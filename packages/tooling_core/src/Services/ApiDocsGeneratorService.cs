@@ -833,7 +833,7 @@ public static partial class ApiDocsGeneratorService
         sb.Append("## Module Overview\n\n");
         sb.Append("`kernel-api` serves the Clinical Kernel alongside consolidated `Intelligence` and `Execution` modules in one transactional composition host:\n\n");
         sb.Append($"- **[Kernel Module](#kernel-module):** {kernelOps.Count} operation(s) covering clinical studies, bitemporal graph nodes, protocol governance, effectivities, locks, proposals, validation rule packs, exports, and commercial entitlements.\n");
-        sb.Append($"- **[Intelligence Module](#intelligence-module):** {intelligenceOps.Count} host-level MCP transport operation(s) in `kernel_openapi.json`, plus the dedicated [intelligence API](intelligence.md) contract (`/api/v1/ai/*` ledger, task qualification, evaluation runs, and kill-switch controls).\n");
+        sb.Append($"- **[Intelligence Module](#intelligence-module):** {intelligenceOps.Count} operation(s) in `kernel_openapi.json`; governed `/api/v1/ai/*` operations (including Streamable HTTP MCP `POST /api/v1/ai/mcp`, ledger, task qualification, evaluation runs, liveness, and kill-switch controls) are published in the dedicated [intelligence API](intelligence.md) contract.\n");
         sb.Append($"- **[Execution Module](#execution-module):** {executionOps.Count} kernel subject enrollment, observation, verification, assertion, and casebook operation(s), plus the consolidated [execution_forms API](execution_forms.md) contract (`/api/v1/execution/forms*`) and standalone [execution API](execution.md).\n\n");
 
         AppendModuleOperationGroup(
@@ -845,7 +845,7 @@ public static partial class ApiDocsGeneratorService
         AppendModuleOperationGroup(
             sb,
             "Intelligence Module",
-            "Streamable HTTP Model Context Protocol (MCP) transport hosted on `kernel-api` (`POST /api/v1/ai/mcp`). Companion REST ledger, evaluation-run, qualification, and control endpoints are documented in [intelligence API](intelligence.md).",
+            "Governed AI operations hosted on `kernel-api` are published in the dedicated [intelligence API](intelligence.md) contract (`/api/v1/ai/*`, including `POST /api/v1/ai/mcp`).",
             intelligenceOps);
 
         AppendModuleOperationGroup(
@@ -1114,8 +1114,8 @@ public static partial class ApiDocsGeneratorService
         sb.Append("Each page documents the live HTTP operations, authorization policies, GxP headers (`X-Sig-Token`, `Idempotency-Key`, `X-Change-Reason`), RFC 7807 error contracts, and deduplicated `components.schemas` exported directly from the .NET 10 hosts (`pnpm cadence sync-openapi-spec`). The `openapi` quality gate fails whenever any operation omits an `operationId` or `summary` or when `docs/api/*.md` drifts from `docs/openapi/*.json`.\n\n");
         sb.Append($"- **Unified Gateway OpenAPI 3.1 Bundle:** [`cdisc_openapi.json`](../openapi/cdisc_openapi.json)\n");
         sb.Append($"- **Contract Coverage:** `{contracts.Count}` OpenAPI contracts (`{activeCount}` Active, `{scaffoldCount}` Scaffold in `ServiceTopology`), `{totalOps}` documented operations, and `{totalSchemas}` component schemas.\n");
-        sb.Append("- **Consolidated Composition Host (`kernel-api`):** [kernel](kernel.md) groups core `Kernel`, `Intelligence` (`POST /api/v1/ai/mcp`), and `Execution` operations, alongside dedicated module contracts [intelligence](intelligence.md) and [execution_forms](execution_forms.md).\n");
-        sb.Append("- **Legacy Reference Contracts:** Archived Python-era specs remain isolated under `docs/openapi/legacy/` for historical reference only.\n\n");
+        sb.Append("- **Consolidated Composition Host (`kernel-api`):** [kernel](kernel.md) groups core `Kernel` and kernel-backed `Execution` operations alongside the dedicated module contracts [intelligence](intelligence.md) (including `POST /api/v1/ai/mcp`) and [execution_forms](execution_forms.md).\n");
+        sb.Append("- **Legacy Reference Snapshot:** `docs/openapi/legacy/cdisc_openapi.json` retains the frozen Python-era aggregate snapshot solely for unmigrated `apps/web/src/api/types.ts` slices.\n\n");
 
         sb.Append("| Service | Operations | Schemas | Maturity | Stubs (`501`) | OpenAPI JSON |\n");
         sb.Append("| ------- | ---------- | ------- | -------- | ------------- | ------------ |\n");

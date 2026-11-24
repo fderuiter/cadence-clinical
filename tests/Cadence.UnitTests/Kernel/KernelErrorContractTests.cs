@@ -34,12 +34,13 @@ namespace Cadence.UnitTests.Kernel;
 public sealed class KernelErrorContractTests
 {
     /// <summary>
-    /// POST endpoints that run no kernel service and so answer with no kernel error: they parse their body and compute
-    /// in memory, and a bad body is a plain 400.
+    /// POST endpoints that run no mutating kernel command and so answer with no kernel error: stateless read/evaluation
+    /// computations and the read-only Streamable HTTP MCP JSON-RPC transport.
     /// </summary>
     private static readonly HashSet<string> ComputationOnly = new(StringComparer.Ordinal)
     {
         "AiVerifyLiveness",
+        "IntelligenceMcpStreamableHttp",
         "KernelGenerateProtocolProposal",
         "KernelMatrixGapCheck",
         "RouteAiIntent",

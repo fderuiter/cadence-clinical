@@ -657,8 +657,10 @@ public static class KnowledgeEndpoints
     private static KnowledgeArticleDto ToArticleDto(
         KnowledgeArticle article,
         string? categoryName,
-        KnowledgeArticleVersion? version) =>
-        new(
+        KnowledgeArticleVersion? version)
+    {
+        string? compiledHtml = SopHtmlCompiler.EnsureCompiledHtml(version?.BodyMarkdown, version?.BodyHtml);
+        return new(
             Id: article.Id,
             Slug: article.Slug,
             Title: article.Title,
@@ -673,23 +675,27 @@ public static class KnowledgeEndpoints
             LastEditedBy: article.LastEditedBy,
             ApprovedBy: article.ApprovedBy,
             BodyMarkdown: version?.BodyMarkdown,
-            BodyHtml: version?.BodyHtml,
+            BodyHtml: compiledHtml,
             CreatedAt: article.CreatedAt,
             UpdatedAt: version?.CreatedAt ?? article.CreatedAt);
+    }
 
-    private static KnowledgeArticleVersionDto ToVersionDto(KnowledgeArticleVersion version) =>
-        new(
+    private static KnowledgeArticleVersionDto ToVersionDto(KnowledgeArticleVersion version)
+    {
+        string? compiledHtml = SopHtmlCompiler.EnsureCompiledHtml(version.BodyMarkdown, version.BodyHtml);
+        return new(
             Id: version.Id,
             ArticleId: version.ArticleId,
             VersionIndex: version.VersionIndex,
             VersionLabel: version.VersionLabel,
             BodyMarkdown: version.BodyMarkdown,
-            BodyHtml: version.BodyHtml,
+            BodyHtml: compiledHtml,
             StatusAtSnapshot: version.StatusAtSnapshot,
             IsLocked: version.IsLocked,
             CreatedAt: version.CreatedAt,
             CreatedBy: version.CreatedBy,
             ReasonForChange: version.ReasonForChange);
+    }
 
     private static IReadOnlyList<string> ParseJsonArray(string? raw)
     {

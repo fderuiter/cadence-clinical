@@ -208,6 +208,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/ai/mcp": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Executes stateless Streamable HTTP Model Context Protocol (MCP) JSON-RPC 2.0 requests for governed read-only clinical tools.
+     * @description Stateless Streamable HTTP MCP transport (ADR-2633 §4.8) accepting JSON-RPC 2.0 requests (initialize, notifications/initialized, ping, tools/list, tools/call) and answering with application/json or text/event-stream envelopes. Requires a gateway-verified OIDC BearerAuth token (SignedInCaller): every tool executes as the signed-in caller acting through agent:mcp over KernelToolNames.McpProfile, masked in place for both caller and agent (K-AUTH-4, ADR-2471), with zero write capabilities. Subject-partitioned fixed-window gateway rate limiting applies (GATEWAY_RATE_LIMIT_PER_MINUTE, default 600 requests/minute per authenticated sub; 429 Too Many Requests with Retry-After).
+     */
+    post: operations["IntelligenceMcpStreamableHttp"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -347,6 +367,51 @@ export interface components {
       recommendations: components["schemas"]["Intelligence_IntentRecommendation"][];
     };
     Intelligence_JsonElement: unknown;
+    /** @description JSON-RPC 2.0 error object returned when protocol parsing or method dispatch fails. */
+    Intelligence_McpJsonRpcError: {
+      /** Format: int32 */
+      code: number;
+      message: string;
+      data?: null | Record<string, never>;
+    };
+    /** @description JSON-RPC 2.0 request or notification message sent over the Streamable HTTP MCP transport. */
+    Intelligence_McpJsonRpcRequest: {
+      /**
+       * @description JSON-RPC protocol version (must be "2.0").
+       * @enum {string}
+       */
+      jsonrpc: "2.0";
+      /** @description Caller request correlation identifier (omitted on notifications such as notifications/initialized). */
+      id?: null | number | string;
+      /**
+       * @description MCP JSON-RPC method name.
+       * @enum {string}
+       */
+      method:
+        | "initialize"
+        | "notifications/initialized"
+        | "ping"
+        | "tools/list"
+        | "tools/call";
+      /** @description Method parameters (for tools/call, conforms to McpToolCallParams). */
+      params?: null | Record<string, never>;
+    };
+    /** @description JSON-RPC 2.0 response envelope carrying governed read-only tool metadata or ToolResultEnvelope content. */
+    Intelligence_McpJsonRpcResponse: {
+      /** @enum {string} */
+      jsonrpc: "2.0";
+      id: null | number | string;
+      /** @description Method result payload (InitializeResult, ListToolsResult, or CallToolResult with ToolResultEnvelope). */
+      result?: null | Record<string, never>;
+      error?: components["schemas"]["Intelligence_McpJsonRpcError"];
+    };
+    /** @description Parameters for a JSON-RPC 2.0 tools/call invocation against KernelToolNames.McpProfile. */
+    Intelligence_McpToolCallParams: {
+      /** @description Registered read-only tool identifier in KernelToolNames.McpProfile. */
+      name: string;
+      /** @description Tool-specific JSON arguments validated against the tool's InputSchema. */
+      arguments?: Record<string, never>;
+    };
     Intelligence_ProblemDetails: {
       type?: null | string;
       title?: null | string;
@@ -934,6 +999,75 @@ export interface operations {
       };
       /** @description Unauthorized. Kernel errors: `K.Actor.Unresolved`. */
       401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Intelligence_ProblemDetails"];
+        };
+      };
+    };
+  };
+  IntelligenceMcpStreamableHttp: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** @description JSON-RPC 2.0 MCP message (initialize, ping, tools/list, tools/call, or notification). */
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Intelligence_McpJsonRpcRequest"];
+      };
+    };
+    responses: {
+      /** @description JSON-RPC 2.0 MCP response envelope (application/json or text/event-stream). */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Intelligence_McpJsonRpcResponse"];
+          "text/event-stream": string;
+        };
+      };
+      /** @description Accepted JSON-RPC 2.0 client notification with no response body. */
+      202: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Malformed JSON-RPC 2.0 payload or unsupported Streamable HTTP MCP transport headers. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Intelligence_ProblemDetails"];
+        };
+      };
+      /** @description Missing or invalid gateway-verified OIDC BearerAuth credentials. */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Intelligence_ProblemDetails"];
+        };
+      };
+      /** @description Caller is denied by gateway authorization or auditor/tenant guardrails. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Intelligence_ProblemDetails"];
+        };
+      };
+      /** @description Caller exceeded the per-subject gateway fixed-window rate limit (includes Retry-After header). */
+      429: {
         headers: {
           [name: string]: unknown;
         };

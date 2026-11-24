@@ -3676,12 +3676,13 @@ Deduplicated component schemas exported in `components.schemas` (91 total). Oper
 - **Type:** object
 
 <details class="api-schema-details">
-<summary>Properties (10)</summary>
+<summary>Properties (11)</summary>
 
 | Property | Type | Required | Description |
 | -------- | ---- | -------- | ----------- |
 | `active_protocol_version` | `string` | `required` |  |
 | `enrollment_index` | `integer` (`int32`) | `required` |  |
+| `enrollment_ref` | `string` \| `null` | `optional` |  |
 | `id` | [`Execution_SubjectId`](#schema-execution-subjectid) | `required` |  |
 | `investigational_product_id` | `string` \| `null` | `required` |  |
 | `randomization_seed` | `string` \| `null` | `required` |  |
@@ -3718,12 +3719,13 @@ Deduplicated component schemas exported in `components.schemas` (91 total). Oper
 - **Type:** object
 
 <details class="api-schema-details">
-<summary>Properties (7)</summary>
+<summary>Properties (8)</summary>
 
 | Property | Type | Required | Description |
 | -------- | ---- | -------- | ----------- |
 | `active_protocol_version` | `string` \| `null` | `required` |  |
 | `encrypted_demographics` | `string` \| `null` | `required` |  |
+| `enrollment_ref` | `string` \| `null` | `optional` |  |
 | `id` | [`Execution_SubjectId`](#schema-execution-subjectid) | `required` |  |
 | `site_id` | [`Execution_SiteCode`](#schema-execution-sitecode) \| `null` | `required` |  |
 | `status` | `string` | `required` |  |
@@ -3765,12 +3767,13 @@ Deduplicated component schemas exported in `components.schemas` (91 total). Oper
 - **Type:** object
 
 <details class="api-schema-details">
-<summary>Properties (7)</summary>
+<summary>Properties (8)</summary>
 
 | Property | Type | Required | Description |
 | -------- | ---- | -------- | ----------- |
 | `active_protocol_version` | `string` | `required` |  |
 | `enrollment_index` | `integer` (`int32`) | `required` |  |
+| `enrollment_ref` | `string` \| `null` | `optional` |  |
 | `id` | [`Execution_SubjectId`](#schema-execution-subjectid) | `required` |  |
 | `site_id` | [`Execution_SiteCode`](#schema-execution-sitecode) \| `null` | `required` |  |
 | `status` | `string` | `required` |  |

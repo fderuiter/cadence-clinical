@@ -190,11 +190,6 @@ public static class PreCommitOpenApiService
             }
         }
 
-        if (detectedServices.Contains("intelligence"))
-        {
-            detectedServices.Add("kernel");
-        }
-
         if (detectedServices.Count == 0)
         {
             return (false, null, true);

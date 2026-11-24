@@ -3,7 +3,7 @@
 Generated from `docs/openapi/intelligence_openapi.json` by `pnpm cadence generate-api-docs`. Don't edit this file by hand.
 
 - **Service Maturity:** <span class="VPBadge tip">Active</span> (Consolidated module hosted in `kernel-api` · port `8018` · `/api/v1/ai/*`)
-- **OpenAPI 3.1 Contract:** [`intelligence_openapi.json`](../openapi/intelligence_openapi.json) (12 operation(s), 20 schema(s))
+- **OpenAPI 3.1 Contract:** [`intelligence_openapi.json`](../openapi/intelligence_openapi.json) (13 operation(s), 24 schema(s))
 
 ## Operations
 
@@ -15,6 +15,7 @@ Generated from `docs/openapi/intelligence_openapi.json` by `pnpm cadence generat
 | `POST` | `/api/v1/ai/evaluation-runs` | AiRecordEvaluationRun | Stores an evaluation run record after checking it against its task configuration version, set, criteria and case results (evaluation_run.record, ADR-2634). | [Details](#op-airecordevaluationrun) |
 | `GET` | `/api/v1/ai/evaluation-runs/{runId}` | AiGetEvaluationRun | One stored evaluation run with its record, exactly as hashed. | [Details](#op-aigetevaluationrun) |
 | `POST` | `/api/v1/ai/intent/route` | RouteAiIntent | Match a command-palette query against fixed patterns and return the navigation targets the caller's roles allow. | [Details](#op-routeaiintent) |
+| `POST` | `/api/v1/ai/mcp` | IntelligenceMcpStreamableHttp | Executes stateless Streamable HTTP Model Context Protocol (MCP) JSON-RPC 2.0 requests for governed read-only clinical tools. | [Details](#op-intelligencemcpstreamablehttp) |
 | `GET` | `/api/v1/ai/runs` | AiListMyRuns | The caller's latest agent runs from the interaction ledger, newest first. | [Details](#op-ailistmyruns) |
 | `GET` | `/api/v1/ai/runs/{runId}` | AiGetMyRun | One of the caller's agent runs with its request, answer, usage and integrity hash. | [Details](#op-aigetmyrun) |
 | `GET` | `/api/v1/ai/tasks` | AiListTasks | The agent task configuration versions in this deployment, with their content hashes and the tenant's qualification of each. | [Details](#op-ailisttasks) |
@@ -235,6 +236,43 @@ Generated from `docs/openapi/intelligence_openapi.json` by `pnpm cadence generat
 
 </details>
 
+### `POST` `/api/v1/ai/mcp` {#op-intelligencemcpstreamablehttp}
+
+**Operation ID:** `IntelligenceMcpStreamableHttp` — Executes stateless Streamable HTTP Model Context Protocol (MCP) JSON-RPC 2.0 requests for governed read-only clinical tools.
+
+Stateless Streamable HTTP MCP transport (ADR-2633 §4.8) accepting JSON-RPC 2.0 requests (initialize, notifications/initialized, ping, tools/list, tools/call) and answering with application/json or text/event-stream envelopes. Requires a gateway-verified OIDC BearerAuth token (SignedInCaller): every tool executes as the signed-in caller acting through agent:mcp over KernelToolNames.McpProfile, masked in place for both caller and agent (K-AUTH-4, ADR-2471), with zero write capabilities. Subject-partitioned fixed-window gateway rate limiting applies (GATEWAY_RATE_LIMIT_PER_MINUTE, default 600 requests/minute per authenticated sub; 429 Too Many Requests with Retry-After).
+
+<details class="api-operation-details">
+<summary>Authorization, Parameters, Payloads &amp; Responses</summary>
+
+- **Authentication:** `BearerAuth` (`SignedInCaller`)
+- **Signed-In Caller Rule:** Read-only agent tools: every read runs as the signed-in caller, masked for both the caller and the agent, and no tool writes.
+- **Clinical Scope Enforcement:** `Tenant`
+- **Rate Limit:** 600 requests/minute per authenticated subject (GATEWAY_RATE_LIMIT_PER_MINUTE fixed window; answers 429 with Retry-After)
+- **Tags:** `Intelligence`
+
+**Request Body** (`required`)
+
+JSON-RPC 2.0 MCP message (initialize, ping, tools/list, tools/call, or notification).
+
+| Media Type | Schema |
+| ---------- | ------ |
+| `application/json` | [`Intelligence_McpJsonRpcRequest`](#schema-intelligence-mcpjsonrpcrequest) |
+
+**Responses**
+
+| Status | Description | Media Type | Schema |
+| ------ | ----------- | ---------- | ------ |
+| `200` | JSON-RPC 2.0 MCP response envelope (application/json or text/event-stream). | `application/json` | [`Intelligence_McpJsonRpcResponse`](#schema-intelligence-mcpjsonrpcresponse) |
+| `200` | JSON-RPC 2.0 MCP response envelope (application/json or text/event-stream). | `text/event-stream` | `string` |
+| `202` | Accepted JSON-RPC 2.0 client notification with no response body. | — | — |
+| `400` | Malformed JSON-RPC 2.0 payload or unsupported Streamable HTTP MCP transport headers. | `application/problem+json` | [`Intelligence_ProblemDetails`](#schema-intelligence-problemdetails) |
+| `401` | Missing or invalid gateway-verified OIDC BearerAuth credentials. | `application/problem+json` | [`Intelligence_ProblemDetails`](#schema-intelligence-problemdetails) |
+| `403` | Caller is denied by gateway authorization or auditor/tenant guardrails. | `application/problem+json` | [`Intelligence_ProblemDetails`](#schema-intelligence-problemdetails) |
+| `429` | Caller exceeded the per-subject gateway fixed-window rate limit (includes Retry-After header). | `application/problem+json` | [`Intelligence_ProblemDetails`](#schema-intelligence-problemdetails) |
+
+</details>
+
 ### `GET` `/api/v1/ai/runs` {#op-ailistmyruns}
 
 **Operation ID:** `AiListMyRuns` — The caller's latest agent runs from the interaction ledger, newest first.
@@ -442,7 +480,7 @@ Generated from `docs/openapi/intelligence_openapi.json` by `pnpm cadence generat
 
 ## Schemas
 
-Deduplicated component schemas exported in `components.schemas` (20 total). Operation payloads and responses link here so nested models are defined once per page.
+Deduplicated component schemas exported in `components.schemas` (24 total). Operation payloads and responses link here so nested models are defined once per page.
 
 ### `Intelligence_AcceptanceCriteria` {#schema-intelligence-acceptancecriteria}
 
@@ -683,6 +721,71 @@ Deduplicated component schemas exported in `components.schemas` (20 total). Oper
 ### `Intelligence_JsonElement` {#schema-intelligence-jsonelement}
 
 - **Type:** any
+
+### `Intelligence_McpJsonRpcError` {#schema-intelligence-mcpjsonrpcerror}
+
+- **Type:** object
+- **Description:** JSON-RPC 2.0 error object returned when protocol parsing or method dispatch fails.
+
+<details class="api-schema-details">
+<summary>Properties (3)</summary>
+
+| Property | Type | Required | Description |
+| -------- | ---- | -------- | ----------- |
+| `code` | `integer` (`int32`) | `required` |  |
+| `data` | `object` \| `null` | `optional` |  |
+| `message` | `string` | `required` |  |
+
+</details>
+
+### `Intelligence_McpJsonRpcRequest` {#schema-intelligence-mcpjsonrpcrequest}
+
+- **Type:** object
+- **Description:** JSON-RPC 2.0 request or notification message sent over the Streamable HTTP MCP transport.
+
+<details class="api-schema-details">
+<summary>Properties (4)</summary>
+
+| Property | Type | Required | Description |
+| -------- | ---- | -------- | ----------- |
+| `id` | `integer` \| `null` | `optional` | Caller request correlation identifier (omitted on notifications such as notifications/initialized). |
+| `jsonrpc` | `string` (enum: `2.0`) | `required` | JSON-RPC protocol version (must be "2.0"). |
+| `method` | `string` (enum: `initialize`, `notifications/initialized`, `ping`, `tools/list`, `tools/call`) | `required` | MCP JSON-RPC method name. |
+| `params` | `object` \| `null` | `optional` | Method parameters (for tools/call, conforms to McpToolCallParams). |
+
+</details>
+
+### `Intelligence_McpJsonRpcResponse` {#schema-intelligence-mcpjsonrpcresponse}
+
+- **Type:** object
+- **Description:** JSON-RPC 2.0 response envelope carrying governed read-only tool metadata or ToolResultEnvelope content.
+
+<details class="api-schema-details">
+<summary>Properties (4)</summary>
+
+| Property | Type | Required | Description |
+| -------- | ---- | -------- | ----------- |
+| `error` | [`Intelligence_McpJsonRpcError`](#schema-intelligence-mcpjsonrpcerror) | `optional` |  |
+| `id` | `integer` \| `null` | `required` |  |
+| `jsonrpc` | `string` (enum: `2.0`) | `required` |  |
+| `result` | `object` \| `null` | `optional` | Method result payload (InitializeResult, ListToolsResult, or CallToolResult with ToolResultEnvelope). |
+
+</details>
+
+### `Intelligence_McpToolCallParams` {#schema-intelligence-mcptoolcallparams}
+
+- **Type:** object
+- **Description:** Parameters for a JSON-RPC 2.0 tools/call invocation against KernelToolNames.McpProfile.
+
+<details class="api-schema-details">
+<summary>Properties (2)</summary>
+
+| Property | Type | Required | Description |
+| -------- | ---- | -------- | ----------- |
+| `arguments` | `object` | `optional` | Tool-specific JSON arguments validated against the tool's InputSchema. |
+| `name` | `string` | `required` | Registered read-only tool identifier in KernelToolNames.McpProfile. |
+
+</details>
 
 ### `Intelligence_ProblemDetails` {#schema-intelligence-problemdetails}
 

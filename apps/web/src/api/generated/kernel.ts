@@ -782,6 +782,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/kernel/locks/in-force": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Checks whether any active write-denying lock (Frozen or Locked) covers a study, study site, or enrollment scope. */
+    get: operations["KernelGetScopeWriteLock"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/kernel/studies/{studyRef}/locks": {
     parameters: {
       query?: never;
@@ -806,7 +823,7 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** Evaluates lock readiness (open queries, missing required items, and unresolved Error validation findings) for a study or child lock scope. */
+    /** Evaluates lock readiness across queries, missing required items, unverified revisions, unsigned forms, unopened scheduled visits, and Error validation findings. */
     get: operations["KernelGetStudyLockReadiness"];
     put?: never;
     post?: never;
@@ -1172,26 +1189,6 @@ export interface paths {
      * @description Mapped outside KernelTenantFilter for signed-in callers without an active tenant_id claim, study/site scope, or clinical realm roles. Requires caller Idempotency-Key and signed X-Change-Reason headers.
      */
     post: operations["KernelBootstrapTrialWorkspace"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/ai/mcp": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /**
-     * Executes stateless Streamable HTTP Model Context Protocol (MCP) JSON-RPC 2.0 requests for governed read-only clinical tools.
-     * @description Stateless Streamable HTTP MCP transport (ADR-2633 §4.8) accepting JSON-RPC 2.0 requests (initialize, notifications/initialized, ping, tools/list, tools/call) and answering with application/json or text/event-stream envelopes. Requires a gateway-verified OIDC BearerAuth token (SignedInCaller): every tool executes as the signed-in caller acting through agent:mcp over KernelToolNames.McpProfile, masked in place for both caller and agent (K-AUTH-4, ADR-2471), with zero write capabilities. Subject-partitioned fixed-window gateway rate limiting applies (GATEWAY_RATE_LIMIT_PER_MINUTE, default 600 requests/minute per authenticated sub; 429 Too Many Requests with Retry-After).
-     */
-    post: operations["IntelligenceMcpStreamableHttp"];
     delete?: never;
     options?: never;
     head?: never;
@@ -1820,6 +1817,16 @@ export interface components {
       finding_ref?: null | string;
       rule_id?: null | string;
       detail?: null | string;
+      /** Format: int32 */
+      current_revision?: null | number | string;
+      /** @default false */
+      signature_superseded: boolean;
+      planned_activity_id?: null | string;
+      planned_activity_name?: null | string;
+      /** Format: date */
+      planned_date?: null | string;
+      /** Format: date */
+      window_end?: null | string;
     };
     Kernel_KernelLockReadinessResponse: {
       study_ref: string;
@@ -1838,6 +1845,21 @@ export interface components {
       blocker_count: number | string;
       blockers: components["schemas"]["Kernel_KernelLockBlockerResponse"][];
       explanation: components["schemas"]["Kernel_KernelExplanationResponse"];
+      /**
+       * Format: int32
+       * @default 0
+       */
+      unverified_value_count: number | string;
+      /**
+       * Format: int32
+       * @default 0
+       */
+      unsigned_form_count: number | string;
+      /**
+       * Format: int32
+       * @default 0
+       */
+      unopened_visit_count: number | string;
     };
     Kernel_KernelLockResponse: {
       ref: null | string;
@@ -2161,6 +2183,12 @@ export interface components {
       columns: components["schemas"]["Kernel_KernelSoaColumnResponse"][];
       rows: components["schemas"]["Kernel_KernelSoaRowResponse"][];
       footnotes: components["schemas"]["Kernel_KernelSoaFootnoteResponse"][];
+    };
+    Kernel_KernelScopeWriteLockResponse: {
+      study_exists: boolean;
+      locked: boolean;
+      lock_kind: null | string;
+      scope_kind: null | string;
     };
     Kernel_KernelScreenEnrollmentRequest: {
       /** Format: uuid */
@@ -2502,51 +2530,6 @@ export interface components {
     };
     Kernel_MatrixGapCheckRequest: {
       protocol_content: string;
-    };
-    /** @description JSON-RPC 2.0 error object returned when protocol parsing or method dispatch fails. */
-    Kernel_McpJsonRpcError: {
-      /** Format: int32 */
-      code: number;
-      message: string;
-      data?: null | Record<string, never>;
-    };
-    /** @description JSON-RPC 2.0 request or notification message sent over the Streamable HTTP MCP transport. */
-    Kernel_McpJsonRpcRequest: {
-      /**
-       * @description JSON-RPC protocol version (must be "2.0").
-       * @enum {string}
-       */
-      jsonrpc: "2.0";
-      /** @description Caller request correlation identifier (omitted on notifications such as notifications/initialized). */
-      id?: null | number | string;
-      /**
-       * @description MCP JSON-RPC method name.
-       * @enum {string}
-       */
-      method:
-        | "initialize"
-        | "notifications/initialized"
-        | "ping"
-        | "tools/list"
-        | "tools/call";
-      /** @description Method parameters (for tools/call, conforms to McpToolCallParams). */
-      params?: null | Record<string, never>;
-    };
-    /** @description JSON-RPC 2.0 response envelope carrying governed read-only tool metadata or ToolResultEnvelope content. */
-    Kernel_McpJsonRpcResponse: {
-      /** @enum {string} */
-      jsonrpc: "2.0";
-      id: null | number | string;
-      /** @description Method result payload (InitializeResult, ListToolsResult, or CallToolResult with ToolResultEnvelope). */
-      result?: null | Record<string, never>;
-      error?: components["schemas"]["Kernel_McpJsonRpcError"];
-    };
-    /** @description Parameters for a JSON-RPC 2.0 tools/call invocation against KernelToolNames.McpProfile. */
-    Kernel_McpToolCallParams: {
-      /** @description Registered read-only tool identifier in KernelToolNames.McpProfile. */
-      name: string;
-      /** @description Tool-specific JSON arguments validated against the tool's InputSchema. */
-      arguments?: Record<string, never>;
     };
     Kernel_NextAction: {
       description: string;
@@ -5606,6 +5589,15 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
+      /** @description Locked. Kernel errors: `K.Observation.Locked`. */
+      423: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
     };
   };
   KernelApplyLock: {
@@ -5772,6 +5764,40 @@ export interface operations {
       };
       /** @description Unprocessable Entity. Kernel errors: `K.Assertion.AttestationRejected`, `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`, `K.Trust.MethodRequired`. */
       422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
+  KernelGetScopeWriteLock: {
+    parameters: {
+      query?: {
+        study_code?: string;
+        site_code?: string;
+        subject_code?: string;
+        enrollment_id?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_KernelScopeWriteLockResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
         headers: {
           [name: string]: unknown;
         };
@@ -7342,75 +7368,6 @@ export interface operations {
       };
       /** @description Bad Gateway. Kernel errors: `K.Commercial.IdentityProviderSyncFailed`. */
       502: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
-        };
-      };
-    };
-  };
-  IntelligenceMcpStreamableHttp: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** @description JSON-RPC 2.0 MCP message (initialize, ping, tools/list, tools/call, or notification). */
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["Kernel_McpJsonRpcRequest"];
-      };
-    };
-    responses: {
-      /** @description JSON-RPC 2.0 MCP response envelope (application/json or text/event-stream). */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["Kernel_McpJsonRpcResponse"];
-          "text/event-stream": string;
-        };
-      };
-      /** @description Accepted JSON-RPC 2.0 client notification with no response body. */
-      202: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-      /** @description Malformed JSON-RPC 2.0 payload or unsupported Streamable HTTP MCP transport headers. */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
-        };
-      };
-      /** @description Missing or invalid gateway-verified OIDC BearerAuth credentials. */
-      401: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
-        };
-      };
-      /** @description Caller is denied by gateway authorization or auditor/tenant guardrails. */
-      403: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
-        };
-      };
-      /** @description Caller exceeded the per-subject gateway fixed-window rate limit (includes Retry-After header). */
-      429: {
         headers: {
           [name: string]: unknown;
         };

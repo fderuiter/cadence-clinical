@@ -1736,7 +1736,7 @@ Deduplicated component schemas exported in `components.schemas` (40 total). Oper
 - **Type:** object
 
 <details class="api-schema-details">
-<summary>Properties (8)</summary>
+<summary>Properties (9)</summary>
 
 | Property | Type | Required | Description |
 | -------- | ---- | -------- | ----------- |
@@ -1747,6 +1747,7 @@ Deduplicated component schemas exported in `components.schemas` (40 total). Oper
 | `siteId` | `string` \| `null` | `optional` |  |
 | `studyId` | `string` \| `null` | `optional` |  |
 | `subjectId` | `string` \| `null` | `optional` |  |
+| `syncVerificationToken` | `string` \| `null` | `optional` |  |
 | `walletId` | `string` \| `null` | `optional` |  |
 
 </details>

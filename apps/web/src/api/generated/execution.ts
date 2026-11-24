@@ -2175,6 +2175,7 @@ export interface components {
       treatment_group: null | string;
       randomization_seed: null | string;
       investigational_product_id: null | string;
+      enrollment_ref?: null | string;
     };
     Execution_SubjectId: string;
     Execution_SubjectListResponse: {
@@ -2194,6 +2195,7 @@ export interface components {
       status: string;
       active_protocol_version: null | string;
       encrypted_demographics: null | string;
+      enrollment_ref?: null | string;
     };
     Execution_SubjectSiteAssignmentRequest: {
       site_id: null | string;
@@ -2212,6 +2214,7 @@ export interface components {
       active_protocol_version: string;
       /** Format: int32 */
       enrollment_index: number | string;
+      enrollment_ref?: null | string;
     };
     Execution_SynonymDeactivateResponse: {
       message: string;

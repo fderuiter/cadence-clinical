@@ -9729,6 +9729,12 @@
               "null",
               "string"
             ]
+          },
+          "enrollment_ref": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -9821,6 +9827,12 @@
               "null",
               "string"
             ]
+          },
+          "enrollment_ref": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -9909,6 +9921,12 @@
               "string"
             ],
             "format": "int32"
+          },
+          "enrollment_ref": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },

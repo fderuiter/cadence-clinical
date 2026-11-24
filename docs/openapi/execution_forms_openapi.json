@@ -2316,6 +2316,16 @@
                 }
               }
             }
+          },
+          "423": {
+            "description": "Locked. Kernel errors: \u0060K.Assertion.Locked\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExecutionForms_ProblemDetails"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -2401,6 +2411,10 @@
           {
             "code": "K.Trust.MethodRequired",
             "status": 422
+          },
+          {
+            "code": "K.Assertion.Locked",
+            "status": 423
           }
         ]
       }

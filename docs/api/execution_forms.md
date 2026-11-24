@@ -663,6 +663,7 @@ Generated from `docs/openapi/execution_forms_openapi.json` by `pnpm cadence gene
 | `404` | Not Found. Kernel errors: `K.Aggregate.NotFound`. | `application/problem+json` | [`ExecutionForms_ProblemDetails`](#schema-executionforms-problemdetails) |
 | `409` | Conflict. Kernel errors: `K.Aggregate.AlreadyExists`, `K.Aggregate.ConcurrencyConflict`, `K.Collection.NotReadyToSign`, `K.Command.IdempotencyConflict`, `K.Trust.TargetContentChanged`, `K.Trust.TargetNotSignable`. | `application/problem+json` | [`ExecutionForms_ProblemDetails`](#schema-executionforms-problemdetails) |
 | `422` | Unprocessable Entity. Kernel errors: `K.Collection.SignatureMeaningInvalid`, `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`, `K.Trust.MethodRequired`. | `application/problem+json` | [`ExecutionForms_ProblemDetails`](#schema-executionforms-problemdetails) |
+| `423` | Locked. Kernel errors: `K.Assertion.Locked`. | `application/problem+json` | [`ExecutionForms_ProblemDetails`](#schema-executionforms-problemdetails) |
 
 **Registered Kernel Error Codes (`x-kernel-errors`)**
 
@@ -686,6 +687,7 @@ Generated from `docs/openapi/execution_forms_openapi.json` by `pnpm cadence gene
 | `422` | `K.Command.ReasonForChangeRequired` |
 | `422` | `K.Command.TenantRequired` |
 | `422` | `K.Trust.MethodRequired` |
+| `423` | `K.Assertion.Locked` |
 
 </details>
 

@@ -3,14 +3,14 @@
 Generated from `docs/openapi/kernel_openapi.json` by `pnpm cadence generate-api-docs`. Don't edit this file by hand.
 
 - **Service Maturity:** <span class="VPBadge tip">Active</span> (Port `8018` · Gateway prefixes: `/api/v1/kernel`, `/api/v1/ai`, `/api/v1/execution/forms`)
-- **OpenAPI 3.1 Contract:** [`kernel_openapi.json`](../openapi/kernel_openapi.json) (72 operation(s), 151 schema(s))
+- **OpenAPI 3.1 Contract:** [`kernel_openapi.json`](../openapi/kernel_openapi.json) (72 operation(s), 148 schema(s))
 
 ## Module Overview
 
 `kernel-api` serves the Clinical Kernel alongside consolidated `Intelligence` and `Execution` modules in one transactional composition host:
 
-- **[Kernel Module](#kernel-module):** 63 operation(s) covering clinical studies, bitemporal graph nodes, protocol governance, effectivities, locks, proposals, validation rule packs, exports, and commercial entitlements.
-- **[Intelligence Module](#intelligence-module):** 1 host-level MCP transport operation(s) in `kernel_openapi.json`, plus the dedicated [intelligence API](intelligence.md) contract (`/api/v1/ai/*` ledger, task qualification, evaluation runs, and kill-switch controls).
+- **[Kernel Module](#kernel-module):** 64 operation(s) covering clinical studies, bitemporal graph nodes, protocol governance, effectivities, locks, proposals, validation rule packs, exports, and commercial entitlements.
+- **[Intelligence Module](#intelligence-module):** 0 operation(s) in `kernel_openapi.json`; governed `/api/v1/ai/*` operations (including Streamable HTTP MCP `POST /api/v1/ai/mcp`, ledger, task qualification, evaluation runs, liveness, and kill-switch controls) are published in the dedicated [intelligence API](intelligence.md) contract.
 - **[Execution Module](#execution-module):** 8 kernel subject enrollment, observation, verification, assertion, and casebook operation(s), plus the consolidated [execution_forms API](execution_forms.md) contract (`/api/v1/execution/forms*`) and standalone [execution API](execution.md).
 
 ## Kernel Module
@@ -28,6 +28,7 @@ Core Clinical Kernel read and command endpoints (`Kernel`, `Kernel protocol gove
 | `POST` | `/api/v1/kernel/entitlements/tier` | KernelUpgradeSubscriptionTier | Switches the tenant's commercial evaluation tier in place while preserving trial countdown and clinical records. | [Details](#op-kernelupgradesubscriptiontier) |
 | `POST` | `/api/v1/kernel/library-items/{itemRef}/approve` | KernelApproveLibraryItem | Approves a draft library item version with an Approved attestation (library_item.approve). | [Details](#op-kernelapprovelibraryitem) |
 | `POST` | `/api/v1/kernel/locks` | KernelApplyLock | Applies a Frozen or Locked assertion to a study, study site, enrollment, form instance or observation (lock.apply). | [Details](#op-kernelapplylock) |
+| `GET` | `/api/v1/kernel/locks/in-force` | KernelGetScopeWriteLock | Checks whether any active write-denying lock (Frozen or Locked) covers a study, study site, or enrollment scope. | [Details](#op-kernelgetscopewritelock) |
 | `POST` | `/api/v1/kernel/locks/{lockRef}/release` | KernelReleaseLock | Releases a Frozen or Locked assertion with a signed retracting assertion (lock.release). | [Details](#op-kernelreleaselock) |
 | `GET` | `/api/v1/kernel/nodes/{nodeRef}` | KernelGetNode | Resolves a NodeRef to its summary. | [Details](#op-kernelgetnode) |
 | `GET` | `/api/v1/kernel/nodes/{nodeRef}/children` | KernelGetChildren | The children of a scope node, with their own child counts. | [Details](#op-kernelgetchildren) |
@@ -62,7 +63,7 @@ Core Clinical Kernel read and command endpoints (`Kernel`, `Kernel protocol gove
 | `GET` | `/api/v1/kernel/studies/{studyRef}/effectivities` | KernelListStudyEffectivities | Lists bitemporal protocol-version effectivities declared for a study. | [Details](#op-kernelliststudyeffectivities) |
 | `GET` | `/api/v1/kernel/studies/{studyRef}/exports` | KernelExportStudySnapshot | Streams a bitemporal study snapshot as CSV, CDISC ODM v1.3.2 XML, CDISC Dataset-JSON, SAS bundle ZIP, R bundle ZIP, or Study Archive ZIP. | [Details](#op-kernelexportstudysnapshot) |
 | `GET` | `/api/v1/kernel/studies/{studyRef}/locks` | KernelListStudyLocks | Lists Frozen and Locked assertions recorded for a study at an optional bitemporal as_of cut. | [Details](#op-kernelliststudylocks) |
-| `GET` | `/api/v1/kernel/studies/{studyRef}/locks/readiness` | KernelGetStudyLockReadiness | Evaluates lock readiness (open queries, missing required items, and unresolved Error validation findings) for a study or child lock scope. | [Details](#op-kernelgetstudylockreadiness) |
+| `GET` | `/api/v1/kernel/studies/{studyRef}/locks/readiness` | KernelGetStudyLockReadiness | Evaluates lock readiness across queries, missing required items, unverified revisions, unsigned forms, unopened scheduled visits, and Error validation findings. | [Details](#op-kernelgetstudylockreadiness) |
 | `GET` | `/api/v1/kernel/studies/{studyRef}/proposals` | KernelListProposals | A study's proposals, newest first, optionally only those with one status (Open, Approved, Rejected, Withdrawn, Expired). | [Details](#op-kernellistproposals) |
 | `POST` | `/api/v1/kernel/studies/{studyRef}/protocol-imports` | KernelImportProtocolDraft | Synchronously imports ODM v1.3.2 XML, USDM v4 JSON, or bundled eCRF templates into a protocol draft. | [Details](#op-kernelimportprotocoldraft) |
 | `GET` | `/api/v1/kernel/studies/{studyRef}/protocol-versions` | KernelListProtocolVersions | A study's protocol versions, newest first, without their content. | [Details](#op-kernellistprotocolversions) |
@@ -488,6 +489,34 @@ Requires caller Idempotency-Key and signed X-Change-Reason headers. Updates enab
 | `422` | `K.Command.ReasonForChangeRequired` |
 | `422` | `K.Command.TenantRequired` |
 | `422` | `K.Trust.MethodRequired` |
+
+</details>
+
+### `GET` `/api/v1/kernel/locks/in-force` {#op-kernelgetscopewritelock}
+
+**Operation ID:** `KernelGetScopeWriteLock` — Checks whether any active write-denying lock (Frozen or Locked) covers a study, study site, or enrollment scope.
+
+<details class="api-operation-details">
+<summary>Authorization, Parameters, Payloads &amp; Responses</summary>
+
+- **Authentication:** `BearerAuth` (`SignedInCaller`)
+- **Tags:** `Kernel locks`
+
+**Parameters & Headers**
+
+| Name | In | Required | Schema / Constraints | Description |
+| ---- | -- | -------- | -------------------- | ----------- |
+| `enrollment_id` | `query` | `optional` | `string` (`uuid`) |  |
+| `site_code` | `query` | `optional` | `string` |  |
+| `study_code` | `query` | `optional` | `string` |  |
+| `subject_code` | `query` | `optional` | `string` |  |
+
+**Responses**
+
+| Status | Description | Media Type | Schema |
+| ------ | ----------- | ---------- | ------ |
+| `200` | OK | `application/json` | [`Kernel_KernelScopeWriteLockResponse`](#schema-kernel-kernelscopewritelockresponse) |
+| `400` | Bad Request | `application/problem+json` | [`Kernel_ProblemDetails`](#schema-kernel-problemdetails) |
 
 </details>
 
@@ -1794,7 +1823,7 @@ Projects canonical kernel observations at as_of(valid_at, known_at), applying lo
 
 ### `GET` `/api/v1/kernel/studies/{studyRef}/locks/readiness` {#op-kernelgetstudylockreadiness}
 
-**Operation ID:** `KernelGetStudyLockReadiness` — Evaluates lock readiness (open queries, missing required items, and unresolved Error validation findings) for a study or child lock scope.
+**Operation ID:** `KernelGetStudyLockReadiness` — Evaluates lock readiness across queries, missing required items, unverified revisions, unsigned forms, unopened scheduled visits, and Error validation findings.
 
 <details class="api-operation-details">
 <summary>Authorization, Parameters, Payloads &amp; Responses</summary>
@@ -2661,48 +2690,9 @@ within is an optional NodeRef (for example study:&lt;uuid&gt; or study_site:&lt;
 
 ## Intelligence Module
 
-Streamable HTTP Model Context Protocol (MCP) transport hosted on `kernel-api` (`POST /api/v1/ai/mcp`). Companion REST ledger, evaluation-run, qualification, and control endpoints are documented in [intelligence API](intelligence.md).
+Governed AI operations hosted on `kernel-api` are published in the dedicated [intelligence API](intelligence.md) contract (`/api/v1/ai/*`, including `POST /api/v1/ai/mcp`).
 
-| Method | Path | Operation | Summary | Contract |
-| ------ | ---- | --------- | ------- | -------- |
-| `POST` | `/api/v1/ai/mcp` | IntelligenceMcpStreamableHttp | Executes stateless Streamable HTTP Model Context Protocol (MCP) JSON-RPC 2.0 requests for governed read-only clinical tools. | [Details](#op-intelligencemcpstreamablehttp) |
-
-### `POST` `/api/v1/ai/mcp` {#op-intelligencemcpstreamablehttp}
-
-**Operation ID:** `IntelligenceMcpStreamableHttp` — Executes stateless Streamable HTTP Model Context Protocol (MCP) JSON-RPC 2.0 requests for governed read-only clinical tools.
-
-Stateless Streamable HTTP MCP transport (ADR-2633 §4.8) accepting JSON-RPC 2.0 requests (initialize, notifications/initialized, ping, tools/list, tools/call) and answering with application/json or text/event-stream envelopes. Requires a gateway-verified OIDC BearerAuth token (SignedInCaller): every tool executes as the signed-in caller acting through agent:mcp over KernelToolNames.McpProfile, masked in place for both caller and agent (K-AUTH-4, ADR-2471), with zero write capabilities. Subject-partitioned fixed-window gateway rate limiting applies (GATEWAY_RATE_LIMIT_PER_MINUTE, default 600 requests/minute per authenticated sub; 429 Too Many Requests with Retry-After).
-
-<details class="api-operation-details">
-<summary>Authorization, Parameters, Payloads &amp; Responses</summary>
-
-- **Authentication:** `BearerAuth` (`SignedInCaller`)
-- **Signed-In Caller Rule:** Read-only agent tools: every read runs as the signed-in caller, masked for both the caller and the agent, and no tool writes.
-- **Clinical Scope Enforcement:** `Tenant`
-- **Rate Limit:** 600 requests/minute per authenticated subject (GATEWAY_RATE_LIMIT_PER_MINUTE fixed window; answers 429 with Retry-After)
-- **Tags:** `Intelligence`
-
-**Request Body** (`required`)
-
-JSON-RPC 2.0 MCP message (initialize, ping, tools/list, tools/call, or notification).
-
-| Media Type | Schema |
-| ---------- | ------ |
-| `application/json` | [`Kernel_McpJsonRpcRequest`](#schema-kernel-mcpjsonrpcrequest) |
-
-**Responses**
-
-| Status | Description | Media Type | Schema |
-| ------ | ----------- | ---------- | ------ |
-| `200` | JSON-RPC 2.0 MCP response envelope (application/json or text/event-stream). | `application/json` | [`Kernel_McpJsonRpcResponse`](#schema-kernel-mcpjsonrpcresponse) |
-| `200` | JSON-RPC 2.0 MCP response envelope (application/json or text/event-stream). | `text/event-stream` | `string` |
-| `202` | Accepted JSON-RPC 2.0 client notification with no response body. | — | — |
-| `400` | Malformed JSON-RPC 2.0 payload or unsupported Streamable HTTP MCP transport headers. | `application/problem+json` | [`Kernel_ProblemDetails`](#schema-kernel-problemdetails) |
-| `401` | Missing or invalid gateway-verified OIDC BearerAuth credentials. | `application/problem+json` | [`Kernel_ProblemDetails`](#schema-kernel-problemdetails) |
-| `403` | Caller is denied by gateway authorization or auditor/tenant guardrails. | `application/problem+json` | [`Kernel_ProblemDetails`](#schema-kernel-problemdetails) |
-| `429` | Caller exceeded the per-subject gateway fixed-window rate limit (includes Retry-After header). | `application/problem+json` | [`Kernel_ProblemDetails`](#schema-kernel-problemdetails) |
-
-</details>
+_No operations registered in this module group._
 
 ## Execution Module
 
@@ -2844,6 +2834,7 @@ Reads over the tenant's unique study and subject indexes without listing sites. 
 | `404` | Not Found. Kernel errors: `K.Execution.ParticipantUnknown`, `K.Execution.StudySiteUnknown`. | `application/problem+json` | [`Kernel_ProblemDetails`](#schema-kernel-problemdetails) |
 | `409` | Conflict. Kernel errors: `K.Aggregate.AlreadyExists`, `K.Aggregate.ConcurrencyConflict`, `K.Command.IdempotencyConflict`, `K.Execution.AlreadyActiveAtSite`, `K.Execution.SubjectCodeTaken`. | `application/problem+json` | [`Kernel_ProblemDetails`](#schema-kernel-problemdetails) |
 | `422` | Unprocessable Entity. Kernel errors: `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`, `K.Execution.SubjectCodeInvalid`, `K.Execution.TransitionTimeInvalid`. | `application/problem+json` | [`Kernel_ProblemDetails`](#schema-kernel-problemdetails) |
+| `423` | Locked. Kernel errors: `K.Observation.Locked`. | `application/problem+json` | [`Kernel_ProblemDetails`](#schema-kernel-problemdetails) |
 
 **Registered Kernel Error Codes (`x-kernel-errors`)**
 
@@ -2865,6 +2856,7 @@ Reads over the tenant's unique study and subject indexes without listing sites. 
 | `422` | `K.Command.TenantRequired` |
 | `422` | `K.Execution.SubjectCodeInvalid` |
 | `422` | `K.Execution.TransitionTimeInvalid` |
+| `423` | `K.Observation.Locked` |
 
 </details>
 
@@ -3108,7 +3100,7 @@ Streams JSON, CDISC ODM v1.3.2 XML, printable HTML, or certified PDF (%PDF-1.7) 
 
 ## Schemas
 
-Deduplicated component schemas exported in `components.schemas` (151 total). Operation payloads and responses link here so nested models are defined once per page.
+Deduplicated component schemas exported in `components.schemas` (148 total). Operation payloads and responses link here so nested models are defined once per page.
 
 ### `Kernel_AnonymousTypeOfstringAndstring` {#schema-kernel-anonymoustypeofstringandstring}
 
@@ -4238,13 +4230,14 @@ Deduplicated component schemas exported in `components.schemas` (151 total). Ope
 - **Type:** object
 
 <details class="api-schema-details">
-<summary>Properties (19)</summary>
+<summary>Properties (25)</summary>
 
 | Property | Type | Required | Description |
 | -------- | ---- | -------- | ----------- |
 | `answered` | `boolean` | `required` |  |
 | `collection_spec_id` | `string` \| `null` | `required` |  |
 | `collection_title` | `string` \| `null` | `required` |  |
+| `current_revision` | `integer` (`int32`) \| `null` | `optional` |  |
 | `detail` | `string` \| `null` | `optional` |  |
 | `finding_ref` | `string` \| `null` | `optional` |  |
 | `item_id` | `string` \| `null` | `required` |  |
@@ -4255,12 +4248,17 @@ Deduplicated component schemas exported in `components.schemas` (151 total). Ope
 | `next_action` | `string` | `required` |  |
 | `next_capability` | `string` | `required` |  |
 | `owner` | `string` | `required` |  |
+| `planned_activity_id` | `string` \| `null` | `optional` |  |
+| `planned_activity_name` | `string` \| `null` | `optional` |  |
+| `planned_date` | `string` (`date`) \| `null` | `optional` |  |
 | `query_ref` | `string` \| `null` | `required` |  |
 | `query_text` | `string` \| `null` | `required` |  |
 | `rule_id` | `string` \| `null` | `optional` |  |
+| `signature_superseded` | `boolean` | `optional` |  |
 | `subject_code` | `string` \| `null` | `required` |  |
 | `target_kind` | `string` | `required` |  |
 | `target_ref` | `string` \| `null` | `required` |  |
+| `window_end` | `string` (`date`) \| `null` | `optional` |  |
 
 </details>
 
@@ -4269,7 +4267,7 @@ Deduplicated component schemas exported in `components.schemas` (151 total). Ope
 - **Type:** object
 
 <details class="api-schema-details">
-<summary>Properties (12)</summary>
+<summary>Properties (15)</summary>
 
 | Property | Type | Required | Description |
 | -------- | ---- | -------- | ----------- |
@@ -4285,6 +4283,9 @@ Deduplicated component schemas exported in `components.schemas` (151 total). Ope
 | `scope_ref` | `string` | `required` |  |
 | `study_code` | `string` | `required` |  |
 | `study_ref` | `string` | `required` |  |
+| `unopened_visit_count` | `integer` (`int32`) | `optional` |  |
+| `unsigned_form_count` | `integer` (`int32`) | `optional` |  |
+| `unverified_value_count` | `integer` (`int32`) | `optional` |  |
 
 </details>
 
@@ -4859,6 +4860,22 @@ Deduplicated component schemas exported in `components.schemas` (151 total). Ope
 | `rows` | array of [`Kernel_KernelSoaRowResponse`](#schema-kernel-kernelsoarowresponse) | `required` |  |
 | `title` | `string` | `required` |  |
 | `version` | `string` | `required` |  |
+
+</details>
+
+### `Kernel_KernelScopeWriteLockResponse` {#schema-kernel-kernelscopewritelockresponse}
+
+- **Type:** object
+
+<details class="api-schema-details">
+<summary>Properties (4)</summary>
+
+| Property | Type | Required | Description |
+| -------- | ---- | -------- | ----------- |
+| `lock_kind` | `string` \| `null` | `required` |  |
+| `locked` | `boolean` | `required` |  |
+| `scope_kind` | `string` \| `null` | `required` |  |
+| `study_exists` | `boolean` | `required` |  |
 
 </details>
 
@@ -5482,71 +5499,6 @@ Deduplicated component schemas exported in `components.schemas` (151 total). Ope
 | Property | Type | Required | Description |
 | -------- | ---- | -------- | ----------- |
 | `protocol_content` | `string` | `required` |  |
-
-</details>
-
-### `Kernel_McpJsonRpcError` {#schema-kernel-mcpjsonrpcerror}
-
-- **Type:** object
-- **Description:** JSON-RPC 2.0 error object returned when protocol parsing or method dispatch fails.
-
-<details class="api-schema-details">
-<summary>Properties (3)</summary>
-
-| Property | Type | Required | Description |
-| -------- | ---- | -------- | ----------- |
-| `code` | `integer` (`int32`) | `required` |  |
-| `data` | `object` \| `null` | `optional` |  |
-| `message` | `string` | `required` |  |
-
-</details>
-
-### `Kernel_McpJsonRpcRequest` {#schema-kernel-mcpjsonrpcrequest}
-
-- **Type:** object
-- **Description:** JSON-RPC 2.0 request or notification message sent over the Streamable HTTP MCP transport.
-
-<details class="api-schema-details">
-<summary>Properties (4)</summary>
-
-| Property | Type | Required | Description |
-| -------- | ---- | -------- | ----------- |
-| `id` | `integer` \| `null` | `optional` | Caller request correlation identifier (omitted on notifications such as notifications/initialized). |
-| `jsonrpc` | `string` (enum: `2.0`) | `required` | JSON-RPC protocol version (must be "2.0"). |
-| `method` | `string` (enum: `initialize`, `notifications/initialized`, `ping`, `tools/list`, `tools/call`) | `required` | MCP JSON-RPC method name. |
-| `params` | `object` \| `null` | `optional` | Method parameters (for tools/call, conforms to McpToolCallParams). |
-
-</details>
-
-### `Kernel_McpJsonRpcResponse` {#schema-kernel-mcpjsonrpcresponse}
-
-- **Type:** object
-- **Description:** JSON-RPC 2.0 response envelope carrying governed read-only tool metadata or ToolResultEnvelope content.
-
-<details class="api-schema-details">
-<summary>Properties (4)</summary>
-
-| Property | Type | Required | Description |
-| -------- | ---- | -------- | ----------- |
-| `error` | [`Kernel_McpJsonRpcError`](#schema-kernel-mcpjsonrpcerror) | `optional` |  |
-| `id` | `integer` \| `null` | `required` |  |
-| `jsonrpc` | `string` (enum: `2.0`) | `required` |  |
-| `result` | `object` \| `null` | `optional` | Method result payload (InitializeResult, ListToolsResult, or CallToolResult with ToolResultEnvelope). |
-
-</details>
-
-### `Kernel_McpToolCallParams` {#schema-kernel-mcptoolcallparams}
-
-- **Type:** object
-- **Description:** Parameters for a JSON-RPC 2.0 tools/call invocation against KernelToolNames.McpProfile.
-
-<details class="api-schema-details">
-<summary>Properties (2)</summary>
-
-| Property | Type | Required | Description |
-| -------- | ---- | -------- | ----------- |
-| `arguments` | `object` | `optional` | Tool-specific JSON arguments validated against the tool's InputSchema. |
-| `name` | `string` | `required` | Registered read-only tool identifier in KernelToolNames.McpProfile. |
 
 </details>
 

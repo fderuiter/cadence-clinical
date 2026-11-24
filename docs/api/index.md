@@ -5,9 +5,9 @@ Generated from `docs/openapi/*_openapi.json` by `pnpm cadence generate-api-docs`
 Each page documents the live HTTP operations, authorization policies, GxP headers (`X-Sig-Token`, `Idempotency-Key`, `X-Change-Reason`), RFC 7807 error contracts, and deduplicated `components.schemas` exported directly from the .NET 10 hosts (`pnpm cadence sync-openapi-spec`). The `openapi` quality gate fails whenever any operation omits an `operationId` or `summary` or when `docs/api/*.md` drifts from `docs/openapi/*.json`.
 
 - **Unified Gateway OpenAPI 3.1 Bundle:** [`cdisc_openapi.json`](../openapi/cdisc_openapi.json)
-- **Contract Coverage:** `20` OpenAPI contracts (`13` Active, `7` Scaffold in `ServiceTopology`), `346` documented operations, and `541` component schemas.
-- **Consolidated Composition Host (`kernel-api`):** [kernel](kernel.md) groups core `Kernel`, `Intelligence` (`POST /api/v1/ai/mcp`), and `Execution` operations, alongside dedicated module contracts [intelligence](intelligence.md) and [execution_forms](execution_forms.md).
-- **Legacy Reference Contracts:** Archived Python-era specs remain isolated under `docs/openapi/legacy/` for historical reference only.
+- **Contract Coverage:** `20` OpenAPI contracts (`13` Active, `7` Scaffold in `ServiceTopology`), `347` documented operations, and `542` component schemas.
+- **Consolidated Composition Host (`kernel-api`):** [kernel](kernel.md) groups core `Kernel` and kernel-backed `Execution` operations alongside the dedicated module contracts [intelligence](intelligence.md) (including `POST /api/v1/ai/mcp`) and [execution_forms](execution_forms.md).
+- **Legacy Reference Snapshot:** `docs/openapi/legacy/cdisc_openapi.json` retains the frozen Python-era aggregate snapshot solely for unmigrated `apps/web/src/api/types.ts` slices.
 
 | Service | Operations | Schemas | Maturity | Stubs (`501`) | OpenAPI JSON |
 | ------- | ---------- | ------- | -------- | ------------- | ------------ |
@@ -21,9 +21,9 @@ Each page documents the live HTTP operations, authorization policies, GxP header
 | [fileshare](fileshare.md) | 2 | 1 | <span class="VPBadge warning">Scaffold</span> | 0 | [`fileshare_openapi.json`](../openapi/fileshare_openapi.json) |
 | [gateway](gateway.md) | 3 | 6 | <span class="VPBadge tip">Active</span> | 0 | [`gateway_openapi.json`](../openapi/gateway_openapi.json) |
 | [imaging](imaging.md) | 11 | 17 | <span class="VPBadge tip">Active</span> | `1` | [`imaging_openapi.json`](../openapi/imaging_openapi.json) |
-| [intelligence](intelligence.md) | 12 | 20 | <span class="VPBadge tip">Active</span> | 0 | [`intelligence_openapi.json`](../openapi/intelligence_openapi.json) |
+| [intelligence](intelligence.md) | 13 | 24 | <span class="VPBadge tip">Active</span> | 0 | [`intelligence_openapi.json`](../openapi/intelligence_openapi.json) |
 | [interop](interop.md) | 28 | 46 | <span class="VPBadge tip">Active</span> | `1` | [`interop_openapi.json`](../openapi/interop_openapi.json) |
-| [kernel](kernel.md) | 72 | 151 | <span class="VPBadge tip">Active</span> | 0 | [`kernel_openapi.json`](../openapi/kernel_openapi.json) |
+| [kernel](kernel.md) | 72 | 148 | <span class="VPBadge tip">Active</span> | 0 | [`kernel_openapi.json`](../openapi/kernel_openapi.json) |
 | [knowledge](knowledge.md) | 15 | 18 | <span class="VPBadge tip">Active</span> | 0 | [`knowledge_openapi.json`](../openapi/knowledge_openapi.json) |
 | [notifications](notifications.md) | 3 | 5 | <span class="VPBadge warning">Scaffold</span> | 0 | [`notifications_openapi.json`](../openapi/notifications_openapi.json) |
 | [org](org.md) | 2 | 1 | <span class="VPBadge warning">Scaffold</span> | 0 | [`org_openapi.json`](../openapi/org_openapi.json) |

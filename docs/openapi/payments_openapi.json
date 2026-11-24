@@ -4677,6 +4677,12 @@
               "string"
             ]
           },
+          "syncVerificationToken": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
           "studyId": {
             "type": [
               "null",

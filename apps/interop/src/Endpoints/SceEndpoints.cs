@@ -526,13 +526,11 @@ public static class SceEndpoints
 
             await db.SaveChangesAsync();
 
-            return Results.Ok(new Dictionary<string, object>
-            {
-                ["status"] = "REVOKED",
-                ["token_id"] = token.TokenId,
-                ["revoked_at"] = now.ToString("O"),
-                ["reason"] = revocationReason
-            });
+            return Results.Ok(new RevokeLockTokenResponseDto(
+                Status: "REVOKED",
+                TokenId: token.TokenId,
+                RevokedAt: now.ToString("O"),
+                Reason: revocationReason));
         })
             .WithName("RevokeSceLockToken")
             .WithSummary("Revokes an active database lock authorization token and logs the revocation.")
@@ -893,18 +891,16 @@ public static class SceEndpoints
                 return Results.NotFound(new { error = $"Artifact '{artifact_id}' not found in run '{run_id}'." });
             }
 
-            return Results.Ok(new Dictionary<string, object?>
-            {
-                ["artifact_id"] = artifact.ArtifactId,
-                ["run_id"] = run.RunId,
-                ["name"] = artifact.Name,
-                ["artifact_type"] = artifact.ArtifactType,
-                ["file_path"] = artifact.FilePath,
-                ["mime_type"] = artifact.MimeType,
-                ["size_bytes"] = artifact.SizeBytes,
-                ["sha256_digest"] = artifact.Sha256Digest,
-                ["content_preview"] = artifact.ContentPreview
-            });
+            return Results.Ok(new SceArtifactDetailResponseDto(
+                ArtifactId: artifact.ArtifactId,
+                RunId: run.RunId,
+                Name: artifact.Name,
+                ArtifactType: artifact.ArtifactType,
+                FilePath: artifact.FilePath,
+                MimeType: artifact.MimeType,
+                SizeBytes: artifact.SizeBytes,
+                Sha256Digest: artifact.Sha256Digest,
+                ContentPreview: artifact.ContentPreview));
         })
             .WithName("GetSceRunArtifact")
             .WithSummary("Retrieves metadata, SHA-256 digest, and preview for an output artifact from an SCE run.")

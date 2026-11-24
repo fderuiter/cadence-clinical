@@ -180,6 +180,7 @@ Generated from `docs/openapi/imaging_openapi.json` by `pnpm cadence generate-api
 | `201` | Created | `application/json` | [`Imaging_IngestionResult`](#schema-imaging-ingestionresult) |
 | `400` | Bad Request | `application/problem+json` | [`Imaging_ProblemDetails`](#schema-imaging-problemdetails) |
 | `403` | Forbidden | `application/problem+json` | [`Imaging_ProblemDetails`](#schema-imaging-problemdetails) |
+| `413` | Payload Too Large | `application/problem+json` | [`Imaging_ProblemDetails`](#schema-imaging-problemdetails) |
 
 </details>
 
@@ -262,6 +263,7 @@ Generated from `docs/openapi/imaging_openapi.json` by `pnpm cadence generate-api
 | `200` | OK | `application/octet-stream` | `string` (`binary`) |
 | `403` | Forbidden | `application/problem+json` | [`Imaging_ProblemDetails`](#schema-imaging-problemdetails) |
 | `404` | Not Found | `application/problem+json` | [`Imaging_ProblemDetails`](#schema-imaging-problemdetails) |
+| `422` | Unprocessable Entity | `application/problem+json` | [`Imaging_ProblemDetails`](#schema-imaging-problemdetails) |
 
 </details>
 

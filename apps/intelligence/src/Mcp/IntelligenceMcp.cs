@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Cadence.Kernel;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Tenancy;
+using Cadence.Modules.Intelligence.Infrastructure.Persistence;
 using Cadence.Modules.Intelligence.Tools;
 using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
@@ -74,7 +75,7 @@ public static class IntelligenceMcp
             .WithListToolsHandler(ListToolsAsync)
             .WithCallToolHandler(CallToolAsync);
 
-        services.Configure<OpenApiOptions>("kernel", options => options.AddDocumentTransformer(TransformKernelOpenApiAsync));
+        services.Configure<OpenApiOptions>(IntelligenceDbContext.Module, options => options.AddDocumentTransformer(TransformIntelligenceOpenApiAsync));
         return services;
     }
 
@@ -165,7 +166,7 @@ public static class IntelligenceMcp
         public static IntelligenceMcpEndpointMarker Instance { get; } = new();
     }
 
-    private static Task TransformKernelOpenApiAsync(
+    private static Task TransformIntelligenceOpenApiAsync(
         OpenApiDocument document,
         OpenApiDocumentTransformerContext context,
         CancellationToken cancellationToken)

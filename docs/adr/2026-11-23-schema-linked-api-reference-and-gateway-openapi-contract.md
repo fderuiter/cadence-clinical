@@ -13,7 +13,7 @@
 
 Following the .NET 10 platform migration and Clinical Kernel consolidation ([ADR-2244](2026-09-29-clinical-kernel-modular-monolith-architecture.md), [ADR-2601](2026-10-19-one-composition-host-for-the-kernel-and-its-modules.md)), Cadence's OpenAPI contracts (`docs/openapi/*.json`) and VitePress REST API reference (`docs/api/*.md`) exhibited six structural gaps:
 
-1. **Missing Gateway & MCP contracts:** `apps/gateway` (including Part 11 step-up token issuance at `POST /api/v1/auth/signature-verification`) had no exported `gateway_openapi.json` because booting YARP in-memory exposed `{**catch-all}` proxy routes, and `IntelligenceMcp.cs` (`POST /api/v1/ai/mcp`) lacked OpenAPI metadata in `kernel_openapi.json`.
+1. **Missing Gateway & MCP contracts:** `apps/gateway` (including Part 11 step-up token issuance at `POST /api/v1/auth/signature-verification`) had no exported `gateway_openapi.json` because booting YARP in-memory exposed `{**catch-all}` proxy routes, and `IntelligenceMcp.cs` (`POST /api/v1/ai/mcp`) lacked OpenAPI metadata in `intelligence_openapi.json`.
 2. **Flat, schema-less Markdown reference:** `ApiDocsGeneratorService` emitted only a 4-column method/path/operationId/summary table, discarding all `500+` `components.schemas` DTOs, path/query parameters, request bodies, RFC 7807 error responses, and `x-kernel-errors` codes.
 3. **Undocumented security & GxP headers:** Exported specs lacked `BearerAuth` security schemes, `Permission:<resource:action>` / `SignedInCaller` metadata, rate-limit policy annotations, and regulated headers (`X-Sig-Token`, `Idempotency-Key`, `X-Change-Reason`).
 4. **Operation metadata & response gaps:** Several Minimal API endpoints omitted `operationId`, `summary`, or typed `2xx` schemas, and `cdisc_openapi.json` appended `/api/v1` to `servers[].url` even though every path already starts with `/api/v1/...`.
@@ -63,8 +63,8 @@ Following the .NET 10 platform migration and Clinical Kernel consolidation ([ADR
 ## 5. Consequences & Trade-offs
 
 - **Positive Impact:**
-  - All `20` service/module contracts (`317` per-contract paths / `300` unique paths in `cdisc_openapi.json`, `346` per-contract operations / `329` unique operations, `541` schemas) have `0` missing `operationId`s, `0` blank summaries, `0` empty `200` schemas, and complete `BearerAuth` + GxP header documentation.
-  - `gateway_openapi.json` and `docs/api/gateway.md` document `POST /api/v1/auth/signature-verification` without leaking YARP proxy catch-alls, and `kernel_openapi.json` / `docs/api/kernel.md` document `POST /api/v1/ai/mcp`.
+  - All `20` service/module contracts (`318` per-contract paths / `301` unique paths in `cdisc_openapi.json`, `347` per-contract operations / `330` unique operations, `542` schemas) have `0` missing `operationId`s, `0` blank summaries, `0` empty `200` schemas, and complete `BearerAuth` + GxP header documentation.
+  - `gateway_openapi.json` and `docs/api/gateway.md` document `POST /api/v1/auth/signature-verification` without leaking YARP proxy catch-alls, and `intelligence_openapi.json` / `docs/api/intelligence.md` document `POST /api/v1/ai/mcp`.
   - Both `docs/api/*.md` headers and the VitePress `REST API Reference` sidebar surface `Active` and `Scaffold` badges directly from `ServiceTopology`, and HTTP `501` stubs are prominently flagged.
 - **Negative Impact / Technical Debt:**
   - New Minimal API endpoints must declare both `.WithName(...)` (`operationId`) and `.WithSummary(...)`; omitting either now fails `pnpm cadence check openapi`.
