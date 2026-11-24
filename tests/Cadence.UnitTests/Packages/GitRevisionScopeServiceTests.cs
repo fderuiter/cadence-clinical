@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 
+using Cadence.Cli.Services;
 using Cadence.ToolingCore.Services;
 
 using FluentAssertions;
@@ -363,6 +365,129 @@ public sealed class GitRevisionScopeServiceTests : IDisposable
         conflictPreview.Succeeded.Should().BeFalse();
         conflictPreview.HasConflicts.Should().BeTrue();
         conflictPreview.ConflictingFiles.Should().Equal("apps/shared.cs");
+    }
+
+    [Fact]
+    public void ResolveEventScope_AndResolveFileScanScope_DistinguishWorkflowDispatchVersionTagAndNewReleaseBranchPushes()
+    {
+        Write("apps/base.cs", "class Base {}\n");
+        Commit("initial main");
+        string branchPoint = Git("rev-parse", "HEAD").Trim();
+        Git("tag", "v1.0.1");
+
+        Git("checkout", "-q", "-b", "release/1.2");
+        Write("apps/release-patch.cs", "class ReleasePatch {}\n");
+        Commit("release patch");
+        string releaseHead = Git("rev-parse", "HEAD").Trim();
+
+        // Advance origin/main independently so HEAD and origin/main diverge.
+        Git("checkout", "-q", "main");
+        Write("apps/main-diverged.cs", "class MainDiverged {}\n");
+        Commit("diverged main commit");
+        Git("update-ref", "refs/remotes/origin/main", "HEAD");
+
+        Git("checkout", "-q", "v1.0.1");
+        string tagHead = Git("rev-parse", "HEAD").Trim();
+
+        var tagPushScope = GitRevisionScopeService.ResolveEventScope(
+            _dir,
+            pushBefore: GitRevisionScopeService.AllZeroSha,
+            eventName: "push",
+            gitRef: "refs/tags/v1.0.1");
+        tagPushScope.Kind.Should().Be(GitEventScopeKind.TargetRef);
+        tagPushScope.CompareBase.Should().Be(tagHead);
+
+        var tagDispatchScope = GitRevisionScopeService.ResolveEventScope(
+            _dir,
+            eventName: "workflow_dispatch",
+            gitRef: "refs/tags/v1.0.1");
+        tagDispatchScope.Kind.Should().Be(GitEventScopeKind.TargetRef);
+        tagDispatchScope.CompareBase.Should().Be(tagHead);
+
+        var releaseDispatchScope = GitRevisionScopeService.ResolveEventScope(
+            _dir,
+            environment: key => key switch
+            {
+                GitRevisionScopeService.GitHubEventNameVariable => "workflow_dispatch",
+                GitRevisionScopeService.GitHubRefVariable => "refs/heads/release/1.2",
+                _ => null,
+            });
+        releaseDispatchScope.Kind.Should().Be(GitEventScopeKind.TargetRef);
+
+        var unprotectedDispatch = GitRevisionScopeService.ResolveEventScope(
+            _dir,
+            eventName: "workflow_dispatch",
+            gitRef: "refs/heads/feature/unapproved");
+        unprotectedDispatch.Kind.Should().Be(GitEventScopeKind.UnprotectedTargetRef);
+        unprotectedDispatch.CompareBase.Should().BeNull();
+
+        // New release/* branch push with 40-zero BEFORE_SHA scopes strictly to merge-base(origin/main, HEAD)..HEAD.
+        Git("checkout", "-q", "release/1.2");
+        var newReleaseBranchScope = GitRevisionScopeService.ResolveEventScope(
+            _dir,
+            pushBefore: GitRevisionScopeService.AllZeroSha,
+            eventName: "push",
+            gitRef: "refs/heads/release/1.2");
+        newReleaseBranchScope.Kind.Should().Be(GitEventScopeKind.NewBranchPush);
+        newReleaseBranchScope.CompareBase.Should().Be(branchPoint);
+        newReleaseBranchScope.HeadCommit.Should().Be(releaseHead);
+
+        var newReleaseFileScope = GitRevisionScopeService.ResolveFileScanScope(
+            _dir,
+            pushBefore: GitRevisionScopeService.AllZeroSha,
+            eventName: "push",
+            gitRef: "refs/heads/release/1.2");
+        newReleaseFileScope.Kind.Should().Be(GitScopeKind.BranchDiff);
+        newReleaseFileScope.CompareBase.Should().Be(branchPoint);
+        newReleaseFileScope.Files.Should().Equal("apps/release-patch.cs");
+    }
+
+    [Fact]
+    public void MergeReadiness_And_BranchFreshness_SkipOriginMainOnProtectedDispatchAndTagPushes_WhileEnforcingPullRequestsAndLocalRuns()
+    {
+        Write("apps/shared.cs", "class Shared { public const int Value = 1; }\n");
+        Commit("base commit");
+
+        Git("checkout", "-q", "-b", "release/1.0");
+        Write("apps/shared.cs", "class Shared { public const int Value = 2; }\n");
+        Commit("release commit");
+        Git("tag", "v1.0.1");
+
+        // Advance origin/main with a conflicting modification to apps/shared.cs.
+        Git("checkout", "-q", "main");
+        Write("apps/shared.cs", "class Shared { public const int Value = 99; }\n");
+        Commit("diverged conflicting main");
+        Git("update-ref", "refs/remotes/origin/main", "HEAD");
+
+        Git("checkout", "-q", "v1.0.1");
+
+        var mergeReadiness = QualityGates.All.Single(g => g.Name == "merge-readiness");
+        var branchFreshness = QualityGates.All.Single(g => g.Name == "branch-freshness");
+
+        GateContext ContextFor(string? eventName = null, string? gitRef = null, string? pushBefore = null, string? baseRef = null) =>
+            new(_dir, BaseRef: baseRef, PushBefore: pushBefore, EventName: eventName, GitRef: gitRef);
+
+        // Protected workflow_dispatch runs and 40-zero v* tag pushes skip origin/main checks even when origin/main conflicts.
+        mergeReadiness.Run(ContextFor("workflow_dispatch", "refs/tags/v1.0.1")).Should().BeTrue();
+        branchFreshness.Run(ContextFor("workflow_dispatch", "refs/tags/v1.0.1")).Should().BeTrue();
+        mergeReadiness.Run(ContextFor("workflow_dispatch", "refs/heads/release/1.0")).Should().BeTrue();
+        branchFreshness.Run(ContextFor("workflow_dispatch", "refs/heads/release/1.0")).Should().BeTrue();
+        mergeReadiness.Run(ContextFor("workflow_dispatch", "refs/heads/main")).Should().BeTrue();
+        branchFreshness.Run(ContextFor("workflow_dispatch", "refs/heads/main")).Should().BeTrue();
+        mergeReadiness.Run(ContextFor("push", "refs/tags/v1.0.1", GitRevisionScopeService.AllZeroSha)).Should().BeTrue();
+        branchFreshness.Run(ContextFor("push", "refs/tags/v1.0.1", GitRevisionScopeService.AllZeroSha)).Should().BeTrue();
+
+        // Unprotected workflow_dispatch refs fail closed.
+        mergeReadiness.Run(ContextFor("workflow_dispatch", "refs/heads/feature/x")).Should().BeFalse();
+        branchFreshness.Run(ContextFor("workflow_dispatch", "refs/heads/feature/x")).Should().BeFalse();
+
+        // Local runs, pull_request, and merge_group preserve strict origin/<base> enforcement.
+        mergeReadiness.Run(ContextFor()).Should().BeFalse();
+        branchFreshness.Run(ContextFor()).Should().BeFalse();
+        mergeReadiness.Run(ContextFor("pull_request", "refs/pull/42/merge", baseRef: "origin/main")).Should().BeFalse();
+        branchFreshness.Run(ContextFor("pull_request", "refs/pull/42/merge", baseRef: "origin/main")).Should().BeFalse();
+        mergeReadiness.Run(ContextFor("merge_group", "refs/heads/gh-readonly-queue/main/pr-42", baseRef: "origin/main")).Should().BeFalse();
+        branchFreshness.Run(ContextFor("merge_group", "refs/heads/gh-readonly-queue/main/pr-42", baseRef: "origin/main")).Should().BeFalse();
     }
 
     private static void DeleteDirectorySafe(string path)

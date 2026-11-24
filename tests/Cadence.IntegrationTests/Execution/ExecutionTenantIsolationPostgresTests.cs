@@ -9,15 +9,19 @@ using System.Threading.Tasks;
 using Cadence.Apps.Execution.Application.Compliance;
 using Cadence.Apps.Execution.Application.Serialization;
 using Cadence.Apps.Execution.Application.Subjects;
+using Cadence.Apps.Execution.Endpoints;
 using Cadence.Apps.Execution.Infrastructure.Persistence;
+using Cadence.Database;
 using Cadence.Database.Tenancy;
 using Cadence.Security.Authentication;
+using Cadence.Security.Rbac;
 using Cadence.Testing;
 using Cadence.Testing.Security;
 using Cadence.TestSupport.Execution;
 
 using FluentAssertions;
 
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 using Xunit;
@@ -294,6 +298,165 @@ public sealed class ExecutionTenantIsolationPostgresTests(ExecutionPostgresApiFa
             JsonOptions,
             ct);
         betaListAfter!.Items.Single().EnrollmentIndex.Should().Be(0);
+    }
+
+    [Fact(DisplayName = "ExecutionDbSeeder_SeedsApprovedSchemeAndEncryptedSiteKitsStrictlyInDemoTenant_EnablingImmediateCoordinatorRandomization")]
+    [GxPRequirement("PRD-SUB-003")]
+    [GxPRequirement("PRD-SYS-192")]
+    public async Task ExecutionDbSeederSeedsApprovedSchemeAndEncryptedSiteKitsStrictlyInDemoTenantEnablingImmediateCoordinatorRandomization()
+    {
+        factory.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+
+        using (var warm = factory.CreateSignedClient())
+        {
+            _ = await warm.GetAsync(new Uri("/healthz", UriKind.Relative), ct);
+        }
+
+        using (var seedScope = factory.Services.CreateSeedingScope())
+        {
+            var db = seedScope.ServiceProvider.GetRequiredService<ExecutionDbContext>();
+            var tenantScope = seedScope.ServiceProvider.GetRequiredService<ITenantScope>();
+            await ExecutionDbSeeder.SeedAsync(db, tenantScope, ct);
+        }
+
+        // 1. Non-demo tenants (tenant-beta) see zero seeded randomization schemes and zero seeded IP kits for CADENCE-101.
+        using (var betaStat = factory.CreateSignedClient(new GatewayIdentity(
+            UserId: "stat-beta",
+            Roles: [RoleNormalization.ROLE_UNBLINDED_STATISTICIAN],
+            SiteIds: [],
+            TenantId: "tenant-beta",
+            StudyIds: ["CADENCE-101"])))
+        {
+            using var betaSchemes = await betaStat.GetAsync(
+                new Uri("/api/v1/execution/randomization/schemes?study_id=CADENCE-101", UriKind.Relative),
+                ct);
+            betaSchemes.StatusCode.Should().Be(HttpStatusCode.OK, await betaSchemes.Content.ReadAsStringAsync(ct));
+            JsonDocument.Parse(await betaSchemes.Content.ReadAsStringAsync(ct)).RootElement.GetArrayLength().Should().Be(0);
+        }
+
+        using (var betaPharmacist = factory.CreateSignedClient(new GatewayIdentity(
+            UserId: "pharm-beta",
+            Roles: [RoleNormalization.ROLE_PHARMACIST],
+            SiteIds: ["SITE-101"],
+            TenantId: "tenant-beta",
+            StudyIds: ["CADENCE-101"])))
+        {
+            using var betaKits = await betaPharmacist.GetAsync(
+                new Uri("/api/v1/execution/rtsm/kits/inventory/CADENCE-101/SITE-101", UriKind.Relative),
+                ct);
+            betaKits.StatusCode.Should().Be(HttpStatusCode.OK, await betaKits.Content.ReadAsStringAsync(ct));
+            JsonDocument.Parse(await betaKits.Content.ReadAsStringAsync(ct)).RootElement.GetArrayLength().Should().Be(0);
+        }
+
+        // 2. Demo tenant (cadence-local) sees the approved v1 scheme (8 encrypted slots) and ACTIVE_AT_SITE kits at SITE-101 & SITE-102,
+        //    with zero clear-text arms and zero unhashed audit rows.
+        using (var verifyScope = factory.Services.CreateScope())
+        {
+            var tenantScope = verifyScope.ServiceProvider.GetRequiredService<ITenantScope>();
+            using var bound = tenantScope.Bind(ExecutionDbSeeder.DemoTenantCode);
+            var db = verifyScope.ServiceProvider.GetRequiredService<ExecutionDbContext>();
+            Guid demoTenantId = db.ActiveBoundTenantId!.Value;
+
+            var slots = await db.RandomizationListSlots.AsNoTracking()
+                .Where(s => EF.Property<Guid>(s, StandaloneTenantModelExtensions.TenantPropertyName) == demoTenantId)
+                .ToListAsync(ct);
+            slots.Should().HaveCount(8);
+            slots.Should().OnlyContain(s =>
+                !string.IsNullOrWhiteSpace(s.ArmCiphertext)
+                && !s.ArmCiphertext.Contains("PLACEBO", StringComparison.OrdinalIgnoreCase)
+                && !s.ArmCiphertext.Contains("ACTIVE", StringComparison.OrdinalIgnoreCase));
+
+            var kits = await db.IpKitInventoryItems.AsNoTracking()
+                .Where(k => EF.Property<Guid>(k, StandaloneTenantModelExtensions.TenantPropertyName) == demoTenantId
+                    && k.StudyId == "CADENCE-101")
+                .ToListAsync(ct);
+            kits.Should().HaveCount(8);
+            kits.Should().OnlyContain(k =>
+                !string.IsNullOrWhiteSpace(k.TreatmentArmCiphertext)
+                && !k.TreatmentArmCiphertext!.Contains("PLACEBO", StringComparison.OrdinalIgnoreCase)
+                && !k.TreatmentArmCiphertext.Contains("ACTIVE", StringComparison.OrdinalIgnoreCase));
+
+            var unhashedAudits = await db.AuditLogEntries.AsNoTracking()
+                .CountAsync(a => string.IsNullOrWhiteSpace(a.BlockHash), ct);
+            unhashedAudits.Should().Be(0);
+        }
+
+        // 3. Site coordinator in cadence-local registers/enrolls a consented participant at activated SITE-101 and immediately randomizes
+        //    using the pre-seeded baseline scheme and site kits.
+        string demoSubjectCode = $"SUBJ-101-{Guid.NewGuid().ToString("N")[..6].ToUpperInvariant()}";
+        var demoCrc = new GatewayIdentity(
+            UserId: "demo-crc-rand",
+            Roles: ["crc"],
+            SiteIds: ["SITE-101"],
+            TenantId: ExecutionDbSeeder.DemoTenantCode,
+            StudyIds: ["CADENCE-101"],
+            ChangeReason: Reason);
+        using var crcClient = factory.CreateSignedClient(demoCrc);
+
+        using var createResp = await crcClient.PostAsJsonAsync(
+            "/api/v1/execution/subjects",
+            new SubjectCreateRequest(demoSubjectCode, "CADENCE-101", "SITE-101", null),
+            JsonOptions,
+            ct);
+        createResp.StatusCode.Should().Be(HttpStatusCode.Created, await createResp.Content.ReadAsStringAsync(ct));
+
+        using var consentResp = await crcClient.PostAsJsonAsync(
+            $"/api/v1/execution/subjects/{demoSubjectCode}/consent",
+            new SubjectConsentRequest(
+                new ProtocolVersionPayload("CADENCE-101", "1.0", 1),
+                IcfSigned: true,
+                IcfSignedDate: new DateTimeOffset(2026, 11, 21, 0, 0, 0, TimeSpan.Zero),
+                RequiresReconsent: false,
+                IsPaperOverride: false),
+            JsonOptions,
+            ct);
+        consentResp.StatusCode.Should().Be(HttpStatusCode.OK, await consentResp.Content.ReadAsStringAsync(ct));
+
+        using var enrollResp = await crcClient.PatchAsJsonAsync(
+            $"/api/v1/execution/subjects/{demoSubjectCode}/state",
+            new { status = "ENROLLED" },
+            ct);
+        enrollResp.StatusCode.Should().Be(HttpStatusCode.OK, await enrollResp.Content.ReadAsStringAsync(ct));
+
+        string randPath = RandomizationEndpoints.RandomizeSubjectAction(demoSubjectCode);
+        using var randReq = new HttpRequestMessage(HttpMethod.Post, randPath)
+        {
+            Content = JsonContent.Create(new { })
+        };
+        randReq.Headers.Add(
+            GatewayHeaders.SigToken,
+            TestSecurityContext.CreateSigToken(
+                demoCrc.UserId,
+                randPath,
+                RandomizationEndpoints.RandomizeSubjectSemanticAction,
+                roles: ["crc"]));
+
+        using var randResp = await crcClient.SendAsync(randReq, ct);
+        string randBody = await randResp.Content.ReadAsStringAsync(ct);
+        randResp.StatusCode.Should().Be(HttpStatusCode.OK, randBody);
+        randBody.Should().NotContain("PLACEBO").And.NotContain("ACTIVE");
+
+        using var randJson = JsonDocument.Parse(randBody);
+        randJson.RootElement.GetProperty("status").GetString().Should().Be("RANDOMIZED");
+        string assignedKit = randJson.RootElement.GetProperty("kit_number").GetString()!;
+        assignedKit.Should().BeOneOf("KIT-1001", "KIT-1002", "KIT-1003", "KIT-1004");
+
+        // Unblinded statistician in cadence-local inspects revealed treatment_group and investigational_product_id.
+        using var statClient = factory.CreateSignedClient(new GatewayIdentity(
+            UserId: "demo-stat-unblinded",
+            Roles: [RoleNormalization.ROLE_UNBLINDED_STATISTICIAN],
+            SiteIds: [],
+            TenantId: ExecutionDbSeeder.DemoTenantCode,
+            StudyIds: ["CADENCE-101"],
+            UnblindedAccess: true));
+        using var detailResp = await statClient.GetAsync(
+            new Uri($"/api/v1/execution/subjects/{demoSubjectCode}", UriKind.Relative),
+            ct);
+        detailResp.StatusCode.Should().Be(HttpStatusCode.OK, await detailResp.Content.ReadAsStringAsync(ct));
+        using var detailJson = JsonDocument.Parse(await detailResp.Content.ReadAsStringAsync(ct));
+        detailJson.RootElement.GetProperty("treatment_group").GetString().Should().BeOneOf("PLACEBO", "ACTIVE");
+        detailJson.RootElement.GetProperty("investigational_product_id").GetString().Should().Be(assignedKit);
     }
 
     private static JsonSerializerOptions CreateJsonOptions()

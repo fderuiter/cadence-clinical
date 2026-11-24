@@ -241,6 +241,7 @@
 
           <ObservationView
             v-else-if="openObservationRef"
+            ref="observationViewRef"
             :key="openObservationRef"
             embedded
             :study-code="studyCode"
@@ -1709,6 +1710,7 @@ const loadedForm = ref<EcrfForm | null>(null);
 const formWorkspaceDirty = ref(false);
 const documentsWorkspaceDirty = ref(false);
 const observationWorkspaceDirty = ref(false);
+const observationViewRef = ref<{ discardCorrection?: () => void } | null>(null);
 const loadedObservation = ref<KernelObservation | null>(null);
 const resolvedLineage = ref<{ siteCode: string; subjectCode: string } | null>(
   null
@@ -2184,14 +2186,11 @@ function formLocationById(formId: string, itemId?: string | null) {
   return studyLocation({
     stage: preserveDataSection ? "data" : "conduct",
     section: preserveDataSection ? section.value!.id : undefined,
-    site: preserveDataSection
-      ? siteFilter.value ||
-        (!activeParticipantNodeText.value
-          ? zoomSite.value || undefined
-          : undefined)
-      : !activeParticipantNodeText.value
+    site:
+      siteFilter.value ||
+      (!activeParticipantNodeText.value
         ? zoomSite.value || undefined
-        : undefined,
+        : undefined),
     participant: activeParticipantNodeText.value || undefined,
     form: formRef ?? undefined,
     item: itemId || undefined,
@@ -2207,6 +2206,7 @@ function observationLocationFromRecord(
   const formRef = formId ? collectionInstanceRef(formId) : null;
   return studyLocation({
     stage: "conduct",
+    site: siteFilter.value || undefined,
     participant: activeParticipantNodeText.value || undefined,
     form: formRef ?? undefined,
     item: itemId || undefined,
@@ -2225,14 +2225,11 @@ function observationLocationFromForm(
   return studyLocation({
     stage: preserveDataSection ? "data" : "conduct",
     section: preserveDataSection ? section.value!.id : undefined,
-    site: preserveDataSection
-      ? siteFilter.value ||
-        (!activeParticipantNodeText.value
-          ? zoomSite.value || undefined
-          : undefined)
-      : !activeParticipantNodeText.value
+    site:
+      siteFilter.value ||
+      (!activeParticipantNodeText.value
         ? zoomSite.value || undefined
-        : undefined,
+        : undefined),
     participant: activeParticipantNodeText.value || undefined,
     form: formRef ?? undefined,
     item: itemId || highlightItemQuery.value || undefined,
@@ -2324,7 +2321,15 @@ const observationReturnLocation = computed(() => {
     });
   }
   if (activeFormParticipant.value) {
-    return recordLocationFor(activeFormParticipant.value);
+    const base = recordLocationFor(activeFormParticipant.value);
+    if (siteFilter.value) {
+      return studyLocation({
+        stage: "conduct",
+        site: siteFilter.value,
+        participant: base.query.participant as string | undefined,
+      });
+    }
+    return base;
   }
   if (zoomSite.value) {
     return studyLocation({
@@ -2990,7 +2995,7 @@ function leavesActiveDocuments(to: RouteLocationNormalized): boolean {
   const nextStudyCode = single(to.params.studyCode).trim();
   if (!nextStudyCode || nextStudyCode !== studyCode.value) return true;
   if (parseNodeRef(to.query.proposal)?.kind === "proposal") return true;
-  if (observationNodeRef(to.query.observation)) return true;
+  if (observationNodeRef(single(to.query.observation))) return true;
   if (single(to.query.form).trim()) return true;
   const nextStage = single(to.query.stage).trim() || "start";
   const nextSection = single(to.query.section).trim();
@@ -3029,7 +3034,10 @@ function leavesActiveObservation(to: RouteLocationNormalized): boolean {
   const nextStudyCode = single(to.params.studyCode).trim();
   if (!nextStudyCode || nextStudyCode !== studyCode.value) return true;
   if (parseNodeRef(to.query.proposal)?.kind === "proposal") return true;
-  return observationNodeRef(to.query.observation) !== openObservationRef.value;
+  return (
+    observationNodeRef(single(to.query.observation)) !==
+    openObservationRef.value
+  );
 }
 
 useUnsavedNavigationGuard({
@@ -3080,6 +3088,7 @@ useUnsavedNavigationGuard({
     (documentsWorkspaceDirty.value && leavesActiveDocuments(to)),
   onConfirmedDiscard: () => {
     if (observationWorkspaceDirty.value) {
+      observationViewRef.value?.discardCorrection?.();
       observationWorkspaceDirty.value = false;
     }
     if (documentsWorkspaceDirty.value) {

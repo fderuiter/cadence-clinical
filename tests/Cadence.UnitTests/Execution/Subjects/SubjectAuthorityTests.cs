@@ -114,6 +114,17 @@ public sealed class SubjectAuthorityTests
         PermissionMatrix.HasPermission(trialPrincipal, "subject_enrollment:randomize").Should().BeTrue();
         PermissionMatrix.HasPermission(trialPrincipal, "ecrf_data_entry:create").Should().BeTrue();
         PermissionMatrix.HasPermission(trialPrincipal, "ecrf_data_entry:update").Should().BeTrue();
+        PermissionMatrix.HasPermission(trialPrincipal, "cgt_chain_of_custody:read").Should().BeTrue();
+        PermissionMatrix.HasPermission(trialPrincipal, "cgt_chain_of_custody:write").Should().BeFalse();
+
+        // Unblinded statistician reads subject enrollment for allocation reconciliation without subject write or CGT custody read grants.
+        var statPrincipal = new Principal { UserId = "stat-01", RawRoles = ["unblinded_statistician"] };
+        PermissionMatrix.HasPermission(statPrincipal, "subject_enrollment:read").Should().BeTrue();
+        PermissionMatrix.HasPermission(statPrincipal, "subject_enrollment:create").Should().BeFalse();
+        PermissionMatrix.HasPermission(statPrincipal, "subject_enrollment:update").Should().BeFalse();
+        PermissionMatrix.HasPermission(statPrincipal, "subject_enrollment:randomize").Should().BeFalse();
+        PermissionMatrix.HasPermission(statPrincipal, "cgt_chain_of_custody:read").Should().BeFalse();
+        PermissionMatrix.HasPermission(statPrincipal, "cgt_chain_of_custody:write").Should().BeFalse();
 
         // Separation of duties: sponsor_dm still cannot create or update subjects or eCRF entries.
         var sponsorPrincipal = new Principal { UserId = "sponsor-01", RawRoles = ["Sponsor Admin"] };

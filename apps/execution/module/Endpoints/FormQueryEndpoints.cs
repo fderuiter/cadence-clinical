@@ -138,7 +138,7 @@ internal static class FormQueryEndpoints
             return NotVisible($"form {formId:D}");
         }
 
-        var queries = await ReadAsync(contexts, tenant, q => q.FormId == form, cancellationToken).ConfigureAwait(false);
+        var queries = await ReadAsync(contexts, tenant, q => q.FormId == form, temporalFilter.HasCoordinate, cancellationToken).ConfigureAwait(false);
         var states = ProjectStates(queries, temporalFilter, clock);
         if (states.Count == 0)
         {
@@ -450,29 +450,34 @@ internal static class FormQueryEndpoints
 
         if ((request?.ObservationId is null || request.ObservationId == Guid.Empty) && !string.IsNullOrWhiteSpace(request?.ItemId))
         {
-            if (await forms.FindScopeStateAsync(tenant, form, cancellationToken).ConfigureAwait(false) is not { } scopeState)
+            var itemId = request.ItemId.Trim();
+            if (await forms.FindQueryTargetAsync(
+                tenant,
+                form,
+                itemId: itemId,
+                checkLocks: false,
+                cancellationToken: cancellationToken).ConfigureAwait(false) is not { } itemTarget)
             {
                 return FormNotFound(formId);
             }
 
-            var itemId = request.ItemId.Trim();
-            if (scopeState.Values.FirstOrDefault(v => string.Equals(v.ItemId, itemId, StringComparison.Ordinal)) is { } existing)
+            if (itemTarget.ObservationId is { } existingObsId && itemTarget.Revision is { } existingRevision)
             {
-                if (existing.Value is not MissingValue { Reason: NullFlavor.NotAsked })
+                if (!itemTarget.IsUnaskedPlaceholder)
                 {
                     return KernelErrorEndpoints.Problem(
                         FormQueryErrors.RevisionStale.WithMessage(
-                            $"Item {itemId} now holds a value at revision {existing.Revision}; reload the form and query the current value."));
+                            $"Item {itemId} now holds a value at revision {existingRevision}; reload the form and query the current value."));
                 }
 
-                targetObservation = existing.ObservationId;
-                targetRevision = existing.Revision;
+                targetObservation = existingObsId;
+                targetRevision = existingRevision;
             }
             else
             {
                 var unaskedKey = string.IsNullOrWhiteSpace(key) ? string.Empty : $"{key}:unasked";
                 var unasked = await sender.SendAsync(
-                    new RecordUnaskedCollectionItem(tenant, form, scopeState.EnrollmentId, itemId, ObservationId: null, unaskedKey, reason),
+                    new RecordUnaskedCollectionItem(tenant, form, itemTarget.EnrollmentId, itemId, ObservationId: null, unaskedKey, reason),
                     cancellationToken: cancellationToken).ConfigureAwait(false);
                 if (unasked.Value is not { } seeded)
                 {
@@ -484,17 +489,12 @@ internal static class FormQueryEndpoints
             }
 
             resolvedHeader = new CollectionInstanceHeader(
-                scopeState.CollectionInstanceId,
-                scopeState.EnrollmentId,
-                ParticipantId.Empty,
-                scopeState.StudyId,
-                scopeState.StudySiteId,
-                scopeState.ProtocolVersionId,
-                scopeState.CollectionSpecId,
-                scopeState.PlannedActivityId,
-                default,
-                default,
-                scopeState.Version);
+                itemTarget.CollectionInstanceId,
+                itemTarget.StudyId,
+                itemTarget.StudySiteId,
+                itemTarget.EnrollmentId,
+                itemTarget.CollectionSpecId,
+                itemTarget.PlannedActivityId);
         }
         else
         {
@@ -614,7 +614,7 @@ internal static class FormQueryEndpoints
         }
 
         var rawQueries = filter.HasTemporalCoordinate
-            ? await ReadAsync(contexts, tenant, q => q.EnrollmentId == enrollment, cancellationToken).ConfigureAwait(false)
+            ? await ReadAsync(contexts, tenant, q => q.EnrollmentId == enrollment, includePeriods: true, cancellationToken).ConfigureAwait(false)
             : await ReadCurrentAsync(contexts, tenant, q => q.EnrollmentId == enrollment, parsedFilters, filter.Escalated, cancellationToken).ConfigureAwait(false);
         var candidateStates = FilterStates(ProjectStates(rawQueries, filter.Temporal, clock), parsedFilters, filter.Escalated);
         if (candidateStates.Count == 0)
@@ -760,7 +760,7 @@ internal static class FormQueryEndpoints
         }
 
         var rawQueries = filter.HasTemporalCoordinate
-            ? await ReadAsync(contexts, tenant, q => allowed.Contains(q.EnrollmentId), cancellationToken).ConfigureAwait(false)
+            ? await ReadAsync(contexts, tenant, q => allowed.Contains(q.EnrollmentId), includePeriods: true, cancellationToken).ConfigureAwait(false)
             : await ReadCurrentAsync(contexts, tenant, q => allowed.Contains(q.EnrollmentId), parsedFilters, filter.Escalated, cancellationToken).ConfigureAwait(false);
         var candidateStates = FilterStates(ProjectStates(rawQueries, filter.Temporal, clock), parsedFilters, filter.Escalated);
         if (candidateStates.Count == 0)
@@ -1204,8 +1204,22 @@ internal static class FormQueryEndpoints
         CancellationToken cancellationToken)
     {
         var canUnblind = await access.CanUnblindAsync(tenant, state.EnrollmentId, cancellationToken).ConfigureAwait(false);
-        if (canUnblind && !replayed && state.Scope is { } scope)
+        if (!replayed && state.Scope is { } scope)
         {
+            var maskFromScope = false;
+            if (!canUnblind)
+            {
+                var projections = await forms.FindObservationProjectionsAsync(
+                    tenant,
+                    [state.ObservationId],
+                    [state.FormId],
+                    cancellationToken).ConfigureAwait(false);
+                var obsBlinded = projections.TryGetValue(state.ObservationId, out var proj) && proj.IsBlinded;
+                maskFromScope = obsBlinded
+                    || BlindedTreatmentClassifier.Instance.IsBlindedCollectionSpec(scope.CollectionSpecId)
+                    || BlindedTreatmentClassifier.MatchesMarkers(state.ItemId);
+            }
+
             var contextFromScope = await BuildFormContextAsync(
                 navigator,
                 tenant,
@@ -1219,7 +1233,7 @@ internal static class FormQueryEndpoints
                 state,
                 new Dictionary<ObservationId, int>(),
                 contextFromScope,
-                maskBlinded: false,
+                maskBlinded: maskFromScope,
                 currentRevisionOverride: scope.CurrentRevision);
         }
 
@@ -1257,10 +1271,16 @@ internal static class FormQueryEndpoints
         IModuleTenantContextFactory<ExecutionModuleDbContext> contexts,
         TenantId tenant,
         System.Linq.Expressions.Expression<Func<FormQuery, bool>> filter,
+        bool includePeriods,
         CancellationToken cancellationToken)
     {
         await using var db = contexts.Create(tenant);
-        return await db.FormQueries.AsNoTracking()
+        IQueryable<FormQuery> query = includePeriods
+            ? db.FormQueries.AsNoTracking()
+            : db.FormQueries.AsNoTracking()
+                .IgnoreAutoIncludes()
+                .Include(q => q.MessageRecords);
+        return await query
             .Where(filter)
             .OrderBy(q => q.CreatedAt)
             .ThenBy(q => q.Id)
@@ -1277,7 +1297,11 @@ internal static class FormQueryEndpoints
         CancellationToken cancellationToken)
     {
         await using var db = contexts.Create(tenant);
-        return await ApplyCurrentStateFilters(db.FormQueries.AsNoTracking().Where(scopeFilter), parsed, escalated)
+        var baseQuery = db.FormQueries.AsNoTracking()
+            .IgnoreAutoIncludes()
+            .Include(q => q.MessageRecords)
+            .Where(scopeFilter);
+        return await ApplyCurrentStateFilters(baseQuery, parsed, escalated)
             .OrderBy(q => q.CreatedAt)
             .ThenBy(q => q.Id)
             .ToListAsync(cancellationToken)
@@ -1295,7 +1319,11 @@ internal static class FormQueryEndpoints
         CancellationToken cancellationToken)
     {
         await using var db = contexts.Create(tenant);
-        return await ApplyCurrentStateFilters(db.FormQueries.AsNoTracking().Where(scopeFilter), parsed, escalated)
+        var baseQuery = db.FormQueries.AsNoTracking()
+            .IgnoreAutoIncludes()
+            .Include(q => q.MessageRecords)
+            .Where(scopeFilter);
+        return await ApplyCurrentStateFilters(baseQuery, parsed, escalated)
             .OrderBy(q => q.CreatedAt)
             .ThenBy(q => q.Id)
             .Skip(offset)

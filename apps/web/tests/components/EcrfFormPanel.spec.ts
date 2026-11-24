@@ -392,6 +392,13 @@ describe("EcrfFormPanel: a kernel form instance saved a page at a time (ADR-2622
     ).toBe("82");
     expect(view.find("#ecrf-form-save").text()).toBe("Save page (1)");
     expect(view.find('[data-testid="ecrf-form-outcome"]').exists()).toBe(false);
+    const staleBanner = view.find('[data-testid="ecrf-draft-stale-banner"]');
+    expect(staleBanner.exists()).toBe(true);
+    expect(staleBanner.attributes("role")).toBe("alert");
+    expect(staleBanner.text()).toContain("SYSBP");
+    expect(staleBanner.text()).toContain("130 mm[Hg]");
+    expect(staleBanner.text()).toContain("rev 3");
+    expect(staleBanner.text()).toContain("rev 4");
   });
 
   it("shows the kernel's per-item errors on an invalid save (422)", async () => {
@@ -3074,9 +3081,22 @@ describe("EcrfFormPanel: source data verification, lock scopes, and item highlig
     );
     const sysUnsaved = wrapper.find('[data-testid="ecrf-unsaved-badge-SYSBP"]');
     const sysSdv = wrapper.find('[data-testid="ecrf-sdv-status-SYSBP"]');
+    const sysSdvDraftNote = wrapper.find(
+      '[data-testid="ecrf-sdv-draft-note-SYSBP"]'
+    );
     expect(sysUnsaved.exists()).toBe(true);
     expect(sysUnsaved.text()).toBe("Unsaved");
     expect(sysSdv.text()).toContain("Verified (rev 3)");
+    expect(sysSdvDraftNote.exists()).toBe(true);
+    expect(sysSdvDraftNote.text()).toContain(
+      "Verification applies only to saved revision 3; unsaved draft is not verified."
+    );
+    expect(
+      wrapper.find("#ecrf-item-SYSBP").attributes("aria-describedby")
+    ).toContain("ecrf-sdv-draft-note-SYSBP");
+    expect(
+      wrapper.find('[data-testid="ecrf-sdv-draft-note-DIABP"]').exists()
+    ).toBe(false);
     expect(
       wrapper.find('[data-testid="ecrf-unsaved-badge-COMMENT"]').exists()
     ).toBe(false);
@@ -3100,7 +3120,29 @@ describe("EcrfFormPanel: source data verification, lock scopes, and item highlig
 
     await expect(wrapper.element).toBeAccessible();
 
-    // Discard draft reverts inputs to committed server values, removes storage key, hides Unsaved badges & banner, and hands off focus cleanly.
+    // Per-item Revert resets DIABP, hands focus back to #ecrf-item-DIABP, updates localStorage synchronously, and keeps SYSBP's restored banner & comparison active.
+    (wrapper.find("#ecrf-revert-DIABP").element as HTMLButtonElement).focus();
+    await wrapper.find("#ecrf-revert-DIABP").trigger("click");
+    await flushPromises();
+    expect(document.activeElement?.id).toBe("ecrf-item-DIABP");
+    expect(
+      (wrapper.find("#ecrf-item-DIABP").element as HTMLInputElement).value
+    ).toBe("");
+    expect(wrapper.find("#ecrf-revert-DIABP").exists()).toBe(false);
+    expect(
+      wrapper.find('[data-testid="ecrf-draft-restored-banner"]').exists()
+    ).toBe(true);
+    expect(
+      wrapper.find('[data-testid="ecrf-committed-baseline-SYSBP"]').exists()
+    ).toBe(true);
+    expect(JSON.parse(localStorage.getItem(draftKey)!)).toEqual({
+      form_id: FORM_ID,
+      items: {
+        SYSBP: { text: "138", missing: "", revision: 3 },
+      },
+    });
+
+    // Discard draft reverts remaining inputs to committed server values, removes storage key, hides Unsaved badges & banner, and hands off focus cleanly.
     (wrapper.find("#ecrf-draft-discard").element as HTMLButtonElement).focus();
     await wrapper.find("#ecrf-draft-discard").trigger("click");
     await flushPromises();
@@ -3121,6 +3163,88 @@ describe("EcrfFormPanel: source data verification, lock scopes, and item highlig
     ).toBe(false);
     expect(localStorage.getItem(draftKey)).toBeNull();
     expect(wrapper.emitted("dirty-change")?.at(-1)).toEqual([false]);
+
+    // Typing a fresh edit and reverting the last dirty item removes the storage key; reloading with unsaved edits into a Frozen form surfaces ecrf-draft-locked-banner.
+    await wrapper.find("#ecrf-item-DIABP").setValue("88");
+    await flushPromises();
+    await wrapper.find("#ecrf-revert-DIABP").trigger("click");
+    await flushPromises();
+    expect(localStorage.getItem(draftKey)).toBeNull();
+    expect(wrapper.emitted("dirty-change")?.at(-1)).toEqual([false]);
+
+    await wrapper.find("#ecrf-item-DIABP").setValue("90");
+    await flushPromises();
+    vi.mocked(ecrfFormsApi.getForm).mockResolvedValueOnce(
+      form({
+        locks: [
+          {
+            lock_id: "lock-reload-1",
+            kind: "Frozen",
+            scope: `collection_instance:${FORM_ID}`,
+            locked_at: "2027-04-02T00:00:00Z",
+            locked_by: "dm1",
+            reason: "Interim cut",
+          },
+        ],
+      }) as never
+    );
+    wrapper.findComponent(ScopeLockControls).vm.$emit("changed");
+    await flushPromises();
+
+    const lockedReloadBanner = wrapper.find(
+      '[data-testid="ecrf-draft-locked-banner"]'
+    );
+    expect(lockedReloadBanner.exists()).toBe(true);
+    expect(lockedReloadBanner.attributes("role")).toBe("status");
+    expect(lockedReloadBanner.text()).toContain("DIABP");
+    expect(lockedReloadBanner.text()).toContain("90 mm[Hg]");
+    expect(localStorage.getItem(draftKey)).toBeNull();
+    wrapper.unmount();
+
+    // Reverting an item whose committed server baseline is a missing reason disables #ecrf-item-<id> and hands focus to its missing-reason select.
+    vi.mocked(ecrfFormsApi.getForm).mockResolvedValueOnce(
+      form({
+        items: [
+          form().items[0],
+          item({
+            item_id: "DIABP",
+            unit: "mm[Hg]",
+            value_kind: "Quantity",
+            required: true,
+            value: { type: "missing", reason: "NotDone" },
+            observation_id: "obs-diabp",
+            revision: 1,
+            recorded_by: "crc1",
+            recorded_at: "2027-03-14T09:05:00Z",
+          }),
+          form().items[2],
+        ],
+      }) as never
+    );
+    wrapper = mount(EcrfFormPanel, {
+      props: { formId: FORM_ID, canVerifySource: true },
+      attachTo: document.body,
+    });
+    await flushPromises();
+
+    await wrapper
+      .find('select[aria-label="Why DIABP is missing"]')
+      .setValue("");
+    await wrapper.find("#ecrf-item-DIABP").setValue("82");
+    await flushPromises();
+    (
+      wrapper.find('[data-testid="ecrf-revert-DIABP"]')
+        .element as HTMLButtonElement
+    ).focus();
+    await wrapper.find('[data-testid="ecrf-revert-DIABP"]').trigger("click");
+    await flushPromises();
+
+    expect(
+      (wrapper.find("#ecrf-item-DIABP").element as HTMLInputElement).disabled
+    ).toBe(true);
+    expect(document.activeElement?.getAttribute("aria-label")).toBe(
+      "Why DIABP is missing"
+    );
   });
 
   it("performs zero form.assertions reads and zero selectedSdvItems.includes scans across keystrokes and the 250 ms preview", async () => {

@@ -1250,4 +1250,118 @@ describe("ObservationView (ADR-2620)", () => {
     await expect(supersededWrapper.element).toBeAccessible();
     supersededWrapper.unmount();
   });
+
+  it("keeps dirty true while ReasonForChangeModal is open, ignores @version-only route updates, and suppresses slow zoom-path auto-redirect once the user starts typing", async () => {
+    const studyRef = "study:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d80";
+    let resolveZoom!: (
+      steps: Awaited<ReturnType<typeof kernelApi.getZoomPath>>
+    ) => void;
+    vi.spyOn(kernelApi, "getObservation").mockResolvedValue(observation());
+    vi.spyOn(kernelApi, "getZoomPath").mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveZoom = resolve;
+        })
+    );
+    vi.spyOn(kernelApi, "getNode").mockResolvedValue({
+      ref: studyRef,
+      kind: "study",
+      title: "Phase II Hypertension Study",
+      code: "CAD-101",
+      status: "Active",
+      mask: null,
+    });
+
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        {
+          path: "/studies/:studyCode?",
+          name: "study",
+          component: { template: "<div id='canvas-stub'>Canvas</div>" },
+        },
+        {
+          path: "/ecrf",
+          name: "ecrf",
+          component: { template: "<div id='ecrf-stub'>eCRF</div>" },
+        },
+        {
+          path: "/observations/:observationRef",
+          name: "observation",
+          component: ObservationView,
+          props: true,
+        },
+      ],
+    });
+    await router.push(`/observations/${OBSERVATION}`);
+    await router.isReady();
+
+    const wrapper = mount(
+      {
+        components: { ConfirmationDialogHost },
+        template: "<div><router-view /><ConfirmationDialogHost /></div>",
+      },
+      { global: { plugins: [router] }, attachTo: document.body }
+    );
+    await flushPromises();
+
+    // User begins typing while getZoomPath is still in flight.
+    await wrapper.find("#observation-new-value").setValue("136");
+    await flushPromises();
+
+    // Opening ReasonForChangeModal keeps dirty === true.
+    await wrapper.find("form.observation-correction").trigger("submit");
+    await flushPromises();
+    const obsVm = wrapper.findComponent(ObservationView).vm as unknown as {
+      dirty: boolean;
+      discardCorrection: () => void;
+    };
+    expect(obsVm.dirty).toBe(true);
+
+    // Resolving getZoomPath after edits began must not auto-redirect or discard input.
+    resolveZoom([
+      {
+        level: "study",
+        ref: studyRef,
+        label: "CAD-101",
+        mask: null,
+      },
+      {
+        level: "study_site",
+        ref: "study_site:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d81",
+        label: "017",
+        mask: null,
+      },
+      {
+        level: "enrollment",
+        ref: ENROLLMENT,
+        label: "017-0001",
+        mask: null,
+      },
+    ]);
+    await flushPromises();
+    expect(router.currentRoute.value.name).toBe("observation");
+    expect(
+      (wrapper.find("#observation-new-value").element as HTMLInputElement).value
+    ).toBe("136");
+
+    // @version-only route updates on the same observation NodeRef do not prompt.
+    const confirmStore = useConfirmStore();
+    await router.push(`/observations/${OBSERVATION}@1`);
+    await flushPromises();
+    expect(confirmStore.activeRequest).toBeNull();
+    expect(router.currentRoute.value.params.observationRef).toBe(
+      `${OBSERVATION}@1`
+    );
+
+    // discardCorrection() closes ReasonForChangeModal and resets newValue.
+    obsVm.discardCorrection();
+    await flushPromises();
+    expect(obsVm.dirty).toBe(false);
+    expect(
+      (wrapper.find("#observation-new-value").element as HTMLInputElement).value
+    ).toBe("");
+
+    wrapper.unmount();
+  });
 });
