@@ -66,7 +66,7 @@ public static class Program
         AddCommand(root, "extract-env-vars", "Verifies bidirectional parity and file citations between code, .env.example and docs/ENVIRONMENT_VARIABLES.md", ToolCommands.ConfigureExtractEnvVars);
         AddCommand(root, "audit-security", "Scans for hardcoded secrets", () => SecurityAuditorService.AuditSecurity());
         AddCommand(root, "validate-public-bundle", "Verifies built VitePress and demo web bundles with zero comment exemptions", () => PublicBundleValidatorService.ValidatePublicBundles());
-        AddCommand(root, "validate-vulnerabilities", "Audits dependency vulnerabilities against the exclusions ledger", () => VulnerabilityAuditorService.AuditVulnerabilities());
+        AddCommand(root, "validate-vulnerabilities", "Audits NuGet, pnpm, Python OSV and container Trivy vulnerabilities against the bounded FMEA exclusions ledger", ToolCommands.ConfigureValidateVulnerabilities);
         AddCommand(root, "clean-secrets-baseline", "Normalizes or checks the detect-secrets baseline", ToolCommands.ConfigureCleanSecretsBaseline);
         AddCommand(root, "validate-architecture-drift", "Verifies compose, topology, database schema, electronic signature and audit-host parity across architecture docs", () => ArchitectureDriftValidatorService.ValidateArchitectureDrift());
         AddCommand(root, "sync-openapi-spec", "Exports each service's OpenAPI document into docs/openapi", ToolCommands.ConfigureSyncOpenApiSpec);
