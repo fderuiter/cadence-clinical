@@ -331,7 +331,9 @@ public sealed class KernelApiHostTests : IDisposable
     public async Task CanI_WithoutAGrant_Denies_AndExplainsWhy()
     {
         var entry = KernelCommandCatalog.Kernel.Entries.First(e => e.InCatalogue);
-        var resource = new NodeRef(entry.ResourceKind, Guid.CreateVersion7());
+        var resource = entry.ResourceKind == NodeKinds.ValidationFinding
+            ? FakeValidationFindings.OpenFinding
+            : new NodeRef(entry.ResourceKind, Guid.CreateVersion7());
         using var client = Client();
         var ct = TestContext.Current.CancellationToken;
 
@@ -362,7 +364,9 @@ public sealed class KernelApiHostTests : IDisposable
     public async Task CanI_WithAGrantInEffect_Permits()
     {
         var entry = KernelCommandCatalog.Kernel.Entries.First(e => e.InCatalogue);
-        var resource = new NodeRef(entry.ResourceKind, Guid.CreateVersion7());
+        var resource = entry.ResourceKind == NodeKinds.ValidationFinding
+            ? FakeValidationFindings.OpenFinding
+            : new NodeRef(entry.ResourceKind, Guid.CreateVersion7());
         var grant = Grant.Issue(
             GrantId.New(), Tenant, Reader, entry.Capability.Token, null, AuthorityScope.Tenant(), GrantedFrom, null,
             withGrantOption: false, parentGrantId: null, Actor.Person("study-admin"), GrantedFrom).Value!;
@@ -970,6 +974,7 @@ public sealed class KernelApiHostTests : IDisposable
         using var factory = new WebApplicationFactory<Cadence.Kernel.Host.Program>().WithWebHostBuilder(builder => builder
             .UseEnvironment("Production")
             .UseTestGatewaySecret()
+            .UseTestBiometricLivenessKey()
             .UseTestPostgresConnectionString()
             .UseSetting("Kernel:DevelopmentTenant:Code", "cadence-local"));
 
@@ -1248,7 +1253,7 @@ public sealed class KernelApiHostTests : IDisposable
 
         var factory = new WebApplicationFactory<Cadence.Kernel.Host.Program>().WithWebHostBuilder(builder =>
         {
-            builder.UseTestGatewaySecret().UseTestPostgresConnectionString();
+            builder.UseTestGatewaySecret().UseTestBiometricLivenessKey().UseTestPostgresConnectionString();
             builder.ConfigureServices(services =>
             {
                 services.RemoveAll<IKernelNavigator>();
@@ -1781,6 +1786,8 @@ public sealed class KernelApiHostTests : IDisposable
             MakeFinding(ValidationSeverity.Warning, FindingStatus.Investigating, "VS-002"),
             MakeFinding(ValidationSeverity.Notice, FindingStatus.Resolved, "VS-003"),
         ];
+
+        public static NodeRef OpenFinding => NodeRef.For(AllFindings[0].Id);
 
         public Task<ValidationFindingView?> FindAsync(TenantId tenant, ValidationFindingId finding, CancellationToken cancellationToken) =>
             Task.FromResult(AllFindings.FirstOrDefault(f => f.Id == finding));

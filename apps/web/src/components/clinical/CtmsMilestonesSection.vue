@@ -21,7 +21,7 @@
       prefix="milestones"
       form-id="milestones-scope-form"
       aria-label="Site milestones scope"
-      :show-study-input="!props.studyCode"
+      :show-study-input="!isStudyLocked"
       site-placeholder="Site code (optional)"
       :assigned-studies="assignedStudies"
       :assigned-sites="assignedSites"
@@ -73,6 +73,7 @@
               <td v-if="canManage">
                 <button
                   v-if="item.status !== 'ACHIEVED'"
+                  :id="`btn-achieve-milestone-${item.id}`"
                   type="button"
                   class="btn btn-secondary btn-sm"
                   :disabled="saving"
@@ -125,7 +126,7 @@
           <button
             type="button"
             class="btn btn-secondary"
-            @click="activeAchieveMilestone = null"
+            @click="cancelAchieve"
           >
             Cancel
           </button>
@@ -188,10 +189,12 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
+import { useInlineFocusHandoff } from "ui";
 import { ctmsApi, type SiteMilestone } from "../../api/ctmsApi";
 import { canManageMilestones } from "../../canvas/authority";
 import {
   formatIsoDateShort,
+  scopedWorkspaceSectionProps,
   useScopedWorkspaceSection,
 } from "../../composables/useScopedWorkspaceSection";
 import {
@@ -201,44 +204,27 @@ import {
 import CtmsSectionScopeBar from "./CtmsSectionScopeBar.vue";
 import "./ctmsWorkspaceSection.css";
 
-const props = withDefaults(
-  defineProps<{
-    studyCode?: string;
-    siteId?: string;
-  }>(),
-  {
-    studyCode: "",
-    siteId: "",
-  }
-);
-
-const newSiteId = ref("");
+const props = defineProps(scopedWorkspaceSectionProps);
+const workspace = useScopedWorkspaceSection(props, {
+  onStudyPropChange: () => void loadMilestones(),
+  fallbackErrorTitle: "Site milestones could not be loaded",
+  fallbackErrorMessage: "Site milestones could not be loaded.",
+});
+const { authStore, toasts, isStudyLocked, syncActiveScope, recordLoadFailure } =
+  workspace;
 const {
-  authStore,
-  toasts,
   assignedStudies,
   assignedSites,
   studyInput,
   siteInput,
+  newSiteId,
   loading,
   loaded,
   saving,
   loadError,
   scopeGuidance,
-  syncActiveScope,
-  recordLoadFailure,
-} = useScopedWorkspaceSection(props, {
-  onStudyPropChange: () => {
-    void loadMilestones();
-  },
-  onSitePropChange: (val) => {
-    if (val) newSiteId.value = val;
-  },
-  fallbackErrorTitle: "Site milestones could not be loaded",
-  fallbackErrorMessage: "Site milestones could not be loaded.",
-});
+} = workspace;
 
-newSiteId.value = siteInput.value;
 const canManage = computed(() => canManageMilestones(authStore));
 const milestones = ref<SiteMilestone[]>([]);
 const newType = ref("SITE_ACTIVATION");
@@ -248,6 +234,11 @@ const newReason = ref("");
 const activeAchieveMilestone = ref<SiteMilestone | null>(null);
 const achieveDate = ref("");
 const achieveReason = ref("");
+const achieveHandoff = useInlineFocusHandoff({
+  openTarget: "#achieve-milestone-date",
+  closeFallback: "#ctms-milestones-title",
+  scrollIfOffscreen: true,
+});
 
 async function loadMilestones() {
   const study = studyInput.value.trim();
@@ -311,8 +302,22 @@ async function createMilestone() {
 }
 
 function prepareAchieve(item: SiteMilestone) {
+  achieveHandoff.rememberTrigger(`[id="btn-achieve-milestone-${item.id}"]`);
   activeAchieveMilestone.value = item;
   achieveReason.value = "";
+  void achieveHandoff.handoff("#achieve-milestone-date", {
+    scrollIfOffscreen: true,
+  });
+}
+
+function cancelAchieve() {
+  const itemId = activeAchieveMilestone.value?.id;
+  activeAchieveMilestone.value = null;
+  achieveReason.value = "";
+  void achieveHandoff.restoreTrigger([
+    itemId ? `[id="btn-achieve-milestone-${itemId}"]` : null,
+    "#ctms-milestones-title",
+  ]);
 }
 
 async function confirmAchieve() {
@@ -341,6 +346,14 @@ async function confirmAchieve() {
       message: `${formatClinicalEnum(item.milestone_type)} marked achieved for ${item.site_id}.`,
     });
     await loadMilestones();
+    saving.value = false;
+    void achieveHandoff.handoff([
+      () =>
+        document.querySelector<HTMLElement>(
+          "#milestones-table button:not([disabled])"
+        ),
+      "#ctms-milestones-title",
+    ]);
   } catch (err) {
     toasts.apiError("Milestone could not be updated", err);
   } finally {

@@ -27,6 +27,7 @@
         {{ descriptionText }}
       </p>
       <a
+        v-if="canReturnToTasks || canReturnToWallet"
         id="btn-unavailable-return-tasks"
         :href="availableAction.href"
         class="btn btn-primary"
@@ -41,6 +42,15 @@
       >
         {{ availableAction.label }}
       </a>
+      <button
+        v-else
+        id="btn-unavailable-signin"
+        type="button"
+        class="btn btn-primary"
+        @click="handleSignIn"
+      >
+        Sign In
+      </button>
     </div>
   </section>
 </template>
@@ -48,12 +58,31 @@
 <script setup>
 import { computed } from "vue";
 
+import { login } from "../features/auth.js";
 import { showView } from "../features/navigation.js";
 import { isScreenAvailable, screenTitle } from "../router/availability.js";
 import { ROUTER_BASE } from "../router/index.js";
+import { useSessionStore } from "../stores/session.js";
 import { useUiStore } from "../stores/ui.js";
 
 const ui = useUiStore();
+const sessionStore = useSessionStore();
+
+const canReturnToTasks = computed(() => {
+  void sessionStore.session?.isDemoMode;
+  void sessionStore.session?.token;
+  void sessionStore.session?.userId;
+  void sessionStore.session?.isOfflineMode;
+  return isScreenAvailable("tasks");
+});
+
+const canReturnToWallet = computed(() => {
+  void sessionStore.session?.isDemoMode;
+  void sessionStore.session?.token;
+  void sessionStore.session?.userId;
+  void sessionStore.session?.isOfflineMode;
+  return !canReturnToTasks.value && isScreenAvailable("wallet");
+});
 
 const normalizedBase = computed(() =>
   (ROUTER_BASE || "/subject-portal/").replace(/\/+$/, "")
@@ -61,20 +90,24 @@ const normalizedBase = computed(() =>
 
 const heading = computed(() => {
   const screen = ui.unavailableScreen;
-  return screen
-    ? `${screenTitle(screen)} isn't available yet`
-    : "This workflow isn't available yet";
+  if (screen) {
+    return `${screenTitle(screen)} isn't available yet`;
+  }
+  if (!canReturnToTasks.value && !canReturnToWallet.value) {
+    return "Sign in to access your participant portal";
+  }
+  return "This workflow isn't available yet";
 });
 
 const availableAction = computed(() => {
-  if (isScreenAvailable("tasks")) {
+  if (canReturnToTasks.value) {
     return {
       viewId: "view-tasks",
       href: `${normalizedBase.value}/`,
       label: "Return to My Tasks",
     };
   }
-  if (isScreenAvailable("wallet")) {
+  if (canReturnToWallet.value) {
     return {
       viewId: "view-wallet",
       href: `${normalizedBase.value}/wallet`,
@@ -89,10 +122,17 @@ const availableAction = computed(() => {
 });
 
 const descriptionText = computed(() => {
-  if (isScreenAvailable("tasks")) {
+  if (
+    !ui.unavailableScreen &&
+    !canReturnToTasks.value &&
+    !canReturnToWallet.value
+  ) {
+    return "Authenticate with your participant credentials to access your financial wallet and study stipends, or contact your study coordinator if you need assistance.";
+  }
+  if (canReturnToTasks.value) {
     return "This section is not open for your study right now. Nothing was changed or submitted. You can return to your tasks or contact your study coordinator if you have questions.";
   }
-  if (isScreenAvailable("wallet")) {
+  if (canReturnToWallet.value) {
     return "This section is not open for your study right now. Nothing was changed or submitted. You can open My Wallet or contact your study coordinator if you have questions.";
   }
   return "This section is not open for your study right now. Nothing was changed or submitted. Sign in to access available participant services or contact your study coordinator if you have questions.";
@@ -101,5 +141,9 @@ const descriptionText = computed(() => {
 function navigateToAvailable() {
   ui.unavailableScreen = null;
   showView(availableAction.value.viewId);
+}
+
+function handleSignIn() {
+  login();
 }
 </script>

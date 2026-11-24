@@ -652,15 +652,16 @@ public sealed class ParticipantSelfServiceAndOcrTests : IAsyncDisposable
     public async Task SelfServiceDiaryStipend_UsesServerRule_EnforcesIdempotency_AndRejectsClientAmount()
     {
         await EnsureDbCreatedAsync();
+        DateTimeOffset now = SystemClock.Instance.UtcNow;
         await using (var seed = OpenDb())
         {
-            DateTimeOffset now = SystemClock.Instance.UtcNow;
             seed.ParticipantStipendRules.Add(new ParticipantStipendRule
             {
                 StudyId = "STUDY-DIARY",
                 VisitCode = "DIARY",
                 VisitName = "Daily ePRO Diary",
                 Amount = 30.00m,
+                RequiresVerification = false,
                 AntiCoercionCap = 500.00m,
                 IsActive = true,
                 CreatedAt = now,
@@ -671,6 +672,14 @@ public sealed class ParticipantSelfServiceAndOcrTests : IAsyncDisposable
         }
 
         using var client = SubjectClient("SUBJ-DIARY-01");
+        string syncVerificationToken = PaymentEndpoints.IssueDiarySyncVerificationToken(
+            callerUserId: "SUBJ-DIARY-01",
+            studyCode: "STUDY-DIARY",
+            diaryId: "vas-01",
+            assignmentId: null,
+            sequenceNumber: 1,
+            issuedAt: now,
+            gatewaySecret: TestSecurityContext.GatewaySecret);
 
         // Client-supplied amount is strictly rejected with 400 BadRequest
         using var forgedAmountResp = await client.PostAsync(
@@ -682,7 +691,7 @@ public sealed class ParticipantSelfServiceAndOcrTests : IAsyncDisposable
             Ct);
         forgedAmountResp.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
-        // Valid request without client amount credits strictly the $30.00 server rule
+        // Valid request with server-signed sync token and without client amount credits strictly the $30.00 server rule
         using var validResp = await client.PostAsJsonAsync(
             "/api/v1/payments/participant/me/diary-stipend",
             new
@@ -692,6 +701,7 @@ public sealed class ParticipantSelfServiceAndOcrTests : IAsyncDisposable
                 diaryId = "vas-01",
                 sequenceNumber = 1,
                 idempotencyKey = "seq_1_SUBJ-DIARY-01",
+                syncVerificationToken,
             },
             Ct);
         validResp.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -700,7 +710,7 @@ public sealed class ParticipantSelfServiceAndOcrTests : IAsyncDisposable
         credited.CurrentBalance.Should().Be(30.00m);
         credited.Status.Should().Be("CREDITED");
 
-        // Replay with same idempotency key does not double-credit
+        // Replay with same idempotency key returns ALREADY_PROCESSED before single-use token replay rejection
         using var replayResp = await client.PostAsJsonAsync(
             "/api/v1/payments/participant/me/diary-stipend",
             new
@@ -710,12 +720,347 @@ public sealed class ParticipantSelfServiceAndOcrTests : IAsyncDisposable
                 diaryId = "vas-01",
                 sequenceNumber = 1,
                 idempotencyKey = "seq_1_SUBJ-DIARY-01",
+                syncVerificationToken,
             },
             Ct);
         replayResp.StatusCode.Should().Be(HttpStatusCode.OK);
         var replayed = (await replayResp.Content.ReadFromJsonAsync<SelfServiceDiaryStipendResponseDto>(Ct))!;
         replayed.Status.Should().Be("ALREADY_PROCESSED");
         replayed.CurrentBalance.Should().Be(30.00m);
+    }
+
+    [Fact]
+    [GxPRequirement("PRD-PAY-006")]
+    public async Task SelfServiceDiaryStipend_GatesOnSingleUseSyncToken_RuleEligibility_AndAutoDisbursementThresholds()
+    {
+        await EnsureDbCreatedAsync();
+        DateTimeOffset now = SystemClock.Instance.UtcNow;
+        await using (var seed = OpenDb())
+        {
+            seed.ParticipantStipendRules.AddRange(
+                new ParticipantStipendRule
+                {
+                    StudyId = "STUDY-CANARY-01",
+                    VisitCode = "VISIT-SCREENING-CANARY",
+                    VisitName = "Clinician-Verified Screening Milestone",
+                    Amount = 250.00m,
+                    RequiresVerification = true,
+                    IsMilestone = true,
+                    AutoDisbursementThreshold = 100.00m,
+                    AntiCoercionCap = 500.00m,
+                    IsActive = true,
+                    CreatedAt = now,
+                    CreatedBy = "finance-1",
+                    UpdatedAt = now,
+                },
+                new ParticipantStipendRule
+                {
+                    StudyId = "STUDY-CANARY-01",
+                    VisitCode = "DIARY",
+                    VisitName = "Daily ePRO Diary",
+                    Amount = 25.00m,
+                    RequiresVerification = false,
+                    IsMilestone = false,
+                    AutoDisbursementThreshold = 100.00m,
+                    AntiCoercionCap = 500.00m,
+                    IsActive = true,
+                    CreatedAt = now,
+                    CreatedBy = "finance-1",
+                    UpdatedAt = now,
+                },
+                new ParticipantStipendRule
+                {
+                    StudyId = "STUDY-VERIFIED-ONLY",
+                    VisitCode = "DIARY",
+                    VisitName = "Coordinator-Reviewed Diary",
+                    Amount = 20.00m,
+                    RequiresVerification = true,
+                    IsMilestone = false,
+                    IsActive = true,
+                    CreatedAt = now,
+                    CreatedBy = "finance-1",
+                    UpdatedAt = now,
+                },
+                new ParticipantStipendRule
+                {
+                    StudyId = "STUDY-THRESHOLD",
+                    VisitCode = "DIARY_HIGH",
+                    VisitName = "High-Value Diary Completion",
+                    Amount = 75.00m,
+                    RequiresVerification = false,
+                    IsMilestone = false,
+                    AutoDisbursementThreshold = 50.00m,
+                    AntiCoercionCap = 500.00m,
+                    IsActive = true,
+                    CreatedAt = now,
+                    CreatedBy = "finance-1",
+                    UpdatedAt = now,
+                },
+                new ParticipantStipendRule
+                {
+                    StudyId = "STUDY-WALLET-THRESH",
+                    VisitCode = "DIARY",
+                    VisitName = "Standard Diary",
+                    Amount = 40.00m,
+                    RequiresVerification = false,
+                    IsMilestone = false,
+                    AutoDisbursementThreshold = 100.00m,
+                    AntiCoercionCap = 500.00m,
+                    IsActive = true,
+                    CreatedAt = now,
+                    CreatedBy = "finance-1",
+                    UpdatedAt = now,
+                });
+
+            seed.ParticipantWallets.Add(new ParticipantWallet
+            {
+                Id = "wallet-thresh-01",
+                SubjectId = "SUBJ-WALLET-THRESH",
+                StudyId = "STUDY-WALLET-THRESH",
+                SiteId = "SITE-01",
+                CurrentBalance = 0.00m,
+                AutoDisbursementThreshold = 30.00m,
+                Currency = "USD",
+                Status = "ACTIVE",
+                CreatedAt = now,
+                CreatedBy = "crc-1",
+                UpdatedAt = now,
+            });
+            await seed.SaveChangesAsync(Ct);
+        }
+
+        // 1. Canary proof: unverified clinician visit claim + unverified diary loop credit $0.00 and fail ACH payout with 409 Conflict
+        using var subjectClient = SubjectClient("SUBJ-CANARY-01");
+
+        // Clinician-verified milestone rule ($250, RequiresVerification = true, IsMilestone = true, AutoDisbursementThreshold = 100m)
+        using var selfVisitResp = await subjectClient.PostAsJsonAsync(
+            "/api/v1/payments/participant/me/diary-stipend",
+            new { studyId = "STUDY-CANARY-01", siteId = "SITE-CANARY-01", diaryId = "VISIT-SCREENING-CANARY", assignmentId = "canary-unverified-visit-001", sequenceNumber = 1 },
+            Ct);
+        selfVisitResp.StatusCode.Should().Be(HttpStatusCode.OK);
+        var selfVisitBody = (await selfVisitResp.Content.ReadFromJsonAsync<SelfServiceDiaryStipendResponseDto>(Ct))!;
+        selfVisitBody.Status.Should().Be("FLAGGED_FOR_REVIEW");
+        selfVisitBody.CreditedAmount.Should().Be(0.00m);
+        selfVisitBody.CurrentBalance.Should().Be(0.00m);
+
+        // Unverified diary stipend loop without SyncVerificationToken
+        using var selfDiaryResp = await subjectClient.PostAsJsonAsync(
+            "/api/v1/payments/participant/me/diary-stipend",
+            new { studyId = "STUDY-CANARY-01", siteId = "SITE-CANARY-01", diaryId = "DIARY", assignmentId = "canary-fabricated-diary", sequenceNumber = 1 },
+            Ct);
+        selfDiaryResp.StatusCode.Should().Be(HttpStatusCode.OK);
+        var selfDiaryBody = (await selfDiaryResp.Content.ReadFromJsonAsync<SelfServiceDiaryStipendResponseDto>(Ct))!;
+        selfDiaryBody.Status.Should().Be("FLAGGED_FOR_REVIEW");
+        selfDiaryBody.CreditedAmount.Should().Be(0.00m);
+        selfDiaryBody.CurrentBalance.Should().Be(0.00m);
+
+        // Subsequent cash-out must fail with 409 Conflict because wallet CurrentBalance stays $0.00
+        using var disburseResp = await subjectClient.PostAsJsonAsync(
+            "/api/v1/payments/participant/me/disburse",
+            new SelfServiceDisburseRequestDto(DisbursementType: "DIRECT_ACH", IdempotencyKey: "canary-ach-cashout-01"),
+            Ct);
+        disburseResp.StatusCode.Should().Be(HttpStatusCode.Conflict);
+
+        // 2. Even with a valid server sync token, a rule with RequiresVerification = true or IsMilestone = true is held and never falls back to DIARY
+        string milestoneSyncToken = PaymentEndpoints.IssueDiarySyncVerificationToken(
+            callerUserId: "SUBJ-CANARY-01",
+            studyCode: "STUDY-CANARY-01",
+            diaryId: "VISIT-SCREENING-CANARY",
+            assignmentId: "canary-verified-token-visit",
+            sequenceNumber: 2,
+            issuedAt: now,
+            gatewaySecret: TestSecurityContext.GatewaySecret);
+
+        using var restrictedRuleResp = await subjectClient.PostAsJsonAsync(
+            "/api/v1/payments/participant/me/diary-stipend",
+            new
+            {
+                studyId = "STUDY-CANARY-01",
+                siteId = "SITE-CANARY-01",
+                diaryId = "VISIT-SCREENING-CANARY",
+                assignmentId = "canary-verified-token-visit",
+                sequenceNumber = 2,
+                syncVerificationToken = milestoneSyncToken,
+            },
+            Ct);
+        restrictedRuleResp.StatusCode.Should().Be(HttpStatusCode.OK);
+        var restrictedRuleBody = (await restrictedRuleResp.Content.ReadFromJsonAsync<SelfServiceDiaryStipendResponseDto>(Ct))!;
+        restrictedRuleBody.Status.Should().Be("FLAGGED_FOR_REVIEW");
+        restrictedRuleBody.CreditedAmount.Should().Be(0.00m);
+        restrictedRuleBody.CurrentBalance.Should().Be(0.00m);
+
+        // 3. Generic DIARY rule with RequiresVerification = true is excluded from eligible self-service rules
+        using var verifiedOnlyClient = SubjectClient("SUBJ-VERIFIED-ONLY");
+        string verifiedOnlyToken = PaymentEndpoints.IssueDiarySyncVerificationToken(
+            callerUserId: "SUBJ-VERIFIED-ONLY",
+            studyCode: "STUDY-VERIFIED-ONLY",
+            diaryId: "vas-daily",
+            assignmentId: "assign-daily-01",
+            sequenceNumber: 1,
+            issuedAt: now,
+            gatewaySecret: TestSecurityContext.GatewaySecret);
+
+        using var verifiedOnlyResp = await verifiedOnlyClient.PostAsJsonAsync(
+            "/api/v1/payments/participant/me/diary-stipend",
+            new
+            {
+                studyId = "STUDY-VERIFIED-ONLY",
+                siteId = "SITE-01",
+                diaryId = "vas-daily",
+                assignmentId = "assign-daily-01",
+                sequenceNumber = 1,
+                syncVerificationToken = verifiedOnlyToken,
+            },
+            Ct);
+        verifiedOnlyResp.StatusCode.Should().Be(HttpStatusCode.OK);
+        var verifiedOnlyBody = (await verifiedOnlyResp.Content.ReadFromJsonAsync<SelfServiceDiaryStipendResponseDto>(Ct))!;
+        verifiedOnlyBody.Status.Should().Be("NO_APPLICABLE_RULE");
+        verifiedOnlyBody.CreditedAmount.Should().Be(0.00m);
+
+        // 4. Token binding mismatches (wrong caller, expired, wrong sequence) and single-use token replay are rejected with FLAGGED_FOR_REVIEW
+        string wrongCallerToken = PaymentEndpoints.IssueDiarySyncVerificationToken(
+            callerUserId: "SUBJ-OTHER-99",
+            studyCode: "STUDY-CANARY-01",
+            diaryId: "vas-canary",
+            assignmentId: "assign-canary-03",
+            sequenceNumber: 3,
+            issuedAt: now,
+            gatewaySecret: TestSecurityContext.GatewaySecret);
+        string expiredToken = PaymentEndpoints.IssueDiarySyncVerificationToken(
+            callerUserId: "SUBJ-CANARY-01",
+            studyCode: "STUDY-CANARY-01",
+            diaryId: "vas-canary",
+            assignmentId: "assign-canary-04",
+            sequenceNumber: 4,
+            issuedAt: now.AddHours(-2),
+            gatewaySecret: TestSecurityContext.GatewaySecret,
+            lifetime: TimeSpan.FromMinutes(30));
+
+        foreach (var (assignId, seq, token) in new[]
+        {
+            ("assign-canary-03", 3, wrongCallerToken),
+            ("assign-canary-04", 4, expiredToken),
+            ("assign-canary-03", 99, milestoneSyncToken),
+        })
+        {
+            using var badTokenResp = await subjectClient.PostAsJsonAsync(
+                "/api/v1/payments/participant/me/diary-stipend",
+                new
+                {
+                    studyId = "STUDY-CANARY-01",
+                    siteId = "SITE-CANARY-01",
+                    diaryId = "vas-canary",
+                    assignmentId = assignId,
+                    sequenceNumber = seq,
+                    syncVerificationToken = token,
+                },
+                Ct);
+            badTokenResp.StatusCode.Should().Be(HttpStatusCode.OK);
+            var badBody = (await badTokenResp.Content.ReadFromJsonAsync<SelfServiceDiaryStipendResponseDto>(Ct))!;
+            badBody.Status.Should().Be("FLAGGED_FOR_REVIEW");
+            badBody.CreditedAmount.Should().Be(0.00m);
+        }
+
+        // Single-use token replay across distinct idempotency keys (when sequenceNumber/assignmentId are omitted) credits once then holds
+        string singleUseToken = PaymentEndpoints.IssueDiarySyncVerificationToken(
+            callerUserId: "SUBJ-CANARY-01",
+            studyCode: "STUDY-CANARY-01",
+            diaryId: "vas-single-use",
+            assignmentId: null,
+            sequenceNumber: null,
+            issuedAt: now,
+            gatewaySecret: TestSecurityContext.GatewaySecret);
+
+        using var firstSingleUseResp = await subjectClient.PostAsJsonAsync(
+            "/api/v1/payments/participant/me/diary-stipend",
+            new
+            {
+                studyId = "STUDY-CANARY-01",
+                siteId = "SITE-CANARY-01",
+                diaryId = "vas-single-use",
+                idempotencyKey = "single-use-key-a",
+                syncVerificationToken = singleUseToken,
+            },
+            Ct);
+        var firstSingleUseBody = (await firstSingleUseResp.Content.ReadFromJsonAsync<SelfServiceDiaryStipendResponseDto>(Ct))!;
+        firstSingleUseBody.Status.Should().Be("CREDITED");
+        firstSingleUseBody.CreditedAmount.Should().Be(25.00m);
+
+        using var replayDifferentKeyResp = await subjectClient.PostAsJsonAsync(
+            "/api/v1/payments/participant/me/diary-stipend",
+            new
+            {
+                studyId = "STUDY-CANARY-01",
+                siteId = "SITE-CANARY-01",
+                diaryId = "vas-single-use",
+                idempotencyKey = "single-use-key-b",
+                syncVerificationToken = singleUseToken,
+            },
+            Ct);
+        var replayDifferentKeyBody = (await replayDifferentKeyResp.Content.ReadFromJsonAsync<SelfServiceDiaryStipendResponseDto>(Ct))!;
+        replayDifferentKeyBody.Status.Should().Be("FLAGGED_FOR_REVIEW");
+        replayDifferentKeyBody.CreditedAmount.Should().Be(0.00m);
+        replayDifferentKeyBody.CurrentBalance.Should().Be(25.00m);
+
+        // 5. Rule and wallet AutoDisbursementThreshold checks hold exceeding stipends with $0.00 credited
+        using var ruleThreshClient = SubjectClient("SUBJ-RULE-THRESH");
+        string ruleThreshToken = PaymentEndpoints.IssueDiarySyncVerificationToken(
+            callerUserId: "SUBJ-RULE-THRESH",
+            studyCode: "STUDY-THRESHOLD",
+            diaryId: "DIARY_HIGH",
+            assignmentId: "assign-thresh-01",
+            sequenceNumber: 1,
+            issuedAt: now,
+            gatewaySecret: TestSecurityContext.GatewaySecret);
+
+        using var ruleThreshResp = await ruleThreshClient.PostAsJsonAsync(
+            "/api/v1/payments/participant/me/diary-stipend",
+            new
+            {
+                studyId = "STUDY-THRESHOLD",
+                siteId = "SITE-01",
+                diaryId = "DIARY_HIGH",
+                assignmentId = "assign-thresh-01",
+                sequenceNumber = 1,
+                syncVerificationToken = ruleThreshToken,
+            },
+            Ct);
+        var ruleThreshBody = (await ruleThreshResp.Content.ReadFromJsonAsync<SelfServiceDiaryStipendResponseDto>(Ct))!;
+        ruleThreshBody.Status.Should().Be("FLAGGED_FOR_REVIEW");
+        ruleThreshBody.CreditedAmount.Should().Be(0.00m);
+        ruleThreshBody.CurrentBalance.Should().Be(0.00m);
+
+        using var walletThreshClient = SubjectClient("SUBJ-WALLET-THRESH");
+        string walletThreshToken = PaymentEndpoints.IssueDiarySyncVerificationToken(
+            callerUserId: "SUBJ-WALLET-THRESH",
+            studyCode: "STUDY-WALLET-THRESH",
+            diaryId: "vas-wallet-thresh",
+            assignmentId: "assign-wallet-thresh-01",
+            sequenceNumber: 1,
+            issuedAt: now,
+            gatewaySecret: TestSecurityContext.GatewaySecret);
+
+        using var walletThreshResp = await walletThreshClient.PostAsJsonAsync(
+            "/api/v1/payments/participant/me/diary-stipend",
+            new
+            {
+                studyId = "STUDY-WALLET-THRESH",
+                siteId = "SITE-01",
+                diaryId = "vas-wallet-thresh",
+                assignmentId = "assign-wallet-thresh-01",
+                sequenceNumber = 1,
+                syncVerificationToken = walletThreshToken,
+            },
+            Ct);
+        var walletThreshBody = (await walletThreshResp.Content.ReadFromJsonAsync<SelfServiceDiaryStipendResponseDto>(Ct))!;
+        walletThreshBody.Status.Should().Be("FLAGGED_FOR_REVIEW");
+        walletThreshBody.CreditedAmount.Should().Be(0.00m);
+        walletThreshBody.CurrentBalance.Should().Be(0.00m);
+
+        await using var verifyDb = OpenDb();
+        bool hasThresholdAudit = await verifyDb.PaymentAuditLogs.AsNoTracking()
+            .AnyAsync(l => l.Action == "THRESHOLD_EXCEEDED_REVIEW_REQUIRED", Ct);
+        hasThresholdAudit.Should().BeTrue();
     }
 
     [Fact]
@@ -885,6 +1230,38 @@ public sealed class ParticipantSelfServiceAndOcrTests : IAsyncDisposable
         approvedByPi.Status.Should().Be("APPROVED");
         approvedByPi.ReviewedBy.Should().Be("pi-reviewer-1");
         approvedByPi.NetAmount.Should().Be(500.00m);
+
+        // 4. Staff ocr-extract and staff expense routes also block rawText token minting and plain UTF-8 receipts
+        byte[] staffCorrupted = [0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x02, 0xFF, 0xD9, 0x02];
+        using var staffScanResp = await crcClient.PostAsJsonAsync(
+            "/api/v1/payments/participant/expenses/ocr-extract",
+            new OcrExtractRequestDto(
+                RawText: "STAFF TRANSIT\nDATE 2026-11-23\nTOTAL $54.00",
+                ImageBase64: Convert.ToBase64String(staffCorrupted),
+                CategoryHint: "TRANSIT"),
+            Ct);
+        staffScanResp.StatusCode.Should().Be(HttpStatusCode.OK);
+        var staffScan = (await staffScanResp.Content.ReadFromJsonAsync<ReceiptOcrExtractResponseDto>(Ct))!;
+        staffScan.OcrReadable.Should().BeFalse();
+        staffScan.OcrToken.Should().BeNull();
+
+        string staffPlainUtf8 = Convert.ToBase64String(Encoding.UTF8.GetBytes("STAFF SHUTTLE\nDATE 2026-11-23\nTOTAL $54.00"));
+        using var staffPlainResp = await crcClient.PostAsJsonAsync(
+            "/api/v1/payments/participant/expenses",
+            new SubmitExpenseClaimRequestDto(
+                SubjectId: "SUBJ-VERIFY-04",
+                StudyId: "STUDY-01",
+                SiteId: "SITE-01",
+                Category: "TRANSIT",
+                MerchantName: "STAFF SHUTTLE",
+                GrossAmount: 54.00m,
+                ExpenseDate: "2026-11-23",
+                ReceiptImageBase64: staffPlainUtf8),
+            Ct);
+        staffPlainResp.StatusCode.Should().Be(HttpStatusCode.OK);
+        var staffPlainClaim = (await staffPlainResp.Content.ReadFromJsonAsync<ParticipantExpenseClaim>(Ct))!;
+        staffPlainClaim.Status.Should().Be("PENDING_REVIEW");
+        staffPlainClaim.DisbursementReference.Should().BeNull();
     }
 
     [Fact]
@@ -971,6 +1348,7 @@ public sealed class ParticipantSelfServiceAndOcrTests : IAsyncDisposable
             blurRadius: 7);
         var blurryScan = await PostOcrAsync(client, Convert.ToBase64String(blurryPng), "blurry_parking.png");
         blurryScan.OcrReadable.Should().BeFalse();
+        blurryScan.OcrToken.Should().BeNull();
 
         using var manualAfterBlurryResp = await client.PostAsJsonAsync(
             "/api/v1/payments/participant/me/expenses",
@@ -1013,6 +1391,111 @@ public sealed class ParticipantSelfServiceAndOcrTests : IAsyncDisposable
         editedClaim.Status.Should().Be("PENDING_REVIEW");
         editedClaim.AutoApproved.Should().BeFalse();
         editedClaim.ReviewNotes.Should().Contain("differ from server-extracted receipt scan");
+
+        // Supplying RawText alongside corrupted image bytes ignores RawText and refuses to mint an OcrToken
+        byte[] corrupted = [0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x02, 0xFF, 0xD9, 0x01];
+        using var scanResp = await client.PostAsJsonAsync(
+            "/api/v1/payments/participant/me/expenses/ocr-extract",
+            new OcrExtractRequestDto(
+                RawText: "CANARY TRANSIT\nDATE 2026-11-23\nTOTAL $98.50",
+                ImageBase64: Convert.ToBase64String(corrupted),
+                CategoryHint: "TRANSIT"),
+            Ct);
+        scanResp.StatusCode.Should().Be(HttpStatusCode.OK);
+        var scan = (await scanResp.Content.ReadFromJsonAsync<ReceiptOcrExtractResponseDto>(Ct))!;
+        scan.OcrReadable.Should().BeFalse();
+        scan.ConfidenceScore.Should().Be(0.0);
+        scan.OcrToken.Should().BeNull();
+
+        // Supplying RawText alongside valid PNG bytes extracts from the PNG bytes and still refuses to mint an OcrToken
+        using var mixedValidScanResp = await client.PostAsJsonAsync(
+            "/api/v1/payments/participant/me/expenses/ocr-extract",
+            new OcrExtractRequestDto(
+                RawText: "CANARY TRANSIT\nDATE 2026-11-23\nTOTAL $98.50",
+                ImageBase64: Convert.ToBase64String(sharpTaxiPng),
+                CategoryHint: "TRANSIT"),
+            Ct);
+        mixedValidScanResp.StatusCode.Should().Be(HttpStatusCode.OK);
+        var mixedValidScan = (await mixedValidScanResp.Content.ReadFromJsonAsync<ReceiptOcrExtractResponseDto>(Ct))!;
+        mixedValidScan.MerchantName.Should().Be("METRO CAB");
+        mixedValidScan.GrossAmount.Should().Be(22.00m);
+        mixedValidScan.OcrToken.Should().BeNull();
+
+        // Plain UTF-8 text disguised as base64 receipt bytes stays in PENDING_REVIEW with zero auto-disbursement
+        string plainUtf8 = Convert.ToBase64String(Encoding.UTF8.GetBytes("CANARY SHUTTLE\nDATE 2026-11-23\nTOTAL $96.25"));
+        using var claimResp = await client.PostAsJsonAsync(
+            "/api/v1/payments/participant/me/expenses",
+            new SelfServiceSubmitExpenseRequestDto(
+                Category: "TRANSIT",
+                MerchantName: "CANARY SHUTTLE",
+                GrossAmount: 96.25m,
+                ExpenseDate: "2026-11-23",
+                ReceiptImageBase64: plainUtf8,
+                StudyCode: "STUDY-01",
+                SiteCode: "SITE-01"),
+            Ct);
+        claimResp.StatusCode.Should().Be(HttpStatusCode.OK);
+        var claim = (await claimResp.Content.ReadFromJsonAsync<SelfServiceExpenseClaimResponseDto>(Ct))!;
+        claim.Status.Should().Be("PENDING_REVIEW");
+        claim.AutoApproved.Should().BeFalse();
+        claim.DisbursementReference.Should().BeNull();
+
+        // data:text/plain URIs are rejected on both ocr-extract and expense submission (200 OK in PENDING_REVIEW)
+        string dataTextPlain = "data:text/plain," + Uri.EscapeDataString("CANARY RAIL\nDATE 2026-11-23\nTOTAL $44.00");
+        var plainUriScan = await PostOcrAsync(client, dataTextPlain, "receipt.txt");
+        plainUriScan.OcrReadable.Should().BeFalse();
+        plainUriScan.OcrToken.Should().BeNull();
+
+        using var plainUriClaimResp = await client.PostAsJsonAsync(
+            "/api/v1/payments/participant/me/expenses",
+            new SelfServiceSubmitExpenseRequestDto(
+                Category: "TRANSIT",
+                MerchantName: "CANARY RAIL",
+                GrossAmount: 44.00m,
+                ExpenseDate: "2026-11-23",
+                ReceiptImageBase64: dataTextPlain,
+                StudyCode: "STUDY-01",
+                SiteCode: "SITE-01"),
+            Ct);
+        plainUriClaimResp.StatusCode.Should().Be(HttpStatusCode.OK);
+        var plainUriClaim = (await plainUriClaimResp.Content.ReadFromJsonAsync<SelfServiceExpenseClaimResponseDto>(Ct))!;
+        plainUriClaim.Status.Should().Be("PENDING_REVIEW");
+        plainUriClaim.AutoApproved.Should().BeFalse();
+        plainUriClaim.DisbursementReference.Should().BeNull();
+
+        // Valid base64 and UTF-8 data:image/svg+xml documents containing <svg> XML still parse and auto-approve
+        const string svgReceiptXml = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"360\" height=\"180\"><text y=\"30\">HARBOR TRANSIT</text><text y=\"60\">DATE 2026-11-23</text><text y=\"90\">TOTAL $19.50</text></svg>";
+        string svgUtf8DataUri = "data:image/svg+xml;utf8," + Uri.EscapeDataString(svgReceiptXml);
+        var svgUtf8Scan = await PostOcrAsync(client, svgUtf8DataUri, "ferry.svg");
+        svgUtf8Scan.OcrReadable.Should().BeTrue();
+        svgUtf8Scan.MerchantName.Should().Be("HARBOR TRANSIT");
+        svgUtf8Scan.GrossAmount.Should().Be(19.50m);
+        svgUtf8Scan.OcrToken.Should().NotBeNullOrWhiteSpace();
+
+        using var svgClaimResp = await client.PostAsJsonAsync(
+            "/api/v1/payments/participant/me/expenses",
+            new SelfServiceSubmitExpenseRequestDto(
+                Category: "TRANSIT",
+                MerchantName: "HARBOR TRANSIT",
+                GrossAmount: 19.50m,
+                ExpenseDate: "2026-11-23",
+                OcrToken: svgUtf8Scan.OcrToken,
+                StudyCode: "STUDY-01",
+                SiteCode: "SITE-01"),
+            Ct);
+        svgClaimResp.StatusCode.Should().Be(HttpStatusCode.OK);
+        var svgClaim = (await svgClaimResp.Content.ReadFromJsonAsync<SelfServiceExpenseClaimResponseDto>(Ct))!;
+        svgClaim.Status.Should().Be("APPROVED");
+        svgClaim.AutoApproved.Should().BeTrue();
+        svgClaim.DisbursementReference.Should().StartWith("DISB-ACH-");
+
+        const string svgBase64Xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><svg xmlns=\"http://www.w3.org/2000/svg\"><text>AIRPORT EXPRESS</text><text>DATE 2026-11-23</text><text>TOTAL $31.00</text></svg>";
+        string svgBase64DataUri = "data:image/svg+xml;base64," + Convert.ToBase64String(Encoding.UTF8.GetBytes(svgBase64Xml));
+        var svgBase64Scan = await PostOcrAsync(client, svgBase64DataUri, "airport.svg");
+        svgBase64Scan.OcrReadable.Should().BeTrue();
+        svgBase64Scan.MerchantName.Should().Be("AIRPORT EXPRESS");
+        svgBase64Scan.GrossAmount.Should().Be(31.00m);
+        svgBase64Scan.OcrToken.Should().NotBeNullOrWhiteSpace();
     }
 
     private HttpClient SubjectClient(string subjectId) =>

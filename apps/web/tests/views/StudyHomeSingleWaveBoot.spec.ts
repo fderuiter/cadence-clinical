@@ -245,6 +245,7 @@ describe("Single-wave Study Home boot & seeded stage transitions", () => {
       valid_at: "2026-10-20T10:00:00Z",
       known_at: "2026-10-20T10:00:00Z",
       locks: [],
+      hidden: { more_exist: false, reasons: [] },
     });
     vi.mocked(kernelApi.listStudyRulePacks).mockResolvedValue({
       study_ref: STUDY_REF,
@@ -593,6 +594,7 @@ describe("Single-wave Study Home boot & seeded stage transitions", () => {
       valid_at: "2026-10-20T11:00:00Z",
       known_at: "2026-10-20T11:00:00Z",
       locks: lockEntries,
+      hidden: { more_exist: false, reasons: [] },
     });
     vi.mocked(kernelApi.getNodes).mockImplementation(async (refs) => ({
       nodes: Object.fromEntries(

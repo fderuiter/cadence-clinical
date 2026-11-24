@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 
 using Cadence.Kernel.Application.Navigation;
 using Cadence.Kernel.Application.Simulation;
+using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Domain.Knowledge;
 using Cadence.Kernel.Domain.Standards;
@@ -35,7 +36,8 @@ namespace Cadence.Kernel.Persistence.Navigation;
 /// observations under their collection instance; assertions under their target; concepts under their tenant; artifacts
 /// under their study or tenant; protocol versions and study standards under their study; a protocol element under the version
 /// that last governed it (ADR-2474); an attestation under the object it signs (ADR-2485), falling back to the tenant when a
-/// lock signature precedes a lock assertion that has not been recorded. Participants (identity only) resolve to nothing.
+/// lock signature precedes a lock assertion that has not been recorded. Pseudonymous participant and person identities resolve
+/// directly under the tenant without direct identifiers (K-IDN-1).
 /// Current-state objects are returned at their current version, whatever version the reference names; the returned
 /// <see cref="NodeSummary.Ref"/> says which version that is.
 /// </summary>
@@ -71,6 +73,40 @@ internal sealed class KernelScopeGraph(KernelTenantDbContextFactory contexts) : 
                     ? null
                     : new ScopeNode(new NodeSummary(NodeRef.For(organizationId, organization.VersionIndex), organization.Name, organization.Code), tenantRef);
 
+            case NodeKinds.Person:
+                var personId = PersonId.FromGuid(node.Id);
+                var person = await (
+                        from p in db.People.AsNoTracking()
+                        where p.Id == personId
+                            && db.TenantMemberships.Any(m => m.TenantId == tenant && m.PersonId == p.Id && m.IsActive)
+                        select new { p.IsActive, p.VersionIndex })
+                    .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+                if (person is null)
+                {
+                    return null;
+                }
+
+                var personStatus = person.IsActive ? "Active" : "Inactive";
+                return new ScopeNode(
+                    new NodeSummary(NodeRef.For(personId, person.VersionIndex), "Person", Code: null, personStatus),
+                    tenantRef);
+
+            case NodeKinds.TenantMembership:
+                var membershipId = TenantMembershipId.FromGuid(node.Id);
+                var membership = await db.TenantMemberships.AsNoTracking()
+                    .Where(m => m.TenantId == tenant && m.Id == membershipId)
+                    .Select(m => new { m.IsActive, m.VersionIndex })
+                    .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+                if (membership is null)
+                {
+                    return null;
+                }
+
+                var membershipStatus = membership.IsActive ? "Active" : "Inactive";
+                return new ScopeNode(
+                    new NodeSummary(NodeRef.For(membershipId, membership.VersionIndex), "Tenant membership", Code: null, membershipStatus),
+                    tenantRef);
+
             case NodeKinds.Site:
                 var siteId = SiteId.FromGuid(node.Id);
                 var site = await db.Sites.AsNoTracking()
@@ -79,7 +115,10 @@ internal sealed class KernelScopeGraph(KernelTenantDbContextFactory contexts) : 
                     .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
                 return site is null
                     ? null
-                    : new ScopeNode(new NodeSummary(NodeRef.For(siteId, site.VersionIndex), site.Name, site.SiteCode), NodeRef.For(site.InstitutionId));
+                    : new ScopeNode(
+                        new NodeSummary(NodeRef.For(siteId, site.VersionIndex), site.Name, site.SiteCode),
+                        NodeRef.For(site.InstitutionId),
+                        FallbackParent: tenantRef);
 
             case NodeKinds.Study:
                 var studyId = StudyId.FromGuid(node.Id);
@@ -98,7 +137,19 @@ internal sealed class KernelScopeGraph(KernelTenantDbContextFactory contexts) : 
                     .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
                 return studySite is null
                     ? null
-                    : new ScopeNode(StudySiteSummary(studySite), NodeRef.For(studySite.StudyId), studySite.Country);
+                    : new ScopeNode(StudySiteSummary(studySite), NodeRef.For(studySite.StudyId), studySite.Country, FallbackParent: tenantRef);
+
+            case NodeKinds.Participant:
+                var participantId = ParticipantId.FromGuid(node.Id);
+                var participant = await db.Participants.AsNoTracking()
+                    .Where(p => p.TenantId == tenant && p.Id == participantId)
+                    .Select(p => (long?)p.VersionIndex)
+                    .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+                return participant is null
+                    ? null
+                    : new ScopeNode(
+                        new NodeSummary(NodeRef.For(participantId, participant.Value), "Participant", Code: null),
+                        tenantRef);
 
             case NodeKinds.Enrollment:
                 // A participant's place in a study is its enrollment at a study site (ADR-2453). The participant itself is
@@ -112,7 +163,8 @@ internal sealed class KernelScopeGraph(KernelTenantDbContextFactory contexts) : 
                     ? null
                     : new ScopeNode(
                         EnrollmentSummary(enrollmentId, enrollment.SubjectCode, enrollment.Status, enrollment.VersionIndex),
-                        ZoomRules.EnrollmentParent(enrollment.StudyId, enrollment.StudySiteId));
+                        ZoomRules.EnrollmentParent(enrollment.StudyId, enrollment.StudySiteId),
+                        FallbackParent: NodeRef.For(enrollment.StudyId));
 
             case NodeKinds.CollectionInstance:
                 var singleInstanceId = CollectionInstanceId.FromGuid(node.Id);
@@ -139,6 +191,22 @@ internal sealed class KernelScopeGraph(KernelTenantDbContextFactory contexts) : 
                             $"v{protocolVersion.Number}",
                             protocolVersion.Status.ToString()),
                         NodeRef.For(protocolVersion.StudyId));
+
+            case NodeKinds.FormVersionSnapshot:
+                var snapshotId = FormVersionSnapshotId.FromGuid(node.Id);
+                var snapshot = await db.FormVersionSnapshots.AsNoTracking()
+                    .Where(s => s.TenantId == tenant && s.Id == snapshotId)
+                    .Select(s => new { s.StudyId, s.ProtocolVersionId, s.ProtocolVersion, s.FormId, s.VersionIndex })
+                    .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+                return snapshot is null
+                    ? null
+                    : new ScopeNode(
+                        new NodeSummary(
+                            NodeRef.For(snapshotId, snapshot.VersionIndex),
+                            $"Form version snapshot {snapshot.FormId}",
+                            snapshot.FormId),
+                        NodeRef.For(snapshot.ProtocolVersionId),
+                        FallbackParent: NodeRef.For(snapshot.StudyId));
 
             case NodeKinds.ProtocolElement:
                 return (await LoadProtocolElementsAsync(db, tenant, [node.Id], cancellationToken).ConfigureAwait(false))
@@ -186,19 +254,21 @@ internal sealed class KernelScopeGraph(KernelTenantDbContextFactory contexts) : 
 
                 return new ScopeNode(
                     new NodeSummary(NodeRef.For(attestationId, attestation.VersionIndex), $"{attestation.Meaning} attestation", Code: null),
-                    attestationParent);
+                    attestationParent,
+                    FallbackParent: tenantRef);
 
             case NodeKinds.Assertion:
                 var assertionId = AssertionId.FromGuid(node.Id);
                 var assertion = await db.Assertions.AsNoTracking()
                     .Where(a => a.TenantId == tenant && a.Id == assertionId)
-                    .Select(a => new { a.Kind, a.TargetKind, a.TargetId, a.VersionIndex })
+                    .Select(a => new { a.Kind, a.StudyId, a.TargetKind, a.TargetId, a.VersionIndex })
                     .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
                 return assertion is null
                     ? null
                     : new ScopeNode(
                         new NodeSummary(NodeRef.For(assertionId, assertion.VersionIndex), $"{assertion.Kind} assertion", Code: null, assertion.Kind.ToString()),
-                        new NodeRef(assertion.TargetKind, assertion.TargetId));
+                        new NodeRef(assertion.TargetKind, assertion.TargetId),
+                        FallbackParent: NodeRef.For(assertion.StudyId));
 
             case NodeKinds.Artifact:
                 var artifactId = ArtifactId.FromGuid(node.Id);
@@ -218,18 +288,96 @@ internal sealed class KernelScopeGraph(KernelTenantDbContextFactory contexts) : 
 
             case NodeKinds.ArtifactVersion:
                 var artifactVersionId = ArtifactVersionId.FromGuid(node.Id);
-                var artifactVersion = await (
-                        from v in db.ArtifactVersions.AsNoTracking()
-                        join a in db.Artifacts.AsNoTracking()
-                            on new { v.TenantId, Id = v.ArtifactId } equals new { a.TenantId, a.Id }
-                        where v.TenantId == tenant && v.Id == artifactVersionId
-                        select new { v.ArtifactId, v.Number, a.Title })
+                return (await LoadArtifactVersionsAsync(db, tenant, tenantRef, [artifactVersionId], cancellationToken).ConfigureAwait(false))
+                    .GetValueOrDefault(artifactVersionId);
+
+            case NodeKinds.Role:
+                var roleId = RoleId.FromGuid(node.Id);
+                var role = await db.Roles.AsNoTracking()
+                    .Where(r => r.TenantId == tenant && r.Id == roleId)
+                    .Select(r => new { r.Name, r.Code, r.VersionIndex })
                     .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
-                return artifactVersion is null
+                return role is null
                     ? null
                     : new ScopeNode(
-                        new NodeSummary(NodeRef.For(artifactVersionId, 1), $"{artifactVersion.Title} v{artifactVersion.Number}", $"v{artifactVersion.Number}"),
-                        NodeRef.For(artifactVersion.ArtifactId));
+                        new NodeSummary(NodeRef.For(roleId, role.VersionIndex), role.Name, role.Code),
+                        tenantRef);
+
+            case NodeKinds.Grant:
+                var grantId = GrantId.FromGuid(node.Id);
+                return (await LoadGrantsAsync(db, tenant, [grantId], cancellationToken).ConfigureAwait(false))
+                    .GetValueOrDefault(grantId);
+
+            case NodeKinds.Qualification:
+                var qualificationId = QualificationId.FromGuid(node.Id);
+                var qualification = await db.Qualifications.AsNoTracking()
+                    .Where(q => q.TenantId == tenant && q.Id == qualificationId)
+                    .Select(q => new { q.Kind, q.Code, q.VersionIndex })
+                    .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+                return qualification is null
+                    ? null
+                    : new ScopeNode(
+                        new NodeSummary(NodeRef.For(qualificationId, qualification.VersionIndex), $"{qualification.Code} qualification", qualification.Code, qualification.Kind.ToString()),
+                        tenantRef);
+
+            case NodeKinds.QualificationRequirement:
+                var requirementId = QualificationRequirementId.FromGuid(node.Id);
+                return (await LoadQualificationRequirementsAsync(db, tenant, [requirementId], cancellationToken).ConfigureAwait(false))
+                    .GetValueOrDefault(requirementId);
+
+            case NodeKinds.Effectivity:
+                var effectivityId = EffectivityId.FromGuid(node.Id);
+                return (await LoadEffectivitiesAsync(db, tenant, [effectivityId], cancellationToken).ConfigureAwait(false))
+                    .GetValueOrDefault(effectivityId);
+
+            case NodeKinds.CodeSystem:
+                var codeSystemId = CodeSystemId.FromGuid(node.Id);
+                var codeSystem = await db.CodeSystems.AsNoTracking()
+                    .Where(cs => cs.TenantId == tenant && cs.Id == codeSystemId)
+                    .Select(cs => new { cs.Name, cs.Uri, cs.License, cs.VersionIndex })
+                    .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+                return codeSystem is null
+                    ? null
+                    : new ScopeNode(
+                        new NodeSummary(NodeRef.For(codeSystemId, codeSystem.VersionIndex), codeSystem.Name, codeSystem.Uri, codeSystem.License.ToString()),
+                        tenantRef);
+
+            case NodeKinds.CodeSystemVersion:
+                var codeSystemVersionId = CodeSystemVersionId.FromGuid(node.Id);
+                return (await LoadCodeSystemVersionsAsync(db, tenant, tenantRef, [codeSystemVersionId], cancellationToken).ConfigureAwait(false))
+                    .GetValueOrDefault(codeSystemVersionId);
+
+            case NodeKinds.Concept:
+                return await ConceptAsync(db, tenant, tenantRef, node, cancellationToken).ConfigureAwait(false);
+
+            case NodeKinds.ConceptMapping:
+                var conceptMappingId = ConceptMappingId.FromGuid(node.Id);
+                var conceptMapping = await db.ConceptMappings.AsNoTracking()
+                    .Where(m => m.TenantId == tenant && m.Id == conceptMappingId)
+                    .Select(m => new { m.ConceptId, m.Code, m.Relation, m.Status, m.VersionIndex })
+                    .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+                return conceptMapping is null
+                    ? null
+                    : new ScopeNode(
+                        new NodeSummary(
+                            NodeRef.For(conceptMappingId, conceptMapping.VersionIndex),
+                            $"{conceptMapping.Relation} mapping to {conceptMapping.Code}",
+                            conceptMapping.Code,
+                            conceptMapping.Status.ToString()),
+                        NodeRef.For(conceptMapping.ConceptId),
+                        FallbackParent: tenantRef);
+
+            case NodeKinds.WorkQueueDefinition:
+                var workQueueId = WorkQueueDefinitionId.FromGuid(node.Id);
+                var workQueue = await db.WorkQueueDefinitions.AsNoTracking()
+                    .Where(q => q.TenantId == tenant && q.Id == workQueueId)
+                    .Select(q => new { q.Title, q.Code, q.Version, q.VersionIndex })
+                    .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+                return workQueue is null
+                    ? null
+                    : new ScopeNode(
+                        new NodeSummary(NodeRef.For(workQueueId, workQueue.VersionIndex), workQueue.Title, workQueue.Code, $"v{workQueue.Version}"),
+                        tenantRef);
 
             case NodeKinds.LibraryItem:
                 var libraryItemId = LibraryItemId.FromGuid(node.Id);
@@ -297,25 +445,34 @@ internal sealed class KernelScopeGraph(KernelTenantDbContextFactory contexts) : 
 
             case NodeKinds.ValidationFinding:
                 var findingId = ValidationFindingId.FromGuid(node.Id);
-                var detection = await db.Set<ValidationDetectionRecord>().AsNoTracking()
-                    .Where(d => d.TenantId == tenant && d.FindingId == findingId)
-                    .Select(d => new { d.StudyId, d.RuleId, d.Dataset, d.TargetKey })
+                return (await LoadValidationFindingsAsync(db, tenant, [findingId], cancellationToken).ConfigureAwait(false))
+                    .GetValueOrDefault(findingId);
+
+            case NodeKinds.Subscription:
+                var subscriptionId = SubscriptionId.FromGuid(node.Id);
+                return (await LoadSubscriptionsAsync(db, tenant, tenantRef, [subscriptionId], cancellationToken).ConfigureAwait(false))
+                    .GetValueOrDefault(subscriptionId);
+
+            case NodeKinds.ProductEntitlement:
+                var entitlementId = ProductEntitlementId.FromGuid(node.Id);
+                var entitlement = await db.ProductEntitlements.AsNoTracking()
+                    .Where(e => e.TenantId == tenant && e.Id == entitlementId)
+                    .Select(e => new { e.SubscriptionId, e.Family, e.IsEnabled, e.VersionIndex })
                     .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
-                if (detection is null)
+                if (entitlement is null)
                 {
                     return null;
                 }
 
-                var decisions = await db.Set<ValidationFinding>().AsNoTracking()
-                    .Where(f => f.TenantId == tenant && f.Id == findingId)
-                    .Select(f => (long?)f.VersionIndex)
-                    .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+                var entitlementStatus = entitlement.IsEnabled ? "Enabled" : "Disabled";
                 return new ScopeNode(
-                    new NodeSummary(NodeRef.For(findingId, decisions), $"Finding {detection.RuleId} on {detection.Dataset} {detection.TargetKey}", detection.RuleId),
-                    NodeRef.For(detection.StudyId));
-
-            case NodeKinds.Concept:
-                return await ConceptAsync(db, tenant, tenantRef, node, cancellationToken).ConfigureAwait(false);
+                    new NodeSummary(
+                        NodeRef.For(entitlementId, entitlement.VersionIndex),
+                        $"{entitlement.Family} entitlement",
+                        entitlement.Family.ToString(),
+                        entitlementStatus),
+                    NodeRef.For(entitlement.SubscriptionId),
+                    FallbackParent: tenantRef);
 
             default:
                 return null;
@@ -433,6 +590,22 @@ internal sealed class KernelScopeGraph(KernelTenantDbContextFactory contexts) : 
         await using var db = contexts.Create(tenant);
         var tenantRef = NodeRef.For(tenant);
 
+        await PopulateCoreScopeNodesAsync(db, tenant, tenantRef, distinct, found, cancellationToken).ConfigureAwait(false);
+        await PopulateProtocolAndExecutionNodesAsync(db, tenant, distinct, found, cancellationToken).ConfigureAwait(false);
+        await PopulateAuthorityAndTerminologyNodesAsync(db, tenant, tenantRef, distinct, firstByUnversioned, found, cancellationToken).ConfigureAwait(false);
+        await PopulateGovernanceAndValidationNodesAsync(db, tenant, tenantRef, distinct, found, cancellationToken).ConfigureAwait(false);
+
+        return found;
+    }
+
+    private static async Task PopulateCoreScopeNodesAsync(
+        KernelDbContext db,
+        TenantId tenant,
+        NodeRef tenantRef,
+        List<NodeRef> distinct,
+        Dictionary<NodeRef, ScopeNode> found,
+        CancellationToken cancellationToken)
+    {
         if (distinct.Any(n => n.Kind == NodeKinds.Tenant && n.Id == tenant.Value))
         {
             var tenantRow = await db.Tenants.AsNoTracking()
@@ -462,6 +635,38 @@ internal sealed class KernelScopeGraph(KernelTenantDbContextFactory contexts) : 
             }
         }
 
+        var personIds = distinct.Where(n => n.Kind == NodeKinds.Person).Select(n => PersonId.FromGuid(n.Id)).ToList();
+        if (personIds.Count > 0)
+        {
+            var people = await (
+                    from p in db.People.AsNoTracking()
+                    where personIds.Contains(p.Id)
+                        && db.TenantMemberships.Any(m => m.TenantId == tenant && m.PersonId == p.Id && m.IsActive)
+                    select new { p.Id, p.IsActive, p.VersionIndex })
+                .ToListAsync(cancellationToken).ConfigureAwait(false);
+            foreach (var person in people)
+            {
+                found[NodeRef.For(person.Id)] = new ScopeNode(
+                    new NodeSummary(NodeRef.For(person.Id, person.VersionIndex), "Person", Code: null, person.IsActive ? "Active" : "Inactive"),
+                    tenantRef);
+            }
+        }
+
+        var membershipIds = distinct.Where(n => n.Kind == NodeKinds.TenantMembership).Select(n => TenantMembershipId.FromGuid(n.Id)).ToList();
+        if (membershipIds.Count > 0)
+        {
+            var memberships = await db.TenantMemberships.AsNoTracking()
+                .Where(m => m.TenantId == tenant && membershipIds.Contains(m.Id))
+                .Select(m => new { m.Id, m.IsActive, m.VersionIndex })
+                .ToListAsync(cancellationToken).ConfigureAwait(false);
+            foreach (var membership in memberships)
+            {
+                found[NodeRef.For(membership.Id)] = new ScopeNode(
+                    new NodeSummary(NodeRef.For(membership.Id, membership.VersionIndex), "Tenant membership", Code: null, membership.IsActive ? "Active" : "Inactive"),
+                    tenantRef);
+            }
+        }
+
         var siteIds = distinct.Where(n => n.Kind == NodeKinds.Site).Select(n => SiteId.FromGuid(n.Id)).ToList();
         if (siteIds.Count > 0)
         {
@@ -473,7 +678,8 @@ internal sealed class KernelScopeGraph(KernelTenantDbContextFactory contexts) : 
             {
                 found[NodeRef.For(site.Id)] = new ScopeNode(
                     new NodeSummary(NodeRef.For(site.Id, site.VersionIndex), site.Name, site.SiteCode),
-                    NodeRef.For(site.InstitutionId));
+                    NodeRef.For(site.InstitutionId),
+                    FallbackParent: tenantRef);
             }
         }
 
@@ -503,7 +709,23 @@ internal sealed class KernelScopeGraph(KernelTenantDbContextFactory contexts) : 
                 found[NodeRef.For(studySite.Id)] = new ScopeNode(
                     StudySiteSummary(studySite),
                     NodeRef.For(studySite.StudyId),
-                    studySite.Country);
+                    studySite.Country,
+                    FallbackParent: tenantRef);
+            }
+        }
+
+        var participantIds = distinct.Where(n => n.Kind == NodeKinds.Participant).Select(n => ParticipantId.FromGuid(n.Id)).ToList();
+        if (participantIds.Count > 0)
+        {
+            var participants = await db.Participants.AsNoTracking()
+                .Where(p => p.TenantId == tenant && participantIds.Contains(p.Id))
+                .Select(p => new { p.Id, p.VersionIndex })
+                .ToListAsync(cancellationToken).ConfigureAwait(false);
+            foreach (var participant in participants)
+            {
+                found[NodeRef.For(participant.Id)] = new ScopeNode(
+                    new NodeSummary(NodeRef.For(participant.Id, participant.VersionIndex), "Participant", Code: null),
+                    tenantRef);
             }
         }
 
@@ -518,10 +740,19 @@ internal sealed class KernelScopeGraph(KernelTenantDbContextFactory contexts) : 
             {
                 found[NodeRef.For(enrollment.Id)] = new ScopeNode(
                     EnrollmentSummary(enrollment.Id, enrollment.SubjectCode, enrollment.Status, enrollment.VersionIndex),
-                    ZoomRules.EnrollmentParent(enrollment.StudyId, enrollment.StudySiteId));
+                    ZoomRules.EnrollmentParent(enrollment.StudyId, enrollment.StudySiteId),
+                    FallbackParent: NodeRef.For(enrollment.StudyId));
             }
         }
+    }
 
+    private static async Task PopulateProtocolAndExecutionNodesAsync(
+        KernelDbContext db,
+        TenantId tenant,
+        List<NodeRef> distinct,
+        Dictionary<NodeRef, ScopeNode> found,
+        CancellationToken cancellationToken)
+    {
         var collectionInstanceIds = distinct.Where(n => n.Kind == NodeKinds.CollectionInstance).Select(n => CollectionInstanceId.FromGuid(n.Id)).ToList();
         if (collectionInstanceIds.Count > 0)
         {
@@ -559,6 +790,25 @@ internal sealed class KernelScopeGraph(KernelTenantDbContextFactory contexts) : 
             }
         }
 
+        var snapshotIds = distinct.Where(n => n.Kind == NodeKinds.FormVersionSnapshot).Select(n => FormVersionSnapshotId.FromGuid(n.Id)).ToList();
+        if (snapshotIds.Count > 0)
+        {
+            var snapshots = await db.FormVersionSnapshots.AsNoTracking()
+                .Where(s => s.TenantId == tenant && snapshotIds.Contains(s.Id))
+                .Select(s => new { s.Id, s.StudyId, s.ProtocolVersionId, s.FormId, s.VersionIndex })
+                .ToListAsync(cancellationToken).ConfigureAwait(false);
+            foreach (var snapshot in snapshots)
+            {
+                found[NodeRef.For(snapshot.Id)] = new ScopeNode(
+                    new NodeSummary(
+                        NodeRef.For(snapshot.Id, snapshot.VersionIndex),
+                        $"Form version snapshot {snapshot.FormId}",
+                        snapshot.FormId),
+                    NodeRef.For(snapshot.ProtocolVersionId),
+                    FallbackParent: NodeRef.For(snapshot.StudyId));
+            }
+        }
+
         var protocolElementGuids = distinct.Where(n => n.Kind == NodeKinds.ProtocolElement).Select(n => n.Id).ToList();
         if (protocolElementGuids.Count > 0)
         {
@@ -591,14 +841,9 @@ internal sealed class KernelScopeGraph(KernelTenantDbContextFactory contexts) : 
                     NodeRef.For(profile.StudyId));
             }
         }
-
-        await PopulateGovernanceAndValidationNodesAsync(db, tenant, tenantRef, distinct, firstByUnversioned, found, cancellationToken)
-            .ConfigureAwait(false);
-
-        return found;
     }
 
-    private static async Task PopulateGovernanceAndValidationNodesAsync(
+    private static async Task PopulateAuthorityAndTerminologyNodesAsync(
         KernelDbContext db,
         TenantId tenant,
         NodeRef tenantRef,
@@ -607,82 +852,133 @@ internal sealed class KernelScopeGraph(KernelTenantDbContextFactory contexts) : 
         Dictionary<NodeRef, ScopeNode> found,
         CancellationToken cancellationToken)
     {
-        var attestationIds = distinct.Where(n => n.Kind == NodeKinds.Attestation).Select(n => AttestationId.FromGuid(n.Id)).ToList();
-        if (attestationIds.Count > 0)
+        var roleIds = distinct.Where(n => n.Kind == NodeKinds.Role).Select(n => RoleId.FromGuid(n.Id)).ToList();
+        if (roleIds.Count > 0)
         {
-            var attestations = await db.Attestations.AsNoTracking()
-                .Where(a => a.TenantId == tenant && attestationIds.Contains(a.Id))
-                .Select(a => new { a.Id, a.Meaning, a.TargetKind, a.TargetId, a.VersionIndex })
+            var roles = await db.Roles.AsNoTracking()
+                .Where(r => r.TenantId == tenant && roleIds.Contains(r.Id))
+                .Select(r => new { r.Id, r.Name, r.Code, r.VersionIndex })
                 .ToListAsync(cancellationToken).ConfigureAwait(false);
-            var assertionTargetIds = attestations
-                .Where(a => a.TargetKind == NodeKinds.Assertion)
-                .Select(a => AssertionId.FromGuid(a.TargetId))
-                .Distinct()
-                .ToList();
-            var recordedAssertions = assertionTargetIds.Count == 0
-                ? []
-                : (await db.Assertions.AsNoTracking()
-                    .Where(a => a.TenantId == tenant && assertionTargetIds.Contains(a.Id))
-                    .Select(a => a.Id)
-                    .ToListAsync(cancellationToken).ConfigureAwait(false)).ToHashSet();
-            foreach (var attestation in attestations)
+            foreach (var role in roles)
             {
-                var parent = attestation.TargetKind == NodeKinds.Assertion
-                    && !recordedAssertions.Contains(AssertionId.FromGuid(attestation.TargetId))
-                    ? tenantRef
-                    : new NodeRef(attestation.TargetKind, attestation.TargetId);
-                found[NodeRef.For(attestation.Id)] = new ScopeNode(
-                    new NodeSummary(NodeRef.For(attestation.Id, attestation.VersionIndex), $"{attestation.Meaning} attestation", Code: null),
-                    parent);
+                found[NodeRef.For(role.Id)] = new ScopeNode(
+                    new NodeSummary(NodeRef.For(role.Id, role.VersionIndex), role.Name, role.Code),
+                    tenantRef);
             }
         }
 
-        var assertionIds = distinct.Where(n => n.Kind == NodeKinds.Assertion).Select(n => AssertionId.FromGuid(n.Id)).ToList();
-        if (assertionIds.Count > 0)
+        var grantIds = distinct.Where(n => n.Kind == NodeKinds.Grant).Select(n => GrantId.FromGuid(n.Id)).ToList();
+        if (grantIds.Count > 0)
         {
-            var assertions = await db.Assertions.AsNoTracking()
-                .Where(a => a.TenantId == tenant && assertionIds.Contains(a.Id))
-                .Select(a => new { a.Id, a.Kind, a.TargetKind, a.TargetId, a.VersionIndex })
-                .ToListAsync(cancellationToken).ConfigureAwait(false);
-            foreach (var assertion in assertions)
+            foreach (var (grantId, scopeNode) in await LoadGrantsAsync(db, tenant, grantIds, cancellationToken).ConfigureAwait(false))
             {
-                found[NodeRef.For(assertion.Id)] = new ScopeNode(
-                    new NodeSummary(NodeRef.For(assertion.Id, assertion.VersionIndex), $"{assertion.Kind} assertion", Code: null, assertion.Kind.ToString()),
-                    new NodeRef(assertion.TargetKind, assertion.TargetId));
+                found[NodeRef.For(grantId)] = scopeNode;
             }
         }
 
-        var artifactIds = distinct.Where(n => n.Kind == NodeKinds.Artifact).Select(n => ArtifactId.FromGuid(n.Id)).ToList();
-        if (artifactIds.Count > 0)
+        var qualificationIds = distinct.Where(n => n.Kind == NodeKinds.Qualification).Select(n => QualificationId.FromGuid(n.Id)).ToList();
+        if (qualificationIds.Count > 0)
         {
-            var artifacts = await db.Artifacts.AsNoTracking()
-                .Where(a => a.TenantId == tenant && artifactIds.Contains(a.Id))
-                .Select(a => new { a.Id, a.Title, a.Kind, a.StudyId, a.VersionIndex })
+            var qualifications = await db.Qualifications.AsNoTracking()
+                .Where(q => q.TenantId == tenant && qualificationIds.Contains(q.Id))
+                .Select(q => new { q.Id, q.Kind, q.Code, q.VersionIndex })
                 .ToListAsync(cancellationToken).ConfigureAwait(false);
-            foreach (var artifact in artifacts)
+            foreach (var qualification in qualifications)
             {
-                var parent = artifact.StudyId is { } artifactStudyId ? NodeRef.For(artifactStudyId) : tenantRef;
-                found[NodeRef.For(artifact.Id)] = new ScopeNode(
-                    new NodeSummary(NodeRef.For(artifact.Id, artifact.VersionIndex), artifact.Title, Code: null, artifact.Kind.ToString()),
-                    parent);
+                found[NodeRef.For(qualification.Id)] = new ScopeNode(
+                    new NodeSummary(
+                        NodeRef.For(qualification.Id, qualification.VersionIndex),
+                        $"{qualification.Code} qualification",
+                        qualification.Code,
+                        qualification.Kind.ToString()),
+                    tenantRef);
             }
         }
 
-        var artifactVersionIds = distinct.Where(n => n.Kind == NodeKinds.ArtifactVersion).Select(n => ArtifactVersionId.FromGuid(n.Id)).ToList();
-        if (artifactVersionIds.Count > 0)
+        var requirementIds = distinct.Where(n => n.Kind == NodeKinds.QualificationRequirement).Select(n => QualificationRequirementId.FromGuid(n.Id)).ToList();
+        if (requirementIds.Count > 0)
         {
-            var artifactVersions = await (
-                    from v in db.ArtifactVersions.AsNoTracking()
-                    join a in db.Artifacts.AsNoTracking()
-                        on new { v.TenantId, Id = v.ArtifactId } equals new { a.TenantId, a.Id }
-                    where v.TenantId == tenant && artifactVersionIds.Contains(v.Id)
-                    select new { v.Id, v.ArtifactId, v.Number, a.Title })
-                .ToListAsync(cancellationToken).ConfigureAwait(false);
-            foreach (var av in artifactVersions)
+            foreach (var (requirementId, scopeNode) in await LoadQualificationRequirementsAsync(db, tenant, requirementIds, cancellationToken).ConfigureAwait(false))
             {
-                found[NodeRef.For(av.Id)] = new ScopeNode(
-                    new NodeSummary(NodeRef.For(av.Id, 1), $"{av.Title} v{av.Number}", $"v{av.Number}"),
-                    NodeRef.For(av.ArtifactId));
+                found[NodeRef.For(requirementId)] = scopeNode;
+            }
+        }
+
+        var effectivityIds = distinct.Where(n => n.Kind == NodeKinds.Effectivity).Select(n => EffectivityId.FromGuid(n.Id)).ToList();
+        if (effectivityIds.Count > 0)
+        {
+            foreach (var (effectivityId, scopeNode) in await LoadEffectivitiesAsync(db, tenant, effectivityIds, cancellationToken).ConfigureAwait(false))
+            {
+                found[NodeRef.For(effectivityId)] = scopeNode;
+            }
+        }
+
+        var codeSystemIds = distinct.Where(n => n.Kind == NodeKinds.CodeSystem).Select(n => CodeSystemId.FromGuid(n.Id)).ToList();
+        if (codeSystemIds.Count > 0)
+        {
+            var codeSystems = await db.CodeSystems.AsNoTracking()
+                .Where(cs => cs.TenantId == tenant && codeSystemIds.Contains(cs.Id))
+                .Select(cs => new { cs.Id, cs.Name, cs.Uri, cs.License, cs.VersionIndex })
+                .ToListAsync(cancellationToken).ConfigureAwait(false);
+            foreach (var cs in codeSystems)
+            {
+                found[NodeRef.For(cs.Id)] = new ScopeNode(
+                    new NodeSummary(NodeRef.For(cs.Id, cs.VersionIndex), cs.Name, cs.Uri, cs.License.ToString()),
+                    tenantRef);
+            }
+        }
+
+        var codeSystemVersionIds = distinct.Where(n => n.Kind == NodeKinds.CodeSystemVersion).Select(n => CodeSystemVersionId.FromGuid(n.Id)).ToList();
+        if (codeSystemVersionIds.Count > 0)
+        {
+            foreach (var (csvId, scopeNode) in await LoadCodeSystemVersionsAsync(db, tenant, tenantRef, codeSystemVersionIds, cancellationToken).ConfigureAwait(false))
+            {
+                found[NodeRef.For(csvId)] = scopeNode;
+            }
+        }
+
+        var conceptKeys = distinct.Where(n => n.Kind == NodeKinds.Concept).ToList();
+        if (conceptKeys.Count > 0)
+        {
+            var requestedConcepts = conceptKeys.Select(k => firstByUnversioned[k]).ToList();
+            foreach (var (conceptId, scopeNode) in await LoadConceptsAsync(db, tenant, tenantRef, requestedConcepts, cancellationToken).ConfigureAwait(false))
+            {
+                found[NodeRef.For(conceptId)] = scopeNode;
+            }
+        }
+
+        var conceptMappingIds = distinct.Where(n => n.Kind == NodeKinds.ConceptMapping).Select(n => ConceptMappingId.FromGuid(n.Id)).ToList();
+        if (conceptMappingIds.Count > 0)
+        {
+            var mappings = await db.ConceptMappings.AsNoTracking()
+                .Where(m => m.TenantId == tenant && conceptMappingIds.Contains(m.Id))
+                .Select(m => new { m.Id, m.ConceptId, m.Code, m.Relation, m.Status, m.VersionIndex })
+                .ToListAsync(cancellationToken).ConfigureAwait(false);
+            foreach (var mapping in mappings)
+            {
+                found[NodeRef.For(mapping.Id)] = new ScopeNode(
+                    new NodeSummary(
+                        NodeRef.For(mapping.Id, mapping.VersionIndex),
+                        $"{mapping.Relation} mapping to {mapping.Code}",
+                        mapping.Code,
+                        mapping.Status.ToString()),
+                    NodeRef.For(mapping.ConceptId),
+                    FallbackParent: tenantRef);
+            }
+        }
+
+        var workQueueIds = distinct.Where(n => n.Kind == NodeKinds.WorkQueueDefinition).Select(n => WorkQueueDefinitionId.FromGuid(n.Id)).ToList();
+        if (workQueueIds.Count > 0)
+        {
+            var workQueues = await db.WorkQueueDefinitions.AsNoTracking()
+                .Where(q => q.TenantId == tenant && workQueueIds.Contains(q.Id))
+                .Select(q => new { q.Id, q.Title, q.Code, q.Version, q.VersionIndex })
+                .ToListAsync(cancellationToken).ConfigureAwait(false);
+            foreach (var workQueue in workQueues)
+            {
+                found[NodeRef.For(workQueue.Id)] = new ScopeNode(
+                    new NodeSummary(NodeRef.For(workQueue.Id, workQueue.VersionIndex), workQueue.Title, workQueue.Code, $"v{workQueue.Version}"),
+                    tenantRef);
             }
         }
 
@@ -717,6 +1013,116 @@ internal sealed class KernelScopeGraph(KernelTenantDbContextFactory contexts) : 
                         $"{sv.StandardCode} {sv.Version}",
                         sv.Status.ToString()),
                     tenantRef);
+            }
+        }
+
+        var subscriptionIds = distinct.Where(n => n.Kind == NodeKinds.Subscription).Select(n => SubscriptionId.FromGuid(n.Id)).ToList();
+        if (subscriptionIds.Count > 0)
+        {
+            foreach (var (subscriptionId, scopeNode) in await LoadSubscriptionsAsync(db, tenant, tenantRef, subscriptionIds, cancellationToken).ConfigureAwait(false))
+            {
+                found[NodeRef.For(subscriptionId)] = scopeNode;
+            }
+        }
+
+        var entitlementIds = distinct.Where(n => n.Kind == NodeKinds.ProductEntitlement).Select(n => ProductEntitlementId.FromGuid(n.Id)).ToList();
+        if (entitlementIds.Count > 0)
+        {
+            var entitlements = await db.ProductEntitlements.AsNoTracking()
+                .Where(e => e.TenantId == tenant && entitlementIds.Contains(e.Id))
+                .Select(e => new { e.Id, e.SubscriptionId, e.Family, e.IsEnabled, e.VersionIndex })
+                .ToListAsync(cancellationToken).ConfigureAwait(false);
+            foreach (var entitlement in entitlements)
+            {
+                found[NodeRef.For(entitlement.Id)] = new ScopeNode(
+                    new NodeSummary(
+                        NodeRef.For(entitlement.Id, entitlement.VersionIndex),
+                        $"{entitlement.Family} entitlement",
+                        entitlement.Family.ToString(),
+                        entitlement.IsEnabled ? "Enabled" : "Disabled"),
+                    NodeRef.For(entitlement.SubscriptionId),
+                    FallbackParent: tenantRef);
+            }
+        }
+    }
+
+    private static async Task PopulateGovernanceAndValidationNodesAsync(
+        KernelDbContext db,
+        TenantId tenant,
+        NodeRef tenantRef,
+        List<NodeRef> distinct,
+        Dictionary<NodeRef, ScopeNode> found,
+        CancellationToken cancellationToken)
+    {
+        var attestationIds = distinct.Where(n => n.Kind == NodeKinds.Attestation).Select(n => AttestationId.FromGuid(n.Id)).ToList();
+        if (attestationIds.Count > 0)
+        {
+            var attestations = await db.Attestations.AsNoTracking()
+                .Where(a => a.TenantId == tenant && attestationIds.Contains(a.Id))
+                .Select(a => new { a.Id, a.Meaning, a.TargetKind, a.TargetId, a.VersionIndex })
+                .ToListAsync(cancellationToken).ConfigureAwait(false);
+            var assertionTargetIds = attestations
+                .Where(a => a.TargetKind == NodeKinds.Assertion)
+                .Select(a => AssertionId.FromGuid(a.TargetId))
+                .Distinct()
+                .ToList();
+            var recordedAssertions = assertionTargetIds.Count == 0
+                ? []
+                : (await db.Assertions.AsNoTracking()
+                    .Where(a => a.TenantId == tenant && assertionTargetIds.Contains(a.Id))
+                    .Select(a => a.Id)
+                    .ToListAsync(cancellationToken).ConfigureAwait(false)).ToHashSet();
+            foreach (var attestation in attestations)
+            {
+                var parent = attestation.TargetKind == NodeKinds.Assertion
+                    && !recordedAssertions.Contains(AssertionId.FromGuid(attestation.TargetId))
+                    ? tenantRef
+                    : new NodeRef(attestation.TargetKind, attestation.TargetId);
+                found[NodeRef.For(attestation.Id)] = new ScopeNode(
+                    new NodeSummary(NodeRef.For(attestation.Id, attestation.VersionIndex), $"{attestation.Meaning} attestation", Code: null),
+                    parent,
+                    FallbackParent: tenantRef);
+            }
+        }
+
+        var assertionIds = distinct.Where(n => n.Kind == NodeKinds.Assertion).Select(n => AssertionId.FromGuid(n.Id)).ToList();
+        if (assertionIds.Count > 0)
+        {
+            var assertions = await db.Assertions.AsNoTracking()
+                .Where(a => a.TenantId == tenant && assertionIds.Contains(a.Id))
+                .Select(a => new { a.Id, a.Kind, a.StudyId, a.TargetKind, a.TargetId, a.VersionIndex })
+                .ToListAsync(cancellationToken).ConfigureAwait(false);
+            foreach (var assertion in assertions)
+            {
+                found[NodeRef.For(assertion.Id)] = new ScopeNode(
+                    new NodeSummary(NodeRef.For(assertion.Id, assertion.VersionIndex), $"{assertion.Kind} assertion", Code: null, assertion.Kind.ToString()),
+                    new NodeRef(assertion.TargetKind, assertion.TargetId),
+                    FallbackParent: NodeRef.For(assertion.StudyId));
+            }
+        }
+
+        var artifactIds = distinct.Where(n => n.Kind == NodeKinds.Artifact).Select(n => ArtifactId.FromGuid(n.Id)).ToList();
+        if (artifactIds.Count > 0)
+        {
+            var artifacts = await db.Artifacts.AsNoTracking()
+                .Where(a => a.TenantId == tenant && artifactIds.Contains(a.Id))
+                .Select(a => new { a.Id, a.Title, a.Kind, a.StudyId, a.VersionIndex })
+                .ToListAsync(cancellationToken).ConfigureAwait(false);
+            foreach (var artifact in artifacts)
+            {
+                var parent = artifact.StudyId is { } artifactStudyId ? NodeRef.For(artifactStudyId) : tenantRef;
+                found[NodeRef.For(artifact.Id)] = new ScopeNode(
+                    new NodeSummary(NodeRef.For(artifact.Id, artifact.VersionIndex), artifact.Title, Code: null, artifact.Kind.ToString()),
+                    parent);
+            }
+        }
+
+        var artifactVersionIds = distinct.Where(n => n.Kind == NodeKinds.ArtifactVersion).Select(n => ArtifactVersionId.FromGuid(n.Id)).ToList();
+        if (artifactVersionIds.Count > 0)
+        {
+            foreach (var (avId, scopeNode) in await LoadArtifactVersionsAsync(db, tenant, tenantRef, artifactVersionIds, cancellationToken).ConfigureAwait(false))
+            {
+                found[NodeRef.For(avId)] = scopeNode;
             }
         }
 
@@ -770,37 +1176,9 @@ internal sealed class KernelScopeGraph(KernelTenantDbContextFactory contexts) : 
         var findingIds = distinct.Where(n => n.Kind == NodeKinds.ValidationFinding).Select(n => ValidationFindingId.FromGuid(n.Id)).ToList();
         if (findingIds.Count > 0)
         {
-            var detections = await db.Set<ValidationDetectionRecord>().AsNoTracking()
-                .Where(d => d.TenantId == tenant && findingIds.Contains(d.FindingId))
-                .Select(d => new { d.FindingId, d.StudyId, d.RuleId, d.Dataset, d.TargetKey })
-                .ToListAsync(cancellationToken).ConfigureAwait(false);
-            var detectionsByFinding = detections
-                .GroupBy(d => d.FindingId)
-                .ToDictionary(g => g.Key, g => g.First());
-            if (detectionsByFinding.Count > 0)
+            foreach (var (findingId, scopeNode) in await LoadValidationFindingsAsync(db, tenant, findingIds, cancellationToken).ConfigureAwait(false))
             {
-                var matchedFindingIds = detectionsByFinding.Keys.ToList();
-                var decisions = await db.Set<ValidationFinding>().AsNoTracking()
-                    .Where(f => f.TenantId == tenant && matchedFindingIds.Contains(f.Id))
-                    .Select(f => new { f.Id, f.VersionIndex })
-                    .ToDictionaryAsync(f => f.Id, f => (long?)f.VersionIndex, cancellationToken).ConfigureAwait(false);
-                foreach (var (findingId, detection) in detectionsByFinding)
-                {
-                    decisions.TryGetValue(findingId, out var versionIndex);
-                    found[NodeRef.For(findingId)] = new ScopeNode(
-                        new NodeSummary(NodeRef.For(findingId, versionIndex), $"Finding {detection.RuleId} on {detection.Dataset} {detection.TargetKey}", detection.RuleId),
-                        NodeRef.For(detection.StudyId));
-                }
-            }
-        }
-
-        var conceptKeys = distinct.Where(n => n.Kind == NodeKinds.Concept).ToList();
-        if (conceptKeys.Count > 0)
-        {
-            var requestedConcepts = conceptKeys.Select(k => firstByUnversioned[k]).ToList();
-            foreach (var (conceptId, scopeNode) in await LoadConceptsAsync(db, tenant, tenantRef, requestedConcepts, cancellationToken).ConfigureAwait(false))
-            {
-                found[NodeRef.For(conceptId)] = scopeNode;
+                found[NodeRef.For(findingId)] = scopeNode;
             }
         }
     }
@@ -926,10 +1304,417 @@ internal sealed class KernelScopeGraph(KernelTenantDbContextFactory contexts) : 
                 .FirstOrDefault(e => ProtocolElementId.For(owner.StudyId, e) == id);
             result[elementGuid] = new ScopeNode(
                 new NodeSummary(NodeRef.For(id, latest.Value), elementId is null ? "Protocol element" : $"Protocol element {elementId}", elementId),
-                NodeRef.For(versionId));
+                NodeRef.For(versionId),
+                FallbackParent: NodeRef.For(owner.StudyId));
         }
 
         return result;
+    }
+
+    private static (NodeRef Parent, string? Group, NodeRef? FallbackParent) ScopedAuthorityParent(
+        TenantId tenant,
+        ScopeLevel scopeLevel,
+        Guid? scopeTargetId,
+        string? scopeCountry)
+    {
+        var tenantRef = NodeRef.For(tenant);
+        return (scopeLevel, scopeTargetId) switch
+        {
+            (ScopeLevel.StudySite, { } siteGuid) => (NodeRef.For(StudySiteId.FromGuid(siteGuid)), null, tenantRef),
+            (ScopeLevel.Study, { } studyGuid) => (NodeRef.For(StudyId.FromGuid(studyGuid)), null, tenantRef),
+            (ScopeLevel.StudyCountry, { } countryStudyGuid) => (NodeRef.For(StudyId.FromGuid(countryStudyGuid)), scopeCountry, tenantRef),
+            (ScopeLevel.Organization, { } orgGuid) => (NodeRef.For(OrganizationId.FromGuid(orgGuid)), null, tenantRef),
+            _ => (tenantRef, null, null),
+        };
+    }
+
+    private static async Task<Dictionary<ArtifactVersionId, ScopeNode>> LoadArtifactVersionsAsync(
+        KernelDbContext db,
+        TenantId tenant,
+        NodeRef tenantRef,
+        IReadOnlyCollection<ArtifactVersionId> artifactVersionIds,
+        CancellationToken cancellationToken)
+    {
+        var rows = await (
+                from v in db.ArtifactVersions.AsNoTracking()
+                join a in db.Artifacts.AsNoTracking()
+                    on new { v.TenantId, Id = v.ArtifactId } equals new { a.TenantId, a.Id } into artifactGroup
+                from a in artifactGroup.DefaultIfEmpty()
+                where v.TenantId == tenant && artifactVersionIds.Contains(v.Id)
+                select new { v.Id, v.ArtifactId, v.Number, Title = a != null ? a.Title : null, StudyId = a != null ? a.StudyId : null })
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+        var result = new Dictionary<ArtifactVersionId, ScopeNode>(rows.Count);
+        foreach (var av in rows)
+        {
+            var title = av.Title is not null ? $"{av.Title} v{av.Number}" : $"Artifact v{av.Number}";
+            var fallback = av.StudyId is { } avStudyId ? NodeRef.For(avStudyId) : tenantRef;
+            result[av.Id] = new ScopeNode(
+                new NodeSummary(NodeRef.For(av.Id, 1), title, $"v{av.Number}"),
+                NodeRef.For(av.ArtifactId),
+                FallbackParent: fallback);
+        }
+
+        return result;
+    }
+
+    private static async Task<Dictionary<GrantId, ScopeNode>> LoadGrantsAsync(
+        KernelDbContext db,
+        TenantId tenant,
+        IReadOnlyCollection<GrantId> grantIds,
+        CancellationToken cancellationToken)
+    {
+        var rows = await (
+                from g in db.Grants.AsNoTracking()
+                join r in db.Roles.AsNoTracking()
+                    on new { g.TenantId, Id = g.RoleId } equals new { r.TenantId, Id = (RoleId?)r.Id } into roleGroup
+                from r in roleGroup.DefaultIfEmpty()
+                where g.TenantId == tenant && grantIds.Contains(g.Id)
+                select new
+                {
+                    g.Id,
+                    g.Capability,
+                    RoleCode = r != null ? r.Code : null,
+                    g.ScopeLevel,
+                    g.ScopeTargetId,
+                    g.ScopeCountry,
+                    g.VersionIndex,
+                })
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+        var result = new Dictionary<GrantId, ScopeNode>(rows.Count);
+        foreach (var grant in rows)
+        {
+            var label = grant.Capability ?? grant.RoleCode;
+            string title;
+            if (grant.Capability is not null)
+            {
+                title = $"{grant.Capability} grant";
+            }
+            else if (grant.RoleCode is not null)
+            {
+                title = $"{grant.RoleCode} role grant";
+            }
+            else
+            {
+                title = "Role grant";
+            }
+
+            var (parent, group, fallback) = ScopedAuthorityParent(tenant, grant.ScopeLevel, grant.ScopeTargetId, grant.ScopeCountry);
+            result[grant.Id] = new ScopeNode(
+                new NodeSummary(NodeRef.For(grant.Id, grant.VersionIndex), title, label, grant.ScopeLevel.ToString()),
+                parent,
+                group,
+                fallback);
+        }
+
+        return result;
+    }
+
+    private static async Task<Dictionary<QualificationRequirementId, ScopeNode>> LoadQualificationRequirementsAsync(
+        KernelDbContext db,
+        TenantId tenant,
+        IReadOnlyCollection<QualificationRequirementId> requirementIds,
+        CancellationToken cancellationToken)
+    {
+        var rows = await db.QualificationRequirements.AsNoTracking()
+            .Where(r => r.TenantId == tenant && requirementIds.Contains(r.Id))
+            .Select(r => new { r.Id, r.Capability, r.QualificationCode, r.ScopeLevel, r.ScopeTargetId, r.ScopeCountry, r.VersionIndex })
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+        var result = new Dictionary<QualificationRequirementId, ScopeNode>(rows.Count);
+        foreach (var req in rows)
+        {
+            var (parent, group, fallback) = ScopedAuthorityParent(tenant, req.ScopeLevel, req.ScopeTargetId, req.ScopeCountry);
+            result[req.Id] = new ScopeNode(
+                new NodeSummary(
+                    NodeRef.For(req.Id, req.VersionIndex),
+                    $"Requires {req.QualificationCode} for {req.Capability}",
+                    req.QualificationCode,
+                    req.ScopeLevel.ToString()),
+                parent,
+                group,
+                fallback);
+        }
+
+        return result;
+    }
+
+    private static async Task<Dictionary<EffectivityId, ScopeNode>> LoadEffectivitiesAsync(
+        KernelDbContext db,
+        TenantId tenant,
+        IReadOnlyCollection<EffectivityId> effectivityIds,
+        CancellationToken cancellationToken)
+    {
+        var rows = await db.Effectivities.AsNoTracking()
+            .Where(e => e.TenantId == tenant && effectivityIds.Contains(e.Id))
+            .Select(e => new { e.Id, e.StudyId, e.ScopeLevel, e.ScopeCountry, e.ScopeStudySiteId, e.Status, e.VersionIndex })
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+        var result = new Dictionary<EffectivityId, ScopeNode>(rows.Count);
+        foreach (var eff in rows)
+        {
+            var parent = eff.ScopeLevel == EffectivityLevel.StudySite && eff.ScopeStudySiteId is { IsEmpty: false } effSiteId
+                ? NodeRef.For(effSiteId)
+                : NodeRef.For(eff.StudyId);
+            var group = eff.ScopeLevel == EffectivityLevel.Country ? eff.ScopeCountry : null;
+            result[eff.Id] = new ScopeNode(
+                new NodeSummary(NodeRef.For(eff.Id, eff.VersionIndex), $"{eff.ScopeLevel} effectivity", Code: null, eff.Status.ToString()),
+                parent,
+                group,
+                FallbackParent: NodeRef.For(eff.StudyId));
+        }
+
+        return result;
+    }
+
+    private static async Task<Dictionary<CodeSystemVersionId, ScopeNode>> LoadCodeSystemVersionsAsync(
+        KernelDbContext db,
+        TenantId tenant,
+        NodeRef tenantRef,
+        IReadOnlyCollection<CodeSystemVersionId> codeSystemVersionIds,
+        CancellationToken cancellationToken)
+    {
+        var rows = await (
+                from v in db.CodeSystemVersions.AsNoTracking()
+                join cs in db.CodeSystems.AsNoTracking()
+                    on new { v.TenantId, Id = v.CodeSystemId } equals new { cs.TenantId, cs.Id } into csGroup
+                from cs in csGroup.DefaultIfEmpty()
+                where v.TenantId == tenant && codeSystemVersionIds.Contains(v.Id)
+                select new { v.Id, v.CodeSystemId, v.Version, v.VersionIndex, SystemName = cs != null ? cs.Name : null })
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+        var result = new Dictionary<CodeSystemVersionId, ScopeNode>(rows.Count);
+        foreach (var csv in rows)
+        {
+            var title = csv.SystemName is not null ? $"{csv.SystemName} {csv.Version}" : csv.Version;
+            result[csv.Id] = new ScopeNode(
+                new NodeSummary(NodeRef.For(csv.Id, csv.VersionIndex), title, csv.Version),
+                NodeRef.For(csv.CodeSystemId),
+                FallbackParent: tenantRef);
+        }
+
+        return result;
+    }
+
+    private static async Task<Dictionary<SubscriptionId, ScopeNode>> LoadSubscriptionsAsync(
+        KernelDbContext db,
+        TenantId tenant,
+        NodeRef tenantRef,
+        IReadOnlyCollection<SubscriptionId> subscriptionIds,
+        CancellationToken cancellationToken)
+    {
+        var subscriptions = await db.Subscriptions.AsNoTracking()
+            .Where(s => s.TenantId == tenant && subscriptionIds.Contains(s.Id))
+            .Select(s => new { s.Id, s.VersionIndex })
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+        if (subscriptions.Count == 0)
+        {
+            return [];
+        }
+
+        var matchedIds = subscriptions.Select(s => s.Id).ToList();
+        var openPeriods = await db.SubscriptionPeriods.AsNoTracking()
+            .Where(p => p.TenantId == tenant && matchedIds.Contains(p.SubscriptionId) && p.Period.Recorded.IsOpen)
+            .OrderByDescending(p => p.Period.Valid.Start)
+            .Select(p => new { p.SubscriptionId, p.Tier, p.Status })
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+        var periodBySub = new Dictionary<SubscriptionId, (string Tier, string Status)>();
+        foreach (var p in openPeriods)
+        {
+            periodBySub.TryAdd(p.SubscriptionId, (p.Tier.ToString(), p.Status.ToString()));
+        }
+
+        var result = new Dictionary<SubscriptionId, ScopeNode>(subscriptions.Count);
+        foreach (var sub in subscriptions)
+        {
+            var hasPeriod = periodBySub.TryGetValue(sub.Id, out var period);
+            result[sub.Id] = new ScopeNode(
+                new NodeSummary(
+                    NodeRef.For(sub.Id, sub.VersionIndex),
+                    hasPeriod ? $"{period.Tier} subscription" : "Subscription",
+                    hasPeriod ? period.Tier : null,
+                    hasPeriod ? period.Status : null),
+                tenantRef);
+        }
+
+        return result;
+    }
+
+    private static async Task<Dictionary<ValidationFindingId, ScopeNode>> LoadValidationFindingsAsync(
+        KernelDbContext db,
+        TenantId tenant,
+        IReadOnlyCollection<ValidationFindingId> findingIds,
+        CancellationToken cancellationToken)
+    {
+        var detections = await (
+                from d in db.Set<ValidationDetectionRecord>().AsNoTracking()
+                join r in db.Set<ValidationRun>().AsNoTracking()
+                    on new { d.TenantId, Id = d.RunId } equals new { r.TenantId, r.Id }
+                where d.TenantId == tenant && findingIds.Contains(d.FindingId)
+                orderby r.VersionIndex descending, r.Id descending
+                select new { d.FindingId, d.StudyId, d.RuleId, d.TargetKind, d.Dataset, d.TargetKey })
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+        var detectionsByFinding = new Dictionary<ValidationFindingId, DetectionRow>();
+        foreach (var d in detections)
+        {
+            detectionsByFinding.TryAdd(d.FindingId, new DetectionRow(d.StudyId, d.RuleId, d.TargetKind, d.Dataset, d.TargetKey));
+        }
+
+        var decisions = await db.Set<ValidationFinding>().AsNoTracking()
+            .Where(f => f.TenantId == tenant && findingIds.Contains(f.Id))
+            .Select(f => new { f.Id, f.StudyId, f.Decision, f.VersionIndex })
+            .ToDictionaryAsync(f => f.Id, cancellationToken).ConfigureAwait(false);
+        var parents = await ResolveValidationFindingParentsAsync(db, tenant, detectionsByFinding, cancellationToken)
+            .ConfigureAwait(false);
+
+        var result = new Dictionary<ValidationFindingId, ScopeNode>(findingIds.Count);
+        foreach (var findingId in findingIds)
+        {
+            if (detectionsByFinding.TryGetValue(findingId, out var detection))
+            {
+                decisions.TryGetValue(findingId, out var decisionRow);
+                result[findingId] = new ScopeNode(
+                    new NodeSummary(
+                        NodeRef.For(findingId, decisionRow?.VersionIndex),
+                        $"Finding {detection.RuleId} on {detection.Dataset} {detection.TargetKey}",
+                        detection.RuleId,
+                        decisionRow?.Decision?.ToString()),
+                    parents[findingId],
+                    FallbackParent: NodeRef.For(detection.StudyId));
+            }
+            else if (decisions.TryGetValue(findingId, out var decisionOnly))
+            {
+                result[findingId] = new ScopeNode(
+                    new NodeSummary(
+                        NodeRef.For(findingId, decisionOnly.VersionIndex),
+                        "Validation finding",
+                        Code: null,
+                        decisionOnly.Decision?.ToString()),
+                    NodeRef.For(decisionOnly.StudyId));
+            }
+        }
+
+        return result;
+    }
+
+    private static async Task<Dictionary<ValidationFindingId, NodeRef>> ResolveValidationFindingParentsAsync(
+        KernelDbContext db,
+        TenantId tenant,
+        IReadOnlyDictionary<ValidationFindingId, DetectionRow> detectionsByFinding,
+        CancellationToken cancellationToken)
+    {
+        var parents = new Dictionary<ValidationFindingId, NodeRef>(detectionsByFinding.Count);
+        if (detectionsByFinding.Count == 0)
+        {
+            return parents;
+        }
+
+        var datasetGuids = new List<(ValidationFindingId FindingId, StudyId StudyId, Guid RecordGuid)>();
+        var subjectCodeLookups = new List<(ValidationFindingId FindingId, StudyId StudyId, SubjectCode SubjectCode)>();
+
+        foreach (var (findingId, det) in detectionsByFinding)
+        {
+            if (NodeRef.TryParse(det.TargetKey, out var parsed)
+                && parsed!.Unversioned() is
+                {
+                    Kind: NodeKinds.CollectionInstance
+                    or NodeKinds.Observation
+                    or NodeKinds.Enrollment
+                    or NodeKinds.StudySite
+                    or NodeKinds.ProtocolVersion
+                    or NodeKinds.ProtocolElement
+                } unversioned)
+            {
+                parents[findingId] = unversioned;
+                continue;
+            }
+
+            if (det.TargetKind == FindingTargetKind.Observation && Guid.TryParse(det.TargetKey, out var observationGuid))
+            {
+                parents[findingId] = NodeRef.For(ObservationId.FromGuid(observationGuid));
+                continue;
+            }
+
+            if (det.TargetKind == FindingTargetKind.DatasetRecord)
+            {
+                if (Guid.TryParse(det.TargetKey, out var recordGuid))
+                {
+                    datasetGuids.Add((findingId, det.StudyId, recordGuid));
+                    continue;
+                }
+
+                if (!string.IsNullOrEmpty(det.TargetKey)
+                    && SubjectCode.TryFrom(det.TargetKey.Split(':', 2)[0], out var subjectCode))
+                {
+                    subjectCodeLookups.Add((findingId, det.StudyId, subjectCode));
+                    continue;
+                }
+            }
+
+            parents[findingId] = NodeRef.For(det.StudyId);
+        }
+
+        if (datasetGuids.Count > 0)
+        {
+            var candidateFormIds = datasetGuids.Select(c => CollectionInstanceId.FromGuid(c.RecordGuid)).Distinct().ToList();
+            var existingForms = (await db.CollectionInstances.AsNoTracking()
+                    .Where(c => c.TenantId == tenant && candidateFormIds.Contains(c.Id))
+                    .Select(c => c.Id)
+                    .ToListAsync(cancellationToken).ConfigureAwait(false))
+                .ToHashSet();
+
+            var remainingForEnrollment = new List<(ValidationFindingId FindingId, StudyId StudyId, Guid RecordGuid)>();
+            foreach (var candidate in datasetGuids)
+            {
+                var formId = CollectionInstanceId.FromGuid(candidate.RecordGuid);
+                if (existingForms.Contains(formId))
+                {
+                    parents[candidate.FindingId] = NodeRef.For(formId);
+                }
+                else
+                {
+                    remainingForEnrollment.Add(candidate);
+                }
+            }
+
+            if (remainingForEnrollment.Count > 0)
+            {
+                var candidateEnrollmentIds = remainingForEnrollment.Select(c => EnrollmentId.FromGuid(c.RecordGuid)).Distinct().ToList();
+                var existingEnrollments = (await db.Enrollments.AsNoTracking()
+                        .Where(e => e.TenantId == tenant && candidateEnrollmentIds.Contains(e.Id))
+                        .Select(e => new { e.StudyId, e.Id })
+                        .ToListAsync(cancellationToken).ConfigureAwait(false))
+                    .Select(e => (e.StudyId, e.Id))
+                    .ToHashSet();
+                foreach (var candidate in remainingForEnrollment)
+                {
+                    var enrollmentId = EnrollmentId.FromGuid(candidate.RecordGuid);
+                    parents[candidate.FindingId] = existingEnrollments.Contains((candidate.StudyId, enrollmentId))
+                        ? NodeRef.For(enrollmentId)
+                        : NodeRef.For(CollectionInstanceId.FromGuid(candidate.RecordGuid));
+                }
+            }
+        }
+
+        if (subjectCodeLookups.Count > 0)
+        {
+            var studyIds = subjectCodeLookups.Select(c => c.StudyId).Distinct().ToList();
+            var codes = subjectCodeLookups.Select(c => c.SubjectCode).Distinct().ToList();
+            var matchedEnrollments = await db.Enrollments.AsNoTracking()
+                .Where(e => e.TenantId == tenant && studyIds.Contains(e.StudyId) && codes.Contains(e.SubjectCode))
+                .Select(e => new { e.StudyId, e.SubjectCode, e.Id })
+                .ToListAsync(cancellationToken).ConfigureAwait(false);
+            var enrollmentByStudyAndCode = new Dictionary<(StudyId, SubjectCode), EnrollmentId>();
+            foreach (var m in matchedEnrollments)
+            {
+                enrollmentByStudyAndCode.TryAdd((m.StudyId, m.SubjectCode), m.Id);
+            }
+
+            foreach (var candidate in subjectCodeLookups)
+            {
+                parents[candidate.FindingId] = enrollmentByStudyAndCode.TryGetValue((candidate.StudyId, candidate.SubjectCode), out var enrollmentId)
+                    ? NodeRef.For(enrollmentId)
+                    : NodeRef.For(candidate.StudyId);
+            }
+        }
+
+        return parents;
     }
 
     /// <summary>
@@ -1152,7 +1937,10 @@ internal sealed class KernelScopeGraph(KernelTenantDbContextFactory contexts) : 
         foreach (var instance in instances)
         {
             var design = designsByVersion.GetValueOrDefault(instance.ProtocolVersionId);
-            result[instance.Id] = new ScopeNode(CollectionInstanceSummary(instance, design), NodeRef.For(instance.EnrollmentId));
+            result[instance.Id] = new ScopeNode(
+                CollectionInstanceSummary(instance, design),
+                NodeRef.For(instance.EnrollmentId),
+                FallbackParent: NodeRef.For(instance.StudyId));
         }
 
         return result;
@@ -1221,7 +2009,10 @@ internal sealed class KernelScopeGraph(KernelTenantDbContextFactory contexts) : 
             var parentRef = parentInstance is not null
                 ? NodeRef.For(parentInstance.Id)
                 : NodeRef.For(observation.EnrollmentId);
-            result[observation.Id] = new ScopeNode(ObservationSummary(observation, item, itemId, label, externalCode), parentRef);
+            result[observation.Id] = new ScopeNode(
+                ObservationSummary(observation, item, itemId, label, externalCode),
+                parentRef,
+                FallbackParent: NodeRef.For(observation.StudyId));
         }
 
         return result;
@@ -1440,6 +2231,13 @@ internal sealed class KernelScopeGraph(KernelTenantDbContextFactory contexts) : 
 
         public string Country { get; init; } = string.Empty;
     }
+
+    private sealed record DetectionRow(
+        StudyId StudyId,
+        string RuleId,
+        FindingTargetKind TargetKind,
+        string Dataset,
+        string TargetKey);
 }
 
 /// <summary>Registers the kernel scope graph behind <see cref="IKernelScopeGraph"/>.</summary>

@@ -148,6 +148,50 @@
             :disabled="importing"
           />
         </div>
+        <div class="field-group">
+          <label
+            :for="`${idPrefix}-amendment-classification`"
+            class="field-label"
+          >
+            Amendment classification (when amending)
+          </label>
+          <select
+            :id="`${idPrefix}-amendment-classification`"
+            v-model="amendmentClassification"
+            class="text-input select-input"
+            :disabled="importing"
+          >
+            <option value="">Default (Non-substantial)</option>
+            <option value="NonSubstantial">
+              Non-substantial (NonSubstantial)
+            </option>
+            <option value="Substantial">Substantial (Substantial)</option>
+            <option value="UrgentSafetyMeasure">
+              Urgent safety measure (UrgentSafetyMeasure)
+            </option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label :for="`${idPrefix}-transition-policy`" class="field-label">
+            Participant transition policy (when amending)
+          </label>
+          <select
+            :id="`${idPrefix}-transition-policy`"
+            v-model="transitionPolicy"
+            class="text-input select-input"
+            :disabled="importing"
+          >
+            <option value="">Default (New participants only)</option>
+            <option value="NewParticipantsOnly">
+              New participants only (NewParticipantsOnly)
+            </option>
+            <option value="RequiresReconsent">
+              Requires re-consent (RequiresReconsent)
+            </option>
+            <option value="Automatic">Automatic transition (Automatic)</option>
+            <option value="ByCohort">Transition by cohort (ByCohort)</option>
+          </select>
+        </div>
         <div class="field-group checkbox-group">
           <label :for="`${idPrefix}-replace`" class="checkbox-label">
             <input
@@ -214,6 +258,45 @@
         Draft status: formal review and electronic approval are required before
         any site can be activated on this protocol version.
       </p>
+
+      <div
+        v-if="draftSummary.amendment"
+        :id="`${idPrefix}-amendment`"
+        data-testid="draft-amendment-summary"
+        class="amendment-summary-box"
+      >
+        <div class="amendment-summary-header">
+          <strong>Amendment metadata</strong>
+          <span class="amendment-badges">
+            <span class="amendment-badge">
+              {{ draftSummary.amendment.classification }}
+            </span>
+            <span class="amendment-badge">
+              {{ draftSummary.amendment.transition_policy }}
+            </span>
+          </span>
+        </div>
+        <p class="amendment-rationale">
+          {{ draftSummary.amendment.summary_of_changes }}
+        </p>
+        <div
+          v-if="draftSummary.amendment.impacted_elements?.length"
+          class="amendment-elements"
+        >
+          <span class="amendment-elements-label">
+            Impacted elements ({{
+              draftSummary.amendment.impacted_elements.length
+            }}):
+          </span>
+          <code
+            v-for="elemId in draftSummary.amendment.impacted_elements"
+            :key="elemId"
+            class="amendment-element-code"
+          >
+            {{ elemId }}
+          </code>
+        </div>
+      </div>
 
       <div
         v-if="draftSummary.imported_rule_pack"
@@ -349,6 +432,8 @@ const templateFilter = ref("");
 const selectedTemplateIds = ref<string[]>([]);
 const changeReason = ref("");
 const replaceForms = ref(false);
+const amendmentClassification = ref("");
+const transitionPolicy = ref("");
 const pendingIdempotencyKey = ref("");
 
 const importing = ref(false);
@@ -433,9 +518,18 @@ function onFileSelected(event: Event) {
   selectedFile.value = file;
 }
 
-watch([selectedTemplateIds, changeReason, replaceForms], () => {
-  pendingIdempotencyKey.value = "";
-});
+watch(
+  [
+    selectedTemplateIds,
+    changeReason,
+    replaceForms,
+    amendmentClassification,
+    transitionPolicy,
+  ],
+  () => {
+    pendingIdempotencyKey.value = "";
+  }
+);
 
 async function loadTemplates() {
   if (typeof kernelApi.listProtocolTemplates !== "function") return;
@@ -511,6 +605,8 @@ async function submitImport() {
       file: selectedFile.value,
       templateIds: selectedTemplateIds.value,
       replaceForms: replaceForms.value,
+      amendmentClassification: amendmentClassification.value || null,
+      transitionPolicy: transitionPolicy.value || null,
       reason,
       idempotencyKey: pendingIdempotencyKey.value,
     });
@@ -677,6 +773,14 @@ defineExpose({
   font-size: 0.85rem;
   width: 100%;
   box-sizing: border-box;
+  background: var(--semantic-color-surface);
+  color: var(--semantic-color-text-body);
+}
+
+@media (pointer: coarse) {
+  .text-input {
+    font-size: 1rem;
+  }
 }
 
 .template-search {
@@ -792,6 +896,66 @@ defineExpose({
   margin: 0;
   font-size: 0.82rem;
   color: var(--neutral-dark);
+}
+
+.amendment-summary-box {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: var(--semantic-color-info-bg);
+  border: 1px solid var(--semantic-color-info-border);
+  font-size: 0.82rem;
+}
+
+.amendment-summary-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.amendment-badges {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.amendment-badge {
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--semantic-color-surface);
+  border: 1px solid var(--semantic-color-info-border);
+  color: var(--semantic-color-info);
+  font-weight: 600;
+  font-size: 0.76rem;
+}
+
+.amendment-rationale {
+  margin: 0;
+  color: var(--semantic-color-text-body);
+}
+
+.amendment-elements {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.amendment-elements-label {
+  font-weight: 600;
+  color: var(--semantic-color-text-secondary);
+}
+
+.amendment-element-code {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--semantic-color-surface);
+  border: 1px solid var(--border);
+  font-size: 0.75rem;
 }
 
 .import-notes-box {

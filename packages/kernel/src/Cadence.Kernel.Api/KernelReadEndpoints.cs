@@ -14,6 +14,7 @@ using Cadence.Kernel.Navigation;
 using Cadence.Kernel.Protocol;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Search;
+using Cadence.Kernel.Validation;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -306,14 +307,23 @@ public static class KernelReadEndpoints
     }
 
     internal static async Task<Results<Ok<IReadOnlyList<KernelCommandResponse>>, ProblemHttpResult>> GetCommandsAsync(
-        string nodeRef, HttpContext context, IAuthorizationProbe probe, CancellationToken cancellationToken)
+        string nodeRef,
+        HttpContext context,
+        IAuthorizationProbe probe,
+        INodeVisibility visibility,
+        ICurrentActor actor,
+        CancellationToken cancellationToken)
     {
         if (!NodeRef.TryParse(nodeRef, out var node))
         {
             return KernelProblems.InvalidNodeRef(nodeRef);
         }
 
-        var commands = await probe.GetCommandsAsync(KernelRequestTenant.Get(context), node, cancellationToken).ConfigureAwait(false);
+        var tenant = KernelRequestTenant.Get(context);
+        var commands = actor.Actor is not null
+            && !await IsProbedNodeVisibleAsync(tenant, node, context.RequestServices, visibility, actor, cancellationToken).ConfigureAwait(false)
+                ? await probe.DenyHiddenCommandsAsync(tenant, node, cancellationToken).ConfigureAwait(false)
+                : await probe.GetCommandsAsync(tenant, node, cancellationToken).ConfigureAwait(false);
         return TypedResults.Ok<IReadOnlyList<KernelCommandResponse>>([.. commands.Select(KernelCommandResponse.From)]);
     }
 
@@ -323,6 +333,8 @@ public static class KernelReadEndpoints
         HttpContext context,
         IAuthorizationProbe probe,
         KernelCommandCatalog catalog,
+        INodeVisibility visibility,
+        ICurrentActor actor,
         CancellationToken cancellationToken)
     {
         if (!NodeRef.TryParse(resource, out var node))
@@ -336,8 +348,46 @@ public static class KernelReadEndpoints
             return KernelProblems.BadRequest("Unknown capability", $"No kernel command or read declares the capability '{capability}'.");
         }
 
-        var decision = await probe.CanIAsync(KernelRequestTenant.Get(context), declared, node, cancellationToken).ConfigureAwait(false);
+        var tenant = KernelRequestTenant.Get(context);
+        var decision = actor.Actor is not null
+            && !await IsProbedNodeVisibleAsync(tenant, node, context.RequestServices, visibility, actor, cancellationToken).ConfigureAwait(false)
+                ? await probe.DenyHiddenAsync(tenant, declared, node, cancellationToken).ConfigureAwait(false)
+                : await probe.CanIAsync(tenant, declared, node, cancellationToken).ConfigureAwait(false);
         return TypedResults.Ok(KernelDecisionResponse.From(declared, node, decision, decision.Explain(declared.Token, node)));
+    }
+
+    private static async Task<bool> IsProbedNodeVisibleAsync(
+        TenantId tenant,
+        NodeRef node,
+        IServiceProvider services,
+        INodeVisibility visibility,
+        ICurrentActor actor,
+        CancellationToken cancellationToken)
+    {
+        var masks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, [node], cancellationToken).ConfigureAwait(false);
+        if (masks.For(node) is not null)
+        {
+            return false;
+        }
+
+        if (node.Kind == NodeKinds.ValidationFinding
+            && KernelValidationEndpoints.ResolveActiveValidationFindings(services) is { } findings)
+        {
+            var finding = await findings.FindAsync(tenant, ValidationFindingId.FromGuid(node.Id), cancellationToken).ConfigureAwait(false);
+            if (finding is null
+                || !await KernelValidationEndpoints.IsFindingVisibleAsync(
+                    tenant,
+                    finding,
+                    services,
+                    visibility,
+                    actor,
+                    cancellationToken).ConfigureAwait(false))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     internal static async Task<Results<Ok<IReadOnlyList<KernelSearchHitResponse>>, ProblemHttpResult>> SearchAsync(

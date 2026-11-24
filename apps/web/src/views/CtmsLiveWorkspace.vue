@@ -5,10 +5,9 @@
       id="ctms-live-tabs"
       v-model="liveTab"
       :tabs="liveTabsWithIds"
+      variant="pills"
       aria-label="Site readiness workspaces"
       id-prefix="ctms-live"
-      list-class="live-tabs"
-      tab-class="live-tab-btn"
     />
 
     <div
@@ -20,31 +19,37 @@
         v-if="activeSection === 'activation'"
         :study-code="scopedStudyProp"
         :site-id="siteId"
+        :lock-study="hasFixedStudyProp"
       />
       <CtmsGreenlightSection
         v-else-if="activeSection === 'startup'"
         :study-code="scopedStudyProp"
         :site-id="siteId"
+        :lock-study="hasFixedStudyProp"
       />
       <CtmsMilestonesSection
         v-else-if="activeSection === 'milestones'"
         :study-code="scopedStudyProp"
         :site-id="siteId"
+        :lock-study="hasFixedStudyProp"
       />
       <CtmsMonitoringSection
         v-else-if="activeSection === 'monitoring'"
         :study-code="scopedStudyProp"
         :site-id="siteId"
+        :lock-study="hasFixedStudyProp"
       />
       <CtmsDelegationSection
         v-else-if="activeSection === 'delegation'"
         :study-code="scopedStudyProp"
         :site-id="siteId"
+        :lock-study="hasFixedStudyProp"
       />
       <RtsmSupplySection
         v-else-if="activeSection === 'supply'"
         :study-code="scopedStudyProp"
         :site-id="siteId"
+        :lock-study="hasFixedStudyProp"
       />
     </div>
 
@@ -82,10 +87,16 @@ const props = defineProps({
 const route = useRoute();
 const scopeStore = useClinicalScopeStore();
 
+const hasFixedStudyProp = computed(() => Boolean(props.studyCode.trim()));
+
 const scopedStudyProp = computed(() => {
   const routeStudy =
     typeof route?.query?.studyId === "string" ? route.query.studyId.trim() : "";
-  return props.studyCode.trim() || routeStudy;
+  return (
+    props.studyCode.trim() ||
+    routeStudy ||
+    (scopeStore.activeStudyId || "").trim()
+  );
 });
 
 const siteId = computed(() => {
@@ -149,31 +160,8 @@ defineExpose({ liveTab });
   display: flex;
   flex-direction: column;
   gap: 16px;
-}
-
-.live-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  border-bottom: 1px solid var(--semantic-color-border);
-  padding-bottom: 10px;
-}
-
-.live-tab-btn {
-  padding: 8px 14px;
-  border-radius: 6px;
-  border: 1px solid var(--semantic-color-border-control);
-  background: var(--semantic-color-surface);
-  color: var(--semantic-color-text-body);
-  font-weight: 600;
-  font-size: 0.88rem;
-  cursor: pointer;
-}
-
-.live-tab-btn.active {
-  background: var(--semantic-color-primary);
-  border-color: var(--semantic-color-primary);
-  color: var(--semantic-color-text-on-primary);
+  min-width: 0;
+  max-width: 100%;
 }
 
 .live-unbacked-note {

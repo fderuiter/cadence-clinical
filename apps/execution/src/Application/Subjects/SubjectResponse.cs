@@ -31,7 +31,8 @@ public sealed record SubjectResponse(
     SiteCode? SiteId,
     string Status,
     string? ActiveProtocolVersion,
-    string? EncryptedDemographics)
+    string? EncryptedDemographics,
+    string? EnrollmentRef = null)
 {
     /// <summary>
     /// Full population — used only by `CreateAsync` (MIG-SUBJ-018), matching the legacy
@@ -40,5 +41,6 @@ public sealed record SubjectResponse(
     /// </summary>
     public static SubjectResponse FromAggregate(ClinicalSubject subject) => new(
         subject.Id, subject.SubjectCode, subject.StudyCode, subject.SiteCode,
-        SubjectStateCodec.ToCode(subject.Status), subject.ActiveProtocolVersion, subject.EncryptedDemographics);
+        SubjectStateCodec.ToCode(subject.Status), subject.ActiveProtocolVersion, subject.EncryptedDemographics,
+        subject.EnrollmentRef);
 }

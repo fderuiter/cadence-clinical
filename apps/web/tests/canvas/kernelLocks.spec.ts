@@ -65,6 +65,7 @@ describe("kernelLocks utilities", () => {
           valid_at: "2026-06-01T10:00:00Z",
           known_at: "2026-06-01T10:00:00Z",
           locks: [sampleLock],
+          hidden: { more_exist: false, reasons: [] },
         })
         .mockResolvedValueOnce({} as never);
 

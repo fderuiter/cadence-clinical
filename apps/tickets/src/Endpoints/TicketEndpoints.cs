@@ -188,16 +188,6 @@ public static partial class TicketEndpoints
         TicketStatus.PENDING_REGULATORY_REVIEW,
     ];
 
-    private static readonly HashSet<string> SiteCommentRestrictedRoles = new(StringComparer.OrdinalIgnoreCase)
-    {
-        RoleNormalization.ROLE_CRC,
-        RoleNormalization.ROLE_INVESTIGATOR,
-        RoleNormalization.ROLE_PRINCIPAL_INVESTIGATOR,
-        RoleNormalization.ROLE_AUTHORIZED_ER_PHYSICIAN,
-        RoleNormalization.ROLE_LEAD_INVESTIGATOR,
-        RoleNormalization.ROLE_PHARMACIST,
-    };
-
     private static readonly HashSet<string> SponsorCommentCapableRoles = new(StringComparer.OrdinalIgnoreCase)
     {
         RoleNormalization.ROLE_SYSADMIN,
@@ -211,6 +201,8 @@ public static partial class TicketEndpoints
         RoleNormalization.ROLE_REVIEWER,
         RoleNormalization.ROLE_FINANCE_OFFICER,
         RoleNormalization.ROLE_AUDITOR_CANONICAL,
+        "tmf_auditor",
+        "tmf auditor",
         RoleNormalization.ROLE_UNBLINDED_STATISTICIAN,
         RoleNormalization.ROLE_IDMC,
         RoleNormalization.ROLE_EMERGENCY_UNBLINDER,
@@ -629,39 +621,15 @@ public static partial class TicketEndpoints
         [FromQuery(Name = "revision")] int? revision = null,
         [FromQuery(Name = "as_of")] DateTimeOffset? asOf = null)
     {
-        Principal? principal = ClinicalScopeGuard.ResolvePrincipal(httpContext);
-        if (principal is null || string.IsNullOrWhiteSpace(principal.UserId))
+        var (_, ticket, errorResult) = await LoadAuthorizedTicketAsync(
+            ticket_id,
+            httpContext,
+            db,
+            asNoTracking: true,
+            ct).ConfigureAwait(false);
+        if (errorResult is not null || ticket is null)
         {
-            return Results.Problem(
-                title: "Unauthorized caller",
-                detail: "Verified gateway caller identity is required.",
-                statusCode: StatusCodes.Status401Unauthorized);
-        }
-        if (ClinicalScopeGuard.RequireAnyStudyAndSiteScope(httpContext) is { } callerScopeDenied)
-        {
-            return callerScopeDenied;
-        }
-
-        string key = ticket_id.Trim();
-        Ticket? ticket = await db.Tickets
-            .AsNoTracking()
-            .FirstOrDefaultAsync(t => !t.IsDeleted && (t.Id == key || t.Reference == key), ct)
-            .ConfigureAwait(false);
-
-        if (ticket is null)
-        {
-            return Results.Problem(
-                title: "Ticket not found",
-                detail: $"No support ticket matched '{key}'.",
-                statusCode: StatusCodes.Status404NotFound);
-        }
-
-        if (!IsTicketVisibleToCaller(principal, ticket))
-        {
-            return Results.Problem(
-                title: "Ticket scope forbidden",
-                detail: "Caller is not authorized for this ticket's study or site scope.",
-                statusCode: StatusCodes.Status403Forbidden);
+            return errorResult!;
         }
 
         if (revision.HasValue || asOf.HasValue)
@@ -682,7 +650,7 @@ public static partial class TicketEndpoints
             {
                 return Results.Problem(
                     title: "Ticket revision not found",
-                    detail: $"No historical revision matched for ticket '{key}'.",
+                    detail: $"No historical revision matched for ticket '{ticket_id.Trim()}'.",
                     statusCode: StatusCodes.Status404NotFound);
             }
 
@@ -700,42 +668,19 @@ public static partial class TicketEndpoints
         IClock clock,
         CancellationToken ct)
     {
-        Principal? principal = ClinicalScopeGuard.ResolvePrincipal(httpContext);
-        if (principal is null || string.IsNullOrWhiteSpace(principal.UserId))
+        var (principal, ticket, errorResult) = await LoadAuthorizedTicketAsync(
+            ticket_id,
+            httpContext,
+            db,
+            asNoTracking: false,
+            ct).ConfigureAwait(false);
+        if (errorResult is not null || principal is null || ticket is null)
         {
-            return Results.Problem(
-                title: "Unauthorized caller",
-                detail: "Verified gateway caller identity is required.",
-                statusCode: StatusCodes.Status401Unauthorized);
-        }
-        if (ClinicalScopeGuard.RequireAnyStudyAndSiteScope(httpContext) is { } callerScopeDenied)
-        {
-            return callerScopeDenied;
+            return errorResult!;
         }
 
         string changeReason = ChangeReasonHeader.Read(httpContext.Request)
             ?? throw new InvalidOperationException("ChangeReasonHeaderFilter must guarantee a non-empty X-Change-Reason.");
-
-        string key = ticket_id.Trim();
-        Ticket? ticket = await db.Tickets
-            .FirstOrDefaultAsync(t => !t.IsDeleted && (t.Id == key || t.Reference == key), ct)
-            .ConfigureAwait(false);
-
-        if (ticket is null)
-        {
-            return Results.Problem(
-                title: "Ticket not found",
-                detail: $"No support ticket matched '{key}'.",
-                statusCode: StatusCodes.Status404NotFound);
-        }
-
-        if (!IsTicketVisibleToCaller(principal, ticket))
-        {
-            return Results.Problem(
-                title: "Ticket scope forbidden",
-                detail: "Caller is not authorized for this ticket's study or site scope.",
-                statusCode: StatusCodes.Status403Forbidden);
-        }
 
         if (ticket.SignatureTimestamp is not null)
         {
@@ -938,10 +883,9 @@ public static partial class TicketEndpoints
         if (string.Equals(visibility, "INTERNAL_SPONSOR", StringComparison.OrdinalIgnoreCase)
             && IsSiteRestrictedCommentCaller(principal))
         {
-            return Results.Problem(
-                title: "Internal sponsor comment forbidden",
-                detail: "Site-bound clinical personnel may read and post PUBLIC comments only.",
-                statusCode: StatusCodes.Status403Forbidden);
+            return ClinicalScopeGuard.Forbidden(
+                detail: "Only callers holding sponsor or oversight roles may read or post INTERNAL_SPONSOR comments.",
+                title: "Internal sponsor comment forbidden");
         }
 
         string? piiViolation = TicketPiiValidator.ValidateCommentNoDirectParticipantPii(body, changeReason);
@@ -1319,10 +1263,9 @@ public static partial class TicketEndpoints
 
         if (!IsTicketVisibleToCaller(principal, ticket))
         {
-            return (principal, null, Results.Problem(
-                title: "Ticket scope forbidden",
+            return (principal, null, ClinicalScopeGuard.Forbidden(
                 detail: "Caller is not authorized for this ticket's study or site scope.",
-                statusCode: StatusCodes.Status403Forbidden));
+                title: "Ticket scope forbidden"));
         }
 
         return (principal, ticket, null);
@@ -1374,13 +1317,8 @@ public static partial class TicketEndpoints
 
     private static bool IsSiteRestrictedCommentCaller(Principal principal)
     {
-        var normalized = RoleNormalization.GetNormalizedRoles(principal.Roles);
-        if (normalized.Any(SponsorCommentCapableRoles.Contains))
-        {
-            return false;
-        }
-
-        return normalized.Any(SiteCommentRestrictedRoles.Contains);
+        var normalized = RoleNormalization.GetNormalizedRoles(principal.Roles.Concat(principal.RawRoles));
+        return !normalized.Any(SponsorCommentCapableRoles.Contains);
     }
 
     private static TicketCommentResponseDto ToCommentDto(TicketComment comment) =>
