@@ -214,10 +214,13 @@ export function hydrateSessionScopeFromClaims(
   claimsSource = null,
   fallbackToken = null
 ) {
-  const claimStudyId =
-    extractPrimaryStudyId(claimsSource) || extractPrimaryStudyId(fallbackToken);
-  const claimSiteId =
-    extractPrimarySiteId(claimsSource) || extractPrimarySiteId(fallbackToken);
+  const claimStudyId = isDemoBuild()
+    ? null
+    : extractPrimaryStudyId(claimsSource) ||
+      extractPrimaryStudyId(fallbackToken);
+  const claimSiteId = isDemoBuild()
+    ? null
+    : extractPrimarySiteId(claimsSource) || extractPrimarySiteId(fallbackToken);
   const urlScope = readScopeFromCurrentUrl();
 
   let storedStudyId;
@@ -274,23 +277,62 @@ export function hydrateSessionScopeFromClaims(
   return { studyId: nextStudyId, siteId: nextSiteId };
 }
 
-export const portalSessionCoordinator = createOidcSessionCoordinator({
-  minValiditySeconds: 30,
-  getKeycloak: () =>
-    typeof window !== "undefined" ? window.keycloakInstance || null : null,
-  getCurrentReturnUrl: getPortalCurrentReturnUrl,
-  onTokenRefreshed: (nextToken, kc) => {
-    if (nextToken) {
-      state.session.token = nextToken;
-      state.session.sessionExpired = false;
-      state.authError = "";
-      hydrateSessionScopeFromClaims(kc?.tokenParsed || null, nextToken);
-    }
-  },
-  onSessionExpired: ({ returnUrl }) => {
-    expirePortalSession({ returnUrl, fromCoordinator: true });
-  },
-});
+function createStaticDemoSessionCoordinator() {
+  let savedReturnUrl = null;
+  return {
+    resolveKeycloak: () => null,
+    attachKeycloak() {},
+    isSessionExpired: () => false,
+    markSessionExpired() {},
+    ensureFreshToken: async () => ({
+      ok: Boolean(state.session.token),
+      refreshed: false,
+      token: state.session.token || null,
+    }),
+    refreshOnUnauthorized: async () => ({
+      ok: false,
+      refreshed: false,
+      token: null,
+    }),
+    markAuthenticated() {},
+    saveReturnUrl(url) {
+      savedReturnUrl = url || null;
+      return savedReturnUrl;
+    },
+    peekReturnUrl: () => savedReturnUrl,
+    consumeReturnUrl() {
+      const next = savedReturnUrl;
+      savedReturnUrl = null;
+      return next;
+    },
+    beginVoluntaryLogout() {
+      savedReturnUrl = null;
+    },
+    reset() {
+      savedReturnUrl = null;
+    },
+  };
+}
+
+export const portalSessionCoordinator = isDemoBuild()
+  ? createStaticDemoSessionCoordinator()
+  : createOidcSessionCoordinator({
+      minValiditySeconds: 30,
+      getKeycloak: () =>
+        typeof window !== "undefined" ? window.keycloakInstance || null : null,
+      getCurrentReturnUrl: getPortalCurrentReturnUrl,
+      onTokenRefreshed: (nextToken, kc) => {
+        if (nextToken) {
+          state.session.token = nextToken;
+          state.session.sessionExpired = false;
+          state.authError = "";
+          hydrateSessionScopeFromClaims(kc?.tokenParsed || null, nextToken);
+        }
+      },
+      onSessionExpired: ({ returnUrl }) => {
+        expirePortalSession({ returnUrl, fromCoordinator: true });
+      },
+    });
 
 /**
  * Transitions the portal out of Authenticated when token refresh or HTTP 401

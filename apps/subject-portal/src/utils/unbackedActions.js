@@ -9,7 +9,8 @@ import { isDemoModeActive } from "./demoMode.js";
  * clinical or financial record was saved.
  */
 const portalUnbackedActionGuard = createUnbackedActionGuard({
-  isAllowed: (env) => isDemoModeActive(env),
+  isAllowed: (env) =>
+    env === undefined ? isDemoModeActive() : isDemoModeActive(env),
   defaultDetail:
     "No live Cadence service records this action yet, so nothing was saved.",
   onRefuse({ message }) {

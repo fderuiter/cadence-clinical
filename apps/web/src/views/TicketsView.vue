@@ -19,22 +19,11 @@
       </div>
 
       <div class="header-action-group">
-        <button
+        <TicketsDemoWorkspace
           v-if="demoBuild"
-          class="btn btn-secondary"
-          title="Export Regulatory Audit Trail CSV"
-          @click="exportAuditTrail('csv')"
-        >
-          <span class="btn-icon">📊</span> Export CSV
-        </button>
-        <button
-          v-if="demoBuild"
-          class="btn btn-secondary"
-          title="Export Regulatory Audit Trail JSON"
-          @click="exportAuditTrail('json')"
-        >
-          <span class="btn-icon">📄</span> Export JSON
-        </button>
+          mode="header-actions"
+          @export="exportAuditTrail"
+        />
         <button
           id="btn-create-ticket"
           type="button"
@@ -218,74 +207,16 @@
     </div>
 
     <!-- Bulk Action Toolbar (Demo mode only) -->
-    <div v-if="demoBuild && selectedTicketCount > 0" class="bulk-action-bar">
-      <div class="bulk-info">
-        <span class="bulk-count-badge"
-          >{{ selectedTicketCount }} ticket(s) selected</span
-        >
-      </div>
-
-      <div class="bulk-actions">
-        <div class="bulk-action-group">
-          <label for="tickets-batch-status" class="sr-only"
-            >Batch target status</label
-          >
-          <select
-            id="tickets-batch-status"
-            v-model="batchStatus"
-            class="filter-select batch-select"
-          >
-            <option value="" disabled>Change Status...</option>
-            <option value="OPEN">Open</option>
-            <option value="IN_PROGRESS">In Progress</option>
-            <option value="WAITING_ON_SITE">Waiting on Site</option>
-            <option value="WAITING_ON_SPONSOR">Waiting on Sponsor</option>
-            <option value="RESOLVED">Resolved</option>
-            <option value="CLOSED">Closed</option>
-          </select>
-          <button
-            type="button"
-            class="btn btn-sm btn-primary"
-            :disabled="!batchStatus"
-            @click="handleBatchTransition(batchStatus)"
-          >
-            Apply Status
-          </button>
-        </div>
-
-        <div class="bulk-action-group">
-          <label for="tickets-batch-severity" class="sr-only"
-            >Batch target severity</label
-          >
-          <select
-            id="tickets-batch-severity"
-            v-model="batchSeverity"
-            class="filter-select batch-select"
-          >
-            <option value="" disabled>Change Severity...</option>
-            <option value="CRITICAL">Critical</option>
-            <option value="MAJOR">Major</option>
-            <option value="MINOR">Minor</option>
-          </select>
-          <button
-            type="button"
-            class="btn btn-sm btn-primary"
-            :disabled="!batchSeverity"
-            @click="handleBatchSeverityUpdate(batchSeverity)"
-          >
-            Apply Severity
-          </button>
-        </div>
-
-        <button
-          type="button"
-          class="btn btn-sm btn-secondary"
-          @click="clearSelection"
-        >
-          Clear Selection
-        </button>
-      </div>
-    </div>
+    <TicketsDemoWorkspace
+      v-if="demoBuild"
+      v-model:batch-status="batchStatus"
+      v-model:batch-severity="batchSeverity"
+      mode="bulk-bar"
+      :selected-ticket-count="selectedTicketCount"
+      @batch-transition="handleBatchTransition"
+      @batch-severity="handleBatchSeverityUpdate"
+      @clear-selection="clearSelection"
+    />
 
     <!-- MAIN WORKSPACE: KANBAN VIEW -->
     <div
@@ -719,6 +650,7 @@ import {
   ref,
   reactive,
   computed,
+  defineAsyncComponent,
   watch,
   onMounted,
   getCurrentInstance,
@@ -733,10 +665,26 @@ import {
   resolveRouteAndRouter,
 } from "../composables/useRouteScopeSync";
 import { useClinicalScopeStore } from "../stores/clinicalScope";
+import {
+  DEMO_TICKET_KPIS,
+  applyDemoBatchSeverityUpdate,
+  applyDemoBatchStatusTransition,
+  applyDemoTicketSignature,
+  applyDemoTicketTransition,
+  buildDemoTicketAttachment,
+  buildDemoTicketComment,
+  buildDemoTicketDetailSeed,
+  createInitialMockTickets,
+  exportDemoAuditTrail,
+  mergeDemoEscalatedTickets,
+} from "../stores/demo/ticketsDemo";
 import { useKnowledgeStore } from "../stores/knowledge.js";
 import { useToastStore } from "../stores/toasts.js";
 import { isDemoBuild } from "../utils/demoMode.js";
-import { allowUnbackedAction } from "../utils/unbackedActions.js";
+
+const TicketsDemoWorkspace = defineAsyncComponent(
+  () => import("./demo/TicketsDemoWorkspace.vue")
+);
 
 const demoBuild = isDemoBuild();
 const instance = getCurrentInstance();
@@ -748,8 +696,10 @@ const initialRouteScope = readRouteScopeQuery(route);
 const tickets = ref([]);
 const kpis = reactive({
   active_tickets: 0,
-  sla_compliance_rate: demoBuild ? 96.4 : null,
-  mttr_hours: demoBuild ? 4.2 : null,
+  sla_compliance_rate: demoBuild
+    ? (DEMO_TICKET_KPIS?.sla_compliance_rate ?? 96.4)
+    : null,
+  mttr_hours: demoBuild ? (DEMO_TICKET_KPIS?.mttr_hours ?? 4.2) : null,
   critical_tickets: 0,
 });
 
@@ -831,116 +781,6 @@ const selectedTicketComments = ref([]);
 const selectedTicketAttachments = ref([]);
 const selectedTicketAuditLogs = ref([]);
 
-// Initial Seed Scenario Data for Demo Workspace
-const initialMockTickets = [
-  {
-    id: "tk-8801",
-    reference: "DEV-2026-0041",
-    title: "Investigational Product Cold-Chain Excursion at Site 101",
-    description:
-      "Cold-chain continuous temperature logger logged 9.4°C (protocol limit 2.0-8.0°C) during weekend storage.",
-    category: "SUPPLY_EXCURSION",
-    gxp_severity: "CRITICAL",
-    priority: "CRITICAL",
-    status: "OPEN",
-    study_id: "STUDY-ONC-202",
-    site_id: "SITE-101",
-    subject_id: null,
-    entity_type: "SUPPLY_KIT",
-    entity_id: "KIT-9941",
-    created_by: "cra.monitor@cadence.clinical",
-    created_at: new Date(Date.now() - 3600 * 1000 * 2).toISOString(),
-    sla_target_at: new Date(Date.now() + 3600 * 1000 * 2).toISOString(),
-    sla_breached: false,
-    sla_amber_warned: false,
-    version_index: 1,
-  },
-  {
-    id: "tk-8802",
-    reference: "DEV-2026-0042",
-    title: "Missed Scheduled Blood Draw at Cycle 2 Day 1",
-    description:
-      "Subject 8812 PK blood sample collection missed due to scheduling conflict.",
-    category: "PROTOCOL_DEVIATION",
-    gxp_severity: "MAJOR",
-    priority: "HIGH",
-    status: "IN_PROGRESS",
-    study_id: "STUDY-ONC-202",
-    site_id: "SITE-102",
-    subject_id: "SUBJ-8812",
-    entity_type: "SUBJECT",
-    entity_id: "SUBJ-8812",
-    created_by: "crc.smith@cadence.clinical",
-    created_at: new Date(Date.now() - 3600 * 1000 * 8).toISOString(),
-    sla_target_at: new Date(Date.now() + 3600 * 1000 * 16).toISOString(),
-    sla_breached: false,
-    sla_amber_warned: false,
-    version_index: 2,
-  },
-  {
-    id: "tk-8803",
-    reference: "QRY-2026-0109",
-    title: "Inconsistent Diastolic BP Observation in Vital Signs Form",
-    description:
-      "Systolic 120 recorded with Diastolic 130 mmHg. Out-of-bounds cross-field validation query.",
-    category: "DATA_QUERY",
-    gxp_severity: "MINOR",
-    priority: "MEDIUM",
-    status: "WAITING_ON_SITE",
-    study_id: "STUDY-ONC-202",
-    site_id: "SITE-101",
-    subject_id: "SUBJ-8815",
-    entity_type: "CRF_FORM",
-    entity_id: "FORM-VS-003",
-    created_by: "dm.lead@cadence.clinical",
-    created_at: new Date(Date.now() - 3600 * 1000 * 24).toISOString(),
-    sla_target_at: new Date(Date.now() + 3600 * 1000 * 48).toISOString(),
-    sla_total_paused_seconds: 3600 * 12,
-    sla_breached: false,
-    version_index: 2,
-  },
-  {
-    id: "tk-8804",
-    reference: "DEV-2026-0038",
-    title: "Informed Consent Form Re-Consent Signed on V2 Instead of V3",
-    description:
-      "Subject 8804 re-consented on outdated paper template version during Protocol Amendment 2 rollout.",
-    category: "PROTOCOL_DEVIATION",
-    gxp_severity: "MAJOR",
-    priority: "HIGH",
-    status: "RESOLVED",
-    study_id: "STUDY-ONC-202",
-    site_id: "SITE-101",
-    subject_id: "SUBJ-8804",
-    entity_type: "SUBJECT",
-    entity_id: "SUBJ-8804",
-    created_by: "cra.monitor@cadence.clinical",
-    created_at: new Date(Date.now() - 3600 * 1000 * 72).toISOString(),
-    sla_target_at: new Date(Date.now() - 3600 * 1000 * 24).toISOString(),
-    signature_token: "sig_token_hex_a982fe41b3",
-    signature_user: "dr_smith_pi",
-    signature_timestamp: new Date(Date.now() - 3600 * 1000 * 12).toISOString(),
-    signature_meaning:
-      "I approve the clinical assessment and corrective medical action.",
-    root_cause_category: "PROCESS_WORKFLOW_DEFICIT",
-    root_cause_summary:
-      "Site ICF version binders were updated and CRC re-training completed.",
-    resolution_code: "CORRECTIVE_ACTION_IMPLEMENTED",
-    version_index: 4,
-  },
-];
-
-function mergeDemoEscalatedTickets(baseTickets) {
-  if (!isDemoBuild() || !knowledgeStore.escalatedTickets.length) {
-    return baseTickets;
-  }
-  const seen = new Set(baseTickets.map((t) => t.id || t.reference));
-  const extra = knowledgeStore.escalatedTickets.filter(
-    (t) => !seen.has(t.id) && !seen.has(t.reference)
-  );
-  return [...extra, ...baseTickets];
-}
-
 function getRouteRefParam() {
   const proxyRoute = instance?.proxy?.$route;
   const raw =
@@ -992,7 +832,10 @@ function upsertTicketInList(updated) {
 onMounted(async () => {
   // Sample tickets only in a demo build (#4523, #4827); elsewhere the list shows what the service returns.
   if (demoBuild) {
-    tickets.value = mergeDemoEscalatedTickets([...initialMockTickets]);
+    tickets.value = mergeDemoEscalatedTickets(
+      createInitialMockTickets(),
+      knowledgeStore.escalatedTickets
+    );
   }
   await fetchTicketsFromApi();
   await openDeepLinkedTicketIfRequested();
@@ -1048,7 +891,9 @@ const fetchTicketsFromApi = async () => {
   try {
     const res = await ticketsApi.listTickets();
     if (res && Array.isArray(res)) {
-      tickets.value = demoBuild ? mergeDemoEscalatedTickets(res) : res;
+      tickets.value = demoBuild
+        ? mergeDemoEscalatedTickets(res, knowledgeStore.escalatedTickets)
+        : res;
     }
   } catch (err) {
     if (!demoBuild) {
@@ -1129,7 +974,6 @@ const slaComplianceClass = computed(() => {
 // Filtering
 const filteredTickets = computed(() => {
   return tickets.value.filter((t) => {
-    // Search query match
     if (searchQuery.value.trim()) {
       const q = searchQuery.value.toLowerCase();
       const match =
@@ -1140,22 +984,18 @@ const filteredTickets = computed(() => {
         t.study_id?.toLowerCase().includes(q);
       if (!match) return false;
     }
-    // Category match
     if (filterCategory.value !== "ALL" && t.category !== filterCategory.value) {
       return false;
     }
-    // Severity match
     if (
       filterSeverity.value !== "ALL" &&
       t.gxp_severity !== filterSeverity.value
     ) {
       return false;
     }
-    // Status match
     if (filterStatus.value !== "ALL" && t.status !== filterStatus.value) {
       return false;
     }
-    // Clinical scope match
     const scopedStudy = filterStudyId.value.trim().toLowerCase();
     if (scopedStudy && t.study_id && t.study_id.toLowerCase() !== scopedStudy) {
       return false;
@@ -1222,46 +1062,10 @@ const refreshLiveAuditTrail = async (ticketIdOrRef) => {
 const openTicketDetail = async (t) => {
   selectedTicket.value = { ...t };
   if (demoBuild) {
-    selectedTicketComments.value = [
-      {
-        id: "cm-001",
-        user_id: t.created_by || "cra.monitor@cadence.clinical",
-        content: `Logged initial ${formatCategory(t.category)}: ${t.description}`,
-        visibility: "PUBLIC",
-        created_at: t.created_at,
-      },
-      {
-        id: "cm-002",
-        user_id: "sponsor.qa@cadence.clinical",
-        content:
-          "Quality assessment initiated under ICH E6(R3). Reviewing cold-chain calibration records.",
-        visibility: "INTERNAL_SPONSOR",
-        created_at: new Date(
-          new Date(t.created_at).getTime() + 1800 * 1000
-        ).toISOString(),
-      },
-    ];
-    selectedTicketAttachments.value = [
-      {
-        id: "att-001",
-        filename: "logger_raw_export.csv",
-        file_size_bytes: 42100,
-        mime_type: "text/csv",
-        sha256_hash:
-          "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", // pragma: allowlist secret
-        uploaded_by: t.created_by || "cra.monitor@cadence.clinical",
-        uploaded_at: t.created_at,
-        deid_scrubbed: true,
-      },
-    ];
-    selectedTicketAuditLogs.value = [
-      {
-        action: "CREATE",
-        user_id: t.created_by || "cra.monitor@cadence.clinical",
-        timestamp: t.created_at,
-        change_reason: "Initial ticket registration",
-      },
-    ];
+    const seed = buildDemoTicketDetailSeed(t, formatCategory);
+    selectedTicketComments.value = seed.comments;
+    selectedTicketAttachments.value = seed.attachments;
+    selectedTicketAuditLogs.value = seed.auditLogs;
     isDrawerOpen.value = true;
     return;
   }
@@ -1310,16 +1114,15 @@ const handleTicketTransition = async ({
   reason_for_change,
 }) => {
   if (demoBuild) {
-    const index = tickets.value.findIndex((t) => t.id === ticketId);
-    if (index !== -1) {
-      tickets.value[index].status = newStatus;
-      if (root_cause_category)
-        tickets.value[index].root_cause_category = root_cause_category;
-      if (root_cause_summary)
-        tickets.value[index].root_cause_summary = root_cause_summary;
-      if (resolution_code)
-        tickets.value[index].resolution_code = resolution_code;
-      selectedTicket.value = { ...tickets.value[index] };
+    const updatedDemo = applyDemoTicketTransition(tickets.value, {
+      ticketId,
+      newStatus,
+      root_cause_category,
+      root_cause_summary,
+      resolution_code,
+    });
+    if (updatedDemo) {
+      selectedTicket.value = updatedDemo;
     }
     return;
   }
@@ -1351,57 +1154,27 @@ const handleTicketTransition = async ({
 };
 
 const handleBatchTransition = (targetStatus) => {
+  if (!demoBuild) return;
   const statusToApply = targetStatus || batchStatus.value;
   if (!statusToApply) return;
   if (selectedTicketIds.value.size === 0) return;
-  if (!allowUnbackedAction("Batch updating ticket status")) return;
 
   const targetIds = Array.from(selectedTicketIds.value);
-  tickets.value.forEach((t) => {
-    if (targetIds.includes(t.id)) {
-      if (t.status === "CLOSED" || t.signature_token) {
-        return;
-      }
-      t.status = statusToApply;
-      t.version_index = (t.version_index || 1) + 1;
-      t.audit_logs = t.audit_logs || [];
-      t.audit_logs.push({
-        action: "BATCH_STATUS_UPDATE",
-        user_id: "active.user@cadence.clinical",
-        timestamp: new Date().toISOString(),
-        change_reason: `Batch status transition to ${statusToApply}`,
-      });
-    }
-  });
-
-  clearSelection();
+  if (applyDemoBatchStatusTransition(tickets.value, targetIds, statusToApply)) {
+    clearSelection();
+  }
 };
 
 const handleBatchSeverityUpdate = (targetSeverity) => {
+  if (!demoBuild) return;
   const severityToApply = targetSeverity || batchSeverity.value;
   if (!severityToApply) return;
   if (selectedTicketIds.value.size === 0) return;
-  if (!allowUnbackedAction("Batch updating ticket severity")) return;
 
   const targetIds = Array.from(selectedTicketIds.value);
-  tickets.value.forEach((t) => {
-    if (targetIds.includes(t.id)) {
-      if (t.status === "CLOSED") {
-        return;
-      }
-      t.gxp_severity = severityToApply;
-      t.version_index = (t.version_index || 1) + 1;
-      t.audit_logs = t.audit_logs || [];
-      t.audit_logs.push({
-        action: "BATCH_SEVERITY_UPDATE",
-        user_id: "active.user@cadence.clinical",
-        timestamp: new Date().toISOString(),
-        change_reason: `Batch severity update to ${severityToApply}`,
-      });
-    }
-  });
-
-  clearSelection();
+  if (applyDemoBatchSeverityUpdate(tickets.value, targetIds, severityToApply)) {
+    clearSelection();
+  }
 };
 
 const handleTicketComment = async ({
@@ -1411,15 +1184,9 @@ const handleTicketComment = async ({
   reason_for_change,
 }) => {
   if (demoBuild) {
-    const newComment = {
-      id: "cm-" + Date.now(),
-      user_id: "active.user@cadence.clinical",
-      content,
-      visibility,
-      created_at: new Date().toISOString(),
-      reason_for_change,
-    };
-    selectedTicketComments.value.push(newComment);
+    selectedTicketComments.value.push(
+      buildDemoTicketComment({ content, visibility, reason_for_change })
+    );
     return;
   }
 
@@ -1452,20 +1219,11 @@ const handleTicketComment = async ({
 };
 
 const handleTicketAttachment = ({ file, reason_for_change }) => {
-  if (!allowUnbackedAction("Attaching a file to a ticket")) return;
-  const newAttachment = {
-    id: "att-" + Date.now(),
-    filename: file.name,
-    file_size_bytes: file.size,
-    mime_type: file.type || "application/octet-stream",
-    sha256_hash:
-      "a4f891b2c3d4e5f67890123456789abcdef0123456789abcdef0123456789abc", // pragma: allowlist secret
-    uploaded_by: "active.user@cadence.clinical",
-    uploaded_at: new Date().toISOString(),
-    deid_scrubbed: true,
-    reason_for_change,
-  };
-  selectedTicketAttachments.value.push(newAttachment);
+  if (!demoBuild) return;
+  const newAttachment = buildDemoTicketAttachment({ file, reason_for_change });
+  if (newAttachment) {
+    selectedTicketAttachments.value.push(newAttachment);
+  }
 };
 
 const handleTicketSigned = async ({
@@ -1475,13 +1233,13 @@ const handleTicketSigned = async ({
   meaning,
 }) => {
   if (demoBuild) {
-    const index = tickets.value.findIndex((t) => t.id === ticketId);
-    if (index !== -1) {
-      tickets.value[index].signature_token = signature_token;
-      tickets.value[index].signature_meaning = meaning;
-      tickets.value[index].signature_timestamp = new Date().toISOString();
-      tickets.value[index].signature_user = "active.user@cadence.clinical";
-      selectedTicket.value = { ...tickets.value[index] };
+    const updatedDemo = applyDemoTicketSignature(tickets.value, {
+      ticketId,
+      signature_token,
+      meaning,
+    });
+    if (updatedDemo) {
+      selectedTicket.value = updatedDemo;
     }
     return;
   }
@@ -1523,18 +1281,8 @@ const handleTicketCreated = (createdTicket) => {
 };
 
 const exportAuditTrail = (format) => {
-  // The export is built from the in-browser ticket list, not an audit trail any service kept.
-  if (!allowUnbackedAction("Exporting the ticket audit trail")) return;
-  const data = JSON.stringify(tickets.value, null, 2);
-  const blob = new Blob([data], {
-    type: format === "json" ? "application/json" : "text/csv",
-  });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `tickets_part11_audit_trail.${format}`;
-  a.click();
-  URL.revokeObjectURL(url);
+  if (!demoBuild) return;
+  exportDemoAuditTrail(tickets.value, format);
 };
 </script>
 
@@ -2077,51 +1825,6 @@ const exportAuditTrail = (format) => {
   border-color: var(--semantic-color-border-control);
   color: var(--semantic-color-text-body);
 }
-/* Bulk Action Toolbar */
-.bulk-action-bar {
-  background: var(--semantic-color-info-bg);
-  border: 1px solid var(--semantic-color-info-border);
-  border-radius: 8px;
-  padding: 12px 18px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-
-.bulk-info {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.bulk-count-badge {
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: var(--semantic-color-info);
-  background: var(--semantic-color-info-light);
-  padding: 4px 10px;
-  border-radius: 12px;
-}
-
-.bulk-actions {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-
-.bulk-action-group {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.batch-select {
-  font-size: 0.82rem;
-  padding: 5px 10px;
-}
 
 .checkbox-cell {
   width: 36px;
@@ -2139,13 +1842,6 @@ const exportAuditTrail = (format) => {
 
 .selected-row {
   background-color: var(--semantic-color-info-bg-soft) !important;
-}
-
-.btn-sm {
-  min-height: var(--semantic-control-target-min, 24px);
-  min-width: var(--semantic-control-target-min, 24px);
-  padding: 5px 10px;
-  font-size: 0.8rem;
 }
 
 .btn-secondary:hover {

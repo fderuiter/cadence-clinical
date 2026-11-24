@@ -25,7 +25,6 @@ import {
 import { kernelApi } from "../api/kernelApi";
 import { PRE_RELEASE_ENVIRONMENT_NOTICE } from "../catalog/productCatalog.js";
 import { demoNowMs, isDemoBuild } from "../utils/demoMode.js";
-import { useNotificationsStore } from "./notifications.js";
 import { clearActiveStudyScope } from "./studyScopeBridge";
 import { useOnboardingStore } from "./onboarding.js";
 import {
@@ -961,7 +960,13 @@ export const useAuthStore = defineStore("auth", {
       resetCanvasSessionCaches();
       rehydrateStoresForPersona(personaKey, this._p);
       try {
-        useNotificationsStore().fetchNotifications();
+        const notificationsStore = this._p?._s?.get("notifications");
+        if (
+          notificationsStore &&
+          typeof notificationsStore.fetchNotifications === "function"
+        ) {
+          void notificationsStore.fetchNotifications();
+        }
       } catch {
         // Pinia store not ready or active
       }

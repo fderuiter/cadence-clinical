@@ -186,21 +186,135 @@ describe("apps/web cold-boot bundle budget & chunk isolation", () => {
       ).toEqual([]);
     }
 
-    // Verify preserved vendor splits and isolated lazy draggable chunk.
+    // Verify preserved vendor splits and complete exclusion of demo-only route subgraphs
+    // (DocumentsHubView -> MediaPreviewModal -> hls.js and MdrView -> CrfAuthoringCanvas -> vuedraggable/sortablejs).
     const allChunkNames = Array.from(chunksByFile.keys());
     expect(allChunkNames.some((f) => f.includes("vendor-vue"))).toBe(true);
     expect(allChunkNames.some((f) => f.includes("vendor-auth"))).toBe(true);
-    expect(allChunkNames.some((f) => f.includes("vendor-media"))).toBe(true);
+    expect(allChunkNames.some((f) => f.includes("vendor-media"))).toBe(false);
 
-    const draggableChunks = Array.from(chunksByFile.values()).filter((chunk) =>
-      Object.keys(chunk.modules).some((m) =>
-        /(?:^|\/)(?:vuedraggable|sortablejs)(?:\/|$)/.test(
-          m.replace(/\\/g, "/")
+    const allProdModuleIds = Array.from(chunksByFile.values()).flatMap(
+      (chunk) => Object.keys(chunk.modules).map((m) => m.replace(/\\/g, "/"))
+    );
+    expect(
+      allProdModuleIds.some((m) =>
+        /(?:^|\/)(?:vuedraggable|sortablejs|hls\.js)(?:\/|$)/.test(m)
+      )
+    ).toBe(false);
+    expect(
+      allProdModuleIds.filter((m) => /\/src\/views\/demo\//.test(m))
+    ).toEqual([]);
+    expect(
+      allProdModuleIds.filter((m) => /\/src\/stores\/demo\//.test(m))
+    ).toEqual([]);
+    expect(
+      allProdModuleIds.filter((m) =>
+        /\/src\/views\/(?:MdrView|ProtocolDigitizationView|ICFBuilderView|ConsentAuthoringView|AmendmentDiffView|ImagingView|DeviceInvestigationView|CecAdjudicationView|AuditView|AuditorView|RulesView|MedicalCodingView|LakehouseView|SensorTelemetryView|LabGovernanceView|TelehealthDtpView|AggregateSafetyView|QualityCockpitView|NotificationsView|DocumentsHubView|ParticipantWalletView|LaySummaryPortal)\.vue/.test(
+          m
         )
       )
+    ).toEqual([]);
+
+    // Verify live chunks omit demo authoring dialogs, localStorage simulation keys, and mock payloads.
+    const allProdCode = Array.from(chunksByFile.values())
+      .map((chunk) => chunk.code)
+      .join("\n");
+    expect(allProdCode).not.toContain("create-art-modal-title");
+    expect(allProdCode).not.toContain("DEV-2026-0041");
+    expect(allProdCode).not.toContain("demo_documents");
+    expect(allProdCode).not.toContain("demo_notifications");
+  }, 60_000);
+
+  it("keeps vuedraggable/sortablejs isolated in a single lazy chunk outside cold boot in demo builds and strips portal mock-data.js in live portal builds", async () => {
+    const previousNodeEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = "production";
+    let demoResult: Awaited<ReturnType<typeof build>>;
+    let portalProdResult: Awaited<ReturnType<typeof build>>;
+    const portalRoot = path.resolve(WEB_ROOT, "../subject-portal");
+    const portalViteConfig = path.resolve(portalRoot, "vite.config.js");
+
+    try {
+      [demoResult, portalProdResult] = await Promise.all([
+        build({
+          root: WEB_ROOT,
+          configFile: VITE_CONFIG_PATH,
+          mode: "demo",
+          logLevel: "silent",
+          define: {
+            "process.env.NODE_ENV": JSON.stringify("production"),
+          },
+          build: {
+            write: false,
+          },
+        }),
+        build({
+          root: portalRoot,
+          configFile: portalViteConfig,
+          mode: "production",
+          logLevel: "silent",
+          define: {
+            "process.env.NODE_ENV": JSON.stringify("production"),
+          },
+          build: {
+            write: false,
+          },
+        }),
+      ]);
+    } finally {
+      if (previousNodeEnv === undefined) {
+        delete process.env.NODE_ENV;
+      } else {
+        process.env.NODE_ENV = previousNodeEnv;
+      }
+    }
+
+    const demoBundleItems = (
+      Array.isArray(demoResult) ? demoResult : [demoResult]
+    ).flatMap((entry) => ("output" in entry ? entry.output : []));
+    const demoHtmlAsset = demoBundleItems.find(
+      (item): item is Rollup.OutputAsset =>
+        item.type === "asset" && item.fileName === "index.html"
+    )!;
+    const demoHtmlSource =
+      typeof demoHtmlAsset.source === "string"
+        ? demoHtmlAsset.source
+        : Buffer.from(demoHtmlAsset.source).toString("utf8");
+
+    const demoChunksByFile = new Map<string, Rollup.OutputChunk>();
+    for (const item of demoBundleItems) {
+      if (item.type === "chunk") {
+        demoChunksByFile.set(item.fileName, item);
+      }
+    }
+
+    const demoBootFiles = new Set<string>(
+      extractInitialJsAssetsFromHtml(
+        demoHtmlSource,
+        new Set(demoChunksByFile.keys())
+      )
+    );
+    const demoQueue = [...demoBootFiles];
+    while (demoQueue.length > 0) {
+      const current = demoQueue.shift()!;
+      const chunk = demoChunksByFile.get(current);
+      for (const imported of chunk?.imports || []) {
+        if (imported.endsWith(".js") && !demoBootFiles.has(imported)) {
+          demoBootFiles.add(imported);
+          demoQueue.push(imported);
+        }
+      }
+    }
+
+    const draggableChunks = Array.from(demoChunksByFile.values()).filter(
+      (chunk) =>
+        Object.keys(chunk.modules).some((m) =>
+          /(?:^|\/)(?:vuedraggable|sortablejs)(?:\/|$)/.test(
+            m.replace(/\\/g, "/")
+          )
+        )
     );
     expect(draggableChunks).toHaveLength(1);
-    expect(bootChunkFiles.has(draggableChunks[0].fileName)).toBe(false);
+    expect(demoBootFiles.has(draggableChunks[0].fileName)).toBe(false);
 
     const draggableModules = Object.keys(draggableChunks[0].modules).map((m) =>
       m.replace(/\\/g, "/")
@@ -211,5 +325,20 @@ describe("apps/web cold-boot bundle budget & chunk isolation", () => {
     expect(draggableModules.some((m) => /(?:^|\/)sortablejs\//.test(m))).toBe(
       true
     );
+
+    const portalBundleItems = (
+      Array.isArray(portalProdResult) ? portalProdResult : [portalProdResult]
+    ).flatMap((entry) => ("output" in entry ? entry.output : []));
+    const portalChunks = portalBundleItems.filter(
+      (item): item is Rollup.OutputChunk => item.type === "chunk"
+    );
+    const portalModuleIds = portalChunks.flatMap((chunk) =>
+      Object.keys(chunk.modules).map((m) => m.replace(/\\/g, "/"))
+    );
+    expect(
+      portalModuleIds.filter((m) => /\/src\/data\/mock-data\.js$/.test(m))
+    ).toEqual([]);
+    const portalCode = portalChunks.map((chunk) => chunk.code).join("\n");
+    expect(portalCode).not.toContain("inst_daily_diary");
   }, 60_000);
 });

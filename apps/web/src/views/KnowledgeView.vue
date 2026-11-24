@@ -732,387 +732,22 @@
       </main>
     </div>
 
-    <!-- Modal 1: Create New Article Modal -->
-    <ClinicalModal
-      v-model="isCreateArticleModalOpen"
-      :teleport="false"
-      :show-footer="false"
-      size="lg"
-      dialog-class="modal-card modal-lg"
-      aria-labelledby="create-art-modal-title"
-    >
-      <template #header>
-        <h3 id="create-art-modal-title">➕ Author New Knowledge SOP Article</h3>
-      </template>
-
-      <form @submit.prevent="handleCreateArticle">
-        <div class="form-group">
-          <label for="new-art-title">SOP Title *</label>
-          <input
-            id="new-art-title"
-            v-model="newArticleForm.title"
-            type="text"
-            class="form-control"
-            placeholder="e.g. SOP-ECRF-301: Adverse Event Severity Grading"
-            required
-            @input="autoGenerateSlug"
-          />
-        </div>
-
-        <div class="form-row">
-          <div class="form-group col">
-            <label for="new-art-slug">Document Slug *</label>
-            <input
-              id="new-art-slug"
-              v-model="newArticleForm.slug"
-              type="text"
-              class="form-control"
-              placeholder="sop-ecrf-301-adverse-events"
-              required
-            />
-          </div>
-          <div class="form-group col">
-            <label for="new-art-category">Category *</label>
-            <select
-              id="new-art-category"
-              v-model="newArticleForm.category_id"
-              class="form-control"
-              required
-            >
-              <option
-                v-for="cat in visibleCategories"
-                :key="cat.id"
-                :value="cat.id"
-              >
-                {{ cat.name }}
-              </option>
-            </select>
-          </div>
-        </div>
-
-        <div class="form-row">
-          <div class="form-group col">
-            <label for="new-art-version">Initial Version Label</label>
-            <input
-              id="new-art-version"
-              v-model="newArticleForm.version_label"
-              type="text"
-              class="form-control"
-              placeholder="0.1"
-            />
-          </div>
-          <div class="form-group col">
-            <label for="new-art-tags">Tags (comma-separated)</label>
-            <input
-              id="new-art-tags"
-              v-model="newArticleForm.tagsInput"
-              type="text"
-              class="form-control"
-              placeholder="ecrf, safety, adverse-events"
-            />
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label for="new-art-body">Markdown SOP Body *</label>
-          <textarea
-            id="new-art-body"
-            v-model="newArticleForm.body_markdown"
-            class="form-control code-textarea"
-            rows="8"
-            placeholder="## Purpose & Scope&#10;Describe procedural guidance, regulatory backing (21 CFR Part 11), and responsibilities..."
-            required
-          />
-        </div>
-
-        <div class="form-group">
-          <label for="new-art-reason">GxP Reason for Change *</label>
-          <input
-            id="new-art-reason"
-            v-model="newArticleForm.reason_for_change"
-            type="text"
-            class="form-control"
-            placeholder="Initial authoring of standard operating procedure"
-            required
-          />
-        </div>
-
-        <div class="modal-footer">
-          <button
-            type="button"
-            class="btn btn-secondary"
-            @click="isCreateArticleModalOpen = false"
-          >
-            Cancel
-          </button>
-          <button type="submit" class="btn btn-primary">
-            Save Working Draft
-          </button>
-        </div>
-      </form>
-    </ClinicalModal>
-
-    <!-- Modal 2: Edit Working Draft Modal -->
-    <ClinicalModal
-      v-model="isEditDraftModalOpen"
-      :teleport="false"
-      :show-footer="false"
-      size="lg"
-      dialog-class="modal-card modal-lg"
-      aria-labelledby="edit-draft-modal-title"
-    >
-      <template #header>
-        <h3 id="edit-draft-modal-title">✏️ Edit Working Draft SOP</h3>
-      </template>
-
-      <form @submit.prevent="handleSaveDraft">
-        <div class="form-group">
-          <label for="edit-art-title">SOP Title *</label>
-          <input
-            id="edit-art-title"
-            v-model="editDraftForm.title"
-            type="text"
-            class="form-control"
-            required
-          />
-        </div>
-
-        <div class="form-row">
-          <div class="form-group col">
-            <label for="edit-art-category">Category</label>
-            <select
-              id="edit-art-category"
-              v-model="editDraftForm.category_id"
-              class="form-control"
-            >
-              <option
-                v-for="cat in visibleCategories"
-                :key="cat.id"
-                :value="cat.id"
-              >
-                {{ cat.name }}
-              </option>
-            </select>
-          </div>
-          <div class="form-group col">
-            <label for="edit-art-tags">Tags</label>
-            <input
-              id="edit-art-tags"
-              v-model="editDraftForm.tagsInput"
-              type="text"
-              class="form-control"
-            />
-          </div>
-        </div>
-
-        <div class="form-group">
-          <div class="textarea-label-row">
-            <label for="edit-art-body">Markdown SOP Content *</label>
-            <button
-              type="button"
-              class="btn-text-toggle"
-              @click="isPreviewMode = !isPreviewMode"
-            >
-              {{
-                isPreviewMode ? "👁️ Show Raw Markdown" : "🔍 Show Live Preview"
-              }}
-            </button>
-          </div>
-
-          <div
-            v-if="isPreviewMode"
-            class="preview-container prose-content"
-            v-html="renderPreviewHtml(editDraftForm.body_markdown)"
-          />
-          <textarea
-            v-else
-            id="edit-art-body"
-            v-model="editDraftForm.body_markdown"
-            class="form-control code-textarea"
-            rows="10"
-            required
-          />
-        </div>
-
-        <div class="form-group">
-          <label for="edit-art-reason">GxP Reason for Change *</label>
-          <input
-            id="edit-art-reason"
-            v-model="editDraftForm.reason_for_change"
-            type="text"
-            class="form-control"
-            placeholder="Updated procedural guidelines and regulatory notes"
-            required
-          />
-        </div>
-
-        <div class="modal-footer">
-          <button
-            type="button"
-            class="btn btn-secondary"
-            @click="isEditDraftModalOpen = false"
-          >
-            Cancel
-          </button>
-          <button type="submit" class="btn btn-primary">
-            Save Draft Changes
-          </button>
-        </div>
-      </form>
-    </ClinicalModal>
-
-    <!-- Modal 3: Part 11 Action Justification / Reason Modal -->
-    <ClinicalModal
-      v-model="isReasonModalOpen"
-      :teleport="false"
-      :show-footer="false"
-      dialog-class="modal-card"
-      aria-labelledby="reason-modal-title"
-    >
-      <template #header>
-        <h3 id="reason-modal-title">
-          {{ actionModalTitle }}
-        </h3>
-      </template>
-
-      <form @submit.prevent="executeActionWithReason">
-        <p class="reason-modal-intro">
-          {{ actionModalIntro }}
-        </p>
-
-        <div v-if="actionModalType === 'publish'" class="form-group">
-          <label for="action-version-label">Published Version Label *</label>
-          <input
-            id="action-version-label"
-            v-model="actionVersionLabel"
-            type="text"
-            class="form-control"
-            placeholder="e.g. 1.0 or 2.0"
-            required
-          />
-        </div>
-
-        <div class="form-group">
-          <label for="action-reason-input"
-            >21 CFR Part 11 Reason for Change *</label
-          >
-          <textarea
-            id="action-reason-input"
-            v-model="actionReason"
-            class="form-control"
-            rows="3"
-            placeholder="Mandatory regulatory reason for executing this document state change..."
-            required
-          />
-        </div>
-
-        <div class="modal-footer">
-          <button
-            type="button"
-            class="btn btn-secondary"
-            @click="isReasonModalOpen = false"
-          >
-            Cancel
-          </button>
-          <button type="submit" class="btn" :class="actionButtonClass">
-            {{ actionButtonLabel }}
-          </button>
-        </div>
-      </form>
-    </ClinicalModal>
-
-    <!-- Modal 4: Create Category Modal -->
-    <ClinicalModal
-      v-model="isCreateCategoryModalOpen"
-      :teleport="false"
-      :show-footer="false"
-      dialog-class="modal-card"
-      aria-labelledby="create-cat-modal-title"
-    >
-      <template #header>
-        <h3 id="create-cat-modal-title">📁 Create Knowledge Category</h3>
-      </template>
-
-      <form @submit.prevent="handleCreateCategory">
-        <div class="form-group">
-          <label for="new-cat-name">Category Name *</label>
-          <input
-            id="new-cat-name"
-            v-model="newCategoryForm.name"
-            type="text"
-            class="form-control"
-            placeholder="e.g. Safety & Pharmacovigilance"
-            required
-            @input="autoGenerateCategorySlug"
-          />
-        </div>
-
-        <div class="form-group">
-          <label for="new-cat-slug">Category Slug *</label>
-          <input
-            id="new-cat-slug"
-            v-model="newCategoryForm.slug"
-            type="text"
-            class="form-control"
-            placeholder="safety-pharmacovigilance"
-            required
-          />
-        </div>
-
-        <div class="form-group">
-          <label for="new-cat-desc">Description</label>
-          <input
-            id="new-cat-desc"
-            v-model="newCategoryForm.description"
-            type="text"
-            class="form-control"
-            placeholder="Guidelines for safety event intake, triage, and expedited reporting."
-          />
-        </div>
-
-        <fieldset class="form-group form-fieldset">
-          <legend class="form-label">
-            Persona Visibility (All by default if empty)
-          </legend>
-          <div class="persona-checkbox-grid">
-            <label
-              v-for="p in PERSONA_PRESETS"
-              :key="p.key"
-              class="checkbox-label"
-            >
-              <input
-                v-model="newCategoryForm.persona_visibility"
-                type="checkbox"
-                :value="p.key"
-              />
-              <span>{{ p.label }}</span>
-            </label>
-          </div>
-        </fieldset>
-
-        <div class="modal-footer">
-          <button
-            type="button"
-            class="btn btn-secondary"
-            @click="isCreateCategoryModalOpen = false"
-          >
-            Cancel
-          </button>
-          <button type="submit" class="btn btn-primary">Create Category</button>
-        </div>
-      </form>
-    </ClinicalModal>
+    <KnowledgeDemoWorkspace
+      v-if="demoBuild && isSuperAdmin"
+      ref="demoWorkspaceRef"
+      :selected-article="selectedArticle"
+      :visible-categories="visibleCategories"
+      @article-created="onArticleCreated"
+      @article-updated="onArticleUpdated"
+      @category-created="onCategoryCreated"
+    />
   </div>
 </template>
 
-<script>
-import { computed, onMounted, ref, watch } from "vue";
-import { ClinicalIconButton, ClinicalModal, ClinicalTabs } from "ui";
-import {
-  knowledgeService,
-  DEFAULT_CATEGORIES,
-  DEFAULT_MOCK_ARTICLES,
-} from "../api/knowledge.js";
+<script setup>
+import { computed, defineAsyncComponent, onMounted, ref, watch } from "vue";
+import { ClinicalIconButton, ClinicalTabs } from "ui";
+import { knowledgeService } from "../api/knowledge.js";
 import {
   readRouteScopeQuery,
   replaceRouteQueryParams,
@@ -1120,853 +755,545 @@ import {
 } from "../composables/useRouteScopeSync";
 import { useAuthStore, PERSONA_PRESETS } from "../stores/auth.js";
 import { useClinicalScopeStore } from "../stores/clinicalScope";
+import { createKnowledgeDemoState } from "../stores/demo/knowledgeDemo";
 import { useToastStore } from "../stores/toasts.js";
 import { isDemoBuild } from "../utils/demoMode.js";
 
-export default {
+defineOptions({
   name: "KnowledgeView",
-  components: {
-    ClinicalIconButton,
-    ClinicalModal,
-    ClinicalTabs,
+});
+
+const KnowledgeDemoWorkspace = defineAsyncComponent(
+  () => import("./demo/KnowledgeDemoWorkspace.vue")
+);
+
+const authStore = useAuthStore();
+const scopeStore = useClinicalScopeStore();
+const toastStore = useToastStore();
+const { route, router } = resolveRouteAndRouter();
+const initialRouteScope = readRouteScopeQuery(route);
+
+// Data State: bundled sample SOPs only in a demo build; otherwise the list comes from the server (#4523).
+const demoBuild = isDemoBuild();
+const initialDemoState = demoBuild
+  ? createKnowledgeDemoState()
+  : { categories: [], articles: [], selectedArticle: null };
+const demoWorkspaceRef = ref(null);
+const categories = ref(initialDemoState.categories);
+const articles = ref(initialDemoState.articles);
+const selectedCategoryId = ref(null);
+const selectedArticle = ref(initialDemoState.selectedArticle);
+const searchQuery = ref("");
+const selectedTag = ref(null);
+const activeStatusFilter = ref("ALL");
+const activeReaderTab = ref("content");
+const loading = ref(false);
+const scopeStudyId = ref(initialRouteScope.studyId);
+const scopeSiteId = ref(initialRouteScope.siteId);
+const scopeSubjectId = ref(initialRouteScope.subjectId);
+
+if (route?.query) {
+  if (initialRouteScope.studyId) {
+    scopeStore.activeStudyId = initialRouteScope.studyId;
+  }
+  if (initialRouteScope.siteId) {
+    scopeStore.activeSiteId = initialRouteScope.siteId;
+  }
+  if (initialRouteScope.subjectId) {
+    scopeStore.activeSubjectId = initialRouteScope.subjectId;
+  }
+}
+
+// Version & Audit Log Lists for Tab Viewers
+const versionsList = ref([]);
+const versionsLoading = ref(false);
+const auditLogList = ref([]);
+const auditLoading = ref(false);
+
+// Persona & Role Checking
+const activePersonaKey = computed(
+  () => authStore.currentPersona || "super_admin"
+);
+const activePersonaLabel = computed(() => {
+  const p = PERSONA_PRESETS.find(
+    (preset) => preset.key === activePersonaKey.value
+  );
+  return p ? p.label : "Active Role";
+});
+
+const isSuperAdmin = computed(() => {
+  const current = authStore.currentPersona;
+  if (current && current !== "super_admin") {
+    return false;
+  }
+  const roles = authStore.normalizedRoles || [];
+  return (
+    current === "super_admin" ||
+    roles.includes("super_admin") ||
+    roles.includes("sponsor_admin")
+  );
+});
+
+// Filtered Categories based on Persona
+const visibleCategories = computed(() => {
+  if (isSuperAdmin.value) {
+    return categories.value.filter((c) => !c.is_deleted);
+  }
+  const role = activePersonaKey.value;
+  return categories.value.filter((c) => {
+    if (c.is_deleted) return false;
+    if (!c.persona_visibility || c.persona_visibility.length === 0) return true;
+    return (
+      c.persona_visibility.includes(role) ||
+      c.persona_visibility.includes("all")
+    );
+  });
+});
+
+// Filtered Articles based on Persona (via Category visibility)
+const filteredByPersonaArticles = computed(() => {
+  if (isSuperAdmin.value) {
+    return articles.value;
+  }
+  const allowedCatIds = new Set(visibleCategories.value.map((c) => c.id));
+  return articles.value.filter((a) => allowedCatIds.has(a.category_id));
+});
+
+// Filtered Articles by Category, Status, Tag, and Search
+const displayArticles = computed(() => {
+  let list = [...filteredByPersonaArticles.value];
+
+  if (selectedCategoryId.value) {
+    list = list.filter((a) => a.category_id === selectedCategoryId.value);
+  }
+
+  if (activeStatusFilter.value !== "ALL") {
+    list = list.filter((a) => a.status === activeStatusFilter.value);
+  }
+
+  if (selectedTag.value) {
+    list = list.filter((a) => {
+      const tags = getTagList(a.tags);
+      return tags.includes(selectedTag.value);
+    });
+  }
+
+  const q = searchQuery.value.trim().toLowerCase();
+  if (q) {
+    list = list.filter((a) => {
+      const matchTitle = a.title?.toLowerCase().includes(q);
+      const matchSlug = a.slug?.toLowerCase().includes(q);
+      const matchBody = (a.body_markdown || a.body_html || "")
+        .toLowerCase()
+        .includes(q);
+      const tags = getTagList(a.tags);
+      const matchTags = tags.some((t) => t.toLowerCase().includes(q));
+      return matchTitle || matchSlug || matchBody || matchTags;
+    });
+  }
+
+  const scopedStudy = scopeStudyId.value.trim().toLowerCase();
+  if (scopedStudy) {
+    list = list.filter(
+      (a) => !a.study_id || a.study_id.toLowerCase() === scopedStudy
+    );
+  }
+
+  return list;
+});
+
+// Aggregations / Metrics
+const totalArticlesCount = computed(
+  () => filteredByPersonaArticles.value.length
+);
+const publishedArticlesCount = computed(
+  () =>
+    filteredByPersonaArticles.value.filter((a) => a.status === "PUBLISHED")
+      .length
+);
+const inReviewArticlesCount = computed(
+  () =>
+    filteredByPersonaArticles.value.filter((a) => a.status === "IN_REVIEW")
+      .length
+);
+const draftArticlesCount = computed(
+  () =>
+    filteredByPersonaArticles.value.filter(
+      (a) => a.status === "DRAFT" || a.status === "REJECTED"
+    ).length
+);
+
+// Available Tags
+const availableTags = computed(() => {
+  const tagSet = new Set();
+  filteredByPersonaArticles.value.forEach((a) => {
+    getTagList(a.tags).forEach((t) => tagSet.add(t));
+  });
+  return Array.from(tagSet).sort();
+});
+
+// Helper functions
+function getTagList(tags) {
+  if (!tags) return [];
+  if (Array.isArray(tags)) return tags;
+  if (typeof tags === "string") {
+    return tags
+      .split(",")
+      .map((t) => t.trim())
+      .filter(Boolean);
+  }
+  return [];
+}
+
+function getCategoryIcon(slug) {
+  if (!slug) return "📁";
+  if (slug.includes("clinical") || slug.includes("ecrf")) return "🩺";
+  if (slug.includes("authoring") || slug.includes("mdr")) return "📋";
+  if (slug.includes("monitoring") || slug.includes("ctms")) return "📊";
+  if (
+    slug.includes("regulatory") ||
+    slug.includes("compliance") ||
+    slug.includes("audit")
+  )
+    return "🔒";
+  if (slug.includes("data") || slug.includes("coding")) return "🏷️";
+  return "📁";
+}
+
+function getArticleCountForCategory(catId) {
+  return filteredByPersonaArticles.value.filter((a) => a.category_id === catId)
+    .length;
+}
+
+function getStatusPillClass(status) {
+  switch (status) {
+    case "PUBLISHED":
+      return "status-published";
+    case "IN_REVIEW":
+      return "status-review";
+    case "APPROVED":
+      return "status-approved";
+    case "DRAFT":
+      return "status-draft";
+    case "REJECTED":
+      return "status-rejected";
+    case "SUPERSEDED":
+      return "status-superseded";
+    case "ARCHIVED":
+      return "status-archived";
+    default:
+      return "status-draft";
+  }
+}
+
+function formatDate(isoStr) {
+  if (!isoStr) return "—";
+  try {
+    const d = new Date(isoStr);
+    return d.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  } catch {
+    return isoStr;
+  }
+}
+
+// Actions & Selection
+function selectCategory(catId) {
+  selectedCategoryId.value = catId;
+  if (
+    selectedArticle.value &&
+    catId &&
+    selectedArticle.value.category_id !== catId
+  ) {
+    const firstMatch = displayArticles.value[0] || null;
+    selectedArticle.value = firstMatch;
+  }
+}
+
+function selectArticle(article) {
+  selectedArticle.value = article;
+  activeReaderTab.value = "content";
+  versionsList.value = [];
+  auditLogList.value = [];
+}
+
+function setStatusFilter(status) {
+  activeStatusFilter.value = status;
+}
+
+function toggleTag(tag) {
+  if (selectedTag.value === tag) {
+    selectedTag.value = null;
+  } else {
+    selectedTag.value = tag;
+  }
+}
+
+function onSearchInput() {
+  // Live search is reactive via displayArticles computed
+}
+
+function clearSearch() {
+  searchQuery.value = "";
+}
+
+function resetFilters() {
+  searchQuery.value = "";
+  selectedTag.value = null;
+  activeStatusFilter.value = "ALL";
+  selectedCategoryId.value = null;
+}
+
+// Tab Loaders
+async function loadVersionHistory() {
+  activeReaderTab.value = "versions";
+  if (!selectedArticle.value) return;
+  versionsLoading.value = true;
+  try {
+    const list = await knowledgeService.listArticleVersions(
+      selectedArticle.value.id
+    );
+    versionsList.value = Array.isArray(list) ? list : [];
+  } catch (err) {
+    toastStore.apiError("Could not load version history", err);
+    versionsList.value = [];
+  } finally {
+    versionsLoading.value = false;
+  }
+}
+
+async function loadAuditTrail() {
+  activeReaderTab.value = "audit";
+  if (!selectedArticle.value) return;
+  auditLoading.value = true;
+  try {
+    const list = await knowledgeService.getArticleAuditLog(
+      selectedArticle.value.id
+    );
+    auditLogList.value = Array.isArray(list) ? list : [];
+  } catch (err) {
+    toastStore.apiError("Could not load audit trail", err);
+    auditLogList.value = [];
+  } finally {
+    auditLoading.value = false;
+  }
+}
+
+const readerTabs = computed(() => [
+  {
+    id: "content",
+    label: "SOP Guidance",
+    panelId: "sop-prose-viewer",
   },
-  setup() {
-    const authStore = useAuthStore();
-    const scopeStore = useClinicalScopeStore();
-    const toastStore = useToastStore();
-    const { route, router } = resolveRouteAndRouter();
-    const initialRouteScope = readRouteScopeQuery(route);
+  {
+    id: "versions",
+    label: `Version History (${versionsList.value.length})`,
+    panelId: "sop-versions-viewer",
+  },
+  {
+    id: "audit",
+    label: `21 CFR Part 11 Audit Trail (${auditLogList.value.length})`,
+    panelId: "sop-audit-viewer",
+  },
+]);
 
-    // Data State: bundled sample SOPs only in a demo build; otherwise the list comes from the server (#4523).
-    const demoBuild = isDemoBuild();
-    const categories = ref(demoBuild ? [...DEFAULT_CATEGORIES] : []);
-    const articles = ref(demoBuild ? [...DEFAULT_MOCK_ARTICLES] : []);
-    const selectedCategoryId = ref(null);
-    const selectedArticle = ref(
-      demoBuild ? DEFAULT_MOCK_ARTICLES[0] || null : null
-    );
-    const searchQuery = ref("");
-    const selectedTag = ref(null);
-    const activeStatusFilter = ref("ALL");
-    const activeReaderTab = ref("content");
-    const loading = ref(false);
-    const scopeStudyId = ref(initialRouteScope.studyId);
-    const scopeSiteId = ref(initialRouteScope.siteId);
-    const scopeSubjectId = ref(initialRouteScope.subjectId);
+function handleReaderTabChange(tabId) {
+  if (tabId === "versions") {
+    loadVersionHistory();
+  } else if (tabId === "audit") {
+    loadAuditTrail();
+  } else {
+    activeReaderTab.value = "content";
+  }
+}
 
-    if (route?.query) {
-      if (initialRouteScope.studyId) {
-        scopeStore.activeStudyId = initialRouteScope.studyId;
-      }
-      if (initialRouteScope.siteId) {
-        scopeStore.activeSiteId = initialRouteScope.siteId;
-      }
-      if (initialRouteScope.subjectId) {
-        scopeStore.activeSubjectId = initialRouteScope.subjectId;
-      }
-    }
+// Demo Authoring Workspace Delegation
+function onArticleCreated(created) {
+  articles.value.unshift(created);
+  selectedArticle.value = created;
+}
 
-    // Version & Audit Log Lists for Tab Viewers
-    const versionsList = ref([]);
-    const versionsLoading = ref(false);
-    const auditLogList = ref([]);
-    const auditLoading = ref(false);
+function onArticleUpdated(updated) {
+  const idx = articles.value.findIndex((a) => a.id === updated.id);
+  if (idx !== -1) {
+    articles.value[idx] = updated;
+  }
+  selectedArticle.value = updated;
+}
 
-    // Modals
-    const isCreateArticleModalOpen = ref(false);
-    const isEditDraftModalOpen = ref(false);
-    const isReasonModalOpen = ref(false);
-    const isCreateCategoryModalOpen = ref(false);
-    const isPreviewMode = ref(false);
+function onCategoryCreated(created) {
+  categories.value.push(created);
+}
 
-    // Forms
-    const newArticleForm = ref({
-      title: "",
-      slug: "",
-      category_id: "",
-      version_label: "0.1",
-      tagsInput: "",
-      body_markdown: "",
-      reason_for_change: "Initial SOP document draft creation",
-    });
+function openCreateArticleModal(...args) {
+  return demoWorkspaceRef.value?.openCreateArticleModal?.(...args);
+}
 
-    const editDraftForm = ref({
-      title: "",
-      category_id: "",
-      tagsInput: "",
-      body_markdown: "",
-      reason_for_change: "",
-    });
+function handleCreateArticle(...args) {
+  return demoWorkspaceRef.value?.handleCreateArticle?.(...args);
+}
 
-    const newCategoryForm = ref({
-      name: "",
-      slug: "",
-      description: "",
-      persona_visibility: [],
-    });
+function openEditDraftModal(...args) {
+  return demoWorkspaceRef.value?.openEditDraftModal?.(...args);
+}
 
-    // Reason Modal Parameters
-    const actionModalType = ref("");
-    const actionModalTitle = ref("");
-    const actionModalIntro = ref("");
-    const actionReason = ref("");
-    const actionVersionLabel = ref("");
-    const actionButtonLabel = ref("Confirm");
-    const actionButtonClass = ref("btn-primary");
+function handleSaveDraft(...args) {
+  return demoWorkspaceRef.value?.handleSaveDraft?.(...args);
+}
 
-    // Persona & Role Checking
-    const activePersonaKey = computed(
-      () => authStore.currentPersona || "super_admin"
-    );
-    const activePersonaLabel = computed(() => {
-      const p = PERSONA_PRESETS.find(
-        (preset) => preset.key === activePersonaKey.value
-      );
-      return p ? p.label : "Active Role";
-    });
+function promptSubmitReview(...args) {
+  return demoWorkspaceRef.value?.promptSubmitReview?.(...args);
+}
 
-    const isSuperAdmin = computed(() => {
-      const current = authStore.currentPersona;
-      if (current && current !== "super_admin") {
-        return false;
-      }
-      const roles = authStore.normalizedRoles || [];
-      return (
-        current === "super_admin" ||
-        roles.includes("super_admin") ||
-        roles.includes("sponsor_admin")
-      );
-    });
+function promptApproveArticle(...args) {
+  return demoWorkspaceRef.value?.promptApproveArticle?.(...args);
+}
 
-    // Filtered Categories based on Persona
-    const visibleCategories = computed(() => {
-      if (isSuperAdmin.value) {
-        return categories.value.filter((c) => !c.is_deleted);
-      }
-      const role = activePersonaKey.value;
-      return categories.value.filter((c) => {
-        if (c.is_deleted) return false;
-        if (!c.persona_visibility || c.persona_visibility.length === 0)
-          return true;
-        return (
-          c.persona_visibility.includes(role) ||
-          c.persona_visibility.includes("all")
-        );
-      });
-    });
+function promptRejectArticle(...args) {
+  return demoWorkspaceRef.value?.promptRejectArticle?.(...args);
+}
 
-    // Filtered Articles based on Persona (via Category visibility)
-    const filteredByPersonaArticles = computed(() => {
-      if (isSuperAdmin.value) {
-        return articles.value;
-      }
-      const allowedCatIds = new Set(visibleCategories.value.map((c) => c.id));
-      return articles.value.filter((a) => allowedCatIds.has(a.category_id));
-    });
+function promptPublishArticle(...args) {
+  return demoWorkspaceRef.value?.promptPublishArticle?.(...args);
+}
 
-    // Filtered Articles by Category, Status, Tag, and Search
-    const displayArticles = computed(() => {
-      let list = [...filteredByPersonaArticles.value];
+function promptArchiveArticle(...args) {
+  return demoWorkspaceRef.value?.promptArchiveArticle?.(...args);
+}
 
-      // Category filter
-      if (selectedCategoryId.value) {
-        list = list.filter((a) => a.category_id === selectedCategoryId.value);
-      }
+function executeActionWithReason(...args) {
+  return demoWorkspaceRef.value?.executeActionWithReason?.(...args);
+}
 
-      // Status filter
-      if (activeStatusFilter.value !== "ALL") {
-        list = list.filter((a) => a.status === activeStatusFilter.value);
-      }
+function openCreateCategoryModal(...args) {
+  return demoWorkspaceRef.value?.openCreateCategoryModal?.(...args);
+}
 
-      // Tag filter
-      if (selectedTag.value) {
-        list = list.filter((a) => {
-          const tags = getTagList(a.tags);
-          return tags.includes(selectedTag.value);
-        });
-      }
+function handleCreateCategory(...args) {
+  return demoWorkspaceRef.value?.handleCreateCategory?.(...args);
+}
 
-      // Search Query
-      const q = searchQuery.value.trim().toLowerCase();
-      if (q) {
-        list = list.filter((a) => {
-          const matchTitle = a.title?.toLowerCase().includes(q);
-          const matchSlug = a.slug?.toLowerCase().includes(q);
-          const matchBody = (a.body_markdown || a.body_html || "")
-            .toLowerCase()
-            .includes(q);
-          const tags = getTagList(a.tags);
-          const matchTags = tags.some((t) => t.toLowerCase().includes(q));
-          return matchTitle || matchSlug || matchBody || matchTags;
-        });
-      }
-
-      // Clinical study scope filter when articles carry an explicit study_id
-      const scopedStudy = scopeStudyId.value.trim().toLowerCase();
-      if (scopedStudy) {
-        list = list.filter(
-          (a) => !a.study_id || a.study_id.toLowerCase() === scopedStudy
-        );
-      }
-
-      return list;
-    });
-
-    // Aggregations / Metrics
-    const totalArticlesCount = computed(
-      () => filteredByPersonaArticles.value.length
-    );
-    const publishedArticlesCount = computed(
-      () =>
-        filteredByPersonaArticles.value.filter((a) => a.status === "PUBLISHED")
-          .length
-    );
-    const inReviewArticlesCount = computed(
-      () =>
-        filteredByPersonaArticles.value.filter((a) => a.status === "IN_REVIEW")
-          .length
-    );
-    const draftArticlesCount = computed(
-      () =>
-        filteredByPersonaArticles.value.filter(
-          (a) => a.status === "DRAFT" || a.status === "REJECTED"
-        ).length
-    );
-
-    // Available Tags
-    const availableTags = computed(() => {
-      const tagSet = new Set();
-      filteredByPersonaArticles.value.forEach((a) => {
-        getTagList(a.tags).forEach((t) => tagSet.add(t));
-      });
-      return Array.from(tagSet).sort();
-    });
-
-    // Helper functions
-    function getTagList(tags) {
-      if (!tags) return [];
-      if (Array.isArray(tags)) return tags;
-      if (typeof tags === "string") {
-        return tags
-          .split(",")
-          .map((t) => t.trim())
-          .filter(Boolean);
-      }
-      return [];
-    }
-
-    function getCategoryIcon(slug) {
-      if (!slug) return "📁";
-      if (slug.includes("clinical") || slug.includes("ecrf")) return "🩺";
-      if (slug.includes("authoring") || slug.includes("mdr")) return "📋";
-      if (slug.includes("monitoring") || slug.includes("ctms")) return "📊";
-      if (
-        slug.includes("regulatory") ||
-        slug.includes("compliance") ||
-        slug.includes("audit")
-      )
-        return "🔒";
-      if (slug.includes("data") || slug.includes("coding")) return "🏷️";
-      return "📁";
-    }
-
-    function getArticleCountForCategory(catId) {
-      return filteredByPersonaArticles.value.filter(
-        (a) => a.category_id === catId
-      ).length;
-    }
-
-    function getStatusPillClass(status) {
-      switch (status) {
-        case "PUBLISHED":
-          return "status-published";
-        case "IN_REVIEW":
-          return "status-review";
-        case "APPROVED":
-          return "status-approved";
-        case "DRAFT":
-          return "status-draft";
-        case "REJECTED":
-          return "status-rejected";
-        case "SUPERSEDED":
-          return "status-superseded";
-        case "ARCHIVED":
-          return "status-archived";
-        default:
-          return "status-draft";
-      }
-    }
-
-    function formatDate(isoStr) {
-      if (!isoStr) return "—";
-      try {
-        const d = new Date(isoStr);
-        return d.toLocaleDateString("en-US", {
-          year: "numeric",
-          month: "short",
-          day: "numeric",
-        });
-      } catch {
-        return isoStr;
-      }
-    }
-
-    function renderPreviewHtml(markdown) {
-      if (!markdown) return "<p>No content to preview.</p>";
-      let html = markdown
-        .replace(/^### (.*$)/gim, "<h3>$1</h3>")
-        .replace(/^## (.*$)/gim, "<h2>$1</h2>")
-        .replace(/^# (.*$)/gim, "<h1>$1</h1>")
-        .replace(/\*\*(.*)\*\*/gim, "<strong>$1</strong>")
-        .replace(/\*(.*)\*/gim, "<em>$1</em>")
-        .replace(/`([^`]+)`/gim, "<code>$1</code>")
-        .replace(/^\* (.*$)/gim, "<li>$1</li>")
-        .replace(/^\d+\. (.*$)/gim, "<li>$1</li>")
-        .replace(/\n\n+/g, "</p><p>")
-        .replace(/\n/g, "<br>");
-      return `<p>${html}</p>`;
-    }
-
-    // Actions & Selection
-    function selectCategory(catId) {
-      selectedCategoryId.value = catId;
-      if (
-        selectedArticle.value &&
-        catId &&
-        selectedArticle.value.category_id !== catId
-      ) {
-        const firstMatch = displayArticles.value[0] || null;
-        selectedArticle.value = firstMatch;
-      }
-    }
-
-    function selectArticle(article) {
-      selectedArticle.value = article;
-      activeReaderTab.value = "content";
-      versionsList.value = [];
-      auditLogList.value = [];
-    }
-
-    function setStatusFilter(status) {
-      activeStatusFilter.value = status;
-    }
-
-    function toggleTag(tag) {
-      if (selectedTag.value === tag) {
-        selectedTag.value = null;
-      } else {
-        selectedTag.value = tag;
-      }
-    }
-
-    function onSearchInput() {
-      // Live search is reactive via displayArticles computed
-    }
-
-    function clearSearch() {
-      searchQuery.value = "";
-    }
-
-    function resetFilters() {
-      searchQuery.value = "";
-      selectedTag.value = null;
-      activeStatusFilter.value = "ALL";
-      selectedCategoryId.value = null;
-    }
-
-    // Tab Loaders
-    async function loadVersionHistory() {
-      activeReaderTab.value = "versions";
-      if (!selectedArticle.value) return;
-      versionsLoading.value = true;
-      try {
-        const list = await knowledgeService.listArticleVersions(
-          selectedArticle.value.id
-        );
-        versionsList.value = Array.isArray(list) ? list : [];
-      } catch (err) {
-        toastStore.apiError("Could not load version history", err);
-        versionsList.value = [];
-      } finally {
-        versionsLoading.value = false;
-      }
-    }
-
-    async function loadAuditTrail() {
-      activeReaderTab.value = "audit";
-      if (!selectedArticle.value) return;
-      auditLoading.value = true;
-      try {
-        const list = await knowledgeService.getArticleAuditLog(
-          selectedArticle.value.id
-        );
-        auditLogList.value = Array.isArray(list) ? list : [];
-      } catch (err) {
-        toastStore.apiError("Could not load audit trail", err);
-        auditLogList.value = [];
-      } finally {
-        auditLoading.value = false;
-      }
-    }
-
-    const readerTabs = computed(() => [
-      {
-        id: "content",
-        label: "SOP Guidance",
-        panelId: "sop-prose-viewer",
-      },
-      {
-        id: "versions",
-        label: `Version History (${versionsList.value.length})`,
-        panelId: "sop-versions-viewer",
-      },
-      {
-        id: "audit",
-        label: `21 CFR Part 11 Audit Trail (${auditLogList.value.length})`,
-        panelId: "sop-audit-viewer",
-      },
+// Initial Data Fetch
+async function loadInitialData() {
+  loading.value = true;
+  try {
+    const persona = activePersonaKey.value;
+    const [cats, arts] = await Promise.all([
+      knowledgeService.listCategories({ persona }),
+      knowledgeService.listArticles({ persona }),
     ]);
+    if (Array.isArray(cats)) categories.value = cats;
+    if (Array.isArray(arts)) articles.value = arts;
 
-    function handleReaderTabChange(tabId) {
-      if (tabId === "versions") {
-        loadVersionHistory();
-      } else if (tabId === "audit") {
-        loadAuditTrail();
-      } else {
-        activeReaderTab.value = "content";
-      }
+    if (selectedArticle.value) {
+      const updatedSelected = displayArticles.value.find(
+        (a) => a.id === selectedArticle.value.id
+      );
+      selectedArticle.value =
+        updatedSelected || displayArticles.value[0] || null;
+    } else if (displayArticles.value.length > 0) {
+      selectedArticle.value = displayArticles.value[0];
     }
+  } catch (err) {
+    toastStore.apiError("Could not load the knowledge base", err);
+  } finally {
+    loading.value = false;
+  }
+}
 
-    // Lifecycle Modals & Triggers
-    function openCreateArticleModal() {
-      const defaultCat = visibleCategories.value[0]?.id || "cat-clinical-ops";
-      newArticleForm.value = {
-        title: "",
-        slug: "",
-        category_id: defaultCat,
-        version_label: "0.1",
-        tagsInput: "",
-        body_markdown:
-          "## Purpose & Scope\n\n### Responsibilities\n1. \n\n### Procedure\n1. ",
-        reason_for_change: "Initial authoring of standard operating procedure",
-      };
-      isCreateArticleModalOpen.value = true;
-    }
+// Watchers
+watch(
+  () => [
+    route?.query?.studyId,
+    route?.query?.siteId,
+    route?.query?.site,
+    route?.query?.subjectId,
+    route?.query?.participant,
+  ],
+  () => {
+    if (!route?.query) return;
+    const nextScope = readRouteScopeQuery(route);
+    scopeStudyId.value = nextScope.studyId;
+    scopeSiteId.value = nextScope.siteId;
+    scopeSubjectId.value = nextScope.subjectId;
+    scopeStore.activeStudyId = nextScope.studyId;
+    scopeStore.activeSiteId = nextScope.siteId;
+    scopeStore.activeSubjectId = nextScope.subjectId;
+  }
+);
 
-    function autoGenerateSlug() {
-      if (newArticleForm.value.title) {
-        newArticleForm.value.slug = newArticleForm.value.title
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, "-")
-          .replace(/^-+|-+$/g, "");
-      }
-    }
-
-    function autoGenerateCategorySlug() {
-      if (newCategoryForm.value.name) {
-        newCategoryForm.value.slug = newCategoryForm.value.name
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, "-")
-          .replace(/^-+|-+$/g, "");
-      }
-    }
-
-    async function handleCreateArticle() {
-      try {
-        if (!newArticleForm.value.slug && newArticleForm.value.title) {
-          autoGenerateSlug();
-        }
-        const tags = newArticleForm.value.tagsInput
-          ? newArticleForm.value.tagsInput
-              .split(",")
-              .map((t) => t.trim())
-              .filter(Boolean)
-          : [];
-        const payload = {
-          title: newArticleForm.value.title,
-          slug:
-            newArticleForm.value.slug ||
-            newArticleForm.value.title
-              .toLowerCase()
-              .replace(/[^a-z0-9]+/g, "-"),
-          category_id:
-            newArticleForm.value.category_id ||
-            visibleCategories.value[0]?.id ||
-            "cat-clinical-ops",
-          version_label: newArticleForm.value.version_label || "0.1",
-          tags,
-          body_markdown: newArticleForm.value.body_markdown,
-          reason_for_change: newArticleForm.value.reason_for_change,
-        };
-        const created = await knowledgeService.createArticle(payload);
-        articles.value.unshift(created);
-        selectedArticle.value = created;
-        isCreateArticleModalOpen.value = false;
-      } catch (err) {
-        toastStore.apiError("Could not create article", err);
-      }
-    }
-
-    function openEditDraftModal() {
-      if (!selectedArticle.value) return;
-      const art = selectedArticle.value;
-      editDraftForm.value = {
-        title: art.title,
-        category_id: art.category_id,
-        tagsInput: getTagList(art.tags).join(", "),
-        body_markdown: art.body_markdown || "",
-        reason_for_change: `Updated draft for ${art.title}`,
-      };
-      isPreviewMode.value = false;
-      isEditDraftModalOpen.value = true;
-    }
-
-    async function handleSaveDraft() {
-      if (!selectedArticle.value) return;
-      try {
-        const tags = editDraftForm.value.tagsInput
-          ? editDraftForm.value.tagsInput
-              .split(",")
-              .map((t) => t.trim())
-              .filter(Boolean)
-          : [];
-        const payload = {
-          title: editDraftForm.value.title,
-          category_id: editDraftForm.value.category_id,
-          tags,
-          body_markdown: editDraftForm.value.body_markdown,
-          reason_for_change: editDraftForm.value.reason_for_change,
-        };
-        const updated = await knowledgeService.updateArticleDraft(
-          selectedArticle.value.id,
-          payload
-        );
-        const idx = articles.value.findIndex(
-          (a) => a.id === selectedArticle.value.id
-        );
-        if (idx !== -1) {
-          articles.value[idx] = updated;
-        }
-        selectedArticle.value = updated;
-        isEditDraftModalOpen.value = false;
-      } catch (err) {
-        toastStore.apiError("Could not save draft", err);
-      }
-    }
-
-    function promptSubmitReview() {
-      actionModalType.value = "submit_review";
-      actionModalTitle.value = "📨 Submit Draft for Four-Eyes Review";
-      actionModalIntro.value =
-        "Submitting this working draft will transition the document to IN_REVIEW status. An independent peer reviewer must review and approve this revision.";
-      actionReason.value =
-        "Draft completed; submitted for formal quality & regulatory review.";
-      actionButtonLabel.value = "Submit for Review";
-      actionButtonClass.value = "btn-primary";
-      isReasonModalOpen.value = true;
-    }
-
-    function promptApproveArticle() {
-      actionModalType.value = "approve";
-      actionModalTitle.value = "✓ Approve Article Revision";
-      actionModalIntro.value =
-        "Approving this article locks the working version snapshot as permanently immutable per 21 CFR Part 11 four-eyes principles.";
-      actionReason.value =
-        "Verified procedural accuracy and regulatory compliance.";
-      actionButtonLabel.value = "Approve & Lock Version";
-      actionButtonClass.value = "btn-success";
-      isReasonModalOpen.value = true;
-    }
-
-    function promptRejectArticle() {
-      actionModalType.value = "reject";
-      actionModalTitle.value = "✕ Reject Article Revision";
-      actionModalIntro.value =
-        "Rejecting this draft returns it to REJECTED status. Please provide clear clinical or regulatory justification for rejection.";
-      actionReason.value =
-        "Protocol amendment alignment requires updates before approval.";
-      actionButtonLabel.value = "Reject Draft";
-      actionButtonClass.value = "btn-danger";
-      isReasonModalOpen.value = true;
-    }
-
-    function promptPublishArticle() {
-      actionModalType.value = "publish";
-      actionModalTitle.value = "🚀 Publish Approved SOP Live";
-      actionModalIntro.value =
-        "Publishing will immediately make this document active across the platform and automatically supersede any previous published version.";
-      actionReason.value =
-        "Formal regulatory release for clinical site operations.";
-      actionVersionLabel.value = selectedArticle.value?.version_label || "1.0";
-      actionButtonLabel.value = "Publish Live";
-      actionButtonClass.value = "btn-primary";
-      isReasonModalOpen.value = true;
-    }
-
-    function promptArchiveArticle() {
-      actionModalType.value = "archive";
-      actionModalTitle.value = "📦 Archive Knowledge Article";
-      actionModalIntro.value =
-        "Archiving will deprecate this SOP document and remove it from active clinical workflows while retaining 21 CFR Part 11 audit records.";
-      actionReason.value =
-        "Replaced by updated master protocol and standard operating procedures.";
-      actionButtonLabel.value = "Archive SOP";
-      actionButtonClass.value = "btn-danger";
-      isReasonModalOpen.value = true;
-    }
-
-    async function executeActionWithReason() {
-      if (!selectedArticle.value) return;
-      const artId = selectedArticle.value.id;
-      const reason = actionReason.value;
-
-      try {
-        let updated = null;
-        if (actionModalType.value === "submit_review") {
-          updated = await knowledgeService.submitArticleReview(artId, {
-            reason_for_change: reason,
-          });
-        } else if (actionModalType.value === "approve") {
-          updated = await knowledgeService.approveArticle(artId, {
-            reason_for_change: reason,
-          });
-        } else if (actionModalType.value === "reject") {
-          updated = await knowledgeService.rejectArticle(artId, {
-            reason_for_change: reason,
-          });
-        } else if (actionModalType.value === "publish") {
-          updated = await knowledgeService.publishArticle(artId, {
-            reason_for_change: reason,
-            version_label: actionVersionLabel.value,
-          });
-        } else if (actionModalType.value === "archive") {
-          updated = await knowledgeService.transitionArticle(artId, {
-            target_status: "ARCHIVED",
-            reason_for_change: reason,
-          });
-        }
-
-        if (updated) {
-          const idx = articles.value.findIndex((a) => a.id === artId);
-          if (idx !== -1) {
-            articles.value[idx] = updated;
-          }
-          selectedArticle.value = updated;
-        }
-
-        isReasonModalOpen.value = false;
-      } catch (err) {
-        toastStore.apiError("Could not update article status", err);
-      }
-    }
-
-    function openCreateCategoryModal() {
-      newCategoryForm.value = {
-        name: "",
-        slug: "",
-        description: "",
-        persona_visibility: [],
-      };
-      isCreateCategoryModalOpen.value = true;
-    }
-
-    async function handleCreateCategory() {
-      try {
-        if (!newCategoryForm.value.slug && newCategoryForm.value.name) {
-          autoGenerateCategorySlug();
-        }
-        const payload = {
-          name: newCategoryForm.value.name,
-          slug:
-            newCategoryForm.value.slug ||
-            newCategoryForm.value.name
-              .toLowerCase()
-              .replace(/[^a-z0-9]+/g, "-"),
-          description: newCategoryForm.value.description,
-          persona_visibility: newCategoryForm.value.persona_visibility,
-        };
-        const created = await knowledgeService.createCategory(payload);
-        categories.value.push(created);
-        isCreateCategoryModalOpen.value = false;
-      } catch (err) {
-        toastStore.apiError("Could not create category", err);
-      }
-    }
-
-    // Initial Data Fetch
-    async function loadInitialData() {
-      loading.value = true;
-      try {
-        const persona = activePersonaKey.value;
-        const [cats, arts] = await Promise.all([
-          knowledgeService.listCategories({ persona }),
-          knowledgeService.listArticles({ persona }),
-        ]);
-        if (Array.isArray(cats)) categories.value = cats;
-        if (Array.isArray(arts)) articles.value = arts;
-
-        if (selectedArticle.value) {
-          const updatedSelected = displayArticles.value.find(
-            (a) => a.id === selectedArticle.value.id
-          );
-          selectedArticle.value =
-            updatedSelected || displayArticles.value[0] || null;
-        } else if (displayArticles.value.length > 0) {
-          selectedArticle.value = displayArticles.value[0];
-        }
-      } catch (err) {
-        toastStore.apiError("Could not load the knowledge base", err);
-      } finally {
-        loading.value = false;
-      }
-    }
-
-    // Watchers
-    watch(
-      () => [
-        route?.query?.studyId,
-        route?.query?.siteId,
-        route?.query?.site,
-        route?.query?.subjectId,
-        route?.query?.participant,
-      ],
-      () => {
-        if (!route?.query) return;
-        const nextScope = readRouteScopeQuery(route);
-        scopeStudyId.value = nextScope.studyId;
-        scopeSiteId.value = nextScope.siteId;
-        scopeSubjectId.value = nextScope.subjectId;
-        scopeStore.activeStudyId = nextScope.studyId;
-        scopeStore.activeSiteId = nextScope.siteId;
-        scopeStore.activeSubjectId = nextScope.subjectId;
-      }
-    );
-
-    watch(
-      [scopeStudyId, scopeSiteId, scopeSubjectId],
-      ([nextStudy, nextSite, nextSubject]) => {
-        const trimmedStudy = nextStudy.trim();
-        const trimmedSite = nextSite.trim();
-        const trimmedSubject = nextSubject.trim();
-        scopeStore.activeStudyId = trimmedStudy;
-        scopeStore.activeSiteId = trimmedSite;
-        scopeStore.activeSubjectId = trimmedSubject;
-        void replaceRouteQueryParams(router, route, {
-          studyId: trimmedStudy || null,
-          siteId: trimmedSite || null,
-          subjectId: trimmedSubject || null,
-        });
-      }
-    );
-
-    watch(
-      () => activePersonaKey.value,
-      async () => {
-        if (!demoBuild) {
-          await loadInitialData();
-          return;
-        }
-        if (selectedArticle.value) {
-          const isStillVisible = displayArticles.value.some(
-            (a) => a.id === selectedArticle.value.id
-          );
-          if (!isStillVisible) {
-            selectedArticle.value = displayArticles.value[0] || null;
-          }
-        }
-      }
-    );
-
-    onMounted(() => {
-      loadInitialData();
+watch(
+  [scopeStudyId, scopeSiteId, scopeSubjectId],
+  ([nextStudy, nextSite, nextSubject]) => {
+    const trimmedStudy = nextStudy.trim();
+    const trimmedSite = nextSite.trim();
+    const trimmedSubject = nextSubject.trim();
+    scopeStore.activeStudyId = trimmedStudy;
+    scopeStore.activeSiteId = trimmedSite;
+    scopeStore.activeSubjectId = trimmedSubject;
+    void replaceRouteQueryParams(router, route, {
+      studyId: trimmedStudy || null,
+      siteId: trimmedSite || null,
+      subjectId: trimmedSubject || null,
     });
+  }
+);
 
-    return {
-      // State
-      demoBuild,
-      categories,
-      articles,
-      selectedCategoryId,
-      selectedArticle,
-      searchQuery,
-      selectedTag,
-      activeStatusFilter,
-      activeReaderTab,
-      loading,
-      versionsList,
-      versionsLoading,
-      auditLogList,
-      auditLoading,
-      scopeStudyId,
-      scopeSiteId,
-      scopeSubjectId,
+watch(
+  () => activePersonaKey.value,
+  async () => {
+    if (!demoBuild) {
+      await loadInitialData();
+      return;
+    }
+    if (selectedArticle.value) {
+      const isStillVisible = displayArticles.value.some(
+        (a) => a.id === selectedArticle.value.id
+      );
+      if (!isStillVisible) {
+        selectedArticle.value = displayArticles.value[0] || null;
+      }
+    }
+  }
+);
 
-      // Modals & Forms
-      isCreateArticleModalOpen,
-      isEditDraftModalOpen,
-      isReasonModalOpen,
-      isCreateCategoryModalOpen,
-      isPreviewMode,
-      newArticleForm,
-      editDraftForm,
-      newCategoryForm,
-      actionModalType,
-      actionModalTitle,
-      actionModalIntro,
-      actionReason,
-      actionVersionLabel,
-      actionButtonLabel,
-      actionButtonClass,
+onMounted(() => {
+  loadInitialData();
+});
 
-      // Computeds
-      PERSONA_PRESETS,
-      activePersonaKey,
-      activePersonaLabel,
-      isSuperAdmin,
-      visibleCategories,
-      filteredByPersonaArticles,
-      displayArticles,
-      totalArticlesCount,
-      publishedArticlesCount,
-      inReviewArticlesCount,
-      draftArticlesCount,
-      availableTags,
-      readerTabs,
-
-      // Methods
-      getTagList,
-      getCategoryIcon,
-      getArticleCountForCategory,
-      getStatusPillClass,
-      formatDate,
-      renderPreviewHtml,
-      selectCategory,
-      selectArticle,
-      setStatusFilter,
-      toggleTag,
-      onSearchInput,
-      clearSearch,
-      resetFilters,
-      loadVersionHistory,
-      loadAuditTrail,
-      handleReaderTabChange,
-      openCreateArticleModal,
-      autoGenerateSlug,
-      autoGenerateCategorySlug,
-      handleCreateArticle,
-      openEditDraftModal,
-      handleSaveDraft,
-      promptSubmitReview,
-      promptApproveArticle,
-      promptRejectArticle,
-      promptPublishArticle,
-      promptArchiveArticle,
-      executeActionWithReason,
-      openCreateCategoryModal,
-      handleCreateCategory,
-    };
-  },
-};
+defineExpose({
+  categories,
+  articles,
+  selectedCategoryId,
+  selectedArticle,
+  searchQuery,
+  selectedTag,
+  activeStatusFilter,
+  activeReaderTab,
+  loading,
+  versionsList,
+  versionsLoading,
+  auditLogList,
+  auditLoading,
+  visibleCategories,
+  filteredByPersonaArticles,
+  displayArticles,
+  openCreateArticleModal,
+  handleCreateArticle,
+  openEditDraftModal,
+  handleSaveDraft,
+  promptSubmitReview,
+  promptApproveArticle,
+  promptRejectArticle,
+  promptPublishArticle,
+  promptArchiveArticle,
+  executeActionWithReason,
+  openCreateCategoryModal,
+  handleCreateCategory,
+});
 </script>
 
 <style scoped>
@@ -2883,99 +2210,6 @@ export default {
   border-radius: 4px;
 }
 
-/* Modals */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background-color: rgba(15, 23, 42, 0.6);
-  backdrop-filter: blur(2px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: 16px;
-}
-
-.modal-card {
-  background-color: var(--semantic-color-surface);
-  border-radius: 8px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-  width: 100%;
-  max-width: 580px;
-  display: flex;
-  flex-direction: column;
-  max-height: 90vh;
-  overflow: hidden;
-}
-
-.modal-lg {
-  max-width: 820px;
-}
-
-.modal-header {
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.modal-header h3 {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: var(--primary);
-  margin: 0;
-}
-
-.modal-close-btn {
-  background: none;
-  border: none;
-  font-size: 1.1rem;
-  color: var(--neutral-dark);
-  cursor: pointer;
-}
-
-.modal-body {
-  padding: 20px;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.modal-footer {
-  padding: 14px 20px;
-  border-top: 1px solid var(--border);
-  background-color: var(--semantic-color-surface-muted);
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.form-group label {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--primary);
-}
-
-.form-row {
-  display: flex;
-  gap: 12px;
-}
-
-.form-row .col {
-  flex: 1;
-}
-
 .form-control {
   width: 100%;
   min-height: var(--semantic-control-target-min, 24px);
@@ -2988,66 +2222,6 @@ export default {
 
 .form-control:focus-visible {
   border-color: var(--accent);
-}
-
-.code-textarea {
-  font-family: monospace;
-  font-size: 0.85rem;
-  line-height: 1.4;
-}
-
-.textarea-label-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.btn-text-toggle {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: var(--semantic-control-target-min, 24px);
-  min-width: var(--semantic-control-target-min, 24px);
-  padding: 2px 6px;
-  border-radius: 4px;
-  background: none;
-  border: none;
-  color: var(--accent);
-  font-size: 0.75rem;
-  font-weight: 600;
-  cursor: pointer;
-  box-sizing: border-box;
-}
-
-.preview-container {
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 12px;
-  min-height: 200px;
-  max-height: 300px;
-  overflow-y: auto;
-  background-color: var(--semantic-color-surface-muted);
-}
-
-.persona-checkbox-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  margin-top: 4px;
-}
-
-.checkbox-label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.8rem;
-  cursor: pointer;
-}
-
-.reason-modal-intro {
-  font-size: 0.85rem;
-  color: var(--neutral-dark);
-  margin-bottom: 6px;
 }
 
 /* Common Buttons */
@@ -3161,13 +2335,6 @@ export default {
     min-width: 0;
     overflow-x: auto;
   }
-}
-
-.form-fieldset {
-  border: none;
-  padding: 0;
-  margin: 0;
-  min-width: 0;
 }
 
 .sr-only {

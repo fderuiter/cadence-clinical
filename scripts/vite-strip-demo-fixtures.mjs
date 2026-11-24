@@ -5,6 +5,50 @@ const VIRTUAL_DEMO_FIXTURES_ID = "\0virtual:demo-fixtures-prod-stub";
 const VIRTUAL_DEMO_RUNTIME_ID = "\0virtual:demo-fixtures-runtime-prod-stub";
 const VIRTUAL_DEMO_VIEW_PREFIX = "\0virtual:demo-view-prod-stub:";
 const VIRTUAL_DEMO_STORE_PREFIX = "\0virtual:demo-store-prod-stub:";
+const VIRTUAL_PORTAL_MOCK_DATA_ID = "\0virtual:portal-mock-data-prod-stub";
+
+/**
+ * The 22 view SFCs in `apps/web/src/views/` backing the 24 demo-only routes
+ * (`DEMO_AVAILABLE_SCREENS` minus `AVAILABLE_SCREENS` in `router/availability.js`).
+ * In non-demo builds, `router.beforeEach` redirects these route names to `UnavailableView`
+ * before any route component resolves, so stubbing their dynamic imports drops their
+ * unreachable component subgraphs from Rollup output while keeping route records intact.
+ */
+export const DEMO_ONLY_WEB_VIEW_FILES = new Set([
+  "MdrView.vue",
+  "ProtocolDigitizationView.vue",
+  "ICFBuilderView.vue",
+  "ConsentAuthoringView.vue",
+  "AmendmentDiffView.vue",
+  "ImagingView.vue",
+  "DeviceInvestigationView.vue",
+  "CecAdjudicationView.vue",
+  "AuditView.vue",
+  "AuditorView.vue",
+  "RulesView.vue",
+  "MedicalCodingView.vue",
+  "LakehouseView.vue",
+  "SensorTelemetryView.vue",
+  "LabGovernanceView.vue",
+  "TelehealthDtpView.vue",
+  "AggregateSafetyView.vue",
+  "QualityCockpitView.vue",
+  "NotificationsView.vue",
+  "DocumentsHubView.vue",
+  "ParticipantWalletView.vue",
+  "LaySummaryPortal.vue",
+]);
+
+const EMPTY_PORTAL_MOCK_DATA_STUB_SOURCE = `
+const EMPTY_LIST = /* @__PURE__ */ Object.freeze([]);
+const EMPTY_RECORD = /* @__PURE__ */ Object.freeze({});
+
+export const MOCK_ASSIGNMENTS = EMPTY_LIST;
+export const MOCK_INSTRUMENTS = EMPTY_RECORD;
+export const MOCK_NOTIFICATIONS = EMPTY_LIST;
+export const MOCK_APPROVED_CONTENT = EMPTY_RECORD;
+export const MOCK_COMPREHENSION_CHECK = EMPTY_RECORD;
+`;
 
 const EMPTY_PROD_STUB_SOURCE = `
 const EMPTY_LIST = /* @__PURE__ */ Object.freeze([]);
@@ -300,6 +344,163 @@ export function createClinicalIngestionActions() {
     },
   };
 }
+
+export const DEFAULT_CATEGORIES = EMPTY_LIST;
+export const DEFAULT_CONTEXTUAL_SOPS = EMPTY_RECORD;
+export const DEFAULT_MOCK_ARTICLES = EMPTY_LIST;
+
+export function getFallbackArticles() {
+  return [];
+}
+
+export function getFallbackCategories() {
+  return [];
+}
+
+export function getFallbackContextualHelp() {
+  return { context_key: "general", title: "", steps: [], sop_links: [] };
+}
+
+export function createKnowledgeDemoState() {
+  return {
+    categories: [],
+    articles: [],
+    selectedArticle: null,
+  };
+}
+
+export const knowledgeDemoAuthoringService = EMPTY_RECORD;
+
+export const DEMO_TICKET_KPIS = EMPTY_RECORD;
+export const initialMockTickets = EMPTY_LIST;
+
+export function createInitialMockTickets() {
+  return [];
+}
+
+export function mergeDemoEscalatedTickets(baseTickets = []) {
+  return baseTickets;
+}
+
+export function buildDemoTicketDetailSeed() {
+  return { comments: [], attachments: [], auditLogs: [] };
+}
+
+export function applyDemoTicketTransition() {
+  return null;
+}
+
+export function applyDemoBatchStatusTransition() {
+  return false;
+}
+
+export function applyDemoBatchSeverityUpdate() {
+  return false;
+}
+
+export function buildDemoTicketComment() {
+  return null;
+}
+
+export function buildDemoTicketAttachment() {
+  return null;
+}
+
+export function applyDemoTicketSignature() {
+  return null;
+}
+
+export function exportDemoAuditTrail() {
+  return false;
+}
+
+export function buildDemoResolvePayload(ticketId = "") {
+  return { ticketId, newStatus: "RESOLVED" };
+}
+
+export function resolveDemoEtmfStudyId() {
+  return "";
+}
+
+export function buildDefaultDocuments() {
+  return [];
+}
+
+export function getDefaultDocuments() {
+  return [];
+}
+
+export function localPredictTaxonomy() {
+  return {};
+}
+
+export function buildLocalIntelligenceReport() {
+  return {};
+}
+
+export function fetchDemoEtmfDocuments() {
+  return { handled: false, documentsList: [] };
+}
+
+export async function uploadDemoEtmfDocument() {
+  return { handled: false, response: null };
+}
+
+export function fallbackSubmitDemoDraftForQc() {
+  return { handled: false, result: null };
+}
+
+export function resetDemoEtmfStorage() {
+  return [];
+}
+
+export function fallbackStageDemoQcDocument() {
+  return { handled: false, item: null };
+}
+
+export function fallbackDeriveDemoQcQueue() {
+  return { handled: false, qcQueue: [] };
+}
+
+export function fallbackReviewDemoQcDocument({ qcQueue = [] } = {}) {
+  return { handled: false, qcQueue, result: null };
+}
+
+export function fetchDemoDocumentContent() {
+  return { handled: false, result: null };
+}
+
+export function buildDefaultTemplates() {
+  return [];
+}
+
+export function getDefaultTemplates() {
+  return [];
+}
+
+export function getNotificationsStorageKey() {
+  return "";
+}
+
+export function getInitialDemoNotifications() {
+  return [];
+}
+
+export async function fetchDemoNotifications() {
+  return { handled: false, notifications: [] };
+}
+
+export async function acknowledgeDemoNotification() {
+  return { handled: false, updated: null };
+}
+
+export async function resolveDemoNotification() {
+  return { handled: false, updated: null };
+}
+
+export function resetDemoNotificationsStorage() {
+  return [];
+}
 `;
 
 function toPosixPath(value) {
@@ -307,10 +508,11 @@ function toPosixPath(value) {
 }
 
 /**
- * Excludes \`packages/demo-fixtures\`, \`src/views/demo/*\`, and \`src/stores/demo/*\`
- * from non-demo production Rollup bundles by resolving them to inert virtual modules
- * during production builds, while preserving real modules in demo builds (\`build:demo\`),
- * dev servers, and test runs.
+ * Excludes `packages/demo-fixtures`, `src/views/demo/*`, `src/stores/demo/*`,
+ * unreachable demo-only route views in `apps/web`, and `src/data/mock-data.js`
+ * in `apps/subject-portal` from non-demo production Rollup bundles by resolving
+ * them to inert virtual modules during production builds, while preserving real
+ * modules in demo builds (`build:demo`), dev servers, and test runs.
  *
  * @param {string} appDir - Absolute directory of the Vite app.
  * @returns {import("vite").Plugin}
@@ -340,8 +542,12 @@ export function createDemoFixturesPlugin(appDir) {
     appDir,
     "../../packages/demo-fixtures/src/runtime.js"
   );
+  const viewsRoot = toPosixPath(path.resolve(appDir, "src/views"));
   const viewsDemoPrefix = `${toPosixPath(path.resolve(appDir, "src/views/demo"))}/`;
   const storesDemoPrefix = `${toPosixPath(path.resolve(appDir, "src/stores/demo"))}/`;
+  const portalMockDataBase = toPosixPath(
+    path.resolve(appDir, "src/data/mock-data")
+  );
 
   function resolveCandidateSource(source, importer) {
     if (!source || source.startsWith("\0")) return null;
@@ -391,6 +597,19 @@ export function createDemoFixturesPlugin(appDir) {
       if (resolvedPath.startsWith(storesDemoPrefix)) {
         return `${VIRTUAL_DEMO_STORE_PREFIX}${path.basename(resolvedPath)}`;
       }
+      const candidateBaseName = path.posix.basename(resolvedPath);
+      if (
+        path.posix.dirname(resolvedPath) === viewsRoot &&
+        DEMO_ONLY_WEB_VIEW_FILES.has(candidateBaseName)
+      ) {
+        return `${VIRTUAL_DEMO_VIEW_PREFIX}unavailable-route`;
+      }
+      if (
+        resolvedPath === `${portalMockDataBase}.js` ||
+        resolvedPath === portalMockDataBase
+      ) {
+        return VIRTUAL_PORTAL_MOCK_DATA_ID;
+      }
       return null;
     },
     load(id) {
@@ -399,6 +618,9 @@ export function createDemoFixturesPlugin(appDir) {
       }
       if (id === VIRTUAL_DEMO_RUNTIME_ID) {
         return EMPTY_PROD_RUNTIME_STUB_SOURCE;
+      }
+      if (id === VIRTUAL_PORTAL_MOCK_DATA_ID) {
+        return EMPTY_PORTAL_MOCK_DATA_STUB_SOURCE;
       }
       if (id.startsWith(VIRTUAL_DEMO_VIEW_PREFIX)) {
         return EMPTY_DEMO_VIEW_STUB_SOURCE;
@@ -411,10 +633,116 @@ export function createDemoFixturesPlugin(appDir) {
   };
 }
 
+function hoistDemoManifestSections(code) {
+  const lines = code.split("\n");
+  const outLines = [];
+  const defs = [];
+  let i = 0;
+  while (i < lines.length) {
+    const scalar = lines[i].match(
+      /^  (tenantCode|tenantUuid|epochIso|epochMs): ([^,\n]+),(.*)$/
+    );
+    if (scalar) {
+      const prop = scalar[1];
+      const constName = `__DEMO_MANIFEST_${prop.toUpperCase()}`;
+      defs.push(`export const ${constName} = ${scalar[2]};${scalar[3]}`);
+      outLines.push(`  ${prop}: ${constName},`);
+      i += 1;
+      continue;
+    }
+    const section = lines[i].match(
+      /^  (sponsor|study|sites|participants|roles|personas): (Object\.freeze\([{[!])$/
+    );
+    if (section) {
+      const prop = section[1];
+      const constName = `__DEMO_MANIFEST_${prop.toUpperCase()}`;
+      const block = [lines[i].replace(`  ${prop}: `, "")];
+      i += 1;
+      while (i < lines.length && !/^  \}\),$|^  \]\),$/.test(lines[i])) {
+        block.push(lines[i]);
+        i += 1;
+      }
+      if (i < lines.length) {
+        block.push(lines[i].replace(/,$/, ""));
+        i += 1;
+      }
+      const expr = block
+        .join("\n")
+        .replace(/Object\.freeze\(/g, "/* @__PURE__ */ Object.freeze(");
+      defs.push(`export const ${constName} = ${expr};`);
+      outLines.push(`  ${prop}: ${constName},`);
+      continue;
+    }
+    outLines.push(lines[i]);
+    i += 1;
+  }
+  if (defs.length === 0) {
+    return null;
+  }
+  return outLines
+    .join("\n")
+    .replace(
+      "export const DEMO_MANIFEST = Object.freeze({",
+      `${defs.join("\n")}\nexport const DEMO_MANIFEST = /* @__PURE__ */ Object.freeze({`
+    );
+}
+
+function rewriteDemoFixturesIndexForTreeShaking(code) {
+  if (!code.includes('import { DEMO_MANIFEST } from "./manifest.js";')) {
+    return null;
+  }
+  return code
+    .replace(
+      'import { DEMO_MANIFEST } from "./manifest.js";',
+      'import { DEMO_MANIFEST, __DEMO_MANIFEST_TENANTCODE, __DEMO_MANIFEST_TENANTUUID, __DEMO_MANIFEST_EPOCHISO, __DEMO_MANIFEST_EPOCHMS, __DEMO_MANIFEST_SPONSOR, __DEMO_MANIFEST_STUDY, __DEMO_MANIFEST_SITES, __DEMO_MANIFEST_PARTICIPANTS, __DEMO_MANIFEST_ROLES, __DEMO_MANIFEST_PERSONAS } from "./manifest.js";'
+    )
+    .replace(
+      "export const DEMO_TENANT_CODE = DEMO_MANIFEST.tenantCode;",
+      "export const DEMO_TENANT_CODE = __DEMO_MANIFEST_TENANTCODE;"
+    )
+    .replace(
+      "export const DEMO_TENANT_UUID = DEMO_MANIFEST.tenantUuid;",
+      "export const DEMO_TENANT_UUID = __DEMO_MANIFEST_TENANTUUID;"
+    )
+    .replace(
+      "export const DEMO_EPOCH_ISO = DEMO_MANIFEST.epochIso;",
+      "export const DEMO_EPOCH_ISO = __DEMO_MANIFEST_EPOCHISO;"
+    )
+    .replace(
+      "export const DEMO_EPOCH_MS = DEMO_MANIFEST.epochMs;",
+      "export const DEMO_EPOCH_MS = __DEMO_MANIFEST_EPOCHMS;"
+    )
+    .replace(
+      "export const DEMO_SPONSOR = DEMO_MANIFEST.sponsor;",
+      "export const DEMO_SPONSOR = __DEMO_MANIFEST_SPONSOR;"
+    )
+    .replace(
+      "export const DEMO_STUDY = DEMO_MANIFEST.study;",
+      "export const DEMO_STUDY = __DEMO_MANIFEST_STUDY;"
+    )
+    .replace(
+      "export const DEMO_SITES = DEMO_MANIFEST.sites;",
+      "export const DEMO_SITES = __DEMO_MANIFEST_SITES;"
+    )
+    .replace(
+      "export const DEMO_PARTICIPANTS = DEMO_MANIFEST.participants;",
+      "export const DEMO_PARTICIPANTS = __DEMO_MANIFEST_PARTICIPANTS;"
+    )
+    .replace(
+      "export const DEMO_ROLES = DEMO_MANIFEST.roles;",
+      "export const DEMO_ROLES = __DEMO_MANIFEST_ROLES;"
+    )
+    .replace(
+      "export const DEMO_PERSONAS = DEMO_MANIFEST.personas;",
+      "export const DEMO_PERSONAS = __DEMO_MANIFEST_PERSONAS;"
+    );
+}
+
 /**
- * Constant-folds zero-argument `isDemoBuild()` calls during `vite build` so Rollup
- * dead-code-eliminates OIDC (`keycloak-js`) and streaming (`hls.js`) branches in demo
- * bundles while preserving `isDemoBuild(env)` overrides and `vi.stubEnv` in Vitest.
+ * Constant-folds zero-argument `isDemoBuild()`, `isDemoModeActive()`, and
+ * `unbackedActionsEnabled()` calls during `vite build` so Rollup dead-code-eliminates
+ * unreachable OIDC/streaming branches in demo bundles and synthetic/unbacked branches
+ * in live bundles while preserving explicit `(env)` overrides and `vi.stubEnv` in Vitest.
  *
  * @param {string} appDir - Absolute directory of the Vite app.
  * @returns {import("vite").Plugin}
@@ -422,6 +750,12 @@ export function createDemoFixturesPlugin(appDir) {
 export function createConstantFoldDemoModePlugin(appDir) {
   let isDemo = false;
   const srcRoot = `${path.resolve(appDir, "src").replace(/\\/g, "/")}/`;
+  const demoManifestPath = path
+    .resolve(appDir, "../../packages/demo-fixtures/src/manifest.js")
+    .replace(/\\/g, "/");
+  const demoFixturesIndexPath = path
+    .resolve(appDir, "../../packages/demo-fixtures/src/index.js")
+    .replace(/\\/g, "/");
 
   return {
     name: "constant-fold-demo-mode",
@@ -430,10 +764,22 @@ export function createConstantFoldDemoModePlugin(appDir) {
       isDemo = isDemoBuildResolved(appDir, resolved);
     },
     transform(code, id) {
-      if (!code.includes("isDemoBuild")) {
+      const cleanId = id.split("?")[0].replace(/\\/g, "/");
+      if (isDemo && cleanId === demoManifestPath) {
+        const hoisted = hoistDemoManifestSections(code);
+        return hoisted ? { code: hoisted, map: null } : null;
+      }
+      if (isDemo && cleanId === demoFixturesIndexPath) {
+        const rewritten = rewriteDemoFixturesIndexForTreeShaking(code);
+        return rewritten ? { code: rewritten, map: null } : null;
+      }
+      if (
+        !code.includes("isDemoBuild") &&
+        !code.includes("isDemoModeActive") &&
+        !code.includes("unbackedActionsEnabled")
+      ) {
         return null;
       }
-      const cleanId = id.split("?")[0].replace(/\\/g, "/");
       if (
         !cleanId.startsWith(srcRoot) ||
         cleanId.endsWith("/demoMode.js") ||
@@ -444,7 +790,7 @@ export function createConstantFoldDemoModePlugin(appDir) {
 
       const literal = isDemo ? "(true)" : "(false)";
       const transformed = code.replace(
-        /(?<!function\s+)(?<![.\w$])isDemoBuild\(\s*\)/g,
+        /(?<!(?:function|get|set)\s+)(?<![.\w$])(?:isDemoBuild|isDemoModeActive|unbackedActionsEnabled)\(\s*\)(?!\s*\{)/g,
         literal
       );
       if (transformed === code) {

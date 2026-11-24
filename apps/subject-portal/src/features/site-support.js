@@ -152,11 +152,12 @@ export function resolveQuestionLabel(key, diaryId = null) {
     state.instruments && typeof state.instruments === "object"
       ? state.instruments
       : {};
+  const demoActive = isDemoModeActive();
 
   if (diaryId) {
     const directLabel =
       activeInstruments[diaryId]?.items?.[fieldKey]?.label ||
-      MOCK_INSTRUMENTS[diaryId]?.items?.[fieldKey]?.label;
+      (demoActive ? MOCK_INSTRUMENTS[diaryId]?.items?.[fieldKey]?.label : null);
     if (directLabel) return directLabel;
   }
 
@@ -165,9 +166,11 @@ export function resolveQuestionLabel(key, diaryId = null) {
     if (label) return label;
   }
 
-  for (const inst of Object.values(MOCK_INSTRUMENTS)) {
-    const label = inst?.items?.[fieldKey]?.label;
-    if (label) return label;
+  if (demoActive) {
+    for (const inst of Object.values(MOCK_INSTRUMENTS)) {
+      const label = inst?.items?.[fieldKey]?.label;
+      if (label) return label;
+    }
   }
 
   if (COMMON_QUESTION_LABELS[fieldKey]) {
@@ -176,6 +179,11 @@ export function resolveQuestionLabel(key, diaryId = null) {
 
   return humanizeFieldKey(fieldKey);
 }
+
+const COMMON_SURVEY_TITLES = Object.freeze({
+  daily_diary: "Daily Health & Vital Diary",
+  weekly_qol: "Weekly Quality of Life (EQ-5D)",
+});
 
 /**
  * Resolves a participant-friendly survey title for a diary/instrument ID.
@@ -188,8 +196,19 @@ export function getInstrumentDisplayName(diaryId) {
       ? state.instruments[id]?.name
       : null;
   if (fromState) return fromState;
-  if (MOCK_INSTRUMENTS[id]?.name) return MOCK_INSTRUMENTS[id].name;
-  return humanizeFieldKey(id.replace(/^(inst|diary)_/i, ""));
+  const fromAssignment = Array.isArray(state.assignments)
+    ? state.assignments.find((item) => item?.instrument_id === id)
+        ?.instrument_name
+    : null;
+  if (fromAssignment) return fromAssignment;
+  if (isDemoModeActive() && MOCK_INSTRUMENTS[id]?.name) {
+    return MOCK_INSTRUMENTS[id].name;
+  }
+  const slug = id.replace(/^(inst|diary)_/i, "");
+  if (COMMON_SURVEY_TITLES[slug.toLowerCase()]) {
+    return COMMON_SURVEY_TITLES[slug.toLowerCase()];
+  }
+  return humanizeFieldKey(slug);
 }
 
 function formatSafeScalar(key, val) {
