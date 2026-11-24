@@ -847,6 +847,7 @@ import TicketSignModal from "./TicketSignModal.vue";
 import SkeletonLoader from "../common/SkeletonLoader.vue";
 import { useAuthStore, normalizeRole } from "../../stores/auth";
 import { isDemoBuild } from "../../utils/demoMode.js";
+import { useTicketMutationPermission } from "../../utils/ticketPermissions";
 
 const SITE_PERSONAS = new Set(["site_crc", "site_investigator"]);
 const SPONSOR_ROLES = new Set([
@@ -862,20 +863,6 @@ const SPONSOR_ROLES = new Set([
   "tmf_auditor",
 ]);
 const SITE_ONLY_ROLES = new Set([
-  "crc",
-  "site_investigator",
-  "principal_investigator",
-  "investigator",
-]);
-const OPERATIONAL_MUTATION_ROLES = new Set([
-  "sponsor_admin",
-  "sponsor_designer",
-  "data_manager",
-  "cra",
-  "monitor",
-  "safety_reviewer",
-  "safety_officer",
-  "sponsor_mm",
   "crc",
   "site_investigator",
   "principal_investigator",
@@ -954,19 +941,7 @@ const canViewInternalSponsorNotes = computed(() => {
   return true;
 });
 
-const canMutateTicket = computed(() => {
-  if (authStore.currentPersona === "auditor") {
-    return false;
-  }
-  const roles = normalizedCallerRoles.value;
-  if (
-    roles.length > 0 &&
-    !roles.some((r) => OPERATIONAL_MUTATION_ROLES.has(r))
-  ) {
-    return false;
-  }
-  return true;
-});
+const { canMutateTicket } = useTicketMutationPermission(authStore);
 
 const isSigned = computed(() => Boolean(props.ticket?.signature_token));
 
