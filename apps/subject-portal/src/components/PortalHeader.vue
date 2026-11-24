@@ -31,14 +31,14 @@
         <span
           v-if="queuedSubmissionsCount > 0"
           id="header-sync-badge"
-          class="sync-badge"
+          class="sync-badge tabular-nums"
           :class="{ 'sync-badge-quarantined': quarantinedSubmissionsCount > 0 }"
           aria-live="polite"
           aria-atomic="true"
         >
           {{ queuedSubmissionsCount }}
         </span>
-        <span class="sync-btn-label">{{ headerSyncLabel }}</span>
+        <span class="sync-btn-label tabular-nums">{{ headerSyncLabel }}</span>
       </button>
     </div>
   </header>

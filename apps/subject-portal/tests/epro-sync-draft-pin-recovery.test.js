@@ -231,6 +231,7 @@ describe("Client-side ePRO sync, draft preservation, PIN recovery, and offline s
 
     sessionStorage.setItem("mock_user_id", "subject_001");
     sessionStorage.setItem("mock_token", "jwt_valid_subject_token"); // pragma: allowlist secret
+    state.session.isDemoMode = true;
     await initializeApp();
     await settle();
 
@@ -539,6 +540,7 @@ describe("Client-side ePRO sync, draft preservation, PIN recovery, and offline s
     vi.stubEnv("VITE_DEMO_MODE", "true");
     sessionStorage.setItem("mock_user_id", "subject_001");
     sessionStorage.setItem("mock_token", "jwt_valid_subject_token"); // pragma: allowlist secret
+    state.session.isDemoMode = true;
     globalThis.fetch = vi.fn().mockImplementation(async (url) => {
       if (String(url).includes("assignments/subject/")) {
         return { ok: true, status: 200, json: async () => state.assignments };

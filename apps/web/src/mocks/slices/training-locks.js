@@ -418,6 +418,7 @@ export function createTrainingLocksSliceStore(ctx) {
         valid_at: now,
         known_at: now,
         locks: cloneJson(locks),
+        hidden: { more_exist: false, reasons: [] },
       };
     },
 

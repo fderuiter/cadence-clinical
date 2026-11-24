@@ -1109,7 +1109,7 @@ public partial class LocalCiPlanTests
             .SelectMany(j => j.Steps)
             .Where(s => s.Commands.Any(c => c.FileName == "node" && c.Arguments.FirstOrDefault() == "scripts/run-cli.js"))
             .ToList();
-        nodeCliSteps.Should().HaveCount(8);
+        nodeCliSteps.Should().HaveCount(9);
         foreach (var step in nodeCliSteps)
         {
             step.EnvironmentIfPassed.Should().Contain(expectedCacheHit, $"{step.Job}/{step.Name} must reuse <worktreeRoot>/bin/cadence");

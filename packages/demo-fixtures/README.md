@@ -14,11 +14,12 @@ Canonical synthetic trial catalog and shared MSW route factories across the publ
 - `src/index.js` and `src/index.d.ts` synthesize `DEMO_MANIFEST` and deterministic RFC 9562 UUIDv8 identifiers directly from `demo-seed.json` at import time (with zero committed `manifest.js` or `manifest.d.ts` artifacts).
 - `docker/cadence-realm.json` binds the eleven staff personas and isolates `subject.site101` (`Subject` role, zero staff kernel grants per `K027`).
 
-Validate schema conformance, Keycloak realm parity, `K027` Subject-role isolation, and absence of stale generated manifest files (also run by `pnpm cadence check` and `pnpm cadence fix`):
+Validate schema conformance, Keycloak realm parity, `K027` Subject-role isolation, absence of stale generated manifest files, and declaration types (also run by `pnpm cadence check`, `pnpm cadence fix`, and `pnpm typecheck`):
 
 ```bash
 pnpm cadence check demo-manifest
 pnpm cadence generate-demo-manifest
+pnpm --filter demo-fixtures typecheck
 ```
 
 ## Production Bundle Isolation
