@@ -159,7 +159,7 @@ public static class SchemaDocGeneratorService
     }
 
     private static bool RunExporter(string repoRoot, string exportDir) =>
-        ExporterBuildFreshness.RunDotnetExporter(
+        ExporterBinaryResolver.RunExporter(
             repoRoot,
             ExporterProject,
             ["--output-dir", exportDir],

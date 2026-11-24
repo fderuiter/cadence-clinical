@@ -351,6 +351,25 @@ public static class QualityGates
         return commandsDocumented && tablesCurrent;
     }
 
+    private static readonly string[] FolderWhitespaceExcludes =
+    [
+        "**/.git/**",
+        "**/.cadence/**",
+        "**/.claude/**",
+        "**/.venv/**",
+        "**/venv/**",
+        "**/.vs/**",
+        "**/bin/**",
+        "**/obj/**",
+        "**/node_modules/**",
+        "**/dist/**",
+        "**/build/**",
+        "**/coverage/**",
+        "**/TestResults/**",
+        "**/test-results/**",
+        "**/playwright-report/**",
+    ];
+
     private static bool CheckDotnetFormat(GateContext ctx, string subcommand)
     {
         if (ctx.TargetFiles is { Length: 0 })
@@ -452,7 +471,17 @@ public static class QualityGates
 
         if (string.Equals(subcommand, "whitespace", StringComparison.Ordinal))
         {
-            return RunProcess(ctx.RepoRoot, "dotnet", "format", "whitespace", ".", "--folder", "--verify-no-changes") == 0;
+            var folderArgs = new List<string>(FolderWhitespaceExcludes.Length + 6)
+            {
+                "format",
+                "whitespace",
+                ".",
+                "--folder",
+                "--verify-no-changes",
+                "--exclude",
+            };
+            folderArgs.AddRange(FolderWhitespaceExcludes);
+            return RunProcess(ctx.RepoRoot, "dotnet", [.. folderArgs]) == 0;
         }
 
         return RunProcess(ctx.RepoRoot, "dotnet", "format", subcommand, "Cadence.sln", "--verify-no-changes", "--no-restore") == 0;
