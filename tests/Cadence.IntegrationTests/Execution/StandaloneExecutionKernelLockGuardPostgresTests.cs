@@ -124,6 +124,7 @@ public sealed class StandaloneExecutionKernelLockGuardPostgresTests(
 
         _kernelHost = new WebApplicationFactory<Cadence.Kernel.Host.Program>().WithWebHostBuilder(builder => builder
             .UseTestGatewaySecret()
+            .UseTestBiometricLivenessKey()
             .UseSetting("ConnectionStrings:cadence", kernelFixture.ConnectionString)
             .ConfigureTestServices(services => services.AddDeclaredKernelErrorsCheck()));
         _kernelInternalClient = _kernelHost.CreateClient();

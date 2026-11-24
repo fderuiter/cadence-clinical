@@ -385,6 +385,7 @@ public sealed class KernelDevelopmentTenantPostgresTests(ExecutionFormModulePost
         new WebApplicationFactory<Cadence.Kernel.Host.Program>().WithWebHostBuilder(builder => builder
             .UseEnvironment("Development")
             .UseTestGatewaySecret()
+            .UseTestBiometricLivenessKey()
             .UseSetting("ConnectionStrings:cadence", fixture.ConnectionString)
             .UseSetting("Kernel:DevelopmentTenant:Code", code)
             .UseSetting("Kernel:DevelopmentTenant:DemoData", demoData ? "true" : "false"));
