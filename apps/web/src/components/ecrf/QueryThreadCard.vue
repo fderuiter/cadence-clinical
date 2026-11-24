@@ -35,6 +35,13 @@
         Owner: {{ OWNER_LABELS[query.owner_role] ?? query.owner_role }}
       </span>
       <span
+        v-if="query.assignee && query.assignee !== 'masked'"
+        class="form-query-badge form-query-badge--assignee"
+        :data-testid="`query-assignee-${query.query_id}`"
+      >
+        Assignee: <span class="form-query-code">{{ query.assignee }}</span>
+      </span>
+      <span
         v-if="query.priority"
         class="form-query-badge"
         :data-priority="query.priority"
@@ -95,7 +102,101 @@
     </p>
 
     <form
-      v-if="activeAction"
+      v-if="activeReassign"
+      class="form-query-form"
+      aria-label="Reassign query"
+      @submit.prevent="emit('confirm-reassign')"
+    >
+      <label :for="`reassign-assignee-${query.query_id}`">
+        Assignee (leave blank to unassign)
+      </label>
+      <input
+        :id="`reassign-assignee-${query.query_id}`"
+        :value="reassignAssignee"
+        type="text"
+        autocomplete="off"
+        placeholder="Actor ID or leave blank to unassign"
+        :disabled="busy || assertionsLocked"
+        @input="
+          emit(
+            'update:reassignAssignee',
+            ($event.target as HTMLInputElement).value
+          )
+        "
+      />
+      <label :for="`reassign-owner-${query.query_id}`">Responsible role</label>
+      <select
+        :id="`reassign-owner-${query.query_id}`"
+        :value="reassignOwnerRole"
+        :disabled="busy || assertionsLocked"
+        @change="
+          emit(
+            'update:reassignOwnerRole',
+            ($event.target as HTMLSelectElement).value as FormQueryOwnerRole
+          )
+        "
+      >
+        <option value="site">Site</option>
+        <option value="monitor">Monitor</option>
+        <option value="data_manager">Data manager</option>
+      </select>
+      <label :for="`reassign-note-${query.query_id}`">
+        Reassignment note (optional)
+      </label>
+      <input
+        :id="`reassign-note-${query.query_id}`"
+        :value="reassignNote"
+        type="text"
+        autocomplete="off"
+        :disabled="busy || assertionsLocked"
+        @input="
+          emit('update:reassignNote', ($event.target as HTMLInputElement).value)
+        "
+      />
+      <label :for="`reassign-reason-${query.query_id}`"
+        >Reason for change</label
+      >
+      <input
+        :id="`reassign-reason-${query.query_id}`"
+        :value="reassignReason"
+        type="text"
+        autocomplete="off"
+        :disabled="busy || assertionsLocked"
+        @input="
+          emit(
+            'update:reassignReason',
+            ($event.target as HTMLInputElement).value
+          )
+        "
+      />
+      <div class="form-query-buttons">
+        <button
+          :id="`btn-confirm-reassign-${query.query_id}`"
+          type="submit"
+          class="btn btn-primary"
+          :disabled="
+            busy ||
+            assertionsLocked ||
+            !reassignReason?.trim() ||
+            !hasReassignChange
+          "
+        >
+          Confirm reassignment<span class="sr-only">
+            for {{ query.item_id }}</span
+          >
+        </button>
+        <button
+          :id="`btn-cancel-reassign-${query.query_id}`"
+          type="button"
+          class="btn btn-secondary"
+          @click="emit('dismiss-reassign')"
+        >
+          Back<span class="sr-only"> from query on {{ query.item_id }}</span>
+        </button>
+      </div>
+    </form>
+    <form
+      v-else-if="activeAction"
       class="form-query-form"
       :aria-label="QUERY_ACTION_TEXT[activeAction].button"
       @submit.prevent="emit('confirm')"
@@ -115,6 +216,25 @@
           )
         "
       />
+      <template v-if="activeAction === 'answer' || activeAction === 'reopen'">
+        <label :for="`query-assignee-${query.query_id}`">
+          Replacement assignee (optional)
+        </label>
+        <input
+          :id="`query-assignee-${query.query_id}`"
+          :value="actionAssignee"
+          type="text"
+          autocomplete="off"
+          placeholder="Leave blank to clear previous role assignee"
+          :disabled="busy || assertionsLocked"
+          @input="
+            emit(
+              'update:actionAssignee',
+              ($event.target as HTMLInputElement).value
+            )
+          "
+        />
+      </template>
       <label :for="`query-reason-${query.query_id}`">Reason for change</label>
       <input
         :id="`query-reason-${query.query_id}`"
@@ -163,32 +283,52 @@
         {{ QUERY_ACTION_TEXT[action].start
         }}<span class="sr-only"> query on {{ query.item_id }}</span>
       </button>
+      <button
+        v-if="canReassign"
+        :id="`btn-reassign-${query.query_id}`"
+        type="button"
+        class="btn btn-secondary"
+        :disabled="busy || assertionsLocked"
+        @click="emit('begin-reassign')"
+      >
+        Reassign<span class="sr-only"> query on {{ query.item_id }}</span>
+      </button>
     </div>
   </li>
 </template>
 
 <script setup lang="ts">
+import { computed } from "vue";
 import type { RouteLocationRaw } from "vue-router";
 import {
   actionTakesText,
   type FormQueryAction,
+  type FormQueryOwnerRole,
   type FormQueryResponse,
 } from "../../api/ecrfQueriesApi";
 import {
   isBlockedBySeparationOfDuties,
+  isLiveQuery,
   isSystemQuery,
 } from "../../composables/useFormQueries";
 import { QUERY_ACTION_TEXT } from "./QueryBulkToolbar.vue";
 import QueryContextLinks from "./QueryContextLinks.vue";
 
-defineProps<{
+const props = defineProps<{
   query: FormQueryResponse;
   canManage: boolean;
+  canReassign?: boolean;
   effectiveCurrentUserId?: string | readonly string[] | null;
   actions: FormQueryAction[];
   activeAction: FormQueryAction | null;
   actionText: string;
+  actionAssignee?: string;
   actionReason: string;
+  activeReassign?: boolean;
+  reassignAssignee?: string;
+  reassignOwnerRole?: FormQueryOwnerRole;
+  reassignNote?: string;
+  reassignReason?: string;
   showCheckbox: boolean;
   selected: boolean;
   eligibleForBulk: boolean;
@@ -207,10 +347,35 @@ const emit = defineEmits<{
   (e: "toggle-select", checked: boolean): void;
   (e: "begin", action: FormQueryAction): void;
   (e: "update:actionText", text: string): void;
+  (e: "update:actionAssignee", assignee: string): void;
   (e: "update:actionReason", reason: string): void;
   (e: "confirm"): void;
   (e: "dismiss"): void;
+  (e: "begin-reassign"): void;
+  (e: "update:reassignAssignee", assignee: string): void;
+  (e: "update:reassignOwnerRole", ownerRole: FormQueryOwnerRole): void;
+  (e: "update:reassignNote", note: string): void;
+  (e: "update:reassignReason", reason: string): void;
+  (e: "confirm-reassign"): void;
+  (e: "dismiss-reassign"): void;
 }>();
+
+const canReassign = computed(() =>
+  props.canReassign !== undefined
+    ? props.canReassign
+    : props.canManage &&
+      isLiveQuery(props.query) &&
+      props.query.raised_by !== "masked"
+);
+
+const hasReassignChange = computed(() => {
+  const nextAssignee = (props.reassignAssignee ?? "").trim();
+  const currentAssignee = (props.query.assignee ?? "").trim();
+  const nextRole =
+    props.reassignOwnerRole ?? (props.query.owner_role || "site");
+  const currentRole = props.query.owner_role || "site";
+  return nextAssignee !== currentAssignee || nextRole !== currentRole;
+});
 
 function formatDueDate(iso: string): string {
   return iso.length >= 10 ? iso.slice(0, 10) : iso;
@@ -239,6 +404,7 @@ const MESSAGE_LABELS: Record<string, string> = {
   raised: "Raised",
   answered: "Answered",
   reopened: "Reopened",
+  reassigned: "Reassigned",
   closed: "Closed",
   cancelled: "Cancelled",
   escalated: "Escalated",
@@ -247,6 +413,7 @@ const MESSAGE_LABELS: Record<string, string> = {
 
 <style scoped>
 .form-query {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -254,6 +421,10 @@ const MESSAGE_LABELS: Record<string, string> = {
   border: 1px solid var(--border);
   border-radius: 8px;
   font-size: 0.85rem;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-wrap: anywhere;
 }
 .form-query-head {
   display: flex;
@@ -270,6 +441,9 @@ const MESSAGE_LABELS: Record<string, string> = {
   font-size: 0.75rem;
   font-weight: 600;
 }
+.form-query-code {
+  font-family: var(--font-mono, monospace);
+}
 .form-query-status[data-status="open"],
 .form-query-badge[data-priority="high"] {
   background: var(--warning-bg);
@@ -282,6 +456,7 @@ const MESSAGE_LABELS: Record<string, string> = {
 .form-query-due {
   font-size: 0.75rem;
   color: var(--neutral-dark);
+  font-variant-numeric: tabular-nums;
 }
 .form-query-messages {
   margin: 0;
@@ -302,10 +477,19 @@ const MESSAGE_LABELS: Record<string, string> = {
   gap: 6px;
 }
 .form-query-form textarea,
-.form-query-form input {
+.form-query-form input,
+.form-query-form select {
   padding: 8px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
+  background: var(--semantic-color-surface, inherit);
+}
+@media (pointer: coarse) {
+  .form-query-form textarea,
+  .form-query-form input,
+  .form-query-form select {
+    font-size: 1rem;
+  }
 }
 .form-query-buttons {
   display: flex;

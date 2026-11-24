@@ -32,6 +32,75 @@ function fillRandomBytes(buffer, demoStreamKey) {
 }
 
 let inMemorySessionKey = null;
+let inMemoryCryptoKeyCache = null;
+const openDbHandles = new Map();
+const pendingDbOpens = new Map();
+const decryptedSubmissionCache = new Map();
+
+function cloneStructuredValue(value) {
+  if (value === null || typeof value !== "object") {
+    return value;
+  }
+  if (Array.isArray(value)) {
+    return value.map(cloneStructuredValue);
+  }
+  const copy = {};
+  for (const [k, v] of Object.entries(value)) {
+    copy[k] = cloneStructuredValue(v);
+  }
+  return copy;
+}
+
+function cloneSubmissionProjection(record) {
+  if (!record || typeof record !== "object") {
+    return record;
+  }
+  const copy = { ...record };
+  if ("answers" in copy) {
+    copy.answers = cloneStructuredValue(copy.answers);
+  }
+  if ("resolved_answers" in copy) {
+    copy.resolved_answers = cloneStructuredValue(copy.resolved_answers);
+  }
+  return copy;
+}
+
+function clearDecryptedSubmissionCache(dbName = null) {
+  if (dbName) {
+    decryptedSubmissionCache.delete(dbName);
+    return;
+  }
+  decryptedSubmissionCache.clear();
+}
+
+function getDbSubmissionCache(dbName, createIfMissing = false) {
+  let dbCache = decryptedSubmissionCache.get(dbName);
+  if (!dbCache && createIfMissing) {
+    dbCache = new Map();
+    decryptedSubmissionCache.set(dbName, dbCache);
+  }
+  return dbCache || null;
+}
+
+function evictCachedDatabase(dbName, expectedDb = null) {
+  const existing = openDbHandles.get(dbName);
+  if (existing && (!expectedDb || existing === expectedDb)) {
+    openDbHandles.delete(dbName);
+  }
+}
+
+function closeCachedDatabaseByName(dbName) {
+  pendingDbOpens.delete(dbName);
+  const existing = openDbHandles.get(dbName);
+  if (existing) {
+    openDbHandles.delete(dbName);
+    try {
+      existing.close();
+    } catch {
+      // Ignore errors when closing an already-closed IDB handle
+    }
+  }
+}
 
 // ADR-2360: Active encryption keys must remain strictly in volatile memory and
 // are never persisted unwrapped in IndexedDB or browser storage.
@@ -67,6 +136,8 @@ export async function clearSessionKeyFromDB(userId) {
 
 export function clearSessionKey(userId) {
   inMemorySessionKey = null;
+  inMemoryCryptoKeyCache = null;
+  clearDecryptedSubmissionCache();
   clearSessionKeyFromDB(userId).catch((err) =>
     console.warn("Could not clear session_key from DB:", err)
   );
@@ -74,6 +145,8 @@ export function clearSessionKey(userId) {
 
 export function clearInMemoryKey() {
   inMemorySessionKey = null;
+  inMemoryCryptoKeyCache = null;
+  clearDecryptedSubmissionCache();
 }
 
 async function getOrGenerateSalt() {
@@ -111,15 +184,45 @@ async function getOrGenerateSalt() {
 
 let currentUserId = null;
 
+function resolveDbName(userId) {
+  const targetUserId = userId !== undefined ? userId : currentUserId;
+  return targetUserId
+    ? `SubjectPortalSyncDB_${targetUserId}`
+    : "SubjectPortalSyncDB";
+}
+
 export function setActiveUserId(userId) {
-  currentUserId = userId || null;
+  const nextUserId = userId || null;
+  if (nextUserId !== currentUserId) {
+    const prevDbName = resolveDbName(currentUserId);
+    const nextDbName = resolveDbName(nextUserId);
+    clearInMemoryKey();
+    if (prevDbName !== nextDbName) {
+      closeCachedDatabaseByName(prevDbName);
+    }
+    currentUserId = nextUserId;
+  }
 }
 
 export function getActiveUserId() {
   return currentUserId;
 }
 
-async function createNonExtractableCryptoKey(rawKeyBytes) {
+export function closeDatabase(userId) {
+  const dbName = resolveDbName(userId);
+  clearDecryptedSubmissionCache(dbName);
+  closeCachedDatabaseByName(dbName);
+}
+
+export function closeAllDatabases() {
+  clearDecryptedSubmissionCache();
+  for (const dbName of Array.from(openDbHandles.keys())) {
+    closeCachedDatabaseByName(dbName);
+  }
+  pendingDbOpens.clear();
+}
+
+export async function createNonExtractableCryptoKey(rawKeyBytes) {
   if (!rawKeyBytes) return null;
   if (typeof rawKeyBytes === "object" && rawKeyBytes.algorithm) {
     return rawKeyBytes;
@@ -148,6 +251,25 @@ async function createNonExtractableCryptoKey(rawKeyBytes) {
   return rawKeyBytes;
 }
 
+async function getActiveCryptoKey() {
+  const activeKey = inMemorySessionKey;
+  if (!activeKey) return null;
+  if (typeof activeKey === "object" && activeKey.algorithm) {
+    return activeKey;
+  }
+  if (
+    inMemoryCryptoKeyCache &&
+    inMemoryCryptoKeyCache.sourceKey === activeKey
+  ) {
+    return inMemoryCryptoKeyCache.cryptoKey;
+  }
+  const imported = await createNonExtractableCryptoKey(activeKey);
+  if (inMemorySessionKey === activeKey) {
+    inMemoryCryptoKeyCache = { sourceKey: activeKey, cryptoKey: imported };
+  }
+  return imported;
+}
+
 export async function initSessionKey(sessionMaterial, userId) {
   if (userId) {
     setActiveUserId(userId);
@@ -156,16 +278,27 @@ export async function initSessionKey(sessionMaterial, userId) {
   const info = "cadence-subject-portal-offline-v1";
   const rawBytes = await deriveSessionKey(sessionMaterial, salt, info);
   const cryptoKey = await createNonExtractableCryptoKey(rawBytes);
-  inMemorySessionKey = cryptoKey;
+  if (rawBytes instanceof Uint8Array && cryptoKey !== rawBytes) {
+    rawBytes.fill(0);
+  }
+  setInMemorySessionKey(cryptoKey);
   await clearSessionKeyFromDB(userId);
 }
 
 export function openDatabase(userId) {
-  const targetUserId = userId || currentUserId;
-  const dbName = targetUserId
-    ? `SubjectPortalSyncDB_${targetUserId}`
-    : "SubjectPortalSyncDB";
-  return new Promise((resolve, reject) => {
+  const dbName = resolveDbName(
+    userId === undefined ? currentUserId : userId || currentUserId
+  );
+  const cachedDb = openDbHandles.get(dbName);
+  if (cachedDb) {
+    return Promise.resolve(cachedDb);
+  }
+  const inFlight = pendingDbOpens.get(dbName);
+  if (inFlight) {
+    return inFlight;
+  }
+
+  const openPromise = new Promise((resolve, reject) => {
     try {
       const request = indexedDB.open(dbName, 2);
       /* v8 ignore start */
@@ -201,6 +334,24 @@ export function openDatabase(userId) {
       /* v8 ignore stop */
       request.onsuccess = (event) => {
         const db = event.target.result;
+        const origClose = db.close.bind(db);
+        db.close = () => {
+          evictCachedDatabase(dbName, db);
+          return origClose();
+        };
+        db.onversionchange = () => {
+          evictCachedDatabase(dbName, db);
+          try {
+            origClose();
+          } catch {
+            // Ignore close errors during version change
+          }
+        };
+        db.onclose = () => {
+          evictCachedDatabase(dbName, db);
+        };
+        openDbHandles.set(dbName, db);
+        pendingDbOpens.delete(dbName);
         console.log(
           `[IndexedDB] Opened ${dbName} at version ${db.version} containing stores:`,
           Array.from(db.objectStoreNames)
@@ -209,6 +360,7 @@ export function openDatabase(userId) {
       };
       /* v8 ignore start */
       request.onerror = (event) => {
+        pendingDbOpens.delete(dbName);
         const err = event.target.error;
         console.error(
           "IndexedDB open failed (disk limits, private window, or quota exceeded):",
@@ -222,6 +374,7 @@ export function openDatabase(userId) {
       };
       /* v8 ignore stop */
     } catch (err) {
+      pendingDbOpens.delete(dbName);
       /* v8 ignore start */
       console.error(
         "Failed to call indexedDB.open due to a critical error:",
@@ -235,6 +388,9 @@ export function openDatabase(userId) {
       /* v8 ignore stop */
     }
   });
+
+  pendingDbOpens.set(dbName, openPromise);
+  return openPromise;
 }
 
 export async function saveAssignmentsToDB(assignments) {
@@ -440,7 +596,9 @@ export async function queueSubmission({
   change_reason,
   username,
 }) {
-  if (!inMemorySessionKey) {
+  const sessionKeySnapshot = inMemorySessionKey;
+  const cryptoKey = await getActiveCryptoKey();
+  if (!sessionKeySnapshot || !cryptoKey) {
     throw new Error(
       "Encryption key not initialized. Cannot queue submission securely."
     );
@@ -464,9 +622,9 @@ export async function queueSubmission({
       ? instrument.version_index
       : 1;
 
-  const encAnswers = await encryptAESGCM(answers, inMemorySessionKey);
-  const encSubjectId = await encryptAESGCM(subject_id, inMemorySessionKey);
-  const encUsername = await encryptAESGCM(username, inMemorySessionKey);
+  const encAnswers = await encryptAESGCM(answers, cryptoKey);
+  const encSubjectId = await encryptAESGCM(subject_id, cryptoKey);
+  const encUsername = await encryptAESGCM(username, cryptoKey);
 
   const submission = {
     sequence_number,
@@ -490,7 +648,32 @@ export async function queueSubmission({
     const store = tx.objectStore("submissions");
     store.put(submission);
     tx.oncomplete = () => {
-      resolve(submission);
+      hasPotentialUnsyncedLocalRecords = true;
+      if (inMemorySessionKey === sessionKeySnapshot && inMemorySessionKey) {
+        const dbCache = getDbSubmissionCache(db.name, true);
+        const normalizedAnswers =
+          answers === undefined
+            ? undefined
+            : JSON.parse(JSON.stringify(answers));
+        const normalizedSubjectId =
+          subject_id === undefined
+            ? undefined
+            : JSON.parse(JSON.stringify(subject_id));
+        const normalizedUsername =
+          username === undefined
+            ? undefined
+            : JSON.parse(JSON.stringify(username));
+        dbCache.set(sequence_number, {
+          sessionKeyRef: sessionKeySnapshot,
+          answersCipher: encAnswers,
+          subjectIdCipher: encSubjectId,
+          usernameCipher: encUsername,
+          decryptedAnswers: normalizedAnswers,
+          decryptedSubjectId: normalizedSubjectId,
+          decryptedUsername: normalizedUsername,
+        });
+      }
+      resolve({ ...submission });
     };
     /* v8 ignore start */
     tx.onerror = () => {
@@ -500,82 +683,131 @@ export async function queueSubmission({
   });
 }
 
-async function decryptRecord(record) {
-  if (!record) return record;
-  // Project into a shallow copy so encrypted ciphertext in IndexedDB is never mutated or wiped.
-  const decrypted = { ...record };
+function projectLockedRecord(
+  record,
+  errorMessage,
+  markUnrecoverable = false,
+  stripResolvedAnswers = false
+) {
+  const locked = { ...record };
+  locked.status = "DECRYPTION_ERROR";
+  locked.locked = true;
+  if (markUnrecoverable) {
+    locked.unrecoverable = Boolean(record.unrecoverable);
+  }
+  locked.error = errorMessage;
+  delete locked.answers;
+  delete locked.subject_id;
+  delete locked.username;
+  if (stripResolvedAnswers) {
+    delete locked.resolved_answers;
+  }
+  return locked;
+}
 
-  if (
-    decrypted.unrecoverable === true ||
-    decrypted.status === "DECRYPTION_ERROR"
-  ) {
-    decrypted.status = "DECRYPTION_ERROR";
-    decrypted.locked = true;
-    decrypted.unrecoverable = Boolean(decrypted.unrecoverable);
-    decrypted.error =
-      decrypted.error ||
-      "Locked — enter your security PIN to decrypt queued answers.";
-    delete decrypted.answers;
-    delete decrypted.subject_id;
-    delete decrypted.username;
-    delete decrypted.resolved_answers;
-    return decrypted;
+async function decryptRecordForDb(dbName, record) {
+  if (!record) return record;
+  const seq = record.sequence_number;
+  const hasSeq = seq !== undefined && seq !== null;
+
+  if (record.unrecoverable === true || record.status === "DECRYPTION_ERROR") {
+    if (hasSeq) {
+      getDbSubmissionCache(dbName, false)?.delete(seq);
+    }
+    return projectLockedRecord(
+      record,
+      record.error ||
+        "Locked — enter your security PIN to decrypt queued answers.",
+      true,
+      true
+    );
   }
 
-  if (!inMemorySessionKey) {
-    decrypted.status = "DECRYPTION_ERROR";
-    decrypted.error = "DECRYPTION_ERROR: Missing encryption key";
-    decrypted.locked = true;
-    delete decrypted.answers;
-    delete decrypted.subject_id;
-    delete decrypted.username;
-    return decrypted;
+  const sessionKeySnapshot = inMemorySessionKey;
+  const cryptoKey = await getActiveCryptoKey();
+  if (!sessionKeySnapshot || !cryptoKey) {
+    return projectLockedRecord(
+      record,
+      "DECRYPTION_ERROR: Missing encryption key"
+    );
+  }
+
+  const existingCache = hasSeq
+    ? getDbSubmissionCache(dbName, false)?.get(seq)
+    : null;
+  if (
+    existingCache &&
+    existingCache.sessionKeyRef === sessionKeySnapshot &&
+    existingCache.answersCipher === record.answers &&
+    existingCache.subjectIdCipher === record.subject_id &&
+    existingCache.usernameCipher === record.username
+  ) {
+    return cloneSubmissionProjection({
+      ...record,
+      answers: existingCache.decryptedAnswers,
+      subject_id: existingCache.decryptedSubjectId,
+      username: existingCache.decryptedUsername,
+      locked: false,
+    });
   }
 
   try {
-    if (typeof decrypted.answers === "string") {
-      decrypted.answers = await decryptAESGCM(
-        decrypted.answers,
-        inMemorySessionKey
+    const decAnswers =
+      typeof record.answers === "string"
+        ? await decryptAESGCM(record.answers, cryptoKey)
+        : record.answers;
+    const decSubjectId =
+      typeof record.subject_id === "string"
+        ? await decryptAESGCM(record.subject_id, cryptoKey)
+        : record.subject_id;
+    const decUsername =
+      typeof record.username === "string"
+        ? await decryptAESGCM(record.username, cryptoKey)
+        : record.username;
+
+    if (inMemorySessionKey !== sessionKeySnapshot || !inMemorySessionKey) {
+      return projectLockedRecord(
+        record,
+        "DECRYPTION_ERROR: Missing encryption key"
       );
     }
-    if (typeof decrypted.subject_id === "string") {
-      decrypted.subject_id = await decryptAESGCM(
-        decrypted.subject_id,
-        inMemorySessionKey
-      );
+
+    if (hasSeq) {
+      const dbCache = getDbSubmissionCache(dbName, true);
+      dbCache.set(seq, {
+        sessionKeyRef: sessionKeySnapshot,
+        answersCipher: record.answers,
+        subjectIdCipher: record.subject_id,
+        usernameCipher: record.username,
+        decryptedAnswers: cloneStructuredValue(decAnswers),
+        decryptedSubjectId: cloneStructuredValue(decSubjectId),
+        decryptedUsername: cloneStructuredValue(decUsername),
+      });
     }
-    if (typeof decrypted.username === "string") {
-      decrypted.username = await decryptAESGCM(
-        decrypted.username,
-        inMemorySessionKey
-      );
-    }
-    decrypted.locked = false;
-    return decrypted;
+
+    return cloneSubmissionProjection({
+      ...record,
+      answers: decAnswers,
+      subject_id: decSubjectId,
+      username: decUsername,
+      locked: false,
+    });
   } catch (err) {
-    decrypted.status = "DECRYPTION_ERROR";
-    decrypted.error = `DECRYPTION_ERROR: ${err.message}`;
-    decrypted.locked = true;
-    delete decrypted.answers;
-    delete decrypted.subject_id;
-    delete decrypted.username;
-    return decrypted;
+    if (hasSeq) {
+      getDbSubmissionCache(dbName, false)?.delete(seq);
+    }
+    return projectLockedRecord(record, `DECRYPTION_ERROR: ${err.message}`);
   }
 }
 
-export async function getQueuedSubmissions() {
+async function readRawSubmissionsFromDB() {
   const db = await openDatabase();
-  return new Promise((resolve, reject) => {
+  const records = await new Promise((resolve, reject) => {
     const tx = db.transaction("submissions", "readonly");
     const store = tx.objectStore("submissions");
     const req = store.getAll();
-    req.onsuccess = async () => {
-      const all = req.result;
-      const queued = all.filter((s) => s.status === "QUEUED");
-      const decryptedQueued = await Promise.all(queued.map(decryptRecord));
-      decryptedQueued.sort((a, b) => a.sequence_number - b.sequence_number);
-      resolve(decryptedQueued);
+    req.onsuccess = () => {
+      resolve(req.result || []);
     };
     /* v8 ignore start */
     req.onerror = () => {
@@ -583,26 +815,36 @@ export async function getQueuedSubmissions() {
     };
     /* v8 ignore stop */
   });
+  return { dbName: db.name, records };
+}
+
+export async function getQueuedSubmissions() {
+  const { dbName, records } = await readRawSubmissionsFromDB();
+  const queued = records.filter((s) => s.status === "QUEUED");
+  const decryptedQueued = await Promise.all(
+    queued.map((rec) => decryptRecordForDb(dbName, rec))
+  );
+  decryptedQueued.sort((a, b) => a.sequence_number - b.sequence_number);
+  return decryptedQueued;
 }
 
 export async function getAllSubmissions() {
-  const db = await openDatabase();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction("submissions", "readonly");
-    const store = tx.objectStore("submissions");
-    const req = store.getAll();
-    req.onsuccess = async () => {
-      const all = req.result;
-      const decryptedAll = await Promise.all(all.map(decryptRecord));
-      decryptedAll.sort((a, b) => b.sequence_number - a.sequence_number);
-      resolve(decryptedAll);
-    };
-    /* v8 ignore start */
-    req.onerror = () => {
-      reject(req.error);
-    };
-    /* v8 ignore stop */
-  });
+  const { dbName, records } = await readRawSubmissionsFromDB();
+  const decryptedAll = await Promise.all(
+    records.map((rec) => decryptRecordForDb(dbName, rec))
+  );
+  decryptedAll.sort((a, b) => b.sequence_number - a.sequence_number);
+  return decryptedAll;
+}
+
+function applySafeStatusMutation(sub, status, additionalFields = {}) {
+  sub.status = status;
+  sub.resolved_at = new Date().toISOString();
+  const safeFields = { ...additionalFields };
+  delete safeFields.answers;
+  delete safeFields.subject_id;
+  delete safeFields.username;
+  Object.assign(sub, safeFields);
 }
 
 export async function updateSubmissionStatus(
@@ -621,16 +863,10 @@ export async function updateSubmissionStatus(
         reject(new Error(`Submission ${sequence_number} not found`));
         return;
       }
-      sub.status = status;
-      sub.resolved_at = new Date().toISOString();
-      const safeFields = { ...additionalFields };
-      delete safeFields.answers;
-      delete safeFields.subject_id;
-      delete safeFields.username;
-      Object.assign(sub, safeFields);
+      applySafeStatusMutation(sub, status, additionalFields);
       const putReq = store.put(sub);
       putReq.onsuccess = async () => {
-        const decryptedSub = await decryptRecord(sub);
+        const decryptedSub = await decryptRecordForDb(db.name, sub);
         resolve(decryptedSub);
       };
       /* v8 ignore start */
@@ -670,13 +906,7 @@ export async function bulkUpdateSubmissionStatuses(updates) {
           reject(new Error(`Submission ${sequence_number} not found`));
           return;
         }
-        sub.status = status;
-        sub.resolved_at = new Date().toISOString();
-        const safeFields = { ...additionalFields };
-        delete safeFields.answers;
-        delete safeFields.subject_id;
-        delete safeFields.username;
-        Object.assign(sub, safeFields);
+        applySafeStatusMutation(sub, status, additionalFields);
 
         const putReq = store.put(sub);
         putReq.onsuccess = () => {
@@ -698,7 +928,9 @@ export async function bulkUpdateSubmissionStatuses(updates) {
 
     tx.oncomplete = async () => {
       try {
-        const decrypted = await Promise.all(subsToDecrypt.map(decryptRecord));
+        const decrypted = await Promise.all(
+          subsToDecrypt.map((sub) => decryptRecordForDb(db.name, sub))
+        );
         resolve(decrypted);
       } catch (err) {
         /* v8 ignore start */
@@ -726,6 +958,7 @@ export async function clearAllSubmissions() {
     const store = tx.objectStore("submissions");
     store.clear();
     tx.oncomplete = () => {
+      clearDecryptedSubmissionCache(db.name);
       resolve();
     };
     /* v8 ignore start */
@@ -736,11 +969,25 @@ export async function clearAllSubmissions() {
   });
 }
 
+let hasPotentialUnsyncedLocalRecords = false;
+
+export function hasTrackedLocalQueueActivity() {
+  return hasPotentialUnsyncedLocalRecords;
+}
+
+export function setTrackedLocalQueueActivity(active) {
+  hasPotentialUnsyncedLocalRecords = Boolean(active);
+}
+
 export function getInMemorySessionKey() {
   return inMemorySessionKey;
 }
 
 export function setInMemorySessionKey(key) {
+  if (key !== inMemorySessionKey) {
+    inMemoryCryptoKeyCache = null;
+    clearDecryptedSubmissionCache();
+  }
   inMemorySessionKey = key;
 }
 
@@ -809,7 +1056,7 @@ export async function clearWrappedMasterKeyConfig(userId) {
 }
 
 export async function clearLockedOfflineData(userId) {
-  inMemorySessionKey = null;
+  clearInMemoryKey();
   const db = await openDatabase(userId);
   return new Promise((resolve, reject) => {
     const tx = db.transaction(["submissions", "drafts", "config"], "readwrite");
@@ -820,6 +1067,8 @@ export async function clearLockedOfflineData(userId) {
     configStore.delete("pbkdf2_salt");
     configStore.delete("session_key");
     tx.oncomplete = () => {
+      hasPotentialUnsyncedLocalRecords = false;
+      clearDecryptedSubmissionCache(db.name);
       resolve();
     };
     /* v8 ignore start */
@@ -831,7 +1080,7 @@ export async function clearLockedOfflineData(userId) {
 }
 
 export async function flagLockedEntriesForPinReset(userId) {
-  inMemorySessionKey = null;
+  clearInMemoryKey();
   const db = await openDatabase(userId);
   return new Promise((resolve, reject) => {
     const tx = db.transaction(["submissions", "drafts", "config"], "readwrite");
@@ -874,6 +1123,8 @@ export async function flagLockedEntriesForPinReset(userId) {
     };
     /* v8 ignore stop */
     tx.oncomplete = () => {
+      hasPotentialUnsyncedLocalRecords = false;
+      clearDecryptedSubmissionCache(db.name);
       resolve({ flaggedCount });
     };
     /* v8 ignore start */
@@ -911,20 +1162,16 @@ export async function getDraftAssignmentIds(userId) {
 }
 
 export async function saveDraft(assignmentId, answers) {
-  if (!inMemorySessionKey) {
+  const cryptoKey = await getActiveCryptoKey();
+  if (!cryptoKey) {
     console.warn("No active session key. Cannot save draft.");
-    return null;
+    return false;
   }
   try {
     const aad = new TextEncoder().encode(assignmentId);
-    const encryptedAnswers = await encryptAESGCM(
-      answers,
-      inMemorySessionKey,
-      1,
-      aad
-    );
+    const encryptedAnswers = await encryptAESGCM(answers, cryptoKey, 1, aad);
     const db = await openDatabase();
-    return new Promise((resolve, reject) => {
+    return await new Promise((resolve, reject) => {
       const tx = db.transaction("drafts", "readwrite");
       const store = tx.objectStore("drafts");
       store.put({
@@ -933,20 +1180,24 @@ export async function saveDraft(assignmentId, answers) {
         updated_at: new Date().toISOString(),
       });
       tx.oncomplete = () => {
-        resolve();
+        hasPotentialUnsyncedLocalRecords = true;
+        resolve(true);
       };
+      /* v8 ignore start */
       tx.onerror = () => {
         reject(tx.error);
       };
+      /* v8 ignore stop */
     });
   } catch (err) {
     console.error("Failed to save draft:", err);
-    return null;
+    return false;
   }
 }
 
 export async function getDraft(assignmentId) {
-  if (!inMemorySessionKey) {
+  const cryptoKey = await getActiveCryptoKey();
+  if (!cryptoKey) {
     console.warn("No active session key. Cannot retrieve draft.");
     return null;
   }
@@ -971,7 +1222,7 @@ export async function getDraft(assignmentId) {
     const aad = new TextEncoder().encode(assignmentId);
     const decryptedAnswers = await decryptAESGCM(
       draft.answers,
-      inMemorySessionKey,
+      cryptoKey,
       1,
       aad
     );

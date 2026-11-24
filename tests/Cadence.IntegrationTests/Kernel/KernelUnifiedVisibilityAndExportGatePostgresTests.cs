@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 
+using Cadence.Ddf;
 using Cadence.IntegrationTests.Execution;
 using Cadence.Kernel;
 using Cadence.Kernel.Api;
@@ -21,6 +22,7 @@ using Cadence.Kernel.Execution;
 using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.Protocol;
 using Cadence.Kernel.Protocol.Design;
+using Cadence.Kernel.Protocol.Import;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Standards;
 using Cadence.Kernel.Tenancy;
@@ -194,9 +196,24 @@ public sealed class KernelUnifiedVisibilityAndExportGatePostgresTests(ExecutionF
             var armItem = root.GetProperty("items").EnumerateArray().Single(i => i.GetProperty("item_id").GetString() == TreatmentItem);
             armItem.GetProperty("value").GetProperty("reason").GetString()!.ToLowerInvariant().Should().Be("masked");
             var maskedSig = root.GetProperty("signatures").EnumerateArray().Single();
+            maskedSig.GetProperty("superseded").GetBoolean().Should().BeFalse();
             maskedSig.GetProperty("content_hash").GetString().Should().Be("masked");
             maskedSig.GetProperty("reason").GetString().Should().Be("masked");
+            var signedValues = maskedSig.GetProperty("signed_values");
+            signedValues.ValueKind.Should().Be(JsonValueKind.Array, "CollectionInstance.ContentHashOf must verify raw values before masking SignedValues");
+            var maskedSignedArm = signedValues.EnumerateArray()
+                .Single(v => v.GetProperty("item_id").GetString() == TreatmentItem);
+            maskedSignedArm.GetProperty("observation_id").GetGuid().Should().Be(Guid.Empty);
+            maskedSignedArm.GetProperty("value").GetProperty("reason").GetString()!.ToLowerInvariant().Should().Be("masked");
             root.GetProperty("assertions").EnumerateArray().Should().OnlyContain(a => a.GetProperty("text").GetString() == "masked");
+        }
+
+        var monitorFormListRaw = await GetRawAsync(tenantMonitor, $"{FormEndpoints.RoutePrefix}?enrollment_id={world.EnrollmentA.Value:D}", HttpStatusCode.OK, ct);
+        monitorFormListRaw.Should().NotContain(BlindedArmText).And.NotContain(BlindedSignReason);
+        using (var monitorListDoc = JsonDocument.Parse(monitorFormListRaw))
+        {
+            monitorListDoc.RootElement.EnumerateArray().Single().GetProperty("signed").GetBoolean()
+                .Should().BeTrue("form summary must remain Signed=true when ContentHash is verified prior to masking");
         }
 
         var pharmFormRaw = await GetRawAsync(unblindedPharm, $"{FormEndpoints.RoutePrefix}/{world.FormA.Value:D}", HttpStatusCode.OK, ct);
@@ -392,9 +409,16 @@ public sealed class KernelUnifiedVisibilityAndExportGatePostgresTests(ExecutionF
         var crcExplainSiteBFinding = await McpCallAsync(siteACrc, KernelToolNames.Explain, new { node = siteBFindingRef }, ct);
         crcExplainSiteBFinding.GetProperty("isError").GetBoolean().Should().BeTrue();
 
-        //    - TenantMonitor (Tenant() scope, no enrollment.unblind) cannot get_node on blinded observation or explain blindedFindingRef (isError == true)!
+        //    - TenantMonitor (Tenant() scope, no enrollment.unblind) cannot get_node on blinded observation or explain blindedFindingRef (isError == true),
+        //      while list_children on EnrollmentA masks the blinded observation child in place!
         var monitorGetBlindedObs = await McpCallAsync(tenantMonitor, KernelToolNames.GetNode, new { node = blindedObsARef }, ct);
         monitorGetBlindedObs.GetProperty("isError").GetBoolean().Should().BeTrue();
+        monitorGetBlindedObs.ToString().Should().NotContain(BlindedArmText);
+
+        var monitorListFormChildren = await McpCallAsync(tenantMonitor, KernelToolNames.ListChildren, new { node = NodeRef.For(world.FormA).ToString() }, ct);
+        monitorListFormChildren.GetProperty("isError").GetBoolean().Should().BeFalse();
+        var listChildrenText = monitorListFormChildren.ToString();
+        listChildrenText.Should().Contain("\"masked\":\"blinded\"").And.NotContain(BlindedArmText).And.NotContain(blindedObsARef);
 
         var monitorExplainBlinded = await McpCallAsync(tenantMonitor, KernelToolNames.Explain, new { node = blindedFindingRef }, ct);
         monitorExplainBlinded.GetProperty("isError").GetBoolean().Should().BeTrue();
@@ -452,18 +476,10 @@ public sealed class KernelUnifiedVisibilityAndExportGatePostgresTests(ExecutionF
             .GetProperty("observation_id").GetGuid());
         var blindedObsUuid = blindedObsId.Value.ToString("D");
 
-        // Verify blinded observation, raise + answer kernel query on blinded observation, and sign formA before tCut.
+        // Verify blinded observation and sign formA while discrepancy-free, then raise + answer a blinded pharmacy query and freeze before tCut.
         Tick();
         await _scenario.Protocol.OkAsync(
             new VerifyObservation(world.Tenant, AssertionId.New(), world.EnrollmentA, blindedObsId, 1, KernelProtocolScenario.Key(), "Verified kit against pharmacy log"),
-            ct);
-
-        Tick();
-        var queryAssertion = await _scenario.Protocol.OkAsync(
-            new RaiseQuery(world.Tenant, AssertionId.New(), world.EnrollmentA, blindedObsId, BlindedQueryPrompt, KernelProtocolScenario.Key(), "Pharmacy query"),
-            ct);
-        await _scenario.Protocol.OkAsync(
-            new AnswerQuery(world.Tenant, AssertionId.New(), world.EnrollmentA, queryAssertion.AssertionId, BlindedQueryAnswer, KernelProtocolScenario.Key(), "Pharmacy answer"),
             ct);
 
         var pharmForm = await SendJsonAsync<JsonElement>(
@@ -479,6 +495,14 @@ public sealed class KernelUnifiedVisibilityAndExportGatePostgresTests(ExecutionF
             using var signRes = await unblindedPharm.SendAsync(signReq, ct);
             signRes.StatusCode.Should().Be(HttpStatusCode.Created, await signRes.Content.ReadAsStringAsync(ct));
         }
+
+        Tick();
+        var queryAssertion = await _scenario.Protocol.OkAsync(
+            new RaiseQuery(world.Tenant, AssertionId.New(), world.EnrollmentA, blindedObsId, BlindedQueryPrompt, KernelProtocolScenario.Key(), "Pharmacy query"),
+            ct);
+        await _scenario.Protocol.OkAsync(
+            new AnswerQuery(world.Tenant, AssertionId.New(), world.EnrollmentA, queryAssertion.AssertionId, BlindedQueryAnswer, KernelProtocolScenario.Key(), "Pharmacy answer"),
+            ct);
 
         // Also freeze the blinded observation directly before tCut via POST /api/v1/kernel/locks (while its query remains open, per LockReadinessEvaluator) so both blinded lock attestations and blinded form signatures are exercised.
         using (var lockReq = new HttpRequestMessage(HttpMethod.Post, new Uri("/api/v1/kernel/locks", UriKind.Relative)))
@@ -576,6 +600,8 @@ public sealed class KernelUnifiedVisibilityAndExportGatePostgresTests(ExecutionF
             if (format == "json")
             {
                 var cb = JsonSerializer.Deserialize<KernelCasebookResponse>(statCasebookRaw, Json)!;
+                cb.Observations.Single(o => o.Masked).Ref.Should().Be("masked");
+                cb.Forms.Single().ContentHash.Should().BeNull("form content hash must be redacted when a member item is blinded");
                 cb.Queries.Should().HaveCount(2);
                 cb.Queries.Should().OnlyContain(q => q.Ref == "masked" && q.TargetRef == "masked" && q.Text == "masked" && q.AssertedBy == null);
 
@@ -599,11 +625,19 @@ public sealed class KernelUnifiedVisibilityAndExportGatePostgresTests(ExecutionF
                 cb.AuditTrail.Where(a => a.Subject == "masked").Should().NotBeEmpty()
                     .And.OnlyContain(a => a.ActorId == "masked" && a.ReasonForChange == "masked");
             }
+            else if (format == "odm_xml")
+            {
+                // AC 7: Blinded casebook ODM XML includes Study, AdminData/SignatureDef, nested ClinicalData hierarchy, and passes OdmDesignImporter cleanly.
+                await AssertValidCasebookOdmXmlAsync(statCasebookRaw, expectSignature: true, ct);
+            }
         }
 
-        // 3. UnblindedPharmacist sees unmasked values, ObservationRef, LegalReason, and AuditTrail details.
+        // 3. UnblindedPharmacist sees unmasked values, ObservationRef, LegalReason, and AuditTrail details, and casebook ODM XML passes OdmDesignImporter cleanly.
         var pharmCasebookRaw = await GetRawAsync(unblindedPharm, $"/api/v1/kernel/enrollments/{enrollmentARef}/casebook?format=json", HttpStatusCode.OK, ct);
         pharmCasebookRaw.Should().Contain(BlindedArmText).And.Contain(BlindedQueryPrompt).And.Contain(BlindedQueryAnswer).And.Contain(BlindedSignReason).And.Contain(blindedObsUuid);
+        var pharmCasebookOdm = await GetRawAsync(unblindedPharm, $"/api/v1/kernel/enrollments/{enrollmentARef}/casebook?format=odm_xml", HttpStatusCode.OK, ct);
+        pharmCasebookOdm.Should().Contain(BlindedArmText).And.Contain(BlindedSignReason);
+        await AssertValidCasebookOdmXmlAsync(pharmCasebookOdm, expectSignature: true, ct);
         var unblindedOdmDoc = XDocument.Parse(latestOdm);
         var unblindedSigDef = unblindedOdmDoc.Descendants(odmNs + "SignatureDef").Single(sd => sd.Attribute("OID")?.Value == blindedSigOid);
         unblindedSigDef.Element(odmNs + "LegalReason")!.Value.Should().Be(BlindedSignReason);
@@ -669,6 +703,10 @@ public sealed class KernelUnifiedVisibilityAndExportGatePostgresTests(ExecutionF
         {
             (await db.AuditEntries.CountAsync(a => a.TenantId == world.Tenant && a.Action == "Denied", ct))
                 .Should().Be(deniedAuditsBefore + 2, "each unauthorized export attempt must write a Denied audit entry");
+            var deniedBiostatLogs = await db.BiostatExportAuditLogs.AsNoTracking()
+                .Where(l => l.TenantId == world.Tenant && l.Outcome == "Denied")
+                .ToListAsync(ct);
+            deniedBiostatLogs.Should().HaveCount(2, "each denied export command must also write a Denied BiostatExportAuditLog row");
             (await db.Set<Artifact>().CountAsync(a => a.TenantId == world.Tenant && a.Kind == ArtifactKind.Dataset, ct))
                 .Should().Be(datasetArtifactsBefore, "unauthorized exports must not register Dataset artifacts");
         }
@@ -695,6 +733,34 @@ public sealed class KernelUnifiedVisibilityAndExportGatePostgresTests(ExecutionF
             exportAudits[0].ReasonForChange.Should().Contain("disclosure=blinded");
             exportAudits[1].ActorId.Should().Be(UnblindedPharm);
             exportAudits[1].ReasonForChange.Should().Contain("disclosure=unblinded");
+
+            var committedBiostatLogs = await db.BiostatExportAuditLogs.AsNoTracking()
+                .Where(l => l.TenantId == world.Tenant && l.Outcome == "Committed")
+                .OrderBy(l => l.Timestamp)
+                .ToListAsync(ct);
+            committedBiostatLogs.Should().HaveCount(2);
+            committedBiostatLogs[0].Action.Should().Be("EXPORT_STUDY_SNAPSHOT");
+            committedBiostatLogs[0].UserId.Should().Be(BlindedStat);
+            committedBiostatLogs[0].Format.Should().Be("csv");
+            committedBiostatLogs[0].LockFilter.Should().Be("all");
+            committedBiostatLogs[0].IsUnblinded.Should().BeFalse();
+            committedBiostatLogs[0].Sha256Hash.Should().HaveLength(64);
+
+            committedBiostatLogs[1].Action.Should().Be("EXPORT_ENROLLMENT_CASEBOOK");
+            committedBiostatLogs[1].UserId.Should().Be(UnblindedPharm);
+            committedBiostatLogs[1].EnrollmentId.Should().Be(world.EnrollmentA);
+            committedBiostatLogs[1].Format.Should().Be("json");
+            committedBiostatLogs[1].IsUnblinded.Should().BeTrue();
+            committedBiostatLogs[1].Sha256Hash.Should().HaveLength(64);
+
+            // InsertOnlySql triggers forbid UPDATE and DELETE on kernel.biostat_export_audit_logs even for admin connections!
+            var targetId = committedBiostatLogs[0].Id;
+            await FluentActions.Invoking(() => db.Database.ExecuteSqlInterpolatedAsync(
+                    $"UPDATE kernel.biostat_export_audit_logs SET outcome = 'Tampered' WHERE id = {targetId}", ct))
+                .Should().ThrowAsync<Npgsql.PostgresException>();
+            await FluentActions.Invoking(() => db.Database.ExecuteSqlInterpolatedAsync(
+                    $"DELETE FROM kernel.biostat_export_audit_logs WHERE id = {targetId}", ct))
+                .Should().ThrowAsync<Npgsql.PostgresException>();
         }
 
         // 3. Provision an Expired commercial Subscription: non-baseline writes fail with 403 K.Subscription.Expired,
@@ -746,6 +812,50 @@ public sealed class KernelUnifiedVisibilityAndExportGatePostgresTests(ExecutionF
         {
             payload.Should().NotContain(secret);
         }
+    }
+
+    private static async Task AssertValidCasebookOdmXmlAsync(string odmXml, bool expectSignature, CancellationToken ct)
+    {
+        XNamespace odmNs = OdmDesignImporter.OdmNamespace;
+        var doc = XDocument.Parse(odmXml);
+        doc.Root!.Name.Should().Be(odmNs + "ODM");
+        var study = doc.Root.Element(odmNs + "Study");
+        study.Should().NotBeNull();
+        study!.Element(odmNs + "GlobalVariables").Should().NotBeNull();
+        var mdv = study.Element(odmNs + "MetaDataVersion");
+        mdv.Should().NotBeNull();
+        mdv!.Elements(odmNs + "StudyEventDef").Should().NotBeEmpty();
+        mdv.Elements(odmNs + "FormDef").Should().ContainSingle(e => e.Attribute("OID")!.Value == $"FORM.{SpecId}");
+        mdv.Elements(odmNs + "ItemGroupDef").Should().ContainSingle(e => e.Attribute("OID")!.Value == $"IG.{SpecId}");
+        mdv.Elements(odmNs + "ItemDef").Should().NotBeEmpty();
+
+        var clinical = doc.Root.Element(odmNs + "ClinicalData");
+        clinical.Should().NotBeNull();
+        var subject = clinical!.Element(odmNs + "SubjectData");
+        subject.Should().NotBeNull();
+        var studyEvent = subject!.Elements(odmNs + "StudyEventData").FirstOrDefault();
+        studyEvent.Should().NotBeNull();
+        var formData = studyEvent!.Elements(odmNs + "FormData").FirstOrDefault();
+        formData.Should().NotBeNull();
+        var itemGroup = formData!.Elements(odmNs + "ItemGroupData").FirstOrDefault();
+        itemGroup.Should().NotBeNull();
+        itemGroup!.Elements(odmNs + "ItemData").Should().NotBeEmpty();
+
+        if (expectSignature)
+        {
+            var admin = doc.Root.Element(odmNs + "AdminData");
+            admin.Should().NotBeNull();
+            admin!.Elements(odmNs + "SignatureDef").Should().NotBeEmpty();
+            formData.Elements(odmNs + "Signature").Should().NotBeEmpty();
+        }
+
+        var importResult = await OdmDesignImporter.ImportAsync(
+            odmXml,
+            (_, _) => ValueTask.FromResult(new ProtocolConceptResolution(new ConceptRef(ConceptId.New(), 1), UsedFallbackSponsorConcept: false)),
+            cancellationToken: ct);
+        importResult.Problems.Should().BeEmpty();
+        importResult.IsSuccess.Should().BeTrue();
+        importResult.CollectionSpecs.Should().ContainSingle(cs => cs.Name.Contains("Vital signs", StringComparison.OrdinalIgnoreCase));
     }
 
     private async Task<SeededWorld> SeedWorldAsync(CancellationToken ct, bool declareStandards = true)
@@ -1002,6 +1112,7 @@ public sealed class KernelUnifiedVisibilityAndExportGatePostgresTests(ExecutionF
     {
         _host ??= new WebApplicationFactory<Cadence.Kernel.Host.Program>().WithWebHostBuilder(builder => builder
             .UseTestGatewaySecret()
+            .UseTestBiometricLivenessKey()
             .UseSetting("ConnectionStrings:cadence", fixture.ConnectionString)
             .ConfigureTestServices(services =>
             {

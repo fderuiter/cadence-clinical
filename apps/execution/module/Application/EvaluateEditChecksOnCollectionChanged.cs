@@ -45,6 +45,8 @@ internal sealed class EvaluateEditChecksOnCollectionChanged(
 
     private static readonly KernelEventAttribute SavedEvent = typeof(CollectedValuesSaved).GetCustomAttribute<KernelEventAttribute>()!;
     private static readonly KernelEventAttribute CorrectedEvent = typeof(ObservationCorrected).GetCustomAttribute<KernelEventAttribute>()!;
+    private static readonly KernelEventAttribute AcceptedEvent = typeof(FindingAccepted).GetCustomAttribute<KernelEventAttribute>()!;
+    private static readonly KernelEventAttribute ExplainedEvent = typeof(FindingExplained).GetCustomAttribute<KernelEventAttribute>()!;
     // jsonb reorders object members, so a polymorphic ObservationValue's "type" member may follow "code" or "text".
     private static readonly JsonSerializerOptions EventJsonOptions = new(JsonSerializerDefaults.Web) { AllowOutOfOrderMetadataProperties = true };
     private static readonly string SelfActorId = Actor.ServiceAccount(Name).Id;
@@ -52,7 +54,9 @@ internal sealed class EvaluateEditChecksOnCollectionChanged(
     public bool Handles(EventEnvelope envelope) =>
         envelope is not null
         && ((string.Equals(envelope.Type, SavedEvent.Type, StringComparison.Ordinal) && envelope.SchemaVersion == SavedEvent.SchemaVersion)
-            || (string.Equals(envelope.Type, CorrectedEvent.Type, StringComparison.Ordinal) && envelope.SchemaVersion == CorrectedEvent.SchemaVersion));
+            || (string.Equals(envelope.Type, CorrectedEvent.Type, StringComparison.Ordinal) && envelope.SchemaVersion == CorrectedEvent.SchemaVersion)
+            || (string.Equals(envelope.Type, AcceptedEvent.Type, StringComparison.Ordinal) && envelope.SchemaVersion == AcceptedEvent.SchemaVersion)
+            || (string.Equals(envelope.Type, ExplainedEvent.Type, StringComparison.Ordinal) && envelope.SchemaVersion == ExplainedEvent.SchemaVersion));
 
     public async Task ConsumeAsync(KernelEventDelivery delivery, CancellationToken cancellationToken)
     {
@@ -66,6 +70,34 @@ internal sealed class EvaluateEditChecksOnCollectionChanged(
         }
 
         var metadata = new CommandMetadata(delivery.Envelope.CorrelationId, delivery.Envelope.EventId);
+        if (string.Equals(delivery.Envelope.Type, AcceptedEvent.Type, StringComparison.Ordinal))
+        {
+            var accepted = delivery.Envelope.Payload.Deserialize<FindingAccepted>(EventJsonOptions)
+                ?? throw new JsonException($"The payload of event {delivery.Envelope.EventId} is null.");
+            await CloseConcludedFindingQueriesAsync(
+                accepted.TenantId,
+                accepted.FindingId,
+                accepted.DetectedBy,
+                FindingStatus.Accepted,
+                metadata,
+                cancellationToken).ConfigureAwait(false);
+            return;
+        }
+
+        if (string.Equals(delivery.Envelope.Type, ExplainedEvent.Type, StringComparison.Ordinal))
+        {
+            var explained = delivery.Envelope.Payload.Deserialize<FindingExplained>(EventJsonOptions)
+                ?? throw new JsonException($"The payload of event {delivery.Envelope.EventId} is null.");
+            await CloseConcludedFindingQueriesAsync(
+                explained.TenantId,
+                explained.FindingId,
+                explained.DetectedBy,
+                FindingStatus.Explained,
+                metadata,
+                cancellationToken).ConfigureAwait(false);
+            return;
+        }
+
         TenantId tenant;
         StudyId studyId;
         if (string.Equals(delivery.Envelope.Type, SavedEvent.Type, StringComparison.Ordinal))
@@ -86,18 +118,12 @@ internal sealed class EvaluateEditChecksOnCollectionChanged(
             await AutoAnswerOpenManualQueriesAsync(tenant, corrected, delivery.Envelope.Actor, metadata, cancellationToken).ConfigureAwait(false);
 
             var obs = await observations.FindAsync(tenant, corrected.ObservationId, cancellationToken).ConfigureAwait(false);
-            if (obs?.CollectionInstanceId is not { } formId)
+            if (obs?.CollectionInstanceId is null || obs.StudyId.IsEmpty)
             {
                 return;
             }
 
-            var formRecord = await forms.FindAsync(tenant, formId, cancellationToken).ConfigureAwait(false);
-            if (formRecord is null)
-            {
-                return;
-            }
-
-            studyId = formRecord.StudyId;
+            studyId = obs.StudyId;
         }
 
         var evaluatedAt = delivery.Envelope.Recorded;
@@ -141,6 +167,86 @@ internal sealed class EvaluateEditChecksOnCollectionChanged(
         }
 
         await ReconcileAutomatedQueriesAsync(tenant, findings, metadata, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task CloseConcludedFindingQueriesAsync(
+        TenantId tenant,
+        ValidationFindingId findingId,
+        ValidationRunId detectedBy,
+        FindingStatus decisionStatus,
+        CommandMetadata metadata,
+        CancellationToken cancellationToken)
+    {
+        var finding = await findingsReader.FindAsync(tenant, findingId, cancellationToken).ConfigureAwait(false);
+        if (finding is null || finding.Status is not (FindingStatus.Accepted or FindingStatus.Explained))
+        {
+            return;
+        }
+
+        CollectionInstanceId formId;
+        if (finding.Target.Kind == FindingTargetKind.DatasetRecord
+            && Guid.TryParse(finding.Target.Key, out var parsedFormGuid)
+            && parsedFormGuid != Guid.Empty)
+        {
+            formId = CollectionInstanceId.FromGuid(parsedFormGuid);
+        }
+        else if (finding.Target.Kind == FindingTargetKind.Observation
+            && finding.Target.Node is { } obsNode)
+        {
+            var obs = await observations.FindAsync(tenant, ObservationId.FromGuid(obsNode.Id), cancellationToken).ConfigureAwait(false);
+            if (obs?.CollectionInstanceId is not { } parentFormId)
+            {
+                return;
+            }
+
+            formId = parentFormId;
+        }
+        else
+        {
+            return;
+        }
+
+        var scope = await forms.FindScopeStateAsync(tenant, formId, cancellationToken).ConfigureAwait(false);
+        if (scope is null)
+        {
+            return;
+        }
+
+        var enrollmentForms = await forms.ListRuleInputsForEnrollmentAsync(tenant, scope.EnrollmentId, cancellationToken).ConfigureAwait(false);
+        var targetInput = enrollmentForms.FirstOrDefault(f => f.CollectionInstanceId == formId)
+            ?? new CollectionRuleInput(
+                scope.CollectionInstanceId,
+                scope.EnrollmentId,
+                scope.StudyId,
+                scope.ProtocolVersionId,
+                scope.CollectionSpecId,
+                DateTimeOffset.MinValue,
+                [],
+                [.. scope.Values.Select(v => new CollectionRuleValue(v.ItemId, v.ObservationId, v.Value))]);
+        if (!AreObservedValuesUnchanged(finding, targetInput, enrollmentForms))
+        {
+            return;
+        }
+
+        List<FormQuery> formQueries;
+        await using (var db = contexts.Create(tenant))
+        {
+            formQueries = await db.FormQueries.AsNoTracking()
+                .Where(q => q.FormId == formId)
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        var currentRevisions = scope.Values.ToDictionary(v => v.ObservationId, v => v.Revision);
+        await CloseConcludedAutoQueriesOnUnchangedValuesAsync(
+            tenant,
+            finding,
+            currentRevisions,
+            formQueries,
+            detectedBy,
+            decisionStatus,
+            metadata,
+            cancellationToken).ConfigureAwait(false);
     }
 
     private async Task AutoAnswerOpenManualQueriesAsync(
@@ -229,6 +335,7 @@ internal sealed class EvaluateEditChecksOnCollectionChanged(
         }
 
         var formRecordCache = new Dictionary<CollectionInstanceId, CollectionInstanceRecord?>();
+        var ruleInputsByEnrollment = new Dictionary<EnrollmentId, IReadOnlyList<CollectionRuleInput>>();
         foreach (var finding in candidateFindings)
         {
             if (!Guid.TryParse(finding.Target.Key, out var formGuid) || formGuid == Guid.Empty)
@@ -248,6 +355,54 @@ internal sealed class EvaluateEditChecksOnCollectionChanged(
             {
                 await CloseResolvedAutoQueriesAsync(tenant, finding, formQueries, metadata, cancellationToken).ConfigureAwait(false);
             }
+            else if (finding.Status is FindingStatus.Accepted or FindingStatus.Explained)
+            {
+                if (!formRecordCache.TryGetValue(formId, out var record))
+                {
+                    record = await forms.FindAsync(tenant, formId, cancellationToken).ConfigureAwait(false);
+                    formRecordCache[formId] = record;
+                }
+
+                if (record is not null)
+                {
+                    if (finding.Decision?.DecidedOnRun == finding.LastDetectedRun)
+                    {
+                        if (!ruleInputsByEnrollment.TryGetValue(record.EnrollmentId, out var enrollmentForms))
+                        {
+                            enrollmentForms = await forms.ListRuleInputsForEnrollmentAsync(tenant, record.EnrollmentId, cancellationToken).ConfigureAwait(false);
+                            ruleInputsByEnrollment[record.EnrollmentId] = enrollmentForms;
+                        }
+
+                        if (AreObservedValuesUnchanged(finding, CollectionRuleInput.From(record), enrollmentForms))
+                        {
+                            await CloseConcludedAutoQueriesOnUnchangedValuesAsync(
+                                tenant,
+                                finding,
+                                record.Values.ToDictionary(v => v.ObservationId, v => v.Revision),
+                                formQueries,
+                                finding.Decision?.DecidedOnRun ?? finding.LastDetectedRun,
+                                finding.Status,
+                                metadata,
+                                cancellationToken).ConfigureAwait(false);
+                        }
+                    }
+                    else
+                    {
+                        var firstEpisodeId = DeriveAutoQueryId(tenant, finding.Id, 0);
+                        if (formQueries.Any(q => q.Id == firstEpisodeId))
+                        {
+                            await EnsureOpenAutoQueryAsync(
+                                tenant,
+                                finding,
+                                formId,
+                                formQueries,
+                                formRecordCache,
+                                metadata,
+                                cancellationToken).ConfigureAwait(false);
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -260,24 +415,6 @@ internal sealed class EvaluateEditChecksOnCollectionChanged(
         CommandMetadata metadata,
         CancellationToken cancellationToken)
     {
-        var episode = 0;
-        while (true)
-        {
-            var candidateId = DeriveAutoQueryId(tenant, finding.Id, episode);
-            var existing = formQueries.FirstOrDefault(q => q.Id == candidateId);
-            if (existing is null)
-            {
-                break;
-            }
-
-            if (existing.Status is FormQueryStatus.Open or FormQueryStatus.Answered)
-            {
-                return;
-            }
-
-            episode++;
-        }
-
         if (!formRecordCache.TryGetValue(formId, out var record))
         {
             record = await forms.FindAsync(tenant, formId, cancellationToken).ConfigureAwait(false);
@@ -346,6 +483,33 @@ internal sealed class EvaluateEditChecksOnCollectionChanged(
             }
         }
 
+        var episode = 0;
+        while (true)
+        {
+            var candidateId = DeriveAutoQueryId(tenant, finding.Id, episode);
+            var existing = formQueries.FirstOrDefault(q => q.Id == candidateId);
+            if (existing is null)
+            {
+                break;
+            }
+
+            if (existing.Status is FormQueryStatus.Open or FormQueryStatus.Answered)
+            {
+                // Active automated query already exists for this finding episode.
+                return;
+            }
+
+            if (existing.Status is FormQueryStatus.Closed or FormQueryStatus.Cancelled
+                && existing.ObservationId == targetObservation
+                && existing.Revision >= targetRevision)
+            {
+                // Monitor already closed/cancelled the automated query on this unchanged observation revision.
+                return;
+            }
+
+            episode++;
+        }
+
         if (FormQueryScopes.IsLocked(record, targetObservation))
         {
             return;
@@ -406,6 +570,143 @@ internal sealed class EvaluateEditChecksOnCollectionChanged(
             throw new InvalidOperationException(
                 $"Raising automated query {queryId.Value:D} on form {formId} failed: {error.Code} ({error.Message}).");
         }
+    }
+
+    private async Task CloseConcludedAutoQueriesOnUnchangedValuesAsync(
+        TenantId tenant,
+        ValidationFindingView finding,
+        IReadOnlyDictionary<ObservationId, int> currentRevisions,
+        List<FormQuery> formQueries,
+        ValidationRunId decidedOnRun,
+        FindingStatus decisionStatus,
+        CommandMetadata metadata,
+        CancellationToken cancellationToken)
+    {
+        if (formQueries.Count == 0)
+        {
+            return;
+        }
+
+        var autoIds = new HashSet<FormQueryId>();
+        for (var episode = 0; episode <= formQueries.Count; episode++)
+        {
+            autoIds.Add(DeriveAutoQueryId(tenant, finding.Id, episode));
+        }
+
+        var activeAutoQueries = formQueries
+            .Where(q => autoIds.Contains(q.Id)
+                && q.Origin == FormQueryOrigin.System
+                && q.Status is FormQueryStatus.Open or FormQueryStatus.Answered)
+            .Where(q => finding.Observed.Count > 0
+                ? currentRevisions.ContainsKey(q.ObservationId) && (finding.Decision?.DecidedOnRun == finding.LastDetectedRun || currentRevisions[q.ObservationId] == q.Revision)
+                : currentRevisions.TryGetValue(q.ObservationId, out var rev) && rev == q.Revision)
+            .ToList();
+
+        var verb = decisionStatus == FindingStatus.Accepted ? "accepted" : "explained";
+        foreach (var query in activeAutoQueries)
+        {
+            var closeReason = TrimText(
+                $"Automated closure: validation finding {finding.PackKey}/{finding.RuleId} was {verb} on unchanged values.",
+                AssertionText.MaxLength);
+            var closeResult = await sender.SendAsync(
+                new CloseFormQuery(
+                    tenant,
+                    query.Id,
+                    query.EnrollmentId,
+                    $"auto-query:close:{query.Id.Value:D}:{verb}:{decidedOnRun.Value:D}",
+                    closeReason),
+                metadata,
+                cancellationToken).ConfigureAwait(false);
+
+            if (closeResult.Error is { } error
+                && error.Code != KernelErrors.AlreadyExists.Code
+                && error.Code != FormQueryErrors.InvalidTransition.Code
+                && error.Code != AssertionErrors.Locked.Code)
+            {
+                throw new InvalidOperationException(
+                    $"Closing automated query {query.Id.Value:D} after finding {verb} failed: {error.Code} ({error.Message}).");
+            }
+        }
+    }
+
+    private static bool AreObservedValuesUnchanged(
+        ValidationFindingView finding,
+        CollectionRuleInput target,
+        IReadOnlyList<CollectionRuleInput> enrollmentForms)
+    {
+        if (finding.Observed.Count == 0)
+        {
+            return true;
+        }
+
+        var siblings = enrollmentForms.Count > 0 ? enrollmentForms : [target];
+        var currentValues = BuildComparableValues(target, siblings);
+        foreach (var expected in finding.Observed)
+        {
+            currentValues.TryGetValue(expected.Variable, out var actual);
+            if (!string.Equals(expected.Value, actual, StringComparison.Ordinal))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static Dictionary<string, string?> BuildComparableValues(
+        CollectionRuleInput target,
+        IReadOnlyList<CollectionRuleInput> enrollmentForms)
+    {
+        var values = new Dictionary<string, string?>(StringComparer.Ordinal);
+        var recordedByItem = target.Values.ToDictionary(v => v.ItemId, v => (ObservationValue?)v.Value, StringComparer.Ordinal);
+        foreach (var itemId in target.Items.Select(i => i.Id).Concat(recordedByItem.Keys).Distinct(StringComparer.Ordinal))
+        {
+            recordedByItem.TryGetValue(itemId, out var raw);
+            var formatted = FormatObservedValue(raw);
+            values[itemId] = formatted;
+            values[$"{target.CollectionSpecId}.{itemId}"] = formatted;
+        }
+
+        var latestBySpec = enrollmentForms
+            .Where(f => f.CollectionInstanceId != target.CollectionInstanceId
+                && !string.Equals(f.CollectionSpecId, target.CollectionSpecId, StringComparison.Ordinal))
+            .GroupBy(f => f.CollectionSpecId, StringComparer.Ordinal)
+            .Select(g => g.OrderBy(f => f.OpenedAt).ThenBy(f => f.CollectionInstanceId).Last());
+        foreach (var sibling in latestBySpec)
+        {
+            var siblingRecorded = sibling.Values.ToDictionary(v => v.ItemId, v => (ObservationValue?)v.Value, StringComparer.Ordinal);
+            foreach (var siblingItemId in sibling.Items.Select(i => i.Id).Concat(siblingRecorded.Keys).Distinct(StringComparer.Ordinal))
+            {
+                siblingRecorded.TryGetValue(siblingItemId, out var raw);
+                var formatted = FormatObservedValue(raw);
+                values[$"{sibling.CollectionSpecId}.{siblingItemId}"] = formatted;
+                values.TryAdd(siblingItemId, formatted);
+            }
+        }
+
+        return values;
+    }
+
+    private static string? FormatObservedValue(ObservationValue? value)
+    {
+        var raw = value switch
+        {
+            null or MissingValue => null,
+            QuantityValue q => q.Value.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            BooleanValue b => b.Value ? "true" : "false",
+            CodedValue c => c.Code,
+            TextValue t => t.Value,
+            DateTimeValue d => d.Value,
+            _ => value.ToDisplayString(),
+        };
+        if (raw is null)
+        {
+            return null;
+        }
+
+        return raw.Length <= ValidationDetection.MaxTextLength
+            ? raw
+            : string.Concat(raw.AsSpan(0, ValidationDetection.MaxTextLength - 1), "…");
     }
 
     private async Task CloseResolvedAutoQueriesAsync(

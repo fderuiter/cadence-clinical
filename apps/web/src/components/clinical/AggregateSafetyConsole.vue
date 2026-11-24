@@ -237,28 +237,28 @@
         <div class="metrics-grid">
           <div class="metric-card">
             <div class="metric-label">Cumulative Enrolled Subjects</div>
-            <div class="metric-value">
+            <div class="metric-value tabular-nums">
               {{ totalCumulativeSubjects }}
             </div>
             <div class="metric-sub">Across all active trial cohorts</div>
           </div>
           <div class="metric-card">
             <div class="metric-label">Interval Exposed Subjects</div>
-            <div class="metric-value">
+            <div class="metric-value tabular-nums">
               {{ totalIntervalSubjects }}
             </div>
             <div class="metric-sub">{{ periodStart }} to {{ periodEnd }}</div>
           </div>
           <div class="metric-card highlight">
             <div class="metric-label">Cumulative Patient-Years (PYE)</div>
-            <div class="metric-value">
+            <div class="metric-value tabular-nums">
               {{ totalExposurePYE }}
             </div>
             <div class="metric-sub">Sum of all dosing duration / 365.25</div>
           </div>
           <div class="metric-card highlight">
             <div class="metric-label">Interval Patient-Years (PYE)</div>
-            <div class="metric-value">
+            <div class="metric-value tabular-nums">
               {{ totalIntervalPYE }}
             </div>
             <div class="metric-sub">Dosing duration within interval</div>
@@ -748,21 +748,21 @@
         <div class="metrics-grid">
           <div class="metric-card">
             <div class="metric-label">Active Expedited Cases</div>
-            <div class="metric-value">
+            <div class="metric-value tabular-nums">
               {{ activeExpeditedCases.length }}
             </div>
             <div class="metric-sub">ICSR regulatory countdowns active</div>
           </div>
           <div class="metric-card highlight">
             <div class="metric-label">7-Day Fatal/Life-Threatening</div>
-            <div class="metric-value">
+            <div class="metric-value tabular-nums">
               {{ fatalCasesCount }}
             </div>
             <div class="metric-sub">FDA / EMA / PMDA / MHRA / HC</div>
           </div>
           <div class="metric-card">
             <div class="metric-label">15-Day Serious Unexpected</div>
-            <div class="metric-value">
+            <div class="metric-value tabular-nums">
               {{ seriousCasesCount }}
             </div>
             <div class="metric-sub">SUSAR expedited notifications</div>
@@ -773,7 +773,7 @@
           >
             <div class="metric-label">Threshold Alerts (≥75%)</div>
             <div
-              class="metric-value"
+              class="metric-value tabular-nums"
               :class="{ 'text-critical': criticalAlertsCount > 0 }"
             >
               {{ criticalAlertsCount }}
@@ -1803,6 +1803,34 @@ async function executeQppvSignoff() {
     toasts.apiError("QPPV sign-off failed", err);
   } finally {
     isSigning.value = false;
+  }
+}
+
+async function exportReport(format: "xml" | "html" | "json") {
+  const reportId = activeReportId.value;
+  if (!reportId) return;
+
+  try {
+    const endpoint =
+      format === "xml"
+        ? `/api/v1/safety/periodic-reports/${encodeURIComponent(reportId)}/xml`
+        : `/api/v1/safety/periodic-reports/${encodeURIComponent(reportId)}/export?format=${encodeURIComponent(format)}`;
+    const res = await fetch(endpoint, { method: "GET" });
+    await ensureOk(res);
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${reportType.value}_${reportId}.${format}`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  } catch (err) {
+    toasts.apiError(
+      `Periodic report ${format.toUpperCase()} export failed`,
+      err
+    );
   }
 }
 

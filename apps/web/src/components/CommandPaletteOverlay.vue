@@ -10,7 +10,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, watch } from "vue";
+import { computed, nextTick, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import CanvasPalette from "./canvas/CanvasPalette.vue";
 import {
@@ -85,7 +85,12 @@ function handleAction(action: PaletteWorkspaceAction) {
   }
 }
 
-function handleGo(target: PaletteTarget) {
+async function handleGo(target: PaletteTarget) {
+  const priorStudyCode = activeStudyCode.value;
+  const priorScope = {
+    ...workspaceScope.value,
+    studyCode: priorStudyCode,
+  };
   if (target.studyCode) {
     setActiveStudyCode(target.studyCode);
   }
@@ -96,12 +101,30 @@ function handleGo(target: PaletteTarget) {
     canvasStore.rememberParticipants([target.participant]);
   }
   emit("close");
-  executePaletteTarget(target, {
+  await nextTick();
+  if (
+    typeof document !== "undefined" &&
+    (!document.activeElement || document.activeElement === document.body)
+  ) {
+    const fallback =
+      document.getElementById("btn-open-palette") ||
+      document.getElementById("btn-mobile-menu-toggle") ||
+      document.getElementById("main-content") ||
+      document.querySelector<HTMLElement>("main, [role='main']");
+    fallback?.focus?.();
+  }
+  await executePaletteTarget(target, {
     router,
     currentRouteName: route?.name,
     currentQuery: route?.query,
-    activeStudyCode: activeStudyCode.value,
+    activeStudyCode: priorStudyCode,
+    workspaceScope: priorScope,
     onAction: handleAction,
+    onFocusInspector: (nodeRef) =>
+      canvasStore.requestInspectorFocus({
+        nodeRef,
+        scrollIntoView: true,
+      }),
   });
 }
 </script>

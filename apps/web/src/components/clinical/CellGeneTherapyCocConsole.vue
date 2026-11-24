@@ -89,7 +89,9 @@
       <section class="overview-grid">
         <div class="card metric-card">
           <span class="metric-label">Donation ID (ISBT 128 DIN)</span>
-          <span class="metric-value code-font">{{ cocData.din }}</span>
+          <span class="metric-value code-font tabular-nums">{{
+            cocData.din
+          }}</span>
           <span class="metric-sub"
             >{{ formatDatabaseKey("collection_site_id") }}:
             {{ formatFacilityCode(cocData.collection_site_id) }}</span
@@ -98,13 +100,15 @@
 
         <div class="card metric-card">
           <span class="metric-label">Subject Identity Binding</span>
-          <span class="metric-value">{{ cocData.subject_id }}</span>
+          <span class="metric-value tabular-nums">{{
+            cocData.subject_id
+          }}</span>
           <span class="metric-sub">Study: {{ cocData.study_id }}</span>
         </div>
 
         <div class="card metric-card">
           <span class="metric-label">Manufacturing Batch</span>
-          <span class="metric-value highlight">{{
+          <span class="metric-value highlight tabular-nums">{{
             cocData.batch_id || "Pending Synthesis"
           }}</span>
           <span class="metric-sub"
@@ -121,7 +125,7 @@
           :class="{ 'card-excursion': cocData.cryo_temp_excursion_count > 0 }"
         >
           <span class="metric-label">Cryogenic Integrity</span>
-          <span class="metric-value">
+          <span class="metric-value tabular-nums">
             {{
               cocData.lowest_temp_celsius != null
                 ? `${cocData.lowest_temp_celsius.toFixed(1)}°C`
@@ -861,7 +865,7 @@
           <div class="drawer-header">
             <div class="drawer-title-group">
               <h4 class="drawer-title">Excursion Preview Drawer</h4>
-              <span class="badge badge-stage">
+              <span class="badge badge-stage tabular-nums">
                 {{
                   parsedTelemetry.isDownsampled
                     ? `Downsampled Keypoints (${parsedTelemetry.keypoints.length} / ${parsedTelemetry.totalSamples})`
@@ -870,7 +874,7 @@
               </span>
             </div>
             <span
-              class="badge"
+              class="badge tabular-nums"
               :class="
                 parsedTelemetry.excursionCount > 0
                   ? 'badge-quarantine'
@@ -890,7 +894,7 @@
             <div class="drawer-stat">
               <span class="stat-label">Min Temperature</span>
               <span
-                class="stat-value code-font"
+                class="stat-value code-font tabular-nums"
                 :class="
                   parsedTelemetry.minTemperature < -196.0
                     ? 'text-danger'
@@ -903,7 +907,7 @@
             <div class="drawer-stat">
               <span class="stat-label">Max Temperature</span>
               <span
-                class="stat-value code-font"
+                class="stat-value code-font tabular-nums"
                 :class="
                   parsedTelemetry.maxTemperature > -70.0
                     ? 'text-danger'
@@ -915,14 +919,14 @@
             </div>
             <div class="drawer-stat">
               <span class="stat-label">Total Sample Count</span>
-              <span class="stat-value code-font">{{
+              <span class="stat-value code-font tabular-nums">{{
                 parsedTelemetry.totalSamples.toLocaleString()
               }}</span>
             </div>
             <div class="drawer-stat">
               <span class="stat-label">Excursion Reading Points</span>
               <span
-                class="stat-value code-font"
+                class="stat-value code-font tabular-nums"
                 :class="
                   parsedTelemetry.excursionCount > 0
                     ? 'text-danger font-bold'

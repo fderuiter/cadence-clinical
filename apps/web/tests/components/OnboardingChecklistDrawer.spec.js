@@ -1,5 +1,6 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
-import { mount, flushPromises } from "@vue/test-utils";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { nextTick } from "vue";
+import { mount, enableAutoUnmount, flushPromises } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { createRouter, createWebHistory } from "vue-router";
 import AppShell from "../../src/components/AppShell.vue";
@@ -7,6 +8,8 @@ import OnboardingChecklistDrawer from "../../src/components/OnboardingChecklistD
 import {
   useOnboardingStore,
   DEFAULT_SETUP_TASKS,
+  resolveAuthorizedTaskRoute,
+  isTourRouteAuthorized,
 } from "../../src/stores/onboarding";
 import { useAuthStore } from "../../src/stores/auth";
 import {
@@ -113,10 +116,13 @@ router.beforeEach((to) => {
 });
 
 describe("OnboardingChecklistDrawer.vue & AppShell Integration", () => {
+  enableAutoUnmount(afterEach);
+  let pinia;
+
   beforeEach(async () => {
     vi.restoreAllMocks();
     window.localStorage.clear();
-    const pinia = createPinia();
+    pinia = createPinia();
     setActivePinia(pinia);
     await router.push("/overview");
     await router.isReady();
@@ -313,11 +319,71 @@ describe("OnboardingChecklistDrawer.vue & AppShell Integration", () => {
 
     // Reopen and test Escape key
     onboardingStore.openDrawer();
+    await nextTick();
     expect(onboardingStore.isDrawerOpen).toBe(true);
 
     const keydownEvent = new KeyboardEvent("keydown", { key: "Escape" });
     window.dispatchEvent(keydownEvent);
+    await nextTick();
     expect(onboardingStore.isDrawerOpen).toBe(false);
+  });
+
+  it("exposes aria-expanded/aria-controls on #btn-onboarding-checklist-trigger, blocks Ctrl+K while drawer is open, and closes <nav id='mobile-nav-menu'> on Escape restoring focus", async () => {
+    await router.push("/overview");
+    await router.isReady();
+
+    const authStore = useAuthStore();
+    authStore.isAuthenticated = true;
+    authStore.rawRoles = ["Sponsor Admin"];
+
+    const onboardingStore = useOnboardingStore();
+    const wrapper = mount(AppShell, {
+      attachTo: document.body,
+      global: { plugins: [pinia, router] },
+    });
+
+    const checklistBtn = wrapper.find("#btn-onboarding-checklist-trigger");
+    expect(checklistBtn.attributes("aria-expanded")).toBe("false");
+    expect(checklistBtn.attributes("aria-controls")).toBe(
+      "onboarding-checklist-drawer"
+    );
+
+    await checklistBtn.trigger("click");
+    await nextTick();
+    expect(checklistBtn.attributes("aria-expanded")).toBe("true");
+
+    // Pressing Ctrl+K while OnboardingChecklistDrawer is open must NOT open #canvas-palette
+    window.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "k", ctrlKey: true, bubbles: true })
+    );
+    await nextTick();
+    expect(document.getElementById("canvas-palette")).toBeNull();
+
+    // Close checklist drawer with a single Escape press
+    window.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true })
+    );
+    await nextTick();
+    expect(onboardingStore.isDrawerOpen).toBe(false);
+    expect(checklistBtn.attributes("aria-expanded")).toBe("false");
+
+    // Mobile menu renders as <nav id="mobile-nav-menu"> and closes on Escape restoring focus to #btn-mobile-menu-toggle
+    const mobileToggle = wrapper.find("#btn-mobile-menu-toggle");
+    const mobileMenu = wrapper.find("#mobile-nav-menu");
+    expect(mobileMenu.element.tagName).toBe("NAV");
+    expect(mobileMenu.attributes("hidden")).toBeDefined();
+
+    mobileToggle.element.focus();
+    await mobileToggle.trigger("click");
+    await nextTick();
+    expect(mobileMenu.attributes("hidden")).toBeUndefined();
+
+    window.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true })
+    );
+    await nextTick();
+    expect(mobileMenu.attributes("hidden")).toBeDefined();
+    expect(document.activeElement).toBe(mobileToggle.element);
   });
 
   it("hides #btn-onboarding-checklist-trigger in AppShell when zero tasks are available", () => {
@@ -400,5 +466,59 @@ describe("OnboardingChecklistDrawer.vue & AppShell Integration", () => {
     await navBtns[readinessIndex].trigger("click");
     expect(pushSpy).toHaveBeenCalledWith("/ssu");
     pushSpy.mockRestore();
+  });
+
+  it("unlocks authorized DEMO_MODULE_CATALOG task and guided-tour routes in demo builds while blocking unauthorized routes", async () => {
+    vi.stubEnv("VITE_DEMO_MODE", "true");
+    try {
+      const authStore = useAuthStore();
+      authStore.startDemoSession();
+      authStore.switchPersona("sponsor_designer");
+
+      expect(
+        resolveAuthorizedTaskRoute(
+          { id: "demo_mdr", routeName: "mdr", route: "/mdr" },
+          authStore.normalizedRoles
+        )
+      ).toBe("/mdr");
+      expect(isTourRouteAuthorized("mdr", authStore.normalizedRoles)).toBe(
+        true
+      );
+      expect(isTourRouteAuthorized("safety", authStore.normalizedRoles)).toBe(
+        false
+      );
+
+      const onboardingStore = useOnboardingStore();
+      onboardingStore.openDrawer();
+      const wrapper = mount(OnboardingChecklistDrawer, {
+        global: { plugins: [router] },
+      });
+      const pushSpy = vi.spyOn(router, "push");
+      wrapper.vm.$.setupState.navigateToTask({
+        id: "demo_mdr",
+        routeName: "mdr",
+        route: "/mdr",
+      });
+      expect(pushSpy).toHaveBeenCalledWith("/mdr");
+
+      pushSpy.mockClear();
+      authStore.switchPersona("auditor");
+      expect(
+        resolveAuthorizedTaskRoute(
+          { id: "demo_mdr", routeName: "mdr", route: "/mdr" },
+          authStore.normalizedRoles
+        )
+      ).toBeNull();
+      wrapper.vm.$.setupState.navigateToTask({
+        id: "demo_mdr",
+        routeName: "mdr",
+        route: "/mdr",
+      });
+      expect(pushSpy).not.toHaveBeenCalled();
+      pushSpy.mockRestore();
+      wrapper.unmount();
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 });

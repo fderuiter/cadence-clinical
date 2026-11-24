@@ -5,11 +5,11 @@
         v-if="field.type === 'radio' || field.type === 'choice_single'"
         :id="field.id"
         :label="field.label"
-        :options="field.options"
+        :options="field.options ?? []"
         :model-value="modelValue"
         :query="query"
         :grid-span="field.gridSpan || 12"
-        :error="error"
+        :error="error ?? undefined"
         :can-manage-queries="canManageQueries"
         :query-label="queryLabel"
         @update:model-value="$emit('update:modelValue', $event)"
@@ -49,7 +49,7 @@
         :model-value="modelValue"
         :query="query"
         :grid-span="field.gridSpan || 12"
-        :error="error"
+        :error="error ?? undefined"
         :attributes="customAttributes"
         :can-manage-queries="canManageQueries"
         :query-label="queryLabel"
@@ -65,7 +65,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted } from "vue";
+import { computed, ref, onMounted, onUnmounted, type CSSProperties } from "vue";
 import ClinicalInput from "./ClinicalInput.vue";
 import ClinicalRadioGroup from "./ClinicalRadioGroup.vue";
 import ClinicalLookupInput from "./ClinicalLookupInput.vue";
@@ -104,10 +104,33 @@ defineEmits<{
   (e: "reopen-query"): void;
 }>();
 
+const TABULAR_FIELD_TYPES = new Set([
+  "number",
+  "numeric",
+  "integer",
+  "float",
+  "decimal",
+  "date",
+  "datetime",
+  "datetime-local",
+  "time",
+  "month",
+  "week",
+  "tel",
+]);
+
 const customAttributes = computed(() => {
   const attrs: Record<string, string> = {};
   if (props.field.cdash) {
     attrs["data-cdash"] = props.field.cdash;
+  }
+  if (
+    TABULAR_FIELD_TYPES.has(String(props.field.type || "").toLowerCase()) ||
+    props.field.tabularNums === true ||
+    props.field["data-tabular-nums"] === true ||
+    props.field["data-tabular-nums"] === "true"
+  ) {
+    attrs["data-tabular-nums"] = "true";
   }
   return attrs;
 });
@@ -122,17 +145,13 @@ const shouldRender = computed(() => true);
 let io: IntersectionObserver | null = null;
 let ro: ResizeObserver | null = null;
 
-const wrapperStyle = computed(() => {
-  const styles = {
-    minHeight: "44px",
-    width: "100%",
-    boxSizing: "border-box",
-    contentVisibility: "auto",
-    containIntrinsicSize:
-      `auto ${measuredHeight.value ? measuredHeight.value + "px" : "44px"}` as any,
-  };
-  return styles;
-});
+const wrapperStyle = computed<CSSProperties>(() => ({
+  minHeight: "44px",
+  width: "100%",
+  boxSizing: "border-box",
+  contentVisibility: "auto",
+  containIntrinsicSize: `auto ${measuredHeight.value ? measuredHeight.value + "px" : "44px"}`,
+}));
 
 onMounted(() => {
   if (typeof IntersectionObserver !== "undefined") {

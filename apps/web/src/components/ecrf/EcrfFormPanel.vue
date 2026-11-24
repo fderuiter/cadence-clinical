@@ -11,6 +11,7 @@
       :collection-spec-id="collectionSpecId"
       :planned-activity-id="plannedActivityId"
       :enrollment-context="enrollmentContext"
+      :schedule-options="scheduleOptions"
       :schedule-loading="scheduleLoading"
       :schedule-error="scheduleError"
       :loading="formState.loading"
@@ -58,6 +59,7 @@
         :can-answer-queries="effectiveCanAnswerQueries"
         :assertions-locked="formState.assertionsLocked"
         :act-query="queries.act"
+        :reassign-query="queries.reassign"
         :act-many-queries="queries.actMany"
         :current-form-titles="currentFormTitles"
         :query-form-link="queryFormLink"
@@ -86,7 +88,10 @@
 </template>
 
 <script lang="ts">
-export type { CanvasFormEnrollmentContext } from "./EcrfFormOpener.vue";
+export type {
+  CanvasFormEnrollmentContext,
+  CanvasFormScheduleOptions,
+} from "./EcrfFormOpener.vue";
 </script>
 
 <script setup lang="ts">
@@ -116,6 +121,7 @@ import { useAuthStore } from "../../stores/auth.js";
 import EcrfAssertionsList from "./EcrfAssertionsList.vue";
 import EcrfFormOpener, {
   type CanvasFormEnrollmentContext,
+  type CanvasFormScheduleOptions,
 } from "./EcrfFormOpener.vue";
 import EcrfItemTable from "./EcrfItemTable.vue";
 import EcrfSdvToolbar from "./EcrfSdvToolbar.vue";
@@ -128,6 +134,7 @@ const props = withDefaults(
     collectionSpecId?: string | null;
     plannedActivityId?: string | null;
     enrollmentContext?: CanvasFormEnrollmentContext | null;
+    scheduleOptions?: CanvasFormScheduleOptions | null;
     scheduleLoading?: boolean;
     scheduleError?: string | null;
     observationLocation?: (
@@ -363,6 +370,10 @@ onUnmounted(() => {
   flex-direction: column;
   gap: 12px;
   margin-bottom: 20px;
+  min-width: 0;
+  max-width: 100%;
+}
+.ecrf-form-panel > * {
   min-width: 0;
   max-width: 100%;
 }

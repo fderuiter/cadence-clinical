@@ -18,12 +18,8 @@ CADENCE_CLI := pnpm cadence
 
 ##@ Setup
 
-setup: ## Install all Node deps, restore .NET solution, and configure pre-commit hooks
-	pnpm install --frozen-lockfile
-	dotnet restore Cadence.sln
-	git config core.hooksPath .githooks
-	chmod +x .githooks/pre-commit
-	@echo "$(CYAN)✔ Environment ready. Run 'make verify' to confirm everything passes.$(RESET)"
+setup: ## Provision local dev environment non-interactively (.NET, pnpm, .cadence/venv, linters, hooks)
+	bash scripts/setup_wizard.sh --dev --minimal
 
 wizard: ## Interactive full-stack onboarding wizard (.NET SDK + setup, for new/CI/Codespaces environments)
 	bash scripts/setup_wizard.sh
@@ -48,8 +44,8 @@ fix: ## Auto-fix C# & Prettier formatting, secrets baseline, doc/ADR indexes, an
 lint-paths: ## Run the path-pattern boundary linter
 	$(CADENCE_CLI) validate-path-patterns
 
-typecheck: ## Type-check the web workspace
-	pnpm --filter web typecheck
+typecheck: ## Type-check all frontend and TypeScript workspaces
+	pnpm -r typecheck
 
 lint: lint-paths typecheck ## Check lint (no auto-fix)
 	pnpm -r lint
@@ -63,11 +59,12 @@ action-pinning: ## Validate GitHub Actions workflow security and SHA pinning
 check: ## Run every quality gate (cadence check)
 	$(CADENCE_CLI) check
 
-verify: ## Run the quality gates and .NET test suites
+verify: ## Run the quality gates, frontend tests, and .NET test suites
 	$(CADENCE_CLI) check
+	pnpm test
 	$(CADENCE_CLI) test
 
-ci: ## Run the CI workflow's jobs locally (GitHub Actions is off until 2027; needs PostgreSQL)
+ci: ## Run the CI workflow's jobs locally (mirrors .github/workflows/ci.yml; needs PostgreSQL)
 	$(CADENCE_CLI) ci
 
 test: ## Run the .NET test suites

@@ -1,4 +1,4 @@
-# ADR-2655: Standardize Semantic Role Tokens, Dark-Theme Parity, and ESLint AST Color Gates
+# ADR-2671: Standardize Semantic Role Tokens, Dark-Theme Parity, and ESLint AST Color Gates
 
 - **Status:** Accepted
 - **Date:** 2026-11-23
@@ -14,7 +14,7 @@ Across `packages/ui`, `apps/web`, and `apps/subject-portal`, five token-governan
 
 1. **Interactive Brand Blue Conflated with Body Ink:** Root shell containers (`AppShell.vue`, `StudyCanvasView.vue`), clinical headings, table headers, form labels, and Subject Portal metrics bound `color` to `var(--primary)` / `var(--semantic-color-primary)` (`#026597` light / `#38bdf8` dark) instead of neutral primary ink (`--text-main` / `--semantic-color-text`), painting static clinical typography in interactive brand blue.
 2. **Missing Non-AI Workflow & Regulatory Badge Roles:** Non-AI candidate, in-progress, and regulatory badges lacked dedicated paired light/dark role tokens, encouraging ad-hoc tint overrides or tempting misuse of `--semantic-color-ai*` reserved by [ADR-2635](2026-10-20-ai-in-the-canvas-is-labelled-scoped-and-ends-in-a-proposal.md) (UX-8).
-3. **Dark & System-Auto Theme Parity and Contrast Gaps:** Thirty-two non-inverse semantic tokens in `:root` lacked `:root[data-theme="dark"]` and `@media (prefers-color-scheme: dark) { :root[data-theme="auto"] }` overrides, while hardcoded `white`, `black`, `rgb()`, `rgba()`, and `hsl()` literals and uncalibrated dark info/danger fills (`packages/ui/index.js` solid danger button, dark `--semantic-color-info-bg-soft` / `--semantic-color-info-light`, and light warning text over solid fills) fell below WCAG 2.2 AA `4.5:1` contrast.
+3. **Dark & System-Auto Theme Parity and Contrast Gaps:** Thirty-two non-inverse semantic tokens in `:root` lacked `:root[data-theme="dark"]` and `@media (prefers-color-scheme: dark) { :root[data-theme="auto"] }` overrides, while hardcoded `white`, `black`, `rgb()`, `rgba()`, and `hsl()` literals and uncalibrated dark info/danger fills (`packages/ui/src/builders.js` solid danger button, dark `--semantic-color-info-bg-soft` / `--semantic-color-info-light`, and light warning text over solid fills) fell below WCAG 2.2 AA `4.5:1` contrast.
 4. **Script & Medical Imaging `<canvas>` Hex Literals:** Vue `<script>` blocks (`DicomMprViewer.vue`, `IcfSectionEditor.vue`, `NotificationsView.vue`) embedded 48 raw hex strings, while HTML5 `<canvas>` 2D drawing contexts cannot consume unresolved `var(--...)` custom property references directly.
 5. **Narrow ESLint & Pre-Commit Coverage:** `custom-vue/no-inline-hex` only inspected template/style hex patterns, skipping `<script>` AST literals, `.js`/`.ts` modules, `rgb()`/`rgba()`/`hsl()`/`hsla()` functions, and named `white`/`black` CSS declarations; meanwhile `FrontendQualityGateService.cs` omitted `.css` from `EslintExtensions`, allowing staged `.css` color regressions to bypass `--pre-commit` stdin linting.
 
@@ -58,5 +58,5 @@ Across `packages/ui`, `apps/web`, and `apps/subject-portal`, five token-governan
 
 ## 6. Implementation & Verification
 
-- **Affected Repositories / Services:** `packages/ui`, `packages/usdm-schemas` (`./epro` `zod/mini` subpath keeping staged `/subject-portal/assets/` within the `920 KiB` `public-bundle` budget alongside the expanded light/dark/auto token sheets), `apps/web`, `apps/subject-portal`, `packages/tooling_core`, `tests/Cadence.UnitTests`, `eslint.config.mjs`, `docs/adr/`, `docs/DOCUMENTATION_INDEX.md`.
+- **Affected Repositories / Services:** `packages/ui`, `packages/usdm-schemas` (`./epro` zero-dependency subpath keeping staged `/subject-portal/assets/` within the `920 KiB` `public-bundle` budget alongside the expanded light/dark/auto token sheets), `apps/web`, `apps/subject-portal`, `packages/tooling_core`, `tests/Cadence.UnitTests`, `eslint.config.mjs`, `docs/adr/`, `docs/DOCUMENTATION_INDEX.md`.
 - **Verification Plan:** Verified via `pnpm exec eslint --max-warnings 0 .`, `pnpm --filter ui test`, `pnpm --filter web test`, `pnpm --filter subject-portal test`, Playwright `web-accessibility.spec.ts` and `portal-accessibility.spec.js` (including `data-theme="dark"` and `data-theme="auto"` checks), `dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter PreCommitGuardrailsTests`, and `pnpm cadence check` (`adrs`, `markdown`, `readmes`, `eslint`, `prettier`, `deid`, `public-bundle`).

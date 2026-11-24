@@ -1,5 +1,5 @@
 // 1. My Tasks: the assigned questionnaires list, its loading and retry.
-import { createSrOnlyActionButton } from "ui";
+import { createSrOnlyActionButton, handoffFocus } from "ui";
 import {
   fetchAssignedInstruments,
   fetchAssignments,
@@ -14,8 +14,12 @@ import {
   saveInstrumentsToDB,
 } from "../sync-queue.js";
 import { demoNowMs, isDemoModeActive } from "../utils/demoMode.js";
+import { showToast } from "../widgets/toast.js";
 import { login } from "./auth.js";
 import { startQuestionnaire } from "./questionnaire.js";
+
+const RECONSENT_TASK_GATE_MESSAGE =
+  "Action required: Please review and sign your updated study consent form before starting or resuming surveys.";
 
 // 1. My Tasks (Assigned Surveys)
 export function renderTasks() {
@@ -136,11 +140,14 @@ export function renderTasks() {
         : "—";
       const isTaskLoading = state.loadingTaskId === task.id;
       const isAnyTaskLoading = Boolean(state.loadingTaskId);
+      const isReconsentBlocked = Boolean(state.pendingReconsent);
       const ctaLabel = isTaskLoading
         ? "Loading Survey..."
-        : hasDraft
-          ? "Resume Survey"
-          : "Start Survey";
+        : isReconsentBlocked
+          ? "Re-Consent Required"
+          : hasDraft
+            ? "Resume Survey"
+            : "Start Survey";
       const ctaClasses = hasDraft
         ? "btn btn-primary btn-start-task btn-resume-task"
         : "btn btn-primary btn-start-task";
@@ -151,7 +158,7 @@ export function renderTasks() {
             srContext: instName,
             className: ctaClasses,
             dataId: task.id,
-            disabled: isAnyTaskLoading,
+            disabled: isAnyTaskLoading || isReconsentBlocked,
             ariaBusy: isTaskLoading,
           });
 
@@ -173,6 +180,12 @@ export function renderTasks() {
   // Attach events with duplicate-click busy guard during instrument fetch
   container.querySelectorAll(".btn-start-task").forEach((btn) => {
     btn.addEventListener("click", async () => {
+      if (state.pendingReconsent) {
+        state.taskActionError = RECONSENT_TASK_GATE_MESSAGE;
+        showToast(RECONSENT_TASK_GATE_MESSAGE, { variant: "error" });
+        renderTasks();
+        return;
+      }
       if (state.loadingTaskId || btn.disabled) return;
       const taskId = btn.getAttribute("data-id");
       if (!taskId) return;
@@ -295,6 +308,11 @@ export async function loadAssignedInstruments(userId) {
 
 // Retry button on the task list failure state.
 export async function retryTasks() {
+  const startedInFailure =
+    typeof document !== "undefined" &&
+    Boolean(
+      document.getElementById("tasks-failure")?.contains(document.activeElement)
+    );
   state.tasksLoading = true;
   state.tasksError = null;
   state.assignmentsError = false;
@@ -350,5 +368,23 @@ export async function retryTasks() {
   } finally {
     state.tasksLoading = false;
     renderTasks();
+    if (startedInFailure) {
+      if (state.tasksError || state.assignmentsError) {
+        void handoffFocus([
+          "#btn-retry-tasks",
+          "#tasks-view-heading",
+          "#main-content",
+        ]);
+      } else {
+        void handoffFocus([
+          () =>
+            document.querySelector(
+              "#tasks-list-container button:not([disabled]), #tasks-list-container a[href], #tasks-list-container input:not([disabled])"
+            ),
+          "#tasks-view-heading",
+          "#main-content",
+        ]);
+      }
+    }
   }
 }

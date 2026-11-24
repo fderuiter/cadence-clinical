@@ -412,7 +412,7 @@ describe("CSS Assets and Package Exports", () => {
       }
     });
 
-    it("maintains 1:1 parity across :root, :root[data-theme='dark'], and :root[data-theme='auto'] for all non-inverse color, badge, backdrop, watermark, and shadow tokens (ADR-2655)", () => {
+    it("maintains 1:1 parity across :root, :root[data-theme='dark'], and :root[data-theme='auto'] for all non-inverse color, badge, backdrop, watermark, and shadow tokens (ADR-2671)", () => {
       const tokensContent = fs.readFileSync(tokensPath, "utf-8");
       function extractRawBlockMap(headerRegex) {
         const headerMatch = tokensContent.match(headerRegex);
@@ -487,7 +487,7 @@ describe("CSS Assets and Package Exports", () => {
       expect(unmappedDarkTokens).toEqual([]);
     });
 
-    it("delivers >= 4.5:1 dark-mode text, badge, and solid-fill contrast and >= 3:1 dark control border contrast across #0f172a, #1e293b, and #090d16 (ADR-2655)", () => {
+    it("delivers >= 4.5:1 dark-mode text, badge, and solid-fill contrast and >= 3:1 dark control border contrast across #0f172a, #1e293b, and #090d16 (ADR-2671)", () => {
       const tokensContent = fs.readFileSync(tokensPath, "utf-8");
       const darkTokens = parseThemeOverlayTokens(
         tokensContent,
@@ -639,7 +639,7 @@ describe("CSS Assets and Package Exports", () => {
       expect(cssRules).toContain("custom-vue/no-undefined-css-vars");
     });
 
-    it("rejects <script>, .ts, and CSS rgba()/hsl()/white/black color literals while allowing DOM ID selectors (ADR-2655)", async () => {
+    it("rejects <script>, .ts, and CSS rgba()/hsl()/white/black color literals while allowing DOM ID selectors (ADR-2671)", async () => {
       const eslint = new ESLint({
         cwd: repoRoot,
         overrideConfigFile: path.join(repoRoot, "eslint.config.mjs"),

@@ -2,16 +2,27 @@
 // shell renders from; the router follows it into the URL and back (see
 // src/router/index.js).
 import { handoffFocus } from "ui";
-import { isScreenAvailable } from "../router/availability.js";
+import {
+  defaultPortalViewId,
+  isScreenAvailable,
+} from "../router/availability.js";
 import { activeTabForView, routeForView, tabs } from "../router/routes.js";
 import { state } from "../stores/state.js";
 import { loadConsentDetails } from "./consent.js";
+import { loadParticipantWallet } from "./wallet.js";
 
-const viewLeaveHandlers = new Map();
+var viewLeaveHandlers;
+
+function getLeaveHandlers() {
+  if (!viewLeaveHandlers) {
+    viewLeaveHandlers = new Map();
+  }
+  return viewLeaveHandlers;
+}
 
 export function registerViewLeaveHandler(viewId, handler) {
   if (typeof handler === "function") {
-    viewLeaveHandlers.set(viewId, handler);
+    getLeaveHandlers().set(viewId, handler);
   }
 }
 
@@ -42,14 +53,18 @@ export function showView(viewId, options = {}) {
   const matchedRoute = routeForView(viewId);
   let targetViewId = viewId;
 
-  if (matchedRoute && !isScreenAvailable(matchedRoute.name)) {
+  if (viewId === "view-tasks" && !isScreenAvailable("tasks")) {
+    const fallbackView = defaultPortalViewId();
+    state.unavailableScreen = null;
+    targetViewId = fallbackView;
+  } else if (matchedRoute && !isScreenAvailable(matchedRoute.name)) {
     state.unavailableScreen = String(matchedRoute.name);
     targetViewId = "view-unavailable";
   }
 
   const previousView = state.currentView;
   if (previousView && previousView !== targetViewId) {
-    const leaveHandler = viewLeaveHandlers.get(previousView);
+    const leaveHandler = getLeaveHandlers().get(previousView);
     if (typeof leaveHandler === "function") {
       try {
         leaveHandler(targetViewId);
@@ -83,13 +98,14 @@ export function showView(viewId, options = {}) {
 
     const questionnaireSection = document.getElementById("view-questionnaire");
     if (questionnaireSection) {
-      if (!questionnaireSection.hasAttribute("role")) {
-        questionnaireSection.setAttribute("role", "tabpanel");
-      }
+      const hasTasksTab = Boolean(document.getElementById("btn-tab-btn-tasks"));
+      questionnaireSection.setAttribute(
+        "role",
+        hasTasksTab ? "tabpanel" : "region"
+      );
       if (!questionnaireSection.hasAttribute("tabindex")) {
         questionnaireSection.setAttribute("tabindex", "0");
       }
-      const hasTasksTab = Boolean(document.getElementById("btn-tab-btn-tasks"));
       questionnaireSection.setAttribute(
         "aria-labelledby",
         hasTasksTab ? "btn-tab-btn-tasks" : "questionnaire-title"
@@ -133,8 +149,20 @@ export function showView(viewId, options = {}) {
 
   if (
     targetViewId === "view-consent" &&
+    isScreenAvailable("consent") &&
     typeof loadConsentDetails === "function"
   ) {
     loadConsentDetails();
+  }
+
+  if (
+    targetViewId === "view-wallet" &&
+    previousView === "view-wallet" &&
+    isScreenAvailable("wallet") &&
+    !state.session?.isDemoMode &&
+    !state.walletLoaded &&
+    !state.walletLoading
+  ) {
+    loadParticipantWallet().catch(() => {});
   }
 }

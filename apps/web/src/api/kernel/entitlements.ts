@@ -1,7 +1,7 @@
-import { demoNowMs, nextDemoStep } from "../../utils/demoMode.js";
-import { encodeChangeReason } from "../changeReason";
 import { unwrapResponse } from "../client";
 import { kernelClient, type KernelSchemas } from "./shared";
+
+const loadRouteTransport = () => import("./protocolImport");
 
 export type KernelEntitlements =
   KernelSchemas["Kernel_KernelEntitlementsResponse"];
@@ -23,61 +23,26 @@ export const kernelEntitlementsApi = {
   },
 
   /** Provisions or idempotently replays the authenticated OIDC caller's self-service trial workspace. */
-  bootstrapTrial(
+  async bootstrapTrial(
     request: KernelTrialOnboardingRequest,
     options?: { idempotencyKey?: string; reason?: string }
   ): Promise<KernelTrialOnboardingResponse> {
-    const idempotencyKey =
-      options?.idempotencyKey ||
-      `web-trial-bootstrap-${demoNowMs(nextDemoStep("trial-bootstrap"))}`;
-    const reason =
-      options?.reason ||
-      `Bootstrap self-service ${request.tier || "Individual"} trial workspace`;
-    return unwrapResponse(
-      kernelClient.POST("/api/v1/kernel/onboarding/trial", {
-        headers: {
-          "Idempotency-Key": idempotencyKey,
-          "X-Change-Reason": encodeChangeReason(reason),
-        },
-        body: request,
-      })
-    );
+    const { executeBootstrapTrial } = await loadRouteTransport();
+    return executeBootstrapTrial(request, options);
   },
 
   /** Switches the caller's tenant commercial subscription tier in place while preserving an active trial window (POST /api/v1/kernel/entitlements/tier). */
-  upgradeSubscriptionTier({
-    tier,
-    idempotencyKey,
-    reason = "Update commercial subscription tier in workspace",
-  }: {
+  async upgradeSubscriptionTier(input: {
     tier: string;
     idempotencyKey: string;
     reason?: string;
   }): Promise<KernelEntitlements> {
-    return unwrapResponse(
-      kernelClient.POST("/api/v1/kernel/entitlements/tier", {
-        headers: {
-          "Idempotency-Key": idempotencyKey,
-          "X-Change-Reason": encodeChangeReason(reason),
-        },
-        body: { tier },
-      })
-    );
+    const { executeUpgradeSubscriptionTier } = await loadRouteTransport();
+    return executeUpgradeSubscriptionTier(input);
   },
 
   /** Activates or upgrades the caller's tenant commercial subscription with validated study scoping and billing confirmation (POST /api/v1/kernel/entitlements/activate). */
-  activateSubscription({
-    tier,
-    studyPhase,
-    studyDurationMonths,
-    countries,
-    siteCount,
-    participantCount,
-    activeStudyCount,
-    billingConfirmation,
-    idempotencyKey,
-    reason = "Activate scoped commercial subscription in workspace",
-  }: {
+  async activateSubscription(input: {
     tier: string;
     studyPhase?: string | null;
     studyDurationMonths?: number | null;
@@ -89,23 +54,7 @@ export const kernelEntitlementsApi = {
     idempotencyKey: string;
     reason?: string;
   }): Promise<KernelEntitlements> {
-    return unwrapResponse(
-      kernelClient.POST("/api/v1/kernel/entitlements/activate", {
-        headers: {
-          "Idempotency-Key": idempotencyKey,
-          "X-Change-Reason": encodeChangeReason(reason),
-        },
-        body: {
-          tier,
-          study_phase: studyPhase ?? null,
-          study_duration_months: studyDurationMonths ?? null,
-          countries: countries ?? null,
-          site_count: siteCount ?? null,
-          participant_count: participantCount ?? null,
-          active_study_count: activeStudyCount ?? null,
-          billing_confirmation: billingConfirmation ?? null,
-        },
-      })
-    );
+    const { executeActivateSubscription } = await loadRouteTransport();
+    return executeActivateSubscription(input);
   },
 };

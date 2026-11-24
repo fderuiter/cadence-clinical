@@ -231,6 +231,7 @@ describe("Client-side ePRO sync, draft preservation, PIN recovery, and offline s
 
     sessionStorage.setItem("mock_user_id", "subject_001");
     sessionStorage.setItem("mock_token", "jwt_valid_subject_token"); // pragma: allowlist secret
+    state.session.isDemoMode = true;
     await initializeApp();
     await settle();
 
@@ -539,6 +540,7 @@ describe("Client-side ePRO sync, draft preservation, PIN recovery, and offline s
     vi.stubEnv("VITE_DEMO_MODE", "true");
     sessionStorage.setItem("mock_user_id", "subject_001");
     sessionStorage.setItem("mock_token", "jwt_valid_subject_token"); // pragma: allowlist secret
+    state.session.isDemoMode = true;
     globalThis.fetch = vi.fn().mockImplementation(async (url) => {
       if (String(url).includes("assignments/subject/")) {
         return { ok: true, status: 200, json: async () => state.assignments };
@@ -654,7 +656,15 @@ describe("Client-side ePRO sync, draft preservation, PIN recovery, and offline s
     state.pinSetup.confirmPin = "246810";
     await handlePINSetupSubmit();
     const originalMasterKey = getInMemorySessionKey();
-    expect(originalMasterKey).toBeInstanceOf(Uint8Array);
+    expect(originalMasterKey?.type).toBe("secret");
+    expect(originalMasterKey?.extractable).toBe(false);
+    expect(originalMasterKey?.algorithm?.name).toBe("AES-GCM");
+    const probeIv = crypto.getRandomValues(new Uint8Array(12));
+    const probeCiphertext = await crypto.subtle.encrypt(
+      { name: "AES-GCM", iv: probeIv },
+      originalMasterKey,
+      new TextEncoder().encode("pin-reset-probe")
+    );
 
     // Queue an offline submission with clinical data & draft
     await saveDraft("assign_01", { vssbp: "132" });
@@ -769,8 +779,16 @@ describe("Client-side ePRO sync, draft preservation, PIN recovery, and offline s
     await settle();
 
     const newMasterKey = getInMemorySessionKey();
-    expect(newMasterKey).toBeInstanceOf(Uint8Array);
-    expect(Array.from(newMasterKey)).not.toEqual(Array.from(originalMasterKey));
+    expect(newMasterKey?.type).toBe("secret");
+    expect(newMasterKey?.extractable).toBe(false);
+    expect(newMasterKey?.algorithm?.name).toBe("AES-GCM");
+    await expect(
+      crypto.subtle.decrypt(
+        { name: "AES-GCM", iv: probeIv },
+        newMasterKey,
+        probeCiphertext
+      )
+    ).rejects.toThrow();
 
     const postResetHistory = await getAllSubmissions();
     expect(postResetHistory).toHaveLength(1);

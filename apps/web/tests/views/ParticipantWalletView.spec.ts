@@ -2,7 +2,7 @@
  * @req: PRD-SYS-182
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { mount, flushPromises } from "@vue/test-utils";
+import { mount, flushPromises, type VueWrapper } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import ParticipantWalletView from "../../src/views/ParticipantWalletView.vue";
 import { useToastStore } from "../../src/stores/toasts.js";
@@ -109,7 +109,7 @@ describe("ParticipantWalletView Mutation Error Handling (@req: PRD-SYS-182)", ()
     vi.restoreAllMocks();
   });
 
-  async function mountComponent() {
+  async function mountComponent(): Promise<VueWrapper<any>> {
     const wrapper = mount(ParticipantWalletView, {
       global: {
         plugins: [pinia],
@@ -621,6 +621,7 @@ describe("ParticipantWalletView Mutation Error Handling (@req: PRD-SYS-182)", ()
 
     it("uploads base64 receipt bytes to /api/v1/payments/participant/expenses/ocr-extract and populates extracted fields", async () => {
       let capturedOcrBody: any = null;
+      let capturedSubmitBody: any = null;
       global.fetch = createMockFetch((url, init) => {
         if (url === "/api/v1/payments/participant/expenses/ocr-extract") {
           capturedOcrBody = JSON.parse(String(init?.body || "{}"));
@@ -635,7 +636,26 @@ describe("ParticipantWalletView Mutation Error Handling (@req: PRD-SYS-182)", ()
                 netAmount: 42.75,
                 category: "FUEL",
                 confidenceScore: 0.96,
+                ocrToken: "signed_ocr_token_staff_01",
                 rawText: "SHELL SERVICE STATION\nDATE 2026-09-14\nTOTAL $42.75",
+              }),
+              { status: 200, headers: { "Content-Type": "application/json" } }
+            )
+          );
+        }
+        if (
+          url === "/api/v1/payments/participant/expenses" &&
+          init?.method === "POST"
+        ) {
+          capturedSubmitBody = JSON.parse(String(init?.body || "{}"));
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({
+                id: "claim-staff-ocr-1",
+                status: "APPROVED",
+                grossAmount: 42.75,
+                taxDeduction: 0,
+                netAmount: 42.75,
               }),
               { status: 200, headers: { "Content-Type": "application/json" } }
             )
@@ -665,6 +685,17 @@ describe("ParticipantWalletView Mutation Error Handling (@req: PRD-SYS-182)", ()
       expect(wrapper.vm.expenseForm.gross_amount).toBe(42.75);
       expect(wrapper.vm.expenseForm.category).toBe("FUEL");
       expect(wrapper.find("#staff-ocr-warning-banner").exists()).toBe(false);
+
+      await wrapper.vm.submitExpenseClaim();
+      await flushPromises();
+
+      expect(capturedSubmitBody).not.toBeNull();
+      expect(capturedSubmitBody.ocrToken).toBe("signed_ocr_token_staff_01");
+      expect(capturedSubmitBody.receiptImageBase64).toBe(
+        capturedOcrBody.imageBase64
+      );
+      expect(capturedSubmitBody.ocrConfidence).toBeUndefined();
+      expect(capturedSubmitBody.perDiemCap).toBeUndefined();
     });
 
     it("never fabricates merchant or amount when OCR returns unreadable image", async () => {

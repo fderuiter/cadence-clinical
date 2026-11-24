@@ -167,7 +167,7 @@
       <!-- Floating Action Bar for Selected Items -->
       <div v-if="selectedCandidateIds.length > 0" class="floating-batch-bar">
         <div class="batch-count-summary">
-          <span class="batch-count-badge">{{
+          <span class="batch-count-badge tabular-nums">{{
             selectedCandidateIds.length
           }}</span>
           item(s) selected
@@ -244,8 +244,8 @@
             :key="item.id"
             class="reconciliation-card"
             :class="[
-              `status-${item.status.toLowerCase()}`,
-              `disc-${item.discrepancy_type.toLowerCase()}`,
+              `status-${(item.status || 'pending_review').toLowerCase()}`,
+              `disc-${(item.discrepancy_type || 'not_compared').toLowerCase()}`,
             ]"
           >
             <!-- Card Header: Variable & Provenance Tag -->
@@ -274,7 +274,7 @@
                 <span
                   :class="[
                     'discrepancy-pill',
-                    `pill-${item.discrepancy_type.toLowerCase()}`,
+                    `pill-${(item.discrepancy_type || 'not_compared').toLowerCase()}`,
                   ]"
                 >
                   {{ formatDiscrepancy(item.discrepancy_type) }}
@@ -282,7 +282,7 @@
                 <span
                   :class="[
                     'status-pill',
-                    `status-${item.status.toLowerCase()}`,
+                    `status-${(item.status || 'pending_review').toLowerCase()}`,
                   ]"
                 >
                   {{ formatStatus(item.status) }}
@@ -324,7 +324,9 @@
                   <div class="meta-row">
                     <span class="lbl">Confidence:</span>
                     <span class="val"
-                      >{{ Math.round(item.confidence_score * 100) }}%</span
+                      >{{
+                        Math.round((item.confidence_score ?? 0) * 100)
+                      }}%</span
                     >
                   </div>
                 </div>
@@ -379,7 +381,7 @@
             <div
               v-if="item.status !== 'PENDING_REVIEW'"
               class="resolution-banner"
-              :class="`banner-${item.status.toLowerCase()}`"
+              :class="`banner-${(item.status || 'resolved').toLowerCase()}`"
             >
               <div class="resolution-info">
                 <strong
@@ -748,44 +750,9 @@ import { EmptyState, useFocusTrap } from "ui";
 import { interopService } from "../../api/interop";
 import SkeletonLoader from "../common/SkeletonLoader.vue";
 
-export interface EhrCandidate {
-  id: string;
-  study_id: string;
-  site_id: string;
-  subject_id: string;
-  subject_pseudonym: string;
-  ehr_system_id: string;
-  fhir_resource_type: string;
-  fhir_resource_id: string;
-  source_timestamp: string;
-  target_domain: string;
-  target_variable: string;
-  cdash_testcd?: string;
-  cdash_test?: string;
-  candidate_value: any;
-  candidate_unit?: string;
-  current_ecrf_value?: any;
-  current_ecrf_updated_at?: string;
-  discrepancy_type:
-    | "NEW_FIELD"
-    | "EXACT_MATCH"
-    | "VALUE_MISMATCH"
-    | "UNIT_MISMATCH"
-    | "DATE_MISMATCH"
-    | "NOT_COMPARED";
-  confidence_score: number;
-  mapping_provenance: string;
-  raw_fhir_resource: Record<string, any>;
-  status: "PENDING_REVIEW" | "ACCEPTED" | "REJECTED" | "QUERIED";
-  resolution_action?: string;
-  resolution_reason?: string;
-  resolved_by?: string;
-  resolved_at?: string;
-  electronic_signature?: Record<string, any>;
-  clinical_query_id?: string;
-  created_at?: string;
-  version_index: number;
-}
+export type EhrCandidate = NonNullable<
+  Awaited<ReturnType<typeof interopService.listEhrCandidates>>["candidates"]
+>[number];
 
 const props = defineProps<{
   isOpen: boolean;
@@ -869,7 +836,9 @@ const isAllPendingSelected = computed(() => {
 
 function selectHighConfidence() {
   const highConfPending = candidates.value
-    .filter((c) => c.status === "PENDING_REVIEW" && c.confidence_score >= 0.9)
+    .filter(
+      (c) => c.status === "PENDING_REVIEW" && (c.confidence_score ?? 0) >= 0.9
+    )
     .map((c) => c.id);
   const set = new Set([...selectedCandidateIds.value, ...highConfPending]);
   selectedCandidateIds.value = Array.from(set);
@@ -1175,7 +1144,7 @@ function formatValue(val: any): string {
   return String(val);
 }
 
-function formatDate(dt?: string): string {
+function formatDate(dt?: string | null): string {
   if (!dt) return "";
   try {
     return new Date(dt).toLocaleString();
@@ -1184,7 +1153,7 @@ function formatDate(dt?: string): string {
   }
 }
 
-function formatDiscrepancy(disc: string): string {
+function formatDiscrepancy(disc?: string | null): string {
   switch (disc) {
     case "NEW_FIELD":
       return "✨ New Field";
@@ -1199,11 +1168,11 @@ function formatDiscrepancy(disc: string): string {
     case "NOT_COMPARED":
       return "Not compared with eCRF";
     default:
-      return disc;
+      return disc || "";
   }
 }
 
-function formatStatus(st: string): string {
+function formatStatus(st?: string | null): string {
   switch (st) {
     case "PENDING_REVIEW":
       return "Pending Review";
@@ -1214,11 +1183,11 @@ function formatStatus(st: string): string {
     case "QUERIED":
       return "Query Open";
     default:
-      return st;
+      return st || "";
   }
 }
 
-function formatResolutionAction(act?: string): string {
+function formatResolutionAction(act?: string | null): string {
   switch (act) {
     case "ACCEPT_COMMIT":
       return "Committed to eCRF";

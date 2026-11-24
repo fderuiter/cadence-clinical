@@ -12,6 +12,16 @@ import { logAuditRecord } from "./audit.js";
 
 const EXPENSE_IDEM_STORAGE_KEY = "cadence.wallet.expenseIdempotency";
 const DISBURSE_IDEM_STORAGE_KEY = "cadence.wallet.disburseIdempotency";
+let lastHydratedAttemptKey = "";
+
+export function hasAttemptedWalletHydration() {
+  const currentKey = `${state.session?.userId || ""}:${state.session?.token || ""}`;
+  return Boolean(currentKey !== ":" && lastHydratedAttemptKey === currentKey);
+}
+
+export function resetWalletHydrationAttempt() {
+  lastHydratedAttemptKey = "";
+}
 
 function generateIdempotencyKey(prefix = "idem") {
   if (isDemoModeActive()) {
@@ -218,6 +228,13 @@ function applyWalletProjection(summaryOrWallet) {
     state.walletSiteId ??
     (isDemoModeActive() ? DEFAULT_DEMO_SITE?.code || null : null);
 
+  if (!state.session.studyId && state.walletStudyId) {
+    state.session.studyId = state.walletStudyId;
+  }
+  if (!state.session.siteId && state.walletSiteId) {
+    state.session.siteId = state.walletSiteId;
+  }
+
   const currentBal = w.currentBalance ?? w.current_balance;
   if (typeof currentBal === "number") {
     state.walletBalance = currentBal;
@@ -291,6 +308,8 @@ export function resetExpenseClaimForm() {
     warning: null,
     data: null,
     previewUrl: null,
+    ocrToken: null,
+    imageBase64: null,
   };
   const demo = isDemoModeActive();
   const defaultStudyId = demo ? DEMO_STUDY?.code || null : null;
@@ -365,6 +384,7 @@ export async function loadParticipantWallet() {
     return null;
   }
 
+  lastHydratedAttemptKey = `${state.session?.userId || ""}:${state.session?.token || ""}`;
   state.walletLoading = true;
   state.expenseError = null;
   try {
@@ -406,6 +426,8 @@ export async function extractReceiptOcr(fileOrText) {
 
   const { rawText, imageBase64, fileName } =
     await readReceiptPayload(fileOrText);
+  state.expenseOcr.imageBase64 = imageBase64 || null;
+  state.expenseOcr.ocrToken = null;
   if (fileName) {
     state.expenseForm.receiptImageName = fileName;
   }
@@ -445,6 +467,8 @@ export async function extractReceiptOcr(fileOrText) {
       rawRes.confidenceScore ?? rawRes.confidence_score ?? 0
     );
     const warning = rawRes.warning ?? null;
+    const ocrToken = rawRes.ocrToken ?? rawRes.ocr_token ?? null;
+    const receiptSha256 = rawRes.receiptSha256 ?? rawRes.receipt_sha256 ?? null;
 
     const normalized = {
       ...rawRes,
@@ -464,9 +488,14 @@ export async function extractReceiptOcr(fileOrText) {
       confidenceScore,
       confidence_score: confidenceScore,
       warning,
+      ocrToken,
+      ocr_token: ocrToken,
+      receiptSha256,
+      receipt_sha256: receiptSha256,
     };
 
     state.expenseOcr.data = normalized;
+    state.expenseOcr.ocrToken = ocrToken;
     state.expenseOcr.warning =
       warning ||
       (!ocrReadable
@@ -525,9 +554,14 @@ export async function submitExpenseClaim(customFormData = null) {
   const expenseDate = (form.expenseDate || "").trim();
   const receiptImageName = form.receiptImageName || "";
   const isMealAllowance = Boolean(form.isMealAllowance || category === "MEAL");
-  const perDiemCap = form.perDiemCap ? Number(form.perDiemCap) : 75.0;
-  const ocrConfidence =
-    typeof form.ocrConfidence === "number" ? Number(form.ocrConfidence) : 0;
+  const ocrToken =
+    form.ocrToken ??
+    state.expenseOcr?.ocrToken ??
+    state.expenseOcr?.data?.ocrToken ??
+    state.expenseOcr?.data?.ocr_token ??
+    undefined;
+  const receiptImageBase64 =
+    form.receiptImageBase64 ?? state.expenseOcr?.imageBase64 ?? undefined;
 
   const fingerprint = [
     state.session?.userId || "",
@@ -554,11 +588,11 @@ export async function submitExpenseClaim(customFormData = null) {
     merchantName,
     grossAmount,
     isMealAllowance,
-    perDiemCap,
     expenseDate,
     receiptImageName,
-    ocrConfidence,
     receiptOcrData: state.expenseOcr.data || null,
+    ocrToken,
+    receiptImageBase64,
     idempotencyKey,
     studyId: form.studyId || state.walletStudyId || undefined,
     siteId: form.siteId || state.walletSiteId || undefined,
@@ -589,8 +623,14 @@ export async function submitExpenseClaim(customFormData = null) {
       rawRes.disbursementReference ?? rawRes.disbursement_reference ?? null;
     const reviewNotes = rawRes.reviewNotes ?? rawRes.review_notes ?? null;
     const claimId = rawRes.id ?? rawRes.claim_id ?? `claim_${idempotencyKey}`;
+    const resolvedGross = Number(
+      rawRes.grossAmount ?? rawRes.gross_amount ?? grossAmount
+    );
+    const taxDeduction = Number(
+      rawRes.taxDeduction ?? rawRes.tax_deduction ?? 0
+    );
     const netAmount = Number(
-      rawRes.netAmount ?? rawRes.net_amount ?? grossAmount
+      rawRes.netAmount ?? rawRes.net_amount ?? resolvedGross - taxDeduction
     );
 
     const normalized = {
@@ -611,8 +651,10 @@ export async function submitExpenseClaim(customFormData = null) {
       disbursement_reference: disbursementReference,
       reviewNotes,
       review_notes: reviewNotes,
-      grossAmount,
-      gross_amount: grossAmount,
+      grossAmount: resolvedGross,
+      gross_amount: resolvedGross,
+      taxDeduction,
+      tax_deduction: taxDeduction,
       netAmount,
       net_amount: netAmount,
       createdAt: rawRes.createdAt ?? rawRes.created_at ?? demoNowIso(),

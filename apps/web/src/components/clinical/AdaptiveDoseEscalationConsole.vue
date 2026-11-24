@@ -207,7 +207,9 @@
         <h4 class="section-title">
           Response-Adaptive Randomization (RAR) Allocation Weights
         </h4>
-        <span class="pill highlight">{{ rarArms.length }} Treatment Arms</span>
+        <span class="pill highlight tabular-nums"
+          >{{ rarArms.length }} Treatment Arms</span
+        >
       </div>
       <div class="rar-cards-grid">
         <div
@@ -318,6 +320,7 @@
           id="target-dose-select"
           v-model.number="selectedTargetDoseIndex"
           class="form-select"
+          data-tabular-nums="true"
         >
           <option
             v-for="dose in doseSummaries"

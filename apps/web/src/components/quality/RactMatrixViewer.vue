@@ -43,7 +43,7 @@
           <div class="meta-item">
             <span class="meta-label">Protocol Risk Posture:</span>
             <span
-              class="status-pill"
+              class="status-pill tabular-nums"
               :class="
                 highRiskCount > 0 ? 'status-pill-alert' : 'status-pill-nominal'
               "
@@ -105,7 +105,7 @@
       >
         <div class="kpi-icon icon-total">📊</div>
         <div class="kpi-content">
-          <div class="kpi-value">
+          <div class="kpi-value tabular-nums">
             {{ totalRiskFactors }}
           </div>
           <div class="kpi-label">Total Protocol Risks</div>
@@ -115,7 +115,7 @@
       <div class="kpi-card kpi-card-danger">
         <div class="kpi-icon icon-high">🚨</div>
         <div class="kpi-content">
-          <div class="kpi-value">
+          <div class="kpi-value tabular-nums">
             {{ highRiskCount }}
           </div>
           <div class="kpi-label">High Risk Factors (Score &ge; 15)</div>
@@ -125,7 +125,7 @@
       <div class="kpi-card kpi-card-warning">
         <div class="kpi-icon icon-med">⚠️</div>
         <div class="kpi-content">
-          <div class="kpi-value">
+          <div class="kpi-value tabular-nums">
             {{ mediumRiskCount }}
           </div>
           <div class="kpi-label">Medium Risk Factors (7 - 14)</div>
@@ -135,7 +135,7 @@
       <div class="kpi-card kpi-card-success">
         <div class="kpi-icon icon-low">✅</div>
         <div class="kpi-content">
-          <div class="kpi-value">
+          <div class="kpi-value tabular-nums">
             {{ lowRiskCount }}
           </div>
           <div class="kpi-label">Low Risk Factors (&le; 6)</div>
@@ -145,7 +145,7 @@
       <div class="kpi-card">
         <div class="kpi-icon icon-kri">🔗</div>
         <div class="kpi-content">
-          <div class="kpi-value">{{ linkedKriCoverage }}%</div>
+          <div class="kpi-value tabular-nums">{{ linkedKriCoverage }}%</div>
           <div class="kpi-label">Automated KRI Coverage</div>
         </div>
       </div>
@@ -478,7 +478,7 @@
               protocol risk categories.
             </p>
           </div>
-          <span class="badge badge-gxp"
+          <span class="badge badge-gxp tabular-nums"
             >{{ kriDefinitions.length }} Defined KRIs</span
           >
         </div>
@@ -606,6 +606,7 @@
             <select
               v-model.number="riskForm.probability_score"
               class="form-control"
+              data-tabular-nums="true"
             >
               <option :value="1">1 - Low / Rare</option>
               <option :value="2">2 - Medium / Possible</option>
@@ -617,7 +618,11 @@
             <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
             <label class="score-label">Impact (1-3) *</label>
             <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-            <select v-model.number="riskForm.impact_score" class="form-control">
+            <select
+              v-model.number="riskForm.impact_score"
+              class="form-control"
+              data-tabular-nums="true"
+            >
               <option :value="1">1 - Low / Minor</option>
               <option :value="2">2 - Medium / Moderate</option>
               <option :value="3">3 - High / Critical</option>
@@ -631,6 +636,7 @@
             <select
               v-model.number="riskForm.detectability_score"
               class="form-control"
+              data-tabular-nums="true"
             >
               <option :value="1">1 - High / Readily Detectable</option>
               <option :value="2">2 - Moderate / Detectable with Effort</option>

@@ -12,6 +12,7 @@ using Cadence.Kernel.Application.Search;
 using Cadence.Kernel.Application.Simulation;
 using Cadence.Kernel.Application.Standards;
 using Cadence.Kernel.Application.Validation;
+using Cadence.Kernel.Application.WorkQueues;
 using Cadence.Kernel.Host;
 using Cadence.Kernel.Host.Onboarding;
 using Cadence.Kernel.Modules;
@@ -22,6 +23,7 @@ using Cadence.Kernel.Persistence.Search;
 using Cadence.Kernel.Persistence.Simulation;
 using Cadence.Kernel.Persistence.Standards;
 using Cadence.Kernel.Persistence.Validation;
+using Cadence.Kernel.Protocol;
 using Cadence.Kernel.Protocol.Import;
 using Cadence.Kernel.Simulation;
 using Cadence.Kernel.Tenancy;
@@ -31,6 +33,7 @@ using Cadence.Modules.Intelligence;
 using Cadence.Modules.Intelligence.Mcp;
 using Cadence.Modules.Intelligence.Tools;
 using Cadence.Rules;
+using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
 using Cadence.Telemetry;
 
@@ -98,6 +101,7 @@ builder.Services
     .AddKernelStandards()
     .AddKernelValidationPersistence()
     .AddKernelValidation()
+    .AddKernelWorkQueues()
     .AddCadenceRules()
     .AddCadenceCollectionValidation()
 
@@ -115,6 +119,7 @@ builder.Services.AddScoped<ICurrentActor, ClaimsCurrentActor>();
 builder.Services.AddSingleton<IKernelChangeReason, SignedChangeReason>();
 builder.Services.AddScoped<IKernelReadAccess, KernelReadAccess>();
 builder.Services.AddSingleton<IProtocolDesignImporter, ProtocolDesignImporterService>();
+builder.Services.AddSingleton<IProtocolFormCompiler, ProtocolFormCompiler>();
 
 // A reader sees what its grants in effect cover (ADR-2457) and what treatment blinding permits (K-AUTH-4); everything
 // else is masked in place (ADR-2471). The IdentityVault (#4782) is not decided here yet.
@@ -122,6 +127,7 @@ builder.Services.AddKernelGrantVisibility();
 
 // Modules in this host (ADR-2601). The Intelligence module is the governed AI agent runtime (ADR-2630): agents read and
 // propose, a person approves, and AI is never required for clinical work (K-AI-8).
+builder.Services.AddCadenceBiometricLiveness();
 builder.Services.AddCadenceIntelligenceModule(builder.Configuration, builder.Environment, connectionString);
 
 // The Execution module: eCRF forms over kernel form instances (ADR-2622).
@@ -155,6 +161,7 @@ app.MapKernelApi()
     .MapKernelLocks()
     .MapKernelProposals()
     .MapKernelValidation()
+    .MapKernelWorkQueues()
     .MapKernelEntitlements()
     .MapTrialOnboarding();
 app.MapIntelligenceModule();

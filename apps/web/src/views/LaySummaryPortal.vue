@@ -34,7 +34,7 @@
       <div class="stat-card">
         <div class="stat-icon summary-icon">📜</div>
         <div class="stat-details">
-          <div class="stat-value">
+          <div class="stat-value tabular-nums">
             {{ publishedSummariesCount }}
           </div>
           <div class="stat-label">Published Lay Summaries</div>
@@ -43,7 +43,7 @@
       <div class="stat-card">
         <div class="stat-icon score-icon">⭐</div>
         <div class="stat-details">
-          <div class="stat-value">
+          <div class="stat-value tabular-nums">
             {{ avgComprehensionScore.toFixed(1) }} / 5.0
           </div>
           <div class="stat-label">Avg Comprehension Rating</div>
@@ -52,7 +52,7 @@
       <div class="stat-card">
         <div class="stat-icon receipt-icon">🔏</div>
         <div class="stat-details">
-          <div class="stat-value">
+          <div class="stat-value tabular-nums">
             {{ totalReceiptsCount }}
           </div>
           <div class="stat-label">Confirmed Receipts (SHA-256)</div>
@@ -61,7 +61,7 @@
       <div class="stat-card">
         <div class="stat-icon compliance-icon">🇪🇺</div>
         <div class="stat-details">
-          <div class="stat-value">100%</div>
+          <div class="stat-value tabular-nums">100%</div>
           <div class="stat-label">EU CTR Art 37 Compliance</div>
         </div>
       </div>
@@ -581,7 +581,7 @@
             EU CTR 536/2014 Article 37 Participant Delivery &amp; Comprehension
             Ledger
           </h3>
-          <span class="badge badge-gxp"
+          <span class="badge badge-gxp tabular-nums"
             >{{ auditReceipts.length }} Immutable Receipts</span
           >
         </div>

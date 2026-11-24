@@ -45,7 +45,6 @@ internal static class FormEndpoints
     public const string IdempotencyKeyHeader = "Idempotency-Key";
 
     private static readonly Capability SignFormCapability = new("collection.sign", VerbClass.Execute);
-    private static readonly Capability EnrollmentUnblindCapability = new("enrollment.unblind", VerbClass.Read);
 
     public static IEndpointRouteBuilder MapFormEndpoints(this IEndpointRouteBuilder endpoints)
     {
@@ -120,28 +119,32 @@ internal static class FormEndpoints
             return TypedResults.Ok<IReadOnlyList<FormSummaryResponse>>([.. summaries.Select(s => FormSummaryResponse.From(s))]);
         }
 
-        Dictionary<CollectionInstanceId, (int Open, int Answered)> queryCounts;
+        Dictionary<CollectionInstanceId, List<(Guid KernelQueryId, FormQueryStatus Status)>> queriesByForm;
         await using (var db = contexts.Create(tenant))
         {
-            var activeQueries = await db.FormQueries.AsNoTracking()
-                .Where(q => q.EnrollmentId == enrollment && (q.Status == FormQueryStatus.Open || q.Status == FormQueryStatus.Answered))
-                .Select(q => new { q.FormId, q.Status })
+            var allFormQueries = await db.FormQueries.AsNoTracking()
+                .Where(q => q.EnrollmentId == enrollment)
+                .Select(q => new { q.FormId, q.KernelQueryId, q.Status })
                 .ToListAsync(cancellationToken)
                 .ConfigureAwait(false);
-            queryCounts = activeQueries
+            queriesByForm = allFormQueries
                 .GroupBy(q => q.FormId)
-                .ToDictionary(
-                    g => g.Key,
-                    g => (
-                        Open: g.Count(x => x.Status == FormQueryStatus.Open),
-                        Answered: g.Count(x => x.Status == FormQueryStatus.Answered)));
+                .ToDictionary(g => g.Key, g => g.Select(x => (x.KernelQueryId.Value, x.Status)).ToList());
         }
 
         return TypedResults.Ok<IReadOnlyList<FormSummaryResponse>>([
             .. summaries.Select(s =>
             {
-                var (openCount, answeredCount) = queryCounts.GetValueOrDefault(s.CollectionInstanceId);
-                return FormSummaryResponse.From(s, openCount, answeredCount);
+                var execQueries = queriesByForm.GetValueOrDefault(s.CollectionInstanceId) ?? [];
+                if (s.ActiveQueryAssertionIds is { } activeQueryAssertionIds)
+                {
+                    var (openCount, answeredCount) = ExecutionQueryMerger.Merge(activeQueryAssertionIds, s.AnsweredQueryAssertionIds, execQueries);
+                    return FormSummaryResponse.From(s, openCount, answeredCount);
+                }
+
+                var fallbackOpen = Math.Max(s.OpenQueryCount, execQueries.Count(q => q.Status == FormQueryStatus.Open));
+                var fallbackAnswered = Math.Max(s.AnsweredQueryCount, execQueries.Count(q => q.Status == FormQueryStatus.Answered));
+                return FormSummaryResponse.From(s, fallbackOpen, fallbackAnswered);
             }),
         ]);
     }
@@ -184,7 +187,18 @@ internal static class FormEndpoints
         CancellationToken cancellationToken)
     {
         var tenant = KernelRequestTenant.Get(context);
-        if (await forms.FindAsync(tenant, CollectionInstanceId.FromGuid(formId), cancellationToken).ConfigureAwait(false) is not { } record)
+        var canUnblind = false;
+        var evaluatedUnblind = false;
+        if (await forms.FindForReaderAsync(
+            tenant,
+            CollectionInstanceId.FromGuid(formId),
+            async (enrollmentId, ct) =>
+            {
+                canUnblind = await access.CanUnblindAsync(tenant, enrollmentId, ct).ConfigureAwait(false);
+                evaluatedUnblind = true;
+                return canUnblind;
+            },
+            cancellationToken).ConfigureAwait(false) is not { } record)
         {
             return NotFound(formId);
         }
@@ -203,24 +217,32 @@ internal static class FormEndpoints
         // The layout the module snapshotted when the kernel opened the form; until that event is delivered, the
         // specification's own order, which is the same.
         string[]? layout;
+        List<(Guid KernelQueryId, FormQueryStatus Status)> execQueries;
         await using (var db = contexts.Create(tenant))
         {
             layout = await db.FormInstances
                 .Where(f => f.Id == formId)
                 .Select(f => EF.Property<string[]>(f, ExecutionModuleDbContext.ItemOrderField))
                 .SingleOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+            var rawQueries = await db.FormQueries.AsNoTracking()
+                .Where(q => q.FormId == record.CollectionInstanceId)
+                .Select(q => new { q.KernelQueryId, q.Status })
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+            execQueries = [.. rawQueries.Select(q => (q.KernelQueryId.Value, q.Status))];
         }
 
+        var (openQueryCount, answeredQueryCount) = ExecutionQueryMerger.Merge(record.Assertions, execQueries);
         var canSign = await access.CanExerciseAsync(
             tenant,
             SignFormCapability,
             enrollmentNode,
             cancellationToken).ConfigureAwait(false);
-        var canUnblind = await access.CanExerciseAsync(
-            tenant,
-            EnrollmentUnblindCapability,
-            enrollmentNode,
-            cancellationToken).ConfigureAwait(false);
+        if (!evaluatedUnblind)
+        {
+            canUnblind = await access.CanUnblindAsync(tenant, record.EnrollmentId, cancellationToken).ConfigureAwait(false);
+        }
+
         var (blindedItemIds, blindedObservationIds) = await ResolveBlindedFormTargetsAsync(
             tenant,
             record,
@@ -229,7 +251,7 @@ internal static class FormEndpoints
             context.RequestServices,
             cancellationToken).ConfigureAwait(false);
 
-        return TypedResults.Ok(FormResponse.From(record, layout, canSign, blindedItemIds, blindedObservationIds));
+        return TypedResults.Ok(FormResponse.From(record, layout, canSign, blindedItemIds, blindedObservationIds, openQueryCount, answeredQueryCount));
     }
 
     internal static async Task<Results<Ok<FormPreviewResponse>, ProblemHttpResult>> PreviewAsync(
@@ -248,14 +270,25 @@ internal static class FormEndpoints
 
         var tenant = KernelRequestTenant.Get(context);
         var id = CollectionInstanceId.FromGuid(formId);
-        if (await forms.FindAsync(tenant, id, cancellationToken).ConfigureAwait(false) is not { } record)
+        var canUnblind = false;
+        var evaluatedUnblind = false;
+        if (await forms.FindForReaderAsync(
+            tenant,
+            id,
+            async (enrollmentId, ct) =>
+            {
+                canUnblind = await access.CanUnblindAsync(tenant, enrollmentId, ct).ConfigureAwait(false);
+                evaluatedUnblind = true;
+                return canUnblind;
+            },
+            cancellationToken).ConfigureAwait(false) is not { } record)
         {
             return NotFound(formId);
         }
 
         var enrollmentNode = NodeRef.For(record.EnrollmentId);
         var previewNodes = new List<NodeRef>(1 + record.Values.Count) { enrollmentNode };
-        previewNodes.AddRange(record.Values.Select(v => NodeRef.For(v.ObservationId)));
+        previewNodes.AddRange(record.Values.Where(v => !v.ObservationId.IsEmpty).Select(v => NodeRef.For(v.ObservationId)));
         var masks = await access.MaskAsync(tenant, previewNodes, cancellationToken).ConfigureAwait(false);
         if (masks.ContainsKey(enrollmentNode))
         {
@@ -269,11 +302,11 @@ internal static class FormEndpoints
             return TypedResults.Ok(new FormPreviewResponse(formId, []));
         }
 
-        var canUnblind = await access.CanExerciseAsync(
-            tenant,
-            EnrollmentUnblindCapability,
-            enrollmentNode,
-            cancellationToken).ConfigureAwait(false);
+        if (!evaluatedUnblind)
+        {
+            canUnblind = await access.CanUnblindAsync(tenant, record.EnrollmentId, cancellationToken).ConfigureAwait(false);
+        }
+
         var unblinded = canUnblind && !masks.Values.Any(reason => reason == MaskReason.Blinded);
 
         var overlay = new Dictionary<string, ObservationValue?>(StringComparer.Ordinal);
@@ -310,7 +343,7 @@ internal static class FormEndpoints
         var id = CollectionInstanceId.FromGuid(formId);
 
         // The save is authorized against the form's enrollment, which the client does not send.
-        if (await forms.FindAsync(tenant, id, cancellationToken).ConfigureAwait(false) is not { } record)
+        if (await forms.FindHeaderAsync(tenant, id, cancellationToken).ConfigureAwait(false) is not { } header)
         {
             return NotFound(formId);
         }
@@ -319,7 +352,7 @@ internal static class FormEndpoints
             new RecordCollectedValues(
                 tenant,
                 id,
-                record.EnrollmentId,
+                header.EnrollmentId,
                 [.. values.Select(v => new CollectedValue(
                     v.ItemId,
                     v.Value!,
@@ -337,9 +370,25 @@ internal static class FormEndpoints
         FormResponse? hydrated = null;
         HashSet<string>? blindedItemIds = null;
         HashSet<ObservationId>? blindedObservationIds = null;
-        if (await forms.FindAsync(tenant, id, cancellationToken).ConfigureAwait(false) is { } updated)
+        var canUnblindSave = false;
+        var evaluatedSaveUnblind = false;
+        var updatedRecord = access is null
+            ? await forms.FindForReaderAsync(tenant, id, unblinded: false, cancellationToken).ConfigureAwait(false)
+            : await forms.FindForReaderAsync(
+                tenant,
+                id,
+                async (enrollmentId, ct) =>
+                {
+                    canUnblindSave = await access.CanUnblindAsync(tenant, enrollmentId, ct).ConfigureAwait(false);
+                    evaluatedSaveUnblind = true;
+                    return canUnblindSave;
+                },
+                cancellationToken).ConfigureAwait(false);
+        if (updatedRecord is { } updated)
         {
             string[]? layout = null;
+            int? openQueryCount = null;
+            int? answeredQueryCount = null;
             if (contexts is not null)
             {
                 await using var db = contexts.Create(tenant);
@@ -347,6 +396,13 @@ internal static class FormEndpoints
                     .Where(f => f.Id == formId)
                     .Select(f => EF.Property<string[]>(f, ExecutionModuleDbContext.ItemOrderField))
                     .SingleOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+                var rawQueries = await db.FormQueries.AsNoTracking()
+                    .Where(q => q.FormId == updated.CollectionInstanceId)
+                    .Select(q => new { q.KernelQueryId, q.Status })
+                    .ToListAsync(cancellationToken)
+                    .ConfigureAwait(false);
+                var execQueries = rawQueries.Select(q => (q.KernelQueryId.Value, q.Status)).ToList();
+                (openQueryCount, answeredQueryCount) = ExecutionQueryMerger.Merge(updated.Assertions, execQueries);
             }
 
             var enrollmentNode = NodeRef.For(updated.EnrollmentId);
@@ -359,21 +415,25 @@ internal static class FormEndpoints
             if (access is not null)
             {
                 var masks = await access.MaskAsync(tenant, CollectFormNodes(updated), cancellationToken).ConfigureAwait(false);
-                var canUnblind = await access.CanExerciseAsync(
-                    tenant,
-                    EnrollmentUnblindCapability,
-                    enrollmentNode,
-                    cancellationToken).ConfigureAwait(false);
+                if (!evaluatedSaveUnblind)
+                {
+                    canUnblindSave = await access.CanUnblindAsync(tenant, updated.EnrollmentId, cancellationToken).ConfigureAwait(false);
+                }
+
                 (blindedItemIds, blindedObservationIds) = await ResolveBlindedFormTargetsAsync(
                     tenant,
                     updated,
                     masks,
-                    canUnblind,
+                    canUnblindSave,
                     context.RequestServices,
                     cancellationToken).ConfigureAwait(false);
             }
+            else if (updated.BlindedItemIds is { Count: > 0 })
+            {
+                blindedItemIds = new HashSet<string>(updated.BlindedItemIds, StringComparer.Ordinal);
+            }
 
-            hydrated = FormResponse.From(updated, layout, canSign, blindedItemIds, blindedObservationIds);
+            hydrated = FormResponse.From(updated, layout, canSign, blindedItemIds, blindedObservationIds, openQueryCount, answeredQueryCount);
         }
 
         return TypedResults.Ok(FormSavedResponse.From(state, hydrated, blindedItemIds, blindedObservationIds));
@@ -381,20 +441,21 @@ internal static class FormEndpoints
 
     internal static string IdempotencyKey(HttpContext context) => context.Request.Headers[IdempotencyKeyHeader].ToString().Trim();
 
-    private static List<NodeRef> CollectFormNodes(CollectionInstanceRecord record)
+    internal static List<NodeRef> CollectFormNodes(CollectionInstanceRecord record)
     {
         var nodes = new List<NodeRef> { NodeRef.For(record.EnrollmentId) };
-        nodes.AddRange(record.Values.Select(v => NodeRef.For(v.ObservationId)));
+        nodes.AddRange(record.Values.Where(v => !v.ObservationId.IsEmpty).Select(v => NodeRef.For(v.ObservationId)));
         nodes.AddRange(record.Attestations
             .Where(s => s.SignedValues is not null)
             .SelectMany(s => s.SignedValues!)
+            .Where(sv => !sv.ObservationId.IsEmpty)
             .Select(sv => NodeRef.For(sv.ObservationId)));
         nodes.AddRange(record.Assertions.Where(a => a.Target.Kind == NodeKinds.Observation).Select(a => a.Target));
         nodes.AddRange(record.Locks.Where(l => l.Scope.Kind == NodeKinds.Observation).Select(l => l.Scope));
         return nodes;
     }
 
-    private static async Task<(HashSet<string> BlindedItemIds, HashSet<ObservationId> BlindedObservationIds)> ResolveBlindedFormTargetsAsync(
+    internal static async Task<(HashSet<string> BlindedItemIds, HashSet<ObservationId> BlindedObservationIds)> ResolveBlindedFormTargetsAsync(
         TenantId tenant,
         CollectionInstanceRecord record,
         IReadOnlyDictionary<NodeRef, MaskReason> masks,
@@ -407,16 +468,47 @@ internal static class FormEndpoints
                 .Where(n => n.Kind == NodeKinds.Observation)
                 .Select(n => ObservationId.FromGuid(n.Id)));
         var blindedItemIds = record.Values
-            .Where(recorded => blindedObservationIds.Contains(recorded.ObservationId))
+            .Where(recorded => !recorded.ObservationId.IsEmpty && blindedObservationIds.Contains(recorded.ObservationId))
             .Select(recorded => recorded.ItemId)
             .ToHashSet(StringComparer.Ordinal);
+        foreach (var signed in record.Attestations
+            .Where(s => s.SignedValues is not null)
+            .SelectMany(s => s.SignedValues!)
+            .Where(sv => !sv.ObservationId.IsEmpty && blindedObservationIds.Contains(sv.ObservationId)))
+        {
+            blindedItemIds.Add(signed.ItemId);
+        }
 
         if (!canUnblind)
         {
+            if (record.BlindedItemIds is not null)
+            {
+                foreach (var itemId in record.BlindedItemIds)
+                {
+                    blindedItemIds.Add(itemId);
+                }
+            }
+
+            if (record.BlindedObservationIds is not null)
+            {
+                foreach (var observationId in record.BlindedObservationIds)
+                {
+                    blindedObservationIds.Add(observationId);
+                }
+            }
+
             var classifier = services?.GetService<IBlindedTreatmentClassifier>()
                 ?? BlindedTreatmentClassifier.Instance;
-            var designs = await LoadStudyDesignsAsync(tenant, record.StudyId, record.ProtocolVersionId, services, cancellationToken).ConfigureAwait(false);
-            var concepts = await LoadItemConceptsAsync(tenant, record.Items, services, cancellationToken).ConfigureAwait(false);
+            var reuseKernelBlinding = record.BlindedItemIds is not null
+                && ReferenceEquals(classifier, BlindedTreatmentClassifier.Instance);
+            IReadOnlyList<ProtocolDesign>? designs = null;
+            IReadOnlyDictionary<ConceptId, BlindedConceptMetadata>? concepts = null;
+            if (!reuseKernelBlinding)
+            {
+                designs = await LoadStudyDesignsAsync(tenant, record.StudyId, record.ProtocolVersionId, services, cancellationToken).ConfigureAwait(false);
+                concepts = await LoadItemConceptsAsync(tenant, record.Items, services, cancellationToken).ConfigureAwait(false);
+            }
+
             var specById = record.Items.ToDictionary(i => i.Id, StringComparer.Ordinal);
             var valuesById = record.Values.ToDictionary(v => v.ItemId, StringComparer.Ordinal);
 
@@ -424,10 +516,17 @@ internal static class FormEndpoints
             {
                 specById.TryGetValue(itemId, out var specItem);
                 valuesById.TryGetValue(itemId, out var recordedValue);
-                BlindedConceptMetadata? conceptMeta = specItem is not null && concepts.TryGetValue(specItem.Concept.ConceptId, out var m)
+                BlindedConceptMetadata? conceptMeta = specItem is not null
+                    && concepts is not null
+                    && concepts.TryGetValue(specItem.Concept.ConceptId, out var m)
                     ? m
                     : null;
-                if (classifier.IsBlindedCollectionItem(
+                var valueObservationBlinded = recordedValue is not null
+                    && !recordedValue.ObservationId.IsEmpty
+                    && blindedObservationIds.Contains(recordedValue.ObservationId);
+                if (blindedItemIds.Contains(itemId)
+                    || valueObservationBlinded
+                    || classifier.IsBlindedCollectionItem(
                         record.CollectionSpecId,
                         record.CollectionTitle,
                         specItem,
@@ -436,7 +535,7 @@ internal static class FormEndpoints
                         designs))
                 {
                     blindedItemIds.Add(itemId);
-                    if (recordedValue is not null)
+                    if (recordedValue is not null && !recordedValue.ObservationId.IsEmpty)
                     {
                         blindedObservationIds.Add(recordedValue.ObservationId);
                     }
@@ -448,10 +547,15 @@ internal static class FormEndpoints
                 .SelectMany(signature => signature.SignedValues!))
             {
                 specById.TryGetValue(signedValue.ItemId, out var specItem);
-                BlindedConceptMetadata? conceptMeta = specItem is not null && concepts.TryGetValue(specItem.Concept.ConceptId, out var m)
+                BlindedConceptMetadata? conceptMeta = specItem is not null
+                    && concepts is not null
+                    && concepts.TryGetValue(specItem.Concept.ConceptId, out var m)
                     ? m
                     : null;
+                var signedObservationBlinded = !signedValue.ObservationId.IsEmpty
+                    && blindedObservationIds.Contains(signedValue.ObservationId);
                 if (blindedItemIds.Contains(signedValue.ItemId)
+                    || signedObservationBlinded
                     || classifier.IsBlindedCollectionItem(
                         record.CollectionSpecId,
                         record.CollectionTitle,
@@ -461,7 +565,10 @@ internal static class FormEndpoints
                         designs))
                 {
                     blindedItemIds.Add(signedValue.ItemId);
-                    blindedObservationIds.Add(signedValue.ObservationId);
+                    if (!signedValue.ObservationId.IsEmpty)
+                    {
+                        blindedObservationIds.Add(signedValue.ObservationId);
+                    }
                 }
             }
         }

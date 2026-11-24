@@ -24,8 +24,7 @@ import { humanizeValidationError } from "./site-support.js";
 import {
   checkOnline,
   emitSyncLifecycleEvent,
-  refreshSubmissionsState,
-  renderSyncQueueList,
+  refreshSyncViews,
   resetSyncRetryInfo,
 } from "./sync-status.js";
 import { renderTasks } from "./tasks.js";
@@ -181,12 +180,21 @@ async function isolateSubmissionsIndividually(validSubmissions) {
           ? rawStatus
           : "CREATED";
 
+      const syncVerificationToken =
+        singleRes?.syncVerificationToken ??
+        singleRes?.sync_verification_token ??
+        null;
+
       updates.push({
         sequence_number: item.sequence_number,
         status: resolvedStatus,
+        ...(syncVerificationToken ? { syncVerificationToken } : {}),
         additionalFields: {
           resolved_answers: singleRes?.answers ?? item.answers,
           resolved_at: new Date().toISOString(),
+          ...(syncVerificationToken
+            ? { sync_verification_token: syncVerificationToken }
+            : {}),
           error: isServerQuarantined
             ? "Survey form version changed on the study server. Tap Sync Now to refresh active forms or contact your study coordinator."
             : null,
@@ -285,8 +293,11 @@ export async function syncOfflineQueue(isManual = false, options = {}) {
       statusTextEl.textContent = txt;
     }
     state.syncStatusText = txt;
-    await renderSyncQueueList();
-    await refreshSubmissionsState();
+    await refreshSyncViews(
+      Array.isArray(options.initialSubmissions)
+        ? options.initialSubmissions
+        : null
+    );
     return;
   }
 
@@ -309,17 +320,27 @@ export async function syncOfflineQueue(isManual = false, options = {}) {
     }
     state.syncStatusText = txt;
     emitSyncLifecycleEvent("sync:success", { syncedCount: 0, queuedCount: 0 });
-    await renderSyncQueueList();
-    await refreshSubmissionsState();
+    await refreshSyncViews(
+      !isManual && Array.isArray(options.initialSubmissions)
+        ? options.initialSubmissions
+        : null
+    );
     return;
   }
 
+  const lockedItems = queued.filter(
+    (item) =>
+      (item.status === "DECRYPTION_ERROR" || Boolean(item.locked)) &&
+      !item.unrecoverable
+  );
+  const lockedCount = lockedItems.length;
   const decryptable = queued.filter(
     (item) => item.status !== "DECRYPTION_ERROR"
   );
 
   // Pre-transmission schema gate: isolate invalid items locally while allowing valid siblings through
   const validSubmissions = [];
+  const quarantinedBySeq = new Map();
   let preCheckQuarantinedCount = 0;
   for (const item of decryptable) {
     const activeInstrument = state.instruments?.[item.diary_id];
@@ -336,17 +357,51 @@ export async function syncOfflineQueue(isManual = false, options = {}) {
     if (!validation.valid) {
       preCheckQuarantinedCount += 1;
       const errMsg = humanizeValidationError(validation.errors.join("; "));
-      await updateSubmissionStatus(item.sequence_number, "LOCAL_QUARANTINED", {
-        error: errMsg,
-      });
+      const updatedQuarantined = await updateSubmissionStatus(
+        item.sequence_number,
+        "LOCAL_QUARANTINED",
+        {
+          error: errMsg,
+        }
+      );
+      if (updatedQuarantined) {
+        quarantinedBySeq.set(item.sequence_number, updatedQuarantined);
+      }
     } else {
       validSubmissions.push(item);
     }
   }
 
+  let candidateSnapshot =
+    !isManual && Array.isArray(options.initialSubmissions)
+      ? options.initialSubmissions.map((existing) =>
+          quarantinedBySeq.has(existing.sequence_number)
+            ? quarantinedBySeq.get(existing.sequence_number)
+            : existing
+        )
+      : null;
+
   if (validSubmissions.length === 0) {
     if (isManual && manualRefreshResult.refreshed) {
       state.autoSyncSuspended = false;
+    }
+    if (lockedCount > 0) {
+      const lockedBase = `Locked — enter your security PIN to sync ${lockedCount} queued survey${lockedCount === 1 ? "" : "s"}.`;
+      const txtLocked =
+        preCheckQuarantinedCount > 0
+          ? `${lockedBase} ${preCheckQuarantinedCount} survey(s) quarantined for coordinator review.`
+          : lockedBase;
+      if (statusTextEl) {
+        statusTextEl.textContent = txtLocked;
+      }
+      state.syncStatusText = txtLocked;
+      emitSyncLifecycleEvent("sync:locked", {
+        syncedCount: 0,
+        lockedCount,
+        queuedCount: lockedCount,
+      });
+      await refreshSyncViews(candidateSnapshot);
+      return;
     }
     const txtComplete =
       preCheckQuarantinedCount > 0
@@ -357,8 +412,7 @@ export async function syncOfflineQueue(isManual = false, options = {}) {
     }
     state.syncStatusText = txtComplete;
     emitSyncLifecycleEvent("sync:success", { syncedCount: 0, queuedCount: 0 });
-    await renderSyncQueueList();
-    await refreshSubmissionsState();
+    await refreshSyncViews(candidateSnapshot);
     return;
   }
 
@@ -376,8 +430,7 @@ export async function syncOfflineQueue(isManual = false, options = {}) {
     queuedCount: validSubmissions.length,
   });
 
-  await renderSyncQueueList();
-  await refreshSubmissionsState();
+  let snapshot = await refreshSyncViews(candidateSnapshot);
 
   const payload = {
     submissions: validSubmissions.map(buildSingleSubmissionPayload),
@@ -419,12 +472,20 @@ export async function syncOfflineQueue(isManual = false, options = {}) {
               if (isQuar) {
                 hasQuarantined = true;
               }
+              const syncVerificationToken =
+                res.syncVerificationToken ??
+                res.sync_verification_token ??
+                null;
               updates.push({
                 sequence_number: item.sequence_number,
                 status: res.status,
+                ...(syncVerificationToken ? { syncVerificationToken } : {}),
                 additionalFields: {
                   resolved_answers: res.answers,
                   resolved_at: new Date().toISOString(),
+                  ...(syncVerificationToken
+                    ? { sync_verification_token: syncVerificationToken }
+                    : {}),
                   error: isQuar
                     ? "Survey form version changed on the study server. Tap Sync Now to refresh active forms or contact your study coordinator."
                     : null,
@@ -442,12 +503,20 @@ export async function syncOfflineQueue(isManual = false, options = {}) {
               if (isQuar) {
                 hasQuarantined = true;
               }
+              const syncVerificationToken =
+                res.syncVerificationToken ??
+                res.sync_verification_token ??
+                null;
               updates.push({
                 sequence_number: item.sequence_number,
                 status: res.status,
+                ...(syncVerificationToken ? { syncVerificationToken } : {}),
                 additionalFields: {
                   resolved_answers: res.answers,
                   resolved_at: new Date().toISOString(),
+                  ...(syncVerificationToken
+                    ? { sync_verification_token: syncVerificationToken }
+                    : {}),
                   error: isQuar
                     ? "Survey form version changed on the study server. Tap Sync Now to refresh active forms or contact your study coordinator."
                     : null,
@@ -470,7 +539,17 @@ export async function syncOfflineQueue(isManual = false, options = {}) {
     }
 
     if (updates.length > 0) {
-      await bulkUpdateSubmissionStatuses(updates);
+      const bulkUpdatedRecords = await bulkUpdateSubmissionStatuses(updates);
+      if (Array.isArray(snapshot) && bulkUpdatedRecords.length > 0) {
+        const updatedBySeq = new Map(
+          bulkUpdatedRecords.map((rec) => [rec.sequence_number, rec])
+        );
+        snapshot = snapshot.map((existing) =>
+          updatedBySeq.has(existing.sequence_number)
+            ? updatedBySeq.get(existing.sequence_number)
+            : existing
+        );
+      }
     }
 
     const confirmedSubs = [];
@@ -481,7 +560,17 @@ export async function syncOfflineQueue(isManual = false, options = {}) {
           (s) => s.sequence_number === upd.sequence_number
         );
         if (syncedSub) {
-          confirmedSubs.push(syncedSub);
+          const resolvedSyncToken =
+            upd.syncVerificationToken ??
+            upd.additionalFields?.sync_verification_token ??
+            syncedSub.syncVerificationToken ??
+            syncedSub.sync_verification_token ??
+            undefined;
+          confirmedSubs.push(
+            resolvedSyncToken
+              ? { ...syncedSub, syncVerificationToken: resolvedSyncToken }
+              : syncedSub
+          );
           if (syncedSub.assignment_id) {
             const assign = state.assignments.find(
               (a) => a.id === syncedSub.assignment_id
@@ -521,6 +610,10 @@ export async function syncOfflineQueue(isManual = false, options = {}) {
         try {
           const targetSubjectId = sub.subject_id || state.session.userId;
           const idempotencyKey = `seq_${sub.sequence_number}_${targetSubjectId}`;
+          const syncVerificationToken =
+            sub.syncVerificationToken ??
+            sub.sync_verification_token ??
+            undefined;
           const stipendPayload = {
             studyId: sub.study_id || state.walletStudyId || undefined,
             siteId: sub.site_id || state.walletSiteId || undefined,
@@ -528,6 +621,7 @@ export async function syncOfflineQueue(isManual = false, options = {}) {
             assignmentId: sub.assignment_id,
             diaryId: sub.diary_id,
             idempotencyKey,
+            ...(syncVerificationToken ? { syncVerificationToken } : {}),
           };
 
           const disburseRes = await dispatchApi(
@@ -576,7 +670,10 @@ export async function syncOfflineQueue(isManual = false, options = {}) {
     }
 
     if (transientFallbackError) {
-      const remainingQueued = await getQueuedSubmissions();
+      const updatedSeqs = new Set(updates.map((u) => u.sequence_number));
+      const remainingQueued = validSubmissions.filter(
+        (s) => !updatedSeqs.has(s.sequence_number)
+      );
       scheduleExponentialRetry({
         isManual,
         options,
@@ -597,6 +694,25 @@ export async function syncOfflineQueue(isManual = false, options = {}) {
       if (statusTextEl) {
         statusTextEl.textContent = msg;
       }
+    } else if (lockedCount > 0) {
+      if (isManual) {
+        state.autoSyncSuspended = false;
+      }
+      const totalQuarantined =
+        preCheckQuarantinedCount + isolatedQuarantinedCount;
+      const quarantineSuffix =
+        totalQuarantined > 0 ? ` ${totalQuarantined} quarantined.` : "";
+      const txtLockedRemaining = `Locked — ${confirmedSubs.length} synced; enter your security PIN to sync ${lockedCount} remaining queued survey${lockedCount === 1 ? "" : "s"}.${quarantineSuffix}`;
+      if (statusTextEl) {
+        statusTextEl.textContent = txtLockedRemaining;
+      }
+      state.syncStatusText = txtLockedRemaining;
+      emitSyncLifecycleEvent("sync:locked", {
+        syncedCount: confirmedSubs.length,
+        lockedCount,
+        sequenceNumber: seqNumber,
+        queuedCount: lockedCount,
+      });
     } else {
       if (isManual) {
         state.autoSyncSuspended = false;
@@ -633,6 +749,5 @@ export async function syncOfflineQueue(isManual = false, options = {}) {
     });
   }
 
-  await renderSyncQueueList();
-  await refreshSubmissionsState();
+  await refreshSyncViews(snapshot);
 }

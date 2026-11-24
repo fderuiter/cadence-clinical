@@ -110,6 +110,7 @@
             id="deauville-select"
             v-model.number="newLesionForm.deauvilleScore"
             class="field-select"
+            data-tabular-nums="true"
           >
             <option :value="null">None</option>
             <option :value="1">1: No uptake</option>
@@ -270,7 +271,7 @@
                 : "Sum of Products (SPD)"
             }}
           </span>
-          <span class="metric-value">
+          <span class="metric-value tabular-nums">
             {{
               criteria === "RECIST_1_1"
                 ? (derivedResponse.current_sld_mm || 0) + " mm"
@@ -282,7 +283,7 @@
         <div class="metric-item">
           <span class="metric-label">% Change Baseline</span>
           <span
-            class="metric-value"
+            class="metric-value tabular-nums"
             :class="pctChangeClass(derivedResponse.pct_change_baseline)"
           >
             {{ (derivedResponse.pct_change_baseline || 0) > 0 ? "+" : ""
@@ -293,7 +294,7 @@
         <div class="metric-item">
           <span class="metric-label">% Change Nadir</span>
           <span
-            class="metric-value"
+            class="metric-value tabular-nums"
             :class="pctChangeClass(derivedResponse.pct_change_nadir)"
           >
             {{ (derivedResponse.pct_change_nadir || 0) > 0 ? "+" : ""
@@ -303,7 +304,7 @@
 
         <div class="metric-item">
           <span class="metric-label">Target Response</span>
-          <span class="metric-value">{{
+          <span class="metric-value tabular-nums">{{
             derivedResponse.target_response ||
             derivedResponse.ct_response ||
             "SD"

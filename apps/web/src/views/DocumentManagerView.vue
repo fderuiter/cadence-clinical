@@ -24,10 +24,10 @@
           <ClinicalTabs
             v-model="activeWorkspaceTab"
             :tabs="etmfWorkspaceTabs"
+            variant="pills"
+            overflow="wrap"
             aria-label="eTMF workspace views"
             id-prefix="etmf-workspace"
-            list-class="etmf-tab-group"
-            tab-class="etmf-tab-btn"
           />
 
           <!-- Standalone /etmf Study & Site Scope Selector -->
@@ -509,7 +509,9 @@ import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 import { useAuthStore } from "../stores/auth";
 import { useClinicalStore } from "../stores/clinical";
 import { useEtmfStore } from "../stores/etmf";
+import { useStudyCanvasStore } from "../stores/studyCanvas";
 import { useToastStore } from "../stores/toasts.js";
+import { syncWorkspaceScope } from "../stores/workspaceScope";
 import {
   extractAssignedSites,
   extractAssignedStudies,
@@ -533,6 +535,7 @@ const props = defineProps({
 const authStore = useAuthStore();
 const etmfStore = useEtmfStore();
 const clinicalStore = useClinicalStore();
+const canvasStore = useStudyCanvasStore();
 const { route, router } = resolveRouteAndRouter();
 const { activeStudyCode, setActiveStudyCode } = useActiveStudyScope();
 
@@ -586,6 +589,7 @@ const effectiveStudyId = computed(
   () =>
     props.studyId ||
     etmfStore.currentStudyId ||
+    canvasStore.studyCode ||
     activeStudyCode.value ||
     clinicalStore.activeStudyId
 );
@@ -630,6 +634,10 @@ function syncScope(study, site) {
     clinicalStore.activeStudyId = normalizedStudy;
   }
   clinicalStore.activeSiteId = normalizedSite;
+  syncWorkspaceScope({
+    ...(normalizedStudy ? { studyId: normalizedStudy } : {}),
+    siteId: normalizedSite,
+  });
   standaloneStudyInput.value = normalizedStudy;
   standaloneSiteInput.value = normalizedSite;
 }
@@ -929,6 +937,7 @@ onMounted(async () => {
   const initialStudy =
     props.studyId ||
     queryStudy ||
+    canvasStore.studyCode ||
     activeStudyCode.value ||
     clinicalStore.activeStudyId ||
     etmfStore.currentStudyId ||
@@ -1105,30 +1114,6 @@ defineExpose({
   color: var(--semantic-color-warning-text);
 }
 
-.etmf-tab-group,
-:deep(.etmf-tab-group) {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  min-width: 0;
-  max-width: 100%;
-  box-sizing: border-box;
-}
-
-.etmf-tab-btn,
-:deep(.etmf-tab-btn) {
-  padding: 6px 12px;
-  border: 1px solid var(--semantic-color-border-control);
-  border-radius: 6px;
-  background: var(--semantic-color-surface);
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--semantic-color-text-secondary);
-  cursor: pointer;
-  max-width: 100%;
-  box-sizing: border-box;
-}
-
 #etmf-workspace-panel-binder,
 #etmf-workspace-panel-qc-queue {
   min-width: 0;
@@ -1165,11 +1150,6 @@ defineExpose({
     gap: 10px;
   }
 
-  .etmf-tab-group,
-  :deep(.etmf-tab-group) {
-    width: 100%;
-  }
-
   .etmf-scope-form {
     width: 100%;
   }
@@ -1184,13 +1164,6 @@ defineExpose({
   .etmf-scope-apply-btn {
     width: 100%;
   }
-}
-
-.etmf-tab-btn.active,
-:deep(.etmf-tab-btn.active) {
-  background: var(--semantic-color-primary-dark);
-  border-color: var(--semantic-color-primary-dark);
-  color: var(--semantic-color-text-on-primary);
 }
 
 .etmf-study-chip {

@@ -5,6 +5,8 @@ using Cadence.Kernel.Application.Commands;
 using Cadence.Kernel.Application.Events;
 using Cadence.Kernel.Application.Execution;
 using Cadence.Kernel.Application.WorkQueues;
+using Cadence.Kernel.Authorization;
+using Cadence.Kernel.Background;
 using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Execution;
 using Cadence.Kernel.Indicators;
@@ -80,12 +82,15 @@ public static class KernelPersistenceServiceCollectionExtensions
         services.TryAddSingleton<IStudyDirectory, KernelStudyDirectory>();
         services.TryAddSingleton<IBlindedTreatmentClassifier>(BlindedTreatmentClassifier.Instance);
         services.TryAddSingleton<IAuthorityStore, KernelAuthorityStore>();
+        services.TryAddSingleton<ILeadAlertRecipientDirectory, KernelLeadAlertRecipientDirectory>();
+        services.TryAddSingleton<KernelLeaderLock>();
+        services.TryAddSingleton<IKernelLeaderLock>(sp => sp.GetRequiredService<KernelLeaderLock>());
         services.TryAddSingleton<IProtocolVersionReader, KernelProtocolVersionReader>();
         services.TryAddSingleton<IProposalReader, KernelProposalReader>();
         services.TryAddSingleton<IEffectivityReader, KernelEffectivityReader>();
         services.TryAddSingleton<IStudyGovernanceReader, KernelStudyGovernanceReader>();
-        services.TryAddSingleton<IObservationRecords, KernelObservationRecords>();
-        services.TryAddSingleton<ICollectionInstanceRecords, KernelCollectionInstanceRecords>();
+        services.TryAddScoped<IObservationRecords, KernelObservationRecords>();
+        services.TryAddScoped<ICollectionInstanceRecords, KernelCollectionInstanceRecords>();
         services.TryAddSingleton<ILockRecords, KernelLockRecords>();
         services.TryAddSingleton<IKernelExportReader, KernelExportReader>();
         services.TryAddSingleton<ITenantDirectory, KernelTenantDirectory>();
@@ -97,7 +102,15 @@ public static class KernelPersistenceServiceCollectionExtensions
         services.TryAddSingleton<KernelAuditChainSealer>();
         services.TryAddSingleton<IConceptRegistry, KernelConceptRegistry>();
         services.TryAddSingleton<IWorkQueueDefinitions, KernelWorkQueueDefinitions>();
+        services.TryAddSingleton<IWorkItemBlindingMask, KernelWorkItemBlindingMask>();
+        services.TryAddSingleton<IWorkItemTargetResolver, KernelWorkItemTargetResolver>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IWorkItemSource, ProtocolVersionsInReviewSource>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IWorkItemSource, QueriesOpenSource>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IWorkItemSource, QueriesAnsweredSource>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IWorkItemSource, ValidationFindingsOpenSource>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IWorkItemSource, FormsAwaitingSignatureSource>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IWorkItemSource, ObservationsAwaitingVerificationSource>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IWorkItemSource, ProposalsPendingSource>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IIndicatorPopulationSource, EnrollmentPopulationSource>());
 
         // Lineage reads need the host's INodeVisibility (ADR-2471); none is registered here, so resolving
@@ -132,6 +145,7 @@ public static class KernelPersistenceServiceCollectionExtensions
         services.RemoveAll<KernelBackgroundOptions>();
         services.AddSingleton(options);
         services.TryAddSingleton<KernelLeaderLock>();
+        services.TryAddSingleton<IKernelLeaderLock>(sp => sp.GetRequiredService<KernelLeaderLock>());
         services.TryAddSingleton<KernelOutboxRelay>();
         services.AddHostedService<KernelOutboxRelayService>();
         services.AddHostedService<KernelAuditSealingService>();

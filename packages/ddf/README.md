@@ -15,7 +15,7 @@ if (result.IsSuccess)
 // result.Notes: what the design does not carry, by USDM id
 ```
 
-USDM ids become element ids. Each Biomedical Concept resolves to the tenant's current concept version, and a missing one fails the import. Timings become study days (no day 0) with windows. A study with several versions or designs needs `UsdmImportOptions` to name one.
+USDM ids become element ids. Each Biomedical Concept resolves to the tenant's current concept version, and a missing one fails the import. Timings become SDTM study days (no day 0; a `P0D` `Fixed Reference` baseline normalizes to day 1) with windows. A study with several versions or designs needs `UsdmImportOptions` to name one.
 
 ## Project
 
@@ -25,7 +25,8 @@ USDM ids become element ids. Each Biomedical Concept resolves to the tenant's cu
 - Item text (`ItemText` in `DdfRules.cs`): an item's `label` (default: its own name), `description` and `hint` are in `CompileOptions.DefaultLanguage`; `localizations` adds languages as `{"fr": {"label": "…", "hint": "…", "description": "…"}}`. The form gets one label and hint per language; the ODM `ItemDef` gets a `Question` and, when there are descriptions, a `Description`. A missing study id or name, or an item without an id, is filled in and reported in `Warnings`.
 - `IAccessibilityValidator`, `AccessibilityStatus`, `AccessibilityValidationException` (`Accessibility.cs`) and `XFormsAccessibilityValidator`: the accessibility check. The built-in validator is a structural WCAG 2.1 review of the XForm (title, labels, label languages, choice labels, and every control bound once); pass another `IAccessibilityValidator` to replace it.
 - `UsdmDesignImporter` (with `UsdmImportOptions`, `UsdmImportResult`, `UsdmImportNote`, `BiomedicalConceptResolver`): USDM 4 into a `ProtocolDesign`. `UsdmDesignReader`, `UsdmSchedule` and `UsdmDuration` (`UsdmJson.cs`) are internal.
-- `OdmDesignImporter`, `CdiscLibraryTemplateCatalog`, and `ProtocolDesignImporterService`: synchronous ODM v1.3.2 XML and USDM v4 JSON import into `ProtocolDesign`, bundled CDISC Library eCRF template catalog (`docs/CDISC/Library/Data_Collection/eCRFs`), 10 MB payload enforcement, DTD/XXE blocking, and readable `ProtocolImportNote` generation.
+- `OdmDesignImporter`, `CdiscLibraryTemplateCatalog`, and `ProtocolDesignImporterService`: synchronous ODM v1.3.2 XML and USDM v4 JSON import into `ProtocolDesign` (mapping item datatypes, UCUM units, requiredness, and terminology bindings via `ProtocolTerminologyResolver`), bundled CDISC Library eCRF template catalog (`docs/CDISC/Library/Data_Collection/eCRFs`), 10 MB payload enforcement, DTD/XXE blocking, and readable `ProtocolImportNote` generation.
+- `ProtocolFormCompiler`: implements `IProtocolFormCompiler` to compile `ProtocolDesign.CollectionSpecs` into OpenRosa XForm XML and CDISC ODM v1.3.2 XML snapshots when a `ProtocolVersion` is approved.
 - `Models.cs`: `DDFStudyIR`, `DDFItemIR`, `DDFCompilationResult`, `CompileOptions`, `CompilerWarning`, `AccessibilityReport`, `ItemLocalization`.
 - `Templates/`: `odm_template.xml.liquid` and `openrosa_template.xml.liquid`, embedded into the assembly.
 - No Python reference sources remain (#4789).

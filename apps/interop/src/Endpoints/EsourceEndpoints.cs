@@ -84,7 +84,8 @@ public static class EsourceEndpoints
             .RequirePermission("esource_candidate:ingest").RequireCallerStudyAndSiteScope()
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<FhirBundleIngestResponse>(StatusCodes.Status200OK)
-            .ProducesProblem(StatusCodes.Status400BadRequest);
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status409Conflict);
 
         // Candidates for Drawer
         group.MapGet("/candidates", ListCandidatesAsync)
@@ -185,7 +186,7 @@ public static class EsourceEndpoints
                 statusCode: StatusCodes.Status400BadRequest);
         }
 
-        var caller = GetCallerUser(httpContext);
+        var caller = CallerScope.RequiredUserId(httpContext, "An admitted eSource request has no signed caller.");
         var record = new EhrEndpointRecord
         {
             Name = request.Name,
@@ -371,7 +372,7 @@ public static class EsourceEndpoints
 
         if (ClinicalScopeGuard.RequireStudyAndOptionalSite(httpContext, request.StudyId, request.SiteId, allowUnassignedSiteForScopedCaller: true) is not null)
         {
-            return OutsideStudy();
+            return ClinicalScopeGuard.OutsideStudy();
         }
 
         return Results.Problem(
@@ -397,9 +398,38 @@ public static class EsourceEndpoints
             return Results.Problem("SiteId and EhrSystemId are required.", statusCode: StatusCodes.Status400BadRequest);
         }
 
-        if (ClinicalScopeGuard.RequireStudyAndSite(httpContext, request.StudyId, request.SiteId) is not null)
+        string studyId = request.StudyId.Trim();
+        string siteId = request.SiteId.Trim();
+        string subjectId = request.SubjectId.Trim();
+        string ehrSystemId = request.EhrSystemId.Trim();
+        string subjectPseudonym = string.IsNullOrWhiteSpace(request.SubjectPseudonym)
+            ? subjectId
+            : request.SubjectPseudonym.Trim();
+
+        if (ClinicalScopeGuard.RequireStudyAndSite(httpContext, studyId, siteId) is not null)
         {
-            return OutsideStudy();
+            return ClinicalScopeGuard.OutsideStudy();
+        }
+
+        var conflictingSites = await db.EhrReconciliationCandidateRecords
+            .AsNoTracking()
+            .Where(c => c.StudyId == studyId && c.SubjectId == subjectId && c.SiteId != siteId)
+            .Select(c => c.SiteId)
+            .Distinct()
+            .ToListAsync(ct)
+            .ConfigureAwait(false);
+
+        if (conflictingSites.Exists(existingSite => ClinicalScopeGuard.RequireStudyAndSite(httpContext, studyId, existingSite) is not null))
+        {
+            return ClinicalScopeGuard.OutsideStudy();
+        }
+
+        if (conflictingSites.Count > 0)
+        {
+            return Results.Problem(
+                title: "Conflicting subject site",
+                detail: "Reconciliation candidates for this subject are already recorded under another site in this study.",
+                statusCode: StatusCodes.Status409Conflict);
         }
 
         FhirObservationMapper.Result mapped;
@@ -408,9 +438,9 @@ public static class EsourceEndpoints
             mapped = FhirObservationMapper.Map(
                 request.RawFhirBundleJson ?? string.Empty,
                 new FhirObservationMapper.Target(
-                    request.SubjectId,
-                    string.IsNullOrWhiteSpace(request.SubjectPseudonym) ? request.SubjectId : request.SubjectPseudonym,
-                    request.EhrSystemId),
+                    subjectId,
+                    subjectPseudonym,
+                    ehrSystemId),
                 clock.UtcNow);
         }
         catch (FormatException ex)
@@ -427,14 +457,21 @@ public static class EsourceEndpoints
         }
 
         var dtos = new List<EhrCandidateItemDto>();
-        foreach (var candidate in mapped.Candidates)
+        foreach (var candidate in mapped.Candidates.DistinctBy(c => (c.FhirResourceId, c.TargetVariable)))
         {
-            candidate.StudyId = request.StudyId;
-            candidate.SiteId = request.SiteId;
+            candidate.StudyId = studyId;
+            candidate.SiteId = siteId;
 
-            // A resource already pending review for the same variable is not filed twice.
+            // A resource already pending review for the same variable at this site is not filed twice.
             var existing = await db.EhrReconciliationCandidateRecords
-                .FirstOrDefaultAsync(c => c.StudyId == candidate.StudyId && c.SubjectId == candidate.SubjectId && c.FhirResourceId == candidate.FhirResourceId && c.TargetVariable == candidate.TargetVariable, ct)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(
+                    c => c.StudyId == candidate.StudyId
+                        && c.SiteId == candidate.SiteId
+                        && c.SubjectId == candidate.SubjectId
+                        && c.FhirResourceId == candidate.FhirResourceId
+                        && c.TargetVariable == candidate.TargetVariable,
+                    ct)
                 .ConfigureAwait(false);
 
             if (existing is null)
@@ -444,6 +481,11 @@ public static class EsourceEndpoints
             }
             else
             {
+                if (ClinicalScopeGuard.RequireStudyAndSite(httpContext, existing.StudyId, existing.SiteId) is not null)
+                {
+                    return ClinicalScopeGuard.OutsideStudy();
+                }
+
                 dtos.Add(ToDto(existing));
             }
         }
@@ -455,8 +497,8 @@ public static class EsourceEndpoints
             CandidateCount: dtos.Count,
             Candidates: dtos,
             Message: mapped.Skipped.Count == 0
-                ? $"Ingested {dtos.Count} Observation(s) for subject {request.SubjectId}."
-                : $"Ingested {dtos.Count} Observation(s) for subject {request.SubjectId}; skipped {mapped.Skipped.Count}: {string.Join("; ", mapped.Skipped)}."));
+                ? $"Ingested {dtos.Count} Observation(s) for subject {subjectId}."
+                : $"Ingested {dtos.Count} Observation(s) for subject {subjectId}; skipped {mapped.Skipped.Count}: {string.Join("; ", mapped.Skipped)}."));
     }
 
     public static async Task<IResult> ListCandidatesAsync(
@@ -478,7 +520,7 @@ public static class EsourceEndpoints
             return scopeDenied!;
         }
 
-        var query = InCallerStudies(db.EhrReconciliationCandidateRecords.AsNoTracking(), httpContext);
+        var query = ClinicalScopeGuard.NarrowToStudyScope(db.EhrReconciliationCandidateRecords.AsNoTracking(), httpContext, c => c.StudyId);
         if (siteFilter is not null)
         {
             var allowedSites = siteFilter.ToList();
@@ -554,11 +596,11 @@ public static class EsourceEndpoints
 
         if (ClinicalScopeGuard.RequireStudyAndOptionalSite(httpContext, item.StudyId, item.SiteId) is not null)
         {
-            return OutsideStudy();
+            return ClinicalScopeGuard.OutsideStudy();
         }
 
-        var callerUser = GetCallerUser(httpContext);
-        var callerRole = GetCallerRole(httpContext);
+        var callerUser = CallerScope.RequiredUserId(httpContext, "An admitted eSource request has no signed caller.");
+        var callerRole = CallerScope.Roles(httpContext);
         var now = clock.UtcNow;
 
         item.Status = "ACCEPTED";
@@ -624,11 +666,11 @@ public static class EsourceEndpoints
 
         if (ClinicalScopeGuard.RequireStudyAndOptionalSite(httpContext, item.StudyId, item.SiteId) is not null)
         {
-            return OutsideStudy();
+            return ClinicalScopeGuard.OutsideStudy();
         }
 
-        var callerUser = GetCallerUser(httpContext);
-        var callerRole = GetCallerRole(httpContext);
+        var callerUser = CallerScope.RequiredUserId(httpContext, "An admitted eSource request has no signed caller.");
+        var callerRole = CallerScope.Roles(httpContext);
         var now = clock.UtcNow;
 
         item.Status = "REJECTED";
@@ -701,11 +743,11 @@ public static class EsourceEndpoints
 
         if (items.Exists(i => ClinicalScopeGuard.RequireStudyAndOptionalSite(httpContext, i.StudyId, i.SiteId) is not null))
         {
-            return OutsideStudy();
+            return ClinicalScopeGuard.OutsideStudy();
         }
 
-        var callerUser = GetCallerUser(httpContext);
-        var callerRole = GetCallerRole(httpContext);
+        var callerUser = CallerScope.RequiredUserId(httpContext, "An admitted eSource request has no signed caller.");
+        var callerRole = CallerScope.Roles(httpContext);
         var now = clock.UtcNow;
         var commitReason = string.IsNullOrWhiteSpace(request.CommitReason) ? "CRC batch accepted candidate data from hospital EHR" : request.CommitReason;
 
@@ -791,11 +833,11 @@ public static class EsourceEndpoints
 
         if (items.Exists(i => ClinicalScopeGuard.RequireStudyAndOptionalSite(httpContext, i.StudyId, i.SiteId) is not null))
         {
-            return OutsideStudy();
+            return ClinicalScopeGuard.OutsideStudy();
         }
 
-        var callerUser = GetCallerUser(httpContext);
-        var callerRole = GetCallerRole(httpContext);
+        var callerUser = CallerScope.RequiredUserId(httpContext, "An admitted eSource request has no signed caller.");
+        var callerRole = CallerScope.Roles(httpContext);
         var now = clock.UtcNow;
 
         foreach (var item in items)
@@ -862,11 +904,11 @@ public static class EsourceEndpoints
 
         if (ClinicalScopeGuard.RequireStudyAndOptionalSite(httpContext, item.StudyId, item.SiteId) is not null)
         {
-            return OutsideStudy();
+            return ClinicalScopeGuard.OutsideStudy();
         }
 
-        var callerUser = GetCallerUser(httpContext);
-        var callerRole = GetCallerRole(httpContext);
+        var callerUser = CallerScope.RequiredUserId(httpContext, "An admitted eSource request has no signed caller.");
+        var callerRole = CallerScope.Roles(httpContext);
         var now = clock.UtcNow;
 
         var query = new ClinicalQuery
@@ -1025,26 +1067,6 @@ public static class EsourceEndpoints
         {
             return json;
         }
-    }
-
-    // The signed caller (ADR-2516); the permission policy has already refused any request without one.
-    private static string GetCallerUser(HttpContext httpContext) =>
-        CallerScope.UserId(httpContext) ?? throw new InvalidOperationException("An admitted eSource request has no signed caller.");
-
-    private static string GetCallerRole(HttpContext httpContext) => CallerScope.Roles(httpContext);
-
-    private static IResult OutsideStudy() =>
-        Results.Problem(
-            title: "Outside your studies",
-            detail: "You are not assigned to this study.",
-            statusCode: StatusCodes.Status403Forbidden);
-
-    private static IQueryable<EhrReconciliationCandidateRecord> InCallerStudies(
-        IQueryable<EhrReconciliationCandidateRecord> candidates,
-        HttpContext httpContext)
-    {
-        var studies = CallerScope.StudyFilter(httpContext);
-        return studies == null ? candidates : candidates.Where(c => studies.Contains(c.StudyId));
     }
 }
 

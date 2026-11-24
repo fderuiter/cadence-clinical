@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { computed } from "vue";
 import { ApiError } from "../../src/api/client";
 import {
   ecrfQueriesApi,
@@ -20,6 +21,7 @@ vi.mock("../../src/api/ecrfQueriesApi", async (importOriginal) => {
       listForEnrollment: vi.fn(),
       listForStudy: vi.fn(),
       transition: vi.fn(),
+      reassign: vi.fn(),
     },
   };
 });
@@ -457,5 +459,158 @@ describe("useFormQueries (#5461, ADR-2625)", () => {
       value_changed: true,
     });
     expect(ecrfQueriesApi.listForForm).toHaveBeenCalledTimes(1);
+  });
+
+  it("indexes queries by form_id and item_id in a computed nested Map, avoids delimiter collisions, and invalidates on put, applySavedValues, and clear", async () => {
+    const q1 = query({
+      query_id: "query-1",
+      form_id: "form:a",
+      item_id: "b",
+      status: "open",
+    });
+    const q2 = query({
+      query_id: "query-2",
+      form_id: "form",
+      item_id: "a:b",
+      status: "open",
+    });
+    vi.mocked(ecrfQueriesApi.listForEnrollment).mockResolvedValue([q1, q2]);
+
+    const queries = useFormQueries();
+    const sysbpLiveStatuses = computed(() =>
+      queries.forItem("form-a", "SYSBP").map((q) => q.status)
+    );
+    expect(sysbpLiveStatuses.value).toEqual([]);
+
+    // Shared empty array on misses without allocating new arrays.
+    const missA = queries.forItem("form-a", "NONE");
+    const missB = queries.forItem("form-b", "NONE");
+    expect(missA).toEqual([]);
+    expect(missA).toBe(missB);
+
+    await queries.load({ enrollmentId: "enrollment-a" });
+    expect(queries.forItem("form:a", "b").map((q) => q.query_id)).toEqual([
+      "query-1",
+    ]);
+    expect(queries.forItem("form", "a:b").map((q) => q.query_id)).toEqual([
+      "query-2",
+    ]);
+    expect(queries.forItem("form:a", "a:b")).toBe(missA);
+
+    // Repeated forItem lookups read the computed Map in O(1) without scanning queries.value.
+    const filterSpy = vi.spyOn(queries.queries.value, "filter");
+    expect(queries.forItem("form:a", "b")).toHaveLength(1);
+    expect(queries.forItem("form", "a:b")).toHaveLength(1);
+    expect(queries.forItem("form-a", "MISSING")).toHaveLength(0);
+    expect(filterSpy).not.toHaveBeenCalled();
+    filterSpy.mockRestore();
+
+    // In-place push via raise invalidates computed consumers.
+    const raisedSysbp = query({
+      query_id: "query-sys-1",
+      form_id: "form-a",
+      item_id: "SYSBP",
+      status: "open",
+    });
+    vi.mocked(ecrfQueriesApi.raise).mockResolvedValueOnce(raisedSysbp);
+    await queries.raise(TARGET, "Confirm systolic BP", "Source audit");
+    expect(sysbpLiveStatuses.value).toEqual(["open"]);
+
+    // In-place splice via act and actMany invalidates computed consumers.
+    vi.mocked(ecrfQueriesApi.transition).mockResolvedValueOnce({
+      ...raisedSysbp,
+      status: "answered",
+      version: 2,
+    });
+    await queries.act(
+      queries.forItem("form-a", "SYSBP")[0],
+      "answer",
+      "Confirmed on chart",
+      "Site response"
+    );
+    expect(sysbpLiveStatuses.value).toEqual(["answered"]);
+
+    vi.mocked(ecrfQueriesApi.transition).mockResolvedValueOnce({
+      ...raisedSysbp,
+      status: "closed",
+      version: 3,
+    });
+    await queries.actMany(
+      [queries.forItem("form-a", "SYSBP")[0]],
+      "close",
+      "Verified",
+      "CRA closeout"
+    );
+    expect(sysbpLiveStatuses.value).toEqual(["closed"]);
+
+    // clear resets the index back to the shared empty array.
+    queries.clear();
+    expect(sysbpLiveStatuses.value).toEqual([]);
+    expect(queries.forItem("form-a", "SYSBP")).toBe(missA);
+  });
+
+  it("reassigns or unassigns a query with retry-safe idempotency key and forwards replacement assignee on act", async () => {
+    const initial = query({ assignee: "crc.alice" });
+    vi.mocked(ecrfQueriesApi.listForForm).mockResolvedValue([initial]);
+    vi.mocked(ecrfQueriesApi.reassign)
+      .mockRejectedValueOnce(new TypeError("Failed to fetch"))
+      .mockResolvedValueOnce({ ...initial, assignee: "crc.bob", version: 2 })
+      .mockResolvedValueOnce({ ...initial, assignee: null, version: 3 });
+    vi.mocked(ecrfQueriesApi.transition).mockResolvedValueOnce({
+      ...initial,
+      status: "answered",
+      owner_role: "monitor",
+      assignee: "cra.lead",
+      version: 4,
+    });
+
+    const queries = useFormQueries();
+    await queries.load({ formId: "form-a" });
+
+    expect(
+      await queries.reassign(
+        queries.queries.value[0],
+        { assignee: "crc.bob", ownerRole: "site", note: "Evening shift" },
+        "Coordinator handoff"
+      )
+    ).toBe(false);
+    expect(
+      await queries.reassign(
+        queries.queries.value[0],
+        { assignee: "crc.bob", ownerRole: "site", note: "Evening shift" },
+        "Coordinator handoff"
+      )
+    ).toBe(true);
+
+    const [firstReassign, secondReassign] = vi
+      .mocked(ecrfQueriesApi.reassign)
+      .mock.calls.map(([req]) => req);
+    expect(secondReassign.idempotencyKey).toBe(firstReassign.idempotencyKey);
+    expect(queries.queries.value[0].assignee).toBe("crc.bob");
+    expect(queries.outcome.value?.message).toBe("Query reassigned.");
+
+    expect(
+      await queries.reassign(
+        queries.queries.value[0],
+        { assignee: null },
+        "Return to shared site queue"
+      )
+    ).toBe(true);
+    expect(queries.queries.value[0].assignee).toBeNull();
+    expect(queries.outcome.value?.message).toBe("Query unassigned.");
+
+    expect(
+      await queries.act(
+        queries.queries.value[0],
+        "answer",
+        "Confirmed",
+        "Site review",
+        { assignee: "cra.lead" }
+      )
+    ).toBe(true);
+    expect(ecrfQueriesApi.transition).toHaveBeenCalledWith(
+      "answer",
+      expect.objectContaining({ assignee: "cra.lead" })
+    );
   });
 });

@@ -6,7 +6,7 @@
         <h3>Live Rule Execution Tracer</h3>
       </div>
       <span
-        class="rule-count-badge"
+        class="rule-count-badge tabular-nums"
         :class="{ 'has-violations': violationCount > 0 }"
       >
         {{ activeRules.length }} Rules ({{ violationCount }} Queries)

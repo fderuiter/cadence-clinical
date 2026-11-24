@@ -6,7 +6,7 @@ function isInitialDemoBuild(env = import.meta.env) {
   return (
     env?.MODE === "demo" ||
     env?.VITE_DEMO_MODE === "true" ||
-    (typeof process !== "undefined" && process.env?.VITE_DEMO_MODE === "true")
+    globalThis.process?.env?.VITE_DEMO_MODE === "true"
   );
 }
 
@@ -54,6 +54,8 @@ export const useWalletStore = defineStore("wallet", {
         warning: null,
         data: null,
         previewUrl: null,
+        ocrToken: null,
+        imageBase64: null,
       },
       expenseForm: {
         subjectId: null,

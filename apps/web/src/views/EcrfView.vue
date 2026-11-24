@@ -41,9 +41,14 @@ import {
   readRouteScopeQuery,
   replaceRouteQueryParams,
   resolveRouteAndRouter,
+  shouldSuppressUnsavedNavigationGuard,
 } from "../composables/useRouteScopeSync";
 import { useClinicalScopeStore } from "../stores/clinicalScope";
 import { useAuthStore } from "../stores/auth";
+import {
+  resolveHydratedWorkspaceScope,
+  syncWorkspaceScope,
+} from "../stores/workspaceScope";
 import { confirmDialog } from "../composables/useConfirmDialog.js";
 import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 import {
@@ -79,6 +84,7 @@ function routeQuery(name, targetRoute = route) {
 }
 
 const initialRouteScope = readRouteScopeQuery(route);
+const hydratedScope = resolveHydratedWorkspaceScope(route);
 if (route && route.query) {
   const hasExplicitRouteScope = Boolean(
     initialRouteScope.studyId ||
@@ -88,15 +94,29 @@ if (route && route.query) {
   if (initialRouteScope.studyId) {
     setActiveStudyCode(initialRouteScope.studyId);
     scopeStore.activeStudyId = initialRouteScope.studyId;
-  } else if (!scopeStore.activeStudyId && activeStudyCode.value) {
-    scopeStore.activeStudyId = activeStudyCode.value;
+  } else if (
+    !scopeStore.activeStudyId &&
+    (hydratedScope.studyId || activeStudyCode.value)
+  ) {
+    scopeStore.activeStudyId = hydratedScope.studyId || activeStudyCode.value;
   }
   if (hasExplicitRouteScope) {
     scopeStore.activeSiteId = initialRouteScope.siteId;
     scopeStore.activeSubjectId = initialRouteScope.subjectId;
+  } else if (hydratedScope.siteId && !scopeStore.activeSiteId) {
+    scopeStore.activeSiteId = hydratedScope.siteId;
   }
-} else if (!scopeStore.activeStudyId && activeStudyCode.value) {
-  scopeStore.activeStudyId = activeStudyCode.value;
+} else if (
+  !scopeStore.activeStudyId &&
+  (hydratedScope.studyId || activeStudyCode.value)
+) {
+  scopeStore.activeStudyId = hydratedScope.studyId || activeStudyCode.value;
+}
+if (scopeStore.activeStudyId || scopeStore.activeSiteId) {
+  syncWorkspaceScope({
+    ...(scopeStore.activeStudyId ? { studyId: scopeStore.activeStudyId } : {}),
+    ...(scopeStore.activeSiteId ? { siteId: scopeStore.activeSiteId } : {}),
+  });
 }
 
 watch(
@@ -192,17 +212,28 @@ function onFormPanelClosed() {
   }
   loadedFormId.value = null;
   loadedFormTitle.value = "";
-  if (!routeQuery("formId") && !routeQuery("itemId")) return;
+  if (
+    !routeQuery("formId") &&
+    !routeQuery("itemId") &&
+    !routeQuery("collectionSpecId") &&
+    !routeQuery("plannedActivityId") &&
+    !routeQuery("visitId")
+  ) {
+    return;
+  }
   if (typeof router?.replace === "function") {
     const nextQuery = { ...(route?.query || {}) };
     delete nextQuery.formId;
     delete nextQuery.itemId;
+    delete nextQuery.collectionSpecId;
+    delete nextQuery.plannedActivityId;
+    delete nextQuery.visitId;
     void router.replace({ query: nextQuery });
   }
 }
 
-function shouldSuppressUnsavedGuard() {
-  return Boolean(authStore.sessionExpired || authStore.isLoggingOut);
+function shouldSuppressUnsavedGuard(to) {
+  return shouldSuppressUnsavedNavigationGuard(authStore, to);
 }
 
 function handleBeforeUnload(event) {
@@ -233,8 +264,8 @@ onUnmounted(() => {
 });
 
 if (typeof onBeforeRouteLeave === "function") {
-  onBeforeRouteLeave(() => {
-    if (workspaceDirty.value && !shouldSuppressUnsavedGuard()) {
+  onBeforeRouteLeave((to) => {
+    if (workspaceDirty.value && !shouldSuppressUnsavedGuard(to)) {
       return confirmLeaveDirtyDraft().then((confirmLeave) =>
         confirmLeave ? undefined : false
       );
@@ -244,7 +275,7 @@ if (typeof onBeforeRouteLeave === "function") {
 
 if (typeof onBeforeRouteUpdate === "function") {
   onBeforeRouteUpdate((to, from) => {
-    if (!formPanelDirty.value || shouldSuppressUnsavedGuard()) return;
+    if (!formPanelDirty.value || shouldSuppressUnsavedGuard(to)) return;
     const nextFormId = routeQuery("formId", to);
     const currentFormId =
       loadedFormId.value ?? routeQuery("formId", from ?? route);

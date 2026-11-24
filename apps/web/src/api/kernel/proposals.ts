@@ -1,6 +1,6 @@
-import { encodeChangeReason } from "../changeReason";
-import { unwrapResponse } from "../client";
-import { kernelClient, unversioned, type KernelSchemas } from "./shared";
+import type { KernelSchemas } from "./shared";
+
+const loadRouteTransport = () => import("./protocolImport");
 
 export type KernelProposal = KernelSchemas["Kernel_KernelProposalResponse"];
 export type KernelProposalState =
@@ -23,27 +23,18 @@ export const kernelProposalsApi = {
    * A study's proposals, newest first (GET /api/v1/kernel/studies/{studyRef}/proposals). A proposal the reader may
    * not see comes back masked; an affected object they may not see keeps its place with its mask (ADR-2471).
    */
-  listProposals(
+  async listProposals(
     studyRef: string,
     query: { status?: KernelProposalStatus; limit?: number } = {}
   ): Promise<KernelProposal[]> {
-    return unwrapResponse(
-      kernelClient.GET("/api/v1/kernel/studies/{studyRef}/proposals", {
-        params: {
-          path: { studyRef },
-          query: { status: query.status, limit: query.limit },
-        },
-      })
-    );
+    const { executeListProposals } = await loadRouteTransport();
+    return executeListProposals(studyRef, query);
   },
 
   /** One proposal with its plan, affected objects, requested capabilities, model, content hash and decision. */
-  getProposal(proposalRef: string): Promise<KernelProposal> {
-    return unwrapResponse(
-      kernelClient.GET("/api/v1/kernel/proposals/{proposalRef}", {
-        params: { path: { proposalRef: unversioned(proposalRef) } },
-      })
-    );
+  async getProposal(proposalRef: string): Promise<KernelProposal> {
+    const { executeGetProposal } = await loadRouteTransport();
+    return executeGetProposal(proposalRef);
   },
 
   /**
@@ -51,19 +42,10 @@ export const kernelProposalsApi = {
    * ApiError of status 409 when the proposal is already decided or expired, 422 without a reason and 403 without
    * proposal.reject in its study.
    */
-  rejectProposal({
-    proposalRef,
-    reason,
-    idempotencyKey,
-  }: KernelProposalRejection): Promise<KernelProposalState> {
-    return unwrapResponse(
-      kernelClient.POST("/api/v1/kernel/proposals/{proposalRef}/rejection", {
-        params: { path: { proposalRef: unversioned(proposalRef) } },
-        headers: {
-          "X-Change-Reason": encodeChangeReason(reason),
-          "Idempotency-Key": idempotencyKey,
-        },
-      })
-    );
+  async rejectProposal(
+    input: KernelProposalRejection
+  ): Promise<KernelProposalState> {
+    const { executeRejectProposal } = await loadRouteTransport();
+    return executeRejectProposal(input);
   },
 };

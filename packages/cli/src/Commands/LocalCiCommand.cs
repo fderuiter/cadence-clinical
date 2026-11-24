@@ -13,8 +13,8 @@ using Spectre.Console;
 namespace Cadence.Cli.Commands;
 
 /// <summary>
-/// <c>cadence ci</c>: runs the jobs of <c>.github/workflows/ci.yml</c> on this machine (#5017), because GitHub Actions
-/// does not run jobs for this repository until 2027.
+/// <c>cadence ci</c>: mirrors the pull-request jobs of <c>.github/workflows/ci.yml</c> locally (#5017) so contributors
+/// can verify full workflow parity before pushing to GitHub Actions.
 /// </summary>
 public static class LocalCiCommand
 {
@@ -47,6 +47,10 @@ public static class LocalCiCommand
         {
             Description = "Skip 'git fetch' before synthesizing the merged worktree (air-gapped debugging only)",
         };
+        var includeUncommitted = new Option<bool>("--include-uncommitted")
+        {
+            Description = "Synthesize an ephemeral snapshot commit from uncommitted working-tree and index changes without mutating your checkout",
+        };
         var list = new Option<bool>("--list") { Description = "Print the steps and what each runs locally, without running them" };
 
         command.Options.Add(jobs);
@@ -55,6 +59,7 @@ public static class LocalCiCommand
         command.Options.Add(allowSkip);
         command.Options.Add(baseRef);
         command.Options.Add(offline);
+        command.Options.Add(includeUncommitted);
         command.Options.Add(list);
         command.SetAction(result =>
         {
@@ -65,7 +70,8 @@ public static class LocalCiCommand
                 allowDbSkip: result.GetValue(allowDbSkip) || skipAll,
                 baseRef: result.GetValue(baseRef) ?? GitRevisionScopeService.DefaultBaseRef,
                 list: result.GetValue(list),
-                offline: result.GetValue(offline));
+                offline: result.GetValue(offline),
+                includeUncommitted: result.GetValue(includeUncommitted));
         });
     }
 
@@ -87,7 +93,8 @@ public static class LocalCiCommand
         string baseRef,
         bool list,
         LocalCiEnvironment? environment = null,
-        bool offline = false) =>
+        bool offline = false,
+        bool includeUncommitted = false) =>
         Execute(
             jobKeys,
             allowMissingTools: allowSkip,
@@ -95,7 +102,8 @@ public static class LocalCiCommand
             baseRef: baseRef,
             list: list,
             environment: environment,
-            offline: offline);
+            offline: offline,
+            includeUncommitted: includeUncommitted);
 
     public static int Execute(
         string[] jobKeys,
@@ -104,7 +112,8 @@ public static class LocalCiCommand
         string baseRef,
         bool list,
         LocalCiEnvironment? environment = null,
-        bool offline = false)
+        bool offline = false,
+        bool includeUncommitted = false)
     {
         IReadOnlyList<CiJob> jobs;
         try
@@ -135,7 +144,13 @@ public static class LocalCiCommand
 
         var results = LocalCiRunner.Run(
             jobs,
-            new LocalCiOptions(allowMissingTools, allowDbSkip, baseRef, Offline: offline, RequestedJobs: jobKeys),
+            new LocalCiOptions(
+                allowMissingTools,
+                allowDbSkip,
+                baseRef,
+                Offline: offline,
+                RequestedJobs: jobKeys,
+                IncludeUncommitted: includeUncommitted),
             environment);
         PrintSummary(results, jobKeys.Length == 0);
         return results.Any(r => r.Outcome == CiOutcome.Failed) ? 1 : 0;

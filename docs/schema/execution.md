@@ -25,6 +25,8 @@ Entity: `AuditLogEntry`
 
 Indexes:
 
+- `IX_AuditLogEntries_EntityName_PredecessorHash`: (`EntityName`, `PredecessorHash`)
+- `IX_AuditLogEntries_EntityName_Timestamp_VersionIndex_Id`: (`EntityName`, `Timestamp`, `VersionIndex`, `Id`)
 - `IX_AuditLogEntries_tenant_id`: (`tenant_id`)
 
 ## edc.InboxState
@@ -453,6 +455,7 @@ Entity: `ClinicalSubject`
 | `WithdrawalReason` | `text` | yes |  |  |
 | `WithdrawnAt` | `timestamp with time zone` | yes |  |  |
 | `_version` | `bigint` | no | `0` |  |
+| `kernel_enrollment_id` | `uuid` | yes |  |  |
 | `strat_factors` | `jsonb` | no |  |  |
 | `tenant_id` | `uuid` | no |  |  |
 
@@ -464,6 +467,7 @@ Indexes:
 - `IX_clinical_subjects_tenant_id_StudyCode_EnrollmentIndex`: unique (`tenant_id`, `StudyCode`, `EnrollmentIndex`)
 - `IX_clinical_subjects_tenant_id_StudyCode_SiteCode_Status_EnrollmentIndex`: (`tenant_id`, `StudyCode`, `SiteCode`, `Status`, `EnrollmentIndex`)
 - `IX_clinical_subjects_tenant_id_SubjectCode`: unique (`tenant_id`, `SubjectCode`)
+- `IX_clinical_subjects_tenant_id_kernel_enrollment_id`: (`tenant_id`, `kernel_enrollment_id`)
 
 ## edc.consumed_signature_tokens
 

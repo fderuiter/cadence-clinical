@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -10,12 +11,15 @@ using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Domain.Knowledge;
 using Cadence.Kernel.Events;
+using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.Lineage;
 using Cadence.Kernel.Modules;
 using Cadence.Kernel.Protocol;
 using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Trust;
+
+using FluentValidation;
 
 using Microsoft.Extensions.DependencyInjection;
 
@@ -40,12 +44,21 @@ internal sealed class CreateProtocolDraftHandler : ICommandHandler<CreateProtoco
         var studyId = command.StudyId;
         await context.Work.LockAsync<Study>(studyId, cancellationToken).ConfigureAwait(false);
         var existing = await context.Work.ReadAllAsync<ProtocolVersion>(v => v.StudyId == studyId, cancellationToken).ConfigureAwait(false);
-        if (existing.Count > 0)
+        CommandResult<ProtocolVersion> created;
+        if (existing.Count == 0)
+        {
+            created = ProtocolVersion.CreateFirst(command.ProtocolVersionId, command.TenantId, command.StudyId, command.Content);
+        }
+        else if (existing.All(v => v.Status is ProtocolVersionStatus.Withdrawn or ProtocolVersionStatus.Superseded))
+        {
+            var nextNumber = existing.Max(v => v.Number) + 1;
+            created = ProtocolVersion.CreateRecoveryDraft(command.ProtocolVersionId, command.TenantId, command.StudyId, nextNumber, command.Content);
+        }
+        else
         {
             return ProtocolErrors.FirstVersionExists;
         }
 
-        var created = ProtocolVersion.CreateFirst(command.ProtocolVersionId, command.TenantId, command.StudyId, command.Content);
         if (created.Value is not { } version)
         {
             return created.Error!;
@@ -210,7 +223,9 @@ internal sealed class ReturnProtocolVersionToDraftHandler : ICommandHandler<Retu
 /// version's content hash (spec §6.2, 21 CFR 11.70). The approval also writes the design's elements as lineage parts
 /// of the approved version (ADR-2474), so amendment impact can start from the elements an amendment changes.
 /// </summary>
-internal sealed class ApproveProtocolVersionHandler(IAttestationVerifier verifier) : ICommandHandler<ApproveProtocolVersion, ProtocolVersionState>
+internal sealed class ApproveProtocolVersionHandler(
+    IAttestationVerifier verifier,
+    IProtocolFormCompiler? formCompiler = null) : ICommandHandler<ApproveProtocolVersion, ProtocolVersionState>
 {
     public async Task<CommandResult<ProtocolVersionState>> HandleAsync(
         ApproveProtocolVersion command, ICommandContext context, CancellationToken cancellationToken)
@@ -232,7 +247,8 @@ internal sealed class ApproveProtocolVersionHandler(IAttestationVerifier verifie
         }
 
         version.Approve(command.AttestationId);
-        var plan = ProtocolElementLineage.Plan(version.StudyId, await ChainAsync(version, context, cancellationToken).ConfigureAwait(false));
+        var chain = await ProtocolElementLineage.ChainAsync(context.Work, version, cancellationToken).ConfigureAwait(false);
+        var plan = ProtocolElementLineage.Plan(version.StudyId, chain);
         foreach (var part in plan.Parts)
         {
             context.Work.IncludePart(part.Node, part.NewVersion);
@@ -246,93 +262,48 @@ internal sealed class ApproveProtocolVersionHandler(IAttestationVerifier verifie
         context.Work.Raise(new ProtocolVersionApproved(
             version.TenantId, version.StudyId, version.Id, version.Number, version.ContentHash!, command.AttestationId));
 
-        if (!string.IsNullOrWhiteSpace(version.Content))
+        if (formCompiler is not null && version.Design() is { } design)
         {
-            try
+            var versionTag = version.Number.ToString(CultureInfo.InvariantCulture);
+            if (formCompiler.Compile(design, version.StudyId.Value.ToString(), versionTag) is { } compiled)
             {
-                if (TryCompileUsdm(version.Content, version.StudyId.Value.ToString(), version.Number.ToString()) is { } compiled)
+                var snapshot = new FormVersionSnapshot(
+                    FormVersionSnapshotId.New(context.RecordedAt),
+                    version.TenantId,
+                    version.StudyId,
+                    version.Id,
+                    versionTag,
+                    compiled.FormId,
+                    compiled.FormHash,
+                    compiled.OpenRosaXml,
+                    compiled.DdfIrJson,
+                    compiled.OdmXml,
+                    context.RecordedAt);
+
+                context.Work.Add(snapshot);
+                var elements = ProtocolElementLineage.Elements(version.StudyId, chain);
+                var snapshotTarget = NodeRef.For(snapshot.Id);
+                foreach (var spec in design.CollectionSpecs)
                 {
-                    var snapshot = new FormVersionSnapshot(
-                        FormVersionSnapshotId.New(),
-                        version.TenantId,
-                        version.StudyId,
-                        version.Id,
-                        version.Number.ToString(),
-                        compiled.FormId,
-                        compiled.FormHash,
-                        compiled.OpenRosaXml,
-                        compiled.DdfIrJson,
-                        compiled.OdmXml,
-                        context.RecordedAt);
-
-                    context.Work.Add(snapshot);
-
-                    context.Work.Raise(new FormVersionPublished(
-                        version.TenantId,
-                        version.StudyId,
-                        version.Id,
-                        version.Number.ToString(),
-                        compiled.FormId,
-                        compiled.FormHash,
-                        compiled.OpenRosaXml,
-                        compiled.DdfIrJson));
+                    if (elements.TryGetValue(spec.Id, out var specElement))
+                    {
+                        context.Work.LinkInput(specElement, LineageEdgeKind.DerivedFrom, target: snapshotTarget);
+                    }
                 }
-            }
-            catch (Exception)
-            {
-                // Gracefully ignore if version.Content is not valid USDM JSON (e.g. in legacy/simple tests)
+
+                context.Work.Raise(new FormVersionPublished(
+                    version.TenantId,
+                    version.StudyId,
+                    version.Id,
+                    versionTag,
+                    compiled.FormId,
+                    compiled.FormHash,
+                    compiled.OpenRosaXml,
+                    compiled.DdfIrJson));
             }
         }
 
         return ProtocolVersionStates.Of(version);
-    }
-
-    private static (string FormHash, string OpenRosaXml, string DdfIrJson, string FormId, string? OdmXml)? TryCompileUsdm(
-        string content, string fallbackStudyId, string versionTag)
-    {
-        var ddfAssembly = AppDomain.CurrentDomain.GetAssemblies().FirstOrDefault(a => a.GetName().Name == "Cadence.Ddf")
-            ?? System.Reflection.Assembly.Load("Cadence.Ddf");
-        if (ddfAssembly is null) return null;
-
-        var compilerType = ddfAssembly.GetType("Cadence.Ddf.UsdmCompiler");
-        if (compilerType is null) return null;
-
-        var compileMethod = compilerType.GetMethod("CompileUsdm", [typeof(string), typeof(string), typeof(string)]);
-        var parseMethod = compilerType.GetMethod("ParseUsdmToIr", [typeof(string), typeof(string), typeof(string)]);
-        if (compileMethod is null || parseMethod is null) return null;
-
-        var compilation = compileMethod.Invoke(null, [content, fallbackStudyId, versionTag]);
-        var parseResult = parseMethod.Invoke(null, [content, fallbackStudyId, versionTag]);
-        if (compilation is null || parseResult is null) return null;
-
-        var formHash = compilation.GetType().GetProperty("FormHash")?.GetValue(compilation) as string ?? string.Empty;
-        var openRosaXml = compilation.GetType().GetProperty("OpenRosaXml")?.GetValue(compilation) as string ?? string.Empty;
-        var odmXml = compilation.GetType().GetProperty("OdmXml")?.GetValue(compilation) as string;
-
-        var studyIr = parseResult.GetType().GetProperty("Item1")?.GetValue(parseResult);
-        var ddfIrJson = studyIr is not null ? System.Text.Json.JsonSerializer.Serialize(studyIr) : "{}";
-        var studyIdProp = studyIr?.GetType().GetProperty("StudyId")?.GetValue(studyIr) as string;
-        var formId = string.IsNullOrWhiteSpace(studyIdProp) ? fallbackStudyId : studyIdProp;
-
-        return (formHash, openRosaXml, ddfIrJson, formId, odmXml);
-    }
-
-    /// <summary>The version and its ancestors, first version first, as (number, content).</summary>
-    private static async Task<IReadOnlyList<(int Number, string Content)>> ChainAsync(
-        ProtocolVersion version, ICommandContext context, CancellationToken cancellationToken)
-    {
-        var chain = new List<(int Number, string Content)> { (version.Number, version.Content) };
-        var parentId = version.ParentVersionId;
-        while (parentId is { } id)
-        {
-            var parent = await context.Work.ReadAsync<ProtocolVersion>(id, cancellationToken).ConfigureAwait(false)
-                ?? throw new InvalidOperationException($"Protocol version {id} names a parent the tenant does not have.");
-            chain.Add((parent.Number, parent.Content));
-            parentId = parent.ParentVersionId;
-        }
-
-        chain.Reverse();
-        return chain;
     }
 }
 
@@ -415,6 +386,272 @@ internal static class ProtocolVersionStates
     }
 }
 
+/// <summary>Validates structural inputs on <see cref="ImportProtocolDraft"/> before authorization and persistence.</summary>
+internal sealed class ImportProtocolDraftValidator : AbstractValidator<ImportProtocolDraft>
+{
+    public ImportProtocolDraftValidator()
+    {
+        RuleFor(x => x.StudyId)
+            .Must(id => !id.IsEmpty)
+            .WithMessage("StudyId is required.");
+
+        RuleFor(x => x.TargetVersionId)
+            .Must(id => !id.IsEmpty)
+            .WithMessage("TargetVersionId is required.");
+
+        RuleFor(x => x.Mode)
+            .IsInEnum()
+            .WithMessage("Mode must be a defined ProtocolDraftImportMode.");
+
+        RuleFor(x => x.Content)
+            .NotEmpty()
+            .WithMessage("Content is required.");
+
+        RuleFor(x => x.ParentVersionId)
+            .Must(id => id is { IsEmpty: false })
+            .When(x => x.Mode == ProtocolDraftImportMode.ForkApproved)
+            .WithMessage("ParentVersionId is required when forking an approved protocol version.");
+
+        RuleFor(x => x.Amendment)
+            .NotNull()
+            .When(x => x.Mode == ProtocolDraftImportMode.ForkApproved)
+            .WithMessage("Amendment is required when forking an approved protocol version.");
+
+        RuleFor(x => x.StagedConcepts)
+            .NotNull()
+            .WithMessage("StagedConcepts must not be null.");
+
+        RuleForEach(x => x.StagedConcepts).ChildRules(concept =>
+        {
+            concept.RuleFor(c => c.ConceptId)
+                .Must(id => !id.IsEmpty)
+                .WithMessage("ConceptId is required.");
+            concept.RuleFor(c => c.PreferredLabel)
+                .NotEmpty()
+                .MaximumLength(500)
+                .WithMessage("PreferredLabel is required and at most 500 characters.");
+            concept.RuleFor(c => c.Definition)
+                .NotEmpty()
+                .WithMessage("Definition is required.");
+        });
+    }
+}
+
+/// <summary>
+/// Handles <see cref="ImportProtocolDraft"/>: acquires the study scope lock, validates protocol version lifecycle
+/// rules, and atomically commits staged <see cref="Concept"/> aggregates alongside the <see cref="ProtocolVersion"/>
+/// draft creation, revision, reopening, or fork.
+/// </summary>
+internal sealed class ImportProtocolDraftHandler : ICommandHandler<ImportProtocolDraft, ProtocolVersionState>
+{
+    public async Task<CommandResult<ProtocolVersionState>> HandleAsync(
+        ImportProtocolDraft command, ICommandContext context, CancellationToken cancellationToken)
+    {
+        var studyId = command.StudyId;
+        if (!await context.Work.ExistsAsync<Study>(studyId, cancellationToken).ConfigureAwait(false))
+        {
+            return ProtocolErrors.StudyUnknown;
+        }
+
+        await context.Work.LockScopeAsync(NodeRef.For(studyId), cancellationToken).ConfigureAwait(false);
+
+        var preparedConcepts = new List<Concept>();
+        if (command.StagedConcepts.Count > 0)
+        {
+            var requestedCodes = command.StagedConcepts
+                .Where(c => c.Origin == ConceptOrigin.CdiscBiomedicalConcept && !string.IsNullOrWhiteSpace(c.ExternalCode))
+                .Select(c => c.ExternalCode!.Trim())
+                .Distinct(StringComparer.Ordinal)
+                .ToList();
+            var existingByCode = requestedCodes.Count == 0
+                ? []
+                : await context.Work.ReadAllAsync<Concept>(
+                    c => c.Origin == ConceptOrigin.CdiscBiomedicalConcept && c.ExternalCode != null && requestedCodes.Contains(c.ExternalCode),
+                    cancellationToken).ConfigureAwait(false);
+            var existingCodes = existingByCode
+                .Where(c => c.ExternalCode is not null)
+                .Select(c => c.ExternalCode!)
+                .ToHashSet(StringComparer.Ordinal);
+            var seenIds = new HashSet<ConceptId>();
+            var seenCodes = new HashSet<string>(StringComparer.Ordinal);
+
+            foreach (var staged in command.StagedConcepts.OrderBy(c => c.ConceptId.Value))
+            {
+                if (!seenIds.Add(staged.ConceptId))
+                {
+                    continue;
+                }
+
+                if (staged.Origin == ConceptOrigin.CdiscBiomedicalConcept && !string.IsNullOrWhiteSpace(staged.ExternalCode))
+                {
+                    var normalizedCode = staged.ExternalCode.Trim();
+                    if (!seenCodes.Add(normalizedCode) || existingCodes.Contains(normalizedCode))
+                    {
+                        continue;
+                    }
+                }
+
+                if (await context.Work.ExistsAsync<Concept>(staged.ConceptId, cancellationToken).ConfigureAwait(false))
+                {
+                    continue;
+                }
+
+                var defined = Concept.Define(
+                    staged.ConceptId,
+                    command.TenantId,
+                    staged.Origin,
+                    staged.ExternalCode,
+                    staged.Kind,
+                    staged.PreferredLabel,
+                    staged.Definition,
+                    context.RecordedAt);
+                if (!defined.IsSuccess)
+                {
+                    return defined.Error!;
+                }
+
+                preparedConcepts.Add(defined.Value!);
+            }
+        }
+
+        ProtocolVersion targetVersion;
+        switch (command.Mode)
+        {
+            case ProtocolDraftImportMode.CreateDraft:
+                {
+                    if (await context.Work.ExistsAsync<ProtocolVersion>(command.TargetVersionId, cancellationToken).ConfigureAwait(false))
+                    {
+                        return KernelErrors.AlreadyExists;
+                    }
+
+                    var existing = await context.Work.ReadAllAsync<ProtocolVersion>(v => v.StudyId == studyId, cancellationToken).ConfigureAwait(false);
+                    CommandResult<ProtocolVersion> created;
+                    if (existing.Count == 0)
+                    {
+                        created = ProtocolVersion.CreateFirst(command.TargetVersionId, command.TenantId, studyId, command.Content);
+                    }
+                    else if (existing.All(v => v.Status is ProtocolVersionStatus.Withdrawn or ProtocolVersionStatus.Superseded))
+                    {
+                        var nextNumber = existing.Max(v => v.Number) + 1;
+                        created = ProtocolVersion.CreateRecoveryDraft(command.TargetVersionId, command.TenantId, studyId, nextNumber, command.Content);
+                    }
+                    else
+                    {
+                        return ProtocolErrors.FirstVersionExists;
+                    }
+
+                    if (created.Value is not { } draft)
+                    {
+                        return created.Error!;
+                    }
+
+                    if (command.Amendment is not null)
+                    {
+                        return ProtocolErrors.AmendmentNotAllowed;
+                    }
+
+                    context.Work.Add(draft);
+                    context.Work.Raise(new ProtocolVersionDrafted(draft.TenantId, draft.StudyId, draft.Id, draft.Number, null, null));
+                    targetVersion = draft;
+                    break;
+                }
+
+            case ProtocolDraftImportMode.UpdateExisting:
+            case ProtocolDraftImportMode.ReopenInReview:
+                {
+                    if (await context.Work.FindAsync<ProtocolVersion>(command.TargetVersionId, cancellationToken).ConfigureAwait(false) is not { } existing
+                        || existing.StudyId != studyId)
+                    {
+                        return KernelErrors.NotFound;
+                    }
+
+                    if (command.Mode == ProtocolDraftImportMode.ReopenInReview && existing.Status != ProtocolVersionStatus.InReview)
+                    {
+                        return existing.ReturnToDraft()!;
+                    }
+
+                    var reopened = false;
+                    if (existing.Status == ProtocolVersionStatus.InReview)
+                    {
+                        if (existing.ReturnToDraft() is { } reopenError)
+                        {
+                            return reopenError;
+                        }
+
+                        reopened = true;
+                    }
+
+                    if (existing.Revise(command.Content, command.Amendment) is { } reviseError)
+                    {
+                        return reviseError;
+                    }
+
+                    if (reopened)
+                    {
+                        context.Work.Raise(new ProtocolVersionReturnedToDraft(existing.TenantId, existing.StudyId, existing.Id));
+                    }
+
+                    context.Work.Raise(new ProtocolVersionRevised(existing.TenantId, existing.StudyId, existing.Id));
+                    targetVersion = existing;
+                    break;
+                }
+
+            case ProtocolDraftImportMode.ForkApproved:
+                {
+                    if (await context.Work.ExistsAsync<ProtocolVersion>(command.TargetVersionId, cancellationToken).ConfigureAwait(false))
+                    {
+                        return KernelErrors.AlreadyExists;
+                    }
+
+                    if (command.ParentVersionId is not { IsEmpty: false } parentId
+                        || await context.Work.ReadAsync<ProtocolVersion>(parentId, cancellationToken).ConfigureAwait(false) is not { } parent
+                        || parent.StudyId != studyId)
+                    {
+                        return KernelErrors.NotFound.WithMessage("The parent protocol version does not exist.");
+                    }
+
+                    var siblings = await context.Work.ReadAllAsync<ProtocolVersion>(v => v.StudyId == studyId, cancellationToken).ConfigureAwait(false);
+                    var number = siblings.Max(v => v.Number) + 1;
+                    var forked = ProtocolVersion.Fork(parent, command.TargetVersionId, number, command.Amendment!);
+                    if (forked.Value is not { } draft)
+                    {
+                        return forked.Error!;
+                    }
+
+                    if (draft.Revise(command.Content, command.Amendment) is { } reviseError)
+                    {
+                        return reviseError;
+                    }
+
+                    context.Work.Add(draft);
+                    context.Work.LinkInput(NodeRef.For(parent.Id, parent.VersionIndex), LineageEdgeKind.DerivedFrom);
+                    context.Work.Raise(new ProtocolVersionDrafted(
+                        draft.TenantId, draft.StudyId, draft.Id, draft.Number, draft.ParentVersionId, draft.Amendment));
+                    context.Work.Raise(new ProtocolVersionRevised(draft.TenantId, draft.StudyId, draft.Id));
+                    targetVersion = draft;
+                    break;
+                }
+
+            default:
+                return ProtocolErrors.InvalidTransition;
+        }
+
+        foreach (var concept in preparedConcepts)
+        {
+            context.Work.Add(concept);
+            context.Work.Raise(new ConceptDefined(
+                command.TenantId,
+                concept.Current,
+                concept.Origin,
+                concept.ExternalCode,
+                concept.Kind,
+                concept.PreferredLabel));
+        }
+
+        return ProtocolVersionStates.Of(targetVersion);
+    }
+}
+
 /// <summary>Registers the protocol version command handlers (spec §6.2).</summary>
 public static class ProtocolServiceCollectionExtensions
 {
@@ -428,6 +665,8 @@ public static class ProtocolServiceCollectionExtensions
         services.AddTransient<ICommandHandler<ApproveProtocolVersion, ProtocolVersionState>, ApproveProtocolVersionHandler>();
         services.AddTransient<ICommandHandler<WithdrawProtocolVersion, ProtocolVersionState>, WithdrawProtocolVersionHandler>();
         services.AddTransient<ICommandHandler<ForkProtocolVersion, ProtocolVersionState>, ForkProtocolVersionHandler>();
+        services.AddTransient<ICommandHandler<ImportProtocolDraft, ProtocolVersionState>, ImportProtocolDraftHandler>();
+        services.AddCommandValidator<ImportProtocolDraft, ImportProtocolDraftValidator>();
         return services;
     }
 }

@@ -10,9 +10,11 @@ using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Events;
 using Cadence.Kernel.Evidence;
+using Cadence.Kernel.Lineage;
 using Cadence.Kernel.Modules;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Trust;
+using Cadence.Kernel.Validation;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -24,7 +26,7 @@ namespace Cadence.Kernel.Application.Evidence;
 /// exclusive advisory lock, which waits for every covered write in flight, refuses a second lock of the same kind there,
 /// checks the signature over <see cref="LockStatement.Apply"/> and records the lock.
 /// </summary>
-internal sealed class ApplyLockHandler(IAttestationVerifier verifier) : ICommandHandler<ApplyLock, LockState>
+internal sealed class ApplyLockHandler(IAttestationVerifier verifier, IValidationFindings? findings = null) : ICommandHandler<ApplyLock, LockState>
 {
     public async Task<CommandResult<LockState>> HandleAsync(ApplyLock command, ICommandContext context, CancellationToken cancellationToken)
     {
@@ -52,7 +54,14 @@ internal sealed class ApplyLockHandler(IAttestationVerifier verifier) : ICommand
         }
 
         if (command.Kind == LockKind.Locked
-            && await LockReadinessEvaluator.CheckAsync(context.Work, command.StudyId, command.Scope, cancellationToken).ConfigureAwait(false) is { } notReady)
+            && await LockReadinessEvaluator.CheckAsync(
+                context.TenantId,
+                context.Work,
+                command.StudyId,
+                command.Scope,
+                findings,
+                cancellationToken,
+                context.RecordedAt).ConfigureAwait(false) is { } notReady)
         {
             return notReady;
         }
@@ -72,10 +81,16 @@ internal sealed class ApplyLockHandler(IAttestationVerifier verifier) : ICommand
             return rejected;
         }
 
+        var scopeVersion = await AssertionScopes.VersionAsync(command.Scope, context.Work, cancellationToken).ConfigureAwait(false);
         var applied = Assertion.Lock(
             command.AssertionId, context.TenantId, command.Kind, command.StudyId, enrollment, command.Scope, command.AttestationId,
             context.Actor.Id, context.RecordedAt);
         context.Work.Add(applied);
+        if (scopeVersion is not null)
+        {
+            context.Work.LinkInput(scopeVersion, LineageEdgeKind.DefinedBy, target: NodeRef.For(applied.Id));
+        }
+
         context.Work.Raise(new LockApplied(context.TenantId, applied.Id, command.Kind, command.StudyId, command.Scope, command.AttestationId));
         return CommandResult<LockState>.Success(new LockState(
             applied.Id, command.Kind, command.Scope, command.AttestationId, Released: false, applied.AssertedAt, applied.AssertedBy));
@@ -147,9 +162,17 @@ internal sealed class ReleaseLockHandler(IAttestationVerifier verifier) : IComma
             return rejected;
         }
 
+        var scopeVersion = await AssertionScopes.VersionAsync(applied.Target, context.Work, cancellationToken).ConfigureAwait(false);
         var release = Assertion.Retract(command.AssertionId, applied, command.AttestationId, context.Actor.Id, context.RecordedAt);
         var kind = (LockKind)applied.Kind;
+        var releaseTarget = NodeRef.For(release.Id);
         context.Work.Add(release);
+        context.Work.LinkInput(NodeRef.For(applied.Id, Math.Max(1L, applied.VersionIndex)), LineageEdgeKind.DerivedFrom, target: releaseTarget);
+        if (scopeVersion is not null)
+        {
+            context.Work.LinkInput(scopeVersion, LineageEdgeKind.DefinedBy, target: releaseTarget);
+        }
+
         context.Work.Raise(new LockReleased(context.TenantId, release.Id, applied.Id, kind, applied.StudyId, applied.Target, command.AttestationId));
         return CommandResult<LockState>.Success(new LockState(
             applied.Id, kind, applied.Target, command.AttestationId, Released: true, release.AssertedAt, release.AssertedBy));
@@ -177,7 +200,9 @@ internal sealed class VerifyObservationHandler : ICommandHandler<VerifyObservati
                 $"The observation's current revision is {observation.Revision}, not {command.Revision}; reload it and verify the current value.");
         }
 
-        return ObservationAssertions.Made(context, Assertion.Verify(command.AssertionId, observation, command.Revision, context.Actor.Id, context.RecordedAt));
+        var verified = Assertion.Verify(command.AssertionId, observation, command.Revision, context.Actor.Id, context.RecordedAt);
+        context.Work.LinkInput(NodeRef.For(observation.Id, command.Revision), LineageEdgeKind.DerivedFrom, target: NodeRef.For(verified.Id));
+        return ObservationAssertions.Made(context, verified);
     }
 }
 
@@ -195,7 +220,13 @@ internal sealed class RaiseQueryHandler : ICommandHandler<RaiseQuery, AssertionS
 
         var assertedBy = ObservationAssertions.ResolveAssertedBy(context, command.AssertedBy);
         var query = Assertion.Query(command.AssertionId, observation, command.Text, assertedBy, context.RecordedAt, command.Revision);
-        return query.Value is { } raised ? ObservationAssertions.Made(context, raised) : query.Error!;
+        if (query.Value is not { } raised)
+        {
+            return query.Error!;
+        }
+
+        context.Work.LinkInput(NodeRef.For(observation.Id, raised.TargetRevision!.Value), LineageEdgeKind.DerivedFrom, target: NodeRef.For(raised.Id));
+        return ObservationAssertions.Made(context, raised);
     }
 }
 
@@ -234,7 +265,15 @@ internal sealed class AnswerQueryHandler : ICommandHandler<AnswerQuery, Assertio
 
         var assertedBy = ObservationAssertions.ResolveAssertedBy(context, command.AssertedBy);
         var answer = Assertion.Answer(command.AssertionId, query, command.Text, assertedBy, context.RecordedAt, command.Revision);
-        return answer.Value is { } answered ? ObservationAssertions.Made(context, answered) : answer.Error!;
+        if (answer.Value is not { } answered)
+        {
+            return answer.Error!;
+        }
+
+        var answerTarget = NodeRef.For(answered.Id);
+        context.Work.LinkInput(NodeRef.For(query.Id, Math.Max(1L, query.VersionIndex)), LineageEdgeKind.DerivedFrom, target: answerTarget);
+        context.Work.LinkInput(NodeRef.For(observation!.Id, answered.TargetRevision ?? observation.Revision), LineageEdgeKind.DerivedFrom, target: answerTarget);
+        return ObservationAssertions.Made(context, answered);
     }
 }
 
@@ -269,7 +308,7 @@ internal sealed class RetractAssertionHandler : ICommandHandler<RetractAssertion
             observationId = ObservationId.FromGuid(query.TargetId);
         }
 
-        var (_, refused) = await ObservationAssertions.OpenAsync(
+        var (observation, refused) = await ObservationAssertions.OpenAsync(
             context, command.AssertionId, command.EnrollmentId, observationId, cancellationToken).ConfigureAwait(false);
         if (refused is not null)
         {
@@ -283,10 +322,39 @@ internal sealed class RetractAssertionHandler : ICommandHandler<RetractAssertion
 
         var assertedBy = ObservationAssertions.ResolveAssertedBy(context, command.AssertedBy);
         var retraction = Assertion.Retract(command.AssertionId, retracted, attestation: null, assertedBy, context.RecordedAt);
+        var retractionTarget = NodeRef.For(retraction.Id);
         context.Work.Add(retraction);
+        context.Work.LinkInput(NodeRef.For(retracted.Id, Math.Max(1L, retracted.VersionIndex)), LineageEdgeKind.DerivedFrom, target: retractionTarget);
+        context.Work.LinkInput(NodeRef.For(observation!.Id, retracted.TargetRevision ?? observation.Revision), LineageEdgeKind.DerivedFrom, target: retractionTarget);
         context.Work.Raise(new AssertionRetracted(
             context.TenantId, retraction.Id, retracted.Id, retracted.Kind, retracted.StudyId, command.EnrollmentId));
         return ObservationAssertions.StateOf(retraction);
+    }
+}
+
+/// <summary>Resolves the current versioned <see cref="NodeRef"/> of a lock scope.</summary>
+internal static class AssertionScopes
+{
+    public static async Task<NodeRef?> VersionAsync(NodeRef scope, IKernelUnitOfWork work, CancellationToken cancellationToken)
+    {
+        switch (scope.Kind)
+        {
+            case NodeKinds.Study:
+                var study = await work.ReadAsync<Study>(StudyId.FromGuid(scope.Id), cancellationToken).ConfigureAwait(false);
+                return scope.AtVersion(Math.Max(1L, study?.VersionIndex ?? 1L));
+            case NodeKinds.StudySite:
+                var site = await work.ReadAsync<StudySite>(StudySiteId.FromGuid(scope.Id), cancellationToken).ConfigureAwait(false);
+                return site is null ? null : scope.AtVersion(Math.Max(1L, site.VersionIndex));
+            case NodeKinds.Enrollment:
+                var enrollment = await work.ReadAsync<Enrollment>(EnrollmentId.FromGuid(scope.Id), cancellationToken).ConfigureAwait(false);
+                return enrollment is null ? null : scope.AtVersion(Math.Max(1L, enrollment.VersionIndex));
+            case NodeKinds.CollectionInstance:
+                var instance = await work.ReadAsync<CollectionInstance>(CollectionInstanceId.FromGuid(scope.Id), cancellationToken).ConfigureAwait(false);
+                return instance is null ? null : scope.AtVersion(Math.Max(1L, instance.VersionIndex));
+            default:
+                var observation = await work.ReadAsync<Observation>(ObservationId.FromGuid(scope.Id), cancellationToken).ConfigureAwait(false);
+                return observation is null ? null : scope.AtVersion(Math.Max(1L, observation.VersionIndex));
+        }
     }
 }
 

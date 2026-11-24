@@ -506,7 +506,7 @@ public sealed class KernelProtocolGovernanceEndpointsTests : IDisposable
     {
         var factory = new WebApplicationFactory<Cadence.Kernel.Host.Program>().WithWebHostBuilder(builder =>
         {
-            builder.UseTestGatewaySecret().UseTestPostgresConnectionString();
+            builder.UseTestGatewaySecret().UseTestBiometricLivenessKey().UseTestPostgresConnectionString();
             builder.ConfigureServices(services =>
             {
                 services.RemoveAll<IClock>();
@@ -735,8 +735,15 @@ public sealed class KernelProtocolGovernanceEndpointsTests : IDisposable
         public Task<SiteDirectoryEntry?> FindSiteAsync(TenantId tenant, SiteId siteId, CancellationToken cancellationToken = default) =>
             Task.FromResult(Find<Site>(siteId) is { } site ? ToSiteDirectoryEntry(site) : null);
 
-        Task<SiteDirectoryEntry?> IStudyDirectory.FindSiteByCodeAsync(TenantId tenant, string siteCode, CancellationToken cancellationToken) =>
-            Task.FromResult(ReadAll<Site>().FirstOrDefault(s => string.Equals(s.SiteCode, siteCode, StringComparison.OrdinalIgnoreCase)) is { } site
+        Task<SiteDirectoryEntry?> IStudyDirectory.FindSiteByCodeAsync(
+            TenantId tenant,
+            string siteCode,
+            OrganizationId? institutionId,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(ReadAll<Site>()
+                .FirstOrDefault(s =>
+                    string.Equals(s.SiteCode, siteCode, StringComparison.OrdinalIgnoreCase)
+                    && (institutionId is null || s.InstitutionId == institutionId.Value)) is { } site
                 ? ToSiteDirectoryEntry(site)
                 : null);
 
@@ -750,6 +757,16 @@ public sealed class KernelProtocolGovernanceEndpointsTests : IDisposable
 
         public Task<StudySiteDirectoryEntry?> FindStudySiteAsync(TenantId tenant, StudySiteId studySiteId, CancellationToken cancellationToken = default) =>
             Task.FromResult(Find<StudySite>(studySiteId) is { } ss ? ToStudySiteDirectoryEntry(ss) : null);
+
+        public Task<StudySiteDirectoryEntry?> FindStudySiteBySiteAsync(
+            TenantId tenant,
+            StudyId studyId,
+            SiteId siteId,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(ReadAll<StudySite>()
+                .FirstOrDefault(ss => ss.StudyId == studyId && ss.SiteId == siteId) is { } ss
+                ? ToStudySiteDirectoryEntry(ss)
+                : null);
 
         public Task<IReadOnlyList<ProtocolVersionSummary>> ListForStudyAsync(TenantId tenant, StudyId study, CancellationToken cancellationToken) =>
             Task.FromResult<IReadOnlyList<ProtocolVersionSummary>>([
@@ -979,7 +996,7 @@ public sealed class KernelProtocolGovernanceEndpointsTests : IDisposable
             {
             }
 
-            public void LinkInput(NodeRef input, LineageEdgeKind kind, DateTimeOffset? validFrom = null)
+            public void LinkInput(NodeRef input, LineageEdgeKind kind, DateTimeOffset? validFrom = null, NodeRef? target = null)
             {
             }
 

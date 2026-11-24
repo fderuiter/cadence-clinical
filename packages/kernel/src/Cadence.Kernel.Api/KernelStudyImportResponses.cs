@@ -86,6 +86,8 @@ public sealed record KernelCreateOrganizationRequest(
 /// <param name="InstitutionRef">Owning site institution <c>NodeRef</c>.</param>
 /// <param name="InstitutionCode">Owning site institution code.</param>
 /// <param name="InstitutionName">Owning site institution display name.</param>
+/// <param name="IsActive">Whether the investigational site is active.</param>
+/// <param name="LinkedStudyCount">Number of studies linked to this site.</param>
 public sealed record KernelSiteSummaryResponse(
     string Ref,
     string Code,
@@ -93,7 +95,9 @@ public sealed record KernelSiteSummaryResponse(
     string Country,
     string InstitutionRef,
     string InstitutionCode,
-    string InstitutionName)
+    string InstitutionName,
+    bool IsActive = true,
+    int LinkedStudyCount = 0)
 {
     internal static KernelSiteSummaryResponse From(SiteDirectoryEntry entry) =>
         new(
@@ -103,7 +107,9 @@ public sealed record KernelSiteSummaryResponse(
             entry.Country,
             NodeRef.For(entry.InstitutionId, entry.InstitutionVersionIndex).ToString(),
             entry.InstitutionCode,
-            entry.InstitutionName);
+            entry.InstitutionName,
+            entry.IsActive,
+            entry.LinkedStudyCount);
 }
 
 /// <summary>Request body for <c>POST /api/v1/kernel/sites</c>.</summary>
@@ -125,7 +131,7 @@ public sealed record KernelCreateSiteRequest(
 /// <param name="Ref">StudySite <c>NodeRef</c> pinned to its current version.</param>
 /// <param name="StudySiteId">Study-site UUID.</param>
 /// <param name="StudySiteRef">Canonical unversioned <c>NodeRef</c> of the study site (<c>study_site:&lt;uuid&gt;</c>).</param>
-/// <param name="StudyRef">Linked study <c>NodeRef</c>.</param>
+/// <param name="StudyRef">Linked study <c>NodeRef</c> pinned to its current version.</param>
 /// <param name="SiteRef">Linked site <c>NodeRef</c> pinned to its current version.</param>
 /// <param name="SiteCode">Linked site code.</param>
 /// <param name="SiteName">Linked site display name.</param>
@@ -135,6 +141,8 @@ public sealed record KernelCreateSiteRequest(
 /// <param name="InstitutionName">Owning site institution display name.</param>
 /// <param name="Status">Study-site lifecycle status (<c>Selected</c> or <c>Active</c>).</param>
 /// <param name="EffectiveVersions">Protocol versions currently effective at this study site.</param>
+/// <param name="StudyCode">Linked study code.</param>
+/// <param name="IsActive">Whether the study-site link is active.</param>
 public sealed record KernelStudySiteSummaryResponse(
     string Ref,
     Guid StudySiteId,
@@ -148,7 +156,9 @@ public sealed record KernelStudySiteSummaryResponse(
     string InstitutionCode,
     string InstitutionName,
     string Status,
-    IReadOnlyList<KernelEffectiveVersionResponse> EffectiveVersions)
+    IReadOnlyList<KernelEffectiveVersionResponse> EffectiveVersions,
+    string StudyCode = "",
+    bool IsActive = true)
 {
     internal static KernelStudySiteSummaryResponse From(
         StudySiteDirectoryEntry entry,
@@ -157,7 +167,7 @@ public sealed record KernelStudySiteSummaryResponse(
             NodeRef.For(entry.StudySiteId, entry.VersionIndex).ToString(),
             entry.StudySiteId.Value,
             NodeRef.For(entry.StudySiteId).ToString(),
-            NodeRef.For(entry.StudyId).ToString(),
+            NodeRef.For(entry.StudyId, entry.StudyVersionIndex).ToString(),
             NodeRef.For(entry.SiteId, entry.SiteVersionIndex).ToString(),
             entry.SiteCode,
             entry.SiteName,
@@ -168,7 +178,9 @@ public sealed record KernelStudySiteSummaryResponse(
             governance?.Status ?? entry.Status,
             governance is not null
                 ? [.. governance.EffectiveVersions.Select(KernelEffectiveVersionResponse.From)]
-                : []);
+                : [],
+            entry.StudyCode,
+            entry.IsActive);
 }
 
 /// <summary>Request body for <c>POST /api/v1/kernel/studies/{studyRef}/sites</c>.</summary>
@@ -176,7 +188,8 @@ public sealed record KernelStudySiteSummaryResponse(
 /// <param name="SiteCode">Site code to link to the study (or register inline when <paramref name="SiteName"/> or <paramref name="Country"/> is supplied).</param>
 /// <param name="SiteName">Optional site display name when registering a new site inline alongside study-site linking.</param>
 /// <param name="Country">Optional ISO 3166-1 alpha-2 country code when registering a new site inline (defaults to <c>US</c>).</param>
-/// <param name="InstitutionRef">Optional owning site institution <c>NodeRef</c> when registering a new site inline (defaults to the study sponsor).</param>
+/// <param name="InstitutionRef">Optional owning site institution <c>NodeRef</c> to disambiguate <paramref name="SiteCode"/> or register a new site inline (defaults to the study sponsor when registering inline).</param>
+/// <param name="InstitutionCode">Optional institution code to disambiguate <paramref name="SiteCode"/>.</param>
 /// <param name="SiteId">Optional caller-assigned site UUID when registering a new site inline.</param>
 /// <param name="StudySiteId">Optional caller-assigned study-site UUID when linking to the study.</param>
 public sealed record KernelLinkSiteToStudyRequest(
@@ -185,6 +198,7 @@ public sealed record KernelLinkSiteToStudyRequest(
     string? SiteName = null,
     string? Country = null,
     string? InstitutionRef = null,
+    string? InstitutionCode = null,
     Guid? SiteId = null,
     Guid? StudySiteId = null);
 
@@ -234,12 +248,16 @@ public sealed record KernelProtocolTemplateResponse(
 /// <param name="Content">Raw ODM v1.3.2 XML or USDM v4 JSON text, when sending JSON instead of multipart upload.</param>
 /// <param name="TemplateIds">Selected bundled CDISC Library template identifiers.</param>
 /// <param name="ReplaceForms">True to replace existing draft forms instead of merging into an existing draft.</param>
+/// <param name="AmendmentClassification">Optional amendment classification (<c>Substantial</c>, <c>NonSubstantial</c>, or <c>UrgentSafetyMeasure</c>) when importing onto or forking an amended protocol version.</param>
+/// <param name="TransitionPolicy">Optional participant transition policy (<c>NewParticipantsOnly</c>, <c>RequiresReconsent</c>, <c>Automatic</c>, or <c>ByCohort</c>) when importing onto or forking an amended protocol version.</param>
 public sealed record KernelImportProtocolJsonRequest(
     string? Format = null,
     string? FileName = null,
     string? Content = null,
     IReadOnlyList<string>? TemplateIds = null,
-    bool ReplaceForms = false);
+    bool ReplaceForms = false,
+    string? AmendmentClassification = null,
+    string? TransitionPolicy = null);
 
 /// <summary>Readable import note attached to a protocol draft summary.</summary>
 /// <param name="Source">Source element, OID, or path in the imported file.</param>
@@ -344,6 +362,31 @@ public sealed record KernelImportedRulePackSummaryResponse(
             GovernanceStatus.Draft.ToString());
 }
 
+/// <summary>Protocol amendment details attached to a forked protocol version.</summary>
+/// <param name="Intent">Short statement of why the amendment exists.</param>
+/// <param name="Rationale">Clinical or operational reasoning.</param>
+/// <param name="Classification">Regulatory weight (<c>Substantial</c>, <c>NonSubstantial</c>, or <c>UrgentSafetyMeasure</c>).</param>
+/// <param name="SummaryOfChanges">Human-readable description of what changed.</param>
+/// <param name="ImpactedElements">Protocol element identifiers touched by this amendment.</param>
+/// <param name="TransitionPolicy">Participant transition policy (<c>NewParticipantsOnly</c>, <c>RequiresReconsent</c>, <c>Automatic</c>, or <c>ByCohort</c>).</param>
+public sealed record KernelProtocolAmendmentResponse(
+    string Intent,
+    string Rationale,
+    string Classification,
+    string SummaryOfChanges,
+    IReadOnlyList<string> ImpactedElements,
+    string TransitionPolicy)
+{
+    internal static KernelProtocolAmendmentResponse From(ProtocolAmendment amendment) =>
+        new(
+            amendment.Intent,
+            amendment.Rationale,
+            amendment.Classification.ToString(),
+            amendment.SummaryOfChanges,
+            amendment.ImpactedElements,
+            amendment.TransitionPolicy.ToString());
+}
+
 /// <summary>Viewable protocol draft summary with forms, ordered items, and readable import notes.</summary>
 /// <param name="Version">Protocol version metadata.</param>
 /// <param name="Title">Protocol design title.</param>
@@ -352,6 +395,7 @@ public sealed record KernelImportedRulePackSummaryResponse(
 /// <param name="Forms">Forms and their ordered items.</param>
 /// <param name="ImportNotes">Readable import notes recorded during ODM/USDM import.</param>
 /// <param name="ImportedRulePack">Drafted rule-pack library item when the imported ODM file contained range checks or conditions.</param>
+/// <param name="Amendment">Amendment metadata when the protocol version is a forked amendment.</param>
 public sealed record KernelProtocolDraftSummaryResponse(
     KernelProtocolVersionResponse Version,
     string Title,
@@ -359,13 +403,15 @@ public sealed record KernelProtocolDraftSummaryResponse(
     int ItemCount,
     IReadOnlyList<KernelProtocolFormSummaryResponse> Forms,
     IReadOnlyList<KernelProtocolImportNoteResponse> ImportNotes,
-    KernelImportedRulePackSummaryResponse? ImportedRulePack = null)
+    KernelImportedRulePackSummaryResponse? ImportedRulePack = null,
+    KernelProtocolAmendmentResponse? Amendment = null)
 {
     internal static KernelProtocolDraftSummaryResponse From(
         ProtocolVersionSummary version,
         ProtocolDesign? design,
         IReadOnlyDictionary<ConceptRef, string> conceptLabels,
-        KernelImportedRulePackSummaryResponse? importedRulePack = null)
+        KernelImportedRulePackSummaryResponse? importedRulePack = null,
+        ProtocolAmendment? amendment = null)
     {
         var specs = design?.CollectionSpecs ?? [];
         var forms = specs
@@ -381,6 +427,7 @@ public sealed record KernelProtocolDraftSummaryResponse(
             forms.Sum(f => f.ItemCount),
             forms,
             notes,
-            importedRulePack);
+            importedRulePack,
+            amendment is not null ? KernelProtocolAmendmentResponse.From(amendment) : null);
     }
 }

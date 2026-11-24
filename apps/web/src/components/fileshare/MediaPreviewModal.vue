@@ -1098,28 +1098,6 @@ function getStatusClass(status) {
 </script>
 
 <style scoped>
-.modal-backdrop {
-  position: fixed;
-  inset: 0;
-  background: var(--semantic-color-backdrop-strong);
-  backdrop-filter: blur(4px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: 16px;
-}
-
-.modal-card {
-  background: var(--semantic-color-surface);
-  border-radius: 12px;
-  border: 1px solid var(--semantic-color-border);
-  box-shadow: var(--semantic-shadow-xl);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
 .media-preview-modal {
   max-width: 1100px !important;
   width: 95% !important;
@@ -1725,3 +1703,5 @@ function getStatusClass(status) {
   background-color: var(--semantic-color-error);
 }
 </style>
+
+<style scoped src="../shared/regulatedPreviewModal.css"></style>

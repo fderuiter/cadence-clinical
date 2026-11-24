@@ -63,7 +63,7 @@
       <div class="stat-card">
         <div class="stat-icon alert-icon">📚</div>
         <div class="stat-details">
-          <div id="kpi-active-curricula" class="stat-value">
+          <div id="kpi-active-curricula" class="stat-value tabular-nums">
             {{ activeCurriculaCount }}
           </div>
           <div class="stat-label">Active Protocol Curricula</div>
@@ -75,7 +75,7 @@
         <div class="stat-details">
           <div
             id="kpi-completed-qualifications"
-            class="stat-value text-success"
+            class="stat-value text-success tabular-nums"
           >
             {{ completedQualificationsCount }}
           </div>
@@ -86,7 +86,10 @@
       <div class="stat-card">
         <div class="stat-icon rbqm-icon">🔒</div>
         <div class="stat-details">
-          <div id="kpi-pending-assignments" class="stat-value text-warning">
+          <div
+            id="kpi-pending-assignments"
+            class="stat-value text-warning tabular-nums"
+          >
             {{ pendingGatedCount }}
           </div>
           <div class="stat-label">Pending Staff Assignments</div>
@@ -117,6 +120,10 @@ import {
 import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 import { useClinicalScopeStore } from "../stores/clinicalScope";
 import { useToastStore } from "../stores/toasts.js";
+import {
+  resolveHydratedWorkspaceScope,
+  syncWorkspaceScope,
+} from "../stores/workspaceScope";
 
 const props = defineProps({
   studyId: {
@@ -137,6 +144,10 @@ const { route, router } = resolveRouteAndRouter();
 const scopeStore = useClinicalScopeStore();
 const { activeStudyCode, setActiveStudyCode } = useActiveStudyScope();
 const initialRouteScope = readRouteScopeQuery(route);
+const hydratedScope = resolveHydratedWorkspaceScope(route, {
+  studyId: props.studyId,
+  siteId: props.siteId,
+});
 
 const activeCurriculaCount = ref(0);
 const completedQualificationsCount = ref(0);
@@ -146,13 +157,17 @@ const standaloneStudyFilter = ref(
   props.studyId ||
     initialRouteScope.studyId ||
     (!props.studyId && route
-      ? activeStudyCode.value || scopeStore.activeStudyId
+      ? hydratedScope.studyId ||
+        activeStudyCode.value ||
+        scopeStore.activeStudyId
       : "")
 );
 const standaloneSiteFilter = ref(
   props.siteId ||
     initialRouteScope.siteId ||
-    (!props.studyId && route ? scopeStore.activeSiteId : "")
+    (!props.studyId && route
+      ? hydratedScope.siteId || scopeStore.activeSiteId
+      : "")
 );
 const protocolVersionFilter = ref(
   props.protocolVersion || String(route?.query?.protocolVersion || "")
@@ -215,11 +230,15 @@ function syncStandaloneRouteScope() {
   if (nextStudy) {
     setActiveStudyCode(nextStudy);
   }
-  scopeStore.activeStudyId = nextStudy;
-  scopeStore.activeSiteId = nextSite;
+  const synced = syncWorkspaceScope({
+    studyId: nextStudy,
+    siteId: nextSite,
+  });
+  standaloneStudyFilter.value = synced.studyId;
+  standaloneSiteFilter.value = synced.siteId;
   void replaceRouteQueryParams(router, route, {
-    studyId: nextStudy || null,
-    siteId: nextSite || null,
+    studyId: synced.studyId || null,
+    siteId: synced.siteId || null,
     subjectId: scopeStore.activeSubjectId || null,
     protocolVersion: nextProtocol || null,
   });
@@ -291,8 +310,12 @@ watch(
     }
     standaloneStudyFilter.value = resolvedStudy;
     standaloneSiteFilter.value = nextScope.siteId;
-    scopeStore.activeStudyId = resolvedStudy;
-    scopeStore.activeSiteId = nextScope.siteId;
+    syncWorkspaceScope({
+      ...(resolvedStudy ? { studyId: resolvedStudy } : {}),
+      ...(nextScope.siteId || resolvedStudy
+        ? { siteId: nextScope.siteId }
+        : {}),
+    });
     scopeStore.activeSubjectId = nextScope.subjectId;
     const nextPv =
       typeof route.query.protocolVersion === "string"
@@ -303,7 +326,6 @@ watch(
     }
   }
 );
-
 watch([effectiveStudyId, effectiveSiteId, effectiveProtocolVersion], () => {
   loadMetrics();
 });

@@ -44,6 +44,7 @@
       :study-code="studyCode"
       :subject-code="subjectCode"
       :act="queries.act"
+      :reassign="queries.reassign"
       :act-many="queries.actMany"
       :form-to="formTo"
       :observation-to="observationTo"
@@ -136,6 +137,9 @@ watch(
   display: flex;
   flex-direction: column;
   gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .queries h3 {

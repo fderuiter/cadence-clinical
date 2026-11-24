@@ -5,6 +5,7 @@ import {
   createWebHistory,
 } from "vue-router";
 import { TOKEN_MIN_VALIDITY_SECONDS } from "../api/authorization.js";
+import { resolveActiveWorkspaceScope } from "../canvas/palette";
 import { useAuthStore, ROLE_ALIASES } from "../stores/auth";
 import { useOnboardingStore } from "../stores/onboarding.js";
 import { isDemoBuild } from "../utils/demoMode.js";
@@ -18,21 +19,45 @@ import { AVAILABLE_SCREENS, isScreenAvailable } from "./availability";
 
 // Helper to check if user has required roles, mapping UI roles to Keycloak roles
 export function hasRequiredRole(userRoles, requiredRoles) {
-  return userRoles.some((uRole) => {
+  return (userRoles || []).some((uRole) => {
     if (requiredRoles.includes(uRole)) return true;
     const aliases = ROLE_ALIASES[uRole] || [];
     return aliases.some((alias) => requiredRoles.includes(alias));
   });
 }
 
+export function getRouteRequiredRoles(routeOrTarget) {
+  const matched = routeOrTarget?.matched;
+  const roles = matched?.length
+    ? matched.flatMap((r) => r.meta?.requiresRole || [])
+    : [];
+  return roles.length ? roles : routeOrTarget?.meta?.requiresRole || [];
+}
+
+export function isRouteAuthorizedForRoles(routeOrTarget, userRoles) {
+  const req = getRouteRequiredRoles(routeOrTarget);
+  return !req.length || hasRequiredRole(userRoles || [], req);
+}
+
 // The screen each role lands on when opening "/".
 function landingRouteFor(roles) {
   if (roles.includes("sponsor_designer")) return "mdr";
-  if (roles.includes("site_investigator") || roles.includes("crc")) {
+  if (
+    roles.includes("site_investigator") ||
+    roles.includes("crc") ||
+    roles.includes("trial_coordinator")
+  ) {
     return isDemoBuild() ? "ecrf" : "study";
   }
   if (roles.includes("cra") || roles.includes("monitor")) return "ctms";
   if (roles.includes("data_manager")) return "rules";
+  if (
+    roles.includes("safety_officer") ||
+    roles.includes("safety_physician") ||
+    roles.includes("qppv")
+  ) {
+    return "safety";
+  }
   if (roles.includes("auditor") || roles.includes("tmf_auditor")) {
     return "audit";
   }
@@ -47,21 +72,19 @@ function primaryFallbackScreens() {
 
 function redirectToCanvasSection(stage, section) {
   return (to) => {
-    const canvasStudyCode =
-      getActivePinia()?.state.value?.studyCanvas?.studyCode;
+    const canvasState = getActivePinia()?.state.value?.studyCanvas;
+    const scope = resolveActiveWorkspaceScope(to, canvasState);
     const rawCode =
       (typeof to.query?.studyCode === "string" && to.query.studyCode.trim()) ||
       (typeof to.query?.studyId === "string" && to.query.studyId.trim()) ||
-      (typeof canvasStudyCode === "string" && canvasStudyCode.trim()) ||
+      scope.studyCode ||
+      "";
+    const rawSite =
+      (typeof to.query?.site === "string" && to.query.site.trim()) ||
+      (typeof to.query?.siteId === "string" && to.query.siteId.trim()) ||
+      scope.siteId ||
       "";
     const nextQuery = { ...to.query, stage, section };
-    if (
-      !nextQuery.site &&
-      typeof nextQuery.siteId === "string" &&
-      nextQuery.siteId.trim()
-    ) {
-      nextQuery.site = nextQuery.siteId.trim();
-    }
     if (
       !nextQuery.participant &&
       typeof nextQuery.subjectId === "string" &&
@@ -73,6 +96,9 @@ function redirectToCanvasSection(stage, section) {
     delete nextQuery.studyId;
     delete nextQuery.siteId;
     delete nextQuery.subjectId;
+    if (rawSite) {
+      nextQuery.site = rawSite;
+    }
     return rawCode
       ? { name: "study", params: { studyCode: rawCode }, query: nextQuery }
       : { name: "study", query: nextQuery };
@@ -696,8 +722,8 @@ router.beforeEach(async (to) => {
     }
 
     // Role-based authorization guard
-    const requiredRoles = to.meta.requiresRole;
-    if (requiredRoles && requiredRoles.length > 0) {
+    const requiredRoles = getRouteRequiredRoles(to);
+    if (requiredRoles.length > 0) {
       const hasRole = hasRequiredRole(authStore.normalizedRoles, requiredRoles);
       if (!hasRole) {
         console.warn(

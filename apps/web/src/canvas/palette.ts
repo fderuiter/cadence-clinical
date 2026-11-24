@@ -1,11 +1,26 @@
 import { getActivePinia } from "pinia";
-import type { LocationQuery, Router } from "vue-router";
+import type { LocationQuery, RouteLocationRaw, Router } from "vue-router";
 import type { SubjectSummary } from "../api/executionApi";
 import { formatNodeRef, parseNodeRef, tryNodeRef } from "./nodeRef";
-import { isScreenAvailable } from "../router/availability.js";
-import { hasRequiredRole } from "../router/index.js";
+import {
+  isScreenAvailable,
+  listDemoCatalogModules,
+} from "../router/availability.js";
+import { ROLE_ALIASES } from "../stores/auth.js";
 import { getSyncedStudyScope } from "../stores/studyScopeBridge";
 import { isDemoBuild } from "../utils/demoMode.js";
+
+function hasRequiredRole(
+  userRoles: readonly string[],
+  requiredRoles: readonly string[]
+): boolean {
+  const aliasesMap = ROLE_ALIASES as Record<string, readonly string[]>;
+  return userRoles.some((uRole) => {
+    if (requiredRoles.includes(uRole)) return true;
+    const aliases = aliasesMap[uRole] || [];
+    return aliases.some((alias) => requiredRoles.includes(alias));
+  });
+}
 
 export function readInstantiatedClinicalScope(): {
   activeStudyId?: string;
@@ -91,16 +106,9 @@ export interface WorkspaceScopeSnapshot {
   subjectCode: string;
   participantRef: string;
   enrollmentId: string;
+  recordParticipantParam?: string;
+  inspectorNodeParam?: string;
 }
-
-const DATA_COLLECTION_ROLES = [
-  "site_investigator",
-  "crc",
-  "data_manager",
-  "sponsor_admin",
-  "cra",
-  "monitor",
-];
 
 const SITE_READINESS_SPONSOR_ROLES = [
   "cra",
@@ -109,6 +117,10 @@ const SITE_READINESS_SPONSOR_ROLES = [
   "sponsor_admin",
 ];
 const SITE_READINESS_SITE_ROLES = ["site_investigator", "crc"];
+const DATA_COLLECTION_ROLES = [
+  ...SITE_READINESS_SITE_ROLES,
+  ...SITE_READINESS_SPONSOR_ROLES,
+];
 const ETMF_ROLES = [
   "cra",
   "monitor",
@@ -149,6 +161,19 @@ function cleanQueryString(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
+export function buildScopedRoutePath(
+  basePath: string,
+  scope?: { studyCode?: string; siteId?: string }
+): string {
+  const studyCode = scope?.studyCode?.trim() || "";
+  const siteId = scope?.siteId?.trim() || "";
+  if (!studyCode && !siteId) return basePath;
+  const params = new URLSearchParams();
+  if (studyCode) params.set("studyId", studyCode);
+  if (siteId) params.set("siteId", siteId);
+  return `${basePath}?${params.toString()}`;
+}
+
 export function resolveSiteReadinessPath(
   normalizedRoles: string[],
   scopeOrStudyCode?:
@@ -178,15 +203,140 @@ export function buildScopedWorkflowPath(
   basePath: string,
   scope?: { studyCode?: string; siteId?: string; subjectCode?: string }
 ): string {
-  const studyCode = scope?.studyCode?.trim() || "";
-  const siteId = scope?.siteId?.trim() || "";
-  const subjectCode = scope?.subjectCode?.trim() || "";
+  const fallbackClinical =
+    scope === undefined ? readInstantiatedClinicalScope() : null;
+  const fallbackStudy =
+    scope === undefined
+      ? cleanQueryString(fallbackClinical?.activeStudyId) ||
+        cleanQueryString(getSyncedStudyScope())
+      : "";
+  const studyCode = scope?.studyCode?.trim() || fallbackStudy;
+  const siteId =
+    scope?.siteId?.trim() ||
+    (scope === undefined &&
+    studyCode &&
+    cleanQueryString(fallbackClinical?.activeStudyId) === studyCode
+      ? cleanQueryString(fallbackClinical?.activeSiteId)
+      : "");
+  const subjectCode =
+    scope?.subjectCode?.trim() ||
+    (scope === undefined &&
+    studyCode &&
+    cleanQueryString(fallbackClinical?.activeStudyId) === studyCode
+      ? cleanQueryString(fallbackClinical?.activeSubjectId)
+      : "");
   if (!studyCode && !siteId && !subjectCode) return basePath;
   const params = new URLSearchParams();
   if (studyCode) params.set("studyId", studyCode);
   if (siteId) params.set("siteId", siteId);
   if (subjectCode) params.set("subjectId", subjectCode);
   return `${basePath}?${params.toString()}`;
+}
+
+export function buildScopedWorkflowLocation(
+  basePath: string,
+  scope?: { studyCode?: string; siteId?: string; subjectCode?: string }
+): RouteLocationRaw {
+  return buildScopedWorkflowPath(basePath, scope);
+}
+
+export interface ScopedStudyLocationOptions {
+  stage?: string;
+  section?: string;
+  site?: string;
+  participant?: string;
+  node?: string;
+  form?: string;
+  item?: string;
+  observation?: string;
+  proposal?: string;
+  ask?: string;
+  targetParticipant?: SubjectSummary | null;
+}
+
+export function buildScopedStudyLocation(
+  targetStudyCode: string,
+  options: ScopedStudyLocationOptions = {},
+  currentScope?: Partial<WorkspaceScopeSnapshot> | null
+): {
+  name: "study";
+  params: { studyCode: string };
+  query: Record<string, string>;
+} {
+  const studyCode = targetStudyCode.trim();
+  const priorStudy = cleanQueryString(currentScope?.studyCode);
+  const isCrossStudy = Boolean(
+    priorStudy && studyCode && priorStudy !== studyCode
+  );
+  const query: Record<string, string> = {};
+
+  if (options.stage) query.stage = options.stage;
+  if (options.section) query.section = options.section;
+
+  if (options.targetParticipant) {
+    if (!isCrossStudy) {
+      const activeSite =
+        cleanQueryString(options.site) ||
+        cleanQueryString(currentScope?.explicitSiteId) ||
+        cleanQueryString(currentScope?.siteId);
+      const participantSite = cleanQueryString(
+        options.targetParticipant.site_id
+      );
+      if (activeSite && (!participantSite || participantSite === activeSite)) {
+        query.site = activeSite;
+      }
+    }
+    const participantNode = canonicalParticipantNodeFromSummary(
+      options.targetParticipant
+    );
+    if (participantNode) {
+      query.node = formatNodeRef(participantNode);
+    }
+  } else if (!isCrossStudy) {
+    const site =
+      options.site !== undefined
+        ? cleanQueryString(options.site)
+        : cleanQueryString(currentScope?.siteId);
+    const recordParticipant = cleanQueryString(
+      currentScope?.recordParticipantParam
+    );
+    const inspectorNode = cleanQueryString(currentScope?.inspectorNodeParam);
+    const fallbackParticipant =
+      !recordParticipant && !inspectorNode
+        ? cleanQueryString(currentScope?.participantRef) ||
+          cleanQueryString(currentScope?.subjectCode)
+        : "";
+    const participant =
+      options.participant !== undefined
+        ? cleanQueryString(options.participant)
+        : recordParticipant || fallbackParticipant;
+    const node =
+      options.node !== undefined
+        ? cleanQueryString(options.node)
+        : inspectorNode;
+
+    if (site) query.site = site;
+    if (participant) query.participant = participant;
+    if (node) query.node = node;
+  } else {
+    if (options.site) query.site = cleanQueryString(options.site);
+    if (options.participant) {
+      query.participant = cleanQueryString(options.participant);
+    }
+    if (options.node) query.node = cleanQueryString(options.node);
+  }
+
+  if (options.form) query.form = options.form;
+  if (options.item) query.item = options.item;
+  if (options.observation) query.observation = options.observation;
+  if (options.proposal) query.proposal = options.proposal;
+  if (options.ask) query.ask = options.ask;
+
+  return {
+    name: "study",
+    params: { studyCode },
+    query,
+  };
 }
 
 export function buildStudiesWorkspacePath(scope?: {
@@ -231,15 +381,35 @@ export function canAccessKnowledgeHub(normalizedRoles: string[]): boolean {
   );
 }
 
-function extractParticipantIdFromQueryValue(value: unknown): string {
+function extractParticipantNodeFromQueryValue(
+  value: unknown
+): { kind: "enrollment" | "participant"; id: string } | null {
   const parsed = parseNodeRef(value);
-  if (parsed?.kind === "participant") return parsed.id;
-  if (typeof value === "string" && value.startsWith("participant:")) {
-    const rawId =
-      value.slice("participant:".length).split("@")[0]?.trim() || "";
-    return rawId;
+  if (parsed?.kind === "enrollment" || parsed?.kind === "participant") {
+    return { kind: parsed.kind, id: parsed.id };
   }
-  return "";
+  if (typeof value === "string") {
+    for (const kind of ["enrollment", "participant"] as const) {
+      const prefix = `${kind}:`;
+      if (value.startsWith(prefix)) {
+        const rawId = value.slice(prefix.length).split("@")[0]?.trim() || "";
+        if (rawId) return { kind, id: rawId };
+      }
+    }
+  }
+  return null;
+}
+
+function canonicalParticipantNodeFromSummary(
+  item: SubjectSummary | undefined
+): { kind: "enrollment" | "participant"; id: string } | null {
+  if (!item) return null;
+  const enrollment = parseNodeRef(item.enrollment_ref);
+  if (enrollment?.kind === "enrollment") {
+    return { kind: "enrollment", id: enrollment.id };
+  }
+  const fallback = tryNodeRef("participant", item.id);
+  return fallback ? { kind: "participant", id: fallback.id } : null;
 }
 
 /**
@@ -252,6 +422,7 @@ export function resolveCanvasParticipantContext(
   canvasStore: {
     studyCode?: string;
     knownParticipants?: Record<string, SubjectSummary>;
+    knownParticipantsByEnrollmentId?: Record<string, SubjectSummary>;
     record?: { subjectCode?: string; enrollmentId?: string | null };
   }
 ): { subjectCode: string; participantRef: string; enrollmentId: string } {
@@ -261,18 +432,24 @@ export function resolveCanvasParticipantContext(
   }
   const parsedRef =
     parseNodeRef(routeQuery?.participant) ?? parseNodeRef(routeQuery?.node);
-  const participantNode = parsedRef?.kind === "participant" ? parsedRef : null;
-  const participantRefId =
-    participantNode?.id ||
-    extractParticipantIdFromQueryValue(routeQuery?.participant) ||
-    extractParticipantIdFromQueryValue(routeQuery?.node);
+  const participantNode =
+    parsedRef?.kind === "enrollment" || parsedRef?.kind === "participant"
+      ? { kind: parsedRef.kind, id: parsedRef.id }
+      : null;
+  const extractedNode =
+    participantNode ??
+    extractParticipantNodeFromQueryValue(routeQuery?.participant) ??
+    extractParticipantNodeFromQueryValue(routeQuery?.node);
   const rawParticipantParam = cleanQueryString(routeQuery?.participant);
   const rawParticipantCode =
-    !participantRefId && !rawParticipantParam.includes(":")
+    !extractedNode && !rawParticipantParam.includes(":")
       ? rawParticipantParam
       : "";
-  const knownById = participantRefId
-    ? canvasStore.knownParticipants?.[participantRefId]
+  const knownById = extractedNode
+    ? extractedNode.kind === "enrollment"
+      ? (canvasStore.knownParticipantsByEnrollmentId?.[extractedNode.id] ??
+        canvasStore.knownParticipants?.[extractedNode.id])
+      : canvasStore.knownParticipants?.[extractedNode.id]
     : undefined;
   const knownByCode =
     !knownById && rawParticipantCode
@@ -286,24 +463,33 @@ export function resolveCanvasParticipantContext(
     rawParticipantCode ||
     canvasStore.record?.subjectCode ||
     "";
-  let resolvedRefNode = participantNode
-    ? { kind: "participant" as const, id: participantNode.id }
-    : known
-      ? tryNodeRef("participant", known.id)
-      : null;
+  const persistedEnrollment = parseNodeRef(known?.enrollment_ref);
+  let resolvedRefNode: {
+    kind: "enrollment" | "participant";
+    id: string;
+  } | null =
+    persistedEnrollment?.kind === "enrollment"
+      ? { kind: "enrollment", id: persistedEnrollment.id }
+      : participantNode
+        ? participantNode
+        : canonicalParticipantNodeFromSummary(known);
   if (!resolvedRefNode && subjectCode && canvasStore.knownParticipants) {
     const matched = Object.values(canvasStore.knownParticipants).find(
       (item) => item?.subject_id === subjectCode
     );
-    resolvedRefNode = matched ? tryNodeRef("participant", matched.id) : null;
+    resolvedRefNode = canonicalParticipantNodeFromSummary(matched);
   }
   const participantRef = resolvedRefNode ? formatNodeRef(resolvedRefNode) : "";
   const enrollmentId =
-    subjectCode &&
+    (persistedEnrollment?.kind === "enrollment"
+      ? persistedEnrollment.id
+      : "") ||
+    (extractedNode?.kind === "enrollment" ? extractedNode.id : "") ||
+    (subjectCode &&
     canvasStore.record?.subjectCode === subjectCode &&
     canvasStore.record?.enrollmentId
       ? canvasStore.record.enrollmentId
-      : "";
+      : "");
   return { subjectCode, participantRef, enrollmentId };
 }
 
@@ -322,6 +508,7 @@ export function resolveActiveWorkspaceScope(
   canvasStore?: {
     studyCode?: string;
     knownParticipants?: Record<string, SubjectSummary>;
+    knownParticipantsByEnrollmentId?: Record<string, SubjectSummary>;
     record?: { subjectCode?: string; enrollmentId?: string | null };
     participantsFilter?: { siteId?: string };
   } | null,
@@ -329,14 +516,14 @@ export function resolveActiveWorkspaceScope(
     activeStudyId?: string;
     activeSiteId?: string;
     activeSubjectId?: string;
+    subjects?: Array<{ id?: string }>;
   } | null
 ): WorkspaceScopeSnapshot {
   const effectiveClinical =
     clinicalStore !== undefined
       ? clinicalStore
       : readInstantiatedClinicalScope();
-  const demo = isDemoBuild();
-  const allowClinicalFallback = !demo || clinicalStore !== undefined;
+  const allowClinicalFallback = Boolean(effectiveClinical);
   const routeParamStudy = cleanQueryString(route?.params?.studyCode);
   const routeQueryStudy =
     cleanQueryString(route?.query?.studyId) ||
@@ -347,21 +534,29 @@ export function resolveActiveWorkspaceScope(
   const clinicalStudy = allowClinicalFallback
     ? cleanQueryString(effectiveClinical?.activeStudyId)
     : "";
-  const bridgedStudy = !demo ? cleanQueryString(getSyncedStudyScope()) : "";
+  const bridgedStudy = cleanQueryString(getSyncedStudyScope());
   const studyCode = routeStudy || canvasStudy || clinicalStudy || bridgedStudy;
 
+  const hasExplicitStandaloneStudyQuery = Boolean(
+    !routeParamStudy && routeQueryStudy
+  );
   const routeSite =
     cleanQueryString(route?.query?.site) ||
     cleanQueryString(route?.query?.siteId);
 
   let participantSite = "";
   if (!routeSite && studyCode && canvasStore?.studyCode === studyCode) {
-    const participantId =
-      extractParticipantIdFromQueryValue(route?.query?.participant) ||
-      extractParticipantIdFromQueryValue(route?.query?.node);
-    if (participantId) {
+    const extractedNode =
+      extractParticipantNodeFromQueryValue(route?.query?.participant) ??
+      extractParticipantNodeFromQueryValue(route?.query?.node);
+    if (extractedNode?.kind === "enrollment") {
+      const known =
+        canvasStore.knownParticipantsByEnrollmentId?.[extractedNode.id] ??
+        canvasStore.knownParticipants?.[extractedNode.id];
+      participantSite = cleanQueryString(known?.site_id);
+    } else if (extractedNode?.kind === "participant") {
       participantSite = cleanQueryString(
-        canvasStore.knownParticipants?.[participantId]?.site_id
+        canvasStore.knownParticipants?.[extractedNode.id]?.site_id
       );
     }
   }
@@ -374,6 +569,7 @@ export function resolveActiveWorkspaceScope(
     if (
       !storeSite &&
       allowClinicalFallback &&
+      !hasExplicitStandaloneStudyQuery &&
       cleanQueryString(effectiveClinical?.activeStudyId) === studyCode
     ) {
       storeSite = cleanQueryString(effectiveClinical?.activeSiteId);
@@ -384,7 +580,9 @@ export function resolveActiveWorkspaceScope(
   const siteId = routeSite || participantSite || storeSite;
 
   const rawParticipantParam = cleanQueryString(route?.query?.participant);
+  const rawNodeParam = cleanQueryString(route?.query?.node);
   const parsedParticipantParam = parseNodeRef(rawParticipantParam);
+  const parsedNodeParam = parseNodeRef(rawNodeParam);
   const routeSubject =
     cleanQueryString(route?.query?.subjectId) ||
     cleanQueryString(route?.query?.subject) ||
@@ -396,22 +594,43 @@ export function resolveActiveWorkspaceScope(
     ? resolveCanvasParticipantContext(studyCode, route?.query, canvasStore)
     : { subjectCode: "", participantRef: "", enrollmentId: "" };
 
+  const rawClinicalSubject = cleanQueryString(
+    effectiveClinical?.activeSubjectId
+  );
+  const clinicalSubjects =
+    clinicalStore?.subjects ??
+    (
+      getActivePinia()?.state.value as
+        { clinical?: { subjects?: Array<{ id?: string }> } } | undefined
+    )?.clinical?.subjects;
+  const verifiedClinicalSubject =
+    rawClinicalSubject &&
+    (rawClinicalSubject !== "SUBJ-001" ||
+      Boolean(clinicalSubjects?.some((s) => s?.id === rawClinicalSubject)))
+      ? rawClinicalSubject
+      : "";
+
   const subjectCode =
     routeSubject ||
     canvasParticipant.subjectCode ||
     (allowClinicalFallback &&
+    !hasExplicitStandaloneStudyQuery &&
     studyCode &&
     cleanQueryString(effectiveClinical?.activeStudyId) === studyCode
-      ? cleanQueryString(effectiveClinical?.activeSubjectId)
+      ? verifiedClinicalSubject
       : "");
 
   let participantRef =
     routeSubject && routeSubject !== canvasParticipant.subjectCode
       ? ""
       : canvasParticipant.participantRef;
-  if (!participantRef && parsedParticipantParam?.kind === "participant") {
+  if (
+    !participantRef &&
+    (parsedParticipantParam?.kind === "enrollment" ||
+      parsedParticipantParam?.kind === "participant")
+  ) {
     participantRef = formatNodeRef({
-      kind: "participant",
+      kind: parsedParticipantParam.kind,
       id: parsedParticipantParam.id,
     });
   }
@@ -425,7 +644,7 @@ export function resolveActiveWorkspaceScope(
     const matched = Object.values(canvasStore.knownParticipants).find(
       (item) => item?.subject_id === subjectCode
     );
-    const refNode = matched ? tryNodeRef("participant", matched.id) : null;
+    const refNode = canonicalParticipantNodeFromSummary(matched);
     if (refNode) {
       participantRef = formatNodeRef(refNode);
     }
@@ -436,6 +655,24 @@ export function resolveActiveWorkspaceScope(
       ? routeEnrollment
       : routeEnrollment || canvasParticipant.enrollmentId) || "";
 
+  const recordParticipantParam = routeParamStudy
+    ? parsedParticipantParam?.kind === "enrollment" ||
+      parsedParticipantParam?.kind === "participant"
+      ? formatNodeRef({
+          kind: parsedParticipantParam.kind,
+          id: parsedParticipantParam.id,
+        })
+      : !rawParticipantParam.includes(":")
+        ? rawParticipantParam
+        : ""
+    : "";
+  const inspectorNodeParam =
+    routeParamStudy && parsedNodeParam
+      ? formatNodeRef(parsedNodeParam)
+      : routeParamStudy
+        ? rawNodeParam
+        : "";
+
   return {
     studyCode,
     siteId,
@@ -443,7 +680,42 @@ export function resolveActiveWorkspaceScope(
     subjectCode,
     participantRef,
     enrollmentId,
+    recordParticipantParam,
+    inspectorNodeParam,
   };
+}
+
+export function resolveWorkspaceNavigationScope(
+  route?: {
+    params?: Record<string, unknown>;
+    query?: LocationQuery | Record<string, unknown>;
+  } | null,
+  canvasStore?: {
+    studyCode?: string;
+    knownParticipants?: Record<string, SubjectSummary>;
+    knownParticipantsByEnrollmentId?: Record<string, SubjectSummary>;
+    record?: { subjectCode?: string; enrollmentId?: string | null };
+    participantsFilter?: { siteId?: string };
+  } | null,
+  clinicalStore?: {
+    activeStudyId?: string;
+    activeSiteId?: string;
+    activeSubjectId?: string;
+  } | null,
+  fallbackStudyCode?: string
+): WorkspaceScopeSnapshot {
+  const resolved = resolveActiveWorkspaceScope(
+    route,
+    canvasStore,
+    clinicalStore
+  );
+  if (!resolved.studyCode && fallbackStudyCode?.trim()) {
+    return {
+      ...resolved,
+      studyCode: fallbackStudyCode.trim(),
+    };
+  }
+  return resolved;
 }
 
 /**
@@ -460,7 +732,9 @@ export function buildDataCollectionPath(context: {
   const studyCode = context.studyCode?.trim() || "";
   const siteId = context.siteId?.trim() || "";
   if (isDemoBuild()) {
-    if (!studyCode && !siteId) return "/ecrf";
+    const subjectCode = context.subjectCode?.trim() || "";
+    const enrollmentId = context.enrollmentId?.trim() || "";
+    if (!studyCode && !siteId && !subjectCode && !enrollmentId) return "/ecrf";
     const params = new URLSearchParams();
     if (studyCode) {
       params.set("studyId", studyCode);
@@ -468,11 +742,9 @@ export function buildDataCollectionPath(context: {
     if (siteId) {
       params.set("siteId", siteId);
     }
-    const subjectCode = context.subjectCode?.trim() || "";
     if (subjectCode) {
       params.set("subjectId", subjectCode);
     }
-    const enrollmentId = context.enrollmentId?.trim() || "";
     if (enrollmentId) {
       params.set("enrollmentId", enrollmentId);
     }
@@ -492,10 +764,13 @@ export function buildDataCollectionPath(context: {
   const subjectCode = context.subjectCode?.trim() || "";
   const parsedParticipant =
     parseNodeRef(participantRef) ?? tryNodeRef("participant", participantRef);
-  if (parsedParticipant?.kind === "participant") {
+  if (
+    parsedParticipant?.kind === "enrollment" ||
+    parsedParticipant?.kind === "participant"
+  ) {
     params.set(
       "participant",
-      formatNodeRef({ kind: "participant", id: parsedParticipant.id })
+      formatNodeRef({ kind: parsedParticipant.kind, id: parsedParticipant.id })
     );
   } else if (subjectCode) {
     params.set("subject", subjectCode);
@@ -523,8 +798,10 @@ export function buildWorkspacePaletteItems(options: {
   if (!options.isAuthenticated) return [];
   const roles = options.normalizedRoles || [];
   const items: WorkspacePaletteOption[] = [];
+  const includedRoutes = new Set<string>();
 
   if (isScreenAvailable("study")) {
+    includedRoutes.add("study");
     const studyPath = buildStudiesWorkspacePath({
       studyCode: options.activeStudyCode,
       siteId: options.activeSiteId,
@@ -541,6 +818,7 @@ export function buildWorkspacePaletteItems(options: {
   }
 
   if (canAccessDataCollection(roles)) {
+    includedRoutes.add("ecrf");
     items.push({
       key: "workspace:data-collection",
       group: "Workspace",
@@ -567,6 +845,11 @@ export function buildWorkspacePaletteItems(options: {
     subjectCode: options.activeSubjectCode,
   });
   if (siteReadinessPath) {
+    if (siteReadinessPath.startsWith("/ctms")) {
+      includedRoutes.add("ctms");
+    } else if (siteReadinessPath.startsWith("/ssu")) {
+      includedRoutes.add("ssu");
+    }
     items.push({
       key: "workspace:site-readiness",
       group: "Workspace",
@@ -577,30 +860,41 @@ export function buildWorkspacePaletteItems(options: {
   }
 
   if (isScreenAvailable("etmf") && hasRequiredRole(roles, ETMF_ROLES)) {
+    includedRoutes.add("etmf");
     items.push({
       key: "workspace:trial-documents",
       group: "Workspace",
       label: "Trial documents",
       detail: "Study binder, document classification, and clinical review",
       target: {
-        routePath: buildStudyScopedPath("/etmf", options.activeStudyCode),
+        routePath: buildScopedWorkflowPath("/etmf", {
+          studyCode: options.activeStudyCode,
+          siteId: options.activeSiteId,
+          subjectCode: options.activeSubjectCode,
+        }),
       },
     });
   }
 
   if (isScreenAvailable("training")) {
+    includedRoutes.add("training");
     items.push({
       key: "workspace:training",
       group: "Workspace",
       label: "Study training",
       detail: "Protocol curricula, staff assignments, and delegation sign-off",
       target: {
-        routePath: buildStudyScopedPath("/training", options.activeStudyCode),
+        routePath: buildScopedWorkflowPath("/training", {
+          studyCode: options.activeStudyCode,
+          siteId: options.activeSiteId,
+          subjectCode: options.activeSubjectCode,
+        }),
       },
     });
   }
 
   if (canAccessSupportHub(roles)) {
+    includedRoutes.add("tickets");
     items.push({
       key: "workspace:support",
       group: "Workspace",
@@ -617,6 +911,7 @@ export function buildWorkspacePaletteItems(options: {
   }
 
   if (canAccessKnowledgeHub(roles)) {
+    includedRoutes.add("knowledge");
     items.push({
       key: "workspace:knowledge",
       group: "Workspace",
@@ -633,15 +928,48 @@ export function buildWorkspacePaletteItems(options: {
   }
 
   if (isScreenAvailable("overview")) {
+    includedRoutes.add("overview");
     items.push({
       key: "workspace:orientation",
       group: "Workspace",
       label: "Orientation",
       detail: "Role-tailored workspace orientation and setup",
       target: {
-        routePath: buildStudyScopedPath("/overview", options.activeStudyCode),
+        routePath: buildScopedWorkflowPath("/overview", {
+          studyCode: options.activeStudyCode,
+          siteId: options.activeSiteId,
+          subjectCode: options.activeSubjectCode,
+        }),
       },
     });
+  }
+
+  if (isDemoBuild()) {
+    for (const mod of listDemoCatalogModules()) {
+      if (includedRoutes.has(mod.routeName)) continue;
+      if (!isScreenAvailable(mod.routeName)) continue;
+      if (
+        mod.requiresRole.length > 0 &&
+        !hasRequiredRole(roles, mod.requiresRole)
+      ) {
+        continue;
+      }
+      const routePath =
+        mod.routeName === "observation"
+          ? mod.defaultPath
+          : buildScopedWorkflowPath(mod.defaultPath, {
+              studyCode: options.activeStudyCode,
+              siteId: options.activeSiteId,
+              subjectCode: options.activeSubjectCode,
+            });
+      items.push({
+        key: `preview:${mod.routeName}`,
+        group: "Preview",
+        label: mod.title,
+        detail: `${mod.family} · ${mod.summary}`,
+        target: { routePath },
+      });
+    }
   }
 
   items.push(
@@ -684,51 +1012,84 @@ export function buildWorkspacePaletteItems(options: {
   return items;
 }
 
-export function executePaletteTarget(
+export async function executePaletteTarget(
   target: PaletteTarget,
   context: {
     router: Router;
     currentRouteName?: string | symbol | null;
     currentQuery?: LocationQuery;
     activeStudyCode?: string;
+    workspaceScope?: Partial<WorkspaceScopeSnapshot> | null;
     onAction?: (action: PaletteWorkspaceAction) => void;
+    onFocusInspector?: (nodeRef?: string | null) => void | Promise<void>;
   }
-): void {
+): Promise<void> {
   if (target.action) {
     context.onAction?.(target.action);
     return;
   }
   if (target.routePath) {
-    context.router.push(target.routePath);
+    await context.router.push(target.routePath);
     return;
   }
-  const studyCode = target.studyCode || context.activeStudyCode || "";
+  const priorStudyCode = cleanQueryString(
+    context.workspaceScope?.studyCode ?? context.activeStudyCode
+  );
+  const studyCode = cleanQueryString(target.studyCode) || priorStudyCode;
   if (!studyCode) {
-    context.router.push({ name: "study" });
+    await context.router.push({ name: "study" });
     return;
+  }
+  const isCrossStudy = Boolean(priorStudyCode && studyCode !== priorStudyCode);
+  if (isCrossStudy) {
+    syncInstantiatedClinicalScope({
+      activeStudyId: studyCode,
+      activeSiteId: "",
+      activeSubjectId: "",
+    });
   }
   if (target.ask) {
     const baseQuery =
-      context.currentRouteName === "study" && context.currentQuery
+      !isCrossStudy &&
+      context.currentRouteName === "study" &&
+      context.currentQuery
         ? { ...context.currentQuery }
         : {};
-    context.router.push({
+    await context.router.push({
       name: "study",
       params: { studyCode },
       query: { ...baseQuery, ask: target.ask },
     });
+    await context.onFocusInspector?.(null);
     return;
   }
-  const query: Record<string, string> = {};
-  if (target.stage) query.stage = target.stage;
-  if (target.section) query.section = target.section;
+  const effectiveScope: Partial<WorkspaceScopeSnapshot> =
+    context.workspaceScope ??
+    resolveActiveWorkspaceScope(
+      {
+        params:
+          context.currentRouteName === "study" && priorStudyCode
+            ? { studyCode: priorStudyCode }
+            : {},
+        query: context.currentQuery,
+      },
+      null
+    );
+  const scopedWithStudy: Partial<WorkspaceScopeSnapshot> = {
+    ...effectiveScope,
+    studyCode: priorStudyCode || effectiveScope.studyCode || "",
+  };
+  const location = buildScopedStudyLocation(
+    studyCode,
+    {
+      stage: target.stage,
+      section: target.section,
+      targetParticipant: target.participant ?? null,
+    },
+    scopedWithStudy
+  );
+  await context.router.push(location);
   if (target.participant) {
-    const node = tryNodeRef("participant", target.participant.id);
-    if (node) query.node = formatNodeRef(node);
+    await context.onFocusInspector?.(location.query.node ?? null);
   }
-  context.router.push({
-    name: "study",
-    params: { studyCode },
-    query,
-  });
 }

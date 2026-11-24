@@ -39,8 +39,8 @@ public static class LetterTemplateEndpoints
         typeof(LetterTemplateEndpoints).Assembly,
         new Dictionary<string, string>(StringComparer.Ordinal)
         {
-            ["confirmation_letter"] = "confirmation_letter.liquid",
-            ["follow_up_letter"] = "follow_up_letter.liquid",
+            ["confirmation_letter"] = "confirmation_letter.html.liquid",
+            ["follow_up_letter"] = "follow_up_letter.html.liquid",
         });
 
     public static RouteGroupBuilder MapLetterTemplateEndpoints(this RouteGroupBuilder group)
@@ -90,7 +90,7 @@ public static class LetterTemplateEndpoints
         if (ClinicalScopeGuard.ResolvePrincipal(httpContext) is not null
             && ClinicalScopeGuard.RequireStudyAndOptionalSite(httpContext, request.StudyId, request.SiteId) is { } scopeDenied)
         {
-            string detail = (scopeDenied as ProblemHttpResult)?.ProblemDetails.Detail
+            string detail = scopeDenied.ProblemDetails.Detail
                 ?? "You are not assigned to the requested study or site.";
             return CtmsScopeGuard.Forbidden(detail);
         }

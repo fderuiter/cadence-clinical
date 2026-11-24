@@ -50,6 +50,21 @@ export interface RaiseQueryOptions {
   assignee?: string | null;
 }
 
+/** Optional metadata when reassigning an open or answered query. */
+export interface ReassignQueryOptions {
+  ownerRole?: FormQueryOwnerRole | null;
+  text?: string;
+  note?: string;
+}
+
+export type ReassignQueryInput =
+  string | null | ({ assignee?: string | null } & ReassignQueryOptions);
+
+/** Optional metadata when answering or reopening a query. */
+export interface TransitionQueryOptions {
+  assignee?: string | null;
+}
+
 const DONE: Record<FormQueryAction, string> = {
   answer: "Query answered.",
   reopen: "Query reopened.",
@@ -159,6 +174,10 @@ function isAbortError(error: unknown, signal?: AbortSignal): boolean {
   );
 }
 
+const EMPTY_QUERIES: FormQueryResponse[] = Object.freeze(
+  []
+) as unknown as FormQueryResponse[];
+
 export function useFormQueries() {
   const queries = ref<FormQueryResponse[]>([]);
   const loading = ref(false);
@@ -173,11 +192,27 @@ export function useFormQueries() {
 
   const liveCount = computed(() => queries.value.filter(isLiveQuery).length);
 
+  const queriesByFormAndItem = computed(() => {
+    const index = new Map<string, Map<string, FormQueryResponse[]>>();
+    for (const query of queries.value) {
+      let byItem = index.get(query.form_id);
+      if (!byItem) {
+        byItem = new Map<string, FormQueryResponse[]>();
+        index.set(query.form_id, byItem);
+      }
+      const list = byItem.get(query.item_id);
+      if (list) {
+        list.push(query);
+      } else {
+        byItem.set(query.item_id, [query]);
+      }
+    }
+    return index;
+  });
+
   /** The form's queries on one item, oldest first. */
   function forItem(formId: string, itemId: string): FormQueryResponse[] {
-    return queries.value.filter(
-      (q) => q.form_id === formId && q.item_id === itemId
-    );
+    return queriesByFormAndItem.value.get(formId)?.get(itemId) ?? EMPTY_QUERIES;
   }
 
   async function load(
@@ -363,19 +398,72 @@ export function useFormQueries() {
     query: FormQueryResponse,
     action: FormQueryAction,
     text: string,
-    reason: string
+    reason: string,
+    options?: TransitionQueryOptions
   ): Promise<boolean> {
+    const trimmedAssignee = options?.assignee?.trim() || undefined;
     return write(
-      { action, query: query.query_id, version: query.version, text, reason },
+      {
+        action,
+        query: query.query_id,
+        version: query.version,
+        text,
+        reason,
+        ...(trimmedAssignee ? { assignee: trimmedAssignee } : {}),
+      },
       ({ key }) =>
         ecrfQueriesApi.transition(action, {
           formId: query.form_id,
           queryId: query.query_id,
           text,
+          ...(trimmedAssignee ? { assignee: trimmedAssignee } : {}),
           reason,
           idempotencyKey: key,
         }),
       DONE[action]
+    );
+  }
+
+  /** Reassigns or unassigns an open or answered query with audited bitemporal history and explicit `X-Change-Reason`. */
+  function reassign(
+    query: FormQueryResponse,
+    assigneeOrInput: ReassignQueryInput,
+    reason: string,
+    options?: ReassignQueryOptions
+  ): Promise<boolean> {
+    const inputIsObject =
+      assigneeOrInput !== null && typeof assigneeOrInput === "object";
+    const rawAssignee = inputIsObject
+      ? (assigneeOrInput.assignee ?? null)
+      : assigneeOrInput;
+    const mergedOptions = inputIsObject ? assigneeOrInput : options;
+    const trimmedAssignee = rawAssignee?.trim() || null;
+    const trimmedNote =
+      (mergedOptions?.text ?? mergedOptions?.note)?.trim() || undefined;
+    const ownerRole = mergedOptions?.ownerRole ?? undefined;
+    const doneMessage = trimmedAssignee
+      ? "Query reassigned."
+      : "Query unassigned.";
+    return write(
+      {
+        reassign: query.query_id,
+        version: query.version,
+        assignee: trimmedAssignee,
+        ownerRole: ownerRole ?? null,
+        text: trimmedNote ?? null,
+        reason,
+      },
+      ({ key }) =>
+        ecrfQueriesApi.reassign({
+          formId: query.form_id,
+          queryId: query.query_id,
+          assignee: trimmedAssignee,
+          ...(ownerRole ? { ownerRole } : {}),
+          ...(trimmedNote ? { text: trimmedNote } : {}),
+          reason,
+          idempotencyKey: key,
+        }),
+      doneMessage
     );
   }
 
@@ -457,6 +545,7 @@ export function useFormQueries() {
     applySavedValues,
     raise,
     act,
+    reassign,
     actMany,
   };
 }

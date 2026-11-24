@@ -5,12 +5,15 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Kernel.Application.Commands;
+using Cadence.Kernel.Application.Evidence;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Events;
+using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Execution;
 using Cadence.Kernel.Modules;
 using Cadence.Kernel.Protocol;
+using Cadence.Kernel.References;
 
 using Microsoft.Extensions.DependencyInjection;
 
@@ -51,6 +54,14 @@ internal sealed class DeclareEffectivityHandler : ICommandHandler<DeclareEffecti
             return EffectivityErrors.StudySiteNotInStudy;
         }
 
+        var coveringScopes = scope.StudySiteId is { } targetStudySite
+            ? LockScopes.Covering(version.StudyId, targetStudySite)
+            : [NodeRef.For(version.StudyId)];
+        if (await LocksInForce.AnyAsync(context.Work, coveringScopes, LocksInForce.DenyingWrites, cancellationToken).ConfigureAwait(false))
+        {
+            return ObservationErrors.Locked;
+        }
+
         var versionId = command.ProtocolVersionId;
         var declared = await context.Work.ReadAllAsync<Effectivity>(e => e.ProtocolVersionId == versionId, cancellationToken).ConfigureAwait(false);
         if (declared.Any(e => e.Scope == scope))
@@ -85,6 +96,14 @@ internal sealed class ChangeEffectivityStatusHandler : ICommandHandler<ChangeEff
         if (await context.Work.FindAsync<Effectivity>(command.EffectivityId, cancellationToken).ConfigureAwait(false) is not { } effectivity)
         {
             return KernelErrors.NotFound;
+        }
+
+        var coveringScopes = effectivity.ScopeStudySiteId is { } targetStudySite
+            ? LockScopes.Covering(effectivity.StudyId, targetStudySite)
+            : [NodeRef.For(effectivity.StudyId)];
+        if (await LocksInForce.AnyAsync(context.Work, coveringScopes, LocksInForce.DenyingWrites, cancellationToken).ConfigureAwait(false))
+        {
+            return ObservationErrors.Locked;
         }
 
         var evidence = command.Evidence ?? [];
@@ -168,6 +187,15 @@ internal sealed class ActivateStudySiteHandler : ICommandHandler<ActivateStudySi
         if (await context.Work.FindAsync<StudySite>(command.StudySiteId, cancellationToken).ConfigureAwait(false) is not { } studySite)
         {
             return EffectivityErrors.StudySiteUnknown;
+        }
+
+        if (await LocksInForce.AnyAsync(
+                context.Work,
+                LockScopes.Covering(studySite.StudyId, studySite.Id),
+                LocksInForce.DenyingWrites,
+                cancellationToken).ConfigureAwait(false))
+        {
+            return ObservationErrors.Locked;
         }
 
         if (string.Equals(studySite.Status, ActiveStatus, StringComparison.Ordinal))
