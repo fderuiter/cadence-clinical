@@ -149,7 +149,9 @@
         {{ participantStateLabel(row.status) }}
       </template>
       <template #cell-site_id="{ row }">
-        {{ row.site_id || "Not assigned" }}
+        <span :class="{ 'participant-site-code': Boolean(row.site_id) }">
+          {{ row.site_id || "Not assigned" }}
+        </span>
       </template>
       <template #pagination>
         <span />
@@ -478,6 +480,13 @@ function onSiteSelect(value: string | number) {
   max-width: 100%;
 }
 
+#participants-search,
+#participants-site,
+#participants-site-filter,
+.participant-site-code {
+  font-family: var(--semantic-font-mono);
+}
+
 .filter-chip {
   display: inline-flex;
   align-items: center;
@@ -507,6 +516,7 @@ function onSiteSelect(value: string | number) {
   margin: 0;
   color: var(--neutral-dark);
   font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
 }
 
 .coordinator-lens-hint {
@@ -536,7 +546,7 @@ function onSiteSelect(value: string | number) {
   border-radius: 4px;
   background: transparent;
   color: var(--accent);
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--semantic-font-mono);
   cursor: pointer;
   box-sizing: border-box;
 }

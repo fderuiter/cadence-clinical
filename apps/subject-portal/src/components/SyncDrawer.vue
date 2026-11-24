@@ -252,3 +252,16 @@ function getStatusDescription(item) {
   );
 }
 </script>
+
+<style scoped>
+#sync-drawer-retry-countdown,
+.status-text,
+.item-time,
+.answer-value {
+  font-variant-numeric: tabular-nums;
+}
+
+.answer-value {
+  font-family: var(--semantic-font-mono);
+}
+</style>

@@ -737,6 +737,7 @@ onMounted(() => {
   margin: 0;
   color: var(--semantic-color-text-secondary);
   font-size: 0.92rem;
+  font-variant-numeric: tabular-nums;
 }
 
 :deep(.table-wrap) {
@@ -752,11 +753,20 @@ onMounted(() => {
 
 :deep(.code-cell) {
   white-space: nowrap;
+  font-family: var(--semantic-font-mono);
 }
 
 .muted-code {
   color: var(--semantic-color-text-secondary);
   font-size: 0.84rem;
+  font-family: var(--semantic-font-mono);
+}
+
+#register-site-code,
+#register-site-country,
+#register-site-institution-code,
+#link-site-picker {
+  font-family: var(--semantic-font-mono);
 }
 
 .status-pill {

@@ -779,7 +779,7 @@ function handleBatchIngested(result) {
 }
 
 .badge {
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 2px 8px;
   border-radius: 4px;
@@ -1007,7 +1007,7 @@ function handleBatchIngested(result) {
 
 .modality-tag,
 .slices-tag {
-  font-size: 0.65rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   padding: 1px 4px;
   border-radius: 3px;
@@ -1029,7 +1029,7 @@ function handleBatchIngested(result) {
 .info-row {
   display: flex;
   justify-content: space-between;
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
 }
 
 .info-label {
@@ -1042,7 +1042,7 @@ function handleBatchIngested(result) {
 }
 
 .info-val.code {
-  font-family: monospace;
+  font-family: var(--semantic-font-mono);
   color: var(--semantic-color-accent-inverse);
 }
 
@@ -1115,7 +1115,7 @@ function handleBatchIngested(result) {
 }
 
 .table-response-pill {
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   font-weight: 800;
   padding: 2px 8px;
   border-radius: 999px;

@@ -1295,9 +1295,10 @@ watch(
 
 .visit-day {
   display: block;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 500;
   color: var(--semantic-color-text-secondary);
+  font-variant-numeric: tabular-nums;
   margin-top: 2px;
 }
 
@@ -1314,10 +1315,17 @@ watch(
 
 .row-spec-code {
   display: block;
-  font-size: 0.75rem;
+  font-family: var(--semantic-font-mono);
+  font-size: var(--font-size-2xs);
   font-weight: 400;
   color: var(--semantic-color-text-secondary);
+  font-variant-numeric: tabular-nums;
   margin-top: 2px;
+}
+
+.casebook-summary,
+.forms-meta {
+  font-variant-numeric: tabular-nums;
 }
 
 .matrix-cell--na {

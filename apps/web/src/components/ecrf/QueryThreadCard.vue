@@ -442,7 +442,7 @@ const MESSAGE_LABELS: Record<string, string> = {
   font-weight: 600;
 }
 .form-query-code {
-  font-family: var(--font-mono, monospace);
+  font-family: var(--semantic-font-mono);
 }
 .form-query-status[data-status="open"],
 .form-query-badge[data-priority="high"] {
