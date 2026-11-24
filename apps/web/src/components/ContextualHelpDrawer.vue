@@ -772,6 +772,14 @@
   </div>
 </template>
 
+<script>
+import { defineLazyOverlay } from "../utils/lazyOverlay.js";
+
+const TicketCreateModal = defineLazyOverlay(
+  () => import("./tickets/TicketCreateModal.vue")
+);
+</script>
+
 <script setup>
 import {
   h,
@@ -783,7 +791,6 @@ import {
   onUnmounted,
   getCurrentInstance,
 } from "vue";
-import { getActivePinia } from "pinia";
 import { useRoute, useRouter } from "vue-router";
 import {
   ClinicalDrawer,
@@ -802,9 +809,16 @@ import {
   sanitizePseudonymousSubjectCode,
   useKnowledgeStore,
 } from "../stores/knowledge.js";
+import { resolveStorePinia } from "../stores/onboardingSummary.js";
 import { useAuthStore, PERSONA_PRESETS } from "../stores/auth.js";
 import { compileSopMarkdownToHtml } from "../api/knowledge.js";
-import { useStudyCanvasStore } from "../stores/studyCanvas";
+import { useToastStore } from "../stores/toasts.js";
+import { isDemoBuild } from "../utils/demoMode.js";
+import {
+  hasBlockingModalDialog,
+  isEditableOrFormControl,
+} from "../utils/lazyOverlay.js";
+import { useTicketMutationPermission } from "../utils/ticketPermissions";
 
 function makeLucideIcon(nodes) {
   const Icon = (props, { attrs }) =>
@@ -905,10 +919,6 @@ const X = makeLucideIcon([
   ["path", { d: "M18 6 6 18" }],
   ["path", { d: "m6 6 12 12" }],
 ]);
-import { useToastStore } from "../stores/toasts.js";
-import { isDemoBuild } from "../utils/demoMode.js";
-import { useTicketMutationPermission } from "../utils/ticketPermissions";
-import TicketCreateModal from "./tickets/TicketCreateModal.vue";
 
 const CLINICAL_ACRONYMS = {
   ecrf: "eCRF",
@@ -975,14 +985,15 @@ const LOWERCASE_CONNECTORS = new Set([
 
 const knowledgeStore = useKnowledgeStore();
 const authStore = useAuthStore();
-const toastStore = useToastStore();
+const pinia = resolveStorePinia(authStore);
+const toastStore = useToastStore(pinia);
 const route = useRoute();
 const instance = getCurrentInstance();
 const { activeStudyCode } = useActiveStudyScope();
-const activeCanvasStore = computed(() => {
-  const pinia = getActivePinia();
-  return pinia ? useStudyCanvasStore(pinia) : null;
-});
+const activeCanvasStore = computed(
+  () =>
+    (resolveStorePinia(authStore) || pinia)?.state?.value?.studyCanvas || null
+);
 let injectedRouter = null;
 try {
   injectedRouter = useRouter();
@@ -1460,32 +1471,6 @@ watch(
   { immediate: true }
 );
 
-function isEditableOrFormControl(node) {
-  const el =
-    node instanceof HTMLElement
-      ? node
-      : typeof document !== "undefined" &&
-          document.activeElement instanceof HTMLElement
-        ? document.activeElement
-        : null;
-  if (!el) return false;
-  if (el.isContentEditable) return true;
-  const tag = el.tagName?.toUpperCase?.() || "";
-  if (["INPUT", "TEXTAREA", "SELECT", "OPTION"].includes(tag)) return true;
-  if (
-    typeof el.closest === "function" &&
-    el.closest(
-      '[contenteditable="true"], [contenteditable=""], [contenteditable="plaintext-only"]'
-    )
-  ) {
-    return true;
-  }
-  const role = (el.getAttribute?.("role") || "").toLowerCase();
-  return ["textbox", "searchbox", "combobox", "listbox", "spinbutton"].includes(
-    role
-  );
-}
-
 function hasActiveExternalModalTrap() {
   if (knowledgeStore.isEscalating) return true;
   if (hasActiveModalFocusTrap({ excludeId: "contextual-help-drawer" })) {
@@ -1502,26 +1487,7 @@ function hasActiveExternalModalTrap() {
     }
     ancestor = ancestor.parentElement;
   }
-  if (typeof document === "undefined") return false;
-  const activeDialog = document.activeElement?.closest?.(
-    '[aria-modal="true"], [role="dialog"], [role="alertdialog"]'
-  );
-  if (
-    activeDialog &&
-    activeDialog.id !== "contextual-help-drawer" &&
-    !activeDialog.closest?.("#contextual-help-drawer")
-  ) {
-    return true;
-  }
-  const modalDialogs = document.querySelectorAll(
-    '[aria-modal="true"], [role="alertdialog"]'
-  );
-  for (const dialog of modalDialogs) {
-    if (dialog.id === "contextual-help-drawer") continue;
-    if (dialog.closest?.("#contextual-help-drawer")) continue;
-    return true;
-  }
-  return false;
+  return hasBlockingModalDialog("contextual-help-drawer");
 }
 
 // Keyboard accessibility: F1 / '?' to toggle contextual help; guarded against form controls and modal traps

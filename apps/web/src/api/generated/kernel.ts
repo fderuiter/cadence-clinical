@@ -321,7 +321,7 @@ export interface paths {
     };
     /**
      * Streams a bitemporal study snapshot as CSV, CDISC ODM v1.3.2 XML, CDISC Dataset-JSON, SAS bundle ZIP, R bundle ZIP, or Study Archive ZIP.
-     * @description Projects canonical kernel observations at as_of(valid_at, known_at), applying lock_filter and masking unauthorized sites or blinded treatment values in place (K-TRUTH-1, K-AUTH-4).
+     * @description Projects canonical kernel observations at as_of(valid_at, known_at), filtering to the caller's visible scope, reporting omitted scopes as a collapsed indicator, and masking blinded treatment values in place (K-TRUTH-1, K-AUTH-4, ADR-2590).
      */
     get: operations["KernelExportStudySnapshot"];
     put?: never;
@@ -1589,6 +1589,10 @@ export interface components {
       variable: string;
       value: null | string;
     };
+    Kernel_KernelHiddenContentResponse: {
+      more_exist: boolean;
+      reasons: string[];
+    };
     Kernel_KernelImportedRulePackSummaryResponse: {
       ref: string;
       key: string;
@@ -1606,6 +1610,8 @@ export interface components {
       template_ids?: null | string[];
       /** @default false */
       replace_forms: boolean;
+      amendment_classification?: null | string;
+      transition_policy?: null | string;
     };
     Kernel_KernelLineageEdgeResponse: {
       from: string;
@@ -1719,18 +1725,18 @@ export interface components {
       ref: null | string;
       study_ref: string;
       scope_ref: null | string;
-      scope_kind: string;
+      scope_kind: null | string;
       study_site_ref: null | string;
       enrollment_ref: null | string;
       subject_code: null | string;
-      kind: string;
+      kind: null | string;
       attestation_ref: null | string;
       attestation_meaning: null | string;
       /** Format: date-time */
       locked_at: null | string;
       locked_by: null | string;
       reason_for_change: null | string;
-      released: boolean;
+      released: null | boolean;
       release_ref: null | string;
       /** Format: date-time */
       released_at: null | string;
@@ -1879,6 +1885,14 @@ export interface components {
       decided_at: null | string;
       decided_by: null | string;
     };
+    Kernel_KernelProtocolAmendmentResponse: {
+      intent: string;
+      rationale: string;
+      classification: string;
+      summary_of_changes: string;
+      impacted_elements: string[];
+      transition_policy: string;
+    };
     Kernel_KernelProtocolDraftSummaryResponse: {
       version: components["schemas"]["Kernel_KernelProtocolVersionResponse"];
       title: string;
@@ -1891,6 +1905,8 @@ export interface components {
       imported_rule_pack?:
         | null
         | components["schemas"]["Kernel_KernelImportedRulePackSummaryResponse"];
+      amendment?:
+        null | components["schemas"]["Kernel_KernelProtocolAmendmentResponse"];
     };
     Kernel_KernelProtocolFormItemResponse: {
       id: string;
@@ -2181,6 +2197,7 @@ export interface components {
       /** Format: date-time */
       known_at: string;
       locks: components["schemas"]["Kernel_KernelLockResponse"][];
+      hidden: components["schemas"]["Kernel_KernelHiddenContentResponse"];
     };
     Kernel_KernelStudyRulePacksResponse: {
       study_ref: string;
@@ -4161,7 +4178,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Not Found. Kernel errors: `K.Aggregate.NotFound`, `K.Protocol.StudyUnknown`, `K.Standards.StandardVersionUnknown`. */
+      /** @description Not Found. Kernel errors: `K.Aggregate.NotFound`, `K.Identity.TenantUnknown`, `K.Knowledge.CodeSystemUnknown`, `K.Protocol.StudyUnknown`, `K.Standards.StandardVersionUnknown`. */
       404: {
         headers: {
           [name: string]: unknown;
@@ -4188,7 +4205,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Unprocessable Entity. Kernel errors: `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`, `K.Protocol.AmendmentInvalid`, `K.Protocol.AmendmentNotAllowed`, `K.Protocol.ContentInvalid`, `K.Protocol.ContentRequired`, `K.Standards.LibraryItemInvalid`. */
+      /** @description Unprocessable Entity. Kernel errors: `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`, `K.Identity.NameRequired`, `K.Knowledge.CodeSystemUriInvalid`, `K.Knowledge.ConceptLabelRequired`, `K.Knowledge.DuplicateEntry`, `K.Knowledge.EntriesInvalid`, `K.Knowledge.ExternalCodeMismatch`, `K.Knowledge.LicenseMismatch`, `K.Knowledge.PackageInvalid`, `K.Knowledge.VersionRequired`, `K.Protocol.AmendmentInvalid`, `K.Protocol.AmendmentNotAllowed`, `K.Protocol.ContentInvalid`, `K.Protocol.ContentRequired`, `K.Standards.LibraryItemInvalid`. */
       422: {
         headers: {
           [name: string]: unknown;

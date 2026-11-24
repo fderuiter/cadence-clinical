@@ -55,6 +55,7 @@ public class CliCommandLineTests
     [InlineData("gxp", "snapshot", "--commit", "--results-dir", "TestResults/gxp")]
     [InlineData("gxp", "validate")]
     [InlineData("generate-schema-doc", "--validate")]
+    [InlineData("pre-commit-openapi")]
     [InlineData("generate-demo-manifest")]
     [InlineData("generate-demo-manifest", "--check")]
     [InlineData("check", "demo-manifest")]

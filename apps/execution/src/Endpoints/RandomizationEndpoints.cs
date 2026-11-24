@@ -8,8 +8,10 @@ using Cadence.Apps.Execution.Application.Randomization;
 using Cadence.Apps.Execution.Application.Subjects;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Execution.Endpoints.Filters;
+using Cadence.Apps.Execution.Infrastructure.Security;
 using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
+using Cadence.Security.Rbac;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -107,7 +109,7 @@ public static class RandomizationEndpoints
     {
         ct.ThrowIfCancellationRequested();
 
-        if (ExecutionScopeGuard.RequireStudy(http, request.StudyId.Value) is { } scopeDenied)
+        if (ClinicalScopeGuard.RequireStudy(http, request.StudyId.Value, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } scopeDenied)
         {
             return scopeDenied;
         }
@@ -136,10 +138,15 @@ public static class RandomizationEndpoints
         string changeReason = ChangeReasonHeader.Read(http.Request)
             ?? throw new InvalidOperationException("ChangeReasonHeaderFilter should have rejected this request.");
 
+        if (ClinicalScopeGuard.RequireVerifiedTenant(http, ClinicalScopeGuard.ForbiddenCode) is { } tenantDenied)
+        {
+            return tenantDenied;
+        }
+
         var schemeStudy = await svc.GetSchemeStudyAsync(schemeId, ct).ConfigureAwait(false);
         IResult? scopeDenied = schemeStudy is { } study
-            ? ExecutionScopeGuard.RequireStudy(http, study.Value)
-            : ExecutionScopeGuard.RequireAnyStudyScope(http);
+            ? ClinicalScopeGuard.RequireStudy(http, study.Value, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true)
+            : ClinicalScopeGuard.RequireAnyStudyScope(http, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true);
         if (scopeDenied is not null)
         {
             return scopeDenied;
@@ -162,8 +169,8 @@ public static class RandomizationEndpoints
         ct.ThrowIfCancellationRequested();
 
         IResult? scopeDenied = !string.IsNullOrWhiteSpace(studyId)
-            ? ExecutionScopeGuard.RequireStudy(http, studyId)
-            : ExecutionScopeGuard.RequireAnyStudyScope(http);
+            ? ClinicalScopeGuard.RequireStudy(http, studyId, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true)
+            : ClinicalScopeGuard.RequireAnyStudyScope(http, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true);
         if (scopeDenied is not null)
         {
             return scopeDenied;
@@ -190,21 +197,30 @@ public static class RandomizationEndpoints
 
         string changeReason = ChangeReasonHeader.Read(http.Request)
             ?? throw new InvalidOperationException("ChangeReasonHeaderFilter should have rejected this request.");
-        if (SubjectAuthority.AuthorizeParticipantChange(http.User.ToAuthenticatedCaller()) is { } forbidden)
+        var caller = ClinicalScopeGuard.ResolvePrincipal(http) is { UserId.Length: > 0 } p
+            ? new AuthenticatedCaller(p.UserId, p.Roles, p.TenantId)
+            : null;
+        if (SubjectAuthority.AuthorizeParticipantChange(caller) is { } forbidden)
         {
             return forbidden.ToProblemResult();
+        }
+
+        if (ClinicalScopeGuard.RequireVerifiedTenant(http, ClinicalScopeGuard.ForbiddenCode) is { } tenantDenied)
+        {
+            return tenantDenied;
         }
 
         var subjectScope = await svc.GetSubjectScopeAsync(subjectId, ct).ConfigureAwait(false);
         var subjectLockScope = await svc.GetSubjectLockScopeAsync(subjectId, ct).ConfigureAwait(false);
         IResult? scopeDenied = subjectScope is { } s
-            ? ExecutionScopeGuard.RequireStudyAndOptionalSite(
+            ? ClinicalScopeGuard.RequireStudyAndOptionalSite(
                 http,
                 s.StudyId.Value,
                 s.SiteId?.Value,
-                allowUnassignedSiteForScopedCaller: true)
-            : (ExecutionScopeGuard.RequireAnyStudyScope(http)
-                ?? ExecutionScopeGuard.ResolveSiteFilter(http, null, out _, out _));
+                allowUnassignedSiteForScopedCaller: true,
+                code: ClinicalScopeGuard.ForbiddenCode,
+                requireVerifiedTenant: true)
+            : ClinicalScopeGuard.RequireAnyStudyAndSiteScope(http, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true);
         if (scopeDenied is not null)
         {
             return scopeDenied;

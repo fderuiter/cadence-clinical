@@ -1,5 +1,3 @@
-using System;
-
 using Cadence.Apps.Safety.Domain;
 using Cadence.Apps.Safety.Endpoints;
 using Cadence.Apps.Safety.Infrastructure.Persistence;
@@ -11,7 +9,6 @@ using Cadence.Telemetry;
 using Cadence.Templating;
 
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 
 var builder = WebApplication.CreateBuilder(args);

@@ -180,7 +180,7 @@ public static class DoaEndpoints
         string resolvedStudyId = scope.AuthorizedStudies.First();
         string trimmedSite = request.Site.Trim();
         var now = clock.UtcNow;
-        var (user, role) = ResolveCaller(httpContext, "site_coordinator");
+        var (user, role) = CallerScope.ResolveActor(httpContext, "site_coordinator");
 
         var delegation = new CtmsDelegation
         {
@@ -310,7 +310,7 @@ public static class DoaEndpoints
             httpContext);
 
         var now = clock.UtcNow;
-        var (user, role) = ResolveCaller(httpContext, "investigator");
+        var (user, role) = CallerScope.ResolveActor(httpContext, "investigator");
         long baselineVersion = db.Entry(delegation).Property(x => x.VersionIndex).OriginalValue;
 
         delegation.IsActive = false;
@@ -430,7 +430,7 @@ public static class DoaEndpoints
             request.ExpectedVersionIndex,
             httpContext);
 
-        var (user, role) = ResolveCaller(httpContext, "investigator");
+        var (user, role) = CallerScope.ResolveActor(httpContext, "investigator");
         var now = clock.UtcNow;
         long baselineVersion = db.Entry(delegation).Property(x => x.VersionIndex).OriginalValue;
 
@@ -584,7 +584,7 @@ public static class DoaEndpoints
             ? gate.GreenlightCertifiedBy
             : "Principal Investigator";
 
-        var (user, role) = ResolveCaller(httpContext, "investigator");
+        var (user, role) = CallerScope.ResolveActor(httpContext, "investigator");
         DateTimeOffset now = clock.UtcNow;
 
         var pdfBuilder = new StringBuilder();
@@ -690,17 +690,6 @@ public static class DoaEndpoints
         out string reason,
         out IResult? problem) =>
         MonitoringVisitEndpoints.TryExtractReasonForChange(httpContext, bodyReason, out reason, out problem);
-
-    private static (string User, string Role) ResolveCaller(HttpContext httpContext, string defaultUser)
-    {
-        string user = CallerScope.UserId(httpContext) ?? (httpContext.User?.Identity?.Name is { Length: > 0 } n ? n : defaultUser);
-        string role = CallerScope.Roles(httpContext);
-        if (string.IsNullOrWhiteSpace(role))
-        {
-            role = "SYSTEM";
-        }
-        return (user, role);
-    }
 
     private static List<string> ParseTaskCodes(string taskCodesJson)
     {

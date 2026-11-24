@@ -25,9 +25,11 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Kernel.Modules;
+using Cadence.ToolingCore.Services;
 
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -37,11 +39,19 @@ namespace Cadence.OpenApiExporter;
 
 public static class Program
 {
+    public const int DefaultMaxParallelism = 4;
+
     public static async Task<int> Main(string[] args)
     {
         Console.WriteLine("========================================================================");
         Console.WriteLine(" Cadence.OpenApiExporter - Standalone .NET OpenAPI Specification CLI");
         Console.WriteLine("========================================================================");
+
+        if (!TryParseMaxParallelism(args, out int maxParallelism, out string? parallelismError))
+        {
+            await Console.Error.WriteLineAsync($"[ERROR] {parallelismError}");
+            return 1;
+        }
 
         string? outputDir = null;
         int outputFlagIndex = Array.FindIndex(args, a => a == "--output-dir" || a == "-o");
@@ -75,6 +85,7 @@ public static class Program
 
         Directory.CreateDirectory(outputDir);
         Console.WriteLine($"[INFO] Target output directory: {outputDir}");
+        Console.WriteLine($"[INFO] Max host parallelism: {maxParallelism}");
 
         var standaloneServices = new List<DotnetServiceRegistration>
         {
@@ -108,45 +119,64 @@ public static class Program
             Console.WriteLine($"[INFO] Target contract filter requested: {string.Join(", ", targetServices.OrderBy(s => s, StringComparer.Ordinal))}");
         }
 
-        var exportedSchemas = new Dictionary<string, JsonObject>(StringComparer.OrdinalIgnoreCase);
+        var matchedStandaloneNames = selectedStandalone.Select(s => s.Name).ToArray();
+        var hostJobs = new List<Func<Task<HostExportResult>>>(selectedStandalone.Count + (shouldInspectKernelHost ? 1 : 0));
 
-        bool success = true;
         foreach (var svc in selectedStandalone)
         {
-            Console.WriteLine($"\n[INFO] Compiling OpenAPI specification for .NET service: '{svc.Name}'...");
-            try
-            {
-                var specObj = await ExportServiceOpenApiAsync(svc);
-                if (specObj != null)
-                {
-                    exportedSchemas[svc.Name] = specObj;
-                    string filePath = Path.Combine(outputDir, $"{svc.Name}_openapi.json");
-                    await WriteJsonToFileAsync(specObj, filePath);
-                    Console.WriteLine($"[SUCCESS] Exported namespaced schema for '{svc.Name}' -> {filePath}");
-                }
-                else
-                {
-                    await Console.Error.WriteLineAsync($"[ERROR] Failed to compile OpenAPI spec for '{svc.Name}'.");
-                    success = false;
-                }
-            }
-            catch (Exception ex)
-            {
-                await Console.Error.WriteLineAsync($"[ERROR] Exception compiling '{svc.Name}': {ex.GetBaseException().Message}");
-                success = false;
-            }
+            var capturedService = svc;
+            hostJobs.Add(() => ExportStandaloneHostJobAsync(capturedService, outputDir));
         }
 
         if (shouldInspectKernelHost)
         {
             string kernelContentRoot = Path.Combine(repoRoot, "apps", "kernel-api", "src");
-            bool kernelSuccess = await ExportKernelHostOpenApiAsync(
+            hostJobs.Add(() => ExportKernelHostJobAsync(
                 kernelContentRoot,
                 outputDir,
                 targetServices,
-                selectedStandalone.Select(s => s.Name),
-                exportedSchemas);
-            if (!kernelSuccess)
+                matchedStandaloneNames));
+        }
+
+        using var throttle = new SemaphoreSlim(maxParallelism, maxParallelism);
+        var runningTasks = hostJobs
+            .Select(async job =>
+            {
+                await throttle.WaitAsync();
+                try
+                {
+                    return await job();
+                }
+                finally
+                {
+                    throttle.Release();
+                }
+            })
+            .ToArray();
+
+        HostExportResult[] results = await Task.WhenAll(runningTasks);
+
+        var exportedSchemas = new Dictionary<string, JsonObject>(StringComparer.OrdinalIgnoreCase);
+        bool success = true;
+
+        foreach (HostExportResult result in results)
+        {
+            foreach (string line in result.StdoutLines)
+            {
+                Console.WriteLine(line);
+            }
+
+            foreach (string errorLine in result.StderrLines)
+            {
+                await Console.Error.WriteLineAsync(errorLine);
+            }
+
+            foreach (var (name, spec) in result.ExportedSpecs)
+            {
+                exportedSchemas[name] = spec;
+            }
+
+            if (!result.Succeeded)
             {
                 success = false;
             }
@@ -178,6 +208,9 @@ public static class Program
         Console.WriteLine("========================================================================");
         return 0;
     }
+
+    public static bool TryParseMaxParallelism(string[] args, out int maxParallelism, out string? error) =>
+        OpenApiSyncService.TryParseMaxParallelism(args, out maxParallelism, out error);
 
     public static string ToSchemaPrefix(string contractName)
     {
@@ -213,14 +246,46 @@ public static class Program
             .UseSetting("CADENCE_IMAGING_DEID_PSEUDONYMIZATION_KEY", Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)))
             .UseSetting("Storage:Provider", "memory");
 
-    private static async Task<bool> ExportKernelHostOpenApiAsync(
+    private static async Task<HostExportResult> ExportStandaloneHostJobAsync(
+        DotnetServiceRegistration svc,
+        string outputDir)
+    {
+        var result = new HostExportResult();
+        result.StdoutLines.Add($"\n[INFO] Compiling OpenAPI specification for .NET service: '{svc.Name}'...");
+        try
+        {
+            var specObj = await ExportServiceOpenApiAsync(svc, result.StderrLines);
+            if (specObj != null)
+            {
+                result.ExportedSpecs.Add((svc.Name, specObj));
+                string filePath = Path.Combine(outputDir, $"{svc.Name}_openapi.json");
+                await WriteJsonToFileAsync(specObj, filePath);
+                result.StdoutLines.Add($"[SUCCESS] Exported namespaced schema for '{svc.Name}' -> {filePath}");
+                result.Succeeded = true;
+            }
+            else
+            {
+                result.StderrLines.Add($"[ERROR] Failed to compile OpenAPI spec for '{svc.Name}'.");
+                result.Succeeded = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            result.StderrLines.Add($"[ERROR] Exception compiling '{svc.Name}': {ex.GetBaseException().Message}");
+            result.Succeeded = false;
+        }
+
+        return result;
+    }
+
+    private static async Task<HostExportResult> ExportKernelHostJobAsync(
         string contentRoot,
         string outputDir,
         HashSet<string> targetServices,
-        IEnumerable<string> matchedStandaloneNames,
-        Dictionary<string, JsonObject> exportedSchemas)
+        IReadOnlyCollection<string> matchedStandaloneNames)
     {
-        Console.WriteLine("\n[INFO] Booting Cadence.Kernel.Host once for kernel and module OpenAPI export...");
+        var result = new HostExportResult();
+        result.StdoutLines.Add("\n[INFO] Booting Cadence.Kernel.Host once for kernel and module OpenAPI export...");
         try
         {
             using var factory = new WebApplicationFactory<kernel::Cadence.Kernel.Host.Program>();
@@ -249,7 +314,7 @@ public static class Program
                 var unknown = targetServices.Where(t => !knownContracts.Contains(t)).OrderBy(t => t, StringComparer.Ordinal).ToList();
                 if (unknown.Count > 0)
                 {
-                    Console.WriteLine($"[WARNING] Unknown target contract(s) ignored: {string.Join(", ", unknown)}");
+                    result.StdoutLines.Add($"[WARNING] Unknown target contract(s) ignored: {string.Join(", ", unknown)}");
                 }
             }
 
@@ -257,31 +322,33 @@ public static class Program
             foreach (string documentName in documentsToExport)
             {
                 string prefix = ToSchemaPrefix(documentName);
-                Console.WriteLine($"[INFO] Exporting Cadence.Kernel.Host OpenAPI document '{documentName}' (prefix '{prefix}')...");
-                var docObj = await FetchAndNamespaceDocumentAsync(client, $"/openapi/{documentName}.json", prefix);
+                result.StdoutLines.Add($"[INFO] Exporting Cadence.Kernel.Host OpenAPI document '{documentName}' (prefix '{prefix}')...");
+                var docObj = await FetchAndNamespaceDocumentAsync(client, $"/openapi/{documentName}.json", prefix, result.StderrLines);
                 if (docObj == null)
                 {
-                    await Console.Error.WriteLineAsync($"[ERROR] Failed to compile OpenAPI document '{documentName}' on Cadence.Kernel.Host.");
+                    result.StderrLines.Add($"[ERROR] Failed to compile OpenAPI document '{documentName}' on Cadence.Kernel.Host.");
                     allSucceeded = false;
                     continue;
                 }
 
-                exportedSchemas[documentName] = docObj;
+                result.ExportedSpecs.Add((documentName, docObj));
                 string filePath = Path.Combine(outputDir, $"{documentName}_openapi.json");
                 await WriteJsonToFileAsync(docObj, filePath);
-                Console.WriteLine($"[SUCCESS] Exported namespaced schema for '{documentName}' -> {filePath}");
+                result.StdoutLines.Add($"[SUCCESS] Exported namespaced schema for '{documentName}' -> {filePath}");
             }
 
-            return allSucceeded;
+            result.Succeeded = allSucceeded;
+            return result;
         }
         catch (Exception ex)
         {
-            await Console.Error.WriteLineAsync($"[ERROR] Exception booting Cadence.Kernel.Host: {ex.GetBaseException().Message}");
-            return false;
+            result.StderrLines.Add($"[ERROR] Exception booting Cadence.Kernel.Host: {ex.GetBaseException().Message}");
+            result.Succeeded = false;
+            return result;
         }
     }
 
-    private static async Task<JsonObject?> ExportServiceOpenApiAsync(DotnetServiceRegistration svc)
+    private static async Task<JsonObject?> ExportServiceOpenApiAsync(DotnetServiceRegistration svc, List<string> stderrLines)
     {
         var factoryType = typeof(WebApplicationFactory<>).MakeGenericType(svc.ProgramType);
         using var factory = (IDisposable)Activator.CreateInstance(factoryType)!;
@@ -299,15 +366,19 @@ public static class Program
         var createClientMethod = configuredFactory.GetType().GetMethod("CreateClient", Type.EmptyTypes);
         using var client = (HttpClient)createClientMethod!.Invoke(configuredFactory, null)!;
 
-        return await FetchAndNamespaceDocumentAsync(client, "/openapi/v1.json", svc.Prefix);
+        return await FetchAndNamespaceDocumentAsync(client, "/openapi/v1.json", svc.Prefix, stderrLines);
     }
 
-    private static async Task<JsonObject?> FetchAndNamespaceDocumentAsync(HttpClient client, string route, string prefix)
+    private static async Task<JsonObject?> FetchAndNamespaceDocumentAsync(
+        HttpClient client,
+        string route,
+        string prefix,
+        List<string> stderrLines)
     {
         var response = await client.GetAsync(route);
         if (!response.IsSuccessStatusCode)
         {
-            await Console.Error.WriteLineAsync($"HTTP GET {route} returned status {response.StatusCode}");
+            stderrLines.Add($"HTTP GET {route} returned status {response.StatusCode}");
             return null;
         }
 
@@ -398,133 +469,11 @@ public static class Program
         return schemaName.StartsWith(prefix, StringComparison.Ordinal) ? refVal : $"{targetPrefix}{prefix}{schemaName}";
     }
 
-    private static JsonObject AggregateOpenApiSpecs(
+    public static JsonObject AggregateOpenApiSpecs(
         string outputDir,
         string repoRoot,
-        Dictionary<string, JsonObject> newlyExported)
-    {
-        var aggregatedPaths = new JsonObject();
-        var aggregatedSchemas = new JsonObject();
-
-        string fallbackDir = Path.Combine(repoRoot, "docs", "openapi");
-
-        // Collect all file names ending in _openapi.json from outputDir and fallbackDir
-        var specFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        if (Directory.Exists(outputDir))
-        {
-            foreach (var f in Directory.GetFiles(outputDir, "*_openapi.json"))
-            {
-                specFiles.Add(Path.GetFileName(f));
-            }
-        }
-        if (Directory.Exists(fallbackDir))
-        {
-            foreach (var f in Directory.GetFiles(fallbackDir, "*_openapi.json"))
-            {
-                specFiles.Add(Path.GetFileName(f));
-            }
-        }
-
-        var orderedFiles = specFiles
-            .Where(f => !f.Equals("cdisc_openapi.json", StringComparison.OrdinalIgnoreCase))
-            .OrderBy(f => f, StringComparer.Ordinal)
-            .ToList();
-
-        foreach (var fileName in orderedFiles)
-        {
-            string serviceName = fileName.Replace("_openapi.json", "", StringComparison.OrdinalIgnoreCase);
-            JsonObject? doc = null;
-
-            if (newlyExported.TryGetValue(serviceName, out var exportedDoc))
-            {
-                doc = exportedDoc;
-            }
-            else
-            {
-                string outputFilePath = Path.Combine(outputDir, fileName);
-                string fallbackFilePath = Path.Combine(fallbackDir, fileName);
-                string? targetReadPath = null;
-                if (File.Exists(outputFilePath))
-                {
-                    targetReadPath = outputFilePath;
-                }
-                else if (File.Exists(fallbackFilePath))
-                {
-                    targetReadPath = fallbackFilePath;
-                }
-
-                if (targetReadPath != null)
-                {
-                    try
-                    {
-                        string text = File.ReadAllText(targetReadPath);
-                        doc = JsonNode.Parse(text) as JsonObject;
-                    }
-                    catch
-                    {
-                        // Ignore unparseable fallback files
-                    }
-                }
-            }
-
-            if (doc == null) continue;
-
-            // Merge paths
-            if (doc["paths"] is JsonObject paths)
-            {
-                foreach (var pathKv in paths)
-                {
-                    if (!aggregatedPaths.ContainsKey(pathKv.Key))
-                    {
-                        aggregatedPaths[pathKv.Key] = pathKv.Value?.DeepClone();
-                    }
-                }
-            }
-
-            // Merge schemas
-            if (doc["components"] is JsonObject components && components["schemas"] is JsonObject schemas)
-            {
-                foreach (var schemaKv in schemas)
-                {
-                    if (!aggregatedSchemas.ContainsKey(schemaKv.Key))
-                    {
-                        aggregatedSchemas[schemaKv.Key] = schemaKv.Value?.DeepClone();
-                    }
-                }
-            }
-        }
-
-        var aggregatedSpec = new JsonObject
-        {
-            ["openapi"] = "3.1.0",
-            ["info"] = new JsonObject
-            {
-                ["title"] = "Cadence Clinical Unified Gateway API",
-                ["description"] = "Unified microservices API contract for Cadence Clinical Platform.\nEnforces OIDC/Keycloak authentication, RFC 7807 problem details, and ISO 14155:2020 regulatory compliance.",
-                ["version"] = "1.0.0-PROD"
-            },
-            ["servers"] = new JsonArray
-            {
-                new JsonObject
-                {
-                    ["url"] = "https://api.ccrsoft.com/api/v1",
-                    ["description"] = "Production API Gateway"
-                },
-                new JsonObject
-                {
-                    ["url"] = "http://localhost:8000/api/v1",
-                    ["description"] = "Local Dev Gateway Proxy"
-                }
-            },
-            ["paths"] = aggregatedPaths,
-            ["components"] = new JsonObject
-            {
-                ["schemas"] = aggregatedSchemas
-            }
-        };
-
-        return aggregatedSpec;
-    }
+        IReadOnlyDictionary<string, JsonObject> newlyExported) =>
+        OpenApiSyncService.AggregateOpenApiSpecs(outputDir, repoRoot, newlyExported);
 
     private static async Task WriteJsonToFileAsync(JsonObject obj, string filePath)
     {
@@ -560,4 +509,15 @@ public static class Program
     }
 
     private sealed record DotnetServiceRegistration(string Name, string Prefix, Type ProgramType, string ContentRoot);
+
+    private sealed class HostExportResult
+    {
+        public List<string> StdoutLines { get; } = [];
+
+        public List<string> StderrLines { get; } = [];
+
+        public List<(string Name, JsonObject Spec)> ExportedSpecs { get; } = [];
+
+        public bool Succeeded { get; set; }
+    }
 }

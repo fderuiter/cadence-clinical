@@ -63,10 +63,16 @@ export function useActiveStudyScope() {
     return syncActiveStudyScope(normalized, pinia);
   }
 
+  function isOwnPiniaActive(): boolean {
+    if (!pinia) return true;
+    const current = getActivePinia();
+    return !current || current === pinia;
+  }
+
   watch(
     routeCode,
     (code) => {
-      if (code) setActiveStudyCode(code);
+      if (code && isOwnPiniaActive()) setActiveStudyCode(code);
     },
     { immediate: true }
   );
@@ -75,7 +81,7 @@ export function useActiveStudyScope() {
     watch(
       () => normalizeStudyCode(bridgeRef.value),
       (code) => {
-        if (code) syncActiveStudyScope(code, pinia);
+        if (code && isOwnPiniaActive()) syncActiveStudyScope(code, pinia);
       },
       { immediate: true }
     );

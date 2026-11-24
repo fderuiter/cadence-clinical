@@ -296,19 +296,22 @@ public sealed partial class ContainerImagePinTests
         catalog.Should().ContainKeys(
             "@axe-core/playwright",
             "@playwright/test",
+            "@types/node",
             "@typescript-eslint/eslint-plugin",
             "@typescript-eslint/parser",
             "@vitejs/plugin-vue",
             "@vitest/coverage-v8",
             "axe-core",
             "eslint-plugin-vue",
+            "globals",
             "pinia",
             "typescript",
             "typescript-eslint",
             "vite",
             "vitest",
             "vue",
-            "vue-router");
+            "vue-router",
+            "vue-tsc");
 
         catalog["@typescript-eslint/eslint-plugin"].Should().Be("^8.73.0");
         catalog["@typescript-eslint/parser"].Should().Be("^8.73.0");
@@ -479,6 +482,56 @@ public sealed partial class ContainerImagePinTests
         AssertMalformedManifestFails(".config/dotnet-tools.json", "{ \"tools\": ");
         AssertMalformedManifestFails(".config/dotnet-tools.json", """{ "version": 1, "isRoot": true }""");
         AssertMalformedManifestFails("packages/ui/package.json", """{ "dependencies": { "jose": "^5.0.0" } }""");
+        AssertMalformedManifestFails(
+            ".github/dependabot.yml",
+            """
+            version: 2
+            updates:
+              - package-ecosystem: "nuget"
+                directory: "/"
+                ignore:
+                  - dependency-name: "SonarAnalyzer.CSharp"
+                    versions: [">= 10.7.0"]
+                  - dependency-name: "SonarAnalyzer.CSharp"
+                    versions: [">= 10.7.0"]
+            """);
+        AssertMalformedManifestFails(
+            ".github/dependabot.yml",
+            """
+            version: 2
+            updates:
+              - package-ecosystem: "nuget"
+                directory: "/"
+                ignore:
+                  - dependency-name: "MassTransit*"
+                    update-types: ["version-update:semver-major"]
+                  - dependency-name: "MassTransit*"
+                    update-types:
+                      [
+                        "version-update:semver-major",
+                      ]
+            """);
+        AssertMalformedManifestFails(
+            ".github/dependabot.yml",
+            """
+            version: 2
+            updates:
+              - package-ecosystem: "nuget"
+                directory: "/"
+                ignore:
+                  - dependency-name: "SonarAnalyzer.CSharp"
+                    versions: [">= 10.7.0", ">= 10.7.0"]
+            """);
+        AssertMalformedManifestFails(
+            ".github/dependabot.yml",
+            """
+            version: 2
+            updates:
+              - package-ecosystem: "nuget"
+                directory: "/"
+              - package-ecosystem: "nuget"
+                directory: "/"
+            """);
 
         foreach (string testPackage in new[]
         {

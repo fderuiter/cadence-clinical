@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -6,8 +7,10 @@ using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Application.Toxicity;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Execution.Endpoints.Filters;
+using Cadence.Apps.Execution.Infrastructure.Security;
 using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
+using Cadence.Security.Rbac;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -76,7 +79,7 @@ public static class LabToxicityEndpoints
         ILabToxicityGovernanceService svc,
         CancellationToken ct)
     {
-        if (ExecutionScopeGuard.ResolveStudyAndSiteFilters(httpContext, studyId, siteId, out var studyFilter, out var siteFilter, out var effectiveSiteId) is { } denied)
+        if (ClinicalScopeGuard.ResolveStudyAndSingleSiteFilters(httpContext, studyId, siteId, out var studyFilter, out var siteFilter, out var effectiveSiteId, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } denied)
         {
             return denied;
         }
@@ -84,7 +87,7 @@ public static class LabToxicityEndpoints
         string status = string.IsNullOrWhiteSpace(reviewStatus) ? "STAGED_FOR_INVESTIGATOR_REVIEW" : reviewStatus;
         var result = await svc.ListQueueAsync(studyId, effectiveSiteId, status, ct).ConfigureAwait(false);
         return result.Match(
-            items => Results.Ok(ExecutionScopeGuard.ApplyFilters(items, studyFilter, r => r.StudyId, siteFilter, r => r.SiteId)),
+            items => Results.Ok(ClinicalScopeGuard.ApplyFilters(items, studyFilter, siteFilter, r => r.StudyId, r => r.SiteId).ToList()),
             e => e.ToProblemResult());
     }
 
@@ -96,15 +99,21 @@ public static class LabToxicityEndpoints
         CancellationToken ct,
         [FromServices] IKernelLockGuard? lockGuard = null)
     {
+        if (ClinicalScopeGuard.RequireVerifiedTenant(httpContext, ClinicalScopeGuard.ForbiddenCode) is { } tenantDenied)
+        {
+            return tenantDenied;
+        }
+
         var existing = await svc.GetReviewByIdAsync(reviewId, ct).ConfigureAwait(false);
         IResult? scopeDenied = existing is not null
-            ? ExecutionScopeGuard.RequireStudyAndOptionalSite(
+            ? ClinicalScopeGuard.RequireStudyAndOptionalSite(
                 httpContext,
                 existing.StudyId,
                 existing.SiteId,
-                allowUnassignedSiteForScopedCaller: true)
-            : (ExecutionScopeGuard.RequireAnyStudyScope(httpContext)
-                ?? ExecutionScopeGuard.ResolveSiteFilter(httpContext, null, out _, out _));
+                allowUnassignedSiteForScopedCaller: true,
+                code: ClinicalScopeGuard.ForbiddenCode,
+                requireVerifiedTenant: true)
+            : ClinicalScopeGuard.RequireAnyStudyAndSiteScope(httpContext, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true);
         if (scopeDenied is not null)
         {
             return scopeDenied;
@@ -121,7 +130,10 @@ public static class LabToxicityEndpoints
             return locked;
         }
 
-        var result = await svc.ExecuteActionAsync(reviewId, request, httpContext.User.ToAuthenticatedCaller(), ct).ConfigureAwait(false);
+        var caller = ClinicalScopeGuard.ResolvePrincipal(httpContext) is { UserId.Length: > 0 } p
+            ? new AuthenticatedCaller(p.UserId, p.Roles, p.TenantId)
+            : null;
+        var result = await svc.ExecuteActionAsync(reviewId, request, caller, ct).ConfigureAwait(false);
         return result.Match(Results.Ok, e => e.ToProblemResult());
     }
 
@@ -131,7 +143,7 @@ public static class LabToxicityEndpoints
         ILabToxicityGovernanceService svc,
         CancellationToken ct)
     {
-        if (ExecutionScopeGuard.RequireAnyStudyScope(httpContext) is { } denied)
+        if (ClinicalScopeGuard.RequireAnyStudyScope(httpContext, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } denied)
         {
             return denied;
         }

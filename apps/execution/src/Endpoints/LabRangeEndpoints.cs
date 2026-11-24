@@ -8,9 +8,10 @@ using System.Threading.Tasks;
 using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Application.Observations;
 using Cadence.Apps.Execution.Endpoints.Filters;
-using Cadence.Database.Audit;
+using Cadence.Apps.Execution.Infrastructure.Security;
 using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
+using Cadence.Security.Rbac;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -147,13 +148,13 @@ public static class LabRangeEndpoints
         string? effectiveStudyId = !string.IsNullOrWhiteSpace(study_id) ? study_id : studyId;
         string? effectiveSiteId = !string.IsNullOrWhiteSpace(site_id) ? site_id : siteId;
 
-        if (ExecutionScopeGuard.ResolveStudyAndSiteFilters(httpContext, effectiveStudyId, effectiveSiteId, out var studyFilter, out var siteFilter, out var querySiteId) is { } denied)
+        if (ClinicalScopeGuard.ResolveStudyAndSingleSiteFilters(httpContext, effectiveStudyId, effectiveSiteId, out var studyFilter, out var siteFilter, out var querySiteId, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } denied)
         {
             return denied;
         }
 
         var result = await labRangeImportService.GetReferenceRangesAsync(effectiveStudyId ?? string.Empty, querySiteId, ct);
-        return TypedResults.Ok(ExecutionScopeGuard.ApplyFilters(result, studyFilter, r => r.StudyId, siteFilter, r => r.SiteId));
+        return TypedResults.Ok(ClinicalScopeGuard.ApplyFilters(result, studyFilter, siteFilter, r => r.StudyId, r => r.SiteId).ToList());
     }
 
     private static async Task<IResult> GetReferenceRangeByIdAsync(
@@ -162,8 +163,7 @@ public static class LabRangeEndpoints
         ILabRangeImportService labRangeImportService,
         CancellationToken ct)
     {
-        if ((ExecutionScopeGuard.RequireAnyStudyScope(httpContext)
-             ?? ExecutionScopeGuard.ResolveSiteFilter(httpContext, null, out _, out _)) is { } callerDenied)
+        if (ClinicalScopeGuard.RequireAnyStudyAndSiteScope(httpContext, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } callerDenied)
         {
             return callerDenied;
         }
@@ -174,7 +174,7 @@ public static class LabRangeEndpoints
             return TypedResults.NotFound(new { code = "RANGE_NOT_FOUND", detail = $"Lab reference range with ID '{id}' was not found." });
         }
 
-        if (ExecutionScopeGuard.RequireStudyAndOptionalSite(httpContext, result.StudyId, result.SiteId) is { } recordDenied)
+        if (ClinicalScopeGuard.RequireStudyAndOptionalSite(httpContext, result.StudyId, result.SiteId, code: ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } recordDenied)
         {
             return recordDenied;
         }
@@ -189,7 +189,7 @@ public static class LabRangeEndpoints
         CancellationToken ct,
         [FromServices] IKernelLockGuard? lockGuard = null)
     {
-        if (ExecutionScopeGuard.RequireStudyAndOptionalSite(httpContext, request.StudyId, request.SiteId) is { } denied)
+        if (ClinicalScopeGuard.RequireStudyAndOptionalSite(httpContext, request.StudyId, request.SiteId, code: ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } denied)
         {
             return denied;
         }
@@ -199,7 +199,7 @@ public static class LabRangeEndpoints
             return locked;
         }
 
-        string createdBy = httpContext.User.ToAuthenticatedCaller()?.UserId ?? throw new AuditActorUnresolvedException();
+        string createdBy = ResolveActorId(httpContext);
         string? changeReason = ChangeReasonHeader.Read(httpContext.Request) ?? request.ReasonForChange;
 
         var updatedRequest = request with { ReasonForChange = changeReason };
@@ -227,7 +227,7 @@ public static class LabRangeEndpoints
             return locked;
         }
 
-        string updatedBy = httpContext.User.ToAuthenticatedCaller()?.UserId ?? throw new AuditActorUnresolvedException();
+        string updatedBy = ResolveActorId(httpContext);
         string? changeReason = ChangeReasonHeader.Read(httpContext.Request) ?? request.ReasonForChange;
 
         var updatedRequest = request with { ReasonForChange = changeReason };
@@ -258,7 +258,7 @@ public static class LabRangeEndpoints
             return locked;
         }
 
-        string updatedBy = httpContext.User.ToAuthenticatedCaller()?.UserId ?? throw new AuditActorUnresolvedException();
+        string updatedBy = ResolveActorId(httpContext);
         string changeReason = ChangeReasonHeader.Read(httpContext.Request) ?? "Deactivating lab reference range.";
 
         bool deleted = await labRangeImportService.DeleteReferenceRangeAsync(id, updatedBy, changeReason, ct);
@@ -274,7 +274,7 @@ public static class LabRangeEndpoints
         ILabRangeImportService labRangeImportService,
         CancellationToken ct)
     {
-        if (ExecutionScopeGuard.RequireAnyStudyScope(httpContext) is { } callerDenied)
+        if (ClinicalScopeGuard.RequireAnyStudyScope(httpContext, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } callerDenied)
         {
             return callerDenied;
         }
@@ -316,7 +316,7 @@ public static class LabRangeEndpoints
                 ?? throw new BadHttpRequestException("Invalid JSON request body.");
         }
 
-        if (ExecutionScopeGuard.RequireStudyAndOptionalSite(httpContext, request.StudyId, request.SiteId) is { } scopeDenied)
+        if (ClinicalScopeGuard.RequireStudyAndOptionalSite(httpContext, request.StudyId, request.SiteId, code: ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } scopeDenied)
         {
             return scopeDenied;
         }
@@ -338,7 +338,7 @@ public static class LabRangeEndpoints
         CancellationToken ct,
         [FromServices] IKernelLockGuard? lockGuard = null)
     {
-        if (ExecutionScopeGuard.RequireAnyStudyScope(httpContext) is { } callerDenied)
+        if (ClinicalScopeGuard.RequireAnyStudyScope(httpContext, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } callerDenied)
         {
             return callerDenied;
         }
@@ -384,7 +384,7 @@ public static class LabRangeEndpoints
                 ?? throw new BadHttpRequestException("Invalid JSON request body.");
         }
 
-        if (ExecutionScopeGuard.RequireStudyAndOptionalSite(httpContext, request.StudyId, request.SiteId) is { } scopeDenied)
+        if (ClinicalScopeGuard.RequireStudyAndOptionalSite(httpContext, request.StudyId, request.SiteId, code: ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } scopeDenied)
         {
             return scopeDenied;
         }
@@ -393,7 +393,7 @@ public static class LabRangeEndpoints
             return locked;
         }
 
-        string submittedBy = httpContext.User.ToAuthenticatedCaller()?.UserId ?? throw new AuditActorUnresolvedException();
+        string submittedBy = ResolveActorId(httpContext);
         string? headerChangeReason = ChangeReasonHeader.Read(httpContext.Request);
         if (!string.IsNullOrWhiteSpace(headerChangeReason))
         {
@@ -419,13 +419,13 @@ public static class LabRangeEndpoints
         CancellationToken ct)
     {
         string? effectiveStudyId = !string.IsNullOrWhiteSpace(study_id) ? study_id : studyId;
-        if (ExecutionScopeGuard.ResolveStudyAndSiteFilters(httpContext, effectiveStudyId, null, out var studyFilter, out var siteFilter, out _) is { } denied)
+        if (ClinicalScopeGuard.ResolveStudyAndSingleSiteFilters(httpContext, effectiveStudyId, null, out var studyFilter, out var siteFilter, out _, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } denied)
         {
             return denied;
         }
 
         var result = await labRangeImportService.GetImportJobsAsync(effectiveStudyId ?? string.Empty, ct);
-        return TypedResults.Ok(ExecutionScopeGuard.ApplyFilters(result, studyFilter, j => j.StudyId, siteFilter, j => j.SiteId));
+        return TypedResults.Ok(ClinicalScopeGuard.ApplyFilters(result, studyFilter, siteFilter, j => j.StudyId, j => j.SiteId).ToList());
     }
 
     private static async Task<IResult> GetBatchStatusByIdAsync(
@@ -434,8 +434,7 @@ public static class LabRangeEndpoints
         ILabRangeImportService labRangeImportService,
         CancellationToken ct)
     {
-        if ((ExecutionScopeGuard.RequireAnyStudyScope(httpContext)
-             ?? ExecutionScopeGuard.ResolveSiteFilter(httpContext, null, out _, out _)) is { } callerDenied)
+        if (ClinicalScopeGuard.RequireAnyStudyAndSiteScope(httpContext, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } callerDenied)
         {
             return callerDenied;
         }
@@ -446,7 +445,7 @@ public static class LabRangeEndpoints
             return TypedResults.NotFound(new { code = "JOB_NOT_FOUND", detail = $"Batch import job with ID '{id}' was not found." });
         }
 
-        if (ExecutionScopeGuard.RequireStudyAndOptionalSite(httpContext, result.StudyId, result.SiteId) is { } recordDenied)
+        if (ClinicalScopeGuard.RequireStudyAndOptionalSite(httpContext, result.StudyId, result.SiteId, code: ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } recordDenied)
         {
             return recordDenied;
         }
@@ -459,7 +458,7 @@ public static class LabRangeEndpoints
         HttpContext httpContext,
         ILabRangeImportService labRangeImportService)
     {
-        if (ExecutionScopeGuard.RequireAnyStudyScope(httpContext) is { } denied)
+        if (ClinicalScopeGuard.RequireAnyStudyScope(httpContext, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } denied)
         {
             return denied;
         }
@@ -472,7 +471,7 @@ public static class LabRangeEndpoints
         HttpContext httpContext,
         ILabRangeImportService labRangeImportService)
     {
-        if (ExecutionScopeGuard.RequireAnyStudyScope(httpContext) is { } denied)
+        if (ClinicalScopeGuard.RequireAnyStudyScope(httpContext, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } denied)
         {
             return denied;
         }
@@ -487,11 +486,20 @@ public static class LabRangeEndpoints
         ILabRangeImportService labRangeImportService,
         CancellationToken ct)
     {
+        if (ClinicalScopeGuard.RequireVerifiedTenant(httpContext, ClinicalScopeGuard.ForbiddenCode) is { } tenantDenied)
+        {
+            return (tenantDenied, null);
+        }
+
         var existing = await labRangeImportService.GetReferenceRangeByIdAsync(id, ct).ConfigureAwait(false);
         var denied = existing is not null
-            ? ExecutionScopeGuard.RequireStudyAndOptionalSite(httpContext, existing.StudyId, existing.SiteId)
-            : (ExecutionScopeGuard.RequireAnyStudyScope(httpContext)
-                ?? ExecutionScopeGuard.ResolveSiteFilter(httpContext, null, out _, out _));
+            ? ClinicalScopeGuard.RequireStudyAndOptionalSite(httpContext, existing.StudyId, existing.SiteId, code: ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true)
+            : ClinicalScopeGuard.RequireAnyStudyAndSiteScope(httpContext, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true);
         return (denied, existing);
     }
+
+    private static string ResolveActorId(HttpContext httpContext) =>
+        ClinicalScopeGuard.ResolvePrincipal(httpContext)?.UserId is { Length: > 0 } actorId && !string.IsNullOrWhiteSpace(actorId)
+            ? actorId
+            : throw new AuditActorUnresolvedException();
 }

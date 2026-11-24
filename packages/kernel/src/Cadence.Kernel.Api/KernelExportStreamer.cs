@@ -118,6 +118,19 @@ internal static class KernelExportStreamer
         writer.WriteString("lock_filter", export.LockFilter);
         writer.WriteEndObject();
 
+        writer.WritePropertyName("hidden");
+        writer.WriteStartObject();
+        writer.WriteBoolean("more_exist", export.Hidden.MoreExist);
+        writer.WritePropertyName("reasons");
+        writer.WriteStartArray();
+        foreach (var reason in export.Hidden.Reasons)
+        {
+            writer.WriteStringValue(reason);
+        }
+
+        writer.WriteEndArray();
+        writer.WriteEndObject();
+
         writer.WritePropertyName("hiddenScopes");
         writer.WriteStartObject();
         writer.WriteBoolean("more_exist", export.HiddenScopes.MoreExist);
@@ -190,6 +203,11 @@ internal static class KernelExportStreamer
         await xml.WriteAttributeStringAsync("cadence", "ValidAt", CadenceNamespace, FormatInstant(snapshot.ValidAt)).ConfigureAwait(false);
         await xml.WriteAttributeStringAsync("cadence", "KnownAt", CadenceNamespace, FormatInstant(snapshot.KnownAt)).ConfigureAwait(false);
         await xml.WriteAttributeStringAsync("cadence", "LockFilter", CadenceNamespace, export.LockFilter).ConfigureAwait(false);
+        await xml.WriteAttributeStringAsync("cadence", "HiddenMoreExist", CadenceNamespace, export.Hidden.MoreExist ? "true" : "false").ConfigureAwait(false);
+        if (export.Hidden.MoreExist)
+        {
+            await xml.WriteAttributeStringAsync("cadence", "HiddenReasons", CadenceNamespace, string.Join(',', export.Hidden.Reasons)).ConfigureAwait(false);
+        }
 
         await WriteOdmStudyMetadataAsync(
             xml,
@@ -202,9 +220,6 @@ internal static class KernelExportStreamer
 
         await WriteOdmAdminDataAsync(xml, snapshot.StudyCode, visibleAttestations, blindedSignatureAttestationIds).ConfigureAwait(false);
 
-        await xml.WriteStartElementAsync(null, "ClinicalData", OdmNamespace).ConfigureAwait(false);
-        await xml.WriteAttributeStringAsync(null, "StudyOID", null, snapshot.StudyCode).ConfigureAwait(false);
-        await xml.WriteAttributeStringAsync(null, "MetaDataVersionOID", null, mdvOid).ConfigureAwait(false);
         if (export.HiddenScopes.MoreExist)
         {
             await xml.WriteStartElementAsync("cadence", "HiddenScopes", CadenceNamespace).ConfigureAwait(false);
@@ -212,6 +227,10 @@ internal static class KernelExportStreamer
             await xml.WriteAttributeStringAsync(null, "Reasons", null, string.Join(',', export.HiddenScopes.Reasons)).ConfigureAwait(false);
             await xml.WriteEndElementAsync().ConfigureAwait(false);
         }
+
+        await xml.WriteStartElementAsync(null, "ClinicalData", OdmNamespace).ConfigureAwait(false);
+        await xml.WriteAttributeStringAsync(null, "StudyOID", null, snapshot.StudyCode).ConfigureAwait(false);
+        await xml.WriteAttributeStringAsync(null, "MetaDataVersionOID", null, mdvOid).ConfigureAwait(false);
 
         var visibleRowsByEnrollment = export.Rows
             .GroupBy(r => r.EnrollmentRef, StringComparer.Ordinal)
@@ -340,7 +359,7 @@ internal static class KernelExportStreamer
                 Locks: [],
                 Attestations: [],
                 AuditTrail: [],
-                Protocols: []);
+                ProtocolVersions: snapshot.ProtocolVersions);
         }
 
         var designs = snapshot.ProtocolVersions
@@ -393,7 +412,8 @@ internal static class KernelExportStreamer
                     EffectiveLock: obs.EffectiveLock?.ToString(),
                     Masked: true,
                     Mask: MaskReason.Blinded.ToString(),
-                    Revisions: maskedRevisions));
+                    Revisions: maskedRevisions,
+                    GroupingFormId: obs.CollectionInstanceId?.Value));
                 continue;
             }
 
@@ -435,7 +455,8 @@ internal static class KernelExportStreamer
                 obs.EffectiveLock?.ToString(),
                 Masked: false,
                 Mask: null,
-                Revisions: revisions));
+                Revisions: revisions,
+                GroupingFormId: obs.CollectionInstanceId?.Value));
         }
 
         var formsWithBlindedObservations = new HashSet<Guid>();
@@ -468,7 +489,8 @@ internal static class KernelExportStreamer
                     isBlindedForm ? null : c.OpenedBy,
                     hasBlindedObs || isBlindedForm ? null : c.ContentHashAtCut,
                     Masked: isBlindedForm,
-                    Mask: isBlindedForm ? MaskReason.Blinded.ToString() : null);
+                    Mask: isBlindedForm ? MaskReason.Blinded.ToString() : null,
+                    GroupingFormId: c.CollectionInstanceId.Value);
             })
             .ToList();
 
@@ -626,7 +648,7 @@ internal static class KernelExportStreamer
             Locks: locks,
             Attestations: attestations,
             AuditTrail: auditTrail,
-            Protocols: snapshot.ProtocolVersions);
+            ProtocolVersions: snapshot.ProtocolVersions);
     }
 
     public static Task WriteCasebookJsonAsync(
@@ -640,7 +662,7 @@ internal static class KernelExportStreamer
         KernelCasebookResponse casebook,
         CancellationToken cancellationToken)
     {
-        var protocols = casebook.Protocols ?? [];
+        var protocols = casebook.ProtocolVersions ?? [];
         var latestProtocol = protocols.Count > 0 ? protocols[^1] : null;
         var versionNumber = latestProtocol?.Number ?? 1;
         var mdvOid = $"MDV.{versionNumber.ToString(CultureInfo.InvariantCulture)}";
@@ -695,11 +717,16 @@ internal static class KernelExportStreamer
         await xml.WriteAttributeStringAsync("cadence", "ValidAt", CadenceNamespace, FormatInstant(casebook.ValidAt)).ConfigureAwait(false);
         await xml.WriteAttributeStringAsync("cadence", "KnownAt", CadenceNamespace, FormatInstant(casebook.KnownAt)).ConfigureAwait(false);
 
+        var compiledOdmFallback = latestProtocol is null
+            ? null
+            : latestProtocol.CompiledOdmXml
+                ?? TryCompileUsdmOdmViaReflection(latestProtocol.RawContent, casebook.StudyCode, versionNumber.ToString(CultureInfo.InvariantCulture));
         await WriteCasebookOdmStudyMetadataAsync(
             xml,
             casebook,
             versionNumber,
             latestProtocol?.Design,
+            compiledOdmFallback,
             clinicalForms).ConfigureAwait(false);
 
         if (signatureDefs.Count > 0)
@@ -888,7 +915,7 @@ internal static class KernelExportStreamer
         await destination.FlushAsync(cancellationToken).ConfigureAwait(false);
     }
 
-    public static async Task WriteStudyBundleZipAsync(
+    public static async Task<KernelHiddenContentResponse> WriteStudyBundleZipAsync(
         Stream destination,
         ProjectedStudyExport export,
         StudyExportFormat format,
@@ -899,7 +926,9 @@ internal static class KernelExportStreamer
         var entryTimestamp = NormalizeZipTimestamp(export.GeneratedAt);
         var manifestFiles = new List<BundleManifestFileEntry>();
         var manifestCasebooks = new List<BundleManifestCasebookEntry>();
+        var combinedHiddenReasons = new HashSet<string>(export.Hidden.Reasons, StringComparer.Ordinal);
 
+        var orderedHiddenReasons = new List<string>();
         using (var archive = new ZipArchive(destination, ZipArchiveMode.Create, leaveOpen: true))
         {
             await AddZipEntryAsync(
@@ -973,6 +1002,7 @@ internal static class KernelExportStreamer
             if (format == StudyExportFormat.StudyArchive)
             {
                 var maskedLocks = BuildMaskedStudyLocks(export);
+                combinedHiddenReasons.UnionWith(maskedLocks.Hidden.Reasons);
                 await AddZipEntryAsync(
                     archive,
                     "locks/locks.json",
@@ -982,7 +1012,16 @@ internal static class KernelExportStreamer
                     (stream, ct) => JsonSerializer.SerializeAsync(stream, maskedLocks, CasebookJsonOptions, ct),
                     cancellationToken).ConfigureAwait(false);
 
-                var auditPayload = BuildMaskedAuditTrail(export);
+                var (auditEntries, hiddenAuditReasons) = BuildMaskedAuditTrail(export);
+                foreach (var reason in hiddenAuditReasons)
+                {
+                    combinedHiddenReasons.Add(reason.ToString());
+                }
+
+                var auditPayload = new BundleAuditTrailPayload(
+                    Hidden: KernelHiddenContentResponse.FromReasons(hiddenAuditReasons),
+                    Entries: auditEntries);
+
                 await AddZipEntryAsync(
                     archive,
                     "audit/audit_trail.json",
@@ -1056,6 +1095,11 @@ internal static class KernelExportStreamer
                 _ => "study_archive",
             };
 
+            orderedHiddenReasons.AddRange(combinedHiddenReasons.OrderBy(r => r, StringComparer.Ordinal));
+            var manifestHidden = orderedHiddenReasons.Count == 0
+                ? KernelHiddenContentResponse.None
+                : new KernelHiddenContentResponse(true, orderedHiddenReasons);
+
             var manifest = new StudyExportBundleManifest(
                 Producer: ProducerName,
                 Format: formatCode,
@@ -1067,7 +1111,8 @@ internal static class KernelExportStreamer
                 KnownAt: FormatInstant(export.Snapshot.KnownAt),
                 GeneratedAt: FormatInstant(export.GeneratedAt),
                 RequestedBy: requestedBy,
-                HiddenScopes: new BundleHiddenScopesView(export.HiddenScopes.MoreExist, export.HiddenScopes.Reasons),
+                Hidden: manifestHidden,
+                HiddenScopes: new BundleHiddenScopesView(manifestHidden.MoreExist, manifestHidden.Reasons),
                 Files: manifestFiles,
                 Casebooks: manifestCasebooks);
 
@@ -1079,6 +1124,9 @@ internal static class KernelExportStreamer
         }
 
         await destination.FlushAsync(cancellationToken).ConfigureAwait(false);
+        return orderedHiddenReasons.Count == 0
+            ? KernelHiddenContentResponse.None
+            : new KernelHiddenContentResponse(true, orderedHiddenReasons);
     }
 
     private static void WriteDatasetJsonGroup(
@@ -1345,7 +1393,13 @@ internal static class KernelExportStreamer
         await xml.WriteEndElementAsync().ConfigureAwait(false);
     }
 
-    private static void TryCopyCompiledMetaDataChildren(XmlWriter xml, string compiledOdmXml, HashSet<string> writtenItemOids)
+    private static void TryCopyCompiledMetaDataChildren(
+        XmlWriter xml,
+        string compiledOdmXml,
+        HashSet<string> writtenItemOids,
+        HashSet<string>? writtenFormOids = null,
+        HashSet<string>? writtenItemGroupOids = null,
+        HashSet<string>? writtenEventOids = null)
     {
         try
         {
@@ -1360,9 +1414,23 @@ internal static class KernelExportStreamer
             foreach (var element in mdv.Elements())
             {
                 var oidAttr = element.Attribute("OID")?.Value;
-                if (element.Name.LocalName == "ItemDef" && oidAttr is not null)
+                if (oidAttr is not null)
                 {
-                    writtenItemOids.Add(oidAttr);
+                    switch (element.Name.LocalName)
+                    {
+                        case "ItemDef":
+                            writtenItemOids.Add(oidAttr);
+                            break;
+                        case "FormDef":
+                            writtenFormOids?.Add(oidAttr);
+                            break;
+                        case "ItemGroupDef":
+                            writtenItemGroupOids?.Add(oidAttr);
+                            break;
+                        case "StudyEventDef":
+                            writtenEventOids?.Add(oidAttr);
+                            break;
+                    }
                 }
 
                 element.WriteTo(xml);
@@ -1415,6 +1483,7 @@ internal static class KernelExportStreamer
         }
 
         var buckets = new List<CasebookOdmFormBucket>(casebook.Forms.Count + 1);
+        var byGroupingId = new Dictionary<Guid, CasebookOdmFormBucket>();
         var byFormRef = new Dictionary<string, CasebookOdmFormBucket>(StringComparer.Ordinal);
         var bySpecId = new Dictionary<string, CasebookOdmFormBucket>(StringComparer.Ordinal);
 
@@ -1442,6 +1511,11 @@ internal static class KernelExportStreamer
                 FormMaskReason: form.Mask,
                 Observations: []);
             buckets.Add(bucket);
+            if (form.GroupingFormId is { } groupingGuid)
+            {
+                byGroupingId.TryAdd(groupingGuid, bucket);
+            }
+
             if (repeatKey is not null)
             {
                 byFormRef.TryAdd(repeatKey, bucket);
@@ -1454,7 +1528,12 @@ internal static class KernelExportStreamer
         {
             var specId = string.IsNullOrWhiteSpace(obs.CollectionSpecId) ? "unscheduled" : obs.CollectionSpecId!;
             CasebookOdmFormBucket? target = null;
-            if (obs.CollectionInstanceRef is { } ciRef)
+            if (obs.GroupingFormId is { } obsGroupingGuid)
+            {
+                byGroupingId.TryGetValue(obsGroupingGuid, out target);
+            }
+
+            if (target is null && obs.CollectionInstanceRef is { } ciRef)
             {
                 byFormRef.TryGetValue(ciRef, out target);
             }
@@ -1530,6 +1609,7 @@ internal static class KernelExportStreamer
         KernelCasebookResponse casebook,
         int versionNumber,
         ProtocolDesign? design,
+        string? compiledOdmXml,
         IReadOnlyList<CasebookOdmFormBucket> clinicalForms)
     {
         var numText = versionNumber.ToString(CultureInfo.InvariantCulture);
@@ -1545,6 +1625,38 @@ internal static class KernelExportStreamer
         await xml.WriteStartElementAsync(null, "MetaDataVersion", OdmNamespace).ConfigureAwait(false);
         await xml.WriteAttributeStringAsync(null, "OID", null, $"MDV.{numText}").ConfigureAwait(false);
         await xml.WriteAttributeStringAsync(null, "Name", null, $"Version {numText}").ConfigureAwait(false);
+
+        if (design is null && !string.IsNullOrWhiteSpace(compiledOdmXml))
+        {
+            var copiedItemOids = new HashSet<string>(StringComparer.Ordinal);
+            var copiedFormOids = new HashSet<string>(StringComparer.Ordinal);
+            var copiedIgOids = new HashSet<string>(StringComparer.Ordinal);
+            var copiedEventOids = new HashSet<string>(StringComparer.Ordinal);
+            TryCopyCompiledMetaDataChildren(xml, compiledOdmXml, copiedItemOids, copiedFormOids, copiedIgOids, copiedEventOids);
+            if (copiedFormOids.Count > 0)
+            {
+                foreach (var bucket in clinicalForms)
+                {
+                    foreach (var obs in bucket.Observations)
+                    {
+                        var rawItemId = obs.ItemId ?? obs.ConceptCode;
+                        var itemOid = $"IT.{SanitizeOid(rawItemId)}";
+                        if (copiedItemOids.Add(itemOid))
+                        {
+                            await xml.WriteStartElementAsync(null, "ItemDef", OdmNamespace).ConfigureAwait(false);
+                            await xml.WriteAttributeStringAsync(null, "OID", null, itemOid).ConfigureAwait(false);
+                            await xml.WriteAttributeStringAsync(null, "Name", null, obs.ConceptLabel).ConfigureAwait(false);
+                            await xml.WriteAttributeStringAsync(null, "DataType", null, !obs.Masked && obs.NumericValue is not null ? "decimal" : "text").ConfigureAwait(false);
+                            await xml.WriteEndElementAsync().ConfigureAwait(false);
+                        }
+                    }
+                }
+
+                await xml.WriteEndElementAsync().ConfigureAwait(false);
+                await xml.WriteEndElementAsync().ConfigureAwait(false);
+                return;
+            }
+        }
 
         var eventDefs = new List<(string EventOid, string EventName, bool IsScheduled, List<string> FormOids)>();
         var eventIndexByOid = new Dictionary<string, int>(StringComparer.Ordinal);
@@ -2239,6 +2351,11 @@ internal static class KernelExportStreamer
         sb.AppendLine($"/* Valid At: {FormatInstant(export.Snapshot.ValidAt)}                        */");
         sb.AppendLine($"/* Known At: {FormatInstant(export.Snapshot.KnownAt)}                        */");
         sb.AppendLine($"/* Generated At: {FormatInstant(export.GeneratedAt)}                         */");
+        if (export.Hidden.MoreExist)
+        {
+            sb.AppendLine($"/* Hidden Scope Notice: more_exist=true ({EscapeSasComment(string.Join(", ", export.Hidden.Reasons))}) */");
+        }
+
         sb.AppendLine($"/* Producer: {ProducerName}                                                  */");
         sb.AppendLine("/* ========================================================================= */");
         sb.AppendLine();
@@ -2342,6 +2459,11 @@ internal static class KernelExportStreamer
         sb.AppendLine($"# Valid At: {FormatInstant(export.Snapshot.ValidAt)}");
         sb.AppendLine($"# Known At: {FormatInstant(export.Snapshot.KnownAt)}");
         sb.AppendLine($"# Generated At: {FormatInstant(export.GeneratedAt)}");
+        if (export.Hidden.MoreExist)
+        {
+            sb.AppendLine($"# Hidden Scope Notice: more_exist=true ({EscapeRComment(string.Join(", ", export.Hidden.Reasons))})");
+        }
+
         sb.AppendLine($"# Producer: {ProducerName}");
         sb.AppendLine("# ===========================================================================");
         sb.AppendLine();
@@ -2401,51 +2523,21 @@ internal static class KernelExportStreamer
         return sb.ToString();
     }
 
-    private static IReadOnlyList<KernelLockResponse> BuildMaskedStudyLocks(ProjectedStudyExport export)
+    private static KernelStudyLocksResponse BuildMaskedStudyLocks(ProjectedStudyExport export)
     {
         var enrollmentSiteMap = export.Snapshot.Enrollments.ToDictionary(e => e.EnrollmentId.Value, e => e.StudySiteId);
         var collectionEnrollmentMap = export.Snapshot.Collections.ToDictionary(c => c.CollectionInstanceId.Value, c => (c.EnrollmentId, c.StudySiteId));
         var obsEnrollmentMap = export.Snapshot.Observations.ToDictionary(o => o.ObservationId.Value, o => (o.EnrollmentId, o.StudySiteId, o.IsBlindedTreatment));
 
+        var hiddenReasons = new HashSet<MaskReason>();
         var responses = new List<KernelLockResponse>(export.Snapshot.Locks.Count);
         foreach (var entry in export.Snapshot.Locks)
         {
-            MaskReason? reason = export.Visibility.Masks.For(entry.Scope);
-            if (reason is null)
+            var reason = ResolveLockEntryMask(entry, export, enrollmentSiteMap, collectionEnrollmentMap, obsEnrollmentMap);
+            if (reason is { } hiddenScopeReason && hiddenScopeReason != MaskReason.Blinded)
             {
-                if (entry.Scope.Kind == NodeKinds.Enrollment && enrollmentSiteMap.TryGetValue(entry.Scope.Id, out var siteId))
-                {
-                    reason = export.Visibility.Masks.For(NodeRef.For(siteId));
-                }
-                else if (entry.Scope.Kind == NodeKinds.CollectionInstance
-                    && collectionEnrollmentMap.TryGetValue(entry.Scope.Id, out var colScope))
-                {
-                    reason = export.Visibility.Masks.For(NodeRef.For(colScope.EnrollmentId))
-                        ?? export.Visibility.Masks.For(NodeRef.For(colScope.StudySiteId));
-                }
-                else if (entry.Scope.Kind == NodeKinds.Observation
-                    && obsEnrollmentMap.TryGetValue(entry.Scope.Id, out var obsScope))
-                {
-                    reason = export.Visibility.Masks.For(NodeRef.For(obsScope.EnrollmentId))
-                        ?? export.Visibility.Masks.For(NodeRef.For(obsScope.StudySiteId));
-                    if (reason is null && (entry.BlindedScope || obsScope.IsBlindedTreatment)
-                        && !export.Visibility.UnblindedEnrollments.Contains(obsScope.EnrollmentId))
-                    {
-                        reason = MaskReason.Blinded;
-                    }
-                }
-            }
-
-            if (reason is { } hiddenLockReason && hiddenLockReason != MaskReason.Blinded)
-            {
+                hiddenReasons.Add(hiddenScopeReason);
                 continue;
-            }
-
-            if (reason is null
-                && entry.BlindedScope
-                && (entry.EnrollmentId is null || !export.Visibility.UnblindedEnrollments.Contains(entry.EnrollmentId.Value)))
-            {
-                reason = MaskReason.Blinded;
             }
 
             responses.Add(reason is { } mask
@@ -2453,15 +2545,180 @@ internal static class KernelExportStreamer
                 : KernelLockResponse.FromVisible(entry));
         }
 
-        return responses;
+        return new KernelStudyLocksResponse(
+            NodeRef.For(export.Snapshot.StudyId).ToString(),
+            export.Snapshot.StudyCode,
+            export.Snapshot.ValidAt,
+            export.Snapshot.KnownAt,
+            responses,
+            KernelHiddenContentResponse.FromReasons(hiddenReasons));
     }
 
-    private static IReadOnlyList<BundleAuditEntryView> BuildMaskedAuditTrail(ProjectedStudyExport export)
+    private static MaskReason? ResolveLockEntryMask(
+        StudyLockEntry entry,
+        ProjectedStudyExport export,
+        IReadOnlyDictionary<Guid, StudySiteId> enrollmentSiteMap,
+        IReadOnlyDictionary<Guid, (EnrollmentId EnrollmentId, StudySiteId StudySiteId)> collectionEnrollmentMap,
+        IReadOnlyDictionary<Guid, (EnrollmentId EnrollmentId, StudySiteId StudySiteId, bool IsBlindedTreatment)> obsEnrollmentMap)
     {
+        MaskReason? reason = entry.Scope.Kind is NodeKinds.Study or NodeKinds.StudySite or NodeKinds.Enrollment
+            ? export.Visibility.Masks.For(entry.Scope)
+            : null;
+        if (reason is null)
+        {
+            if (entry.Scope.Kind == NodeKinds.Enrollment && enrollmentSiteMap.TryGetValue(entry.Scope.Id, out var siteId))
+            {
+                reason = export.Visibility.Masks.For(NodeRef.For(siteId));
+            }
+            else if (entry.Scope.Kind == NodeKinds.CollectionInstance
+                && collectionEnrollmentMap.TryGetValue(entry.Scope.Id, out var colScope))
+            {
+                reason = export.Visibility.Masks.For(NodeRef.For(colScope.EnrollmentId))
+                    ?? export.Visibility.Masks.For(NodeRef.For(colScope.StudySiteId));
+            }
+            else if (entry.Scope.Kind == NodeKinds.Observation
+                && obsEnrollmentMap.TryGetValue(entry.Scope.Id, out var obsScope))
+            {
+                reason = export.Visibility.Masks.For(NodeRef.For(obsScope.EnrollmentId))
+                    ?? export.Visibility.Masks.For(NodeRef.For(obsScope.StudySiteId));
+                if (reason is null && (entry.BlindedScope || obsScope.IsBlindedTreatment)
+                    && !export.Visibility.UnblindedEnrollments.Contains(obsScope.EnrollmentId))
+                {
+                    reason = MaskReason.Blinded;
+                }
+            }
+        }
+
+        reason ??= (entry.EnrollmentId is { } eid ? export.Visibility.Masks.For(NodeRef.For(eid)) : null)
+            ?? (entry.StudySiteId is { } sid ? export.Visibility.Masks.For(NodeRef.For(sid)) : null);
+
+        if (reason is null
+            && entry.BlindedScope
+            && (entry.EnrollmentId is null || !export.Visibility.UnblindedEnrollments.Contains(entry.EnrollmentId.Value)))
+        {
+            reason = MaskReason.Blinded;
+        }
+
+        return reason;
+    }
+
+    private static (IReadOnlyList<BundleAuditEntryView> Entries, HashSet<MaskReason> HiddenReasons) BuildMaskedAuditTrail(ProjectedStudyExport export)
+    {
+        var hiddenReasons = new HashSet<MaskReason>();
         var snapshot = export.Snapshot;
-        var visibleAggregateIds = BuildVisibleStudyAuditAggregateIds(export);
-        var aggregateIdsBySequence = snapshot.AuditAggregateIdsBySequence;
-        var hasVisibleBlindedData = snapshot.Observations.Any(o =>
+        var enrollmentSiteMap = snapshot.Enrollments.ToDictionary(e => e.EnrollmentId.Value, e => e.StudySiteId);
+        var collectionEnrollmentMap = snapshot.Collections.ToDictionary(c => c.CollectionInstanceId.Value, c => (c.EnrollmentId, c.StudySiteId));
+        var obsEnrollmentMap = snapshot.Observations.ToDictionary(o => o.ObservationId.Value, o => (o.EnrollmentId, o.StudySiteId, o.IsBlindedTreatment));
+
+        var maskByAggregateId = new Dictionary<string, MaskReason?>(StringComparer.Ordinal)
+        {
+            [snapshot.StudyId.ToString()] = null,
+        };
+        var maskByTargetGuid = new Dictionary<Guid, MaskReason?>
+        {
+            [snapshot.StudyId.Value] = null,
+        };
+        foreach (var protocol in snapshot.ProtocolVersions)
+        {
+            maskByTargetGuid[protocol.ProtocolVersionId.Value] = null;
+            maskByAggregateId[protocol.ProtocolVersionId.ToString()] = null;
+        }
+
+        foreach (var site in snapshot.StudySites)
+        {
+            var siteMask = export.Visibility.Masks.For(NodeRef.For(site.StudySiteId));
+            maskByTargetGuid[site.StudySiteId.Value] = siteMask;
+            maskByAggregateId[site.StudySiteId.ToString()] = siteMask;
+        }
+
+        foreach (var enrollment in snapshot.Enrollments)
+        {
+            var eMask = export.Visibility.Masks.For(NodeRef.For(enrollment.EnrollmentId))
+                ?? export.Visibility.Masks.For(NodeRef.For(enrollment.StudySiteId));
+            maskByTargetGuid[enrollment.EnrollmentId.Value] = eMask;
+            maskByAggregateId[enrollment.EnrollmentId.ToString()] = eMask;
+            maskByAggregateId[enrollment.ParticipantId.ToString()] = eMask;
+        }
+
+        var designs = snapshot.ProtocolVersions.Where(p => p.Design is not null).Select(p => p.Design!).ToList();
+        var blindedObsIds = snapshot.Observations
+            .Where(o => o.IsBlindedTreatment && !export.Visibility.UnblindedEnrollments.Contains(o.EnrollmentId))
+            .Select(o => o.ObservationId)
+            .ToHashSet();
+
+        foreach (var coll in snapshot.Collections)
+        {
+            var cMask = export.Visibility.Masks.For(NodeRef.For(coll.EnrollmentId))
+                ?? export.Visibility.Masks.For(NodeRef.For(coll.StudySiteId));
+            if (cMask is null
+                && !export.Visibility.UnblindedEnrollments.Contains(coll.EnrollmentId)
+                && (BlindedTreatmentClassifier.Instance.IsBlindedCollectionSpec(coll.CollectionSpecId, coll.CollectionSpecName, designs: designs)
+                    || coll.ItemIdsByObservation.Keys.Any(blindedObsIds.Contains)))
+            {
+                cMask = MaskReason.Blinded;
+            }
+
+            maskByTargetGuid[coll.CollectionInstanceId.Value] = cMask;
+            maskByAggregateId[coll.CollectionInstanceId.ToString()] = cMask;
+        }
+
+        foreach (var obs in snapshot.Observations)
+        {
+            var oMask = export.Visibility.Masks.For(NodeRef.For(obs.EnrollmentId))
+                ?? export.Visibility.Masks.For(NodeRef.For(obs.StudySiteId))
+                ?? export.Visibility.Masks.For(NodeRef.For(obs.ObservationId));
+            if (oMask is null && obs.IsBlindedTreatment && !export.Visibility.UnblindedEnrollments.Contains(obs.EnrollmentId))
+            {
+                oMask = MaskReason.Blinded;
+            }
+
+            maskByTargetGuid[obs.ObservationId.Value] = oMask;
+            maskByAggregateId[obs.ObservationId.ToString()] = oMask;
+            foreach (var assertion in obs.Assertions)
+            {
+                maskByTargetGuid[assertion.AssertionId.Value] = oMask;
+                maskByAggregateId[assertion.AssertionId.ToString()] = oMask;
+            }
+        }
+
+        foreach (var lk in snapshot.Locks)
+        {
+            var lMask = ResolveLockEntryMask(lk, export, enrollmentSiteMap, collectionEnrollmentMap, obsEnrollmentMap);
+            maskByTargetGuid[lk.LockId.Value] = lMask;
+            maskByAggregateId[lk.LockId.ToString()] = lMask;
+            if (lk.ReleaseAssertionId is { } relId)
+            {
+                maskByTargetGuid[relId.Value] = lMask;
+                maskByAggregateId[relId.ToString()] = lMask;
+            }
+        }
+
+        foreach (var att in snapshot.Attestations)
+        {
+            maskByTargetGuid.TryGetValue(att.TargetId, out var aMask);
+            maskByAggregateId[att.AttestationId.ToString()] = aMask;
+        }
+
+        MaskReason? fallbackHiddenReason = null;
+        foreach (var site in snapshot.StudySites)
+        {
+            var sm = export.Visibility.Masks.For(NodeRef.For(site.StudySiteId));
+            if (sm is not null && sm != MaskReason.Blinded)
+            {
+                fallbackHiddenReason ??= sm;
+            }
+        }
+
+        foreach (var enrollment in snapshot.Enrollments)
+        {
+            var em = export.Visibility.Masks.For(NodeRef.For(enrollment.EnrollmentId));
+            if (em is not null && em != MaskReason.Blinded)
+            {
+                fallbackHiddenReason ??= em;
+            }
+        }
+
+        var hasUnrevealedBlindedObs = snapshot.Observations.Any(o =>
                 export.VisibleEnrollmentIds.Contains(o.EnrollmentId)
                 && o.IsBlindedTreatment
                 && !export.Visibility.UnblindedEnrollments.Contains(o.EnrollmentId))
@@ -2470,24 +2727,54 @@ internal static class KernelExportStreamer
                 && (l.EnrollmentId is null
                     || (export.VisibleEnrollmentIds.Contains(l.EnrollmentId.Value)
                         && !export.Visibility.UnblindedEnrollments.Contains(l.EnrollmentId.Value))));
-
         var blindedSequences = snapshot.BlindedAuditSequences;
+        var aggregateIdsBySequence = snapshot.AuditAggregateIdsBySequence;
         var entries = new List<BundleAuditEntryView>(snapshot.AuditEntries.Count);
+
         foreach (var audit in snapshot.AuditEntries)
         {
-            if (aggregateIdsBySequence is not null
-                && (!aggregateIdsBySequence.TryGetValue(audit.Sequence, out var aggregateId)
-                    || !visibleAggregateIds.Contains(aggregateId)))
+            var isStudyLevel = string.Equals(audit.Subject, "Study", StringComparison.OrdinalIgnoreCase);
+            MaskReason? entryMask = null;
+
+            if (!isStudyLevel)
             {
+                if (aggregateIdsBySequence is not null && aggregateIdsBySequence.TryGetValue(audit.Sequence, out var aggId))
+                {
+                    if (!maskByAggregateId.TryGetValue(aggId, out entryMask))
+                    {
+                        if (fallbackHiddenReason is { } unmappedHidden)
+                        {
+                            hiddenReasons.Add(unmappedHidden);
+                        }
+
+                        continue;
+                    }
+
+                    if (entryMask is null && hasUnrevealedBlindedObs && blindedSequences?.Contains(audit.Sequence) is true)
+                    {
+                        entryMask = MaskReason.Blinded;
+                    }
+                }
+                else
+                {
+                    if (fallbackHiddenReason is { } hiddenFallback)
+                    {
+                        entryMask = hiddenFallback;
+                    }
+                    else if (hasUnrevealedBlindedObs && (blindedSequences is null || blindedSequences.Contains(audit.Sequence)))
+                    {
+                        entryMask = MaskReason.Blinded;
+                    }
+                }
+            }
+
+            if (entryMask is { } hiddenScopeReason && hiddenScopeReason != MaskReason.Blinded)
+            {
+                hiddenReasons.Add(hiddenScopeReason);
                 continue;
             }
 
-            var isStudyLevel = string.Equals(audit.Subject, "Study", StringComparison.OrdinalIgnoreCase);
-            var isBlindedEntry = !isStudyLevel
-                && hasVisibleBlindedData
-                && (blindedSequences is null || blindedSequences.Contains(audit.Sequence));
-
-            if (isBlindedEntry)
+            if (entryMask == MaskReason.Blinded)
             {
                 entries.Add(new BundleAuditEntryView(
                     Sequence: audit.Sequence,
@@ -2514,81 +2801,7 @@ internal static class KernelExportStreamer
                 MaskReason: null));
         }
 
-        return entries;
-    }
-
-    private static HashSet<string> BuildVisibleStudyAuditAggregateIds(ProjectedStudyExport export)
-    {
-        var snapshot = export.Snapshot;
-        var visibleIds = new HashSet<string>(StringComparer.Ordinal)
-        {
-            snapshot.StudyId.ToString(),
-        };
-        var visibleTargetGuids = new HashSet<Guid>
-        {
-            snapshot.StudyId.Value,
-        };
-
-        foreach (var protocol in snapshot.ProtocolVersions)
-        {
-            visibleIds.Add(protocol.ProtocolVersionId.ToString());
-            visibleTargetGuids.Add(protocol.ProtocolVersionId.Value);
-        }
-
-        foreach (var site in snapshot.StudySites)
-        {
-            if (export.Visibility.Masks.For(NodeRef.For(site.StudySiteId)) is null)
-            {
-                visibleIds.Add(site.StudySiteId.ToString());
-                visibleTargetGuids.Add(site.StudySiteId.Value);
-            }
-        }
-
-        foreach (var enrollmentId in export.VisibleEnrollmentIds)
-        {
-            visibleIds.Add(enrollmentId.ToString());
-            visibleTargetGuids.Add(enrollmentId.Value);
-        }
-
-        foreach (var collection in snapshot.Collections.Where(c => export.VisibleEnrollmentIds.Contains(c.EnrollmentId)))
-        {
-            visibleIds.Add(collection.CollectionInstanceId.ToString());
-            visibleTargetGuids.Add(collection.CollectionInstanceId.Value);
-        }
-
-        foreach (var obs in snapshot.Observations.Where(o => export.VisibleEnrollmentIds.Contains(o.EnrollmentId)))
-        {
-            visibleIds.Add(obs.ObservationId.ToString());
-            visibleTargetGuids.Add(obs.ObservationId.Value);
-            foreach (var assertion in obs.Assertions)
-            {
-                visibleIds.Add(assertion.AssertionId.ToString());
-                visibleTargetGuids.Add(assertion.AssertionId.Value);
-            }
-        }
-
-        foreach (var l in snapshot.Locks)
-        {
-            bool lockHidden = (l.EnrollmentId is { } eid && !export.VisibleEnrollmentIds.Contains(eid))
-                || (l.StudySiteId is { } sid && export.Visibility.Masks.For(NodeRef.For(sid)) is { } sm && sm != MaskReason.Blinded);
-            if (!lockHidden)
-            {
-                visibleIds.Add(l.LockId.ToString());
-                visibleTargetGuids.Add(l.LockId.Value);
-                if (l.ReleaseAssertionId is { } relId)
-                {
-                    visibleIds.Add(relId.ToString());
-                    visibleTargetGuids.Add(relId.Value);
-                }
-            }
-        }
-
-        foreach (var att in snapshot.Attestations.Where(a => visibleTargetGuids.Contains(a.TargetId)))
-        {
-            visibleIds.Add(att.AttestationId.ToString());
-        }
-
-        return visibleIds;
+        return (entries, hiddenReasons);
     }
 
     private static List<PdfStyledLine> BuildCasebookPdfLines(KernelCasebookResponse casebook)
@@ -2686,7 +2899,7 @@ internal static class KernelExportStreamer
         {
             foreach (var lk in casebook.Locks)
             {
-                var lockState = lk.Released ? "Released" : "InEffect";
+                var lockState = lk.Released is true ? "Released" : "InEffect";
                 var lkLine = lk.Masked
                     ? $"- [masked ({lk.Mask ?? "NotPermitted"})]"
                     : $"- [{lk.Kind ?? "Lock"}] Scope: {lk.ScopeRef} | State: {lockState} | By: {lk.LockedBy ?? "-"} | Reason: {lk.ReasonForChange ?? "-"}";
@@ -3030,6 +3243,7 @@ internal static class KernelExportStreamer
         string KnownAt,
         string GeneratedAt,
         string RequestedBy,
+        KernelHiddenContentResponse Hidden,
         BundleHiddenScopesView HiddenScopes,
         IReadOnlyList<BundleManifestFileEntry> Files,
         IReadOnlyList<BundleManifestCasebookEntry> Casebooks);
@@ -3051,6 +3265,10 @@ internal static class KernelExportStreamer
         string PdfSha256,
         string OdmXmlPath,
         string OdmXmlSha256);
+
+    private sealed record BundleAuditTrailPayload(
+        KernelHiddenContentResponse Hidden,
+        IReadOnlyList<BundleAuditEntryView> Entries);
 
     private sealed record BundleAuditEntryView(
         long Sequence,

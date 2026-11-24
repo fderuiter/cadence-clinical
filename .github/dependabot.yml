@@ -102,6 +102,7 @@ updates:
         patterns:
           - "vue"
           - "vue-*"
+          - "vue-tsc"
           - "@vue/*"
           - "pinia"
           - "vite"
