@@ -46,6 +46,12 @@ public interface ISubjectRepository
     Task<ClinicalSubject?> GetByIdAsync(string id, CancellationToken cancellationToken);
 
     /// <summary>
+    /// Looks up by the synchronized Clinical Kernel <c>EnrollmentId</c> UUID within the active tenant.
+    /// Returns <see langword="null"/> when absent or empty; tracked like <see cref="GetByIdAsync"/>.
+    /// </summary>
+    Task<ClinicalSubject?> GetByKernelEnrollmentIdAsync(System.Guid enrollmentId, CancellationToken cancellationToken);
+
+    /// <summary>
     /// Looks up by the domain <see cref="SubjectCode"/>. Returns <see langword="null"/> on a miss — never
     /// throws — so callers such as <c>EConsentCompletedConsumer</c> can use this in isolation as an
     /// idempotency check without paying for the id-then-code fallback sequencing. Tracked, for the same

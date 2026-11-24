@@ -151,3 +151,27 @@ export async function replaceRouteQueryParams(
     return false;
   }
 }
+
+export function shouldSuppressUnsavedNavigationGuard(
+  authStore: {
+    isAuthenticated?: boolean;
+    sessionExpired?: boolean;
+    isLoggingOut?: boolean;
+  },
+  to?: { name?: unknown; path?: string } | null
+): boolean {
+  if (
+    !authStore.isAuthenticated ||
+    authStore.sessionExpired ||
+    authStore.isLoggingOut
+  ) {
+    return true;
+  }
+  return Boolean(
+    to &&
+    (to.name === "forbidden" ||
+      to.path === "/forbidden" ||
+      to.name === "login" ||
+      to.path === "/login")
+  );
+}
