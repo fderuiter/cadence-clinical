@@ -6,6 +6,10 @@ import {
   type StoreGeneric,
 } from "pinia";
 import type { useStudyCanvasStore } from "./studyCanvas";
+import {
+  registerLogoutCleanup,
+  registerSessionCacheClearHandler,
+} from "../auth/sessionCoordinator.js";
 
 export type StudyCanvasStoreInstance = ReturnType<typeof useStudyCanvasStore>;
 
@@ -173,3 +177,8 @@ export async function loadStudyCanvasStore(
   const mod = await studyCanvasModulePromise;
   return mod.useStudyCanvasStore(pinia);
 }
+
+registerSessionCacheClearHandler(() => {
+  clearActiveStudyScope();
+});
+registerLogoutCleanup(clearActiveStudyScope);

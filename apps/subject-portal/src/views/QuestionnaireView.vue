@@ -124,15 +124,19 @@ import {
   requestCancelQuestionnaire,
   saveAndLeaveQuestionnaire,
 } from "../features/questionnaire.js";
+import { isScreenAvailable } from "../router/availability.js";
 import { useSessionStore } from "../stores/session.js";
 import { useUiStore } from "../stores/ui.js";
+import { isDemoModeActive } from "../utils/demoMode.js";
 
 const ui = useUiStore();
 const session = useSessionStore();
 const hasTasksTab = ref(false);
 
 function syncTasksTabPresence() {
+  const tabAllowed = isDemoModeActive() || isScreenAvailable("tasks");
   hasTasksTab.value =
+    tabAllowed &&
     typeof document !== "undefined" &&
     Boolean(document.getElementById("btn-tab-btn-tasks"));
 }
@@ -144,6 +148,8 @@ watch(
     () => ui.currentView,
     () => session.session?.isDemoMode,
     () => session.session?.token,
+    () => session.session?.userId,
+    () => session.session?.isOfflineMode,
   ],
   () => {
     syncTasksTabPresence();

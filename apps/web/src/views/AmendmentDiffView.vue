@@ -67,7 +67,7 @@
       >
         <span class="nav-icon">📋</span>
         <span>Site Coordinator: Bulk Re-Consent &amp; Migration Workspace</span>
-        <span v-if="gatedSubjectCount > 0" class="nav-pill-badge"
+        <span v-if="gatedSubjectCount > 0" class="nav-pill-badge tabular-nums"
           >{{ gatedSubjectCount }} Hold(s)</span
         >
       </button>
@@ -863,7 +863,7 @@
     >
       <div class="batch-toolbar-content">
         <div class="batch-info">
-          <span class="batch-count-badge"
+          <span class="batch-count-badge tabular-nums"
             >⚡ {{ selectedSubjectIds.length }} Subject(s) Selected</span
           >
           <span class="batch-site-scope"

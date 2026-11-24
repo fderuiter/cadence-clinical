@@ -36,6 +36,7 @@ import {
 } from "./consent.js";
 import { showView } from "./navigation.js";
 import { syncOfflineQueue } from "./sync.js";
+import { checkOnline } from "./sync-status.js";
 import { renderTasks } from "./tasks.js";
 
 const RECONSENT_EPRO_GATE_MESSAGE =
@@ -537,7 +538,7 @@ export async function verifyAndSubmitSignature() {
     }
 
     // Verify online OIDC Account Password or offline local Security PIN before accepting signature
-    if (isAuthenticatedSession()) {
+    if (isAuthenticatedSession() && checkOnline()) {
       try {
         const eproActionPath = "/api/v1/interop/epro/submit";
         const verificationBody = buildStepUpVerificationPayload({

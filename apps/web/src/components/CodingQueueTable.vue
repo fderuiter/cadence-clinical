@@ -10,7 +10,9 @@
       class="batch-action-bar cluster-batch-bar"
     >
       <div class="batch-summary">
-        <span class="badge badge-accent">{{ codingStore.selectedCount }}</span>
+        <span class="badge badge-accent tabular-nums">{{
+          codingStore.selectedCount
+        }}</span>
         <span>verbatim clusters selected for batch action</span>
       </div>
       <div class="batch-buttons">
@@ -48,7 +50,9 @@
       class="batch-action-bar"
     >
       <div class="batch-summary">
-        <span class="badge badge-accent">{{ codingStore.selectedCount }}</span>
+        <span class="badge badge-accent tabular-nums">{{
+          codingStore.selectedCount
+        }}</span>
         <span>items selected for batch action</span>
       </div>
       <div class="batch-buttons">

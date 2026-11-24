@@ -55,7 +55,9 @@
       <div class="metrics-grid">
         <div class="metric-card">
           <span class="metric-label">Total Device Inventory</span>
-          <span class="metric-value">{{ summary.total_devices }}</span>
+          <span class="metric-value tabular-nums">{{
+            summary.total_devices
+          }}</span>
           <span class="metric-sub"
             >{{ summary.available_devices }} Available |
             {{ summary.dispensed_devices }} Dispensed</span
@@ -66,7 +68,7 @@
           :class="{ 'metric-alert-danger': summary.quarantined_devices > 0 }"
         >
           <span class="metric-label">RTSM Quarantined</span>
-          <span class="metric-value text-danger">{{
+          <span class="metric-value text-danger tabular-nums">{{
             summary.quarantined_devices
           }}</span>
           <span class="metric-sub"
@@ -75,7 +77,7 @@
         </div>
         <div class="metric-card">
           <span class="metric-label">Reported Deficiencies</span>
-          <span class="metric-value text-warning">{{
+          <span class="metric-value text-warning tabular-nums">{{
             summary.total_deficiencies
           }}</span>
           <span class="metric-sub"
@@ -87,7 +89,9 @@
           :class="{ 'metric-alert-danger': summary.sade_count > 0 }"
         >
           <span class="metric-label">SADE / USADE Critical</span>
-          <span class="metric-value text-danger">{{ summary.sade_count }}</span>
+          <span class="metric-value text-danger tabular-nums">{{
+            summary.sade_count
+          }}</span>
           <span class="metric-sub">ISO 14155 Expedited Vigilance</span>
         </div>
       </div>
@@ -271,6 +275,7 @@
               <h3 class="panel-title">Serialized Device Inventory Ledger</h3>
               <div class="filter-pills">
                 <button
+                  class="tabular-nums"
                   :class="[
                     'filter-pill',
                     { active: inventoryFilter === 'ALL' },
@@ -280,6 +285,7 @@
                   All ({{ devices.length }})
                 </button>
                 <button
+                  class="tabular-nums"
                   :class="[
                     'filter-pill',
                     { active: inventoryFilter === 'AVAILABLE' },
@@ -291,6 +297,7 @@
                   }})
                 </button>
                 <button
+                  class="tabular-nums"
                   :class="[
                     'filter-pill',
                     { active: inventoryFilter === 'DISPENSED' },
@@ -302,6 +309,7 @@
                   }})
                 </button>
                 <button
+                  class="tabular-nums"
                   :class="[
                     'filter-pill filter-danger',
                     { active: inventoryFilter === 'QUARANTINED' },
@@ -779,7 +787,7 @@
                 compromised devices.
               </p>
             </div>
-            <span class="badge badge-danger"
+            <span class="badge badge-danger tabular-nums"
               >{{
                 quarantines.filter((q) => q.status === "ACTIVE").length
               }}
@@ -895,11 +903,13 @@
                   >
                 </div>
                 <div
-                  class="countdown-badge"
+                  class="countdown-badge tabular-nums"
                   :class="{ overdue: sc.is_overdue }"
                 >
                   <span class="clock-icon">⏱️</span>
-                  <span>{{ sc.days_remaining }} days remaining</span>
+                  <span class="tabular-nums"
+                    >{{ sc.days_remaining }} days remaining</span
+                  >
                 </div>
               </div>
 

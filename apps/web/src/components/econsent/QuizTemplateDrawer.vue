@@ -115,7 +115,7 @@
           />
           <span> Select All Filtered ({{ filteredTemplates.length }}) </span>
         </label>
-        <span class="selected-count-badge">
+        <span class="selected-count-badge tabular-nums">
           {{ selectedTemplateIds.length }} Question{{
             selectedTemplateIds.length === 1 ? "" : "s"
           }}

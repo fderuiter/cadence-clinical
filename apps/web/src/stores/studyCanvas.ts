@@ -1,5 +1,8 @@
 import { defineStore, getActivePinia } from "pinia";
-import { registerSessionCacheClearHandler } from "../auth/sessionCoordinator.js";
+import {
+  registerLogoutCleanup,
+  registerSessionCacheClearHandler,
+} from "../auth/sessionCoordinator.js";
 import {
   executionApi,
   type SubjectDetail,
@@ -1283,12 +1286,25 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
   },
 });
 
-registerSessionCacheClearHandler((context?: { reason?: string }) => {
+function resetMountedStudyCanvasStore(): void {
+  participantsRequest++;
+  pulseRequest++;
+  recordRequest++;
+  scheduleRequest++;
+  lookupEpoch++;
+  inFlightPages.clear();
+  inFlightById.clear();
+  inFlightByCode.clear();
+  palettePromise = null;
+  palettePromiseKey = "";
   const pinia = getActivePinia();
   if (!pinia || !("studyCanvas" in pinia.state.value)) return;
   const store = useStudyCanvasStore(pinia);
-  if (context?.reason === "logout") {
-    store.$reset();
-  }
+  store.$reset();
   store.clearSessionCaches();
+}
+
+registerSessionCacheClearHandler(() => {
+  resetMountedStudyCanvasStore();
 });
+registerLogoutCleanup(resetMountedStudyCanvasStore);

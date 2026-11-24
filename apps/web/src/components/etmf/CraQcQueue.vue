@@ -104,7 +104,7 @@
         </label>
         <span
           v-if="selectedItemIds.length > 0"
-          class="badge status-approved"
+          class="badge status-approved tabular-nums"
           style="font-size: 11px"
         >
           {{ selectedItemIds.length }} Selected

@@ -94,12 +94,12 @@
       <div class="metric-strip">
         <div class="metric-card">
           <span class="metric-title">Total Dossiers</span>
-          <span class="metric-value">{{ dossiers.length }}</span>
+          <span class="metric-value tabular-nums">{{ dossiers.length }}</span>
           <span class="metric-sub">Packaged candidate events</span>
         </div>
         <div class="metric-card">
           <span class="metric-title">In Primary Review</span>
-          <span class="metric-value text-warning">
+          <span class="metric-value text-warning tabular-nums">
             {{
               dossiers.filter((d) =>
                 [
@@ -114,7 +114,7 @@
         </div>
         <div class="metric-card">
           <span class="metric-title">Consensus Finalized</span>
-          <span class="metric-value text-success">
+          <span class="metric-value text-success tabular-nums">
             {{
               dossiers.filter((d) =>
                 ["FINALIZED_CONCORDANT", "CONSENSUS_REACHED"].includes(
@@ -127,7 +127,7 @@
         </div>
         <div class="metric-card">
           <span class="metric-title">Escalated to Chair</span>
-          <span class="metric-value text-danger">
+          <span class="metric-value text-danger tabular-nums">
             {{
               dossiers.filter((d) =>
                 ["DISCORDANCE_DETECTED", "ESCALATED_TO_CHAIR"].includes(
@@ -140,7 +140,9 @@
         </div>
         <div class="metric-card">
           <span class="metric-title">SDTM CE Compiled</span>
-          <span class="metric-value text-info">{{ sdtmCeRecords.length }}</span>
+          <span class="metric-value text-info tabular-nums">{{
+            sdtmCeRecords.length
+          }}</span>
           <span class="metric-sub">Casebook synced records</span>
         </div>
       </div>
@@ -163,7 +165,7 @@
         @click="activeMainTab = 'chair_tiebreaker'"
       >
         ⚖️ Chair Tie-Breaker &amp; Consensus Panel
-        <span v-if="discordantCount > 0" class="badge-count">{{
+        <span v-if="discordantCount > 0" class="badge-count tabular-nums">{{
           discordantCount
         }}</span>
       </button>
@@ -192,7 +194,9 @@
         <aside class="sidebar-pane">
           <div class="pane-header">
             <h3 class="pane-title">Candidate Event Queue</h3>
-            <span class="pill-badge">{{ filteredDossiers.length }} Events</span>
+            <span class="pill-badge tabular-nums"
+              >{{ filteredDossiers.length }} Events</span
+            >
           </div>
 
           <div class="filter-toolbar">

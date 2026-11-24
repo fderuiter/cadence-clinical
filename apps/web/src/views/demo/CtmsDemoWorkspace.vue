@@ -24,7 +24,7 @@
           Total Subjects
         </div>
         <div
-          class="stat-value"
+          class="stat-value tabular-nums"
           style="
             font-size: 1.75rem;
             font-weight: 800;
@@ -63,7 +63,7 @@
           Enrollment Rate
         </div>
         <div
-          class="stat-value"
+          class="stat-value tabular-nums"
           style="
             font-size: 1.75rem;
             font-weight: 800;
@@ -98,7 +98,7 @@
           Verified SDV %
         </div>
         <div
-          class="stat-value"
+          class="stat-value tabular-nums"
           style="
             font-size: 1.75rem;
             font-weight: 800;
@@ -133,7 +133,7 @@
           Open Queries
         </div>
         <div
-          class="stat-value"
+          class="stat-value tabular-nums"
           style="
             font-size: 1.75rem;
             font-weight: 800;
@@ -2962,7 +2962,7 @@
 
 <script setup>
 import { ref, computed, watch } from "vue";
-import { useRoute } from "vue-router";
+import * as VueRouter from "vue-router";
 import {
   buildStepUpVerificationPayload,
   ClinicalModal,
@@ -2973,6 +2973,7 @@ import {
 import { useClinicalStore } from "../../stores/clinical";
 import { useAuthStore } from "../../stores/auth";
 import { useActiveStudyScope } from "../../composables/useActiveStudyScope";
+import { syncWorkspaceScope } from "../../stores/workspaceScope";
 import CraVerificationConsole from "../../components/persona/CraVerificationConsole.vue";
 import SsuGreenlightConsole from "../../components/clinical/SsuGreenlightConsole.vue";
 import AdaptiveDoseEscalationConsole from "../../components/clinical/AdaptiveDoseEscalationConsole.vue";
@@ -3008,7 +3009,12 @@ const KNOWN_SITE_CODES = ["SITE-101", "SITE-102"];
 // Active session store/router setup
 const store = useClinicalStore();
 const authStore = useAuthStore();
-const route = useRoute();
+const route =
+  typeof VueRouter.useRoute === "function" ? VueRouter.useRoute() : null;
+const router =
+  "useRouter" in VueRouter && typeof VueRouter.useRouter === "function"
+    ? VueRouter.useRouter()
+    : null;
 const demoBuild = isDemoBuild();
 
 const demoWorkspaceTabs = computed(() => {
@@ -3145,6 +3151,8 @@ function onSitePickerChange() {
 }
 
 function syncScopeToStore() {
+  const nextStudy = !props.studyCode ? localStudyId.value.trim() : undefined;
+  const nextSite = localSiteId.value.trim();
   if (!props.studyCode) {
     const trimmedStudy = localStudyId.value.trim();
     store.activeStudyId = trimmedStudy;
@@ -3152,7 +3160,14 @@ function syncScopeToStore() {
       setActiveStudyCode(trimmedStudy);
     }
   }
-  store.activeSiteId = localSiteId.value.trim();
+  store.activeSiteId = nextSite;
+  syncWorkspaceScope({
+    ...(nextStudy !== undefined ? { studyId: nextStudy } : {}),
+    siteId: nextSite,
+    router,
+    route,
+    syncRouteQuery: !props.studyCode && !props.sectionMode,
+  });
 }
 
 watch(activeStudyCode, (next) => {

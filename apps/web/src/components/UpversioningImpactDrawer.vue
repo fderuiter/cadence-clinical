@@ -127,7 +127,7 @@
       <!-- 4 Metric Cards -->
       <div class="metrics-grid">
         <div class="metric-card metric-unchanged">
-          <div class="metric-value">
+          <div class="metric-value tabular-nums">
             {{ metrics.unchanged }}
           </div>
           <div class="metric-label">Unchanged Terms</div>
@@ -137,7 +137,7 @@
         </div>
 
         <div class="metric-card metric-reclassified">
-          <div class="metric-value">
+          <div class="metric-value tabular-nums">
             {{ metrics.reclassified }}
           </div>
           <div class="metric-label">Reclassified Terms</div>
@@ -147,7 +147,7 @@
         </div>
 
         <div class="metric-card metric-deprecated">
-          <div class="metric-value">
+          <div class="metric-value tabular-nums">
             {{ metrics.deprecated }}
           </div>
           <div class="metric-label">Deprecated Terms</div>
@@ -157,7 +157,7 @@
         </div>
 
         <div class="metric-card metric-skipped">
-          <div class="metric-value">
+          <div class="metric-value tabular-nums">
             {{ metrics.skipped }}
           </div>
           <div class="metric-label">Skipped / Uncoded</div>

@@ -69,7 +69,7 @@
         </div>
         <div class="metric-content">
           <span class="metric-label">Telehealth Sessions</span>
-          <span class="metric-value">{{
+          <span class="metric-value tabular-nums">{{
             metrics.total_telehealth_sessions
           }}</span>
           <span class="metric-sub"
@@ -84,7 +84,7 @@
         </div>
         <div class="metric-content">
           <span class="metric-label">Pediatric Assents / LAR</span>
-          <span class="metric-value">{{
+          <span class="metric-value tabular-nums">{{
             metrics.pediatric_assents_completed
           }}</span>
           <span class="metric-sub">Tiered dual-signatures sealed</span>
@@ -97,7 +97,9 @@
         </div>
         <div class="metric-content">
           <span class="metric-label">DTP Courier Shipments</span>
-          <span class="metric-value">{{ metrics.total_dtp_shipments }}</span>
+          <span class="metric-value tabular-nums">{{
+            metrics.total_dtp_shipments
+          }}</span>
           <span class="metric-sub"
             >{{ metrics.active_cold_chain_shipments }} in transit</span
           >
@@ -116,7 +118,7 @@
         <div class="metric-content">
           <span class="metric-label">Cold-Chain Excursions</span>
           <span
-            class="metric-value"
+            class="metric-value tabular-nums"
             :class="{ 'text-danger': metrics.temperature_excursion_alerts > 0 }"
           >
             {{ metrics.temperature_excursion_alerts }}
@@ -413,7 +415,7 @@
                 >
                   ▼ Scroll Down
                 </button>
-                <span class="badge badge-participant"
+                <span class="badge badge-participant tabular-nums"
                   >Sync {{ currentScrollPercent }}%</span
                 >
               </div>

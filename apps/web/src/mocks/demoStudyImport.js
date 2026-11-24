@@ -663,6 +663,10 @@ export async function parseDemoProtocolImportRequest(request) {
       .filter(Boolean);
     const replaceForms =
       String(formData.get("replace_forms") || "").toLowerCase() === "true";
+    const amendmentClassification =
+      String(formData.get("amendment_classification") || "").trim() || null;
+    const transitionPolicy =
+      String(formData.get("transition_policy") || "").trim() || null;
 
     let fileName = "";
     let content = null;
@@ -679,6 +683,8 @@ export async function parseDemoProtocolImportRequest(request) {
       byteLength,
       templateIds,
       replaceForms,
+      amendmentClassification,
+      transitionPolicy,
     };
   }
 
@@ -696,6 +702,8 @@ export async function parseDemoProtocolImportRequest(request) {
     byteLength: content ? new TextEncoder().encode(content).length : 0,
     templateIds: Array.isArray(body?.template_ids) ? body.template_ids : [],
     replaceForms: Boolean(body?.replace_forms),
+    amendmentClassification: body?.amendment_classification || null,
+    transitionPolicy: body?.transition_policy || null,
   };
 }
 

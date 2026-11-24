@@ -13,6 +13,7 @@ using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Execution;
+using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Time;
 using Cadence.Kernel.Trust;
@@ -159,6 +160,175 @@ public sealed class ExecutionFormSignatureHostPostgresTests(ExecutionFormModuleP
         }
 
         (await ReadAsync(investigator, form, ct)).Signatures.Should().ContainSingle().Which.Meaning.Should().Be("Responsibility");
+    }
+
+    /// <summary>
+    /// When an investigator without <c>enrollment.unblind</c> signs a form that holds both a routine clinical observation
+    /// and a blinded randomization treatment observation, the immediate <c>201 Created</c> <see cref="FormSignatureResponse"/>
+    /// masks <c>Reason</c>, <c>ContentHash</c>, and the blinded item's <see cref="FormSignedValueResponse"/>
+    /// (<c>ObservationId == Guid.Empty</c>, <c>NullFlavor.Masked</c>) while keeping non-blinded signed values intact, and
+    /// an unblinded pharmacist reads the full unmasked signature.
+    /// </summary>
+    [Fact(DisplayName = "HostSignature_ImmediateResponse_MasksBlindedValuesHashesAndReasons_WhilePreservingNonBlindedValues")]
+    [KernelRule("K-AUTH-4")]
+    [GxPRequirement("SRS-PRD-EDC-003")]
+    public async Task HostSignatureImmediateResponseMasksBlindedValuesHashesAndReasonsWhilePreservingNonBlindedValues()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        const string pharmacistUser = "pharmacist@execution-signatures.test";
+        const string treatmentItem = "item.randomization_treatment_assignment";
+        const string blindedArm = "ARM-BLINDED-DOSE-200MG";
+        const string signReasonWithArm = "Investigator approved vitals alongside ARM-BLINDED-DOSE-200MG kit";
+
+        var code = $"T-SBL-{Guid.NewGuid():N}"[..16];
+        var tenant = TenantId.New();
+        await _scenario.Protocol.OkAsync(
+            new ProvisionTenant(tenant, code, "Blinded signature host tenant", KernelProtocolScenario.Key(), KernelProtocolScenario.Reason), ct);
+        var (_, study) = await _scenario.Protocol.NewStudyAsync(tenant, ct);
+
+        var sbpConcept = await _scenario.Protocol.OkAsync(
+            new DefineConcept(tenant, ConceptId.New(), ConceptOrigin.Sponsor, null, ConceptKind.BiomedicalConcept, "Systolic blood pressure", "SBP.", KernelProtocolScenario.Key(), "Defined SBP"),
+            ct);
+        var treatmentConcept = await _scenario.Protocol.OkAsync(
+            new DefineConcept(
+                tenant,
+                ConceptId.New(),
+                ConceptOrigin.Sponsor,
+                null,
+                ConceptKind.BiomedicalConcept,
+                "Randomized treatment arm (randomization_treatment_assignment)",
+                "Treatment allocation.",
+                KernelProtocolScenario.Key(),
+                "Defined blinded concept"),
+            ct);
+
+        var design = Cadence.TestSupport.Kernel.Protocol.ProtocolDesignSamples.MinimalDesign() with
+        {
+            Epochs = [new Cadence.Kernel.Protocol.Design.Epoch("ep.treatment", "Treatment", 1)],
+            PlannedActivities =
+            [
+                new Cadence.Kernel.Protocol.Design.PlannedActivity(
+                    VisitId,
+                    "Week 12 visit",
+                    "ep.treatment",
+                    [Cadence.Kernel.Protocol.Design.ActivityLocation.Site],
+                    [SpecId],
+                    new Cadence.Kernel.Protocol.Design.ActivityTiming(84, 3, 3)),
+            ],
+            CollectionSpecs =
+            [
+                new Cadence.Kernel.Protocol.Design.CollectionSpec(
+                    SpecId,
+                    "Vital signs and kit check",
+                    [
+                        new Cadence.Kernel.Protocol.Design.CollectionItem(Systolic, sbpConcept, "mm[Hg]", Required: true),
+                        new Cadence.Kernel.Protocol.Design.CollectionItem(treatmentItem, treatmentConcept, ValueKind: Cadence.Kernel.Evidence.ObservationValueKind.Text, Required: true),
+                    ]),
+            ],
+        };
+
+        var version = ProtocolVersionId.New();
+        var draft = await _scenario.Protocol.CreateDraftAsync(tenant, study, version, ct, Cadence.Kernel.Protocol.Design.ProtocolDesignDocument.Write(design));
+        draft.IsSuccess.Should().BeTrue(draft.Error?.Message);
+        var inReview = await _scenario.Protocol.OkAsync(new SubmitProtocolVersionForReview(tenant, version, KernelProtocolScenario.Key(), "Ready"), ct);
+        var protocolSig = await _scenario.Protocol.OkAsync(_scenario.Protocol.AttestCommand(tenant, Cadence.Kernel.Trust.AttestationMeaning.Approved, KernelProtocolScenario.Target(inReview)), ct);
+        await _scenario.Protocol.OkAsync(new ApproveProtocolVersion(tenant, version, protocolSig, KernelProtocolScenario.Key(), "Approved"), ct);
+
+        var effectivity = EffectivityId.New();
+        await _scenario.Protocol.OkAsync(
+            new DeclareEffectivity(tenant, effectivity, version, EffectivityScope.Study(), _scenario.Tick(), KernelProtocolScenario.Key(), "Study-wide"), ct);
+        var ethicsBytes = System.Text.Encoding.UTF8.GetBytes($"ethics-{Guid.NewGuid():N}");
+        var ethicsVersion = ArtifactVersionId.New();
+        await _scenario.Protocol.OkAsync(
+            new RegisterArtifact(
+                tenant,
+                ArtifactId.New(),
+                ethicsVersion,
+                Cadence.Kernel.Evidence.ArtifactKind.EthicsApproval,
+                study,
+                "Ethics approval",
+                new Cadence.Kernel.Evidence.ArtifactContent(Cadence.Kernel.Trust.ContentHash.OfBytes(ethicsBytes), ethicsBytes.Length, "application/pdf", "blob://evidence/ethics"),
+                KernelProtocolScenario.Key(),
+                "Filed approval"),
+            ct);
+        await _scenario.Protocol.OkAsync(
+            new ChangeEffectivityStatus(tenant, effectivity, EffectivityStatus.Effective, _scenario.Tick(), [ethicsVersion], KernelProtocolScenario.Key(), "Effective"),
+            ct);
+
+        var studySite = await _scenario.Observations.AddStudySiteAsync(tenant, study, ct);
+        var enrollment = await _scenario.Observations.ScreenAsync(tenant, studySite, ct);
+        foreach (var (person, capability) in new[]
+        {
+            (Crc, "collection.record"),
+            (Investigator, "collection.sign"),
+            (pharmacistUser, "observation.verify"),
+            (pharmacistUser, "enrollment.unblind"),
+        })
+        {
+            await _scenario.Protocol.OkAsync(
+                new IssueGrant(tenant, GrantId.New(), Actor.Person(person), capability, null, AuthorityScope.StudySite(studySite), _scenario.Tick(), null, false,
+                    KernelProtocolScenario.Key(), "Appointed"),
+                ct);
+        }
+
+        var subject = new KernelObservationScenario.Subject(tenant, study, studySite, enrollment);
+        var opened = await _scenario.Protocol.OkAsync(Open(subject, CollectionInstanceId.New(), _scenario.Tick()), ct);
+        var saved = await _scenario.Protocol.OkAsync(
+            Save(
+                new Form(subject, version, opened.CollectionInstanceId),
+                Value(Systolic, Mmhg(122)),
+                Value(treatmentItem, new Cadence.Kernel.Evidence.TextValue(blindedArm))),
+            ct);
+        var formId = opened.CollectionInstanceId.Value;
+        var sbpObsId = saved.Values.Single(v => v.ItemId == Systolic).ObservationId.Value;
+        var treatmentObsId = saved.Values.Single(v => v.ItemId == treatmentItem).ObservationId.Value;
+
+        using var investigator = Client(code, Investigator);
+        using var pharmacist = Client(code, pharmacistUser);
+
+        var unblindedForm = await ReadAsync(pharmacist, formId, ct);
+        var unblindedHash = unblindedForm.ContentHash!;
+        unblindedHash.Should().NotBeNullOrWhiteSpace();
+
+        var blindedReadBefore = await ReadAsync(investigator, formId, ct);
+        blindedReadBefore.ContentHash.Should().BeNull("blinded form read omits raw content_hash");
+
+        using var signHttpReq = Request(
+            HttpMethod.Post,
+            $"/{formId:D}/signatures",
+            signReasonWithArm,
+            Token(Investigator, formId),
+            new { meaning = "approved", content_hash = unblindedHash });
+        using var signHttpRes = await investigator.SendAsync(signHttpReq, ct);
+        var immediateText = await signHttpRes.Content.ReadAsStringAsync(ct);
+        signHttpRes.StatusCode.Should().Be(HttpStatusCode.Created, immediateText);
+
+        immediateText.Should().NotContain(blindedArm, "immediate sign response must never leak blinded treatment values or reasons");
+        immediateText.Should().NotContain(unblindedHash, "immediate sign response must mask content_hash when blinded items are present");
+        immediateText.Should().NotContain(treatmentObsId.ToString("D"), "immediate sign response must mask blinded observation identifiers");
+
+        var immediateSig = JsonSerializer.Deserialize<FormSignatureResponse>(immediateText, Json)!;
+        immediateSig.Meaning.Should().Be("Approved");
+        immediateSig.SignedBy.Should().Be(Investigator);
+        immediateSig.Reason.Should().Be("masked");
+        immediateSig.ContentHash.Should().Be("masked");
+        immediateSig.SignedValues.Should().NotBeNull().And.HaveCount(2);
+
+        var signedSbp = immediateSig.SignedValues!.Single(v => v.ItemId == Systolic);
+        signedSbp.ObservationId.Should().Be(sbpObsId);
+        signedSbp.Value.Should().Be(Mmhg(122));
+
+        var signedTreatment = immediateSig.SignedValues!.Single(v => v.ItemId == treatmentItem);
+        signedTreatment.ObservationId.Should().Be(Guid.Empty);
+        signedTreatment.Value.Should().Be(new Cadence.Kernel.Evidence.MissingValue(Cadence.Kernel.Evidence.NullFlavor.Masked));
+
+        var pharmacistAfter = await ReadAsync(pharmacist, formId, ct);
+        var unmaskedSig = pharmacistAfter.Signatures.Should().ContainSingle().Subject;
+        unmaskedSig.AttestationId.Should().Be(immediateSig.AttestationId);
+        unmaskedSig.Reason.Should().Be(signReasonWithArm);
+        unmaskedSig.ContentHash.Should().Be(unblindedHash);
+        unmaskedSig.SignedValues!.Single(v => v.ItemId == treatmentItem).ObservationId.Should().Be(treatmentObsId);
     }
 
     /// <summary>

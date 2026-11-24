@@ -1,10 +1,10 @@
-# ADR-2670: Three-Tier Shared Overlay Architecture and Raw Dialog Migration
+# ADR-2671: Three-Tier Shared Overlay Architecture and Raw Dialog Migration
 
 - **Status:** Accepted
 - **Date:** 2026-11-23
 - **Authors:** @fderuiter
 - **Deciders:** @fderuiter
-- **Related:** ADR-2545, ADR-2652, ADR-2653, ADR-2655, ADR-2657, ADR-2658, ADR-2659, UX-3 (`docs/ux/CLINICAL_CANVAS.md`)
+- **Related:** ADR-2545, ADR-2652, ADR-2653, ADR-2655, ADR-2657, ADR-2658, ADR-2659, ADR-2670, UX-3 (`docs/ux/CLINICAL_CANVAS.md`)
 - **Requirements:** PRD-SYS-001 (21 CFR Part 11 regulated signing locks and credential clearing on dismissal), PRD-CRF-015 (WCAG 2.2 Level AA SC 1.4.10 Reflow, SC 2.1.1 Keyboard, SC 2.1.2 No Keyboard Trap, SC 2.4.3 Focus Order, SC 2.5.8 Target Size, and WAI-ARIA `dialog` / `alertdialog` patterns)
 
 ---

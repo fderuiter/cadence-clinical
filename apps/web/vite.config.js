@@ -189,6 +189,13 @@ export default defineConfig({
               ) {
                 return "ui-shell";
               }
+              if (
+                /\/apps\/web\/src\/(?:stores\/(?:auth|onboarding|studyScopeBridge|toasts|clinicalScope)|canvas\/(?:palette|nodeRef|lifecycle|stages\/[^/]+|generated\/(?:nodeKinds|participantContracts))|utils\/(?:demoMode|apiErrors|unbackedActions)|router\/availability|catalog\/productCatalog)\.(?:js|ts)(?:$|\?)/.test(
+                  normalizedId
+                )
+              ) {
+                return "app-shell-core";
+              }
               if (!normalizedId.includes("node_modules/")) {
                 return undefined;
               }

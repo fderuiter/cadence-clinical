@@ -43,7 +43,7 @@
           <div class="meta-item">
             <span class="meta-label">Surveillance Status:</span>
             <span
-              class="status-pill"
+              class="status-pill tabular-nums"
               :class="
                 anomalousSitesCount > 0
                   ? 'status-pill-critical'
@@ -98,7 +98,7 @@
       >
         <div class="kpi-icon">🚨</div>
         <div class="kpi-content">
-          <div class="kpi-value">
+          <div class="kpi-value tabular-nums">
             {{ anomalousSitesCount }} / {{ siteRecords.length || 0 }}
           </div>
           <div class="kpi-label">Anomalous Sites (P &lt; 0.001)</div>
@@ -109,7 +109,7 @@
       <div class="kpi-card" @click="activeSubTab = 'benford'">
         <div class="kpi-icon">📊</div>
         <div class="kpi-content">
-          <div class="kpi-value">
+          <div class="kpi-value tabular-nums">
             {{ benfordNonConformCount }}
           </div>
           <div class="kpi-label">Benford's Law Deviations</div>
@@ -120,7 +120,7 @@
       <div class="kpi-card" @click="activeSubTab = 'rounding'">
         <div class="kpi-icon">🎯</div>
         <div class="kpi-content">
-          <div class="kpi-value">
+          <div class="kpi-value tabular-nums">
             {{ severeRoundingCount }}
           </div>
           <div class="kpi-label">Severe Rounding Bias Sites</div>
@@ -131,7 +131,7 @@
       <div class="kpi-card" @click="activeSubTab = 'variance'">
         <div class="kpi-icon">🔬</div>
         <div class="kpi-content">
-          <div class="kpi-value">
+          <div class="kpi-value tabular-nums">
             {{ varianceShrunkCount }}
           </div>
           <div class="kpi-label">Variance Shrinkage / Clones</div>
@@ -142,7 +142,7 @@
       <div class="kpi-card" @click="activeSubTab = 'mahalanobis'">
         <div class="kpi-icon">🌐</div>
         <div class="kpi-content">
-          <div class="kpi-value">
+          <div class="kpi-value tabular-nums">
             {{ maxMahalanobisDistance.toFixed(2) }}
           </div>
           <div class="kpi-label">Max Mahalanobis Distance (D_M)</div>
