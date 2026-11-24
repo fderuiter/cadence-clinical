@@ -5,17 +5,23 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Kernel;
+using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Modules;
+using Cadence.Kernel.References;
 using Cadence.Kernel.Trust;
+using Cadence.Modules.Execution.Domain;
+using Cadence.Modules.Execution.Infrastructure;
 using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.EntityFrameworkCore;
 
 namespace Cadence.Modules.Execution.Endpoints;
 
@@ -66,7 +72,9 @@ internal static class FormSignatureEndpoints
         ICollectionInstanceRecords forms,
         IKernelCommandSender sender,
         IKernelChangeReason changeReason,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        [FromServices] IModuleTenantContextFactory<ExecutionModuleDbContext>? contexts = null,
+        [FromServices] IKernelReadAccess? access = null)
     {
         if (request is null
             || !Enum.TryParse<AttestationMeaning>(request.Meaning, ignoreCase: true, out var meaning)
@@ -91,6 +99,62 @@ internal static class FormSignatureEndpoints
             return TypedResults.Problem(title: "Not found", detail: $"Form {formId:D} does not exist.", statusCode: StatusCodes.Status404NotFound);
         }
 
+        if (record.Locks.Any(l => l.Kind == LockKind.Locked))
+        {
+            return KernelErrorEndpoints.Problem(AssertionErrors.Locked);
+        }
+
+        var trimmedHash = request.ContentHash.Trim();
+        if (contexts is not null
+            && access is not null
+            && record.ContentHash is not null
+            && string.Equals(record.ContentHash, trimmedHash, StringComparison.Ordinal)
+            && await access.CanExerciseAsync(
+                tenant,
+                new Capability("collection.sign", VerbClass.Execute),
+                NodeRef.For(record.EnrollmentId),
+                cancellationToken).ConfigureAwait(false))
+        {
+            System.Collections.Generic.List<(Guid KernelQueryId, FormQueryStatus Status)> execQueries;
+            await using (var db = contexts.Create(tenant))
+            {
+                var rawQueries = await db.FormQueries.AsNoTracking()
+                    .Where(q => q.FormId == id)
+                    .Select(q => new { q.KernelQueryId, q.Status })
+                    .ToListAsync(cancellationToken)
+                    .ConfigureAwait(false);
+                execQueries = [.. rawQueries.Select(q => (q.KernelQueryId.Value, q.Status))];
+            }
+
+            var (openQueryCount, answeredQueryCount) = ExecutionQueryMerger.Merge(record.Assertions, execQueries);
+            if (openQueryCount + answeredQueryCount > 0)
+            {
+                var missing = record.MissingRequired ?? [];
+                var blockers = CollectionReadiness.BuildBlockers(
+                    missing,
+                    missing.Count,
+                    openQueryCount,
+                    answeredQueryCount,
+                    record.OpenErrorFindingCount);
+                var errors = new System.Collections.Generic.Dictionary<string, string[]>(StringComparer.Ordinal)
+                {
+                    ["active_queries"] = [$"open={openQueryCount}, answered={answeredQueryCount}"],
+                };
+                if (missing.Count > 0)
+                {
+                    errors["missing_required"] = [.. missing];
+                }
+
+                if (record.OpenErrorFindingCount > 0)
+                {
+                    errors["error_findings"] = [$"count={record.OpenErrorFindingCount}"];
+                }
+
+                return KernelErrorEndpoints.Problem(
+                    CollectionErrors.NotReadyToSign.WithMessage(string.Join(" ", blockers)) with { Errors = errors });
+            }
+        }
+
         var signature = request.SignatureId is { } chosen && chosen != Guid.Empty ? AttestationId.FromGuid(chosen) : AttestationId.New();
         var result = await sender.SendAsync(
             new SignCollectionInstance(
@@ -99,7 +163,7 @@ internal static class FormSignatureEndpoints
                 id,
                 record.EnrollmentId,
                 meaning,
-                request.ContentHash.Trim(),
+                trimmedHash,
                 new DateTimeOffset(token.IssuedAt, TimeSpan.Zero),
                 StepUpMethod,
                 FormEndpoints.IdempotencyKey(context),
@@ -110,10 +174,14 @@ internal static class FormSignatureEndpoints
             return KernelErrorEndpoints.Problem(error);
         }
 
-        var signed = await forms.FindAsync(tenant, id, cancellationToken).ConfigureAwait(false);
+        var unblinded = access is not null
+            && await access.CanUnblindAsync(tenant, record.EnrollmentId, cancellationToken).ConfigureAwait(false);
+        var signed = await forms.FindForReaderAsync(tenant, id, unblinded, cancellationToken).ConfigureAwait(false);
         var view = signed?.Attestations.SingleOrDefault(a => a.AttestationId == result.Value)
             ?? throw new InvalidOperationException($"Signature {result.Value} on form {formId:D} was recorded but cannot be read back.");
-        return TypedResults.Created($"{FormEndpoints.RoutePrefix}/{formId:D}", FormSignatureResponse.From(view));
+        return TypedResults.Created(
+            $"{FormEndpoints.RoutePrefix}/{formId:D}",
+            FormSignatureResponse.From(view, signed.BlindedItemIds, signed.BlindedObservationIds));
     }
 
     private static string SignActionFor(HttpContext context) =>

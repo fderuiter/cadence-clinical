@@ -88,7 +88,8 @@ namespace Cadence.Apps.Econsent.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("ConsentId");
 
-                    b.HasIndex("LivenessTokenHash");
+                    b.HasIndex("LivenessTokenHash")
+                        .IsUnique();
 
                     b.HasIndex("SubjectPseudonym");
 
@@ -1247,7 +1248,10 @@ namespace Cadence.Apps.Econsent.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("TenantId");
 
-                    b.HasIndex("EntityName", "Timestamp");
+                    b.HasIndex("EntityName", "PredecessorHash");
+
+                    b.HasIndex("EntityName", "Timestamp", "VersionIndex", "Id")
+                        .IsDescending(false, true, true, true);
 
                     b.ToTable("audit_log_entries", (string)null);
                 });

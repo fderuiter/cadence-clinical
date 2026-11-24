@@ -10,8 +10,10 @@ using System.Threading.Tasks;
 
 using Cadence.Ddf;
 using Cadence.Kernel;
+using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.Protocol.Design;
+using Cadence.Kernel.Protocol.Import;
 using Cadence.TestSupport.Kernel.Protocol;
 
 using FluentAssertions;
@@ -237,6 +239,168 @@ public sealed class UsdmDesignImporterTests
         result.Notes.Should().ContainSingle().Which.Source.Should().Be("activities", "USDM does not say why data is collected");
     }
 
+    /// <summary>
+    /// USDM v4 BiomedicalConcept properties map datatype, isRequired, explicit and single-code companion UCUM units, and
+    /// responseCodes terminology bindings onto a single CollectionItem per BiomedicalConcept, while recording import notes
+    /// for uncarried qualifier properties and item rules/conditions.
+    /// </summary>
+    [Fact(DisplayName = "Import_MapsItemSchemas_Terminology_AndNotesUncarriedRulesAndQualifiers")]
+    public async Task ImportMapsItemSchemasTerminologyAndNotesUncarriedRulesAndQualifiers()
+    {
+        var json = EditVersion(Mini, version =>
+        {
+            version["biomedicalConcepts"] = new JsonArray(
+                new JsonObject
+                {
+                    ["id"] = "BC_SBP",
+                    ["name"] = "Systolic Blood Pressure",
+                    ["code"] = new JsonObject { ["standardCode"] = new JsonObject { ["code"] = "C25298", ["decode"] = "Systolic Blood Pressure" } },
+                    ["properties"] = new JsonArray(
+                        new JsonObject
+                        {
+                            ["id"] = "P_SBP_VAL",
+                            ["name"] = "VSORRES",
+                            ["datatype"] = "decimal",
+                            ["isRequired"] = true,
+                            ["isEnabled"] = true,
+                            ["rule"] = "VSORRES >= 50 and VSORRES <= 260",
+                        },
+                        new JsonObject
+                        {
+                            ["id"] = "P_SBP_UNIT",
+                            ["name"] = "VSORRESU",
+                            ["datatype"] = "string",
+                            ["isRequired"] = true,
+                            ["isEnabled"] = true,
+                            ["responseCodes"] = new JsonArray(
+                                new JsonObject
+                                {
+                                    ["id"] = "RC_MMHG",
+                                    ["isEnabled"] = true,
+                                    ["code"] = new JsonObject { ["code"] = "C49670", ["decode"] = "Millimeter of Mercury" },
+                                }),
+                        },
+                        new JsonObject
+                        {
+                            ["id"] = "P_SBP_LOC",
+                            ["name"] = "VSLOC",
+                            ["datatype"] = "string",
+                            ["isRequired"] = false,
+                            ["isEnabled"] = true,
+                        }),
+                },
+                new JsonObject
+                {
+                    ["id"] = "BC_POS",
+                    ["name"] = "Body Position",
+                    ["code"] = new JsonObject { ["standardCode"] = new JsonObject { ["code"] = "C62164", ["decode"] = "Body Position" } },
+                    ["properties"] = new JsonArray(
+                        new JsonObject
+                        {
+                            ["id"] = "P_POS",
+                            ["name"] = "VSPOS",
+                            ["datatype"] = "string",
+                            ["isRequired"] = false,
+                            ["isEnabled"] = true,
+                            ["responseCodes"] = new JsonArray(
+                                new JsonObject
+                                {
+                                    ["id"] = "RC_SIT",
+                                    ["isEnabled"] = true,
+                                    ["code"] = new JsonObject { ["code"] = "C62122", ["decode"] = "Sitting" },
+                                },
+                                new JsonObject
+                                {
+                                    ["id"] = "RC_SUP",
+                                    ["isEnabled"] = true,
+                                    ["code"] = new JsonObject { ["code"] = "C62167", ["decode"] = "Supine" },
+                                }),
+                        }),
+                },
+                new JsonObject
+                {
+                    ["id"] = "BC_FAST",
+                    ["name"] = "Fasting Indicator",
+                    ["code"] = new JsonObject { ["standardCode"] = new JsonObject { ["code"] = "C17056", ["decode"] = "Fasting" } },
+                    ["properties"] = new JsonArray(
+                        new JsonObject
+                        {
+                            ["id"] = "P_FAST",
+                            ["name"] = "VSFAST",
+                            ["datatype"] = "boolean",
+                            ["isRequired"] = true,
+                            ["isEnabled"] = true,
+                        }),
+                },
+                new JsonObject
+                {
+                    ["id"] = "BC_DTC",
+                    ["name"] = "Assessment Date/Time",
+                    ["code"] = new JsonObject { ["standardCode"] = new JsonObject { ["code"] = "C82515", ["decode"] = "Collection Date Time" } },
+                    ["properties"] = new JsonArray(
+                        new JsonObject
+                        {
+                            ["id"] = "P_DTC",
+                            ["name"] = "VSDTC",
+                            ["datatype"] = "datetime",
+                            ["isRequired"] = false,
+                            ["isEnabled"] = true,
+                        }),
+                });
+            version["studyDesigns"]![0]!["activities"]![0]!["biomedicalConceptIds"] = new JsonArray("BC_SBP", "BC_POS", "BC_FAST", "BC_DTC");
+        });
+
+        var csVersion = CodeSystemVersionId.New();
+        ProtocolTerminologyCandidate? capturedCandidate = null;
+        var withResolver = await UsdmDesignImporter.ImportAsync(
+            json,
+            (code, _) => Task.FromResult<ConceptRef?>(ConceptFor(code)),
+            resolveTerminology: (candidate, _) =>
+            {
+                capturedCandidate = candidate;
+                return ValueTask.FromResult(
+                    new ProtocolTerminologyResolution(new TerminologyBinding(csVersion, candidate.CodelistCode)));
+            },
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        withResolver.IsSuccess.Should().BeTrue(string.Join("; ", withResolver.Problems));
+        capturedCandidate.Should().NotBeNull();
+        capturedCandidate!.Entries.Select(c => (c.Code, c.Display)).Should().Equal(("C62122", "Sitting"), ("C62167", "Supine"));
+
+        var items = withResolver.Design!.CollectionSpecs.Single().Items;
+        items.Should().HaveCount(4, "ADR-2473 keeps exactly one CollectionItem per BiomedicalConcept");
+
+        items[0].Should().Match<CollectionItem>(i =>
+            i.Id == "Activity_1.BC_SBP"
+            && i.ValueKind == ObservationValueKind.Quantity
+            && i.Unit == "mm[Hg]"
+            && i.Required
+            && i.Terminology == null);
+        items[1].Should().Match<CollectionItem>(i =>
+            i.Id == "Activity_1.BC_POS"
+            && i.ValueKind == ObservationValueKind.Coded
+            && i.Unit == null
+            && !i.Required
+            && i.Terminology == new TerminologyBinding(csVersion, capturedCandidate.CodelistCode));
+        items[2].Should().Match<CollectionItem>(i =>
+            i.Id == "Activity_1.BC_FAST"
+            && i.ValueKind == ObservationValueKind.Boolean
+            && i.Required);
+        items[3].Should().Match<CollectionItem>(i =>
+            i.Id == "Activity_1.BC_DTC"
+            && i.ValueKind == ObservationValueKind.DateTime
+            && !i.Required);
+
+        withResolver.Notes.Should().Contain(n => n.Source == "Activity_1.BC_SBP" && n.Message.Contains("VSLOC", StringComparison.Ordinal));
+        withResolver.Notes.Should().Contain(n => n.Source == "Activity_1.BC_SBP" && n.Message.Contains("rule", StringComparison.OrdinalIgnoreCase));
+
+        // Without a terminology resolver, responseCodes fall back to Text with an explicit import note.
+        var withoutResolver = await ImportAsync(json);
+        withoutResolver.Design!.CollectionSpecs.Single().Items[1].Should().Match<CollectionItem>(i =>
+            i.ValueKind == ObservationValueKind.Text && i.Terminology == null);
+        withoutResolver.Notes.Should().Contain(n => n.Source == "Activity_1.BC_POS" && n.Message.Contains("responseCodes", StringComparison.OrdinalIgnoreCase));
+    }
+
     /// <summary>A strategy USDM states in words maps to a known strategy when it names one, and otherwise keeps the words.</summary>
     [Theory(DisplayName = "Import_MapsIntercurrentEventStrategies")]
     [InlineData("Treatment Policy", IntercurrentEventStrategy.TreatmentPolicy)]
@@ -403,8 +567,58 @@ public sealed class UsdmDesignImporterTests
     [InlineData(null)]
     public void UsdmDurationRefusesYearsMonthsAndNonDurations(string? value) => UsdmDuration.Parse(value).Should().BeNull();
 
-    /// <summary>Moving across study days skips day 0: the day before day 1 is day -1.</summary>
+    /// <summary>
+    /// A USDM <c>P0D</c> Fixed Reference baseline timing normalizes to SDTM Day 1, and relative Before/After timings from
+    /// that anchor step across the zero-less SDTM boundary.
+    /// </summary>
+    [Fact(DisplayName = "Import_P0DFixedReference_NormalizesBaselineAndRelativeTimings")]
+    public async Task ImportP0DFixedReferenceNormalizesBaselineAndRelativeTimings()
+    {
+        var json = Edit(Mini, design =>
+        {
+            design["encounters"]!.AsArray().Add(new JsonObject
+            {
+                ["id"] = "Encounter_0",
+                ["name"] = "Pre-screening visit",
+                ["environmentalSettings"] = new JsonArray(new JsonObject { ["code"] = "C211570", ["decode"] = "Clinic" }),
+                ["contactModes"] = new JsonArray(new JsonObject { ["code"] = "C175574", ["decode"] = "In Person" }),
+            });
+            var timeline = design["scheduleTimelines"]![0]!;
+            timeline["instances"]!.AsArray().Insert(0, new JsonObject
+            {
+                ["id"] = "SAI_0",
+                ["instanceType"] = "ScheduledActivityInstance",
+                ["epochId"] = "Epoch_1",
+                ["encounterId"] = "Encounter_0",
+                ["activityIds"] = new JsonArray("Activity_1"),
+            });
+            timeline["timings"]![0]!["value"] = "P0D";
+            timeline["timings"]!.AsArray().Add(new JsonObject
+            {
+                ["id"] = "Timing_0",
+                ["type"] = new JsonObject { ["code"] = "C201356", ["decode"] = "Before" },
+                ["value"] = "P2W",
+                ["relativeFromScheduledInstanceId"] = "SAI_0",
+                ["relativeToScheduledInstanceId"] = "SAI_1",
+            });
+        });
+
+        var result = await ImportAsync(json);
+
+        result.Problems.Should().BeEmpty();
+        result.Design!.PlannedActivities.Select(a => (a.Id, a.Timing)).Should().Equal(
+            ("SAI_0", new ActivityTiming(-14)),
+            ("SAI_1", new ActivityTiming(1)),
+            ("SAI_2", new ActivityTiming(15, 2, 3)));
+    }
+
+    /// <summary>Moving across study days skips day 0: the day before day 1 is day -1, and a day-0 input normalizes to day 1.</summary>
     [Theory(DisplayName = "UsdmSchedule_Shift_SkipsDayZero")]
+    [InlineData(0, 0, 1)]
+    [InlineData(0, 1, 2)]
+    [InlineData(0, 14, 15)]
+    [InlineData(0, -1, -1)]
+    [InlineData(0, -14, -14)]
     [InlineData(1, 14, 15)]
     [InlineData(1, -1, -1)]
     [InlineData(1, -2, -2)]

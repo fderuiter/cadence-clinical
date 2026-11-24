@@ -1293,6 +1293,16 @@ describe("EcrfFormPanel: signing a form (#5463)", () => {
     expect(old.find('[data-testid="ecrf-signature-superseded"]').text()).toBe(
       "Superseded by a later correction"
     );
+    const signedScroll = old.find('[data-testid="ecrf-signed-values-scroll"]');
+    expect(signedScroll.exists()).toBe(true);
+    expect(signedScroll.attributes("role")).toBe("region");
+    expect(signedScroll.attributes("tabindex")).toBe("0");
+    expect(signedScroll.attributes("aria-label")).toContain(
+      "Superseded signed values"
+    );
+    expect(
+      signedScroll.find('[data-testid="ecrf-signed-values"]').exists()
+    ).toBe(true);
     const row = old.find('[data-signed-item="SYSBP"]');
     const cells = row.findAll("th, td").map((c) => c.text());
     expect(cells[0]).toBe("SYSBP");
@@ -1309,6 +1319,240 @@ describe("EcrfFormPanel: signing a form (#5463)", () => {
     ).toBe(false);
     expect(current.find('[data-testid="ecrf-signed-values"]').exists()).toBe(
       false
+    );
+  });
+
+  it("performs zero query/signature linear scans or baseline re-formatting per keystroke and preserves signature diffs for unchanged, duplicate, and removed items", async () => {
+    let baselineTextReads = 0;
+    const noteValue = { type: "text" as const, value: "Stable vitals" };
+    Object.defineProperty(noteValue, "value", {
+      enumerable: true,
+      configurable: true,
+      get() {
+        baselineTextReads += 1;
+        return "Stable vitals";
+      },
+    });
+
+    const loadedForm = form({
+      items: [
+        form().items[0],
+        item({
+          item_id: "DIABP",
+          unit: "mm[Hg]",
+          value_kind: "Quantity",
+          required: true,
+          value: { type: "quantity", value: 80, unit: "mm[Hg]" },
+          observation_id: "0192f3c4-5e6a-7b8c-9d0e-00000000a002",
+          revision: 1,
+          recorded_by: "crc1",
+          recorded_at: "2027-03-14T09:05:00Z",
+        }),
+        item({
+          item_id: "COMMENT",
+          value_kind: "Text",
+          value: noteValue,
+          observation_id: "0192f3c4-5e6a-7b8c-9d0e-00000000a003",
+          revision: 1,
+          recorded_by: "crc1",
+          recorded_at: "2027-03-14T09:05:00Z",
+        }),
+        item({
+          item_id: "DUP_ITEM",
+          unit: "/min",
+          value_kind: "Quantity",
+          value: { type: "quantity", value: 72, unit: "/min" },
+          observation_id: "0192f3c4-5e6a-7b8c-9d0e-00000000a004",
+          revision: 2,
+          recorded_by: "crc1",
+          recorded_at: "2027-03-14T09:05:00Z",
+        }),
+        item({
+          item_id: "DUP_ITEM",
+          unit: "/min",
+          value_kind: "Quantity",
+          value: { type: "quantity", value: 99, unit: "/min" },
+          observation_id: "0192f3c4-5e6a-7b8c-9d0e-00000000a005",
+          revision: 5,
+          recorded_by: "crc1",
+          recorded_at: "2027-03-14T09:06:00Z",
+        }),
+      ],
+      signatures: [
+        signature({
+          attestation_id: "sig-old",
+          content_hash: "sha256:form-v1",
+          superseded: true,
+          signed_values: [
+            {
+              item_id: "SYSBP",
+              observation_id: OBS_ID,
+              revision: 2,
+              value: { type: "quantity", value: 118, unit: "mm[Hg]" },
+            },
+            {
+              item_id: "DIABP",
+              observation_id: "0192f3c4-5e6a-7b8c-9d0e-00000000a002",
+              revision: 1,
+              value: { type: "quantity", value: 80, unit: "mm[Hg]" },
+            },
+            {
+              item_id: "DUP_ITEM",
+              observation_id: "0192f3c4-5e6a-7b8c-9d0e-00000000a004",
+              revision: 2,
+              value: { type: "quantity", value: 72, unit: "/min" },
+            },
+            {
+              item_id: "REMOVED_TEMP",
+              observation_id: "0192f3c4-5e6a-7b8c-9d0e-00000000a009",
+              revision: 1,
+              value: { type: "quantity", value: 36.8, unit: "Cel" },
+            },
+          ],
+        }),
+      ],
+    });
+
+    vi.mocked(ecrfFormsApi.getForm).mockResolvedValue(loadedForm as never);
+    vi.mocked(ecrfQueriesApi.listForForm).mockResolvedValue([
+      formQuery({
+        query_id: "query-open",
+        item_id: "SYSBP",
+        status: "open",
+        value_changed: true,
+      }),
+      formQuery({
+        query_id: "query-closed",
+        item_id: "DIABP",
+        status: "closed",
+      }),
+    ] as never);
+
+    const view = await mountWith();
+    await nextTick();
+
+    // Superseded signature table reflects changed, unchanged, first-match duplicate, and removed items.
+    const oldSig = view.find('[data-signature="sig-old"]');
+    const sysRow = oldSig.find('[data-signed-item="SYSBP"]');
+    expect(sysRow.classes()).toContain("ecrf-signed-changed");
+    expect(sysRow.findAll("th, td").map((c) => c.text())).toEqual([
+      "SYSBP",
+      "118 mm[Hg]",
+      "2",
+      "120 mm[Hg]",
+      "3",
+    ]);
+
+    const diaRow = oldSig.find('[data-signed-item="DIABP"]');
+    expect(diaRow.classes()).not.toContain("ecrf-signed-changed");
+    expect(diaRow.findAll("th, td").map((c) => c.text())).toEqual([
+      "DIABP",
+      "80 mm[Hg]",
+      "1",
+      "80 mm[Hg]",
+      "1",
+    ]);
+
+    const dupRow = oldSig.find('[data-signed-item="DUP_ITEM"]');
+    expect(dupRow.classes()).not.toContain("ecrf-signed-changed");
+    expect(dupRow.findAll("th, td").map((c) => c.text())).toEqual([
+      "DUP_ITEM",
+      "72 /min",
+      "2",
+      "72 /min",
+      "2",
+    ]);
+
+    const removedRow = oldSig.find('[data-signed-item="REMOVED_TEMP"]');
+    expect(removedRow.classes()).toContain("ecrf-signed-changed");
+    expect(removedRow.findAll("th, td").map((c) => c.text())).toEqual([
+      "REMOVED_TEMP",
+      "36.8 Cel",
+      "1",
+      "No value",
+      "None",
+    ]);
+
+    expect(view.find('[data-testid="ecrf-query-badge-SYSBP"]').text()).toBe(
+      "1 unresolved query"
+    );
+    expect(view.find('[data-testid="ecrf-query-changed-SYSBP"]').exists()).toBe(
+      true
+    );
+    expect(view.find('[data-testid="ecrf-query-badge-DIABP"]').exists()).toBe(
+      false
+    );
+
+    // Measure linear scans across keystrokes (clean -> dirty -> multi-char edits -> clean).
+    let itemFindCalls = 0;
+    let queryFilterCalls = 0;
+    const origFind = Array.prototype.find;
+    const origFilter = Array.prototype.filter;
+    Array.prototype.find = function <T>(
+      this: T[],
+      predicate: (value: T, index: number, obj: T[]) => unknown,
+      thisArg?: unknown
+    ) {
+      if (
+        this.length > 0 &&
+        this[0] &&
+        typeof this[0] === "object" &&
+        "item_id" in this[0] &&
+        "value_kind" in this[0]
+      ) {
+        itemFindCalls += 1;
+      }
+      return origFind.call(this, predicate, thisArg);
+    } as typeof Array.prototype.find;
+    Array.prototype.filter = function <T>(
+      this: T[],
+      predicate: (value: T, index: number, obj: T[]) => unknown,
+      thisArg?: unknown
+    ) {
+      if (
+        this.length > 0 &&
+        this[0] &&
+        typeof this[0] === "object" &&
+        "query_id" in this[0]
+      ) {
+        queryFilterCalls += 1;
+      }
+      return origFilter.call(this, predicate, thisArg);
+    } as typeof Array.prototype.filter;
+
+    try {
+      baselineTextReads = 0;
+      const sysInput = view.find("#ecrf-item-SYSBP");
+      for (const typed of ["1", "12", "125", "120", "130", "120"]) {
+        await sysInput.setValue(typed);
+        await nextTick();
+      }
+
+      expect(itemFindCalls).toBe(0);
+      expect(queryFilterCalls).toBe(0);
+      expect(baselineTextReads).toBe(0);
+    } finally {
+      Array.prototype.find = origFind;
+      Array.prototype.filter = origFilter;
+    }
+
+    // Query transition via put (splice) still updates live query badges reactively.
+    vi.mocked(ecrfQueriesApi.transition).mockResolvedValueOnce(
+      formQuery({
+        query_id: "query-open",
+        item_id: "SYSBP",
+        status: "answered",
+        value_changed: true,
+        version: 2,
+      }) as never
+    );
+    await view.find("#btn-answer-query-open").trigger("click");
+    await view.find("#query-text-query-open").setValue("Confirmed 120 mm[Hg]");
+    await view.find("#query-reason-query-open").setValue("Source chart match");
+    await view.find("#query-query-open form").trigger("submit");
+    await flushPromises();
+    expect(view.find('[data-testid="ecrf-query-badge-SYSBP"]').text()).toBe(
+      "1 unresolved query"
     );
   });
 });
@@ -2600,6 +2844,325 @@ describe("EcrfFormPanel: source data verification, lock scopes, and item highlig
       expect(wrapper.find(".ecrf-item-concept").text()).toContain("Heart Rate");
     } finally {
       getNodeSpy.mockRestore();
+    }
+  });
+
+  it("renders Collection spec and Visit dropdowns when scheduleOptions exist even without enrollmentContext while still allowing direct form reference loading", async () => {
+    vi.mocked(ecrfFormsApi.getForm).mockResolvedValue(
+      form({ form_id: FORM_ID }) as never
+    );
+
+    wrapper = mount(EcrfFormPanel, {
+      props: {
+        scheduleOptions: {
+          collectionSpecs: [
+            {
+              id: "VS",
+              name: "Vital Signs",
+              plannedActivityIds: ["SCR", "W4"],
+            },
+            { id: "AE", name: "Adverse Events", plannedActivityIds: [] },
+          ],
+          plannedActivities: [
+            { id: "SCR", name: "Screening", studyDay: -7 },
+            { id: "W4", name: "Week 4", studyDay: 28 },
+          ],
+        },
+      },
+    });
+    await flushPromises();
+
+    // Raw Form id and Enrollment id are collapsed behind disclosure by default
+    const disclosures = wrapper.findAll("details.ecrf-direct-id-disclosure");
+    expect(disclosures.length).toBeGreaterThanOrEqual(2);
+    for (const disclosure of disclosures) {
+      expect(disclosure.attributes("open")).toBeUndefined();
+    }
+
+    // Collection spec and Visit render as structured <select> dropdowns
+    const specSelect = wrapper.find("#ecrf-collection-spec");
+    const visitSelect = wrapper.find("#ecrf-planned-activity");
+    expect(specSelect.element.tagName).toBe("SELECT");
+    expect(visitSelect.element.tagName).toBe("SELECT");
+    expect(
+      specSelect.findAll("option").map((opt) => opt.attributes("value"))
+    ).toEqual(["", "VS", "AE"]);
+
+    await specSelect.setValue("AE");
+    await nextTick();
+    // AE is unscheduled-only (plannedActivityIds: []) so only Unscheduled ("") is offered
+    expect(
+      visitSelect.findAll("option").map((opt) => opt.attributes("value"))
+    ).toEqual([""]);
+
+    // Users can still load an existing form directly when supplying a known form reference
+    await wrapper.find("#ecrf-form-id").setValue(FORM_ID);
+    await wrapper.find("form.ecrf-form-reuse-block").trigger("submit.prevent");
+    await flushPromises();
+
+    expect(ecrfFormsApi.getForm).toHaveBeenCalledWith(FORM_ID);
+    expect(wrapper.find('[data-testid="ecrf-form-id"]').text()).toBe(FORM_ID);
+  });
+
+  it("performs zero form.assertions reads and zero selectedSdvItems.includes scans across keystrokes and the 250 ms preview", async () => {
+    vi.useFakeTimers();
+
+    let assertionReads = 0;
+    function trackedAssertion(raw: {
+      assertion_id: string;
+      kind: string;
+      target: string;
+      revision: number | null;
+      text: string | null;
+      asserted_at: string;
+      asserted_by: string;
+      reason: string;
+      retracted_at: string | null;
+    }) {
+      const copy = { ...raw };
+      const kindValue = raw.kind;
+      Object.defineProperty(copy, "kind", {
+        enumerable: true,
+        configurable: true,
+        get() {
+          assertionReads += 1;
+          return kindValue;
+        },
+      });
+      return copy;
+    }
+
+    const rawAssertions = [
+      trackedAssertion({
+        assertion_id: "a-obs10-verified",
+        kind: "Verified",
+        target: "observation:obs-10@2",
+        revision: 2,
+        text: null,
+        asserted_at: "2027-03-14T10:00:00Z",
+        asserted_by: "cra1",
+        reason: "Verified against bedside chart",
+        retracted_at: null,
+      }),
+      trackedAssertion({
+        assertion_id: "a-obs2-stale",
+        kind: "Verified",
+        target: "observation:obs-2",
+        revision: 1,
+        text: null,
+        asserted_at: "2027-03-14T10:01:00Z",
+        asserted_by: "cra1",
+        reason: "Initial chart check",
+        retracted_at: null,
+      }),
+      trackedAssertion({
+        assertion_id: "a-obs3-retracted",
+        kind: "Verified",
+        target: "observation:obs-3",
+        revision: 1,
+        text: null,
+        asserted_at: "2027-03-14T10:02:00Z",
+        asserted_by: "cra1",
+        reason: "Withdrawn check",
+        retracted_at: "2027-03-14T10:05:00Z",
+      }),
+      trackedAssertion({
+        assertion_id: "a-obs3-null-rev",
+        kind: "Verified",
+        target: "observation:obs-3",
+        revision: null,
+        text: null,
+        asserted_at: "2027-03-14T10:03:00Z",
+        asserted_by: "cra1",
+        reason: "Unversioned note",
+        retracted_at: null,
+      }),
+      trackedAssertion({
+        assertion_id: "a-obs1-query",
+        kind: "Queried",
+        target: "observation:obs-1",
+        revision: 3,
+        text: "Confirm systolic BP",
+        asserted_at: "2027-03-14T10:04:00Z",
+        asserted_by: "dm1",
+        reason: "Out of range",
+        retracted_at: null,
+      }),
+    ];
+
+    const trackedAssertionsArray = [...rawAssertions];
+    rawAssertions.forEach((entry, index) => {
+      Object.defineProperty(trackedAssertionsArray, index, {
+        enumerable: true,
+        configurable: true,
+        get() {
+          assertionReads += 1;
+          return entry;
+        },
+      });
+    });
+
+    const loadedForm = form({
+      items: [
+        item({
+          item_id: "SYSBP",
+          unit: "mm[Hg]",
+          value_kind: "Quantity",
+          required: true,
+          value: { type: "quantity", value: 120, unit: "mm[Hg]" },
+          observation_id: "obs-1",
+          revision: 3,
+          recorded_by: "crc1",
+          recorded_at: "2027-03-14T09:05:00Z",
+        }),
+        item({
+          item_id: "DIABP",
+          unit: "mm[Hg]",
+          value_kind: "Quantity",
+          required: true,
+          value: { type: "quantity", value: 80, unit: "mm[Hg]" },
+          observation_id: "obs-10",
+          revision: 2,
+          recorded_by: "crc1",
+          recorded_at: "2027-03-14T09:05:00Z",
+        }),
+        item({
+          item_id: "HR",
+          unit: "/min",
+          value_kind: "Quantity",
+          required: false,
+          value: { type: "quantity", value: 74, unit: "/min" },
+          observation_id: "obs-2",
+          revision: 2,
+          recorded_by: "crc1",
+          recorded_at: "2027-03-14T09:06:00Z",
+        }),
+        item({
+          item_id: "TEMP",
+          unit: "Cel",
+          value_kind: "Quantity",
+          required: false,
+          value: { type: "quantity", value: 36.7, unit: "Cel" },
+          observation_id: "obs-3",
+          revision: 1,
+          recorded_by: "crc1",
+          recorded_at: "2027-03-14T09:06:00Z",
+        }),
+        item({ item_id: "COMMENT", value_kind: "Text" }),
+      ],
+      assertions: trackedAssertionsArray,
+    });
+
+    vi.mocked(ecrfFormsApi.getForm).mockResolvedValue(loadedForm as never);
+
+    const apiWithPreview = ecrfFormsApi as Omit<
+      typeof ecrfFormsApi,
+      "previewValues"
+    > & {
+      previewValues?: typeof ecrfFormsApi.previewValues;
+    };
+    const origPreviewValues = apiWithPreview.previewValues;
+    const origIncludes = Array.prototype.includes;
+    let selectedIncludesCalls = 0;
+
+    apiWithPreview.previewValues = vi.fn().mockResolvedValue({
+      form_id: FORM_ID,
+      warnings: [
+        {
+          pack_key: "vs-checks",
+          rule_id: "VS_SYSBP_HIGH",
+          rule_version: 1,
+          severity: "Warning",
+          dataset: "VS",
+          item_id: "SYSBP",
+          message: "Systolic BP exceeds 220 mm[Hg].",
+          remediation_guidance: null,
+        },
+      ],
+    });
+
+    try {
+      wrapper = mount(EcrfFormPanel, {
+        props: { formId: FORM_ID, canVerifySource: true },
+      });
+      await flushPromises();
+
+      expect(wrapper.find('[data-testid="ecrf-sdv-status-SYSBP"]').text()).toBe(
+        "Unverified"
+      );
+      expect(wrapper.find('[data-testid="ecrf-sdv-status-DIABP"]').text()).toBe(
+        "Verified (rev 2)"
+      );
+      expect(wrapper.find('[data-testid="ecrf-sdv-status-HR"]').text()).toBe(
+        "Needs re-verification"
+      );
+      expect(wrapper.find('[data-testid="ecrf-sdv-status-TEMP"]').text()).toBe(
+        "Unverified"
+      );
+      expect(
+        wrapper.find('[data-testid="ecrf-sdv-status-COMMENT"]').text()
+      ).toBe("No value");
+
+      await wrapper.find("#ecrf-sdv-select-all").trigger("click");
+      await nextTick();
+
+      expect(
+        (wrapper.find("#ecrf-sdv-select-SYSBP").element as HTMLInputElement)
+          .checked
+      ).toBe(true);
+      expect(
+        (wrapper.find("#ecrf-sdv-select-HR").element as HTMLInputElement)
+          .checked
+      ).toBe(true);
+      expect(
+        (wrapper.find("#ecrf-sdv-select-TEMP").element as HTMLInputElement)
+          .checked
+      ).toBe(true);
+      expect(wrapper.find('[data-testid="ecrf-bulk-sdv"]').text()).toContain(
+        "3 selected"
+      );
+
+      Array.prototype.includes = function <T>(
+        this: T[],
+        searchElement: T,
+        fromIndex?: number
+      ) {
+        if (
+          this.length === 3 &&
+          this[0] === "SYSBP" &&
+          this[1] === "HR" &&
+          this[2] === "TEMP"
+        ) {
+          selectedIncludesCalls += 1;
+        }
+        return origIncludes.call(this, searchElement, fromIndex);
+      } as typeof Array.prototype.includes;
+
+      assertionReads = 0;
+      selectedIncludesCalls = 0;
+
+      const sysInput = wrapper.find("#ecrf-item-SYSBP");
+      for (const typed of ["1", "13", "135", "245"]) {
+        await sysInput.setValue(typed);
+        await nextTick();
+      }
+
+      vi.advanceTimersByTime(250);
+      await flushPromises();
+
+      expect(
+        wrapper.find('[data-testid="ecrf-preview-warnings-SYSBP"]').text()
+      ).toContain("VS_SYSBP_HIGH");
+      expect(assertionReads).toBe(0);
+      expect(selectedIncludesCalls).toBe(0);
+    } finally {
+      Array.prototype.includes = origIncludes;
+      if (origPreviewValues === undefined) {
+        delete apiWithPreview.previewValues;
+      } else {
+        apiWithPreview.previewValues = origPreviewValues;
+      }
+      vi.useRealTimers();
     }
   });
 });

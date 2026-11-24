@@ -54,10 +54,15 @@ public sealed class EConsentCompletedConsumer(
             "EConsent completed filing sync");
 
         var docId = Guid.NewGuid().ToString();
+        var safeStudyId = TmfDocument.SanitizePathSegment(msg.StudyId, "study");
+        var safeSubjectId = TmfDocument.SanitizePathSegment(msg.SubjectId, "subject");
+        var safeVersionTag = TmfDocument.SanitizePathSegment(msg.VersionTag, "v1");
+        var safeFilename = TmfDocument.SanitizePathSegment($"eConsent_{safeSubjectId}_{safeVersionTag}.pdf", "eConsent.pdf");
+
         var doc = TmfDocument.CreateFiled(
             id: docId,
             studyId: msg.StudyId,
-            filename: $"eConsent_{msg.SubjectId}_{msg.VersionTag}.pdf",
+            filename: safeFilename,
             createdBy: "svc:etmf-econsent-consumer",
             createdAt: effectiveTimestamp.UtcDateTime,
             reasonForChange: "EConsent completed filing sync",
@@ -66,8 +71,8 @@ public sealed class EConsentCompletedConsumer(
             section: "05.01",
             artifactCode: "ICF",
             artifactType: "05.01.01",
-            content: $"s3://etmf/{msg.StudyId}/{msg.SubjectId}/icf_{msg.VersionTag}.pdf",
-            objectKey: $"etmf/{msg.StudyId}/{msg.SubjectId}/icf_{msg.VersionTag}.pdf",
+            content: $"s3://etmf/{safeStudyId}/{safeSubjectId}/icf_{safeVersionTag}.pdf",
+            objectKey: $"etmf/{safeStudyId}/{safeSubjectId}/icf_{safeVersionTag}.pdf",
             idempotencyKey: key,
             correlationKey: key,
             sourceSystem: "ECONSENT",

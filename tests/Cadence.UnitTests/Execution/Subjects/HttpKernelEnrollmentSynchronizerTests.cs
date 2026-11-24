@@ -140,6 +140,47 @@ public sealed class HttpKernelEnrollmentSynchronizerTests
     }
 
     [Fact]
+    public async Task SynchronizeScreeningEnrollmentAsync_WhenKernelReturnsLockedProblem_PreservesLockedCode()
+    {
+        var clock = new FakeClock(new DateTimeOffset(2026, 4, 19, 12, 0, 0, TimeSpan.Zero));
+        using var handler = new StubHttpMessageHandler((_, _) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.Locked)
+        {
+            Content = new StringContent(
+                """{"title":"K.Observation.Locked","status":423,"detail":"Study CADENCE-101 is Frozen.","code":"K.Observation.Locked"}""",
+                Encoding.UTF8,
+                "application/problem+json"),
+        }));
+        using var client = new HttpClient(handler) { BaseAddress = new Uri("http://kernel.internal") };
+
+        var context = BuildHttpContext(
+            tenantId: Guid.NewGuid().ToString(),
+            userId: "crc.site101",
+            roles: ["crc"],
+            sites: ["SITE-101"],
+            studies: ["CADENCE-101"]);
+
+        var synchronizer = new HttpKernelEnrollmentSynchronizer(
+            client,
+            new HttpContextAccessor { HttpContext = context },
+            new StaticOptionsMonitor<GatewayAuthenticationOptions>(new GatewayAuthenticationOptions { GatewaySecret = GatewaySigningKey }),
+            clock);
+
+        var result = await synchronizer.SynchronizeScreeningEnrollmentAsync(
+            Guid.NewGuid(),
+            "CADENCE-101",
+            "SITE-101",
+            "SUBJ-101-LOCKED",
+            clock.UtcNow,
+            "Attempt registration under Frozen study",
+            TestContext.Current.CancellationToken);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error.Should().NotBeNull();
+        result.Error!.Code.Should().Be("K.Observation.Locked");
+        result.Error.Description.Should().Contain("Frozen");
+    }
+
+    [Fact]
     public async Task SynchronizeScreeningEnrollmentAsync_WithoutTenantClaim_SkipsSyncCleanly()
     {
         var clock = new FakeClock(new DateTimeOffset(2026, 4, 19, 12, 0, 0, TimeSpan.Zero));

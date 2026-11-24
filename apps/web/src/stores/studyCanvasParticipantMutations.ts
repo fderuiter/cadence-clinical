@@ -147,7 +147,13 @@ export async function changeParticipantStateMutation(
       reason,
       ...(sigToken ? [sigToken] : [])
     );
-    const changed = { ...participant, status: updated.status };
+    const changed: SubjectSummary = {
+      ...participant,
+      status: updated.status,
+      ...(updated.enrollment_ref !== undefined
+        ? { enrollment_ref: updated.enrollment_ref }
+        : {}),
+    };
     store.rememberParticipants([changed]);
     const index = store.participants.findIndex((p) => p.id === participant.id);
     if (index >= 0) store.participants.splice(index, 1, changed);
@@ -190,6 +196,9 @@ export async function assignParticipantSiteMutation(
     changed = {
       ...participant,
       site_id: updated.site_id ?? normalizedSite,
+      ...(updated.enrollment_ref !== undefined
+        ? { enrollment_ref: updated.enrollment_ref }
+        : {}),
     };
     store.rememberParticipants([changed]);
     const index = store.participants.findIndex((p) => p.id === participant.id);

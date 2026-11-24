@@ -4,6 +4,7 @@ using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Application.Randomization;
 using Cadence.Apps.Execution.Application.Subjects;
 using Cadence.Apps.Execution.Domain.Subjects;
@@ -222,7 +223,12 @@ public static partial class SubjectEndpoints
     /// code (<see cref="SubjectResponse.SubjectId_"/>), per `02_technical_design.md` §3.3.
     /// </summary>
     public static async Task<IResult> CreateSubjectAsync(
-        SubjectCreateRequest request, HttpContext http, ISubjectApplicationService svc, CancellationToken ct, [FromServices] ILogger? logger = null)
+        SubjectCreateRequest request,
+        HttpContext http,
+        ISubjectApplicationService svc,
+        CancellationToken ct,
+        [FromServices] ILogger? logger = null,
+        [FromServices] IKernelLockGuard? lockGuard = null)
     {
         ct.ThrowIfCancellationRequested();
 
@@ -238,6 +244,16 @@ public static partial class SubjectEndpoints
                 allowUnassignedSiteForScopedCaller: true) is { } scopeDenied)
         {
             return scopeDenied;
+        }
+
+        if (await ExecutionLockGuard.EnsureUnlockedAsync(
+                lockGuard,
+                request.StudyId,
+                request.SiteId,
+                request.SubjectId,
+                ct).ConfigureAwait(false) is { } locked)
+        {
+            return locked;
         }
 
         if (logger != null)
@@ -263,7 +279,13 @@ public static partial class SubjectEndpoints
     /// <see cref="MapSubjectEndpoints"/>'s own remarks).
     /// </summary>
     public static async Task<IResult> RecordSubjectConsentAsync(
-        string subjectId, SubjectConsentRequest request, HttpContext http, ISubjectApplicationService svc, CancellationToken ct, [FromServices] ILogger? logger = null)
+        string subjectId,
+        SubjectConsentRequest request,
+        HttpContext http,
+        ISubjectApplicationService svc,
+        CancellationToken ct,
+        [FromServices] ILogger? logger = null,
+        [FromServices] IKernelLockGuard? lockGuard = null)
     {
         ct.ThrowIfCancellationRequested();
 
@@ -278,9 +300,20 @@ public static partial class SubjectEndpoints
             return requestStudyDenied;
         }
 
-        if (await GuardSubjectScopeAsync(subjectId, http, svc, ct).ConfigureAwait(false) is { } scopeDenied)
+        var (scopeDenied, resolvedScope) = await GuardSubjectAndResolveLockScopeAsync(subjectId, http, svc, ct).ConfigureAwait(false);
+        if (scopeDenied is not null)
         {
             return scopeDenied;
+        }
+
+        if (await ExecutionLockGuard.EnsureUnlockedAsync(
+                lockGuard,
+                resolvedScope?.StudyCode ?? request.ProtocolVersion?.StudyId,
+                resolvedScope?.SiteCode,
+                resolvedScope?.SubjectCode,
+                ct).ConfigureAwait(false) is { } locked)
+        {
+            return locked;
         }
 
         if (logger != null)
@@ -304,7 +337,13 @@ public static partial class SubjectEndpoints
     /// <c>UNBLINDED</c> (<see cref="SubjectAuthority.AuthorizeStateChange"/>).
     /// </summary>
     public static async Task<IResult> AdvanceSubjectStateAsync(
-        string subjectId, SubjectStateUpdateRequest request, HttpContext http, ISubjectApplicationService svc, CancellationToken ct, [FromServices] ILogger? logger = null)
+        string subjectId,
+        SubjectStateUpdateRequest request,
+        HttpContext http,
+        ISubjectApplicationService svc,
+        CancellationToken ct,
+        [FromServices] ILogger? logger = null,
+        [FromServices] IKernelLockGuard? lockGuard = null)
     {
         ct.ThrowIfCancellationRequested();
 
@@ -316,9 +355,16 @@ public static partial class SubjectEndpoints
             return forbidden.ToProblemResult();
         }
 
-        if (await GuardSubjectScopeAsync(subjectId, http, svc, ct).ConfigureAwait(false) is { } scopeDenied)
+        var (scopeDenied, resolvedScope) = await GuardSubjectAndResolveLockScopeAsync(subjectId, http, svc, ct).ConfigureAwait(false);
+        if (scopeDenied is not null)
         {
             return scopeDenied;
+        }
+
+        if (resolvedScope is { } ls
+            && await ExecutionLockGuard.EnsureUnlockedAsync(lockGuard, ls.StudyCode, ls.SiteCode, ls.SubjectCode, ct).ConfigureAwait(false) is { } locked)
+        {
+            return locked;
         }
 
         if (logger != null)
@@ -337,7 +383,13 @@ public static partial class SubjectEndpoints
     /// <c>site_id</c> in their assigned sites).
     /// </summary>
     public static async Task<IResult> AssignSubjectSiteAsync(
-        string subjectId, SubjectSiteAssignmentRequest request, HttpContext http, ISubjectApplicationService svc, CancellationToken ct, [FromServices] ILogger? logger = null)
+        string subjectId,
+        SubjectSiteAssignmentRequest request,
+        HttpContext http,
+        ISubjectApplicationService svc,
+        CancellationToken ct,
+        [FromServices] ILogger? logger = null,
+        [FromServices] IKernelLockGuard? lockGuard = null)
     {
         ct.ThrowIfCancellationRequested();
 
@@ -350,6 +402,7 @@ public static partial class SubjectEndpoints
         }
 
         var scope = await svc.GetSubjectScopeAsync(subjectId, ct).ConfigureAwait(false);
+        var lockScope = await svc.GetSubjectLockScopeAsync(subjectId, ct).ConfigureAwait(false);
         if (scope is { } s)
         {
             if (ExecutionScopeGuard.RequireStudyAndOptionalSite(
@@ -369,6 +422,29 @@ public static partial class SubjectEndpoints
                     allowUnassignedSiteForScopedCaller: false) is { } targetScopeDenied)
             {
                 return targetScopeDenied;
+            }
+
+            string resolvedSubjectCode = lockScope?.SubjectCode.Value ?? subjectId;
+            if (await ExecutionLockGuard.EnsureUnlockedAsync(
+                    lockGuard,
+                    s.StudyId.Value,
+                    s.SiteId?.Value,
+                    resolvedSubjectCode,
+                    ct).ConfigureAwait(false) is { } existingLocked)
+            {
+                return existingLocked;
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.SiteCode)
+                && !string.Equals(s.SiteId?.Value, request.SiteCode.Trim(), StringComparison.Ordinal)
+                && await ExecutionLockGuard.EnsureUnlockedAsync(
+                    lockGuard,
+                    s.StudyId.Value,
+                    request.SiteCode.Trim(),
+                    resolvedSubjectCode,
+                    ct).ConfigureAwait(false) is { } targetLocked)
+            {
+                return targetLocked;
             }
         }
         else
@@ -532,7 +608,13 @@ public static partial class SubjectEndpoints
     /// `02_technical_design.md` §3.3's reference implementation for this exact route.
     /// </summary>
     public static async Task<IResult> UpdateSubjectDemographicsAsync(
-        string subjectId, SubjectDemographicsUpdateRequest request, HttpContext http, ISubjectApplicationService svc, CancellationToken ct, [FromServices] ILogger? logger = null)
+        string subjectId,
+        SubjectDemographicsUpdateRequest request,
+        HttpContext http,
+        ISubjectApplicationService svc,
+        CancellationToken ct,
+        [FromServices] ILogger? logger = null,
+        [FromServices] IKernelLockGuard? lockGuard = null)
     {
         ct.ThrowIfCancellationRequested();
 
@@ -543,9 +625,16 @@ public static partial class SubjectEndpoints
             return forbidden.ToProblemResult();
         }
 
-        if (await GuardSubjectScopeAsync(subjectId, http, svc, ct).ConfigureAwait(false) is { } scopeDenied)
+        var (scopeDenied, resolvedScope) = await GuardSubjectAndResolveLockScopeAsync(subjectId, http, svc, ct).ConfigureAwait(false);
+        if (scopeDenied is not null)
         {
             return scopeDenied;
+        }
+
+        if (resolvedScope is { } ls
+            && await ExecutionLockGuard.EnsureUnlockedAsync(lockGuard, ls.StudyCode, ls.SiteCode, ls.SubjectCode, ct).ConfigureAwait(false) is { } locked)
+        {
+            return locked;
         }
 
         if (logger != null)
@@ -564,7 +653,12 @@ public static partial class SubjectEndpoints
     /// exact same justification as <see cref="UpdateSubjectDemographicsAsync"/>'s.
     /// </summary>
     public static async Task<IResult> DeleteSubjectDemographicsAsync(
-        string subjectId, HttpContext http, ISubjectApplicationService svc, CancellationToken ct, [FromServices] ILogger? logger = null)
+        string subjectId,
+        HttpContext http,
+        ISubjectApplicationService svc,
+        CancellationToken ct,
+        [FromServices] ILogger? logger = null,
+        [FromServices] IKernelLockGuard? lockGuard = null)
     {
         ct.ThrowIfCancellationRequested();
 
@@ -575,9 +669,16 @@ public static partial class SubjectEndpoints
             return forbidden.ToProblemResult();
         }
 
-        if (await GuardSubjectScopeAsync(subjectId, http, svc, ct).ConfigureAwait(false) is { } scopeDenied)
+        var (scopeDenied, resolvedScope) = await GuardSubjectAndResolveLockScopeAsync(subjectId, http, svc, ct).ConfigureAwait(false);
+        if (scopeDenied is not null)
         {
             return scopeDenied;
+        }
+
+        if (resolvedScope is { } ls
+            && await ExecutionLockGuard.EnsureUnlockedAsync(lockGuard, ls.StudyCode, ls.SiteCode, ls.SubjectCode, ct).ConfigureAwait(false) is { } locked)
+        {
+            return locked;
         }
 
         if (logger != null)
@@ -589,17 +690,32 @@ public static partial class SubjectEndpoints
         return result.Match(r => Results.Ok(r), e => e.ToProblemResult());
     }
 
-    private static async Task<IResult?> GuardSubjectScopeAsync(
+    private static async Task<(IResult? Denied, (string StudyCode, string? SiteCode, string SubjectCode)? Scope)> GuardSubjectAndResolveLockScopeAsync(
         string subjectId, HttpContext http, ISubjectApplicationService svc, CancellationToken ct)
     {
         var scope = await svc.GetSubjectScopeAsync(subjectId, ct).ConfigureAwait(false);
-        return scope is { } s
-            ? ExecutionScopeGuard.RequireStudyAndOptionalSite(
+        var lockScope = await svc.GetSubjectLockScopeAsync(subjectId, ct).ConfigureAwait(false);
+        if (scope is { } s)
+        {
+            var denied = ExecutionScopeGuard.RequireStudyAndOptionalSite(
                 http,
                 s.StudyId.Value,
                 s.SiteId?.Value,
-                allowUnassignedSiteForScopedCaller: true)
-            : GuardMissingRecordScope(http);
+                allowUnassignedSiteForScopedCaller: true);
+            return (denied, (s.StudyId.Value, s.SiteId?.Value, lockScope?.SubjectCode.Value ?? subjectId));
+        }
+
+        if (lockScope is { } ls)
+        {
+            var denied = ExecutionScopeGuard.RequireStudyAndOptionalSite(
+                http,
+                ls.StudyCode.Value,
+                ls.SiteCode?.Value,
+                allowUnassignedSiteForScopedCaller: true);
+            return (denied, (ls.StudyCode.Value, ls.SiteCode?.Value, ls.SubjectCode.Value));
+        }
+
+        return (GuardMissingRecordScope(http), null);
     }
 
     private static IResult? GuardMissingRecordScope(HttpContext http) =>

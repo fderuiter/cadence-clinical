@@ -1,0 +1,31 @@
+# Kernel boundary ratchet baseline shard (K-XS-1, K-MOD-1) - docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md §2, §9.
+# One pre-existing violation per line: RULE|Assembly|Type[.Member]. Sorted ordinally. Shards may only shrink.
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 (see tests/Cadence.ArchitectureTests/Architecture/KernelBoundaryBaseline.cs).
+K-MOD-1|Cadence.Apps.Etmf|Cadence.Apps.Etmf.Domain.TmfAuditLedgerSeal.TenantId
+K-MOD-1|Cadence.Apps.Etmf|Cadence.Apps.Etmf.Domain.TmfAuditLog.TenantId
+K-MOD-1|Cadence.Apps.Etmf|Cadence.Apps.Etmf.Domain.TmfDocument.SiteId
+K-MOD-1|Cadence.Apps.Etmf|Cadence.Apps.Etmf.Domain.TmfDocument.StudyId
+K-MOD-1|Cadence.Apps.Etmf|Cadence.Apps.Etmf.Domain.TmfDocument.TenantId
+K-MOD-1|Cadence.Apps.Etmf|Cadence.Apps.Etmf.Domain.TmfDocumentExpirationAlertState.TenantId
+K-MOD-1|Cadence.Apps.Etmf|Cadence.Apps.Etmf.Domain.TmfDocumentQcTransition.TenantId
+K-MOD-1|Cadence.Apps.Etmf|Cadence.Apps.Etmf.Domain.TmfDocumentRevision.TenantId
+K-MOD-1|Cadence.Apps.Etmf|Cadence.Apps.Etmf.Domain.TmfExpectedDocument.SiteId
+K-MOD-1|Cadence.Apps.Etmf|Cadence.Apps.Etmf.Domain.TmfExpectedDocument.StudyId
+K-MOD-1|Cadence.Apps.Etmf|Cadence.Apps.Etmf.Domain.TmfExpectedDocument.TenantId
+K-MOD-1|Cadence.Apps.Etmf|Cadence.Apps.Etmf.Domain.TmfExportJob.StudyId
+K-MOD-1|Cadence.Apps.Etmf|Cadence.Apps.Etmf.Domain.TmfExportJob.TenantId
+K-MOD-1|Cadence.Apps.Etmf|Cadence.Core.Domain.Audit.AuditLogEntry.TenantId
+K-MOD-1|Cadence.Apps.Etmf|Cadence.Core.Domain.TransactionalOutboxMessage.TenantId
+K-XS-1|Cadence.Apps.Etmf|Cadence.Apps.Etmf.Domain.TmfAuditLog
+K-XS-1|Cadence.Apps.Etmf|Cadence.Apps.Etmf.Domain.TmfDocument.SiteId
+K-XS-1|Cadence.Apps.Etmf|Cadence.Apps.Etmf.Domain.TmfDocument.StudyId
+K-XS-1|Cadence.Apps.Etmf|Cadence.Apps.Etmf.Domain.TmfExpectedDocument.SiteId
+K-XS-1|Cadence.Apps.Etmf|Cadence.Apps.Etmf.Domain.TmfExpectedDocument.StudyId
+K-XS-1|Cadence.Apps.Etmf|Cadence.Apps.Etmf.Domain.TmfExportJob.StudyId
+K-XS-1|Cadence.Apps.Etmf|Cadence.Apps.Etmf.Endpoints.CraqcStagingItem.SiteId
+K-XS-1|Cadence.Apps.Etmf|Cadence.Apps.Etmf.Endpoints.CraqcStagingItem.StudyId
+K-XS-1|Cadence.Apps.Etmf|Cadence.Apps.Etmf.Endpoints.ExportDocumentsRequest.StudyId
+K-XS-1|Cadence.Apps.Etmf|Cadence.Apps.Etmf.Endpoints.IngestDocumentRequest.SiteId
+K-XS-1|Cadence.Apps.Etmf|Cadence.Apps.Etmf.Endpoints.IngestDocumentRequest.StudyId
+K-XS-1|Cadence.Apps.Etmf|Cadence.Apps.Etmf.Endpoints.StageDocumentQCRequest.SiteId
+K-XS-1|Cadence.Apps.Etmf|Cadence.Apps.Etmf.Endpoints.StageDocumentQCRequest.StudyId

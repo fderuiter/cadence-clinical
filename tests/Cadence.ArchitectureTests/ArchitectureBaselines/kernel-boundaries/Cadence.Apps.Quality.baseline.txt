@@ -1,0 +1,22 @@
+# Kernel boundary ratchet baseline shard (K-XS-1, K-MOD-1) - docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md §2, §9.
+# One pre-existing violation per line: RULE|Assembly|Type[.Member]. Sorted ordinally. Shards may only shrink.
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 (see tests/Cadence.ArchitectureTests/Architecture/KernelBoundaryBaseline.cs).
+K-MOD-1|Cadence.Apps.Quality|Cadence.Apps.Quality.Domain.QualityAuditLog.TenantId
+K-MOD-1|Cadence.Apps.Quality|Cadence.Apps.Quality.Domain.QualityCapaRecord.SiteId
+K-MOD-1|Cadence.Apps.Quality|Cadence.Apps.Quality.Domain.QualityCapaRecord.StudyId
+K-MOD-1|Cadence.Apps.Quality|Cadence.Apps.Quality.Domain.QualityCapaRecord.TenantId
+K-MOD-1|Cadence.Apps.Quality|Cadence.Apps.Quality.Domain.QualityDeviation.SiteId
+K-MOD-1|Cadence.Apps.Quality|Cadence.Apps.Quality.Domain.QualityDeviation.StudyId
+K-MOD-1|Cadence.Apps.Quality|Cadence.Apps.Quality.Domain.QualityDeviation.TenantId
+K-MOD-1|Cadence.Apps.Quality|Cadence.Apps.Quality.Domain.QualityRootCauseAnalysis.SiteId
+K-MOD-1|Cadence.Apps.Quality|Cadence.Apps.Quality.Domain.QualityRootCauseAnalysis.StudyId
+K-MOD-1|Cadence.Apps.Quality|Cadence.Apps.Quality.Domain.QualityRootCauseAnalysis.TenantId
+K-MOD-1|Cadence.Apps.Quality|Cadence.Core.Domain.Audit.AuditLogEntry.TenantId
+K-MOD-1|Cadence.Apps.Quality|Cadence.Core.Domain.TransactionalOutboxMessage.TenantId
+K-XS-1|Cadence.Apps.Quality|Cadence.Apps.Quality.Domain.QualityAuditLog
+K-XS-1|Cadence.Apps.Quality|Cadence.Apps.Quality.Domain.QualityCapaRecord.SiteId
+K-XS-1|Cadence.Apps.Quality|Cadence.Apps.Quality.Domain.QualityCapaRecord.StudyId
+K-XS-1|Cadence.Apps.Quality|Cadence.Apps.Quality.Domain.QualityDeviation.SiteId
+K-XS-1|Cadence.Apps.Quality|Cadence.Apps.Quality.Domain.QualityDeviation.StudyId
+K-XS-1|Cadence.Apps.Quality|Cadence.Apps.Quality.Domain.QualityRootCauseAnalysis.SiteId
+K-XS-1|Cadence.Apps.Quality|Cadence.Apps.Quality.Domain.QualityRootCauseAnalysis.StudyId

@@ -535,6 +535,17 @@ public sealed class CgtApplicationService(
         return coc is null ? null : (coc.StudyId, coc.SiteId);
     }
 
+    public async Task<(string StudyCode, string SiteCode, string SubjectCode)?> GetChainOfCustodyLockScopeAsync(
+        Guid chainOfCustodyId,
+        CancellationToken cancellationToken = default)
+    {
+        var coc = await _dbContext.CGTChainsOfCustody
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Id == chainOfCustodyId, cancellationToken);
+
+        return coc is null ? null : (coc.StudyId, coc.SiteId, coc.SubjectId);
+    }
+
     public async Task<(string StudyId, string SiteId)?> GetSubjectChainOfCustodyScopeAsync(
         string studyId,
         string subjectId,

@@ -84,8 +84,8 @@ public static class KernelPersistenceServiceCollectionExtensions
         services.TryAddSingleton<IProposalReader, KernelProposalReader>();
         services.TryAddSingleton<IEffectivityReader, KernelEffectivityReader>();
         services.TryAddSingleton<IStudyGovernanceReader, KernelStudyGovernanceReader>();
-        services.TryAddSingleton<IObservationRecords, KernelObservationRecords>();
-        services.TryAddSingleton<ICollectionInstanceRecords, KernelCollectionInstanceRecords>();
+        services.TryAddScoped<IObservationRecords, KernelObservationRecords>();
+        services.TryAddScoped<ICollectionInstanceRecords, KernelCollectionInstanceRecords>();
         services.TryAddSingleton<ILockRecords, KernelLockRecords>();
         services.TryAddSingleton<IKernelExportReader, KernelExportReader>();
         services.TryAddSingleton<ITenantDirectory, KernelTenantDirectory>();
@@ -97,7 +97,15 @@ public static class KernelPersistenceServiceCollectionExtensions
         services.TryAddSingleton<KernelAuditChainSealer>();
         services.TryAddSingleton<IConceptRegistry, KernelConceptRegistry>();
         services.TryAddSingleton<IWorkQueueDefinitions, KernelWorkQueueDefinitions>();
+        services.TryAddSingleton<IWorkItemBlindingMask, KernelWorkItemBlindingMask>();
+        services.TryAddSingleton<IWorkItemTargetResolver, KernelWorkItemTargetResolver>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IWorkItemSource, ProtocolVersionsInReviewSource>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IWorkItemSource, QueriesOpenSource>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IWorkItemSource, QueriesAnsweredSource>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IWorkItemSource, ValidationFindingsOpenSource>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IWorkItemSource, FormsAwaitingSignatureSource>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IWorkItemSource, ObservationsAwaitingVerificationSource>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IWorkItemSource, ProposalsPendingSource>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IIndicatorPopulationSource, EnrollmentPopulationSource>());
 
         // Lineage reads need the host's INodeVisibility (ADR-2471); none is registered here, so resolving

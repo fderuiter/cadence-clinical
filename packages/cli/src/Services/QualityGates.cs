@@ -105,6 +105,14 @@ public static class QualityGates
             PreCommit = PreCommitMode.Quick,
             PreCommitNote = "lints staged JS, TS and Vue blobs over stdin; fails closed when `pnpm` or `node_modules` is missing",
         },
+        new("typecheck", ["validate-typecheck"],
+            "Workspace TypeScript and Vue SFC typecheck (`pnpm -r typecheck` via `vue-tsc` and `tsc`)",
+            ctx => FrontendQualityGateService.CheckTypecheck(ctx.RepoRoot, ctx.TargetFiles, ctx.PreCommit, ctx.IndexReader) == 0)
+        {
+            TakesFiles = true,
+            PreCommit = PreCommitMode.Quick,
+            PreCommitNote = "runs `pnpm -r typecheck` when staged JS, TS, Vue, JSON or YAML files are present; fails closed when `pnpm` or `node_modules` is missing",
+        },
         new("actionlint", ["validate-workflows"],
             "GitHub Actions workflow and composite-action static analysis via `actionlint` from `.cadence/bin` or `PATH` (fails closed when missing)",
             ctx => CliLinterGateService.RunActionlint(ctx.RepoRoot, ctx.TargetFiles, ctx.PreCommit, ctx.IndexReader) == 0)
@@ -134,25 +142,25 @@ public static class QualityGates
             ctx => FileHygieneValidatorService.ValidateEndOfFileNewline(ctx.TargetFiles, ctx.RepoRoot, ctx.PreCommit, ctx.IndexReader) == 0)
         { TakesFiles = true },
         new("clean-secrets", ["clean-secrets-baseline"],
-            "Verifies `.secrets.baseline` is valid, normalized JSON with the canonical exclusion filter without mutating it",
+            "Verifies `baselines/secrets/config.json` and `baselines/secrets/*.secrets.baseline.json` shards are valid, normalized JSON with the canonical exclusion filter without mutating them",
             ctx => SecretsBaselineCleanerService.CleanSecretsBaseline(repoRoot: ctx.RepoRoot, check: true, preCommit: ctx.PreCommit, indexReader: ctx.IndexReader) == 0)
         {
             PreCommit = PreCommitMode.Quick,
-            PreCommitNote = "validates staged `.secrets.baseline` JSON without mutating the working tree",
+            PreCommitNote = "validates staged `baselines/secrets/` JSON shards without mutating the working tree",
         },
         new("detect-secrets", ["secrets-scan"],
-            "Scans changed or tracked files against `.secrets.baseline` using `detect-secrets-hook` from `.cadence/venv`, `PATH` or `uvx` (fails closed when missing)",
+            "Scans changed or tracked files against merged `baselines/secrets/` shards using `detect-secrets-hook` from `.cadence/venv`, `PATH` or `uvx` (fails closed when missing)",
             ctx => DetectSecretsGateService.Scan(ctx.RepoRoot, ctx.TargetFiles, ctx.PreCommit, indexReader: ctx.IndexReader, baseRef: ctx.BaseRef, pushBefore: ctx.PushBefore) == 0)
         {
             TakesFiles = true,
             PreCommit = PreCommitMode.Quick,
             PreCommitNote = "scans materialized staged blobs instead of the working tree",
         },
-        new("duplication", ["detect-code-duplication"], "Duplicated code blocks over 15 normalized lines involving a C# or JavaScript file",
+        new("duplication", ["detect-code-duplication"], "Duplicated code blocks over 15 normalized lines across C#, JavaScript, TypeScript, Vue and CSS files",
             ctx => DuplicationDetectorService.DetectDuplication(ctx.Files, ctx.RepoRoot, ctx.PreCommit, ctx.IndexReader) == 0)
         { TakesFiles = true },
         new("cli-docs", ["validate-cli-docs"],
-            "`docs/cli.md` documents every command in `Program.cs`, and the gate tables in `docs/cli.md` and `docs/CI.md` match this registry",
+            "`docs/cli.md` documents every command in `Program.cs` and `PortCheckerService` ports, and all synthesized doc regions match code metadata",
             ctx => CheckCliDocs(ctx.RepoRoot)),
         new("adrs", ["validate-adrs"], "ADR schema, `docs/adr/index.md` consistency, and an ADR for architectural changes",
             ctx => AdrValidatorService.ValidateAdrs(checkGitDiff: true, repoRoot: ctx.RepoRoot, preCommit: ctx.PreCommit, baseRef: ctx.BaseRef, pushBefore: ctx.PushBefore))
@@ -161,7 +169,7 @@ public static class QualityGates
             PreCommitNote = "checks staged files for architectural changes, accepting ADRs already added on the branch",
         },
         new("arch-drift", ["validate-architecture-drift"],
-            "`docker/docker-compose.yml` exists and declares services; services missing from the architecture docs are warnings",
+            "Fail-closed parity of `docker/docker-compose.yml`, `ServiceTopology`, Vite ports, `core` hosts, EF Core module schemas, `RequireElectronicSignature` endpoints, durable signature token stores, and `GxPAuditInterceptor` hosts across `ARCHITECTURE.md`, `docs/OPERATIONAL_DATABASE.md`, and `docs/SDLC/Signature_Token_Cryptographic_Contract.md`",
             ctx => ArchitectureDriftValidatorService.ValidateArchitectureDrift(ctx.RepoRoot) == 0),
         new("sanitizer", ["path-requirement-sanitizer"],
             "Requirement tags in Markdown are upper case (`@req:PRD-…`); fixes them in normal mode and reports errors read-only during pre-commit",
@@ -176,10 +184,10 @@ public static class QualityGates
             ctx => MarkdownValidatorService.ValidateMarkdown(ctx.Files, ctx.RepoRoot, ctx.PreCommit, ctx.IndexReader) == 0)
         { TakesFiles = true },
         new("env-vars", ["validate-environment-variables"],
-            "Environment variables read in code are in `.env.example` and `docs/ENVIRONMENT_VARIABLES.md`",
+            "Bidirectional parity of environment variables across source code, `.env.example`, and `docs/ENVIRONMENT_VARIABLES.md`, plus existence of every file path cited in `docs/ENVIRONMENT_VARIABLES.md`",
             ctx => EnvVarExtractorService.ExtractAndValidateEnvVars(checkOnly: true, repoRoot: ctx.RepoRoot) == 0),
         new("dev-env", ["validate-dev-environment", "dev-environment"],
-            "Service ports in `docs/LOCAL_DEV_ENVIRONMENT.md` match the gateway and the Aspire AppHost",
+            "Service ports, Vite ports, database schemas, `core` profile hosts, and standalone startup keys in `docs/LOCAL_DEV_ENVIRONMENT.md` match `ServiceTopology`, the gateway, and the Aspire AppHost",
             ctx => DevEnvironmentValidatorService.ValidateDevEnvironment(ctx.RepoRoot) == 0),
         new("readmes", ["validate-readmes"], "Each directory under `apps/` and `packages/` has a README with a title",
             ctx => ReadmeValidatorService.ValidateReadmes(ctx.RepoRoot) == 0),
@@ -196,13 +204,25 @@ public static class QualityGates
             PreCommit = PreCommitMode.Quick,
             PreCommitNote = "validates staged `.github/rulesets` and `.github/workflows` blobs",
         },
-        new("imports", ["validate-imports"], "No `using` of another service's namespace across `apps/<service>`",
-            ctx => ImportValidatorService.ValidateImports(ctx.RepoRoot) == 0),
+        new("imports", ["validate-imports"],
+            "No cross-service direct imports, qualified namespace references, or reflection string lookups across `apps/<service>` (ratcheted by `cross-service-isolation.baseline.txt`)",
+            ctx => ImportValidatorService.ValidateImports(ctx.RepoRoot, ctx.PreCommit, ctx.IndexReader) == 0)
+        {
+            PreCommit = PreCommitMode.Quick,
+            PreCommitNote = "validates staged `apps/<service>` C# blobs and `cross-service-isolation.baseline.txt` against cross-service imports and reflection lookups",
+        },
+        new("permission-matrix", ["validate-permission-matrix", "rbac-matrix"],
+            "Static role-to-permission grants in `PermissionMatrix` and repository RBAC sources do not exceed the shrink-only `permission-matrix.baseline.txt` inventory",
+            ctx => PermissionMatrixRatchetService.Check(ctx.RepoRoot, ctx.PreCommit, ctx.IndexReader) == 0)
+        {
+            PreCommit = PreCommitMode.Quick,
+            PreCommitNote = "checks staged RBAC sources and `permission-matrix.baseline.txt` against the shrink-only grant inventory",
+        },
         new("security", ["audit-security"], "Hard-coded secret patterns across source, Vue templates and build scripts (private keys, cloud keys, API tokens, compliance secrets)",
             ctx => SecurityAuditorService.AuditSecurity(ctx.Files, ctx.RepoRoot, ctx.PreCommit, ctx.IndexReader) == 0)
         { TakesFiles = true },
         new("deid", ["deid-compliance-scan"],
-            "PHI/PII in changed or tracked files including authored `docs/`, root portal docs, `.vue` templates and `stores/` (vendored `docs/CDISC/`, `docs/NCI/` and `docs/SDLC/runs/` excluded), ratcheted by `.deid-baseline.txt`; a line that is not PHI takes a `deid-ignore` comment",
+            "PHI/PII in changed or tracked files including authored `docs/`, root portal docs, `.vue` templates and `stores/` (vendored `docs/CDISC/`, `docs/NCI/`, `docs/SDLC/runs/` and `baselines/` excluded), ratcheted by per-unit `baselines/deid/<unit>.baseline.txt` shards; a line that is not PHI takes a `deid-ignore` comment",
             ctx => DeidComplianceService.ScanDeidCompliance(ctx.Files, ctx.RepoRoot, preCommit: ctx.PreCommit, indexReader: ctx.IndexReader, baseRef: ctx.BaseRef, pushBefore: ctx.PushBefore) == 0)
         { TakesFiles = true },
         new("openapi", ["auto-stage-openapi"], "`docs/openapi` matches what the .NET services serve, and `docs/api` matches `docs/openapi`",
@@ -213,8 +233,13 @@ public static class QualityGates
             PreCommitNote = "exports specs only for the services the staged C# files touch, otherwise checks staged `docs/api` against staged `docs/openapi`",
         },
         new("api-clients", ["validate-api-clients"],
-            "The web API types are generated from the current `docs/openapi`, and the web API clients typecheck against them",
-            ctx => ApiClientValidatorService.ValidateApiClients(ctx.RepoRoot) == 0),
+            "The web API types are generated from the current `docs/openapi`, and the frontend workspace typechecks against them (`pnpm -r typecheck`)",
+            ctx => ApiClientValidatorService.ValidateApiClients(ctx.RepoRoot, ctx.TargetFiles, ctx.PreCommit) == 0)
+        {
+            TakesFiles = true,
+            PreCommit = PreCommitMode.Quick,
+            PreCommitNote = "runs `generate:api --check` and `pnpm -r typecheck` when staged files touch `docs/openapi` or frontend inputs; fails closed when `pnpm` or `apps/web/tsconfig.json` is missing",
+        },
         new("schema-doc", ["auto-stage-schema-doc"],
             "`docs/schema` matches the EF Core models, and all 18 persistence modules pass snapshot, `.Designer.cs`, attribute, and DDL uniqueness checks",
             ctx => CheckSchemaDoc(ctx))
@@ -232,7 +257,12 @@ public static class QualityGates
         { TakesFiles = true },
         new("vulnerabilities", ["validate-vulnerabilities"],
             "NuGet and pnpm dependency vulnerabilities not exempted by a valid `docs/SDLC/vulnerability_exclusions_ledger.json` entry (fails closed on missing or broken scanners)",
-            ctx => VulnerabilityAuditorService.AuditVulnerabilities(ctx.RepoRoot) == 0),
+            ctx => VulnerabilityAuditorService.AuditVulnerabilities(ctx.RepoRoot, targetFiles: ctx.TargetFiles, preCommit: ctx.PreCommit, indexReader: ctx.IndexReader) == 0)
+        {
+            TakesFiles = true,
+            PreCommit = PreCommitMode.Quick,
+            PreCommitNote = "validates `docs/SDLC/vulnerability_exclusions_ledger.json` offline and scans only ecosystems with staged manifests, lockfiles or ledger edits",
+        },
         new("dependencies", ["validate-dependencies"],
             "Valid JSON across workspace `package.json` and `.config/dotnet-tools.json` manifests, no client-side crypto package (`node-forge`, `elliptic`, `jose`), and no test harness package (`axe-core`, `@axe-core/playwright`, `vitest`, `@vue/test-utils`, `jsdom`, `fake-indexeddb`, `msw`) in runtime `dependencies`",
             ctx => DependencyValidatorService.ValidateDependencies(ctx.RepoRoot) == 0),
@@ -257,11 +287,11 @@ public static class QualityGates
             PreCommitNote = "checks the staged files instead of the branch",
         },
         new("baseline-ratchet", ["baselines"],
-            "No ratchet baseline (`*.baseline.txt`, `.deid-baseline.txt`, `.secrets.baseline`) gained an entry without a `Baseline-Growth: <path> - <reason>` trailer on the commit that grew it",
+            "No ratchet baseline gate (`*.baseline.txt`, `baselines/deid/*.baseline.txt`, `baselines/secrets/*.secrets.baseline.json`) gained an entry without a `Baseline-Growth: <path> +<count> - <reason>` trailer on the commit that grew it",
             ctx => BaselineRatchetService.Check(ctx.RepoRoot, ctx.PreCommit, baseRef: ctx.BaseRef, pushBefore: ctx.PushBefore) == 0)
         {
             PreCommit = PreCommitMode.Quick,
-            PreCommitNote = "checks staged files against `HEAD`; `CADENCE_BASELINE_GROWTH=\"<reason>\"` admits growth",
+            PreCommitNote = "checks staged files against `HEAD`; `CADENCE_BASELINE_GROWTH=\"<path> +<count> - <reason>\"` admits growth",
         },
         new("merge-readiness", ["check-merge-readiness"],
             "Verifies `origin/main` (or `--base`) is present, shares history with `HEAD`, and merges cleanly via `git merge-tree --write-tree` without conflicts",
@@ -287,11 +317,12 @@ public static class QualityGates
             PreCommitNote = "skipped on commit so local work-in-progress commits stay offline; run by `cadence check` before push",
         },
         new("architecture-tests", ["arch-tests"],
-            "Hexagonal layering and kernel boundary invariants (`tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`)",
-            ctx => CheckDotnetTestSuite(ctx.RepoRoot, "tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj"))
+            "Hexagonal layering, direct-write IL sentinels, RBAC grant inventory, cross-service isolation, and kernel boundary invariants (`tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`)",
+            CheckArchitectureTests)
         {
-            PreCommit = PreCommitMode.Skipped,
-            PreCommitNote = "full xUnit architecture suite; run by `cadence check` and CI's `dotnet-quality` job",
+            TakesFiles = true,
+            PreCommit = PreCommitMode.Quick,
+            PreCommitNote = "runs when staged files touch backend C#/MSBuild, architecture baselines, or test files; skips docs-only and non-test frontend asset commits",
         },
         new("unit-tests", ["dotnet-unit-tests"],
             ".NET unit test suite (`tests/Cadence.UnitTests/Cadence.UnitTests.csproj`)",
@@ -417,6 +448,11 @@ public static class QualityGates
 
                 return true;
             }
+        }
+
+        if (string.Equals(subcommand, "whitespace", StringComparison.Ordinal))
+        {
+            return RunProcess(ctx.RepoRoot, "dotnet", "format", "whitespace", ".", "--folder", "--verify-no-changes") == 0;
         }
 
         return RunProcess(ctx.RepoRoot, "dotnet", "format", subcommand, "Cadence.sln", "--verify-no-changes", "--no-restore") == 0;
@@ -597,6 +633,71 @@ public static class QualityGates
 
         Console.WriteLine($"✔ Branch HEAD includes {baseRef}.");
         return true;
+    }
+
+    private static bool CheckArchitectureTests(GateContext ctx)
+    {
+        if (ctx.TargetFiles is { Length: 0 })
+        {
+            return true;
+        }
+
+        if (ctx.PreCommit)
+        {
+            var files = ctx.TargetFiles is not null
+                ? (IEnumerable<string>)ctx.TargetFiles
+                : PreCommitOpenApiService.GetStagedFiles(ctx.RepoRoot);
+            if (!files.Any(f => AffectsArchitectureTestsGate(ctx.RepoRoot, f)))
+            {
+                Console.WriteLine("Staged changes touch only documentation or non-test frontend assets. Skipping architecture tests...");
+                return true;
+            }
+        }
+        else if (ctx.Files is not null && !ctx.Files.Any(f => AffectsArchitectureTestsGate(ctx.RepoRoot, f)))
+        {
+            return true;
+        }
+
+        return CheckDotnetTestSuite(ctx.RepoRoot, "tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj");
+    }
+
+    internal static bool AffectsArchitectureTestsGate(string repoRoot, string file)
+    {
+        string rel = Path.IsPathRooted(file)
+            ? Path.GetRelativePath(repoRoot, file)
+            : file;
+        string normalized = rel.Replace('\\', '/');
+        while (normalized.StartsWith("./", StringComparison.Ordinal))
+        {
+            normalized = normalized[2..];
+        }
+
+        if (string.IsNullOrWhiteSpace(normalized) ||
+            normalized.StartsWith("docs/", StringComparison.OrdinalIgnoreCase) ||
+            normalized.EndsWith(".md", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        string fileName = Path.GetFileName(normalized);
+        if (normalized.EndsWith(".cs", StringComparison.OrdinalIgnoreCase) ||
+            normalized.EndsWith(".csproj", StringComparison.OrdinalIgnoreCase) ||
+            normalized.EndsWith(".props", StringComparison.OrdinalIgnoreCase) ||
+            normalized.EndsWith(".targets", StringComparison.OrdinalIgnoreCase) ||
+            normalized.EndsWith(".sln", StringComparison.OrdinalIgnoreCase) ||
+            normalized.EndsWith(".slnx", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(normalized, "global.json", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(fileName, "BannedSymbols.txt", StringComparison.OrdinalIgnoreCase) ||
+            BaselineRatchetService.IsRatchetBaseline(normalized))
+        {
+            return true;
+        }
+
+        return normalized.StartsWith("tests/", StringComparison.OrdinalIgnoreCase) ||
+               normalized.Contains("/tests/", StringComparison.OrdinalIgnoreCase) ||
+               normalized.Contains("/__tests__/", StringComparison.OrdinalIgnoreCase) ||
+               fileName.Contains(".spec.", StringComparison.OrdinalIgnoreCase) ||
+               fileName.Contains(".test.", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool CheckDotnetTestSuite(string repoRoot, string relativeProjectPath)

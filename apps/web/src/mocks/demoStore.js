@@ -26,6 +26,8 @@ import {
   PRE_RELEASE_ENVIRONMENT_NOTICE,
 } from "../catalog/productCatalog.js";
 import { demoNowIso, demoNowMs } from "../utils/demoMode.js";
+import { registerDemoStoreReset } from "../utils/demoReset.js";
+import { isCallerBlinded, isSitePermitted } from "./demoPolicy.js";
 
 const DEMO_TENANT_UUID =
   MANIFEST_DEMO_TENANT_UUID || "00000000-0000-0000-0000-000000000010"; // deid-ignore
@@ -110,7 +112,9 @@ function createInitialObservations() {
   const obs1Ref = `observation:${OBS_1_UUID}`;
   const obs2Ref = `observation:${OBS_2_UUID}`;
   const obs3Ref = `observation:${OBS_3_UUID}`;
-  const enrollmentRef = `enrollment:${ENROLLMENT_1001_UUID}`;
+  const canonicalEnrollmentUuid =
+    DEMO_PARTICIPANTS[0]?.enrollmentUuid || ENROLLMENT_1001_UUID;
+  const enrollmentRef = `enrollment:${canonicalEnrollmentUuid}`;
 
   const makeObs = (ref, concept, value, recordedAt) => ({
     ref,
@@ -205,9 +209,25 @@ function resolveSiteUuid(siteCode) {
   return makeUuidFromIndex("00000200", Number(digits));
 }
 
-function resolveSiteCodeFromRef(nodeRef, subjects = []) {
-  const raw = String(nodeRef || "").replace(/^study_site:/, "");
-  const manifestSite = DEMO_SITES.find((s) => s.studySiteUuid === raw);
+function resolveSiteCodeFromRef(nodeRef, subjects = [], studySites = null) {
+  const unpinned = String(nodeRef || "").split("@")[0];
+  const raw = unpinned.replace(/^study_site:/, "");
+  if (studySites) {
+    for (const links of studySites.values()) {
+      const found = links.find(
+        (item) =>
+          item.study_site_ref === unpinned ||
+          item.study_site_id === raw ||
+          String(item.ref || "").split("@")[0] === unpinned
+      );
+      if (found?.site_code) return found.site_code;
+    }
+  }
+  const manifestSite = DEMO_SITES.find(
+    (s) =>
+      s.studySiteUuid === raw ||
+      String(s.studySiteRef || "").split("@")[0] === unpinned
+  );
   if (manifestSite) return manifestSite.code;
   if (raw === SITE_101_UUID) return "SITE-101";
   if (raw === SITE_102_UUID) return "SITE-102";
@@ -445,6 +465,8 @@ export function createWebDemoStore() {
     importedProtocolVersions: new Map(),
     protocolDesignSummaries: new Map(),
     idempotentStudyResponses: new Map(),
+    idempotentSiteResponses: new Map(),
+    idempotentStudySiteResponses: new Map(),
     idempotentImportResponses: new Map(),
     subjects: [],
     observations: createInitialObservations(),
@@ -524,18 +546,19 @@ export function createWebDemoStore() {
       ...cloneJson(DEMO_ORGANIZATIONS),
       ...demoSiteInstitutions,
     ];
-    state.sites = DEMO_SITES.map((site) => ({
-      ref: `site:${site.siteUuid}@1`,
-      code: site.code,
-      name: site.name,
-      country: site.country,
-      institution_ref: `organization:${site.institutionUuid}@1`,
-      institution_code: site.institutionCode,
-      institution_name: `${site.name} Institution`,
-    }));
+    if (!state.organizations.some((org) => org.kind === "SiteInstitution")) {
+      state.organizations.push({
+        ref: "organization:00000000-0000-4000-8000-000000000310@1", // deid-ignore
+        code: "US-CLINICAL-INST",
+        name: "US Academic Clinical Research Network",
+        kind: "SiteInstitution",
+      });
+    }
     state.importedProtocolVersions = new Map();
     state.protocolDesignSummaries = new Map();
     state.idempotentStudyResponses = new Map();
+    state.idempotentSiteResponses = new Map();
+    state.idempotentStudySiteResponses = new Map();
     state.idempotentImportResponses = new Map();
 
     const canonicalStudyCode = DEMO_STUDY.code || "CADENCE-101";
@@ -588,46 +611,129 @@ export function createWebDemoStore() {
       ],
     ]);
 
-    const buildStudySitesForStudy = (studyRef) =>
-      DEMO_SITES.map((site, idx) => {
-        const unversionedStudySiteRef =
-          studyRef === canonicalStudyEntry.ref
-            ? String(site.studySiteRef).split("@")[0]
-            : `study_site:${makeUuidFromIndex("00000400", idx + 1)}`;
-        return {
-          ref: `${unversionedStudySiteRef}@1`,
-          study_site_id: unversionedStudySiteRef.replace(/^study_site:/, ""),
-          study_site_ref: unversionedStudySiteRef,
-          study_ref: String(studyRef).split("@")[0],
-          site_ref: `site:${site.siteUuid}@1`,
-          site_code: site.code,
-          site_name: site.name,
-          country: site.country,
-          institution_ref: `organization:${site.institutionUuid}@1`,
-          institution_code: site.institutionCode,
-          institution_name: `${site.name} Institution`,
-          status: site.complianceStage === "CONDUCT" ? "Active" : "Selected",
-          effective_versions: [],
-        };
-      });
+    const initialSiteInst =
+      state.organizations.find((o) => o.kind === "SiteInstitution") ||
+      state.organizations[0];
+    state.sites =
+      DEMO_SITES.length > 0
+        ? DEMO_SITES.map((demoSite, idx) => ({
+            ref: demoSite.siteUuid
+              ? `site:${demoSite.siteUuid}@1`
+              : `site:${makeUuidFromIndex("00000210", idx + 1)}@1`,
+            code: demoSite.code,
+            name: demoSite.name || demoSite.code,
+            country: demoSite.country || "US",
+            is_active: true,
+            institution_ref: demoSite.institutionUuid
+              ? `organization:${demoSite.institutionUuid}@1`
+              : initialSiteInst.ref,
+            institution_code: demoSite.institutionCode || initialSiteInst.code,
+            institution_name: demoSite.name
+              ? `${demoSite.name} Institution`
+              : initialSiteInst.name,
+            linked_study_count: state.studies.size,
+          }))
+        : [
+            {
+              ref: `site:${SITE_101_UUID}@1`,
+              code: "SITE-101",
+              name: "US Academic Clinical Research Center (SITE-101)",
+              country: "US",
+              is_active: true,
+              institution_ref: initialSiteInst.ref,
+              institution_code: initialSiteInst.code,
+              institution_name: initialSiteInst.name,
+              linked_study_count: state.studies.size,
+            },
+            {
+              ref: `site:${SITE_102_UUID}@1`,
+              code: "SITE-102",
+              name: "US Regional Trial Unit 2",
+              country: "US",
+              is_active: true,
+              institution_ref: initialSiteInst.ref,
+              institution_code: initialSiteInst.code,
+              institution_name: initialSiteInst.name,
+              linked_study_count: state.studies.size,
+            },
+          ];
+
+    const buildStudySitesForStudy = (studyRef, studyCode) =>
+      DEMO_SITES.length > 0
+        ? DEMO_SITES.map((site, idx) => {
+            const unversionedStudySiteRef =
+              studyRef === canonicalStudyEntry.ref && site.studySiteRef
+                ? String(site.studySiteRef).split("@")[0]
+                : `study_site:${makeUuidFromIndex("00000400", idx + 1)}`;
+            return {
+              ref: `${unversionedStudySiteRef}@1`,
+              study_site_id: unversionedStudySiteRef.replace(
+                /^study_site:/,
+                ""
+              ),
+              study_site_ref: unversionedStudySiteRef,
+              study_ref: String(studyRef).split("@")[0],
+              study_code: studyCode,
+              site_ref: `site:${site.siteUuid}@1`,
+              site_code: site.code,
+              site_name: site.name,
+              country: site.country,
+              institution_ref: `organization:${site.institutionUuid}@1`,
+              institution_code: site.institutionCode,
+              institution_name: `${site.name} Institution`,
+              status:
+                site.complianceStage === "CONDUCT" ? "Active" : "Selected",
+              is_active: true,
+              effective_versions: [],
+              mask: null,
+            };
+          })
+        : state.sites.map((site) => {
+            const siteUuid = resolveSiteUuid(site.code);
+            return {
+              ref: `study_site:${siteUuid}@1`,
+              study_site_id: siteUuid,
+              study_site_ref: `study_site:${siteUuid}`,
+              study_ref: String(studyRef).split("@")[0],
+              study_code: studyCode,
+              site_ref: site.ref,
+              site_code: site.code,
+              site_name: site.name,
+              country: site.country,
+              institution_ref: site.institution_ref,
+              institution_code: site.institution_code,
+              institution_name: site.institution_name,
+              status: "Active",
+              is_active: true,
+              effective_versions: [],
+              mask: null,
+            };
+          });
 
     state.studySites = new Map([
-      [canonicalStudyCode, buildStudySitesForStudy(canonicalStudyEntry.ref)],
-      ["DEMO-01", buildStudySitesForStudy(STUDY_REF)],
+      [
+        canonicalStudyCode.toUpperCase(),
+        buildStudySitesForStudy(canonicalStudyEntry.ref, canonicalStudyCode),
+      ],
+      ["DEMO-01", buildStudySitesForStudy(STUDY_REF, "DEMO-01")],
       [
         "STUDY-USDM-001",
-        buildStudySitesForStudy("study:00000000-0000-0000-0000-000000000002"), // deid-ignore
+        buildStudySitesForStudy(
+          "study:00000000-0000-0000-0000-000000000002", // deid-ignore
+          "STUDY-USDM-001"
+        ),
       ],
     ]);
 
     const canonicalSubjects = DEMO_PARTICIPANTS.map((participant, idx) => ({
-      id: participant.enrollmentUuid,
+      id: participant.participantUuid || participant.enrollmentUuid,
       subject_id: participant.subjectCode,
       study_id: canonicalStudyCode,
       site_id: participant.siteCode,
       status: idx === 2 ? "ENROLLED" : "ACTIVE",
       active_protocol_version: idx === 1 ? "1.0" : "2.0",
       enrollment_index: idx + 1,
+      enrollment_ref: participant.enrollmentRef,
       treatment_group: idx === 1 ? "ARM-B" : "ARM-A",
     }));
 
@@ -641,6 +747,7 @@ export function createWebDemoStore() {
         status: "ENROLLED",
         active_protocol_version: "2.0",
         enrollment_index: 1,
+        enrollment_ref: `enrollment:${ENROLLMENT_1001_UUID}`,
         treatment_group: "ARM-A",
       },
       {
@@ -651,6 +758,7 @@ export function createWebDemoStore() {
         status: "SCREENED",
         active_protocol_version: "2.0",
         enrollment_index: 2,
+        enrollment_ref: `enrollment:${ENROLLMENT_1002_UUID}`,
         treatment_group: null,
       },
     ];
@@ -806,7 +914,7 @@ export function createWebDemoStore() {
         PROPOSAL_1_REF,
         {
           ref: PROPOSAL_1_REF,
-          study: STUDY_REF,
+          study: canonicalStudyEntry.ref,
           intent: "Extend Week 4 visit window from +/-2 days to +/-3 days",
           plan: {
             ref: "plan:00000000-0000-0000-0000-000000004101", // deid-ignore
@@ -820,15 +928,17 @@ export function createWebDemoStore() {
           simulated_impact:
             "2 scheduled visit windows updated; 0 re-consents required.",
           requested_capabilities: ["protocol.amend"],
-          proposed_at: "2026-08-03T10:00:00Z",
-          expires_at: "2026-09-03T10:00:00Z",
-          proposed_by: "usr-designer-01",
-          proposed_by_kind: "human",
-          requested_by: "usr-designer-01",
-          model_id: null,
-          confidence_score: null,
+          proposed_at: demoNowIso(),
+          expires_at: demoNowIso(30, 86_400_000),
+          proposed_by: "agent:protocol-visit-window",
+          proposed_by_kind: "AutomationAgent",
+          requested_by:
+            getDemoPersonaForWorkspace("sponsor_designer")?.username ||
+            "designer_demo",
+          model_id: "cadence-protocol-guardian-1.2",
+          confidence_score: 0.89,
           content_hash: "sha256-demo-prop-4001",
-          status: "PENDING",
+          status: "Open",
           decided_at: null,
           decided_by: null,
           approval_attestation: null,
@@ -993,6 +1103,9 @@ export function createWebDemoStore() {
               staff_role: "CRC",
               task_codes: ["CRF_DATA_ENTRY", "SUBJECT_SCREENING"],
               status: "ACTIVE",
+              is_active: true,
+              signed_off: true,
+              end_date: null,
               start_date: "2026-07-15", // deid-ignore
               pi_signed_off_by: "usr-pi-01",
               pi_signed_off_at: "2026-07-15T10:00:00Z", // deid-ignore
@@ -1367,8 +1480,139 @@ export function createWebDemoStore() {
     return ensureStudyByCode(refOrCode);
   }
 
+  const resetListeners = new Set();
+
+  function resetStoreState() {
+    seedInitialState();
+    for (const listener of resetListeners) {
+      try {
+        listener();
+      } catch {
+        // Ignore individual listener errors
+      }
+    }
+  }
+
+  function subjectEnrollmentRef(subject) {
+    const raw = String(subject?.enrollment_ref || "").split("@")[0];
+    return raw.startsWith("enrollment:") ? raw : `enrollment:${subject.id}`;
+  }
+
+  function subjectEnrollmentUuid(subject) {
+    return subjectEnrollmentRef(subject).replace(/^enrollment:/, "");
+  }
+
+  function resolveEnrollmentByIdOrCode(rawId) {
+    const cleanId = String(rawId || "")
+      .replace(
+        /^(enrollment|participant|allocation|randomization|treatment_arm|arm):/,
+        ""
+      )
+      .split("@")[0];
+    return (
+      state.subjects.find(
+        (s) =>
+          s.id === cleanId ||
+          subjectEnrollmentUuid(s) === cleanId ||
+          String(s.subject_id || "").toUpperCase() === cleanId.toUpperCase()
+      ) || null
+    );
+  }
+
+  function resolveSiteCodeForNodeRef(nodeRef) {
+    const refStr = String(nodeRef || "");
+    if (refStr.startsWith("study_site:")) {
+      return resolveSiteCodeFromRef(refStr, state.subjects, state.studySites);
+    }
+    if (
+      refStr.startsWith("enrollment:") ||
+      refStr.startsWith("allocation:") ||
+      refStr.startsWith("randomization:")
+    ) {
+      const subj = resolveEnrollmentByIdOrCode(refStr);
+      return subj?.site_id || null;
+    }
+    if (refStr.startsWith("collection_instance:")) {
+      const rawFormId = refStr
+        .replace(/^collection_instance:/, "")
+        .split("@")[0];
+      const form = state.forms.get(rawFormId);
+      if (form?.enrollment_id) {
+        const subj = resolveEnrollmentByIdOrCode(form.enrollment_id);
+        return subj?.site_id || null;
+      }
+    }
+    if (refStr.startsWith("observation:")) {
+      const cleanObsId = refStr.replace(/^observation:/, "").split("@")[0];
+      for (const form of state.forms.values()) {
+        if (
+          Array.isArray(form.items) &&
+          form.items.some((it) => it.observation_id === cleanObsId)
+        ) {
+          const subj = resolveEnrollmentByIdOrCode(form.enrollment_id);
+          return subj?.site_id || null;
+        }
+      }
+    }
+    return null;
+  }
+
+  function isAllocationNodeRef(nodeRef) {
+    const kind = String(nodeRef || "")
+      .split(":")[0]
+      .toLowerCase();
+    return (
+      kind === "allocation" ||
+      kind === "treatment_arm" ||
+      kind === "arm" ||
+      kind === "randomization"
+    );
+  }
+
+  function applyNodeVisibilityMask(
+    node,
+    caller = null,
+    { siteCode = null, isAllocation = false, subjectStatus = null } = {}
+  ) {
+    if (!caller || !node) {
+      return node;
+    }
+    const effectiveSite = siteCode || resolveSiteCodeForNodeRef(node.ref);
+    if (effectiveSite && !isSitePermitted(caller, effectiveSite)) {
+      return {
+        ...node,
+        title: null,
+        status: null,
+        mask: "NotPermitted",
+      };
+    }
+    if (
+      (isAllocation || isAllocationNodeRef(node.ref)) &&
+      isCallerBlinded(caller) &&
+      String(subjectStatus || "").toUpperCase() !== "UNBLINDED"
+    ) {
+      return {
+        ...node,
+        title: null,
+        code: null,
+        status: null,
+        mask: "Blinded",
+      };
+    }
+    return node;
+  }
+
   return {
-    reset: seedInitialState,
+    reset: resetStoreState,
+    onReset(listener) {
+      if (typeof listener !== "function") {
+        return () => {};
+      }
+      resetListeners.add(listener);
+      return () => {
+        resetListeners.delete(listener);
+      };
+    },
     state,
     buildDecision,
 
@@ -1413,7 +1657,7 @@ export function createWebDemoStore() {
 
       for (const subj of state.subjects) {
         candidates.push({
-          ref: `enrollment:${subj.id}`,
+          ref: subjectEnrollmentRef(subj),
           kind: "enrollment",
           title: `Participant ${subj.subject_id}`,
           code: subj.subject_id,
@@ -1543,28 +1787,49 @@ export function createWebDemoStore() {
             effectiveSiteCode === "SITE-102"
               ? "US Regional Trial Unit 2"
               : `US Academic Clinical Research Center (${effectiveSiteCode})`,
-          enrollment_ref: `enrollment:${matched.id}@1`,
+          enrollment_ref: `${subjectEnrollmentRef(matched)}@1`,
           subject_code: matched.subject_id,
           status: matched.status || "SCREENED",
         },
       };
     },
 
-    getNode(nodeRef) {
+    getNode(nodeRef, caller = null) {
       if (String(nodeRef).startsWith("study:")) {
         return cloneJson(getStudyByRefOrCode(nodeRef));
+      }
+      if (isAllocationNodeRef(nodeRef)) {
+        const subj =
+          resolveEnrollmentByIdOrCode(nodeRef) || state.subjects[0] || null;
+        const armCode = subj?.treatment_group || "ARM-A";
+        const baseNode = {
+          ref: nodeRef,
+          kind: String(nodeRef).split(":")[0] || "allocation",
+          title: `Treatment Allocation · ${armCode}`,
+          code: armCode,
+          status: "ALLOCATED",
+          mask: null,
+        };
+        return applyNodeVisibilityMask(baseNode, caller, {
+          siteCode: subj?.site_id || null,
+          isAllocation: true,
+          subjectStatus: subj?.status || null,
+        });
       }
       if (String(nodeRef).startsWith("observation:")) {
         const obs = state.observations.get(nodeRef);
         if (obs) {
-          return {
-            ref: obs.ref,
-            kind: "observation",
-            title: `Observation ${obs.concept}`,
-            code: obs.concept,
-            status: "RECORDED",
-            mask: null,
-          };
+          return applyNodeVisibilityMask(
+            {
+              ref: obs.ref,
+              kind: "observation",
+              title: `Observation ${obs.concept}`,
+              code: obs.concept,
+              status: "RECORDED",
+              mask: null,
+            },
+            caller
+          );
         }
       }
       if (String(nodeRef).startsWith("protocol_version:")) {
@@ -1580,34 +1845,81 @@ export function createWebDemoStore() {
           mask: null,
         };
       }
+      if (String(nodeRef).startsWith("plan:")) {
+        const unversionedPlan = String(nodeRef).split("@")[0];
+        const matchingProposal = [...state.proposals.values()].find(
+          (p) => String(p.plan?.ref || "").split("@")[0] === unversionedPlan
+        );
+        return applyNodeVisibilityMask(
+          {
+            ref: nodeRef,
+            kind: "plan",
+            title:
+              matchingProposal?.plan?.title ||
+              "Protocol Amendment 2 Visit Window Adjustment",
+            code: `v${matchingProposal?.plan?.number ?? 2}`,
+            status: "PROPOSED",
+            mask: null,
+          },
+          caller
+        );
+      }
+      if (String(nodeRef).startsWith("proposal:")) {
+        const unversionedProp = String(nodeRef).split("@")[0];
+        const matchingProposal =
+          state.proposals.get(unversionedProp) ||
+          [...state.proposals.values()].find(
+            (p) => String(p.ref || "").split("@")[0] === unversionedProp
+          );
+        return applyNodeVisibilityMask(
+          {
+            ref: nodeRef,
+            kind: "proposal",
+            title: matchingProposal?.intent || "Protocol Amendment Proposal",
+            code: String(unversionedProp).split(":")[1]?.slice(-4) || "4001",
+            status: matchingProposal?.status || "Open",
+            mask: null,
+          },
+          caller
+        );
+      }
       if (String(nodeRef).startsWith("study_site:")) {
-        const siteCode = resolveSiteCodeFromRef(nodeRef, state.subjects);
-        return {
-          ref: nodeRef,
-          kind: "study_site",
-          title:
-            siteCode === "SITE-102"
-              ? "US Regional Trial Unit 2"
-              : `US Academic Clinical Research Center (${siteCode})`,
-          code: siteCode,
-          status: "ACTIVE",
-          mask: null,
-        };
+        const siteCode = resolveSiteCodeFromRef(
+          nodeRef,
+          state.subjects,
+          state.studySites
+        );
+        return applyNodeVisibilityMask(
+          {
+            ref: nodeRef,
+            kind: "study_site",
+            title:
+              siteCode === "SITE-102"
+                ? "US Regional Trial Unit 2"
+                : `US Academic Clinical Research Center (${siteCode})`,
+            code: siteCode,
+            status: "ACTIVE",
+            mask: null,
+          },
+          caller,
+          { siteCode }
+        );
       }
       if (String(nodeRef).startsWith("enrollment:")) {
-        const rawId = String(nodeRef)
-          .replace(/^enrollment:/, "")
-          .split("@")[0];
-        const subj = state.subjects.find((s) => s.id === rawId);
+        const subj = resolveEnrollmentByIdOrCode(nodeRef);
         if (subj) {
-          return {
-            ref: nodeRef,
-            kind: "enrollment",
-            title: `Participant ${subj.subject_id}`,
-            code: subj.subject_id,
-            status: subj.status,
-            mask: null,
-          };
+          return applyNodeVisibilityMask(
+            {
+              ref: nodeRef,
+              kind: "enrollment",
+              title: `Participant ${subj.subject_id}`,
+              code: subj.subject_id,
+              status: subj.status,
+              mask: null,
+            },
+            caller,
+            { siteCode: subj.site_id }
+          );
         }
       }
       if (String(nodeRef).startsWith("collection_instance:")) {
@@ -1617,35 +1929,42 @@ export function createWebDemoStore() {
         const form =
           state.forms.get(rawFormId) || state.forms.get(DEFAULT_FORM_UUID);
         if (form) {
-          return {
-            ref: nodeRef,
-            kind: "collection_instance",
-            title: `${form.collection_title || resolveCollectionTitle(form.collection_spec_id) || form.collection_spec_id}${form.planned_activity_id ? ` (${form.planned_activity_id})` : ""}`,
-            code: form.collection_spec_id,
-            status: form.complete ? "COMPLETE" : "OPEN",
-            mask: null,
-          };
+          return applyNodeVisibilityMask(
+            {
+              ref: nodeRef,
+              kind: "collection_instance",
+              title: `${form.collection_title || resolveCollectionTitle(form.collection_spec_id) || form.collection_spec_id}${form.planned_activity_id ? ` (${form.planned_activity_id})` : ""}`,
+              code: form.collection_spec_id,
+              status: form.complete ? "COMPLETE" : "OPEN",
+              mask: null,
+            },
+            caller
+          );
         }
       }
-      return {
-        ref: nodeRef,
-        kind: String(nodeRef).split(":")[0] || "node",
-        title: String(nodeRef),
-        code: String(nodeRef).split(":")[1]?.slice(-6) || "DEMO",
-        status: "ACTIVE",
-        mask: null,
-      };
+      return applyNodeVisibilityMask(
+        {
+          ref: nodeRef,
+          kind: String(nodeRef).split(":")[0] || "node",
+          title: String(nodeRef),
+          code: String(nodeRef).split(":")[1]?.slice(-6) || "DEMO",
+          status: "ACTIVE",
+          mask: null,
+        },
+        caller
+      );
     },
 
-    getZoomPath(nodeRef) {
+    getZoomPath(nodeRef, caller = null) {
       const refStr = String(nodeRef || "");
       if (refStr.startsWith("enrollment:")) {
-        const rawId = refStr.replace(/^enrollment:/, "");
-        const subj = state.subjects.find((s) => s.id === rawId);
+        const rawId = refStr.replace(/^enrollment:/, "").split("@")[0];
+        const subj = resolveEnrollmentByIdOrCode(refStr);
         const study = subj
           ? getStudyByRefOrCode(subj.study_id)
           : state.studies.get("DEMO-01");
         const siteCode = subj?.site_id || "SITE-101";
+        const sitePermitted = !caller || isSitePermitted(caller, siteCode);
         return [
           {
             level: "study",
@@ -1655,21 +1974,26 @@ export function createWebDemoStore() {
           },
           {
             level: "study_site",
-            label: siteCode,
+            label: sitePermitted ? siteCode : null,
             ref: `study_site:${resolveSiteUuid(siteCode)}`,
-            mask: null,
+            mask: sitePermitted ? null : "NotPermitted",
           },
           {
             level: "enrollment",
-            label: subj?.subject_id || rawId.slice(-6),
+            label: sitePermitted ? subj?.subject_id || rawId.slice(-6) : null,
             ref: refStr,
-            mask: null,
+            mask: sitePermitted ? null : "NotPermitted",
           },
         ];
       }
       if (refStr.startsWith("study_site:")) {
-        const siteCode = resolveSiteCodeFromRef(refStr, state.subjects);
+        const siteCode = resolveSiteCodeFromRef(
+          refStr,
+          state.subjects,
+          state.studySites
+        );
         const study = state.studies.get("DEMO-01");
+        const sitePermitted = !caller || isSitePermitted(caller, siteCode);
         return [
           {
             level: "study",
@@ -1679,9 +2003,9 @@ export function createWebDemoStore() {
           },
           {
             level: "study_site",
-            label: siteCode,
+            label: sitePermitted ? siteCode : null,
             ref: refStr,
-            mask: null,
+            mask: sitePermitted ? null : "NotPermitted",
           },
         ];
       }
@@ -1700,29 +2024,42 @@ export function createWebDemoStore() {
         nodeRef !== study.ref &&
         refStr.split("@")[0] !== study.ref.split("@")[0]
       ) {
-        const node = this.getNode(nodeRef);
+        const node = this.getNode(nodeRef, caller);
         steps.push({
           level: node.kind,
-          label: node.title || node.code,
+          label: node.mask ? null : node.title || node.code,
           ref: node.ref,
-          mask: null,
+          mask: node.mask ?? null,
         });
       }
       return steps;
     },
 
-    getChildren(nodeRef) {
+    getChildren(nodeRef, caller = null) {
       if (String(nodeRef).startsWith("study:")) {
         const study = getStudyByRefOrCode(nodeRef);
         const studySubjects = state.subjects.filter(
           (s) => s.study_id.toUpperCase() === study.code.toUpperCase()
         );
-        const effectiveSubjects =
-          studySubjects.length > 0 ? studySubjects : state.subjects;
+        const effectiveSubjects = study.isCustomCreated
+          ? studySubjects
+          : studySubjects.length > 0
+            ? studySubjects
+            : state.subjects;
+        const linkedStudySites =
+          state.studySites.get(study.code.toUpperCase()) || [];
+        const linkedByCode = new Map(
+          linkedStudySites
+            .filter((item) => item.site_code)
+            .map((item) => [item.site_code, item])
+        );
+        const defaultCodes = study.isCustomCreated
+          ? []
+          : ["SITE-101", "SITE-102"];
         const siteCodes = [
           ...new Set([
-            "SITE-101",
-            "SITE-102",
+            ...defaultCodes,
+            ...linkedByCode.keys(),
             ...effectiveSubjects.map((s) => s.site_id).filter(Boolean),
           ]),
         ];
@@ -1730,18 +2067,26 @@ export function createWebDemoStore() {
           const siteSubjects = effectiveSubjects.filter(
             (s) => (s.site_id || "SITE-101") === siteCode
           );
+          const linkedMeta = linkedByCode.get(siteCode);
           return {
-            node: {
-              ref: `study_site:${resolveSiteUuid(siteCode)}`,
-              kind: "study_site",
-              title:
-                siteCode === "SITE-102"
-                  ? "US Regional Trial Unit 2"
-                  : `US Academic Clinical Research Center (${siteCode})`,
-              code: siteCode,
-              status: "ACTIVE",
-              mask: null,
-            },
+            node: applyNodeVisibilityMask(
+              {
+                ref: linkedMeta?.ref
+                  ? linkedMeta.ref.split("@")[0]
+                  : `study_site:${resolveSiteUuid(siteCode)}`,
+                kind: "study_site",
+                title:
+                  linkedMeta?.site_name ||
+                  (siteCode === "SITE-102"
+                    ? "US Regional Trial Unit 2"
+                    : `US Academic Clinical Research Center (${siteCode})`),
+                code: siteCode,
+                status: linkedMeta?.status || "ACTIVE",
+                mask: null,
+              },
+              caller,
+              { siteCode }
+            ),
             child_count: siteSubjects.length,
             group: "sites",
           };
@@ -1761,35 +2106,47 @@ export function createWebDemoStore() {
           },
           ...siteNodes,
           ...effectiveSubjects.map((s) => ({
-            node: {
-              ref: `enrollment:${s.id}`,
-              kind: "enrollment",
-              title: `Participant ${s.subject_id}`,
-              code: s.subject_id,
-              status: s.status,
-              mask: null,
-            },
+            node: applyNodeVisibilityMask(
+              {
+                ref: subjectEnrollmentRef(s),
+                kind: "enrollment",
+                title: `Participant ${s.subject_id}`,
+                code: s.subject_id,
+                status: s.status,
+                mask: null,
+              },
+              caller,
+              { siteCode: s.site_id || "SITE-101" }
+            ),
             child_count: 1,
             group: "enrollments",
           })),
         ];
       }
       if (String(nodeRef).startsWith("study_site:")) {
-        const siteCode = resolveSiteCodeFromRef(nodeRef, state.subjects);
+        const siteCode = resolveSiteCodeFromRef(
+          nodeRef,
+          state.subjects,
+          state.studySites
+        );
         const siteSubjects = state.subjects.filter(
           (s) =>
             String(s.site_id || "SITE-101").toUpperCase() ===
             siteCode.toUpperCase()
         );
         return siteSubjects.map((s) => ({
-          node: {
-            ref: `enrollment:${s.id}`,
-            kind: "enrollment",
-            title: `Participant ${s.subject_id}`,
-            code: s.subject_id,
-            status: s.status,
-            mask: null,
-          },
+          node: applyNodeVisibilityMask(
+            {
+              ref: subjectEnrollmentRef(s),
+              kind: "enrollment",
+              title: `Participant ${s.subject_id}`,
+              code: s.subject_id,
+              status: s.status,
+              mask: null,
+            },
+            caller,
+            { siteCode }
+          ),
           child_count: 1,
           group: "enrollments",
         }));
@@ -1798,25 +2155,61 @@ export function createWebDemoStore() {
         const enrollmentId = String(nodeRef)
           .replace(/^enrollment:/, "")
           .split("@")[0];
+        const subj = resolveEnrollmentByIdOrCode(nodeRef);
+        const canonicalEnrollmentUuid = subj
+          ? subjectEnrollmentUuid(subj)
+          : enrollmentId;
+        const siteCode = subj?.site_id || null;
         let forms = [...state.forms.values()].filter(
-          (f) => f.enrollment_id === enrollmentId
+          (f) =>
+            f.enrollment_id === enrollmentId ||
+            (subj &&
+              (f.enrollment_id === subj.id ||
+                f.enrollment_id === canonicalEnrollmentUuid))
         );
         if (forms.length === 0) {
           const fallback = state.forms.get(DEFAULT_FORM_UUID);
           if (fallback) forms = [fallback];
         }
-        return forms.map((f) => ({
-          node: {
-            ref: `collection_instance:${f.form_id}`,
-            kind: "collection_instance",
-            title: `${f.collection_title || resolveCollectionTitle(f.collection_spec_id) || f.collection_spec_id}${f.planned_activity_id ? ` (${f.planned_activity_id})` : ""}`,
-            code: f.collection_spec_id,
-            status: f.complete ? "COMPLETE" : "OPEN",
-            mask: null,
-          },
+        const formChildren = forms.map((f) => ({
+          node: applyNodeVisibilityMask(
+            {
+              ref: `collection_instance:${f.form_id}`,
+              kind: "collection_instance",
+              title: `${f.collection_title || resolveCollectionTitle(f.collection_spec_id) || f.collection_spec_id}${f.planned_activity_id ? ` (${f.planned_activity_id})` : ""}`,
+              code: f.collection_spec_id,
+              status: f.complete ? "COMPLETE" : "OPEN",
+              mask: null,
+            },
+            caller,
+            { siteCode }
+          ),
           child_count: Array.isArray(f.items) ? f.items.length : 0,
           group: f.planned_activity_id || "forms",
         }));
+        if (subj?.treatment_group) {
+          formChildren.push({
+            node: applyNodeVisibilityMask(
+              {
+                ref: `allocation:${canonicalEnrollmentUuid}`,
+                kind: "allocation",
+                title: `Treatment Allocation · ${subj.treatment_group}`,
+                code: subj.treatment_group,
+                status: "ALLOCATED",
+                mask: null,
+              },
+              caller,
+              {
+                siteCode,
+                isAllocation: true,
+                subjectStatus: subj.status,
+              }
+            ),
+            child_count: 0,
+            group: "allocation",
+          });
+        }
+        return formChildren;
       }
       if (String(nodeRef).startsWith("collection_instance:")) {
         const formId = String(nodeRef)
@@ -1825,17 +2218,22 @@ export function createWebDemoStore() {
         const form =
           state.forms.get(formId) || state.forms.get(DEFAULT_FORM_UUID);
         if (!form || !Array.isArray(form.items)) return [];
+        const siteCode = resolveSiteCodeForNodeRef(nodeRef);
         return form.items
           .filter((it) => it.observation_id)
           .map((it) => ({
-            node: {
-              ref: `observation:${it.observation_id}@${Math.max(1, Number(it.revision || 1))}`,
-              kind: "observation",
-              title: `${it.concept || it.item_id}: ${it.value?.value ?? "not recorded"}${it.unit ? ` ${it.unit}` : ""}`,
-              code: it.item_id,
-              status: `r${Math.max(1, Number(it.revision || 1))}`,
-              mask: null,
-            },
+            node: applyNodeVisibilityMask(
+              {
+                ref: `observation:${it.observation_id}@${Math.max(1, Number(it.revision || 1))}`,
+                kind: "observation",
+                title: `${it.concept || it.item_id}: ${it.value?.value ?? "not recorded"}${it.unit ? ` ${it.unit}` : ""}`,
+                code: it.item_id,
+                status: `r${Math.max(1, Number(it.revision || 1))}`,
+                mask: null,
+              },
+              caller,
+              { siteCode }
+            ),
             child_count: 0,
             group: null,
           }));
@@ -1921,7 +2319,7 @@ export function createWebDemoStore() {
       }));
     },
 
-    listOrganizations(kind) {
+    listOrganizations(kind = "") {
       const filterKind = String(kind || "").trim();
       const orgs = filterKind
         ? state.organizations.filter(
@@ -1936,11 +2334,11 @@ export function createWebDemoStore() {
       if (!String(reason || "").trim()) {
         return {
           error: {
-            status: 400,
+            status: 422,
             problem: {
               title: "Missing X-Change-Reason",
-              status: 400,
-              code: "Kernel.Audit.MissingReasonForChange",
+              status: 422,
+              code: "K.Audit.ReasonRequired",
               detail:
                 "Header 'X-Change-Reason' is required when registering an organization.",
             },
@@ -1951,10 +2349,10 @@ export function createWebDemoStore() {
       if (!name) {
         return {
           error: {
-            status: 400,
+            status: 422,
             problem: {
               title: "Invalid organization request",
-              status: 400,
+              status: 422,
               code: "K.Identity.NameRequired",
               detail: "Organization name is required.",
             },
@@ -2006,21 +2404,29 @@ export function createWebDemoStore() {
       );
     },
 
-    createSite(body = {}, { reason = "" } = {}) {
+    createSite(body = {}, { reason = "", idempotencyKey = "" } = {}) {
       if (!String(reason || "").trim()) {
         return {
           error: {
-            status: 400,
+            status: 422,
             problem: {
               title: "Missing X-Change-Reason",
-              status: 400,
-              code: "Kernel.Audit.MissingReasonForChange",
+              status: 422,
+              code: "K.Audit.ReasonRequired",
               detail:
                 "Header 'X-Change-Reason' is required when registering a site.",
             },
           },
         };
       }
+      const trimmedKey = String(idempotencyKey || "").trim();
+      if (trimmedKey && state.idempotentSiteResponses?.has(trimmedKey)) {
+        return {
+          data: cloneJson(state.idempotentSiteResponses.get(trimmedKey)),
+          replayed: true,
+        };
+      }
+
       const siteCode = String(body.site_code || "")
         .trim()
         .toUpperCase();
@@ -2035,13 +2441,14 @@ export function createWebDemoStore() {
             problem: {
               title: "Invalid site registration request",
               status: 422,
-              code: "K.Site.CountryInvalid",
+              code: "K.Study.CountryInvalid",
               detail:
                 "Site code, name, and a two-letter ISO country code are required.",
             },
           },
         };
       }
+
       if (
         state.sites.some((s) => s.code.toUpperCase() === siteCode.toUpperCase())
       ) {
@@ -2051,13 +2458,14 @@ export function createWebDemoStore() {
             problem: {
               title: "Duplicate site code",
               status: 409,
-              code: "K.Node.AlreadyExists",
-              detail: `Site '${siteCode}' already exists.`,
+              code: "K.Study.SiteCodeTaken",
+              detail: `A site with code '${siteCode}' already exists in this tenant.`,
             },
           },
         };
       }
-      let inst = state.organizations.find(
+
+      let org = state.organizations.find(
         (o) =>
           (body.institution_ref &&
             o.ref.split("@")[0] ===
@@ -2066,96 +2474,176 @@ export function createWebDemoStore() {
             o.code.toUpperCase() ===
               String(body.institution_code).trim().toUpperCase())
       );
-      if (!inst) {
-        const instRes = this.createOrganization(
-          {
-            name: String(body.institution_name || `${name} Institution`).trim(),
-            code: body.institution_code || `INST-${siteCode}`,
-            kind: "SiteInstitution",
-          },
-          { reason }
-        );
-        if (instRes.error) return instRes;
-        inst = instRes.data;
+      if (org && org.kind !== "SiteInstitution") {
+        if (body.institution_ref || body.institution_code) {
+          return {
+            error: {
+              status: 422,
+              problem: {
+                title: "Invalid site institution kind",
+                status: 422,
+                code: "K.Study.OrganizationKindMismatch",
+                detail: `Organization '${org.code}' has kind '${org.kind}', expected 'SiteInstitution'.`,
+              },
+            },
+          };
+        }
+        org = null;
       }
+
+      if (!org) {
+        const instName = String(body.institution_name || "").trim();
+        if (!instName && !String(body.institution_code || "").trim()) {
+          return {
+            error: {
+              status: 422,
+              problem: {
+                title: "Missing site institution",
+                status: 422,
+                code: "K.Study.MissingInstitution",
+                detail:
+                  "Select an existing SiteInstitution or provide institution_name.",
+              },
+            },
+          };
+        }
+        const derivedBase = (
+          String(body.institution_code || "").trim() ||
+          instName.replace(/[^A-Za-z0-9]+/g, "-").replace(/^-+|-+$/g, "")
+        ).toUpperCase();
+        const codeTaken = state.organizations.some(
+          (o) => o.code.toUpperCase() === derivedBase
+        );
+        const finalOrgCode = codeTaken ? `${derivedBase}-SITE` : derivedBase;
+        const orgIdx = nextCounter();
+        org = {
+          ref: `organization:${makeUuidFromIndex("00000310", orgIdx)}@1`,
+          code: finalOrgCode,
+          name: instName || finalOrgCode,
+          kind: "SiteInstitution",
+        };
+        state.organizations.push(org);
+      }
+
       const idx = nextCounter();
       const created = {
-        ref: `site:${makeUuidFromIndex("00000320", idx)}@1`,
+        ref: `site:${makeUuidFromIndex("00000220", idx)}@1`,
         code: siteCode,
         name,
         country,
-        institution_ref: inst.ref,
-        institution_code: inst.code,
-        institution_name: inst.name,
+        is_active: true,
+        institution_ref: org.ref,
+        institution_code: org.code,
+        institution_name: org.name,
+        linked_study_count: 0,
       };
       state.sites.push(created);
+      if (trimmedKey && state.idempotentSiteResponses) {
+        state.idempotentSiteResponses.set(trimmedKey, cloneJson(created));
+      }
       return { data: cloneJson(created) };
     },
 
-    listStudySites(studyRef) {
-      const normalized = String(studyRef || "").trim();
-      const unpinned = normalized.split("@")[0];
-      let matchedCode = null;
-      for (const [code, study] of state.studies.entries()) {
+    listStudySites(studyRefOrCode = "") {
+      const clean = String(studyRefOrCode || "").trim();
+      const unversioned = clean.split("@")[0];
+      let matchedStudy = null;
+      for (const candidate of state.studies.values()) {
         if (
-          code.toUpperCase() === normalized.toUpperCase() ||
-          String(study.ref).split("@")[0] === unpinned
+          candidate.code.toUpperCase() === clean.toUpperCase() ||
+          String(candidate.ref).split("@")[0] === unversioned
         ) {
-          matchedCode = code;
+          matchedStudy = candidate;
           break;
         }
       }
-      if (!matchedCode) return [];
-      return cloneJson(state.studySites.get(matchedCode) || []);
-    },
-
-    linkSiteToStudy(studyRef, body = {}, { reason = "" } = {}) {
-      if (!String(reason || "").trim()) {
-        return {
-          error: {
-            status: 400,
-            problem: {
-              title: "Missing X-Change-Reason",
-              status: 400,
-              code: "Kernel.Audit.MissingReasonForChange",
-              detail:
-                "Header 'X-Change-Reason' is required when linking a site.",
-            },
-          },
-        };
-      }
-      const normalized = String(studyRef || "").trim();
-      const unpinned = normalized.split("@")[0];
-      let studyEntry = null;
-      for (const study of state.studies.values()) {
-        if (
-          study.code.toUpperCase() === normalized.toUpperCase() ||
-          String(study.ref).split("@")[0] === unpinned
-        ) {
-          studyEntry = study;
-          break;
-        }
-      }
-      if (!studyEntry) {
+      if (!matchedStudy) {
         return {
           error: {
             status: 404,
             problem: {
               title: "Study not found",
               status: 404,
-              code: "K.Node.NotFound",
-              detail: `Study '${studyRef}' was not found.`,
+              code: "K.Study.NotFound",
+              detail: `No visible study '${clean}' exists in this tenant.`,
             },
           },
         };
       }
+      const list =
+        state.studySites.get(matchedStudy.code.toUpperCase()) ||
+        state.studySites.get(matchedStudy.code) ||
+        [];
+      return {
+        data: cloneJson(
+          [...list].sort((a, b) =>
+            String(a.site_code || "").localeCompare(String(b.site_code || ""))
+          )
+        ),
+      };
+    },
+
+    linkSiteToStudy(
+      studyRefOrCode = "",
+      body = {},
+      { reason = "", idempotencyKey = "" } = {}
+    ) {
+      if (!String(reason || "").trim()) {
+        return {
+          error: {
+            status: 422,
+            problem: {
+              title: "Missing X-Change-Reason",
+              status: 422,
+              code: "K.Audit.ReasonRequired",
+              detail:
+                "Header 'X-Change-Reason' is required when linking a site to a study.",
+            },
+          },
+        };
+      }
+      const trimmedKey = String(idempotencyKey || "").trim();
+      if (trimmedKey && state.idempotentStudySiteResponses?.has(trimmedKey)) {
+        return {
+          data: cloneJson(state.idempotentStudySiteResponses.get(trimmedKey)),
+          replayed: true,
+        };
+      }
+
+      const clean = String(studyRefOrCode || "").trim();
+      const unversioned = clean.split("@")[0];
+      let matchedStudy = null;
+      for (const candidate of state.studies.values()) {
+        if (
+          candidate.code.toUpperCase() === clean.toUpperCase() ||
+          String(candidate.ref).split("@")[0] === unversioned
+        ) {
+          matchedStudy = candidate;
+          break;
+        }
+      }
+      if (!matchedStudy) {
+        return {
+          error: {
+            status: 404,
+            problem: {
+              title: "Study not found",
+              status: 404,
+              code: "K.Study.NotFound",
+              detail: `No visible study '${clean}' exists in this tenant.`,
+            },
+          },
+        };
+      }
+
+      const reqRef = String(body.site_ref || "")
+        .trim()
+        .split("@")[0];
+      const reqCode = String(body.site_code || "").trim();
       let site = state.sites.find(
-        (s) =>
-          (body.site_ref &&
-            s.ref.split("@")[0] === String(body.site_ref).split("@")[0]) ||
-          (body.site_code &&
-            s.code.toUpperCase() ===
-              String(body.site_code).trim().toUpperCase())
+        (candidate) =>
+          (reqRef && candidate.ref.split("@")[0] === reqRef) ||
+          (reqCode && candidate.code.toUpperCase() === reqCode.toUpperCase())
       );
       if (
         !site &&
@@ -2172,14 +2660,16 @@ export function createWebDemoStore() {
           country: String(body.country || "US")
             .trim()
             .toUpperCase(),
+          is_active: true,
           institution_ref:
             body.institution_ref ||
-            studyEntry.sponsor_ref ||
+            matchedStudy.sponsor_ref ||
             DEMO_ORGANIZATIONS[0].ref,
           institution_code:
-            studyEntry.sponsor_code || DEMO_ORGANIZATIONS[0].code,
+            matchedStudy.sponsor_code || DEMO_ORGANIZATIONS[0].code,
           institution_name:
-            studyEntry.sponsor_name || DEMO_ORGANIZATIONS[0].name,
+            matchedStudy.sponsor_name || DEMO_ORGANIZATIONS[0].name,
+          linked_study_count: 1,
         };
         state.sites.push(site);
       }
@@ -2190,16 +2680,22 @@ export function createWebDemoStore() {
             problem: {
               title: "Site not found",
               status: 404,
-              code: "K.Node.NotFound",
-              detail: "Requested investigational site was not found.",
+              code: "K.Study.SiteUnknown",
+              detail:
+                "The specified clinical site was not found in this tenant.",
             },
           },
         };
       }
-      const existingLinks = state.studySites.get(studyEntry.code) || [];
+
+      const key = matchedStudy.code.toUpperCase();
+      const existingList =
+        state.studySites.get(key) ||
+        state.studySites.get(matchedStudy.code) ||
+        [];
       if (
-        existingLinks.some(
-          (l) => l.site_code.toUpperCase() === site.code.toUpperCase()
+        existingList.some(
+          (entry) => entry.site_code?.toUpperCase() === site.code.toUpperCase()
         )
       ) {
         return {
@@ -2208,19 +2704,21 @@ export function createWebDemoStore() {
             problem: {
               title: "Site already linked",
               status: 409,
-              code: "K.StudySite.DuplicateSite",
-              detail: `Site '${site.code}' is already linked to '${studyEntry.code}'.`,
+              code: "K.Study.AlreadyLinked",
+              detail: `Site '${site.code}' is already linked to '${matchedStudy.code}'.`,
             },
           },
         };
       }
+
       const idx = nextCounter();
       const studySiteUuid = makeUuidFromIndex("00000410", idx);
-      const linked = {
+      const studySite = {
         ref: `study_site:${studySiteUuid}@1`,
         study_site_id: studySiteUuid,
         study_site_ref: `study_site:${studySiteUuid}`,
-        study_ref: String(studyEntry.ref).split("@")[0],
+        study_ref: String(matchedStudy.ref).split("@")[0],
+        study_code: matchedStudy.code,
         site_ref: site.ref,
         site_code: site.code,
         site_name: site.name,
@@ -2229,14 +2727,22 @@ export function createWebDemoStore() {
         institution_code: site.institution_code,
         institution_name: site.institution_name,
         status: "Selected",
+        is_active: true,
         effective_versions: [],
+        mask: null,
       };
-      const nextLinks = [...existingLinks, linked].sort((a, b) =>
-        a.site_code.localeCompare(b.site_code)
+      const nextLinks = [...existingList, studySite].sort((a, b) =>
+        String(a.site_code || "").localeCompare(String(b.site_code || ""))
       );
-      state.studySites.set(studyEntry.code, nextLinks);
-      studyEntry.site_count = nextLinks.length;
-      return { data: cloneJson(linked) };
+      state.studySites.set(key, nextLinks);
+      matchedStudy.site_count = nextLinks.length;
+      if (trimmedKey && state.idempotentStudySiteResponses) {
+        state.idempotentStudySiteResponses.set(
+          trimmedKey,
+          cloneJson(studySite)
+        );
+      }
+      return { data: cloneJson(studySite) };
     },
 
     createStudy(body = {}, { reason = "", idempotencyKey = "" } = {}) {
@@ -2345,7 +2851,7 @@ export function createWebDemoStore() {
         isCustomCreated: true,
       };
       state.studies.set(code, created);
-      state.studySites.set(code, []);
+      state.studySites.set(code.toUpperCase(), []);
       let linkedSite = null;
       if (
         body.link_sandbox_site ||
@@ -2688,8 +3194,9 @@ export function createWebDemoStore() {
       };
     },
 
-    getLineage(nodeRef, direction = "upstream", depth = 3) {
+    getLineage(nodeRef, direction = "upstream", depth = 3, caller = null) {
       const now = new Date().toISOString();
+      const startNode = this.getNode(nodeRef, caller);
       return {
         start: nodeRef,
         direction,
@@ -2701,7 +3208,7 @@ export function createWebDemoStore() {
             handle: "n0",
             kind: String(nodeRef).split(":")[0] || "node",
             ref: nodeRef,
-            mask: null,
+            mask: startNode?.mask ?? null,
             distance: 0,
           },
           {
@@ -2741,55 +3248,122 @@ export function createWebDemoStore() {
       };
     },
 
-    getDependents(nodeRef, depth = 3) {
+    getDependents(nodeRef, depth = 3, caller = null) {
       const now = new Date().toISOString();
+      const groups = [
+        {
+          kind: "enrollment",
+          count: state.subjects.length,
+          objects: state.subjects.map((subj, index) => {
+            const sitePermitted =
+              !caller || isSitePermitted(caller, subj.site_id || "SITE-101");
+            return {
+              handle: `dep-${index}`,
+              kind: "enrollment",
+              ref: subjectEnrollmentRef(subj),
+              mask: sitePermitted ? null : "NotPermitted",
+              distance: 1,
+            };
+          }),
+        },
+      ];
+      const allocatedSubjects = state.subjects.filter(
+        (subj) => subj.treatment_group
+      );
+      if (allocatedSubjects.length > 0) {
+        groups.push({
+          kind: "allocation",
+          count: allocatedSubjects.length,
+          objects: allocatedSubjects.map((subj, index) => {
+            const sitePermitted =
+              !caller || isSitePermitted(caller, subj.site_id || "SITE-101");
+            const blinded =
+              caller &&
+              isCallerBlinded(caller) &&
+              String(subj.status || "").toUpperCase() !== "UNBLINDED";
+            return {
+              handle: `alloc-${index}`,
+              kind: "allocation",
+              ref: `allocation:${subjectEnrollmentUuid(subj)}`,
+              mask: !sitePermitted
+                ? "NotPermitted"
+                : blinded
+                  ? "Blinded"
+                  : null,
+              distance: 2,
+            };
+          }),
+        });
+      }
       return {
         start: nodeRef,
         depth,
         valid_at: now,
         known_at: now,
-        groups: [
-          {
-            kind: "enrollment",
-            count: state.subjects.length,
-            objects: state.subjects.map((subj, index) => ({
-              handle: `dep-${index}`,
-              kind: "enrollment",
-              ref: `enrollment:${subj.id}`,
-              mask: null,
-              distance: 1,
-            })),
-          },
-        ],
-        total: state.subjects.length,
+        groups,
+        total: groups.reduce((sum, g) => sum + g.count, 0),
         truncated: false,
       };
     },
 
-    listProposals() {
-      return cloneJson([...state.proposals.values()]);
+    listProposals({ status, limit } = {}) {
+      let items = [...state.proposals.values()];
+      const normalizedStatus = String(status || "")
+        .trim()
+        .toLowerCase();
+      if (normalizedStatus) {
+        items = items.filter(
+          (item) =>
+            String(item.status || "")
+              .trim()
+              .toLowerCase() === normalizedStatus
+        );
+      }
+      const maxItems = Number(limit);
+      if (Number.isFinite(maxItems) && maxItems > 0) {
+        items = items.slice(0, maxItems);
+      }
+      return cloneJson(items);
     },
 
     getProposal(proposalRef) {
+      const cleanRef = String(proposalRef || "").split("@")[0];
       return cloneJson(
-        state.proposals.get(proposalRef) || [...state.proposals.values()][0]
+        state.proposals.get(cleanRef) ||
+          state.proposals.get(proposalRef) ||
+          [...state.proposals.values()][0]
       );
     },
 
-    rejectProposal(proposalRef, reason = "Rejected in demo review") {
+    rejectProposal(
+      proposalRef,
+      reason = "Rejected in demo review",
+      caller = null
+    ) {
+      const cleanRef = String(proposalRef || "").split("@")[0];
       const existing =
-        state.proposals.get(proposalRef) || [...state.proposals.values()][0];
-      const now = new Date().toISOString();
-      existing.status = "REJECTED";
+        state.proposals.get(cleanRef) ||
+        state.proposals.get(proposalRef) ||
+        [...state.proposals.values()][0];
+      const now = demoNowIso(nextCounter());
+      const personaUsername = caller?.persona
+        ? getDemoPersonaForWorkspace(caller.persona)?.username
+        : null;
+      const actor =
+        personaUsername ||
+        caller?.userId ||
+        getDemoPersonaForWorkspace("sponsor_designer")?.username ||
+        "designer_demo";
+      existing.status = "Rejected";
       existing.decided_at = now;
-      existing.decided_by = "usr-demo-operator";
+      existing.decided_by = actor;
       existing.decision_reason = reason;
       recordActivity(
         "proposal.rejected",
         "governance",
         "proposal",
         existing.ref,
-        "usr-demo-operator"
+        actor
       );
       return {
         ref: existing.ref,
@@ -2807,15 +3381,17 @@ export function createWebDemoStore() {
       };
     },
 
-    getObservation(observationRef) {
+    getObservation(observationRef, scopeHint = {}) {
       const normalized = String(observationRef).startsWith("observation:")
         ? String(observationRef)
         : `observation:${observationRef}`;
+      const canonicalEnrollmentUuid =
+        DEMO_PARTICIPANTS[0]?.enrollmentUuid || ENROLLMENT_1001_UUID;
       let obs = state.observations.get(normalized);
       if (!obs) {
         obs = {
           ref: normalized,
-          enrollment_ref: `enrollment:${ENROLLMENT_1001_UUID}`,
+          enrollment_ref: `enrollment:${canonicalEnrollmentUuid}`,
           concept: "SYSBP",
           value: {
             type: "quantity",
@@ -2856,7 +3432,35 @@ export function createWebDemoStore() {
         };
         state.observations.set(normalized, obs);
       }
-      return cloneJson(obs);
+      const result = cloneJson(obs);
+      const hintStudy = String(scopeHint?.studyCode || "").trim();
+      const hintSite = String(scopeHint?.siteCode || "").trim();
+      const hintSubject = String(scopeHint?.subjectCode || "").trim();
+      if (hintStudy || hintSite || hintSubject) {
+        const matchedSubject = state.subjects.find((subj) => {
+          if (
+            hintStudy &&
+            String(subj.study_id || "").toUpperCase() !==
+              hintStudy.toUpperCase()
+          ) {
+            return false;
+          }
+          if (
+            hintSite &&
+            String(subj.site_id || "").toUpperCase() !== hintSite.toUpperCase()
+          ) {
+            return false;
+          }
+          if (hintSubject && subj.subject_id !== hintSubject) {
+            return false;
+          }
+          return true;
+        });
+        if (matchedSubject) {
+          result.enrollment_ref = subjectEnrollmentRef(matchedSubject);
+        }
+      }
+      return result;
     },
 
     correctObservation(observationRef, body, reasonForChange) {
@@ -3144,6 +3748,7 @@ export function createWebDemoStore() {
             status: s.status,
             active_protocol_version: s.active_protocol_version || "2.0",
             enrollment_index: s.enrollment_index,
+            enrollment_ref: s.enrollment_ref || `enrollment:${s.id}`,
           }))
         ),
         total: filtered.length,
@@ -3201,19 +3806,23 @@ export function createWebDemoStore() {
           status: existing.status,
           active_protocol_version: existing.active_protocol_version,
           encrypted_demographics: null,
+          enrollment_ref:
+            existing.enrollment_ref || `enrollment:${existing.id}`,
         };
       }
 
       ensureStudyByCode(studyCode);
       const idx = nextCounter();
+      const createdId = makeUuidFromIndex("00001000", idx);
       const created = {
-        id: makeUuidFromIndex("00001000", idx),
+        id: createdId,
         subject_id: subjectCode,
         study_id: studyCode,
         site_id: siteCode,
         status: "SCREENED",
         active_protocol_version: "2.0",
         enrollment_index: state.subjects.length + 1,
+        enrollment_ref: `enrollment:${createdId}`,
         treatment_group: null,
       };
       state.subjects.push(created);
@@ -3221,7 +3830,7 @@ export function createWebDemoStore() {
         "execution.subject.registered",
         "execution",
         "enrollment",
-        `enrollment:${created.id}`,
+        created.enrollment_ref,
         "usr-crc-01"
       );
 
@@ -3233,16 +3842,26 @@ export function createWebDemoStore() {
         status: created.status,
         active_protocol_version: created.active_protocol_version,
         encrypted_demographics: null,
+        enrollment_ref: created.enrollment_ref,
       };
     },
 
-    getSubjectDetail(subjectId) {
+    getSubjectDetail(subjectId, caller = null) {
+      const normalizedKey = String(subjectId || "")
+        .trim()
+        .replace(/^(?:enrollment|participant):/i, "")
+        .split("@")[0];
       const found =
         state.subjects.find(
           (s) =>
-            s.subject_id.toUpperCase() === String(subjectId).toUpperCase() ||
-            s.id === subjectId
+            s.subject_id.toUpperCase() === normalizedKey.toUpperCase() ||
+            s.id === normalizedKey ||
+            s.enrollment_ref === `enrollment:${normalizedKey}`
         ) || state.subjects[0];
+      const shouldBlind =
+        Boolean(caller) &&
+        isCallerBlinded(caller) &&
+        String(found.status || "").toUpperCase() !== "UNBLINDED";
       return {
         id: found.id,
         subject_id: found.subject_id,
@@ -3251,9 +3870,16 @@ export function createWebDemoStore() {
         site_id: found.site_id,
         active_protocol_version: found.active_protocol_version || "2.0",
         enrollment_index: found.enrollment_index ?? 0,
-        treatment_group: found.treatment_group ?? null,
+        treatment_group: shouldBlind
+          ? "BLINDED"
+          : (found.treatment_group ?? null),
         randomization_seed: null,
-        investigational_product_id: found.investigational_product_id ?? null,
+        investigational_product_id: shouldBlind
+          ? found.investigational_product_id
+            ? "BLINDED"
+            : null
+          : (found.investigational_product_id ?? null),
+        enrollment_ref: found.enrollment_ref || `enrollment:${found.id}`,
       };
     },
 
@@ -3261,10 +3887,15 @@ export function createWebDemoStore() {
       const nextStatus = String(
         body?.status || body?.state || body?.target || "ENROLLED"
       ).toUpperCase();
+      const normalizedKey = String(subjectId || "")
+        .trim()
+        .replace(/^(?:enrollment|participant):/i, "")
+        .split("@")[0];
       let found = state.subjects.find(
         (s) =>
-          s.subject_id.toUpperCase() === String(subjectId).toUpperCase() ||
-          s.id === subjectId
+          s.subject_id.toUpperCase() === normalizedKey.toUpperCase() ||
+          s.id === normalizedKey ||
+          s.enrollment_ref === `enrollment:${normalizedKey}`
       );
       if (!found) {
         const created = this.createSubject({
@@ -3285,7 +3916,7 @@ export function createWebDemoStore() {
         "execution.subject.state_changed",
         "execution",
         "enrollment",
-        `enrollment:${found.id}`,
+        found.enrollment_ref || `enrollment:${found.id}`,
         "usr-crc-01"
       );
       return {
@@ -3296,6 +3927,7 @@ export function createWebDemoStore() {
         status: found.status,
         active_protocol_version: found.active_protocol_version,
         encrypted_demographics: null,
+        enrollment_ref: found.enrollment_ref || `enrollment:${found.id}`,
       };
     },
 
@@ -3456,14 +4088,14 @@ export function createWebDemoStore() {
         },
       ];
 
-      const subjMatch = state.subjects.find((s) => s.id === enrollmentId);
+      const subjMatch = resolveEnrollmentByIdOrCode(enrollmentId);
       const siteUuid = resolveSiteUuid(subjMatch?.site_id || "SITE-101");
       const collectionTitle = resolveCollectionTitle(collectionSpecId);
 
       const created = {
         form_id: formId,
         enrollment_id: enrollmentId,
-        participant_id: makeUuidFromIndex("00005000", idx),
+        participant_id: subjMatch?.id || makeUuidFromIndex("00005000", idx),
         study_id: STUDY_UUID,
         study_site_id: siteUuid,
         protocol_version_id: VERSION_V2_UUID,
@@ -3981,9 +4613,7 @@ export function createWebDemoStore() {
         body?.text || "Verify recorded value against source."
       );
       const rev = Number(body?.revision ?? item?.revision ?? 1);
-      const subjectMatch = state.subjects.find(
-        (s) => s.id === form.enrollment_id
-      );
+      const subjectMatch = resolveEnrollmentByIdOrCode(form.enrollment_id);
 
       const created = {
         query_id: queryId,
@@ -4380,6 +5010,8 @@ export function createWebDemoStore() {
       const blockers = [];
       let openQueryCount = 0;
       let missingRequiredItemCount = 0;
+      let unverifiedValueCount = 0;
+      let unsignedFormCount = 0;
 
       for (const q of state.queries.values()) {
         const status = String(q.status || "").toLowerCase();
@@ -4422,7 +5054,7 @@ export function createWebDemoStore() {
       if (scopeKind !== "observation") {
         for (const f of state.forms.values()) {
           if (!matchesScope(f)) continue;
-          const subj = state.subjects.find((s) => s.id === f.enrollment_id);
+          const subj = resolveEnrollmentByIdOrCode(f.enrollment_id);
           const missingIds = Array.isArray(f.missing_required)
             ? f.missing_required
             : [];
@@ -4458,10 +5090,175 @@ export function createWebDemoStore() {
         }
       }
 
+      const checkedObservationRefs = new Set();
+      for (const f of state.forms.values()) {
+        if (scopeKind !== "observation" && !matchesScope(f)) continue;
+        const subj = state.subjects.find((s) => s.id === f.enrollment_id);
+        const collectionTitle =
+          f.collection_title ||
+          resolveCollectionTitle(f.collection_spec_id) ||
+          null;
+        const formAssertions = Array.isArray(f.assertions) ? f.assertions : [];
+        const activeFormVerified = formAssertions.some(
+          (a) =>
+            !a.retracted_at &&
+            String(a.kind).toLowerCase() === "verified" &&
+            !String(a.target || "").startsWith("observation:")
+        );
+        const itemsList = Array.isArray(f.items) ? f.items : [];
+        let recordedItemCount = 0;
+
+        for (const it of itemsList) {
+          if (
+            !it.observation_id ||
+            it.value === null ||
+            it.value === undefined
+          ) {
+            continue;
+          }
+          if (
+            scopeKind === "observation" &&
+            String(it.observation_id) !== scopeUuid
+          ) {
+            continue;
+          }
+          recordedItemCount += 1;
+          const obsRef = `observation:${it.observation_id}`;
+          checkedObservationRefs.add(obsRef);
+          if (activeFormVerified) continue;
+
+          const obs = state.observations.get(obsRef);
+          const obsAssertions = Array.isArray(obs?.assertions)
+            ? obs.assertions
+            : [];
+          const currentRevision = Number(it.revision ?? obs?.version ?? 1);
+          const isObsVerified =
+            obsAssertions.some(
+              (a) =>
+                !a.retracted_at &&
+                String(a.kind).toLowerCase() === "verified" &&
+                (a.revision === undefined ||
+                  Number(a.revision) === currentRevision)
+            ) ||
+            formAssertions.some(
+              (a) =>
+                !a.retracted_at &&
+                String(a.kind).toLowerCase() === "verified" &&
+                a.target === obsRef &&
+                (a.revision === undefined ||
+                  Number(a.revision) === currentRevision)
+            );
+          if (!isObsVerified) {
+            unverifiedValueCount += 1;
+            const itemLabel = it.concept || it.item_id || obsRef;
+            blockers.push({
+              kind: "UnverifiedValue",
+              owner: "Monitor / Data Management",
+              target_ref: obsRef,
+              target_kind: "observation",
+              subject_code: subj?.subject_id || null,
+              collection_spec_id: f.collection_spec_id || null,
+              collection_title: collectionTitle,
+              item_id: it.item_id || null,
+              item_label: itemLabel,
+              query_ref: null,
+              query_text: null,
+              answered: false,
+              current_revision: currentRevision,
+              detail: `Revision ${currentRevision} awaiting source verification`,
+              next_action: `Monitor / Data Management: verify revision ${currentRevision} of '${itemLabel}' (${obsRef}) against source records.`,
+              next_capability: "observation.verify",
+              masked: false,
+              mask: null,
+            });
+          }
+        }
+
+        if (scopeKind !== "observation" && recordedItemCount > 0) {
+          const sigs = Array.isArray(f.signatures) ? f.signatures : [];
+          const signed =
+            sigs.length > 0 &&
+            sigs.some(
+              (s) => !s.superseded && s.content_hash === f.content_hash
+            );
+          if (!signed) {
+            unsignedFormCount += 1;
+            const formRef = `collection_instance:${f.form_id}`;
+            const titleLabel =
+              collectionTitle || f.collection_spec_id || formRef;
+            const signatureSuperseded = sigs.length > 0;
+            blockers.push({
+              kind: "UnsignedForm",
+              owner: "Principal Investigator",
+              target_ref: formRef,
+              target_kind: "collection_instance",
+              subject_code: subj?.subject_id || null,
+              collection_spec_id: f.collection_spec_id || null,
+              collection_title: collectionTitle,
+              item_id: null,
+              item_label: titleLabel,
+              query_ref: null,
+              query_text: null,
+              answered: false,
+              signature_superseded: signatureSuperseded,
+              next_action: `Principal Investigator: sign form '${titleLabel}' (${formRef}) at its current content revision.`,
+              next_capability: "collection.sign",
+              masked: false,
+              mask: null,
+            });
+          }
+        }
+      }
+
+      if (scopeKind === "observation") {
+        const singleObsRef = `observation:${scopeUuid}`;
+        if (
+          !checkedObservationRefs.has(singleObsRef) &&
+          state.observations.has(singleObsRef)
+        ) {
+          const obs = state.observations.get(singleObsRef);
+          const obsAssertions = Array.isArray(obs?.assertions)
+            ? obs.assertions
+            : [];
+          const currentRevision = Number(obs?.version ?? 1);
+          const isObsVerified = obsAssertions.some(
+            (a) =>
+              !a.retracted_at &&
+              String(a.kind).toLowerCase() === "verified" &&
+              (a.revision === undefined ||
+                Number(a.revision) === currentRevision)
+          );
+          if (!isObsVerified) {
+            unverifiedValueCount += 1;
+            const itemLabel = obs?.concept || singleObsRef;
+            blockers.push({
+              kind: "UnverifiedValue",
+              owner: "Monitor / Data Management",
+              target_ref: singleObsRef,
+              target_kind: "observation",
+              subject_code: null,
+              collection_spec_id: null,
+              collection_title: null,
+              item_id: null,
+              item_label: itemLabel,
+              query_ref: null,
+              query_text: null,
+              answered: false,
+              current_revision: currentRevision,
+              detail: `Revision ${currentRevision} awaiting source verification`,
+              next_action: `Monitor / Data Management: verify revision ${currentRevision} of '${itemLabel}' (${singleObsRef}) against source records.`,
+              next_capability: "observation.verify",
+              masked: false,
+              mask: null,
+            });
+          }
+        }
+      }
+
       const readyForLock = blockers.length === 0;
       const claim = readyForLock
-        ? `Scope ${cleanScopeRef} has 0 open queries and 0 missing required items and is ready for Locked.`
-        : `Scope ${cleanScopeRef} cannot be committed as Locked because ${openQueryCount} open ${openQueryCount === 1 ? "query" : "queries"} and ${missingRequiredItemCount} missing required ${missingRequiredItemCount === 1 ? "item" : "items"} remain unresolved (Frozen remains available).`;
+        ? `Scope ${cleanScopeRef} satisfies all lock readiness gates and is ready for Locked.`
+        : `Scope ${cleanScopeRef} cannot be committed as Locked because ${openQueryCount} open ${openQueryCount === 1 ? "query" : "queries"}, ${missingRequiredItemCount} missing required ${missingRequiredItemCount === 1 ? "item" : "items"}, ${unverifiedValueCount} unverified ${unverifiedValueCount === 1 ? "value" : "values"}, and ${unsignedFormCount} unsigned ${unsignedFormCount === 1 ? "form" : "forms"} remain unresolved (Frozen remains available).`;
 
       return {
         study_ref: cleanStudyRef,
@@ -4472,6 +5269,10 @@ export function createWebDemoStore() {
         can_freeze: true,
         open_query_count: openQueryCount,
         missing_required_item_count: missingRequiredItemCount,
+        unverified_value_count: unverifiedValueCount,
+        unsigned_form_count: unsignedFormCount,
+        unopened_visit_count: 0,
+        open_error_finding_count: 0,
         blocker_count: blockers.length,
         blockers,
         explanation: {
@@ -4484,7 +5285,7 @@ export function createWebDemoStore() {
           })),
           conditions: [
             {
-              code: "NO_OPEN_QUERIES",
+              code: "lock.queries_closed",
               description: "Zero open queries remain in target scope.",
               met: openQueryCount === 0,
               evidence: blockers
@@ -4492,7 +5293,7 @@ export function createWebDemoStore() {
                 .map((b) => b.target_ref),
             },
             {
-              code: "REQUIRED_ITEMS_COMPLETE",
+              code: "lock.required_items_complete",
               description:
                 "All required collection items are recorded in target scope.",
               met: missingRequiredItemCount === 0,
@@ -4500,9 +5301,27 @@ export function createWebDemoStore() {
                 .filter((b) => b.kind === "MissingRequiredItem" && b.target_ref)
                 .map((b) => b.target_ref),
             },
+            {
+              code: "lock.observations_verified",
+              description:
+                "All recorded observation revisions in target scope are source-verified.",
+              met: unverifiedValueCount === 0,
+              evidence: blockers
+                .filter((b) => b.kind === "UnverifiedValue" && b.target_ref)
+                .map((b) => b.target_ref),
+            },
+            {
+              code: "lock.forms_signed",
+              description:
+                "All populated forms in target scope carry a current investigator signature.",
+              met: unsignedFormCount === 0,
+              evidence: blockers
+                .filter((b) => b.kind === "UnsignedForm" && b.target_ref)
+                .map((b) => b.target_ref),
+            },
           ],
           next_actions: blockers.map((b) => ({
-            action: b.next_action,
+            description: b.next_action,
             capability: b.next_capability,
             target: b.target_ref,
           })),
@@ -4713,3 +5532,4 @@ export function createWebDemoStore() {
 }
 
 export const webDemoStore = createWebDemoStore();
+registerDemoStoreReset(() => webDemoStore.reset());

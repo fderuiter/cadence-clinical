@@ -322,9 +322,123 @@ public sealed class KernelTrialOnboardingPostgresTests(ExecutionFormModulePostgr
         tenantCodeTwo.Should().NotBe(tenantCode);
 
         using var refreshedTwo = host.CreateSignedClient(
-            new GatewayIdentity(subjectTwo, ["Sponsor Admin", "Sponsor Designer"], ["*"], TenantId: tenantCodeTwo));
+            new GatewayIdentity(subjectTwo, ["Sponsor Admin", "Sponsor Designer", "Trial Coordinator"], ["*"], TenantId: tenantCodeTwo));
         var searchTwo = await GetJsonAsync(refreshedTwo, "/api/v1/kernel/search?q=MERIDIAN-101", ct);
         searchTwo.GetArrayLength().Should().Be(0, "PostgreSQL RLS isolates self-registered trial tenants");
+    }
+
+    [Fact(DisplayName = "TrialFounderRegistersSiteInstitutionLinksToStudyAndScreensParticipant_AcrossIsolatedTrialTenants")]
+    public async Task TrialFounderRegistersSiteInstitutionLinksToStudyAndScreensParticipantAcrossIsolatedTrialTenants()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var clock = new FakeClock();
+        var keycloak = new RecordingKeycloakOnboardingClient();
+
+        using var host = CreateHost(clock, keycloak, environment: "Production");
+
+        foreach (int idx in new[] { 1, 2 })
+        {
+            string founderSub = Guid.CreateVersion7(clock.UtcNow.AddSeconds(idx * 10)).ToString();
+            using var unprovisioned = host.CreateSignedClient(new GatewayIdentity(founderSub, [], [], TenantId: null));
+            using var onboardResp = await PostTrialBootstrapAsync(
+                unprovisioned,
+                $"idem-founder-bootstrap-{idx}",
+                $"Self-service trial workspace bootstrap for Founder Org {idx}",
+                new { organization_name = $"Founder Org {idx}", residency = "US", tier = "Individual" },
+                ct);
+            onboardResp.StatusCode.Should().Be(HttpStatusCode.OK);
+            var onboardJson = JsonDocument.Parse(await onboardResp.Content.ReadAsStringAsync(ct)).RootElement;
+            string tenantCode = onboardJson.GetProperty("tenant_code").GetString()!;
+            string sponsorRef = onboardJson.GetProperty("organization_ref").GetString()!;
+
+            string sandboxInstitutionCode = onboardJson.GetProperty("sandbox_institution_code").GetString()!;
+
+            using var founderClient = host.CreateSignedClient(
+                new GatewayIdentity(
+                    founderSub,
+                    ["Sponsor Admin", "Sponsor Designer", "Trial Coordinator"],
+                    ["*"],
+                    TenantId: tenantCode));
+
+            // 1. Create CADENCE-101 via HTTP endpoint
+            using (var studyReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/kernel/studies")
+            {
+                Content = JsonContent.Create(new
+                {
+                    study_code = "CADENCE-101",
+                    title = "Cardiovascular Feasibility Trial",
+                    phase = "Phase 2",
+                    sponsor_ref = sponsorRef,
+                }),
+            })
+            {
+                studyReq.Headers.Add("Idempotency-Key", $"idem-study-{idx}");
+                studyReq.Headers.Add(GatewayHeaders.ChangeReason, "Create CADENCE-101 in trial workspace");
+                using var studyResp = await founderClient.SendAsync(studyReq, ct);
+                studyResp.StatusCode.Should().Be(HttpStatusCode.Created, await studyResp.Content.ReadAsStringAsync(ct));
+            }
+
+            // 2. Register SITE-01 via POST /api/v1/kernel/sites -> resolves/registers OrganizationKind.SiteInstitution
+            using (var siteReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/kernel/sites")
+            {
+                Content = JsonContent.Create(new
+                {
+                    site_code = "SITE-01",
+                    name = "Metro Cardiology Research Center",
+                    country = "US",
+                    institution_name = $"Founder Org {idx}",
+                }),
+            })
+            {
+                siteReq.Headers.Add("Idempotency-Key", $"idem-site-{idx}");
+                siteReq.Headers.Add(GatewayHeaders.ChangeReason, "Register clinical site in trial workspace");
+                using var siteResp = await founderClient.SendAsync(siteReq, ct);
+                string siteBody = await siteResp.Content.ReadAsStringAsync(ct);
+                siteResp.StatusCode.Should().Be(HttpStatusCode.Created, siteBody);
+            }
+
+            var siteInstitutions = await GetJsonAsync(founderClient, "/api/v1/kernel/organizations?kind=SiteInstitution", ct);
+            siteInstitutions.EnumerateArray().Should().HaveCount(2);
+            siteInstitutions.EnumerateArray().Should().OnlyContain(o => o.GetProperty("kind").GetString() == "SiteInstitution");
+            siteInstitutions.EnumerateArray().Should().ContainSingle(o => o.GetProperty("code").GetString() == sandboxInstitutionCode);
+            siteInstitutions.EnumerateArray().Should().ContainSingle(o => o.GetProperty("name").GetString() == $"Founder Org {idx}");
+
+            // 3. Link SITE-01 to CADENCE-101 via POST /api/v1/kernel/studies/CADENCE-101/sites
+            using (var linkReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/kernel/studies/CADENCE-101/sites")
+            {
+                Content = JsonContent.Create(new { site_code = "SITE-01" }),
+            })
+            {
+                linkReq.Headers.Add("Idempotency-Key", $"idem-link-{idx}");
+                linkReq.Headers.Add(GatewayHeaders.ChangeReason, "Link SITE-01 to CADENCE-101");
+                using var linkResp = await founderClient.SendAsync(linkReq, ct);
+                string linkBody = await linkResp.Content.ReadAsStringAsync(ct);
+                linkResp.StatusCode.Should().Be(HttpStatusCode.Created, linkBody);
+                JsonDocument.Parse(linkBody).RootElement.GetProperty("site_code").GetString().Should().Be("SITE-01");
+            }
+
+            var studySites = await GetJsonAsync(founderClient, "/api/v1/kernel/studies/CADENCE-101/sites", ct);
+            studySites.EnumerateArray().Should().ContainSingle(s => s.GetProperty("site_code").GetString() == "SITE-01");
+
+            // 4. Screen SUBJ-001 via POST /api/v1/kernel/enrollments/screen -> 201 Created without StudySiteUnknown
+            using var screenReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/kernel/enrollments/screen")
+            {
+                Content = JsonContent.Create(new
+                {
+                    participant_id = Guid.CreateVersion7(clock.UtcNow.AddSeconds(idx * 20)),
+                    study_code = "CADENCE-101",
+                    site_code = "SITE-01",
+                    subject_code = "SUBJ-001",
+                    screened_at = clock.UtcNow,
+                }),
+            };
+            screenReq.Headers.Add("Idempotency-Key", $"idem-screen-{idx}");
+            screenReq.Headers.Add(GatewayHeaders.ChangeReason, "Screen first participant at linked site");
+            using var screenResp = await founderClient.SendAsync(screenReq, ct);
+            string screenBody = await screenResp.Content.ReadAsStringAsync(ct);
+            screenResp.StatusCode.Should().Be(HttpStatusCode.Created, screenBody);
+        }
     }
 
     [Fact(DisplayName = "CompleteTierWithoutGrant_MasksStudy_AndExpiredTrialBlocksMutationsWith403WhilePreservingReadsAndBaselineSignatures")]
@@ -942,6 +1056,7 @@ public sealed class KernelTrialOnboardingPostgresTests(ExecutionFormModulePostgr
         new WebApplicationFactory<Cadence.Kernel.Host.Program>().WithWebHostBuilder(builder => builder
             .UseEnvironment(environment)
             .UseTestGatewaySecret()
+            .UseTestBiometricLivenessKey()
             .UseSetting("ConnectionStrings:cadence", fixture.ConnectionString)
             .ConfigureServices(services =>
             {

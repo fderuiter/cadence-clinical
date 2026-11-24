@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Application.Cgt;
 using Cadence.Apps.Execution.Domain.Cgt.Errors;
 using Cadence.Apps.Execution.Endpoints.Filters;
@@ -10,6 +11,7 @@ using Cadence.Security.DependencyInjection;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 
 namespace Cadence.Apps.Execution.Endpoints;
@@ -29,11 +31,22 @@ public static class CgtEndpoints
             CgtApheresisCreateRequest request,
             HttpContext httpContext,
             ICgtApplicationService service,
-            CancellationToken ct) =>
+            CancellationToken ct,
+            [FromServices] IKernelLockGuard? lockGuard = null) =>
         {
             if (ExecutionScopeGuard.RequireStudyAndSite(httpContext, request.StudyId, request.CollectionSiteId) is { } denied)
             {
                 return denied;
+            }
+
+            if (await ExecutionLockGuard.EnsureUnlockedAsync(
+                    lockGuard,
+                    request.StudyId,
+                    request.CollectionSiteId,
+                    request.SubjectId,
+                    ct).ConfigureAwait(false) is { } locked)
+            {
+                return locked;
             }
 
             try
@@ -53,11 +66,23 @@ public static class CgtEndpoints
             CgtMilestoneCreateRequest request,
             HttpContext httpContext,
             ICgtApplicationService service,
-            CancellationToken ct) =>
+            CancellationToken ct,
+            [FromServices] IKernelLockGuard? lockGuard = null) =>
         {
-            if (await GuardStudyAndStoredCocAsync(httpContext, service, request.StudyId, request.ChainOfCustodyId, ct) is { } denied)
+            var (denied, cocLockScope) = await GuardStudyAndLoadCocLockScopeAsync(httpContext, service, request.StudyId, request.ChainOfCustodyId, ct).ConfigureAwait(false);
+            if (denied is not null)
             {
                 return denied;
+            }
+
+            if (await ExecutionLockGuard.EnsureUnlockedAsync(
+                    lockGuard,
+                    cocLockScope?.StudyCode ?? request.StudyId,
+                    cocLockScope?.SiteCode,
+                    cocLockScope?.SubjectCode,
+                    ct).ConfigureAwait(false) is { } locked)
+            {
+                return locked;
             }
 
             try
@@ -77,11 +102,23 @@ public static class CgtEndpoints
             CgtManufacturingBindRequest request,
             HttpContext httpContext,
             ICgtApplicationService service,
-            CancellationToken ct) =>
+            CancellationToken ct,
+            [FromServices] IKernelLockGuard? lockGuard = null) =>
         {
-            if (await GuardStudyAndStoredCocAsync(httpContext, service, request.StudyId, request.ChainOfCustodyId, ct) is { } denied)
+            var (denied, cocLockScope) = await GuardStudyAndLoadCocLockScopeAsync(httpContext, service, request.StudyId, request.ChainOfCustodyId, ct).ConfigureAwait(false);
+            if (denied is not null)
             {
                 return denied;
+            }
+
+            if (await ExecutionLockGuard.EnsureUnlockedAsync(
+                    lockGuard,
+                    cocLockScope?.StudyCode ?? request.StudyId,
+                    cocLockScope?.SiteCode,
+                    cocLockScope?.SubjectCode,
+                    ct).ConfigureAwait(false) is { } locked)
+            {
+                return locked;
             }
 
             try
@@ -101,16 +138,28 @@ public static class CgtEndpoints
             CgtBedsideVerificationRequest request,
             HttpContext httpContext,
             ICgtApplicationService service,
-            CancellationToken ct) =>
+            CancellationToken ct,
+            [FromServices] IKernelLockGuard? lockGuard = null) =>
         {
             if (ExecutionScopeGuard.RequireStudyAndSite(httpContext, request.StudyId, request.SiteId) is { } requestDenied)
             {
                 return requestDenied;
             }
 
-            if (GuardCocScope(httpContext, await service.GetSubjectChainOfCustodyScopeAsync(request.StudyId, request.SubjectId, ct)) is { } cocDenied)
+            var storedScope = await service.GetSubjectChainOfCustodyScopeAsync(request.StudyId, request.SubjectId, ct).ConfigureAwait(false);
+            if (GuardCocScope(httpContext, storedScope) is { } cocDenied)
             {
                 return cocDenied;
+            }
+
+            if (await ExecutionLockGuard.EnsureUnlockedAsync(
+                    lockGuard,
+                    request.StudyId,
+                    request.SiteId,
+                    request.SubjectId,
+                    ct).ConfigureAwait(false) is { } locked)
+            {
+                return locked;
             }
 
             try
@@ -135,16 +184,28 @@ public static class CgtEndpoints
             CgtInfusionExecuteRequest request,
             HttpContext httpContext,
             ICgtApplicationService service,
-            CancellationToken ct) =>
+            CancellationToken ct,
+            [FromServices] IKernelLockGuard? lockGuard = null) =>
         {
             if (ExecutionScopeGuard.RequireStudyAndSite(httpContext, request.StudyId, request.SiteId) is { } requestDenied)
             {
                 return requestDenied;
             }
 
-            if (GuardCocScope(httpContext, await service.GetChainOfCustodyScopeAsync(request.ChainOfCustodyId, ct)) is { } cocDenied)
+            var cocScope = await service.GetChainOfCustodyScopeAsync(request.ChainOfCustodyId, ct).ConfigureAwait(false);
+            if (GuardCocScope(httpContext, cocScope) is { } cocDenied)
             {
                 return cocDenied;
+            }
+
+            if (await ExecutionLockGuard.EnsureUnlockedAsync(
+                    lockGuard,
+                    request.StudyId,
+                    request.SiteId,
+                    request.SubjectId,
+                    ct).ConfigureAwait(false) is { } locked)
+            {
+                return locked;
             }
 
             try
@@ -168,7 +229,8 @@ public static class CgtEndpoints
             CgtVialReturnReconciliationRequest request,
             HttpContext httpContext,
             ICgtApplicationService service,
-            CancellationToken ct) =>
+            CancellationToken ct,
+            [FromServices] IKernelLockGuard? lockGuard = null) =>
         {
             if (ExecutionScopeGuard.RequireStudyAndSite(httpContext, request.StudyId, request.SiteId) is { } requestDenied)
             {
@@ -178,6 +240,16 @@ public static class CgtEndpoints
             if (GuardCocScope(httpContext, await service.GetSubjectChainOfCustodyScopeAsync(request.StudyId, request.SubjectId, ct)) is { } cocDenied)
             {
                 return cocDenied;
+            }
+
+            if (await ExecutionLockGuard.EnsureUnlockedAsync(
+                    lockGuard,
+                    request.StudyId,
+                    request.SiteId,
+                    request.SubjectId,
+                    ct).ConfigureAwait(false) is { } locked)
+            {
+                return locked;
             }
 
             var result = await service.LogVialReturnAsync(request, ct);
@@ -190,7 +262,8 @@ public static class CgtEndpoints
             CgtDestructionCertificateCreateRequest request,
             HttpContext httpContext,
             ICgtApplicationService service,
-            CancellationToken ct) =>
+            CancellationToken ct,
+            [FromServices] IKernelLockGuard? lockGuard = null) =>
         {
             if (ExecutionScopeGuard.RequireStudyAndSite(httpContext, request.StudyId, request.SiteId) is { } requestDenied)
             {
@@ -201,6 +274,16 @@ public static class CgtEndpoints
                 && GuardCocScope(httpContext, await service.GetChainOfCustodyScopeAsync(cocId, ct)) is { } cocDenied)
             {
                 return cocDenied;
+            }
+
+            if (await ExecutionLockGuard.EnsureUnlockedAsync(
+                    lockGuard,
+                    request.StudyId,
+                    request.SiteId,
+                    request.SubjectId,
+                    ct).ConfigureAwait(false) is { } locked)
+            {
+                return locked;
             }
 
             try
@@ -310,7 +393,7 @@ public static class CgtEndpoints
         return routes;
     }
 
-    private static async Task<IResult?> GuardStudyAndStoredCocAsync(
+    private static async Task<(IResult? Denied, (string StudyCode, string? SiteCode, string? SubjectCode)? Scope)> GuardStudyAndLoadCocLockScopeAsync(
         HttpContext httpContext,
         ICgtApplicationService service,
         string studyId,
@@ -320,10 +403,22 @@ public static class CgtEndpoints
         if ((ExecutionScopeGuard.RequireStudy(httpContext, studyId)
              ?? ExecutionScopeGuard.ResolveSiteFilter(httpContext, null, out _, out _)) is { } callerDenied)
         {
-            return callerDenied;
+            return (callerDenied, null);
         }
 
-        return GuardCocScope(httpContext, await service.GetChainOfCustodyScopeAsync(chainOfCustodyId, ct).ConfigureAwait(false));
+        var scope = await service.GetChainOfCustodyScopeAsync(chainOfCustodyId, ct).ConfigureAwait(false);
+        var lockScope = await service.GetChainOfCustodyLockScopeAsync(chainOfCustodyId, ct).ConfigureAwait(false);
+        if (GuardCocScope(httpContext, scope) is { } cocDenied)
+        {
+            return (cocDenied, null);
+        }
+
+        if (lockScope is { } ls)
+        {
+            return (null, (ls.StudyCode, ls.SiteCode, ls.SubjectCode));
+        }
+
+        return scope is { } s ? (null, (s.StudyId, s.SiteId, null)) : (null, null);
     }
 
     private static IResult? GuardCocScope(HttpContext httpContext, (string StudyId, string SiteId)? scope) =>

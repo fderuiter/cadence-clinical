@@ -142,6 +142,7 @@ public sealed class ExecutionDbContext(DbContextOptions<ExecutionDbContext> opti
         modelBuilder.ApplyConfiguration(new BulkLabRangeImportJobConfiguration());
         modelBuilder.ApplyConfiguration(new TransactionalOutboxMessageConfiguration());
         modelBuilder.ApplyConfiguration(new ConsumedSignatureTokenConfiguration());
+        AuditLogEntryConfiguration.ConfigureChainIndexes(modelBuilder.Entity<AuditLogEntry>());
 
         modelBuilder.AddTransactionalOutboxEntities();
 

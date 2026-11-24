@@ -125,6 +125,45 @@ describe("Clinical Canvas shared composables and error alert primitive", () => {
       );
       expect(selection.selectedGenericNodeRef.value).toBe("");
     });
+
+    it("resolves canonical enrollment:<uuid> NodeRefs and upgrades legacy participant:<uuid> URLs when enrollment_ref is persisted", () => {
+      const enrollmentId = "0192f3c4-5e6a-7b8c-9d0e-000000000999";
+      const query = ref<LocationQuery>({
+        node: `enrollment:${enrollmentId}`,
+      });
+      const participant = {
+        id: PARTICIPANT_ID,
+        enrollment_ref: `enrollment:${enrollmentId}`,
+        subject_id: "SUBJ-101-001",
+        study_id: "CADENCE-101",
+        site_id: "SITE-01",
+        status: "ACTIVE",
+        active_protocol_version: "1.0",
+        enrollment_index: 1,
+      };
+
+      const selection = useCanvasSelection({
+        query: () => query.value,
+        knownParticipants: () => ({ [PARTICIPANT_ID]: participant }),
+        canResolveRemotely: () => true,
+      });
+
+      expect(selection.selectedParticipant.value?.subject_id).toBe(
+        "SUBJ-101-001"
+      );
+      expect(selection.inspectedNodeText.value).toBe(
+        `enrollment:${enrollmentId}`
+      );
+      expect(selection.selectedGenericNodeRef.value).toBe("");
+
+      query.value = { node: `participant:${PARTICIPANT_ID}` };
+      expect(selection.selectedParticipant.value?.subject_id).toBe(
+        "SUBJ-101-001"
+      );
+      expect(selection.inspectedNodeText.value).toBe(
+        `enrollment:${enrollmentId}`
+      );
+    });
   });
 
   describe("useRovingToolbar", () => {
@@ -232,7 +271,10 @@ describe("Clinical Canvas shared composables and error alert primitive", () => {
       vi.mocked(kernelApi.listStudySites).mockResolvedValue([
         {
           ref: `study_site:${SITE_ID}@1`,
+          study_site_id: SITE_ID,
+          study_site_ref: `study_site:${SITE_ID}@1`,
           study_ref: `study:${STUDY_ID}`,
+          study_code: "CAD-101",
           site_ref: "site:0192f3c4-5e6a-7b8c-9d0e-000000000021",
           site_code: "SITE-7",
           site_name: "Boston Medical",
@@ -241,6 +283,8 @@ describe("Clinical Canvas shared composables and error alert primitive", () => {
           institution_code: "INST-BOS",
           institution_name: "Boston Institution",
           status: "Linked",
+          is_active: true,
+          effective_versions: [],
         },
       ]);
 
@@ -258,7 +302,9 @@ describe("Clinical Canvas shared composables and error alert primitive", () => {
           kind: "study",
           code: "CAD-101",
           title: "Cadence 101",
+          detail: null,
           exact_code: true,
+          rank: 0,
         },
       ]);
       vi.mocked(kernelApi.getChildren).mockResolvedValue([
@@ -272,6 +318,7 @@ describe("Clinical Canvas shared composables and error alert primitive", () => {
             mask: null,
           },
           child_count: 0,
+          group: null,
         },
       ]);
       const kernelDecision = {

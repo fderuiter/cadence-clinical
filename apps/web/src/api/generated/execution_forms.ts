@@ -442,6 +442,22 @@ export interface components {
       collection_title?: null | string;
       /** @default true */
       can_sign: boolean;
+      /**
+       * Format: int32
+       * @default 0
+       */
+      open_query_count: number | string;
+      /**
+       * Format: int32
+       * @default 0
+       */
+      answered_query_count: number | string;
+      /**
+       * Format: int32
+       * @default 0
+       */
+      open_error_finding_count: number | string;
+      readiness_blockers?: null | string[];
     };
     ExecutionForms_FormSavedResponse: {
       /** Format: uuid */
@@ -567,6 +583,12 @@ export interface components {
        * @default 0
        */
       signature_count: number | string;
+      /**
+       * Format: int32
+       * @default 0
+       */
+      open_error_finding_count: number | string;
+      readiness_blockers?: null | string[];
     };
     ExecutionForms_FormValueRequest: {
       item_id: string;
@@ -1774,7 +1796,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["ExecutionForms_ProblemDetails"];
         };
       };
-      /** @description Conflict. Kernel errors: `K.Aggregate.AlreadyExists`, `K.Aggregate.ConcurrencyConflict`, `K.Command.IdempotencyConflict`, `K.Trust.TargetContentChanged`, `K.Trust.TargetNotSignable`. */
+      /** @description Conflict. Kernel errors: `K.Aggregate.AlreadyExists`, `K.Aggregate.ConcurrencyConflict`, `K.Collection.NotReadyToSign`, `K.Command.IdempotencyConflict`, `K.Trust.TargetContentChanged`, `K.Trust.TargetNotSignable`. */
       409: {
         headers: {
           [name: string]: unknown;
@@ -1785,6 +1807,15 @@ export interface operations {
       };
       /** @description Unprocessable Entity. Kernel errors: `K.Collection.SignatureMeaningInvalid`, `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`, `K.Trust.MethodRequired`. */
       422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["ExecutionForms_ProblemDetails"];
+        };
+      };
+      /** @description Locked. Kernel errors: `K.Assertion.Locked`. */
+      423: {
         headers: {
           [name: string]: unknown;
         };

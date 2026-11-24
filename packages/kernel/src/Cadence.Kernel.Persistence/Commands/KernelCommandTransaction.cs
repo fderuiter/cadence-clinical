@@ -21,6 +21,7 @@ using Cadence.Kernel.Persistence.IdentityVault;
 using Cadence.Kernel.Persistence.Lineage;
 using Cadence.Kernel.Persistence.Tenancy;
 using Cadence.Kernel.References;
+using Cadence.Kernel.Trust;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
@@ -78,7 +79,7 @@ internal sealed class KernelCommandTransaction(
     private const string DecisionDeniedEvent = "DecisionDenied";
 
     private readonly List<(object Event, DateTimeOffset? OccurredValid)> _events = [];
-    private readonly List<(NodeRef Input, LineageEdgeKind Kind, DateTimeOffset? ValidFrom)> _inputs = [];
+    private readonly List<(NodeRef Input, LineageEdgeKind Kind, DateTimeOffset? ValidFrom, NodeRef? Target)> _inputs = [];
     private readonly Dictionary<NodeRef, bool> _parts = [];
     private readonly List<(NodeRef From, NodeRef To, LineageEdgeKind Kind)> _partEdges = [];
     private readonly List<IIdentityVaultWrite> _vaultWrites = [];
@@ -227,7 +228,7 @@ internal sealed class KernelCommandTransaction(
         _events.Add((domainEvent, occurredValid));
     }
 
-    public void LinkInput(NodeRef input, LineageEdgeKind kind, DateTimeOffset? validFrom = null)
+    public void LinkInput(NodeRef input, LineageEdgeKind kind, DateTimeOffset? validFrom = null, NodeRef? target = null)
     {
         ArgumentNullException.ThrowIfNull(input);
         if (input.Version is null)
@@ -240,9 +241,9 @@ internal sealed class KernelCommandTransaction(
             throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unknown lineage edge kind.");
         }
 
-        if (!_inputs.Contains((input, kind, validFrom)))
+        if (!_inputs.Contains((input, kind, validFrom, target)))
         {
-            _inputs.Add((input, kind, validFrom));
+            _inputs.Add((input, kind, validFrom, target));
         }
     }
 
@@ -337,15 +338,7 @@ internal sealed class KernelCommandTransaction(
             AddProvenance("Committed", aggregate, _permit);
             Fault(CommitStage.ProvenanceStaged);
 
-            if (changed.Count == 0)
-            {
-                StageLineage(null);
-            }
-
-            foreach (var written in changed)
-            {
-                StageLineage(written, withParts: ReferenceEquals(written, aggregate));
-            }
+            StageAllLineage(changed, aggregate);
 
             Fault(CommitStage.LineageStaged);
 
@@ -357,15 +350,23 @@ internal sealed class KernelCommandTransaction(
 
             Fault(CommitStage.EventsStaged);
 
+            AuditEntryRecord? primaryAudit = null;
             if (changed.Count == 0)
             {
-                await AppendAuditAsync("NoChange", null, cancellationToken).ConfigureAwait(false);
+                primaryAudit = await AppendAuditAsync("NoChange", null, cancellationToken).ConfigureAwait(false);
             }
 
             foreach (var written in changed)
             {
-                await AppendAuditAsync(written.Action, written, cancellationToken).ConfigureAwait(false);
+                var appended = await AppendAuditAsync(written.Action, written, cancellationToken).ConfigureAwait(false);
+                primaryAudit ??= appended;
             }
+
+            await StageBiostatExportAuditAsync(
+                outcome: "Committed",
+                auditEntryHash: primaryAudit?.Hash ?? string.Empty,
+                failureReason: null,
+                cancellationToken).ConfigureAwait(false);
 
             Fault(CommitStage.AuditAppended);
 
@@ -458,7 +459,12 @@ internal sealed class KernelCommandTransaction(
             },
             KernelCommandPipelineJson.Options);
         AddEvent(DecisionDeniedEvent, 1, payload, occurredValid: null);
-        await AppendAuditAsync("Denied", aggregate: null, cancellationToken, changes: payload.GetRawText()).ConfigureAwait(false);
+        var deniedAudit = await AppendAuditAsync("Denied", aggregate: null, cancellationToken, changes: payload.GetRawText()).ConfigureAwait(false);
+        await StageBiostatExportAuditAsync(
+            outcome: "Denied",
+            auditEntryHash: deniedAudit.Hash,
+            failureReason: denial.Reason,
+            cancellationToken).ConfigureAwait(false);
 
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
@@ -493,7 +499,12 @@ internal sealed class KernelCommandTransaction(
                 conditions = refusal.Explanation?.Conditions.Select(c => new { c.Code, c.Description, c.Met, evidence = c.Evidence.Select(e => e.ToString()) }),
             },
             KernelCommandPipelineJson.Options);
-        await AppendAuditAsync("Refused", aggregate: null, cancellationToken, changes: payload.GetRawText()).ConfigureAwait(false);
+        var refusedAudit = await AppendAuditAsync("Refused", aggregate: null, cancellationToken, changes: payload.GetRawText()).ConfigureAwait(false);
+        await StageBiostatExportAuditAsync(
+            outcome: "Refused",
+            auditEntryHash: refusedAudit.Hash,
+            failureReason: refusal.Message,
+            cancellationToken).ConfigureAwait(false);
 
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
@@ -641,6 +652,14 @@ internal sealed class KernelCommandTransaction(
             return;
         }
 
+        if (type == typeof(FormVersionSnapshot)
+            && _claimed.All(c => c.Type == typeof(ProtocolVersion) || c.Type == typeof(FormVersionSnapshot))
+            && _claimed.Count(c => c.Type == typeof(ProtocolVersion)) == 1)
+        {
+            _claimed.Add((type, key));
+            return;
+        }
+
         if (_claimed.Count > 0 && !_claimed.Contains((type, key)))
         {
             var claimed = _claimed.First();
@@ -665,7 +684,18 @@ internal sealed class KernelCommandTransaction(
             .ToList();
         if (changed.Count > 1)
         {
-            changed = _scopeLocked ? OrderSignedLockAssertion(changed) : OrderFormSave(changed);
+            if (_scopeLocked)
+            {
+                changed = OrderSignedLockAssertion(changed);
+            }
+            else if (_collection is not null)
+            {
+                changed = OrderFormSave(changed);
+            }
+            else
+            {
+                changed = OrderProtocolApprovalSnapshots(changed);
+            }
         }
 
         return [.. changed.Select(c => Stamp(c.Entry, c.Module))];
@@ -719,6 +749,30 @@ internal sealed class KernelCommandTransaction(
         }
 
         return [changed.Single(c => ReferenceEquals(c.Entry.Entity, instance)), .. observations.OrderBy(o => ((Observation)o.Entry.Entity).Id)];
+    }
+
+    /// <summary>
+    /// The aggregates of an approved protocol version and its bound immutable <see cref="FormVersionSnapshot"/>s (ADR-2809).
+    /// </summary>
+    private static List<(EntityEntry<AggregateRootBase> Entry, string? Module)> OrderProtocolApprovalSnapshots(
+        List<(EntityEntry<AggregateRootBase> Entry, string? Module)> changed)
+    {
+        var protocolEntry = changed.SingleOrDefault(c => c.Module is null && c.Entry.State == EntityState.Modified && c.Entry.Entity is ProtocolVersion);
+        if (protocolEntry.Entry?.Entity is ProtocolVersion protocol)
+        {
+            var snapshots = changed.Where(c => c.Entry.Entity is FormVersionSnapshot).ToList();
+            if (snapshots.Count == changed.Count - 1
+                && snapshots.All(s => s.Module is null
+                    && s.Entry.State == EntityState.Added
+                    && ((FormVersionSnapshot)s.Entry.Entity).ProtocolVersionId == protocol.Id
+                    && ((FormVersionSnapshot)s.Entry.Entity).TenantId == protocol.TenantId
+                    && ((FormVersionSnapshot)s.Entry.Entity).StudyId == protocol.StudyId))
+            {
+                return [protocolEntry, .. snapshots.OrderBy(s => ((FormVersionSnapshot)s.Entry.Entity).Id)];
+            }
+        }
+
+        throw new InvalidOperationException($"K-TX-1: changed {changed.Count} aggregates.");
     }
 
     private ChangedAggregate Stamp(EntityEntry<AggregateRootBase> entry, string? module)
@@ -815,65 +869,92 @@ internal sealed class KernelCommandTransaction(
         });
 
     /// <summary>
-    /// Records the written object version as a lineage node and its inbound edges (spec §9.6, K-LIN-2): the inputs the
-    /// handler declared, plus <see cref="LineageEdgeKind.Supersedes"/> from the previous version on an update. A
-    /// derived object without an inbound edge, or inputs without an object to attach them to, is a handler defect and
-    /// aborts the commit (K-LIN-1).
+    /// Stages lineage nodes and edges for every aggregate the command wrote, verifying that every declared input and
+    /// part attaches to a written object version (K-LIN-2).
     /// </summary>
-    private void StageLineage(ChangedAggregate? aggregate, bool withParts = true)
+    private void StageAllLineage(IReadOnlyList<ChangedAggregate> changed, ChangedAggregate? primary)
     {
-        if (aggregate?.Subject is not { Version: { } version } subject || aggregate.Action == "Deleted")
+        if ((_parts.Count > 0 || _partEdges.Count > 0)
+            && (primary?.Subject is not { Version: not null } || primary.Action == "Deleted"))
         {
-            if (_inputs.Count > 0 || _parts.Count > 0 || _partEdges.Count > 0)
-            {
-                throw new InvalidOperationException(
-                    $"K-LIN-2: {execution.CommandType} declared lineage inputs or parts but wrote no object version to attach them to.");
-            }
+            throw new InvalidOperationException(
+                $"K-LIN-2: {execution.CommandType} declared lineage inputs or parts but wrote no object version to attach them to.");
+        }
 
+        if (_inputs.Exists(i => !changed.Any(w => MatchesAggregate(i.Target, w, ReferenceEquals(w, primary)))))
+        {
+            throw new InvalidOperationException(
+                $"K-LIN-2: {execution.CommandType} declared lineage inputs or parts but wrote no object version to attach them to.");
+        }
+
+        foreach (var written in changed)
+        {
+            StageLineage(written, isPrimary: ReferenceEquals(written, primary));
+        }
+    }
+
+    private static bool MatchesAggregate(NodeRef? target, ChangedAggregate written, bool isPrimary) =>
+        written.Subject is { Version: { } version } subject
+        && written.Action != "Deleted"
+        && (target is null
+            ? isPrimary
+            : target.Unversioned() == subject.Unversioned() && (target.Version is null || target.Version == version));
+
+    /// <summary>
+    /// Records the written object version as a lineage node and its inbound edges (spec §9.6, K-LIN-2): the inputs the
+    /// handler declared for this aggregate, plus <see cref="LineageEdgeKind.Supersedes"/> from the previous version on
+    /// an update. A derived object without an inbound edge is a handler defect and aborts the commit (K-LIN-1).
+    /// </summary>
+    private void StageLineage(ChangedAggregate written, bool isPrimary)
+    {
+        if (written.Subject is not { Version: { } version } subject || written.Action == "Deleted")
+        {
             return;
         }
 
-        if (_inputs.Exists(i => i.Input.Unversioned() == subject.Unversioned() && i.Input.Version >= version))
+        var scoped = _inputs.Where(i => MatchesAggregate(i.Target, written, isPrimary)).ToList();
+        if (scoped.Exists(i => i.Input.Unversioned() == subject.Unversioned() && i.Input.Version >= version))
         {
             throw new InvalidOperationException(
                 $"K-LIN: {execution.CommandType} declared {subject} as an input of itself or of an earlier version.");
         }
 
-        var inbound = new List<(NodeRef From, LineageEdgeKind Kind, DateTimeOffset? ValidFrom)>(_inputs);
-        if (aggregate.Action == "Updated")
+        var inbound = scoped.Select(i => (From: i.Input, i.Kind, i.ValidFrom)).ToList();
+        if (written.Action == "Updated")
         {
             inbound.Add((subject.AtVersion(version - 1), LineageEdgeKind.Supersedes, null));
         }
 
-        if (_proposal is { } proposal && proposal.Unversioned() != subject.Unversioned())
+        if (isPrimary && _proposal is { } proposal && proposal.Unversioned() != subject.Unversioned())
         {
             inbound.Add((proposal, LineageEdgeKind.ExecutedUnder, null));
         }
 
-        if (aggregate.Derived && inbound.Count == 0)
+        if (written.Derived && inbound.Count == 0)
         {
             throw new InvalidOperationException(
                 $"K-LIN-1: {execution.CommandType} wrote derived object {subject} without declaring its inputs.");
         }
 
+        var pinned = subject.AtVersion(version);
         db.LineageNodes.Add(new LineageNodeRecord
         {
             TenantId = Command.TenantId,
             Kind = subject.Kind,
             NodeId = subject.Id,
             Version = version,
-            Derived = aggregate.Derived,
+            Derived = written.Derived,
             ActivityId = execution.ActivityId,
             RecordedAt = execution.RecordedAt,
         });
-        foreach (var (from, kind, validFrom) in inbound)
+        foreach (var (from, kind, validFrom) in inbound.DistinctBy(e => (e.From, e.Kind)))
         {
-            AddEdge(from, subject.AtVersion(version), kind, validFrom);
+            AddEdge(from, pinned, kind, validFrom);
         }
 
-        if (withParts)
+        if (isPrimary)
         {
-            StageParts(subject.AtVersion(version));
+            StageParts(pinned);
         }
     }
 
@@ -981,7 +1062,7 @@ internal sealed class KernelCommandTransaction(
     /// Appends one link to the tenant's chain. The head row is created if missing and locked <c>FOR UPDATE</c>, so
     /// concurrent commands for one tenant serialise here and the chain never forks.
     /// </summary>
-    private async Task AppendAuditAsync(string action, ChangedAggregate? aggregate, CancellationToken cancellationToken, string? changes = null)
+    private async Task<AuditEntryRecord> AppendAuditAsync(string action, ChangedAggregate? aggregate, CancellationToken cancellationToken, string? changes = null)
     {
         var tenant = Command.TenantId.Value;
         await db.Database.ExecuteSqlAsync(
@@ -1012,6 +1093,121 @@ internal sealed class KernelCommandTransaction(
         db.AuditEntries.Add(link);
         head.LastSequence = link.Sequence;
         head.LastHash = link.Hash;
+        return link;
+    }
+
+    private async Task StageBiostatExportAuditAsync(
+        string outcome,
+        string auditEntryHash,
+        string? failureReason,
+        CancellationToken cancellationToken)
+    {
+        switch (Command)
+        {
+            case ExportStudySnapshot studyExport:
+                {
+                    var sha = outcome == "Committed"
+                        ? NormalizeSha256Hex(studyExport.Content.ContentHash, auditEntryHash)
+                        : auditEntryHash;
+                    var details = Serialize(new
+                    {
+                        command = execution.CommandType,
+                        outcome,
+                        artifactId = studyExport.ArtifactId.Value,
+                        artifactVersionId = studyExport.ArtifactVersionId.Value,
+                        format = studyExport.Format,
+                        lockFilter = studyExport.LockFilter,
+                        validAt = studyExport.ValidAt,
+                        knownAt = studyExport.KnownAt,
+                        isUnblinded = studyExport.IncludesUnblindedData,
+                        contentHash = studyExport.Content.ContentHash,
+                        auditEntryHash,
+                        reasonForChange = studyExport.ReasonForChange,
+                        failureReason,
+                    });
+                    db.BiostatExportAuditLogs.Add(new BiostatExportAuditLog
+                    {
+                        Id = Guid.CreateVersion7(execution.RecordedAt),
+                        TenantId = studyExport.TenantId,
+                        StudyId = studyExport.StudyId,
+                        EnrollmentId = null,
+                        ArtifactId = studyExport.ArtifactId,
+                        ActivityId = execution.ActivityId,
+                        Timestamp = execution.RecordedAt,
+                        UserId = execution.Actor.Id,
+                        Action = "EXPORT_STUDY_SNAPSHOT",
+                        Outcome = outcome,
+                        Format = studyExport.Format,
+                        LockFilter = studyExport.LockFilter,
+                        ValidAt = studyExport.ValidAt,
+                        KnownAt = studyExport.KnownAt,
+                        IsUnblinded = studyExport.IncludesUnblindedData,
+                        DetailsJson = details,
+                        Sha256Hash = sha,
+                        CreatedAt = execution.RecordedAt,
+                    });
+                    break;
+                }
+
+            case ExportEnrollmentCasebook casebookExport:
+                {
+                    var resolvedStudyId = casebookExport.StudyId;
+                    if (resolvedStudyId.IsEmpty)
+                    {
+                        var foundStudyId = await db.Enrollments.AsNoTracking()
+                            .Where(e => e.Id == casebookExport.EnrollmentId)
+                            .Select(e => (StudyId?)e.StudyId)
+                            .FirstOrDefaultAsync(cancellationToken)
+                            .ConfigureAwait(false);
+                        if (foundStudyId is { } sid)
+                        {
+                            resolvedStudyId = sid;
+                        }
+                    }
+
+                    var sha = outcome == "Committed"
+                        ? NormalizeSha256Hex(casebookExport.Content.ContentHash, auditEntryHash)
+                        : auditEntryHash;
+                    var details = Serialize(new
+                    {
+                        command = execution.CommandType,
+                        outcome,
+                        enrollmentId = casebookExport.EnrollmentId.Value,
+                        artifactId = casebookExport.ArtifactId.Value,
+                        artifactVersionId = casebookExport.ArtifactVersionId.Value,
+                        format = casebookExport.Format,
+                        validAt = casebookExport.ValidAt,
+                        knownAt = casebookExport.KnownAt,
+                        isUnblinded = casebookExport.IncludesUnblindedData,
+                        contentHash = casebookExport.Content.ContentHash,
+                        auditEntryHash,
+                        reasonForChange = casebookExport.ReasonForChange,
+                        failureReason,
+                    });
+                    db.BiostatExportAuditLogs.Add(new BiostatExportAuditLog
+                    {
+                        Id = Guid.CreateVersion7(execution.RecordedAt),
+                        TenantId = casebookExport.TenantId,
+                        StudyId = resolvedStudyId,
+                        EnrollmentId = casebookExport.EnrollmentId,
+                        ArtifactId = casebookExport.ArtifactId,
+                        ActivityId = execution.ActivityId,
+                        Timestamp = execution.RecordedAt,
+                        UserId = execution.Actor.Id,
+                        Action = "EXPORT_ENROLLMENT_CASEBOOK",
+                        Outcome = outcome,
+                        Format = casebookExport.Format,
+                        LockFilter = null,
+                        ValidAt = casebookExport.ValidAt,
+                        KnownAt = casebookExport.KnownAt,
+                        IsUnblinded = casebookExport.IncludesUnblindedData,
+                        DetailsJson = details,
+                        Sha256Hash = sha,
+                        CreatedAt = execution.RecordedAt,
+                    });
+                    break;
+                }
+        }
     }
 
     private void Fault(CommitStage stage) => faultInjector?.Invoke(stage);
@@ -1026,6 +1222,19 @@ internal sealed class KernelCommandTransaction(
     private static string KeyText(object id) => id is IEntityId entityId ? entityId.Value.ToString("D") : id.ToString()!;
 
     private static string Serialize(object value) => JsonSerializer.Serialize(value, KernelCommandPipelineJson.Options);
+
+    private static string NormalizeSha256Hex(string? candidate, string fallback)
+    {
+        if (string.IsNullOrWhiteSpace(candidate))
+        {
+            return fallback;
+        }
+
+        var trimmed = candidate.StartsWith(ContentHash.Prefix, StringComparison.OrdinalIgnoreCase)
+            ? candidate[ContentHash.Prefix.Length..]
+            : candidate;
+        return trimmed.Length <= 64 ? trimmed : trimmed[..64];
+    }
 
     private sealed record ChangedAggregate(string Type, string Id, long Version, string Action, string Changes, NodeRef? Subject, bool Derived);
 }

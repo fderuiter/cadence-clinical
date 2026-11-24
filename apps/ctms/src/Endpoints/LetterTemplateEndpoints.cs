@@ -40,8 +40,8 @@ public static class LetterTemplateEndpoints
         typeof(LetterTemplateEndpoints).Assembly,
         new Dictionary<string, string>(StringComparer.Ordinal)
         {
-            ["confirmation_letter"] = "confirmation_letter.liquid",
-            ["follow_up_letter"] = "follow_up_letter.liquid",
+            ["confirmation_letter"] = "confirmation_letter.html.liquid",
+            ["follow_up_letter"] = "follow_up_letter.html.liquid",
         });
 
     public static RouteGroupBuilder MapLetterTemplateEndpoints(this RouteGroupBuilder group)

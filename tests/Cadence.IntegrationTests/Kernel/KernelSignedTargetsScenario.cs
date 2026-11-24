@@ -124,6 +124,12 @@ internal sealed class KernelSignedTargetsScenario(KernelPostgresFixture fixture)
                 KernelCollectionScenario.Value(KernelCollectionScenario.Diastolic, KernelCollectionScenario.Mmhg(78))),
             ct);
         var formObservation = saved.Values.Single(v => v.ItemId == KernelCollectionScenario.Systolic).ObservationId;
+        foreach (var savedItem in saved.Values)
+        {
+            await forms.Protocol.OkAsync(
+                new VerifyObservation(tenant, AssertionId.New(), enrollment, savedItem.ObservationId, savedItem.Revision, KernelProtocolScenario.Key(), Reason),
+                ct);
+        }
 
         string collectionHash;
         await using (var db = fixture.CreateContext(tenant))

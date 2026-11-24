@@ -1,18 +1,15 @@
-import {
-  notifySubscriptionExpiredIfNeeded,
-  SUBSCRIPTION_EXPIRED_GUIDANCE,
-} from "../authorization.js";
-import { encodeChangeReason } from "../changeReason";
 import { unwrapResponse } from "../client";
 import {
   ASSERTION_ALREADY_LOCKED,
   ASSERTION_LOCKED,
   ASSERTION_SCOPE_NOT_READY,
   assertionErrorCode,
+  describeKernelError,
   extractKernelExplanation,
   KERNEL_AUTHORIZATION_DENIED,
   KERNEL_SUBSCRIPTION_EXPIRED,
   kernelClient,
+  signedMutationHeaders,
   streamKernelDownload,
   unversioned,
   type KernelSchemas,
@@ -25,6 +22,13 @@ export type KernelLockReadiness =
   KernelSchemas["Kernel_KernelLockReadinessResponse"];
 export type KernelLockBlocker =
   KernelSchemas["Kernel_KernelLockBlockerResponse"];
+export type KernelLockBlockerKind =
+  | "OpenQuery"
+  | "MissingRequiredItem"
+  | "UnverifiedValue"
+  | "UnsignedForm"
+  | "UnopenedVisit"
+  | "ErrorFinding";
 export type KernelLockKind = KernelSchemas["Kernel_LockKind"];
 export type KernelLockMeaning = "Approved" | "Responsibility";
 export type StudyExportFormat =
@@ -95,16 +99,26 @@ export interface KernelCasebookExportQuery {
   knownAt?: string;
 }
 
+/** Formats a concise context summary for a visible `KernelLockBlocker` item. */
+export function formatLockBlockerDetail(blocker: KernelLockBlocker): string {
+  if (blocker.masked) return "";
+  if (blocker.detail) return blocker.detail;
+  const parts: string[] = [];
+  if (blocker.subject_code) parts.push(blocker.subject_code);
+  if (blocker.collection_title) parts.push(blocker.collection_title);
+  const item = blocker.item_label || blocker.item_id;
+  if (item) parts.push(item);
+  if (blocker.rule_id) parts.push(`[${blocker.rule_id}]`);
+  if (blocker.query_text) parts.push(blocker.query_text);
+  return parts.join(" · ");
+}
+
 /** Actionable user-facing explanation when a lock apply or release call fails. */
 export function describeLockError(error: unknown): string {
   const code = assertionErrorCode(error);
   const status = (error as { status?: number | null } | null)?.status ?? null;
   if (code === KERNEL_SUBSCRIPTION_EXPIRED) {
-    notifySubscriptionExpiredIfNeeded(
-      status ?? 403,
-      (error as { data?: unknown } | null)?.data
-    );
-    return SUBSCRIPTION_EXPIRED_GUIDANCE;
+    return describeKernelError(error);
   }
   if (code === ASSERTION_SCOPE_NOT_READY) {
     const data =
@@ -144,7 +158,7 @@ export function describeLockError(error: unknown): string {
     if (parts.length > 0) {
       return parts.join(" ");
     }
-    return "This scope has open queries or missing required items that must be resolved before locking. Freeze remains available.";
+    return "This scope has open queries, missing required items, unverified values, unsigned forms, unopened scheduled visits, or unresolved error validation findings that must be resolved before locking. Freeze remains available.";
   }
   if (code === ASSERTION_ALREADY_LOCKED || status === 409) {
     return "That lock state already changed; reload and inspect the current locks.";
@@ -157,6 +171,33 @@ export function describeLockError(error: unknown): string {
   }
   return error instanceof Error ? error.message : String(error);
 }
+
+function buildExportParams(
+  init: Record<string, string>,
+  q: { asOf?: string; validAt?: string; knownAt?: string }
+): string {
+  const params = new URLSearchParams(init);
+  if (q.asOf) params.set("as_of", q.asOf);
+  if (q.validAt) params.set("valid_at", q.validAt);
+  if (q.knownAt) params.set("known_at", q.knownAt);
+  return params.toString();
+}
+
+const STUDY_EXPORT_EXT: Record<StudyExportFormat, string> = {
+  csv: "csv",
+  odm_xml: "odm.xml",
+  dataset_json: "dataset.json",
+  sas_bundle: "sas_bundle.zip",
+  r_bundle: "r_bundle.zip",
+  study_archive: "study_archive.zip",
+};
+
+const CASEBOOK_EXPORT_EXT: Record<CasebookExportFormat, string> = {
+  json: "casebook.json",
+  odm_xml: "casebook.odm.xml",
+  html: "casebook.html",
+  pdf: "casebook.pdf",
+};
 
 export const kernelLocksApi = {
   /** Lists active and historical Frozen and Locked assertions in a study, masked per caller visibility and blinding (GET /api/v1/kernel/studies/{studyRef}/locks). */
@@ -179,7 +220,7 @@ export const kernelLocksApi = {
     );
   },
 
-  /** Evaluates lock readiness (open queries and missing required items) for a study or child scope (`GET /api/v1/kernel/studies/{studyRef}/locks/readiness`). */
+  /** Evaluates all six lock readiness gates (open queries, missing required items, unverified values, unsigned forms, unopened scheduled visits, and unresolved error validation findings) for a study or child scope (`GET /api/v1/kernel/studies/{studyRef}/locks/readiness`). */
   getStudyLockReadiness(
     studyRef: string,
     scopeRef?: string
@@ -216,11 +257,7 @@ export const kernelLocksApi = {
           ...(lockId ? { lock_id: lockId } : {}),
           ...(attestationId ? { attestation_id: attestationId } : {}),
         },
-        headers: {
-          "X-Change-Reason": encodeChangeReason(reason),
-          "Idempotency-Key": idempotencyKey,
-          "X-Sig-Token": sigToken,
-        },
+        headers: signedMutationHeaders(reason, idempotencyKey, sigToken),
       })
     );
   },
@@ -245,11 +282,7 @@ export const kernelLocksApi = {
           ...(assertionId ? { assertion_id: assertionId } : {}),
           ...(attestationId ? { attestation_id: attestationId } : {}),
         },
-        headers: {
-          "X-Change-Reason": encodeChangeReason(reason),
-          "Idempotency-Key": idempotencyKey,
-          "X-Sig-Token": sigToken,
-        },
+        headers: signedMutationHeaders(reason, idempotencyKey, sigToken),
       })
     );
   },
@@ -263,26 +296,13 @@ export const kernelLocksApi = {
     validAt,
     knownAt,
   }: KernelStudyExportQuery): Promise<KernelStreamedArtifact> {
-    const cleanRef = unversioned(studyRef);
-    const params = new URLSearchParams({
-      format,
-      lock_filter: lockFilter,
-    });
-    if (asOf) params.set("as_of", asOf);
-    if (validAt) params.set("valid_at", validAt);
-    if (knownAt) params.set("known_at", knownAt);
-    const extByFormat: Record<StudyExportFormat, string> = {
-      csv: "csv",
-      odm_xml: "odm.xml",
-      dataset_json: "dataset.json",
-      sas_bundle: "sas_bundle.zip",
-      r_bundle: "r_bundle.zip",
-      study_archive: "study_archive.zip",
-    };
-    const ext = extByFormat[format] || "csv";
+    const qs = buildExportParams(
+      { format, lock_filter: lockFilter },
+      { asOf, validAt, knownAt }
+    );
     return streamKernelDownload(
-      `/api/v1/kernel/studies/${encodeURIComponent(cleanRef)}/exports?${params.toString()}`,
-      `study-export.${ext}`
+      `/api/v1/kernel/studies/${encodeURIComponent(unversioned(studyRef))}/exports?${qs}`,
+      `study-export.${STUDY_EXPORT_EXT[format] || "csv"}`
     );
   },
 
@@ -294,21 +314,10 @@ export const kernelLocksApi = {
     validAt,
     knownAt,
   }: KernelCasebookExportQuery): Promise<KernelStreamedArtifact> {
-    const cleanRef = unversioned(enrollmentRef);
-    const params = new URLSearchParams({ format });
-    if (asOf) params.set("as_of", asOf);
-    if (validAt) params.set("valid_at", validAt);
-    if (knownAt) params.set("known_at", knownAt);
-    const extByFormat: Record<CasebookExportFormat, string> = {
-      json: "casebook.json",
-      odm_xml: "casebook.odm.xml",
-      html: "casebook.html",
-      pdf: "casebook.pdf",
-    };
-    const ext = extByFormat[format] || "casebook.json";
+    const qs = buildExportParams({ format }, { asOf, validAt, knownAt });
     return streamKernelDownload(
-      `/api/v1/kernel/enrollments/${encodeURIComponent(cleanRef)}/casebook?${params.toString()}`,
-      `participant.${ext}`
+      `/api/v1/kernel/enrollments/${encodeURIComponent(unversioned(enrollmentRef))}/casebook?${qs}`,
+      `participant.${CASEBOOK_EXPORT_EXT[format] || "casebook.json"}`
     );
   },
 };

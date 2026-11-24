@@ -1,6 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
+using System.Net.Http;
+using System.Net.Http.Json;
+using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,6 +18,7 @@ using Cadence.Compliance;
 using Cadence.Kernel.Time;
 using Cadence.Templating;
 using Cadence.Testing;
+using Cadence.Testing.Security;
 using Cadence.Testing.Time;
 
 using FluentAssertions;
@@ -117,6 +122,70 @@ public sealed class VisitLetterPdfPipelineTests
             .And.Contain("Informed consent missing date stamp")
             .And.Contain("MAJOR")
             .And.Contain("Temperature log missing for Oct 01");
+    }
+
+    [Fact]
+    public async Task VisitLetterEndpoints_EscapeHtmlInjectionCanary_AcrossRenderCompileAndStoredRead()
+    {
+        const string Canary = "<div data-canary=\"ctms-finding-marker\">finding-marker</div>";
+        var ct = TestContext.Current.CancellationToken;
+
+        await using var factory = new CtmsStudySiteScopeIsolationTests.CtmsInMemoryWebFactory();
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<CtmsDbContext>();
+            var now = _clock.UtcNow;
+            db.CtmsMonitoringVisits.Add(new CtmsMonitoringVisit("VISIT-VERIFY-001")
+            {
+                StudyId = "STUDY-101",
+                SiteId = "SITE-01",
+                CraId = "CRA-01",
+                VisitType = "IMV",
+                ScheduledDate = now,
+                CreatedAt = now.UtcDateTime,
+                CreatedBy = "CRA-01",
+                ReasonForChange = "Seed monitoring visit for HTML encoding verification",
+                VersionIndex = 1,
+            });
+            await db.SaveChangesAsync(ct);
+        }
+
+        using var craClient = factory.CreateSignedClient("CRA", "CRA-01", TestSecurityContext.AllStudies, ["SITE-01"]);
+        using var auditorClient = factory.CreateSignedClient("Auditor", "AUD-01", ["STUDY-101"], []);
+
+        var renderResp = await craClient.PostAsJsonAsync(
+            "/api/v1/ctms/letters/render?templateName=confirmation_letter",
+            new { craId = "CRA-01", createdAt = "2026-11-19", studyId = $"STUDY-101 {Canary}", siteId = "SITE-01" },
+            ct);
+        renderResp.StatusCode.Should().Be(HttpStatusCode.OK);
+        string renderedHtml = await renderResp.Content.ReadAsStringAsync(ct);
+        renderedHtml.Should().NotContain(Canary).And.Contain("&lt;div data-canary=&quot;ctms-finding-marker&quot;&gt;");
+
+        using var compileReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ctms/letters/compile?templateName=follow_up_letter")
+        {
+            Content = JsonContent.Create(new
+            {
+                craId = "CRA-01",
+                createdAt = "2026-11-19",
+                studyId = "STUDY-101",
+                siteId = "SITE-01",
+                visitId = "VISIT-VERIFY-001",
+                findings = new[] { new { text = Canary, severity = "MINOR", resolutionStatus = "OPEN" } },
+            }),
+        };
+        compileReq.Headers.Add(
+            "X-Sig-Token",
+            TestSecurityContext.CreateSigToken("CRA-01", "/api/v1/ctms/letters/compile", "ctms.letter.compile", ["CRA"]));
+        var compileResp = await craClient.SendAsync(compileReq, ct);
+        compileResp.StatusCode.Should().Be(HttpStatusCode.OK);
+        var compiled = await compileResp.Content.ReadFromJsonAsync<VisitLetterCompilationResultDto>(ct);
+        Encoding.UTF8.GetString(Convert.FromBase64String(compiled!.PdfBase64))
+            .Should().NotContain(Canary).And.Contain("&lt;div data-canary=&quot;ctms-finding-marker&quot;&gt;");
+
+        var stored = await auditorClient.GetFromJsonAsync<GeneratedLetterResponseDto>(
+            "/api/v1/ctms/monitoring-visits/VISIT-VERIFY-001/letters/follow_up_letter", // pragma: allowlist secret
+            ct);
+        stored!.RenderedContent.Should().NotContain(Canary).And.Contain("&lt;div data-canary=&quot;ctms-finding-marker&quot;&gt;");
     }
 
     [Fact]

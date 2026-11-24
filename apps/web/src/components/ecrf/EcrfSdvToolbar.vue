@@ -14,9 +14,18 @@
     <dd data-testid="ecrf-form-status">
       <span v-if="form.complete" class="ecrf-form-complete">Complete</span>
       <span v-else class="ecrf-form-incomplete">
-        Incomplete: {{ form.missing_required.length }} required
-        {{ form.missing_required.length === 1 ? "item" : "items" }}
-        without a value ({{ form.missing_required.join(", ") }})
+        <template v-if="form.missing_required.length > 0">
+          Incomplete: {{ form.missing_required.length }} required
+          {{ form.missing_required.length === 1 ? "item" : "items" }}
+          without a value ({{ form.missing_required.join(", ") }})<template
+            v-if="nonMissingReadinessBlockers.length > 0"
+            >; {{ nonMissingReadinessBlockers.join("; ") }}</template
+          >
+        </template>
+        <template v-else-if="nonMissingReadinessBlockers.length > 0">
+          Incomplete: {{ nonMissingReadinessBlockers.join("; ") }}
+        </template>
+        <template v-else>Incomplete</template>
       </span>
     </dd>
   </dl>
@@ -217,24 +226,35 @@ const ancestorFormLocks = computed<CoveringScopeLockItem[]>(() =>
     `collection_instance:${props.form.form_id}`
   )
 );
+
+const nonMissingReadinessBlockers = computed(() =>
+  (props.form.readiness_blockers ?? []).filter(
+    (blocker) => !/required items? without a value/i.test(blocker)
+  )
+);
 </script>
 
 <style scoped>
 .ecrf-form-summary {
   display: grid;
-  grid-template-columns: max-content 1fr;
+  grid-template-columns: max-content minmax(0, 1fr);
   gap: 4px 12px;
   font-size: 0.85rem;
 }
 .ecrf-form-summary dt {
   font-weight: 600;
 }
+.ecrf-form-summary dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
 .ecrf-form-complete {
   color: var(--semantic-color-success-dark);
   font-weight: 600;
 }
 .ecrf-form-incomplete {
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
 }
 .ecrf-form-locks {
   background-color: var(--semantic-color-surface-header);
@@ -274,21 +294,6 @@ const ancestorFormLocks = computed<CoveringScopeLockItem[]>(() =>
 .ecrf-bulk-sdv-result--failed {
   color: var(--semantic-color-error-text-dark);
 }
-.ecrf-form-outcome {
-  border-radius: 6px;
-  padding: 8px 12px;
-  font-size: 0.85rem;
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-.ecrf-form-outcome--saved {
-  background-color: var(--semantic-color-success-bg-soft);
-  color: var(--semantic-color-success-dark);
-}
-.ecrf-form-outcome--failed {
-  background-color: var(--semantic-color-error-bg-soft);
-  color: var(--semantic-color-error-text-dark);
-}
 </style>
+
+<style scoped src="./ecrfFormBanners.css"></style>

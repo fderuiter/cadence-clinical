@@ -1970,6 +1970,10 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Migrations
                     b.Property<bool>("IsUnblinded")
                         .HasColumnType("boolean");
 
+                    b.Property<Guid?>("KernelEnrollmentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("kernel_enrollment_id");
+
                     b.Property<string>("KitReference")
                         .HasColumnType("text");
 
@@ -2034,6 +2038,9 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("TenantId");
+
+                    b.HasIndex("TenantId", "KernelEnrollmentId")
+                        .HasDatabaseName("IX_clinical_subjects_tenant_id_kernel_enrollment_id");
 
                     b.HasIndex("TenantId", "SubjectCode")
                         .IsUnique()
@@ -2578,6 +2585,11 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("TenantId");
+
+                    b.HasIndex("EntityName", "PredecessorHash");
+
+                    b.HasIndex("EntityName", "Timestamp", "VersionIndex", "Id")
+                        .IsDescending(false, true, true, true);
 
                     b.ToTable("AuditLogEntries");
                 });

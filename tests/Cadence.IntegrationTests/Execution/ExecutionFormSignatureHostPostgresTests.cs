@@ -11,7 +11,11 @@ using Cadence.IntegrationTests.Kernel;
 using Cadence.Kernel;
 using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
+using Cadence.Kernel.Evidence;
+using Cadence.Kernel.Execution;
+using Cadence.Kernel.References;
 using Cadence.Kernel.Time;
+using Cadence.Kernel.Trust;
 using Cadence.Modules.Execution.Endpoints;
 using Cadence.Security.Authentication;
 using Cadence.Testing;
@@ -158,6 +162,96 @@ public sealed class ExecutionFormSignatureHostPostgresTests(ExecutionFormModuleP
     }
 
     /// <summary>
+    /// Investigator sign-off succeeds under a covering <see cref="LockKind.Frozen"/> lock so closeout signatures can be
+    /// collected during soft freeze, whereas a covering <see cref="LockKind.Locked"/> lock rejects new signatures with
+    /// <c>423 K.Assertion.Locked</c> without writing orphan <c>Attestation</c> rows.
+    /// </summary>
+    [Fact(DisplayName = "HostSignature_AllowsSigningUnderFrozenLock_AndRefusesUnderCoveringLockedLock")]
+    [GxPRequirement("SRS-PRD-EDC-003")]
+    public async Task HostSignatureAllowsSigningUnderFrozenLockAndRefusesUnderCoveringLockedLock()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var (tenant, code, form) = await SeedAsync(ct);
+        using var investigator = Client(code, Investigator);
+
+        var readBeforeFreeze = await ReadAsync(investigator, form, ct);
+        var observation = ObservationId.FromGuid(readBeforeFreeze.Items.Single(i => i.ItemId == Systolic).ObservationId!.Value);
+
+        StudyId study;
+        EnrollmentId enrollment;
+        await using (var db = fixture.CreateContext(tenant))
+        {
+            var instance = await db.CollectionInstances.AsNoTracking().SingleAsync(c => c.Id == CollectionInstanceId.FromGuid(form), ct);
+            study = instance.StudyId;
+            enrollment = instance.EnrollmentId;
+        }
+
+        await _scenario.Protocol.OkAsync(
+            new VerifyObservation(tenant, AssertionId.New(), enrollment, observation, 1, KernelProtocolScenario.Key(), "SDV completed before freeze"),
+            ct);
+
+        var enrollmentScope = NodeRef.For(enrollment);
+        var frozen = await _scenario.Protocol.OkAsync(
+            await _scenario.Observations.LockAsync(tenant, study, enrollmentScope, ct, LockKind.Frozen),
+            ct);
+
+        var readWhileFrozen = await ReadAsync(investigator, form, ct);
+        var signedUnderFreeze = await SignAsync(
+            investigator,
+            form,
+            Token(Investigator, form),
+            "approved",
+            readWhileFrozen.ContentHash!,
+            HttpStatusCode.Created,
+            ct);
+        signedUnderFreeze.Superseded.Should().BeFalse();
+
+        await _scenario.Protocol.OkAsync(
+            await _scenario.Observations.ReleaseAsync(tenant, study, frozen.LockId, ct),
+            ct);
+
+        await _scenario.Protocol.OkAsync(
+            await _scenario.Observations.LockAsync(tenant, study, enrollmentScope, ct, LockKind.Locked),
+            ct);
+
+        int attestationsBeforeRefusal;
+        await using (var db = fixture.CreateContext(tenant))
+        {
+            attestationsBeforeRefusal = await db.Attestations.CountAsync(ct);
+        }
+
+        using (var refused = await investigator.SendAsync(SignRequest(form, Token(Investigator, form), "responsibility", readWhileFrozen.ContentHash!), ct))
+        {
+            refused.StatusCode.Should().Be((HttpStatusCode)423);
+            (await ProblemCodeAsync(refused, ct)).Should().Be(AssertionErrors.Locked.Code);
+        }
+
+        var directHandlerResult = await fixture.Sender.SendAsync(
+            new SignCollectionInstance(
+                tenant,
+                AttestationId.New(),
+                CollectionInstanceId.FromGuid(form),
+                enrollment,
+                AttestationMeaning.Responsibility,
+                readWhileFrozen.ContentHash!,
+                _scenario.Tick(),
+                FormSignatureEndpoints.StepUpMethod,
+                KernelProtocolScenario.Key(),
+                "Attempted post-lock handler signature"),
+            cancellationToken: ct);
+        directHandlerResult.Error.Should().NotBeNull();
+        directHandlerResult.Error!.Code.Should().Be(AssertionErrors.Locked.Code);
+
+        await using (var db = fixture.CreateContext(tenant))
+        {
+            (await db.Attestations.CountAsync(ct)).Should().Be(
+                attestationsBeforeRefusal,
+                "post-lock signature attempts must write zero new Attestation rows");
+        }
+    }
+
+    /// <summary>
     /// A tenant whose study has the vital signs form in force, one screened participant with a form whose systolic value is
     /// entered at revision 1, the coordinator granted to enter values and the investigator granted to sign at the
     /// participant's study site.
@@ -169,7 +263,7 @@ public sealed class ExecutionFormSignatureHostPostgresTests(ExecutionFormModuleP
         await _scenario.Protocol.OkAsync(
             new ProvisionTenant(tenant, code, "Execution signature host tenant", KernelProtocolScenario.Key(), KernelProtocolScenario.Reason), ct);
         var (_, study) = await _scenario.Protocol.NewStudyAsync(tenant, ct);
-        var version = await _scenario.EffectiveVersionAsync(tenant, study, ct);
+        var version = await _scenario.EffectiveVersionAsync(tenant, study, ct, requireDiastolic: false);
         var studySite = await _scenario.Observations.AddStudySiteAsync(tenant, study, ct);
         var enrollment = await _scenario.Observations.ScreenAsync(tenant, studySite, ct);
         foreach (var (person, capability) in new[] { (Crc, "collection.record"), (Investigator, "collection.sign") })
@@ -193,6 +287,7 @@ public sealed class ExecutionFormSignatureHostPostgresTests(ExecutionFormModuleP
     {
         _host ??= new WebApplicationFactory<Cadence.Kernel.Host.Program>().WithWebHostBuilder(builder => builder
             .UseTestGatewaySecret()
+            .UseTestBiometricLivenessKey()
             .UseSetting("ConnectionStrings:cadence", fixture.ConnectionString)
 
             // Every error the signature route returns must be one its command declares (ADR-2600 §4.5).

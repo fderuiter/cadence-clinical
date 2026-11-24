@@ -251,6 +251,195 @@ public sealed class PaymentsCallerAuthorizationTests : IAsyncDisposable
         audit.UserId.Should().Be("finance-1");
         audit.UserRoles.Should().Be("finance_officer", "the gateway signs the canonical role for the realm's \"Grants Manager\"");
         audit.CreatedBy.Should().Be("finance-1");
+
+        var tx = await db.ParticipantTransactions.AsNoTracking().SingleAsync(t => t.IdempotencyKey == "k-77", Ct);
+        tx.TransactionType.Should().Be("STIPEND_CREDIT");
+        tx.Amount.Should().Be(25.00m);
+        tx.CreatedBy.Should().Be("finance-1");
+
+        var updatedWallet = await db.ParticipantWallets.AsNoTracking().SingleAsync(w => w.Id == WalletId, Ct);
+        updatedWallet.CurrentBalance.Should().Be(125.00m);
+        updatedWallet.LifetimeStipends.Should().Be(25.00m);
+        updatedWallet.TaxableYtd.Should().Be(25.00m);
+        updatedWallet.LifetimeDisbursements.Should().Be(0m);
+    }
+
+    [Fact]
+    public async Task W9Verification_RequiresValidSubmission_AndEnforcesSeparationOfDuties()
+    {
+        await SeedAsync();
+        await using (var seed = OpenDb())
+        {
+            DateTimeOffset now = SystemClock.Instance.UtcNow;
+            seed.ParticipantWallets.AddRange(
+                new ParticipantWallet
+                {
+                    Id = "W-CANARY-UNSUB",
+                    SubjectId = "SUBJ-CANARY-UNSUB",
+                    StudyId = "S-1",
+                    SiteId = "SITE-1",
+                    CurrentBalance = 0m,
+                    Currency = "USD",
+                    Status = "ACTIVE",
+                    W9Status = "REQUIRED",
+                    TaxIdLastFour = null,
+                    CreatedAt = now,
+                    CreatedBy = "crc-seed",
+                    UpdatedAt = now,
+                },
+                new ParticipantWallet
+                {
+                    Id = "W-CANARY-SELF",
+                    SubjectId = "SUBJ-CANARY-SELF",
+                    StudyId = "S-1",
+                    SiteId = "SITE-1",
+                    CurrentBalance = 0m,
+                    Currency = "USD",
+                    Status = "ACTIVE",
+                    W9Status = "REQUIRED",
+                    TaxIdLastFour = null,
+                    CreatedAt = now,
+                    CreatedBy = "crc-seed",
+                    UpdatedAt = now,
+                });
+            await seed.SaveChangesAsync(Ct);
+        }
+
+        using var crcAlpha = SiteClient("crc-alpha", "SITE-1", "crc");
+        using var sitePi = SiteClient("pi-reviewer", "SITE-1", "investigator");
+
+        // 1. Unsubmitted W-9 (W9Status = "REQUIRED", TaxIdLastFour = null) must fail verification:
+        using var unsubResp = await crcAlpha.PostAsJsonAsync(
+            "/api/v1/payments/participant/wallets/W-CANARY-UNSUB/verify-w9",
+            new { notes = "canary-verify-without-w9-submission" },
+            Ct);
+        unsubResp.StatusCode.Should().Be(HttpStatusCode.Conflict);
+
+        // Seeded SUBMITTED wallet without a four-digit TaxIdLastFour must also fail verification:
+        using var missingTinResp = await sitePi.PostAsJsonAsync(
+            $"/api/v1/payments/participant/wallets/{WalletId}/verify-w9",
+            new { notes = "verify-missing-tin" },
+            Ct);
+        missingTinResp.StatusCode.Should().Be(HttpStatusCode.Conflict);
+
+        // Invalid W-9 submissions (blank legal name or malformed TIN suffix) must be rejected:
+        using var blankNameResp = await crcAlpha.PostAsJsonAsync(
+            "/api/v1/payments/participant/wallets/W-CANARY-SELF/submit-w9",
+            new { fullLegalName = "   ", taxIdLastFour = "1234", certifyAccurate = true },
+            Ct);
+        blankNameResp.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+
+        using var invalidTinResp = await crcAlpha.PostAsJsonAsync(
+            "/api/v1/payments/participant/wallets/W-CANARY-SELF/submit-w9",
+            new { fullLegalName = "Canary Participant", taxIdLastFour = "12A4", certifyAccurate = true },
+            Ct);
+        invalidTinResp.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+
+        // 2. Single CRC submitting and self-verifying W-9 must fail separation of duties:
+        using var submitResp = await crcAlpha.PostAsJsonAsync(
+            "/api/v1/payments/participant/wallets/W-CANARY-SELF/submit-w9",
+            new { fullLegalName = "Canary Participant", taxIdLastFour = "1234", certifyAccurate = true },
+            Ct);
+        submitResp.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using var selfVerifyResp = await crcAlpha.PostAsJsonAsync(
+            "/api/v1/payments/participant/wallets/W-CANARY-SELF/verify-w9",
+            new { notes = "canary-self-verified-by-submitter" },
+            Ct);
+        selfVerifyResp.StatusCode.Should().Be(HttpStatusCode.Conflict);
+
+        // At single-coordinator sites, an assigned site investigator holds payments_w9:verify and can verify the CRC's submission:
+        using var dualVerifyResp = await sitePi.PostAsJsonAsync(
+            "/api/v1/payments/participant/wallets/W-CANARY-SELF/verify-w9",
+            new { notes = "dual-verified-by-investigator" },
+            Ct);
+        dualVerifyResp.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        await using var db = OpenDb();
+        var verifiedWallet = await db.ParticipantWallets.AsNoTracking().SingleAsync(w => w.Id == "W-CANARY-SELF", Ct);
+        verifiedWallet.W9Status.Should().Be("VERIFIED");
+        verifiedWallet.TaxIdLastFour.Should().Be("1234");
+        verifiedWallet.W9VerifiedAt.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task DirectStipendDisbursement_RejectsNonPositiveOverCapOverThresholdAndUnverified600Ytd()
+    {
+        await SeedAsync();
+        await using (var seed = OpenDb())
+        {
+            DateTimeOffset now = SystemClock.Instance.UtcNow;
+            seed.ParticipantWallets.AddRange(
+                new ParticipantWallet
+                {
+                    Id = "W-CANARY-DIRECT",
+                    SubjectId = "SUBJ-CANARY-DIRECT-01",
+                    StudyId = "STUDY-CANARY-PAY-01",
+                    SiteId = "SITE-CANARY-01",
+                    CurrentBalance = 0m,
+                    AntiCoercionCap = 150.00m,
+                    AutoDisbursementThreshold = 100.00m,
+                    Currency = "USD",
+                    Status = "ACTIVE",
+                    W9Status = "NOT_REQUIRED",
+                    CreatedAt = now,
+                    CreatedBy = "crc-seed",
+                    UpdatedAt = now,
+                },
+                new ParticipantWallet
+                {
+                    Id = "W-CANARY-TAX",
+                    SubjectId = "SUBJ-CANARY-TAX-01",
+                    StudyId = "STUDY-CANARY-PAY-01",
+                    SiteId = "SITE-CANARY-01",
+                    CurrentBalance = 550.00m,
+                    LifetimeStipends = 550.00m,
+                    TaxableYtd = 550.00m,
+                    Currency = "USD",
+                    Status = "ACTIVE",
+                    W9Status = "SUBMITTED",
+                    TaxIdLastFour = "9876",
+                    CreatedAt = now,
+                    CreatedBy = "crc-seed",
+                    UpdatedAt = now,
+                });
+            await seed.SaveChangesAsync(Ct);
+        }
+
+        string before = await SnapshotAsync();
+        using var financeClient = Client("finance-1", "Grants Manager");
+
+        using var overCapResp = await financeClient.PostAsJsonAsync(
+            "/api/v1/payments/disburse",
+            new { subjectId = "SUBJ-CANARY-DIRECT-01", studyId = "STUDY-CANARY-PAY-01", siteId = "SITE-CANARY-01", amount = 5000.00m },
+            Ct);
+        overCapResp.StatusCode.Should().BeOneOf(HttpStatusCode.Conflict, HttpStatusCode.UnprocessableEntity);
+
+        using var overThresholdResp = await financeClient.PostAsJsonAsync(
+            "/api/v1/payments/disburse",
+            new { subjectId = "SUBJ-CANARY-DIRECT-01", studyId = "STUDY-CANARY-PAY-01", siteId = "SITE-CANARY-01", amount = 125.00m },
+            Ct);
+        overThresholdResp.StatusCode.Should().Be(HttpStatusCode.Conflict);
+
+        using var w9HoldResp = await financeClient.PostAsJsonAsync(
+            "/api/v1/payments/disburse",
+            new { subjectId = "SUBJ-CANARY-TAX-01", studyId = "STUDY-CANARY-PAY-01", siteId = "SITE-CANARY-01", amount = 75.00m },
+            Ct);
+        w9HoldResp.StatusCode.Should().Be(HttpStatusCode.Conflict);
+
+        using var negativeResp = await financeClient.PostAsJsonAsync(
+            "/api/v1/payments/participant/wallets/disburse",
+            new { subjectId = "SUBJ-CANARY-DIRECT-01", studyId = "STUDY-CANARY-PAY-01", siteId = "SITE-CANARY-01", amount = -250.00m },
+            Ct);
+        negativeResp.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        using var zeroResp = await financeClient.PostAsJsonAsync(
+            "/api/v1/payments/participant/wallets/disburse",
+            new { subjectId = "SUBJ-CANARY-DIRECT-01", studyId = "STUDY-CANARY-PAY-01", siteId = "SITE-CANARY-01", amount = 0m },
+            Ct);
+        zeroResp.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        (await SnapshotAsync()).Should().Be(before, "rejected direct disbursements must not mutate wallets, transactions, or audit rows");
     }
 
     [Fact]

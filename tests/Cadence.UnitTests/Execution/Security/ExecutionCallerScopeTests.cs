@@ -708,6 +708,9 @@ public sealed class ExecutionCallerScopeTests : IDisposable
         public string Protect(string arm, string purpose) =>
             (_inner ?? throw new InvalidOperationException("Inner protector not attached.")).Protect(arm, purpose);
 
+        public IReadOnlyList<string> ProtectBatch(IReadOnlyList<(string Arm, string Purpose)> items) =>
+            (_inner ?? throw new InvalidOperationException("Inner protector not attached.")).ProtectBatch(items);
+
         public string Reveal(string ciphertext, string purpose)
         {
             Interlocked.Increment(ref _revealCount);

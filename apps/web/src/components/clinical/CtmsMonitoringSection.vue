@@ -92,6 +92,7 @@
               <td>{{ visit.findings?.length ?? 0 }}</td>
               <td class="action-cell">
                 <button
+                  :id="`btn-visit-letters-${visit.id}`"
                   type="button"
                   class="btn btn-secondary btn-sm"
                   @click="viewLetters(visit)"
@@ -189,9 +190,10 @@
             }})
           </h4>
           <button
+            id="btn-close-monitoring-letters"
             type="button"
             class="btn btn-secondary btn-sm"
-            @click="selectedLettersVisit = null"
+            @click="closeLettersPanel"
           >
             Close
           </button>
@@ -202,8 +204,8 @@
         <ul v-else class="letter-list">
           <li v-for="letter in letters" :key="letter.id" class="letter-item">
             <strong>{{ formatClinicalEnum(letter.letter_type) }}</strong> ·
-            {{ letter.subject }}
-            <pre class="letter-body">{{ letter.body_markdown }}</pre>
+            {{ formatIsoDateShort(letter.created_at) }}
+            <pre class="letter-body">{{ letter.rendered_content }}</pre>
           </li>
         </ul>
       </div>
@@ -297,7 +299,7 @@
           <button
             type="button"
             class="btn btn-secondary"
-            @click="activeCompleteVisit = null"
+            @click="cancelComplete"
           >
             Cancel
           </button>
@@ -393,7 +395,7 @@
           <button
             type="button"
             class="btn btn-secondary"
-            @click="activeSignOffVisit = null"
+            @click="cancelSignOff"
           >
             Cancel
           </button>
@@ -462,7 +464,9 @@
 import { computed, onMounted, ref } from "vue";
 import {
   buildStepUpVerificationPayload,
+  handoffFocus,
   SIGNATURE_PASSWORD_INPUT_ATTRS,
+  useInlineFocusHandoff,
 } from "ui";
 import {
   ctmsApi,
@@ -480,6 +484,7 @@ import {
 } from "../../canvas/authority";
 import {
   formatIsoDateShort,
+  scopedWorkspaceSectionProps,
   useScopedWorkspaceSection,
 } from "../../composables/useScopedWorkspaceSection";
 import apiClient from "../../services/api";
@@ -507,72 +512,83 @@ interface StructuredFindingDraft {
   resolution_status: string;
 }
 
-const props = withDefaults(
-  defineProps<{
-    studyCode?: string;
-    siteId?: string;
-  }>(),
-  {
-    studyCode: "",
-    siteId: "",
-  }
-);
+type MonitoringVisitRow = MonitoringVisit & {
+  findings?: Array<{
+    text: string;
+    severity: string;
+    resolution_status?: string | null;
+  }> | null;
+};
 
-const newSiteId = ref("");
+const props = defineProps(scopedWorkspaceSectionProps);
+const workspace = useScopedWorkspaceSection(props, {
+  onStudyPropChange: () => void loadVisits(),
+  fallbackErrorTitle: "Monitoring visits could not be loaded",
+  fallbackErrorMessage: "Monitoring visits could not be loaded.",
+});
+const { authStore, toasts, syncActiveScope, recordLoadFailure } = workspace;
 const {
-  authStore,
-  toasts,
   assignedStudies,
   assignedSites,
   studyInput,
   siteInput,
+  newSiteId,
   loading,
   loaded,
   saving,
   loadError,
   scopeGuidance,
-  syncActiveScope,
-  recordLoadFailure,
-} = useScopedWorkspaceSection(props, {
-  onStudyPropChange: () => {
-    void loadVisits();
-  },
-  onSitePropChange: (val) => {
-    if (val) newSiteId.value = val;
-  },
-  fallbackErrorTitle: "Monitoring visits could not be loaded",
-  fallbackErrorMessage: "Monitoring visits could not be loaded.",
-});
+} = workspace;
 
-newSiteId.value = siteInput.value;
 const canSchedule = computed(() => canScheduleMonitoringVisits(authStore));
 const canComplete = computed(() => canCompleteMonitoringVisits(authStore));
 const canSignOff = computed(() => canSignOffMonitoringVisits(authStore));
 
-const visits = ref<MonitoringVisit[]>([]);
+const visits = ref<MonitoringVisitRow[]>([]);
 const newVisitType = ref("IMV");
 const newCraId = ref(authStore.userId || "cra_monitor");
 const newScheduledDate = ref("");
 const newReason = ref("");
 
-const activeCompleteVisit = ref<MonitoringVisit | null>(null);
+const activeCompleteVisit = ref<MonitoringVisitRow | null>(null);
 const completeActualDate = ref("");
 const completeFindingDesc = ref("");
 const structuredFindings = ref<StructuredFindingDraft[]>([]);
 const completeReason = ref("");
 
-const activeCompileVisit = ref<MonitoringVisit | null>(null);
+const activeCompileVisit = ref<MonitoringVisitRow | null>(null);
 const compileTemplateName = ref("follow_up_letter");
 const compileFinalize = ref(true);
 const compilePassword = ref("");
 const compileReason = ref("");
 const compiledLetters = ref<VisitLetterCompilationResult[]>([]);
 
-const activeSignOffVisit = ref<MonitoringVisit | null>(null);
+const activeSignOffVisit = ref<MonitoringVisitRow | null>(null);
 const signOffReason = ref("");
 
-const selectedLettersVisit = ref<MonitoringVisit | null>(null);
+const selectedLettersVisit = ref<MonitoringVisitRow | null>(null);
 const letters = ref<GeneratedVisitLetter[]>([]);
+
+const completeHandoff = useInlineFocusHandoff({
+  openTarget: "#complete-visit-date",
+  closeFallback: "#ctms-monitoring-title",
+  scrollIfOffscreen: true,
+});
+const compileHandoff = useInlineFocusHandoff({
+  openTarget: "#compile-letter-template",
+  closeFallback: "#ctms-monitoring-title",
+  scrollIfOffscreen: true,
+});
+const signOffHandoff = useInlineFocusHandoff({
+  openTarget: "#signoff-visit-reason",
+  closeFallback: "#ctms-monitoring-title",
+  scrollIfOffscreen: true,
+});
+const lettersHandoff = useInlineFocusHandoff({
+  openTarget: "#btn-close-monitoring-letters",
+  closeFallback: "#ctms-monitoring-title",
+  scrollIfOffscreen: true,
+});
 
 async function loadVisits() {
   const study = studyInput.value.trim();
@@ -641,11 +657,29 @@ async function scheduleVisit() {
 }
 
 function prepareComplete(visit: MonitoringVisit) {
+  completeHandoff.rememberTrigger(
+    `[data-testid="btn-complete-visit-${visit.id}"]`
+  );
+  activeCompileVisit.value = null;
+  activeSignOffVisit.value = null;
   activeCompleteVisit.value = visit;
   completeActualDate.value = new Date().toISOString().slice(0, 10);
   completeFindingDesc.value = "";
   structuredFindings.value = [];
   completeReason.value = "";
+  void completeHandoff.handoff("#complete-visit-date", {
+    scrollIfOffscreen: true,
+  });
+}
+
+function cancelComplete() {
+  const visitId = activeCompleteVisit.value?.id;
+  activeCompleteVisit.value = null;
+  completeReason.value = "";
+  void completeHandoff.restoreTrigger([
+    visitId ? `[data-testid="btn-complete-visit-${visitId}"]` : null,
+    "#ctms-monitoring-title",
+  ]);
 }
 
 function addStructuredFinding() {
@@ -658,6 +692,15 @@ function addStructuredFinding() {
 
 function removeStructuredFinding(index: number) {
   structuredFindings.value.splice(index, 1);
+  const remaining = structuredFindings.value.length;
+  void handoffFocus(
+    remaining > 0
+      ? [
+          `#finding-text-${Math.min(index, remaining - 1)}`,
+          "#btn-add-visit-finding",
+        ]
+      : ["#btn-add-visit-finding", "#complete-visit-date"]
+  );
 }
 
 async function confirmComplete() {
@@ -705,6 +748,13 @@ async function confirmComplete() {
       message: `${visit.visit_type} completed for ${visit.site_id}.`,
     });
     await loadVisits();
+    saving.value = false;
+    void completeHandoff.handoff([
+      `[data-testid="btn-signoff-visit-${visit.id}"]`,
+      `[data-testid="btn-compile-letter-${visit.id}"]`,
+      `[id="btn-visit-letters-${visit.id}"]`,
+      "#ctms-monitoring-title",
+    ]);
   } catch (err) {
     toasts.apiError("Visit could not be completed", err);
   } finally {
@@ -713,17 +763,30 @@ async function confirmComplete() {
 }
 
 function prepareCompileLetter(visit: MonitoringVisit) {
+  compileHandoff.rememberTrigger(
+    `[data-testid="btn-compile-letter-${visit.id}"]`
+  );
+  activeCompleteVisit.value = null;
+  activeSignOffVisit.value = null;
   activeCompileVisit.value = visit;
   compileTemplateName.value =
     visit.status === "SCHEDULED" ? "confirmation_letter" : "follow_up_letter";
   compileFinalize.value = true;
   compilePassword.value = "";
   compileReason.value = "";
+  void compileHandoff.handoff("#compile-letter-template", {
+    scrollIfOffscreen: true,
+  });
 }
 
 function cancelCompileLetter() {
+  const visitId = activeCompileVisit.value?.id;
   compilePassword.value = "";
   activeCompileVisit.value = null;
+  void compileHandoff.restoreTrigger([
+    visitId ? `[data-testid="btn-compile-letter-${visitId}"]` : null,
+    "#ctms-monitoring-title",
+  ]);
 }
 
 async function confirmCompileLetter() {
@@ -804,6 +867,14 @@ async function confirmCompileLetter() {
       title: "Visit letter compiled",
       message: `${compiled.letterId} (${compiled.status}) compiled.`,
     });
+    saving.value = false;
+    void compileHandoff.handoff([
+      `[data-testid="btn-download-letter-${compiled.letterId}"]`,
+      "#ctms-compiled-letters-container button:not([disabled])",
+      `[data-testid="btn-compile-letter-${visit.id}"]`,
+      `[id="btn-visit-letters-${visit.id}"]`,
+      "#ctms-monitoring-title",
+    ]);
   } catch (err) {
     toasts.apiError("Visit letter could not be compiled", err);
   } finally {
@@ -828,8 +899,26 @@ async function downloadCompiledLetter(letter: VisitLetterCompilationResult) {
 }
 
 function prepareSignOff(visit: MonitoringVisit) {
+  signOffHandoff.rememberTrigger(
+    `[data-testid="btn-signoff-visit-${visit.id}"]`
+  );
+  activeCompleteVisit.value = null;
+  activeCompileVisit.value = null;
   activeSignOffVisit.value = visit;
   signOffReason.value = "";
+  void signOffHandoff.handoff("#signoff-visit-reason", {
+    scrollIfOffscreen: true,
+  });
+}
+
+function cancelSignOff() {
+  const visitId = activeSignOffVisit.value?.id;
+  activeSignOffVisit.value = null;
+  signOffReason.value = "";
+  void signOffHandoff.restoreTrigger([
+    visitId ? `[data-testid="btn-signoff-visit-${visitId}"]` : null,
+    "#ctms-monitoring-title",
+  ]);
 }
 
 async function confirmSignOff() {
@@ -848,6 +937,12 @@ async function confirmSignOff() {
       message: `${visit.visit_type} visit for ${visit.site_id} signed off.`,
     });
     await loadVisits();
+    saving.value = false;
+    void signOffHandoff.handoff([
+      `[data-testid="btn-compile-letter-${visit.id}"]`,
+      `[id="btn-visit-letters-${visit.id}"]`,
+      "#ctms-monitoring-title",
+    ]);
   } catch (err) {
     toasts.apiError("Supervisory sign-off failed", err);
   } finally {
@@ -856,13 +951,26 @@ async function confirmSignOff() {
 }
 
 async function viewLetters(visit: MonitoringVisit) {
+  lettersHandoff.rememberTrigger(`[id="btn-visit-letters-${visit.id}"]`);
   selectedLettersVisit.value = visit;
   letters.value = [];
+  void lettersHandoff.handoff("#btn-close-monitoring-letters", {
+    scrollIfOffscreen: true,
+  });
   try {
     letters.value = await ctmsApi.listMonitoringVisitLetters(visit.id);
   } catch (err) {
     toasts.apiError("Monitoring visit letters could not be loaded", err);
   }
+}
+
+function closeLettersPanel() {
+  const visitId = selectedLettersVisit.value?.id;
+  selectedLettersVisit.value = null;
+  void lettersHandoff.restoreTrigger([
+    visitId ? `[id="btn-visit-letters-${visitId}"]` : null,
+    "#ctms-monitoring-title",
+  ]);
 }
 
 onMounted(() => {

@@ -246,6 +246,7 @@ export function parseRoleNormalization(
   const aliasBraceIdx = aliasesMatch.index + aliasesMatch[0].length - 1;
   const { body: aliasBody } = extractBalancedBraces(clean, aliasBraceIdx);
 
+  /** @type {Record<string, string>} */
   const roleAliases = {};
   for (const m of aliasBody.matchAll(/\["([^"]+)"\]\s*=\s*([^,\r\n}]+)/g)) {
     const rawKey = m[1].trim().toLowerCase();
@@ -514,14 +515,26 @@ export function parsePermissionMatrix(rbacDir = SOURCE_PATHS.rbacDir) {
     const afterPi = ctorBody.slice(
       piBaseCloneMatch.index + piBaseCloneMatch[0].length
     );
-    for (const overMatch of afterPi.matchAll(
-      /piBase\["([^"]+)"\]\s*=\s*\[([^\]]*)\]\s*;/g
+    for (const piStmtMatch of afterPi.matchAll(
+      /piBase\["([^"]+)"\]\s*(?:=\s*\[([^\]]*)\]|(?:\.UnionWith\(\s*\[([^\]]*)\]\s*\)))\s*;/g
     )) {
-      const resource = overMatch[1].toLowerCase();
-      const actions = splitTopLevelArgs(overMatch[2]).map((a) =>
-        resolveStringExpr(a).toLowerCase()
-      );
-      piBucket.set(resource, new Set(actions));
+      const resource = piStmtMatch[1].toLowerCase();
+      if (piStmtMatch[2] !== undefined) {
+        const actions = splitTopLevelArgs(piStmtMatch[2]).map((a) =>
+          resolveStringExpr(a).toLowerCase()
+        );
+        piBucket.set(resource, new Set(actions));
+      } else if (piStmtMatch[3] !== undefined) {
+        const actions = splitTopLevelArgs(piStmtMatch[3]).map((a) =>
+          resolveStringExpr(a).toLowerCase()
+        );
+        let existing = piBucket.get(resource);
+        if (!existing) {
+          existing = new Set();
+          piBucket.set(resource, existing);
+        }
+        for (const action of actions) existing.add(action);
+      }
     }
     for (const targetMatch of afterPi.matchAll(
       /_rolePermissions\[([^\]]+)\]\s*=\s*ClonePermissions\(\s*piBase\s*\)\s*;/g
@@ -532,6 +545,7 @@ export function parsePermissionMatrix(rbacDir = SOURCE_PATHS.rbacDir) {
   }
 
   // Build deterministic plain objects
+  /** @type {Record<string, Record<string, string[]>>} */
   const rolePermissions = {};
   const permissionRolesMap = new Map();
 
@@ -554,6 +568,7 @@ export function parsePermissionMatrix(rbacDir = SOURCE_PATHS.rbacDir) {
     rolePermissions[role] = resourcesObj;
   }
 
+  /** @type {Record<string, string[]>} */
   const permissionRoles = {};
   for (const permKey of [...permissionRolesMap.keys()].sort()) {
     permissionRoles[permKey] = [...permissionRolesMap.get(permKey)].sort();
@@ -688,13 +703,13 @@ export async function renderCanvasContractFiles() {
       path.join(CANVAS_GENERATED_DIR, "permissions.ts"),
       GENERATED_HEADER("packages/security/src/Rbac/PermissionMatrix*.cs") +
         `/** Canonical role -> resource -> allowed actions from \`Cadence.Security.Rbac.PermissionMatrix\`. */\n` +
-        `export const ROLE_PERMISSIONS: Readonly<Record<string, Readonly<Record<string, readonly string[]>>>> = Object.freeze(${JSON.stringify(
+        `export const ROLE_PERMISSIONS: Readonly<Record<string, Readonly<Record<string, readonly string[]>>>> = /*#__PURE__*/ Object.freeze(${JSON.stringify(
           rolePermissions,
           null,
           2
         )});\n\n` +
         `/** \`resource:action\` -> canonical roles holding that permission in \`PermissionMatrix\`. */\n` +
-        `export const PERMISSION_ROLES: Readonly<Record<string, readonly string[]>> = Object.freeze(${JSON.stringify(
+        `export const PERMISSION_ROLES: Readonly<Record<string, readonly string[]>> = /*#__PURE__*/ Object.freeze(${JSON.stringify(
           permissionRoles,
           null,
           2

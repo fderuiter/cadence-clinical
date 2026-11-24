@@ -69,8 +69,13 @@
     </div>
 
     <template v-if="effectiveCanManageParticipants">
-      <h3 id="inspector-state-change-title">Change state</h3>
-      <p v-if="!changes.targets.length" id="state-change-final" class="note">
+      <h3 id="inspector-state-change-title" tabindex="-1">Change state</h3>
+      <p
+        v-if="!changes.targets.length"
+        id="state-change-final"
+        class="note"
+        tabindex="-1"
+      >
         {{ finalNote }}
       </p>
       <template v-else>
@@ -128,7 +133,7 @@
         </p>
       </template>
     </template>
-    <h3 v-else id="inspector-state-change-title" class="sr-only">
+    <h3 v-else id="inspector-state-change-title" class="sr-only" tabindex="-1">
       Emergency unblinding
     </h3>
 
@@ -144,7 +149,7 @@
             id="btn-toggle-emergency-unblind"
             type="button"
             class="btn btn-secondary btn-sm"
-            @click="unblindOpen = !unblindOpen"
+            @click="toggleEmergencyUnblind"
           >
             {{ unblindOpen ? "Cancel" : "Emergency unblind" }}
           </button>
@@ -188,10 +193,9 @@
     <SignatureCaptureModal
       v-if="hasStepUpCapableAction"
       :is-open="activeSignatureFlow !== null"
+      :fallback-focus="signatureModalFallbackFocus"
       :username="authStore.user?.username || ''"
-      :signer-name="
-        authStore.user?.displayName || authStore.user?.username || ''
-      "
+      :signer-name="signerFullName"
       :signer-role="signatureModalSignerRole"
       :reasons="signatureModalReasons"
       :action-url="signatureModalActionUrl"
@@ -204,6 +208,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
+import { handoffFocus, useInlineFocusHandoff } from "ui";
 import type { SubjectSummary } from "../../api/executionApi";
 import { canUnblindParticipant } from "../../canvas/authority";
 import {
@@ -233,10 +238,15 @@ import SignatureCaptureModal from "../SignatureCaptureModal.vue";
  * and enforces Part 11 step-up electronic signatures with >= 50-character clinical justifications on
  * participant withdrawal and emergency unblinding (#4943).
  */
-const props = defineProps<{
-  participant: SubjectSummary;
-  canManageParticipants?: boolean;
-}>();
+const props = withDefaults(
+  defineProps<{
+    participant: SubjectSummary;
+    canManageParticipants?: boolean;
+  }>(),
+  {
+    canManageParticipants: true,
+  }
+);
 
 type SignatureFlow = "randomize" | "withdraw" | "unblind";
 
@@ -259,6 +269,15 @@ const UNBLIND_SIGNING_REASONS = [
 ];
 
 const authStore = useAuthStore();
+const signerFullName = computed(() => {
+  const identity = authStore.user;
+  if (!identity) return "";
+  const full = [identity.firstName, identity.lastName]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+  return full || identity.username || "";
+});
 const canvas = useStudyCanvasStore();
 const target = ref("");
 const reason = ref("");
@@ -270,6 +289,15 @@ const activeSignatureFlow = ref<SignatureFlow | null>(null);
 
 const unblindOpen = ref(false);
 const unblindReason = ref("");
+const unblindHandoff = useInlineFocusHandoff({
+  openTarget: "#emergency-unblind-reason",
+  closeFallback: [
+    "#btn-toggle-emergency-unblind",
+    "#state-change-final",
+    "#inspector-state-change-title",
+  ],
+  scrollIfOffscreen: true,
+});
 
 const changes = computed(() =>
   participantStateChanges(props.participant.status)
@@ -341,6 +369,16 @@ const signatureModalActionUrl = computed(() =>
     : subjectStateAction(props.participant.id)
 );
 
+const signatureModalFallbackFocus = computed(() => {
+  if (activeSignatureFlow.value === "unblind") {
+    return "#btn-toggle-emergency-unblind";
+  }
+  if (activeSignatureFlow.value === "withdraw") {
+    return "#state-change-final";
+  }
+  return "#state-change-target";
+});
+
 const signatureModalSemanticAction = computed(() => {
   if (activeSignatureFlow.value === "unblind") {
     return UNBLIND_SUBJECT_SEMANTIC_ACTION;
@@ -372,6 +410,32 @@ function addStratFactor() {
 
 function removeStratFactor(index: number) {
   stratFactors.value.splice(index, 1);
+  const remaining = stratFactors.value.length;
+  void handoffFocus(
+    remaining > 0
+      ? [
+          `#strat-factor-key-${Math.min(index, remaining - 1)}`,
+          "#btn-add-strat-factor",
+        ]
+      : ["#btn-add-strat-factor", "#inspector-state-change-title"]
+  );
+}
+
+function toggleEmergencyUnblind() {
+  if (unblindOpen.value) {
+    unblindOpen.value = false;
+    void unblindHandoff.restoreTrigger([
+      "#btn-toggle-emergency-unblind",
+      "#state-change-final",
+      "#inspector-state-change-title",
+    ]);
+  } else {
+    unblindHandoff.rememberTrigger("#btn-toggle-emergency-unblind");
+    unblindOpen.value = true;
+    void unblindHandoff.handoff("#emergency-unblind-reason", {
+      scrollIfOffscreen: true,
+    });
+  }
 }
 
 async function submit() {
@@ -385,7 +449,21 @@ async function submit() {
   }
   busy.value = true;
   try {
-    await changeParticipantStateMutation(canvas, props.participant, state, why);
+    const ok = await changeParticipantStateMutation(
+      canvas,
+      props.participant,
+      state,
+      why
+    );
+    if (ok) {
+      busy.value = false;
+      void handoffFocus([
+        "#state-change-final",
+        "#state-change-target",
+        "#btn-toggle-emergency-unblind",
+        "#inspector-state-change-title",
+      ]);
+    }
   } finally {
     busy.value = false;
   }
@@ -432,6 +510,13 @@ async function handleRandomizeSigned(sigToken: string, signingReason: string) {
     activeSignatureFlow.value = null;
     randomizeReason.value = "";
     stratFactors.value = [];
+    busy.value = false;
+    void handoffFocus([
+      "#state-change-target",
+      "#state-change-final",
+      "#btn-toggle-emergency-unblind",
+      "#inspector-state-change-title",
+    ]);
     return { kind: "signed" };
   } finally {
     busy.value = false;
@@ -458,6 +543,13 @@ async function handleWithdrawSigned(sigToken: string, signingReason: string) {
     activeSignatureFlow.value = null;
     target.value = "";
     reason.value = "";
+    busy.value = false;
+    void handoffFocus([
+      "#state-change-final",
+      "#state-change-target",
+      "#btn-toggle-emergency-unblind",
+      "#inspector-state-change-title",
+    ]);
     return { kind: "signed" };
   } finally {
     busy.value = false;
@@ -484,6 +576,12 @@ async function handleUnblindSigned(sigToken: string, signingReason: string) {
     activeSignatureFlow.value = null;
     unblindOpen.value = false;
     unblindReason.value = "";
+    busy.value = false;
+    void unblindHandoff.handoff([
+      "#state-change-final",
+      "#btn-toggle-emergency-unblind",
+      "#inspector-state-change-title",
+    ]);
     return { kind: "signed" };
   } finally {
     busy.value = false;

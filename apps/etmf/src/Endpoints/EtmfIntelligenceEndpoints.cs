@@ -214,6 +214,14 @@ public static class EtmfIntelligenceEndpoints
         [FromBody] ClassifyRequest request,
         [FromServices] IClock clock)
     {
+        if (!TmfDocument.IsValidPathSegment(request.Filename))
+        {
+            return Task.FromResult<IResult>(TypedResults.BadRequest(new
+            {
+                error = "filename must be a single valid file name without path separators, control characters, or '.' / '..' segments."
+            }));
+        }
+
         var report = PerformClassification(
             docId: null,
             filename: request.Filename,
@@ -243,6 +251,14 @@ public static class EtmfIntelligenceEndpoints
         if (CheckStudyAndOptionalSiteScope(httpContext, request.StudyId, request.SiteId) is { } scopeDenied)
         {
             return scopeDenied;
+        }
+
+        if (!TmfDocument.IsValidPathSegment(request.Filename))
+        {
+            return TypedResults.BadRequest(new
+            {
+                error = "filename must be a single valid file name without path separators, control characters, or '.' / '..' segments."
+            });
         }
 
         if (!TryDecodeDocumentPayload(request.ContentBase64, request.Content, out var payloadBytes, out var textExcerpt, out var payloadError))
@@ -811,7 +827,7 @@ public static class EtmfIntelligenceEndpoints
             }
         }
 
-        if (targetZone <= 0 || string.IsNullOrWhiteSpace(targetSection) || string.IsNullOrWhiteSpace(targetArtifactType))
+        if (targetZone <= 0 || !TmfDocument.IsValidPathSegment(targetSection) || string.IsNullOrWhiteSpace(targetArtifactType))
         {
             return TypedResults.BadRequest(new { error = "Valid zone, section, and artifact_type are required for taxonomy updates." });
         }
@@ -871,6 +887,22 @@ public static class EtmfIntelligenceEndpoints
         if (CheckStudyAndOptionalSiteScope(httpContext, request.StudyId, request.SiteId) is { } scopeDenied)
         {
             return scopeDenied;
+        }
+
+        if (!TmfDocument.IsValidPathSegment(request.Filename))
+        {
+            return TypedResults.BadRequest(new
+            {
+                error = "filename must be a single valid file name without path separators, control characters, or '.' / '..' segments."
+            });
+        }
+
+        if (request.Section is not null && !TmfDocument.IsValidPathSegment(request.Section))
+        {
+            return TypedResults.BadRequest(new
+            {
+                error = "section must be a single valid taxonomy section segment without path separators, control characters, or '.' / '..' segments."
+            });
         }
 
         string effectiveReason = ResolveChangeReason(request.ReasonForChange, httpContext) ?? "Initial filing";
@@ -1138,15 +1170,21 @@ public static class EtmfIntelligenceEndpoints
             query = query.Where(d => d.Zone == request.Zone.Value);
         }
 
-        var matchingDocs = (await query
-            .OrderBy(d => d.Zone)
-            .ThenBy(d => d.Section)
-            .ThenBy(d => d.Filename)
-            .ToListAsync(ct))
-            .Where(d => string.IsNullOrWhiteSpace(d.SiteId) || ClinicalScopeGuard.CanAccessSite(httpContext, d.SiteId))
-            .ToList();
+        if (ClinicalScopeGuard.IsSiteBound(principal))
+        {
+            var allowedSites = principal!.AssignedSites
+                .Where(s => !string.IsNullOrWhiteSpace(s))
+                .Select(s => s.Trim().ToUpperInvariant())
+                .Distinct(StringComparer.Ordinal)
+                .ToList();
 
-        int count = matchingDocs.Count;
+            query = query.Where(d =>
+                d.SiteId == null
+                || d.SiteId.Trim().Length == 0
+                || allowedSites.Contains(d.SiteId.Trim().ToUpper()));
+        }
+
+        int count = await query.CountAsync(ct);
         var studyId = request.StudyId;
 
         // Requirement 2:
@@ -1154,61 +1192,73 @@ public static class EtmfIntelligenceEndpoints
         // If count > 50 or IsFullBinder == true -> enqueue background job and return 202 Accepted
         if (count <= 50 && !request.IsFullBinder)
         {
-            var exportId = "EXP-" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
-            var now = clock.UtcNow;
-            var zipBytes = await EtmfExportPackager.CreateZipArchiveAsync(
-                exportId,
-                studyId,
-                matchingDocs,
-                storage,
-                now,
-                ct: ct);
+            IReadOnlyList<TmfDocument> matchingDocs = count == 0
+                ? Array.Empty<TmfDocument>()
+                : await query
+                    .OrderBy(d => d.Zone)
+                    .ThenBy(d => d.Section)
+                    .ThenBy(d => d.Filename)
+                    .ThenBy(d => d.Id)
+                    .ToListAsync(ct);
 
-            var filename = $"etmf_export_{studyId}_{now:yyyyMMdd_HHmmss}.zip";
-            return TypedResults.File(zipBytes, "application/zip", filename);
-        }
-        else
-        {
-            var jobId = "JOB-" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
-            var user = Caller(httpContext);
-            var now = clock.UtcNow;
-
-            var job = new TmfExportJob(jobId)
+            if (matchingDocs.Count <= 50)
             {
-                StudyId = studyId,
-                RequestedBy = user,
-                Status = "QUEUED",
-                ProgressPercentage = 0.0,
-                TotalDocuments = count,
-                ProcessedDocuments = 0,
-                CreatedAt = now.UtcDateTime,
-                ReasonForChange = "Study binder bulk export request"
-            };
+                var exportId = "EXP-" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
+                var syncNow = clock.UtcNow;
+                var zipBytes = await EtmfExportPackager.CreateZipArchiveAsync(
+                    exportId,
+                    studyId,
+                    matchingDocs,
+                    storage,
+                    syncNow,
+                    ct: ct);
 
-            dbContext.TmfExportJobs.Add(job);
-            await dbContext.SaveChangesAsync(ct);
+                var filename = $"etmf_export_{studyId}_{syncNow:yyyyMMdd_HHmmss}.zip";
+                return TypedResults.File(zipBytes, "application/zip", filename);
+            }
 
-            await exportQueue.EnqueueAsync(jobId, CallerScope.TenantId(httpContext), ct);
-
-            return TypedResults.Accepted(
-                uri: $"/api/v1/etmf/export-jobs/{jobId}",
-                value: new
-                {
-                    job_id = jobId,
-                    study_id = job.StudyId,
-                    requested_by = user,
-                    status = "QUEUED",
-                    progress_percentage = 0.0,
-                    total_documents = count,
-                    processed_documents = 0,
-                    download_url = (string?)null,
-                    expires_at = (DateTimeOffset?)null,
-                    created_at = job.CreatedAt,
-                    status_url = $"/api/v1/etmf/export-jobs/{jobId}",
-                    message = "Export job enqueued successfully for background processing."
-                }
-            );
+            count = matchingDocs.Count;
         }
+
+        var jobId = "JOB-" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
+        var user = Caller(httpContext);
+        var now = clock.UtcNow;
+
+        var job = new TmfExportJob(jobId)
+        {
+            StudyId = studyId,
+            RequestedBy = user,
+            Status = "QUEUED",
+            ProgressPercentage = 0.0,
+            TotalDocuments = count,
+            ProcessedDocuments = 0,
+            CreatedAt = now.UtcDateTime,
+            ReasonForChange = "Study binder bulk export request"
+        };
+
+        dbContext.TmfExportJobs.Add(job);
+        await dbContext.SaveChangesAsync(ct);
+
+        await exportQueue.EnqueueAsync(jobId, CallerScope.TenantId(httpContext), ct);
+
+        return TypedResults.Accepted(
+            uri: $"/api/v1/etmf/export-jobs/{jobId}",
+            value: new
+            {
+                job_id = jobId,
+                study_id = job.StudyId,
+                requested_by = user,
+                status = "QUEUED",
+                progress_percentage = 0.0,
+                total_documents = count,
+                processed_documents = 0,
+                download_url = (string?)null,
+                expires_at = (DateTimeOffset?)null,
+                created_at = job.CreatedAt,
+                status_url = $"/api/v1/etmf/export-jobs/{jobId}",
+                message = "Export job enqueued successfully for background processing."
+            }
+        );
     }
 
     public static async Task<IResult> GetExportJob(
@@ -1300,6 +1350,7 @@ public static class EtmfIntelligenceEndpoints
             .OrderBy(d => d.Zone)
             .ThenBy(d => d.Section)
             .ThenBy(d => d.Filename)
+            .ThenBy(d => d.Id)
             .ToListAsync(ct))
             .Where(d => string.IsNullOrWhiteSpace(d.SiteId) || ClinicalScopeGuard.CanAccessSite(httpContext, d.SiteId))
             .ToList();

@@ -68,10 +68,7 @@
           <tbody>
             <tr v-for="rec in doaLog.delegated_staff" :key="rec.record_id">
               <td>
-                <strong>{{ rec.staff_name || rec.staff_user_id }}</strong>
-                <span v-if="rec.role" class="role-hint">
-                  · {{ formatRoleLabel(rec.role) }}</span
-                >
+                <strong>{{ rec.staff_user_id }}</strong>
               </td>
               <td>
                 {{
@@ -84,31 +81,36 @@
               <td>
                 <span
                   class="status-pill"
-                  :class="`doa-${rec.status.toLowerCase()}`"
+                  :class="`doa-${delegationStatus(rec).toLowerCase()}`"
                 >
-                  {{ formatClinicalStatus(rec.status) }}
+                  {{ formatClinicalStatus(delegationStatus(rec)) }}
                 </span>
               </td>
               <td class="action-cell">
                 <button
-                  v-if="canSignOff && rec.status === 'PENDING_PI_SIGNATURE'"
+                  v-if="
+                    canSignOff &&
+                    delegationStatus(rec) === 'PENDING_PI_SIGNATURE'
+                  "
+                  :id="`btn-doa-signoff-${rec.record_id}`"
                   type="button"
                   class="btn btn-primary btn-sm"
                   @click="prepareSignOff(rec)"
                 >
                   PI sign-off<span class="sr-only">
-                    for {{ rec.staff_name || rec.staff_user_id }}</span
+                    for {{ rec.staff_user_id }}</span
                   >
                 </button>
                 <button
-                  v-if="canManage && rec.status !== 'REVOKED'"
+                  v-if="canManage && delegationStatus(rec) !== 'REVOKED'"
+                  :id="`btn-doa-revoke-${rec.record_id}`"
                   type="button"
                   class="btn btn-secondary btn-sm"
                   @click="prepareRevoke(rec)"
                 >
                   Revoke<span class="sr-only">
                     delegation for
-                    {{ rec.staff_name || rec.staff_user_id }}</span
+                    {{ rec.staff_user_id }}</span
                   >
                 </button>
               </td>
@@ -121,7 +123,7 @@
         v-if="
           !canSignOff &&
           doaLog.delegated_staff.some(
-            (r) => r.status === 'PENDING_PI_SIGNATURE'
+            (r) => delegationStatus(r) === 'PENDING_PI_SIGNATURE'
           )
         "
         id="doa-pi-separation-note"
@@ -134,9 +136,7 @@
       <div v-if="activeSignOffRecord && canSignOff" class="mutation-card">
         <h4>
           Principal Investigator sign-off for
-          {{
-            activeSignOffRecord.staff_name || activeSignOffRecord.staff_user_id
-          }}
+          {{ activeSignOffRecord.staff_user_id }}
         </h4>
         <div class="form-row">
           <label for="doa-signoff-reason">Part 11 attestation</label>
@@ -158,7 +158,7 @@
           <button
             type="button"
             class="btn btn-secondary"
-            @click="activeSignOffRecord = null"
+            @click="cancelSignOff"
           >
             Cancel
           </button>
@@ -168,9 +168,7 @@
       <div v-if="activeRevokeRecord && canManage" class="mutation-card">
         <h4>
           Revoke delegation for
-          {{
-            activeRevokeRecord.staff_name || activeRevokeRecord.staff_user_id
-          }}
+          {{ activeRevokeRecord.staff_user_id }}
         </h4>
         <div class="form-row">
           <label for="doa-revoke-reason">Revocation justification</label>
@@ -189,11 +187,7 @@
           >
             {{ saving ? "Revoking..." : "Confirm revocation" }}
           </button>
-          <button
-            type="button"
-            class="btn btn-secondary"
-            @click="activeRevokeRecord = null"
-          >
+          <button type="button" class="btn btn-secondary" @click="cancelRevoke">
             Cancel
           </button>
         </div>
@@ -255,13 +249,13 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
+import { useInlineFocusHandoff } from "ui";
 import { ctmsApi, type DelegationRecord, type DoaLog } from "../../api/ctmsApi";
 import { canManageDoa, canSignOffDoa } from "../../canvas/authority";
 import { useScopedWorkspaceSection } from "../../composables/useScopedWorkspaceSection";
 import {
   formatClinicalEnum,
   formatClinicalStatus,
-  formatRoleLabel,
 } from "../../utils/clinicalLabels";
 import CtmsSectionScopeBar from "./CtmsSectionScopeBar.vue";
 import "./ctmsWorkspaceSection.css";
@@ -310,9 +304,31 @@ const newReason = ref("");
 
 const activeSignOffRecord = ref<DelegationRecord | null>(null);
 const signOffReason = ref("");
+const signOffHandoff = useInlineFocusHandoff({
+  openTarget: "#doa-signoff-reason",
+  closeFallback: "#ctms-delegation-title",
+  scrollIfOffscreen: true,
+});
 
 const activeRevokeRecord = ref<DelegationRecord | null>(null);
 const revokeReason = ref("");
+const revokeHandoff = useInlineFocusHandoff({
+  openTarget: "#doa-revoke-reason",
+  closeFallback: "#ctms-delegation-title",
+  scrollIfOffscreen: true,
+});
+
+function delegationStatus(
+  rec: DelegationRecord
+): "ACTIVE" | "PENDING_PI_SIGNATURE" | "REVOKED" {
+  if (!rec.is_active || rec.end_date) {
+    return "REVOKED";
+  }
+  if (!rec.signed_off) {
+    return "PENDING_PI_SIGNATURE";
+  }
+  return "ACTIVE";
+}
 
 async function loadDoaLog() {
   const site = siteInput.value.trim();
@@ -373,8 +389,23 @@ async function submitDelegation() {
 }
 
 function prepareSignOff(rec: DelegationRecord) {
+  signOffHandoff.rememberTrigger(`[id="btn-doa-signoff-${rec.record_id}"]`);
+  activeRevokeRecord.value = null;
   activeSignOffRecord.value = rec;
   signOffReason.value = "";
+  void signOffHandoff.handoff("#doa-signoff-reason", {
+    scrollIfOffscreen: true,
+  });
+}
+
+function cancelSignOff() {
+  const recordId = activeSignOffRecord.value?.record_id;
+  activeSignOffRecord.value = null;
+  signOffReason.value = "";
+  void signOffHandoff.restoreTrigger([
+    recordId ? `[id="btn-doa-signoff-${recordId}"]` : null,
+    "#ctms-delegation-title",
+  ]);
 }
 
 async function confirmSignOff() {
@@ -396,9 +427,18 @@ async function confirmSignOff() {
     toasts.push({
       tone: "success",
       title: "PI signature recorded",
-      message: `Delegation active for ${rec.staff_name || rec.staff_user_id}.`,
+      message: `Delegation active for ${rec.staff_user_id}.`,
     });
     await loadDoaLog();
+    saving.value = false;
+    void signOffHandoff.handoff([
+      `[id="btn-doa-revoke-${rec.record_id}"]`,
+      () =>
+        document.querySelector<HTMLElement>(
+          "#doa-staff-table button:not([disabled])"
+        ),
+      "#ctms-delegation-title",
+    ]);
   } catch (err) {
     toasts.apiError("PI sign-off failed", err);
   } finally {
@@ -407,8 +447,23 @@ async function confirmSignOff() {
 }
 
 function prepareRevoke(rec: DelegationRecord) {
+  revokeHandoff.rememberTrigger(`[id="btn-doa-revoke-${rec.record_id}"]`);
+  activeSignOffRecord.value = null;
   activeRevokeRecord.value = rec;
   revokeReason.value = "";
+  void revokeHandoff.handoff("#doa-revoke-reason", {
+    scrollIfOffscreen: true,
+  });
+}
+
+function cancelRevoke() {
+  const recordId = activeRevokeRecord.value?.record_id;
+  activeRevokeRecord.value = null;
+  revokeReason.value = "";
+  void revokeHandoff.restoreTrigger([
+    recordId ? `[id="btn-doa-revoke-${recordId}"]` : null,
+    "#ctms-delegation-title",
+  ]);
 }
 
 async function confirmRevoke() {
@@ -430,9 +485,17 @@ async function confirmRevoke() {
     toasts.push({
       tone: "success",
       title: "Delegation revoked",
-      message: `Delegation revoked for ${rec.staff_name || rec.staff_user_id}.`,
+      message: `Delegation revoked for ${rec.staff_user_id}.`,
     });
     await loadDoaLog();
+    saving.value = false;
+    void revokeHandoff.handoff([
+      () =>
+        document.querySelector<HTMLElement>(
+          "#doa-staff-table button:not([disabled])"
+        ),
+      "#ctms-delegation-title",
+    ]);
   } catch (err) {
     toasts.apiError("Revocation failed", err);
   } finally {

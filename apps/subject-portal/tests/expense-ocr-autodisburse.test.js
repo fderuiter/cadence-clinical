@@ -248,7 +248,10 @@ describe("Mobile Receipt OCR & Direct ACH Reimbursement Engine", () => {
 
     expect(res.status).toBe("PENDING_REVIEW");
     expect(res.auto_approved).toBe(false);
-    expect(res.review_notes).toContain("0.90 threshold");
+    expect(res.review_notes).toContain(
+      "could not read every detail on the receipt photo clearly"
+    );
+    expect(res.review_notes).not.toContain("0.90");
   });
 
   it("handles OCR extraction and submission errors gracefully", async () => {
@@ -349,6 +352,13 @@ describe("Mobile Receipt OCR & Direct ACH Reimbursement Engine", () => {
   });
 
   it("enforces Idempotency-Key deduplication on expense and payout retries and resets the expense form after submission", async () => {
+    await extractReceiptOcr(
+      buildReceiptSvgFile(
+        ["METRO RAIL", "Date: 2026-09-10", "Fare Paid: $24.00"],
+        "metro_rail.svg"
+      )
+    );
+
     const capturedHeaders = [];
     const origFetch = globalThis.fetch;
     const fetchSpy = vi
@@ -364,12 +374,6 @@ describe("Mobile Receipt OCR & Direct ACH Reimbursement Engine", () => {
         });
         return origFetch(input, init);
       });
-
-    state.expenseForm.category = "TRANSIT";
-    state.expenseForm.merchantName = "Metro Rail";
-    state.expenseForm.grossAmount = 24.0;
-    state.expenseForm.expenseDate = "2026-09-10";
-    state.expenseForm.ocrConfidence = 0.96;
 
     // Simulate network failure before client clears draft -> retry must reuse exact Idempotency-Key
     fetchSpy.mockImplementationOnce(async (input, init) => {
@@ -398,15 +402,17 @@ describe("Mobile Receipt OCR & Direct ACH Reimbursement Engine", () => {
     const reimbursementsBeforeReplay = state.lifetimeReimbursements;
     const replayRes = await submitExpenseClaim({
       category: "TRANSIT",
-      merchantName: "Metro Rail",
+      merchantName: "METRO RAIL",
       grossAmount: 24.0,
       expenseDate: "2026-09-10",
-      ocrConfidence: 0.96,
       idempotencyKey: firstAttemptKey,
     });
     expect(replayRes.claim_id).toBe(claimRes.claim_id);
     expect(state.expenseClaims).toHaveLength(1);
     expect(state.lifetimeReimbursements).toBe(reimbursementsBeforeReplay);
+
+    expect(capturedHeaders[1].body.ocrToken).toMatch(/^mock_ocr_token_/);
+    expect(capturedHeaders[1].body.receiptImageBase64).toBeTruthy();
 
     // Verify payout retry reuses sessionStorage Idempotency-Key across transient timeout
     capturedHeaders.length = 0;
@@ -601,5 +607,34 @@ describe("Mobile Receipt OCR & Direct ACH Reimbursement Engine", () => {
     await expect(disburseAvailableBalance()).rejects.toThrow(
       /not available in this environment/i
     );
+  });
+
+  it("ignores spoofed client ocrConfidence and perDiemCap on unscanned $95.00 meal claims and enforces $75.00 server cap", async () => {
+    await loadParticipantWallet();
+    const initialBalance = state.walletBalance;
+
+    // Manually enter a $95.00 meal claim without scanning a receipt
+    state.expenseForm.category = "MEAL";
+    state.expenseForm.merchantName = "Bistro 95";
+    state.expenseForm.grossAmount = 95.0;
+    state.expenseForm.isMealAllowance = true;
+    state.expenseForm.perDiemCap = 100.0;
+    state.expenseForm.expenseDate = "2026-03-29";
+    state.expenseForm.ocrConfidence = 0.99;
+    state.expenseForm.ocrToken = null;
+    state.expenseForm.receiptImageBase64 = null;
+
+    const res = await submitExpenseClaim();
+
+    // Held for review instead of auto-disbursing; $75.00 server cap yields $3.00 tax deduction -> $92.00 net
+    expect(state.walletBalance).toBe(initialBalance);
+    expect(res.status).toBe("PENDING_REVIEW");
+    expect(res.auto_approved).toBe(false);
+    expect(res.tax_deduction).toBe(3.0);
+    expect(res.net_amount).toBe(92.0);
+    expect(state.expenseClaims[0].status).toBe("PENDING_REVIEW");
+    expect(state.expenseClaims[0].ocrConfidence).toBe(0);
+    expect(state.expenseClaims[0].tax_deduction).toBe(3.0);
+    expect(state.expenseClaims[0].net_amount).toBe(92.0);
   });
 });
