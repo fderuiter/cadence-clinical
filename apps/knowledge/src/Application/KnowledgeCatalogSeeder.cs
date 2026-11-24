@@ -83,14 +83,15 @@ public static class KnowledgeCatalogSeeder
     private static readonly Guid DefaultTestTenantGuid =
         DeterministicTenantCodeResolver.ComputeDeterministicGuid("tenant-test");
 
+    private const int ExpectedSeededSopCount = 33;
+
     public static async Task EnsureSeededAsync(KnowledgeDbContext db, IClock clock, CancellationToken ct = default)
     {
         string tenantSuffix = await ResolveSeedTenantSuffixAsync(db, ct).ConfigureAwait(false);
-        string latestVersionSentinelId = $"ver-sys-404-v2{tenantSuffix}";
         string latestMappingSentinelId = $"m-stc-q-observation{tenantSuffix}";
 
         // Fast path: once complete HTML snapshots, Canvas section SOPs, and zoom mappings exist for this tenant, skip locking and writes.
-        if (await HasCompleteCatalogBaselineAsync(db, latestVersionSentinelId, latestMappingSentinelId, ct).ConfigureAwait(false))
+        if (await HasCompleteCatalogBaselineAsync(db, latestMappingSentinelId, ct).ConfigureAwait(false))
         {
             return;
         }
@@ -98,7 +99,7 @@ public static class KnowledgeCatalogSeeder
         await SeedLock.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            if (await HasCompleteCatalogBaselineAsync(db, latestVersionSentinelId, latestMappingSentinelId, ct).ConfigureAwait(false))
+            if (await HasCompleteCatalogBaselineAsync(db, latestMappingSentinelId, ct).ConfigureAwait(false))
             {
                 return;
             }
@@ -131,12 +132,14 @@ public static class KnowledgeCatalogSeeder
             // Read existing version metadata with AsNoTracking so locked 21 CFR Part 11 snapshots are never mutated.
             var existingVersions = await db.KnowledgeArticleVersions
                 .AsNoTracking()
-                .Select(v => new { v.Id, v.ArticleId, v.VersionIndex })
+                .Select(v => new { v.Id, v.ArticleId, v.VersionIndex, v.BodyMarkdown, v.BodyHtml })
                 .ToListAsync(ct)
                 .ConfigureAwait(false);
 
-            var existingVersionIds = existingVersions
-                .Select(v => v.Id)
+            var existingVersionsById = existingVersions
+                .ToDictionary(v => v.Id, StringComparer.Ordinal);
+
+            var existingVersionIds = existingVersionsById.Keys
                 .ToHashSet(StringComparer.Ordinal);
 
             var maxVersionIndexByArticleId = existingVersions
@@ -157,6 +160,7 @@ public static class KnowledgeCatalogSeeder
                     if (!existingVersionIds.Contains(seed.Version.Id))
                     {
                         db.KnowledgeArticleVersions.Add(seed.Version);
+                        existingVersionIds.Add(seed.Version.Id);
                     }
 
                     AuditActions.Record(db, new AuditAction(
@@ -173,53 +177,66 @@ public static class KnowledgeCatalogSeeder
                             status = seed.Article.Status,
                         })));
                 }
-                else if (!existingVersionIds.Contains(seed.Version.Id))
+                else
                 {
-                    int nextVersionIndex = Math.Max(
-                        existingArticle.VersionIndex,
-                        maxVersionIndexByArticleId.GetValueOrDefault(existingArticle.Id, 0)) + 1;
+                    bool missingSeedVersion = !existingVersionIds.Contains(seed.Version.Id);
+                    bool currentPublishedIncomplete = existingArticle.CurrentPublishedVersionId is null
+                        || !existingVersionsById.TryGetValue(existingArticle.CurrentPublishedVersionId, out var currentPublished)
+                        || !SopHtmlCompiler.HasCompleteHeadingIdsAndSteps(currentPublished.BodyMarkdown, currentPublished.BodyHtml);
 
-                    var upgradedVersion = new KnowledgeArticleVersion
+                    if (missingSeedVersion || currentPublishedIncomplete)
                     {
-                        Id = seed.Version.Id,
-                        ArticleId = existingArticle.Id,
-                        VersionIndex = nextVersionIndex,
-                        VersionLabel = seed.Article.VersionLabel,
-                        BodyMarkdown = seed.Version.BodyMarkdown,
-                        BodyHtml = seed.Version.BodyHtml,
-                        StatusAtSnapshot = "PUBLISHED",
-                        IsLocked = true,
-                        CreatedAt = seededAt,
-                        CreatedBy = CatalogServiceAccount,
-                        ReasonForChange = UpgradeSeedReason,
-                    };
+                        int nextVersionIndex = Math.Max(
+                            existingArticle.VersionIndex,
+                            maxVersionIndexByArticleId.GetValueOrDefault(existingArticle.Id, 0)) + 1;
 
-                    db.KnowledgeArticleVersions.Add(upgradedVersion);
+                        string upgradedVersionId = missingSeedVersion
+                            ? seed.Version.Id
+                            : BuildNextSeedVersionId(seed.Version.Id, existingVersionIds, tenantSuffix, nextVersionIndex);
+                        existingVersionIds.Add(upgradedVersionId);
 
-                    string? previousVersionId = existingArticle.CurrentPublishedVersionId;
-                    string? previousVersionLabel = existingArticle.VersionLabel;
-
-                    existingArticle.CurrentPublishedVersionId = upgradedVersion.Id;
-                    existingArticle.VersionLabel = upgradedVersion.VersionLabel;
-                    existingArticle.VersionIndex = nextVersionIndex;
-                    existingArticle.LastEditedBy = CatalogServiceAccount;
-                    existingArticle.ReasonForChange = UpgradeSeedReason;
-
-                    AuditActions.Record(db, new AuditAction(
-                        EntityName: nameof(KnowledgeArticle),
-                        EntityId: existingArticle.Id,
-                        Action: "SOP_PUBLISHED",
-                        UserId: CatalogServiceAccount,
-                        ReasonForChange: UpgradeSeedReason,
-                        ChangesJson: JsonSerializer.Serialize(new
+                        var upgradedVersion = new KnowledgeArticleVersion
                         {
-                            slug = existingArticle.Slug,
-                            previous_version_id = previousVersionId,
-                            previous_version_label = previousVersionLabel,
-                            version_id = upgradedVersion.Id,
-                            version_label = upgradedVersion.VersionLabel,
-                            status = existingArticle.Status,
-                        })));
+                            Id = upgradedVersionId,
+                            ArticleId = existingArticle.Id,
+                            VersionIndex = nextVersionIndex,
+                            VersionLabel = seed.Article.VersionLabel,
+                            BodyMarkdown = seed.Version.BodyMarkdown,
+                            BodyHtml = seed.Version.BodyHtml,
+                            StatusAtSnapshot = "PUBLISHED",
+                            IsLocked = true,
+                            CreatedAt = seededAt,
+                            CreatedBy = CatalogServiceAccount,
+                            ReasonForChange = UpgradeSeedReason,
+                        };
+
+                        db.KnowledgeArticleVersions.Add(upgradedVersion);
+
+                        string? previousVersionId = existingArticle.CurrentPublishedVersionId;
+                        string? previousVersionLabel = existingArticle.VersionLabel;
+
+                        existingArticle.CurrentPublishedVersionId = upgradedVersion.Id;
+                        existingArticle.VersionLabel = upgradedVersion.VersionLabel;
+                        existingArticle.VersionIndex = nextVersionIndex;
+                        existingArticle.LastEditedBy = CatalogServiceAccount;
+                        existingArticle.ReasonForChange = UpgradeSeedReason;
+
+                        AuditActions.Record(db, new AuditAction(
+                            EntityName: nameof(KnowledgeArticle),
+                            EntityId: existingArticle.Id,
+                            Action: "SOP_PUBLISHED",
+                            UserId: CatalogServiceAccount,
+                            ReasonForChange: UpgradeSeedReason,
+                            ChangesJson: JsonSerializer.Serialize(new
+                            {
+                                slug = existingArticle.Slug,
+                                previous_version_id = previousVersionId,
+                                previous_version_label = previousVersionLabel,
+                                version_id = upgradedVersion.Id,
+                                version_label = upgradedVersion.VersionLabel,
+                                status = existingArticle.Status,
+                            })));
+                    }
                 }
 
                 foreach (var mapping in seed.Mappings.Where(m => !existingMappingIds.Contains(m.Id)))
@@ -236,25 +253,70 @@ public static class KnowledgeCatalogSeeder
         }
     }
 
+    private static string BuildNextSeedVersionId(
+        string currentSeedVersionId,
+        IReadOnlySet<string> existingVersionIds,
+        string tenantSuffix,
+        int startIndex)
+    {
+        string baseId = tenantSuffix.Length > 0 && currentSeedVersionId.EndsWith(tenantSuffix, StringComparison.Ordinal)
+            ? currentSeedVersionId[..^tenantSuffix.Length]
+            : currentSeedVersionId;
+
+        int vPos = baseId.LastIndexOf("-v", StringComparison.Ordinal);
+        string stem = vPos > 0 ? baseId[..vPos] : baseId;
+        int idx = Math.Max(3, startIndex);
+        while (true)
+        {
+            string candidateBase = $"{stem}-v{idx}";
+            if (candidateBase.Length > 27)
+            {
+                candidateBase = $"{stem[..Math.Max(1, 27 - ($"-v{idx}").Length)]}-v{idx}";
+            }
+
+            string candidate = $"{candidateBase}{tenantSuffix}";
+            if (!existingVersionIds.Contains(candidate))
+            {
+                return candidate;
+            }
+
+            idx++;
+        }
+    }
+
     private static async Task<bool> HasCompleteCatalogBaselineAsync(
         KnowledgeDbContext db,
-        string latestVersionSentinelId,
         string latestMappingSentinelId,
         CancellationToken ct)
     {
-        bool hasLatestVersion = await db.KnowledgeArticleVersions
-            .AsNoTracking()
-            .AnyAsync(v => v.Id == latestVersionSentinelId, ct)
-            .ConfigureAwait(false);
-        if (!hasLatestVersion)
+        if (!await db.ContextualHelpMappings
+                .AsNoTracking()
+                .AnyAsync(m => m.Id == latestMappingSentinelId, ct)
+                .ConfigureAwait(false))
         {
             return false;
         }
 
-        return await db.ContextualHelpMappings
-            .AsNoTracking()
-            .AnyAsync(m => m.Id == latestMappingSentinelId, ct)
+        var seededStates = await (
+            from a in db.KnowledgeArticles.AsNoTracking()
+            where a.CreatedBy == CatalogServiceAccount && !a.IsDeleted
+            join v in db.KnowledgeArticleVersions.AsNoTracking()
+                on a.CurrentPublishedVersionId equals v.Id into vj
+            from v in vj.DefaultIfEmpty()
+            select new
+            {
+                IsComplete = v != null
+                    && v.BodyHtml != null
+                    && v.BodyHtml.Contains("id=\"")
+                    && (v.BodyMarkdown == null || !v.BodyMarkdown.Contains("1. ") || v.BodyHtml.Contains("<ol>"))
+                    && !v.BodyHtml.Contains("<h2>")
+                    && !v.BodyHtml.Contains("<h3>")
+                    && !v.BodyHtml.Contains("<h4>"),
+            })
+            .ToListAsync(ct)
             .ConfigureAwait(false);
+
+        return seededStates.Count >= ExpectedSeededSopCount && seededStates.All(s => s.IsComplete);
     }
 
     private static async Task<string> ResolveSeedTenantSuffixAsync(KnowledgeDbContext db, CancellationToken ct)
@@ -383,6 +445,11 @@ public static class KnowledgeCatalogSeeder
                 versionLabel: "2.1",
                 versionIndex: 2,
                 tags: ["studies", "portfolio", "governance", "usdm"],
+                primaryAnchor: "#study-portfolio-governance",
+                headingAnchors: new Dictionary<string, string>
+                {
+                    ["Operational Steps"] = "portfolio-operational-steps",
+                },
                 markdown: """
                     ## Purpose & Scope
                     Governs study selection, protocol status verification, and role-scoped workspace entry across `/studies`.
@@ -409,28 +476,6 @@ public static class KnowledgeCatalogSeeder
 
                     ### Inspection Scope Selection
                     Auditors confirm read-only inspection scope across published study artifacts and immutable audit trails.
-                    """,
-                html: """
-                    <h2 id="study-portfolio-governance">Purpose &amp; Scope</h2>
-                    <p>Governs study selection, protocol status verification, and role-scoped workspace entry across <code>/studies</code>.</p>
-                    <h2 id="portfolio-operational-steps">Operational Steps</h2>
-                    <ol>
-                      <li>Verify protocol code and lifecycle status (<code>ACTIVE</code>, <code>IN_DESIGN</code>, or <code>LOCKED</code>) prior to opening clinical data workspaces.</li>
-                      <li>Confirm assigned study and site scope before initiating enrollment, monitoring, or data management actions.</li>
-                      <li>Escalate missing study assignments to Platform Access Governance via contextual support ticketing.</li>
-                    </ol>
-                    <h3 id="enterprise-portfolio-oversight">Enterprise Portfolio Oversight</h3>
-                    <p>Sponsor administrators verify tenant-wide study lifecycle readiness, environment locks, and portfolio governance controls.</p>
-                    <h3 id="protocol-version-selection">Protocol Version Selection</h3>
-                    <p>Study designers confirm active USDM protocol versions before entering Schedule of Activities or amendment workspaces.</p>
-                    <h3 id="assigned-site-study-selection">Assigned Site Study Selection</h3>
-                    <p>Site coordinators select authorized protocols and verify site activation status before enrolling or updating participants.</p>
-                    <h3 id="study-monitoring-entry">Study Monitoring Entry</h3>
-                    <p>Clinical Research Associates verify site monitoring assignments, SDV backlogs, and pending visit action items.</p>
-                    <h3 id="study-data-review-entry">Study Data Review Entry</h3>
-                    <p>Data managers review open discrepancy query counts and database lock readiness across active protocols.</p>
-                    <h3 id="inspection-scope-selection">Inspection Scope Selection</h3>
-                    <p>Auditors confirm read-only inspection scope across published study artifacts and immutable audit trails.</p>
                     """,
                 createdAt: baseTime.AddMinutes(-60),
                 mappings: BuildRouteMappings(
@@ -461,6 +506,12 @@ public static class KnowledgeCatalogSeeder
                 versionLabel: "2.3",
                 versionIndex: 2,
                 tags: ["studies", "clinical-canvas", "enrollment", "visits", "queries"],
+                primaryAnchor: "#active-study-clinical-canvas",
+                headingAnchors: new Dictionary<string, string>
+                {
+                    ["Key Controls"] = "study-canvas-key-controls",
+                    ["Investigator Oversight & Sign-Off"] = "investigator-oversight-and-signoff",
+                },
                 markdown: """
                     ## Purpose & Scope
                     Defines standard operating procedures for executing study-specific enrollment, visit schedule navigation, and form query resolution inside `/studies/:studyCode`.
@@ -473,36 +524,29 @@ public static class KnowledgeCatalogSeeder
                     ### Participant Timeline & Visit Record
                     Inspect longitudinal visit completion, scheduled windows, and open form queries within the individual participant record view.
 
-                    ### Role-Specific Study Canvas Responsibilities
-                    Sponsor administrators oversee lock gates; designers maintain visit schedules; site CRCs and investigators capture and sign visit data; CRAs verify source records; data managers triage cleanliness; safety officers review clinical signals; and auditors inspect read-only provenance.
-                    """,
-                html: """
-                    <h2 id="active-study-clinical-canvas">Purpose &amp; Scope</h2>
-                    <p>Defines standard operating procedures for executing study-specific enrollment, visit schedule navigation, and form query resolution inside <code>/studies/:studyCode</code>.</p>
-                    <h2 id="study-canvas-key-controls">Key Controls</h2>
-                    <ol>
-                      <li>Use pseudonymous subject codes (for example <code>SUBJ-1001</code>) exclusively; never enter direct participant PII.</li>
-                      <li>Supply a clear 21 CFR Part 11 reason for change whenever recording or amending clinical observations.</li>
-                      <li>Review open form queries and SDV indicators prior to visit sign-off.</li>
-                    </ol>
-                    <h3 id="participant-timeline-and-visit-record">Participant Timeline &amp; Visit Record</h3>
-                    <p>Inspect longitudinal visit completion, scheduled windows, and open form queries within the individual participant record view.</p>
-                    <h3 id="study-governance-and-locks">Study Governance &amp; Locks</h3>
-                    <p>Sponsor administrators oversee study-level access boundaries, freeze milestones, and lock authorization.</p>
-                    <h3 id="visit-schedule-and-form-definitions">Visit Schedule &amp; Form Definitions</h3>
-                    <p>Sponsor designers maintain USDM visit schedules, collection specifications, and controlled terminology bindings.</p>
-                    <h3 id="subject-enrollment-and-visit-capture">Subject Enrollment &amp; Visit Capture</h3>
-                    <p>Site coordinators verify eligibility criteria and enter contemporaneous visit assessments under pseudonymous subject IDs.</p>
-                    <h3 id="investigator-oversight-and-signoff">Investigator Oversight &amp; Sign-Off</h3>
-                    <p>Site investigators review clinical significance assessments, protocol deviations, and 21 CFR Part 11 visit attestations.</p>
-                    <h3 id="study-sdv-and-query-oversight">Study SDV &amp; Query Oversight</h3>
-                    <p>Monitors track source data verification progress and issue targeted discrepancy queries across assigned sites.</p>
-                    <h3 id="study-query-triage-and-cleanliness">Study Query Triage &amp; Cleanliness</h3>
-                    <p>Data managers reconcile aged queries, coding flags, and cross-form consistency checks prior to milestone locks.</p>
-                    <h3 id="study-safety-signal-review">Study Safety Signal Review</h3>
-                    <p>Medical monitors and safety officers evaluate serious adverse event trends and laboratory alert thresholds.</p>
-                    <h3 id="study-audit-trail-inspection">Study Audit Trail Inspection</h3>
-                    <p>Auditors perform read-only verification of study lineage, electronic signatures, and contemporaneous change reasons.</p>
+                    ### Study Governance & Locks
+                    Sponsor administrators oversee study-level access boundaries, freeze milestones, and lock authorization.
+
+                    ### Visit Schedule & Form Definitions
+                    Sponsor designers maintain USDM visit schedules, collection specifications, and controlled terminology bindings.
+
+                    ### Subject Enrollment & Visit Capture
+                    Site coordinators verify eligibility criteria and enter contemporaneous visit assessments under pseudonymous subject IDs.
+
+                    ### Investigator Oversight & Sign-Off
+                    Site investigators review clinical significance assessments, protocol deviations, and 21 CFR Part 11 visit attestations.
+
+                    ### Study SDV & Query Oversight
+                    Monitors track source data verification progress and issue targeted discrepancy queries across assigned sites.
+
+                    ### Study Query Triage & Cleanliness
+                    Data managers reconcile aged queries, coding flags, and cross-form consistency checks prior to milestone locks.
+
+                    ### Study Safety Signal Review
+                    Medical monitors and safety officers evaluate serious adverse event trends and laboratory alert thresholds.
+
+                    ### Study Audit Trail Inspection
+                    Auditors perform read-only verification of study lineage, electronic signatures, and contemporaneous change reasons.
                     """,
                 createdAt: baseTime.AddMinutes(-50),
                 mappings: BuildParameterizedStudyMappings(
@@ -519,6 +563,11 @@ public static class KnowledgeCatalogSeeder
                 versionLabel: "2.2",
                 versionIndex: 2,
                 tags: ["ecrf", "enrollment", "gxp-edc", "site-sop"],
+                primaryAnchor: "#subject-enrollment-and-visit-entry",
+                headingAnchors: new Dictionary<string, string>
+                {
+                    ["Mandatory GxP Controls"] = "ecrf-mandatory-gxp-controls",
+                },
                 markdown: """
                     ## Purpose & Scope
                     This Standard Operating Procedure (SOP) governs all clinical trial personnel executing electronic Case Report Form (eCRF) data capture, subject registration, source verification, and discrepancy query management within the Cadence Clinical Research Platform.
@@ -534,30 +583,17 @@ public static class KnowledgeCatalogSeeder
                     ### Discrepancy Management & Coding
                     Triage open validation queries, document source-backed responses, and reconcile MedDRA/WHODrug coding terms before form lock.
 
-                    ### EDC Governance, SDV & Audit Review
-                    Maintain role-segregated eCRF layout validation, CRA source data verification, and immutable Part 11 audit inspection.
-                    """,
-                html: """
-                    <h2 id="subject-enrollment-and-visit-entry">Purpose &amp; Scope</h2>
-                    <p>This Standard Operating Procedure (SOP) governs all clinical trial personnel executing electronic Case Report Form (eCRF) data capture, subject registration, source verification, and discrepancy query management within the Cadence Clinical Research Platform.</p>
-                    <h2 id="ecrf-mandatory-gxp-controls">Mandatory GxP Controls</h2>
-                    <ol>
-                      <li>Confirm informed consent verification prior to recording baseline assessments.</li>
-                      <li>Record contemporaneous source-verified measurements and document mandatory change justifications for every amendment.</li>
-                      <li>Escalate protocol deviations or locked-form blockers via Contextual Help using pseudonymous subject identifiers only.</li>
-                    </ol>
-                    <h3 id="ecrf-form-capture-and-change-reason">eCRF Form Capture &amp; Change Reason</h3>
-                    <p>Verify unit conversions, controlled terminology selections, and non-PII 21 CFR Part 11 change reasons when saving form instances.</p>
-                    <h3 id="discrepancy-management-and-coding">Discrepancy Management &amp; Coding</h3>
-                    <p>Triage open validation queries, document source-backed responses, and reconcile MedDRA/WHODrug coding terms before form lock.</p>
-                    <h3 id="edc-governance-and-locks">EDC Governance &amp; Locks</h3>
-                    <p>Sponsor administrators govern eCRF environment locks, freeze rules, and role-level data entry permissions.</p>
-                    <h3 id="crf-layout-validation">CRF Layout Validation</h3>
-                    <p>Study designers verify form item bindings, CDASH/SDTM annotations, and edit-check firing conditions prior to live capture.</p>
-                    <h3 id="ecrf-sdv-and-query-verification">eCRF SDV &amp; Query Verification</h3>
-                    <p>Clinical Research Associates verify eCRF entries against clinic source records and close answered discrepancy queries.</p>
-                    <h3 id="ecrf-audit-trail-review">eCRF Audit Trail Review</h3>
-                    <p>Auditors inspect item-level revision histories, actor attributions, and SHA-256 Merkle chain integrity.</p>
+                    ### EDC Governance & Locks
+                    Sponsor administrators govern eCRF environment locks, freeze rules, and role-level data entry permissions.
+
+                    ### CRF Layout Validation
+                    Study designers verify form item bindings, CDASH/SDTM annotations, and edit-check firing conditions prior to live capture.
+
+                    ### eCRF SDV & Query Verification
+                    Clinical Research Associates verify eCRF entries against clinic source records and close answered discrepancy queries.
+
+                    ### eCRF Audit Trail Review
+                    Auditors inspect item-level revision histories, actor attributions, and SHA-256 Merkle chain integrity.
                     """,
                 createdAt: baseTime.AddMinutes(-40),
                 mappings:
@@ -599,6 +635,12 @@ public static class KnowledgeCatalogSeeder
                 versionLabel: "1.5",
                 versionIndex: 1,
                 tags: ["ctms", "monitoring", "sdv", "cra", "trip-reports"],
+                primaryAnchor: "#site-monitoring-and-sdv",
+                headingAnchors: new Dictionary<string, string>
+                {
+                    ["Operational Checklist"] = "ctms-operational-checklist",
+                    ["Site Visit Readiness & Delegation"] = "site-visit-readiness",
+                },
                 markdown: """
                     ## Site Monitoring & SDV Procedures
                     Governs Clinical Trial Management System (CTMS) monitoring visit scheduling, follow-up letters, CRA workload balancing, and site milestone tracking across `/ctms`.
@@ -607,27 +649,20 @@ public static class KnowledgeCatalogSeeder
                     1. Reconcile site enrollment metrics and pending monitoring action items prior to on-site or remote visits.
                     2. Document monitoring findings with ICH E6(R3) severity classification and link follow-up CAPA or support tickets.
 
-                    ### Role-Scoped Monitoring & Milestone Controls
-                    Align monitoring plans, site visit readiness, delegation rosters, query reconciliation, and signed trip report inspection across clinical operations roles.
-                    """,
-                html: """
-                    <h2 id="site-monitoring-and-sdv">Site Monitoring &amp; SDV Procedures</h2>
-                    <p>Governs Clinical Trial Management System (CTMS) monitoring visit scheduling, follow-up letters, CRA workload balancing, and site milestone tracking across <code>/ctms</code>.</p>
-                    <h2 id="ctms-operational-checklist">Operational Checklist</h2>
-                    <ol>
-                      <li>Reconcile site enrollment metrics and pending monitoring action items prior to on-site or remote visits.</li>
-                      <li>Document monitoring findings with ICH E6(R3) severity classification and link follow-up CAPA or support tickets.</li>
-                    </ol>
-                    <h3 id="ctms-portfolio-oversight">CTMS Portfolio Oversight</h3>
-                    <p>Sponsor operations track site milestone attainment, monitoring cadence compliance, and regional enrollment velocity.</p>
-                    <h3 id="monitoring-plan-alignment">Monitoring Plan Alignment</h3>
-                    <p>Study designers align risk-based monitoring (RBQM) critical data indicators with Schedule of Activities assessments.</p>
-                    <h3 id="site-visit-readiness">Site Visit Readiness &amp; Delegation</h3>
-                    <p>Site coordinators maintain current delegation logs, source chart availability, and action-item remediation prior to CRA visits.</p>
-                    <h3 id="monitoring-query-reconciliation">Monitoring Query Reconciliation</h3>
-                    <p>Data managers reconcile unresolved monitoring findings with open eCRF discrepancy queries before interim locks.</p>
-                    <h3 id="monitoring-visit-report-inspection">Monitoring Visit Report Inspection</h3>
-                    <p>Auditors verify signed monitoring visit reports, follow-up communications, and CAPA closure evidence.</p>
+                    ### CTMS Portfolio Oversight
+                    Sponsor operations track site milestone attainment, monitoring cadence compliance, and regional enrollment velocity.
+
+                    ### Monitoring Plan Alignment
+                    Study designers align risk-based monitoring (RBQM) critical data indicators with Schedule of Activities assessments.
+
+                    ### Site Visit Readiness & Delegation
+                    Site coordinators maintain current delegation logs, source chart availability, and action-item remediation prior to CRA visits.
+
+                    ### Monitoring Query Reconciliation
+                    Data managers reconcile unresolved monitoring findings with open eCRF discrepancy queries before interim locks.
+
+                    ### Monitoring Visit Report Inspection
+                    Auditors verify signed monitoring visit reports, follow-up communications, and CAPA closure evidence.
                     """,
                 createdAt: baseTime.AddMinutes(-30),
                 mappings: BuildRouteMappings(
@@ -658,6 +693,12 @@ public static class KnowledgeCatalogSeeder
                 versionLabel: "1.3",
                 versionIndex: 1,
                 tags: ["ssu", "site-startup", "greenlight", "regulatory", "activation"],
+                primaryAnchor: "#site-greenlight-activation-matrix",
+                headingAnchors: new Dictionary<string, string>
+                {
+                    ["Greenlight Verification"] = "ssu-greenlight-verification",
+                    ["Site Initiation Visit & Greenlight"] = "site-initiation-visit-greenlight",
+                },
                 markdown: """
                     ## Site Startup & Greenlight Activation Gate
                     Establishes mandatory regulatory, ethics (IRB/IEC), contract, essential document, and training prerequisites required before certifying site activation on `/ssu`.
@@ -666,29 +707,23 @@ public static class KnowledgeCatalogSeeder
                     1. Confirm Essential Document List (EDL) artifacts and Delegation of Authority sign-offs are complete.
                     2. Verify country regulatory approval and IP pharmacy readiness before issuing greenlight certification.
 
-                    ### Country & Site Activation Controls
-                    Enforce country-pack regulatory alignment, site initiation visit completion, EDC release gating, and immutable greenlight certification records.
-                    """,
-                html: """
-                    <h2 id="site-greenlight-activation-matrix">Site Startup &amp; Greenlight Activation Gate</h2>
-                    <p>Establishes mandatory regulatory, ethics (IRB/IEC), contract, essential document, and training prerequisites required before certifying site activation on <code>/ssu</code>.</p>
-                    <h2 id="ssu-greenlight-verification">Greenlight Verification</h2>
-                    <ol>
-                      <li>Confirm Essential Document List (EDL) artifacts and Delegation of Authority sign-offs are complete.</li>
-                      <li>Verify country regulatory approval and IP pharmacy readiness before issuing greenlight certification.</li>
-                    </ol>
-                    <h3 id="global-country-activation-gates">Global Country Activation Gates</h3>
-                    <p>Sponsor operations verify competent authority approvals, clinical trial agreements, and site roster readiness across participating countries.</p>
-                    <h3 id="protocol-country-pack-alignment">Protocol Country-Pack Alignment</h3>
-                    <p>Study designers align country-specific ICF templates and local assessment rules with the master USDM protocol.</p>
-                    <h3 id="site-essential-documents-checklist">Site Essential Documents Checklist</h3>
-                    <p>Site coordinators upload current IRB/IEC approvals, investigator CVs, medical licenses, and laboratory certifications.</p>
-                    <h3 id="site-initiation-visit-greenlight">Site Initiation Visit &amp; Greenlight</h3>
-                    <p>Monitors confirm Site Initiation Visit (SIV) completion and facility readiness prior to greenlight release.</p>
-                    <h3 id="edc-environment-release-gate">EDC Environment Release Gate</h3>
-                    <p>Data managers confirm production eCRF edit checks and randomization tables are validated before unlocking site enrollment.</p>
-                    <h3 id="greenlight-certification-audit">Greenlight Certification Audit</h3>
-                    <p>Auditors inspect timestamped greenlight tokens and prerequisite document completeness prior to first-patient-in.</p>
+                    ### Global Country Activation Gates
+                    Sponsor operations verify competent authority approvals, clinical trial agreements, and site roster readiness across participating countries.
+
+                    ### Protocol Country-Pack Alignment
+                    Study designers align country-specific ICF templates and local assessment rules with the master USDM protocol.
+
+                    ### Site Essential Documents Checklist
+                    Site coordinators upload current IRB/IEC approvals, investigator CVs, medical licenses, and laboratory certifications.
+
+                    ### Site Initiation Visit & Greenlight
+                    Monitors confirm Site Initiation Visit (SIV) completion and facility readiness prior to greenlight release.
+
+                    ### EDC Environment Release Gate
+                    Data managers confirm production eCRF edit checks and randomization tables are validated before unlocking site enrollment.
+
+                    ### Greenlight Certification Audit
+                    Auditors inspect timestamped greenlight tokens and prerequisite document completeness prior to first-patient-in.
                     """,
                 createdAt: baseTime.AddMinutes(-20),
                 mappings: BuildRouteMappings(
@@ -719,6 +754,11 @@ public static class KnowledgeCatalogSeeder
                 versionLabel: "3.1",
                 versionIndex: 3,
                 tags: ["mdr", "usdm", "soa-matrix", "study-design"],
+                primaryAnchor: "#schedule-of-activities-matrix-authoring",
+                headingAnchors: new Dictionary<string, string>
+                {
+                    ["Authoring Steps"] = "mdr-authoring-steps",
+                },
                 markdown: """
                     ## Protocol Metadata Management & SoA Design
                     Standardizes CDISC USDM Schedule of Activities authoring and controlled terminology binding.
@@ -726,17 +766,9 @@ public static class KnowledgeCatalogSeeder
                     ## Authoring Steps
                     1. Bind every clinical activity and eCRF item to an approved CDISC Biomedical Concept and NCI Codelist version.
                     2. Document protocol amendment rationale and assess downstream participant visit impact before publishing a new version.
-                    """,
-                html: """
-                    <h2 id="schedule-of-activities-matrix-authoring">Protocol Metadata Management &amp; SoA Design</h2>
-                    <p>Standardizes CDISC USDM Schedule of Activities authoring and controlled terminology binding.</p>
-                    <h2 id="mdr-authoring-steps">Authoring Steps</h2>
-                    <ol>
-                      <li>Bind every clinical activity and eCRF item to an approved CDISC Biomedical Concept and NCI Codelist version.</li>
-                      <li>Document protocol amendment rationale and assess downstream participant visit impact before publishing a new version.</li>
-                    </ol>
-                    <h3 id="amendment-proposal-review">Amendment Proposal Review</h3>
-                    <p>Review structural Schedule of Activities diffs, version lineage, and governance sign-off prerequisites before approving protocol proposals.</p>
+
+                    ### Amendment Proposal Review
+                    Review structural Schedule of Activities diffs, version lineage, and governance sign-off prerequisites before approving protocol proposals.
                     """,
                 createdAt: baseTime.AddMinutes(-15),
                 mappings:
@@ -770,6 +802,11 @@ public static class KnowledgeCatalogSeeder
                 versionLabel: "1.1",
                 versionIndex: 1,
                 tags: ["audit", "part11", "gxp", "compliance"],
+                primaryAnchor: "#gxp-audit-trail-inspection",
+                headingAnchors: new Dictionary<string, string>
+                {
+                    ["Inspection Steps"] = "audit-inspection-steps",
+                },
                 markdown: """
                     ## Audit Trail Inspection Guidelines
                     Defines SHA-256 Merkle audit chain verification and regulatory inspection procedures.
@@ -777,15 +814,6 @@ public static class KnowledgeCatalogSeeder
                     ## Inspection Steps
                     1. Filter immutable audit records by study, actor, entity, and UTC date window while preserving read-only inspection posture.
                     2. Verify predecessor and block SHA-256 hashes prior to exporting signed regulatory inspection bundles.
-                    """,
-                html: """
-                    <h2 id="gxp-audit-trail-inspection">Audit Trail Inspection Guidelines</h2>
-                    <p>Defines SHA-256 Merkle audit chain verification and regulatory inspection procedures.</p>
-                    <h2 id="audit-inspection-steps">Inspection Steps</h2>
-                    <ol>
-                      <li>Filter immutable audit records by study, actor, entity, and UTC date window while preserving read-only inspection posture.</li>
-                      <li>Verify predecessor and block SHA-256 hashes prior to exporting signed regulatory inspection bundles.</li>
-                    </ol>
                     """,
                 createdAt: baseTime.AddMinutes(-10),
                 mappings: BuildRouteMappings(
@@ -808,6 +836,11 @@ public static class KnowledgeCatalogSeeder
                 versionLabel: "1.1",
                 versionIndex: 1,
                 tags: ["overview", "command-center", "triage", "portfolio"],
+                primaryAnchor: "#clinical-command-center-triage",
+                headingAnchors: new Dictionary<string, string>
+                {
+                    ["Operational Steps"] = "overview-operational-steps",
+                },
                 markdown: """
                     ## Purpose & Scope
                     Governs daily review of clinical portfolio KPIs, pending operational tasks, safety escalations, and query backlogs across `/overview`.
@@ -815,19 +848,12 @@ public static class KnowledgeCatalogSeeder
                     ## Operational Steps
                     1. Review high-priority safety, SDV, and query alerts at workspace login.
                     2. Navigate directly to study, site, or support queues requiring immediate GxP follow-up.
-                    """,
-                html: """
-                    <h2 id="clinical-command-center-triage">Purpose &amp; Scope</h2>
-                    <p>Governs daily review of clinical portfolio KPIs, pending operational tasks, safety escalations, and query backlogs across <code>/overview</code>.</p>
-                    <h2 id="overview-operational-steps">Operational Steps</h2>
-                    <ol>
-                      <li>Review high-priority safety, SDV, and query alerts at workspace login.</li>
-                      <li>Navigate directly to study, site, or support queues requiring immediate GxP follow-up.</li>
-                    </ol>
-                    <h3 id="pharmacovigilance-signal-overview">Pharmacovigilance Signal Overview</h3>
-                    <p>Safety officers prioritize expedited serious adverse event alerts and medical review escalations upon sign-in.</p>
-                    <h3 id="investigator-oversight-summary">Investigator Oversight Summary</h3>
-                    <p>Principal Investigators review pending visit signatures, safety notifications, and site delegation alerts.</p>
+
+                    ### Pharmacovigilance Signal Overview
+                    Safety officers prioritize expedited serious adverse event alerts and medical review escalations upon sign-in.
+
+                    ### Investigator Oversight Summary
+                    Principal Investigators review pending visit signatures, safety notifications, and site delegation alerts.
                     """,
                 createdAt: baseTime.AddMinutes(-9),
                 mappings: BuildRouteMappings(
@@ -854,6 +880,11 @@ public static class KnowledgeCatalogSeeder
                 versionLabel: "1.1",
                 versionIndex: 1,
                 tags: ["plans", "milestones", "ctms", "readiness"],
+                primaryAnchor: "#study-execution-plan-milestones",
+                headingAnchors: new Dictionary<string, string>
+                {
+                    ["Key Controls"] = "plans-key-controls",
+                },
                 markdown: """
                     ## Study Execution Plan Governance
                     Defines milestone tracking, enrollment forecasting, and cross-functional study execution plans on `/plans`.
@@ -861,15 +892,6 @@ public static class KnowledgeCatalogSeeder
                     ## Key Controls
                     1. Reconcile country and site activation dates with approved protocol amendments.
                     2. Escalate milestone slippage with documented root-cause context.
-                    """,
-                html: """
-                    <h2 id="study-execution-plan-milestones">Study Execution Plan Governance</h2>
-                    <p>Defines milestone tracking, enrollment forecasting, and cross-functional study execution plans on <code>/plans</code>.</p>
-                    <h2 id="plans-key-controls">Key Controls</h2>
-                    <ol>
-                      <li>Reconcile country and site activation dates with approved protocol amendments.</li>
-                      <li>Escalate milestone slippage with documented root-cause context.</li>
-                    </ol>
                     """,
                 createdAt: baseTime.AddMinutes(-8),
                 mappings: BuildRouteMappings(
@@ -892,6 +914,11 @@ public static class KnowledgeCatalogSeeder
                 versionLabel: "1.2",
                 versionIndex: 1,
                 tags: ["onboarding", "trial-setup", "provisioning", "protocol"],
+                primaryAnchor: "#clinical-trial-onboarding",
+                headingAnchors: new Dictionary<string, string>
+                {
+                    ["Mandatory Checks"] = "onboarding-mandatory-checks",
+                },
                 markdown: """
                     ## Clinical Trial Onboarding Procedure
                     Establishes controlled onboarding steps for new study protocols, organization tenancy bindings, and initial site rosters on `/onboarding/trial`.
@@ -899,15 +926,6 @@ public static class KnowledgeCatalogSeeder
                     ## Mandatory Checks
                     1. Validate sponsor protocol identifier, therapeutic area, and regulatory phase before workspace creation.
                     2. Verify initial study team RBAC assignments and training curriculum bindings prior to activation.
-                    """,
-                html: """
-                    <h2 id="clinical-trial-onboarding">Clinical Trial Onboarding Procedure</h2>
-                    <p>Establishes controlled onboarding steps for new study protocols, organization tenancy bindings, and initial site rosters on <code>/onboarding/trial</code>.</p>
-                    <h2 id="onboarding-mandatory-checks">Mandatory Checks</h2>
-                    <ol>
-                      <li>Validate sponsor protocol identifier, therapeutic area, and regulatory phase before workspace creation.</li>
-                      <li>Verify initial study team RBAC assignments and training curriculum bindings prior to activation.</li>
-                    </ol>
                     """,
                 createdAt: baseTime.AddMinutes(-7),
                 mappings: BuildOnboardingMappings(
@@ -924,6 +942,11 @@ public static class KnowledgeCatalogSeeder
                 versionLabel: "1.4",
                 versionIndex: 1,
                 tags: ["etmf", "dia-reference-model", "essential-documents", "qc"],
+                primaryAnchor: "#etmf-artifact-filing-and-qc",
+                headingAnchors: new Dictionary<string, string>
+                {
+                    ["Operational Controls"] = "etmf-operational-controls",
+                },
                 markdown: """
                     ## eTMF Contemporaneous Filing & Inspection Readiness
                     Governs DIA Reference Model classification, artifact completeness review, and regulatory inspection readiness across `/etmf`.
@@ -931,19 +954,12 @@ public static class KnowledgeCatalogSeeder
                     ## Operational Controls
                     1. File essential regulatory and ethics artifacts under the matching zone, section, and study/site scope.
                     2. Verify document legibility, metadata completeness, and immutable hash integrity during QC review.
-                    """,
-                html: """
-                    <h2 id="etmf-artifact-filing-and-qc">eTMF Contemporaneous Filing &amp; Inspection Readiness</h2>
-                    <p>Governs DIA Reference Model classification, artifact completeness review, and regulatory inspection readiness across <code>/etmf</code>.</p>
-                    <h2 id="etmf-operational-controls">Operational Controls</h2>
-                    <ol>
-                      <li>File essential regulatory and ethics artifacts under the matching zone, section, and study/site scope.</li>
-                      <li>Verify document legibility, metadata completeness, and immutable hash integrity during QC review.</li>
-                    </ol>
-                    <h3 id="etmf-inspection-readiness-verification">eTMF Inspection Readiness Verification</h3>
-                    <p>Auditors inspect DIA Reference Model completeness, certified copy attestations, and immutable filing timestamps.</p>
-                    <h3 id="investigator-site-file-attestation">Investigator Site File Attestation</h3>
-                    <p>Principal Investigators verify site-level regulatory binder synchronization and essential document currency.</p>
+
+                    ### eTMF Inspection Readiness Verification
+                    Auditors inspect DIA Reference Model completeness, certified copy attestations, and immutable filing timestamps.
+
+                    ### Investigator Site File Attestation
+                    Principal Investigators verify site-level regulatory binder synchronization and essential document currency.
                     """,
                 createdAt: baseTime.AddMinutes(-6),
                 mappings: BuildRouteMappings(
@@ -970,6 +986,12 @@ public static class KnowledgeCatalogSeeder
                 versionLabel: "1.3",
                 versionIndex: 1,
                 tags: ["training", "delegation", "ich-e6", "qualification"],
+                primaryAnchor: "#gxp-training-and-delegation",
+                headingAnchors: new Dictionary<string, string>
+                {
+                    ["Qualification Rules"] = "training-qualification-rules",
+                    ["PI Delegation Log Sign-Off"] = "pi-delegation-log-signoff",
+                },
                 markdown: """
                     ## GxP Role Qualification & Training Attestation
                     Defines mandatory SOP read-and-understand training completion and Principal Investigator Delegation of Authority prerequisites on `/training`.
@@ -977,19 +999,12 @@ public static class KnowledgeCatalogSeeder
                     ## Qualification Rules
                     1. Complete assigned protocol and GxP SOP modules prior to performing delegated clinical duties.
                     2. Maintain current training records across protocol amendments to preserve active write access.
-                    """,
-                html: """
-                    <h2 id="gxp-training-and-delegation">GxP Role Qualification &amp; Training Attestation</h2>
-                    <p>Defines mandatory SOP read-and-understand training completion and Principal Investigator Delegation of Authority prerequisites on <code>/training</code>.</p>
-                    <h2 id="training-qualification-rules">Qualification Rules</h2>
-                    <ol>
-                      <li>Complete assigned protocol and GxP SOP modules prior to performing delegated clinical duties.</li>
-                      <li>Maintain current training records across protocol amendments to preserve active write access.</li>
-                    </ol>
-                    <h3 id="pi-delegation-log-signoff">PI Delegation Log Sign-Off</h3>
-                    <p>Principal Investigators verify completed staff training attestations before countersigning Delegation of Authority entries.</p>
-                    <h3 id="site-staff-training-attestation">Site Staff Training Attestation</h3>
-                    <p>Site coordinators complete read-and-understand attestations for protocol amendments prior to executing clinical visits.</p>
+
+                    ### PI Delegation Log Sign-Off
+                    Principal Investigators verify completed staff training attestations before countersigning Delegation of Authority entries.
+
+                    ### Site Staff Training Attestation
+                    Site coordinators complete read-and-understand attestations for protocol amendments prior to executing clinical visits.
                     """,
                 createdAt: baseTime.AddMinutes(-5),
                 mappings: BuildRouteMappings(
@@ -1016,6 +1031,12 @@ public static class KnowledgeCatalogSeeder
                 versionLabel: "1.1",
                 versionIndex: 1,
                 tags: ["observations", "provenance", "sdv", "queries", "safety"],
+                primaryAnchor: "#clinical-observation-provenance-review",
+                headingAnchors: new Dictionary<string, string>
+                {
+                    ["Key Controls"] = "observation-key-controls",
+                    ["Investigator Clinical Significance Sign-Off"] = "investigator-clinical-significance-signoff",
+                },
                 markdown: """
                     ## Clinical Observation Provenance & Discrepancy Review
                     Standardizes item-level observation inspection, audit provenance verification, medical safety review, and query resolution on `/observations/:observationRef`.
@@ -1023,27 +1044,24 @@ public static class KnowledgeCatalogSeeder
                     ## Key Controls
                     1. Inspect source provenance, prior amendments, and open queries before updating or verifying an observation.
                     2. Escalate clinically significant safety abnormalities or MedDRA coding questions with pseudonymous subject codes only.
-                    """,
-                html: """
-                    <h2 id="clinical-observation-provenance-review">Clinical Observation Provenance &amp; Discrepancy Review</h2>
-                    <p>Standardizes item-level observation inspection, audit provenance verification, medical safety review, and query resolution on <code>/observations/:observationRef</code>.</p>
-                    <h2 id="observation-key-controls">Key Controls</h2>
-                    <ol>
-                      <li>Inspect source provenance, prior amendments, and open queries before updating or verifying an observation.</li>
-                      <li>Escalate clinically significant safety abnormalities or MedDRA coding questions with pseudonymous subject codes only.</li>
-                    </ol>
-                    <h3 id="safety-observation-medical-review">Safety Observation Medical Review</h3>
-                    <p>Safety officers evaluate abnormal laboratory values and adverse event observations for expedited reporting criteria.</p>
-                    <h3 id="investigator-clinical-significance-signoff">Investigator Clinical Significance Sign-Off</h3>
-                    <p>Investigators record clinical significance determinations and contemporaneous medical rationale on flagged observations.</p>
-                    <h3 id="source-observation-amendment">Source Observation Amendment</h3>
-                    <p>Site coordinators submit source-verified corrections with mandatory 21 CFR Part 11 reasons for change.</p>
-                    <h3 id="observation-sdv-verification">Observation SDV Verification</h3>
-                    <p>Monitors compare recorded kernel observations against clinic source charts and record SDV status.</p>
-                    <h3 id="observation-discrepancy-query-resolution">Observation Discrepancy Query Resolution</h3>
-                    <p>Data managers review edit-check lineage and verify query responses before closing item-level discrepancies.</p>
-                    <h3 id="observation-provenance-audit-trail">Observation Provenance Audit Trail</h3>
-                    <p>Auditors inspect the append-only revision chain, actor identity, and UTC timestamps for every observation mutation.</p>
+
+                    ### Safety Observation Medical Review
+                    Safety officers evaluate abnormal laboratory values and adverse event observations for expedited reporting criteria.
+
+                    ### Investigator Clinical Significance Sign-Off
+                    Investigators record clinical significance determinations and contemporaneous medical rationale on flagged observations.
+
+                    ### Source Observation Amendment
+                    Site coordinators submit source-verified corrections with mandatory 21 CFR Part 11 reasons for change.
+
+                    ### Observation SDV Verification
+                    Monitors compare recorded kernel observations against clinic source charts and record SDV status.
+
+                    ### Observation Discrepancy Query Resolution
+                    Data managers review edit-check lineage and verify query responses before closing item-level discrepancies.
+
+                    ### Observation Provenance Audit Trail
+                    Auditors inspect the append-only revision chain, actor identity, and UTC timestamps for every observation mutation.
                     """,
                 createdAt: baseTime.AddMinutes(-4),
                 mappings:
@@ -1071,6 +1089,11 @@ public static class KnowledgeCatalogSeeder
                 versionLabel: "1.1",
                 versionIndex: 1,
                 tags: ["tickets", "support", "capa", "sla", "part11"],
+                primaryAnchor: "#gxp-support-ticket-lifecycle",
+                headingAnchors: new Dictionary<string, string>
+                {
+                    ["Mandatory Rules"] = "tickets-mandatory-rules",
+                },
                 markdown: """
                     ## GxP Support Ticket Triage & Closure Governance
                     Defines severity classification, SLA pause/resume tracking, participant de-identification rules, root-cause documentation, and 21 CFR Part 11 electronic signatures on `/tickets`.
@@ -1078,15 +1101,6 @@ public static class KnowledgeCatalogSeeder
                     ## Mandatory Rules
                     1. Never enter direct participant PII in ticket descriptions, comments, or root-cause summaries; use pseudonymous subject codes (for example `SUBJ-1001`).
                     2. Record structured resolution codes and root-cause summaries prior to resolving tickets and applying Part 11 closure signatures.
-                    """,
-                html: """
-                    <h2 id="gxp-support-ticket-lifecycle">GxP Support Ticket Triage &amp; Closure Governance</h2>
-                    <p>Defines severity classification, SLA pause/resume tracking, participant de-identification rules, root-cause documentation, and 21 CFR Part 11 electronic signatures on <code>/tickets</code>.</p>
-                    <h2 id="tickets-mandatory-rules">Mandatory Rules</h2>
-                    <ol>
-                      <li>Never enter direct participant PII in ticket descriptions, comments, or root-cause summaries; use pseudonymous subject codes (for example <code>SUBJ-1001</code>).</li>
-                      <li>Record structured resolution codes and root-cause summaries prior to resolving tickets and applying Part 11 closure signatures.</li>
-                    </ol>
                     """,
                 createdAt: baseTime.AddMinutes(-3),
                 mappings: BuildRouteMappings(
@@ -1109,6 +1123,11 @@ public static class KnowledgeCatalogSeeder
                 versionLabel: "1.1",
                 versionIndex: 1,
                 tags: ["knowledge", "sop", "versioning", "part11"],
+                primaryAnchor: "#controlled-sop-repository-governance",
+                headingAnchors: new Dictionary<string, string>
+                {
+                    ["Operational Steps"] = "knowledge-operational-steps",
+                },
                 markdown: """
                     ## Controlled SOP Repository Usage
                     Governs role-scoped SOP lookup, locked snapshot inspection, and 21 CFR Part 11 Merkle audit verification on `/knowledge`.
@@ -1116,15 +1135,6 @@ public static class KnowledgeCatalogSeeder
                     ## Operational Steps
                     1. Verify that referenced SOP guidance carries `PUBLISHED` status and a locked version snapshot before executing regulated procedures.
                     2. Inspect the 21 CFR Part 11 audit trail tab to verify cryptographic SHA-256 block hashes during quality or regulatory reviews.
-                    """,
-                html: """
-                    <h2 id="controlled-sop-repository-governance">Controlled SOP Repository Usage</h2>
-                    <p>Governs role-scoped SOP lookup, locked snapshot inspection, and 21 CFR Part 11 Merkle audit verification on <code>/knowledge</code>.</p>
-                    <h2 id="knowledge-operational-steps">Operational Steps</h2>
-                    <ol>
-                      <li>Verify that referenced SOP guidance carries <code>PUBLISHED</code> status and a locked version snapshot before executing regulated procedures.</li>
-                      <li>Inspect the 21 CFR Part 11 audit trail tab to verify cryptographic SHA-256 block hashes during quality or regulatory reviews.</li>
-                    </ol>
                     """,
                 createdAt: baseTime.AddMinutes(-2),
                 mappings: BuildRouteMappings(
@@ -1147,22 +1157,14 @@ public static class KnowledgeCatalogSeeder
                 versionLabel: "1.1",
                 versionIndex: 2,
                 tags: ["clinical-canvas", "protocol-versions", "usdm", "design", "amendments"],
+                primaryAnchor: "#canvas-protocol-versions",
                 markdown: """
                     ## Protocol Versions & USDM Draft Governance
                     Governs protocol version inspection, USDM JSON draft import, Schedule of Activities review, and amendment impact evaluation in Clinical Canvas (`stage=design&section=protocol-versions`).
 
-                    ## Key Controls
+                    ### Key Controls
                     1. Validate USDM schedule structure, visit windows, and form bindings before publishing a new protocol version.
                     2. Record a 21 CFR Part 11 justification whenever importing or superseding protocol versions.
-                    """,
-                html: """
-                    <h2 id="canvas-protocol-versions">Protocol Versions &amp; USDM Draft Governance</h2>
-                    <p>Governs protocol version inspection, USDM JSON draft import, Schedule of Activities review, and amendment impact evaluation in Clinical Canvas.</p>
-                    <h3>Key Controls</h3>
-                    <ol>
-                      <li>Validate USDM schedule structure, visit windows, and form bindings before publishing a new protocol version.</li>
-                      <li>Record a 21 CFR Part 11 justification whenever importing or superseding protocol versions.</li>
-                    </ol>
                     """,
                 createdAt: baseTime.AddMinutes(-1).AddSeconds(-55),
                 mappings: BuildCanvasSectionMappings(
@@ -1184,22 +1186,14 @@ public static class KnowledgeCatalogSeeder
                 versionLabel: "1.1",
                 versionIndex: 2,
                 tags: ["clinical-canvas", "sites", "investigator", "site-roster", "start", "conduct"],
+                primaryAnchor: "#canvas-study-sites",
                 markdown: """
                     ## Study Site Roster & Investigator Binding
                     Standardizes clinical site linking, Principal Investigator assignment, and country-level site scope verification in Clinical Canvas (`stage=start&section=sites` and `stage=conduct&section=sites`).
 
-                    ## Operational Steps
+                    ### Operational Steps
                     1. Confirm organization and facility identifiers prior to linking a clinical site to the study.
                     2. Verify site code uniqueness and RBAC scope visibility for assigned site coordinators and monitors.
-                    """,
-                html: """
-                    <h2 id="canvas-study-sites">Study Site Roster &amp; Investigator Binding</h2>
-                    <p>Standardizes clinical site linking, Principal Investigator assignment, and country-level site scope verification in Clinical Canvas.</p>
-                    <h3>Operational Steps</h3>
-                    <ol>
-                      <li>Confirm organization and facility identifiers prior to linking a clinical site to the study.</li>
-                      <li>Verify site code uniqueness and RBAC scope visibility for assigned site coordinators and monitors.</li>
-                    </ol>
                     """,
                 createdAt: baseTime.AddMinutes(-1).AddSeconds(-52),
                 mappings:
@@ -1231,22 +1225,14 @@ public static class KnowledgeCatalogSeeder
                 versionLabel: "1.1",
                 versionIndex: 2,
                 tags: ["clinical-canvas", "site-activation", "irb-iec", "regulatory", "start"],
+                primaryAnchor: "#canvas-site-activation",
                 markdown: """
                     ## Site Activation Lifecycle Controls
                     Defines site status progression from feasibility and IRB/IEC submission through activation readiness in Clinical Canvas (`stage=start&section=site-activation`).
 
-                    ## Mandatory Checks
+                    ### Mandatory Checks
                     1. Confirm ethics approval and executed clinical trial agreement dates before advancing site activation state.
                     2. Document regulatory submission blockers via support escalation with study and site scope attached.
-                    """,
-                html: """
-                    <h2 id="canvas-site-activation">Site Activation Lifecycle Controls</h2>
-                    <p>Defines site status progression from feasibility and IRB/IEC submission through activation readiness in Clinical Canvas.</p>
-                    <h3>Mandatory Checks</h3>
-                    <ol>
-                      <li>Confirm ethics approval and executed clinical trial agreement dates before advancing site activation state.</li>
-                      <li>Document regulatory submission blockers via support escalation with study and site scope attached.</li>
-                    </ol>
                     """,
                 createdAt: baseTime.AddMinutes(-1).AddSeconds(-49),
                 mappings: BuildCanvasSectionMappings(
@@ -1268,22 +1254,14 @@ public static class KnowledgeCatalogSeeder
                 versionLabel: "1.1",
                 versionIndex: 2,
                 tags: ["clinical-canvas", "startup-greenlight", "readiness", "ssu", "start"],
+                primaryAnchor: "#canvas-startup-greenlight",
                 markdown: """
                     ## Startup Readiness & Enrollment Greenlight Gate
                     Governs pre-enrollment checklist verification across essential documents, training completion, delegation sign-off, and IP pharmacy release (`stage=start&section=startup-greenlight`).
 
-                    ## Greenlight Rules
+                    ### Greenlight Rules
                     1. Verify 100% completion of mandatory startup prerequisites prior to issuing site enrollment greenlight.
                     2. Retain immutable certification timestamps and approver attribution in the study audit trail.
-                    """,
-                html: """
-                    <h2 id="canvas-startup-greenlight">Startup Readiness &amp; Enrollment Greenlight Gate</h2>
-                    <p>Governs pre-enrollment checklist verification across essential documents, training completion, delegation sign-off, and IP pharmacy release.</p>
-                    <h3>Greenlight Rules</h3>
-                    <ol>
-                      <li>Verify 100% completion of mandatory startup prerequisites prior to issuing site enrollment greenlight.</li>
-                      <li>Retain immutable certification timestamps and approver attribution in the study audit trail.</li>
-                    </ol>
                     """,
                 createdAt: baseTime.AddMinutes(-1).AddSeconds(-46),
                 mappings: BuildCanvasSectionMappings(
@@ -1305,22 +1283,14 @@ public static class KnowledgeCatalogSeeder
                 versionLabel: "1.1",
                 versionIndex: 2,
                 tags: ["clinical-canvas", "documents", "etmf", "dia-reference-model", "start"],
+                primaryAnchor: "#canvas-essential-documents",
                 markdown: """
                     ## Study Essential Document Filing & QC
                     Standardizes DIA TMF Reference Model filing, metadata verification, and quality review within Clinical Canvas (`stage=start&section=documents`).
 
-                    ## Operational Controls
+                    ### Operational Controls
                     1. Classify uploaded essential documents under the correct study and site scope without participant PII.
                     2. Complete QC verification prior to relying on regulatory artifacts for site greenlight.
-                    """,
-                html: """
-                    <h2 id="canvas-essential-documents">Study Essential Document Filing &amp; QC</h2>
-                    <p>Standardizes DIA TMF Reference Model filing, metadata verification, and quality review within Clinical Canvas.</p>
-                    <h3>Operational Controls</h3>
-                    <ol>
-                      <li>Classify uploaded essential documents under the correct study and site scope without participant PII.</li>
-                      <li>Complete QC verification prior to relying on regulatory artifacts for site greenlight.</li>
-                    </ol>
                     """,
                 createdAt: baseTime.AddMinutes(-1).AddSeconds(-43),
                 mappings: BuildCanvasSectionMappings(
@@ -1342,22 +1312,14 @@ public static class KnowledgeCatalogSeeder
                 versionLabel: "1.1",
                 versionIndex: 2,
                 tags: ["clinical-canvas", "training", "qualification", "ich-e6", "start"],
+                primaryAnchor: "#canvas-study-training",
                 markdown: """
                     ## Study Protocol Training & Role Qualification
                     Defines protocol-specific training assignment, read-and-understand attestation, and write-access qualification checks (`stage=start&section=training`).
 
-                    ## Qualification Rules
+                    ### Qualification Rules
                     1. Ensure site personnel complete required protocol version curricula prior to delegation sign-off.
                     2. Re-verify training currency following major protocol amendments.
-                    """,
-                html: """
-                    <h2 id="canvas-study-training">Study Protocol Training &amp; Role Qualification</h2>
-                    <p>Defines protocol-specific training assignment, read-and-understand attestation, and write-access qualification checks.</p>
-                    <h3>Qualification Rules</h3>
-                    <ol>
-                      <li>Ensure site personnel complete required protocol version curricula prior to delegation sign-off.</li>
-                      <li>Re-verify training currency following major protocol amendments.</li>
-                    </ol>
                     """,
                 createdAt: baseTime.AddMinutes(-1).AddSeconds(-40),
                 mappings: BuildCanvasSectionMappings(
@@ -1379,22 +1341,14 @@ public static class KnowledgeCatalogSeeder
                 versionLabel: "1.1",
                 versionIndex: 2,
                 tags: ["clinical-canvas", "site-milestones", "ctms", "timelines", "start"],
+                primaryAnchor: "#canvas-site-milestones",
                 markdown: """
                     ## Site Milestone Tracking & Baseline Variance Governance
                     Governs planned, baseline, and actual startup milestone tracking across study sites (`stage=start&section=site-milestones`).
 
-                    ## Operational Steps
+                    ### Operational Steps
                     1. Record contemporaneous actual completion dates for IRB submission, contract execution, and SIV completion.
                     2. Escalate critical-path startup delays with root-cause commentary.
-                    """,
-                html: """
-                    <h2 id="canvas-site-milestones">Site Milestone Tracking &amp; Baseline Variance Governance</h2>
-                    <p>Governs planned, baseline, and actual startup milestone tracking across study sites.</p>
-                    <h3>Operational Steps</h3>
-                    <ol>
-                      <li>Record contemporaneous actual completion dates for IRB submission, contract execution, and SIV completion.</li>
-                      <li>Escalate critical-path startup delays with root-cause commentary.</li>
-                    </ol>
                     """,
                 createdAt: baseTime.AddMinutes(-1).AddSeconds(-37),
                 mappings: BuildCanvasSectionMappings(
@@ -1416,22 +1370,14 @@ public static class KnowledgeCatalogSeeder
                 versionLabel: "1.1",
                 versionIndex: 2,
                 tags: ["clinical-canvas", "delegation", "doa-log", "part11", "start"],
+                primaryAnchor: "#canvas-delegation-log",
                 markdown: """
                     ## Principal Investigator Delegation of Authority (DoA) Governance
                     Establishes electronic DoA duty assignment, effective date tracking, and Principal Investigator 21 CFR Part 11 countersignature rules (`stage=start&section=delegation`).
 
-                    ## Mandatory Controls
+                    ### Mandatory Controls
                     1. Verify active GxP training completion before delegating clinical assessment or eCRF entry responsibilities.
                     2. Capture step-up electronic signatures when authorizing or ending delegated site duties.
-                    """,
-                html: """
-                    <h2 id="canvas-delegation-log">Principal Investigator Delegation of Authority (DoA) Governance</h2>
-                    <p>Establishes electronic DoA duty assignment, effective date tracking, and Principal Investigator 21 CFR Part 11 countersignature rules.</p>
-                    <h3>Mandatory Controls</h3>
-                    <ol>
-                      <li>Verify active GxP training completion before delegating clinical assessment or eCRF entry responsibilities.</li>
-                      <li>Capture step-up electronic signatures when authorizing or ending delegated site duties.</li>
-                    </ol>
                     """,
                 createdAt: baseTime.AddMinutes(-1).AddSeconds(-34),
                 mappings: BuildCanvasSectionMappings(
@@ -1453,22 +1399,14 @@ public static class KnowledgeCatalogSeeder
                 versionLabel: "1.1",
                 versionIndex: 2,
                 tags: ["clinical-canvas", "participants", "enrollment", "ecrf", "conduct"],
+                primaryAnchor: "#canvas-participants-execution",
                 markdown: """
                     ## Participant Lifecycle, Visit Matrix & eCRF Execution
                     Governs participant screening, enrollment, visit collection instances, source data verification, and PI form signatures (`stage=conduct&section=participants`).
 
-                    ## Mandatory GxP Controls
+                    ### Mandatory GxP Controls
                     1. Reference participants strictly by pseudonymous subject code (for example `SUBJ-1001`); never record direct PII.
                     2. Provide an auditable 21 CFR Part 11 reason for change on every observation amendment or form correction.
-                    """,
-                html: """
-                    <h2 id="canvas-participants-execution">Participant Lifecycle, Visit Matrix &amp; eCRF Execution</h2>
-                    <p>Governs participant screening, enrollment, visit collection instances, source data verification, and PI form signatures.</p>
-                    <h3>Mandatory GxP Controls</h3>
-                    <ol>
-                      <li>Reference participants strictly by pseudonymous subject code (for example <code>SUBJ-1001</code>); never record direct PII.</li>
-                      <li>Provide an auditable 21 CFR Part 11 reason for change on every observation amendment or form correction.</li>
-                    </ol>
                     """,
                 createdAt: baseTime.AddMinutes(-1).AddSeconds(-31),
                 mappings: BuildCanvasSectionMappings(
@@ -1490,22 +1428,14 @@ public static class KnowledgeCatalogSeeder
                 versionLabel: "1.1",
                 versionIndex: 2,
                 tags: ["clinical-canvas", "monitoring-visits", "mvr", "sdv", "conduct"],
+                primaryAnchor: "#canvas-monitoring-visits",
                 markdown: """
                     ## Site Monitoring Visit Execution & Finding Resolution
                     Standardizes SIV, IMV, and COV visit execution, finding severity grading, and compiled follow-up letter sign-off (`stage=conduct&section=monitoring-visits`).
 
-                    ## Operational Checklist
+                    ### Operational Checklist
                     1. Reconcile SDV coverage and open discrepancy queries before finalizing monitoring visit reports.
                     2. Escalate major or critical monitoring findings to the quality and site operations queue with site scope preserved.
-                    """,
-                html: """
-                    <h2 id="canvas-monitoring-visits">Site Monitoring Visit Execution &amp; Finding Resolution</h2>
-                    <p>Standardizes SIV, IMV, and COV visit execution, finding severity grading, and compiled follow-up letter sign-off.</p>
-                    <h3>Operational Checklist</h3>
-                    <ol>
-                      <li>Reconcile SDV coverage and open discrepancy queries before finalizing monitoring visit reports.</li>
-                      <li>Escalate major or critical monitoring findings to the quality and site operations queue with site scope preserved.</li>
-                    </ol>
                     """,
                 createdAt: baseTime.AddMinutes(-1).AddSeconds(-28),
                 mappings: BuildCanvasSectionMappings(
@@ -1527,22 +1457,14 @@ public static class KnowledgeCatalogSeeder
                 versionLabel: "1.1",
                 versionIndex: 2,
                 tags: ["clinical-canvas", "supply", "rtsm", "ip-accountability", "conduct"],
+                primaryAnchor: "#canvas-investigational-supply",
                 markdown: """
                     ## Investigational Product Inventory & Temperature Excursion Controls
                     Governs depot-to-site shipments, kit quarantine on temperature excursion, subject dispensing, and IP accountability (`stage=conduct&section=supply`).
 
-                    ## Mandatory Controls
+                    ### Mandatory Controls
                     1. Quarantine affected kit lots immediately upon cold-chain excursion detection and escalate under `SUPPLY_EXCURSION`.
                     2. Maintain blinded kit reconciliation records across dispensing and return workflows.
-                    """,
-                html: """
-                    <h2 id="canvas-investigational-supply">Investigational Product Inventory &amp; Temperature Excursion Controls</h2>
-                    <p>Governs depot-to-site shipments, kit quarantine on temperature excursion, subject dispensing, and IP accountability.</p>
-                    <h3>Mandatory Controls</h3>
-                    <ol>
-                      <li>Quarantine affected kit lots immediately upon cold-chain excursion detection and escalate under <code>SUPPLY_EXCURSION</code>.</li>
-                      <li>Maintain blinded kit reconciliation records across dispensing and return workflows.</li>
-                    </ol>
                     """,
                 createdAt: baseTime.AddMinutes(-1).AddSeconds(-25),
                 mappings: BuildCanvasSectionMappings(
@@ -1564,22 +1486,14 @@ public static class KnowledgeCatalogSeeder
                 versionLabel: "1.1",
                 versionIndex: 2,
                 tags: ["clinical-canvas", "queries", "discrepancies", "data-cleaning", "data"],
+                primaryAnchor: "#canvas-discrepancy-queries",
                 markdown: """
                     ## Study Discrepancy Query Triage & Resolution
                     Defines manual and rule-generated query review, site coordinator response, and data manager closure verification (`stage=data&section=queries`).
 
-                    ## Operational Steps
+                    ### Operational Steps
                     1. Inspect linked observation provenance before answering or closing open discrepancy queries.
                     2. Never close discrepancy queries without verifying either an observation correction or a documented clinical explanation.
-                    """,
-                html: """
-                    <h2 id="canvas-discrepancy-queries">Study Discrepancy Query Triage &amp; Resolution</h2>
-                    <p>Defines manual and rule-generated query review, site coordinator response, and data manager closure verification.</p>
-                    <h3>Operational Steps</h3>
-                    <ol>
-                      <li>Inspect linked observation provenance before answering or closing open discrepancy queries.</li>
-                      <li>Never close discrepancy queries without verifying either an observation correction or a documented clinical explanation.</li>
-                    </ol>
                     """,
                 createdAt: baseTime.AddMinutes(-1).AddSeconds(-22),
                 mappings: BuildCanvasSectionMappings(
@@ -1601,22 +1515,14 @@ public static class KnowledgeCatalogSeeder
                 versionLabel: "1.1",
                 versionIndex: 2,
                 tags: ["clinical-canvas", "locks", "data-lock", "part11", "data"],
+                primaryAnchor: "#canvas-scoped-data-locks",
                 markdown: """
                     ## Scoped Data Lock & Unlock Governance
                     Governs observation, form, participant, site, and study lock readiness checks, Part 11 step-up electronic signatures, and controlled unlock procedures (`stage=data&section=locks` and `/data-lock`).
 
-                    ## Mandatory Lock Gates
+                    ### Mandatory Lock Gates
                     1. Resolve all open discrepancy queries, pending SDV items, and required PI signatures before applying a hard lock.
                     2. Record an explicit regulatory justification and step-up signature for every lock or controlled unlock action.
-                    """,
-                html: """
-                    <h2 id="canvas-scoped-data-locks">Scoped Data Lock &amp; Unlock Governance</h2>
-                    <p>Governs observation, form, participant, site, and study lock readiness checks, Part 11 step-up electronic signatures, and controlled unlock procedures.</p>
-                    <h3>Mandatory Lock Gates</h3>
-                    <ol>
-                      <li>Resolve all open discrepancy queries, pending SDV items, and required PI signatures before applying a hard lock.</li>
-                      <li>Record an explicit regulatory justification and step-up signature for every lock or controlled unlock action.</li>
-                    </ol>
                     """,
                 createdAt: baseTime.AddMinutes(-1).AddSeconds(-19),
                 mappings:
@@ -1650,22 +1556,14 @@ public static class KnowledgeCatalogSeeder
                 versionLabel: "1.1",
                 versionIndex: 2,
                 tags: ["clinical-canvas", "validation", "edit-checks", "rules", "data"],
+                primaryAnchor: "#canvas-rule-validation",
                 markdown: """
                     ## Edit-Check Rule Pack Authoring & Validation Findings
                     Standardizes deterministic edit-check specification, dry-run impact preview, rule pack activation, and cross-visit validation triage (`stage=data&section=validation`).
 
-                    ## Key Controls
+                    ### Key Controls
                     1. Execute dry-run previews against study observations to verify false-positive rates before activating new rule packs.
                     2. Review validation findings alongside query ownership to coordinate timely site data cleaning.
-                    """,
-                html: """
-                    <h2 id="canvas-rule-validation">Edit-Check Rule Pack Authoring &amp; Validation Findings</h2>
-                    <p>Standardizes deterministic edit-check specification, dry-run impact preview, rule pack activation, and cross-visit validation triage.</p>
-                    <h3>Key Controls</h3>
-                    <ol>
-                      <li>Execute dry-run previews against study observations to verify false-positive rates before activating new rule packs.</li>
-                      <li>Review validation findings alongside query ownership to coordinate timely site data cleaning.</li>
-                    </ol>
                     """,
                 createdAt: baseTime.AddMinutes(-1).AddSeconds(-16),
                 mappings: BuildCanvasSectionMappings(
@@ -1687,22 +1585,14 @@ public static class KnowledgeCatalogSeeder
                 versionLabel: "1.1",
                 versionIndex: 2,
                 tags: ["clinical-canvas", "analyze", "blinded-review", "biostatistics"],
+                primaryAnchor: "#canvas-analysis-readiness",
                 markdown: """
                     ## Blinded Data Review & Endpoint Analysis Readiness
                     Defines pre-lock blinded data review, population evaluability checks, and statistical readiness governance (`stage=analyze`).
 
-                    ## Operational Controls
+                    ### Operational Controls
                     1. Confirm database lock prerequisites and protocol deviation classifications prior to unblinded analysis cutoffs.
                     2. Preserve treatment-assignment blinding across operational support escalations.
-                    """,
-                html: """
-                    <h2 id="canvas-analysis-readiness">Blinded Data Review &amp; Endpoint Analysis Readiness</h2>
-                    <p>Defines pre-lock blinded data review, population evaluability checks, and statistical readiness governance.</p>
-                    <h3>Operational Controls</h3>
-                    <ol>
-                      <li>Confirm database lock prerequisites and protocol deviation classifications prior to unblinded analysis cutoffs.</li>
-                      <li>Preserve treatment-assignment blinding across operational support escalations.</li>
-                    </ol>
                     """,
                 createdAt: baseTime.AddMinutes(-1).AddSeconds(-13),
                 mappings: BuildCanvasStageOnlyMappings(
@@ -1722,22 +1612,14 @@ public static class KnowledgeCatalogSeeder
                 versionLabel: "1.1",
                 versionIndex: 2,
                 tags: ["clinical-canvas", "exports", "submission", "cdisc", "submit"],
+                primaryAnchor: "#canvas-regulated-exports",
                 markdown: """
                     ## Regulated Clinical Dataset & Audit-Trail Exports
                     Governs authorized clinical observation exports, 21 CFR Part 11 audit-trail archival packages, and submission readiness checks (`stage=submit&section=exports` and `/exports`).
 
-                    ## Mandatory Controls
+                    ### Mandatory Controls
                     1. Verify study/site authorization and lock state prior to generating regulatory submission or inspection export bundles.
                     2. Confirm SHA-256 manifest integrity and pseudonymous subject de-identification on exported deliverables.
-                    """,
-                html: """
-                    <h2 id="canvas-regulated-exports">Regulated Clinical Dataset &amp; Audit-Trail Exports</h2>
-                    <p>Governs authorized clinical observation exports, 21 CFR Part 11 audit-trail archival packages, and submission readiness checks.</p>
-                    <h3>Mandatory Controls</h3>
-                    <ol>
-                      <li>Verify study/site authorization and lock state prior to generating regulatory submission or inspection export bundles.</li>
-                      <li>Confirm SHA-256 manifest integrity and pseudonymous subject de-identification on exported deliverables.</li>
-                    </ol>
                     """,
                 createdAt: baseTime.AddMinutes(-1).AddSeconds(-10),
                 mappings:
@@ -1771,22 +1653,14 @@ public static class KnowledgeCatalogSeeder
                 versionLabel: "1.1",
                 versionIndex: 2,
                 tags: ["forbidden", "rbac", "access-control", "least-privilege", "provisioning"],
+                primaryAnchor: "#rbac-access-refusal-and-escalation",
                 markdown: """
                     ## Role-Based Access Control (RBAC) Refusal & Scope Escalation
                     Explains ICH E6(R3) least-privilege role enforcement, study/site assignment boundaries, and controlled access request procedures when landing on `/forbidden`.
 
-                    ## Operational Steps
+                    ### Operational Steps
                     1. Confirm your active workspace persona and assigned study/site scope before retrying restricted clinical routes.
                     2. Escalate legitimate role or site provisioning requests under `ACCESS_CONTROL` for Sponsor Admin review and training verification.
-                    """,
-                html: """
-                    <h2 id="rbac-access-refusal-and-escalation">Role-Based Access Control (RBAC) Refusal &amp; Scope Escalation</h2>
-                    <p>Explains ICH E6(R3) least-privilege role enforcement, study/site assignment boundaries, and controlled access request procedures on <code>/forbidden</code>.</p>
-                    <h3>Operational Steps</h3>
-                    <ol>
-                      <li>Confirm your active workspace persona and assigned study/site scope before retrying restricted clinical routes.</li>
-                      <li>Escalate legitimate role or site provisioning requests under <code>ACCESS_CONTROL</code> for Sponsor Admin review and training verification.</li>
-                    </ol>
                     """,
                 createdAt: baseTime.AddMinutes(-1).AddSeconds(-5),
                 mappings: BuildRouteMappings(
@@ -1809,22 +1683,14 @@ public static class KnowledgeCatalogSeeder
                 versionLabel: "1.1",
                 versionIndex: 2,
                 tags: ["unavailable", "roadmap", "validated-workflows", "clinical-canvas"],
+                primaryAnchor: "#module-availability-and-roadmap",
                 markdown: """
                     ## Workspace Module Availability & Validated Clinical Canvas Fallbacks
                     Guides operators encountering pre-release module screens on `/unavailable` to the validated Clinical Kernel workflows active in Clinical Canvas.
 
-                    ## Operational Steps
+                    ### Operational Steps
                     1. Use Clinical Canvas (`/studies/:studyCode`), Data Collection (`/ecrf`), Site Readiness (`/ctms`, `/ssu`), eTMF (`/etmf`), Training (`/training`), Support (`/tickets`), and Knowledge (`/knowledge`) for live regulated operations.
                     2. Log an operational support ticket under `SYSTEM_SUPPORT` if an expected entitlement or module workflow is unavailable.
-                    """,
-                html: """
-                    <h2 id="module-availability-and-roadmap">Workspace Module Availability &amp; Validated Clinical Canvas Fallbacks</h2>
-                    <p>Guides operators encountering pre-release module screens on <code>/unavailable</code> to validated Clinical Kernel workflows active in Clinical Canvas.</p>
-                    <h3>Operational Steps</h3>
-                    <ol>
-                      <li>Use Clinical Canvas (<code>/studies/:studyCode</code>), Data Collection (<code>/ecrf</code>), Site Readiness (<code>/ctms</code>, <code>/ssu</code>), eTMF (<code>/etmf</code>), Training (<code>/training</code>), Support (<code>/tickets</code>), and Knowledge (<code>/knowledge</code>) for live regulated operations.</li>
-                      <li>Log an operational support ticket under <code>SYSTEM_SUPPORT</code> if an expected entitlement or module workflow is unavailable.</li>
-                    </ol>
                     """,
                 createdAt: baseTime.AddMinutes(-1),
                 mappings: BuildRouteMappings(
@@ -1850,11 +1716,13 @@ public static class KnowledgeCatalogSeeder
         string versionLabel,
         int versionIndex,
         string[] tags,
+        string primaryAnchor,
         string markdown,
-        string html,
         DateTimeOffset createdAt,
-        IReadOnlyList<ContextualHelpMapping> mappings)
+        IReadOnlyList<ContextualHelpMapping> mappings,
+        IReadOnlyDictionary<string, string>? headingAnchors = null)
     {
+        string compiledHtml = SopHtmlCompiler.Compile(markdown, primaryAnchor, headingAnchors);
         var article = new KnowledgeArticle
         {
             Id = articleId,
@@ -1882,7 +1750,7 @@ public static class KnowledgeCatalogSeeder
             VersionIndex = versionIndex,
             VersionLabel = versionLabel,
             BodyMarkdown = markdown,
-            BodyHtml = html,
+            BodyHtml = compiledHtml,
             StatusAtSnapshot = "PUBLISHED",
             IsLocked = true,
             CreatedAt = createdAt,

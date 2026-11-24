@@ -997,6 +997,7 @@ public sealed class KernelApiHostTests : IDisposable
         using var factory = new WebApplicationFactory<Cadence.Kernel.Host.Program>().WithWebHostBuilder(builder => builder
             .UseEnvironment("Production")
             .UseTestGatewaySecret()
+            .UseTestBiometricLivenessKey()
             .UseTestPostgresConnectionString()
             .UseSetting("Kernel:DevelopmentTenant:Code", "cadence-local"));
 
@@ -1183,7 +1184,7 @@ public sealed class KernelApiHostTests : IDisposable
 
         var factory = new WebApplicationFactory<Cadence.Kernel.Host.Program>().WithWebHostBuilder(builder =>
         {
-            builder.UseTestGatewaySecret().UseTestPostgresConnectionString();
+            builder.UseTestGatewaySecret().UseTestBiometricLivenessKey().UseTestPostgresConnectionString();
             builder.ConfigureServices(services =>
             {
                 services.RemoveAll<IKernelNavigator>();

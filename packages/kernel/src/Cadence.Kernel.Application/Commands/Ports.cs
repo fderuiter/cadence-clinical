@@ -77,7 +77,6 @@ public sealed record AuthorizationDecision(bool Permitted, string? Reason = null
 
     private static NextAction ToNextAction(EvaluatedCondition condition, NodeRef? subject)
     {
-        var target = condition.Evidence.Count > 0 ? condition.Evidence[0] : subject;
         var capability = condition.Code switch
         {
             "grant.active" or "grant.delegable" or "authority.grant" => "grant.issue",
@@ -87,6 +86,8 @@ public sealed record AuthorizationDecision(bool Permitted, string? Reason = null
             "scope.unlocked" or "lock.unlocked" => "lock.release",
             _ => null,
         };
+        var fallbackTarget = capability is not null ? subject : null;
+        var target = condition.Evidence.Count > 0 ? condition.Evidence[0] : fallbackTarget;
         return new NextAction(condition.Description, capability, target);
     }
 }

@@ -1,4 +1,4 @@
-# ADR-2659: Inline Explanation Primitives and RBAC Problem Details
+# ADR-2661: Inline Explanation Primitives and RBAC Problem Details
 
 - **Status:** Accepted
 - **Date:** 2026-11-22

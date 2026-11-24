@@ -457,8 +457,8 @@ import {
   resolveActiveWorkspaceScope,
   resolveSiteReadinessPath,
 } from "../canvas/palette";
-import OnboardingTour from "./OnboardingTour.vue";
 import OnboardingChecklistDrawer from "./OnboardingChecklistDrawer.vue";
+import OnboardingTour from "./OnboardingTour.vue";
 import CommandPaletteOverlay from "./CommandPaletteOverlay.vue";
 
 const DemoResetBtn = isDemoBuild()

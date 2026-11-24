@@ -183,11 +183,18 @@ export default defineConfig({
             manualChunks(id) {
               const normalizedId = id.replace(/\\/g, "/");
               if (
-                /\/packages\/ui\/(?:(?:session|callerScope)\.js|src\/composables\/(?:useFocusTrap|useEscapeClose|useSignOutGuard)\.js|src\/components\/clinical\/(?:sharedProps\.js|(?:ClinicalModal|ClinicalDrawer|ClinicalContextBar|ClinicalIconButton|ClinicalToastHost|SignOutConfirmModal)\.vue))(?:$|\?)/.test(
+                /\/packages\/ui\/(?:(?:session|callerScope)\.js|src\/composables\/(?:useFocusTrap|useEscapeClose|useInlineFocusHandoff|useSignOutGuard)\.js|src\/utils\/entityPeekHandler\.js|src\/components\/clinical\/(?:sharedProps\.js|(?:ClinicalModal|ClinicalDrawer|ClinicalContextBar|ClinicalIconButton|ClinicalToastHost|SignOutConfirmModal)\.vue))(?:$|\?)/.test(
                   normalizedId
                 )
               ) {
                 return "ui-shell";
+              }
+              if (
+                /\/apps\/web\/src\/(?:canvas\/(?:nodeRef|lifecycle)\.ts|canvas\/generated\/(?:nodeKinds|participantContracts)\.ts|canvas\/stages\/[^/]+\.ts|stores\/(?:toasts\.js|clinicalScope\.ts)|utils\/(?:apiErrors|demoMode|unbackedActions)\.js)(?:$|\?)/.test(
+                  normalizedId
+                )
+              ) {
+                return "app-core";
               }
               if (!normalizedId.includes("node_modules/")) {
                 return undefined;

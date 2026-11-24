@@ -416,6 +416,7 @@ public sealed class KernelObservationHostPostgresTests(KernelPostgresFixture fix
     {
         _host ??= new WebApplicationFactory<Cadence.Kernel.Host.Program>().WithWebHostBuilder(builder => builder
             .UseTestGatewaySecret()
+            .UseTestBiometricLivenessKey()
             .UseSetting("ConnectionStrings:cadence", fixture.ConnectionString)
 
             // Every error an observation endpoint returns must be one its command declares (ADR-2600 §4.5).
