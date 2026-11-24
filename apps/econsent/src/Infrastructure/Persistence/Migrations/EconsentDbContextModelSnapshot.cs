@@ -88,7 +88,8 @@ namespace Cadence.Apps.Econsent.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("ConsentId");
 
-                    b.HasIndex("LivenessTokenHash");
+                    b.HasIndex("LivenessTokenHash")
+                        .IsUnique();
 
                     b.HasIndex("SubjectPseudonym");
 

@@ -194,6 +194,7 @@ import { ctmsApi, type SiteMilestone } from "../../api/ctmsApi";
 import { canManageMilestones } from "../../canvas/authority";
 import {
   formatIsoDateShort,
+  scopedWorkspaceSectionProps,
   useScopedWorkspaceSection,
 } from "../../composables/useScopedWorkspaceSection";
 import {
@@ -203,44 +204,26 @@ import {
 import CtmsSectionScopeBar from "./CtmsSectionScopeBar.vue";
 import "./ctmsWorkspaceSection.css";
 
-const props = withDefaults(
-  defineProps<{
-    studyCode?: string;
-    siteId?: string;
-  }>(),
-  {
-    studyCode: "",
-    siteId: "",
-  }
-);
-
-const newSiteId = ref("");
+const props = defineProps(scopedWorkspaceSectionProps);
+const workspace = useScopedWorkspaceSection(props, {
+  onStudyPropChange: () => void loadMilestones(),
+  fallbackErrorTitle: "Site milestones could not be loaded",
+  fallbackErrorMessage: "Site milestones could not be loaded.",
+});
+const { authStore, toasts, syncActiveScope, recordLoadFailure } = workspace;
 const {
-  authStore,
-  toasts,
   assignedStudies,
   assignedSites,
   studyInput,
   siteInput,
+  newSiteId,
   loading,
   loaded,
   saving,
   loadError,
   scopeGuidance,
-  syncActiveScope,
-  recordLoadFailure,
-} = useScopedWorkspaceSection(props, {
-  onStudyPropChange: () => {
-    void loadMilestones();
-  },
-  onSitePropChange: (val) => {
-    if (val) newSiteId.value = val;
-  },
-  fallbackErrorTitle: "Site milestones could not be loaded",
-  fallbackErrorMessage: "Site milestones could not be loaded.",
-});
+} = workspace;
 
-newSiteId.value = siteInput.value;
 const canManage = computed(() => canManageMilestones(authStore));
 const milestones = ref<SiteMilestone[]>([]);
 const newType = ref("SITE_ACTIVATION");
