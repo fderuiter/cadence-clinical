@@ -1,116 +1,129 @@
 import { findSection, findStage } from "../canvas/lifecycle";
+import { listDemoCatalogModules } from "../router/availability.js";
 import { isDemoBuild } from "../utils/demoMode.js";
 import { createOpenApiClient, openApiClient, unwrapResponse } from "./client";
 import type { paths as KnowledgePaths } from "./generated/knowledge";
 
 const knowledgeClient = createOpenApiClient<KnowledgePaths>();
 
+const DOCS_PORTAL_MARKDOWN_FOOTER =
+  "\n\n## Documentation Portal\n- [Open Cadence Clinical Documentation Portal](/cadence-clinical/)";
+const DOCS_PORTAL_HTML_FOOTER =
+  '<h3>Documentation Portal</h3><p><a href="/cadence-clinical/">Open Cadence Clinical Documentation Portal</a></p>';
+
+function isNonDemoProductionBuild(): boolean {
+  return import.meta.env.MODE === "production" && !isDemoBuild();
+}
+
 /**
  * Bundled offline help categories. Served only by a demo build when the API is unreachable (#4523).
  */
-export const DEFAULT_CATEGORIES = [
-  {
-    id: "cat-clinical-ops",
-    name: "Clinical Operations",
-    slug: "clinical-operations",
-    description: "eCRF data capture, subject enrollment, and visit procedures.",
-    persona_visibility: [
-      "site_crc",
-      "site_investigator",
-      "safety_officer",
-      "cra_monitor",
-      "data_manager",
-      "super_admin",
-    ],
-    parent_id: null,
-    is_deleted: false,
-    created_at: "2026-01-15T08:00:00Z",
-    created_by: "svc:knowledge-sop-catalog",
-  },
-  {
-    id: "cat-study-authoring",
-    name: "Study Authoring & MDR",
-    slug: "study-authoring-mdr",
-    description:
-      "CDISC USDM protocol authoring, SoA matrix design, and digitizer workflows.",
-    persona_visibility: ["sponsor_designer", "data_manager", "super_admin"],
-    parent_id: null,
-    is_deleted: false,
-    created_at: "2026-01-15T08:00:00Z",
-    created_by: "svc:knowledge-sop-catalog",
-  },
-  {
-    id: "cat-site-startup",
-    name: "Site Startup & Activation",
-    slug: "site-startup-activation",
-    description:
-      "IRB/IEC submissions, regulatory greenlight checklists, delegation logs, and site initiation readiness.",
-    persona_visibility: [
-      "cra_monitor",
-      "site_crc",
-      "site_investigator",
-      "sponsor_designer",
-      "super_admin",
-    ],
-    parent_id: null,
-    is_deleted: false,
-    created_at: "2026-01-15T08:00:00Z",
-    created_by: "svc:knowledge-sop-catalog",
-  },
-  {
-    id: "cat-site-monitoring",
-    name: "Site Monitoring & CTMS",
-    slug: "site-monitoring-ctms",
-    description:
-      "CRA monitoring visits, source data verification, and trip reports.",
-    persona_visibility: [
-      "cra_monitor",
-      "site_crc",
-      "site_investigator",
-      "super_admin",
-    ],
-    parent_id: null,
-    is_deleted: false,
-    created_at: "2026-01-15T08:00:00Z",
-    created_by: "svc:knowledge-sop-catalog",
-  },
-  {
-    id: "cat-regulatory-compliance",
-    name: "Regulatory & Quality Compliance",
-    slug: "regulatory-compliance",
-    description:
-      "21 CFR Part 11 compliance, audit trail inspection, and digital signatures.",
-    persona_visibility: [
-      "auditor",
-      "super_admin",
-      "sponsor_designer",
-      "data_manager",
-      "safety_officer",
-      "site_investigator",
-    ],
-    parent_id: null,
-    is_deleted: false,
-    created_at: "2026-01-15T08:00:00Z",
-    created_by: "svc:knowledge-sop-catalog",
-  },
-  {
-    id: "cat-data-management",
-    name: "Data Management & Coding",
-    slug: "data-management-coding",
-    description:
-      "MedDRA / WHODrug coding, query management, and data lock workflows.",
-    persona_visibility: [
-      "data_manager",
-      "safety_officer",
-      "sponsor_designer",
-      "super_admin",
-    ],
-    parent_id: null,
-    is_deleted: false,
-    created_at: "2026-01-15T08:00:00Z",
-    created_by: "svc:knowledge-sop-catalog",
-  },
-];
+export const DEFAULT_CATEGORIES = isNonDemoProductionBuild()
+  ? []
+  : [
+      {
+        id: "cat-clinical-ops",
+        name: "Clinical Operations",
+        slug: "clinical-operations",
+        description:
+          "eCRF data capture, subject enrollment, and visit procedures.",
+        persona_visibility: [
+          "site_crc",
+          "site_investigator",
+          "safety_officer",
+          "cra_monitor",
+          "data_manager",
+          "super_admin",
+        ],
+        parent_id: null,
+        is_deleted: false,
+        created_at: "2026-01-15T08:00:00Z",
+        created_by: "svc:knowledge-sop-catalog",
+      },
+      {
+        id: "cat-study-authoring",
+        name: "Study Authoring & MDR",
+        slug: "study-authoring-mdr",
+        description:
+          "CDISC USDM protocol authoring, SoA matrix design, and digitizer workflows.",
+        persona_visibility: ["sponsor_designer", "data_manager", "super_admin"],
+        parent_id: null,
+        is_deleted: false,
+        created_at: "2026-01-15T08:00:00Z",
+        created_by: "svc:knowledge-sop-catalog",
+      },
+      {
+        id: "cat-site-startup",
+        name: "Site Startup & Activation",
+        slug: "site-startup-activation",
+        description:
+          "IRB/IEC submissions, regulatory greenlight checklists, delegation logs, and site initiation readiness.",
+        persona_visibility: [
+          "cra_monitor",
+          "site_crc",
+          "site_investigator",
+          "sponsor_designer",
+          "super_admin",
+        ],
+        parent_id: null,
+        is_deleted: false,
+        created_at: "2026-01-15T08:00:00Z",
+        created_by: "svc:knowledge-sop-catalog",
+      },
+      {
+        id: "cat-site-monitoring",
+        name: "Site Monitoring & CTMS",
+        slug: "site-monitoring-ctms",
+        description:
+          "CRA monitoring visits, source data verification, and trip reports.",
+        persona_visibility: [
+          "cra_monitor",
+          "site_crc",
+          "site_investigator",
+          "super_admin",
+        ],
+        parent_id: null,
+        is_deleted: false,
+        created_at: "2026-01-15T08:00:00Z",
+        created_by: "svc:knowledge-sop-catalog",
+      },
+      {
+        id: "cat-regulatory-compliance",
+        name: "Regulatory & Quality Compliance",
+        slug: "regulatory-compliance",
+        description:
+          "21 CFR Part 11 compliance, audit trail inspection, and digital signatures.",
+        persona_visibility: [
+          "auditor",
+          "super_admin",
+          "sponsor_designer",
+          "data_manager",
+          "safety_officer",
+          "site_investigator",
+        ],
+        parent_id: null,
+        is_deleted: false,
+        created_at: "2026-01-15T08:00:00Z",
+        created_by: "svc:knowledge-sop-catalog",
+      },
+      {
+        id: "cat-data-management",
+        name: "Data Management & Coding",
+        slug: "data-management-coding",
+        description:
+          "MedDRA / WHODrug coding, query management, and data lock workflows.",
+        persona_visibility: [
+          "data_manager",
+          "safety_officer",
+          "sponsor_designer",
+          "super_admin",
+        ],
+        parent_id: null,
+        is_deleted: false,
+        created_at: "2026-01-15T08:00:00Z",
+        created_by: "svc:knowledge-sop-catalog",
+      },
+    ];
 
 interface BundledSopSpec {
   mappingId: string;
@@ -291,6 +304,9 @@ function createDefaultContextualSops(): Record<
   string,
   Record<string, unknown>
 > {
+  if (isNonDemoProductionBuild()) {
+    return {};
+  }
   return {
     "/overview": buildBundledSop({
       mappingId: "map-overview-01",
@@ -1481,6 +1497,9 @@ This Standard Operating Procedure (SOP) governs all investigator site personnel 
 function attachCanvasZoomSops(
   sops: Record<string, Record<string, unknown>>
 ): Record<string, Record<string, unknown>> {
+  if (Object.keys(sops).length === 0) {
+    return sops;
+  }
   const buildZoomEntry = (
     baseKey: string,
     mappingId: string,
@@ -1544,13 +1563,37 @@ function attachCanvasZoomSops(
   return sops;
 }
 
+function withPortalReferenceLinks(
+  sops: Record<string, Record<string, unknown>>
+): Record<string, Record<string, unknown>> {
+  const patchedArticles = new WeakSet<object>();
+  for (const entry of Object.values(sops)) {
+    const article = entry.primary_article as
+      Record<string, unknown> | undefined;
+    if (!article || patchedArticles.has(article)) continue;
+    patchedArticles.add(article);
+    const markdown =
+      typeof article.body_markdown === "string" ? article.body_markdown : "";
+    if (!markdown.includes("/cadence-clinical/")) {
+      article.body_markdown = `${markdown}${DOCS_PORTAL_MARKDOWN_FOOTER}`;
+    }
+    const html = typeof article.body_html === "string" ? article.body_html : "";
+    if (!html.includes("/cadence-clinical/")) {
+      article.body_html = `${html}${DOCS_PORTAL_HTML_FOOTER}`;
+    }
+  }
+  return sops;
+}
+
 /**
  * Bundled offline help SOPs. Served only by a demo build when the API is unreachable (#4523).
  */
 export const DEFAULT_CONTEXTUAL_SOPS: Record<
   string,
   Record<string, unknown>
-> = /*#__PURE__*/ attachCanvasZoomSops(createDefaultContextualSops());
+> = /*#__PURE__*/ withPortalReferenceLinks(
+  attachCanvasZoomSops(createDefaultContextualSops())
+);
 
 function collectUniqueBundledArticles(
   sops: Record<string, Record<string, unknown>>
@@ -1811,7 +1854,111 @@ function getFallbackArticles(
   return clone(filtered);
 }
 
+const FAMILY_CATEGORY_META: Record<
+  string,
+  { categoryId: string; categoryName: string }
+> = {
+  Blueprint: {
+    categoryId: "cat-study-authoring",
+    categoryName: "Study Authoring & MDR",
+  },
+  Capture: {
+    categoryId: "cat-data-management",
+    categoryName: "Data Management & Coding",
+  },
+  Orbit: {
+    categoryId: "cat-site-monitoring",
+    categoryName: "Site Monitoring & CTMS",
+  },
+  Engage: {
+    categoryId: "cat-clinical-ops",
+    categoryName: "Clinical Operations",
+  },
+  Allocate: {
+    categoryId: "cat-clinical-ops",
+    categoryName: "Clinical Operations",
+  },
+  Lens: {
+    categoryId: "cat-data-management",
+    categoryName: "Data Management & Coding",
+  },
+  Vigil: {
+    categoryId: "cat-regulatory-compliance",
+    categoryName: "Regulatory & Quality Compliance",
+  },
+  Assure: {
+    categoryId: "cat-regulatory-compliance",
+    categoryName: "Regulatory & Quality Compliance",
+  },
+  "Cadence Core": {
+    categoryId: "cat-clinical-ops",
+    categoryName: "Clinical Operations",
+  },
+};
+
+function buildSynthesizedDemoFamilySop(
+  parsedRoute: ParsedCanvasRoute,
+  persona?: string
+): Record<string, unknown> | null {
+  const catalog = listDemoCatalogModules();
+  const matchedModule =
+    catalog.find(
+      (mod) =>
+        scoreBundledPattern(parsedRoute, mod.defaultPath) > 0 ||
+        scoreBundledPattern(parsedRoute, `${mod.defaultPath}/*`) > 0
+    ) || null;
+  if (!matchedModule) {
+    return null;
+  }
+
+  const cleanSlug =
+    (matchedModule.routeName || parsedRoute.path)
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "") || "workspace";
+  const familyLabel = matchedModule.family || "Cadence Core";
+  const titleLabel = matchedModule.title || "Clinical Workspace Guidance";
+  const summaryText =
+    matchedModule.summary ||
+    "Provides family-scoped operational guidance and regulatory controls for this demonstration screen.";
+  const categoryMeta = FAMILY_CATEGORY_META[familyLabel] || {
+    categoryId: "cat-clinical-ops",
+    categoryName: "Clinical Operations",
+  };
+
+  const entry = buildBundledSop({
+    mappingId: `map-demo-synth-${cleanSlug}`,
+    routePattern: matchedModule.defaultPath || parsedRoute.path,
+    persona: persona || "super_admin",
+    priority: 10,
+    articleId: `art-demo-synth-${cleanSlug}`,
+    versionId: `ver-demo-synth-${cleanSlug}`,
+    title: `SOP-DEMO: ${familyLabel} — ${titleLabel}`,
+    slug: `sop-demo-${cleanSlug}`,
+    tags: ["demo", cleanSlug, familyLabel.toLowerCase().replace(/\s+/g, "-")],
+    categoryId: categoryMeta.categoryId,
+    categoryName: categoryMeta.categoryName,
+    sectionAnchor: `#${cleanSlug}-guidance`,
+    heading: `${titleLabel} (${familyLabel})`,
+    summary: summaryText,
+  });
+  return withPortalReferenceLinks({ [parsedRoute.path]: entry })[
+    parsedRoute.path
+  ];
+}
+
 export function getFallbackContextualHelp(route?: string, persona?: string) {
+  if (isNonDemoProductionBuild()) {
+    return {
+      matched_mapping: null,
+      primary_article: null,
+      primary_version: null,
+      section_anchor: null,
+      related_articles: [],
+      article: null,
+      version: null,
+    };
+  }
   const parsedRoute = parseRouteAndCanvasQuery(route);
   const cleanRoute = parsedRoute.path;
 
@@ -1842,11 +1989,16 @@ export function getFallbackContextualHelp(route?: string, persona?: string) {
 
   if (
     !selected &&
+    DEFAULT_CONTEXTUAL_SOPS["/ecrf"] &&
     (cleanRoute.includes("subject") ||
       cleanRoute.includes("form") ||
       cleanRoute.includes("visit"))
   ) {
     selected = clone(DEFAULT_CONTEXTUAL_SOPS["/ecrf"]);
+  }
+
+  if (!selected && isDemoBuild()) {
+    selected = buildSynthesizedDemoFamilySop(parsedRoute, persona);
   }
 
   if (selected) {

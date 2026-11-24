@@ -49,6 +49,28 @@ internal sealed class ScopedAssertions
             [.. direct.Concat(answers).Where(a => scopes.Any(s => s.Kind == a.TargetKind && s.Id == a.TargetId) || a.TargetKind == NodeKinds.Assertion)]);
     }
 
+    /// <summary>Reads only the active locks and freezes at <paramref name="scopes"/>, widest first.</summary>
+    public static async Task<IReadOnlyList<LockView>> ReadLocksAsync(
+        KernelDbContext db,
+        IReadOnlyList<NodeRef> scopes,
+        CancellationToken cancellationToken)
+    {
+        var scopeIds = scopes.Select(s => s.Id).ToList();
+        var locks = await db.Assertions.AsNoTracking()
+            .Where(a => scopeIds.Contains(a.TargetId)
+                && (a.Kind == AssertionKind.Locked || a.Kind == AssertionKind.Frozen))
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+        if (locks.Count == 0)
+        {
+            return [];
+        }
+
+        return new ScopedAssertions(
+            scopes,
+            [.. locks.Where(a => scopes.Any(s => s.Kind == a.TargetKind && s.Id == a.TargetId))]).Locks();
+    }
+
     /// <summary>The locks in force, widest scope first.</summary>
     public IReadOnlyList<LockView> Locks() =>
         [.. _stated
