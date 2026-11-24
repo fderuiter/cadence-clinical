@@ -36,4 +36,13 @@ public interface INodeVisibility
     /// </summary>
     ValueTask<IReadOnlyDictionary<NodeRef, MaskReason>> MaskAsync(
         TenantId tenant, Actor reader, IReadOnlyCollection<NodeRef> nodes, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// True when <paramref name="reader"/> holds an active grant whose scope directly covers <paramref name="scope"/>'s
+    /// downward scope path (for example, study-, organization-, or tenant-wide authority on a study node, rather than
+    /// upward visibility from a single study site).
+    /// </summary>
+    async ValueTask<bool> CoversScopeAsync(
+        TenantId tenant, Actor reader, NodeRef scope, CancellationToken cancellationToken) =>
+        (await MaskAsync(tenant, reader, [scope], cancellationToken).ConfigureAwait(false)).Count == 0;
 }

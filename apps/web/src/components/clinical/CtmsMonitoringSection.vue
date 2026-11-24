@@ -22,7 +22,7 @@
       prefix="monitoring"
       form-id="monitoring-scope-form"
       aria-label="Monitoring visits scope"
-      :show-study-input="!props.studyCode"
+      :show-study-input="!isStudyLocked"
       site-placeholder="Site code (optional)"
       :assigned-studies="assignedStudies"
       :assigned-sites="assignedSites"
@@ -529,6 +529,7 @@ const workspace = useScopedWorkspaceSection(props, {
 const {
   authStore,
   toasts,
+  isStudyLocked,
   signerUsername,
   signerDisplayName,
   syncActiveScope,

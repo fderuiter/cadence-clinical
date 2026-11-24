@@ -275,7 +275,10 @@ import { computed, onMounted, ref } from "vue";
 import { handoffFocus, SEMANTIC_ACTIONS, useInlineFocusHandoff } from "ui";
 import { ctmsApi, type DelegationRecord, type DoaLog } from "../../api/ctmsApi";
 import { canManageDoa, canSignOffDoa } from "../../canvas/authority";
-import { useScopedWorkspaceSection } from "../../composables/useScopedWorkspaceSection";
+import {
+  scopedWorkspaceSectionProps,
+  useScopedWorkspaceSection,
+} from "../../composables/useScopedWorkspaceSection";
 import {
   formatClinicalEnum,
   formatClinicalStatus,
@@ -284,16 +287,7 @@ import SignatureCaptureModal from "../SignatureCaptureModal.vue";
 import CtmsSectionScopeBar from "./CtmsSectionScopeBar.vue";
 import "./ctmsWorkspaceSection.css";
 
-const props = withDefaults(
-  defineProps<{
-    studyCode?: string;
-    siteId?: string;
-  }>(),
-  {
-    studyCode: "",
-    siteId: "",
-  }
-);
+const props = defineProps(scopedWorkspaceSectionProps);
 
 const {
   authStore,

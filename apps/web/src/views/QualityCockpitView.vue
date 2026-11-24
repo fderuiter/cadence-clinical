@@ -66,7 +66,7 @@
       <div class="stat-card" @click="activeTab = 'deviations'">
         <div class="stat-icon alert-icon">⚠️</div>
         <div class="stat-details">
-          <div class="stat-value">
+          <div class="stat-value tabular-nums">
             {{ deviations.length }}
           </div>
           <div class="stat-label">
@@ -80,7 +80,7 @@
       <div class="stat-card" @click="activeTab = 'capa'">
         <div class="stat-icon capa-icon">🔄</div>
         <div class="stat-details">
-          <div class="stat-value">
+          <div class="stat-value tabular-nums">
             {{ activeCapasCount }}
           </div>
           <div class="stat-label">Active CAPAs (6-Stage Gates)</div>
@@ -91,7 +91,7 @@
       <div class="stat-card" @click="activeTab = 'rbqm'">
         <div class="stat-icon rbqm-icon">🎯</div>
         <div class="stat-details">
-          <div class="stat-value">
+          <div class="stat-value tabular-nums">
             {{ highRiskSitesCount }} / {{ siteRiskProfiles.length || 4 }}
           </div>
           <div class="stat-label">High-Risk Sites (Z &ge; 2.0)</div>
@@ -102,7 +102,7 @@
       <div class="stat-card" @click="activeTab = 'rbqm'">
         <div class="stat-icon qtl-icon">📊</div>
         <div class="stat-details">
-          <div class="stat-value">
+          <div class="stat-value tabular-nums">
             {{ qtlBreaches.length }}
           </div>
           <div class="stat-label">QTL Breaches (CSR 9.6 Alerts)</div>
@@ -114,7 +114,7 @@
         <div class="stat-icon breach-icon">🚨</div>
         <div class="stat-details">
           <div
-            class="stat-value"
+            class="stat-value tabular-nums"
             :class="{
               'text-danger':
                 activeBreachesOverdue ||
@@ -136,7 +136,7 @@
       <div class="stat-card" @click="openDossierModal">
         <div class="stat-icon seal-icon">🔒</div>
         <div class="stat-details">
-          <div class="stat-value text-success">100% GxP</div>
+          <div class="stat-value text-success tabular-nums">100% GxP</div>
           <div class="stat-label">Inspection Readiness Seal</div>
         </div>
       </div>
@@ -402,20 +402,20 @@
               <div class="qtl-metrics-row">
                 <div class="metric-item">
                   <span class="metric-label">Target Value:</span>
-                  <span class="metric-value"
+                  <span class="metric-value tabular-nums"
                     >{{ qtl.target_value }}{{ qtl.unit }}</span
                   >
                 </div>
                 <div class="metric-item">
                   <span class="metric-label">Tolerance Limit:</span>
-                  <span class="metric-value text-danger"
+                  <span class="metric-value text-danger tabular-nums"
                     >&le; {{ qtl.tolerance_limit }}{{ qtl.unit }}</span
                   >
                 </div>
                 <div class="metric-item">
                   <span class="metric-label">Latest Observed:</span>
                   <span
-                    class="metric-value"
+                    class="metric-value tabular-nums"
                     :class="
                       qtl.observed_value > qtl.tolerance_limit
                         ? 'text-danger font-bold'

@@ -1,13 +1,11 @@
-import { getBearerToken } from "../authorization.js";
-import { ApiError, getBaseUrl, unwrapResponse } from "../client";
+import { unwrapResponse } from "../client";
 import {
-  describeKernelError,
   kernelClient,
-  mutationHeaders,
-  windowQuery,
   type KernelLineageWindow,
   type KernelSchemas,
 } from "./shared";
+
+const loadAuthoring = () => import("./protocolImport");
 
 export type KernelProtocolVersion =
   KernelSchemas["Kernel_KernelProtocolVersionResponse"];
@@ -58,6 +56,8 @@ export type KernelProtocolImportNote =
   KernelSchemas["Kernel_KernelProtocolImportNoteResponse"];
 export type KernelImportedRulePackSummary =
   KernelSchemas["Kernel_KernelImportedRulePackSummaryResponse"];
+export type KernelProtocolAmendment =
+  KernelSchemas["Kernel_KernelProtocolAmendmentResponse"];
 
 export interface KernelCreateStudyRequest {
   code: string;
@@ -111,6 +111,8 @@ export interface KernelProtocolImportRequest {
   format?: string | null;
   templateIds?: string[];
   replaceForms?: boolean;
+  amendmentClassification?: string | null;
+  transitionPolicy?: string | null;
   reason: string;
   idempotencyKey: string;
 }
@@ -122,306 +124,126 @@ export const kernelStudiesApi = {
   },
 
   /** Registered organizations in the caller's tenant, optionally filtered by kind (GET /api/v1/kernel/organizations). */
-  listOrganizations(kind?: string): Promise<KernelOrganizationSummary[]> {
-    return unwrapResponse(
-      kernelClient.GET("/api/v1/kernel/organizations", {
-        params: { query: { kind: kind || undefined } },
-      })
-    );
+  async listOrganizations(kind?: string): Promise<KernelOrganizationSummary[]> {
+    const { executeListOrganizations } = await loadAuthoring();
+    return executeListOrganizations(kind);
   },
 
   /** Registers an organization such as a SiteInstitution with a signed reason and idempotency key (POST /api/v1/kernel/organizations). */
-  createOrganization({
-    name,
-    code,
-    kind = "SiteInstitution",
-    reason,
-    idempotencyKey,
-  }: KernelCreateOrganizationInput): Promise<KernelOrganizationSummary> {
-    return unwrapResponse(
-      kernelClient.POST("/api/v1/kernel/organizations", {
-        body: {
-          name,
-          code: code ?? null,
-          kind: kind ?? "SiteInstitution",
-        },
-        headers: mutationHeaders(reason, idempotencyKey),
-      })
-    );
+  async createOrganization(
+    input: KernelCreateOrganizationInput
+  ): Promise<KernelOrganizationSummary> {
+    const { executeCreateOrganization } = await loadAuthoring();
+    return executeCreateOrganization(input);
   },
 
   /** Registered investigational sites in the caller's tenant, ordered by site code (GET /api/v1/kernel/sites). */
-  listSites(): Promise<KernelSiteSummary[]> {
-    return unwrapResponse(kernelClient.GET("/api/v1/kernel/sites"));
+  async listSites(): Promise<KernelSiteSummary[]> {
+    const { executeListSites } = await loadAuthoring();
+    return executeListSites();
   },
 
   /** Registers an investigational site with a 2-letter ISO country code, signed reason, and idempotency key (POST /api/v1/kernel/sites). */
-  createSite({
-    siteCode,
-    code,
-    name,
-    country,
-    institutionRef,
-    institutionCode,
-    institutionName,
-    reason,
-    idempotencyKey,
-  }: KernelCreateSiteInput): Promise<KernelSiteSummary> {
-    const resolvedSiteCode = (siteCode ?? code ?? "").trim();
-    return unwrapResponse(
-      kernelClient.POST("/api/v1/kernel/sites", {
-        body: {
-          site_code: resolvedSiteCode,
-          name,
-          country,
-          institution_ref: institutionRef ?? null,
-          institution_code: institutionCode ?? null,
-          institution_name: institutionName ?? null,
-        },
-        headers: mutationHeaders(reason, idempotencyKey),
-      })
-    );
+  async createSite(input: KernelCreateSiteInput): Promise<KernelSiteSummary> {
+    const { executeCreateSite } = await loadAuthoring();
+    return executeCreateSite(input);
   },
 
   /** Sites linked to a study in the caller's tenant, ordered by site code (GET /api/v1/kernel/studies/{studyRef}/sites). */
-  listStudySites(studyRef: string): Promise<KernelStudySiteSummary[]> {
-    return unwrapResponse(
-      kernelClient.GET("/api/v1/kernel/studies/{studyRef}/sites", {
-        params: { path: { studyRef } },
-      })
-    );
+  async listStudySites(studyRef: string): Promise<KernelStudySiteSummary[]> {
+    const { executeListStudySites } = await loadAuthoring();
+    return executeListStudySites(studyRef);
   },
 
   /** Links a registered investigational site to a study with a signed reason and idempotency key (POST /api/v1/kernel/studies/{studyRef}/sites). */
-  linkSiteToStudy({
-    studyRef,
-    siteRef,
-    siteCode,
-    institutionRef,
-    institutionCode,
-    reason,
-    idempotencyKey,
-  }: KernelLinkSiteToStudyInput): Promise<KernelStudySiteSummary> {
-    return unwrapResponse(
-      kernelClient.POST("/api/v1/kernel/studies/{studyRef}/sites", {
-        params: { path: { studyRef } },
-        body: {
-          site_ref: siteRef ?? null,
-          site_code: siteCode ?? null,
-          ...(institutionRef !== undefined
-            ? { institution_ref: institutionRef }
-            : {}),
-          ...(institutionCode !== undefined
-            ? { institution_code: institutionCode }
-            : {}),
-        },
-        headers: mutationHeaders(reason, idempotencyKey),
-      })
-    );
+  async linkSiteToStudy(
+    input: KernelLinkSiteToStudyInput
+  ): Promise<KernelStudySiteSummary> {
+    const { executeLinkSiteToStudy } = await loadAuthoring();
+    return executeLinkSiteToStudy(input);
   },
 
   /** Registers a new study with a signed reason for change and idempotency key (POST /api/v1/kernel/studies). */
-  createStudy({
-    code,
-    title,
-    phase,
-    sponsorRef,
-    sponsorCode,
-    sponsorName,
-    linkSandboxSite,
-    initialSiteRef,
-    initialSiteCode,
-    reason,
-    idempotencyKey,
-  }: KernelCreateStudyRequest): Promise<KernelStudySummary> {
-    return unwrapResponse(
-      kernelClient.POST("/api/v1/kernel/studies", {
-        body: {
-          study_code: code,
-          title,
-          phase,
-          sponsor_ref: sponsorRef ?? null,
-          sponsor_code: sponsorCode ?? null,
-          sponsor_name: sponsorName ?? null,
-          link_sandbox_site: Boolean(linkSandboxSite),
-          initial_site_ref: initialSiteRef ?? null,
-          initial_site_code: initialSiteCode ?? null,
-        },
-        headers: mutationHeaders(reason, idempotencyKey),
-      })
-    );
+  async createStudy(
+    input: KernelCreateStudyRequest
+  ): Promise<KernelStudySummary> {
+    const { executeCreateStudy } = await loadAuthoring();
+    return executeCreateStudy(input);
   },
 
   /** Bundled CDISC Library eCRF templates available to import into a protocol draft (GET /api/v1/kernel/protocol-templates). */
-  listProtocolTemplates(): Promise<KernelProtocolTemplate[]> {
-    return unwrapResponse(
-      kernelClient.GET("/api/v1/kernel/protocol-templates")
-    );
+  async listProtocolTemplates(): Promise<KernelProtocolTemplate[]> {
+    const { executeListProtocolTemplates } = await loadAuthoring();
+    return executeListProtocolTemplates();
   },
 
   /** Viewable forms, ordered items, prompts, mandatory flags, and import notes for a protocol version (GET /api/v1/kernel/protocol-versions/{versionRef}/design-summary). */
-  getProtocolDesignSummary(
+  async getProtocolDesignSummary(
     versionRef: string
   ): Promise<KernelProtocolDraftSummary> {
-    return unwrapResponse(
-      kernelClient.GET(
-        "/api/v1/kernel/protocol-versions/{versionRef}/design-summary",
-        {
-          params: { path: { versionRef } },
-        }
-      )
-    );
+    const { executeGetProtocolDesignSummary } = await loadAuthoring();
+    return executeGetProtocolDesignSummary(versionRef);
   },
 
   /**
    * Synchronously imports an ODM v1.3.2 XML file, USDM v4 JSON file, or bundled CDISC Library eCRF templates
    * to create or revise a study's protocol draft (POST /api/v1/kernel/studies/{studyRef}/protocol-imports).
    */
-  async importProtocolDraft({
-    studyRef,
-    file,
-    content,
-    fileName,
-    format,
-    templateIds,
-    replaceForms = false,
-    reason,
-    idempotencyKey,
-  }: KernelProtocolImportRequest): Promise<KernelProtocolDraftSummary> {
-    if (file) {
-      const baseUrl = getBaseUrl().replace(/\/+$/, "");
-      const url = `${baseUrl}/api/v1/kernel/studies/${encodeURIComponent(studyRef)}/protocol-imports`;
-      const formData = new FormData();
-      formData.append("file", file);
-      if (templateIds && templateIds.length > 0) {
-        for (const tplId of templateIds) {
-          formData.append("template_ids", tplId);
-        }
-      }
-      if (replaceForms) {
-        formData.append("replace_forms", "true");
-      }
-
-      const headers: Record<string, string> = mutationHeaders(
-        reason,
-        idempotencyKey
-      );
-      const token = await getBearerToken();
-      if (token) {
-        headers["Authorization"] = `Bearer ${token}`;
-      }
-
-      const response = await globalThis.fetch(url, {
-        method: "POST",
-        headers,
-        body: formData,
-      });
-      if (!response.ok) {
-        const errData = await response.json().catch(() => null);
-        const tempError = new ApiError(
-          `Import failed with status ${response.status}`,
-          response.status,
-          response.statusText,
-          errData
-        );
-        throw new ApiError(
-          describeKernelError(tempError),
-          response.status,
-          response.statusText,
-          errData
-        );
-      }
-      return (await response.json()) as KernelProtocolDraftSummary;
-    }
-
-    return unwrapResponse(
-      kernelClient.POST("/api/v1/kernel/studies/{studyRef}/protocol-imports", {
-        params: { path: { studyRef } },
-        body: {
-          content: content ?? null,
-          file_name: fileName ?? null,
-          format: format ?? null,
-          template_ids:
-            templateIds && templateIds.length > 0 ? templateIds : null,
-          replace_forms: replaceForms,
-        },
-        headers: mutationHeaders(reason, idempotencyKey),
-      })
-    );
+  async importProtocolDraft(
+    request: KernelProtocolImportRequest
+  ): Promise<KernelProtocolDraftSummary> {
+    const { executeProtocolDraftImport } = await loadAuthoring();
+    return executeProtocolDraftImport(request);
   },
 
   /** A study's protocol versions, newest first, without content. */
-  listProtocolVersions(studyRef: string): Promise<KernelProtocolVersion[]> {
-    return unwrapResponse(
-      kernelClient.GET("/api/v1/kernel/studies/{studyRef}/protocol-versions", {
-        params: { path: { studyRef } },
-      })
-    );
+  async listProtocolVersions(
+    studyRef: string
+  ): Promise<KernelProtocolVersion[]> {
+    const { executeListProtocolVersions } = await loadAuthoring();
+    return executeListProtocolVersions(studyRef);
   },
 
   /** One protocol version, without content. */
-  getProtocolVersion(versionRef: string): Promise<KernelProtocolVersion> {
-    return unwrapResponse(
-      kernelClient.GET("/api/v1/kernel/protocol-versions/{versionRef}", {
-        params: { path: { versionRef } },
-      })
-    );
+  async getProtocolVersion(versionRef: string): Promise<KernelProtocolVersion> {
+    const { executeGetProtocolVersion } = await loadAuthoring();
+    return executeGetProtocolVersion(versionRef);
   },
 
   /** A protocol version's Schedule of Activities: planned activities as columns, collection specifications as rows (ADR-2475). */
-  getScheduleOfActivities(
+  async getScheduleOfActivities(
     versionRef: string
   ): Promise<KernelScheduleOfActivities> {
-    return unwrapResponse(
-      kernelClient.GET(
-        "/api/v1/kernel/protocol-versions/{versionRef}/schedule-of-activities",
-        {
-          params: { path: { versionRef } },
-        }
-      )
-    );
+    const { executeGetScheduleOfActivities } = await loadAuthoring();
+    return executeGetScheduleOfActivities(versionRef);
   },
 
   /** What depends on the version a protocol amendment changes (K-PROT-2). A first version amends nothing and is refused. */
-  amendmentImpact(
+  async amendmentImpact(
     versionRef: string,
     window: Omit<KernelLineageWindow, "edgeKinds"> = {}
   ): Promise<KernelAmendmentImpact> {
-    const { depth, valid_at, known_at } = windowQuery(window);
-    return unwrapResponse(
-      kernelClient.GET("/api/v1/kernel/protocol-versions/{versionRef}/impact", {
-        params: { path: { versionRef }, query: { depth, valid_at, known_at } },
-      })
-    );
+    const { executeAmendmentImpact } = await loadAuthoring();
+    return executeAmendmentImpact(versionRef, window);
   },
 
   /** Runs evaluate-only in-memory simulation over candidate protocol version. */
-  simulate(request: {
+  async simulate(request: {
     baseVersionRef?: string;
     storedVersionRef?: string;
     candidateContent?: string;
     validAt?: string;
     knownAt?: string;
   }): Promise<KernelSimulationResult> {
-    return unwrapResponse(
-      kernelClient.POST("/api/v1/kernel/simulation/simulate", {
-        body: {
-          base_version_ref: request.baseVersionRef ?? null,
-          stored_version_ref: request.storedVersionRef ?? null,
-          candidate_content: request.candidateContent ?? null,
-          valid_at: request.validAt ?? null,
-          known_at: request.knownAt ?? null,
-        },
-      })
-    );
+    const { executeSimulate } = await loadAuthoring();
+    return executeSimulate(request);
   },
 
   /** Performs real-time schedule matrix gap check over a protocol design document. */
-  checkMatrixGaps(protocolContent: string): Promise<KernelMatrixGapFinding[]> {
-    return unwrapResponse(
-      kernelClient.POST("/api/v1/kernel/protocols/matrix-gap-check", {
-        body: { protocol_content: protocolContent },
-      })
-    );
+  async checkMatrixGaps(
+    protocolContent: string
+  ): Promise<KernelMatrixGapFinding[]> {
+    const { executeCheckMatrixGaps } = await loadAuthoring();
+    return executeCheckMatrixGaps(protocolContent);
   },
 };

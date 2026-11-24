@@ -22,7 +22,7 @@
       prefix="greenlight"
       form-id="greenlight-scope-form"
       aria-label="Startup readiness scope"
-      :show-study-input="!props.studyCode"
+      :show-study-input="!isStudyLocked"
       site-label="Site (optional for matrix)"
       :assigned-studies="assignedStudies"
       :assigned-sites="assignedSites"
@@ -275,6 +275,7 @@ const workspace = useScopedWorkspaceSection(props, {
 const {
   authStore,
   toasts,
+  isStudyLocked,
   signerUsername,
   signerDisplayName,
   syncActiveScope,

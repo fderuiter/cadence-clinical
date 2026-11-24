@@ -27,7 +27,11 @@ import {
 } from "../catalog/productCatalog.js";
 import { demoNowIso, demoNowMs } from "../utils/demoMode.js";
 import { registerDemoStoreReset } from "../utils/demoReset.js";
-import { isCallerBlinded, isSitePermitted } from "./demoPolicy.js";
+import {
+  hasStudyWideScope,
+  isCallerBlinded,
+  isSitePermitted,
+} from "./demoPolicy.js";
 
 const DEMO_TENANT_UUID =
   MANIFEST_DEMO_TENANT_UUID || "00000000-0000-0000-0000-000000000010"; // deid-ignore
@@ -472,6 +476,7 @@ export function createWebDemoStore() {
     observations: createInitialObservations(),
     forms: new Map(),
     queries: new Map(),
+    queryDigests: [],
     proposals: new Map(),
     activityEntries: [],
     siteCompliance: new Map(),
@@ -781,7 +786,7 @@ export function createWebDemoStore() {
           status: "open",
           origin: "manual",
           owner_role: "site",
-          assignee: null,
+          assignee: "usr-crc-01",
           priority: "high",
           opened_at: "2026-08-02T11:00:00Z",
           status_since: "2026-08-02T11:00:00Z",
@@ -908,6 +913,7 @@ export function createWebDemoStore() {
         },
       ],
     ]);
+    state.queryDigests = [];
 
     state.proposals = new Map([
       [
@@ -3039,9 +3045,10 @@ export function createWebDemoStore() {
           (acc, v) => Math.max(acc, Number(v.number || 0)),
           0
         );
-        const parent = existingVersions.find(
-          (v) => String(v.status).toUpperCase() === "PUBLISHED"
-        );
+        const parent = existingVersions.find((v) => {
+          const upper = String(v.status).toUpperCase();
+          return upper === "APPROVED" || upper === "PUBLISHED";
+        });
         const vIdx = nextCounter();
         targetVersion = {
           ref: `protocol_version:${makeUuidFromIndex("00000150", vIdx)}@1`,
@@ -3050,7 +3057,7 @@ export function createWebDemoStore() {
           parent_version: parent ? parent.ref : null,
           status: "Draft",
           content_hash: null,
-          amendment_intent: reason,
+          amendment_intent: parent ? "Protocol design import" : null,
           approval_attestation: null,
           withdrawal_reason: null,
           mask: null,
@@ -3060,6 +3067,26 @@ export function createWebDemoStore() {
         state.importedProtocolVersions.set(foundStudy.code, list);
       }
 
+      const prevSummaryForAmendment = state.protocolDesignSummaries.get(
+        targetVersion.ref
+      );
+      const amendment = targetVersion.parent_version
+        ? {
+            intent: targetVersion.amendment_intent || "Protocol design import",
+            rationale: reason,
+            classification:
+              parsedRequest.amendmentClassification ||
+              prevSummaryForAmendment?.amendment?.classification ||
+              "NonSubstantial",
+            summary_of_changes: `Imported ${mergedForms.length} protocol form specification(s) (${mergedForms.length} impacted element(s)).`,
+            impacted_elements: mergedForms.map((f) => f.id),
+            transition_policy:
+              parsedRequest.transitionPolicy ||
+              prevSummaryForAmendment?.amendment?.transition_policy ||
+              "NewParticipantsOnly",
+          }
+        : null;
+
       const summary = {
         version: cloneJson(targetVersion),
         title: built.title,
@@ -3067,6 +3094,7 @@ export function createWebDemoStore() {
         item_count: mergedForms.reduce((acc, f) => acc + f.item_count, 0),
         forms: cloneJson(mergedForms),
         import_notes: cloneJson(mergedNotes),
+        amendment: cloneJson(amendment),
       };
       state.protocolDesignSummaries.set(targetVersion.ref, summary);
       recordActivity(
@@ -4504,18 +4532,29 @@ export function createWebDemoStore() {
       return { conflict: false, data: cloneJson(signature) };
     },
 
-    listFormQueries(formId) {
-      return cloneJson(
-        [...state.queries.values()].filter((q) => q.form_id === formId)
+    listFormQueries(formId, caller = null) {
+      let results = [...state.queries.values()].filter(
+        (q) => q.form_id === formId
       );
+      if (caller) {
+        results = results.filter(
+          (q) => !q.site_code || isSitePermitted(caller, q.site_code)
+        );
+      }
+      return cloneJson(results);
     },
 
-    listEnrollmentQueries(enrollmentIdOrOptions) {
+    listEnrollmentQueries(enrollmentIdOrOptions, caller = null) {
       const opts =
         enrollmentIdOrOptions && typeof enrollmentIdOrOptions === "object"
           ? enrollmentIdOrOptions
           : { enrollmentId: enrollmentIdOrOptions };
       let results = [...state.queries.values()];
+      if (caller) {
+        results = results.filter(
+          (q) => !q.site_code || isSitePermitted(caller, q.site_code)
+        );
+      }
       if (opts.enrollmentId) {
         const matches = results.filter(
           (q) => q.enrollment_id === opts.enrollmentId
@@ -4561,6 +4600,22 @@ export function createWebDemoStore() {
         const wantedEsc =
           opts.escalated === true || String(opts.escalated) === "true";
         results = results.filter((q) => Boolean(q.escalated_at) === wantedEsc);
+      }
+      if (opts.assignee) {
+        const wantedAssignee = String(opts.assignee).trim().toLowerCase();
+        const normalizedWanted = wantedAssignee.startsWith("u:")
+          ? wantedAssignee.slice(2)
+          : wantedAssignee;
+        results = results.filter((q) => {
+          const current = String(q.assignee || "")
+            .trim()
+            .toLowerCase();
+          if (!current) return false;
+          const normalizedCurrent = current.startsWith("u:")
+            ? current.slice(2)
+            : current;
+          return normalizedCurrent === normalizedWanted;
+        });
       }
       if (opts.site) {
         const site = String(opts.site).trim().toLowerCase();
@@ -4685,6 +4740,54 @@ export function createWebDemoStore() {
           },
         };
       }
+      if (action === "reassign") {
+        if (existing.status !== "open" && existing.status !== "answered") {
+          return {
+            invalid: true,
+            problem: {
+              title: "Invalid query transition",
+              status: 409,
+              code: "M.Execution.Query.InvalidTransition",
+              detail: "Only open or answered queries may be reassigned.",
+            },
+          };
+        }
+        const now = new Date().toISOString();
+        const nextAssignee =
+          typeof body?.assignee === "string" && body.assignee.trim()
+            ? body.assignee.trim()
+            : null;
+        const nextRole =
+          typeof body?.owner_role === "string" && body.owner_role.trim()
+            ? body.owner_role.trim()
+            : existing.owner_role || "site";
+        existing.assignee = nextAssignee;
+        existing.owner_role = nextRole;
+        existing.version = Number(existing.version) + 1;
+        const summary = nextAssignee
+          ? `Assigned to ${nextAssignee} (${nextRole}).`
+          : `Unassigned (${nextRole}).`;
+        const noteText =
+          typeof body?.text === "string" && body.text.trim()
+            ? `${summary} ${body.text.trim()}`
+            : summary;
+        existing.messages.push({
+          kind: "reassigned",
+          text: noteText,
+          by: "usr-dm-01",
+          at: now,
+          reason_for_change: reason || noteText,
+        });
+        recordActivity(
+          "execution.query.reassigned",
+          "execution",
+          "query",
+          `query:${queryId}`,
+          "usr-dm-01"
+        );
+        return { data: cloneJson(existing) };
+      }
+
       const statusMap = {
         answer: "answered",
         reopen: "open",
@@ -4732,12 +4835,26 @@ export function createWebDemoStore() {
       existing.status = nextStatus;
       existing.status_since = now;
       if (action === "answer") {
+        const prevRole = existing.owner_role || "site";
         existing.owner_role = "monitor";
+        existing.assignee =
+          typeof body?.assignee === "string" && body.assignee.trim()
+            ? body.assignee.trim()
+            : prevRole !== "monitor"
+              ? null
+              : existing.assignee;
         existing.due_at = null;
         existing.escalated_at = null;
         existing.last_answered_by = actor;
       } else if (action === "reopen") {
+        const prevRole = existing.owner_role || "monitor";
         existing.owner_role = "site";
+        existing.assignee =
+          typeof body?.assignee === "string" && body.assignee.trim()
+            ? body.assignee.trim()
+            : prevRole !== "site"
+              ? null
+              : existing.assignee;
         existing.due_at = new Date(
           Date.now() + 14 * 86400 * 1000
         ).toISOString();
@@ -4762,6 +4879,140 @@ export function createWebDemoStore() {
         action === "answer" ? "usr-crc-01" : "usr-dm-01"
       );
       return { data: cloneJson(existing) };
+    },
+
+    listQueryDigests({ studyId, site, recipientRole } = {}, caller = null) {
+      if (state.queryDigests.length === 0) {
+        this.escalateStudyQueries(studyId || STUDY_UUID, "Initial SLA digest");
+      }
+      let results = [...state.queryDigests];
+      if (caller) {
+        results = results.filter((d) =>
+          d.study_site_id || d.site_code
+            ? isSitePermitted(caller, d.site_code)
+            : hasStudyWideScope(caller)
+        );
+      }
+      if (studyId) {
+        results = results.filter((d) => !d.study_id || d.study_id === studyId);
+      }
+      if (site) {
+        const wanted = String(site).trim().toLowerCase();
+        results = results.filter(
+          (d) =>
+            String(d.site_code || "").toLowerCase() === wanted ||
+            String(d.study_site_id || "").toLowerCase() === wanted
+        );
+      }
+      if (recipientRole) {
+        const wantedRole = String(recipientRole).trim().toLowerCase();
+        results = results.filter(
+          (d) => String(d.recipient_role || "").toLowerCase() === wantedRole
+        );
+      }
+      return cloneJson(results);
+    },
+
+    escalateStudyQueries(studyId, reason = "14-day SLA check", caller = null) {
+      const now = new Date();
+      const nowIso = now.toISOString();
+      const digestDate = nowIso.slice(0, 10);
+      let escalatedQueries = 0;
+      const overdue = [];
+      for (const q of state.queries.values()) {
+        if (studyId && q.study_id && q.study_id !== studyId) continue;
+        if (q.status !== "open") continue;
+        const dueMs = q.due_at ? Date.parse(q.due_at) : NaN;
+        if (!Number.isNaN(dueMs) && dueMs <= now.getTime()) {
+          if (!q.escalated_at) {
+            q.escalated_at = nowIso;
+            q.priority = "high";
+            q.version = Number(q.version) + 1;
+            q.messages.push({
+              kind: "escalated",
+              text: "Query exceeded 14-day response SLA and was escalated to high priority.",
+              by: "svc:execution-query-sla",
+              at: nowIso,
+              reason_for_change: reason,
+            });
+            escalatedQueries++;
+          }
+        }
+        if (q.escalated_at) {
+          const openedMs = q.opened_at
+            ? Date.parse(q.opened_at)
+            : now.getTime();
+          const ageDays = Math.max(
+            14,
+            Math.floor((now.getTime() - openedMs) / 86400000)
+          );
+          overdue.push({
+            query_id: q.query_id,
+            form_id: q.form_id,
+            enrollment_id: q.enrollment_id,
+            study_site_id: q.study_site_id || SITE_101_UUID,
+            site_code: q.site_code || "SITE-101",
+            subject_code: q.subject_code || "SUBJ-1001",
+            collection_spec_id: q.collection_spec_id || "form-vital-signs",
+            item_id: q.item_id,
+            owner_role: q.owner_role || "site",
+            priority: q.priority || "high",
+            opened_at: q.opened_at || nowIso,
+            due_at: q.due_at || nowIso,
+            age_days: ageDays,
+          });
+        }
+      }
+      const targetStudyId = studyId || STUDY_UUID;
+      const bySite = new Map();
+      for (const entry of overdue) {
+        const key = entry.site_code || "SITE-101";
+        if (!bySite.has(key)) bySite.set(key, []);
+        bySite.get(key).push(entry);
+      }
+      const digests = [
+        {
+          digest_id: "00000000-0000-0000-0000-000000009501", // deid-ignore
+          study_id: targetStudyId,
+          study_site_id: null,
+          scope_key: "study",
+          recipient_role: "study_lead",
+          digest_date: digestDate,
+          generated_at: nowIso,
+          study_code: "CAD-ONC-301",
+          site_code: null,
+          escalated_count: overdue.length,
+          entries: overdue,
+        },
+      ];
+      let idx = 2;
+      for (const [siteCode, entries] of bySite.entries()) {
+        digests.push({
+          digest_id: `00000000-0000-0000-0000-00000000950${idx++}`, // deid-ignore
+          study_id: targetStudyId,
+          study_site_id: entries[0]?.study_site_id || SITE_101_UUID,
+          scope_key: `site:${entries[0]?.study_site_id || SITE_101_UUID}`,
+          recipient_role: "site_investigator",
+          digest_date: digestDate,
+          generated_at: nowIso,
+          study_code: "CAD-ONC-301",
+          site_code: siteCode,
+          escalated_count: entries.length,
+          entries,
+        });
+      }
+      state.queryDigests = digests;
+      const visibleDigests = caller
+        ? digests.filter((d) =>
+            d.study_site_id || d.site_code
+              ? isSitePermitted(caller, d.site_code)
+              : hasStudyWideScope(caller)
+          )
+        : digests;
+      return cloneJson({
+        escalated_queries: escalatedQueries,
+        digests: visibleDigests,
+      });
     },
 
     getStartupMatrix(countryCode = "US") {

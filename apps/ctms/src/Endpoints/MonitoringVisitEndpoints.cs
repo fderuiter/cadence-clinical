@@ -188,7 +188,7 @@ public static class MonitoringVisitEndpoints
                 statusCode: StatusCodes.Status400BadRequest);
         }
 
-        var (user, role) = ResolveCaller(httpContext, request.CraId);
+        var (user, role) = CallerScope.ResolveActor(httpContext, request.CraId);
         DateTimeOffset now = clock.UtcNow;
 
         var visit = new CtmsMonitoringVisit(Guid.NewGuid().ToString(), CtmsMonitoringVisitStatus.Scheduled)
@@ -267,7 +267,7 @@ public static class MonitoringVisitEndpoints
                 statusCode: StatusCodes.Status400BadRequest);
         }
 
-        var (user, role) = ResolveCaller(httpContext, visit.CraId);
+        var (user, role) = CallerScope.ResolveActor(httpContext, visit.CraId);
         DateTimeOffset now = clock.UtcNow;
 
         var completeResult = visit.Complete(request.ActualDate, reason, user, now, role);
@@ -353,7 +353,7 @@ public static class MonitoringVisitEndpoints
             return problem!;
         }
 
-        var (user, role) = ResolveCaller(httpContext, "supervisor");
+        var (user, role) = CallerScope.ResolveActor(httpContext, "supervisor");
         DateTimeOffset now = clock.UtcNow;
 
         var manifestationObj = new
@@ -533,17 +533,6 @@ public static class MonitoringVisitEndpoints
             detail: "Reason for change is required.",
             statusCode: StatusCodes.Status400BadRequest);
         return false;
-    }
-
-    private static (string User, string Role) ResolveCaller(HttpContext httpContext, string defaultUser)
-    {
-        string user = CallerScope.UserId(httpContext) ?? (httpContext.User?.Identity?.Name is { Length: > 0 } n ? n : defaultUser);
-        string role = CallerScope.Roles(httpContext);
-        if (string.IsNullOrWhiteSpace(role))
-        {
-            role = "SYSTEM";
-        }
-        return (user, role);
     }
 
     public static MonitoringVisitResponseDto ToResponseDto(CtmsMonitoringVisit visit) =>
