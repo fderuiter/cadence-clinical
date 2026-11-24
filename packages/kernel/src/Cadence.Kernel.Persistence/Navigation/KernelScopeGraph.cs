@@ -138,6 +138,21 @@ internal sealed class KernelScopeGraph(KernelTenantDbContextFactory contexts) : 
                             protocolVersion.Status.ToString()),
                         NodeRef.For(protocolVersion.StudyId));
 
+            case NodeKinds.FormVersionSnapshot:
+                var snapshotId = FormVersionSnapshotId.FromGuid(node.Id);
+                var snapshot = await db.FormVersionSnapshots.AsNoTracking()
+                    .Where(s => s.TenantId == tenant && s.Id == snapshotId)
+                    .Select(s => new { s.ProtocolVersionId, s.ProtocolVersion, s.FormId, s.VersionIndex })
+                    .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+                return snapshot is null
+                    ? null
+                    : new ScopeNode(
+                        new NodeSummary(
+                            NodeRef.For(snapshotId, snapshot.VersionIndex),
+                            $"Form version snapshot {snapshot.FormId}",
+                            snapshot.ProtocolVersion),
+                        NodeRef.For(snapshot.ProtocolVersionId));
+
             case NodeKinds.ProtocolElement:
                 return await ProtocolElementAsync(db, tenant, node.Id, cancellationToken).ConfigureAwait(false);
 

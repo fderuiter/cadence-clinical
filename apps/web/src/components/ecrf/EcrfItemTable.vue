@@ -222,7 +222,7 @@
                       <input
                         :id="`ecrf-sdv-select-${item.item_id}`"
                         type="checkbox"
-                        :checked="sdv.selectedSdvItems.includes(item.item_id)"
+                        :checked="sdv.isSdvSelected(item.item_id)"
                         :value="item.item_id"
                         :disabled="sdv.sdvBusy || formState.assertionsLocked"
                         :aria-label="`Select ${item.item_id} for source verification`"

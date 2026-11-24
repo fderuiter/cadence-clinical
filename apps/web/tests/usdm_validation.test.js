@@ -7,6 +7,7 @@ import {
   formatZodIssues,
   useClinicalStore,
 } from "../src/stores/clinical.js";
+import { normalizeUsdm } from "../src/stores/normalization.ts";
 import { useAuthStore } from "../src/stores/auth.js";
 import { useToastStore } from "../src/stores/toasts.js";
 import { soaClient } from "../src/api/soaClient.js";
@@ -391,5 +392,89 @@ describe("Shared Zod Schema Client-Side Validation", () => {
     } finally {
       server.close();
     }
+  });
+
+  it("validates and normalizes both USDM v4 Wrapper payloads and USDM v3 root-study payloads", () => {
+    const store = useClinicalStore();
+
+    const v4Wrapper = {
+      usdmVersion: "4.0.0",
+      study: {
+        id: "STUDY-V4-WRAPPER",
+        name: "CADENCE-V4",
+        versions: [
+          {
+            id: "SV_1",
+            versionIdentifier: "1.0",
+            titles: [
+              {
+                id: "T_1",
+                text: "Official USDM v4 Wrapper Study",
+                type: { code: "C207616", decode: "Official Study Title" },
+              },
+            ],
+            biomedicalConcepts: [
+              {
+                id: "BC_SBP",
+                name: "Systolic Blood Pressure",
+                properties: [
+                  {
+                    id: "P_SBP",
+                    name: "VSORRES",
+                    datatype: "decimal",
+                    isRequired: true,
+                    isEnabled: true,
+                  },
+                ],
+              },
+            ],
+            studyDesigns: [
+              {
+                id: "SD_1",
+                arms: [{ id: "ARM_1", name: "Active Arm" }],
+                epochs: [{ id: "EP_1", name: "Screening" }],
+                encounters: [{ id: "ENC_1", name: "Screening Visit" }],
+                activities: [
+                  {
+                    id: "ACT_1",
+                    name: "Vital Signs",
+                    biomedicalConceptIds: ["BC_SBP"],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    };
+
+    const v3Study = {
+      id: "STUDY-V3-LEGACY",
+      name: "Legacy USDM v3 Study",
+      version: "3.0.0",
+      arms: [{ id: "ARM_A", name: "Control" }],
+      epochs: [{ id: "EP_SCR", name: "Screening" }],
+      encounters: [{ id: "V_SCR", name: "Visit 1" }],
+      activities: [{ id: "ACT_VS", name: "Vital Signs" }],
+    };
+
+    expect(store.validateModel("wrapper", v4Wrapper).success).toBe(true);
+    expect(store.validateModel("usdm", v4Wrapper).success).toBe(true);
+    expect(store.validateModel("usdm", v3Study).success).toBe(true);
+    expect(store.validateModel("wrapper", v3Study).success).toBe(false);
+    expect(
+      store.validateModel("usdm", { usdmVersion: "3.0.0", study: {} }).success
+    ).toBe(false);
+
+    const normalizedV4 = normalizeUsdm(v4Wrapper);
+    expect(normalizedV4.studyId).toBe("STUDY-V4-WRAPPER");
+    expect(normalizedV4.arms[0].armId).toBe("ARM_1");
+    expect(normalizedV4.epochs[0].epochId).toBe("EP_1");
+    expect(normalizedV4.encounters[0].encounterId).toBe("ENC_1");
+    expect(normalizedV4.rows[0].activityId).toBe("ACT_1");
+
+    const normalizedV3 = normalizeUsdm(v3Study);
+    expect(normalizedV3.studyId).toBe("STUDY-V3-LEGACY");
+    expect(normalizedV3.arms[0].armId).toBe("ARM_A");
   });
 });

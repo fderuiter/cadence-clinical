@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Ddf;
 using Cadence.IntegrationTests.Intelligence;
 using Cadence.Kernel;
 using Cadence.Kernel.Application.Authorization;
@@ -170,6 +171,7 @@ public class KernelPostgresFixture : IAsyncLifetime
             .AddCadenceRules()
             .AddCadenceCollectionValidation()
             .AddCadenceStandards()
+            .AddSingleton<IProtocolFormCompiler, ProtocolFormCompiler>()
             .AddKernelIdentityVault()
             .AddKernelIdentityVaultPersistence(VaultMasterKey, VaultRegion);
         ConfigureServices(services);

@@ -6,6 +6,7 @@ import { router } from "../src/router/index.js";
 import {
   AVAILABLE_SCREENS,
   DEMO_AVAILABLE_SCREENS,
+  DEMO_MODULE_CATALOG,
 } from "../src/router/availability.js";
 import { STAGES } from "../src/canvas/lifecycle";
 import { useAuthStore, PERSONA_PRESETS } from "../src/stores/auth.js";
@@ -1709,6 +1710,110 @@ describe("Contextual Help Drawer & Support Ticket Escalation (Issue #4332)", () 
       await wrapper.vm.$nextTick();
       expect(searchInput.element.value).toBe("");
       expect(document.activeElement).toBe(searchInput.element);
+
+      wrapper.unmount();
+      mountNode.remove();
+    });
+
+    it("resolves PUBLISHED SOP guidance with /cadence-clinical/ portal link across /overview and all 35 DEMO_AVAILABLE_SCREENS", () => {
+      const overviewHelp = getFallbackContextualHelp(
+        "/overview",
+        "super_admin"
+      );
+      expect(overviewHelp.primary_article?.status).toBe("PUBLISHED");
+      expect(overviewHelp.primary_article?.body_html).toContain(
+        "/cadence-clinical/"
+      );
+
+      expect(Object.keys(DEMO_MODULE_CATALOG)).toHaveLength(
+        DEMO_AVAILABLE_SCREENS.size
+      );
+      for (const routeName of DEMO_AVAILABLE_SCREENS) {
+        const mod = DEMO_MODULE_CATALOG[routeName];
+        expect(mod, `catalog entry for ${routeName}`).toBeDefined();
+        const help = getFallbackContextualHelp(mod.defaultPath, "super_admin");
+        expect(help.primary_article, `SOP for ${mod.defaultPath}`).toBeTruthy();
+        expect(help.primary_article.status).toBe("PUBLISHED");
+        expect(help.primary_article.body_html).toContain("/cadence-clinical/");
+      }
+    });
+
+    it("suspends ClinicalDrawer backdrop and inert trap while TicketCreateModal is open, restores drawer on cancel, and opens tickets tab on submit", async () => {
+      vi.spyOn(knowledgeService, "resolveContextualHelp").mockResolvedValue(
+        mockResolvedSop
+      );
+      vi.spyOn(ticketsApi, "createTicket").mockResolvedValue({
+        id: "tkt-demo-9001",
+        reference: "TKT-9001",
+        title: "Escalated Clinical Issue",
+        status: "OPEN",
+        priority: "MEDIUM",
+        gxp_severity: "MINOR",
+        category: "PROTOCOL_DEVIATION",
+      });
+      vi.spyOn(ticketsApi, "getTicket").mockResolvedValue({
+        id: "tkt-demo-9001",
+        reference: "TKT-9001",
+        title: "Escalated Clinical Issue",
+        status: "OPEN",
+        priority: "MEDIUM",
+        gxp_severity: "MINOR",
+        category: "PROTOCOL_DEVIATION",
+      });
+      vi.spyOn(ticketsApi, "listTickets").mockResolvedValue([]);
+
+      await knowledgeStore.fetchContextualHelp("/ecrf", "site_crc");
+      knowledgeStore.openDrawer();
+
+      const mountNode = document.createElement("div");
+      document.body.appendChild(mountNode);
+      const wrapper = mount(ContextualHelpDrawer, {
+        attachTo: mountNode,
+        global: { plugins: [pinia, router] },
+      });
+      await flushPromises();
+
+      expect(wrapper.find("#contextual-help-drawer-overlay").exists()).toBe(
+        true
+      );
+
+      // Escalate to ticket modal -> drawer overlay unmounts and modal is interactive (not inert)
+      await wrapper.find(".btn-escalate").trigger("click");
+      await flushPromises();
+
+      expect(knowledgeStore.isEscalating).toBe(true);
+      expect(wrapper.find("#contextual-help-drawer-overlay").exists()).toBe(
+        false
+      );
+      const modalDialog = wrapper.find(".ticket-create-modal");
+      expect(modalDialog.exists()).toBe(true);
+      expect(modalDialog.element.closest("[inert]")).toBeNull();
+      expect(modalDialog.element.closest('[aria-hidden="true"]')).toBeNull();
+
+      // Cancel modal -> drawer reopens on guidance tab
+      await wrapper
+        .find(".ticket-create-modal .modal-footer .btn-secondary")
+        .trigger("click");
+      await flushPromises();
+
+      expect(knowledgeStore.isEscalating).toBe(false);
+      expect(knowledgeStore.isOpen).toBe(true);
+      expect(wrapper.find("#contextual-help-drawer-overlay").exists()).toBe(
+        true
+      );
+
+      // Escalate again and submit -> drawer reopens on tickets tab with created ticket
+      await wrapper.find(".btn-escalate").trigger("click");
+      await flushPromises();
+      await wrapper.find("#btn-submit-ticket").trigger("click");
+      await flushPromises();
+
+      expect(knowledgeStore.isEscalating).toBe(false);
+      expect(knowledgeStore.isOpen).toBe(true);
+      expect(knowledgeStore.activeDrawerTab).toBe("tickets");
+      expect(wrapper.find("#contextual-help-drawer-overlay").exists()).toBe(
+        true
+      );
 
       wrapper.unmount();
       mountNode.remove();
