@@ -162,6 +162,44 @@ export function createKernelGraphDomain(ctx) {
         mask: null,
       };
     }
+    if (String(nodeRef).startsWith("plan:")) {
+      const unversionedPlan = String(nodeRef).split("@")[0];
+      const matchingProposal = [...state.proposals.values()].find(
+        (p) => String(p.plan?.ref || "").split("@")[0] === unversionedPlan
+      );
+      return applyNodeVisibilityMask(
+        {
+          ref: nodeRef,
+          kind: "plan",
+          title:
+            matchingProposal?.plan?.title ||
+            "Protocol Amendment 2 Visit Window Adjustment",
+          code: `v${matchingProposal?.plan?.number ?? 2}`,
+          status: "PROPOSED",
+          mask: null,
+        },
+        caller
+      );
+    }
+    if (String(nodeRef).startsWith("proposal:")) {
+      const unversionedProp = String(nodeRef).split("@")[0];
+      const matchingProposal =
+        state.proposals.get(unversionedProp) ||
+        [...state.proposals.values()].find(
+          (p) => String(p.ref || "").split("@")[0] === unversionedProp
+        );
+      return applyNodeVisibilityMask(
+        {
+          ref: nodeRef,
+          kind: "proposal",
+          title: matchingProposal?.intent || "Protocol Amendment Proposal",
+          code: String(unversionedProp).split(":")[1]?.slice(-4) || "4001",
+          status: matchingProposal?.status || "Open",
+          mask: null,
+        },
+        caller
+      );
+    }
     if (String(nodeRef).startsWith("study_site:")) {
       const siteCode = resolveSiteCodeFromRef(
         nodeRef,

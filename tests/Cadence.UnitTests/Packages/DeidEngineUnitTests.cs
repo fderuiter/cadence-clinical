@@ -245,6 +245,125 @@ public class DeidEngineUnitTests
     }
 
     [Fact]
+    public void DicomDeidentifier_ScopesAllFourUidsByLengthPrefixedStudySiteAndSubject_WithoutColonCollisions()
+    {
+        var deidentifier = new DicomDeidentifier(SigningKey, PseudonymKey);
+        byte[] sample = MinimalDicomWithFrameOfReference();
+
+        (string StudyUid, string SeriesUid, string SopUid, string FrameUid) DeidentifyWithScope(
+            string studyId,
+            string siteId,
+            string subjectId)
+        {
+            var res = deidentifier.Deidentify(
+                dicomBytes: sample,
+                subjectId: subjectId,
+                siteId: siteId,
+                studyId: studyId,
+                deidentifiedAt: FakeClock.DefaultStart,
+                applyPixelMask: false);
+
+            using var sliceStream = new MemoryStream(sample, writable: false);
+            var sliceRes = deidentifier.DeidentifySlice(
+                dicomStream: sliceStream,
+                subjectId: subjectId,
+                siteId: siteId,
+                studyId: studyId,
+                applyPixelMask: false);
+
+            sliceRes.AnonymizedStudyUid.Should().Be(res.AnonymizedStudyUid);
+            sliceRes.AnonymizedSeriesUid.Should().Be(res.AnonymizedSeriesUid);
+            sliceRes.AnonymizedSopUid.Should().Be(res.AnonymizedSopUid);
+
+            using var outMs = new MemoryStream(res.DeidentifiedBytes, writable: false);
+            var outDataset = DicomFile.Open(outMs).Dataset;
+            string frameUid = outDataset.GetSingleValue<string>(DicomTag.FrameOfReferenceUID);
+            frameUid.Should().StartWith(DicomDeidentifier.CadenceDicomUidRoot);
+
+            return (res.AnonymizedStudyUid, res.AnonymizedSeriesUid, res.AnonymizedSopUid, frameUid);
+        }
+
+        var baseline = DeidentifyWithScope("STUDY-01", "SITE-01", "SUBJ-01");
+        var repeat = DeidentifyWithScope("STUDY-01", "SITE-01", "SUBJ-01");
+        repeat.Should().Be(baseline);
+
+        var differentSite = DeidentifyWithScope("STUDY-01", "SITE-02", "SUBJ-01");
+        var differentSubject = DeidentifyWithScope("STUDY-01", "SITE-01", "SUBJ-02");
+        var differentStudy = DeidentifyWithScope("STUDY-02", "SITE-01", "SUBJ-01");
+
+        foreach (var other in new[] { differentSite, differentSubject, differentStudy })
+        {
+            other.StudyUid.Should().NotBe(baseline.StudyUid);
+            other.SeriesUid.Should().NotBe(baseline.SeriesUid);
+            other.SopUid.Should().NotBe(baseline.SopUid);
+            other.FrameUid.Should().NotBe(baseline.FrameUid);
+        }
+
+        var colonPairs = new[]
+        {
+            (Left: DeidentifyWithScope("STUDY:A", "SITE", "SUBJ"), Right: DeidentifyWithScope("STUDY", "A:SITE", "SUBJ")),
+            (Left: DeidentifyWithScope("STUDY", "SITE:B", "SUBJ"), Right: DeidentifyWithScope("STUDY", "SITE", "B:SUBJ")),
+            (Left: DeidentifyWithScope("STUDY:SITE", "X", "SUBJ"), Right: DeidentifyWithScope("STUDY", "SITE:X", "SUBJ")),
+        };
+
+        foreach (var (left, right) in colonPairs)
+        {
+            left.StudyUid.Should().NotBe(right.StudyUid);
+            left.SeriesUid.Should().NotBe(right.SeriesUid);
+            left.SopUid.Should().NotBe(right.SopUid);
+            left.FrameUid.Should().NotBe(right.FrameUid);
+        }
+    }
+
+    [Theory]
+    [InlineData(null, "SITE-01", "STUDY-01")]
+    [InlineData("", "SITE-01", "STUDY-01")]
+    [InlineData("   ", "SITE-01", "STUDY-01")]
+    [InlineData("SUBJ-01", null, "STUDY-01")]
+    [InlineData("SUBJ-01", "", "STUDY-01")]
+    [InlineData("SUBJ-01", "   ", "STUDY-01")]
+    [InlineData("SUBJ-01", "SITE-01", null)]
+    [InlineData("SUBJ-01", "SITE-01", "")]
+    [InlineData("SUBJ-01", "SITE-01", "   ")]
+    public void DicomDeidentifier_RefusesNullOrWhitespaceScopeIdentifiers(string? subjectId, string? siteId, string? studyId)
+    {
+        var deidentifier = new DicomDeidentifier(SigningKey, PseudonymKey);
+        byte[] sample = MinimalDicom();
+
+        Action deidentifyAct = () => deidentifier.Deidentify(
+            dicomBytes: sample,
+            subjectId: subjectId!,
+            siteId: siteId!,
+            studyId: studyId!,
+            deidentifiedAt: FakeClock.DefaultStart,
+            applyPixelMask: false);
+
+        Action sliceAct = () =>
+        {
+            using var ms = new MemoryStream(sample, writable: false);
+            _ = deidentifier.DeidentifySlice(
+                dicomStream: ms,
+                subjectId: subjectId!,
+                siteId: siteId!,
+                studyId: studyId!,
+                applyPixelMask: false);
+        };
+
+        deidentifyAct.Should().Throw<ArgumentException>();
+        sliceAct.Should().Throw<ArgumentException>();
+    }
+
+    private static byte[] MinimalDicomWithFrameOfReference()
+    {
+        using var ms = new MemoryStream(MinimalDicom());
+        var file = DicomFile.Open(ms);
+        file.Dataset.AddOrUpdate(DicomTag.FrameOfReferenceUID, "1.2.840.10008.5.1.4.1.1.6.1.4001");
+        using var outMs = new MemoryStream();
+        file.Save(outMs);
+        return outMs.ToArray();
+    }
+
+    [Fact]
     public void DeidTransforms_Pseudonymize_WithoutAKey_IsRefused()
     {
         var detector = new DeidDetector();

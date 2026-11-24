@@ -204,8 +204,20 @@ public static class QualityGates
             PreCommit = PreCommitMode.Quick,
             PreCommitNote = "validates staged `.github/rulesets` and `.github/workflows` blobs",
         },
-        new("imports", ["validate-imports"], "No `using` of another service's namespace across `apps/<service>`",
-            ctx => ImportValidatorService.ValidateImports(ctx.RepoRoot) == 0),
+        new("imports", ["validate-imports"],
+            "No cross-service direct imports, qualified namespace references, or reflection string lookups across `apps/<service>` (ratcheted by `cross-service-isolation.baseline.txt`)",
+            ctx => ImportValidatorService.ValidateImports(ctx.RepoRoot, ctx.PreCommit, ctx.IndexReader) == 0)
+        {
+            PreCommit = PreCommitMode.Quick,
+            PreCommitNote = "validates staged `apps/<service>` C# blobs and `cross-service-isolation.baseline.txt` against cross-service imports and reflection lookups",
+        },
+        new("permission-matrix", ["validate-permission-matrix", "rbac-matrix"],
+            "Static role-to-permission grants in `PermissionMatrix` and repository RBAC sources do not exceed the shrink-only `permission-matrix.baseline.txt` inventory",
+            ctx => PermissionMatrixRatchetService.Check(ctx.RepoRoot, ctx.PreCommit, ctx.IndexReader) == 0)
+        {
+            PreCommit = PreCommitMode.Quick,
+            PreCommitNote = "checks staged RBAC sources and `permission-matrix.baseline.txt` against the shrink-only grant inventory",
+        },
         new("security", ["audit-security"], "Hard-coded secret patterns across source, Vue templates and build scripts (private keys, cloud keys, API tokens, compliance secrets)",
             ctx => SecurityAuditorService.AuditSecurity(ctx.Files, ctx.RepoRoot, ctx.PreCommit, ctx.IndexReader) == 0)
         { TakesFiles = true },
@@ -275,11 +287,11 @@ public static class QualityGates
             PreCommitNote = "checks the staged files instead of the branch",
         },
         new("baseline-ratchet", ["baselines"],
-            "No ratchet baseline gate (`*.baseline.txt`, `baselines/deid/*.baseline.txt`, `baselines/secrets/*.secrets.baseline.json`) gained an entry without a `Baseline-Growth: <path> - <reason>` trailer on the commit that grew it",
+            "No ratchet baseline gate (`*.baseline.txt`, `baselines/deid/*.baseline.txt`, `baselines/secrets/*.secrets.baseline.json`) gained an entry without a `Baseline-Growth: <path> +<count> - <reason>` trailer on the commit that grew it",
             ctx => BaselineRatchetService.Check(ctx.RepoRoot, ctx.PreCommit, baseRef: ctx.BaseRef, pushBefore: ctx.PushBefore) == 0)
         {
             PreCommit = PreCommitMode.Quick,
-            PreCommitNote = "checks staged files against `HEAD`; `CADENCE_BASELINE_GROWTH=\"<reason>\"` admits growth",
+            PreCommitNote = "checks staged files against `HEAD`; `CADENCE_BASELINE_GROWTH=\"<path> +<count> - <reason>\"` admits growth",
         },
         new("merge-readiness", ["check-merge-readiness"],
             "Verifies `origin/main` (or `--base`) is present, shares history with `HEAD`, and merges cleanly via `git merge-tree --write-tree` without conflicts",
@@ -305,11 +317,12 @@ public static class QualityGates
             PreCommitNote = "skipped on commit so local work-in-progress commits stay offline; run by `cadence check` before push",
         },
         new("architecture-tests", ["arch-tests"],
-            "Hexagonal layering and kernel boundary invariants (`tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`)",
-            ctx => CheckDotnetTestSuite(ctx.RepoRoot, "tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj"))
+            "Hexagonal layering, direct-write IL sentinels, RBAC grant inventory, cross-service isolation, and kernel boundary invariants (`tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`)",
+            CheckArchitectureTests)
         {
-            PreCommit = PreCommitMode.Skipped,
-            PreCommitNote = "full xUnit architecture suite; run by `cadence check` and CI's `dotnet-quality` job",
+            TakesFiles = true,
+            PreCommit = PreCommitMode.Quick,
+            PreCommitNote = "runs when staged files touch backend C#/MSBuild, architecture baselines, or test files; skips docs-only and non-test frontend asset commits",
         },
         new("unit-tests", ["dotnet-unit-tests"],
             ".NET unit test suite (`tests/Cadence.UnitTests/Cadence.UnitTests.csproj`)",
@@ -619,6 +632,71 @@ public static class QualityGates
 
         Console.WriteLine($"✔ Branch HEAD includes {baseRef}.");
         return true;
+    }
+
+    private static bool CheckArchitectureTests(GateContext ctx)
+    {
+        if (ctx.TargetFiles is { Length: 0 })
+        {
+            return true;
+        }
+
+        if (ctx.PreCommit)
+        {
+            var files = ctx.TargetFiles is not null
+                ? (IEnumerable<string>)ctx.TargetFiles
+                : PreCommitOpenApiService.GetStagedFiles(ctx.RepoRoot);
+            if (!files.Any(f => AffectsArchitectureTestsGate(ctx.RepoRoot, f)))
+            {
+                Console.WriteLine("Staged changes touch only documentation or non-test frontend assets. Skipping architecture tests...");
+                return true;
+            }
+        }
+        else if (ctx.Files is not null && !ctx.Files.Any(f => AffectsArchitectureTestsGate(ctx.RepoRoot, f)))
+        {
+            return true;
+        }
+
+        return CheckDotnetTestSuite(ctx.RepoRoot, "tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj");
+    }
+
+    internal static bool AffectsArchitectureTestsGate(string repoRoot, string file)
+    {
+        string rel = Path.IsPathRooted(file)
+            ? Path.GetRelativePath(repoRoot, file)
+            : file;
+        string normalized = rel.Replace('\\', '/');
+        while (normalized.StartsWith("./", StringComparison.Ordinal))
+        {
+            normalized = normalized[2..];
+        }
+
+        if (string.IsNullOrWhiteSpace(normalized) ||
+            normalized.StartsWith("docs/", StringComparison.OrdinalIgnoreCase) ||
+            normalized.EndsWith(".md", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        string fileName = Path.GetFileName(normalized);
+        if (normalized.EndsWith(".cs", StringComparison.OrdinalIgnoreCase) ||
+            normalized.EndsWith(".csproj", StringComparison.OrdinalIgnoreCase) ||
+            normalized.EndsWith(".props", StringComparison.OrdinalIgnoreCase) ||
+            normalized.EndsWith(".targets", StringComparison.OrdinalIgnoreCase) ||
+            normalized.EndsWith(".sln", StringComparison.OrdinalIgnoreCase) ||
+            normalized.EndsWith(".slnx", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(normalized, "global.json", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(fileName, "BannedSymbols.txt", StringComparison.OrdinalIgnoreCase) ||
+            BaselineRatchetService.IsRatchetBaseline(normalized))
+        {
+            return true;
+        }
+
+        return normalized.StartsWith("tests/", StringComparison.OrdinalIgnoreCase) ||
+               normalized.Contains("/tests/", StringComparison.OrdinalIgnoreCase) ||
+               normalized.Contains("/__tests__/", StringComparison.OrdinalIgnoreCase) ||
+               fileName.Contains(".spec.", StringComparison.OrdinalIgnoreCase) ||
+               fileName.Contains(".test.", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool CheckDotnetTestSuite(string repoRoot, string relativeProjectPath)

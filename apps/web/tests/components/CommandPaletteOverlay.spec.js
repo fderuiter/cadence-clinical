@@ -875,4 +875,62 @@ describe("CommandPaletteOverlay.vue - Unified Global Command Palette", () => {
       searchSpy.mockRestore();
     }
   });
+
+  it("appends deduplicated role-authorized Preview module destinations in demo builds and suppresses Preview in standard builds", async () => {
+    const authStore = useAuthStore();
+    authStore.isAuthenticated = true;
+    authStore.rawRoles = ["Sponsor Admin"];
+
+    const stdWrapper = mount(CommandPaletteOverlay, {
+      props: { isOpen: true },
+      global: { plugins: [pinia, router] },
+    });
+    expect(body.find("#canvas-palette").text()).not.toContain("Preview");
+    stdWrapper.unmount();
+
+    vi.stubEnv("VITE_DEMO_MODE", "true");
+    try {
+      authStore.startDemoSession();
+      authStore.switchPersona("sponsor_designer");
+
+      const designerWrapper = mount(CommandPaletteOverlay, {
+        props: { isOpen: true },
+        global: { plugins: [pinia, router] },
+      });
+      await flushPromises();
+
+      const paletteText = body.find("#canvas-palette").text();
+      expect(paletteText).toContain("Preview");
+      expect(paletteText).toContain("Protocol & schedule designer");
+      expect(paletteText).not.toContain("EDC");
+      expect(paletteText).not.toContain("CTMS");
+      expect(paletteText).not.toContain("eTMF");
+      expect(paletteText).not.toContain("RTSM");
+      expect(paletteText).not.toContain("P21");
+      expect(paletteText).not.toContain("QMS");
+      expect(paletteText).not.toContain("Safety system");
+
+      const labels = body
+        .findAll("#canvas-palette .palette-label")
+        .map((el) => el.text());
+      expect(labels.filter((label) => label === "Studies")).toHaveLength(1);
+      expect(labels).not.toContain("Safety review");
+      designerWrapper.unmount();
+
+      authStore.switchPersona("safety_officer");
+      const safetyWrapper = mount(CommandPaletteOverlay, {
+        props: { isOpen: true },
+        global: { plugins: [pinia, router] },
+      });
+      await flushPromises();
+      const safetyLabels = body
+        .findAll("#canvas-palette .palette-label")
+        .map((el) => el.text());
+      expect(safetyLabels).toContain("Safety review");
+      expect(safetyLabels).not.toContain("Protocol & schedule designer");
+      safetyWrapper.unmount();
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
 });

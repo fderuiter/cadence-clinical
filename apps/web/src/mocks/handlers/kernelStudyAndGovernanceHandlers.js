@@ -1,4 +1,5 @@
 import { http, HttpResponse } from "msw";
+import { resolveDemoCaller } from "../demoPolicy.js";
 import { parseDemoProtocolImportRequest } from "../demoStudyImport.js";
 import {
   DEFAULT_STUDY_REF,
@@ -160,9 +161,15 @@ export function createKernelStudyAndGovernanceHandlers(store) {
         store.getProtocolVersion(decodeURIComponent(String(params.versionRef)))
       )
     ),
-    http.get("*/api/v1/kernel/studies/:studyRef/proposals", () =>
-      HttpResponse.json(store.listProposals())
-    ),
+    http.get("*/api/v1/kernel/studies/:studyRef/proposals", ({ request }) => {
+      const url = new URL(request.url);
+      return HttpResponse.json(
+        store.listProposals({
+          status: url.searchParams.get("status") || undefined,
+          limit: url.searchParams.get("limit") || undefined,
+        })
+      );
+    }),
     http.get(
       "*/api/v1/kernel/studies/:studyRef/locks",
       ({ params, request }) => {
@@ -339,13 +346,21 @@ export function createKernelStudyAndGovernanceHandlers(store) {
     ),
     http.post(
       "*/api/v1/kernel/proposals/:proposalRef/rejection",
-      ({ params, request }) =>
-        HttpResponse.json(
+      async ({ params, request }) => {
+        const body = await readJsonBody(request);
+        const caller = resolveDemoCaller(request);
+        const reason =
+          readRequiredReasonHeader(request) ||
+          (typeof body?.reason === "string" ? body.reason.trim() : "") ||
+          decodeReasonHeader(request);
+        return HttpResponse.json(
           store.rejectProposal(
             decodeURIComponent(String(params.proposalRef)),
-            decodeReasonHeader(request)
+            reason,
+            caller
           )
-        )
+        );
+      }
     ),
     http.get("*/api/v1/kernel/activity", ({ request }) => {
       const url = new URL(request.url);

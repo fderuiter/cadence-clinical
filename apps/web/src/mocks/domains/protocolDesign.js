@@ -1,3 +1,5 @@
+import { DEMO_STUDY, getDemoPersonaForWorkspace } from "demo-fixtures";
+import { demoNowIso } from "../../utils/demoMode.js";
 import {
   DEMO_PROTOCOL_TEMPLATES,
   buildImportedDraftDesign,
@@ -114,12 +116,17 @@ export function createProtocolDesignDomain(ctx) {
     state.idempotentImportResponses = new Map();
     state.soaProjection = createInitialSoaProjection();
 
+    const canonicalStudyRef =
+      state.studies.get(DEMO_STUDY.code || "CADENCE-101")?.ref ||
+      DEMO_STUDY.ref ||
+      STUDY_REF;
+
     state.proposals = new Map([
       [
         PROPOSAL_1_REF,
         {
           ref: PROPOSAL_1_REF,
-          study: STUDY_REF,
+          study: canonicalStudyRef,
           intent: "Extend Week 4 visit window from +/-2 days to +/-3 days",
           plan: {
             ref: "plan:00000000-0000-0000-0000-000000004101", // deid-ignore
@@ -133,15 +140,17 @@ export function createProtocolDesignDomain(ctx) {
           simulated_impact:
             "2 scheduled visit windows updated; 0 re-consents required.",
           requested_capabilities: ["protocol.amend"],
-          proposed_at: "2026-08-03T10:00:00Z",
-          expires_at: "2026-09-03T10:00:00Z",
-          proposed_by: "usr-designer-01",
-          proposed_by_kind: "human",
-          requested_by: "usr-designer-01",
-          model_id: null,
-          confidence_score: null,
+          proposed_at: demoNowIso(),
+          expires_at: demoNowIso(30, 86_400_000),
+          proposed_by: "agent:protocol-visit-window",
+          proposed_by_kind: "AutomationAgent",
+          requested_by:
+            getDemoPersonaForWorkspace("sponsor_designer")?.username ||
+            "designer_demo",
+          model_id: "cadence-protocol-guardian-1.2",
+          confidence_score: 0.89,
           content_hash: "sha256-demo-prop-4001",
-          status: "PENDING",
+          status: "Open",
           decided_at: null,
           decided_by: null,
           approval_attestation: null,
@@ -499,30 +508,64 @@ export function createProtocolDesignDomain(ctx) {
       };
     },
 
-    listProposals() {
-      return cloneJson([...state.proposals.values()]);
+    listProposals({ status, limit } = {}) {
+      let items = [...state.proposals.values()];
+      const normalizedStatus = String(status || "")
+        .trim()
+        .toLowerCase();
+      if (normalizedStatus) {
+        items = items.filter(
+          (item) =>
+            String(item.status || "")
+              .trim()
+              .toLowerCase() === normalizedStatus
+        );
+      }
+      const maxItems = Number(limit);
+      if (Number.isFinite(maxItems) && maxItems > 0) {
+        items = items.slice(0, maxItems);
+      }
+      return cloneJson(items);
     },
 
     getProposal(proposalRef) {
+      const cleanRef = String(proposalRef || "").split("@")[0];
       return cloneJson(
-        state.proposals.get(proposalRef) || [...state.proposals.values()][0]
+        state.proposals.get(cleanRef) ||
+          state.proposals.get(proposalRef) ||
+          [...state.proposals.values()][0]
       );
     },
 
-    rejectProposal(proposalRef, reason = "Rejected in demo review") {
+    rejectProposal(
+      proposalRef,
+      reason = "Rejected in demo review",
+      caller = null
+    ) {
+      const cleanRef = String(proposalRef || "").split("@")[0];
       const existing =
-        state.proposals.get(proposalRef) || [...state.proposals.values()][0];
-      const now = new Date().toISOString();
-      existing.status = "REJECTED";
+        state.proposals.get(cleanRef) ||
+        state.proposals.get(proposalRef) ||
+        [...state.proposals.values()][0];
+      const now = demoNowIso(nextCounter());
+      const personaUsername = caller?.persona
+        ? getDemoPersonaForWorkspace(caller.persona)?.username
+        : null;
+      const actor =
+        personaUsername ||
+        caller?.userId ||
+        getDemoPersonaForWorkspace("sponsor_designer")?.username ||
+        "designer_demo";
+      existing.status = "Rejected";
       existing.decided_at = now;
-      existing.decided_by = "usr-demo-operator";
+      existing.decided_by = actor;
       existing.decision_reason = reason;
       ctx.recordActivity(
         "proposal.rejected",
         "governance",
         "proposal",
         existing.ref,
-        "usr-demo-operator"
+        actor
       );
       return {
         ref: existing.ref,
