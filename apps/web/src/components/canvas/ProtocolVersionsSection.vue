@@ -86,7 +86,7 @@
     >
       <div class="gov-card-header">
         <div>
-          <h3 id="protocol-governance-heading">
+          <h3 id="protocol-governance-heading" tabindex="-1">
             Version {{ activeVersion.number }} governance
           </h3>
           <p class="gov-subtitle">
@@ -320,7 +320,9 @@
     >
       <div class="gov-card-header">
         <div>
-          <h3 id="protocol-effectivity-heading">Protocol effectivity</h3>
+          <h3 id="protocol-effectivity-heading" tabindex="-1">
+            Protocol effectivity
+          </h3>
           <p class="gov-subtitle">
             Declare scope effectivity and transition an approved protocol
             version to <strong>Effective</strong> with approval evidence so
@@ -578,14 +580,19 @@
       :semantic-action="PROTOCOL_APPROVE_SEMANTIC_ACTION"
       :on-sign="approveProtocolWithToken"
       @cancel="approvingVersion = null"
-      @success="approvingVersion = null"
+      @success="handleApprovalSigned"
     />
   </section>
 </template>
 
 <script setup lang="ts">
 import { computed, reactive, ref } from "vue";
-import { ClinicalDataTable, ClinicalFieldLayout, ClinicalInput } from "ui";
+import {
+  ClinicalDataTable,
+  ClinicalFieldLayout,
+  ClinicalInput,
+  handoffFocus,
+} from "ui";
 import {
   describeKernelError,
   isMasked,
@@ -978,6 +985,7 @@ async function submitForReview() {
   governanceBusy.value = true;
   governanceErrorMessage.value = "";
   governanceActionMessage.value = "";
+  let didSubmit = false;
   try {
     const updated = await kernelGovernanceApi.submitProtocolVersionForReview({
       versionRef: target.ref,
@@ -988,10 +996,25 @@ async function submitForReview() {
     await refreshVersions();
     emit("select", updated);
     governanceActionMessage.value = `Submitted Version ${updated.number} for review (${updated.status}).`;
+    didSubmit = true;
   } catch (err) {
     governanceErrorMessage.value = describeKernelError(err);
   } finally {
     governanceBusy.value = false;
+  }
+
+  if (didSubmit) {
+    await handoffFocus(
+      [
+        "#btn-approve-protocol-version",
+        "#protocol-governance-reason",
+        "#protocol-governance-heading",
+        "#protocol-versions-title",
+      ],
+      {
+        container: () => document.getElementById("protocol-versions-section"),
+      }
+    );
   }
 }
 
@@ -1002,6 +1025,7 @@ async function returnToDraft() {
   governanceBusy.value = true;
   governanceErrorMessage.value = "";
   governanceActionMessage.value = "";
+  let didReturn = false;
   try {
     const updated = await kernelGovernanceApi.returnProtocolVersionToDraft({
       versionRef: target.ref,
@@ -1012,16 +1036,46 @@ async function returnToDraft() {
     await refreshVersions();
     emit("select", updated);
     governanceActionMessage.value = `Returned Version ${updated.number} to Draft.`;
+    didReturn = true;
   } catch (err) {
     governanceErrorMessage.value = describeKernelError(err);
   } finally {
     governanceBusy.value = false;
+  }
+
+  if (didReturn) {
+    await handoffFocus(
+      [
+        "#protocol-governance-reason",
+        "#btn-submit-protocol-review",
+        "#protocol-governance-heading",
+        "#protocol-versions-title",
+      ],
+      {
+        container: () => document.getElementById("protocol-versions-section"),
+      }
+    );
   }
 }
 
 function openApprovalSignature(version: KernelProtocolVersion) {
   governanceErrorMessage.value = "";
   approvingVersion.value = version;
+}
+
+function handleApprovalSigned() {
+  approvingVersion.value = null;
+  void handoffFocus(
+    [
+      "#effectivity-scope-level",
+      "#protocol-artifact-kind",
+      "#protocol-governance-heading",
+      "#protocol-versions-title",
+    ],
+    {
+      container: () => document.getElementById("protocol-versions-section"),
+    }
+  );
 }
 
 async function approveProtocolWithToken(sigToken: string, reason: string) {
@@ -1164,6 +1218,7 @@ async function transitionEffectivity(eff: KernelEffectivity) {
   governanceBusy.value = true;
   governanceErrorMessage.value = "";
   governanceActionMessage.value = "";
+  let didTransition = false;
   try {
     const updated = await kernelGovernanceApi.changeEffectivityStatus({
       effectivityRef: eff.effectivity_ref,
@@ -1180,10 +1235,27 @@ async function transitionEffectivity(eff: KernelEffectivity) {
       void canvasStore.loadScheduleOptions(props.studyCode, { force: true });
     }
     governanceActionMessage.value = `Effectivity moved to ${updated.status}.`;
+    didTransition = true;
   } catch (err) {
     governanceErrorMessage.value = describeKernelError(err);
   } finally {
     governanceBusy.value = false;
+  }
+
+  if (didTransition) {
+    await handoffFocus(
+      [
+        () =>
+          document.getElementById(`effectivity-reason-${eff.effectivity_id}`),
+        '[data-testid="btn-transition-effectivity"]:not([disabled])',
+        "#effectivity-scope-level",
+        "#protocol-effectivity-heading",
+        "#protocol-versions-title",
+      ],
+      {
+        container: () => document.getElementById("protocol-versions-section"),
+      }
+    );
   }
 }
 

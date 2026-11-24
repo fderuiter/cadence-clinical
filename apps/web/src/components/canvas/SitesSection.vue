@@ -347,7 +347,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
-import { ClinicalDataTable, ClinicalInput } from "ui";
+import { ClinicalDataTable, ClinicalInput, handoffFocus } from "ui";
 import {
   describeKernelError,
   kernelApi,
@@ -571,6 +571,7 @@ async function submitLinkExisting() {
   }
 
   linking.value = true;
+  let linkedSiteCode = "";
   try {
     const linked = await kernelApi.linkSiteToStudy({
       studyRef: props.studyCode,
@@ -578,6 +579,7 @@ async function submitLinkExisting() {
       reason: linkReason.value.trim(),
       idempotencyKey: linkExistingIdempotencyKey.value,
     });
+    linkedSiteCode = linked.site_code || "";
     await syncCallerSiteScope(authStore, linked.site_code);
     invalidateStudySitesCache(props.studyCode);
     feedbackBanner.value = `Site ${linked.site_code || ""} linked to ${props.studyCode}.`;
@@ -588,6 +590,23 @@ async function submitLinkExisting() {
     linkError.value = describeKernelError(err);
   } finally {
     linking.value = false;
+  }
+
+  if (linkedSiteCode || !linkError.value) {
+    await handoffFocus(
+      [
+        "#link-site-picker",
+        () =>
+          linkedSiteCode
+            ? document.getElementById(`btn-site-participants-${linkedSiteCode}`)
+            : null,
+        "#register-site-code",
+        "#sites-section-title",
+      ],
+      {
+        container: () => document.getElementById("sites-section"),
+      }
+    );
   }
 }
 
@@ -671,6 +690,12 @@ async function submitRegisterSite() {
     registerError.value = describeKernelError(err);
   } finally {
     registering.value = false;
+  }
+
+  if (!registerError.value) {
+    await handoffFocus(["#register-site-code", "#sites-section-title"], {
+      container: () => document.getElementById("sites-section"),
+    });
   }
 }
 

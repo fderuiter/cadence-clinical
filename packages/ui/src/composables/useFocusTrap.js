@@ -21,6 +21,20 @@ const NON_CONTENT_TAGS = new Set([
   "NOSCRIPT",
 ]);
 
+const DETACHMENT_OBSERVER_OPTIONS = {
+  childList: true,
+  subtree: true,
+  attributes: true,
+  attributeFilter: [
+    "disabled",
+    "hidden",
+    "inert",
+    "aria-hidden",
+    "style",
+    "class",
+  ],
+};
+
 const activeTrapStack = [];
 const handledEvents = new WeakSet();
 const managedBackgroundNodes = new Map();
@@ -604,6 +618,9 @@ export function useFocusTrap(
     typeof document !== "undefined" ? document.activeElement : null;
   let previousActiveElement = null;
   let isActive = false;
+  let detachmentObserver = null;
+  let observedContainer = null;
+  let detachmentCheckPending = false;
 
   const getContainer = () => resolveOption(targetRef) || null;
   const getIsOpen = () =>
@@ -675,6 +692,84 @@ export function useFocusTrap(
     handleTrapKeyDown(e, trapEntry);
   };
 
+  const disconnectDetachmentObserver = () => {
+    if (detachmentObserver) {
+      detachmentObserver.disconnect();
+      detachmentObserver = null;
+    }
+    observedContainer = null;
+  };
+
+  const scheduleDetachmentFocusRecovery = () => {
+    if (detachmentCheckPending) return;
+    detachmentCheckPending = true;
+    nextTick(async () => {
+      await Promise.resolve();
+      detachmentCheckPending = false;
+      if (
+        !isActive ||
+        typeof document === "undefined" ||
+        !getModal() ||
+        activeTrapStack[activeTrapStack.length - 1] !== trapEntry
+      ) {
+        return;
+      }
+      const latestContainer = getContainer();
+      if (
+        !latestContainer ||
+        (typeof document.contains === "function" &&
+          !document.contains(latestContainer))
+      ) {
+        return;
+      }
+      const activeEl = document.activeElement;
+      if (
+        !activeEl ||
+        activeEl === document.body ||
+        activeEl === document.documentElement
+      ) {
+        focusIntoContainer(latestContainer);
+      }
+    });
+  };
+
+  const observeContainerDetachment = (container) => {
+    if (
+      !container ||
+      !getModal() ||
+      typeof MutationObserver !== "function" ||
+      typeof container.querySelectorAll !== "function"
+    ) {
+      disconnectDetachmentObserver();
+      return;
+    }
+    if (detachmentObserver && observedContainer === container) {
+      return;
+    }
+    disconnectDetachmentObserver();
+    try {
+      const observer = new MutationObserver(() => {
+        if (!isActive || typeof document === "undefined") return;
+        const activeEl = document.activeElement;
+        if (
+          !activeEl ||
+          activeEl === document.body ||
+          activeEl === document.documentElement ||
+          !container.contains(activeEl) ||
+          isElementInertOrHidden(activeEl, container)
+        ) {
+          scheduleDetachmentFocusRecovery();
+        }
+      });
+      observer.observe(container, DETACHMENT_OBSERVER_OPTIONS);
+      detachmentObserver = observer;
+      observedContainer = container;
+    } catch {
+      // Synthetic non-DOM test doubles are ignored gracefully; real DOM Nodes attach cleanly.
+      disconnectDetachmentObserver();
+    }
+  };
+
   const syncContainerFocus = (container) => {
     if (!container) return;
     if (
@@ -684,6 +779,7 @@ export function useFocusTrap(
     ) {
       trapEntry.wasConnected = true;
     }
+    observeContainerDetachment(container);
     reconcileBackgroundInert();
     focusIntoContainer(container);
     nextTick(() => {
@@ -700,6 +796,7 @@ export function useFocusTrap(
           ) {
             trapEntry.wasConnected = true;
           }
+          observeContainerDetachment(latestContainer);
           reconcileBackgroundInert();
           focusIntoContainer(latestContainer);
         }
@@ -861,6 +958,7 @@ export function useFocusTrap(
   const deactivate = () => {
     if (!isActive) return;
     isActive = false;
+    disconnectDetachmentObserver();
 
     if (typeof document !== "undefined") {
       document.removeEventListener("keydown", onTrapKeyDown);

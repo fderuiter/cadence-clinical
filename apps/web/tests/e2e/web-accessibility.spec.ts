@@ -4171,4 +4171,233 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
       });
     }
   });
+
+  test("preserves keyboard focus across ContextualHelpDrawer, BatchUploadDrawer/ClinicalDropzone, and Clinical Canvas swaps without BODY drops or inert background locks (ADR-2675)", async ({
+    page,
+  }) => {
+    const captureScreenshots = process.env.CAPTURE_SCREENSHOTS === "1";
+    await page.addInitScript(() => {
+      let underlyingFetch = window.fetch.bind(window);
+      const w = window as unknown as {
+        __failNextTickets?: boolean;
+        __mockTicketsList?: boolean;
+        __failNextLocks?: boolean;
+      };
+      const demoTicket = {
+        id: "ticket_demo_01",
+        ticket_number: "TKT-1042",
+        title: "Protocol version v2.0 alignment question",
+        description: "Verify visit window mapping for Screening epoch.",
+        status: "OPEN",
+        priority: "MEDIUM",
+        category: "DATA_QUERY",
+        gxp_severity: "MINOR",
+        study_id: "DEMO-01",
+        created_at: "2026-04-01T10:00:00Z",
+        updated_at: "2026-04-01T10:05:00Z",
+        comments: [],
+      };
+      const wrappedFetch: typeof window.fetch = async (input, init) => {
+        const url =
+          typeof input === "string"
+            ? input
+            : input instanceof URL
+              ? input.href
+              : input.url;
+        if (w.__mockTicketsList && url.includes("/api/v1/tickets")) {
+          if (url.includes("/ticket_demo_01")) {
+            return new Response(JSON.stringify(demoTicket), {
+              status: 200,
+              headers: { "Content-Type": "application/json" },
+            });
+          }
+          if (w.__failNextTickets) {
+            w.__failNextTickets = false;
+            return new Response(
+              JSON.stringify({
+                detail: "Support queue temporarily unavailable",
+              }),
+              { status: 503, headers: { "Content-Type": "application/json" } }
+            );
+          }
+          return new Response(JSON.stringify([demoTicket]), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+        if (
+          w.__failNextLocks &&
+          url.includes("/locks") &&
+          !url.includes("/readiness")
+        ) {
+          w.__failNextLocks = false;
+          return new Response(
+            JSON.stringify({ detail: "Temporary lock service timeout" }),
+            { status: 503, headers: { "Content-Type": "application/json" } }
+          );
+        }
+        return underlyingFetch(input, init);
+      };
+      Object.defineProperty(window, "fetch", {
+        configurable: true,
+        enumerable: true,
+        get() {
+          return wrappedFetch;
+        },
+        set(nextFn) {
+          if (typeof nextFn === "function" && nextFn !== wrappedFetch) {
+            underlyingFetch = nextFn.bind(window);
+          }
+        },
+      });
+    });
+
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await gotoHashRoute(page, "/tickets");
+    await expect(page.locator("#section-tickets-hub")).toBeVisible();
+
+    // 1. ContextualHelpDrawer: #btn-retry-drawer-tickets recovery + ticket detail <-> list swap inside open dialog
+    await page.evaluate(() => {
+      const w = window as unknown as {
+        __failNextTickets?: boolean;
+        __mockTicketsList?: boolean;
+      };
+      w.__mockTicketsList = true;
+      w.__failNextTickets = true;
+    });
+
+    const compactActionsBtn = page.locator("#btn-header-actions-menu");
+    if (await compactActionsBtn.isVisible().catch(() => false)) {
+      await compactActionsBtn.click();
+      await expect(
+        page.locator("#header-secondary-menu.is-open")
+      ).toBeVisible();
+    }
+    await page.locator("#btn-contextual-help-trigger").click();
+    const helpDrawer = page.locator("#contextual-help-drawer");
+    await expect(helpDrawer).toBeVisible();
+
+    await helpDrawer.locator("#tab-contextual-tickets").click();
+    const retryTicketsBtn = helpDrawer.locator("#btn-retry-drawer-tickets");
+    await expect(retryTicketsBtn).toBeVisible();
+    await retryTicketsBtn.focus();
+    await page.keyboard.press("Enter");
+
+    const firstTicketCard = helpDrawer.locator(".drawer-ticket-card").first();
+    await expect(firstTicketCard).toBeVisible();
+    await expect(firstTicketCard).toBeFocused();
+    await page.keyboard.press("Enter");
+
+    const backBtn = helpDrawer.locator("#btn-back-to-ticket-list");
+    await expect(backBtn).toBeVisible();
+    await expect(backBtn).toBeFocused();
+
+    await page.keyboard.press("Enter");
+    await expect(firstTicketCard).toBeVisible();
+    await expect(firstTicketCard).toBeFocused();
+
+    if (captureScreenshots) {
+      await page.screenshot({
+        path: "/tmp/contextual-help-drawer-focus-handoff.png",
+      });
+    }
+    await page.keyboard.press("Escape");
+    await expect(helpDrawer).toBeHidden();
+
+    // 2. BatchUploadDrawer + ClinicalDropzone queue removal and Clear Queue inside open dialog
+    await gotoHashRoute(page, "/documents");
+    const batchTrigger = page
+      .locator(".btn-batch-upload, .batch-upload-trigger-btn")
+      .first();
+    await expect(batchTrigger).toBeVisible();
+    await batchTrigger.click();
+
+    const batchDrawer = page.locator(".batch-drawer");
+    await expect(batchDrawer).toBeVisible();
+    await batchDrawer.locator('input[type="file"]').setInputFiles([
+      {
+        name: "protocol-amendment-1.pdf",
+        mimeType: "application/pdf",
+        buffer: Buffer.from("%PDF-1.4 demo 1"),
+      },
+      {
+        name: "protocol-amendment-2.pdf",
+        mimeType: "application/pdf",
+        buffer: Buffer.from("%PDF-1.4 demo 2"),
+      },
+    ]);
+
+    const removeButtons = batchDrawer.locator(".btn-remove-item");
+    await expect(removeButtons).toHaveCount(2);
+    await removeButtons.first().focus();
+    await page.keyboard.press("Enter");
+    await expect(removeButtons).toHaveCount(1);
+    await expect(removeButtons.first()).toBeFocused();
+
+    const clearQueueBtn = batchDrawer.getByRole("button", {
+      name: /^Clear Queue$/i,
+    });
+    await clearQueueBtn.focus();
+    await page.keyboard.press("Enter");
+    await expect(removeButtons).toHaveCount(0);
+    await expect(
+      batchDrawer.locator(".clinical-dropzone-browse-btn")
+    ).toBeFocused();
+
+    if (captureScreenshots) {
+      await page.screenshot({
+        path: "/tmp/batch-upload-drawer-focus-handoff.png",
+      });
+    }
+    await page.keyboard.press("Escape");
+    await expect(batchDrawer).toBeHidden();
+
+    // 3. Clinical Canvas inline heading target & CanvasErrorAlert retry handoff (without inert background)
+    await gotoHashRoute(
+      page,
+      "/studies/DEMO-01?stage=design&section=protocol-versions"
+    );
+    const versionsSection = page.locator("#protocol-versions-section");
+    await expect(versionsSection).toBeVisible();
+    await expect(
+      versionsSection.locator("#protocol-versions-title")
+    ).toHaveAttribute("tabindex", "-1");
+    await expect(page.locator("#main-content")).not.toHaveAttribute("inert");
+
+    await page.evaluate(() => {
+      (window as unknown as { __failNextLocks?: boolean }).__failNextLocks =
+        true;
+    });
+
+    await gotoHashRoute(page, "/studies/DEMO-01?stage=closeout&section=locks");
+    const locksSection = page.locator("#study-locks-section");
+    const retryLocksBtn = locksSection.locator("#btn-retry-locks-list");
+    await expect(retryLocksBtn).toBeVisible();
+    await retryLocksBtn.focus();
+    await page.keyboard.press("Enter");
+    await expect(
+      locksSection
+        .locator('#study-locks-empty, [data-testid="study-locks-table-scroll"]')
+        .first()
+    ).toBeVisible();
+
+    const activeInsideLocks = await page.evaluate(() => {
+      const active = document.activeElement;
+      const section = document.getElementById("study-locks-section");
+      return Boolean(
+        active &&
+        active !== document.body &&
+        section &&
+        section.contains(active)
+      );
+    });
+    expect(activeInsideLocks).toBe(true);
+    await expect(page.locator("#main-content")).not.toHaveAttribute("inert");
+
+    if (captureScreenshots) {
+      await page.screenshot({
+        path: "/tmp/study-locks-retry-focus-handoff.png",
+      });
+    }
+  });
 });

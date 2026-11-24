@@ -638,6 +638,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2671: Composable Dirty Navigation Guards, Inline eCRF Draft Recovery Banners, and Edited-Row Contrast Tokens](adr/2026-11-23-composable-dirty-guards-and-inline-draft-recovery.md) | Current | - Status: Accepted |
 | [ADR-2672: Share Step-Up Signature Dispatch, Web HTTP Core, and TypeScript Duplication Enforcement](adr/2026-11-23-share-step-up-dispatch-http-core-and-ts-duplication-gate.md) | Current | - Status: Accepted |
 | [ADR-2673: Centralize CSS Button, Disclosure, and Programmatic Focus States and Migrate Live Clinical Hubs onto Shared UI Primitives](adr/2026-11-24-centralize-css-states-and-migrate-live-clinical-hubs.md) | Current | - Status: Accepted |
+| [ADR-2675: Focus-Trap Detachment Recovery, Shared Retry Focus Primitives, and Inline Focus-Handoff AST Gates](adr/2026-11-24-focus-trap-detachment-recovery-and-retry-focus-primitives.md) | Current | - Status: Accepted |
 
 ## Developing and running
 

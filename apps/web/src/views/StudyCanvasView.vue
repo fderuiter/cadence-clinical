@@ -1880,8 +1880,9 @@ async function loadInspectedProtocolVersion(text: string) {
 
 function retryProtocolVersionLoad() {
   if (selectedVersionText.value) {
-    void loadInspectedProtocolVersion(selectedVersionText.value);
+    return loadInspectedProtocolVersion(selectedVersionText.value);
   }
+  return undefined;
 }
 
 watch(
