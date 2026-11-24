@@ -588,88 +588,12 @@
         </div>
 
         <!-- TAB 3: ATTACHMENTS (Demo mode only while blob storage is out of scope) -->
-        <div
+        <TicketAttachmentsDemoPanel
           v-if="demoBuild && activeTab === 'attachments'"
-          id="ticket-drawer-panel-attachments"
-          role="tabpanel"
-          aria-labelledby="ticket-drawer-tab-attachments"
-          class="tab-pane"
-        >
-          <div class="attachment-upload-box">
-            <h4 class="card-title">Upload Audited Evidence Blob</h4>
-            <p class="upload-hint">
-              Upload logs, temperature traces, source certificates, or PDFs (21
-              CFR Part 11 &amp; DEID scanned).
-            </p>
-            <div class="upload-inputs">
-              <input
-                ref="fileInput"
-                type="file"
-                aria-label="Evidence attachment file"
-                class="file-input"
-                @change="onFileSelected"
-              />
-              <ClinicalInput
-                id="ticket-attachment-reason"
-                v-model="attachmentReason"
-                label="Reason for attaching evidence"
-                hide-label
-                density="compact"
-                :show-query-flag="false"
-                control-class="form-control"
-                placeholder="Mandatory GxP reason for attachment..."
-                :attributes="{ 'aria-label': 'Reason for attaching evidence' }"
-              />
-              <button
-                type="button"
-                class="btn btn-primary"
-                :disabled="
-                  !selectedFile || !attachmentReason.trim() || uploadSubmitting
-                "
-                @click="uploadAttachment"
-              >
-                Attach Evidence
-              </button>
-            </div>
-          </div>
-
-          <div class="attachments-list">
-            <div
-              v-for="att in attachments"
-              :key="att.id"
-              class="attachment-card"
-            >
-              <div class="attachment-icon">📄</div>
-              <div class="attachment-details">
-                <div class="attachment-filename">
-                  {{ att.filename }}
-                </div>
-                <div class="attachment-meta">
-                  <span>{{ (att.file_size_bytes / 1024).toFixed(1) }} KB</span>
-                  • <span>Uploaded by {{ att.uploaded_by }}</span> •
-                  <span>{{ formatDate(att.uploaded_at) }}</span>
-                </div>
-                <div class="sha-hash" :title="att.sha256_hash">
-                  SHA-256:
-                  <code>{{ att.sha256_hash?.substring(0, 16) }}...</code>
-                </div>
-              </div>
-              <div class="attachment-badges">
-                <span v-if="att.deid_scrubbed" class="badge badge-deid"
-                  >🛡️ DEID Verified</span
-                >
-              </div>
-            </div>
-
-            <div v-if="attachments.length === 0" class="empty-placeholder">
-              <EmptyState
-                icon="📎"
-                title="No Evidence Attached"
-                message="No evidence files have been attached to this ticket yet."
-              />
-            </div>
-          </div>
-        </div>
+          :ticket-id="ticket.id"
+          :attachments="attachments"
+          @attachment="emit('attachment', $event)"
+        />
 
         <!-- TAB 4: SIGNATURES -->
         <div
@@ -884,7 +808,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, watch } from "vue";
+import { ref, reactive, computed, watch, defineAsyncComponent } from "vue";
 import {
   ClinicalInput,
   ClinicalTabs,
@@ -896,9 +820,14 @@ import {
 import TicketSignModal from "./TicketSignModal.vue";
 import SkeletonLoader from "../common/SkeletonLoader.vue";
 import { useAuthStore } from "../../stores/auth";
+import { buildDemoResolvePayload } from "../../stores/demo/ticketsDemo";
 import { normalizeBackendRole } from "../../canvas/authority/roles";
 import { isDemoBuild } from "../../utils/demoMode.js";
 import { useTicketMutationPermission } from "../../utils/ticketPermissions";
+
+const TicketAttachmentsDemoPanel = defineAsyncComponent(
+  () => import("../../views/demo/TicketAttachmentsDemoPanel.vue")
+);
 
 const SITE_PERSONAS = new Set(["site_crc", "site_investigator"]);
 const SPONSOR_COMMENT_CAPABLE_ROLES = new Set([
@@ -1050,12 +979,6 @@ const newCommentContent = ref("");
 const newCommentReason = ref("Standard clinical progress note");
 const newCommentVisibility = ref("PUBLIC");
 const commentSubmitting = ref(false);
-
-// Attachment state
-const fileInput = ref(null);
-const selectedFile = ref(null);
-const attachmentReason = ref("Supporting regulatory evidence attachment");
-const uploadSubmitting = ref(false);
 
 const close = () => {
   emit("close");
@@ -1277,16 +1200,7 @@ const transitionTicket = (newStatus) => {
 const openResolveModal = () => {
   if (demoBuild) {
     pendingStatusHandoff = true;
-    emit("transition", {
-      ticketId: props.ticket.id,
-      newStatus: "RESOLVED",
-      root_cause_category: "PROCESS_WORKFLOW_DEFICIT",
-      root_cause_summary:
-        "Clinical team addressed protocol checklist with site coordinator.",
-      resolution_code: "CORRECTIVE_ACTION_IMPLEMENTED",
-      reason_for_change:
-        "Resolving ticket following comprehensive clinical assessment.",
-    });
+    emit("transition", buildDemoResolvePayload(props.ticket.id));
     return;
   }
   resolvePanelHandoff.rememberTrigger("#btn-open-resolve");
@@ -1336,21 +1250,6 @@ const submitComment = () => {
     reason_for_change: newCommentReason.value.trim(),
   });
   newCommentContent.value = "";
-};
-
-const onFileSelected = (e) => {
-  selectedFile.value = e.target.files?.[0] || null;
-};
-
-const uploadAttachment = () => {
-  if (!selectedFile.value || !attachmentReason.value.trim()) return;
-  emit("attachment", {
-    ticketId: props.ticket.id,
-    file: selectedFile.value,
-    reason_for_change: attachmentReason.value,
-  });
-  selectedFile.value = null;
-  if (fileInput.value) fileInput.value.value = "";
 };
 
 const onTicketSigned = (sigPayload) => {
@@ -1802,72 +1701,6 @@ const onTicketSigned = (sigPayload) => {
 .comment-submit-row {
   display: flex;
   gap: 8px;
-}
-
-/* Attachments tab */
-.attachment-upload-box {
-  background: var(--semantic-color-surface);
-  border: 1px dashed var(--semantic-color-border-control);
-  border-radius: 8px;
-  padding: 16px;
-}
-
-.upload-hint {
-  font-size: 0.78rem;
-  color: var(--semantic-color-text-secondary);
-  margin-bottom: 12px;
-}
-
-.upload-inputs {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.attachments-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.attachment-card {
-  background: var(--semantic-color-surface);
-  border: 1px solid var(--semantic-color-border);
-  border-radius: 8px;
-  padding: 12px 14px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.attachment-icon {
-  font-size: 1.5rem;
-}
-
-.attachment-details {
-  flex: 1;
-}
-
-.attachment-filename {
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: var(--semantic-color-text);
-}
-
-.attachment-meta {
-  font-size: 0.72rem;
-  color: var(--semantic-color-text-secondary);
-  margin: 2px 0;
-}
-
-.sha-hash {
-  font-size: 0.7rem;
-  color: var(--semantic-color-text-secondary);
-}
-
-.badge-deid {
-  background: var(--semantic-color-success-bg);
-  color: var(--semantic-color-success-dark);
 }
 
 /* Signatures tab */

@@ -2,10 +2,19 @@ import { fileURLToPath } from "node:url";
 import { defineConfig, mergeConfig } from "vitest/config";
 import viteConfig from "./vite.config.js";
 
+const EAGER_DEMO_WORKSPACE_HOSTS = [
+  "/src/views/EcrfView.vue",
+  "/src/views/CtmsView.vue",
+  "/src/views/KnowledgeView.vue",
+  "/src/views/TicketsView.vue",
+  "/src/components/tickets/TicketDetailDrawer.vue",
+];
+
 /**
- * Resolves lazy demo workspace boundaries (`defineAsyncComponent(() => import("./demo/..."))`)
- * synchronously inside Vitest so existing synchronous `mount(CtmsView)` / `mount(EcrfView)`
- * tests render on tick 0 when `VITE_DEMO_MODE=true`.
+ * Resolves lazy demo workspace boundaries (`defineAsyncComponent(() => import(".../demo/..."))`)
+ * synchronously inside Vitest so existing synchronous `mount(...)` tests for `EcrfView`,
+ * `CtmsView`, `KnowledgeView`, `TicketsView`, and `TicketDetailDrawer` render on tick 0
+ * when `VITE_DEMO_MODE=true`.
  */
 function eagerDemoWorkspacesForVitest() {
   return {
@@ -14,13 +23,12 @@ function eagerDemoWorkspacesForVitest() {
     transform(code, id) {
       const cleanId = id.split("?", 1)[0].replaceAll("\\", "/");
       if (
-        !cleanId.endsWith("/src/views/EcrfView.vue") &&
-        !cleanId.endsWith("/src/views/CtmsView.vue")
+        !EAGER_DEMO_WORKSPACE_HOSTS.some((suffix) => cleanId.endsWith(suffix))
       ) {
         return null;
       }
       const next = code.replace(
-        /const\s+(EcrfDemoWorkspace|CtmsDemoWorkspace)\s*=\s*defineAsyncComponent\(\s*\(\)\s*=>\s*import\((["']\.\/demo\/(?:Ecrf|Ctms)DemoWorkspace\.vue["'])\)\s*,?\s*\);?/g,
+        /const\s+(EcrfDemoWorkspace|CtmsDemoWorkspace|KnowledgeDemoWorkspace|TicketsDemoWorkspace|TicketAttachmentsDemoPanel)\s*=\s*defineAsyncComponent\(\s*\(\)\s*=>\s*import\((["'](?:\.\/demo\/|\.\.\/\.\.\/views\/demo\/)(?:EcrfDemoWorkspace|CtmsDemoWorkspace|KnowledgeDemoWorkspace|TicketsDemoWorkspace|TicketAttachmentsDemoPanel)\.vue["'])\)\s*,?\s*\);?/g,
         "import $1 from $2;"
       );
       return next === code ? null : { code: next, map: null };
