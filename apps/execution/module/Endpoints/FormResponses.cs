@@ -352,6 +352,34 @@ public sealed record FormResponse(
 internal static class ExecutionQueryMerger
 {
     internal static (int OpenCount, int AnsweredCount) Merge(
+        IReadOnlySet<AssertionId> activeQueryAssertionIds,
+        IReadOnlySet<AssertionId>? answeredQueryAssertionIds,
+        IReadOnlyCollection<(Guid KernelQueryId, FormQueryStatus Status)> executionQueries)
+    {
+        var ownedKernelIds = executionQueries.Select(q => AssertionId.FromGuid(q.KernelQueryId)).ToHashSet();
+        var unownedActiveCount = 0;
+        var unownedAnsweredCount = 0;
+        foreach (var assertionId in activeQueryAssertionIds)
+        {
+            if (ownedKernelIds.Contains(assertionId))
+            {
+                continue;
+            }
+
+            unownedActiveCount++;
+            if (answeredQueryAssertionIds?.Contains(assertionId) ?? false)
+            {
+                unownedAnsweredCount++;
+            }
+        }
+
+        var kernelOpen = unownedActiveCount - unownedAnsweredCount;
+        var execOpen = executionQueries.Count(q => q.Status == FormQueryStatus.Open);
+        var execAnswered = executionQueries.Count(q => q.Status == FormQueryStatus.Answered);
+        return (kernelOpen + execOpen, unownedAnsweredCount + execAnswered);
+    }
+
+    internal static (int OpenCount, int AnsweredCount) Merge(
         IReadOnlyList<AssertionView> kernelAssertions,
         IReadOnlyCollection<(Guid KernelQueryId, FormQueryStatus Status)> executionQueries)
     {
