@@ -66,7 +66,7 @@ public sealed class KernelCommandPipeline(
             return invalid;
         }
 
-        if ((consumerActor.Actor ?? currentActor.Actor) is not { } actor)
+        if ((consumerActor.Actor ?? services.GetService<ModuleServiceActor>()?.Actor ?? currentActor.Actor) is not { } actor)
         {
             return KernelErrors.ActorUnresolved;
         }
@@ -402,7 +402,8 @@ public sealed class KernelCommandPipeline(
             return BlueprintCommandFamilies;
         }
 
-        if (ns.StartsWith("Cadence.Apps.Execution", StringComparison.Ordinal))
+        if (ns.StartsWith("Cadence.Apps.Execution", StringComparison.Ordinal)
+            || ns.StartsWith("Cadence.Modules.Execution", StringComparison.Ordinal))
         {
             return CaptureCommandFamilies;
         }
@@ -605,6 +606,7 @@ public static class KernelApplicationServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
         services.AddScoped<IKernelCommandSender, KernelCommandPipeline>();
         services.TryAddScoped<ConsumerActor>();
+        services.TryAddScoped<ModuleServiceActor>();
         services.AddTransient<ICommandHandler<ProvisionTenant, TenantId>, ProvisionTenantHandler>();
         services.AddTransient<ICommandHandler<RegisterOrganization, OrganizationId>, RegisterOrganizationHandler>();
         services.AddTransient<ICommandHandler<RegisterPerson, PersonId>, RegisterPersonHandler>();

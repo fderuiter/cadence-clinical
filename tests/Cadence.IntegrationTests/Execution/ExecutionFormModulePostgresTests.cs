@@ -55,6 +55,10 @@ public sealed class ExecutionFormModulePostgresFixture : KernelPostgresFixture
             .AddCadenceExecutionModule(ConnectionString!);
     }
 
+    /// <summary>Host-local alert sink populated when outbox relay delivers <see cref="FormQueryAgingDigestGenerated"/>.</summary>
+    public IFormQueryAgingDigestAlertDispatcher AlertDispatcher =>
+        Scope().GetRequiredService<IFormQueryAgingDigestAlertDispatcher>();
+
     /// <summary>The Execution form instance with <paramref name="id"/>, read as the superuser past Row-Level Security.</summary>
     public async Task<FormInstanceRow?> ReadFormAsync(Guid id, CancellationToken ct)
     {

@@ -648,7 +648,7 @@ public sealed class AuthorityEvaluator(IAuthorityStore store, KernelAuthorityOpt
 }
 
 /// <summary>Checks a grant together with every grant above it (K-AUTH-3).</summary>
-internal static class GrantChain
+public static class GrantChain
 {
     /// <summary>
     /// True when <paramref name="grant"/> and every grant above it are in effect at <paramref name="at"/> as known at
