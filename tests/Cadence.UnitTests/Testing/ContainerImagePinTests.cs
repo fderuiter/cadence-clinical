@@ -406,6 +406,67 @@ public sealed partial class ContainerImagePinTests
             "dependabot.yml must ignore semver-major and semver-minor bumps on python in /docker/sce/python (ADR-2327)");
         SceRIgnoreRule().IsMatch(dependabot).Should().BeTrue(
             "dependabot.yml must ignore semver-major, semver-minor, and semver-patch bumps on r-base in /docker/sce/r");
+
+        ValidateDependabotUniqueness(dependabot).Should().BeEmpty(
+            "dependabot.yml must not contain duplicate ecosystem/directory entries or duplicate (dependency-name, versions/update-types) ignore rules");
+    }
+
+    [Fact]
+    public void DependabotUniquenessValidator_RejectsDuplicateVersionsUpdateTypesAndUnconditionalIgnores()
+    {
+        const string duplicateVersionsYaml = """
+            version: 2
+            updates:
+              - package-ecosystem: "nuget"
+                directory: "/"
+                schedule:
+                  interval: "weekly"
+                ignore:
+                  - dependency-name: "SonarAnalyzer.CSharp"
+                    versions: [">= 10.7.0"]
+                  - dependency-name: "OpenTelemetry*"
+                    versions: [">= 1.21.0"]
+                  - dependency-name: "SonarAnalyzer.CSharp"
+                    versions: [">= 10.7.0"]
+            """;
+        ValidateDependabotUniqueness(duplicateVersionsYaml)
+            .Should().ContainSingle()
+            .Which.Should().Contain("#/updates/0/ignore/2/versions");
+
+        const string duplicateUpdateTypesYaml = """
+            version: 2
+            updates:
+              - package-ecosystem: "npm"
+                directory: "/"
+                schedule:
+                  interval: "weekly"
+                ignore:
+                  - dependency-name: "@types/node"
+                    update-types: ["version-update:semver-major"]
+                  - dependency-name: "@types/node"
+                    update-types:
+                      [
+                        "version-update:semver-major",
+                      ]
+            """;
+        ValidateDependabotUniqueness(duplicateUpdateTypesYaml)
+            .Should().ContainSingle()
+            .Which.Should().Contain("#/updates/0/ignore/1/update-types");
+
+        const string duplicateUnconditionalYaml = """
+            version: 2
+            updates:
+              - package-ecosystem: "nuget"
+                directory: "/"
+                schedule:
+                  interval: "weekly"
+                ignore:
+                  - dependency-name: "Fluid.Core"
+                  - dependency-name: "Fluid.Core"
+            """;
+        ValidateDependabotUniqueness(duplicateUnconditionalYaml)
+            .Should().ContainSingle()
+            .Which.Should().Contain("#/updates/0/ignore/1/dependency-name");
     }
 
     [Fact]
@@ -619,6 +680,335 @@ public sealed partial class ContainerImagePinTests
         }
 
         return result;
+    }
+
+    private static List<string> ValidateDependabotUniqueness(string dependabotYaml)
+    {
+        var updates = ParseDependabotUpdates(dependabotYaml);
+        var errors = new List<string>();
+        var seenEcosystemTargets = new HashSet<string>(StringComparer.Ordinal);
+
+        for (int u = 0; u < updates.Count; u++)
+        {
+            var update = updates[u];
+            string targetKey = $"{update.Ecosystem}|{update.Directory}|{update.TargetBranch}";
+            if (!seenEcosystemTargets.Add(targetKey))
+            {
+                errors.Add($"The property '#/updates/{u}' duplicates ecosystem/directory target '{targetKey}'.");
+            }
+
+            ValidateDependabotIgnoreRules(u, update.Ignores, errors);
+        }
+
+        return errors;
+    }
+
+    private static void ValidateDependabotIgnoreRules(
+        int updateIndex,
+        List<DependabotIgnoreEntry> ignores,
+        List<string> errors)
+    {
+        var seenVersions = new HashSet<string>(StringComparer.Ordinal);
+        var seenUpdateTypes = new HashSet<string>(StringComparer.Ordinal);
+        var seenUnconditional = new HashSet<string>(StringComparer.Ordinal);
+
+        for (int i = 0; i < ignores.Count; i++)
+        {
+            var rule = ignores[i];
+            if (string.IsNullOrWhiteSpace(rule.DependencyName))
+            {
+                errors.Add($"The property '#/updates/{updateIndex}/ignore/{i}/dependency-name' must be non-empty.");
+                continue;
+            }
+
+            if (rule.Versions is { Count: > 0 })
+            {
+                CheckIgnoreConstraintList(
+                    updateIndex,
+                    i,
+                    "versions",
+                    rule.DependencyName,
+                    rule.Versions,
+                    seenVersions,
+                    errors);
+            }
+
+            if (rule.UpdateTypes is { Count: > 0 })
+            {
+                CheckIgnoreConstraintList(
+                    updateIndex,
+                    i,
+                    "update-types",
+                    rule.DependencyName,
+                    rule.UpdateTypes,
+                    seenUpdateTypes,
+                    errors);
+            }
+
+            if (rule.Versions is null && rule.UpdateTypes is null && !seenUnconditional.Add(rule.DependencyName))
+            {
+                errors.Add(
+                    $"The property '#/updates/{updateIndex}/ignore/{i}/dependency-name' includes a duplicate ('{rule.DependencyName}').");
+            }
+        }
+    }
+
+    private static void CheckIgnoreConstraintList(
+        int updateIndex,
+        int ignoreIndex,
+        string propertyName,
+        string dependencyName,
+        List<string> items,
+        HashSet<string> seenCombinations,
+        List<string> errors)
+    {
+        foreach (string item in items)
+        {
+            string comboKey = $"{dependencyName}|{item}";
+            if (!seenCombinations.Add(comboKey))
+            {
+                errors.Add(
+                    $"The property '#/updates/{updateIndex}/ignore/{ignoreIndex}/{propertyName}' includes a duplicate. " +
+                    $"Ignores must have a unique combination of 'dependency-name' and '{propertyName}' ('{dependencyName}': '{item}').");
+                break;
+            }
+        }
+    }
+
+    private static List<DependabotUpdateEntry> ParseDependabotUpdates(string yaml)
+    {
+        var updates = new List<DependabotUpdateEntry>();
+        string[] lines = yaml.ReplaceLineEndings("\n").Split('\n');
+        bool inUpdates = false;
+        bool inIgnore = false;
+        DependabotUpdateEntry? currentUpdate = null;
+        DependabotIgnoreEntry? currentIgnore = null;
+
+        for (int idx = 0; idx < lines.Length; idx++)
+        {
+            string raw = lines[idx];
+            string trimmed = raw.Trim();
+            if (trimmed.Length == 0 || trimmed.StartsWith('#'))
+            {
+                continue;
+            }
+
+            int indent = raw.Length - raw.TrimStart(' ').Length;
+            if (indent == 0)
+            {
+                inUpdates = string.Equals(trimmed, "updates:", StringComparison.Ordinal);
+                inIgnore = false;
+                currentUpdate = null;
+                currentIgnore = null;
+                continue;
+            }
+
+            if (!inUpdates)
+            {
+                continue;
+            }
+
+            if (indent == 2 && trimmed.StartsWith("- ", StringComparison.Ordinal))
+            {
+                currentUpdate = new DependabotUpdateEntry();
+                updates.Add(currentUpdate);
+                inIgnore = false;
+                currentIgnore = null;
+                ApplyUpdateProperty(currentUpdate, trimmed[2..].Trim(), ref inIgnore);
+                continue;
+            }
+
+            if (currentUpdate is null)
+            {
+                continue;
+            }
+
+            if (indent == 4)
+            {
+                currentIgnore = null;
+                ApplyUpdateProperty(currentUpdate, trimmed, ref inIgnore);
+                continue;
+            }
+
+            if (!inIgnore)
+            {
+                continue;
+            }
+
+            if (indent == 6 && trimmed.StartsWith("- ", StringComparison.Ordinal))
+            {
+                currentIgnore = new DependabotIgnoreEntry();
+                currentUpdate.Ignores.Add(currentIgnore);
+                ApplyIgnoreProperty(currentIgnore, lines, ref idx, trimmed[2..].Trim());
+                continue;
+            }
+
+            if (indent == 8 && currentIgnore is not null)
+            {
+                ApplyIgnoreProperty(currentIgnore, lines, ref idx, trimmed);
+            }
+        }
+
+        return updates;
+    }
+
+    private static void ApplyUpdateProperty(DependabotUpdateEntry update, string propLine, ref bool inIgnore)
+    {
+        if (string.Equals(propLine, "ignore:", StringComparison.Ordinal))
+        {
+            inIgnore = true;
+            return;
+        }
+
+        inIgnore = false;
+        if (!TrySplitYamlScalarProperty(propLine, out string key, out string value))
+        {
+            return;
+        }
+
+        switch (key)
+        {
+            case "package-ecosystem":
+                update.Ecosystem = value;
+                break;
+            case "directory":
+                update.Directory = value;
+                break;
+            case "target-branch":
+                update.TargetBranch = value;
+                break;
+        }
+    }
+
+    private static void ApplyIgnoreProperty(
+        DependabotIgnoreEntry ignore,
+        string[] lines,
+        ref int idx,
+        string propLine)
+    {
+        int colon = propLine.IndexOf(':', StringComparison.Ordinal);
+        if (colon <= 0)
+        {
+            return;
+        }
+
+        string key = propLine[..colon].Trim();
+        string rest = propLine[(colon + 1)..].Trim();
+        if (string.Equals(key, "dependency-name", StringComparison.Ordinal))
+        {
+            ignore.DependencyName = UnquoteYamlScalar(rest);
+            return;
+        }
+
+        if (key is "versions" or "update-types")
+        {
+            var values = ReadYamlStringArray(lines, ref idx, rest);
+            if (string.Equals(key, "versions", StringComparison.Ordinal))
+            {
+                ignore.Versions = values;
+            }
+            else
+            {
+                ignore.UpdateTypes = values;
+            }
+        }
+    }
+
+    private static List<string> ReadYamlStringArray(string[] lines, ref int idx, string inlineRest)
+    {
+        string buffer = inlineRest;
+        if (buffer.Length == 0 && idx + 1 < lines.Length && lines[idx + 1].TrimStart().StartsWith('['))
+        {
+            idx++;
+            buffer = lines[idx].Trim();
+        }
+
+        if (buffer.StartsWith('['))
+        {
+            while (!buffer.Contains(']', StringComparison.Ordinal) && idx + 1 < lines.Length)
+            {
+                idx++;
+                string next = lines[idx].Trim();
+                if (!next.StartsWith('#'))
+                {
+                    buffer += " " + next;
+                }
+            }
+
+            int open = buffer.IndexOf('[', StringComparison.Ordinal);
+            int close = buffer.LastIndexOf(']');
+            string inner = close > open ? buffer[(open + 1)..close] : "";
+            return inner
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(UnquoteYamlScalar)
+                .Where(s => s.Length > 0)
+                .ToList();
+        }
+
+        var items = new List<string>();
+        while (idx + 1 < lines.Length)
+        {
+            string peek = lines[idx + 1];
+            string peekTrimmed = peek.Trim();
+            if (peekTrimmed.Length == 0 || peekTrimmed.StartsWith('#'))
+            {
+                idx++;
+                continue;
+            }
+
+            int peekIndent = peek.Length - peek.TrimStart(' ').Length;
+            if (peekIndent < 8 || !peekTrimmed.StartsWith("- ", StringComparison.Ordinal))
+            {
+                break;
+            }
+
+            idx++;
+            items.Add(UnquoteYamlScalar(peekTrimmed[2..].Trim()));
+        }
+
+        return items;
+    }
+
+    private static bool TrySplitYamlScalarProperty(string line, out string key, out string value)
+    {
+        int colon = line.IndexOf(':', StringComparison.Ordinal);
+        if (colon <= 0)
+        {
+            key = "";
+            value = "";
+            return false;
+        }
+
+        key = line[..colon].Trim();
+        value = UnquoteYamlScalar(line[(colon + 1)..].Trim());
+        return true;
+    }
+
+    private static string UnquoteYamlScalar(string raw)
+    {
+        if (raw.Length >= 2 &&
+            ((raw[0] == '"' && raw[^1] == '"') || (raw[0] == '\'' && raw[^1] == '\'')))
+        {
+            return raw[1..^1];
+        }
+
+        int commentIdx = raw.IndexOf(" #", StringComparison.Ordinal);
+        return (commentIdx >= 0 ? raw[..commentIdx] : raw).Trim();
+    }
+
+    private sealed class DependabotUpdateEntry
+    {
+        public string Ecosystem { get; set; } = "";
+        public string Directory { get; set; } = "";
+        public string TargetBranch { get; set; } = "";
+        public List<DependabotIgnoreEntry> Ignores { get; } = [];
+    }
+
+    private sealed class DependabotIgnoreEntry
+    {
+        public string DependencyName { get; set; } = "";
+        public List<string>? Versions { get; set; }
+        public List<string>? UpdateTypes { get; set; }
     }
 
     [GeneratedRegex(@"<TargetFramework>net(\d+)\.\d+</TargetFramework>")]
