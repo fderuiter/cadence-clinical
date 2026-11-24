@@ -263,8 +263,34 @@ function openOrientationHub() {
   }
 }
 
+const NON_TOUR_SHELL_ROUTES = new Set([
+  "login",
+  "plans",
+  "trial-onboarding",
+  "forbidden",
+  "unavailable",
+]);
+
 function startGuidedTour() {
   onboardingStore.startTour();
+  const currentName = String(activeRoute?.name || "");
+  const currentPath = String(activeRoute?.path || "");
+  if (
+    NON_TOUR_SHELL_ROUTES.has(currentName) ||
+    currentPath === "/forbidden" ||
+    currentPath === "/unavailable" ||
+    currentPath === "/plans" ||
+    currentPath === "/onboarding/trial"
+  ) {
+    const targetPath = buildScopedWorkflowPath("/overview", {
+      studyCode: workspaceScope.value.studyCode,
+      siteId: workspaceScope.value.siteId,
+      subjectCode: workspaceScope.value.subjectCode,
+    });
+    if (isScreenAvailable("overview") && canPushResolvedPath(targetPath)) {
+      router.push(targetPath);
+    }
+  }
   onboardingStore.closeDrawer();
 }
 </script>

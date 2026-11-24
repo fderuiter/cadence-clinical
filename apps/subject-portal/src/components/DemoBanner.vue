@@ -7,9 +7,8 @@
     aria-label="Synthetic study data notice"
   >
     <p class="demo-mode-banner-copy">
-      Demo Mode — Displaying synthetic study data. Entries and signatures in
-      this sandbox are simulated locally and are not recorded in a clinical
-      trial system.
+      Demo Mode: Showing synthetic study data. Entries stay in this browser
+      only.
     </p>
     <nav class="demo-mode-banner-links" aria-label="Co-hosted demo surfaces">
       <a
@@ -51,16 +50,19 @@ const showBanner = computed(() => {
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 8px 16px;
+  gap: 4px 12px;
   background-color: var(--semantic-color-warning-bg);
   color: var(--semantic-color-warning);
   border-bottom: 1px solid var(--semantic-color-warning);
-  padding: 6px 16px;
+  padding: 4px 16px;
   font-size: 13px;
   font-weight: 600;
+  line-height: 1.3;
 }
 
 .demo-mode-banner-copy {
+  flex: 1 1 240px;
+  min-width: 0;
   margin: 0;
   text-align: left;
 }
@@ -68,15 +70,17 @@ const showBanner = computed(() => {
 .demo-mode-banner-links {
   display: inline-flex;
   flex-wrap: wrap;
+  min-width: 0;
+  max-width: 100%;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
 }
 
 .demo-mode-banner-link {
   display: inline-flex;
   align-items: center;
   min-height: var(--semantic-control-target-min, 24px);
-  padding: 2px 6px;
+  padding: 0 6px;
   border-radius: var(--semantic-radius-sm, 6px);
   color: var(--semantic-color-warning);
   font-weight: 700;
@@ -95,9 +99,10 @@ const showBanner = computed(() => {
 
 @media (max-width: 767px) {
   .demo-mode-banner {
-    padding: 6px 12px;
+    padding: 4px 12px;
+    gap: 2px 10px;
     font-size: 0.75rem;
-    line-height: 1.35;
+    line-height: 1.25;
   }
 }
 </style>

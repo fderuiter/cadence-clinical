@@ -568,4 +568,50 @@ describe("Shared UI primitives, bootstrap ordering, and query-synced portal rout
     await flushUi();
     expect(state.currentView).toBe("view-consent");
   });
+
+  it("defers teleported PortalPeekSheet drawer while PIN or session-expiry modals are open so #app never becomes inert over blocking modals", async () => {
+    await initializeApp();
+    await flushUi();
+
+    state.walletLoaded = true;
+    state.expenseClaims = [
+      {
+        id: "claim_pin_gate_01",
+        merchantName: "Hospital Garage",
+        category: "PARKING",
+        grossAmount: 24,
+        currency: "USD",
+        status: "PENDING_REVIEW",
+      },
+    ];
+
+    // Simulate cold-reload where PIN setup opens alongside a query-synced peek record
+    state.pinSetup.isOpen = true;
+    const router = getPortalRouter();
+    await router.replace({
+      name: "wallet",
+      query: { claimId: "claim_pin_gate_01" },
+    });
+    await flushUi();
+
+    expect(state.peekRecord?.id).toBe("claim_pin_gate_01");
+    expect(document.getElementById("portal-peek-drawer")).toBeNull();
+    expect(document.getElementById("app")?.hasAttribute("inert")).toBe(false);
+
+    // Once PIN setup completes, PortalPeekSheet opens automatically for the preserved peekRecord
+    state.pinSetup.isOpen = false;
+    await flushUi();
+    expect(document.getElementById("portal-peek-drawer")).not.toBeNull();
+
+    // Opening SessionExpiryModal yields the teleported peek drawer so #portal-session-expiry-modal inside #app stays interactive
+    state.sessionWarning.isOpen = true;
+    await flushUi();
+    expect(document.getElementById("portal-peek-drawer")).toBeNull();
+    expect(document.getElementById("app")?.hasAttribute("inert")).toBe(false);
+    expect(state.peekRecord?.id).toBe("claim_pin_gate_01");
+
+    state.sessionWarning.isOpen = false;
+    await flushUi();
+    expect(document.getElementById("portal-peek-drawer")).not.toBeNull();
+  });
 });

@@ -936,5 +936,31 @@ describe("Onboarding Guided Tour & Opt-in Live Sequences Spec", () => {
       expect(wrapper.find(".diagnostic-panel").exists()).toBe(false);
       expect(wrapper.find(".onboarding-popover-card").exists()).toBe(false);
     });
+
+    it("navigates from /forbidden to /overview when launching Start Tour from the checklist drawer", async () => {
+      signInAs(useAuthStore(), ["Site Coordinator"]);
+      await router.push("/forbidden");
+      await flushPromises();
+
+      const onboardingStore = useOnboardingStore();
+      onboardingStore.openDrawer();
+
+      const wrapper = mount(AppShell, {
+        global: { plugins: [router] },
+      });
+      await flushPromises();
+
+      await wrapper.find("#btn-drawer-start-tour").trigger("click");
+      await flushPromises();
+
+      expect(onboardingStore.isActive).toBe(true);
+      expect(onboardingStore.isDrawerOpen).toBe(false);
+      expect(router.currentRoute.value.path).not.toBe("/forbidden");
+      expect(["/overview", "/studies"]).toContain(
+        router.currentRoute.value.path
+      );
+      expect(wrapper.find(".onboarding-popover-card").exists()).toBe(true);
+      wrapper.unmount();
+    });
   });
 });

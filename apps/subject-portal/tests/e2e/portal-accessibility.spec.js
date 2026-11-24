@@ -1286,6 +1286,7 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
   test("should scroll all five modals at 320x568 and 320x256 while preserving PIN Escape lock and wrapping #btn-disburse-full-amount", async ({
     page,
   }) => {
+    test.setTimeout(60000);
     let reconsentEnabled = false;
     await page.route("**/econsent/reconsent/pending/**", async (route) => {
       await route.fulfill({

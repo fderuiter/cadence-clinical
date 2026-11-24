@@ -186,6 +186,21 @@ test.describe("Clinical Workflows and ePRO Portal Tests", () => {
         }
       );
 
+      // Intercept Part 11 step-up signature verification endpoint
+      await page.route(
+        "**/api/v1/auth/signature-verification",
+        async (route) => {
+          const payload = route.request().postDataJSON();
+          expect(payload?.username).toBe("subject_001");
+          expect(payload?.semantic_action).toBe("collection.sign");
+          await route.fulfill({
+            status: 200,
+            contentType: "application/json",
+            body: JSON.stringify({ sig_token: "sig_tok_epro_mock_001" }),
+          });
+        }
+      );
+
       // Intercept ePRO sync endpoint
       await page.route("**/epro/sync", async (route) => {
         await route.fulfill({

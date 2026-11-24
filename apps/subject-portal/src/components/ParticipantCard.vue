@@ -234,7 +234,7 @@ function handleLogout() {
   min-height: var(--touch-target-min);
   padding: 6px 10px;
   border-radius: 6px;
-  border: 1px solid var(--semantic-color-border);
+  border: 1px solid var(--semantic-color-border-control);
   background: var(--semantic-color-surface);
   color: var(--semantic-color-text);
   font-size: 1rem;
@@ -244,7 +244,8 @@ function handleLogout() {
 }
 
 .participant-timing-select:focus-visible {
-  outline: 2px solid var(--semantic-color-primary);
+  outline: 2px solid var(--semantic-color-accent);
   outline-offset: 2px;
+  border-color: var(--semantic-color-accent);
 }
 </style>

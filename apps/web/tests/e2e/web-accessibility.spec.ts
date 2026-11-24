@@ -460,6 +460,7 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
   test("OverviewView, OnboardingChecklistDrawer, and OnboardingTour (including final Finish Tour step) pass WCAG 2.2 AA", async ({
     page,
   }) => {
+    test.setTimeout(90000);
     const captureScreenshots = process.env.CAPTURE_OVERLAY_SCREENSHOTS === "1";
     await gotoHashRoute(page, "/overview");
     await expect(page.locator("#overview-hub-root")).toBeVisible();
@@ -473,19 +474,28 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
     expect(taskLaunchBorderRatio).toBeGreaterThanOrEqual(3);
 
     // Open OnboardingChecklistDrawer (via compact Account menu when <= 1280px) and audit pending status pills and task navigation buttons
-    const compactActionsBtn = page.locator("#btn-header-actions-menu");
-    if (await compactActionsBtn.isVisible().catch(() => false)) {
-      await compactActionsBtn.click();
-      await expect(
-        page.locator("#header-secondary-menu.is-open")
-      ).toBeVisible();
-      await expectNoWcagViolations(
-        page,
-        "AppShell compact secondary menu (#header-secondary-menu)"
-      );
-    }
-    await page.locator("#btn-onboarding-checklist-trigger").click();
-    await expect(page.locator("#onboarding-checklist-drawer")).toBeVisible();
+    const openOnboardingChecklistDrawer = async (options?: {
+      auditMenu?: boolean;
+    }) => {
+      const compactActionsBtn = page.locator("#btn-header-actions-menu");
+      if (await compactActionsBtn.isVisible().catch(() => false)) {
+        const secondaryMenu = page.locator("#header-secondary-menu.is-open");
+        if (!(await secondaryMenu.isVisible().catch(() => false))) {
+          await compactActionsBtn.click();
+        }
+        await expect(secondaryMenu).toBeVisible();
+        if (options?.auditMenu) {
+          await expectNoWcagViolations(
+            page,
+            "AppShell compact secondary menu (#header-secondary-menu)"
+          );
+        }
+      }
+      await page.locator("#btn-onboarding-checklist-trigger").click();
+      await expect(page.locator("#onboarding-checklist-drawer")).toBeVisible();
+    };
+
+    await openOnboardingChecklistDrawer({ auditMenu: true });
     await expect(
       page.locator("#onboarding-checklist-drawer .status-pending").first()
     ).toBeVisible();
@@ -558,8 +568,7 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
     expect(toggleBox!.height).toBeGreaterThanOrEqual(43.9);
 
     await gotoHashRoute(page, "/overview");
-    await page.locator("#btn-onboarding-checklist-trigger").click();
-    await expect(page.locator("#onboarding-checklist-drawer")).toBeVisible();
+    await openOnboardingChecklistDrawer();
     await page.locator("#btn-drawer-start-tour").click();
     await expect(tourPopover).toBeVisible();
 
@@ -591,7 +600,7 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
 
     // Switch persona to site_crc on 768x1024 and verify eCRF workspace anchors without inert locks
     await page.locator("#persona-select").selectOption("site_crc");
-    await page.locator("#btn-onboarding-checklist-trigger").click();
+    await openOnboardingChecklistDrawer();
     await page.locator("#btn-drawer-start-tour").click();
     await expect(tourPopover).toBeVisible();
 

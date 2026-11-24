@@ -2,7 +2,7 @@
   <ClinicalDrawer
     id="portal-peek-drawer"
     overlay-id="portal-peek-overlay"
-    :model-value="Boolean(ui.peekRecord)"
+    :model-value="isPeekDrawerOpen"
     position="bottom"
     mobile-bottom-sheet
     :restore-focus="false"
@@ -79,7 +79,7 @@
 </template>
 
 <script setup>
-import { inject, watch } from "vue";
+import { computed, inject, watch } from "vue";
 import { routeLocationKey } from "vue-router";
 import { ClinicalDrawer, ClinicalIcon } from "ui";
 
@@ -91,7 +91,9 @@ import {
 } from "../features/peek.js";
 import { useAuditStore } from "../stores/audit.js";
 import { useComplianceStore } from "../stores/compliance.js";
+import { useConsentStore } from "../stores/consent.js";
 import { useInboxStore } from "../stores/inbox.js";
+import { useSessionStore } from "../stores/session.js";
 import { useSyncStore } from "../stores/sync.js";
 import { useUiStore } from "../stores/ui.js";
 import { useWalletStore } from "../stores/wallet.js";
@@ -99,11 +101,23 @@ import SiteContactLinks from "./SiteContactLinks.vue";
 
 const route = inject(routeLocationKey, null);
 const ui = useUiStore();
+const session = useSessionStore();
+const consent = useConsentStore();
 const wallet = useWalletStore();
 const inbox = useInboxStore();
 const compliance = useComplianceStore();
 const audit = useAuditStore();
 const sync = useSyncStore();
+
+const isPeekDrawerOpen = computed(
+  () =>
+    Boolean(ui.peekRecord) &&
+    !session.pinSetup?.isOpen &&
+    !session.pinUnlock?.isOpen &&
+    !session.sessionWarning?.isOpen &&
+    !consent.reconsentModalOpen &&
+    !ui.signatureModalOpen
+);
 
 watch(
   () => [
