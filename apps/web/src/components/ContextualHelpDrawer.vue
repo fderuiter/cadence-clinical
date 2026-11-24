@@ -3,7 +3,8 @@
     <!-- Contextual Help Slide-Out Drawer -->
     <ClinicalDrawer
       id="contextual-help-drawer"
-      :is-open="knowledgeStore.isOpen"
+      :is-open="knowledgeStore.isOpen && !knowledgeStore.isEscalating"
+      :restore-focus="() => !knowledgeStore.isEscalating"
       :teleport="false"
       overlay-id="contextual-help-drawer-overlay"
       overlay-class="drawer-overlay"

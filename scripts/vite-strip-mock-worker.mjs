@@ -13,18 +13,27 @@ import path from "path";
  */
 export function createStripMockWorkerInProdPlugin(appDir) {
   let shouldStripMsw = false;
+  let hasSlimDemoTldtsStub = false;
   return {
     name: "strip-mock-worker-in-prod",
-    enforce: "pre",
     apply: "build",
     configResolved(resolved) {
       shouldStripMsw =
         resolved.mode === "production" &&
         process.env.VITE_DEMO_MODE !== "true" &&
         process.env.VITE_ENABLE_MSW !== "true";
+      hasSlimDemoTldtsStub =
+        resolved.mode === "demo" &&
+        resolved.plugins.some((p) => p?.name === "slim-demo-msw-tldts");
     },
     resolveId(source, importer) {
       if (source !== "tldts" || !importer || importer.startsWith("\0")) {
+        return null;
+      }
+      if (
+        hasSlimDemoTldtsStub &&
+        importer.replace(/\\/g, "/").includes("/tough-cookie/")
+      ) {
         return null;
       }
       try {

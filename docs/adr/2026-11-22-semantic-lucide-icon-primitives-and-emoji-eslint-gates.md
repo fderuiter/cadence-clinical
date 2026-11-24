@@ -49,7 +49,7 @@ Across `packages/ui`, `apps/web`, `apps/subject-portal`, and `apps/web/src/local
 ## 5. Consequences & Trade-offs
 
 - **Positive Impact:** Crisp, OS-independent vector icons paired with visible text or `aria-label` across all clinician and participant workflows, `aria-hidden="true"` decorative SVGs by default, plain ISO jurisdiction badges instead of regional flag emojis, and immediate line-level ESLint diagnostics when emojis are staged or committed.
-- **Negative Impact / Technical Debt:** Adding a new icon requires adding an explicit import and semantic key in `packages/ui/src/icons/clinicalIcons.js` and rebuilding `packages/ui`.
+- **Negative Impact / Technical Debt:** Adding a new icon requires adding an explicit import and semantic key in `packages/ui/src/icons/clinicalIcons.js` and regenerating `packages/ui/index.d.ts` via `pnpm --filter ui build`.
 - **Mitigation Strategy:** Keep the semantic registry curated and verified by `packages/ui/tests/clinical_icon.test.js` and `packages/ui/tests/design_system_harmony.test.js`.
 
 ## 6. Implementation & Verification

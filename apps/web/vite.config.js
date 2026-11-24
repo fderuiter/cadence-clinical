@@ -132,7 +132,7 @@ export default defineConfig({
   ],
   resolve: {
     alias: [
-      ...createUiWorkspaceAliases(__dirname, { uiEntry: "dist/index.js" }),
+      ...createUiWorkspaceAliases(__dirname),
       { find: "@", replacement: path.resolve(__dirname, "./src") },
       {
         find: "pinia",
@@ -164,7 +164,12 @@ export default defineConfig({
     ...(IS_E2E_BUILD ? { proxy: {} } : {}),
   },
   optimizeDeps: {
-    entries: ["index.html", "tests/browser/observation.html"],
+    entries: [
+      "index.html",
+      "tests/browser/observation.html",
+      "../../packages/ui/index.js",
+    ],
+    include: ["ui > axe-core"],
   },
   build: {
     outDir: "dist",
@@ -177,26 +182,14 @@ export default defineConfig({
         : {
             manualChunks(id) {
               const normalizedId = id.replace(/\\/g, "/");
+              if (
+                /\/packages\/ui\/(?:(?:session|callerScope)\.js|src\/icons\/clinicalCoreIcons\.js|src\/composables\/(?:useFocusTrap|useEscapeClose|useSignOutGuard)\.js|src\/components\/clinical\/(?:sharedProps\.js|(?:ClinicalModal|ClinicalDrawer|ClinicalContextBar|ClinicalIcon|ClinicalIconButton|ClinicalToastHost|SignOutConfirmModal)\.vue))(?:$|\?)/.test(
+                  normalizedId
+                )
+              ) {
+                return "ui-shell";
+              }
               if (!normalizedId.includes("node_modules/")) {
-                if (
-                  normalizedId.includes("/packages/ui/dist/") &&
-                  (normalizedId.endsWith("/src/icons/clinicalCoreIcons.js") ||
-                    normalizedId.endsWith(
-                      "/_virtual/_plugin-vue_export-helper.js"
-                    ) ||
-                    normalizedId.endsWith(
-                      "/src/components/clinical/ClinicalIcon.js"
-                    ) ||
-                    normalizedId.endsWith("/src/composables/useFocusTrap.js") ||
-                    normalizedId.endsWith(
-                      "/src/components/clinical/sharedProps.js"
-                    ) ||
-                    normalizedId.endsWith(
-                      "/src/components/clinical/ClinicalModal.js"
-                    ))
-                ) {
-                  return "ui-shell";
-                }
                 return undefined;
               }
 
