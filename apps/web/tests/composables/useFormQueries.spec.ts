@@ -21,6 +21,7 @@ vi.mock("../../src/api/ecrfQueriesApi", async (importOriginal) => {
       listForEnrollment: vi.fn(),
       listForStudy: vi.fn(),
       transition: vi.fn(),
+      reassign: vi.fn(),
     },
   };
 });
@@ -546,5 +547,70 @@ describe("useFormQueries (#5461, ADR-2625)", () => {
     queries.clear();
     expect(sysbpLiveStatuses.value).toEqual([]);
     expect(queries.forItem("form-a", "SYSBP")).toBe(missA);
+  });
+
+  it("reassigns or unassigns a query with retry-safe idempotency key and forwards replacement assignee on act", async () => {
+    const initial = query({ assignee: "crc.alice" });
+    vi.mocked(ecrfQueriesApi.listForForm).mockResolvedValue([initial]);
+    vi.mocked(ecrfQueriesApi.reassign)
+      .mockRejectedValueOnce(new TypeError("Failed to fetch"))
+      .mockResolvedValueOnce({ ...initial, assignee: "crc.bob", version: 2 })
+      .mockResolvedValueOnce({ ...initial, assignee: null, version: 3 });
+    vi.mocked(ecrfQueriesApi.transition).mockResolvedValueOnce({
+      ...initial,
+      status: "answered",
+      owner_role: "monitor",
+      assignee: "cra.lead",
+      version: 4,
+    });
+
+    const queries = useFormQueries();
+    await queries.load({ formId: "form-a" });
+
+    expect(
+      await queries.reassign(
+        queries.queries.value[0],
+        { assignee: "crc.bob", ownerRole: "site", note: "Evening shift" },
+        "Coordinator handoff"
+      )
+    ).toBe(false);
+    expect(
+      await queries.reassign(
+        queries.queries.value[0],
+        { assignee: "crc.bob", ownerRole: "site", note: "Evening shift" },
+        "Coordinator handoff"
+      )
+    ).toBe(true);
+
+    const [firstReassign, secondReassign] = vi
+      .mocked(ecrfQueriesApi.reassign)
+      .mock.calls.map(([req]) => req);
+    expect(secondReassign.idempotencyKey).toBe(firstReassign.idempotencyKey);
+    expect(queries.queries.value[0].assignee).toBe("crc.bob");
+    expect(queries.outcome.value?.message).toBe("Query reassigned.");
+
+    expect(
+      await queries.reassign(
+        queries.queries.value[0],
+        { assignee: null },
+        "Return to shared site queue"
+      )
+    ).toBe(true);
+    expect(queries.queries.value[0].assignee).toBeNull();
+    expect(queries.outcome.value?.message).toBe("Query unassigned.");
+
+    expect(
+      await queries.act(
+        queries.queries.value[0],
+        "answer",
+        "Confirmed",
+        "Site review",
+        { assignee: "cra.lead" }
+      )
+    ).toBe(true);
+    expect(ecrfQueriesApi.transition).toHaveBeenCalledWith(
+      "answer",
+      expect.objectContaining({ assignee: "cra.lead" })
+    );
   });
 });

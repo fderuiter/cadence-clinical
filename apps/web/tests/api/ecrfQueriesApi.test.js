@@ -289,4 +289,253 @@ describe("ecrfQueriesApi (#5461, ADR-2625)", () => {
       "Gateway timeout"
     );
   });
+
+  it("reassigns a query, lists scoped aging digests, runs manual SLA escalation, and forwards assignee filters", async () => {
+    fetchSpy
+      .mockResolvedValueOnce(
+        jsonResponse(200, { ...QUERY, assignee: "crc.bob" })
+      )
+      .mockResolvedValueOnce(jsonResponse(200, []))
+      .mockResolvedValueOnce(
+        jsonResponse(200, { escalated_queries: 1, digests: [] })
+      )
+      .mockResolvedValueOnce(jsonResponse(200, [QUERY]))
+      .mockResolvedValueOnce(jsonResponse(200, QUERY));
+
+    await ecrfQueriesApi.reassign({
+      formId: "form-a",
+      queryId: "query-a",
+      assignee: "crc.bob",
+      ownerRole: "site",
+      note: "Handed off to evening shift",
+      reason: "Coordinator shift handoff",
+      idempotencyKey: "reassign-1",
+    });
+    const reassignReq = lastRequest();
+    expect(new URL(reassignReq.url).pathname).toBe(
+      "/api/v1/execution/forms/form-a/queries/query-a/reassign"
+    );
+    expect(reassignReq.headers.get("Idempotency-Key")).toBe("reassign-1");
+    expect(reassignReq.headers.get("X-Change-Reason")).toBe(
+      "Coordinator shift handoff"
+    );
+    expect(await reassignReq.json()).toEqual({
+      assignee: "crc.bob",
+      owner_role: "site",
+      text: "Handed off to evening shift",
+    });
+
+    await ecrfQueriesApi.listDigests("study-1", {
+      site: "017",
+      recipientRole: "site_investigator",
+    });
+    const digestsUrl = new URL(lastRequest().url);
+    expect(digestsUrl.pathname).toBe("/api/v1/execution/forms/queries/digests");
+    expect(Object.fromEntries(digestsUrl.searchParams)).toEqual({
+      study_id: "study-1",
+      site: "017",
+      recipient_role: "site_investigator",
+    });
+
+    await ecrfQueriesApi.escalate({
+      studyId: "study-1",
+      reason: "Daily 14-day SLA check",
+      idempotencyKey: "esc-1",
+    });
+    const escReq = lastRequest();
+    const escUrl = new URL(escReq.url);
+    expect(escUrl.pathname).toBe("/api/v1/execution/forms/queries/escalate");
+    expect(escUrl.searchParams.get("study_id")).toBe("study-1");
+    expect(escReq.headers.get("Idempotency-Key")).toBe("esc-1");
+    expect(escReq.headers.get("X-Change-Reason")).toBe(
+      "Daily 14-day SLA check"
+    );
+
+    await ecrfQueriesApi.listForStudy("study-1", { assignee: "crc.bob" });
+    expect(new URL(lastRequest().url).searchParams.get("assignee")).toBe(
+      "crc.bob"
+    );
+
+    await ecrfQueriesApi.transition("answer", {
+      formId: "form-a",
+      queryId: "query-a",
+      text: "Confirmed",
+      assignee: "cra.lead",
+      reason: "Site review",
+      idempotencyKey: "ans-assign-1",
+    });
+    expect(await lastRequest().json()).toEqual({
+      text: "Confirmed",
+      assignee: "cra.lead",
+    });
+
+    expect(
+      describeQueryError(
+        new ApiError("Expired", 403, null, { code: "K.Subscription.Expired" })
+      )
+    ).toContain("Capture subscription");
+  });
+});
+
+describe("MSW demo RBAC & reset alignment for query SLA digests, escalation, and reassignment", () => {
+  it("enforces QUERY_MANAGE_ROLES on /queries/escalate & /reassign, scopes aging digests by site persona, evaluates query can-i capabilities, and resets queryDigests on store.reset()", async () => {
+    vi.stubEnv("VITE_DEMO_MODE", "true");
+    const { setupServer } = await import("msw/node");
+    const { installAuthorizedFetch } =
+      await import("../../src/api/authorization.js");
+    const { createWebDemoStore } = await import("../../src/mocks/demoStore.js");
+    const { buildWebGatewayHandlers } =
+      await import("../../src/mocks/handlers.js");
+    const { useAuthStore } = await import("../../src/stores/auth.js");
+
+    setActivePinia(createPinia());
+    const store = createWebDemoStore();
+    const baselineEscalatedCount =
+      store.listQueryDigests({}).find((d) => d.scope_key === "study")
+        ?.escalated_count ?? 0;
+    store.reset();
+    const server = setupServer(
+      ...buildWebGatewayHandlers({ forceDemo: true, store })
+    );
+    server.listen({ onUnhandledRequest: "error" });
+    installAuthorizedFetch(globalThis);
+    const origin = window.location.origin;
+
+    try {
+      const authStore = useAuthStore();
+      authStore.startDemoSession("site_crc");
+
+      // Site CRC cannot manually escalate study queries or reassign queries (403),
+      // sees only SITE-101 digests & queries (study-wide and SITE-102 hidden),
+      // and holds execution.query.answer but not execution.query.manage.
+      const crcEscalateRes = await fetch(
+        `${origin}/api/v1/execution/forms/queries/escalate?study_id=00000000-0000-0000-0000-000000000001`, // deid-ignore
+        {
+          method: "POST",
+          headers: { "X-Change-Reason": "CRC attempted SLA sweep" },
+        }
+      );
+      expect(crcEscalateRes.status).toBe(403);
+
+      const crcReassignRes = await fetch(
+        `${origin}/api/v1/execution/forms/00000000-0000-0000-0000-000000002001/queries/00000000-0000-0000-0000-000000003001/reassign`, // deid-ignore
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Change-Reason": "CRC attempted reassign",
+          },
+          body: JSON.stringify({ assignee: "crc.bob" }),
+        }
+      );
+      expect(crcReassignRes.status).toBe(403);
+
+      const crcCanAnswer = await (
+        await fetch(
+          `${origin}/api/v1/kernel/authorization/can-i?action=execution.query.answer`
+        )
+      ).json();
+      expect(crcCanAnswer.permitted).toBe(true);
+      const crcCanManage = await (
+        await fetch(
+          `${origin}/api/v1/kernel/authorization/can-i?action=execution.query.manage`
+        )
+      ).json();
+      expect(crcCanManage.permitted).toBe(false);
+
+      const crcDigests = await (
+        await fetch(`${origin}/api/v1/execution/forms/queries/digests`)
+      ).json();
+      expect(crcDigests.length).toBeGreaterThan(0);
+      expect(
+        crcDigests.every(
+          (d) => d.scope_key !== "study" && d.site_code === "SITE-101"
+        )
+      ).toBe(true);
+
+      const crcQueries = await (
+        await fetch(`${origin}/api/v1/execution/forms/queries`)
+      ).json();
+      expect(crcQueries.every((q) => q.site_code === "SITE-101")).toBe(true);
+
+      // CRA Monitor (assigned to SITE-101 in demo-fixtures) holds QUERY_MANAGE_ROLES:
+      // can run manual SLA check, reassign queries, pass can-i execution.query.manage,
+      // and receives SITE-101 digests while Data Manager (study-wide) also receives scope_key === "study".
+      authStore.switchPersona("cra_monitor");
+
+      const craCanManage = await (
+        await fetch(
+          `${origin}/api/v1/kernel/authorization/can-i?action=execution.query.manage`
+        )
+      ).json();
+      expect(craCanManage.permitted).toBe(true);
+
+      const craEscalateRes = await fetch(
+        `${origin}/api/v1/execution/forms/queries/escalate?study_id=00000000-0000-0000-0000-000000000001`, // deid-ignore
+        {
+          method: "POST",
+          headers: { "X-Change-Reason": "CRA scheduled SLA sweep" },
+        }
+      );
+      expect(craEscalateRes.status).toBe(200);
+      const craEscalatePayload = await craEscalateRes.json();
+      expect(
+        craEscalatePayload.digests.every((d) => d.site_code === "SITE-101")
+      ).toBe(true);
+
+      authStore.switchPersona("data_manager");
+      const dmDigests = await (
+        await fetch(`${origin}/api/v1/execution/forms/queries/digests`)
+      ).json();
+      expect(dmDigests.some((d) => d.scope_key === "study")).toBe(true);
+
+      const craReassignRes = await fetch(
+        `${origin}/api/v1/execution/forms/00000000-0000-0000-0000-000000002001/queries/00000000-0000-0000-0000-000000003001/reassign`, // deid-ignore
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Change-Reason": "CRA reassigned coordinator",
+          },
+          body: JSON.stringify({ assignee: "crc.nightshift" }),
+        }
+      );
+      expect(craReassignRes.status).toBe(200);
+      expect((await craReassignRes.json()).assignee).toBe("crc.nightshift");
+
+      // Mutate a raised query into overdue state, regenerate digests, then verify store.reset() clears stale digests.
+      const raised = store.raiseQuery(
+        "00000000-0000-0000-0000-000000002001", // deid-ignore
+        {
+          query_id: "00000000-0000-0000-0000-000000003099", // deid-ignore
+          item_id: "item-hr",
+          text: "Check HR",
+          priority: "high",
+        },
+        "Raised before reset"
+      );
+      expect(raised.query_id).toBe("00000000-0000-0000-0000-000000003099"); // deid-ignore
+      store.escalateStudyQueries(
+        "00000000-0000-0000-0000-000000000001", // deid-ignore
+        "Pre-reset sweep"
+      );
+      store.reset();
+      const postResetQueries = store.listEnrollmentQueries({});
+      expect(
+        postResetQueries.find((q) => q.assignee === "crc.nightshift")
+      ).toBeUndefined();
+      expect(
+        postResetQueries.find(
+          (q) => q.query_id === "00000000-0000-0000-0000-000000003099" // deid-ignore
+        )
+      ).toBeUndefined();
+      const postResetDigests = store.listQueryDigests({});
+      expect(
+        postResetDigests.find((d) => d.scope_key === "study")?.escalated_count
+      ).toBe(baselineEscalatedCount);
+    } finally {
+      server.close();
+      vi.unstubAllEnvs();
+    }
+  });
 });

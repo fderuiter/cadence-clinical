@@ -8,7 +8,7 @@
 # ------------------------------------------------------------------------------
 # Base images are pinned to an exact version and digest so every build uses the same bits.
 # Dependabot (.github/dependabot.yml) proposes updates; bump the SDK and runtime together.
-FROM mcr.microsoft.com/dotnet/sdk:10.0.404@sha256:2b1e13a22e46b55117f9cdb4b38e73172de08a30370166c8227d06cdaff82473 AS dev
+FROM mcr.microsoft.com/dotnet/sdk:10.0.404@sha256:8c6edfb26c85153f236d26efebd9ad349aec403583f343f201ee67838b23658d AS dev
 
 # Install curl, git, procps, and netcat-traditional for developer introspection
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -100,7 +100,7 @@ RUN env -u VERSION dotnet publish "${PROJECT_PATH}" --no-restore -c Release -o /
 # ------------------------------------------------------------------------------
 # 5. Production Runtime Stage
 # ------------------------------------------------------------------------------
-FROM mcr.microsoft.com/dotnet/aspnet:10.0.15@sha256:0bfa6494dead26049c1e0d6c9dc890be79259cb7300f5f23ae1df1cdac3da7df AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:10.0.15@sha256:aac50ceef10391e78a899e3d2ccd00bbafa2dcb56ccf4586cbccf00edb84fc21 AS runtime
 
 # Install curl for container health check parity
 RUN apt-get update && apt-get install -y --no-install-recommends \
