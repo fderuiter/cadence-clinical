@@ -160,6 +160,18 @@ export const DEMO_PERSONA_DEFAULT_SCOPES = Object.freeze({
     rawRoles: ["Site Investigator", "CRC"],
     siteIds: ["SITE-101"],
   },
+  trial_coordinator: {
+    rawRoles: ["trial_coordinator"],
+    siteIds: ["SITE-101"],
+  },
+  unblinded_statistician: {
+    rawRoles: ["unblinded_statistician"],
+    siteIds: [],
+  },
+  pharmacist: {
+    rawRoles: ["pharmacist"],
+    siteIds: ["SITE-101"],
+  },
   site_investigator: {
     rawRoles: ["Principal Investigator", "Site Investigator"],
     siteIds: ["SITE-101"],
@@ -817,6 +829,48 @@ export async function evaluateDemoRequestPolicy(request, store) {
   }
 
   if (!WRITE_HTTP_METHODS.has(method)) {
+    if (/\/api\/v1\/execution\/rtsm\/cgt\//.test(pathname)) {
+      if (!holdsMatrixPermission(caller, "cgt_chain_of_custody:read")) {
+        return {
+          status: 403,
+          problem: buildProblemDetails(
+            403,
+            "Execution.Cgt.Forbidden",
+            "Chain-of-custody read not permitted",
+            "Active persona lacks 'cgt_chain_of_custody:read' authority."
+          ),
+        };
+      }
+    }
+    if (/\/api\/v1\/execution\/rtsm\/kits\//.test(pathname)) {
+      if (!holdsMatrixPermission(caller, "rtsm_supply:read")) {
+        return {
+          status: 403,
+          problem: buildProblemDetails(
+            403,
+            "Execution.Rtsm.Forbidden",
+            "IP kit inventory read not permitted",
+            "Active persona lacks 'rtsm_supply:read' authority."
+          ),
+        };
+      }
+    }
+    if (/\/api\/v1\/execution\/randomization\/schemes/.test(pathname)) {
+      if (
+        !holdsMatrixPermission(caller, "randomization_scheme:read") &&
+        !holdsMatrixPermission(caller, "randomization_scheme:draft")
+      ) {
+        return {
+          status: 403,
+          problem: buildProblemDetails(
+            403,
+            "Execution.Randomization.Forbidden",
+            "Randomization scheme read not permitted",
+            "Active persona lacks 'randomization_scheme:read' authority."
+          ),
+        };
+      }
+    }
     return null;
   }
 
@@ -1194,15 +1248,40 @@ export async function evaluateDemoRequestPolicy(request, store) {
     return null;
   }
 
-  // 8. RTSM kit seeding / allocation / dispensing
+  // 8. RTSM kit seeding / allocation / dispensing / randomization schemes
   if (/\/api\/v1\/execution\/(rtsm|randomization)\//.test(pathname)) {
-    const isSiteDispense =
-      /\/api\/v1\/execution\/rtsm\/(dispense|allocate|cgt)\//.test(pathname);
-    const allowed = isSiteDispense
-      ? hasAnyRole(caller, PARTICIPANT_MANAGEMENT_ROLES) ||
-        caller.backendRoles.has("pharmacist")
-      : hasAnyRole(caller, DESIGN_AUTHORITY_ROLES) ||
+    let allowed;
+    if (/\/api\/v1\/execution\/randomization\/schemes/.test(pathname)) {
+      const isApprove =
+        /\/api\/v1\/execution\/randomization\/schemes\/[^/]+\/approve$/.test(
+          pathname
+        );
+      allowed = holdsMatrixPermission(
+        caller,
+        isApprove
+          ? "randomization_scheme:approve"
+          : "randomization_scheme:draft"
+      );
+    } else if (/\/api\/v1\/execution\/rtsm\/cgt\//.test(pathname)) {
+      allowed = holdsMatrixPermission(caller, "cgt_chain_of_custody:write");
+    } else if (
+      /\/api\/v1\/execution\/rtsm\/kits\/seed-inventory/.test(pathname) ||
+      (method === "POST" &&
+        /\/api\/v1\/execution\/rtsm\/kits\/?$/.test(pathname))
+    ) {
+      allowed = holdsMatrixPermission(caller, "ip_kit_inventory:seed");
+    } else if (
+      /\/api\/v1\/execution\/rtsm\/(dispense|allocate)\//.test(pathname)
+    ) {
+      allowed =
+        hasAnyRole(caller, PARTICIPANT_MANAGEMENT_ROLES) ||
         caller.backendRoles.has("pharmacist");
+    } else {
+      allowed =
+        holdsMatrixPermission(caller, "rtsm_supply:write") ||
+        hasAnyRole(caller, DESIGN_AUTHORITY_ROLES) ||
+        caller.backendRoles.has("pharmacist");
+    }
     if (!allowed) {
       return {
         status: 403,

@@ -367,6 +367,7 @@ export const ROLE_PERMISSIONS: Readonly<
     visit_windowing: ["read"],
   },
   trial_coordinator: {
+    cgt_chain_of_custody: ["read"],
     ctms_cra_allocation: ["read"],
     ctms_cra_workload: ["read"],
     ctms_recruitment: ["read"],
@@ -649,6 +650,7 @@ export const ROLE_PERMISSIONS: Readonly<
     sce_lock_token: ["read"],
     sce_program: ["create", "read"],
     sce_run: ["execute", "execute_unblinded", "read", "read_unblinded"],
+    subject_enrollment: ["read"],
     tickets: ["comment", "create", "read", "sign", "transition"],
   },
   idmc: {
@@ -898,6 +900,7 @@ export const PERMISSION_ROLES: Readonly<Record<string, readonly string[]>> =
       "sponsor_dm",
       "sponsor_mm",
       "sysadmin",
+      "trial_coordinator",
     ],
     "cgt_chain_of_custody:write": [
       "authorized_er_physician",
@@ -1965,6 +1968,7 @@ export const PERMISSION_ROLES: Readonly<Record<string, readonly string[]>> =
       "sponsor_dm",
       "sponsor_mm",
       "trial_coordinator",
+      "unblinded_statistician",
     ],
     "subject_enrollment:update": [
       "authorized_er_physician",

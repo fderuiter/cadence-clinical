@@ -34,6 +34,7 @@
     >
       <template #after-site>
         <ClinicalInput
+          v-if="canReadCoc"
           id="rtsm-subject"
           v-model="subjectInput"
           label="Participant (optional for custody trace)"
@@ -46,8 +47,11 @@
       </template>
     </CtmsSectionScopeBar>
 
-    <div id="rtsm-cgt-panel" class="subpanel">
+    <div v-if="canReadCoc" id="rtsm-cgt-panel" class="subpanel">
       <h4>Autologous chain-of-custody &amp; disposition ledger</h4>
+      <p v-if="cgtError" id="rtsm-cgt-error" class="error-banner" role="alert">
+        {{ cgtError }}
+      </p>
       <p class="subpanel-meta">
         Destruction certificates recorded:
         <strong>{{ cgtCertificates.length }}</strong>
@@ -133,6 +137,14 @@
 
     <div id="rtsm-kits-panel" class="subpanel">
       <h4>Site investigational product kit accountability</h4>
+      <p
+        v-if="kitsError"
+        id="rtsm-kits-error"
+        class="error-banner"
+        role="alert"
+      >
+        {{ kitsError }}
+      </p>
       <template v-if="canReconcile">
         <p v-if="!siteInput.trim()" class="muted-status">
           Enter a site code above to inspect blinded kit inventory and launch
@@ -274,6 +286,14 @@
           {{ draftSchemeFormOpen ? "Close draft form" : "Draft scheme" }}
         </button>
       </div>
+      <p
+        v-if="schemesError"
+        id="rtsm-schemes-error"
+        class="error-banner"
+        role="alert"
+      >
+        {{ schemesError }}
+      </p>
 
       <form
         v-if="canManageSchemes && draftSchemeFormOpen"
@@ -489,6 +509,7 @@ import {
 } from "../../api/executionApi";
 import {
   canManageRandomizationSchemes,
+  canReadChainOfCustody,
   canReadRandomizationSchemes,
   canReconcileIpKits,
   canRecordChainOfCustody,
@@ -502,6 +523,10 @@ import {
   scopedWorkspaceSectionProps,
   useScopedWorkspaceSection,
 } from "../../composables/useScopedWorkspaceSection";
+import {
+  formatScopeForbiddenGuidance,
+  isForbiddenScopeError,
+} from "../../utils/callerScope";
 import {
   formatClinicalEnum,
   formatClinicalStatus,
@@ -518,15 +543,14 @@ const workspace = useScopedWorkspaceSection(props, {
   fallbackErrorTitle: "Supply status could not be loaded",
   fallbackErrorMessage: "Investigational supply status could not be loaded.",
 });
-const { authStore, toasts, isStudyLocked, syncActiveScope, recordLoadFailure } =
-  workspace;
+const { authStore, toasts, isStudyLocked, syncActiveScope, saving } = workspace;
 const {
   assignedStudies,
   assignedSites,
   studyInput,
   siteInput,
   loading,
-  saving,
+  loaded,
   loadError,
   scopeGuidance,
 } = workspace;
@@ -543,6 +567,7 @@ const signerFullName = computed(() => {
 
 const canReconcile = computed(() => canReconcileIpKits(authStore));
 const canSeed = computed(() => canSeedIpKits(authStore));
+const canReadCoc = computed(() => canReadChainOfCustody(authStore));
 const canWriteCoc = computed(() => canRecordChainOfCustody(authStore));
 const canReadSchemes = computed(() => canReadRandomizationSchemes(authStore));
 const canManageSchemes = computed(() =>
@@ -582,6 +607,9 @@ const cgtCertificates = ref<Array<Record<string, unknown>>>([]);
 const cgtReconciliations = ref<Array<Record<string, unknown>>>([]);
 const cocTrace = ref<CgtChainOfCustodyTrace | null>(null);
 const cocNotFoundMessage = ref("");
+const cgtError = ref("");
+const kitsError = ref("");
+const schemesError = ref("");
 const reconciliationDrawerOpen = ref(false);
 
 const aphSubject = ref("");
@@ -698,18 +726,34 @@ function openApproveSchemeModal(scheme: RandomizationScheme) {
   approvingScheme.value = scheme;
 }
 
-async function loadSupplyOverview() {
-  const study = studyInput.value.trim();
-  const site = siteInput.value.trim();
-  const subject = subjectInput.value.trim();
-  if (!study) return;
+function formatSubpanelError(
+  err: unknown,
+  study: string,
+  site: string,
+  fallbackMessage: string
+): string {
+  if (isForbiddenScopeError(err)) {
+    return formatScopeForbiddenGuidance(err, {
+      studyId: study || undefined,
+      siteId: site || undefined,
+      assignedStudies: assignedStudies.value,
+      assignedSites: assignedSites.value,
+      hasAllStudiesScope: authStore.hasAllStudiesScope,
+    });
+  }
+  return err instanceof Error && err.message ? err.message : fallbackMessage;
+}
 
-  syncActiveScope(study, site);
-  loading.value = true;
-  loadError.value = "";
-  scopeGuidance.value = "";
+async function loadCgtSubpanel(study: string, site: string, subject: string) {
+  cgtError.value = "";
   cocTrace.value = null;
   cocNotFoundMessage.value = "";
+
+  if (!canReadCoc.value) {
+    cgtCertificates.value = [];
+    cgtReconciliations.value = [];
+    return;
+  }
 
   try {
     const [certs, recs] = await Promise.all([
@@ -718,16 +762,6 @@ async function loadSupplyOverview() {
     ]);
     cgtCertificates.value = certs || [];
     cgtReconciliations.value = recs || [];
-
-    kitInventory.value =
-      canReconcile.value && site
-        ? (await executionApi.getSiteIpKitInventory(study, site)) || []
-        : [];
-
-    schemes.value =
-      canReadSchemes.value || canManageSchemes.value
-        ? (await executionApi.listRandomizationSchemes(study)) || []
-        : [];
 
     if (subject) {
       try {
@@ -741,7 +775,74 @@ async function loadSupplyOverview() {
       }
     }
   } catch (err) {
-    recordLoadFailure(err, study, site);
+    cgtError.value = formatSubpanelError(
+      err,
+      study,
+      site,
+      "Autologous chain-of-custody records could not be loaded."
+    );
+  }
+}
+
+async function loadKitsSubpanel(study: string, site: string) {
+  kitsError.value = "";
+
+  if (!canReconcile.value || !site) {
+    kitInventory.value = [];
+    return;
+  }
+
+  try {
+    kitInventory.value =
+      (await executionApi.getSiteIpKitInventory(study, site)) || [];
+  } catch (err) {
+    kitsError.value = formatSubpanelError(
+      err,
+      study,
+      site,
+      "Site IP kit inventory could not be loaded."
+    );
+  }
+}
+
+async function loadSchemesSubpanel(study: string, site: string) {
+  schemesError.value = "";
+
+  if (!canReadSchemes.value && !canManageSchemes.value) {
+    schemes.value = [];
+    return;
+  }
+
+  try {
+    schemes.value = (await executionApi.listRandomizationSchemes(study)) || [];
+  } catch (err) {
+    schemesError.value = formatSubpanelError(
+      err,
+      study,
+      site,
+      "Randomization schemes could not be loaded."
+    );
+  }
+}
+
+async function loadSupplyOverview() {
+  const study = studyInput.value.trim();
+  const site = siteInput.value.trim();
+  const subject = subjectInput.value.trim();
+  if (!study) return;
+
+  syncActiveScope(study, site);
+  loading.value = true;
+  loadError.value = "";
+  scopeGuidance.value = "";
+
+  try {
+    await Promise.all([
+      loadCgtSubpanel(study, site, subject),
+      loadKitsSubpanel(study, site),
+      loadSchemesSubpanel(study, site),
+    ]);
+    loaded.value = true;
   } finally {
     loading.value = false;
   }

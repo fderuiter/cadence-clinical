@@ -285,7 +285,8 @@ if (args.Contains("--seed"))
         ServiceAccounts.DbSeeder.ChangeReason);
     var dbContext = scope.ServiceProvider.GetRequiredService<ExecutionDbContext>();
     var tenantScope = scope.ServiceProvider.GetService<Cadence.Database.Tenancy.ITenantScope>();
-    await ExecutionDbSeeder.SeedAsync(dbContext, tenantScope);
+    var allocationProtector = scope.ServiceProvider.GetRequiredService<IAllocationProtector>();
+    await ExecutionDbSeeder.SeedAsync(dbContext, tenantScope, allocationProtector);
     Console.WriteLine("[SUCCESS] ExecutionDbContext seeded successfully.");
     return;
 }

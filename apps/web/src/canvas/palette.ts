@@ -115,16 +115,28 @@ export interface WorkspaceScopeSnapshot {
   inspectorNodeParam?: string;
 }
 
-export const SITE_READINESS_SPONSOR_ROLES = [
+const DATA_COLLECTION_SPONSOR_ROLES = [
   "cra",
   "monitor",
   "data_manager",
   "sponsor_admin",
 ];
-export const SITE_READINESS_SITE_ROLES = ["site_investigator", "crc"];
+const DATA_COLLECTION_SITE_ROLES = [
+  "site_investigator",
+  "crc",
+  "trial_coordinator",
+];
+export const SITE_READINESS_SPONSOR_ROLES = [
+  ...DATA_COLLECTION_SPONSOR_ROLES,
+  "unblinded_statistician",
+];
+export const SITE_READINESS_SITE_ROLES = [
+  ...DATA_COLLECTION_SITE_ROLES,
+  "pharmacist",
+];
 export const DATA_COLLECTION_ROLES = [
-  ...SITE_READINESS_SITE_ROLES,
-  ...SITE_READINESS_SPONSOR_ROLES,
+  ...DATA_COLLECTION_SITE_ROLES,
+  ...DATA_COLLECTION_SPONSOR_ROLES,
 ];
 export const ETMF_ROLES = [
   "cra",
@@ -132,6 +144,7 @@ export const ETMF_ROLES = [
   "data_manager",
   "site_investigator",
   "crc",
+  "trial_coordinator",
   "auditor",
   "tmf_auditor",
   "sponsor_admin",
@@ -141,6 +154,8 @@ const STAFF_HUB_ROLES = [
   "sponsor_admin",
   "sponsor_designer",
   "data_manager",
+  "unblinded_statistician",
+  "pharmacist",
   "safety_reviewer",
   "safety_officer",
   "safety_physician",
@@ -150,6 +165,7 @@ const STAFF_HUB_ROLES = [
   "principal_investigator",
   "site_investigator",
   "crc",
+  "trial_coordinator",
   "auditor",
   "tmf_auditor",
 ];
