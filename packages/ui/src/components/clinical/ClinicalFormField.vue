@@ -5,7 +5,7 @@
         v-if="field.type === 'radio' || field.type === 'choice_single'"
         :id="field.id"
         :label="field.label"
-        :options="field.options ?? undefined"
+        :options="field.options ?? []"
         :model-value="modelValue"
         :query="query"
         :grid-span="field.gridSpan || 12"
@@ -122,16 +122,13 @@ const shouldRender = computed(() => true);
 let io: IntersectionObserver | null = null;
 let ro: ResizeObserver | null = null;
 
-const wrapperStyle = computed<CSSProperties>(() => {
-  const styles: CSSProperties = {
-    minHeight: "44px",
-    width: "100%",
-    boxSizing: "border-box",
-    contentVisibility: "auto",
-    containIntrinsicSize: `auto ${measuredHeight.value ? measuredHeight.value + "px" : "44px"}`,
-  };
-  return styles;
-});
+const wrapperStyle = computed<CSSProperties>(() => ({
+  minHeight: "44px",
+  width: "100%",
+  boxSizing: "border-box",
+  contentVisibility: "auto",
+  containIntrinsicSize: `auto ${measuredHeight.value ? measuredHeight.value + "px" : "44px"}`,
+}));
 
 onMounted(() => {
   if (typeof IntersectionObserver !== "undefined") {

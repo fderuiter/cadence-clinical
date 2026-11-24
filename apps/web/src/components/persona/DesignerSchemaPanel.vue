@@ -744,13 +744,13 @@ const props = defineProps({
   importErrorMessage: { type: String, default: "" },
   importedDraftSummary: { type: Object, default: null },
   editingItemId: {
-    type: /** @type {import("vue").PropType<string | null>} */ (String),
+    type: /** @type {import("vue").PropType<string | null>} */ ([String, null]),
     default: null,
   },
   editItemValue: { type: String, default: "" },
   editItemReason: { type: String, default: "" },
   rejectingItemId: {
-    type: /** @type {import("vue").PropType<string | null>} */ (String),
+    type: /** @type {import("vue").PropType<string | null>} */ ([String, null]),
     default: null,
   },
   rejectItemReason: { type: String, default: "" },

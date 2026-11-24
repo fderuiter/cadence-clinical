@@ -6,8 +6,8 @@ import FormSectionContainer from "../../src/components/crf/FormSectionContainer.
 import CanvasFieldWidget from "../../src/components/crf/CanvasFieldWidget.vue";
 import {
   useDesignerStore,
-  type DesignerField,
-} from "../../src/stores/designer.js";
+  type DesignerSection,
+} from "../../src/stores/designer";
 
 // Mock draggable to make tests synchronous and easier to test without full sortablejs drag interactions
 vi.mock("vuedraggable", () => {
@@ -140,7 +140,7 @@ describe("CrfAuthoringCanvas.vue & Drag-and-Drop Authoring Component Suite", () 
   });
 
   it("supports section collapsing and expansion toggling", async () => {
-    const section = {
+    const section: DesignerSection = {
       id: "section-1",
       name: "Demographics",
       isCollapsed: false,
@@ -172,11 +172,11 @@ describe("CrfAuthoringCanvas.vue & Drag-and-Drop Authoring Component Suite", () 
   });
 
   it("appends new item to section items array on click '+ Add Row'", async () => {
-    const section = {
+    const section: DesignerSection = {
       id: "section-1",
       name: "Demographics",
       isCollapsed: false,
-      items: [] as DesignerField[],
+      items: [],
     };
 
     const store = useDesignerStore();
@@ -536,11 +536,10 @@ describe("CrfAuthoringCanvas.vue & Drag-and-Drop Authoring Component Suite", () 
         ],
       };
       store.activeForm = JSON.parse(JSON.stringify(formSchema));
-      if (!store.activeForm) throw new Error("Expected activeForm");
 
       const wrapper = mount(CrfAuthoringCanvas, {
         props: {
-          formSchema: store.activeForm,
+          formSchema: store.activeForm!,
           selectedFieldId: null,
         },
       });
@@ -560,9 +559,9 @@ describe("CrfAuthoringCanvas.vue & Drag-and-Drop Authoring Component Suite", () 
       await sec2MoveUp.trigger("click");
 
       // Verify order changed to Sec 2, Sec 1, Sec 3
-      expect(store.activeForm?.sections[0].id).toBe("sec-2");
-      expect(store.activeForm?.sections[1].id).toBe("sec-1");
-      expect(store.activeForm?.sections[2].id).toBe("sec-3");
+      expect(store.activeForm!.sections[0].id).toBe("sec-2");
+      expect(store.activeForm!.sections[1].id).toBe("sec-1");
+      expect(store.activeForm!.sections[2].id).toBe("sec-3");
 
       // Now click Move Down on Section 2 (which is now at index 0)
       const sec2MoveDown = wrapper
@@ -571,20 +570,20 @@ describe("CrfAuthoringCanvas.vue & Drag-and-Drop Authoring Component Suite", () 
       await sec2MoveDown.trigger("click");
 
       // Verify order restored to Sec 1, Sec 2, Sec 3
-      expect(store.activeForm?.sections[0].id).toBe("sec-1");
-      expect(store.activeForm?.sections[1].id).toBe("sec-2");
-      expect(store.activeForm?.sections[2].id).toBe("sec-3");
+      expect(store.activeForm!.sections[0].id).toBe("sec-1");
+      expect(store.activeForm!.sections[1].id).toBe("sec-2");
+      expect(store.activeForm!.sections[2].id).toBe("sec-3");
     });
 
     it("reorders field widgets when move action buttons are clicked and respects boundary limits", async () => {
-      const section = {
+      const section: DesignerSection = {
         id: "sec-field-reorder",
         name: "Fields Section",
         isCollapsed: false,
         items: [
-          { id: "f-1", label: "Field One", type: "text" },
-          { id: "f-2", label: "Field Two", type: "text" },
-          { id: "f-3", label: "Field Three", type: "text" },
+          { id: "f-1", label: "Field One", type: "text", gridSpan: 12 },
+          { id: "f-2", label: "Field Two", type: "text", gridSpan: 12 },
+          { id: "f-3", label: "Field Three", type: "text", gridSpan: 12 },
         ],
       };
 

@@ -489,13 +489,6 @@ const {
   fallbackErrorMessage: "Investigational supply status could not be loaded.",
 });
 
-const canReconcile = computed(() => canReconcileIpKits(authStore));
-const canSeed = computed(() => canSeedIpKits(authStore));
-const canWriteCoc = computed(() => canRecordChainOfCustody(authStore));
-const canReadSchemes = computed(() => canReadRandomizationSchemes(authStore));
-const canManageSchemes = computed(() =>
-  canManageRandomizationSchemes(authStore)
-);
 const signerFullName = computed(() => {
   const identity = authStore.user;
   if (!identity) return "";
@@ -505,6 +498,14 @@ const signerFullName = computed(() => {
     .trim();
   return full || identity.username || "";
 });
+
+const canReconcile = computed(() => canReconcileIpKits(authStore));
+const canSeed = computed(() => canSeedIpKits(authStore));
+const canWriteCoc = computed(() => canRecordChainOfCustody(authStore));
+const canReadSchemes = computed(() => canReadRandomizationSchemes(authStore));
+const canManageSchemes = computed(() =>
+  canManageRandomizationSchemes(authStore)
+);
 
 const SCHEME_APPROVAL_REASONS = [
   "Independent second-person verification and approval of randomization scheme",

@@ -1538,9 +1538,7 @@ const isLoadingDiff = ref(false);
 const notificationBanner = ref(null);
 // #4523: set when the live subject-impact / amendment-diff calls fail, so seeded figures are never shown as
 // the verified server analysis.
-/** @type {import("vue").Ref<string | null>} */
 const impactLoadError = ref(null);
-/** @type {import("vue").Ref<string | null>} */
 const diffLoadError = ref(null);
 
 // Wizard State
@@ -1561,7 +1559,6 @@ const siteFilter = ref("ALL");
 const versionFilter = ref("ALL");
 const gatingFilter = ref("ALL");
 const searchQuery = ref("");
-/** @type {import("vue").Ref<string[]>} */
 const selectedSubjectIds = ref([]);
 const showBulkReconsentModal = ref(false);
 const bulkReconsentForm = ref({
@@ -2169,20 +2166,6 @@ async function executeBulkReconsent() {
 onMounted(() => {
   fetchSubjectImpact();
   fetchAmendmentDiffAndImpact();
-});
-
-defineExpose({
-  subjectsList,
-  showCreateModal,
-  wizardStep,
-  goToWizardStep,
-  activeMode,
-  siteFilter,
-  selectedSubjectIds,
-  showBulkReconsentModal,
-  activeDiffLayer,
-  activeTab,
-  diffLoadError,
 });
 </script>
 

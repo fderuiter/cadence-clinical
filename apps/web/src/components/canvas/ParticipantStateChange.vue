@@ -214,6 +214,15 @@ const RANDOMIZE_SIGNING_REASONS = [
 ];
 
 const authStore = useAuthStore();
+const signerFullName = computed(() => {
+  const identity = authStore.user;
+  if (!identity) return "";
+  const full = [identity.firstName, identity.lastName]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+  return full || identity.username || "";
+});
 const canvas = useStudyCanvasStore();
 const target = ref("");
 const reason = ref("");
@@ -236,15 +245,6 @@ const canRandomize = computed(() =>
   canRandomizeParticipant(props.participant.status)
 );
 const canUnblind = computed(() => canUnblindParticipant(authStore));
-const signerFullName = computed(() => {
-  const identity = authStore.user;
-  if (!identity) return "";
-  const full = [identity.firstName, identity.lastName]
-    .filter(Boolean)
-    .join(" ")
-    .trim();
-  return full || identity.username || "";
-});
 const unblindReasonLength = computed(() => unblindReason.value.trim().length);
 
 const finalNote = computed(

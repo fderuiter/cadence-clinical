@@ -4,21 +4,23 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "strict": true,
+    "noEmit": true,
+    "incremental": true,
+    "tsBuildInfoFile": "./node_modules/.cache/tsconfig.tsbuildinfo",
     "jsx": "preserve",
     "resolveJsonModule": true,
     "esModuleInterop": true,
+    "isolatedModules": true,
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
-    "types": ["node"],
+    "types": ["vite/client", "node"],
     "skipLibCheck": true,
-    "allowJs": true,
-    "noEmit": true,
-    "incremental": true,
-    "tsBuildInfoFile": "./node_modules/.cache/tsconfig.tsbuildinfo"
+    "allowJs": true
   },
   "include": [
     "index.d.ts",
     "accessibility-matcher.d.ts",
     "src/**/*.ts",
+    "src/**/*.d.ts",
     "src/**/*.vue",
     "tests/**/*.ts"
   ]

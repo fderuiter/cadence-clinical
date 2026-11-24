@@ -14,9 +14,9 @@ export interface DesignerField {
   label: string;
   type: string;
   cdash?: string;
-  gridSpan?: number;
+  gridSpan: number;
   required?: boolean;
-  [key: string]: unknown;
+  [key: string]: any; // Index signature for flexible fields
 }
 
 export interface DesignerSection {

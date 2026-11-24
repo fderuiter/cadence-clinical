@@ -8,7 +8,7 @@ using System.Linq;
 namespace Cadence.ToolingCore.Services;
 
 /// <summary>
-/// Fail-closed Prettier and ESLint quality gates for <c>cadence check</c> and <c>cadence check --pre-commit</c>.
+/// Fail-closed Prettier, ESLint, and TypeScript/Vue SFC typecheck quality gates for <c>cadence check</c> and <c>cadence check --pre-commit</c>.
 /// </summary>
 public static class FrontendQualityGateService
 {
@@ -22,6 +22,11 @@ public static class FrontendQualityGateService
     private static readonly HashSet<string> EslintExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
         ".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ".vue",
+    };
+
+    private static readonly HashSet<string> TypecheckExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ".vue", ".json", ".yaml", ".yml",
     };
 
     public static int CheckPrettier(
@@ -234,7 +239,7 @@ public static class FrontendQualityGateService
 
                     var stdinArgs = BuildEslintArgs(["--stdin", "--stdin-filename", rel]);
 
-                    if (RunProcessWithStdin(repoRoot, pnpm, stdinArgs, blobBytes, suppressStdoutOnSuccess: false, getEnvironmentVariable) != 0)
+                    if (RunProcessWithStdin(repoRoot, pnpm, stdinArgs, blobBytes, suppressStdoutOnSuccess: false) != 0)
                     {
                         Console.WriteLine($"[ERROR] ESLint violations detected in staged '{rel}'. Fix the findings above or run 'pnpm lint'.");
                         return 1;
@@ -251,7 +256,7 @@ public static class FrontendQualityGateService
                 {
                     Console.WriteLine(preCommit
                         ? "[ERROR] ESLint violations detected in staged files. Fix the findings above or run 'pnpm lint'."
-                        : "[ERROR] Workspace ESLint check failed. Fix the findings above or run 'pnpm lint'.");
+                        : "[ERROR] Workspace ESLint check ('pnpm cadence check eslint') failed. Fix the findings above or run 'pnpm lint'.");
                     return 1;
                 }
             }
@@ -260,17 +265,69 @@ public static class FrontendQualityGateService
         }
     }
 
+    public static int CheckTypecheck(
+        string? repoRoot = null,
+        string[]? targetFiles = null,
+        bool preCommit = false,
+        GitIndexReader? indexReader = null)
+    {
+        if (targetFiles is { Length: 0 })
+        {
+            return 0;
+        }
+
+        repoRoot ??= FindRepoRoot();
+
+        if (preCommit || targetFiles is not null)
+        {
+            var reader = GitIndexReader.ResolvePreCommitReader(repoRoot, preCommit, indexReader, out var ownedReader);
+            using (ownedReader)
+            {
+                var rawFiles = preCommit && targetFiles is null
+                    ? PreCommitOpenApiService.GetStagedFiles(repoRoot)
+                    : (IReadOnlyList<string>)targetFiles!;
+
+                var matching = SelectExistingFiles(repoRoot, rawFiles, TypecheckExtensions, reader);
+                if (matching.Count == 0)
+                {
+                    return 0;
+                }
+            }
+        }
+
+        string? pnpm = ResolveUsablePnpm(repoRoot);
+        if (pnpm is null)
+        {
+            return 1;
+        }
+
+        if (!EnsureNodeModules(repoRoot))
+        {
+            return 1;
+        }
+
+        if (RunProcess(repoRoot, pnpm, ["-r", "typecheck"]) != 0)
+        {
+            Console.WriteLine("[ERROR] Workspace TypeScript and Vue SFC typecheck ('pnpm -r typecheck') failed.");
+            return 1;
+        }
+
+        return 0;
+    }
+
     public static List<string> BuildEslintArgs(IEnumerable<string> additionalArgs) =>
         ["exec", "eslint", "--no-warn-ignored", "--max-warnings", "0", .. additionalArgs];
 
     private static string? ResolveUsablePnpm(string repoRoot, Func<string, string?>? getEnvironmentVariable = null)
     {
-        string? pathOverride = getEnvironmentVariable?.Invoke("PATH");
-        IReadOnlyDictionary<string, string?>? envOverride = pathOverride is not null
-            ? new Dictionary<string, string?>(StringComparer.Ordinal) { ["PATH"] = pathOverride }
-            : null;
+        IReadOnlyDictionary<string, string?>? environment = getEnvironmentVariable is null
+            ? null
+            : new Dictionary<string, string?>(StringComparer.Ordinal)
+            {
+                ["PATH"] = getEnvironmentVariable("PATH"),
+            };
 
-        string? resolved = PosixProcessLauncher.ResolveExecutablePath("pnpm", repoRoot, envOverride);
+        string? resolved = PosixProcessLauncher.ResolveExecutablePath("pnpm", repoRoot, environment);
         if (resolved is null)
         {
             Console.WriteLine("[ERROR] 'pnpm' is required for frontend quality gates but was not found on PATH. Install Node.js and run 'corepack enable'.");
@@ -284,7 +341,7 @@ public static class FrontendQualityGateService
             RedirectStandardOutput = true,
             RedirectStandardError = true,
         };
-        if (pathOverride is not null)
+        if (getEnvironmentVariable is not null && getEnvironmentVariable("PATH") is { } pathOverride)
         {
             psi.Environment["PATH"] = pathOverride;
         }
@@ -418,8 +475,7 @@ public static class FrontendQualityGateService
         string fileName,
         IReadOnlyList<string> arguments,
         byte[] stdinBytes,
-        bool suppressStdoutOnSuccess,
-        Func<string, string?>? getEnvironmentVariable = null)
+        bool suppressStdoutOnSuccess)
     {
         var psi = new ProcessStartInfo(fileName)
         {
@@ -429,10 +485,6 @@ public static class FrontendQualityGateService
             RedirectStandardOutput = true,
             RedirectStandardError = true,
         };
-        if (getEnvironmentVariable is not null && getEnvironmentVariable("PATH") is { } pathOverride)
-        {
-            psi.Environment["PATH"] = pathOverride;
-        }
         foreach (string arg in arguments)
         {
             psi.ArgumentList.Add(arg);

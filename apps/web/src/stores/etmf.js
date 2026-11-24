@@ -241,37 +241,41 @@ function buildLocalIntelligenceReport(
 }
 
 /**
- * @typedef {Record<string, unknown> & {
- *   id: string,
- *   study_id?: string,
- *   site_id?: string | null,
- *   zone?: number | string,
- *   section?: string,
- *   artifact_code?: string,
- *   artifact_type?: string,
- *   filename?: string,
- *   mime_type?: string,
- *   status?: string,
- *   version_index?: number,
- *   created_by?: string,
- *   created_at?: string,
- *   content?: string,
- *   content_checksum?: string | null,
- *   contentChecksum?: string | null
- * }} EtmfStoreDocument
- *
- * @typedef {Record<string, unknown> & {
- *   job_id: string,
- *   study_id: string,
- *   status: string,
- *   progress_percentage?: number,
- *   total_documents?: number,
- *   processed_documents?: number,
- *   download_url?: string,
- *   expires_at?: string,
- *   requested_by?: string,
- *   created_at?: string
- * }} EtmfStoreExportJob
+ * @typedef {Object} EtmfExportJobRecord
+ * @property {string} job_id
+ * @property {string} study_id
+ * @property {string} status
+ * @property {number} progress_percentage
+ * @property {number} total_documents
+ * @property {number} processed_documents
+ * @property {string} [requested_by]
+ * @property {string} [download_url]
+ * @property {string} [expires_at]
+ * @property {string} [created_at]
+ */
+
+/**
+ * @typedef {Object} EtmfDocumentRecord
+ * @property {string} id
+ * @property {string} study_id
+ * @property {string} [site_id]
+ * @property {number} [zone]
+ * @property {string} [section]
+ * @property {string} [artifact_code]
+ * @property {string} [taxonomy_code]
+ * @property {string} [artifact_type]
+ * @property {string} [filename]
+ * @property {string} [mime_type]
+ * @property {string} [status]
+ * @property {number} [version_index]
+ * @property {string} [created_by]
+ * @property {string} [created_at]
+ * @property {string} [reason_for_change]
+ * @property {string} [signer]
+ * @property {string} [signing_timestamp]
+ * @property {string} [content_checksum]
+ * @property {string} [object_key]
+ * @property {Record<string, unknown>} [signature_manifestation]
  */
 
 export const useEtmfStore = defineStore("etmf", {
@@ -280,9 +284,9 @@ export const useEtmfStore = defineStore("etmf", {
     binderTree: [],
     /** @type {string | null} */
     selectedArtifactId: null,
-    /** @type {EtmfStoreDocument[]} */
+    /** @type {EtmfDocumentRecord[]} */
     documentsList: [],
-    /** @type {EtmfStoreDocument | null} */
+    /** @type {EtmfDocumentRecord | null} */
     activeDocument: null,
     isUploading: false,
     currentStudyId:
@@ -297,9 +301,9 @@ export const useEtmfStore = defineStore("etmf", {
     qcQueue: [],
     isBatchUploading: false,
     batchProgress: 0,
-    /** @type {EtmfStoreExportJob | null} */
+    /** @type {EtmfExportJobRecord | null} */
     activeExportJob: null,
-    /** @type {EtmfStoreExportJob[]} */
+    /** @type {EtmfExportJobRecord[]} */
     exportJobs: [],
     isExportDrawerOpen: false,
     /** @type {string[]} */

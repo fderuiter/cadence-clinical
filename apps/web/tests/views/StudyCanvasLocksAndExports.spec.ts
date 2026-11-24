@@ -717,6 +717,15 @@ describe("Clinical Canvas locks, streaming exports, and inline controls (#5466, 
     expect(
       wrapper.find("[data-testid='participant-casebook-sha256']").text()
     ).toContain(sha);
+
+    // Trigger a second casebook download for the same participant and cut (AC 8)
+    await wrapper.find("#btn-export-casebook").trigger("click");
+    await flushPromises();
+
+    expect(mockStreamEnrollmentCasebook).toHaveBeenCalledTimes(2);
+    expect(
+      wrapper.find("[data-testid='participant-casebook-sha256']").text()
+    ).toContain(sha);
     wrapper.unmount();
   });
 
@@ -889,6 +898,53 @@ describe("Clinical Canvas locks, streaming exports, and inline controls (#5466, 
     });
     await flushPromises();
     expect(wizardView.find("#study-exports-section").exists()).toBe(true);
+
+    for (const [fmt, ext, sha] of [
+      [
+        "csv",
+        "csv",
+        "1111111111111111111111111111111111111111111111111111111111111111",
+      ],
+      [
+        "dataset_json",
+        "dataset.json",
+        "2222222222222222222222222222222222222222222222222222222222222222",
+      ],
+      [
+        "odm_xml",
+        "odm.xml",
+        "3333333333333333333333333333333333333333333333333333333333333333",
+      ],
+    ] as const) {
+      mockStreamStudyExport.mockResolvedValueOnce({
+        blob: new Blob(["payload"], { type: "text/plain" }),
+        filename: `CAD-101-locked_only.${ext}`,
+        contentType: "text/plain",
+        contentSha256: sha,
+        hiddenScopes: { moreExist: true, reasons: ["NotPermitted"] },
+      });
+      await wizardView.find("#study-export-format").setValue(fmt);
+      await wizardView.find("#study-exports-form").trigger("submit");
+      await flushPromises();
+
+      expect(mockStreamStudyExport).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          studyRef: STUDY_REF,
+          format: fmt,
+          lockFilter: "locked_only",
+        })
+      );
+      expect(
+        wizardView.find("[data-testid='study-exports-sha256']").text()
+      ).toContain(sha);
+      expect(
+        wizardView.find("[data-testid='study-exports-hidden-scopes']").text()
+      ).toContain(
+        "Additional clinical scopes outside your access were excluded"
+      );
+    }
+
+    await expectNoAxeViolations(wizardView.element);
     wizardView.unmount();
   });
 
@@ -1135,17 +1191,17 @@ describe("Clinical Canvas locks, streaming exports, and inline controls (#5466, 
 
   it("renders parent covering lock banner in ParticipantRecord and hides covered Freeze and Lock buttons while keeping direct Unlock enabled", async () => {
     mockGetZoomPath.mockResolvedValue([
-      { level: "study", label: "CAD-101", ref: `${STUDY_REF}@1`, mask: null },
+      { level: "study", label: "CAD-101", node: `${STUDY_REF}@1`, mask: null },
       {
         level: "study_site",
         label: "SITE-101",
-        ref: `${SITE_A_REF}@1`,
+        node: `${SITE_A_REF}@1`,
         mask: null,
       },
       {
         level: "enrollment",
         label: "SUBJ-A",
-        ref: `${ENROLLMENT_REF}@1`,
+        node: `${ENROLLMENT_REF}@1`,
         mask: null,
       },
     ]);
@@ -1412,9 +1468,16 @@ describe("Clinical Canvas locks, streaming exports, and inline controls (#5466, 
 
     expect(wrapper.find("#lock-apply-scope-ref").exists()).toBe(false);
     expect(wrapper.html()).not.toContain('placeholder="kind:uuid"');
-    expect(wrapper.find('[data-testid="study-locks-table"]').text()).toContain(
-      "DM-01 · Dr. Morgan Vance"
+    const locksScroll = wrapper.find(
+      '[data-testid="study-locks-table-scroll"]'
     );
+    expect(locksScroll.exists()).toBe(true);
+    expect(locksScroll.attributes("role")).toBe("region");
+    expect(locksScroll.attributes("aria-label")).toBe("Study locks");
+    expect(locksScroll.attributes("tabindex")).toBe("0");
+    expect(
+      locksScroll.find('[data-testid="study-locks-table"]').text()
+    ).toContain("DM-01 · Dr. Morgan Vance");
 
     await wrapper.find("#lock-apply-scope-kind").setValue("enrollment");
     await flushPromises();

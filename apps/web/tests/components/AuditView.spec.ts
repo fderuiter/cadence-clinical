@@ -46,7 +46,6 @@ describe("AuditView.vue - Audit Trail Explorer & Part 11 Inspection (Issue #4080
       user_id: "crc.user",
       user_role: "site_crc",
       action: "UPDATE",
-      document_id: null,
       entity_type: "Observation",
       record_id: "OBS-1042",
       details: "Observation VS.VSSBP changed from 140 to 120 mmHg",
@@ -63,7 +62,6 @@ describe("AuditView.vue - Audit Trail Explorer & Part 11 Inspection (Issue #4080
       user_id: "dm.user",
       user_role: "data_manager",
       action: "SIGN",
-      document_id: null,
       entity_type: "Query",
       record_id: "QRY-208",
       details: "Electronic sign-off for discrepancy query QRY-208",
@@ -81,7 +79,9 @@ describe("AuditView.vue - Audit Trail Explorer & Part 11 Inspection (Issue #4080
     vi.clearAllMocks();
 
     vi.mocked(auditorService.getAuditLogs).mockResolvedValue({
-      items: mockLogs,
+      items: mockLogs as unknown as Awaited<
+        ReturnType<typeof auditorService.getAuditLogs>
+      >["items"],
       total_count: 2,
       limit: 20,
       offset: 0,
@@ -92,19 +92,17 @@ describe("AuditView.vue - Audit Trail Explorer & Part 11 Inspection (Issue #4080
       status: "VERIFIED",
       ledger_entries: 2,
       last_sealed_at: "2026-08-21T11:30:00Z",
-    });
+    } as unknown as Awaited<
+      ReturnType<typeof auditorService.getExecutionIntegrity>
+    >);
 
     vi.mocked(etmfService.getDocuments).mockResolvedValue([]);
     vi.mocked(etmfService.getCompleteness).mockResolvedValue({
-      study_id: "CADENCE-101",
-      site_id: null,
-      milestone: "SIV",
-      is_complete: true,
-      scope: "STUDY",
-      present_artifacts: ["01.01.01"],
-      missing_artifacts: [],
-      per_artifact_detail: [],
-    });
+      expected_count: 10,
+      present_count: 10,
+      missing_count: 0,
+      completeness_percentage: 100,
+    } as unknown as Awaited<ReturnType<typeof etmfService.getCompleteness>>);
   });
 
   it("renders audit trail logs and initializes with default query params", async () => {

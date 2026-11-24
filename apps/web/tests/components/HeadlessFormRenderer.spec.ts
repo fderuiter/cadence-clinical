@@ -65,19 +65,18 @@ describe("HeadlessFormRenderer.vue Skip Logic & Submission Payload Filtering", (
     });
 
     // When pulse is 80 (<= 100), hide condition triggers (relevant = false)
-    expect(wrapper.vm.visibleFields["pulse_details"]).toBe(false);
-    expect(wrapper.vm.formData["pulse_details"]).toBe("");
+    const vm = wrapper.vm as Record<string, any>;
+    expect(vm.visibleFields["pulse_details"]).toBe(false);
+    expect(vm.formData["pulse_details"]).toBe("");
 
     // Submit form
     await wrapper.find("form").trigger("submit");
 
-    const emitted =
-      wrapper.emitted<{ data: Record<string, unknown> }[]>("form-submitted");
+    const emitted = wrapper.emitted("form-submitted");
     expect(emitted).toBeTruthy();
-    if (!emitted) throw new Error("Expected form-submitted event");
-    expect(emitted.length).toBe(1);
+    expect(emitted!.length).toBe(1);
 
-    const submissionPayload = emitted[0][0];
+    const submissionPayload = emitted![0][0] as Record<string, any>;
     expect(submissionPayload.data).toEqual({
       pulse: 80,
       vssbp: 120,
@@ -98,16 +97,15 @@ describe("HeadlessFormRenderer.vue Skip Logic & Submission Payload Filtering", (
     });
 
     // When pulse is 110 (> 100), hide condition is false -> relevant = true
-    expect(wrapper.vm.visibleFields["pulse_details"]).toBe(true);
-    expect(wrapper.vm.formData["pulse_details"]).toBe("Tachycardic notes");
+    const vm = wrapper.vm as Record<string, any>;
+    expect(vm.visibleFields["pulse_details"]).toBe(true);
+    expect(vm.formData["pulse_details"]).toBe("Tachycardic notes");
 
     await wrapper.find("form").trigger("submit");
 
-    const emitted =
-      wrapper.emitted<{ data: Record<string, unknown> }[]>("form-submitted");
+    const emitted = wrapper.emitted("form-submitted");
     expect(emitted).toBeTruthy();
-    if (!emitted) throw new Error("Expected form-submitted event");
-    const submissionPayload = emitted[0][0];
+    const submissionPayload = emitted![0][0] as Record<string, any>;
     expect(submissionPayload.data).toEqual({
       pulse: 110,
       pulse_details: "Tachycardic notes",

@@ -1858,25 +1858,6 @@ async function triggerDisbursement() {
 onMounted(() => {
   loadAllData();
 });
-
-defineExpose({
-  isSubmitting,
-  selectWallet,
-  showW9Modal,
-  w9Form,
-  submitW9Form,
-  verifyW9Form,
-  issueReloadableCard,
-  wallets,
-  activeTab,
-  extractReceiptFromFile,
-  expenseForm,
-  submitExpenseClaim,
-  triggerVisitVerified,
-  visitTriggerSuccess,
-  reviewClaim,
-  triggerDisbursement,
-});
 </script>
 
 <style scoped>

@@ -317,8 +317,8 @@ describe("useSignedKernelLock", () => {
       blockers: [],
       explanation: {
         subject: SCOPE_REF,
-        claim: "Scope has 1 open query blocking hard lock.",
-        producer: "Kernel.LockReadinessEvaluator",
+        claim: "Blocked",
+        producer: "test",
         steps: [],
         conditions: [],
         next_actions: [],

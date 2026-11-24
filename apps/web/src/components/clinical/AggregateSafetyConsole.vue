@@ -1763,12 +1763,6 @@ async function verifySnapshot() {
   }
 }
 
-function exportReport(format: "xml" | "html" | "json") {
-  if (!activeReportId.value) return;
-  const url = `/api/v1/safety/periodic-reports/${encodeURIComponent(activeReportId.value)}/export?format=${encodeURIComponent(format)}`;
-  window.open(url, "_blank", "noopener,noreferrer");
-}
-
 async function executeQppvSignoff() {
   if (!qppvSecret.value) return;
   isSigning.value = true;
@@ -1809,6 +1803,34 @@ async function executeQppvSignoff() {
     toasts.apiError("QPPV sign-off failed", err);
   } finally {
     isSigning.value = false;
+  }
+}
+
+async function exportReport(format: "xml" | "html" | "json") {
+  const reportId = activeReportId.value;
+  if (!reportId) return;
+
+  try {
+    const endpoint =
+      format === "xml"
+        ? `/api/v1/safety/periodic-reports/${encodeURIComponent(reportId)}/xml`
+        : `/api/v1/safety/periodic-reports/${encodeURIComponent(reportId)}/export?format=${encodeURIComponent(format)}`;
+    const res = await fetch(endpoint, { method: "GET" });
+    await ensureOk(res);
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${reportType.value}_${reportId}.${format}`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  } catch (err) {
+    toasts.apiError(
+      `Periodic report ${format.toUpperCase()} export failed`,
+      err
+    );
   }
 }
 

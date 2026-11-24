@@ -30,20 +30,14 @@ export type SiteMilestoneResponse = SiteMilestone;
 export type SiteMilestoneCreate = Schemas["Ctms_SiteMilestoneCreateDto"];
 export type SiteMilestoneUpdate = Schemas["Ctms_SiteMilestoneUpdateDto"];
 
-export type MonitoringVisit = Schemas["Ctms_MonitoringVisitResponseDto"] & {
-  findings?: MonitoringFindingCreate[] | null;
-};
+export type MonitoringVisit = Schemas["Ctms_MonitoringVisitResponseDto"];
 export type MonitoringVisitResponse = MonitoringVisit;
 export type MonitoringVisitCreate = Schemas["Ctms_MonitoringVisitCreateDto"];
 export type MonitoringVisitComplete =
   Schemas["Ctms_MonitoringVisitCompleteDto"];
 export type MonitoringFindingCreate = Schemas["Ctms_FindingCreateDto"];
 export type FindingCreate = MonitoringFindingCreate;
-export type GeneratedVisitLetter =
-  Schemas["Ctms_GeneratedLetterResponseDto"] & {
-    subject?: string | null;
-    body_markdown?: string | null;
-  };
+export type GeneratedVisitLetter = Schemas["Ctms_GeneratedLetterResponseDto"];
 export type GeneratedLetterResponse = GeneratedVisitLetter;
 
 export type SiteVisitFindingModel = Schemas["Ctms_SiteVisitFindingModel"];
@@ -51,19 +45,10 @@ export type SiteVisitLetterModel = Schemas["Ctms_SiteVisitLetterModel"];
 export type VisitLetterCompilationResult =
   Schemas["Ctms_VisitLetterCompilationResultDto"];
 
-export type DelegationRecord = Schemas["Ctms_DelegationResponseDto"] & {
-  staff_name?: string | null;
-  role?: string | null;
-  status?: string | null;
-};
-export type DelegationResponse = DelegationRecord;
-export type DoaLog = Omit<
-  Schemas["Ctms_DoaLogResponseDto"],
-  "delegated_staff"
-> & {
-  delegated_staff: DelegationRecord[];
-};
+export type DoaLog = Schemas["Ctms_DoaLogResponseDto"];
 export type DoaLogResponse = DoaLog;
+export type DelegationRecord = Schemas["Ctms_DelegationResponseDto"];
+export type DelegationResponse = DelegationRecord;
 export type DelegationTaskRequest = Schemas["Ctms_DelegationTaskRequest"];
 export type RevokeDelegationRequest = Schemas["Ctms_RevokeDelegationRequest"];
 export type DoaSignOffRequest = Schemas["Ctms_DoaSignOffRequest"];

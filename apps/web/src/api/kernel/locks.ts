@@ -92,35 +92,18 @@ export interface KernelCasebookExportQuery {
   knownAt?: string;
 }
 
-/** Concise summary of a visible `KernelLockBlocker` (`detail`, `query_text`, `rule_id`, or the missing required item label). */
-export function formatLockBlockerDetail(
-  blocker: KernelLockBlocker
-): string | null {
-  const detail = blocker.detail?.trim();
-  if (detail) {
-    return detail;
-  }
-  const queryText = blocker.query_text?.trim();
-  if (queryText) {
-    return queryText;
-  }
-  const ruleId = blocker.rule_id?.trim();
-  if (ruleId) {
-    const item = (blocker.item_label ?? blocker.item_id)?.trim();
-    return item
-      ? `Error finding [${ruleId}] on ${item}`
-      : `Error finding [${ruleId}]`;
-  }
-  const item = (blocker.item_label ?? blocker.item_id)?.trim();
-  if (item) {
-    const form = (
-      blocker.collection_title ?? blocker.collection_spec_id
-    )?.trim();
-    return form
-      ? `Missing required item ${item} (${form})`
-      : `Missing required item ${item}`;
-  }
-  return null;
+/** Formats a concise context summary for a visible `KernelLockBlocker` item. */
+export function formatLockBlockerDetail(blocker: KernelLockBlocker): string {
+  if (blocker.masked) return "";
+  if (blocker.detail) return blocker.detail;
+  const parts: string[] = [];
+  if (blocker.subject_code) parts.push(blocker.subject_code);
+  if (blocker.collection_title) parts.push(blocker.collection_title);
+  const item = blocker.item_label || blocker.item_id;
+  if (item) parts.push(item);
+  if (blocker.rule_id) parts.push(`[${blocker.rule_id}]`);
+  if (blocker.query_text) parts.push(blocker.query_text);
+  return parts.join(" · ");
 }
 
 /** Actionable user-facing explanation when a lock apply or release call fails. */

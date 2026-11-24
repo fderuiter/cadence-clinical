@@ -3,20 +3,19 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { mount, type VueWrapper } from "@vue/test-utils";
+import { mount } from "@vue/test-utils";
 import ReconsentChannelPicker from "../../src/components/econsent/ReconsentChannelPicker.vue";
 
 describe("ReconsentChannelPicker", () => {
   it("checks the channels in the model and emits the new selection", async () => {
-    const wrapper: VueWrapper<InstanceType<typeof ReconsentChannelPicker>> =
-      mount(ReconsentChannelPicker, {
-        props: {
-          modelValue: ["SMS"],
-          "onUpdate:modelValue": (value: string[]) => {
-            void wrapper.setProps({ modelValue: value });
-          },
+    const wrapper: ReturnType<typeof mount> = mount(ReconsentChannelPicker, {
+      props: {
+        modelValue: ["SMS"],
+        "onUpdate:modelValue": (value: unknown[]) => {
+          void wrapper.setProps({ modelValue: value as string[] });
         },
-      });
+      },
+    });
 
     const boxes = wrapper.findAll<HTMLInputElement>("input[type=checkbox]");
     expect(boxes.map((b) => b.element.checked)).toEqual([true, false, false]);

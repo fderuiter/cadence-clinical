@@ -1,82 +1,21 @@
 import { defineStore } from "pinia";
 import { allowUnbackedAction } from "../utils/unbackedActions.js";
 
-/**
- * @typedef {Object} IcfMeta
- * @property {string} id
- * @property {string} title
- * @property {string} version
- * @property {string} protocolVersion
- * @property {string} studyId
- */
-
-/**
- * @typedef {Object} IcfSectionTranslation
- * @property {string} title
- * @property {string} html
- */
-
-/**
- * @typedef {Object} IcfSection
- * @property {string} id
- * @property {string} title
- * @property {string} html
- * @property {Record<string, IcfSectionTranslation>} translations
- */
-
-/**
- * @typedef {Object} QuizQuestionTranslation
- * @property {string} text
- * @property {string[]} options
- * @property {string} [hint]
- */
-
-/**
- * @typedef {Object} QuizQuestion
- * @property {string} id
- * @property {string} text
- * @property {string[]} options
- * @property {number} correctAnswerIndex
- * @property {string} hint
- * @property {Record<string, QuizQuestionTranslation>} [translations]
- */
-
-/**
- * @typedef {Object} IcfVersionEntry
- * @property {string} version
- * @property {string} reason
- * @property {string} timestamp
- */
-
-/**
- * @typedef {Object} SignedConsentEntry
- * @property {string} id
- * @property {string} subjectId
- * @property {string} icfId
- * @property {string} icfVersion
- * @property {string} signerName
- * @property {string} signerRole
- * @property {string} signatureMeaning
- * @property {string} language
- * @property {string} timestamp
- * @property {string} sha256Hash
- */
-
 export const useEconsentStore = defineStore("econsent", {
   state: () => ({
-    /** @type {IcfMeta | null} */
+    /** @type {{ id: string; title: string; version: string; protocolVersion: string; studyId: string } | null} */
     currentIcf: null,
-    /** @type {IcfSection[]} */
+    /** @type {Array<Record<string, any>>} */
     sections: [],
-    /** @type {QuizQuestion[]} */
+    /** @type {Array<Record<string, any>>} */
     quizQuestions: [],
     activeLanguage: "en",
-    /** @type {IcfVersionEntry[]} */
+    /** @type {Array<Record<string, any>>} */
     versionHistory: [],
     passingThreshold: 80,
     quizPassed: false,
     quizScore: 0,
-    /** @type {SignedConsentEntry[]} */
+    /** @type {Array<Record<string, any>>} */
     signedConsents: [],
   }),
 

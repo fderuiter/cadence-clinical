@@ -184,8 +184,7 @@
                 </td>
                 <td>
                   {{ getGateFacets(row).filter((f) => f.is_satisfied).length }}
-                  /
-                  {{ getGateFacets(row).length }}
+                  / {{ getGateFacets(row).length }}
                 </td>
                 <td>
                   <span v-if="(row.unfulfilled_reasons ?? []).length">
@@ -289,49 +288,61 @@ const certifyReason = ref("");
 const batchReason = ref("");
 const certifying = ref(false);
 
-interface GateFacetItem {
+interface GateFacetSummary {
   facet_code: string;
   display_name: string;
   evidence_summary: string;
   is_satisfied: boolean;
 }
 
-function getGateFacets(gate: SiteGreenlightGate): GateFacetItem[] {
+function getGateFacets(gate: SiteGreenlightGate): GateFacetSummary[] {
   return [
     {
       facet_code: "REGULATORY_IRB",
       display_name: "IRB / EC Favorable Opinion",
-      evidence_summary: gate.facet_regulatory_irb ? "Verified" : "Pending",
+      evidence_summary: gate.facet_regulatory_irb
+        ? "Approved regulatory milestone on file"
+        : "Pending IRB / EC approval",
       is_satisfied: Boolean(gate.facet_regulatory_irb),
     },
     {
       facet_code: "CTA_BUDGET",
       display_name: "CTA & Budget Executed",
-      evidence_summary: gate.facet_cta_budget ? "Verified" : "Pending",
+      evidence_summary: gate.facet_cta_budget
+        ? "Executed clinical trial agreement verified"
+        : "Pending CTA / budget execution",
       is_satisfied: Boolean(gate.facet_cta_budget),
     },
     {
       facet_code: "EISF_BASELINE",
       display_name: "eISF Baseline Complete",
-      evidence_summary: gate.facet_eisf_baseline ? "Verified" : "Pending",
+      evidence_summary: gate.facet_eisf_baseline
+        ? "Essential investigator site file complete"
+        : "Missing baseline eISF artifacts",
       is_satisfied: Boolean(gate.facet_eisf_baseline),
     },
     {
       facet_code: "DOA_LOG",
       display_name: "PI Delegation Log Signed",
-      evidence_summary: gate.facet_doa_log ? "Verified" : "Pending",
+      evidence_summary: gate.facet_doa_log
+        ? "PI-endorsed DoA log active"
+        : "Pending PI delegation sign-off",
       is_satisfied: Boolean(gate.facet_doa_log),
     },
     {
       facet_code: "STAFF_TRAINING",
       display_name: "GCP & Protocol Training",
-      evidence_summary: gate.facet_staff_training ? "Verified" : "Pending",
+      evidence_summary: gate.facet_staff_training
+        ? "Delegated staff training verified"
+        : "Incomplete staff training records",
       is_satisfied: Boolean(gate.facet_staff_training),
     },
     {
       facet_code: "IP_RELEASE",
       display_name: "Investigational Supply Released",
-      evidence_summary: gate.facet_ip_release ? "Verified" : "Pending",
+      evidence_summary: gate.facet_ip_release
+        ? "Site supply authorization active"
+        : "Investigational product hold",
       is_satisfied: Boolean(gate.facet_ip_release),
     },
   ];

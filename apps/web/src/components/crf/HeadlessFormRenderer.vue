@@ -166,11 +166,8 @@ const emit = defineEmits(["form-submitted", "data-changed"]);
 const currentViewport = ref(
   props.formDefinition.ui_schema?.default_viewport || "desktop_edc"
 );
-/** @type {Record<string, unknown>} */
 const formData = reactive({});
-/** @type {Record<string, string>} */
 const fieldErrors = reactive({});
-/** @type {import("vue").Ref<Record<string, boolean>>} */
 const visibleFields = ref({});
 
 // Initialize form data model

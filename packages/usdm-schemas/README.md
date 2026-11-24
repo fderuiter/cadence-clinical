@@ -23,8 +23,8 @@ Exports shared utilities, domain interfaces, and models for `usdm-schemas`.
 #### Exposed CLI Commands
 
 - No build step: the Zod schemas in `src/` are committed. The old Python generator was removed and there is no C# USDM export command yet.
-- `typecheck`: `tsc --noEmit`
 - `test`: `vitest run`
+- `typecheck`: `tsc --noEmit`
 
 ---
 
@@ -32,6 +32,7 @@ Exports shared utilities, domain interfaces, and models for `usdm-schemas`.
 
 This package relies on the following standard dependencies:
 
+- `typescript`
 - `vitest`
 - `zod`
 

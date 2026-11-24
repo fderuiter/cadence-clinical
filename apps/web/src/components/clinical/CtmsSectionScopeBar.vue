@@ -2,7 +2,7 @@
   <form
     :id="formId"
     class="scope-bar"
-    :aria-label="ariaLabel"
+    :aria-label="ariaLabel || undefined"
     @submit.prevent="$emit('submit')"
   >
     <template v-if="showStudyInput">

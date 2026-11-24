@@ -284,14 +284,8 @@ describe("Generated canvas contracts freshness & drift gate", () => {
           ],
           { cwd: join(repoRoot, "apps/web"), stdio: "pipe" }
         );
-      } catch (err: unknown) {
-        exitCode =
-          err &&
-          typeof err === "object" &&
-          "status" in err &&
-          typeof err.status === "number"
-            ? err.status
-            : 1;
+      } catch (err: any) {
+        exitCode = err.status ?? 1;
       }
       expect(exitCode).toBe(1);
     } finally {

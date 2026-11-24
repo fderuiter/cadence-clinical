@@ -514,7 +514,7 @@ const props = defineProps({
     required: true,
   },
   selectedFieldId: {
-    type: /** @type {import("vue").PropType<string | null>} */ (String),
+    type: [String, null],
     default: null,
   },
 });

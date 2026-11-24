@@ -622,8 +622,8 @@ describe("kernelStudy session cache", () => {
       .mockResolvedValueOnce([
         {
           ref: SITE_A,
-          study_site_id: "0192f3c4-5e6a-7b8c-9d0e-00000000c002",
-          study_site_ref: "study_site:0192f3c4-5e6a-7b8c-9d0e-00000000c002",
+          study_site_id: "0192f3c4-5e6a-7b8c-9d0e-00000000a001",
+          study_site_ref: SITE_A,
           study_ref: STUDY_REF,
           study_code: "CAD-101",
           site_ref: "site:0192f3c4-5e6a-7b8c-9d0e-00000000c010@1",
@@ -637,14 +637,13 @@ describe("kernelStudy session cache", () => {
           institution_code: "METRO-HOSP",
           institution_name: "Metro Hospital",
           effective_versions: [],
-          mask: null,
         },
       ])
       .mockResolvedValueOnce([
         {
           ref: SITE_A,
-          study_site_id: "0192f3c4-5e6a-7b8c-9d0e-00000000c002",
-          study_site_ref: "study_site:0192f3c4-5e6a-7b8c-9d0e-00000000c002",
+          study_site_id: "0192f3c4-5e6a-7b8c-9d0e-00000000a001",
+          study_site_ref: SITE_A,
           study_ref: STUDY_REF,
           study_code: "CAD-101",
           site_ref: "site:0192f3c4-5e6a-7b8c-9d0e-00000000c010@1",
@@ -658,12 +657,11 @@ describe("kernelStudy session cache", () => {
           institution_code: "METRO-HOSP",
           institution_name: "Metro Hospital",
           effective_versions: [],
-          mask: null,
         },
         {
           ref: SITE_B,
-          study_site_id: "0192f3c4-5e6a-7b8c-9d0e-00000000c003",
-          study_site_ref: "study_site:0192f3c4-5e6a-7b8c-9d0e-00000000c003",
+          study_site_id: "0192f3c4-5e6a-7b8c-9d0e-00000000a002",
+          study_site_ref: SITE_B,
           study_ref: STUDY_REF,
           study_code: "CAD-101",
           site_ref: "site:0192f3c4-5e6a-7b8c-9d0e-00000000c012@1",
@@ -677,7 +675,6 @@ describe("kernelStudy session cache", () => {
           institution_code: "HARBOR-HOSP",
           institution_name: "Harbor Hospital",
           effective_versions: [],
-          mask: null,
         },
       ]);
 
@@ -723,7 +720,7 @@ describe("kernelStudy session cache", () => {
           mask: null,
         },
         child_count: 0,
-        group: "study_sites",
+        group: null,
       },
     ]);
 

@@ -83,7 +83,7 @@ describe("proposal review rules (ADR-2635)", () => {
     const own = proposal({
       proposed_by: "reviewer-1",
       proposed_by_kind: "Person",
-      affected: [{ ref: "", mask: "NotPermitted" }],
+      affected: [{ ref: "masked:1", mask: "NotPermitted" }],
     });
     expect(ids(own, [], false)).toEqual([
       "own-proposal",

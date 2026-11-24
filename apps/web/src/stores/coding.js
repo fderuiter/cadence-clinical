@@ -34,6 +34,7 @@ export const useCodingStore = defineStore("coding", {
       isLoading: false,
       dictionaryType: "MEDDRA",
       targetVersion: "27.0",
+      /** @type {any} */
       results: null,
       /** @type {string | null} */
       error: null,
@@ -487,7 +488,7 @@ export const useCodingStore = defineStore("coding", {
           this.assignments = [];
         }
       } catch (err) {
-        this.error = err.message || "Failed to load medical coding queue";
+        this.error = err?.message || "Failed to load medical coding queue";
       } finally {
         this.isLoading = false;
       }
@@ -800,7 +801,7 @@ export const useCodingStore = defineStore("coding", {
         this.selectedAssignmentIds = [];
         return res;
       } catch (err) {
-        this.error = err.message || "Batch assignment failed";
+        this.error = err?.message || "Batch assignment failed";
         throw err;
       } finally {
         this.isLoading = false;
@@ -927,7 +928,8 @@ export const useCodingStore = defineStore("coding", {
         this.selectedClusterIds = [];
         this.selectedClusterKeys = [];
       } catch (err) {
-        this.error = err.message || "Failed to batch approve verbatim clusters";
+        this.error =
+          err?.message || "Failed to batch approve verbatim clusters";
         throw err;
       } finally {
         this.isLoading = false;
@@ -1064,7 +1066,7 @@ export const useCodingStore = defineStore("coding", {
         this.selectedClusterIds = [];
         this.selectedClusterKeys = [];
       } catch (err) {
-        this.error = err.message || "Failed to batch code verbatim clusters";
+        this.error = err?.message || "Failed to batch code verbatim clusters";
         throw err;
       } finally {
         this.isLoading = false;
@@ -1106,10 +1108,7 @@ export const useCodingStore = defineStore("coding", {
       }
     },
 
-    async runImpactAnalysis({
-      dictionaryType = this.impactAnalysis.dictionaryType,
-      newVersion = this.impactAnalysis.targetVersion,
-    } = {}) {
+    async runImpactAnalysis({ dictionaryType, newVersion }) {
       this.impactAnalysis.isLoading = true;
       this.impactAnalysis.error = null;
       try {
@@ -1130,7 +1129,7 @@ export const useCodingStore = defineStore("coding", {
         return res;
       } catch (err) {
         this.impactAnalysis.error =
-          err.message || "Failed to run up-versioning impact analysis";
+          err?.message || "Failed to run up-versioning impact analysis";
         throw err;
       } finally {
         this.impactAnalysis.isLoading = false;

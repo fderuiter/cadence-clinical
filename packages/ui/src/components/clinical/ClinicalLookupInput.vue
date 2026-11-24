@@ -103,20 +103,23 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<{
   (e: "update:modelValue", value: string | number): void;
   (e: "input", value: string | number): void;
-  (e: "change", value: string | number, target: EventTarget | null): void;
+  (e: "change", value: string | number, target: HTMLInputElement | null): void;
+  (e: "create-query", event: unknown): void;
+  (e: "respond-query", event: unknown): void;
+  (e: "close-query"): void;
+  (e: "reopen-query"): void;
 }>();
 
 function handleInput(event: Event) {
-  if (event.target instanceof HTMLInputElement) {
-    emit("update:modelValue", event.target.value);
-    emit("input", event.target.value);
-  }
+  const target = event.target as HTMLInputElement | null;
+  const value = target?.value ?? "";
+  emit("update:modelValue", value);
+  emit("input", value);
 }
 
 function handleChange(event: Event) {
-  if (event.target instanceof HTMLInputElement) {
-    emit("change", event.target.value, event.target);
-  }
+  const target = event.target as HTMLInputElement | null;
+  emit("change", target?.value ?? "", target);
 }
 
 const stateClass = computed(() => {

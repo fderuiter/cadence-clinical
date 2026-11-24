@@ -236,9 +236,9 @@ describe("Kernel site setup, founder coordinator lens, and tenant-scoped partici
     const studySites = [
       {
         ref: "study_site:01960000-0000-7000-8000-000000000101",
+        id: "01960000-0000-7000-8000-000000000101",
         study_site_id: "01960000-0000-7000-8000-000000000101",
         study_site_ref: "study_site:01960000-0000-7000-8000-000000000101",
-        id: "01960000-0000-7000-8000-000000000101",
         study_ref: "study:01960000-0000-7000-8000-000000000001",
         study_code: "CADENCE-101",
         site_ref: "site:01960000-0000-7000-8000-000000000011",
@@ -305,9 +305,9 @@ describe("Kernel site setup, founder coordinator lens, and tenant-scoped partici
         const matched = workspaceSites.find((s) => s.ref === siteRef)!;
         const linked = {
           ref: `study_site:${matched.id}`,
+          id: matched.id,
           study_site_id: matched.id,
           study_site_ref: `study_site:${matched.id}`,
-          id: matched.id,
           study_ref: "study:01960000-0000-7000-8000-000000000001",
           study_code: "CADENCE-101",
           site_ref: matched.ref,
@@ -444,7 +444,6 @@ describe("Kernel site setup, founder coordinator lens, and tenant-scoped partici
 
     const starterSite = {
       ref: "site:01960000-0000-7000-8000-000000000011",
-      id: "01960000-0000-7000-8000-000000000011",
       code: "SITE-4E9999991111",
       name: "Meridian Sandbox Site",
       country: "US",
@@ -464,7 +463,6 @@ describe("Kernel site setup, founder coordinator lens, and tenant-scoped partici
           ? [
               {
                 ref: "organization:01960000-0000-7000-8000-000000000002",
-                id: "01960000-0000-7000-8000-000000000002",
                 code: "ORG-4E9999991111",
                 name: "Meridian Vascular Research",
                 kind: "Sponsor",
@@ -473,7 +471,6 @@ describe("Kernel site setup, founder coordinator lens, and tenant-scoped partici
           : [
               {
                 ref: starterSite.institution_ref,
-                id: "01960000-0000-7000-8000-000000000021",
                 code: starterSite.institution_code,
                 name: starterSite.institution_name,
                 kind: "SiteInstitution",
@@ -530,8 +527,7 @@ describe("Kernel site setup, founder coordinator lens, and tenant-scoped partici
           code,
           title,
           phase,
-          sponsor_ref:
-            sponsorRef || "organization:01960000-0000-7000-8000-000000000002",
+          sponsor_ref: sponsorRef || "",
           sponsor_code: "ORG-4E9999991111",
           sponsor_name: "Meridian Vascular Research",
           site_count: 1,
@@ -571,12 +567,7 @@ describe("Kernel site setup, founder coordinator lens, and tenant-scoped partici
         };
         tenantParticipants.push(created);
         return {
-          id: created.id,
-          subject_id: created.subject_id,
-          study_id: created.study_id,
-          site_id: created.site_id,
-          status: created.status,
-          active_protocol_version: created.active_protocol_version,
+          ...created,
           encrypted_demographics: null,
         };
       });

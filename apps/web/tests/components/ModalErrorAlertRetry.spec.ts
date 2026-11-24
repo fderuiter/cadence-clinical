@@ -46,11 +46,12 @@ describe("ModalErrorAlert Retry Actions Across Overlays (#4523)", () => {
       });
 
       // Fill in required fields
-      wrapper.vm.password = "Secret123!"; // pragma: allowlist secret
-      wrapper.vm.signingReason = "APPROVAL";
+      const vm = wrapper.vm as Record<string, any>;
+      vm.password = "Secret123!"; // pragma: allowlist secret
+      vm.signingReason = "APPROVAL";
 
       // First attempt fails via mockOnSign
-      await wrapper.vm.confirm();
+      await vm.confirm();
 
       expect(mockOnSign).toHaveBeenCalledTimes(1);
       expect(wrapper.find("#sig-error-msg").exists()).toBe(true);
@@ -59,7 +60,7 @@ describe("ModalErrorAlert Retry Actions Across Overlays (#4523)", () => {
       );
 
       // Re-enter password for GxP safety check
-      wrapper.vm.password = "Secret123!"; // pragma: allowlist secret
+      vm.password = "Secret123!"; // pragma: allowlist secret
 
       // Click Retry button in ModalErrorAlert
       const retryBtn = wrapper.find('[data-testid="modal-error-retry-btn"]');
@@ -163,9 +164,10 @@ describe("ModalErrorAlert Retry Actions Across Overlays (#4523)", () => {
         },
       });
 
-      wrapper.vm.password = "Secret123!"; // pragma: allowlist secret
-      wrapper.vm.signingReason = "APPROVAL";
-      await wrapper.vm.confirm();
+      const vm = wrapper.vm as Record<string, any>;
+      vm.password = "Secret123!"; // pragma: allowlist secret
+      vm.signingReason = "APPROVAL";
+      await vm.confirm();
 
       expect(wrapper.emitted("success")).toBeUndefined();
       expect(wrapper.find("#sig-error-msg").text()).toContain(
@@ -183,7 +185,7 @@ describe("ModalErrorAlert Retry Actions Across Overlays (#4523)", () => {
 
       const runAnalysisSpy = vi
         .spyOn(codingStore, "runImpactAnalysis")
-        .mockResolvedValue({});
+        .mockResolvedValue(undefined as never);
 
       const wrapper = mount(UpversioningImpactDrawer);
 

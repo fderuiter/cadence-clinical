@@ -369,6 +369,7 @@ public sealed class PreCommitGuardrailsTests : IDisposable
 
         FrontendQualityGateService.CheckPrettier(_tempDir, ["apps/web/src/sample.ts"], preCommit: true).Should().Be(1);
         FrontendQualityGateService.CheckEslint(_tempDir, ["apps/web/src/sample.ts"], preCommit: true).Should().Be(1);
+        FrontendQualityGateService.CheckTypecheck(_tempDir, ["apps/web/src/sample.ts"], preCommit: true).Should().Be(1);
     }
 
     [Fact]
@@ -1351,6 +1352,7 @@ public sealed class PreCommitGuardrailsTests : IDisposable
     {
         FrontendQualityGateService.CheckPrettier(_tempDir, [], preCommit: true).Should().Be(0);
         FrontendQualityGateService.CheckEslint(_tempDir, [], preCommit: true).Should().Be(0);
+        FrontendQualityGateService.CheckTypecheck(_tempDir, [], preCommit: true).Should().Be(0);
     }
 
     [Fact]
@@ -1364,11 +1366,15 @@ public sealed class PreCommitGuardrailsTests : IDisposable
                 "native-aot-build/Publish the CLI as Native AOT",
                 "CADENCE_CLI_CACHE_HIT",
                 "true"));
-        step.Commands.Should().HaveCount(2);
+        step.Commands.Should().HaveCount(3);
         var eslintCmd = step.Commands[1];
         eslintCmd.FileName.Should().Be("node");
         eslintCmd.Arguments.Should().Equal("scripts/run-cli.js", "check", "eslint");
         eslintCmd.ForwardsBaseRef.Should().BeFalse("ci.yml runs check eslint unscoped across all tracked files");
+
+        var typecheckCmd = step.Commands[2];
+        typecheckCmd.FileName.Should().Be("pnpm");
+        typecheckCmd.Arguments.Should().Equal("-r", "typecheck");
     }
 
     [Fact]
@@ -1401,7 +1407,7 @@ public sealed class PreCommitGuardrailsTests : IDisposable
         File.WriteAllText(
             pnpmStub,
             "#!/bin/sh\n" +
-            "if [ \"${1:-}\" = \"--version\" ]; then echo '10.28.2'; exit 0; fi\n" +
+            "if [ \"${1:-}\" = \"--version\" ]; then echo '10.34.6'; exit 0; fi\n" +
             $"printf '%s\\n' \"$*\" >> '{argsCapture}'\n" +
             "for arg in \"$@\"; do\n" +
             "  if [ -f \"$arg\" ] && grep -q 'BROKEN_ESLINT_MARKER' \"$arg\" 2>/dev/null; then exit 1; fi\n" +
@@ -1435,44 +1441,6 @@ public sealed class PreCommitGuardrailsTests : IDisposable
     }
 
     [Fact]
-    public void ApiClientValidator_RunsGeneratedApiCheckThenWorkspaceTypecheck_AndPropagatesFailures()
-    {
-        if (OperatingSystem.IsWindows())
-        {
-            return;
-        }
-
-        Write("apps/web/tsconfig.json", "{}\n");
-        string binDir = Path.Combine(_tempDir, "api-pnpm-stub");
-        Directory.CreateDirectory(binDir);
-        string argsCapture = Path.Combine(_tempDir, "api-pnpm-args.txt");
-        string failMarker = Path.Combine(_tempDir, "fail-typecheck");
-        string pnpmStub = Path.Combine(binDir, "pnpm");
-        File.WriteAllText(
-            pnpmStub,
-            "#!/bin/sh\n" +
-            $"printf '%s\\n' \"$*\" >> '{argsCapture}'\n" +
-            $"if [ \"$1 $2\" = \"run typecheck\" ] && [ -f '{failMarker}' ]; then exit 1; fi\n" +
-            "exit 0\n");
-        File.SetUnixFileMode(pnpmStub, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
-
-        string systemPath = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
-        var stubEnv = new Dictionary<string, string?>(StringComparer.Ordinal)
-        {
-            ["PATH"] = string.IsNullOrEmpty(systemPath) ? binDir : $"{binDir}{Path.PathSeparator}{systemPath}",
-        };
-
-        ApiClientValidatorService.ValidateApiClients(_tempDir, k => stubEnv.GetValueOrDefault(k)).Should().Be(0);
-        File.ReadAllLines(argsCapture).Should().Equal(
-            "--filter web run generate:api -- --check",
-            "run typecheck");
-
-        File.WriteAllText(failMarker, "1");
-        ApiClientValidatorService.ValidateApiClients(_tempDir, k => stubEnv.GetValueOrDefault(k))
-            .Should().Be(1, "workspace vue-tsc/tsc typecheck failure must fail api-clients gate");
-    }
-
-    [Fact]
     public void FrontendEslintGate_ValidatesDuplicateIdentifiersInStagedClinicalEcrfSlice()
     {
         if (OperatingSystem.IsWindows())
@@ -1483,8 +1451,18 @@ public sealed class PreCommitGuardrailsTests : IDisposable
         string realRepoRoot = QualityGateOrchestrator.FindRepoRoot();
         string realScript = Path.Combine(realRepoRoot, "scripts", "check_duplicate_identifiers.js");
         Write("scripts/check_duplicate_identifiers.js", File.ReadAllText(realScript));
+        string realNodeModules = Path.Combine(realRepoRoot, "node_modules");
         string symlinkNodeModules = Path.Combine(_tempDir, "node_modules");
-        Directory.CreateSymbolicLink(symlinkNodeModules, Path.Combine(realRepoRoot, "node_modules"));
+        bool createdSymlink = Directory.Exists(realNodeModules);
+        if (createdSymlink)
+        {
+            Directory.CreateSymbolicLink(symlinkNodeModules, realNodeModules);
+        }
+        else
+        {
+            Directory.CreateDirectory(symlinkNodeModules);
+        }
+
         Directory.CreateDirectory(Path.Combine(_tempDir, "apps", "web"));
 
         string stubBin = Path.Combine(_tempDir, "pnpm-stub-bin");
@@ -1642,6 +1620,7 @@ public sealed class PreCommitGuardrailsTests : IDisposable
         ApiClientValidatorService.AffectsApiClients(_tempDir, "apps/web/src/App.vue").Should().BeTrue();
         ApiClientValidatorService.AffectsApiClients(_tempDir, "apps/subject-portal/src/main.ts").Should().BeTrue();
         ApiClientValidatorService.AffectsApiClients(_tempDir, "packages/ui/src/index.ts").Should().BeTrue();
+        ApiClientValidatorService.AffectsApiClients(_tempDir, "packages/usdm-schemas/src/index.ts").Should().BeTrue();
         ApiClientValidatorService.AffectsApiClients(_tempDir, "scripts/generate-api-types.js").Should().BeTrue();
         ApiClientValidatorService.AffectsApiClients(_tempDir, "scripts/generate-canvas-contracts.js").Should().BeTrue();
         ApiClientValidatorService.AffectsApiClients(_tempDir, "packages/kernel/src/Cadence.Kernel.Abstractions/References/NodeKinds.cs").Should().BeTrue();
@@ -1686,12 +1665,13 @@ public sealed class PreCommitGuardrailsTests : IDisposable
             Environment.SetEnvironmentVariable("PATH", $"{sentinelBin}:/usr/bin:/bin");
 
             var context = new GateContext(_tempDir, ["README.md"], PreCommit: true);
+            QualityGates.Find("typecheck")!.Run(context).Should().BeTrue();
             QualityGates.Find("vulnerabilities")!.Run(context).Should().BeTrue();
             QualityGates.Find("api-clients")!.Run(context).Should().BeTrue();
             QualityGates.Find("openapi")!.Run(context).Should().BeTrue();
 
             File.Exists(invocationsLog).Should().BeFalse(
-                "staging only README.md must complete vulnerabilities, api-clients, and openapi offline without invoking dotnet, pnpm, pip-audit, or tsc");
+                "staging only README.md must complete typecheck, vulnerabilities, api-clients, and openapi offline without invoking dotnet, pnpm, pip-audit, or tsc");
         }
         finally
         {

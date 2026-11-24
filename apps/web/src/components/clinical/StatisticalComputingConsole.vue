@@ -1341,29 +1341,21 @@ async function viewRunDetails(runId: string) {
 async function verifyManifest(runId: string) {
   try {
     const res = await statisticalComputingService.verifyRunManifest(runId);
-    const vr = res.result;
-    const detailText =
-      typeof vr.details === "string"
-        ? vr.details
-        : vr.details != null
-          ? JSON.stringify(vr.details)
-          : undefined;
+    const vr = res.result as Record<string, any>;
     if (vr.is_valid) {
       toastStore.push({
         tone: "success",
         title: "Manifest Verified",
-        message: detailText
-          ? `Seal: ${vr.stored_seal} · Signer: ${vr.signer_id} (${vr.signer_role}) · ${detailText}`
-          : `Seal: ${vr.stored_seal} · Signer: ${vr.signer_id} (${vr.signer_role})`,
+        message: `Seal: ${vr.stored_seal} · Signer: ${vr.signer_id} (${vr.signer_role}) · ${vr.details}`,
       });
     } else {
       toastStore.push({
         tone: "error",
         title: "Manifest Verification Failed",
-        message: detailText,
+        message: vr.details,
       });
     }
-  } catch (err: unknown) {
+  } catch (err: any) {
     toastStore.push({
       tone: "error",
       title: "Verification Error",

@@ -200,45 +200,50 @@ export function findKernelStudyRef(code: string): Promise<string | null> {
 
   const pending = bucket.studyInFlight.get(key);
   if (pending) return pending;
-  const epochAtStart = bucket.epoch;
-  const lookup: Promise<string | null> = (async () => {
-    const inFlightEnrollmentStudy = bucket.enrollmentStudyInFlight.get(key);
-    if (inFlightEnrollmentStudy) {
-      const hinted = await inFlightEnrollmentStudy;
-      if (hinted) {
-        if (
-          bucket.epoch === epochAtStart &&
-          getKernelStudyCallerScopeKey() === scope
-        ) {
-          bucket.studyRefs.set(key, hinted);
-        }
-        return hinted;
-      }
-      const cachedAfterHint = bucket.studyRefs.get(key);
-      if (cachedAfterHint) {
-        return cachedAfterHint;
-      }
-    }
 
-    const hits = await kernelApi.search({
-      text: trimmed,
-      kinds: ["study"],
-      limit: 5,
-    });
-    const resolved = hits.find((hit) => hit.exact_code)?.ref ?? null;
-    if (
-      resolved &&
-      bucket.epoch === epochAtStart &&
-      getKernelStudyCallerScopeKey() === scope
-    ) {
-      bucket.studyRefs.set(key, resolved);
+  const epochAtStart = bucket.epoch;
+  const inFlight: { promise?: Promise<string | null> } = {};
+  const lookup: Promise<string | null> = (async () => {
+    try {
+      const inFlightEnrollmentStudy = bucket.enrollmentStudyInFlight.get(key);
+      if (inFlightEnrollmentStudy) {
+        const hinted = await inFlightEnrollmentStudy;
+        if (hinted) {
+          if (
+            bucket.epoch === epochAtStart &&
+            getKernelStudyCallerScopeKey() === scope
+          ) {
+            bucket.studyRefs.set(key, hinted);
+          }
+          return hinted;
+        }
+        const cachedAfterHint = bucket.studyRefs.get(key);
+        if (cachedAfterHint) {
+          return cachedAfterHint;
+        }
+      }
+
+      const hits = await kernelApi.search({
+        text: trimmed,
+        kinds: ["study"],
+        limit: 5,
+      });
+      const resolved = hits.find((hit) => hit.exact_code)?.ref ?? null;
+      if (
+        resolved &&
+        bucket.epoch === epochAtStart &&
+        getKernelStudyCallerScopeKey() === scope
+      ) {
+        bucket.studyRefs.set(key, resolved);
+      }
+      return resolved;
+    } finally {
+      if (bucket.studyInFlight.get(key) === inFlight.promise) {
+        bucket.studyInFlight.delete(key);
+      }
     }
-    return resolved;
-  })().finally(() => {
-    if (bucket.studyInFlight.get(key) === lookup) {
-      bucket.studyInFlight.delete(key);
-    }
-  });
+  })();
+  inFlight.promise = lookup;
   bucket.studyInFlight.set(key, lookup);
   return lookup;
 }
@@ -294,6 +299,7 @@ export function findKernelEnrollmentRef(
   }
 
   const epochAtStart = bucket.epoch;
+  const inFlight: { promise?: Promise<NodeRef | null> } = {};
   const lookup: Promise<NodeRef | null> =
     (async (): Promise<NodeRef | null> => {
       try {
@@ -356,19 +362,20 @@ export function findKernelEnrollmentRef(
           return null;
         }
         throw err;
+      } finally {
+        resolveStudyHint(null);
+        if (
+          studyHintPromise &&
+          bucket.enrollmentStudyInFlight.get(sKey) === studyHintPromise
+        ) {
+          bucket.enrollmentStudyInFlight.delete(sKey);
+        }
+        if (bucket.enrollmentInFlight.get(key) === inFlight.promise) {
+          bucket.enrollmentInFlight.delete(key);
+        }
       }
-    })().finally(() => {
-      resolveStudyHint(null);
-      if (
-        studyHintPromise &&
-        bucket.enrollmentStudyInFlight.get(sKey) === studyHintPromise
-      ) {
-        bucket.enrollmentStudyInFlight.delete(sKey);
-      }
-      if (bucket.enrollmentInFlight.get(key) === lookup) {
-        bucket.enrollmentInFlight.delete(key);
-      }
-    });
+    })();
+  inFlight.promise = lookup;
   bucket.enrollmentInFlight.set(key, lookup);
   return lookup;
 }
@@ -467,8 +474,11 @@ export function findStudySites(studyCode: string): Promise<StudySiteOption[]> {
   if (pending) return pending;
 
   const epochAtStart = bucket.epoch;
-  const lookup: Promise<StudySiteOption[]> = Promise.resolve()
-    .then(async (): Promise<StudySiteOption[]> => {
+  const inFlight: { promise?: Promise<StudySiteOption[]> } = {};
+  const lookup: Promise<StudySiteOption[]> = (async (): Promise<
+    StudySiteOption[]
+  > => {
+    try {
       const byCode = new Map<string, StudySiteOption>();
       const refsByCode = new Map<string, string>();
       const recordStudySiteRef = (
@@ -542,19 +552,20 @@ export function findStudySites(studyCode: string): Promise<StudySiteOption[]> {
       if (
         options.length > 0 &&
         bucket.epoch === epochAtStart &&
-        bucket.studySitesInFlight.get(key) === lookup &&
+        bucket.studySitesInFlight.get(key) === inFlight.promise &&
         getKernelStudyCallerScopeKey() === scope
       ) {
         bucket.studySites.set(key, options);
         bucket.studySiteRefs.set(key, refsByCode);
       }
       return options.map((item) => ({ ...item }));
-    })
-    .finally(() => {
-      if (bucket.studySitesInFlight.get(key) === lookup) {
+    } finally {
+      if (bucket.studySitesInFlight.get(key) === inFlight.promise) {
         bucket.studySitesInFlight.delete(key);
       }
-    });
+    }
+  })();
+  inFlight.promise = lookup;
   bucket.studySitesInFlight.set(key, lookup);
   return lookup;
 }
@@ -750,82 +761,86 @@ export function findStudyScheduleOptions(
   if (pending) return pending;
 
   const epochAtStart = bucket.epoch;
+  const inFlight: { promise?: Promise<StudyScheduleOptions | null> } = {};
   const lookup: Promise<StudyScheduleOptions | null> = (async () => {
-    const studyRef = await findKernelStudyRef(trimmed);
-    if (!studyRef) return null;
-    const versions = await kernelApi.listProtocolVersions(studyRef);
-    const chosen =
-      versions.find((v) => v.ref && !v.mask && v.status === "Approved") ??
-      versions.find((v) => v.ref && !v.mask);
-    if (!chosen?.ref) return null;
-    const soa = await kernelApi.getScheduleOfActivities(chosen.ref);
-    const rawColumns = Array.isArray(soa.columns) ? soa.columns : [];
-    const rawRows = Array.isArray(soa.rows) ? soa.rows : [];
-    const columns: StudyScheduleColumn[] = rawColumns.map((col) => ({
-      activityId: col.activity_id,
-      name: col.name,
-      epochId: col.epoch_id ?? "",
-      studyDay:
-        col.study_day !== null && col.study_day !== undefined
-          ? Number(col.study_day)
-          : null,
-      windowBefore: Number(col.window_before) || 0,
-      windowAfter: Number(col.window_after) || 0,
-      locations: Array.isArray(col.locations) ? col.locations : [],
-    }));
-    const epochs = buildScheduleEpochs(
-      Array.isArray(soa.epochs) ? soa.epochs : [],
-      columns
-    );
-    const mappedRows: StudyScheduleRow[] = rawRows.map((row) => {
-      const columnIndices = (Array.isArray(row.columns) ? row.columns : [])
-        .map((idx) => Number(idx))
-        .filter(
-          (idx) => Number.isInteger(idx) && idx >= 0 && idx < columns.length
-        );
-      return {
-        collectionSpecId: row.collection_spec_id,
-        name: row.name,
-        itemCount: Array.isArray(row.item_ids) ? row.item_ids.length : 0,
-        columnIndices,
-        plannedActivityIds: columnIndices
-          .map((idx) => columns[idx]?.activityId)
-          .filter((id): id is string => Boolean(id)),
-      };
-    });
-
-    const resolved: StudyScheduleOptions = {
-      versionRef: soa.version,
-      title: soa.title ?? "",
-      epochs,
-      columns,
-      scheduledRows: mappedRows.filter((row) => row.columnIndices.length > 0),
-      unscheduledRows: mappedRows.filter(
-        (row) => row.columnIndices.length === 0
-      ),
-      collectionSpecs: mappedRows.map((row) => ({
-        id: row.collectionSpecId,
-        name: row.name,
-        plannedActivityIds: row.plannedActivityIds,
-      })),
-      plannedActivities: columns.map((col) => ({
-        id: col.activityId,
+    try {
+      const studyRef = await findKernelStudyRef(trimmed);
+      if (!studyRef) return null;
+      const versions = await kernelApi.listProtocolVersions(studyRef);
+      const chosen =
+        versions.find((v) => v.ref && !v.mask && v.status === "Approved") ??
+        versions.find((v) => v.ref && !v.mask);
+      if (!chosen?.ref) return null;
+      const soa = await kernelApi.getScheduleOfActivities(chosen.ref);
+      const rawColumns = Array.isArray(soa.columns) ? soa.columns : [];
+      const rawRows = Array.isArray(soa.rows) ? soa.rows : [];
+      const columns: StudyScheduleColumn[] = rawColumns.map((col) => ({
+        activityId: col.activity_id,
         name: col.name,
-        studyDay: col.studyDay,
-      })),
-    };
-    if (
-      bucket.epoch === epochAtStart &&
-      getKernelStudyCallerScopeKey() === scope
-    ) {
-      bucket.scheduleOptions.set(key, resolved);
+        epochId: col.epoch_id ?? "",
+        studyDay:
+          col.study_day !== null && col.study_day !== undefined
+            ? Number(col.study_day)
+            : null,
+        windowBefore: Number(col.window_before) || 0,
+        windowAfter: Number(col.window_after) || 0,
+        locations: Array.isArray(col.locations) ? col.locations : [],
+      }));
+      const epochs = buildScheduleEpochs(
+        Array.isArray(soa.epochs) ? soa.epochs : [],
+        columns
+      );
+      const mappedRows: StudyScheduleRow[] = rawRows.map((row) => {
+        const columnIndices = (Array.isArray(row.columns) ? row.columns : [])
+          .map((idx) => Number(idx))
+          .filter(
+            (idx) => Number.isInteger(idx) && idx >= 0 && idx < columns.length
+          );
+        return {
+          collectionSpecId: row.collection_spec_id,
+          name: row.name,
+          itemCount: Array.isArray(row.item_ids) ? row.item_ids.length : 0,
+          columnIndices,
+          plannedActivityIds: columnIndices
+            .map((idx) => columns[idx]?.activityId)
+            .filter((id): id is string => Boolean(id)),
+        };
+      });
+
+      const resolved: StudyScheduleOptions = {
+        versionRef: soa.version,
+        title: soa.title ?? "",
+        epochs,
+        columns,
+        scheduledRows: mappedRows.filter((row) => row.columnIndices.length > 0),
+        unscheduledRows: mappedRows.filter(
+          (row) => row.columnIndices.length === 0
+        ),
+        collectionSpecs: mappedRows.map((row) => ({
+          id: row.collectionSpecId,
+          name: row.name,
+          plannedActivityIds: row.plannedActivityIds,
+        })),
+        plannedActivities: columns.map((col) => ({
+          id: col.activityId,
+          name: col.name,
+          studyDay: col.studyDay,
+        })),
+      };
+      if (
+        bucket.epoch === epochAtStart &&
+        getKernelStudyCallerScopeKey() === scope
+      ) {
+        bucket.scheduleOptions.set(key, resolved);
+      }
+      return resolved;
+    } finally {
+      if (bucket.scheduleOptionsInFlight.get(key) === inFlight.promise) {
+        bucket.scheduleOptionsInFlight.delete(key);
+      }
     }
-    return resolved;
-  })().finally(() => {
-    if (bucket.scheduleOptionsInFlight.get(key) === lookup) {
-      bucket.scheduleOptionsInFlight.delete(key);
-    }
-  });
+  })();
+  inFlight.promise = lookup;
   bucket.scheduleOptionsInFlight.set(key, lookup);
   return lookup;
 }

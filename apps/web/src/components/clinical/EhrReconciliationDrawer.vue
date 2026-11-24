@@ -244,8 +244,8 @@
             :key="item.id"
             class="reconciliation-card"
             :class="[
-              `status-${(item.status ?? 'PENDING_REVIEW').toLowerCase()}`,
-              `disc-${(item.discrepancy_type ?? 'NEW_FIELD').toLowerCase()}`,
+              `status-${(item.status || 'pending_review').toLowerCase()}`,
+              `disc-${(item.discrepancy_type || 'not_compared').toLowerCase()}`,
             ]"
           >
             <!-- Card Header: Variable & Provenance Tag -->
@@ -274,7 +274,7 @@
                 <span
                   :class="[
                     'discrepancy-pill',
-                    `pill-${(item.discrepancy_type ?? 'NEW_FIELD').toLowerCase()}`,
+                    `pill-${(item.discrepancy_type || 'not_compared').toLowerCase()}`,
                   ]"
                 >
                   {{ formatDiscrepancy(item.discrepancy_type) }}
@@ -282,7 +282,7 @@
                 <span
                   :class="[
                     'status-pill',
-                    `status-${(item.status ?? 'PENDING_REVIEW').toLowerCase()}`,
+                    `status-${(item.status || 'pending_review').toLowerCase()}`,
                   ]"
                 >
                   {{ formatStatus(item.status) }}
@@ -369,7 +369,7 @@
                     <span class="lbl">Mapping Rule:</span>
                     <span
                       class="val truncate"
-                      :title="item.mapping_provenance ?? undefined"
+                      :title="item.mapping_provenance"
                       >{{ item.mapping_provenance }}</span
                     >
                   </div>
@@ -379,9 +379,9 @@
 
             <!-- Resolution / Audit Trail Banner (If Resolved) -->
             <div
-              v-if="(item.status ?? 'PENDING_REVIEW') !== 'PENDING_REVIEW'"
+              v-if="item.status !== 'PENDING_REVIEW'"
               class="resolution-banner"
-              :class="`banner-${(item.status ?? 'PENDING_REVIEW').toLowerCase()}`"
+              :class="`banner-${(item.status || 'resolved').toLowerCase()}`"
             >
               <div class="resolution-info">
                 <strong
@@ -748,10 +748,11 @@
 import { computed, onMounted, ref, watch } from "vue";
 import { EmptyState, useFocusTrap } from "ui";
 import { interopService } from "../../api/interop";
-import type { components } from "../../api/types";
 import SkeletonLoader from "../common/SkeletonLoader.vue";
 
-export type EhrCandidate = components["schemas"]["Interop_EhrCandidateItemDTO"];
+export type EhrCandidate = NonNullable<
+  Awaited<ReturnType<typeof interopService.listEhrCandidates>>["candidates"]
+>[number];
 
 const props = defineProps<{
   isOpen: boolean;
@@ -1167,7 +1168,7 @@ function formatDiscrepancy(disc?: string | null): string {
     case "NOT_COMPARED":
       return "Not compared with eCRF";
     default:
-      return disc || "NEW_FIELD";
+      return disc || "";
   }
 }
 
@@ -1182,7 +1183,7 @@ function formatStatus(st?: string | null): string {
     case "QUERIED":
       return "Query Open";
     default:
-      return st || "Pending Review";
+      return st || "";
   }
 }
 
