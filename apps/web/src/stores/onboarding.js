@@ -678,10 +678,17 @@ export const useOnboardingStore = defineStore("onboarding", {
   getters: {
     visibleTasks(state) {
       const roles = effectiveRolesForStore(state.currentPersona);
+      const storePinia =
+        /** @type {{ _p?: import("pinia").Pinia } | undefined} */ (this)?._p;
       /** @type {typeof DEFAULT_SETUP_TASKS} */
       const visible = [];
       for (const task of state.tasks || []) {
-        const resolvedRoute = resolveAuthorizedTaskRoute(task, roles);
+        const resolvedRoute = resolveAuthorizedTaskRoute(
+          task,
+          roles,
+          undefined,
+          storePinia
+        );
         if (resolvedRoute) {
           visible.push({ ...task, route: resolvedRoute });
         }

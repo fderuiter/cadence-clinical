@@ -36,7 +36,7 @@
         }}
       </p>
       <div class="completion-metrics">
-        <span class="metric-badge">
+        <span class="metric-badge tabular-nums">
           {{
             $t("econsent.translationTabs.sectionsMetric", {
               translated: translatedSectionsCount,

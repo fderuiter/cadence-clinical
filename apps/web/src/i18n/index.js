@@ -31,8 +31,12 @@ export const i18n = createI18n({
   locale: getStoredLocale(),
   fallbackLocale: DEFAULT_LOCALE,
   messages: {},
-  missingWarn: process.env.NODE_ENV !== "production",
-  fallbackWarn: process.env.NODE_ENV !== "production",
+  missingWarn: globalThis.process
+    ? globalThis.process.env?.NODE_ENV !== "production"
+    : !import.meta.env?.PROD,
+  fallbackWarn: globalThis.process
+    ? globalThis.process.env?.NODE_ENV !== "production"
+    : !import.meta.env?.PROD,
 });
 
 export function loadLocaleMessages(locale) {

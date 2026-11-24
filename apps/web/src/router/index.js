@@ -5,6 +5,7 @@ import {
   createWebHistory,
 } from "vue-router";
 import { TOKEN_MIN_VALIDITY_SECONDS } from "../api/authorization.js";
+import { resolveActiveWorkspaceScope } from "../canvas/palette";
 import { getRegisteredI18nApp } from "../i18n/runtime.js";
 import { useAuthStore, ROLE_ALIASES } from "../stores/auth";
 import { readPassiveOnboardingBypassOverview } from "../stores/onboardingSummary.js";
@@ -72,21 +73,19 @@ function primaryFallbackScreens() {
 
 function redirectToCanvasSection(stage, section) {
   return (to) => {
-    const canvasStudyCode =
-      getActivePinia()?.state.value?.studyCanvas?.studyCode;
+    const canvasState = getActivePinia()?.state.value?.studyCanvas;
+    const scope = resolveActiveWorkspaceScope(to, canvasState);
     const rawCode =
       (typeof to.query?.studyCode === "string" && to.query.studyCode.trim()) ||
       (typeof to.query?.studyId === "string" && to.query.studyId.trim()) ||
-      (typeof canvasStudyCode === "string" && canvasStudyCode.trim()) ||
+      scope.studyCode ||
+      "";
+    const rawSite =
+      (typeof to.query?.site === "string" && to.query.site.trim()) ||
+      (typeof to.query?.siteId === "string" && to.query.siteId.trim()) ||
+      scope.siteId ||
       "";
     const nextQuery = { ...to.query, stage, section };
-    if (
-      !nextQuery.site &&
-      typeof nextQuery.siteId === "string" &&
-      nextQuery.siteId.trim()
-    ) {
-      nextQuery.site = nextQuery.siteId.trim();
-    }
     if (
       !nextQuery.participant &&
       typeof nextQuery.subjectId === "string" &&
@@ -98,6 +97,9 @@ function redirectToCanvasSection(stage, section) {
     delete nextQuery.studyId;
     delete nextQuery.siteId;
     delete nextQuery.subjectId;
+    if (rawSite) {
+      nextQuery.site = rawSite;
+    }
     return rawCode
       ? { name: "study", params: { studyCode: rawCode }, query: nextQuery }
       : { name: "study", query: nextQuery };
