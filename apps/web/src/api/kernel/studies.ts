@@ -227,13 +227,18 @@ export const kernelStudiesApi = {
     return executeAmendmentImpact(versionRef, window);
   },
 
-  /** Runs evaluate-only in-memory simulation over candidate protocol version. */
+  /** Runs evaluate-only in-memory simulation over candidate protocol version, mapping specification, or rule pack. */
   async simulate(request: {
     baseVersionRef?: string;
     storedVersionRef?: string;
     candidateContent?: string;
     validAt?: string;
     knownAt?: string;
+    kind?: "ProtocolVersion" | "MappingSpecification" | "RulePack";
+    studyRef?: string;
+    libraryItemRef?: string;
+    baseLibraryItemRef?: string;
+    standardVersionRef?: string;
   }): Promise<KernelSimulationResult> {
     const { executeSimulate } = await loadAuthoring();
     return executeSimulate(request);
