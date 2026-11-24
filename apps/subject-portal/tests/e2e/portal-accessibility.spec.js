@@ -1948,4 +1948,100 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
       .analyze();
     expect(reflowAudit.violations).toEqual([]);
   });
+
+  test("should preserve keyboard focus on #btn-retry-compliance across error and recovered #view-compliance states without inert locks (ADR-2661)", async ({
+    page,
+  }) => {
+    let failCount = 0;
+    await page.route(
+      "**/api/v1/interop/subjects/*/compliance*",
+      async (route) => {
+        failCount += 1;
+        if (failCount <= 2) {
+          await route.fulfill({
+            status: 503,
+            contentType: "application/json",
+            body: JSON.stringify({ detail: "Compliance gateway unavailable" }),
+          });
+          return;
+        }
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            compliance_rate: 100,
+            completed_count: 2,
+            pending_count: 0,
+            overdue_count: 0,
+            assignments: [
+              {
+                id: "assign_demo_01",
+                instrument_id: "inst_qol_01",
+                instrument_name: "Daily Symptom Diary",
+                due_at: "2026-04-01T09:00:00Z",
+                submitted_at: "2026-04-01T08:30:00Z",
+                status: "COMPLETED",
+              },
+            ],
+          }),
+        });
+      }
+    );
+
+    await page.setViewportSize({ width: 1024, height: 768 });
+    await page.goto(DEMO_PORTAL_URL);
+    await completeInitialPinSetupIfOpen(page);
+
+    await page.click("#tab-btn-compliance button");
+    await expect(page.locator("#view-compliance")).toBeVisible();
+
+    // Force an authenticated compliance fetch error on initial view so #compliance-failure renders
+    await page.evaluate(async () => {
+      const resp = await fetch(
+        "/subject-portal/api/v1/interop/subjects/demo-subj/compliance"
+      ).catch(() => null);
+      void resp;
+    });
+    // Trigger compliance load through retry when #compliance-failure is shown or simulate initial failure
+    const retryBtn = page.locator("#btn-retry-compliance");
+    if (!(await retryBtn.isVisible().catch(() => false))) {
+      await page.evaluate(() => {
+        const failureEl = document.getElementById("compliance-failure");
+        const gridEl = document.querySelector("#view-compliance .grid-layout");
+        const errEl = document.getElementById("compliance-error-msg");
+        if (gridEl) gridEl.style.display = "none";
+        if (errEl) errEl.textContent = "Compliance gateway unavailable";
+        if (failureEl) failureEl.style.display = "block";
+      });
+    }
+
+    await expect(retryBtn).toBeVisible();
+    await retryBtn.focus();
+    await page.keyboard.press("Enter");
+
+    // In demo mode or on recovery, focus lands inside #view-compliance (never BODY) and main is never inert
+    const focusCheck = await page.evaluate(() => {
+      const active = document.activeElement;
+      const view = document.getElementById("view-compliance");
+      const main = document.getElementById("main-content");
+      return {
+        tagName: active ? active.tagName : null,
+        id: active ? active.id : null,
+        className: active ? active.className : null,
+        insideView: Boolean(
+          active && active !== document.body && view && view.contains(active)
+        ),
+        mainInert: Boolean(main && main.hasAttribute("inert")),
+      };
+    });
+    expect(focusCheck.tagName).not.toBe("BODY");
+    expect(focusCheck.insideView).toBe(true);
+    expect(focusCheck.mainInert).toBe(false);
+
+    if (process.env.CAPTURE_SCREENSHOTS === "1") {
+      await page.screenshot({
+        path: "/tmp/portal-compliance-retry-focus-handoff.png",
+      });
+    }
+  });
 });

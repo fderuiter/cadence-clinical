@@ -483,7 +483,7 @@
 </template>
 
 <script setup>
-import { ClinicalDrawer, ClinicalTabs } from "ui";
+import { ClinicalDrawer, ClinicalTabs, handoffFocus } from "ui";
 import { computed, onMounted, ref, watch } from "vue";
 import { kernelApi } from "../api/kernelApi";
 import {
@@ -848,6 +848,7 @@ async function handleSubmitDraftForQc(doc) {
 
   submittingDraftQc.value = true;
   qcReviewError.value = "";
+  let transitionedToQc = false;
   try {
     const updated = await etmfStore.submitDraftForQc(docId, {
       reason_for_change: reason,
@@ -860,6 +861,7 @@ async function handleSubmitDraftForQc(doc) {
         status: nextStatus,
         approval_status: nextStatus,
       };
+      transitionedToQc = nextStatus !== "DRAFT";
     }
     useToastStore().push({
       tone: "success",
@@ -876,6 +878,12 @@ async function handleSubmitDraftForQc(doc) {
   } finally {
     submittingDraftQc.value = false;
   }
+
+  if (transitionedToQc) {
+    await handoffFocus(["#qc-accept-reason", ".btn-preview-from-drawer"], {
+      includeDefaultFallbacks: false,
+    });
+  }
 }
 
 async function handleAcceptClassification(doc) {
@@ -890,6 +898,7 @@ async function handleAcceptClassification(doc) {
 
   reviewingQc.value = true;
   qcReviewError.value = "";
+  let transitionedFromQc = false;
   try {
     const updated = await etmfStore.reviewQcDocument(docId, {
       decision: "ACCEPT",
@@ -903,6 +912,7 @@ async function handleAcceptClassification(doc) {
         status: nextStatus,
         approval_status: nextStatus,
       };
+      transitionedFromQc = nextStatus !== "TECHNICAL_QC";
     }
     useToastStore().push({
       tone: "success",
@@ -918,6 +928,12 @@ async function handleAcceptClassification(doc) {
       "Request failed";
   } finally {
     reviewingQc.value = false;
+  }
+
+  if (transitionedFromQc) {
+    await handoffFocus([".btn-preview-from-drawer"], {
+      includeDefaultFallbacks: false,
+    });
   }
 }
 

@@ -15,7 +15,7 @@ import {
 
 const DEFAULT_INLINE_FALLBACKS = ["#canvas-workspace", "#main-content"];
 
-const NATIVE_INTERACTIVE_TAGS = new Set([
+const NATIVE_INTERACTIVE_TAGS = /* @__PURE__ */ new Set([
   "BUTTON",
   "INPUT",
   "SELECT",
@@ -31,7 +31,7 @@ const escapeIdSelector = (rawId) => {
   return `#${String(rawId).replace(/([^\w-])/g, "\\$1")}`;
 };
 
-const queryDocumentSelector = (selector, container) => {
+export const queryDocumentSelector = (selector, container) => {
   if (!selector || typeof selector !== "string") return null;
   if (container && typeof container.querySelector === "function") {
     const scoped = container.querySelector(selector);
@@ -53,7 +53,7 @@ const queryDocumentSelector = (selector, container) => {
   return null;
 };
 
-const resolveFocusCandidateElement = (candidate, container) => {
+export const resolveFocusCandidateElement = (candidate, container) => {
   if (!candidate) return null;
   const raw = resolveOption(candidate);
   if (!raw) return null;
@@ -136,9 +136,24 @@ const applyInlineFocus = (el, options = {}) => {
   }
 };
 
-const normalizeCandidateList = (input) => {
+export const normalizeCandidateList = (input) => {
   if (input === null || input === undefined) return [];
   return Array.isArray(input) ? input : [input];
+};
+
+export const findFocusableCandidate = (candidates, container) => {
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+    const resolvedValue =
+      typeof candidate === "function" ? candidate() : unref(candidate);
+    for (const item of normalizeCandidateList(resolvedValue)) {
+      const el = resolveFocusCandidateElement(item, container);
+      if (el && isInlineTargetFocusable(el, container)) {
+        return el;
+      }
+    }
+  }
+  return null;
 };
 
 /**
@@ -165,28 +180,20 @@ export async function handoffFocus(targets, options = {}) {
   }
 
   const container = resolveOption(options.container) || null;
-  const candidates = [
-    ...normalizeCandidateList(targets),
-    ...normalizeCandidateList(options.fallback),
-    ...(options.includeDefaultFallbacks === false
-      ? []
-      : DEFAULT_INLINE_FALLBACKS),
-  ];
-
-  for (const candidate of candidates) {
-    if (!candidate) continue;
-    const resolvedValue =
-      typeof candidate === "function" ? candidate() : unref(candidate);
-    const subCandidates = normalizeCandidateList(resolvedValue);
-    for (const item of subCandidates) {
-      const el = resolveFocusCandidateElement(item, container);
-      if (el && isInlineTargetFocusable(el, container)) {
-        applyInlineFocus(el, options);
-        return el;
-      }
-    }
+  const el = findFocusableCandidate(
+    [
+      ...normalizeCandidateList(targets),
+      ...normalizeCandidateList(options.fallback),
+      ...(options.includeDefaultFallbacks === false
+        ? []
+        : DEFAULT_INLINE_FALLBACKS),
+    ],
+    container
+  );
+  if (el) {
+    applyInlineFocus(el, options);
+    return el;
   }
-
   return null;
 }
 
@@ -324,3 +331,8 @@ export function useInlineFocusHandoff(options = {}) {
     handoff,
   };
 }
+
+export {
+  handoffRetryFocus,
+  useRetryFocusHandoff,
+} from "./useRetryFocusHandoff.js";

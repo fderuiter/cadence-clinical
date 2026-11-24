@@ -640,8 +640,29 @@ describe("Shared UI Vue Components Behavior & SSR Rendering", () => {
       expect(inputEvt.target.value).toBe("");
       expect(emit).toHaveBeenCalledWith("change", inputEvt);
 
-      state.onRemove();
-      expect(emit).toHaveBeenCalledWith("remove");
+      const focusedBrowse = vi.fn();
+      const browseBtn = {
+        tagName: "BUTTON",
+        focus: focusedBrowse,
+        hasAttribute: () => false,
+        getAttribute: () => null,
+        getClientRects: () => [{ width: 80 }],
+      };
+      vi.stubGlobal("document", {
+        body: {},
+        activeElement: null,
+        contains: () => true,
+        querySelector: () => null,
+      });
+      try {
+        state.browseButtonRef.value = browseBtn;
+        state.onRemove();
+        expect(emit).toHaveBeenCalledWith("remove");
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        expect(focusedBrowse).toHaveBeenCalled();
+      } finally {
+        vi.unstubAllGlobals();
+      }
     });
 
     it("keeps visible text first in AiActionButton, includes fieldLabel in ClinicalQueryFlag, and escapes HTML in createSrOnlyActionButton", async () => {

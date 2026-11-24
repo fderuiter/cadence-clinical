@@ -1,5 +1,5 @@
 // 3. My Compliance: rate, counts and survey history.
-import { createSrOnlyActionButton } from "ui";
+import { createSrOnlyActionButton, handoffRetryFocus } from "ui";
 import { fetchCompliance, isAuthenticatedSession } from "../api/client.js";
 import { state } from "../stores/state.js";
 import { demoNowMs, isDemoModeActive } from "../utils/demoMode.js";
@@ -240,9 +240,34 @@ export async function loadCompliance(userId) {
 
 // Retry button on the compliance failure state.
 export async function retryCompliance() {
-  state.complianceLoading = true;
-  state.complianceError = null;
-  renderCompliance();
-  await loadCompliance(state.session.userId);
-  renderCompliance();
+  await handoffRetryFocus(
+    async () => {
+      state.complianceLoading = true;
+      state.complianceError = null;
+      renderCompliance();
+      await loadCompliance(state.session.userId);
+      renderCompliance();
+    },
+    {
+      retryScope: "#compliance-failure",
+      container: () => document.getElementById("view-compliance"),
+      isError: () => {
+        const failureEl = document.getElementById("compliance-failure");
+        return Boolean(
+          state.complianceError ||
+          (failureEl && failureEl.style.display !== "none")
+        );
+      },
+      errorTargets: [
+        "#btn-retry-compliance",
+        "#compliance-view-heading",
+        "#main-content",
+      ],
+      successTargets: [
+        () => document.querySelector("#view-compliance .btn-peek-compliance"),
+        "#compliance-view-heading",
+        "#main-content",
+      ],
+    }
+  );
 }

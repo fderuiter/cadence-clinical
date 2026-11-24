@@ -404,7 +404,12 @@
 
 <script setup>
 import { ref, computed } from "vue";
-import { ClinicalDropzone, ClinicalIconButton, useFocusTrap } from "ui";
+import {
+  ClinicalDropzone,
+  ClinicalIconButton,
+  handoffFocus,
+  useFocusTrap,
+} from "ui";
 import SupportDetails from "../canvas/SupportDetails.vue";
 import { useEtmfStore, arrayBufferToBase64 } from "../../stores/etmf.js";
 import { useAuthStore } from "../../stores/auth.js";
@@ -535,12 +540,35 @@ function addFilesToQueue(files) {
 }
 
 function removeItem(index) {
+  const priorPendingCount = queue.value
+    .slice(0, index)
+    .filter((item) => item?.status === "PENDING").length;
   queue.value.splice(index, 1);
+  void handoffFocus(
+    [
+      () => {
+        const buttons = drawerRef.value?.querySelectorAll?.(".btn-remove-item");
+        if (!buttons?.length) return null;
+        const btnIndex = Math.min(priorPendingCount, buttons.length - 1);
+        return buttons[btnIndex] || null;
+      },
+      ".btn-remove-item",
+      ".clinical-dropzone-browse-btn",
+    ],
+    {
+      container: drawerRef,
+      includeDefaultFallbacks: false,
+    }
+  );
 }
 
 function clearQueue() {
   queue.value = [];
   batchError.value = "";
+  void handoffFocus([".clinical-dropzone-browse-btn"], {
+    container: drawerRef,
+    includeDefaultFallbacks: false,
+  });
 }
 
 function inspectItem(item) {

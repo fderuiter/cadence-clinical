@@ -5,7 +5,7 @@
     aria-labelledby="record-queries-title"
     :aria-busy="queries.loading"
   >
-    <h3 id="record-queries-title">Queries</h3>
+    <h3 id="record-queries-title" tabindex="-1">Queries</h3>
     <p
       v-if="queries.loading || enrollmentLoading"
       class="status-line"

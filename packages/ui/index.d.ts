@@ -628,6 +628,34 @@ export function useInlineFocusHandoff(
   options?: InlineFocusHandoffOptions
 ): InlineFocusHandoffControls;
 
+export interface HandoffRetryFocusOptions extends HandoffFocusOptions {
+  retryScope?: InlineFocusCandidate;
+  alertElement?:
+    | HTMLElement
+    | import("vue").Ref<HTMLElement | null | undefined>
+    | (() => HTMLElement | null | undefined)
+    | null;
+  errorTargets?: InlineFocusCandidate | InlineFocusCandidate[];
+  successTargets?: InlineFocusCandidate | InlineFocusCandidate[];
+  isError?: () => boolean;
+}
+
+export function handoffRetryFocus(
+  action?: (() => unknown | Promise<unknown>) | null,
+  options?: HandoffRetryFocusOptions
+): Promise<HTMLElement | null>;
+
+export interface RetryFocusHandoffControls {
+  retryWithFocus: (
+    action?: (() => unknown | Promise<unknown>) | null,
+    overrideOptions?: HandoffRetryFocusOptions
+  ) => Promise<HTMLElement | null>;
+}
+
+export function useRetryFocusHandoff(
+  defaultOptions?: HandoffRetryFocusOptions
+): RetryFocusHandoffControls;
+
 export function useEscapeClose(
   onCloseCallback: (event: KeyboardEvent) => void,
   options?: {

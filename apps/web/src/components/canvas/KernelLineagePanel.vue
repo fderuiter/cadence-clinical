@@ -4,7 +4,7 @@
     class="lineage"
     :aria-labelledby="`kernel-${verb}-title`"
   >
-    <h3 :id="`kernel-${verb}-title`">
+    <h3 :id="`kernel-${verb}-title`" tabindex="-1">
       {{ title }}
     </h3>
     <p v-if="loading" class="lineage-note" role="status">

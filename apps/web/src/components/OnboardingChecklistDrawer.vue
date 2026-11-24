@@ -265,6 +265,18 @@ function openOrientationHub() {
 
 function startGuidedTour() {
   onboardingStore.startTour();
+  const firstStepRoute = onboardingStore.currentStepConfig?.routeName;
+  if (
+    firstStepRoute &&
+    activeRoute &&
+    (activeRoute.name === "forbidden" ||
+      activeRoute.path === "/forbidden" ||
+      activeRoute.name === "unavailable" ||
+      activeRoute.path === "/unavailable") &&
+    isScreenAvailable(firstStepRoute)
+  ) {
+    router?.push?.({ name: firstStepRoute });
+  }
   onboardingStore.closeDrawer();
 }
 </script>

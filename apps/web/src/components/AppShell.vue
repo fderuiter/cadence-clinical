@@ -406,6 +406,7 @@
     <OnboardingTour v-if="showOnboardingTour" :active-tab="activeTab" />
     <OnboardingChecklistDrawer v-if="authStore.isAuthenticated" />
     <CommandPaletteOverlay
+      v-if="isCommandPaletteOpen && authStore.isAuthenticated"
       :is-open="isCommandPaletteOpen && authStore.isAuthenticated"
       @close="isCommandPaletteOpen = false"
     />
@@ -459,7 +460,12 @@ import {
 } from "../canvas/palette";
 import OnboardingTour from "./OnboardingTour.vue";
 import OnboardingChecklistDrawer from "./OnboardingChecklistDrawer.vue";
-import CommandPaletteOverlay from "./CommandPaletteOverlay.vue";
+
+const loadCommandPaletteOverlay = () => import("./CommandPaletteOverlay.vue");
+if (import.meta.env.VITEST) {
+  void loadCommandPaletteOverlay();
+}
+const CommandPaletteOverlay = defineAsyncComponent(loadCommandPaletteOverlay);
 
 const DemoResetBtn = isDemoBuild()
   ? defineAsyncComponent(() => import("../views/demo/DemoResetButton.vue"))

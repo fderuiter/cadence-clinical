@@ -1885,5 +1885,119 @@ const tabs = [{ id: "a", label: "Alpha" }];
         )
       ).toEqual([]);
     });
+
+    it("enforces custom-vue/require-inline-focus-handoff across dropzones, error alerts, and subject-portal retry scripts", async () => {
+      const uiExports = await import("../index.js");
+      expect(uiExports.handoffRetryFocus).toBeTypeOf("function");
+      expect(uiExports.useRetryFocusHandoff).toBeTypeOf("function");
+
+      const dropzoneSrc = fs.readFileSync(
+        path.join(uiDir, "src/components/clinical/ClinicalDropzone.vue"),
+        "utf-8"
+      );
+      expect(dropzoneSrc).toContain("handoffFocus");
+      expect(dropzoneSrc).toContain(".clinical-dropzone-browse-btn");
+
+      const canvasErrorSrc = fs.readFileSync(
+        path.join(webSrcDir, "components/canvas/CanvasErrorAlert.vue"),
+        "utf-8"
+      );
+      expect(canvasErrorSrc).toContain("handoffRetryFocus");
+
+      const portalFeaturesDir = path.join(
+        repoRoot,
+        "apps/subject-portal/src/features"
+      );
+      for (const scriptName of ["tasks.js", "inbox.js", "compliance.js"]) {
+        const scriptSrc = fs.readFileSync(
+          path.join(portalFeaturesDir, scriptName),
+          "utf-8"
+        );
+        expect(
+          /handoffRetryFocus|handoffFocus/.test(scriptSrc),
+          `Expected ${scriptName} to coordinate retry focus via handoffRetryFocus or handoffFocus`
+        ).toBe(true);
+      }
+
+      const { ESLint } = await import("eslint");
+      const eslint = new ESLint({
+        cwd: repoRoot,
+        overrideConfigFile: path.join(repoRoot, "eslint.config.mjs"),
+      });
+
+      const invalidProbes = [
+        {
+          filePath: path.join(
+            uiDir,
+            "src/components/clinical/__SyntheticDropzoneInvalid.vue"
+          ),
+          code: `<template>\n  <div>\n    <button type="button" class="clinical-dropzone-browse-btn">Browse</button>\n    <button v-if="hasFile" type="button" class="clinical-dropzone-remove-btn" @click="emit('remove')">Remove</button>\n  </div>\n</template>\n<script setup>\ndefineProps({ hasFile: Boolean });\nconst emit = defineEmits(["remove"]);\n</script>\n`,
+        },
+        {
+          filePath: path.join(
+            webSrcDir,
+            "components/canvas/__SyntheticErrorAlertInvalid.vue"
+          ),
+          code: `<template>\n  <div role="alert">\n    <button type="button" data-testid="canvas-error-retry" @click="$emit('retry')">Retry</button>\n  </div>\n</template>\n<script setup>\ndefineEmits(["retry"]);\n</script>\n`,
+        },
+        {
+          filePath: path.join(
+            portalFeaturesDir,
+            "__SyntheticPortalRetryInvalid.js"
+          ),
+          code: `export async function retrySyntheticVisits() {\n  await Promise.resolve();\n}\n`,
+        },
+      ];
+
+      for (const probe of invalidProbes) {
+        const [result] = await eslint.lintText(probe.code, {
+          filePath: probe.filePath,
+        });
+        const focusErrors = result.messages.filter(
+          (m) =>
+            m.ruleId === "custom-vue/require-inline-focus-handoff" &&
+            m.severity === 2
+        );
+        expect(
+          focusErrors,
+          `Expected require-inline-focus-handoff error for ${probe.filePath}`
+        ).toHaveLength(1);
+      }
+
+      const validProbes = [
+        {
+          filePath: path.join(
+            uiDir,
+            "src/components/clinical/ClinicalDropzone.vue"
+          ),
+          code: dropzoneSrc,
+        },
+        {
+          filePath: path.join(
+            webSrcDir,
+            "components/canvas/CanvasErrorAlert.vue"
+          ),
+          code: canvasErrorSrc,
+        },
+        {
+          filePath: path.join(portalFeaturesDir, "compliance.js"),
+          code: fs.readFileSync(
+            path.join(portalFeaturesDir, "compliance.js"),
+            "utf-8"
+          ),
+        },
+      ];
+
+      for (const probe of validProbes) {
+        const [result] = await eslint.lintText(probe.code, {
+          filePath: probe.filePath,
+        });
+        expect(
+          result.messages.filter(
+            (m) => m.ruleId === "custom-vue/require-inline-focus-handoff"
+          )
+        ).toEqual([]);
+      }
+    });
   });
 });

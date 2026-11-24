@@ -675,8 +675,70 @@ export function useFocusTrap(
     handleTrapKeyDown(e, trapEntry);
   };
 
+  let subtreeObserver = null;
+  let observedContainer = null;
+  let recoveryScheduled = false;
+
+  const disconnectSubtreeObserver = () => {
+    subtreeObserver?.disconnect();
+    subtreeObserver = null;
+    observedContainer = null;
+  };
+
+  const observeContainerSubtree = (container) => {
+    if (!getModal()) {
+      disconnectSubtreeObserver();
+      return;
+    }
+    if (observedContainer === container && subtreeObserver) return;
+    disconnectSubtreeObserver();
+    if (!container || typeof MutationObserver !== "function") return;
+    try {
+      subtreeObserver = new MutationObserver((mutations) => {
+        if (
+          !isActive ||
+          !getModal() ||
+          recoveryScheduled ||
+          !mutations?.some((r) => r?.removedNodes?.length > 0)
+        ) {
+          return;
+        }
+        recoveryScheduled = true;
+        nextTick(() => {
+          Promise.resolve().then(() => {
+            recoveryScheduled = false;
+            if (
+              !isActive ||
+              !getModal() ||
+              typeof document === "undefined" ||
+              activeTrapStack[activeTrapStack.length - 1] !== trapEntry ||
+              (document.activeElement &&
+                document.activeElement !== document.body)
+            ) {
+              return;
+            }
+            const latest = getContainer();
+            if (
+              latest &&
+              (typeof document.contains !== "function" ||
+                document.contains(latest)) &&
+              !isElementInertOrHidden(latest, null)
+            ) {
+              focusIntoContainer(latest);
+            }
+          });
+        });
+      });
+      subtreeObserver.observe(container, { childList: true, subtree: true });
+      observedContainer = container;
+    } catch {
+      disconnectSubtreeObserver();
+    }
+  };
+
   const syncContainerFocus = (container) => {
     if (!container) return;
+    observeContainerSubtree(container);
     if (
       typeof document !== "undefined" &&
       typeof document.contains === "function" &&
@@ -693,6 +755,7 @@ export function useFocusTrap(
       ) {
         const latestContainer = getContainer();
         if (latestContainer) {
+          observeContainerSubtree(latestContainer);
           if (
             typeof document !== "undefined" &&
             typeof document.contains === "function" &&
@@ -861,6 +924,8 @@ export function useFocusTrap(
   const deactivate = () => {
     if (!isActive) return;
     isActive = false;
+    recoveryScheduled = false;
+    disconnectSubtreeObserver();
 
     if (typeof document !== "undefined") {
       document.removeEventListener("keydown", onTrapKeyDown);

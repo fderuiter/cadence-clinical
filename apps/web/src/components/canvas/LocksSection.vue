@@ -60,7 +60,7 @@
           type="button"
           class="btn btn-secondary"
           :disabled="studyLoading"
-          @click="reloadStudy()"
+          @click="handleRetryStudyLocks"
         >
           Try again
         </button>
@@ -482,7 +482,7 @@
             type="button"
             class="btn btn-secondary"
             :disabled="locksLoading"
-            @click="reloadLocks"
+            @click="handleRetryLocksList"
           >
             Try again
           </button>
@@ -683,7 +683,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import { ClinicalModal } from "ui";
+import { ClinicalModal, handoffRetryFocus } from "ui";
 import {
   kernelApi,
   type KernelChild,
@@ -906,6 +906,31 @@ const {
     await Promise.all(tasks);
   },
 });
+
+const LOCKS_RECOVERED_TARGETS = [
+  '[data-testid="study-locks-table"] button:not([disabled])',
+  '[data-testid="study-locks-table-scroll"]',
+  "#lock-apply-scope-kind",
+  "#study-locks-title",
+];
+
+function handleRetryStudyLocks() {
+  void handoffRetryFocus(() => reloadStudy(), {
+    container: () => document.getElementById("study-locks-section"),
+    isError: () => Boolean(studyError.value || locksError.value),
+    errorTargets: ["#btn-retry-study-locks", "#btn-retry-locks-list"],
+    successTargets: LOCKS_RECOVERED_TARGETS,
+  });
+}
+
+function handleRetryLocksList() {
+  void handoffRetryFocus(() => reloadLocks(), {
+    container: () => document.getElementById("study-locks-section"),
+    isError: () => Boolean(locksError.value),
+    errorTargets: ["#btn-retry-locks-list"],
+    successTargets: LOCKS_RECOVERED_TARGETS,
+  });
+}
 
 const needsSitePicker = computed(() => applyScopeKind.value !== "study");
 const needsEnrollmentPicker = computed(
