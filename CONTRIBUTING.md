@@ -165,11 +165,12 @@ Every PR updates what its change makes stale, in the same PR:
   baseline entries, drop them with `CADENCE_UPDATE_BASELINE=1 pnpm cadence check deid [files]`.
 - Ratchet baselines (`tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-boundaries/<Assembly>.baseline.txt`,
   `tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-rule-coverage/<AREA>.baseline.txt`,
+  `tests/Cadence.ArchitectureTests/ArchitectureBaselines/{direct-state-writes,permission-matrix,cross-service-isolation}.baseline.txt`,
   `baselines/deid/<unit>.baseline.txt`, `baselines/secrets/<unit>.secrets.baseline.json`, and any other
   `*.baseline.txt`) may only shrink, aggregated per gate across all shards. The `baseline-ratchet` gate fails on uncommitted
-  working-tree growth and when any commit on the branch or push range adds an entry without a matching
-  `Baseline-Growth: <path> - <reason>` trailer on that commit covering the gate (`git commit --trailer "Baseline-Growth: <path> - <reason>"`).
-  For the commit that stages growth against `HEAD`, set `CADENCE_BASELINE_GROWTH="<reason>"` so the pre-commit hook admits it
+  working-tree growth and when any commit on the branch or push range adds an entry without a matching file-and-count-scoped
+  `Baseline-Growth: <path> +<count> - <reason>` trailer on that commit covering the gate (`git commit --trailer "Baseline-Growth: <path> +<count> - <reason>"`).
+  For the commit that stages growth against `HEAD`, set `CADENCE_BASELINE_GROWTH="<path> +<count> - <reason>"` so the pre-commit hook admits it
   ([docs/TESTING.md](docs/TESTING.md#ratchet-baselines)).
 - Do not re-add Python code or tooling; the remaining Python reference sources are listed in
   [docs/PYTHON_REFERENCE_INVENTORY.md](docs/PYTHON_REFERENCE_INVENTORY.md) and are removed as their ports are
