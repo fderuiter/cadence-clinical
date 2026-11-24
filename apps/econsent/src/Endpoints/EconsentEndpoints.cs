@@ -123,15 +123,6 @@ public static class EconsentEndpoints
         return app;
     }
 
-    private static string Caller(HttpContext httpContext) =>
-        CallerScope.UserId(httpContext) ?? throw new InvalidOperationException("An admitted eConsent request has no signed caller.");
-
-    private static IResult OutsideStudy() =>
-        TypedResults.Problem(
-            title: "Outside your studies",
-            detail: "You are not assigned to this study.",
-            statusCode: StatusCodes.Status403Forbidden);
-
     private static string CaptureConsentActionFor(HttpContext httpContext)
     {
         string templateId = httpContext.Request.RouteValues["template_id"]?.ToString() ?? string.Empty;
@@ -295,7 +286,7 @@ public static class EconsentEndpoints
         }
 
         // The participant or representative signs; the record is attributed to the signed-in staff member who captured it.
-        string capturedBy = Caller(httpContext);
+        string capturedBy = CallerScope.RequiredUserId(httpContext, "An admitted eConsent request has no signed caller.");
 
         string subjectPseudonym = request.SubjectPseudonym!;
         string studyId = request.StudyId!;
@@ -477,7 +468,7 @@ public static class EconsentEndpoints
         if (!ClinicalScopeGuard.CanAccessStudy(httpContext, targetStudy)
             || (template is not null && !ClinicalScopeGuard.CanAccessStudy(httpContext, template.StudyId)))
         {
-            return OutsideStudy();
+            return ClinicalScopeGuard.OutsideStudy();
         }
 
         if (template is null)
@@ -493,7 +484,7 @@ public static class EconsentEndpoints
                 RequiresReconsent = request?.RequiresReconsent ?? true,
                 VersionIndex = versionIndex,
                 CreatedAt = now,
-                CreatedBy = Caller(httpContext),
+                CreatedBy = CallerScope.RequiredUserId(httpContext, "An admitted eConsent request has no signed caller."),
                 ReasonForChange = request?.ChangeSummary ?? request?.ChangeReason ?? "Publishing template"
             };
             dbContext.ConsentTemplates.Add(template);

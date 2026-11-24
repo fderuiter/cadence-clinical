@@ -1,4 +1,4 @@
-# ADR-2553: Schema-Linked Static API Reference, Enriched OpenAPI 3.1 Contracts, and Gateway Contract Export
+# ADR-2554: Schema-Linked Static API Reference, Enriched OpenAPI 3.1 Contracts, and Gateway Contract Export
 
 - **Status:** Accepted
 - **Date:** 2026-11-23
@@ -63,7 +63,7 @@ Following the .NET 10 platform migration and Clinical Kernel consolidation ([ADR
 ## 5. Consequences & Trade-offs
 
 - **Positive Impact:**
-  - All `20` service/module contracts (`318` per-contract paths / `301` unique paths in `cdisc_openapi.json`, `347` per-contract operations / `330` unique operations, `542` schemas) have `0` missing `operationId`s, `0` blank summaries, `0` empty `200` schemas, and complete `BearerAuth` + GxP header documentation.
+  - All `20` service/module contracts (`319` per-contract paths / `302` unique paths in `cdisc_openapi.json`, `348` per-contract operations / `331` unique operations, `545` schemas) have `0` missing `operationId`s, `0` blank summaries, `0` empty `200` schemas, and complete `BearerAuth` + GxP header documentation.
   - `gateway_openapi.json` and `docs/api/gateway.md` document `POST /api/v1/auth/signature-verification` without leaking YARP proxy catch-alls, and `intelligence_openapi.json` / `docs/api/intelligence.md` document `POST /api/v1/ai/mcp`.
   - Both `docs/api/*.md` headers and the VitePress `REST API Reference` sidebar surface `Active` and `Scaffold` badges directly from `ServiceTopology`, and HTTP `501` stubs are prominently flagged.
 - **Negative Impact / Technical Debt:**
@@ -78,7 +78,7 @@ Following the .NET 10 platform migration and Clinical Kernel consolidation ([ADR
   - `packages/telemetry/src/CadenceOpenApiTransformers.cs`, `packages/telemetry/src/CadenceTelemetryExtensions.cs`
   - `packages/security/src/Rbac/EndpointAuthorizationMetadata.cs`, `packages/security/src/DependencyInjection/CadenceSecurityServiceCollectionExtensions.cs`
   - `apps/gateway/src/Program.cs`, `apps/gateway/src/Signatures/SignatureTokenEndpoints.cs`, `apps/intelligence/src/Mcp/IntelligenceMcp.cs`, and Minimal API endpoint summaries/typed responses across `apps/*`
-  - `packages/tooling_core/src/Cadence.OpenApiExporter/Program.cs`, `packages/tooling_core/src/Services/ApiDocsGeneratorService.cs`, `packages/tooling_core/src/Services/OpenApiDriftValidatorService.cs`
+  - `packages/tooling_core/src/Cadence.OpenApiExporter/Program.cs`, `packages/tooling_core/src/Services/OpenApiSyncService.cs`, `packages/tooling_core/src/Services/ApiDocsGeneratorService.cs`, `packages/tooling_core/src/Services/OpenApiDriftValidatorService.cs`
   - `docs/.vitepress/config.mjs`, `docs/.vitepress/sidebar.mjs`, `docs/.vitepress/repoLinks.mjs`, `docs/.vitepress/theme/custom.css`, `scripts/build-docs.js`
   - `docs/openapi/*.json`, `docs/api/*.md`, `docs/openapi/README.md`, `docs/web/API_MIGRATION.md`, `docs/DOCUMENTATION_INDEX.md`, `apps/web/src/api/generated/*.ts`
 - **Verification Plan:**

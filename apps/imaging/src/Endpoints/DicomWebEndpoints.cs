@@ -87,16 +87,6 @@ public static class DicomWebEndpoints
         return routes;
     }
 
-    // The operator recorded on a de-identification certificate is the signed caller, never a request header (ADR-2516).
-    private static string OperatorIdentity(HttpContext httpContext) =>
-        CallerScope.UserId(httpContext) ?? throw new InvalidOperationException("An admitted imaging upload has no signed caller.");
-
-    private static IResult OutsideStudy() =>
-        TypedResults.Problem(
-            title: "Outside your studies",
-            detail: "You are not assigned to this study.",
-            statusCode: StatusCodes.Status403Forbidden);
-
     private static IResult PayloadTooLargeResult(string? detail = null) =>
         TypedResults.Problem(
             detail: string.IsNullOrWhiteSpace(detail) ? BatchPayloadTooLargeException.DefaultMessage : detail,
@@ -190,7 +180,7 @@ public static class DicomWebEndpoints
 
         if (ClinicalScopeGuard.RequireStudyAndSite(request.HttpContext, studyId, siteId) is not null)
         {
-            return OutsideStudy();
+            return ClinicalScopeGuard.OutsideStudy();
         }
 
         pooledPayload.Position = 0;
@@ -204,7 +194,7 @@ public static class DicomWebEndpoints
                 subjectId: subjectId,
                 siteId: siteId,
                 studyId: studyId,
-                operatorIdentity: OperatorIdentity(request.HttpContext),
+                operatorIdentity: CallerScope.RequiredUserId(request.HttpContext, "An admitted imaging upload has no signed caller."),
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             return TypedResults.Created($"/api/v1/imaging/studies/{result.AnonymizedStudyUid}", result);
@@ -374,7 +364,7 @@ public static class DicomWebEndpoints
                 }
             }
 
-            return OutsideStudy();
+            return ClinicalScopeGuard.OutsideStudy();
         }
 
         var state = new FormEnumerationState();
@@ -490,7 +480,7 @@ public static class DicomWebEndpoints
                     await BatchStreamHelpers.DrainAsync(countingBody, cancellationToken).ConfigureAwait(false);
                 }
 
-                return OutsideStudy();
+                return ClinicalScopeGuard.OutsideStudy();
             }
 
             var batchRequest = CreateStreamingBatchRequest(
@@ -601,7 +591,7 @@ public static class DicomWebEndpoints
 
             if (ClinicalScopeGuard.RequireStudyAndSite(request.HttpContext, metadata.StudyValue, metadata.SiteValue) is not null)
             {
-                return OutsideStudy();
+                return ClinicalScopeGuard.OutsideStudy();
             }
 
             var batchRequest = CreateStreamingBatchRequest(
@@ -670,7 +660,7 @@ public static class DicomWebEndpoints
                 await BatchStreamHelpers.DrainAsync(countingBody, cancellationToken).ConfigureAwait(false);
             }
 
-            return OutsideStudy();
+            return ClinicalScopeGuard.OutsideStudy();
         }
 
         bool isZipContent = request.ContentType?.Contains("zip", StringComparison.OrdinalIgnoreCase) ?? false;
@@ -704,7 +694,7 @@ public static class DicomWebEndpoints
             SiteId: metadata.SiteValue,
             StudyId: metadata.StudyValue,
             TimepointName: metadata.TimepointName,
-            OperatorIdentity: OperatorIdentity(httpContext))
+            OperatorIdentity: CallerScope.RequiredUserId(httpContext, "An admitted imaging upload has no signed caller."))
         {
             StreamFiles = streamFiles
         };

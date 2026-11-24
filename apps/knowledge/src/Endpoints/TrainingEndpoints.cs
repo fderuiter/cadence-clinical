@@ -205,12 +205,6 @@ public static class TrainingEndpoints
         return app;
     }
 
-    private static IResult OutsideStudy() =>
-        TypedResults.Problem(
-            title: "Outside your studies",
-            detail: "You are not assigned to this study.",
-            statusCode: StatusCodes.Status403Forbidden);
-
     private static async Task<IResult> ListCurriculaAsync(
         string? study_id,
         string? protocol_version,
@@ -272,11 +266,10 @@ public static class TrainingEndpoints
 
         if (!CallerScope.CanAccessStudy(httpContext, request.StudyId))
         {
-            return OutsideStudy();
+            return ClinicalScopeGuard.OutsideStudy();
         }
 
-        string actorId = CallerScope.UserId(httpContext)
-            ?? throw new InvalidOperationException("An admitted training request has no signed caller.");
+        string actorId = CallerScope.RequiredUserId(httpContext, "An admitted training request has no signed caller.");
         string actorRole = CallerScope.Roles(httpContext);
 
         bool namesSites = request.SiteIds is { Count: > 0 };
@@ -305,7 +298,7 @@ public static class TrainingEndpoints
         var principal = CallerScope.Principal(httpContext);
         if (namesSites && request.SiteIds!.Exists(site => !SiteAccessEvaluator.CanAccessSite(principal, site)))
         {
-            return OutsideStudy();
+            return ClinicalScopeGuard.OutsideStudy();
         }
 
         // The audience is the study's site staff on the delegation log: the module's record of who works on the study,
@@ -578,7 +571,7 @@ public static class TrainingEndpoints
 
         // The filter has verified and consumed the token for this caller and these ids.
         if (httpContext.VerifiedSigToken() is null
-            || httpContext.Items[GatewayAuthenticationHandler.PrincipalItemKey] is not Principal signer)
+            || CallerScope.Principal(httpContext) is not { } signer)
         {
             return TypedResults.Problem(SigTokenVerifier.ReauthenticationRequired, statusCode: StatusCodes.Status401Unauthorized);
         }
@@ -602,7 +595,7 @@ public static class TrainingEndpoints
 
         if (records.Exists(r => !StudyAccessEvaluator.CanAccessStudy(signer, r.StudyId) || !SiteAccessEvaluator.CanAccessSite(signer, r.SiteId)))
         {
-            return OutsideStudy();
+            return ClinicalScopeGuard.OutsideStudy();
         }
 
         var now = clock.UtcNow;

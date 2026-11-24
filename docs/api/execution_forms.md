@@ -3,7 +3,7 @@
 Generated from `docs/openapi/execution_forms_openapi.json` by `pnpm cadence generate-api-docs`. Don't edit this file by hand.
 
 - **Service Maturity:** <span class="VPBadge tip">Active</span> (Consolidated module hosted in `kernel-api` · port `8018` · `/api/v1/execution/forms*`)
-- **OpenAPI 3.1 Contract:** [`execution_forms_openapi.json`](../openapi/execution_forms_openapi.json) (15 operation(s), 39 schema(s))
+- **OpenAPI 3.1 Contract:** [`execution_forms_openapi.json`](../openapi/execution_forms_openapi.json) (16 operation(s), 40 schema(s))
 
 ## Operations
 
@@ -21,6 +21,7 @@ Generated from `docs/openapi/execution_forms_openapi.json` by `pnpm cadence gene
 | `POST` | `/api/v1/execution/forms/{formId}/queries/{queryId}/answer` | ExecutionAnswerFormQuery | Answers an open query (execution.query.answer). | [Details](#op-executionanswerformquery) |
 | `POST` | `/api/v1/execution/forms/{formId}/queries/{queryId}/cancel` | ExecutionCancelFormQuery | Cancels an open or answered query raised in error (execution.query.manage). | [Details](#op-executioncancelformquery) |
 | `POST` | `/api/v1/execution/forms/{formId}/queries/{queryId}/close` | ExecutionCloseFormQuery | Closes an answered manual query (separation of duties) or system query (execution.query.manage). | [Details](#op-executioncloseformquery) |
+| `POST` | `/api/v1/execution/forms/{formId}/queries/{queryId}/reassign` | ExecutionReassignFormQuery | Reassigns an open or answered query's assignee or responsible role with audited bitemporal history (execution.query.manage). | [Details](#op-executionreassignformquery) |
 | `POST` | `/api/v1/execution/forms/{formId}/queries/{queryId}/reopen` | ExecutionReopenFormQuery | Reopens an answered or closed query with why it is not settled (execution.query.manage). | [Details](#op-executionreopenformquery) |
 | `POST` | `/api/v1/execution/forms/{formId}/signatures` | ExecutionSignForm | Signs the form's current values with an X-Sig-Token step-up token (collection.sign); 409 when the form changed since it was read. | [Details](#op-executionsignform) |
 | `PUT` | `/api/v1/execution/forms/{formId}/values` | ExecutionSaveFormValues | Saves a page of values: all of them or, on one stale revision or invalid value, none (collection.record). | [Details](#op-executionsaveformvalues) |
@@ -128,6 +129,7 @@ Generated from `docs/openapi/execution_forms_openapi.json` by `pnpm cadence gene
 | Name | In | Required | Schema / Constraints | Description |
 | ---- | -- | -------- | -------------------- | ----------- |
 | `as_of` | `query` | `optional` | `string` (`date-time`) |  |
+| `assignee` | `query` | `optional` | `string` |  |
 | `enrollment_id` | `query` | `optional` | `string` (`uuid`) |  |
 | `escalated` | `query` | `optional` | `boolean` |  |
 | `known_at` | `query` | `optional` | `string` (`date-time`) |  |
@@ -209,11 +211,11 @@ Generated from `docs/openapi/execution_forms_openapi.json` by `pnpm cadence gene
 | ------ | ----------- | ---------- | ------ |
 | `200` | OK | `application/json` | [`ExecutionForms_FormQueryEscalationPassResponse`](#schema-executionforms-formqueryescalationpassresponse) |
 | `400` | Bad Request | `application/problem+json` | [`ExecutionForms_ProblemDetails`](#schema-executionforms-problemdetails) |
-| `401` | Unauthorized. Kernel errors: `K.Actor.Unresolved`. Kernel errors: `K.Actor.Unresolved`. | `application/problem+json` | [`ExecutionForms_ProblemDetails`](#schema-executionforms-problemdetails) |
-| `403` | Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`. | `application/problem+json` | [`ExecutionForms_ProblemDetails`](#schema-executionforms-problemdetails) |
+| `401` | Unauthorized. Kernel errors: `K.Actor.Unresolved`. | `application/problem+json` | [`ExecutionForms_ProblemDetails`](#schema-executionforms-problemdetails) |
+| `403` | Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`. | `application/problem+json` | [`ExecutionForms_ProblemDetails`](#schema-executionforms-problemdetails) |
 | `404` | Not Found. Kernel errors: `K.Aggregate.NotFound`. | `application/problem+json` | [`ExecutionForms_ProblemDetails`](#schema-executionforms-problemdetails) |
-| `409` | Conflict. Kernel errors: `K.Aggregate.AlreadyExists`, `K.Aggregate.ConcurrencyConflict`, `K.Command.IdempotencyConflict`, `M.Execution.Query.InvalidTransition`. Kernel errors: `K.Aggregate.AlreadyExists`, `K.Aggregate.ConcurrencyConflict`, `K.Command.IdempotencyConflict`. | `application/problem+json` | [`ExecutionForms_ProblemDetails`](#schema-executionforms-problemdetails) |
-| `422` | Unprocessable Entity. Kernel errors: `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`. Kernel errors: `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`. | `application/problem+json` | [`ExecutionForms_ProblemDetails`](#schema-executionforms-problemdetails) |
+| `409` | Conflict. Kernel errors: `K.Aggregate.AlreadyExists`, `K.Aggregate.ConcurrencyConflict`, `K.Command.IdempotencyConflict`, `M.Execution.Query.InvalidTransition`. | `application/problem+json` | [`ExecutionForms_ProblemDetails`](#schema-executionforms-problemdetails) |
+| `422` | Unprocessable Entity. Kernel errors: `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`. | `application/problem+json` | [`ExecutionForms_ProblemDetails`](#schema-executionforms-problemdetails) |
 | `423` | Locked. Kernel errors: `K.Assertion.Locked`. | `application/problem+json` | [`ExecutionForms_ProblemDetails`](#schema-executionforms-problemdetails) |
 
 **Registered Kernel Error Codes (`x-kernel-errors`)**
@@ -223,13 +225,16 @@ Generated from `docs/openapi/execution_forms_openapi.json` by `pnpm cadence gene
 | `401` | `K.Actor.Unresolved` |
 | `403` | `K.Authorization.Denied` |
 | `403` | `K.Subscription.Expired` |
+| `404` | `K.Aggregate.NotFound` |
 | `409` | `K.Aggregate.AlreadyExists` |
 | `409` | `K.Aggregate.ConcurrencyConflict` |
 | `409` | `K.Command.IdempotencyConflict` |
+| `409` | `M.Execution.Query.InvalidTransition` |
 | `422` | `K.Command.IdempotencyKeyRequired` |
 | `422` | `K.Command.Invalid` |
 | `422` | `K.Command.ReasonForChangeRequired` |
 | `422` | `K.Command.TenantRequired` |
+| `423` | `K.Assertion.Locked` |
 
 </details>
 
@@ -568,6 +573,65 @@ Generated from `docs/openapi/execution_forms_openapi.json` by `pnpm cadence gene
 
 </details>
 
+### `POST` `/api/v1/execution/forms/{formId}/queries/{queryId}/reassign` {#op-executionreassignformquery}
+
+**Operation ID:** `ExecutionReassignFormQuery` — Reassigns an open or answered query's assignee or responsible role with audited bitemporal history (execution.query.manage).
+
+<details class="api-operation-details">
+<summary>Authorization, Parameters, Payloads &amp; Responses</summary>
+
+- **Authentication:** `BearerAuth` (`SignedInCaller`)
+- **Signed-In Caller Rule:** Every read checks the caller may see the enrollment; every write is a module command authorized against the caller's grants.
+- **Tags:** `Execution queries`
+
+**Parameters & Headers**
+
+| Name | In | Required | Schema / Constraints | Description |
+| ---- | -- | -------- | -------------------- | ----------- |
+| `formId` | `path` | `required` | `string` (`uuid`) |  |
+| `queryId` | `path` | `required` | `string` (`uuid`) |  |
+| `Idempotency-Key` | `header` | `required` | `string` (minLen: 1; maxLen: 255) | Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry. |
+| `X-Change-Reason` | `header` | `required` | `string` (minLen: 1) | Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. |
+
+**Request Body** (`required`)
+
+| Media Type | Schema |
+| ---------- | ------ |
+| `application/json` | [`ExecutionForms_ReassignFormQueryRequest`](#schema-executionforms-reassignformqueryrequest) |
+
+**Responses**
+
+| Status | Description | Media Type | Schema |
+| ------ | ----------- | ---------- | ------ |
+| `200` | OK | `application/json` | [`ExecutionForms_FormQueryResponse`](#schema-executionforms-formqueryresponse) |
+| `400` | Bad Request | `application/problem+json` | [`ExecutionForms_ProblemDetails`](#schema-executionforms-problemdetails) |
+| `401` | Unauthorized. Kernel errors: `K.Actor.Unresolved`. | `application/problem+json` | [`ExecutionForms_ProblemDetails`](#schema-executionforms-problemdetails) |
+| `403` | Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`. | `application/problem+json` | [`ExecutionForms_ProblemDetails`](#schema-executionforms-problemdetails) |
+| `404` | Not Found. Kernel errors: `K.Aggregate.NotFound`. | `application/problem+json` | [`ExecutionForms_ProblemDetails`](#schema-executionforms-problemdetails) |
+| `409` | Conflict. Kernel errors: `K.Aggregate.AlreadyExists`, `K.Aggregate.ConcurrencyConflict`, `K.Command.IdempotencyConflict`, `M.Execution.Query.InvalidTransition`. | `application/problem+json` | [`ExecutionForms_ProblemDetails`](#schema-executionforms-problemdetails) |
+| `422` | Unprocessable Entity. Kernel errors: `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`. | `application/problem+json` | [`ExecutionForms_ProblemDetails`](#schema-executionforms-problemdetails) |
+| `423` | Locked. Kernel errors: `K.Assertion.Locked`. | `application/problem+json` | [`ExecutionForms_ProblemDetails`](#schema-executionforms-problemdetails) |
+
+**Registered Kernel Error Codes (`x-kernel-errors`)**
+
+| HTTP Status | Domain Error Code |
+| ----------- | ----------------- |
+| `401` | `K.Actor.Unresolved` |
+| `403` | `K.Authorization.Denied` |
+| `403` | `K.Subscription.Expired` |
+| `404` | `K.Aggregate.NotFound` |
+| `409` | `K.Aggregate.AlreadyExists` |
+| `409` | `K.Aggregate.ConcurrencyConflict` |
+| `409` | `K.Command.IdempotencyConflict` |
+| `409` | `M.Execution.Query.InvalidTransition` |
+| `422` | `K.Command.IdempotencyKeyRequired` |
+| `422` | `K.Command.Invalid` |
+| `422` | `K.Command.ReasonForChangeRequired` |
+| `422` | `K.Command.TenantRequired` |
+| `423` | `K.Assertion.Locked` |
+
+</details>
+
 ### `POST` `/api/v1/execution/forms/{formId}/queries/{queryId}/reopen` {#op-executionreopenformquery}
 
 **Operation ID:** `ExecutionReopenFormQuery` — Reopens an answered or closed query with why it is not settled (execution.query.manage).
@@ -754,7 +818,7 @@ Generated from `docs/openapi/execution_forms_openapi.json` by `pnpm cadence gene
 
 ## Schemas
 
-Deduplicated component schemas exported in `components.schemas` (39 total). Operation payloads and responses link here so nested models are defined once per page.
+Deduplicated component schemas exported in `components.schemas` (40 total). Operation payloads and responses link here so nested models are defined once per page.
 
 ### `ExecutionForms_CodeSystemVersionId` {#schema-executionforms-codesystemversionid}
 
@@ -1015,10 +1079,11 @@ Deduplicated component schemas exported in `components.schemas` (39 total). Oper
 - **Type:** object
 
 <details class="api-schema-details">
-<summary>Properties (1)</summary>
+<summary>Properties (2)</summary>
 
 | Property | Type | Required | Description |
 | -------- | ---- | -------- | ----------- |
+| `assignee` | `string` \| `null` | `optional` |  |
 | `text` | `string` | `required` |  |
 
 </details>
@@ -1396,6 +1461,21 @@ Deduplicated component schemas exported in `components.schemas` (39 total). Oper
 | `query_id` | `string` (`uuid`) \| `null` | `optional` |  |
 | `revision` | `integer` (`int32`) \| `null` | `required` |  |
 | `text` | `string` | `required` |  |
+
+</details>
+
+### `ExecutionForms_ReassignFormQueryRequest` {#schema-executionforms-reassignformqueryrequest}
+
+- **Type:** object
+
+<details class="api-schema-details">
+<summary>Properties (3)</summary>
+
+| Property | Type | Required | Description |
+| -------- | ---- | -------- | ----------- |
+| `assignee` | `string` \| `null` | `required` |  |
+| `owner_role` | `string` \| `null` | `optional` |  |
+| `text` | `string` \| `null` | `optional` |  |
 
 </details>
 

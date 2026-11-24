@@ -96,15 +96,6 @@ public static class ImagingAdjudicationEndpoints
         return routes;
     }
 
-    private static string Caller(HttpContext httpContext) =>
-        CallerScope.UserId(httpContext) ?? throw new InvalidOperationException("An admitted adjudication request has no signed caller.");
-
-    private static IResult OutsideStudy() =>
-        TypedResults.Problem(
-            title: "Outside your studies",
-            detail: "You are not assigned to this study.",
-            statusCode: StatusCodes.Status403Forbidden);
-
     private static async Task<IResult> SubmitOrEvaluateSessionAsync(
         SubmitAdjudicationSessionRequest request,
         ImagingDbContext dbContext,
@@ -118,7 +109,7 @@ public static class ImagingAdjudicationEndpoints
 
         if (ClinicalScopeGuard.RequireStudyAndOptionalSite(httpContext, request.StudyId, request.SiteId, allowUnassignedSiteForScopedCaller: true) is not null)
         {
-            return OutsideStudy();
+            return ClinicalScopeGuard.OutsideStudy();
         }
 
         DateTimeOffset now = SystemClock.Instance.UtcNow;
@@ -179,7 +170,7 @@ public static class ImagingAdjudicationEndpoints
             BindingReader = isDiscordant ? null : "CONCORDANT_READERS",
             SessionDigest = sessionDigest,
             CreatedAt = now,
-            CreatedBy = Caller(httpContext),
+            CreatedBy = CallerScope.RequiredUserId(httpContext, "An admitted adjudication request has no signed caller."),
             UpdatedAt = now
         };
 
@@ -239,11 +230,11 @@ public static class ImagingAdjudicationEndpoints
 
         if (ClinicalScopeGuard.RequireStudyAndOptionalSite(httpContext, session.StudyId, session.SiteId, allowUnassignedSiteForScopedCaller: true) is not null)
         {
-            return OutsideStudy();
+            return ClinicalScopeGuard.OutsideStudy();
         }
 
         // The chair who signs is the signed caller, never a name in the request body (ADR-2516).
-        string signerId = Caller(httpContext);
+        string signerId = CallerScope.RequiredUserId(httpContext, "An admitted adjudication request has no signed caller.");
 
         if (session.WorkflowStatus is "FINALIZED_BY_CHAIR" or "FINALIZED_CONCORDANT")
         {

@@ -169,12 +169,102 @@ public sealed class OpenApiDriftTests : IDisposable
             "apps/kernel-api/src/Cadence.Kernel.Host.csproj");
     }
 
-    [Fact]
-    public void ExecutePreCommitOpenApi_WhenNoCsharpFilesStaged_BypassesServiceStartup()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void ExecutePreCommitOpenApi_WhenTargetFilesContainNoCsharpFiles_BypassesServiceStartup(bool quick)
     {
         string[] targetFiles = ["apps/web/src/components/Footer.vue", "docs/README.md"];
-        int result = PreCommitOpenApiService.ExecutePreCommitOpenApi(quick: true, targetFiles: targetFiles);
+        int result = PreCommitOpenApiService.ExecutePreCommitOpenApi(quick: quick, targetFiles: targetFiles);
         result.Should().Be(0);
+    }
+
+    [Fact]
+    public void AnalyzeBackendContractChanges_WhenTargetingSingleServiceProgramCs_SelectsOnlyThatService()
+    {
+        var (shouldExport, targetServices, hasCsharpFiles) =
+            PreCommitOpenApiService.AnalyzeBackendContractChanges(
+                ["apps/tickets/src/Program.cs"],
+                PreCommitOpenApiService.FindRepoRoot());
+
+        hasCsharpFiles.Should().BeTrue();
+        shouldExport.Should().BeTrue();
+        targetServices.Should().Equal("tickets");
+    }
+
+    [Theory]
+    [InlineData(new string[0], 4)]
+    [InlineData(new[] { "--max-parallelism", "1" }, 1)]
+    [InlineData(new[] { "--output-dir", "/tmp/out", "--max-parallelism=8" }, 8)]
+    public void TryParseMaxParallelism_ParsesDefaultAndExplicitWorkerCounts(string[] args, int expected)
+    {
+        bool ok = OpenApiSyncService.TryParseMaxParallelism(args, out int actual, out string? error);
+
+        ok.Should().BeTrue();
+        error.Should().BeNull();
+        actual.Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData("--max-parallelism")]
+    [InlineData("--max-parallelism", "0")]
+    [InlineData("--max-parallelism", "-2")]
+    [InlineData("--max-parallelism=abc")]
+    public void TryParseMaxParallelism_RejectsMissingOrNonPositiveValues(params string[] args)
+    {
+        bool ok = OpenApiSyncService.TryParseMaxParallelism(args, out _, out string? error);
+
+        ok.Should().BeFalse();
+        error.Should().NotBeNullOrWhiteSpace();
+    }
+
+    [Fact]
+    public void AggregateOpenApiSpecs_PreservesOrdinalOrderRegardlessOfConcurrentExportOrder()
+    {
+        string ctmsJson = """
+            {
+              "openapi": "3.1.1",
+              "paths": { "/api/v1/ctms/sites": { "get": { "operationId": "ListSites" } } },
+              "components": {
+                "securitySchemes": { "BearerAuth": { "type": "http", "scheme": "bearer" } },
+                "schemas": { "Ctms_SiteDto": { "type": "object" } }
+              }
+            }
+            """;
+        string ticketsJson = """
+            {
+              "openapi": "3.1.1",
+              "paths": { "/api/v1/tickets": { "get": { "operationId": "ListTickets" } } },
+              "components": { "schemas": { "Tickets_TicketDto": { "type": "object" } } }
+            }
+            """;
+
+        File.WriteAllText(Path.Combine(_exported, "tickets_openapi.json"), ticketsJson);
+        File.WriteAllText(Path.Combine(_exported, "ctms_openapi.json"), ctmsJson);
+
+        var forwardOrder = new Dictionary<string, System.Text.Json.Nodes.JsonObject>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["ctms"] = (System.Text.Json.Nodes.JsonObject)System.Text.Json.Nodes.JsonNode.Parse(ctmsJson)!,
+            ["tickets"] = (System.Text.Json.Nodes.JsonObject)System.Text.Json.Nodes.JsonNode.Parse(ticketsJson)!,
+        };
+        var reverseOrder = new Dictionary<string, System.Text.Json.Nodes.JsonObject>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["tickets"] = (System.Text.Json.Nodes.JsonObject)System.Text.Json.Nodes.JsonNode.Parse(ticketsJson)!,
+            ["ctms"] = (System.Text.Json.Nodes.JsonObject)System.Text.Json.Nodes.JsonNode.Parse(ctmsJson)!,
+        };
+
+        var aggregatedForward = OpenApiSyncService.AggregateOpenApiSpecs(_exported, _root, forwardOrder);
+        var aggregatedReverse = OpenApiSyncService.AggregateOpenApiSpecs(_exported, _root, reverseOrder);
+
+        aggregatedForward.ToJsonString().Should().Be(aggregatedReverse.ToJsonString());
+        aggregatedForward["paths"]!.AsObject().Select(kv => kv.Key)
+            .Should().Equal("/api/v1/ctms/sites", "/api/v1/tickets");
+        aggregatedForward["components"]!["schemas"]!.AsObject().Select(kv => kv.Key)
+            .Should().Equal("Ctms_SiteDto", "Tickets_TicketDto");
+        aggregatedForward["components"]!["securitySchemes"]!.AsObject().Select(kv => kv.Key)
+            .Should().Equal("BearerAuth");
+        aggregatedForward["servers"]!.AsArray().Select(n => n!["url"]!.GetValue<string>())
+            .Should().Equal("https://api.ccrsoft.com", "http://localhost:8000");
     }
 
     [Fact]

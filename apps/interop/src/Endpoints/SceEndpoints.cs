@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -14,7 +13,6 @@ using Cadence.Apps.Interop.Domain;
 using Cadence.Apps.Interop.Infrastructure.Persistence;
 using Cadence.Apps.Interop.Infrastructure.Security;
 using Cadence.Kernel.Time;
-using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
 using Cadence.Security.Rbac;
 
@@ -275,7 +273,7 @@ public static class SceEndpoints
         // 1. List statistical programs
         group.MapGet("/programs", async (string study_id, InteropDbContext db, HttpContext httpContext) =>
         {
-            if (!CallerScope.CanAccessStudy(httpContext, study_id))
+            if (!ClinicalScopeGuard.CanAccessStudy(httpContext, study_id))
             {
                 return Results.Ok(new ProgramListResponseDto(study_id, 0, []));
             }
@@ -298,12 +296,12 @@ public static class SceEndpoints
         // 2. Create / register statistical program
         group.MapPost("/programs", async (CreateProgramRequestDto req, InteropDbContext db, IClock clock, HttpContext httpContext) =>
         {
-            if (!CallerScope.CanAccessStudy(httpContext, req.StudyId))
+            if (!ClinicalScopeGuard.CanAccessStudy(httpContext, req.StudyId))
             {
                 return OutsideStudy();
             }
 
-            string userId = Caller(httpContext).UserId;
+            string userId = CallerScope.RequiredUserId(httpContext, "SCE routes require a verified gateway principal.");
             string codeHash = ComputeSha256(req.SourceCode ?? "");
             string lockDigest = ComputeSha256(req.LockfileContent ?? "");
 
@@ -345,7 +343,7 @@ public static class SceEndpoints
                 .AsNoTracking()
                 .FirstOrDefaultAsync(p => p.Id == program_id || p.Name == program_id);
 
-            if (program == null || !CallerScope.CanAccessStudy(httpContext, program.StudyId))
+            if (program == null || !ClinicalScopeGuard.CanAccessStudy(httpContext, program.StudyId))
             {
                 return Results.NotFound(new { error = $"Statistical program '{program_id}' not found." });
             }
@@ -386,12 +384,12 @@ public static class SceEndpoints
         // 5. List active database lock tokens
         group.MapGet("/lock-tokens", async (string study_id, InteropDbContext db, IClock clock, HttpContext httpContext) =>
         {
-            if (!CallerScope.CanAccessStudy(httpContext, study_id))
+            if (!ClinicalScopeGuard.CanAccessStudy(httpContext, study_id))
             {
                 return Results.Ok(new LockTokenListResponseDto(study_id, 0, []));
             }
 
-            var caller = Caller(httpContext);
+            var caller = CallerScope.RequiredPrincipal(httpContext, "SCE routes require a verified gateway principal.");
             var now = clock.UtcNow;
             var query = db.DatabaseLockAuthTokens
                 .AsNoTracking()
@@ -416,15 +414,15 @@ public static class SceEndpoints
         // 6. Issue database lock token
         group.MapPost("/lock-tokens", async (IssueLockTokenRequestDto req, InteropDbContext db, IClock clock, SceTokenSigner signer, HttpContext httpContext) =>
         {
-            var caller = Caller(httpContext);
+            var caller = CallerScope.RequiredPrincipal(httpContext, "SCE routes require a verified gateway principal.");
             string userId = caller.UserId;
-            string userRole = RolesOf(caller);
+            string userRole = CallerScope.Roles(httpContext);
             if (string.IsNullOrWhiteSpace(req.StudyId) || string.IsNullOrWhiteSpace(req.LockId) || string.IsNullOrWhiteSpace(req.IssuedTo))
             {
                 return Results.BadRequest(new { error = "study_id, lock_id and issued_to are required." });
             }
 
-            if (!CallerScope.CanAccessStudy(httpContext, req.StudyId))
+            if (!ClinicalScopeGuard.CanAccessStudy(httpContext, req.StudyId))
             {
                 return OutsideStudy();
             }
@@ -486,9 +484,9 @@ public static class SceEndpoints
         // 7. Revoke database lock token
         group.MapPost("/lock-tokens/{token_id}/revoke", async (string token_id, string? reason, InteropDbContext db, IClock clock, HttpContext httpContext) =>
         {
-            var caller = Caller(httpContext);
+            var caller = CallerScope.RequiredPrincipal(httpContext, "SCE routes require a verified gateway principal.");
             string userId = caller.UserId;
-            string userRole = RolesOf(caller);
+            string userRole = CallerScope.Roles(httpContext);
             string revocationReason = string.IsNullOrWhiteSpace(reason) ? "Revocation" : reason;
 
             var token = await db.DatabaseLockAuthTokens
@@ -499,7 +497,7 @@ public static class SceEndpoints
                 return Results.NotFound(new { error = $"Database lock auth token '{token_id}' not found." });
             }
 
-            if (!CallerScope.CanAccessStudy(httpContext, token.StudyId))
+            if (!ClinicalScopeGuard.CanAccessStudy(httpContext, token.StudyId))
             {
                 return OutsideStudy();
             }
@@ -542,14 +540,14 @@ public static class SceEndpoints
         // 8. Execute statistical program in sandbox
         group.MapPost("/execute", async (ExecuteProgramRequestDto req, InteropDbContext db, ISceDockerEngineDriver driver, ILockfileValidatorService lockfileValidator, IClock clock, SceTokenSigner signer, HttpContext httpContext) =>
         {
-            if (!CallerScope.CanAccessStudy(httpContext, req.StudyId))
+            if (!ClinicalScopeGuard.CanAccessStudy(httpContext, req.StudyId))
             {
                 return OutsideStudy();
             }
 
-            var caller = Caller(httpContext);
+            var caller = CallerScope.RequiredPrincipal(httpContext, "SCE routes require a verified gateway principal.");
             string userId = caller.UserId;
-            string userRole = RolesOf(caller);
+            string userRole = CallerScope.Roles(httpContext);
             var now = clock.UtcNow;
 
             // The program must belong to the study the run is recorded under, so a caller cannot run another study's
@@ -765,7 +763,7 @@ public static class SceEndpoints
         // 9. List historical execution runs for a study
         group.MapGet("/runs", async (string study_id, string? program_id, string? snapshot_id, InteropDbContext db, HttpContext httpContext) =>
         {
-            if (!CallerScope.CanAccessStudy(httpContext, study_id))
+            if (!ClinicalScopeGuard.CanAccessStudy(httpContext, study_id))
             {
                 return Results.Ok(new ExecutionRunListResponseDto(study_id, 0, []));
             }
@@ -773,7 +771,7 @@ public static class SceEndpoints
             var query = db.ExecutionRunRecords
                 .AsNoTracking()
                 .Where(r => r.StudyId == study_id);
-            if (!PermissionMatrix.HasPermission(Caller(httpContext), ReadUnblindedPermission))
+            if (!PermissionMatrix.HasPermission(CallerScope.RequiredPrincipal(httpContext, "SCE routes require a verified gateway principal."), ReadUnblindedPermission))
             {
                 query = query.Where(r => !r.IsUnblindedRun);
             }
@@ -993,17 +991,13 @@ public static class SceEndpoints
         );
     }
 
-    /// <summary>The verified gateway principal. Every route requires a permission, so one is always present.</summary>
-    private static Principal Caller(HttpContext context) =>
-        context.Items[GatewayAuthenticationHandler.PrincipalItemKey] as Principal
-        ?? throw new InvalidOperationException("SCE routes require a verified gateway principal.");
-
-    private static string RolesOf(Principal principal) => string.Join(",", principal.Roles);
-
     private static bool IsVisible([NotNullWhen(true)] ExecutionRunRecord? run, HttpContext httpContext) =>
         run != null
-        && CallerScope.CanAccessStudy(httpContext, run.StudyId)
-        && (!run.IsUnblindedRun || PermissionMatrix.HasPermission(Caller(httpContext), ReadUnblindedPermission));
+        && ClinicalScopeGuard.CanAccessStudy(httpContext, run.StudyId)
+        && (!run.IsUnblindedRun
+            || PermissionMatrix.HasPermission(
+                CallerScope.RequiredPrincipal(httpContext, "SCE routes require a verified gateway principal."),
+                ReadUnblindedPermission));
 
     private static IResult OutsideStudy() =>
         Results.Json(new { error = "OUTSIDE_STUDY_SCOPE", details = "You are not assigned to this study." }, statusCode: StatusCodes.Status403Forbidden);

@@ -3,7 +3,7 @@
 Generated from `docs/openapi/kernel_openapi.json` by `pnpm cadence generate-api-docs`. Don't edit this file by hand.
 
 - **Service Maturity:** <span class="VPBadge tip">Active</span> (Port `8018` · Gateway prefixes: `/api/v1/kernel`, `/api/v1/ai`, `/api/v1/execution/forms`)
-- **OpenAPI 3.1 Contract:** [`kernel_openapi.json`](../openapi/kernel_openapi.json) (72 operation(s), 148 schema(s))
+- **OpenAPI 3.1 Contract:** [`kernel_openapi.json`](../openapi/kernel_openapi.json) (72 operation(s), 150 schema(s))
 
 ## Module Overview
 
@@ -1756,7 +1756,7 @@ Each word matches as a prefix; an exact code ranks first. Sources that reveal id
 
 **Operation ID:** `KernelExportStudySnapshot` — Streams a bitemporal study snapshot as CSV, CDISC ODM v1.3.2 XML, CDISC Dataset-JSON, SAS bundle ZIP, R bundle ZIP, or Study Archive ZIP.
 
-Projects canonical kernel observations at as_of(valid_at, known_at), applying lock_filter and masking unauthorized sites or blinded treatment values in place (K-TRUTH-1, K-AUTH-4).
+Projects canonical kernel observations at as_of(valid_at, known_at), filtering to the caller's visible scope, reporting omitted scopes as a collapsed indicator, and masking blinded treatment values in place (K-TRUTH-1, K-AUTH-4, ADR-2590).
 
 <details class="api-operation-details">
 <summary>Authorization, Parameters, Payloads &amp; Responses</summary>
@@ -1914,10 +1914,10 @@ A study the caller may not see is refused; a proposal the caller may not see is 
 | `400` | Bad Request | `application/problem+json` | [`Kernel_ProblemDetails`](#schema-kernel-problemdetails) |
 | `401` | Unauthorized. Kernel errors: `K.Actor.Unresolved`. | `application/problem+json` | [`Kernel_ProblemDetails`](#schema-kernel-problemdetails) |
 | `403` | Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`. | `application/problem+json` | [`Kernel_ProblemDetails`](#schema-kernel-problemdetails) |
-| `404` | Not Found. Kernel errors: `K.Aggregate.NotFound`, `K.Protocol.StudyUnknown`, `K.Standards.StandardVersionUnknown`. | `application/problem+json` | [`Kernel_ProblemDetails`](#schema-kernel-problemdetails) |
+| `404` | Not Found. Kernel errors: `K.Aggregate.NotFound`, `K.Identity.TenantUnknown`, `K.Knowledge.CodeSystemUnknown`, `K.Protocol.StudyUnknown`, `K.Standards.StandardVersionUnknown`. | `application/problem+json` | [`Kernel_ProblemDetails`](#schema-kernel-problemdetails) |
 | `409` | Conflict. Kernel errors: `K.Aggregate.AlreadyExists`, `K.Aggregate.ConcurrencyConflict`, `K.Command.IdempotencyConflict`, `K.Protocol.FirstVersionExists`, `K.Protocol.InvalidTransition`. | `application/problem+json` | [`Kernel_ProblemDetails`](#schema-kernel-problemdetails) |
 | `413` | Payload Too Large | `application/problem+json` | [`Kernel_ProblemDetails`](#schema-kernel-problemdetails) |
-| `422` | Unprocessable Entity. Kernel errors: `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`, `K.Protocol.AmendmentInvalid`, `K.Protocol.AmendmentNotAllowed`, `K.Protocol.ContentInvalid`, `K.Protocol.ContentRequired`, `K.Standards.LibraryItemInvalid`. | `application/problem+json` | [`Kernel_ProblemDetails`](#schema-kernel-problemdetails) |
+| `422` | Unprocessable Entity. Kernel errors: `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`, `K.Identity.NameRequired`, `K.Knowledge.CodeSystemUriInvalid`, `K.Knowledge.ConceptLabelRequired`, `K.Knowledge.DuplicateEntry`, `K.Knowledge.EntriesInvalid`, `K.Knowledge.ExternalCodeMismatch`, `K.Knowledge.LicenseMismatch`, `K.Knowledge.PackageInvalid`, `K.Knowledge.VersionRequired`, `K.Protocol.AmendmentInvalid`, `K.Protocol.AmendmentNotAllowed`, `K.Protocol.ContentInvalid`, `K.Protocol.ContentRequired`, `K.Standards.LibraryItemInvalid`. | `application/problem+json` | [`Kernel_ProblemDetails`](#schema-kernel-problemdetails) |
 
 **Registered Kernel Error Codes (`x-kernel-errors`)**
 
@@ -1927,6 +1927,8 @@ A study the caller may not see is refused; a proposal the caller may not see is 
 | `403` | `K.Authorization.Denied` |
 | `403` | `K.Subscription.Expired` |
 | `404` | `K.Aggregate.NotFound` |
+| `404` | `K.Identity.TenantUnknown` |
+| `404` | `K.Knowledge.CodeSystemUnknown` |
 | `404` | `K.Protocol.StudyUnknown` |
 | `404` | `K.Standards.StandardVersionUnknown` |
 | `409` | `K.Aggregate.AlreadyExists` |
@@ -1938,6 +1940,15 @@ A study the caller may not see is refused; a proposal the caller may not see is 
 | `422` | `K.Command.Invalid` |
 | `422` | `K.Command.ReasonForChangeRequired` |
 | `422` | `K.Command.TenantRequired` |
+| `422` | `K.Identity.NameRequired` |
+| `422` | `K.Knowledge.CodeSystemUriInvalid` |
+| `422` | `K.Knowledge.ConceptLabelRequired` |
+| `422` | `K.Knowledge.DuplicateEntry` |
+| `422` | `K.Knowledge.EntriesInvalid` |
+| `422` | `K.Knowledge.ExternalCodeMismatch` |
+| `422` | `K.Knowledge.LicenseMismatch` |
+| `422` | `K.Knowledge.PackageInvalid` |
+| `422` | `K.Knowledge.VersionRequired` |
 | `422` | `K.Protocol.AmendmentInvalid` |
 | `422` | `K.Protocol.AmendmentNotAllowed` |
 | `422` | `K.Protocol.ContentInvalid` |
@@ -3100,7 +3111,7 @@ Streams JSON, CDISC ODM v1.3.2 XML, printable HTML, or certified PDF (%PDF-1.7) 
 
 ## Schemas
 
-Deduplicated component schemas exported in `components.schemas` (148 total). Operation payloads and responses link here so nested models are defined once per page.
+Deduplicated component schemas exported in `components.schemas` (150 total). Operation payloads and responses link here so nested models are defined once per page.
 
 ### `Kernel_AnonymousTypeOfstringAndstring` {#schema-kernel-anonymoustypeofstringandstring}
 
@@ -4115,20 +4126,36 @@ Deduplicated component schemas exported in `components.schemas` (148 total). Ope
 
 </details>
 
+### `Kernel_KernelHiddenContentResponse` {#schema-kernel-kernelhiddencontentresponse}
+
+- **Type:** object
+
+<details class="api-schema-details">
+<summary>Properties (2)</summary>
+
+| Property | Type | Required | Description |
+| -------- | ---- | -------- | ----------- |
+| `more_exist` | `boolean` | `required` |  |
+| `reasons` | array of `string` | `required` |  |
+
+</details>
+
 ### `Kernel_KernelImportProtocolJsonRequest` {#schema-kernel-kernelimportprotocoljsonrequest}
 
 - **Type:** object
 
 <details class="api-schema-details">
-<summary>Properties (5)</summary>
+<summary>Properties (7)</summary>
 
 | Property | Type | Required | Description |
 | -------- | ---- | -------- | ----------- |
+| `amendment_classification` | `string` \| `null` | `optional` |  |
 | `content` | `string` \| `null` | `optional` |  |
 | `file_name` | `string` \| `null` | `optional` |  |
 | `format` | `string` \| `null` | `optional` |  |
 | `replace_forms` | `boolean` | `optional` |  |
 | `template_ids` | array of `string` \| `null` | `optional` |  |
+| `transition_policy` | `string` \| `null` | `optional` |  |
 
 </details>
 
@@ -4301,7 +4328,7 @@ Deduplicated component schemas exported in `components.schemas` (148 total). Ope
 | `attestation_meaning` | `string` \| `null` | `required` |  |
 | `attestation_ref` | `string` \| `null` | `required` |  |
 | `enrollment_ref` | `string` \| `null` | `required` |  |
-| `kind` | `string` | `required` |  |
+| `kind` | `string` \| `null` | `required` |  |
 | `locked_at` | `string` (`date-time`) \| `null` | `required` |  |
 | `locked_by` | `string` \| `null` | `required` |  |
 | `mask` | `string` \| `null` | `required` |  |
@@ -4310,10 +4337,10 @@ Deduplicated component schemas exported in `components.schemas` (148 total). Ope
 | `ref` | `string` \| `null` | `required` |  |
 | `release_reason` | `string` \| `null` | `required` |  |
 | `release_ref` | `string` \| `null` | `required` |  |
-| `released` | `boolean` | `required` |  |
+| `released` | `boolean` \| `null` | `required` |  |
 | `released_at` | `string` (`date-time`) \| `null` | `required` |  |
 | `released_by` | `string` \| `null` | `required` |  |
-| `scope_kind` | `string` | `required` |  |
+| `scope_kind` | `string` \| `null` | `required` |  |
 | `scope_ref` | `string` \| `null` | `required` |  |
 | `study_ref` | `string` | `required` |  |
 | `study_site_ref` | `string` \| `null` | `required` |  |
@@ -4570,15 +4597,34 @@ Deduplicated component schemas exported in `components.schemas` (148 total). Ope
 
 </details>
 
+### `Kernel_KernelProtocolAmendmentResponse` {#schema-kernel-kernelprotocolamendmentresponse}
+
+- **Type:** object
+
+<details class="api-schema-details">
+<summary>Properties (6)</summary>
+
+| Property | Type | Required | Description |
+| -------- | ---- | -------- | ----------- |
+| `classification` | `string` | `required` |  |
+| `impacted_elements` | array of `string` | `required` |  |
+| `intent` | `string` | `required` |  |
+| `rationale` | `string` | `required` |  |
+| `summary_of_changes` | `string` | `required` |  |
+| `transition_policy` | `string` | `required` |  |
+
+</details>
+
 ### `Kernel_KernelProtocolDraftSummaryResponse` {#schema-kernel-kernelprotocoldraftsummaryresponse}
 
 - **Type:** object
 
 <details class="api-schema-details">
-<summary>Properties (7)</summary>
+<summary>Properties (8)</summary>
 
 | Property | Type | Required | Description |
 | -------- | ---- | -------- | ----------- |
+| `amendment` | [`Kernel_KernelProtocolAmendmentResponse`](#schema-kernel-kernelprotocolamendmentresponse) \| `null` | `optional` |  |
 | `form_count` | `integer` (`int32`) | `required` |  |
 | `forms` | array of [`Kernel_KernelProtocolFormSummaryResponse`](#schema-kernel-kernelprotocolformsummaryresponse) | `required` |  |
 | `import_notes` | array of [`Kernel_KernelProtocolImportNoteResponse`](#schema-kernel-kernelprotocolimportnoteresponse) | `required` |  |
@@ -5108,10 +5154,11 @@ Deduplicated component schemas exported in `components.schemas` (148 total). Ope
 - **Type:** object
 
 <details class="api-schema-details">
-<summary>Properties (5)</summary>
+<summary>Properties (6)</summary>
 
 | Property | Type | Required | Description |
 | -------- | ---- | -------- | ----------- |
+| `hidden` | [`Kernel_KernelHiddenContentResponse`](#schema-kernel-kernelhiddencontentresponse) | `required` |  |
 | `known_at` | `string` (`date-time`) | `required` |  |
 | `locks` | array of [`Kernel_KernelLockResponse`](#schema-kernel-kernellockresponse) | `required` |  |
 | `study_code` | `string` | `required` |  |

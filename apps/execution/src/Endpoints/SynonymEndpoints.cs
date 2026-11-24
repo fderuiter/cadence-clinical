@@ -1,15 +1,14 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Application.Coding;
-using Cadence.Security;
+using Cadence.Apps.Execution.Infrastructure.Security;
 using Cadence.Security.DependencyInjection;
+using Cadence.Security.Rbac;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -83,15 +82,15 @@ public static class SynonymEndpoints
         ISynonymImportService synonymService,
         CancellationToken cancellationToken)
     {
-        var caller = httpContext.User.ToAuthenticatedCaller();
+        var caller = ClinicalScopeGuard.ResolvePrincipal(httpContext);
         if (!HasImportAuthorization(caller))
         {
-            return TypedResults.Problem(
-                detail: "Bulk synonym dictionary import requires DATA_MANAGER or SPONSOR_DESIGNER authorization.",
-                statusCode: StatusCodes.Status403Forbidden);
+            return ClinicalScopeGuard.Forbidden(
+                "Bulk synonym dictionary import requires DATA_MANAGER or SPONSOR_DESIGNER authorization.",
+                code: ClinicalScopeGuard.ForbiddenCode);
         }
 
-        if (ExecutionScopeGuard.RequireAnyStudyScope(httpContext) is { } callerDenied)
+        if (ClinicalScopeGuard.RequireAnyStudyScope(httpContext, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } callerDenied)
         {
             return callerDenied;
         }
@@ -147,15 +146,15 @@ public static class SynonymEndpoints
         CancellationToken cancellationToken,
         [FromServices] IKernelLockGuard? lockGuard = null)
     {
-        var caller = httpContext.User.ToAuthenticatedCaller();
+        var caller = ClinicalScopeGuard.ResolvePrincipal(httpContext);
         if (!HasImportAuthorization(caller))
         {
-            return TypedResults.Problem(
-                detail: "Bulk synonym dictionary import requires DATA_MANAGER or SPONSOR_DESIGNER authorization.",
-                statusCode: StatusCodes.Status403Forbidden);
+            return ClinicalScopeGuard.Forbidden(
+                "Bulk synonym dictionary import requires DATA_MANAGER or SPONSOR_DESIGNER authorization.",
+                code: ClinicalScopeGuard.ForbiddenCode);
         }
 
-        if (ExecutionScopeGuard.RequireAnyStudyScope(httpContext) is { } callerDenied)
+        if (ClinicalScopeGuard.RequireAnyStudyScope(httpContext, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } callerDenied)
         {
             return callerDenied;
         }
@@ -210,7 +209,9 @@ public static class SynonymEndpoints
 
         try
         {
-            string createdBy = caller?.UserId ?? "DATA_MANAGER";
+            string createdBy = caller?.UserId is { Length: > 0 } callerId && !string.IsNullOrWhiteSpace(callerId)
+                ? callerId
+                : "DATA_MANAGER";
             var result = await synonymService.ImportSynonymRulesAsync(
                 bytes,
                 file.FileName,
@@ -237,8 +238,8 @@ public static class SynonymEndpoints
     {
         string? effectiveStudyId = !string.IsNullOrWhiteSpace(study_id) ? study_id : studyId;
         IResult? scopeDenied = !string.IsNullOrWhiteSpace(effectiveStudyId)
-            ? ExecutionScopeGuard.RequireStudy(httpContext, effectiveStudyId)
-            : ExecutionScopeGuard.RequireAllStudies(httpContext);
+            ? ClinicalScopeGuard.RequireStudy(httpContext, effectiveStudyId, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true)
+            : ClinicalScopeGuard.RequireAllStudies(httpContext, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true);
         if (scopeDenied is not null)
         {
             return scopeDenied;
@@ -257,8 +258,8 @@ public static class SynonymEndpoints
     {
         string? effectiveStudyId = !string.IsNullOrWhiteSpace(study_id) ? study_id : studyId;
         IResult? scopeDenied = !string.IsNullOrWhiteSpace(effectiveStudyId)
-            ? ExecutionScopeGuard.RequireStudy(httpContext, effectiveStudyId)
-            : ExecutionScopeGuard.RequireAllStudies(httpContext);
+            ? ClinicalScopeGuard.RequireStudy(httpContext, effectiveStudyId, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true)
+            : ClinicalScopeGuard.RequireAllStudies(httpContext, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true);
         if (scopeDenied is not null)
         {
             return scopeDenied;
@@ -275,18 +276,23 @@ public static class SynonymEndpoints
         CancellationToken cancellationToken,
         [FromServices] IKernelLockGuard? lockGuard = null)
     {
-        var caller = httpContext.User.ToAuthenticatedCaller();
+        var caller = ClinicalScopeGuard.ResolvePrincipal(httpContext);
         if (!HasImportAuthorization(caller))
         {
-            return TypedResults.Problem(
-                detail: "Deactivating synonym rules requires DATA_MANAGER or SPONSOR_DESIGNER authorization.",
-                statusCode: StatusCodes.Status403Forbidden);
+            return ClinicalScopeGuard.Forbidden(
+                "Deactivating synonym rules requires DATA_MANAGER or SPONSOR_DESIGNER authorization.",
+                code: ClinicalScopeGuard.ForbiddenCode);
+        }
+
+        if (ClinicalScopeGuard.RequireVerifiedTenant(httpContext, ClinicalScopeGuard.ForbiddenCode) is { } tenantDenied)
+        {
+            return tenantDenied;
         }
 
         var existing = await synonymService.GetRuleByIdAsync(id, cancellationToken).ConfigureAwait(false);
         IResult? scopeDenied = existing is not null
             ? RequireSynonymScope(httpContext, existing.Scope, existing.StudyId)
-            : ExecutionScopeGuard.RequireAnyStudyScope(httpContext);
+            : ClinicalScopeGuard.RequireAnyStudyScope(httpContext, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true);
         if (scopeDenied is not null)
         {
             return scopeDenied;
@@ -323,18 +329,22 @@ public static class SynonymEndpoints
 
     private static IResult? RequireSynonymScope(HttpContext? httpContext, string? scope, string? studyId) =>
         IsGlobalScope(scope)
-            ? ExecutionScopeGuard.RequireAllStudies(httpContext)
-            : ExecutionScopeGuard.RequireStudy(httpContext, studyId);
+            ? ClinicalScopeGuard.RequireAllStudies(httpContext, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true)
+            : ClinicalScopeGuard.RequireStudy(httpContext, studyId, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true);
 
     private static bool IsGlobalScope(string? scope) =>
         string.Equals(scope?.Trim(), "ENTERPRISE", StringComparison.OrdinalIgnoreCase)
         || string.Equals(scope?.Trim(), "GLOBAL", StringComparison.OrdinalIgnoreCase);
 
-    private static bool HasImportAuthorization(AuthenticatedCaller? caller)
+    private static bool HasImportAuthorization(Principal? caller)
     {
-        if (caller == null) return false;
-        return caller.Roles.Any(r =>
-            r.Equals(Cadence.Security.Rbac.RoleNormalization.ROLE_SPONSOR_DM, StringComparison.OrdinalIgnoreCase) ||
+        if (caller is null)
+        {
+            return false;
+        }
+
+        return caller.Roles.Concat(caller.RawRoles).Any(r =>
+            r.Equals(RoleNormalization.ROLE_SPONSOR_DM, StringComparison.OrdinalIgnoreCase) ||
             r.Equals("DATA_MANAGER", StringComparison.OrdinalIgnoreCase) ||
             r.Equals("SPONSOR_DESIGNER", StringComparison.OrdinalIgnoreCase));
     }
