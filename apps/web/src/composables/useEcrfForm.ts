@@ -100,7 +100,7 @@ export const FORM_CHANGED_MESSAGE =
 
 /** The message a 403 signature answers with. */
 export const SIGN_DENIED_MESSAGE =
-  "You are not authorised to sign this form (collection.sign); it was not signed.";
+  "You are not authorised to sign this form; it was not signed.";
 
 /** One item's unsaved entry: typed text, or a reason the value is missing. */
 export interface EcrfEntry {

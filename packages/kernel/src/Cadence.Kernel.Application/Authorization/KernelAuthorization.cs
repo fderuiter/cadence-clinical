@@ -14,6 +14,7 @@ using Cadence.Kernel.References;
 using Cadence.Kernel.Time;
 
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 
 namespace Cadence.Kernel.Application.Authorization;
@@ -365,6 +366,7 @@ public static class KernelAuthorizationServiceCollectionExtensions
         services.AddScoped<KernelAuthorization>();
         services.AddScoped<IAuthorizer>(sp => sp.GetRequiredService<KernelAuthorization>());
         services.AddScoped<IAuthorizationProbe>(sp => sp.GetRequiredService<KernelAuthorization>());
+        services.TryAddScoped<IKernelExplanationMasker, KernelExplanationMasker>();
         return services;
     }
 }

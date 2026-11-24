@@ -329,6 +329,83 @@ public sealed class KernelApiHostPostgresTests(KernelPostgresFixture fixture) : 
     }
 
     /// <summary>
+    /// K-EXP-2 end-to-end over PostgreSQL: a caller without visibility over another site's enrollment or draft protocol
+    /// version receives masked NodeRefs (<c>masked:&lt;kind&gt;:NotPermitted</c>) in <c>can-i</c>, <c>commands</c>, and HTTP
+    /// 403 <c>ProblemDetails.explanation</c> responses without leaking hidden UUIDs, while the denial audit entry in
+    /// PostgreSQL preserves unredacted evidence.
+    /// </summary>
+    [Fact(DisplayName = "HostExplanations_MaskRestrictedNodeRefs_WhileKeepingAuditUnredacted")]
+    [Cadence.Testing.KernelRule("K-EXP-2")]
+    public async Task HostExplanationsMaskRestrictedNodeRefsWhileKeepingAuditUnredacted()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var code = $"T-EXP-{Guid.NewGuid():N}"[..16];
+        var tenant = TenantId.New();
+        await _scenario.OkAsync(new ProvisionTenant(tenant, code, "Explanation masking tenant", KernelProtocolScenario.Key(), KernelProtocolScenario.Reason), ct);
+        var (_, study) = await _scenario.NewStudyAsync(tenant, ct);
+        var first = await ApproveFirstAsync(tenant, study, ct);
+        var amendment = await ForkRewordedAsync(tenant, first, ct);
+        var ownSite = await AddStudySiteAsync(tenant, study, ct);
+        var otherSite = await AddStudySiteAsync(tenant, study, ct);
+        var otherEnrollment = NodeRef.For(await ScreenAsync(tenant, otherSite, "EXP-002", ct), 1);
+
+        await _scenario.OkAsync(
+            new IssueGrant(tenant, GrantId.New(), Actor.Person(Crc), "observation.record", null, AuthorityScope.StudySite(ownSite), Tick(), null, false,
+                KernelProtocolScenario.Key(), "Own-site CRC appointed"),
+            ct);
+        Tick();
+
+        using var stranger = Client(code, Stranger);
+        using var canIResp = await stranger.GetAsync(
+            new Uri($"/api/v1/kernel/authorization/can-i?capability=observation.record&resource={Uri.EscapeDataString(otherEnrollment.ToString())}", UriKind.Relative), ct);
+        var canIBody = await canIResp.Content.ReadAsStringAsync(ct);
+        canIResp.IsSuccessStatusCode.Should().BeTrue(canIBody);
+        using var canIDoc = JsonDocument.Parse(canIBody);
+        canIDoc.RootElement.GetProperty("permitted").GetBoolean().Should().BeFalse();
+        var canIExp = canIDoc.RootElement.GetProperty("explanation");
+        canIExp.GetRawText().Should().NotContain(otherEnrollment.Id.ToString("D"));
+        canIExp.GetProperty("subject").GetString()
+            .Should().Be($"masked:{NodeKinds.Enrollment}:{NotPermitted}");
+
+        using var cmdsResp = await stranger.GetAsync(
+            new Uri($"/api/v1/kernel/nodes/{Uri.EscapeDataString(otherEnrollment.ToString())}/commands", UriKind.Relative), ct);
+        var cmdsBody = await cmdsResp.Content.ReadAsStringAsync(ct);
+        cmdsResp.IsSuccessStatusCode.Should().BeTrue(cmdsBody);
+        using var cmdsDoc = JsonDocument.Parse(cmdsBody);
+        cmdsDoc.RootElement.EnumerateArray().Should().NotBeEmpty()
+            .And.OnlyContain(c =>
+                !c.GetProperty("decision").GetProperty("explanation").GetRawText().Contains(otherEnrollment.Id.ToString("D"))
+                && c.GetProperty("decision").GetProperty("explanation").GetProperty("subject").GetString()
+                    == $"masked:{NodeKinds.Enrollment}:{NotPermitted}");
+
+        using var submitReq = new HttpRequestMessage(
+            HttpMethod.Post,
+            new Uri($"/api/v1/kernel/protocol-versions/{NodeRef.For(amendment)}/submit-for-review", UriKind.Relative));
+        submitReq.Headers.Add("Idempotency-Key", KernelProtocolScenario.Key());
+        submitReq.Headers.Add(GatewayHeaders.ChangeReason, ChangeReasonHeader.Encode("Unauthorized submit"));
+        using var denied = await stranger.SendAsync(submitReq, ct);
+        denied.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        var deniedBody = await denied.Content.ReadAsStringAsync(ct);
+        deniedBody.Should().NotContain(amendment.Value.ToString("D"));
+        using var deniedDoc = JsonDocument.Parse(deniedBody);
+        deniedDoc.RootElement.TryGetProperty("explanation", out var expEl).Should().BeTrue();
+        expEl.GetProperty("producer").GetString().Should().Be("kernel.authorization");
+        expEl.GetProperty("conditions")[0].GetProperty("evidence").EnumerateArray().Select(e => e.GetString())
+            .Should().Contain($"masked:{NodeKinds.ProtocolVersion}:{NotPermitted}");
+        expEl.GetProperty("next_actions")[0].GetProperty("target").GetString()
+            .Should().Be($"masked:{NodeKinds.ProtocolVersion}:{NotPermitted}");
+
+        await using var db = fixture.CreateAdminContext();
+        var denialAudit = await db.AuditEntries.AsNoTracking()
+            .Where(a => a.TenantId == tenant && a.Action == "Denied")
+            .SingleAsync(ct);
+        denialAudit.Changes.Should().NotContain("masked:")
+            .And.Contain("SubmitProtocolVersionForReview")
+            .And.Contain(amendment.Value.ToString("D"));
+    }
+
+    /// <summary>
     /// Every registered <see cref="NodeKinds.All"/> kind resolves through <c>GET /api/v1/kernel/nodes/{nodeRef}</c> and
     /// <c>/path</c> for seeded records in the active tenant; pseudonymous <c>person</c> and <c>participant</c> summaries
     /// expose zero direct identifiers and require an active <c>TenantMembership</c>; site-scoped callers receive

@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Kernel.Application.Commands;
+using Cadence.Kernel.Explanations;
 using Cadence.Kernel.References;
 
 namespace Cadence.Kernel.Api;
@@ -37,6 +38,14 @@ internal static class KernelReadMasking
         return await visibility.MaskAsync(tenant, reader, distinct, cancellationToken).ConfigureAwait(false);
     }
 
+    public static ValueTask<IReadOnlyDictionary<NodeRef, MaskReason>> MaskExplanationsAsync(
+        INodeVisibility visibility,
+        ICurrentActor currentActor,
+        TenantId tenant,
+        IEnumerable<Explanation> explanations,
+        CancellationToken cancellationToken) =>
+        MaskAsync(visibility, currentActor, tenant, ExplanationMasking.CollectNodes(explanations), cancellationToken);
+
     public static MaskReason? For(this IReadOnlyDictionary<NodeRef, MaskReason> masks, NodeRef? node) =>
-        node is not null && masks.TryGetValue(node, out var reason) ? reason : null;
+        ExplanationMasking.ReasonFor(node, masks);
 }

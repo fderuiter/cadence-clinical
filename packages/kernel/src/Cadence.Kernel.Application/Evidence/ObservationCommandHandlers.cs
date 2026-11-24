@@ -38,11 +38,16 @@ internal sealed class RecordObservationHandler : ICommandHandler<RecordObservati
             return ObservationErrors.EnrollmentUnknown;
         }
 
-        if (await LocksInForce.AnyAsync(
-            context.Work, LockScopes.Covering(enrollment.StudyId, enrollment.StudySiteId, enrollment.Id), LocksInForce.DenyingWrites, cancellationToken)
-            .ConfigureAwait(false))
+        if (await LocksInForce.RefusalAsync(
+            context.Work,
+            LockScopes.Covering(enrollment.StudyId, enrollment.StudySiteId, enrollment.Id),
+            LocksInForce.DenyingWrites,
+            ObservationErrors.Locked,
+            nameof(RecordObservation),
+            NodeRef.For(enrollment.Id, enrollment.VersionIndex),
+            cancellationToken).ConfigureAwait(false) is { } locked)
         {
-            return ObservationErrors.Locked;
+            return locked;
         }
 
         if (await CaptureConditions.RefusalAsync(context.Work, enrollment.Id, nameof(RecordObservation), cancellationToken).ConfigureAwait(false) is { } refused)
@@ -98,13 +103,16 @@ internal sealed class CorrectObservationHandler(IConceptRegistry? concepts = nul
         }
 
         var instance = await CollectionMembership.InstanceOfAsync(context.Work, command.ObservationId, cancellationToken).ConfigureAwait(false);
-        if (await LocksInForce.AnyAsync(
+        if (await LocksInForce.RefusalAsync(
             context.Work,
             LockScopes.Covering(enrollment.StudyId, enrollment.StudySiteId, enrollment.Id, command.ObservationId, instance),
             LocksInForce.DenyingWrites,
-            cancellationToken).ConfigureAwait(false))
+            ObservationErrors.Locked,
+            nameof(CorrectObservation),
+            NodeRef.For(command.ObservationId),
+            cancellationToken).ConfigureAwait(false) is { } locked)
         {
-            return ObservationErrors.Locked;
+            return locked;
         }
 
         if (await context.Work.FindAsync<Observation>(command.ObservationId, cancellationToken).ConfigureAwait(false) is not { } observation

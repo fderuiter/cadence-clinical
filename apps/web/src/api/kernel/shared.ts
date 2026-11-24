@@ -319,3 +319,51 @@ export function triggerBrowserDownload(blob: Blob, filename: string): void {
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
 }
+
+export function formatProblemExplanationSummary(
+  problem: Record<string, unknown> | null | undefined
+): string {
+  const rawExp = problem?.explanation;
+  if (!rawExp || typeof rawExp !== "object") {
+    return "";
+  }
+  const exp = rawExp as Record<string, unknown>;
+  const claim = typeof exp.claim === "string" ? exp.claim.trim() : "";
+  const conditions = Array.isArray(exp.conditions) ? exp.conditions : [];
+  const unmet = conditions
+    .filter(
+      (c): c is Record<string, unknown> => Boolean(c) && typeof c === "object"
+    )
+    .filter((c) => c.met === false && typeof c.description === "string")
+    .map((c) => (c.description as string).trim())
+    .filter(Boolean);
+  if (claim && unmet.length > 0 && !unmet.includes(claim)) {
+    return `${claim} (${unmet.join("; ")})`;
+  }
+  return claim || unmet.join("; ");
+}
+
+export function extractExplanationTargets(
+  problem: Record<string, unknown> | null | undefined
+): Array<{ description: string; target: string }> {
+  const rawExp = problem?.explanation;
+  const exp =
+    rawExp && typeof rawExp === "object"
+      ? (rawExp as Record<string, unknown>)
+      : null;
+  const actions = Array.isArray(exp?.next_actions)
+    ? exp.next_actions
+    : Array.isArray(exp?.nextActions)
+      ? exp.nextActions
+      : [];
+  return actions
+    .filter(
+      (a): a is Record<string, unknown> => Boolean(a) && typeof a === "object"
+    )
+    .filter((a) => typeof a.target === "string" && a.target.length > 0)
+    .map((a) => ({
+      description:
+        typeof a.description === "string" ? a.description : "Inspect blocker",
+      target: a.target as string,
+    }));
+}

@@ -815,6 +815,7 @@ function createDefaultContextualSops(): Record<
     })(),
     ...buildCanvasSectionSopEntries("stage=start&section=site-activation", {
       mappingPrefix: "map-can-act",
+      stageFallback: "start",
       persona: "cra_monitor",
       priority: 45,
       articleId: "art-can-act",

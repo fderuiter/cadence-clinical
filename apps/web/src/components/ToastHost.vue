@@ -7,13 +7,25 @@
     @dismiss="toastStore.dismiss"
     @pause="toastStore.pause"
     @resume="toastStore.resume"
-  />
+  >
+    <template #extra="{ toast }">
+      <ToastTargetLinks
+        v-if="toast?.targets?.length"
+        :targets="toast.targets"
+        @peek="toastStore.dismiss(toast.id)"
+      />
+    </template>
+  </ClinicalToastHost>
 </template>
 
 <script setup>
-import { getCurrentInstance } from "vue";
+import { defineAsyncComponent, getCurrentInstance } from "vue";
 import { ClinicalToastHost } from "ui";
 import { useToastStore } from "../stores/toasts.js";
+
+const ToastTargetLinks = defineAsyncComponent(
+  () => import("./ToastTargetLinks.vue")
+);
 
 const toastStore = useToastStore();
 const instance = getCurrentInstance();
