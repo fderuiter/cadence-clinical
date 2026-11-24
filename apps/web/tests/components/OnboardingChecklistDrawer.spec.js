@@ -521,4 +521,29 @@ describe("OnboardingChecklistDrawer.vue & AppShell Integration", () => {
       vi.unstubAllEnvs();
     }
   });
+
+  it("navigates from /forbidden to /overview when #btn-drawer-start-tour is clicked after a persona RBAC redirect", async () => {
+    await router.push("/forbidden");
+    await flushPromises();
+    const authStore = useAuthStore();
+    authStore.isAuthenticated = true;
+    authStore.rawRoles = ["CRC"];
+    authStore.currentPersona = "site_crc";
+
+    const onboardingStore = useOnboardingStore();
+    onboardingStore.loadPersonaState("site_crc");
+    onboardingStore.openDrawer();
+
+    const wrapper = mount(OnboardingChecklistDrawer, {
+      global: { plugins: [router] },
+    });
+
+    await wrapper.find("#btn-drawer-start-tour").trigger("click");
+    await flushPromises();
+
+    expect(router.currentRoute.value.path).toBe("/overview");
+    expect(onboardingStore.isActive).toBe(true);
+    expect(onboardingStore.isDrawerOpen).toBe(false);
+    wrapper.unmount();
+  });
 });

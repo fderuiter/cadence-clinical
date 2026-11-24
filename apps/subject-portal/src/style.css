@@ -391,6 +391,18 @@ body {
   display: none;
 }
 
+@media (min-width: 768px) and (max-width: 1023px) {
+  .portal-header {
+    padding: 12px 20px;
+    gap: 10px 16px;
+  }
+
+  .portal-container {
+    padding: 16px 20px;
+    gap: 20px;
+  }
+}
+
 @media (max-width: 767px) {
   #app {
     padding-bottom: calc(
@@ -400,18 +412,36 @@ body {
   }
 
   .portal-header {
-    padding: 8px 16px;
-    gap: 8px;
+    padding: 6px 12px;
+    gap: 6px;
+  }
+
+  .header-branding {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 2px 8px;
+    min-width: 0;
   }
 
   .header-branding h1 {
-    font-size: 20px;
+    font-size: 18px;
+    line-height: 1.25;
+  }
+
+  .header-branding p.role-badge {
+    font-size: 0.75rem;
+    line-height: 1.25;
+  }
+
+  .compliance-badges {
+    gap: 6px;
   }
 
   .portal-container {
     flex-direction: column;
-    padding: 8px 16px;
-    gap: 8px;
+    padding: 6px 16px;
+    gap: 6px;
   }
 
   .portal-navigation {

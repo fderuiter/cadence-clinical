@@ -51,16 +51,19 @@ const showBanner = computed(() => {
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 8px 16px;
+  gap: 4px 12px;
   background-color: var(--semantic-color-warning-bg);
   color: var(--semantic-color-warning);
   border-bottom: 1px solid var(--semantic-color-warning);
-  padding: 6px 16px;
+  padding: 4px 16px;
   font-size: 13px;
+  line-height: 1.35;
   font-weight: 600;
 }
 
 .demo-mode-banner-copy {
+  flex: 1 1 320px;
+  min-width: 0;
   margin: 0;
   text-align: left;
 }
@@ -69,14 +72,15 @@ const showBanner = computed(() => {
   display: inline-flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
+  gap: 4px 6px;
+  max-width: 100%;
 }
 
 .demo-mode-banner-link {
   display: inline-flex;
   align-items: center;
   min-height: var(--semantic-control-target-min, 24px);
-  padding: 2px 6px;
+  padding: 0 6px;
   border-radius: var(--semantic-radius-sm, 6px);
   color: var(--semantic-color-warning);
   font-weight: 700;
@@ -95,9 +99,18 @@ const showBanner = computed(() => {
 
 @media (max-width: 767px) {
   .demo-mode-banner {
-    padding: 6px 12px;
+    gap: 2px 10px;
+    padding: 4px 12px;
     font-size: 0.75rem;
-    line-height: 1.35;
+    line-height: 1.25;
+  }
+
+  .demo-mode-banner-copy {
+    flex-basis: 100%;
+  }
+
+  .demo-mode-banner-link {
+    padding: 0 4px;
   }
 }
 </style>
