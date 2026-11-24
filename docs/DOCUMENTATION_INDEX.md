@@ -618,6 +618,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2656: Keyboard Operability and WAI-ARIA Semantics in `ClinicalDataTable`](adr/2026-11-23-clinical-data-table-keyboard-and-aria-compliance.md) | Current | - Status: Accepted |
 | [ADR-2657: Share UI Primitives and Synchronize Participant Portal Route Queries](adr/2026-11-23-share-ui-primitives-and-query-synced-portal-routes.md) | Current | - Status: Accepted |
 | [ADR-2831: Stage Encrypted Randomization Slots Before Acquiring the Study Lock](adr/2026-11-23-stage-encrypted-randomization-slots-before-acquiring-the-study-lock.md) | Current | - Status: Accepted |
+| [ADR-2658: Unify Participant eConsent APIs and Shared Signing Modals](adr/2026-11-23-unify-participant-econsent-apis-and-shared-signing-modals.md) | Current | - Status: Accepted |
 
 ## Developing and running
 

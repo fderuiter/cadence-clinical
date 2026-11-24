@@ -21,6 +21,8 @@ export const useSessionStore = defineStore("session", {
     return {
       session: {
         userId: demo ? DEFAULT_DEMO_PARTICIPANT?.subjectCode || null : null,
+        username: null,
+        usernameBoundToUserId: null,
         studyId: demo ? DEMO_STUDY?.code || null : null,
         siteId: demo ? DEFAULT_DEMO_SITE?.code || null : null,
         sponsorCode: demo ? DEMO_SPONSOR?.code || null : null,

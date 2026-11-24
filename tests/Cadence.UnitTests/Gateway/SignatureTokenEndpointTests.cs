@@ -149,6 +149,52 @@ public sealed class SignatureTokenEndpointTests(SignatureTokenEndpointTests.Fixt
     }
 
     /// <summary>
+    /// A trial participant whose OIDC token carries a UUID <c>sub</c> and a human-readable
+    /// <c>preferred_username</c> (<c>subject.site101</c>) receives a valid single-use <c>sig_token</c>
+    /// bound to the UUID <c>sub</c> when submitting <c>preferred_username</c>, whereas submitting the raw
+    /// UUID as <c>username</c> is rejected with <c>403 SIGNER_MISMATCH</c>.
+    /// @req:SRS-SYS-005
+    /// </summary>
+    [Fact]
+    [Trait("Category", "GxP_OQ")]
+    [GxPRequirement("SRS-SYS-005")]
+    public async Task SignatureVerification_ParticipantPreferredUsernameWithUuidSub_IssuesTokenBoundToSub()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        const string subjectSub = "7a8b9c4d-5e6f-4a1b-8c2d-3e4f5a6b7c8d";
+        const string preferredUsername = "subject.site101";
+        const string reconsentAction = "/api/v1/econsent/reconsent/complete/req-amend-2";
+        const string reconsentSemanticAction = "econsent.reconsent.sign";
+        using var client = fixture.ClientFor(subjectSub, preferredUsername, "subject");
+
+        var mismatchResponse = await client.PostAsJsonAsync(
+            SignatureTokenEndpoints.Path,
+            new { username = subjectSub, password = RecordingCredentials.Password, action = reconsentAction, semantic_action = reconsentSemanticAction },
+            ct);
+        mismatchResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await mismatchResponse.Content.ReadAsStringAsync(ct)).Should().Contain("SIGNER_MISMATCH");
+
+        var validResponse = await client.PostAsJsonAsync(
+            SignatureTokenEndpoints.Path,
+            new { username = preferredUsername, password = RecordingCredentials.Password, action = reconsentAction, semantic_action = reconsentSemanticAction },
+            ct);
+        validResponse.StatusCode.Should().Be(HttpStatusCode.OK, await validResponse.Content.ReadAsStringAsync(ct));
+
+        var issued = await validResponse.Content.ReadFromJsonAsync<SignatureTokenResponse>(ct);
+        issued.Should().NotBeNull();
+        var verifier = new SigTokenVerifier();
+        byte[] secret = GatewayIdentity.EncodeSecret(TestSecurityContext.GatewaySecret);
+        var verified = await verifier.VerifyAndConsumeAsync(
+            issued!.SigToken,
+            subjectSub,
+            new SigTokenBinding(reconsentAction, reconsentSemanticAction),
+            secret,
+            ct);
+        verified.Subject.Should().Be(subjectSub);
+        verified.Claims.First(c => c.Type == SigTokenClaims.Username).Value.Should().Be(preferredUsername);
+    }
+
+    /// <summary>
     /// Every token names the concrete API path and the namespaced meaning it signs.
     /// @req:SRS-SYS-005
     /// </summary>
@@ -304,7 +350,7 @@ public sealed class SignatureTokenEndpointTests(SignatureTokenEndpointTests.Fixt
 
         public ConcurrentDictionary<string, string> Subjects { get; } = new(StringComparer.OrdinalIgnoreCase);
 
-        public IReadOnlyCollection<(string Username, string Password, string? Totp)> Checked => _checked.ToArray();
+        public IReadOnlyCollection<(string Username, string Password, string? Totp)> Checked => [.. _checked];
 
         public Task<CredentialCheck> VerifyAsync(string username, string password, string? oneTimeCode, CancellationToken cancellationToken)
         {

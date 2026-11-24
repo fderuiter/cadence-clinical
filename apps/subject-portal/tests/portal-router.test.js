@@ -105,8 +105,17 @@ describe("Subject portal router and stores", () => {
 
     state.currentView = "view-consent";
     await settle();
+    expect(router.currentRoute.value.path).toBe("/consent");
+    expect(state.currentView).toBe("view-consent");
+
+    state.currentView = "view-lay-summaries";
+    await settle();
     expect(router.currentRoute.value.path).toBe("/unavailable");
     expect(state.currentView).toBe("view-unavailable");
+
+    state.currentView = "view-consent";
+    await settle();
+    expect(router.currentRoute.value.path).toBe("/consent");
 
     state.session.token = null;
     await settle();

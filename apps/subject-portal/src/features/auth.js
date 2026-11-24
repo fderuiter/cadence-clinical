@@ -7,6 +7,7 @@ import {
 } from "demo-fixtures";
 import {
   createOidcSessionCoordinator,
+  decodeJwtPayloadClaims,
   extractPrimarySiteId,
   extractPrimaryStudyId,
   resolveOidcRedirectUri,
@@ -210,6 +211,37 @@ function readScopeFromCurrentUrl() {
   return { studyId, siteId };
 }
 
+function extractPreferredUsername(claimsSource = null, fallbackToken = null) {
+  const fromSource =
+    claimsSource &&
+    typeof claimsSource === "object" &&
+    typeof claimsSource.preferred_username === "string"
+      ? claimsSource.preferred_username.trim()
+      : "";
+  if (fromSource) {
+    return fromSource;
+  }
+  const decoded =
+    typeof fallbackToken === "string"
+      ? decodeJwtPayloadClaims(fallbackToken)
+      : null;
+  const fromToken =
+    decoded && typeof decoded.preferred_username === "string"
+      ? decoded.preferred_username.trim()
+      : "";
+  return fromToken || null;
+}
+
+export function resolveSessionSignerUsername() {
+  const activeUserId = String(state.session?.userId || "").trim();
+  const explicitUsername = String(state.session?.username || "").trim();
+  const boundUserId = state.session?.usernameBoundToUserId;
+  if (explicitUsername && (!boundUserId || boundUserId === activeUserId)) {
+    return explicitUsername;
+  }
+  return activeUserId;
+}
+
 export function hydrateSessionScopeFromClaims(
   claimsSource = null,
   fallbackToken = null
@@ -218,10 +250,12 @@ export function hydrateSessionScopeFromClaims(
     extractPrimaryStudyId(claimsSource) || extractPrimaryStudyId(fallbackToken);
   const claimSiteId =
     extractPrimarySiteId(claimsSource) || extractPrimarySiteId(fallbackToken);
+  const claimUsername = extractPreferredUsername(claimsSource, fallbackToken);
   const urlScope = readScopeFromCurrentUrl();
 
   let storedStudyId;
   let storedSiteId;
+  let storedUsername;
   try {
     storedStudyId =
       (typeof sessionStorage !== "undefined" &&
@@ -237,9 +271,17 @@ export function hydrateSessionScopeFromClaims(
         (localStorage.getItem("mock_site_id") ||
           localStorage.getItem("oidc_site_id"))) ||
       null;
+    storedUsername =
+      (typeof sessionStorage !== "undefined" &&
+        sessionStorage.getItem("mock_username")) ||
+      (typeof localStorage !== "undefined" &&
+        (localStorage.getItem("mock_username") ||
+          localStorage.getItem("oidc_username"))) ||
+      null;
   } catch {
     storedStudyId = null;
     storedSiteId = null;
+    storedUsername = null;
   }
 
   const nextStudyId =
@@ -258,6 +300,19 @@ export function hydrateSessionScopeFromClaims(
   state.session.studyId = nextStudyId;
   state.session.siteId = nextSiteId;
 
+  const resolvedUsername =
+    claimUsername ||
+    storedUsername ||
+    (state.session.username &&
+    (!state.session.usernameBoundToUserId ||
+      state.session.usernameBoundToUserId === state.session.userId)
+      ? state.session.username
+      : null);
+  if (resolvedUsername) {
+    state.session.username = resolvedUsername;
+    state.session.usernameBoundToUserId = state.session.userId || null;
+  }
+
   try {
     if (typeof localStorage !== "undefined") {
       if (claimStudyId) {
@@ -265,6 +320,9 @@ export function hydrateSessionScopeFromClaims(
       }
       if (claimSiteId) {
         localStorage.setItem("oidc_site_id", claimSiteId);
+      }
+      if (claimUsername) {
+        localStorage.setItem("oidc_username", claimUsername);
       }
     }
   } catch {
@@ -454,11 +512,17 @@ export async function signIn() {
           });
 
           if (keycloak.authenticated && keycloak.token) {
+            const preferredUsername = extractPreferredUsername(
+              keycloak.tokenParsed || null,
+              keycloak.token
+            );
             const authenticatedUserId =
-              keycloak.subject ||
-              keycloak.tokenParsed?.preferred_username ||
-              null;
+              keycloak.subject || preferredUsername || null;
             state.session.userId = authenticatedUserId;
+            state.session.username = preferredUsername || null;
+            state.session.usernameBoundToUserId = preferredUsername
+              ? authenticatedUserId
+              : null;
             state.session.token = keycloak.token;
             state.session.isOfflineMode = false;
             state.session.isDemoMode = false;
@@ -473,6 +537,9 @@ export async function signIn() {
             if (authenticatedUserId) {
               try {
                 localStorage.setItem("oidc_user_id", authenticatedUserId);
+                if (preferredUsername) {
+                  localStorage.setItem("oidc_username", preferredUsername);
+                }
               } catch (err) {
                 console.warn(
                   "Failed to save oidc_user_id to localStorage:",
@@ -501,6 +568,8 @@ export async function signIn() {
       }
 
       state.session.userId = null;
+      state.session.username = null;
+      state.session.usernameBoundToUserId = null;
       state.session.isOfflineMode = false;
       transitionParticipantScope(null);
     }
@@ -524,6 +593,7 @@ export async function signIn() {
       state.session.isOfflineMode = false;
     } else if (state.session.token) {
       state.session.isOfflineMode = false;
+      hydrateSessionScopeFromClaims(null, state.session.token);
     }
     transitionParticipantScope(state.session.userId);
   }
@@ -697,14 +767,17 @@ export async function logout(options = {}) {
 
   try {
     localStorage.removeItem("oidc_user_id");
+    localStorage.removeItem("oidc_username");
     localStorage.removeItem("oidc_study_id");
     localStorage.removeItem("oidc_site_id");
     localStorage.removeItem("mock_user_id");
+    localStorage.removeItem("mock_username");
     localStorage.removeItem("mock_token");
     localStorage.removeItem("mock_study_id");
     localStorage.removeItem("mock_site_id");
     if (typeof sessionStorage !== "undefined") {
       sessionStorage.removeItem("mock_user_id");
+      sessionStorage.removeItem("mock_username");
       sessionStorage.removeItem("mock_token");
       sessionStorage.removeItem("mock_study_id");
       sessionStorage.removeItem("mock_site_id");
@@ -738,6 +811,8 @@ export async function logout(options = {}) {
   if (wasDemo) {
     const demoUserId = DEFAULT_DEMO_PARTICIPANT?.subjectCode || null;
     state.session.userId = demoUserId;
+    state.session.username = null;
+    state.session.usernameBoundToUserId = null;
     state.session.studyId = DEMO_STUDY?.code || null;
     state.session.siteId = DEFAULT_DEMO_SITE?.code || null;
     state.session.sponsorCode = DEMO_SPONSOR?.code || null;
@@ -747,6 +822,8 @@ export async function logout(options = {}) {
     setActiveUserId(demoUserId);
   } else {
     state.session.userId = null;
+    state.session.username = null;
+    state.session.usernameBoundToUserId = null;
     state.session.studyId = null;
     state.session.siteId = null;
     state.session.sponsorCode = null;

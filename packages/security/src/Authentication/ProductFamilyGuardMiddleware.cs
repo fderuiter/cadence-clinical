@@ -426,6 +426,11 @@ public sealed class ProductFamilyGuardMiddleware : IMiddleware
             return OrbitOnly;
         }
 
+        if (StartsWithSegment(trimmed, "/api/v1/execution/webhooks/econsent"))
+        {
+            return EngageOnly;
+        }
+
         return CaptureOnly;
     }
 

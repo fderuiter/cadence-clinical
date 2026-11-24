@@ -28,7 +28,7 @@ namespace Cadence.UnitTests.Security;
 
 /// <summary>
 /// Verifies across standalone and kernel clinical services that a gateway-signed expired tenant identity
-/// (<c>X-Tenant-Read-Only: true</c>) is refused on mutating clinical endpoints — including all ten non-closeout
+/// (<c>X-Tenant-Read-Only: true</c>) is refused on mutating clinical endpoints — including all eleven non-closeout
 /// 21 CFR Part 11 step-up signature endpoints (<see cref="ElectronicSignatureRequired"/>) — with
 /// <c>403 K.Subscription.Expired</c> before consuming <c>X-Sig-Token</c>, while preserving GET reads, regulated exports
 /// (<c>POST /api/v1/etmf/documents/export</c>), and closeout routes marked with <see cref="AllowExpiredTenantWriteMetadata"/>,
@@ -373,8 +373,8 @@ public sealed class ExpiredSubscriptionStandaloneServicesTests
         }
 
         standaloneSignatureRoutesVerified.Should().Be(
-            10,
-            "all ten standalone ElectronicSignatureRequired clinical routes across econsent, execution, knowledge, safety, and tickets must be verified");
+            11,
+            "all eleven standalone ElectronicSignatureRequired clinical routes across econsent, execution, knowledge, safety, and tickets must be verified");
         kernelSignatureRoutesVerified.Should().Be(
             4,
             "kernel non-closeout ElectronicSignatureRequired routes (library-items/{itemRef}/approve, protocol-versions/{versionRef}/approve, validation/findings/{findingRef}/accept, and validation/findings/{findingRef}/explain) must all be verified");

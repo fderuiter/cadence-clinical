@@ -270,6 +270,7 @@ export const ModalErrorAlert: DefineComponent<
     onRetry?: (...args: any[]) => void;
     onDismiss?: (...args: any[]) => void;
     id?: string;
+    autoFocus?: boolean;
   },
   {},
   any
@@ -329,6 +330,7 @@ export const ClinicalModal: DefineSlotsComponent<
     showHeader?: boolean;
     showClose?: boolean;
     showFooter?: boolean;
+    keepMounted?: boolean;
   },
   {
     default?: (props: Record<string, never>) => any;

@@ -10,6 +10,7 @@ export const useUiStore = defineStore("ui", {
     unavailableScreen: null,
     pendingSignableAction: null,
     modalError: "",
+    signatureNeedsPasswordReentry: false,
     previouslyFocusedElement: null,
     initiatingButton: null,
     draftPresence: {},

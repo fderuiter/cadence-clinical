@@ -34,4 +34,8 @@ public static class ServiceAccounts
     /// <summary>The eConsent-completed consumer that auto-enrolls subjects and backfills consent records.</summary>
     public static readonly ServiceAccount EConsentConsumer =
         new("svc:econsent-consumer", "Automated consent-completion enrollment");
+
+    /// <summary>The signed eConsent service webhook that synchronizes verified consent and amendment signatures.</summary>
+    public static readonly ServiceAccount EConsentWebhook =
+        new("svc:econsent", "Automated eConsent signature synchronization");
 }

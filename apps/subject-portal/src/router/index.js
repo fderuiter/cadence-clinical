@@ -571,38 +571,48 @@ export function getPortalRouter() {
     }
   );
 
-  watch(
-    () => isScreenAvailable("wallet"),
-    (walletAvailable) => {
-      if (!router || !portalMounted) return;
-      const current = router.currentRoute.value;
-      if (walletAvailable && current.name === "unavailable") {
-        const requested = current.query?.screen
-          ? String(current.query.screen)
-          : "";
-        if (!requested || requested === "wallet") {
-          state.unavailableScreen = null;
+  for (const authScreen of ["wallet", "consent"]) {
+    watch(
+      () => isScreenAvailable(authScreen),
+      (screenAvailable) => {
+        if (!router || !portalMounted) return;
+        const current = router.currentRoute.value;
+        if (
+          screenAvailable &&
+          current.name === "unavailable" &&
+          !pushingFromViewState &&
+          state.currentView === "view-unavailable"
+        ) {
+          const requested = current.query?.screen
+            ? String(current.query.screen)
+            : "";
+          if (
+            requested === authScreen ||
+            (!requested && authScreen === "wallet")
+          ) {
+            state.unavailableScreen = null;
+            router
+              .replace({
+                name: authScreen,
+                query: buildScopedQuery(current.query),
+              })
+              .catch(console.warn);
+          }
+        } else if (!screenAvailable && current.name === authScreen) {
+          state.unavailableScreen = authScreen;
           router
             .replace({
-              name: "wallet",
-              query: buildScopedQuery(current.query),
+              name: "unavailable",
+              query: {
+                ...buildScopedQuery(current.query),
+                screen: authScreen,
+              },
             })
             .catch(console.warn);
         }
-      } else if (!walletAvailable && current.name === "wallet") {
-        state.unavailableScreen = "wallet";
-        router
-          .replace({
-            name: "unavailable",
-            query: {
-              ...buildScopedQuery(current.query),
-              screen: "wallet",
-            },
-          })
-          .catch(console.warn);
       }
-    }
-  );
+    );
+  }
 
   // Synchronous, so the push supersedes any navigation still in flight
   // (including rapid A -> B -> A transitions before B commits currentRoute).

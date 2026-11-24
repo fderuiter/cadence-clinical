@@ -15,6 +15,12 @@ public static partial class PermissionMatrix
         foreach (string role in new[] { RoleNormalization.ROLE_CRC, RoleNormalization.ROLE_INVESTIGATOR })
         {
             Grant(role, "econsent_consent", "capture");
+            Grant(role, "econsent_self_consent", "read", "sign");
         }
+
+        // Participant self-service: strictly bound to the signed caller's own SubjectId in EconsentEndpoints.
+        // Participants hold zero staff-scoped permissions (econsent_template:*, econsent_consent:capture).
+        Grant(RoleNormalization.ROLE_SUBJECT, "econsent_self_consent", "read", "verify", "sign");
+        Grant(RoleNormalization.ROLE_SUBJECT, "econsent_self_reconsent", "read", "sign");
     }
 }

@@ -5,6 +5,9 @@ public static partial class PermissionMatrix
     /// <summary>The role the eTMF service's signed caller carries when it posts completeness updates to Execution.</summary>
     public const string EtmfServiceRole = "etmf_service";
 
+    /// <summary>The role the eConsent service's signed caller carries when it synchronizes signed consents to Execution.</summary>
+    public const string EconsentServiceRole = "econsent_service";
+
     /// <summary>The role of the clinical endpoint committee chair, who signs final adjudications.</summary>
     public const string CecChairRole = "cec_chair";
 
@@ -193,6 +196,10 @@ public static partial class PermissionMatrix
         // The eTMF completeness webhook is called service to service. Only the eTMF service's signed identity holds
         // the role, so no person can mark a site's TMF complete and unblock its activation.
         Grant(EtmfServiceRole, "site_compliance", "etmf_sync");
+
+        // The eConsent synchronization webhook is called service to service by apps/econsent after verified 21 CFR Part 11
+        // consent or amendment signing so Execution's subject and consent read-model stays synchronized atomically.
+        Grant(EconsentServiceRole, "subject_enrollment", "econsent_sync");
     }
 
     /// <summary>Clinical endpoint adjudication (CEC).</summary>

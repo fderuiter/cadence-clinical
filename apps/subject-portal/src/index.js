@@ -30,6 +30,7 @@ import {
   portalSessionCoordinator,
   prepareSignOutGuardState,
   refreshPortalSessionOnUnauthorized,
+  resolveSessionSignerUsername,
 } from "./features/auth.js";
 import { renderLedger } from "./features/audit.js";
 import { renderCompliance } from "./features/compliance.js";
@@ -223,6 +224,7 @@ export {
   portalSessionCoordinator,
   ensurePortalSessionToken,
   refreshPortalSessionOnUnauthorized,
+  resolveSessionSignerUsername,
   refreshSubmissionsState,
   refreshSyncViews,
   checkPINWrapper,

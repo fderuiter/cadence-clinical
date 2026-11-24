@@ -182,7 +182,9 @@ export async function initializeApp() {
   const nameEl = document.getElementById("session-subject-id");
   if (nameEl) {
     nameEl.textContent =
-      maskParticipantIdentifier(state.session.userId) || "Not signed in";
+      maskParticipantIdentifier(
+        state.session.username || state.session.userId
+      ) || "Not signed in";
   }
 
   // Initialize genesis compliance ledger

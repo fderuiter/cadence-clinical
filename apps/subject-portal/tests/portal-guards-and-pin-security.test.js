@@ -184,32 +184,34 @@ describe("Portal Availability Guards and PIN Security", () => {
     await router.isReady();
     await settle();
 
-    // Authenticated production mount lands on /wallet and renders ONLY My Wallet
+    // Authenticated production mount lands on /wallet and renders ONLY backed authenticated tabs (My Consent + My Wallet)
     expect(router.currentRoute.value.path).toBe("/wallet");
     expect(state.currentView).toBe("view-wallet");
     expect(document.getElementById("tab-btn-wallet")).not.toBeNull();
+    expect(document.getElementById("tab-btn-consent")).not.toBeNull();
     expect(document.getElementById("tab-btn-tasks")).toBeNull();
     expect(document.getElementById("tab-btn-compliance")).toBeNull();
     expect(document.getElementById("tab-btn-inbox")).toBeNull();
-    expect(document.getElementById("tab-btn-consent")).toBeNull();
     expect(document.getElementById("tab-btn-lay-summaries")).toBeNull();
 
-    // Zero startup fetches to unmounted /api/v1/interop/* or /api/v1/econsent/*
+    // Zero startup fetches to unmounted /api/v1/interop/*
     const calledUrls = globalThis.fetch.mock.calls.map((c) => String(c[0]));
     expect(
-      calledUrls.filter(
-        (url) =>
-          url.includes("/api/v1/interop/") || url.includes("/api/v1/econsent/")
-      )
+      calledUrls.filter((url) => url.includes("/api/v1/interop/"))
     ).toEqual([]);
 
-    // Direct navigation to /tasks, /questionnaire, /compliance, /inbox, /consent, and /lay-summaries renders UnavailableView with link to /wallet
+    // Authenticated direct navigation to /consent succeeds outside demo builds
+    await router.push("/consent");
+    await settle();
+    expect(router.currentRoute.value.path).toBe("/consent");
+    expect(state.currentView).toBe("view-consent");
+
+    // Direct navigation to unbacked screens (/tasks, /questionnaire, /compliance, /inbox, /lay-summaries) renders UnavailableView with link to /wallet
     for (const [blockedPath, expectedHeading] of [
       ["/tasks", "My Tasks isn't available yet"],
       ["/questionnaire", "Questionnaire isn't available yet"],
       ["/compliance", "My Compliance isn't available yet"],
       ["/inbox", "My Inbox isn't available yet"],
-      ["/consent", "My Consent isn't available yet"],
       [
         "/lay-summaries",
         "Plain-Language Clinical Trial Results isn't available yet",

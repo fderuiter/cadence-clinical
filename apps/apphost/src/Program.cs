@@ -210,6 +210,7 @@ if (full)
     Service(builder.AddProject<Projects.Cadence_Apps_Tickets>("tickets"));
     Service(builder.AddProject<Projects.Cadence_Apps_Eisf>("eisf"));
     Service(builder.AddProject<Projects.Cadence_Apps_Econsent>("econsent"))
+        .WithEnvironment("EXECUTION_SERVICE_URL", execution.GetEndpoint("http"))
         .WithEnvironment("FIELD_ENCRYPTION_KEY", fieldEncryptionKey);
     Service(builder.AddProject<Projects.Cadence_Apps_Org>("org"));
     Service(builder.AddProject<Projects.Cadence_Apps_Fileshare>("fileshare"));

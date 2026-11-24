@@ -147,12 +147,20 @@ export async function loadConsentDetails() {
 
   try {
     if (isAuthenticatedSession()) {
+      const requestedTemplateId =
+        state.consentContent?.template_id || "template-icf";
       // Fetch dynamic approved composed content from secure microservice
       state.consentContent = await dispatchApi(
-        `api/v1/econsent/templates/template-icf/approved-content?language_code=${state.consentLanguage}`
+        `api/v1/econsent/templates/${encodeURIComponent(requestedTemplateId)}/approved-content?language_code=${encodeURIComponent(state.consentLanguage)}`
       );
+      if (state.consentContent?.study_id && !state.session.studyId) {
+        state.session.studyId = state.consentContent.study_id;
+      }
+      const resolvedTemplateId =
+        state.consentContent?.template_id || requestedTemplateId;
+      const resolvedVersionIndex = state.consentContent?.version_index ?? 1;
       state.consentCheck = await dispatchApi(
-        `api/v1/econsent/templates/template-icf/versions/1/comprehension-checks`
+        `api/v1/econsent/templates/${encodeURIComponent(resolvedTemplateId)}/versions/${resolvedVersionIndex}/comprehension-checks`
       );
     } else if (isDemoModeActive()) {
       // Explicit demo mode fallback using language matched synthetic structures
@@ -533,8 +541,14 @@ export async function submitConsentAnswers() {
     let resultResponse;
 
     if (isAuthenticatedSession()) {
+      const resolvedTemplateId =
+        state.consentContent?.template_id ||
+        check?.template_id ||
+        "template-icf";
+      const resolvedVersionIndex =
+        state.consentContent?.version_index ?? check?.version_index ?? 1;
       resultResponse = await dispatchApi(
-        "api/v1/econsent/templates/template-icf/versions/1/submit-answers",
+        `api/v1/econsent/templates/${encodeURIComponent(resolvedTemplateId)}/versions/${resolvedVersionIndex}/submit-answers`,
         {
           method: "POST",
           body: JSON.stringify(payload),

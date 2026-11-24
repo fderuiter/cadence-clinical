@@ -59,6 +59,7 @@ Signature-gated endpoints today:
 
 | Host        | Endpoint                                                                                            | `semantic_action`                      | `action`                                                                            |
 | ----------- | --------------------------------------------------------------------------------------------------- | -------------------------------------- | ----------------------------------------------------------------------------------- |
+| `econsent`  | `POST /api/v1/econsent/reconsent/complete/{requirement_id}`                                         | `econsent.reconsent.sign`              | `/api/v1/econsent/reconsent/complete/{requirement_id}`                              |
 | `econsent`  | `POST /api/v1/econsent/templates/{template_id}/capture-consent`                                     | `econsent.consent.capture`             | `/api/v1/econsent/templates/{template_id}/capture-consent`                          |
 | `econsent`  | `POST /api/v1/econsent/templates/{template_id}/versions/{version_index}/capture-consent`            | `econsent.consent.capture`             | `/api/v1/econsent/templates/{template_id}/versions/{version_index}/capture-consent` |
 | `execution` | `POST /api/v1/execution/cec/dossiers/{id}/chair-adjudicate`                                         | `execution.cec.chair_adjudicate`       | `/api/v1/execution/cec/dossiers/{id}/chair-adjudicate`                              |

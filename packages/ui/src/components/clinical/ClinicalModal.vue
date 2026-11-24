@@ -85,6 +85,10 @@ const props = defineProps({
     type: Boolean,
     default: true,
   },
+  keepMounted: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const emit = defineEmits([
@@ -170,9 +174,12 @@ useFocusTrap(dialogRef, {
 <template>
   <Teleport :to="teleportTarget" :disabled="!teleport">
     <div
-      v-if="modalOpen"
+      v-if="modalOpen || keepMounted"
+      v-show="modalOpen"
       :id="overlayId"
       :class="['clinical-modal-backdrop', backdropClass]"
+      :aria-hidden="!modalOpen ? 'true' : undefined"
+      :inert="!modalOpen || undefined"
       role="presentation"
       @click.self="onBackdropClick"
     >
@@ -182,7 +189,9 @@ useFocusTrap(dialogRef, {
         v-bind="attrs"
         :class="['clinical-modal-dialog', `size-${size}`, dialogClass]"
         :role="role"
-        aria-modal="true"
+        :aria-modal="modalOpen ? 'true' : undefined"
+        :aria-hidden="!modalOpen ? 'true' : undefined"
+        :inert="!modalOpen || undefined"
         :aria-labelledby="computedLabelledby"
         :aria-label="computedAriaLabel"
         :aria-describedby="computedDescribedby"

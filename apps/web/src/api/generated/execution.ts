@@ -21,6 +21,22 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/execution/webhooks/econsent": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations["EconsentConsentWebhook"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/execution/webhooks/etmf": {
     parameters: {
       query?: never;
@@ -1822,6 +1838,17 @@ export interface components {
       /** Format: int64 */
       version_index: number | string;
     };
+    Execution_EconsentWebhookPayload: {
+      subject_code: string;
+      study_id: string;
+      site_id: null | string;
+      version_tag: string;
+      /** Format: int32 */
+      version_index: number | string;
+      /** Format: date-time */
+      signed_at: string;
+      consent_id?: null | string;
+    };
     Execution_EtmfCompletenessWebhookPayload: {
       study_id: string;
       site_id: null | string;
@@ -2306,6 +2333,48 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Execution_AnonymousTypeOfstringAndstringAndstring"];
+        };
+      };
+    };
+  };
+  EconsentConsentWebhook: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Execution_EconsentWebhookPayload"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_OperationEnvelopeResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_HttpValidationProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
         };
       };
     };

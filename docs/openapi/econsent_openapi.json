@@ -177,6 +177,215 @@
         }
       }
     },
+    "/api/v1/econsent/templates/{template_id}/approved-content": {
+      "get": {
+        "tags": [
+          "eConsent"
+        ],
+        "operationId": "GetApprovedConsentContent",
+        "parameters": [
+          {
+            "name": "template_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "language_code",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Econsent_ApprovedConsentContentResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Econsent_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Econsent_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/econsent/templates/{template_id}/versions/{version_index}/comprehension-checks": {
+      "get": {
+        "tags": [
+          "eConsent"
+        ],
+        "operationId": "GetComprehensionChecks",
+        "parameters": [
+          {
+            "name": "template_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version_index",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Econsent_ComprehensionCheckResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Econsent_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Econsent_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/econsent/templates/{template_id}/versions/{version_index}/submit-answers": {
+      "post": {
+        "tags": [
+          "eConsent"
+        ],
+        "operationId": "SubmitComprehensionAnswers",
+        "parameters": [
+          {
+            "name": "template_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version_index",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Econsent_SubmitComprehensionAnswersRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Econsent_SubmitComprehensionAnswersResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Econsent_HttpValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Econsent_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Econsent_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/econsent/templates/{template_id}/versions/{version_index}/capture-consent": {
       "post": {
         "tags": [
@@ -329,6 +538,149 @@
           }
         }
       }
+    },
+    "/api/v1/econsent/reconsent/pending/{study_id}": {
+      "get": {
+        "tags": [
+          "eConsent"
+        ],
+        "operationId": "GetPendingReconsents",
+        "parameters": [
+          {
+            "name": "study_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "subject_pseudonym",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Econsent_PendingReconsentListResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Econsent_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/econsent/reconsent/complete/{requirement_id}": {
+      "post": {
+        "tags": [
+          "eConsent"
+        ],
+        "operationId": "CompleteReconsentRequirement",
+        "parameters": [
+          {
+            "name": "requirement_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Econsent_CompleteReconsentRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Econsent_CompleteReconsentResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Econsent_HttpValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Econsent_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Econsent_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Econsent_ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Econsent_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -351,6 +703,104 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "Econsent_ApprovedConsentClauseDto": {
+        "required": [
+          "id",
+          "clause_id",
+          "title",
+          "text",
+          "content",
+          "version_index"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "clause_id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          },
+          "version_index": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "Econsent_ApprovedConsentContentResponse": {
+        "required": [
+          "template_id",
+          "template_name",
+          "study_id",
+          "site_id",
+          "protocol_version",
+          "version_index",
+          "language_code",
+          "requires_reconsent",
+          "digest_sha256",
+          "clauses",
+          "workflow_steps"
+        ],
+        "type": "object",
+        "properties": {
+          "template_id": {
+            "type": "string"
+          },
+          "template_name": {
+            "type": "string"
+          },
+          "study_id": {
+            "type": "string"
+          },
+          "site_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "protocol_version": {
+            "type": "string"
+          },
+          "version_index": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "language_code": {
+            "type": "string"
+          },
+          "requires_reconsent": {
+            "type": "boolean"
+          },
+          "digest_sha256": {
+            "type": "string"
+          },
+          "clauses": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Econsent_ApprovedConsentClauseDto"
+            }
+          },
+          "workflow_steps": {
+            "$ref": "#/components/schemas/Econsent_JsonElement"
           }
         }
       },
@@ -506,6 +956,365 @@
           }
         }
       },
+      "Econsent_CompleteReconsentRequest": {
+        "required": [
+          "subject_pseudonym",
+          "study_id",
+          "site_id",
+          "template_id",
+          "version_index",
+          "protocol_version",
+          "signer_name",
+          "signer_email",
+          "signer_role",
+          "meaning",
+          "signing_reason",
+          "comprehension_answers",
+          "digest_sha256",
+          "signature_data",
+          "device_timestamp"
+        ],
+        "type": "object",
+        "properties": {
+          "subject_pseudonym": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "study_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "site_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "template_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "version_index": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "protocol_version": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "signer_name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "signer_email": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "signer_role": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "meaning": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "signing_reason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "comprehension_answers": {
+            "type": [
+              "null",
+              "object"
+            ],
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "digest_sha256": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "signature_data": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "device_timestamp": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "Econsent_CompleteReconsentResponse": {
+        "required": [
+          "id",
+          "requirement_id",
+          "completed_consent_id",
+          "template_id",
+          "version_index",
+          "protocol_version",
+          "subject_pseudonym",
+          "status",
+          "server_timestamp",
+          "sha256_hash"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "requirement_id": {
+            "type": "string"
+          },
+          "completed_consent_id": {
+            "type": "string"
+          },
+          "template_id": {
+            "type": "string"
+          },
+          "version_index": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "protocol_version": {
+            "type": "string"
+          },
+          "subject_pseudonym": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "server_timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "sha256_hash": {
+            "type": "string"
+          }
+        }
+      },
+      "Econsent_ComprehensionCheckResponse": {
+        "required": [
+          "template_id",
+          "version_index",
+          "questions",
+          "threshold_policy"
+        ],
+        "type": "object",
+        "properties": {
+          "template_id": {
+            "type": "string"
+          },
+          "version_index": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "questions": {
+            "$ref": "#/components/schemas/Econsent_JsonElement"
+          },
+          "threshold_policy": {
+            "$ref": "#/components/schemas/Econsent_JsonElement"
+          }
+        }
+      },
+      "Econsent_HttpValidationProblemDetails": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "detail": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "instance": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "errors": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "Econsent_JsonElement": {},
+      "Econsent_PendingReconsentItemDto": {
+        "required": [
+          "id",
+          "requirement_id",
+          "study_id",
+          "site_id",
+          "template_id",
+          "prior_version_index",
+          "new_version_index",
+          "version_index",
+          "protocol_version",
+          "subject_pseudonym",
+          "status",
+          "change_summary",
+          "deadline_at",
+          "clause_diffs",
+          "comprehension_questions"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "requirement_id": {
+            "type": "string"
+          },
+          "study_id": {
+            "type": "string"
+          },
+          "site_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "template_id": {
+            "type": "string"
+          },
+          "prior_version_index": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "new_version_index": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "version_index": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "protocol_version": {
+            "type": "string"
+          },
+          "subject_pseudonym": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "change_summary": {
+            "type": "string"
+          },
+          "deadline_at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "clause_diffs": {
+            "$ref": "#/components/schemas/Econsent_JsonElement"
+          },
+          "comprehension_questions": {
+            "$ref": "#/components/schemas/Econsent_JsonElement"
+          }
+        }
+      },
+      "Econsent_PendingReconsentListResponse": {
+        "required": [
+          "study_id",
+          "subject_pseudonym",
+          "pending_items"
+        ],
+        "type": "object",
+        "properties": {
+          "study_id": {
+            "type": "string"
+          },
+          "subject_pseudonym": {
+            "type": "string"
+          },
+          "pending_items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Econsent_PendingReconsentItemDto"
+            }
+          }
+        }
+      },
       "Econsent_ProblemDetails": {
         "type": "object",
         "properties": {
@@ -626,6 +1435,87 @@
           "published_at": {
             "type": "string",
             "format": "date-time"
+          }
+        }
+      },
+      "Econsent_SubmitComprehensionAnswersRequest": {
+        "required": [
+          "subject_pseudonym",
+          "submitted_answers",
+          "reason_for_change"
+        ],
+        "type": "object",
+        "properties": {
+          "subject_pseudonym": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "submitted_answers": {
+            "type": [
+              "null",
+              "object"
+            ],
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "reason_for_change": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Econsent_SubmitComprehensionAnswersResponse": {
+        "required": [
+          "id",
+          "passed",
+          "score",
+          "correct_count",
+          "total_questions",
+          "next_step",
+          "message"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "passed": {
+            "type": "boolean"
+          },
+          "score": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d\u002B)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "correct_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "total_questions": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "next_step": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
           }
         }
       }

@@ -100,6 +100,7 @@ import {
   login,
   logout,
   prepareSignOutGuardState,
+  resolveSessionSignerUsername,
 } from "../features/auth.js";
 import { maskParticipantIdentifier } from "../features/site-support.js";
 import { useSessionStore } from "../stores/session.js";
@@ -168,9 +169,11 @@ const isSignedInOrDemo = computed(
 );
 
 const displaySubjectId = computed(() => {
+  void sessionStore.session.username;
+  const signerOrUser = resolveSessionSignerUsername();
   const raw = isDemo.value
-    ? sessionStore.session.userId || DEFAULT_DEMO_PARTICIPANT?.subjectCode
-    : sessionStore.session.userId;
+    ? signerOrUser || DEFAULT_DEMO_PARTICIPANT?.subjectCode
+    : signerOrUser;
   return maskParticipantIdentifier(raw) || "Not signed in";
 });
 

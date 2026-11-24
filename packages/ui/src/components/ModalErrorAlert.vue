@@ -1,5 +1,6 @@
 <script setup>
 import { computed, ref, watch, onMounted } from "vue";
+import ClinicalIcon from "./clinical/ClinicalIcon.vue";
 
 const props = defineProps({
   error: {
@@ -42,6 +43,10 @@ const props = defineProps({
     type: String,
     default: null,
   },
+  autoFocus: {
+    type: Boolean,
+    default: true,
+  },
 });
 
 const emit = defineEmits(["retry", "dismiss", "clear-error"]);
@@ -72,13 +77,13 @@ function handleDismiss(event) {
 }
 
 watch(hasError, (newVal) => {
-  if (newVal && alertRef.value) {
+  if (props.autoFocus && newVal && alertRef.value) {
     alertRef.value.focus();
   }
 });
 
 onMounted(() => {
-  if (hasError.value && alertRef.value) {
+  if (props.autoFocus && hasError.value && alertRef.value) {
     alertRef.value.focus();
   }
 });
@@ -95,7 +100,9 @@ onMounted(() => {
     tabindex="-1"
   >
     <div class="alert-content">
-      <span class="error-icon" aria-hidden="true">⚠️</span>
+      <span class="error-icon" aria-hidden="true">
+        <ClinicalIcon name="alert-circle" :size="18" />
+      </span>
       <div class="error-text-container">
         <strong v-if="title" class="alert-title">{{ title }}</strong>
         <span class="alert-message">

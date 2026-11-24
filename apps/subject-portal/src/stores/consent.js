@@ -11,6 +11,7 @@ export const useConsentStore = defineStore("consent", {
     pendingReconsent: null,
     reconsentModalOpen: false,
     reconsentModalError: "",
+    reconsentNeedsPasswordReentry: false,
     reconsentForm: {
       username: "",
       password: "",

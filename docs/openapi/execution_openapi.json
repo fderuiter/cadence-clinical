@@ -31,6 +31,56 @@
         }
       }
     },
+    "/api/v1/execution/webhooks/econsent": {
+      "post": {
+        "tags": [
+          "Subjects"
+        ],
+        "operationId": "EconsentConsentWebhook",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_EconsentWebhookPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_OperationEnvelopeResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_HttpValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/execution/webhooks/etmf": {
       "post": {
         "tags": [
@@ -5196,6 +5246,52 @@
           }
         }
       },
+      "Execution_EconsentWebhookPayload": {
+        "required": [
+          "subject_code",
+          "study_id",
+          "site_id",
+          "version_tag",
+          "version_index",
+          "signed_at"
+        ],
+        "type": "object",
+        "properties": {
+          "subject_code": {
+            "type": "string"
+          },
+          "study_id": {
+            "type": "string"
+          },
+          "site_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "version_tag": {
+            "type": "string"
+          },
+          "version_index": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "signed_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "consent_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "Execution_EtmfCompletenessWebhookPayload": {
         "required": [
           "study_id",
@@ -7191,10 +7287,10 @@
       "name": "Cadence.Apps.Execution"
     },
     {
-      "name": "SiteCompliance"
+      "name": "Subjects"
     },
     {
-      "name": "Subjects"
+      "name": "SiteCompliance"
     },
     {
       "name": "Randomization"

@@ -6574,9 +6574,10 @@ export interface operations {
       path?: never;
       cookie?: never;
     };
-    requestBody: {
+    requestBody?: {
       content: {
-        "application/json": components["schemas"]["Kernel_KernelDefineWorkQueueRequest"];
+        "application/json":
+          null | components["schemas"]["Kernel_KernelDefineWorkQueueRequest"];
       };
     };
     responses: {

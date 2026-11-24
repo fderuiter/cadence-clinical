@@ -1,5 +1,6 @@
 // 21 CFR Part 11 electronic signature modal for ePRO and eConsent.
 import { DEFAULT_DEMO_SITE, DEMO_STUDY } from "demo-fixtures";
+import { nextTick } from "vue";
 import {
   SEMANTIC_ACTIONS,
   buildStepUpVerificationPayload,
@@ -27,6 +28,7 @@ import { demoNowIso, isDemoModeActive } from "../utils/demoMode.js";
 import { allowUnbackedAction } from "../utils/unbackedActions.js";
 import { showToast } from "../widgets/toast.js";
 import { logAuditRecord } from "./audit.js";
+import { resolveSessionSignerUsername } from "./auth.js";
 import { renderCompliance } from "./compliance.js";
 import {
   LIVENESS_EXPIRED_MESSAGE,
@@ -42,17 +44,20 @@ const RECONSENT_EPRO_GATE_MESSAGE =
   "Action required: Please review and sign your updated study consent form before signing or submitting surveys.";
 
 let signatureTrapBound = false;
+let lastTrappedKeydownEvent = null;
 
 function handleSignatureModalKeydown(event) {
   if (!state.signatureModalOpen) return;
+  if (event === lastTrappedKeydownEvent || event.defaultPrevented) return;
   const modal =
     typeof document !== "undefined"
       ? document.getElementById("portal-sign-modal")
       : null;
   if (!modal) return;
+  lastTrappedKeydownEvent = event;
   if (event.key === "Tab") {
     trapTabFocus(event, modal);
-  } else if (event.key === "Escape" && !event.defaultPrevented) {
+  } else if (event.key === "Escape") {
     event.preventDefault();
     closeSignatureModal();
   }
@@ -116,16 +121,29 @@ export function openSignatureModal(actionType = "epro") {
   }
 
   state.pendingSignableAction = normalizedAction;
+  state.modalError = "";
+  state.signatureNeedsPasswordReentry = false;
   if (typeof document !== "undefined") {
     state.previouslyFocusedElement = document.activeElement;
   }
-  document.getElementById("sign-username").value = state.session.userId || "";
-  document.getElementById("sign-password").value = "";
+
+  const usernameInput = document.getElementById("sign-username");
+  if (usernameInput) {
+    usernameInput.value = resolveSessionSignerUsername();
+  }
+  const passwordInput = document.getElementById("sign-password");
+  if (passwordInput) {
+    passwordInput.value = "";
+  }
+  const customReasonInput = document.getElementById("sign-reason-custom");
+  if (customReasonInput) {
+    customReasonInput.value = "";
+  }
 
   const reasonSelect = document.getElementById("sign-reason");
   const modalHeader = document.getElementById("portal-modal-title");
   const errorBanner = document.getElementById("modal-error-banner");
-  if (errorBanner) {
+  if (errorBanner && !errorBanner.classList?.contains("modal-error-alert")) {
     errorBanner.style.display = "none";
     errorBanner.setAttribute("role", "status");
     errorBanner.setAttribute("aria-live", "polite");
@@ -134,24 +152,42 @@ export function openSignatureModal(actionType = "epro") {
   if (normalizedAction === "consent") {
     if (modalHeader)
       modalHeader.textContent = "eConsent Electronic Signature Required";
-    reasonSelect.innerHTML = `
+    if (reasonSelect) {
+      reasonSelect.innerHTML = `
       <option value="Enrollment Confirmation and Consent">Enrollment Confirmation and Consent</option>
       <option value="Re-consent on amended protocol version">Re-consent on amended protocol version</option>
       <option value="Other">Other (specify below)</option>
     `;
-    reasonSelect.value = "Enrollment Confirmation and Consent";
+      reasonSelect.value = "Enrollment Confirmation and Consent";
+      reasonSelect.dispatchEvent(new Event("change"));
+    }
   } else {
     if (modalHeader) modalHeader.textContent = "Electronic Signature Required";
-    reasonSelect.innerHTML = `
+    if (reasonSelect) {
+      reasonSelect.innerHTML = `
       <option value="Initial Questionnaire Completion">Initial Questionnaire Completion</option>
       <option value="Correction of previous entry">Correction of previous entry</option>
       <option value="Requested update by study coordinator">Requested update by study coordinator</option>
       <option value="Acknowledge important reminder">Acknowledge important reminder</option>
       <option value="Other">Other (specify below)</option>
     `;
-    reasonSelect.value = "Initial Questionnaire Completion";
+      reasonSelect.value = "Initial Questionnaire Completion";
+      reasonSelect.dispatchEvent(new Event("change"));
+    }
   }
 
+  const backdrop = document.getElementById("portal-sign-modal-backdrop");
+  if (backdrop) {
+    backdrop.style.display = "flex";
+    if (
+      typeof HTMLElement !== "undefined" &&
+      "inert" in HTMLElement.prototype
+    ) {
+      backdrop.inert = false;
+    }
+    backdrop.removeAttribute("inert");
+    backdrop.removeAttribute("aria-hidden");
+  }
   const modal = document.getElementById("portal-sign-modal");
   if (modal) {
     modal.style.display = "flex";
@@ -177,10 +213,9 @@ export function openSignatureModal(actionType = "epro") {
   }
 }
 
-function canSynchronouslyRestoreTarget(el) {
+function isRestoreCandidateEligibleIgnoringInert(el) {
   if (!el || typeof el.focus !== "function") return false;
   if (el.isConnected === false || el.disabled) return false;
-  if (el.closest?.("[inert]")) return false;
   if (el.closest?.(".portal-view:not(.active)")) return false;
   let current = el;
   while (current && current.nodeType === 1) {
@@ -190,11 +225,43 @@ function canSynchronouslyRestoreTarget(el) {
   return true;
 }
 
+function canSynchronouslyRestoreTarget(el) {
+  if (!isRestoreCandidateEligibleIgnoringInert(el)) return false;
+  if (el.closest?.("[inert]")) return false;
+  return true;
+}
+
+function handoffSignatureFallbackFocus() {
+  void handoffFocus([
+    () =>
+      state.currentView === "view-consent" && state.consentSigned
+        ? document.getElementById("consent-signed-heading")
+        : null,
+    () => document.querySelector(".portal-view.active .view-header h2"),
+    () => document.querySelector(".portal-view.active h2"),
+    "#main-content",
+  ]);
+}
+
 export function closeSignatureModal() {
   detachSignatureModalTrap();
   // Credential hygiene: clear PIN / password from DOM immediately on cancel or Escape
   const passwordEl = document.getElementById("sign-password");
   if (passwordEl) passwordEl.value = "";
+  state.modalError = "";
+  state.signatureNeedsPasswordReentry = false;
+  const backdropEl = document.getElementById("portal-sign-modal-backdrop");
+  if (backdropEl) {
+    backdropEl.style.display = "none";
+    if (
+      typeof HTMLElement !== "undefined" &&
+      "inert" in HTMLElement.prototype
+    ) {
+      backdropEl.inert = true;
+    }
+    backdropEl.setAttribute("inert", "");
+    backdropEl.setAttribute("aria-hidden", "true");
+  }
   const modalEl = document.getElementById("portal-sign-modal");
   if (modalEl) {
     modalEl.style.display = "none";
@@ -212,6 +279,7 @@ export function closeSignatureModal() {
   const initiatingTarget = state.initiatingButton;
   const fallbackPrevTarget = state.previouslyFocusedElement;
   state.initiatingButton = null;
+  state.previouslyFocusedElement = null;
 
   if (canSynchronouslyRestoreTarget(initiatingTarget)) {
     initiatingTarget.focus();
@@ -222,19 +290,57 @@ export function closeSignatureModal() {
     return;
   }
 
-  void handoffFocus([
-    () =>
-      state.currentView === "view-consent" && state.consentSigned
-        ? document.getElementById("consent-signed-heading")
-        : null,
-    () => document.querySelector(".portal-view.active .view-header h2"),
-    () => document.querySelector(".portal-view.active h2"),
-    "#main-content",
-  ]);
+  const deferredTarget = isRestoreCandidateEligibleIgnoringInert(
+    initiatingTarget
+  )
+    ? initiatingTarget
+    : isRestoreCandidateEligibleIgnoringInert(fallbackPrevTarget)
+      ? fallbackPrevTarget
+      : null;
+
+  if (deferredTarget) {
+    void nextTick(() => {
+      if (canSynchronouslyRestoreTarget(deferredTarget)) {
+        deferredTarget.focus();
+      } else {
+        handoffSignatureFallbackFocus();
+      }
+    });
+    return;
+  }
+
+  handoffSignatureFallbackFocus();
 }
 
-function displayModalOrToastError(errorBanner, message) {
-  if (errorBanner) {
+async function displayModalOrToastError(
+  errorBanner,
+  message,
+  { focusTarget = null, needsPasswordReentry = false } = {}
+) {
+  const hostEl =
+    typeof document !== "undefined"
+      ? document.querySelector("[data-signature-error-host]")
+      : null;
+  const bannerWasRemovedExternally = Boolean(
+    hostEl && state.modalError && !errorBanner
+  );
+
+  state.signatureNeedsPasswordReentry = Boolean(needsPasswordReentry);
+
+  if (bannerWasRemovedExternally) {
+    showToast(message, { variant: "error" });
+  } else if (hostEl) {
+    state.modalError = message;
+    await nextTick();
+    const mountedBanner = document.getElementById("modal-error-banner");
+    if (mountedBanner) {
+      mountedBanner.setAttribute("role", "alert");
+      mountedBanner.setAttribute("aria-live", "assertive");
+      mountedBanner.style.display = "block";
+    } else {
+      showToast(message, { variant: "error" });
+    }
+  } else if (errorBanner) {
     errorBanner.setAttribute("role", "alert");
     errorBanner.setAttribute("aria-live", "assertive");
     errorBanner.textContent = message;
@@ -242,53 +348,52 @@ function displayModalOrToastError(errorBanner, message) {
   } else {
     showToast(message, { variant: "error" });
   }
+
+  if (focusTarget && typeof focusTarget.focus === "function") {
+    focusTarget.focus();
+  }
 }
 
 export async function verifyAndSubmitSignature() {
   const usernameInput = document.getElementById("sign-username");
   const passwordInput = document.getElementById("sign-password");
-  const username = usernameInput.value.trim();
-  const password = passwordInput.value;
-  const reasonSelect = document.getElementById("sign-reason").value;
-  const reasonCustom = document
-    .getElementById("sign-reason-custom")
-    .value.trim();
+  const username = usernameInput ? usernameInput.value.trim() : "";
+  const password = passwordInput ? passwordInput.value : "";
+  const reasonSelect = document.getElementById("sign-reason")?.value || "";
+  const reasonCustom = (
+    document.getElementById("sign-reason-custom")?.value || ""
+  ).trim();
   const errorBanner = document.getElementById("modal-error-banner");
 
-  if (errorBanner) {
+  if (errorBanner && !errorBanner.classList?.contains("modal-error-alert")) {
     errorBanner.style.display = "none";
     errorBanner.setAttribute("role", "status");
     errorBanner.setAttribute("aria-live", "polite");
   }
 
   if (!username || !password) {
-    displayModalOrToastError(
+    await displayModalOrToastError(
       errorBanner,
-      "Please enter both User ID and Security PIN/Password to sign."
+      "Please enter both User ID and Security PIN/Password to sign.",
+      {
+        focusTarget: !username && usernameInput ? usernameInput : passwordInput,
+        needsPasswordReentry: !password,
+      }
     );
-    if (
-      !username &&
-      usernameInput &&
-      typeof usernameInput.focus === "function"
-    ) {
-      usernameInput.focus();
-    } else if (passwordInput && typeof passwordInput.focus === "function") {
-      passwordInput.focus();
-    }
     return;
   }
 
   const reasonCheck = resolveSignatureReason(reasonSelect, reasonCustom);
   if (!reasonCheck.valid) {
-    displayModalOrToastError(errorBanner, reasonCheck.error);
+    if (passwordInput) passwordInput.value = "";
     const customInput = document.getElementById("sign-reason-custom");
-    if (
-      requiresCustomSignatureReason(reasonSelect) &&
-      customInput &&
-      typeof customInput.focus === "function"
-    ) {
-      customInput.focus();
-    }
+    await displayModalOrToastError(errorBanner, reasonCheck.error, {
+      focusTarget:
+        requiresCustomSignatureReason(reasonSelect) && customInput
+          ? customInput
+          : passwordInput,
+      needsPasswordReentry: true,
+    });
     return;
   }
 
@@ -300,26 +405,36 @@ export async function verifyAndSubmitSignature() {
   const cleanUsername = username;
   const cleanPassword = password;
 
-  // Clear the actual DOM element for credential hygiene
-  passwordInput.value = "";
+  // Clear the actual DOM element for credential hygiene while retaining selected reason/customReason
+  if (passwordInput) passwordInput.value = "";
+  state.modalError = "";
+  state.signatureNeedsPasswordReentry = false;
 
   const actionType =
     state.pendingSignableAction === "consent" ? "consent" : "epro";
 
-  // Enforce signer username match against active session identity
-  const expectedUserId = String(state.session.userId || "").trim();
+  // Enforce signer username match against active session OIDC preferred_username (or fallback userId)
+  const expectedSignerUsername = resolveSessionSignerUsername();
+  const fallbackUserId = String(state.session.userId || "").trim();
+  const matchesExpectedSigner =
+    (expectedSignerUsername &&
+      cleanUsername.toLowerCase() === expectedSignerUsername.toLowerCase()) ||
+    (!state.session.username &&
+      fallbackUserId &&
+      cleanUsername.toLowerCase() === fallbackUserId.toLowerCase());
+
   if (
-    (isAuthenticatedSession() && !expectedUserId) ||
-    (expectedUserId &&
-      cleanUsername.toLowerCase() !== expectedUserId.toLowerCase())
+    (isAuthenticatedSession() && !expectedSignerUsername) ||
+    (expectedSignerUsername && !matchesExpectedSigner)
   ) {
-    displayModalOrToastError(
+    await displayModalOrToastError(
       errorBanner,
-      "Signature Verification Rejected: Participant ID must match the signed-in participant account."
+      "Signature Verification Rejected: Participant ID must match the signed-in participant account.",
+      {
+        focusTarget: passwordInput || usernameInput,
+        needsPasswordReentry: true,
+      }
     );
-    if (usernameInput && typeof usernameInput.focus === "function") {
-      usernameInput.focus();
-    }
     return;
   }
 
@@ -327,9 +442,13 @@ export async function verifyAndSubmitSignature() {
     // Re-check 15-minute biometric liveness freshness before any network submission
     if (isConsentLivenessExpired()) {
       expireConsentLiveness();
-      displayModalOrToastError(
+      await displayModalOrToastError(
         errorBanner,
-        `Signature Verification Rejected: ${LIVENESS_EXPIRED_MESSAGE}`
+        `Signature Verification Rejected: ${LIVENESS_EXPIRED_MESSAGE}`,
+        {
+          focusTarget: passwordInput,
+          needsPasswordReentry: true,
+        }
       );
       return;
     }
@@ -343,9 +462,13 @@ export async function verifyAndSubmitSignature() {
     if (isAuthenticatedSession()) {
       if (!state.consentLivenessToken) {
         expireConsentLiveness();
-        displayModalOrToastError(
+        await displayModalOrToastError(
           errorBanner,
-          `Signature Verification Rejected: ${LIVENESS_EXPIRED_MESSAGE}`
+          `Signature Verification Rejected: ${LIVENESS_EXPIRED_MESSAGE}`,
+          {
+            focusTarget: passwordInput,
+            needsPasswordReentry: true,
+          }
         );
         return;
       }
@@ -376,9 +499,13 @@ export async function verifyAndSubmitSignature() {
         // Re-check liveness freshness immediately before posting to capture-consent
         if (isConsentLivenessExpired() || !state.consentLivenessToken) {
           expireConsentLiveness();
-          displayModalOrToastError(
+          await displayModalOrToastError(
             errorBanner,
-            `Signature Verification Rejected: ${LIVENESS_EXPIRED_MESSAGE}`
+            `Signature Verification Rejected: ${LIVENESS_EXPIRED_MESSAGE}`,
+            {
+              focusTarget: passwordInput,
+              needsPasswordReentry: true,
+            }
           );
           return;
         }
@@ -457,14 +584,15 @@ export async function verifyAndSubmitSignature() {
         showToast("Informed Consent successfully signed and archived!");
         await loadConsentDetails();
       } catch (err) {
-        // Show in accessible error status banner, focus #sign-password for retry, and preserve credential hygiene
-        displayModalOrToastError(
+        // Show in accessible assertive alert banner, show retry guidance, focus #sign-password, and preserve reason
+        await displayModalOrToastError(
           errorBanner,
-          `Signature Verification Rejected: ${err.message}`
+          `Signature Verification Rejected: ${err.message}`,
+          {
+            focusTarget: passwordInput,
+            needsPasswordReentry: true,
+          }
         );
-        if (passwordInput && typeof passwordInput.focus === "function") {
-          passwordInput.focus();
-        }
       }
     } else if (allowUnbackedAction("Electronic consent signature")) {
       // Explicit demo mode only
@@ -490,15 +618,18 @@ export async function verifyAndSubmitSignature() {
     } else {
       const refusalMsg =
         "Electronic consent cannot be signed while unauthenticated or when signature verification services are unavailable. Nothing was saved.";
-      displayModalOrToastError(errorBanner, refusalMsg);
-      if (passwordInput && typeof passwordInput.focus === "function") {
-        passwordInput.focus();
-      }
+      await displayModalOrToastError(errorBanner, refusalMsg, {
+        focusTarget: passwordInput,
+        needsPasswordReentry: true,
+      });
     }
   } else {
     // Default ePRO questionnaire submission
     if (state.pendingReconsent) {
-      displayModalOrToastError(errorBanner, RECONSENT_EPRO_GATE_MESSAGE);
+      await displayModalOrToastError(errorBanner, RECONSENT_EPRO_GATE_MESSAGE, {
+        focusTarget: passwordInput,
+        needsPasswordReentry: true,
+      });
       return;
     }
 
@@ -526,13 +657,14 @@ export async function verifyAndSubmitSignature() {
           );
         }
       } catch (err) {
-        displayModalOrToastError(
+        await displayModalOrToastError(
           errorBanner,
-          `Signature Verification Rejected: ${err.message}`
+          `Signature Verification Rejected: ${err.message}`,
+          {
+            focusTarget: passwordInput,
+            needsPasswordReentry: true,
+          }
         );
-        if (passwordInput && typeof passwordInput.focus === "function") {
-          passwordInput.focus();
-        }
         return;
       }
     } else {
@@ -541,13 +673,14 @@ export async function verifyAndSubmitSignature() {
       );
       if (wrappedConfig && wrappedConfig.wrappedKey && wrappedConfig.salt) {
         if (!/^\d+$/.test(cleanPassword)) {
-          displayModalOrToastError(
+          await displayModalOrToastError(
             errorBanner,
-            "Signature Verification Rejected: Please enter your numeric Security PIN."
+            "Signature Verification Rejected: Please enter your numeric Security PIN.",
+            {
+              focusTarget: passwordInput,
+              needsPasswordReentry: true,
+            }
           );
-          if (passwordInput && typeof passwordInput.focus === "function") {
-            passwordInput.focus();
-          }
           return;
         }
         try {
@@ -577,23 +710,25 @@ export async function verifyAndSubmitSignature() {
             decrypted.masterKey.fill(0);
           }
         } catch {
-          displayModalOrToastError(
+          await displayModalOrToastError(
             errorBanner,
-            "Signature Verification Rejected: Incorrect Security PIN."
+            "Signature Verification Rejected: Incorrect Security PIN.",
+            {
+              focusTarget: passwordInput,
+              needsPasswordReentry: true,
+            }
           );
-          if (passwordInput && typeof passwordInput.focus === "function") {
-            passwordInput.focus();
-          }
           return;
         }
       } else if (!allowUnbackedAction("Offline ePRO diary signature")) {
-        displayModalOrToastError(
+        await displayModalOrToastError(
           errorBanner,
-          "Signature Verification Rejected: Security PIN is not configured on this device. Please sign in online or configure your Security PIN."
+          "Signature Verification Rejected: Security PIN is not configured on this device. Please sign in online or configure your Security PIN.",
+          {
+            focusTarget: passwordInput,
+            needsPasswordReentry: true,
+          }
         );
-        if (passwordInput && typeof passwordInput.focus === "function") {
-          passwordInput.focus();
-        }
         return;
       }
     }

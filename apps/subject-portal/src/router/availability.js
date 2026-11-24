@@ -4,12 +4,12 @@ import { isDemoModeActive } from "../utils/demoMode.js";
 /**
  * Screens available to any session outside explicit demo builds (docs/web/API_MIGRATION.md).
  *
- * Python-era ePRO (`tasks`, `questionnaire`, `compliance`, `inbox`), eConsent
- * (`consent`), and plain-language trial results (`lay-summaries`) have no .NET
- * backend yet and live in `DEMO_AVAILABLE_SCREENS` (ADR-2819). Participant
- * wallet (`wallet`) is enabled for authenticated participants via signed
- * self-service endpoints (`/api/v1/payments/participant/me/*`) and in explicit
- * demo builds.
+ * Python-era ePRO (`tasks`, `questionnaire`, `compliance`, `inbox`) and
+ * plain-language trial results (`lay-summaries`) have no .NET backend yet and
+ * live in `DEMO_AVAILABLE_SCREENS` (ADR-2819). Participant wallet (`wallet`)
+ * and electronic consent (`consent`) are enabled for authenticated participants
+ * via caller-bound self-service endpoints (`/api/v1/payments/participant/me/*`
+ * and `/api/v1/econsent/*`) and in explicit demo builds.
  */
 export const AVAILABLE_SCREENS = new Set();
 
@@ -22,7 +22,7 @@ export const DEMO_AVAILABLE_SCREENS = new Set([
   "lay-summaries",
 ]);
 
-export const AUTHENTICATED_SCREENS = new Set(["wallet"]);
+export const AUTHENTICATED_SCREENS = new Set(["wallet", "consent"]);
 
 const ALWAYS_AVAILABLE = new Set(["unavailable"]);
 

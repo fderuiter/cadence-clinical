@@ -194,6 +194,7 @@ if (builder.Configuration[HttpKernelEnrollmentSynchronizer.ConfigurationKey] is 
 }
 
 builder.Services.AddScoped<ISubjectApplicationService, SubjectApplicationService>();
+builder.Services.AddScoped<IEconsentWebhookApplicationService, EconsentWebhookApplicationService>();
 builder.Services.AddScoped<IRandomizationApplicationService, RandomizationApplicationService>();
 builder.Services.AddScoped<ISiteComplianceApplicationService, SiteComplianceApplicationService>();
 builder.Services.AddScoped<ILabToxicityGovernanceService, LabToxicityGovernanceService>();
@@ -256,6 +257,7 @@ app.MapGet("/healthz", () => TypedResults.Ok(new { status = "healthy", service =
 
 // Route-group registrations
 app.MapSubjectEndpoints();
+app.MapEconsentWebhookEndpoints();
 app.MapRandomizationEndpoints();
 app.MapSiteComplianceEndpoints();
 app.MapLabToxicityEndpoints();

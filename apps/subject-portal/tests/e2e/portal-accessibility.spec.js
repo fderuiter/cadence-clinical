@@ -244,24 +244,61 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
       });
     });
 
+    await page.route("**/econsent/templates/**", async (route) => {
+      const url = route.request().url();
+      if (url.includes("approved-content")) {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            template_id: "template-icf",
+            template_name: "Main Study Informed Consent Form",
+            study_id: "study_001",
+            version_index: 1,
+            language_code: "en",
+            clauses: [
+              {
+                clause_id: "clause-1",
+                title: "Study Purpose",
+                text: "This study evaluates participant symptom tracking.",
+                version_index: 1,
+              },
+            ],
+          }),
+        });
+      } else {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            template_id: "template-icf",
+            version_index: 1,
+            questions: [],
+          }),
+        });
+      }
+    });
+
     // Inject pre-configured mock credentials into storage to bypass login server
     await page.addInitScript(() => {
       sessionStorage.setItem("mock_user_id", "subject_mocked_001");
+      sessionStorage.setItem("mock_study_id", "study_001");
       sessionStorage.setItem("mock_token", "mock_jwt_token_xyz_123");
     });
   });
 
-  test("should successfully bypass third-party login, expose only My Wallet with zero unbacked startup API calls, and pass WCAG 2.1 AA audits on landing page", async ({
+  test("should successfully bypass third-party login, expose My Wallet and My Consent with zero unbacked startup API calls, and pass WCAG 2.1 AA audits on landing page", async ({
     page,
   }) => {
     const unbackedStartupRequests = [];
+    const reconsentStartupRequests = [];
     page.on("request", (req) => {
       const url = req.url();
-      if (
-        url.includes("/api/v1/interop/") ||
-        url.includes("/api/v1/econsent/")
-      ) {
+      if (url.includes("/api/v1/interop/")) {
         unbackedStartupRequests.push(url);
+      }
+      if (url.includes("/api/v1/econsent/reconsent/pending/")) {
+        reconsentStartupRequests.push(url);
       }
     });
 
@@ -273,12 +310,14 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
       "subject_mocked_001"
     );
 
-    // Outside demo mode, authenticated participants land on /wallet and see only My Wallet
+    // Outside demo mode, authenticated participants land on /wallet, see My Consent + My Wallet, and run checkPendingReconsent()
     await expect(page).toHaveURL(/\/subject-portal\/wallet(\?|$)/);
     await expect(page.locator("#view-wallet")).toBeVisible();
-    await expect(page.locator('.nav-tabs [role="tab"]')).toHaveCount(1);
+    await expect(page.locator('.nav-tabs [role="tab"]')).toHaveCount(2);
+    await expect(page.locator("#btn-tab-btn-consent")).toBeVisible();
     await expect(page.locator("#btn-tab-btn-wallet")).toBeVisible();
     expect(unbackedStartupRequests).toEqual([]);
+    expect(reconsentStartupRequests.length).toBeGreaterThanOrEqual(1);
 
     // Ensure landing page header is loaded
     await expect(page.locator(".portal-header h1")).toContainText("My Cadence");
@@ -411,14 +450,10 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
     await expect(syncStatusText).toHaveAttribute("role", "status");
     await expect(syncStatusText).toHaveAttribute("aria-live", "polite");
 
-    // 3. Unavailable workflow guard outside demo mode across all 6 demo-gated screens
-    for (const demoTabId of [
-      "tasks",
-      "compliance",
-      "inbox",
-      "consent",
-      "lay-summaries",
-    ]) {
+    // 3. Unavailable workflow guard outside demo mode across all 5 unbacked demo-gated screens (while My Consent & My Wallet remain available)
+    await expect(page.locator("#tab-btn-consent")).toHaveCount(1);
+    await expect(page.locator("#tab-btn-wallet")).toHaveCount(1);
+    for (const demoTabId of ["tasks", "compliance", "inbox", "lay-summaries"]) {
       await expect(page.locator(`#tab-btn-${demoTabId}`)).toHaveCount(0);
     }
 
@@ -427,7 +462,6 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
       "questionnaire",
       "compliance",
       "inbox",
-      "consent",
       "lay-summaries",
     ]) {
       await page.goto(blockedPath);
@@ -905,10 +939,18 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
       }
     );
 
-    // Outside demo mode, only My Wallet is rendered in the tablist and gated views use region + aria-label with zero dangling aria-labelledby
+    // Outside demo mode, My Consent and My Wallet are rendered in the tablist and gated views use region + aria-label with zero dangling aria-labelledby
     await page.goto("");
     await completeInitialPinSetupIfOpen(page);
-    await expect(page.locator('.nav-tabs [role="tab"]')).toHaveCount(1);
+    await expect(page.locator('.nav-tabs [role="tab"]')).toHaveCount(2);
+    await expect(page.locator("#btn-tab-btn-consent")).toHaveAttribute(
+      "aria-selected",
+      "false"
+    );
+    await expect(page.locator("#btn-tab-btn-consent")).toHaveAttribute(
+      "tabindex",
+      "-1"
+    );
     await expect(page.locator("#btn-tab-btn-wallet")).toHaveAttribute(
       "aria-selected",
       "true"
@@ -1315,22 +1357,17 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
       });
     });
     await page.route(
-      "**/api/v1/execution/amendments/reconsent",
-      async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: JSON.stringify({ persisted: true }),
-        });
-      }
-    );
-    await page.route(
       "**/api/v1/econsent/reconsent/complete/**",
       async (route) => {
         await route.fulfill({
           status: 200,
           contentType: "application/json",
-          body: JSON.stringify({ completed: true }),
+          body: JSON.stringify({
+            id: "req_amendment_scroll_v2",
+            status: "COMPLETED",
+            completed: true,
+            persisted: true,
+          }),
         });
       }
     );

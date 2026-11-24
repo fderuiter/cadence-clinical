@@ -346,7 +346,7 @@ describe("Subject Portal Focus Traps, Closed Drawer Inertness, and 6-Tab Navigat
   it("drives participant portal tabs from a single state source across authenticated production mode and 6-tab demo mode", async () => {
     expect(tabs).toHaveLength(6);
 
-    // 1. Authenticated non-demo mode renders only My Wallet and wraps keyboard navigation cleanly
+    // 1. Authenticated non-demo mode renders My Consent + My Wallet and wraps keyboard navigation cleanly
     state.session.userId = "subject_001";
     state.session.token = "jwt_valid_subject_token"; // pragma: allowlist secret
     state.session.isOfflineMode = false;
@@ -355,7 +355,7 @@ describe("Subject Portal Focus Traps, Closed Drawer Inertness, and 6-Tab Navigat
     await settle();
     state.pinSetup.isOpen = false;
     await settle();
-    expect(document.querySelectorAll('.nav-tabs [role="tab"]')).toHaveLength(1);
+    expect(document.querySelectorAll('.nav-tabs [role="tab"]')).toHaveLength(2);
 
     // Gated views without rendered tabs must use role="region" + aria-label with zero dangling aria-labelledby
     const tasksPanelGated = document.getElementById("view-tasks");

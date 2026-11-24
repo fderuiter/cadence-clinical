@@ -1,5 +1,5 @@
 // Protocol amendment re-consent: the pending requirement and its modal.
-import { DEMO_STUDY } from "demo-fixtures";
+import { DEFAULT_DEMO_SITE, DEMO_STUDY } from "demo-fixtures";
 import {
   SEMANTIC_ACTIONS,
   buildStepUpVerificationPayload,
@@ -10,10 +10,11 @@ import { nextTick } from "vue";
 
 import { dispatchApi, isAuthenticatedSession } from "../api/client.js";
 import { state } from "../stores/state.js";
-import { isDemoModeActive } from "../utils/demoMode.js";
+import { demoNowIso, isDemoModeActive } from "../utils/demoMode.js";
 import { allowUnbackedAction } from "../utils/unbackedActions.js";
 import { showToast } from "../widgets/toast.js";
 import { logAuditRecord } from "./audit.js";
+import { resolveSessionSignerUsername } from "./auth.js";
 import { renderTasks } from "./tasks.js";
 
 export const DEFAULT_RECONSENT_COMPREHENSION_QUESTIONS = Object.freeze([
@@ -127,16 +128,13 @@ export function resolveReconsentComprehensionQuestions(pendingReconsent) {
         Array.isArray(q?.options) && q.options.length > 0
           ? q.options
           : ["Yes", "No"];
-      const correctOption =
-        expectedMap[id] ??
-        q?.correct_option ??
-        q?.expected_answer ??
-        options[0];
+      const explicitCorrectOption =
+        expectedMap[id] ?? q?.correct_option ?? q?.expected_answer ?? null;
       return {
         id,
         text: q?.text || q?.prompt || `Comprehension Check ${index + 1}`,
         options,
-        correct_option: correctOption,
+        correct_option: explicitCorrectOption,
       };
     });
   }
@@ -188,7 +186,8 @@ export function openReconsentModal() {
     };
   }
   state.reconsentModalError = "";
-  state.reconsentForm.username = state.session.userId || "";
+  state.reconsentNeedsPasswordReentry = false;
+  state.reconsentForm.username = resolveSessionSignerUsername();
   state.reconsentForm.password = "";
   state.reconsentForm.reason = "Protocol Amendment Re-Consent Acknowledgment";
   state.reconsentForm.customReason = "";
@@ -210,12 +209,21 @@ export function closeReconsentModal() {
   }
   state.reconsentModalOpen = false;
   state.reconsentModalError = "";
+  state.reconsentNeedsPasswordReentry = false;
   // Keep state.pendingReconsent intact so survey starts and ePRO signing remain gated
   renderTasks();
   const prev = state.reconsentPreviouslyFocusedElement;
-  if (prev && typeof prev.focus === "function" && !prev.closest?.("[inert]")) {
-    prev.focus();
-    state.reconsentPreviouslyFocusedElement = null;
+  state.reconsentPreviouslyFocusedElement = null;
+  if (prev && typeof prev.focus === "function" && prev.isConnected !== false) {
+    if (!prev.closest?.("[inert]")) {
+      prev.focus();
+    } else {
+      void nextTick(() => {
+        if (prev.isConnected !== false && !prev.closest?.("[inert]")) {
+          prev.focus();
+        }
+      });
+    }
   }
 }
 
@@ -229,8 +237,13 @@ export async function checkPendingReconsent() {
         const pendingReqs = await dispatchApi(
           `api/v1/econsent/reconsent/pending/${encodeURIComponent(studyId)}?subject_pseudonym=${encodeURIComponent(state.session.userId)}`
         );
-        if (Array.isArray(pendingReqs) && pendingReqs.length > 0) {
-          state.pendingReconsent = pendingReqs[0];
+        const pendingItems = Array.isArray(pendingReqs)
+          ? pendingReqs
+          : Array.isArray(pendingReqs?.pending_items)
+            ? pendingReqs.pending_items
+            : [];
+        if (pendingItems.length > 0) {
+          state.pendingReconsent = pendingItems[0];
           openReconsentModal();
           return;
         }
@@ -274,19 +287,46 @@ function wipeReconsentPasswordField() {
   }
 }
 
+async function failReconsentAttempt(
+  message,
+  {
+    focusSelector = "#reconsent-sign-password",
+    needsPasswordReentry = false,
+  } = {}
+) {
+  state.reconsentNeedsPasswordReentry = Boolean(needsPasswordReentry);
+  state.reconsentModalError = message;
+  await nextTick();
+  if (typeof document !== "undefined" && focusSelector) {
+    const target = document.querySelector(focusSelector);
+    if (target && typeof target.focus === "function") {
+      target.focus();
+    }
+  }
+}
+
 export async function submitReconsentSignature() {
   const cleanUsername = (state.reconsentForm.username || "").trim();
   const cleanPassword = state.reconsentForm.password || "";
 
   if (!cleanUsername) {
     wipeReconsentPasswordField();
-    state.reconsentModalError = "Please enter your User ID / Username.";
+    await failReconsentAttempt("Please enter your User ID / Username.", {
+      focusSelector: "#reconsent-sign-username",
+      needsPasswordReentry: Boolean(cleanPassword),
+    });
     return;
   }
   if (!cleanPassword) {
-    state.reconsentModalError = isAuthenticatedSession()
-      ? "Please enter your Account Password."
-      : "Please enter your Security PIN / Password.";
+    await failReconsentAttempt(
+      isAuthenticatedSession()
+        ? "Please enter your Account Password."
+        : "Please enter your Security PIN / Password.",
+      {
+        focusSelector: "#reconsent-sign-password",
+        needsPasswordReentry: true,
+      }
+    );
     return;
   }
 
@@ -297,47 +337,55 @@ export async function submitReconsentSignature() {
   );
   if (!reasonCheck.valid) {
     wipeReconsentPasswordField();
-    state.reconsentModalError = reasonCheck.error;
-    if (
-      typeof document !== "undefined" &&
-      requiresCustomSignatureReason(state.reconsentForm.reason)
-    ) {
-      const customEl = document.getElementById("reconsent-sign-reason-custom");
-      if (customEl && typeof customEl.focus === "function") {
-        customEl.focus();
-      }
-    }
+    await failReconsentAttempt(reasonCheck.error, {
+      focusSelector: requiresCustomSignatureReason(state.reconsentForm.reason)
+        ? "#reconsent-sign-reason-custom"
+        : "#reconsent-sign-password",
+      needsPasswordReentry: true,
+    });
     return;
   }
 
   const studyId = resolveReconsentStudyId();
   if (isAuthenticatedSession() && !studyId) {
     wipeReconsentPasswordField();
-    state.reconsentModalError =
-      "Study context is unavailable while your study assignment is loading. Nothing was saved. Please refresh or contact your study coordinator before signing.";
+    await failReconsentAttempt(
+      "Study context is unavailable while your study assignment is loading. Nothing was saved. Please refresh or contact your study coordinator before signing.",
+      {
+        focusSelector: "#reconsent-sign-password",
+        needsPasswordReentry: true,
+      }
+    );
     return;
   }
 
-  // Enforce signer username match against active session identity
-  const expectedUserId = String(state.session.userId || "").trim();
+  // Enforce signer username match against active session OIDC preferred_username (or fallback userId)
+  const expectedSignerUsername = resolveSessionSignerUsername();
+  const fallbackUserId = String(state.session.userId || "").trim();
+  const matchesExpectedSigner =
+    (expectedSignerUsername &&
+      cleanUsername.toLowerCase() === expectedSignerUsername.toLowerCase()) ||
+    (!state.session.username &&
+      fallbackUserId &&
+      cleanUsername.toLowerCase() === fallbackUserId.toLowerCase());
+
   if (
-    (isAuthenticatedSession() && !expectedUserId) ||
-    (expectedUserId &&
-      cleanUsername.toLowerCase() !== expectedUserId.toLowerCase())
+    (isAuthenticatedSession() && !expectedSignerUsername) ||
+    (expectedSignerUsername && !matchesExpectedSigner)
   ) {
     wipeReconsentPasswordField();
-    state.reconsentModalError =
-      "Signature Verification Rejected: User ID / Username must match the signed-in participant account.";
-    if (typeof document !== "undefined") {
-      const userEl = document.getElementById("reconsent-sign-username");
-      if (userEl && typeof userEl.focus === "function") {
-        userEl.focus();
+    await failReconsentAttempt(
+      "Signature Verification Rejected: User ID / Username must match the signed-in participant account.",
+      {
+        focusSelector: "#reconsent-sign-password",
+        needsPasswordReentry: true,
       }
-    }
+    );
     return;
   }
 
   // Validate comprehension checks when rendered in ReconsentModal or explicitly configured on pendingReconsent
+  const submittedComprehensionAnswers = {};
   const comprehensionMounted =
     typeof document !== "undefined" &&
     Boolean(document.getElementById("reconsent-comprehension-section"));
@@ -358,36 +406,51 @@ export async function submitReconsentSignature() {
         state.reconsentComprehensionAnswers?.[q.id] ?? domChecked ?? "";
       if (!recordedVal) {
         wipeReconsentPasswordField();
-        state.reconsentModalError =
-          "Please answer all comprehension check questions to confirm you understand the updated consent terms before signing.";
+        await failReconsentAttempt(
+          "Please answer all comprehension check questions to confirm you understand the updated consent terms before signing.",
+          {
+            focusSelector: "#reconsent-sign-password",
+            needsPasswordReentry: true,
+          }
+        );
         return;
       }
       if (q.correct_option && recordedVal !== q.correct_option) {
         wipeReconsentPasswordField();
-        state.reconsentModalError =
-          "Comprehension check not passed: please review the redlined consent clauses above and select the correct answers before signing.";
+        await failReconsentAttempt(
+          "Comprehension check not passed: please review the redlined consent clauses above and select the correct answers before signing.",
+          {
+            focusSelector: "#reconsent-sign-password",
+            needsPasswordReentry: true,
+          }
+        );
         return;
       }
+      submittedComprehensionAnswers[q.id] = recordedVal;
     }
   }
 
-  // Credential hygiene: clear password immediately before async network work
+  // Credential hygiene: clear password immediately before async network work while preserving reason and answers
   wipeReconsentPasswordField();
   state.reconsentModalError = "";
+  state.reconsentNeedsPasswordReentry = false;
 
   const protocolVersion = state.pendingReconsent?.protocol_version || "2.0";
-  const requirementId = state.pendingReconsent?.id;
+  const requirementId =
+    state.pendingReconsent?.id ||
+    state.pendingReconsent?.requirement_id ||
+    "req_default";
   const declReason = requiresCustomSignatureReason(state.reconsentForm.reason)
     ? reasonCheck.reason
     : `${reasonCheck.reason}${customReasonTrimmed ? ": " + customReasonTrimmed : ""}`;
 
   try {
     if (isAuthenticatedSession()) {
-      const reconsentActionPath = "/api/v1/execution/amendments/reconsent";
+      const reconsentCompleteActionPath = `/api/v1/econsent/reconsent/complete/${encodeURIComponent(requirementId)}`;
       const verificationBody = buildStepUpVerificationPayload({
         username: cleanUsername,
         password: cleanPassword,
-        action: reconsentActionPath,
+        action: reconsentCompleteActionPath,
         semanticAction: SEMANTIC_ACTIONS.ECONSENT_RECONSENT_SIGN,
       });
       const tokenResponse = await dispatchApi(
@@ -405,17 +468,36 @@ export async function submitReconsentSignature() {
         );
       }
 
-      const persistRes = await dispatchApi(
-        "api/v1/execution/amendments/reconsent",
+      const subjectPseudonym = state.session.userId || cleanUsername;
+      const siteId =
+        state.pendingReconsent?.site_id ||
+        state.session.siteId ||
+        (isDemoModeActive() ? DEFAULT_DEMO_SITE?.code || null : null);
+      const versionIndex =
+        state.pendingReconsent?.new_version_index ??
+        state.pendingReconsent?.version_index ??
+        2;
+
+      const completeRes = await dispatchApi(
+        `api/v1/econsent/reconsent/complete/${encodeURIComponent(requirementId)}`,
         {
           method: "POST",
           body: JSON.stringify({
-            subject_id: cleanUsername,
+            subject_pseudonym: subjectPseudonym,
             study_id: studyId,
+            site_id: siteId,
+            signer_name: cleanUsername,
+            signer_role: "Subject",
+            meaning: declReason,
+            signing_reason: declReason,
             protocol_version: protocolVersion,
-            version_index: state.pendingReconsent?.new_version_index || 2,
-            icf_signed: true,
-            signature_type: "ECONSENT",
+            version_index: versionIndex,
+            signature_data: cleanUsername,
+            device_timestamp: demoNowIso(),
+            comprehension_answers:
+              Object.keys(submittedComprehensionAnswers).length > 0
+                ? submittedComprehensionAnswers
+                : undefined,
           }),
           headers: {
             "X-Sig-Token": sigToken,
@@ -425,31 +507,23 @@ export async function submitReconsentSignature() {
       );
 
       if (
-        !persistRes ||
-        typeof persistRes !== "object" ||
-        persistRes.error ||
-        persistRes.persisted === false
+        !completeRes ||
+        typeof completeRes !== "object" ||
+        completeRes.error ||
+        completeRes.persisted === false
       ) {
         throw new Error(
           "Re-consent persistence service is unavailable. Nothing was saved."
         );
       }
-
-      if (requirementId && !requirementId.startsWith("req_")) {
-        await dispatchApi(
-          `api/v1/econsent/reconsent/complete/${requirementId}`,
-          {
-            method: "POST",
-            headers: {
-              "X-Sig-Token": sigToken,
-            },
-            change_reason: declReason,
-          }
-        );
-      }
     } else if (!allowUnbackedAction("Protocol amendment re-consent")) {
-      state.reconsentModalError =
-        "Protocol amendment re-consent cannot be completed while unauthenticated or when signature verification services are unavailable. Nothing was saved.";
+      await failReconsentAttempt(
+        "Protocol amendment re-consent cannot be completed while unauthenticated or when signature verification services are unavailable. Nothing was saved.",
+        {
+          focusSelector: "#reconsent-sign-password",
+          needsPasswordReentry: true,
+        }
+      );
       return;
     }
 
@@ -458,6 +532,7 @@ export async function submitReconsentSignature() {
       "RECONSENT_EXECUTED",
       {
         subject_id: cleanUsername,
+        subject_pseudonym: state.session.userId || cleanUsername,
         study_id: studyId,
         protocol_version: protocolVersion,
         signature_type: "ECONSENT",
@@ -469,21 +544,36 @@ export async function submitReconsentSignature() {
     state.consentSigned = true;
     state.reconsentModalOpen = false;
     state.reconsentModalError = "";
+    state.reconsentNeedsPasswordReentry = false;
     renderTasks();
     const prev = state.reconsentPreviouslyFocusedElement;
+    state.reconsentPreviouslyFocusedElement = null;
     if (
       prev &&
       typeof prev.focus === "function" &&
-      !prev.closest?.("[inert]")
+      prev.isConnected !== false
     ) {
-      prev.focus();
-      state.reconsentPreviouslyFocusedElement = null;
+      if (!prev.closest?.("[inert]")) {
+        prev.focus();
+      } else {
+        void nextTick(() => {
+          if (prev.isConnected !== false && !prev.closest?.("[inert]")) {
+            prev.focus();
+          }
+        });
+      }
     }
 
     showToast(
       "Re-Consent signed and submitted successfully. Submissions unlocked."
     );
   } catch (err) {
-    state.reconsentModalError = `Re-Consent submission failed: ${err.message || err}`;
+    await failReconsentAttempt(
+      `Re-Consent submission failed: ${err.message || err}`,
+      {
+        focusSelector: "#reconsent-sign-password",
+        needsPasswordReentry: true,
+      }
+    );
   }
 }

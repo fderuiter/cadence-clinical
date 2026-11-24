@@ -51,12 +51,19 @@ export function bindPortalControls() {
 
   // Modal actions
   const btnModalCancel = document.getElementById("btn-modal-cancel");
-  if (btnModalCancel)
+  if (btnModalCancel && btnModalCancel.dataset.portalBound !== "true") {
+    btnModalCancel.dataset.portalBound = "true";
     btnModalCancel.addEventListener("click", closeSignatureModal);
+  }
 
   const btnModalSign = document.getElementById("btn-modal-sign");
-  if (btnModalSign)
-    btnModalSign.addEventListener("click", verifyAndSubmitSignature);
+  if (btnModalSign && btnModalSign.dataset.portalBound !== "true") {
+    btnModalSign.dataset.portalBound = "true";
+    btnModalSign.addEventListener("click", (event) => {
+      event.preventDefault();
+      void verifyAndSubmitSignature();
+    });
+  }
 
   // eConsent visual element binding
   const langSelector = document.getElementById("consent-lang-selector");

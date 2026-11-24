@@ -194,12 +194,6 @@ export function createPortalDemoHandlers(store = portalDemoStore) {
     http.get("*/api/v1/econsent/reconsent/pending/:studyId", () =>
       HttpResponse.json(store.state.pendingReconsents)
     ),
-    http.post("*/api/v1/execution/amendments/reconsent", () =>
-      HttpResponse.json({
-        status: "RECORDED",
-        recorded_at: demoNowIso(nextSeq()),
-      })
-    ),
     http.post(
       "*/api/v1/econsent/reconsent/complete/:requirementId",
       ({ params }) => {
@@ -207,8 +201,11 @@ export function createPortalDemoHandlers(store = portalDemoStore) {
           (item) => String(item.id) !== String(params.requirementId)
         );
         return HttpResponse.json({
+          id: params.requirementId,
           requirement_id: params.requirementId,
           status: "COMPLETED",
+          completed: true,
+          persisted: true,
         });
       }
     ),
