@@ -15,6 +15,7 @@ K-MOD-1|Cadence.Apps.Etmf|Cadence.Apps.Etmf.Domain.TmfExpectedDocument.TenantId
 K-MOD-1|Cadence.Apps.Etmf|Cadence.Apps.Etmf.Domain.TmfExportJob.StudyId
 K-MOD-1|Cadence.Apps.Etmf|Cadence.Apps.Etmf.Domain.TmfExportJob.TenantId
 K-MOD-1|Cadence.Apps.Etmf|Cadence.Core.Domain.Audit.AuditLogEntry.TenantId
+K-MOD-1|Cadence.Apps.Etmf|Cadence.Core.Domain.TransactionalOutboxMessage.TenantId
 K-XS-1|Cadence.Apps.Etmf|Cadence.Apps.Etmf.Domain.TmfAuditLog
 K-XS-1|Cadence.Apps.Etmf|Cadence.Apps.Etmf.Domain.TmfDocument.SiteId
 K-XS-1|Cadence.Apps.Etmf|Cadence.Apps.Etmf.Domain.TmfDocument.StudyId

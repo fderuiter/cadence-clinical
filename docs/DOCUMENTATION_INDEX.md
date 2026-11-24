@@ -34,10 +34,12 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | Document | Status | What it is |
 | --- | --- | --- |
 | [Cadence Engineering Blog](blog/index.md) | Current | Curated architectural milestones, platform engineering narratives, and governance updates |
-| [Clinical Kernel v0.2: One Canonical Body of Clinical Truth](blog/2026-09-29-clinical-kernel-v02-ontology-and-invariants.md) | Current | Why Cadence inverted the multi-product eClinical stack around one PostgreSQL clinical kernel, six domain engines, bit... |
-| [From Python Microservices to .NET 10 and Disciplined Python Retirement](blog/2026-09-30-dotnet-10-modernization-and-python-retirement.md) | Current | How we migrated Cadence's backend and developer tooling to .NET 10 / C# 14 with Native AOT quality gates and retired ... |
-| [Governed AI in Clinical Research: Proposals, Grounding, and Human Attestation](blog/2026-10-20-governed-ai-proposals-in-one-runtime.md) | Current | How ADR-2630 (K037) embeds AI agents across clinical workflows through one governed runtime where every output is a c... |
-| [Keeping Cadence in One Repository: Consolidating on a Modular Monolith](blog/2026-11-19-keeping-cadence-in-one-repository.md) | Current | Why ADR-2603 ended our multi-repository split plan so kernel contracts, application modules, and end-to-end GxP evide... |
+| [Self-Service Trial Bootstrap, Standards Import, and Co-Hosted Clinical Demos](blog/2026-11-20-self-service-trial-bootstrap-protocol-import-and-cohosted-demos.md) | Current | 2026-11-20 — How we opened Cadence for zero-friction evaluation and study onboarding—combining Keycloak PKCE self-registration, sy... |
+| [Defense-in-Depth PostgreSQL RLS, Deterministic IClock, and Forwarded GxP Evidence](blog/2026-11-20-postgres-rls-deterministic-iclock-and-gxp-release-evidence.md) | Current | 2026-11-20 — How we extended forced PostgreSQL Row-Level Security across all 15 standalone schemas, closed the TimeProvider wall-c... |
+| [Keeping Cadence in One Repository: Consolidating on a Modular Monolith](blog/2026-11-19-keeping-cadence-in-one-repository.md) | Current | 2026-11-19 — Why ADR-2603 ended our multi-repository split plan so kernel contracts, application modules, and end-to-end GxP evide... |
+| [Governed AI in Clinical Research: Proposals, Grounding, and Human Attestation](blog/2026-10-20-governed-ai-proposals-in-one-runtime.md) | Current | 2026-10-20 — How ADR-2630 (K037) embeds AI agents across clinical workflows through one governed runtime where every output is a c... |
+| [From Python Microservices to .NET 10 and Disciplined Python Retirement](blog/2026-09-30-dotnet-10-modernization-and-python-retirement.md) | Current | 2026-09-30 — How we migrated Cadence's backend and developer tooling to .NET 10 / C# 14 with Native AOT quality gates and retired ... |
+| [Clinical Kernel v0.2: One Canonical Body of Clinical Truth](blog/2026-09-29-clinical-kernel-v02-ontology-and-invariants.md) | Current | 2026-09-29 — Why Cadence inverted the multi-product eClinical stack around one PostgreSQL clinical kernel, six domain engines, bit... |
 
 ## Kernel and roadmap
 
@@ -300,7 +302,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2380: Centralized Permission-Based Authorization and Dynamic Mappings](adr/2026-08-17-centralized-permission-auth.md) | Historical | Also known as: ADR-097 (former number) |
 | [ADR-2381: Fast Version-Check with Immediate Quarantine and Client Alerting](adr/2026-08-17-fast-version-check-with-immediate-quarantine-and-client-alerting.md) | Current | Also known as: ADR-2179 (former number) |
 | [ADR-2382: Frontend Standardization, CSS Grid Layouts, and Centralized UI Utilities](adr/2026-08-17-frontend-standardization-css-grid-and-centralized-utilities.md) | Historical | Also known as: ADR-097 (former number) |
-| [ADR-2383: Interactive Mermaid Diagrams and Responsive Layout Controls](adr/2026-08-17-interactive-mermaid-diagrams-and-zoom-pan-controls.md) | Historical | Also known as: ADR-097 (former number) |
+| [ADR-2383: Interactive Mermaid Diagrams and Responsive Layout Controls](adr/2026-08-17-interactive-mermaid-diagrams-and-zoom-pan-controls.md) | Current | Also known as: ADR-097 (former number) |
 | [ADR-2384: Standardized PostgreSQL Write Verification and eTMF Immutability Triggers](adr/2026-08-17-standardized-postgresql-write-verification-and-etmf-immutability-triggers.md) | Historical | - Status: Accepted |
 | [ADR-2385: Unified Database Schema Introspection and Automated Type Synchronization Gating](adr/2026-08-17-unified-database-introspection-and-type-gating.md) | Historical | Also known as: ADR-2174 (former number) |
 | [ADR-2386: Unified De-identification Compliance Scan CLI, Pre-commit Hook, and Blocking CI Gate](adr/2026-08-17-unified-deid-compliance-scan-cli.md) | Historical | Also known as: ADR-097 (former number) |
@@ -619,6 +621,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2656: Keyboard Operability and WAI-ARIA Semantics in `ClinicalDataTable`](adr/2026-11-23-clinical-data-table-keyboard-and-aria-compliance.md) | Current | - Status: Accepted |
 | [ADR-2528: Extend Cohort, xUnit v3, and PostgreSQL Digest Guardrails](adr/2026-11-23-extend-cohort-xunit-v3-and-postgres-digest-guardrails.md) | Current | - Status: Accepted |
 | [ADR-2657: Share UI Primitives and Synchronize Participant Portal Route Queries](adr/2026-11-23-share-ui-primitives-and-query-synced-portal-routes.md) | Current | - Status: Accepted |
+| [ADR-2498: Hoist CSP Meta Directives, Delegate Clinical Widgets, and Scope Mode-Aware Vite CSP Profiles](adr/2026-11-22-hoist-csp-delegate-widgets-and-mode-aware-vite-profiles.md) | Current | - Status: Accepted |
 | [ADR-2607: Complete Kernel NodeKinds Scope Mapping and Persist Canonical Enrollment NodeRefs](adr/2026-11-23-persist-enrollment-id-and-map-all-kernel-node-kinds.md) | Current | - Status: Accepted |
 | [ADR-2658: Resolve Shared UI from Workspace Source and Align Verification Scripts](adr/2026-11-23-resolve-shared-ui-from-source-and-align-verification-scripts.md) | Current | - Status: Accepted |
 | [ADR-2660: Enforce Configured Biometric Liveness HMAC Key and Single-Use Replay Protection](adr/2026-11-23-biometric-liveness-hmac-key-and-single-use-replay-protection.md) | Current | - Status: Accepted |
@@ -627,10 +630,14 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2553: Unify Root ESLint Gates, Explicit Runtime Globals, and Demo-Fixtures Typechecking](adr/2026-11-23-unify-root-eslint-gates-globals-and-demo-fixtures-typecheck.md) | Current | - Status: Accepted |
 | [ADR-2832: Expand IL Sentinels and Shrink-Only CLI Ratchets](adr/2026-11-23-expand-il-sentinels-and-shrink-only-cli-ratchets.md) | Current | - Status: Accepted |
 | [ADR-2659: Centralize `ClinicalTabs` Visual Variants, Overflow Containment, Focus Scroll Alignment, and Scoped CSS AST Gates](adr/2026-11-23-centralize-clinical-tabs-variants-overflow-and-scoped-css-gates.md) | Current | - Status: Accepted |
+| [ADR-2663: Sync Sticky Chrome Offsets, Short-Viewport Sticky Release, and Responsive Grid Primitives](adr/2026-11-23-sync-sticky-chrome-offsets-and-responsive-grid-primitives.md) | Current | - Status: Accepted |
 | [ADR-2670: Enforce Tabular Numerals via Shared CSS Tokens and AST Lint](adr/2026-11-22-enforce-tabular-numerals-via-css-tokens-and-lint.md) | Current | - Status: Accepted |
+| [ADR-2664: Enforce Default GxP Audits, Step-Up Electronic Signatures, and Attribution Sentinels Across Standalone Services](adr/2026-11-23-enforce-default-gxp-audits-signatures-and-sentinels.md) | Current | - Status: Accepted |
+| [ADR-2663: Inline Explanation Primitives and RBAC Problem Details](adr/2026-11-22-inline-explanation-primitives-and-rbac-problem-details.md) | Current | - Status: Accepted |
 | [ADR-2626: Observation Assertion Audit Coverage, SDV Precondition Guards, and CRA Modification Alerts](adr/2026-11-23-observation-assertions-sdv-guards-and-cra-alerts.md) | Current | - Status: Accepted |
 | [ADR-2671: Composable Dirty Navigation Guards, Inline eCRF Draft Recovery Banners, and Edited-Row Contrast Tokens](adr/2026-11-23-composable-dirty-guards-and-inline-draft-recovery.md) | Current | - Status: Accepted |
-| [ADR-2672: Standardize Semantic Role Tokens, Dark-Theme Parity, and ESLint AST Color Gates](adr/2026-11-23-standardize-semantic-role-tokens-and-eslint-color-gates.md) | Current | - Status: Accepted |
+| [ADR-2672: Share Step-Up Signature Dispatch, Web HTTP Core, and TypeScript Duplication Enforcement](adr/2026-11-23-share-step-up-dispatch-http-core-and-ts-duplication-gate.md) | Current | - Status: Accepted |
+| [ADR-2673: Standardize Semantic Role Tokens, Dark-Theme Parity, and ESLint AST Color Gates](adr/2026-11-23-standardize-semantic-role-tokens-and-eslint-color-gates.md) | Current | - Status: Accepted |
 
 ## Developing and running
 

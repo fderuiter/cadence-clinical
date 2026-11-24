@@ -5,6 +5,7 @@ K-MOD-1|Cadence.Apps.Notifications|Cadence.Apps.Notifications.Domain.Notificatio
 K-MOD-1|Cadence.Apps.Notifications|Cadence.Apps.Notifications.Domain.NotificationDelivery.TenantId
 K-MOD-1|Cadence.Apps.Notifications|Cadence.Apps.Notifications.Domain.NotificationRecord.TenantId
 K-MOD-1|Cadence.Apps.Notifications|Cadence.Core.Domain.Audit.AuditLogEntry.TenantId
+K-MOD-1|Cadence.Apps.Notifications|Cadence.Core.Domain.TransactionalOutboxMessage.TenantId
 K-XS-1|Cadence.Apps.Notifications|Cadence.Apps.Notifications.Domain.NotificationAuditLog
 K-XS-1|Cadence.Apps.Notifications|Cadence.Apps.Notifications.Domain.NotificationPayload.SiteId
 K-XS-1|Cadence.Apps.Notifications|Cadence.Apps.Notifications.Domain.NotificationPayload.SubjectId

@@ -6,7 +6,9 @@ using System.Threading.Tasks;
 
 using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Application.Supply;
+using Cadence.Apps.Execution.Endpoints.Filters;
 using Cadence.Apps.Execution.Infrastructure.Security;
+using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
 using Cadence.Security.Rbac;
 
@@ -19,6 +21,7 @@ namespace Cadence.Apps.Execution.Endpoints;
 
 public static class IpKitEndpoints
 {
+    public const string ReconcileBatchSemanticAction = "execution.rtsm.reconcile_batch";
     public static IEndpointRouteBuilder MapIpKitEndpoints(this IEndpointRouteBuilder routes)
     {
         // Route permissions (ADR-2516): kit scans, reconciliation and inventory are blinded supply data, so only the
@@ -71,7 +74,9 @@ public static class IpKitEndpoints
                 return Results.BadRequest(new { detail = ex.Message });
             }
         })
-        .RequirePermission("rtsm_supply:write").RequireCallerStudyAndSiteScope();
+        .RequirePermission("rtsm_supply:write").RequireCallerStudyAndSiteScope()
+        .RequireElectronicSignature(ReconcileBatchSemanticAction, http => http.Request.Path.Value ?? string.Empty)
+        .RequireChangeReasonHeader();
 
         group.MapGet("/certificates/{certificateId}", async (
             string certificateId,
@@ -140,7 +145,8 @@ public static class IpKitEndpoints
             var result = await service.SeedSiteInventoryAsync(request.StudyId, request.SiteId, request.Kits ?? [], ct);
             return Results.Ok(result);
         })
-        .RequirePermission("ip_kit_inventory:seed").RequireCallerStudyAndSiteScope();
+        .RequirePermission("ip_kit_inventory:seed").RequireCallerStudyAndSiteScope()
+        .RequireChangeReasonHeader();
 
         return routes;
     }

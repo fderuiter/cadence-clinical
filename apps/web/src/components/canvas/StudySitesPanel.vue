@@ -298,8 +298,10 @@ import {
 } from "../../api/kernelApi";
 import {
   clearKernelStudyCache,
+  seedKernelStudyRef,
   syncCallerSiteScope,
 } from "../../canvas/kernelStudy";
+import { seedNodeSummary } from "../../canvas/nodeResolver";
 import { buildScopedStudyLocation } from "../../canvas/palette";
 import { useAuthStore } from "../../stores/auth.js";
 import { demoRandomToken, isDemoBuild } from "../../utils/demoMode";
@@ -428,6 +430,20 @@ async function loadAll(code: string) {
     const linked = await kernelApi.listStudySites(code);
     if (req !== requestEpoch) return;
     studySites.value = Array.isArray(linked) ? linked : [];
+    const firstStudyRef = studySites.value.find((s) => s.study_ref)?.study_ref;
+    if (firstStudyRef) {
+      seedKernelStudyRef(code, firstStudyRef);
+    }
+    for (const site of studySites.value) {
+      if (site.ref && !site.mask) {
+        seedNodeSummary(site.ref, {
+          kind: "study_site",
+          code: site.site_code ?? null,
+          title: site.site_name ?? null,
+          status: site.status ?? null,
+        });
+      }
+    }
     emit("changed", studySites.value);
 
     if (!props.compact && props.canManageSites) {
@@ -611,10 +627,18 @@ async function submitRegisterSite() {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
   padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--semantic-color-surface);
+}
+
+.linked-site-main {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .linked-site-top {
@@ -639,11 +663,13 @@ async function submitRegisterSite() {
 
 .linked-site-name {
   font-size: 0.9rem;
+  overflow-wrap: anywhere;
 }
 
 .linked-site-inst {
   color: var(--neutral-dark);
   font-size: 0.8rem;
+  overflow-wrap: anywhere;
 }
 
 .site-form {
@@ -663,7 +689,7 @@ async function submitRegisterSite() {
 
 .site-form-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
   gap: 10px;
 }
 

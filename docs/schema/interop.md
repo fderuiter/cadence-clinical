@@ -55,6 +55,20 @@ Indexes:
 - `IX_clinical_queries_TestCode`: (`TestCode`)
 - `IX_clinical_queries_tenant_id`: (`tenant_id`)
 
+## interop.consumed_signature_tokens
+
+Entity: `ConsumedSignatureToken`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `TokenId` | `character varying(128)` | no |  | PK |
+| `ConsumedAt` | `timestamp with time zone` | no |  |  |
+| `RetainUntil` | `timestamp with time zone` | no |  |  |
+
+Indexes:
+
+- `IX_consumed_signature_tokens_RetainUntil`: (`RetainUntil`)
+
 ## interop.device_registrations
 
 Entity: `DeviceRegistrationRecord`
@@ -637,3 +651,28 @@ Indexes:
 - `IX_subject_notifications_DueAt`: (`DueAt`)
 - `IX_subject_notifications_SubjectId`: (`SubjectId`)
 - `IX_subject_notifications_tenant_id`: (`tenant_id`)
+
+## interop.transactional_outbox
+
+Entity: `TransactionalOutboxMessage`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `Id` | `uuid` | no |  | PK |
+| `AggregateId` | `character varying(255)` | no |  |  |
+| `AggregateType` | `character varying(255)` | no |  |  |
+| `Attempts` | `integer` | no |  |  |
+| `CreatedAt` | `timestamp with time zone` | no |  |  |
+| `DispatchedAt` | `timestamp with time zone` | yes |  |  |
+| `EventId` | `uuid` | no |  |  |
+| `EventType` | `character varying(255)` | no |  |  |
+| `LastError` | `character varying(2000)` | yes |  |  |
+| `Payload` | `text` | no |  |  |
+| `_version` | `bigint` | no | `0` |  |
+| `tenant_id` | `uuid` | no |  |  |
+
+Indexes:
+
+- `IX_transactional_outbox_CreatedAt_DispatchedAt`: (`CreatedAt`, `DispatchedAt`)
+- `IX_transactional_outbox_EventId`: (`EventId`)
+- `IX_transactional_outbox_tenant_id`: (`tenant_id`)

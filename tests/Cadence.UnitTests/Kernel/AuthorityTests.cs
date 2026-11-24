@@ -420,10 +420,41 @@ public sealed class AuthorityTests
         var trainedOnV1 = Qualify(kind: QualificationKind.ProtocolTraining, code: "protocol_training", version: v1).Value!;
         var trainedOnV2 = Qualify(kind: QualificationKind.ProtocolTraining, code: "protocol_training", version: v2).Value!;
 
-        var denied = await Evaluate(new Store(grant) { Requirements = [requirement], Qualifications = [trainedOnV1] }, Crc, Record, SiteA1Ref);
-        denied.Reason.Should().EndWith($": Obtain protocol_training for protocol version {v2}.");
+        var denied = await Evaluate(
+            new Store(grant)
+            {
+                Requirements = [requirement],
+                Qualifications = [trainedOnV1],
+                VersionNumbers = new System.Collections.Generic.Dictionary<ProtocolVersionId, int> { [v2] = 2 },
+            },
+            Crc,
+            Record,
+            SiteA1Ref);
+        denied.Reason.Should().EndWith(": Obtain protocol_training for protocol version 2.");
+        denied.Reason.Should().NotContain(v2.Value.ToString("D"));
+        denied.Conditions.Single(c => !c.Met).Evidence.Should().Contain(NodeRef.For(v2));
         (await Evaluate(new Store(grant) { Requirements = [requirement], Qualifications = [trainedOnV1, trainedOnV2] }, Crc, Record, SiteA1Ref))
             .Permitted.Should().BeTrue();
+    }
+
+    /// <summary>
+    /// When Actor.Id is a UUID, denial reasons use a human-readable actor phrase rather than leaking the raw UUID and
+    /// attach the corresponding Person NodeRef as condition evidence.
+    /// </summary>
+    [Fact(DisplayName = "Evaluate_UuidActorDenial_UsesHumanReadableLabelAndPersonNodeRefEvidence")]
+    [KernelRule("K-AUTH-6")]
+    public async Task EvaluateUuidActorDenialUsesHumanReadableLabelAndPersonNodeRefEvidence()
+    {
+        var personId = PersonId.New();
+        var uuidActor = new Actor(ActorKind.Person, personId.Value.ToString("D"));
+
+        var noGrant = await Evaluate(new Store(), uuidActor, Record, SiteA1Ref);
+
+        noGrant.Permitted.Should().BeFalse();
+        noGrant.Reason.Should().NotContain(personId.Value.ToString("D"));
+        noGrant.Reason.Should().StartWith("The signed-in user holds no grant");
+        noGrant.Conditions.Should().ContainSingle()
+            .Which.Evidence.Should().Equal(SiteA1Ref, NodeRef.For(personId));
     }
 
     /// <summary>
@@ -722,6 +753,16 @@ public sealed class AuthorityTests
         public IReadOnlyList<Qualification> Qualifications { get; init; } = [];
 
         public IReadOnlyList<QualificationRequirement> Requirements { get; init; } = [];
+
+        public IReadOnlyDictionary<ProtocolVersionId, int> VersionNumbers { get; init; } =
+            new Dictionary<ProtocolVersionId, int>();
+
+        public Task<IReadOnlyDictionary<ProtocolVersionId, int>> ProtocolVersionNumbersAsync(
+            TenantId tenant,
+            IReadOnlyCollection<ProtocolVersionId> versions,
+            CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyDictionary<ProtocolVersionId, int>>(
+                VersionNumbers.Where(kvp => versions.Contains(kvp.Key)).ToDictionary(kvp => kvp.Key, kvp => kvp.Value));
 
         public IReadOnlyDictionary<EnrollmentId, StudySiteId> EnrollmentSites { get; init; } =
             new Dictionary<EnrollmentId, StudySiteId>();

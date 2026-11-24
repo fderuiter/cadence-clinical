@@ -40,6 +40,7 @@ K-MOD-1|Cadence.Apps.Payments|Cadence.Apps.Payments.Domain.SelfBillingInvoice.St
 K-MOD-1|Cadence.Apps.Payments|Cadence.Apps.Payments.Domain.SelfBillingInvoice.TenantId
 K-MOD-1|Cadence.Apps.Payments|Cadence.Apps.Payments.Domain.SplitPayeeConfig.TenantId
 K-MOD-1|Cadence.Apps.Payments|Cadence.Core.Domain.Audit.AuditLogEntry.TenantId
+K-MOD-1|Cadence.Apps.Payments|Cadence.Core.Domain.TransactionalOutboxMessage.TenantId
 K-XS-1|Cadence.Apps.Payments|Cadence.Apps.Payments.Domain.BudgetContract.SiteId
 K-XS-1|Cadence.Apps.Payments|Cadence.Apps.Payments.Domain.BudgetContract.StudyId
 K-XS-1|Cadence.Apps.Payments|Cadence.Apps.Payments.Domain.HoldbackReserve.SiteId

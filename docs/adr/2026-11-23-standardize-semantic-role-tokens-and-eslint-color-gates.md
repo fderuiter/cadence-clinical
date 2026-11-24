@@ -1,4 +1,4 @@
-# ADR-2672: Standardize Semantic Role Tokens, Dark-Theme Parity, and ESLint AST Color Gates
+# ADR-2673: Standardize Semantic Role Tokens, Dark-Theme Parity, and ESLint AST Color Gates
 
 - **Status:** Accepted
 - **Date:** 2026-11-23

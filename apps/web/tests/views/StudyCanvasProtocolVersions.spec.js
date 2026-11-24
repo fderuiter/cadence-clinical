@@ -5,17 +5,14 @@ import { createMemoryHistory, createRouter } from "vue-router";
 import { executionApi } from "../../src/api/executionApi";
 import { kernelApi } from "../../src/api/kernelApi";
 import { kernelGovernanceApi } from "../../src/api/kernelGovernanceApi";
-import { etmfService } from "../../src/api/etmf";
+import { requestStepUpSignature } from "../../src/api/signatureVerification";
 import { ApiError } from "../../src/api/client";
 import { useAuthStore } from "../../src/stores/auth";
 import { useStudyCanvasStore } from "../../src/stores/studyCanvas";
 import StudyCanvasView from "../../src/views/StudyCanvasView.vue";
 
-vi.mock("../../src/api/etmf", () => ({
-  etmfService: {
-    verifySignature: vi.fn(),
-    signDocument: vi.fn(),
-  },
+vi.mock("../../src/api/signatureVerification", () => ({
+  requestStepUpSignature: vi.fn(),
 }));
 
 vi.mock("../../src/api/executionApi", () => ({
@@ -137,7 +134,7 @@ describe("Clinical Canvas protocol versions and amendment impact (ADR-2540, K-PR
     vi.mocked(kernelGovernanceApi.listStudyArtifacts).mockResolvedValue([]);
     vi.mocked(kernelGovernanceApi.listStudyEffectivities).mockResolvedValue([]);
     vi.mocked(kernelGovernanceApi.listStudySites).mockResolvedValue([]);
-    vi.mocked(etmfService.verifySignature).mockReset();
+    vi.mocked(requestStepUpSignature).mockReset();
     vi.mocked(kernelApi.search).mockResolvedValue([
       {
         ref: STUDY,
@@ -782,7 +779,7 @@ describe("Clinical Canvas protocol versions and amendment impact (ADR-2540, K-PR
       currentV2 = { ...currentV2, status: "Draft", content_hash: null };
       return currentV2;
     });
-    vi.mocked(etmfService.verifySignature).mockResolvedValue({
+    vi.mocked(requestStepUpSignature).mockResolvedValue({
       sig_token: "step-up-sig-token-60s",
     });
     vi.mocked(kernelGovernanceApi.approveProtocolVersion).mockImplementation(
@@ -905,7 +902,7 @@ describe("Clinical Canvas protocol versions and amendment impact (ADR-2540, K-PR
     await wrapper.find("#btn-confirm-sig").trigger("click");
     await flushPromises();
 
-    expect(etmfService.verifySignature).toHaveBeenCalledWith(
+    expect(requestStepUpSignature).toHaveBeenCalledWith(
       expect.objectContaining({
         username: "designer.lead",
         action: `/api/v1/kernel/protocol-versions/protocol_version:${V2_ID}/approve`,

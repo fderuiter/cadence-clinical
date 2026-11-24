@@ -12,6 +12,7 @@ using Cadence.Apps.Ctms.Domain;
 using Cadence.Apps.Ctms.Infrastructure.Persistence;
 using Cadence.Compliance;
 using Cadence.Kernel.Time;
+using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
 using Cadence.Security.Rbac;
 
@@ -57,7 +58,8 @@ public static class StartupGreenlightEndpoints
             .WithSummary("Certifies greenlight activation for a single trial site, issuing an HMAC-SHA256 token.")
             .Produces<SiteGreenlightGateResponseDto>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status400BadRequest)
-            .ProducesProblem(StatusCodes.Status404NotFound);
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .RequireElectronicSignature("ctms.greenlight.certify", http => http.Request.Path.Value ?? string.Empty);
 
         startup.MapGet("/matrix", GetCountryMatrixAsync)
             .WithName("GetCountryGreenlightMatrix")
@@ -73,7 +75,8 @@ public static class StartupGreenlightEndpoints
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .WithSummary("Batch-certifies all selected 100% compliant sites in a target country with a single e-signature.")
             .Produces<BatchCertifyResponseDto>(StatusCodes.Status200OK)
-            .ProducesProblem(StatusCodes.Status400BadRequest);
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .RequireElectronicSignature("ctms.greenlight.batch_certify", http => http.Request.Path.Value ?? string.Empty);
 
         return group;
     }

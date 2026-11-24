@@ -25,6 +25,7 @@ K-MOD-1|Cadence.Apps.Imaging|Cadence.Apps.Imaging.Domain.TumorResponseAssessment
 K-MOD-1|Cadence.Apps.Imaging|Cadence.Apps.Imaging.Domain.TumorResponseAssessment.SubjectId
 K-MOD-1|Cadence.Apps.Imaging|Cadence.Apps.Imaging.Domain.TumorResponseAssessment.TenantId
 K-MOD-1|Cadence.Apps.Imaging|Cadence.Core.Domain.Audit.AuditLogEntry.TenantId
+K-MOD-1|Cadence.Apps.Imaging|Cadence.Core.Domain.TransactionalOutboxMessage.TenantId
 K-XS-1|Cadence.Apps.Imaging|Cadence.Apps.Imaging.Domain.DeidentificationCertificate.SiteId
 K-XS-1|Cadence.Apps.Imaging|Cadence.Apps.Imaging.Domain.DeidentificationCertificate.StudyId
 K-XS-1|Cadence.Apps.Imaging|Cadence.Apps.Imaging.Domain.DeidentificationCertificate.SubjectId

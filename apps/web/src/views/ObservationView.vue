@@ -1270,14 +1270,33 @@ watch(
 <style scoped>
 .back {
   display: inline-block;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-wrap: anywhere;
   margin-bottom: 12px;
   color: var(--semantic-color-interactive-primary);
   font-size: 0.85rem;
 }
 .observation-summary {
   display: grid;
-  grid-template-columns: max-content 1fr;
+  grid-template-columns: minmax(0, max-content) minmax(0, 1fr);
   gap: 4px 16px;
+  min-width: 0;
+  max-width: 100%;
+}
+.observation-summary :deep(dt),
+.observation-summary :deep(dd),
+.observation-summary dt,
+.observation-summary dd {
+  margin: 0;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 640px) {
+  .observation-summary {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 .observation-sdv-meta {
   margin-left: 8px;
@@ -1355,16 +1374,28 @@ watch(
   flex-wrap: wrap;
   align-items: center;
   margin: 16px 0;
+  min-width: 0;
+  max-width: 100%;
+}
+.observation-correction > * {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-wrap: anywhere;
 }
 .observation-hint {
   flex-basis: 100%;
   margin: 0;
   color: var(--semantic-color-error-text-dark);
+  overflow-wrap: anywhere;
 }
 .observation-outcome {
   padding: 8px 12px;
   border-radius: 6px;
   margin-bottom: 16px;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-wrap: anywhere;
 }
 .observation-outcome--saved {
   background: var(--semantic-color-success-bg-soft);
@@ -1381,12 +1412,16 @@ watch(
 #section-observation > .card {
   min-width: 0;
   max-width: 100%;
+  box-sizing: border-box;
+  overflow-wrap: anywhere;
 }
 .observation-table-scroll {
+  position: relative;
   overflow-x: auto;
   max-width: 100%;
   margin-bottom: 16px;
   padding: 2px;
+  box-sizing: border-box;
 }
 .observation-table-scroll:focus-visible {
   outline: 2px solid var(--semantic-color-accent);

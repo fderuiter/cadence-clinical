@@ -852,10 +852,134 @@ textarea {
   border-color: var(--color-accent) !important;
 }
 
-/* Hide query flags and panels in subject portal as these are staff console concepts */
-.query-flag,
+/* Clinical field query flags & panels (WCAG 2.2 AA + 48px touch targets) */
+.clinical-input .input-wrapper,
+.clinical-radio-grid .radio-options-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.clinical-input .input-wrapper > input {
+  flex: 1;
+  min-width: 0;
+}
+
+.clinical-radio-grid .radio-options-wrapper > .radio-options {
+  flex: 1;
+  min-width: 0;
+}
+
+.query-flag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  min-width: var(--touch-target-min);
+  min-height: var(--touch-target-min);
+  padding: 6px;
+  border: 1px solid var(--semantic-color-border-control);
+  border-radius: 6px;
+  background-color: var(--semantic-color-surface);
+  color: var(--text-main);
+  font-size: 16px;
+  cursor: pointer;
+  transition:
+    background-color 0.2s,
+    border-color 0.2s;
+}
+
+.can-hover .query-flag:hover {
+  background-color: var(--semantic-color-surface-header);
+  border-color: var(--primary);
+}
+
 .query-panel {
-  display: none !important;
+  margin-top: 12px;
+  border: 1px solid var(--semantic-color-border-control);
+  border-radius: 8px;
+  background-color: var(--semantic-color-surface);
+  color: var(--text-main);
+}
+
+.query-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background-color: var(--semantic-color-surface-muted);
+  border-bottom: 1px solid var(--border);
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+}
+
+.query-panel-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.btn-close-panel {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--touch-target-min);
+  min-height: var(--touch-target-min);
+  padding: 4px 10px;
+  border: 1px solid var(--semantic-color-border-control);
+  border-radius: 6px;
+  background-color: var(--semantic-color-surface);
+  color: var(--text-main);
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.can-hover .btn-close-panel:hover {
+  background-color: var(--semantic-color-surface-header);
+}
+
+.query-panel-body {
+  padding: 12px;
+}
+
+.query-panel-instruction {
+  margin: 0 0 8px 0;
+  font-size: 13px;
+  color: var(--text-main);
+}
+
+.query-create-section textarea,
+.query-respond-section textarea {
+  width: 100%;
+  min-height: 76px;
+  padding: 8px 10px;
+  border: 1px solid var(--semantic-color-border-control);
+  border-radius: 6px;
+  background-color: var(--semantic-color-surface);
+  color: var(--text-main);
+  font-size: 1rem;
+}
+
+.btn-submit-query,
+.btn-respond-query,
+.btn-close-query,
+.btn-reopen-query {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--touch-target-min);
+  margin-top: 8px;
+  padding: 8px 14px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background-color: var(--primary);
+  color: var(--semantic-color-text-on-primary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 /* Footer & Activity Log */

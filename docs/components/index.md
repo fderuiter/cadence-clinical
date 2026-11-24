@@ -13,13 +13,15 @@ The Cadence Clinical platform provides a shared, vanilla CSS-based enterprise de
 
 ## Component & Composable Catalog
 
-All 28 Vue components and interaction helpers are exported directly from the root `ui` package:
+All 30 Vue components and interaction helpers are exported directly from the root `ui` package:
 
 | Export                                     | Description                                                                                                                                                                                                          | ARIA Landmark / Role                        |
 | :----------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------ |
 | `ClinicalContextBar`                       | Accessible clinical scope breadcrumb landmark linking Studies, study, site, participant, and current workflow                                                                                                        | `navigation`, `list`, `link`                |
 | `ClinicalBreadcrumbs`                      | Accessible `<nav aria-label="Breadcrumb">` trail marking the active item with `aria-current="page"` and `48px` mobile touch targets                                                                                  | `navigation`, `list`, `link`                |
-| `EntityLink`                               | `NodeRef`-compatible keyboard-operable button or link trigger with `.sr-only` context and peek/open focus restoration                                                                                                | `button` / `link`                           |
+| `ClinicalExplanation`                      | Structured ADR-2482 rule explanation card rendering claims, met/unmet conditions, steps, and `NextAction` `NodeRef` links                                                                                            | `region`, `aria-live="polite"`              |
+| `ClinicalGatedAction`                      | Visible capability-gated action wrapper with accessible inline or expandable why-blocked explanations                                                                                                                | `button`, `aria-describedby`                |
+| `EntityLink`                               | `NodeRef`-compatible keyboard-operable button or link trigger and K-EXP-2 masked badge with `.sr-only` context and peek/open focus restoration                                                                       | `button` / `link`                           |
 | `ClinicalIcon`                             | Zero-emoji `1.75px` stroke-only vector icon primitive (`aria-hidden="true"`) paired with visible labels                                                                                                              | Decorative SVG (`aria-hidden="true"`)       |
 | [`ClinicalDataTable`](./data-table.md)     | Accessible, keyboard-sortable, paginated clinical dataset table with focusable rows, row selection, live pagination status, and tabular numerals                                                                     | `table`, `region`, `columnheader`, `status` |
 | [`ClinicalModal`](./modal.md)              | Accessible modal dialog with focus trap, `ariaDescribedby` support, and backdrop blur                                                                                                                                | `dialog`, `aria-modal="true"`               |
@@ -89,3 +91,9 @@ Viewport-relative design tokens defined in `packages/ui/tokens.css` specify stan
 | `--drawer-width-xl` | `--semantic-drawer-width-xl` | `min(100vw, 920px)` | 920px            |
 
 Responsive utilities in `packages/ui/responsive.css` provide `.drawer-mobile-full` and `.drawer-panel-mobile-full` for expanding side drawer panels to full viewport width on mobile viewports (<= 640px).
+
+### Inline Explanation & Gated Action Primitives
+
+- `EntityLink`: Renders Clinical Kernel `NodeRef` links in monospace with K-EXP-2 masked badge support and scope-preserving peek-drawer activation.
+- `ClinicalExplanation`: Renders ADR-2482 `Explanation` claims, evaluated met/unmet conditions, reasoning steps, and clickable `NextAction.Target` links.
+- `ClinicalGatedAction`: Keeps blocked clinical controls visible with accessible why-blocked explanations.

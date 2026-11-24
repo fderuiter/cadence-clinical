@@ -625,7 +625,10 @@ function handleLookupInput(field, value) {
 const ecrfSessions = reactive({});
 
 function getSessionKey() {
-  return `${selectedSubjectId.value}:${selectedVisitId.value}`;
+  const personaKey = authStore.isAuthenticated
+    ? authStore.currentPersona || "default"
+    : "guest";
+  return `${personaKey}:${selectedSubjectId.value}:${selectedVisitId.value}`;
 }
 
 function loadEcrfSession() {

@@ -749,10 +749,13 @@ async function handleActivateSubscription() {
 <style scoped>
 .plans-view {
   max-width: 1120px;
+  width: 100%;
+  min-width: 0;
   margin: 0 auto;
   padding: 24px 20px 56px;
   box-sizing: border-box;
   color: var(--semantic-color-text);
+  overflow-wrap: anywhere;
 }
 
 .prerelease-banner {

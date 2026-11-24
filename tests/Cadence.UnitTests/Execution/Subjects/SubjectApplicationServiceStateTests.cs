@@ -361,10 +361,25 @@ public class SubjectApplicationServiceStateTests
         var subject = await SeedSubjectAsync(harness.Subjects, "SUBJ-001", siteCode);
 
         var result = await harness.Service.AdvanceStateAsync(subject.SubjectCode.Value,
-            new SubjectStateUpdateRequest(Status: "WITHDRAWN", State: null), "Subject withdrew consent",
+            new SubjectStateUpdateRequest(Status: "WITHDRAWN", State: null),
+            "Participant voluntarily withdrew informed consent after clinical consultation",
             TestContext.Current.CancellationToken);
 
         result.IsSuccess.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task AdvanceStateAsync_TargetingWithdrawnWithShortJustification_ReturnsValidationError()
+    {
+        var harness = new Harness();
+        var subject = await SeedSubjectAsync(harness.Subjects, "SUBJ-WD-SHORT", new SiteCode("SITE-001"));
+
+        var result = await harness.Service.AdvanceStateAsync(subject.SubjectCode.Value,
+            new SubjectStateUpdateRequest(Status: "WITHDRAWN", State: null),
+            "Subject withdrew consent",
+            TestContext.Current.CancellationToken);
+
+        result.IsFailure.Should().BeTrue();
     }
 
     // -- EvaluateAndTransitionScreeningAsync: not-found ------------------------------------------

@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Cadence.Apps.Imaging.Domain;
 using Cadence.Apps.Imaging.Infrastructure.Persistence;
 using Cadence.Kernel.Time;
+using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
 using Cadence.Security.Rbac;
 
@@ -88,7 +89,8 @@ public static class ImagingAdjudicationEndpoints
             .Produces<AdjudicationSessionResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status404NotFound)
-            .ProducesProblem(StatusCodes.Status409Conflict);
+            .ProducesProblem(StatusCodes.Status409Conflict)
+            .RequireElectronicSignature("imaging.adjudication.chair_adjudicate", http => http.Request.Path.Value ?? string.Empty);
 
         return routes;
     }

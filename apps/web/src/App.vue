@@ -5,6 +5,9 @@
   <ContextualHelpDrawer
     v-if="showContextualHelp && hasActivatedContextualHelp"
   />
+  <Teleport v-if="peekState.open" to="body">
+    <EntityPeekDrawerHost />
+  </Teleport>
   <Teleport v-if="hasActivatedToastHost" to="body">
     <ToastHost />
   </Teleport>
@@ -18,6 +21,10 @@ const ContextualHelpDrawer = defineLazyOverlay(
   () => import("./components/ContextualHelpDrawer.vue")
 );
 
+const EntityPeekDrawerHost = defineLazyOverlay(
+  () => import("./components/canvas/EntityPeekDrawerHost.vue")
+);
+
 const ToastHost = defineLazyOverlay(() => import("./components/ToastHost.vue"));
 
 const ConfirmationDialogHost = defineLazyOverlay(
@@ -29,6 +36,7 @@ const ConfirmationDialogHost = defineLazyOverlay(
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import AppShell from "./components/AppShell.vue";
+import { useEntityPeekDrawer } from "./composables/useEntityPeekDrawer";
 import { useAuthStore } from "./stores/auth.js";
 import { useConfirmStore } from "./stores/confirm.js";
 import { resolveStorePinia } from "./stores/onboardingSummary.js";
@@ -40,6 +48,7 @@ import {
 } from "./utils/lazyOverlay.js";
 import "./style.css";
 
+const { state: peekState } = useEntityPeekDrawer();
 const route = useRoute();
 const authStore = useAuthStore();
 const pinia = resolveStorePinia(authStore);

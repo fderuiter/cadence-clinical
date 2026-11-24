@@ -578,4 +578,308 @@ public static partial class PermissionMatrix
 
         return false;
     }
+
+    private static readonly Dictionary<string, string> RoleDisplayNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        [RoleNormalization.ROLE_PRINCIPAL_INVESTIGATOR] = "Principal Investigator",
+        [RoleNormalization.ROLE_LEAD_INVESTIGATOR] = "Lead Investigator",
+        [RoleNormalization.ROLE_AUTHORIZED_ER_PHYSICIAN] = "Authorized ER Physician",
+        [RoleNormalization.ROLE_INVESTIGATOR] = "Site Investigator",
+        [RoleNormalization.ROLE_CRC] = "Clinical Research Coordinator",
+        [RoleNormalization.ROLE_TRIAL_COORDINATOR] = "Trial Coordinator",
+        [RoleNormalization.ROLE_CRA_CANONICAL] = "Clinical Research Associate",
+        ["monitor"] = "Clinical Monitor",
+        [RoleNormalization.ROLE_EXTERNAL_MONITOR] = "External Monitor",
+        [RoleNormalization.ROLE_SPONSOR_DM] = "Sponsor Data Manager",
+        [RoleNormalization.ROLE_SPONSOR_DESIGNER] = "Sponsor Study Designer",
+        [RoleNormalization.ROLE_REVIEWER] = "Protocol Reviewer",
+        [RoleNormalization.ROLE_SPONSOR_MM] = "Sponsor Medical Monitor",
+        [RoleNormalization.ROLE_SPONSOR_STATISTICIAN] = "Sponsor Statistician",
+        [RoleNormalization.ROLE_UNBLINDED_STATISTICIAN] = "Unblinded Statistician",
+        [RoleNormalization.ROLE_IDMC] = "IDMC Member",
+        [RoleNormalization.ROLE_PHARMACIST] = "Study Pharmacist",
+        [RoleNormalization.ROLE_EMERGENCY_UNBLINDER] = "Emergency Unblinder",
+        [RoleNormalization.ROLE_FINANCE_OFFICER] = "Finance Officer",
+        ["terminology_manager"] = "Terminology Manager",
+        [RoleNormalization.ROLE_AUDITOR_CANONICAL] = "Regulatory Auditor",
+        [RoleNormalization.ROLE_SUBJECT] = "Study Participant",
+        [RoleNormalization.ROLE_SYSADMIN] = "System Administrator",
+        ["admin"] = "Sponsor Data Manager",
+    };
+
+    private static readonly string[] PreferredRoleOrder =
+    [
+        RoleNormalization.ROLE_PRINCIPAL_INVESTIGATOR,
+        RoleNormalization.ROLE_INVESTIGATOR,
+        RoleNormalization.ROLE_CRC,
+        RoleNormalization.ROLE_TRIAL_COORDINATOR,
+        RoleNormalization.ROLE_CRA_CANONICAL,
+        "monitor",
+        RoleNormalization.ROLE_SPONSOR_DM,
+        RoleNormalization.ROLE_SPONSOR_DESIGNER,
+        RoleNormalization.ROLE_REVIEWER,
+        RoleNormalization.ROLE_SPONSOR_MM,
+        RoleNormalization.ROLE_SPONSOR_STATISTICIAN,
+        RoleNormalization.ROLE_UNBLINDED_STATISTICIAN,
+        RoleNormalization.ROLE_IDMC,
+        RoleNormalization.ROLE_PHARMACIST,
+        RoleNormalization.ROLE_EMERGENCY_UNBLINDER,
+        RoleNormalization.ROLE_FINANCE_OFFICER,
+        "terminology_manager",
+        RoleNormalization.ROLE_EXTERNAL_MONITOR,
+        RoleNormalization.ROLE_AUDITOR_CANONICAL,
+        RoleNormalization.ROLE_SUBJECT,
+        RoleNormalization.ROLE_LEAD_INVESTIGATOR,
+        RoleNormalization.ROLE_AUTHORIZED_ER_PHYSICIAN,
+        RoleNormalization.ROLE_SYSADMIN,
+    ];
+
+    private static readonly Dictionary<string, string> ExactPermissionPhrases = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["site_compliance:activate"] = "activate clinical sites for enrollment",
+        ["site_compliance:read"] = "view clinical site activation readiness",
+        ["site_compliance:write"] = "update clinical site compliance gates",
+        ["delegation_log:sign"] = "co-sign the site delegation of authority log",
+        ["delegation_log:read"] = "view the site delegation of authority log",
+        ["delegation_log:write"] = "manage site delegation of authority assignments",
+        ["training_curriculum:assign"] = "assign protocol training curricula",
+        ["training_curriculum:write"] = "configure protocol training curricula",
+        ["training_curriculum:read"] = "view protocol training curricula",
+        ["etmf_document:create"] = "upload documents to the electronic Trial Master File",
+        ["etmf_document:tag"] = "classify and tag electronic Trial Master File documents",
+        ["etmf_document:redact"] = "redact protected health information in Trial Master File documents",
+        ["etmf_document:sign"] = "apply an electronic signature to Trial Master File documents",
+        ["etmf_document:transition_technical_qc"] = "complete technical quality review on Trial Master File documents",
+        ["etmf_document:transition_clinical_qc"] = "complete clinical quality review on Trial Master File documents",
+        ["etmf_document:transition_approved"] = "approve Trial Master File documents for filing",
+        ["etmf_document:transition_rejected"] = "return Trial Master File documents from quality review",
+        ["etmf_document:transition_archived"] = "archive Trial Master File documents",
+        ["etmf_document:transition_draft"] = "return Trial Master File documents to draft status",
+        ["etmf_document:transition_signed"] = "record signed status on Trial Master File documents",
+        ["etmf_document:manage_expiration"] = "update Trial Master File document expiration dates",
+        ["etmf_document:export"] = "export certified Trial Master File archives",
+    };
+
+    private static readonly Dictionary<string, string> ResourceNouns = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["soa"] = "Schedule of Activities definitions",
+        ["mdr_concept"] = "metadata repository concepts",
+        ["sdv"] = "source data verification records",
+        ["ecrf_data_entry"] = "electronic case report form entries",
+        ["subject_enrollment"] = "participant enrollment records",
+        ["ctms_study"] = "clinical trial management study records",
+        ["ctms_audit_logs"] = "clinical trial management audit logs",
+        ["ctms_monitoring_visit"] = "site monitoring visits",
+        ["ctms_monitoring_letter"] = "site monitoring letters",
+        ["ctms_recruitment"] = "site recruitment milestones",
+        ["ctms_site_milestone"] = "clinical site milestones",
+        ["ctms_cra_allocation"] = "monitor site allocations",
+        ["ctms_cra_workload"] = "monitor workload summaries",
+        ["ctms_financial"] = "site financial records",
+        ["ctms_financial_budget"] = "study financial budgets",
+        ["ctms_financial_milestone"] = "financial payment milestones",
+        ["ctms_financial_payable"] = "site financial payables",
+        ["etmf_document"] = "electronic Trial Master File documents",
+        ["etmf_edl"] = "expected document lists",
+        ["etmf_taxonomy"] = "Trial Master File taxonomy entries",
+        ["etmf_audit_logs"] = "Trial Master File audit logs",
+        ["eisf_document"] = "electronic Investigator Site File documents",
+        ["ecoa_schedule"] = "participant assessment schedules",
+        ["ecoa_diary"] = "participant diary entries",
+        ["ecoa_submission"] = "participant questionnaire submissions",
+        ["rtsm_supply"] = "investigational product supply records",
+        ["rtsm_randomization"] = "randomization schedules",
+        ["rtsm_allocation"] = "treatment arm allocations",
+        ["rtsm_unblind"] = "emergency treatment unblinding",
+        ["sce_program"] = "statistical computing programs",
+        ["sce_run"] = "statistical analysis runs",
+        ["sce_lock_token"] = "database lock analysis tokens",
+    };
+
+    private static readonly Dictionary<string, string> ActionVerbs = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["read"] = "view",
+        ["read_raw"] = "view unredacted",
+        ["read_type"] = "view",
+        ["read_unblinded"] = "view unblinded",
+        ["create"] = "create",
+        ["write"] = "update",
+        ["update"] = "update",
+        ["delete"] = "remove",
+        ["sign"] = "electronically sign",
+        ["sign_off"] = "sign off on",
+        ["approve"] = "approve",
+        ["review"] = "review",
+        ["publish"] = "publish",
+        ["release"] = "release",
+        ["promote"] = "promote",
+        ["upload"] = "upload",
+        ["export"] = "export",
+        ["generate"] = "generate",
+        ["execute"] = "execute",
+        ["execute_unblinded"] = "execute unblinded",
+        ["issue"] = "issue",
+        ["revoke"] = "revoke",
+        ["assign"] = "assign",
+        ["activate"] = "activate",
+        ["disburse"] = "disburse",
+        ["reconcile"] = "reconcile",
+        ["compile"] = "compile",
+        ["transition"] = "transition",
+        ["transition_approved"] = "approve",
+        ["lock"] = "lock",
+        ["unlock"] = "unlock",
+        ["sync"] = "synchronize",
+        ["investigate"] = "investigate",
+        ["redact"] = "redact",
+        ["tag"] = "classify",
+        ["send"] = "send",
+        ["trigger"] = "trigger",
+        ["admin"] = "administer",
+    };
+
+    /// <summary>
+    /// Canonical roles that grant <paramref name="permission"/> (<c>resource:action</c>), ordered for clinical readability.
+    /// </summary>
+    public static IReadOnlyList<string> RolesHolding(string permission)
+    {
+        if (!TrySplit(permission, out string resource, out string action))
+        {
+            return [];
+        }
+
+        var holders = _rolePermissions
+            .Where(kvp => !string.Equals(kvp.Key, "admin", StringComparison.OrdinalIgnoreCase)
+                && kvp.Value.TryGetValue(resource, out var actions)
+                && actions.Contains(action))
+            .Select(kvp => kvp.Key)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var ordered = PreferredRoleOrder.Where(holders.Remove).ToList();
+        ordered.AddRange(holders.OrderBy(r => r, StringComparer.OrdinalIgnoreCase));
+        return ordered;
+    }
+
+    /// <summary>Human-readable clinical title for a canonical or raw role name.</summary>
+    public static string DescribeRole(string role)
+    {
+        if (string.IsNullOrWhiteSpace(role))
+        {
+            return "Authorized Study Staff";
+        }
+
+        string normalized = RoleNormalization.NormalizeRole(role);
+        if (RoleDisplayNames.TryGetValue(normalized, out string? label))
+        {
+            return label;
+        }
+
+        return HumanizeWords(normalized);
+    }
+
+    /// <summary>Formats a list of roles as a concise plain-English phrase without raw role codes.</summary>
+    public static string DescribeRoles(IEnumerable<string> roles, int maxListed = 3)
+    {
+        ArgumentNullException.ThrowIfNull(roles);
+        var distinct = roles
+            .Select(DescribeRole)
+            .Where(label => !string.IsNullOrWhiteSpace(label))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (distinct.Count == 0)
+        {
+            return "authorized study role";
+        }
+
+        if (distinct.Count == 1)
+        {
+            return distinct[0];
+        }
+
+        if (distinct.Count == 2)
+        {
+            return $"{distinct[0]} or {distinct[1]}";
+        }
+
+        if (distinct.Count <= maxListed)
+        {
+            return $"{string.Join(", ", distinct.Take(distinct.Count - 1))}, or {distinct[^1]}";
+        }
+
+        int remaining = distinct.Count - (maxListed - 1);
+        string head = string.Join(", ", distinct.Take(maxListed - 1));
+        return $"{head}, or {remaining} other clinical roles";
+    }
+
+    /// <summary>
+    /// Describes a <c>resource:action</c> permission in plain clinical English without exposing raw permission tokens.
+    /// </summary>
+    public static string DescribePermission(string permission)
+    {
+        if (string.IsNullOrWhiteSpace(permission))
+        {
+            return "perform this clinical action";
+        }
+
+        string trimmed = permission.Trim();
+        if (ExactPermissionPhrases.TryGetValue(trimmed, out string? exact))
+        {
+            return exact;
+        }
+
+        if (!TrySplit(trimmed, out string resource, out string action))
+        {
+            return $"perform {HumanizeLowerWords(trimmed)}";
+        }
+
+        string noun = ResourceNouns.TryGetValue(resource, out string? mappedNoun)
+            ? mappedNoun
+            : HumanizeResourceNoun(resource);
+        string verb = ActionVerbs.TryGetValue(action, out string? mappedVerb)
+            ? mappedVerb
+            : HumanizeLowerWords(action);
+
+        return $"{verb} {noun}";
+    }
+
+    private static string HumanizeResourceNoun(string resource)
+    {
+        string words = HumanizeLowerWords(resource);
+        return words.EndsWith('s') ? words : $"{words} records";
+    }
+
+    private static string HumanizeLowerWords(string token) =>
+        string.Join(
+            ' ',
+            token.Split(['_', ':', '-', '.'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(ExpandClinicalAbbreviation));
+
+    private static string ExpandClinicalAbbreviation(string part) => part.ToLowerInvariant() switch
+    {
+        "ctms" => "clinical trial management",
+        "etmf" => "Trial Master File",
+        "eisf" => "Investigator Site File",
+        "ecrf" => "electronic case report form",
+        "ecoa" => "electronic clinical outcome",
+        "econsent" => "electronic consent",
+        "rtsm" => "randomization and supply",
+        "sdv" => "source data verification",
+        "soa" => "Schedule of Activities",
+        "qc" => "quality review",
+        "edl" => "expected document list",
+        "doa" => "delegation of authority",
+        "sce" => "statistical computing",
+        "cgt" => "cell and gene therapy",
+        "cec" => "clinical endpoint adjudication",
+        "ip" => "investigational product",
+        "erp" => "financial ledger",
+        _ => part.ToLowerInvariant(),
+    };
+
+    private static string HumanizeWords(string token) =>
+        string.Join(
+            ' ',
+            token.Split(['_', ':', '-', ' '], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(w => char.ToUpperInvariant(w[0]) + w[1..].ToLowerInvariant()));
 }

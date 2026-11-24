@@ -1,12 +1,7 @@
-import { buildStepUpVerificationPayload } from "ui";
 import { encodeChangeReason } from "./changeReason";
-import {
-  ApiError,
-  createOpenApiClient,
-  openApiClient,
-  unwrapResponse,
-} from "./client";
+import { ApiError, createOpenApiClient, unwrapResponse } from "./client";
 import type { components, paths } from "./generated/tickets";
+import { requestStepUpSignature } from "./signatureVerification";
 import { isDemoBuild } from "../utils/demoMode.js";
 
 /**
@@ -459,18 +454,15 @@ export const ticketsApi = {
     totp,
   }: TicketStepUpVerificationParams): Promise<{ signature_token: string }> {
     const action = `/api/v1/tickets/${encodeURIComponent(ticketId)}/sign`;
-    const body = buildStepUpVerificationPayload({
-      username,
-      password: password || "",
-      totp: totp || undefined,
-      action,
-      semanticAction: "tickets.ticket.sign",
-    });
-
-    return unwrapResponse(
-      (openApiClient as any).POST("/api/v1/auth/signature-verification", {
-        body,
-      })
+    return requestStepUpSignature<{ signature_token: string }>(
+      {
+        username,
+        password: password || "",
+        totp: totp || undefined,
+        action,
+        semanticAction: "tickets.ticket.sign",
+      },
+      { requireSigToken: false }
     );
   },
 

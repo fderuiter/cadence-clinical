@@ -55,7 +55,7 @@ public static class AuditChainVerifier
             var action = rec.Action ?? "UPDATE";
             var entityName = rec.TableName ?? "entity";
             var entityId = rec.RecordId ?? $"rec-{idx}";
-            var userId = rec.UserId ?? "system";
+            var userId = rec.UserId ?? string.Empty;
             var tenantId = rec.TenantId ?? "tenant_default";
             var reason = rec.ChangeReason ?? "";
             var tsStr = rec.Timestamp?.ToString("o") ?? "";

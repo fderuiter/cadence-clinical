@@ -303,6 +303,7 @@ function openRelease(lockRef: string, lockKind: string) {
   min-width: 0;
   max-width: 100%;
   box-sizing: border-box;
+  overflow-wrap: anywhere;
 }
 
 .scope-lock-row {
@@ -310,17 +311,22 @@ function openRelease(lockRef: string, lockKind: string) {
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .scope-lock-label {
   font-size: 0.85rem;
   font-weight: 600;
   color: var(--semantic-color-text-dark);
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .scope-lock-input {
   flex: 1 1 220px;
-  min-width: min(180px, 100%);
+  min-width: 0;
   max-width: 100%;
   box-sizing: border-box;
   padding: 6px 10px;
@@ -338,6 +344,7 @@ function openRelease(lockRef: string, lockKind: string) {
   font-size: 0.82rem;
   min-width: 0;
   max-width: 100%;
+  box-sizing: border-box;
   overflow-wrap: anywhere;
 }
 
@@ -357,6 +364,16 @@ function openRelease(lockRef: string, lockKind: string) {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-wrap: anywhere;
+}
+
+.scope-lock-blocker-list li {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .scope-lock-readiness-summary {
@@ -393,6 +410,10 @@ function openRelease(lockRef: string, lockKind: string) {
   font-size: 0.85rem;
   padding: 6px 10px;
   border-radius: 4px;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-wrap: anywhere;
 }
 
 .scope-lock-outcome--ok {

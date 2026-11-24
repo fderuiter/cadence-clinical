@@ -558,12 +558,12 @@ flowchart LR
 
     SV_V2 -->|PREVIOUS_VERSION| SV_V1
 
-    subgraph v1 Graph Path
+    subgraph "v1 Graph Path"
         SV_V1 --> Arm_V1[StudyArm: Standard Care]
         Arm_V1 --> Visit_V1[Visit: Day 0]
     end
 
-    subgraph v2 Graph Path (Cloned & Branched)
+    subgraph "v2 Graph Path (Cloned & Branched)"
         SV_V2 --> Arm_V2[StudyArm: Standard Care]
         Arm_V2 --> Visit_V2[Visit: Day 0]
         SV_V2 --> Arm_Exp[StudyArm: Experimental Combo]
