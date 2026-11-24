@@ -4,9 +4,69 @@ import { collectionInstanceId, parseNodeRef } from "../canvas/nodeRef";
 import { describeApiError } from "../utils/apiErrors.js";
 import { demoNowIso, isDemoBuild } from "../utils/demoMode.js";
 import { useAuthStore } from "./auth.js";
+import { useClinicalScopeStore } from "./clinicalScope";
+import { getSyncedStudyScope } from "./studyScopeBridge";
 
 function getLoadedStudyCanvasStore() {
   return getActivePinia()?._s?.get("studyCanvas") || null;
+}
+
+function readAuthorizedStandaloneClinicalScope(
+  authStore,
+  preferredStudyId = ""
+) {
+  const pinia = getActivePinia();
+  const instantiatedScopeStore = pinia?._s?.get("clinicalScope")
+    ? useClinicalScopeStore(pinia)
+    : pinia?.state?.value?.clinicalScope || null;
+  const rawStoreStudy =
+    typeof instantiatedScopeStore?.activeStudyId === "string"
+      ? instantiatedScopeStore.activeStudyId.trim()
+      : "";
+  const rawBridgedStudy =
+    typeof getSyncedStudyScope() === "string"
+      ? getSyncedStudyScope().trim()
+      : "";
+  const candidateStudy = rawStoreStudy || rawBridgedStudy;
+  const authorizedStudy = resolveAuthorizedScope(
+    candidateStudy,
+    [authStore?.assignedStudies || [], authStore?.studyIds || []],
+    Boolean(authStore?.hasAllStudiesScope)
+  );
+  if (candidateStudy && !authorizedStudy) {
+    return { study_id: "", site_id: "", subject_id: "" };
+  }
+
+  const effectiveStudy = preferredStudyId.trim() || authorizedStudy;
+  const canInheritScopedChildren =
+    !effectiveStudy || !rawStoreStudy || rawStoreStudy === effectiveStudy;
+  if (!canInheritScopedChildren) {
+    return { study_id: authorizedStudy, site_id: "", subject_id: "" };
+  }
+
+  const rawStoreSite =
+    typeof instantiatedScopeStore?.activeSiteId === "string"
+      ? instantiatedScopeStore.activeSiteId.trim()
+      : "";
+  const authorizedSite = resolveAuthorizedScope(rawStoreSite, [
+    authStore?.assignedSites || [],
+    authStore?.siteIds || [],
+  ]);
+  if (rawStoreSite && !authorizedSite) {
+    return { study_id: authorizedStudy, site_id: "", subject_id: "" };
+  }
+
+  const rawStoreSubject =
+    typeof instantiatedScopeStore?.activeSubjectId === "string"
+      ? instantiatedScopeStore.activeSubjectId.trim()
+      : "";
+  const subject_id = sanitizePseudonymousSubjectCode(rawStoreSubject);
+
+  return {
+    study_id: authorizedStudy,
+    site_id: authorizedSite,
+    subject_id,
+  };
 }
 
 let knowledgeServicePromise;
@@ -385,6 +445,7 @@ export const useKnowledgeStore = defineStore("knowledge", {
       return state.sectionAnchor;
     },
     activeRouteScope: (state) => {
+      const authStore = useAuthStore();
       const scope = extractClinicalScopeFromRoute(
         resolveEffectiveRawRoute(state)
       );
@@ -404,6 +465,28 @@ export const useKnowledgeStore = defineStore("knowledge", {
         ) {
           scope.site_id = ctx.siteCode;
         }
+        if (
+          !scope.subject_id &&
+          ctx.subjectCode &&
+          (!scope.study_id ||
+            !ctx.studyCode ||
+            ctx.studyCode === scope.study_id)
+        ) {
+          scope.subject_id = sanitizePseudonymousSubjectCode(ctx.subjectCode);
+        }
+      }
+      const standalone = readAuthorizedStandaloneClinicalScope(
+        authStore,
+        scope.study_id
+      );
+      if (!scope.study_id && standalone.study_id) {
+        scope.study_id = standalone.study_id;
+      }
+      if (!scope.site_id && standalone.site_id) {
+        scope.site_id = standalone.site_id;
+      }
+      if (!scope.subject_id && standalone.subject_id) {
+        scope.subject_id = standalone.subject_id;
       }
       return scope;
     },
@@ -692,12 +775,19 @@ export const useKnowledgeStore = defineStore("knowledge", {
         ? matchedSection.stage.id
         : findStage(rawStage)?.id || rawStage;
 
-      const candidateStudy =
+      const explicitStudyCandidate =
         overrides.studyId ||
         studyFromRoute ||
         canvasCtx?.studyCode ||
         (isCanvasRoute ? canvasStore?.studyCode : "") ||
         "";
+      const standaloneScope = readAuthorizedStandaloneClinicalScope(
+        authStore,
+        explicitStudyCandidate
+      );
+
+      const candidateStudy =
+        explicitStudyCandidate || standaloneScope.study_id || "";
 
       const participantQueryRef = parseNodeRef(
         overrides.participant ||
@@ -717,6 +807,11 @@ export const useKnowledgeStore = defineStore("knowledge", {
         : null;
 
       const subjectFromEcrfPath = path.match(/\/subjects\/([^/?#]+)/);
+      const hasExplicitUnmappedParticipantRef = Boolean(
+        (participantUuid && !knownParticipant) ||
+        (getQuery("participant") &&
+          !sanitizePseudonymousSubjectCode(getQuery("participant")))
+      );
       const rawSubjectCandidate =
         overrides.subjectCode ||
         canvasCtx?.subjectCode ||
@@ -730,7 +825,10 @@ export const useKnowledgeStore = defineStore("knowledge", {
           "subject",
         ]) ||
         routeScope.subject_id ||
-        (subjectFromEcrfPath ? safeDecodeSegment(subjectFromEcrfPath[1]) : "");
+        (subjectFromEcrfPath
+          ? safeDecodeSegment(subjectFromEcrfPath[1])
+          : "") ||
+        (!hasExplicitUnmappedParticipantRef ? standaloneScope.subject_id : "");
       const subjectCode = sanitizePseudonymousSubjectCode(rawSubjectCandidate);
 
       const candidateSite =
@@ -740,6 +838,7 @@ export const useKnowledgeStore = defineStore("knowledge", {
         getQueryAny(["site", "siteId", "site_id", "siteCode", "site_code"]) ||
         routeScope.site_id ||
         (isCanvasRoute ? canvasStore?.participantsFilter?.siteId : "") ||
+        standaloneScope.site_id ||
         "";
 
       const authorizedStudyId = resolveAuthorizedScope(

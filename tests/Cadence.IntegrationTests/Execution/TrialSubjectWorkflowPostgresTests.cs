@@ -403,6 +403,7 @@ public sealed class TrialSubjectWorkflowPostgresTests : IAsyncLifetime
         new WebApplicationFactory<Cadence.Kernel.Host.Program>().WithWebHostBuilder(builder => builder
             .UseEnvironment("Production")
             .UseTestGatewaySecret()
+            .UseTestBiometricLivenessKey()
             .UseSetting("ConnectionStrings:cadence", AppConnectionString)
             .UseSetting("Kernel:VaultMasterKey", VaultMasterKey)
             .UseSetting("Kernel:VaultRegion", "US")

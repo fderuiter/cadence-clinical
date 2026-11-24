@@ -490,9 +490,13 @@ import {
   resolveActiveWorkspaceScope,
   resolveSiteReadinessPath,
 } from "../canvas/palette";
-import OnboardingTour from "./OnboardingTour.vue";
 import OnboardingChecklistDrawer from "./OnboardingChecklistDrawer.vue";
 import CommandPaletteOverlay from "./CommandPaletteOverlay.vue";
+
+let onboardingTourPromise = null;
+const loadOnboardingTour = () =>
+  (onboardingTourPromise ??= import("./OnboardingTour.vue"));
+const OnboardingTour = defineAsyncComponent(loadOnboardingTour);
 
 const DemoResetBtn = isDemoBuild()
   ? defineAsyncComponent(() => import("../views/demo/DemoResetButton.vue"))
@@ -501,6 +505,15 @@ const DemoResetBtn = isDemoBuild()
 provide("inAppShell", true);
 
 const authStore = useAuthStore();
+watch(
+  () => authStore.isAuthenticated,
+  (isAuthenticated) => {
+    if (isAuthenticated) {
+      void loadOnboardingTour();
+    }
+  },
+  { immediate: true }
+);
 const timingPreferences = useTimingPreferences();
 const knowledgeStore = useKnowledgeStore();
 const onboardingStore = useOnboardingStore();
