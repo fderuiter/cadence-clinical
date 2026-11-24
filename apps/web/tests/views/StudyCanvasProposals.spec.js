@@ -172,7 +172,7 @@ describe("Clinical Canvas AI proposals (ADR-2635, PX-10, PX-17, UX-8)", () => {
     it("lists the study's open proposals from the kernel, an agent's with the AI label", async () => {
       await open();
 
-      expect(kernelApi.listProposals).toHaveBeenCalledWith(STUDY, {
+      expect(kernelApi.listProposals).toHaveBeenCalledWith("CAD-101", {
         status: "Open",
         limit: 20,
       });

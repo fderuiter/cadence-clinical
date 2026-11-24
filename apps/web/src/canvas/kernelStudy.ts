@@ -181,6 +181,28 @@ function ensureActiveStudySession(
 }
 
 /**
+ * Seeds a positive `study:<id>[@<version>]` reference for `studyCode` into the active `(tenant, actor, persona,
+ * studyCode)` session cache (for example from `listStudySites` or `getStudyAttention`) so subsequent stage switches
+ * that call `findKernelStudyRef` reuse the warm session entry without issuing `/api/v1/kernel/search`.
+ */
+export function seedKernelStudyRef(
+  studyCode: string,
+  studyRef: string | null | undefined
+): void {
+  const trimmedCode = studyCode.trim();
+  const trimmedRef = studyRef?.trim() ?? "";
+  if (!trimmedCode || !trimmedRef) return;
+  const parsed = parseNodeRef(trimmedRef);
+  if (parsed?.kind !== "study") return;
+
+  const bucket = getBucket();
+  const scope = getKernelStudyCallerScopeKey();
+  const normalizedStudy = normalizeStudyCode(trimmedCode);
+  ensureActiveStudySession(bucket, normalizedStudy);
+  bucket.studyRefs.set(studyKey(scope, normalizedStudy), trimmedRef);
+}
+
+/**
  * The kernel reference of the study with exactly this code, found with kernel search (ADR-2484) — or piggybacked off
  * an already in-flight enrollment lookup for the same study — and cached for the active `(tenant, actor, persona,
  * studyCode)` session once positively resolved, or null when the kernel has no such study the reader may see.
@@ -526,6 +548,17 @@ export function findStudySites(studyCode: string): Promise<StudySiteOption[]> {
         try {
           const linked = await kernelApi.listStudySites(studyRef ?? trimmed);
           if (Array.isArray(linked)) {
+            const firstStudyRef = linked.find((s) => s.study_ref)?.study_ref;
+            if (
+              firstStudyRef &&
+              bucket.epoch === epochAtStart &&
+              getKernelStudyCallerScopeKey() === scope
+            ) {
+              bucket.studyRefs.set(
+                studyKey(scope, normalizedStudy),
+                firstStudyRef.trim()
+              );
+            }
             for (const site of linked) {
               if (site.mask) continue;
               const code = site.site_code?.trim();

@@ -13,6 +13,7 @@ using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Execution;
+using Cadence.Kernel.Intelligence;
 using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.Modules;
 using Cadence.Kernel.Navigation;
@@ -29,6 +30,7 @@ using Cadence.Security.Authentication;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -124,7 +126,15 @@ public static class KernelValidationEndpoints
 
         group.MapGet("/studies/{studyRef}/validation/findings", ListStudyFindingsAsync)
             .WithName("KernelListStudyValidationFindings")
-            .WithSummary("Lists derived validation findings for a study, optionally filtered by stage, status, severity, rule pack or dataset.")
+            .WithSummary("Lists derived validation findings for a study, optionally filtered by stage, repeatable status, severity, rule pack or dataset.")
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        group.MapGet("/studies/{studyRef}/attention", GetStudyAttentionAsync)
+            .WithName("KernelGetStudyAttention")
+            .WithSummary("Lists a study's open proposals and active (Open or Investigating) validation findings in one attention read.")
+            .WithDescription("studyRef accepts a study NodeRef or study code. Returns the pinned study NodeRef, open proposals masked in place, and visible Open or Investigating findings up to limit (default 20).")
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound);
@@ -495,7 +505,7 @@ public static class KernelValidationEndpoints
     internal static async Task<Results<Ok<KernelValidationFindingPageResponse>, ProblemHttpResult>> ListStudyFindingsAsync(
         string studyRef,
         string? stage,
-        string? status,
+        [FromQuery(Name = "status")] string[]? status,
         string? severity,
         string? dataset,
         string? pack_key,
@@ -508,7 +518,7 @@ public static class KernelValidationEndpoints
         ValidationStage? parsedStage = null;
         if (!string.IsNullOrWhiteSpace(stage))
         {
-            if (!Enum.TryParse<ValidationStage>(stage, ignoreCase: true, out var s) || !Enum.IsDefined(s))
+            if (!Enum.TryParse<ValidationStage>(stage, ignoreCase: true, out var s) || !Enum.IsDefined(s) || int.TryParse(stage, out _))
             {
                 return KernelProblems.BadRequest("Invalid stage", $"'{stage}' is not a valid validation stage.");
             }
@@ -516,15 +526,24 @@ public static class KernelValidationEndpoints
             parsedStage = s;
         }
 
-        IReadOnlyCollection<FindingStatus>? parsedStatuses = null;
-        if (!string.IsNullOrWhiteSpace(status))
+        HashSet<FindingStatus>? parsedStatuses = null;
+        if (status is { Length: > 0 })
         {
-            if (!Enum.TryParse<FindingStatus>(status, ignoreCase: true, out var st) || !Enum.IsDefined(st))
+            foreach (var rawStatus in status)
             {
-                return KernelProblems.BadRequest("Invalid status", $"'{status}' is not a valid finding status.");
-            }
+                if (string.IsNullOrWhiteSpace(rawStatus))
+                {
+                    continue;
+                }
 
-            parsedStatuses = [st];
+                if (!Enum.TryParse<FindingStatus>(rawStatus, ignoreCase: true, out var st) || !Enum.IsDefined(st) || int.TryParse(rawStatus, out _))
+                {
+                    return KernelProblems.BadRequest("Invalid status", $"'{rawStatus}' is not a valid finding status.");
+                }
+
+                parsedStatuses ??= [];
+                parsedStatuses.Add(st);
+            }
         }
 
         ValidationSeverity? parsedSeverity = null;
@@ -587,6 +606,82 @@ public static class KernelValidationEndpoints
         return TypedResults.Ok(new KernelValidationFindingPageResponse(
             visibleFindings.Count,
             [.. visibleFindings.Take(take).Select(KernelValidationFindingResponse.From)]));
+    }
+
+    internal static async Task<Results<Ok<KernelStudyAttentionResponse>, ProblemHttpResult>> GetStudyAttentionAsync(
+        string studyRef,
+        [FromQuery] int? limit,
+        HttpContext context,
+        INodeVisibility visibility,
+        ICurrentActor actor,
+        IClock clock,
+        CancellationToken cancellationToken)
+    {
+        var take = limit ?? 20;
+        if (take is < 1 or > KernelProposalEndpoints.MaxLimit)
+        {
+            return KernelProblems.BadRequest("Invalid limit", $"Limit must be between 1 and {KernelProposalEndpoints.MaxLimit}.");
+        }
+
+        var tenant = KernelRequestTenant.Get(context);
+        var resolved = await KernelStudyLookup.ResolveVisibleStudyAsync(
+            tenant,
+            studyRef,
+            context,
+            visibility,
+            actor,
+            static (studyNode, mask) => $"You may not access study {studyNode} ({mask}).",
+            allowVersionedStudyRef: true,
+            cancellationToken).ConfigureAwait(false);
+        if (resolved.Problem is { } problem)
+        {
+            return problem;
+        }
+
+        IReadOnlyList<KernelProposalResponse> proposalResponses = [];
+        if (context.RequestServices.GetService<IProposalReader>() is { } proposalReader)
+        {
+            var proposals = await proposalReader
+                .ListForStudyAsync(tenant, resolved.Study.StudyId, ProposalStatus.Open, clock.UtcNow, take, cancellationToken)
+                .ConfigureAwait(false);
+            if (proposals.Count > 0)
+            {
+                var masks = await KernelProposalEndpoints
+                    .MaskProposalsAsync(visibility, actor, tenant, proposals, cancellationToken)
+                    .ConfigureAwait(false);
+                proposalResponses = [.. proposals.Select(p => KernelProposalResponse.From(p, masks))];
+            }
+        }
+
+        IReadOnlyList<KernelValidationFindingResponse> findingResponses = [];
+        if (context.RequestServices.GetService<IValidationFindings>() is { } findings)
+        {
+            var rawPage = await findings.ListAsync(
+                tenant,
+                new FindingQuery(resolved.Study.StudyId)
+                {
+                    Statuses = [FindingStatus.Open, FindingStatus.Investigating],
+                    Take = FindingQuery.MaxTake,
+                },
+                cancellationToken).ConfigureAwait(false);
+            if (rawPage.Findings.Count > 0)
+            {
+                var visibleFindings = await FilterVisibleFindingsAsync(
+                    tenant,
+                    resolved.Study.StudyId,
+                    rawPage.Findings,
+                    context.RequestServices,
+                    visibility,
+                    actor,
+                    cancellationToken).ConfigureAwait(false);
+                findingResponses = [.. visibleFindings.Take(take).Select(KernelValidationFindingResponse.From)];
+            }
+        }
+
+        return TypedResults.Ok(new KernelStudyAttentionResponse(
+            resolved.Study.PinnedRef.ToString(),
+            proposalResponses,
+            findingResponses));
     }
 
     internal static async Task<Results<Ok<KernelValidationFindingDetailResponse>, ProblemHttpResult>> GetFindingAsync(
@@ -966,49 +1061,16 @@ public static class KernelValidationEndpoints
         ICurrentActor actor,
         CancellationToken cancellationToken)
     {
-        StudyId studyId;
-        if (NodeRef.TryParse(studyRef, out var node))
-        {
-            if (node.Kind != NodeKinds.Study)
-            {
-                return (default, KernelProblems.WrongKind(node, NodeKinds.Study));
-            }
-
-            studyId = StudyId.FromGuid(node.Id);
-            var navigator = context.RequestServices.GetService<IKernelNavigator>();
-            var directory = context.RequestServices.GetService<IStudyDirectory>();
-            var existsInNav = navigator is not null && await navigator.ResolveAsync(tenant, NodeRef.For(studyId), cancellationToken).ConfigureAwait(false) is not null;
-            var existsInDir = directory is not null && await directory.FindStudyAsync(tenant, studyId, cancellationToken).ConfigureAwait(false) is not null;
-            if (!existsInNav && !existsInDir)
-            {
-                return (default, KernelProblems.NotFound(NodeRef.For(studyId)));
-            }
-        }
-        else
-        {
-            var directory = context.RequestServices.GetService<IStudyDirectory>();
-            var byCode = directory is not null
-                ? await directory.FindStudyByCodeAsync(tenant, studyRef.Trim(), cancellationToken).ConfigureAwait(false)
-                : null;
-            if (byCode is null)
-            {
-                return (default, TypedResults.Problem(
-                    title: "Study not found",
-                    detail: $"Study '{studyRef}' does not exist in your tenant.",
-                    statusCode: StatusCodes.Status404NotFound));
-            }
-
-            studyId = byCode.StudyId;
-        }
-
-        var studyNode = NodeRef.For(studyId);
-        var masks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, [studyNode], cancellationToken).ConfigureAwait(false);
-        if (masks.For(studyNode) is { } mask)
-        {
-            return (default, KernelProblems.NotVisible($"You may not access study {studyNode} ({mask})."));
-        }
-
-        return (studyId, null);
+        var (study, problem) = await KernelStudyLookup.ResolveVisibleStudyAsync(
+            tenant,
+            studyRef,
+            context,
+            visibility,
+            actor,
+            static (studyNode, mask) => $"You may not access study {studyNode} ({mask}).",
+            allowVersionedStudyRef: true,
+            cancellationToken).ConfigureAwait(false);
+        return (study.StudyId, problem);
     }
 
     private static bool TryParseLibraryItem(string text, out LibraryItemId itemId)

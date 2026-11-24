@@ -1713,5 +1713,55 @@ describe("Contextual Help Drawer & Support Ticket Escalation (Issue #4332)", () 
       wrapper.unmount();
       mountNode.remove();
     });
+
+    it("defers resolveContextualHelp while the drawer is closed across mount, stage navigation, and persona switches, then fetches on open", async () => {
+      const localRouter = createRouter({
+        history: createMemoryHistory(),
+        routes: [
+          {
+            path: "/studies/:studyCode?",
+            name: "study",
+            component: { template: "<div>Study</div>" },
+          },
+        ],
+      });
+      await localRouter.push("/studies/CAD-101");
+      await localRouter.isReady();
+
+      const resolveSpy = vi
+        .spyOn(knowledgeService, "resolveContextualHelp")
+        .mockResolvedValue(mockResolvedSop);
+
+      const wrapper = mount(ContextualHelpDrawer, {
+        global: { plugins: [pinia, localRouter] },
+      });
+      await flushPromises();
+
+      expect(knowledgeStore.isOpen).toBe(false);
+      expect(resolveSpy).not.toHaveBeenCalled();
+
+      // Navigating across study stages while closed does not fetch contextual help
+      await localRouter.push("/studies/CAD-101?stage=design");
+      await localRouter.push("/studies/CAD-101?stage=conduct");
+      await flushPromises();
+      expect(resolveSpy).not.toHaveBeenCalled();
+
+      // Switching persona while closed marks help dirty without fetching over the network
+      authStore.currentPersona = "cra";
+      await flushPromises();
+      expect(resolveSpy).not.toHaveBeenCalled();
+
+      // Opening the drawer immediately fetches help for the current route and persona
+      knowledgeStore.openDrawer();
+      await flushPromises();
+
+      expect(resolveSpy).toHaveBeenCalledTimes(1);
+      expect(resolveSpy).toHaveBeenLastCalledWith({
+        route: "/studies/CAD-101?stage=conduct",
+        persona: "cra",
+      });
+
+      wrapper.unmount();
+    });
   });
 });

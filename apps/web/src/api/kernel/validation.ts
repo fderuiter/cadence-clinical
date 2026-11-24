@@ -23,6 +23,8 @@ export type KernelValidationFindingPage =
   KernelSchemas["Kernel_KernelValidationFindingPageResponse"];
 export type KernelValidationFindingDetail =
   KernelSchemas["Kernel_KernelValidationFindingDetailResponse"];
+export type KernelStudyAttention =
+  KernelSchemas["Kernel_KernelStudyAttentionResponse"];
 export type KernelFindingClassification =
   "DataIssue" | "MappingIssue" | "MetadataIssue" | "RuleIssue" | "NotAnIssue";
 
@@ -53,7 +55,7 @@ export interface KernelDeclareStudyRulePacksInput {
 
 export interface KernelStudyValidationFindingsQuery {
   stage?: string;
-  status?: string;
+  status?: string | string[];
   severity?: string;
   dataset?: string;
   packKey?: string;
@@ -183,6 +185,11 @@ export const kernelValidationApi = {
     studyRef: string,
     query: KernelStudyValidationFindingsQuery = {}
   ): Promise<KernelValidationFindingPage> {
+    const statuses = Array.isArray(query.status)
+      ? query.status.filter(Boolean)
+      : query.status
+        ? [query.status]
+        : undefined;
     return unwrapResponse(
       kernelClient.GET(
         "/api/v1/kernel/studies/{studyRef}/validation/findings",
@@ -191,7 +198,7 @@ export const kernelValidationApi = {
             path: { studyRef },
             query: {
               stage: query.stage || undefined,
-              status: query.status || undefined,
+              status: statuses && statuses.length > 0 ? statuses : undefined,
               severity: query.severity || undefined,
               dataset: query.dataset || undefined,
               pack_key: query.packKey || undefined,
@@ -200,6 +207,21 @@ export const kernelValidationApi = {
           },
         }
       )
+    );
+  },
+
+  /** Unified study attention summary: open proposals alongside Open and Investigating validation findings. */
+  getStudyAttention(
+    studyRef: string,
+    query: { limit?: number } = {}
+  ): Promise<KernelStudyAttention> {
+    return unwrapResponse(
+      kernelClient.GET("/api/v1/kernel/studies/{studyRef}/attention", {
+        params: {
+          path: { studyRef },
+          query: { limit: query.limit },
+        },
+      })
     );
   },
 

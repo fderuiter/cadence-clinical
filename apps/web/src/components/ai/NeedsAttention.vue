@@ -81,7 +81,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 import type { RouteLocationRaw } from "vue-router";
 import {
   kernelApi,
@@ -89,20 +89,20 @@ import {
   type KernelValidationFinding,
 } from "../../api/kernelApi";
 import { isAgentProposal } from "../../ai/proposals";
+import { seedKernelStudyRef } from "../../canvas/kernelStudy";
 import {
   collectionInstanceRef,
   observationNodeRef,
 } from "../../canvas/nodeRef";
 import { maskReasonWords, seedNodeSummary } from "../../canvas/nodeResolver";
-import { useKernelStudyRef } from "../../composables/useKernelStudyRef";
 import SupportDetails from "../canvas/SupportDetails.vue";
 import AiLabel from "./AiLabel.vue";
 
 /**
- * Needs Attention on study home (docs/ux/CLINICAL_CANVAS.md PX-10): the study's open proposals from the kernel, newest
- * first, each opening the review screen. An agent's proposal carries the AI label (UX-8). It shows whether AI
- * assistance is on or off: a proposal already made is a kernel record a person must still decide (ADR-2635).
- * Findings, signals and the other attention items join it as their kernel reads arrive.
+ * Needs Attention on study home (docs/ux/CLINICAL_CANVAS.md PX-10): the study's open proposals and active validation
+ * findings from the kernel, queried directly by `studyCode` in Wave 1 (`GET /api/v1/kernel/studies/{studyRef}/attention`).
+ * An agent's proposal carries the AI label (UX-8). It shows whether AI assistance is on or off: a proposal already
+ * made is a kernel record a person must still decide (ADR-2635).
  */
 const props = defineProps<{ studyCode: string }>();
 
@@ -110,63 +110,128 @@ const LIMIT = 20;
 
 const proposals = ref<KernelProposal[]>([]);
 const findings = ref<KernelValidationFinding[]>([]);
+const loading = ref(false);
+const error = ref<string | null>(null);
+const noStudy = ref(false);
 
-const {
-  studyLoading: loading,
-  studyError: error,
-  noStudy,
-} = useKernelStudyRef(() => props.studyCode, {
-  onReset: () => {
-    proposals.value = [];
-    findings.value = [];
-  },
-  onResolved: async (studyRef, { isCurrent }) => {
+let requestSeq = 0;
+
+function seedProposalSummaries(items: ReadonlyArray<KernelProposal>): void {
+  for (const item of items) {
+    if (item.ref && !item.mask) {
+      seedNodeSummary(item.ref, {
+        kind: "proposal",
+        title: item.intent ?? null,
+        status: item.status ?? null,
+      });
+    }
+  }
+}
+
+function dedupeCappedFindings(
+  items: ReadonlyArray<KernelValidationFinding>
+): KernelValidationFinding[] {
+  const seen = new Set<string>();
+  const merged: KernelValidationFinding[] = [];
+  for (const item of items) {
+    if (seen.has(item.ref)) continue;
+    seen.add(item.ref);
+    merged.push(item);
+    if (merged.length >= LIMIT) break;
+  }
+  return merged;
+}
+
+async function loadAttention(rawCode: string): Promise<void> {
+  const seq = ++requestSeq;
+  const code = rawCode.trim();
+  proposals.value = [];
+  findings.value = [];
+  error.value = null;
+  noStudy.value = false;
+
+  if (!code) {
+    noStudy.value = true;
+    loading.value = false;
+    return;
+  }
+
+  loading.value = true;
+  try {
+    if (typeof kernelApi.getStudyAttention === "function") {
+      const attention = await kernelApi.getStudyAttention(code, {
+        limit: LIMIT,
+      });
+      if (seq !== requestSeq) return;
+      seedKernelStudyRef(code, attention.study_ref);
+      const openProposals = Array.isArray(attention.proposals)
+        ? attention.proposals.slice(0, LIMIT)
+        : [];
+      proposals.value = openProposals;
+      seedProposalSummaries(openProposals);
+      findings.value = dedupeCappedFindings(attention.findings ?? []);
+      return;
+    }
+
     const canReadFindings =
       typeof kernelApi.listStudyValidationFindings === "function";
-    const [open, openFindingsPage, investigatingFindingsPage] =
+    const [openProposals, openFindingsPage, investigatingFindingsPage] =
       await Promise.all([
-        kernelApi.listProposals(studyRef, {
-          status: "Open",
-          limit: LIMIT,
-        }),
+        typeof kernelApi.listProposals === "function"
+          ? kernelApi.listProposals(code, { status: "Open", limit: LIMIT })
+          : Promise.resolve([] as KernelProposal[]),
         canReadFindings
           ? kernelApi
-              .listStudyValidationFindings(studyRef, { status: "Open" })
+              .listStudyValidationFindings(code, {
+                status: "Open",
+                limit: LIMIT,
+              })
               .catch(() => ({ findings: [] as KernelValidationFinding[] }))
           : Promise.resolve({ findings: [] as KernelValidationFinding[] }),
         canReadFindings
           ? kernelApi
-              .listStudyValidationFindings(studyRef, {
+              .listStudyValidationFindings(code, {
                 status: "Investigating",
+                limit: LIMIT,
               })
               .catch(() => ({ findings: [] as KernelValidationFinding[] }))
           : Promise.resolve({ findings: [] as KernelValidationFinding[] }),
       ]);
-    if (!isCurrent()) return;
-    proposals.value = open;
-    for (const item of open) {
-      if (item.ref && !item.mask) {
-        seedNodeSummary(item.ref, {
-          kind: "proposal",
-          title: item.intent ?? null,
-          status: item.status ?? null,
-        });
-      }
+    if (seq !== requestSeq) return;
+    proposals.value = openProposals;
+    const hintedStudyRef =
+      openProposals.find((p) => p.study)?.study ??
+      openFindingsPage?.findings?.[0]?.study_ref ??
+      investigatingFindingsPage?.findings?.[0]?.study_ref;
+    if (hintedStudyRef) {
+      seedKernelStudyRef(code, hintedStudyRef);
     }
-    const seen = new Set<string>();
-    const merged: KernelValidationFinding[] = [];
-    for (const item of [
+    seedProposalSummaries(openProposals);
+    findings.value = dedupeCappedFindings([
       ...(openFindingsPage?.findings ?? []),
       ...(investigatingFindingsPage?.findings ?? []),
-    ]) {
-      if (seen.has(item.ref)) continue;
-      seen.add(item.ref);
-      merged.push(item);
-      if (merged.length >= LIMIT) break;
+    ]);
+  } catch (err) {
+    if (seq !== requestSeq) return;
+    if ((err as { status?: number | null } | null)?.status === 404) {
+      noStudy.value = true;
+      return;
     }
-    findings.value = merged;
+    error.value = err instanceof Error ? err.message : String(err);
+  } finally {
+    if (seq === requestSeq) {
+      loading.value = false;
+    }
+  }
+}
+
+watch(
+  () => props.studyCode,
+  (code) => {
+    void loadAttention(code ?? "");
   },
-});
+  { immediate: true }
+);
 
 const statusLine = computed(() => {
   if (loading.value) return "Reading what needs attention...";

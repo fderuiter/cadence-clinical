@@ -16,8 +16,17 @@ import {
 
 export type { KernelObservationValue };
 
-export type KernelObservation =
+type GeneratedKernelObservation =
   KernelSchemas["Kernel_KernelObservationResponse"];
+export type KernelObservationLock = Omit<
+  KernelSchemas["Kernel_LockView"],
+  "masked"
+> & {
+  masked?: boolean;
+};
+export type KernelObservation = Omit<GeneratedKernelObservation, "locks"> & {
+  locks: KernelObservationLock[];
+};
 export type KernelObservationState =
   KernelSchemas["Kernel_KernelObservationStateResponse"];
 export type KernelObservationRevision =

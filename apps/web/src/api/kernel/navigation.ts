@@ -7,6 +7,7 @@ import {
 } from "./shared";
 
 export type KernelNode = KernelSchemas["Kernel_KernelNodeResponse"];
+export type KernelBatchNodes = KernelSchemas["Kernel_KernelBatchNodesResponse"];
 export type KernelZoomStep = KernelSchemas["Kernel_KernelZoomStepResponse"];
 export type KernelChild = KernelSchemas["Kernel_KernelChildResponse"];
 export type KernelDecision = KernelSchemas["Kernel_KernelDecisionResponse"];
@@ -41,6 +42,7 @@ export interface KernelActivityQuery {
   from?: string;
   before?: string;
   limit?: number;
+  includeNodes?: boolean;
 }
 
 export interface KernelTraceQuery extends KernelLineageWindow {
@@ -66,6 +68,18 @@ export const kernelNavigationApi = {
     return unwrapResponse(
       kernelClient.GET("/api/v1/kernel/nodes/{nodeRef}", {
         params: { path: { nodeRef } },
+      })
+    );
+  },
+
+  /** Summaries of up to 100 objects at their current or pinned versions (GET /api/v1/kernel/nodes). */
+  getNodes(nodeRefs: string[]): Promise<KernelBatchNodes> {
+    if (nodeRefs.length === 0) {
+      return Promise.resolve({ nodes: {} });
+    }
+    return unwrapResponse(
+      kernelClient.GET("/api/v1/kernel/nodes", {
+        params: { query: { ref: nodeRefs } },
       })
     );
   },
@@ -182,6 +196,7 @@ export const kernelNavigationApi = {
     from,
     before,
     limit,
+    includeNodes,
   }: KernelActivityQuery = {}): Promise<KernelActivityPage> {
     return unwrapResponse(
       kernelClient.GET("/api/v1/kernel/activity", {
@@ -193,6 +208,7 @@ export const kernelNavigationApi = {
             from,
             before,
             limit,
+            include_nodes: includeNodes ? true : undefined,
           },
         },
       })
