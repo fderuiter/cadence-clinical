@@ -1,7 +1,11 @@
 import fs from "fs";
 import path from "path";
 
-import { isDraftBlogPostFile } from "./blog.mjs";
+import {
+  getBlogSidebarItems,
+  isDraftBlogPostFile,
+  parseBlogFrontmatter,
+} from "./blog.mjs";
 import {
   EXCLUDED_PORTAL_DOCS,
   isExcludedPortalDocFile,
@@ -66,8 +70,11 @@ export function toSidebarLink(rawHref, { docsDir, repoRoot }) {
       .replace(/^\//, "")
       .replace(/\.(html|md)$/i, "");
     if (normalizedPage) {
-      const excludedCandidate = path.join(docsDir, `${normalizedPage}.md`);
-      if (isExcludedPortalDocFile(excludedCandidate, docsDir)) {
+      const rootCandidate = path.join(docsDir, `${normalizedPage}.md`);
+      if (isDraftBlogPostFile(rootCandidate)) {
+        return null;
+      }
+      if (isExcludedPortalDocFile(rootCandidate, docsDir)) {
         return toRepoUrl(href, docsDir, docsDir, repoRoot);
       }
     }
@@ -122,11 +129,10 @@ export function toSidebarLink(rawHref, { docsDir, repoRoot }) {
             fs.existsSync(absolute.replace(/\.html$/i, ".md"))
           ? absolute.replace(/\.html$/i, ".md")
           : null;
-    if (
-      mdCandidate &&
-      (isDraftBlogPostFile(mdCandidate) ||
-        isExcludedPortalDocFile(mdCandidate, docsDir))
-    ) {
+    if (mdCandidate && isDraftBlogPostFile(mdCandidate)) {
+      return null;
+    }
+    if (mdCandidate && isExcludedPortalDocFile(mdCandidate, docsDir)) {
       return toRepoUrl(href, docsDir, docsDir, repoRoot);
     }
 
@@ -594,14 +600,40 @@ export function synthesizeSidebarFromIndex(indexPath, options = {}) {
     }
   }
 
-  // Keep the blog overview at the top and sort published dated posts newest-first.
-  blogItems.sort((a, b) => {
-    const aKey = normalizeRouteKey(a.link);
-    const bKey = normalizeRouteKey(b.link);
-    if (aKey === "/blog/index") return -1;
-    if (bKey === "/blog/index") return 1;
-    return bKey.localeCompare(aKey);
-  });
+  // Populate Engineering Blog from published frontmatter titles sorted newest-first by date via getBlogSidebarItems,
+  // while preserving synthetic indexContent fixtures that supply non-disk blog entries or omit the section.
+  let resolvedBlogItems = [];
+  const hasDiskBlogDir = fs.existsSync(path.join(docsDir, "blog"));
+  const shouldIncludeBlogGroup =
+    options.indexContent === undefined
+      ? hasDiskBlogDir || blogItems.length > 0
+      : blogItems.length > 0;
+
+  if (shouldIncludeBlogGroup) {
+    if (hasDiskBlogDir) {
+      const diskBlogItems = getBlogSidebarItems(docsDir);
+      const coveredBlogRoutes = new Set(
+        diskBlogItems.map((item) => normalizeRouteKey(item.link))
+      );
+      const syntheticExtraItems = blogItems
+        .filter(
+          (entry) => !coveredBlogRoutes.has(normalizeRouteKey(entry.link))
+        )
+        .sort((a, b) =>
+          normalizeRouteKey(b.link).localeCompare(normalizeRouteKey(a.link))
+        );
+      resolvedBlogItems = [...diskBlogItems, ...syntheticExtraItems];
+    } else {
+      blogItems.sort((a, b) => {
+        const aKey = normalizeRouteKey(a.link);
+        const bKey = normalizeRouteKey(b.link);
+        if (aKey === "/blog/index") return -1;
+        if (bKey === "/blog/index") return 1;
+        return bKey.localeCompare(aKey);
+      });
+      resolvedBlogItems = blogItems;
+    }
+  }
 
   // Keep overview pages at the top of generated reference and component sections.
   apiItems.sort((a, b) => {
@@ -631,6 +663,13 @@ export function synthesizeSidebarFromIndex(indexPath, options = {}) {
     }
   };
 
+  for (const item of resolvedBlogItems) {
+    const key = normalizeRouteKey(item.link);
+    if (key.startsWith("/")) {
+      seenRoutes.add(key);
+    }
+  }
+
   const aiItems = kernelItems.filter((entry) => {
     const key = normalizeRouteKey(entry.link);
     return (
@@ -647,7 +686,10 @@ export function synthesizeSidebarFromIndex(indexPath, options = {}) {
     ? [{ text: "REST API Reference", link: "/api/index" }, ...openapiItems]
     : openapiItems;
 
-  assignSection(["/blog/"], [makeGroup("Engineering Blog", blogItems, false)]);
+  assignSection(
+    ["/blog/"],
+    [makeGroup("Engineering Blog", resolvedBlogItems, false)]
+  );
   assignSection(
     ["/kernel/"],
     [makeGroup("Kernel & Roadmap", kernelItems, false)]
@@ -832,7 +874,7 @@ export function buildPortalSearchCatalog(indexPath, options = {}) {
     if (!relativePath) return false;
     if (
       frontmatter?.draft === true ||
-      frontmatter?.draft === "true" ||
+      /^true$/i.test(String(frontmatter?.draft ?? "").trim()) ||
       frontmatter?.search === false
     ) {
       return false;
@@ -840,6 +882,15 @@ export function buildPortalSearchCatalog(indexPath, options = {}) {
 
     const rel = relativePath.replace(/\\/g, "/").replace(/^\/+/, "");
     const relLower = rel.toLowerCase();
+    if (!frontmatter && rawSrc && relLower.startsWith("blog/")) {
+      const parsedDraft = parseBlogFrontmatter(rawSrc).frontmatter?.draft;
+      if (
+        parsedDraft === true ||
+        /^true$/i.test(String(parsedDraft ?? "").trim())
+      ) {
+        return false;
+      }
+    }
     if (excludedDocSet.has(relLower)) {
       return false;
     }

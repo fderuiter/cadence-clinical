@@ -669,6 +669,10 @@ public sealed class KernelApiHostPostgresTests(KernelPostgresFixture fixture) : 
 
         seededNodes.Keys.Should().BeEquivalentTo(NodeKinds.All, "every registered NodeKinds.All entry must be exercised");
 
+        var batchedQuery = string.Join("&", seededNodes.Values.Select(r => $"ref={Uri.EscapeDataString(r.ToString())}"));
+        var batchedAdmin = await GetAsync<KernelBatchNodesResponse>(adminClient, $"nodes?{batchedQuery}", ct);
+        batchedAdmin.Nodes.Keys.Should().BeEquivalentTo(seededNodes.Values.Select(r => r.ToString()), "batch GET /nodes must resolve all 38 NodeKinds.All");
+
         foreach (var (kind, nodeRef) in seededNodes)
         {
             var resolved = await GetAsync<KernelNodeResponse>(adminClient, $"nodes/{nodeRef}", ct);
@@ -676,11 +680,26 @@ public sealed class KernelApiHostPostgresTests(KernelPostgresFixture fixture) : 
             resolved.Mask.Should().BeNull($"{kind} should resolve unmasked for a tenant-wide reader");
             resolved.Ref.Should().NotBeNullOrWhiteSpace();
             resolved.Title.Should().NotBeNullOrWhiteSpace();
+            batchedAdmin.Nodes[nodeRef.ToString()].Should().BeEquivalentTo(resolved, $"batch GET /nodes summary for {kind} must match GET /nodes/{{nodeRef}}");
 
             var zoom = await GetAsync<IReadOnlyList<KernelZoomStepResponse>>(adminClient, $"nodes/{nodeRef}/path", ct);
             zoom.Should().NotBeEmpty();
             zoom[0].Level.Should().Be(NodeKinds.Tenant, $"{kind} zoom path must start at tenant");
             zoom[^1].Level.Should().Be(kind, $"{kind} zoom path must end at {kind}");
+        }
+
+        var batchedCrc = await GetAsync<KernelBatchNodesResponse>(crcClient, $"nodes?{batchedQuery}", ct);
+        foreach (var maskedKindRef in new[]
+        {
+            NodeRef.For(qualificationState.QualificationId),
+            NodeRef.For(subscription),
+            NodeRef.For(productEntitlement),
+        })
+        {
+            var maskedItem = batchedCrc.Nodes[maskedKindRef.ToString()];
+            maskedItem.Kind.Should().Be(maskedKindRef.Kind);
+            maskedItem.Mask.Should().Be(NotPermitted);
+            maskedItem.Ref.Should().BeNull();
         }
 
         // Req 2 & Req 3: Pseudonymous person/participant without PII, and person requires active TenantMembership:

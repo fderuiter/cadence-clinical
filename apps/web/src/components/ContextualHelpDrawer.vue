@@ -1376,16 +1376,24 @@ watch(canonicalRoute, (newRoute) => {
   if (newRoute && newRoute !== knowledgeStore.currentRoute) {
     searchInput.value = "";
     isSearchOpen.value = false;
-    knowledgeStore.fetchContextualHelp(
-      resolveActiveRouteLocation(route) || newRoute,
-      authStore.currentPersona
-    );
-    if (
-      knowledgeStore.isOpen &&
-      knowledgeStore.activeDrawerTab === "tickets" &&
-      !knowledgeStore.selectedTicket
-    ) {
-      knowledgeStore.fetchDrawerTickets();
+    const activeLocation = resolveActiveRouteLocation(route) || newRoute;
+    if (knowledgeStore.isOpen) {
+      knowledgeStore.fetchContextualHelp(
+        activeLocation,
+        authStore.currentPersona
+      );
+      if (
+        knowledgeStore.activeDrawerTab === "tickets" &&
+        !knowledgeStore.selectedTicket
+      ) {
+        knowledgeStore.fetchDrawerTickets();
+      }
+    } else {
+      knowledgeStore.syncDeferredContext(
+        activeLocation,
+        newRoute,
+        authStore.currentPersona
+      );
     }
   }
 });
@@ -1411,7 +1419,7 @@ watch(
   }
 );
 
-// Watch persona changes to automatically refresh contextual help
+// Watch persona changes to refresh contextual help when open or mark stale when closed
 watch(
   () => authStore.currentPersona,
   (newPersona) => {
@@ -1421,21 +1429,52 @@ watch(
       }
       searchInput.value = "";
       isSearchOpen.value = false;
-      knowledgeStore.fetchContextualHelp(
+      const activeLocation =
         resolveActiveRouteLocation(route) ||
-          canonicalRoute.value ||
-          knowledgeStore.currentRoute,
-        newPersona
-      );
-      if (
-        knowledgeStore.isOpen &&
-        knowledgeStore.activeDrawerTab === "tickets" &&
-        !knowledgeStore.selectedTicket
-      ) {
-        knowledgeStore.fetchDrawerTickets();
+        canonicalRoute.value ||
+        knowledgeStore.currentRoute;
+      if (knowledgeStore.isOpen) {
+        knowledgeStore.fetchContextualHelp(activeLocation, newPersona);
+        if (
+          knowledgeStore.activeDrawerTab === "tickets" &&
+          !knowledgeStore.selectedTicket
+        ) {
+          knowledgeStore.fetchDrawerTickets();
+        }
+      } else {
+        knowledgeStore.syncDeferredContext(
+          activeLocation,
+          canonicalRoute.value || activeLocation,
+          newPersona
+        );
       }
     }
   }
+);
+
+// Load contextual SOP guidance on demand when the drawer opens
+watch(
+  () => knowledgeStore.isOpen,
+  (isOpen) => {
+    if (
+      isOpen &&
+      (!knowledgeStore.hasLoadedContextualHelp ||
+        knowledgeStore.needsContextualRefresh) &&
+      !knowledgeStore.loading
+    ) {
+      const activeLocation =
+        resolveActiveRouteLocation(route) ||
+        canonicalRoute.value ||
+        knowledgeStore.currentRoute;
+      if (activeLocation) {
+        knowledgeStore.fetchContextualHelp(
+          activeLocation,
+          authStore.currentPersona
+        );
+      }
+    }
+  },
+  { immediate: true }
 );
 
 // Auto-load scoped tickets when the drawer opens on the Support Tickets tab
@@ -1513,10 +1552,18 @@ onMounted(() => {
     !knowledgeStore.primaryArticle &&
     !knowledgeStore.loading
   ) {
-    knowledgeStore.fetchContextualHelp(
-      initialRoute || canonicalRoute.value,
-      authStore.currentPersona
-    );
+    if (knowledgeStore.isOpen) {
+      knowledgeStore.fetchContextualHelp(
+        initialRoute || canonicalRoute.value,
+        authStore.currentPersona
+      );
+    } else {
+      knowledgeStore.syncDeferredContext(
+        initialRoute || canonicalRoute.value,
+        canonicalRoute.value,
+        authStore.currentPersona
+      );
+    }
   }
 });
 

@@ -527,7 +527,7 @@ The title is required. With make, pass it as `make adr TITLE="Use X for Y"`.
 
 #### `cadence scaffold post <title>`
 
-Creates `docs/blog/<yyyy-mm-dd>-<slug>.md` with YAML frontmatter (`title`, `date`, `authors`, `summary`, `tags`, `draft`, `related`) and structured Markdown sections, then updates `docs/DOCUMENTATION_INDEX.md` under `## Engineering blog` when that file exists. Posts start with `draft: true` by default so drafts stay excluded from public index pages, site search, and `/feed.xml` until flipped to `draft: false` (or created with `--publish`). Fails with exit code `1` if the title produces an empty slug or the dated file already exists.
+Creates `docs/blog/<yyyy-mm-dd>-<slug>.md` with YAML frontmatter (`title`, `date`, `authors`, `summary`, `tags`, `draft`, `related`) and structured Markdown sections, synchronizing `docs/DOCUMENTATION_INDEX.md` under `## Engineering blog` when published. Posts start with `draft: true` by default so drafts stay excluded from `docs/DOCUMENTATION_INDEX.md`, public index pages, site search, and `/feed.xml` until flipped to `draft: false` and synced with `pnpm cadence generate-doc-index` (or created immediately with `--publish`). Fails with exit code `1` if the title produces an empty slug or the dated file already exists.
 
 The title is required. With make, pass it as `make post TITLE="Ship X"`.
 

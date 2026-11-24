@@ -67,6 +67,7 @@ import type {
   KernelExplainValidationFindingInput,
   KernelRulePack,
   KernelRulePackPreview,
+  KernelStudyAttention,
   KernelStudyRulePacks,
   KernelStudyValidationFindingsQuery,
   KernelValidationFinding,
@@ -537,18 +538,37 @@ export function executeListStudyValidationFindings(
   studyRef: string,
   query: KernelStudyValidationFindingsQuery = {}
 ): Promise<KernelValidationFindingPage> {
+  const statuses = Array.isArray(query.status)
+    ? query.status.filter(Boolean)
+    : query.status
+      ? [query.status]
+      : undefined;
   return unwrapResponse(
     kernelClient.GET("/api/v1/kernel/studies/{studyRef}/validation/findings", {
       params: {
         path: { studyRef },
         query: {
           stage: query.stage || undefined,
-          status: query.status || undefined,
+          status: statuses && statuses.length > 0 ? statuses : undefined,
           severity: query.severity || undefined,
           dataset: query.dataset || undefined,
           pack_key: query.packKey || undefined,
           limit: query.limit,
         },
+      },
+    })
+  );
+}
+
+export function executeGetStudyAttention(
+  studyRef: string,
+  query: { limit?: number } = {}
+): Promise<KernelStudyAttention> {
+  return unwrapResponse(
+    kernelClient.GET("/api/v1/kernel/studies/{studyRef}/attention", {
+      params: {
+        path: { studyRef },
+        query: { limit: query.limit },
       },
     })
   );
@@ -1038,6 +1058,7 @@ export function executeActivity({
   from,
   before,
   limit,
+  includeNodes,
 }: KernelActivityQuery = {}): Promise<KernelActivityPage> {
   return unwrapResponse(
     kernelClient.GET("/api/v1/kernel/activity", {
@@ -1049,6 +1070,7 @@ export function executeActivity({
           from,
           before,
           limit,
+          include_nodes: includeNodes ? true : undefined,
         },
       },
     })
