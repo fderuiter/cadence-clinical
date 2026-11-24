@@ -339,7 +339,7 @@ const toggleEdit = () => {
   left: 0;
   width: 100vw;
   height: 100vh;
-  background: rgba(15, 23, 42, 0.45);
+  background: var(--semantic-color-backdrop-soft);
   backdrop-filter: blur(2px);
   z-index: 9999;
   display: flex;
@@ -355,7 +355,7 @@ const toggleEdit = () => {
   height: 100vh;
   background: var(--color-surface);
   border-left: 1px solid var(--color-border);
-  box-shadow: -8px 0 24px -4px rgba(0, 0, 0, 0.12);
+  box-shadow: var(--shadow-drawer-left);
   display: flex;
   flex-direction: column;
   animation: ai-slide-in 0.25s cubic-bezier(0.16, 1, 0.3, 1);
@@ -424,7 +424,7 @@ const toggleEdit = () => {
   transition: background 0.15s;
 }
 
-.ai-drawer-close-btn:hover {
+.ai-drawer-close-btn:hover:not(:disabled) {
   background: var(--color-border);
   color: var(--color-text);
 }
@@ -456,7 +456,7 @@ const toggleEdit = () => {
 }
 
 code.ai-provenance-val {
-  background: rgba(255, 255, 255, 0.7);
+  background: var(--semantic-color-surface);
   padding: 1px 4px;
   border-radius: 3px;
   font-family: var(--font-mono, monospace);
@@ -525,7 +525,7 @@ code.ai-provenance-val {
   border-radius: 4px;
 }
 
-.ai-edit-toggle-btn:hover {
+.ai-edit-toggle-btn:hover:not(:disabled) {
   background: var(--color-primary-light);
 }
 
@@ -638,7 +638,7 @@ code.ai-provenance-val {
   color: var(--color-text);
 }
 
-.btn-secondary:hover {
+.btn-secondary:hover:not(:disabled) {
   background: var(--semantic-color-surface-header);
 }
 
@@ -648,8 +648,14 @@ code.ai-provenance-val {
   color: var(--color-error);
 }
 
-.btn-dismiss:hover {
+.btn-dismiss:hover:not(:disabled) {
   background: var(--color-error-bg);
+}
+
+.btn-dismiss:disabled,
+.btn-secondary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .btn-accept {

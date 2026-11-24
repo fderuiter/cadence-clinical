@@ -95,7 +95,7 @@ public class CurrentAuditContextAccessorTests
     {
         var accessor = new AmbientAuditContextAccessor(new FakeHttpContextAccessor(null));
 
-        accessor.ChangeReason.Should().Be("system_operation");
+        FluentActions.Invoking(() => _ = accessor.ChangeReason).Should().Throw<Cadence.Apps.Execution.Application.Abstractions.AuditChangeReasonUnresolvedException>();
     }
 
     [Fact]
@@ -103,7 +103,7 @@ public class CurrentAuditContextAccessorTests
     {
         var accessor = CreateAccessor(changeReasonHeader: null);
 
-        accessor.ChangeReason.Should().Be("system_operation");
+        FluentActions.Invoking(() => _ = accessor.ChangeReason).Should().Throw<Cadence.Apps.Execution.Application.Abstractions.AuditChangeReasonUnresolvedException>();
     }
 
     [Fact]
@@ -113,7 +113,7 @@ public class CurrentAuditContextAccessorTests
         // default as a fully-absent one, not be distinguished from it.
         var accessor = CreateAccessor(changeReasonHeader: string.Empty);
 
-        accessor.ChangeReason.Should().Be("system_operation");
+        FluentActions.Invoking(() => _ = accessor.ChangeReason).Should().Throw<Cadence.Apps.Execution.Application.Abstractions.AuditChangeReasonUnresolvedException>();
     }
 
     [Fact]
@@ -123,7 +123,7 @@ public class CurrentAuditContextAccessorTests
         // one consistent falsy-check, not a null-only check that would treat "" (or "   ") differently.
         var accessor = CreateAccessor(changeReasonHeader: "   ");
 
-        accessor.ChangeReason.Should().Be("system_operation");
+        FluentActions.Invoking(() => _ = accessor.ChangeReason).Should().Throw<Cadence.Apps.Execution.Application.Abstractions.AuditChangeReasonUnresolvedException>();
     }
 
     [Fact]

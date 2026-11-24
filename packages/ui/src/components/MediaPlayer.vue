@@ -199,6 +199,135 @@ const formatTime = (secs) => {
 const pdfPage = ref(1);
 const pdfTotalPages = ref(1);
 const pdfCanvasRef = ref(null);
+const pdfFrameSrc = ref("");
+let ownedPdfObjectUrl = "";
+let pdfFetchAbortController = null;
+let isComponentMounted = false;
+
+function canUseBlobUrls() {
+  return (
+    typeof Blob !== "undefined" &&
+    typeof URL !== "undefined" &&
+    typeof URL.createObjectURL === "function"
+  );
+}
+
+function revokeOwnedPdfUrl() {
+  if (
+    ownedPdfObjectUrl &&
+    typeof URL !== "undefined" &&
+    typeof URL.revokeObjectURL === "function"
+  ) {
+    URL.revokeObjectURL(ownedPdfObjectUrl);
+  }
+  ownedPdfObjectUrl = "";
+}
+
+function abortPendingPdfFetch() {
+  if (pdfFetchAbortController) {
+    pdfFetchAbortController.abort();
+    pdfFetchAbortController = null;
+  }
+}
+
+function decodeDataUriToPdfBlob(dataUri) {
+  const commaIdx = dataUri.indexOf(",");
+  if (commaIdx < 0) {
+    return null;
+  }
+  const metadata = dataUri.slice(5, commaIdx);
+  const payload = dataUri.slice(commaIdx + 1);
+  const isBase64 = /;base64/i.test(metadata);
+
+  if (isBase64) {
+    const binary = atob(payload);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    return new Blob([bytes], { type: "application/pdf" });
+  }
+
+  const decoded = decodeURIComponent(payload);
+  return new Blob([decoded], { type: "application/pdf" });
+}
+
+async function syncPdfBlobSource() {
+  abortPendingPdfFetch();
+  revokeOwnedPdfUrl();
+
+  const rawSrc = props.src || "";
+  if (!rawSrc || mediaCategory.value !== "pdf") {
+    pdfFrameSrc.value = "";
+    return;
+  }
+
+  if (rawSrc.startsWith("blob:")) {
+    pdfFrameSrc.value = rawSrc;
+    return;
+  }
+
+  if (rawSrc.startsWith("data:")) {
+    if (!canUseBlobUrls()) {
+      pdfFrameSrc.value = "";
+      return;
+    }
+    try {
+      const pdfBlob = decodeDataUriToPdfBlob(rawSrc);
+      if (pdfBlob) {
+        ownedPdfObjectUrl = URL.createObjectURL(pdfBlob);
+        pdfFrameSrc.value = ownedPdfObjectUrl;
+      } else {
+        pdfFrameSrc.value = "";
+      }
+    } catch (err) {
+      pdfFrameSrc.value = "";
+      emit("error", err);
+    }
+    return;
+  }
+
+  if (
+    !isComponentMounted ||
+    !canUseBlobUrls() ||
+    typeof window === "undefined" ||
+    typeof fetch !== "function"
+  ) {
+    pdfFrameSrc.value = "";
+    return;
+  }
+
+  const controller =
+    typeof AbortController !== "undefined" ? new AbortController() : null;
+  pdfFetchAbortController = controller;
+
+  try {
+    const resolvedHref = window.location?.href
+      ? new URL(rawSrc, window.location.href).href
+      : rawSrc;
+    const response = await fetch(
+      resolvedHref,
+      controller ? { signal: controller.signal } : undefined
+    );
+    if (!response.ok) {
+      throw new Error(`Failed to load PDF preview (${response.status})`);
+    }
+    const buffer = await response.arrayBuffer();
+    if (pdfFetchAbortController !== controller) {
+      return;
+    }
+    pdfFetchAbortController = null;
+    const pdfBlob = new Blob([buffer], { type: "application/pdf" });
+    ownedPdfObjectUrl = URL.createObjectURL(pdfBlob);
+    pdfFrameSrc.value = ownedPdfObjectUrl;
+  } catch (err) {
+    if (err?.name === "AbortError") {
+      return;
+    }
+    pdfFrameSrc.value = "";
+    emit("error", err);
+  }
+}
 
 const prevPdfPage = () => {
   if (pdfPage.value > 1) {
@@ -212,22 +341,40 @@ const nextPdfPage = () => {
   }
 };
 
+// Synchronously initialize data:/blob: PDF URLs for immediate render
+if (
+  mediaCategory.value === "pdf" &&
+  (props.src?.startsWith("blob:") || props.src?.startsWith("data:"))
+) {
+  void syncPdfBlobSource();
+}
+
 // Reset state when src or category changes
 watch(
-  () => props.src,
-  () => {
-    resetTransform();
-    isPlaying.value = false;
-    currentTime.value = 0;
+  () => [props.src, mediaCategory.value],
+  ([newSrc], [oldSrc] = []) => {
+    if (newSrc !== oldSrc) {
+      resetTransform();
+      isPlaying.value = false;
+      currentTime.value = 0;
+    }
+    void syncPdfBlobSource();
   }
 );
 
 onMounted(() => {
+  isComponentMounted = true;
   window.addEventListener("mouseup", handleMouseUp);
+  if (mediaCategory.value === "pdf" && !pdfFrameSrc.value) {
+    void syncPdfBlobSource();
+  }
 });
 
 onUnmounted(() => {
+  isComponentMounted = false;
   window.removeEventListener("mouseup", handleMouseUp);
+  abortPendingPdfFetch();
+  revokeOwnedPdfUrl();
 });
 </script>
 
@@ -253,6 +400,7 @@ onUnmounted(() => {
       <div class="header-controls">
         <template v-if="mediaCategory === 'image' || mediaCategory === 'pdf'">
           <button
+            type="button"
             class="control-btn"
             aria-label="Zoom Out"
             title="Zoom Out"
@@ -262,6 +410,7 @@ onUnmounted(() => {
           </button>
           <span class="zoom-indicator">{{ Math.round(zoomLevel * 100) }}%</span>
           <button
+            type="button"
             class="control-btn"
             aria-label="Zoom In"
             title="Zoom In"
@@ -271,6 +420,7 @@ onUnmounted(() => {
           </button>
           <button
             v-if="mediaCategory === 'image'"
+            type="button"
             class="control-btn"
             aria-label="Rotate 90 Degrees"
             title="Rotate Clockwise"
@@ -299,6 +449,7 @@ onUnmounted(() => {
             <span aria-hidden="true">&rarr;</span>
           </button>
           <button
+            type="button"
             class="control-btn"
             aria-label="Reset View"
             title="Reset Zoom & Pan"
@@ -335,7 +486,7 @@ onUnmounted(() => {
         data-testid="pdf-viewer"
       >
         <iframe
-          :src="src"
+          :src="pdfFrameSrc || undefined"
           class="pdf-frame"
           :title="title"
           data-testid="pdf-iframe"
@@ -349,6 +500,7 @@ onUnmounted(() => {
         ></canvas>
         <div class="pdf-bottom-bar">
           <button
+            type="button"
             class="control-btn"
             :disabled="pdfPage <= 1"
             aria-label="Previous page"
@@ -360,6 +512,7 @@ onUnmounted(() => {
             >Page {{ pdfPage }} of {{ pdfTotalPages }}</span
           >
           <button
+            type="button"
             class="control-btn"
             :disabled="pdfPage >= pdfTotalPages"
             aria-label="Next page"
@@ -421,6 +574,7 @@ onUnmounted(() => {
 
         <div class="audio-controls-bar">
           <button
+            type="button"
             class="play-toggle-btn"
             :aria-label="isPlaying ? 'Pause audio' : 'Play audio'"
             data-testid="audio-play-btn"
@@ -444,6 +598,7 @@ onUnmounted(() => {
           <span class="time-display">{{ formatTime(duration) }}</span>
 
           <button
+            type="button"
             class="control-btn"
             :aria-label="isMuted ? 'Unmute' : 'Mute'"
             @click="toggleMute"
@@ -475,6 +630,7 @@ onUnmounted(() => {
 
         <div class="video-controls-bar">
           <button
+            type="button"
             class="play-toggle-btn"
             :aria-label="isPlaying ? 'Pause video' : 'Play video'"
             data-testid="video-play-btn"
@@ -502,6 +658,7 @@ onUnmounted(() => {
             <button
               v-for="rate in [0.5, 1, 1.5, 2]"
               :key="rate"
+              type="button"
               class="speed-btn"
               :class="{ active: playbackRate === rate }"
               :aria-label="`Set speed to ${rate}x`"
@@ -512,6 +669,7 @@ onUnmounted(() => {
           </div>
 
           <button
+            type="button"
             class="control-btn"
             :aria-label="isMuted ? 'Unmute' : 'Mute'"
             @click="toggleMute"
@@ -540,7 +698,7 @@ onUnmounted(() => {
   border: 1px solid var(--semantic-color-border);
   border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-sm);
   font-family: inherit;
   width: 100%;
 }
@@ -580,7 +738,7 @@ onUnmounted(() => {
 
 .badge-audio {
   background: var(--semantic-color-warning-bg-badge);
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
 }
 
 .badge-video {
@@ -793,7 +951,7 @@ onUnmounted(() => {
   transition: background 0.15s ease;
 }
 
-.play-toggle-btn:hover {
+.play-toggle-btn:hover:not(:disabled) {
   background: var(--semantic-color-primary-dark);
 }
 
@@ -827,7 +985,7 @@ onUnmounted(() => {
 
 .video-controls-bar {
   padding: 10px 16px;
-  background: rgba(15, 23, 42, 0.95);
+  background: var(--semantic-color-backdrop-strong);
 }
 
 .speed-selector {

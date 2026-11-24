@@ -84,6 +84,9 @@ public sealed class CtmsStudySiteScopeIsolationTests : IAsyncLifetime
                 record_id = "DEL-BETA-SHARED",
                 reason_for_change = "Cross-study sign-off attempt",
             });
+        signCrossReq.Headers.Add(
+            GatewayHeaders.SigToken,
+            TestSecurityContext.CreateSigToken("pi-alpha-shared", "/api/v1/ctms/doa/sign-off", "ctms.doa.sign_off", ["principal_investigator"]));
 
         using var revCrossReq = JsonPost(
             "/api/v1/ctms/doa/revoke",
@@ -97,7 +100,11 @@ public sealed class CtmsStudySiteScopeIsolationTests : IAsyncLifetime
         var resDoaLogDelegOnly = await alphaDm.GetAsync("/api/v1/ctms/doa/sites/SITE-BETA-DELEG/log", Ct);
         var resDoaLogShared = await alphaPiShared.GetAsync("/api/v1/ctms/doa/sites/SITE-SHARED/log", Ct);
         var resDoaAuditLeak = await alphaPiSite1.GetAsync("/api/v1/ctms/doa/sites/SITE-1/log", Ct);
-        var resDoaPdf = await alphaDm.GetAsync("/api/v1/ctms/doa/sites/SITE-BETA-DELEG/export-pdf", Ct);
+        using var exportCrossReq = new HttpRequestMessage(HttpMethod.Get, "/api/v1/ctms/doa/sites/SITE-BETA-DELEG/export-pdf");
+        exportCrossReq.Headers.Add(
+            GatewayHeaders.SigToken,
+            TestSecurityContext.CreateSigToken("dm-alpha-1", "/api/v1/ctms/doa/sites/SITE-BETA-DELEG/export-pdf", "ctms.doa.export_pdf", ["data_manager"]));
+        var resDoaPdf = await alphaDm.SendAsync(exportCrossReq, Ct);
         var resDoaDelegate = await alphaDm.SendAsync(delCrossReq, Ct);
         var resDoaSignOff = await alphaPiShared.SendAsync(signCrossReq, Ct);
         var resDoaRevoke = await alphaDm.SendAsync(revCrossReq, Ct);
@@ -107,10 +114,13 @@ public sealed class CtmsStudySiteScopeIsolationTests : IAsyncLifetime
             "/api/v1/ctms/letters/render?templateName=confirmation_letter",
             new { craId = "cra-alpha-nosite", createdAt = "2026-11-22", studyId = "STUDY-ALPHA", siteId = "SITE-ALPHA-UNASSIGNED-99", visitType = "IMV" },
             Ct);
-        var resLetterCompile = await alphaCraSite1.PostAsJsonAsync(
+        using var compileCrossReq = JsonPost(
             "/api/v1/ctms/letters/compile?templateName=follow_up_letter",
-            new { craId = "cra-alpha-1", createdAt = "2026-11-22", studyId = "STUDY-ALPHA", siteId = "SITE-1", visitId = visitBetaId, visitType = "IMV" },
-            Ct);
+            new { craId = "cra-alpha-1", createdAt = "2026-11-22", studyId = "STUDY-ALPHA", siteId = "SITE-1", visitId = visitBetaId, visitType = "IMV" });
+        compileCrossReq.Headers.Add(
+            GatewayHeaders.SigToken,
+            TestSecurityContext.CreateSigToken("cra-alpha-1", "/api/v1/ctms/letters/compile", "ctms.letter.compile", ["cra"]));
+        var resLetterCompile = await alphaCraSite1.SendAsync(compileCrossReq, Ct);
         var resLetterPdf = await alphaCraSite1.GetAsync("/api/v1/ctms/letters/LTR-BETA-NOKEY/pdf", Ct);
 
         // Assert DOA cross-study delegation-only site blocked fail-closed with 403 FORBIDDEN_SCOPE
@@ -197,17 +207,24 @@ public sealed class CtmsStudySiteScopeIsolationTests : IAsyncLifetime
         var created = await delegateRes.Content.ReadFromJsonAsync<DelegationResponseDto>(Ct);
         created.Should().NotBeNull();
 
-        var signRes = await alphaPiShared.PostAsJsonAsync(
+        using var signReq = JsonPost(
             "/api/v1/ctms/doa/sign-off",
             new
             {
                 record_id = created!.RecordId,
                 reason_for_change = "PI sign-off for STUDY-ALPHA delegation",
-            },
-            Ct);
+            });
+        signReq.Headers.Add(
+            GatewayHeaders.SigToken,
+            TestSecurityContext.CreateSigToken("pi-alpha-shared", "/api/v1/ctms/doa/sign-off", "ctms.doa.sign_off", ["principal_investigator"]));
+        var signRes = await alphaPiShared.SendAsync(signReq, Ct);
         signRes.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        var pdfRes = await alphaPiShared.GetAsync("/api/v1/ctms/doa/sites/SITE-SHARED/export-pdf", Ct);
+        using var exportReq = new HttpRequestMessage(HttpMethod.Get, "/api/v1/ctms/doa/sites/SITE-SHARED/export-pdf");
+        exportReq.Headers.Add(
+            GatewayHeaders.SigToken,
+            TestSecurityContext.CreateSigToken("pi-alpha-shared", "/api/v1/ctms/doa/sites/SITE-SHARED/export-pdf", "ctms.doa.export_pdf", ["principal_investigator"]));
+        var pdfRes = await alphaPiShared.SendAsync(exportReq, Ct);
         pdfRes.StatusCode.Should().Be(HttpStatusCode.OK);
         string pdfText = Encoding.UTF8.GetString(await pdfRes.Content.ReadAsByteArrayAsync(Ct));
         pdfText.Should().Contain("DEL-ALPHA-SHARED")
@@ -249,7 +266,7 @@ public sealed class CtmsStudySiteScopeIsolationTests : IAsyncLifetime
     {
         using var alphaCraSite1 = _factory.CreateSignedClient("CRA", "cra-alpha-1", ["STUDY-ALPHA"], ["SITE-1"]);
 
-        var compileRes = await alphaCraSite1.PostAsJsonAsync(
+        using var compileReq = JsonPost(
             "/api/v1/ctms/letters/compile?templateName=follow_up_letter",
             new
             {
@@ -259,8 +276,11 @@ public sealed class CtmsStudySiteScopeIsolationTests : IAsyncLifetime
                 siteId = "SITE-1",
                 visitId = VisitAlphaId,
                 visitType = "IMV",
-            },
-            Ct);
+            });
+        compileReq.Headers.Add(
+            GatewayHeaders.SigToken,
+            TestSecurityContext.CreateSigToken("cra-alpha-1", "/api/v1/ctms/letters/compile", "ctms.letter.compile", ["cra"]));
+        var compileRes = await alphaCraSite1.SendAsync(compileReq, Ct);
         compileRes.StatusCode.Should().Be(HttpStatusCode.OK);
         var compiled = await compileRes.Content.ReadFromJsonAsync<JsonElement>(Ct);
         string letterId = compiled.GetProperty("letterId").GetString()!;

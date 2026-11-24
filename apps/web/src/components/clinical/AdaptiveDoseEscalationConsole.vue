@@ -594,7 +594,7 @@ function submitCohortTransition(): void {
   border-radius: 6px;
   border: 1px solid var(--semantic-color-warning-border-strong);
   background: var(--semantic-color-warning-bg-soft);
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
   font-size: 0.88rem;
 }
 
@@ -760,7 +760,7 @@ function submitCohortTransition(): void {
 .rec-dose-pill {
   font-size: 0.75rem;
   font-weight: 600;
-  background-color: rgba(0, 0, 0, 0.08);
+  background-color: var(--semantic-color-surface-header);
   padding: 2px 8px;
   border-radius: 12px;
 }
@@ -924,7 +924,7 @@ function submitCohortTransition(): void {
   padding: 2px 6px;
   border-radius: 4px;
   background-color: var(--semantic-color-warning-bg-badge);
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
 }
 
 .text-muted {
@@ -1054,7 +1054,7 @@ function submitCohortTransition(): void {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(15, 23, 42, 0.6);
+  background-color: var(--semantic-color-backdrop);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1067,9 +1067,7 @@ function submitCohortTransition(): void {
   width: 100%;
   max-width: 520px;
   padding: 24px;
-  box-shadow:
-    0 20px 25px -5px rgba(0, 0, 0, 0.1),
-    0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-xl);
 }
 
 .modal-header {

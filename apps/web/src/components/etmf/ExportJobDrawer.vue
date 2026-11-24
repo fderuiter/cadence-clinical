@@ -25,6 +25,7 @@
           </div>
         </div>
         <button
+          type="button"
           class="btn-close-drawer"
           aria-label="Close export drawer"
           @click="handleClose"
@@ -303,7 +304,7 @@ function formatDate(dt) {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(15, 23, 42, 0.5);
+  background-color: var(--semantic-color-backdrop);
   backdrop-filter: blur(2px);
   z-index: 1050;
   display: flex;
@@ -315,7 +316,7 @@ function formatDate(dt) {
   max-width: 90vw;
   height: 100%;
   background: var(--semantic-color-surface);
-  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-drawer-left);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -363,7 +364,7 @@ function formatDate(dt) {
   border-radius: 4px;
 }
 
-.btn-close-drawer:hover {
+.btn-close-drawer:hover:not(:disabled) {
   background: var(--semantic-color-surface-header);
   color: var(--semantic-color-text);
 }
@@ -534,7 +535,7 @@ function formatDate(dt) {
   cursor: not-allowed;
 }
 
-.btn-download:hover {
+.btn-download:hover:not(:disabled) {
   background: var(--semantic-color-success);
 }
 
@@ -637,7 +638,7 @@ function formatDate(dt) {
   cursor: not-allowed;
 }
 
-.history-download-link:hover {
+.history-download-link:hover:not(:disabled) {
   text-decoration: underline;
 }
 

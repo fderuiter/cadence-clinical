@@ -29,6 +29,7 @@ const mockAcceptValidationFinding = vi.fn();
 const mockExplainValidationFinding = vi.fn();
 const mockReopenValidationFinding = vi.fn();
 const mockListProposals = vi.fn();
+const mockGetStudyAttention = vi.fn();
 const mockListWorkQueues = vi.fn();
 
 vi.mock("../../src/api/kernelApi", async () => {
@@ -61,6 +62,7 @@ vi.mock("../../src/api/kernelApi", async () => {
       reopenValidationFinding: (...args: unknown[]) =>
         mockReopenValidationFinding(...args),
       listProposals: (...args: unknown[]) => mockListProposals(...args),
+      getStudyAttention: (...args: unknown[]) => mockGetStudyAttention(...args),
       listWorkQueues: (...args: unknown[]) => mockListWorkQueues(...args),
     },
   };
@@ -221,6 +223,31 @@ describe("Kernel readiness gates, validation finding lifecycle, and capability w
       },
     ]);
     mockGetChildren.mockResolvedValue([]);
+    mockGetStudyAttention.mockImplementation(
+      async (studyRef: string, opts?: { limit?: number }) => {
+        const limit = opts?.limit ?? 20;
+        const [proposals, openFindings, investigatingFindings] =
+          await Promise.all([
+            mockListProposals(studyRef, { status: "Open", limit }),
+            mockListStudyValidationFindings(studyRef, {
+              status: "Open",
+              limit,
+            }),
+            mockListStudyValidationFindings(studyRef, {
+              status: "Investigating",
+              limit,
+            }),
+          ]);
+        return {
+          study_ref: STUDY_REF,
+          proposals: proposals ?? [],
+          findings: [
+            ...(openFindings?.findings ?? []),
+            ...(investigatingFindings?.findings ?? []),
+          ].slice(0, limit),
+        };
+      }
+    );
     mockCanI.mockResolvedValue({
       capability: "any",
       verb_class: "Execute",
@@ -1110,6 +1137,12 @@ describe("Kernel readiness gates, validation finding lifecycle, and capability w
       global: { plugins: [router] },
     });
     await flushPromises();
+
+    expect(mockListWorkQueues).toHaveBeenCalledWith({ within: "CAD-101" });
+    expect(mockGetStudyAttention).toHaveBeenCalledWith("CAD-101", {
+      limit: 20,
+    });
+    expect(mockSearch).not.toHaveBeenCalled();
 
     expect(attentionWrapper.find("#needs-attention-proposal-0").exists()).toBe(
       true

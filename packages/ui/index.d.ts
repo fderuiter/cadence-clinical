@@ -92,21 +92,61 @@ export const ClinicalFormField: DefineComponent<
   any
 >;
 
-export const ClinicalInput: DefineComponent<
+export interface ClinicalSelectOption {
+  value: string | number;
+  label?: string;
+  disabled?: boolean;
+}
+
+export const ClinicalInput: DefineSlotsComponent<
   {
     id: string;
     label: string;
     modelValue?: string | number;
     type?: string;
+    as?: "input" | "select" | "textarea" | string;
+    options?: Array<ClinicalSelectOption | string | number> | null;
+    placeholder?: string;
+    disabled?: boolean;
+    readonly?: boolean;
+    required?: boolean;
+    density?: "comfortable" | "compact" | string;
+    hint?: string;
+    hideLabel?: boolean;
+    showQueryFlag?: boolean;
+    rows?: number | string;
+    min?: number | string | null;
+    max?: number | string | null;
+    step?: number | string | null;
+    maxlength?: number | string | null;
+    autocomplete?: string;
     inputmode?: string;
     tabularNums?: boolean;
+    list?: string;
+    name?: string;
+    ariaLabel?: string;
+    ariaDescribedby?: string;
+    extraClass?: string;
+    labelClass?: string | any[] | Record<string, boolean>;
+    controlClass?: string | any[] | Record<string, boolean>;
+    controlAttrs?: Record<string, any>;
     query?: any;
     gridSpan?: number | string;
     error?: string | null;
     attributes?: Record<string, any>;
+    canManageQueries?: boolean;
+    queryLabel?: string;
+    "onUpdate:modelValue"?: (value: any) => void;
+    onInput?: (value: any, event?: Event) => void;
+    onChange?: (value: any, target?: HTMLElement) => void;
+    onBlur?: (event: FocusEvent) => void;
+    onKeydown?: (event: KeyboardEvent) => void;
+    onKeyup?: (event: KeyboardEvent) => void;
   },
-  {},
-  any
+  {
+    default?: (props: Record<string, never>) => any;
+    "after-input"?: (props: Record<string, never>) => any;
+  }
 >;
 
 export const ClinicalRadioGroup: DefineComponent<
@@ -346,6 +386,8 @@ export const ClinicalDrawer: DefineSlotsComponent<
   {
     modelValue?: boolean;
     isOpen?: boolean;
+    open?: boolean;
+    docked?: boolean;
     title?: string;
     subtitle?: string;
     ariaLabel?: string;
@@ -411,20 +453,81 @@ export interface ClinicalDataTableColumn {
   key: string;
   label: string;
   sortable?: boolean;
+  rowHeader?: boolean;
+  align?: "left" | "right" | "center" | string;
+  headerClass?: string | any[] | Record<string, boolean>;
+  cellClass?: string | any[] | Record<string, boolean>;
 }
 
-export const ClinicalDataTable: DefineComponent<
+export const ClinicalDataTable: DefineSlotsComponent<
   {
     columns: ClinicalDataTableColumn[];
-    data: Record<string, any>[];
+    data: any[];
     pageSize?: number;
     selectable?: boolean;
     title?: string;
+    hideHeader?: boolean;
+    labelledBy?: string;
+    ariaLabel?: string;
+    plain?: boolean;
+    containerClass?: string | any[] | Record<string, boolean>;
+    wrapperClass?: string | any[] | Record<string, boolean>;
+    wrapperTestId?: string;
+    tableId?: string;
+    tableClass?: string | any[] | Record<string, boolean>;
+    tableTestId?: string;
+    tbodyId?: string;
+    rowKey?: string | ((row: any, index: number) => string | number);
+    rowId?: (row: any, index: number) => string | undefined;
+    rowClass?:
+      | string
+      | ((
+          row: any,
+          index: number
+        ) => string | any[] | Record<string, boolean> | undefined);
+    rowAttrs?: (
+      row: any,
+      index: number
+    ) => Record<string, string | number | boolean | undefined> | undefined;
+    selectedRowKeys?: any[] | null;
+    emptyMessage?: string;
+    isRowMasked?: (row: any, index: number) => boolean;
+    externalPagination?: boolean;
+    page?: number | null;
+    totalRecords?: number | null;
+    hasMore?: boolean;
+    loadingMore?: boolean;
+    loadMoreLabel?: string;
+    loadMoreId?: string;
+    externalSort?: boolean;
+    initialSortKey?: string;
+    initialSortOrder?: "asc" | "desc" | string;
     onSelect?: (selectedKeys: any[]) => void;
-    "onRow-click"?: (row: Record<string, any>) => void;
+    "onRow-click"?: (row: any) => void;
+    "onPage-change"?: (page: number) => void;
+    "onLoad-more"?: () => void;
+    "onSort-change"?: (payload: { key: string; order: string }) => void;
   },
-  {},
-  any
+  {
+    [headSlot: `head-${string}`]: (props: {
+      column: ClinicalDataTableColumn;
+    }) => any;
+    [cellSlot: `cell-${string}`]: (props: {
+      row: any;
+      value: any;
+      index: number;
+    }) => any;
+    "header-actions"?: (props: Record<string, never>) => any;
+    "header-select"?: (props: Record<string, never>) => any;
+    "masked-row"?: (props: { row: any; index: number; colSpan: number }) => any;
+    empty?: (props: Record<string, never>) => any;
+    pagination?: (props: {
+      currentPage: number;
+      totalPages: number;
+      totalRecords: number;
+      goToPage: (page: number) => void;
+    }) => any;
+  }
 >;
 
 export const ClinicalFieldLayout: DefineSlotsComponent<
@@ -437,13 +540,22 @@ export const ClinicalFieldLayout: DefineSlotsComponent<
     attributes?: Record<string, any>;
     tag?: string;
     extraClass?: string;
+    labelClass?: string | any[] | Record<string, boolean>;
     canManageQueries?: boolean;
     queryLabel?: string;
+    density?: "comfortable" | "compact" | string;
+    required?: boolean;
+    hint?: string;
+    hideLabel?: boolean;
+    showQueryFlag?: boolean;
   },
   {
     default?: (props: {
       id: string;
+      error?: string | null;
       errorId: string;
+      hintId?: string;
+      describedBy?: string;
       hasError: boolean;
     }) => any;
     "after-input"?: (props: Record<string, never>) => any;
@@ -506,7 +618,7 @@ export interface ClinicalToastItem {
   duration?: number;
 }
 
-export const ClinicalToastHost: DefineComponent<
+export const ClinicalToastHost: DefineSlotsComponent<
   {
     toasts?: ClinicalToastItem[];
     ariaLabel?: string;
@@ -518,8 +630,9 @@ export const ClinicalToastHost: DefineComponent<
     onPause?: (id: string | number) => void;
     onResume?: (id: string | number) => void;
   },
-  {},
-  any
+  {
+    extra?: (props: { toast: any }) => any;
+  }
 >;
 
 export interface FocusTrapOptions {
@@ -818,6 +931,31 @@ export interface StepUpVerificationPayload {
 export function buildStepUpVerificationPayload(
   input: StepUpVerificationPayloadInput
 ): StepUpVerificationPayload;
+export const STEP_UP_VERIFICATION_PATH: "/api/v1/auth/signature-verification";
+export function resolveDefaultSemanticAction(action?: string | null): string;
+export interface StepUpSignatureRequestInput {
+  username?: string | null;
+  password?: string;
+  totp?: string | null;
+  action: string;
+  semanticAction?: string;
+  semantic_action?: string;
+  batchId?: string | null;
+  batch_id?: string | null;
+}
+export interface StepUpSignatureRequestOptions<
+  TResponse = { sig_token: string; expires_in?: number },
+> {
+  post: (path: string, body: StepUpVerificationPayload) => Promise<TResponse>;
+  requireSigToken?: boolean;
+  missingTokenMessage?: string;
+}
+export function requestStepUpSignature<
+  TResponse = { sig_token: string; expires_in?: number },
+>(
+  input: StepUpSignatureRequestInput,
+  options: StepUpSignatureRequestOptions<TResponse>
+): Promise<TResponse>;
 
 export const SIGNATURE_OTHER_REASON: "Other";
 export const SIGNATURE_PASSWORD_INPUT_ATTRS: Readonly<{
@@ -992,9 +1130,21 @@ export interface EntityLinkNodeRef {
   siteId?: string | null;
 }
 
-export const EntityLink: DefineComponent<
+export interface ParsedNodeRef {
+  raw: string;
+  masked: boolean;
+  kind: string;
+  kindLabel: string;
+  id: string | null;
+  version: number | null;
+  maskReason: string | null;
+  shortRef: string;
+  displayLabel: string;
+}
+
+export const EntityLink: DefineSlotsComponent<
   {
-    nodeRef?: EntityLinkNodeRef | null;
+    nodeRef?: string | EntityLinkNodeRef | null;
     entityType?: string;
     entityId?: string;
     label?: string;
@@ -1002,9 +1152,49 @@ export const EntityLink: DefineComponent<
     href?: string;
     preventNavigation?: boolean;
     tabular?: boolean;
+    compact?: boolean;
+    showCode?: boolean;
+    onPeek?: (payload: any) => void;
+    onSelect?: (payload: any) => void;
+  },
+  {
+    default?: (props: Record<string, never>) => any;
+  }
+>;
+
+export const ClinicalExplanation: DefineComponent<
+  {
+    explanation?: Record<string, any> | null;
+    fallbackReason?: string;
+    code?: string;
+    compact?: boolean;
+    onPeek?: (payload: any) => void;
   },
   {},
   any
+>;
+
+export const ClinicalGatedAction: DefineSlotsComponent<
+  {
+    permitted?: boolean;
+    explanation?: Record<string, any> | null;
+    reason?: string;
+    code?: string;
+    label?: string;
+    whyLabel?: string;
+    inline?: boolean;
+    defaultExpanded?: boolean;
+    onAction?: () => void;
+    onPeek?: (payload: any) => void;
+  },
+  {
+    default?: (props: {
+      disabled: boolean;
+      permitted: boolean;
+      ariaDisabled?: "true";
+      explanationId?: string;
+    }) => any;
+  }
 >;
 
 export const ClinicalIcon: DefineComponent<
@@ -1015,3 +1205,13 @@ export const ClinicalIcon: DefineComponent<
   {},
   any
 >;
+
+export function parseNodeRef(raw: string): ParsedNodeRef;
+export function stripRawPermissionTokens(text: string): string;
+export function registerEntityPeekHandler(
+  handler: (payload: Record<string, any>) => void
+): () => void;
+export function openEntityPeek(
+  nodeRef: string,
+  context?: Record<string, any>
+): boolean;

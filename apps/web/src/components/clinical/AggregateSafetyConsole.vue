@@ -2096,11 +2096,11 @@ onMounted(() => {
   flex-direction: column;
   gap: 16px;
   background-color: var(--semantic-color-surface);
-  color: var(--primary);
+  color: var(--text-main);
   border-radius: var(--radius-lg, 8px);
   border: 1px solid var(--border);
   padding: 20px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-sm);
 }
 
 /* Header Architecture */
@@ -2123,13 +2123,13 @@ onMounted(() => {
 .console-title {
   font-size: 1.35rem;
   font-weight: 700;
-  color: var(--primary);
+  color: var(--text-main);
   margin: 0;
 }
 
 .badge-regulatory {
-  background-color: var(--semantic-color-indigo-bg);
-  color: var(--semantic-color-indigo-text);
+  background-color: var(--semantic-badge-regulatory-bg);
+  color: var(--semantic-badge-regulatory-text);
   font-size: 0.72rem;
   font-weight: 700;
   padding: 2px 8px;
@@ -2137,6 +2137,7 @@ onMounted(() => {
   align-self: flex-start;
   text-transform: uppercase;
   letter-spacing: 0.02em;
+  border: 1px solid var(--semantic-badge-regulatory-border);
 }
 
 .header-meta-pills {
@@ -2165,7 +2166,7 @@ onMounted(() => {
 
 .status-badge.draft {
   background-color: var(--semantic-color-warning-bg-badge);
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
 }
 .status-badge.approved {
   background-color: var(--semantic-color-success-bg);
@@ -2222,7 +2223,7 @@ onMounted(() => {
 .btn-qppv {
   background-color: var(--semantic-color-success);
   color: var(--semantic-color-surface);
-  box-shadow: 0 2px 4px rgba(22, 163, 74, 0.25);
+  box-shadow: var(--shadow-sm);
 }
 .btn-qppv:hover:not(:disabled) {
   background-color: var(--semantic-color-success);
@@ -2370,7 +2371,7 @@ onMounted(() => {
   border: 1px solid var(--semantic-color-border);
   border-radius: var(--radius-md, 6px);
   padding: 14px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  box-shadow: var(--shadow-sm);
 }
 
 .metric-card.highlight {
@@ -2484,7 +2485,7 @@ onMounted(() => {
 }
 .badge-warning {
   background-color: var(--semantic-color-warning-bg-badge);
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
 }
 .badge-success {
   background-color: var(--semantic-color-success-bg);
@@ -2675,7 +2676,7 @@ onMounted(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(15, 23, 42, 0.65);
+  background-color: var(--semantic-color-backdrop);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2687,7 +2688,7 @@ onMounted(() => {
   border-radius: var(--radius-lg, 8px);
   width: 100%;
   max-width: 560px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-xl);
   overflow: hidden;
 }
 
@@ -2791,7 +2792,7 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-sm);
   transition:
     transform 0.15s ease,
     box-shadow 0.15s ease;
@@ -2799,7 +2800,7 @@ onMounted(() => {
 
 .clock-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-sm);
 }
 
 .clock-card.alert-warning {
@@ -2984,7 +2985,7 @@ onMounted(() => {
   border: 1px solid var(--semantic-color-info-border-accent);
   border-radius: var(--radius-md, 6px);
   padding: 16px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow-sm);
 }
 
 .sim-results-header {

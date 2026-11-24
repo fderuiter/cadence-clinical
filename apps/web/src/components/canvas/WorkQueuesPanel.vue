@@ -134,7 +134,7 @@ import {
   type KernelWorkItem,
   type KernelWorkQueue,
 } from "../../api/kernelApi";
-import { findKernelStudyRef } from "../../canvas/kernelStudy";
+import { seedKernelStudyRef } from "../../canvas/kernelStudy";
 import {
   collectionInstanceRef,
   observationNodeRef,
@@ -305,24 +305,37 @@ let requestSeq = 0;
 async function load() {
   if (!hasWorkQueueService.value) return;
   const seq = ++requestSeq;
+  const code = props.studyCode.trim();
   loading.value = true;
   error.value = "";
   noStudy.value = false;
   queues.value = [];
+  if (!code) {
+    noStudy.value = true;
+    loading.value = false;
+    return;
+  }
   try {
-    const studyRef = await findKernelStudyRef(props.studyCode);
-    if (seq !== requestSeq) return;
-    if (!studyRef) {
-      noStudy.value = true;
-      return;
-    }
-    const page = await kernelApi.listWorkQueues({ within: studyRef });
+    const page = await kernelApi.listWorkQueues({ within: code });
     if (seq === requestSeq) {
-      queues.value = page?.queues ?? [];
+      const nextQueues = page?.queues ?? [];
+      queues.value = nextQueues;
+      for (const q of nextQueues) {
+        const studyRefHint = q.items.find((it) => it.target?.study_ref)?.target
+          ?.study_ref;
+        if (studyRefHint) {
+          seedKernelStudyRef(code, studyRefHint);
+          break;
+        }
+      }
     }
   } catch (err) {
     if (seq === requestSeq) {
-      error.value = err instanceof Error ? err.message : String(err);
+      if ((err as { status?: number | null } | null)?.status === 404) {
+        noStudy.value = true;
+      } else {
+        error.value = err instanceof Error ? err.message : String(err);
+      }
     }
   } finally {
     if (seq === requestSeq) loading.value = false;
@@ -375,7 +388,7 @@ watch(() => props.studyCode, load, { immediate: true });
 
 .work-queues-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
   gap: 12px;
 }
 
@@ -383,6 +396,9 @@ watch(() => props.studyCode, load, { immediate: true });
   display: flex;
   flex-direction: column;
   gap: 10px;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
   padding: 12px 14px;
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -391,19 +407,24 @@ watch(() => props.studyCode, load, { immediate: true });
 
 .work-queue-top {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
   justify-content: space-between;
   gap: 8px;
+  min-width: 0;
 }
 
 .work-queue-title {
   margin: 0;
   font-size: 0.92rem;
+  overflow-wrap: anywhere;
 }
 
 .work-queue-capability {
   display: inline-block;
   margin-top: 2px;
+  max-width: 100%;
+  overflow-wrap: anywhere;
   font-size: 0.75rem;
   color: var(--semantic-color-text-secondary);
 }

@@ -310,27 +310,46 @@ public sealed class ExecutionFormModuleTests
             [],
             "hash-v2",
             "Vital signs");
+        var validDesign = new ProtocolDesign
+        {
+            Title = "Vital Signs Protocol",
+            CollectionSpecs = [new CollectionSpec("cs.vitals", "Vital signs", initial.Items)],
+        };
+        var validDesignJson = ProtocolDesignDocument.Write(validDesign);
         var http = await ContextWithTenantAsync(tenant);
         http.Request.Headers[FormEndpoints.IdempotencyKeyHeader] = "idem-save-1";
-        var records = new StubCollectionInstanceRecords([], [initial, updated]);
+        var records = new StubCollectionInstanceRecords(
+            [],
+            [updated],
+            headers: new Dictionary<CollectionInstanceId, CollectionInstanceHeader>
+            {
+                [initial.CollectionInstanceId] = CollectionInstanceHeader.From(initial),
+            });
         var sender = new StubCommandSender(
             new CollectedValuesState(
                 initial.CollectionInstanceId,
                 2,
-                [new CollectedValueState("sbp", sbpObs, new QuantityValue(124m, "mm[Hg]"), 1, true)]));
+                [new CollectedValueState("sbp", sbpObs, new QuantityValue(124m, "mm[Hg]"), 1, true)]),
+            protocolContentToRead: validDesignJson);
         var request = new SaveFormValuesRequest(
             [new FormValueRequest("sbp", new QuantityValue(124m, "mm[Hg]"), 0, null, null)]);
 
-        var response = await FormEndpoints.SaveAsync(
-            initial.CollectionInstanceId.Value,
-            request,
-            http,
-            records,
-            sender,
-            new FixedChangeReason("Initial vitals entry"),
-            ct,
-            contexts: null,
-            access: new StubReadAccess(true, canSign: true));
+        int protocolReads;
+        Results<Ok<FormSavedResponse>, ProblemHttpResult> response;
+        using (var readScope = ProtocolDesignDocument.MeasureReads())
+        {
+            response = await FormEndpoints.SaveAsync(
+                initial.CollectionInstanceId.Value,
+                request,
+                http,
+                records,
+                sender,
+                new FixedChangeReason("Initial vitals entry"),
+                ct,
+                contexts: null,
+                access: new StubReadAccess(true, canSign: true));
+            protocolReads = readScope.Count;
+        }
 
         var ok = response.Result.Should().BeOfType<Ok<FormSavedResponse>>().Subject;
         ok.Value!.Version.Should().Be(2);
@@ -340,6 +359,11 @@ public sealed class ExecutionFormModuleTests
         ok.Value.Form.Complete.Should().BeTrue();
         ok.Value.Form.CanSign.Should().BeTrue();
         ok.Value.Form.Items.Should().ContainSingle().Which.Revision.Should().Be(1);
+        records.FindHeaderCalls.Should().Be(1, "pre-save authorization resolves EnrollmentId via FindHeaderAsync");
+        records.FindCalls.Should().Be(1, "only the post-save hydrated FormResponse read calls FindAsync");
+        records.LastGoverningDesign.Should().NotBeNull();
+        records.LastGoverningDesign!.Title.Should().Be("Vital Signs Protocol");
+        protocolReads.Should().Be(1, "SaveAsync parses governing protocol content at most once per request");
     }
 
     private static async Task<HttpContext> ContextWithTenantAsync(TenantId tenant, IServiceProvider? services = null)
@@ -411,16 +435,41 @@ public sealed class ExecutionFormModuleTests
 
     private sealed class StubCollectionInstanceRecords(
         IReadOnlyList<CollectionInstanceSummary> summaries,
-        IReadOnlyList<CollectionInstanceRecord>? findQueue = null) : ICollectionInstanceRecords
+        IReadOnlyList<CollectionInstanceRecord>? findQueue = null,
+        IReadOnlyDictionary<CollectionInstanceId, CollectionInstanceHeader>? headers = null) : ICollectionInstanceRecords
     {
         private readonly Queue<CollectionInstanceRecord> _records = new(findQueue ?? []);
         public int FindCalls { get; private set; }
+        public int FindHeaderCalls { get; private set; }
         public int ListCalls { get; private set; }
+        public ProtocolDesign? LastGoverningDesign { get; private set; }
 
-        public Task<CollectionInstanceRecord?> FindAsync(TenantId tenant, CollectionInstanceId instance, CancellationToken cancellationToken)
+        public Task<CollectionInstanceRecord?> FindAsync(TenantId tenant, CollectionInstanceId instance, CancellationToken cancellationToken) =>
+            FindAsync(tenant, instance, governingDesign: null, cancellationToken);
+
+        public Task<CollectionInstanceRecord?> FindAsync(
+            TenantId tenant,
+            CollectionInstanceId instance,
+            ProtocolDesign? governingDesign,
+            CancellationToken cancellationToken = default)
         {
             FindCalls++;
+            LastGoverningDesign = governingDesign;
             return Task.FromResult(_records.Count > 0 ? _records.Dequeue() : null);
+        }
+
+        public Task<CollectionInstanceHeader?> FindHeaderAsync(
+            TenantId tenant,
+            CollectionInstanceId instance,
+            CancellationToken cancellationToken = default)
+        {
+            FindHeaderCalls++;
+            if (headers is not null && headers.TryGetValue(instance, out var header))
+            {
+                return Task.FromResult<CollectionInstanceHeader?>(header);
+            }
+
+            return Task.FromResult(_records.Count > 0 ? CollectionInstanceHeader.From(_records.Peek()) : null);
         }
 
         public Task<IReadOnlyList<CollectionInstanceSummary>> ListForEnrollmentAsync(
@@ -470,14 +519,24 @@ public sealed class ExecutionFormModuleTests
             throw new NotSupportedException();
     }
 
-    private sealed class StubCommandSender(CollectedValuesState saved) : IKernelCommandSender
+    private sealed class StubCommandSender(CollectedValuesState saved, string? protocolContentToRead = null) : IKernelCommandSender
     {
         public Task<CommandResult<TResult>> SendAsync<TResult>(
             ICommand<TResult> command,
             CommandMetadata? metadata = null,
-            CancellationToken cancellationToken = default) =>
-            command is RecordCollectedValues
-                ? Task.FromResult(CommandResult<TResult>.Success((TResult)(object)saved))
-                : throw new NotSupportedException();
+            CancellationToken cancellationToken = default)
+        {
+            if (command is RecordCollectedValues)
+            {
+                if (protocolContentToRead is not null)
+                {
+                    _ = ProtocolDesignDocument.Read(protocolContentToRead);
+                }
+
+                return Task.FromResult(CommandResult<TResult>.Success((TResult)(object)saved));
+            }
+
+            throw new NotSupportedException();
+        }
     }
 }

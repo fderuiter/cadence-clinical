@@ -447,24 +447,125 @@ export function createProtocolDesignDomain(ctx) {
       };
     },
 
-    listProposals({ status, limit } = {}) {
+    listProposals(studyOrOptions = "", maybeOptions = {}) {
+      const hasStudyArg = typeof studyOrOptions === "string";
+      const studyRefOrCode = hasStudyArg ? studyOrOptions : "";
+      const { status, limit } = hasStudyArg
+        ? maybeOptions || {}
+        : studyOrOptions || {};
+      if (studyRefOrCode) {
+        const resolved = ctx.resolveExistingStudy(studyRefOrCode);
+        if (resolved.error) return resolved;
+      }
       let items = [...state.proposals.values()];
-      const normalizedStatus = String(status || "")
-        .trim()
-        .toLowerCase();
-      if (normalizedStatus) {
-        items = items.filter(
-          (item) =>
-            String(item.status || "")
-              .trim()
-              .toLowerCase() === normalizedStatus
-        );
+      if (status) {
+        const upper = String(status).trim().toUpperCase();
+        items = items.filter((p) => {
+          const itemStatus = String(p.status || "")
+            .trim()
+            .toUpperCase();
+          if (upper === "OPEN") {
+            return itemStatus === "OPEN" || itemStatus === "PENDING";
+          }
+          return itemStatus === upper;
+        });
       }
-      const maxItems = Number(limit);
-      if (Number.isFinite(maxItems) && maxItems > 0) {
-        items = items.slice(0, maxItems);
+      const cap = Math.min(Math.max(1, Number(limit) || 50), 200);
+      const sliced = cloneJson(items.slice(0, cap));
+      return studyRefOrCode ? { data: sliced } : sliced;
+    },
+
+    listStudyValidationFindings(
+      studyRefOrCode = "",
+      { stage, statuses = [], severity, dataset, packKey, limit } = {}
+    ) {
+      const resolved = ctx.resolveExistingStudy(studyRefOrCode);
+      if (resolved.error) return resolved;
+      const studyRefUnpinned = String(resolved.study.ref).split("@")[0];
+      const normalizedStatuses = (
+        Array.isArray(statuses) ? statuses : [statuses]
+      )
+        .filter(Boolean)
+        .map((s) => String(s).toUpperCase());
+
+      let matched = (state.validationFindings || []).filter((f) => {
+        if (
+          f.study_ref &&
+          String(f.study_ref).split("@")[0] !== studyRefUnpinned &&
+          f.study_code?.toUpperCase() !== resolved.study.code.toUpperCase()
+        ) {
+          return false;
+        }
+        if (
+          stage &&
+          String(f.stage || "").toUpperCase() !== stage.toUpperCase()
+        )
+          return false;
+        if (
+          normalizedStatuses.length > 0 &&
+          !normalizedStatuses.includes(String(f.status || "").toUpperCase())
+        ) {
+          return false;
+        }
+        if (
+          severity &&
+          String(f.severity || "").toUpperCase() !== severity.toUpperCase()
+        ) {
+          return false;
+        }
+        if (
+          dataset &&
+          String(f.dataset || "").toUpperCase() !== dataset.toUpperCase()
+        ) {
+          return false;
+        }
+        if (packKey && f.pack_key !== packKey) return false;
+        return true;
+      });
+
+      const total = matched.length;
+      if (limit !== undefined && limit !== null && Number(limit) > 0) {
+        matched = matched.slice(0, Math.min(Number(limit), 200));
       }
-      return cloneJson(items);
+      return {
+        data: {
+          total,
+          findings: cloneJson(matched),
+        },
+      };
+    },
+
+    getStudyAttention(studyRefOrCode = "", { limit = 20 } = {}) {
+      const resolved = ctx.resolveExistingStudy(studyRefOrCode);
+      if (resolved.error) return resolved;
+      const cap = Math.min(Math.max(1, Number(limit) || 20), 200);
+      const proposalsRes = methods.listProposals(studyRefOrCode, {
+        status: "Open",
+        limit: cap,
+      });
+      const findingsRes = methods.listStudyValidationFindings(studyRefOrCode, {
+        statuses: ["Open", "Investigating"],
+        limit: cap,
+      });
+      return {
+        data: {
+          study_ref: String(resolved.study.ref).split("@")[0],
+          proposals: proposalsRes.data || [],
+          findings: findingsRes.data?.findings || [],
+        },
+      };
+    },
+
+    listWorkQueues({ within, queue } = {}) {
+      if (within) {
+        const check = ctx.validateScopeOrStudyParam(within);
+        if (check.error) return check;
+      }
+      let queues = cloneJson(state.workQueues || []);
+      if (queue) {
+        queues = queues.filter((q) => q.code === queue);
+      }
+      return { data: { queues } };
     },
 
     getProposal(proposalRef) {

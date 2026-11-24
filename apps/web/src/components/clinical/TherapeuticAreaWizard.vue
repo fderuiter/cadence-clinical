@@ -763,7 +763,7 @@ function synthesizeProtocol() {
   border-radius: 6px;
   padding: 12px 16px;
   margin-bottom: 20px;
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
   font-size: 0.875rem;
 }
 
@@ -790,7 +790,7 @@ function synthesizeProtocol() {
 .btn-retry-save {
   background-color: var(--semantic-color-warning-bg-badge);
   border: 1px solid var(--semantic-color-warning-border-strong);
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
   font-weight: 600;
   padding: 4px 10px;
   border-radius: 4px;
@@ -806,7 +806,7 @@ function synthesizeProtocol() {
 .btn-dismiss-warning {
   background: none;
   border: none;
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
   font-weight: 600;
   cursor: pointer;
   padding: 4px 8px;
@@ -815,13 +815,13 @@ function synthesizeProtocol() {
 }
 
 .btn-dismiss-warning:hover {
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
 }
 
 .header-title-box h3 {
   margin: 0 0 4px 0;
   font-weight: 700;
-  color: var(--primary);
+  color: var(--text-main);
   font-size: 1.25rem;
 }
 
@@ -847,7 +847,7 @@ function synthesizeProtocol() {
 
 .badge-gxp {
   background-color: var(--semantic-color-warning-bg-badge);
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
   padding: 4px 10px;
   border-radius: 4px;
   font-weight: 600;
@@ -887,7 +887,7 @@ function synthesizeProtocol() {
 .ta-card.selected {
   border-color: var(--semantic-color-interactive-primary);
   background-color: var(--semantic-color-info-bg);
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.12);
+  box-shadow: var(--shadow-md);
 }
 
 .ta-card-header {

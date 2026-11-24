@@ -54,11 +54,16 @@ internal sealed class OpenCollectionInstanceHandler : ICommandHandler<OpenCollec
             return CollectionErrors.CollectedAtInvalid;
         }
 
-        if (await LocksInForce.AnyAsync(
-            context.Work, LockScopes.Covering(enrollment.StudyId, enrollment.StudySiteId, enrollment.Id), LocksInForce.DenyingWrites, cancellationToken)
-            .ConfigureAwait(false))
+        if (await LocksInForce.RefusalAsync(
+            context.Work,
+            LockScopes.Covering(enrollment.StudyId, enrollment.StudySiteId, enrollment.Id),
+            LocksInForce.DenyingWrites,
+            ObservationErrors.Locked,
+            nameof(OpenCollectionInstance),
+            NodeRef.For(enrollment.Id, enrollment.VersionIndex),
+            cancellationToken).ConfigureAwait(false) is { } locked)
         {
-            return ObservationErrors.Locked;
+            return locked;
         }
 
         if (await CaptureConditions.RefusalAsync(context.Work, enrollment.Id, nameof(OpenCollectionInstance), cancellationToken).ConfigureAwait(false) is { } refused)
@@ -155,13 +160,16 @@ internal sealed class RecordCollectedValuesHandler(IConceptRegistry? concepts = 
         }
 
         var members = values.Select(v => instance.MemberFor(v.ItemId)?.ObservationId).OfType<ObservationId>().ToList();
-        if (await LocksInForce.AnyAsync(
+        if (await LocksInForce.RefusalAsync(
             work,
             LockScopes.Covering(instance.StudyId, instance.StudySiteId, instance.EnrollmentId, instance.Id, members),
             LocksInForce.DenyingWrites,
-            cancellationToken).ConfigureAwait(false))
+            ObservationErrors.Locked,
+            nameof(RecordCollectedValues),
+            NodeRef.For(instance.Id, instance.VersionIndex),
+            cancellationToken).ConfigureAwait(false) is { } locked)
         {
-            return ObservationErrors.Locked;
+            return locked;
         }
 
         // A save that only corrects values captured before a withdrawal goes on; one with a new value is new capture.
@@ -660,26 +668,32 @@ internal sealed class RecordUnaskedCollectionItemHandler : ICommandHandler<Recor
         {
             var existing = await work.FindAsync<Observation>(existingMember.ObservationId, cancellationToken).ConfigureAwait(false)
                 ?? throw new InvalidOperationException($"Member observation {existingMember.ObservationId} of {instance.Id} does not exist.");
-            if (await LocksInForce.AnyAsync(
+            if (await LocksInForce.RefusalAsync(
                 work,
                 LockScopes.Covering(instance.StudyId, instance.StudySiteId, instance.EnrollmentId, existing.Id, instance.Id),
                 LocksInForce.DenyingAssertions,
-                cancellationToken).ConfigureAwait(false))
+                AssertionErrors.Locked,
+                nameof(RecordUnaskedCollectionItem),
+                NodeRef.For(existing.Id, existing.VersionIndex),
+                cancellationToken).ConfigureAwait(false) is { } existingLocked)
             {
-                return AssertionErrors.Locked;
+                return existingLocked;
             }
 
             return CommandResult<CollectedValueState>.Success(
                 new CollectedValueState(command.ItemId, existing.Id, existing.Value, existing.Revision, Changed: false));
         }
 
-        if (await LocksInForce.AnyAsync(
+        if (await LocksInForce.RefusalAsync(
             work,
             LockScopes.Covering(instance.StudyId, instance.StudySiteId, instance.EnrollmentId, instance.Id, []),
             LocksInForce.DenyingAssertions,
-            cancellationToken).ConfigureAwait(false))
+            AssertionErrors.Locked,
+            nameof(RecordUnaskedCollectionItem),
+            NodeRef.For(instance.Id, instance.VersionIndex),
+            cancellationToken).ConfigureAwait(false) is { } instanceLocked)
         {
-            return AssertionErrors.Locked;
+            return instanceLocked;
         }
 
         if (command.ObservationId is { } chosen && await work.ExistsAsync<Observation>(chosen, cancellationToken).ConfigureAwait(false))

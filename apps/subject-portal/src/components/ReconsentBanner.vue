@@ -15,7 +15,7 @@
       align-items: center;
       justify-content: space-between;
       gap: 16px;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      box-shadow: var(--shadow-md);
     "
     role="alert"
   >
@@ -67,7 +67,7 @@
           max-width: 100%;
           background-color: var(--semantic-color-warning-action);
           border: 1px solid var(--semantic-color-warning-action-border);
-          color: var(--semantic-color-surface);
+          color: var(--semantic-color-text-on-solid);
         "
         @click="openReconsentModal"
       >

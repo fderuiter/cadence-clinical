@@ -4,7 +4,7 @@
 
 .DESCRIPTION
     Interactive step-by-step terminal wizard guiding developers through .NET 10 SDK verification,
-    global CLI tools installation, HTTPS development certificates, Docker datastores, and solution build.
+    pinned local CLI tools restoration, HTTPS development certificates, Docker datastores, and solution build.
     Requirements: PRD-SYS-053, ADR-2233
 #>
 
@@ -78,19 +78,21 @@ if (-not $sdkFound) {
 }
 
 # ------------------------------------------------------------------------------
-# Stage 2: Global CLI Tools
+# Stage 2: Local CLI Tools
 # ------------------------------------------------------------------------------
-Invoke-Stage -Number 2 -Total 6 -Title "Global Developer Tools" -Description "Ensuring required dotnet CLI tools are installed..."
+Invoke-Stage -Number 2 -Total 6 -Title "Local Developer Tools" -Description "Restoring pinned local .NET CLI tools from .config/dotnet-tools.json..."
 
-$tools = @("dotnet-ef", "dotnet-format")
-foreach ($tool in $tools) {
-    Write-Host "  Checking $tool..." -ForegroundColor Gray
-    try {
-        & dotnet tool update --global $tool 2>$null
-        Write-Host "  [SUCCESS] $tool is configured." -ForegroundColor Green
-    } catch {
-        Write-Host "  [INFO] Tool configuration note: $_" -ForegroundColor DarkGray
+$repoRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
+Push-Location $repoRoot
+try {
+    & dotnet tool restore
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "  [ERROR] dotnet tool restore failed with exit code $LASTEXITCODE. Aborting onboarding." -ForegroundColor Red
+        exit $LASTEXITCODE
     }
+    Write-Host "  [SUCCESS] Local .NET tools restored." -ForegroundColor Green
+} finally {
+    Pop-Location
 }
 
 # ------------------------------------------------------------------------------

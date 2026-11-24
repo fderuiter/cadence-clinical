@@ -18,8 +18,10 @@ const EXPECTED_SHARED_COMPONENTS = [
   "ClinicalDataTable",
   "ClinicalDrawer",
   "ClinicalDropzone",
+  "ClinicalExplanation",
   "ClinicalFieldLayout",
   "ClinicalFormField",
+  "ClinicalGatedAction",
   "ClinicalIcon",
   "ClinicalIconButton",
   "ClinicalInput",
@@ -199,7 +201,7 @@ function resolveCssColorExpr(expr, themeMap) {
 
 describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", () => {
   describe("Requirement 1: Complete Root Package Exports & Type Definitions", () => {
-    it("exposes all 28 shared Vue components from root index.js with zero unexported SFCs", () => {
+    it("exposes all 30 shared Vue components from root index.js with zero unexported SFCs", () => {
       const discoveredVueNames = walkFiles(path.join(uiDir, "src/components"), [
         ".vue",
       ])
@@ -209,7 +211,7 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       expect(discoveredVueNames).toEqual(
         [...EXPECTED_SHARED_COMPONENTS].sort()
       );
-      expect(EXPECTED_SHARED_COMPONENTS).toHaveLength(28);
+      expect(EXPECTED_SHARED_COMPONENTS).toHaveLength(30);
       for (const name of EXPECTED_SHARED_COMPONENTS) {
         expect(rootUi[name], `root index.js missing ${name}`).toBeDefined();
       }
@@ -229,7 +231,7 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       }
     });
 
-    it("declares complete TypeScript definitions for all 28 components and helpers in index.d.ts", () => {
+    it("declares complete TypeScript definitions for all 30 components and helpers in index.d.ts", () => {
       const dts = fs.readFileSync(path.join(uiDir, "index.d.ts"), "utf-8");
       for (const componentName of EXPECTED_SHARED_COMPONENTS) {
         expect(dts).toMatch(
@@ -382,7 +384,10 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
         "justify-content": "flex-end",
       });
       expect(tokensCss).toMatch(
-        /:where\(\[role="button"\],\s*\[tabindex\]\):focus-visible\s*\{/
+        /:where\(\[role="button"\],\s*\[tabindex\]:not\(\[tabindex="-1"\]\)\):focus-visible\s*\{/
+      );
+      expect(tokensCss).toMatch(
+        /:where\(\s*:is\(\s*button,\s*\[role="button"\],\s*summary,/
       );
       expect(responsiveCss).toMatch(
         /\.touch-target,\s*\.min-touch-target\s*\{/
@@ -861,9 +866,16 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       expect(btnPrimary).not.toBeNull();
       const btnPrimaryHover = parseRuleProps(
         tokensCss,
-        /\.can-hover\s+\.btn-primary:hover,\s*\.can-hover\s+\.btn\.btn-primary:hover\s*\{/
+        /\.can-hover\s+\.btn-primary:not\(:disabled\):not\(\[aria-disabled="true"\]\):hover,\s*\.can-hover\s+\.btn\.btn-primary:not\(:disabled\):not\(\[aria-disabled="true"\]\):hover\s*\{/
       );
       expect(btnPrimaryHover).not.toBeNull();
+      const btnDisabled = parseRuleProps(
+        tokensCss,
+        /\.btn:disabled,\s*\.btn\[aria-disabled="true"\],\s*button\.btn:disabled,\s*button\.btn\[aria-disabled="true"\]\s*\{/
+      );
+      expect(btnDisabled).toMatchObject({
+        cursor: "not-allowed",
+      });
 
       for (const [mode, map] of [
         ["light", lightTheme],
@@ -1113,11 +1125,14 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
         ...walkFiles(portalSrcDir, [".vue", ".css", ".js", ".ts"]),
       ];
 
-      const tableVueFiles = [
+      const allVueFiles = [
         ...walkFiles(path.join(uiDir, "src"), [".vue"]),
         ...appVueFiles,
-      ].filter((file) => /<table[\s>]/.test(fs.readFileSync(file, "utf-8")));
-      expect(tableVueFiles.length + 2).toBeGreaterThanOrEqual(52);
+      ];
+      const tabularVueFiles = allVueFiles.filter((file) =>
+        /<(?:table|ClinicalDataTable)[\s>]/.test(fs.readFileSync(file, "utf-8"))
+      );
+      expect(tabularVueFiles.length + 2).toBeGreaterThanOrEqual(52);
 
       // Scan ALL frontend files (not just <table> files) for forbidden normal overrides
       const overridingTabularNums = allFrontendFiles
@@ -2033,6 +2048,50 @@ const open = () => {};
       }
     });
 
+    it("enforces minmax(0, 1fr) responsive grid tracks, nested fieldset span resets, relative scroll wrappers, and clinical-input shrink safety (ADR-2663)", () => {
+      const responsiveCss = fs.readFileSync(
+        path.join(uiDir, "responsive.css"),
+        "utf8"
+      );
+      const cleanResponsive = responsiveCss.replace(/\/\*[\s\S]*?\*\//g, "");
+
+      expect(cleanResponsive).toMatch(
+        /\.responsive-grid\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/
+      );
+      expect(cleanResponsive).toMatch(
+        /\.grid-layout-responsive\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/
+      );
+      expect(cleanResponsive).toMatch(
+        /\.grid-layout-responsive\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)\s+minmax\(0,\s*2fr\)/
+      );
+      expect(cleanResponsive).toMatch(
+        /\.grid-2-responsive\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/
+      );
+      expect(cleanResponsive).toMatch(
+        /\.grid-asymmetric-responsive\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/
+      );
+      expect(cleanResponsive).toMatch(
+        /\.grid-asymmetric-responsive\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)\s+minmax\(0,\s*1\.2fr\)/
+      );
+      expect(cleanResponsive).toMatch(
+        /@media\s*\(max-width:\s*1023px\)\s*\{\s*\.responsive-grid\s*>\s*\*,\s*\.responsive-grid\s+fieldset\s*>\s*\*\s*\{\s*grid-column:\s*span\s+1\s*\/\s*span\s+1\s*!important;/
+      );
+      expect(cleanResponsive).toMatch(
+        /\.scrollable-table-wrapper\s*\{[^}]*position:\s*relative;/
+      );
+
+      expect(tokensCss).toMatch(
+        /\.clinical-input,\s*\.clinical-radio-grid\s*\{[^}]*min-width:\s*0;/
+      );
+      expect(tokensCss).toMatch(
+        /\.clinical-input\s+\.input-wrapper\s*\{[^}]*min-width:\s*0;/
+      );
+      expect(tokensCss).toMatch(/\.query-flag\s*\{\s*flex-shrink:\s*0;\s*\}/);
+      expect(tokensCss).toMatch(
+        /\.clinical-input\s+\.clinical-input-control\s*\{[^}]*min-width:\s*0;/
+      );
+    });
+
     it("enforces custom-vue/no-unscoped-clinical-tabs-css against unscoped list-class, tab-class, and active-tab-class selectors while permitting :deep(...) and variants", async () => {
       const { ESLint } = await import("eslint");
       const eslint = new ESLint({
@@ -2122,6 +2181,292 @@ const tabs = [{ id: "a", label: "Alpha" }];
           (m) => m.ruleId === "custom-vue/no-unscoped-clinical-tabs-css"
         )
       ).toEqual([]);
+    });
+  });
+
+  describe("Requirement 10: Centralized CSS States, Live Clinical Hub Migrations & AST Ratchet Gates (ADR-2673)", () => {
+    const MIGRATED_CLINICAL_HUB_FILES = [
+      path.join(webSrcDir, "components/canvas/ParticipantsSection.vue"),
+      path.join(webSrcDir, "components/canvas/SitesSection.vue"),
+      path.join(webSrcDir, "components/canvas/AddParticipantForm.vue"),
+      path.join(webSrcDir, "components/canvas/ProtocolVersionsSection.vue"),
+      path.join(webSrcDir, "components/canvas/LocksSection.vue"),
+      path.join(webSrcDir, "components/canvas/QueriesSection.vue"),
+      path.join(webSrcDir, "components/clinical/CtmsGreenlightSection.vue"),
+      path.join(webSrcDir, "components/clinical/CtmsMilestonesSection.vue"),
+      path.join(webSrcDir, "components/clinical/CtmsMonitoringSection.vue"),
+      path.join(webSrcDir, "components/clinical/CtmsDelegationSection.vue"),
+      path.join(webSrcDir, "components/clinical/RtsmSupplySection.vue"),
+      path.join(webSrcDir, "components/clinical/SiteActivationPanel.vue"),
+      path.join(
+        webSrcDir,
+        "components/clinical/BulkIpKitReconciliationDrawer.vue"
+      ),
+      path.join(webSrcDir, "components/etmf/CraQcQueue.vue"),
+      path.join(webSrcDir, "components/etmf/BatchUploadDrawer.vue"),
+      path.join(webSrcDir, "views/DocumentsHubView.vue"),
+      path.join(webSrcDir, "views/DocumentManagerView.vue"),
+      path.join(webSrcDir, "views/TicketsView.vue"),
+      path.join(webSrcDir, "components/tickets/TicketCreateModal.vue"),
+      path.join(webSrcDir, "components/tickets/TicketSignModal.vue"),
+      path.join(webSrcDir, "components/tickets/TicketDetailDrawer.vue"),
+      path.join(portalSrcDir, "views/ComplianceView.vue"),
+    ];
+
+    it("migrates live Canvas, CTMS, eTMF, Documents, Tickets, and Compliance views onto ClinicalDataTable / ClinicalInput / ClinicalFieldLayout with zero raw tables", () => {
+      for (const fullPath of MIGRATED_CLINICAL_HUB_FILES) {
+        const rel = path.relative(repoRoot, fullPath);
+        const content = fs.readFileSync(fullPath, "utf-8");
+        expect(
+          /\b(?:ClinicalDataTable|ClinicalFieldLayout|ClinicalInput)\b/.test(
+            content
+          ),
+          `${rel} must adopt ClinicalDataTable, ClinicalFieldLayout, or ClinicalInput from packages/ui`
+        ).toBe(true);
+        const templateOnly =
+          content.match(/<template\b[^>]*>([\s\S]*?)<\/template>/i)?.[1] || "";
+        expect(
+          /<table\b/i.test(templateOnly),
+          `${rel} must not render raw <table> markup`
+        ).toBe(false);
+      }
+    });
+
+    it("enforces subject-portal focus outline lint, custom-vue/no-raw-clinical-table, and custom-vue/no-unguarded-button-state in ESLint", async () => {
+      const { ESLint } = await import("eslint");
+      const eslint = new ESLint({
+        cwd: repoRoot,
+        overrideConfigFile: path.join(repoRoot, "eslint.config.mjs"),
+      });
+
+      // 1. Subject portal focus lint rejects bare outline: none and accepts :focus:not(:focus-visible)
+      const [portalBadCss] = await eslint.lintText(
+        `.global-drawer {\n  outline: none;\n}\n`,
+        { filePath: path.join(portalSrcDir, "__SyntheticPortalBad.css") }
+      );
+      expect(
+        portalBadCss.messages.filter(
+          (m) => m.ruleId === "custom-vue/no-suppressed-focus-outline"
+        )
+      ).toHaveLength(1);
+
+      const [portalGoodCss] = await eslint.lintText(
+        `.global-drawer:focus:not(:focus-visible),\nh2[tabindex="-1"]:focus-visible {\n  outline: none;\n}\n`,
+        { filePath: path.join(portalSrcDir, "__SyntheticPortalGood.css") }
+      );
+      expect(
+        portalGoodCss.messages.filter(
+          (m) => m.ruleId === "custom-vue/no-suppressed-focus-outline"
+        )
+      ).toEqual([]);
+
+      // 2. no-raw-clinical-table blocks raw <table> in migrated hubs while exempting 2D clinical matrices
+      const rawTableSfc = `<template>
+  <table>
+    <thead><tr><th scope="col">ID</th></tr></thead>
+    <tbody><tr><td>1</td></tr></tbody>
+  </table>
+</template>
+`;
+      const [migratedTableViolation] = await eslint.lintText(rawTableSfc, {
+        filePath: path.join(webSrcDir, "components/canvas/SitesSection.vue"),
+      });
+      expect(
+        migratedTableViolation.messages.filter(
+          (m) => m.ruleId === "custom-vue/no-raw-clinical-table"
+        )
+      ).toHaveLength(1);
+
+      const [portalTableViolation] = await eslint.lintText(rawTableSfc, {
+        filePath: path.join(portalSrcDir, "views/ComplianceView.vue"),
+      });
+      expect(
+        portalTableViolation.messages.filter(
+          (m) => m.ruleId === "custom-vue/no-raw-clinical-table"
+        )
+      ).toHaveLength(1);
+
+      const [exemptMatrixResult] = await eslint.lintText(rawTableSfc, {
+        filePath: path.join(
+          webSrcDir,
+          "components/clinical/ClinicalSoAMatrix.vue"
+        ),
+      });
+      expect(
+        exemptMatrixResult.messages.filter(
+          (m) => m.ruleId === "custom-vue/no-raw-clinical-table"
+        )
+      ).toEqual([]);
+
+      // 3. no-unguarded-button-state flags untyped <button> and unguarded .btn*:hover while passing guarded buttons
+      const [unguardedBtnResult] = await eslint.lintText(
+        `<template>
+  <button class="btn-submit" @click="save">Save</button>
+</template>
+<script setup>
+const save = () => {};
+</script>
+<style scoped>
+.btn-submit:hover {
+  opacity: 0.9;
+}
+</style>
+`,
+        {
+          filePath: path.join(webSrcDir, "views/__SyntheticUnguardedBtn.vue"),
+        }
+      );
+      const btnViolations = unguardedBtnResult.messages.filter(
+        (m) => m.ruleId === "custom-vue/no-unguarded-button-state"
+      );
+      expect(btnViolations).toHaveLength(2);
+
+      const [guardedBtnResult] = await eslint.lintText(
+        `<template>
+  <button type="button" class="btn-submit" @click="save">Save</button>
+</template>
+<script setup>
+const save = () => {};
+</script>
+<style scoped>
+.btn-submit:not(:disabled):hover {
+  opacity: 0.9;
+}
+</style>
+`,
+        {
+          filePath: path.join(webSrcDir, "views/__SyntheticGuardedBtn.vue"),
+        }
+      );
+      expect(
+        guardedBtnResult.messages.filter(
+          (m) => m.ruleId === "custom-vue/no-unguarded-button-state"
+        )
+      ).toEqual([]);
+    });
+  });
+
+  describe("Requirement 11: Semantic Role Separation, Workflow/Regulatory Badges & Zero Hardcoded Color Literals (ADR-2675)", () => {
+    const tokensCss = fs.readFileSync(path.join(uiDir, "tokens.css"), "utf-8");
+    const lightTheme = parseCssBlockVars(tokensCss, /:root\s*\{/);
+    const darkTheme = {
+      ...lightTheme,
+      ...parseCssBlockVars(tokensCss, /:root\[data-theme="dark"\][\s\S]*?\{/),
+    };
+
+    it("separates neutral primary ink (--text-main) from interactive brand blue (--primary) on AppShell, StudyCanvasView, and Subject Portal root containers", () => {
+      const appShell = fs.readFileSync(
+        path.join(webSrcDir, "components/AppShell.vue"),
+        "utf-8"
+      );
+      const studyCanvas = fs.readFileSync(
+        path.join(webSrcDir, "views/StudyCanvasView.vue"),
+        "utf-8"
+      );
+      const portalStyle = fs.readFileSync(
+        path.join(portalSrcDir, "style.css"),
+        "utf-8"
+      );
+
+      const appShellRule = parseRuleProps(appShell, /\.app-shell\s*\{/);
+      expect(appShellRule).not.toBeNull();
+      expect(appShellRule.color).toBe("var(--text-main)");
+
+      const canvasRule = parseRuleProps(studyCanvas, /\.canvas\s*\{/);
+      expect(canvasRule).not.toBeNull();
+      expect(canvasRule.color).toBe("var(--text-main)");
+
+      expect(portalStyle).toMatch(
+        /h1,\s*h2,\s*h3,\s*h4\s*\{[^}]*color:\s*var\(--text-main\)/s
+      );
+    });
+
+    it("provides paired >= 4.5:1 light and dark non-AI workflow and regulatory badge modifiers (.clinical-badge--candidate, --in-progress, --regulatory)", () => {
+      for (const mod of ["candidate", "in-progress", "regulatory"]) {
+        const rule = parseRuleProps(
+          tokensCss,
+          new RegExp(`\\.clinical-badge--${mod}\\s*\\{`)
+        );
+        expect(rule, `Missing .clinical-badge--${mod}`).not.toBeNull();
+        for (const [mode, map] of [
+          ["light", lightTheme],
+          ["dark", darkTheme],
+        ]) {
+          const fg = resolveCssColorExpr(rule.color, map);
+          const bg = resolveCssColorExpr(rule["background-color"], map);
+          const ratio = contrastRatio(fg, bg);
+          expect(
+            ratio,
+            `.clinical-badge--${mod} (${mode}): ${fg} on ${bg} = ${ratio.toFixed(2)}:1`
+          ).toBeGreaterThanOrEqual(4.5);
+        }
+      }
+    });
+
+    it("maintains zero hardcoded #hex, rgb(), rgba(), hsl(), or hsla() color literals across packages/ui/src, apps/web/src, and apps/subject-portal/src", () => {
+      const sourceFiles = [
+        path.join(uiDir, "index.js"),
+        ...walkFiles(path.join(uiDir, "src"), [".vue", ".js", ".ts", ".css"]),
+        ...walkFiles(webSrcDir, [".vue", ".js", ".ts", ".css"]),
+        ...walkFiles(portalSrcDir, [".vue", ".js", ".ts", ".css"]),
+      ];
+
+      const extractScannableSegments = (filePath, raw) => {
+        if (filePath.endsWith(".css")) {
+          return [raw.replace(/\/\*[\s\S]*?\*\//g, "")];
+        }
+        if (filePath.endsWith(".vue")) {
+          const segments = [];
+          for (const m of raw.matchAll(
+            /<script\b[^>]*>([\s\S]*?)<\/script>/gi
+          )) {
+            segments.push(
+              m[1]
+                .replace(/\/\*[\s\S]*?\*\//g, "")
+                .replace(/(^|[^:])\/\/.*$/gm, "$1")
+            );
+          }
+          for (const m of raw.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/gi)) {
+            segments.push(m[1].replace(/\/\*[\s\S]*?\*\//g, ""));
+          }
+          const tplMatch = raw.match(/<template\b[^>]*>([\s\S]*)<\/template>/i);
+          if (tplMatch) {
+            const tpl = tplMatch[1].replace(/<!--[\s\S]*?-->/g, "");
+            for (const tag of tpl.matchAll(/<[a-zA-Z][^>]*>/g)) {
+              segments.push(tag[0]);
+            }
+          }
+          return segments;
+        }
+        return [
+          raw
+            .replace(/\/\*[\s\S]*?\*\//g, "")
+            .replace(/(^|[^:])\/\/.*$/gm, "$1"),
+        ];
+      };
+
+      const violations = [];
+      for (const filePath of sourceFiles) {
+        const raw = fs.readFileSync(filePath, "utf-8");
+        for (const content of extractScannableSegments(filePath, raw)) {
+          if (/(?:rgba?|hsla?)\s*\(/i.test(content)) {
+            violations.push(
+              `${path.relative(repoRoot, filePath)}: rgb/hsl function`
+            );
+          }
+          for (const m of content.matchAll(
+            /#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})(?![0-9a-zA-Z_-])/g
+          )) {
+            const idx = m.index ?? 0;
+            const prevChar = idx > 0 ? content[idx - 1] : "";
+            if (/[0-9a-zA-Z_$/-]/.test(prevChar) || prevChar === "&") {
+              continue;
+            }
+            violations.push(`${path.relative(repoRoot, filePath)}: ${m[0]}`);
+          }
+        }
+      }
+      expect(violations).toEqual([]);
     });
   });
 });

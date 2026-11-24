@@ -91,9 +91,14 @@ public sealed class SubjectRouteAuthorityTests(ExecutionPostgresApiFactory facto
     {
         factory.SkipIfUnavailable();
         string subject = await SeedAsync(SubjectState.Screening);
-        using var client = factory.CreateSignedClient(Caller("crc", "crc"));
+        var caller = Caller("crc", "crc");
+        string path = $"/api/v1/execution/subjects/{subject}/state";
+        using var client = factory.CreateSignedClient(caller with
+        {
+            SigToken = TestSecurityContext.CreateSigToken(caller.UserId, path, "execution.subject.withdraw", [.. caller.Roles]),
+        });
 
-        var state = await client.PatchAsJsonAsync($"/api/v1/execution/subjects/{subject}/state", new { status = "WITHDRAWN" }, Ct);
+        var state = await client.PatchAsJsonAsync(path, new { status = "WITHDRAWN" }, Ct);
 
         state.StatusCode.Should().Be(HttpStatusCode.OK, await state.Content.ReadAsStringAsync(Ct));
         (await ReadSubjectAsync(subject)).Status.Should().Be(SubjectState.Withdrawn);
@@ -135,9 +140,14 @@ public sealed class SubjectRouteAuthorityTests(ExecutionPostgresApiFactory facto
     {
         factory.SkipIfUnavailable();
         string subject = await SeedAsync(SubjectState.Randomized);
-        using var client = factory.CreateSignedClient(Caller($"no-unblind-{role}", role));
+        var caller = Caller($"no-unblind-{role}", role);
+        string path = $"/api/v1/execution/subjects/{subject}/state";
+        using var client = factory.CreateSignedClient(caller with
+        {
+            SigToken = TestSecurityContext.CreateSigToken(caller.UserId, path, "execution.subject.unblind", [.. caller.Roles]),
+        });
 
-        var state = await client.PatchAsJsonAsync($"/api/v1/execution/subjects/{subject}/state", new { status = "UNBLINDED" }, Ct);
+        var state = await client.PatchAsJsonAsync(path, new { status = "UNBLINDED" }, Ct);
 
         state.StatusCode.Should().Be(HttpStatusCode.Forbidden);
         (await state.Content.ReadAsStringAsync(Ct)).Should().Contain("UNAUTHORIZED_UNBLIND_ROLE");
@@ -171,9 +181,13 @@ public sealed class SubjectRouteAuthorityTests(ExecutionPostgresApiFactory facto
         factory.SkipIfUnavailable();
         string subject = await SeedAsync(SubjectState.Randomized);
         var unblinder = Caller($"unblinder-{role}", role);
-        using var client = factory.CreateSignedClient(unblinder);
+        string path = $"/api/v1/execution/subjects/{subject}/state";
+        using var client = factory.CreateSignedClient(unblinder with
+        {
+            SigToken = TestSecurityContext.CreateSigToken(unblinder.UserId, path, "execution.subject.unblind", [.. unblinder.Roles]),
+        });
 
-        var state = await client.PatchAsJsonAsync($"/api/v1/execution/subjects/{subject}/state", new { status = "UNBLINDED" }, Ct);
+        var state = await client.PatchAsJsonAsync(path, new { status = "UNBLINDED" }, Ct);
 
         state.StatusCode.Should().Be(HttpStatusCode.OK, await state.Content.ReadAsStringAsync(Ct));
         var stored = await ReadSubjectAsync(subject);
@@ -202,9 +216,15 @@ public sealed class SubjectRouteAuthorityTests(ExecutionPostgresApiFactory facto
     {
         factory.SkipIfUnavailable();
         string subject = await SeedAsync(SubjectState.Randomized);
-        using var client = factory.CreateSignedClient(Caller("unblinder-short", "Principal Investigator") with { ChangeReason = "SAE" });
+        var caller = Caller("unblinder-short", "Principal Investigator");
+        string path = $"/api/v1/execution/subjects/{subject}/state";
+        using var client = factory.CreateSignedClient(caller with
+        {
+            ChangeReason = "Acute SAE clinical review",
+            SigToken = TestSecurityContext.CreateSigToken(caller.UserId, path, "execution.subject.unblind", [.. caller.Roles]),
+        });
 
-        var state = await client.PatchAsJsonAsync($"/api/v1/execution/subjects/{subject}/state", new { status = "UNBLINDED" }, Ct);
+        var state = await client.PatchAsJsonAsync(path, new { status = "UNBLINDED" }, Ct);
 
         state.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         (await state.Content.ReadAsStringAsync(Ct)).Should().Contain("UNBLINDING_REASON_TOO_SHORT");
@@ -243,6 +263,83 @@ public sealed class SubjectRouteAuthorityTests(ExecutionPostgresApiFactory facto
         body.RootElement.TryGetProperty("treatment_group", out _).Should().BeFalse();
     }
 
+    [Fact]
+    [GxPRequirement("PRD-SUB-003")]
+    public async Task UnblindedStatistician_ListsCountsAndInspectsAllocatedSubjects_WhileDeniedCgtCustodyReads_AndTrialCoordinatorReadsCgt()
+    {
+        factory.SkipIfUnavailable();
+        string kitNumber = $"KIT-{Guid.NewGuid().ToString("N")[..8]}";
+        (string studyCode, string subjectCode) = await SeedAllocatedWithStudyAndKitAsync(kitNumber);
+
+        var statisticianIdentity = Caller("unblinded-stat", RoleNormalization.ROLE_UNBLINDED_STATISTICIAN) with
+        {
+            StudyIds = [studyCode],
+            UnblindedAccess = true,
+        };
+        using var statistician = factory.CreateSignedClient(statisticianIdentity);
+
+        using var listDoc = await ReadAsync(statistician, $"/api/v1/execution/subjects?study_id={studyCode}");
+        listDoc.RootElement.GetProperty("total").GetInt32().Should().Be(1);
+        listDoc.RootElement.GetProperty("items")[0].GetProperty("subject_id").GetString().Should().Be(subjectCode);
+
+        using var countsDoc = await ReadAsync(statistician, $"/api/v1/execution/subjects/counts?study_id={studyCode}");
+        countsDoc.RootElement.GetProperty("total").GetInt32().Should().Be(1);
+        countsDoc.RootElement.GetProperty("counts").GetProperty("RANDOMIZED").GetInt32().Should().Be(1);
+
+        using var detailDoc = await ReadAsync(statistician, $"/api/v1/execution/subjects/{subjectCode}");
+        detailDoc.RootElement.GetProperty("treatment_group").GetString().Should().Be(Arm);
+        detailDoc.RootElement.GetProperty("investigational_product_id").GetString().Should().Be(kitNumber);
+
+        // Blinded callers remain strictly blinded under ADR-2640.
+        foreach (string blindedRole in new[] { "crc", "Principal Investigator", "sponsor_dm" })
+        {
+            var blindedIdentity = Caller($"blinded-{blindedRole}", blindedRole) with { StudyIds = [studyCode] };
+            using var blindedClient = factory.CreateSignedClient(blindedIdentity);
+            using var blindedDetail = await ReadAsync(blindedClient, $"/api/v1/execution/subjects/{subjectCode}");
+            blindedDetail.RootElement.GetProperty("treatment_group").ValueKind.Should().Be(JsonValueKind.Null);
+            blindedDetail.RootElement.GetProperty("investigational_product_id").ValueKind.Should().Be(JsonValueKind.Null);
+        }
+
+        // Unblinded statistician lacks cgt_chain_of_custody:read and receives 403 on CGT custody endpoints.
+        foreach (string cgtPath in new[]
+        {
+            $"/api/v1/execution/rtsm/cgt/certificates/{studyCode}",
+            $"/api/v1/execution/rtsm/cgt/reconciliations/{studyCode}",
+            $"/api/v1/execution/rtsm/cgt/chain-of-custody/{studyCode}/{subjectCode}",
+        })
+        {
+            using var cgtDenied = await statistician.GetAsync(cgtPath, Ct);
+            cgtDenied.StatusCode.Should().Be(HttpStatusCode.Forbidden, cgtPath);
+        }
+
+        // Under ADR-2662, non-trial trial_coordinator callers are site-bound and read CGT custody for their assigned site,
+        // while unconfigured SiteIds fail closed with 403 FORBIDDEN_SCOPE.
+        var unscopedNonTrialCoordinator = Caller("trial-coord-unscoped", RoleNormalization.ROLE_TRIAL_COORDINATOR) with
+        {
+            StudyIds = [studyCode],
+        };
+        using var unscopedCoordinatorClient = factory.CreateSignedClient(unscopedNonTrialCoordinator);
+        using var unscopedCgtDenied = await unscopedCoordinatorClient.GetAsync($"/api/v1/execution/rtsm/cgt/certificates/{studyCode}", Ct);
+        unscopedCgtDenied.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        var trialCoordinatorIdentity = Caller("trial-coord", RoleNormalization.ROLE_TRIAL_COORDINATOR) with
+        {
+            StudyIds = [studyCode],
+            SiteIds = ["SITE-01"],
+        };
+        using var trialCoordinator = factory.CreateSignedClient(trialCoordinatorIdentity);
+        foreach (string cgtPath in new[]
+        {
+            $"/api/v1/execution/rtsm/cgt/certificates/{studyCode}",
+            $"/api/v1/execution/rtsm/cgt/reconciliations/{studyCode}",
+            $"/api/v1/execution/rtsm/cgt/chain-of-custody/{studyCode}/{subjectCode}",
+        })
+        {
+            using var cgtAllowed = await trialCoordinator.GetAsync(cgtPath, Ct);
+            cgtAllowed.StatusCode.Should().Be(HttpStatusCode.OK, $"{cgtPath}: {await cgtAllowed.Content.ReadAsStringAsync(Ct)}");
+        }
+    }
+
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
     private GatewayIdentity Caller(string name, string role) =>
@@ -279,17 +376,23 @@ public sealed class SubjectRouteAuthorityTests(ExecutionPostgresApiFactory facto
     /// </summary>
     private async Task<string> SeedAllocatedAsync()
     {
+        (_, string code) = await SeedAllocatedWithStudyAndKitAsync(kitNumber: null);
+        return code;
+    }
+
+    private async Task<(string StudyCode, string SubjectCode)> SeedAllocatedWithStudyAndKitAsync(string? kitNumber)
+    {
         var clock = SystemClock.Instance;
         var study = new StudyCode($"{Study}-{Guid.NewGuid().ToString("N")[..8]}");
         string code = $"SUBJ-{Guid.NewGuid().ToString("N")[..10]}";
-        var subject = ClinicalSubject.Create(new SubjectCode(code), study, siteCode: null, enrollmentIndex: 1,
+        var subject = ClinicalSubject.Create(new SubjectCode(code), study, siteCode: new SiteCode("SITE-01"), enrollmentIndex: 1,
             encryptedDemographics: "seed-ciphertext", stratFactors: null);
         subject.TransitionTo(SubjectState.Enrolled).IsSuccess.Should().BeTrue();
 
         var scheme = RandomizationScheme.Draft(study, 1, RandomizationMethod.Minimization,
             new Dictionary<string, int> { ["ARM-A"] = 1, [Arm] = 1 },
             new Dictionary<string, IReadOnlyList<string>> { ["sex"] = ["F", "M"] }, blockSizes: null,
-            slotsPerStratum: 0, preferredArmProbability: 0.8, requiresKit: false, "statistician-a", Reason, clock).Value!;
+            slotsPerStratum: 0, preferredArmProbability: 0.8, requiresKit: kitNumber is not null, "statistician-a", Reason, clock).Value!;
         scheme.Approve("statistician-b", Reason, clock).IsSuccess.Should().BeTrue();
 
         using var scope = factory.Services.CreateSeedingScope();
@@ -297,16 +400,16 @@ public sealed class SubjectRouteAuthorityTests(ExecutionPostgresApiFactory facto
         var allocationId = Guid.NewGuid();
         var allocation = RandomizationAllocation.Record(allocationId, scheme, subject, "sex=F",
             new Dictionary<string, string> { ["sex"] = "F" }, sequence: 1,
-            protector.Protect(Arm, RandomizationAllocation.ArmPurpose(allocationId)), listSlotId: null, kitNumber: null,
+            protector.Protect(Arm, RandomizationAllocation.ArmPurpose(allocationId)), listSlotId: null, kitNumber: kitNumber,
             "crc-seed", clock.UtcNow, Reason);
-        subject.Randomize(allocationId, kitReference: null, new Dictionary<string, object?>()).IsSuccess.Should().BeTrue();
+        subject.Randomize(allocationId, kitReference: kitNumber, new Dictionary<string, object?>()).IsSuccess.Should().BeTrue();
 
         var db = scope.ServiceProvider.GetRequiredService<ExecutionDbContext>();
         db.ClinicalSubjects.Add(subject);
         db.RandomizationSchemes.Add(scheme);
         db.RandomizationAllocations.Add(allocation);
         await db.SaveChangesAsync(Ct);
-        return code;
+        return (study.Value, code);
     }
 
     private async Task<ClinicalSubject> ReadSubjectAsync(string code)

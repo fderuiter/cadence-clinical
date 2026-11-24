@@ -247,7 +247,15 @@ export const DEMO_MODULE_CATALOG = IS_PRODUCTION_LIVE_BUILD
         family: "Orbit",
         summary:
           "Track site activation checklists, monitoring visits, delegation logs, and operational milestones.",
-        requiresRole: ["cra", "monitor", "data_manager", "sponsor_admin"],
+        requiresRole: [
+          "cra",
+          "monitor",
+          "data_manager",
+          "sponsor_admin",
+          "unblinded_statistician",
+          "pharmacist",
+          "trial_coordinator",
+        ],
       },
       ssu: {
         routeName: "ssu",
@@ -263,6 +271,9 @@ export const DEMO_MODULE_CATALOG = IS_PRODUCTION_LIVE_BUILD
           "sponsor_admin",
           "site_investigator",
           "crc",
+          "trial_coordinator",
+          "unblinded_statistician",
+          "pharmacist",
         ],
       },
       etmf: {

@@ -103,7 +103,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 import type { RouteLocationRaw } from "vue-router";
 import {
   ecrfQueriesApi,
@@ -116,20 +116,24 @@ import {
 } from "../../api/kernelApi";
 import { isAgentProposal } from "../../ai/proposals";
 import {
+  findKernelStudyRef,
+  seedKernelStudyRef,
+} from "../../canvas/kernelStudy";
+import {
   collectionInstanceRef,
   observationNodeRef,
   parseNodeRef,
 } from "../../canvas/nodeRef";
 import { maskReasonWords, seedNodeSummary } from "../../canvas/nodeResolver";
-import { useKernelStudyRef } from "../../composables/useKernelStudyRef";
 import SupportDetails from "../canvas/SupportDetails.vue";
 import AiLabel from "./AiLabel.vue";
 
 /**
- * Needs Attention on study home (docs/ux/CLINICAL_CANVAS.md PX-10): the study's open proposals from the kernel and
- * active CRA SDV modification alerts (`PRD-QRY-006`) from Execution, newest first. An agent's proposal carries the AI
- * label (UX-8). It shows whether AI assistance is on or off: a proposal already made is a kernel record a person must
- * still decide (ADR-2635).
+ * Needs Attention on study home (docs/ux/CLINICAL_CANVAS.md PX-10): the study's open proposals and active validation
+ * findings from the kernel (`GET /api/v1/kernel/studies/{studyRef}/attention`, queried directly by `studyCode` in
+ * Wave 1) together with active CRA SDV modification alerts (`PRD-QRY-006`) from Execution. An agent's proposal carries
+ * the AI label (UX-8). It shows whether AI assistance is on or off: a proposal already made is a kernel record a person
+ * must still decide (ADR-2635).
  */
 const props = defineProps<{ studyCode: string }>();
 
@@ -138,11 +142,17 @@ const LIMIT = 20;
 const proposals = ref<KernelProposal[]>([]);
 const findings = ref<KernelValidationFinding[]>([]);
 const sdvAlerts = ref<FormSdvAlertResponse[]>([]);
+const loading = ref(false);
+const error = ref<string | null>(null);
+const noStudy = ref(false);
+
+let requestSeq = 0;
 
 async function hydrateStudySdvAlerts(
-  studyRef: string,
+  studyRef: string | null | undefined,
   isCurrent: () => boolean
 ): Promise<void> {
+  if (!studyRef) return;
   const parsed = parseNodeRef(studyRef);
   if (
     parsed?.kind !== "study" ||
@@ -156,68 +166,134 @@ async function hydrateStudySdvAlerts(
       sdvAlerts.value = alerts;
     }
   } catch {
-    // Keep kernel proposals visible if execution SDV alerts are unavailable.
+    // Keep kernel proposals and findings visible if execution SDV alerts are unavailable.
   }
 }
 
-const {
-  studyLoading: loading,
-  studyError: error,
-  noStudy,
-} = useKernelStudyRef(() => props.studyCode, {
-  onReset: () => {
-    proposals.value = [];
-    findings.value = [];
-    sdvAlerts.value = [];
-  },
-  onResolved: async (studyRef, { isCurrent }) => {
-    void hydrateStudySdvAlerts(studyRef, isCurrent);
+function seedProposalSummaries(items: ReadonlyArray<KernelProposal>): void {
+  for (const item of items) {
+    if (item.ref && !item.mask) {
+      seedNodeSummary(item.ref, {
+        kind: "proposal",
+        title: item.intent ?? null,
+        status: item.status ?? null,
+      });
+    }
+  }
+}
+
+function dedupeCappedFindings(
+  items: ReadonlyArray<KernelValidationFinding>
+): KernelValidationFinding[] {
+  const seen = new Set<string>();
+  const merged: KernelValidationFinding[] = [];
+  for (const item of items) {
+    if (seen.has(item.ref)) continue;
+    seen.add(item.ref);
+    merged.push(item);
+    if (merged.length >= LIMIT) break;
+  }
+  return merged;
+}
+
+async function loadAttention(rawCode: string): Promise<void> {
+  const seq = ++requestSeq;
+  const isCurrent = () => seq === requestSeq;
+  const code = rawCode.trim();
+  proposals.value = [];
+  findings.value = [];
+  sdvAlerts.value = [];
+  error.value = null;
+  noStudy.value = false;
+
+  if (!code) {
+    noStudy.value = true;
+    loading.value = false;
+    return;
+  }
+
+  loading.value = true;
+  try {
+    if (typeof kernelApi.getStudyAttention === "function") {
+      const attention = await kernelApi.getStudyAttention(code, {
+        limit: LIMIT,
+      });
+      if (!isCurrent()) return;
+      seedKernelStudyRef(code, attention.study_ref);
+      const openProposals = Array.isArray(attention.proposals)
+        ? attention.proposals.slice(0, LIMIT)
+        : [];
+      proposals.value = openProposals;
+      seedProposalSummaries(openProposals);
+      findings.value = dedupeCappedFindings(attention.findings ?? []);
+      await hydrateStudySdvAlerts(attention.study_ref, isCurrent);
+      return;
+    }
+
     const canReadFindings =
       typeof kernelApi.listStudyValidationFindings === "function";
-    const [open, openFindingsPage, investigatingFindingsPage] =
+    const [openProposals, openFindingsPage, investigatingFindingsPage] =
       await Promise.all([
-        kernelApi.listProposals(studyRef, {
-          status: "Open",
-          limit: LIMIT,
-        }),
+        typeof kernelApi.listProposals === "function"
+          ? kernelApi.listProposals(code, { status: "Open", limit: LIMIT })
+          : Promise.resolve([] as KernelProposal[]),
         canReadFindings
           ? kernelApi
-              .listStudyValidationFindings(studyRef, { status: "Open" })
+              .listStudyValidationFindings(code, {
+                status: "Open",
+                limit: LIMIT,
+              })
               .catch(() => ({ findings: [] as KernelValidationFinding[] }))
           : Promise.resolve({ findings: [] as KernelValidationFinding[] }),
         canReadFindings
           ? kernelApi
-              .listStudyValidationFindings(studyRef, {
+              .listStudyValidationFindings(code, {
                 status: "Investigating",
+                limit: LIMIT,
               })
               .catch(() => ({ findings: [] as KernelValidationFinding[] }))
           : Promise.resolve({ findings: [] as KernelValidationFinding[] }),
       ]);
     if (!isCurrent()) return;
-    proposals.value = open;
-    for (const item of open) {
-      if (item.ref && !item.mask) {
-        seedNodeSummary(item.ref, {
-          kind: "proposal",
-          title: item.intent ?? null,
-          status: item.status ?? null,
-        });
-      }
+    proposals.value = openProposals;
+    const hintedStudyRef =
+      openProposals.find((p) => p.study)?.study ??
+      openFindingsPage?.findings?.[0]?.study_ref ??
+      investigatingFindingsPage?.findings?.[0]?.study_ref ??
+      (typeof kernelApi.search === "function"
+        ? await findKernelStudyRef(code).catch(() => null)
+        : null);
+    if (!isCurrent()) return;
+    if (hintedStudyRef) {
+      seedKernelStudyRef(code, hintedStudyRef);
     }
-    const seen = new Set<string>();
-    const merged: KernelValidationFinding[] = [];
-    for (const item of [
+    seedProposalSummaries(openProposals);
+    findings.value = dedupeCappedFindings([
       ...(openFindingsPage?.findings ?? []),
       ...(investigatingFindingsPage?.findings ?? []),
-    ]) {
-      if (seen.has(item.ref)) continue;
-      seen.add(item.ref);
-      merged.push(item);
-      if (merged.length >= LIMIT) break;
+    ]);
+    await hydrateStudySdvAlerts(hintedStudyRef, isCurrent);
+  } catch (err) {
+    if (seq !== requestSeq) return;
+    if ((err as { status?: number | null } | null)?.status === 404) {
+      noStudy.value = true;
+      return;
     }
-    findings.value = merged;
+    error.value = err instanceof Error ? err.message : String(err);
+  } finally {
+    if (seq === requestSeq) {
+      loading.value = false;
+    }
+  }
+}
+
+watch(
+  () => props.studyCode,
+  (code) => {
+    void loadAttention(code ?? "");
   },
-});
+  { immediate: true }
+);
 
 const statusLine = computed(() => {
   if (loading.value) return "Reading what needs attention...";
@@ -328,6 +404,9 @@ function maskWords(mask: string | null | undefined): string {
   flex-wrap: wrap;
   align-items: center;
   gap: 6px 10px;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
   padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -348,12 +427,18 @@ function maskWords(mask: string | null | undefined): string {
 
 .attention-kind,
 .attention-when {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
   font-size: 0.8rem;
   color: var(--neutral-dark);
 }
 
 .attention-intent {
   flex-basis: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
   font-weight: 600;
   color: inherit;
 }

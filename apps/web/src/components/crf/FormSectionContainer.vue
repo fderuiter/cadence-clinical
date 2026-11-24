@@ -335,14 +335,14 @@ function moveFieldDown(index) {
   background-color: var(--semantic-color-surface-muted);
   border: 1px solid var(--semantic-color-border);
   border-radius: 10px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  box-shadow: var(--shadow-sm);
   overflow: hidden;
   transition: all 0.15s;
 }
 
 .form-section-container.is-active-section {
   border-color: var(--semantic-color-divider-accent);
-  box-shadow: 0 0 0 2px rgba(147, 197, 253, 0.3);
+  box-shadow: var(--shadow-focus-ring);
 }
 
 .section-header-card {

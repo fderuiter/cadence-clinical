@@ -24,7 +24,7 @@ public enum PreCommitMode
 
 /// <summary>
 /// What a gate checks: the repository root, the files to limit it to, whether the pre-commit hook runs it, an optional
-/// shared Git index reader, and optional <c>--base</c> / <c>--push-before</c> Git scope overrides.
+/// shared Git index reader, and optional <c>--base</c>, <c>--push-before</c>, event, and ref scope overrides.
 /// </summary>
 public sealed record GateContext(
     string RepoRoot,
@@ -32,7 +32,9 @@ public sealed record GateContext(
     bool PreCommit = false,
     GitIndexReader? IndexReader = null,
     string? BaseRef = null,
-    string? PushBefore = null)
+    string? PushBefore = null,
+    string? EventName = null,
+    string? GitRef = null)
 {
     /// <summary>The target files (including an empty array when zero files are staged or a commit only deletes files), or <c>null</c> for the whole repository or Git revision scope.</summary>
     public string[]? Files => TargetFiles;
@@ -158,7 +160,7 @@ public static class QualityGates
         },
         new("detect-secrets", ["secrets-scan"],
             "Scans changed or tracked files against merged `baselines/secrets/` shards using `detect-secrets-hook` from `.cadence/venv`, `PATH` or `uvx` (fails closed when missing)",
-            ctx => DetectSecretsGateService.Scan(ctx.RepoRoot, ctx.TargetFiles, ctx.PreCommit, indexReader: ctx.IndexReader, baseRef: ctx.BaseRef, pushBefore: ctx.PushBefore) == 0)
+            ctx => DetectSecretsGateService.Scan(ctx.RepoRoot, ctx.TargetFiles, ctx.PreCommit, indexReader: ctx.IndexReader, baseRef: ctx.BaseRef, pushBefore: ctx.PushBefore, eventName: ctx.EventName, gitRef: ctx.GitRef) == 0)
         {
             TakesFiles = true,
             PreCommit = PreCommitMode.Quick,
@@ -172,7 +174,7 @@ public static class QualityGates
             "`docs/cli.md` documents every command in `Program.cs` and `PortCheckerService` ports, and all synthesized doc regions match code metadata",
             ctx => CheckCliDocs(ctx.RepoRoot)),
         new("adrs", ["validate-adrs"], "ADR schema, `docs/adr/index.md` consistency, and an ADR for architectural changes",
-            ctx => AdrValidatorService.ValidateAdrs(checkGitDiff: true, repoRoot: ctx.RepoRoot, preCommit: ctx.PreCommit, baseRef: ctx.BaseRef, pushBefore: ctx.PushBefore))
+            ctx => AdrValidatorService.ValidateAdrs(checkGitDiff: true, repoRoot: ctx.RepoRoot, preCommit: ctx.PreCommit, baseRef: ctx.BaseRef, pushBefore: ctx.PushBefore, eventName: ctx.EventName, gitRef: ctx.GitRef))
         {
             PreCommit = PreCommitMode.Quick,
             PreCommitNote = "checks staged files for architectural changes, accepting ADRs already added on the branch",
@@ -203,11 +205,11 @@ public static class QualityGates
         new("codeowners", ["validate-codeowners"], "Path pattern existence and owner handle syntax in `.github/CODEOWNERS`",
             ctx => CodeownersValidatorService.ValidateCodeowners(ctx.RepoRoot) == 0),
         new("workflow-security", ["validate-workflow-security", "action-pinning", "check-action-pinning"],
-            "40-hex commit SHAs with version comments, `sha256:` digests on `docker://` refs, `persist-credentials: false` on `actions/checkout`, typed non-interpolated `workflow_dispatch` inputs, ref-guarded dispatch triggers, and least-privilege permissions across `.github/workflows` and `.github/actions`",
+            "40-hex commit SHAs with version comments, `sha256:` digests on `docker://` refs, `persist-credentials: false` and no fork checkouts on `actions/checkout`, fork-guarded PR write permissions, typed non-interpolated `workflow_dispatch` inputs, ref-guarded dispatch triggers, least-privilege permissions, and no masked shell errors across `.github/workflows` and `.github/actions`",
             ctx => WorkflowSecurityValidatorService.ValidateWorkflowSecurity(ctx.Files, ctx.RepoRoot, ctx.PreCommit, ctx.IndexReader) == 0)
         { TakesFiles = true },
         new("rulesets", ["validate-rulesets"],
-            "Branch and signed `v*` tag rulesets in `.github/rulesets/*.json`, `pull_request`-only branch bypasses, release-admin-only tag bypasses, `merge_queue` policy, strict status checks, `CI Gate` upstream job coverage, and `pull_request` / `merge_group` workflow parity",
+            "Branch and signed `v*` tag rulesets in `.github/rulesets/*.json`, `pull_request`-only branch bypasses, release-admin-only tag bypasses, `merge_queue` policy, strict status checks, `CI Gate` upstream job coverage, `edited` / `merge_group` / `git merge-tree` conflict-check parity, and no `GITHUB_TOKEN` workflow merges",
             ctx => RulesetService.Validate(ctx.RepoRoot, preCommit: ctx.PreCommit, indexReader: ctx.IndexReader) == 0)
         {
             PreCommit = PreCommitMode.Quick,
@@ -232,7 +234,7 @@ public static class QualityGates
         { TakesFiles = true },
         new("deid", ["deid-compliance-scan"],
             "PHI/PII in changed or tracked files including authored `docs/`, root portal docs, `.vue` templates and `stores/` (vendored `docs/CDISC/`, `docs/NCI/`, `docs/SDLC/runs/` and `baselines/` excluded), ratcheted by per-unit `baselines/deid/<unit>.baseline.txt` shards; a line that is not PHI takes a `deid-ignore` comment",
-            ctx => DeidComplianceService.ScanDeidCompliance(ctx.Files, ctx.RepoRoot, preCommit: ctx.PreCommit, indexReader: ctx.IndexReader, baseRef: ctx.BaseRef, pushBefore: ctx.PushBefore) == 0)
+            ctx => DeidComplianceService.ScanDeidCompliance(ctx.Files, ctx.RepoRoot, preCommit: ctx.PreCommit, indexReader: ctx.IndexReader, baseRef: ctx.BaseRef, pushBefore: ctx.PushBefore, eventName: ctx.EventName, gitRef: ctx.GitRef) == 0)
         { TakesFiles = true },
         new("openapi", ["auto-stage-openapi"], "`docs/openapi` matches what the .NET services serve, and `docs/api` matches `docs/openapi`",
             ctx => PreCommitOpenApiService.ExecutePreCommitOpenApi(ctx.RepoRoot, quick: ctx.PreCommit, targetFiles: ctx.TargetFiles, indexReader: ctx.IndexReader) == 0)
@@ -294,14 +296,14 @@ public static class QualityGates
             ctx => GxpRtmValidatorService.ValidateGxpRtm(ctx.RepoRoot)),
         new("gxp-snapshot", ["gxp-snapshot-guard"],
             "The branch or push range does not change the generated RTM, IQ/OQ/PQ report or `docs/SDLC/runs/` unless `CADENCE_GXP_SNAPSHOT=1` (ADR-2532)",
-            ctx => GxpSnapshotGuardService.Check(ctx.RepoRoot, ctx.PreCommit, baseRef: ctx.BaseRef, pushBefore: ctx.PushBefore) == 0)
+            ctx => GxpSnapshotGuardService.Check(ctx.RepoRoot, ctx.PreCommit, baseRef: ctx.BaseRef, pushBefore: ctx.PushBefore, eventName: ctx.EventName, gitRef: ctx.GitRef) == 0)
         {
             PreCommit = PreCommitMode.Quick,
             PreCommitNote = "checks the staged files instead of the branch",
         },
         new("baseline-ratchet", ["baselines"],
             "No ratchet baseline gate (`*.baseline.txt`, `*-baseline.txt`, `baselines/deid/*.baseline.txt`, `baselines/secrets/*.secrets.baseline.json`) gained an entry without a `Baseline-Growth: <path> +<count> - <reason>` trailer on the commit that grew it",
-            ctx => BaselineRatchetService.Check(ctx.RepoRoot, ctx.PreCommit, baseRef: ctx.BaseRef, pushBefore: ctx.PushBefore) == 0)
+            ctx => BaselineRatchetService.Check(ctx.RepoRoot, ctx.PreCommit, baseRef: ctx.BaseRef, pushBefore: ctx.PushBefore, eventName: ctx.EventName, gitRef: ctx.GitRef) == 0)
         {
             PreCommit = PreCommitMode.Quick,
             PreCommitNote = "checks staged files against `HEAD`; `CADENCE_BASELINE_GROWTH=\"<path> +<count> - <reason>\"` admits growth",
@@ -561,11 +563,35 @@ public static class QualityGates
         }
 
         string effectiveBaseRef = GitRevisionScopeService.NormalizeBaseRef(ctx.BaseRef);
-        if (!string.IsNullOrWhiteSpace(ctx.PushBefore) &&
-            string.IsNullOrWhiteSpace(ctx.BaseRef) &&
-            GitRevisionScopeService.TryResolveCommitSha(ctx.RepoRoot, "HEAD") is not null)
+        var scope = GitRevisionScopeService.ResolveEventScope(ctx.RepoRoot, effectiveBaseRef, ctx.PushBefore, ctx.EventName, ctx.GitRef);
+        if (scope.Kind == GitEventScopeKind.UnprotectedTargetRef)
         {
-            Console.WriteLine($"[MERGE-READINESS] Push scope (--push-before) verified on HEAD; skipping branch merge-tree check against '{effectiveBaseRef}'.");
+            Console.WriteLine($"[MERGE-READINESS] [ERROR] Unsupported target ref '{scope.GitRef}' for event '{scope.EventName}'.");
+            return false;
+        }
+
+        if (scope.Kind == GitEventScopeKind.TargetRef)
+        {
+            if (scope.HeadCommit is null)
+            {
+                Console.WriteLine("[MERGE-READINESS] [ERROR] Could not resolve HEAD commit.");
+                return false;
+            }
+
+            Console.WriteLine($"[MERGE-READINESS] Protected target ref '{scope.GitRef}' ({scope.EventName}) verified at HEAD; skipping branch merge-tree check against '{effectiveBaseRef}'.");
+            return true;
+        }
+
+        if (scope.Kind is GitEventScopeKind.PushCommitRange or GitEventScopeKind.NewBranchPush &&
+            string.IsNullOrWhiteSpace(ctx.BaseRef))
+        {
+            if (scope.HeadCommit is null)
+            {
+                Console.WriteLine("[MERGE-READINESS] [ERROR] Could not resolve HEAD commit.");
+                return false;
+            }
+
+            Console.WriteLine($"[MERGE-READINESS] Push scope ({scope.Kind}) verified on HEAD; skipping branch merge-tree check against '{effectiveBaseRef}'.");
             return true;
         }
 
@@ -653,13 +679,33 @@ public static class QualityGates
 
     private static bool CheckBranchFreshness(GateContext ctx)
     {
-        if (!string.IsNullOrWhiteSpace(ctx.PushBefore))
+        string baseRef = GitRevisionScopeService.NormalizeBaseRef(ctx.BaseRef);
+        var scope = GitRevisionScopeService.ResolveEventScope(ctx.RepoRoot, baseRef, ctx.PushBefore, ctx.EventName, ctx.GitRef);
+        if (scope.Kind == GitEventScopeKind.UnprotectedTargetRef)
+        {
+            Console.WriteLine($"[BRANCH-FRESHNESS ERROR] Unsupported target ref '{scope.GitRef}' for event '{scope.EventName}'.");
+            return false;
+        }
+
+        if (scope.Kind == GitEventScopeKind.TargetRef)
+        {
+            if (scope.HeadCommit is null)
+            {
+                Console.WriteLine("[BRANCH-FRESHNESS ERROR] Could not resolve HEAD commit.");
+                return false;
+            }
+
+            Console.WriteLine($"Protected target ref '{scope.GitRef}' ({scope.EventName}): skipping branch-freshness ancestor check against '{baseRef}'.");
+            return true;
+        }
+
+        if (scope.Kind is GitEventScopeKind.PushCommitRange or GitEventScopeKind.NewBranchPush &&
+            string.IsNullOrWhiteSpace(ctx.BaseRef))
         {
             Console.WriteLine("Push-scoped run (--push-before): skipping branch-freshness ancestor check.");
             return true;
         }
 
-        string baseRef = GitRevisionScopeService.NormalizeBaseRef(ctx.BaseRef);
         if (RunQuietProcess(ctx.RepoRoot, "git", "rev-parse", "--verify", "--quiet", baseRef) != 0)
         {
             Console.WriteLine($"[BRANCH-FRESHNESS ERROR] '{baseRef}' was not found. Fetch the base branch so branch ancestry can be verified.");

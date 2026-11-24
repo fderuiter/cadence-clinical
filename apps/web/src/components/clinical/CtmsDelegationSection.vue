@@ -54,70 +54,69 @@
       <p v-if="!doaLog.delegated_staff.length" class="muted-status">
         No delegated staff entries recorded for site {{ doaLog.site_id }}.
       </p>
-      <div v-else class="table-wrap">
-        <table id="doa-staff-table" class="data-table">
-          <thead>
-            <tr>
-              <th scope="col">Staff</th>
-              <th scope="col">Delegated tasks</th>
-              <th scope="col">Start date</th>
-              <th scope="col">Status</th>
-              <th scope="col">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="rec in doaLog.delegated_staff" :key="rec.record_id">
-              <td>
-                <strong>{{ rec.staff_user_id }}</strong>
-              </td>
-              <td>
-                {{
-                  rec.task_codes
-                    .map((code) => formatClinicalEnum(code))
-                    .join(", ")
-                }}
-              </td>
-              <td>{{ rec.start_date }}</td>
-              <td>
-                <span
-                  class="status-pill"
-                  :class="`doa-${delegationStatus(rec).toLowerCase()}`"
-                >
-                  {{ formatClinicalStatus(delegationStatus(rec)) }}
-                </span>
-              </td>
-              <td class="action-cell">
-                <button
-                  v-if="
-                    canSignOff &&
-                    delegationStatus(rec) === 'PENDING_PI_SIGNATURE'
-                  "
-                  :id="`btn-doa-signoff-${rec.record_id}`"
-                  type="button"
-                  class="btn btn-primary btn-sm"
-                  @click="prepareSignOff(rec)"
-                >
-                  PI sign-off<span class="sr-only">
-                    for {{ rec.staff_user_id }}</span
-                  >
-                </button>
-                <button
-                  v-if="canManage && delegationStatus(rec) !== 'REVOKED'"
-                  :id="`btn-doa-revoke-${rec.record_id}`"
-                  type="button"
-                  class="btn btn-secondary btn-sm"
-                  @click="prepareRevoke(rec)"
-                >
-                  Revoke<span class="sr-only">
-                    delegation for
-                    {{ rec.staff_user_id }}</span
-                  >
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+      <ClinicalDataTable
+        v-else
+        hide-header
+        plain
+        labelled-by="ctms-delegation-title"
+        wrapper-class="table-wrap"
+        table-id="doa-staff-table"
+        table-class="data-table"
+        :columns="doaColumns"
+        :data="doaLog.delegated_staff"
+        row-key="record_id"
+      >
+        <template #cell-staff_user_id="{ row: rec }">
+          <strong>{{ rec.staff_user_id }}</strong>
+        </template>
+        <template #cell-task_codes="{ row: rec }">
+          {{
+            rec.task_codes
+              .map((code: string) => formatClinicalEnum(code))
+              .join(", ")
+          }}
+        </template>
+        <template #cell-start_date="{ row: rec }">
+          {{ rec.start_date }}
+        </template>
+        <template #cell-status="{ row: rec }">
+          <span
+            class="status-pill"
+            :class="`doa-${delegationStatus(rec).toLowerCase()}`"
+          >
+            {{ formatClinicalStatus(delegationStatus(rec)) }}
+          </span>
+        </template>
+        <template #cell-actions="{ row: rec }">
+          <div class="action-cell">
+            <button
+              v-if="
+                canSignOff && delegationStatus(rec) === 'PENDING_PI_SIGNATURE'
+              "
+              :id="`btn-doa-signoff-${rec.record_id}`"
+              type="button"
+              class="btn btn-primary btn-sm"
+              @click="prepareSignOff(rec)"
+            >
+              PI sign-off<span class="sr-only">
+                for {{ rec.staff_user_id }}</span
+              >
+            </button>
+            <button
+              v-if="canManage && delegationStatus(rec) !== 'REVOKED'"
+              :id="`btn-doa-revoke-${rec.record_id}`"
+              type="button"
+              class="btn btn-secondary btn-sm"
+              @click="prepareRevoke(rec)"
+            >
+              Revoke<span class="sr-only">
+                delegation for
+                {{ rec.staff_user_id }}</span
+              >
+            </button>
+          </div>
+        </template>
+      </ClinicalDataTable>
 
       <p
         v-if="
@@ -139,12 +138,14 @@
           {{ activeSignOffRecord.staff_user_id }}
         </h4>
         <div class="form-row">
-          <label for="doa-signoff-reason">Part 11 attestation</label>
-          <input
+          <ClinicalInput
             id="doa-signoff-reason"
             v-model="signOffReason"
+            label="Part 11 attestation"
             type="text"
             placeholder="I attest this staff member is qualified for the delegated tasks"
+            density="compact"
+            :show-query-flag="false"
           />
           <button
             id="btn-confirm-doa-signoff"
@@ -171,12 +172,14 @@
           {{ activeRevokeRecord.staff_user_id }}
         </h4>
         <div class="form-row">
-          <label for="doa-revoke-reason">Revocation justification</label>
-          <input
+          <ClinicalInput
             id="doa-revoke-reason"
             v-model="revokeReason"
+            label="Revocation justification"
             type="text"
             placeholder="Reason for revoking delegated tasks"
+            density="compact"
+            :show-query-flag="false"
           />
           <button
             id="btn-confirm-doa-revoke"
@@ -201,15 +204,23 @@
       >
         <h4>Delegate trial tasks</h4>
         <div class="form-row">
-          <label for="del-staff-user">Staff user ID</label>
-          <input
+          <ClinicalInput
             id="del-staff-user"
             v-model="newStaffUserId"
+            label="Staff user ID"
             type="text"
             placeholder="crc_staff_01"
+            density="compact"
+            :show-query-flag="false"
           />
-          <label for="del-task-select">Primary duty</label>
-          <select id="del-task-select" v-model="newTaskCode">
+          <ClinicalInput
+            id="del-task-select"
+            v-model="newTaskCode"
+            as="select"
+            label="Primary duty"
+            density="compact"
+            :show-query-flag="false"
+          >
             <option value="SUBJECT_INFORMED_CONSENT">
               Subject Informed Consent
             </option>
@@ -217,15 +228,23 @@
             <option value="SUBJECT_SCREENING">Participant Screening</option>
             <option value="SAE_REPORTING">Safety Event Reporting</option>
             <option value="IP_DISPENSING">Investigational Supply</option>
-          </select>
-          <label for="del-start-date">Start date</label>
-          <input id="del-start-date" v-model="newStartDate" type="date" />
-          <label for="del-change-reason">Reason for change</label>
-          <input
+          </ClinicalInput>
+          <ClinicalInput
+            id="del-start-date"
+            v-model="newStartDate"
+            label="Start date"
+            type="date"
+            density="compact"
+            :show-query-flag="false"
+          />
+          <ClinicalInput
             id="del-change-reason"
             v-model="newReason"
+            label="Reason for change"
             type="text"
             placeholder="Justification for delegating duty"
+            density="compact"
+            :show-query-flag="false"
           />
           <button
             id="btn-delegate-task"
@@ -249,7 +268,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
-import { useInlineFocusHandoff } from "ui";
+import { ClinicalDataTable, ClinicalInput, useInlineFocusHandoff } from "ui";
 import { ctmsApi, type DelegationRecord, type DoaLog } from "../../api/ctmsApi";
 import { canManageDoa, canSignOffDoa } from "../../canvas/authority";
 import {
@@ -288,6 +307,13 @@ const {
 
 const canManage = computed(() => canManageDoa(authStore));
 const canSignOff = computed(() => canSignOffDoa(authStore));
+const doaColumns = [
+  { key: "staff_user_id", label: "Staff", rowHeader: true },
+  { key: "task_codes", label: "Delegated tasks" },
+  { key: "start_date", label: "Start date" },
+  { key: "status", label: "Status" },
+  { key: "actions", label: "Actions" },
+];
 const exporting = ref(false);
 const doaLog = ref<DoaLog | null>(null);
 

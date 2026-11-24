@@ -204,9 +204,13 @@ async function submitOnboarding() {
 <style scoped>
 .trial-setup-view {
   max-width: 680px;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   margin: 28px auto 56px;
   padding: 0 20px;
   color: var(--semantic-color-text);
+  overflow-wrap: anywhere;
 }
 
 .prerelease-banner {
@@ -225,7 +229,7 @@ async function submitOnboarding() {
   border: 1px solid var(--semantic-color-border-muted);
   border-radius: 12px;
   padding: 28px;
-  box-shadow: 0 4px 12px rgb(15 23 42 / 0.06);
+  box-shadow: var(--shadow-md);
 }
 
 .setup-eyebrow {

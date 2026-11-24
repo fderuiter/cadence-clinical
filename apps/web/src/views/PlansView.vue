@@ -749,10 +749,13 @@ async function handleActivateSubscription() {
 <style scoped>
 .plans-view {
   max-width: 1120px;
+  width: 100%;
+  min-width: 0;
   margin: 0 auto;
   padding: 24px 20px 56px;
   box-sizing: border-box;
   color: var(--semantic-color-text);
+  overflow-wrap: anywhere;
 }
 
 .prerelease-banner {
@@ -927,7 +930,7 @@ async function handleActivateSubscription() {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  box-shadow: 0 2px 6px rgb(15 23 42 / 0.05);
+  box-shadow: var(--shadow-sm);
 }
 
 .plan-card.is-active-tier {

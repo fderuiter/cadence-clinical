@@ -869,7 +869,7 @@ onUnmounted(() => {
 
 .col-procedure-header {
   background-color: var(--semantic-color-surface-muted);
-  color: var(--primary);
+  color: var(--text-main);
   font-weight: 700;
   min-width: 260px;
 }

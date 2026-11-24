@@ -41,11 +41,14 @@
             <label for="etmf-study-select" class="etmf-scope-label"
               >Study</label
             >
-            <input
+            <ClinicalInput
               id="etmf-study-select"
               v-model="standaloneStudyInput"
-              type="text"
-              class="etmf-scope-input"
+              label="Study"
+              hide-label
+              density="compact"
+              :show-query-flag="false"
+              control-class="etmf-scope-input"
               autocomplete="off"
               placeholder="e.g. CADENCE-101"
               :list="studyOptions.length ? 'etmf-studies-datalist' : undefined"
@@ -62,11 +65,14 @@
             </datalist>
 
             <label for="etmf-site-select" class="etmf-scope-label">Site</label>
-            <input
+            <ClinicalInput
               id="etmf-site-select"
               v-model="standaloneSiteInput"
-              type="text"
-              class="etmf-scope-input etmf-scope-site-input"
+              label="Site"
+              hide-label
+              density="compact"
+              :show-query-flag="false"
+              control-class="etmf-scope-input etmf-scope-site-input"
               autocomplete="off"
               placeholder="All assigned sites"
               :list="siteOptions.length ? 'etmf-sites-datalist' : undefined"
@@ -344,14 +350,13 @@
 
             <!-- DRAFT -> TECHNICAL_QC transition -->
             <div v-if="inspectedDoc.status === 'DRAFT'" class="qc-accept-panel">
-              <label for="draft-submit-qc-reason" class="meta-label">
-                Submit Draft for Technical QC (min 10 characters)
-              </label>
-              <input
+              <ClinicalInput
                 id="draft-submit-qc-reason"
                 v-model="draftSubmitReason"
-                type="text"
-                class="qc-reason-input"
+                label="Submit Draft for Technical QC (min 10 characters)"
+                density="compact"
+                :show-query-flag="false"
+                control-class="qc-reason-input"
                 :disabled="!canStage || submittingDraftQc"
                 placeholder="Ready for technical QC review and taxonomy verification"
               />
@@ -401,14 +406,13 @@
               v-else-if="inspectedDoc.status === 'TECHNICAL_QC'"
               class="qc-accept-panel"
             >
-              <label for="qc-accept-reason" class="meta-label">
-                Clinical QC Review Justification (min 10 characters)
-              </label>
-              <input
+              <ClinicalInput
                 id="qc-accept-reason"
                 v-model="qcAcceptReason"
-                type="text"
-                class="qc-reason-input"
+                label="Clinical QC Review Justification (min 10 characters)"
+                density="compact"
+                :show-query-flag="false"
+                control-class="qc-reason-input"
                 :disabled="!canReviewQc || reviewingQc"
                 placeholder="Verified artifact taxonomy, dates, and signatures"
               />
@@ -483,7 +487,7 @@
 </template>
 
 <script setup>
-import { ClinicalDrawer, ClinicalTabs } from "ui";
+import { ClinicalDrawer, ClinicalInput, ClinicalTabs } from "ui";
 import { computed, onMounted, ref, watch } from "vue";
 import { kernelApi } from "../api/kernelApi";
 import {
@@ -1030,7 +1034,7 @@ defineExpose({
   background-color: var(--semantic-color-surface);
   border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-sm);
   box-sizing: border-box;
 }
 
@@ -1040,7 +1044,7 @@ defineExpose({
   background-color: var(--semantic-color-surface);
   border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-sm);
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
@@ -1111,7 +1115,7 @@ defineExpose({
   border-left: 4px solid var(--semantic-color-warning-border-strong);
   border-radius: 6px;
   font-size: 13px;
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
 }
 
 #etmf-workspace-panel-binder,
@@ -1192,7 +1196,7 @@ defineExpose({
 .qc-role-note {
   margin: 0;
   font-size: 11px;
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
   background: var(--semantic-color-warning-bg-soft);
   border: 1px solid var(--semantic-color-warning-border);
   border-radius: 4px;
@@ -1216,7 +1220,7 @@ defineExpose({
   right: 0;
   bottom: 0;
   max-width: 100vw;
-  background: rgba(0, 0, 0, 0.35);
+  background: var(--semantic-color-backdrop-soft);
   z-index: 1000;
   display: flex;
   justify-content: flex-end;
@@ -1234,7 +1238,7 @@ defineExpose({
   height: 100%;
   display: flex;
   flex-direction: column;
-  box-shadow: -4px 0 16px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-drawer-left);
   overscroll-behavior: contain;
   touch-action: pan-y;
 }

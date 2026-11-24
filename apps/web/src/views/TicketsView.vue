@@ -211,26 +211,29 @@
     <div class="controls-card">
       <div class="search-box">
         <span class="search-icon" aria-hidden="true">🔍</span>
-        <label for="tickets-search-input" class="sr-only"
-          >Search clinical issues</label
-        >
-        <input
+        <ClinicalInput
           id="tickets-search-input"
           v-model="searchQuery"
-          type="text"
-          class="search-input"
+          label="Search clinical issues"
+          hide-label
+          density="compact"
+          :show-query-flag="false"
+          extra-class="search-field"
+          control-class="search-input"
           placeholder="Search by ref #, title, subject ID, or site..."
         />
       </div>
 
       <div class="filter-group">
-        <label for="tickets-filter-category" class="sr-only"
-          >Filter by category</label
-        >
-        <select
+        <ClinicalInput
           id="tickets-filter-category"
           v-model="filterCategory"
-          class="filter-select"
+          as="select"
+          label="Filter by category"
+          hide-label
+          density="compact"
+          :show-query-flag="false"
+          control-class="filter-select"
         >
           <option value="ALL">All Categories</option>
           <option value="PROTOCOL_DEVIATION">Protocol Deviation</option>
@@ -243,29 +246,33 @@
           <option value="ACCESS_CONTROL">Access Control</option>
           <option value="REGULATORY_QUERY">Regulatory Query</option>
           <option value="TECHNICAL_SYSTEM">Technical / Bug</option>
-        </select>
+        </ClinicalInput>
 
-        <label for="tickets-filter-severity" class="sr-only"
-          >Filter by GxP severity</label
-        >
-        <select
+        <ClinicalInput
           id="tickets-filter-severity"
           v-model="filterSeverity"
-          class="filter-select"
+          as="select"
+          label="Filter by GxP severity"
+          hide-label
+          density="compact"
+          :show-query-flag="false"
+          control-class="filter-select"
         >
           <option value="ALL">All Severities</option>
           <option value="CRITICAL">Critical</option>
           <option value="MAJOR">Major</option>
           <option value="MINOR">Minor</option>
-        </select>
+        </ClinicalInput>
 
-        <label for="tickets-filter-status" class="sr-only"
-          >Filter by workflow status</label
-        >
-        <select
+        <ClinicalInput
           id="tickets-filter-status"
           v-model="filterStatus"
-          class="filter-select"
+          as="select"
+          label="Filter by workflow status"
+          hide-label
+          density="compact"
+          :show-query-flag="false"
+          control-class="filter-select"
         >
           <option value="ALL">All Statuses</option>
           <option value="OPEN">Open</option>
@@ -274,33 +281,42 @@
           <option value="WAITING_ON_SPONSOR">Waiting on Sponsor</option>
           <option value="RESOLVED">Resolved</option>
           <option value="CLOSED">Closed</option>
-        </select>
+        </ClinicalInput>
 
-        <input
+        <ClinicalInput
           id="tickets-study-filter"
           v-model="filterStudyId"
-          type="text"
-          class="filter-select scope-filter-input"
-          aria-label="Filter issues by study"
+          label="Filter issues by study"
+          hide-label
+          density="compact"
+          :show-query-flag="false"
+          control-class="filter-select scope-filter-input"
           placeholder="Study (all)"
+          :attributes="{ 'aria-label': 'Filter issues by study' }"
           @change="applyTicketScope"
         />
-        <input
+        <ClinicalInput
           id="tickets-site-filter"
           v-model="filterSiteId"
-          type="text"
-          class="filter-select scope-filter-input"
-          aria-label="Filter issues by site"
+          label="Filter issues by site"
+          hide-label
+          density="compact"
+          :show-query-flag="false"
+          control-class="filter-select scope-filter-input"
           placeholder="Site (all)"
+          :attributes="{ 'aria-label': 'Filter issues by site' }"
           @change="applyTicketScope"
         />
-        <input
+        <ClinicalInput
           id="tickets-subject-filter"
           v-model="filterSubjectId"
-          type="text"
-          class="filter-select scope-filter-input"
-          aria-label="Filter issues by participant"
+          label="Filter issues by participant"
+          hide-label
+          density="compact"
+          :show-query-flag="false"
+          control-class="filter-select scope-filter-input"
           placeholder="Participant (all)"
+          :attributes="{ 'aria-label': 'Filter issues by participant' }"
         />
       </div>
 
@@ -328,13 +344,15 @@
 
       <div class="bulk-actions">
         <div class="bulk-action-group">
-          <label for="tickets-batch-status" class="sr-only"
-            >Batch target status</label
-          >
-          <select
+          <ClinicalInput
             id="tickets-batch-status"
             v-model="batchStatus"
-            class="filter-select batch-select"
+            as="select"
+            label="Batch target status"
+            hide-label
+            density="compact"
+            :show-query-flag="false"
+            control-class="filter-select batch-select"
           >
             <option value="" disabled>Change Status...</option>
             <option value="OPEN">Open</option>
@@ -343,7 +361,7 @@
             <option value="WAITING_ON_SPONSOR">Waiting on Sponsor</option>
             <option value="RESOLVED">Resolved</option>
             <option value="CLOSED">Closed</option>
-          </select>
+          </ClinicalInput>
           <button
             type="button"
             class="btn btn-sm btn-primary"
@@ -355,19 +373,21 @@
         </div>
 
         <div class="bulk-action-group">
-          <label for="tickets-batch-severity" class="sr-only"
-            >Batch target severity</label
-          >
-          <select
+          <ClinicalInput
             id="tickets-batch-severity"
             v-model="batchSeverity"
-            class="filter-select batch-select"
+            as="select"
+            label="Batch target severity"
+            hide-label
+            density="compact"
+            :show-query-flag="false"
+            control-class="filter-select batch-select"
           >
             <option value="" disabled>Change Severity...</option>
             <option value="CRITICAL">Critical</option>
             <option value="MAJOR">Major</option>
             <option value="MINOR">Minor</option>
-          </select>
+          </ClinicalInput>
           <button
             type="button"
             class="btn btn-sm btn-primary"
@@ -667,128 +687,121 @@
       aria-labelledby="tickets-view-tab-table"
       class="table-card"
     >
-      <table class="clinical-table">
-        <thead>
-          <tr>
-            <th v-if="demoBuild" class="checkbox-cell">
-              <input
-                type="checkbox"
-                class="ticket-checkbox"
-                aria-label="Select all visible tickets"
-                :checked="isAllSelected"
-                :indeterminate="isSomeSelected"
-                @change="toggleSelectAll"
-              />
-            </th>
-            <th>Reference</th>
-            <th>Title</th>
-            <th>Category</th>
-            <th>GxP Severity</th>
-            <th>Status</th>
-            <th>Study / Site / Subject</th>
-            <th>Priority</th>
-            <th>SLA Status</th>
-            <th>Sign-Off</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="t in filteredTickets"
-            :key="t.id"
-            class="table-row"
-            :class="{
-              'selected-row': demoBuild && selectedTicketIds.has(t.id),
-            }"
-            @click="openTicketDetail(t)"
-          >
-            <td v-if="demoBuild" class="checkbox-cell" @click.stop>
-              <input
-                type="checkbox"
-                class="ticket-checkbox"
-                :aria-label="'Select ticket ' + (t.reference || t.id)"
-                :checked="selectedTicketIds.has(t.id)"
-                @change="toggleSelectTicket(t.id)"
-              />
-            </td>
-            <td class="ref-cell font-mono">
-              {{ t.reference || `#${t.id?.substring(0, 8)}` }}
-            </td>
-            <td class="title-cell font-semibold">
-              {{ t.title }}
-            </td>
-            <td>
-              <span class="category-pill">{{
-                formatCategory(t.category)
-              }}</span>
-            </td>
-            <td>
-              <span
-                class="badge"
-                :class="`badge-sev-${t.gxp_severity?.toLowerCase()}`"
-                >{{ t.gxp_severity }}</span
-              >
-            </td>
-            <td>
-              <span
-                class="badge"
-                :class="`badge-status-${t.status?.toLowerCase()}`"
-                >{{ formatStatus(t.status) }}</span
-              >
-            </td>
-            <td class="context-cell">
-              <span v-if="t.site_id">{{ t.site_id }}</span>
-              <span v-if="t.subject_id"> / {{ t.subject_id }}</span>
-              <span v-if="!t.site_id && !t.subject_id">{{
-                t.study_id || "—"
-              }}</span>
-            </td>
-            <td>
-              <span
-                class="priority-tag"
-                :class="`priority-${t.priority?.toLowerCase()}`"
-                >{{ t.priority }}</span
-              >
-            </td>
-            <td>
-              <div
-                v-if="t.sla_target_at"
-                class="sla-mini-badge"
-                :class="getSlaClass(t)"
-              >
-                {{ formatSlaRemaining(t) }}
-              </div>
-              <span v-else>—</span>
-            </td>
-            <td>
-              <span v-if="t.signature_token" class="badge badge-signed"
-                >✍️ eSigned</span
-              >
-              <span
-                v-else-if="t.status === 'RESOLVED'"
-                class="badge badge-pending-sign"
-                >Needs Sign</span
-              >
-              <span v-else>—</span>
-            </td>
-            <td>
-              <button
-                type="button"
-                class="btn btn-xs btn-secondary"
-                @click.stop="openTicketDetail(t)"
-              >
-                Inspect<span class="sr-only"> {{ t.reference || t.id }}</span>
-              </button>
-            </td>
-          </tr>
+      <ClinicalDataTable
+        title="Clinical Issue & Operations Table"
+        hide-header
+        plain
+        :columns="ticketTableColumns"
+        :data="filteredTickets"
+        row-key="id"
+        :page-size="Math.max(filteredTickets.length, 50)"
+        table-class="clinical-table"
+        :row-class="resolveTicketRowClass"
+        @row-click="openTicketDetail"
+      >
+        <template #head-select>
+          <input
+            type="checkbox"
+            class="ticket-checkbox"
+            aria-label="Select all visible tickets"
+            :checked="isAllSelected"
+            :indeterminate="isSomeSelected"
+            @change="toggleSelectAll"
+          />
+        </template>
 
-          <tr v-if="filteredTickets.length === 0">
-            <td :colspan="demoBuild ? 11 : 10" class="empty-table-cell">
-              No clinical issues match the selected search and filter criteria.
-            </td>
-          </tr>
-        </tbody>
-      </table>
+        <template #cell-select="{ row }">
+          <input
+            type="checkbox"
+            class="ticket-checkbox"
+            :aria-label="'Select ticket ' + (row.reference || row.id)"
+            :checked="selectedTicketIds.has(row.id)"
+            @click.stop
+            @change="toggleSelectTicket(row.id)"
+          />
+        </template>
+
+        <template #cell-reference="{ row }">
+          {{ row.reference || `#${row.id?.substring(0, 8)}` }}
+        </template>
+
+        <template #cell-title="{ row }">
+          {{ row.title }}
+        </template>
+
+        <template #cell-category="{ row }">
+          <span class="category-pill">{{ formatCategory(row.category) }}</span>
+        </template>
+
+        <template #cell-gxp_severity="{ row }">
+          <span
+            class="badge"
+            :class="`badge-sev-${row.gxp_severity?.toLowerCase()}`"
+            >{{ row.gxp_severity }}</span
+          >
+        </template>
+
+        <template #cell-status="{ row }">
+          <span
+            class="badge"
+            :class="`badge-status-${row.status?.toLowerCase()}`"
+            >{{ formatStatus(row.status) }}</span
+          >
+        </template>
+
+        <template #cell-context="{ row }">
+          <span v-if="row.site_id">{{ row.site_id }}</span>
+          <span v-if="row.subject_id"> / {{ row.subject_id }}</span>
+          <span v-if="!row.site_id && !row.subject_id">{{
+            row.study_id || "—"
+          }}</span>
+        </template>
+
+        <template #cell-priority="{ row }">
+          <span
+            class="priority-tag"
+            :class="`priority-${row.priority?.toLowerCase()}`"
+            >{{ row.priority }}</span
+          >
+        </template>
+
+        <template #cell-sla="{ row }">
+          <div
+            v-if="row.sla_target_at"
+            class="sla-mini-badge"
+            :class="getSlaClass(row)"
+          >
+            {{ formatSlaRemaining(row) }}
+          </div>
+          <span v-else>—</span>
+        </template>
+
+        <template #cell-signoff="{ row }">
+          <span v-if="row.signature_token" class="badge badge-signed"
+            >eSigned</span
+          >
+          <span
+            v-else-if="row.status === 'RESOLVED'"
+            class="badge badge-pending-sign"
+            >Needs Sign</span
+          >
+          <span v-else>—</span>
+        </template>
+
+        <template #cell-actions="{ row }">
+          <button
+            type="button"
+            class="btn btn-xs btn-secondary"
+            @click.stop="openTicketDetail(row)"
+          >
+            Inspect<span class="sr-only"> {{ row.reference || row.id }}</span>
+          </button>
+        </template>
+
+        <template #empty>
+          No clinical issues match the selected search and filter criteria.
+        </template>
+      </ClinicalDataTable>
     </div>
 
     <!-- Ticket Detail Drawer -->
@@ -828,7 +841,7 @@ import {
   onMounted,
   getCurrentInstance,
 } from "vue";
-import { ClinicalTabs } from "ui";
+import { ClinicalDataTable, ClinicalInput, ClinicalTabs } from "ui";
 import TicketDetailDrawer from "../components/tickets/TicketDetailDrawer.vue";
 import TicketCreateModal from "../components/tickets/TicketCreateModal.vue";
 import { ticketsApi } from "../api/ticketsApi";
@@ -912,6 +925,40 @@ const batchStatus = ref("");
 const batchSeverity = ref("");
 
 const selectedTicketCount = computed(() => selectedTicketIds.value.size);
+
+const ticketTableColumns = computed(() => [
+  ...(demoBuild
+    ? [
+        {
+          key: "select",
+          label: "",
+          headerClass: "checkbox-cell",
+          cellClass: "checkbox-cell",
+        },
+      ]
+    : []),
+  { key: "reference", label: "Reference", cellClass: "ref-cell font-mono" },
+  { key: "title", label: "Title", cellClass: "title-cell font-semibold" },
+  { key: "category", label: "Category" },
+  { key: "gxp_severity", label: "GxP Severity" },
+  { key: "status", label: "Status" },
+  {
+    key: "context",
+    label: "Study / Site / Subject",
+    cellClass: "context-cell",
+  },
+  { key: "priority", label: "Priority" },
+  { key: "sla", label: "SLA Status" },
+  { key: "signoff", label: "Sign-Off" },
+  { key: "actions", label: "Actions" },
+]);
+
+const resolveTicketRowClass = (t) => [
+  "table-row",
+  {
+    "selected-row": demoBuild && selectedTicketIds.value.has(t.id),
+  },
+];
 
 const isAllSelected = computed(() => {
   if (filteredTickets.value.length === 0) return false;
@@ -1014,7 +1061,7 @@ const initialMockTickets = [
     gxp_severity: "CRITICAL",
     priority: "CRITICAL",
     status: "OPEN",
-    study_id: "STUDY-ONC-202",
+    study_id: "CADENCE-101",
     site_id: "SITE-101",
     subject_id: null,
     entity_type: "SUPPLY_KIT",
@@ -1036,7 +1083,7 @@ const initialMockTickets = [
     gxp_severity: "MAJOR",
     priority: "HIGH",
     status: "IN_PROGRESS",
-    study_id: "STUDY-ONC-202",
+    study_id: "CADENCE-101",
     site_id: "SITE-102",
     subject_id: "SUBJ-8812",
     entity_type: "SUBJECT",
@@ -1058,7 +1105,7 @@ const initialMockTickets = [
     gxp_severity: "MINOR",
     priority: "MEDIUM",
     status: "WAITING_ON_SITE",
-    study_id: "STUDY-ONC-202",
+    study_id: "CADENCE-101",
     site_id: "SITE-101",
     subject_id: "SUBJ-8815",
     entity_type: "CRF_FORM",
@@ -1080,7 +1127,7 @@ const initialMockTickets = [
     gxp_severity: "MAJOR",
     priority: "HIGH",
     status: "RESOLVED",
-    study_id: "STUDY-ONC-202",
+    study_id: "CADENCE-101",
     site_id: "SITE-101",
     subject_id: "SUBJ-8804",
     entity_type: "SUBJECT",
@@ -1358,8 +1405,15 @@ const filteredTickets = computed(() => {
     }
     // Clinical scope match
     const scopedStudy = filterStudyId.value.trim().toLowerCase();
-    if (scopedStudy && t.study_id && t.study_id.toLowerCase() !== scopedStudy) {
-      return false;
+    if (scopedStudy && t.study_id) {
+      const ticketStudy = t.study_id.trim().toLowerCase();
+      const isCanonicalDemoAlias =
+        demoBuild &&
+        (scopedStudy === "cadence-101" || scopedStudy === "demo-01") &&
+        (ticketStudy === "cadence-101" || ticketStudy === "demo-01");
+      if (ticketStudy !== scopedStudy && !isCanonicalDemoAlias) {
+        return false;
+      }
     }
     const scopedSite = filterSiteId.value.trim().toLowerCase();
     if (scopedSite && t.site_id && t.site_id.toLowerCase() !== scopedSite) {
@@ -1745,18 +1799,31 @@ const exportAuditTrail = (format) => {
   display: flex;
   flex-direction: column;
   gap: 24px;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 640px) {
+  .dashboard-section {
+    padding: 12px 8px;
+    gap: 16px;
+  }
 }
 
 /* Header */
 .section-header {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 24px;
+  gap: 16px 24px;
+  min-width: 0;
 }
 
 .header-badge-row {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   margin-bottom: 8px;
 }
@@ -1771,15 +1838,17 @@ const exportAuditTrail = (format) => {
 
 .badge-gxp {
   background: var(--semantic-color-primary);
-  color: var(--semantic-color-surface);
+  color: var(--semantic-color-text-on-primary);
 }
 .badge-regulatory {
-  background: var(--semantic-color-accent);
-  color: var(--semantic-color-surface);
+  background-color: var(--semantic-badge-regulatory-bg);
+  color: var(--semantic-badge-regulatory-text);
+  border: 1px solid var(--semantic-badge-regulatory-border);
 }
 .badge-standard {
-  background: var(--semantic-color-text-secondary);
-  color: var(--semantic-color-surface);
+  background: var(--semantic-badge-draft-bg);
+  color: var(--semantic-badge-draft-text);
+  border: 1px solid var(--semantic-badge-draft-border);
 }
 
 .view-title {
@@ -1803,11 +1872,16 @@ const exportAuditTrail = (format) => {
   flex-direction: column;
   align-items: flex-end;
   gap: 8px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .header-action-group {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .btn-icon-svg {
@@ -1816,17 +1890,19 @@ const exportAuditTrail = (format) => {
 
 .auditor-readonly-note {
   margin: 0;
-  max-width: 420px;
+  max-width: 100%;
+  width: min(100%, 420px);
   font-size: 0.78rem;
   line-height: 1.4;
   color: var(--semantic-color-text-secondary);
   text-align: right;
+  overflow-wrap: anywhere;
 }
 
 /* Stats Cards Grid */
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
   gap: 16px;
 }
 
@@ -1851,9 +1927,9 @@ const exportAuditTrail = (format) => {
     box-shadow 0.15s ease;
 }
 
-.stat-card-btn:hover {
+.stat-card-btn:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 6px 12px -2px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-md);
 }
 
 .stat-icon {
@@ -1934,12 +2010,20 @@ const exportAuditTrail = (format) => {
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   padding: 6px 12px;
-  flex: 1;
-  min-width: 240px;
+  flex: 1 1 240px;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .search-icon {
   font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+.search-field {
+  flex: 1;
+  min-width: 0;
 }
 
 .search-input {
@@ -1948,6 +2032,7 @@ const exportAuditTrail = (format) => {
   background: transparent;
   font-size: 0.85rem;
   width: 100%;
+  min-width: 0;
   min-height: var(--semantic-control-target-min, 24px);
 }
 
@@ -1989,6 +2074,8 @@ const exportAuditTrail = (format) => {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .filter-select {
@@ -1998,19 +2085,25 @@ const exportAuditTrail = (format) => {
   font-size: 0.82rem;
   background: var(--semantic-color-surface);
   color: var(--semantic-color-text-body);
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .scope-filter-input {
   width: 132px;
+  max-width: 100%;
   font-family: var(--font-mono);
 }
 
 /* KANBAN BOARD VIEW */
 .kanban-board {
+  position: relative;
   display: grid;
   grid-template-columns: repeat(5, minmax(240px, 1fr));
   gap: 16px;
   overflow-x: auto;
+  max-width: 100%;
   align-items: flex-start;
 }
 
@@ -2093,7 +2186,7 @@ const exportAuditTrail = (format) => {
   border-radius: 8px;
   padding: 12px 14px;
   cursor: pointer;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-sm);
   transition:
     transform 0.12s ease,
     border-color 0.12s ease;
@@ -2102,10 +2195,10 @@ const exportAuditTrail = (format) => {
   gap: 8px;
 }
 
-.ticket-card:hover {
+.ticket-card:hover:not(:disabled) {
   transform: translateY(-2px);
   border-color: var(--semantic-color-interactive-primary);
-  box-shadow: 0 4px 8px -1px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-sm);
 }
 
 .ticket-card:focus-visible,
@@ -2208,10 +2301,12 @@ const exportAuditTrail = (format) => {
 
 /* TABLE VIEW */
 .table-card {
+  position: relative;
   background: var(--semantic-color-surface);
   border-radius: 8px;
   border: 1px solid var(--semantic-color-border);
   overflow-x: auto;
+  max-width: 100%;
 }
 
 .clinical-table {
@@ -2303,7 +2398,7 @@ const exportAuditTrail = (format) => {
   background: var(--semantic-color-interactive-primary);
   color: var(--semantic-color-surface);
 }
-.btn-primary:hover {
+.btn-primary:hover:not(:disabled) {
   background: var(--semantic-color-interactive-primary);
 }
 .btn-secondary {
@@ -2383,7 +2478,7 @@ const exportAuditTrail = (format) => {
   font-size: 0.8rem;
 }
 
-.btn-secondary:hover {
+.btn-secondary:hover:not(:disabled) {
   background: var(--semantic-color-surface-header);
 }
 

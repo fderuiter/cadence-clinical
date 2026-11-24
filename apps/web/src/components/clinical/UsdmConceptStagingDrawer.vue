@@ -467,7 +467,7 @@ const confirmAndApply = () => {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(15, 23, 42, 0.6);
+  background-color: var(--semantic-color-backdrop);
   z-index: 1050;
   display: flex;
   justify-content: flex-end;
@@ -483,7 +483,7 @@ const confirmAndApply = () => {
   flex-direction: column;
   padding: 24px;
   overflow-y: auto;
-  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-drawer-left);
 }
 
 .drawer-header {
@@ -500,7 +500,7 @@ const confirmAndApply = () => {
   margin: 0 0 6px 0;
   font-size: 1.25rem;
   font-weight: 700;
-  color: var(--primary);
+  color: var(--text-main);
 }
 
 .drawer-subtitle {
@@ -556,7 +556,7 @@ const confirmAndApply = () => {
 .alert-warning-inline {
   background-color: var(--semantic-color-warning-bg-soft);
   border: 1px solid var(--semantic-color-warning-border);
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
   padding: 8px 12px;
   border-radius: 6px;
   font-size: 0.8rem;
@@ -629,7 +629,7 @@ const confirmAndApply = () => {
 
 .token-code {
   font-size: 0.9rem;
-  color: var(--semantic-color-primary);
+  color: var(--text-main);
   font-family: monospace;
 }
 
@@ -677,7 +677,7 @@ const confirmAndApply = () => {
 
 .tab-btn.active {
   background-color: var(--primary);
-  color: var(--semantic-color-text-inverse);
+  color: var(--semantic-color-text-on-primary);
   border-color: var(--primary);
 }
 

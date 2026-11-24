@@ -923,7 +923,7 @@ const canSave = computed(
     !sameObservationValue(parsed.value.value, observation.value?.value)
 );
 
-const isDirty = computed(() => {
+const hasChangedText = computed(() => {
   const current = observation.value?.value;
   if (!current || locked.value || !canCorrect.value) return false;
   if (newValue.value.trim().length === 0) return false;
@@ -931,6 +931,25 @@ const isDirty = computed(() => {
     return !sameObservationValue(parsed.value.value, current);
   }
   return true;
+});
+
+const isDirty = computed(
+  () =>
+    Boolean(observation.value?.value) &&
+    !locked.value &&
+    canCorrect.value &&
+    (hasChangedText.value || reasonOpen.value)
+);
+
+function discardCorrection() {
+  reasonOpen.value = false;
+  newValue.value = "";
+}
+
+watch(locked, (isLocked) => {
+  if (isLocked) {
+    reasonOpen.value = false;
+  }
 });
 
 watch(isDirty, (dirty) => {
@@ -954,15 +973,19 @@ useUnsavedNavigationGuard({
     confirmLabel: "Leave Without Saving",
     cancelLabel: "Stay on Observation",
   },
-  shouldPromptOnUpdate: (to, from) =>
-    String(to.params.observationRef ?? "") !==
-    String(from.params.observationRef ?? ""),
+  shouldPromptOnUpdate: (to, from) => {
+    const nextRaw = String(to.params.observationRef ?? "");
+    const prevRaw = String(from.params.observationRef ?? "");
+    const nextRef = observationNodeRef(nextRaw) ?? nextRaw;
+    const prevRef = observationNodeRef(prevRaw) ?? prevRaw;
+    return nextRef !== prevRef;
+  },
   onConfirmedDiscard: () => {
-    newValue.value = "";
+    discardCorrection();
   },
 });
 
-defineExpose({ dirty: isDirty });
+defineExpose({ dirty: isDirty, discardCorrection });
 
 function askReason() {
   if (canSave.value && !saving.value) reasonOpen.value = true;
@@ -1111,6 +1134,7 @@ watch(
     emit("loaded", obs);
     if (
       props.embedded ||
+      isDirty.value ||
       !activeRouter ||
       activeRouter.currentRoute.value.name !== "observation" ||
       typeof kernelApi.getZoomPath !== "function"
@@ -1218,6 +1242,12 @@ watch(
       const sectionVal = queryString("section");
       const isDataWorklist =
         sectionVal === "queries" || sectionVal === "validation";
+      if (
+        isDirty.value ||
+        activeRouter.currentRoute.value.name !== "observation"
+      ) {
+        return;
+      }
       const canonicalRef = observationNodeRef(obs.ref) ?? props.observationRef;
       await activeRouter.replace({
         name: "study",
@@ -1240,8 +1270,7 @@ watch(
 );
 
 function handleDemoReset() {
-  newValue.value = "";
-  reasonOpen.value = false;
+  discardCorrection();
   outcome.value = null;
   void load();
 }
@@ -1261,7 +1290,7 @@ onUnmounted(() => {
 watch(
   () => props.observationRef,
   () => {
-    newValue.value = "";
+    discardCorrection();
     void load();
   }
 );
@@ -1270,14 +1299,33 @@ watch(
 <style scoped>
 .back {
   display: inline-block;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-wrap: anywhere;
   margin-bottom: 12px;
   color: var(--semantic-color-interactive-primary);
   font-size: 0.85rem;
 }
 .observation-summary {
   display: grid;
-  grid-template-columns: max-content 1fr;
+  grid-template-columns: minmax(0, max-content) minmax(0, 1fr);
   gap: 4px 16px;
+  min-width: 0;
+  max-width: 100%;
+}
+.observation-summary :deep(dt),
+.observation-summary :deep(dd),
+.observation-summary dt,
+.observation-summary dd {
+  margin: 0;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 640px) {
+  .observation-summary {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 .observation-sdv-meta {
   margin-left: 8px;
@@ -1355,16 +1403,28 @@ watch(
   flex-wrap: wrap;
   align-items: center;
   margin: 16px 0;
+  min-width: 0;
+  max-width: 100%;
+}
+.observation-correction > * {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-wrap: anywhere;
 }
 .observation-hint {
   flex-basis: 100%;
   margin: 0;
   color: var(--semantic-color-error-text-dark);
+  overflow-wrap: anywhere;
 }
 .observation-outcome {
   padding: 8px 12px;
   border-radius: 6px;
   margin-bottom: 16px;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-wrap: anywhere;
 }
 .observation-outcome--saved {
   background: var(--semantic-color-success-bg-soft);
@@ -1381,12 +1441,16 @@ watch(
 #section-observation > .card {
   min-width: 0;
   max-width: 100%;
+  box-sizing: border-box;
+  overflow-wrap: anywhere;
 }
 .observation-table-scroll {
+  position: relative;
   overflow-x: auto;
   max-width: 100%;
   margin-bottom: 16px;
   padding: 2px;
+  box-sizing: border-box;
 }
 .observation-table-scroll:focus-visible {
   outline: 2px solid var(--semantic-color-accent);

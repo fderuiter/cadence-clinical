@@ -3,6 +3,7 @@ import {
   registerLogoutCleanup,
   registerSessionCacheClearHandler,
 } from "../auth/sessionCoordinator.js";
+import { kernelNavigationApi } from "../api/kernel/navigation";
 import { kernelApi, type KernelNode } from "../api/kernelApi";
 import * as kernelStudy from "./kernelStudy";
 import { formatNodeRef, parseNodeRef, type NodeRef } from "./nodeRef";
@@ -15,6 +16,7 @@ import { formatNodeRef, parseNodeRef, type NodeRef } from "./nodeRef";
  * impact graphs never flood backend read services.
  */
 export const MAX_CONCURRENT_NODE_LOOKUPS = 4;
+export const MAX_BATCH_NODES = 100;
 
 export interface ResolvedNodeEntry {
   status: "loading" | "resolved" | "not_found" | "error";
@@ -44,6 +46,7 @@ export interface NodeDisplaySummary {
 }
 
 let activeSessionKey = "";
+let activeCallerScopeKey = "";
 let sessionEpoch = 0;
 let activeLookups = 0;
 const lookupQueue: Array<() => void> = [];
@@ -51,6 +54,32 @@ const lookupQueue: Array<() => void> = [];
 const resolvedEntries = shallowReactive<Record<string, ResolvedNodeEntry>>({});
 const localHints = shallowReactive<Record<string, NodeLocalHint>>({});
 const inFlight = new Map<string, Promise<KernelNode | null>>();
+const pendingBatchKeys = new Set<string>();
+const batchWaiters = new Map<
+  string,
+  { resolve: (node: KernelNode | null) => void }
+>();
+let batchFlushScheduled = false;
+
+function currentCallerScopeKey(): string {
+  return typeof kernelStudy.getKernelStudyCallerScopeKey === "function"
+    ? kernelStudy.getKernelStudyCallerScopeKey()
+    : "anonymous::";
+}
+
+function isCallerScopeStale(): boolean {
+  return Boolean(
+    activeCallerScopeKey && activeCallerScopeKey !== currentCallerScopeKey()
+  );
+}
+
+function syncCallerScope(): void {
+  const nextScope = currentCallerScopeKey();
+  if (activeCallerScopeKey && activeCallerScopeKey !== nextScope) {
+    clearNodeResolutionCache();
+  }
+  activeCallerScopeKey = nextScope;
+}
 
 function acquireLookupSlot(): Promise<void> | null {
   if (activeLookups < MAX_CONCURRENT_NODE_LOOKUPS) {
@@ -84,10 +113,17 @@ function clearReactiveRecord(record: Record<string, unknown>): void {
 
 export function clearNodeResolutionCache(): void {
   activeSessionKey = "";
+  activeCallerScopeKey = "";
   sessionEpoch += 1;
   clearReactiveRecord(resolvedEntries);
   clearReactiveRecord(localHints);
   inFlight.clear();
+  pendingBatchKeys.clear();
+  batchFlushScheduled = false;
+  for (const waiter of batchWaiters.values()) {
+    waiter.resolve(null);
+  }
+  batchWaiters.clear();
   if (typeof kernelStudy.clearKernelStudyCache === "function") {
     kernelStudy.clearKernelStudyCache();
   }
@@ -111,10 +147,7 @@ registerLogoutCleanup(clearNodeResolutionCache);
  */
 export function resetNodeResolutionSession(studyCode = ""): void {
   const normalized = studyCode.trim();
-  const callerScope =
-    typeof kernelStudy.getKernelStudyCallerScopeKey === "function"
-      ? kernelStudy.getKernelStudyCallerScopeKey()
-      : "anonymous::";
+  const callerScope = currentCallerScopeKey();
   const nextSessionKey = normalized
     ? `${callerScope}::${encodeURIComponent(normalized.toUpperCase())}`
     : "";
@@ -124,9 +157,11 @@ export function resetNodeResolutionSession(studyCode = ""): void {
       : "";
   if (
     nextSessionKey &&
+    (!activeCallerScopeKey || activeCallerScopeKey === callerScope) &&
     (nextSessionKey === activeSessionKey ||
       (!activeSessionKey && nextSessionKey === activeStudySessionKey))
   ) {
+    activeCallerScopeKey = callerScope;
     activeSessionKey = nextSessionKey;
     if (typeof kernelStudy.resetKernelStudySession === "function") {
       kernelStudy.resetKernelStudySession(normalized);
@@ -134,6 +169,7 @@ export function resetNodeResolutionSession(studyCode = ""): void {
     return;
   }
   clearNodeResolutionCache();
+  activeCallerScopeKey = callerScope;
   activeSessionKey = nextSessionKey;
   if (typeof kernelStudy.resetKernelStudySession === "function") {
     kernelStudy.resetKernelStudySession(normalized);
@@ -181,6 +217,7 @@ export function seedNodeSummary(
   nodeRefText: string,
   hint: NodeLocalHint
 ): void {
+  syncCallerScope();
   const parsed = parseLookupNodeRef(nodeRefText);
   if (!parsed) return;
   const fullKey = formatNodeRef(parsed);
@@ -200,16 +237,157 @@ export function seedNodeSummary(
   };
 }
 
-/** Can the browser call `kernelApi.getNode` in this environment? */
-export function canResolveNodesRemotely(): boolean {
-  return typeof (kernelApi as { getNode?: unknown }).getNode === "function";
+function storeResolvedNodeEntry(key: string, node: KernelNode): void {
+  const parsed = parseLookupNodeRef(key);
+  const entry: ResolvedNodeEntry = { status: "resolved", node, error: null };
+  resolvedEntries[key] = entry;
+  if (parsed) {
+    const baseKey = `${parsed.kind}:${parsed.id}`;
+    if (key !== baseKey && !resolvedEntries[baseKey]) {
+      resolvedEntries[baseKey] = entry;
+    }
+    if (node.ref) {
+      const nodeParsed = parseLookupNodeRef(node.ref);
+      if (
+        nodeParsed &&
+        nodeParsed.kind === parsed.kind &&
+        nodeParsed.id === parsed.id
+      ) {
+        const canonicalNodeKey = formatNodeRef(nodeParsed);
+        if (!resolvedEntries[canonicalNodeKey]) {
+          resolvedEntries[canonicalNodeKey] = entry;
+        }
+      }
+    }
+  }
 }
 
 /**
- * Resolves a `NodeRef` via `kernelApi.getNode`, deduplicating concurrent requests for the same
- * key and capping in-flight lookups at `MAX_CONCURRENT_NODE_LOOKUPS`.
+ * Seeds already-masked `KernelNode` summaries (for example from `GET /api/v1/kernel/activity?include_nodes=true`)
+ * into the active caller/study session cache before `NodeRefChip` components mount.
+ */
+export function seedResolvedNodes(
+  nodes: Record<string, KernelNode> | null | undefined
+): void {
+  if (!nodes) return;
+  syncCallerScope();
+  for (const [requestedKey, node] of Object.entries(nodes)) {
+    if (!node) continue;
+    const normalizedKey = normalizeLookupNodeRef(requestedKey);
+    if (!normalizedKey) continue;
+    storeResolvedNodeEntry(normalizedKey, node);
+  }
+}
+
+/** Can the browser call `kernelApi.getNodes` or `kernelApi.getNode` in this environment? */
+export function canResolveNodesRemotely(): boolean {
+  const api = kernelApi as { getNodes?: unknown; getNode?: unknown };
+  return (
+    typeof api.getNodes === "function" || typeof api.getNode === "function"
+  );
+}
+
+function canResolveNodesInBatch(): boolean {
+  const api = kernelApi as { getNodes?: unknown; getNode?: unknown };
+  if (typeof api.getNodes !== "function") return false;
+  if (
+    api.getNodes === kernelNavigationApi.getNodes &&
+    api.getNode !== kernelNavigationApi.getNode
+  ) {
+    return false;
+  }
+  return true;
+}
+
+async function flushPendingNodeBatch(scheduledEpoch: number): Promise<void> {
+  batchFlushScheduled = false;
+  if (pendingBatchKeys.size === 0) return;
+
+  const keys = Array.from(pendingBatchKeys);
+  pendingBatchKeys.clear();
+
+  if (scheduledEpoch !== sessionEpoch || isCallerScopeStale()) {
+    for (const k of keys) {
+      batchWaiters.get(k)?.resolve(null);
+      batchWaiters.delete(k);
+      inFlight.delete(k);
+    }
+    return;
+  }
+
+  const chunks: string[][] = [];
+  for (let idx = 0; idx < keys.length; idx += MAX_BATCH_NODES) {
+    chunks.push(keys.slice(idx, idx + MAX_BATCH_NODES));
+  }
+
+  await Promise.all(
+    chunks.map(async (chunk) => {
+      const slotWait = acquireLookupSlot();
+      if (slotWait) await slotWait;
+      try {
+        if (scheduledEpoch !== sessionEpoch || isCallerScopeStale()) {
+          for (const k of chunk) {
+            batchWaiters.get(k)?.resolve(null);
+          }
+          return;
+        }
+        const response = await kernelApi.getNodes(chunk);
+        const nodesMap = response?.nodes ?? {};
+        if (scheduledEpoch !== sessionEpoch || isCallerScopeStale()) {
+          for (const k of chunk) {
+            const node = Object.prototype.hasOwnProperty.call(nodesMap, k)
+              ? nodesMap[k]
+              : null;
+            batchWaiters.get(k)?.resolve(node ?? null);
+          }
+          return;
+        }
+        for (const k of chunk) {
+          const node = Object.prototype.hasOwnProperty.call(nodesMap, k)
+            ? nodesMap[k]
+            : null;
+          if (node) {
+            storeResolvedNodeEntry(k, node);
+            batchWaiters.get(k)?.resolve(node);
+          } else {
+            resolvedEntries[k] = {
+              status: "not_found",
+              node: null,
+              error: null,
+            };
+            batchWaiters.get(k)?.resolve(null);
+          }
+        }
+      } catch (err) {
+        const httpStatus = (err as { status?: number | null } | null)?.status;
+        const message = err instanceof Error ? err.message : String(err);
+        for (const k of chunk) {
+          if (scheduledEpoch === sessionEpoch && !isCallerScopeStale()) {
+            resolvedEntries[k] = {
+              status: httpStatus === 404 ? "not_found" : "error",
+              node: null,
+              error: message,
+            };
+          }
+          batchWaiters.get(k)?.resolve(null);
+        }
+      } finally {
+        for (const k of chunk) {
+          batchWaiters.delete(k);
+          inFlight.delete(k);
+        }
+        releaseLookupSlot();
+      }
+    })
+  );
+}
+
+/**
+ * Resolves a `NodeRef` via same-tick `kernelApi.getNodes` batches (or `kernelApi.getNode` when batching is not mocked),
+ * deduplicating concurrent requests for the same key and capping in-flight requests at `MAX_CONCURRENT_NODE_LOOKUPS`.
  */
 export function resolveNode(nodeRefText: string): Promise<KernelNode | null> {
+  syncCallerScope();
   const parsed = parseLookupNodeRef(nodeRefText);
   if (!parsed) return Promise.resolve(null);
 
@@ -248,6 +426,21 @@ export function resolveNode(nodeRefText: string): Promise<KernelNode | null> {
     error: null,
   };
 
+  if (canResolveNodesInBatch()) {
+    const batchRequest = new Promise<KernelNode | null>((resolve) => {
+      batchWaiters.set(key, { resolve });
+    });
+    inFlight.set(key, batchRequest);
+    pendingBatchKeys.add(key);
+    if (!batchFlushScheduled) {
+      batchFlushScheduled = true;
+      queueMicrotask(() => {
+        void flushPendingNodeBatch(epochAtStart);
+      });
+    }
+    return batchRequest;
+  }
+
   const request = (async (): Promise<KernelNode | null> => {
     const slotWait = acquireLookupSlot();
     if (slotWait) await slotWait;
@@ -255,10 +448,7 @@ export function resolveNode(nodeRefText: string): Promise<KernelNode | null> {
       if (epochAtStart !== sessionEpoch) return null;
       const node = await kernelApi.getNode(key);
       if (epochAtStart !== sessionEpoch) return node;
-      resolvedEntries[key] = { status: "resolved", node, error: null };
-      if (key !== baseKey && !resolvedEntries[baseKey]) {
-        resolvedEntries[baseKey] = { status: "resolved", node, error: null };
-      }
+      storeResolvedNodeEntry(key, node);
       return node;
     } catch (err) {
       if (epochAtStart === sessionEpoch) {
@@ -285,6 +475,7 @@ export function resolveNode(nodeRefText: string): Promise<KernelNode | null> {
 export function ensureNodesResolved(
   refs: Iterable<string | null | undefined>
 ): void {
+  syncCallerScope();
   if (!canResolveNodesRemotely()) return;
   for (const raw of refs) {
     if (!raw) continue;
@@ -421,8 +612,13 @@ export function getNodeDisplay(
 
   const key = formatNodeRef(parsed);
   const baseKey = `${parsed.kind}:${parsed.id}`;
-  const entry = resolvedEntries[key] ?? resolvedEntries[baseKey];
-  const hint = localHints[key] ?? localHints[baseKey];
+  const staleScope = isCallerScopeStale();
+  const entry = staleScope
+    ? undefined
+    : (resolvedEntries[key] ?? resolvedEntries[baseKey]);
+  const hint = staleScope
+    ? undefined
+    : (localHints[key] ?? localHints[baseKey]);
   const node = entry?.node ?? null;
 
   if (node && node.mask !== null) {
@@ -480,6 +676,7 @@ export function useNodeDisplay(
 export function getCachedNodeEntry(
   nodeRefText: string
 ): ResolvedNodeEntry | null {
+  if (isCallerScopeStale()) return null;
   const parsed = parseLookupNodeRef(nodeRefText);
   if (!parsed) return null;
   const key = formatNodeRef(parsed);

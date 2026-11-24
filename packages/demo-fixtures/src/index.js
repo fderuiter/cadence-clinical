@@ -65,8 +65,17 @@ export function getDemoPersonaForWorkspace(workspacePersona) {
   if (!workspacePersona) {
     return DEMO_PERSONA_BY_WORKSPACE.super_admin || DEMO_PERSONAS[0] || null;
   }
+  const key = String(workspacePersona).trim();
+  if (key === "trial_coordinator") {
+    return (
+      DEMO_PERSONA_BY_WORKSPACE.trial_coordinator ||
+      DEMO_PERSONA_BY_WORKSPACE.site_crc ||
+      DEMO_PERSONAS[0] ||
+      null
+    );
+  }
   return (
-    DEMO_PERSONA_BY_WORKSPACE[String(workspacePersona).trim()] ||
+    DEMO_PERSONA_BY_WORKSPACE[key] ||
     getDemoPersonaByWorkflow(workspacePersona) ||
     getDemoPersonaByUsername(workspacePersona) ||
     DEMO_PERSONA_BY_WORKSPACE.super_admin ||

@@ -1049,7 +1049,7 @@
                 style="
                   font-size: 0.85rem;
                   font-weight: 600;
-                  color: var(--primary);
+                  color: var(--text-main);
                 "
               >
                 Automated Re-Consent Notification Channels:
@@ -2274,7 +2274,7 @@ onMounted(() => {
   background: var(--primary);
   color: var(--semantic-color-surface);
   border-color: var(--primary);
-  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
+  box-shadow: var(--shadow-sm);
 }
 
 .nav-pill-badge {
@@ -2319,7 +2319,7 @@ onMounted(() => {
 
 .diff-arrow {
   font-size: 1.25rem;
-  color: var(--primary);
+  color: var(--text-main);
   margin-top: 1rem;
 }
 
@@ -2601,7 +2601,7 @@ onMounted(() => {
 
 .version-tag {
   font-weight: 600;
-  color: var(--primary);
+  color: var(--text-main);
 }
 
 .consent-badge {
@@ -2653,7 +2653,7 @@ onMounted(() => {
   color: var(--semantic-color-text-inverse);
   border-radius: var(--radius-md, 8px);
   padding: 0.85rem 1.5rem;
-  box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-xl);
   z-index: 900;
 }
 
@@ -2673,7 +2673,7 @@ onMounted(() => {
 
 .batch-count-badge {
   background: var(--primary);
-  color: var(--semantic-color-surface);
+  color: var(--semantic-color-text-on-primary);
   font-weight: 700;
   padding: 0.3rem 0.75rem;
   border-radius: 6px;
@@ -2687,9 +2687,9 @@ onMounted(() => {
 }
 
 .btn-batch-action {
-  background: var(--semantic-color-success);
-  border-color: var(--semantic-color-success);
-  color: var(--semantic-color-surface);
+  background: var(--semantic-color-success-interactive);
+  border-color: var(--semantic-color-success-interactive);
+  color: var(--semantic-color-text-on-solid);
   font-weight: 700;
 }
 
@@ -2866,7 +2866,7 @@ onMounted(() => {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--semantic-color-backdrop);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -2878,7 +2878,7 @@ onMounted(() => {
   border-radius: var(--radius-md, 8px);
   width: 580px;
   max-width: 90vw;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-xl);
   overflow: hidden;
 }
 
@@ -2938,8 +2938,9 @@ onMounted(() => {
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: var(--semantic-color-border-muted);
-  color: var(--semantic-color-surface);
+  background: var(--semantic-badge-draft-bg);
+  color: var(--semantic-badge-draft-text);
+  border: 1px solid var(--semantic-badge-draft-border);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2949,10 +2950,14 @@ onMounted(() => {
 
 .step-item.active .step-number {
   background: var(--primary);
+  color: var(--semantic-color-text-on-primary);
+  border-color: var(--primary);
 }
 
 .step-item.completed .step-number {
-  background: var(--semantic-color-success);
+  background: var(--semantic-color-success-interactive);
+  color: var(--semantic-color-text-on-solid);
+  border-color: var(--semantic-color-success-interactive);
 }
 
 .step-label {
@@ -3131,7 +3136,7 @@ onMounted(() => {
 }
 
 .subject-tags-inline {
-  color: var(--primary);
+  color: var(--text-main);
   font-family: monospace;
 }
 
@@ -3162,7 +3167,7 @@ onMounted(() => {
 
 .btn-primary {
   background: var(--primary);
-  color: var(--semantic-color-surface);
+  color: var(--semantic-color-text-on-primary);
 }
 
 .btn-primary:disabled {
@@ -3215,7 +3220,7 @@ onMounted(() => {
   border-radius: var(--radius-md, 8px);
   padding: 1.25rem 1.5rem;
   margin-bottom: 1.5rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-sm);
 }
 
 .summary-top-row {
@@ -3335,7 +3340,7 @@ onMounted(() => {
 
 .layer-tab-btn.active {
   background: var(--primary);
-  color: var(--semantic-color-surface);
+  color: var(--semantic-color-text-on-primary);
   border-color: var(--primary);
 }
 
@@ -3432,7 +3437,7 @@ onMounted(() => {
   font-size: 0.75rem;
   font-family: monospace;
   font-weight: 700;
-  color: var(--primary);
+  color: var(--text-main);
 }
 
 .form-title {
@@ -3455,7 +3460,7 @@ onMounted(() => {
 
 .diff-badge-node-modified {
   background: var(--semantic-color-warning-bg-badge);
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
   border: 1px solid var(--semantic-color-warning-border);
 }
 

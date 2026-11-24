@@ -73,6 +73,7 @@ public static class ContextualHelpScorer
         ["crc"] = "site_crc",
         ["site_coordinator"] = "site_crc",
         ["study_coordinator"] = "site_crc",
+        ["trial_coordinator"] = "site_crc",
         ["pharmacist"] = "site_crc",
 
         ["site_investigator"] = "site_investigator",

@@ -6,7 +6,9 @@ using System.Threading.Tasks;
 using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Application.Cgt;
 using Cadence.Apps.Execution.Domain.Cgt.Errors;
+using Cadence.Apps.Execution.Endpoints.Filters;
 using Cadence.Apps.Execution.Infrastructure.Security;
+using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
 using Cadence.Security.Rbac;
 
@@ -19,6 +21,8 @@ namespace Cadence.Apps.Execution.Endpoints;
 
 public static class CgtEndpoints
 {
+    public const string BedsideVerifySemanticAction = "execution.cgt.bedside_verify";
+    public const string DestructionCertificateSemanticAction = "execution.cgt.destruction_certificate";
     public static IEndpointRouteBuilder MapCgtEndpoints(this IEndpointRouteBuilder routes)
     {
         // Route permissions (ADR-2516): site and pharmacy staff record the chain of custody; sponsor, monitoring and
@@ -58,7 +62,8 @@ public static class CgtEndpoints
                 return Results.BadRequest(new { detail = ex.Message });
             }
         })
-        .RequirePermission("cgt_chain_of_custody:write").RequireCallerStudyAndSiteScope();
+        .RequirePermission("cgt_chain_of_custody:write").RequireCallerStudyAndSiteScope()
+        .RequireChangeReasonHeader();
 
         group.MapPost("/milestone", async (
             CgtMilestoneCreateRequest request,
@@ -93,7 +98,8 @@ public static class CgtEndpoints
                 return Results.NotFound(new { detail = ex.Message });
             }
         })
-        .RequirePermission("cgt_chain_of_custody:write").RequireCallerStudyScope();
+        .RequirePermission("cgt_chain_of_custody:write").RequireCallerStudyScope()
+        .RequireChangeReasonHeader();
 
         group.MapPost("/manufacturing-bind", async (
             CgtManufacturingBindRequest request,
@@ -128,7 +134,8 @@ public static class CgtEndpoints
                 return Results.NotFound(new { detail = ex.Message });
             }
         })
-        .RequirePermission("cgt_chain_of_custody:write").RequireCallerStudyScope();
+        .RequirePermission("cgt_chain_of_custody:write").RequireCallerStudyScope()
+        .RequireChangeReasonHeader();
 
         group.MapPost("/bedside-verify", async (
             CgtBedsideVerificationRequest request,
@@ -172,7 +179,9 @@ public static class CgtEndpoints
                 return Results.BadRequest(new { detail = ex.Message });
             }
         })
-        .RequirePermission("cgt_chain_of_custody:write").RequireCallerStudyAndSiteScope();
+        .RequirePermission("cgt_chain_of_custody:write").RequireCallerStudyAndSiteScope()
+        .RequireElectronicSignature(BedsideVerifySemanticAction, http => http.Request.Path.Value ?? string.Empty)
+        .RequireChangeReasonHeader();
 
         group.MapPost("/infuse", async (
             CgtInfusionExecuteRequest request,
@@ -216,7 +225,8 @@ public static class CgtEndpoints
                 return Results.BadRequest(new { detail = ex.Message });
             }
         })
-        .RequirePermission("cgt_chain_of_custody:write").RequireCallerStudyAndSiteScope();
+        .RequirePermission("cgt_chain_of_custody:write").RequireCallerStudyAndSiteScope()
+        .RequireChangeReasonHeader();
 
         group.MapPost("/returns", async (
             CgtVialReturnReconciliationRequest request,
@@ -248,7 +258,8 @@ public static class CgtEndpoints
             var result = await service.LogVialReturnAsync(request, ct);
             return Results.Ok(result);
         })
-        .RequirePermission("cgt_chain_of_custody:write").RequireCallerStudyAndSiteScope();
+        .RequirePermission("cgt_chain_of_custody:write").RequireCallerStudyAndSiteScope()
+        .RequireChangeReasonHeader();
 
         group.MapPost("/destruction-certificate", async (
             CgtDestructionCertificateCreateRequest request,
@@ -288,7 +299,9 @@ public static class CgtEndpoints
                 return Results.UnprocessableEntity(new { detail = ex.Message });
             }
         })
-        .RequirePermission("cgt_chain_of_custody:write").RequireCallerStudyAndSiteScope();
+        .RequirePermission("cgt_chain_of_custody:write").RequireCallerStudyAndSiteScope()
+        .RequireElectronicSignature(DestructionCertificateSemanticAction, http => http.Request.Path.Value ?? string.Empty)
+        .RequireChangeReasonHeader();
 
         group.MapPost("/verify-barcode", (
             CgtBarcodeVerifyRequest request,

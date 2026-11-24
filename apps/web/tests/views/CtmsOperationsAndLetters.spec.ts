@@ -2,7 +2,8 @@ import { flushPromises, mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ctmsApi } from "../../src/api/ctmsApi";
-import apiClient from "../../src/services/api";
+import { apiClient } from "../../src/api/apiClient";
+import * as signatureVerification from "../../src/api/signatureVerification";
 import { useAuthStore } from "../../src/stores/auth";
 import CtmsView from "../../src/views/CtmsView.vue";
 import { signInAs } from "../helpers/signIn.js";
@@ -87,9 +88,11 @@ describe("CtmsMonitoringSection in live CTMS workspace: structured findings, com
       pdfAccessUrl: "/api/v1/ctms/letters/LTR-ABCD1234/pdf",
       pdfBase64: "JVBERi0xLjc=",
     });
-    vi.spyOn(apiClient, "post").mockResolvedValue({
-      sig_token: "sig-token-letter-1",
-    });
+    vi.spyOn(signatureVerification, "requestStepUpSignature").mockResolvedValue(
+      {
+        sig_token: "sig-token-letter-1",
+      }
+    );
   });
 
   afterEach(() => {
@@ -160,11 +163,10 @@ describe("CtmsMonitoringSection in live CTMS workspace: structured findings, com
     await wrapper.find("#btn-confirm-compile-letter").trigger("click");
     await flushPromises();
 
-    expect(apiClient.post).toHaveBeenCalledWith(
-      "/api/v1/auth/signature-verification",
+    expect(signatureVerification.requestStepUpSignature).toHaveBeenCalledWith(
       expect.objectContaining({
         action: "/api/v1/ctms/letters/compile",
-        semantic_action: "ctms.letter.compile",
+        semanticAction: "ctms.letter.compile",
       })
     );
     expect(ctmsApi.compileVisitLetter).toHaveBeenCalledWith(

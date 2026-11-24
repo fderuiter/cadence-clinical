@@ -10,7 +10,6 @@ import { createPinia, setActivePinia } from "pinia";
 import { useAuthStore } from "../src/stores/auth";
 import { apiClient } from "../src/api/apiClient";
 import { etmfService } from "../src/api/etmf";
-import apiService from "../src/services/api";
 import { jsonResponse, recordedRequest } from "./fetch_mock.js";
 
 const lastRequest = () =>
@@ -240,12 +239,6 @@ describe("Gateway API Clients and Service Modules Unit Tests", () => {
         "Bearer etmf-bearer-token"
       );
       expect(exportArchive.blob.size).toBe(4);
-    });
-  });
-
-  describe("services/api wrapper", () => {
-    it("should re-export apiClient correctly as the default export", () => {
-      expect(apiService).toBe(apiClient);
     });
   });
 

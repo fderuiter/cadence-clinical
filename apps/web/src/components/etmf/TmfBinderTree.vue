@@ -674,7 +674,7 @@ function getDocumentCount(node) {
   transition: background-color 0.2s;
 }
 
-.btn-export-full-binder:hover {
+.btn-export-full-binder:hover:not(:disabled) {
   background-color: var(--semantic-color-interactive-primary);
 }
 
@@ -836,7 +836,7 @@ function getDocumentCount(node) {
 
 .doc-count-badge {
   background-color: var(--semantic-color-primary-dark);
-  color: var(--semantic-color-text-on-solid);
+  color: var(--semantic-color-text-on-primary);
   font-size: 0.75rem;
   font-weight: 700;
   padding: 2px 6px;

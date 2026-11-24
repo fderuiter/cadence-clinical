@@ -1,5 +1,9 @@
 import { getActivePinia } from "pinia";
 import {
+  DATA_COLLECTION_ROLES,
+  ETMF_ROLES,
+  SITE_READINESS_SITE_ROLES,
+  SITE_READINESS_SPONSOR_ROLES,
   buildDataCollectionPath,
   buildScopedWorkflowPath,
   buildStudiesWorkspacePath,
@@ -13,32 +17,19 @@ export function resolveStorePinia(store) {
   return store?._p || getActivePinia() || null;
 }
 
-const DATA_COLLECTION_ROLES = [
-  "site_investigator",
-  "crc",
-  "data_manager",
-  "sponsor_admin",
-  "cra",
-  "monitor",
+export {
+  DATA_COLLECTION_ROLES,
+  ETMF_ROLES,
+  SITE_READINESS_SITE_ROLES,
+  SITE_READINESS_SPONSOR_ROLES,
+};
+
+const CTMS_AUTHORIZED_ROLES = [
+  ...SITE_READINESS_SPONSOR_ROLES,
+  "pharmacist",
+  "trial_coordinator",
 ];
 
-const SITE_READINESS_SPONSOR_ROLES = [
-  "cra",
-  "monitor",
-  "data_manager",
-  "sponsor_admin",
-];
-const SITE_READINESS_SITE_ROLES = ["site_investigator", "crc"];
-const ETMF_ROLES = [
-  "cra",
-  "monitor",
-  "data_manager",
-  "site_investigator",
-  "crc",
-  "auditor",
-  "tmf_auditor",
-  "sponsor_admin",
-];
 const NON_ONBOARDING_ROUTES = new Set([
   "landing",
   "login",
@@ -223,7 +214,7 @@ export function resolveAuthorizedTaskRoute(
   }
   if (routeName === "ctms") {
     return isScreenAvailable("ctms") &&
-      hasRequiredRole(userRoles, SITE_READINESS_SPONSOR_ROLES)
+      hasRequiredRole(userRoles, CTMS_AUTHORIZED_ROLES)
       ? buildScopedWorkflowPath("/ctms", {
           studyCode,
           siteId,
@@ -318,7 +309,7 @@ export function isTourRouteAuthorized(routeName, userRoles) {
     return hasRequiredRole(userRoles, obsRoles);
   }
   if (routeName === "ctms") {
-    return hasRequiredRole(userRoles, SITE_READINESS_SPONSOR_ROLES);
+    return hasRequiredRole(userRoles, CTMS_AUTHORIZED_ROLES);
   }
   if (routeName === "ssu") {
     return hasRequiredRole(userRoles, [

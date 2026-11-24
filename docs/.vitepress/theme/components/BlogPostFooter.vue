@@ -2,7 +2,12 @@
 import { computed } from "vue";
 import { useRoute } from "vitepress";
 import { data as posts } from "../../../blog/posts.data.mjs";
-import { normalizeRelatedLinks, resolveBaseHref } from "../../blogShared.mjs";
+import {
+  normalizeRelatedLinks,
+  resolveBaseHref,
+  resolveBlogLinkRel,
+  resolveBlogLinkTarget,
+} from "../../blogShared.mjs";
 
 const route = useRoute();
 const frontmatter = computed(() => route.data?.frontmatter ?? {});
@@ -58,7 +63,12 @@ function resolveHref(link) {
       </h2>
       <ul class="blog-related-list">
         <li v-for="item in related" :key="item.link">
-          <a :href="resolveHref(item.link)">{{ item.text }}</a>
+          <a
+            :href="resolveHref(item.link)"
+            :target="resolveBlogLinkTarget(item.link)"
+            :rel="resolveBlogLinkRel(item.link)"
+            >{{ item.text }}</a
+          >
         </li>
       </ul>
     </section>

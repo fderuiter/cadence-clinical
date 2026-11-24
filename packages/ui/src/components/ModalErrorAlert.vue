@@ -205,7 +205,7 @@ onMounted(() => {
   border: 1px solid var(--semantic-color-error);
 }
 
-.btn-retry:hover {
+.btn-retry:hover:not(:disabled) {
   background-color: var(--semantic-color-error-text-dark);
   border-color: var(--semantic-color-error-text-dark);
 }
@@ -216,7 +216,7 @@ onMounted(() => {
   border: 1px solid var(--semantic-color-error);
 }
 
-.btn-dismiss:hover {
+.btn-dismiss:hover:not(:disabled) {
   background-color: var(--semantic-color-error-bg);
 }
 </style>

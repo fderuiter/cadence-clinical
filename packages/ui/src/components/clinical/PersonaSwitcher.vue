@@ -96,6 +96,7 @@ const selectPersona = (persona) => {
       <button
         v-for="persona in personas"
         :key="persona.id"
+        type="button"
         :class="['menu-item', { active: persona.id === modelValue }]"
         role="menuitem"
         @click="selectPersona(persona)"
@@ -125,11 +126,11 @@ const selectPersona = (persona) => {
   border-radius: 6px;
   padding: 6px 12px;
   cursor: pointer;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-sm);
   transition: all 0.15s ease;
 }
 
-.persona-toggle-btn:hover {
+.persona-toggle-btn:hover:not(:disabled) {
   background: var(--semantic-color-surface-muted);
   border-color: var(--semantic-color-border-control);
 }
@@ -175,9 +176,7 @@ const selectPersona = (persona) => {
   background: var(--semantic-color-surface);
   border: 1px solid var(--semantic-color-border);
   border-radius: 8px;
-  box-shadow:
-    0 10px 15px -3px rgba(0, 0, 0, 0.1),
-    0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-lg);
   z-index: 1000;
   overflow: hidden;
 }

@@ -42,6 +42,13 @@ async function buildSignedTextHeaders(
   };
 }
 
+function problemResponse(error) {
+  return HttpResponse.json(error.problem, {
+    status: error.status,
+    headers: { "Content-Type": "application/problem+json" },
+  });
+}
+
 export function createKernelStudyAndGovernanceHandlers(store) {
   return [
     http.get("*/api/v1/kernel/studies", () =>
@@ -189,25 +196,48 @@ export function createKernelStudyAndGovernanceHandlers(store) {
         store.getProtocolVersion(decodeURIComponent(String(params.versionRef)))
       )
     ),
-    http.get("*/api/v1/kernel/studies/:studyRef/proposals", ({ request }) => {
-      const url = new URL(request.url);
-      return HttpResponse.json(
-        store.listProposals({
-          status: url.searchParams.get("status") || undefined,
-          limit: url.searchParams.get("limit") || undefined,
-        })
-      );
-    }),
+    http.get(
+      "*/api/v1/kernel/studies/:studyRef/proposals",
+      ({ params, request }) => {
+        const url = new URL(request.url);
+        const studyRef = decodeURIComponent(String(params.studyRef));
+        const status = url.searchParams.get("status") || undefined;
+        const limit = url.searchParams.get("limit") || undefined;
+        const result = store.listProposals(studyRef, { status, limit });
+        if (Array.isArray(result)) {
+          return HttpResponse.json(result);
+        }
+        if (result.error) return problemResponse(result.error);
+        return HttpResponse.json(result.data);
+      }
+    ),
+    http.get(
+      "*/api/v1/kernel/studies/:studyRef/attention",
+      ({ params, request }) => {
+        const url = new URL(request.url);
+        const studyRef = decodeURIComponent(String(params.studyRef));
+        const limit = url.searchParams.get("limit") || 20;
+        const result = store.getStudyAttention(studyRef, { limit });
+        if (result.error) return problemResponse(result.error);
+        return HttpResponse.json(result.data);
+      }
+    ),
     http.get(
       "*/api/v1/kernel/studies/:studyRef/locks",
       ({ params, request }) => {
         const url = new URL(request.url);
         const activeOnly = url.searchParams.get("active_only") === "true";
         const now = new Date().toISOString();
-        const studyRef = decodeURIComponent(String(params.studyRef));
+        const rawStudyRef = decodeURIComponent(String(params.studyRef));
+        const resolved =
+          typeof store.resolveStudy === "function"
+            ? store.resolveStudy(rawStudyRef)
+            : { study: { ref: rawStudyRef, code: "CAD-ONC-2026" } };
+        if (resolved.error) return problemResponse(resolved.error);
+        const canonicalRef = String(resolved.study.ref).split("@")[0];
         return HttpResponse.json({
-          study_ref: studyRef,
-          study_code: "CAD-ONC-2026",
+          study_ref: canonicalRef,
+          study_code: resolved.study.code || "CAD-ONC-2026",
           valid_at: now,
           known_at: now,
           locks: store.listKernelLocks(activeOnly),
@@ -219,9 +249,13 @@ export function createKernelStudyAndGovernanceHandlers(store) {
       "*/api/v1/kernel/studies/:studyRef/locks/readiness",
       ({ params, request }) => {
         const url = new URL(request.url);
-        const studyRef = decodeURIComponent(String(params.studyRef));
+        const rawStudyRef = decodeURIComponent(String(params.studyRef));
+        if (typeof store.resolveStudy === "function") {
+          const resolved = store.resolveStudy(rawStudyRef);
+          if (resolved.error) return problemResponse(resolved.error);
+        }
         const scopeRef = url.searchParams.get("scope_ref") || undefined;
-        return HttpResponse.json(store.getLockReadiness(studyRef, scopeRef));
+        return HttpResponse.json(store.getLockReadiness(rawStudyRef, scopeRef));
       }
     ),
     http.post("*/api/v1/kernel/locks", async ({ request }) => {
@@ -243,11 +277,17 @@ export function createKernelStudyAndGovernanceHandlers(store) {
         );
       }
     ),
-    http.get("*/api/v1/kernel/work-queues", () =>
-      HttpResponse.json({
-        queues: [],
-      })
-    ),
+    http.get("*/api/v1/kernel/work-queues", ({ request }) => {
+      const url = new URL(request.url);
+      const within = url.searchParams.get("within") || undefined;
+      const queue = url.searchParams.get("queue") || undefined;
+      if (typeof store.listWorkQueues === "function") {
+        const result = store.listWorkQueues({ within, queue });
+        if (result.error) return problemResponse(result.error);
+        return HttpResponse.json(result.data);
+      }
+      return HttpResponse.json({ queues: [] });
+    }),
     http.post("*/api/v1/kernel/work-queues", async ({ request }) => {
       const body = await readJsonBody(request);
       return HttpResponse.json(
@@ -264,11 +304,28 @@ export function createKernelStudyAndGovernanceHandlers(store) {
         { status: 201 }
       );
     }),
-    http.get("*/api/v1/kernel/studies/:studyRef/validation/findings", () =>
-      HttpResponse.json({
-        total: 0,
-        findings: [],
-      })
+    http.get(
+      "*/api/v1/kernel/studies/:studyRef/validation/findings",
+      ({ params, request }) => {
+        const url = new URL(request.url);
+        const studyRef = decodeURIComponent(String(params.studyRef));
+        if (typeof store.listStudyValidationFindings === "function") {
+          const result = store.listStudyValidationFindings(studyRef, {
+            stage: url.searchParams.get("stage") || undefined,
+            statuses: url.searchParams.getAll("status"),
+            severity: url.searchParams.get("severity") || undefined,
+            dataset: url.searchParams.get("dataset") || undefined,
+            packKey: url.searchParams.get("pack_key") || undefined,
+            limit: url.searchParams.get("limit") || undefined,
+          });
+          if (result.error) return problemResponse(result.error);
+          return HttpResponse.json(result.data);
+        }
+        return HttpResponse.json({
+          total: 0,
+          findings: [],
+        });
+      }
     ),
     http.get(
       "*/api/v1/kernel/studies/:studyRef/exports",
@@ -398,9 +455,19 @@ export function createKernelStudyAndGovernanceHandlers(store) {
     ),
     http.get("*/api/v1/kernel/activity", ({ request }) => {
       const url = new URL(request.url);
-      return HttpResponse.json(
-        store.getActivityPage({ limit: url.searchParams.get("limit") || 25 })
-      );
+      const scope = url.searchParams.get("scope") || undefined;
+      const families = url.searchParams.getAll("family");
+      const limit = url.searchParams.get("limit") || 25;
+      const includeNodes = url.searchParams.get("include_nodes") === "true";
+      const result = store.getActivityPage({
+        scope,
+        families,
+        limit,
+        includeNodes,
+        caller: resolveDemoCaller(request),
+      });
+      if (result?.error) return problemResponse(result.error);
+      return HttpResponse.json(result?.data ?? result);
     }),
     http.post("*/api/v1/kernel/simulation/simulate", async ({ request }) => {
       const body = await readJsonBody(request);

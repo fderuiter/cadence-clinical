@@ -56,7 +56,7 @@ graph TD
     T0B --> T2A
     T0C --> T2A
     T0I -.->|reflection into apps.execution.database.context| T2A
-    T0I -.->|reflection into apps.{eisf,etmf,quality}.*.database| T3D
+    T0I -.->|"reflection into apps.{eisf,etmf,quality}.*.database"| T3D
     T0I -.->|reflection| T3C
     T0I -.->|reflection| T3A
 

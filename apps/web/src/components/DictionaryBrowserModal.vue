@@ -514,7 +514,7 @@ useFocusTrap(modalRef, {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(15, 23, 42, 0.65);
+  background-color: var(--semantic-color-backdrop);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -522,12 +522,12 @@ useFocusTrap(modalRef, {
 }
 
 .dictionary-browser-modal {
-  background-color: white;
+  background-color: var(--semantic-color-surface);
   width: 95%;
   max-width: 1080px;
   max-height: 90vh;
   border-radius: 8px;
-  box-shadow: 0 20px 35px rgba(0, 0, 0, 0.25);
+  box-shadow: var(--shadow-xl);
   display: flex;
   flex-direction: column;
 }
@@ -544,7 +544,7 @@ useFocusTrap(modalRef, {
 .header-titles h3 {
   margin: 0;
   font-size: 1.25rem;
-  color: var(--primary);
+  color: var(--text-main);
 }
 
 .header-subtitle {
@@ -604,7 +604,7 @@ useFocusTrap(modalRef, {
 }
 
 .card {
-  background-color: white;
+  background-color: var(--semantic-color-surface);
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 16px;
@@ -624,7 +624,7 @@ useFocusTrap(modalRef, {
 .column-header h4 {
   margin: 0;
   font-size: 0.95rem;
-  color: var(--primary);
+  color: var(--text-main);
 }
 
 .results-list {
@@ -647,7 +647,7 @@ useFocusTrap(modalRef, {
 .result-item-card:hover,
 .result-item-card:focus-visible {
   border-color: var(--accent);
-  background-color: rgba(2, 101, 151, 0.03);
+  background-color: var(--semantic-color-info-bg-soft);
 }
 
 .result-item-card:focus-visible {
@@ -670,7 +670,7 @@ useFocusTrap(modalRef, {
 
 .result-term-name {
   font-weight: 600;
-  color: var(--primary);
+  color: var(--text-main);
   font-size: 0.92rem;
 }
 
@@ -678,7 +678,7 @@ useFocusTrap(modalRef, {
   font-size: 0.75rem;
   font-weight: 700;
   color: var(--accent);
-  background-color: white;
+  background-color: var(--semantic-color-surface);
   padding: 2px 6px;
   border-radius: 4px;
   border: 1px solid var(--semantic-color-info-border);
@@ -719,12 +719,12 @@ useFocusTrap(modalRef, {
 .concept-title {
   font-size: 1.1rem;
   font-weight: 700;
-  color: var(--semantic-color-primary);
+  color: var(--text-main);
 }
 
 .concept-code {
   font-size: 0.85rem;
-  color: var(--semantic-color-primary);
+  color: var(--text-main);
   margin-top: 2px;
 }
 
@@ -773,7 +773,7 @@ useFocusTrap(modalRef, {
   padding: 2px 6px;
   border-radius: 4px;
   background-color: var(--primary);
-  color: white;
+  color: var(--semantic-color-text-on-primary);
 }
 
 .node-info {
@@ -784,7 +784,7 @@ useFocusTrap(modalRef, {
 .node-name {
   font-weight: 600;
   font-size: 0.88rem;
-  color: var(--primary);
+  color: var(--text-main);
 }
 
 .node-code {
@@ -826,7 +826,7 @@ useFocusTrap(modalRef, {
 
 .atc-description {
   font-size: 0.85rem;
-  color: var(--primary);
+  color: var(--text-main);
 }
 
 .ingredient-chips {
@@ -888,7 +888,7 @@ useFocusTrap(modalRef, {
 .form-group label {
   font-size: 0.82rem;
   font-weight: 600;
-  color: var(--primary);
+  color: var(--text-main);
 }
 
 .form-control {

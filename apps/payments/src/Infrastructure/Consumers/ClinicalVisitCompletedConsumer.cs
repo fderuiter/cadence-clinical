@@ -10,6 +10,7 @@ using Cadence.Apps.Payments.Domain;
 using Cadence.Apps.Payments.Domain.Ledger;
 using Cadence.Apps.Payments.Infrastructure.Persistence;
 using Cadence.Contracts;
+using Cadence.Database.Audit;
 using Cadence.Kernel;
 using Cadence.Kernel.Time;
 
@@ -44,6 +45,9 @@ public sealed class ClinicalVisitCompletedConsumer(
 
         string triggerEventId = msg.EventId;
         DateTimeOffset now = clock.UtcNow;
+        using var _ = AmbientAuditActorScope.BeginScope(
+            SystemUserId,
+            $"Automated investigator payment milestone processing for visit {msg.VisitCode}");
 
         // Requirement 5 & Criterion 2: Verify event idempotency by checking TriggerEventId before processing
         bool alreadyProcessed = await dbContext.Payables

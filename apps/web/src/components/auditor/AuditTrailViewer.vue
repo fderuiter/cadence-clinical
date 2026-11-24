@@ -215,7 +215,7 @@
                 class="part11-reason"
                 style="
                   padding: 6px 8px;
-                  background: rgba(0, 123, 255, 0.05);
+                  background: var(--semantic-color-info-bg-soft);
                   border-left: 3px solid var(--accent);
                   border-radius: 2px;
                   font-size: 11px;
@@ -324,6 +324,6 @@ function getActionBadgeClass(action) {
 
 <style scoped>
 .clinical-table tr:hover {
-  background-color: rgba(0, 0, 0, 0.01);
+  background-color: var(--semantic-color-surface-muted);
 }
 </style>

@@ -18,17 +18,20 @@ public static class GxpSnapshotGuardService
     public const string DefaultBaseRef = GitRevisionScopeService.DefaultBaseRef;
 
     /// <summary>
-    /// Checks staged files (<paramref name="preCommit"/>), a pushed commit range (<paramref name="pushBefore"/> on
-    /// <c>main</c> and <c>release/*</c> pushes), or everything the branch changed since <paramref name="baseRef"/>
-    /// (filtering out verbatim <paramref name="baseRef"/> snapshots merged into a feature branch). Returns 0 when no
-    /// snapshot path changed or snapshot mode is on, and 1 otherwise.
+    /// Checks staged files (<paramref name="preCommit"/>), uncommitted working-tree drift on protected
+    /// <c>workflow_dispatch</c> and <c>refs/tags/v*</c> target refs, a pushed commit range (<paramref name="pushBefore"/>
+    /// or <c>merge-base(origin/main, HEAD)..HEAD</c> on newly created <c>refs/heads/release/*</c> branches), or everything
+    /// the branch changed since <paramref name="baseRef"/> (filtering out verbatim <paramref name="baseRef"/> snapshots
+    /// merged into a feature branch). Returns 0 when no snapshot path changed or snapshot mode is on, and 1 otherwise.
     /// </summary>
     public static int Check(
         string repoRoot,
         bool preCommit,
         string? baseRef = DefaultBaseRef,
         bool? snapshotMode = null,
-        string? pushBefore = null)
+        string? pushBefore = null,
+        string? eventName = null,
+        string? gitRef = null)
     {
         bool snapshot = snapshotMode ?? GxpSnapshotPolicy.IsSnapshotMode();
         string effectiveBaseRef = GitRevisionScopeService.NormalizeBaseRef(baseRef);
@@ -54,23 +57,56 @@ public static class GxpSnapshotGuardService
             return Evaluate(stagedChanged, snapshot, "staged");
         }
 
-        if (!string.IsNullOrWhiteSpace(pushBefore))
+        var eventScope = GitRevisionScopeService.ResolveEventScope(repoRoot, effectiveBaseRef, pushBefore, eventName, gitRef);
+        if (eventScope.Kind == GitEventScopeKind.UnprotectedTargetRef)
         {
-            string? headCommit = GitRevisionScopeService.TryResolveCommitSha(repoRoot, "HEAD");
-            string? validPushBase = GitRevisionScopeService.TryResolveValidPushBase(repoRoot, pushBefore, headCommit);
-            if (validPushBase is not null)
-            {
-                var pushedChanged = GitRevisionScopeService.CollectChangedFilesSinceCommit(
-                    repoRoot,
-                    validPushBase,
-                    includeDeletions: true,
-                    includeUntracked: false);
-                string shortSha = validPushBase[..Math.Min(12, validPushBase.Length)];
-                return Evaluate(pushedChanged, snapshot, $"changed since {shortSha}");
-            }
+            Console.WriteLine($"[GXP SNAPSHOT] [ERROR] Unsupported target ref '{eventScope.GitRef}' for event '{eventScope.EventName}'.");
+            return 1;
         }
 
-        string? mergeBase = GitRevisionScopeService.TryResolveBranchCompareBase(repoRoot, effectiveBaseRef);
+        if (eventScope.Kind == GitEventScopeKind.TargetRef)
+        {
+            if (string.IsNullOrEmpty(eventScope.HeadCommit))
+            {
+                Console.WriteLine("[GXP SNAPSHOT] [ERROR] Could not resolve HEAD commit.");
+                return 1;
+            }
+
+            var uncommittedDrift = GitRevisionScopeService.GetUncommittedChangesAtHead(repoRoot, includeDeletions: true, includeUntracked: true);
+            return Evaluate(uncommittedDrift, snapshot, "uncommitted at HEAD");
+        }
+
+        if (eventScope.Kind == GitEventScopeKind.PushCommitRange && !string.IsNullOrEmpty(eventScope.CompareBase))
+        {
+            var pushedChanged = GitRevisionScopeService.CollectChangedFilesSinceCommit(
+                repoRoot,
+                eventScope.CompareBase,
+                includeDeletions: true,
+                includeUntracked: false);
+            string shortSha = eventScope.CompareBase[..Math.Min(12, eventScope.CompareBase.Length)];
+            return Evaluate(pushedChanged, snapshot, $"changed since {shortSha}");
+        }
+
+        if (eventScope.Kind == GitEventScopeKind.NewBranchPush && GitRevisionScopeService.IsBranchHeadRef(eventScope.GitRef))
+        {
+            if (string.IsNullOrEmpty(eventScope.CompareBase))
+            {
+                Console.WriteLine(
+                    $"[GXP SNAPSHOT] [ERROR] '{eventScope.EffectiveBaseRef}' (and fallback '{GitRevisionScopeService.FallbackLocalMainRef}') " +
+                    $"not found or shares no history with HEAD on new branch push '{eventScope.GitRef}'.");
+                return 1;
+            }
+
+            var newBranchChanged = GitRevisionScopeService.CollectChangedFilesSinceCommit(
+                repoRoot,
+                eventScope.CompareBase,
+                includeDeletions: true,
+                includeUntracked: true);
+            string shortMergeBase = eventScope.CompareBase[..Math.Min(12, eventScope.CompareBase.Length)];
+            return Evaluate(newBranchChanged, snapshot, $"changed since {shortMergeBase}");
+        }
+
+        string? mergeBase = eventScope.CompareBase ?? GitRevisionScopeService.TryResolveBranchCompareBase(repoRoot, effectiveBaseRef);
         IReadOnlyList<string> changed = mergeBase is null
             ? GitRevisionScopeService.GetWorkingTreeChanges(repoRoot, includeDeletions: true, includeUntracked: false)
             : GitRevisionScopeService.CollectChangedFilesSinceCommit(repoRoot, mergeBase, includeDeletions: true, includeUntracked: false);
@@ -89,6 +125,85 @@ public static class GxpSnapshotGuardService
         }
 
         return Evaluate(changed, snapshot, $"changed since {effectiveBaseRef}");
+    }
+
+    /// <summary>
+    /// Evaluates fail-closed CI provenance for <c>CADENCE_GXP_SNAPSHOT=1</c>: same-repository owner pull requests,
+    /// <c>merge_group</c> runs, and reviewed <c>refs/heads/main</c> or <c>refs/heads/release/*</c> pushes carrying a
+    /// canonical <see cref="GxpSnapshotPolicy.SnapshotTrailer"/> commit trailer in the evaluated commit range.
+    /// </summary>
+    public static bool AuthorizeCiSnapshot(
+        string repoRoot,
+        string? eventName,
+        string? gitRef,
+        string? baseRef = DefaultBaseRef,
+        string? pushBefore = null,
+        string? repositoryFullName = null,
+        string? repositoryOwner = null,
+        string? pullRequestHeadRepoFullName = null,
+        string? pullRequestUserLogin = null)
+    {
+        if (!GitRevisionScopeService.HasGitRepository(repoRoot) || string.IsNullOrWhiteSpace(eventName))
+        {
+            return false;
+        }
+
+        string trimmedEvent = eventName.Trim();
+        string trimmedRef = (gitRef ?? string.Empty).Trim();
+        string effectiveBaseRef = GitRevisionScopeService.NormalizeBaseRef(baseRef);
+        string? headCommit = GitRevisionScopeService.TryResolveCommitSha(repoRoot, "HEAD");
+        if (string.IsNullOrEmpty(headCommit))
+        {
+            return false;
+        }
+
+        string? revisionRange = null;
+        if (string.Equals(trimmedEvent, "pull_request", StringComparison.OrdinalIgnoreCase))
+        {
+            if (string.IsNullOrWhiteSpace(repositoryFullName) ||
+                string.IsNullOrWhiteSpace(repositoryOwner) ||
+                !string.Equals(pullRequestHeadRepoFullName?.Trim(), repositoryFullName.Trim(), StringComparison.Ordinal) ||
+                !string.Equals(pullRequestUserLogin?.Trim(), repositoryOwner.Trim(), StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            if (GitRevisionScopeService.TryResolveCommitSha(repoRoot, effectiveBaseRef) is not null)
+            {
+                revisionRange = $"{effectiveBaseRef}..HEAD";
+            }
+        }
+        else if (string.Equals(trimmedEvent, "merge_group", StringComparison.OrdinalIgnoreCase))
+        {
+            if (GitRevisionScopeService.TryResolveCommitSha(repoRoot, effectiveBaseRef) is not null)
+            {
+                revisionRange = $"{effectiveBaseRef}..HEAD";
+            }
+        }
+        else if (string.Equals(trimmedEvent, "push", StringComparison.OrdinalIgnoreCase) &&
+                 (GitRevisionScopeService.IsMainBranchRef(trimmedRef) || GitRevisionScopeService.IsReleaseBranchRef(trimmedRef)))
+        {
+            string? validPushBase = GitRevisionScopeService.TryResolveValidPushBase(repoRoot, pushBefore, headCommit);
+            if (!string.IsNullOrEmpty(validPushBase))
+            {
+                revisionRange = $"{validPushBase}..HEAD";
+            }
+            else if (GitRevisionScopeService.IsReleaseBranchRef(trimmedRef) && GitRevisionScopeService.IsAllZeroSha(pushBefore))
+            {
+                string? mergeBase = GitRevisionScopeService.TryResolveCompareBaseWithLocalMainFallback(repoRoot, DefaultBaseRef, out _);
+                if (!string.IsNullOrEmpty(mergeBase))
+                {
+                    revisionRange = $"{mergeBase}..HEAD";
+                }
+            }
+        }
+
+        return !string.IsNullOrEmpty(revisionRange) &&
+               GitRevisionScopeService.HasCommitTrailer(
+                   repoRoot,
+                   revisionRange,
+                   GxpSnapshotPolicy.SnapshotTrailerKey,
+                   GxpSnapshotPolicy.SnapshotTrailerValue);
     }
 
     /// <summary>The decision, separated from git so it can be tested.</summary>

@@ -1193,8 +1193,8 @@ public sealed class PreCommitGuardrailsTests : IDisposable
 
         string logged = File.ReadAllText(invocationLog);
         string expectedDotnetRoot = Path.Combine(wizardHome, ".dotnet");
-        logged.Should().Contain($"dotnet:restore {Path.Combine(wizardRepo, "Cadence.sln")}|DOTNET_ROOT={expectedDotnetRoot}");
-        logged.Should().Contain($"run-cli:doctor|DOTNET_ROOT={expectedDotnetRoot}|DOTNET={Path.Combine(expectedDotnetRoot, "dotnet")}");
+        logged.Should().Contain($"dotnet:tool restore|DOTNET_ROOT={expectedDotnetRoot}");
+        logged.Should().Contain($"run-cli:doctor --auto-fix --minimal|DOTNET_ROOT={expectedDotnetRoot}|DOTNET={Path.Combine(expectedDotnetRoot, "dotnet")}");
     }
 
     [Fact]
@@ -2049,6 +2049,69 @@ public sealed class PreCommitGuardrailsTests : IDisposable
     }
 
     [Fact]
+    public void FrontendEslintGate_IncludesCssExtension_AndRoutesStagedCssThroughPreCommitStdinLinting()
+    {
+        FrontendQualityGateService.SupportedEslintExtensions.Should().Contain(".css");
+
+        if (OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        InitGitRepo();
+        Directory.CreateDirectory(Path.Combine(_tempDir, "node_modules"));
+        string cleanCss = Write("apps/web/src/style.css", ".app-shell { color: var(--text-main); }\n");
+        _ = cleanCss;
+        RunGit("add", "apps/web/src/style.css");
+
+        string logFile = Path.Combine(_tempDir, "pnpm-eslint-invocations.log");
+        string stubBinDir = Path.Combine(_tempDir, "eslint-pnpm-bin");
+        Directory.CreateDirectory(stubBinDir);
+        string pnpmStub = Path.Combine(stubBinDir, "pnpm");
+        WriteExecutable(
+            pnpmStub,
+            "#!/bin/sh\n" +
+            "set -eu\n" +
+            "if [ \"${1:-}\" = \"--version\" ]; then\n" +
+            "    echo \"10.28.2\"\n" +
+            "    exit 0\n" +
+            "fi\n" +
+            $"printf '%s\\n' \"$*\" >> \"{logFile}\"\n" +
+            "stdin_body=$(cat)\n" +
+            "case \"$stdin_body\" in\n" +
+            "    *\"#ff0000\"*)\n" +
+            "        echo \"error Hardcoded color literal '#ff0000' is prohibited\" >&2\n" +
+            "        exit 1\n" +
+            "        ;;\n" +
+            "esac\n" +
+            "exit 0\n");
+
+        string? originalPath = Environment.GetEnvironmentVariable("PATH");
+        try
+        {
+            Environment.SetEnvironmentVariable(
+                "PATH",
+                string.IsNullOrEmpty(originalPath) ? stubBinDir : $"{stubBinDir}{Path.PathSeparator}{originalPath}");
+
+            FrontendQualityGateService.CheckEslint(_tempDir, targetFiles: null, preCommit: true)
+                .Should().Be(0, "staged token-clean .css files must pass ESLint stdin pre-commit validation");
+
+            File.ReadAllText(logFile).Should().Contain(
+                "exec eslint --no-warn-ignored --max-warnings 0 --stdin --stdin-filename apps/web/src/style.css");
+
+            Write("apps/web/src/style.css", ".app-shell { color: #ff0000; }\n");
+            RunGit("add", "apps/web/src/style.css");
+
+            FrontendQualityGateService.CheckEslint(_tempDir, targetFiles: null, preCommit: true)
+                .Should().Be(1, "staged .css files with hardcoded color literals must fail closed in pre-commit mode");
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("PATH", originalPath);
+        }
+    }
+
+    [Fact]
     public void SetupWizard_LintersOnly_FailsClosedWhenXzIsMissing()
     {
         if (OperatingSystem.IsWindows() || !File.Exists("/bin/bash"))
@@ -2089,7 +2152,13 @@ public sealed class PreCommitGuardrailsTests : IDisposable
 
         string minimalPathDir = Path.Combine(_tempDir, "no-xz-bin");
         Directory.CreateDirectory(minimalPathDir);
-        foreach (string tool in new[] { "uname", "dirname", "mkdir", "mktemp", "rm", "mv", "cp", "chmod", "curl", "tar", "gzip", "sha256sum", "shasum", "awk", "tr", "head" })
+        foreach (string tool in new[]
+                 {
+                     "sh", "bash", "pwd", "id", "env", "uname", "dirname", "mkdir", "mktemp",
+                     "rm", "mv", "cp", "chmod", "curl", "tar", "gzip", "sha256sum", "shasum",
+                     "awk", "tr", "head", "node", "dotnet", "pnpm", "clang", "cc", "gcc",
+                     "ld", "ld.bfd", "ld.lld", "ld.gold", "lld", "dsymutil", "as", "ar", "strip", "objcopy"
+                 })
         {
             string? resolved = ResolveFromSystemPath(tool);
             if (resolved is not null)

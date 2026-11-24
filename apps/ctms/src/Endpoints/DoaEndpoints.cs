@@ -70,7 +70,8 @@ public static class DoaEndpoints
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict)
-            .RequirePermission(SignOffPermission).RequireCallerStudyAndSiteScope();
+            .RequirePermission(SignOffPermission).RequireCallerStudyAndSiteScope()
+            .RequireElectronicSignature("ctms.doa.sign_off", http => http.Request.Path.Value ?? string.Empty);
 
         doa.MapGet("/sites/{site_id}/log", GetSiteDoaLogAsync)
             .WithName("GetSiteDoaLog")
@@ -86,7 +87,8 @@ public static class DoaEndpoints
             .Produces(StatusCodes.Status200OK, contentType: "application/pdf")
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
-            .RequirePermission(ReadPermission).RequireSiteScope("site_id");
+            .RequirePermission(ReadPermission).RequireSiteScope("site_id")
+            .RequireElectronicSignature("ctms.doa.export_pdf", http => http.Request.Path.Value ?? string.Empty);
 
         return group;
     }

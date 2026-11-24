@@ -33,7 +33,7 @@ public static class DetectSecretsGateService
         repoRoot ??= FindRepoRoot();
         getEnvironmentVariable ??= Environment.GetEnvironmentVariable;
 
-        // 1. Isolated .cadence/venv (provisioned by setup_wizard.sh / setup_wizard.ps1)
+        // 1. Isolated .cadence/venv (provisioned by cadence doctor --auto-fix)
         foreach (string venvDir in new[] { Path.Combine(repoRoot, ".cadence", "venv"), Path.Combine(repoRoot, ".venv") })
         {
             string venvBinary = OperatingSystem.IsWindows()
@@ -77,7 +77,9 @@ public static class DetectSecretsGateService
         Func<string, string?>? getEnvironmentVariable = null,
         GitIndexReader? indexReader = null,
         string? baseRef = null,
-        string? pushBefore = null)
+        string? pushBefore = null,
+        string? eventName = null,
+        string? gitRef = null)
     {
         if (targetFiles is { Length: 0 })
         {
@@ -91,7 +93,7 @@ public static class DetectSecretsGateService
         if (tool is null)
         {
             Console.WriteLine("[ERROR] 'detect-secrets-hook' is not available in .cadence/venv, PATH, or uvx.");
-            Console.WriteLine($"  Provision it via './scripts/setup_wizard.sh --minimal' (or 'python3 -m venv .cadence/venv && .cadence/venv/bin/python -m pip install --upgrade pip detect-secrets=={PinnedVersion}').");
+            Console.WriteLine($"  Provision it via 'pnpm cadence doctor --auto-fix' (or 'python3 -m venv .cadence/venv && .cadence/venv/bin/python -m pip install --upgrade pip detect-secrets=={PinnedVersion}').");
             return 1;
         }
 
@@ -103,7 +105,7 @@ public static class DetectSecretsGateService
                 return 1;
             }
 
-            var filesToScan = ResolveFilesToScan(repoRoot, targetFiles, preCommit, baseRef, pushBefore, reader);
+            var filesToScan = ResolveFilesToScan(repoRoot, targetFiles, preCommit, baseRef, pushBefore, reader, eventName, gitRef);
             if (filesToScan.Count == 0)
             {
                 return 0;
@@ -294,7 +296,9 @@ public static class DetectSecretsGateService
         bool preCommit,
         string? baseRef = null,
         string? pushBefore = null,
-        GitIndexReader? reader = null)
+        GitIndexReader? reader = null,
+        string? eventName = null,
+        string? gitRef = null)
     {
         if (targetFiles is { Length: 0 })
         {
@@ -306,7 +310,9 @@ public static class DetectSecretsGateService
             explicitFiles: targetFiles,
             preCommit: preCommit,
             baseRef: baseRef,
-            pushBefore: pushBefore);
+            pushBefore: pushBefore,
+            eventName: eventName,
+            gitRef: gitRef);
         IEnumerable<string> rawCandidates = scope.Kind == GitScopeKind.NonGitDirectory
             ? EnumerateDirectoryFiles(repoRoot)
             : scope.Files;

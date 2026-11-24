@@ -130,18 +130,18 @@ function handleConfirm() {
   border: 1px solid var(--semantic-color-border-control);
 }
 
-.btn-signout-stay:hover {
+.btn-signout-stay:hover:not(:disabled) {
   background: var(--semantic-color-surface-subtle);
 }
 
 .btn-signout-confirm {
-  background: var(--semantic-color-error);
+  background: var(--semantic-color-error-interactive);
   color: var(--semantic-color-text-on-solid);
-  border: 1px solid var(--semantic-color-error-text-dark);
+  border: 1px solid var(--semantic-color-error-interactive-hover);
 }
 
-.btn-signout-confirm:hover {
-  background: var(--semantic-color-error-text-dark);
+.btn-signout-confirm:hover:not(:disabled) {
+  background: var(--semantic-color-error-interactive-hover);
 }
 
 .btn-signout-stay:focus-visible,

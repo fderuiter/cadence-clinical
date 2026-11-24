@@ -1,3 +1,4 @@
+import { DEMO_STUDY } from "demo-fixtures";
 import {
   DEFAULT_CATEGORIES,
   DEFAULT_MOCK_ARTICLES,
@@ -36,7 +37,7 @@ export function createKnowledgeAndTicketsDomain(ctx) {
         assignee_user: null,
         reporter: "cra_monitor",
         created_by: "cra_monitor",
-        study_id: "STUDY-ONC-202",
+        study_id: DEMO_STUDY.code || "CADENCE-101",
         site_id: "SITE-101",
         subject_id: null,
         related_entity_type: "SUPPLY_KIT",
@@ -66,7 +67,7 @@ export function createKnowledgeAndTicketsDomain(ctx) {
         assignee_user: null,
         reporter: "site_crc",
         created_by: "site_crc",
-        study_id: "STUDY-ONC-202",
+        study_id: DEMO_STUDY.code || "CADENCE-101",
         site_id: "SITE-102",
         subject_id: "SUBJ-8812",
         related_entity_type: "SUBJECT",
@@ -103,7 +104,23 @@ export function createKnowledgeAndTicketsDomain(ctx) {
         );
       }
       if (filters.study_id) {
-        results = results.filter((t) => t.study_id === filters.study_id);
+        const requestedStudy = String(filters.study_id).trim().toUpperCase();
+        const canonicalDemoStudies = new Set([
+          String(DEMO_STUDY.code || "CADENCE-101")
+            .trim()
+            .toUpperCase(),
+          "DEMO-01",
+        ]);
+        results = results.filter((t) => {
+          const ticketStudy = String(t.study_id || "")
+            .trim()
+            .toUpperCase();
+          if (ticketStudy === requestedStudy) return true;
+          return (
+            canonicalDemoStudies.has(requestedStudy) &&
+            canonicalDemoStudies.has(ticketStudy)
+          );
+        });
       }
       if (filters.site_id) {
         results = results.filter((t) => t.site_id === filters.site_id);

@@ -5,8 +5,13 @@
 /* Default stack (single column) on mobile, becomes 12-column grid on desktop (1024px) and up */
 .responsive-grid {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--spacing-md, 16px);
+}
+
+.responsive-grid > *,
+.responsive-grid fieldset > * {
+  min-width: 0;
 }
 
 @media (min-width: 1024px) {
@@ -16,7 +21,8 @@
 }
 
 @media (max-width: 1023px) {
-  .responsive-grid > * {
+  .responsive-grid > *,
+  .responsive-grid fieldset > * {
     grid-column: span 1 / span 1 !important;
   }
 }
@@ -61,23 +67,23 @@
 
 /* 2. Grid Helpers modeled on .grid-layout & .grid-2 conventions */
 
-/* .grid-layout-responsive: 1 column on mobile/tablet, 1fr 2fr on larger screens (1024px and up) */
+/* .grid-layout-responsive: 1 column on mobile/tablet, minmax(0, 1fr) minmax(0, 2fr) on larger screens (1024px and up) */
 .grid-layout-responsive {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--spacing-xl, 24px);
 }
 
 @media (min-width: 1024px) {
   .grid-layout-responsive {
-    grid-template-columns: 1fr 2fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
   }
 }
 
 /* .grid-2-responsive: 1 column on mobile, 2 columns on desktop (1024px) and up */
 .grid-2-responsive {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--spacing-xl, 24px);
 }
 
@@ -87,16 +93,16 @@
   }
 }
 
-/* .grid-asymmetric-responsive: 1 column on mobile, 1fr 1.2fr on desktop (1024px) and up */
+/* .grid-asymmetric-responsive: 1 column on mobile, minmax(0, 1fr) minmax(0, 1.2fr) on desktop (1024px) and up */
 .grid-asymmetric-responsive {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--spacing-xl, 24px);
 }
 
 @media (min-width: 1024px) {
   .grid-asymmetric-responsive {
-    grid-template-columns: 1fr 1.2fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
   }
 }
 
@@ -154,12 +160,15 @@
 
 /* 5. Horizontal-Scroll Table Wrapper */
 .scrollable-table-wrapper {
+  position: relative;
   width: 100%;
+  max-width: 100%;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   margin-bottom: var(--spacing-md, 16px);
   border: 1px solid var(--semantic-color-border);
   border-radius: 8px;
+  box-sizing: border-box;
 }
 
 .scrollable-table-wrapper table {

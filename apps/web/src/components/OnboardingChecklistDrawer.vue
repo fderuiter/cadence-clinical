@@ -283,9 +283,35 @@ function openOrientationHub() {
   }
 }
 
-function startGuidedTour() {
+async function startGuidedTour() {
   onboardingStore.startTour();
   onboardingStore.closeDrawer();
+  const initialRouteName = onboardingStore.currentStepConfig?.routeName;
+  if (
+    initialRouteName &&
+    router &&
+    activeRoute?.name !== initialRouteName &&
+    (activeRoute?.name === "forbidden" ||
+      activeRoute?.path === "/forbidden" ||
+      activeRoute?.name === "unavailable" ||
+      activeRoute?.path === "/unavailable")
+  ) {
+    const resolved =
+      typeof router.resolve === "function"
+        ? router.resolve({ name: initialRouteName })
+        : null;
+    const basePath = resolved?.path || resolved?.fullPath;
+    const targetPath = basePath
+      ? buildScopedWorkflowPath(basePath, {
+          studyCode: workspaceScope.value.studyCode,
+          siteId: workspaceScope.value.siteId,
+          subjectCode: workspaceScope.value.subjectCode,
+        })
+      : null;
+    if (targetPath && canPushResolvedPath(targetPath)) {
+      await router.push(targetPath);
+    }
+  }
 }
 </script>
 
@@ -296,7 +322,7 @@ function startGuidedTour() {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(15, 23, 42, 0.4);
+  background-color: var(--semantic-color-backdrop);
   backdrop-filter: blur(2px);
   z-index: 1050;
   display: flex;
@@ -308,7 +334,7 @@ function startGuidedTour() {
   max-width: 100vw;
   height: 100%;
   background-color: var(--semantic-color-surface);
-  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-drawer-left);
   display: flex;
   flex-direction: column;
   z-index: 1051;
@@ -454,7 +480,7 @@ function startGuidedTour() {
 
 .task-card:hover {
   border-color: var(--semantic-color-border-muted);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow-sm);
 }
 
 .task-card.completed {

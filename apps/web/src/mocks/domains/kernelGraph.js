@@ -178,6 +178,7 @@ export function createKernelGraphDomain(ctx) {
     if (String(nodeRef).startsWith("proposal:")) {
       const unversionedProp = String(nodeRef).split("@")[0];
       const matchingProposal =
+        state.proposals.get(nodeRef) ||
         state.proposals.get(unversionedProp) ||
         [...state.proposals.values()].find(
           (p) => String(p.ref || "").split("@")[0] === unversionedProp
@@ -253,6 +254,28 @@ export function createKernelGraphDomain(ctx) {
         );
       }
     }
+    if (String(nodeRef).startsWith("query:")) {
+      const rawQueryId = String(nodeRef)
+        .replace(/^query:/, "")
+        .split("@")[0];
+      const q = state.queries.get(rawQueryId);
+      if (q) {
+        return applyNodeVisibilityMask(
+          {
+            ref: nodeRef,
+            kind: "query",
+            title: q.text || `Discrepancy query (${q.item_id || "item"})`,
+            code: q.subject_code
+              ? `${q.subject_code} · ${q.item_id || "query"}`
+              : q.item_id || null,
+            status: String(q.status || "OPEN").toUpperCase(),
+            mask: null,
+          },
+          caller,
+          { siteCode: q.site_code || null }
+        );
+      }
+    }
     return applyNodeVisibilityMask(
       {
         ref: nodeRef,
@@ -265,6 +288,55 @@ export function createKernelGraphDomain(ctx) {
       caller
     );
   }
+
+  function getNodes(refs = [], caller = null) {
+    const list = Array.isArray(refs) ? refs : [refs];
+    if (list.length > 100) {
+      return {
+        error: {
+          status: 400,
+          problem: {
+            title: "Batch size limit exceeded",
+            status: 400,
+            code: "K.Nodes.BatchLimitExceeded",
+            detail: "At most 100 node references may be requested per batch.",
+          },
+        },
+      };
+    }
+    const nodes = {};
+    for (const raw of list) {
+      const key = String(raw || "").trim();
+      if (!key) continue;
+      if (!ctx.DEMO_NODE_REF_SYNTAX.test(key)) {
+        return {
+          error: {
+            status: 400,
+            problem: {
+              title: "Invalid node reference",
+              status: 400,
+              code: "K.NodeRef.Invalid",
+              detail: `'${key}' is not a valid NodeRef.`,
+            },
+          },
+        };
+      }
+      const unpinned = key.split("@")[0];
+      if (
+        state.missingNodeRefs?.has(key) ||
+        state.missingNodeRefs?.has(unpinned)
+      ) {
+        continue;
+      }
+      const resolved = getNode(key, caller);
+      if (resolved) {
+        nodes[key] = resolved;
+      }
+    }
+    return { data: { nodes } };
+  }
+
+  ctx.getNodes = getNodes;
 
   function getDependents(nodeRef, depth = 3, caller = null) {
     const now = new Date().toISOString();
@@ -505,6 +577,8 @@ export function createKernelGraphDomain(ctx) {
     },
 
     getNode,
+
+    getNodes,
 
     getZoomPath(nodeRef, caller = null) {
       const refStr = String(nodeRef || "");

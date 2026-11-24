@@ -33,13 +33,14 @@
           🔄 Refresh Queue
         </button>
         <button
+          type="button"
           class="btn btn-primary btn-sm btn-batch-accept"
           style="font-size: 12px"
           :disabled="!canReviewQc || selectedItemIds.length === 0"
           :title="!canReviewQc ? ETMF_QC_REVIEW_ROLE_REASON : undefined"
           @click="openBatchAcceptModal"
         >
-          ✓ Batch Accept Classifications ({{ selectedItemIds.length }})
+          Batch Accept Classifications ({{ selectedItemIds.length }})
         </button>
       </div>
     </div>
@@ -111,14 +112,17 @@
         </span>
       </div>
 
-      <div style="display: flex; gap: 8px">
-        <input
+      <div style="display: flex; gap: 8px; width: 220px">
+        <ClinicalInput
+          id="cra-qc-filter-input"
           v-model="searchQuery"
-          type="text"
-          aria-label="Filter by filename or code"
-          class="form-control"
+          label="Filter by filename or code"
+          hide-label
+          density="compact"
+          :show-query-flag="false"
+          control-class="form-control"
           placeholder="Filter by filename or code..."
-          style="font-size: 12px; width: 220px; padding: 4px 8px"
+          :attributes="{ 'aria-label': 'Filter by filename or code' }"
         />
       </div>
     </div>
@@ -160,127 +164,106 @@
         </p>
       </div>
 
-      <table v-else class="qc-table">
-        <thead>
-          <tr>
-            <th style="width: 36px" />
-            <th>Document File</th>
-            <th>Staged At / By</th>
-            <th>Predicted DIA Taxonomy</th>
-            <th>AI Confidence</th>
-            <th>Discrepancy Notes</th>
-            <th style="text-align: right">Adjudication</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="item in filteredItems"
-            :key="item.document_id"
-            class="qc-row"
+      <ClinicalDataTable
+        v-else
+        title="CRA Quality Control Review Queue"
+        labelled-by="cra-qc-queue-heading"
+        hide-header
+        plain
+        :columns="qcColumns"
+        :data="filteredItems"
+        row-key="document_id"
+        :page-size="Math.max(filteredItems.length, 50)"
+        table-class="qc-table"
+        row-class="qc-row"
+      >
+        <template #cell-select="{ row }">
+          <input
+            v-model="selectedItemIds"
+            type="checkbox"
+            :aria-label="`Select ${row.filename || row.document_id}`"
+            :value="row.document_id"
+            :disabled="!canReviewQc"
+            :title="!canReviewQc ? ETMF_QC_REVIEW_ROLE_REASON : undefined"
+          />
+        </template>
+        <template #cell-filename="{ row }">
+          <div style="display: flex; flex-direction: column; gap: 2px">
+            <span class="font-mono font-bold" style="font-size: 12px">{{
+              row.filename
+            }}</span>
+            <SupportDetails
+              v-if="row.document_id"
+              summary-label="Document reference"
+              :reference="row.document_id"
+            />
+          </div>
+        </template>
+        <template #cell-staged_at="{ row }">
+          <div style="display: flex; flex-direction: column; font-size: 11px">
+            <span>{{ row.staged_by }}</span>
+            <span class="text-muted">{{ formatDate(row.staged_at) }}</span>
+          </div>
+        </template>
+        <template #cell-taxonomy="{ row }">
+          <div
+            v-if="row.intelligence_report"
+            style="display: flex; flex-direction: column; font-size: 11px"
           >
-            <td>
-              <input
-                v-model="selectedItemIds"
-                type="checkbox"
-                :aria-label="`Select ${item.filename || item.document_id}`"
-                :value="item.document_id"
-                :disabled="!canReviewQc"
-                :title="!canReviewQc ? ETMF_QC_REVIEW_ROLE_REASON : undefined"
-              />
-            </td>
-            <td>
-              <div style="display: flex; flex-direction: column; gap: 2px">
-                <span class="font-mono font-bold" style="font-size: 12px">{{
-                  item.filename
-                }}</span>
-                <SupportDetails
-                  v-if="item.document_id"
-                  summary-label="Document reference"
-                  :reference="item.document_id"
-                />
-              </div>
-            </td>
-            <td>
-              <div
-                style="display: flex; flex-direction: column; font-size: 11px"
-              >
-                <span>{{ item.staged_by }}</span>
-                <span class="text-muted">{{ formatDate(item.staged_at) }}</span>
-              </div>
-            </td>
-            <td>
-              <div
-                v-if="item.intelligence_report"
-                style="display: flex; flex-direction: column; font-size: 11px"
-              >
-                <span class="font-mono font-bold">{{
-                  item.intelligence_report.primary_classification.artifact_code
-                }}</span>
-                <span>{{
-                  item.intelligence_report.primary_classification.artifact_type
-                }}</span>
-                <span class="text-muted"
-                  >Zone
-                  {{ item.intelligence_report.primary_classification.zone }} -
-                  Section
-                  {{
-                    item.intelligence_report.primary_classification.section
-                  }}</span
-                >
-              </div>
-            </td>
-            <td>
-              <span
-                v-if="item.intelligence_report"
-                class="badge"
-                :class="
-                  getConfidenceClass(item.intelligence_report.confidence_tier)
-                "
-              >
-                {{
-                  Math.round(
-                    item.intelligence_report.primary_classification.confidence *
-                      100
-                  )
-                }}% {{ item.intelligence_report.confidence_tier }}
-              </span>
-            </td>
-            <td>
-              <div
-                v-if="
-                  item.discrepancy_notes && item.discrepancy_notes.length > 0
-                "
-              >
-                <span
-                  v-for="(note, nIdx) in item.discrepancy_notes"
-                  :key="nIdx"
-                  class="badge status-hold"
-                  style="font-size: 10px"
-                >
-                  ⚠️ {{ note }}
-                </span>
-              </div>
-              <span v-else class="text-muted" style="font-size: 11px"
-                >No discrepancies</span
-              >
-            </td>
-            <td style="text-align: right">
-              <button
-                type="button"
-                class="btn btn-secondary btn-xs btn-inspect-qc"
-                style="font-size: 11px; padding: 4px 8px"
-                @click="openInspectionModal(item)"
-              >
-                <span aria-hidden="true">📋 </span>Inspect &amp; Edit<span
-                  class="sr-only"
-                >
-                  {{ item.filename || item.document_id }}</span
-                >
-              </button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+            <span class="font-mono font-bold">{{
+              row.intelligence_report.primary_classification.artifact_code
+            }}</span>
+            <span>{{
+              row.intelligence_report.primary_classification.artifact_type
+            }}</span>
+            <span class="text-muted"
+              >Zone {{ row.intelligence_report.primary_classification.zone }} -
+              Section
+              {{ row.intelligence_report.primary_classification.section }}</span
+            >
+          </div>
+        </template>
+        <template #cell-confidence="{ row }">
+          <span
+            v-if="row.intelligence_report"
+            class="badge"
+            :class="getConfidenceClass(row.intelligence_report.confidence_tier)"
+          >
+            {{
+              Math.round(
+                row.intelligence_report.primary_classification.confidence * 100
+              )
+            }}% {{ row.intelligence_report.confidence_tier }}
+          </span>
+        </template>
+        <template #cell-discrepancies="{ row }">
+          <div v-if="row.discrepancy_notes && row.discrepancy_notes.length > 0">
+            <span
+              v-for="(note, nIdx) in row.discrepancy_notes"
+              :key="nIdx"
+              class="badge status-hold"
+              style="font-size: 10px"
+            >
+              {{ note }}
+            </span>
+          </div>
+          <span v-else class="text-muted" style="font-size: 11px"
+            >No discrepancies</span
+          >
+        </template>
+        <template #cell-adjudication="{ row }">
+          <button
+            type="button"
+            class="btn btn-secondary btn-xs btn-inspect-qc"
+            style="font-size: 11px; padding: 4px 8px"
+            @click="openInspectionModal(row)"
+          >
+            Inspect &amp; Edit<span class="sr-only">
+              {{ row.filename || row.document_id }}</span
+            >
+          </button>
+        </template>
+      </ClinicalDataTable>
     </div>
 
     <!-- Batch Accept Modal -->
@@ -315,24 +298,20 @@
           <strong>{{ selectedItemIds.length }}</strong> staged documents.
         </p>
         <div class="form-group" style="margin-bottom: 16px">
-          <label
-            for="batch-accept-reason"
-            class="form-label"
-            style="font-size: 12px; font-weight: 600"
-          >
-            21 CFR Part 11 Reason for Approval <span class="required">*</span>
-          </label>
-          <input
+          <ClinicalInput
             id="batch-accept-reason"
             v-model="batchReason"
-            type="text"
-            class="form-control"
+            label="21 CFR Part 11 Reason for Approval"
+            required
+            density="compact"
+            :show-query-flag="false"
+            control-class="form-control"
             placeholder="e.g. Verified AI classifications against source regulatory document originals"
-            style="font-size: 12px"
           />
         </div>
         <div style="display: flex; justify-content: flex-end; gap: 8px">
           <button
+            type="button"
             class="btn btn-secondary"
             style="font-size: 12px"
             @click="showBatchModal = false"
@@ -340,12 +319,13 @@
             Cancel
           </button>
           <button
+            type="button"
             class="btn btn-primary btn-confirm-batch-accept"
             style="font-size: 12px"
             :disabled="!batchReason || batchReason.length < 10"
             @click="executeBatchAccept"
           >
-            ✓ Confirm Batch Accept
+            Confirm Batch Accept
           </button>
         </div>
       </div>
@@ -403,7 +383,11 @@
           <!-- Predicted Classification Panel -->
           <div class="info-card">
             <h5
-              style="margin: 0 0 8px 0; font-size: 12px; color: var(--primary)"
+              style="
+                margin: 0 0 8px 0;
+                font-size: 12px;
+                color: var(--text-main);
+              "
             >
               Predicted Taxonomy
             </h5>
@@ -446,21 +430,22 @@
           <!-- Override Taxonomy Panel -->
           <div class="info-card">
             <h5
-              style="margin: 0 0 8px 0; font-size: 12px; color: var(--primary)"
+              style="
+                margin: 0 0 8px 0;
+                font-size: 12px;
+                color: var(--text-main);
+              "
             >
               Override Taxonomy Tag
             </h5>
-            <label
-              class="form-label"
-              style="font-size: 11px"
-              for="qc-artifact-code-override"
-              >Artifact Code Override</label
-            >
-            <select
+            <ClinicalInput
               id="qc-artifact-code-override"
               v-model="overrideArtifactCode"
-              class="form-control"
-              style="font-size: 12px; margin-bottom: 8px"
+              as="select"
+              label="Artifact Code Override"
+              density="compact"
+              :show-query-flag="false"
+              control-class="form-control"
             >
               <option value="">
                 -- Keep Predicted ({{
@@ -496,26 +481,21 @@
               <option value="11.01.01">
                 11.01.01 - Statistical Analysis Plan
               </option>
-            </select>
+            </ClinicalInput>
           </div>
         </div>
 
         <!-- 21 CFR Part 11 Change Reason -->
         <div class="form-group" style="margin-bottom: 16px">
-          <label
-            for="review-reason-input"
-            class="form-label"
-            style="font-size: 12px; font-weight: 600"
-          >
-            21 CFR Part 11 Reason for Change <span class="required">*</span>
-          </label>
-          <input
+          <ClinicalInput
             id="review-reason-input"
             v-model="reviewReason"
-            type="text"
-            class="form-control"
+            label="21 CFR Part 11 Reason for Change"
+            required
+            density="compact"
+            :show-query-flag="false"
+            control-class="form-control"
             placeholder="Mandatory Part 11 justification (min 10 chars)"
-            style="font-size: 12px"
           />
         </div>
 
@@ -530,6 +510,7 @@
           "
         >
           <button
+            type="button"
             class="btn btn-secondary"
             style="font-size: 12px"
             @click="inspectedItem = null"
@@ -537,6 +518,7 @@
             Cancel
           </button>
           <button
+            type="button"
             class="btn btn-danger btn-reject-qc"
             style="font-size: 12px"
             :disabled="
@@ -545,9 +527,10 @@
             :title="!canReviewQc ? ETMF_QC_REVIEW_ROLE_REASON : undefined"
             @click="submitDecision('REJECT')"
           >
-            ✕ Reject
+            Reject
           </button>
           <button
+            type="button"
             class="btn btn-primary btn-accept-qc"
             style="font-size: 12px"
             :disabled="
@@ -558,7 +541,6 @@
               submitDecision(overrideArtifactCode ? 'OVERRIDE' : 'ACCEPT')
             "
           >
-            ✓
             {{
               overrideArtifactCode
                 ? "Override Tag & Approve"
@@ -573,7 +555,7 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from "vue";
-import { useFocusTrap } from "ui";
+import { ClinicalDataTable, ClinicalInput, useFocusTrap } from "ui";
 import SupportDetails from "../canvas/SupportDetails.vue";
 import { useEtmfStore } from "../../stores/etmf.js";
 import { useAuthStore } from "../../stores/auth.js";
@@ -627,6 +609,16 @@ useFocusTrap(inspectModalRef, {
 });
 
 const queueItems = computed(() => etmfStore.qcQueue || []);
+
+const qcColumns = [
+  { key: "select", label: "" },
+  { key: "filename", label: "Document File" },
+  { key: "staged_at", label: "Staged At / By" },
+  { key: "taxonomy", label: "Predicted DIA Taxonomy" },
+  { key: "confidence", label: "AI Confidence" },
+  { key: "discrepancies", label: "Discrepancy Notes" },
+  { key: "adjudication", label: "Adjudication", align: "right" },
+];
 
 const filteredItems = computed(() => {
   if (!searchQuery.value) return queueItems.value;
@@ -777,7 +769,7 @@ onMounted(() => {
   flex-direction: column;
   background: var(--semantic-color-surface);
   border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-sm);
   overflow: hidden;
 }
 
@@ -794,7 +786,7 @@ onMounted(() => {
   font-size: 12px;
   background: var(--semantic-color-warning-bg-soft);
   border-bottom: 1px solid var(--semantic-color-warning-bg-badge);
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
 }
 
 .qc-error-banner {
@@ -840,7 +832,7 @@ onMounted(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.35);
+  background: var(--semantic-color-backdrop-soft);
   z-index: 1200;
   display: flex;
   align-items: center;
@@ -853,7 +845,7 @@ onMounted(() => {
   background: var(--semantic-color-surface);
   border-radius: 8px;
   padding: 20px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-md);
 }
 
 .qc-modal-lg {

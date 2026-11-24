@@ -1334,6 +1334,7 @@ terminology_manager|tickets|create
 terminology_manager|tickets|read
 terminology_manager|tickets|sign
 terminology_manager|tickets|transition
+trial_coordinator|cgt_chain_of_custody|read
 trial_coordinator|ctms_cra_allocation|read
 trial_coordinator|ctms_cra_workload|read
 trial_coordinator|ctms_recruitment|read
@@ -1394,6 +1395,7 @@ unblinded_statistician|sce_run|execute
 unblinded_statistician|sce_run|execute_unblinded
 unblinded_statistician|sce_run|read
 unblinded_statistician|sce_run|read_unblinded
+unblinded_statistician|subject_enrollment|read
 unblinded_statistician|tickets|comment
 unblinded_statistician|tickets|create
 unblinded_statistician|tickets|read

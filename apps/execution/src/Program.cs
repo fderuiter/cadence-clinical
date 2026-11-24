@@ -149,7 +149,8 @@ builder.AddCadencePostgresDbContext<ExecutionDbContext>(
             concurrencyTokenIncrementInterceptor,
             new Cadence.Database.GxPAuditInterceptor(
                 () => sp.GetRequiredService<ICurrentAuditContextAccessor>().UserId,
-                sp.GetRequiredService<IClock>()));
+                sp.GetRequiredService<IClock>(),
+                () => sp.GetRequiredService<ICurrentAuditContextAccessor>().ChangeReason));
     });
 
 // E-signature step-up tokens are single use across every instance and restart: their use is recorded in
@@ -278,9 +279,14 @@ app.MapIpKitEndpoints();
 if (args.Contains("--seed"))
 {
     using var scope = app.Services.CreateScope();
+    scope.ServiceProvider.GetRequiredService<IAuditActorScope>().RunAs(ServiceAccounts.DbSeeder);
+    using var auditScope = Cadence.Database.Audit.AmbientAuditActorScope.BeginScope(
+        ServiceAccounts.DbSeeder.UserId,
+        ServiceAccounts.DbSeeder.ChangeReason);
     var dbContext = scope.ServiceProvider.GetRequiredService<ExecutionDbContext>();
     var tenantScope = scope.ServiceProvider.GetService<Cadence.Database.Tenancy.ITenantScope>();
-    await ExecutionDbSeeder.SeedAsync(dbContext, tenantScope);
+    var allocationProtector = scope.ServiceProvider.GetRequiredService<IAllocationProtector>();
+    await ExecutionDbSeeder.SeedAsync(dbContext, tenantScope, allocationProtector);
     Console.WriteLine("[SUCCESS] ExecutionDbContext seeded successfully.");
     return;
 }

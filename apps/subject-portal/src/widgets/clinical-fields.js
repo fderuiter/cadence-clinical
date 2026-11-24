@@ -2,9 +2,21 @@
 // inputs, radio grids, visual analog sliders) and their query flag and panel.
 
 const SLIDER_TOUCHED_BADGE_STYLE =
-  "background: var(--semantic-color-interactive-primary); color: var(--semantic-color-surface); border: 1px solid var(--semantic-color-interactive-primary); padding: 2px 10px; border-radius: 12px; font-weight: bold; font-size: 14px; font-variant-numeric: var(--font-variant-numeric-tabular);";
+  "background: var(--semantic-color-interactive-primary); color: var(--semantic-color-text-on-primary); border: 1px solid var(--semantic-color-interactive-primary); padding: 2px 10px; border-radius: 12px; font-weight: bold; font-size: 14px; font-variant-numeric: var(--font-variant-numeric-tabular);";
 const SLIDER_UNTOUCHED_BADGE_STYLE =
   "background: var(--semantic-color-surface); color: var(--semantic-color-text-secondary); border: 1px solid var(--semantic-color-border-control); padding: 2px 10px; border-radius: 12px; font-weight: 600; font-size: 14px; font-variant-numeric: var(--font-variant-numeric-tabular);";
+
+const SLIDER_INTERACTION_KEYS = new Set([
+  "ArrowLeft",
+  "ArrowRight",
+  "ArrowUp",
+  "ArrowDown",
+  "Home",
+  "End",
+  "PageUp",
+  "PageDown",
+  " ",
+]);
 
 export function markClinicalSliderTouched(inputEl, explicitValue = undefined) {
   if (!inputEl) return;
@@ -85,7 +97,6 @@ export function createClinicalSlider(
         data-touched="${initialTouched}"${ariaValueTextAttr}
         class="vas-slider-input"
         style="width: 100%; cursor: pointer; accent-color: ${initialAccentColor}; min-height: var(--touch-target-min); height: var(--touch-target-min);"
-        oninput="this.setAttribute('data-touched', 'true'); this.removeAttribute('aria-valuetext'); this.style.accentColor = 'var(--semantic-color-interactive-primary)'; const disp = document.getElementById('${id}_display'); if (disp) { disp.textContent = 'Value: ' + this.value; disp.setAttribute('data-state', 'touched'); disp.setAttribute('style', '${SLIDER_TOUCHED_BADGE_STYLE}'); }"
       />
       ${queryFlagHTML}
     </div>
@@ -271,11 +282,112 @@ export function createQueryPanel(fieldId, query) {
 <div class="query-panel" id="query-panel-${fieldId}" style="display: none;" role="region" aria-labelledby="query-flag-${fieldId}">
   <div class="query-panel-header">
     <span class="query-panel-title">Query Manager - ${fieldId}</span>
-    <button type="button" class="btn-close-panel" aria-label="Close query panel" onclick="document.getElementById('query-panel-${fieldId}').style.display='none'">×</button>
+    <button type="button" class="btn-close-panel" data-field-id="${fieldId}" aria-label="Close query panel">×</button>
   </div>
   <div class="query-panel-body">
     ${bodyHTML}
   </div>
 </div>
   `.trim();
+}
+
+const delegatedContainers = new WeakMap();
+
+export function bindDelegatedClinicalWidgets(container, options = {}) {
+  if (!container || typeof container.addEventListener !== "function") {
+    return;
+  }
+
+  const alreadyBound = delegatedContainers.has(container);
+  delegatedContainers.set(container, options);
+  if (alreadyBound) {
+    return;
+  }
+
+  const isSliderInput = (target) =>
+    Boolean(
+      target &&
+      target.tagName === "INPUT" &&
+      (target.type === "range" ||
+        target.classList?.contains("vas-slider-input"))
+    );
+
+  const notifyFieldInput = (event) => {
+    const currentOptions = delegatedContainers.get(container);
+    if (typeof currentOptions?.onFieldInput === "function") {
+      currentOptions.onFieldInput(event);
+    }
+  };
+
+  const handleInputOrChange = (event) => {
+    const target = event?.target;
+    if (isSliderInput(target)) {
+      markClinicalSliderTouched(target);
+    }
+    notifyFieldInput(event);
+  };
+
+  const handlePointerDown = (event) => {
+    const target = event?.target;
+    if (isSliderInput(target)) {
+      markClinicalSliderTouched(target);
+      notifyFieldInput(event);
+    }
+  };
+
+  const handleKeyDown = (event) => {
+    const target = event?.target;
+    if (isSliderInput(target) && SLIDER_INTERACTION_KEYS.has(event.key)) {
+      markClinicalSliderTouched(target);
+      notifyFieldInput(event);
+    }
+  };
+
+  const handleClick = (event) => {
+    const rawTarget = event?.target;
+    const elementTarget =
+      rawTarget && typeof rawTarget.closest === "function"
+        ? rawTarget
+        : rawTarget?.parentElement;
+    if (!elementTarget || typeof elementTarget.closest !== "function") {
+      return;
+    }
+
+    const doc = container.ownerDocument || document;
+
+    const flagBtn = elementTarget.closest(".query-flag");
+    if (flagBtn && container.contains(flagBtn)) {
+      const panelId = flagBtn.getAttribute("aria-controls");
+      const panel = panelId ? doc.getElementById(panelId) : null;
+      if (panel) {
+        const isClosed =
+          panel.style.display === "none" ||
+          panel.hidden ||
+          flagBtn.getAttribute("aria-expanded") !== "true";
+        panel.style.display = isClosed ? "block" : "none";
+        flagBtn.setAttribute("aria-expanded", isClosed ? "true" : "false");
+      }
+      return;
+    }
+
+    const closeBtn = elementTarget.closest(".btn-close-panel");
+    if (closeBtn && container.contains(closeBtn)) {
+      const panel = closeBtn.closest(".query-panel");
+      if (panel) {
+        panel.style.display = "none";
+        const flagId = panel.getAttribute("aria-labelledby");
+        const linkedFlag = flagId ? doc.getElementById(flagId) : null;
+        if (linkedFlag) {
+          linkedFlag.setAttribute("aria-expanded", "false");
+          linkedFlag.focus?.();
+        }
+      }
+    }
+  };
+
+  container.addEventListener("input", handleInputOrChange, true);
+  container.addEventListener("change", handleInputOrChange, true);
+  container.addEventListener("pointerdown", handlePointerDown, true);
+  container.addEventListener("keydown", handleKeyDown, true);
+  container.addEventListener("click", handleClick);
 }

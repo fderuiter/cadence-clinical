@@ -205,6 +205,18 @@ export function createKernelPlatformHandlers(store) {
         );
       }
     ),
+    http.get("*/api/v1/kernel/nodes", ({ request }) => {
+      const url = new URL(request.url);
+      const refs = url.searchParams.getAll("ref");
+      const result = store.getNodes(refs, resolveDemoCaller(request));
+      if (result.error) {
+        return HttpResponse.json(result.error.problem, {
+          status: result.error.status,
+          headers: { "Content-Type": "application/problem+json" },
+        });
+      }
+      return HttpResponse.json(result.data);
+    }),
     http.get("*/api/v1/kernel/nodes/:nodeRef", ({ params, request }) =>
       HttpResponse.json(
         store.getNode(

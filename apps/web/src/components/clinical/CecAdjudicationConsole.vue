@@ -1411,14 +1411,11 @@
 
 <script setup>
 import { ref, computed, onMounted } from "vue";
-import {
-  buildStepUpVerificationPayload,
-  ClinicalModal,
-  SEMANTIC_ACTIONS,
-} from "ui";
+import { ClinicalModal, SEMANTIC_ACTIONS } from "ui";
 import { isDemoBuild } from "../../utils/demoMode.js";
 import { allowUnbackedAction } from "../../utils/unbackedActions.js";
 import { apiClient } from "../../api/apiClient";
+import { requestStepUpSignature } from "../../api/signatureVerification";
 import { useErrorPresenter } from "../../composables/useErrorPresenter";
 import { useToastStore } from "../../stores/toasts";
 
@@ -1949,22 +1946,20 @@ async function submitChairAdjudication() {
   try {
     const dossierId = activeDossier.value?.dossier_id || "DOSSIER-101";
     const actionUrl = `/api/v1/execution/cec/dossiers/${dossierId}/chair-adjudicate`;
-    const verificationPayload = buildStepUpVerificationPayload({
-      username: chairForm.value.signer_name || "chair_adjudicator",
-      password: enteredPassword,
-      action: actionUrl,
-      semanticAction: SEMANTIC_ACTIONS.CEC_CHAIR_ADJUDICATE,
-    });
-
-    const reauthRes = await apiClient.post(
-      "/api/v1/auth/signature-verification",
-      verificationPayload
+    const reauthRes = await requestStepUpSignature(
+      {
+        username: chairForm.value.signer_name || "chair_adjudicator",
+        password: enteredPassword,
+        action: actionUrl,
+        semanticAction: SEMANTIC_ACTIONS.CEC_CHAIR_ADJUDICATE,
+      },
+      {
+        missingTokenMessage:
+          "Re-authentication failed: missing signature token",
+      }
     );
 
-    const sigToken = reauthRes?.sig_token;
-    if (!sigToken) {
-      throw new Error("Re-authentication failed: missing signature token");
-    }
+    const sigToken = reauthRes.sig_token;
 
     const payload = {
       final_classification: chairForm.value.final_classification,
@@ -2122,7 +2117,7 @@ onMounted(() => {
   border: 1px solid var(--color-border);
   border-radius: 8px;
   padding: 1.5rem;
-  box-shadow: var(--shadow-sm, 0 1px 2px 0 rgba(0, 0, 0, 0.05));
+  box-shadow: var(--shadow-sm);
 }
 
 .header-main {
@@ -2150,13 +2145,14 @@ onMounted(() => {
 }
 
 .badge-regulatory {
-  background: var(--semantic-color-indigo-bg);
-  color: var(--semantic-color-indigo-text);
+  background-color: var(--semantic-badge-regulatory-bg);
+  color: var(--semantic-badge-regulatory-text);
+  border: 1px solid var(--semantic-badge-regulatory-border);
 }
 
 .badge-charter {
   background: var(--semantic-color-warning-bg-badge);
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
 }
 
 .badge-phi {
@@ -2425,7 +2421,7 @@ onMounted(() => {
 
 .dossier-card:hover {
   border-color: var(--color-primary);
-  box-shadow: var(--shadow-sm, 0 1px 2px 0 rgba(0, 0, 0, 0.05));
+  box-shadow: var(--shadow-sm);
 }
 
 .dossier-card.active {
@@ -2507,7 +2503,7 @@ onMounted(() => {
 }
 .status-pill.warning {
   background: var(--semantic-color-warning-bg-badge);
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
 }
 .status-pill.danger {
   background: var(--semantic-color-error-bg);
@@ -2727,11 +2723,11 @@ onMounted(() => {
   color: var(--semantic-color-warning);
 }
 .grade-2 {
-  background: var(--semantic-color-orange-border);
+  background: var(--semantic-color-orange-bg);
   color: var(--semantic-color-orange-text);
 }
 .grade-3 {
-  background: var(--semantic-color-rose-border);
+  background: var(--semantic-color-rose-bg);
   color: var(--semantic-color-rose-text);
 }
 .grade-4 {
@@ -3217,7 +3213,7 @@ onMounted(() => {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.6);
+  background: var(--semantic-color-backdrop);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3230,7 +3226,7 @@ onMounted(() => {
   border-radius: 8px;
   width: 100%;
   max-width: 560px;
-  box-shadow: var(--shadow-xl, 0 20px 25px -5px rgba(0, 0, 0, 0.1));
+  box-shadow: var(--shadow-xl);
   display: flex;
   flex-direction: column;
   max-height: 90vh;

@@ -598,7 +598,7 @@ public partial class LocalCiPlanTests
     }
 
     [Fact]
-    public void ParseWorkflow_ExtractsMultilineNeedsForCiGateAutomergeAndSyntheticWorkflows()
+    public void ParseWorkflow_ExtractsMultilineNeedsForCiGateAndSyntheticWorkflows()
     {
         Workflow.Single(j => j.Key == "ci-gate").Needs.Should().Equal(
             "actionlint",
@@ -612,13 +612,12 @@ public partial class LocalCiPlanTests
             "dotnet-tests",
             "accessibility-e2e",
             "compliance");
-        Workflow.Single(j => j.Key == "automerge").Needs.Should().Equal("classify", "ci-gate");
 
         var parsed = ParseWorkflow(
         [
             "jobs:",
-            "  automerge:",
-            "    name: Enable Automerge",
+            "  synthetic-gate:",
+            "    name: Synthetic Gate",
             "    needs:",
             "      [",
             "        classify,",
@@ -879,7 +878,7 @@ public partial class LocalCiPlanTests
     public void Select_AddsTheJobsANamedJobNeeds_InPlanOrder()
     {
         CiPlan.Select(["container-security"]).Select(j => j.Key).Should().Equal("container-security");
-        CiPlan.Select(["compliance"]).Select(j => j.Key).Should().Equal("native-aot-build", "unit-tests", "dotnet-tests", "compliance");
+        CiPlan.Select(["compliance"]).Select(j => j.Key).Should().Equal("native-aot-build", "unit-tests", "dotnet-tests", "accessibility-e2e", "compliance");
         CiPlan.Select(["lint-and-static"]).Select(j => j.Key).Should().Equal("native-aot-build", "lint-and-static");
         CiPlan.Select(["docs-build"]).Select(j => j.Key).Should().Equal("native-aot-build", "docs-build");
         CiPlan.Select(["security"]).Select(j => j.Key).Should().Equal("native-aot-build", "security");
@@ -888,9 +887,9 @@ public partial class LocalCiPlanTests
 
     [Theory]
     [InlineData("no-such-job", "Unknown job")]
-    [InlineData("classify", "no local equivalent")]
+    [InlineData("automerge", "Unknown job")]
     [InlineData("ci-gate", "no local equivalent")]
-    [InlineData("automerge", "no local equivalent")]
+    [InlineData("classify", "no local equivalent")]
     [InlineData("release-and-archive", "no local equivalent")]
     [InlineData("deploy-docs", "no local equivalent")]
     public void Select_RejectsUnknownAndGitHubOnlyJobs(string key, string message)
@@ -940,6 +939,38 @@ public partial class LocalCiPlanTests
         deployDocsJob.If.Should().Contain("refs/heads/main")
             .And.Contain("github.event_name == 'workflow_dispatch'")
             .And.NotContain("release-and-archive");
+    }
+
+    [Fact]
+    public void ComplianceAndQualityJobs_WireBrowserEvidence_AndGateSnapshotModeOnOwnerProvenanceAndTrailer()
+    {
+        string[] lines = File.ReadAllLines(Path.Combine(RepoRoot(), ".github", "workflows", "ci.yml"));
+        var complianceJob = Workflow.Single(j => j.Key == "compliance");
+        complianceJob.Needs.Should().Equal("native-aot-build", "unit-tests", "dotnet-tests", "accessibility-e2e");
+        complianceJob.If.Should().Contain("needs.accessibility-e2e.result == 'success'");
+
+        var complianceBlocks = ExtractJobStepBlocks(lines, "compliance");
+        string downloadBrowserBlock = complianceBlocks.Single(b => b.Contains("- name: Download Browser Test Evidence", StringComparison.Ordinal));
+        downloadBrowserBlock.Should().Contain("gxp-browser-test-evidence-${{ github.run_id }}-${{ github.run_attempt }}")
+            .And.Contain("path: TestResults/gxp/browser");
+
+        string generateReportsBlock = complianceBlocks.Single(b => b.Contains("- name: Generate Compliance Reports", StringComparison.Ordinal));
+        generateReportsBlock.Should().Contain("REPO_FULL_NAME: ${{ github.repository }}")
+            .And.Contain("PR_HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}")
+            .And.Contain("PR_USER_LOGIN: ${{ github.event.pull_request.user.login }}")
+            .And.Contain("REPO_OWNER: ${{ github.repository_owner }}")
+            .And.Contain("trailers:key=Gxp-Snapshot,valueonly,unfold")
+            .And.Contain("export CADENCE_GXP_SNAPSHOT=\"1\"")
+            .And.Contain("$GITHUB_ENV");
+
+        var dotnetQualityBlocks = ExtractJobStepBlocks(lines, "dotnet-quality");
+        string sentinelsBlock = dotnetQualityBlocks.Single(b => b.Contains("- name: Run Cadence quality sentinels", StringComparison.Ordinal));
+        sentinelsBlock.Should().Contain("REPO_FULL_NAME: ${{ github.repository }}")
+            .And.Contain("PR_HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}")
+            .And.Contain("PR_USER_LOGIN: ${{ github.event.pull_request.user.login }}")
+            .And.Contain("REPO_OWNER: ${{ github.repository_owner }}")
+            .And.Contain("trailers:key=Gxp-Snapshot,valueonly,unfold")
+            .And.Contain("export CADENCE_GXP_SNAPSHOT=\"1\"");
     }
 
     [Fact]

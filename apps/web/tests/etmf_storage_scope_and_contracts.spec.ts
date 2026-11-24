@@ -359,9 +359,13 @@ describe("eTMF binary storage, scope propagation, role gates, and mapped contrac
       global: { plugins: [pinia, router] },
     });
     await flushPromises();
-    expect(pharmCanvas.find("#etmf-read-role-guidance").text()).toContain(
-      "etmf_document:read"
+    const readRoleGuidance = pharmCanvas
+      .find("#etmf-read-role-guidance")
+      .text();
+    expect(readRoleGuidance).toContain(
+      "Requires Clinical Research Coordinator, Investigator, CRA, Monitor, Sponsor Data Manager, Auditor, External Monitor, or System Administrator role."
     );
+    expect(readRoleGuidance).not.toContain("etmf_document:read");
     expect(getDocsSpy).not.toHaveBeenCalled();
     pharmCanvas.unmount();
 
@@ -410,12 +414,12 @@ describe("eTMF binary storage, scope propagation, role gates, and mapped contrac
     expect(
       piGrid.find("button.batch-upload-trigger-btn").attributes("disabled")
     ).toBeDefined();
-    expect(piGrid.find("#document-grid-role-note").text()).toContain(
-      "etmf_document:create"
+    const gridRoleNote = piGrid.find("#document-grid-role-note").text();
+    expect(gridRoleNote).toContain(
+      "Requires Clinical Research Coordinator, CRA, Monitor, Sponsor Data Manager, or System Administrator role."
     );
-    expect(piGrid.find("#document-grid-role-note").text()).toContain(
-      "etmf_document:tag"
-    );
+    expect(gridRoleNote).not.toContain("etmf_document:create");
+    expect(gridRoleNote).not.toContain("etmf_document:tag");
     await piGrid.find('td[data-row="0"][data-col="1"]').trigger("dblclick");
     expect(piGrid.find("select.inline-select").exists()).toBe(false);
     expect(tagSpy).not.toHaveBeenCalled();
@@ -464,9 +468,11 @@ describe("eTMF binary storage, scope propagation, role gates, and mapped contrac
     expect(
       tree.find(".btn-export-full-binder").attributes("disabled")
     ).toBeDefined();
-    expect(tree.find("#etmf-export-role-note").text()).toContain(
-      "etmf_document:export"
+    const exportRoleNote = tree.find("#etmf-export-role-note").text();
+    expect(exportRoleNote).toContain(
+      "Requires Sponsor Data Manager, CRA, Monitor, or Auditor role."
     );
+    expect(exportRoleNote).not.toContain("etmf_document:export");
     expect(tree.findAll(".unread-badge").length).toBe(0);
 
     // Inline taxonomy edit persists through PATCH /api/v1/etmf/documents/{document_id}/taxonomy
@@ -509,9 +515,11 @@ describe("eTMF binary storage, scope propagation, role gates, and mapped contrac
       global: { plugins: [pinia] },
     });
     await flushPromises();
-    expect(qcWrapper.find("#cra-qc-role-note").text()).toContain(
-      "etmf_document:transition_clinical_qc"
+    const craQcRoleNote = qcWrapper.find("#cra-qc-role-note").text();
+    expect(craQcRoleNote).toContain(
+      "Requires CRA, Monitor, Sponsor Data Manager, or System Administrator role."
     );
+    expect(craQcRoleNote).not.toContain("etmf_document:transition_clinical_qc");
     expect(
       qcWrapper.find("button.btn-batch-accept").attributes("disabled")
     ).toBeDefined();

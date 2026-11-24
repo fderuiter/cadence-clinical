@@ -104,6 +104,52 @@ public sealed class MarkdownTestPathTests : IDisposable
     }
 
     [Fact]
+    public void ValidateMarkdown_UnclosedFence_FailsValidation()
+    {
+        var doc = Write("docs/unclosed.md", "# Lifecycle\n\n```text\n[ Stage A ] --> [ Stage B ]\n");
+
+        int exitCode = Cadence.ToolingCore.Services.MarkdownValidatorService.ValidateMarkdown([doc], _root);
+
+        exitCode.Should().Be(1);
+    }
+
+    [Theory]
+    [InlineData("```text\n[ Stage A ]\n````\n")]
+    [InlineData("````text\n[ Stage A ]\n```\n")]
+    public void ValidateMarkdown_MismatchedClosingFenceLength_FailsValidation(string fencedSnippet)
+    {
+        var doc = Write("docs/mismatched.md", $"# Lifecycle\n\n{fencedSnippet}");
+
+        int exitCode = Cadence.ToolingCore.Services.MarkdownValidatorService.ValidateMarkdown([doc], _root);
+
+        exitCode.Should().Be(1);
+    }
+
+    [Fact]
+    public void ValidateMarkdown_UnlabeledFenceContainingHeadings_FailsValidation()
+    {
+        var doc = Write(
+            "docs/swallowed.md",
+            "# Lifecycle\n\n````\n\n### Stage 1: Ingest\n\nSome swallowed prose.\n\n````\n");
+
+        int exitCode = Cadence.ToolingCore.Services.MarkdownValidatorService.ValidateMarkdown([doc], _root);
+
+        exitCode.Should().Be(1);
+    }
+
+    [Fact]
+    public void ValidateMarkdown_MarkdownFenceWithNestedThreeBacktickBlock_PassesValidation()
+    {
+        var doc = Write(
+            "docs/nested.md",
+            "# Prompt Template\n\n````markdown\n## Nested Section\n\n```text\ninner example\n```\n````\n");
+
+        int exitCode = Cadence.ToolingCore.Services.MarkdownValidatorService.ValidateMarkdown([doc], _root);
+
+        exitCode.Should().Be(0);
+    }
+
+    [Fact]
     public void ValidateWorkspaceLinks_MissingSamePageHeadingAnchor_IsReported()
     {
         var doc = Write("docs/guide.md", "# Guide\n\n## Overview\n\nJump to [Missing](#does-not-exist).\n");
@@ -155,6 +201,73 @@ public sealed class MarkdownTestPathTests : IDisposable
             "```\n");
 
         MarkdownParser.ValidateWorkspaceLinks(_root, [schemaDoc, readerDoc]).Should().BeEmpty();
+    }
+
+    [Fact]
+    public void ValidateWorkspaceLinks_ValidatesFrontmatterRelatedPathsAnchorsAndDraftExclusions()
+    {
+        Write("ARCHITECTURE.md", "# Cadence Architecture\n\n## 1. Target architecture\n");
+        Write("packages/kernel/README.md", "# Kernel Package\n\n## Assemblies\n");
+        Write("docs/adr/2026-11-20-sample.md", "# ADR-9999: Sample\n\n## 1. Context\n");
+        Write(
+            "docs/blog/2026-11-19-sibling.md",
+            "---\ntitle: \"Sibling\"\ndate: \"2026-11-19\"\ndraft: false\n---\n\n# Sibling\n\n## Section One\n");
+        var draftPost = Write(
+            "docs/blog/2026-11-25-draft.md",
+            "---\ntitle: \"Draft\"\ndate: \"2026-11-25\"\ndraft: true\n---\n\n# Draft\n");
+
+        var validBlog = Write(
+            "docs/blog/2026-11-20-valid.md",
+            """
+            ---
+            title: "Valid Post"
+            date: "2026-11-20"
+            draft: false
+            related:
+              - text: "Sample ADR"
+                link: "../adr/2026-11-20-sample.md#1-context"
+              - text: "Sibling Post"
+                link: "./2026-11-19-sibling.md#section-one"
+              - text: "Architecture"
+                link: "../../ARCHITECTURE.md#1-target-architecture"
+              - text: "Kernel README"
+                link: "../../packages/kernel/README.md#assemblies"
+              - text: "Interactive Demo"
+                link: "/demo/"
+            ---
+
+            # Valid Post
+            """);
+
+        MarkdownParser.ValidateWorkspaceLinks(_root, [validBlog, draftPost]).Should().BeEmpty();
+
+        var invalidBlog = Write(
+            "docs/blog/2026-11-20-invalid.md",
+            """
+            ---
+            title: "Invalid Post"
+            date: "2026-11-20"
+            draft: false
+            related:
+              - text: "Missing File"
+                link: "../adr/missing.md"
+              - text: "Missing Anchor"
+                link: "../adr/2026-11-20-sample.md#no-such-anchor"
+              - text: "Draft Target"
+                link: "./2026-11-25-draft.md"
+            ---
+
+            # Invalid Post
+
+            Inline link to [Draft](./2026-11-25-draft.md).
+            """);
+
+        var issues = MarkdownParser.ValidateWorkspaceLinks(_root, [invalidBlog]);
+        issues.Select(i => i.TargetLink).Should().BeEquivalentTo(
+            "../adr/missing.md",
+            "../adr/2026-11-20-sample.md#no-such-anchor",
+            "./2026-11-25-draft.md",
+            "./2026-11-25-draft.md");
     }
 
     private string Write(string relativePath, string content)

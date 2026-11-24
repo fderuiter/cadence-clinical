@@ -140,7 +140,7 @@
                       cursor: pointer;
                       border: 1px solid var(--border);
                       border-radius: 4px;
-                      background: white;
+                      background: var(--semantic-color-surface);
                     "
                     @click="openEditor(tpl)"
                   >
@@ -152,8 +152,10 @@
                     style="
                       padding: 4px 10px;
                       font-size: 0.75rem;
-                      background-color: var(--success);
-                      color: white;
+                      background-color: var(
+                        --semantic-color-success-interactive
+                      );
+                      color: var(--semantic-color-text-on-solid);
                       border: none;
                       border-radius: 4px;
                       cursor: pointer;
@@ -166,8 +168,10 @@
                     v-else
                     class="badge status-badge"
                     style="
-                      background-color: var(--success);
-                      color: white;
+                      background-color: var(
+                        --semantic-color-success-interactive
+                      );
+                      color: var(--semantic-color-text-on-solid);
                       font-size: 0.7rem;
                       padding: 4px 8px;
                       border-radius: 4px;
@@ -395,7 +399,7 @@
                     font-size: 0.8rem;
                     font-weight: 600;
                     margin-bottom: 8px;
-                    color: var(--primary);
+                    color: var(--text-main);
                   "
                 >
                   Automated Re-Consent Notification Channels:
@@ -489,8 +493,8 @@
                   class="btn btn-remove-clause touch-target-interactive"
                   style="
                     font-size: 0.75rem;
-                    background-color: var(--error);
-                    color: white;
+                    background-color: var(--semantic-color-error-interactive);
+                    color: var(--semantic-color-text-on-solid);
                     border: none;
                     border-radius: 4px;
                   "
@@ -571,8 +575,8 @@
                     style="
                       padding: 2px 6px;
                       font-size: 0.7rem;
-                      background-color: var(--error);
-                      color: white;
+                      background-color: var(--semantic-color-error-interactive);
+                      color: var(--semantic-color-text-on-solid);
                       border: none;
                       border-radius: 4px;
                     "
@@ -663,7 +667,7 @@
                   margin-bottom: 8px;
                 "
               >
-                <strong style="color: var(--primary); font-size: 0.85rem">{{
+                <strong style="color: var(--text-main); font-size: 0.85rem">{{
                   $t("econsent.authoring.previewSubheader")
                 }}</strong>
                 <button
@@ -1059,6 +1063,6 @@ onMounted(() => {
 <style scoped>
 .template-card:hover {
   border-color: var(--accent) !important;
-  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
+  box-shadow: var(--shadow-md);
 }
 </style>

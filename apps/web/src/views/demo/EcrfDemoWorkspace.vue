@@ -8,7 +8,7 @@
           class="badge"
           style="
             background-color: var(--accent);
-            color: white;
+            color: var(--semantic-color-text-on-accent);
             padding: 4px 8px;
             border-radius: 4px;
             font-weight: bold;
@@ -176,7 +176,7 @@
                 font-size: 0.9rem;
                 font-weight: 700;
                 margin-bottom: 8px;
-                color: var(--primary);
+                color: var(--text-main);
               "
             >
               {{ $t("ecrf.validationRulesTitle") }}
@@ -211,7 +211,7 @@
                 font-size: 0.9rem;
                 font-weight: 700;
                 margin-bottom: 8px;
-                color: var(--primary);
+                color: var(--text-main);
               "
             >
               {{ $t("ecrf.queryManagementTitle") }}
@@ -625,7 +625,10 @@ function handleLookupInput(field, value) {
 const ecrfSessions = reactive({});
 
 function getSessionKey() {
-  return `${selectedSubjectId.value}:${selectedVisitId.value}`;
+  const personaKey = authStore.isAuthenticated
+    ? authStore.currentPersona || "default"
+    : "guest";
+  return `${personaKey}:${selectedSubjectId.value}:${selectedVisitId.value}`;
 }
 
 function loadEcrfSession() {

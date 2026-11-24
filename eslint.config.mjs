@@ -17,7 +17,10 @@ const portalStyleCssPath = path.join(
   "apps/subject-portal/src/style.css"
 );
 
-const hexColorRegex = /#(?:[0-9a-fA-F]{3,4}){1,2}\b/g;
+const hexColorRegex = /#(?:[0-9a-fA-F]{3,4}){1,2}(?![0-9a-zA-Z_-])/g;
+const colorFunctionRegex = /\b(?:rgba?|hsla?)\s*\([^)]*\)/gi;
+const namedColorDeclRegex =
+  /(?:^|[;{\s"'`])(?:background(?:-color)?|color|border(?:-(?:top|right|bottom|left))?(?:-color)?|fill|stroke|outline(?:-color)?)\s*:\s*(white|black)\b/gi;
 const cssVarDefRegex = /(--[a-zA-Z0-9_-]+)\s*:/g;
 const cssVarUseRegex = /var\(\s*(--[a-zA-Z0-9_-]+)/g;
 const aiTokenRegex = /--(?:semantic-)?color-ai(?:-[a-zA-Z0-9_-]+)?\b/g;
@@ -110,17 +113,59 @@ const cssStubParser = {
   },
 };
 
+function findColorViolationsInCssText(text) {
+  const violations = [];
+  for (const match of text.matchAll(hexColorRegex)) {
+    violations.push({ index: match.index, literal: match[0] });
+  }
+  for (const match of text.matchAll(colorFunctionRegex)) {
+    violations.push({ index: match.index, literal: match[0] });
+  }
+  for (const match of text.matchAll(namedColorDeclRegex)) {
+    const colorWord = match[1];
+    const wordOffset = match[0]
+      .toLowerCase()
+      .lastIndexOf(colorWord.toLowerCase());
+    violations.push({
+      index: match.index + Math.max(0, wordOffset),
+      literal: colorWord,
+    });
+  }
+  return violations;
+}
+
+function collectColorLiteralsFromScriptString(rawText) {
+  const cleaned = stripUrlFragmentsPreservingLength(rawText);
+  const found = new Set();
+  for (const m of cleaned.matchAll(hexColorRegex)) found.add(m[0]);
+  for (const m of cleaned.matchAll(colorFunctionRegex)) found.add(m[0]);
+  for (const m of cleaned.matchAll(namedColorDeclRegex)) found.add(m[1]);
+  return [...found];
+}
+
+function isModuleSpecifierNode(node) {
+  const parent = node.parent;
+  if (!parent) return false;
+  return (
+    (parent.type === "ImportDeclaration" ||
+      parent.type === "ExportNamedDeclaration" ||
+      parent.type === "ExportAllDeclaration" ||
+      parent.type === "ImportExpression") &&
+    parent.source === node
+  );
+}
+
 const noInlineHexRule = {
   meta: {
     type: "problem",
     docs: {
       description:
-        "Disallow hardcoded hex color codes in Vue templates, Vue <style> blocks, and CSS stylesheets outside packages/ui/tokens.css :root.",
+        "Disallow hardcoded color literals (#hex, rgb/rgba/hsl/hsla, named white/black declarations) in Vue templates, <script> blocks, <style> blocks, JS/TS modules, and CSS stylesheets outside packages/ui/tokens.css theme blocks.",
       category: "Best Practices",
     },
     messages: {
       noHexInStyle:
-        'Hardcoded hex color "{{hex}}" is prohibited. Use design system tokens defined in packages/ui/tokens.css (e.g. var(--semantic-color-...)).',
+        'Hardcoded color literal "{{hex}}" is prohibited. Use design system tokens defined in packages/ui/tokens.css (e.g. var(--semantic-color-...)).',
     },
   },
   create(context) {
@@ -142,67 +187,115 @@ const noInlineHexRule = {
               (rootBlock) => rootBlock.replace(/[^\r\n]/g, " ")
             );
           }
-          for (const match of masked.matchAll(hexColorRegex)) {
-            const loc = offsetToLoc(sourceText, match.index);
+          for (const v of findColorViolationsInCssText(masked)) {
+            const loc = offsetToLoc(sourceText, v.index);
             context.report({
               loc,
               messageId: "noHexInStyle",
-              data: { hex: match[0] },
+              data: { hex: v.literal },
             });
           }
         },
       };
     }
 
-    // 2. Vue SFCs: check both <template> style/presentation attributes and <style> blocks
-    const styleBlockCheck = {
-      "Program:exit"() {
-        for (const styleMatch of sourceText.matchAll(
-          /(<style\b[^>]*>)([\s\S]*?)<\/style>/gi
-        )) {
-          const contentStart = styleMatch.index + styleMatch[1].length;
-          const masked = stripUrlFragmentsPreservingLength(
-            stripCssCommentsPreservingNewlines(styleMatch[2])
-          );
-          for (const match of masked.matchAll(hexColorRegex)) {
-            const loc = offsetToLoc(sourceText, contentStart + match.index);
-            context.report({
-              loc,
-              messageId: "noHexInStyle",
-              data: { hex: match[0] },
-            });
-          }
+    const scriptColorVisitors = {
+      Literal(node) {
+        if (typeof node.value !== "string" || isModuleSpecifierNode(node)) {
+          return;
+        }
+        const trimmed = node.value.trim().toLowerCase();
+        const isCanvasNamedColor =
+          (trimmed === "white" || trimmed === "black") &&
+          node.parent?.type === "AssignmentExpression" &&
+          node.parent.right === node &&
+          node.parent.left?.type === "MemberExpression" &&
+          (node.parent.left.property?.name === "fillStyle" ||
+            node.parent.left.property?.name === "strokeStyle");
+        const literals = collectColorLiteralsFromScriptString(node.value);
+        if (isCanvasNamedColor) literals.push(node.value.trim());
+        for (const hex of new Set(literals)) {
+          context.report({
+            node,
+            messageId: "noHexInStyle",
+            data: { hex },
+          });
         }
       },
+      TemplateElement(node) {
+        const raw = node.value?.raw || "";
+        if (!raw) return;
+        for (const hex of collectColorLiteralsFromScriptString(raw)) {
+          context.report({
+            node,
+            messageId: "noHexInStyle",
+            data: { hex },
+          });
+        }
+      },
+    };
+
+    // 2. Vue SFCs & JS/TS modules: check <template> style/presentation attributes, <script> AST literals, and <style> blocks
+    const scriptAndStyleCheck = {
+      ...scriptColorVisitors,
+      ...(filename.endsWith(".vue")
+        ? {
+            "Program:exit"() {
+              for (const styleMatch of sourceText.matchAll(
+                /(<style\b[^>]*>)([\s\S]*?)<\/style>/gi
+              )) {
+                const contentStart = styleMatch.index + styleMatch[1].length;
+                const masked = stripUrlFragmentsPreservingLength(
+                  stripCssCommentsPreservingNewlines(styleMatch[2])
+                );
+                for (const v of findColorViolationsInCssText(masked)) {
+                  const loc = offsetToLoc(sourceText, contentStart + v.index);
+                  context.report({
+                    loc,
+                    messageId: "noHexInStyle",
+                    data: { hex: v.literal },
+                  });
+                }
+              }
+            },
+          }
+        : {}),
     };
 
     const parserServices =
       context.sourceCode?.parserServices || context.parserServices;
     if (!parserServices?.defineTemplateBodyVisitor) {
-      return filename.endsWith(".vue") ? styleBlockCheck : {};
+      return scriptAndStyleCheck;
     }
 
     return parserServices.defineTemplateBodyVisitor(
       {
         VAttribute(node) {
           if (isStyleOrColorVAttribute(node) && node.value) {
-            const text = stripUrlFragmentsPreservingLength(
-              context.sourceCode.getText(node.value)
-            );
-            const matches = text.match(hexColorRegex);
-            if (matches) {
-              for (const hex of new Set(matches)) {
-                context.report({
-                  node: node.value,
-                  messageId: "noHexInStyle",
-                  data: { hex },
-                });
-              }
+            const rawAttr = context.sourceCode.getText(node.value);
+            const literals = collectColorLiteralsFromScriptString(rawAttr);
+            const attrName = !node.directive
+              ? node.key?.name
+              : node.key?.argument?.name;
+            if (
+              (attrName === "fill" ||
+                attrName === "stroke" ||
+                attrName === "color") &&
+              /^['"]?(?:white|black)['"]?$/i.test(rawAttr.trim())
+            ) {
+              literals.push(rawAttr.replace(/['"]/g, "").trim());
+            }
+            for (const hex of new Set(literals)) {
+              context.report({
+                node: node.value,
+                messageId: "noHexInStyle",
+                data: { hex },
+              });
             }
           }
         },
       },
-      styleBlockCheck
+      scriptAndStyleCheck
     );
   },
 };
@@ -624,9 +717,8 @@ function splitTopLevelCommas(selectorText) {
 }
 
 function findUnscopedSuppressedOutlinesInCss(cssText) {
-  const clean = maskCssStringsPreservingLength(
-    stripCssCommentsPreservingNewlines(cssText)
-  );
+  const noComments = stripCssCommentsPreservingNewlines(cssText);
+  const clean = maskCssStringsPreservingLength(noComments);
   const violations = [];
   const stack = [];
   let segStart = 0;
@@ -644,7 +736,7 @@ function findUnscopedSuppressedOutlinesInCss(cssText) {
       } else {
         stack.push({
           isAtRule: false,
-          selectorText: header,
+          selectorText: noComments.slice(segStart, i).trim(),
           bodyStart: i + 1,
         });
       }
@@ -656,8 +748,13 @@ function findUnscopedSuppressedOutlinesInCss(cssText) {
         const selectors = splitTopLevelCommas(entry.selectorText);
         const isProgrammaticFocusOnly =
           selectors.length > 0 &&
-          selectors.every((sel) =>
-            /:focus:not\(\s*:focus-visible\s*\)/.test(sel)
+          selectors.every(
+            (sel) =>
+              /:focus:not\(\s*:focus-visible\s*\)/.test(sel) ||
+              (/\[tabindex=["']?-1["']?\]:focus(?:-visible)?\b/.test(sel) &&
+                !/\b(?:button|input|select|textarea|a|summary)\b|\[role=["']?(?:button|link|tab|menuitem|checkbox|radio|switch|option|combobox|textbox)["']?\]/i.test(
+                  sel
+                ))
           );
         if (!isProgrammaticFocusOnly) {
           for (const match of body.matchAll(suppressedOutlineDeclRegex)) {
@@ -679,7 +776,7 @@ const noSuppressedFocusOutlineRule = {
     type: "problem",
     docs: {
       description:
-        "Disallow bare outline: none or outline: 0 rules without :focus-visible across packages/ui and apps/web (WCAG 2.2 SC 2.4.7 / Failure F78).",
+        "Disallow bare outline: none or outline: 0 rules without :focus-visible across packages/ui, apps/web, and apps/subject-portal (WCAG 2.2 SC 2.4.7 / Failure F78).",
       category: "Accessibility",
     },
     messages: {
@@ -691,9 +788,6 @@ const noSuppressedFocusOutlineRule = {
     const filename = (context.filename || context.getFilename() || "")
       .split(path.sep)
       .join("/");
-    if (filename.includes("/apps/subject-portal/")) {
-      return {};
-    }
 
     const sourceText = context.sourceCode.getText();
 
@@ -2357,6 +2451,341 @@ const noUnscopedClinicalTabsCssRule = {
   },
 };
 
+// Exempt 2D multi-header clinical matrices and inline cell grids from ClinicalDataTable replacement (ADR-2673).
+const EXEMPT_2D_CLINICAL_MATRICES = new Set([
+  "components/canvas/ParticipantFormsPanel.vue",
+  "components/clinical/ClinicalSoAMatrix.vue",
+  "components/clinical/SoAMatrixEditor.vue",
+  "components/crf/widgets/RepeatingLogGridWidget.vue",
+  "components/etmf/DocumentGrid.vue",
+  "components/imaging/OncologyCalipers.vue",
+  "components/quality/RactMatrixViewer.vue",
+]);
+
+// Shrink-only legacy allowlist of unmigrated apps/web table views. Do not add new entries;
+// migrate clinical dataset tables to ClinicalDataTable from "ui" (ADR-2656 / ADR-2673).
+const LEGACY_WEB_RAW_TABLE_ALLOWLIST = new Set([
+  "components/CodingQueueTable.vue",
+  "components/SynonymImportDrawer.vue",
+  "components/auditor/AuditTrailViewer.vue",
+  "components/clinical/AdaptiveDoseEscalationConsole.vue",
+  "components/clinical/AggregateSafetyConsole.vue",
+  "components/clinical/CecAdjudicationConsole.vue",
+  "components/clinical/CellGeneTherapyCocConsole.vue",
+  "components/clinical/ClinicalLakehouseConsole.vue",
+  "components/clinical/DeviceInvestigationConsole.vue",
+  "components/clinical/IECriteriaTable.vue",
+  "components/clinical/LabGovernanceConsole.vue",
+  "components/clinical/ProtocolTrainingConsole.vue",
+  "components/clinical/SensorTelemetryConsole.vue",
+  "components/clinical/SsuGreenlightConsole.vue",
+  "components/clinical/StatisticalComputingConsole.vue",
+  "components/clinical/TelehealthDtpConsole.vue",
+  "components/clinical/TherapeuticAreaWizard.vue",
+  "components/crf/CanvasFieldWidget.vue",
+  "components/econsent/IcfSectionEditor.vue",
+  "components/ecrf/EcrfItemTable.vue",
+  "components/ecrf/EcrfSignaturesSection.vue",
+  "components/imaging/DualReaderAdjudicationPanel.vue",
+  "components/persona/CraVerificationConsole.vue",
+  "components/quality/StatisticalForensicsViewer.vue",
+  "views/AmendmentDiffView.vue",
+  "views/AuditView.vue",
+  "views/ImagingView.vue",
+  "views/KnowledgeView.vue",
+  "views/LaySummaryPortal.vue",
+  "views/ObservationView.vue",
+  "views/ParticipantWalletView.vue",
+  "views/QualityCockpitView.vue",
+  "views/RulesView.vue",
+  "views/demo/CtmsDemoWorkspace.vue",
+]);
+
+const noRawClinicalTableRule = {
+  meta: {
+    type: "problem",
+    docs: {
+      description:
+        "Disallow raw <table> markup in migrated clinical hubs and apps/subject-portal; require ClinicalDataTable from packages/ui unless exempted as a 2D clinical matrix (ADR-2673).",
+      category: "Accessibility",
+    },
+    messages: {
+      noRawClinicalTable:
+        'Raw <table> markup is prohibited outside exempted 2D clinical matrices. Use ClinicalDataTable from "ui" to preserve keyboard sorting, focusable row activation, sr-only captions, and polite pagination status (ADR-2656 / ADR-2673).',
+    },
+  },
+  create(context) {
+    const filename = (context.filename || context.getFilename() || "")
+      .split(path.sep)
+      .join("/");
+    if (
+      !filename.endsWith(".vue") ||
+      filename.includes("/packages/ui/src/components/")
+    ) {
+      return {};
+    }
+
+    const webSrcMarker = "/apps/web/src/";
+    const webSrcIdx = filename.lastIndexOf(webSrcMarker);
+    const relWebSrcPath =
+      webSrcIdx >= 0 ? filename.slice(webSrcIdx + webSrcMarker.length) : null;
+
+    if (
+      relWebSrcPath !== null &&
+      (EXEMPT_2D_CLINICAL_MATRICES.has(relWebSrcPath) ||
+        LEGACY_WEB_RAW_TABLE_ALLOWLIST.has(relWebSrcPath))
+    ) {
+      return {};
+    }
+
+    const parserServices =
+      context.sourceCode?.parserServices || context.parserServices;
+    if (!parserServices?.defineTemplateBodyVisitor) {
+      return {};
+    }
+
+    return parserServices.defineTemplateBodyVisitor({
+      VElement(node) {
+        const rawTag = node.rawName || node.name || "";
+        if (rawTag === "table") {
+          context.report({
+            node: node.startTag,
+            messageId: "noRawClinicalTable",
+          });
+        }
+      },
+    });
+  },
+};
+
+// Shrink-only legacy allowlist of unmigrated apps/web Vue files with untyped <button> elements
+// or unguarded button :hover selectors. Do not add new entries (ADR-2673).
+const LEGACY_WEB_UNGUARDED_BUTTON_ALLOWLIST = new Set([
+  "components/AppShell.vue",
+  "components/CodingQueueTable.vue",
+  "components/ContextualHelpDrawer.vue",
+  "components/OnboardingChecklistDrawer.vue",
+  "components/auditor/AuditorExportModal.vue",
+  "components/clinical/AdaptiveDoseEscalationConsole.vue",
+  "components/clinical/AggregateSafetyConsole.vue",
+  "components/clinical/CdiscPipelineConsole.vue",
+  "components/clinical/CecAdjudicationConsole.vue",
+  "components/clinical/ClinicalLakehouseConsole.vue",
+  "components/clinical/DeviceInvestigationConsole.vue",
+  "components/clinical/EhrReconciliationDrawer.vue",
+  "components/clinical/LabGovernanceConsole.vue",
+  "components/clinical/ProtocolTrainingConsole.vue",
+  "components/clinical/SensorTelemetryConsole.vue",
+  "components/clinical/SsuGreenlightConsole.vue",
+  "components/clinical/StatisticalComputingConsole.vue",
+  "components/clinical/TelehealthDtpConsole.vue",
+  "components/clinical/TherapeuticAreaWizard.vue",
+  "components/crf/CanvasFieldWidget.vue",
+  "components/crf/CrfAuthoringCanvas.vue",
+  "components/crf/FormSectionContainer.vue",
+  "components/crf/RuleTracerPanel.vue",
+  "components/econsent/ComprehensionQuizBuilder.vue",
+  "components/econsent/IcfSectionEditor.vue",
+  "components/econsent/QuizTemplateDrawer.vue",
+  "components/econsent/ReadabilityDrawer.vue",
+  "components/fileshare/ActivityFeed.vue",
+  "components/fileshare/MediaPreviewModal.vue",
+  "components/fileshare/ShareDrawer.vue",
+  "components/imaging/BatchDicomDropzoneModal.vue",
+  "components/imaging/DicomMprViewer.vue",
+  "components/imaging/DualReaderAdjudicationPanel.vue",
+  "components/imaging/OncologyCalipers.vue",
+  "components/persona/CrcFormRenderer.vue",
+  "components/persona/DesignerSchemaPanel.vue",
+  "components/quality/RactMatrixViewer.vue",
+  "components/quality/StatisticalForensicsViewer.vue",
+  "components/shared/ReAuthModal.vue",
+  "views/AmendmentDiffView.vue",
+  "views/AuditView.vue",
+  "views/AuditorView.vue",
+  "views/ConsentAuthoringView.vue",
+  "views/ForbiddenView.vue",
+  "views/ICFBuilderView.vue",
+  "views/KnowledgeView.vue",
+  "views/LaySummaryPortal.vue",
+  "views/LoginView.vue",
+  "views/MdrView.vue",
+  "views/MedicalCodingView.vue",
+  "views/NotificationsView.vue",
+  "views/OverviewView.vue",
+  "views/ParticipantWalletView.vue",
+  "views/ProtocolDigitizationView.vue",
+  "views/QualityCockpitView.vue",
+  "views/RulesView.vue",
+  "views/demo/CtmsDemoWorkspace.vue",
+]);
+
+const buttonHoverCompoundRegex =
+  /(?:^|[\s>+~(])(?:\.(?![a-z0-9_-]*btn-(?:group|row|bar|wrap|wrapper|container|list|stack|grid|actions|slot)\b)[a-z0-9_-]*btn[a-z0-9_-]*|button)(?:[:.#[]\S*?)?:hover\b/i;
+
+function findUnguardedButtonHoverSelectorsInCss(cssText) {
+  const clean = maskCssStringsPreservingLength(
+    stripCssCommentsPreservingNewlines(cssText)
+  );
+  const violations = [];
+  const stack = [];
+  let segStart = 0;
+
+  for (let i = 0; i < clean.length; i++) {
+    const ch = clean[i];
+    if (ch === ";") {
+      if (stack.length === 0 || stack[stack.length - 1].isAtRule) {
+        segStart = i + 1;
+      }
+    } else if (ch === "{") {
+      const header = clean.slice(segStart, i).trim();
+      if (header.startsWith("@")) {
+        stack.push({ isAtRule: true });
+      } else {
+        stack.push({
+          isAtRule: false,
+          selectorText: header,
+          headerOffset:
+            segStart + (clean.slice(segStart, i).length - header.length),
+        });
+      }
+      segStart = i + 1;
+    } else if (ch === "}") {
+      const entry = stack.pop();
+      if (entry && !entry.isAtRule) {
+        for (const sel of splitTopLevelCommas(entry.selectorText)) {
+          if (
+            buttonHoverCompoundRegex.test(sel) &&
+            !/:not\(\s*:disabled\s*\)/.test(sel)
+          ) {
+            violations.push({
+              offset: entry.headerOffset,
+              selector: sel.replace(/\s+/g, " ").trim(),
+            });
+          }
+        }
+      }
+      segStart = i + 1;
+    }
+  }
+  return violations;
+}
+
+const VALID_BUTTON_TYPES = new Set(["button", "submit", "reset"]);
+
+const noUnguardedButtonStateRule = {
+  meta: {
+    type: "problem",
+    docs: {
+      description:
+        "Require explicit button type attributes and :not(:disabled) hover guards on button and .btn selectors across packages/ui, apps/subject-portal, and migrated apps/web views (ADR-2673).",
+      category: "Accessibility",
+    },
+    messages: {
+      missingButtonType:
+        'Native <button> is missing an explicit type ("button", "submit", or "reset"). Unspecified buttons default to type="submit" (ADR-2673).',
+      unguardedButtonHover:
+        'Button hover selector "{{selector}}" is missing a :not(:disabled) guard, allowing disabled buttons to highlight on hover (ADR-2673).',
+    },
+  },
+  create(context) {
+    const filename = (context.filename || context.getFilename() || "")
+      .split(path.sep)
+      .join("/");
+    const sourceText = context.sourceCode.getText();
+
+    if (filename.endsWith(".css")) {
+      return {
+        Program() {
+          for (const v of findUnguardedButtonHoverSelectorsInCss(sourceText)) {
+            context.report({
+              loc: offsetToLoc(sourceText, v.offset),
+              messageId: "unguardedButtonHover",
+              data: { selector: v.selector },
+            });
+          }
+        },
+      };
+    }
+
+    if (!filename.endsWith(".vue")) {
+      return {};
+    }
+
+    const webSrcMarker = "/apps/web/src/";
+    const webSrcIdx = filename.lastIndexOf(webSrcMarker);
+    const relWebSrcPath =
+      webSrcIdx >= 0 ? filename.slice(webSrcIdx + webSrcMarker.length) : null;
+    if (
+      relWebSrcPath !== null &&
+      LEGACY_WEB_UNGUARDED_BUTTON_ALLOWLIST.has(relWebSrcPath)
+    ) {
+      return {};
+    }
+
+    const styleBlockCheck = {
+      "Program:exit"() {
+        for (const styleMatch of sourceText.matchAll(
+          /(<style\b[^>]*>)([\s\S]*?)<\/style>/gi
+        )) {
+          const contentStart = styleMatch.index + styleMatch[1].length;
+          for (const v of findUnguardedButtonHoverSelectorsInCss(
+            styleMatch[2]
+          )) {
+            context.report({
+              loc: offsetToLoc(sourceText, contentStart + v.offset),
+              messageId: "unguardedButtonHover",
+              data: { selector: v.selector },
+            });
+          }
+        }
+      },
+    };
+
+    const parserServices =
+      context.sourceCode?.parserServices || context.parserServices;
+    if (!parserServices?.defineTemplateBodyVisitor) {
+      return styleBlockCheck;
+    }
+
+    return parserServices.defineTemplateBodyVisitor(
+      {
+        VElement(node) {
+          const rawTag = node.rawName || node.name || "";
+          if (rawTag !== "button") return;
+
+          const hasValidType = (node.startTag?.attributes || []).some(
+            (attr) => {
+              if (!attr.directive && attr.key?.type === "VIdentifier") {
+                return (
+                  attr.key.name === "type" &&
+                  VALID_BUTTON_TYPES.has(attr.value?.value)
+                );
+              }
+              if (
+                attr.directive &&
+                attr.key?.type === "VDirectiveKey" &&
+                attr.key.name?.name === "bind"
+              ) {
+                return attr.key.argument?.name === "type";
+              }
+              return false;
+            }
+          );
+
+          if (!hasValidType) {
+            context.report({
+              node: node.startTag,
+              messageId: "missingButtonType",
+            });
+          }
+        },
+      },
+      styleBlockCheck
+    );
+  },
+};
+
 const customVuePlugin = {
   rules: {
     "no-inline-hex": noInlineHexRule,
@@ -2369,6 +2798,8 @@ const customVuePlugin = {
     "require-tabular-nums": requireTabularNumsRule,
     "no-vuejs-a11y-suppression": noVuejsA11ySuppressionRule,
     "no-unscoped-clinical-tabs-css": noUnscopedClinicalTabsCssRule,
+    "no-raw-clinical-table": noRawClinicalTableRule,
+    "no-unguarded-button-state": noUnguardedButtonStateRule,
   },
 };
 
@@ -2424,6 +2855,8 @@ export default [
       "custom-vue/no-aria-label-mismatch": "error",
       "custom-vue/require-tabular-nums": "error",
       "custom-vue/no-unscoped-clinical-tabs-css": "error",
+      "custom-vue/no-raw-clinical-table": "error",
+      "custom-vue/no-unguarded-button-state": "error",
       "vue/max-attributes-per-line": "off",
       "vue/singleline-html-element-content-newline": "off",
       "vue/multiline-html-element-content-newline": "off",
@@ -2460,6 +2893,7 @@ export default [
       "custom-vue/no-undefined-css-vars": "error",
       "custom-vue/no-misused-ai-tokens": "error",
       "custom-vue/no-suppressed-focus-outline": "error",
+      "custom-vue/no-unguarded-button-state": "error",
       "custom-vue/require-tabular-nums": "error",
     },
   },
@@ -2467,7 +2901,9 @@ export default [
     files: [
       "packages/ui/index.js",
       "packages/ui/src/**/*.js",
+      "packages/ui/src/**/*.ts",
       "apps/subject-portal/src/**/*.js",
+      "apps/subject-portal/src/**/*.ts",
       "apps/web/src/**/*.js",
       "apps/web/src/**/*.ts",
     ],
@@ -2475,6 +2911,7 @@ export default [
       "custom-vue": customVuePlugin,
     },
     rules: {
+      "custom-vue/no-inline-hex": "error",
       "custom-vue/no-undefined-css-vars": "error",
       "custom-vue/no-misused-ai-tokens": "error",
       "custom-vue/no-unlabeled-glyph-button": "error",
@@ -2777,6 +3214,7 @@ export default [
     rules: {
       "vue/one-component-per-file": "off",
       "vue/require-prop-types": "off",
+      "custom-vue/no-inline-hex": "off",
       "custom-vue/no-misused-ai-tokens": "off",
       "no-unused-vars": "off",
       "@typescript-eslint/no-unused-vars": "off",

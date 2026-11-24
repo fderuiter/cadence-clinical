@@ -84,38 +84,42 @@
         <div v-else-if="canMutateTicket" class="action-btn-group">
           <button
             v-if="ticket.status === 'OPEN'"
+            type="button"
             class="btn btn-sm btn-primary"
             :disabled="actionLoading"
             @click="transitionTicket('IN_PROGRESS')"
           >
-            ▶ Start Work
+            Start Work
           </button>
           <button
             v-if="ticket.status === 'IN_PROGRESS'"
+            type="button"
             class="btn btn-sm btn-warning"
             :disabled="actionLoading"
             @click="transitionTicket('WAITING_ON_SITE')"
           >
-            ⏸ Pause (Wait Site)
+            Pause (Wait Site)
           </button>
           <button
             v-if="ticket.status === 'IN_PROGRESS'"
+            type="button"
             class="btn btn-sm btn-warning"
             :disabled="actionLoading"
             @click="transitionTicket('WAITING_ON_SPONSOR')"
           >
-            ⏸ Pause (Wait Sponsor)
+            Pause (Wait Sponsor)
           </button>
           <button
             v-if="
               ticket.status === 'WAITING_ON_SITE' ||
               ticket.status === 'WAITING_ON_SPONSOR'
             "
+            type="button"
             class="btn btn-sm btn-primary"
             :disabled="actionLoading"
             @click="transitionTicket('IN_PROGRESS')"
           >
-            ▶ Resume Work
+            Resume Work
           </button>
           <button
             v-if="
@@ -124,42 +128,49 @@
               ticket.status === 'WAITING_ON_SPONSOR'
             "
             id="btn-open-resolve"
+            type="button"
             class="btn btn-sm btn-success"
             :disabled="actionLoading"
             @click="openResolveModal"
           >
-            ✓ Resolve Issue
+            Resolve Issue
           </button>
           <button
             v-if="ticket.status === 'RESOLVED'"
+            type="button"
             class="btn btn-sm btn-secondary"
             :disabled="actionLoading"
             @click="transitionTicket('CLOSED')"
           >
-            🔒 Final Close
+            Final Close
           </button>
-          <input
+          <ClinicalInput
             v-if="ticket.status !== 'CLOSED'"
             id="transition-reason-input"
             v-model="transitionReason"
-            type="text"
-            aria-label="Reason for workflow status transition"
-            class="form-control transition-reason-field"
+            label="Reason for workflow status transition"
+            hide-label
+            density="compact"
+            :show-query-flag="false"
+            control-class="form-control transition-reason-field"
             placeholder="GxP transition reason..."
+            :attributes="{
+              'aria-label': 'Reason for workflow status transition',
+            }"
           />
         </div>
         <div v-else class="signed-lock-notice">
-          👁️ Read-only view — Status transitions require operational staff
-          access.
+          Read-only view — Status transitions require operational staff access.
         </div>
 
         <button
           v-if="canSignTicket"
           id="btn-open-part11-sign"
+          type="button"
           class="btn btn-sm btn-sign"
           @click="isSignModalOpen = true"
         >
-          ✍️ Part 11 eSign
+          Part 11 eSign
         </button>
       </div>
 
@@ -170,12 +181,15 @@
       >
         <h4 class="card-title">Document Root Cause &amp; Resolution</h4>
         <div class="resolve-grid">
-          <label class="resolve-field">
-            <span class="meta-label">Root-Cause Category</span>
-            <select
+          <div class="resolve-field">
+            <ClinicalInput
               id="resolve-rca-category"
               v-model="resolveForm.root_cause_category"
-              class="form-control"
+              as="select"
+              label="Root-Cause Category"
+              density="compact"
+              :show-query-flag="false"
+              control-class="form-control"
             >
               <option value="PROCESS_WORKFLOW_DEFICIT">
                 Process / Workflow Deficit
@@ -186,39 +200,46 @@
               <option value="EQUIPMENT_CALIBRATION">
                 Equipment / Cold-Chain Calibration
               </option>
-            </select>
-          </label>
-          <label class="resolve-field">
-            <span class="meta-label">Resolution Code</span>
-            <input
+            </ClinicalInput>
+          </div>
+          <div class="resolve-field">
+            <ClinicalInput
               id="resolve-code"
               v-model="resolveForm.resolution_code"
-              type="text"
-              class="form-control"
+              label="Resolution Code"
+              density="compact"
+              :show-query-flag="false"
+              control-class="form-control"
               placeholder="e.g. CORRECTIVE_ACTION_IMPLEMENTED"
             />
-          </label>
+          </div>
         </div>
-        <label class="resolve-field">
-          <span class="meta-label"
-            >Root-Cause &amp; Corrective Action Summary *</span
-          >
-          <textarea
+        <div class="resolve-field">
+          <ClinicalInput
             id="resolve-rca-summary"
             v-model="resolveForm.root_cause_summary"
-            rows="2"
-            class="form-control"
+            as="textarea"
+            :rows="2"
+            label="Root-Cause & Corrective Action Summary"
+            required
+            density="compact"
+            :show-query-flag="false"
+            control-class="form-control"
             placeholder="Describe de-identified root cause and corrective action (no participant PII)..."
           />
-        </label>
+        </div>
         <div class="comment-submit-row">
-          <input
+          <ClinicalInput
             id="resolve-change-reason"
             v-model="resolveForm.reason_for_change"
-            type="text"
-            aria-label="GxP reason for resolving ticket"
-            class="form-control flex-1"
+            label="GxP reason for resolving ticket"
+            hide-label
+            density="compact"
+            :show-query-flag="false"
+            extra-class="flex-1"
+            control-class="form-control"
             placeholder="Mandatory GxP reason for resolution..."
+            :attributes="{ 'aria-label': 'GxP reason for resolving ticket' }"
           />
           <button
             type="button"
@@ -238,7 +259,7 @@
             "
             @click="submitResolution"
           >
-            ✓ Confirm Resolution
+            Confirm Resolution
           </button>
         </div>
       </div>
@@ -432,6 +453,7 @@
         >
           <div class="comments-filter-bar">
             <button
+              type="button"
               class="filter-chip"
               :class="{ active: commentFilter === 'ALL' }"
               @click="commentFilter = 'ALL'"
@@ -439,19 +461,21 @@
               All Notes
             </button>
             <button
+              type="button"
               class="filter-chip"
               :class="{ active: commentFilter === 'PUBLIC' }"
               @click="commentFilter = 'PUBLIC'"
             >
-              🌐 Public (Site &amp; Sponsor)
+              Public (Site &amp; Sponsor)
             </button>
             <button
               v-if="canViewInternalSponsorNotes"
+              type="button"
               class="filter-chip"
               :class="{ active: commentFilter === 'INTERNAL_SPONSOR' }"
               @click="commentFilter = 'INTERNAL_SPONSOR'"
             >
-              🔒 Internal Sponsor Only
+              Internal Sponsor Only
             </button>
           </div>
 
@@ -513,23 +537,35 @@
                 <span>🔒 Internal Sponsor Note</span>
               </label>
             </div>
-            <textarea
+            <ClinicalInput
+              id="ticket-new-comment-body"
               v-model="newCommentContent"
-              rows="3"
-              aria-label="Clinical discussion note"
-              class="form-control"
+              as="textarea"
+              :rows="3"
+              label="Clinical discussion note"
+              hide-label
+              density="compact"
+              :show-query-flag="false"
+              control-class="form-control"
               placeholder="Add a clinical note, investigator response, or internal audit review (no participant PII)..."
+              :attributes="{ 'aria-label': 'Clinical discussion note' }"
             />
             <div class="comment-submit-row">
-              <input
+              <ClinicalInput
+                id="ticket-new-comment-reason"
                 v-model="newCommentReason"
-                type="text"
-                aria-label="Reason for adding note"
-                class="form-control flex-1"
+                label="Reason for adding note"
+                hide-label
+                density="compact"
+                :show-query-flag="false"
+                extra-class="flex-1"
+                control-class="form-control"
                 placeholder="Reason for change (GxP justification)..."
+                :attributes="{ 'aria-label': 'Reason for adding note' }"
               />
               <button
                 id="btn-post-ticket-comment"
+                type="button"
                 class="btn btn-primary"
                 :disabled="
                   !newCommentContent.trim() ||
@@ -573,21 +609,26 @@
                 class="file-input"
                 @change="onFileSelected"
               />
-              <input
+              <ClinicalInput
+                id="ticket-attachment-reason"
                 v-model="attachmentReason"
-                type="text"
-                aria-label="Reason for attaching evidence"
-                class="form-control"
+                label="Reason for attaching evidence"
+                hide-label
+                density="compact"
+                :show-query-flag="false"
+                control-class="form-control"
                 placeholder="Mandatory GxP reason for attachment..."
+                :attributes="{ 'aria-label': 'Reason for attaching evidence' }"
               />
               <button
+                type="button"
                 class="btn btn-primary"
                 :disabled="
                   !selectedFile || !attachmentReason.trim() || uploadSubmitting
                 "
                 @click="uploadAttachment"
               >
-                📎 Attach Evidence
+                Attach Evidence
               </button>
             </div>
           </div>
@@ -683,10 +724,11 @@
             </p>
             <button
               v-if="canSignTicket"
+              type="button"
               class="btn btn-primary btn-sign-action"
               @click="isSignModalOpen = true"
             >
-              ✍️ Sign &amp; Authorize Ticket
+              Sign &amp; Authorize Ticket
             </button>
             <p v-else class="sig-prereq-hint">
               {{
@@ -844,6 +886,7 @@
 <script setup>
 import { ref, reactive, computed, watch } from "vue";
 import {
+  ClinicalInput,
   ClinicalTabs,
   EmptyState,
   handoffFocus,
@@ -1326,7 +1369,7 @@ const onTicketSigned = (sigPayload) => {
   width: 100vw;
   height: 100vh;
   max-width: 100vw;
-  background: rgba(15, 23, 42, 0.6);
+  background: var(--semantic-color-backdrop);
   backdrop-filter: blur(3px);
   display: flex;
   justify-content: flex-end;
@@ -1345,7 +1388,7 @@ const onTicketSigned = (sigPayload) => {
   background: var(--semantic-color-surface);
   display: flex;
   flex-direction: column;
-  box-shadow: -10px 0 25px -5px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-drawer-left);
   border-left: 1px solid var(--semantic-color-border-control);
   animation: slideLeft 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   overscroll-behavior: contain;
@@ -1380,7 +1423,7 @@ const onTicketSigned = (sigPayload) => {
   font-family: monospace;
   font-size: 0.85rem;
   font-weight: 700;
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--semantic-color-inverse-tint);
   padding: 3px 8px;
   border-radius: 4px;
   color: var(--semantic-color-text-inverse);
@@ -1395,50 +1438,51 @@ const onTicketSigned = (sigPayload) => {
 }
 
 .badge-sev-critical {
-  background: var(--semantic-color-error);
-  color: var(--semantic-color-surface);
+  background: var(--semantic-color-error-interactive);
+  color: var(--semantic-color-text-on-solid);
 }
 
 .badge-sev-major {
   background: var(--semantic-color-warning-action);
-  color: var(--semantic-color-surface);
+  color: var(--semantic-color-text-on-solid);
 }
 
 .badge-sev-minor {
-  background: var(--semantic-color-interactive-primary);
-  color: var(--semantic-color-surface);
+  background: var(--semantic-color-primary);
+  color: var(--semantic-color-text-on-primary);
 }
 
 .badge-status-open {
-  background: var(--semantic-color-interactive-primary);
-  color: var(--semantic-color-surface);
+  background: var(--semantic-color-primary);
+  color: var(--semantic-color-text-on-primary);
 }
 
 .badge-status-in_progress {
-  background: var(--semantic-color-info-bg);
-  color: var(--semantic-color-info);
-  border: 1px solid var(--semantic-color-info-border);
+  background: var(--semantic-badge-in-progress-bg);
+  color: var(--semantic-badge-in-progress-text);
+  border: 1px solid var(--semantic-badge-in-progress-border);
 }
 
 .badge-status-waiting_on_site,
 .badge-status-waiting_on_sponsor {
   background: var(--semantic-color-warning-action);
-  color: var(--semantic-color-text);
+  color: var(--semantic-color-text-on-solid);
 }
 
 .badge-status-resolved {
-  background: var(--semantic-color-success);
-  color: var(--semantic-color-surface);
+  background: var(--semantic-color-success-interactive);
+  color: var(--semantic-color-text-on-solid);
 }
 
 .badge-status-closed {
-  background: var(--semantic-color-text-secondary);
-  color: var(--semantic-color-surface);
+  background: var(--semantic-badge-locked-bg);
+  color: var(--semantic-badge-locked-text);
+  border: 1px solid var(--semantic-badge-locked-border);
 }
 
 .badge-signed {
-  background: var(--semantic-color-success);
-  color: var(--semantic-color-surface);
+  background: var(--semantic-color-success-interactive);
+  color: var(--semantic-color-text-on-solid);
 }
 
 .drawer-title {
@@ -1466,9 +1510,9 @@ const onTicketSigned = (sigPayload) => {
   justify-content: center;
 }
 
-.drawer-close:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: var(--semantic-color-surface);
+.drawer-close:hover:not(:disabled) {
+  background: var(--semantic-color-inverse-tint);
+  color: var(--semantic-color-text-inverse);
 }
 
 .sla-banner {
@@ -1480,23 +1524,23 @@ const onTicketSigned = (sigPayload) => {
 }
 
 .sla-banner.sla-normal {
-  background: rgba(37, 99, 235, 0.2);
-  border: 1px solid rgba(37, 99, 235, 0.4);
+  background: var(--semantic-color-surface-elevated);
+  border: 1px solid var(--semantic-color-divider-accent);
 }
 
 .sla-banner.sla-warning {
-  background: rgba(245, 158, 11, 0.25);
-  border: 1px solid rgba(245, 158, 11, 0.5);
+  background: var(--semantic-color-surface-elevated);
+  border: 1px solid var(--semantic-color-warning-action-border);
 }
 
 .sla-banner.sla-breached {
-  background: rgba(220, 38, 38, 0.3);
-  border: 1px solid rgba(220, 38, 38, 0.6);
+  background: var(--semantic-color-surface-elevated);
+  border: 1px solid var(--semantic-color-error-border);
 }
 
 .sla-banner.sla-paused {
-  background: rgba(148, 163, 184, 0.25);
-  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: var(--semantic-color-surface-elevated);
+  border: 1px solid var(--semantic-color-border-inverse);
 }
 
 .sla-banner-left {
@@ -1509,7 +1553,7 @@ const onTicketSigned = (sigPayload) => {
 
 .sla-progress-track {
   height: 4px;
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--semantic-color-inverse-tint-strong);
   border-radius: 2px;
   overflow: hidden;
 }
@@ -1637,7 +1681,7 @@ const onTicketSigned = (sigPayload) => {
 .rca-category-pill {
   display: inline-block;
   background: var(--semantic-color-warning-bg-badge);
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
   font-size: 0.75rem;
   font-weight: 700;
   padding: 3px 8px;
@@ -1672,9 +1716,9 @@ const onTicketSigned = (sigPayload) => {
 }
 
 .filter-chip.active {
-  background: var(--semantic-color-interactive-primary);
-  color: var(--semantic-color-surface);
-  border-color: var(--semantic-color-interactive-primary);
+  background: var(--semantic-color-primary);
+  color: var(--semantic-color-text-on-primary);
+  border-color: var(--semantic-color-primary);
 }
 
 .comment-stream {
@@ -2013,11 +2057,11 @@ const onTicketSigned = (sigPayload) => {
 }
 
 .btn-primary {
-  background: var(--semantic-color-interactive-primary);
-  color: var(--semantic-color-surface);
+  background: var(--semantic-color-primary);
+  color: var(--semantic-color-text-on-primary);
 }
 .btn-primary:hover:not(:disabled) {
-  background: var(--semantic-color-interactive-primary);
+  background: var(--semantic-color-primary-dark);
 }
 .btn-secondary {
   background: var(--semantic-color-surface);
@@ -2030,25 +2074,25 @@ const onTicketSigned = (sigPayload) => {
 }
 .btn-warning {
   background: var(--semantic-color-warning-action);
-  color: var(--semantic-color-surface);
+  color: var(--semantic-color-text-on-solid);
 }
 .btn-warning:hover:not(:disabled) {
-  background: var(--semantic-color-warning-action);
+  background: var(--semantic-color-warning-dark);
 }
 .btn-success {
-  background: var(--semantic-color-success);
-  color: var(--semantic-color-surface);
+  background: var(--semantic-color-success-interactive);
+  color: var(--semantic-color-text-on-solid);
 }
 .btn-success:hover:not(:disabled) {
-  background: var(--semantic-color-success);
+  background: var(--semantic-color-success-accent);
 }
 .btn-sign {
-  background: var(--semantic-color-success);
-  color: var(--semantic-color-surface);
+  background: var(--semantic-color-success-interactive);
+  color: var(--semantic-color-text-on-solid);
   font-weight: 700;
 }
 .btn-sign:hover:not(:disabled) {
-  background: var(--semantic-color-success);
+  background: var(--semantic-color-success-accent);
 }
 .btn:disabled {
   opacity: 0.6;
@@ -2160,7 +2204,7 @@ const onTicketSigned = (sigPayload) => {
   transition: all 0.15s ease-in-out;
 }
 
-.citation-chip-btn:hover {
+.citation-chip-btn:hover:not(:disabled) {
   background: var(--semantic-color-info-light);
   border-color: var(--semantic-color-divider-accent);
   color: var(--semantic-color-info);
@@ -2194,7 +2238,7 @@ const onTicketSigned = (sigPayload) => {
 .citation-modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.65);
+  background: var(--semantic-color-backdrop);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2210,7 +2254,7 @@ const onTicketSigned = (sigPayload) => {
   max-height: 85vh;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-xl);
   border: 1px solid var(--semantic-color-border-control);
   overflow: hidden;
 }

@@ -520,13 +520,13 @@ defineExpose({
   ) {
   -webkit-mask-image: linear-gradient(
     to right,
-    rgb(0 0 0 / 1) calc(100% - 24px),
-    rgb(0 0 0 / 0) 100%
+    var(--semantic-color-black) calc(100% - 24px),
+    transparent 100%
   );
   mask-image: linear-gradient(
     to right,
-    rgb(0 0 0 / 1) calc(100% - 24px),
-    rgb(0 0 0 / 0) 100%
+    var(--semantic-color-black) calc(100% - 24px),
+    transparent 100%
   );
 }
 
@@ -535,26 +535,30 @@ defineExpose({
   ) {
   -webkit-mask-image: linear-gradient(
     to right,
-    rgb(0 0 0 / 0) 0%,
-    rgb(0 0 0 / 1) 24px
+    transparent 0%,
+    var(--semantic-color-black) 24px
   );
-  mask-image: linear-gradient(to right, rgb(0 0 0 / 0) 0%, rgb(0 0 0 / 1) 24px);
+  mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    var(--semantic-color-black) 24px
+  );
 }
 
 .clinical-tabs-list.orientation-horizontal.overflow-scroll.can-scroll-start.can-scroll-end {
   -webkit-mask-image: linear-gradient(
     to right,
-    rgb(0 0 0 / 0) 0%,
-    rgb(0 0 0 / 1) 24px,
-    rgb(0 0 0 / 1) calc(100% - 24px),
-    rgb(0 0 0 / 0) 100%
+    transparent 0%,
+    var(--semantic-color-black) 24px,
+    var(--semantic-color-black) calc(100% - 24px),
+    transparent 100%
   );
   mask-image: linear-gradient(
     to right,
-    rgb(0 0 0 / 0) 0%,
-    rgb(0 0 0 / 1) 24px,
-    rgb(0 0 0 / 1) calc(100% - 24px),
-    rgb(0 0 0 / 0) 100%
+    transparent 0%,
+    var(--semantic-color-black) 24px,
+    var(--semantic-color-black) calc(100% - 24px),
+    transparent 100%
   );
 }
 

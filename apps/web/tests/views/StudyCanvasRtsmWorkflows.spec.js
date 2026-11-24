@@ -3,11 +3,19 @@ import { mount, flushPromises } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { createMemoryHistory, createRouter } from "vue-router";
 import { ref } from "vue";
+import { ApiError } from "../../src/api/client";
 import { executionApi } from "../../src/api/executionApi";
-import { etmfService } from "../../src/api/etmf";
+import { requestStepUpSignature } from "../../src/api/signatureVerification";
 import { useAuthStore } from "../../src/stores/auth";
 import { useClinicalStore } from "../../src/stores/clinical";
 import { useConsentGating } from "../../src/composables/useConsentGating";
+import {
+  canManageRandomizationSchemes,
+  canReadChainOfCustody,
+  canReadRandomizationSchemes,
+  canReconcileIpKits,
+} from "../../src/canvas/authority";
+import { router as appRouter } from "../../src/router";
 import StudyCanvasView from "../../src/views/StudyCanvasView.vue";
 import RtsmSupplySection from "../../src/components/clinical/RtsmSupplySection.vue";
 
@@ -37,10 +45,8 @@ vi.mock("../../src/api/executionApi", async () => {
   };
 });
 
-vi.mock("../../src/api/etmf", () => ({
-  etmfService: {
-    verifySignature: vi.fn(),
-  },
+vi.mock("../../src/api/signatureVerification", () => ({
+  requestStepUpSignature: vi.fn(),
 }));
 
 const SUBJECT_UUID = "0192f3c4-5e6a-7b8c-9d0e-000000000010";
@@ -84,7 +90,7 @@ describe("Clinical Canvas RTSM workflows", () => {
         vi.mocked(fn).mockReset();
       }
     }
-    vi.mocked(etmfService.verifySignature).mockReset();
+    vi.mocked(requestStepUpSignature).mockReset();
 
     vi.mocked(executionApi.listSubjects).mockImplementation(
       async ({ status, siteId, limit = 50, offset = 0 }) => {
@@ -101,9 +107,55 @@ describe("Clinical Canvas RTSM workflows", () => {
         };
       }
     );
-    vi.mocked(executionApi.listCgtCertificates).mockResolvedValue([]);
-    vi.mocked(executionApi.listCgtReconciliations).mockResolvedValue([]);
-    vi.mocked(executionApi.getSiteIpKitInventory).mockResolvedValue([]);
+    const rejectForbidden = (permission) =>
+      Promise.reject(
+        new ApiError(`Forbidden (${permission})`, 403, "Forbidden", {
+          status: 403,
+          code: "FORBIDDEN",
+          detail: `Caller lacks required permission ${permission}`,
+        })
+      );
+
+    vi.mocked(executionApi.listCgtCertificates).mockImplementation(async () => {
+      if (!canReadChainOfCustody(useAuthStore())) {
+        return rejectForbidden("cgt_chain_of_custody:read");
+      }
+      return [];
+    });
+    vi.mocked(executionApi.listCgtReconciliations).mockImplementation(
+      async () => {
+        if (!canReadChainOfCustody(useAuthStore())) {
+          return rejectForbidden("cgt_chain_of_custody:read");
+        }
+        return [];
+      }
+    );
+    vi.mocked(executionApi.getChainOfCustody).mockImplementation(async () => {
+      if (!canReadChainOfCustody(useAuthStore())) {
+        return rejectForbidden("cgt_chain_of_custody:read");
+      }
+      return { events: [] };
+    });
+    vi.mocked(executionApi.getSiteIpKitInventory).mockImplementation(
+      async () => {
+        if (!canReconcileIpKits(useAuthStore())) {
+          return rejectForbidden("rtsm_supply:read");
+        }
+        return [];
+      }
+    );
+    vi.mocked(executionApi.listRandomizationSchemes).mockImplementation(
+      async () => {
+        const auth = useAuthStore();
+        if (
+          !canReadRandomizationSchemes(auth) &&
+          !canManageRandomizationSchemes(auth)
+        ) {
+          return rejectForbidden("randomization_scheme:read");
+        }
+        return [];
+      }
+    );
     vi.spyOn(console, "error").mockImplementation(() => {});
   });
 
@@ -173,7 +225,7 @@ describe("Clinical Canvas RTSM workflows", () => {
       }
     );
 
-    // 1. Authoring statistician drafts scheme; self-approval is disabled.
+    // 1. Authoring statistician drafts scheme; self-approval is disabled and CGT/kit endpoints are never called.
     signIn({
       id: "usr-stat-author",
       username: "stat.author",
@@ -185,6 +237,13 @@ describe("Clinical Canvas RTSM workflows", () => {
       attachTo: document.body,
     });
     await flushPromises();
+
+    expect(wrapper.find("#rtsm-cgt-panel").exists()).toBe(false);
+    expect(wrapper.find("#rtsm-subject").exists()).toBe(false);
+    expect(executionApi.listCgtCertificates).not.toHaveBeenCalled();
+    expect(executionApi.listCgtReconciliations).not.toHaveBeenCalled();
+    expect(executionApi.getChainOfCustody).not.toHaveBeenCalled();
+    expect(executionApi.getSiteIpKitInventory).not.toHaveBeenCalled();
 
     await wrapper.find("#btn-toggle-draft-scheme").trigger("click");
     await wrapper.find("#scheme-arms").setValue("PLACEBO:1, ACTIVE:1");
@@ -225,7 +284,13 @@ describe("Clinical Canvas RTSM workflows", () => {
     });
     await flushPromises();
 
-    vi.mocked(etmfService.verifySignature).mockResolvedValue({
+    expect(wrapper.find("#rtsm-cgt-panel").exists()).toBe(false);
+    expect(wrapper.find("#rtsm-subject").exists()).toBe(false);
+    expect(executionApi.listCgtCertificates).not.toHaveBeenCalled();
+    expect(executionApi.listCgtReconciliations).not.toHaveBeenCalled();
+    expect(executionApi.getChainOfCustody).not.toHaveBeenCalled();
+
+    vi.mocked(requestStepUpSignature).mockResolvedValue({
       sig_token: "sig-scheme-approve-001",
     });
     vi.mocked(executionApi.approveRandomizationScheme).mockImplementation(
@@ -254,7 +319,7 @@ describe("Clinical Canvas RTSM workflows", () => {
     await wrapper.find("#btn-confirm-sig").trigger("click");
     await flushPromises();
 
-    expect(etmfService.verifySignature).toHaveBeenCalledWith(
+    expect(requestStepUpSignature).toHaveBeenCalledWith(
       expect.objectContaining({
         username: "stat.approver",
         action: `/api/v1/execution/randomization/schemes/${SCHEME_UUID}/approve`,
@@ -384,7 +449,7 @@ describe("Clinical Canvas RTSM workflows", () => {
 
   it("withholds RANDOMIZED from generic state select, dispatches step-up randomization with stratification factors, and keeps blinded coordinator blind", async () => {
     signIn({ roles: ["crc"] });
-    vi.mocked(etmfService.verifySignature).mockResolvedValue({
+    vi.mocked(requestStepUpSignature).mockResolvedValue({
       sig_token: "sig-rand-001",
     });
     vi.mocked(executionApi.randomizeSubject).mockImplementation(async () => {
@@ -445,7 +510,7 @@ describe("Clinical Canvas RTSM workflows", () => {
     await wrapper.find("#btn-confirm-sig").trigger("click");
     await flushPromises();
 
-    expect(etmfService.verifySignature).toHaveBeenCalledWith(
+    expect(requestStepUpSignature).toHaveBeenCalledWith(
       expect.objectContaining({
         action: `/api/v1/execution/subjects/${SUBJECT_UUID}/randomize`,
         semanticAction: "execution.subject.randomize",
@@ -523,10 +588,29 @@ describe("Clinical Canvas RTSM workflows", () => {
     await wrapper.find("#btn-confirm-emergency-unblind").trigger("click");
     await flushPromises();
 
+    vi.mocked(requestStepUpSignature).mockResolvedValue({
+      sig_token: "sig-unblind-001",
+    });
+    await wrapper.find("#sig-password").setValue("Password123!"); // pragma: allowlist secret
+    await wrapper
+      .find("#sig-reason")
+      .setValue(
+        "I authorize emergency treatment arm unblinding for acute clinical care"
+      );
+    await wrapper.find("#btn-confirm-sig").trigger("click");
+    await flushPromises();
+
+    expect(requestStepUpSignature).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: `/api/v1/execution/subjects/${SUBJECT_UUID}/state`,
+        semanticAction: "execution.subject.unblind",
+      })
+    );
     expect(executionApi.changeSubjectState).toHaveBeenCalledWith(
       SUBJECT_UUID,
       "UNBLINDED",
-      justification
+      justification,
+      "sig-unblind-001"
     );
     expect(wrapper.find("#inspector-state").text()).toBe("Unblinded");
     expect(wrapper.find("#inspector-assigned-kit").text()).toBe("KIT-1001");
@@ -578,14 +662,110 @@ describe("Clinical Canvas RTSM workflows", () => {
     await wrapper.find("#btn-confirm-emergency-unblind").trigger("click");
     await flushPromises();
 
+    vi.mocked(requestStepUpSignature).mockResolvedValue({
+      sig_token: "sig-unblind-er-001",
+    });
+    await wrapper.find("#sig-password").setValue("Password123!"); // pragma: allowlist secret
+    await wrapper
+      .find("#sig-reason")
+      .setValue(
+        "I authorize emergency treatment arm unblinding for acute clinical care"
+      );
+    await wrapper.find("#btn-confirm-sig").trigger("click");
+    await flushPromises();
+
+    expect(requestStepUpSignature).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: `/api/v1/execution/subjects/${SUBJECT_UUID}/state`,
+        semanticAction: "execution.subject.unblind",
+      })
+    );
     expect(executionApi.changeSubjectState).toHaveBeenCalledWith(
       SUBJECT_UUID,
       "UNBLINDED",
-      justification
+      justification,
+      "sig-unblind-er-001"
     );
     expect(wrapper.find("#inspector-state").text()).toBe("Unblinded");
     expect(wrapper.find("#inspector-assigned-kit").text()).toBe("KIT-2002");
     expect(wrapper.find("#inspector-treatment-group").text()).toBe("PLACEBO");
+  });
+
+  it("enforces >= 50-character clinical justification and step-up signature for participant withdrawal", async () => {
+    participants[0].status = "ACTIVE";
+    signIn({
+      id: "usr-pi-1",
+      username: "pi.site101",
+      roles: ["Site Investigator", "Principal Investigator"],
+    });
+    vi.mocked(executionApi.getSubjectDetail).mockResolvedValue({
+      id: SUBJECT_UUID,
+      subject_id: "101-0001",
+      study_id: "CAD-101",
+      site_id: "SITE-101",
+      status: "ACTIVE",
+      active_protocol_version: "1.0",
+      enrollment_index: 1,
+      treatment_group: null,
+      randomization_seed: null,
+      investigational_product_id: null,
+    });
+    vi.mocked(executionApi.changeSubjectState).mockImplementation(
+      async (_id, nextState) => {
+        participants[0].status = nextState;
+        return { ...participants[0] };
+      }
+    );
+    vi.mocked(requestStepUpSignature).mockResolvedValue({
+      sig_token: "sig-withdraw-001",
+    });
+
+    await openCanvas(
+      `/studies/CAD-101?stage=conduct&section=participants&node=participant:${SUBJECT_UUID}`
+    );
+
+    await wrapper.find("#state-change-target").setValue("WITHDRAWN");
+    expect(wrapper.find("#btn-change-state").text()).toBe(
+      "Sign & move to withdrawn"
+    );
+    await wrapper.find("#state-change-reason").setValue("Short reason");
+    expect(wrapper.find("#btn-change-state").element.disabled).toBe(true);
+    expect(wrapper.find("#state-change-withdraw-char-count").text()).toContain(
+      "12 / 50 minimum characters"
+    );
+
+    const withdrawalJustification =
+      "Participant voluntarily withdrew consent from study procedures following Cycle 2 Day 15 visit.";
+    await wrapper
+      .find("#state-change-reason")
+      .setValue(withdrawalJustification);
+    expect(wrapper.find("#btn-change-state").element.disabled).toBe(false);
+
+    await wrapper.find("#btn-change-state").trigger("click");
+    await flushPromises();
+
+    await wrapper.find("#sig-password").setValue("Password123!"); // pragma: allowlist secret
+    await wrapper
+      .find("#sig-reason")
+      .setValue(
+        "I verify clinical justification and authorize participant withdrawal"
+      );
+    await wrapper.find("#btn-confirm-sig").trigger("click");
+    await flushPromises();
+
+    expect(requestStepUpSignature).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: `/api/v1/execution/subjects/${SUBJECT_UUID}/state`,
+        semanticAction: "execution.subject.withdraw",
+      })
+    );
+    expect(executionApi.changeSubjectState).toHaveBeenCalledWith(
+      SUBJECT_UUID,
+      "WITHDRAWN",
+      withdrawalJustification,
+      "sig-withdraw-001"
+    );
+    expect(wrapper.find("#inspector-state").text()).toBe("Withdrawn");
   });
 
   it("reveals arm details to an unblinded caller and purges cached treatment_group when switching to a blinded coordinator", async () => {
@@ -627,5 +807,161 @@ describe("Clinical Canvas RTSM workflows", () => {
     await flushPromises();
 
     expect(wrapper.find("#inspector-treatment-group").exists()).toBe(false);
+  });
+
+  it("isolates supply subpanel load errors into scoped role=alert banners without clearing sibling subpanels", async () => {
+    // 1. Pharmacist: kit inventory fails with 500 while CGT custody records succeed.
+    signIn({
+      id: "usr-pharm-1",
+      username: "pharm.site101",
+      roles: ["pharmacist"],
+    });
+    vi.mocked(executionApi.listCgtCertificates).mockResolvedValueOnce([
+      {
+        id: "cert-101",
+        din: "=A999926000101",
+        site_id: "SITE-101",
+        destruction_reason: "Expired batch reconciliation",
+      },
+    ]);
+    vi.mocked(executionApi.listCgtReconciliations).mockResolvedValueOnce([
+      { id: "rec-101" },
+    ]);
+    vi.mocked(executionApi.getSiteIpKitInventory).mockRejectedValueOnce(
+      new ApiError(
+        "Pharmacy cold-chain service unavailable",
+        500,
+        "Internal Server Error",
+        { detail: "Pharmacy cold-chain service unavailable" }
+      )
+    );
+
+    wrapper = mount(RtsmSupplySection, {
+      props: { studyCode: "CAD-101", siteId: "SITE-101" },
+      global: { plugins: [pinia, router] },
+      attachTo: document.body,
+    });
+    await flushPromises();
+
+    const kitsAlert = wrapper.find("#rtsm-kits-error");
+    expect(kitsAlert.exists()).toBe(true);
+    expect(kitsAlert.attributes("role")).toBe("alert");
+    expect(kitsAlert.text()).toContain(
+      "Pharmacy cold-chain service unavailable"
+    );
+    expect(wrapper.find("#rtsm-cgt-error").exists()).toBe(false);
+    expect(wrapper.find("#rtsm-cgt-panel").text()).toContain(
+      "Destruction certificates recorded: 1"
+    );
+    expect(wrapper.find("#rtsm-cgt-panel").text()).toContain(
+      "Vial return reconciliations: 1"
+    );
+    expect(executionApi.listRandomizationSchemes).not.toHaveBeenCalled();
+
+    wrapper.unmount();
+    vi.mocked(executionApi.getSiteIpKitInventory).mockClear();
+
+    // 2. Sponsor Data Manager: CGT certificates fail with 502 while randomization schemes succeed.
+    signIn({
+      id: "usr-dm-2",
+      username: "dm.lead",
+      roles: ["sponsor_dm"],
+    });
+    vi.mocked(executionApi.listCgtCertificates).mockRejectedValueOnce(
+      new ApiError("CGT ledger upstream timeout", 502, "Bad Gateway", {
+        detail: "CGT ledger upstream timeout",
+      })
+    );
+    vi.mocked(executionApi.listRandomizationSchemes).mockResolvedValueOnce([
+      {
+        id: SCHEME_UUID,
+        study_id: "CAD-101",
+        version: 1,
+        method: "permuted_block",
+        status: "APPROVED",
+        arms: { PLACEBO: 1, ACTIVE: 1 },
+        stratification_factors: {},
+        requires_kit: true,
+        list_size: 8,
+        drafted_by: "stat.author",
+        approved_by: "stat.approver",
+      },
+    ]);
+
+    wrapper = mount(RtsmSupplySection, {
+      props: { studyCode: "CAD-101", siteId: "SITE-101" },
+      global: { plugins: [pinia, router] },
+      attachTo: document.body,
+    });
+    await flushPromises();
+
+    const cgtAlert = wrapper.find("#rtsm-cgt-error");
+    expect(cgtAlert.exists()).toBe(true);
+    expect(cgtAlert.attributes("role")).toBe("alert");
+    expect(cgtAlert.text()).toContain("CGT ledger upstream timeout");
+    expect(wrapper.find("#rtsm-schemes-error").exists()).toBe(false);
+    expect(wrapper.find("#rtsm-schemes-panel").text()).toContain("Approved");
+    expect(executionApi.getSiteIpKitInventory).not.toHaveBeenCalled();
+
+    wrapper.unmount();
+
+    // 3. Trial Coordinator: reads CGT custody records without calling kit inventory or randomization scheme endpoints.
+    vi.mocked(executionApi.listCgtCertificates).mockClear();
+    vi.mocked(executionApi.listCgtReconciliations).mockClear();
+    vi.mocked(executionApi.getSiteIpKitInventory).mockClear();
+    vi.mocked(executionApi.listRandomizationSchemes).mockClear();
+
+    signIn({
+      id: "usr-tc-1",
+      username: "founder.tc",
+      roles: ["trial_coordinator"],
+    });
+    wrapper = mount(RtsmSupplySection, {
+      props: { studyCode: "CAD-101", siteId: "SITE-101" },
+      global: { plugins: [pinia, router] },
+      attachTo: document.body,
+    });
+    await flushPromises();
+
+    expect(wrapper.find("#rtsm-cgt-panel").exists()).toBe(true);
+    expect(wrapper.find("#rtsm-subject").exists()).toBe(true);
+    expect(executionApi.listCgtCertificates).toHaveBeenCalledTimes(1);
+    expect(executionApi.listCgtReconciliations).toHaveBeenCalledTimes(1);
+    expect(executionApi.getSiteIpKitInventory).not.toHaveBeenCalled();
+    expect(executionApi.listRandomizationSchemes).not.toHaveBeenCalled();
+  });
+
+  it("maps unblinded_statistician, pharmacist, and trial_coordinator personas and allows /ctms and /ssu navigation without /forbidden redirects", async () => {
+    const auth = useAuthStore();
+    vi.spyOn(auth, "refresh").mockResolvedValue(false);
+
+    for (const [role, expectedPersona] of [
+      ["unblinded_statistician", "unblinded_statistician"],
+      ["pharmacist", "pharmacist"],
+      ["trial_coordinator", "trial_coordinator"],
+    ]) {
+      auth.setAuth({
+        authenticated: true,
+        token: "tok-test",
+        tokenParsed: {
+          sub: `usr-${role}`,
+          preferred_username: `user.${role}`,
+          tenant_id: "cadence-local",
+          realm_access: { roles: [role] },
+          study_ids: ["CADENCE-101"],
+          site_id: ["SITE-101"],
+        },
+      });
+      expect(auth.currentPersona).toBe(expectedPersona);
+      expect(auth.availablePersonas.map((p) => p.key)).toContain(
+        expectedPersona
+      );
+
+      await appRouter.push("/ctms");
+      expect(appRouter.currentRoute.value.path).toBe("/ctms");
+
+      await appRouter.push("/ssu");
+      expect(appRouter.currentRoute.value.path).toBe("/ssu");
+    }
   });
 });

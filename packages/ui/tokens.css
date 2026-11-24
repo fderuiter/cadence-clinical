@@ -32,6 +32,10 @@
     0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
   --shadow-xl:
     0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  --shadow-drawer-left: -8px 0 24px -4px rgba(0, 0, 0, 0.12);
+  --shadow-drawer-right: 8px 0 24px -4px rgba(0, 0, 0, 0.12);
+  --shadow-drawer-bottom: 0 -8px 24px -4px rgba(0, 0, 0, 0.16);
+  --shadow-focus-ring: 0 0 0 2px var(--semantic-color-divider-accent);
 
   /* Spacing Scale */
   --spacing-2xs: 4px;
@@ -149,6 +153,8 @@
   --semantic-color-error-dark: #b91c1c;
   --semantic-color-error-text-dark: #991b1b;
   --semantic-color-error-text-deep: #7f1d1d;
+  --semantic-color-error-interactive: #b91c1c;
+  --semantic-color-error-interactive-hover: #991b1b;
 
   /* Standardized GxP & Readiness Badge Tokens (WCAG 2.2 AA >= 4.5:1 in light & dark) */
   --semantic-badge-draft-bg: #f1f5f9;
@@ -160,6 +166,15 @@
   --semantic-badge-queried-bg: #fffbeb;
   --semantic-badge-queried-text: #92400e;
   --semantic-badge-queried-border: #fcd34d;
+  --semantic-badge-candidate-bg: #f0f9ff;
+  --semantic-badge-candidate-text: #0369a1;
+  --semantic-badge-candidate-border: #7dd3fc;
+  --semantic-badge-in-progress-bg: #eff6ff;
+  --semantic-badge-in-progress-text: #1d4ed8;
+  --semantic-badge-in-progress-border: #93c5fd;
+  --semantic-badge-regulatory-bg: #f0fdfa;
+  --semantic-badge-regulatory-text: #0f766e;
+  --semantic-badge-regulatory-border: #99f6e4;
   --semantic-badge-frozen-bg: #eff6ff;
   --semantic-badge-frozen-text: #1d4ed8;
   --semantic-badge-frozen-border: #93c5fd;
@@ -192,6 +207,7 @@
   --semantic-color-text-subtle: #475569;
   --semantic-color-text-on-solid: #ffffff;
   --semantic-color-text-on-primary: #ffffff;
+  --semantic-color-text-on-accent: #ffffff;
   --semantic-color-surface-header: #f1f5f9;
   --semantic-color-surface-subtle: #f8fafc;
   --semantic-color-divider-accent: #93c5fd;
@@ -230,6 +246,16 @@
   --semantic-color-pink-border: #fbcfe8;
   --semantic-color-cyan-bg: #ecfeff;
   --semantic-color-black: #000000;
+  --semantic-color-imaging-highlight: #f8fafc;
+
+  /* Shared Backdrop, Scrim & Translucent Surface Roles */
+  --semantic-color-backdrop-soft: rgba(15, 23, 42, 0.45);
+  --semantic-color-backdrop: rgba(15, 23, 42, 0.6);
+  --semantic-color-backdrop-strong: rgba(15, 23, 42, 0.85);
+  --semantic-color-surface-glass: rgba(255, 255, 255, 0.85);
+  --semantic-color-inverse-tint: rgba(255, 255, 255, 0.12);
+  --semantic-color-inverse-tint-strong: rgba(255, 255, 255, 0.2);
+  --semantic-watermark-auditor-pattern: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'><text x='10' y='90' font-family='Arial' font-size='10' fill='rgba(220,53,69,0.12)' transform='rotate(-30 80 80)' letter-spacing='0.5'>CONFIDENTIAL AUDITOR COPY</text></svg>");
 
   /* Financial Wallet & Gradient Roles */
   --semantic-color-wallet-start: #0369a1;
@@ -346,13 +372,14 @@
   --semantic-color-ai: #c4b5fd;
   --semantic-color-ai-bg: #2e1065;
   --semantic-color-ai-border: #7c3aed;
+  --semantic-color-ai-dark: #ddd6fe;
 
   --semantic-color-info: #93c5fd;
   --semantic-color-info-bg: #172554;
-  --semantic-color-info-bg-soft: #0c4a6e;
+  --semantic-color-info-bg-soft: #082f49;
   --semantic-color-info-border: #1d4ed8;
   --semantic-color-info-border-accent: #0284c7;
-  --semantic-color-info-light: #1e3a8a;
+  --semantic-color-info-light: #172554;
 
   --semantic-color-warning-text: #fde047;
   --semantic-color-warning-text-dark: #fef08a;
@@ -379,6 +406,8 @@
   --semantic-color-error-dark: #fca5a5;
   --semantic-color-error-text-dark: #fca5a5;
   --semantic-color-error-text-deep: #fecaca;
+  --semantic-color-error-interactive: #b91c1c;
+  --semantic-color-error-interactive-hover: #991b1b;
 
   --semantic-badge-draft-bg: #1e293b;
   --semantic-badge-draft-text: #e2e8f0;
@@ -389,6 +418,15 @@
   --semantic-badge-queried-bg: #451a03;
   --semantic-badge-queried-text: #fcd34d;
   --semantic-badge-queried-border: #d97706;
+  --semantic-badge-candidate-bg: #082f49;
+  --semantic-badge-candidate-text: #7dd3fc;
+  --semantic-badge-candidate-border: #0284c7;
+  --semantic-badge-in-progress-bg: #172554;
+  --semantic-badge-in-progress-text: #93c5fd;
+  --semantic-badge-in-progress-border: #2563eb;
+  --semantic-badge-regulatory-bg: #134e4a;
+  --semantic-badge-regulatory-text: #5eead4;
+  --semantic-badge-regulatory-border: #0d9488;
   --semantic-badge-frozen-bg: #172554;
   --semantic-badge-frozen-text: #93c5fd;
   --semantic-badge-frozen-border: #2563eb;
@@ -419,6 +457,26 @@
   --semantic-color-purple-text: #e9d5ff;
   --semantic-color-purple-bg: #3b0764;
   --semantic-color-purple-border: #9333ea;
+  --semantic-color-orange-text: #fdba74;
+  --semantic-color-orange-bg: #431407;
+  --semantic-color-orange-border: #ea580c;
+  --semantic-color-rose-text: #fda4af;
+  --semantic-color-rose-bg: #4c0519;
+  --semantic-color-rose-border: #e11d48;
+  --semantic-color-pink-text: #f9a8d4;
+  --semantic-color-pink-bg: #500724;
+  --semantic-color-pink-border: #db2777;
+  --semantic-color-cyan-bg: #083344;
+  --semantic-color-black: #000000;
+  --semantic-color-imaging-highlight: #f8fafc;
+
+  --semantic-color-backdrop-soft: rgba(2, 6, 23, 0.65);
+  --semantic-color-backdrop: rgba(2, 6, 23, 0.75);
+  --semantic-color-backdrop-strong: rgba(2, 6, 23, 0.92);
+  --semantic-color-surface-glass: rgba(15, 23, 42, 0.85);
+  --semantic-color-inverse-tint: rgba(255, 255, 255, 0.12);
+  --semantic-color-inverse-tint-strong: rgba(255, 255, 255, 0.2);
+  --semantic-watermark-auditor-pattern: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'><text x='10' y='90' font-family='Arial' font-size='10' fill='rgba(248,113,113,0.16)' transform='rotate(-30 80 80)' letter-spacing='0.5'>CONFIDENTIAL AUDITOR COPY</text></svg>");
 
   --semantic-color-interactive-primary: #60a5fa;
   --semantic-color-interactive-primary-hover: #93c5fd;
@@ -430,6 +488,7 @@
   --semantic-color-text-subtle: #94a3b8;
   --semantic-color-text-on-solid: #ffffff;
   --semantic-color-text-on-primary: #0f172a;
+  --semantic-color-text-on-accent: #0f172a;
   --semantic-color-surface-header: #172033;
   --semantic-color-surface-elevated: #1e293b;
   --semantic-color-surface-subtle: #172033;
@@ -440,7 +499,15 @@
   --semantic-color-wallet-end: #075985;
 
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.35);
+  --shadow-md:
+    0 4px 6px -1px rgba(0, 0, 0, 0.35), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
+  --shadow-lg:
+    0 10px 15px -3px rgba(0, 0, 0, 0.45), 0 4px 6px -4px rgba(0, 0, 0, 0.35);
   --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+  --shadow-drawer-left: -8px 0 24px -4px rgba(0, 0, 0, 0.45);
+  --shadow-drawer-right: 8px 0 24px -4px rgba(0, 0, 0, 0.45);
+  --shadow-drawer-bottom: 0 -8px 24px -4px rgba(0, 0, 0, 0.45);
+  --shadow-focus-ring: 0 0 0 2px var(--semantic-color-divider-accent);
 
   /* Paired Dark Theme Application Semantic Color Aliases */
   --primary: var(--semantic-color-primary);
@@ -489,6 +556,8 @@
     --semantic-color-primary-dark: var(--color-primary-dark);
     --semantic-color-primary-light: var(--color-primary-light);
     --semantic-color-accent: var(--color-accent);
+    --semantic-color-accent-light: #1e1b4b;
+    --semantic-color-accent-bg: #1e1b4b;
     --semantic-color-text: var(--color-text);
     --semantic-color-text-muted: var(--color-text-muted);
     --semantic-color-surface: var(--color-surface);
@@ -501,17 +570,16 @@
     --semantic-color-warning-bg: var(--color-warning-bg);
     --semantic-color-error: var(--color-error);
     --semantic-color-error-bg: var(--color-error-bg);
-    --semantic-color-accent-light: #1e1b4b;
-    --semantic-color-accent-bg: #1e1b4b;
     --semantic-color-ai: #c4b5fd;
     --semantic-color-ai-bg: #2e1065;
     --semantic-color-ai-border: #7c3aed;
+    --semantic-color-ai-dark: #ddd6fe;
     --semantic-color-info: #93c5fd;
     --semantic-color-info-bg: #172554;
-    --semantic-color-info-bg-soft: #0c4a6e;
+    --semantic-color-info-bg-soft: #082f49;
     --semantic-color-info-border: #1d4ed8;
     --semantic-color-info-border-accent: #0284c7;
-    --semantic-color-info-light: #1e3a8a;
+    --semantic-color-info-light: #172554;
     --semantic-color-warning-text: #fde047;
     --semantic-color-warning-text-dark: #fef08a;
     --semantic-color-warning-bg-light: #3b1d06;
@@ -535,6 +603,8 @@
     --semantic-color-error-dark: #fca5a5;
     --semantic-color-error-text-dark: #fca5a5;
     --semantic-color-error-text-deep: #fecaca;
+    --semantic-color-error-interactive: #b91c1c;
+    --semantic-color-error-interactive-hover: #991b1b;
     --semantic-badge-draft-bg: #1e293b;
     --semantic-badge-draft-text: #e2e8f0;
     --semantic-badge-draft-border: #475569;
@@ -544,6 +614,15 @@
     --semantic-badge-queried-bg: #451a03;
     --semantic-badge-queried-text: #fcd34d;
     --semantic-badge-queried-border: #d97706;
+    --semantic-badge-candidate-bg: #082f49;
+    --semantic-badge-candidate-text: #7dd3fc;
+    --semantic-badge-candidate-border: #0284c7;
+    --semantic-badge-in-progress-bg: #172554;
+    --semantic-badge-in-progress-text: #93c5fd;
+    --semantic-badge-in-progress-border: #2563eb;
+    --semantic-badge-regulatory-bg: #134e4a;
+    --semantic-badge-regulatory-text: #5eead4;
+    --semantic-badge-regulatory-border: #0d9488;
     --semantic-badge-frozen-bg: #172554;
     --semantic-badge-frozen-text: #93c5fd;
     --semantic-badge-frozen-border: #2563eb;
@@ -573,6 +652,25 @@
     --semantic-color-purple-text: #e9d5ff;
     --semantic-color-purple-bg: #3b0764;
     --semantic-color-purple-border: #9333ea;
+    --semantic-color-orange-text: #fdba74;
+    --semantic-color-orange-bg: #431407;
+    --semantic-color-orange-border: #ea580c;
+    --semantic-color-rose-text: #fda4af;
+    --semantic-color-rose-bg: #4c0519;
+    --semantic-color-rose-border: #e11d48;
+    --semantic-color-pink-text: #f9a8d4;
+    --semantic-color-pink-bg: #500724;
+    --semantic-color-pink-border: #db2777;
+    --semantic-color-cyan-bg: #083344;
+    --semantic-color-black: #000000;
+    --semantic-color-imaging-highlight: #f8fafc;
+    --semantic-color-backdrop-soft: rgba(2, 6, 23, 0.65);
+    --semantic-color-backdrop: rgba(2, 6, 23, 0.75);
+    --semantic-color-backdrop-strong: rgba(2, 6, 23, 0.92);
+    --semantic-color-surface-glass: rgba(15, 23, 42, 0.85);
+    --semantic-color-inverse-tint: rgba(255, 255, 255, 0.12);
+    --semantic-color-inverse-tint-strong: rgba(255, 255, 255, 0.2);
+    --semantic-watermark-auditor-pattern: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'><text x='10' y='90' font-family='Arial' font-size='10' fill='rgba(248,113,113,0.16)' transform='rotate(-30 80 80)' letter-spacing='0.5'>CONFIDENTIAL AUDITOR COPY</text></svg>");
     --semantic-color-interactive-primary: #60a5fa;
     --semantic-color-interactive-primary-hover: #93c5fd;
     --semantic-color-interactive-brand: #38bdf8;
@@ -581,12 +679,26 @@
     --semantic-color-text-body: #e2e8f0;
     --semantic-color-text-secondary: #b6c2d2;
     --semantic-color-text-subtle: #94a3b8;
+    --semantic-color-text-on-solid: #ffffff;
     --semantic-color-text-on-primary: #0f172a;
+    --semantic-color-text-on-accent: #0f172a;
     --semantic-color-surface-header: #172033;
     --semantic-color-surface-elevated: #1e293b;
     --semantic-color-surface-subtle: #172033;
     --semantic-color-surface-sunken: #0b1120;
     --semantic-color-divider-accent: #38bdf8;
+    --semantic-color-wallet-start: #0369a1;
+    --semantic-color-wallet-end: #075985;
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.35);
+    --shadow-md:
+      0 4px 6px -1px rgba(0, 0, 0, 0.35), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
+    --shadow-lg:
+      0 10px 15px -3px rgba(0, 0, 0, 0.45), 0 4px 6px -4px rgba(0, 0, 0, 0.35);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+    --shadow-drawer-left: -8px 0 24px -4px rgba(0, 0, 0, 0.45);
+    --shadow-drawer-right: 8px 0 24px -4px rgba(0, 0, 0, 0.45);
+    --shadow-drawer-bottom: 0 -8px 24px -4px rgba(0, 0, 0, 0.45);
+    --shadow-focus-ring: 0 0 0 2px var(--semantic-color-divider-accent);
     --primary: var(--semantic-color-primary);
     --primary-dark: var(--semantic-color-primary-dark);
     --primary-light: var(--semantic-color-primary-light);
@@ -612,11 +724,38 @@
   }
 }
 
-/* Global Box-Sizing & Spacing Reset */
+/* Global Box-Sizing, Color-Scheme & Form Control Inheritance Reset */
+html {
+  color-scheme: light;
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  html[data-theme="auto"] {
+    color-scheme: dark;
+  }
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+}
+
+:where(
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  select,
+  textarea
+) {
+  color: var(--semantic-color-text);
+  background-color: var(--semantic-color-surface);
+}
+
+:where(button) {
+  color: inherit;
 }
 
 /* Global Keyboard Navigation Two-Color Focus Indicators (WCAG 2.2 SC 2.4.7 / SC 1.4.11 via Techniques C40, C45, G195).
@@ -628,13 +767,35 @@ select:focus-visible,
 textarea:focus-visible,
 a:focus-visible,
 summary:focus-visible,
-:where([role="button"], [tabindex]):focus-visible {
+:where([role="button"], [tabindex]:not([tabindex="-1"])):focus-visible {
   outline: 3px solid var(--semantic-color-accent) !important;
   outline-offset: 2px !important;
   box-shadow: 0 0 0 2px var(--semantic-color-text-on-solid) !important;
 }
 
-:where([tabindex="-1"]):focus:not(:focus-visible) {
+:where([tabindex="-1"]):focus:not(:focus-visible),
+:where(
+    main,
+    section,
+    article,
+    aside,
+    header,
+    footer,
+    nav,
+    p,
+    div:not([role]),
+    div[role="dialog"],
+    div[role="alertdialog"],
+    div[role="region"],
+    div[role="alert"],
+    div[role="status"],
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6
+  )[tabindex="-1"]:focus-visible {
   outline: none !important;
   box-shadow: none !important;
 }
@@ -657,11 +818,30 @@ summary:focus-visible,
   border-color: var(--primary);
 }
 
-.can-hover .btn-primary:hover,
-.can-hover .btn.btn-primary:hover {
+.can-hover .btn-primary:not(:disabled):not([aria-disabled="true"]):hover,
+.can-hover .btn.btn-primary:not(:disabled):not([aria-disabled="true"]):hover {
   background-color: var(--primary-dark);
   border-color: var(--primary-dark);
   color: var(--semantic-color-text-on-primary);
+}
+
+.btn:disabled,
+.btn[aria-disabled="true"],
+button.btn:disabled,
+button.btn[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.btn:not(.btn-primary):not(.btn-danger):not(.btn-success):not(
+    .btn-warning
+  ):disabled,
+.btn:not(.btn-primary):not(.btn-danger):not(.btn-success):not(
+    .btn-warning
+  )[aria-disabled="true"] {
+  background-color: var(--semantic-color-surface-muted);
+  color: var(--semantic-color-text-muted);
+  border-color: var(--semantic-color-border);
 }
 
 /* Tabular Numerals Everywhere Numbers Align (CLINICAL_CANVAS.md §2.13) */
@@ -714,6 +894,8 @@ td select,
 .clinical-radio-grid {
   display: flex;
   flex-direction: column;
+  min-width: 0;
+  max-width: 100%;
   margin-bottom: var(--semantic-spacing-md, 16px);
   font-family: var(--semantic-font-family, sans-serif);
 }
@@ -725,6 +907,7 @@ td select,
   font-size: var(--semantic-font-size-base, 15px);
   margin-bottom: var(--semantic-spacing-xs, 8px);
   color: var(--semantic-color-text-muted);
+  overflow-wrap: anywhere;
 }
 
 .clinical-input .input-wrapper {
@@ -732,6 +915,13 @@ td select,
   gap: var(--semantic-spacing-xs, 8px);
   position: relative;
   align-items: center;
+  min-width: 0;
+  max-width: 100%;
+  width: 100%;
+}
+
+.query-flag {
+  flex-shrink: 0;
 }
 
 /* WCAG 2.2 SC 2.5.8 Target Size (Minimum) (24x24px via Technique C42).
@@ -740,6 +930,7 @@ td select,
   :is(
       button,
       [role="button"],
+      summary,
       input:not([type="hidden"]),
       select,
       textarea
@@ -750,7 +941,7 @@ td select,
   box-sizing: border-box;
 }
 
-:where([role="button"]:not(.sr-only):not(.visually-hidden)) {
+:where(:is([role="button"], summary):not(.sr-only):not(.visually-hidden)) {
   display: inline-flex;
   align-items: center;
 }
@@ -771,15 +962,15 @@ td select,
 }
 
 /* Centralized styles maintain WCAG 2.1 minimum target dimensions of 48px and SC 1.4.11 >= 3:1 boundary contrast */
-.clinical-input input[type="text"],
-.clinical-input input[type="number"],
-.clinical-input input[type="date"],
-.clinical-input input[type="email"],
-.clinical-input input[type="tel"],
+.clinical-input
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
 .clinical-input select,
 .clinical-input textarea,
 .clinical-input .clinical-input-control {
   flex: 1;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
   padding: 12px 14px;
   min-height: var(--semantic-touch-target-min, 48px);
   border: 1px solid var(--semantic-color-border-control);
@@ -788,24 +979,62 @@ td select,
   font-size: var(--semantic-font-size-base, 15px);
   background-color: var(--semantic-color-surface);
   color: var(--semantic-color-text);
-  transition: all 0.2s;
+  transition:
+    border-color 0.2s,
+    background-color 0.2s;
   box-sizing: border-box;
+}
+
+.clinical-input input[type="file"] {
+  flex: 1;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.clinical-input input:disabled,
+.clinical-input select:disabled,
+.clinical-input textarea:disabled,
+.clinical-input .clinical-input-control:disabled {
+  background-color: var(--semantic-color-surface-muted);
+  color: var(--semantic-color-text-muted);
+  border-color: var(--semantic-color-border);
+  cursor: not-allowed;
+}
+
+.clinical-input--compact {
+  margin-bottom: 0;
+}
+
+.clinical-input--compact label,
+.clinical-input--compact legend {
+  font-size: 0.8125rem;
+  margin-bottom: 4px;
+  color: var(--semantic-color-text-secondary);
+}
+
+.clinical-input--compact
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+.clinical-input--compact select,
+.clinical-input--compact textarea,
+.clinical-input--compact .clinical-input-control {
+  min-height: 36px;
+  padding: 6px 10px;
+  font-size: 0.875rem;
 }
 
 /* Prevent iOS auto-zoom on touch viewports by preserving >= 16px (1rem) font-size on form controls */
 @media (pointer: coarse) {
-  .clinical-input input[type="text"],
-  .clinical-input input[type="number"],
-  .clinical-input input[type="date"],
-  .clinical-input input[type="datetime-local"],
-  .clinical-input input[type="time"],
-  .clinical-input input[type="month"],
-  .clinical-input input[type="week"],
-  .clinical-input input[type="email"],
-  .clinical-input input[type="tel"],
+  .clinical-input
+    input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
   .clinical-input select,
   .clinical-input textarea,
   .clinical-input .clinical-input-control,
+  .clinical-input--compact
+    input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+  .clinical-input--compact select,
+  .clinical-input--compact textarea,
+  .clinical-input--compact .clinical-input-control,
   td input:not([type="checkbox"]):not([type="radio"]),
   td select,
   td textarea {
@@ -813,11 +1042,36 @@ td select,
   }
 }
 
-.clinical-input input[type="text"]:focus:not(:focus-visible),
-.clinical-input input[type="number"]:focus:not(:focus-visible),
-.clinical-input input[type="date"]:focus:not(:focus-visible),
-.clinical-input input[type="email"]:focus:not(:focus-visible),
-.clinical-input input[type="tel"]:focus:not(:focus-visible),
+@media (max-width: 768px) {
+  .clinical-input
+    input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+  .clinical-input select,
+  .clinical-input textarea,
+  .clinical-input .clinical-input-control,
+  .clinical-input--compact
+    input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+  .clinical-input--compact select,
+  .clinical-input--compact textarea,
+  .clinical-input--compact .clinical-input-control {
+    font-size: max(1rem, var(--font-size-md, 16px));
+  }
+}
+
+.clinical-field-required {
+  color: var(--semantic-color-error);
+  margin-left: 2px;
+}
+
+.clinical-field-hint {
+  margin-top: var(--semantic-spacing-2xs, 4px);
+  font-size: 0.78rem;
+  color: var(--semantic-color-text-secondary);
+}
+
+.clinical-input
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus:not(
+    :focus-visible
+  ),
 .clinical-input select:focus:not(:focus-visible),
 .clinical-input textarea:focus:not(:focus-visible),
 .clinical-input .clinical-input-control:focus:not(:focus-visible) {
@@ -826,11 +1080,10 @@ td select,
   border-color: var(--semantic-color-border-control);
 }
 
-.clinical-input input[type="text"]:focus-visible,
-.clinical-input input[type="number"]:focus-visible,
-.clinical-input input[type="date"]:focus-visible,
-.clinical-input input[type="email"]:focus-visible,
-.clinical-input input[type="tel"]:focus-visible,
+.clinical-input
+  input:not([type="checkbox"]):not([type="radio"]):not(
+    [type="file"]
+  ):focus-visible,
 .clinical-input select:focus-visible,
 .clinical-input textarea:focus-visible,
 .clinical-input .clinical-input-control:focus-visible {
@@ -869,12 +1122,11 @@ textarea[aria-invalid="true"]:focus-visible {
   textarea:focus-visible,
   a:focus-visible,
   summary:focus-visible,
-  :where([role="button"], [tabindex]):focus-visible,
-  .clinical-input input[type="text"]:focus-visible,
-  .clinical-input input[type="number"]:focus-visible,
-  .clinical-input input[type="date"]:focus-visible,
-  .clinical-input input[type="email"]:focus-visible,
-  .clinical-input input[type="tel"]:focus-visible,
+  :where([role="button"], [tabindex]:not([tabindex="-1"])):focus-visible,
+  .clinical-input
+    input:not([type="checkbox"]):not([type="radio"]):not(
+      [type="file"]
+    ):focus-visible,
   .clinical-input select:focus-visible,
   .clinical-input textarea:focus-visible,
   .clinical-input .clinical-input-control:focus-visible {
@@ -989,6 +1241,24 @@ textarea[aria-invalid="true"]:focus-visible {
   border-color: var(--semantic-badge-queried-border);
 }
 
+.clinical-badge--candidate {
+  background-color: var(--semantic-badge-candidate-bg);
+  color: var(--semantic-badge-candidate-text);
+  border-color: var(--semantic-badge-candidate-border);
+}
+
+.clinical-badge--in-progress {
+  background-color: var(--semantic-badge-in-progress-bg);
+  color: var(--semantic-badge-in-progress-text);
+  border-color: var(--semantic-badge-in-progress-border);
+}
+
+.clinical-badge--regulatory {
+  background-color: var(--semantic-badge-regulatory-bg);
+  color: var(--semantic-badge-regulatory-text);
+  border-color: var(--semantic-badge-regulatory-border);
+}
+
 .clinical-badge--frozen {
   background-color: var(--semantic-badge-frozen-bg);
   color: var(--semantic-badge-frozen-text);
@@ -1096,7 +1366,7 @@ textarea[aria-invalid="true"]:focus-visible {
   background-color: var(--semantic-color-primary);
   color: var(--semantic-color-text-on-primary);
   font-weight: 800;
-  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-sm);
 }
 
 .clinical-soa-matrix th.epoch-header {
@@ -1193,9 +1463,9 @@ textarea[aria-invalid="true"]:focus-visible {
 }
 
 .lookup-status-indicator.lookup-candidate {
-  color: var(--semantic-color-info);
-  background-color: var(--semantic-color-info-bg);
-  border: 1px solid var(--semantic-color-info-border);
+  color: var(--semantic-badge-candidate-text);
+  background-color: var(--semantic-badge-candidate-bg);
+  border: 1px solid var(--semantic-badge-candidate-border);
 }
 
 .lookup-status-icon {

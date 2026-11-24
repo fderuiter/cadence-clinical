@@ -32,6 +32,9 @@ export function createKernelDirectoryDomain(ctx) {
   state.idempotentStudySiteResponses = new Map();
   state.activityEntries = [];
   state.rules = [];
+  state.validationFindings = [];
+  state.workQueues = [];
+  state.missingNodeRefs = new Set();
 
   function recordActivity(type, family, subjectKind, subjectRef, actorId) {
     const idx = nextCounter();
@@ -91,9 +94,112 @@ export function createKernelDirectoryDomain(ctx) {
     return ensureStudyByCode(refOrCode);
   }
 
+  const DEMO_NODE_REF_SYNTAX =
+    /^[a-z][a-z0-9_]*:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?:@[1-9][0-9]*)?$/i;
+  const DEMO_STUDY_CODE_SYNTAX = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
+
+  function resolveExistingStudy(studyRefOrCode) {
+    const clean = String(studyRefOrCode || "").trim();
+    if (!clean) {
+      return {
+        error: {
+          status: 400,
+          problem: {
+            title: "Invalid study reference",
+            status: 400,
+            code: "K.NodeRef.Invalid",
+            detail: "A study reference or study code is required.",
+          },
+        },
+      };
+    }
+    if (clean.includes(":")) {
+      if (
+        !DEMO_NODE_REF_SYNTAX.test(clean) ||
+        !clean.toLowerCase().startsWith("study:")
+      ) {
+        return {
+          error: {
+            status: 400,
+            problem: {
+              title: "Invalid study reference",
+              status: 400,
+              code: "K.NodeRef.Invalid",
+              detail: `'${clean}' is not a valid study NodeRef.`,
+            },
+          },
+        };
+      }
+    } else if (!DEMO_STUDY_CODE_SYNTAX.test(clean)) {
+      return {
+        error: {
+          status: 400,
+          problem: {
+            title: "Invalid study code",
+            status: 400,
+            code: "K.Study.InvalidCode",
+            detail: `'${clean}' is not a valid study code or NodeRef.`,
+          },
+        },
+      };
+    }
+
+    const unpinned = clean.split("@")[0].toLowerCase();
+    for (const candidate of state.studies.values()) {
+      if (
+        candidate.code.toUpperCase() === clean.toUpperCase() ||
+        String(candidate.ref).split("@")[0].toLowerCase() === unpinned
+      ) {
+        return { study: candidate };
+      }
+    }
+    if (clean.toUpperCase().startsWith("DEMO")) {
+      return { study: ensureStudyByCode(clean.toUpperCase()) };
+    }
+    return {
+      error: {
+        status: 404,
+        problem: {
+          title: "Study not found",
+          status: 404,
+          code: "K.Study.NotFound",
+          detail: `No visible study '${clean}' exists in this tenant.`,
+        },
+      },
+    };
+  }
+
+  function validateScopeOrStudyParam(rawScope) {
+    const clean = String(rawScope || "").trim();
+    if (!clean) return { study: null };
+    if (clean.includes(":")) {
+      if (!DEMO_NODE_REF_SYNTAX.test(clean)) {
+        return {
+          error: {
+            status: 400,
+            problem: {
+              title: "Invalid scope reference",
+              status: 400,
+              code: "K.NodeRef.Invalid",
+              detail: `'${clean}' is not a valid NodeRef.`,
+            },
+          },
+        };
+      }
+      if (clean.toLowerCase().startsWith("study:")) {
+        return resolveExistingStudy(clean);
+      }
+      return { scopeRef: clean };
+    }
+    return resolveExistingStudy(clean);
+  }
+
   ctx.recordActivity = recordActivity;
   ctx.ensureStudyByCode = ensureStudyByCode;
   ctx.getStudyByRefOrCode = getStudyByRefOrCode;
+  ctx.DEMO_NODE_REF_SYNTAX = DEMO_NODE_REF_SYNTAX;
+  ctx.resolveExistingStudy = resolveExistingStudy;
+  ctx.validateScopeOrStudyParam = validateScopeOrStudyParam;
 
   function seed() {
     const demoSiteInstitutions = DEMO_SITES.map((site) => ({
@@ -117,6 +223,9 @@ export function createKernelDirectoryDomain(ctx) {
     state.idempotentStudyResponses = new Map();
     state.idempotentSiteResponses = new Map();
     state.idempotentStudySiteResponses = new Map();
+    state.validationFindings = [];
+    state.workQueues = [];
+    state.missingNodeRefs = new Set();
 
     const canonicalStudyCode = DEMO_STUDY.code || "CADENCE-101";
     const baseCadenceStudy = createInitialDemoStudyDirectoryEntry();
@@ -920,11 +1029,49 @@ export function createKernelDirectoryDomain(ctx) {
       return { data: response };
     },
 
-    getActivityPage({ limit = 25 } = {}) {
-      return {
-        entries: cloneJson(state.activityEntries.slice(0, Number(limit) || 25)),
+    resolveStudy(studyRefOrCode = "") {
+      return resolveExistingStudy(studyRefOrCode);
+    },
+
+    getActivityPage({
+      scope,
+      families = [],
+      limit = 25,
+      includeNodes = false,
+      caller = null,
+    } = {}) {
+      if (scope) {
+        const check = validateScopeOrStudyParam(scope);
+        if (check.error) return check;
+      }
+      const normalizedFamilies = (
+        Array.isArray(families) ? families : [families]
+      )
+        .filter(Boolean)
+        .map((f) => String(f).toLowerCase());
+      let filtered = state.activityEntries;
+      if (normalizedFamilies.length > 0) {
+        filtered = filtered.filter((entry) =>
+          normalizedFamilies.includes(String(entry.family || "").toLowerCase())
+        );
+      }
+      const entries = cloneJson(filtered.slice(0, Number(limit) || 25));
+      const page = {
+        entries,
         next: null,
       };
+      if (includeNodes) {
+        const subjectRefs = [
+          ...new Set(
+            entries
+              .filter((e) => !e.mask && e.subject)
+              .map((e) => String(e.subject))
+          ),
+        ];
+        const batch = ctx.getNodes(subjectRefs, caller);
+        page.nodes = batch.data?.nodes || {};
+      }
+      return scope ? { data: page } : page;
     },
   };
 

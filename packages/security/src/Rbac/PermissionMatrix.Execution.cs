@@ -29,12 +29,14 @@ public static partial class PermissionMatrix
     private static void AddEdcGrants()
     {
         // Subject and eCRF reads beyond the sponsor, site and CRA roles that already hold them: monitors need them for
-        // SDV, auditors and inspectors read everything, and the unblinded pharmacist dispenses against a subject.
+        // SDV, auditors and inspectors read everything, the unblinded pharmacist dispenses against a subject, and the
+        // unblinded statistician inspects study participant enrollment and unblinded allocation details (ADR-2640).
         Grant("monitor", "subject_enrollment", "read");
         Grant("monitor", "ecrf_data_entry", "read");
         Grant(RoleNormalization.ROLE_AUDITOR_CANONICAL, "subject_enrollment", "read");
         Grant(RoleNormalization.ROLE_AUDITOR_CANONICAL, "ecrf_data_entry", "read");
         Grant(RoleNormalization.ROLE_PHARMACIST, "subject_enrollment", "read");
+        Grant(RoleNormalization.ROLE_UNBLINDED_STATISTICIAN, "subject_enrollment", "read");
 
         // Signing a form (PI approval, batch sign-off) is the investigator's act; the PI roles inherit it. Unlocking a
         // signed form for correction is a data-management action.
@@ -165,7 +167,7 @@ public static partial class PermissionMatrix
         foreach (string role in new[]
         {
             RoleNormalization.ROLE_SYSADMIN, RoleNormalization.ROLE_SPONSOR_DM, RoleNormalization.ROLE_SPONSOR_MM,
-            RoleNormalization.ROLE_CRA_CANONICAL, "monitor", RoleNormalization.ROLE_AUDITOR_CANONICAL,
+            RoleNormalization.ROLE_TRIAL_COORDINATOR, RoleNormalization.ROLE_CRA_CANONICAL, "monitor", RoleNormalization.ROLE_AUDITOR_CANONICAL,
         })
         {
             Grant(role, "cgt_chain_of_custody", "read");

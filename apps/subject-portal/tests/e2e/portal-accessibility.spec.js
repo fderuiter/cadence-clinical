@@ -249,10 +249,31 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
     });
 
     // Inject pre-configured mock credentials into storage to bypass login server
+    // and capture every browser Content-Security-Policy violation event.
     await page.addInitScript(() => {
+      window.__cadenceCspViolations = [];
+      document.addEventListener("securitypolicyviolation", (event) => {
+        window.__cadenceCspViolations.push({
+          effectiveDirective: event.effectiveDirective,
+          violatedDirective: event.violatedDirective,
+          blockedURI: event.blockedURI,
+          sourceFile: event.sourceFile,
+          sample: event.sample,
+        });
+      });
       sessionStorage.setItem("mock_user_id", "subject_mocked_001");
       sessionStorage.setItem("mock_token", "mock_jwt_token_xyz_123");
     });
+  });
+
+  test.afterEach(async ({ page }) => {
+    const violations = await page
+      .evaluate(() => window.__cadenceCspViolations || [])
+      .catch(() => []);
+    expect(
+      violations,
+      `Unexpected browser Content-Security-Policy violations: ${JSON.stringify(violations, null, 2)}`
+    ).toEqual([]);
   });
 
   test("should successfully bypass third-party login, expose only My Wallet with zero unbacked startup API calls, and pass WCAG 2.1 AA audits on landing page", async ({
@@ -1956,5 +1977,401 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
       .withTags(WCAG_AA_TAGS)
       .analyze();
     expect(reflowAudit.violations).toEqual([]);
+  });
+
+  test("should pass WCAG 2.2 AA contrast, >= 3:1 control border contrast, and neutral-ink separation in dark mode (data-theme='dark') and system-auto dark mode", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.emulateMedia({ reducedMotion: "reduce", colorScheme: "dark" });
+    await page.addInitScript(() => {
+      document.documentElement.setAttribute("data-theme", "dark");
+    });
+
+    await page.goto(DEMO_PORTAL_URL);
+    await completeInitialPinSetupIfOpen(page);
+    await page.evaluate(() => {
+      document.documentElement.setAttribute("data-theme", "dark");
+    });
+
+    // 1. Tasks dashboard + Compliance banner in dark mode
+    await expect(page.locator("#view-tasks")).toBeVisible();
+    const darkTasksAudit = await new AxeBuilder({ page })
+      .withTags(WCAG_AA_TAGS)
+      .analyze();
+    expect(darkTasksAudit.violations).toEqual([]);
+
+    // Verify neutral ink on portal body/headings vs interactive brand blue
+    const portalInkCheck = await page.evaluate(() => {
+      const heading = document.querySelector("h2");
+      const rootStyle = window.getComputedStyle(document.documentElement);
+      return {
+        bodyColor: window.getComputedStyle(document.body).color,
+        headingColor: heading ? window.getComputedStyle(heading).color : "",
+        primaryToken: rootStyle.getPropertyValue("--primary").trim(),
+      };
+    });
+    expect(portalInkCheck.bodyColor).toBe("rgb(248, 250, 252)");
+    expect(portalInkCheck.headingColor).toBe("rgb(248, 250, 252)");
+    expect(portalInkCheck.primaryToken.toLowerCase()).toBe("#38bdf8");
+
+    if (process.env.CAPTURE_OVERLAY_SCREENSHOTS === "1") {
+      await page.screenshot({ path: "/tmp/portal-dark-semantic-tokens.png" });
+    }
+
+    // 2. Questionnaire form inputs >= 3:1 control border contrast and zero axe violations in dark mode
+    await page.click("#task-card-assign_01 .btn-start-task");
+    await expect(page.locator("#view-questionnaire")).toBeVisible();
+    const darkQuestionnaireAudit = await new AxeBuilder({ page })
+      .withTags(WCAG_AA_TAGS)
+      .analyze();
+    expect(darkQuestionnaireAudit.violations).toEqual([]);
+
+    const firstInput = page.locator("#view-questionnaire input").first();
+    if (await firstInput.isVisible().catch(() => false)) {
+      const borderRatio = await getControlBorderContrast(
+        page,
+        "#view-questionnaire input >> nth=0"
+      );
+      expect(borderRatio).toBeGreaterThanOrEqual(3);
+    }
+
+    // 3. Consent & Lay Summaries tabs in dark mode
+    await page.click("#btn-tab-btn-consent");
+    await expect(page.locator("#view-consent")).toBeVisible();
+    const darkConsentAudit = await new AxeBuilder({ page })
+      .withTags(WCAG_AA_TAGS)
+      .analyze();
+    expect(darkConsentAudit.violations).toEqual([]);
+
+    // 4. System-auto dark mode (data-theme="auto" + prefers-color-scheme: dark)
+    await page.evaluate(() => {
+      document.documentElement.setAttribute("data-theme", "auto");
+    });
+    const autoThemeCheck = await page.evaluate(() => ({
+      surfaceToken: window
+        .getComputedStyle(document.documentElement)
+        .getPropertyValue("--color-surface")
+        .trim()
+        .toLowerCase(),
+      bodyBg: window.getComputedStyle(document.body).backgroundColor,
+    }));
+    expect(autoThemeCheck.surfaceToken).toBe("#0f172a");
+    expect(autoThemeCheck.bodyBg).toBe("rgb(30, 41, 59)");
+    const autoConsentAudit = await new AxeBuilder({ page })
+      .withTags(WCAG_AA_TAGS)
+      .analyze();
+    expect(autoConsentAudit.violations).toEqual([]);
+  });
+
+  test("should enforce hoisted CSP meta, delegated slider and 10 query panels in demo mode, and OIDC connect-src in non-demo mode", async ({
+    page,
+  }) => {
+    const captureScreenshots = process.env.CAPTURE_CSP_SCREENSHOTS === "1";
+
+    async function inspectHeadCsp(targetPage) {
+      return targetPage.evaluate(() => {
+        const headHtml = document.head.innerHTML;
+        const cspMeta = document.head.querySelector(
+          'meta[http-equiv="Content-Security-Policy"]'
+        );
+        const cspIndex = headHtml.search(
+          /<meta\b[^>]*http-equiv\s*=\s*["']?Content-Security-Policy/i
+        );
+        const firstScriptIndex = headHtml.search(/<script\b/i);
+        const firstLinkIndex = headHtml.search(/<link\b/i);
+        return {
+          content: cspMeta?.getAttribute("content") || "",
+          cspIndex,
+          firstScriptIndex,
+          firstLinkIndex,
+        };
+      });
+    }
+
+    async function exerciseQueryPanels(fieldKeys, scopeSelector) {
+      const inlineHandlers = await page
+        .locator(scopeSelector)
+        .evaluate((root) => {
+          const matches = [];
+          for (const el of root.querySelectorAll("*")) {
+            for (const attr of el.getAttributeNames()) {
+              if (attr.toLowerCase().startsWith("on")) {
+                matches.push(`${el.tagName.toLowerCase()}[${attr}]`);
+              }
+            }
+          }
+          return matches;
+        });
+      expect(inlineHandlers).toEqual([]);
+
+      for (const key of fieldKeys) {
+        const flagBtn = page.locator(`#query-flag-${key}`);
+        const panel = page.locator(`#query-panel-${key}`);
+        const closeBtn = panel.locator(".btn-close-panel");
+
+        await expect(flagBtn).toBeVisible();
+        await expect(flagBtn).toHaveAttribute("aria-expanded", "false");
+        await expect(panel).toBeHidden();
+
+        const flagBox = await flagBtn.boundingBox();
+        expect(flagBox?.width ?? 0).toBeGreaterThanOrEqual(48);
+        expect(flagBox?.height ?? 0).toBeGreaterThanOrEqual(48);
+
+        await flagBtn.click();
+        await expect(panel).toBeVisible();
+        await expect(flagBtn).toHaveAttribute("aria-expanded", "true");
+
+        const closeBox = await closeBtn.boundingBox();
+        expect(closeBox?.width ?? 0).toBeGreaterThanOrEqual(48);
+        expect(closeBox?.height ?? 0).toBeGreaterThanOrEqual(48);
+
+        await closeBtn.click();
+        await expect(panel).toBeHidden();
+        await expect(flagBtn).toHaveAttribute("aria-expanded", "false");
+      }
+    }
+
+    // 1. Demo portal bundle (port 5175): strict same-origin CSP + slider + all 10 query panels
+    await page.route("**/instruments", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify([
+          {
+            id: "inst_daily_diary",
+            name: "Daily Health & Vital Diary",
+            description:
+              "Please record your systolic/diastolic blood pressure, pulse, and current symptoms.",
+            items: {
+              vssbp: {
+                label: "Systolic Blood Pressure (mmHg)",
+                type: "numeric",
+                required: true,
+                min: 50,
+                max: 250,
+              },
+              vsdpb: {
+                label: "Diastolic Blood Pressure (mmHg)",
+                type: "numeric",
+                required: true,
+                min: 30,
+                max: 150,
+              },
+              vshr: {
+                label: "Pulse Rate (bpm)",
+                type: "numeric",
+                required: true,
+                min: 30,
+                max: 200,
+              },
+              pain_scale: {
+                label: "Symptom Severity (Visual Analog Scale 0-10)",
+                type: "visual_analog",
+                required: true,
+                min: 0,
+                max: 10,
+                step: 1,
+                min_label: "No Pain (0)",
+                max_label: "Worst Possible (10)",
+              },
+              has_symptoms: {
+                label: "Are you experiencing any new physical symptoms today?",
+                type: "choice_single",
+                options: ["Yes", "No"],
+              },
+            },
+          },
+          {
+            id: "inst_weekly_symptoms",
+            name: "Weekly Symptoms & eCOA Checklist",
+            description:
+              "Please complete this survey detailing any adverse clinical signs experienced during the week.",
+            items: {
+              severity: {
+                label: "Overall symptom severity this week",
+                type: "choice_single",
+                options: ["None", "Mild", "Moderate", "Severe"],
+              },
+              restricted_activity: {
+                label: "Did symptoms restrict your daily activities?",
+                type: "choice_single",
+                options: ["Yes", "No"],
+              },
+              missed_doses: {
+                label: "Did you miss any medication doses?",
+                type: "choice_single",
+                options: ["Yes", "No"],
+              },
+            },
+          },
+        ]),
+      });
+    });
+
+    await page.route("**/econsent/templates/**", async (route) => {
+      const url = route.request().url();
+      if (url.includes("approved-content")) {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            template_id: "template-icf",
+            template_name: "Main Informed Consent Form",
+            version_index: 1,
+            language_code: "en",
+            clauses: [
+              {
+                clause_id: "clause-risk",
+                title: "Risks & Side Effects",
+                text: "There is a risk of mild temporary headache.",
+                version_index: 1,
+              },
+            ],
+            workflow_steps: [
+              { type: "comprehension_check" },
+              { type: "signature_placeholder" },
+            ],
+          }),
+        });
+      } else {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            template_id: "template-icf",
+            version_index: 1,
+            questions: [
+              {
+                id: "q_headache",
+                text: "What is a potential temporary side effect?",
+                options: ["Headache", "Nausea", "Vision Loss"],
+              },
+              {
+                id: "q_withdraw",
+                text: "Can you withdraw from the study at any time?",
+                options: ["Yes", "No"],
+              },
+            ],
+            expected_answers: {
+              q_headache: "Headache",
+              q_withdraw: "Yes",
+            },
+            threshold_policy: { min_correct: 2 },
+          }),
+        });
+      }
+    });
+
+    await page.goto("http://127.0.0.1:5175/subject-portal/");
+    await completeInitialPinSetupIfOpen(page);
+
+    const demoCsp = await inspectHeadCsp(page);
+    expect(demoCsp.cspIndex).toBeGreaterThanOrEqual(0);
+    if (demoCsp.firstScriptIndex >= 0) {
+      expect(demoCsp.cspIndex).toBeLessThan(demoCsp.firstScriptIndex);
+    }
+    if (demoCsp.firstLinkIndex >= 0) {
+      expect(demoCsp.cspIndex).toBeLessThan(demoCsp.firstLinkIndex);
+    }
+    expect(demoCsp.content).toContain("script-src 'self'");
+    expect(demoCsp.content).toContain("connect-src 'self'");
+    expect(demoCsp.content).toContain("frame-src 'self'");
+    expect(demoCsp.content).not.toContain("localhost");
+    expect(demoCsp.content).not.toContain("127.0.0.1");
+
+    // inst_daily_diary: #pain_scale slider + 5 query panels
+    await page.locator("#task-card-assign_01 .btn-start-task").click();
+    await expect(page.locator("#view-questionnaire")).toBeVisible();
+
+    const painSlider = page.locator("#pain_scale");
+    const painDisplay = page.locator("#pain_scale_display");
+    await expect(painSlider).toBeVisible();
+    await painSlider.fill("7");
+    await expect(painDisplay).toHaveText("Value: 7");
+
+    await exerciseQueryPanels(
+      ["vssbp", "vsdpb", "vshr", "pain_scale", "has_symptoms"],
+      "#questionnaire-form-container"
+    );
+
+    // Open #query-panel-pain_scale to run WCAG 2.2 AA audit on the open query panel state
+    await page.locator("#query-flag-pain_scale").click();
+    await expect(page.locator("#query-panel-pain_scale")).toBeVisible();
+    expect(
+      await getControlBorderContrast(page, "#query-flag-pain_scale")
+    ).toBeGreaterThanOrEqual(3);
+    const openPanelAudit = await new AxeBuilder({ page })
+      .include("#view-questionnaire")
+      .withTags(WCAG_AA_TAGS)
+      .analyze();
+    expect(openPanelAudit.violations).toEqual([]);
+    if (captureScreenshots) {
+      await page.screenshot({ path: "/tmp/subject-portal-widgets-csp.png" });
+    }
+    await page.locator("#query-panel-pain_scale .btn-close-panel").click();
+    await expect(page.locator("#query-panel-pain_scale")).toBeHidden();
+
+    // inst_weekly_symptoms: 3 query panels
+    await page.click("#btn-back-to-tasks");
+    await expect(page.locator("#view-tasks")).toBeVisible();
+    await page.locator("#task-card-assign_02 .btn-start-task").click();
+    await expect(page.locator("#questionnaire-title")).toContainText(
+      "Weekly Symptoms & eCOA Checklist"
+    );
+    await exerciseQueryPanels(
+      ["severity", "restricted_activity", "missed_doses"],
+      "#questionnaire-form-container"
+    );
+
+    // ConsentView MOCK_COMPREHENSION_CHECK: 2 query panels (total = 10)
+    await page.click("#tab-btn-consent button");
+    await expect(page.locator("#view-consent")).toBeVisible();
+    await exerciseQueryPanels(
+      ["q_headache", "q_withdraw"],
+      "#consent-questions-container"
+    );
+
+    // 2. Non-demo portal build (port 5174): OIDC origin allowed in connect-src and frame-src
+    await page.route(
+      "http://127.0.0.1:8080/realms/cadence/.well-known/openid-configuration",
+      async (route) => {
+        await route.fulfill({
+          status: 200,
+          headers: {
+            "Access-Control-Allow-Origin": "*",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            issuer: "http://127.0.0.1:8080/realms/cadence",
+            authorization_endpoint:
+              "http://127.0.0.1:8080/realms/cadence/protocol/openid-connect/auth",
+          }),
+        });
+      }
+    );
+
+    await page.goto("http://127.0.0.1:5174/subject-portal/");
+    await completeInitialPinSetupIfOpen(page);
+
+    const nonDemoCsp = await inspectHeadCsp(page);
+    expect(nonDemoCsp.cspIndex).toBeGreaterThanOrEqual(0);
+    if (nonDemoCsp.firstScriptIndex >= 0) {
+      expect(nonDemoCsp.cspIndex).toBeLessThan(nonDemoCsp.firstScriptIndex);
+    }
+    expect(nonDemoCsp.content).toContain(
+      "connect-src 'self' http://127.0.0.1:8080"
+    );
+    expect(nonDemoCsp.content).toContain(
+      "frame-src 'self' http://127.0.0.1:8080"
+    );
+
+    const oidcDiscoveryStatus = await page.evaluate(async () => {
+      const res = await fetch(
+        "http://127.0.0.1:8080/realms/cadence/.well-known/openid-configuration"
+      );
+      return res.status;
+    });
+    expect(oidcDiscoveryStatus).toBe(200);
   });
 });

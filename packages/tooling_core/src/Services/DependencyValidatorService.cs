@@ -250,7 +250,8 @@ public static partial class DependencyValidatorService
             bool hasDotnetTools = snapshot.Exists(".config/dotnet-tools.json");
             bool hasBuildProps = snapshot.Exists("Directory.Build.props");
             bool hasPackagesProps = snapshot.Exists("Directory.Packages.props");
-            bool hasDependabot = snapshot.Exists(DependabotRelativePath);
+            string? dependabotPath = ResolveDependabotPath(snapshot);
+            bool hasDependabot = dependabotPath is not null;
             bool hasPostgresImageSource = snapshot.Exists("packages/testing/src/Persistence/PostgresTestImage.cs");
             bool hasDockerCompose = snapshot.Exists("docker/docker-compose.yml");
 
@@ -298,9 +299,9 @@ public static partial class DependencyValidatorService
                 errors += ValidateDotnetToolsManifest(snapshot, msBuildProps);
             }
 
-            if (hasDependabot)
+            if (dependabotPath is not null)
             {
-                errors += ValidateDependabotConfig(snapshot);
+                errors += ValidateDependabotConfig(snapshot, dependabotPath);
             }
 
             if (hasPostgresImageSource || hasDockerCompose)
@@ -1087,15 +1088,51 @@ public static partial class DependencyValidatorService
         return errors;
     }
 
-    private static int ValidateDependabotConfig(RepoSnapshot snapshot)
+    /// <summary>
+    /// Validates a Dependabot v2 YAML configuration document for syntax errors, target uniqueness,
+    /// and unique <c>ignore</c> rules (<c>dependency-name</c> combined with <c>versions</c> or <c>update-types</c>).
+    /// </summary>
+    /// <param name="content">Raw YAML content of a Dependabot configuration file.</param>
+    /// <returns>Zero or more validation diagnostic messages.</returns>
+    public static IReadOnlyList<string> ValidateDependabotContent(string content)
     {
-        if (!snapshot.TryReadBytes(DependabotRelativePath, out byte[] bytes, out string? readError))
+        ArgumentNullException.ThrowIfNull(content);
+
+        var yamlErrors = YamlSyntaxValidatorService.ValidateContent(content, DependabotRelativePath);
+        if (yamlErrors.Count > 0)
         {
-            Console.WriteLine($"[ERROR] Failed to read {DependabotRelativePath}: {readError}");
+            return yamlErrors;
+        }
+
+        var parseErrors = new List<string>();
+        var parsed = ParseDependabotConfig(content, parseErrors);
+        if (parseErrors.Count > 0)
+        {
+            return parseErrors;
+        }
+
+        return ValidateDependabotStructureAndUniqueness(parsed);
+    }
+
+    private static string? ResolveDependabotPath(RepoSnapshot snapshot)
+    {
+        if (snapshot.Exists(DependabotRelativePath))
+        {
+            return DependabotRelativePath;
+        }
+
+        return snapshot.Exists(".github/dependabot.yaml") ? ".github/dependabot.yaml" : null;
+    }
+
+    private static int ValidateDependabotConfig(RepoSnapshot snapshot, string dependabotPath)
+    {
+        if (!snapshot.TryReadBytes(dependabotPath, out byte[] bytes, out string? readError))
+        {
+            Console.WriteLine($"[ERROR] Failed to read {dependabotPath}: {readError}");
             return 1;
         }
 
-        var yamlErrors = YamlSyntaxValidatorService.ValidateBytes(bytes, DependabotRelativePath);
+        var yamlErrors = YamlSyntaxValidatorService.ValidateBytes(bytes, dependabotPath);
         if (yamlErrors.Count > 0)
         {
             foreach (string err in yamlErrors)
@@ -1113,68 +1150,84 @@ public static partial class DependencyValidatorService
         {
             foreach (string parseError in parseErrors)
             {
-                Console.WriteLine($"[ERROR] {DependabotRelativePath}: {parseError}");
+                Console.WriteLine($"[ERROR] {dependabotPath}: {parseError}");
             }
 
             return parseErrors.Count;
         }
 
-        int errors = 0;
-        if (!string.Equals(parsed.Version, "2", StringComparison.Ordinal))
+        var structuralErrors = ValidateDependabotStructureAndUniqueness(parsed);
+        foreach (string structuralError in structuralErrors)
         {
-            Console.WriteLine($"[ERROR] {DependabotRelativePath}: Top-level 'version' must be 2.");
-            errors++;
+            Console.WriteLine($"[DEPENDABOT VIOLATION] {dependabotPath}: {structuralError}");
         }
 
         if (parsed.Updates.Count == 0)
         {
-            Console.WriteLine($"[ERROR] {DependabotRelativePath}: 'updates' must define at least one package-ecosystem entry.");
-            return errors + 1;
+            return structuralErrors.Count;
+        }
+
+        int errors = structuralErrors.Count;
+        errors += ValidateNugetDependabotBlock(dependabotPath, FindDependabotBlock(parsed.Updates, "nuget", "/"));
+        errors += ValidateNpmDependabotBlock(dependabotPath, FindDependabotBlock(parsed.Updates, "npm", "/"));
+        errors += ValidateDockerDotnetDependabotBlock(dependabotPath, FindDependabotBlock(parsed.Updates, "docker", "/docker"));
+        errors += ValidateDockerSceDependabotBlock(dependabotPath, FindDependabotBlock(parsed.Updates, "docker", "/docker/sce/python"), "/docker/sce/python", "python", ScePythonIgnoredUpdateTypes);
+        errors += ValidateDockerSceDependabotBlock(dependabotPath, FindDependabotBlock(parsed.Updates, "docker", "/docker/sce/r"), "/docker/sce/r", "r-base", SceRIgnoredUpdateTypes);
+        errors += ValidateDockerComposeDependabotBlock(dependabotPath, FindDependabotBlock(parsed.Updates, "docker-compose", "/docker"));
+
+        return errors;
+    }
+
+    private static List<string> ValidateDependabotStructureAndUniqueness(ParsedDependabotConfig parsed)
+    {
+        var errors = new List<string>();
+        if (!string.Equals(parsed.Version, "2", StringComparison.Ordinal))
+        {
+            errors.Add("Top-level 'version' must be 2.");
+        }
+
+        if (parsed.Updates.Count == 0)
+        {
+            errors.Add("'updates' must define at least one package-ecosystem entry.");
+            return errors;
         }
 
         var seenTargets = new HashSet<string>(StringComparer.Ordinal);
         for (int u = 0; u < parsed.Updates.Count; u++)
         {
-            errors += ValidateDependabotUpdateEntry(parsed.Updates[u], u, seenTargets);
+            ValidateDependabotUpdateEntry(parsed.Updates[u], u, seenTargets, errors);
         }
-
-        errors += ValidateNugetDependabotBlock(DependabotRelativePath, FindDependabotBlock(parsed.Updates, "nuget", "/"));
-        errors += ValidateNpmDependabotBlock(DependabotRelativePath, FindDependabotBlock(parsed.Updates, "npm", "/"));
-        errors += ValidateDockerDotnetDependabotBlock(DependabotRelativePath, FindDependabotBlock(parsed.Updates, "docker", "/docker"));
-        errors += ValidateDockerSceDependabotBlock(DependabotRelativePath, FindDependabotBlock(parsed.Updates, "docker", "/docker/sce/python"), "/docker/sce/python", "python", ScePythonIgnoredUpdateTypes);
-        errors += ValidateDockerSceDependabotBlock(DependabotRelativePath, FindDependabotBlock(parsed.Updates, "docker", "/docker/sce/r"), "/docker/sce/r", "r-base", SceRIgnoredUpdateTypes);
-        errors += ValidateDockerComposeDependabotBlock(DependabotRelativePath, FindDependabotBlock(parsed.Updates, "docker-compose", "/docker"));
 
         return errors;
     }
 
-    private static int ValidateDependabotUpdateEntry(
+    private static void ValidateDependabotUpdateEntry(
         DependabotUpdateEntry update,
         int updateIndex,
-        HashSet<string> seenTargets)
+        HashSet<string> seenTargets,
+        List<string> errors)
     {
-        int errors = 0;
         if (string.IsNullOrWhiteSpace(update.PackageEcosystem))
         {
-            Console.WriteLine($"[ERROR] {DependabotRelativePath}: '#/updates/{updateIndex}' is missing a non-empty 'package-ecosystem'.");
-            errors++;
+            errors.Add($"'#/updates/{updateIndex}' is missing a non-empty 'package-ecosystem'.");
         }
 
         var directories = ResolveUpdateDirectories(update);
         if (directories.Count == 0)
         {
-            Console.WriteLine($"[ERROR] {DependabotRelativePath}: '#/updates/{updateIndex}' must specify 'directory' or 'directories'.");
-            errors++;
+            errors.Add($"'#/updates/{updateIndex}' must specify 'directory' or 'directories'.");
         }
-
-        string targetBranch = update.TargetBranch ?? string.Empty;
-        foreach (string dir in directories)
+        else if (!string.IsNullOrWhiteSpace(update.PackageEcosystem))
         {
-            string targetKey = $"{update.PackageEcosystem}\0{dir}\0{targetBranch}";
-            if (!seenTargets.Add(targetKey))
+            string targetBranch = update.TargetBranch ?? string.Empty;
+            string branchSuffix = string.IsNullOrEmpty(targetBranch) ? string.Empty : $" (target-branch '{targetBranch}')";
+            foreach (string dir in directories)
             {
-                Console.WriteLine($"[DEPENDABOT VIOLATION] {DependabotRelativePath}: '#/updates/{updateIndex}' duplicates package-ecosystem '{update.PackageEcosystem}' and directory '{dir}'.");
-                errors++;
+                string targetKey = $"{update.PackageEcosystem}\0{dir}\0{targetBranch}";
+                if (!seenTargets.Add(targetKey))
+                {
+                    errors.Add($"'#/updates/{updateIndex}' duplicates package-ecosystem '{update.PackageEcosystem}' and directory '{dir}'{branchSuffix}.");
+                }
             }
         }
 
@@ -1184,16 +1237,15 @@ public static partial class DependencyValidatorService
 
         for (int i = 0; i < update.Ignores.Count; i++)
         {
-            errors += ValidateDependabotIgnoreEntry(
+            ValidateDependabotIgnoreEntry(
                 update.Ignores[i],
                 updateIndex,
                 i,
                 seenVersionIgnores,
                 seenUpdateTypeIgnores,
-                seenBareIgnores);
+                seenBareIgnores,
+                errors);
         }
-
-        return errors;
     }
 
     private static List<string> ResolveUpdateDirectories(DependabotUpdateEntry update)
@@ -1211,92 +1263,79 @@ public static partial class DependencyValidatorService
         return [];
     }
 
-    private static int ValidateDependabotIgnoreEntry(
+    private static void ValidateDependabotIgnoreEntry(
         DependabotIgnoreEntry ignore,
         int updateIndex,
         int ignoreIndex,
         HashSet<string> seenVersionIgnores,
         HashSet<string> seenUpdateTypeIgnores,
-        HashSet<string> seenBareIgnores)
+        HashSet<string> seenBareIgnores,
+        List<string> errors)
     {
         if (string.IsNullOrWhiteSpace(ignore.DependencyName))
         {
-            Console.WriteLine($"[ERROR] {DependabotRelativePath}: '#/updates/{updateIndex}/ignore/{ignoreIndex}' is missing a non-empty 'dependency-name'.");
-            return 1;
+            errors.Add($"'#/updates/{updateIndex}/ignore/{ignoreIndex}' is missing a non-empty 'dependency-name'.");
+            return;
         }
 
-        int errors = 0;
         string depName = ignore.DependencyName!;
 
         if (ignore.HasVersions)
         {
-            errors += ValidateIgnoreListUniqueness(
+            ValidateIgnoreListUniqueness(
                 depName,
                 ignore.Versions,
                 propertyName: "versions",
                 updateIndex,
                 ignoreIndex,
-                seenVersionIgnores);
+                seenVersionIgnores,
+                errors);
         }
 
         if (ignore.HasUpdateTypes)
         {
-            errors += ValidateIgnoreListUniqueness(
+            ValidateIgnoreListUniqueness(
                 depName,
                 ignore.UpdateTypes,
                 propertyName: "update-types",
                 updateIndex,
                 ignoreIndex,
-                seenUpdateTypeIgnores);
+                seenUpdateTypeIgnores,
+                errors);
         }
 
         if (!ignore.HasVersions && !ignore.HasUpdateTypes && !seenBareIgnores.Add(depName))
         {
-            Console.WriteLine(
-                $"[DEPENDABOT VIOLATION] {DependabotRelativePath}: The property '#/updates/{updateIndex}/ignore/{ignoreIndex}/dependency-name' includes a duplicate ignore for '{depName}'.");
-            errors++;
+            errors.Add($"The property '#/updates/{updateIndex}/ignore/{ignoreIndex}/dependency-name' includes a duplicate.");
         }
-
-        return errors;
     }
 
-    private static int ValidateIgnoreListUniqueness(
+    private static void ValidateIgnoreListUniqueness(
         string depName,
         List<string> values,
         string propertyName,
         int updateIndex,
         int ignoreIndex,
-        HashSet<string> seenCombinations)
+        HashSet<string> seenCombinations,
+        List<string> errors)
     {
         if (values.Count == 0)
         {
-            Console.WriteLine($"[ERROR] {DependabotRelativePath}: '#/updates/{updateIndex}/ignore/{ignoreIndex}/{propertyName}' must not be empty.");
-            return 1;
-        }
-
-        int errors = 0;
-        var uniqueItems = new HashSet<string>(values, StringComparer.Ordinal);
-        if (uniqueItems.Count != values.Count)
-        {
-            Console.WriteLine(
-                $"[DEPENDABOT VIOLATION] {DependabotRelativePath}: The property '#/updates/{updateIndex}/ignore/{ignoreIndex}/{propertyName}' contains duplicate values.");
-            errors++;
+            errors.Add($"'#/updates/{updateIndex}/ignore/{ignoreIndex}/{propertyName}' must not be empty.");
+            return;
         }
 
         bool reportedOverlap = false;
-        foreach (string item in uniqueItems)
+        foreach (string item in values)
         {
             string itemKey = $"{depName}\0{item}";
             if (!seenCombinations.Add(itemKey) && !reportedOverlap)
             {
-                Console.WriteLine(
-                    $"[DEPENDABOT VIOLATION] {DependabotRelativePath}: The property '#/updates/{updateIndex}/ignore/{ignoreIndex}/{propertyName}' includes a duplicate. Ignores must have a unique combination of 'dependency-name' and '{propertyName}'.");
-                errors++;
+                errors.Add(
+                    $"The property '#/updates/{updateIndex}/ignore/{ignoreIndex}/{propertyName}' includes a duplicate. Ignores must have a unique combination of 'dependency-name' and '{propertyName}'");
                 reportedOverlap = true;
             }
         }
-
-        return errors;
     }
 
     private static DependabotUpdateEntry? FindDependabotBlock(

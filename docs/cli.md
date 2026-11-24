@@ -30,7 +30,7 @@ Some commands also have a `make` target. Those targets use `pnpm cadence` and sh
 | `make check`                             | `cadence check`                               |
 | `make action-pinning`                    | `cadence check workflow-security`             |
 | `make test`                              | `cadence test`                                |
-| `make verify`                            | `cadence check`, then `cadence test`          |
+| `make verify`                            | `cadence check`, `pnpm test`, `cadence test`  |
 | `make ci`                                | `cadence ci`                                  |
 | `make sync-gxp`, `make gxp-sync`         | `cadence gxp sync`                            |
 | `make rtm`                               | `cadence gxp validate`                        |
@@ -39,7 +39,7 @@ Some commands also have a `make` target. Those targets use `pnpm cadence` and sh
 | `make post TITLE="..."`                  | `cadence scaffold post "<title>"`             |
 | `make db-reset`, `make db-reset-offline` | `cadence db reset`                            |
 
-`make wizard` runs `scripts/setup_wizard.sh` directly. That is the same script as `cadence wizard onboarding`.
+`make wizard` and `make setup` run `scripts/setup_wizard.sh` directly (`make setup` passes `--dev --minimal`), which bootstraps the `.NET 10` SDK and delegates workspace provisioning to `cadence doctor --auto-fix`. `cadence wizard onboarding` runs the same script.
 
 System.CommandLine adds `-h|--help|-?` to every command, for example `pnpm cadence check --help`, and `--version` to the root command. There are no other global options. Every run prints a "Cadence" banner first.
 
@@ -51,20 +51,26 @@ Exit code `0` means success. Any other exit code means failure. Some commands al
 
 ### `cadence doctor`
 
-Checks the local environment. It reports:
+Checks the local environment (read-only unless `--auto-fix` is passed). In full mode it reports:
 
-- the .NET SDK version (from `dotnet --version`)
-- whether `Directory.Packages.props` exists in the current directory
-- whether the pnpm on the `PATH` runs and matches the `packageManager` pin in `package.json` (ADR-2508)
+- the .NET 10 SDK version (from `dotnet --version`, satisfying `global.json`)
+- whether `Directory.Packages.props` exists in the repository root
+- whether local `.NET` tools declared in `.config/dotnet-tools.json` (`dotnet-ef` `10.0.15` with `rollForward: false`, ADR-2527) are restored
+- whether the `pnpm` on `PATH` runs and matches the `packageManager` pin in `package.json` (ADR-2508)
 - whether `detect-secrets-hook` runs from `.cadence/venv`, `.venv`, `PATH`, or `uvx`
-- whether `actionlint`, `hadolint`, and `shellcheck` run from `.cadence/bin` or `PATH`
-- whether PostgreSQL answers on `127.0.0.1:5432`
+- whether `actionlint`, `hadolint`, and `shellcheck` run from `.cadence/bin` (or `CADENCE_BIN_DIR`) or `PATH`
+- whether Git pre-commit hooks are active (`core.hooksPath` set to `.githooks`)
+- whether PostgreSQL answers on `127.0.0.1:5432` (informational; does not affect the exit code)
 
-It exits `1` when the .NET SDK is missing, pnpm is missing/crashes/differs from the pin, or `detect-secrets`, `actionlint`, `hadolint`, or `shellcheck` is unavailable, and `0` otherwise.
+Without `--auto-fix`, `cadence doctor` performs zero filesystem or Git configuration writes and exits `1` when any required tool or workspace configuration above is missing, and `0` otherwise.
 
-| Option           | Description                                                                          |
-| ---------------- | ------------------------------------------------------------------------------------ |
-| `-f\|--auto-fix` | Declared as "remediate missing databases and recoverable issues". Currently ignored. |
+With `-f|--auto-fix`, `DoctorProvisioningService` (`packages/tooling_core/src/Services/DoctorProvisioningService.cs`) verifies `dotnet`, `node`, and `pnpm` (running `corepack enable` if needed), runs `dotnet tool restore` and `dotnet restore Cadence.sln`, provisions `detect-secrets==1.5.0` in `.cadence/venv`, downloads and SHA-256-verifies `actionlint` (`1.7.12`), `hadolint` (`2.15.1`), and `shellcheck` (`0.11.0`) into `.cadence/bin` (verifying binary execution such as `hadolint.exe --version` on Windows `arm64`), runs `pnpm install --frozen-lockfile`, initializes `.env` from `.env.example` when absent, optionally installs Playwright Chromium (skipped with `--minimal`), and enables `.githooks/pre-commit` (`git config core.hooksPath .githooks`) only after all blocking steps succeed.
+
+| Option           | Description                                                                                                                       |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `-f\|--auto-fix` | Provision `.cadence/bin` linters, `.cadence/venv`, local `.NET` tools, `pnpm` workspace dependencies, and `.githooks/pre-commit`. |
+| `--minimal`      | Skip optional heavy provisioning steps (Playwright Chromium browser download) during `--auto-fix`.                                |
+| `--linters-only` | Scope `--auto-fix` provisioning and read-only diagnostics to `actionlint`, `hadolint`, and `shellcheck` in `.cadence/bin`.        |
 
 ### `cadence check`
 
@@ -77,19 +83,22 @@ pnpm cadence check <gate> <files>        # one gate, limited to these files
 pnpm cadence check --exclude <gate>      # every gate except the named gate (repeatable)
 pnpm cadence check --fail-fast           # stop at the first failing gate
 pnpm cadence check --base <ref>          # scope branch diffs against <ref> (default: origin/main)
-pnpm cadence check --push-before <sha>   # scope push diffs across <sha>..HEAD (falls back to git ls-files -z)
+pnpm cadence check --push-before <sha>   # scope push diffs across <sha>..HEAD (or new branch / v* tag scope)
+pnpm cadence check --event-name <event> --git-ref <ref> # override GITHUB_EVENT_NAME / GITHUB_REF event scope
 pnpm cadence check --pre-commit          # what the pre-commit hook runs
 ```
 
-| Argument              | Description                                                                                                                                                                                                                              |
-| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `[gate]`              | One gate to run. Full or short name, for example `duplication` or `detect-code-duplication`. Underscores are treated as hyphens.                                                                                                         |
-| `[files]`             | Files to check. Only the gates marked in the table below use them.                                                                                                                                                                       |
-| `--exclude <gate>`    | Skip a gate by name or alias when running all gates (repeatable). Fails on an unknown gate name or when combined with `[gate]`.                                                                                                          |
-| `--fail-fast`         | Stop at the first failing quality gate and exit `1`. Enabled by default with `--pre-commit` (pass `--fail-fast false` to run every remaining pre-commit gate).                                                                           |
-| `--base <ref>`        | Base Git ref for revision-scoped gates (`deid`, `adrs`, `gxp-snapshot`, `baseline-ratchet`, `merge-readiness`, `branch-freshness`, and secret scanning; defaults to `origin/main`). Scans all tracked files when `HEAD` matches `<ref>`. |
-| `--push-before <sha>` | Pre-push SHA used in CI push runs (`<sha>..HEAD`). Falls back to every tracked file (`git ls-files -z`) when `<sha>` is all zeros, a tag, or not an ancestor of `HEAD`. Mutually exclusive with `--base`.                                |
-| `--pre-commit`        | What the pre-commit hook runs: the staged files are the `[files]`, fail-fast is enabled by default, and each gate runs, runs a quicker variant or is skipped as the last column of the table below says.                                 |
+| Argument               | Description                                                                                                                                                                                                                                         |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `[gate]`               | One gate to run. Full or short name, for example `duplication` or `detect-code-duplication`. Underscores are treated as hyphens.                                                                                                                    |
+| `[files]`              | Files to check. Only the gates marked in the table below use them.                                                                                                                                                                                  |
+| `--exclude <gate>`     | Skip a gate by name or alias when running all gates (repeatable). Fails on an unknown gate name or when combined with `[gate]`.                                                                                                                     |
+| `--fail-fast`          | Stop at the first failing quality gate and exit `1`. Enabled by default with `--pre-commit` (pass `--fail-fast false` to run every remaining pre-commit gate).                                                                                      |
+| `--base <ref>`         | Base Git ref for revision-scoped gates (`deid`, `adrs`, `gxp-snapshot`, `baseline-ratchet`, `merge-readiness`, `branch-freshness`, and secret scanning; defaults to `origin/main`). Scans all tracked files when `HEAD` matches `<ref>`.            |
+| `--push-before <sha>`  | Pre-push SHA used in CI push runs (`<sha>..HEAD`). Evaluates `merge-base(origin/main, HEAD)..HEAD` on 40-zero `refs/heads/*` pushes, checks `HEAD` on `refs/tags/v*` pushes, and falls back to `git ls-files -z` for file scanners when non-linear. |
+| `--event-name <event>` | Override `GITHUB_EVENT_NAME` (`pull_request`, `merge_group`, `push`, `workflow_dispatch`) for revision-scoped gates (`cadence check` reads `GITHUB_EVENT_NAME` automatically outside `--pre-commit`). Mutually exclusive with `--pre-commit`.       |
+| `--git-ref <ref>`      | Override `GITHUB_REF` (`refs/heads/*`, `refs/tags/v*`) for revision-scoped gates (`cadence check` reads `GITHUB_REF` automatically outside `--pre-commit`). Mutually exclusive with `--pre-commit`.                                                 |
+| `--pre-commit`         | What the pre-commit hook runs: the staged files are the `[files]`, fail-fast is enabled by default, and each gate runs, runs a quicker variant or is skipped as the last column of the table below says.                                            |
 
 With no gate, every gate runs in the order below. Unscoped `cadence check` runs every gate and exits `1` if any gate
 failed; `--fail-fast` (enabled by default with `--pre-commit`) stops at the first failing gate. An unknown gate name
@@ -154,8 +163,10 @@ must make it fail.
 <!-- quality-gates:end -->
 
 The `gxp-snapshot` gate (also `gxp-snapshot-guard`, ADR-2532) fails when the generated RTM, the IQ/OQ/PQ report or
-anything under `docs/SDLC/runs/` is changed: the staged files with `--pre-commit`, the `--push-before <sha>..HEAD` range
-on pushes to `main` or `release/*`, and otherwise everything the branch changed since its merge base with `--base <ref>`
+anything under `docs/SDLC/runs/` is changed: the staged files with `--pre-commit`, uncommitted working-tree drift at `HEAD`
+on protected-ref `workflow_dispatch` runs (`refs/heads/main`, `refs/heads/release/*`, `refs/tags/v*`) and 40-zero
+`refs/tags/v*` pushes, `merge-base(origin/main, HEAD)..HEAD` on 40-zero `refs/heads/*` branch pushes, `<sha>..HEAD` on
+ancestor `--push-before <sha>` pushes, and otherwise everything the branch changed since its merge base with `--base <ref>`
 (default `origin/main`), uncommitted changes included. With `CADENCE_GXP_SNAPSHOT=1` it admits them, and outside the
 pre-commit hook it then runs `cadence gxp diff` instead. A branch that changed them restores `main`'s copy with
 `git checkout origin/main -- docs/SDLC/Requirements_Traceability_Matrix.md docs/SDLC/IQ_OQ_PQ_Execution_Report.md docs/SDLC/runs`.
@@ -163,16 +174,21 @@ pre-commit hook it then runs `cadence gxp diff` instead. A branch that changed t
 The `baseline-ratchet` gate (also `baselines`, #5318) fails when a ratchet baseline gate gained an entry: every tracked
 `*.baseline.txt` or `*-baseline.txt` shard (comment lines ignored) and the `results` of `baselines/secrets/*.secrets.baseline.json`
 shards, aggregated per gate as multisets, so a reorder, shard split, or shrink passes. With `--pre-commit` it compares the staged
-index copies against `HEAD` and admits staged growth only when `CADENCE_BASELINE_GROWTH="<path> +<count> - <reason>"` is set. Outside `--pre-commit`
-it rejects any uncommitted working-tree growth and inspects every commit in `compareBase..HEAD` (`--push-before <sha>` or the merge
-base with `--base <ref>`, falling back from default `origin/main` to `refs/heads/main` when `origin/main` is absent), requiring each
-commit that grows a baseline gate to carry a matching file-and-count-scoped `Baseline-Growth: <path> +<count> - <reason>` trailer covering the gate. When neither
-`origin/main` nor `refs/heads/main` (or an explicit `--base <ref>`) exists, it fails closed both locally and in CI.
+index copies against `HEAD` and admits staged growth only when `CADENCE_BASELINE_GROWTH="<path> +<count> - <reason>"` is set. On protected-ref
+`workflow_dispatch` runs and 40-zero `refs/tags/v*` pushes it checks only uncommitted working-tree drift at `HEAD`. Otherwise
+outside `--pre-commit` it rejects any uncommitted working-tree growth and inspects every commit in `compareBase..HEAD`
+(`--push-before <sha>`, `merge-base(origin/main, HEAD)` on 40-zero `refs/heads/*` pushes, or the merge base with `--base <ref>`,
+falling back from default `origin/main` to `refs/heads/main` when `origin/main` is absent), requiring each commit that grows a
+baseline gate to carry a matching file-and-count-scoped `Baseline-Growth: <path> +<count> - <reason>` trailer covering the gate. When neither
+`origin/main` nor `refs/heads/main` (or an explicit `--base <ref>`) exists, or when `workflow_dispatch` targets an unprotected ref,
+it fails closed both locally and in CI.
 
 The `merge-readiness` gate (also `check-merge-readiness`) verifies that `--base <ref>` (`origin/main` by default) exists
 locally and merges cleanly into `HEAD` in-memory via `git merge-tree --write-tree` without modifying the working tree or
-index; on `--push-before` push runs it skips cleanly, and `--pre-commit` skips it so local commits are not blocked while
-offline. When conflicts exist, it prints every conflicted file path and exits `1`.
+index; on `--push-before` push runs, `refs/tags/v*` pushes, and protected-ref `workflow_dispatch` runs (`refs/heads/main`,
+`refs/heads/release/*`, `refs/tags/v*`) it skips cleanly (failing closed on unprotected `workflow_dispatch` refs), and
+`--pre-commit` skips it so local commits are not blocked while offline. When conflicts exist, it prints every conflicted file
+path and exits `1`.
 
 The `deid` gate scans the given files, or the candidate files resolved from `--pre-commit`, `--push-before <sha>`, or
 `--base <ref>` (default `origin/main`, falling back to every file git tracks via `git ls-files -z` when `HEAD` equals
@@ -207,8 +223,9 @@ closed), and always fails closed on direct `cadence check public-bundle` calls i
 The `branch-freshness` and `unit-tests` gates are skipped by `--pre-commit` so local commits
 stay fast and offline, while `architecture-tests` runs in `--pre-commit` whenever staged files touch backend C#/MSBuild,
 architecture baselines, or test files (skipping docs-only and non-test frontend asset commits), and all three run in full
-during `pnpm cadence check`: `branch-freshness` fails when `origin/main` (or
-`--base <ref>`) is missing or not an ancestor of `HEAD` (skipping post-push `--push-before` runs), `architecture-tests`
+during `pnpm cadence check`: `branch-freshness` fails when `origin/main` (or `--base <ref>`) is missing or not an ancestor of
+`HEAD` on local runs, `pull_request`, and `merge_group` (skipping post-push `--push-before` runs, `refs/tags/v*` pushes, and
+protected-ref `workflow_dispatch` runs while failing closed on unprotected `workflow_dispatch` refs), `architecture-tests`
 runs `tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`, and `unit-tests` runs
 `tests/Cadence.UnitTests/Cadence.UnitTests.csproj`. The `demo-manifest` gate runs in `--pre-commit` only when staged
 files touch `packages/demo-fixtures`, `DevelopmentDemoData.cs`, `ExecutionDbSeeder.cs` or `docker/cadence-realm.json`.
@@ -247,7 +264,7 @@ pnpm cadence ci                          # fetch origin/main, synthesize merged 
 pnpm cadence ci --include-uncommitted    # synthesize an ephemeral snapshot commit of uncommitted edits without mutating checkout
 pnpm cadence ci --job container-security # validate Compose config, build and Trivy-scan all 18 .NET and 2 SCE images
 pnpm cadence ci --job dotnet-tests       # one job (repeat --job for more)
-pnpm cadence ci --job compliance         # a job and the jobs it needs (native-aot-build, unit-tests, dotnet-tests)
+pnpm cadence ci --job compliance         # a job and the jobs it needs (native-aot-build, unit-tests, dotnet-tests, accessibility-e2e)
 pnpm cadence ci --job accessibility-e2e  # the Playwright E2E and browser-to-database job alone
 pnpm cadence ci --offline                # air-gapped debugging: skip git fetch and merge against local origin/main
 pnpm cadence ci --list                   # what each step runs locally, without running it
@@ -265,7 +282,7 @@ pnpm cadence ci --list                   # what each step runs locally, without 
 | `--list`                | Prints each step and what it runs locally, then exits `0`.                                                                                                                                                                                                                                    |
 
 It follows the workflow's rules: inside a job, a failed step stops the later steps unless CI gives them `if: always()`,
-and the compliance job runs only when the frontend and .NET test steps passed. The run itself never stops early. It
+and the compliance job runs only when the frontend, .NET, and Playwright/browser E2E test steps passed. The run itself never stops early. It
 ends with one line per step (passed, failed, covered, skipped or not run, with its time) and exits `1` if any step
 failed.
 
@@ -301,13 +318,13 @@ Where it differs from CI:
   `CADENCE_GXP_SNAPSHOT=1` it runs `cadence gxp diff` instead, which fails if the regenerated reports differ from the
   committed ones outside their evidence block, and puts the committed copies back when they match.
 - **Required binaries and daemons must be available.** `actionlint` (`rhysd/actionlint` in CI), Hadolint, and ShellCheck (resolved
-  from `.cadence/bin` or `PATH`, provisioned by `./scripts/setup_wizard.sh --minimal` or `pwsh scripts/setup_wizard.ps1 -Minimal`),
+  from `.cadence/bin` or `PATH`, provisioned by `pnpm cadence doctor --auto-fix`),
   `detect-secrets-hook` (resolved from `.cadence/venv`, `.venv`, or `PATH`), `docker` (with a reachable Docker daemon), `trivy`,
   and `bash` are not installed automatically by `cadence ci`: when any required binary or daemon is unavailable, the step fails with setup guidance
   so an incomplete environment cannot report green. Pass `--allow-missing-tools` (or `--allow-skip`) to record unavailable tool or Docker steps as skipped,
   with the setup hint, instead of failing.
 - **Not run:** the Playwright browser install, `Upload Trivy scan results to GitHub Security tab` (SARIF upload to GitHub Code Scanning), and the jobs that act on GitHub itself
-  (`ci-gate`, `classify`, `automerge`, `release-and-archive`, `deploy-docs`).
+  (`ci-gate`, `classify`, `release-and-archive`, `deploy-docs`).
 - **Clean checkouts required unless `--include-uncommitted` is passed.** `cadence ci` checks `GitRevisionScopeService.GetWorkingTreeChanges` before synthesizing the merged worktree and fails `merge-readiness` with exit `1` (listing dirty paths and instructing you to commit, stash, or pass `--include-uncommitted`) when staged, unstaged, or untracked edits exist. Passing `--include-uncommitted` copies `.git/index` to a temporary index file, stages all edits, and synthesizes an ephemeral snapshot commit pinned under `refs/cadence-ci/<runId>` (deleted when the worktree is disposed without running `git prune` or `git gc`), leaving your checkout untouched.
 - **Single Native AOT publish reused across CLI jobs.** `native-aot-build` targets this machine's runtime (`linux-x64` in CI), since AOT does not cross-compile, publishes into `./bin` (`<worktreeRoot>/bin/cadence`), and sets `CADENCE_CLI_CACHE_HIT=true` for downstream `node scripts/run-cli.js` steps in `lint-and-static`, `docs-build`, and `security` so the compiled binary is reused without rebuilding.
 
@@ -332,7 +349,7 @@ pnpm cadence rulesets --repo fderuiter/cadence-clinical # target an explicit own
 | `--repo <owner/repo>`                        | Target GitHub repository (`owner/repo`). Defaults to `GITHUB_REPOSITORY`, then `git remote get-url origin`.                                                                                                                   |
 | `--profile <paused-actions\|active-actions>` | Reconciliation profile. `paused-actions` (default while Actions runners are paused) omits `required_status_checks` and `merge_queue` from synced payloads; `active-actions` applies the full declarative ruleset payload.     |
 
-Before making any API request, `cadence rulesets` runs the `rulesets` quality gate (`RulesetService.Validate`, which also validates staged index blobs under `cadence check --pre-commit`): `.github/rulesets/` must contain `main.json`, `release_branches.json`, and `version_tags.json`; every branch ruleset must restrict any `bypass_actors` entries to repository admins (`RepositoryRole` `5`) with `bypass_mode: "pull_request"` (`"always"` bypasses are rejected on branches), while `version_tags.json` requires `creation`, `required_signatures`, `deletion`, and `non_fast_forward` on `refs/tags/v*` with `bypass_actors` pinned to release admins (`RepositoryRole` `5`, `bypass_mode: "always"`); `main.json` must configure a `merge_queue` rule (`SQUASH`, `ALLGREEN`); every branch ruleset must set `strict_required_status_checks_policy: true`, pin required status checks to GitHub Actions (`integration_id: 15368`), require `CI Gate` and `Check for Merge Conflicts`, and match active `pull_request` and `merge_group` workflow jobs (`CI Gate` in `.github/workflows/ci.yml` must use `if: always()` and evaluate every pull-request validation job). When `.github/rulesets` is absent, `cadence rulesets --dry-run` still validates `CI Gate` upstream job coverage and exits `0` when valid (or `1` if `CI Gate` omits an upstream job), whereas `cadence check rulesets` and non-dry-run reconciliation both fail closed (`1`) without `.github/rulesets/*.json`.
+Before making any API request, `cadence rulesets` runs the `rulesets` quality gate (`RulesetService.Validate`, which also validates staged index blobs under `cadence check --pre-commit`): `.github/rulesets/` must contain `main.json`, `release_branches.json`, and `version_tags.json`; every branch ruleset must restrict any `bypass_actors` entries to repository admins (`RepositoryRole` `5`) with `bypass_mode: "pull_request"` (`"always"` bypasses are rejected on branches), while `version_tags.json` requires `creation`, `required_signatures`, `deletion`, and `non_fast_forward` on `refs/tags/v*` with `bypass_actors` pinned to release admins (`RepositoryRole` `5`, `bypass_mode: "always"`); `main.json` must configure a `merge_queue` rule (`SQUASH`, `ALLGREEN`); every branch ruleset must set `strict_required_status_checks_policy: true`, pin required status checks to GitHub Actions (`integration_id: 15368`), require `CI Gate` and `Check for Merge Conflicts`, and match active `pull_request` and `merge_group` workflow jobs (`CI Gate` in `.github/workflows/ci.yml` must use `if: always()` and evaluate every pull-request validation job, `.github/workflows/conflict-check.yml` must run on `opened`, `synchronize`, `reopened`, and `edited` plus `merge_group` and fail closed via `git merge-tree --write-tree`, and no workflow may run `automerge` or `gh pr merge` with `GITHUB_TOKEN`). When `.github/rulesets` is absent, `cadence rulesets --dry-run` still validates `CI Gate` and conflict-check workflow coverage and exits `0` when valid (or `1` if workflow validation fails), whereas `cadence check rulesets` and non-dry-run reconciliation both fail closed (`1`) without `.github/rulesets/*.json`.
 
 Without `--dry-run`, it fetches `gh api --paginate repos/<owner>/<repo>/rulesets?per_page=100`, updates existing
 rulesets by `name` (`PUT repos/<owner>/<repo>/rulesets/<id> --input <file>`), and creates missing ones
@@ -378,7 +395,7 @@ Paths are relative to the repository root. "Calls" is the method the command run
 | `validate-path-patterns`      | Fails on directories named `tmp`, `temp`, `scratch` or `old_src`, `.vue` files outside `apps/`, `packages/` and `docs/.vitepress/`, and `.sh` files outside `scripts/`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | `PathPatternValidatorService.ValidatePathPatterns`                                        |
 | `validate-readmes`            | Fails when a direct subdirectory of `apps/` or `packages/` has no `README.md`, or its README has no `# ` title.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | `ReadmeValidatorService.ValidateReadmes`                                                  |
 | `validate-codeowners`         | Fails when `.github/CODEOWNERS` is missing or empty.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | `CodeownersValidatorService.ValidateCodeowners`                                           |
-| `validate-workflow-security`  | Validates `.github/workflows/*.{yml,yaml}` and `.github/actions/**/action.{yml,yaml}` for 40-hex commit SHAs with version comments, `sha256:` digests on `docker://` refs, `persist-credentials: false` on `actions/checkout`, typed non-interpolated `workflow_dispatch` inputs, ref-guarded dispatch triggers, and least-privilege permissions.                                                                                                                                                                                                                                                                                                                                                                                                                                                              | `WorkflowSecurityValidatorService.ValidateWorkflowSecurity`                               |
+| `validate-workflow-security`  | Validates `.github/workflows/*.{yml,yaml}` and `.github/actions/**/action.{yml,yaml}` for 40-hex commit SHAs with version comments, `sha256:` digests on `docker://` refs, `persist-credentials: false` and no fork checkouts on `actions/checkout`, fork-guarded PR write permissions, typed non-interpolated `workflow_dispatch` inputs, ref-guarded dispatch triggers, least-privilege permissions, and no masked shell errors.                                                                                                                                                                                                                                                                                                                                                                             | `WorkflowSecurityValidatorService.ValidateWorkflowSecurity`                               |
 | `validate-markdown`           | Checks workspace links and `#` heading spacing in `docs/**/*.md`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | `MarkdownValidatorService.ValidateMarkdown`                                               |
 | `query-linter`                | Scans `.cs` files outside `tests/`. Fails on interpolated `FromSqlRaw($...)` or `ExecuteSqlRaw($...)`, and on `== true` or `== false`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | `QueryLinterService.LintQueries`                                                          |
 | `extract-env-vars`            | Extracts environment variable and screaming-snake-case `IConfiguration` reads in `.cs`, `.py`, and frontend `import.meta.env.VITE_*` files, verifies bidirectional parity between `.env.example` and concrete keys in `docs/ENVIRONMENT_VARIABLES.md`, and checks that every repository file path cited in `docs/ENVIRONMENT_VARIABLES.md` exists on disk. Exits `1` on drift when `--check` is passed. Never writes files.                                                                                                                                                                                                                                                                                                                                                                                    | `EnvVarExtractorService.ExtractAndValidateEnvVars`                                        |
@@ -444,12 +461,13 @@ evidence without re-running `dotnet test`).
    `docs/SDLC/runs/`.
 3. Fails, without staging, on the same errors as `cadence gxp sync`, when `*.database.txt` fixture metadata is missing
    under `--results-dir`, and when the RTM's test mapping does not match the tags in `tests/`.
-4. Otherwise stages those files with `git add` when `.git` is present. Commit them with `CADENCE_GXP_SNAPSHOT=1` set,
-   so the pre-commit `gxp-snapshot` gate admits them.
+4. Otherwise stages those files with `git add` when `.git` is present. Commit them with `CADENCE_GXP_SNAPSHOT=1` set
+   and a `Gxp-Snapshot: refreshed` commit trailer (`--commit` adds both automatically), so the pre-commit `gxp-snapshot`
+   gate and CI snapshot authorization admit them.
 
 | Option                | Description                                                                                                                                                                                    |
 | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--commit`            | After staging, runs `git commit -m "docs(rtm): take the GxP snapshot from the integrated candidate"` with `CADENCE_GXP_SNAPSHOT=1` set.                                                        |
+| `--commit`            | After staging, runs `git commit -m "docs(rtm): take the GxP snapshot from the integrated candidate" -m "Gxp-Snapshot: refreshed"` with `CADENCE_GXP_SNAPSHOT=1` set.                           |
 | `--results-dir <dir>` | Reuses verified TRX reports and `*.database.txt` fixture evidence under `<dir>` instead of running `dotnet test`; fails if `*.database.txt` is missing or any mandatory database test skipped. |
 
 #### `cadence gxp validate`
@@ -527,7 +545,7 @@ The title is required. With make, pass it as `make adr TITLE="Use X for Y"`.
 
 #### `cadence scaffold post <title>`
 
-Creates `docs/blog/<yyyy-mm-dd>-<slug>.md` with YAML frontmatter (`title`, `date`, `authors`, `summary`, `tags`, `draft`, `related`) and structured Markdown sections, then updates `docs/DOCUMENTATION_INDEX.md` under `## Engineering blog` when that file exists. Posts start with `draft: true` by default so drafts stay excluded from public index pages, site search, and `/feed.xml` until flipped to `draft: false` (or created with `--publish`). Fails with exit code `1` if the title produces an empty slug or the dated file already exists.
+Creates `docs/blog/<yyyy-mm-dd>-<slug>.md` with YAML frontmatter (`title`, `date`, `authors`, `summary`, `tags`, `draft`, `related`) and structured Markdown sections, synchronizing `docs/DOCUMENTATION_INDEX.md` under `## Engineering blog` when published. Posts start with `draft: true` by default so drafts stay excluded from `docs/DOCUMENTATION_INDEX.md`, public index pages, site search, and `/feed.xml` until flipped to `draft: false` and synced with `pnpm cadence generate-doc-index` (or created immediately with `--publish`). Fails with exit code `1` if the title produces an empty slug or the dated file already exists.
 
 The title is required. With make, pass it as `make post TITLE="Ship X"`.
 

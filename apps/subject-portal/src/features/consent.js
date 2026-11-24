@@ -21,7 +21,10 @@ import {
   resolveFriendlyStudyTitle,
 } from "../utils/participantCopy.js";
 import { allowUnbackedAction } from "../utils/unbackedActions.js";
-import { createClinicalRadioGrid } from "../widgets/clinical-fields.js";
+import {
+  bindDelegatedClinicalWidgets,
+  createClinicalRadioGrid,
+} from "../widgets/clinical-fields.js";
 import {
   clearFieldInvalid,
   markFieldInvalid,
@@ -279,7 +282,7 @@ export function renderConsentUI() {
     .map(
       (sec) => `
     <div class="clause-view-box" style="border: 1px solid var(--semantic-color-border); padding: 16px; border-radius: 6px; background: var(--semantic-color-surface);">
-      <h4 style="margin-top: 0; color: var(--semantic-color-primary); border-bottom: 1px dashed var(--semantic-color-border); padding-bottom: 6px;">${sec.title}</h4>
+      <h4 style="margin-top: 0; color: var(--semantic-color-text); border-bottom: 1px dashed var(--semantic-color-border); padding-bottom: 6px;">${sec.title}</h4>
       <p style="margin: 0; font-size: 14px;">${sec.content}</p>
     </div>
   `
@@ -339,6 +342,7 @@ export function renderConsentUI() {
     });
     formHtml += `</div>`;
     qContainer.innerHTML = formHtml;
+    bindDelegatedClinicalWidgets(qContainer);
   } else {
     qContainer.innerHTML = `<div class="loading-state">No comprehension questions configured for this template.</div>`;
   }

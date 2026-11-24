@@ -20,7 +20,9 @@ public static class QualityGateOrchestrator
         string? repoRoot = null,
         string? baseRef = null,
         string? pushBefore = null,
-        bool? failFast = null)
+        bool? failFast = null,
+        string? eventName = null,
+        string? gitRef = null)
     {
         AnsiConsole.MarkupLine("[bold cyan]Executing Cadence Quality Sentinels & Policy Gates...[/]\n");
 
@@ -53,7 +55,7 @@ public static class QualityGateOrchestrator
         }
 
         using var indexReader = preCommit ? GitIndexReader.TryOpen(repoRoot) : null;
-        var context = new GateContext(repoRoot, targetFiles, preCommit, indexReader, baseRef, pushBefore);
+        var context = new GateContext(repoRoot, targetFiles, preCommit, indexReader, baseRef, pushBefore, eventName, gitRef);
 
         if (!string.IsNullOrEmpty(gateName))
         {

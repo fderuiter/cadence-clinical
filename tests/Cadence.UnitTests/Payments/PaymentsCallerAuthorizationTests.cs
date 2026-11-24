@@ -129,9 +129,13 @@ public sealed class PaymentsCallerAuthorizationTests : IAsyncDisposable
     public async Task InvoiceApproval_RecordsTheSignedCaller()
     {
         await SeedAsync();
-        using var client = Client("finance-1", "Grants Manager");
+        string approvePath = $"/api/v1/payments/invoices/{InvoiceId}/approve";
+        using var client = _factory.CreateSignedClient(TestSecurityContext.Identity("finance-1", "Grants Manager") with
+        {
+            SigToken = TestSecurityContext.CreateSigToken("finance-1", approvePath, "payments.invoice.approve", ["finance_officer"]),
+        });
 
-        using var response = await client.PostAsync($"/api/v1/payments/invoices/{InvoiceId}/approve", null, Ct);
+        using var response = await client.PostAsync(approvePath, null, Ct);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         await using var db = OpenDb();
@@ -147,12 +151,23 @@ public sealed class PaymentsCallerAuthorizationTests : IAsyncDisposable
     public async Task RemittanceSignature_IsTheSignedCaller_NotTheBodysName_AndNotTheApprover()
     {
         await SeedAsync();
-        using (var approver = Client("finance-1", "Grants Manager"))
+        string approvePath = $"/api/v1/payments/invoices/{InvoiceId}/approve";
+        string signPath = $"/api/v1/payments/invoices/{InvoiceId}/remittance-advice/sign";
+        using (var approver = _factory.CreateSignedClient(TestSecurityContext.Identity("finance-1", "Grants Manager") with
         {
-            (await approver.PostAsync($"/api/v1/payments/invoices/{InvoiceId}/approve", null, Ct)).StatusCode.Should().Be(HttpStatusCode.OK);
+            SigToken = TestSecurityContext.CreateSigToken("finance-1", approvePath, "payments.invoice.approve", ["finance_officer"]),
+        }))
+        {
+            (await approver.PostAsync(approvePath, null, Ct)).StatusCode.Should().Be(HttpStatusCode.OK);
+        }
 
-            using var ownSignature = await approver.PostAsJsonAsync(
-                $"/api/v1/payments/invoices/{InvoiceId}/remittance-advice/sign", new { signature_reason = "Approve and sign" }, Ct);
+        using (var approverSigner = _factory.CreateSignedClient(TestSecurityContext.Identity("finance-1", "Grants Manager") with
+        {
+            SigToken = TestSecurityContext.CreateSigToken("finance-1", signPath, "payments.remittance.sign", ["finance_officer"]),
+        }))
+        {
+            using var ownSignature = await approverSigner.PostAsJsonAsync(
+                signPath, new { signature_reason = "Approve and sign" }, Ct);
             ownSignature.StatusCode.Should().Be(HttpStatusCode.Conflict, "the approver may not also sign the remittance");
         }
 
@@ -161,9 +176,12 @@ public sealed class PaymentsCallerAuthorizationTests : IAsyncDisposable
             (await db.RemittanceAdvices.AsNoTracking().SingleAsync(r => r.InvoiceId == InvoiceId, Ct)).IsSigned.Should().BeFalse();
         }
 
-        using var signer = Client("finance-2", "finance officer");
+        using var signer = _factory.CreateSignedClient(TestSecurityContext.Identity("finance-2", "finance officer") with
+        {
+            SigToken = TestSecurityContext.CreateSigToken("finance-2", signPath, "payments.remittance.sign", ["finance_officer"]),
+        });
         using var response = await signer.PostAsync(
-            $"/api/v1/payments/invoices/{InvoiceId}/remittance-advice/sign",
+            signPath,
             new StringContent("""{"signer_name":"Mallory","signer_role":"CFO","signature_reason":"Remittance statement"}""", Encoding.UTF8, "application/json"),
             Ct);
 

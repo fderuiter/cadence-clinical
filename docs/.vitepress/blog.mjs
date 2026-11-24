@@ -1,6 +1,8 @@
 import fs from "fs";
 import path from "path";
+import process from "process";
 import {
+  SITE_ORIGIN,
   buildRssFeedXml,
   normalizeBlogPost,
   parseBlogFrontmatter,
@@ -26,7 +28,10 @@ export function isDraftBlogPostFile(filePath) {
   }
   const content = fs.readFileSync(filePath, "utf-8");
   const { frontmatter } = parseBlogFrontmatter(content);
-  return frontmatter.draft === true || frontmatter.draft === "true";
+  return (
+    frontmatter.draft === true ||
+    /^true$/i.test(String(frontmatter.draft ?? "").trim())
+  );
 }
 
 /**
@@ -107,6 +112,8 @@ export function writeRssFeed(siteConfig) {
     siteTitle: "Cadence Clinical Engineering Blog",
     siteDescription:
       "Curated architectural milestones and engineering updates from Cadence Clinical Research Software.",
+    siteOrigin:
+      siteConfig.siteOrigin || process.env.VITEPRESS_SITE_ORIGIN || SITE_ORIGIN,
     base: siteConfig.site?.base || "/cadence-clinical/",
   });
 

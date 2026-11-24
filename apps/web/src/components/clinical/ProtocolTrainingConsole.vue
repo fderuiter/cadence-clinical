@@ -693,7 +693,7 @@
 <script setup>
 import { ClinicalModal, ClinicalTabs, handoffFocus } from "ui";
 import { computed, onMounted, ref, watch } from "vue";
-import { soaClient } from "../../api/soaClient";
+import { requestStepUpSignature } from "../../api/signatureVerification";
 import { trainingApi } from "../../api/training";
 import {
   TRAINING_ASSIGN_ROLE_REASON,
@@ -1017,7 +1017,7 @@ async function handleExecuteBulkSignOff() {
   bulkSignError.value = "";
   try {
     const delegationIds = [...selectedDelegationIds.value];
-    const verification = await soaClient.verifySignature({
+    const verification = await requestStepUpSignature({
       username: authStore.identity?.username || "",
       password: bulkSignForm.value.password,
       action: DELEGATION_SIGN_OFF_ACTION,
@@ -1066,10 +1066,13 @@ async function handleExecuteBulkSignOff() {
 
 .console-header {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: flex-start;
+  gap: 12px 16px;
   border-bottom: 1px solid var(--border);
   padding-bottom: var(--spacing-md, 16px);
+  min-width: 0;
 }
 
 .btn-secondary {
@@ -1096,9 +1099,10 @@ async function handleExecuteBulkSignOff() {
 }
 
 .badge-regulatory {
-  background: var(--semantic-color-primary-light);
-  color: var(--semantic-color-primary);
+  background-color: var(--semantic-badge-regulatory-bg);
+  color: var(--semantic-badge-regulatory-text);
   font-weight: 600;
+  border: 1px solid var(--semantic-badge-regulatory-border);
 }
 
 .badge-locked {
@@ -1136,6 +1140,15 @@ async function handleExecuteBulkSignOff() {
   border-radius: var(--radius-sm, 6px);
   border: 1px solid var(--border);
   flex-wrap: wrap;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.assignment-selector-panel .form-group {
+  flex: 1 1 16rem;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .select-input {
@@ -1144,12 +1157,17 @@ async function handleExecuteBulkSignOff() {
   border-radius: var(--radius-sm, 4px);
   background: var(--semantic-color-surface);
   font-size: 0.9rem;
-  min-width: 320px;
+  width: 100%;
+  max-width: 32rem;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .status-summary-chips {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
+  min-width: 0;
 }
 
 .summary-chip {
@@ -1189,13 +1207,28 @@ async function handleExecuteBulkSignOff() {
 
 .modules-layout {
   display: grid;
-  grid-template-columns: 280px 1fr;
+  grid-template-columns: 280px minmax(0, 1fr);
   gap: 20px;
+  min-width: 0;
 }
 
 .module-sidebar {
   border-right: 1px solid var(--border);
   padding-right: 16px;
+  min-width: 0;
+}
+
+@media (max-width: 900px) {
+  .modules-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .module-sidebar {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    padding-right: 0;
+    padding-bottom: 16px;
+  }
 }
 
 .sidebar-heading {
@@ -1249,7 +1282,7 @@ async function handleExecuteBulkSignOff() {
 
 .module-num {
   font-weight: 700;
-  color: var(--primary);
+  color: var(--text-main);
 }
 
 .module-meta {
@@ -1270,7 +1303,7 @@ async function handleExecuteBulkSignOff() {
 
 .badge-mod-procedure_delta {
   background: var(--semantic-color-warning-bg-badge);
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
 }
 
 .badge-mod-protocol_overview {
@@ -1281,12 +1314,15 @@ async function handleExecuteBulkSignOff() {
 .module-reader {
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 
 .reader-header {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
+  gap: 8px 12px;
   border-bottom: 1px solid var(--border);
   padding-bottom: 12px;
   margin-bottom: 16px;
@@ -1295,10 +1331,12 @@ async function handleExecuteBulkSignOff() {
 .reader-title {
   margin: 4px 0 0 0;
   font-size: 1.15rem;
+  overflow-wrap: anywhere;
 }
 
 .content-text {
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
   font-family: inherit;
   font-size: 0.95rem;
   line-height: 1.6;
@@ -1306,19 +1344,25 @@ async function handleExecuteBulkSignOff() {
   padding: 16px;
   border-radius: 6px;
   border: 1px solid var(--semantic-color-border);
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .reader-footer {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
+  gap: 10px;
   margin-top: 20px;
 }
 
 /* Quiz Styles */
 .quiz-header-card {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
   background: var(--semantic-color-surface-muted);
   border: 1px solid var(--semantic-color-border);
   padding: 16px;
@@ -1411,6 +1455,7 @@ async function handleExecuteBulkSignOff() {
 
 .quiz-actions-bar {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
   gap: 12px;
   margin-top: 20px;
@@ -1422,7 +1467,10 @@ async function handleExecuteBulkSignOff() {
   border: 2px solid var(--semantic-color-border-control);
   padding: 32px;
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-md);
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-x: auto;
 }
 
 .cert-header {
@@ -1484,13 +1532,14 @@ async function handleExecuteBulkSignOff() {
 
 .manifest-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
   gap: 6px 16px;
   font-size: 0.85rem;
 }
 
 .cert-routing-status {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   margin-top: 20px;
 }
@@ -1511,7 +1560,7 @@ async function handleExecuteBulkSignOff() {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(15, 23, 42, 0.6);
+  background: var(--semantic-color-backdrop);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1524,7 +1573,7 @@ async function handleExecuteBulkSignOff() {
   max-width: 90vw;
   border-radius: 8px;
   padding: 24px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-xl);
 }
 
 .modal-header {
@@ -1578,6 +1627,7 @@ async function handleExecuteBulkSignOff() {
 /* Inline Sync Error Banner Styles */
 .sync-error-banner {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   background-color: var(--semantic-color-error-bg-soft);
@@ -1652,6 +1702,17 @@ async function handleExecuteBulkSignOff() {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 640px) {
+  .batch-card,
+  .delegations-card,
+  .certificate-paper {
+    padding: 14px;
+  }
 }
 
 .section-desc {
@@ -1662,7 +1723,7 @@ async function handleExecuteBulkSignOff() {
 
 .batch-filter-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
   gap: 20px;
   background: var(--semantic-color-surface-muted);
   padding: 16px;
@@ -1695,8 +1756,10 @@ async function handleExecuteBulkSignOff() {
 
 .batch-preview-bar {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
   background: var(--semantic-color-info-bg);
   border: 1px solid var(--semantic-color-info-border);
   padding: 12px 16px;
@@ -1705,10 +1768,12 @@ async function handleExecuteBulkSignOff() {
 
 .preview-info {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 12px;
   font-size: 0.9rem;
   color: var(--semantic-color-info);
+  min-width: 0;
 }
 
 .badge-error {
@@ -1730,13 +1795,16 @@ async function handleExecuteBulkSignOff() {
 
 .result-header {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
+  gap: 8px;
   margin-bottom: 12px;
 }
 
 .result-stats {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   margin-bottom: 12px;
 }
@@ -1754,11 +1822,21 @@ async function handleExecuteBulkSignOff() {
 }
 .warning-pill {
   background: var(--semantic-color-warning-bg-badge);
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
 }
 .info-pill {
   background: var(--semantic-color-primary-light);
   color: var(--semantic-color-primary-dark);
+}
+
+.skipped-table-wrapper,
+.delegations-table-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  box-sizing: border-box;
 }
 
 .skipped-table-wrapper {
@@ -1767,14 +1845,18 @@ async function handleExecuteBulkSignOff() {
 
 .delegation-header {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: flex-start;
+  gap: 12px;
 }
 
 .delegation-actions-bar {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
   padding: 12px 16px;
   background: var(--semantic-color-surface-header);
   border-radius: 6px;
@@ -1783,7 +1865,7 @@ async function handleExecuteBulkSignOff() {
 
 .seal-hash {
   background: var(--semantic-color-surface-header);
-  color: var(--semantic-color-primary);
+  color: var(--text-main);
   padding: 2px 6px;
   border-radius: 4px;
   font-family: monospace;

@@ -133,6 +133,65 @@ public sealed class BuildDocsScriptTests : IDisposable
     }
 
     [Theory]
+    [InlineData("ARCHITECTURE.md", "sequenceDiagram\n    A->>B: stale; 403\n")]
+    [InlineData("docs/guide.md", "graph TD\n    A -->|POST /protocols/{id}/amend| B\n")]
+    public void BuildDocs_WhenSkipChecksEnvIsSetAndMermaidSyntaxIsInvalid_ExitsOneAndCleansUpStagedDocs(
+        string relativeMarkdownPath,
+        string invalidMermaidBody)
+    {
+        string repoRoot = FindRepoRoot();
+        File.Copy(
+            Path.Combine(repoRoot, "scripts", "build-docs.js"),
+            Path.Combine(_fixtureRoot, "scripts", "build-docs.js"),
+            overwrite: true);
+
+        string rootPkgJson = Path.Combine(_fixtureRoot, "package.json");
+        string rootNodeModulesLink = Path.Combine(_fixtureRoot, "node_modules");
+        string fixtureWebDir = Directory.CreateDirectory(Path.Combine(_fixtureRoot, "apps", "web")).FullName;
+        string webPkgJson = Path.Combine(fixtureWebDir, "package.json");
+        string webNodeModulesLink = Path.Combine(fixtureWebDir, "node_modules");
+
+        File.Copy(Path.Combine(repoRoot, "package.json"), rootPkgJson, overwrite: true);
+        File.Copy(Path.Combine(repoRoot, "apps", "web", "package.json"), webPkgJson, overwrite: true);
+        Directory.CreateSymbolicLink(rootNodeModulesLink, Path.Combine(repoRoot, "node_modules"));
+        Directory.CreateSymbolicLink(webNodeModulesLink, Path.Combine(repoRoot, "apps", "web", "node_modules"));
+
+        string fullTarget = Path.Combine(_fixtureRoot, relativeMarkdownPath.Replace('/', Path.DirectorySeparatorChar));
+        string originalTarget = File.ReadAllText(fullTarget);
+        File.WriteAllText(
+            fullTarget,
+            $"{originalTarget}\n```mermaid\n{invalidMermaidBody}```\n");
+
+        try
+        {
+            var result = RunBuildDocs(new Dictionary<string, string?>
+            {
+                ["CADENCE_DOCS_SKIP_CHECKS"] = "1",
+            });
+
+            File.WriteAllText(fullTarget, originalTarget);
+
+            result.ExitCode.Should().Be(1, result.Output);
+            result.Output.Should().Contain(relativeMarkdownPath);
+            ReadPnpmLog().Should().NotContain("exec vitepress build docs");
+            AssertTrackedDocsUnchangedAndTempDocsCleaned();
+        }
+        finally
+        {
+            File.WriteAllText(fullTarget, originalTarget);
+            if (Directory.Exists(webNodeModulesLink))
+            {
+                Directory.Delete(webNodeModulesLink);
+            }
+
+            if (Directory.Exists(rootNodeModulesLink))
+            {
+                Directory.Delete(rootNodeModulesLink);
+            }
+        }
+    }
+
+    [Theory]
     [InlineData("check openapi")]
     [InlineData("check schema-doc")]
     [InlineData("check rtm")]

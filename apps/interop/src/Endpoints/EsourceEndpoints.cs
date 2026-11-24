@@ -13,6 +13,7 @@ using Cadence.Apps.Interop.Domain;
 using Cadence.Apps.Interop.Infrastructure.Persistence;
 using Cadence.Apps.Interop.Infrastructure.Security;
 using Cadence.Kernel.Time;
+using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
 using Cadence.Security.Rbac;
 
@@ -108,7 +109,8 @@ public static class EsourceEndpoints
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<EhrReconcileActionResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound)
-            .ProducesProblem(StatusCodes.Status400BadRequest);
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .RequireElectronicSignature("interop.esource.accept", http => http.Request.Path.Value ?? string.Empty);
 
         group.MapPost("/reconcile/batch-accept", BatchAcceptCandidatesAsync)
             .WithName("BatchAcceptCandidates")
@@ -116,7 +118,8 @@ public static class EsourceEndpoints
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<EhrReconcileBatchActionResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound)
-            .ProducesProblem(StatusCodes.Status400BadRequest);
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .RequireElectronicSignature("interop.esource.batch_accept", http => http.Request.Path.Value ?? string.Empty);
 
         group.MapPost("/reconcile/reject", RejectCandidateAsync)
             .WithName("RejectCandidate")
@@ -124,7 +127,8 @@ public static class EsourceEndpoints
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<EhrReconcileActionResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound)
-            .ProducesProblem(StatusCodes.Status400BadRequest);
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .RequireElectronicSignature("interop.esource.reject", http => http.Request.Path.Value ?? string.Empty);
 
         group.MapPost("/reconcile/batch-reject", BatchRejectCandidatesAsync)
             .WithName("BatchRejectCandidates")
@@ -132,7 +136,8 @@ public static class EsourceEndpoints
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<EhrReconcileBatchActionResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound)
-            .ProducesProblem(StatusCodes.Status400BadRequest);
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .RequireElectronicSignature("interop.esource.batch_reject", http => http.Request.Path.Value ?? string.Empty);
 
         group.MapPost("/reconcile/query", RaiseClinicalQueryAsync)
             .WithName("RaiseClinicalQuery")

@@ -4,6 +4,7 @@ import { defineStore } from "pinia";
 export const useComplianceStore = defineStore("compliance", {
   state: () => ({
     compliance: null, // Holds SubjectComplianceResponse
+    complianceHistory: [],
     complianceLoading: false,
     complianceError: null,
   }),

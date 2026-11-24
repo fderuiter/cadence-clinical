@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -12,6 +14,7 @@ using Cadence.Kernel;
 using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Evidence;
+using Cadence.Kernel.Protocol.Design;
 using Cadence.Modules.Execution.Endpoints;
 using Cadence.Security.Authentication;
 using Cadence.Testing.Commands;
@@ -19,8 +22,11 @@ using Cadence.Testing.Security;
 
 using FluentAssertions;
 
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 using Xunit;
 
@@ -43,9 +49,14 @@ public sealed class ExecutionFormHostPostgresTests(ExecutionFormModulePostgresFi
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web) { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower, AllowOutOfOrderMetadataProperties = true };
 
     private readonly KernelCollectionScenario _scenario = new(fixture);
+    private readonly SqlCommandCollector _sql = new();
     private WebApplicationFactory<Cadence.Kernel.Host.Program>? _host;
 
-    public void Dispose() => _host?.Dispose();
+    public void Dispose()
+    {
+        _host?.Dispose();
+        _sql.Dispose();
+    }
 
     /// <summary>
     /// The coordinator opens the week 12 vital signs form, which reads back empty and incomplete with its items in the
@@ -390,6 +401,132 @@ public sealed class ExecutionFormHostPostgresTests(ExecutionFormModulePostgresFi
         s1After.LockCount.Should().Be(1);
     }
 
+    /// <summary>
+    /// <c>PUT /forms/{formId}/values</c> resolves pre-command enrollment authority via <c>FindHeaderAsync</c> and reuses the
+    /// governing <see cref="ProtocolDesign"/> parsed during <see cref="RecordCollectedValues"/> so protocol JSON is parsed at
+    /// most once per save (including idempotent replay); <c>POST /forms/{formId}/signatures</c> likewise uses <c>FindHeaderAsync</c>
+    /// before signing while still returning the full <see cref="FormSignatureResponse"/> (<see cref="FormAttestationView"/>).
+    /// </summary>
+    [Fact(DisplayName = "HostForm_SaveAndSign_UseSlimPreChecksAndParseProtocolAtMostOnce")]
+    public async Task HostFormSaveAndSignUseSlimPreChecksAndParseProtocolAtMostOnce()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        const string investigatorUser = "pi@execution-slim-forms.test";
+
+        var code = $"T-SLIM-{Guid.NewGuid():N}"[..16];
+        var tenant = TenantId.New();
+        await _scenario.Protocol.OkAsync(
+            new ProvisionTenant(tenant, code, "Execution slim form tenant", KernelProtocolScenario.Key(), KernelProtocolScenario.Reason), ct);
+        var (_, study) = await _scenario.Protocol.NewStudyAsync(tenant, ct);
+        await _scenario.EffectiveVersionAsync(tenant, study, ct);
+        var studySite = await _scenario.Observations.AddStudySiteAsync(tenant, study, ct);
+        var enrollment = await _scenario.Observations.ScreenAsync(tenant, studySite, ct);
+        var collectedAt = _scenario.Tick();
+
+        foreach (var capability in new[] { "collection.open", "collection.record" })
+        {
+            await _scenario.Protocol.OkAsync(
+                new IssueGrant(tenant, GrantId.New(), Actor.Person(Crc), capability, null, AuthorityScope.StudySite(studySite), _scenario.Tick(), null, false,
+                    KernelProtocolScenario.Key(), "Coordinator appointed"),
+                ct);
+        }
+
+        await _scenario.Protocol.OkAsync(
+            new IssueGrant(tenant, GrantId.New(), Actor.Person(investigatorUser), "collection.sign", null, AuthorityScope.StudySite(studySite), _scenario.Tick(), null, false,
+                KernelProtocolScenario.Key(), "Investigator appointed"),
+            ct);
+        await _scenario.Protocol.OkAsync(
+            new IssueGrant(tenant, GrantId.New(), Actor.ServiceAccount("execution-forms"), "execution.form.open", null, AuthorityScope.Tenant(), _scenario.Tick(), null, false,
+                KernelProtocolScenario.Key(), "Module consumer grant"),
+            ct);
+
+        using var crc = Client(code, Crc);
+        using var investigator = Client(code, investigatorUser);
+
+        var opened = await SendAsync<FormStateResponse>(crc, HttpMethod.Post, string.Empty, "Visit opened", new
+        {
+            enrollment_id = enrollment.Value,
+            collection_spec_id = SpecId,
+            planned_activity_id = VisitId,
+            collected_at = collectedAt,
+        }, HttpStatusCode.Created, ct);
+
+        var idempotencyKey = KernelProtocolScenario.Key();
+        FormSavedResponse saved;
+        IReadOnlyList<string> saveSql;
+        using (var reads = ProtocolDesignDocument.MeasureReads())
+        {
+            _sql.Reset();
+            using var req = new HttpRequestMessage(HttpMethod.Put, new Uri($"{FormEndpoints.RoutePrefix}/{opened.FormId:D}/values", UriKind.Relative))
+            {
+                Content = JsonContent.Create(Page((Systolic, Quantity(124), 0), (Diastolic, Quantity(80), 0))),
+            };
+            req.Headers.Add(FormEndpoints.IdempotencyKeyHeader, idempotencyKey);
+            req.Headers.Add(GatewayHeaders.ChangeReason, ChangeReasonHeader.Encode(SaveReason));
+            using var res = await crc.SendAsync(req, ct);
+            var body = await res.Content.ReadAsStringAsync(ct);
+            res.StatusCode.Should().Be(HttpStatusCode.OK, body);
+            saved = JsonSerializer.Deserialize<FormSavedResponse>(body, Json)!;
+            saveSql = _sql.Snapshot();
+            reads.Count.Should().Be(1, "SaveAsync parses governing protocol JSON once during command validation and reuses it when hydrating FormResponse");
+        }
+
+        saved.Form.Should().NotBeNull();
+        saved.Form!.Complete.Should().BeTrue();
+        saved.Form.ContentHash.Should().NotBeNullOrWhiteSpace();
+        saveSql.Count(sql => sql.Contains("attestations", StringComparison.Ordinal)).Should().Be(1, "pre-save FindHeaderAsync skips attestations; only post-save FindAsync reads them");
+
+        // Idempotent replay with the same Idempotency-Key also parses protocol JSON at most once.
+        using (var replayReads = ProtocolDesignDocument.MeasureReads())
+        {
+            using var replayReq = new HttpRequestMessage(HttpMethod.Put, new Uri($"{FormEndpoints.RoutePrefix}/{opened.FormId:D}/values", UriKind.Relative))
+            {
+                Content = JsonContent.Create(Page((Systolic, Quantity(124), 0), (Diastolic, Quantity(80), 0))),
+            };
+            replayReq.Headers.Add(FormEndpoints.IdempotencyKeyHeader, idempotencyKey);
+            replayReq.Headers.Add(GatewayHeaders.ChangeReason, ChangeReasonHeader.Encode(SaveReason));
+            using var replayRes = await crc.SendAsync(replayReq, ct);
+            var replayBody = await replayRes.Content.ReadAsStringAsync(ct);
+            replayRes.StatusCode.Should().Be(HttpStatusCode.OK, replayBody);
+            var replayed = JsonSerializer.Deserialize<FormSavedResponse>(replayBody, Json)!;
+            replayed.Version.Should().Be(saved.Version);
+            replayed.Form!.ContentHash.Should().Be(saved.Form.ContentHash);
+            replayReads.Count.Should().BeLessThanOrEqualTo(1);
+        }
+
+        // SignAsync uses FindHeaderAsync before signing and FindAttestationAsync after signing, so protocol JSON is parsed only once (during SignCollectionInstanceHandler readiness validation).
+        FormSignatureResponse signature;
+        IReadOnlyList<string> signSql;
+        using (var signReads = ProtocolDesignDocument.MeasureReads())
+        {
+            _sql.Reset();
+            using var signReq = Request(HttpMethod.Post, $"/{opened.FormId:D}/signatures", "Investigator approval", new
+            {
+                meaning = "approved",
+                content_hash = saved.Form.ContentHash,
+            });
+            signReq.Headers.Add(
+                GatewayHeaders.SigToken,
+                TestSecurityContext.CreateSigToken(investigatorUser, FormSignatureEndpoints.SignAction(opened.FormId), FormSignatureEndpoints.SignSemanticAction));
+            using var signRes = await investigator.SendAsync(signReq, ct);
+            var signBody = await signRes.Content.ReadAsStringAsync(ct);
+            signRes.StatusCode.Should().Be(HttpStatusCode.Created, signBody);
+            signature = JsonSerializer.Deserialize<FormSignatureResponse>(signBody, Json)!;
+            signSql = _sql.Snapshot();
+            signReads.Count.Should().Be(1, "SignAsync skips pre-command FindAsync and post-command FindAttestationAsync skips protocol reads, leaving a single protocol parse inside SignCollectionInstanceHandler");
+        }
+
+        signature.AttestationId.Should().NotBeEmpty();
+        signature.Meaning.Should().Be("Approved");
+        signature.SignedBy.Should().Be(investigatorUser);
+        signature.ContentHash.Should().Be(saved.Form.ContentHash);
+        signature.Superseded.Should().BeFalse();
+        signature.SignedValues.Should().NotBeNull();
+        signature.SignedValues!.Select(v => (v.ItemId, v.Revision)).Should().Equal((Diastolic, 1), (Systolic, 1));
+        signSql.Count(sql => sql.Contains("kernel.protocol_versions", StringComparison.Ordinal)).Should().Be(1);
+    }
+
     private static object Page(params (string Item, object Value, int ExpectedRevision)[] values) =>
         new { values = values.Select(v => new { item_id = v.Item, value = v.Value, expected_revision = v.ExpectedRevision }).ToArray() };
 
@@ -427,9 +564,11 @@ public sealed class ExecutionFormHostPostgresTests(ExecutionFormModulePostgresFi
             .UseTestGatewaySecret()
             .UseTestBiometricLivenessKey()
             .UseSetting("ConnectionStrings:cadence", fixture.ConnectionString)
+            .ConfigureLogging(logging => logging.AddProvider(_sql))
 
             // Every error a form endpoint returns must be one its command declares (ADR-2600 §4.5).
             .ConfigureTestServices(services => services.AddDeclaredKernelErrorsCheck()));
+        _host.Server.PreserveExecutionContext = true;
         return _host.CreateSignedClient(new GatewayIdentity(userId, [], [], TenantId: tenantCode));
     }
 
@@ -463,5 +602,72 @@ public sealed class ExecutionFormHostPostgresTests(ExecutionFormModulePostgresFi
         }
 
         return request;
+    }
+
+    private sealed class SqlCommandCollector : ILoggerProvider
+    {
+        private readonly AsyncLocal<ConcurrentQueue<string>?> _activeCommands = new();
+
+        public void Reset() => _activeCommands.Value = new ConcurrentQueue<string>();
+
+        public IReadOnlyList<string> Snapshot() => _activeCommands.Value is { } active ? [.. active] : [];
+
+        public ILogger CreateLogger(string categoryName) =>
+            string.Equals(categoryName, DbLoggerCategory.Database.Command.Name, StringComparison.Ordinal)
+                ? new CommandLogger(_activeCommands)
+                : NullLogger.Instance;
+
+        public void Dispose()
+        {
+        }
+
+        private sealed class CommandLogger(AsyncLocal<ConcurrentQueue<string>?> activeCommands) : ILogger
+        {
+            public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+
+            public bool IsEnabled(LogLevel logLevel) => true;
+
+            public void Log<TState>(
+                LogLevel logLevel,
+                EventId eventId,
+                TState state,
+                Exception? exception,
+                Func<TState, Exception?, string> formatter)
+            {
+                if (activeCommands.Value is not { } commands
+                    || eventId.Id != 20101
+                    || state is not IReadOnlyList<KeyValuePair<string, object?>> fields)
+                {
+                    return;
+                }
+
+                foreach (var (key, value) in fields)
+                {
+                    if (string.Equals(key, "commandText", StringComparison.Ordinal) && value is string sql)
+                    {
+                        commands.Enqueue(sql);
+                        return;
+                    }
+                }
+            }
+        }
+
+        private sealed class NullLogger : ILogger
+        {
+            public static readonly NullLogger Instance = new();
+
+            public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+
+            public bool IsEnabled(LogLevel logLevel) => false;
+
+            public void Log<TState>(
+                LogLevel logLevel,
+                EventId eventId,
+                TState state,
+                Exception? exception,
+                Func<TState, Exception?, string> formatter)
+            {
+            }
+        }
     }
 }

@@ -250,7 +250,7 @@ defineExpose({
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(15, 23, 42, 0.65);
+  background-color: var(--semantic-color-backdrop);
   backdrop-filter: blur(3px);
   display: flex;
   align-items: center;
@@ -263,9 +263,7 @@ defineExpose({
   background: var(--semantic-color-surface);
   border-radius: var(--radius-lg, 12px);
   border: 1px solid var(--border);
-  box-shadow:
-    0 20px 25px -5px rgba(0, 0, 0, 0.15),
-    0 10px 10px -5px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-xl);
   width: 100%;
   max-width: 480px;
   overflow: hidden;

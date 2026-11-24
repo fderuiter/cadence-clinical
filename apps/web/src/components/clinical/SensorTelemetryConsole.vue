@@ -1598,7 +1598,7 @@ onMounted(() => {
 
 .badge-gxp {
   background: var(--semantic-color-warning-bg-badge);
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
 }
 .badge-standard {
   background: var(--semantic-color-primary-light);
@@ -1639,7 +1639,7 @@ onMounted(() => {
 }
 .severity-badge.warning {
   background: var(--semantic-color-warning-action);
-  color: var(--semantic-color-surface);
+  color: var(--semantic-color-text-on-solid);
 }
 .severity-badge.info {
   background: var(--semantic-color-primary);
@@ -1705,7 +1705,7 @@ onMounted(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--semantic-color-backdrop);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1718,7 +1718,7 @@ onMounted(() => {
   border-radius: var(--radius-lg, 8px);
   width: 100%;
   max-width: 580px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-xl);
 }
 
 .modal-header {
