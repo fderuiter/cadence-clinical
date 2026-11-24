@@ -4,7 +4,7 @@ import { createPinia, setActivePinia } from "pinia";
 import { createMemoryHistory, createRouter } from "vue-router";
 import { ref } from "vue";
 import { executionApi } from "../../src/api/executionApi";
-import { etmfService } from "../../src/api/etmf";
+import { requestStepUpSignature } from "../../src/api/signatureVerification";
 import { useAuthStore } from "../../src/stores/auth";
 import { useClinicalStore } from "../../src/stores/clinical";
 import { useConsentGating } from "../../src/composables/useConsentGating";
@@ -37,10 +37,8 @@ vi.mock("../../src/api/executionApi", async () => {
   };
 });
 
-vi.mock("../../src/api/etmf", () => ({
-  etmfService: {
-    verifySignature: vi.fn(),
-  },
+vi.mock("../../src/api/signatureVerification", () => ({
+  requestStepUpSignature: vi.fn(),
 }));
 
 const SUBJECT_UUID = "0192f3c4-5e6a-7b8c-9d0e-000000000010";
@@ -84,7 +82,7 @@ describe("Clinical Canvas RTSM workflows", () => {
         vi.mocked(fn).mockReset();
       }
     }
-    vi.mocked(etmfService.verifySignature).mockReset();
+    vi.mocked(requestStepUpSignature).mockReset();
 
     vi.mocked(executionApi.listSubjects).mockImplementation(
       async ({ status, siteId, limit = 50, offset = 0 }) => {
@@ -225,7 +223,7 @@ describe("Clinical Canvas RTSM workflows", () => {
     });
     await flushPromises();
 
-    vi.mocked(etmfService.verifySignature).mockResolvedValue({
+    vi.mocked(requestStepUpSignature).mockResolvedValue({
       sig_token: "sig-scheme-approve-001",
     });
     vi.mocked(executionApi.approveRandomizationScheme).mockImplementation(
@@ -254,7 +252,7 @@ describe("Clinical Canvas RTSM workflows", () => {
     await wrapper.find("#btn-confirm-sig").trigger("click");
     await flushPromises();
 
-    expect(etmfService.verifySignature).toHaveBeenCalledWith(
+    expect(requestStepUpSignature).toHaveBeenCalledWith(
       expect.objectContaining({
         username: "stat.approver",
         action: `/api/v1/execution/randomization/schemes/${SCHEME_UUID}/approve`,
@@ -384,7 +382,7 @@ describe("Clinical Canvas RTSM workflows", () => {
 
   it("withholds RANDOMIZED from generic state select, dispatches step-up randomization with stratification factors, and keeps blinded coordinator blind", async () => {
     signIn({ roles: ["crc"] });
-    vi.mocked(etmfService.verifySignature).mockResolvedValue({
+    vi.mocked(requestStepUpSignature).mockResolvedValue({
       sig_token: "sig-rand-001",
     });
     vi.mocked(executionApi.randomizeSubject).mockImplementation(async () => {
@@ -445,7 +443,7 @@ describe("Clinical Canvas RTSM workflows", () => {
     await wrapper.find("#btn-confirm-sig").trigger("click");
     await flushPromises();
 
-    expect(etmfService.verifySignature).toHaveBeenCalledWith(
+    expect(requestStepUpSignature).toHaveBeenCalledWith(
       expect.objectContaining({
         action: `/api/v1/execution/subjects/${SUBJECT_UUID}/randomize`,
         semanticAction: "execution.subject.randomize",

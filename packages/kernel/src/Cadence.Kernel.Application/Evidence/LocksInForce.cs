@@ -3,8 +3,10 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Evidence;
+using Cadence.Kernel.Explanations;
 using Cadence.Kernel.Modules;
 using Cadence.Kernel.References;
 
@@ -16,6 +18,12 @@ namespace Cadence.Kernel.Application.Evidence;
 /// </summary>
 internal static class LocksInForce
 {
+    /// <summary>Producer name on explanations of lock refusals (K-EXP-1).</summary>
+    public const string ExplanationProducer = "kernel.locks";
+
+    /// <summary>Condition code reported when a covering scope holds a blocking lock assertion.</summary>
+    public const string ScopeUnlockedCondition = "scope.unlocked";
+
     /// <summary>The locks that refuse recording and correcting observations: both kinds.</summary>
     public static readonly IReadOnlySet<AssertionKind> DenyingWrites = new HashSet<AssertionKind> { AssertionKind.Locked, AssertionKind.Frozen };
 
@@ -33,6 +41,63 @@ internal static class LocksInForce
         await work.ShareScopesAsync(scopes, cancellationToken).ConfigureAwait(false);
         var locks = await ReadAsync(work, scopes, cancellationToken).ConfigureAwait(false);
         return locks.Any(l => kinds.Contains(l.Kind));
+    }
+
+    /// <summary>
+    /// Takes shared locks on <paramref name="scopes"/> (widest first) and returns <paramref name="baseError"/> enriched
+    /// with a rule-owner <see cref="Explanation"/> naming each blocking lock assertion and its release target when one
+    /// of <paramref name="kinds"/> holds; returns null when the write may proceed.
+    /// </summary>
+    public static async Task<KernelError?> RefusalAsync(
+        IKernelUnitOfWork work,
+        IReadOnlyList<NodeRef> scopes,
+        IReadOnlySet<AssertionKind> kinds,
+        KernelError baseError,
+        string commandName,
+        NodeRef subject,
+        CancellationToken cancellationToken)
+    {
+        await work.ShareScopesAsync(scopes, cancellationToken).ConfigureAwait(false);
+        var locks = await ReadAsync(work, scopes, cancellationToken).ConfigureAwait(false);
+        var blocking = locks
+            .Where(l => kinds.Contains(l.Kind))
+            .OrderBy(l => l.AssertedAt)
+            .ThenBy(l => l.Id)
+            .ToList();
+        if (blocking.Count == 0)
+        {
+            return null;
+        }
+
+        var steps = blocking
+            .Select(l => new ExplanationStep(
+                $"A {l.Kind} assertion covers this {l.Target.Kind}.",
+                [NodeRef.For(l.Id), l.Target]))
+            .ToArray();
+        var conditions = blocking
+            .Select(l => EvaluatedCondition.Unsatisfied(
+                ScopeUnlockedCondition,
+                $"Release the {l.Kind} assertion on this {l.Target.Kind} before running {commandName}.",
+                NodeRef.For(l.Id),
+                l.Target))
+            .ToArray();
+        var nextActions = blocking
+            .Select(l => new NextAction(
+                $"Release the {l.Kind} assertion covering this {l.Target.Kind}.",
+                "lock.release",
+                NodeRef.For(l.Id)))
+            .ToArray();
+
+        return baseError with
+        {
+            Explanation = new Explanation(
+                subject,
+                $"{commandName} is refused because its scope is locked.",
+                ExplanationProducer,
+                steps,
+                conditions,
+                nextActions),
+        };
     }
 
     /// <summary>The locks in force at <paramref name="scopes"/>, without taking any advisory lock.</summary>

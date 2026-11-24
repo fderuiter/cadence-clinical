@@ -1,7 +1,7 @@
 <template>
   <div
     class="app-shell"
-    :style="{ '--shell-header-height': `${headerHeight}px` }"
+    :style="{ '--shell-header-height': `${effectiveHeaderHeight}px` }"
   >
     <a
       v-if="hasStudyWorkspace"
@@ -463,7 +463,7 @@ import {
 import { useRoute, useRouter } from "vue-router";
 import { useSignOutGuard } from "ui";
 import { rehydrateOnboardingPersona } from "../auth/sessionCoordinator.js";
-import { PRE_RELEASE_ENVIRONMENT_NOTICE } from "../catalog/productCatalog.js";
+import { PRE_RELEASE_ENVIRONMENT_NOTICE } from "../catalog/environmentNotice.js";
 import { useAuthStore } from "../stores/auth";
 import {
   readPassiveOnboardingSummary,
@@ -485,6 +485,13 @@ import {
   resolveActiveWorkspaceScope,
   resolveSiteReadinessPath,
 } from "../canvas/palette";
+import {
+  clearShellStickyHeaderHeight,
+  ensureFocusedElementClearsStickyChrome,
+  recordStickyChromePointerDown,
+  syncRootStickyChromeOffset,
+  updateShellStickyHeaderHeight,
+} from "../utils/stickyChromeOffset";
 
 const DemoResetBtn = isDemoBuild()
   ? defineAsyncComponent(() => import("../views/demo/DemoResetButton.vue"))
@@ -529,6 +536,7 @@ const secondaryMenuToggleRef = ref(null);
 const statusAnnouncement = ref("");
 const headerRef = ref(null);
 const headerHeight = ref(48);
+const effectiveHeaderHeight = ref(48);
 let headerResizeObserver = null;
 
 function focusSkipTarget(targetId) {
@@ -540,14 +548,36 @@ function focusSkipTarget(targetId) {
 
 function syncHeaderHeight() {
   const el = headerRef.value;
-  if (!el || typeof el.getBoundingClientRect !== "function") return;
-  const measured = Math.round(el.getBoundingClientRect().height);
-  if (measured > 0) {
-    headerHeight.value = measured;
-    el.closest?.(".app-shell")?.style?.setProperty(
-      "--shell-header-height",
-      `${measured}px`
-    );
+  if (el && typeof el.getBoundingClientRect === "function") {
+    const measured = Math.round(el.getBoundingClientRect().height);
+    if (measured > 0) {
+      headerHeight.value = measured;
+    }
+  }
+  const synced = updateShellStickyHeaderHeight(headerHeight.value);
+  effectiveHeaderHeight.value = synced.shellHeight;
+}
+
+function handleViewportResize() {
+  syncHeaderHeight();
+  syncRootStickyChromeOffset();
+}
+
+function handleGlobalFocusIn(event) {
+  const target = event?.target;
+  ensureFocusedElementClearsStickyChrome(target);
+  if (
+    typeof window !== "undefined" &&
+    typeof window.requestAnimationFrame === "function"
+  ) {
+    window.requestAnimationFrame(() => {
+      if (
+        typeof document !== "undefined" &&
+        document.activeElement === target
+      ) {
+        ensureFocusedElementClearsStickyChrome(target);
+      }
+    });
   }
 }
 
@@ -785,10 +815,11 @@ const showOnboardingTour = computed(
     route?.path !== "/plans" &&
     route?.name !== "trial-onboarding" &&
     route?.path !== "/onboarding/trial" &&
-    route?.name !== "forbidden" &&
-    route?.path !== "/forbidden" &&
-    route?.name !== "unavailable" &&
-    route?.path !== "/unavailable"
+    (isOnboardingTourActive.value ||
+      (route?.name !== "forbidden" &&
+        route?.path !== "/forbidden" &&
+        route?.name !== "unavailable" &&
+        route?.path !== "/unavailable"))
 );
 
 const checkActiveRouteAuth = () =>
@@ -1068,6 +1099,7 @@ watch(
     authStore.activePlanBadge,
     isMobileMenuOpen.value,
     isSecondaryMenuOpen.value,
+    route?.fullPath,
   ],
   () => {
     nextTick(syncHeaderHeight);
@@ -1076,8 +1108,10 @@ watch(
 
 onMounted(() => {
   window.addEventListener("keydown", handleGlobalKeydown);
-  window.addEventListener("resize", syncHeaderHeight);
+  window.addEventListener("resize", handleViewportResize);
   document.addEventListener("pointerdown", handleDocumentPointerDown);
+  document.addEventListener("pointerdown", recordStickyChromePointerDown, true);
+  document.addEventListener("focusin", handleGlobalFocusIn);
   syncHeaderHeight();
   if (typeof ResizeObserver !== "undefined" && headerRef.value) {
     headerResizeObserver = new ResizeObserver(() => syncHeaderHeight());
@@ -1093,12 +1127,19 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener("keydown", handleGlobalKeydown);
-  window.removeEventListener("resize", syncHeaderHeight);
+  window.removeEventListener("resize", handleViewportResize);
   document.removeEventListener("pointerdown", handleDocumentPointerDown);
+  document.removeEventListener(
+    "pointerdown",
+    recordStickyChromePointerDown,
+    true
+  );
+  document.removeEventListener("focusin", handleGlobalFocusIn);
   if (headerResizeObserver) {
     headerResizeObserver.disconnect();
     headerResizeObserver = null;
   }
+  clearShellStickyHeaderHeight();
 });
 </script>
 
@@ -1186,8 +1227,11 @@ onUnmounted(() => {
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 16px;
-  padding: 10px 20px;
+  gap: 12px;
+  padding: 8px 16px;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   background: var(--semantic-color-surface);
   border-bottom: 1px solid var(--semantic-color-border);
   position: sticky;
@@ -1199,13 +1243,17 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 20px;
+  gap: 14px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .brand-link {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
+  max-width: 100%;
   text-decoration: none;
   color: var(--semantic-color-text);
 }
@@ -1214,20 +1262,29 @@ onUnmounted(() => {
   color: var(--semantic-color-interactive-primary);
   font-size: 1rem;
   line-height: 1;
+  flex-shrink: 0;
+}
+
+.header-title-area {
+  min-width: 0;
 }
 
 .header-title-area h1 {
   margin: 0;
-  font-size: 1.05rem;
+  font-size: 1rem;
+  line-height: 1.2;
   font-weight: 700;
   letter-spacing: -0.01em;
   color: var(--semantic-color-text);
+  overflow-wrap: anywhere;
 }
 
 .primary-nav {
   display: flex;
   align-items: center;
-  gap: 6px;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-width: 0;
 }
 
 .primary-nav-link {
@@ -1264,27 +1321,28 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .plan-status-badge {
-  display: inline-block;
-  vertical-align: middle;
+  display: inline-flex;
+  align-items: center;
   min-height: 24px;
-  box-sizing: border-box;
-  line-height: 1.25;
-  max-width: 180px;
-  overflow: hidden;
-  text-overflow: ellipsis;
   padding: 4px 10px;
   border-radius: 999px;
-  font-size: 0.78rem;
+  font-size: 0.76rem;
+  line-height: 1.2;
   font-weight: 700;
   text-decoration: none;
   background: var(--semantic-color-info-bg);
   border: 1px solid var(--semantic-color-info-border);
   color: var(--semantic-color-info);
-  white-space: nowrap;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow-wrap: anywhere;
 }
 
 .plan-status-badge:hover {
@@ -1332,17 +1390,21 @@ onUnmounted(() => {
 .command-palette-trigger {
   display: inline-flex;
   align-items: center;
+  flex-wrap: wrap;
   min-height: 28px;
-  box-sizing: border-box;
-  gap: 10px;
-  padding: 6px 10px;
+  gap: 8px;
+  padding: 5px 10px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   background: var(--semantic-color-surface-muted);
   color: var(--semantic-color-text-body);
-  font-size: 0.85rem;
+  font-size: 0.84rem;
+  line-height: 1.2;
   font-weight: 500;
   cursor: pointer;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .command-palette-trigger:hover {
@@ -1362,6 +1424,7 @@ onUnmounted(() => {
 }
 
 .persona-switcher-wrapper {
+  position: relative;
   display: inline-flex;
   align-items: center;
   flex-wrap: wrap;
@@ -1390,19 +1453,25 @@ onUnmounted(() => {
 }
 
 .shell-control-btn {
+  position: relative;
   display: inline-flex;
   align-items: center;
+  flex-wrap: wrap;
   min-height: 28px;
-  box-sizing: border-box;
   gap: 6px;
-  padding: 6px 10px;
+  padding: 5px 10px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   background: var(--semantic-color-surface);
   color: var(--semantic-color-text-dark);
-  font-size: 0.85rem;
+  font-size: 0.84rem;
+  line-height: 1.2;
   font-weight: 500;
   cursor: pointer;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow-wrap: anywhere;
 }
 
 .shell-control-btn:hover {
@@ -1424,6 +1493,8 @@ onUnmounted(() => {
   position: relative;
   display: inline-flex;
   align-items: center;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .header-actions-menu-toggle {
@@ -1531,16 +1602,9 @@ onUnmounted(() => {
   border: 0;
 }
 
-@media (min-width: 961px) {
-  .app-header {
-    padding: 6px 16px;
-    gap: 8px;
-    flex-wrap: nowrap;
-  }
-
+@media (min-width: 768px) {
   .header-left {
-    gap: 10px;
-    flex-wrap: nowrap;
+    gap: 8px;
     min-width: 0;
   }
 
@@ -1549,66 +1613,82 @@ onUnmounted(() => {
   }
 
   .header-title-area h1 {
-    font-size: 0.96rem;
+    font-size: 0.9rem;
     white-space: nowrap;
   }
 
   .primary-nav {
-    gap: 3px;
+    gap: 2px;
     flex-wrap: nowrap;
     min-width: 0;
   }
 
   .primary-nav-link {
-    padding: 5px 8px;
-    font-size: 0.82rem;
+    padding: 4px 6px;
+    font-size: 0.78rem;
+    line-height: 1.2;
     white-space: nowrap;
   }
 
   .header-controls {
-    gap: 6px;
-    flex-wrap: nowrap;
+    gap: 5px;
     min-width: 0;
   }
 
   .plan-status-badge {
-    max-width: 136px;
-    padding: 4px 8px;
-    font-size: 0.75rem;
+    display: inline-block;
+    vertical-align: middle;
+    max-width: 112px;
+    padding: 3px 7px;
+    font-size: 0.73rem;
+    line-height: 1.25;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .persona-switcher-wrapper {
-    flex-wrap: nowrap;
     gap: 4px;
   }
 
   .persona-label {
     font-size: 0.76rem;
-    white-space: nowrap;
   }
 
   .persona-select {
-    max-width: 118px;
+    max-width: 104px;
     padding: 4px 6px;
-    font-size: 0.78rem;
+    font-size: 0.76rem;
   }
 
   .shell-control-btn,
   .command-palette-trigger {
-    padding: 5px 8px;
-    font-size: 0.8rem;
+    padding: 4px 7px;
+    font-size: 0.76rem;
+    line-height: 1.2;
     white-space: nowrap;
+  }
+
+  .mobile-menu-toggle {
+    padding: 4px 8px;
+    font-size: 0.9rem;
+    line-height: 1.2;
   }
 
   .header-secondary-actions {
-    gap: 6px;
+    gap: 5px;
     flex-wrap: nowrap;
   }
 
+  .user-session-controls {
+    gap: 5px;
+  }
+
   .user-session-controls :deep(.btn) {
-    white-space: nowrap;
-    padding: 5px 8px;
+    padding: 4px 8px;
     font-size: 0.78rem;
+    line-height: 1.2;
+    white-space: nowrap;
   }
 
   .user-badge {
@@ -1616,64 +1696,33 @@ onUnmounted(() => {
   }
 }
 
-@media (min-width: 1281px) and (max-width: 1520px) {
+@media (min-width: 768px) and (max-width: 860px) {
   .app-header {
-    padding: 6px 12px;
+    padding: 3px 12px;
     gap: 6px;
   }
+}
 
-  .header-left {
-    gap: 8px;
+@media (min-width: 861px) {
+  .app-header {
+    padding: 5px 14px;
+    gap: 6px;
+    flex-wrap: nowrap;
   }
+}
 
-  .header-title-area h1 {
-    font-size: 0.92rem;
-  }
-
-  .primary-nav {
-    gap: 2px;
-  }
-
-  .primary-nav-link {
-    padding: 4px 6px;
-    font-size: 0.78rem;
-  }
-
-  .header-controls {
-    gap: 5px;
+@media (min-width: 1281px) and (max-width: 1520px) {
+  .app-header {
+    padding: 5px 12px;
+    gap: 6px;
   }
 
   .plan-status-badge {
     max-width: 108px;
-    padding: 4px 7px;
-    font-size: 0.75rem;
-  }
-
-  .shell-control-btn,
-  .command-palette-trigger {
-    padding: 4px 7px;
-    font-size: 0.78rem;
-    gap: 5px;
   }
 
   .persona-select {
     max-width: 96px;
-    padding: 4px 5px;
-    font-size: 0.78rem;
-  }
-
-  .header-secondary-actions {
-    gap: 5px;
-  }
-
-  .user-session-controls {
-    gap: 5px;
-    padding-left: 5px;
-  }
-
-  .user-session-controls :deep(.btn) {
-    padding: 4px 7px;
-    font-size: 0.78rem;
   }
 
   .user-badge {
@@ -1733,39 +1782,45 @@ onUnmounted(() => {
   }
 }
 
-@media (min-width: 961px) and (max-width: 1280px) {
-  .app-header {
-    padding: 6px 12px;
-    gap: 6px;
-  }
-
-  .header-left {
-    gap: 8px;
-  }
-
-  .header-title-area h1 {
-    font-size: 0.92rem;
-  }
-
-  .primary-nav {
-    gap: 2px;
-  }
-
-  .primary-nav-link {
-    padding: 4px 6px;
-    font-size: 0.78rem;
-  }
-
-  .plan-status-badge {
-    max-width: 104px;
-  }
-
+@media (min-width: 768px) and (max-width: 1400px) {
   .palette-kbd {
     display: none;
   }
 
+  .persona-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+}
+
+@media (min-width: 861px) and (max-width: 1024px) {
+  .app-header {
+    padding: 5px 10px;
+    gap: 5px;
+  }
+
+  .header-title-area h1 {
+    font-size: 0.86rem;
+  }
+
+  .primary-nav-link {
+    padding: 4px 5px;
+    font-size: 0.75rem;
+  }
+
+  .plan-status-badge {
+    max-width: 92px;
+  }
+
   .persona-select {
-    max-width: 98px;
+    max-width: 90px;
   }
 }
 
@@ -1782,8 +1837,9 @@ onUnmounted(() => {
 @media (max-width: 640px) {
   .app-header {
     position: relative;
-    padding: 10px 12px;
-    gap: 10px;
+    top: auto;
+    padding: 8px 10px;
+    gap: 8px;
   }
 
   .header-secondary-menu-wrapper {
@@ -1808,6 +1864,13 @@ onUnmounted(() => {
 
   .shell-main:not(.shell-main-canvas) {
     padding: 16px 12px;
+  }
+}
+
+@media (max-height: 499px) {
+  .app-header {
+    position: relative;
+    top: auto;
   }
 }
 </style>

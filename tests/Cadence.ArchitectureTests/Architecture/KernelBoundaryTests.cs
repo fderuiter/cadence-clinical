@@ -14,7 +14,7 @@ using Xunit;
 using static ArchUnitNET.Fluent.ArchRuleDefinition;
 
 using ArchLoader = ArchUnitNET.Loader.ArchLoader;
-using ArchRuleExtensions = ArchUnitNET.xUnit.ArchRuleExtensions;
+using ArchRuleExtensions = ArchUnitNET.xUnitV3.ArchRuleExtensions;
 using IArchRule = ArchUnitNET.Fluent.IArchRule;
 
 namespace Cadence.ArchitectureTests.Architecture;
@@ -322,5 +322,36 @@ public class KernelBoundaryTests
                 Directory.Delete(tempDir, recursive: true);
             }
         }
+    }
+
+    /// <summary>
+    /// Validates that Execution's CRA SDV alert domain entity (<c>FormSdvAlert</c>), outbox consumer
+    /// (<c>AlertMonitorOnVerifiedObservationCorrected</c>), HTTP DTO (<c>FormSdvAlertResponse</c>), and
+    /// <c>ExecutionModuleDbContext</c> mapping introduce zero <c>K-XS-1</c>, <c>K-XS-2</c>, or <c>K-MOD-1</c> violations.
+    /// </summary>
+    [Fact(DisplayName = "ExecutionModule_SdvAlerts_HasZeroKernelBoundaryViolations")]
+    [Trait("Category", "Architecture")]
+    [KernelRule("K-XS-1")]
+    [KernelRule("K-XS-2")]
+    [KernelRule("K-MOD-1")]
+    public void ExecutionModuleSdvAlertsHasZeroKernelBoundaryViolations()
+    {
+        var executionAssembly = NonKernelAssemblies.Value.Single(
+            a => a.GetType("Cadence.Modules.Execution.ExecutionModule") is not null);
+        var dbContextType = executionAssembly.GetType(
+            "Cadence.Modules.Execution.Infrastructure.ExecutionModuleDbContext", throwOnError: true)!;
+
+        executionAssembly.GetType("Cadence.Modules.Execution.Domain.FormSdvAlert", throwOnError: true).Should().NotBeNull();
+        executionAssembly.GetType("Cadence.Modules.Execution.Application.AlertMonitorOnVerifiedObservationCorrected", throwOnError: true).Should().NotBeNull();
+        executionAssembly.GetType("Cadence.Modules.Execution.Endpoints.FormSdvAlertResponse", throwOnError: true).Should().NotBeNull();
+
+        KernelBoundaryRules.EvaluateKXs1([executionAssembly])
+            .Where(v => v.Contains("SdvAlert", StringComparison.Ordinal) || v.Contains("VerifiedObservation", StringComparison.Ordinal))
+            .Should().BeEmpty("Execution SDV alert types must use Guid DTOs and avoid redefining kernel concepts (K-XS-1)");
+        KernelBoundaryRules.EvaluateKXs2([executionAssembly])
+            .Should().BeEmpty("Execution must consume kernel observations through IObservationRecords, never Kernel.Persistence (K-XS-2)");
+        KernelBoundaryRules.EvaluateKMod1([dbContextType])
+            .Where(v => v.Contains("FormSdvAlert", StringComparison.Ordinal))
+            .Should().BeEmpty("FormSdvAlert in ExecutionModuleDbContext must persist kernel StudyId rather than string/Guid duplicates (K-MOD-1)");
     }
 }

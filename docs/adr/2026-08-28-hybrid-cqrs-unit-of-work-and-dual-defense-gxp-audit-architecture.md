@@ -77,7 +77,7 @@ Reference requirement: `PRD-SYS-001`, `PRD-SYS-004`, `PRD-SYS-042`.
 graph TD
     Client["Client / API Gateway"] --> Router["Presentation Routers (26 modular routers)"]
 
-    subgraph Command Pipeline
+    subgraph "Command Pipeline"
         Router --> Service["Domain Application Services (e.g. SubjectLifecycleService)"]
         Service --> UoW["Unit of Work Protocol (packages.hexagonal)"]
         UoW --> Ports["Domain Repository Ports (apps.execution.domain.ports)"]
@@ -85,12 +85,12 @@ graph TD
         Adapters --> DB[(PostgreSQL Execution DB)]
     end
 
-    subgraph Query Pipeline (CQRS)
+    subgraph "Query Pipeline (CQRS)"
         Router --> QueryService["Optimized Read Query Services (e.g. SDTM / Anomaly / Audit)"]
         QueryService --> DB
     end
 
-    subgraph GxP Audit Trail (Dual-Defense)
+    subgraph "GxP Audit Trail (Dual-Defense)"
         Service -.-> DomainEvents["Domain Audit Events"]
         Adapters -.-> DBTriggers["PostgreSQL Session Triggers & Block Sealing"]
         DomainEvents --> AuditLogTable[(audit_logs)]

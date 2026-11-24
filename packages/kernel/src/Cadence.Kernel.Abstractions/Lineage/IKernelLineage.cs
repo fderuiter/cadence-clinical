@@ -110,6 +110,17 @@ public sealed record DependentsQuery(
     DateTimeOffset? KnownAt = null);
 
 /// <summary>
+/// Signals whether additional restricted objects exist outside the reader's visible scope, and why (ADR-2590).
+/// </summary>
+/// <param name="MoreExist">True when at least one object was omitted from counts or listings due to visibility or blinding.</param>
+/// <param name="Reasons">Distinct mask reasons explaining why objects were omitted, in deterministic order.</param>
+public sealed record HiddenObjects(bool MoreExist, IReadOnlyList<MaskReason> Reasons)
+{
+    /// <summary>No restricted objects were omitted.</summary>
+    public static HiddenObjects None { get; } = new(false, []);
+}
+
+/// <summary>
 /// The dependents of one kind. <see cref="Count"/> counts objects, not versions, and masked objects are counted like
 /// any other (D1), so a count never depends on who is reading.
 /// </summary>

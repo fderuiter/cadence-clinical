@@ -1231,7 +1231,7 @@ public static class KnowledgeCatalogSeeder
                     code: "sa",
                     stage: "start",
                     section: "site-activation",
-                    includeStageFallback: false,
+                    includeStageFallback: true,
                     articleId: "art-can-actv-sop",
                     defaultAnchor: "#canvas-site-activation",
                     createdAt: baseTime.AddMinutes(-1).AddSeconds(-49))),

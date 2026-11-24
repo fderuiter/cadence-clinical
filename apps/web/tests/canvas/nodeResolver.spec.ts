@@ -1,6 +1,9 @@
+import { createPinia, setActivePinia } from "pinia";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { kernelApi } from "../../src/api/kernelApi";
+import { kernelApi, type KernelNode } from "../../src/api/kernelApi";
+import { useAuthStore } from "../../src/stores/auth";
 import {
+  MAX_BATCH_NODES,
   MAX_CONCURRENT_NODE_LOOKUPS,
   clearNodeResolutionCache,
   ensureNodesResolved,
@@ -8,13 +11,18 @@ import {
   formatFieldPath,
   formatKindTitle,
   formatMaskedNode,
+  getCachedNodeEntry,
   getNodeDisplay,
   normalizeLookupNodeRef,
   parseLookupNodeRef,
   resetNodeResolutionSession,
   resolveNode,
   seedNodeSummary,
+  seedResolvedNodes,
 } from "../../src/canvas/nodeResolver";
+
+const mockGetNodes =
+  vi.fn<(refs: string[]) => Promise<{ nodes: Record<string, KernelNode> }>>();
 
 vi.mock("../../src/api/kernelApi", () => ({
   kernelApi: {
@@ -27,8 +35,11 @@ const SITE_REF = "study_site:0192f3c4-5e6a-7b8c-9d0e-00000000000c@2";
 
 describe("Client node resolution and plain clinical formatting", () => {
   beforeEach(() => {
+    setActivePinia(createPinia());
+    delete (kernelApi as unknown as { getNodes?: unknown }).getNodes;
     clearNodeResolutionCache();
     vi.mocked(kernelApi.getNode).mockReset();
+    mockGetNodes.mockReset();
   });
 
   it("resolves human-readable codes and titles on demand and caches them per study session", async () => {
@@ -199,6 +210,123 @@ describe("Client node resolution and plain clinical formatting", () => {
     expect(kernelApi.getNode).toHaveBeenCalledWith(canonicalConceptRef);
     expect(getNodeDisplay(bareConceptRef).label).toBe(
       "SYSBP · Systolic Blood Pressure"
+    );
+  });
+
+  it("coalesces same-tick lookups into kernelApi.getNodes chunks of 100, preserves masked entries, and marks omitted refs not_found", async () => {
+    (kernelApi as unknown as { getNodes?: typeof mockGetNodes }).getNodes =
+      mockGetNodes;
+    resetNodeResolutionSession("CAD-101");
+
+    const totalRefs = MAX_BATCH_NODES + 25;
+    const refs = Array.from(
+      { length: totalRefs },
+      (_, idx) =>
+        `protocol_element:0192f3c4-5e6a-7b8c-9d0e-${String(idx + 1).padStart(12, "0")}@1`
+    );
+    const missingRef = refs[totalRefs - 1];
+    const blindedRef = refs[1];
+
+    mockGetNodes.mockImplementation(async (batch) => {
+      const nodes: Record<string, KernelNode> = {};
+      for (const ref of batch) {
+        if (ref === missingRef) continue;
+        if (ref === blindedRef) {
+          nodes[ref] = {
+            ref: null,
+            kind: "protocol_element",
+            code: null,
+            title: null,
+            status: null,
+            mask: "Blinded",
+          };
+          continue;
+        }
+        nodes[ref] = {
+          ref,
+          kind: "protocol_element",
+          code: `VISIT-${ref.slice(-4, -2)}`,
+          title: `Visit ${ref.slice(-4, -2)}`,
+          status: "Active",
+          mask: null,
+        };
+      }
+      return { nodes };
+    });
+
+    const results = await Promise.all(refs.map((ref) => resolveNode(ref)));
+
+    expect(mockGetNodes).toHaveBeenCalledTimes(2);
+    expect(mockGetNodes.mock.calls[0]?.[0]).toHaveLength(MAX_BATCH_NODES);
+    expect(mockGetNodes.mock.calls[1]?.[0]).toHaveLength(25);
+    expect(kernelApi.getNode).not.toHaveBeenCalled();
+
+    expect(results[0]?.title).toContain("Visit");
+    expect(getNodeDisplay(blindedRef).masked).toBe(true);
+    expect(getNodeDisplay(blindedRef).label).toBe(
+      "Hidden protocol element (blinded)"
+    );
+    expect(results[totalRefs - 1]).toBeNull();
+    expect(getCachedNodeEntry(missingRef)?.status).toBe("not_found");
+
+    // Repeated resolution of a not_found or resolved ref makes zero additional network calls
+    await resolveNode(missingRef);
+    await resolveNode(refs[0]);
+    expect(mockGetNodes).toHaveBeenCalledTimes(2);
+  });
+
+  it("seeds pre-resolved KernelNode maps via seedResolvedNodes and clears cache on caller persona or tenant switch", async () => {
+    (kernelApi as unknown as { getNodes?: typeof mockGetNodes }).getNodes =
+      mockGetNodes;
+    const auth = useAuthStore();
+    auth.isAuthenticated = true;
+    auth.currentPersona = "data_manager";
+    auth.user = {
+      id: "actor-dm",
+      username: "dm",
+      tenantId: "tenant-alpha",
+    } as never;
+
+    resetNodeResolutionSession("CAD-101");
+    seedResolvedNodes({
+      [PARTICIPANT_REF]: {
+        ref: PARTICIPANT_REF,
+        kind: "participant",
+        code: "017-0001",
+        title: "Participant 017-0001",
+        status: "Active",
+        mask: null,
+      },
+    });
+
+    ensureNodesResolved([PARTICIPANT_REF]);
+    expect(getNodeDisplay(PARTICIPANT_REF).label).toBe(
+      "017-0001 · Participant 017-0001"
+    );
+    expect(
+      getNodeDisplay("participant:0192f3c4-5e6a-7b8c-9d0e-000000000001").label
+    ).toBe("017-0001 · Participant 017-0001");
+    expect(mockGetNodes).not.toHaveBeenCalled();
+
+    // Switching persona invalidates caller scope so unblinded/seeded labels never leak across personas
+    auth.currentPersona = "blinded_monitor";
+    mockGetNodes.mockResolvedValueOnce({
+      nodes: {
+        [PARTICIPANT_REF]: {
+          ref: null,
+          kind: "participant",
+          code: null,
+          title: null,
+          status: null,
+          mask: "Blinded",
+        },
+      },
+    });
+
+    await resolveNode(PARTICIPANT_REF);
+    expect(mockGetNodes).toHaveBeenCalledTimes(1);
+    expect(getNodeDisplay(PARTICIPANT_REF).label).toBe(
+      "Hidden participant (blinded)"
     );
   });
 });

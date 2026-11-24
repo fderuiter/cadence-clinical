@@ -47,7 +47,76 @@ public sealed class ExplanationTests
         explanation.UnmetConditions.Should().ContainSingle().Which.Evidence.Should().Equal(Training);
         explanation.Steps.Should().ContainSingle().Which.Should().Be(
             new ExplanationStep("Protocol v3 training is not current.", [Delegation, Training]));
-        explanation.NextActions.Should().Equal(new NextAction("Complete protocol v3 training"));
+        explanation.NextActions.Should().Equal(
+            new NextAction("Complete protocol v3 training", Capability: "qualification.record", Target: Training));
+    }
+
+    /// <summary>
+    /// Unmet grant, qualification, and readiness conditions map their remedial capability and first evidence NodeRef
+    /// (falling back to Subject) onto each NextAction so UI surfaces can render clickable resolution targets.
+    /// </summary>
+    [Fact(DisplayName = "Explain_PopulatesNextActionTargetAndCapabilityFromUnmetConditionEvidence")]
+    [KernelRule("K-AUTH-6")]
+    [KernelRule("K-EXP-1")]
+    public void ExplainPopulatesNextActionTargetAndCapabilityFromUnmetConditionEvidence()
+    {
+        var requirement = NodeRef.For(QualificationRequirementId.New());
+        var decision = AuthorizationDecision.Deny(
+            "Missing grant and qualification.",
+            EvaluatedCondition.Unsatisfied("authority.grant", "Hold observation.record for this study site"),
+            EvaluatedCondition.Unsatisfied("authority.qualification", "Obtain gcp", requirement));
+
+        var explanation = decision.Explain("Record observation", Participant);
+
+        explanation.NextActions.Should().Equal(
+            new NextAction("Hold observation.record for this study site", Capability: "grant.issue", Target: Participant),
+            new NextAction("Obtain gcp", Capability: "qualification.record", Target: requirement));
+    }
+
+    /// <summary>
+    /// K-EXP-2: restricted or blinded NodeRefs in an explanation are replaced in place with masked:&lt;kind&gt;:&lt;Reason&gt;
+    /// without dropping conditions, steps, or evidence entries and without leaking hidden UUIDs.
+    /// </summary>
+    [Fact(DisplayName = "ExplanationMasking_ReplacesHiddenNodeRefsInPlaceWithoutDroppingItems")]
+    [KernelRule("K-EXP-2")]
+    public void ExplanationMaskingReplacesHiddenNodeRefsInPlaceWithoutDroppingItems()
+    {
+        var hiddenSite = NodeRef.For(StudySiteId.New());
+        var blindedAllocation = NodeRef.For(AssertionId.New());
+        var explanation = new Explanation(
+            Claim: $"Action on {hiddenSite} is blocked by {blindedAllocation}.",
+            Producer: "test.rule",
+            Subject: hiddenSite,
+            Steps: [new ExplanationStep($"Blocked at {hiddenSite}.", [hiddenSite, Training, blindedAllocation])],
+            Conditions:
+            [
+                EvaluatedCondition.Satisfied("delegation.active", "Delegated", Delegation),
+                EvaluatedCondition.Unsatisfied("lock.unlocked", $"Release {blindedAllocation}", blindedAllocation),
+            ],
+            NextActions:
+            [
+                new NextAction($"Release lock {blindedAllocation}", Capability: "lock.release", Target: blindedAllocation),
+            ]);
+
+        var masks = new System.Collections.Generic.Dictionary<NodeRef, MaskReason>
+        {
+            [hiddenSite] = MaskReason.NotPermitted,
+            [blindedAllocation] = MaskReason.Blinded,
+        };
+
+        var wire = ProblemExplanation.From(explanation, masks);
+        var json = System.Text.Json.JsonSerializer.Serialize(wire);
+
+        json.Should().NotContain(hiddenSite.Id.ToString("D"));
+        json.Should().NotContain(blindedAllocation.Id.ToString("D"));
+        wire.Subject.Should().Be($"masked:{NodeKinds.StudySite}:{MaskReason.NotPermitted}");
+        wire.Steps.Should().ContainSingle().Which.Evidence.Should().Equal(
+            $"masked:{NodeKinds.StudySite}:{MaskReason.NotPermitted}",
+            Training.ToString(),
+            $"masked:{NodeKinds.Assertion}:{MaskReason.Blinded}");
+        wire.Conditions.Should().HaveCount(2);
+        wire.Conditions[1].Evidence.Should().Equal($"masked:{NodeKinds.Assertion}:{MaskReason.Blinded}");
+        wire.NextActions.Should().ContainSingle().Which.Target.Should().Be($"masked:{NodeKinds.Assertion}:{MaskReason.Blinded}");
     }
 
     /// <summary>A permit explains itself too, with no unmet conditions and nothing to do.</summary>

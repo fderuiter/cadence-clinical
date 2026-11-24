@@ -2,7 +2,7 @@ name: Conflict Check
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [opened, synchronize, reopened, edited]
   merge_group:
     branches: [main, release/*]
 
@@ -19,57 +19,34 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: read
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
+          ref: ${{ github.event.pull_request.base.ref || github.ref }}
           fetch-depth: 0
-          repository: ${{ github.event.pull_request && github.event.pull_request.head.repo.full_name || github.repository }}
-          ref: ${{ github.event.pull_request && github.event.pull_request.head.ref || github.ref }}
 
-      - name: Check mergeable status
-        id: check_status
+      - name: Check mergeability with git merge-tree
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           EVENT_NAME: ${{ github.event_name }}
+          BASE_REF: ${{ github.event.pull_request.base.ref || github.event.merge_group.base_ref }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
-          BASE_REF: ${{ github.base_ref || github.event.merge_group.base_ref || 'main' }}
         run: |
+          set -euo pipefail
           BASE_BRANCH="${BASE_REF#refs/heads/}"
-          git fetch --no-tags origin "$BASE_BRANCH"
-
-          if ! MERGE_OUTPUT=$(git merge-tree --write-tree --name-only --no-messages "origin/$BASE_BRANCH" HEAD 2>&1); then
-            echo "::error::Merge conflicts detected against origin/$BASE_BRANCH:"
-            echo "$MERGE_OUTPUT"
-            echo "status=CONFLICTING" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          if [ "$EVENT_NAME" = "merge_group" ]; then
-            echo "Merge group commit merges cleanly with origin/$BASE_BRANCH."
-            echo "status=MERGEABLE" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          STATUS="UNKNOWN"
-          for _ in {1..6}; do
-            STATUS=$(gh pr view "$PR_NUMBER" --json mergeable --jq .mergeable 2>/dev/null || echo "UNKNOWN")
-            if [ "$STATUS" != "UNKNOWN" ]; then
-              break
+          if [ "${EVENT_NAME:-pull_request}" = "merge_group" ]; then
+            git fetch --no-tags origin "+refs/heads/${BASE_BRANCH}:refs/remotes/origin/${BASE_BRANCH}"
+            if ! git merge-tree --write-tree "refs/remotes/origin/${BASE_BRANCH}" HEAD; then
+              echo "::error::This merge group has merge conflicts with '${BASE_BRANCH}'. Merge or rebase onto 'origin/${BASE_BRANCH}' and resolve them."
+              exit 1
             fi
-            echo "Mergeable status is UNKNOWN. Retrying in 10 seconds..."
-            sleep 10
-          done
-          echo "Final mergeable status: $STATUS"
-          echo "status=$STATUS" >> "$GITHUB_OUTPUT"
-
-      - name: Fail on merge conflict
-        env:
-          STATUS: ${{ steps.check_status.outputs.status }}
-        run: |
-          if [ "$STATUS" = "CONFLICTING" ]; then
-            echo "::error::This pull request or merge group has merge conflicts with its base branch. Merge the base branch in and resolve them."
-            exit 1
+          else
+            git fetch --no-tags origin \
+              "+refs/heads/${BASE_BRANCH}:refs/remotes/origin/${BASE_BRANCH}" \
+              "+refs/pull/${PR_NUMBER}/head:refs/remotes/origin/pr/${PR_NUMBER}"
+            if ! git merge-tree --write-tree "refs/remotes/origin/${BASE_BRANCH}" "refs/remotes/origin/pr/${PR_NUMBER}"; then
+              echo "::error::This pull request has merge conflicts with '${BASE_BRANCH}'. Merge or rebase onto 'origin/${BASE_BRANCH}' and resolve them."
+              exit 1
+            fi
           fi

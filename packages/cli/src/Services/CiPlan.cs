@@ -211,8 +211,7 @@ public static class CiPlan
     public static IReadOnlyDictionary<string, string> GitHubOnlyJobs { get; } = new Dictionary<string, string>
     {
         ["ci-gate"] = "aggregates pull-request validation job outcomes into one required branch ruleset status check",
-        ["classify"] = "labels the pull request through the GitHub API",
-        ["automerge"] = "approves and merges the pull request through the GitHub API",
+        ["classify"] = "classifies changed paths and labels same-repository pull requests through the GitHub API",
         ["release-and-archive"] = "calls the production pipeline on pushes or ref-guarded dispatches to main, release/* and v* tags",
         ["deploy-docs"] = "deploys the documentation portal to GitHub Pages on pushes or ref-guarded dispatches to main",
     };

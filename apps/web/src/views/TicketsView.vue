@@ -1014,7 +1014,7 @@ const initialMockTickets = [
     gxp_severity: "CRITICAL",
     priority: "CRITICAL",
     status: "OPEN",
-    study_id: "STUDY-ONC-202",
+    study_id: "CADENCE-101",
     site_id: "SITE-101",
     subject_id: null,
     entity_type: "SUPPLY_KIT",
@@ -1036,7 +1036,7 @@ const initialMockTickets = [
     gxp_severity: "MAJOR",
     priority: "HIGH",
     status: "IN_PROGRESS",
-    study_id: "STUDY-ONC-202",
+    study_id: "CADENCE-101",
     site_id: "SITE-102",
     subject_id: "SUBJ-8812",
     entity_type: "SUBJECT",
@@ -1058,7 +1058,7 @@ const initialMockTickets = [
     gxp_severity: "MINOR",
     priority: "MEDIUM",
     status: "WAITING_ON_SITE",
-    study_id: "STUDY-ONC-202",
+    study_id: "CADENCE-101",
     site_id: "SITE-101",
     subject_id: "SUBJ-8815",
     entity_type: "CRF_FORM",
@@ -1080,7 +1080,7 @@ const initialMockTickets = [
     gxp_severity: "MAJOR",
     priority: "HIGH",
     status: "RESOLVED",
-    study_id: "STUDY-ONC-202",
+    study_id: "CADENCE-101",
     site_id: "SITE-101",
     subject_id: "SUBJ-8804",
     entity_type: "SUBJECT",
@@ -1358,8 +1358,15 @@ const filteredTickets = computed(() => {
     }
     // Clinical scope match
     const scopedStudy = filterStudyId.value.trim().toLowerCase();
-    if (scopedStudy && t.study_id && t.study_id.toLowerCase() !== scopedStudy) {
-      return false;
+    if (scopedStudy && t.study_id) {
+      const ticketStudy = t.study_id.trim().toLowerCase();
+      const isCanonicalDemoAlias =
+        demoBuild &&
+        (scopedStudy === "cadence-101" || scopedStudy === "demo-01") &&
+        (ticketStudy === "cadence-101" || ticketStudy === "demo-01");
+      if (ticketStudy !== scopedStudy && !isCanonicalDemoAlias) {
+        return false;
+      }
     }
     const scopedSite = filterSiteId.value.trim().toLowerCase();
     if (scopedSite && t.site_id && t.site_id.toLowerCase() !== scopedSite) {
@@ -1745,18 +1752,31 @@ const exportAuditTrail = (format) => {
   display: flex;
   flex-direction: column;
   gap: 24px;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 640px) {
+  .dashboard-section {
+    padding: 12px 8px;
+    gap: 16px;
+  }
 }
 
 /* Header */
 .section-header {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 24px;
+  gap: 16px 24px;
+  min-width: 0;
 }
 
 .header-badge-row {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   margin-bottom: 8px;
 }
@@ -1803,11 +1823,16 @@ const exportAuditTrail = (format) => {
   flex-direction: column;
   align-items: flex-end;
   gap: 8px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .header-action-group {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .btn-icon-svg {
@@ -1816,17 +1841,19 @@ const exportAuditTrail = (format) => {
 
 .auditor-readonly-note {
   margin: 0;
-  max-width: 420px;
+  max-width: 100%;
+  width: min(100%, 420px);
   font-size: 0.78rem;
   line-height: 1.4;
   color: var(--semantic-color-text-secondary);
   text-align: right;
+  overflow-wrap: anywhere;
 }
 
 /* Stats Cards Grid */
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
   gap: 16px;
 }
 
@@ -1934,12 +1961,15 @@ const exportAuditTrail = (format) => {
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   padding: 6px 12px;
-  flex: 1;
-  min-width: 240px;
+  flex: 1 1 240px;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .search-icon {
   font-size: 0.9rem;
+  flex-shrink: 0;
 }
 
 .search-input {
@@ -1948,6 +1978,7 @@ const exportAuditTrail = (format) => {
   background: transparent;
   font-size: 0.85rem;
   width: 100%;
+  min-width: 0;
   min-height: var(--semantic-control-target-min, 24px);
 }
 
@@ -1989,6 +2020,8 @@ const exportAuditTrail = (format) => {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .filter-select {
@@ -1998,19 +2031,25 @@ const exportAuditTrail = (format) => {
   font-size: 0.82rem;
   background: var(--semantic-color-surface);
   color: var(--semantic-color-text-body);
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .scope-filter-input {
   width: 132px;
+  max-width: 100%;
   font-family: var(--font-mono);
 }
 
 /* KANBAN BOARD VIEW */
 .kanban-board {
+  position: relative;
   display: grid;
   grid-template-columns: repeat(5, minmax(240px, 1fr));
   gap: 16px;
   overflow-x: auto;
+  max-width: 100%;
   align-items: flex-start;
 }
 
@@ -2208,10 +2247,12 @@ const exportAuditTrail = (format) => {
 
 /* TABLE VIEW */
 .table-card {
+  position: relative;
   background: var(--semantic-color-surface);
   border-radius: 8px;
   border: 1px solid var(--semantic-color-border);
   overflow-x: auto;
+  max-width: 100%;
 }
 
 .clinical-table {

@@ -203,11 +203,11 @@ public static class QualityGates
         new("codeowners", ["validate-codeowners"], "Path pattern existence and owner handle syntax in `.github/CODEOWNERS`",
             ctx => CodeownersValidatorService.ValidateCodeowners(ctx.RepoRoot) == 0),
         new("workflow-security", ["validate-workflow-security", "action-pinning", "check-action-pinning"],
-            "40-hex commit SHAs with version comments, `sha256:` digests on `docker://` refs, `persist-credentials: false` on `actions/checkout`, typed non-interpolated `workflow_dispatch` inputs, ref-guarded dispatch triggers, and least-privilege permissions across `.github/workflows` and `.github/actions`",
+            "40-hex commit SHAs with version comments, `sha256:` digests on `docker://` refs, `persist-credentials: false` and no fork checkouts on `actions/checkout`, fork-guarded PR write permissions, typed non-interpolated `workflow_dispatch` inputs, ref-guarded dispatch triggers, least-privilege permissions, and no masked shell errors across `.github/workflows` and `.github/actions`",
             ctx => WorkflowSecurityValidatorService.ValidateWorkflowSecurity(ctx.Files, ctx.RepoRoot, ctx.PreCommit, ctx.IndexReader) == 0)
         { TakesFiles = true },
         new("rulesets", ["validate-rulesets"],
-            "Branch and signed `v*` tag rulesets in `.github/rulesets/*.json`, `pull_request`-only branch bypasses, release-admin-only tag bypasses, `merge_queue` policy, strict status checks, `CI Gate` upstream job coverage, and `pull_request` / `merge_group` workflow parity",
+            "Branch and signed `v*` tag rulesets in `.github/rulesets/*.json`, `pull_request`-only branch bypasses, release-admin-only tag bypasses, `merge_queue` policy, strict status checks, `CI Gate` upstream job coverage, `edited` / `merge_group` / `git merge-tree` conflict-check parity, and no `GITHUB_TOKEN` workflow merges",
             ctx => RulesetService.Validate(ctx.RepoRoot, preCommit: ctx.PreCommit, indexReader: ctx.IndexReader) == 0)
         {
             PreCommit = PreCommitMode.Quick,
@@ -273,8 +273,12 @@ public static class QualityGates
             PreCommitNote = "validates `docs/SDLC/vulnerability_exclusions_ledger.json` offline and scans only ecosystems with staged manifests, lockfiles or ledger edits",
         },
         new("dependencies", ["validate-dependencies"],
-            "Valid JSON across workspace `package.json` and `.config/dotnet-tools.json` manifests, unique `.github/dependabot.yml` update targets and `ignore` rules, no client-side crypto package (`node-forge`, `elliptic`, `jose`), and no test harness package (`axe-core`, `@axe-core/playwright`, `vitest`, `@vue/test-utils`, `jsdom`, `fake-indexeddb`, `msw`) in runtime `dependencies`",
-            ctx => DependencyValidatorService.ValidateDependencies(ctx.RepoRoot, ctx.PreCommit, ctx.IndexReader) == 0),
+            "Valid JSON/XML/YAML across workspace `package.json`, `pnpm-workspace.yaml`, `.config/dotnet-tools.json`, `Directory.Build.props`, and `Directory.Packages.props` manifests, lockstep NuGet/pnpm/CLI cohorts, unique `.github/dependabot.yml` update targets and group/ignore rules, synchronized `PostgresTestImage` `@sha256` digests across Compose, CI, and AppHost, and no forbidden client-side crypto (`node-forge`, `elliptic`, `jose`) or runtime test-harness (`axe-core`, `@axe-core/playwright`, `vitest`, `@vue/test-utils`, `jsdom`, `fake-indexeddb`, `msw`) packages",
+            ctx => DependencyValidatorService.ValidateDependencies(ctx.RepoRoot, ctx.PreCommit, ctx.IndexReader) == 0)
+        {
+            PreCommit = PreCommitMode.Quick,
+            PreCommitNote = "validates staged dependency manifests, `.github/dependabot.yml`, Compose, CI workflow, and AppHost blobs",
+        },
         new("doc-index", ["validate-doc-index"], "Every Markdown document under `docs/` is listed in `docs/DOCUMENTATION_INDEX.md`",
             ctx => DocIndexSyncService.SyncDocIndex(check: true, repoRoot: ctx.RepoRoot) == 0),
         new("demo-manifest", ["validate-demo-manifest"],

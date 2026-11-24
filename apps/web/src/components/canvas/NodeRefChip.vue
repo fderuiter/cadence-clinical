@@ -151,6 +151,7 @@ function onSelectClick(event?: MouseEvent) {
   gap: 4px;
   min-height: var(--semantic-control-target-min, 24px);
   min-width: var(--semantic-control-target-min, 24px);
+  max-width: 100%;
   box-sizing: border-box;
   color: var(--semantic-color-primary);
   font-weight: 500;
@@ -163,6 +164,12 @@ function onSelectClick(event?: MouseEvent) {
   font-size: inherit;
   cursor: pointer;
   text-align: left;
+}
+
+.noderef-chip-label {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .noderef-chip:hover {
@@ -178,5 +185,6 @@ function onSelectClick(event?: MouseEvent) {
 .noderef-masked {
   color: var(--semantic-color-text-muted);
   font-style: italic;
+  overflow-wrap: anywhere;
 }
 </style>

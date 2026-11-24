@@ -409,6 +409,8 @@ function onSiteChange(event: Event) {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .participants-header {

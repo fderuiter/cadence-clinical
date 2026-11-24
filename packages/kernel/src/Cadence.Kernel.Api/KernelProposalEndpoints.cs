@@ -40,7 +40,7 @@ public static class KernelProposalEndpoints
         group.MapGet("/studies/{studyRef}/proposals", ListAsync)
             .WithName("KernelListProposals")
             .WithSummary("A study's proposals, newest first, optionally only those with one status (Open, Approved, Rejected, Withdrawn, Expired).")
-            .WithDescription("A study the caller may not see is refused; a proposal the caller may not see is masked in place (ADR-2471).")
+            .WithDescription("studyRef accepts a study NodeRef or study code. A study the caller may not see is refused; a proposal the caller may not see is masked in place (ADR-2471).")
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound);
@@ -66,27 +66,18 @@ public static class KernelProposalEndpoints
         string? status,
         int? limit,
         HttpContext context,
-        IKernelNavigator navigator,
         IProposalReader reader,
         INodeVisibility visibility,
         ICurrentActor actor,
         IClock clock,
         CancellationToken cancellationToken)
     {
-        if (!NodeRef.TryParse(studyRef, out var node))
-        {
-            return KernelProblems.InvalidNodeRef(studyRef);
-        }
-
-        if (node.Kind != NodeKinds.Study)
-        {
-            return KernelProblems.WrongKind(node, NodeKinds.Study);
-        }
-
         ProposalStatus? wanted = null;
         if (!string.IsNullOrEmpty(status))
         {
-            if (!Enum.TryParse<ProposalStatus>(status, ignoreCase: true, out var parsed) || !Enum.IsDefined(parsed))
+            if (!Enum.TryParse<ProposalStatus>(status, ignoreCase: true, out var parsed)
+                || !Enum.IsDefined(parsed)
+                || int.TryParse(status, out _))
             {
                 return KernelProblems.BadRequest("Invalid status", $"'{status}' is not a proposal status: Open, Approved, Rejected, Withdrawn or Expired.");
             }
@@ -100,22 +91,25 @@ public static class KernelProposalEndpoints
         }
 
         var tenant = KernelRequestTenant.Get(context);
-        if (await navigator.ResolveAsync(tenant, node, cancellationToken).ConfigureAwait(false) is not { } study)
-        {
-            return KernelProblems.NotFound(node);
-        }
-
         // Listing a hidden study's proposals would describe the study, so the list is refused, not masked.
-        var studyMasks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, [study.Ref], cancellationToken).ConfigureAwait(false);
-        if (studyMasks.For(study.Ref) is { } studyMask)
+        var resolved = await KernelStudyLookup.ResolveVisibleStudyAsync(
+            tenant,
+            studyRef,
+            context,
+            visibility,
+            actor,
+            static (_, studyMask) => $"You can't see this study ({studyMask}), so its proposals are not listed.",
+            allowVersionedStudyRef: true,
+            cancellationToken).ConfigureAwait(false);
+        if (resolved.Problem is { } problem)
         {
-            return KernelProblems.NotVisible($"You can't see this study ({studyMask}), so its proposals are not listed.");
+            return problem;
         }
 
         var proposals = await reader
-            .ListForStudyAsync(tenant, StudyId.FromGuid(node.Id), wanted, clock.UtcNow, limit ?? 50, cancellationToken)
+            .ListForStudyAsync(tenant, resolved.Study.StudyId, wanted, clock.UtcNow, limit ?? 50, cancellationToken)
             .ConfigureAwait(false);
-        var masks = await MaskAsync(visibility, actor, tenant, proposals, cancellationToken).ConfigureAwait(false);
+        var masks = await MaskProposalsAsync(visibility, actor, tenant, proposals, cancellationToken).ConfigureAwait(false);
         return TypedResults.Ok<IReadOnlyList<KernelProposalResponse>>([.. proposals.Select(p => KernelProposalResponse.From(p, masks))]);
     }
 
@@ -139,7 +133,7 @@ public static class KernelProposalEndpoints
             return KernelProblems.NotFound(NodeRef.For(id));
         }
 
-        var masks = await MaskAsync(visibility, actor, tenant, [proposal], cancellationToken).ConfigureAwait(false);
+        var masks = await MaskProposalsAsync(visibility, actor, tenant, [proposal], cancellationToken).ConfigureAwait(false);
         return masks.For(NodeRef.For(proposal.Id)) is { } mask
             ? KernelProblems.NotVisible($"You may not see {NodeRef.For(proposal.Id)} ({mask}).")
             : TypedResults.Ok(KernelProposalResponse.From(proposal, masks));
@@ -170,7 +164,7 @@ public static class KernelProposalEndpoints
     }
 
     /// <summary>The masks for each proposal and every object it names, read in one visibility call.</summary>
-    private static async ValueTask<IReadOnlyDictionary<NodeRef, MaskReason>> MaskAsync(
+    internal static async ValueTask<IReadOnlyDictionary<NodeRef, MaskReason>> MaskProposalsAsync(
         INodeVisibility visibility, ICurrentActor actor, TenantId tenant, IReadOnlyList<ProposalSummary> proposals, CancellationToken cancellationToken)
     {
         var nodes = proposals.SelectMany(p => (IEnumerable<NodeRef>)[NodeRef.For(p.Id), NodeRef.For(p.Plan.VersionId), .. p.Affected.Select(NodeRef.Parse)]);
