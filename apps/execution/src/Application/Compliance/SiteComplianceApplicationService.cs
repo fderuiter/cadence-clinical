@@ -39,7 +39,8 @@ public sealed class SiteComplianceApplicationService(
     ISiteComplianceRepository compliance,
     IAuditLogWriter auditLog,
     ICurrentAuditContextAccessor auditContext,
-    IClock clock) : ISiteComplianceApplicationService
+    IClock clock,
+    IKernelLockGuard? lockGuard = null) : ISiteComplianceApplicationService
 {
     // The audit chain key for every entry this service writes: the aggregate's CLR type name (#4768).
     private const string SiteComplianceEntityName = nameof(SiteComplianceCache);
@@ -47,6 +48,16 @@ public sealed class SiteComplianceApplicationService(
 
     public async Task<Result<bool>> ApplyEtmfWebhookAsync(EtmfCompletenessWebhookPayload payload, CancellationToken ct)
     {
+        if (lockGuard is not null)
+        {
+            var lockCheck = await lockGuard.EnsureUnlockedAsync(payload.StudyId, payload.SiteId, cancellationToken: ct)
+                .ConfigureAwait(false);
+            if (lockCheck.IsFailure)
+            {
+                return Result<bool>.Failure(lockCheck.Error!);
+            }
+        }
+
         var studyCode = new StudyCode(payload.StudyId);
         SiteCode? siteCode = payload.SiteId is null ? null : new SiteCode(payload.SiteId);
         IReadOnlyList<string> missingDocuments = payload.MissingArtifacts ?? Array.Empty<string>();
@@ -97,6 +108,16 @@ public sealed class SiteComplianceApplicationService(
 
     public async Task<Result<bool>> ActivateSiteAsync(string siteId, SiteActivationRequest request, CancellationToken ct)
     {
+        if (lockGuard is not null)
+        {
+            var lockCheck = await lockGuard.EnsureUnlockedAsync(request.StudyId, siteId, cancellationToken: ct)
+                .ConfigureAwait(false);
+            if (lockCheck.IsFailure)
+            {
+                return Result<bool>.Failure(lockCheck.Error!);
+            }
+        }
+
         var studyCode = new StudyCode(request.StudyId);
         var siteCode = new SiteCode(siteId);
 
