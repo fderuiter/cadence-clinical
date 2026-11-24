@@ -1,7 +1,9 @@
 const { execSync, spawn } = require("child_process");
 const crypto = require("crypto");
 const fs = require("fs");
+const { createRequire } = require("module");
 const path = require("path");
+const { pathToFileURL } = require("url");
 
 const repoRoot = path.resolve(__dirname, "..");
 const docsRoot = path.join(repoRoot, "docs");
@@ -446,6 +448,329 @@ function sweepAndPreprocessDocs(docsDir) {
   walkDir(docsDir);
 }
 
+function isDraftBlogMarkdown(relToDocs, content) {
+  if (!relToDocs.startsWith("blog/") || relToDocs === "blog/index.md") {
+    return false;
+  }
+  const frontmatterMatch = content.match(
+    /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/
+  );
+  if (!frontmatterMatch) {
+    return false;
+  }
+  return /^\s*draft\s*:\s*["']?true["']?\s*$/m.test(frontmatterMatch[1]);
+}
+
+/**
+ * Extracts fenced `mermaid` / `mmd` diagram blocks from Markdown content with 1-based line numbers.
+ * @param {string} markdown - Raw Markdown content.
+ * @param {string} fileLabel - Human-readable file label for diagnostics.
+ * @returns {Array<{ file: string, line: number, code: string, unclosed?: boolean }>}
+ */
+function extractMermaidBlocks(markdown, fileLabel) {
+  const lines = markdown.split(/\r?\n/);
+  const blocks = [];
+  let fenceChar = "";
+  let fenceLen = 0;
+  let fenceStartLine = 0;
+  let isMermaid = false;
+  let buffer = [];
+
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i];
+    const match = line.match(/^ {0,3}(`{3,}|~{3,})(.*)$/);
+
+    if (!fenceChar) {
+      if (!match) {
+        continue;
+      }
+      const marker = match[1];
+      const info = match[2];
+      if (marker[0] === "`" && info.includes("`")) {
+        continue;
+      }
+      fenceChar = marker[0];
+      fenceLen = marker.length;
+      fenceStartLine = i + 1;
+      const lang = info.trim().split(/\s+/)[0].toLowerCase();
+      isMermaid = lang === "mermaid" || lang === "mmd";
+      buffer = [];
+      continue;
+    }
+
+    if (
+      match &&
+      match[1][0] === fenceChar &&
+      match[1].length >= fenceLen &&
+      match[2].trim() === ""
+    ) {
+      if (isMermaid) {
+        blocks.push({
+          file: fileLabel,
+          line: fenceStartLine,
+          code: buffer.join("\n"),
+        });
+      }
+      fenceChar = "";
+      fenceLen = 0;
+      fenceStartLine = 0;
+      isMermaid = false;
+      buffer = [];
+      continue;
+    }
+
+    if (isMermaid) {
+      buffer.push(line);
+    }
+  }
+
+  if (fenceChar && isMermaid) {
+    blocks.push({
+      file: fileLabel,
+      line: fenceStartLine,
+      code: buffer.join("\n"),
+      unclosed: true,
+    });
+  }
+
+  return blocks;
+}
+
+function getWorkspaceRequireCandidates(workspaceRoot) {
+  const anchors = [
+    path.join(workspaceRoot, "package.json"),
+    path.join(workspaceRoot, "apps", "web", "package.json"),
+    path.join(workspaceRoot, "apps", "subject-portal", "package.json"),
+  ];
+  const requires = [];
+  for (const anchor of anchors) {
+    if (fs.existsSync(anchor)) {
+      requires.push(createRequire(anchor));
+    }
+  }
+  requires.push(createRequire(__filename));
+  return requires;
+}
+
+function loadJsdomConstructor(workspaceRoot) {
+  for (const req of getWorkspaceRequireCandidates(workspaceRoot)) {
+    try {
+      const jsdomMod = req("jsdom");
+      if (jsdomMod && typeof jsdomMod.JSDOM === "function") {
+        return jsdomMod.JSDOM;
+      }
+    } catch {
+      // Continue searching workspace package anchors.
+    }
+  }
+  throw new Error(
+    "Mermaid syntax gate could not resolve 'jsdom' from workspace node_modules."
+  );
+}
+
+async function loadMermaidInstance(workspaceRoot) {
+  for (const req of getWorkspaceRequireCandidates(workspaceRoot)) {
+    try {
+      const mermaidEntry = req.resolve("mermaid");
+      const mermaidMod = await import(pathToFileURL(mermaidEntry).href);
+      return mermaidMod.default || mermaidMod;
+    } catch {
+      // Continue searching workspace package anchors.
+    }
+  }
+  throw new Error(
+    "Mermaid syntax gate could not resolve 'mermaid' from workspace node_modules."
+  );
+}
+
+function installDomGlobals(domWindow, globalKeys) {
+  for (const key of globalKeys) {
+    if (domWindow[key] !== undefined) {
+      Object.defineProperty(globalThis, key, {
+        value: domWindow[key],
+        configurable: true,
+        writable: true,
+      });
+    }
+  }
+}
+
+let cachedMermaidRuntime = null;
+
+async function getMermaidParserRuntime(workspaceRoot, globalKeys) {
+  if (!cachedMermaidRuntime) {
+    const JSDOM = loadJsdomConstructor(workspaceRoot);
+    const dom = new JSDOM("<!doctype html><html><body></body></html>");
+    installDomGlobals(dom.window, globalKeys);
+    const mermaid = await loadMermaidInstance(workspaceRoot);
+    cachedMermaidRuntime = { dom, mermaid };
+  } else {
+    installDomGlobals(cachedMermaidRuntime.dom.window, globalKeys);
+  }
+  return cachedMermaidRuntime;
+}
+
+/**
+ * Validates every `mermaid` / `mmd` diagram across portal Markdown sources using Mermaid's real parser under JSDOM.
+ * Runs unconditionally in `pnpm docs:build` even when `CADENCE_DOCS_SKIP_CHECKS=1` is set.
+ * @param {string} docsDir - Portal `docs/` directory.
+ * @param {{ repoRoot?: string, includeUnstagedRootDocs?: boolean, silent?: boolean }} [options]
+ * @returns {Promise<{ filesScanned: number, pagesWithMermaid: number, diagramCount: number }>}
+ */
+async function validatePortalMermaidDiagrams(docsDir, options = {}) {
+  const workspaceRoot = options.repoRoot || repoRoot;
+  const stagedDestToSrc = new Map(
+    Object.entries(STAGED_ROOT_DOCS).map(([src, dest]) => [dest, src])
+  );
+  const scannedStagedDests = new Set();
+  const blocks = [];
+  let filesScanned = 0;
+  let pagesWithMermaid = 0;
+
+  function scanMarkdownContent(content, fileLabel) {
+    filesScanned += 1;
+    const fileBlocks = extractMermaidBlocks(content, fileLabel);
+    if (fileBlocks.length > 0) {
+      pagesWithMermaid += 1;
+      blocks.push(...fileBlocks);
+    }
+  }
+
+  function walkPortalDocs(dir) {
+    if (!fs.existsSync(dir)) return;
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+    entries.sort((a, b) => a.name.localeCompare(b.name));
+    for (const entry of entries) {
+      const fullPath = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        if (
+          entry.name !== ".vitepress" &&
+          entry.name !== "node_modules" &&
+          entry.name !== "runs" &&
+          entry.name !== "dist"
+        ) {
+          walkPortalDocs(fullPath);
+        }
+      } else if (entry.isFile() && entry.name.endsWith(".md")) {
+        const relToDocs = path.relative(docsDir, fullPath).replace(/\\/g, "/");
+        const content = fs.readFileSync(fullPath, "utf8");
+        if (isDraftBlogMarkdown(relToDocs, content)) {
+          continue;
+        }
+        if (stagedDestToSrc.has(relToDocs)) {
+          scannedStagedDests.add(relToDocs);
+          scanMarkdownContent(content, stagedDestToSrc.get(relToDocs));
+        } else {
+          scanMarkdownContent(content, `docs/${relToDocs}`);
+        }
+      }
+    }
+  }
+
+  walkPortalDocs(docsDir);
+
+  if (options.includeUnstagedRootDocs) {
+    const sortedRootEntries = Object.entries(STAGED_ROOT_DOCS).sort(
+      ([a], [b]) => a.localeCompare(b)
+    );
+    for (const [srcName, destName] of sortedRootEntries) {
+      if (scannedStagedDests.has(destName) || !srcName.endsWith(".md")) {
+        continue;
+      }
+      const rootSrcPath = path.join(workspaceRoot, srcName);
+      if (fs.existsSync(rootSrcPath)) {
+        scanMarkdownContent(fs.readFileSync(rootSrcPath, "utf8"), srcName);
+      }
+    }
+  }
+
+  if (blocks.length === 0) {
+    return { filesScanned, pagesWithMermaid: 0, diagramCount: 0 };
+  }
+
+  const globalKeys = [
+    "window",
+    "document",
+    "navigator",
+    "DOMParser",
+    "Element",
+    "HTMLElement",
+    "SVGElement",
+    "Node",
+  ];
+  const savedDescriptors = new Map();
+  for (const key of globalKeys) {
+    savedDescriptors.set(key, Object.getOwnPropertyDescriptor(globalThis, key));
+  }
+
+  const failures = [];
+  let runtimeDom = null;
+  try {
+    const { dom, mermaid } = await getMermaidParserRuntime(
+      workspaceRoot,
+      globalKeys
+    );
+    runtimeDom = dom;
+    mermaid.initialize({
+      startOnLoad: false,
+      securityLevel: "strict",
+    });
+
+    for (const block of blocks) {
+      if (block.unclosed) {
+        const message = `${block.file}:${block.line} - Unclosed mermaid code fence`;
+        console.error(`[MERMAID SYNTAX] ${message}`);
+        failures.push(message);
+        continue;
+      }
+      try {
+        await mermaid.parse(block.code);
+      } catch (err) {
+        const rawMessage =
+          err && typeof err.message === "string" ? err.message : String(err);
+        const compactMessage = rawMessage
+          .split(/\r?\n/)
+          .map((l) => l.trim())
+          .filter(Boolean)
+          .slice(0, 3)
+          .join(" | ");
+        const message = `${block.file}:${block.line} - ${compactMessage}`;
+        console.error(`[MERMAID SYNTAX] ${message}`);
+        failures.push(message);
+      }
+    }
+  } finally {
+    if (runtimeDom && runtimeDom.window && runtimeDom.window.document.body) {
+      runtimeDom.window.document.body.innerHTML = "";
+    }
+    for (const [key, descriptor] of savedDescriptors.entries()) {
+      if (descriptor) {
+        Object.defineProperty(globalThis, key, descriptor);
+      } else {
+        delete globalThis[key];
+      }
+    }
+  }
+
+  if (failures.length > 0) {
+    throw new Error(
+      `Mermaid syntax validation failed (${failures.length} error(s)):\n${failures.join("\n")}`
+    );
+  }
+
+  if (!options.silent) {
+    console.log(
+      `Validated ${blocks.length} Mermaid diagram(s) across ${pagesWithMermaid} portal page(s).`
+    );
+  }
+
+  return {
+    filesScanned,
+    pagesWithMermaid,
+    diagramCount: blocks.length,
+  };
+}
+
 /**
  * Stages all repository-root guides, policies, and LICENSE into docs/ for VitePress.
  * These copies are generated (gitignored) and removed after `pnpm docs:build`.
@@ -592,6 +917,8 @@ if (require.main !== module) {
     buildRtmEnv,
     buildVitePressEnv,
     VITEPRESS_ENV_ALLOWLIST,
+    extractMermaidBlocks,
+    validatePortalMermaidDiagrams,
   };
 } else {
   // `node scripts/build-docs.js --prepare-only` stages the root documents for `vitepress dev` and exits.
@@ -606,61 +933,69 @@ if (require.main !== module) {
       .filter((arg) => arg !== "--dev" && arg !== "--");
     runDevServer(extraArgs);
   } else {
-    // Run preflight checks before Step 1
-    runPreflightChecks();
+    async function runDocsBuild() {
+      // Run preflight checks before Step 1
+      runPreflightChecks();
 
-    const cliEnv = buildRtmEnv(process.env);
+      const cliEnv = buildRtmEnv(process.env);
 
-    try {
-      // 1. Run validation scripts
-      console.log("--- Step 1: Pre-Build Validation ---");
-      runCommand("node scripts/run-cli.js check openapi", cliEnv);
-      runCommand("node scripts/run-cli.js check schema-doc", cliEnv);
-      runCommand("node scripts/run-cli.js check markdown", cliEnv);
+      try {
+        // 1. Run validation scripts
+        console.log("--- Step 1: Pre-Build Validation ---");
+        runCommand("node scripts/run-cli.js check openapi", cliEnv);
+        runCommand("node scripts/run-cli.js check schema-doc", cliEnv);
+        runCommand("node scripts/run-cli.js check markdown", cliEnv);
 
-      // 2. Validate committed GxP snapshot without mutation
-      console.log("--- Step 2: Validating GxP Compliance Snapshot ---");
-      runCommand("node scripts/run-cli.js check rtm", cliEnv);
+        // 2. Validate committed GxP snapshot without mutation
+        console.log("--- Step 2: Validating GxP Compliance Snapshot ---");
+        runCommand("node scripts/run-cli.js check rtm", cliEnv);
 
-      // 3. Prepare files for VitePress
-      console.log("--- Step 3: Preparing Documentation Files ---");
-      prepareRootDocs();
+        // 3. Prepare files for VitePress
+        console.log("--- Step 3: Preparing Documentation Files ---");
+        prepareRootDocs();
 
-      // Sweep and preprocess all docs files and subdirectories
-      sweepAndPreprocessDocs(docsRoot);
+        // Sweep and preprocess all docs files and subdirectories
+        sweepAndPreprocessDocs(docsRoot);
 
-      // 4. Build VitePress static portal with a strict non-secret environment allowlist
-      console.log("--- Step 4: Compiling VitePress Static Portal ---");
-      runCommand(
-        `${pnpmCmd} exec vitepress build docs`,
-        buildVitePressEnv(process.env)
-      );
+        // 3b. Unconditional Mermaid syntax gate across staged root docs and docs/ pages
+        console.log("--- Step 3b: Validating Portal Mermaid Diagrams ---");
+        await validatePortalMermaidDiagrams(docsRoot);
 
-      console.log("--- Docs Build Completed Successfully! ---");
-    } catch {
-      console.error("Docs build pipeline failed.");
-      // exitCode, not process.exit(): exiting here would skip the cleanup in `finally`
-      // and leave the staged root docs behind to fail the next run's index check.
-      process.exitCode = 1;
-    } finally {
-      console.log("--- Cleanup Temporary Docs ---");
-      const tempGeneratedDocs = getStagedRootDocPaths();
+        // 4. Build VitePress static portal with a strict non-secret environment allowlist
+        console.log("--- Step 4: Compiling VitePress Static Portal ---");
+        runCommand(
+          `${pnpmCmd} exec vitepress build docs`,
+          buildVitePressEnv(process.env)
+        );
 
-      for (const [fullPath, originalContent] of originalFilesMap.entries()) {
-        if (tempGeneratedDocs.has(fullPath)) {
-          continue;
+        console.log("--- Docs Build Completed Successfully! ---");
+      } catch {
+        console.error("Docs build pipeline failed.");
+        // exitCode, not process.exit(): exiting here would skip the cleanup in `finally`
+        // and leave the staged root docs behind to fail the next run's index check.
+        process.exitCode = 1;
+      } finally {
+        console.log("--- Cleanup Temporary Docs ---");
+        const tempGeneratedDocs = getStagedRootDocPaths();
+
+        for (const [fullPath, originalContent] of originalFilesMap.entries()) {
+          if (tempGeneratedDocs.has(fullPath)) {
+            continue;
+          }
+          try {
+            fs.writeFileSync(fullPath, originalContent, "utf8");
+            console.log(
+              `Restored original content for ${path.relative(repoRoot, fullPath)}`
+            );
+          } catch (err) {
+            console.warn(`Could not restore ${fullPath}:`, err);
+          }
         }
-        try {
-          fs.writeFileSync(fullPath, originalContent, "utf8");
-          console.log(
-            `Restored original content for ${path.relative(repoRoot, fullPath)}`
-          );
-        } catch (err) {
-          console.warn(`Could not restore ${fullPath}:`, err);
-        }
+        // Clean up temporary staged docs files relative to repoRoot
+        cleanupStagedRootDocs();
       }
-      // Clean up temporary staged docs files relative to repoRoot
-      cleanupStagedRootDocs();
     }
+
+    runDocsBuild();
   }
 }

@@ -418,6 +418,142 @@ public static partial class MarkdownParser
         return anchors;
     }
 
+    public static List<MarkdownValidationIssue> ValidateCodeFencesAndHeadings(
+        string repoRoot,
+        string fullMarkdownPath,
+        string[] lines)
+    {
+        var issues = new List<MarkdownValidationIssue>();
+        string relPath = Path.GetRelativePath(repoRoot, fullMarkdownPath).Replace('\\', '/');
+        char fenceChar = '\0';
+        int fenceLen = 0;
+        string fenceInfo = string.Empty;
+        int fenceStartLine = 0;
+
+        for (int i = 0; i < lines.Length; i++)
+        {
+            string line = lines[i].TrimEnd('\r');
+            string trimmed = line.TrimStart();
+            Match fenceMatch = CodeFenceLineRegex().Match(trimmed);
+
+            if (fenceMatch.Success)
+            {
+                string marker = fenceMatch.Groups[1].Value;
+                string rawRest = fenceMatch.Groups[2].Value;
+                string rest = rawRest.Trim();
+                bool isInlineBacktickSpan = marker[0] == '`' && rawRest.Contains('`', StringComparison.Ordinal);
+
+                if (fenceLen == 0)
+                {
+                    if (!isInlineBacktickSpan)
+                    {
+                        fenceChar = marker[0];
+                        fenceLen = marker.Length;
+                        fenceInfo = rest;
+                        fenceStartLine = i + 1;
+                        continue;
+                    }
+                }
+                else if (marker[0] == fenceChar && rest.Length == 0)
+                {
+                    if (marker.Length == fenceLen)
+                    {
+                        fenceChar = '\0';
+                        fenceLen = 0;
+                        fenceInfo = string.Empty;
+                        fenceStartLine = 0;
+                        continue;
+                    }
+
+                    if (marker.Length > fenceLen)
+                    {
+                        issues.Add(new MarkdownValidationIssue(
+                            relPath,
+                            marker,
+                            $"{relPath}:{i + 1} - Mismatched closing code fence length: opened with {fenceLen} '{fenceChar}' at line {fenceStartLine}, closed with {marker.Length}.",
+                            i + 1));
+                        fenceChar = '\0';
+                        fenceLen = 0;
+                        fenceInfo = string.Empty;
+                        fenceStartLine = 0;
+                        continue;
+                    }
+
+                    if (!IsMarkdownFenceInfo(fenceInfo))
+                    {
+                        issues.Add(new MarkdownValidationIssue(
+                            relPath,
+                            marker,
+                            $"{relPath}:{i + 1} - Mismatched closing code fence length: opened with {fenceLen} '{fenceChar}' at line {fenceStartLine}, closed with {marker.Length}.",
+                            i + 1));
+                        continue;
+                    }
+                }
+            }
+
+            if (fenceLen > 0)
+            {
+                if (fenceInfo.Length == 0 && HeadingLineRegex().IsMatch(trimmed))
+                {
+                    issues.Add(new MarkdownValidationIssue(
+                        relPath,
+                        line.Trim(),
+                        $"{relPath}:{i + 1} - Swallowed heading inside unlabeled code fence opened at line {fenceStartLine}: '{line.Trim()}'",
+                        i + 1));
+                }
+
+                continue;
+            }
+
+            if (trimmed.StartsWith('#'))
+            {
+                int hashCount = 0;
+                while (hashCount < trimmed.Length && trimmed[hashCount] == '#')
+                {
+                    hashCount++;
+                }
+
+                if (hashCount >= 1 && hashCount <= 6 && hashCount < trimmed.Length)
+                {
+                    char nextChar = trimmed[hashCount];
+                    if (nextChar != ' ' && nextChar != '\t' && nextChar != '#' && !char.IsDigit(nextChar))
+                    {
+                        issues.Add(new MarkdownValidationIssue(
+                            relPath,
+                            line.Trim(),
+                            $"{relPath}:{i + 1} - Heading missing space after '#': '{line.Trim()}'",
+                            i + 1));
+                    }
+                }
+            }
+        }
+
+        if (fenceLen > 0)
+        {
+            string openMarker = new(fenceChar, fenceLen);
+            issues.Add(new MarkdownValidationIssue(
+                relPath,
+                openMarker,
+                $"{relPath}:{fenceStartLine} - Unclosed code fence '{openMarker}' reached end of file.",
+                fenceStartLine));
+        }
+
+        return issues;
+    }
+
+    private static bool IsMarkdownFenceInfo(string fenceInfo)
+    {
+        if (string.IsNullOrEmpty(fenceInfo))
+        {
+            return false;
+        }
+
+        int spaceIdx = fenceInfo.IndexOfAny([' ', '\t']);
+        string lang = spaceIdx >= 0 ? fenceInfo[..spaceIdx] : fenceInfo;
+        return lang.Equals("markdown", StringComparison.OrdinalIgnoreCase) ||
+               lang.Equals("md", StringComparison.OrdinalIgnoreCase);
+    }
+
     private static bool UpdateCodeFenceState(string line, ref char fenceChar, ref int fenceLen)
     {
         Match fenceMatch = CodeFenceLineRegex().Match(line.TrimStart());
@@ -427,9 +563,15 @@ public static partial class MarkdownParser
         }
 
         string marker = fenceMatch.Groups[1].Value;
-        string rest = fenceMatch.Groups[2].Value.Trim();
+        string rawRest = fenceMatch.Groups[2].Value;
+        string rest = rawRest.Trim();
         if (fenceLen == 0)
         {
+            if (marker[0] == '`' && rawRest.Contains('`', StringComparison.Ordinal))
+            {
+                return false;
+            }
+
             fenceChar = marker[0];
             fenceLen = marker.Length;
             return true;

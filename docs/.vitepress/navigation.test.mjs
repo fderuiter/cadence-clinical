@@ -15,6 +15,7 @@ import {
   toRepoUrl,
   vitepressSlugify,
 } from "./repoLinks.mjs";
+import { createRequire } from "module";
 import rootDocsModule from "./rootDocs.cjs";
 import {
   buildPortalSearchCatalog,
@@ -23,7 +24,12 @@ import {
   toSidebarLink,
 } from "./sidebar.mjs";
 
+const require = createRequire(import.meta.url);
 const { STAGED_ROOT_DOCS } = rootDocsModule;
+const {
+  extractMermaidBlocks,
+  validatePortalMermaidDiagrams,
+} = require("../../scripts/build-docs.js");
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -523,4 +529,65 @@ describe("VitePress navigation synthesis and link/anchor plugins", () => {
       )
     ).toBeGreaterThan(catalog.getSearchBoostMultiplier("CI.md"));
   });
+
+  it("parses all 41 Mermaid diagrams across 20 portal pages cleanly via JSDOM and preserves inline code v-pre", async () => {
+    const result = await validatePortalMermaidDiagrams(docsDir, {
+      repoRoot,
+      includeUnstagedRootDocs: true,
+      silent: true,
+    });
+
+    expect(result.pagesWithMermaid).toBe(20);
+    expect(result.diagramCount).toBe(41);
+
+    const dataLifecycleMd = fs.readFileSync(
+      path.join(docsDir, "DATA_LIFECYCLE.md"),
+      "utf-8"
+    );
+    const dataLifecycleBlocks = extractMermaidBlocks(
+      dataLifecycleMd,
+      "docs/DATA_LIFECYCLE.md"
+    );
+    expect(dataLifecycleBlocks.length).toBe(3);
+
+    const md = await createMarkdownRenderer(docsDir);
+    md.use(dualHeadingAnchorsPlugin);
+    const ciSnippetHtml = md.render(
+      "Workflow expression `${{ steps.cadence-cli-cache.outputs.cache-hit }}`.\n",
+      { relativePath: "CI.md" }
+    );
+    expect(ciSnippetHtml).toContain("<code v-pre");
+  }, 30000);
+
+  it("rejects invalid Mermaid syntax in staged root docs and docs pages with exact file and line numbers", async () => {
+    const tmpDocs = makeTempWorkspace();
+    fs.writeFileSync(
+      path.join(tmpDocs, "ARCHITECTURE.md"),
+      [
+        "# Architecture",
+        "",
+        "```mermaid",
+        "sequenceDiagram",
+        "    S-->>C: stale; 403",
+        "```",
+        "",
+      ].join("\n")
+    );
+    fs.writeFileSync(
+      path.join(tmpDocs, "workflow.md"),
+      [
+        "# Workflow",
+        "",
+        "```mermaid",
+        "graph TD",
+        "    A -->|POST /api/protocols/{id}/amend| B",
+        "```",
+        "",
+      ].join("\n")
+    );
+
+    await expect(
+      validatePortalMermaidDiagrams(tmpDocs, { repoRoot, silent: true })
+    ).rejects.toThrow(/ARCHITECTURE\.md:3[\s\S]*docs\/workflow\.md:3/);
+  }, 30000);
 });
