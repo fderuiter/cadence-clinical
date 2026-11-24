@@ -3693,14 +3693,17 @@ onUnmounted(() => {
 .lifecycle-rail {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: 6px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
 .stage {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  box-sizing: border-box;
   padding: 4px 12px;
   border-radius: 999px;
   color: var(--neutral-dark);
@@ -4096,6 +4099,10 @@ onUnmounted(() => {
 }
 
 @media (max-width: 960px) {
+  .topbar {
+    position: static;
+  }
+
   .panes,
   .panes.panes--navigator-collapsed,
   .panes.panes--inspector-collapsed,

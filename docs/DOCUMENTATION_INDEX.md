@@ -619,6 +619,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2656: Keyboard Operability and WAI-ARIA Semantics in `ClinicalDataTable`](adr/2026-11-23-clinical-data-table-keyboard-and-aria-compliance.md) | Current | - Status: Accepted |
 | [ADR-2528: Extend Cohort, xUnit v3, and PostgreSQL Digest Guardrails](adr/2026-11-23-extend-cohort-xunit-v3-and-postgres-digest-guardrails.md) | Current | - Status: Accepted |
 | [ADR-2657: Share UI Primitives and Synchronize Participant Portal Route Queries](adr/2026-11-23-share-ui-primitives-and-query-synced-portal-routes.md) | Current | - Status: Accepted |
+| [ADR-2498: Hoist CSP Meta Directives, Delegate Clinical Widgets, and Scope Mode-Aware Vite CSP Profiles](adr/2026-11-22-hoist-csp-delegate-widgets-and-mode-aware-vite-profiles.md) | Current | - Status: Accepted |
 | [ADR-2607: Complete Kernel NodeKinds Scope Mapping and Persist Canonical Enrollment NodeRefs](adr/2026-11-23-persist-enrollment-id-and-map-all-kernel-node-kinds.md) | Current | - Status: Accepted |
 | [ADR-2658: Resolve Shared UI from Workspace Source and Align Verification Scripts](adr/2026-11-23-resolve-shared-ui-from-source-and-align-verification-scripts.md) | Current | - Status: Accepted |
 | [ADR-2660: Enforce Configured Biometric Liveness HMAC Key and Single-Use Replay Protection](adr/2026-11-23-biometric-liveness-hmac-key-and-single-use-replay-protection.md) | Current | - Status: Accepted |

@@ -199,6 +199,135 @@ const formatTime = (secs) => {
 const pdfPage = ref(1);
 const pdfTotalPages = ref(1);
 const pdfCanvasRef = ref(null);
+const pdfFrameSrc = ref("");
+let ownedPdfObjectUrl = "";
+let pdfFetchAbortController = null;
+let isComponentMounted = false;
+
+function canUseBlobUrls() {
+  return (
+    typeof Blob !== "undefined" &&
+    typeof URL !== "undefined" &&
+    typeof URL.createObjectURL === "function"
+  );
+}
+
+function revokeOwnedPdfUrl() {
+  if (
+    ownedPdfObjectUrl &&
+    typeof URL !== "undefined" &&
+    typeof URL.revokeObjectURL === "function"
+  ) {
+    URL.revokeObjectURL(ownedPdfObjectUrl);
+  }
+  ownedPdfObjectUrl = "";
+}
+
+function abortPendingPdfFetch() {
+  if (pdfFetchAbortController) {
+    pdfFetchAbortController.abort();
+    pdfFetchAbortController = null;
+  }
+}
+
+function decodeDataUriToPdfBlob(dataUri) {
+  const commaIdx = dataUri.indexOf(",");
+  if (commaIdx < 0) {
+    return null;
+  }
+  const metadata = dataUri.slice(5, commaIdx);
+  const payload = dataUri.slice(commaIdx + 1);
+  const isBase64 = /;base64/i.test(metadata);
+
+  if (isBase64) {
+    const binary = atob(payload);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    return new Blob([bytes], { type: "application/pdf" });
+  }
+
+  const decoded = decodeURIComponent(payload);
+  return new Blob([decoded], { type: "application/pdf" });
+}
+
+async function syncPdfBlobSource() {
+  abortPendingPdfFetch();
+  revokeOwnedPdfUrl();
+
+  const rawSrc = props.src || "";
+  if (!rawSrc || mediaCategory.value !== "pdf") {
+    pdfFrameSrc.value = "";
+    return;
+  }
+
+  if (rawSrc.startsWith("blob:")) {
+    pdfFrameSrc.value = rawSrc;
+    return;
+  }
+
+  if (rawSrc.startsWith("data:")) {
+    if (!canUseBlobUrls()) {
+      pdfFrameSrc.value = "";
+      return;
+    }
+    try {
+      const pdfBlob = decodeDataUriToPdfBlob(rawSrc);
+      if (pdfBlob) {
+        ownedPdfObjectUrl = URL.createObjectURL(pdfBlob);
+        pdfFrameSrc.value = ownedPdfObjectUrl;
+      } else {
+        pdfFrameSrc.value = "";
+      }
+    } catch (err) {
+      pdfFrameSrc.value = "";
+      emit("error", err);
+    }
+    return;
+  }
+
+  if (
+    !isComponentMounted ||
+    !canUseBlobUrls() ||
+    typeof window === "undefined" ||
+    typeof fetch !== "function"
+  ) {
+    pdfFrameSrc.value = "";
+    return;
+  }
+
+  const controller =
+    typeof AbortController !== "undefined" ? new AbortController() : null;
+  pdfFetchAbortController = controller;
+
+  try {
+    const resolvedHref = window.location?.href
+      ? new URL(rawSrc, window.location.href).href
+      : rawSrc;
+    const response = await fetch(
+      resolvedHref,
+      controller ? { signal: controller.signal } : undefined
+    );
+    if (!response.ok) {
+      throw new Error(`Failed to load PDF preview (${response.status})`);
+    }
+    const buffer = await response.arrayBuffer();
+    if (pdfFetchAbortController !== controller) {
+      return;
+    }
+    pdfFetchAbortController = null;
+    const pdfBlob = new Blob([buffer], { type: "application/pdf" });
+    ownedPdfObjectUrl = URL.createObjectURL(pdfBlob);
+    pdfFrameSrc.value = ownedPdfObjectUrl;
+  } catch (err) {
+    if (err?.name === "AbortError") {
+      return;
+    }
+    pdfFrameSrc.value = "";
+    emit("error", err);
+  }
+}
 
 const prevPdfPage = () => {
   if (pdfPage.value > 1) {
@@ -212,22 +341,40 @@ const nextPdfPage = () => {
   }
 };
 
+// Synchronously initialize data:/blob: PDF URLs for immediate render
+if (
+  mediaCategory.value === "pdf" &&
+  (props.src?.startsWith("blob:") || props.src?.startsWith("data:"))
+) {
+  void syncPdfBlobSource();
+}
+
 // Reset state when src or category changes
 watch(
-  () => props.src,
-  () => {
-    resetTransform();
-    isPlaying.value = false;
-    currentTime.value = 0;
+  () => [props.src, mediaCategory.value],
+  ([newSrc], [oldSrc] = []) => {
+    if (newSrc !== oldSrc) {
+      resetTransform();
+      isPlaying.value = false;
+      currentTime.value = 0;
+    }
+    void syncPdfBlobSource();
   }
 );
 
 onMounted(() => {
+  isComponentMounted = true;
   window.addEventListener("mouseup", handleMouseUp);
+  if (mediaCategory.value === "pdf" && !pdfFrameSrc.value) {
+    void syncPdfBlobSource();
+  }
 });
 
 onUnmounted(() => {
+  isComponentMounted = false;
   window.removeEventListener("mouseup", handleMouseUp);
+  abortPendingPdfFetch();
+  revokeOwnedPdfUrl();
 });
 </script>
 
@@ -335,7 +482,7 @@ onUnmounted(() => {
         data-testid="pdf-viewer"
       >
         <iframe
-          :src="src"
+          :src="pdfFrameSrc || undefined"
           class="pdf-frame"
           :title="title"
           data-testid="pdf-iframe"

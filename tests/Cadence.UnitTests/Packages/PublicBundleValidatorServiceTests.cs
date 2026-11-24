@@ -154,11 +154,49 @@ public sealed class PublicBundleValidatorServiceTests : IDisposable
     [InlineData("<!doctype html><html><head><meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'self'; script-src 'self' https:; media-src 'self'; worker-src 'self'; connect-src 'self'\"></head><body></body></html>")]
     [InlineData("<!doctype html><html><head><meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'self'; script-src 'self' 'unsafe-eval'; media-src 'self'; worker-src 'self'; connect-src 'self'\"></head><body></body></html>")]
     [InlineData("<!doctype html><html><head><meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'self'; script-src 'self'\"></head><body></body></html>")]
+    [InlineData("<!doctype html><html><head><meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'self'; script-src 'self' 'unsafe-inline'; media-src 'self'; worker-src 'self'; connect-src 'self'\"></head><body></body></html>")]
+    [InlineData("<!doctype html><html><head><meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'self'; script-src 'self' 'unsafe-hashes'; media-src 'self'; worker-src 'self'; connect-src 'self'\"></head><body></body></html>")]
+    [InlineData("<!doctype html><html><head><meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'self'; script-src 'self' blob:; media-src 'self'; worker-src 'self'; connect-src 'self'\"></head><body></body></html>")]
+    [InlineData("<!doctype html><html><head><meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'self'; script-src 'self'; media-src 'self' blob:; worker-src 'self' blob:; connect-src 'self'; frame-src 'self' data:\"></head><body></body></html>")]
+    [InlineData("<!doctype html><html><head><meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'self'; script-src 'self'; media-src 'self'; worker-src 'self'; connect-src 'self' http://localhost:8080\"></head><body></body></html>")]
     public void ScanBundleFile_RejectsMissingOrPermissiveCspHeaders(string html)
     {
         var findings = PublicBundleValidatorService.ScanBundleFile("apps/web/dist/index.html", "index.html", html, isDocsBundle: false);
 
         findings.Select(f => f.Category).Should().Contain("csp_policy");
+    }
+
+    [Theory]
+    [InlineData("<!doctype html><html><head><script type=\"module\" src=\"/assets/app.js\"></script>" + ValidCsp + "</head><body></body></html>")]
+    [InlineData("<!doctype html><html><head><link rel=\"modulepreload\" href=\"/assets/chunk.js\">" + ValidCsp + "</head><body></body></html>")]
+    [InlineData("<!doctype html><html><head>" + ValidCsp + "</head><body><input type=\"range\" oninput=\"this.dataset.touched='true'\"></body></html>")]
+    [InlineData("<!doctype html><html><head>" + ValidCsp + "</head><body><button type=\"button\" onclick=\"closePanel()\">x</button></body></html>")]
+    public void ScanBundleFile_RejectsTrailingCspMetaOrInlineEventAttributes(string html)
+    {
+        var findings = PublicBundleValidatorService.ScanBundleFile(
+            "docs/.vitepress/dist/index.html",
+            "index.html",
+            html,
+            isDocsBundle: true);
+
+        findings.Select(f => f.Category).Should().Contain("csp_policy");
+    }
+
+    [Fact]
+    public void ScanBundleFile_AllowsEscapedCodeExamplesAndQuotedAttributesWithoutInlineEventFalsePositives()
+    {
+        string html =
+            $"<!doctype html><html><head>{ValidCsp.Replace("connect-src 'self'", "connect-src 'self'; frame-src 'self' blob:", StringComparison.Ordinal)}</head>" +
+            "<body><pre><code><button onclick=\"alert(1)\">Example</button></code></pre>" +
+            "<button type=\"button\" title=\"Toggle on=true\" data-on-click=\"noop\">Safe</button></body></html>";
+
+        var findings = PublicBundleValidatorService.ScanBundleFile(
+            "docs/.vitepress/dist/guide.html",
+            "guide.html",
+            html,
+            isDocsBundle: true);
+
+        findings.Should().BeEmpty();
     }
 
     [Fact]
