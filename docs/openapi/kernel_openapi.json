@@ -4849,6 +4849,16 @@
                 }
               }
             }
+          },
+          "423": {
+            "description": "Locked. Kernel errors: \u0060K.Observation.Locked\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
           }
         },
         "x-kernel-errors": [
@@ -4915,6 +4925,10 @@
           {
             "code": "K.Execution.TransitionTimeInvalid",
             "status": 422
+          },
+          {
+            "code": "K.Observation.Locked",
+            "status": 423
           }
         ]
       }
@@ -5257,6 +5271,68 @@
         ]
       }
     },
+    "/api/v1/kernel/locks/in-force": {
+      "get": {
+        "tags": [
+          "Kernel locks"
+        ],
+        "summary": "Checks whether any active write-denying lock (Frozen or Locked) covers a study, study site, or enrollment scope.",
+        "operationId": "KernelGetScopeWriteLock",
+        "parameters": [
+          {
+            "name": "study_code",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "site_code",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "subject_code",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "enrollment_id",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_KernelScopeWriteLockResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/kernel/studies/{studyRef}/locks": {
       "get": {
         "tags": [
@@ -5354,7 +5430,7 @@
         "tags": [
           "Kernel locks"
         ],
-        "summary": "Evaluates lock readiness (open queries, missing required items, and unresolved Error validation findings) for a study or child lock scope.",
+        "summary": "Evaluates lock readiness across queries, missing required items, unverified revisions, unsigned forms, unopened scheduled visits, and Error validation findings.",
         "operationId": "KernelGetStudyLockReadiness",
         "parameters": [
           {
@@ -10099,6 +10175,45 @@
               "null",
               "string"
             ]
+          },
+          "current_revision": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "signature_superseded": {
+            "type": "boolean",
+            "default": false
+          },
+          "planned_activity_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "planned_activity_name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "planned_date": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "window_end": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
           }
         }
       },
@@ -10177,6 +10292,33 @@
           },
           "explanation": {
             "$ref": "#/components/schemas/Kernel_KernelExplanationResponse"
+          },
+          "unverified_value_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 0
+          },
+          "unsigned_form_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 0
+          },
+          "unopened_visit_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 0
           }
         }
       },
@@ -11789,6 +11931,35 @@
             "items": {
               "$ref": "#/components/schemas/Kernel_KernelSoaFootnoteResponse"
             }
+          }
+        }
+      },
+      "Kernel_KernelScopeWriteLockResponse": {
+        "required": [
+          "study_exists",
+          "locked",
+          "lock_kind",
+          "scope_kind"
+        ],
+        "type": "object",
+        "properties": {
+          "study_exists": {
+            "type": "boolean"
+          },
+          "locked": {
+            "type": "boolean"
+          },
+          "lock_kind": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "scope_kind": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },

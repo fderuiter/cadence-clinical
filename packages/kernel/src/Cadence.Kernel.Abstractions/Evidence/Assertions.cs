@@ -68,6 +68,10 @@ public static class LockScopes
     public static bool IsScope(NodeRef? scope) =>
         scope is { Version: null } && Kinds.Contains(scope.Kind) && scope.Id != Guid.Empty;
 
+    /// <summary>The scopes covering a study or study site, widest first.</summary>
+    public static IReadOnlyList<NodeRef> Covering(StudyId study, StudySiteId? studySite = null) =>
+        studySite is { } site ? [NodeRef.For(study), NodeRef.For(site)] : [NodeRef.For(study)];
+
     /// <summary>
     /// The scopes covering an observation of an enrollment, widest first: its form instance when it was collected in one,
     /// and the observations themselves when named.
