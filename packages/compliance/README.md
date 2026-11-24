@@ -30,8 +30,10 @@ with a named person's certificate; without one it falls back to a throwaway self
 in tests. [docs/TESTING.md](../../docs/TESTING.md) has the workflow.
 
 `GxpSnapshotPolicy` (ADR-2532) names the snapshot paths (the two documents and `docs/SDLC/runs/`), the preview
-directory `TestResults/gxp/preview` that `gxp sync` writes on a feature branch, and `CADENCE_GXP_SNAPSHOT`, which turns
-on snapshot mode. `GenerateRtm(requireCurrentSnapshot: …)` checks that the committed RTM's test mapping matches the
+directory `TestResults/gxp/preview` that `gxp sync` writes on a feature branch, `CADENCE_GXP_SNAPSHOT`, which turns
+on snapshot mode, and `SnapshotTrailer` (`Gxp-Snapshot: refreshed`), which `gxp snapshot --commit` appends so CI only
+exports `CADENCE_GXP_SNAPSHOT=1` on repository-owner PRs, `merge_group` runs, and post-merge pushes carrying that trailer.
+`GenerateRtm(requireCurrentSnapshot: …)` checks that the committed RTM's test mapping matches the
 tags only in snapshot mode, so a branch with new or moved tags passes `check rtm` without committing a new snapshot.
 
 `RequirementTagScanner` finds the test methods under `tests/` and the requirement IDs each declares. The same scan

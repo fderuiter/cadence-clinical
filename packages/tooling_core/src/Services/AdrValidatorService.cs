@@ -145,7 +145,9 @@ public static class AdrValidatorService
         string? repoRoot = null,
         bool preCommit = false,
         string? baseRef = null,
-        string? pushBefore = null)
+        string? pushBefore = null,
+        string? eventName = null,
+        string? gitRef = null)
     {
         repoRoot ??= FindRepoRoot();
         string adrDir = Path.Combine(repoRoot, "docs", "adr");
@@ -228,7 +230,7 @@ public static class AdrValidatorService
             }
         }
 
-        if (checkGitDiff && !CheckArchitecturalChangesRequireAdr(repoRoot, preCommit, baseRef, pushBefore))
+        if (checkGitDiff && !CheckArchitecturalChangesRequireAdr(repoRoot, preCommit, baseRef, pushBefore, eventName, gitRef))
         {
             allPassed = false;
         }
@@ -423,9 +425,11 @@ public static class AdrValidatorService
         string repoRoot,
         bool preCommit,
         string? baseRef,
-        string? pushBefore)
+        string? pushBefore,
+        string? eventName,
+        string? gitRef)
     {
-        var (changedFiles, adrCandidateFiles, compareBase) = ResolveChangedAndAdrFiles(repoRoot, preCommit, baseRef, pushBefore);
+        var (changedFiles, adrCandidateFiles, compareBase) = ResolveChangedAndAdrFiles(repoRoot, preCommit, baseRef, pushBefore, eventName, gitRef);
         var architecturalChanges = changedFiles.Where(f => IsArchitecturalFile(f, repoRoot, preCommit, compareBase)).ToList();
         if (architecturalChanges.Count == 0) return true;
 
@@ -558,7 +562,9 @@ public static class AdrValidatorService
         string repoRoot,
         bool preCommit,
         string? baseRef,
-        string? pushBefore)
+        string? pushBefore,
+        string? eventName,
+        string? gitRef)
     {
         var changed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var adrCandidates = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -607,9 +613,12 @@ public static class AdrValidatorService
             return (changed, adrCandidates, branchCompareBase);
         }
 
-        string? compareBase = !string.IsNullOrWhiteSpace(pushBefore)
-            ? GitRevisionScopeService.TryResolveValidPushBase(repoRoot, pushBefore, headCommit)
-            : GitRevisionScopeService.TryResolveBranchCompareBase(repoRoot, effectiveBaseRef);
+        var eventScope = GitRevisionScopeService.ResolveEventScope(repoRoot, effectiveBaseRef, pushBefore, eventName, gitRef);
+        string? compareBase = eventScope.Kind switch
+        {
+            GitEventScopeKind.TargetRef or GitEventScopeKind.UnprotectedTargetRef => null,
+            _ => eventScope.CompareBase,
+        };
 
         if (!string.IsNullOrEmpty(compareBase) &&
             !string.IsNullOrEmpty(headCommit) &&
@@ -623,7 +632,7 @@ public static class AdrValidatorService
 
             // When comparing against a branch ref (for example after merging origin/main into a feature branch), exclude files
             // whose content matches baseRef verbatim so upstream architectural commits do not require a second ADR on the branch.
-            if (string.IsNullOrWhiteSpace(pushBefore))
+            if (eventScope.Kind == GitEventScopeKind.BranchDiff)
             {
                 var differsFromBaseRef = GitRevisionScopeService.TryGetPathsDifferingFromRevision(repoRoot, effectiveBaseRef, cached: false);
                 if (differsFromBaseRef is not null)
