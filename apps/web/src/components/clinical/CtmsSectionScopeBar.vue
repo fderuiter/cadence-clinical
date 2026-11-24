@@ -6,38 +6,46 @@
     @submit.prevent="$emit('submit')"
   >
     <template v-if="showStudyInput">
-      <label :for="`${prefix}-study`">Study</label>
-      <input
+      <ClinicalInput
         :id="`${prefix}-study`"
-        :value="study"
+        :model-value="study"
+        label="Study"
         type="text"
         autocomplete="off"
         placeholder="Study code"
-        :list="assignedStudies.length ? `${prefix}-studies-list` : undefined"
-        @input="
-          $emit('update:study', ($event.target as HTMLInputElement).value)
-        "
-      />
-      <datalist v-if="assignedStudies.length" :id="`${prefix}-studies-list`">
-        <option v-for="s in assignedStudies" :key="s" :value="s" />
-      </datalist>
+        :list="assignedStudies.length ? `${prefix}-studies-list` : ''"
+        density="compact"
+        :show-query-flag="false"
+        @update:model-value="$emit('update:study', String($event))"
+      >
+        <template v-if="assignedStudies.length" #after-input>
+          <datalist :id="`${prefix}-studies-list`">
+            <option v-for="s in assignedStudies" :key="s" :value="s" />
+          </datalist>
+        </template>
+      </ClinicalInput>
     </template>
 
     <slot name="before-site" />
 
-    <label :for="`${prefix}-site`">{{ siteLabel }}</label>
-    <input
+    <ClinicalInput
       :id="`${prefix}-site`"
-      :value="site"
+      :model-value="site"
+      :label="siteLabel"
       type="text"
       autocomplete="off"
       :placeholder="sitePlaceholder"
-      :list="assignedSites.length ? `${prefix}-sites-list` : undefined"
-      @input="$emit('update:site', ($event.target as HTMLInputElement).value)"
-    />
-    <datalist v-if="assignedSites.length" :id="`${prefix}-sites-list`">
-      <option v-for="item in assignedSites" :key="item" :value="item" />
-    </datalist>
+      :list="assignedSites.length ? `${prefix}-sites-list` : ''"
+      density="compact"
+      :show-query-flag="false"
+      @update:model-value="$emit('update:site', String($event))"
+    >
+      <template v-if="assignedSites.length" #after-input>
+        <datalist :id="`${prefix}-sites-list`">
+          <option v-for="item in assignedSites" :key="item" :value="item" />
+        </datalist>
+      </template>
+    </ClinicalInput>
 
     <slot name="after-site" />
 
@@ -68,6 +76,7 @@
 </template>
 
 <script setup lang="ts">
+import { ClinicalInput } from "ui";
 withDefaults(
   defineProps<{
     prefix: string;

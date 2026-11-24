@@ -313,7 +313,14 @@ useFocusTrap(dialogRef, {
   border-radius: var(--radius-xs);
 }
 
-.modal-close-btn:hover {
+.modal-close-btn:disabled,
+.modal-close-btn[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.5;
+  color: var(--semantic-color-text-muted);
+}
+
+.modal-close-btn:not(:disabled):not([aria-disabled="true"]):hover {
   background: var(--semantic-color-surface-header);
   color: var(--semantic-color-text);
 }
@@ -352,13 +359,26 @@ useFocusTrap(dialogRef, {
   transition: all 0.15s ease;
 }
 
+.btn:disabled,
+.btn[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
 .btn-secondary {
   background: var(--semantic-color-surface);
   border-color: var(--semantic-color-border-control);
   color: var(--semantic-color-text);
 }
 
-.btn-secondary:hover {
+.btn-secondary:disabled,
+.btn-secondary[aria-disabled="true"] {
+  background: var(--semantic-color-surface-muted);
+  border-color: var(--semantic-color-border);
+  color: var(--semantic-color-text-muted);
+}
+
+.btn-secondary:not(:disabled):not([aria-disabled="true"]):hover {
   background: var(--semantic-color-surface-header);
 }
 
@@ -368,7 +388,7 @@ useFocusTrap(dialogRef, {
   color: var(--semantic-color-surface);
 }
 
-.btn-primary:hover {
+.btn-primary:not(:disabled):not([aria-disabled="true"]):hover {
   background: var(--semantic-color-primary-dark);
 }
 

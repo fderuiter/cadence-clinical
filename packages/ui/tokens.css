@@ -767,13 +767,35 @@ select:focus-visible,
 textarea:focus-visible,
 a:focus-visible,
 summary:focus-visible,
-:where([role="button"], [tabindex]):focus-visible {
+:where([role="button"], [tabindex]:not([tabindex="-1"])):focus-visible {
   outline: 3px solid var(--semantic-color-accent) !important;
   outline-offset: 2px !important;
   box-shadow: 0 0 0 2px var(--semantic-color-text-on-solid) !important;
 }
 
-:where([tabindex="-1"]):focus:not(:focus-visible) {
+:where([tabindex="-1"]):focus:not(:focus-visible),
+:where(
+    main,
+    section,
+    article,
+    aside,
+    header,
+    footer,
+    nav,
+    p,
+    div:not([role]),
+    div[role="dialog"],
+    div[role="alertdialog"],
+    div[role="region"],
+    div[role="alert"],
+    div[role="status"],
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6
+  )[tabindex="-1"]:focus-visible {
   outline: none !important;
   box-shadow: none !important;
 }
@@ -796,11 +818,30 @@ summary:focus-visible,
   border-color: var(--primary);
 }
 
-.can-hover .btn-primary:hover,
-.can-hover .btn.btn-primary:hover {
+.can-hover .btn-primary:not(:disabled):not([aria-disabled="true"]):hover,
+.can-hover .btn.btn-primary:not(:disabled):not([aria-disabled="true"]):hover {
   background-color: var(--primary-dark);
   border-color: var(--primary-dark);
   color: var(--semantic-color-text-on-primary);
+}
+
+.btn:disabled,
+.btn[aria-disabled="true"],
+button.btn:disabled,
+button.btn[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.btn:not(.btn-primary):not(.btn-danger):not(.btn-success):not(
+    .btn-warning
+  ):disabled,
+.btn:not(.btn-primary):not(.btn-danger):not(.btn-success):not(
+    .btn-warning
+  )[aria-disabled="true"] {
+  background-color: var(--semantic-color-surface-muted);
+  color: var(--semantic-color-text-muted);
+  border-color: var(--semantic-color-border);
 }
 
 /* Tabular Numerals Everywhere Numbers Align (CLINICAL_CANVAS.md §2.13) */
@@ -854,6 +895,7 @@ td select,
   display: flex;
   flex-direction: column;
   min-width: 0;
+  max-width: 100%;
   margin-bottom: var(--semantic-spacing-md, 16px);
   font-family: var(--semantic-font-family, sans-serif);
 }
@@ -865,6 +907,7 @@ td select,
   font-size: var(--semantic-font-size-base, 15px);
   margin-bottom: var(--semantic-spacing-xs, 8px);
   color: var(--semantic-color-text-muted);
+  overflow-wrap: anywhere;
 }
 
 .clinical-input .input-wrapper {
@@ -873,6 +916,8 @@ td select,
   position: relative;
   align-items: center;
   min-width: 0;
+  max-width: 100%;
+  width: 100%;
 }
 
 .query-flag {
@@ -885,6 +930,7 @@ td select,
   :is(
       button,
       [role="button"],
+      summary,
       input:not([type="hidden"]),
       select,
       textarea
@@ -895,7 +941,7 @@ td select,
   box-sizing: border-box;
 }
 
-:where([role="button"]:not(.sr-only):not(.visually-hidden)) {
+:where(:is([role="button"], summary):not(.sr-only):not(.visually-hidden)) {
   display: inline-flex;
   align-items: center;
 }
@@ -916,16 +962,15 @@ td select,
 }
 
 /* Centralized styles maintain WCAG 2.1 minimum target dimensions of 48px and SC 1.4.11 >= 3:1 boundary contrast */
-.clinical-input input[type="text"],
-.clinical-input input[type="number"],
-.clinical-input input[type="date"],
-.clinical-input input[type="email"],
-.clinical-input input[type="tel"],
+.clinical-input
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
 .clinical-input select,
 .clinical-input textarea,
 .clinical-input .clinical-input-control {
   flex: 1;
   min-width: 0;
+  width: 100%;
+  max-width: 100%;
   padding: 12px 14px;
   min-height: var(--semantic-touch-target-min, 48px);
   border: 1px solid var(--semantic-color-border-control);
@@ -934,24 +979,62 @@ td select,
   font-size: var(--semantic-font-size-base, 15px);
   background-color: var(--semantic-color-surface);
   color: var(--semantic-color-text);
-  transition: all 0.2s;
+  transition:
+    border-color 0.2s,
+    background-color 0.2s;
   box-sizing: border-box;
+}
+
+.clinical-input input[type="file"] {
+  flex: 1;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.clinical-input input:disabled,
+.clinical-input select:disabled,
+.clinical-input textarea:disabled,
+.clinical-input .clinical-input-control:disabled {
+  background-color: var(--semantic-color-surface-muted);
+  color: var(--semantic-color-text-muted);
+  border-color: var(--semantic-color-border);
+  cursor: not-allowed;
+}
+
+.clinical-input--compact {
+  margin-bottom: 0;
+}
+
+.clinical-input--compact label,
+.clinical-input--compact legend {
+  font-size: 0.8125rem;
+  margin-bottom: 4px;
+  color: var(--semantic-color-text-secondary);
+}
+
+.clinical-input--compact
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+.clinical-input--compact select,
+.clinical-input--compact textarea,
+.clinical-input--compact .clinical-input-control {
+  min-height: 36px;
+  padding: 6px 10px;
+  font-size: 0.875rem;
 }
 
 /* Prevent iOS auto-zoom on touch viewports by preserving >= 16px (1rem) font-size on form controls */
 @media (pointer: coarse) {
-  .clinical-input input[type="text"],
-  .clinical-input input[type="number"],
-  .clinical-input input[type="date"],
-  .clinical-input input[type="datetime-local"],
-  .clinical-input input[type="time"],
-  .clinical-input input[type="month"],
-  .clinical-input input[type="week"],
-  .clinical-input input[type="email"],
-  .clinical-input input[type="tel"],
+  .clinical-input
+    input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
   .clinical-input select,
   .clinical-input textarea,
   .clinical-input .clinical-input-control,
+  .clinical-input--compact
+    input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+  .clinical-input--compact select,
+  .clinical-input--compact textarea,
+  .clinical-input--compact .clinical-input-control,
   td input:not([type="checkbox"]):not([type="radio"]),
   td select,
   td textarea {
@@ -959,11 +1042,36 @@ td select,
   }
 }
 
-.clinical-input input[type="text"]:focus:not(:focus-visible),
-.clinical-input input[type="number"]:focus:not(:focus-visible),
-.clinical-input input[type="date"]:focus:not(:focus-visible),
-.clinical-input input[type="email"]:focus:not(:focus-visible),
-.clinical-input input[type="tel"]:focus:not(:focus-visible),
+@media (max-width: 768px) {
+  .clinical-input
+    input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+  .clinical-input select,
+  .clinical-input textarea,
+  .clinical-input .clinical-input-control,
+  .clinical-input--compact
+    input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+  .clinical-input--compact select,
+  .clinical-input--compact textarea,
+  .clinical-input--compact .clinical-input-control {
+    font-size: max(1rem, var(--font-size-md, 16px));
+  }
+}
+
+.clinical-field-required {
+  color: var(--semantic-color-error);
+  margin-left: 2px;
+}
+
+.clinical-field-hint {
+  margin-top: var(--semantic-spacing-2xs, 4px);
+  font-size: 0.78rem;
+  color: var(--semantic-color-text-secondary);
+}
+
+.clinical-input
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus:not(
+    :focus-visible
+  ),
 .clinical-input select:focus:not(:focus-visible),
 .clinical-input textarea:focus:not(:focus-visible),
 .clinical-input .clinical-input-control:focus:not(:focus-visible) {
@@ -972,11 +1080,10 @@ td select,
   border-color: var(--semantic-color-border-control);
 }
 
-.clinical-input input[type="text"]:focus-visible,
-.clinical-input input[type="number"]:focus-visible,
-.clinical-input input[type="date"]:focus-visible,
-.clinical-input input[type="email"]:focus-visible,
-.clinical-input input[type="tel"]:focus-visible,
+.clinical-input
+  input:not([type="checkbox"]):not([type="radio"]):not(
+    [type="file"]
+  ):focus-visible,
 .clinical-input select:focus-visible,
 .clinical-input textarea:focus-visible,
 .clinical-input .clinical-input-control:focus-visible {
@@ -1015,12 +1122,11 @@ textarea[aria-invalid="true"]:focus-visible {
   textarea:focus-visible,
   a:focus-visible,
   summary:focus-visible,
-  :where([role="button"], [tabindex]):focus-visible,
-  .clinical-input input[type="text"]:focus-visible,
-  .clinical-input input[type="number"]:focus-visible,
-  .clinical-input input[type="date"]:focus-visible,
-  .clinical-input input[type="email"]:focus-visible,
-  .clinical-input input[type="tel"]:focus-visible,
+  :where([role="button"], [tabindex]:not([tabindex="-1"])):focus-visible,
+  .clinical-input
+    input:not([type="checkbox"]):not([type="radio"]):not(
+      [type="file"]
+    ):focus-visible,
   .clinical-input select:focus-visible,
   .clinical-input textarea:focus-visible,
   .clinical-input .clinical-input-control:focus-visible {

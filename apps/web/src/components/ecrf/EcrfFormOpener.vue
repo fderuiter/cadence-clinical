@@ -767,9 +767,14 @@ function submitOpenNew() {
   color: var(--semantic-color-text-secondary);
 }
 .ecrf-direct-id-summary {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--semantic-control-target-min, 24px);
+  padding: 3px 2px;
   cursor: pointer;
   font-weight: 500;
   color: var(--semantic-color-text-secondary);
+  box-sizing: border-box;
 }
 </style>
 

@@ -31,36 +31,42 @@
     </div>
 
     <div class="form-group">
-      <label for="ticket-signer-identity" class="form-label"
-        >Signer Identity</label
-      >
-      <input
+      <ClinicalInput
         id="ticket-signer-identity"
-        type="text"
-        class="form-control"
-        :value="currentUser"
+        :model-value="currentUser"
+        label="Signer Identity"
+        density="compact"
+        :show-query-flag="false"
+        control-class="form-control"
         readonly
         disabled
       />
     </div>
 
     <div class="form-group">
-      <label for="ticket-signer-role" class="form-label">Active Role</label>
-      <input
+      <ClinicalInput
         id="ticket-signer-role"
-        type="text"
-        class="form-control"
-        :value="currentRole"
+        :model-value="currentRole"
+        label="Active Role"
+        density="compact"
+        :show-query-flag="false"
+        control-class="form-control"
         readonly
         disabled
       />
     </div>
 
     <div class="form-group">
-      <label for="signature-meaning" class="form-label"
-        >Signature Meaning / Intent <span class="text-danger">*</span></label
+      <ClinicalInput
+        id="signature-meaning"
+        v-model="meaning"
+        as="select"
+        label="Signature Meaning / Intent"
+        required
+        density="compact"
+        :show-query-flag="false"
+        control-class="form-control"
       >
-      <select id="signature-meaning" v-model="meaning" class="form-control">
         <option
           value="I approve the clinical assessment and corrective medical action."
         >
@@ -82,32 +88,32 @@
           I acknowledge and endorse this technical/system operational
           resolution.
         </option>
-      </select>
+      </ClinicalInput>
     </div>
 
     <div class="form-group">
-      <label for="signature-reason" class="form-label"
-        >GxP Reason for Change <span class="text-danger">*</span></label
-      >
-      <input
+      <ClinicalInput
         id="signature-reason"
         v-model="reasonForChange"
-        type="text"
-        class="form-control"
+        label="GxP Reason for Change"
+        required
+        density="compact"
+        :show-query-flag="false"
+        control-class="form-control"
         placeholder="Mandatory regulatory justification for closure sign-off"
       />
     </div>
 
     <div class="form-group">
-      <label for="signature-password" class="form-label"
-        >Re-Authenticate Password / Security Token
-        <span class="text-danger">*</span></label
-      >
-      <input
+      <ClinicalInput
         id="signature-password"
         v-model="password"
         type="password"
-        class="form-control"
+        label="Re-Authenticate Password / Security Token"
+        required
+        density="compact"
+        :show-query-flag="false"
+        control-class="form-control"
         placeholder="Enter your user password to confirm identity"
         autocomplete="current-password"
         @keyup.enter="handleSign"
@@ -115,23 +121,22 @@
     </div>
 
     <div class="form-group">
-      <label for="signature-totp" class="form-label"
-        >One-Time Verification Code (TOTP, if MFA enabled)</label
-      >
-      <input
+      <ClinicalInput
         id="signature-totp"
         v-model="totp"
-        type="text"
+        label="One-Time Verification Code (TOTP, if MFA enabled)"
+        density="compact"
+        :show-query-flag="false"
         inputmode="numeric"
         autocomplete="one-time-code"
-        class="form-control"
+        control-class="form-control"
         placeholder="Optional 6-digit authenticator code"
         @keyup.enter="handleSign"
       />
     </div>
 
     <div v-if="errorMessage" class="error-banner" role="alert">
-      ⚠️ {{ errorMessage }}
+      {{ errorMessage }}
     </div>
 
     <template #footer>
@@ -150,7 +155,7 @@
         @click="handleSign"
       >
         <span v-if="loading" class="spinner" aria-hidden="true" />
-        <span v-else>✍️ Sign &amp; Authorize</span>
+        <span v-else>Sign &amp; Authorize</span>
       </button>
     </template>
   </ClinicalModal>
@@ -158,7 +163,7 @@
 
 <script setup>
 import { ref, computed } from "vue";
-import { ClinicalModal } from "ui";
+import { ClinicalInput, ClinicalModal } from "ui";
 import { ticketsApi } from "../../api/ticketsApi";
 import { useAuthStore } from "../../stores/auth";
 import { describeApiError } from "../../utils/apiErrors.js";

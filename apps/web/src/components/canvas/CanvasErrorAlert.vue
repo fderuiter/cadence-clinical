@@ -103,7 +103,7 @@ defineEmits<{
   cursor: pointer;
 }
 
-.canvas-error-btn:hover {
+.canvas-error-btn:hover:not(:disabled) {
   background: var(--semantic-color-surface-subtle);
 }
 

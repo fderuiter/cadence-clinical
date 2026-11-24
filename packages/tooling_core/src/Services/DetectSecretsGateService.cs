@@ -33,7 +33,7 @@ public static class DetectSecretsGateService
         repoRoot ??= FindRepoRoot();
         getEnvironmentVariable ??= Environment.GetEnvironmentVariable;
 
-        // 1. Isolated .cadence/venv (provisioned by setup_wizard.sh / setup_wizard.ps1)
+        // 1. Isolated .cadence/venv (provisioned by cadence doctor --auto-fix)
         foreach (string venvDir in new[] { Path.Combine(repoRoot, ".cadence", "venv"), Path.Combine(repoRoot, ".venv") })
         {
             string venvBinary = OperatingSystem.IsWindows()
@@ -91,7 +91,7 @@ public static class DetectSecretsGateService
         if (tool is null)
         {
             Console.WriteLine("[ERROR] 'detect-secrets-hook' is not available in .cadence/venv, PATH, or uvx.");
-            Console.WriteLine($"  Provision it via './scripts/setup_wizard.sh --minimal' (or 'python3 -m venv .cadence/venv && .cadence/venv/bin/python -m pip install --upgrade pip detect-secrets=={PinnedVersion}').");
+            Console.WriteLine($"  Provision it via 'pnpm cadence doctor --auto-fix' (or 'python3 -m venv .cadence/venv && .cadence/venv/bin/python -m pip install --upgrade pip detect-secrets=={PinnedVersion}').");
             return 1;
         }
 

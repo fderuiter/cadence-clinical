@@ -400,6 +400,7 @@ onUnmounted(() => {
       <div class="header-controls">
         <template v-if="mediaCategory === 'image' || mediaCategory === 'pdf'">
           <button
+            type="button"
             class="control-btn"
             aria-label="Zoom Out"
             title="Zoom Out"
@@ -409,6 +410,7 @@ onUnmounted(() => {
           </button>
           <span class="zoom-indicator">{{ Math.round(zoomLevel * 100) }}%</span>
           <button
+            type="button"
             class="control-btn"
             aria-label="Zoom In"
             title="Zoom In"
@@ -418,6 +420,7 @@ onUnmounted(() => {
           </button>
           <button
             v-if="mediaCategory === 'image'"
+            type="button"
             class="control-btn"
             aria-label="Rotate 90 Degrees"
             title="Rotate Clockwise"
@@ -446,6 +449,7 @@ onUnmounted(() => {
             <span aria-hidden="true">&rarr;</span>
           </button>
           <button
+            type="button"
             class="control-btn"
             aria-label="Reset View"
             title="Reset Zoom & Pan"
@@ -496,6 +500,7 @@ onUnmounted(() => {
         ></canvas>
         <div class="pdf-bottom-bar">
           <button
+            type="button"
             class="control-btn"
             :disabled="pdfPage <= 1"
             aria-label="Previous page"
@@ -507,6 +512,7 @@ onUnmounted(() => {
             >Page {{ pdfPage }} of {{ pdfTotalPages }}</span
           >
           <button
+            type="button"
             class="control-btn"
             :disabled="pdfPage >= pdfTotalPages"
             aria-label="Next page"
@@ -568,6 +574,7 @@ onUnmounted(() => {
 
         <div class="audio-controls-bar">
           <button
+            type="button"
             class="play-toggle-btn"
             :aria-label="isPlaying ? 'Pause audio' : 'Play audio'"
             data-testid="audio-play-btn"
@@ -591,6 +598,7 @@ onUnmounted(() => {
           <span class="time-display">{{ formatTime(duration) }}</span>
 
           <button
+            type="button"
             class="control-btn"
             :aria-label="isMuted ? 'Unmute' : 'Mute'"
             @click="toggleMute"
@@ -622,6 +630,7 @@ onUnmounted(() => {
 
         <div class="video-controls-bar">
           <button
+            type="button"
             class="play-toggle-btn"
             :aria-label="isPlaying ? 'Pause video' : 'Play video'"
             data-testid="video-play-btn"
@@ -649,6 +658,7 @@ onUnmounted(() => {
             <button
               v-for="rate in [0.5, 1, 1.5, 2]"
               :key="rate"
+              type="button"
               class="speed-btn"
               :class="{ active: playbackRate === rate }"
               :aria-label="`Set speed to ${rate}x`"
@@ -659,6 +669,7 @@ onUnmounted(() => {
           </div>
 
           <button
+            type="button"
             class="control-btn"
             :aria-label="isMuted ? 'Unmute' : 'Mute'"
             @click="toggleMute"
@@ -940,7 +951,7 @@ onUnmounted(() => {
   transition: background 0.15s ease;
 }
 
-.play-toggle-btn:hover {
+.play-toggle-btn:hover:not(:disabled) {
   background: var(--semantic-color-primary-dark);
 }
 

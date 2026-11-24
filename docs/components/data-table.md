@@ -5,9 +5,9 @@ The `ClinicalDataTable` component provides an accessible, performant tabular vie
 ## Features
 
 - **Keyboard-Accessible Column Sorting**: Native `<button type="button">` sort controls inside sortable `<th scope="col">` headers with conditional `aria-sort` (`none`, `ascending`, `descending`), two-color `:focus-visible` indicators, and directional glyphs (`▲`, `▼`, `⇅`).
-- **Focusable Row Activation & Selection**: Keyboard-activatable rows (`tabindex="0"`, `Enter` / `Space`) with interactive-descendant guards so row checkboxes (`aria-selected` when `selectable` is enabled) and slotted action buttons never double-fire `row-click`.
-- **Programmatic Naming & Polite Pagination**: Unique `useId()` heading linked via `aria-labelledby` and `<caption class="sr-only">`, `type="button"` page controls, `role="status"` / `aria-live="polite"` page announcements, and automatic `currentPage` clamping when filtered datasets shrink.
-- **Custom Cell Slotting**: Slot templates for formatting clinical codes, flags, or status pills.
+- **Focusable Row Activation, Selection & Masked Rows**: Keyboard-activatable rows (`tabindex="0"`, `Enter` / `Space`) when `rowInteractive` evaluates true (or `@row-click` is bound), non-focusable rows when `rowInteractive` returns `false`, `#masked-row` full-width redacted row slot (`row.__masked` or `isRowMasked`), and interactive-descendant guards so row checkboxes (`aria-selected` when `selectable` is enabled) and slotted action buttons never double-fire `row-click`.
+- **Programmatic Naming & Client/External Pagination**: Unique `useId()` heading (or `ariaLabel` when `hideHeader` is enabled) linked via `aria-labelledby` and `<caption class="sr-only">`, `paginationMode` (`"client"` | `"external"` | `"none"`), controlled `page` / `totalCount` / `sortBy` / `sortDirection` props (`update:page`, `sort-change`), `type="button"` page controls with `:not(:disabled)` hover guards, `role="status"` / `aria-live="polite"` page announcements, `#pagination` footer slot, and automatic `currentPage` clamping when filtered datasets shrink.
+- **Custom Header & Cell Slotting**: `#head-<key>` header cell slots, `#cell-<key>` data cell slots, `#toolbar`, and `#empty` slots for formatting clinical codes, flags, or status badges.
 
 ## Usage Example
 

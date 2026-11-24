@@ -34,19 +34,26 @@ Use the [project plan](docs/PROJECT_PLAN.md) to find the module owner and the [g
 ```bash
 git clone https://github.com/fderuiter/cadence-clinical.git
 cd cadence-clinical
-make wizard            # interactive: bash scripts/setup_wizard.sh (Windows: scripts/setup_wizard.ps1)
+make wizard            # interactive: bash scripts/setup_wizard.sh (Windows: pwsh scripts/setup_wizard.ps1)
 make setup             # non-interactive: bash scripts/setup_wizard.sh --dev --minimal
 ```
 
-The wizard detects the environment (workstation, Codespaces, devcontainer, Claude Code remote session
-or CI), installs or validates the .NET 10 SDK and dev certificate, installs the pnpm workspace,
-provisions `.cadence/venv` (`detect-secrets`) and `.cadence/bin` (`actionlint`, `hadolint`, `shellcheck`),
-points Git at the repository hooks (`git config core.hooksPath .githooks`), creates `.env` from
-`.env.example`, and runs `cadence doctor`. `make setup` passes `--dev --minimal` to skip prompts and
-the Playwright browser download.
+`scripts/setup_wizard.sh` (and `scripts/setup_wizard.ps1` on Windows) is a fail-closed bootstrap wrapper:
+it detects the environment (workstation, Codespaces, devcontainer, Claude Code remote session, or CI),
+installs or validates the .NET 10 SDK and HTTPS dev certificate via `scripts/setup_dotnet_env.{sh,ps1}`,
+verifies `dotnet`, `node`, and `pnpm` are active, and delegates workspace provisioning to
+`node scripts/run-cli.js doctor --auto-fix`. `cadence doctor --auto-fix` runs `dotnet tool restore`
+(`.config/dotnet-tools.json`) and `dotnet restore Cadence.sln`, provisions `detect-secrets==1.5.0` in
+`.cadence/venv` and SHA-256-verified `actionlint` (`1.7.12`), `hadolint` (`2.15.1`), and `shellcheck`
+(`0.11.0`) in `.cadence/bin`, installs the `pnpm` workspace (`pnpm install --frozen-lockfile`), creates
+`.env` from `.env.example` if absent, and enables `.githooks/pre-commit`
+(`git config core.hooksPath .githooks`) only after all blocking checks pass. `make setup` passes
+`--dev --minimal` to skip prompts, HTTPS cert trust prompts, and Playwright browser downloads; pass
+`--linters-only` / `-LintersOnly` to provision only `.cadence/bin` linters.
 
 With the [prerequisites installed](docs/LOCAL_DEV_ENVIRONMENT.md#1-prerequisites) and developer tools
-already provisioned, restore the workspaces directly with `dotnet restore Cadence.sln && pnpm install --frozen-lockfile`.
+already provisioned, restore the workspaces directly with `dotnet restore Cadence.sln && pnpm install --frozen-lockfile`,
+or self-heal the local toolchain at any time with `pnpm cadence doctor --auto-fix --minimal`.
 
 NuGet restores from the v3 feed configured in [`NuGet.Config`](NuGet.Config).
 
@@ -68,7 +75,7 @@ To run the services locally, see [README: Running the services](README.md#runnin
 
 ## 3. Local checks
 
-The pre-commit hook (`.githooks/pre-commit`) delegates directly to `node scripts/run-cli.js check --pre-commit` on Linux, macOS, and Windows, reading staged Git index blobs via `git cat-file --batch` (without mutating working-tree files or scanning the full repository on deletion/clean-merge commits) and running Prettier, ESLint, `actionlint`, `hadolint`, `dotnet format` (`whitespace` and `style`), `detect-secrets`, GitHub Actions workflow security and SHA pinning (`workflow-security`), YAML syntax, trailing-whitespace, EOF newline, and all Cadence policy gates fail-closed. Before opening a PR also run the full checks and tests:
+The pre-commit hook (`.githooks/pre-commit`) delegates directly to `node scripts/run-cli.js check --pre-commit` on Linux, macOS, and Windows, reading staged Git index blobs via `git cat-file --batch` (without mutating working-tree files or scanning the full repository on deletion/clean-merge commits) and running Prettier, ESLint, `actionlint`, `hadolint`, `shellcheck`, `dotnet format` (`whitespace` and `style`), `detect-secrets`, GitHub Actions workflow security and SHA pinning (`workflow-security`), YAML syntax, trailing-whitespace, EOF newline, and all Cadence policy gates fail-closed. Before opening a PR also run the full checks and tests:
 
 ```bash
 dotnet build Cadence.sln
@@ -81,7 +88,7 @@ pnpm cadence check
 
 `make verify` runs `pnpm cadence check`, `pnpm test`, and `pnpm cadence test` in sequence.
 
-Useful single gates (`pnpm cadence check <gate>`): `prettier`, `eslint`, `typecheck`, `actionlint`, `hadolint`, `workflow-security`, `rulesets`,
+Useful single gates (`pnpm cadence check <gate>`): `prettier`, `eslint`, `typecheck`, `actionlint`, `hadolint`, `shellcheck`, `workflow-security`, `rulesets`,
 `yaml`, `detect-secrets`, `adrs`, `markdown`, `readmes`, `arch-drift`, `env-vars`, `openapi`, `rtm`,
 `duplication`, `security`, `deid`, `vulnerabilities`.
 

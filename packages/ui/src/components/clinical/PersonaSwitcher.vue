@@ -96,6 +96,7 @@ const selectPersona = (persona) => {
       <button
         v-for="persona in personas"
         :key="persona.id"
+        type="button"
         :class="['menu-item', { active: persona.id === modelValue }]"
         role="menuitem"
         @click="selectPersona(persona)"
@@ -129,7 +130,7 @@ const selectPersona = (persona) => {
   transition: all 0.15s ease;
 }
 
-.persona-toggle-btn:hover {
+.persona-toggle-btn:hover:not(:disabled) {
   background: var(--semantic-color-surface-muted);
   border-color: var(--semantic-color-border-control);
 }

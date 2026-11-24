@@ -1334,7 +1334,7 @@ async function submitUpload() {
   padding: 0;
 }
 
-.close-modal-btn:hover {
+.close-modal-btn:hover:not(:disabled) {
   color: var(--semantic-color-text-secondary);
 }
 
@@ -1511,7 +1511,7 @@ async function submitUpload() {
   border: 1px solid var(--semantic-color-interactive-primary);
 }
 
-.btn-outline-primary:hover {
+.btn-outline-primary:hover:not(:disabled) {
   background-color: var(--semantic-color-info-bg);
 }
 
@@ -1521,7 +1521,7 @@ async function submitUpload() {
   border: 1px solid var(--semantic-color-border-control);
 }
 
-.btn-outline-secondary:hover {
+.btn-outline-secondary:hover:not(:disabled) {
   background-color: var(--semantic-color-surface-muted);
 }
 
@@ -1569,7 +1569,7 @@ async function submitUpload() {
   color: var(--semantic-color-text-secondary);
 }
 
-.page-num-btn:hover {
+.page-num-btn:hover:not(:disabled) {
   background-color: var(--semantic-color-surface-header); /* deid-ignore */
   border-color: var(--semantic-color-border-control);
 }

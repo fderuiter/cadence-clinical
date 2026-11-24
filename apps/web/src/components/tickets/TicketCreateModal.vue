@@ -34,28 +34,29 @@
       <div class="modal-body-fields">
         <div class="form-row">
           <div class="form-group flex-2">
-            <label for="ticket-title" class="form-label"
-              >Issue Title
-              <span class="text-danger" aria-hidden="true">*</span></label
-            >
-            <input
+            <ClinicalInput
               id="ticket-title"
               v-model="form.title"
-              type="text"
-              class="form-control"
-              placeholder="e.g. Temperature Excursion in IP Storage Room 102"
+              label="Issue Title"
+              label-class="form-label"
               required
+              density="compact"
+              :show-query-flag="false"
+              control-class="form-control"
+              placeholder="e.g. Temperature Excursion in IP Storage Room 102"
             />
           </div>
           <div class="form-group flex-1">
-            <label for="ticket-category" class="form-label"
-              >ICH GCP Category
-              <span class="text-danger" aria-hidden="true">*</span></label
-            >
-            <select
+            <ClinicalInput
               id="ticket-category"
               v-model="form.category"
-              class="form-control"
+              as="select"
+              label="ICH GCP Category"
+              label-class="form-label"
+              required
+              density="compact"
+              :show-query-flag="false"
+              control-class="form-control"
             >
               <option value="PROTOCOL_DEVIATION">Protocol Deviation</option>
               <option value="DATA_QUERY">Data Query / Discrepancy</option>
@@ -77,20 +78,22 @@
                 Regulatory &amp; Ethics Query
               </option>
               <option value="SYSTEM_SUPPORT">System Support</option>
-            </select>
+            </ClinicalInput>
           </div>
         </div>
 
         <div class="form-row">
           <div class="form-group flex-1">
-            <label for="ticket-severity" class="form-label"
-              >GxP Severity Rating
-              <span class="text-danger" aria-hidden="true">*</span></label
-            >
-            <select
+            <ClinicalInput
               id="ticket-severity"
               v-model="form.gxp_severity"
-              class="form-control"
+              as="select"
+              label="GxP Severity Rating"
+              label-class="form-label"
+              required
+              density="compact"
+              :show-query-flag="false"
+              control-class="form-control"
             >
               <option value="MINOR">
                 Minor (No safety or data integrity impact)
@@ -101,66 +104,77 @@
               <option value="CRITICAL">
                 Critical (Immediate safety, integrity, or compliance breach)
               </option>
-            </select>
+            </ClinicalInput>
           </div>
           <div class="form-group flex-1">
-            <label for="ticket-priority" class="form-label">Priority</label>
-            <select
+            <ClinicalInput
               id="ticket-priority"
               v-model="form.priority"
-              class="form-control"
+              as="select"
+              label="Priority"
+              label-class="form-label"
+              density="compact"
+              :show-query-flag="false"
+              control-class="form-control"
             >
               <option value="LOW">Low</option>
               <option value="MEDIUM">Medium</option>
               <option value="HIGH">High</option>
               <option value="CRITICAL">Critical</option>
-            </select>
+            </ClinicalInput>
           </div>
         </div>
 
         <div class="form-group">
-          <label for="ticket-desc" class="form-label"
-            >Clinical Narrative &amp; Description
-            <span class="text-danger" aria-hidden="true">*</span></label
-          >
-          <textarea
+          <ClinicalInput
             id="ticket-desc"
             v-model="form.description"
-            rows="3"
-            class="form-control"
-            placeholder="Detailed description of the issue, circumstances, and immediate containment..."
+            as="textarea"
+            :rows="3"
+            label="Clinical Narrative & Description"
+            label-class="form-label"
             required
+            density="compact"
+            :show-query-flag="false"
+            control-class="form-control"
+            placeholder="Detailed description of the issue, circumstances, and immediate containment..."
           />
         </div>
 
         <div class="form-row">
           <div class="form-group flex-1">
-            <label for="ticket-study" class="form-label">Study ID</label>
-            <input
+            <ClinicalInput
               id="ticket-study"
               v-model="form.study_id"
-              type="text"
-              class="form-control"
+              label="Study ID"
+              label-class="form-label"
+              density="compact"
+              :show-query-flag="false"
+              control-class="form-control"
               placeholder="e.g. CADENCE-101"
             />
           </div>
           <div class="form-group flex-1">
-            <label for="ticket-site" class="form-label">Site ID</label>
-            <input
+            <ClinicalInput
               id="ticket-site"
               v-model="form.site_id"
-              type="text"
-              class="form-control"
+              label="Site ID"
+              label-class="form-label"
+              density="compact"
+              :show-query-flag="false"
+              control-class="form-control"
               placeholder="e.g. SITE-01"
             />
           </div>
           <div class="form-group flex-1">
-            <label for="ticket-subject" class="form-label">Subject ID</label>
-            <input
+            <ClinicalInput
               id="ticket-subject"
               v-model="form.subject_id"
-              type="text"
-              class="form-control"
+              label="Subject ID"
+              label-class="form-label"
+              density="compact"
+              :show-query-flag="false"
+              control-class="form-control"
               placeholder="e.g. SUBJ-8812"
             />
           </div>
@@ -168,13 +182,15 @@
 
         <div class="form-row">
           <div class="form-group flex-1">
-            <label for="ticket-entity-type" class="form-label"
-              >Linked Entity Type</label
-            >
-            <select
+            <ClinicalInput
               id="ticket-entity-type"
               v-model="form.entity_type"
-              class="form-control"
+              as="select"
+              label="Linked Entity Type"
+              label-class="form-label"
+              density="compact"
+              :show-query-flag="false"
+              control-class="form-control"
             >
               <option value="">None / General</option>
               <option value="SUBJECT">Clinical Subject</option>
@@ -184,34 +200,33 @@
               <option value="TMF_DOCUMENT">eTMF Document</option>
               <option value="MVR_VISIT">Monitoring Visit Finding</option>
               <option value="SUPPLY_KIT">Investigational Product Kit</option>
-            </select>
+            </ClinicalInput>
           </div>
           <div class="form-group flex-2">
-            <label for="ticket-entity-id" class="form-label"
-              >Linked Entity ID</label
-            >
-            <input
+            <ClinicalInput
               id="ticket-entity-id"
               v-model="form.entity_id"
-              type="text"
-              class="form-control"
+              label="Linked Entity ID"
+              label-class="form-label"
+              density="compact"
+              :show-query-flag="false"
+              control-class="form-control"
               placeholder="e.g. FORM-AE-001 or CAPA-2026-09"
             />
           </div>
         </div>
 
         <div class="form-group">
-          <label for="ticket-reason" class="form-label"
-            >GxP Justification / Reason for Creation
-            <span class="text-danger" aria-hidden="true">*</span></label
-          >
-          <input
+          <ClinicalInput
             id="ticket-reason"
             v-model="form.reason_for_change"
-            type="text"
-            class="form-control"
-            placeholder="Mandatory 21 CFR Part 11 audit reason..."
+            label="GxP Justification / Reason for Creation"
+            label-class="form-label"
             required
+            density="compact"
+            :show-query-flag="false"
+            control-class="form-control"
+            placeholder="Mandatory 21 CFR Part 11 audit reason..."
           />
         </div>
 
@@ -221,7 +236,7 @@
           class="error-banner"
           role="alert"
         >
-          ⚠️ {{ errorMessage }}
+          {{ errorMessage }}
         </div>
       </div>
 
@@ -242,7 +257,7 @@
           @click.prevent="handleSubmit"
         >
           <span v-if="loading" class="spinner" />
-          <span v-else>🚀 Log Issue</span>
+          <span v-else>Log Issue</span>
         </button>
       </div>
     </form>
@@ -251,7 +266,7 @@
 
 <script setup>
 import { ref, reactive, computed, watch } from "vue";
-import { ClinicalModal } from "ui";
+import { ClinicalInput, ClinicalModal } from "ui";
 import { describeApiError } from "../../utils/apiErrors.js";
 
 const props = defineProps({

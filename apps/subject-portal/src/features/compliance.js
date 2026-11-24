@@ -17,11 +17,13 @@ export function renderCompliance() {
   if (gridLayoutEl) gridLayoutEl.style.display = "none";
 
   if (state.complianceLoading) {
+    state.complianceHistory = [];
     if (loadingEl) loadingEl.style.display = "block";
     return;
   }
 
   if (state.complianceError) {
+    state.complianceHistory = [];
     if (failureEl) {
       failureEl.style.display = "block";
       if (errorMsgEl) errorMsgEl.textContent = state.complianceError;
@@ -35,6 +37,7 @@ export function renderCompliance() {
     !state.session.userId &&
     state.assignments.length === 0
   ) {
+    state.complianceHistory = [];
     if (failureEl) {
       failureEl.style.display = "block";
       if (errorMsgEl) {
@@ -62,6 +65,7 @@ export function renderCompliance() {
     overdue = state.compliance.overdue_count;
     historyList = state.compliance.assignments || [];
   } else if (isAuthenticatedSession() && !state.compliance) {
+    state.complianceHistory = [];
     if (failureEl) {
       failureEl.style.display = "block";
       if (gridLayoutEl) gridLayoutEl.style.display = "none";
@@ -131,21 +135,10 @@ export function renderCompliance() {
   if (pendingEl) pendingEl.textContent = pending;
   if (overdueEl) overdueEl.textContent = overdue;
 
-  // Update History Table
-  const tbody = document.getElementById("compliance-history-tbody");
-  if (!tbody) return;
-
-  if (historyList.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="4" class="no-data">No history found.</td></tr>`;
-    return;
-  }
-
-  // Sort assignments chronologically by due_at or end_date
+  // Sort assignments chronologically by due_at or end_date and enrich rows for ClinicalDataTable
   const sorted = historyList
     .slice()
-    .sort((a, b) => new Date(b.due_at) - new Date(a.due_at));
-
-  tbody.innerHTML = sorted
+    .sort((a, b) => new Date(b.due_at) - new Date(a.due_at))
     .map((item, rowIndex) => {
       const scheduledText = item.due_at
         ? new Date(item.due_at).toLocaleDateString()
@@ -176,10 +169,35 @@ export function renderCompliance() {
         item.instrument_name ||
         (state.instruments && state.instruments[item.instrument_id]?.name) ||
         "Assigned Instrument";
+
+      return {
+        ...item,
+        rowIndex,
+        instName,
+        scheduledText,
+        submittedText,
+        pillClass,
+        statusLabel,
+      };
+    });
+
+  state.complianceHistory = sorted;
+
+  // Update standalone JSDOM History Table fallback when not managed by Vue ClinicalDataTable
+  const tbody = document.getElementById("compliance-history-tbody");
+  if (!tbody || tbody.hasAttribute("data-vue-managed")) return;
+
+  if (sorted.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="4" class="no-data">No history found.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = sorted
+    .map((item, rowIndex) => {
       const peekBtnHtml = createSrOnlyActionButton({
         id: `btn-peek-compliance-${rowIndex}`,
         label: "View Details",
-        srContext: instName,
+        srContext: item.instName,
         className: "btn btn-secondary btn-peek-compliance",
         dataId: String(rowIndex),
       });
@@ -188,13 +206,13 @@ export function renderCompliance() {
         <tr id="compliance-row-${rowIndex}" data-row-index="${rowIndex}" style="cursor: pointer;">
           <td>
             <div class="compliance-row-title">
-              <strong>${instName}</strong>
+              <strong>${item.instName}</strong>
               ${peekBtnHtml}
             </div>
           </td>
-          <td class="tabular-nums">${scheduledText}</td>
-          <td class="tabular-nums">${submittedText}</td>
-          <td><span class="status-pill ${pillClass}">${statusLabel}</span></td>
+          <td class="tabular-nums">${item.scheduledText}</td>
+          <td class="tabular-nums">${item.submittedText}</td>
+          <td><span class="status-pill ${item.pillClass}">${item.statusLabel}</span></td>
         </tr>
       `;
     })

@@ -84,38 +84,42 @@
         <div v-else-if="canMutateTicket" class="action-btn-group">
           <button
             v-if="ticket.status === 'OPEN'"
+            type="button"
             class="btn btn-sm btn-primary"
             :disabled="actionLoading"
             @click="transitionTicket('IN_PROGRESS')"
           >
-            ▶ Start Work
+            Start Work
           </button>
           <button
             v-if="ticket.status === 'IN_PROGRESS'"
+            type="button"
             class="btn btn-sm btn-warning"
             :disabled="actionLoading"
             @click="transitionTicket('WAITING_ON_SITE')"
           >
-            ⏸ Pause (Wait Site)
+            Pause (Wait Site)
           </button>
           <button
             v-if="ticket.status === 'IN_PROGRESS'"
+            type="button"
             class="btn btn-sm btn-warning"
             :disabled="actionLoading"
             @click="transitionTicket('WAITING_ON_SPONSOR')"
           >
-            ⏸ Pause (Wait Sponsor)
+            Pause (Wait Sponsor)
           </button>
           <button
             v-if="
               ticket.status === 'WAITING_ON_SITE' ||
               ticket.status === 'WAITING_ON_SPONSOR'
             "
+            type="button"
             class="btn btn-sm btn-primary"
             :disabled="actionLoading"
             @click="transitionTicket('IN_PROGRESS')"
           >
-            ▶ Resume Work
+            Resume Work
           </button>
           <button
             v-if="
@@ -124,42 +128,49 @@
               ticket.status === 'WAITING_ON_SPONSOR'
             "
             id="btn-open-resolve"
+            type="button"
             class="btn btn-sm btn-success"
             :disabled="actionLoading"
             @click="openResolveModal"
           >
-            ✓ Resolve Issue
+            Resolve Issue
           </button>
           <button
             v-if="ticket.status === 'RESOLVED'"
+            type="button"
             class="btn btn-sm btn-secondary"
             :disabled="actionLoading"
             @click="transitionTicket('CLOSED')"
           >
-            🔒 Final Close
+            Final Close
           </button>
-          <input
+          <ClinicalInput
             v-if="ticket.status !== 'CLOSED'"
             id="transition-reason-input"
             v-model="transitionReason"
-            type="text"
-            aria-label="Reason for workflow status transition"
-            class="form-control transition-reason-field"
+            label="Reason for workflow status transition"
+            hide-label
+            density="compact"
+            :show-query-flag="false"
+            control-class="form-control transition-reason-field"
             placeholder="GxP transition reason..."
+            :attributes="{
+              'aria-label': 'Reason for workflow status transition',
+            }"
           />
         </div>
         <div v-else class="signed-lock-notice">
-          👁️ Read-only view — Status transitions require operational staff
-          access.
+          Read-only view — Status transitions require operational staff access.
         </div>
 
         <button
           v-if="canSignTicket"
           id="btn-open-part11-sign"
+          type="button"
           class="btn btn-sm btn-sign"
           @click="isSignModalOpen = true"
         >
-          ✍️ Part 11 eSign
+          Part 11 eSign
         </button>
       </div>
 
@@ -170,12 +181,15 @@
       >
         <h4 class="card-title">Document Root Cause &amp; Resolution</h4>
         <div class="resolve-grid">
-          <label class="resolve-field">
-            <span class="meta-label">Root-Cause Category</span>
-            <select
+          <div class="resolve-field">
+            <ClinicalInput
               id="resolve-rca-category"
               v-model="resolveForm.root_cause_category"
-              class="form-control"
+              as="select"
+              label="Root-Cause Category"
+              density="compact"
+              :show-query-flag="false"
+              control-class="form-control"
             >
               <option value="PROCESS_WORKFLOW_DEFICIT">
                 Process / Workflow Deficit
@@ -186,39 +200,46 @@
               <option value="EQUIPMENT_CALIBRATION">
                 Equipment / Cold-Chain Calibration
               </option>
-            </select>
-          </label>
-          <label class="resolve-field">
-            <span class="meta-label">Resolution Code</span>
-            <input
+            </ClinicalInput>
+          </div>
+          <div class="resolve-field">
+            <ClinicalInput
               id="resolve-code"
               v-model="resolveForm.resolution_code"
-              type="text"
-              class="form-control"
+              label="Resolution Code"
+              density="compact"
+              :show-query-flag="false"
+              control-class="form-control"
               placeholder="e.g. CORRECTIVE_ACTION_IMPLEMENTED"
             />
-          </label>
+          </div>
         </div>
-        <label class="resolve-field">
-          <span class="meta-label"
-            >Root-Cause &amp; Corrective Action Summary *</span
-          >
-          <textarea
+        <div class="resolve-field">
+          <ClinicalInput
             id="resolve-rca-summary"
             v-model="resolveForm.root_cause_summary"
-            rows="2"
-            class="form-control"
+            as="textarea"
+            :rows="2"
+            label="Root-Cause & Corrective Action Summary"
+            required
+            density="compact"
+            :show-query-flag="false"
+            control-class="form-control"
             placeholder="Describe de-identified root cause and corrective action (no participant PII)..."
           />
-        </label>
+        </div>
         <div class="comment-submit-row">
-          <input
+          <ClinicalInput
             id="resolve-change-reason"
             v-model="resolveForm.reason_for_change"
-            type="text"
-            aria-label="GxP reason for resolving ticket"
-            class="form-control flex-1"
+            label="GxP reason for resolving ticket"
+            hide-label
+            density="compact"
+            :show-query-flag="false"
+            extra-class="flex-1"
+            control-class="form-control"
             placeholder="Mandatory GxP reason for resolution..."
+            :attributes="{ 'aria-label': 'GxP reason for resolving ticket' }"
           />
           <button
             type="button"
@@ -238,7 +259,7 @@
             "
             @click="submitResolution"
           >
-            ✓ Confirm Resolution
+            Confirm Resolution
           </button>
         </div>
       </div>
@@ -432,6 +453,7 @@
         >
           <div class="comments-filter-bar">
             <button
+              type="button"
               class="filter-chip"
               :class="{ active: commentFilter === 'ALL' }"
               @click="commentFilter = 'ALL'"
@@ -439,19 +461,21 @@
               All Notes
             </button>
             <button
+              type="button"
               class="filter-chip"
               :class="{ active: commentFilter === 'PUBLIC' }"
               @click="commentFilter = 'PUBLIC'"
             >
-              🌐 Public (Site &amp; Sponsor)
+              Public (Site &amp; Sponsor)
             </button>
             <button
               v-if="canViewInternalSponsorNotes"
+              type="button"
               class="filter-chip"
               :class="{ active: commentFilter === 'INTERNAL_SPONSOR' }"
               @click="commentFilter = 'INTERNAL_SPONSOR'"
             >
-              🔒 Internal Sponsor Only
+              Internal Sponsor Only
             </button>
           </div>
 
@@ -513,23 +537,35 @@
                 <span>🔒 Internal Sponsor Note</span>
               </label>
             </div>
-            <textarea
+            <ClinicalInput
+              id="ticket-new-comment-body"
               v-model="newCommentContent"
-              rows="3"
-              aria-label="Clinical discussion note"
-              class="form-control"
+              as="textarea"
+              :rows="3"
+              label="Clinical discussion note"
+              hide-label
+              density="compact"
+              :show-query-flag="false"
+              control-class="form-control"
               placeholder="Add a clinical note, investigator response, or internal audit review (no participant PII)..."
+              :attributes="{ 'aria-label': 'Clinical discussion note' }"
             />
             <div class="comment-submit-row">
-              <input
+              <ClinicalInput
+                id="ticket-new-comment-reason"
                 v-model="newCommentReason"
-                type="text"
-                aria-label="Reason for adding note"
-                class="form-control flex-1"
+                label="Reason for adding note"
+                hide-label
+                density="compact"
+                :show-query-flag="false"
+                extra-class="flex-1"
+                control-class="form-control"
                 placeholder="Reason for change (GxP justification)..."
+                :attributes="{ 'aria-label': 'Reason for adding note' }"
               />
               <button
                 id="btn-post-ticket-comment"
+                type="button"
                 class="btn btn-primary"
                 :disabled="
                   !newCommentContent.trim() ||
@@ -573,21 +609,26 @@
                 class="file-input"
                 @change="onFileSelected"
               />
-              <input
+              <ClinicalInput
+                id="ticket-attachment-reason"
                 v-model="attachmentReason"
-                type="text"
-                aria-label="Reason for attaching evidence"
-                class="form-control"
+                label="Reason for attaching evidence"
+                hide-label
+                density="compact"
+                :show-query-flag="false"
+                control-class="form-control"
                 placeholder="Mandatory GxP reason for attachment..."
+                :attributes="{ 'aria-label': 'Reason for attaching evidence' }"
               />
               <button
+                type="button"
                 class="btn btn-primary"
                 :disabled="
                   !selectedFile || !attachmentReason.trim() || uploadSubmitting
                 "
                 @click="uploadAttachment"
               >
-                📎 Attach Evidence
+                Attach Evidence
               </button>
             </div>
           </div>
@@ -683,10 +724,11 @@
             </p>
             <button
               v-if="canSignTicket"
+              type="button"
               class="btn btn-primary btn-sign-action"
               @click="isSignModalOpen = true"
             >
-              ✍️ Sign &amp; Authorize Ticket
+              Sign &amp; Authorize Ticket
             </button>
             <p v-else class="sig-prereq-hint">
               {{
@@ -844,6 +886,7 @@
 <script setup>
 import { ref, reactive, computed, watch } from "vue";
 import {
+  ClinicalInput,
   ClinicalTabs,
   EmptyState,
   handoffFocus,
@@ -1467,7 +1510,7 @@ const onTicketSigned = (sigPayload) => {
   justify-content: center;
 }
 
-.drawer-close:hover {
+.drawer-close:hover:not(:disabled) {
   background: var(--semantic-color-inverse-tint);
   color: var(--semantic-color-text-inverse);
 }
@@ -2161,7 +2204,7 @@ const onTicketSigned = (sigPayload) => {
   transition: all 0.15s ease-in-out;
 }
 
-.citation-chip-btn:hover {
+.citation-chip-btn:hover:not(:disabled) {
   background: var(--semantic-color-info-light);
   border-color: var(--semantic-color-divider-accent);
   color: var(--semantic-color-info);

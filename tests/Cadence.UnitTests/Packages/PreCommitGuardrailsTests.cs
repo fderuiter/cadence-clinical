@@ -1193,8 +1193,8 @@ public sealed class PreCommitGuardrailsTests : IDisposable
 
         string logged = File.ReadAllText(invocationLog);
         string expectedDotnetRoot = Path.Combine(wizardHome, ".dotnet");
-        logged.Should().Contain($"dotnet:restore {Path.Combine(wizardRepo, "Cadence.sln")}|DOTNET_ROOT={expectedDotnetRoot}");
-        logged.Should().Contain($"run-cli:doctor|DOTNET_ROOT={expectedDotnetRoot}|DOTNET={Path.Combine(expectedDotnetRoot, "dotnet")}");
+        logged.Should().Contain($"dotnet:tool restore|DOTNET_ROOT={expectedDotnetRoot}");
+        logged.Should().Contain($"run-cli:doctor --auto-fix --minimal|DOTNET_ROOT={expectedDotnetRoot}|DOTNET={Path.Combine(expectedDotnetRoot, "dotnet")}");
     }
 
     [Fact]
@@ -2152,7 +2152,13 @@ public sealed class PreCommitGuardrailsTests : IDisposable
 
         string minimalPathDir = Path.Combine(_tempDir, "no-xz-bin");
         Directory.CreateDirectory(minimalPathDir);
-        foreach (string tool in new[] { "uname", "dirname", "mkdir", "mktemp", "rm", "mv", "cp", "chmod", "curl", "tar", "gzip", "sha256sum", "shasum", "awk", "tr", "head" })
+        foreach (string tool in new[]
+                 {
+                     "sh", "bash", "pwd", "id", "env", "uname", "dirname", "mkdir", "mktemp",
+                     "rm", "mv", "cp", "chmod", "curl", "tar", "gzip", "sha256sum", "shasum",
+                     "awk", "tr", "head", "node", "dotnet", "pnpm", "clang", "cc", "gcc",
+                     "ld", "ld.bfd", "ld.lld", "ld.gold", "lld", "dsymutil", "as", "ar", "strip", "objcopy"
+                 })
         {
             string? resolved = ResolveFromSystemPath(tool);
             if (resolved is not null)

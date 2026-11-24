@@ -424,7 +424,7 @@ const toggleEdit = () => {
   transition: background 0.15s;
 }
 
-.ai-drawer-close-btn:hover {
+.ai-drawer-close-btn:hover:not(:disabled) {
   background: var(--color-border);
   color: var(--color-text);
 }
@@ -525,7 +525,7 @@ code.ai-provenance-val {
   border-radius: 4px;
 }
 
-.ai-edit-toggle-btn:hover {
+.ai-edit-toggle-btn:hover:not(:disabled) {
   background: var(--color-primary-light);
 }
 
@@ -638,7 +638,7 @@ code.ai-provenance-val {
   color: var(--color-text);
 }
 
-.btn-secondary:hover {
+.btn-secondary:hover:not(:disabled) {
   background: var(--semantic-color-surface-header);
 }
 
@@ -648,8 +648,14 @@ code.ai-provenance-val {
   color: var(--color-error);
 }
 
-.btn-dismiss:hover {
+.btn-dismiss:hover:not(:disabled) {
   background: var(--color-error-bg);
+}
+
+.btn-dismiss:disabled,
+.btn-secondary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .btn-accept {

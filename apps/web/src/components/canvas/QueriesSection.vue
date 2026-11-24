@@ -275,91 +275,112 @@
           <p v-if="digest.entries.length === 0" class="status-line">
             No overdue open queries in this scope.
           </p>
-          <div v-else class="study-digest-table-wrap">
-            <table class="study-digest-table">
-              <thead>
-                <tr>
-                  <th scope="col">Subject</th>
-                  <th scope="col">Site</th>
-                  <th scope="col">Item</th>
-                  <th scope="col">Owner</th>
-                  <th scope="col">Age</th>
-                  <th scope="col">Form</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr
-                  v-for="entry in digest.entries"
-                  :key="entry.query_id"
-                  :data-testid="`digest-entry-${entry.query_id}`"
+          <ClinicalDataTable
+            v-else
+            :title="
+              digest.study_site_id
+                ? `Aging digest entries for site ${digest.site_code || digest.scope_key}`
+                : 'Study-wide aging digest entries'
+            "
+            :aria-label="
+              digest.study_site_id
+                ? `Aging digest entries for site ${digest.site_code || digest.scope_key}`
+                : 'Study-wide aging digest entries'
+            "
+            hide-header
+            plain
+            wrapper-class="study-digest-table-wrap"
+            table-class="study-digest-table"
+            :columns="digestColumns"
+            :data="digest.entries"
+            :row-key="(entry, idx) => `${entry.query_id}-${idx}`"
+            :row-attrs="
+              (entry) => ({ 'data-testid': `digest-entry-${entry.query_id}` })
+            "
+            external-pagination
+          >
+            <template #cell-subject="{ row: entry }">
+              <span
+                v-if="isRedactedDigestEntry(entry)"
+                class="study-digest-redacted"
+                data-testid="digest-entry-redacted"
+              >
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.75"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
                 >
-                  <template v-if="isRedactedDigestEntry(entry)">
-                    <td colspan="4">
-                      <span
-                        class="study-digest-redacted"
-                        data-testid="digest-entry-redacted"
-                      >
-                        <svg
-                          width="14"
-                          height="14"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          stroke-width="1.75"
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          aria-hidden="true"
-                        >
-                          <path
-                            d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"
-                          />
-                          <path d="M14.084 14.158a3 3 0 0 1-4.242-4.242" />
-                          <path
-                            d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"
-                          />
-                          <path d="m2 2 20 20" />
-                        </svg>
-                        <span>Redacted (blinded treatment item)</span>
-                      </span>
-                    </td>
-                    <td class="study-digest-num">{{ entry.age_days }}d</td>
-                    <td>
-                      <span class="study-digest-muted">Masked</span>
-                    </td>
-                  </template>
-                  <template v-else>
-                    <td>
-                      <span class="clinical-code">{{
-                        entry.subject_code || "—"
-                      }}</span>
-                    </td>
-                    <td>
-                      <span class="clinical-code">{{
-                        entry.site_code || digest.site_code || "—"
-                      }}</span>
-                    </td>
-                    <td>
-                      <span class="clinical-code">{{ entry.item_id }}</span>
-                    </td>
-                    <td>{{ formatOwnerLabel(entry.owner_role) }}</td>
-                    <td class="study-digest-num">{{ entry.age_days }}d</td>
-                    <td>
-                      <router-link
-                        :id="`digest-open-form-${entry.query_id}`"
-                        class="study-digest-link"
-                        :to="digestEntryFormLocation(digest, entry)"
-                      >
-                        Open
-                        <span class="clinical-code">{{
-                          entry.collection_spec_id || "form"
-                        }}</span>
-                      </router-link>
-                    </td>
-                  </template>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+                  <path
+                    d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"
+                  />
+                  <path d="M14.084 14.158a3 3 0 0 1-4.242-4.242" />
+                  <path
+                    d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"
+                  />
+                  <path d="m2 2 20 20" />
+                </svg>
+                <span>Redacted (blinded treatment item)</span>
+              </span>
+              <span v-else class="clinical-code">{{
+                entry.subject_code || "—"
+              }}</span>
+            </template>
+            <template #cell-site="{ row: entry }">
+              <span
+                v-if="isRedactedDigestEntry(entry)"
+                class="study-digest-muted"
+                >—</span
+              >
+              <span v-else class="clinical-code">{{
+                entry.site_code || digest.site_code || "—"
+              }}</span>
+            </template>
+            <template #cell-item="{ row: entry }">
+              <span
+                v-if="isRedactedDigestEntry(entry)"
+                class="study-digest-muted"
+                >—</span
+              >
+              <span v-else class="clinical-code">{{ entry.item_id }}</span>
+            </template>
+            <template #cell-owner="{ row: entry }">
+              <span
+                v-if="isRedactedDigestEntry(entry)"
+                class="study-digest-muted"
+                >—</span
+              >
+              <template v-else>{{
+                formatOwnerLabel(entry.owner_role)
+              }}</template>
+            </template>
+            <template #cell-age="{ row: entry }">
+              {{ entry.age_days }}d
+            </template>
+            <template #cell-form="{ row: entry }">
+              <span
+                v-if="isRedactedDigestEntry(entry)"
+                class="study-digest-muted"
+                >Masked</span
+              >
+              <router-link
+                v-else
+                :id="`digest-open-form-${entry.query_id}`"
+                class="study-digest-link"
+                :to="digestEntryFormLocation(digest, entry)"
+              >
+                Open
+                <span class="clinical-code">{{
+                  entry.collection_spec_id || "form"
+                }}</span>
+              </router-link>
+            </template>
+          </ClinicalDataTable>
         </article>
       </div>
     </section>
@@ -445,7 +466,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, reactive, ref, watch } from "vue";
 import type { RouteLocationRaw } from "vue-router";
-import { handoffFocus } from "ui";
+import { ClinicalDataTable, handoffFocus } from "ui";
 import { ApiError } from "../../api/client";
 import {
   describeQueryError,
@@ -501,6 +522,15 @@ const OWNER_LABELS: Record<string, string> = {
   monitor: "Monitor",
   data_manager: "Data manager",
 };
+
+const digestColumns = [
+  { key: "subject", label: "Subject" },
+  { key: "site", label: "Site" },
+  { key: "item", label: "Item" },
+  { key: "owner", label: "Owner" },
+  { key: "age", label: "Age", cellClass: "study-digest-num" },
+  { key: "form", label: "Form" },
+];
 
 const props = withDefaults(
   defineProps<{
@@ -1293,18 +1323,18 @@ watch(
   font-variant-numeric: tabular-nums;
 }
 
-.study-digest-table-wrap {
+:deep(.study-digest-table-wrap) {
   overflow-x: auto;
 }
 
-.study-digest-table {
+:deep(.study-digest-table) {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.8rem;
 }
 
-.study-digest-table th,
-.study-digest-table td {
+:deep(.study-digest-table th),
+:deep(.study-digest-table td) {
   padding: 5px 6px;
   border-bottom: 1px solid var(--border);
   text-align: left;

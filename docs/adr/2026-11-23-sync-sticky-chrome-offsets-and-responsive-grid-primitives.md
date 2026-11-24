@@ -1,4 +1,4 @@
-# ADR-2663: Sync Sticky Chrome Offsets, Short-Viewport Sticky Release, and Responsive Grid Primitives
+# ADR-2665: Sync Sticky Chrome Offsets, Short-Viewport Sticky Release, and Responsive Grid Primitives
 
 - **Status:** Accepted
 - **Date:** 2026-11-23

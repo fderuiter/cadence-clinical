@@ -10,96 +10,107 @@
       The participant starts in screening. No name, birth date or other identity
       details are recorded here.
     </p>
-    <label for="add-participant-code">Participant code</label>
-    <input
+    <ClinicalInput
       id="add-participant-code"
       v-model="subjectCode"
+      label="Participant code"
       type="text"
-      maxlength="255"
+      density="compact"
+      :show-query-flag="false"
+      :maxlength="255"
       autocomplete="off"
       required
     />
-    <div class="site-label-row">
-      <label for="add-participant-site">
-        {{
-          restrictToOptions && availableSites.length > 0
-            ? "Site"
-            : "Site (optional)"
-        }}
-      </label>
-      <div class="site-shortcuts">
-        <button
-          v-if="!restrictToOptions && availableSites.length > 0"
-          id="btn-add-participant-toggle-site-mode"
-          type="button"
-          class="link-button"
-          @click="toggleSiteMode"
-        >
-          {{ manualSiteMode ? "Pick linked site" : "Enter custom code" }}
-        </button>
-        <button
-          v-if="canQuickCreateSite"
-          id="btn-add-participant-new-site"
-          type="button"
-          class="link-button"
-          @click="toggleInlineSiteForm"
-        >
-          {{
-            showInlineSiteForm ? "Cancel new site" : "+ Register & link site"
-          }}
-        </button>
-      </div>
-    </div>
-
-    <select
-      v-if="
-        (restrictToOptions && availableSites.length > 0) ||
-        (availableSites.length > 0 && !manualSiteMode)
-      "
+    <ClinicalFieldLayout
       id="add-participant-site"
-      v-model="siteId"
-      :required="restrictToOptions && availableSites.length > 0"
+      :label="
+        restrictToOptions && availableSites.length > 0
+          ? 'Site'
+          : 'Site (optional)'
+      "
+      density="compact"
+      :show-query-flag="false"
     >
-      <option v-if="!restrictToOptions" value="">Not assigned</option>
-      <option
-        v-for="site in availableSites"
-        :key="site.code"
-        :value="site.code"
-      >
-        {{ site.label }}
-      </option>
-      <option
+      <template #after-input>
+        <div class="site-shortcuts">
+          <button
+            v-if="!restrictToOptions && availableSites.length > 0"
+            id="btn-add-participant-toggle-site-mode"
+            type="button"
+            class="link-button"
+            @click="toggleSiteMode"
+          >
+            {{ manualSiteMode ? "Pick linked site" : "Enter custom code" }}
+          </button>
+          <button
+            v-if="canQuickCreateSite"
+            id="btn-add-participant-new-site"
+            type="button"
+            class="link-button"
+            @click="toggleInlineSiteForm"
+          >
+            {{
+              showInlineSiteForm ? "Cancel new site" : "+ Register & link site"
+            }}
+          </button>
+        </div>
+      </template>
+
+      <select
         v-if="
-          !restrictToOptions &&
-          siteId &&
-          !availableSites.some((s) => s.code === siteId)
+          (restrictToOptions && availableSites.length > 0) ||
+          (availableSites.length > 0 && !manualSiteMode)
         "
-        :value="siteId"
-      >
-        {{ siteId }}
-      </option>
-    </select>
-    <template v-else>
-      <input
         id="add-participant-site"
         v-model="siteId"
-        type="text"
-        maxlength="255"
-        autocomplete="off"
-        :list="
-          availableSites.length > 0 ? 'add-participant-site-list' : undefined
-        "
-      />
-      <datalist v-if="availableSites.length > 0" id="add-participant-site-list">
+        class="clinical-input clinical-input--compact"
+        :required="restrictToOptions && availableSites.length > 0"
+      >
+        <option v-if="!restrictToOptions" value="">Not assigned</option>
         <option
-          v-for="option in availableSites"
-          :key="option.code"
-          :value="option.code"
+          v-for="site in availableSites"
+          :key="site.code"
+          :value="site.code"
         >
-          {{ option.label }}
+          {{ site.label }}
         </option>
-      </datalist>
-    </template>
+        <option
+          v-if="
+            !restrictToOptions &&
+            siteId &&
+            !availableSites.some((s) => s.code === siteId)
+          "
+          :value="siteId"
+        >
+          {{ siteId }}
+        </option>
+      </select>
+      <template v-else>
+        <input
+          id="add-participant-site"
+          v-model="siteId"
+          type="text"
+          class="clinical-input clinical-input--compact"
+          maxlength="255"
+          autocomplete="off"
+          :list="
+            availableSites.length > 0 ? 'add-participant-site-list' : undefined
+          "
+        />
+        <datalist
+          v-if="availableSites.length > 0"
+          id="add-participant-site-list"
+        >
+          <option
+            v-for="option in availableSites"
+            :key="option.code"
+            :value="option.code"
+          >
+            {{ option.label }}
+          </option>
+        </datalist>
+      </template>
+    </ClinicalFieldLayout>
 
     <fieldset
       v-if="showInlineSiteForm"
@@ -111,48 +122,58 @@
       <p v-if="inlineSiteError" class="inline-site-error" role="alert">
         {{ inlineSiteError }}
       </p>
-      <label for="inline-site-code">Site code</label>
-      <input
+      <ClinicalInput
         id="inline-site-code"
         v-model="inlineSiteCode"
+        label="Site code"
         type="text"
-        maxlength="64"
+        density="compact"
+        :show-query-flag="false"
+        :maxlength="64"
         autocomplete="off"
         placeholder="e.g. SITE-01"
       />
-      <label for="inline-site-name">Site name</label>
-      <input
+      <ClinicalInput
         id="inline-site-name"
         v-model="inlineSiteName"
+        label="Site name"
         type="text"
-        maxlength="200"
+        density="compact"
+        :show-query-flag="false"
+        :maxlength="200"
         autocomplete="off"
         placeholder="e.g. Metro Cardiology Research Center"
       />
-      <label for="inline-site-country">Country (2-letter ISO)</label>
-      <input
+      <ClinicalInput
         id="inline-site-country"
         v-model="inlineSiteCountry"
+        label="Country (2-letter ISO)"
         type="text"
-        maxlength="2"
+        density="compact"
+        :show-query-flag="false"
+        :maxlength="2"
         autocomplete="off"
         placeholder="US"
       />
-      <label for="inline-site-institution">Site institution</label>
-      <input
+      <ClinicalInput
         id="inline-site-institution"
         v-model="inlineInstitutionName"
+        label="Site institution"
         type="text"
-        maxlength="200"
+        density="compact"
+        :show-query-flag="false"
+        :maxlength="200"
         autocomplete="off"
         placeholder="e.g. Metro University Hospital"
       />
-      <label for="inline-site-reason">Reason for site registration</label>
-      <input
+      <ClinicalInput
         id="inline-site-reason"
         v-model="inlineSiteReason"
+        label="Reason for site registration"
         type="text"
-        maxlength="500"
+        density="compact"
+        :show-query-flag="false"
+        :maxlength="500"
         autocomplete="off"
         placeholder="e.g. Register clinical site for screening"
       />
@@ -168,11 +189,14 @@
         </button>
       </div>
     </fieldset>
-    <label for="add-participant-reason">Reason</label>
-    <textarea
+    <ClinicalInput
       id="add-participant-reason"
       v-model="reason"
-      rows="2"
+      label="Reason"
+      type="textarea"
+      density="compact"
+      :show-query-flag="false"
+      :rows="2"
       placeholder="Why this participant is being added (recorded in the audit trail)"
       required
     />
@@ -199,7 +223,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
-import { handoffFocus } from "ui";
+import { ClinicalFieldLayout, ClinicalInput, handoffFocus } from "ui";
 import type { SubjectSummary } from "../../api/executionApi";
 import { describeKernelError, kernelApi } from "../../api/kernelApi";
 import {
@@ -465,18 +489,11 @@ onMounted(() => {
   font-size: 0.85rem;
 }
 
-.site-label-row {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-}
-
 .site-shortcuts {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  margin-top: 4px;
 }
 
 .link-button {
@@ -487,16 +504,6 @@ onMounted(() => {
   color: var(--semantic-color-interactive-primary);
   text-decoration: underline;
   cursor: pointer;
-}
-
-.add-participant input,
-.add-participant select,
-.add-participant textarea {
-  padding: 6px 8px;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  background: var(--semantic-color-surface);
-  color: var(--semantic-color-text, inherit);
 }
 
 .inline-site-panel {

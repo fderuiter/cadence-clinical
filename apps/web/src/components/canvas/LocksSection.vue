@@ -24,11 +24,14 @@
           Active locks only
         </label>
 
-        <label for="study-locks-as-of">As of (ISO UTC)</label>
-        <input
+        <ClinicalInput
           id="study-locks-as-of"
           v-model="asOfInput"
+          label="As of (ISO UTC)"
           type="text"
+          density="compact"
+          :show-query-flag="false"
+          extra-class="locks-inline-field"
           autocomplete="off"
           placeholder="Latest truth"
         />
@@ -82,20 +85,22 @@
       >
         <h3>Apply signed freeze or lock</h3>
         <div class="apply-grid">
-          <div class="field-group">
-            <label for="lock-apply-scope-kind">Scope level</label>
-            <select
-              id="lock-apply-scope-kind"
-              v-model="applyScopeKind"
-              @change="onScopeKindChange"
-            >
-              <option value="study">Study</option>
-              <option value="study_site">Study site</option>
-              <option value="enrollment">Participant enrollment</option>
-              <option value="collection_instance">Form instance</option>
-              <option value="observation">Observation</option>
-            </select>
-          </div>
+          <ClinicalInput
+            id="lock-apply-scope-kind"
+            v-model="applyScopeKind"
+            label="Scope level"
+            type="select"
+            density="compact"
+            :show-query-flag="false"
+            extra-class="field-group"
+            @change="onScopeKindChange"
+          >
+            <option value="study">Study</option>
+            <option value="study_site">Study site</option>
+            <option value="enrollment">Participant enrollment</option>
+            <option value="collection_instance">Form instance</option>
+            <option value="observation">Observation</option>
+          </ClinicalInput>
 
           <div
             v-if="applyScopeKind === 'study'"
@@ -112,143 +117,158 @@
             </div>
           </div>
 
-          <div v-if="needsSitePicker" class="field-group">
-            <label for="lock-picker-site">
+          <ClinicalInput
+            v-if="needsSitePicker"
+            id="lock-picker-site"
+            v-model="selectedSiteRef"
+            :label="
+              applyScopeKind === 'study_site'
+                ? 'Study site'
+                : 'Filter by study site'
+            "
+            type="select"
+            density="compact"
+            :show-query-flag="false"
+            extra-class="field-group"
+            :attributes="{ 'data-testid': 'lock-picker-site' }"
+            @change="onSitePickerChange"
+          >
+            <option value="">
               {{
                 applyScopeKind === "study_site"
-                  ? "Study site"
-                  : "Filter by study site"
+                  ? "Select a study site…"
+                  : "All visible sites"
               }}
-            </label>
-            <select
-              id="lock-picker-site"
-              v-model="selectedSiteRef"
-              data-testid="lock-picker-site"
-              @change="onSitePickerChange"
+            </option>
+            <option
+              v-for="opt in sitePickerOptions"
+              :key="opt.key"
+              :value="opt.ref"
+              :disabled="opt.masked"
             >
-              <option value="">
-                {{
-                  applyScopeKind === "study_site"
-                    ? "Select a study site…"
-                    : "All visible sites"
-                }}
-              </option>
-              <option
-                v-for="opt in sitePickerOptions"
-                :key="opt.key"
-                :value="opt.ref"
-                :disabled="opt.masked"
-              >
-                {{ opt.label }}
-              </option>
-            </select>
-          </div>
+              {{ opt.label }}
+            </option>
+          </ClinicalInput>
 
-          <div v-if="needsEnrollmentPicker" class="field-group">
-            <label for="lock-picker-enrollment">Participant enrollment</label>
-            <select
-              id="lock-picker-enrollment"
-              v-model="selectedEnrollmentRef"
-              data-testid="lock-picker-enrollment"
-              :disabled="enrollmentsLoading"
-              @change="onEnrollmentPickerChange"
+          <ClinicalInput
+            v-if="needsEnrollmentPicker"
+            id="lock-picker-enrollment"
+            v-model="selectedEnrollmentRef"
+            label="Participant enrollment"
+            type="select"
+            density="compact"
+            :show-query-flag="false"
+            extra-class="field-group"
+            :disabled="enrollmentsLoading"
+            :attributes="{ 'data-testid': 'lock-picker-enrollment' }"
+            @change="onEnrollmentPickerChange"
+          >
+            <option value="">
+              {{
+                enrollmentsLoading
+                  ? "Loading enrollments…"
+                  : "Select a participant enrollment…"
+              }}
+            </option>
+            <option
+              v-for="opt in enrollmentPickerOptions"
+              :key="opt.key"
+              :value="opt.ref"
+              :disabled="opt.masked"
             >
-              <option value="">
-                {{
-                  enrollmentsLoading
-                    ? "Loading enrollments…"
-                    : "Select a participant enrollment…"
-                }}
-              </option>
-              <option
-                v-for="opt in enrollmentPickerOptions"
-                :key="opt.key"
-                :value="opt.ref"
-                :disabled="opt.masked"
-              >
-                {{ opt.label }}
-              </option>
-            </select>
-          </div>
+              {{ opt.label }}
+            </option>
+          </ClinicalInput>
 
-          <div v-if="needsFormPicker" class="field-group">
-            <label for="lock-picker-form">Form instance</label>
-            <select
-              id="lock-picker-form"
-              v-model="selectedFormRef"
-              data-testid="lock-picker-form"
-              :disabled="!selectedEnrollmentRef || formsLoading"
-              @change="onFormPickerChange"
+          <ClinicalInput
+            v-if="needsFormPicker"
+            id="lock-picker-form"
+            v-model="selectedFormRef"
+            label="Form instance"
+            type="select"
+            density="compact"
+            :show-query-flag="false"
+            extra-class="field-group"
+            :disabled="!selectedEnrollmentRef || formsLoading"
+            :attributes="{ 'data-testid': 'lock-picker-form' }"
+            @change="onFormPickerChange"
+          >
+            <option value="">
+              {{
+                !selectedEnrollmentRef
+                  ? "Choose an enrollment first…"
+                  : formsLoading
+                    ? "Loading form instances…"
+                    : "Select a form instance…"
+              }}
+            </option>
+            <option
+              v-for="opt in formPickerOptions"
+              :key="opt.key"
+              :value="opt.ref"
+              :disabled="opt.masked"
             >
-              <option value="">
-                {{
-                  !selectedEnrollmentRef
-                    ? "Choose an enrollment first…"
-                    : formsLoading
-                      ? "Loading form instances…"
-                      : "Select a form instance…"
-                }}
-              </option>
-              <option
-                v-for="opt in formPickerOptions"
-                :key="opt.key"
-                :value="opt.ref"
-                :disabled="opt.masked"
-              >
-                {{ opt.label }}
-              </option>
-            </select>
-          </div>
+              {{ opt.label }}
+            </option>
+          </ClinicalInput>
 
-          <div v-if="needsObservationPicker" class="field-group">
-            <label for="lock-picker-observation">Observation</label>
-            <select
-              id="lock-picker-observation"
-              v-model="selectedObservationRef"
-              data-testid="lock-picker-observation"
-              :disabled="!selectedFormRef || observationsLoading"
+          <ClinicalInput
+            v-if="needsObservationPicker"
+            id="lock-picker-observation"
+            v-model="selectedObservationRef"
+            label="Observation"
+            type="select"
+            density="compact"
+            :show-query-flag="false"
+            extra-class="field-group"
+            :disabled="!selectedFormRef || observationsLoading"
+            :attributes="{ 'data-testid': 'lock-picker-observation' }"
+          >
+            <option value="">
+              {{
+                !selectedFormRef
+                  ? "Choose a form instance first…"
+                  : observationsLoading
+                    ? "Loading observations…"
+                    : "Select an observation…"
+              }}
+            </option>
+            <option
+              v-for="opt in observationPickerOptions"
+              :key="opt.key"
+              :value="opt.ref"
+              :disabled="opt.masked"
             >
-              <option value="">
-                {{
-                  !selectedFormRef
-                    ? "Choose a form instance first…"
-                    : observationsLoading
-                      ? "Loading observations…"
-                      : "Select an observation…"
-                }}
-              </option>
-              <option
-                v-for="opt in observationPickerOptions"
-                :key="opt.key"
-                :value="opt.ref"
-                :disabled="opt.masked"
-              >
-                {{ opt.label }}
-              </option>
-            </select>
-          </div>
+              {{ opt.label }}
+            </option>
+          </ClinicalInput>
 
-          <div class="field-group">
-            <label for="lock-apply-kind">Assertion</label>
-            <select id="lock-apply-kind" v-model="applyKind">
-              <option value="Frozen">
-                Frozen (blocks entry &amp; corrections; query closure stays
-                open)
-              </option>
-              <option value="Locked">Locked (blocks all changes)</option>
-            </select>
-          </div>
+          <ClinicalInput
+            id="lock-apply-kind"
+            v-model="applyKind"
+            label="Assertion"
+            type="select"
+            density="compact"
+            :show-query-flag="false"
+            extra-class="field-group"
+          >
+            <option value="Frozen">
+              Frozen (blocks entry &amp; corrections; query closure stays open)
+            </option>
+            <option value="Locked">Locked (blocks all changes)</option>
+          </ClinicalInput>
 
-          <div class="field-group field-group--wide">
-            <label for="lock-apply-reason">Reason for change</label>
-            <input
-              id="lock-apply-reason"
-              v-model="applyReason"
-              type="text"
-              autocomplete="off"
-              placeholder="Interim analysis cut / database lock after query closure"
-            />
-          </div>
+          <ClinicalInput
+            id="lock-apply-reason"
+            v-model="applyReason"
+            label="Reason for change"
+            type="text"
+            density="compact"
+            :show-query-flag="false"
+            extra-class="field-group field-group--wide"
+            autocomplete="off"
+            placeholder="Interim analysis cut / database lock after query closure"
+          />
         </div>
         <div
           v-if="readinessLoading || readiness"
@@ -443,11 +463,14 @@
       </form>
 
       <div v-if="canRelease" class="release-reason-bar">
-        <label for="lock-release-reason">Reason when releasing a lock</label>
-        <input
+        <ClinicalInput
           id="lock-release-reason"
           v-model="releaseReason"
+          label="Reason when releasing a lock"
           type="text"
+          density="compact"
+          :show-query-flag="false"
+          extra-class="locks-release-field"
           autocomplete="off"
           placeholder="Reopening scope for documented source addendum"
         />
@@ -494,142 +517,123 @@
           No locks recorded on {{ studyCode }} within your visible scope at this
           point in time.
         </p>
-        <div
+        <ClinicalDataTable
           v-else
-          class="locks-table-scroll scrollable-table-wrapper"
-          data-testid="study-locks-table-scroll"
-          role="region"
+          title="Study locks"
           aria-label="Study locks"
-          tabindex="0"
+          labelled-by="study-locks-title"
+          hide-header
+          plain
+          wrapper-class="locks-table-scroll scrollable-table-wrapper"
+          wrapper-test-id="study-locks-table-scroll"
+          table-class="locks-table"
+          table-test-id="study-locks-table"
+          :columns="lockColumns"
+          :data="locks"
+          :row-key="(entry, idx) => entry.ref ?? `masked-${idx}`"
+          :row-attrs="
+            (entry) => (entry.masked ? { 'data-masked': 'true' } : undefined)
+          "
+          external-pagination
         >
-          <table class="locks-table" data-testid="study-locks-table">
-            <thead>
-              <tr>
-                <th scope="col">Kind</th>
-                <th scope="col">Scope</th>
-                <th scope="col">Participant</th>
-                <th scope="col">Signed by</th>
-                <th scope="col">Locked at</th>
-                <th scope="col">Reason</th>
-                <th scope="col">State</th>
-                <th v-if="canRelease" scope="col">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr
-                v-for="(entry, idx) in locks"
-                :key="entry.ref ?? `masked-${idx}`"
-                :data-masked="entry.masked ? 'true' : undefined"
+          <template #cell-kind="{ row: entry }">
+            <span v-if="entry.masked || !entry.kind" class="masked-pill">
+              Masked ({{ entry.mask ?? "Restricted" }})
+            </span>
+            <span
+              v-else
+              :class="[
+                'clinical-badge',
+                'lock-badge',
+                entry.kind.toLowerCase() === 'locked'
+                  ? 'clinical-badge--locked'
+                  : 'clinical-badge--frozen',
+                `lock-badge--${entry.kind.toLowerCase()}`,
+              ]"
+            >
+              {{ entry.kind }}
+            </span>
+          </template>
+          <template #cell-scope="{ row: entry }">
+            <template v-if="entry.masked">
+              <span class="masked-pill" data-testid="study-lock-masked">
+                <template v-if="entry.scope_kind">
+                  Masked ({{ entry.mask ?? "Restricted" }}):
+                  {{ scopeLabel(entry.scope_kind) }}
+                </template>
+                <template v-else>
+                  Masked ({{ entry.mask ?? "Restricted" }})
+                </template>
+              </span>
+            </template>
+            <template v-else>
+              <NodeRefChip
+                v-if="entry.scope_ref"
+                :node-ref="entry.scope_ref"
+                :fallback-title="entry.subject_code"
+                include-kind
+              />
+              <span v-else>—</span>
+            </template>
+          </template>
+          <template #cell-participant="{ row: entry }">
+            {{ entry.masked ? "masked" : (entry.subject_code ?? "—") }}
+          </template>
+          <template #cell-signed_by="{ row: entry }">
+            <template v-if="entry.masked"> masked </template>
+            <template v-else>
+              <NodeRefChip
+                v-if="
+                  entry.locked_by && normalizeLookupNodeRef(entry.locked_by)
+                "
+                :node-ref="normalizeLookupNodeRef(entry.locked_by)!"
+              />
+              <template v-else>{{ entry.locked_by ?? "—" }}</template>
+              <span v-if="entry.attestation_meaning" class="meaning-note">
+                ({{ entry.attestation_meaning }})
+              </span>
+            </template>
+          </template>
+          <template #cell-locked_at="{ row: entry }">
+            {{ entry.masked ? "—" : (entry.locked_at ?? "—") }}
+          </template>
+          <template #cell-reason="{ row: entry }">
+            {{ entry.masked ? "masked" : (entry.reason_for_change ?? "—") }}
+          </template>
+          <template #cell-state="{ row: entry }">
+            <template
+              v-if="
+                entry.masked ||
+                entry.released === null ||
+                entry.released === undefined
+              "
+            >
+              masked
+            </template>
+            <template v-else-if="entry.released">
+              Released
+              <span v-if="entry.released_at" class="meaning-note">
+                at {{ entry.released_at }}
+              </span>
+            </template>
+            <template v-else> Active </template>
+          </template>
+          <template #cell-action="{ row: entry }">
+            <button
+              v-if="!entry.masked && !entry.released && entry.ref && entry.kind"
+              :data-testid="`release-lock-${entry.ref}`"
+              type="button"
+              class="btn btn-secondary btn-mini-unlock"
+              :disabled="busy"
+              @click="openReleaseModal(entry.ref, entry.kind)"
+            >
+              Release<span class="sr-only">
+                lock for
+                {{ entry.subject_code ?? entry.scope_ref ?? entry.ref }}</span
               >
-                <td>
-                  <span v-if="entry.masked || !entry.kind" class="masked-pill">
-                    Masked ({{ entry.mask ?? "Restricted" }})
-                  </span>
-                  <span
-                    v-else
-                    :class="[
-                      'clinical-badge',
-                      'lock-badge',
-                      entry.kind.toLowerCase() === 'locked'
-                        ? 'clinical-badge--locked'
-                        : 'clinical-badge--frozen',
-                      `lock-badge--${entry.kind.toLowerCase()}`,
-                    ]"
-                  >
-                    {{ entry.kind }}
-                  </span>
-                </td>
-                <td>
-                  <template v-if="entry.masked">
-                    <span class="masked-pill" data-testid="study-lock-masked">
-                      <template v-if="entry.scope_kind">
-                        Masked ({{ entry.mask ?? "Restricted" }}):
-                        {{ scopeLabel(entry.scope_kind) }}
-                      </template>
-                      <template v-else>
-                        Masked ({{ entry.mask ?? "Restricted" }})
-                      </template>
-                    </span>
-                  </template>
-                  <template v-else>
-                    <NodeRefChip
-                      v-if="entry.scope_ref"
-                      :node-ref="entry.scope_ref"
-                      :fallback-title="entry.subject_code"
-                      include-kind
-                    />
-                    <span v-else>—</span>
-                  </template>
-                </td>
-                <td>
-                  {{ entry.masked ? "masked" : (entry.subject_code ?? "—") }}
-                </td>
-                <td>
-                  <template v-if="entry.masked"> masked </template>
-                  <template v-else>
-                    <NodeRefChip
-                      v-if="
-                        entry.locked_by &&
-                        normalizeLookupNodeRef(entry.locked_by)
-                      "
-                      :node-ref="normalizeLookupNodeRef(entry.locked_by)!"
-                    />
-                    <template v-else>{{ entry.locked_by ?? "—" }}</template>
-                    <span v-if="entry.attestation_meaning" class="meaning-note">
-                      ({{ entry.attestation_meaning }})
-                    </span>
-                  </template>
-                </td>
-                <td>{{ entry.masked ? "—" : (entry.locked_at ?? "—") }}</td>
-                <td>
-                  {{
-                    entry.masked ? "masked" : (entry.reason_for_change ?? "—")
-                  }}
-                </td>
-                <td>
-                  <template
-                    v-if="
-                      entry.masked ||
-                      entry.released === null ||
-                      entry.released === undefined
-                    "
-                  >
-                    masked
-                  </template>
-                  <template v-else-if="entry.released">
-                    Released
-                    <span v-if="entry.released_at" class="meaning-note">
-                      at {{ entry.released_at }}
-                    </span>
-                  </template>
-                  <template v-else> Active </template>
-                </td>
-                <td v-if="canRelease">
-                  <button
-                    v-if="
-                      !entry.masked &&
-                      !entry.released &&
-                      entry.ref &&
-                      entry.kind
-                    "
-                    :data-testid="`release-lock-${entry.ref}`"
-                    type="button"
-                    class="btn btn-secondary btn-mini-unlock"
-                    :disabled="busy"
-                    @click="openReleaseModal(entry.ref, entry.kind)"
-                  >
-                    Release<span class="sr-only">
-                      lock for
-                      {{
-                        entry.subject_code ?? entry.scope_ref ?? entry.ref
-                      }}</span
-                    >
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+            </button>
+          </template>
+        </ClinicalDataTable>
         <p
           v-if="hiddenLocks.more_exist"
           data-testid="study-locks-hidden-notice"
@@ -673,18 +677,18 @@
             <code>{{ quickDialog.lockRef }}</code>
           </template>
         </p>
-        <div class="field-group">
-          <label for="quick-lock-reason-input">
-            GxP reason for change (required)
-          </label>
-          <textarea
-            id="quick-lock-reason-input"
-            v-model="quickDialogReason"
-            class="quick-dialog-textarea"
-            rows="3"
-            placeholder="Document the clinical or monitoring rationale for this signed lock action…"
-          />
-        </div>
+        <ClinicalInput
+          id="quick-lock-reason-input"
+          v-model="quickDialogReason"
+          label="GxP reason for change (required)"
+          type="textarea"
+          density="compact"
+          :show-query-flag="false"
+          extra-class="field-group"
+          control-class="quick-dialog-textarea"
+          :rows="3"
+          placeholder="Document the clinical or monitoring rationale for this signed lock action…"
+        />
       </div>
       <template #footer>
         <button
@@ -717,7 +721,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import { ClinicalModal } from "ui";
+import { ClinicalDataTable, ClinicalInput, ClinicalModal } from "ui";
 import {
   kernelApi,
   type KernelChild,
@@ -947,6 +951,21 @@ const {
     await Promise.all(tasks);
   },
 });
+
+const canReleaseColumn = computed(() =>
+  canRelease.value ? [{ key: "action", label: "Action" }] : []
+);
+
+const lockColumns = computed(() => [
+  { key: "kind", label: "Kind" },
+  { key: "scope", label: "Scope" },
+  { key: "participant", label: "Participant" },
+  { key: "signed_by", label: "Signed by" },
+  { key: "locked_at", label: "Locked at" },
+  { key: "reason", label: "Reason" },
+  { key: "state", label: "State" },
+  ...canReleaseColumn.value,
+]);
 
 const needsSitePicker = computed(() => applyScopeKind.value !== "study");
 const needsEnrollmentPicker = computed(
@@ -1361,6 +1380,9 @@ function openReleaseModal(lockRef: string, lockKind: string) {
   border: 1px solid var(--semantic-color-border-muted);
   border-radius: 8px;
   background: var(--semantic-color-surface-muted);
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .apply-card h3 {
@@ -1370,47 +1392,79 @@ function openReleaseModal(lockRef: string, lockKind: string) {
 
 .apply-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
   gap: 10px;
+  min-width: 0;
 }
 
 .field-group {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  margin-bottom: 0;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .field-group--wide {
   grid-column: 1 / -1;
 }
 
-.field-group label,
-.picker-label,
-.release-reason-bar label {
+.picker-label {
   font-size: 0.82rem;
   font-weight: 600;
   color: var(--semantic-color-text-dark);
+}
+
+.study-locks-filters :deep(.locks-inline-field) {
+  display: flex;
+  flex-wrap: wrap;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.study-locks-filters :deep(.locks-inline-field > label) {
+  margin: 0;
+}
+
+.study-locks-filters :deep(.locks-inline-field > .input-wrapper) {
+  flex: 1 1 150px;
+  min-width: 0;
+  max-width: 100%;
+  width: auto;
+}
+
+.release-reason-bar :deep(.locks-release-field) {
+  display: flex;
+  flex-wrap: wrap;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 100%;
+  margin: 0;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.release-reason-bar :deep(.locks-release-field > label) {
+  margin: 0;
+}
+
+.release-reason-bar :deep(.locks-release-field > .input-wrapper) {
+  flex: 1 1 min(100%, 260px);
+  min-width: 0;
+  max-width: 100%;
+  width: auto;
 }
 
 .selected-scope-chip {
   display: flex;
   align-items: center;
   min-height: 32px;
-}
-
-.field-group input,
-.field-group select,
-.release-reason-bar input,
-.study-locks-filters input[type="text"] {
-  min-height: var(--semantic-control-target-min, 24px);
-  min-width: var(--semantic-control-target-min, 24px);
-  padding: 6px 10px;
-  border: 1px solid var(--semantic-color-border-control);
-  border-radius: 4px;
-  font-size: 0.85rem;
-  color: var(--semantic-color-text);
-  background: var(--semantic-color-surface);
-  box-sizing: border-box;
 }
 
 .readiness-panel {
@@ -1539,7 +1593,7 @@ function openReleaseModal(lockRef: string, lockKind: string) {
   flex: 1 1 260px;
 }
 
-.locks-table-scroll {
+:deep(.locks-table-scroll) {
   position: relative;
   overflow-x: auto;
   max-width: 100%;
@@ -1548,31 +1602,11 @@ function openReleaseModal(lockRef: string, lockKind: string) {
   padding: 4px;
 }
 
-.locks-table-scroll:focus-visible {
-  outline: 3px solid var(--semantic-color-accent);
-  outline-offset: 2px;
-  box-shadow: 0 0 0 2px var(--semantic-color-text-on-solid);
-  border-radius: 4px;
-}
-
-.locks-table {
+:deep(.locks-table) {
   width: 100%;
   min-width: 48rem;
   border-collapse: collapse;
   font-size: 0.85rem;
-}
-
-.locks-table th,
-.locks-table td {
-  padding: 8px 10px;
-  border-bottom: 1px solid var(--semantic-color-border);
-  text-align: left;
-}
-
-.locks-table th {
-  font-weight: 600;
-  color: var(--semantic-color-text-dark);
-  background: var(--semantic-color-surface-muted);
 }
 
 .masked-pill {
