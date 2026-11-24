@@ -674,7 +674,7 @@ function getDocumentCount(node) {
   transition: background-color 0.2s;
 }
 
-.btn-export-full-binder:hover {
+.btn-export-full-binder:hover:not(:disabled) {
   background-color: var(--semantic-color-interactive-primary);
 }
 

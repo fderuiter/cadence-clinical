@@ -9,6 +9,7 @@ import {
   ClinicalDropzone,
   ClinicalFieldLayout,
   ClinicalIconButton,
+  ClinicalInput,
   ClinicalModal,
   ClinicalQueryFlag,
   ClinicalToastHost,
@@ -403,6 +404,111 @@ describe("Shared UI Vue Components Behavior & SSR Rendering", () => {
       );
       expect(fieldsetHtml).toContain("<fieldset");
       expect(fieldsetHtml).toContain("<legend");
+    });
+
+    it("supports compact staff density, required markers, hints, and select/textarea rendering in ClinicalFieldLayout and ClinicalInput (ADR-2661)", async () => {
+      const defaultInputHtml = await renderToString(
+        createSSRApp(ClinicalInput, {
+          id: "portal-given-name",
+          label: "Given Name",
+          modelValue: "Alex",
+          required: true,
+          hint: "Matches government ID",
+        })
+      );
+      expect(defaultInputHtml).toContain('class="clinical-input grid-span-12"');
+      expect(defaultInputHtml).not.toContain("clinical-input--compact");
+      expect(defaultInputHtml).toContain('class="clinical-field-required"');
+      expect(defaultInputHtml).toContain('id="field-hint-portal-given-name"');
+      expect(defaultInputHtml).toContain(
+        'aria-describedby="field-hint-portal-given-name"'
+      );
+
+      const compactSelectHtml = await renderToString(
+        createSSRApp(ClinicalInput, {
+          id: "staff-site-filter",
+          label: "Clinical Site",
+          as: "select",
+          density: "compact",
+          modelValue: "SITE-01",
+          error: "Site scope required",
+          hint: "Select active site",
+          options: [
+            { value: "", label: "All Sites" },
+            { value: "SITE-01", label: "Site 01 - Boston" },
+          ],
+        })
+      );
+      expect(compactSelectHtml).toContain("clinical-input--compact");
+      expect(compactSelectHtml).toContain("<select");
+      expect(compactSelectHtml).toContain("Site 01 - Boston");
+      expect(compactSelectHtml).toContain('aria-invalid="true"');
+      expect(compactSelectHtml).toContain(
+        'aria-describedby="field-hint-staff-site-filter validation-error-staff-site-filter"'
+      );
+
+      const textareaEmit = vi.fn();
+      const { state: textareaState, html: textareaHtml } = await mountSetupSSR(
+        ClinicalInput,
+        {
+          id: "staff-reason-note",
+          label: "Reason for Change",
+          as: "textarea",
+          rows: 4,
+          density: "compact",
+          modelValue: "Initial note",
+          disabled: false,
+          readonly: false,
+        },
+        textareaEmit
+      );
+      expect(textareaHtml).toContain("<textarea");
+      expect(textareaHtml).toContain('rows="4"');
+      const inputEvent = { target: { value: "Updated justification" } };
+      textareaState.onInput(inputEvent);
+      expect(textareaEmit).toHaveBeenCalledWith(
+        "update:modelValue",
+        "Updated justification"
+      );
+      expect(textareaEmit).toHaveBeenCalledWith(
+        "input",
+        "Updated justification",
+        inputEvent
+      );
+      const selectTarget = { value: "SITE-02" };
+      textareaState.onSelectChange({ target: selectTarget });
+      expect(textareaEmit).toHaveBeenCalledWith(
+        "change",
+        "SITE-02",
+        selectTarget
+      );
+
+      const routedAttrHtml = await renderToString(
+        createSSRApp(ClinicalInput, {
+          id: "lock-obs-picker",
+          label: "Observation",
+          hideLabel: true,
+          labelClass: "form-label",
+          required: true,
+          as: "select",
+          density: "compact",
+          modelValue: "OBS-1",
+          options: [{ value: "OBS-1", label: "Systolic BP" }],
+          attributes: {
+            "data-cdash": "LOCKOBS",
+            "data-testid": "lock-picker-observation",
+            "aria-label": "Observation to lock",
+          },
+        })
+      );
+      expect(routedAttrHtml).toContain('data-cdash="LOCKOBS"');
+      expect(routedAttrHtml).toContain('id="lock-obs-picker"');
+      expect(routedAttrHtml).toContain('class="clinical-input-control"');
+      expect(routedAttrHtml).toContain('data-testid="lock-picker-observation"');
+      expect(routedAttrHtml).toContain('aria-label="Observation to lock"');
+      expect(routedAttrHtml).toContain(
+        'class="clinical-field-required text-danger"'
+      );
     });
   });
 

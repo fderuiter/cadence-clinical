@@ -183,7 +183,10 @@ export default defineConfig({
             manualChunks(id) {
               const normalizedId = id.replace(/\\/g, "/");
               if (
-                /\/packages\/ui\/(?:(?:session|callerScope)\.js|src\/composables\/(?:useFocusTrap|useEscapeClose|useSignOutGuard)\.js|src\/components\/clinical\/(?:sharedProps\.js|(?:ClinicalModal|ClinicalDrawer|ClinicalContextBar|ClinicalIconButton|ClinicalToastHost|SignOutConfirmModal)\.vue))(?:$|\?)/.test(
+                /\/packages\/ui\/(?:(?:session|callerScope)\.js|src\/composables\/(?:useFocusTrap|useEscapeClose|useSignOutGuard|useInlineFocusHandoff)\.js|src\/components\/clinical\/(?:sharedProps\.js|(?:ClinicalModal|ClinicalDrawer|ClinicalContextBar|ClinicalIconButton|ClinicalToastHost|SignOutConfirmModal)\.vue))(?:$|\?)/.test(
+                  normalizedId
+                ) ||
+                /\/apps\/web\/src\/(?:utils\/(?:demoMode|apiErrors|unbackedActions)\.js|stores\/(?:toasts\.js|clinicalScope\.ts)|canvas\/(?:generated\/(?:nodeKinds|participantContracts)|stages\/[^/]+|nodeRef|lifecycle)\.ts)(?:$|\?)/.test(
                   normalizedId
                 )
               ) {
@@ -202,7 +205,10 @@ export default defineConfig({
                 pkgPath.startsWith("vue/") ||
                 pkgPath.startsWith("@vue/") ||
                 pkgPath.startsWith("vue-router/") ||
-                pkgPath.startsWith("pinia/")
+                pkgPath.startsWith("pinia/") ||
+                pkgPath.startsWith("vue-i18n/") ||
+                pkgPath.startsWith("@intlify/") ||
+                pkgPath.startsWith("openapi-fetch/")
               ) {
                 return "vendor-vue";
               }
@@ -217,13 +223,6 @@ export default defineConfig({
                 pkgPath.startsWith("sortablejs/")
               ) {
                 return "vendor-vuedraggable";
-              }
-              if (
-                pkgPath.startsWith("vue-i18n/") ||
-                pkgPath.startsWith("@intlify/") ||
-                pkgPath.startsWith("openapi-fetch/")
-              ) {
-                return "vendor";
               }
               return undefined;
             },

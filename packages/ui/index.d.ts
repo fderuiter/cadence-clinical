@@ -92,18 +92,60 @@ export const ClinicalFormField: DefineComponent<
   any
 >;
 
-export const ClinicalInput: DefineComponent<
+export interface ClinicalSelectOption {
+  value: string | number;
+  label?: string;
+  disabled?: boolean;
+}
+
+export const ClinicalInput: DefineSlotsComponent<
   {
     id: string;
     label: string;
     modelValue?: string | number;
+    type?: string;
+    as?: "input" | "select" | "textarea" | string;
+    options?: Array<ClinicalSelectOption | string | number> | null;
+    placeholder?: string;
+    disabled?: boolean;
+    readonly?: boolean;
+    required?: boolean;
+    density?: "comfortable" | "compact" | string;
+    hint?: string;
+    hideLabel?: boolean;
+    showQueryFlag?: boolean;
+    rows?: number | string;
+    min?: number | string | null;
+    max?: number | string | null;
+    step?: number | string | null;
+    maxlength?: number | string | null;
+    autocomplete?: string;
+    inputmode?: string;
+    list?: string;
+    name?: string;
+    ariaLabel?: string;
+    ariaDescribedby?: string;
+    extraClass?: string;
+    labelClass?: string | any[] | Record<string, boolean>;
+    controlClass?: string | any[] | Record<string, boolean>;
+    controlAttrs?: Record<string, any>;
     query?: any;
     gridSpan?: number | string;
     error?: string | null;
     attributes?: Record<string, any>;
+    canManageQueries?: boolean;
+    queryLabel?: string;
+    "onUpdate:modelValue"?: (value: any) => void;
+    onInput?: (value: any, event?: Event) => void;
+    onChange?: (value: any, target?: HTMLElement) => void;
+    onBlur?: (event: FocusEvent) => void;
+    onKeydown?: (event: KeyboardEvent) => void;
+    onKeyup?: (event: KeyboardEvent) => void;
   },
-  {},
-  any
+  {
+    default?: (props: Record<string, never>) => any;
+    "after-input"?: (props: Record<string, never>) => any;
+  }
 >;
 
 export const ClinicalRadioGroup: DefineComponent<
@@ -408,20 +450,81 @@ export interface ClinicalDataTableColumn {
   key: string;
   label: string;
   sortable?: boolean;
+  rowHeader?: boolean;
+  align?: "left" | "right" | "center" | string;
+  headerClass?: string | any[] | Record<string, boolean>;
+  cellClass?: string | any[] | Record<string, boolean>;
 }
 
-export const ClinicalDataTable: DefineComponent<
+export const ClinicalDataTable: DefineSlotsComponent<
   {
     columns: ClinicalDataTableColumn[];
-    data: Record<string, any>[];
+    data: any[];
     pageSize?: number;
     selectable?: boolean;
     title?: string;
+    hideHeader?: boolean;
+    labelledBy?: string;
+    ariaLabel?: string;
+    plain?: boolean;
+    containerClass?: string | any[] | Record<string, boolean>;
+    wrapperClass?: string | any[] | Record<string, boolean>;
+    wrapperTestId?: string;
+    tableId?: string;
+    tableClass?: string | any[] | Record<string, boolean>;
+    tableTestId?: string;
+    tbodyId?: string;
+    rowKey?: string | ((row: any, index: number) => string | number);
+    rowId?: (row: any, index: number) => string | undefined;
+    rowClass?:
+      | string
+      | ((
+          row: any,
+          index: number
+        ) => string | any[] | Record<string, boolean> | undefined);
+    rowAttrs?: (
+      row: any,
+      index: number
+    ) => Record<string, string | number | boolean | undefined> | undefined;
+    selectedRowKeys?: any[] | null;
+    emptyMessage?: string;
+    isRowMasked?: (row: any, index: number) => boolean;
+    externalPagination?: boolean;
+    page?: number | null;
+    totalRecords?: number | null;
+    hasMore?: boolean;
+    loadingMore?: boolean;
+    loadMoreLabel?: string;
+    loadMoreId?: string;
+    externalSort?: boolean;
+    initialSortKey?: string;
+    initialSortOrder?: "asc" | "desc" | string;
     onSelect?: (selectedKeys: any[]) => void;
-    "onRow-click"?: (row: Record<string, any>) => void;
+    "onRow-click"?: (row: any) => void;
+    "onPage-change"?: (page: number) => void;
+    "onLoad-more"?: () => void;
+    "onSort-change"?: (payload: { key: string; order: string }) => void;
   },
-  {},
-  any
+  {
+    [headSlot: `head-${string}`]: (props: {
+      column: ClinicalDataTableColumn;
+    }) => any;
+    [cellSlot: `cell-${string}`]: (props: {
+      row: any;
+      value: any;
+      index: number;
+    }) => any;
+    "header-actions"?: (props: Record<string, never>) => any;
+    "header-select"?: (props: Record<string, never>) => any;
+    "masked-row"?: (props: { row: any; index: number; colSpan: number }) => any;
+    empty?: (props: Record<string, never>) => any;
+    pagination?: (props: {
+      currentPage: number;
+      totalPages: number;
+      totalRecords: number;
+      goToPage: (page: number) => void;
+    }) => any;
+  }
 >;
 
 export const ClinicalFieldLayout: DefineSlotsComponent<
@@ -434,13 +537,22 @@ export const ClinicalFieldLayout: DefineSlotsComponent<
     attributes?: Record<string, any>;
     tag?: string;
     extraClass?: string;
+    labelClass?: string | any[] | Record<string, boolean>;
     canManageQueries?: boolean;
     queryLabel?: string;
+    density?: "comfortable" | "compact" | string;
+    required?: boolean;
+    hint?: string;
+    hideLabel?: boolean;
+    showQueryFlag?: boolean;
   },
   {
     default?: (props: {
       id: string;
+      error?: string | null;
       errorId: string;
+      hintId?: string;
+      describedBy?: string;
       hasError: boolean;
     }) => any;
     "after-input"?: (props: Record<string, never>) => any;

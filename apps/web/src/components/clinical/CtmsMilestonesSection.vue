@@ -42,53 +42,51 @@
       <p v-if="!milestones.length" class="muted-status">
         No site milestones recorded yet for this scope.
       </p>
-      <div v-else class="table-wrap">
-        <table id="milestones-table" class="data-table">
-          <thead>
-            <tr>
-              <th scope="col">Site</th>
-              <th scope="col">Milestone</th>
-              <th scope="col">Status</th>
-              <th scope="col">Planned date</th>
-              <th scope="col">Actual date</th>
-              <th v-if="canManage" scope="col">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="item in milestones" :key="item.id">
-              <td>
-                <strong>{{ item.site_id }}</strong>
-              </td>
-              <td>{{ formatClinicalEnum(item.milestone_type) }}</td>
-              <td>
-                <span
-                  class="status-pill"
-                  :class="`ms-${item.status.toLowerCase()}`"
-                >
-                  {{ formatClinicalStatus(item.status) }}
-                </span>
-              </td>
-              <td>{{ formatIsoDateShort(item.planned_date) || "—" }}</td>
-              <td>{{ formatIsoDateShort(item.actual_date) || "—" }}</td>
-              <td v-if="canManage">
-                <button
-                  v-if="item.status !== 'ACHIEVED'"
-                  :id="`btn-achieve-milestone-${item.id}`"
-                  type="button"
-                  class="btn btn-secondary btn-sm"
-                  :disabled="saving"
-                  @click="prepareAchieve(item)"
-                >
-                  Mark achieved<span class="sr-only">
-                    {{ item.milestone_type }} for {{ item.site_id }}</span
-                  >
-                </button>
-                <span v-else class="text-ok">Completed</span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+      <ClinicalDataTable
+        v-else
+        hide-header
+        plain
+        labelled-by="ctms-milestones-title"
+        wrapper-class="table-wrap"
+        table-id="milestones-table"
+        table-class="data-table"
+        :columns="milestoneColumns"
+        :data="milestones"
+        row-key="id"
+      >
+        <template #cell-site_id="{ row: item }">
+          <strong>{{ item.site_id }}</strong>
+        </template>
+        <template #cell-milestone_type="{ row: item }">
+          {{ formatClinicalEnum(item.milestone_type) }}
+        </template>
+        <template #cell-status="{ row: item }">
+          <span class="status-pill" :class="`ms-${item.status.toLowerCase()}`">
+            {{ formatClinicalStatus(item.status) }}
+          </span>
+        </template>
+        <template #cell-planned_date="{ row: item }">
+          {{ formatIsoDateShort(item.planned_date) || "—" }}
+        </template>
+        <template #cell-actual_date="{ row: item }">
+          {{ formatIsoDateShort(item.actual_date) || "—" }}
+        </template>
+        <template #cell-action="{ row: item }">
+          <button
+            v-if="item.status !== 'ACHIEVED'"
+            :id="`btn-achieve-milestone-${item.id}`"
+            type="button"
+            class="btn btn-secondary btn-sm"
+            :disabled="saving"
+            @click="prepareAchieve(item)"
+          >
+            Mark achieved<span class="sr-only">
+              {{ item.milestone_type }} for {{ item.site_id }}</span
+            >
+          </button>
+          <span v-else class="text-ok">Completed</span>
+        </template>
+      </ClinicalDataTable>
 
       <div
         v-if="canManage && activeAchieveMilestone"
@@ -101,18 +99,22 @@
           {{ activeAchieveMilestone.site_id }}
         </h4>
         <div class="form-row">
-          <label for="achieve-milestone-date">Actual date</label>
-          <input
+          <ClinicalInput
             id="achieve-milestone-date"
             v-model="achieveDate"
+            label="Actual date"
             type="date"
+            density="compact"
+            :show-query-flag="false"
           />
-          <label for="achieve-milestone-reason">Reason for change</label>
-          <input
+          <ClinicalInput
             id="achieve-milestone-reason"
             v-model="achieveReason"
+            label="Reason for change"
             type="text"
             placeholder="Clinical evidence for achieving milestone"
+            density="compact"
+            :show-query-flag="false"
           />
           <button
             id="btn-confirm-achieve-milestone"
@@ -141,15 +143,23 @@
       >
         <h4>Add site milestone</h4>
         <div class="form-row">
-          <label for="new-ms-site">Site</label>
-          <input
+          <ClinicalInput
             id="new-ms-site"
             v-model="newSiteId"
+            label="Site"
             type="text"
             placeholder="Site code"
+            density="compact"
+            :show-query-flag="false"
           />
-          <label for="new-ms-type">Milestone</label>
-          <select id="new-ms-type" v-model="newType">
+          <ClinicalInput
+            id="new-ms-type"
+            v-model="newType"
+            as="select"
+            label="Milestone"
+            density="compact"
+            :show-query-flag="false"
+          >
             <option value="SITE_SELECTION">Site Selection</option>
             <option value="INITIATION_VISIT">Initiation Visit</option>
             <option value="SITE_ACTIVATION">Site Activation</option>
@@ -157,15 +167,23 @@
               First Participant Enrolled
             </option>
             <option value="DB_LOCK">Database Lock</option>
-          </select>
-          <label for="new-ms-planned">Planned date</label>
-          <input id="new-ms-planned" v-model="newPlannedDate" type="date" />
-          <label for="new-ms-reason">Reason for change</label>
-          <input
+          </ClinicalInput>
+          <ClinicalInput
+            id="new-ms-planned"
+            v-model="newPlannedDate"
+            label="Planned date"
+            type="date"
+            density="compact"
+            :show-query-flag="false"
+          />
+          <ClinicalInput
             id="new-ms-reason"
             v-model="newReason"
+            label="Reason for change"
             type="text"
             placeholder="Justification for milestone creation"
+            density="compact"
+            :show-query-flag="false"
           />
           <button
             id="btn-create-milestone"
@@ -189,7 +207,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
-import { useInlineFocusHandoff } from "ui";
+import { ClinicalDataTable, ClinicalInput, useInlineFocusHandoff } from "ui";
 import { ctmsApi, type SiteMilestone } from "../../api/ctmsApi";
 import { canManageMilestones } from "../../canvas/authority";
 import {
@@ -225,6 +243,16 @@ const {
 } = workspace;
 
 const canManage = computed(() => canManageMilestones(authStore));
+const milestoneColumns = computed(() => {
+  const cols = [
+    { key: "site_id", label: "Site", rowHeader: true },
+    { key: "milestone_type", label: "Milestone" },
+    { key: "status", label: "Status" },
+    { key: "planned_date", label: "Planned date" },
+    { key: "actual_date", label: "Actual date" },
+  ];
+  return canManage.value ? [...cols, { key: "action", label: "Action" }] : cols;
+});
 const milestones = ref<SiteMilestone[]>([]);
 const newType = ref("SITE_ACTIVATION");
 const newPlannedDate = ref("");

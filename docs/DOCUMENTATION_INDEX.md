@@ -623,6 +623,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2831: Stage Encrypted Randomization Slots Before Acquiring the Study Lock](adr/2026-11-23-stage-encrypted-randomization-slots-before-acquiring-the-study-lock.md) | Current | - Status: Accepted |
 | [ADR-2832: Expand IL Sentinels and Shrink-Only CLI Ratchets](adr/2026-11-23-expand-il-sentinels-and-shrink-only-cli-ratchets.md) | Current | - Status: Accepted |
 | [ADR-2659: Centralize `ClinicalTabs` Visual Variants, Overflow Containment, Focus Scroll Alignment, and Scoped CSS AST Gates](adr/2026-11-23-centralize-clinical-tabs-variants-overflow-and-scoped-css-gates.md) | Current | - Status: Accepted |
+| [ADR-2661: Centralize CSS Button, Disclosure, and Programmatic Focus States and Migrate Live Clinical Hubs onto Shared UI Primitives](adr/2026-11-24-centralize-css-states-and-migrate-live-clinical-hubs.md) | Current | - Status: Accepted |
 
 ## Developing and running
 

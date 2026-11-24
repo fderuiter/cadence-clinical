@@ -558,6 +558,12 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
     expect(toggleBox!.height).toBeGreaterThanOrEqual(43.9);
 
     await gotoHashRoute(page, "/overview");
+    if (await compactActionsBtn.isVisible().catch(() => false)) {
+      await compactActionsBtn.click();
+      await expect(
+        page.locator("#header-secondary-menu.is-open")
+      ).toBeVisible();
+    }
     await page.locator("#btn-onboarding-checklist-trigger").click();
     await expect(page.locator("#onboarding-checklist-drawer")).toBeVisible();
     await page.locator("#btn-drawer-start-tour").click();
@@ -591,6 +597,12 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
 
     // Switch persona to site_crc on 768x1024 and verify eCRF workspace anchors without inert locks
     await page.locator("#persona-select").selectOption("site_crc");
+    if (await compactActionsBtn.isVisible().catch(() => false)) {
+      await compactActionsBtn.click();
+      await expect(
+        page.locator("#header-secondary-menu.is-open")
+      ).toBeVisible();
+    }
     await page.locator("#btn-onboarding-checklist-trigger").click();
     await page.locator("#btn-drawer-start-tour").click();
     await expect(tourPopover).toBeVisible();

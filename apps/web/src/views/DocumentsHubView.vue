@@ -26,33 +26,39 @@
           style="display: flex; align-items: center; gap: 8px"
         >
           <button
+            type="button"
             class="btn btn-primary btn-batch-upload"
             style="font-size: 13px; font-weight: 600; padding: 6px 14px"
             @click="isBatchDrawerOpen = true"
           >
-            📤 Batch Ingestion
+            Batch Ingestion
           </button>
           <button
+            type="button"
             class="btn btn-outline-secondary btn-qc-queue"
             style="font-size: 13px; font-weight: 600; padding: 6px 14px"
             @click="showQcQueue = !showQcQueue"
           >
-            🛡️ CRA QC Queue
+            CRA QC Queue
           </button>
 
           <!-- Search Bar -->
           <div class="search-input-wrapper">
-            <span class="search-icon-prefix">🔍</span>
-            <input
+            <ClinicalInput
+              id="documents-hub-search"
               v-model="searchInput"
-              type="text"
+              label="Search all documents"
+              hide-label
+              density="compact"
+              :show-query-flag="false"
+              control-class="hub-search-input"
               placeholder="Search by filename, study, uploader, or site..."
-              class="hub-search-input"
-              aria-label="Search all documents"
+              :attributes="{ 'aria-label': 'Search all documents' }"
               @input="onSearchInput"
             />
             <button
               v-if="searchInput"
+              type="button"
               class="clear-search-btn"
               aria-label="Clear search"
               @click="clearSearch"
@@ -128,6 +134,7 @@
 
           <button
             v-if="hasActiveFilter"
+            type="button"
             class="btn btn-sm btn-outline-secondary btn-reset-all"
             @click="resetAllFilters"
           >
@@ -138,15 +145,17 @@
         <!-- Bulk Selection Action Ribbon -->
         <div v-if="selectedFiles.length > 0" class="bulk-actions-toolbar">
           <span class="selection-count-badge">
-            ✓ {{ selectedFiles.length }} Selected
+            {{ selectedFiles.length }} Selected
           </span>
           <button
+            type="button"
             class="btn btn-sm btn-primary btn-bulk-share"
             @click="openBulkShareDrawer"
           >
-            🔗 Bulk Share ({{ selectedFiles.length }})
+            Bulk Share ({{ selectedFiles.length }})
           </button>
           <button
+            type="button"
             class="btn btn-sm btn-outline-secondary btn-deselect-all"
             @click="fileshareStore.clearSelection()"
           >
@@ -156,265 +165,223 @@
       </div>
 
       <!-- Main Data Table -->
-      <div class="table-responsive hub-table-container">
-        <table class="documents-table">
-          <thead>
-            <tr>
-              <th class="checkbox-col">
-                <input
-                  type="checkbox"
-                  :checked="isAllSelected"
-                  :indeterminate="isPartiallySelected"
-                  aria-label="Select all visible documents"
-                  @change="toggleSelectAll"
-                />
-              </th>
-              <th class="sortable-th" @click="setSort('filename')">
-                Name
-                <span class="sort-indicator">{{
-                  getSortIndicator("filename")
-                }}</span>
-              </th>
-              <th class="sortable-th" @click="setSort('study_id')">
-                Study
-                <span class="sort-indicator">{{
-                  getSortIndicator("study_id")
-                }}</span>
-              </th>
-              <th class="sortable-th" @click="setSort('site_id')">
-                Site
-                <span class="sort-indicator">{{
-                  getSortIndicator("site_id")
-                }}</span>
-              </th>
-              <th class="sortable-th" @click="setSort('uploaded_by')">
-                Uploaded By
-                <span class="sort-indicator">{{
-                  getSortIndicator("uploaded_by")
-                }}</span>
-              </th>
-              <th class="sortable-th" @click="setSort('uploaded_at')">
-                Last Modified
-                <span class="sort-indicator">{{
-                  getSortIndicator("uploaded_at")
-                }}</span>
-              </th>
-              <th class="sortable-th" @click="setSort('status')">
-                Status
-                <span class="sort-indicator">{{
-                  getSortIndicator("status")
-                }}</span>
-              </th>
-              <th>Shared</th>
-              <th class="actions-th">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-if="paginatedDocuments.length === 0">
-              <td colspan="9" class="empty-grid-cell">
-                <div class="empty-state-box">
-                  <span class="empty-state-icon">📂</span>
-                  <h4>
-                    No clinical documents match your search or filter criteria.
-                  </h4>
-                  <p>
-                    Try resetting filters or expanding other study branches in
-                    the folder tree.
-                  </p>
-                </div>
-              </td>
-            </tr>
+      <ClinicalDataTable
+        title="Documents Hub"
+        hide-header
+        plain
+        external-pagination
+        external-sort
+        :initial-sort-key="sortField"
+        :initial-sort-order="sortDirection"
+        :columns="documentColumns"
+        :data="paginatedDocuments"
+        row-key="id"
+        :page="currentPage"
+        :page-size="itemsPerPage"
+        :total-records="totalItems"
+        container-class="hub-data-table-shell"
+        wrapper-class="table-responsive hub-table-container"
+        table-class="documents-table"
+        :row-class="resolveDocumentRowClass"
+        @sort-change="handleSortChange"
+      >
+        <template #head-select>
+          <input
+            type="checkbox"
+            :checked="isAllSelected"
+            :indeterminate="isPartiallySelected"
+            aria-label="Select all visible documents"
+            @change="toggleSelectAll"
+          />
+        </template>
 
-            <tr
-              v-for="file in paginatedDocuments"
-              :key="file.id"
-              class="document-row"
-              :class="{ 'row-selected': isFileSelected(file.id) }"
-            >
-              <!-- Multi-select Checkbox -->
-              <td class="checkbox-col" @click.stop>
-                <input
-                  type="checkbox"
-                  :checked="isFileSelected(file.id)"
-                  :aria-label="'Select document ' + file.filename"
-                  @change="fileshareStore.toggleFileSelection(file.id)"
-                />
-              </td>
+        <template #cell-select="{ row }">
+          <input
+            type="checkbox"
+            :checked="isFileSelected(row.id)"
+            :aria-label="'Select document ' + row.filename"
+            @click.stop
+            @change="fileshareStore.toggleFileSelection(row.id)"
+          />
+        </template>
 
-              <!-- File Name & MIME Icon -->
-              <td class="filename-col" @click="openPreview(file)">
-                <span class="mime-icon" :title="file.mime_type">{{
-                  getMimeIcon(file)
-                }}</span>
-                <span class="filename-text" :title="file.filename">{{
-                  file.filename
-                }}</span>
-                <span v-if="file.version_index > 1" class="version-pill"
-                  >v{{ file.version_index }}.0</span
-                >
-              </td>
-
-              <!-- Study ID -->
-              <td>
-                <span class="study-badge">{{ file.study_id }}</span>
-              </td>
-
-              <!-- Site ID -->
-              <td>
-                <span v-if="file.site_id" class="site-badge">{{
-                  file.site_id
-                }}</span>
-                <span v-else class="text-muted">Global</span>
-              </td>
-
-              <!-- Uploaded By -->
-              <td>
-                <span class="uploader-name">{{
-                  file.uploaded_by || file.created_by
-                }}</span>
-              </td>
-
-              <!-- Last Modified -->
-              <td class="date-cell">
-                {{ formatDate(file.uploaded_at || file.created_at) }}
-              </td>
-
-              <!-- Status -->
-              <td>
-                <span
-                  v-if="file.is_on_hold"
-                  class="status-pill status-hold"
-                  :title="file.hold_reason || 'File is under retention hold.'"
-                >
-                  🔒
-                  {{
-                    file.status === "ON_HOLD"
-                      ? "ON HOLD"
-                      : file.status || "ON HOLD"
-                  }}
-                </span>
-                <span
-                  v-else
-                  class="status-pill"
-                  :class="getStatusClass(file.status)"
-                >
-                  {{ file.status || "ACTIVE" }}
-                </span>
-              </td>
-
-              <!-- Shared Active Grant Count -->
-              <td>
-                <span
-                  v-if="file.grant_count > 0"
-                  class="shared-badge has-grants"
-                  :title="`${file.grant_count} active share delegations`"
-                >
-                  👥 {{ file.grant_count }} Shared
-                </span>
-                <span
-                  v-else
-                  class="shared-badge private"
-                  title="Private to study team"
-                >
-                  🔒 Private
-                </span>
-              </td>
-
-              <!-- Action Buttons -->
-              <td class="actions-cell" @click.stop>
-                <div class="action-btn-group">
-                  <button
-                    class="btn btn-sm btn-outline-primary btn-preview-action"
-                    title="View Protected Preview"
-                    :aria-label="'Preview ' + file.filename"
-                    @click="openPreview(file)"
-                  >
-                    👁️ Preview
-                  </button>
-                  <button
-                    class="btn btn-sm btn-outline-secondary btn-share-action"
-                    title="Manage Share Permissions"
-                    :aria-label="'Share ' + file.filename"
-                    @click="openShareDrawerForFile(file)"
-                  >
-                    🔗 Share
-                  </button>
-                  <button
-                    class="btn btn-sm btn-outline-info btn-activity-action"
-                    title="View Document Activity Feed"
-                    :aria-label="'Activity for ' + file.filename"
-                    @click="openActivityDrawerForFile(file)"
-                  >
-                    📋 Activity
-                  </button>
-                  <button
-                    class="btn btn-sm btn-outline-danger btn-delete-action"
-                    :disabled="file.is_on_hold"
-                    :title="
-                      file.is_on_hold
-                        ? 'File is under retention hold.'
-                        : 'Delete document'
-                    "
-                    :aria-label="'Delete ' + file.filename"
-                    @click="handleDeleteFile(file)"
-                  >
-                    🗑️ Delete
-                  </button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <!-- Pagination Footer -->
-      <div v-if="totalItems > 0" class="hub-pagination-bar">
-        <div class="pagination-info">
-          Showing
-          <span class="font-bold">{{
-            Math.min((currentPage - 1) * itemsPerPage + 1, totalItems)
-          }}</span>
-          to
-          <span class="font-bold">{{
-            Math.min(currentPage * itemsPerPage, totalItems)
-          }}</span>
-          of
-          <span class="font-bold">{{ totalItems }}</span> documents
-        </div>
-
-        <div class="pagination-buttons">
+        <template #cell-filename="{ row }">
           <button
-            class="btn btn-sm btn-outline-secondary prev-btn"
-            :disabled="currentPage === 1"
-            aria-label="Previous page"
-            @click="currentPage--"
+            type="button"
+            class="filename-col-inner"
+            @click="openPreview(row)"
           >
-            ◀ Previous
-          </button>
-
-          <div class="page-numbers">
-            <button
-              v-for="page in totalPages"
-              :key="page"
-              class="btn btn-sm page-num-btn"
-              :class="{ active: currentPage === page }"
-              :aria-label="'Go to page ' + page"
-              @click="currentPage = page"
+            <span class="mime-icon" :title="row.mime_type">{{
+              getMimeIcon(row)
+            }}</span>
+            <span class="filename-text" :title="row.filename">{{
+              row.filename
+            }}</span>
+            <span v-if="row.version_index > 1" class="version-pill"
+              >v{{ row.version_index }}.0</span
             >
-              {{ page }}
+          </button>
+        </template>
+
+        <template #cell-study_id="{ row }">
+          <span class="study-badge">{{ row.study_id }}</span>
+        </template>
+
+        <template #cell-site_id="{ row }">
+          <span v-if="row.site_id" class="site-badge">{{ row.site_id }}</span>
+          <span v-else class="text-muted">Global</span>
+        </template>
+
+        <template #cell-uploaded_by="{ row }">
+          <span class="uploader-name">{{
+            row.uploaded_by || row.created_by
+          }}</span>
+        </template>
+
+        <template #cell-uploaded_at="{ row }">
+          {{ formatDate(row.uploaded_at || row.created_at) }}
+        </template>
+
+        <template #cell-status="{ row }">
+          <span
+            v-if="row.is_on_hold"
+            class="status-pill status-hold"
+            :title="row.hold_reason || 'File is under retention hold.'"
+          >
+            🔒
+            {{ row.status === "ON_HOLD" ? "ON HOLD" : row.status || "ON HOLD" }}
+          </span>
+          <span v-else class="status-pill" :class="getStatusClass(row.status)">
+            {{ row.status || "ACTIVE" }}
+          </span>
+        </template>
+
+        <template #cell-shared="{ row }">
+          <span
+            v-if="row.grant_count > 0"
+            class="shared-badge has-grants"
+            :title="`${row.grant_count} active share delegations`"
+          >
+            {{ row.grant_count }} Shared
+          </span>
+          <span
+            v-else
+            class="shared-badge private"
+            title="Private to study team"
+          >
+            Private
+          </span>
+        </template>
+
+        <template #cell-actions="{ row }">
+          <div class="action-btn-group" @click.stop>
+            <button
+              type="button"
+              class="btn btn-sm btn-outline-primary btn-preview-action"
+              title="View Protected Preview"
+              :aria-label="'Preview ' + row.filename"
+              @click="openPreview(row)"
+            >
+              Preview
+            </button>
+            <button
+              type="button"
+              class="btn btn-sm btn-outline-secondary btn-share-action"
+              title="Manage Share Permissions"
+              :aria-label="'Share ' + row.filename"
+              @click="openShareDrawerForFile(row)"
+            >
+              Share
+            </button>
+            <button
+              type="button"
+              class="btn btn-sm btn-outline-info btn-activity-action"
+              title="View Document Activity Feed"
+              :aria-label="'Activity for ' + row.filename"
+              @click="openActivityDrawerForFile(row)"
+            >
+              Activity
+            </button>
+            <button
+              type="button"
+              class="btn btn-sm btn-outline-danger btn-delete-action"
+              :disabled="row.is_on_hold"
+              :title="
+                row.is_on_hold
+                  ? 'File is under retention hold.'
+                  : 'Delete document'
+              "
+              :aria-label="'Delete ' + row.filename"
+              @click="handleDeleteFile(row)"
+            >
+              Delete
             </button>
           </div>
+        </template>
 
-          <button
-            class="btn btn-sm btn-outline-secondary next-btn"
-            :disabled="currentPage === totalPages"
-            aria-label="Next page"
-            @click="currentPage++"
-          >
-            Next ▶
-          </button>
-        </div>
-      </div>
+        <template #empty>
+          <div class="empty-state-box">
+            <h4>No clinical documents match your search or filter criteria.</h4>
+            <p>
+              Try resetting filters or expanding other study branches in the
+              folder tree.
+            </p>
+          </div>
+        </template>
+
+        <template #pagination>
+          <div v-if="totalItems > 0" class="hub-pagination-bar">
+            <div class="pagination-info">
+              Showing
+              <span class="font-bold">{{
+                Math.min((currentPage - 1) * itemsPerPage + 1, totalItems)
+              }}</span>
+              to
+              <span class="font-bold">{{
+                Math.min(currentPage * itemsPerPage, totalItems)
+              }}</span>
+              of
+              <span class="font-bold">{{ totalItems }}</span> documents
+            </div>
+
+            <div class="pagination-buttons">
+              <button
+                type="button"
+                class="btn btn-sm btn-outline-secondary prev-btn"
+                :disabled="currentPage === 1"
+                aria-label="Previous page"
+                @click="currentPage--"
+              >
+                Previous
+              </button>
+
+              <div class="page-numbers">
+                <button
+                  v-for="page in totalPages"
+                  :key="page"
+                  type="button"
+                  class="btn btn-sm page-num-btn"
+                  :class="{ active: currentPage === page }"
+                  :aria-label="'Go to page ' + page"
+                  @click="currentPage = page"
+                >
+                  {{ page }}
+                </button>
+              </div>
+
+              <button
+                type="button"
+                class="btn btn-sm btn-outline-secondary next-btn"
+                :disabled="currentPage === totalPages"
+                aria-label="Next page"
+                @click="currentPage++"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        </template>
+      </ClinicalDataTable>
     </main>
 
     <!-- Slide-in Share Management Drawer -->
@@ -454,7 +421,7 @@
 
 <script setup>
 import { ref, computed, defineAsyncComponent, onMounted, watch } from "vue";
-import { ClinicalIconButton } from "ui";
+import { ClinicalDataTable, ClinicalIconButton, ClinicalInput } from "ui";
 import { useFileshareStore } from "../stores/fileshare";
 import DocumentsFolderTree from "../components/fileshare/DocumentsFolderTree.vue";
 import ShareDrawer from "../components/fileshare/ShareDrawer.vue";
@@ -562,18 +529,63 @@ const hasActiveFilter = computed(() => {
 });
 
 // Sorting Logic
-function setSort(field) {
-  if (sortField.value === field) {
-    sortDirection.value = sortDirection.value === "asc" ? "desc" : "asc";
-  } else {
-    sortField.value = field;
-    sortDirection.value = "asc";
-  }
+const documentColumns = [
+  {
+    key: "select",
+    label: "",
+    headerClass: "checkbox-col",
+    cellClass: "checkbox-col",
+  },
+  {
+    key: "filename",
+    label: "Name",
+    sortable: true,
+    headerClass: "sortable-th",
+    cellClass: "filename-col",
+  },
+  {
+    key: "study_id",
+    label: "Study",
+    sortable: true,
+    headerClass: "sortable-th",
+  },
+  { key: "site_id", label: "Site", sortable: true, headerClass: "sortable-th" },
+  {
+    key: "uploaded_by",
+    label: "Uploaded By",
+    sortable: true,
+    headerClass: "sortable-th",
+  },
+  {
+    key: "uploaded_at",
+    label: "Last Modified",
+    sortable: true,
+    headerClass: "sortable-th",
+    cellClass: "date-cell",
+  },
+  {
+    key: "status",
+    label: "Status",
+    sortable: true,
+    headerClass: "sortable-th",
+  },
+  { key: "shared", label: "Shared" },
+  {
+    key: "actions",
+    label: "Actions",
+    headerClass: "actions-th",
+    cellClass: "actions-cell",
+    align: "right",
+  },
+];
+
+function handleSortChange({ key, order }) {
+  sortField.value = key;
+  sortDirection.value = order;
 }
 
-function getSortIndicator(field) {
-  if (sortField.value !== field) return "↕";
-  return sortDirection.value === "asc" ? "▲" : "▼";
+function resolveDocumentRowClass(file) {
+  return ["document-row", { "row-selected": isFileSelected(file.id) }];
 }
 
 const sortedDocuments = computed(() => {
@@ -893,6 +905,13 @@ async function handleDeleteFile(file) {
 }
 
 /* Data Table Container */
+.hub-data-table-shell {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
 .hub-table-container {
   flex: 1;
   overflow-y: auto;
@@ -953,9 +972,19 @@ async function handleDeleteFile(file) {
 
 .filename-col {
   cursor: pointer;
-  display: flex;
+}
+
+.filename-col-inner {
+  display: inline-flex;
   align-items: center;
   gap: 8px;
+  background: transparent;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
 }
 
 .mime-icon {

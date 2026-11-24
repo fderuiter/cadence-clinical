@@ -39,15 +39,21 @@
       @submit="loadReadiness"
     >
       <template #before-site>
-        <label for="greenlight-country">Country</label>
-        <select id="greenlight-country" v-model="countryCode">
+        <ClinicalInput
+          id="greenlight-country"
+          v-model="countryCode"
+          as="select"
+          label="Country"
+          density="compact"
+          :show-query-flag="false"
+        >
           <option value="US">United States (US)</option>
           <option value="DE">Germany (DE)</option>
           <option value="GB">United Kingdom (GB)</option>
           <option value="JP">Japan (JP)</option>
           <option value="EU">European Union (EU)</option>
           <option value="GLOBAL">Global (GLOBAL)</option>
-        </select>
+        </ClinicalInput>
       </template>
     </CtmsSectionScopeBar>
 
@@ -102,14 +108,15 @@
         "
         class="certify-box"
       >
-        <label for="greenlight-certify-reason"
-          >Part 11 certification rationale</label
-        >
-        <input
+        <ClinicalInput
           id="greenlight-certify-reason"
           v-model="certifyReason"
+          label="Part 11 certification rationale"
           type="text"
           placeholder="State clinical justification for certifying site greenlight"
+          density="compact"
+          :show-query-flag="false"
+          extra-class="certify-input-field"
         />
         <button
           id="btn-certify-site-greenlight"
@@ -136,7 +143,7 @@
     </div>
 
     <div v-if="loaded" class="matrix-block">
-      <h4 class="subsection-title">
+      <h4 id="greenlight-matrix-heading" class="subsection-title">
         Country readiness matrix ({{ countryCode }})
       </h4>
       <p v-if="!countryMatrix.length" class="muted-status">
@@ -146,78 +153,69 @@
         }}).
       </p>
       <template v-else>
-        <div class="table-wrap">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th v-if="canCertify" scope="col">Select</th>
-                <th scope="col">Site</th>
-                <th scope="col">Status</th>
-                <th scope="col">Satisfied facets</th>
-                <th scope="col">Blocking reasons</th>
-                <th scope="col">Certified</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="row in countryMatrix" :key="row.site_id">
-                <td v-if="canCertify">
-                  <input
-                    v-model="selectedMatrixSites"
-                    type="checkbox"
-                    :value="row.site_id"
-                    :disabled="
-                      !row.is_compliant || row.overall_status === 'CERTIFIED'
-                    "
-                    :aria-label="`Select ${row.site_id} for batch certification`"
-                  />
-                </td>
-                <td>
-                  <strong>{{ row.site_id }}</strong>
-                </td>
-                <td>
-                  <span
-                    class="gate-badge"
-                    :class="`gate-${row.overall_status.toLowerCase()}`"
-                  >
-                    {{ formatClinicalStatus(row.overall_status) }}
-                  </span>
-                </td>
-                <td>
-                  {{ getGateFacets(row).filter((f) => f.is_satisfied).length }}
-                  / {{ getGateFacets(row).length }}
-                </td>
-                <td>
-                  <span v-if="(row.unfulfilled_reasons ?? []).length">
-                    {{ (row.unfulfilled_reasons ?? []).join("; ") }}
-                  </span>
-                  <span v-else class="text-ok">None</span>
-                </td>
-                <td>
-                  <span v-if="row.greenlight_certified_by">
-                    {{ row.greenlight_certified_by }}
-                  </span>
-                  <span v-else class="muted-inline">—</span>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        <ClinicalDataTable
+          hide-header
+          plain
+          labelled-by="greenlight-matrix-heading"
+          wrapper-class="table-wrap"
+          table-class="data-table"
+          :columns="matrixColumns"
+          :data="countryMatrix"
+          row-key="site_id"
+        >
+          <template #cell-select="{ row }">
+            <input
+              v-model="selectedMatrixSites"
+              type="checkbox"
+              :value="row.site_id"
+              :disabled="
+                !row.is_compliant || row.overall_status === 'CERTIFIED'
+              "
+              :aria-label="`Select ${row.site_id} for batch certification`"
+            />
+          </template>
+          <template #cell-site_id="{ row }">
+            <strong>{{ row.site_id }}</strong>
+          </template>
+          <template #cell-overall_status="{ row }">
+            <span
+              class="gate-badge"
+              :class="`gate-${row.overall_status.toLowerCase()}`"
+            >
+              {{ formatClinicalStatus(row.overall_status) }}
+            </span>
+          </template>
+          <template #cell-facets="{ row }">
+            {{ getGateFacets(row).filter((f) => f.is_satisfied).length }} /
+            {{ getGateFacets(row).length }}
+          </template>
+          <template #cell-reasons="{ row }">
+            <span v-if="(row.unfulfilled_reasons ?? []).length">
+              {{ (row.unfulfilled_reasons ?? []).join("; ") }}
+            </span>
+            <span v-else class="text-ok">None</span>
+          </template>
+          <template #cell-certified="{ row }">
+            <span v-if="row.greenlight_certified_by">
+              {{ row.greenlight_certified_by }}
+            </span>
+            <span v-else class="muted-inline">—</span>
+          </template>
+        </ClinicalDataTable>
 
         <div
           v-if="canCertify && selectedMatrixSites.length"
           class="certify-box"
         >
-          <label for="batch-certify-reason"
-            >Batch certification rationale ({{
-              selectedMatrixSites.length
-            }}
-            selected)</label
-          >
-          <input
+          <ClinicalInput
             id="batch-certify-reason"
             v-model="batchReason"
+            :label="`Batch certification rationale (${selectedMatrixSites.length} selected)`"
             type="text"
             placeholder="Part 11 justification for batch country certification"
+            density="compact"
+            :show-query-flag="false"
+            extra-class="certify-input-field"
           />
           <button
             id="btn-batch-certify-greenlight"
@@ -240,7 +238,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
-import { handoffFocus } from "ui";
+import { ClinicalDataTable, ClinicalInput, handoffFocus } from "ui";
 import { ctmsApi, type SiteGreenlightGate } from "../../api/ctmsApi";
 import { canCertifyGreenlight } from "../../canvas/authority";
 import {
@@ -270,6 +268,18 @@ const {
 } = workspace;
 
 const canCertify = computed(() => canCertifyGreenlight(authStore));
+const matrixColumns = computed(() => {
+  const cols = [
+    { key: "site_id", label: "Site", rowHeader: true },
+    { key: "overall_status", label: "Status" },
+    { key: "facets", label: "Satisfied facets" },
+    { key: "reasons", label: "Blocking reasons" },
+    { key: "certified", label: "Certified" },
+  ];
+  return canCertify.value
+    ? [{ key: "select", label: "Select" }, ...cols]
+    : cols;
+});
 const countryCode = ref("US");
 const singleGate = ref<SiteGreenlightGate | null>(null);
 const countryMatrix = ref<SiteGreenlightGate[]>([]);
@@ -538,16 +548,14 @@ onMounted(() => {
 .certify-box {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-end;
   gap: 8px;
   margin-top: 8px;
 }
 
-.certify-box input {
+.certify-box :deep(.certify-input-field) {
   flex: 1 1 240px;
-  padding: 8px;
-  border: 1px solid var(--semantic-color-border-control);
-  border-radius: 4px;
+  margin-bottom: 0;
 }
 
 .subsection-title {

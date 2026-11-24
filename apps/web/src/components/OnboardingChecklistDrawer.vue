@@ -264,6 +264,22 @@ function openOrientationHub() {
 }
 
 function startGuidedTour() {
+  if (
+    activeRoute &&
+    (activeRoute.name === "forbidden" ||
+      activeRoute.path === "/forbidden" ||
+      activeRoute.name === "unavailable" ||
+      activeRoute.path === "/unavailable")
+  ) {
+    const targetPath = buildScopedWorkflowPath("/overview", {
+      studyCode: workspaceScope.value.studyCode,
+      siteId: workspaceScope.value.siteId,
+      subjectCode: workspaceScope.value.subjectCode,
+    });
+    if (isScreenAvailable("overview") && canPushResolvedPath(targetPath)) {
+      router.push(targetPath);
+    }
+  }
   onboardingStore.startTour();
   onboardingStore.closeDrawer();
 }
