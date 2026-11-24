@@ -143,8 +143,16 @@ describe("Onboarding Guided Tour & Opt-in Live Sequences Spec", () => {
       expect(store.events).toEqual([]);
     });
 
-    it("logs events and persists them to localStorage", () => {
+    it("logs events and persists them to account-scoped localStorage only when tenant and user claims exist", () => {
       const store = useOnboardingStore();
+      store.addEvent("unscoped_type", "unscoped_target", "no_claims");
+      expect(window.localStorage.length).toBe(0);
+
+      signInAs(useAuthStore(), ["Sponsor Admin"], {
+        username: "admin_one",
+        tenantId: "tenant-1",
+      });
+      store.loadPersonaState("super_admin");
       store.addEvent("test_type", "test_target", "test_details");
       expect(store.events.length).toBe(1);
       expect(store.events[0].type).toBe("test_type");
@@ -153,7 +161,9 @@ describe("Onboarding Guided Tour & Opt-in Live Sequences Spec", () => {
       expect(store.events[0].timestamp).toBeDefined();
 
       const savedEvents = JSON.parse(
-        window.localStorage.getItem(`onboarding_${store.currentPersona}_events`)
+        window.localStorage.getItem(
+          "cadence_user:tenant-1:admin_one-id:onboarding:super_admin:events"
+        )
       );
       expect(savedEvents.length).toBe(1);
       expect(savedEvents[0].type).toBe("test_type");
@@ -202,7 +212,10 @@ describe("Onboarding Guided Tour & Opt-in Live Sequences Spec", () => {
 
     it("maintains distinct step progress and event history per persona", () => {
       const store = useOnboardingStore();
-      const authStore = signInAs(useAuthStore(), ["Sponsor Admin"]);
+      const authStore = signInAs(useAuthStore(), ["Sponsor Admin"], {
+        username: "admin_one",
+        tenantId: "tenant-1",
+      });
 
       expect(store.currentPersona).toBe("super_admin");
       store.startTour();
@@ -211,7 +224,9 @@ describe("Onboarding Guided Tour & Opt-in Live Sequences Spec", () => {
       expect(store.currentStep).toBe(3);
 
       expect(
-        window.localStorage.getItem("onboarding_super_admin_current_step")
+        window.localStorage.getItem(
+          "cadence_user:tenant-1:admin_one-id:onboarding:super_admin:current_step"
+        )
       ).toBe("3");
 
       // Switch to site_crc persona
@@ -228,7 +243,9 @@ describe("Onboarding Guided Tour & Opt-in Live Sequences Spec", () => {
       store.nextStep("Step 1 for site_crc");
       expect(store.currentStep).toBe(2);
       expect(
-        window.localStorage.getItem("onboarding_site_crc_current_step")
+        window.localStorage.getItem(
+          "cadence_user:tenant-1:admin_one-id:onboarding:site_crc:current_step"
+        )
       ).toBe("2");
 
       // Switch back to super_admin
@@ -239,10 +256,9 @@ describe("Onboarding Guided Tour & Opt-in Live Sequences Spec", () => {
       expect(store.currentStep).toBe(3);
     });
 
-    it("migrates legacy unscoped localStorage keys to super_admin without errors", () => {
+    it("ignores unowned legacy onboarding_* localStorage keys on load and purges them on logout", async () => {
       window.localStorage.setItem("onboarding_current_step", "4");
-      window.localStorage.setItem("onboarding_is_active", "false");
-      window.localStorage.setItem("onboarding_disabled", "false");
+      window.localStorage.setItem("onboarding_super_admin_current_step", "4");
       window.localStorage.setItem(
         "onboarding_events",
         JSON.stringify([
@@ -250,24 +266,38 @@ describe("Onboarding Guided Tour & Opt-in Live Sequences Spec", () => {
         ])
       );
 
+      const authStore = signInAs(useAuthStore(), ["Sponsor Admin"], {
+        username: "admin_one",
+        tenantId: "tenant-1",
+      });
       const store = useOnboardingStore();
       store.loadPersonaState("super_admin");
 
-      expect(store.currentStep).toBe(4);
+      expect(store.currentStep).toBe(1);
       expect(store.isActive).toBe(false);
-      expect(store.events.length).toBe(1);
-      expect(store.events[0].type).toBe("legacy_event");
+      expect(store.events).toEqual([]);
 
+      await authStore.logout();
       expect(window.localStorage.getItem("onboarding_current_step")).toBeNull();
-      expect(window.localStorage.getItem("onboarding_events")).toBeNull();
       expect(
         window.localStorage.getItem("onboarding_super_admin_current_step")
-      ).toBe("4");
+      ).toBeNull();
+      expect(window.localStorage.getItem("onboarding_events")).toBeNull();
     });
 
-    it("gracefully handles invalid JSON in legacy storage during migration", () => {
-      window.localStorage.setItem("onboarding_current_step", "2");
-      window.localStorage.setItem("onboarding_events", "corrupted-json{");
+    it("gracefully handles invalid JSON in account-scoped onboarding storage", () => {
+      signInAs(useAuthStore(), ["Sponsor Admin"], {
+        username: "admin_one",
+        tenantId: "tenant-1",
+      });
+      window.localStorage.setItem(
+        "cadence_user:tenant-1:admin_one-id:onboarding:super_admin:current_step",
+        "2"
+      );
+      window.localStorage.setItem(
+        "cadence_user:tenant-1:admin_one-id:onboarding:super_admin:events",
+        "corrupted-json{"
+      );
 
       const store = useOnboardingStore();
       expect(() => store.loadPersonaState("super_admin")).not.toThrow();
@@ -278,7 +308,10 @@ describe("Onboarding Guided Tour & Opt-in Live Sequences Spec", () => {
 
     it("persists persona dismissal and disabled preference keys and isolates tour state across personas", () => {
       const store = useOnboardingStore();
-      const authStore = signInAs(useAuthStore(), ["Sponsor Admin"]);
+      const authStore = signInAs(useAuthStore(), ["Sponsor Admin"], {
+        username: "admin_one",
+        tenantId: "tenant-1",
+      });
 
       expect(store.currentPersona).toBe("super_admin");
       expect(store.isActive).toBe(false);
@@ -292,7 +325,9 @@ describe("Onboarding Guided Tour & Opt-in Live Sequences Spec", () => {
         window.localStorage.getItem("onboarding_global_dismissed")
       ).toBeNull();
       expect(
-        window.localStorage.getItem("onboarding_super_admin_is_active")
+        window.localStorage.getItem(
+          "cadence_user:tenant-1:admin_one-id:onboarding:super_admin:is_active"
+        )
       ).toBe("false");
 
       authStore.switchPersona("site_crc");
@@ -304,6 +339,10 @@ describe("Onboarding Guided Tour & Opt-in Live Sequences Spec", () => {
     });
 
     it("clears dismissal and disabled flags when tour is reset or restarted", () => {
+      signInAs(useAuthStore(), ["Sponsor Admin"], {
+        username: "admin_one",
+        tenantId: "tenant-1",
+      });
       const store = useOnboardingStore();
       store.disableTour();
       expect(store.disabled).toBe(true);
@@ -312,26 +351,51 @@ describe("Onboarding Guided Tour & Opt-in Live Sequences Spec", () => {
       expect(store.isActive).toBe(true);
       expect(store.disabled).toBe(false);
       expect(
-        window.localStorage.getItem("onboarding_super_admin_is_active")
+        window.localStorage.getItem(
+          "cadence_user:tenant-1:admin_one-id:onboarding:super_admin:is_active"
+        )
       ).toBe("true");
     });
 
-    it("purges other persona storage keys in resetTour while activating the current persona", () => {
+    it("purges legacy and other persona storage keys in resetTour while activating the current persona", () => {
       const store = useOnboardingStore();
-      const authStore = signInAs(useAuthStore(), ["Sponsor Admin"]);
+      const authStore = signInAs(useAuthStore(), ["Sponsor Admin"], {
+        username: "admin_one",
+        tenantId: "tenant-1",
+      });
 
-      window.localStorage.setItem("onboarding_super_admin_current_step", "3");
-      window.localStorage.setItem("onboarding_super_admin_disabled", "true");
-      window.localStorage.setItem("onboarding_site_crc_current_step", "2");
       window.localStorage.setItem("onboarding_site_crc_disabled", "true");
+      window.localStorage.setItem(
+        "cadence_user:tenant-1:admin_one-id:onboarding:super_admin:current_step",
+        "3"
+      );
+      window.localStorage.setItem(
+        "cadence_user:tenant-1:admin_one-id:onboarding:super_admin:disabled",
+        "true"
+      );
+      window.localStorage.setItem(
+        "cadence_user:tenant-1:admin_one-id:onboarding:site_crc:current_step",
+        "2"
+      );
+      window.localStorage.setItem(
+        "cadence_user:tenant-1:admin_one-id:onboarding:site_crc:disabled",
+        "true"
+      );
 
       store.resetTour();
 
       expect(
-        window.localStorage.getItem("onboarding_site_crc_current_step")
+        window.localStorage.getItem("onboarding_site_crc_disabled")
       ).toBeNull();
       expect(
-        window.localStorage.getItem("onboarding_site_crc_disabled")
+        window.localStorage.getItem(
+          "cadence_user:tenant-1:admin_one-id:onboarding:site_crc:current_step"
+        )
+      ).toBeNull();
+      expect(
+        window.localStorage.getItem(
+          "cadence_user:tenant-1:admin_one-id:onboarding:site_crc:disabled"
+        )
       ).toBeNull();
 
       expect(store.currentStep).toBe(1);
@@ -701,14 +765,16 @@ describe("Onboarding Guided Tour & Opt-in Live Sequences Spec", () => {
       document.body.removeChild(anchorEl);
     });
 
-    it("renders live role-tailored step sequences across all six clinical personas", async () => {
+    it("renders live role-tailored step sequences across all eight clinical personas", async () => {
       const store = useOnboardingStore();
       const authStore = signInAs(useAuthStore(), [
         "Sponsor Admin",
         "Sponsor Designer",
         "Data Manager",
         "CRC",
+        "Principal Investigator",
         "CRA",
+        "Safety Reviewer",
         "Auditor",
       ]);
 
@@ -732,6 +798,16 @@ describe("Onboarding Guided Tour & Opt-in Live Sequences Spec", () => {
           persona: "site_crc",
           title: "Welcome to Data Collection",
           routeName: "ecrf",
+        },
+        {
+          persona: "site_investigator",
+          title: "Welcome to Investigator Oversight",
+          routeName: "ecrf",
+        },
+        {
+          persona: "safety_officer",
+          title: "Welcome to Pharmacovigilance & Safety",
+          routeName: "study",
         },
         {
           persona: "sponsor_designer",
@@ -878,9 +954,15 @@ describe("Onboarding Guided Tour & Opt-in Live Sequences Spec", () => {
     });
 
     it("clamps stored currentStep to totalSteps after a persona switch with fewer filtered steps", () => {
-      window.localStorage.setItem("onboarding_cra_monitor_current_step", "5");
       const store = useOnboardingStore();
-      const authStore = signInAs(useAuthStore(), ["Auditor"]);
+      const authStore = signInAs(useAuthStore(), ["Auditor"], {
+        username: "aud_one",
+        tenantId: "tenant-1",
+      });
+      window.localStorage.setItem(
+        "cadence_user:tenant-1:aud_one-id:onboarding:cra_monitor:current_step",
+        "5"
+      );
 
       authStore.switchPersona("cra_monitor");
       store.loadPersonaState("cra_monitor");
@@ -888,7 +970,9 @@ describe("Onboarding Guided Tour & Opt-in Live Sequences Spec", () => {
       expect(store.totalSteps).toBe(1);
       expect(store.currentStep).toBe(1);
       expect(
-        window.localStorage.getItem("onboarding_cra_monitor_current_step")
+        window.localStorage.getItem(
+          "cadence_user:tenant-1:aud_one-id:onboarding:cra_monitor:current_step"
+        )
       ).toBe("1");
     });
 

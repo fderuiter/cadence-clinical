@@ -15,6 +15,41 @@ import { ROLE_ALIASES } from "../stores/auth.js";
 import { getSyncedStudyScope } from "../stores/studyScopeBridge";
 import { isDemoBuild } from "../utils/demoMode.js";
 
+export function readInstantiatedStudyCanvasScope(): {
+  studyCode?: string;
+  knownParticipants?: Record<string, SubjectSummary>;
+  knownParticipantsByEnrollmentId?: Record<string, SubjectSummary>;
+  record?: { subjectCode?: string; enrollmentId?: string | null };
+  participantsFilter?: { siteId?: string };
+} | null {
+  const pinia = getActivePinia() as
+    | {
+        _s?: Map<string, unknown>;
+        state?: { value?: Record<string, unknown> };
+      }
+    | undefined;
+  const instance = pinia?._s?.get("studyCanvas") as
+    | {
+        studyCode?: string;
+        knownParticipants?: Record<string, SubjectSummary>;
+        knownParticipantsByEnrollmentId?: Record<string, SubjectSummary>;
+        record?: { subjectCode?: string; enrollmentId?: string | null };
+        participantsFilter?: { siteId?: string };
+      }
+    | undefined;
+  if (instance) return instance;
+  const rawState = pinia?.state?.value?.studyCanvas as
+    | {
+        studyCode?: string;
+        knownParticipants?: Record<string, SubjectSummary>;
+        knownParticipantsByEnrollmentId?: Record<string, SubjectSummary>;
+        record?: { subjectCode?: string; enrollmentId?: string | null };
+        participantsFilter?: { siteId?: string };
+      }
+    | undefined;
+  return rawState ?? null;
+}
+
 function hasRequiredRole(
   userRoles: readonly string[],
   requiredRoles: readonly string[]
@@ -122,6 +157,7 @@ const DATA_COLLECTION_SPONSOR_ROLES = [
   "sponsor_admin",
 ];
 const DATA_COLLECTION_SITE_ROLES = [
+  "principal_investigator",
   "site_investigator",
   "crc",
   "trial_coordinator",
@@ -142,9 +178,15 @@ export const ETMF_ROLES = [
   "cra",
   "monitor",
   "data_manager",
+  "principal_investigator",
   "site_investigator",
   "crc",
   "trial_coordinator",
+  "safety_reviewer",
+  "safety_officer",
+  "safety_physician",
+  "medical_monitor",
+  "sponsor_mm",
   "auditor",
   "tmf_auditor",
   "sponsor_admin",
@@ -153,12 +195,14 @@ export const ETMF_ROLES = [
 const STAFF_HUB_ROLES = [
   "sponsor_admin",
   "sponsor_designer",
+  "protocol_architect",
   "data_manager",
   "unblinded_statistician",
   "pharmacist",
   "safety_reviewer",
   "safety_officer",
   "safety_physician",
+  "medical_monitor",
   "sponsor_mm",
   "cra",
   "monitor",
@@ -422,7 +466,7 @@ function extractParticipantNodeFromQueryValue(
 }
 
 function canonicalParticipantNodeFromSummary(
-  item: SubjectSummary | undefined
+  item: Pick<SubjectSummary, "id" | "enrollment_ref"> | null | undefined
 ): { kind: "enrollment" | "participant"; id: string } | null {
   if (!item) return null;
   const enrollment = parseNodeRef(item.enrollment_ref);
@@ -431,6 +475,13 @@ function canonicalParticipantNodeFromSummary(
   }
   const fallback = tryNodeRef("participant", item.id);
   return fallback ? { kind: "participant", id: fallback.id } : null;
+}
+
+export function participantNodeRefFromSummary(
+  item: Pick<SubjectSummary, "id" | "enrollment_ref"> | null | undefined
+): string {
+  const refNode = canonicalParticipantNodeFromSummary(item);
+  return refNode ? formatNodeRef(refNode) : "";
 }
 
 /**
@@ -540,6 +591,10 @@ export function resolveActiveWorkspaceScope(
     subjects?: Array<{ id?: string }>;
   } | null
 ): WorkspaceScopeSnapshot {
+  const effectiveCanvas =
+    canvasStore !== undefined
+      ? canvasStore
+      : readInstantiatedStudyCanvasScope();
   const effectiveClinical =
     clinicalStore !== undefined
       ? clinicalStore
@@ -551,7 +606,7 @@ export function resolveActiveWorkspaceScope(
     cleanQueryString(route?.query?.study);
   const routeStudy = routeParamStudy || routeQueryStudy;
 
-  const canvasStudy = cleanQueryString(canvasStore?.studyCode);
+  const canvasStudy = cleanQueryString(effectiveCanvas?.studyCode);
   const clinicalStudy = allowClinicalFallback
     ? cleanQueryString(effectiveClinical?.activeStudyId)
     : "";
@@ -566,26 +621,26 @@ export function resolveActiveWorkspaceScope(
     cleanQueryString(route?.query?.siteId);
 
   let participantSite = "";
-  if (!routeSite && studyCode && canvasStore?.studyCode === studyCode) {
+  if (!routeSite && studyCode && effectiveCanvas?.studyCode === studyCode) {
     const extractedNode =
       extractParticipantNodeFromQueryValue(route?.query?.participant) ??
       extractParticipantNodeFromQueryValue(route?.query?.node);
     if (extractedNode?.kind === "enrollment") {
       const known =
-        canvasStore.knownParticipantsByEnrollmentId?.[extractedNode.id] ??
-        canvasStore.knownParticipants?.[extractedNode.id];
+        effectiveCanvas.knownParticipantsByEnrollmentId?.[extractedNode.id] ??
+        effectiveCanvas.knownParticipants?.[extractedNode.id];
       participantSite = cleanQueryString(known?.site_id);
     } else if (extractedNode?.kind === "participant") {
       participantSite = cleanQueryString(
-        canvasStore.knownParticipants?.[extractedNode.id]?.site_id
+        effectiveCanvas.knownParticipants?.[extractedNode.id]?.site_id
       );
     }
   }
 
   let storeSite = "";
   if (!routeSite && studyCode) {
-    if (canvasStore?.studyCode === studyCode) {
-      storeSite = cleanQueryString(canvasStore.participantsFilter?.siteId);
+    if (effectiveCanvas?.studyCode === studyCode) {
+      storeSite = cleanQueryString(effectiveCanvas.participantsFilter?.siteId);
     }
     if (
       !storeSite &&
@@ -611,8 +666,8 @@ export function resolveActiveWorkspaceScope(
       ? rawParticipantParam
       : "");
   const routeEnrollment = cleanQueryString(route?.query?.enrollmentId);
-  const canvasParticipant = canvasStore
-    ? resolveCanvasParticipantContext(studyCode, route?.query, canvasStore)
+  const canvasParticipant = effectiveCanvas
+    ? resolveCanvasParticipantContext(studyCode, route?.query, effectiveCanvas)
     : { subjectCode: "", participantRef: "", enrollmentId: "" };
 
   const rawClinicalSubject = cleanQueryString(
@@ -659,10 +714,10 @@ export function resolveActiveWorkspaceScope(
     !participantRef &&
     subjectCode &&
     studyCode &&
-    canvasStore?.studyCode === studyCode &&
-    canvasStore.knownParticipants
+    effectiveCanvas?.studyCode === studyCode &&
+    effectiveCanvas.knownParticipants
   ) {
-    const matched = Object.values(canvasStore.knownParticipants).find(
+    const matched = Object.values(effectiveCanvas.knownParticipants).find(
       (item) => item?.subject_id === subjectCode
     );
     const refNode = canonicalParticipantNodeFromSummary(matched);
@@ -808,7 +863,7 @@ export function buildDataCollectionPath(context: {
 export function buildWorkspacePaletteItems(options: {
   isAuthenticated: boolean;
   normalizedRoles: string[];
-  availablePersonas?: Array<{ key: string; label: string }>;
+  availablePersonas?: ReadonlyArray<{ key: string; label: string }>;
   activeStudyCode?: string;
   activeSiteId?: string;
   activeExplicitSiteId?: string;

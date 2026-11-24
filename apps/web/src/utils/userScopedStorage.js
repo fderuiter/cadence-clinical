@@ -15,14 +15,15 @@
 export const USER_SCOPED_ROOT = "cadence_user:";
 
 /**
- * Prefixes older builds wrote clinical values under without naming the owner:
- * `cadence_ecrf_drafts:<study>:<subject>:<visit>` and
- * `clinical_<persona>_<field>`. Their ownership can't be established, so they
- * are discarded rather than migrated.
+ * Prefixes older builds wrote clinical or orientation values under without
+ * naming the owner: `cadence_ecrf_drafts:<study>:<subject>:<visit>`,
+ * `clinical_<persona>_<field>`, and `onboarding_<persona>_<field>`. Their
+ * ownership can't be established, so they are discarded rather than migrated.
  */
 export const LEGACY_UNOWNED_PREFIXES = Object.freeze([
   "cadence_ecrf_drafts:",
   "clinical_",
+  "onboarding_",
 ]);
 
 function encode(segment) {

@@ -624,10 +624,21 @@ export function useEcrfForm(
 
   watch(
     () => scopedKey(currentScope(), ECRF_FORM_DRAFT_NAMESPACE),
-    () => {
+    (nextScopeKey) => {
       cancelDraftSave();
-      loadedScopeKey = null;
+      loadedScopeKey = nextScopeKey;
       draftSaved = false;
+      draftCleared = false;
+      if (form.value) {
+        restoredDraftItemIds.value = [];
+        comparingBaseline.value = false;
+        staleDraftItems.value = [];
+        lockedDraftItems.value = [];
+        resetEntries();
+        if (nextScopeKey) {
+          restoreDraft(form.value);
+        }
+      }
     }
   );
 
@@ -717,6 +728,13 @@ export function useEcrfForm(
     entries,
     () => {
       draftCleared = false;
+    },
+    { deep: true, flush: "sync" }
+  );
+
+  watch(
+    entries,
+    () => {
       if (
         (restoredDraftItemIds.value.length > 0 || comparingBaseline.value) &&
         !dirty.value

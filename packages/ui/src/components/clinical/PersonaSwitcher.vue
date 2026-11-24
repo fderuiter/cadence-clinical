@@ -1,5 +1,6 @@
 <script setup>
 import { computed, ref } from "vue";
+import { PERSONA_CATALOG } from "../../catalog/personas.js";
 
 const props = defineProps({
   modelValue: {
@@ -8,44 +9,7 @@ const props = defineProps({
   },
   personas: {
     type: Array,
-    default: () => [
-      {
-        id: "super_admin",
-        label: "Super Administrator",
-        role: "admin",
-        badge: "Admin",
-      },
-      {
-        id: "sponsor_designer",
-        label: "Protocol Author",
-        role: "sponsor_designer",
-        badge: "Designer",
-      },
-      {
-        id: "site_crc",
-        label: "Site Coordinator (CRC)",
-        role: "site_crc",
-        badge: "Site",
-      },
-      {
-        id: "cra_monitor",
-        label: "CRA Monitor",
-        role: "cra_monitor",
-        badge: "Monitor",
-      },
-      {
-        id: "data_manager",
-        label: "Clinical Data Manager",
-        role: "data_manager",
-        badge: "DM",
-      },
-      {
-        id: "auditor",
-        label: "Independent Auditor",
-        role: "auditor",
-        badge: "Auditor",
-      },
-    ],
+    default: () => PERSONA_CATALOG,
   },
 });
 
@@ -73,6 +37,7 @@ const selectPersona = (persona) => {
       class="persona-toggle-btn"
       :aria-expanded="isOpen"
       aria-haspopup="true"
+      :title="activePersona?.title || activePersona?.label"
       @click="isOpen = !isOpen"
     >
       <span class="persona-indicator"></span>
@@ -103,6 +68,15 @@ const selectPersona = (persona) => {
       >
         <div class="item-content">
           <span class="item-title">{{ persona.label }}</span>
+          <span
+            v-if="persona.title && persona.title !== persona.label"
+            class="item-workspace-title"
+          >
+            {{ persona.title }}
+          </span>
+          <span v-if="persona.description" class="item-description">
+            {{ persona.description }}
+          </span>
           <span class="item-role">Role: {{ persona.role }}</span>
         </div>
         <span class="item-badge">{{ persona.badge }}</span>
@@ -172,13 +146,14 @@ const selectPersona = (persona) => {
   position: absolute;
   top: calc(100% + 4px);
   right: 0;
-  width: 280px;
+  width: min(340px, calc(100vw - 32px));
+  max-height: min(440px, calc(100vh - 96px));
+  overflow-y: auto;
   background: var(--semantic-color-surface);
   border: 1px solid var(--semantic-color-border);
   border-radius: 8px;
   box-shadow: var(--shadow-lg);
   z-index: 1000;
-  overflow: hidden;
 }
 
 .menu-header {
@@ -195,7 +170,8 @@ const selectPersona = (persona) => {
 .menu-item {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
+  gap: 8px;
   width: 100%;
   padding: 10px 12px;
   border: none;
@@ -221,12 +197,26 @@ const selectPersona = (persona) => {
 .item-content {
   display: flex;
   flex-direction: column;
+  gap: 2px;
+  min-width: 0;
 }
 
 .item-title {
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--semantic-color-text);
+}
+
+.item-workspace-title {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--semantic-color-text-secondary);
+}
+
+.item-description {
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--semantic-color-text-muted);
 }
 
 .item-role {
@@ -240,5 +230,6 @@ const selectPersona = (persona) => {
   border-radius: 4px;
   background: var(--semantic-color-surface-header);
   color: var(--semantic-color-text-muted);
+  flex-shrink: 0;
 }
 </style>

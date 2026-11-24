@@ -4,13 +4,14 @@
  *
  * @param {ReturnType<import("../../src/stores/auth").useAuthStore>} authStore
  * @param {string[]} roles - Keycloak realm roles, e.g. ["Sponsor Admin"]
- * @param {{ username?: string, sub?: string, token?: string, studyIds?: string[], siteIds?: string[], assignedStudies?: string[], assignedSites?: string[] }} [options]
+ * @param {{ username?: string, sub?: string, token?: string, tenantId?: string, studyIds?: string[], siteIds?: string[], assignedStudies?: string[], assignedSites?: string[] }} [options]
  */
 export function signInAs(authStore, roles, options = {}) {
   const {
     username = "test_user",
     sub = `${username}-id`,
     token = "test-access-token",
+    tenantId,
     studyIds,
     siteIds,
     assignedStudies,
@@ -24,6 +25,7 @@ export function signInAs(authStore, roles, options = {}) {
     tokenParsed: {
       sub,
       preferred_username: username,
+      ...(tenantId !== undefined ? { tenant_id: tenantId } : {}),
       realm_access: { roles },
       ...(effectiveStudyIds !== undefined
         ? { study_ids: effectiveStudyIds }

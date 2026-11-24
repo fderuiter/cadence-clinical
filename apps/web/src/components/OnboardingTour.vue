@@ -116,7 +116,7 @@ import {
   isTourRouteAuthorized,
   useOnboardingStore,
 } from "../stores/onboarding";
-import { PERSONA_PRESETS, useAuthStore } from "../stores/auth";
+import { resolveEffectivePersonaRoles, useAuthStore } from "../stores/auth";
 import { useStudyCanvasStore } from "../stores/studyCanvas";
 import { isScreenAvailable } from "../router/availability";
 import { hasRequiredRole } from "../router";
@@ -128,6 +128,7 @@ const NON_SHELL_TOUR_ROUTES = new Set([
   "unavailable",
 ]);
 
+const COMPACT_NAV_BREAKPOINT_PX = 860;
 const VIEWPORT_MARGIN_PX = 12;
 const ANCHOR_GAP_PX = 12;
 const DEFAULT_CARD_WIDTH_PX = 320;
@@ -165,16 +166,11 @@ const currentStepConfig = computed(
 const totalSteps = computed(() => onboardingStore.totalSteps || 1);
 
 const effectiveRoles = computed(() => {
-  const roles = authStore.normalizedRoles || [];
-  const key =
+  const personaKey =
     authStore.currentPersona || onboardingStore.currentPersona || "super_admin";
-  const preset = PERSONA_PRESETS.find((p) => p.key === key);
-  if (preset && key !== "super_admin" && roles.includes("sponsor_admin")) {
-    return preset.requires;
-  }
-  return authStore.rawRoles?.length
-    ? roles
-    : preset?.requires || ["sponsor_admin"];
+  return resolveEffectivePersonaRoles(authStore.rawRoles, personaKey, {
+    isAuthenticated: Boolean(authStore.isAuthenticated),
+  });
 });
 
 function canNavigateToTourRoute(routeName) {
@@ -464,7 +460,10 @@ async function syncStepRoute() {
           targetRouteName === "ssu" ||
           targetRouteName === "training" ||
           targetRouteName === "tickets" ||
-          targetRouteName === "etmf"
+          targetRouteName === "knowledge" ||
+          targetRouteName === "etmf" ||
+          targetRouteName === "safety" ||
+          targetRouteName === "audit"
         ) {
           delete query.site;
           if (scope.studyCode && !query.studyId) {
@@ -502,6 +501,54 @@ async function syncStepRoute() {
   }
 }
 
+function resolveAnchorElement(selector) {
+  if (!selector || typeof document === "undefined") {
+    return null;
+  }
+  const visible = findFirstVisibleTarget(selector);
+  if (visible) {
+    return visible;
+  }
+  const viewportWidth =
+    typeof window !== "undefined" && window.innerWidth > 0
+      ? window.innerWidth
+      : 1024;
+  const isCompactNavViewport = viewportWidth <= COMPACT_NAV_BREAKPOINT_PX;
+  const isPrimaryNavAnchor =
+    typeof selector === "string" &&
+    (selector.startsWith("#nav-") || selector === "#primary-navigation");
+
+  if (isCompactNavViewport && isPrimaryNavAnchor) {
+    const mobileToggle = findFirstVisibleTarget("#btn-mobile-menu-toggle");
+    if (mobileToggle) {
+      return mobileToggle;
+    }
+  }
+
+  const candidates = String(selector)
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+  for (const candidate of candidates) {
+    try {
+      const rawEl = document.querySelector(candidate);
+      if (
+        rawEl &&
+        typeof rawEl.closest === "function" &&
+        rawEl.closest("#header-secondary-menu")
+      ) {
+        const menuBtn = document.getElementById("btn-header-actions-menu");
+        if (menuBtn && isElementVisible(menuBtn)) {
+          return menuBtn;
+        }
+      }
+    } catch {
+      // Ignore malformed selector candidate
+    }
+  }
+  return null;
+}
+
 const updatePosition = () => {
   if (
     isDisposed ||
@@ -521,6 +568,7 @@ const updatePosition = () => {
   if (!selector) {
     hasTargetElement.value = false;
     isArrowDetached.value = true;
+    arrowStyle.value = {};
     popoverStyle.value = buildCenteredPopoverStyle(cssZoomScale);
     return;
   }
@@ -535,7 +583,7 @@ const updatePosition = () => {
     }
 
     const zoomScale = getEffectiveCssZoom();
-    const el = findFirstVisibleTarget(selector);
+    const el = resolveAnchorElement(selector);
     if (el) {
       let rect = el.getBoundingClientRect();
       if (
@@ -709,6 +757,7 @@ const updatePosition = () => {
     } else {
       hasTargetElement.value = false;
       isArrowDetached.value = true;
+      arrowStyle.value = {};
       popoverStyle.value = buildCenteredPopoverStyle(zoomScale);
       currentRafId = null;
       if (pendingAnchoredFocus && !isModalStep.value) {
@@ -820,12 +869,12 @@ watch(
 
 watch(
   () => [authStore.currentPersona, (authStore.normalizedRoles || []).join(",")],
-  async ([newPersona], [oldPersona] = []) => {
-    if (newPersona && (oldPersona !== undefined || !onboardingStore.isActive)) {
+  async ([newPersona]) => {
+    if (newPersona && onboardingStore.currentPersona !== newPersona) {
       onboardingStore.loadPersonaState(newPersona);
-      await syncStepRoute();
-      updatePosition();
     }
+    await syncStepRoute();
+    updatePosition();
   },
   { immediate: true }
 );
@@ -954,6 +1003,7 @@ onUnmounted(() => {
   font-size: 0.75rem;
   color: var(--semantic-color-text-secondary);
   font-weight: 600;
+  white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
 
@@ -1033,7 +1083,7 @@ onUnmounted(() => {
 .btn-tour-next,
 .btn-tour-complete {
   padding: 10px 14px;
-  color: var(--semantic-color-surface);
+  color: var(--semantic-color-text-on-primary);
   border: none;
   border-radius: 6px;
   cursor: pointer;

@@ -576,14 +576,82 @@ export const MediaPlayer: DefineComponent<
   any
 >;
 
+export interface PersonaTaskSummary {
+  id: string;
+  routeName: string;
+  route: string;
+}
+
+export interface PersonaSummaryEntry {
+  id: string;
+  key: string;
+  label: string;
+  badge: string;
+  role: string;
+  roleName: string;
+  title: string;
+  description: string;
+  requires: ReadonlyArray<string>;
+  landingRoute: string;
+  taskSummaries: ReadonlyArray<PersonaTaskSummary>;
+}
+
+export interface PersonaTaskTemplate extends PersonaTaskSummary {
+  title: string;
+  description: string;
+  keywords: ReadonlyArray<string>;
+}
+
+export interface PersonaTourStep {
+  step: number;
+  routeName: string;
+  targetSelector: string | null;
+  title: string;
+  description: string;
+  prompt?: string;
+}
+
+export interface PersonaCatalogEntry {
+  id: string;
+  key: string;
+  label: string;
+  badge: string;
+  role: string;
+  roleName: string;
+  title: string;
+  description: string;
+  requires: ReadonlyArray<string>;
+  landingRoute: string;
+  tasks: ReadonlyArray<PersonaTaskTemplate>;
+  tourSteps: ReadonlyArray<PersonaTourStep>;
+}
+
+export const PERSONA_SUMMARY_CATALOG: ReadonlyArray<PersonaSummaryEntry>;
+export const PERSONA_SUMMARY_BY_KEY: Readonly<
+  Record<string, PersonaSummaryEntry>
+>;
+export function getPersonaSummaryEntry(
+  personaKey?: string | null
+): PersonaSummaryEntry | null;
+
+export const PERSONA_CATALOG: ReadonlyArray<PersonaCatalogEntry>;
+export const PERSONA_CATALOG_BY_KEY: Readonly<
+  Record<string, PersonaCatalogEntry>
+>;
+export function getPersonaCatalogEntry(
+  personaKey?: string | null
+): PersonaCatalogEntry | null;
+
 export const PersonaSwitcher: DefineComponent<
   {
     modelValue?: string;
-    personas?: Array<{
+    personas?: ReadonlyArray<{
       id: string;
       label: string;
       role: string;
       badge?: string;
+      title?: string;
+      description?: string;
     }>;
   },
   {},

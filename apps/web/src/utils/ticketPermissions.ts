@@ -21,6 +21,7 @@ export const OPERATIONAL_MUTATION_ROLES = new Set([
   "external_monitor",
   "safety_reviewer",
   "safety_officer",
+  "safety_physician",
   "pharmacovigilance",
   "sponsor_mm",
   "medical_monitor",

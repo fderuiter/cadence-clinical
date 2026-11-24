@@ -5,7 +5,10 @@ import {
   getStorageKey,
   readStorageItem,
 } from "../../src/stores/clinical";
-import { useOnboardingStore } from "../../src/stores/onboarding";
+import {
+  useOnboardingStore,
+  getOnboardingStorageKey,
+} from "../../src/stores/onboarding";
 import { useAuthStore, purgeLegacyUnscopedKeys } from "../../src/stores/auth";
 
 describe("Strict Persona-Scoped Namespacing & Lifecycle Rehydration", () => {
@@ -96,8 +99,10 @@ describe("Strict Persona-Scoped Namespacing & Lifecycle Rehydration", () => {
   });
 
   describe("Onboarding Store Scoping & Removal of Global Keys", () => {
-    it("does not read or write global onboarding keys (onboarding_global_disabled / onboarding_global_dismissed)", () => {
+    it("does not read or write global or unscoped onboarding keys (onboarding_global_* / onboarding_<persona>_*)", () => {
       const authStore = useAuthStore();
+      authStore.isAuthenticated = true;
+      authStore.user = { id: "user-a", tenantId: "tenant-a" } as never;
       authStore.rawRoles = ["Sponsor Admin"];
       authStore.currentPersona = "site_crc";
 
@@ -114,18 +119,23 @@ describe("Strict Persona-Scoped Namespacing & Lifecycle Rehydration", () => {
       authStore.switchPersona("site_crc");
       onboardingStore.disableTour();
 
-      // Verify no global keys were written
+      // Verify no global or legacy unscoped keys were written
       expect(
         window.localStorage.getItem("onboarding_global_disabled")
       ).toBeNull();
       expect(
         window.localStorage.getItem("onboarding_global_dismissed")
       ).toBeNull();
+      expect(
+        window.localStorage.getItem("onboarding_site_crc_disabled")
+      ).toBeNull();
 
-      // Verify persona key WAS written
-      expect(window.localStorage.getItem("onboarding_site_crc_disabled")).toBe(
-        "true"
-      );
+      // Verify account-scoped persona key WAS written
+      expect(
+        window.localStorage.getItem(
+          getOnboardingStorageKey("disabled", "site_crc")!
+        )
+      ).toBe("true");
 
       // Switch to monitor persona
       authStore.switchPersona("cra_monitor");
@@ -163,7 +173,7 @@ describe("Strict Persona-Scoped Namespacing & Lifecycle Rehydration", () => {
   });
 
   describe("Bootstrap Legacy Unscoped Key Purging", () => {
-    it("automatically purges legacy unscoped keys upon user sign-in while preserving persona-scoped onboarding keys", () => {
+    it("automatically purges legacy unscoped and unowned onboarding_* keys while preserving account-scoped onboarding keys", () => {
       // Seed legacy unscoped keys
       window.localStorage.setItem(
         "subjects",
@@ -175,18 +185,21 @@ describe("Strict Persona-Scoped Namespacing & Lifecycle Rehydration", () => {
       );
       window.localStorage.setItem("onboarding_global_disabled", "true");
       window.localStorage.setItem("onboarding_global_dismissed", "true");
+      window.localStorage.setItem("onboarding_site_crc_disabled", "true");
       window.localStorage.setItem(
         "cadence_clinical_subjects",
         JSON.stringify([])
       );
 
-      // Seed valid persona-scoped key
-      window.localStorage.setItem("onboarding_site_crc_disabled", "true");
+      // Seed valid account-scoped onboarding key
+      const accountKey =
+        "cadence_user:tenant-a:user-a:onboarding:site_crc:disabled";
+      window.localStorage.setItem(accountKey, "true");
 
       // Run bootstrap purge routine
       purgeLegacyUnscopedKeys();
 
-      // Legacy unscoped keys must be purged
+      // Legacy unscoped and unowned onboarding_* keys must be purged
       expect(window.localStorage.getItem("subjects")).toBeNull();
       expect(window.localStorage.getItem("formValues")).toBeNull();
       expect(
@@ -196,13 +209,14 @@ describe("Strict Persona-Scoped Namespacing & Lifecycle Rehydration", () => {
         window.localStorage.getItem("onboarding_global_dismissed")
       ).toBeNull();
       expect(
+        window.localStorage.getItem("onboarding_site_crc_disabled")
+      ).toBeNull();
+      expect(
         window.localStorage.getItem("cadence_clinical_subjects")
       ).toBeNull();
 
-      // Valid persona-scoped key must remain intact
-      expect(window.localStorage.getItem("onboarding_site_crc_disabled")).toBe(
-        "true"
-      );
+      // Valid account-scoped key must remain intact
+      expect(window.localStorage.getItem(accountKey)).toBe("true");
     });
   });
 });

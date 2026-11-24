@@ -795,6 +795,7 @@ import { useRoute, useRouter } from "vue-router";
 import {
   ClinicalDrawer,
   ClinicalIconButton,
+  getPersonaSummaryEntry,
   hasActiveModalFocusTrap,
   useEscapeClose,
 } from "ui";
@@ -810,7 +811,7 @@ import {
   useKnowledgeStore,
 } from "../stores/knowledge.js";
 import { resolveStorePinia } from "../stores/onboardingSummary.js";
-import { useAuthStore, PERSONA_PRESETS } from "../stores/auth.js";
+import { useAuthStore } from "../stores/auth.js";
 import { compileSopMarkdownToHtml } from "../api/knowledge.js";
 import { useToastStore } from "../stores/toasts.js";
 import { isDemoBuild } from "../utils/demoMode.js";
@@ -1079,8 +1080,10 @@ const canonicalRoute = computed(() =>
 const activePersonaLabel = computed(() => {
   const pKey =
     authStore.currentPersona || knowledgeStore.activePersona || "super_admin";
-  const p = PERSONA_PRESETS.find((preset) => preset.key === pKey);
-  return p ? p.label.replace(/^.+?\s/, "") : "Super Admin";
+  const p = getPersonaSummaryEntry(pKey);
+  return p
+    ? p.label.replace(/^[^\w\s]+\s*/, "").replace(/\s*\(All Access\)$/, "")
+    : "Super Admin";
 });
 
 const displayedArticleHtml = computed(() => {

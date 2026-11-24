@@ -117,6 +117,10 @@ export function rehydrateOnboardingPersona(personaKey, pinia) {
   onboardingSessionBridge?.onRehydratePersona?.(personaKey, pinia);
 }
 
+export function resetOnboardingSession(pinia) {
+  onboardingSessionBridge?.onReset?.(pinia);
+}
+
 export function setSessionEndedHandler(handler) {
   sessionEndedHandler = typeof handler === "function" ? handler : null;
 }

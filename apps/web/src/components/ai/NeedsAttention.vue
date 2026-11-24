@@ -104,6 +104,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
+import { getActivePinia } from "pinia";
 import type { RouteLocationRaw } from "vue-router";
 import {
   ecrfQueriesApi,
@@ -125,6 +126,8 @@ import {
   parseNodeRef,
 } from "../../canvas/nodeRef";
 import { maskReasonWords, seedNodeSummary } from "../../canvas/nodeResolver";
+import { useAuthStore } from "../../stores/auth";
+import { isDemoBuild } from "../../utils/demoMode";
 import SupportDetails from "../canvas/SupportDetails.vue";
 import AiLabel from "./AiLabel.vue";
 
@@ -256,11 +259,16 @@ async function loadAttention(rawCode: string): Promise<void> {
       ]);
     if (!isCurrent()) return;
     proposals.value = openProposals;
+    const activePinia = getActivePinia();
+    const authStore = activePinia ? useAuthStore(activePinia) : null;
+    const canHydrateSdvAlerts =
+      typeof ecrfQueriesApi?.listSdvAlerts === "function" &&
+      Boolean(authStore?.isAuthenticated || authStore?.user || isDemoBuild());
     const hintedStudyRef =
       openProposals.find((p) => p.study)?.study ??
       openFindingsPage?.findings?.[0]?.study_ref ??
       investigatingFindingsPage?.findings?.[0]?.study_ref ??
-      (typeof kernelApi.search === "function"
+      (canHydrateSdvAlerts && typeof kernelApi.search === "function"
         ? await findKernelStudyRef(code).catch(() => null)
         : null);
     if (!isCurrent()) return;

@@ -335,13 +335,14 @@ describe("eCRF draft isolation (#5369)", () => {
     localStorage.setItem("cadence_user:t1:b:ecrf_draft:x", "1");
     localStorage.setItem("cadence_user:t2:a:ecrf_draft:x", "1");
     localStorage.setItem("onboarding_site_crc_disabled", "true");
+    localStorage.setItem("cadence_ui_pref", "compact");
 
     const removed = purgeUserScopedStorage({ tenantId: "t1", userId: "a" });
 
-    expect(removed).toBe(2);
+    expect(removed).toBe(3);
     expect(storedKeys()).toEqual([
+      "cadence_ui_pref",
       "cadence_user:t1:a:ecrf_draft:x",
-      "onboarding_site_crc_disabled",
     ]);
   });
 });

@@ -1101,7 +1101,13 @@
 
 <script>
 import { computed, onMounted, ref, watch } from "vue";
-import { ClinicalIconButton, ClinicalModal, ClinicalTabs } from "ui";
+import {
+  ClinicalIconButton,
+  ClinicalModal,
+  ClinicalTabs,
+  PERSONA_CATALOG,
+  getPersonaCatalogEntry,
+} from "ui";
 import {
   knowledgeService,
   compileSopMarkdownToHtml,
@@ -1113,7 +1119,7 @@ import {
   replaceRouteQueryParams,
   resolveRouteAndRouter,
 } from "../composables/useRouteScopeSync";
-import { useAuthStore, PERSONA_PRESETS } from "../stores/auth.js";
+import { useAuthStore } from "../stores/auth.js";
 import { useClinicalScopeStore } from "../stores/clinicalScope";
 import { useToastStore } from "../stores/toasts.js";
 import { isDemoBuild } from "../utils/demoMode.js";
@@ -1210,13 +1216,12 @@ export default {
     const actionButtonClass = ref("btn-primary");
 
     // Persona & Role Checking
+    const PERSONA_PRESETS = PERSONA_CATALOG;
     const activePersonaKey = computed(
       () => authStore.currentPersona || "super_admin"
     );
     const activePersonaLabel = computed(() => {
-      const p = PERSONA_PRESETS.find(
-        (preset) => preset.key === activePersonaKey.value
-      );
+      const p = getPersonaCatalogEntry(activePersonaKey.value);
       return p ? p.label : "Active Role";
     });
 

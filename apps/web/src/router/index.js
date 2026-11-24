@@ -4,28 +4,19 @@ import {
   createWebHashHistory,
   createWebHistory,
 } from "vue-router";
+import { getPersonaSummaryEntry } from "ui";
 import { TOKEN_MIN_VALIDITY_SECONDS } from "../api/authorization.js";
 import { resolveActiveWorkspaceScope } from "../canvas/palette";
 import { getRegisteredI18nApp } from "../i18n/runtime.js";
-import { useAuthStore, ROLE_ALIASES } from "../stores/auth";
-import { readPassiveOnboardingBypassOverview } from "../stores/onboardingSummary.js";
+import { useAuthStore, resolveEffectivePersonaRoles } from "../stores/auth";
+import {
+  hasRequiredRole,
+  readPassiveOnboardingBypassOverview,
+} from "../stores/onboardingSummary.js";
 import { isDemoBuild } from "../utils/demoMode.js";
 import { AVAILABLE_SCREENS, isScreenAvailable } from "./availability";
 
-/**
- * Seeding Gap Documentation Resolved:
- * The "Sponsor Designer" role has been successfully seeded in the Keycloak realm configuration
- * (`cadence-realm.json`) and is centrally mapped in the OIDC normalizer.
- */
-
-// Helper to check if user has required roles, mapping UI roles to Keycloak roles
-export function hasRequiredRole(userRoles, requiredRoles) {
-  return (userRoles || []).some((uRole) => {
-    if (requiredRoles.includes(uRole)) return true;
-    const aliases = ROLE_ALIASES[uRole] || [];
-    return aliases.some((alias) => requiredRoles.includes(alias));
-  });
-}
+export { hasRequiredRole };
 
 export function getRouteRequiredRoles(routeOrTarget) {
   const matched = routeOrTarget?.matched;
@@ -40,25 +31,48 @@ export function isRouteAuthorizedForRoles(routeOrTarget, userRoles) {
   return !req.length || hasRequiredRole(userRoles || [], req);
 }
 
-// The screen each role lands on when opening "/".
-function landingRouteFor(roles) {
+/**
+ * The screen each role or active persona lens lands on when opening "/".
+ * @param {string[]} [roles]
+ * @param {string | null} [personaKey]
+ */
+export function landingRouteFor(roles = [], personaKey = null) {
+  if (personaKey && personaKey !== "super_admin") {
+    const entry = getPersonaSummaryEntry(personaKey);
+    if (entry && hasRequiredRole(roles, entry.requires)) {
+      if (entry.landingRoute === "ecrf") {
+        return isDemoBuild() ? "ecrf" : "study";
+      }
+      return entry.landingRoute;
+    }
+  }
   if (roles.includes("sponsor_designer")) return "mdr";
   if (
+    roles.includes("principal_investigator") ||
     roles.includes("site_investigator") ||
     roles.includes("crc") ||
     roles.includes("trial_coordinator")
   ) {
     return isDemoBuild() ? "ecrf" : "study";
   }
-  if (roles.includes("cra") || roles.includes("monitor")) return "ctms";
-  if (roles.includes("data_manager")) return "rules";
   if (
+    roles.includes("safety_reviewer") ||
     roles.includes("safety_officer") ||
     roles.includes("safety_physician") ||
+    roles.includes("medical_monitor") ||
+    roles.includes("sponsor_mm") ||
     roles.includes("qppv")
   ) {
     return "safety";
   }
+  if (
+    roles.includes("cra") ||
+    roles.includes("monitor") ||
+    roles.includes("unblinded_statistician")
+  )
+    return "ctms";
+  if (roles.includes("pharmacist")) return "ssu";
+  if (roles.includes("data_manager")) return "rules";
   if (roles.includes("auditor") || roles.includes("tmf_auditor")) {
     return "audit";
   }
@@ -121,13 +135,21 @@ const routes = [
       if (
         !readPassiveOnboardingBypassOverview(
           getActivePinia(),
-          authStore.currentPersona
+          authStore.currentPersona,
+          authStore
         )
       ) {
         return { name: "overview" };
       }
-      const roles = authStore.normalizedRoles || [];
-      const preferred = landingRouteFor(roles);
+      const effectiveRoles = resolveEffectivePersonaRoles(
+        authStore.rawRoles,
+        authStore.currentPersona,
+        { isAuthenticated: authStore.isAuthenticated }
+      );
+      const preferred = landingRouteFor(
+        effectiveRoles,
+        authStore.currentPersona
+      );
       if (isScreenAvailable(preferred)) {
         return { name: preferred };
       }
@@ -140,7 +162,7 @@ const routes = [
           fallbackScreens.has(route.name) &&
           AVAILABLE_SCREENS.has(route.name) &&
           (!route.meta?.requiresRole?.length ||
-            hasRequiredRole(roles, route.meta.requiresRole))
+            hasRequiredRole(effectiveRoles, route.meta.requiresRole))
       );
       if (fallback) {
         return { name: fallback.name };
@@ -285,6 +307,7 @@ const routes = [
       requiresAuth: true,
       requiresI18n: true,
       requiresRole: [
+        "principal_investigator",
         "site_investigator",
         "crc",
         "data_manager",
@@ -354,6 +377,7 @@ const routes = [
     meta: {
       requiresAuth: true,
       requiresRole: [
+        "principal_investigator",
         "site_investigator",
         "crc",
         "data_manager",
@@ -361,6 +385,11 @@ const routes = [
         "cra",
         "monitor",
         "sponsor_designer",
+        "safety_reviewer",
+        "safety_officer",
+        "safety_physician",
+        "medical_monitor",
+        "sponsor_mm",
         "auditor",
         "tmf_auditor",
       ],
@@ -373,6 +402,7 @@ const routes = [
     meta: {
       requiresAuth: true,
       requiresRole: [
+        "principal_investigator",
         "site_investigator",
         "crc",
         "data_manager",
@@ -380,6 +410,11 @@ const routes = [
         "cra",
         "monitor",
         "sponsor_designer",
+        "safety_reviewer",
+        "safety_officer",
+        "safety_physician",
+        "medical_monitor",
+        "sponsor_mm",
         "auditor",
         "tmf_auditor",
       ],
@@ -413,6 +448,7 @@ const routes = [
         "monitor",
         "data_manager",
         "sponsor_admin",
+        "principal_investigator",
         "site_investigator",
         "crc",
         "trial_coordinator",
@@ -518,12 +554,18 @@ const routes = [
     meta: {
       requiresAuth: true,
       requiresRole: [
+        "principal_investigator",
         "site_investigator",
         "crc",
         "data_manager",
         "cra",
         "monitor",
         "sponsor_designer",
+        "safety_reviewer",
+        "safety_officer",
+        "safety_physician",
+        "medical_monitor",
+        "sponsor_mm",
         "sponsor_admin",
         "super_admin",
       ],
@@ -554,6 +596,7 @@ const routes = [
     meta: {
       requiresAuth: true,
       requiresRole: [
+        "safety_reviewer",
         "safety_physician",
         "qppv",
         "qppv_officer",
@@ -562,6 +605,7 @@ const routes = [
         "sponsor_pv_officer",
         "sponsor_medical_monitor",
         "medical_monitor",
+        "sponsor_mm",
         "sponsor_admin",
         "data_manager",
         "super_admin",
@@ -595,8 +639,14 @@ const routes = [
         "cra",
         "monitor",
         "data_manager",
+        "principal_investigator",
         "site_investigator",
         "crc",
+        "safety_reviewer",
+        "safety_officer",
+        "safety_physician",
+        "medical_monitor",
+        "sponsor_mm",
         "auditor",
         "tmf_auditor",
         "sponsor_admin",

@@ -464,7 +464,7 @@ import { useRoute, useRouter } from "vue-router";
 import { useSignOutGuard } from "ui";
 import { rehydrateOnboardingPersona } from "../auth/sessionCoordinator.js";
 import { PRE_RELEASE_ENVIRONMENT_NOTICE } from "../catalog/environmentNotice.js";
-import { useAuthStore } from "../stores/auth";
+import { resolveEffectivePersonaRoles, useAuthStore } from "../stores/auth";
 import {
   readPassiveOnboardingSummary,
   readPassiveOnboardingTourActive,
@@ -582,7 +582,15 @@ function handleGlobalFocusIn(event) {
 }
 
 const availablePersonas = computed(() => authStore.availablePersonas || []);
-const normalizedRoles = computed(() => authStore.normalizedRoles || []);
+const normalizedRoles = computed(() => {
+  const sourceRoles =
+    Array.isArray(authStore.rawRoles) && authStore.rawRoles.length > 0
+      ? authStore.rawRoles
+      : authStore.normalizedRoles || [];
+  return resolveEffectivePersonaRoles(sourceRoles, authStore.currentPersona, {
+    isAuthenticated: Boolean(authStore.isAuthenticated),
+  });
+});
 
 const { activeStudyCode: syncedStudyCode } = useActiveStudyScope();
 const workspaceScope = computed(() =>
