@@ -409,6 +409,8 @@ public sealed partial class ContainerImagePinTests
             "dependabot.yml must ignore semver-major and semver-minor bumps on python in /docker/sce/python (ADR-2327)");
         SceRIgnoreRule().IsMatch(dependabot).Should().BeTrue(
             "dependabot.yml must ignore semver-major, semver-minor, and semver-patch bumps on r-base in /docker/sce/r");
+        ReadDependabotIgnoreKeys(dependabot).Should().OnlyHaveUniqueItems(
+            "dependabot.yml must not contain duplicate dependency-name + versions/update-types ignore entries within an ecosystem");
     }
 
     [Fact]
@@ -604,6 +606,75 @@ public sealed partial class ContainerImagePinTests
         }
 
         return entries;
+    }
+
+    private static List<string> ReadDependabotIgnoreKeys(string dependabotYaml)
+    {
+        var keys = new List<string>();
+        string currentEcosystem = string.Empty;
+        string currentDirectory = string.Empty;
+        bool inIgnore = false;
+        var currentRuleParts = new List<string>();
+
+        void FlushRule()
+        {
+            if (currentRuleParts.Count > 0)
+            {
+                string normalized = Regex.Replace(string.Join(' ', currentRuleParts), @"\s+", " ").Trim();
+                keys.Add($"{currentEcosystem}|{currentDirectory}|{normalized}");
+                currentRuleParts.Clear();
+            }
+        }
+
+        foreach (string rawLine in dependabotYaml.Split('\n'))
+        {
+            string line = rawLine.TrimEnd('\r');
+            string trimmed = line.Trim();
+            if (trimmed.Length == 0 || trimmed.StartsWith('#'))
+            {
+                continue;
+            }
+
+            int indent = line.Length - line.TrimStart().Length;
+            if (indent == 2 && trimmed.StartsWith("- package-ecosystem:", StringComparison.Ordinal))
+            {
+                FlushRule();
+                inIgnore = false;
+                currentEcosystem = trimmed["- package-ecosystem:".Length..].Trim().Trim('"');
+                currentDirectory = string.Empty;
+                continue;
+            }
+
+            if (indent == 4)
+            {
+                FlushRule();
+                if (trimmed.StartsWith("directory:", StringComparison.Ordinal))
+                {
+                    currentDirectory = trimmed["directory:".Length..].Trim().Trim('"');
+                }
+
+                inIgnore = string.Equals(trimmed, "ignore:", StringComparison.Ordinal);
+                continue;
+            }
+
+            if (!inIgnore)
+            {
+                continue;
+            }
+
+            if (indent == 6 && trimmed.StartsWith("- ", StringComparison.Ordinal))
+            {
+                FlushRule();
+                currentRuleParts.Add(trimmed[2..]);
+            }
+            else if (indent > 6)
+            {
+                currentRuleParts.Add(trimmed);
+            }
+        }
+
+        FlushRule();
+        return keys;
     }
 
     private static List<string> DiscoverWorkspacePackageJsonPaths()
