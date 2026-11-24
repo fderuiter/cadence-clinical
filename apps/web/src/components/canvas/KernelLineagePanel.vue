@@ -452,6 +452,7 @@ watch(() => [props.nodeRef, props.mode], load, { immediate: true });
   font-size: 0.82rem;
 }
 
+.lineage-total,
 .numeric {
   font-variant-numeric: tabular-nums;
 }
@@ -459,6 +460,10 @@ watch(() => [props.nodeRef, props.mode], load, { immediate: true });
 .lineage-total {
   margin: 0;
   font-weight: 600;
+}
+
+.amendment-change code {
+  font-family: var(--semantic-font-mono);
 }
 
 .lineage-group summary {

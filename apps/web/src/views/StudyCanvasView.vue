@@ -3578,7 +3578,7 @@ onUnmounted(() => {
   min-height: 100vh;
   background: var(--semantic-color-surface-muted);
   color: var(--text-main);
-  font-family: var(--font);
+  font-family: var(--semantic-font-family);
 }
 
 .canvas.canvas-in-shell {
@@ -3772,6 +3772,24 @@ onUnmounted(() => {
 .study-header h1 {
   margin: 0;
   font-size: 1.25rem;
+  font-family: var(--semantic-font-mono);
+}
+
+#zoom-study,
+#zoom-site,
+#zoom-participant,
+#zoom-form,
+#zoom-observation,
+#open-study-code,
+#create-study-code,
+#create-study-sponsor-code,
+.study-card-code {
+  font-family: var(--semantic-font-mono);
+}
+
+.directory-status,
+.study-card-sponsor {
+  font-variant-numeric: tabular-nums;
 }
 
 .lifecycle-rail {

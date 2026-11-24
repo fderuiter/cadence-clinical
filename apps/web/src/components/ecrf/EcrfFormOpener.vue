@@ -776,6 +776,14 @@ function submitOpenNew() {
   color: var(--semantic-color-text-secondary);
   box-sizing: border-box;
 }
+#ecrf-form-id,
+#ecrf-enrollment-id,
+#ecrf-collection-spec,
+#ecrf-planned-activity,
+#ecrf-collected-at {
+  font-family: var(--semantic-font-mono);
+  font-variant-numeric: tabular-nums;
+}
 </style>
 
 <style scoped src="./ecrfFormBanners.css"></style>

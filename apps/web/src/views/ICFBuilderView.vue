@@ -486,7 +486,7 @@ const formatTime = (isoString) => {
   background-color: var(--semantic-color-surface-header);
   padding: 2px 6px;
   border-radius: 4px;
-  font-family: monospace;
+  font-family: var(--semantic-font-mono);
 }
 
 .translations-section {
@@ -566,7 +566,7 @@ const formatTime = (isoString) => {
   background: var(--semantic-color-surface);
   border: 1px solid var(--border);
   border-radius: 3px;
-  font-size: 0.65rem;
+  font-size: var(--font-size-2xs);
   padding: 2px 5px;
   cursor: pointer;
   color: var(--semantic-color-text-secondary);

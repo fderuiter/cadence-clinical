@@ -1596,7 +1596,7 @@ onMounted(() => {
 }
 
 .badge {
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 3px 8px;
   border-radius: var(--radius-sm);
@@ -1699,7 +1699,7 @@ onMounted(() => {
 }
 
 .status-sub {
-  font-size: 10px;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -1818,7 +1818,7 @@ onMounted(() => {
 }
 
 .template-label {
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -1898,7 +1898,7 @@ onMounted(() => {
 }
 
 .field-hint {
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -1945,7 +1945,7 @@ onMounted(() => {
 
 .token-warning {
   margin: 0;
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-warning);
   line-height: 1.4;
 }
@@ -2037,7 +2037,7 @@ onMounted(() => {
 
 .btn-xs {
   padding: 4px 10px;
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   min-height: 32px;
 }
 
@@ -2079,7 +2079,7 @@ onMounted(() => {
 .status-pill {
   padding: 3px 8px;
   border-radius: var(--radius-sm);
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
 }
 
@@ -2106,12 +2106,12 @@ onMounted(() => {
 }
 
 .seal-label {
-  font-size: 10px;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
 }
 
 .seal-code {
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   word-break: break-all;
   font-family: var(--font-mono);
 }
@@ -2148,12 +2148,12 @@ onMounted(() => {
   font-weight: 700;
   color: var(--semantic-color-text-secondary);
   text-transform: uppercase;
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
 }
 
 .cell-id code {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
 }
 
 .cell-bold {
@@ -2166,19 +2166,19 @@ onMounted(() => {
 
 .cell-date {
   color: var(--semantic-color-text-secondary);
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
 }
 
 .digest-pill {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   background: var(--semantic-color-surface-muted);
   padding: 2px 6px;
   border-radius: var(--radius-sm);
 }
 
 .lang-tag {
-  font-size: 10px;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 2px 6px;
   border-radius: var(--radius-sm);
@@ -2195,7 +2195,7 @@ onMounted(() => {
 }
 
 .version-pill {
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   background: var(--semantic-color-surface-muted);
   padding: 2px 6px;
   border-radius: var(--radius-sm);
@@ -2204,7 +2204,7 @@ onMounted(() => {
 .badge-unblind-tag {
   background: var(--semantic-color-success-bg-soft);
   color: var(--semantic-color-success-dark);
-  font-size: 10px;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 2px 6px;
   border-radius: var(--radius-sm);
@@ -2213,7 +2213,7 @@ onMounted(() => {
 .badge-blinded-tag {
   background: var(--semantic-color-surface-muted);
   color: var(--semantic-color-text-secondary);
-  font-size: 10px;
+  font-size: var(--font-size-2xs);
   padding: 2px 6px;
   border-radius: var(--radius-sm);
 }
@@ -2259,12 +2259,12 @@ onMounted(() => {
 }
 
 .prov-label {
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
 }
 
 .prov-card code {
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   word-break: break-all;
   font-family: var(--font-mono);
 }
@@ -2301,7 +2301,7 @@ onMounted(() => {
 }
 
 .sig-lbl {
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -2311,7 +2311,7 @@ onMounted(() => {
 }
 
 .sig-hmac {
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   font-family: var(--font-mono);
   word-break: break-all;
 }
@@ -2352,7 +2352,7 @@ onMounted(() => {
 }
 
 .art-sub {
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -2366,7 +2366,7 @@ onMounted(() => {
 
 .preview-text {
   margin: 0;
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   font-family: var(--font-mono);
 }
 
@@ -2380,7 +2380,7 @@ onMounted(() => {
   padding: 6px 12px;
   background: var(--semantic-color-surface-elevated);
   color: var(--semantic-color-text-inverse-muted);
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   font-family: var(--font-mono);
 }
 
@@ -2460,7 +2460,7 @@ onMounted(() => {
 .pkg-footer {
   display: flex;
   justify-content: space-between;
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   margin-top: 4px;
 }
 

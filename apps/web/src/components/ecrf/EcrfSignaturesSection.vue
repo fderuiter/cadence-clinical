@@ -260,8 +260,13 @@ const {
   flex-direction: column;
   gap: 8px;
   font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
   min-width: 0;
   max-width: 100%;
+}
+.ecrf-signed-values th[scope="row"],
+.ecrf-signed-values td {
+  font-family: var(--semantic-font-mono);
 }
 .ecrf-signature {
   border: 1px solid var(--border);

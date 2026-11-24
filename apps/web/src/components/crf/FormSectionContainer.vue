@@ -383,13 +383,13 @@ function moveFieldDown(index) {
 }
 
 .section-field-count {
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
   background-color: var(--semantic-color-surface-header);
   padding: 2px 8px;
   border-radius: 12px;
   font-weight: 600;
-  font-family: monospace;
+  font-family: var(--semantic-font-mono);
 }
 
 .section-header-right {

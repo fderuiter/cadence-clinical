@@ -803,7 +803,7 @@ onUnmounted(() => {
 }
 
 .timepoint-tag {
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   background-color: var(--semantic-color-surface-elevated);
   color: var(--semantic-color-accent-inverse);
@@ -816,7 +816,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 2px 8px;
   border-radius: 4px;
@@ -940,7 +940,7 @@ onUnmounted(() => {
 }
 
 .plane-badge {
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 3px;
@@ -966,7 +966,7 @@ onUnmounted(() => {
 }
 
 .slice-loc-label {
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-inverse-muted);
 }
 
@@ -1037,7 +1037,7 @@ onUnmounted(() => {
   }
 
   .plane-badge {
-    font-size: 0.7rem;
+    font-size: var(--font-size-2xs);
     white-space: nowrap;
   }
 

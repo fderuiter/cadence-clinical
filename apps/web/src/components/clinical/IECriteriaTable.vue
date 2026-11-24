@@ -245,7 +245,7 @@ const addCriterion = () => {
 }
 
 .crit-field label {
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   color: var(--semantic-color-text-body);
   text-transform: uppercase;
@@ -327,7 +327,7 @@ const addCriterion = () => {
   border: 1px solid var(--semantic-color-border);
   padding: 2px 6px;
   border-radius: 4px;
-  font-family: monospace;
+  font-family: var(--semantic-font-mono);
   font-size: 0.8rem;
   color: var(--semantic-color-primary);
 }

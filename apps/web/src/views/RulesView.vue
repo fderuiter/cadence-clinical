@@ -153,7 +153,7 @@
                     style="
                       color: var(--accent);
                       font-size: 0.95rem;
-                      font-family: monospace;
+                      font-family: var(--semantic-font-mono);
                     "
                     >{{ rule.id }}</strong
                   >
@@ -208,7 +208,7 @@
                         background-color: var(--semantic-badge-draft-bg);
                         color: var(--semantic-badge-draft-text);
                         border: 1px solid var(--semantic-badge-draft-border);
-                        font-size: 0.7rem;
+                        font-size: var(--font-size-2xs);
                         padding: 2px 6px;
                       "
                       >{{ rule.type }}</span
@@ -235,7 +235,7 @@
                 </div>
                 <div
                   style="
-                    font-family: monospace;
+                    font-family: var(--semantic-font-mono);
                     font-size: 0.75rem;
                     color: var(--text-main);
                     background-color: var(--semantic-color-info-bg);
@@ -318,7 +318,7 @@
                   background-color: var(--semantic-color-surface-header);
                   padding: 12px;
                   border-radius: 8px;
-                  font-family: monospace;
+                  font-family: var(--semantic-font-mono);
                   font-size: 0.8rem;
                   border: 1px solid var(--border);
                   line-height: 1.5;
@@ -646,7 +646,9 @@
           <tbody>
             <tr v-for="q in filteredQueries" :key="q.id">
               <td>
-                <strong style="font-family: monospace">{{ q.id }}</strong>
+                <strong style="font-family: var(--semantic-font-mono)">{{
+                  q.id
+                }}</strong>
                 <div v-if="q.origin === 'AI_ASSISTED'" style="margin-top: 4px">
                   <AiLabel label="AI-assisted" />
                 </div>

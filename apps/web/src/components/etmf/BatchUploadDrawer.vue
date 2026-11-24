@@ -139,7 +139,7 @@
                 v-if="!isProcessing && queue.length > 0"
                 type="button"
                 class="btn btn-secondary btn-sm"
-                style="font-size: 11px; padding: 4px 8px"
+                style="font-size: var(--font-size-2xs); padding: 4px 8px"
                 @click="clearQueue"
               >
                 Clear Queue
@@ -160,7 +160,9 @@
             row-class="queue-row"
           >
             <template #cell-filename="{ row }">
-              <span :title="row.file.name">{{ row.file.name }}</span>
+              <span class="font-mono" :title="row.file.name">{{
+                row.file.name
+              }}</span>
             </template>
             <template #cell-size="{ row }">
               {{ formatFileSize(row.file.size) }}
@@ -200,7 +202,7 @@
                 v-if="row.report"
                 type="button"
                 class="btn btn-secondary btn-xs btn-inspect-item"
-                style="font-size: 10px; padding: 2px 6px"
+                style="font-size: var(--font-size-2xs); padding: 2px 6px"
                 @click="inspectItem(row)"
               >
                 Inspect<span class="sr-only"> {{ row.file.name }}</span>
@@ -211,7 +213,7 @@
                 style="
                   min-width: 24px;
                   min-height: 24px;
-                  font-size: 10px;
+                  font-size: var(--font-size-2xs);
                   padding: 2px 6px;
                   margin-left: 4px;
                 "
@@ -821,7 +823,7 @@ useFocusTrap(inspectionCardRef, {
 
 .dropzone-hint {
   margin: 4px 0 0 0;
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
 }
 

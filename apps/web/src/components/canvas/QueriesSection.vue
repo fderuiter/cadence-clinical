@@ -1345,7 +1345,7 @@ watch(
 }
 
 .clinical-code {
-  font-family: var(--font-mono, monospace);
+  font-family: var(--semantic-font-mono);
 }
 
 .study-digest-redacted {

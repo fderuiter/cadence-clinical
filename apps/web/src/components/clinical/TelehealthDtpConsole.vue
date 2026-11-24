@@ -1423,7 +1423,7 @@ onMounted(() => {
 }
 
 .badge {
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   padding: 3px 8px;
   border-radius: 12px;
@@ -1532,7 +1532,7 @@ onMounted(() => {
 
 .btn-xs {
   padding: 4px 8px;
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
 }
 
 .metrics-grid {
@@ -1644,7 +1644,7 @@ onMounted(() => {
 }
 
 .mono-badge {
-  font-family: monospace;
+  font-family: var(--semantic-font-mono);
   background: var(--semantic-color-surface-header);
   padding: 2px 6px;
   border-radius: 4px;
@@ -1652,7 +1652,7 @@ onMounted(() => {
 }
 
 .status-chip {
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   padding: 3px 8px;
   border-radius: 12px;
@@ -1736,7 +1736,7 @@ onMounted(() => {
 .video-overlay-bottom {
   display: flex;
   justify-content: space-between;
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
 }
 
 .video-placeholder {
@@ -1781,8 +1781,8 @@ onMounted(() => {
 }
 
 .token-snippet {
-  font-family: monospace;
-  font-size: 11px;
+  font-family: var(--semantic-font-mono);
+  font-size: var(--font-size-2xs);
   color: var(--text-main);
   margin-left: 6px;
 }
@@ -1967,7 +1967,7 @@ onMounted(() => {
   font-size: 12px;
 }
 .text-xs {
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
 }
 .text-muted {
   color: var(--semantic-color-text-secondary);

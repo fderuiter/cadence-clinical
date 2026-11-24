@@ -450,7 +450,7 @@ onMounted(() => {
 }
 
 .badge {
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   padding: 2px 6px;
   border-radius: 12px;
   font-weight: 600;
@@ -593,7 +593,7 @@ onMounted(() => {
 }
 
 .diff-tag {
-  font-size: 0.65rem;
+  font-size: var(--font-size-2xs);
   text-transform: uppercase;
   font-weight: 700;
 }

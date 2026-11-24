@@ -719,7 +719,7 @@ onUnmounted(() => {
 }
 
 .media-badge {
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 4px;
@@ -957,7 +957,7 @@ onUnmounted(() => {
 
 .time-display {
   font-size: 12px;
-  font-family: monospace;
+  font-family: var(--semantic-font-mono);
   color: var(--semantic-color-text-inverse-muted);
   min-width: 42px;
   font-variant-numeric: tabular-nums;
@@ -1002,7 +1002,7 @@ onUnmounted(() => {
   background: transparent;
   border: 1px solid var(--semantic-color-border-inverse);
   color: var(--semantic-color-text-inverse-muted);
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   border-radius: 4px;
   padding: 2px 6px;
   cursor: pointer;

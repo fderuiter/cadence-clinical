@@ -142,7 +142,7 @@ const handleClick = (e) => {
   min-height: var(--semantic-control-target-min, 24px);
   min-width: var(--semantic-control-target-min, 24px);
   gap: var(--spacing-xs, 8px);
-  font-family: var(--font-sans, inherit);
+  font-family: var(--semantic-font-family);
   font-weight: 500;
   border-radius: var(--radius-md, 6px);
   border: 1px solid transparent;

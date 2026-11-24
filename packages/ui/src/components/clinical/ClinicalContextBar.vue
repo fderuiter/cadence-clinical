@@ -475,7 +475,7 @@ function handleNavigate(step) {
 }
 
 .clinical-context-code {
-  font-family: "JetBrains Mono", var(--font-mono);
+  font-family: var(--semantic-font-mono);
   font-variant-numeric: tabular-nums;
   font-size: var(--font-size-xs);
 }

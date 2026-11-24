@@ -40,7 +40,9 @@
             {{ observation.version }}
           </dd>
           <dt>Observed</dt>
-          <dd class="tabular-nums">{{ observation.observed_at }}</dd>
+          <dd class="observation-timestamp tabular-nums">
+            {{ observation.observed_at }}
+          </dd>
           <dt>Source verification</dt>
           <dd data-testid="observation-sdv">
             <template v-if="activeVerification">
@@ -1327,6 +1329,25 @@ watch(
     grid-template-columns: minmax(0, 1fr);
   }
 }
+.observation-summary dd {
+  margin: 0;
+}
+[data-testid="observation-concept"],
+[data-testid="observation-value"],
+[data-testid="observation-version"],
+.observation-timestamp,
+#observation-new-value,
+[data-testid="observation-unit"] {
+  font-family: var(--semantic-font-mono);
+}
+[data-testid="observation-value"],
+[data-testid="observation-version"],
+.observation-timestamp,
+.observation-lock,
+#observation-new-value,
+.observation-outcome {
+  font-variant-numeric: tabular-nums;
+}
 .observation-sdv-meta {
   margin-left: 8px;
   font-size: 0.85rem;
@@ -1499,5 +1520,14 @@ td {
 .observation-audit th:nth-child(2),
 .observation-audit td:nth-child(2) {
   min-width: 8.5rem;
+}
+.observation-revisions td:nth-child(1),
+.observation-revisions td:nth-child(2),
+.observation-revisions td:nth-child(5),
+.observation-revisions td:nth-child(6),
+.observation-audit td:nth-child(1),
+.observation-audit td:nth-child(2),
+.observation-audit td:nth-child(5) {
+  font-family: var(--semantic-font-mono);
 }
 </style>

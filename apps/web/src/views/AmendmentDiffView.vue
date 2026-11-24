@@ -2772,7 +2772,7 @@ onMounted(() => {
 }
 
 .node-type-badge {
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   text-transform: uppercase;
   background: var(--semantic-color-surface-header);
@@ -2788,7 +2788,7 @@ onMounted(() => {
 
 .diff-badge {
   margin-left: auto;
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 0.15rem 0.4rem;
   border-radius: 4px;
@@ -3137,7 +3137,7 @@ onMounted(() => {
 
 .subject-tags-inline {
   color: var(--text-main);
-  font-family: monospace;
+  font-family: var(--semantic-font-mono);
 }
 
 .margin-top-md {
@@ -3435,7 +3435,7 @@ onMounted(() => {
 
 .form-key-tag {
   font-size: 0.75rem;
-  font-family: monospace;
+  font-family: var(--semantic-font-mono);
   font-weight: 700;
   color: var(--text-main);
 }

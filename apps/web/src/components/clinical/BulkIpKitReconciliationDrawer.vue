@@ -911,13 +911,7 @@ onMounted(() => {
   flex-direction: column;
   box-shadow: var(--shadow-drawer-left);
   overflow: hidden;
-  font-family:
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    Roboto,
-    sans-serif;
+  font-family: var(--semantic-font-family);
 }
 
 .drawer-header {
@@ -938,7 +932,7 @@ onMounted(() => {
 .badge {
   padding: 3px 8px;
   border-radius: 4px;
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -964,7 +958,7 @@ onMounted(() => {
 .badge-alert-lot {
   background: var(--semantic-color-error-interactive);
   color: var(--semantic-color-text-on-solid);
-  font-size: 0.65rem;
+  font-size: var(--font-size-2xs);
   margin-left: 6px;
 }
 
@@ -1020,7 +1014,7 @@ onMounted(() => {
   font-weight: 600;
 }
 .mono {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family: var(--semantic-font-mono);
 }
 
 .context-actions {
@@ -1073,7 +1067,7 @@ onMounted(() => {
   padding: 10px 14px;
   color: var(--semantic-color-text-inverse);
   font-size: 1.05rem;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family: var(--semantic-font-mono);
 }
 
 .barcode-input:focus-visible {
@@ -1142,7 +1136,7 @@ onMounted(() => {
 }
 
 .metric-label {
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
   text-transform: uppercase;
   font-weight: 600;
@@ -1571,7 +1565,7 @@ onMounted(() => {
   text-transform: uppercase;
 }
 .sig-hash {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family: var(--semantic-font-mono);
   font-size: 0.78rem;
   word-break: break-all;
 }

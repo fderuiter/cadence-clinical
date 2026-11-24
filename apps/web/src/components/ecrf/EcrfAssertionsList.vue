@@ -177,6 +177,10 @@ function assertionLink(target: string): RouteLocationRaw | null {
   min-width: 0;
   max-width: 100%;
   overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+[data-testid="ecrf-form-assertions"] .ecrf-observation-link {
+  font-family: var(--semantic-font-mono);
 }
 </style>
 

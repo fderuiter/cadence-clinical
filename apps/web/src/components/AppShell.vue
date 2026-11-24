@@ -1414,7 +1414,7 @@ onUnmounted(() => {
 }
 
 .palette-kbd {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family: var(--semantic-font-mono);
   font-size: 0.75rem;
   padding: 1px 5px;
   border-radius: 4px;
@@ -1640,7 +1640,7 @@ onUnmounted(() => {
     vertical-align: middle;
     max-width: 112px;
     padding: 3px 7px;
-    font-size: 0.73rem;
+    font-size: var(--font-size-2xs);
     line-height: 1.25;
     overflow: hidden;
     text-overflow: ellipsis;

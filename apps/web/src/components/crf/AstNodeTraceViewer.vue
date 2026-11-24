@@ -96,11 +96,11 @@ function getValueClass(val) {
 
 .node-desc {
   color: var(--semantic-color-text-inverse-muted);
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
 }
 
 .value-pill {
-  font-size: 0.65rem;
+  font-size: var(--font-size-2xs);
   font-weight: bold;
   padding: 1px 5px;
   border-radius: 3px;

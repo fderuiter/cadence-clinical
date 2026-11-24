@@ -1618,9 +1618,17 @@ function openReleaseModal(lockRef: string, lockKind: string) {
   font-size: 0.8rem;
 }
 
+#study-locks-as-of,
+.locks-table td:nth-child(3),
+.locks-table td:nth-child(5),
+.quick-dialog-target code {
+  font-family: var(--semantic-font-mono);
+}
+
 .meaning-note {
   color: var(--semantic-color-text-muted);
   font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
 }
 
 .hidden-scope-notice {
