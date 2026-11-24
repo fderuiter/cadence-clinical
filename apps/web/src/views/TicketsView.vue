@@ -151,7 +151,7 @@
       >
         <span class="stat-icon alert-icon" aria-hidden="true">🎫</span>
         <span class="stat-details">
-          <span class="stat-value">
+          <span class="stat-value tabular-nums">
             {{ activeTicketsCount }}
           </span>
           <span class="stat-label">Active Clinical Issues</span>
@@ -164,7 +164,7 @@
       >
         <span class="stat-icon capa-icon" aria-hidden="true">🚨</span>
         <span class="stat-details">
-          <span class="stat-value text-danger">
+          <span class="stat-value text-danger tabular-nums">
             {{ criticalTicketsCount }}
           </span>
           <span class="stat-label">Critical GxP Deviations</span>
@@ -175,7 +175,7 @@
         <div class="stat-details">
           <div
             id="kpi-sla-compliance"
-            class="stat-value"
+            class="stat-value tabular-nums"
             :class="slaComplianceClass"
           >
             {{ slaComplianceDisplay }}
@@ -186,7 +186,7 @@
       <div class="stat-card">
         <div class="stat-icon qtl-icon">⚡</div>
         <div class="stat-details">
-          <div id="kpi-mttr" class="stat-value">
+          <div id="kpi-mttr" class="stat-value tabular-nums">
             {{ mttrDisplay }}
           </div>
           <div class="stat-label">Mean Resolution Time (MTTR)</div>
@@ -199,7 +199,7 @@
       >
         <span class="stat-icon breach-icon" aria-hidden="true">⏸</span>
         <span class="stat-details">
-          <span class="stat-value">
+          <span class="stat-value tabular-nums">
             {{ pausedTicketsCount }}
           </span>
           <span class="stat-label">SLA Paused (Waiting Site)</span>
@@ -1893,6 +1893,7 @@ const exportAuditTrail = (format) => {
   font-weight: 800;
   color: var(--semantic-color-text);
   line-height: 1.2;
+  font-variant-numeric: var(--font-variant-numeric-tabular);
 }
 
 .stat-label {
@@ -2071,6 +2072,7 @@ const exportAuditTrail = (format) => {
   font-weight: 700;
   padding: 2px 7px;
   border-radius: 10px;
+  font-variant-numeric: var(--font-variant-numeric-tabular);
 }
 
 .column-cards {
@@ -2155,6 +2157,7 @@ const exportAuditTrail = (format) => {
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 4px;
+  font-variant-numeric: var(--font-variant-numeric-tabular);
 }
 
 .sla-tag-normal {
@@ -2334,6 +2337,7 @@ const exportAuditTrail = (format) => {
   background: var(--semantic-color-info-light);
   padding: 4px 10px;
   border-radius: 12px;
+  font-variant-numeric: var(--font-variant-numeric-tabular);
 }
 
 .bulk-actions {

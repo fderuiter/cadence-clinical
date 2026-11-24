@@ -35,6 +35,7 @@ Reservation rule: since the kernel work of September 2026, a new ADR takes the n
 | 2640–2649 | Clinical operations compliance (GCP workflows)                                    |
 | 2650–2659 | Web and design system (continued)                                                 |
 | 2660–2669 | Security (continued)                                                              |
+| 2670–2679 | Web and design system (continued)                                                 |
 | 2800–2899 | Google Stitch pull requests (closed; no new numbers)                              |
 
 An area with no block takes the next unused block of ten below 2800 and adds a row here in the same pull request.
@@ -465,6 +466,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2657: Share UI Primitives and Synchronize Participant Portal Route Queries](2026-11-23-share-ui-primitives-and-query-synced-portal-routes.md) (2026-11-23)
 - [ADR-2658: Resolve Shared UI from Workspace Source and Align Verification Scripts](2026-11-23-resolve-shared-ui-from-source-and-align-verification-scripts.md) (2026-11-23)
 - [ADR-2659: Centralize `ClinicalTabs` Visual Variants, Overflow Containment, Focus Scroll Alignment, and Scoped CSS AST Gates](2026-11-23-centralize-clinical-tabs-variants-overflow-and-scoped-css-gates.md) (2026-11-23)
+- [ADR-2670: Enforce Tabular Numerals via Shared CSS Tokens and AST Lint](2026-11-22-enforce-tabular-numerals-via-css-tokens-and-lint.md) (2026-11-22)
 
 ### 7. DevOps, Tooling & CI/CD
 
