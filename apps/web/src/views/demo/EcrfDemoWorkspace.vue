@@ -418,12 +418,32 @@ function onSubjectScreen() {
 }
 
 const demoRole = ref("site_investigator");
+let syncedPersona = authStore.currentPersona;
+
+function resyncWorkspaceForPersonaSwitch() {
+  for (const key of Object.keys(ecrfSessions)) {
+    delete ecrfSessions[key];
+  }
+  for (const key of Object.keys(sdvStates)) {
+    delete sdvStates[key];
+  }
+  pendingValueChange.value = null;
+  pendingSdvToggle.value = null;
+  showReasonModal.value = false;
+  selectListedSubject();
+}
 
 watch(
   () => authStore.currentPersona,
   (persona) => {
     if (!authStore.isAuthenticated) return;
     demoRole.value = persona === "cra_monitor" ? "cra" : "site_investigator";
+    if (syncedPersona !== null && persona !== syncedPersona) {
+      syncedPersona = persona;
+      resyncWorkspaceForPersonaSwitch();
+    } else {
+      syncedPersona = persona;
+    }
   },
   { immediate: true }
 );
@@ -434,9 +454,11 @@ function onRoleTesterChange() {
     authStore.isDemoMode &&
     !authStore.accessToken
   ) {
-    authStore.switchPersona(
-      demoRole.value === "cra" ? "cra_monitor" : "site_crc"
-    );
+    const nextPersona = demoRole.value === "cra" ? "cra_monitor" : "site_crc";
+    if (authStore.switchPersona(nextPersona)) {
+      syncedPersona = authStore.currentPersona;
+      resyncWorkspaceForPersonaSwitch();
+    }
   }
 }
 

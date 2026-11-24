@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace Cadence.Apps.Execution.Application.Abstractions;
 
 /// <summary>
@@ -12,6 +14,12 @@ public interface IAllocationProtector
 {
     /// <summary>Encrypts <paramref name="arm"/> for <paramref name="purpose"/>.</summary>
     string Protect(string arm, string purpose);
+
+    /// <summary>
+    /// Encrypts a batch of <c>(Arm, Purpose)</c> pairs, reusing one cipher context for the batch while drawing a fresh
+    /// random nonce for each slot.
+    /// </summary>
+    IReadOnlyList<string> ProtectBatch(IReadOnlyList<(string Arm, string Purpose)> items);
 
     /// <summary>Decrypts a value <see cref="Protect"/> produced for the same <paramref name="purpose"/>; throws on any mismatch or tampering.</summary>
     string Reveal(string ciphertext, string purpose);

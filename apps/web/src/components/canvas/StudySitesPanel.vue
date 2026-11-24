@@ -19,11 +19,7 @@
         v-if="compact"
         id="btn-manage-study-sites"
         class="btn btn-secondary"
-        :to="{
-          name: 'study',
-          params: { studyCode },
-          query: { stage: 'conduct', section: 'sites' },
-        }"
+        :to="resolvedManageSitesLocation"
       >
         {{ canManageSites ? "Manage sites" : "View sites" }}
       </router-link>
@@ -292,6 +288,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
+import type { RouteLocationRaw } from "vue-router";
 import {
   describeKernelError,
   kernelApi,
@@ -303,6 +300,7 @@ import {
   clearKernelStudyCache,
   syncCallerSiteScope,
 } from "../../canvas/kernelStudy";
+import { buildScopedStudyLocation } from "../../canvas/palette";
 import { useAuthStore } from "../../stores/auth.js";
 import { demoRandomToken, isDemoBuild } from "../../utils/demoMode";
 
@@ -313,12 +311,31 @@ const props = withDefaults(
     studyCode: string;
     compact?: boolean;
     canManageSites?: boolean;
+    manageSitesLocation?: RouteLocationRaw | null;
+    activeSite?: string;
+    activeParticipant?: string;
+    activeNode?: string;
   }>(),
   {
     compact: false,
     canManageSites: false,
+    manageSitesLocation: null,
+    activeSite: "",
+    activeParticipant: "",
+    activeNode: "",
   }
 );
+
+const resolvedManageSitesLocation = computed<RouteLocationRaw>(() => {
+  if (props.manageSitesLocation) return props.manageSitesLocation;
+  return buildScopedStudyLocation(props.studyCode, {
+    stage: "conduct",
+    section: "sites",
+    site: props.activeSite || undefined,
+    participant: props.activeParticipant || undefined,
+    node: props.activeNode || undefined,
+  });
+});
 
 const emit = defineEmits<{
   "open-participants": [siteCode: string];

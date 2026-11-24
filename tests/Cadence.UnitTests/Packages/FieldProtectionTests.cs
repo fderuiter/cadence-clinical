@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
@@ -122,6 +123,74 @@ public class FieldProtectionTests
     }
 
     /// <summary>
+    /// Batch encryption reuses one cipher context per batch while drawing a fresh 96-bit nonce per item, producing
+    /// wire-compatible values that round-trip through <see cref="IFieldEncryptor.Decrypt"/> and bind associated data.
+    /// </summary>
+    [Fact]
+    public void AesGcmFieldEncryptor_EncryptBatch_RoundTripsUsesFreshNoncesAndAuthenticatesPurpose()
+    {
+        var encryptor = TestFieldProtection.CreateEncryptor();
+        var otherKey = new AesGcmFieldEncryptor(TestFieldProtection.AlternateEncryptionKeyBase64);
+        string largePlaintext = new('X', 2_048);
+        string largePurpose = $"tests.batch.{new string('p', 1_024)}";
+
+        var items = new List<(string Plaintext, string Purpose)>
+        {
+            ("ACTIVE", "execution.randomization.slot:1:DEFAULT:0"),
+            ("ACTIVE", "execution.randomization.slot:1:DEFAULT:0"),
+            ("ACTIVE", "execution.randomization.slot:1:DEFAULT:1"),
+            ("PLACEBO", "execution.randomization.slot:1:DEFAULT:2"),
+            (largePlaintext, largePurpose),
+        };
+        for (int i = 3; i < 64; i++)
+        {
+            items.Add(("ACTIVE", Purpose));
+        }
+
+        IReadOnlyList<string> stored = encryptor.EncryptBatch(items);
+
+        stored.Should().HaveCount(items.Count);
+        encryptor.EncryptBatch([]).Should().BeEmpty();
+
+        int payloadOffset = $"{AesGcmFieldEncryptor.FormatPrefix}{encryptor.KeyId}:".Length;
+        var nonces = new HashSet<string>(StringComparer.Ordinal);
+        for (int i = 0; i < items.Count; i++)
+        {
+            stored[i].Should().StartWith($"{AesGcmFieldEncryptor.FormatPrefix}{encryptor.KeyId}:");
+            encryptor.Decrypt(stored[i], items[i].Purpose).Should().Be(items[i].Plaintext);
+
+            byte[] raw = Convert.FromBase64String(stored[i][payloadOffset..]);
+            nonces.Add(Convert.ToHexString(raw.AsSpan(0, 12))).Should().BeTrue("every item in a batch must draw a unique 96-bit nonce");
+        }
+
+        stored[0].Should().NotBe(stored[1]);
+        FluentActions.Invoking(() => encryptor.Decrypt(stored[0], items[2].Purpose)).Should().Throw<FieldDecryptionException>();
+        FluentActions.Invoking(() => otherKey.Decrypt(stored[0], items[0].Purpose)).Should().Throw<FieldDecryptionException>();
+    }
+
+    /// <summary>
+    /// Singleton <see cref="AesGcmFieldEncryptor"/> instances safely execute concurrent <see cref="IFieldEncryptor.EncryptBatch"/> calls.
+    /// </summary>
+    [Fact]
+    public async Task AesGcmFieldEncryptor_EncryptBatch_IsThreadSafeAcrossConcurrentCallers()
+    {
+        var encryptor = TestFieldProtection.CreateEncryptor();
+        var tasks = Enumerable.Range(0, 16).Select(worker => Task.Run(() =>
+        {
+            var batch = Enumerable.Range(0, 128)
+                .Select(seq => ($"ARM-{worker}-{seq}", $"execution.randomization.slot:{worker}:DEFAULT:{seq}"))
+                .ToArray();
+            var encrypted = encryptor.EncryptBatch(batch);
+            for (int i = 0; i < batch.Length; i++)
+            {
+                encryptor.Decrypt(encrypted[i], batch[i].Item2).Should().Be(batch[i].Item1);
+            }
+        }, TestContext.Current.CancellationToken));
+
+        await Task.WhenAll(tasks);
+    }
+
+    /// <summary>
     /// The design-time encryptor used by <c>dotnet ef</c> factories cannot encrypt or decrypt, so it can never act
     /// as a keyless runtime fallback.
     /// </summary>
@@ -129,6 +198,7 @@ public class FieldProtectionTests
     public void DesignTimeFieldEncryptor_RefusesToConvertValues()
     {
         FluentActions.Invoking(() => DesignTimeFieldEncryptor.Instance.Encrypt("x", Purpose)).Should().Throw<InvalidOperationException>();
+        FluentActions.Invoking(() => DesignTimeFieldEncryptor.Instance.EncryptBatch([("x", Purpose)])).Should().Throw<InvalidOperationException>();
         FluentActions.Invoking(() => DesignTimeFieldEncryptor.Instance.Decrypt("x", Purpose)).Should().Throw<InvalidOperationException>();
     }
 

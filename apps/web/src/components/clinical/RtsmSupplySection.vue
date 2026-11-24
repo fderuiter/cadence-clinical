@@ -411,9 +411,7 @@
       v-if="canManageSchemes"
       :is-open="Boolean(approvingScheme)"
       :username="authStore.user?.username || ''"
-      :signer-name="
-        authStore.user?.displayName || authStore.user?.username || ''
-      "
+      :signer-name="signerFullName"
       signer-role="Unblinded Statistician"
       :reasons="SCHEME_APPROVAL_REASONS"
       :action-url="
@@ -479,6 +477,16 @@ const {
   loadError,
   scopeGuidance,
 } = workspace;
+
+const signerFullName = computed(() => {
+  const identity = authStore.user;
+  if (!identity) return "";
+  const full = [identity.firstName, identity.lastName]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+  return full || identity.username || "";
+});
 
 const canReconcile = computed(() => canReconcileIpKits(authStore));
 const canSeed = computed(() => canSeedIpKits(authStore));
