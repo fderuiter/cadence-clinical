@@ -1009,7 +1009,7 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
         .map((file) => path.relative(repoRoot, file));
       expect(violatingFiles).toEqual([]);
 
-      // ADR-2658: Zero raw modal/drawer overlay containers or raw dialog elements across apps/web and apps/subject-portal
+      // ADR-2659: Zero raw modal/drawer overlay containers or raw dialog elements across apps/web and apps/subject-portal
       const rawAnyOverlayRe =
         /<(?:div|section|aside)\b[^>]*class=["'][^"']*\b(?:(?:modal|drawer|dialog)-(?:overlay|backdrop|mask|bg)|overlay-backdrop|[a-z0-9-]+-drawer-overlay|[a-z0-9-]+-modal-backdrop)\b/i;
       const rawDialogElementRe =

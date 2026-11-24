@@ -2698,180 +2698,221 @@ const promotionReasonOptions = [
 ];
 
 const samplePhase2Usdm = {
-  id: "CDNC-2026-001",
-  name: "CDNC-2026-001",
-  protocolTitle:
-    "A Phase II Randomized Study of Novel Therapeutic vs Control in Advanced Solid Tumors",
-  usdmVersion: "4.0",
-  studyDesigns: [
-    {
-      id: "DESIGN-001",
-      name: "Phase II Randomized Oncology Parallel Design",
-      designType: "Parallel Group",
-      arms: [
-        {
-          id: "ARM-01",
-          name: "Arm A: Novel Therapeutic 100mg Daily",
-          armType: "Experimental",
-          description: "Oral administration of 100mg active drug once daily",
-        },
-        {
-          id: "ARM-02",
-          name: "Arm B: Standard Care Placebo Control",
-          armType: "Placebo Comparator",
-          description: "Matching oral placebo tablet once daily",
-        },
-      ],
-      epochs: [
-        {
-          id: "EP-SCR",
-          name: "Screening Epoch (Day -28 to -1)",
-          epochType: "Screening",
-          sequenceNumber: 1,
-        },
-        {
-          id: "EP-TRT",
-          name: "Treatment Epoch (Cycles 1-6)",
-          epochType: "Treatment",
-          sequenceNumber: 2,
-        },
-        {
-          id: "EP-FU",
-          name: "Safety Follow-Up Epoch (Day 30)",
-          epochType: "Follow-Up",
-          sequenceNumber: 3,
-        },
-      ],
-      encounters: [
-        {
-          id: "V-SCR",
-          name: "Screening Visit (Day -28 to -1)",
-          encounterType: "Screening",
-          startDate: "2026-01-01",
-          endDate: "2026-01-28",
-        },
-        {
-          id: "V-C1D1",
-          name: "Cycle 1 Day 1 (Baseline)",
-          encounterType: "Baseline",
-          startDate: "2026-02-01",
-          endDate: "2026-02-01",
-        },
-        {
-          id: "V-C2D1",
-          name: "Cycle 2 Day 1",
-          encounterType: "Treatment",
-          startDate: "2026-03-01",
-          endDate: "2026-03-01",
-        },
-        {
-          id: "V-EOS",
-          name: "End of Study / Safety Follow-Up",
-          encounterType: "Follow-Up",
-          startDate: "2026-08-01",
-          endDate: "2026-08-01",
-        },
-      ],
-      activities: [
-        {
-          id: "ACT-DEM",
-          name: "Demographics & Informed Consent",
-          description: "Subject demographics, consent, baseline evaluation",
-          definedProcedures: [{ code: "DM", name: "Demographics" }],
-        },
-        {
-          id: "ACT-VS",
-          name: "Vital Signs & Hemodynamics",
-          description: "Blood pressure, heart rate, temperature, weight",
-          definedProcedures: [{ code: "VS", name: "Vital Signs" }],
-        },
-        {
-          id: "ACT-EG",
-          name: "12-Lead Electrocardiogram (ECG)",
-          description: "Triplicate 12-lead ECG recording with QTc calculation",
-          definedProcedures: [{ code: "EG", name: "Electrocardiogram" }],
-        },
-        {
-          id: "ACT-LB",
-          name: "Safety Laboratory Panel (CBC & Chem)",
-          description: "Central laboratory complete blood count and chemistry",
-          definedProcedures: [{ code: "LB", name: "Laboratory" }],
-        },
-        {
-          id: "ACT-QS",
-          name: "Patient Pain VAS & Quality of Life",
-          description: "100mm Visual Analog Scale for pain and health status",
-          definedProcedures: [{ code: "QS", name: "Questionnaire" }],
-        },
-        {
-          id: "ACT-PE",
-          name: "Physical Exam & 74-Zone Body Map",
-          description: "Complete physical examination and anatomical body map",
-          definedProcedures: [{ code: "PE", name: "Physical Examination" }],
-        },
-        {
-          id: "ACT-AE",
-          name: "Adverse Events & Safety Evaluation",
-          description: "CTCAE v5.0 graded adverse event evaluation",
-          definedProcedures: [{ code: "AE", name: "Adverse Events" }],
-        },
-      ],
-      eligibilityCriteria: [
-        {
-          id: "INC-01",
-          name: "Adult Age Requirement",
-          criterionType: "Inclusion",
-          category: "Demographics",
-          text: "Subject must be >= 18 and <= 75 years of age at consent",
-          template: {
-            id: "TMPL-01",
-            name: "Age Template",
-            text: "DM.AGE >= 18 AND DM.AGE <= 75",
-            notes: ["Age criteria"],
+  usdmVersion: "4.0.0",
+  systemName: "Cadence Clinical",
+  systemVersion: "1.0.0",
+  study: {
+    id: "CDNC-2026-001",
+    name: "CDNC-2026-001",
+    versions: [
+      {
+        id: "StudyVersion_1",
+        versionIdentifier: "1.0",
+        titles: [
+          {
+            id: "Title_1",
+            text: "A Phase II Randomized Study of Novel Therapeutic vs Control in Advanced Solid Tumors",
+            type: {
+              code: "C207616",
+              codeSystem: "http://www.cdisc.org",
+              decode: "Official Study Title",
+            },
           },
-        },
-        {
-          id: "INC-02",
-          name: "Histological Malignancy Confirmation",
-          criterionType: "Inclusion",
-          category: "Diagnosis",
-          text: "Histologically confirmed advanced solid tumor malignancy",
-          template: {
-            id: "TMPL-02",
-            name: "Histology Template",
-            text: "MDR.HISTOLOGY == 1",
-            notes: ["Confirmed tumor"],
+        ],
+        studyDesigns: [
+          {
+            id: "DESIGN-001",
+            name: "Phase II Randomized Oncology Parallel Design",
+            designType: "Parallel Group",
+            studyPhase: {
+              standardCode: {
+                code: "C15601",
+                codeSystem: "http://www.cdisc.org",
+                decode: "Phase II",
+              },
+            },
+            indications: [
+              {
+                id: "IND-01",
+                name: "Oncology",
+                label: "Oncology",
+              },
+            ],
+            arms: [
+              {
+                id: "ARM-01",
+                name: "Arm A: Novel Therapeutic 100mg Daily",
+                armType: "Experimental",
+                description:
+                  "Oral administration of 100mg active drug once daily",
+              },
+              {
+                id: "ARM-02",
+                name: "Arm B: Standard Care Placebo Control",
+                armType: "Placebo Comparator",
+                description: "Matching oral placebo tablet once daily",
+              },
+            ],
+            epochs: [
+              {
+                id: "EP-SCR",
+                name: "Screening Epoch (Day -28 to -1)",
+                epochType: "Screening",
+                sequenceNumber: 1,
+              },
+              {
+                id: "EP-TRT",
+                name: "Treatment Epoch (Cycles 1-6)",
+                epochType: "Treatment",
+                sequenceNumber: 2,
+              },
+              {
+                id: "EP-FU",
+                name: "Safety Follow-Up Epoch (Day 30)",
+                epochType: "Follow-Up",
+                sequenceNumber: 3,
+              },
+            ],
+            encounters: [
+              {
+                id: "V-SCR",
+                name: "Screening Visit (Day -28 to -1)",
+                encounterType: "Screening",
+                startDate: "2026-01-01",
+                endDate: "2026-01-28",
+              },
+              {
+                id: "V-C1D1",
+                name: "Cycle 1 Day 1 (Baseline)",
+                encounterType: "Baseline",
+                startDate: "2026-02-01",
+                endDate: "2026-02-01",
+              },
+              {
+                id: "V-C2D1",
+                name: "Cycle 2 Day 1",
+                encounterType: "Treatment",
+                startDate: "2026-03-01",
+                endDate: "2026-03-01",
+              },
+              {
+                id: "V-EOS",
+                name: "End of Study / Safety Follow-Up",
+                encounterType: "Follow-Up",
+                startDate: "2026-08-01",
+                endDate: "2026-08-01",
+              },
+            ],
+            activities: [
+              {
+                id: "ACT-DEM",
+                name: "Demographics & Informed Consent",
+                description:
+                  "Subject demographics, consent, baseline evaluation",
+                definedProcedures: [{ code: "DM", name: "Demographics" }],
+              },
+              {
+                id: "ACT-VS",
+                name: "Vital Signs & Hemodynamics",
+                description: "Blood pressure, heart rate, temperature, weight",
+                definedProcedures: [{ code: "VS", name: "Vital Signs" }],
+              },
+              {
+                id: "ACT-EG",
+                name: "12-Lead Electrocardiogram (ECG)",
+                description:
+                  "Triplicate 12-lead ECG recording with QTc calculation",
+                definedProcedures: [{ code: "EG", name: "Electrocardiogram" }],
+              },
+              {
+                id: "ACT-LB",
+                name: "Safety Laboratory Panel (CBC & Chem)",
+                description:
+                  "Central laboratory complete blood count and chemistry",
+                definedProcedures: [{ code: "LB", name: "Laboratory" }],
+              },
+              {
+                id: "ACT-QS",
+                name: "Patient Pain VAS & Quality of Life",
+                description:
+                  "100mm Visual Analog Scale for pain and health status",
+                definedProcedures: [{ code: "QS", name: "Questionnaire" }],
+              },
+              {
+                id: "ACT-PE",
+                name: "Physical Exam & 74-Zone Body Map",
+                description:
+                  "Complete physical examination and anatomical body map",
+                definedProcedures: [
+                  { code: "PE", name: "Physical Examination" },
+                ],
+              },
+              {
+                id: "ACT-AE",
+                name: "Adverse Events & Safety Evaluation",
+                description: "CTCAE v5.0 graded adverse event evaluation",
+                definedProcedures: [{ code: "AE", name: "Adverse Events" }],
+              },
+            ],
+            eligibilityCriteria: [
+              {
+                id: "INC-01",
+                name: "Adult Age Requirement",
+                criterionType: "Inclusion",
+                category: "Demographics",
+                text: "Subject must be >= 18 and <= 75 years of age at consent",
+                template: {
+                  id: "TMPL-01",
+                  name: "Age Template",
+                  text: "DM.AGE >= 18 AND DM.AGE <= 75",
+                  notes: ["Age criteria"],
+                },
+              },
+              {
+                id: "INC-02",
+                name: "Histological Malignancy Confirmation",
+                criterionType: "Inclusion",
+                category: "Diagnosis",
+                text: "Histologically confirmed advanced solid tumor malignancy",
+                template: {
+                  id: "TMPL-02",
+                  name: "Histology Template",
+                  text: "MDR.HISTOLOGY == 1",
+                  notes: ["Confirmed tumor"],
+                },
+              },
+              {
+                id: "EXC-01",
+                name: "Cardiac QTc Prolongation Risk",
+                criterionType: "Exclusion",
+                category: "Cardiac Safety",
+                text: "Baseline QTc Fridericia > 470 ms or severe arrhythmia",
+                template: {
+                  id: "TMPL-03",
+                  name: "QTc Template",
+                  text: "EG.EGQTC > 470",
+                  notes: ["Cardiac safety"],
+                },
+              },
+              {
+                id: "EXC-02",
+                name: "Severe Hepatic Impairment",
+                criterionType: "Exclusion",
+                category: "Hepatic Safety",
+                text: "Serum ALT or AST > 3.0x upper limit of normal",
+                template: {
+                  id: "TMPL-04",
+                  name: "Hepatic Template",
+                  text: "LB.ALT > 3 * ULN",
+                  notes: ["Liver safety"],
+                },
+              },
+            ],
           },
-        },
-        {
-          id: "EXC-01",
-          name: "Cardiac QTc Prolongation Risk",
-          criterionType: "Exclusion",
-          category: "Cardiac Safety",
-          text: "Baseline QTc Fridericia > 470 ms or severe arrhythmia",
-          template: {
-            id: "TMPL-03",
-            name: "QTc Template",
-            text: "EG.EGQTC > 470",
-            notes: ["Cardiac safety"],
-          },
-        },
-        {
-          id: "EXC-02",
-          name: "Severe Hepatic Impairment",
-          criterionType: "Exclusion",
-          category: "Hepatic Safety",
-          text: "Serum ALT or AST > 3.0x upper limit of normal",
-          template: {
-            id: "TMPL-04",
-            name: "Hepatic Template",
-            text: "LB.ALT > 3 * ULN",
-            notes: ["Liver safety"],
-          },
-        },
-      ],
-    },
-  ],
+        ],
+      },
+    ],
+  },
 };
 
 function openUsdmModal() {
@@ -2938,7 +2979,98 @@ function loadSampleUsdm() {
   validateUsdmPayload();
 }
 
+function extractUsdmStudyMetadata(parsed) {
+  if (parsed.study && typeof parsed.study === "object") {
+    const study = parsed.study;
+    const version = Array.isArray(study.versions)
+      ? study.versions[0] || {}
+      : {};
+    const design = Array.isArray(version.studyDesigns)
+      ? version.studyDesigns[0] || {}
+      : {};
+    const titles = Array.isArray(version.titles) ? version.titles : [];
+    const officialTitle = titles.find((t) => {
+      const decode =
+        t?.type?.decode || t?.type?.standardCode?.decode || t?.type || "";
+      return String(decode).toLowerCase().includes("official");
+    });
+    const studyId =
+      study.id || study.name || parsed.studyId || parsed.protocol_id || "";
+    const title =
+      officialTitle?.text ||
+      titles[0]?.text ||
+      study.label ||
+      study.name ||
+      parsed.protocolTitle ||
+      parsed.studyTitle ||
+      "";
+    const phase =
+      design?.studyPhase?.standardCode?.decode ||
+      design?.studyPhase?.decode ||
+      study.phase ||
+      parsed.phase ||
+      "Phase II";
+    const therapeuticArea =
+      design?.therapeuticAreas?.[0]?.decode ||
+      design?.therapeuticAreas?.[0]?.standardCode?.decode ||
+      design?.indications?.[0]?.label ||
+      design?.indications?.[0]?.name ||
+      study.therapeuticArea ||
+      parsed.therapeuticArea ||
+      parsed.therapeutic_area ||
+      "Oncology";
+    return { studyId, title, phase, therapeuticArea };
+  }
+
+  return {
+    studyId:
+      parsed.id || parsed.studyId || parsed.protocol_id || parsed.name || "",
+    title:
+      parsed.protocolTitle ||
+      parsed.studyTitle ||
+      parsed.study_title ||
+      parsed.name ||
+      "",
+    phase: parsed.phase || "Phase II",
+    therapeuticArea:
+      parsed.therapeuticArea || parsed.therapeutic_area || "Oncology",
+  };
+}
+
 function extractUsdmStudyEntities(parsed) {
+  if (parsed.study && typeof parsed.study === "object") {
+    const versions = Array.isArray(parsed.study.versions)
+      ? parsed.study.versions
+      : [];
+    const version = versions[0] || {};
+    const design = Array.isArray(version.studyDesigns)
+      ? version.studyDesigns[0] || {}
+      : {};
+    return {
+      arms: design.arms || [],
+      epochs: design.epochs || [],
+      encounters: design.encounters || [],
+      activities: design.activities || [],
+      criteria: design.eligibilityCriteria || [],
+      scheduleTimelines: design.scheduleTimelines || [],
+    };
+  }
+  if (
+    Array.isArray(parsed.studyVersions) &&
+    parsed.studyVersions.length > 0 &&
+    Array.isArray(parsed.studyVersions[0]?.studyDesigns) &&
+    parsed.studyVersions[0].studyDesigns.length > 0
+  ) {
+    const design = parsed.studyVersions[0].studyDesigns[0] || {};
+    return {
+      arms: design.arms || [],
+      epochs: design.epochs || [],
+      encounters: design.encounters || [],
+      activities: design.activities || [],
+      criteria: design.eligibilityCriteria || [],
+      scheduleTimelines: [],
+    };
+  }
   if (Array.isArray(parsed.studyDesigns) && parsed.studyDesigns.length > 0) {
     const design = parsed.studyDesigns[0] || {};
     return {
@@ -2947,6 +3079,7 @@ function extractUsdmStudyEntities(parsed) {
       encounters: design.encounters || [],
       activities: design.activities || [],
       criteria: design.eligibilityCriteria || [],
+      scheduleTimelines: [],
     };
   }
   return {
@@ -2955,6 +3088,7 @@ function extractUsdmStudyEntities(parsed) {
     encounters: parsed.encounters || parsed.visits || [],
     activities: parsed.activities || parsed.rows || [],
     criteria: parsed.criteria || parsed.eligibilityCriteria || [],
+    scheduleTimelines: [],
   };
 }
 
@@ -2968,7 +3102,7 @@ function validateUsdmPayload() {
 
   try {
     const parsed = JSON.parse(rawUsdmInput.value);
-    if (!parsed || typeof parsed !== "object") {
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
       validationStatus.isValid = false;
       validationStatus.errorMessage =
         "Invalid JSON structure. Root must be an object.";
@@ -2977,18 +3111,10 @@ function validateUsdmPayload() {
     }
 
     const schemaResult = USDMStudySchema.safeParse(parsed);
+    const isExplicitUsdmEnvelope = "study" in parsed || "usdmVersion" in parsed;
 
-    let studyId =
-      parsed.id || parsed.studyId || parsed.protocol_id || parsed.name || "";
-    let title =
-      parsed.protocolTitle ||
-      parsed.studyTitle ||
-      parsed.study_title ||
-      parsed.name ||
-      "";
-    let phase = parsed.phase || "Phase II";
-    let therapeuticArea =
-      parsed.therapeuticArea || parsed.therapeutic_area || "Oncology";
+    const { studyId, title, phase, therapeuticArea } =
+      extractUsdmStudyMetadata(parsed);
 
     const { arms, epochs, encounters, activities, criteria } =
       extractUsdmStudyEntities(parsed);
@@ -3000,7 +3126,11 @@ function validateUsdmPayload() {
       epochs.length > 0 ||
       arms.length > 0;
 
-    if (schemaResult.success || (hasStudyInfo && hasStructure)) {
+    const isValidPayload = isExplicitUsdmEnvelope
+      ? schemaResult.success
+      : schemaResult.success || (hasStudyInfo && hasStructure);
+
+    if (isValidPayload) {
       validationStatus.isValid = true;
       validationStatus.errorMessage = "";
       validationStatus.errors = [];
@@ -3017,17 +3147,17 @@ function validateUsdmPayload() {
     } else {
       validationStatus.isValid = false;
       const issues = [];
-      if (!hasStudyInfo)
-        issues.push(
-          "Missing study identifier (id/studyId) or title (protocolTitle/studyTitle)."
-        );
-      if (!hasStructure)
-        issues.push(
-          "Missing protocol structure (arms, epochs, encounters/visits, or activities)."
-        );
       if (schemaResult.error) {
         issues.push(...formatZodIssues(schemaResult.error, "root"));
       }
+      if (!isExplicitUsdmEnvelope && !hasStudyInfo)
+        issues.push(
+          "Missing study identifier (id/studyId) or title (protocolTitle/studyTitle)."
+        );
+      if (!isExplicitUsdmEnvelope && !hasStructure)
+        issues.push(
+          "Missing protocol structure (arms, epochs, encounters/visits, or activities)."
+        );
       validationStatus.errorMessage =
         issues[0] || "Invalid USDM specification.";
       validationStatus.errors = issues;
@@ -3048,16 +3178,11 @@ async function executeZeroClickBuild() {
   try {
     const parsed = JSON.parse(rawUsdmInput.value);
 
-    let studyId =
-      parsed.id || parsed.studyId || parsed.protocol_id || "CDNC-2026-001";
-    let title =
-      parsed.protocolTitle ||
-      parsed.studyTitle ||
-      parsed.study_title ||
-      "A Phase II Randomized Study";
-    let phase = parsed.phase || "Phase II";
-    let therapeuticArea =
-      parsed.therapeuticArea || parsed.therapeutic_area || "Oncology";
+    const meta = extractUsdmStudyMetadata(parsed);
+    const studyId = meta.studyId || "CDNC-2026-001";
+    const title = meta.title || "A Phase II Randomized Study";
+    const phase = meta.phase || "Phase II";
+    const therapeuticArea = meta.therapeuticArea || "Oncology";
 
     const {
       arms: rawArms,
@@ -3065,39 +3190,73 @@ async function executeZeroClickBuild() {
       encounters: rawEncounters,
       activities: rawActivities,
       criteria: rawCriteria,
+      scheduleTimelines,
     } = extractUsdmStudyEntities(parsed);
+
+    const timeline =
+      scheduleTimelines.find((tl) => tl?.mainTimeline === true) ||
+      scheduleTimelines[0] ||
+      null;
+    const timelineInstances = Array.isArray(timeline?.instances)
+      ? timeline.instances
+      : [];
+    const scheduledByActivity = new Map();
+    const encounterEpochFromTimeline = new Map();
+    for (const inst of timelineInstances) {
+      if (inst?.encounterId && inst?.epochId) {
+        encounterEpochFromTimeline.set(inst.encounterId, inst.epochId);
+      }
+      if (inst?.encounterId && Array.isArray(inst?.activityIds)) {
+        for (const actId of inst.activityIds) {
+          if (!scheduledByActivity.has(actId)) {
+            scheduledByActivity.set(actId, new Set());
+          }
+          scheduledByActivity.get(actId).add(inst.encounterId);
+        }
+      }
+    }
 
     const arms = rawArms.map((a, idx) => ({
       arm_id: a.id || a.arm_id || `ARM-0${idx + 1}`,
-      arm_name: a.name || a.arm_name || `Arm ${idx + 1}`,
+      arm_name: a.label || a.name || a.arm_name || `Arm ${idx + 1}`,
       sequence: idx + 1,
     }));
 
     const epochs = rawEpochs.map((e, idx) => ({
       epoch_id: e.id || e.epoch_id || `EP-0${idx + 1}`,
-      epoch_name: e.name || e.epoch_name || `Epoch ${idx + 1}`,
+      epoch_name: e.label || e.name || e.epoch_name || `Epoch ${idx + 1}`,
       sequence: e.sequenceNumber || e.sequence || idx + 1,
       arm_id: e.arm_id || arms[idx % (arms.length || 1)]?.arm_id || null,
     }));
 
-    const encounters = rawEncounters.map((enc, idx) => ({
-      encounter_id: enc.id || enc.encounter_id || `V-0${idx + 1}`,
-      encounter_name: enc.name || enc.encounter_name || `Visit ${idx + 1}`,
-      epoch_id:
-        enc.epoch_id ||
-        epochs[Math.min(idx, epochs.length - 1)]?.epoch_id ||
-        "EP-SCR",
-      sequence: idx + 1,
-    }));
+    const encounters = rawEncounters.map((enc, idx) => {
+      const encId = enc.id || enc.encounter_id || `V-0${idx + 1}`;
+      return {
+        encounter_id: encId,
+        encounter_name:
+          enc.label || enc.name || enc.encounter_name || `Visit ${idx + 1}`,
+        epoch_id:
+          enc.epoch_id ||
+          enc.epochId ||
+          encounterEpochFromTimeline.get(encId) ||
+          epochs[Math.min(idx, epochs.length - 1)]?.epoch_id ||
+          "EP-SCR",
+        sequence: idx + 1,
+      };
+    });
 
     const rows = rawActivities.map((act, idx) => {
       const actId = act.id || act.activity_id || `ACT-0${idx + 1}`;
-      const actName = act.name || act.activity_name || `Activity ${idx + 1}`;
+      const actName =
+        act.label || act.name || act.activity_name || `Activity ${idx + 1}`;
+      const scheduledEncs = scheduledByActivity.get(actId);
       const cells = encounters.map((enc, encIdx) => {
         const isApplicable = act.cells
           ? (act.cells.find((c) => c.encounter_id === enc.encounter_id)
               ?.is_applicable ?? true)
-          : encIdx === 0 || idx % 2 === 0 || encIdx % 2 === 0;
+          : scheduledEncs
+            ? scheduledEncs.has(enc.encounter_id)
+            : encIdx === 0 || idx % 2 === 0 || encIdx % 2 === 0;
         return {
           encounter_id: enc.encounter_id,
           is_applicable: isApplicable,
