@@ -28,6 +28,8 @@ related:
   - text: "Clinical Kernel Package README"
     link: "../../packages/kernel/README.md"
 draft: false
+prev: false
+next: false
 ---
 
 # Defense-in-Depth PostgreSQL RLS, Deterministic IClock, and Forwarded GxP Evidence

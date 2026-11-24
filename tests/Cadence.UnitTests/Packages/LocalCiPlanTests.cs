@@ -179,7 +179,7 @@ public partial class LocalCiPlanTests
             {
                 var workflowStep = workflowJob.Steps.Single(s => s.Name == step.Name);
                 string rawRun = workflowStep.Run ?? "";
-                var local = step.Commands.Select(c => (Text: Normalize(c.MatchText), Declared: c.CiText is not null, ForwardsBaseRef: c.ForwardsBaseRef))
+                var local = step.Commands.Select(c => (Text: Normalize(c.MatchText), Declared: c.CiText is not null, c.ForwardsBaseRef))
                     .Concat(step.InProcess is null || step.InProcessCiText is null
                         ? []
                         : [(Text: Normalize(step.InProcessCiText), Declared: false, ForwardsBaseRef: step.InProcessForwardsBaseRef)])
@@ -1222,16 +1222,29 @@ public partial class LocalCiPlanTests
     }
 
     [Fact]
-    public void AccessibilityE2eJob_RunsWebWorkflowSuiteWithDemoModeDisabled()
+    public void AccessibilityE2eJob_RunsDocsPortalAndWebWorkflowSuitesWithExpectedEnvironment()
     {
         var e2eJob = CiPlan.Jobs.Single(j => j.Key == "accessibility-e2e"); // deid-ignore: ci.yml job key
+
+        var docsBuildStep = e2eJob.Steps.Single(s => s.Name == "Build Documentation Portal");
+        docsBuildStep.CoveredBy.Should().Be("docs-build/Run documentation compilation");
+        docsBuildStep.Commands.Select(c => c.Display).Should().Equal("pnpm docs:build");
+
+        var docsE2eStep = e2eJob.Steps.Single(s => s.Name == "Run Documentation Portal E2E Accessibility Tests");
+        docsE2eStep.Commands.Select(c => c.Display).Should().Equal("pnpm --filter subject-portal test:e2e:docs-portal");
+
         var workflowStep = e2eJob.Steps.Single(s => s.Name == "Run Web Application E2E Workflow Tests");
         workflowStep.Commands.Select(c => c.Display).Should().Equal("pnpm --filter web test:e2e:workflows");
         workflowStep.Environment.Should().Contain("CADENCE_TEST_BROWSER", "1")
             .And.Contain("DEMO_MODE", "false");
 
         string[] lines = File.ReadAllLines(Path.Combine(RepoRoot(), ".github", "workflows", "ci.yml"));
-        string workflowBlock = ExtractJobStepBlocks(lines, "accessibility-e2e") // deid-ignore: ci.yml job key
+        var e2eBlocks = ExtractJobStepBlocks(lines, "accessibility-e2e"); // deid-ignore: ci.yml job key
+        e2eBlocks.Single(b => b.Contains("name: Build Documentation Portal", StringComparison.Ordinal))
+            .Should().Contain("run: pnpm docs:build");
+        e2eBlocks.Single(b => b.Contains("name: Run Documentation Portal E2E Accessibility Tests", StringComparison.Ordinal))
+            .Should().Contain("run: pnpm --filter subject-portal test:e2e:docs-portal");
+        string workflowBlock = e2eBlocks
             .Single(b => b.Contains("name: Run Web Application E2E Workflow Tests", StringComparison.Ordinal));
         workflowBlock.Should().Contain("DEMO_MODE: \"false\"")
             .And.Contain("run: pnpm --filter web test:e2e:workflows");
@@ -1401,7 +1414,7 @@ public partial class LocalCiPlanTests
         {
             FlushStep();
             if (key is not null) jobs.Add(new WorkflowJob(key, name ?? key, jobIf, needs, steps));
-            key = name = jobIf = null;
+            _ = name = jobIf = null;
             needs = [];
             steps = [];
         }

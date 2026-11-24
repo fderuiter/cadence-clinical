@@ -32,6 +32,8 @@ related:
   - text: "Interactive Staff Demo"
     link: "/demo/"
 draft: false
+prev: false
+next: false
 ---
 
 # Self-Service Trial Bootstrap, Standards Import, and Co-Hosted Clinical Demos

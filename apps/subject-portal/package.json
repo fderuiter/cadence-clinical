@@ -10,6 +10,7 @@
     "build:demo": "vite build --mode demo",
     "test": "vitest run --coverage",
     "test:e2e": "playwright test",
+    "test:e2e:docs-portal": "playwright test --config playwright.docs-portal.config.js",
     "lint": "eslint --max-warnings 0 .",
     "format": "prettier --write ."
   },

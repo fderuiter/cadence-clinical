@@ -285,7 +285,7 @@ describe("VitePress Engineering Blog Engine", () => {
 
     const sidebarItems = getBlogSidebarItems(docsDir);
     expect(sidebarItems.map((i) => i.link)).toEqual([
-      "/blog/index",
+      "/blog/",
       "/blog/2026-10-01-published",
     ]);
 
@@ -343,7 +343,7 @@ describe("VitePress Engineering Blog Engine", () => {
       assertThemeLinksExist(
         {
           nav: [
-            { text: "Blog", link: "/blog/index" },
+            { text: "Blog", link: "/blog/" },
             { text: "RSS", link: "/cadence-clinical/feed.xml" },
           ],
           sidebar: [],

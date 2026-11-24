@@ -80,6 +80,31 @@ const config = defineConfig({
     },
   },
   vite: {
+    resolve: {
+      alias: [
+        {
+          find: /^.*\/VPSidebarItem\.vue$/,
+          replacement: path.resolve(
+            __dirname,
+            "theme/components/VPSidebarItem.vue"
+          ),
+        },
+        {
+          find: /^.*\/VPNavBarSearchButton\.vue$/,
+          replacement: path.resolve(
+            __dirname,
+            "theme/components/VPNavBarSearchButton.vue"
+          ),
+        },
+        {
+          find: /^.*\/VPContent\.vue$/,
+          replacement: path.resolve(
+            __dirname,
+            "theme/components/VPContent.vue"
+          ),
+        },
+      ],
+    },
     build: {
       chunkSizeWarningLimit: 2500,
     },
@@ -126,16 +151,41 @@ const config = defineConfig({
     },
     nav: [
       { text: "Home", link: "/" },
-      { text: "Staff Demo", link: "/demo/", target: "_self" },
-      { text: "Participant Demo", link: "/subject-portal/", target: "_self" },
-      { text: "Blog", link: "/blog/index", activeMatch: "^/blog/" },
-      { text: "Doc Index", link: "/DOCUMENTATION_INDEX" },
-      { text: "Kernel Spec", link: "/kernel/CLINICAL_KERNEL_SPECIFICATION" },
-      { text: "Architecture", link: "/ARCHITECTURE" },
-      { text: "Glossary", link: "/CONTEXT" },
-      { text: "API Reference", link: "/api/index" },
-      { text: "Data Models", link: "/schema/README" },
-      { text: "ADRs", link: "/adr/index" },
+      {
+        text: "Demos",
+        items: [
+          { text: "Staff Demo", link: "/demo/", target: "_self" },
+          {
+            text: "Participant Demo",
+            link: "/subject-portal/",
+            target: "_self",
+          },
+        ],
+      },
+      { text: "Blog", link: "/blog/", activeMatch: "^/blog/" },
+      {
+        text: "Guides",
+        activeMatch: "^/(DOCUMENTATION_INDEX|kernel/|ARCHITECTURE|CONTEXT)",
+        items: [
+          { text: "Documentation Index", link: "/DOCUMENTATION_INDEX" },
+          {
+            text: "Clinical Kernel Spec",
+            link: "/kernel/CLINICAL_KERNEL_SPECIFICATION",
+          },
+          { text: "System Architecture", link: "/ARCHITECTURE" },
+          { text: "Domain Glossary", link: "/CONTEXT" },
+        ],
+      },
+      {
+        text: "Reference",
+        activeMatch: "^/(api|schema|components|adr)/",
+        items: [
+          { text: "API Reference", link: "/api/" },
+          { text: "Data Models", link: "/schema/README" },
+          { text: "UI Components", link: "/components/" },
+          { text: "ADR Log", link: "/adr/" },
+        ],
+      },
       { text: "RSS", link: rssFeedHref, target: "_blank" },
     ],
     sidebar: synthesizeSidebarFromIndex(indexPath, {

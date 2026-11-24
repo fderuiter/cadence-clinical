@@ -42,20 +42,17 @@ public static class MarkdownValidatorService
             string[] mdFiles;
             if (files is not null)
             {
-                mdFiles = files
+                mdFiles = [.. files
                     .Where(f => f.EndsWith(".md", StringComparison.OrdinalIgnoreCase))
                     .Select(f => GitIndexReader.TryNormalizeRelativePath(repoRoot, f))
                     .Where(rel => !string.IsNullOrEmpty(rel) &&
                                   (reader is not null ? reader.FileExists(rel) : File.Exists(Path.Combine(repoRoot, rel))))
                     .Select(rel => Path.Combine(repoRoot, rel!))
-                    .Where(f => !excludedDirs.Any(d => f.Contains(d)))
-                    .ToArray();
+                    .Where(f => !excludedDirs.Any(d => f.Contains(d)))];
             }
             else
             {
-                mdFiles = Directory.EnumerateFiles(repoRoot, "*.md", SearchOption.AllDirectories)
-                    .Where(f => !excludedDirs.Any(d => f.Contains(d)))
-                    .ToArray();
+                mdFiles = [.. Directory.EnumerateFiles(repoRoot, "*.md", SearchOption.AllDirectories).Where(f => !excludedDirs.Any(d => f.Contains(d)))];
             }
 
             if (mdFiles.Length == 0)
@@ -101,6 +98,17 @@ public static class MarkdownValidatorService
                 {
                     Console.WriteLine($"[MARKDOWN FORMAT] {issue.Message}");
                     issuesCount++;
+                }
+
+                // Rule 4: GFM table structural integrity (skipping immutable GxP qualification run snapshots)
+                string normalizedRelPath = Path.GetRelativePath(repoRoot, file).Replace('\\', '/');
+                if (!normalizedRelPath.StartsWith("docs/SDLC/runs/", StringComparison.OrdinalIgnoreCase))
+                {
+                    foreach (var tableError in DocIndexSyncService.ValidateMarkdownTableLines(lines, normalizedRelPath))
+                    {
+                        Console.WriteLine($"[MARKDOWN TABLE] {tableError}");
+                        issuesCount++;
+                    }
                 }
             }
 

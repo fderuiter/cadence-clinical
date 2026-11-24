@@ -259,6 +259,8 @@ authors:
 summary: ""{EscapeYamlString(cleanSummary)}""
 tags: [{tagsYaml}]
 draft: {draftYaml}
+prev: false
+next: false
 related:
   - text: ""Architecture Decision Records""
     link: ""../adr/index.md""

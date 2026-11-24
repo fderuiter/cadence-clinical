@@ -109,7 +109,7 @@ export function toSidebarLink(rawHref, { docsDir, repoRoot }) {
 
     if (isDir) {
       if (fs.existsSync(path.join(absolute, "index.md"))) {
-        return relToDocs === "" ? `/${anchor}` : `/${relToDocs}/index${anchor}`;
+        return relToDocs === "" ? `/${anchor}` : `/${relToDocs}/${anchor}`;
       }
       return toRepoUrl(href, docsDir, docsDir, repoRoot);
     }
@@ -138,6 +138,9 @@ export function toSidebarLink(rawHref, { docsDir, repoRoot }) {
 
     if (relToDocs.toLowerCase() === "index.md") {
       return `/${anchor}`;
+    }
+    if (/\/index\.(md|html)$/i.test(relToDocs)) {
+      return `/${relToDocs.replace(/\/index\.(md|html)$/i, "/")}${anchor}`;
     }
 
     return `/${relToDocs.replace(/\.(md|html)$/i, "")}${anchor}`;
@@ -332,7 +335,7 @@ function parseAdrIndexStructure(adrIndexContent) {
 
 /**
  * Builds a compact `/adr/` sidebar listing the ADR overview, active Clinical Kernel decisions,
- * and domain decision log section links into `/adr/index#...`.
+ * and domain decision log section links into `/adr/#...`.
  *
  * @param {string} adrIndexContent
  * @param {Array<{text: string, link: string, status?: string}>} indexAdrEntries
@@ -344,7 +347,7 @@ export function buildAdrSidebarGroups(adrIndexContent, indexAdrEntries = []) {
       .map((entry) => normalizeRouteKey(entry.link))
   );
 
-  const overviewItems = [{ text: "ADR Overview & Log", link: "/adr/index" }];
+  const overviewItems = [{ text: "ADR Overview & Log", link: "/adr/" }];
   if (
     indexAdrEntries.some(
       (entry) => normalizeRouteKey(entry.link) === "/adr/TEMPLATE"
@@ -372,7 +375,7 @@ export function buildAdrSidebarGroups(adrIndexContent, indexAdrEntries = []) {
           ...filteredKernelItems.slice(0, MAX_INLINE_KERNEL_SIDEBAR_ITEMS),
           {
             text: "All Kernel Decisions (K001–K037)",
-            link: `/adr/index#${vitepressSlugify(kernelHeading)}`,
+            link: `/adr/#${vitepressSlugify(kernelHeading)}`,
           },
         ]
       : filteredKernelItems;
@@ -385,7 +388,7 @@ export function buildAdrSidebarGroups(adrIndexContent, indexAdrEntries = []) {
       )
       .map((heading) => ({
         text: heading,
-        link: `/adr/index#${vitepressSlugify(heading)}`,
+        link: `/adr/#${vitepressSlugify(heading)}`,
       }))
   );
 
@@ -509,7 +512,10 @@ export function synthesizeSidebarFromIndex(indexPath, options = {}) {
       seenRoutes.add(routeKey);
     }
 
-    if (entry.section === "Architecture decision records") {
+    if (
+      entry.section === "Architecture decision records" ||
+      routeKey.startsWith("/adr/")
+    ) {
       adrEntries.push(entry);
       continue;
     }
@@ -627,8 +633,8 @@ export function synthesizeSidebarFromIndex(indexPath, options = {}) {
       blogItems.sort((a, b) => {
         const aKey = normalizeRouteKey(a.link);
         const bKey = normalizeRouteKey(b.link);
-        if (aKey === "/blog/index") return -1;
-        if (bKey === "/blog/index") return 1;
+        if (aKey === "/blog/") return -1;
+        if (bKey === "/blog/") return 1;
         return bKey.localeCompare(aKey);
       });
       resolvedBlogItems = blogItems;
@@ -637,8 +643,8 @@ export function synthesizeSidebarFromIndex(indexPath, options = {}) {
 
   // Keep overview pages at the top of generated reference and component sections.
   apiItems.sort((a, b) => {
-    if (normalizeRouteKey(a.link) === "/api/index") return -1;
-    if (normalizeRouteKey(b.link) === "/api/index") return 1;
+    if (normalizeRouteKey(a.link) === "/api/") return -1;
+    if (normalizeRouteKey(b.link) === "/api/") return 1;
     return 0;
   });
   schemaItems.sort((a, b) => {
@@ -649,8 +655,18 @@ export function synthesizeSidebarFromIndex(indexPath, options = {}) {
     return 0;
   });
   componentItems.sort((a, b) => {
-    if (normalizeRouteKey(a.link) === "/components/index") return -1;
-    if (normalizeRouteKey(b.link) === "/components/index") return 1;
+    if (normalizeRouteKey(a.link) === "/components/") return -1;
+    if (normalizeRouteKey(b.link) === "/components/") return 1;
+    return 0;
+  });
+  migrationHistoricalItems.sort((a, b) => {
+    const aKey = normalizeRouteKey(a.link);
+    const bKey = normalizeRouteKey(b.link);
+    if (aKey === "/migration/") return -1;
+    if (bKey === "/migration/") return 1;
+    const aInMigration = aKey.startsWith("/migration/");
+    const bInMigration = bKey.startsWith("/migration/");
+    if (aInMigration !== bInMigration) return aInMigration ? -1 : 1;
     return 0;
   });
 
@@ -682,8 +698,8 @@ export function synthesizeSidebarFromIndex(indexPath, options = {}) {
       key.startsWith("/ux/") || key === "/kernel/CLINICAL_KERNEL_SPECIFICATION"
     );
   });
-  const openapiSectionItems = seenRoutes.has("/api/index")
-    ? [{ text: "REST API Reference", link: "/api/index" }, ...openapiItems]
+  const openapiSectionItems = seenRoutes.has("/api/")
+    ? [{ text: "REST API Reference", link: "/api/" }, ...openapiItems]
     : openapiItems;
 
   assignSection(
@@ -774,17 +790,17 @@ export function synthesizeSidebarFromIndex(indexPath, options = {}) {
       text: "Clinical Kernel Specification",
       link: "/kernel/CLINICAL_KERNEL_SPECIFICATION",
     },
-    { text: "Engineering Blog", link: "/blog/index" },
+    { text: "Engineering Blog", link: "/blog/" },
     { text: "Product & Strategy", link: "/strategy/MARKET_HYPOTHESES" },
-    { text: "UI Components", link: "/components/index" },
-    { text: "REST API Reference", link: "/api/index" },
+    { text: "UI Components", link: "/components/" },
+    { text: "REST API Reference", link: "/api/" },
     { text: "Data Model Reference", link: "/schema/README" },
     {
       text: "GxP, Standards & Policies",
       link: "/SDLC/Signature_Token_Cryptographic_Contract",
     },
-    { text: "Architectural Decision Records", link: "/adr/index" },
-    { text: "Historical & Migration Archive", link: "/migration/index" },
+    { text: "Architectural Decision Records", link: "/adr/" },
+    { text: "Historical & Migration Archive", link: "/migration/" },
   ].filter((item) => seenRoutes.has(item.link));
 
   const rootGroups = [
@@ -867,6 +883,9 @@ export function buildPortalSearchCatalog(indexPath, options = {}) {
   const toRoute = (relativePath) => {
     const clean = relativePath.replace(/\\/g, "/").replace(/^\/+/, "");
     if (clean.toLowerCase() === "index.md") return "/";
+    if (/\/index\.md$/i.test(clean)) {
+      return `/${clean.replace(/\/index\.md$/i, "/")}`;
+    }
     return `/${clean.replace(/\.md$/i, "")}`;
   };
 
