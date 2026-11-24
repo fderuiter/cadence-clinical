@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Cadence.Apps.Etmf.Domain;
 using Cadence.Apps.Etmf.Infrastructure.Persistence;
 using Cadence.Contracts;
+using Cadence.Database.Audit;
 using Cadence.Kernel.Time;
 
 using MassTransit;
@@ -48,6 +49,9 @@ public sealed class EConsentCompletedConsumer(
         }
 
         var effectiveTimestamp = msg.SignedAt ?? _clock.UtcNow;
+        using var _ = AmbientAuditActorScope.BeginScope(
+            "svc:etmf-econsent-consumer",
+            "EConsent completed filing sync");
 
         var docId = Guid.NewGuid().ToString();
         var safeStudyId = TmfDocument.SanitizePathSegment(msg.StudyId, "study");

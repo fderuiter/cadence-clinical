@@ -2,6 +2,7 @@ using System;
 
 using Cadence.Apps.Safety.Domain;
 using Cadence.Apps.Safety.Infrastructure.Persistence.Configurations;
+using Cadence.Core.Domain;
 using Cadence.Core.Domain.Audit;
 using Cadence.Database.Configurations;
 using Cadence.Database.Signatures;
@@ -37,6 +38,7 @@ public sealed class SafetyDbContext(DbContextOptions<SafetyDbContext> options) :
     public DbSet<PeriodicSafetyReportRevision> PeriodicSafetyReportRevisions => Set<PeriodicSafetyReportRevision>();
     public DbSet<DeviceSafetyInvestigation> DeviceSafetyInvestigations => Set<DeviceSafetyInvestigation>();
     public DbSet<AuditLogEntry> AuditLogEntries => Set<AuditLogEntry>();
+    public DbSet<TransactionalOutboxMessage> TransactionalOutbox => Set<TransactionalOutboxMessage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -61,6 +63,7 @@ public sealed class SafetyDbContext(DbContextOptions<SafetyDbContext> options) :
         modelBuilder.ApplyConfiguration(new PeriodicSafetyReportRevisionConfiguration());
         modelBuilder.ApplyConfiguration(new DeviceSafetyInvestigationConfiguration());
         modelBuilder.ApplyConfiguration(new AuditLogEntryConfiguration());
+        modelBuilder.ApplyConfiguration(new TransactionalOutboxMessageConfiguration());
         modelBuilder.ConfigureStandaloneTenancy(this);
     }
 }

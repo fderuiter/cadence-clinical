@@ -73,15 +73,20 @@ public sealed class StandaloneTenantSaveChangesInterceptor : SaveChangesIntercep
     {
         if (eventData.Context is { } context)
         {
-            var ext = context.GetService<IDbContextOptions>()?.FindExtension<StandaloneTenantOptionsExtension>();
-            Guid? tenantId = ext?.TenantAccessor is not null
-                ? await ext.TenantAccessor.GetCurrentTenantIdAsync(cancellationToken).ConfigureAwait(false)
-                : null;
-            StampTenantIds(context, ext, tenantId);
+            await StampTenantIdsAsync(context, cancellationToken).ConfigureAwait(false);
             Cadence.Database.Concurrency.StandaloneConcurrencyTokenInterceptor.IncrementConcurrencyTokens(context);
         }
 
         return await base.SavingChangesAsync(eventData, result, cancellationToken).ConfigureAwait(false);
+    }
+
+    internal static async ValueTask StampTenantIdsAsync(DbContext context, CancellationToken cancellationToken = default)
+    {
+        var ext = context.GetService<IDbContextOptions>()?.FindExtension<StandaloneTenantOptionsExtension>();
+        Guid? tenantId = ext?.TenantAccessor is not null
+            ? await ext.TenantAccessor.GetCurrentTenantIdAsync(cancellationToken).ConfigureAwait(false)
+            : null;
+        StampTenantIds(context, ext, tenantId);
     }
 
     private static void StampTenantIds(DbContext context, StandaloneTenantOptionsExtension? ext, Guid? resolvedTenantId)

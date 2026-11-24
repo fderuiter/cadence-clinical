@@ -1,13 +1,20 @@
 using System;
+using System.Linq;
+using System.Security.Claims;
 using System.Text.RegularExpressions;
 
+using Cadence.Database.Audit;
 using Cadence.Database.Concurrency;
 using Cadence.Database.Tenancy;
+using Cadence.Kernel.Time;
+using Cadence.Security.Authentication;
 using Cadence.Security.Rbac;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -40,6 +47,7 @@ public static partial class CadenceDatabaseExtensions
     /// <summary>
     /// Registers <typeparamref name="TDbContext"/> against PostgreSQL with transient-failure retries,
     /// <c>cadence.tenant_id</c> session binding + SaveChanges tenant stamping (ADR-2250, K-ID-2),
+    /// default 21 CFR Part 11 <see cref="GxPAuditInterceptor"/> hash-chained audit logging + outbox flushing,
     /// a readiness health check, and migrations when <see cref="CadenceMigrationOptions"/> asks for it.
     /// The connection string is resolved by <see cref="ResolvePostgresConnectionString"/>.
     /// </summary>
@@ -67,6 +75,8 @@ public static partial class CadenceDatabaseExtensions
         }
 
         builder.Services.AddProblemDetails();
+        builder.Services.TryAddSingleton<IClock>(SystemClock.Instance);
+        builder.Services.TryAddScoped<IAuditActorScope, AmbientAuditActorScope>();
         builder.Services.TryAddEnumerable(
             ServiceDescriptor.Singleton<IExceptionHandler, StandaloneConcurrencyExceptionHandler>());
 
@@ -79,6 +89,7 @@ public static partial class CadenceDatabaseExtensions
                 StandaloneTenantConnectionInterceptor.Instance,
                 StandaloneTenantSaveChangesInterceptor.Instance,
                 StandaloneConcurrencyTokenInterceptor.Instance);
+            options.AddCadenceGxPAuditInterceptor(sp);
         });
 
         builder.Services.AddHealthChecks()
@@ -87,6 +98,94 @@ public static partial class CadenceDatabaseExtensions
         builder.Services.AddCadenceMigrations<TDbContext>(builder.Configuration);
 
         return builder;
+    }
+
+    /// <summary>
+    /// Attaches a single <see cref="GxPAuditInterceptor"/> to <paramref name="options"/> if one has not already been
+    /// configured, resolving actors fail-closed via <see cref="ResolveAuditActor"/>.
+    /// </summary>
+    public static DbContextOptionsBuilder AddCadenceGxPAuditInterceptor(
+        this DbContextOptionsBuilder options,
+        IServiceProvider serviceProvider)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        ArgumentNullException.ThrowIfNull(serviceProvider);
+
+        bool alreadyRegistered = options.Options
+            .FindExtension<CoreOptionsExtension>()?
+            .Interceptors?
+            .OfType<GxPAuditInterceptor>()
+            .Any() is true;
+
+        if (!alreadyRegistered)
+        {
+            options.AddInterceptors(new GxPAuditInterceptor(
+                () => ResolveAuditActor(serviceProvider),
+                serviceProvider.GetService<IClock>() ?? SystemClock.Instance,
+                () => ResolveAuditChangeReason(serviceProvider)));
+        }
+
+        return options;
+    }
+
+    /// <summary>
+    /// Resolves the active change reason for a GxP database save from <see cref="IAuditActorScope"/> or the decoded
+    /// RFC 8187 <c>X-Change-Reason</c> HTTP request header when an audited entity did not supply one directly.
+    /// </summary>
+    public static string? ResolveAuditChangeReason(IServiceProvider serviceProvider)
+    {
+        ArgumentNullException.ThrowIfNull(serviceProvider);
+
+        string? scopedReason = serviceProvider.GetService<IAuditActorScope>()?.CurrentChangeReason
+                               ?? AmbientAuditActorScope.Current?.ChangeReason;
+        if (!string.IsNullOrWhiteSpace(scopedReason))
+        {
+            return scopedReason;
+        }
+
+        HttpContext? httpContext = serviceProvider.GetService<IHttpContextAccessor>()?.HttpContext;
+        return httpContext is not null ? ChangeReasonHeader.Read(httpContext.Request) : null;
+    }
+
+    /// <summary>
+    /// Resolves the attributable actor for a GxP database save from <see cref="IAuditActorScope"/> (<c>svc:*</c>)
+    /// first, then the verified HTTP caller claims, failing closed with <see cref="InvalidOperationException"/>
+    /// when neither is present.
+    /// </summary>
+    public static string ResolveAuditActor(IServiceProvider serviceProvider)
+    {
+        ArgumentNullException.ThrowIfNull(serviceProvider);
+
+        string? scopedActor = serviceProvider.GetService<IAuditActorScope>()?.CurrentActor
+                              ?? AmbientAuditActorScope.Current?.Actor;
+        if (!string.IsNullOrWhiteSpace(scopedActor))
+        {
+            return scopedActor;
+        }
+
+        HttpContext? httpContext = serviceProvider.GetService<IHttpContextAccessor>()?.HttpContext;
+        if (httpContext is not null)
+        {
+            string? principalUserId = CallerScope.Principal(httpContext)?.UserId;
+            if (!string.IsNullOrWhiteSpace(principalUserId))
+            {
+                return principalUserId;
+            }
+
+            if (httpContext.User.Identity is { IsAuthenticated: true })
+            {
+                string? claimUserId = httpContext.User.FindFirst(CadenceClaimTypes.Subject)?.Value
+                                      ?? httpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                                      ?? httpContext.User.Identity.Name;
+                if (!string.IsNullOrWhiteSpace(claimUserId))
+                {
+                    return claimUserId;
+                }
+            }
+        }
+
+        throw new InvalidOperationException(
+            "GxP audit entries require a verified authenticated HTTP caller or an explicit 'svc:' IAuditActorScope.");
     }
 
     /// <summary>
@@ -123,6 +222,8 @@ public static partial class CadenceDatabaseExtensions
     private static void RegisterScopedTenantAccessors(IServiceCollection services)
     {
         services.AddProblemDetails();
+        services.TryAddSingleton<IClock>(SystemClock.Instance);
+        services.TryAddScoped<IAuditActorScope, AmbientAuditActorScope>();
         services.TryAddEnumerable(
             ServiceDescriptor.Singleton<IExceptionHandler, StandaloneConcurrencyExceptionHandler>());
         services.TryAddSingleton<CurrentTenantAccessor>();

@@ -3,6 +3,7 @@ using Cadence.Apps.Imaging.Infrastructure.Persistence;
 using Cadence.Apps.Imaging.Infrastructure.Security;
 using Cadence.Apps.Imaging.Services;
 using Cadence.Database;
+using Cadence.Database.Signatures;
 using Cadence.Kernel.Time;
 using Cadence.Security.DependencyInjection;
 using Cadence.Telemetry;
@@ -20,6 +21,7 @@ builder.Services.AddImagingDeidentification();
 builder.Services.AddScoped<IDicomIngestionService, DicomIngestionService>();
 builder.Services.AddScoped<IImagingSegmentationService, ImagingSegmentationService>();
 builder.AddCadencePostgresDbContext<ImagingDbContext>();
+builder.Services.AddCadenceDurableSigTokenStore<ImagingDbContext>();
 
 var app = builder.Build();
 app.UseCadenceWebDefaults();

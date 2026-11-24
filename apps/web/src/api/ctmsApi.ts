@@ -92,11 +92,14 @@ function buildAuditHeaders(
   return headers;
 }
 
-async function fetchAuthenticatedPdf(pathSuffix: string): Promise<Blob> {
+async function fetchAuthenticatedPdf(
+  pathSuffix: string,
+  extraHeaders: Record<string, string> = {}
+): Promise<Blob> {
   const token = await getBearerToken();
   const baseUrl = getBaseUrl().replace(/\/+$/, "");
   const url = `${baseUrl}${pathSuffix}`;
-  const headers: Record<string, string> = {};
+  const headers: Record<string, string> = { ...extraHeaders };
   if (token) {
     headers.Authorization = `Bearer ${token}`;
   }
@@ -470,9 +473,10 @@ export const ctmsApi = {
   },
 
   /** Exports the 21 CFR Part 11 signed Delegation of Authority PDF log for a site. */
-  exportSiteDoaPdf(siteId: string): Promise<Blob> {
+  exportSiteDoaPdf(siteId: string, sigToken?: string): Promise<Blob> {
     return fetchAuthenticatedPdf(
-      `/api/v1/ctms/doa/sites/${encodeURIComponent(siteId)}/export-pdf`
+      `/api/v1/ctms/doa/sites/${encodeURIComponent(siteId)}/export-pdf`,
+      buildAuditHeaders({ sigToken })
     );
   },
 };

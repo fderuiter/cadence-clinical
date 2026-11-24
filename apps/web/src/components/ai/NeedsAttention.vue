@@ -404,6 +404,9 @@ function maskWords(mask: string | null | undefined): string {
   flex-wrap: wrap;
   align-items: center;
   gap: 6px 10px;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
   padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -424,12 +427,18 @@ function maskWords(mask: string | null | undefined): string {
 
 .attention-kind,
 .attention-when {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
   font-size: 0.8rem;
   color: var(--neutral-dark);
 }
 
 .attention-intent {
   flex-basis: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
   font-weight: 600;
   color: inherit;
 }

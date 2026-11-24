@@ -5,6 +5,7 @@ using Cadence.Apps.Ctms.Infrastructure.Persistence.Configurations;
 using Cadence.Core.Domain;
 using Cadence.Core.Domain.Audit;
 using Cadence.Database.Configurations;
+using Cadence.Database.Signatures;
 using Cadence.Database.Tenancy;
 
 using Microsoft.EntityFrameworkCore;
@@ -40,6 +41,7 @@ public sealed class CtmsDbContext(DbContextOptions<CtmsDbContext> options) : DbC
     public DbSet<CtmsSiteGreenlightGate> CtmsSiteGreenlightGates => Set<CtmsSiteGreenlightGate>();
     public DbSet<AuditLogEntry> AuditLogEntries => Set<AuditLogEntry>();
     public DbSet<TransactionalOutboxMessage> TransactionalOutbox => Set<TransactionalOutboxMessage>();
+    public DbSet<ConsumedSignatureToken> ConsumedSignatureTokens => Set<ConsumedSignatureToken>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -66,6 +68,7 @@ public sealed class CtmsDbContext(DbContextOptions<CtmsDbContext> options) : DbC
         modelBuilder.ApplyConfiguration(new CtmsSiteGreenlightGateConfiguration());
         modelBuilder.ApplyConfiguration(new AuditLogEntryConfiguration());
         modelBuilder.ApplyConfiguration(new TransactionalOutboxMessageConfiguration());
+        modelBuilder.ApplyConfiguration(new ConsumedSignatureTokenConfiguration());
         modelBuilder.ConfigureStandaloneTenancy(this);
     }
 }

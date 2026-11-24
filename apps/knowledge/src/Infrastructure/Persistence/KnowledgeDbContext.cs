@@ -2,6 +2,7 @@ using System;
 
 using Cadence.Apps.Knowledge.Domain;
 using Cadence.Apps.Knowledge.Infrastructure.Persistence.Configurations;
+using Cadence.Core.Domain;
 using Cadence.Core.Domain.Audit;
 using Cadence.Database.Configurations;
 using Cadence.Database.Signatures;
@@ -33,6 +34,7 @@ public sealed class KnowledgeDbContext(DbContextOptions<KnowledgeDbContext> opti
     public DbSet<OrgAuditLog> OrgAuditLogs => Set<OrgAuditLog>();
     public DbSet<TrainingCertificate> TrainingCertificates => Set<TrainingCertificate>();
     public DbSet<AuditLogEntry> AuditLogEntries => Set<AuditLogEntry>();
+    public DbSet<TransactionalOutboxMessage> TransactionalOutbox => Set<TransactionalOutboxMessage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -48,6 +50,7 @@ public sealed class KnowledgeDbContext(DbContextOptions<KnowledgeDbContext> opti
         modelBuilder.ApplyConfiguration(new ProtocolKnowledgeChunkConfiguration());
         modelBuilder.ApplyConfiguration(new DelegationRecordPeriodConfiguration(this));
         modelBuilder.ApplyConfiguration(new AuditLogEntryConfiguration());
+        modelBuilder.ApplyConfiguration(new TransactionalOutboxMessageConfiguration());
         modelBuilder.ConfigureStandaloneTenancy(this);
 
         modelBuilder.Entity<KnowledgeCategory>()

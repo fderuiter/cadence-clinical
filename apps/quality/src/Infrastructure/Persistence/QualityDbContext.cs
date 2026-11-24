@@ -2,6 +2,7 @@ using System;
 
 using Cadence.Apps.Quality.Domain;
 using Cadence.Apps.Quality.Infrastructure.Persistence.Configurations;
+using Cadence.Core.Domain;
 using Cadence.Core.Domain.Audit;
 using Cadence.Database.Configurations;
 using Cadence.Database.Tenancy;
@@ -24,6 +25,7 @@ public sealed class QualityDbContext(DbContextOptions<QualityDbContext> options)
     public DbSet<QualityCapaRecord> QualityCapaRecords => Set<QualityCapaRecord>();
     public DbSet<QualityAuditLog> QualityAuditLogs => Set<QualityAuditLog>();
     public DbSet<AuditLogEntry> AuditLogEntries => Set<AuditLogEntry>();
+    public DbSet<TransactionalOutboxMessage> TransactionalOutbox => Set<TransactionalOutboxMessage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -34,6 +36,7 @@ public sealed class QualityDbContext(DbContextOptions<QualityDbContext> options)
         modelBuilder.ApplyConfiguration(new QualityCapaRecordConfiguration());
         modelBuilder.ApplyConfiguration(new QualityAuditLogConfiguration());
         modelBuilder.ApplyConfiguration(new AuditLogEntryConfiguration());
+        modelBuilder.ApplyConfiguration(new TransactionalOutboxMessageConfiguration());
         modelBuilder.ConfigureStandaloneTenancy(this);
     }
 }

@@ -2,6 +2,7 @@ using System;
 
 using Cadence.Apps.Tickets.Domain;
 using Cadence.Apps.Tickets.Infrastructure.Persistence.Configurations;
+using Cadence.Core.Domain;
 using Cadence.Core.Domain.Audit;
 using Cadence.Database.Configurations;
 using Cadence.Database.Signatures;
@@ -26,6 +27,7 @@ public sealed class TicketsDbContext(DbContextOptions<TicketsDbContext> options)
     public DbSet<TicketAttachment> TicketAttachments => Set<TicketAttachment>();
     public DbSet<TicketAuditLog> TicketAuditLogs => Set<TicketAuditLog>();
     public DbSet<AuditLogEntry> AuditLogEntries => Set<AuditLogEntry>();
+    public DbSet<TransactionalOutboxMessage> TransactionalOutbox => Set<TransactionalOutboxMessage>();
     public DbSet<ConsumedSignatureToken> ConsumedSignatureTokens => Set<ConsumedSignatureToken>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -38,6 +40,7 @@ public sealed class TicketsDbContext(DbContextOptions<TicketsDbContext> options)
         modelBuilder.ApplyConfiguration(new TicketAttachmentConfiguration());
         modelBuilder.ApplyConfiguration(new TicketAuditLogConfiguration());
         modelBuilder.ApplyConfiguration(new AuditLogEntryConfiguration());
+        modelBuilder.ApplyConfiguration(new TransactionalOutboxMessageConfiguration());
         modelBuilder.ApplyConfiguration(new ConsumedSignatureTokenConfiguration());
         modelBuilder.ConfigureStandaloneTenancy(this);
     }

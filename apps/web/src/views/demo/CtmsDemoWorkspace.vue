@@ -6,7 +6,7 @@
       class="stats-grid"
       style="
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
         gap: 16px;
         margin-bottom: 24px;
       "
@@ -194,7 +194,17 @@
           <strong>Study:</strong>
           <span>{{ studyId }}</span>
         </div>
-        <div v-else style="display: flex; align-items: center; gap: 8px">
+        <div
+          v-else
+          style="
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+            min-width: 0;
+            max-width: 100%;
+          "
+        >
           <label
             for="ctms-study-input"
             style="margin: 0; font-weight: 600; white-space: nowrap"
@@ -205,11 +215,25 @@
             v-model="localStudyId"
             type="text"
             placeholder="e.g. CAD-101"
-            style="width: 150px; padding: 5px 8px"
+            style="
+              width: 150px;
+              max-width: 100%;
+              min-width: 0;
+              padding: 5px 8px;
+            "
             @change="syncScopeToStore"
           />
         </div>
-        <div style="display: flex; align-items: center; gap: 8px">
+        <div
+          style="
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+            min-width: 0;
+            max-width: 100%;
+          "
+        >
           <label
             for="ctms-site-picker"
             style="margin: 0; font-weight: 600; white-space: nowrap"
@@ -218,7 +242,12 @@
           <select
             id="ctms-site-picker"
             v-model="sitePickerChoice"
-            style="width: 190px; padding: 5px 8px"
+            style="
+              width: 190px;
+              max-width: 100%;
+              min-width: 0;
+              padding: 5px 8px;
+            "
             @change="onSitePickerChange"
           >
             <option value="">Select site…</option>
@@ -238,13 +267,26 @@
             v-model="localSiteId"
             type="text"
             placeholder="e.g. SITE-204"
-            style="width: 140px; padding: 5px 8px"
+            style="
+              width: 140px;
+              max-width: 100%;
+              min-width: 0;
+              padding: 5px 8px;
+            "
             @change="syncScopeToStore"
           />
         </div>
       </template>
       <div
-        style="margin-left: auto; display: flex; align-items: center; gap: 8px"
+        style="
+          margin-left: auto;
+          display: flex;
+          flex-wrap: wrap;
+          align-items: center;
+          gap: 8px;
+          min-width: 0;
+          max-width: 100%;
+        "
       >
         <strong>Site Document Readiness:</strong>
         <span
@@ -637,53 +679,57 @@
         style="margin-top: 20px"
       >
         <div class="card-title">Compiled Visit Letters</div>
-        <table class="clinical-visit-matrix">
-          <thead>
-            <tr>
-              <th scope="col">Letter ID</th>
-              <th scope="col">Template</th>
-              <th scope="col">Status</th>
-              <th scope="col">PDF SHA-256</th>
-              <th scope="col">Filed Document</th>
-              <th scope="col">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="letter in compiledLetters" :key="letter.letterId">
-              <td>
-                <code>{{ letter.letterId }}</code>
-              </td>
-              <td>{{ letter.letterType }}</td>
-              <td>
-                <span
-                  class="clinical-badge"
-                  :class="
-                    letter.isSigned
-                      ? 'clinical-badge--signed'
-                      : 'clinical-badge--draft'
-                  "
-                  >{{ letter.status }}</span
-                >
-              </td>
-              <td>
-                <code style="font-size: 11px">{{ letter.pdfSha256Hash }}</code>
-              </td>
-              <td>
-                {{ letter.etmfDocumentId || "Draft (not filed)" }}
-              </td>
-              <td>
-                <button
-                  type="button"
-                  class="btn btn-primary btn-sm"
-                  :data-testid="`btn-download-letter-${letter.letterId}`"
-                  @click="downloadCompiledLetterPdf(letter)"
-                >
-                  Download PDF
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        <div class="ctms-table-scroll">
+          <table class="clinical-visit-matrix">
+            <thead>
+              <tr>
+                <th scope="col">Letter ID</th>
+                <th scope="col">Template</th>
+                <th scope="col">Status</th>
+                <th scope="col">PDF SHA-256</th>
+                <th scope="col">Filed Document</th>
+                <th scope="col">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="letter in compiledLetters" :key="letter.letterId">
+                <td>
+                  <code>{{ letter.letterId }}</code>
+                </td>
+                <td>{{ letter.letterType }}</td>
+                <td>
+                  <span
+                    class="clinical-badge"
+                    :class="
+                      letter.isSigned
+                        ? 'clinical-badge--signed'
+                        : 'clinical-badge--draft'
+                    "
+                    >{{ letter.status }}</span
+                  >
+                </td>
+                <td>
+                  <code style="font-size: 11px">{{
+                    letter.pdfSha256Hash
+                  }}</code>
+                </td>
+                <td>
+                  {{ letter.etmfDocumentId || "Draft (not filed)" }}
+                </td>
+                <td>
+                  <button
+                    type="button"
+                    class="btn btn-primary btn-sm"
+                    :data-testid="`btn-download-letter-${letter.letterId}`"
+                    @click="downloadCompiledLetterPdf(letter)"
+                  >
+                    Download PDF
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <div
@@ -1116,7 +1162,10 @@
         <div
           style="
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            grid-template-columns: repeat(
+              auto-fit,
+              minmax(min(100%, 220px), 1fr)
+            );
             gap: 16px;
             margin-bottom: 16px;
             background: var(--semantic-color-surface-muted);
@@ -1301,7 +1350,7 @@
           </div>
         </div>
 
-        <div style="overflow-x: auto">
+        <div class="ctms-table-scroll">
           <table class="clinical-visit-matrix">
             <thead>
               <tr>
@@ -1406,7 +1455,10 @@
       <div
         style="
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+          grid-template-columns: repeat(
+            auto-fit,
+            minmax(min(100%, 320px), 1fr)
+          );
           gap: 20px;
           margin-bottom: 20px;
         "
@@ -1614,7 +1666,7 @@
             </button>
           </div>
 
-          <div style="overflow-x: auto">
+          <div class="ctms-table-scroll">
             <table class="clinical-visit-matrix">
               <thead>
                 <tr>
@@ -1709,7 +1761,7 @@
           <span>Grant Contract Amendments &amp; Version History Ledger</span>
         </div>
 
-        <div style="overflow-x: auto">
+        <div class="ctms-table-scroll">
           <table class="clinical-visit-matrix">
             <thead>
               <tr>
@@ -4574,6 +4626,41 @@ defineExpose({
 </script>
 
 <style scoped>
+.card {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.stats-grid .stat-card {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.stats-grid .stat-card > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+#ctms-milestones-container,
+#ctms-visits-container,
+#ctms-workload-container,
+#ctms-recruitment-container,
+#ctms-delegation-container,
+#ctms-audit-container,
+.ctms-table-scroll {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  box-sizing: border-box;
+}
+
 .modal {
   background: var(--semantic-color-surface);
   border-radius: 8px;

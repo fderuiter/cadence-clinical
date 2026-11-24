@@ -38,19 +38,23 @@ const title = computed(
 <style scoped>
 .ai-label {
   display: inline-flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
+  gap: 4px 6px;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
   padding: 1px 8px 1px 2px;
   border: 1px solid var(--semantic-color-ai-border);
-  border-radius: 999px;
+  border-radius: 12px;
   background: var(--semantic-color-ai-bg);
   color: var(--semantic-color-ai);
   font-size: 0.78rem;
   line-height: 1.6;
-  white-space: nowrap;
 }
 
 .ai-mark {
+  flex-shrink: 0;
   padding: 0 6px;
   border-radius: 999px;
   background: var(--semantic-color-ai);
@@ -60,7 +64,8 @@ const title = computed(
 }
 
 .ai-text {
-  overflow: hidden;
-  text-overflow: ellipsis;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 </style>

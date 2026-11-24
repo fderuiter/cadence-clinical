@@ -521,10 +521,29 @@ describe("Clinical Canvas RTSM workflows", () => {
     await wrapper.find("#btn-confirm-emergency-unblind").trigger("click");
     await flushPromises();
 
+    vi.mocked(etmfService.verifySignature).mockResolvedValue({
+      sig_token: "sig-unblind-001",
+    });
+    await wrapper.find("#sig-password").setValue("Password123!"); // pragma: allowlist secret
+    await wrapper
+      .find("#sig-reason")
+      .setValue(
+        "I authorize emergency treatment arm unblinding for acute clinical care"
+      );
+    await wrapper.find("#btn-confirm-sig").trigger("click");
+    await flushPromises();
+
+    expect(etmfService.verifySignature).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: `/api/v1/execution/subjects/${SUBJECT_UUID}/state`,
+        semanticAction: "execution.subject.unblind",
+      })
+    );
     expect(executionApi.changeSubjectState).toHaveBeenCalledWith(
       SUBJECT_UUID,
       "UNBLINDED",
-      justification
+      justification,
+      "sig-unblind-001"
     );
     expect(wrapper.find("#inspector-state").text()).toBe("Unblinded");
     expect(wrapper.find("#inspector-assigned-kit").text()).toBe("KIT-1001");
@@ -576,14 +595,110 @@ describe("Clinical Canvas RTSM workflows", () => {
     await wrapper.find("#btn-confirm-emergency-unblind").trigger("click");
     await flushPromises();
 
+    vi.mocked(etmfService.verifySignature).mockResolvedValue({
+      sig_token: "sig-unblind-er-001",
+    });
+    await wrapper.find("#sig-password").setValue("Password123!"); // pragma: allowlist secret
+    await wrapper
+      .find("#sig-reason")
+      .setValue(
+        "I authorize emergency treatment arm unblinding for acute clinical care"
+      );
+    await wrapper.find("#btn-confirm-sig").trigger("click");
+    await flushPromises();
+
+    expect(etmfService.verifySignature).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: `/api/v1/execution/subjects/${SUBJECT_UUID}/state`,
+        semanticAction: "execution.subject.unblind",
+      })
+    );
     expect(executionApi.changeSubjectState).toHaveBeenCalledWith(
       SUBJECT_UUID,
       "UNBLINDED",
-      justification
+      justification,
+      "sig-unblind-er-001"
     );
     expect(wrapper.find("#inspector-state").text()).toBe("Unblinded");
     expect(wrapper.find("#inspector-assigned-kit").text()).toBe("KIT-2002");
     expect(wrapper.find("#inspector-treatment-group").text()).toBe("PLACEBO");
+  });
+
+  it("enforces >= 50-character clinical justification and step-up signature for participant withdrawal", async () => {
+    participants[0].status = "ACTIVE";
+    signIn({
+      id: "usr-pi-1",
+      username: "pi.site101",
+      roles: ["Site Investigator", "Principal Investigator"],
+    });
+    vi.mocked(executionApi.getSubjectDetail).mockResolvedValue({
+      id: SUBJECT_UUID,
+      subject_id: "101-0001",
+      study_id: "CAD-101",
+      site_id: "SITE-101",
+      status: "ACTIVE",
+      active_protocol_version: "1.0",
+      enrollment_index: 1,
+      treatment_group: null,
+      randomization_seed: null,
+      investigational_product_id: null,
+    });
+    vi.mocked(executionApi.changeSubjectState).mockImplementation(
+      async (_id, nextState) => {
+        participants[0].status = nextState;
+        return { ...participants[0] };
+      }
+    );
+    vi.mocked(etmfService.verifySignature).mockResolvedValue({
+      sig_token: "sig-withdraw-001",
+    });
+
+    await openCanvas(
+      `/studies/CAD-101?stage=conduct&section=participants&node=participant:${SUBJECT_UUID}`
+    );
+
+    await wrapper.find("#state-change-target").setValue("WITHDRAWN");
+    expect(wrapper.find("#btn-change-state").text()).toBe(
+      "Sign & move to withdrawn"
+    );
+    await wrapper.find("#state-change-reason").setValue("Short reason");
+    expect(wrapper.find("#btn-change-state").element.disabled).toBe(true);
+    expect(wrapper.find("#state-change-withdraw-char-count").text()).toContain(
+      "12 / 50 minimum characters"
+    );
+
+    const withdrawalJustification =
+      "Participant voluntarily withdrew consent from study procedures following Cycle 2 Day 15 visit.";
+    await wrapper
+      .find("#state-change-reason")
+      .setValue(withdrawalJustification);
+    expect(wrapper.find("#btn-change-state").element.disabled).toBe(false);
+
+    await wrapper.find("#btn-change-state").trigger("click");
+    await flushPromises();
+
+    await wrapper.find("#sig-password").setValue("Password123!"); // pragma: allowlist secret
+    await wrapper
+      .find("#sig-reason")
+      .setValue(
+        "I verify clinical justification and authorize participant withdrawal"
+      );
+    await wrapper.find("#btn-confirm-sig").trigger("click");
+    await flushPromises();
+
+    expect(etmfService.verifySignature).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: `/api/v1/execution/subjects/${SUBJECT_UUID}/state`,
+        semanticAction: "execution.subject.withdraw",
+      })
+    );
+    expect(executionApi.changeSubjectState).toHaveBeenCalledWith(
+      SUBJECT_UUID,
+      "WITHDRAWN",
+      withdrawalJustification,
+      "sig-withdraw-001"
+    );
+    expect(wrapper.find("#inspector-state").text()).toBe("Withdrawn");
   });
 
   it("reveals arm details to an unblinded caller and purges cached treatment_group when switching to a blinded coordinator", async () => {

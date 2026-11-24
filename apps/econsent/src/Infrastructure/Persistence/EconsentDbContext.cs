@@ -2,6 +2,7 @@ using System;
 
 using Cadence.Apps.Econsent.Domain;
 using Cadence.Apps.Econsent.Infrastructure.Persistence.Configurations;
+using Cadence.Core.Domain;
 using Cadence.Core.Domain.Audit;
 using Cadence.Database.Configurations;
 using Cadence.Database.Signatures;
@@ -45,6 +46,7 @@ public sealed class EconsentDbContext(DbContextOptions<EconsentDbContext> option
     public DbSet<ConsentWithdrawal> ConsentWithdrawals => Set<ConsentWithdrawal>();
     public DbSet<BiometricLivenessVerification> BiometricLivenessVerifications => Set<BiometricLivenessVerification>();
     public DbSet<AuditLogEntry> AuditLogEntries => Set<AuditLogEntry>();
+    public DbSet<TransactionalOutboxMessage> TransactionalOutbox => Set<TransactionalOutboxMessage>();
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -75,6 +77,7 @@ public sealed class EconsentDbContext(DbContextOptions<EconsentDbContext> option
         modelBuilder.ApplyConfiguration(new ConsentWithdrawalConfiguration());
         modelBuilder.ApplyConfiguration(new BiometricLivenessVerificationConfiguration());
         modelBuilder.ApplyConfiguration(new AuditLogEntryConfiguration());
+        modelBuilder.ApplyConfiguration(new TransactionalOutboxMessageConfiguration());
 
         modelBuilder.AddTransactionalOutboxEntities();
         modelBuilder.ConfigureStandaloneTenancy(this);

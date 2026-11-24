@@ -1716,14 +1716,22 @@ describe("Web Inline Focus Handoffs & Keyboard Scrollable Cards (ADR-2593)", () 
 
     await wrapper.find("#btn-toggle-emergency-unblind").trigger("click");
     await settleFocus();
+    const unblindJustification =
+      "Suspected acute anaphylactic reaction requiring immediate clinical treatment allocation disclosure";
     await wrapper
       .find("#emergency-unblind-reason")
-      .setValue(
-        "Suspected acute anaphylactic reaction requiring immediate clinical treatment allocation disclosure"
-      );
-    const submitUnblindPromise = wrapper
-      .find("#btn-confirm-emergency-unblind")
-      .trigger("click");
+      .setValue(unblindJustification);
+    await wrapper.find("#btn-confirm-emergency-unblind").trigger("click");
+    await settleFocus();
+    const unblindSigModal = wrapper.findComponent({
+      name: "SignatureCaptureModal",
+    });
+    const submitUnblindPromise = (
+      unblindSigModal.props("onSign") as (
+        sigToken: string,
+        signingReason: string
+      ) => Promise<unknown>
+    )("sig-unblind-1", unblindJustification);
     await wrapper.setProps({
       participant: {
         id: "subj-1",
@@ -1756,13 +1764,23 @@ describe("Web Inline Focus Handoffs & Keyboard Scrollable Cards (ADR-2593)", () 
       },
     });
     await settleFocus();
+    const withdrawJustification =
+      "Participant formally withdrew informed consent at Visit 3 following investigator discussion";
     await wrapper.find("#state-change-target").setValue("WITHDRAWN");
-    await wrapper
-      .find("#state-change-reason")
-      .setValue("Participant withdrew consent at Visit 3");
+    await wrapper.find("#state-change-reason").setValue(withdrawJustification);
     const changeBtn = wrapper.find("#btn-change-state");
     (changeBtn.element as HTMLElement).focus();
-    const withdrawPromise = changeBtn.trigger("click");
+    await changeBtn.trigger("click");
+    await settleFocus();
+    const withdrawSigModal = wrapper.findComponent({
+      name: "SignatureCaptureModal",
+    });
+    const withdrawPromise = (
+      withdrawSigModal.props("onSign") as (
+        sigToken: string,
+        signingReason: string
+      ) => Promise<unknown>
+    )("sig-withdraw-1", withdrawJustification);
     await wrapper.setProps({
       participant: {
         id: "subj-1",

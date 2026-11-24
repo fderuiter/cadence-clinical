@@ -504,17 +504,22 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
 
     // Open OnboardingChecklistDrawer (via compact Account menu when <= 1280px) and audit pending status pills and task navigation buttons
     const compactActionsBtn = page.locator("#btn-header-actions-menu");
-    if (await compactActionsBtn.isVisible().catch(() => false)) {
-      await compactActionsBtn.click();
-      await expect(
-        page.locator("#header-secondary-menu.is-open")
-      ).toBeVisible();
-      await expectNoWcagViolations(
-        page,
-        "AppShell compact secondary menu (#header-secondary-menu)"
-      );
-    }
-    await page.locator("#btn-onboarding-checklist-trigger").click();
+    const openOnboardingChecklistDrawer = async (auditCompactMenu = false) => {
+      if (await compactActionsBtn.isVisible().catch(() => false)) {
+        await compactActionsBtn.click();
+        await expect(
+          page.locator("#header-secondary-menu.is-open")
+        ).toBeVisible();
+        if (auditCompactMenu) {
+          await expectNoWcagViolations(
+            page,
+            "AppShell compact secondary menu (#header-secondary-menu)"
+          );
+        }
+      }
+      await page.locator("#btn-onboarding-checklist-trigger").click();
+    };
+    await openOnboardingChecklistDrawer(true);
     await expect(page.locator("#onboarding-checklist-drawer")).toBeVisible();
     await expect(
       page.locator("#onboarding-checklist-drawer .status-pending").first()
@@ -588,7 +593,7 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
     expect(toggleBox!.height).toBeGreaterThanOrEqual(43.9);
 
     await gotoHashRoute(page, "/overview");
-    await page.locator("#btn-onboarding-checklist-trigger").click();
+    await openOnboardingChecklistDrawer();
     await expect(page.locator("#onboarding-checklist-drawer")).toBeVisible();
     await page.locator("#btn-drawer-start-tour").click();
     await expect(tourPopover).toBeVisible();
@@ -621,7 +626,7 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
 
     // Switch persona to site_crc on 768x1024 and verify eCRF workspace anchors without inert locks
     await page.locator("#persona-select").selectOption("site_crc");
-    await page.locator("#btn-onboarding-checklist-trigger").click();
+    await openOnboardingChecklistDrawer();
     await page.locator("#btn-drawer-start-tour").click();
     await expect(tourPopover).toBeVisible();
 
@@ -3655,5 +3660,515 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
     await expectNoWcagLightAndDark(
       "Stacked StudyCanvasView inspector focus/scroll at 768x1024"
     );
+  });
+
+  test("ADR-2663: synced sticky chrome offsets, short-viewport header release, nested fieldset grid stacking, and zero horizontal overflow down to 320px and 200% zoom", async ({
+    page,
+  }) => {
+    test.setTimeout(120_000);
+    const captureScreenshots = process.env.CAPTURE_ADR2657_SCREENSHOTS === "1";
+    await page.emulateMedia({ reducedMotion: "reduce" });
+
+    const SEEDED_OBSERVATION_REF =
+      "observation:00000000-0000-0000-0000-000000000001@1"; // deid-ignore
+    const LIVE_WEB_ROUTES = [
+      "/overview",
+      "/plans",
+      "/onboarding/trial",
+      "/login",
+      "/forbidden",
+      "/unavailable",
+      "/studies",
+      "/studies/DEMO-01",
+      "/ecrf",
+      `/observations/${SEEDED_OBSERVATION_REF}`,
+      "/ctms",
+      "/ssu",
+      "/etmf",
+      "/training",
+      "/tickets",
+      "/knowledge",
+    ];
+
+    const waitForRouteMain = async (routePath: string) => {
+      await gotoHashRoute(page, routePath);
+      await expect(
+        page.locator("main").first(),
+        `Expected <main> on ${routePath}`
+      ).toBeVisible();
+      await page.evaluate(
+        () =>
+          new Promise<void>((resolve) =>
+            requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+          )
+      );
+    };
+
+    // 1. /ecrf at 768x1024 and 320x640: all 7 multi-span field pairs inside form#form-VS_DEMO.responsive-grid stack full-width, and #query-flag-vssbp never overlaps #vsdpb
+    for (const vp of [
+      { width: 768, height: 1024 },
+      { width: 320, height: 640 },
+    ]) {
+      await page.setViewportSize(vp);
+      await waitForRouteMain("/ecrf");
+      const vsForm = page.locator("form#form-VS_DEMO.responsive-grid");
+      await expect(vsForm).toBeVisible();
+
+      const formMetrics = await vsForm.evaluate((form) => {
+        const formRect = form.getBoundingClientRect();
+        const wrappers = Array.from(
+          form.querySelectorAll(":scope > fieldset > div")
+        ).filter((el) => {
+          const style = window.getComputedStyle(el);
+          return (
+            style.display !== "none" &&
+            el.getBoundingClientRect().height > 0 &&
+            el.getBoundingClientRect().width > 0
+          );
+        });
+        const rects = wrappers.map((el) => {
+          const r = el.getBoundingClientRect();
+          return {
+            top: r.top,
+            bottom: r.bottom,
+            left: r.left,
+            right: r.right,
+            width: r.width,
+            inlineSpan: el.getAttribute("style") || "",
+          };
+        });
+        const multiSpanCount = rects.filter(
+          (r) =>
+            r.inlineSpan.includes("span 6") ||
+            r.inlineSpan.includes("span 4") ||
+            r.inlineSpan.includes("span 8") ||
+            !r.inlineSpan.includes("span 12")
+        ).length;
+
+        const queryFlag = document.getElementById("query-flag-vssbp");
+        const vsdpb = document.getElementById("vsdpb");
+        const vssbp = document.getElementById("vssbp");
+        const qRect = queryFlag?.getBoundingClientRect() ?? null;
+        const dRect = vsdpb?.getBoundingClientRect() ?? null;
+        const sRect = vssbp?.getBoundingClientRect() ?? null;
+
+        const overlaps = (
+          a: DOMRect | null,
+          b: DOMRect | null
+        ): boolean | null => {
+          if (!a || !b) return null;
+          return !(
+            a.right <= b.left + 0.5 ||
+            b.right <= a.left + 0.5 ||
+            a.bottom <= b.top + 0.5 ||
+            b.bottom <= a.top + 0.5
+          );
+        };
+
+        return {
+          formWidth: formRect.width,
+          wrapperCount: rects.length,
+          multiSpanCount,
+          rects,
+          hasQueryFlag: Boolean(qRect),
+          hasVsdpb: Boolean(dRect),
+          overlapsVsdpb: overlaps(qRect, dRect),
+          overlapsVssbp: overlaps(qRect, sRect),
+        };
+      });
+
+      // 11 multi-span fields (one 3-column row = 3 pairs + four 2-column rows = 4 pairs => 7 desktop pairs)
+      expect(
+        formMetrics.multiSpanCount,
+        `Expected all 11 multi-span fields (7 multi-span pairs) in form#form-VS_DEMO at ${vp.width}x${vp.height}`
+      ).toBe(11);
+
+      for (let i = 0; i < formMetrics.rects.length; i++) {
+        const cur = formMetrics.rects[i];
+        expect(
+          cur.width,
+          `Field wrapper #${i} should span full form width at ${vp.width}x${vp.height}`
+        ).toBeGreaterThanOrEqual(formMetrics.formWidth - 2);
+        if (i > 0) {
+          const prev = formMetrics.rects[i - 1];
+          expect(
+            cur.top,
+            `Field wrapper #${i} must stack below wrapper #${i - 1} at ${vp.width}x${vp.height}`
+          ).toBeGreaterThanOrEqual(prev.bottom - 1);
+        }
+      }
+
+      expect(formMetrics.hasQueryFlag).toBe(true);
+      expect(formMetrics.hasVsdpb).toBe(true);
+      expect(
+        formMetrics.overlapsVsdpb,
+        `#query-flag-vssbp must never overlap #vsdpb at ${vp.width}x${vp.height}`
+      ).toBe(false);
+      expect(
+        formMetrics.overlapsVssbp,
+        `#query-flag-vssbp must never overlap #vssbp at ${vp.width}x${vp.height}`
+      ).toBe(false);
+
+      if (captureScreenshots) {
+        await vsForm.scrollIntoViewIfNeeded();
+        await page.screenshot({
+          path: `/tmp/adr2657-ecrf-${vp.width}x${vp.height}.png`,
+        });
+      }
+    }
+
+    // 2. Short viewports (320x256 and 640x400): .app-header and .topbar release sticky positioning and scroll out of view
+    for (const vp of [
+      { width: 320, height: 256 },
+      { width: 640, height: 400 },
+    ]) {
+      await page.setViewportSize(vp);
+      await waitForRouteMain("/studies/DEMO-01");
+      await expect(page.locator(".app-header")).toBeVisible();
+      await expect(page.locator(".topbar")).toBeVisible();
+
+      const shortMetrics = await page.evaluate(() => {
+        const header = document.querySelector(".app-header");
+        const topbar = document.querySelector(".topbar");
+        const headerPos = header
+          ? window.getComputedStyle(header).position
+          : "";
+        const topbarPos = topbar
+          ? window.getComputedStyle(topbar).position
+          : "";
+        const stickyVar = document.documentElement.style.getPropertyValue(
+          "--sticky-chrome-offset"
+        );
+        window.scrollTo(0, 400);
+        const scrolledY = window.scrollY;
+        const headerBottomAfterScroll = header
+          ? header.getBoundingClientRect().bottom
+          : 0;
+        const topbarTopAfterScroll = topbar
+          ? topbar.getBoundingClientRect().top
+          : 0;
+        return {
+          headerPos,
+          topbarPos,
+          stickyVar,
+          scrolledY,
+          headerBottomAfterScroll,
+          topbarTopAfterScroll,
+        };
+      });
+
+      expect(["static", "relative"]).toContain(shortMetrics.headerPos);
+      expect(shortMetrics.topbarPos).toBe("static");
+      expect(shortMetrics.stickyVar).toBe("12px");
+      if (shortMetrics.scrolledY > 80) {
+        expect(shortMetrics.headerBottomAfterScroll).toBeLessThanOrEqual(4);
+        expect(shortMetrics.topbarTopAfterScroll).toBeLessThan(20);
+      }
+
+      if (captureScreenshots && vp.width === 320) {
+        await page.screenshot({
+          path: "/tmp/adr2657-study-canvas-320x256-scrolled.png",
+        });
+      }
+      await page.evaluate(() => window.scrollTo(0, 0));
+    }
+
+    // 3. Zero horizontal overflow at 320x640, 768x1024, and 900x768 across all 16 live routes (including /overview, /studies/DEMO-01, /ecrf, /ctms, /ssu, /training, /tickets)
+    for (const vp of [
+      { width: 320, height: 640 },
+      { width: 768, height: 1024 },
+      { width: 900, height: 768 },
+    ]) {
+      await page.setViewportSize(vp);
+      for (const routePath of LIVE_WEB_ROUTES) {
+        await waitForRouteMain(routePath);
+        const overflow = await page.evaluate(() => {
+          const doc = document.documentElement;
+          const main = document.querySelector("main");
+          const header = document.querySelector(".app-header");
+          return {
+            docScrollWidth: doc.scrollWidth,
+            docClientWidth: doc.clientWidth,
+            mainScrollWidth: main ? main.scrollWidth : 0,
+            mainClientWidth: main ? main.clientWidth : 0,
+            headerHeight: header ? header.getBoundingClientRect().height : 0,
+          };
+        });
+
+        expect(
+          overflow.docScrollWidth,
+          `Document horizontal overflow on ${routePath} at ${vp.width}x${vp.height}`
+        ).toBeLessThanOrEqual(overflow.docClientWidth);
+        expect(
+          overflow.mainScrollWidth,
+          `<main> horizontal overflow on ${routePath} at ${vp.width}x${vp.height}`
+        ).toBeLessThanOrEqual(overflow.mainClientWidth);
+
+        if (vp.width >= 768 && overflow.headerHeight > 0) {
+          expect(
+            overflow.headerHeight,
+            `.app-header height <= 52px on ${routePath} at ${vp.width}x${vp.height}`
+          ).toBeLessThanOrEqual(52.5);
+        }
+
+        if (
+          captureScreenshots &&
+          vp.width === 320 &&
+          routePath === "/training"
+        ) {
+          await page.screenshot({
+            path: "/tmp/adr2657-training-320x640.png",
+          });
+        }
+        if (
+          captureScreenshots &&
+          vp.width === 900 &&
+          routePath === "/studies/DEMO-01"
+        ) {
+          await page.screenshot({
+            path: "/tmp/adr2657-study-canvas-900x768.png",
+          });
+        }
+      }
+    }
+
+    // 4. Across all 16 live web routes at 1280x800, 1366x768, 640x400, and 320x256:
+    //    --sticky-chrome-offset stays synced on :root, .app-header <= 52px at >= 768px, and Tab / Shift+Tab / programmatic focus keep focused elements visible below sticky chrome
+    for (const vp of [
+      { width: 1280, height: 800 },
+      { width: 1366, height: 768 },
+      { width: 640, height: 400 },
+      { width: 320, height: 256 },
+    ]) {
+      await page.setViewportSize(vp);
+      for (const routePath of LIVE_WEB_ROUTES) {
+        await waitForRouteMain(routePath);
+
+        const headerState = await page.evaluate(() => {
+          const header = document.querySelector(".app-header");
+          const topbar = document.querySelector(".topbar");
+          const headerRect = header ? header.getBoundingClientRect() : null;
+          const headerPos = header
+            ? window.getComputedStyle(header).position
+            : "none";
+          const topbarRect = topbar ? topbar.getBoundingClientRect() : null;
+          const topbarPos = topbar
+            ? window.getComputedStyle(topbar).position
+            : "none";
+          const rootOffsetPx = parseFloat(
+            window
+              .getComputedStyle(document.documentElement)
+              .getPropertyValue("--sticky-chrome-offset") || "0"
+          );
+          const scrollPaddingTopPx = parseFloat(
+            window.getComputedStyle(document.documentElement)
+              .scrollPaddingTop || "0"
+          );
+          let stuckStickyHeight = 0;
+          if (headerRect && headerPos === "sticky") {
+            stuckStickyHeight += headerRect.height;
+          }
+          if (topbarRect && topbarPos === "sticky") {
+            stuckStickyHeight += topbarRect.height;
+          }
+          return {
+            hasHeader: Boolean(headerRect && headerRect.height > 0),
+            headerHeight: headerRect ? headerRect.height : 0,
+            stuckStickyHeight,
+            rootOffsetPx,
+            scrollPaddingTopPx,
+          };
+        });
+
+        if (vp.width >= 768 && vp.height >= 500 && headerState.hasHeader) {
+          expect(
+            headerState.headerHeight,
+            `.app-header height <= 52px on ${routePath} at ${vp.width}x${vp.height}`
+          ).toBeLessThanOrEqual(52.5);
+          expect(
+            headerState.rootOffsetPx,
+            `--sticky-chrome-offset synced >= stuckStickyHeight on ${routePath} at ${vp.width}x${vp.height}`
+          ).toBeGreaterThanOrEqual(Math.floor(headerState.stuckStickyHeight));
+          expect(headerState.scrollPaddingTopPx).toBeCloseTo(
+            headerState.rootOffsetPx,
+            0
+          );
+        }
+
+        // Scroll to the bottom of the document, then programmatically focus the first interactive element inside <main>
+        // (which is above the scrolled viewport / behind sticky chrome) and step with Tab + Shift+Tab
+        const hasMainTarget = await page.evaluate(() => {
+          (document.activeElement as HTMLElement | null)?.blur?.();
+          window.scrollTo(0, document.documentElement.scrollHeight);
+          const main = document.querySelector("main");
+          if (!main) return false;
+          const candidates = Array.from(
+            main.querySelectorAll<HTMLElement>(
+              'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+            )
+          ).filter((el) => {
+            const style = window.getComputedStyle(el);
+            const rect = el.getBoundingClientRect();
+            return (
+              style.display !== "none" &&
+              style.visibility !== "hidden" &&
+              !el.classList.contains("sr-only") &&
+              rect.width > 0 &&
+              rect.height > 0
+            );
+          });
+          if (candidates.length === 0) return false;
+          candidates[0].focus();
+          return true;
+        });
+
+        if (hasMainTarget) {
+          const checkActiveVisibleBelowChrome = async (stepLabel: string) => {
+            const activeMetrics = await page.evaluate(() => {
+              const active = document.activeElement as HTMLElement | null;
+              if (
+                !active ||
+                active === document.body ||
+                active.classList.contains("sr-only")
+              ) {
+                return null;
+              }
+              const inStickyChrome = Boolean(
+                active.closest(".app-header, .topbar")
+              );
+              if (inStickyChrome) return null;
+
+              let stickyBottom = 0;
+              for (const sel of [".app-header", ".topbar"]) {
+                const el = document.querySelector(sel);
+                if (el && window.getComputedStyle(el).position === "sticky") {
+                  stickyBottom = Math.max(
+                    stickyBottom,
+                    el.getBoundingClientRect().bottom
+                  );
+                }
+              }
+              const rect = active.getBoundingClientRect();
+              return {
+                tag: active.tagName,
+                id: active.id,
+                top: rect.top,
+                bottom: rect.bottom,
+                stickyBottom,
+                innerHeight: window.innerHeight,
+              };
+            });
+
+            if (activeMetrics) {
+              expect(
+                activeMetrics.top,
+                `${stepLabel} on ${routePath} at ${vp.width}x${vp.height} (${activeMetrics.tag}#${activeMetrics.id}) must sit below sticky chrome (${activeMetrics.stickyBottom}px)`
+              ).toBeGreaterThanOrEqual(activeMetrics.stickyBottom - 1.5);
+            }
+          };
+
+          await checkActiveVisibleBelowChrome("Programmatic focus");
+          await page.keyboard.press("Tab");
+          await checkActiveVisibleBelowChrome("Tab focus");
+          await page.keyboard.press("Shift+Tab");
+          await checkActiveVisibleBelowChrome("Shift+Tab focus");
+        }
+      }
+    }
+
+    // 5. 200% font scaling (320px width with 32px root font-size): .app-header and <main> wrap cleanly with zero horizontal page overflow across all 16 live web routes
+    await page.setViewportSize({ width: 320, height: 640 });
+    await page.evaluate(() => {
+      document.documentElement.style.fontSize = "32px";
+    });
+    const zoomFailures: Array<{
+      routePath: string;
+      docScrollWidth: number;
+      docClientWidth: number;
+      mainScrollWidth: number;
+      mainClientWidth: number;
+      headerScrollWidth: number;
+      headerClientWidth: number;
+      culprits: string[];
+    }> = [];
+    try {
+      for (const routePath of LIVE_WEB_ROUTES) {
+        await waitForRouteMain(routePath);
+        await page.evaluate(() => {
+          document.documentElement.style.fontSize = "32px";
+        });
+        const zoomMetrics = await page.evaluate(() => {
+          const doc = document.documentElement;
+          const main = document.querySelector("main");
+          const header = document.querySelector(".app-header");
+          const limit = doc.clientWidth;
+          const culprits: string[] = [];
+          for (const el of Array.from(
+            (main ?? document).querySelectorAll("*")
+          )) {
+            if (
+              el.closest(
+                ".scrollable-table-wrapper, .ecrf-table-scroll, .matrix-table-card, .observation-table-scroll, .casebook-matrix-scroll, [role='tablist']"
+              )
+            ) {
+              continue;
+            }
+            const r = el.getBoundingClientRect();
+            if (r.width > 0 && r.height > 0 && r.right > limit + 0.05) {
+              const cls =
+                typeof el.className === "string" && el.className.trim()
+                  ? `.${el.className.trim().split(/\s+/).slice(0, 2).join(".")}`
+                  : "";
+              const id = el.id ? `#${el.id}` : "";
+              const testId = el.getAttribute("data-testid")
+                ? `[data-testid="${el.getAttribute("data-testid")}"]`
+                : "";
+              const parentCls =
+                el.parentElement &&
+                typeof el.parentElement.className === "string" &&
+                el.parentElement.className.trim()
+                  ? `${el.parentElement.tagName.toLowerCase()}.${el.parentElement.className.trim().split(/\s+/)[0]}>`
+                  : "";
+              culprits.push(
+                `${parentCls}${el.tagName.toLowerCase()}${id}${cls}${testId}(right=${Math.round(r.right)},w=${Math.round(r.width)})`
+              );
+              if (culprits.length >= 6) break;
+            }
+          }
+          return {
+            docScrollWidth: doc.scrollWidth,
+            docClientWidth: doc.clientWidth,
+            mainScrollWidth: main ? main.scrollWidth : 0,
+            mainClientWidth: main ? main.clientWidth : 0,
+            headerScrollWidth: header ? header.scrollWidth : 0,
+            headerClientWidth: header ? header.clientWidth : 0,
+            culprits,
+          };
+        });
+
+        if (
+          zoomMetrics.docScrollWidth > zoomMetrics.docClientWidth ||
+          zoomMetrics.mainScrollWidth > zoomMetrics.mainClientWidth ||
+          (zoomMetrics.headerClientWidth > 0 &&
+            zoomMetrics.headerScrollWidth > zoomMetrics.headerClientWidth)
+        ) {
+          zoomFailures.push({ routePath, ...zoomMetrics });
+        }
+
+        if (captureScreenshots && routePath === "/overview") {
+          await page.screenshot({
+            path: "/tmp/adr2657-overview-320px-200pct-zoom.png",
+          });
+        }
+      }
+      expect(
+        zoomFailures,
+        `200% font-scaling (320px @ 32px) overflows: ${JSON.stringify(zoomFailures, null, 2)}`
+      ).toEqual([]);
+    } finally {
+      await page.evaluate(() => {
+        document.documentElement.style.fontSize = "";
+      });
+    }
   });
 });
