@@ -250,6 +250,9 @@ export const ClinicalInput: DefineComponent<
     id: string;
     label: string;
     modelValue?: string | number;
+    type?: string;
+    inputmode?: string;
+    tabularNums?: boolean;
     query?: any;
     gridSpan?: number | string;
     error?: string | null;

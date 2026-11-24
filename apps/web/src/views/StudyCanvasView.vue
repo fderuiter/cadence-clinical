@@ -530,6 +530,8 @@
             :owner="queryOwnerFilter"
             :origin="queryOriginFilter"
             :priority="queryPriorityFilter"
+            :escalated="queryEscalatedFilter"
+            :assignee="queryAssigneeFilter"
             :site="siteFilter"
             :participant="queryParticipantFilter"
             :changed="queryChangedFilter"
@@ -1082,6 +1084,8 @@ import { useAuthStore } from "../stores/auth";
 import { useCanvasSelection } from "../composables/useCanvasSelection";
 import { useKnowledgeStore } from "../stores/knowledge.js";
 import { useActiveStudyScope } from "../composables/useActiveStudyScope";
+import { shouldSuppressUnsavedNavigationGuard } from "../composables/useRouteScopeSync";
+import { syncWorkspaceScope } from "../stores/workspaceScope";
 import {
   enrollmentIdFromParticipant,
   participantNodeRef,
@@ -1138,6 +1142,8 @@ interface StudyQuery {
   owner?: string;
   origin?: string;
   priority?: string;
+  escalated?: string;
+  assignee?: string;
   site?: string;
   q?: string;
   subject?: string;
@@ -1650,6 +1656,11 @@ const queryPriorityFilter = computed(() => {
   const priority = single(route.query.priority).toLowerCase();
   return ["low", "normal", "high"].includes(priority) ? priority : "";
 });
+const queryEscalatedFilter = computed(() => {
+  const escalated = single(route.query.escalated).toLowerCase();
+  return escalated === "true" || escalated === "false" ? escalated : "";
+});
+const queryAssigneeFilter = computed(() => single(route.query.assignee).trim());
 const siteFilter = computed(() =>
   (single(route.query.site) || single(route.query.siteId)).trim()
 );
@@ -2488,6 +2499,8 @@ function applyStudyQueryFilter(filter: StudyQueriesFilterState) {
       owner: filter.owner,
       origin: filter.origin,
       priority: filter.priority,
+      escalated: filter.escalated,
+      assignee: filter.assignee,
       site: filter.site,
       subject: filter.participant,
       changed: filter.changed,
@@ -2634,6 +2647,23 @@ watch(callerAuthKey, (next, prev) => {
     canvas.clearParticipantAllocationCache();
   }
 });
+
+watch(
+  [studyCode, siteFilter, () => canvas.studyCode],
+  ([code, site, openCanvasCode], prev) => {
+    const prevSite = prev?.[1] ?? "";
+    if (code && !authStore.isLoggingOut && !authStore.sessionExpired) {
+      if (openCanvasCode !== code) {
+        canvas.openStudy(code);
+      }
+      syncWorkspaceScope({
+        studyId: code,
+        ...(site || prevSite ? { siteId: site } : {}),
+      });
+    }
+  },
+  { immediate: true }
+);
 
 watch(
   [
@@ -2924,23 +2954,7 @@ function leavesActiveForm(to: RouteLocationNormalized): boolean {
 }
 
 function shouldSuppressUnsavedGuard(to?: RouteLocationNormalized): boolean {
-  if (
-    !authStore.isAuthenticated ||
-    authStore.sessionExpired ||
-    authStore.isLoggingOut
-  ) {
-    return true;
-  }
-  if (
-    to &&
-    (to.name === "forbidden" ||
-      to.path === "/forbidden" ||
-      to.name === "login" ||
-      to.path === "/login")
-  ) {
-    return true;
-  }
-  return false;
+  return shouldSuppressUnsavedNavigationGuard(authStore, to);
 }
 
 function handleBeforeUnload(event: BeforeUnloadEvent) {

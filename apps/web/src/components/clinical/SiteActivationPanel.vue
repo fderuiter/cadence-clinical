@@ -14,7 +14,7 @@
       aria-label="Study and site"
       @submit.prevent="checkStatus"
     >
-      <template v-if="!props.studyCode">
+      <template v-if="!isStudyLocked">
         <label for="site-activation-study">Study</label>
         <input
           id="site-activation-study"
@@ -188,15 +188,13 @@
     </form>
 
     <div
-      v-if="
-        (!props.studyCode && assignedStudies.length) || assignedSites.length
-      "
+      v-if="(!isStudyLocked && assignedStudies.length) || assignedSites.length"
       id="site-activation-assigned-scope"
       class="assigned-scope"
       aria-label="Assigned scope shortcuts"
     >
       <div
-        v-if="!props.studyCode && assignedStudies.length"
+        v-if="!isStudyLocked && assignedStudies.length"
         class="scope-pill-group"
       >
         <span class="scope-pill-label">Assigned studies:</span>
@@ -534,7 +532,7 @@
       </template>
     </div>
 
-    <p v-if="!props.studyCode" class="unavailable-note">
+    <p v-if="!isStudyLocked" class="unavailable-note">
       Grant financials, CRA workload allocation, recruitment target updates, and
       adaptive dose escalation aren't available yet in this pre-release
       environment (Orbit and Allocate roadmap). See <PlansRoadmapLink />.
@@ -569,6 +567,7 @@ import { useAuthStore } from "../../stores/auth";
 import { useClinicalStore } from "../../stores/clinical";
 import { syncActiveStudyScope } from "../../stores/studyScopeBridge";
 import { useToastStore } from "../../stores/toasts.js";
+import { syncWorkspaceScope } from "../../stores/workspaceScope";
 import {
   formatScopeForbiddenGuidance,
   isForbiddenScopeError,
@@ -590,12 +589,17 @@ const props = defineProps({
   studyCode: { type: String, default: "" },
   /** Optional site filter passed from Clinical Canvas URL query. */
   siteId: { type: String, default: "" },
+  /** Whether the study input is locked by an enclosing study canvas. */
+  lockStudy: { type: Boolean, default: undefined },
 });
 
 const authStore = useAuthStore();
 const store = useClinicalStore();
 const toasts = useToastStore();
 const { route, router } = resolveRouteAndRouter();
+const isStudyLocked = computed(() =>
+  props.lockStudy === undefined ? Boolean(props.studyCode) : props.lockStudy
+);
 const activeSubjectCode = computed(() =>
   normalizeSubjectCodeValue(
     readRouteScopeQuery(route).subjectId || store.activeSubjectId
@@ -1048,6 +1052,13 @@ async function checkStatus() {
   store.activeStudyId = study;
   store.activeSiteId = site;
   syncActiveStudyScope(study);
+  syncWorkspaceScope({
+    studyId: study,
+    siteId: site,
+    router,
+    route,
+    syncRouteQuery: !isStudyLocked.value,
+  });
   checked.value = true;
   loading.value = true;
   loadError.value = false;

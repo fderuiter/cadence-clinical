@@ -559,7 +559,7 @@ public static class BaselineRatchetService
         string repoRoot,
         string compareBase)
     {
-        var violations = new List<CommitGrowthViolation>();
+        var rawViolations = new List<CommitGrowthViolation>();
         var admitted = new List<(string CommitSha, string Path, int Count, string Reason)>();
 
         foreach (string commit in GitRevisionScopeService.GetCommitRange(repoRoot, compareBase, "HEAD"))
@@ -582,12 +582,51 @@ public static class BaselineRatchetService
                 }
                 else
                 {
-                    violations.Add(new CommitGrowthViolation(commit, fileGrowth));
+                    rawViolations.Add(new CommitGrowthViolation(commit, fileGrowth));
                 }
             }
         }
 
-        return (violations, admitted);
+        if (rawViolations.Count == 0)
+        {
+            return (rawViolations, admitted);
+        }
+
+        return (FilterUnremediatedViolations(repoRoot, compareBase, rawViolations), admitted);
+    }
+
+    private static List<CommitGrowthViolation> FilterUnremediatedViolations(
+        string repoRoot,
+        string compareBase,
+        List<CommitGrowthViolation> rawViolations)
+    {
+        var allCandidatePaths = CollectRatchetPathsFromCommits(repoRoot, [compareBase, "HEAD"]);
+        var netAddedByGate = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
+
+        foreach (string gateKey in rawViolations.Select(v => GetGateKey(v.Growth.Path)).Distinct(StringComparer.Ordinal))
+        {
+            var gatePaths = allCandidatePaths
+                .Where(p => string.Equals(GetGateKey(p), gateKey, StringComparison.Ordinal))
+                .ToList();
+            var baseEntries = MaxGateEntriesAcrossParents(repoRoot, [compareBase], gatePaths);
+            var headEntries = MaxGateEntriesAcrossParents(repoRoot, ["HEAD"], gatePaths);
+            netAddedByGate[gateKey] = Additions(baseEntries, headEntries).ToHashSet(StringComparer.Ordinal);
+        }
+
+        var unremediated = new List<CommitGrowthViolation>();
+        foreach (var violation in rawViolations)
+        {
+            var netHeadAdded = netAddedByGate[GetGateKey(violation.Growth.Path)];
+            var survivingAdded = violation.Growth.Added.Where(netHeadAdded.Contains).ToList();
+            if (survivingAdded.Count > 0)
+            {
+                unremediated.Add(new CommitGrowthViolation(
+                    violation.CommitSha,
+                    violation.Growth with { Added = survivingAdded }));
+            }
+        }
+
+        return unremediated;
     }
 
     private static bool TryResolveAdmittingReasons(

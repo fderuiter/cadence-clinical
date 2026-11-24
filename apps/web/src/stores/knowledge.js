@@ -4,7 +4,6 @@ import { collectionInstanceId, parseNodeRef } from "../canvas/nodeRef";
 import { describeApiError } from "../utils/apiErrors.js";
 import { demoNowIso, isDemoBuild } from "../utils/demoMode.js";
 import { useAuthStore } from "./auth.js";
-import { useClinicalScopeStore } from "./clinicalScope";
 import { getSyncedStudyScope } from "./studyScopeBridge";
 
 function getLoadedStudyCanvasStore() {
@@ -16,9 +15,10 @@ function readAuthorizedStandaloneClinicalScope(
   preferredStudyId = ""
 ) {
   const pinia = getActivePinia();
-  const instantiatedScopeStore = pinia?._s?.get("clinicalScope")
-    ? useClinicalScopeStore(pinia)
-    : pinia?.state?.value?.clinicalScope || null;
+  const instantiatedScopeStore =
+    pinia?._s?.get("clinicalScope") ||
+    pinia?.state?.value?.clinicalScope ||
+    null;
   const rawStoreStudy =
     typeof instantiatedScopeStore?.activeStudyId === "string"
       ? instantiatedScopeStore.activeStudyId.trim()

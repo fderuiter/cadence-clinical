@@ -83,6 +83,9 @@ public enum FormQueryMessageKind
 
     /// <summary>It escalated after remaining open for 14 calendar days.</summary>
     Escalated,
+
+    /// <summary>Its assignee or responsible role was explicitly reassigned.</summary>
+    Reassigned,
 }
 
 /// <summary>Why closing a query failed.</summary>
@@ -475,7 +478,13 @@ public sealed class FormQuery : AggregateRoot<FormQueryId>
 
     /// <summary>The site answers an open query (explicitly or via value edit), moving ownership to <see cref="FormQueryOwnerRole.Monitor"/>.</summary>
     /// <returns>The kernel step, or null when the query is not open.</returns>
-    public KernelAssertionStep? Answer(string text, AssertionId answerId, string by, DateTimeOffset at, string reasonForChange = "")
+    public KernelAssertionStep? Answer(
+        string text,
+        AssertionId answerId,
+        string by,
+        DateTimeOffset at,
+        string reasonForChange = "",
+        string? assignee = null)
     {
         if (Status != FormQueryStatus.Open)
         {
@@ -484,11 +493,22 @@ public sealed class FormQuery : AggregateRoot<FormQueryId>
 
         var trimmed = Text(text);
         var normalizedReason = NormalizeReason(reasonForChange, trimmed);
+        var replacementAssignee = NormalizeAssignee(assignee);
+        var previousOwnerRole = OwnerRole;
         var recordedAt = NextInstant(at);
 
         SupersedeCurrent(recordedAt);
         Status = FormQueryStatus.Answered;
         OwnerRole = FormQueryOwnerRole.Monitor;
+        if (replacementAssignee is not null)
+        {
+            Assignee = replacementAssignee;
+        }
+        else if (previousOwnerRole != OwnerRole)
+        {
+            Assignee = null;
+        }
+
         StatusSince = recordedAt;
         DueAt = null;
         EscalatedAt = null;
@@ -505,11 +525,19 @@ public sealed class FormQuery : AggregateRoot<FormQueryId>
     /// with a fresh 14-day SLA window.
     /// </summary>
     /// <returns>The kernel step, or null when the query is open or cancelled.</returns>
-    public KernelAssertionStep? Reopen(string text, AssertionId kernelId, string by, DateTimeOffset at, string reasonForChange = "")
+    public KernelAssertionStep? Reopen(
+        string text,
+        AssertionId kernelId,
+        string by,
+        DateTimeOffset at,
+        string reasonForChange = "",
+        string? assignee = null)
     {
         KernelAssertionStep step;
         var trimmed = Text(text);
         var normalizedReason = NormalizeReason(reasonForChange, trimmed);
+        var replacementAssignee = NormalizeAssignee(assignee);
+        var previousOwnerRole = OwnerRole;
         switch (Status)
         {
             case FormQueryStatus.Answered:
@@ -531,6 +559,15 @@ public sealed class FormQuery : AggregateRoot<FormQueryId>
 
         Status = FormQueryStatus.Open;
         OwnerRole = FormQueryOwnerRole.Site;
+        if (replacementAssignee is not null)
+        {
+            Assignee = replacementAssignee;
+        }
+        else if (previousOwnerRole != OwnerRole)
+        {
+            Assignee = null;
+        }
+
         StatusSince = recordedAt;
         DueAt = recordedAt.AddDays(OpenSlaDays);
         EscalatedAt = null;
@@ -540,6 +577,52 @@ public sealed class FormQuery : AggregateRoot<FormQueryId>
         AppendPeriod(recordedAt, recordedAt, by, normalizedReason);
         AppendMessage(FormQueryMessageKind.Reopened, trimmed, by, normalizedReason, recordedAt);
         return step;
+    }
+
+    /// <summary>
+    /// Reassigns an <see cref="FormQueryStatus.Open"/> or <see cref="FormQueryStatus.Answered"/> query to a new
+    /// <paramref name="assignee"/> (or clears the assignee when null/empty) and optional <paramref name="ownerRole"/>,
+    /// recording both a bitemporal <see cref="FormQueryPeriod"/> and an insert-only <see cref="FormQueryMessageRecord"/>.
+    /// </summary>
+    public bool Reassign(
+        string? assignee,
+        FormQueryOwnerRole? ownerRole,
+        string by,
+        DateTimeOffset at,
+        string reasonForChange,
+        string? note = null)
+    {
+        if (Status is not (FormQueryStatus.Open or FormQueryStatus.Answered))
+        {
+            return false;
+        }
+
+        if (ownerRole is { } role && !Enum.IsDefined(role))
+        {
+            throw new ArgumentException("Owner role is not valid.", nameof(ownerRole));
+        }
+
+        if (string.IsNullOrWhiteSpace(reasonForChange))
+        {
+            throw new ArgumentException("Reason for change is required when reassigning a query.", nameof(reasonForChange));
+        }
+
+        var nextAssignee = NormalizeAssignee(assignee);
+        var previousOwnerRole = OwnerRole;
+        var nextOwnerRole = ownerRole ?? OwnerRole;
+        var normalizedReason = reasonForChange.Trim();
+        var messageText = !string.IsNullOrWhiteSpace(note)
+            ? Text(note)
+            : BuildReassignNote(nextAssignee, previousOwnerRole, nextOwnerRole);
+        var recordedAt = NextInstant(at);
+
+        SupersedeCurrent(recordedAt);
+        OwnerRole = nextOwnerRole;
+        Assignee = nextAssignee;
+
+        AppendPeriod(recordedAt, recordedAt, by, normalizedReason);
+        AppendMessage(FormQueryMessageKind.Reassigned, messageText, by, normalizedReason, recordedAt);
+        return true;
     }
 
     /// <summary>
@@ -752,5 +835,30 @@ public sealed class FormQuery : AggregateRoot<FormQueryId>
         return trimmed.Length <= AssigneeMaxLength
             ? trimmed
             : throw new ArgumentException($"Assignee may be at most {AssigneeMaxLength} characters.", nameof(assignee));
+    }
+
+    private static string BuildReassignNote(
+        string? nextAssignee,
+        FormQueryOwnerRole previousRole,
+        FormQueryOwnerRole nextRole)
+    {
+        var roleWire = nextRole switch
+        {
+            FormQueryOwnerRole.Site => "site",
+            FormQueryOwnerRole.Monitor => "monitor",
+            FormQueryOwnerRole.DataManager => "data_manager",
+            _ => nextRole.ToString().ToLowerInvariant(),
+        };
+
+        if (nextAssignee is not null)
+        {
+            return previousRole != nextRole
+                ? $"Reassigned to {nextAssignee} ({roleWire})."
+                : $"Reassigned to {nextAssignee}.";
+        }
+
+        return previousRole != nextRole
+            ? $"Cleared assignee and set owner role to {roleWire}."
+            : "Cleared query assignee.";
     }
 }
