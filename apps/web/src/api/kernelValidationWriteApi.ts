@@ -1,4 +1,5 @@
 import { unwrapResponse } from "./client";
+import { kernelApi } from "./kernelApi";
 import type { KernelLockMeaning } from "./kernel/locks";
 import {
   kernelClient,
@@ -20,7 +21,6 @@ import {
   type KernelValidationFinding,
   type KernelValidationFindingReasonInput,
 } from "./kernel/validation";
-import { kernelApi } from "./kernelApi";
 
 export {
   FINDING_ACCEPT_SEMANTIC_ACTION,

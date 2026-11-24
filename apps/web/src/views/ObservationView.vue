@@ -32,22 +32,22 @@
             <template v-else>{{ observation.concept }}</template>
           </dd>
           <dt>Current value</dt>
-          <dd data-testid="observation-value">
+          <dd data-testid="observation-value" class="tabular-nums">
             {{ formatObservationValue(observation.value) }}
           </dd>
           <dt>Version</dt>
-          <dd data-testid="observation-version">
+          <dd data-testid="observation-version" class="tabular-nums">
             {{ observation.version }}
           </dd>
           <dt>Observed</dt>
-          <dd>{{ observation.observed_at }}</dd>
+          <dd class="tabular-nums">{{ observation.observed_at }}</dd>
           <dt>Status</dt>
           <dd data-testid="observation-status">
             <template v-if="observation.locks.length > 0">
               <span
                 v-for="held in observation.locks"
                 :key="String(held.lock_id)"
-                class="observation-lock"
+                class="observation-lock tabular-nums"
               >
                 {{ held.kind }} at {{ lockScopeLabel(held.scope) }} by
                 <NodeRefChip
@@ -119,6 +119,7 @@
             v-model="newValue"
             type="text"
             autocomplete="off"
+            :data-tabular-nums="isTabularObservation ? 'true' : undefined"
             :disabled="saving"
             :aria-invalid="parseError !== null"
             aria-describedby="observation-new-value-hint"
@@ -146,6 +147,7 @@
           data-testid="observation-outcome"
           :class="[
             'observation-outcome',
+            'tabular-nums',
             `observation-outcome--${outcome.kind}`,
           ]"
           :role="outcome.kind === 'saved' ? 'status' : 'alert'"
@@ -497,6 +499,12 @@ const expectedSpec = computed<ExpectedItemSpec | null>(() => {
 const unit = computed(() =>
   correctionUnit(observation.value?.value, expectedSpec.value)
 );
+
+const isTabularObservation = computed(() => {
+  const valueKind =
+    observation.value?.value?.type ?? observation.value?.expected_value_kind;
+  return valueKind === "quantity" || valueKind === "dateTime";
+});
 
 const parsed = computed(() => {
   const current = observation.value?.value;

@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using Cadence.Kernel.Application.Authorization;
 using Cadence.Kernel.Application.Commands;
 using Cadence.Kernel.Application.Execution;
+using Cadence.Kernel.Application.Simulation;
 using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Execution;
@@ -183,6 +184,8 @@ public static class KernelStudyImportEndpoints
                 .. KernelErrors.CommandPipeline,
                 KernelErrors.AlreadyExists,
                 KernelErrors.NotFound,
+                IdentityErrors.NameRequired,
+                IdentityErrors.TenantUnknown,
                 ProtocolErrors.StudyUnknown,
                 ProtocolErrors.FirstVersionExists,
                 ProtocolErrors.InvalidTransition,
@@ -190,6 +193,15 @@ public static class KernelStudyImportEndpoints
                 ProtocolErrors.ContentInvalid,
                 ProtocolErrors.AmendmentInvalid,
                 ProtocolErrors.AmendmentNotAllowed,
+                KnowledgeErrors.CodeSystemUnknown,
+                KnowledgeErrors.CodeSystemUriInvalid,
+                KnowledgeErrors.ConceptLabelRequired,
+                KnowledgeErrors.DuplicateEntry,
+                KnowledgeErrors.EntriesInvalid,
+                KnowledgeErrors.ExternalCodeMismatch,
+                KnowledgeErrors.LicenseMismatch,
+                KnowledgeErrors.PackageInvalid,
+                KnowledgeErrors.VersionRequired,
                 StandardsErrors.LibraryItemInvalid,
                 StandardsErrors.StandardVersionUnknown,
             ]);
@@ -865,13 +877,14 @@ public static class KernelStudyImportEndpoints
         }
 
         var design = await reader.GetDesignAsync(tenant, versionId, cancellationToken).ConfigureAwait(false);
+        var amendment = await reader.GetAmendmentAsync(tenant, versionId, cancellationToken).ConfigureAwait(false);
         var labels = await ResolveConceptLabelsAsync(
             tenant,
             design,
             context.RequestServices.GetService<IConceptRegistry>(),
             cancellationToken).ConfigureAwait(false);
 
-        return TypedResults.Ok(KernelProtocolDraftSummaryResponse.From(version, design, labels));
+        return TypedResults.Ok(KernelProtocolDraftSummaryResponse.From(version, design, labels, amendment: amendment));
     }
 
     internal static async Task<Results<Created<KernelProtocolDraftSummaryResponse>, Ok<KernelProtocolDraftSummaryResponse>, ProblemHttpResult>> ImportProtocolDraftAsync(
@@ -933,7 +946,6 @@ public static class KernelStudyImportEndpoints
             study,
             existingVersions,
             derivedVersionId,
-            parsedPayload.ReplaceForms,
             versionReader,
             probe,
             catalog,
@@ -943,10 +955,14 @@ public static class KernelStudyImportEndpoints
             return planProblem;
         }
 
-        KernelError? conceptAuthOrCommandError = null;
         var resolvedConceptsByKey = new Dictionary<string, ProtocolConceptResolution>(StringComparer.Ordinal);
+        var stagedConcepts = new List<StagedProtocolConcept>();
+        var stagedBiomedicalByCode = new Dictionary<string, ConceptRef>(StringComparer.Ordinal);
+        var stagedByConceptId = new Dictionary<ConceptId, ConceptRef>();
+        var stagedLabelsByRef = new Dictionary<ConceptRef, string>();
         var resolvedTerminologyByKey = new Dictionary<string, ProtocolTerminologyResolution>(StringComparer.Ordinal);
-        var registeredCodeSystems = new HashSet<CodeSystemId>();
+        var stagedCodeSystemsById = new Dictionary<CodeSystemId, StagedCodeSystem>();
+        var stagedCodeSystemVersionsById = new Dictionary<CodeSystemVersionId, StagedCodeSystemVersion>();
 
         async ValueTask<ProtocolConceptResolution> ResolveOrDefineConceptAsync(
             ProtocolConceptCandidate candidate,
@@ -957,19 +973,71 @@ public static class KernelStudyImportEndpoints
                 return cached;
             }
 
+            var label = string.IsNullOrWhiteSpace(candidate.PreferredLabel) ? "Protocol Item" : candidate.PreferredLabel.Trim();
+            var definition = string.IsNullOrWhiteSpace(candidate.Definition) ? label : candidate.Definition.Trim();
+
             if (!string.IsNullOrWhiteSpace(candidate.BiomedicalConceptCode))
             {
-                var foundBc = await concepts.FindBiomedicalConceptAsync(tenant, candidate.BiomedicalConceptCode, ct).ConfigureAwait(false);
+                var bcCode = candidate.BiomedicalConceptCode.Trim();
+                if (stagedBiomedicalByCode.TryGetValue(bcCode, out var stagedBcRef))
+                {
+                    var stagedHit = new ProtocolConceptResolution(stagedBcRef, UsedFallbackSponsorConcept: false);
+                    resolvedConceptsByKey[candidate.StableKey] = stagedHit;
+                    return stagedHit;
+                }
+
+                var foundBc = await concepts.FindBiomedicalConceptAsync(tenant, bcCode, ct).ConfigureAwait(false);
                 if (foundBc is not null && foundBc.Status != ConceptStatus.Deprecated)
                 {
                     var hit = new ProtocolConceptResolution(foundBc.Concept, UsedFallbackSponsorConcept: false);
                     resolvedConceptsByKey[candidate.StableKey] = hit;
                     return hit;
                 }
+
+                if (foundBc is null)
+                {
+                    var bcConceptId = ConceptId.FromGuid(DeriveGuid(tenant, "biomedical-concept", bcCode));
+                    var existingByBcId = await concepts.GetCurrentAsync(tenant, bcConceptId, ct).ConfigureAwait(false);
+                    if (existingByBcId is not null
+                        && existingByBcId.Status != ConceptStatus.Deprecated
+                        && existingByBcId.Origin == ConceptOrigin.CdiscBiomedicalConcept
+                        && string.Equals(existingByBcId.ExternalCode, bcCode, StringComparison.Ordinal))
+                    {
+                        var reusedBc = new ProtocolConceptResolution(existingByBcId.Concept, UsedFallbackSponsorConcept: false);
+                        resolvedConceptsByKey[candidate.StableKey] = reusedBc;
+                        return reusedBc;
+                    }
+
+                    if (existingByBcId is null)
+                    {
+                        var newBcRef = new ConceptRef(bcConceptId, 1);
+                        stagedConcepts.Add(new StagedProtocolConcept(
+                            bcConceptId,
+                            ConceptOrigin.CdiscBiomedicalConcept,
+                            bcCode,
+                            ConceptKind.BiomedicalConcept,
+                            label,
+                            definition));
+                        stagedBiomedicalByCode[bcCode] = newBcRef;
+                        stagedByConceptId[bcConceptId] = newBcRef;
+                        stagedLabelsByRef[newBcRef] = label;
+
+                        var stagedResolution = new ProtocolConceptResolution(newBcRef, UsedFallbackSponsorConcept: false);
+                        resolvedConceptsByKey[candidate.StableKey] = stagedResolution;
+                        return stagedResolution;
+                    }
+                }
             }
 
             var usedFallback = !string.IsNullOrWhiteSpace(candidate.BiomedicalConceptCode);
             var conceptId = ConceptId.FromGuid(DeriveGuid(tenant, "import-concept", candidate.StableKey));
+            if (stagedByConceptId.TryGetValue(conceptId, out var alreadyStagedSponsor))
+            {
+                var cachedSponsor = new ProtocolConceptResolution(alreadyStagedSponsor, UsedFallbackSponsorConcept: usedFallback);
+                resolvedConceptsByKey[candidate.StableKey] = cachedSponsor;
+                return cachedSponsor;
+            }
+
             var existingConcept = await concepts.GetCurrentAsync(tenant, conceptId, ct).ConfigureAwait(false);
             if (existingConcept is not null && existingConcept.Status != ConceptStatus.Deprecated)
             {
@@ -978,37 +1046,23 @@ public static class KernelStudyImportEndpoints
                 return reused;
             }
 
-            var label = string.IsNullOrWhiteSpace(candidate.PreferredLabel) ? "Protocol Item" : candidate.PreferredLabel.Trim();
-            var definition = string.IsNullOrWhiteSpace(candidate.Definition) ? label : candidate.Definition.Trim();
-            var defined = await sender.SendAsync(
-                new DefineConcept(
-                    tenant,
-                    conceptId,
+            var targetSponsorId = existingConcept is null
+                ? conceptId
+                : ConceptId.FromGuid(DeriveGuid(tenant, "import-concept-active", candidate.StableKey));
+            var sponsorRef = new ConceptRef(targetSponsorId, 1);
+            if (stagedByConceptId.TryAdd(targetSponsorId, sponsorRef))
+            {
+                stagedConcepts.Add(new StagedProtocolConcept(
+                    targetSponsorId,
                     ConceptOrigin.Sponsor,
                     ExternalCode: null,
                     candidate.Kind,
                     label,
-                    definition,
-                    DeriveSubIdempotencyKey(idempotencyKey, "concept", conceptId.Value),
-                    reason),
-                cancellationToken: ct).ConfigureAwait(false);
-
-            if (!defined.IsSuccess)
-            {
-                if (string.Equals(defined.Error?.Code, KernelErrors.AlreadyExists.Code, StringComparison.Ordinal))
-                {
-                    var racedConcept = await concepts.GetCurrentAsync(tenant, conceptId, ct).ConfigureAwait(false);
-                    var fallbackRef = racedConcept?.Concept ?? new ConceptRef(conceptId, 1);
-                    var racedHit = new ProtocolConceptResolution(fallbackRef, UsedFallbackSponsorConcept: usedFallback);
-                    resolvedConceptsByKey[candidate.StableKey] = racedHit;
-                    return racedHit;
-                }
-
-                conceptAuthOrCommandError ??= defined.Error;
-                return new ProtocolConceptResolution(null, UsedFallbackSponsorConcept: usedFallback, ErrorMessage: defined.Error?.Message);
+                    definition));
+                stagedLabelsByRef[sponsorRef] = label;
             }
 
-            var created = new ProtocolConceptResolution(defined.Value, UsedFallbackSponsorConcept: usedFallback);
+            var created = new ProtocolConceptResolution(sponsorRef, UsedFallbackSponsorConcept: usedFallback);
             resolvedConceptsByKey[candidate.StableKey] = created;
             return created;
         }
@@ -1094,40 +1148,19 @@ public static class KernelStudyImportEndpoints
             }
 
             var codeSystemId = CodeSystemId.FromGuid(DeriveGuid(tenant, "import-codesystem", systemUri));
-            if (!registeredCodeSystems.Contains(codeSystemId))
-            {
-                var registered = await sender.SendAsync(
-                    new RegisterCodeSystem(
-                        tenant,
-                        codeSystemId,
-                        systemUri,
-                        "Protocol Imported Codelists",
-                        "Cadence Protocol Import",
-                        licence,
-                        DeriveSubIdempotencyKey(idempotencyKey, "codesystem", codeSystemId.Value),
-                        reason),
-                    cancellationToken: ct).ConfigureAwait(false);
-
-                if (!registered.IsSuccess && !string.Equals(registered.Error?.Code, KernelErrors.AlreadyExists.Code, StringComparison.Ordinal))
-                {
-                    conceptAuthOrCommandError ??= registered.Error;
-                    return new ProtocolTerminologyResolution(null, registered.Error?.Message);
-                }
-
-                registeredCodeSystems.Add(codeSystemId);
-            }
+            stagedCodeSystemsById.TryAdd(codeSystemId, new StagedCodeSystem(codeSystemId, systemUri, licence));
 
             var versionId = CodeSystemVersionId.FromGuid(DeriveGuid(tenant, "import-codesystem-version", $"{systemUri}:{versionLabel}"));
             var releasedOn = !string.IsNullOrWhiteSpace(candidate.CodeSystemVersion)
                 && DateOnly.TryParseExact(candidate.CodeSystemVersion.Trim(), "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsedRelease)
                     ? parsedRelease
                     : new DateOnly(2026, 1, 1);
-
-            var imported = await sender.SendAsync(
-                new ImportCodeSystemVersion(
-                    tenant,
+            stagedCodeSystemVersionsById.TryAdd(
+                versionId,
+                new StagedCodeSystemVersion(
                     versionId,
                     codeSystemId,
+                    systemUri,
                     versionLabel,
                     releasedOn,
                     new TerminologyPackage(
@@ -1136,27 +1169,9 @@ public static class KernelStudyImportEndpoints
                         systemUri,
                         packageBytes.LongLength,
                         "application/vnd.cadence.codelist+json"),
-                    groupedEntries,
-                    DeriveSubIdempotencyKey(idempotencyKey, "codesystem-version", versionId.Value),
-                    reason),
-                cancellationToken: ct).ConfigureAwait(false);
+                    groupedEntries));
 
-            if (!imported.IsSuccess)
-            {
-                if (string.Equals(imported.Error?.Code, KernelErrors.AlreadyExists.Code, StringComparison.Ordinal))
-                {
-                    var raced = await concepts.FindCodeSystemVersionAsync(tenant, systemUri, versionLabel, ct).ConfigureAwait(false);
-                    var resolvedId = raced?.Id ?? versionId;
-                    var racedResolution = new ProtocolTerminologyResolution(new TerminologyBinding(resolvedId, effectiveGroup));
-                    resolvedTerminologyByKey[cacheKey] = racedResolution;
-                    return racedResolution;
-                }
-
-                conceptAuthOrCommandError ??= imported.Error;
-                return new ProtocolTerminologyResolution(null, imported.Error?.Message);
-            }
-
-            var createdBinding = new ProtocolTerminologyResolution(new TerminologyBinding(imported.Value, effectiveGroup));
+            var createdBinding = new ProtocolTerminologyResolution(new TerminologyBinding(versionId, effectiveGroup));
             resolvedTerminologyByKey[cacheKey] = createdBinding;
             return createdBinding;
         }
@@ -1168,7 +1183,8 @@ public static class KernelStudyImportEndpoints
                 Format: parsedPayload.Format,
                 TemplateIds: parsedPayload.TemplateIds,
                 BaseDesign: plan.BaseDesign,
-                FallbackTitle: study.Title),
+                FallbackTitle: study.Title,
+                ReplaceForms: parsedPayload.ReplaceForms),
             ResolveOrDefineConceptAsync,
             cancellationToken,
             ResolveOrRegisterTerminologyAsync).ConfigureAwait(false);
@@ -1178,33 +1194,100 @@ public static class KernelStudyImportEndpoints
             return PayloadTooLargeProblem(importOutcome.Problems.FirstOrDefault());
         }
 
-        if (conceptAuthOrCommandError is { HttpStatus: StatusCodes.Status403Forbidden })
-        {
-            return KernelErrorEndpoints.Problem(conceptAuthOrCommandError);
-        }
-
         if (!importOutcome.IsSuccess || importOutcome.Design is null)
         {
             return ValidationFailedProblem(importOutcome.Problems);
         }
 
+        if (stagedConcepts.Count > 0
+            && !await IsPermittedAsync(tenant, typeof(DefineConcept), NodeRef.For(tenant), probe, catalog, cancellationToken).ConfigureAwait(false))
+        {
+            return KernelErrorEndpoints.Problem(KernelErrors.AuthorizationDenied);
+        }
+
+        if (stagedCodeSystemsById.Count > 0
+            && !await IsPermittedAsync(tenant, typeof(RegisterCodeSystem), NodeRef.For(tenant), probe, catalog, cancellationToken).ConfigureAwait(false))
+        {
+            return KernelErrorEndpoints.Problem(KernelErrors.AuthorizationDenied);
+        }
+
+        foreach (var targetCodeSystemId in stagedCodeSystemVersionsById.Values.Select(v => v.CodeSystemId).Distinct())
+        {
+            if (!await IsPermittedAsync(tenant, typeof(ImportCodeSystemVersion), NodeRef.For(targetCodeSystemId), probe, catalog, cancellationToken).ConfigureAwait(false))
+            {
+                return KernelErrorEndpoints.Problem(KernelErrors.AuthorizationDenied);
+            }
+        }
+
+        foreach (var stagedCodeSystem in stagedCodeSystemsById.Values)
+        {
+            var registered = await sender.SendAsync(
+                new RegisterCodeSystem(
+                    tenant,
+                    stagedCodeSystem.CodeSystemId,
+                    stagedCodeSystem.SystemUri,
+                    "Protocol Imported Codelists",
+                    "Cadence Protocol Import",
+                    stagedCodeSystem.License,
+                    DeriveSubIdempotencyKey(idempotencyKey, "codesystem", stagedCodeSystem.CodeSystemId.Value),
+                    reason),
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+            if (!registered.IsSuccess && !string.Equals(registered.Error?.Code, KernelErrors.AlreadyExists.Code, StringComparison.Ordinal))
+            {
+                return KernelErrorEndpoints.Problem(registered.Error!);
+            }
+        }
+
+        foreach (var stagedVersion in stagedCodeSystemVersionsById.Values)
+        {
+            var imported = await sender.SendAsync(
+                new ImportCodeSystemVersion(
+                    tenant,
+                    stagedVersion.VersionId,
+                    stagedVersion.CodeSystemId,
+                    stagedVersion.VersionLabel,
+                    stagedVersion.ReleasedOn,
+                    stagedVersion.Package,
+                    stagedVersion.Entries,
+                    DeriveSubIdempotencyKey(idempotencyKey, "codesystem-version", stagedVersion.VersionId.Value),
+                    reason),
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+            if (!imported.IsSuccess && !string.Equals(imported.Error?.Code, KernelErrors.AlreadyExists.Code, StringComparison.Ordinal))
+            {
+                return KernelErrorEndpoints.Problem(imported.Error!);
+            }
+        }
+
         var serializedDesign = ProtocolDesignDocument.Write(importOutcome.Design);
-        var persistOutcome = await ExecuteDraftMutationAsync(
-            tenant,
-            study.StudyId,
+        var amendment = BuildProtocolAmendment(
             plan,
             importOutcome.Design,
             serializedDesign,
-            idempotencyKey,
             reason,
-            sender,
-            cancellationToken).ConfigureAwait(false);
-        if (persistOutcome.Problem is { } persistProblem)
+            parsedPayload.AmendmentClassification,
+            parsedPayload.TransitionPolicy);
+
+        var requestFingerprint = ComputeImportRequestFingerprint(study.StudyId, parsedPayload);
+        var persistResult = await sender.SendAsync(
+            new ImportProtocolDraft(
+                tenant,
+                study.StudyId,
+                plan.Mode,
+                plan.TargetVersionId,
+                plan.ParentVersionId,
+                serializedDesign,
+                amendment,
+                stagedConcepts,
+                idempotencyKey,
+                reason,
+                requestFingerprint),
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+        if (!persistResult.IsSuccess || persistResult.Value is null)
         {
-            return persistProblem;
+            return KernelErrorEndpoints.Problem(persistResult.Error!);
         }
 
-        var persistedState = persistOutcome.State!;
+        var persistedState = persistResult.Value;
         var persistedSummary = await versionReader.GetAsync(tenant, persistedState.ProtocolVersionId, cancellationToken).ConfigureAwait(false)
             ?? new ProtocolVersionSummary(
                 persistedState.ProtocolVersionId,
@@ -1213,9 +1296,15 @@ public static class KernelStudyImportEndpoints
                 plan.ParentVersionId,
                 persistedState.Status,
                 persistedState.ContentHash,
-                plan.AmendmentIntent,
+                amendment?.Intent ?? plan.AmendmentIntent,
                 null,
                 null);
+        var effectiveDesign = persistResult.Replayed
+            ? await versionReader.GetDesignAsync(tenant, persistedState.ProtocolVersionId, cancellationToken).ConfigureAwait(false) ?? importOutcome.Design
+            : importOutcome.Design;
+        var effectiveAmendment = persistResult.Replayed
+            ? await versionReader.GetAmendmentAsync(tenant, persistedState.ProtocolVersionId, cancellationToken).ConfigureAwait(false) ?? amendment
+            : amendment;
 
         KernelImportedRulePackSummaryResponse? draftedRulePack = null;
         if (importOutcome.RulePack is { } rulePack
@@ -1244,8 +1333,18 @@ public static class KernelStudyImportEndpoints
             }
         }
 
-        var conceptLabels = await ResolveConceptLabelsAsync(tenant, importOutcome.Design, concepts, cancellationToken).ConfigureAwait(false);
-        var responseBody = KernelProtocolDraftSummaryResponse.From(persistedSummary, importOutcome.Design, conceptLabels, draftedRulePack);
+        var conceptLabels = await ResolveConceptLabelsAsync(
+            tenant,
+            effectiveDesign,
+            concepts,
+            stagedLabelsByRef,
+            cancellationToken).ConfigureAwait(false);
+        var responseBody = KernelProtocolDraftSummaryResponse.From(
+            persistedSummary,
+            effectiveDesign,
+            conceptLabels,
+            draftedRulePack,
+            effectiveAmendment);
 
         return plan.CreatedNewVersion
             ? TypedResults.Created(
@@ -1716,7 +1815,29 @@ public static class KernelStudyImportEndpoints
 
             var templateIds = ParseTemplateIds(form["template_ids"]);
             var replaceForms = bool.TryParse(form["replace_forms"].ToString(), out var parsedReplace) && parsedReplace;
-            return new ParsedImportInput(rawBytes, fileName, format, templateIds, replaceForms, null);
+            if (!TryParseAmendmentClassification(form["amendment_classification"].ToString(), out var formClassification))
+            {
+                return ParsedImportInput.Fail(KernelProblems.BadRequest(
+                    "Invalid amendment classification",
+                    "Supported amendment_classification values are 'Substantial', 'NonSubstantial', and 'UrgentSafetyMeasure'."));
+            }
+
+            if (!TryParseTransitionPolicy(form["transition_policy"].ToString(), out var formPolicy))
+            {
+                return ParsedImportInput.Fail(KernelProblems.BadRequest(
+                    "Invalid transition policy",
+                    "Supported transition_policy values are 'NewParticipantsOnly', 'RequiresReconsent', 'Automatic', and 'ByCohort'."));
+            }
+
+            return new ParsedImportInput(
+                rawBytes,
+                fileName,
+                format,
+                templateIds,
+                replaceForms,
+                formClassification,
+                formPolicy,
+                null);
         }
 
         var (bodyBytes, bodyExceeded) = await ReadBoundedBytesAsync(
@@ -1758,6 +1879,20 @@ public static class KernelStudyImportEndpoints
                 "Supported format values are 'auto', 'odm_xml', and 'usdm_json'."));
         }
 
+        if (!TryParseAmendmentClassification(jsonRequest.AmendmentClassification, out var jsonClassification))
+        {
+            return ParsedImportInput.Fail(KernelProblems.BadRequest(
+                "Invalid amendment classification",
+                "Supported amendment_classification values are 'Substantial', 'NonSubstantial', and 'UrgentSafetyMeasure'."));
+        }
+
+        if (!TryParseTransitionPolicy(jsonRequest.TransitionPolicy, out var jsonPolicy))
+        {
+            return ParsedImportInput.Fail(KernelProblems.BadRequest(
+                "Invalid transition policy",
+                "Supported transition_policy values are 'NewParticipantsOnly', 'RequiresReconsent', 'Automatic', and 'ByCohort'."));
+        }
+
         byte[]? contentBytes = null;
         if (!string.IsNullOrEmpty(jsonRequest.Content))
         {
@@ -1774,6 +1909,8 @@ public static class KernelStudyImportEndpoints
             jsonFormat,
             jsonRequest.TemplateIds,
             jsonRequest.ReplaceForms,
+            jsonClassification,
+            jsonPolicy,
             null);
     }
 
@@ -1782,43 +1919,70 @@ public static class KernelStudyImportEndpoints
         StudyDirectoryEntry study,
         IReadOnlyList<ProtocolVersionSummary> existingVersions,
         ProtocolVersionId derivedVersionId,
-        bool replaceForms,
         IProtocolVersionReader versionReader,
         IAuthorizationProbe probe,
         KernelCommandCatalog catalog,
         CancellationToken cancellationToken)
     {
+        var ordered = existingVersions
+            .OrderByDescending(v => v.Number)
+            .ToList();
+
         // Check if a previous request with this exact Idempotency-Key already created derivedVersionId.
-        var matchingReplayVersion = existingVersions.FirstOrDefault(v => v.Id == derivedVersionId);
+        var matchingReplayVersion = ordered.FirstOrDefault(v => v.Id == derivedVersionId);
         if (matchingReplayVersion is not null)
         {
             if (matchingReplayVersion.ParentVersionId is null)
             {
+                if (!await IsPermittedAsync(tenant, typeof(CreateProtocolDraft), NodeRef.For(study.StudyId), probe, catalog, cancellationToken).ConfigureAwait(false))
+                {
+                    return DraftMutationPlan.Fail(KernelErrorEndpoints.Problem(KernelErrors.AuthorizationDenied));
+                }
+
+                var priorSuperseded = ordered
+                    .FirstOrDefault(v => v.Id != derivedVersionId && v.Status == ProtocolVersionStatus.Superseded);
+                var replayRecoveryBase = priorSuperseded is not null
+                    ? await versionReader.GetDesignAsync(tenant, priorSuperseded.Id, cancellationToken).ConfigureAwait(false)
+                    : null;
+
                 return new DraftMutationPlan(
-                    DraftMutationKind.CreateFirstDraft,
+                    ProtocolDraftImportMode.CreateDraft,
                     derivedVersionId,
                     ParentVersionId: null,
-                    BaseDesign: null,
+                    BaseDesign: replayRecoveryBase,
+                    ParentContent: null,
+                    ExistingAmendment: null,
                     CreatedNewVersion: true,
                     AmendmentIntent: null,
                     Problem: null);
             }
 
-            var parentDesign = replaceForms
-                ? null
-                : await versionReader.GetDesignAsync(tenant, matchingReplayVersion.ParentVersionId.Value, cancellationToken).ConfigureAwait(false);
+            var replayParentId = matchingReplayVersion.ParentVersionId.Value;
+            if (!await IsPermittedAsync(tenant, typeof(ForkProtocolVersion), NodeRef.For(replayParentId), probe, catalog, cancellationToken).ConfigureAwait(false)
+                || !await IsPermittedAsync(tenant, typeof(ReviseProtocolDraft), NodeRef.For(replayParentId), probe, catalog, cancellationToken).ConfigureAwait(false))
+            {
+                return DraftMutationPlan.Fail(KernelErrorEndpoints.Problem(KernelErrors.AuthorizationDenied));
+            }
+
+            var (replayParentDesign, replayParentContent) = await LoadDesignAndContentAsync(
+                tenant,
+                replayParentId,
+                versionReader,
+                cancellationToken).ConfigureAwait(false);
+            var replayAmendment = await versionReader.GetAmendmentAsync(tenant, matchingReplayVersion.Id, cancellationToken).ConfigureAwait(false);
             return new DraftMutationPlan(
-                DraftMutationKind.ForkAndReviseApproved,
+                ProtocolDraftImportMode.ForkApproved,
                 derivedVersionId,
-                ParentVersionId: matchingReplayVersion.ParentVersionId,
-                BaseDesign: parentDesign,
+                ParentVersionId: replayParentId,
+                BaseDesign: replayParentDesign,
+                ParentContent: replayParentContent,
+                ExistingAmendment: replayAmendment,
                 CreatedNewVersion: true,
                 AmendmentIntent: matchingReplayVersion.AmendmentIntent,
                 Problem: null);
         }
 
-        var latestActive = existingVersions.FirstOrDefault(v => v.Status != ProtocolVersionStatus.Withdrawn);
-        if (latestActive is null && existingVersions.Count == 0)
+        if (ordered.Count == 0)
         {
             if (!await IsPermittedAsync(tenant, typeof(CreateProtocolDraft), NodeRef.For(study.StudyId), probe, catalog, cancellationToken).ConfigureAwait(false))
             {
@@ -1826,136 +1990,215 @@ public static class KernelStudyImportEndpoints
             }
 
             return new DraftMutationPlan(
-                DraftMutationKind.CreateFirstDraft,
+                ProtocolDraftImportMode.CreateDraft,
                 derivedVersionId,
                 ParentVersionId: null,
                 BaseDesign: null,
+                ParentContent: null,
+                ExistingAmendment: null,
                 CreatedNewVersion: true,
                 AmendmentIntent: null,
                 Problem: null);
         }
 
-        var current = latestActive ?? existingVersions[0];
-        switch (current.Status)
+        if (ordered.FirstOrDefault(v => v.Status == ProtocolVersionStatus.Draft) is { } openDraft)
         {
-            case ProtocolVersionStatus.Draft:
-                {
-                    if (!await IsPermittedAsync(tenant, typeof(ReviseProtocolDraft), NodeRef.For(current.Id), probe, catalog, cancellationToken).ConfigureAwait(false))
-                    {
-                        return DraftMutationPlan.Fail(KernelErrorEndpoints.Problem(KernelErrors.AuthorizationDenied));
-                    }
+            if (!await IsPermittedAsync(tenant, typeof(ReviseProtocolDraft), NodeRef.For(openDraft.Id), probe, catalog, cancellationToken).ConfigureAwait(false))
+            {
+                return DraftMutationPlan.Fail(KernelErrorEndpoints.Problem(KernelErrors.AuthorizationDenied));
+            }
 
-                    var currentDesign = replaceForms
-                        ? null
-                        : await versionReader.GetDesignAsync(tenant, current.Id, cancellationToken).ConfigureAwait(false);
-                    return new DraftMutationPlan(
-                        DraftMutationKind.ReviseExistingDraft,
-                        current.Id,
-                        ParentVersionId: current.ParentVersionId,
-                        BaseDesign: currentDesign,
-                        CreatedNewVersion: false,
-                        AmendmentIntent: current.AmendmentIntent,
-                        Problem: null);
-                }
+            var currentDesign = await versionReader.GetDesignAsync(tenant, openDraft.Id, cancellationToken).ConfigureAwait(false);
+            string? draftParentContent = null;
+            ProtocolAmendment? existingAmendment = null;
+            if (openDraft.ParentVersionId is { } draftParentId)
+            {
+                (_, draftParentContent) = await LoadDesignAndContentAsync(tenant, draftParentId, versionReader, cancellationToken).ConfigureAwait(false);
+                existingAmendment = await versionReader.GetAmendmentAsync(tenant, openDraft.Id, cancellationToken).ConfigureAwait(false);
+            }
 
-            case ProtocolVersionStatus.Approved:
-                {
-                    if (!await IsPermittedAsync(tenant, typeof(ForkProtocolVersion), NodeRef.For(current.Id), probe, catalog, cancellationToken).ConfigureAwait(false))
-                    {
-                        return DraftMutationPlan.Fail(KernelErrorEndpoints.Problem(KernelErrors.AuthorizationDenied));
-                    }
-
-                    var approvedDesign = replaceForms
-                        ? null
-                        : await versionReader.GetDesignAsync(tenant, current.Id, cancellationToken).ConfigureAwait(false);
-                    return new DraftMutationPlan(
-                        DraftMutationKind.ForkAndReviseApproved,
-                        derivedVersionId,
-                        ParentVersionId: current.Id,
-                        BaseDesign: approvedDesign,
-                        CreatedNewVersion: true,
-                        AmendmentIntent: "Protocol design import",
-                        Problem: null);
-                }
-
-            default:
-                return DraftMutationPlan.Fail(KernelErrorEndpoints.Problem(ProtocolErrors.InvalidTransition));
+            return new DraftMutationPlan(
+                ProtocolDraftImportMode.UpdateExisting,
+                openDraft.Id,
+                ParentVersionId: openDraft.ParentVersionId,
+                BaseDesign: currentDesign,
+                ParentContent: draftParentContent,
+                ExistingAmendment: existingAmendment,
+                CreatedNewVersion: false,
+                AmendmentIntent: openDraft.AmendmentIntent ?? existingAmendment?.Intent,
+                Problem: null);
         }
+
+        if (ordered.FirstOrDefault(v => v.Status == ProtocolVersionStatus.InReview) is { } inReview)
+        {
+            if (!await IsPermittedAsync(tenant, typeof(ReturnProtocolVersionToDraft), NodeRef.For(inReview.Id), probe, catalog, cancellationToken).ConfigureAwait(false)
+                || !await IsPermittedAsync(tenant, typeof(ReviseProtocolDraft), NodeRef.For(inReview.Id), probe, catalog, cancellationToken).ConfigureAwait(false))
+            {
+                return DraftMutationPlan.Fail(KernelErrorEndpoints.Problem(KernelErrors.AuthorizationDenied));
+            }
+
+            var reviewDesign = await versionReader.GetDesignAsync(tenant, inReview.Id, cancellationToken).ConfigureAwait(false);
+            string? reviewParentContent = null;
+            ProtocolAmendment? reviewAmendment = null;
+            if (inReview.ParentVersionId is { } reviewParentId)
+            {
+                (_, reviewParentContent) = await LoadDesignAndContentAsync(tenant, reviewParentId, versionReader, cancellationToken).ConfigureAwait(false);
+                reviewAmendment = await versionReader.GetAmendmentAsync(tenant, inReview.Id, cancellationToken).ConfigureAwait(false);
+            }
+
+            return new DraftMutationPlan(
+                ProtocolDraftImportMode.ReopenInReview,
+                inReview.Id,
+                ParentVersionId: inReview.ParentVersionId,
+                BaseDesign: reviewDesign,
+                ParentContent: reviewParentContent,
+                ExistingAmendment: reviewAmendment,
+                CreatedNewVersion: false,
+                AmendmentIntent: inReview.AmendmentIntent ?? reviewAmendment?.Intent,
+                Problem: null);
+        }
+
+        if (ordered.FirstOrDefault(v => v.Status == ProtocolVersionStatus.Approved) is { } approved)
+        {
+            if (!await IsPermittedAsync(tenant, typeof(ForkProtocolVersion), NodeRef.For(approved.Id), probe, catalog, cancellationToken).ConfigureAwait(false)
+                || !await IsPermittedAsync(tenant, typeof(ReviseProtocolDraft), NodeRef.For(approved.Id), probe, catalog, cancellationToken).ConfigureAwait(false))
+            {
+                return DraftMutationPlan.Fail(KernelErrorEndpoints.Problem(KernelErrors.AuthorizationDenied));
+            }
+
+            var (approvedDesign, approvedContent) = await LoadDesignAndContentAsync(
+                tenant,
+                approved.Id,
+                versionReader,
+                cancellationToken).ConfigureAwait(false);
+            return new DraftMutationPlan(
+                ProtocolDraftImportMode.ForkApproved,
+                derivedVersionId,
+                ParentVersionId: approved.Id,
+                BaseDesign: approvedDesign,
+                ParentContent: approvedContent,
+                ExistingAmendment: null,
+                CreatedNewVersion: true,
+                AmendmentIntent: "Protocol design import",
+                Problem: null);
+        }
+
+        // All existing versions are terminal (Withdrawn and/or Superseded): create a recovery Draft at max(Number) + 1.
+        if (!await IsPermittedAsync(tenant, typeof(CreateProtocolDraft), NodeRef.For(study.StudyId), probe, catalog, cancellationToken).ConfigureAwait(false))
+        {
+            return DraftMutationPlan.Fail(KernelErrorEndpoints.Problem(KernelErrors.AuthorizationDenied));
+        }
+
+        var latestSuperseded = ordered.FirstOrDefault(v => v.Status == ProtocolVersionStatus.Superseded);
+        var recoveryBaseDesign = latestSuperseded is not null
+            ? await versionReader.GetDesignAsync(tenant, latestSuperseded.Id, cancellationToken).ConfigureAwait(false)
+            : null;
+        return new DraftMutationPlan(
+            ProtocolDraftImportMode.CreateDraft,
+            derivedVersionId,
+            ParentVersionId: null,
+            BaseDesign: recoveryBaseDesign,
+            ParentContent: null,
+            ExistingAmendment: null,
+            CreatedNewVersion: true,
+            AmendmentIntent: null,
+            Problem: null);
     }
 
-    private static async Task<(ProtocolVersionState? State, ProblemHttpResult? Problem)> ExecuteDraftMutationAsync(
+    private static async Task<(ProtocolDesign? Design, string? Content)> LoadDesignAndContentAsync(
         TenantId tenant,
-        StudyId studyId,
+        ProtocolVersionId versionId,
+        IProtocolVersionReader versionReader,
+        CancellationToken cancellationToken)
+    {
+        var rawContent = await versionReader.GetContentAsync(tenant, versionId, cancellationToken).ConfigureAwait(false);
+        if (rawContent is not null)
+        {
+            var parsed = ProtocolDesignDocument.Read(rawContent);
+            if (parsed.IsValid)
+            {
+                return (parsed.Design, rawContent);
+            }
+
+            var fallbackDesign = await versionReader.GetDesignAsync(tenant, versionId, cancellationToken).ConfigureAwait(false);
+            return (fallbackDesign, rawContent);
+        }
+
+        var design = await versionReader.GetDesignAsync(tenant, versionId, cancellationToken).ConfigureAwait(false);
+        return (design, design is not null ? ProtocolDesignDocument.Write(design) : null);
+    }
+
+    private static ProtocolAmendment? BuildProtocolAmendment(
         DraftMutationPlan plan,
         ProtocolDesign design,
         string serializedDesign,
-        string idempotencyKey,
         string reason,
-        IKernelCommandSender sender,
-        CancellationToken cancellationToken)
+        AmendmentClassification? requestedClassification,
+        TransitionPolicy? requestedTransitionPolicy)
     {
-        switch (plan.Kind)
+        if (plan.ParentVersionId is null)
         {
-            case DraftMutationKind.CreateFirstDraft:
-                {
-                    var created = await sender.SendAsync(
-                        new CreateProtocolDraft(tenant, studyId, plan.TargetVersionId, serializedDesign, idempotencyKey, reason),
-                        cancellationToken: cancellationToken).ConfigureAwait(false);
-                    return created.IsSuccess
-                        ? (created.Value, null)
-                        : (null, KernelErrorEndpoints.Problem(created.Error!));
-                }
-
-            case DraftMutationKind.ReviseExistingDraft:
-                {
-                    var revised = await sender.SendAsync(
-                        new ReviseProtocolDraft(tenant, plan.TargetVersionId, serializedDesign, Amendment: null, idempotencyKey, reason),
-                        cancellationToken: cancellationToken).ConfigureAwait(false);
-                    return revised.IsSuccess
-                        ? (revised.Value, null)
-                        : (null, KernelErrorEndpoints.Problem(revised.Error!));
-                }
-
-            case DraftMutationKind.ForkAndReviseApproved:
-                {
-                    var impacted = design.CollectionSpecs.Select(s => s.Id).DefaultIfEmpty("protocol_design").ToList();
-                    var amendment = new ProtocolAmendment(
-                        Intent: plan.AmendmentIntent ?? "Protocol design import",
-                        Rationale: reason,
-                        Classification: AmendmentClassification.NonSubstantial,
-                        SummaryOfChanges: $"Imported {design.CollectionSpecs.Count} protocol form specification(s).",
-                        ImpactedElements: impacted,
-                        TransitionPolicy: TransitionPolicy.NewParticipantsOnly);
-
-                    var forked = await sender.SendAsync(
-                        new ForkProtocolVersion(tenant, plan.ParentVersionId!.Value, plan.TargetVersionId, amendment, $"{idempotencyKey}:fork", reason),
-                        cancellationToken: cancellationToken).ConfigureAwait(false);
-                    if (!forked.IsSuccess)
-                    {
-                        return (null, KernelErrorEndpoints.Problem(forked.Error!));
-                    }
-
-                    var revised = await sender.SendAsync(
-                        new ReviseProtocolDraft(tenant, plan.TargetVersionId, serializedDesign, amendment, $"{idempotencyKey}:revise", reason),
-                        cancellationToken: cancellationToken).ConfigureAwait(false);
-                    return revised.IsSuccess
-                        ? (revised.Value, null)
-                        : (null, KernelErrorEndpoints.Problem(revised.Error!));
-                }
-
-            default:
-                return (null, KernelErrorEndpoints.Problem(ProtocolErrors.InvalidTransition));
+            return null;
         }
+
+        List<string> impacted = [];
+        var diff = ProtocolStructuralDiff.Compare(plan.ParentContent, serializedDesign);
+        if (diff.IsSuccess && diff.Value is { Count: > 0 } changes)
+        {
+            impacted =
+            [
+                .. changes
+                    .Select(c => c.ElementId)
+                    .Where(id => !string.Equals(id, ProtocolStructuralDiff.RootId, StringComparison.Ordinal)),
+            ];
+            if (impacted.Count == 0)
+            {
+                impacted = [.. changes.Select(c => c.ElementId)];
+            }
+        }
+
+        if (impacted.Count == 0)
+        {
+            impacted = plan.ExistingAmendment?.ImpactedElements is { Count: > 0 } existingImpacted
+                ? [.. existingImpacted]
+                : [.. design.CollectionSpecs.Select(s => s.Id).DefaultIfEmpty("protocol_design")];
+        }
+
+        var classification = requestedClassification
+            ?? plan.ExistingAmendment?.Classification
+            ?? AmendmentClassification.NonSubstantial;
+        var transitionPolicy = requestedTransitionPolicy
+            ?? plan.ExistingAmendment?.TransitionPolicy
+            ?? TransitionPolicy.NewParticipantsOnly;
+        var intent = plan.ExistingAmendment?.Intent
+            ?? plan.AmendmentIntent
+            ?? "Protocol design import";
+
+        return new ProtocolAmendment(
+            Intent: intent,
+            Rationale: reason,
+            Classification: classification,
+            SummaryOfChanges: $"Imported {design.CollectionSpecs.Count} protocol form specification(s) ({impacted.Count} impacted element(s)).",
+            ImpactedElements: impacted,
+            TransitionPolicy: transitionPolicy);
     }
+
+    private static Task<IReadOnlyDictionary<ConceptRef, string>> ResolveConceptLabelsAsync(
+        TenantId tenant,
+        ProtocolDesign? design,
+        IConceptRegistry? concepts,
+        CancellationToken cancellationToken) =>
+        ResolveConceptLabelsAsync(tenant, design, concepts, stagedLabels: null, cancellationToken);
 
     private static async Task<IReadOnlyDictionary<ConceptRef, string>> ResolveConceptLabelsAsync(
         TenantId tenant,
         ProtocolDesign? design,
         IConceptRegistry? concepts,
+        IReadOnlyDictionary<ConceptRef, string>? stagedLabels,
         CancellationToken cancellationToken)
     {
         var map = new Dictionary<ConceptRef, string>();
-        if (design is null || concepts is null)
+        if (design is null)
         {
             return map;
         }
@@ -1969,6 +2212,19 @@ public static class KernelStudyImportEndpoints
 
         foreach (var conceptRef in needed)
         {
+            if (stagedLabels is not null
+                && stagedLabels.TryGetValue(conceptRef, out var stagedLabel)
+                && !string.IsNullOrWhiteSpace(stagedLabel))
+            {
+                map[conceptRef] = stagedLabel;
+                continue;
+            }
+
+            if (concepts is null)
+            {
+                continue;
+            }
+
             var resolved = await concepts.ResolveAsync(tenant, conceptRef, cancellationToken).ConfigureAwait(false);
             if (resolved is not null && !string.IsNullOrWhiteSpace(resolved.PreferredLabel))
             {
@@ -2279,6 +2535,7 @@ public static class KernelStudyImportEndpoints
             {
                 submission = rawCode;
             }
+
             if (submission is { Length: > 255 })
             {
                 submission = submission[..255];
@@ -2355,11 +2612,67 @@ public static class KernelStudyImportEndpoints
         return string.IsNullOrEmpty(prefix) ? "codelist" : prefix;
     }
 
-    private enum DraftMutationKind
+    private static string ComputeImportRequestFingerprint(StudyId studyId, ParsedImportInput input)
     {
-        CreateFirstDraft,
-        ReviseExistingDraft,
-        ForkAndReviseApproved,
+        using var sha = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+        var normalizedTemplates = input.TemplateIds is { Count: > 0 }
+            ? string.Join(",", input.TemplateIds.Select(t => t.Trim()))
+            : string.Empty;
+        var metadata = string.Join(
+            "\n",
+            studyId.ToString(),
+            input.Format.ToString(),
+            input.FileName ?? string.Empty,
+            normalizedTemplates,
+            input.ReplaceForms ? "replace:1" : "replace:0",
+            input.AmendmentClassification?.ToString() ?? string.Empty,
+            input.TransitionPolicy?.ToString() ?? string.Empty);
+        sha.AppendData(Encoding.UTF8.GetBytes(metadata));
+        sha.AppendData("\npayload:"u8);
+        if (input.RawBytes is { Length: > 0 } raw)
+        {
+            sha.AppendData(raw);
+        }
+
+        return Convert.ToHexStringLower(sha.GetHashAndReset());
+    }
+
+    private static bool TryParseAmendmentClassification(string? raw, out AmendmentClassification? classification)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            classification = null;
+            return true;
+        }
+
+        var normalized = raw.Trim().Replace("_", string.Empty, StringComparison.Ordinal).Replace("-", string.Empty, StringComparison.Ordinal);
+        if (Enum.TryParse<AmendmentClassification>(normalized, ignoreCase: true, out var parsed) && Enum.IsDefined(parsed))
+        {
+            classification = parsed;
+            return true;
+        }
+
+        classification = null;
+        return false;
+    }
+
+    private static bool TryParseTransitionPolicy(string? raw, out TransitionPolicy? policy)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            policy = null;
+            return true;
+        }
+
+        var normalized = raw.Trim().Replace("_", string.Empty, StringComparison.Ordinal).Replace("-", string.Empty, StringComparison.Ordinal);
+        if (Enum.TryParse<TransitionPolicy>(normalized, ignoreCase: true, out var parsed) && Enum.IsDefined(parsed))
+        {
+            policy = parsed;
+            return true;
+        }
+
+        policy = null;
+        return false;
     }
 
     private sealed record ParsedImportInput(
@@ -2368,22 +2681,40 @@ public static class KernelStudyImportEndpoints
         ProtocolImportFormat Format,
         IReadOnlyList<string>? TemplateIds,
         bool ReplaceForms,
+        AmendmentClassification? AmendmentClassification,
+        TransitionPolicy? TransitionPolicy,
         ProblemHttpResult? Problem)
     {
         public static ParsedImportInput Fail(ProblemHttpResult problem) =>
-            new(null, null, ProtocolImportFormat.Auto, null, false, problem);
+            new(null, null, ProtocolImportFormat.Auto, null, false, null, null, problem);
     }
 
+    private sealed record StagedCodeSystem(
+        CodeSystemId CodeSystemId,
+        string SystemUri,
+        LicenseClass License);
+
+    private sealed record StagedCodeSystemVersion(
+        CodeSystemVersionId VersionId,
+        CodeSystemId CodeSystemId,
+        string SystemUri,
+        string VersionLabel,
+        DateOnly ReleasedOn,
+        TerminologyPackage Package,
+        IReadOnlyList<CodeSystemEntryData> Entries);
+
     private sealed record DraftMutationPlan(
-        DraftMutationKind Kind,
+        ProtocolDraftImportMode Mode,
         ProtocolVersionId TargetVersionId,
         ProtocolVersionId? ParentVersionId,
         ProtocolDesign? BaseDesign,
+        string? ParentContent,
+        ProtocolAmendment? ExistingAmendment,
         bool CreatedNewVersion,
         string? AmendmentIntent,
         ProblemHttpResult? Problem)
     {
         public static DraftMutationPlan Fail(ProblemHttpResult problem) =>
-            new(DraftMutationKind.CreateFirstDraft, default, null, null, false, null, problem);
+            new(ProtocolDraftImportMode.CreateDraft, default, null, null, null, null, false, null, problem);
     }
 }

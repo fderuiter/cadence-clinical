@@ -5,9 +5,9 @@ LABEL description="GxP-validated statistical computing execution base image for 
 LABEL version="2026.1"
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libcurl4-openssl-dev \
-    libssl-dev \
-    libxml2-dev \
+    libcurl4-openssl-dev=8.23.0-2 \
+    libssl-dev=3.6.5-1 \
+    libxml2-dev=2.15.4+dfsg-1+b1 \
     && rm -rf /var/lib/apt/lists/*
 
 RUN groupadd --system --gid 10001 sce \

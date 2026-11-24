@@ -1,12 +1,7 @@
-import { unwrapResponse } from "../client";
 import type { KernelLockMeaning } from "./locks";
-import {
-  kernelClient,
-  mutationHeaders,
-  signedMutationHeaders,
-  unversioned,
-  type KernelSchemas,
-} from "./shared";
+import { unversioned, type KernelSchemas } from "./shared";
+
+const loadRouteTransport = () => import("./protocolImport");
 
 export type KernelRulePack = KernelSchemas["Kernel_KernelRulePackResponse"];
 export type KernelRuleSummary =
@@ -112,218 +107,92 @@ export interface KernelExplainValidationFindingInput {
   idempotencyKey: string;
 }
 
-function findingPath(findingRef: string) {
-  return { path: { findingRef: unversioned(findingRef) } };
-}
-
 export const kernelValidationApi = {
   /** Lists edit-check rule packs in the tenant alongside whether each is pinned on the study. */
-  listStudyRulePacks(studyRef: string): Promise<KernelStudyRulePacks> {
-    return unwrapResponse(
-      kernelClient.GET("/api/v1/kernel/studies/{studyRef}/rule-packs", {
-        params: { path: { studyRef } },
-      })
-    );
+  async listStudyRulePacks(studyRef: string): Promise<KernelStudyRulePacks> {
+    const { executeListStudyRulePacks } = await loadRouteTransport();
+    return executeListStudyRulePacks(studyRef);
   },
 
   /** Dry-runs a rule pack in memory against all collection instances of a study without persisting findings. */
-  previewStudyRulePack(
+  async previewStudyRulePack(
     studyRef: string,
     itemRef: string
   ): Promise<KernelRulePackPreview> {
-    return unwrapResponse(
-      kernelClient.POST(
-        "/api/v1/kernel/studies/{studyRef}/rule-packs/{itemRef}/preview",
-        {
-          params: { path: { studyRef, itemRef: unversioned(itemRef) } },
-        }
-      )
-    );
+    const { executePreviewStudyRulePack } = await loadRouteTransport();
+    return executePreviewStudyRulePack(studyRef, itemRef);
   },
 
   /** Approves a draft library item (such as a RulePack) with a step-up signature token. */
-  approveLibraryItem({
-    itemRef,
-    meaning = "Approved",
-    attestationId,
-    sigToken,
-    reason,
-    idempotencyKey,
-  }: KernelApproveLibraryItemRequest): Promise<KernelRulePack> {
-    return unwrapResponse(
-      kernelClient.POST("/api/v1/kernel/library-items/{itemRef}/approve", {
-        params: { path: { itemRef: unversioned(itemRef) } },
-        body: {
-          meaning,
-          ...(attestationId ? { attestation_id: attestationId } : {}),
-        },
-        headers: signedMutationHeaders(reason, idempotencyKey, sigToken),
-      })
-    );
+  async approveLibraryItem(
+    input: KernelApproveLibraryItemRequest
+  ): Promise<KernelRulePack> {
+    const { executeApproveLibraryItem } = await loadRouteTransport();
+    return executeApproveLibraryItem(input);
   },
 
   /** Pins the active approved rule packs on a study's standards profile. */
-  declareStudyRulePacks({
-    studyRef,
-    rulePackRefs,
-    reason,
-    idempotencyKey,
-  }: KernelDeclareStudyRulePacksInput): Promise<KernelStudyRulePacks> {
-    const normalizedRefs = rulePackRefs.map((ref) => {
-      const clean = unversioned(ref.trim());
-      return clean.includes(":") ? clean : `library_item:${clean}`;
-    });
-    return unwrapResponse(
-      kernelClient.PUT("/api/v1/kernel/studies/{studyRef}/standards", {
-        params: { path: { studyRef } },
-        body: { rule_pack_refs: normalizedRefs },
-        headers: mutationHeaders(reason, idempotencyKey),
-      })
-    );
+  async declareStudyRulePacks(
+    input: KernelDeclareStudyRulePacksInput
+  ): Promise<KernelStudyRulePacks> {
+    const { executeDeclareStudyRulePacks } = await loadRouteTransport();
+    return executeDeclareStudyRulePacks(input);
   },
 
   /** Lists validation findings recorded for a study, newest first. */
-  listStudyValidationFindings(
+  async listStudyValidationFindings(
     studyRef: string,
     query: KernelStudyValidationFindingsQuery = {}
   ): Promise<KernelValidationFindingPage> {
-    return unwrapResponse(
-      kernelClient.GET(
-        "/api/v1/kernel/studies/{studyRef}/validation/findings",
-        {
-          params: {
-            path: { studyRef },
-            query: {
-              stage: query.stage || undefined,
-              status: query.status || undefined,
-              severity: query.severity || undefined,
-              dataset: query.dataset || undefined,
-              pack_key: query.packKey || undefined,
-              limit: query.limit,
-            },
-          },
-        }
-      )
-    );
+    const { executeListStudyValidationFindings } = await loadRouteTransport();
+    return executeListStudyValidationFindings(studyRef, query);
   },
 
   /** Reads a validation finding together with its structured explanation. */
-  getValidationFinding(
+  async getValidationFinding(
     findingRef: string
   ): Promise<KernelValidationFindingDetail> {
-    return unwrapResponse(
-      kernelClient.GET("/api/v1/kernel/validation/findings/{findingRef}", {
-        params: findingPath(findingRef),
-      })
-    );
+    const { executeGetValidationFinding } = await loadRouteTransport();
+    return executeGetValidationFinding(findingRef);
   },
 
   /** Marks an Open validation finding as Investigating (`POST /api/v1/kernel/validation/findings/{findingRef}/investigate`). */
-  investigateValidationFinding({
-    findingRef,
-    reason,
-    idempotencyKey,
-  }: KernelValidationFindingReasonInput): Promise<KernelValidationFinding> {
-    return unwrapResponse(
-      kernelClient.POST(
-        "/api/v1/kernel/validation/findings/{findingRef}/investigate",
-        {
-          params: findingPath(findingRef),
-          headers: mutationHeaders(reason, idempotencyKey),
-        }
-      )
-    );
+  async investigateValidationFinding(
+    input: KernelValidationFindingReasonInput
+  ): Promise<KernelValidationFinding> {
+    const { executeInvestigateValidationFinding } = await loadRouteTransport();
+    return executeInvestigateValidationFinding(input);
   },
 
   /** Classifies a detected validation finding (`POST /api/v1/kernel/validation/findings/{findingRef}/classify`). */
-  classifyValidationFinding({
-    findingRef,
-    classification,
-    reason,
-    idempotencyKey,
-  }: KernelClassifyValidationFindingInput): Promise<KernelValidationFinding> {
-    return unwrapResponse(
-      kernelClient.POST(
-        "/api/v1/kernel/validation/findings/{findingRef}/classify",
-        {
-          params: findingPath(findingRef),
-          body: { classification },
-          headers: mutationHeaders(reason, idempotencyKey),
-        }
-      )
-    );
+  async classifyValidationFinding(
+    input: KernelClassifyValidationFindingInput
+  ): Promise<KernelValidationFinding> {
+    const { executeClassifyValidationFinding } = await loadRouteTransport();
+    return executeClassifyValidationFinding(input);
   },
 
   /** Accepts an Open or Investigating validation finding with a Responsibility signature (`POST /api/v1/kernel/validation/findings/{findingRef}/accept`). */
-  acceptValidationFinding({
-    findingRef,
-    rationale,
-    lastDetectedRunRef,
-    attestationId,
-    sigToken,
-    reason,
-    idempotencyKey,
-  }: KernelAcceptValidationFindingInput): Promise<KernelValidationFinding> {
-    return unwrapResponse(
-      kernelClient.POST(
-        "/api/v1/kernel/validation/findings/{findingRef}/accept",
-        {
-          params: findingPath(findingRef),
-          body: {
-            rationale,
-            ...(lastDetectedRunRef
-              ? { last_detected_run_ref: lastDetectedRunRef }
-              : {}),
-            ...(attestationId ? { attestation_id: attestationId } : {}),
-          },
-          headers: signedMutationHeaders(reason, idempotencyKey, sigToken),
-        }
-      )
-    );
+  async acceptValidationFinding(
+    input: KernelAcceptValidationFindingInput
+  ): Promise<KernelValidationFinding> {
+    const { executeAcceptValidationFinding } = await loadRouteTransport();
+    return executeAcceptValidationFinding(input);
   },
 
   /** Explains an Open or Investigating validation finding with an Approved signature (`POST /api/v1/kernel/validation/findings/{findingRef}/explain`). */
-  explainValidationFinding({
-    findingRef,
-    explanation,
-    lastDetectedRunRef,
-    attestationId,
-    sigToken,
-    reason,
-    idempotencyKey,
-  }: KernelExplainValidationFindingInput): Promise<KernelValidationFinding> {
-    return unwrapResponse(
-      kernelClient.POST(
-        "/api/v1/kernel/validation/findings/{findingRef}/explain",
-        {
-          params: findingPath(findingRef),
-          body: {
-            explanation,
-            ...(lastDetectedRunRef
-              ? { last_detected_run_ref: lastDetectedRunRef }
-              : {}),
-            ...(attestationId ? { attestation_id: attestationId } : {}),
-          },
-          headers: signedMutationHeaders(reason, idempotencyKey, sigToken),
-        }
-      )
-    );
+  async explainValidationFinding(
+    input: KernelExplainValidationFindingInput
+  ): Promise<KernelValidationFinding> {
+    const { executeExplainValidationFinding } = await loadRouteTransport();
+    return executeExplainValidationFinding(input);
   },
 
   /** Reopens an Investigating, Accepted, or Explained validation finding (`POST /api/v1/kernel/validation/findings/{findingRef}/reopen`). */
-  reopenValidationFinding({
-    findingRef,
-    reason,
-    idempotencyKey,
-  }: KernelValidationFindingReasonInput): Promise<KernelValidationFinding> {
-    return unwrapResponse(
-      kernelClient.POST(
-        "/api/v1/kernel/validation/findings/{findingRef}/reopen",
-        {
-          params: findingPath(findingRef),
-          headers: mutationHeaders(reason, idempotencyKey),
-        }
-      )
-    );
+  async reopenValidationFinding(
+    input: KernelValidationFindingReasonInput
+  ): Promise<KernelValidationFinding> {
+    const { executeReopenValidationFinding } = await loadRouteTransport();
+    return executeReopenValidationFinding(input);
   },
 };

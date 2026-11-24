@@ -24,7 +24,7 @@
           Total Subjects
         </div>
         <div
-          class="stat-value"
+          class="stat-value tabular-nums"
           style="
             font-size: 1.75rem;
             font-weight: 800;
@@ -63,7 +63,7 @@
           Enrollment Rate
         </div>
         <div
-          class="stat-value"
+          class="stat-value tabular-nums"
           style="
             font-size: 1.75rem;
             font-weight: 800;
@@ -98,7 +98,7 @@
           Verified SDV %
         </div>
         <div
-          class="stat-value"
+          class="stat-value tabular-nums"
           style="
             font-size: 1.75rem;
             font-weight: 800;
@@ -133,7 +133,7 @@
           Open Queries
         </div>
         <div
-          class="stat-value"
+          class="stat-value tabular-nums"
           style="
             font-size: 1.75rem;
             font-weight: 800;

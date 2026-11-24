@@ -201,8 +201,8 @@ export function findKernelStudyRef(code: string): Promise<string | null> {
   if (pending) return pending;
 
   const epochAtStart = bucket.epoch;
-  let lookup: Promise<string | null> | undefined;
-  lookup = (async () => {
+  const inFlight: { promise?: Promise<string | null> } = {};
+  const lookup: Promise<string | null> = (async () => {
     try {
       const inFlightEnrollmentStudy = bucket.enrollmentStudyInFlight.get(key);
       if (inFlightEnrollmentStudy) {
@@ -237,11 +237,12 @@ export function findKernelStudyRef(code: string): Promise<string | null> {
       }
       return resolved;
     } finally {
-      if (bucket.studyInFlight.get(key) === lookup) {
+      if (bucket.studyInFlight.get(key) === inFlight.promise) {
         bucket.studyInFlight.delete(key);
       }
     }
   })();
+  inFlight.promise = lookup;
   bucket.studyInFlight.set(key, lookup);
   return lookup;
 }
@@ -297,81 +298,83 @@ export function findKernelEnrollmentRef(
   }
 
   const epochAtStart = bucket.epoch;
-  let lookup: Promise<NodeRef | null> | undefined;
-  lookup = (async (): Promise<NodeRef | null> => {
-    try {
-      const found = await kernelApi.lookupEnrollment({
-        studyCode: trimmedStudy,
-        subjectCode: trimmedSubject,
-        siteCode: trimmedSite,
-      });
-      const parsed = parseNodeRef(found.enrollment_ref);
-      const resolved = parsed?.kind === "enrollment" ? parsed : null;
-      const resolvedStudyRef = found.study_ref?.trim() || null;
-      const resolvedSiteRef = found.study_site_ref?.trim() || null;
-      if (
-        resolved &&
-        bucket.epoch === epochAtStart &&
-        getKernelStudyCallerScopeKey() === scope
-      ) {
-        bucket.enrollments.set(key, resolved);
-        if (resolvedSiteRef) {
-          const siteParsed = parseNodeRef(resolvedSiteRef);
-          const unversionedSiteRef =
-            siteParsed?.kind === "study_site"
-              ? `${siteParsed.kind}:${siteParsed.id}`
-              : resolvedSiteRef;
-          bucket.enrollmentStudySites.set(
-            enrollmentSiteKey(scope, resolved.id),
-            unversionedSiteRef
-          );
-        }
-        bucket.enrollments.set(
-          enrollmentKey(scope, normalizedStudy, null, trimmedSubject),
-          resolved
-        );
-        if (found.site_code?.trim()) {
-          bucket.enrollments.set(
-            enrollmentKey(
-              scope,
-              normalizedStudy,
-              found.site_code.trim(),
-              trimmedSubject
-            ),
-            resolved
-          );
-        }
-        if (resolvedStudyRef) {
-          bucket.studyRefs.set(sKey, resolvedStudyRef);
-          if (found.study_code?.trim()) {
-            bucket.studyRefs.set(
-              studyKey(scope, normalizeStudyCode(found.study_code)),
-              resolvedStudyRef
+  const inFlight: { promise?: Promise<NodeRef | null> } = {};
+  const lookup: Promise<NodeRef | null> =
+    (async (): Promise<NodeRef | null> => {
+      try {
+        const found = await kernelApi.lookupEnrollment({
+          studyCode: trimmedStudy,
+          subjectCode: trimmedSubject,
+          siteCode: trimmedSite,
+        });
+        const parsed = parseNodeRef(found.enrollment_ref);
+        const resolved = parsed?.kind === "enrollment" ? parsed : null;
+        const resolvedStudyRef = found.study_ref?.trim() || null;
+        const resolvedSiteRef = found.study_site_ref?.trim() || null;
+        if (
+          resolved &&
+          bucket.epoch === epochAtStart &&
+          getKernelStudyCallerScopeKey() === scope
+        ) {
+          bucket.enrollments.set(key, resolved);
+          if (resolvedSiteRef) {
+            const siteParsed = parseNodeRef(resolvedSiteRef);
+            const unversionedSiteRef =
+              siteParsed?.kind === "study_site"
+                ? `${siteParsed.kind}:${siteParsed.id}`
+                : resolvedSiteRef;
+            bucket.enrollmentStudySites.set(
+              enrollmentSiteKey(scope, resolved.id),
+              unversionedSiteRef
             );
           }
+          bucket.enrollments.set(
+            enrollmentKey(scope, normalizedStudy, null, trimmedSubject),
+            resolved
+          );
+          if (found.site_code?.trim()) {
+            bucket.enrollments.set(
+              enrollmentKey(
+                scope,
+                normalizedStudy,
+                found.site_code.trim(),
+                trimmedSubject
+              ),
+              resolved
+            );
+          }
+          if (resolvedStudyRef) {
+            bucket.studyRefs.set(sKey, resolvedStudyRef);
+            if (found.study_code?.trim()) {
+              bucket.studyRefs.set(
+                studyKey(scope, normalizeStudyCode(found.study_code)),
+                resolvedStudyRef
+              );
+            }
+          }
+        }
+        resolveStudyHint(resolved ? resolvedStudyRef : null);
+        return resolved ? { ...resolved } : null;
+      } catch (err) {
+        resolveStudyHint(null);
+        if ((err as { status?: number | null } | null)?.status === 404) {
+          return null;
+        }
+        throw err;
+      } finally {
+        resolveStudyHint(null);
+        if (
+          studyHintPromise &&
+          bucket.enrollmentStudyInFlight.get(sKey) === studyHintPromise
+        ) {
+          bucket.enrollmentStudyInFlight.delete(sKey);
+        }
+        if (bucket.enrollmentInFlight.get(key) === inFlight.promise) {
+          bucket.enrollmentInFlight.delete(key);
         }
       }
-      resolveStudyHint(resolved ? resolvedStudyRef : null);
-      return resolved ? { ...resolved } : null;
-    } catch (err) {
-      resolveStudyHint(null);
-      if ((err as { status?: number | null } | null)?.status === 404) {
-        return null;
-      }
-      throw err;
-    } finally {
-      resolveStudyHint(null);
-      if (
-        studyHintPromise &&
-        bucket.enrollmentStudyInFlight.get(sKey) === studyHintPromise
-      ) {
-        bucket.enrollmentStudyInFlight.delete(sKey);
-      }
-      if (bucket.enrollmentInFlight.get(key) === lookup) {
-        bucket.enrollmentInFlight.delete(key);
-      }
-    }
-  })();
+    })();
+  inFlight.promise = lookup;
   bucket.enrollmentInFlight.set(key, lookup);
   return lookup;
 }
@@ -470,8 +473,10 @@ export function findStudySites(studyCode: string): Promise<StudySiteOption[]> {
   if (pending) return pending;
 
   const epochAtStart = bucket.epoch;
-  let lookup: Promise<StudySiteOption[]> | undefined;
-  lookup = (async (): Promise<StudySiteOption[]> => {
+  const inFlight: { promise?: Promise<StudySiteOption[]> } = {};
+  const lookup: Promise<StudySiteOption[]> = (async (): Promise<
+    StudySiteOption[]
+  > => {
     try {
       const byCode = new Map<string, StudySiteOption>();
       const refsByCode = new Map<string, string>();
@@ -546,7 +551,7 @@ export function findStudySites(studyCode: string): Promise<StudySiteOption[]> {
       if (
         options.length > 0 &&
         bucket.epoch === epochAtStart &&
-        bucket.studySitesInFlight.get(key) === lookup &&
+        bucket.studySitesInFlight.get(key) === inFlight.promise &&
         getKernelStudyCallerScopeKey() === scope
       ) {
         bucket.studySites.set(key, options);
@@ -554,11 +559,12 @@ export function findStudySites(studyCode: string): Promise<StudySiteOption[]> {
       }
       return options.map((item) => ({ ...item }));
     } finally {
-      if (bucket.studySitesInFlight.get(key) === lookup) {
+      if (bucket.studySitesInFlight.get(key) === inFlight.promise) {
         bucket.studySitesInFlight.delete(key);
       }
     }
   })();
+  inFlight.promise = lookup;
   bucket.studySitesInFlight.set(key, lookup);
   return lookup;
 }
@@ -754,8 +760,8 @@ export function findStudyScheduleOptions(
   if (pending) return pending;
 
   const epochAtStart = bucket.epoch;
-  let lookup: Promise<StudyScheduleOptions | null> | undefined;
-  lookup = (async () => {
+  const inFlight: { promise?: Promise<StudyScheduleOptions | null> } = {};
+  const lookup: Promise<StudyScheduleOptions | null> = (async () => {
     try {
       const studyRef = await findKernelStudyRef(trimmed);
       if (!studyRef) return null;
@@ -828,11 +834,12 @@ export function findStudyScheduleOptions(
       }
       return resolved;
     } finally {
-      if (bucket.scheduleOptionsInFlight.get(key) === lookup) {
+      if (bucket.scheduleOptionsInFlight.get(key) === inFlight.promise) {
         bucket.scheduleOptionsInFlight.delete(key);
       }
     }
   })();
+  inFlight.promise = lookup;
   bucket.scheduleOptionsInFlight.set(key, lookup);
   return lookup;
 }

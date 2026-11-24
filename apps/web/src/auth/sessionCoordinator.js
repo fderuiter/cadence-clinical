@@ -13,6 +13,7 @@ export const WEB_AUTH_RETURN_URL_KEY = "cadence_web_return_url";
 
 let authSessionBridge = null;
 let clinicalSessionBridge = null;
+let onboardingSessionBridge = null;
 let sessionEndedHandler = null;
 const sessionCacheClearHandlers = new Set();
 const logoutCleanupHandlers = new Set();
@@ -105,6 +106,15 @@ export function rehydrateClinicalPersona(personaKey, pinia) {
 
 export function resetClinicalSession(pinia) {
   clinicalSessionBridge?.onReset?.(pinia);
+}
+
+export function registerOnboardingSessionBridge(bridge) {
+  onboardingSessionBridge = bridge || null;
+}
+
+export function rehydrateOnboardingPersona(personaKey, pinia) {
+  if (!personaKey) return;
+  onboardingSessionBridge?.onRehydratePersona?.(personaKey, pinia);
 }
 
 export function setSessionEndedHandler(handler) {
