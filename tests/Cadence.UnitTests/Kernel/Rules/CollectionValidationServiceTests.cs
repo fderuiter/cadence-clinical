@@ -113,11 +113,17 @@ public sealed class CollectionValidationServiceTests
         var evaluator = new DotNetRuleEvaluator();
         var context = new RuleEvaluationContext(ValidationStage.Collection, AsOf);
 
-        // Baseline: static BuildRuleRecord for every form in the enrollment.
+        // Baseline: static BuildRuleRecord for every form and narrow CollectionRuleInput in the enrollment.
         var expectedViolations = evaluator.Evaluate(
             pack,
             context,
             forms.Select(f => CollectionValidationService.BuildRuleRecord(f, forms, draftOverlay: null)));
+        IReadOnlyList<CollectionRuleInput> ruleInputs = [.. forms.Select(CollectionRuleInput.From)];
+        var expectedInputViolations = evaluator.Evaluate(
+            pack,
+            context,
+            ruleInputs.Select(f => CollectionValidationService.BuildRuleRecord(f, ruleInputs, draftOverlay: null)));
+        expectedInputViolations.Should().BeEquivalentTo(expectedViolations);
 
         var packId = LibraryItemId.New();
         var registry = new StubStandardsRegistry(Study, packId, "sponsor.crossform", pack);

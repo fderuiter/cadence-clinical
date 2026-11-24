@@ -96,28 +96,35 @@ public sealed class CollectionValidationService(
             return [];
         }
 
-        var enrollmentForms = await collections.ListRecordsForEnrollmentAsync(tenant, target.EnrollmentId, cancellationToken).ConfigureAwait(false);
-        var siblings = enrollmentForms.Count > 0 ? enrollmentForms : [target];
+        var targetInput = CollectionRuleInput.From(target);
+        var enrollmentForms = await collections.ListRuleInputsForEnrollmentAsync(tenant, target.EnrollmentId, cancellationToken).ConfigureAwait(false);
+        var siblings = enrollmentForms.Count > 0 ? enrollmentForms : [targetInput];
 
         IReadOnlyList<ProtocolDesign> designs = [];
         IReadOnlyDictionary<ConceptId, BlindedConceptMetadata> conceptMap = new Dictionary<ConceptId, BlindedConceptMetadata>();
         if (!unblinded)
         {
-            designs = await LoadDesignsAsync(tenant, target.StudyId, siblings, cancellationToken).ConfigureAwait(false);
-            conceptMap = await LoadConceptsAsync(tenant, siblings, designs, cancellationToken).ConfigureAwait(false);
+            designs = await LoadDesignsAsync(tenant, target.StudyId, siblings.Select(s => s.ProtocolVersionId), cancellationToken).ConfigureAwait(false);
+            conceptMap = await LoadConceptsAsync(tenant, siblings.SelectMany(s => s.Items), designs, cancellationToken).ConfigureAwait(false);
         }
 
         var targetOwnValues = BuildServiceOwnItemValues(
-            target,
+            targetInput,
             draftValues,
             unblinded: unblinded,
             designs,
-            conceptMap,
-            masks: null);
-        var latestSiblings = SelectLatestFormsBySpec(siblings, target.CollectionInstanceId, target.CollectionSpecId);
+            conceptMap);
+        var latestSiblings = SelectLatestFormsBySpec(
+            siblings,
+            static f => f.CollectionInstanceId,
+            static f => f.CollectionSpecId,
+            static f => f.OpenedAt,
+            targetInput.CollectionInstanceId,
+            targetInput.CollectionSpecId);
         var siblingIndex = BuildSiblingIndex(
             latestSiblings,
-            sibling => BuildServiceOwnItemValues(sibling, draftOverlay: null, unblinded: unblinded, designs, conceptMap, masks: null));
+            static sibling => sibling.CollectionSpecId,
+            sibling => BuildServiceOwnItemValues(sibling, draftOverlay: null, unblinded: unblinded, designs, conceptMap));
         IndexedCollectionForm[] singleForm =
         [
             new IndexedCollectionForm(target, targetOwnValues, siblingIndex, unblinded),
@@ -193,8 +200,8 @@ public sealed class CollectionValidationService(
         IReadOnlyDictionary<ConceptId, BlindedConceptMetadata> conceptMap = new Dictionary<ConceptId, BlindedConceptMetadata>();
         if (caller is not null)
         {
-            designs = await LoadDesignsAsync(tenant, studyId, instances, cancellationToken).ConfigureAwait(false);
-            conceptMap = await LoadConceptsAsync(tenant, instances, designs, cancellationToken).ConfigureAwait(false);
+            designs = await LoadDesignsAsync(tenant, studyId, instances.Select(i => i.ProtocolVersionId), cancellationToken).ConfigureAwait(false);
+            conceptMap = await LoadConceptsAsync(tenant, instances.SelectMany(i => i.Items), designs, cancellationToken).ConfigureAwait(false);
         }
 
         var indexedForms = IndexStudyForms(
@@ -343,15 +350,56 @@ public sealed class CollectionValidationService(
     {
         ArgumentNullException.ThrowIfNull(target);
         ArgumentNullException.ThrowIfNull(enrollmentForms);
+        return BuildRuleRecordCore(
+            target,
+            enrollmentForms,
+            static f => f.CollectionInstanceId,
+            static f => f.CollectionSpecId,
+            static f => f.OpenedAt,
+            BuildStaticOwnItemValues(target, draftOverlay, isBlindedVariable),
+            sibling => BuildStaticOwnItemValues(sibling, draftOverlay: null, isBlindedVariable));
+    }
 
-        var targetOwnValues = BuildStaticOwnItemValues(target, draftOverlay, isBlindedVariable);
-        var latestBySpec = SelectLatestFormsBySpec(enrollmentForms, target.CollectionInstanceId, target.CollectionSpecId);
+    /// <summary>
+    /// Builds the <see cref="RuleRecord"/> for a narrow <paramref name="target"/> input, replacing any item matched by
+    /// <paramref name="isBlindedVariable"/> with <see cref="RuleValue.Null"/> (K-AUTH-4).
+    /// </summary>
+    public static RuleRecord BuildRuleRecord(
+        CollectionRuleInput target,
+        IReadOnlyList<CollectionRuleInput> enrollmentForms,
+        IReadOnlyDictionary<string, ObservationValue?>? draftOverlay,
+        Func<CollectionRuleInput, string, ObservationValue?, bool>? isBlindedVariable = null)
+    {
+        ArgumentNullException.ThrowIfNull(target);
+        ArgumentNullException.ThrowIfNull(enrollmentForms);
+        return BuildRuleRecordCore(
+            target,
+            enrollmentForms,
+            static f => f.CollectionInstanceId,
+            static f => f.CollectionSpecId,
+            static f => f.OpenedAt,
+            BuildStaticOwnItemValues(target, draftOverlay, isBlindedVariable),
+            sibling => BuildStaticOwnItemValues(sibling, draftOverlay: null, isBlindedVariable));
+    }
+
+    private static RuleRecord BuildRuleRecordCore<TForm>(
+        TForm target,
+        IReadOnlyList<TForm> enrollmentForms,
+        Func<TForm, CollectionInstanceId> getId,
+        Func<TForm, string> getSpecId,
+        Func<TForm, DateTimeOffset> getOpenedAt,
+        Dictionary<string, RuleValue> targetOwnValues,
+        Func<TForm, Dictionary<string, RuleValue>> buildSiblingOwnValues)
+    {
+        var targetId = getId(target);
+        var targetSpecId = getSpecId(target);
+        var latestBySpec = SelectLatestFormsBySpec(enrollmentForms, getId, getSpecId, getOpenedAt, targetId, targetSpecId);
         var values = new Dictionary<string, RuleValue>(targetOwnValues.Count * 2 + latestBySpec.Count * 8, StringComparer.Ordinal);
 
         foreach (var (itemId, converted) in targetOwnValues)
         {
             values[itemId] = converted;
-            var qualified = $"{target.CollectionSpecId}.{itemId}";
+            var qualified = $"{targetSpecId}.{itemId}";
             if (qualified.Length <= FindingTarget.MaxNameLength)
             {
                 values[qualified] = converted;
@@ -361,10 +409,11 @@ public sealed class CollectionValidationService(
         for (var i = 0; i < latestBySpec.Count; i++)
         {
             var sibling = latestBySpec[i];
-            var siblingOwnValues = BuildStaticOwnItemValues(sibling, draftOverlay: null, isBlindedVariable);
+            var siblingSpecId = getSpecId(sibling);
+            var siblingOwnValues = buildSiblingOwnValues(sibling);
             foreach (var (siblingItemId, converted) in siblingOwnValues)
             {
-                var qualified = $"{sibling.CollectionSpecId}.{siblingItemId}";
+                var qualified = $"{siblingSpecId}.{siblingItemId}";
                 if (qualified.Length <= FindingTarget.MaxNameLength)
                 {
                     values[qualified] = converted;
@@ -377,7 +426,7 @@ public sealed class CollectionValidationService(
             }
         }
 
-        return new RuleRecord(target.CollectionSpecId, target.CollectionInstanceId.Value.ToString("D"), values);
+        return new RuleRecord(targetSpecId, targetId.Value.ToString("D"), values);
     }
 
     /// <summary>Converts a typed <see cref="ObservationValue"/> to the corresponding <see cref="RuleValue"/>.</summary>
@@ -516,10 +565,17 @@ public sealed class CollectionValidationService(
                 }
             }
 
-            var latestBySpec = SelectLatestFormsBySpec(enrollmentForms);
+            var latestBySpec = SelectLatestFormsBySpec(
+                enrollmentForms,
+                static f => f.CollectionInstanceId,
+                static f => f.CollectionSpecId,
+                static f => f.OpenedAt);
             siblingIndexByEnrollment.Add(
                 enrollmentId,
-                BuildSiblingIndex(latestBySpec, sibling => ownValuesByFormId[sibling.CollectionInstanceId]));
+                BuildSiblingIndex(
+                    latestBySpec,
+                    static sibling => sibling.CollectionSpecId,
+                    sibling => ownValuesByFormId[sibling.CollectionInstanceId]));
         }
 
         var indexedForms = new IndexedCollectionForm[instances.Count];
@@ -540,6 +596,58 @@ public sealed class CollectionValidationService(
         CollectionInstanceRecord form,
         IReadOnlyDictionary<string, ObservationValue?>? draftOverlay,
         Func<CollectionInstanceRecord, string, ObservationValue?, bool>? isBlindedVariable)
+    {
+        var recordedByItem = new Dictionary<string, ObservationValue?>(
+            form.Values.Count + (draftOverlay?.Count ?? 0),
+            StringComparer.Ordinal);
+        for (var i = 0; i < form.Values.Count; i++)
+        {
+            var recorded = form.Values[i];
+            recordedByItem[recorded.ItemId] = recorded.Value;
+        }
+
+        if (draftOverlay is not null)
+        {
+            foreach (var (itemId, draftValue) in draftOverlay)
+            {
+                recordedByItem[itemId] = draftValue;
+            }
+        }
+
+        var ownValues = new Dictionary<string, RuleValue>(form.Items.Count + recordedByItem.Count, StringComparer.Ordinal);
+        for (var i = 0; i < form.Items.Count; i++)
+        {
+            var itemId = form.Items[i].Id;
+            if (ownValues.ContainsKey(itemId))
+            {
+                continue;
+            }
+
+            recordedByItem.TryGetValue(itemId, out var raw);
+            ownValues.Add(
+                itemId,
+                isBlindedVariable is not null && isBlindedVariable(form, itemId, raw) ? RuleValue.Null : ToRuleValue(raw));
+        }
+
+        foreach (var (itemId, raw) in recordedByItem)
+        {
+            if (ownValues.ContainsKey(itemId))
+            {
+                continue;
+            }
+
+            ownValues.Add(
+                itemId,
+                isBlindedVariable is not null && isBlindedVariable(form, itemId, raw) ? RuleValue.Null : ToRuleValue(raw));
+        }
+
+        return ownValues;
+    }
+
+    private static Dictionary<string, RuleValue> BuildStaticOwnItemValues(
+        CollectionRuleInput form,
+        IReadOnlyDictionary<string, ObservationValue?>? draftOverlay,
+        Func<CollectionRuleInput, string, ObservationValue?, bool>? isBlindedVariable)
     {
         var recordedByItem = new Dictionary<string, ObservationValue?>(
             form.Values.Count + (draftOverlay?.Count ?? 0),
@@ -624,7 +732,7 @@ public sealed class CollectionValidationService(
             }
 
             recordedByItem.TryGetValue(specItem.Id, out var entry);
-            var converted = !unblinded && IsBlindedItemFast(form, specItem.Id, specItem, entry.Value, entry.ObservationId, designs, conceptMap, masks)
+            var converted = !unblinded && IsBlindedItemFast(form.CollectionSpecId, form.CollectionTitle, specItem.Id, specItem, entry.Value, entry.ObservationId, designs, conceptMap, masks)
                 ? RuleValue.Null
                 : ToRuleValue(entry.Value);
             ownValues.Add(specItem.Id, converted);
@@ -637,7 +745,7 @@ public sealed class CollectionValidationService(
                 continue;
             }
 
-            var converted = !unblinded && IsBlindedItemFast(form, itemId, specItem: null, entry.Value, entry.ObservationId, designs, conceptMap, masks)
+            var converted = !unblinded && IsBlindedItemFast(form.CollectionSpecId, form.CollectionTitle, itemId, specItem: null, entry.Value, entry.ObservationId, designs, conceptMap, masks)
                 ? RuleValue.Null
                 : ToRuleValue(entry.Value);
             ownValues.Add(itemId, converted);
@@ -646,12 +754,71 @@ public sealed class CollectionValidationService(
         return ownValues;
     }
 
-    private static List<CollectionInstanceRecord> SelectLatestFormsBySpec(
-        IReadOnlyList<CollectionInstanceRecord> enrollmentForms,
+    private Dictionary<string, RuleValue> BuildServiceOwnItemValues(
+        CollectionRuleInput form,
+        IReadOnlyDictionary<string, ObservationValue?>? draftOverlay,
+        bool unblinded,
+        IReadOnlyList<ProtocolDesign> designs,
+        IReadOnlyDictionary<ConceptId, BlindedConceptMetadata> conceptMap)
+    {
+        var recordedByItem = new Dictionary<string, ObservationValue?>(
+            form.Values.Count + (draftOverlay?.Count ?? 0),
+            StringComparer.Ordinal);
+        for (var i = 0; i < form.Values.Count; i++)
+        {
+            var recorded = form.Values[i];
+            recordedByItem[recorded.ItemId] = recorded.Value;
+        }
+
+        if (draftOverlay is not null)
+        {
+            foreach (var (itemId, draftValue) in draftOverlay)
+            {
+                recordedByItem[itemId] = draftValue;
+            }
+        }
+
+        var ownValues = new Dictionary<string, RuleValue>(form.Items.Count + recordedByItem.Count, StringComparer.Ordinal);
+        for (var i = 0; i < form.Items.Count; i++)
+        {
+            var specItem = form.Items[i];
+            if (ownValues.ContainsKey(specItem.Id))
+            {
+                continue;
+            }
+
+            recordedByItem.TryGetValue(specItem.Id, out var raw);
+            var converted = !unblinded && IsBlindedItemFast(form.CollectionSpecId, form.CollectionTitle, specItem.Id, specItem, raw, observationId: null, designs, conceptMap, masks: null)
+                ? RuleValue.Null
+                : ToRuleValue(raw);
+            ownValues.Add(specItem.Id, converted);
+        }
+
+        foreach (var (itemId, raw) in recordedByItem)
+        {
+            if (ownValues.ContainsKey(itemId))
+            {
+                continue;
+            }
+
+            var converted = !unblinded && IsBlindedItemFast(form.CollectionSpecId, form.CollectionTitle, itemId, specItem: null, raw, observationId: null, designs, conceptMap, masks: null)
+                ? RuleValue.Null
+                : ToRuleValue(raw);
+            ownValues.Add(itemId, converted);
+        }
+
+        return ownValues;
+    }
+
+    private static List<TForm> SelectLatestFormsBySpec<TForm>(
+        IReadOnlyList<TForm> enrollmentForms,
+        Func<TForm, CollectionInstanceId> getId,
+        Func<TForm, string> getSpecId,
+        Func<TForm, DateTimeOffset> getOpenedAt,
         CollectionInstanceId? excludeFormId = null,
         string? excludeSpecId = null)
     {
-        var latest = new List<CollectionInstanceRecord>();
+        var latest = new List<TForm>();
         if (enrollmentForms.Count == 0)
         {
             return latest;
@@ -661,22 +828,24 @@ public sealed class CollectionValidationService(
         for (var i = 0; i < enrollmentForms.Count; i++)
         {
             var candidate = enrollmentForms[i];
-            if (excludeFormId is { } excludedId && candidate.CollectionInstanceId == excludedId)
+            var candidateId = getId(candidate);
+            if (excludeFormId is { } excludedId && candidateId == excludedId)
             {
                 continue;
             }
 
-            if (excludeSpecId is not null && string.Equals(candidate.CollectionSpecId, excludeSpecId, StringComparison.Ordinal))
+            var candidateSpecId = getSpecId(candidate);
+            if (excludeSpecId is not null && string.Equals(candidateSpecId, excludeSpecId, StringComparison.Ordinal))
             {
                 continue;
             }
 
-            if (!indexBySpec.TryGetValue(candidate.CollectionSpecId, out var existingIndex))
+            if (!indexBySpec.TryGetValue(candidateSpecId, out var existingIndex))
             {
-                indexBySpec.Add(candidate.CollectionSpecId, latest.Count);
+                indexBySpec.Add(candidateSpecId, latest.Count);
                 latest.Add(candidate);
             }
-            else if (IsNewerOrSameSibling(candidate, latest[existingIndex]))
+            else if (IsNewerOrSameSibling(getOpenedAt(candidate), candidateId, getOpenedAt(latest[existingIndex]), getId(latest[existingIndex])))
             {
                 latest[existingIndex] = candidate;
             }
@@ -685,20 +854,25 @@ public sealed class CollectionValidationService(
         return latest;
     }
 
-    private static bool IsNewerOrSameSibling(CollectionInstanceRecord candidate, CollectionInstanceRecord current)
+    private static bool IsNewerOrSameSibling(
+        DateTimeOffset candidateOpenedAt,
+        CollectionInstanceId candidateId,
+        DateTimeOffset currentOpenedAt,
+        CollectionInstanceId currentId)
     {
-        var openedComparison = candidate.OpenedAt.CompareTo(current.OpenedAt);
+        var openedComparison = candidateOpenedAt.CompareTo(currentOpenedAt);
         if (openedComparison != 0)
         {
             return openedComparison > 0;
         }
 
-        return Comparer<CollectionInstanceId>.Default.Compare(candidate.CollectionInstanceId, current.CollectionInstanceId) >= 0;
+        return Comparer<CollectionInstanceId>.Default.Compare(candidateId, currentId) >= 0;
     }
 
-    private static EnrollmentSiblingIndex BuildSiblingIndex(
-        List<CollectionInstanceRecord> latestBySpec,
-        Func<CollectionInstanceRecord, Dictionary<string, RuleValue>> resolveOwnValues)
+    private static EnrollmentSiblingIndex BuildSiblingIndex<TForm>(
+        List<TForm> latestBySpec,
+        Func<TForm, string> getSpecId,
+        Func<TForm, Dictionary<string, RuleValue>> resolveOwnValues)
     {
         if (latestBySpec.Count == 0)
         {
@@ -711,7 +885,7 @@ public sealed class CollectionValidationService(
         for (var i = 0; i < latestBySpec.Count; i++)
         {
             var sibling = latestBySpec[i];
-            var siblingSpec = sibling.CollectionSpecId;
+            var siblingSpec = getSpecId(sibling);
             var ownValues = resolveOwnValues(sibling);
             foreach (var (itemId, converted) in ownValues)
             {
@@ -810,11 +984,12 @@ public sealed class CollectionValidationService(
         }
 
         var specItem = form.Items.FirstOrDefault(i => string.Equals(i.Id, itemId, StringComparison.Ordinal));
-        return IsBlindedItemFast(form, itemId, specItem, rawValue, observationId, designs, conceptMap, masks);
+        return IsBlindedItemFast(form.CollectionSpecId, form.CollectionTitle, itemId, specItem, rawValue, observationId, designs, conceptMap, masks);
     }
 
     private bool IsBlindedItemFast(
-        CollectionInstanceRecord form,
+        string collectionSpecId,
+        string? collectionTitle,
         string itemId,
         CollectionItem? specItem,
         ObservationValue? rawValue,
@@ -831,13 +1006,13 @@ public sealed class CollectionValidationService(
         BlindedConceptMetadata? conceptMeta = specItem is not null && conceptMap.TryGetValue(specItem.Concept.ConceptId, out var meta)
             ? meta
             : null;
-        if (_blinding.IsBlindedCollectionItem(form.CollectionSpecId, form.CollectionTitle, specItem, rawValue, conceptMeta, designs))
+        if (_blinding.IsBlindedCollectionItem(collectionSpecId, collectionTitle, specItem, rawValue, conceptMeta, designs))
         {
             return true;
         }
 
         BlindedConceptMetadata? ResolveConcept(ConceptId id) => conceptMap.TryGetValue(id, out var m) ? m : null;
-        return _blinding.IsBlindedVariable(form.CollectionSpecId, itemId, designs, ResolveConcept);
+        return _blinding.IsBlindedVariable(collectionSpecId, itemId, designs, ResolveConcept);
     }
 
     private bool IsBlindedViolation(
@@ -866,7 +1041,7 @@ public sealed class CollectionValidationService(
     private async Task<IReadOnlyList<ProtocolDesign>> LoadDesignsAsync(
         TenantId tenant,
         StudyId studyId,
-        IReadOnlyList<CollectionInstanceRecord> forms,
+        IEnumerable<ProtocolVersionId> versionIds,
         CancellationToken cancellationToken)
     {
         if (protocols is null)
@@ -876,7 +1051,7 @@ public sealed class CollectionValidationService(
 
         var designs = new List<ProtocolDesign>();
         var seenVersions = new HashSet<ProtocolVersionId>();
-        foreach (var versionId in forms.Select(f => f.ProtocolVersionId).Distinct())
+        foreach (var versionId in versionIds.Distinct())
         {
             if (seenVersions.Add(versionId)
                 && await protocols.GetDesignAsync(tenant, versionId, cancellationToken).ConfigureAwait(false) is { } design)
@@ -904,7 +1079,7 @@ public sealed class CollectionValidationService(
 
     private async Task<IReadOnlyDictionary<ConceptId, BlindedConceptMetadata>> LoadConceptsAsync(
         TenantId tenant,
-        IReadOnlyList<CollectionInstanceRecord> forms,
+        IEnumerable<CollectionItem> items,
         IReadOnlyList<ProtocolDesign> designs,
         CancellationToken cancellationToken)
     {
@@ -914,7 +1089,7 @@ public sealed class CollectionValidationService(
         }
 
         var resolved = new Dictionary<ConceptId, BlindedConceptMetadata>();
-        var refs = forms.SelectMany(f => f.Items).Select(i => i.Concept)
+        var refs = items.Select(i => i.Concept)
             .Concat(designs.SelectMany(d => d.CollectionSpecs).SelectMany(s => s.Items).Select(i => i.Concept))
             .Distinct();
         foreach (var conceptRef in refs)
