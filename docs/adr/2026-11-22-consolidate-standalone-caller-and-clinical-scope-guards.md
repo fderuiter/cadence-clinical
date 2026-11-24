@@ -1,4 +1,4 @@
-# ADR-2660: Consolidate Standalone Caller Attribution and Clinical Scope Guards in Cadence.Security
+# ADR-2661: Consolidate Standalone Caller Attribution and Clinical Scope Guards in Cadence.Security
 
 - **Status:** Accepted
 - **Date:** 2026-11-22

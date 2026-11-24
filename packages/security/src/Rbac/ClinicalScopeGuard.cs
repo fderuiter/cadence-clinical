@@ -15,7 +15,7 @@ namespace Cadence.Security.Rbac;
 /// <summary>
 /// Shared fail-closed tenant, study, and site scope guard for standalone clinical service handlers.
 /// Enforces identical fail-closed tenant, study, and site boundaries across standalone services
-/// (PRD-CRF-013, PRD-SYS-053, PRD-SYS-192, ADR-2514, ADR-2516, ADR-2548, ADR-2552, ADR-2660).
+/// (PRD-CRF-013, PRD-SYS-053, PRD-SYS-192, ADR-2514, ADR-2516, ADR-2548, ADR-2552, ADR-2661).
 /// </summary>
 public static class ClinicalScopeGuard
 {

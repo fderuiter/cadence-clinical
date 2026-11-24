@@ -82,6 +82,24 @@ public sealed class SubjectRepository(ExecutionDbContext context)
             .ConfigureAwait(false);
     }
 
+    public async Task<ClinicalSubject?> GetByKernelEnrollmentIdAsync(Guid enrollmentId, CancellationToken cancellationToken)
+    {
+        EnsureVerifiedTenantContext();
+
+        if (enrollmentId == Guid.Empty)
+        {
+            return null;
+        }
+
+        Guid? relationalTenantFilter = Context.ActiveRelationalTenantFilter;
+
+        return await Context.ClinicalSubjects
+            .SingleOrDefaultAsync(
+                s => s.KernelEnrollmentId == enrollmentId && (relationalTenantFilter == null || s.TenantId == relationalTenantFilter),
+                cancellationToken)
+            .ConfigureAwait(false);
+    }
+
     public async Task<ClinicalSubject?> GetByCodeAsync(string code, CancellationToken cancellationToken)
     {
         EnsureVerifiedTenantContext();

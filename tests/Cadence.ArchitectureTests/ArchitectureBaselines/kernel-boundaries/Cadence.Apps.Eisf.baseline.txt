@@ -3,10 +3,17 @@
 # Prune resolved entries with CADENCE_UPDATE_BASELINE=1 (see tests/Cadence.ArchitectureTests/Architecture/KernelBoundaryBaseline.cs).
 K-MOD-1|Cadence.Apps.Eisf|Cadence.Apps.Eisf.Domain.EisfDocumentRecord.SiteId
 K-MOD-1|Cadence.Apps.Eisf|Cadence.Apps.Eisf.Domain.EisfDocumentRecord.StudyId
+K-MOD-1|Cadence.Apps.Eisf|Cadence.Apps.Eisf.Domain.EisfDocumentRecord.TenantId
+K-MOD-1|Cadence.Apps.Eisf|Cadence.Apps.Eisf.Domain.EisfDocumentRevision.TenantId
+K-MOD-1|Cadence.Apps.Eisf|Cadence.Apps.Eisf.Domain.EisfSectionTaxonomy.TenantId
+K-MOD-1|Cadence.Apps.Eisf|Cadence.Apps.Eisf.Domain.IsfAuditLog.TenantId
 K-MOD-1|Cadence.Apps.Eisf|Cadence.Apps.Eisf.Domain.IsfDocument.SiteId
 K-MOD-1|Cadence.Apps.Eisf|Cadence.Apps.Eisf.Domain.IsfDocument.StudyId
+K-MOD-1|Cadence.Apps.Eisf|Cadence.Apps.Eisf.Domain.IsfDocument.TenantId
+K-MOD-1|Cadence.Apps.Eisf|Cadence.Core.Domain.Audit.AuditLogEntry.TenantId
 K-XS-1|Cadence.Apps.Eisf|Cadence.Apps.Eisf.Domain.EisfDocumentRecord.SiteId
 K-XS-1|Cadence.Apps.Eisf|Cadence.Apps.Eisf.Domain.EisfDocumentRecord.StudyId
 K-XS-1|Cadence.Apps.Eisf|Cadence.Apps.Eisf.Domain.IsfAuditLog
+K-XS-1|Cadence.Apps.Eisf|Cadence.Apps.Eisf.Domain.IsfAuditLog.TenantId
 K-XS-1|Cadence.Apps.Eisf|Cadence.Apps.Eisf.Domain.IsfDocument.SiteId
 K-XS-1|Cadence.Apps.Eisf|Cadence.Apps.Eisf.Domain.IsfDocument.StudyId
