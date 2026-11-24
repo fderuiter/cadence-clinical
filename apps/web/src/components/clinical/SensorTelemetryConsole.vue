@@ -1368,40 +1368,11 @@ onMounted(() => {
   font-size: 20px;
 }
 
-.bg-blue {
-  background: var(--semantic-color-info-bg);
-}
-.bg-green {
-  background: var(--semantic-color-success-bg-soft);
-}
-.bg-purple {
-  background: var(--semantic-color-purple-bg);
-}
-.bg-red {
-  background: var(--semantic-color-error-bg-soft);
-}
-
-.metric-content {
-  display: flex;
-  flex-direction: column;
-}
-
-.metric-label {
-  font-size: 12px;
-  color: var(--semantic-color-text-secondary);
-  font-weight: 500;
-}
-
 .metric-value {
   font-size: 20px;
   font-weight: 700;
   color: var(--semantic-color-text);
   margin: 2px 0;
-}
-
-.metric-sub {
-  font-size: 11px;
-  color: var(--semantic-color-text-secondary);
 }
 
 /* Nav Tabs */
@@ -1862,3 +1833,5 @@ onMounted(() => {
   margin-bottom: 14px;
 }
 </style>
+
+<style scoped src="./consoleMetrics.css"></style>

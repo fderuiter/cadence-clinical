@@ -132,7 +132,7 @@ export default defineConfig({
   ],
   resolve: {
     alias: [
-      ...createUiWorkspaceAliases(__dirname, { uiEntry: "dist/index.js" }),
+      ...createUiWorkspaceAliases(__dirname),
       { find: "@", replacement: path.resolve(__dirname, "./src") },
       {
         find: "pinia",
@@ -164,7 +164,12 @@ export default defineConfig({
     ...(IS_E2E_BUILD ? { proxy: {} } : {}),
   },
   optimizeDeps: {
-    entries: ["index.html", "tests/browser/observation.html"],
+    entries: [
+      "index.html",
+      "tests/browser/observation.html",
+      "../../packages/ui/index.js",
+    ],
+    include: ["ui > axe-core"],
   },
   build: {
     outDir: "dist",
@@ -177,41 +182,54 @@ export default defineConfig({
         : {
             manualChunks(id) {
               const normalizedId = id.replace(/\\/g, "/");
-              if (!normalizedId.includes("node_modules/")) {
+              if (normalizedId.includes("node_modules/")) {
+                const pkgPath = normalizedId.slice(
+                  normalizedId.lastIndexOf("node_modules/") +
+                    "node_modules/".length
+                );
+
+                if (
+                  pkgPath.startsWith("vue/") ||
+                  pkgPath.startsWith("@vue/") ||
+                  pkgPath.startsWith("vue-router/") ||
+                  pkgPath.startsWith("pinia/")
+                ) {
+                  return "vendor-vue";
+                }
+                if (pkgPath.startsWith("hls.js/")) {
+                  return "vendor-media";
+                }
+                if (pkgPath.startsWith("keycloak-js/")) {
+                  return "vendor-auth";
+                }
+                if (
+                  pkgPath.startsWith("vuedraggable/") ||
+                  pkgPath.startsWith("sortablejs/")
+                ) {
+                  return "vendor-vuedraggable";
+                }
+                if (
+                  pkgPath.startsWith("vue-i18n/") ||
+                  pkgPath.startsWith("@intlify/") ||
+                  pkgPath.startsWith("openapi-fetch/")
+                ) {
+                  return "vendor";
+                }
                 return undefined;
               }
-
-              const pkgPath = normalizedId.slice(
-                normalizedId.lastIndexOf("node_modules/") +
-                  "node_modules/".length
-              );
-
               if (
-                pkgPath.startsWith("vue/") ||
-                pkgPath.startsWith("@vue/") ||
-                pkgPath.startsWith("vue-router/") ||
-                pkgPath.startsWith("pinia/")
+                /\/packages\/ui\/(?:(?:session|callerScope)\.js|src\/composables\/(?:useFocusTrap|useEscapeClose|useSignOutGuard|useInlineFocusHandoff)\.js|src\/components\/clinical\/(?:sharedProps\.js|(?:ClinicalModal|ClinicalDrawer|ClinicalContextBar|ClinicalIconButton|ClinicalToastHost|SignOutConfirmModal)\.vue))(?:$|\?)/.test(
+                  normalizedId
+                )
               ) {
-                return "vendor-vue";
-              }
-              if (pkgPath.startsWith("hls.js/")) {
-                return "vendor-media";
-              }
-              if (pkgPath.startsWith("keycloak-js/")) {
-                return "vendor-auth";
+                return "ui-shell";
               }
               if (
-                pkgPath.startsWith("vuedraggable/") ||
-                pkgPath.startsWith("sortablejs/")
+                /\/apps\/web\/src\/(?:utils\/(?:demoMode|changeReason|unbackedActions|apiErrors|userScopedStorage)\.[jt]s|stores\/(?:toasts|clinicalScope|notifications|studyScopeBridge)\.[jt]s|canvas\/(?:nodeRef\.ts|generated\/(?:nodeKinds|participantContracts)\.ts|stages\/(?:conduct|data|start|participants)\.ts))(?:$|\?)/.test(
+                  normalizedId
+                )
               ) {
-                return "vendor-vuedraggable";
-              }
-              if (
-                pkgPath.startsWith("vue-i18n/") ||
-                pkgPath.startsWith("@intlify/") ||
-                pkgPath.startsWith("openapi-fetch/")
-              ) {
-                return "vendor";
+                return "app-core";
               }
               return undefined;
             },

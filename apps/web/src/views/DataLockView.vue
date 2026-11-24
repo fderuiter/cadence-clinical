@@ -94,101 +94,17 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { ref } from "vue";
 import { ClinicalModal } from "ui";
-import { kernelApi, type KernelStudySummary } from "../api/kernelApi";
 import LocksSection from "../components/canvas/LocksSection.vue";
-import { useStudyCanvasStore } from "../stores/studyCanvas";
+import { useConsolidatedStudyList } from "../composables/useConsolidatedStudyList";
 
-const canvasStore = useStudyCanvasStore();
-const studies = ref<KernelStudySummary[]>([]);
-const studiesLoading = ref(false);
-const studiesError = ref<string | null>(null);
-const selectedStudyCode = ref(canvasStore.studyCode || "");
+const { studies, studiesLoading, studiesError, selectedStudyCode } =
+  useConsolidatedStudyList();
 const isGovernanceModalOpen = ref(false);
-
-onMounted(async () => {
-  if (typeof kernelApi.listStudies !== "function") return;
-  studiesLoading.value = true;
-  studiesError.value = null;
-  try {
-    const res = await kernelApi.listStudies();
-    studies.value = res ?? [];
-    if (!selectedStudyCode.value && studies.value.length > 0) {
-      selectedStudyCode.value = studies.value[0].code;
-    }
-  } catch (err) {
-    studiesError.value = err instanceof Error ? err.message : String(err);
-  } finally {
-    studiesLoading.value = false;
-  }
-});
 </script>
 
 <style scoped>
-.canvas-consolidated-view {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  padding: 20px;
-}
-
-.consolidated-header {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  align-items: flex-end;
-  gap: 12px;
-}
-
-.consolidated-header h1 {
-  margin: 0;
-  font-size: 1.35rem;
-}
-
-.consolidated-subtitle {
-  margin: 4px 0 0;
-  font-size: 0.88rem;
-  color: var(--semantic-color-text-body);
-}
-
-.consolidated-controls {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
-
-.consolidated-controls label {
-  font-size: 0.84rem;
-  font-weight: 600;
-}
-
-.consolidated-controls select {
-  min-height: var(--semantic-control-target-min, 24px);
-  min-width: var(--semantic-control-target-min, 24px);
-  padding: 6px 10px;
-  border: 1px solid var(--semantic-color-border-control);
-  border-radius: 4px;
-  font-size: 0.85rem;
-  color: var(--semantic-color-text);
-  background: var(--semantic-color-surface);
-  box-sizing: border-box;
-}
-
-.status-line {
-  margin: 0;
-  font-size: 0.88rem;
-  color: var(--semantic-color-text-body);
-}
-
-.error-banner {
-  padding: 8px 12px;
-  border-radius: 6px;
-  background: var(--semantic-color-error-bg);
-  color: var(--semantic-color-error-dark);
-}
-
 .governance-modal-body {
   display: flex;
   flex-direction: column;
@@ -201,3 +117,5 @@ onMounted(async () => {
   margin: 0;
 }
 </style>
+
+<style scoped src="./consolidatedCanvasView.css"></style>

@@ -133,7 +133,7 @@ Entity: `BiometricLivenessVerification`
 Indexes:
 
 - `IX_biometric_liveness_verifications_ConsentId`: (`ConsentId`)
-- `IX_biometric_liveness_verifications_LivenessTokenHash`: (`LivenessTokenHash`)
+- `IX_biometric_liveness_verifications_LivenessTokenHash`: unique (`LivenessTokenHash`)
 - `IX_biometric_liveness_verifications_SubjectPseudonym`: (`SubjectPseudonym`)
 - `IX_biometric_liveness_verifications_tenant_id`: (`tenant_id`)
 

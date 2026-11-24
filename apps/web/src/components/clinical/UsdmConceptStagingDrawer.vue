@@ -106,10 +106,11 @@
             <ClinicalTabs
               v-model="item.action"
               :tabs="conceptActionTabs"
+              variant="pills"
+              overflow="wrap"
               :aria-label="`Mapping action for ${item.code}`"
               :controls-panels="false"
               list-class="action-type-tabs"
-              tab-class="tab-btn"
             />
 
             <!-- Tab 1: Concept Binding -->
@@ -644,29 +645,8 @@ const confirmAndApply = () => {
   font-weight: 700;
 }
 
-.action-type-tabs {
-  display: flex;
-  gap: 6px;
+:deep(.action-type-tabs) {
   margin-bottom: 12px;
-}
-
-:deep(.tab-btn) {
-  flex: 1;
-  padding: 6px;
-  font-size: 0.75rem;
-  border: 1px solid var(--semantic-color-border-control);
-  background-color: var(--semantic-color-surface-muted);
-  color: var(--semantic-color-text-secondary);
-  border-radius: 4px;
-  cursor: pointer;
-
-  transition: all 0.2s ease;
-}
-
-:deep(.tab-btn.active) {
-  background-color: var(--primary);
-  color: var(--semantic-color-text-inverse);
-  border-color: var(--primary);
 }
 
 .action-panel {

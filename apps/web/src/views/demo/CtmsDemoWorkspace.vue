@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div style="min-width: 0; max-width: 100%">
     <!-- Demo-only CTMS KPI Metric Cards Grid -->
     <div
       v-if="demoBuild && !sectionMode"
@@ -161,10 +161,9 @@
       v-if="!sectionMode"
       v-model="activeTab"
       :tabs="demoWorkspaceTabs"
+      variant="underline"
       aria-label="Site readiness workspaces"
       id-prefix="ctms-demo"
-      list-class="tabs-container"
-      tab-class="tab-btn"
     />
 
     <!-- Active Filter/Scope Info -->
@@ -4669,35 +4668,6 @@ textarea {
   background: var(--semantic-color-primary-dark);
   color: white;
   border: none;
-}
-
-.tab-btn:hover {
-  background: var(--semantic-color-surface-header);
-}
-
-.tabs-container {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-  margin-bottom: 24px;
-  border-bottom: 2px solid var(--semantic-color-border);
-  padding-bottom: 8px;
-}
-
-.tab-btn {
-  padding: 8px 16px;
-  border: none;
-  background: none;
-  font-weight: 600;
-  cursor: pointer;
-  font-size: 16px;
-  color: var(--semantic-color-text-secondary);
-  border-bottom: 3px solid transparent;
-}
-
-.tab-btn.active {
-  border-bottom-color: var(--semantic-color-primary-dark);
-  color: var(--semantic-color-primary-dark);
 }
 
 .form-fieldset {
