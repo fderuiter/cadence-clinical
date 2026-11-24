@@ -336,6 +336,8 @@ function openRelease(lockRef: string, lockKind: string) {
   padding: 6px 10px;
   border-radius: 4px;
   font-size: 0.82rem;
+  min-width: 0;
+  max-width: 100%;
   overflow-wrap: anywhere;
 }
 

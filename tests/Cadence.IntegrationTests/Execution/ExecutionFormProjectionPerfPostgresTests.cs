@@ -555,6 +555,7 @@ public sealed class ExecutionFormProjectionPerfPostgresTests(
     {
         _host ??= new WebApplicationFactory<Cadence.Kernel.Host.Program>().WithWebHostBuilder(builder => builder
             .UseTestGatewaySecret()
+            .UseTestBiometricLivenessKey()
             .UseSetting("ConnectionStrings:cadence", fixture.ConnectionString)
             .ConfigureTestServices(services =>
             {
@@ -617,6 +618,7 @@ public sealed class ExecutionFormProjectionPerfPostgresTests(
     /// </summary>
     private sealed class EfSqlCounter : IObserver<DiagnosticListener>, IObserver<KeyValuePair<string, object?>>, IDisposable
     {
+        private static readonly AsyncLocal<EfSqlCounter?> Current = new();
         private readonly ConcurrentQueue<string> _commands = new();
         private readonly IDisposable _subscription;
         private readonly List<IDisposable> _innerSubscriptions = [];
@@ -624,6 +626,7 @@ public sealed class ExecutionFormProjectionPerfPostgresTests(
 
         private EfSqlCounter()
         {
+            Current.Value = this;
             _subscription = DiagnosticListener.AllListeners.Subscribe(this);
         }
 
@@ -651,6 +654,7 @@ public sealed class ExecutionFormProjectionPerfPostgresTests(
         public void OnNext(KeyValuePair<string, object?> value)
         {
             if (!_disposed
+                && ReferenceEquals(Current.Value, this)
                 && value.Key == RelationalEventId.CommandExecuted.Name
                 && value.Value is CommandExecutedEventData data)
             {
@@ -669,6 +673,11 @@ public sealed class ExecutionFormProjectionPerfPostgresTests(
         public void Dispose()
         {
             _disposed = true;
+            if (ReferenceEquals(Current.Value, this))
+            {
+                Current.Value = null;
+            }
+
             _subscription.Dispose();
             lock (_innerSubscriptions)
             {

@@ -408,7 +408,7 @@
     </main>
 
     <OnboardingTour
-      v-if="showOnboardingTour && isOnboardingTourActive"
+      v-if="showOnboardingTour && hasActivatedOnboardingTour"
       :active-tab="activeTab"
     />
     <OnboardingChecklistDrawer
@@ -501,6 +501,7 @@ const isCommandPaletteOpen = ref(false);
 const hasActivatedCommandPalette = ref(false);
 const pendingChecklistOpen = ref(false);
 const hasActivatedChecklistDrawer = ref(false);
+const hasActivatedOnboardingTour = ref(false);
 const hasActivatedSignOutModal = ref(false);
 
 const onboardingSummary = computed(() =>
@@ -876,9 +877,26 @@ watch(
 );
 
 watch(
+  () => showOnboardingTour.value && isOnboardingTourActive.value,
+  (active) => {
+    if (active) {
+      hasActivatedOnboardingTour.value = true;
+    }
+  },
+  { immediate: true }
+);
+
+watch(showOnboardingTour, (allowed) => {
+  if (!allowed) {
+    hasActivatedOnboardingTour.value = false;
+  }
+});
+
+watch(
   () => authStore.isAuthenticated,
   (authenticated) => {
     if (!authenticated) {
+      hasActivatedOnboardingTour.value = false;
       hasActivatedChecklistDrawer.value = false;
       pendingChecklistOpen.value = false;
       hasActivatedCommandPalette.value = false;

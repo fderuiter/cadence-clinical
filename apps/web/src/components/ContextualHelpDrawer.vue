@@ -806,16 +806,19 @@ import {
 import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 import {
   canonicalizeContextualRoute,
+  sanitizePseudonymousSubjectCode,
   useKnowledgeStore,
 } from "../stores/knowledge.js";
 import { resolveStorePinia } from "../stores/onboardingSummary.js";
-import {
-  useAuthStore,
-  PERSONA_PRESETS,
-  normalizeRole,
-} from "../stores/auth.js";
+import { useAuthStore, PERSONA_PRESETS } from "../stores/auth.js";
+import { compileSopMarkdownToHtml } from "../api/knowledge.js";
 import { useToastStore } from "../stores/toasts.js";
 import { isDemoBuild } from "../utils/demoMode.js";
+import {
+  hasBlockingModalDialog,
+  isEditableOrFormControl,
+} from "../utils/lazyOverlay.js";
+import { useTicketMutationPermission } from "../utils/ticketPermissions";
 
 function makeLucideIcon(nodes) {
   const Icon = (props, { attrs }) =>
@@ -917,22 +920,6 @@ const X = makeLucideIcon([
   ["path", { d: "m6 6 12 12" }],
 ]);
 
-const OPERATIONAL_MUTATION_ROLES = new Set([
-  "sponsor_admin",
-  "super_admin",
-  "sponsor_designer",
-  "data_manager",
-  "cra",
-  "monitor",
-  "safety_reviewer",
-  "safety_officer",
-  "sponsor_mm",
-  "crc",
-  "site_investigator",
-  "principal_investigator",
-  "investigator",
-]);
-
 const CLINICAL_ACRONYMS = {
   ecrf: "eCRF",
   crf: "CRF",
@@ -947,6 +934,7 @@ const CLINICAL_ACRONYMS = {
   usdm: "USDM",
   pi: "PI",
   sae: "SAE",
+  susar: "SUSAR",
   rtsm: "RTSM",
   irb: "IRB",
   iec: "IEC",
@@ -955,6 +943,32 @@ const CLINICAL_ACRONYMS = {
   capa: "CAPA",
   sla: "SLA",
   sop: "SOP",
+  rbac: "RBAC",
+  doa: "DoA",
+  edoa: "eDoA",
+  icf: "ICF",
+  siv: "SIV",
+  fpfv: "FPFV",
+  mvr: "MVR",
+  ip: "IP",
+  kri: "KRI",
+  qms: "QMS",
+  cec: "CEC",
+  dct: "DCT",
+  udi: "UDI",
+  dicom: "DICOM",
+  recist: "RECIST",
+  loinc: "LOINC",
+  cdisc: "CDISC",
+  odm: "ODM",
+  sdtm: "SDTM",
+  cra: "CRA",
+  crc: "CRC",
+  econsent: "eConsent",
+  epro: "ePRO",
+  ecoa: "eCOA",
+  meddra: "MedDRA",
+  whodrug: "WHODrug",
 };
 
 const LOWERCASE_CONNECTORS = new Set([
@@ -1014,18 +1028,32 @@ function resolveEscalationRoute() {
   return storeRoute;
 }
 
-function openHubRoute(path) {
+function resolveDrawerHubScope() {
   const scope = resolveWorkspaceNavigationScope(
     route,
     activeCanvasStore.value,
     undefined,
     activeStudyCode.value
   );
-  const scopedPath = buildScopedWorkflowPath(path, {
-    studyCode: scope.studyCode,
-    siteId: scope.siteId,
-    subjectCode: scope.subjectCode,
-  });
+  const storeScope = knowledgeStore.activeRouteScope || {};
+  const studyCode = scope.studyCode || storeScope.study_id || "";
+  const sameOrUnsetStoreStudy =
+    !studyCode || !storeScope.study_id || storeScope.study_id === studyCode;
+  const siteId =
+    scope.siteId || (sameOrUnsetStoreStudy ? storeScope.site_id || "" : "");
+  const rawSubject =
+    scope.subjectCode ||
+    (sameOrUnsetStoreStudy ? storeScope.subject_id || "" : "");
+  const subjectCode = sanitizePseudonymousSubjectCode(rawSubject);
+  return {
+    studyCode,
+    siteId,
+    subjectCode,
+  };
+}
+
+function openHubRoute(path) {
+  const scopedPath = buildScopedWorkflowPath(path, resolveDrawerHubScope());
   knowledgeStore.closeDrawer();
   const router =
     injectedRouter || instance?.appContext?.config?.globalProperties?.$router;
@@ -1038,26 +1066,8 @@ useEscapeClose(() => knowledgeStore.closeDrawer(), {
   isOpen: () => knowledgeStore.isOpen && !knowledgeStore.isEscalating,
 });
 
-const normalizedCallerRoles = computed(() =>
-  (authStore.rawRoles || []).map(normalizeRole).filter(Boolean)
-);
-
-const isReadOnlyAuditor = computed(() => {
-  if (authStore.currentPersona === "auditor") {
-    return true;
-  }
-  const roles = normalizedCallerRoles.value;
-  const hasAuditorRole = roles.some(
-    (r) => r === "auditor" || r === "tmf_auditor"
-  );
-  if (!hasAuditorRole) {
-    return false;
-  }
-  if (!authStore.isDemoMode) {
-    return true;
-  }
-  return !roles.some((r) => OPERATIONAL_MUTATION_ROLES.has(r));
-});
+const { isReadOnlyTicketViewer: isReadOnlyAuditor } =
+  useTicketMutationPermission(authStore);
 
 const canonicalRoute = computed(() =>
   canonicalizeContextualRoute({
@@ -1082,6 +1092,18 @@ const displayedArticleHtml = computed(() => {
     knowledgeStore.primaryVersion?.body_html
   ) {
     return knowledgeStore.primaryVersion.body_html;
+  }
+  const fallbackMarkdown =
+    article.body_markdown ||
+    (!knowledgeStore.selectedArticle
+      ? knowledgeStore.primaryVersion?.body_markdown
+      : "") ||
+    "";
+  if (fallbackMarkdown) {
+    return compileSopMarkdownToHtml(
+      fallbackMarkdown,
+      knowledgeStore.activeSectionAnchor
+    );
   }
   return "";
 });
@@ -1326,6 +1348,11 @@ function handleTicketCreated(createdTicket) {
     ? ` (${createdTicket.assigned_queue})`
     : "";
   const simulated = isDemoBuild() || String(refId || "").startsWith("SIM-");
+  const scopedTicketsBase = buildScopedWorkflowPath(
+    "/tickets",
+    resolveDrawerHubScope()
+  );
+  const refJoiner = scopedTicketsBase.includes("?") ? "&" : "?";
   toastStore.push({
     tone: "success",
     title: simulated
@@ -1336,7 +1363,7 @@ function handleTicketCreated(createdTicket) {
       refId && isScreenAvailable("tickets")
         ? {
             label: `Open ${refId}`,
-            to: `/tickets?ref=${encodeURIComponent(refId)}`,
+            to: `${scopedTicketsBase}${refJoiner}ref=${encodeURIComponent(refId)}`,
           }
         : null,
   });
@@ -1444,32 +1471,6 @@ watch(
   { immediate: true }
 );
 
-function isEditableOrFormControl(node) {
-  const el =
-    node instanceof HTMLElement
-      ? node
-      : typeof document !== "undefined" &&
-          document.activeElement instanceof HTMLElement
-        ? document.activeElement
-        : null;
-  if (!el) return false;
-  if (el.isContentEditable) return true;
-  const tag = el.tagName?.toUpperCase?.() || "";
-  if (["INPUT", "TEXTAREA", "SELECT", "OPTION"].includes(tag)) return true;
-  if (
-    typeof el.closest === "function" &&
-    el.closest(
-      '[contenteditable="true"], [contenteditable=""], [contenteditable="plaintext-only"]'
-    )
-  ) {
-    return true;
-  }
-  const role = (el.getAttribute?.("role") || "").toLowerCase();
-  return ["textbox", "searchbox", "combobox", "listbox", "spinbutton"].includes(
-    role
-  );
-}
-
 function hasActiveExternalModalTrap() {
   if (knowledgeStore.isEscalating) return true;
   if (hasActiveModalFocusTrap({ excludeId: "contextual-help-drawer" })) {
@@ -1486,26 +1487,7 @@ function hasActiveExternalModalTrap() {
     }
     ancestor = ancestor.parentElement;
   }
-  if (typeof document === "undefined") return false;
-  const activeDialog = document.activeElement?.closest?.(
-    '[aria-modal="true"], [role="dialog"], [role="alertdialog"]'
-  );
-  if (
-    activeDialog &&
-    activeDialog.id !== "contextual-help-drawer" &&
-    !activeDialog.closest?.("#contextual-help-drawer")
-  ) {
-    return true;
-  }
-  const modalDialogs = document.querySelectorAll(
-    '[aria-modal="true"], [role="alertdialog"]'
-  );
-  for (const dialog of modalDialogs) {
-    if (dialog.id === "contextual-help-drawer") continue;
-    if (dialog.closest?.("#contextual-help-drawer")) continue;
-    return true;
-  }
-  return false;
+  return hasBlockingModalDialog("contextual-help-drawer");
 }
 
 // Keyboard accessibility: F1 / '?' to toggle contextual help; guarded against form controls and modal traps

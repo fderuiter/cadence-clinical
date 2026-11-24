@@ -34,6 +34,10 @@ import { useConfirmStore } from "./stores/confirm.js";
 import { resolveStorePinia } from "./stores/onboardingSummary.js";
 import { useToastStore } from "./stores/toasts.js";
 import { isDemoBuild } from "./utils/demoMode.js";
+import {
+  hasBlockingModalDialog,
+  isEditableOrFormControl,
+} from "./utils/lazyOverlay.js";
 import "./style.css";
 
 const route = useRoute();
@@ -84,60 +88,11 @@ watch(showContextualHelp, (allowed) => {
   }
 });
 
-function isEditableOrFormControl(node) {
-  const el =
-    node instanceof HTMLElement
-      ? node
-      : typeof document !== "undefined" &&
-          document.activeElement instanceof HTMLElement
-        ? document.activeElement
-        : null;
-  if (!el) return false;
-  if (el.isContentEditable) return true;
-  const tag = el.tagName?.toUpperCase?.() || "";
-  if (["INPUT", "TEXTAREA", "SELECT", "OPTION"].includes(tag)) return true;
-  if (
-    typeof el.closest === "function" &&
-    el.closest(
-      '[contenteditable="true"], [contenteditable=""], [contenteditable="plaintext-only"]'
-    )
-  ) {
-    return true;
-  }
-  const role = (el.getAttribute?.("role") || "").toLowerCase();
-  return ["textbox", "searchbox", "combobox", "listbox", "spinbutton"].includes(
-    role
-  );
-}
-
-function hasBlockingDialog() {
-  if (typeof document === "undefined") return false;
-  const activeDialog = document.activeElement?.closest?.(
-    '[aria-modal="true"], [role="dialog"], [role="alertdialog"]'
-  );
-  if (
-    activeDialog &&
-    activeDialog.id !== "contextual-help-drawer" &&
-    !activeDialog.closest?.("#contextual-help-drawer")
-  ) {
-    return true;
-  }
-  const modalDialogs = document.querySelectorAll(
-    '[aria-modal="true"], [role="alertdialog"]'
-  );
-  for (const dialog of modalDialogs) {
-    if (dialog.id === "contextual-help-drawer") continue;
-    if (dialog.closest?.("#contextual-help-drawer")) continue;
-    return true;
-  }
-  return false;
-}
-
 function handlePreMountHelpKeydown(e) {
   if (!showContextualHelp.value || hasActivatedContextualHelp.value) return;
   if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return;
   if (e.key !== "F1" && e.key !== "?") return;
-  if (hasBlockingDialog()) return;
+  if (hasBlockingModalDialog("contextual-help-drawer")) return;
   if (isEditableOrFormControl(e.target)) return;
 
   e.preventDefault();
