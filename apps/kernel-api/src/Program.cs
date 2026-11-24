@@ -23,6 +23,7 @@ using Cadence.Kernel.Persistence.Search;
 using Cadence.Kernel.Persistence.Simulation;
 using Cadence.Kernel.Persistence.Standards;
 using Cadence.Kernel.Persistence.Validation;
+using Cadence.Kernel.Protocol;
 using Cadence.Kernel.Protocol.Import;
 using Cadence.Kernel.Simulation;
 using Cadence.Kernel.Tenancy;
@@ -119,6 +120,7 @@ builder.Services.AddScoped<ICurrentActor, ClaimsCurrentActor>();
 builder.Services.AddSingleton<IKernelChangeReason, SignedChangeReason>();
 builder.Services.AddScoped<IKernelReadAccess, KernelReadAccess>();
 builder.Services.AddSingleton<IProtocolDesignImporter, ProtocolDesignImporterService>();
+builder.Services.AddSingleton<IProtocolFormCompiler, ProtocolFormCompiler>();
 
 // A reader sees what its grants in effect cover (ADR-2457) and what treatment blinding permits (K-AUTH-4); everything
 // else is masked in place (ADR-2471). The IdentityVault (#4782) is not decided here yet.

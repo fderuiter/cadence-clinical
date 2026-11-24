@@ -43,7 +43,7 @@ const MEDDRA_CODING_ARTICLE = {
   body_html: "<h2>Adverse event and concomitant medication coding</h2>",
 };
 const EXTENDED_ARTICLE_CATALOGUE = [
-  ...DEFAULT_MOCK_ARTICLES,
+  ...DEFAULT_MOCK_ARTICLES.filter((a) => a.id !== REGULATORY_ARTICLE.id),
   REGULATORY_ARTICLE,
   MEDDRA_CODING_ARTICLE,
 ];
@@ -411,6 +411,43 @@ describe("Knowledge Hub Browser View (Issue #4331)", () => {
       expect(reader.find(".badge-version-lg").exists()).toBe(true);
       expect(reader.find(".reader-author-row").text()).toContain("Author:");
       expect(reader.find("#sop-prose-viewer").exists()).toBe(true);
+      expect(reader.find("#sop-prose-viewer ol li").exists()).toBe(true);
+    });
+
+    it("compiles Markdown fallback into numbered <ol><li> steps and escapes raw HTML tags when body_html is absent", async () => {
+      knowledgeService.listArticles.mockResolvedValueOnce([
+        {
+          id: "art-md-only",
+          title: "SOP-SAFE-999: Markdown Fallback Verification",
+          slug: "sop-safe-999-markdown-fallback",
+          category_id: "cat-clinical-ops",
+          category_name: "Clinical Operations",
+          status: "PUBLISHED",
+          version_label: "1.0",
+          version_index: 1,
+          author_user_id: "lead_clinical_ops",
+          tags: ["ecrf", "safety"],
+          body_markdown:
+            "## Purpose & Scope\nInspect <img src=x onerror=alert(1)> safely.\n\n## Mandatory Steps\n1. Confirm `SUBJ-1001` eligibility.\n2. Record audit reason.",
+          body_html: "",
+          created_at: "2026-02-01T10:00:00Z", // deid-ignore: synthetic test timestamp
+        },
+      ]);
+
+      const wrapper = mount(KnowledgeView, {
+        global: { plugins: [pinia, router] },
+      });
+      await flushPromises();
+
+      await wrapper.find(".article-card").trigger("click");
+      await flushPromises();
+
+      const prose = wrapper.find("#sop-prose-viewer");
+      expect(prose.html()).not.toContain("<img");
+      expect(prose.html()).toContain("&lt;img src=x onerror=alert(1)&gt;");
+      expect(prose.findAll("ol li").length).toBe(2);
+      expect(prose.find("#purpose-and-scope").exists()).toBe(true);
+      expect(prose.find("#mandatory-steps").exists()).toBe(true);
     });
 
     it("switches to Version History tab and loads snapshots table", async () => {

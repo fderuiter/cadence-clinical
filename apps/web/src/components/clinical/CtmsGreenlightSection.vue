@@ -240,6 +240,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
+import { handoffFocus } from "ui";
 import { ctmsApi, type SiteGreenlightGate } from "../../api/ctmsApi";
 import { canCertifyGreenlight } from "../../canvas/authority";
 import { useScopedWorkspaceSection } from "../../composables/useScopedWorkspaceSection";
@@ -407,6 +408,7 @@ async function certifySingleSite() {
       message: "Startup greenlight certification recorded.",
     });
     await loadReadiness();
+    void handoffFocus("#ctms-greenlight-title");
   } catch (err) {
     toasts.apiError("Site certification failed", err);
   } finally {
@@ -443,6 +445,7 @@ async function certifyBatch() {
       message: `Country ${res.country_code} startup greenlight updated.`,
     });
     await loadReadiness();
+    void handoffFocus("#ctms-greenlight-title");
   } catch (err) {
     toasts.apiError("Batch certification failed", err);
   } finally {
