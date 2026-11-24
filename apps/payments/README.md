@@ -72,7 +72,14 @@ roles (#5361). `finance_officer` is the finance role; the local realm's "Grants 
   remittance signature from the user who approved the invoice. Expense submission and expense review likewise share site
   clinical roles (`crc`, `investigator`), so `POST /participant/expenses/{claimId}/review` and `ParticipantExpenseClaim.Approve`
   refuse (`409`) an approval from the user who submitted the claim (`CreatedBy == caller.UserId`), bound `AdjustedAmount`
-  between `$0.01` and `claim.GrossAmount`, and recompute `TaxDeduction` and `NetAmount` on the server. Compiling with
+  between `$0.01` and `claim.GrossAmount`, and recompute `TaxDeduction` and `NetAmount` on the server. Form W-9
+  submission and verification also share site clinical roles (`crc`, `investigator`): `POST /participant/wallets/{walletId}/submit-w9`
+  requires a non-empty `FullLegalName` and a four-digit `TaxIdLastFour` (`422`), and `POST /participant/wallets/{walletId}/verify-w9`
+  requires `W9Status == SUBMITTED` with a four-digit `TaxIdLastFour` and refuses (`409`) verification by the user who
+  recorded the latest `W9_FORM_SUBMITTED` entry. Direct stipend disbursement (`POST /disburse`, `POST /participant/wallets/disburse`)
+  enforces positive amounts (`400`), IRB `AntiCoercionCap` (`422`), `AutoDisbursementThreshold` (`409`), and IRS `$600.00`
+  `TaxableYtd` verified W-9 holds (`409`), deduplicates per wallet on `ParticipantTransaction.IdempotencyKey`, and records
+  `ParticipantTransaction` stipend credits and `TaxableYtd` without inflating `LifetimeDisbursements`. Compiling with
   `auto_approve` also needs `payments_invoice:approve`.
 - **Identity in records.** Handlers take the actor from the signed principal (`PaymentsCaller`): the `sub` claim as the
   user id and the signed role claims (canonical names, so "Grants Manager" is recorded as `finance_officer`) as
@@ -92,7 +99,11 @@ roles (#5361). `finance_officer` is the finance role; the local realm's "Grants 
   manual field edits, and duplicate receipt SHA-256 digests held in `PENDING_REVIEW`) / IRS `$600.00` verified W-9
   auto-approval policy, persists `(WalletId, IdempotencyKey)` deduplication keys across `/participant/me/expenses` and
   `/participant/me/disburse` so retries never double-credit or double-debit balances, and computes diary synchronization
-  stipends strictly from server-side `ParticipantStipendRule` rows (`400` if a request supplies an `amount`). Staff
+  stipends strictly from eligible (`RequiresVerification = false`, `IsMilestone = false`) server-side
+  `ParticipantStipendRule` rows gated on a single-use `GATEWAY_SECRET`-derived HMAC `SyncVerificationToken` bound to
+  `(caller.UserId, StudyId, DiaryId, AssignmentId, SequenceNumber, ExpiresAtUnix)`, `AntiCoercionCap`,
+  `AutoDisbursementThreshold`, and IRS `$600.00` W-9 compliance (`400` if a request supplies an `amount`;
+  `FLAGGED_FOR_REVIEW` with `$0.00` credited on missing, invalid, or replayed sync tokens or exceeded thresholds). Staff
   `POST /participant/expenses` applies the same server-computed OCR confidence, receipt deduplication, and `$75.00` meal
   per-diem cap rules without trusting client `OcrConfidence`, `ReceiptOcrData`, or `PerDiemCap`.
 - `GET /participant/wallets/subject/{subjectId}` no longer opens a wallet when none exists; it answers `404`.
