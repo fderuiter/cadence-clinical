@@ -243,7 +243,9 @@ public static class BaselineRatchetService
         bool preCommit,
         string? baseRef = DefaultBaseRef,
         Func<string, string?>? environment = null,
-        string? pushBefore = null)
+        string? pushBefore = null,
+        string? eventName = null,
+        string? gitRef = null)
     {
         environment ??= Environment.GetEnvironmentVariable;
         string effectiveBaseRef = GitRevisionScopeService.NormalizeBaseRef(baseRef);
@@ -256,17 +258,47 @@ public static class BaselineRatchetService
                 return EvaluatePreCommit(stagedGrowth, environment(GrowthEnvironmentVariable));
             }
 
-            string? headCommit = GitRevisionScopeService.TryResolveCommitSha(repoRoot, "HEAD");
+            var eventScope = GitRevisionScopeService.ResolveEventScope(repoRoot, effectiveBaseRef, pushBefore, eventName, gitRef);
+            string? headCommit = eventScope.HeadCommit;
+            if (eventScope.Kind == GitEventScopeKind.UnprotectedTargetRef)
+            {
+                Console.WriteLine($"{Tag} Unsupported target ref '{eventScope.GitRef}' for event '{eventScope.EventName}'; failing closed.");
+                return 1;
+            }
+
+            if (eventScope.Kind == GitEventScopeKind.TargetRef)
+            {
+                if (string.IsNullOrEmpty(headCommit))
+                {
+                    Console.WriteLine($"{Tag} HEAD commit could not be resolved for target ref '{eventScope.GitRef}'; failing closed.");
+                    return 1;
+                }
+
+                var targetDirtyGrowth = FindDirtyWorkingTreeGrowth(repoRoot, headCommit);
+                if (targetDirtyGrowth.Count > 0)
+                {
+                    PrintDirtyGrowthFailure(targetDirtyGrowth);
+                    return 1;
+                }
+
+                Console.WriteLine($"{Tag} No uncommitted ratchet baseline growth at {eventScope.GitRef}.");
+                return 0;
+            }
+
             string? compareBase;
             string scopeLabel;
 
-            if (!string.IsNullOrWhiteSpace(pushBefore))
+            if (eventScope.Kind == GitEventScopeKind.PushCommitRange && !string.IsNullOrEmpty(eventScope.CompareBase))
             {
-                string? validPushBase = GitRevisionScopeService.TryResolveValidPushBase(repoRoot, pushBefore, headCommit);
-                if (validPushBase is not null)
+                compareBase = eventScope.CompareBase;
+                scopeLabel = compareBase[..Math.Min(12, compareBase.Length)];
+            }
+            else if (eventScope.Kind == GitEventScopeKind.NewBranchPush)
+            {
+                if (GitRevisionScopeService.IsBranchHeadRef(eventScope.GitRef))
                 {
-                    compareBase = validPushBase;
-                    scopeLabel = validPushBase[..Math.Min(12, validPushBase.Length)];
+                    compareBase = eventScope.CompareBase;
+                    scopeLabel = eventScope.EffectiveBaseRef;
                 }
                 else
                 {
