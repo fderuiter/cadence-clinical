@@ -121,8 +121,9 @@
 
       <p class="privacy-note">
         Direct participant identifiers stay protected; unauthorized sites and
-        blinded treatment arms appear as explicit <code>masked</code>
-        placeholders in place.
+        enrollments collapse into one hidden-scope indicator without record
+        counts, while blinded treatment values stay <code>masked</code> in place
+        without observation handles.
       </p>
 
       <div class="exports-actions">
@@ -150,6 +151,12 @@
         <code v-if="outcome.sha256" data-testid="study-exports-sha256">
           SHA-256: {{ outcome.sha256 }}
         </code>
+        <span
+          v-if="outcome.hiddenScopesNote"
+          data-testid="study-exports-hidden-scopes"
+        >
+          {{ outcome.hiddenScopesNote }}
+        </span>
       </p>
     </form>
   </section>
@@ -183,6 +190,7 @@ const outcome = ref<{
   kind: "ok" | "error";
   message: string;
   sha256?: string | null;
+  hiddenScopesNote?: string | null;
 } | null>(null);
 
 const {
@@ -237,6 +245,9 @@ async function downloadSnapshot() {
       kind: "ok",
       message: `Streamed ${result.filename} (${result.blob.size} bytes).`,
       sha256: result.contentSha256,
+      hiddenScopesNote: result.hiddenScopes?.moreExist
+        ? "Additional clinical scopes outside your access were excluded without count disclosure."
+        : null,
     };
   } catch (err) {
     outcome.value = {

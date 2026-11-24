@@ -156,7 +156,7 @@ export function emitSyncLifecycleEvent(eventType, detail = {}) {
     updateDomSyncStatusText(statusMsg);
     patchActiveSyncCountdownDescriptions();
     startSyncCountdownTimer();
-  } else if (eventType === "sync:success") {
+  } else if (eventType === "sync:success" || eventType === "sync:locked") {
     resetSyncRetryInfo();
   }
 

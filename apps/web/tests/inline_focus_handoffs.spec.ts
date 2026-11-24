@@ -1019,7 +1019,7 @@ describe("Web Inline Focus Handoffs & Keyboard Scrollable Cards (ADR-2593)", () 
         milestone_type: "INITIATION_VISIT",
         status: "PLANNED",
         planned_date: "2026-11-01",
-        actual_date: null,
+        actual_date: null as string | null,
       },
       {
         id: "ms-2",
@@ -1028,7 +1028,7 @@ describe("Web Inline Focus Handoffs & Keyboard Scrollable Cards (ADR-2593)", () 
         milestone_type: "SITE_ACTIVATION",
         status: "PLANNED",
         planned_date: "2026-11-15",
-        actual_date: null,
+        actual_date: null as string | null,
       },
     ];
     vi.mocked(ctmsApi.listSiteMilestones).mockImplementation(
@@ -1111,6 +1111,9 @@ describe("Web Inline Focus Handoffs & Keyboard Scrollable Cards (ADR-2593)", () 
               role: "CRC",
               task_codes: ["CRF_DATA_ENTRY"],
               start_date: "2026-10-01",
+              is_active: staffStatus !== "REVOKED",
+              signed_off: staffStatus === "ACTIVE",
+              end_date: staffStatus === "REVOKED" ? "2026-11-23" : null,
               status: staffStatus,
             },
           ],
@@ -1331,7 +1334,15 @@ describe("Web Inline Focus Handoffs & Keyboard Scrollable Cards (ADR-2593)", () 
       site_id: siteId,
       country_code: "US",
       overall_status: gateCertified ? "CERTIFIED" : "READY",
+      is_compliant: true,
       is_ready_for_certification: !gateCertified,
+      facet_regulatory_irb: true,
+      facet_cta_budget: true,
+      facet_eisf_baseline: true,
+      facet_doa_log: true,
+      facet_staff_training: true,
+      facet_ip_release: true,
+      unfulfilled_reasons: [],
       blocking_reasons: [],
       facets: [
         {
@@ -1341,6 +1352,8 @@ describe("Web Inline Focus Handoffs & Keyboard Scrollable Cards (ADR-2593)", () 
           evidence_summary: "Approved",
         },
       ],
+      greenlight_certified_by: gateCertified ? "dm_01" : null,
+      greenlight_certified_at: gateCertified ? "2026-11-20T12:00:00Z" : null,
       certified_by: gateCertified ? "dm_01" : null,
       certified_at: gateCertified ? "2026-11-20T12:00:00Z" : null,
     });
@@ -1357,7 +1370,7 @@ describe("Web Inline Focus Handoffs & Keyboard Scrollable Cards (ADR-2593)", () 
     });
     vi.mocked(ctmsApi.batchCertifyCountrySites).mockImplementation(async () => {
       gateCertified = true;
-      return { certified_count: 1 } as never;
+      return { certified_count: 1, country_code: "US" } as never;
     });
 
     const wrapper = track(
@@ -1516,7 +1529,14 @@ describe("Web Inline Focus Handoffs & Keyboard Scrollable Cards (ADR-2593)", () 
   it("RtsmSupplySection coordinates focus across draft randomization scheme form toggle, save, and approval", async () => {
     const auth = useAuthStore();
     auth.isAuthenticated = true;
-    auth.user = { username: "stat_approver", displayName: "Lead Statistician" };
+    auth.user = {
+      id: "u-stat-1",
+      username: "stat_approver",
+      email: "stat@cadence.clinical",
+      firstName: "Lead",
+      lastName: "Statistician",
+      tenantId: "tenant-1",
+    };
     auth.rawRoles = ["Unblinded Statistician", "Sponsor Admin"];
 
     const schemeList: Array<Record<string, unknown>> = [];
@@ -1768,7 +1788,14 @@ describe("Web Inline Focus Handoffs & Keyboard Scrollable Cards (ADR-2593)", () 
   it("ProtocolTrainingConsole hands off focus to .reader-title when Next Section unmounts or Previous Section disables", async () => {
     const auth = useAuthStore();
     auth.isAuthenticated = true;
-    auth.user = { username: "crc_01", displayName: "CRC Jordan" };
+    auth.user = {
+      id: "u-crc-1",
+      username: "crc_01",
+      email: "crc@cadence.clinical",
+      firstName: "Jordan",
+      lastName: "CRC",
+      tenantId: "tenant-1",
+    };
     auth.rawRoles = ["CRC"];
 
     const curricula = [

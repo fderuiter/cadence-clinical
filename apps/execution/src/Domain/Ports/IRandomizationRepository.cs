@@ -23,6 +23,13 @@ public interface IRandomizationRepository
     /// </summary>
     Task LockStudyAsync(StudyCode studyCode, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Takes the draft scheme's approval lock for the rest of the current transaction, serializing concurrent
+    /// approval attempts on the same scheme before staging list slots or acquiring <see cref="LockStudyAsync"/>.
+    /// Must run inside <see cref="ExecuteInTransactionAsync"/>.
+    /// </summary>
+    Task LockSchemeAsync(Guid schemeId, CancellationToken cancellationToken);
+
     /// <summary>Every version of the study's scheme, newest first.</summary>
     Task<IReadOnlyList<RandomizationScheme>> ListSchemesAsync(StudyCode studyCode, CancellationToken cancellationToken);
 
@@ -37,6 +44,7 @@ public interface IRandomizationRepository
 
     Task AddSchemeAsync(RandomizationScheme scheme, CancellationToken cancellationToken);
 
+    /// <summary>Bulk-stages pre-encrypted list slots in the current transaction without tracking them in the EF Core change tracker.</summary>
     Task AddListSlotsAsync(IReadOnlyCollection<RandomizationListSlot> slots, CancellationToken cancellationToken);
 
     /// <summary>The lowest-sequence unconsumed slot of the scheme's stratum, tracked, or null when the list is exhausted.</summary>
