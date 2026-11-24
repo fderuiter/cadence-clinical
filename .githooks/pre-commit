@@ -26,7 +26,7 @@ if [ ! -f "$RESOLVE_ROOT/scripts/resolve_dotnet_env.sh" ]; then
 fi
 
 if [ -f "$RESOLVE_ROOT/scripts/resolve_dotnet_env.sh" ]; then
-    CADENCE_RESOLVE_REPO_ROOT="$RESOLVE_ROOT"
+    export CADENCE_RESOLVE_REPO_ROOT="$RESOLVE_ROOT"
     # shellcheck source=scripts/resolve_dotnet_env.sh
     . "$RESOLVE_ROOT/scripts/resolve_dotnet_env.sh"
     unset CADENCE_RESOLVE_REPO_ROOT
