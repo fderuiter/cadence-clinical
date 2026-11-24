@@ -2160,6 +2160,33 @@ public static class KernelStudyImportEndpoints
             }
         }
 
+        ProtocolDesign? parentDesign = null;
+        if (plan.ParentContent is not null
+            && ProtocolDesignDocument.Read(plan.ParentContent) is { IsValid: true, Design: { } parsedParent })
+        {
+            parentDesign = parsedParent;
+        }
+        else if (plan.Mode == ProtocolDraftImportMode.ForkApproved)
+        {
+            parentDesign = plan.BaseDesign;
+        }
+
+        if (parentDesign is not null)
+        {
+            var soaImpacted = ScheduleOfActivitiesDiff.Compare(parentDesign, design).ImpactedElements;
+            if (soaImpacted.Count > 0)
+            {
+                impacted =
+                [
+                    .. impacted
+                        .Where(id => !string.Equals(id, ProtocolStructuralDiff.RootId, StringComparison.Ordinal))
+                        .Concat(soaImpacted)
+                        .Distinct(StringComparer.Ordinal)
+                        .Order(StringComparer.Ordinal),
+                ];
+            }
+        }
+
         if (impacted.Count == 0)
         {
             impacted = plan.ExistingAmendment?.ImpactedElements is { Count: > 0 } existingImpacted

@@ -126,13 +126,25 @@ public sealed record KernelDependentsResponse(
 /// The typed Schedule of Activities and eligibility directives (ADR-2475), or null when the amended content is not a
 /// typed protocol design.
 /// </param>
+/// <param name="ActiveSiteCount">Visible active study sites in the study as of the read instant (CLINICAL_CANVAS §4.2).</param>
+/// <param name="PendingSiteCount">Visible pending study sites in the study as of the read instant (CLINICAL_CANVAS §4.2).</param>
+/// <param name="TotalParticipantCount">Visible enrolled/screened participants in the study as of the read instant.</param>
+/// <param name="AffectedParticipantCount">Visible participants whose cohort or upcoming schedule changes under the amendment.</param>
+/// <param name="ReconsentParticipantCount">Visible participants requiring re-consent under the amendment.</param>
+/// <param name="Hidden">Signals when sites, enrollments, or blinded facts were omitted from counts (ADR-2590).</param>
 public sealed record KernelAmendmentImpactResponse(
     string Amended,
     string Parent,
     IReadOnlyList<string> ImpactedElements,
     KernelDependentsResponse Dependents,
     IReadOnlyList<KernelElementChangeResponse> ChangedElements,
-    KernelSoaAmendmentDiffResponse? Schedule)
+    KernelSoaAmendmentDiffResponse? Schedule,
+    int ActiveSiteCount = 0,
+    int PendingSiteCount = 0,
+    int TotalParticipantCount = 0,
+    int AffectedParticipantCount = 0,
+    int ReconsentParticipantCount = 0,
+    HiddenObjects? Hidden = null)
 {
     internal static KernelAmendmentImpactResponse From(AmendmentImpact impact) =>
         new(
@@ -141,7 +153,13 @@ public sealed record KernelAmendmentImpactResponse(
             impact.ImpactedElements,
             KernelDependentsResponse.From(impact.Dependents),
             [.. impact.ChangedElements.Select(c => new KernelElementChangeResponse(c.ElementId, c.InstanceType, c.Change.ToString(), c.Properties))],
-            impact.Schedule is { } schedule ? KernelSoaAmendmentDiffResponse.From(schedule, impact.ImpactedElements) : null);
+            impact.Schedule is { } schedule ? KernelSoaAmendmentDiffResponse.From(schedule, impact.ImpactedElements) : null,
+            impact.ActiveSiteCount,
+            impact.PendingSiteCount,
+            impact.TotalParticipantCount,
+            impact.AffectedParticipantCount,
+            impact.ReconsentParticipantCount,
+            impact.Hidden);
 }
 
 /// <summary>One element an amendment adds, changes or removes.</summary>

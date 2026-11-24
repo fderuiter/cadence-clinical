@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Cadence.Kernel.Application.Authorization;
 using Cadence.Kernel.Application.Commands;
 using Cadence.Kernel.Application.Execution;
+using Cadence.Kernel.Application.Protocol;
 using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Evidence;
@@ -67,6 +68,8 @@ public static class KernelProtocolGovernanceEndpoints
                 ProtocolErrors.InvalidTransition,
                 ProtocolErrors.ContentRequired,
                 ProtocolErrors.ContentInvalid,
+                ProtocolErrors.ReferenceUnknown,
+                ProtocolErrors.UndeclaredImpactedElements,
             ]);
 
         group.MapPost("/protocol-versions/{versionRef}/return-to-draft", ReturnProtocolVersionToDraftAsync)
@@ -91,6 +94,7 @@ public static class KernelProtocolGovernanceEndpoints
                 KernelErrors.NotFound,
                 ProtocolErrors.InvalidTransition,
                 ProtocolErrors.AttestationRejected,
+                ProtocolErrors.SimulationReviewRequired,
             ])
             .RequireElectronicSignature(
                 ApproveProtocolVersionSemanticAction,
@@ -295,6 +299,19 @@ public static class KernelProtocolGovernanceEndpoints
             ? AttestationId.FromGuid(given)
             : AttestationId.FromGuid(DeriveGuid(tenant, "approve-protocol-version-attest", idempotencyKey));
 
+        AttestationId? reviewAttestationId = null;
+        if (!string.IsNullOrWhiteSpace(request?.ReviewAttestationRef))
+        {
+            if (!TryParseAttestation(request.ReviewAttestationRef.Trim(), out var parsedReviewAttestationId))
+            {
+                return KernelProblems.BadRequest(
+                    "Invalid NodeRef",
+                    $"'{request.ReviewAttestationRef}' is not an attestation NodeRef (attestation:<uuid>).");
+            }
+
+            reviewAttestationId = parsedReviewAttestationId;
+        }
+
         var canApprove = await probe.CanIAsync(tenant, ApproveProtocolVersionCapability, NodeRef.For(versionId), cancellationToken).ConfigureAwait(false);
         if (canApprove.Permitted)
         {
@@ -309,6 +326,27 @@ public static class KernelProtocolGovernanceEndpoints
                 if (!string.Equals(normalizedExpected, existing.ContentHash, StringComparison.Ordinal))
                 {
                     return KernelErrorEndpoints.Problem(TrustErrors.TargetContentChanged);
+                }
+            }
+
+            if (existing.ParentVersionId is not null
+                && context.RequestServices.GetService<IKernelUnitOfWorkFactory>() is { } unitOfWorkFactory
+                && context.RequestServices.GetService<IAttestationVerifier>() is { } verifier)
+            {
+                var clock = context.RequestServices.GetService<IClock>() ?? SystemClock.Instance;
+                var actor = context.RequestServices.GetService<ICurrentActor>()?.Actor ?? Actor.Person(sigToken.Subject ?? "system");
+                var precheck = await ProtocolApprovalSimulationGate.CheckAsync(
+                    tenant,
+                    unitOfWorkFactory,
+                    verifier,
+                    actor,
+                    clock.UtcNow,
+                    versionId,
+                    reviewAttestationId,
+                    cancellationToken).ConfigureAwait(false);
+                if (precheck is not null)
+                {
+                    return KernelErrorEndpoints.Problem(precheck);
                 }
             }
 
@@ -330,7 +368,7 @@ public static class KernelProtocolGovernanceEndpoints
         }
 
         var approveResult = await sender.SendAsync(
-            new ApproveProtocolVersion(tenant, versionId, attestationId, idempotencyKey, reason),
+            new ApproveProtocolVersion(tenant, versionId, attestationId, idempotencyKey, reason, reviewAttestationId),
             cancellationToken: cancellationToken).ConfigureAwait(false);
         if (!approveResult.IsSuccess)
         {
@@ -627,7 +665,7 @@ public static class KernelProtocolGovernanceEndpoints
                 WithdrawalReason: null,
                 Mask: null);
 
-    private static (string IdempotencyKey, string Reason, ProblemHttpResult? Problem) ReadMutationHeaders(
+    internal static (string IdempotencyKey, string Reason, ProblemHttpResult? Problem) ReadMutationHeaders(
         HttpContext context,
         IKernelChangeReason changeReason)
     {
@@ -733,7 +771,7 @@ public static class KernelProtocolGovernanceEndpoints
         return (resolved.StudyId, null);
     }
 
-    private static async Task<(StudyId StudyId, ProblemHttpResult? Problem)> ResolveStudyIdAsync(
+    internal static async Task<(StudyId StudyId, ProblemHttpResult? Problem)> ResolveStudyIdAsync(
         TenantId tenant,
         string studyRef,
         HttpContext context,
@@ -844,6 +882,23 @@ public static class KernelProtocolGovernanceEndpoints
         return false;
     }
 
+    private static bool TryParseAttestation(string raw, out AttestationId id)
+    {
+        if (NodeRef.TryParse(raw, out var parsed) && parsed is not null && parsed.TryGetId(out id))
+        {
+            return true;
+        }
+
+        if (Guid.TryParse(raw, out var guid) && guid != Guid.Empty)
+        {
+            id = AttestationId.FromGuid(guid);
+            return true;
+        }
+
+        id = AttestationId.Empty;
+        return false;
+    }
+
     private static string NormalizeSha256(string raw)
     {
         var trimmed = raw.Trim();
@@ -857,7 +912,7 @@ public static class KernelProtocolGovernanceEndpoints
             : trimmed;
     }
 
-    private static Guid DeriveGuid(TenantId tenant, string kind, string key)
+    internal static Guid DeriveGuid(TenantId tenant, string kind, string key)
     {
         Span<byte> hash = stackalloc byte[32];
         SHA256.HashData(Encoding.UTF8.GetBytes($"cadence-kernel-governance:{tenant}:{kind}:{key}"), hash);
