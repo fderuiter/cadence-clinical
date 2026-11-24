@@ -1,4 +1,4 @@
-# ADR-2671: Share Step-Up Signature Dispatch, Web HTTP Core, and TypeScript Duplication Enforcement
+# ADR-2672: Share Step-Up Signature Dispatch, Web HTTP Core, and TypeScript Duplication Enforcement
 
 - **Status:** Accepted
 - **Date:** 2026-11-23

@@ -468,7 +468,8 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2658: Resolve Shared UI from Workspace Source and Align Verification Scripts](2026-11-23-resolve-shared-ui-from-source-and-align-verification-scripts.md) (2026-11-23)
 - [ADR-2659: Centralize `ClinicalTabs` Visual Variants, Overflow Containment, Focus Scroll Alignment, and Scoped CSS AST Gates](2026-11-23-centralize-clinical-tabs-variants-overflow-and-scoped-css-gates.md) (2026-11-23)
 - [ADR-2670: Enforce Tabular Numerals via Shared CSS Tokens and AST Lint](2026-11-22-enforce-tabular-numerals-via-css-tokens-and-lint.md) (2026-11-22)
-- [ADR-2671: Share Step-Up Signature Dispatch, Web HTTP Core, and TypeScript Duplication Enforcement](2026-11-23-share-step-up-dispatch-http-core-and-ts-duplication-gate.md) (2026-11-23)
+- [ADR-2671: Composable Dirty Navigation Guards, Inline eCRF Draft Recovery Banners, and Edited-Row Contrast Tokens](2026-11-23-composable-dirty-guards-and-inline-draft-recovery.md) (2026-11-23)
+- [ADR-2672: Share Step-Up Signature Dispatch, Web HTTP Core, and TypeScript Duplication Enforcement](2026-11-23-share-step-up-dispatch-http-core-and-ts-duplication-gate.md) (2026-11-23)
 
 ### 7. DevOps, Tooling & CI/CD
 
@@ -623,6 +624,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2525: Dependabot Bumps Merge as One Locally Validated Batch](2026-10-20-dependabot-bumps-merge-as-one-locally-validated-batch.md) (2026-10-20)
 - [ADR-2526: Idempotent Self-Service Participant Expense Claims and Wallet Disbursements](2026-11-20-idempotent-self-service-participant-expense-claims-and-wallet-disbursements.md) (2026-11-20)
 - [ADR-2527: Enforce Dependency Alignment with MSBuild Properties and pnpm Catalogs](2026-11-21-enforce-dependency-alignment-with-msbuild-and-pnpm-catalogs.md) (2026-11-21)
+- [ADR-2528: Extend Cohort, xUnit v3, and PostgreSQL Digest Guardrails](2026-11-23-extend-cohort-xunit-v3-and-postgres-digest-guardrails.md) (2026-11-23)
 - [ADR-2530: Measure Web Coverage over All Source with a Ratchet Floor](2026-09-30-measure-web-coverage-over-all-source-with-a-ratchet-floor.md) (2026-09-30)
 - [ADR-2531: Every Mapped Test Is Mandatory Evidence, and Reports Name What They Tested](2026-10-15-every-mapped-test-is-mandatory-evidence.md) (2026-10-15) _(Amended by [ADR-2532](2026-10-16-feature-branches-never-commit-the-gxp-snapshot.md))_
 - [ADR-2532: Feature Branches Never Commit the GxP Snapshot](2026-10-16-feature-branches-never-commit-the-gxp-snapshot.md) (2026-10-16)
