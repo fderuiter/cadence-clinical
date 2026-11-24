@@ -7,13 +7,7 @@ import {
   type SubjectSummary,
 } from "../api/executionApi";
 import { kernelApi } from "../api/kernelApi";
-import {
-  clearKernelStudyCache,
-  findKernelEnrollmentRef,
-  findStudyScheduleOptions,
-  resetKernelStudySession,
-  type StudyScheduleOptions,
-} from "../canvas/kernelStudy";
+import type { StudyScheduleOptions } from "../canvas/kernelStudy";
 import { PARTICIPANT_STATES } from "../canvas/lifecycle";
 import { formatNodeRef, parseNodeRef, tryNodeRef } from "../canvas/nodeRef";
 import {
@@ -21,8 +15,34 @@ import {
   resetNodeResolutionSession,
   seedNodeSummary,
 } from "../canvas/nodeResolver";
-import { getSyncedStudyScope, syncActiveStudyScope } from "./studyScopeBridge";
+import {
+  clearRegisteredKernelStudyCache,
+  getSyncedStudyScope,
+  resetRegisteredKernelStudySession,
+  syncActiveStudyScope,
+} from "./studyScopeBridge";
 import { useToastStore } from "./toasts.js";
+
+type KernelStudyModule = typeof import("../canvas/kernelStudy");
+
+let kernelStudyModulePromise: Promise<KernelStudyModule> | null = null;
+let loadedKernelStudyModule: KernelStudyModule | null = null;
+
+export function registerLoadedKernelStudyModule(mod: KernelStudyModule): void {
+  loadedKernelStudyModule = mod;
+}
+
+function loadKernelStudyModule(): Promise<KernelStudyModule> {
+  if (loadedKernelStudyModule) {
+    return Promise.resolve(loadedKernelStudyModule);
+  }
+  return (kernelStudyModulePromise ??= import("../canvas/kernelStudy").then(
+    (mod) => {
+      loadedKernelStudyModule = mod;
+      return mod;
+    }
+  ));
+}
 
 /** Extracts the unversioned `enrollment:<uuid>` reference from a participant summary when present. */
 export function enrollmentNodeRefFromParticipant(
@@ -324,13 +344,19 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
       palettePromiseKey = "";
       this.$reset();
       this.studyCode = studyCode;
-      if (typeof clearKernelStudyCache === "function") {
-        clearKernelStudyCache();
+      clearRegisteredKernelStudyCache();
+      if (
+        typeof loadedKernelStudyModule?.clearKernelStudyCache === "function"
+      ) {
+        loadedKernelStudyModule.clearKernelStudyCache();
       }
       clearNodeResolutionCache();
       resetNodeResolutionSession(studyCode);
-      if (typeof resetKernelStudySession === "function") {
-        resetKernelStudySession(studyCode);
+      resetRegisteredKernelStudySession(studyCode);
+      if (
+        typeof loadedKernelStudyModule?.resetKernelStudySession === "function"
+      ) {
+        loadedKernelStudyModule.resetKernelStudySession(studyCode);
       }
       if (studyCode.trim()) {
         syncActiveStudyScope(studyCode);
@@ -361,8 +387,11 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
       this.scheduleOptions = null;
       this.scheduleLoading = false;
       this.scheduleError = null;
-      if (typeof clearKernelStudyCache === "function") {
-        clearKernelStudyCache();
+      clearRegisteredKernelStudyCache();
+      if (
+        typeof loadedKernelStudyModule?.clearKernelStudyCache === "function"
+      ) {
+        loadedKernelStudyModule.clearKernelStudyCache();
       }
       clearNodeResolutionCache();
     },
@@ -403,6 +432,9 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
       this.scheduleError = null;
       const promise = (async () => {
         try {
+          const findStudyScheduleOptions =
+            loadedKernelStudyModule?.findStudyScheduleOptions ??
+            (await loadKernelStudyModule()).findStudyScheduleOptions;
           const loaded = await findStudyScheduleOptions(target);
           if (loaded) {
             this.scheduleOptionsByStudy[target] = loaded;
@@ -1171,6 +1203,9 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
         error: false,
       };
       try {
+        const findKernelEnrollmentRef =
+          loadedKernelStudyModule?.findKernelEnrollmentRef ??
+          (await loadKernelStudyModule()).findKernelEnrollmentRef;
         const enrollment = await findKernelEnrollmentRef(
           studyId,
           participant.site_id ?? null,

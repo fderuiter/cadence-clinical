@@ -1086,11 +1086,15 @@ import { useAuthStore } from "../stores/auth";
 import { useCanvasSelection } from "../composables/useCanvasSelection";
 import { useKnowledgeStore } from "../stores/knowledge.js";
 import { useActiveStudyScope } from "../composables/useActiveStudyScope";
+import * as kernelStudyModule from "../canvas/kernelStudy";
 import {
   enrollmentIdFromParticipant,
   participantNodeRef,
+  registerLoadedKernelStudyModule,
   useStudyCanvasStore,
 } from "../stores/studyCanvas";
+
+registerLoadedKernelStudyModule(kernelStudyModule);
 import { hasUserScopedDrafts } from "../utils/userScopedStorage.js";
 import CanvasFormWorkspace from "../components/canvas/CanvasFormWorkspace.vue";
 import CanvasInspector from "../components/canvas/CanvasInspector.vue";

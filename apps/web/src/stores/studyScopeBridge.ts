@@ -145,3 +145,56 @@ export function clearActiveStudyScope(): void {
   if (scopeRef) scopeRef.value = "";
   applyScopeToStores(pinia, "", true);
 }
+
+export interface KernelStudySessionBridge {
+  clearCache: () => void;
+  resetSession: (studyCode?: string) => void;
+  getActiveSessionKey?: () => string;
+}
+
+interface AuthScopeLikeState {
+  isAuthenticated?: boolean;
+  currentPersona?: string | null;
+  user?: {
+    id?: string | null;
+    username?: string | null;
+    tenantId?: string | null;
+  } | null;
+}
+
+/**
+ * Active caller cache scope (`tenant:actor:persona`), taken from the active Pinia auth state when present so positive
+ * study, site, enrollment, and schedule lookups never cross tenant, account, or persona boundaries.
+ */
+export function getKernelStudyCallerScopeKey(): string {
+  const pinia = getActivePinia();
+  const auth = (pinia?.state.value as { auth?: AuthScopeLikeState } | undefined)
+    ?.auth;
+  if (!auth || !auth.isAuthenticated) {
+    return "anonymous::";
+  }
+  const tenant = String(auth.user?.tenantId ?? "").trim();
+  const actor = String(auth.user?.id || auth.user?.username || "").trim();
+  const persona = String(auth.currentPersona ?? "").trim();
+  return `${encodeURIComponent(tenant)}:${encodeURIComponent(actor)}:${encodeURIComponent(persona)}`;
+}
+
+let kernelStudySessionBridge: KernelStudySessionBridge | null = null;
+
+export function registerKernelStudySessionBridge(
+  bridge: KernelStudySessionBridge | null
+): void {
+  kernelStudySessionBridge = bridge;
+}
+
+export function clearRegisteredKernelStudyCache(): void {
+  kernelStudySessionBridge?.clearCache();
+}
+
+export function resetRegisteredKernelStudySession(studyCode = ""): void {
+  kernelStudySessionBridge?.resetSession(studyCode);
+}
+
+export function getRegisteredActiveKernelStudySessionKey(): string {
+  return kernelStudySessionBridge?.getActiveSessionKey?.() ?? "";
+}

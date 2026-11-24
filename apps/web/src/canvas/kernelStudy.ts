@@ -4,17 +4,13 @@ import {
   registerLogoutCleanup,
   registerSessionCacheClearHandler,
 } from "../auth/sessionCoordinator.js";
+import {
+  getKernelStudyCallerScopeKey,
+  registerKernelStudySessionBridge,
+} from "../stores/studyScopeBridge";
 import { parseNodeRef, type NodeRef } from "./nodeRef";
 
-interface AuthLikeState {
-  isAuthenticated?: boolean;
-  currentPersona?: string | null;
-  user?: {
-    id?: string | null;
-    username?: string | null;
-    tenantId?: string | null;
-  } | null;
-}
+export { getKernelStudyCallerScopeKey };
 
 interface SessionCacheBucket {
   epoch: number;
@@ -78,23 +74,6 @@ function clearBucket(bucket: SessionCacheBucket): void {
   bucket.enrollmentInFlight.clear();
   bucket.scheduleOptions.clear();
   bucket.scheduleOptionsInFlight.clear();
-}
-
-/**
- * Active caller cache scope (`tenant:actor:persona`), taken from the active Pinia auth state when present so positive
- * study, site, enrollment, and schedule lookups never cross tenant, account, or persona boundaries.
- */
-export function getKernelStudyCallerScopeKey(): string {
-  const pinia = getActivePinia();
-  const auth = (pinia?.state.value as { auth?: AuthLikeState } | undefined)
-    ?.auth;
-  if (!auth || !auth.isAuthenticated) {
-    return "anonymous::";
-  }
-  const tenant = String(auth.user?.tenantId ?? "").trim();
-  const actor = String(auth.user?.id || auth.user?.username || "").trim();
-  const persona = String(auth.currentPersona ?? "").trim();
-  return `${encodeURIComponent(tenant)}:${encodeURIComponent(actor)}:${encodeURIComponent(persona)}`;
 }
 
 function normalizeStudyCode(code: string): string {
@@ -167,6 +146,12 @@ export function resetKernelStudySession(studyCode = ""): void {
     getBucket().activeSessionKey = nextSessionKey;
   }
 }
+
+registerKernelStudySessionBridge({
+  clearCache: clearKernelStudyCache,
+  resetSession: resetKernelStudySession,
+  getActiveSessionKey: getActiveKernelStudySessionKey,
+});
 
 function ensureActiveStudySession(
   bucket: SessionCacheBucket,

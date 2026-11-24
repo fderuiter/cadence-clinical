@@ -4,7 +4,12 @@ import {
   registerSessionCacheClearHandler,
 } from "../auth/sessionCoordinator.js";
 import { kernelApi, type KernelNode } from "../api/kernelApi";
-import * as kernelStudy from "./kernelStudy";
+import {
+  clearRegisteredKernelStudyCache,
+  getKernelStudyCallerScopeKey,
+  getRegisteredActiveKernelStudySessionKey,
+  resetRegisteredKernelStudySession,
+} from "../stores/studyScopeBridge";
 import { formatNodeRef, parseNodeRef, type NodeRef } from "./nodeRef";
 
 /**
@@ -88,9 +93,7 @@ export function clearNodeResolutionCache(): void {
   clearReactiveRecord(resolvedEntries);
   clearReactiveRecord(localHints);
   inFlight.clear();
-  if (typeof kernelStudy.clearKernelStudyCache === "function") {
-    kernelStudy.clearKernelStudyCache();
-  }
+  clearRegisteredKernelStudyCache();
   while (lookupQueue.length > 0) {
     const waiter = lookupQueue.shift();
     if (waiter) {
@@ -111,33 +114,23 @@ registerLogoutCleanup(clearNodeResolutionCache);
  */
 export function resetNodeResolutionSession(studyCode = ""): void {
   const normalized = studyCode.trim();
-  const callerScope =
-    typeof kernelStudy.getKernelStudyCallerScopeKey === "function"
-      ? kernelStudy.getKernelStudyCallerScopeKey()
-      : "anonymous::";
+  const callerScope = getKernelStudyCallerScopeKey();
   const nextSessionKey = normalized
     ? `${callerScope}::${encodeURIComponent(normalized.toUpperCase())}`
     : "";
-  const activeStudySessionKey =
-    typeof kernelStudy.getActiveKernelStudySessionKey === "function"
-      ? kernelStudy.getActiveKernelStudySessionKey()
-      : "";
+  const activeStudySessionKey = getRegisteredActiveKernelStudySessionKey();
   if (
     nextSessionKey &&
     (nextSessionKey === activeSessionKey ||
       (!activeSessionKey && nextSessionKey === activeStudySessionKey))
   ) {
     activeSessionKey = nextSessionKey;
-    if (typeof kernelStudy.resetKernelStudySession === "function") {
-      kernelStudy.resetKernelStudySession(normalized);
-    }
+    resetRegisteredKernelStudySession(normalized);
     return;
   }
   clearNodeResolutionCache();
   activeSessionKey = nextSessionKey;
-  if (typeof kernelStudy.resetKernelStudySession === "function") {
-    kernelStudy.resetKernelStudySession(normalized);
-  }
+  resetRegisteredKernelStudySession(normalized);
 }
 
 const BARE_CONCEPT_REF_PATTERN =
