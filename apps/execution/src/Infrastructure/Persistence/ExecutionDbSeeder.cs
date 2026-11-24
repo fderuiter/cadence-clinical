@@ -1,6 +1,8 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
@@ -76,25 +78,45 @@ public static partial class ExecutionDbSeeder
             await dbContext.SiteComplianceCaches.AddRangeAsync(initialCaches, ct).ConfigureAwait(false);
         }
 
-        // 2. Seed Initial Clinical Subject for the demo tenant only.
+        // 2. Seed canonical demo ClinicalSubjects matching packages/demo-fixtures/demo-seed.json and DevelopmentDemoData.DemoIds.
         if (Seed.Participants.Length > 0 &&
             !await dbContext.ClinicalSubjects.AnyAsync(s => s.TenantId == demoTenantId, ct).ConfigureAwait(false))
         {
-            var firstParticipant = Seed.Participants[0];
-            var initialSubject = ClinicalSubject.Create(
-                subjectCode: new SubjectCode(firstParticipant.SubjectCode),
-                studyCode: studyCode,
-                siteCode: new SiteCode(firstParticipant.SiteCode),
-                enrollmentIndex: 0,
-                encryptedDemographics: null,
-                stratFactors: null
-            );
-            initialSubject.TenantId = demoTenantId;
+            var initialSubjects = Seed.Participants
+                .Select((participant, index) =>
+                {
+                    var subject = ClinicalSubject.Create(
+                        subjectCode: new SubjectCode(participant.SubjectCode),
+                        studyCode: studyCode,
+                        siteCode: new SiteCode(participant.SiteCode),
+                        enrollmentIndex: index,
+                        encryptedDemographics: null,
+                        stratFactors: null,
+                        id: new SubjectId(DeriveDemoGuid(demoTenantId, "participant", participant.SubjectCode)),
+                        kernelEnrollmentId: DeriveDemoGuid(demoTenantId, "enrollment", participant.SubjectCode));
+                    subject.TenantId = demoTenantId;
+                    return subject;
+                })
+                .ToArray();
 
-            await dbContext.ClinicalSubjects.AddAsync(initialSubject, ct).ConfigureAwait(false);
+            await dbContext.ClinicalSubjects.AddRangeAsync(initialSubjects, ct).ConfigureAwait(false);
         }
 
         await dbContext.SaveChangesAsync(ct).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Derives the same UUID v8 identifier as <c>DevelopmentDemoData.DemoIds</c> and <c>DemoManifestGeneratorService</c>:
+    /// SHA-256 of <c>cadence-development-demo:{tenantUuid}:{kind}:{name}</c>.
+    /// </summary>
+    public static Guid DeriveDemoGuid(Guid tenantId, string kind, string name)
+    {
+        Span<byte> hash = stackalloc byte[32];
+        SHA256.HashData(Encoding.UTF8.GetBytes($"cadence-development-demo:{tenantId:D}:{kind}:{name}"), hash);
+        var bytes = hash[..16];
+        bytes[6] = (byte)((bytes[6] & 0x0F) | 0x80);
+        bytes[8] = (byte)((bytes[8] & 0x3F) | 0x80);
+        return new Guid(bytes, bigEndian: true);
     }
 
     private static ExecutionDemoSeed ReadEmbeddedDemoSeed()

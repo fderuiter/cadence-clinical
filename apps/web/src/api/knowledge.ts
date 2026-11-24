@@ -143,7 +143,9 @@ interface BundledSopSpec {
   sectionAnchor: string;
   heading: string;
   summary: string;
+  stepsHeading?: string;
   steps?: string[];
+  extraSections?: Array<{ id?: string; heading: string; body: string }>;
   extraHtml?: string;
   reasonForChange?: string;
   updatedAt?: string;
@@ -153,7 +155,160 @@ function escapeHtml(text: string): string {
   return text
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+export function slugifySopHeading(heading: string): string {
+  const cleaned = String(heading || "")
+    .trim()
+    .replace(/^#+/, "")
+    .replace(/&/g, " and ")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return cleaned || "section";
+}
+
+function formatInlineSopMarkdown(rawLine: string): string {
+  if (!rawLine) return "";
+  const parts = rawLine.split(/(`[^`]+`)/g);
+  return parts
+    .map((part) => {
+      if (part.length >= 2 && part.startsWith("`") && part.endsWith("`")) {
+        return `<code>${escapeHtml(part.slice(1, -1))}</code>`;
+      }
+      const escaped = escapeHtml(part);
+      const withStrong = escaped.replace(
+        /\*\*([^*]+)\*\*/g,
+        "<strong>$1</strong>"
+      );
+      return withStrong.replace(/(^|[^*])\*([^*]+)\*/g, "$1<em>$2</em>");
+    })
+    .join("");
+}
+
+export function compileSopMarkdownToHtml(
+  markdown: string,
+  primaryAnchor?: string | null,
+  headingAnchors?: Record<string, string>
+): string {
+  if (!markdown || !markdown.trim()) return "";
+  const lines = markdown
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .split("\n");
+  const usedIds = new Set<string>();
+  const normalizedPrimary = (primaryAnchor || "").trim().replace(/^#+/, "");
+  let primaryApplied = false;
+
+  const allocateId = (desired: string): string => {
+    const baseId = (desired || "").trim().replace(/^#+/, "") || "section";
+    if (!usedIds.has(baseId)) {
+      usedIds.add(baseId);
+      return baseId;
+    }
+    let suffix = 2;
+    while (usedIds.has(`${baseId}-${suffix}`)) {
+      suffix++;
+    }
+    const unique = `${baseId}-${suffix}`;
+    usedIds.add(unique);
+    return unique;
+  };
+
+  let html = "";
+  const paragraphLines: string[] = [];
+  let listTag: "ol" | "ul" | null = null;
+  const listItems: string[] = [];
+
+  const flushParagraph = () => {
+    if (paragraphLines.length === 0) return;
+    html += `<p>${formatInlineSopMarkdown(paragraphLines.join(" "))}</p>`;
+    paragraphLines.length = 0;
+  };
+
+  const flushList = () => {
+    if (!listTag || listItems.length === 0) {
+      listTag = null;
+      listItems.length = 0;
+      return;
+    }
+    html += `<${listTag}>${listItems
+      .map((item) => `<li>${formatInlineSopMarkdown(item)}</li>`)
+      .join("")}</${listTag}>`;
+    listTag = null;
+    listItems.length = 0;
+  };
+
+  for (const rawLine of lines) {
+    const trimmed = rawLine.trim();
+    if (!trimmed) {
+      flushParagraph();
+      flushList();
+      continue;
+    }
+
+    const headingMatch = trimmed.match(/^(#{2,4})\s+(.+?)$/);
+    if (headingMatch) {
+      flushParagraph();
+      flushList();
+      const level = headingMatch[1].length;
+      const headingText = headingMatch[2].trim();
+      const mapped = headingAnchors?.[headingText];
+      let desiredId: string;
+      if (mapped) {
+        desiredId = mapped;
+        if (
+          normalizedPrimary &&
+          mapped.replace(/^#+/, "") === normalizedPrimary
+        ) {
+          primaryApplied = true;
+        }
+      } else if (level === 2 && !primaryApplied && normalizedPrimary) {
+        desiredId = normalizedPrimary;
+        primaryApplied = true;
+      } else {
+        desiredId = slugifySopHeading(headingText);
+        if (normalizedPrimary && desiredId === normalizedPrimary) {
+          primaryApplied = true;
+        }
+      }
+      const uniqueId = allocateId(desiredId);
+      html += `<h${level} id="${escapeHtml(uniqueId)}">${formatInlineSopMarkdown(headingText)}</h${level}>`;
+      continue;
+    }
+
+    const olMatch = trimmed.match(/^\d+\.\s+(.+?)$/);
+    if (olMatch) {
+      flushParagraph();
+      if (listTag !== "ol") {
+        flushList();
+        listTag = "ol";
+      }
+      listItems.push(olMatch[1].trim());
+      continue;
+    }
+
+    const ulMatch = trimmed.match(/^[-*]\s+(.+?)$/);
+    if (ulMatch) {
+      flushParagraph();
+      if (listTag !== "ul") {
+        flushList();
+        listTag = "ul";
+      }
+      listItems.push(ulMatch[1].trim());
+      continue;
+    }
+
+    flushList();
+    paragraphLines.push(trimmed);
+  }
+
+  flushParagraph();
+  flushList();
+  return html;
 }
 
 function buildBundledSop(spec: BundledSopSpec): Record<string, unknown> {
@@ -161,7 +316,6 @@ function buildBundledSop(spec: BundledSopSpec): Record<string, unknown> {
   const versionLabel = spec.versionLabel ?? "1.0";
   const author = spec.authorUserId ?? "qa_director";
   const updatedAt = spec.updatedAt ?? "2026-06-15T10:00:00Z";
-  const anchorId = spec.sectionAnchor.replace(/^#+/, "");
   const steps =
     spec.steps && spec.steps.length > 0
       ? spec.steps
@@ -169,12 +323,25 @@ function buildBundledSop(spec: BundledSopSpec): Record<string, unknown> {
           `Verify assigned study, site, and role permissions prior to executing ${spec.heading.toLowerCase()}.`,
           "Record contemporaneous 21 CFR Part 11 change reasons for regulated updates and escalate blockers via Contextual Help using pseudonymous subject codes only.",
         ];
+  const stepsHeading = spec.stepsHeading ?? "Operational Steps";
   const stepsMarkdown = steps
     .map((step, idx) => `${idx + 1}. ${step}`)
     .join("\n");
-  const stepsHtml = steps
-    .map((step) => `<li>${escapeHtml(step)}</li>`)
+  const extraMarkdown = (spec.extraSections || [])
+    .map((sec) => `\n\n### ${sec.heading}\n${sec.body}`)
     .join("");
+  const bodyMarkdown = `## ${spec.heading}\n${spec.summary}\n\n### ${stepsHeading}\n${stepsMarkdown}${extraMarkdown}`;
+  const headingAnchors: Record<string, string> = {};
+  for (const sec of spec.extraSections || []) {
+    if (sec.id) {
+      headingAnchors[sec.heading] = sec.id.replace(/^#+/, "");
+    }
+  }
+  const compiledHtml = compileSopMarkdownToHtml(
+    bodyMarkdown,
+    spec.sectionAnchor,
+    headingAnchors
+  );
   return {
     matched_mapping: {
       id: spec.mappingId,
@@ -200,8 +367,8 @@ function buildBundledSop(spec: BundledSopSpec): Record<string, unknown> {
       approved_by: "qa_director",
       created_at: "2026-02-01T09:00:00Z",
       updated_at: updatedAt,
-      body_markdown: `## ${spec.heading}\n${spec.summary}\n\n${stepsMarkdown}`,
-      body_html: `<h2 id="${escapeHtml(anchorId)}">${escapeHtml(spec.heading)}</h2><p>${escapeHtml(spec.summary)}</p><ol>${stepsHtml}</ol>${spec.extraHtml || ""}`,
+      body_markdown: bodyMarkdown,
+      body_html: `${compiledHtml}${spec.extraHtml || ""}`,
     },
     primary_version: {
       id: spec.versionId,
@@ -274,6 +441,11 @@ const DATA_LOCK_SPEC: Omit<BundledSopSpec, "routePattern" | "mappingId"> = {
   heading: "Scoped Data Lock & Unlock Governance",
   summary:
     "Controls observation, form, participant, site, and study lock prerequisites, query closure checks, and 21 CFR Part 11 signed unlock justifications.",
+  stepsHeading: "Mandatory Lock Gates",
+  steps: [
+    "Resolve all open discrepancy queries, pending SDV items, and required PI signatures before applying a hard lock.",
+    "Record an explicit regulatory justification and step-up signature for every lock or controlled unlock action.",
+  ],
 };
 
 const REGULATED_EXPORTS_SPEC: Omit<
@@ -295,6 +467,11 @@ const REGULATED_EXPORTS_SPEC: Omit<
   heading: "Regulated Submission Export Verification",
   summary:
     "Governs CDISC ODM/SDTM archive generation, cryptographic SHA-256 manifest verification, and read-only regulatory inspection packages.",
+  stepsHeading: "Mandatory Controls",
+  steps: [
+    "Verify study/site authorization and lock state prior to generating regulatory submission or inspection export bundles.",
+    "Confirm SHA-256 manifest integrity and pseudonymous subject de-identification on exported deliverables.",
+  ],
 };
 
 /**
@@ -321,10 +498,31 @@ function createDefaultContextualSops(): Record<
       categoryId: "cat-clinical-ops",
       categoryName: "Clinical Operations",
       authorUserId: "sponsor_study_lead",
-      sectionAnchor: "#workspace-overview-orientation",
+      sectionAnchor: "#clinical-command-center-triage",
       heading: "Workspace Overview & Role Orientation",
       summary:
         "Guides clinical operators through role-scoped study readiness indicators, pending GxP tasks, and compliant navigation.",
+      steps: [
+        "Review high-priority safety, SDV, and query alerts at workspace login.",
+        "Navigate directly to study, site, or support queues requiring immediate GxP follow-up.",
+      ],
+      extraSections: [
+        {
+          id: "workspace-overview-orientation",
+          heading: "Role-Scoped Orientation",
+          body: "Operators verify assigned study/site readiness indicators and active work queues upon sign-in.",
+        },
+        {
+          id: "pharmacovigilance-signal-overview",
+          heading: "Pharmacovigilance Signal Overview",
+          body: "Safety officers prioritize expedited serious adverse event alerts and medical review escalations upon sign-in.",
+        },
+        {
+          id: "investigator-oversight-summary",
+          heading: "Investigator Oversight Summary",
+          body: "Principal Investigators review pending visit signatures, safety notifications, and site delegation alerts.",
+        },
+      ],
     }),
     "/plans": buildBundledSop({
       mappingId: "map-plans-01",
@@ -343,6 +541,11 @@ function createDefaultContextualSops(): Record<
       heading: "Study Execution Plan Governance",
       summary:
         "Defines milestone tracking, enrollment forecasting, and cross-functional study execution plans on /plans.",
+      stepsHeading: "Key Controls",
+      steps: [
+        "Reconcile country and site activation dates with approved protocol amendments.",
+        "Escalate milestone slippage with documented root-cause context.",
+      ],
     }),
     "/onboarding/trial": buildBundledSop({
       mappingId: "map-trial-onboarding-01",
@@ -362,6 +565,11 @@ function createDefaultContextualSops(): Record<
       heading: "Clinical Trial Onboarding Procedure",
       summary:
         "Establishes controlled onboarding steps for new study protocols, organization tenancy bindings, and initial site rosters.",
+      stepsHeading: "Mandatory Checks",
+      steps: [
+        "Validate sponsor protocol identifier, therapeutic area, and regulatory phase before workspace creation.",
+        "Verify initial study team RBAC assignments and training curriculum bindings prior to activation.",
+      ],
     }),
     "/forbidden": buildBundledSop({
       mappingId: "map-forbidden-01",
@@ -380,6 +588,10 @@ function createDefaultContextualSops(): Record<
       heading: "RBAC Refusal Verification & Access Provisioning",
       summary:
         "Explains ICH E6(R3) least-privilege role enforcement, training/delegation prerequisites, and audited access-control ticket escalation.",
+      steps: [
+        "Confirm your active workspace persona and assigned study/site scope before retrying restricted clinical routes.",
+        "Escalate legitimate role or site provisioning requests under `ACCESS_CONTROL` for Sponsor Admin review and training verification.",
+      ],
     }),
     "/unavailable": buildBundledSop({
       mappingId: "map-unavailable-01",
@@ -398,102 +610,150 @@ function createDefaultContextualSops(): Record<
       heading: "Validated Module Availability & Clinical Canvas Equivalents",
       summary:
         "Details GAMP 5 release gating for pre-release screens and directs operators to validated Clinical Canvas workflows.",
+      steps: [
+        "Use Clinical Canvas (`/studies/:studyCode`), Data Collection (`/ecrf`), Site Readiness (`/ctms`, `/ssu`), eTMF (`/etmf`), Training (`/training`), Support (`/tickets`), and Knowledge (`/knowledge`) for live regulated operations.",
+        "Log an operational support ticket under `SYSTEM_SUPPORT` if an expected entitlement or module workflow is unavailable.",
+      ],
     }),
-    "/studies": {
-      matched_mapping: {
-        id: "map-studies-01",
-        route_pattern: "/studies",
-        persona: "sponsor_designer",
-        article_id: "art-studies-sop",
-        section_anchor: "#study-portfolio-governance",
-        priority: 20,
-        is_active: true,
-      },
-      primary_article: {
-        id: "art-studies-sop",
-        title: "SOP-STD-101: Study Portfolio Governance & Workspace Navigation",
-        slug: "sop-std-101-study-portfolio-governance",
-        status: "PUBLISHED",
-        version_index: 1,
-        version_label: "1.0",
-        tags: ["studies", "portfolio", "governance", "usdm"],
-        category_id: "cat-study-authoring",
-        category_name: "Study Authoring & MDR",
-        author_user_id: "sponsor_study_lead",
-        last_edited_by: "sponsor_study_lead",
-        approved_by: "qa_director",
-        created_at: "2026-02-01T09:00:00Z",
-        updated_at: "2026-06-05T10:00:00Z",
-        body_markdown: `## Study Portfolio Governance
-Standardizes study workspace selection, role-scoped study visibility, and protocol readiness checks.
-
-## Operational Steps
-1. Verify protocol code and lifecycle status (\`ACTIVE\`, \`IN_DESIGN\`, or \`LOCKED\`) prior to opening clinical data workspaces.
-2. Confirm assigned study and site scope before initiating enrollment, monitoring, or data management actions.
-3. Escalate missing study assignments to Platform Access Governance via contextual support ticketing.`,
-        body_html: `<h2 id="study-portfolio-governance">Study Portfolio Governance</h2><p>Standardizes study workspace selection, role-scoped study visibility, and protocol readiness checks.</p><h2 id="portfolio-operational-steps">Operational Steps</h2><ol><li>Verify protocol code and lifecycle status (<code>ACTIVE</code>, <code>IN_DESIGN</code>, or <code>LOCKED</code>) prior to opening clinical data workspaces.</li><li>Confirm assigned study and site scope before initiating enrollment, monitoring, or data management actions.</li><li>Escalate missing study assignments to Platform Access Governance via contextual support ticketing.</li></ol>`,
-      },
-      primary_version: {
-        id: "ver-std-101",
-        version_index: 1,
-        version_label: "1.0",
-        status_at_snapshot: "PUBLISHED",
-        is_locked: true,
-        created_by: "sponsor_study_lead",
-        reason_for_change: "Initial controlled release",
-        created_at: "2026-06-05T10:00:00Z",
-      },
-      section_anchor: "#study-portfolio-governance",
-      related_articles: [],
-    },
-    "/studies/:studyCode": {
-      matched_mapping: {
-        id: "map-study-canvas-01",
-        route_pattern: "/studies/:studyCode",
-        persona: "site_crc",
-        article_id: "art-study-canvas-sop",
-        section_anchor: "#clinical-study-canvas-operations",
-        priority: 30,
-        is_active: true,
-      },
-      primary_article: {
-        id: "art-study-canvas-sop",
-        title:
-          "SOP-STD-102: Clinical Study Canvas, Enrollment & Protocol Execution",
-        slug: "sop-std-102-clinical-study-canvas",
-        status: "PUBLISHED",
-        version_index: 2,
-        version_label: "2.0",
-        tags: ["studies", "canvas", "enrollment", "protocol-execution"],
-        category_id: "cat-clinical-ops",
-        category_name: "Clinical Operations",
-        author_user_id: "lead_data_manager",
-        last_edited_by: "lead_data_manager",
-        approved_by: "qa_director",
-        created_at: "2026-02-05T09:00:00Z",
-        updated_at: "2026-06-10T10:00:00Z",
-        body_markdown: `## Clinical Study Canvas Operations
-Governs study-level subject enrollment, Schedule of Activities verification, and site activation monitoring.
-
-## Key Controls
-1. Use pseudonymous subject codes (for example \`SUBJ-1001\`) exclusively; never enter direct participant PII.
-2. Supply a clear 21 CFR Part 11 reason for change whenever recording or amending clinical observations.
-3. Review open form queries and SDV indicators prior to visit sign-off.`,
-        body_html: `<h2 id="clinical-study-canvas-operations">Clinical Study Canvas Operations</h2><p id="active-study-clinical-canvas">Governs study-level subject enrollment, Schedule of Activities verification, and site activation monitoring.</p><h2 id="study-canvas-key-controls">Key Controls</h2><ol><li>Use pseudonymous subject codes (for example <code>SUBJ-1001</code>) exclusively; never enter direct participant PII.</li><li>Supply a clear 21 CFR Part 11 reason for change whenever recording or amending clinical observations.</li><li>Review open form queries and SDV indicators prior to visit sign-off.</li></ol><h3 id="participant-timeline-and-visit-record">Participant Timeline &amp; Visit Record</h3><p>Inspect longitudinal visit completion and open form queries within the participant record.</p>`,
-      },
-      primary_version: {
-        id: "ver-std-102",
-        version_index: 2,
-        version_label: "2.0",
-        status_at_snapshot: "PUBLISHED",
-        is_locked: true,
-        created_by: "lead_data_manager",
-        reason_for_change: "Updated for Clinical Canvas v2",
-        created_at: "2026-06-10T10:00:00Z",
-      },
-      section_anchor: "#clinical-study-canvas-operations",
-      related_articles: [],
-    },
+    "/studies": buildBundledSop({
+      mappingId: "map-studies-01",
+      routePattern: "/studies",
+      persona: "sponsor_designer",
+      priority: 20,
+      articleId: "art-studies-sop",
+      versionId: "ver-std-101",
+      title: "SOP-STD-101: Study Portfolio Governance & Workspace Navigation",
+      slug: "sop-std-101-study-portfolio-governance",
+      versionIndex: 1,
+      versionLabel: "1.0",
+      tags: ["studies", "portfolio", "governance", "usdm"],
+      categoryId: "cat-study-authoring",
+      categoryName: "Study Authoring & MDR",
+      authorUserId: "sponsor_study_lead",
+      sectionAnchor: "#study-portfolio-governance",
+      heading: "Study Portfolio Governance",
+      summary:
+        "Standardizes study workspace selection, role-scoped study visibility, and protocol readiness checks.",
+      steps: [
+        "Verify protocol code and lifecycle status (`ACTIVE`, `IN_DESIGN`, or `LOCKED`) prior to opening clinical data workspaces.",
+        "Confirm assigned study and site scope before initiating enrollment, monitoring, or data management actions.",
+        "Escalate missing study assignments to Platform Access Governance via contextual support ticketing.",
+      ],
+      extraSections: [
+        {
+          id: "enterprise-portfolio-oversight",
+          heading: "Enterprise Portfolio Oversight",
+          body: "Sponsor administrators verify tenant-wide study lifecycle readiness, environment locks, and portfolio governance controls.",
+        },
+        {
+          id: "protocol-version-selection",
+          heading: "Protocol Version Selection",
+          body: "Study designers confirm active USDM protocol versions before entering Schedule of Activities or amendment workspaces.",
+        },
+        {
+          id: "assigned-site-study-selection",
+          heading: "Assigned Site Study Selection",
+          body: "Site coordinators select authorized protocols and verify site activation status before enrolling or updating participants.",
+        },
+        {
+          id: "study-monitoring-entry",
+          heading: "Study Monitoring Entry",
+          body: "Clinical Research Associates verify site monitoring assignments, SDV backlogs, and pending visit action items.",
+        },
+        {
+          id: "study-data-review-entry",
+          heading: "Study Data Review Entry",
+          body: "Data managers review open discrepancy query counts and database lock readiness across active protocols.",
+        },
+        {
+          id: "inspection-scope-selection",
+          heading: "Inspection Scope Selection",
+          body: "Auditors confirm read-only inspection scope across published study artifacts and immutable audit trails.",
+        },
+      ],
+      updatedAt: "2026-06-05T10:00:00Z",
+    }),
+    "/studies/:studyCode": buildBundledSop({
+      mappingId: "map-study-canvas-01",
+      routePattern: "/studies/:studyCode",
+      persona: "site_crc",
+      priority: 30,
+      articleId: "art-study-canvas-sop",
+      versionId: "ver-std-102",
+      title:
+        "SOP-STD-102: Clinical Study Canvas, Enrollment & Protocol Execution",
+      slug: "sop-std-102-clinical-study-canvas",
+      versionIndex: 2,
+      versionLabel: "2.0",
+      tags: ["studies", "canvas", "enrollment", "protocol-execution"],
+      categoryId: "cat-clinical-ops",
+      categoryName: "Clinical Operations",
+      authorUserId: "lead_data_manager",
+      sectionAnchor: "#clinical-study-canvas-operations",
+      heading: "Clinical Study Canvas Operations",
+      summary:
+        "Governs study-level subject enrollment, Schedule of Activities verification, and site activation monitoring.",
+      stepsHeading: "Key Controls",
+      steps: [
+        "Use pseudonymous subject codes (for example `SUBJ-1001`) exclusively; never enter direct participant PII.",
+        "Supply a clear 21 CFR Part 11 reason for change whenever recording or amending clinical observations.",
+        "Review open form queries and SDV indicators prior to visit sign-off.",
+      ],
+      extraSections: [
+        {
+          id: "active-study-clinical-canvas",
+          heading: "Active Study Clinical Canvas",
+          body: "Defines standard operating procedures for executing study-specific enrollment, visit schedule navigation, and form query resolution.",
+        },
+        {
+          id: "participant-timeline-and-visit-record",
+          heading: "Participant Timeline & Visit Record",
+          body: "Inspect longitudinal visit completion, scheduled windows, and open form queries within the participant record.",
+        },
+        {
+          id: "study-governance-and-locks",
+          heading: "Study Governance & Locks",
+          body: "Sponsor administrators oversee study-level access boundaries, freeze milestones, and lock authorization.",
+        },
+        {
+          id: "visit-schedule-and-form-definitions",
+          heading: "Visit Schedule & Form Definitions",
+          body: "Sponsor designers maintain USDM visit schedules, collection specifications, and controlled terminology bindings.",
+        },
+        {
+          id: "subject-enrollment-and-visit-capture",
+          heading: "Subject Enrollment & Visit Capture",
+          body: "Site coordinators verify eligibility criteria and enter contemporaneous visit assessments under pseudonymous subject IDs.",
+        },
+        {
+          id: "investigator-oversight-and-signoff",
+          heading: "Investigator Oversight & Sign-Off",
+          body: "Site investigators review clinical significance assessments, protocol deviations, and 21 CFR Part 11 visit attestations.",
+        },
+        {
+          id: "study-sdv-and-query-oversight",
+          heading: "Study SDV & Query Oversight",
+          body: "Monitors track source data verification progress and issue targeted discrepancy queries across assigned sites.",
+        },
+        {
+          id: "study-query-triage-and-cleanliness",
+          heading: "Study Query Triage & Cleanliness",
+          body: "Data managers reconcile aged queries, coding flags, and cross-form consistency checks prior to milestone locks.",
+        },
+        {
+          id: "study-safety-signal-review",
+          heading: "Study Safety Signal Review",
+          body: "Medical monitors and safety officers evaluate serious adverse event trends and laboratory alert thresholds.",
+        },
+        {
+          id: "study-audit-trail-inspection",
+          heading: "Study Audit Trail Inspection",
+          body: "Auditors perform read-only verification of study lineage, electronic signatures, and contemporaneous change reasons.",
+        },
+      ],
+      reasonForChange: "Updated for Clinical Canvas v2",
+      updatedAt: "2026-06-10T10:00:00Z",
+    }),
     ...buildCanvasSectionSopEntries("stage=design&section=protocol-versions", {
       mappingPrefix: "map-can-proto",
       stageFallback: "design",
@@ -512,6 +772,11 @@ Governs study-level subject enrollment, Schedule of Activities verification, and
       heading: "Protocol Version Authoring & Publication",
       summary:
         "Governs ODM XML and USDM JSON protocol draft imports, Schedule of Activities inspection, and immutable version promotion.",
+      stepsHeading: "Key Controls",
+      steps: [
+        "Validate USDM schedule structure, visit windows, and form bindings before publishing a new protocol version.",
+        "Record a 21 CFR Part 11 justification whenever importing or superseding protocol versions.",
+      ],
     }),
     ...(() => {
       const sitesSpec = {
@@ -529,6 +794,10 @@ Governs study-level subject enrollment, Schedule of Activities verification, and
         heading: "Study Site Linking & Principal Investigator Assignment",
         summary:
           "Standardizes linking clinical investigator sites to a study workspace, country feasibility verification, and site roster maintenance.",
+        steps: [
+          "Confirm organization and facility identifiers prior to linking a clinical site to the study.",
+          "Verify site code uniqueness and RBAC scope visibility for assigned site coordinators and monitors.",
+        ],
       };
       return {
         ...buildCanvasSectionSopEntries("stage=conduct&section=sites", {
@@ -561,6 +830,11 @@ Governs study-level subject enrollment, Schedule of Activities verification, and
       heading: "Site Activation State Transitions",
       summary:
         "Defines regulatory approval verification, contract execution checks, and signed site activation state transitions prior to enrollment.",
+      stepsHeading: "Mandatory Checks",
+      steps: [
+        "Confirm ethics approval and executed clinical trial agreement dates before advancing site activation state.",
+        "Document regulatory submission blockers via support escalation with study and site scope attached.",
+      ],
     }),
     ...buildCanvasSectionSopEntries("stage=start&section=startup-greenlight", {
       mappingPrefix: "map-can-grn",
@@ -579,6 +853,11 @@ Governs study-level subject enrollment, Schedule of Activities verification, and
       heading: "Startup Greenlight Certification",
       summary:
         "Verifies country and site greenlight document hashes, essential regulatory packets, and investigational product release readiness.",
+      stepsHeading: "Greenlight Rules",
+      steps: [
+        "Verify 100% completion of mandatory startup prerequisites prior to issuing site enrollment greenlight.",
+        "Retain immutable certification timestamps and approver attribution in the study audit trail.",
+      ],
     }),
     ...buildCanvasSectionSopEntries("stage=start&section=documents", {
       mappingPrefix: "map-can-docs",
@@ -597,6 +876,11 @@ Governs study-level subject enrollment, Schedule of Activities verification, and
       heading: "Essential Document Filing & Quality Control",
       summary:
         "Governs study-scoped DIA TMF Reference Model classification, metadata completeness verification, and CRA quality control sign-off.",
+      stepsHeading: "Operational Controls",
+      steps: [
+        "Classify uploaded essential documents under the correct study and site scope without participant PII.",
+        "Complete QC verification prior to relying on regulatory artifacts for site greenlight.",
+      ],
     }),
     ...buildCanvasSectionSopEntries("stage=start&section=training", {
       mappingPrefix: "map-can-trn",
@@ -615,6 +899,11 @@ Governs study-level subject enrollment, Schedule of Activities verification, and
       heading: "Protocol Training Assignments & Attestation",
       summary:
         "Ensures site and sponsor personnel complete version-specific protocol curricula with 21 CFR Part 11 attestation before delegation.",
+      stepsHeading: "Qualification Rules",
+      steps: [
+        "Ensure site personnel complete required protocol version curricula prior to delegation sign-off.",
+        "Re-verify training currency following major protocol amendments.",
+      ],
     }),
     ...buildCanvasSectionSopEntries("stage=start&section=site-milestones", {
       mappingPrefix: "map-can-ms",
@@ -633,6 +922,10 @@ Governs study-level subject enrollment, Schedule of Activities verification, and
       heading: "Site Startup & Initiation Milestone Tracking",
       summary:
         "Tracks baseline, planned, and actual dates for ethics submission, Site Initiation Visit completion, and First Participant First Visit.",
+      steps: [
+        "Record contemporaneous actual completion dates for IRB submission, contract execution, and SIV completion.",
+        "Escalate critical-path startup delays with root-cause commentary.",
+      ],
     }),
     ...buildCanvasSectionSopEntries("stage=start&section=delegation", {
       mappingPrefix: "map-can-doa",
@@ -651,6 +944,11 @@ Governs study-level subject enrollment, Schedule of Activities verification, and
       heading: "Delegation of Authority Governance",
       summary:
         "Controls site staff duty assignment, training prerequisite verification, and Principal Investigator electronic countersignatures.",
+      stepsHeading: "Mandatory Controls",
+      steps: [
+        "Verify active GxP training completion before delegating clinical assessment or eCRF entry responsibilities.",
+        "Capture step-up electronic signatures when authorizing or ending delegated site duties.",
+      ],
     }),
     ...buildCanvasSectionSopEntries("stage=conduct&section=participants", {
       mappingPrefix: "map-can-part",
@@ -670,6 +968,11 @@ Governs study-level subject enrollment, Schedule of Activities verification, and
       heading: "Participant Enrollment & Casebook Data Entry",
       summary:
         "Standardizes pseudonymous participant registration, lifecycle state transitions, eCRF visit form entry, and source data verification.",
+      stepsHeading: "Mandatory GxP Controls",
+      steps: [
+        "Reference participants strictly by pseudonymous subject code (for example `SUBJ-1001`); never record direct PII.",
+        "Provide an auditable 21 CFR Part 11 reason for change on every observation amendment or form correction.",
+      ],
     }),
     ...buildCanvasSectionSopEntries("stage=conduct&section=monitoring-visits", {
       mappingPrefix: "map-can-mvr",
@@ -688,6 +991,11 @@ Governs study-level subject enrollment, Schedule of Activities verification, and
       heading: "Monitoring Visit Execution & Trip Reports",
       summary:
         "Governs on-site and remote monitoring visit checklists, finding classification, CAPA linkage, and compiled follow-up letters.",
+      stepsHeading: "Operational Checklist",
+      steps: [
+        "Reconcile SDV coverage and open discrepancy queries before finalizing monitoring visit reports.",
+        "Escalate major or critical monitoring findings to the quality and site operations queue with site scope preserved.",
+      ],
     }),
     ...buildCanvasSectionSopEntries("stage=conduct&section=supply", {
       mappingPrefix: "map-can-sup",
@@ -706,6 +1014,11 @@ Governs study-level subject enrollment, Schedule of Activities verification, and
       heading: "Investigational Product Inventory & Dispensing",
       summary:
         "Defines randomization kit receipt, temperature excursion quarantine, blinded dispensing verification, and IP reconciliation.",
+      stepsHeading: "Mandatory Controls",
+      steps: [
+        "Quarantine affected kit lots immediately upon cold-chain excursion detection and escalate under `SUPPLY_EXCURSION`.",
+        "Maintain blinded kit reconciliation records across dispensing and return workflows.",
+      ],
     }),
     ...buildCanvasSectionSopEntries("stage=data&section=queries", {
       mappingPrefix: "map-can-qry",
@@ -725,6 +1038,10 @@ Governs study-level subject enrollment, Schedule of Activities verification, and
       heading: "Discrepancy Query Lifecycle Management",
       summary:
         "Standardizes manual and rule-generated query triage, site coordinator clarification with change reasons, and data manager closure.",
+      steps: [
+        "Inspect linked observation provenance before answering or closing open discrepancy queries.",
+        "Never close discrepancy queries without verifying either an observation correction or a documented clinical explanation.",
+      ],
     }),
     ...buildCanvasSectionSopEntries("stage=data&section=locks", {
       ...DATA_LOCK_SPEC,
@@ -747,6 +1064,11 @@ Governs study-level subject enrollment, Schedule of Activities verification, and
       heading: "Programmatic Edit Checks & Validation Findings",
       summary:
         "Covers deterministic edit-check rule pack activation, historical dry-run impact previews, and cross-form validation triage.",
+      stepsHeading: "Key Controls",
+      steps: [
+        "Execute dry-run previews against study observations to verify false-positive rates before activating new rule packs.",
+        "Review validation findings alongside query ownership to coordinate timely site data cleaning.",
+      ],
     }),
     ...buildCanvasSectionSopEntries("stage=analyze", {
       mappingPrefix: "map-can-anl",
@@ -765,6 +1087,11 @@ Governs study-level subject enrollment, Schedule of Activities verification, and
       heading: "Analysis Stage Readiness & Blinded Data Review",
       summary:
         "Defines pre-analysis data review, protocol deviation classification, and interim cutoff readiness checks.",
+      stepsHeading: "Operational Controls",
+      steps: [
+        "Confirm database lock prerequisites and protocol deviation classifications prior to unblinded analysis cutoffs.",
+        "Preserve treatment-assignment blinding across operational support escalations.",
+      ],
     }),
     ...buildCanvasSectionSopEntries("stage=submit&section=exports", {
       ...REGULATED_EXPORTS_SPEC,
@@ -781,53 +1108,66 @@ Governs study-level subject enrollment, Schedule of Activities verification, and
       mappingId: "map-exports-01",
       routePattern: "/exports/*",
     }),
-    "/ecrf": {
-      matched_mapping: {
-        id: "map-ecrf-01",
-        route_pattern: "/ecrf/*",
-        persona: "site_crc",
-        article_id: "art-ecrf-sop",
-        section_anchor: "#subject-enrollment-and-visit-entry",
-        priority: 10,
-        is_active: true,
-      },
-      primary_article: {
-        id: "art-ecrf-sop",
-        title: "SOP-ECRF-201: Subject Enrollment & eCRF Data Capture",
-        slug: "sop-ecrf-201-subject-enrollment",
-        status: "PUBLISHED",
-        version_index: 2,
-        version_label: "2.1",
-        tags: ["ecrf", "enrollment", "gxp-edc", "site-sop"],
-        category_id: "cat-clinical-ops",
-        category_name: "Clinical Operations",
-        author_user_id: "lead_data_manager",
-        last_edited_by: "lead_data_manager",
-        approved_by: "qa_director",
-        created_at: "2026-02-10T10:00:00Z",
-        updated_at: "2026-05-18T14:30:00Z",
-        body_markdown: `## Purpose & Scope
-This Standard Operating Procedure (SOP) governs all investigator site personnel executing electronic Case Report Form (eCRF) data capture, subject registration, and visit assessment recording within the Cadence Clinical Research Platform.
-
-## Mandatory GxP Controls
-1. Confirm informed consent verification prior to recording baseline assessments.
-2. Record contemporaneous source-verified measurements and document mandatory change justifications for every amendment.
-3. Escalate protocol deviations or locked-form blockers via Contextual Help using pseudonymous subject identifiers only.`,
-        body_html: `<h2 id="subject-enrollment-and-visit-entry">Purpose &amp; Scope</h2><p>This Standard Operating Procedure (SOP) governs investigator site eCRF data capture, subject registration, and visit assessment recording.</p><h2 id="ecrf-mandatory-gxp-controls">Mandatory GxP Controls</h2><ol><li>Confirm informed consent verification prior to recording baseline assessments.</li><li>Record contemporaneous source-verified measurements and document mandatory change justifications for every amendment.</li><li>Escalate protocol deviations or locked-form blockers via Contextual Help using pseudonymous subject identifiers only.</li></ol><h3 id="discrepancy-management-and-coding">Discrepancy Management &amp; Coding</h3><p>Triage open validation queries and reconcile coding terms prior to form lock.</p><h3 id="ecrf-form-capture-and-change-reason">eCRF Form Capture &amp; Change Reason</h3><p>Verify controlled terminology selections and non-PII change reasons when saving forms.</p>`,
-      },
-      primary_version: {
-        id: "ver-ecrf-201",
-        version_index: 2,
-        version_label: "2.1",
-        status_at_snapshot: "PUBLISHED",
-        is_locked: true,
-        created_by: "lead_data_manager",
-        reason_for_change: "Annual review & protocol amendment 2 alignment",
-        created_at: "2026-05-18T14:30:00Z",
-      },
-      section_anchor: "#subject-enrollment-and-visit-entry",
-      related_articles: [],
-    },
+    "/ecrf": buildBundledSop({
+      mappingId: "map-ecrf-01",
+      routePattern: "/ecrf/*",
+      persona: "site_crc",
+      priority: 10,
+      articleId: "art-ecrf-sop",
+      versionId: "ver-ecrf-201",
+      title: "SOP-ECRF-201: Subject Enrollment & eCRF Data Capture",
+      slug: "sop-ecrf-201-subject-enrollment",
+      versionIndex: 2,
+      versionLabel: "2.1",
+      tags: ["ecrf", "enrollment", "gxp-edc", "site-sop"],
+      categoryId: "cat-clinical-ops",
+      categoryName: "Clinical Operations",
+      authorUserId: "lead_data_manager",
+      sectionAnchor: "#subject-enrollment-and-visit-entry",
+      heading: "Purpose & Scope",
+      summary:
+        "This Standard Operating Procedure (SOP) governs all investigator site personnel executing electronic Case Report Form (eCRF) data capture, subject registration, and visit assessment recording within the Cadence Clinical Research Platform.",
+      stepsHeading: "Mandatory GxP Controls",
+      steps: [
+        "Confirm informed consent verification prior to recording baseline assessments.",
+        "Record contemporaneous source-verified measurements and document mandatory change justifications for every amendment.",
+        "Escalate protocol deviations or locked-form blockers via Contextual Help using pseudonymous subject identifiers only.",
+      ],
+      extraSections: [
+        {
+          id: "ecrf-form-capture-and-change-reason",
+          heading: "eCRF Form Capture & Change Reason",
+          body: "Verify unit conversions, controlled terminology selections, and non-PII 21 CFR Part 11 change reasons when saving form instances.",
+        },
+        {
+          id: "discrepancy-management-and-coding",
+          heading: "Discrepancy Management & Coding",
+          body: "Triage open validation queries, document source-backed responses, and reconcile coding terms prior to form lock.",
+        },
+        {
+          id: "edc-governance-and-locks",
+          heading: "EDC Governance & Locks",
+          body: "Sponsor administrators govern eCRF environment locks, freeze rules, and role-level data entry permissions.",
+        },
+        {
+          id: "crf-layout-validation",
+          heading: "CRF Layout Validation",
+          body: "Study designers verify form item bindings, CDASH/SDTM annotations, and edit-check firing conditions prior to live capture.",
+        },
+        {
+          id: "ecrf-sdv-and-query-verification",
+          heading: "eCRF SDV & Query Verification",
+          body: "Clinical Research Associates verify eCRF entries against clinic source records and close answered discrepancy queries.",
+        },
+        {
+          id: "ecrf-audit-trail-review",
+          heading: "eCRF Audit Trail Review",
+          body: "Auditors inspect item-level revision histories, actor attributions, and SHA-256 Merkle chain integrity.",
+        },
+      ],
+      reasonForChange: "Annual review & protocol amendment 2 alignment",
+      updatedAt: "2026-05-18T14:30:00Z",
+    }),
     "/observations/:observationRef": buildBundledSop({
       mappingId: "map-observation-01",
       routePattern: "/observations/:observationRef",
@@ -846,53 +1186,78 @@ This Standard Operating Procedure (SOP) governs all investigator site personnel 
       heading: "Clinical Observation Provenance & Discrepancy Review",
       summary:
         "Standardizes item-level observation inspection, audit provenance verification, medical safety review, and query resolution.",
+      stepsHeading: "Key Controls",
       steps: [
         "Inspect source provenance, prior amendments, and open queries before updating or verifying an observation.",
         "Escalate clinically significant safety abnormalities or medical coding questions with pseudonymous subject codes only.",
       ],
+      extraSections: [
+        {
+          id: "safety-observation-medical-review",
+          heading: "Safety Observation Medical Review",
+          body: "Safety officers evaluate abnormal laboratory values and adverse event observations for expedited reporting criteria.",
+        },
+        {
+          id: "investigator-clinical-significance-signoff",
+          heading: "Investigator Clinical Significance Sign-Off",
+          body: "Investigators record clinical significance determinations and contemporaneous medical rationale on flagged observations.",
+        },
+        {
+          id: "source-observation-amendment",
+          heading: "Source Observation Amendment",
+          body: "Site coordinators submit source-verified corrections with mandatory 21 CFR Part 11 reasons for change.",
+        },
+        {
+          id: "observation-sdv-verification",
+          heading: "Observation SDV Verification",
+          body: "Monitors compare recorded kernel observations against clinic source charts and record SDV status.",
+        },
+        {
+          id: "observation-discrepancy-query-resolution",
+          heading: "Observation Discrepancy Query Resolution",
+          body: "Data managers review edit-check lineage and verify query responses before closing item-level discrepancies.",
+        },
+        {
+          id: "observation-provenance-audit-trail",
+          heading: "Observation Provenance Audit Trail",
+          body: "Auditors inspect the append-only revision chain, actor identity, and UTC timestamps for every observation mutation.",
+        },
+      ],
     }),
-    "/mdr": {
-      matched_mapping: {
-        id: "map-mdr-01",
-        route_pattern: "/mdr/*",
-        persona: "sponsor_designer",
-        article_id: "art-mdr-sop",
-        section_anchor: "#schedule-of-activities-matrix-authoring",
-        priority: 10,
-        is_active: true,
-      },
-      primary_article: {
-        id: "art-mdr-sop",
-        title:
-          "SOP-MDR-104: Schedule of Activities Matrix & Protocol Authoring",
-        slug: "sop-mdr-104-soa-matrix-authoring",
-        status: "PUBLISHED",
-        version_index: 3,
-        version_label: "3.0",
-        tags: ["mdr", "usdm", "soa-matrix", "study-design"],
-        category_id: "cat-study-authoring",
-        category_name: "Study Authoring & MDR",
-        author_user_id: "sponsor_study_lead",
-        last_edited_by: "sponsor_study_lead",
-        approved_by: "qa_director",
-        created_at: "2026-01-20T09:00:00Z",
-        updated_at: "2026-06-01T11:15:00Z",
-        body_markdown: `## Protocol Metadata Management & SoA Design\n1. Bind clinical activities to CDISC Biomedical Concepts.\n2. Document protocol amendment rationale prior to publication.`,
-        body_html: `<h2 id="schedule-of-activities-matrix-authoring">Protocol Metadata Management &amp; SoA Design</h2><ol><li>Bind clinical activities to CDISC Biomedical Concepts.</li><li>Document protocol amendment rationale prior to publication.</li></ol><h3 id="amendment-proposal-review">Amendment Proposal Review</h3><p>Review structural Schedule of Activities diffs, version lineage, and governance sign-off prerequisites before approving protocol proposals.</p>`,
-      },
-      primary_version: {
-        id: "ver-mdr-104",
-        version_index: 3,
-        version_label: "3.0",
-        status_at_snapshot: "PUBLISHED",
-        is_locked: true,
-        created_by: "sponsor_study_lead",
-        reason_for_change: "CDISC USDM v3.0 standard alignment",
-        created_at: "2026-06-01T11:15:00Z",
-      },
-      section_anchor: "#schedule-of-activities-matrix-authoring",
-      related_articles: [],
-    },
+    "/mdr": buildBundledSop({
+      mappingId: "map-mdr-01",
+      routePattern: "/mdr/*",
+      persona: "sponsor_designer",
+      priority: 10,
+      articleId: "art-mdr-sop",
+      versionId: "ver-mdr-104",
+      title: "SOP-MDR-104: Schedule of Activities Matrix & Protocol Authoring",
+      slug: "sop-mdr-104-soa-matrix-authoring",
+      versionIndex: 3,
+      versionLabel: "3.0",
+      tags: ["mdr", "usdm", "soa-matrix", "study-design"],
+      categoryId: "cat-study-authoring",
+      categoryName: "Study Authoring & MDR",
+      authorUserId: "sponsor_study_lead",
+      sectionAnchor: "#schedule-of-activities-matrix-authoring",
+      heading: "Protocol Metadata Management & SoA Design",
+      summary:
+        "Standardizes CDISC USDM Schedule of Activities authoring and controlled terminology binding.",
+      stepsHeading: "Authoring Steps",
+      steps: [
+        "Bind every clinical activity and eCRF item to an approved CDISC Biomedical Concept and NCI Codelist version.",
+        "Document protocol amendment rationale and assess downstream participant visit impact before publishing a new version.",
+      ],
+      extraSections: [
+        {
+          id: "amendment-proposal-review",
+          heading: "Amendment Proposal Review",
+          body: "Review structural Schedule of Activities diffs, version lineage, and governance sign-off prerequisites before approving protocol proposals.",
+        },
+      ],
+      reasonForChange: "CDISC USDM v3.0 standard alignment",
+      updatedAt: "2026-06-01T11:15:00Z",
+    }),
     "/digitization": buildBundledSop({
       mappingId: "map-digitization-01",
       routePattern: "/digitization/*",
@@ -911,6 +1276,10 @@ This Standard Operating Procedure (SOP) governs all investigator site personnel 
       heading: "Protocol Digitization & Human-in-the-Loop Verification",
       summary:
         "Requires human verification of extracted endpoints, eligibility criteria, and Schedule of Activities cells prior to USDM draft promotion.",
+      steps: [
+        "Inspect extracted Schedule of Activities visit windows and Biomedical Concept mappings against the signed PDF protocol.",
+        "Approve human-verified extraction blocks with a 21 CFR Part 11 justification prior to USDM draft import.",
+      ],
     }),
     "/icf-builder": buildBundledSop({
       mappingId: "map-icf-builder-01",
@@ -929,6 +1298,10 @@ This Standard Operating Procedure (SOP) governs all investigator site personnel 
       heading: "Informed Consent Authoring & Ethics Versioning",
       summary:
         "Standardizes master ICF authoring, mandatory ICH E6(R3) consent elements, and comprehension check validation.",
+      steps: [
+        "Verify all mandatory ICH E6(R3) essential informed consent disclosures and comprehension checkpoints before freezing a master template.",
+        "Bind IRB/IEC approval metadata and effective dates prior to releasing consent versions to investigator sites.",
+      ],
     }),
     "/econsent-authoring": buildBundledSop({
       mappingId: "map-econsent-01",
@@ -947,6 +1320,10 @@ This Standard Operating Procedure (SOP) governs all investigator site personnel 
       heading: "eConsent Template Localization & Site IRB Release",
       summary:
         "Controls certified translation verification, country/site consent localization, and re-consent triggers.",
+      steps: [
+        "Attach certified forward/back translation certificates before activating localized eConsent templates for a country or site.",
+        "Configure participant re-consent flags whenever safety or Schedule of Activities amendments affect enrolled subjects.",
+      ],
     }),
     "/amendment-diff": buildBundledSop({
       mappingId: "map-amendment-diff-01",
@@ -966,6 +1343,10 @@ This Standard Operating Procedure (SOP) governs all investigator site personnel 
       heading: "Protocol Amendment Comparison & Migration",
       summary:
         "Governs structural diffs across protocol versions, active subject impact analysis, and site amendment cutover.",
+      steps: [
+        "Evaluate structural visit, form, and edit-check diffs across baseline and target USDM protocol versions.",
+        "Verify site IRB approval and staff training prerequisites before migrating enrolled participant casebooks.",
+      ],
     }),
     "/imaging": buildBundledSop({
       mappingId: "map-imaging-01",
@@ -983,6 +1364,10 @@ This Standard Operating Procedure (SOP) governs all investigator site personnel 
       heading: "Medical Imaging De-Identification & Lesion Tracking",
       summary:
         "Enforces DICOM header pixel/tag de-identification, target lesion measurement consistency, and blinded central read workflows.",
+      steps: [
+        "Confirm automated DICOM header scrubbing and burnt-in pixel PHI checks pass under pseudonymous subject codes only.",
+        "Reconcile target and non-target lesion measurements across baseline and follow-up RECIST 1.1 timepoints.",
+      ],
     }),
     "/devices": buildBundledSop({
       mappingId: "map-devices-01",
@@ -1001,6 +1386,10 @@ This Standard Operating Procedure (SOP) governs all investigator site personnel 
       heading: "ISO 14155 Device Exposure & UDI Accountability",
       summary:
         "Tracks investigational device serial/UDI assignment, firmware lineage, calibration status, and return accountability.",
+      steps: [
+        "Record unique device identifier (`UDI`), serial number, and active firmware version prior to participant assignment.",
+        "Document device return, cleaning, or quarantine disposition in the ISO 14155 accountability log.",
+      ],
     }),
     "/device-investigation": buildBundledSop({
       mappingId: "map-device-inv-01",
@@ -1019,6 +1408,10 @@ This Standard Operating Procedure (SOP) governs all investigator site personnel 
       heading: "Device Deficiency & Adverse Device Effect Investigation",
       summary:
         "Links device hardware/firmware revisions to clinical observations and governs USADE regulatory reporting.",
+      steps: [
+        "Quarantine suspect investigational device units immediately and link the deficiency record to pseudonymous subject observations.",
+        "Assess unanticipated serious adverse device effect (`USADE`) causality within statutory vigilance reporting timelines.",
+      ],
     }),
     "/adjudication": buildBundledSop({
       mappingId: "map-adjudication-01",
@@ -1037,6 +1430,10 @@ This Standard Operating Procedure (SOP) governs all investigator site personnel 
       heading: "Clinical Events Committee Dossier & Consensus Review",
       summary:
         "Standardizes treatment-blinded clinical dossier redaction, independent reviewer voting, and consensus adjudication sign-off.",
+      steps: [
+        "Verify source dossier redaction removes treatment-arm indicators and direct participant identifiers before CEC release.",
+        "Complete independent reviewer assessments and record Part 11 signed consensus adjudication outcomes.",
+      ],
     }),
     "/cec": buildBundledSop({
       mappingId: "map-cec-01",
@@ -1055,132 +1452,157 @@ This Standard Operating Procedure (SOP) governs all investigator site personnel 
       heading: "Clinical Events Committee Dossier & Consensus Review",
       summary:
         "Standardizes treatment-blinded clinical dossier redaction, independent reviewer voting, and consensus adjudication sign-off.",
+      steps: [
+        "Verify source dossier redaction removes treatment-arm indicators and direct participant identifiers before CEC release.",
+        "Complete independent reviewer assessments and record Part 11 signed consensus adjudication outcomes.",
+      ],
     }),
-    "/ctms": {
-      matched_mapping: {
-        id: "map-ctms-01",
-        route_pattern: "/ctms/*",
-        persona: "cra_monitor",
-        article_id: "art-ctms-sop",
-        section_anchor: "#site-monitoring-and-sdv",
-        priority: 10,
-        is_active: true,
-      },
-      primary_article: {
-        id: "art-ctms-sop",
-        title:
-          "SOP-CTMS-302: Site Monitoring Visits & Source Data Verification",
-        slug: "sop-ctms-302-site-monitoring",
-        status: "PUBLISHED",
-        version_index: 1,
-        version_label: "1.0",
-        tags: ["ctms", "monitoring", "sdv", "cra"],
-        category_id: "cat-site-monitoring",
-        category_name: "Site Monitoring & CTMS",
-        author_user_id: "cra_monitor",
-        last_edited_by: "cra_monitor",
-        approved_by: "qa_director",
-        created_at: "2026-01-20T09:00:00Z",
-        updated_at: "2026-06-01T11:15:00Z",
-        body_markdown: `## Site Monitoring & SDV Procedures\n1. Reconcile site enrollment metrics and pending monitoring action items prior to on-site or remote visits.\n2. Document monitoring findings with ICH E6(R3) severity classification and link follow-up CAPA or support tickets.`,
-        body_html: `<h2 id="site-monitoring-and-sdv">Site Monitoring &amp; SDV Procedures</h2><ol><li>Reconcile site enrollment metrics and pending monitoring action items prior to on-site or remote visits.</li><li>Document monitoring findings with ICH E6(R3) severity classification and link follow-up CAPA or support tickets.</li></ol><h3 id="ctms-portfolio-oversight">CTMS Portfolio Oversight</h3><p>Sponsor operations track site milestone attainment and monitoring cadence compliance.</p><h3 id="site-visit-readiness">Site Visit Readiness &amp; Delegation</h3><p>Site coordinators maintain current delegation logs and source chart availability prior to CRA visits.</p>`,
-      },
-      primary_version: {
-        id: "ver-ctms-302",
-        version_index: 1,
-        version_label: "1.0",
-        status_at_snapshot: "PUBLISHED",
-        is_locked: true,
-        created_by: "cra_monitor",
-        reason_for_change: "Initial release",
-        created_at: "2026-06-01T11:15:00Z",
-      },
-      section_anchor: "#site-monitoring-and-sdv",
-      related_articles: [],
-    },
-    "/ssu": {
-      matched_mapping: {
-        id: "map-ssu-01",
-        route_pattern: "/ssu/*",
-        persona: "cra_monitor",
-        article_id: "art-ssu-sop",
-        section_anchor: "#site-greenlight-activation-matrix",
-        priority: 15,
-        is_active: true,
-      },
-      primary_article: {
-        id: "art-ssu-sop",
-        title: "SOP-SSU-205: Site Startup Readiness & Regulatory Greenlight",
-        slug: "sop-ssu-205-site-startup-greenlight",
-        status: "PUBLISHED",
-        version_index: 1,
-        version_label: "1.1",
-        tags: ["ssu", "site-startup", "greenlight", "activation"],
-        category_id: "cat-site-monitoring",
-        category_name: "Site Monitoring & CTMS",
-        author_user_id: "cra_monitor",
-        last_edited_by: "cra_monitor",
-        approved_by: "qa_director",
-        created_at: "2026-02-12T09:00:00Z",
-        updated_at: "2026-06-12T11:15:00Z",
-        body_markdown: `## Site Startup & Greenlight Certification\n1. Confirm Essential Document List (EDL) artifacts and Delegation of Authority sign-offs are complete.\n2. Verify country regulatory approval and IP pharmacy readiness before issuing greenlight certification.`,
-        body_html: `<h2 id="site-greenlight-activation-matrix">Site Startup &amp; Greenlight Certification</h2><p id="site-startup-and-greenlight">Defines IRB/IEC approval verification, DoA log completion, and investigational product release prerequisites.</p><ol><li>Confirm Essential Document List (EDL) artifacts and Delegation of Authority sign-offs are complete.</li><li>Verify country regulatory approval and IP pharmacy readiness before issuing greenlight certification.</li></ol><h3 id="global-country-activation-gates">Global Country Activation Gates</h3><p>Sponsor operations verify competent authority approvals and site roster readiness across participating countries.</p><h3 id="site-initiation-visit-greenlight">Site Initiation Visit &amp; Greenlight</h3><p>Monitors confirm Site Initiation Visit completion and facility readiness prior to greenlight release.</p>`,
-      },
-      primary_version: {
-        id: "ver-ssu-205",
-        version_index: 1,
-        version_label: "1.1",
-        status_at_snapshot: "PUBLISHED",
-        is_locked: true,
-        created_by: "cra_monitor",
-        reason_for_change: "Added country greenlight matrix checks",
-        created_at: "2026-06-12T11:15:00Z",
-      },
-      section_anchor: "#site-greenlight-activation-matrix",
-      related_articles: [],
-    },
-    "/audit": {
-      matched_mapping: {
-        id: "map-audit-01",
-        route_pattern: "/audit/*",
-        persona: "auditor",
-        article_id: "art-audit-sop",
-        section_anchor: "#gxp-audit-trail-inspection",
-        priority: 10,
-        is_active: true,
-      },
-      primary_article: {
-        id: "art-audit-sop",
-        title:
-          "SOP-AUD-401: 21 CFR Part 11 Audit Trail & Qualification Inspection",
-        slug: "sop-aud-401-audit-trail-inspection",
-        status: "PUBLISHED",
-        version_index: 1,
-        version_label: "1.0",
-        tags: ["audit", "part11", "gxp", "compliance"],
-        category_id: "cat-regulatory-compliance",
-        category_name: "Regulatory & Quality Compliance",
-        author_user_id: "qa_director",
-        last_edited_by: "qa_director",
-        approved_by: "qa_director",
-        created_at: "2026-01-20T09:00:00Z",
-        updated_at: "2026-06-01T11:15:00Z",
-        body_markdown: `## Audit Trail Inspection Guidelines\n1. Filter immutable audit records by study, actor, entity, and UTC date window.\n2. Verify predecessor and block SHA-256 hashes prior to exporting signed regulatory inspection bundles.`,
-        body_html: `<h2 id="gxp-audit-trail-inspection">Audit Trail Inspection Guidelines</h2><ol><li>Filter immutable audit records by study, actor, entity, and UTC date window.</li><li>Verify predecessor and block SHA-256 hashes prior to exporting signed regulatory inspection bundles.</li></ol>`,
-      },
-      primary_version: {
-        id: "ver-audit-401",
-        version_index: 1,
-        version_label: "1.0",
-        status_at_snapshot: "PUBLISHED",
-        is_locked: true,
-        created_by: "qa_director",
-        reason_for_change: "Initial release",
-        created_at: "2026-06-01T11:15:00Z",
-      },
-      section_anchor: "#gxp-audit-trail-inspection",
-      related_articles: [],
-    },
+    "/ctms": buildBundledSop({
+      mappingId: "map-ctms-01",
+      routePattern: "/ctms/*",
+      persona: "cra_monitor",
+      priority: 10,
+      articleId: "art-ctms-sop",
+      versionId: "ver-ctms-302",
+      title: "SOP-CTMS-302: Site Monitoring Visits & Source Data Verification",
+      slug: "sop-ctms-302-site-monitoring",
+      versionIndex: 1,
+      versionLabel: "1.0",
+      tags: ["ctms", "monitoring", "sdv", "cra"],
+      categoryId: "cat-site-monitoring",
+      categoryName: "Site Monitoring & CTMS",
+      authorUserId: "cra_monitor",
+      sectionAnchor: "#site-monitoring-and-sdv",
+      heading: "Site Monitoring & SDV Procedures",
+      summary:
+        "Governs Clinical Trial Management System (CTMS) monitoring visit scheduling, follow-up letters, CRA workload balancing, and site milestone tracking.",
+      stepsHeading: "Operational Checklist",
+      steps: [
+        "Reconcile site enrollment metrics and pending monitoring action items prior to on-site or remote visits.",
+        "Document monitoring findings with ICH E6(R3) severity classification and link follow-up CAPA or support tickets.",
+      ],
+      extraSections: [
+        {
+          id: "ctms-portfolio-oversight",
+          heading: "CTMS Portfolio Oversight",
+          body: "Sponsor operations track site milestone attainment, monitoring cadence compliance, and regional enrollment velocity.",
+        },
+        {
+          id: "monitoring-plan-alignment",
+          heading: "Monitoring Plan Alignment",
+          body: "Study designers align risk-based monitoring critical data indicators with Schedule of Activities assessments.",
+        },
+        {
+          id: "site-visit-readiness",
+          heading: "Site Visit Readiness & Delegation",
+          body: "Site coordinators maintain current delegation logs, source chart availability, and action-item remediation prior to CRA visits.",
+        },
+        {
+          id: "monitoring-query-reconciliation",
+          heading: "Monitoring Query Reconciliation",
+          body: "Data managers reconcile unresolved monitoring findings with open eCRF discrepancy queries before interim locks.",
+        },
+        {
+          id: "monitoring-visit-report-inspection",
+          heading: "Monitoring Visit Report Inspection",
+          body: "Auditors verify signed monitoring visit reports, follow-up communications, and CAPA closure evidence.",
+        },
+      ],
+      reasonForChange: "Initial release",
+      updatedAt: "2026-06-01T11:15:00Z",
+    }),
+    "/ssu": buildBundledSop({
+      mappingId: "map-ssu-01",
+      routePattern: "/ssu/*",
+      persona: "cra_monitor",
+      priority: 15,
+      articleId: "art-ssu-sop",
+      versionId: "ver-ssu-205",
+      title: "SOP-SSU-205: Site Startup Readiness & Regulatory Greenlight",
+      slug: "sop-ssu-205-site-startup-greenlight",
+      versionIndex: 1,
+      versionLabel: "1.1",
+      tags: ["ssu", "site-startup", "greenlight", "activation"],
+      categoryId: "cat-site-monitoring",
+      categoryName: "Site Monitoring & CTMS",
+      authorUserId: "cra_monitor",
+      sectionAnchor: "#site-greenlight-activation-matrix",
+      heading: "Site Startup & Greenlight Certification",
+      summary:
+        "Defines IRB/IEC approval verification, DoA log completion, and investigational product release prerequisites.",
+      stepsHeading: "Greenlight Verification",
+      steps: [
+        "Confirm Essential Document List (EDL) artifacts and Delegation of Authority sign-offs are complete.",
+        "Verify country regulatory approval and IP pharmacy readiness before issuing greenlight certification.",
+      ],
+      extraSections: [
+        {
+          id: "site-startup-and-greenlight",
+          heading: "Site Startup Prerequisites",
+          body: "Establishes mandatory regulatory, ethics, contract, essential document, and training prerequisites required before certifying site activation.",
+        },
+        {
+          id: "global-country-activation-gates",
+          heading: "Global Country Activation Gates",
+          body: "Sponsor operations verify competent authority approvals, clinical trial agreements, and site roster readiness across participating countries.",
+        },
+        {
+          id: "protocol-country-pack-alignment",
+          heading: "Protocol Country-Pack Alignment",
+          body: "Study designers align country-specific ICF templates and local assessment rules with the master USDM protocol.",
+        },
+        {
+          id: "site-essential-documents-checklist",
+          heading: "Site Essential Documents Checklist",
+          body: "Site coordinators upload current IRB/IEC approvals, investigator CVs, medical licenses, and laboratory certifications.",
+        },
+        {
+          id: "site-initiation-visit-greenlight",
+          heading: "Site Initiation Visit & Greenlight",
+          body: "Monitors confirm Site Initiation Visit completion and facility readiness prior to greenlight release.",
+        },
+        {
+          id: "edc-environment-release-gate",
+          heading: "EDC Environment Release Gate",
+          body: "Data managers confirm production eCRF edit checks and randomization tables are validated before unlocking site enrollment.",
+        },
+        {
+          id: "greenlight-certification-audit",
+          heading: "Greenlight Certification Audit",
+          body: "Auditors inspect timestamped greenlight tokens and prerequisite document completeness prior to first-patient-in.",
+        },
+      ],
+      reasonForChange: "Added country greenlight matrix checks",
+      updatedAt: "2026-06-12T11:15:00Z",
+    }),
+    "/audit": buildBundledSop({
+      mappingId: "map-audit-01",
+      routePattern: "/audit/*",
+      persona: "auditor",
+      priority: 10,
+      articleId: "art-audit-sop",
+      versionId: "ver-audit-401",
+      title:
+        "SOP-AUD-401: 21 CFR Part 11 Audit Trail & Qualification Inspection",
+      slug: "sop-aud-401-audit-trail-inspection",
+      versionIndex: 1,
+      versionLabel: "1.0",
+      tags: ["audit", "part11", "gxp", "compliance"],
+      categoryId: "cat-regulatory-compliance",
+      categoryName: "Regulatory & Quality Compliance",
+      authorUserId: "qa_director",
+      sectionAnchor: "#gxp-audit-trail-inspection",
+      heading: "Audit Trail Inspection Guidelines",
+      summary:
+        "Defines SHA-256 Merkle audit chain verification and regulatory inspection procedures.",
+      stepsHeading: "Inspection Steps",
+      steps: [
+        "Filter immutable audit records by study, actor, entity, and UTC date window while preserving read-only inspection posture.",
+        "Verify predecessor and block SHA-256 hashes prior to exporting signed regulatory inspection bundles.",
+      ],
+      reasonForChange: "Initial release",
+      updatedAt: "2026-06-01T11:15:00Z",
+    }),
     "/auditor": buildBundledSop({
       mappingId: "map-auditor-01",
       routePattern: "/auditor/*",
@@ -1198,6 +1620,10 @@ This Standard Operating Procedure (SOP) governs all investigator site personnel 
       heading: "Regulatory Inspection Portal Procedures",
       summary:
         "Guides independent inspectors through read-only SHA-256 Merkle chain verification, electronic signature inspection, and certified exports.",
+      steps: [
+        "Inspect electronic signature manifestations, signer meanings, and linked audit-trail records in read-only mode.",
+        "Execute cryptographic SHA-256 hash-chain verification across study records without mutating operational state.",
+      ],
     }),
     "/rules": buildBundledSop({
       mappingId: "map-rules-01",
@@ -1217,6 +1643,10 @@ This Standard Operating Procedure (SOP) governs all investigator site personnel 
       heading: "Edit Check Specification & Query Triage",
       summary:
         "Defines programmatic validation rule authoring, UAT qualification runs, and discrepancy query resolution SLAs.",
+      steps: [
+        "Validate cross-form range and consistency expressions against dry-run test datasets prior to rule pack activation.",
+        "Assign automated discrepancy queries to site or data management queues with clear remediation prompts.",
+      ],
     }),
     "/coding": buildBundledSop({
       mappingId: "map-coding-01",
@@ -1236,6 +1666,10 @@ This Standard Operating Procedure (SOP) governs all investigator site personnel 
       heading: "Medical Dictionary Coding & Version Upversioning",
       summary:
         "Governs verbatim adverse event and concomitant medication coding, dictionary version pinning, and medical coder second-review.",
+      steps: [
+        "Verify study-pinned clinical dictionary versions before approving automated or manual verbatim term mappings.",
+        "Issue targeted site clarification queries whenever verbatim terms are ambiguous or contain multiple conditions.",
+      ],
     }),
     "/lakehouse": buildBundledSop({
       mappingId: "map-lakehouse-01",
@@ -1255,6 +1689,10 @@ This Standard Operating Procedure (SOP) governs all investigator site personnel 
       heading: "Clinical Lakehouse Dataset Lineage",
       summary:
         "Ensures end-to-end provenance from raw eCRF observations to analysis-ready dataset projections without treatment unblinding.",
+      steps: [
+        "Confirm projection refresh timestamps and upstream observation commit lineage before reviewing analytical tables.",
+        "Enforce pseudonymous subject keys and blinded treatment masks across all lakehouse views.",
+      ],
     }),
     "/sensors": buildBundledSop({
       mappingId: "map-sensors-01",
@@ -1273,6 +1711,10 @@ This Standard Operating Procedure (SOP) governs all investigator site personnel 
       heading: "Digital Health Technology & Sensor Ingestion",
       summary:
         "Controls wearable device pairing, epoch clock synchronization, missing-stream alerts, and physiological threshold review.",
+      steps: [
+        "Pair wearable devices strictly against pseudonymous subject identifiers and verify UTC epoch synchronization.",
+        "Investigate telemetry dropout alerts or out-of-range physiological streams with documented site follow-up.",
+      ],
     }),
     "/labs": buildBundledSop({
       mappingId: "map-labs-01",
@@ -1292,6 +1734,10 @@ This Standard Operating Procedure (SOP) governs all investigator site personnel 
       heading: "Laboratory Normal Ranges & Sample Reconciliation",
       summary:
         "Standardizes age/sex-stratified normal range maintenance, LOINC unit normalization, and Investigator CS/NCS grading.",
+      steps: [
+        "Verify active laboratory certification dates and age/sex-stratified reference ranges before reconciling local lab results.",
+        "Route out-of-range analytes to the Principal Investigator for contemporaneous `CS` or `NCS` clinical significance sign-off.",
+      ],
     }),
     "/dct": buildBundledSop({
       mappingId: "map-dct-01",
@@ -1310,6 +1756,10 @@ This Standard Operating Procedure (SOP) governs all investigator site personnel 
       heading: "Telehealth Visit Verification & Direct-to-Participant Chain",
       summary:
         "Governs participant identity verification during remote visits, home-health nursing source capture, and DTP cold-chain custody.",
+      steps: [
+        "Confirm delegated telehealth jurisdiction and participant identity verification without recording video PII.",
+        "Verify direct-to-participant cold-chain courier temperature logs before recording remote IP administration.",
+      ],
     }),
     "/safety": buildBundledSop({
       mappingId: "map-safety-01",
@@ -1328,6 +1778,10 @@ This Standard Operating Procedure (SOP) governs all investigator site personnel 
       heading: "Pharmacovigilance Signal Detection & Expedited Reporting",
       summary:
         "Defines 24-hour SAE triage, clinical/safety database reconciliation, SUSAR expectedness evaluation, and ICH E2B(R3) reporting.",
+      steps: [
+        "Triage incoming serious adverse event reports within 24 hours and reconcile onset, severity, and causality fields against eCRF records.",
+        "Evaluate Investigator's Brochure expectedness for `SUSAR` determination and track expedited regulatory submission clocks.",
+      ],
     }),
     "/etmf": buildBundledSop({
       mappingId: "map-etmf-01",
@@ -1346,6 +1800,23 @@ This Standard Operating Procedure (SOP) governs all investigator site personnel 
       heading: "eTMF Contemporaneous Filing & Inspection Readiness",
       summary:
         "Governs DIA Reference Model classification, artifact completeness review, and regulatory inspection readiness across /etmf.",
+      stepsHeading: "Operational Controls",
+      steps: [
+        "File essential regulatory and ethics artifacts under the matching zone, section, and study/site scope.",
+        "Verify document legibility, metadata completeness, and immutable hash integrity during QC review.",
+      ],
+      extraSections: [
+        {
+          id: "etmf-inspection-readiness-verification",
+          heading: "eTMF Inspection Readiness Verification",
+          body: "Auditors inspect DIA Reference Model completeness, certified copy attestations, and immutable filing timestamps.",
+        },
+        {
+          id: "investigator-site-file-attestation",
+          heading: "Investigator Site File Attestation",
+          body: "Principal Investigators verify site-level regulatory binder synchronization and essential document currency.",
+        },
+      ],
     }),
     "/quality": buildBundledSop({
       mappingId: "map-quality-01",
@@ -1364,6 +1835,10 @@ This Standard Operating Procedure (SOP) governs all investigator site personnel 
       heading: "ICH E6(R3) Quality Tolerance Limits & CAPA",
       summary:
         "Monitors Critical-to-Quality Key Risk Indicators, Quality Tolerance Limit breaches, root-cause investigations, and CAPA effectiveness.",
+      steps: [
+        "Review Key Risk Indicator (`KRI`) trends and Quality Tolerance Limit breaches across active studies and sites.",
+        "Link confirmed systemic deviations to root-cause investigations and verify CAPA effectiveness checks prior to closure.",
+      ],
     }),
     "/notifications": buildBundledSop({
       mappingId: "map-notifications-01",
@@ -1381,6 +1856,10 @@ This Standard Operating Procedure (SOP) governs all investigator site personnel 
       heading: "Operational & Safety Alert Acknowledgement",
       summary:
         "Standardizes timely review of safety, query, lock, and SLA warning notifications across clinical study teams.",
+      steps: [
+        "Prioritize critical safety, temperature excursion, and amber SLA notifications at the start of each operational shift.",
+        "Navigate directly from alert deep links to the scoped study, site, or ticket record to complete remediation.",
+      ],
     }),
     "/tickets": buildBundledSop({
       mappingId: "map-tickets-01",
@@ -1399,6 +1878,11 @@ This Standard Operating Procedure (SOP) governs all investigator site personnel 
       heading: "GxP Support Ticket Triage & Closure Governance",
       summary:
         "Defines severity classification, SLA pause/resume tracking, participant de-identification rules, root-cause documentation, and 21 CFR Part 11 electronic signatures.",
+      stepsHeading: "Mandatory Rules",
+      steps: [
+        "Never enter direct participant PII in ticket descriptions, comments, or root-cause summaries; use pseudonymous subject codes (for example `SUBJ-1001`).",
+        "Record structured resolution codes and root-cause summaries prior to resolving tickets and applying Part 11 closure signatures.",
+      ],
     }),
     "/documents": buildBundledSop({
       mappingId: "map-documents-01",
@@ -1417,6 +1901,10 @@ This Standard Operating Procedure (SOP) governs all investigator site personnel 
       heading: "Controlled Study Document Distribution & Receipt",
       summary:
         "Controls investigator brochure, lab manual, and pharmacy manual distribution with site acknowledgement tracking.",
+      steps: [
+        "Verify effective version numbers on Investigator's Brochures, lab manuals, and pharmacy manuals prior to site use.",
+        "Record electronic site receipt acknowledgements and synchronize controlled documents with the Investigator Site File.",
+      ],
     }),
     "/knowledge": buildBundledSop({
       mappingId: "map-knowledge-01",
@@ -1435,6 +1923,10 @@ This Standard Operating Procedure (SOP) governs all investigator site personnel 
       heading: "Controlled SOP Repository Usage",
       summary:
         "Governs role-scoped SOP lookup, locked snapshot inspection, and 21 CFR Part 11 Merkle audit verification on /knowledge.",
+      steps: [
+        "Verify that referenced SOP guidance carries `PUBLISHED` status and a locked version snapshot before executing regulated procedures.",
+        "Inspect the 21 CFR Part 11 audit trail tab to verify cryptographic SHA-256 block hashes during quality or regulatory reviews.",
+      ],
     }),
     "/training": buildBundledSop({
       mappingId: "map-training-01",
@@ -1453,6 +1945,23 @@ This Standard Operating Procedure (SOP) governs all investigator site personnel 
       heading: "GxP Role Qualification & Training Attestation",
       summary:
         "Defines mandatory SOP read-and-understand training completion and Principal Investigator Delegation of Authority prerequisites on /training.",
+      stepsHeading: "Qualification Rules",
+      steps: [
+        "Complete assigned protocol and GxP SOP modules prior to performing delegated clinical duties.",
+        "Maintain current training records across protocol amendments to preserve active write access.",
+      ],
+      extraSections: [
+        {
+          id: "pi-delegation-log-signoff",
+          heading: "PI Delegation Log Sign-Off",
+          body: "Principal Investigators verify completed staff training attestations before countersigning Delegation of Authority entries.",
+        },
+        {
+          id: "site-staff-training-attestation",
+          heading: "Site Staff Training Attestation",
+          body: "Site coordinators complete read-and-understand attestations for protocol amendments prior to executing clinical visits.",
+        },
+      ],
     }),
     "/participant-wallet": buildBundledSop({
       mappingId: "map-wallet-01",
@@ -1471,6 +1980,10 @@ This Standard Operating Procedure (SOP) governs all investigator site personnel 
       heading: "IRB-Approved Stipend & Expense Disbursement",
       summary:
         "Ensures pseudonymous visit stipend eligibility, receipt verification without exposing banking PII to sponsors, and IRB cap compliance.",
+      steps: [
+        "Confirm completed visit milestones and IRB-approved stipend schedules under pseudonymous subject codes only.",
+        "Redact direct participant banking or address details from sponsor-visible reimbursement audit logs.",
+      ],
     }),
     "/lay-summaries": buildBundledSop({
       mappingId: "map-lay-summaries-01",
@@ -1489,6 +2002,10 @@ This Standard Operating Procedure (SOP) governs all investigator site personnel 
       heading: "EU CTR Article 37 Plain-Language Summary Governance",
       summary:
         "Controls health-literacy readability checks, non-promotional medical review, and multi-language lay summary release.",
+      steps: [
+        "Verify health-literacy readability metrics and non-promotional medical accuracy against locked CSR results.",
+        "Complete ethics and translation approvals prior to publishing multi-language plain-language trial summaries.",
+      ],
     }),
   };
 }

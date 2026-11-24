@@ -2,30 +2,23 @@ import { DEMO_STUDY } from "demo-fixtures";
 import { isCallerBlinded, isSitePermitted } from "../demoPolicy.js";
 import {
   DEFAULT_FORM_UUID,
-  STUDY_REF,
   VERSION_V1_REF,
   VERSION_V2_REF,
   buildDecision,
   cloneJson,
   resolveCollectionTitle,
+  resolveEnrollmentByIdOrCode as resolveSubjectByEnrollmentOrCode,
   resolveSiteCodeFromRef,
   resolveSiteUuid,
+  subjectEnrollmentRef,
+  subjectEnrollmentUuid,
 } from "./shared.js";
 
 export function createKernelGraphDomain(ctx) {
   const { state } = ctx;
 
   function resolveEnrollmentByIdOrCode(rawId) {
-    const cleanId = String(rawId || "")
-      .replace(/^(enrollment|allocation|randomization|treatment_arm|arm):/, "")
-      .split("@")[0];
-    return (
-      state.subjects.find(
-        (s) =>
-          s.id === cleanId ||
-          String(s.subject_id || "").toUpperCase() === cleanId.toUpperCase()
-      ) || null
-    );
+    return resolveSubjectByEnrollmentOrCode(state.subjects, rawId);
   }
 
   function resolveSiteCodeForNodeRef(nodeRef) {
@@ -223,10 +216,7 @@ export function createKernelGraphDomain(ctx) {
       );
     }
     if (String(nodeRef).startsWith("enrollment:")) {
-      const rawId = String(nodeRef)
-        .replace(/^enrollment:/, "")
-        .split("@")[0];
-      const subj = state.subjects.find((s) => s.id === rawId);
+      const subj = resolveEnrollmentByIdOrCode(nodeRef);
       if (subj) {
         return applyNodeVisibilityMask(
           {
@@ -287,7 +277,7 @@ export function createKernelGraphDomain(ctx) {
           return {
             handle: `dep-${index}`,
             kind: "enrollment",
-            ref: `enrollment:${subj.id}`,
+            ref: subjectEnrollmentRef(subj),
             mask: sitePermitted ? null : "NotPermitted",
             distance: 1,
           };
@@ -311,7 +301,7 @@ export function createKernelGraphDomain(ctx) {
           return {
             handle: `alloc-${index}`,
             kind: "allocation",
-            ref: `allocation:${subj.id}`,
+            ref: `allocation:${subjectEnrollmentUuid(subj)}`,
             mask: !sitePermitted ? "NotPermitted" : blinded ? "Blinded" : null,
             distance: 2,
           };
@@ -376,7 +366,7 @@ export function createKernelGraphDomain(ctx) {
 
       for (const subj of state.subjects) {
         candidates.push({
-          ref: `enrollment:${subj.id}`,
+          ref: subjectEnrollmentRef(subj),
           kind: "enrollment",
           title: `Participant ${subj.subject_id}`,
           code: subj.subject_id,
@@ -506,7 +496,7 @@ export function createKernelGraphDomain(ctx) {
             effectiveSiteCode === "SITE-102"
               ? "US Regional Trial Unit 2"
               : `US Academic Clinical Research Center (${effectiveSiteCode})`,
-          enrollment_ref: `enrollment:${matched.id}@1`,
+          enrollment_ref: `${subjectEnrollmentRef(matched)}@1`,
           subject_code: matched.subject_id,
           status: matched.status || "SCREENED",
         },
@@ -519,7 +509,7 @@ export function createKernelGraphDomain(ctx) {
       const refStr = String(nodeRef || "");
       if (refStr.startsWith("enrollment:")) {
         const rawId = refStr.replace(/^enrollment:/, "").split("@")[0];
-        const subj = state.subjects.find((s) => s.id === rawId);
+        const subj = resolveEnrollmentByIdOrCode(refStr);
         const study = subj
           ? ctx.getStudyByRefOrCode(subj.study_id)
           : state.studies.get("DEMO-01");
@@ -668,7 +658,7 @@ export function createKernelGraphDomain(ctx) {
           ...effectiveSubjects.map((s) => ({
             node: applyNodeVisibilityMask(
               {
-                ref: `enrollment:${s.id}`,
+                ref: subjectEnrollmentRef(s),
                 kind: "enrollment",
                 title: `Participant ${s.subject_id}`,
                 code: s.subject_id,
@@ -697,7 +687,7 @@ export function createKernelGraphDomain(ctx) {
         return siteSubjects.map((s) => ({
           node: applyNodeVisibilityMask(
             {
-              ref: `enrollment:${s.id}`,
+              ref: subjectEnrollmentRef(s),
               kind: "enrollment",
               title: `Participant ${s.subject_id}`,
               code: s.subject_id,
@@ -715,10 +705,17 @@ export function createKernelGraphDomain(ctx) {
         const enrollmentId = String(nodeRef)
           .replace(/^enrollment:/, "")
           .split("@")[0];
-        const subj = state.subjects.find((s) => s.id === enrollmentId) || null;
+        const subj = resolveEnrollmentByIdOrCode(nodeRef);
+        const canonicalEnrollmentUuid = subj
+          ? subjectEnrollmentUuid(subj)
+          : enrollmentId;
         const siteCode = subj?.site_id || null;
         let forms = [...state.forms.values()].filter(
-          (f) => f.enrollment_id === enrollmentId
+          (f) =>
+            f.enrollment_id === enrollmentId ||
+            (subj &&
+              (f.enrollment_id === subj.id ||
+                f.enrollment_id === canonicalEnrollmentUuid))
         );
         if (forms.length === 0) {
           const fallback = state.forms.get(DEFAULT_FORM_UUID);
@@ -744,7 +741,7 @@ export function createKernelGraphDomain(ctx) {
           formChildren.push({
             node: applyNodeVisibilityMask(
               {
-                ref: `allocation:${enrollmentId}`,
+                ref: `allocation:${canonicalEnrollmentUuid}`,
                 kind: "allocation",
                 title: `Treatment Allocation · ${subj.treatment_group}`,
                 code: subj.treatment_group,

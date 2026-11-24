@@ -15,6 +15,7 @@ import {
   computeContentHash,
   makeUuidFromIndex,
   resolveCollectionTitle,
+  resolveEnrollmentByIdOrCode,
   resolveSiteUuid,
 } from "./shared.js";
 
@@ -330,14 +331,17 @@ export function createEcrfAndQueriesDomain(ctx) {
         },
       ];
 
-      const subjMatch = state.subjects.find((s) => s.id === enrollmentId);
+      const subjMatch = resolveEnrollmentByIdOrCode(
+        state.subjects,
+        enrollmentId
+      );
       const siteUuid = resolveSiteUuid(subjMatch?.site_id || "SITE-101");
       const collectionTitle = resolveCollectionTitle(collectionSpecId);
 
       const created = {
         form_id: formId,
         enrollment_id: enrollmentId,
-        participant_id: makeUuidFromIndex("00005000", idx),
+        participant_id: subjMatch?.id || makeUuidFromIndex("00005000", idx),
         study_id: STUDY_UUID,
         study_site_id: siteUuid,
         protocol_version_id: VERSION_V2_UUID,
@@ -855,8 +859,9 @@ export function createEcrfAndQueriesDomain(ctx) {
         body?.text || "Verify recorded value against source."
       );
       const rev = Number(body?.revision ?? item?.revision ?? 1);
-      const subjectMatch = state.subjects.find(
-        (s) => s.id === form.enrollment_id
+      const subjectMatch = resolveEnrollmentByIdOrCode(
+        state.subjects,
+        form.enrollment_id
       );
 
       const created = {

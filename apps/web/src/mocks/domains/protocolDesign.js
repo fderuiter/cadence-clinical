@@ -1,4 +1,5 @@
 import { DEMO_STUDY, getDemoPersonaForWorkspace } from "demo-fixtures";
+import { buildUsdmSoaSchedule } from "../../stores/demo/usdmSoaSchedule";
 import { demoNowIso } from "../../utils/demoMode.js";
 import {
   DEMO_PROTOCOL_TEMPLATES,
@@ -14,91 +15,7 @@ import {
 } from "./shared.js";
 
 function createInitialSoaProjection() {
-  return {
-    arms: [
-      { arm_id: "ARM-A", arm_name: "Arm A: Active 10mg daily" },
-      { arm_id: "ARM-B", arm_name: "Arm B: Placebo Control" },
-    ],
-    epochs: [
-      { epoch_id: "EP-SCR", epoch_name: "Screening", sequence: 1 },
-      {
-        epoch_id: "EP-TRT-A",
-        epoch_name: "Treatment Phase",
-        sequence: 2,
-        arm_id: "ARM-A",
-      },
-      {
-        epoch_id: "EP-TRT-B",
-        epoch_name: "Treatment Phase",
-        sequence: 2,
-        arm_id: "ARM-B",
-      },
-    ],
-    encounters: [
-      {
-        encounter_id: "V-SCR",
-        encounter_name: "Day -7 to -1",
-        epoch_id: "EP-SCR",
-        sequence: 1,
-      },
-      {
-        encounter_id: "V-TRT-A1",
-        encounter_name: "Week 2",
-        epoch_id: "EP-TRT-A",
-        sequence: 2,
-      },
-      {
-        encounter_id: "V-TRT-A2",
-        encounter_name: "Week 4",
-        epoch_id: "EP-TRT-A",
-        sequence: 3,
-      },
-      {
-        encounter_id: "V-TRT-B1",
-        encounter_name: "Week 2",
-        epoch_id: "EP-TRT-B",
-        sequence: 4,
-      },
-    ],
-    rows: [
-      {
-        activity_id: "ACT-DEM",
-        activity_name: "Informed Consent & Demographics",
-        cells: [
-          {
-            encounter_id: "V-SCR",
-            is_applicable: true,
-            details: "Mandatory",
-          },
-          { encounter_id: "V-TRT-A1", is_applicable: false },
-          { encounter_id: "V-TRT-A2", is_applicable: false },
-          { encounter_id: "V-TRT-B1", is_applicable: false },
-        ],
-      },
-      {
-        activity_id: "ACT-VS",
-        activity_name: "Vital Signs (BP & Pulse)",
-        cells: [
-          { encounter_id: "V-SCR", is_applicable: true, details: "Day -7" },
-          {
-            encounter_id: "V-TRT-A1",
-            is_applicable: true,
-            details: "Within 10 mins",
-          },
-          {
-            encounter_id: "V-TRT-A2",
-            is_applicable: true,
-            details: "Conditional",
-          },
-          {
-            encounter_id: "V-TRT-B1",
-            is_applicable: true,
-            details: "Within 10 mins",
-          },
-        ],
-      },
-    ],
-  };
+  return buildUsdmSoaSchedule(["ACT-DEM", "ACT-VS"]);
 }
 
 export function createProtocolDesignDomain(ctx) {

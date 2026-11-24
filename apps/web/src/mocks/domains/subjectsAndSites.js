@@ -138,13 +138,14 @@ export function createSubjectsAndSitesDomain(ctx) {
   function seed() {
     const canonicalStudyCode = DEMO_STUDY.code || "CADENCE-101";
     const canonicalSubjects = DEMO_PARTICIPANTS.map((participant, idx) => ({
-      id: participant.enrollmentUuid,
+      id: participant.participantUuid || participant.enrollmentUuid,
       subject_id: participant.subjectCode,
       study_id: canonicalStudyCode,
       site_id: participant.siteCode,
       status: idx === 2 ? "ENROLLED" : "ACTIVE",
       active_protocol_version: idx === 1 ? "1.0" : "2.0",
       enrollment_index: idx + 1,
+      enrollment_ref: participant.enrollmentRef,
       treatment_group: idx === 1 ? "ARM-B" : "ARM-A",
     }));
 
@@ -158,6 +159,7 @@ export function createSubjectsAndSitesDomain(ctx) {
         status: "ENROLLED",
         active_protocol_version: "2.0",
         enrollment_index: 1,
+        enrollment_ref: `enrollment:${ENROLLMENT_1001_UUID}`,
         treatment_group: "ARM-A",
       },
       {
@@ -168,6 +170,7 @@ export function createSubjectsAndSitesDomain(ctx) {
         status: "SCREENED",
         active_protocol_version: "2.0",
         enrollment_index: 2,
+        enrollment_ref: `enrollment:${ENROLLMENT_1002_UUID}`,
         treatment_group: null,
       },
     ];
@@ -269,19 +272,22 @@ export function createSubjectsAndSitesDomain(ctx) {
         status: existing.status,
         active_protocol_version: existing.active_protocol_version,
         encrypted_demographics: null,
+        enrollment_ref: existing.enrollment_ref || `enrollment:${existing.id}`,
       };
     }
 
     ctx.ensureStudyByCode(studyCode);
     const idx = nextCounter();
+    const createdId = makeUuidFromIndex("00001000", idx);
     const created = {
-      id: makeUuidFromIndex("00001000", idx),
+      id: createdId,
       subject_id: subjectCode,
       study_id: studyCode,
       site_id: siteCode,
       status: "SCREENED",
       active_protocol_version: "2.0",
       enrollment_index: state.subjects.length + 1,
+      enrollment_ref: `enrollment:${createdId}`,
       treatment_group: null,
     };
     state.subjects.push(created);
@@ -289,7 +295,7 @@ export function createSubjectsAndSitesDomain(ctx) {
       "execution.subject.registered",
       "execution",
       "enrollment",
-      `enrollment:${created.id}`,
+      created.enrollment_ref,
       "usr-crc-01"
     );
 
@@ -301,6 +307,7 @@ export function createSubjectsAndSitesDomain(ctx) {
       status: created.status,
       active_protocol_version: created.active_protocol_version,
       encrypted_demographics: null,
+      enrollment_ref: created.enrollment_ref,
     };
   }
 
@@ -383,6 +390,7 @@ export function createSubjectsAndSitesDomain(ctx) {
             status: s.status,
             active_protocol_version: s.active_protocol_version || "2.0",
             enrollment_index: s.enrollment_index,
+            enrollment_ref: s.enrollment_ref || `enrollment:${s.id}`,
           }))
         ),
         total: filtered.length,
@@ -422,11 +430,16 @@ export function createSubjectsAndSitesDomain(ctx) {
     createSubject,
 
     getSubjectDetail(subjectId, caller = null) {
+      const normalizedKey = String(subjectId || "")
+        .trim()
+        .replace(/^(?:enrollment|participant):/i, "")
+        .split("@")[0];
       const found =
         state.subjects.find(
           (s) =>
-            s.subject_id.toUpperCase() === String(subjectId).toUpperCase() ||
-            s.id === subjectId
+            s.subject_id.toUpperCase() === normalizedKey.toUpperCase() ||
+            s.id === normalizedKey ||
+            s.enrollment_ref === `enrollment:${normalizedKey}`
         ) || state.subjects[0];
       const shouldBlind =
         Boolean(caller) &&
@@ -449,6 +462,7 @@ export function createSubjectsAndSitesDomain(ctx) {
             ? "BLINDED"
             : null
           : (found.investigational_product_id ?? null),
+        enrollment_ref: found.enrollment_ref || `enrollment:${found.id}`,
       };
     },
 
@@ -456,10 +470,15 @@ export function createSubjectsAndSitesDomain(ctx) {
       const nextStatus = String(
         body?.status || body?.state || body?.target || "ENROLLED"
       ).toUpperCase();
+      const normalizedKey = String(subjectId || "")
+        .trim()
+        .replace(/^(?:enrollment|participant):/i, "")
+        .split("@")[0];
       let found = state.subjects.find(
         (s) =>
-          s.subject_id.toUpperCase() === String(subjectId).toUpperCase() ||
-          s.id === subjectId
+          s.subject_id.toUpperCase() === normalizedKey.toUpperCase() ||
+          s.id === normalizedKey ||
+          s.enrollment_ref === `enrollment:${normalizedKey}`
       );
       if (!found) {
         const created = createSubject({
@@ -480,7 +499,7 @@ export function createSubjectsAndSitesDomain(ctx) {
         "execution.subject.state_changed",
         "execution",
         "enrollment",
-        `enrollment:${found.id}`,
+        found.enrollment_ref || `enrollment:${found.id}`,
         "usr-crc-01"
       );
       return {
@@ -491,6 +510,7 @@ export function createSubjectsAndSitesDomain(ctx) {
         status: found.status,
         active_protocol_version: found.active_protocol_version,
         encrypted_demographics: null,
+        enrollment_ref: found.enrollment_ref || `enrollment:${found.id}`,
       };
     },
 

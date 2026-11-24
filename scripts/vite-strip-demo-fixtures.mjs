@@ -253,6 +253,15 @@ export function cloneDefaultClinicalUsdm() {
   };
 }
 
+export function buildUsdmSoaSchedule() {
+  return {
+    arms: [],
+    epochs: [],
+    encounters: [],
+    rows: [],
+  };
+}
+
 export function formatZodIssues() {
   return [];
 }

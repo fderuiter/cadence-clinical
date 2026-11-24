@@ -8,6 +8,7 @@ import {
   cloneJson,
   computeContentHash,
   makeUuidFromIndex,
+  subjectEnrollmentRef,
 } from "./shared.js";
 
 function createInitialObservations() {
@@ -199,7 +200,7 @@ export function createObservationsDomain(ctx) {
         return true;
       });
       if (matchedSubject) {
-        result.enrollment_ref = `enrollment:${matchedSubject.id}`;
+        result.enrollment_ref = subjectEnrollmentRef(matchedSubject);
       }
     }
     return result;

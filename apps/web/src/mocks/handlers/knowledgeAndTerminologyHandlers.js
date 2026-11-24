@@ -1,4 +1,5 @@
 import { http, HttpResponse } from "msw";
+import { compileSopMarkdownToHtml } from "../../api/knowledge";
 import { readJsonBody } from "./shared.js";
 
 export function createKnowledgeAndTerminologyHandlers(store) {
@@ -64,6 +65,9 @@ export function createKnowledgeAndTerminologyHandlers(store) {
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         ...body,
+        body_html:
+          body?.body_html ||
+          compileSopMarkdownToHtml(body?.body_markdown || ""),
       };
       store.state.knowledgeArticles.push(created);
       return HttpResponse.json(created, { status: 201 });
