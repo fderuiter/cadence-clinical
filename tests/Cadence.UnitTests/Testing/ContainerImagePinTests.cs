@@ -406,6 +406,54 @@ public sealed partial class ContainerImagePinTests
             "dependabot.yml must ignore semver-major and semver-minor bumps on python in /docker/sce/python (ADR-2327)");
         SceRIgnoreRule().IsMatch(dependabot).Should().BeTrue(
             "dependabot.yml must ignore semver-major, semver-minor, and semver-patch bumps on r-base in /docker/sce/r");
+        NugetSonarAnalyzerIgnoreRule().IsMatch(dependabot).Should().BeTrue(
+            "dependabot.yml must ignore SonarAnalyzer.CSharp >= 10.7.0 until solution-wide analyzer triage (#6030)");
+    }
+
+    [Fact]
+    public void Dependabot_IgnoresHaveUniqueDependencyVersionAndUpdateTypeCombinations()
+    {
+        string dependabot = File.ReadAllText(Path.Combine(Root, ".github", "dependabot.yml"));
+        ValidateDependabotIgnoreUniqueness(dependabot).Should().BeEmpty(
+            "Dependabot rejects duplicate (dependency-name, versions) or (dependency-name, update-types) ignore entries within an updates[] block");
+
+        const string duplicateVersionsFixture = """
+            version: 2
+            updates:
+              - package-ecosystem: "nuget"
+                directory: "/"
+                ignore:
+                  - dependency-name: "SonarAnalyzer.CSharp"
+                    versions: [">= 10.7.0"]
+                  - dependency-name: "OpenTelemetry*"
+                    versions: [">= 1.21.0"]
+                  - dependency-name: "SonarAnalyzer.CSharp"
+                    versions: [">= 10.7.0"]
+            """;
+
+        ValidateDependabotIgnoreUniqueness(duplicateVersionsFixture).Should().ContainSingle()
+            .Which.Should().Be(
+                "The property '#/updates/0/ignore/2/versions' includes a duplicate. Ignores must have a unique combination of 'dependency-name' and 'versions'");
+
+        const string duplicateUpdateTypesFixture = """
+            version: 2
+            updates:
+              - package-ecosystem: "docker"
+                directory: "/docker/sce/r"
+                ignore:
+                  - dependency-name: "r-base"
+                    update-types:
+                      [
+                        "version-update:semver-major",
+                        "version-update:semver-minor",
+                      ]
+                  - dependency-name: "r-base"
+                    update-types: ["version-update:semver-minor"]
+            """;
+
+        ValidateDependabotIgnoreUniqueness(duplicateUpdateTypesFixture).Should().ContainSingle()
+            .Which.Should().Be(
+                "The property '#/updates/0/ignore/1/update-types' includes a duplicate. Ignores must have a unique combination of 'dependency-name' and 'update-types'");
     }
 
     [Fact]
@@ -718,8 +766,237 @@ public sealed partial class ContainerImagePinTests
     [GeneratedRegex(@"dependency-name:\s*""dotnet-ef""\s*\r?\n\s*update-types:\s*\[""version-update:semver-major""\]")]
     private static partial Regex NugetDotnetEfMajorIgnoreRule();
 
+    private sealed class DependabotIgnoreRuleBuilder
+    {
+        public string DependencyName { get; set; } = "";
+        public List<string> Versions { get; } = [];
+        public List<string> UpdateTypes { get; } = [];
+    }
+
+    private static List<string> ValidateDependabotIgnoreUniqueness(string yamlContent)
+    {
+        var errors = new List<string>();
+        string[] lines = yamlContent.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
+
+        int updateIndex = -1;
+        bool inUpdates = false;
+        bool inIgnore = false;
+        var currentIgnores = new List<DependabotIgnoreRuleBuilder>();
+        DependabotIgnoreRuleBuilder? activeRule = null;
+        List<string>? activeList = null;
+        bool inFlowBracket = false;
+
+        void FlushUpdate()
+        {
+            if (updateIndex < 0 || currentIgnores.Count == 0)
+            {
+                currentIgnores.Clear();
+                return;
+            }
+
+            var seenVersions = new HashSet<(string Dep, string Version)>();
+            var seenUpdateTypes = new HashSet<(string Dep, string UpdateType)>();
+            var seenDependencyOnly = new HashSet<string>(StringComparer.Ordinal);
+
+            for (int i = 0; i < currentIgnores.Count; i++)
+            {
+                var rule = currentIgnores[i];
+                if (rule.Versions.Count == 0 && rule.UpdateTypes.Count == 0)
+                {
+                    if (!seenDependencyOnly.Add(rule.DependencyName))
+                    {
+                        errors.Add(
+                            $"The property '#/updates/{updateIndex}/ignore/{i}/dependency-name' includes a duplicate.");
+                    }
+
+                    continue;
+                }
+
+                bool reportedVersionDup = false;
+                foreach (string version in rule.Versions)
+                {
+                    if (!seenVersions.Add((rule.DependencyName, version)) && !reportedVersionDup)
+                    {
+                        errors.Add(
+                            $"The property '#/updates/{updateIndex}/ignore/{i}/versions' includes a duplicate. Ignores must have a unique combination of 'dependency-name' and 'versions'");
+                        reportedVersionDup = true;
+                    }
+                }
+
+                bool reportedUpdateTypeDup = false;
+                foreach (string updateType in rule.UpdateTypes)
+                {
+                    if (!seenUpdateTypes.Add((rule.DependencyName, updateType)) && !reportedUpdateTypeDup)
+                    {
+                        errors.Add(
+                            $"The property '#/updates/{updateIndex}/ignore/{i}/update-types' includes a duplicate. Ignores must have a unique combination of 'dependency-name' and 'update-types'");
+                        reportedUpdateTypeDup = true;
+                    }
+                }
+            }
+
+            currentIgnores.Clear();
+        }
+
+        static void ParseFlowItems(string text, List<string> target, ref bool bracketOpen)
+        {
+            int openIdx = text.IndexOf('[', StringComparison.Ordinal);
+            string segment = text;
+            if (openIdx >= 0)
+            {
+                bracketOpen = true;
+                segment = text[(openIdx + 1)..];
+            }
+
+            int closeIdx = segment.IndexOf(']', StringComparison.Ordinal);
+            if (closeIdx >= 0)
+            {
+                bracketOpen = false;
+                segment = segment[..closeIdx];
+            }
+
+            foreach (string raw in segment.Split(',', StringSplitOptions.RemoveEmptyEntries))
+            {
+                string cleaned = StripYamlScalar(raw);
+                if (cleaned.Length > 0)
+                {
+                    target.Add(cleaned);
+                }
+            }
+        }
+
+        static string StripYamlScalar(string raw)
+        {
+            string trimmed = raw.Trim();
+            if (trimmed.Length >= 2 &&
+                ((trimmed[0] == '"' && trimmed[^1] == '"') || (trimmed[0] == '\'' && trimmed[^1] == '\'')))
+            {
+                return trimmed[1..^1];
+            }
+
+            int commentIdx = trimmed.IndexOf(" #", StringComparison.Ordinal);
+            if (commentIdx >= 0)
+            {
+                trimmed = trimmed[..commentIdx].Trim();
+            }
+
+            return trimmed;
+        }
+
+        foreach (string line in lines)
+        {
+            string trimmedStart = line.TrimStart(' ');
+            if (trimmedStart.Length == 0 || trimmedStart.StartsWith('#'))
+            {
+                continue;
+            }
+
+            int indent = line.Length - trimmedStart.Length;
+
+            if (inFlowBracket && activeList is not null)
+            {
+                ParseFlowItems(trimmedStart, activeList, ref inFlowBracket);
+                continue;
+            }
+
+            if (indent == 0)
+            {
+                FlushUpdate();
+                inUpdates = trimmedStart.StartsWith("updates:", StringComparison.Ordinal);
+                inIgnore = false;
+                activeRule = null;
+                activeList = null;
+                continue;
+            }
+
+            if (!inUpdates)
+            {
+                continue;
+            }
+
+            if (indent == 2 && trimmedStart.StartsWith("- ", StringComparison.Ordinal))
+            {
+                FlushUpdate();
+                updateIndex++;
+                inIgnore = false;
+                activeRule = null;
+                activeList = null;
+                continue;
+            }
+
+            if (indent == 4)
+            {
+                inIgnore = trimmedStart.StartsWith("ignore:", StringComparison.Ordinal);
+                activeRule = null;
+                activeList = null;
+                continue;
+            }
+
+            if (!inIgnore)
+            {
+                continue;
+            }
+
+            if (indent == 6 && trimmedStart.StartsWith("- ", StringComparison.Ordinal))
+            {
+                activeRule = new DependabotIgnoreRuleBuilder();
+                currentIgnores.Add(activeRule);
+                activeList = null;
+                trimmedStart = trimmedStart[2..].TrimStart();
+                indent = 8;
+            }
+
+            if (activeRule is null)
+            {
+                continue;
+            }
+
+            if (indent >= 8 && trimmedStart.StartsWith("dependency-name:", StringComparison.Ordinal))
+            {
+                activeRule.DependencyName = StripYamlScalar(trimmedStart["dependency-name:".Length..]);
+                activeList = null;
+            }
+            else if (indent >= 8 && trimmedStart.StartsWith("versions:", StringComparison.Ordinal))
+            {
+                activeList = activeRule.Versions;
+                string rest = trimmedStart["versions:".Length..].Trim();
+                if (rest.Length > 0)
+                {
+                    ParseFlowItems(rest, activeList, ref inFlowBracket);
+                }
+            }
+            else if (indent >= 8 && trimmedStart.StartsWith("update-types:", StringComparison.Ordinal))
+            {
+                activeList = activeRule.UpdateTypes;
+                string rest = trimmedStart["update-types:".Length..].Trim();
+                if (rest.Length > 0)
+                {
+                    ParseFlowItems(rest, activeList, ref inFlowBracket);
+                }
+            }
+            else if (activeList is not null && trimmedStart.StartsWith('[') && !inFlowBracket)
+            {
+                ParseFlowItems(trimmedStart, activeList, ref inFlowBracket);
+            }
+            else if (activeList is not null && trimmedStart.StartsWith("- ", StringComparison.Ordinal))
+            {
+                string item = StripYamlScalar(trimmedStart[2..]);
+                if (item.Length > 0)
+                {
+                    activeList.Add(item);
+                }
+            }
+        }
+
+        FlushUpdate();
+        return errors;
+    }
+
     [GeneratedRegex(@"dependency-name:\s*""OpenTelemetry\*""\s*\r?\n\s*versions:\s*\[""\>= 1\.21\.0""\]")]
     private static partial Regex NugetOpenTelemetryNet11IgnoreRule();
+
+    [GeneratedRegex(@"dependency-name:\s*""SonarAnalyzer\.CSharp""\s*\r?\n\s*versions:\s*\[""\>= 10\.7\.0""\]")]
+    private static partial Regex NugetSonarAnalyzerIgnoreRule();
 
     [GeneratedRegex(@"dependency-name:\s*""python""\s*\r?\n\s*update-types:\s*\[""version-update:semver-major"",\s*""version-update:semver-minor""\]")]
     private static partial Regex ScePythonIgnoreRule();
