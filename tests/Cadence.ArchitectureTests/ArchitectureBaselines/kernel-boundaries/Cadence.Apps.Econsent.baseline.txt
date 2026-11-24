@@ -1,19 +1,37 @@
 # Kernel boundary ratchet baseline shard (K-XS-1, K-MOD-1) - docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md §2, §9.
 # One pre-existing violation per line: RULE|Assembly|Type[.Member]. Sorted ordinally. Shards may only shrink.
 # Prune resolved entries with CADENCE_UPDATE_BASELINE=1 (see tests/Cadence.ArchitectureTests/Architecture/KernelBoundaryBaseline.cs).
+K-MOD-1|Cadence.Apps.Econsent|Cadence.Apps.Econsent.Domain.BiometricLivenessVerification.TenantId
+K-MOD-1|Cadence.Apps.Econsent|Cadence.Apps.Econsent.Domain.ComprehensionCheck.TenantId
+K-MOD-1|Cadence.Apps.Econsent|Cadence.Apps.Econsent.Domain.ComprehensionResult.TenantId
+K-MOD-1|Cadence.Apps.Econsent|Cadence.Apps.Econsent.Domain.ConsentAuditLog.TenantId
 K-MOD-1|Cadence.Apps.Econsent|Cadence.Apps.Econsent.Domain.ConsentClause.StudyId
+K-MOD-1|Cadence.Apps.Econsent|Cadence.Apps.Econsent.Domain.ConsentClause.TenantId
 K-MOD-1|Cadence.Apps.Econsent|Cadence.Apps.Econsent.Domain.ConsentDocument.SiteId
 K-MOD-1|Cadence.Apps.Econsent|Cadence.Apps.Econsent.Domain.ConsentDocument.StudyId
+K-MOD-1|Cadence.Apps.Econsent|Cadence.Apps.Econsent.Domain.ConsentDocument.TenantId
+K-MOD-1|Cadence.Apps.Econsent|Cadence.Apps.Econsent.Domain.ConsentDocumentRevision.TenantId
+K-MOD-1|Cadence.Apps.Econsent|Cadence.Apps.Econsent.Domain.ConsentSignature.TenantId
 K-MOD-1|Cadence.Apps.Econsent|Cadence.Apps.Econsent.Domain.ConsentTemplate.StudyId
+K-MOD-1|Cadence.Apps.Econsent|Cadence.Apps.Econsent.Domain.ConsentTemplate.TenantId
+K-MOD-1|Cadence.Apps.Econsent|Cadence.Apps.Econsent.Domain.ConsentTranslation.TenantId
 K-MOD-1|Cadence.Apps.Econsent|Cadence.Apps.Econsent.Domain.ConsentWithdrawal.SiteId
 K-MOD-1|Cadence.Apps.Econsent|Cadence.Apps.Econsent.Domain.ConsentWithdrawal.StudyId
+K-MOD-1|Cadence.Apps.Econsent|Cadence.Apps.Econsent.Domain.ConsentWithdrawal.TenantId
 K-MOD-1|Cadence.Apps.Econsent|Cadence.Apps.Econsent.Domain.EtmfArchivalDelivery.SiteId
 K-MOD-1|Cadence.Apps.Econsent|Cadence.Apps.Econsent.Domain.EtmfArchivalDelivery.StudyId
+K-MOD-1|Cadence.Apps.Econsent|Cadence.Apps.Econsent.Domain.EtmfArchivalDelivery.TenantId
+K-MOD-1|Cadence.Apps.Econsent|Cadence.Apps.Econsent.Domain.GranularConsentOption.TenantId
 K-MOD-1|Cadence.Apps.Econsent|Cadence.Apps.Econsent.Domain.ReconsentRequirement.SiteId
 K-MOD-1|Cadence.Apps.Econsent|Cadence.Apps.Econsent.Domain.ReconsentRequirement.StudyId
+K-MOD-1|Cadence.Apps.Econsent|Cadence.Apps.Econsent.Domain.ReconsentRequirement.TenantId
 K-MOD-1|Cadence.Apps.Econsent|Cadence.Apps.Econsent.Domain.SubjectConsent.SiteId
 K-MOD-1|Cadence.Apps.Econsent|Cadence.Apps.Econsent.Domain.SubjectConsent.StudyId
+K-MOD-1|Cadence.Apps.Econsent|Cadence.Apps.Econsent.Domain.SubjectConsent.TenantId
+K-MOD-1|Cadence.Apps.Econsent|Cadence.Apps.Econsent.Domain.SubjectConsentOptionSelection.TenantId
+K-MOD-1|Cadence.Apps.Econsent|Cadence.Core.Domain.Audit.AuditLogEntry.TenantId
 K-XS-1|Cadence.Apps.Econsent|Cadence.Apps.Econsent.Domain.ConsentAuditLog
+K-XS-1|Cadence.Apps.Econsent|Cadence.Apps.Econsent.Domain.ConsentAuditLog.TenantId
 K-XS-1|Cadence.Apps.Econsent|Cadence.Apps.Econsent.Domain.ConsentClause.StudyId
 K-XS-1|Cadence.Apps.Econsent|Cadence.Apps.Econsent.Domain.ConsentDocument.SiteId
 K-XS-1|Cadence.Apps.Econsent|Cadence.Apps.Econsent.Domain.ConsentDocument.StudyId

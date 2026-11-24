@@ -966,6 +966,7 @@ public sealed class KernelApiHostTests : IClassFixture<KernelApiHostTests.HostFi
         using var factory = new WebApplicationFactory<Cadence.Kernel.Host.Program>().WithWebHostBuilder(builder => builder
             .UseEnvironment("Production")
             .UseTestGatewaySecret()
+            .UseTestBiometricLivenessKey()
             .UseTestPostgresConnectionString()
             .UseSetting("Kernel:DevelopmentTenant:Code", "cadence-local"));
 
@@ -1194,7 +1195,7 @@ public sealed class KernelApiHostTests : IClassFixture<KernelApiHostTests.HostFi
             SwitchableNodeVisibility? switchableVisibility = null;
             Factory = new WebApplicationFactory<Cadence.Kernel.Host.Program>().WithWebHostBuilder(builder =>
             {
-                builder.UseTestGatewaySecret().UseTestPostgresConnectionString();
+                builder.UseTestGatewaySecret().UseTestBiometricLivenessKey().UseTestPostgresConnectionString();
                 builder.ConfigureServices(services =>
                 {
                     services.RemoveAll<IKernelNavigator>();

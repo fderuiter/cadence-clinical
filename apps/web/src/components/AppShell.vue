@@ -18,6 +18,36 @@
       >Skip to main content</a
     >
 
+    <div
+      v-if="isDemoBuild()"
+      id="staff-demo-banner"
+      class="shell-demo-banner"
+      role="region"
+      aria-label="Interactive demo navigation"
+    >
+      <p class="shell-demo-banner-copy">
+        <strong>Demo Mode:</strong> Synthetic clinical workspace data. Changes
+        stay in this browser session.
+      </p>
+      <nav class="shell-demo-banner-links" aria-label="Co-hosted demo surfaces">
+        <a
+          id="staff-demo-link-docs"
+          href="/cadence-clinical/"
+          class="shell-demo-banner-link"
+        >
+          Documentation Portal
+        </a>
+        <span class="shell-demo-banner-sep" aria-hidden="true">&middot;</span>
+        <a
+          id="staff-demo-link-participant"
+          href="/cadence-clinical/subject-portal/"
+          class="shell-demo-banner-link"
+        >
+          Participant Demo
+        </a>
+      </nav>
+    </div>
+
     <header ref="headerRef" class="app-header">
       <div class="header-left">
         <router-link
@@ -427,9 +457,12 @@ import {
   resolveActiveWorkspaceScope,
   resolveSiteReadinessPath,
 } from "../canvas/palette";
-import OnboardingTour from "./OnboardingTour.vue";
 import OnboardingChecklistDrawer from "./OnboardingChecklistDrawer.vue";
 import CommandPaletteOverlay from "./CommandPaletteOverlay.vue";
+
+const OnboardingTour = defineAsyncComponent(
+  () => import("./OnboardingTour.vue")
+);
 
 const DemoResetBtn = isDemoBuild()
   ? defineAsyncComponent(() => import("../views/demo/DemoResetButton.vue"))
@@ -699,8 +732,20 @@ const isKnowledgeRoute = computed(
 
 const activeTab = computed(() => String(route?.name || "study"));
 
+const hasActivatedOnboardingTour = ref(false);
+watch(
+  () => Boolean(onboardingStore.isActive && !onboardingStore.disabled),
+  (active) => {
+    if (active) {
+      hasActivatedOnboardingTour.value = true;
+    }
+  },
+  { immediate: true, flush: "sync" }
+);
+
 const showOnboardingTour = computed(
   () =>
+    hasActivatedOnboardingTour.value &&
     Boolean(authStore.isAuthenticated) &&
     route?.name !== "login" &&
     route?.path !== "/login" &&
@@ -943,6 +988,52 @@ onUnmounted(() => {
   font-weight: 600;
   text-decoration: none;
   z-index: 100;
+}
+
+.shell-demo-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 6px 20px;
+  background-color: var(--semantic-color-warning-bg);
+  color: var(--semantic-color-warning);
+  border-bottom: 1px solid var(--semantic-color-warning);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.shell-demo-banner-copy {
+  margin: 0;
+}
+
+.shell-demo-banner-links {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.shell-demo-banner-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--semantic-control-target-min, 24px);
+  padding: 2px 6px;
+  border-radius: var(--semantic-radius-sm, 6px);
+  color: var(--semantic-color-warning);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  white-space: nowrap;
+}
+
+.shell-demo-banner-link:hover {
+  background-color: var(--semantic-color-warning-bg-badge);
+}
+
+.shell-demo-banner-sep {
+  color: var(--semantic-color-warning);
 }
 
 .app-header {

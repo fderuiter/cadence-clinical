@@ -1,4 +1,4 @@
-# ADR-2660: Cache Test Hosts and Split Coverage Gates
+# ADR-2670: Cache Test Hosts and Split Coverage Gates
 
 - **Status:** Accepted
 - **Date:** 2026-11-23
@@ -17,7 +17,6 @@ Inner-loop developer feedback across both the .NET and frontend workspaces suffe
 2. `pnpm cadence test --fast` passed `Category!=Integration` across the entire `Cadence.sln`, forcing MSBuild to compile `Cadence.IntegrationTests` and execute `Cadence.E2ETests` during unit-only checks, and `cadence test` lacked `--project`, `--filter`, and `--no-build` flags for targeted runs.
 3. Workspace `"test"` scripts ran `vitest run --coverage` unconditionally, causing single-file Vitest runs (`pnpm --filter web test tests/notifications.test.js`) to fail against [ADR-2530](2026-09-30-measure-web-coverage-over-all-source-with-a-ratchet-floor.md) whole-app coverage floors, while `apps/web/vitest.config.js` booted `jsdom` and eagerly preloaded `axe-core` in `packages/ui/accessibility-matcher.js` even for pure Node contract tests.
 4. `scripts/playwright-chromium-launcher.mjs` unconditionally wrapped Linux Chromium launches in `taskset -c 0`, throttling multi-core developer workstations outside CI.
-5. `xunit.v3` 4.x transitively sets `IsTestingPlatformApplication=true`, breaking VSTest `dotnet test` targets on the .NET 10 SDK unless test projects explicitly retain VSTest mode when `IsTestingPlatformApplication` is unset.
 
 ## 2. Decision Drivers & Constraints
 
@@ -31,7 +30,6 @@ Inner-loop developer feedback across both the .NET and frontend workspaces suffe
 
 - **Overview:**
   - Cache booted `WebApplicationFactory` and `DistributedApplication` instances per class (`ServiceHostCache`, `KernelApiHostTests.HostFixture`, `ContextualHelpHostFixture`, `SubjectEndpointsTestFactory`, `PaymentsCallerAuthHostFixture`, `ExpiredSubscriptionStandaloneServicesTests.HostFixture`, `AppHostModelTests.ModelFixture`) with per-test fake resets and SQLite `:memory:` `BackupDatabase` clones, and reduce `RuleBenchmarkTests` to 1,000 records while keeping the 1,000,000-record benchmark in `Cadence.Rules.Benchmarks`.
-  - Default `<IsTestingPlatformApplication Condition="'$(IsTestingPlatformApplication)' == ''">false</IsTestingPlatformApplication>` in `tests/Directory.Build.props` and `packages/kernel/Directory.Build.props`.
   - Scope `cadence test --fast` to `Cadence.UnitTests.csproj` and `Cadence.ArchitectureTests.csproj`, add `--project`/`-p`, `--filter`, and `--no-build` options to `TestCommand`, and synthesize `test-options` in `docs/cli.md` via `GateDocs`.
   - Separate `"test": "vitest run"` from `"test:coverage": "vitest run --coverage"` across `package.json`, `apps/web`, `packages/ui`, `apps/subject-portal`, and `packages/usdm-schemas`, and update `.github/workflows/ci.yml` and `CiPlan.cs` together to run `pnpm -r test:coverage`.
   - Split `apps/web/vitest.config.js` into `node` and `jsdom` projects while keeping lazy on-demand `getAxe()` loading inside `toBeAccessible` (`packages/ui/accessibility-matcher.js`).
@@ -68,12 +66,11 @@ Inner-loop developer feedback across both the .NET and frontend workspaces suffe
 ## 6. Implementation & Verification
 
 - **Affected Files:**
-  - `tests/Directory.Build.props`, `packages/kernel/Directory.Build.props`
-  - `tests/Cadence.UnitTests/Security/ServiceHosts.cs`, `RouteAuthorizationTests.cs`, `SigTokenUseStoreWiringTests.cs`, `ExpiredSubscriptionStandaloneServicesTests.cs`
+  - `tests/Cadence.UnitTests/Security/ServiceHosts.cs`, `RouteAuthorizationTests.cs`, `SigTokenUseStoreWiringTests.cs`, `ExpiredSubscriptionStandaloneServicesTests.cs`, `Imaging/Services/DicomIngestionServiceTests.cs`
   - `tests/Cadence.UnitTests/Kernel/Api/KernelApiHostTests.cs`, `Kernel/Rules/RuleBenchmarkTests.cs`, `AppHost/AppHostModelTests.cs`
   - `tests/Cadence.UnitTests/Knowledge/ContextualHelpEndpointsTests.cs`, `Execution/Endpoints/SubjectEndpointsRoutingTests.cs`, `Payments/PaymentsCallerAuthorizationTests.cs`
   - `packages/cli/src/Commands/TestCommand.cs`, `Services/CiPlan.cs`, `Services/GateDocs.cs`, `docs/cli.md`
-  - `.github/workflows/ci.yml`, `package.json`, `apps/web/package.json`, `apps/web/vitest.config.js`, `packages/ui/package.json`, `packages/ui/accessibility-matcher.js`, `apps/subject-portal/package.json`, `packages/usdm-schemas/package.json`
+  - `.github/workflows/ci.yml`, `package.json`, `apps/web/package.json`, `apps/web/vitest.config.js`, `apps/web/src/components/AppShell.vue`, `packages/ui/package.json`, `packages/ui/accessibility-matcher.js`, `apps/subject-portal/package.json`, `packages/usdm-schemas/package.json`
   - `scripts/playwright-chromium-launcher.mjs`, `apps/subject-portal/tests/playwright-chromium-launcher.test.js`, `.env.example`, `docs/ENVIRONMENT_VARIABLES.md`, `docs/TESTING.md`, `docs/CI.md`
 - **Verification:**
   - `dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj` and `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj` pass with zero state leakage, preserved requirement tags, and synced `GateDocs` / `LocalCiPlanTests`.
