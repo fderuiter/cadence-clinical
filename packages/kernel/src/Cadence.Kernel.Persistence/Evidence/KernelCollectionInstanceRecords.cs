@@ -5,6 +5,8 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Kernel.Application.Authorization;
+using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Domain.Knowledge;
 using Cadence.Kernel.Evidence;
@@ -23,8 +25,35 @@ namespace Cadence.Kernel.Persistence.Evidence;
 /// Reads a form instance, its member observations, the assertions and locks that concern them and the signatures over
 /// the form through a context bound to the caller's tenant (ADR-2250). Read-only: no tracking.
 /// </summary>
-internal sealed class KernelCollectionInstanceRecords(KernelTenantDbContextFactory contexts) : ICollectionInstanceRecords
+internal sealed class KernelCollectionInstanceRecords(
+    KernelTenantDbContextFactory contexts,
+    IAuthorizationProbe? authorizationProbe = null) : ICollectionInstanceRecords
 {
+    private static readonly Capability EnrollmentUnblindCapability = new("enrollment.unblind", VerbClass.Read);
+
+    public async Task<CollectionInstanceRecord?> FindForReaderAsync(
+        TenantId tenant,
+        CollectionInstanceId instance,
+        CancellationToken cancellationToken)
+    {
+        var record = await FindAsync(tenant, instance, cancellationToken).ConfigureAwait(false);
+        if (record is null)
+        {
+            return null;
+        }
+
+        if (authorizationProbe is null)
+        {
+            return record.MaskBlinded();
+        }
+
+        var decision = await authorizationProbe.CanIAsync(
+            tenant,
+            EnrollmentUnblindCapability,
+            NodeRef.For(record.EnrollmentId),
+            cancellationToken).ConfigureAwait(false);
+        return decision.Permitted ? record : record.MaskBlinded();
+    }
     public async Task<CollectionInstanceRecord?> FindAsync(TenantId tenant, CollectionInstanceId instance, CancellationToken cancellationToken)
     {
         await using var db = contexts.Create(tenant);
