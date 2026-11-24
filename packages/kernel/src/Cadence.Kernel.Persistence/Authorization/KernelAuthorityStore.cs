@@ -784,14 +784,43 @@ internal sealed class KernelAuthorityStore(
         await using var lease = await contexts.AcquireReadLeaseAsync(tenant, cancellationToken).ConfigureAwait(false);
         var db = lease.Db;
         var path = ScopePath.TenantWide;
+        EvidenceNodeClassification? evidenceInfo = null;
         var unversioned = resource.Unversioned();
         if (PathBearingKinds.Contains(unversioned.Kind))
         {
             var resolved = new Dictionary<(string Kind, Guid Id), ScopePath>(1);
-            var blinded = new HashSet<NodeRef>();
-            await LoadPathsForKindAsync(db, tenant, unversioned.Kind, [unversioned.Id], resolved, blinded, cancellationToken)
-                .ConfigureAwait(false);
-            path = resolved.GetValueOrDefault((unversioned.Kind, unversioned.Id), ScopePath.TenantWide);
+            if (unversioned.Kind is NodeKinds.Observation or NodeKinds.ValidationFinding or NodeKinds.Assertion or NodeKinds.FormQuery)
+            {
+                var resolvedEvidence = new Dictionary<(string Kind, Guid Id), EvidenceNodeClassification>(1);
+                var obsIds = unversioned.Kind == NodeKinds.Observation ? [unversioned.Id] : Array.Empty<Guid>();
+                var findingIds = unversioned.Kind == NodeKinds.ValidationFinding ? [unversioned.Id] : Array.Empty<Guid>();
+                List<AssertionId> assertionIds = unversioned.Kind == NodeKinds.Assertion ? [AssertionId.FromGuid(unversioned.Id)] : [];
+                List<Guid> formQueryIds = unversioned.Kind == NodeKinds.FormQuery ? [unversioned.Id] : [];
+                await ClassifyEvidenceInOpenConnectionAsync(
+                        db,
+                        tenant,
+                        obsIds,
+                        findingIds,
+                        assertionIds,
+                        formQueryIds,
+                        resolved,
+                        resolvedEvidence,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+                resolvedEvidence.TryGetValue((unversioned.Kind, unversioned.Id), out evidenceInfo);
+                path = resolved.GetValueOrDefault((unversioned.Kind, unversioned.Id), ScopePath.TenantWide);
+                if (evidenceInfo is not null && path == ScopePath.TenantWide && evidenceInfo.Scope != ScopePath.TenantWide)
+                {
+                    path = evidenceInfo.Scope;
+                }
+            }
+            else
+            {
+                var blinded = new HashSet<NodeRef>();
+                await LoadPathsForKindAsync(db, tenant, unversioned.Kind, [unversioned.Id], resolved, blinded, cancellationToken)
+                    .ConfigureAwait(false);
+                path = resolved.GetValueOrDefault((unversioned.Kind, unversioned.Id), ScopePath.TenantWide);
+            }
         }
 
         var held = await db.Grants.AsNoTracking()
@@ -815,7 +844,7 @@ internal sealed class KernelAuthorityStore(
                 .ConfigureAwait(false)
             : [];
 
-        return new AuthorityEvaluationSlice(path, held, roles, requirements);
+        return new AuthorityEvaluationSlice(path, held, roles, requirements, evidenceInfo);
     }
 
     public async Task<IReadOnlyDictionary<NodeRef, EvidenceNodeClassification>> InspectEvidenceNodesAsync(

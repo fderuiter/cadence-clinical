@@ -406,6 +406,182 @@ public sealed partial class ContainerImagePinTests
             "dependabot.yml must ignore semver-major and semver-minor bumps on python in /docker/sce/python (ADR-2327)");
         SceRIgnoreRule().IsMatch(dependabot).Should().BeTrue(
             "dependabot.yml must ignore semver-major, semver-minor, and semver-patch bumps on r-base in /docker/sce/r");
+
+        FindDependabotIgnoreDuplicates(dependabot).Should().BeEmpty(
+            "Dependabot requires each ecosystem's ignore rules to have a unique combination of 'dependency-name' and 'versions' or 'update-types'");
+
+        const string duplicateIgnoreFixture = """
+            version: 2
+            updates:
+              - package-ecosystem: "nuget"
+                directory: "/"
+                schedule:
+                  interval: "weekly"
+                ignore:
+                  - dependency-name: "SonarAnalyzer.CSharp"
+                    versions: [">= 10.7.0"]
+                  - dependency-name: "SonarAnalyzer.CSharp"
+                    versions: [">= 10.7.0"]
+            """;
+        FindDependabotIgnoreDuplicates(duplicateIgnoreFixture).Should().ContainSingle()
+            .Which.Should().Contain("#/updates/0/ignore/1/versions");
+    }
+
+    private static List<string> FindDependabotIgnoreDuplicates(string dependabotYaml)
+    {
+        var duplicates = new List<string>();
+        int updateIndex = -1;
+        bool inIgnoreBlock = false;
+        int ignoreIndex = -1;
+        string? currentDependency = null;
+        var currentVersions = new List<string>();
+        var currentUpdateTypes = new List<string>();
+        string? activeListField = null;
+        var seenVersions = new HashSet<string>(StringComparer.Ordinal);
+        var seenUpdateTypes = new HashSet<string>(StringComparer.Ordinal);
+        var seenPlain = new HashSet<string>(StringComparer.Ordinal);
+
+        void FlushIgnoreItem()
+        {
+            if (currentDependency is null)
+            {
+                return;
+            }
+
+            if (currentVersions.Count > 0)
+            {
+                string key = $"{currentDependency}\u001f{string.Join('\u001e', currentVersions.OrderBy(v => v, StringComparer.Ordinal))}";
+                if (!seenVersions.Add(key))
+                {
+                    duplicates.Add(
+                        $"The property '#/updates/{updateIndex}/ignore/{ignoreIndex}/versions' includes a duplicate. Ignores must have a unique combination of 'dependency-name' and 'versions'");
+                }
+            }
+
+            if (currentUpdateTypes.Count > 0)
+            {
+                string key = $"{currentDependency}\u001f{string.Join('\u001e', currentUpdateTypes.OrderBy(v => v, StringComparer.Ordinal))}";
+                if (!seenUpdateTypes.Add(key))
+                {
+                    duplicates.Add(
+                        $"The property '#/updates/{updateIndex}/ignore/{ignoreIndex}/update-types' includes a duplicate. Ignores must have a unique combination of 'dependency-name' and 'update-types'");
+                }
+            }
+
+            if (currentVersions.Count == 0 && currentUpdateTypes.Count == 0 && !seenPlain.Add(currentDependency))
+            {
+                duplicates.Add(
+                    $"The property '#/updates/{updateIndex}/ignore/{ignoreIndex}/dependency-name' includes a duplicate.");
+            }
+
+            currentDependency = null;
+            currentVersions.Clear();
+            currentUpdateTypes.Clear();
+            activeListField = null;
+        }
+
+        foreach (string rawLine in dependabotYaml.Split('\n'))
+        {
+            string line = rawLine.TrimEnd('\r');
+            string trimmed = line.TrimStart();
+            if (trimmed.Length == 0 || trimmed.StartsWith('#'))
+            {
+                continue;
+            }
+
+            int indent = line.Length - trimmed.Length;
+            if (indent == 2 && trimmed.StartsWith("- package-ecosystem:", StringComparison.Ordinal))
+            {
+                FlushIgnoreItem();
+                updateIndex++;
+                inIgnoreBlock = false;
+                ignoreIndex = -1;
+                seenVersions.Clear();
+                seenUpdateTypes.Clear();
+                seenPlain.Clear();
+                continue;
+            }
+
+            if (indent == 4)
+            {
+                FlushIgnoreItem();
+                inIgnoreBlock = string.Equals(trimmed, "ignore:", StringComparison.Ordinal);
+                continue;
+            }
+
+            if (!inIgnoreBlock)
+            {
+                continue;
+            }
+
+            if (indent == 6 && trimmed.StartsWith("- ", StringComparison.Ordinal))
+            {
+                FlushIgnoreItem();
+                ignoreIndex++;
+                trimmed = trimmed[2..].TrimStart();
+                indent = 8;
+            }
+
+            if (indent == 8 && trimmed.StartsWith("dependency-name:", StringComparison.Ordinal))
+            {
+                currentDependency = trimmed["dependency-name:".Length..].Trim().Trim('"', '\'');
+                activeListField = null;
+            }
+            else if (indent == 8 && trimmed.StartsWith("versions:", StringComparison.Ordinal))
+            {
+                string rest = trimmed["versions:".Length..].Trim();
+                ParseYamlStringList(rest, currentVersions);
+                activeListField = rest.EndsWith(']') ? null : "versions";
+            }
+            else if (indent == 8 && trimmed.StartsWith("update-types:", StringComparison.Ordinal))
+            {
+                string rest = trimmed["update-types:".Length..].Trim();
+                ParseYamlStringList(rest, currentUpdateTypes);
+                activeListField = rest.EndsWith(']') ? null : "update-types";
+            }
+            else if (indent >= 10 && activeListField is not null)
+            {
+                var target = activeListField == "versions" ? currentVersions : currentUpdateTypes;
+                ParseYamlStringList(trimmed, target);
+                if (trimmed.EndsWith(']'))
+                {
+                    activeListField = null;
+                }
+            }
+        }
+
+        FlushIgnoreItem();
+        return duplicates;
+    }
+
+    private static void ParseYamlStringList(string segment, List<string> target)
+    {
+        if (string.IsNullOrWhiteSpace(segment))
+        {
+            return;
+        }
+
+        string cleaned = segment.Trim();
+        if (cleaned.StartsWith("- ", StringComparison.Ordinal))
+        {
+            string item = cleaned[2..].Trim().Trim('"', '\'');
+            if (item.Length > 0)
+            {
+                target.Add(item);
+            }
+
+            return;
+        }
+
+        cleaned = cleaned.Trim('[', ']');
+        foreach (string part in cleaned.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            string item = part.Trim('"', '\'');
+            if (item.Length > 0)
+            {
+                target.Add(item);
+            }
+        }
     }
 
     [Fact]

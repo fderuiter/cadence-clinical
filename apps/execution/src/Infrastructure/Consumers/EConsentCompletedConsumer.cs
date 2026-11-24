@@ -81,7 +81,8 @@ public sealed class EConsentCompletedConsumer(
     IConsentRepository consents,
     IAuditLogWriter auditLog,
     IAuditActorScope actorScope,
-    ILogger<EConsentCompletedConsumer>? logger = null)
+    ILogger<EConsentCompletedConsumer>? logger = null,
+    IKernelLockGuard? lockGuard = null)
     : IConsumer<EConsentCompletedEvent>
 {
     public async Task Consume(ConsumeContext<EConsentCompletedEvent> context)
@@ -116,6 +117,27 @@ public sealed class EConsentCompletedConsumer(
         }
 
         EnforceCommercialPostureHeaders(context, msg);
+
+        if (lockGuard is not null)
+        {
+            string? tenantId = context.Headers is { } headers
+                && headers.TryGetHeader(GatewayHeaders.TenantId, out object? rawTenant)
+                && rawTenant is not null
+                    ? rawTenant.ToString()
+                    : null;
+            var lockCheck = await lockGuard.EnsureUnlockedForServiceAsync(
+                account,
+                tenantId,
+                msg.StudyId,
+                msg.SiteId,
+                msg.SubjectId,
+                context.CancellationToken).ConfigureAwait(false);
+            if (lockCheck.IsFailure)
+            {
+                throw new ConsentEventRejectedException(
+                    $"{lockCheck.Error!.Code}: rejected auto-enrollment for subject '{msg.SubjectId}' in study '{msg.StudyId}' — {lockCheck.Error.Description}");
+            }
+        }
 
         if (logger != null)
         {
