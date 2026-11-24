@@ -162,8 +162,8 @@ No MVC controllers. Group routes with `MapGroup("/api/v1/…")`, return `TypedRe
 
 - Every service calls `builder.Services.AddCadenceSecurity()` and `app.UseCadenceSecurity()`. Only
   health, status and development API-doc endpoints may be `AllowAnonymous()`.
-- Take the caller's identity and roles from the verified claims (for example
-  `apps/execution/src/Endpoints/CallerIdentity.cs`), never from request bodies or unsigned headers.
+- Take the caller's identity and roles from the verified claims (via `CallerScope` and
+  `ClinicalScopeGuard` in `packages/security/src/Rbac`), never from request bodies or unsigned headers.
 - Never add a default or fallback secret. `GATEWAY_SECRET` is required at startup (ADR-2256).
 
 ### 6. Requirement traceability in tests (21 CFR Part 11)
