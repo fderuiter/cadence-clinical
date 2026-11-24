@@ -2964,7 +2964,6 @@
 import { ref, computed, watch } from "vue";
 import * as VueRouter from "vue-router";
 import {
-  buildStepUpVerificationPayload,
   ClinicalModal,
   ClinicalTabs,
   SEMANTIC_ACTIONS,
@@ -2981,9 +2980,10 @@ import CellGeneTherapyCocConsole from "../../components/clinical/CellGeneTherapy
 import BulkIpKitReconciliationDrawer from "../../components/clinical/BulkIpKitReconciliationDrawer.vue";
 import { isDemoBuild } from "../../utils/demoMode.js";
 import { allowUnbackedAction } from "../../utils/unbackedActions.js";
-import apiClient from "../../services/api";
+import { apiClient } from "../../api/apiClient";
 import { ctmsApi } from "../../api/ctmsApi";
 import { executionApi } from "../../api/executionApi";
+import { requestStepUpSignature } from "../../api/signatureVerification";
 import {
   DOA_SIGNOFF_ROLE_REASON,
   MONITORING_LETTER_COMPILE_ROLE_REASON,
@@ -3719,25 +3719,14 @@ async function confirmSignature() {
   sigError.value = "";
 
   try {
-    const verificationPayload = buildStepUpVerificationPayload({
+    const reauthRes = await requestStepUpSignature({
       username,
       password,
       totp,
       action: signatureActionPath,
       semanticAction: signatureSemanticAction,
     });
-
-    const reauthRes = await apiClient.post(
-      "/api/v1/auth/signature-verification",
-      verificationPayload
-    );
-
-    const sigToken = reauthRes?.sig_token;
-    if (!sigToken) {
-      throw new Error(
-        "Signature verification did not return a signature token."
-      );
-    }
+    const sigToken = reauthRes.sig_token;
 
     if (signatureCallback) {
       await signatureCallback(sigToken, reason);

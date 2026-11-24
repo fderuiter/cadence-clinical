@@ -1,5 +1,10 @@
-import { demoNowMs, nextDemoStep } from "../../utils/demoMode.js";
-import { getBearerToken } from "../authorization.js";
+import { demoNowMs, isDemoBuild, nextDemoStep } from "../../utils/demoMode.js";
+import {
+  applyDemoIdentityHeaders,
+  fetchWithSingleFlightRetry,
+  getBearerToken,
+  notifySubscriptionExpiredIfNeeded,
+} from "../authorization.js";
 import { ApiError, getBaseUrl, unwrapResponse } from "../client";
 import type {
   KernelEntitlements,
@@ -316,14 +321,21 @@ export async function executeProtocolDraftImport({
     if (token) {
       headers["Authorization"] = `Bearer ${token}`;
     }
+    if (isDemoBuild()) {
+      applyDemoIdentityHeaders(headers);
+    }
 
-    const response = await globalThis.fetch(url, {
+    const response = await fetchWithSingleFlightRetry(url, {
       method: "POST",
       headers,
       body: formData,
     });
     if (!response.ok) {
       const errData = await response.json().catch(() => null);
+      const expiredGuidance = notifySubscriptionExpiredIfNeeded(
+        response.status,
+        errData
+      );
       const tempError = new ApiError(
         `Import failed with status ${response.status}`,
         response.status,
@@ -331,7 +343,7 @@ export async function executeProtocolDraftImport({
         errData
       );
       throw new ApiError(
-        describeKernelError(tempError),
+        expiredGuidance || describeKernelError(tempError),
         response.status,
         response.statusText,
         errData

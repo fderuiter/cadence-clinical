@@ -821,6 +821,31 @@ export interface StepUpVerificationPayload {
 export function buildStepUpVerificationPayload(
   input: StepUpVerificationPayloadInput
 ): StepUpVerificationPayload;
+export const STEP_UP_VERIFICATION_PATH: "/api/v1/auth/signature-verification";
+export function resolveDefaultSemanticAction(action?: string | null): string;
+export interface StepUpSignatureRequestInput {
+  username?: string | null;
+  password?: string;
+  totp?: string | null;
+  action: string;
+  semanticAction?: string;
+  semantic_action?: string;
+  batchId?: string | null;
+  batch_id?: string | null;
+}
+export interface StepUpSignatureRequestOptions<
+  TResponse = { sig_token: string; expires_in?: number },
+> {
+  post: (path: string, body: StepUpVerificationPayload) => Promise<TResponse>;
+  requireSigToken?: boolean;
+  missingTokenMessage?: string;
+}
+export function requestStepUpSignature<
+  TResponse = { sig_token: string; expires_in?: number },
+>(
+  input: StepUpSignatureRequestInput,
+  options: StepUpSignatureRequestOptions<TResponse>
+): Promise<TResponse>;
 
 export const SIGNATURE_OTHER_REASON: "Other";
 export const SIGNATURE_PASSWORD_INPUT_ATTRS: Readonly<{

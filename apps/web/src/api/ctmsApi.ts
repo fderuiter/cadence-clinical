@@ -1,6 +1,8 @@
 import {
+  applyDemoIdentityHeaders,
+  fetchWithSingleFlightRetry,
   getBearerToken,
-  refreshBearerTokenOnUnauthorized,
+  notifySubscriptionExpiredIfNeeded,
 } from "./authorization.js";
 import { encodeChangeReason } from "./changeReason";
 import {
@@ -10,6 +12,7 @@ import {
   unwrapResponse,
 } from "./client";
 import type { components, paths } from "./generated/ctms";
+import { isDemoBuild } from "../utils/demoMode";
 
 /**
  * Typed client for the .NET CTMS service, generated from docs/openapi/ctms_openapi.json (ADR-2610, ADR-2642, ADR-2643).
@@ -97,23 +100,21 @@ async function fetchAuthenticatedPdf(pathSuffix: string): Promise<Blob> {
   if (token) {
     headers.Authorization = `Bearer ${token}`;
   }
-  let response = await globalThis.fetch(url, { method: "GET", headers });
-  if (response.status === 401) {
-    const errBody = await response
-      .clone()
-      .json()
-      .catch(() => null);
-    const freshToken = await refreshBearerTokenOnUnauthorized(url, errBody);
-    if (freshToken) {
-      response = await globalThis.fetch(url, {
-        method: "GET",
-        headers: { ...headers, Authorization: `Bearer ${freshToken}` },
-      });
-    }
+  if (isDemoBuild()) {
+    applyDemoIdentityHeaders(headers);
   }
+  const response = await fetchWithSingleFlightRetry(url, {
+    method: "GET",
+    headers,
+  });
   if (!response.ok) {
     const errData = await response.json().catch(() => null);
+    const expiredGuidance = notifySubscriptionExpiredIfNeeded(
+      response.status,
+      errData
+    );
     const detail =
+      expiredGuidance ||
       (errData as Record<string, unknown> | null)?.detail ||
       `Request failed with status ${response.status}`;
     throw new ApiError(

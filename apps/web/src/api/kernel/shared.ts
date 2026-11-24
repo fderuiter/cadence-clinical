@@ -1,4 +1,6 @@
 import {
+  applyDemoIdentityHeaders,
+  fetchWithSingleFlightRetry,
   getBearerToken,
   notifySubscriptionExpiredIfNeeded,
   SUBSCRIPTION_EXPIRED_GUIDANCE,
@@ -6,6 +8,7 @@ import {
 import { encodeChangeReason } from "../changeReason";
 import { ApiError, createOpenApiClient, getBaseUrl } from "../client";
 import type { components, paths } from "../generated/kernel";
+import { isDemoBuild } from "../../utils/demoMode";
 
 /**
  * Shared OpenAPI client, error helpers, bitemporal query normalizers, and streaming download utilities
@@ -234,7 +237,10 @@ export async function streamKernelDownload(
   if (token) {
     headers.set("Authorization", `Bearer ${token}`);
   }
-  const response = await globalThis.fetch(`${base}${pathAndQuery}`, {
+  if (isDemoBuild()) {
+    applyDemoIdentityHeaders(headers);
+  }
+  const response = await fetchWithSingleFlightRetry(`${base}${pathAndQuery}`, {
     method: "GET",
     headers,
   });
@@ -245,7 +251,12 @@ export async function streamKernelDownload(
     } catch {
       errData = null;
     }
+    const expiredGuidance = notifySubscriptionExpiredIfNeeded(
+      response.status,
+      errData
+    );
     const detail =
+      expiredGuidance ||
       (errData as Record<string, unknown> | null)?.detail ||
       (errData as Record<string, unknown> | null)?.message ||
       `Request failed with status ${response.status}`;

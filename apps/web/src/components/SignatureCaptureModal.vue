@@ -13,7 +13,7 @@ import { ref, computed, provide } from "vue";
 import SignatureCaptureModal, {
   SHARED_SIGNATURE_MODAL_PROPS,
 } from "../features/signatures/components/SignatureCaptureModal.vue";
-import { etmfService } from "../api/etmf";
+import { requestStepUpSignature } from "../api/signatureVerification";
 
 const props = defineProps({
   ...SHARED_SIGNATURE_MODAL_PROPS,
@@ -27,8 +27,16 @@ const props = defineProps({
   },
 });
 
-// Provide the eTMF-specific service to the decoupled FSD component via Dependency Injection
-provide("signatureService", etmfService);
+// Provide a lightweight step-up service by default; lazy-load etmfService only when callers omit `onSign`.
+provide("signatureService", {
+  verifySignature(payload) {
+    return requestStepUpSignature(payload);
+  },
+  async signDocument(documentId, payload, options) {
+    const { etmfService } = await import("../api/etmf");
+    return etmfService.signDocument(documentId, payload, options);
+  },
+});
 
 const innerRef = ref(null);
 
