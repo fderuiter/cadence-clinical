@@ -30,7 +30,7 @@ routes answer as the service being down.
 - `web`: the Clinical Canvas Vite dev server on `http://localhost:3000/cadence-clinical/`, the redirect URI the
   `cadence-web` Keycloak client allows. It gets `VITE_API_BASE_URL` (its own origin), `CADENCE_GATEWAY_URL`
   (the gateway, where its `/api` proxy forwards; the gateway sends no CORS headers, so the browser must not call it
-  cross-origin, #5429) and the `VITE_KEYCLOAK_*` settings. Run `pnpm install --frozen-lockfile && pnpm --filter ui build` at the repository root first; the AppHost does not install packages or prebuild `packages/ui`.
+  cross-origin, #5429) and the `VITE_KEYCLOAK_*` settings. Run `pnpm install --frozen-lockfile` at the repository root first; the AppHost does not install packages (`packages/ui` resolves directly from workspace source).
 - `subject-portal`: the participant portal's Vite dev server on `http://localhost:5174/subject-portal/`, as in docker
   compose, in the `full` profile only (it calls interop and payments). Like `web`, it gets `VITE_API_BASE_URL` (its own
   origin), `CADENCE_GATEWAY_URL` (where its `/api` proxy forwards, #5451) and the `VITE_KEYCLOAK_*` settings. The dev realm's `cadence-web` client allows its redirect URI,
@@ -120,7 +120,7 @@ dashboard prompts for it before starting the containers.
 ## Run locally
 
 ```bash
-pnpm install --frozen-lockfile && pnpm --filter ui build       # once, for the web app and shared UI package
+pnpm install --frozen-lockfile                                 # once, for the frontend workspace
 dotnet run --project apps/apphost/src/Cadence.AppHost.csproj   # full profile
 dotnet run --project apps/apphost/src/Cadence.AppHost.csproj -- --AppHost:Profile=core
 ```
