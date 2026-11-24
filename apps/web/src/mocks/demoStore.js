@@ -1002,12 +1002,19 @@ export function createWebDemoStore() {
           delegated_staff: [
             {
               id: "doa-staff-01",
+              record_id: "doa-staff-01",
+              site_id: "SITE-101",
               staff_id: "usr-crc-01",
+              staff_user_id: "usr-crc-01",
               staff_name: "Site Coordinator 01",
               role: "CRC",
               tasks: ["CRF_DATA_ENTRY", "SUBJECT_SCREENING"],
+              task_codes: ["CRF_DATA_ENTRY", "SUBJECT_SCREENING"],
+              start_date: "2026-07-15", // deid-ignore
               status: "ACTIVE",
-              signed_at: "2026-07-15T10:00:00Z",
+              is_active: true,
+              signed_off: true,
+              signed_at: "2026-07-15T10:00:00Z", // deid-ignore
             },
           ],
           audit_history: [

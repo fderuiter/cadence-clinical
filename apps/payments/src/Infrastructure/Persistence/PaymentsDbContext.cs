@@ -4,6 +4,7 @@ using Cadence.Apps.Payments.Domain;
 using Cadence.Apps.Payments.Infrastructure.Persistence.Configurations;
 using Cadence.Core.Domain.Audit;
 using Cadence.Database.Configurations;
+using Cadence.Database.Signatures;
 using Cadence.Database.Tenancy;
 using Cadence.Security.FieldProtection;
 
@@ -42,6 +43,7 @@ public sealed class PaymentsDbContext(DbContextOptions<PaymentsDbContext> option
     public DbSet<ParticipantExpenseClaim> ParticipantExpenseClaims => Set<ParticipantExpenseClaim>();
     public DbSet<ParticipantDisbursement> ParticipantDisbursements => Set<ParticipantDisbursement>();
     public DbSet<AuditLogEntry> AuditLogEntries => Set<AuditLogEntry>();
+    public DbSet<ConsumedSignatureToken> ConsumedSignatureTokens => Set<ConsumedSignatureToken>();
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -70,6 +72,7 @@ public sealed class PaymentsDbContext(DbContextOptions<PaymentsDbContext> option
         modelBuilder.ApplyConfiguration(new ParticipantExpenseClaimConfiguration());
         modelBuilder.ApplyConfiguration(new ParticipantDisbursementConfiguration());
         modelBuilder.ApplyConfiguration(new AuditLogEntryConfiguration());
+        modelBuilder.ApplyConfiguration(new ConsumedSignatureTokenConfiguration());
         modelBuilder.ConfigureStandaloneTenancy(this);
     }
 }

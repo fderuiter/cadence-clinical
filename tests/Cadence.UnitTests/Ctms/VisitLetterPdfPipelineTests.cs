@@ -238,7 +238,21 @@ public sealed class VisitLetterPdfPipelineTests
 
         var ct = TestContext.Current.CancellationToken;
 
-        var response = await LetterTemplateEndpoints.CompileAndDispatchLetterAsync(
+        // Draft-only /letters/compile refuses Finalize=true with 400 Bad Request
+        var rejectedDraft = await LetterTemplateEndpoints.CompileAndDispatchLetterAsync(
+            "confirmation_letter",
+            model,
+            FluidTemplateRenderer.Instance,
+            _ctmsDb,
+            _clock,
+            _serviceProvider,
+            httpContext,
+            ct);
+        rejectedDraft.Should().BeOfType<ProblemHttpResult>()
+            .Which.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
+
+        // Dedicated signed /letters/finalize finalizes, applies PKCS#7 signature, files to eTMF, and dispatches email
+        var response = await LetterTemplateEndpoints.FinalizeAndDispatchLetterAsync(
             "confirmation_letter",
             model,
             FluidTemplateRenderer.Instance,

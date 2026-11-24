@@ -32,7 +32,8 @@ public static class LabToxicityEndpoints
     public static IEndpointRouteBuilder MapLabToxicityEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/v1/execution/labs/toxicity")
-            .WithTags("Laboratory Governance & Ingestion");
+            .WithTags("Laboratory Governance & Ingestion")
+            .AddEndpointFilter<ChangeReasonHeaderFilter>();
 
         group.MapGet("/review-queue", ListReviewQueueAsync)
             .WithName("ListStagedAeReviewQueue")
@@ -50,12 +51,12 @@ public static class LabToxicityEndpoints
             .Produces<StagedAdverseEventActionResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
             .ProducesProblem(StatusCodes.Status401Unauthorized)
-            .AddEndpointFilter<ChangeReasonHeaderFilter>()
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .RequirePermission("lab_toxicity_review:review").RequireCallerStudyScope()
             .RequireElectronicSignature(ReviewActionSemanticAction, ReviewActionFor);
 
         group.MapPost("/evaluate", EvaluateToxicityAsync)
+            .AllowWithoutChangeReason()
             .WithName("EvaluateLabToxicityEndpoint")
             .WithSummary("Evaluate Lab Toxicity Endpoint")
             .WithDescription("Evaluate CTCAE v5.0 Grade, Hy's Law criteria, and delta checks for a single lab observation.")

@@ -146,6 +146,22 @@ export const executionRtsmApi = {
     );
   },
 
+  unblindSubject(
+    subjectId: string,
+    reason: string,
+    sigToken: string
+  ): Promise<Subject> {
+    return unwrapResponse(
+      client.POST("/api/v1/execution/subjects/{subjectId}/unblind", {
+        params: { path: { subjectId } },
+        headers: {
+          "X-Change-Reason": encodeChangeReason(reason),
+          "X-Sig-Token": sigToken,
+        },
+      })
+    );
+  },
+
   assignSubjectSite(
     subjectId: string,
     siteId: string,

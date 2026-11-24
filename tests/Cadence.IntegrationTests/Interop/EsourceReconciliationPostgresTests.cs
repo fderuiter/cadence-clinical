@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Apps.Interop.Domain;
+using Cadence.Apps.Interop.Endpoints;
 using Cadence.Apps.Interop.Infrastructure.Persistence;
 using Cadence.Security.Authentication;
 using Cadence.Testing;
@@ -47,11 +48,15 @@ public sealed class EsourceReconciliationPostgresTests(InteropPostgresApiFactory
         factory.SkipIfUnavailable();
         string study = NewStudy();
         var ids = await SeedCandidatesAsync(study, 3);
-        var coordinator = Coordinator(study);
+        var requestBody = new EhrReconcileBatchAcceptRequest(ids, "Matches the source chart", "Batch reconciliation");
+        var coordinator = Coordinator(
+            study,
+            EsourceEndpoints.BatchAcceptAction,
+            EsourceEndpoints.BatchAcceptSemanticAction,
+            requestBody.BatchBindingId());
         using var client = factory.CreateSignedClient(coordinator);
 
-        var response = await client.PostAsJsonAsync($"{Base}/batch-accept",
-            new { candidateIds = ids, commitReason = "Matches the source chart", changeReason = "Batch reconciliation" }, Ct);
+        var response = await client.PostAsJsonAsync($"{Base}/batch-accept", requestBody, Ct);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync(Ct));
         var stored = await CandidatesAsync(ids);
@@ -71,11 +76,15 @@ public sealed class EsourceReconciliationPostgresTests(InteropPostgresApiFactory
         factory.SkipIfUnavailable();
         string study = NewStudy();
         var ids = await SeedCandidatesAsync(study, 2);
-        var coordinator = Coordinator(study);
+        var requestBody = new EhrReconcileBatchRejectRequest(ids, "Value belongs to a different visit", "Batch reconciliation");
+        var coordinator = Coordinator(
+            study,
+            EsourceEndpoints.BatchRejectAction,
+            EsourceEndpoints.BatchRejectSemanticAction,
+            requestBody.BatchBindingId());
         using var client = factory.CreateSignedClient(coordinator);
 
-        var response = await client.PostAsJsonAsync($"{Base}/batch-reject",
-            new { candidateIds = ids, rejectionReason = "Value belongs to a different visit", changeReason = "Batch reconciliation" }, Ct);
+        var response = await client.PostAsJsonAsync($"{Base}/batch-reject", requestBody, Ct);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync(Ct));
         (await CandidatesAsync(ids)).Should().HaveCount(2).And.OnlyContain(c =>
@@ -91,11 +100,15 @@ public sealed class EsourceReconciliationPostgresTests(InteropPostgresApiFactory
         factory.SkipIfUnavailable();
         string study = NewStudy();
         var ids = await SeedCandidatesAsync(study, 2);
-        var coordinator = Coordinator(study);
+        var requestBody = new EhrReconcileBatchAcceptRequest(ids.Append($"missing-{Guid.NewGuid():N}").ToList(), null, "Batch reconciliation");
+        var coordinator = Coordinator(
+            study,
+            EsourceEndpoints.BatchAcceptAction,
+            EsourceEndpoints.BatchAcceptSemanticAction,
+            requestBody.BatchBindingId());
         using var client = factory.CreateSignedClient(coordinator);
 
-        var response = await client.PostAsJsonAsync($"{Base}/batch-accept",
-            new { candidateIds = ids.Append($"missing-{Guid.NewGuid():N}").ToList() }, Ct);
+        var response = await client.PostAsJsonAsync($"{Base}/batch-accept", requestBody, Ct);
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound, await response.Content.ReadAsStringAsync(Ct));
         (await CandidatesAsync(ids)).Should().OnlyContain(c => c.Status == "PENDING_REVIEW" && c.VersionIndex == 1);
@@ -114,7 +127,17 @@ public sealed class EsourceReconciliationPostgresTests(InteropPostgresApiFactory
         factory.SkipIfUnavailable();
         string study = NewStudy();
         string id = (await SeedCandidatesAsync(study, 1)).Single();
-        var coordinator = Coordinator(study);
+        var unsignedCoordinator = Coordinator(study);
+        using (var unsignedClient = factory.CreateSignedClient(unsignedCoordinator))
+        {
+            var missingSig = await unsignedClient.PostAsJsonAsync(
+                $"{Base}/accept",
+                new { candidateId = id, commitReason = "Verified against the chart", changeReason = "Reconciliation" },
+                Ct);
+            missingSig.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        }
+
+        var coordinator = Coordinator(study, EsourceEndpoints.AcceptCandidateAction, EsourceEndpoints.AcceptCandidateSemanticAction);
         using var client = factory.CreateSignedClient(coordinator);
 
         var accept = await client.PostAsJsonAsync($"{Base}/accept",
@@ -143,12 +166,17 @@ public sealed class EsourceReconciliationPostgresTests(InteropPostgresApiFactory
         factory.SkipIfUnavailable();
         string study = NewStudy();
         string id = (await SeedCandidatesAsync(study, 1)).Single();
-        var coordinator = Coordinator(study);
-        using var client = factory.CreateSignedClient(coordinator);
         var before = (await CandidatesAsync([id])).Single();
 
-        var empty = await client.PostAsJsonAsync($"{Base}/reject", new { candidateId = id, rejectionReason = "" }, Ct);
-        empty.StatusCode.Should().Be(HttpStatusCode.BadRequest, await empty.Content.ReadAsStringAsync(Ct));
+        var coordinatorForEmpty = Coordinator(study, EsourceEndpoints.RejectCandidateAction, EsourceEndpoints.RejectCandidateSemanticAction);
+        using (var emptyClient = factory.CreateSignedClient(coordinatorForEmpty))
+        {
+            var empty = await emptyClient.PostAsJsonAsync($"{Base}/reject", new { candidateId = id, rejectionReason = "" }, Ct);
+            empty.StatusCode.Should().Be(HttpStatusCode.BadRequest, await empty.Content.ReadAsStringAsync(Ct));
+        }
+
+        var coordinator = Coordinator(study, EsourceEndpoints.RejectCandidateAction, EsourceEndpoints.RejectCandidateSemanticAction);
+        using var client = factory.CreateSignedClient(coordinator);
 
         var reject = await client.PostAsJsonAsync($"{Base}/reject",
             new { candidateId = id, rejectionReason = "Taken before consent", changeReason = "Reconciliation" }, Ct);
@@ -185,8 +213,22 @@ public sealed class EsourceReconciliationPostgresTests(InteropPostgresApiFactory
         opened.Status.Should().Be("OPEN");
     }
 
-    private static GatewayIdentity Coordinator(string study) =>
-        TestSecurityContext.Identity($"crc-{Guid.NewGuid():N}", "crc") with { StudyIds = [study], SiteIds = ["SITE-01"] };
+    private static GatewayIdentity Coordinator(
+        string study,
+        string? action = null,
+        string? semanticAction = null,
+        string? batchId = null)
+    {
+        string userId = $"crc-{Guid.NewGuid():N}";
+        return TestSecurityContext.Identity(userId, "crc") with
+        {
+            StudyIds = [study],
+            SiteIds = ["SITE-01"],
+            SigToken = action is not null && semanticAction is not null
+                ? TestSecurityContext.CreateSigToken(userId, action, semanticAction, ["crc"], batchId: batchId)
+                : null,
+        };
+    }
 
     private static string NewStudy() => $"STUDY-ESR-{Guid.NewGuid():N}";
 

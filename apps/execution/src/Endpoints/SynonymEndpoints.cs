@@ -8,7 +8,9 @@ using System.Threading.Tasks;
 
 using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Application.Coding;
+using Cadence.Apps.Execution.Endpoints.Filters;
 using Cadence.Security;
+using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
 
 using Microsoft.AspNetCore.Builder;
@@ -26,9 +28,11 @@ public static class SynonymEndpoints
     public static RouteGroupBuilder MapSynonymEndpoints(this IEndpointRouteBuilder routes)
     {
         var group = routes.MapGroup("/api/v1/execution/coding/synonyms")
-            .WithTags("Medical Coding Synonyms");
+            .WithTags("Medical Coding Synonyms")
+            .AddEndpointFilter<ChangeReasonHeaderFilter>();
 
         group.MapPost("/validate", ValidateSynonymFileAsync)
+            .AllowWithoutChangeReason()
             .WithName("ValidateSynonymFile")
             .WithSummary("Pre-flight validation report for bulk synonym dictionary CSV/XLSX file.")
             .DisableAntiforgery()
@@ -163,12 +167,9 @@ public static class SynonymEndpoints
             return scopeDenied;
         }
 
-        string? changeReason = form["reason_for_change"].FirstOrDefault() ?? form["change_reason"].FirstOrDefault();
-
-        if (string.IsNullOrWhiteSpace(changeReason) && httpContext.Request.Headers.TryGetValue("X-Change-Reason", out var headerVal))
-        {
-            changeReason = headerVal.ToString();
-        }
+        string? changeReason = ChangeReasonHeader.Read(httpContext.Request)
+            ?? form["reason_for_change"].FirstOrDefault()
+            ?? form["change_reason"].FirstOrDefault();
 
         if (string.IsNullOrWhiteSpace(changeReason))
         {
@@ -264,17 +265,15 @@ public static class SynonymEndpoints
             return scopeDenied;
         }
 
-        string? changeReason = httpContext.Request.Query["reason_for_change"].FirstOrDefault() ??
-                               httpContext.Request.Query["change_reason"].FirstOrDefault();
-
-        if (string.IsNullOrWhiteSpace(changeReason) && httpContext.Request.Headers.TryGetValue("X-Change-Reason", out var headerVal))
-        {
-            changeReason = headerVal.ToString();
-        }
+        string? changeReason = ChangeReasonHeader.Read(httpContext.Request)
+            ?? httpContext.Request.Query["reason_for_change"].FirstOrDefault()
+            ?? httpContext.Request.Query["change_reason"].FirstOrDefault();
 
         if (string.IsNullOrWhiteSpace(changeReason))
         {
-            changeReason = "Deactivated synonym rule in workbench.";
+            return TypedResults.Problem(
+                detail: "X-Change-Reason header is required.",
+                statusCode: StatusCodes.Status400BadRequest);
         }
 
         bool deactivated = await synonymService.DeactivateRuleAsync(id, changeReason, cancellationToken);

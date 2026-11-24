@@ -89,15 +89,27 @@ function buildAuditHeaders(
   return headers;
 }
 
-async function fetchAuthenticatedPdf(pathSuffix: string): Promise<Blob> {
+async function fetchAuthenticatedPdf(
+  pathSuffix: string,
+  init: {
+    method?: "GET" | "POST";
+    body?: string;
+    extraHeaders?: Record<string, string>;
+  } = {}
+): Promise<Blob> {
   const token = await getBearerToken();
   const baseUrl = getBaseUrl().replace(/\/+$/, "");
   const url = `${baseUrl}${pathSuffix}`;
-  const headers: Record<string, string> = {};
+  const method = init.method ?? "GET";
+  const headers: Record<string, string> = { ...(init.extraHeaders ?? {}) };
   if (token) {
     headers.Authorization = `Bearer ${token}`;
   }
-  let response = await globalThis.fetch(url, { method: "GET", headers });
+  let response = await globalThis.fetch(url, {
+    method,
+    headers,
+    body: init.body,
+  });
   if (response.status === 401) {
     const errBody = await response
       .clone()
@@ -106,8 +118,9 @@ async function fetchAuthenticatedPdf(pathSuffix: string): Promise<Blob> {
     const freshToken = await refreshBearerTokenOnUnauthorized(url, errBody);
     if (freshToken) {
       response = await globalThis.fetch(url, {
-        method: "GET",
+        method,
         headers: { ...headers, Authorization: `Bearer ${freshToken}` },
+        body: init.body,
       });
     }
   }
@@ -378,7 +391,7 @@ export const ctmsApi = {
     );
   },
 
-  /** Compiles a GxP PDF visit letter with Part 11 signature and eTMF filing (POST /api/v1/ctms/letters/compile). */
+  /** Compiles an unsigned draft GxP PDF visit letter (POST /api/v1/ctms/letters/compile). */
   compileVisitLetter(
     templateName: string,
     payload: SiteVisitLetterModel,
@@ -387,7 +400,26 @@ export const ctmsApi = {
     return unwrapResponse(
       client.POST("/api/v1/ctms/letters/compile", {
         params: { query: { templateName } },
-        body: payload,
+        body: { ...payload, finalize: false },
+        headers: buildAuditHeaders({
+          changeReason:
+            options.changeReason ?? payload.reasonForChange ?? undefined,
+          sigToken: options.sigToken,
+        }),
+      })
+    );
+  },
+
+  /** Finalizes a GxP PDF visit letter with a Part 11 signature and eTMF filing (POST /api/v1/ctms/letters/finalize). */
+  finalizeVisitLetter(
+    templateName: string,
+    payload: SiteVisitLetterModel,
+    options: SignedMutationOptions = {}
+  ): Promise<VisitLetterCompilationResult> {
+    return unwrapResponse(
+      client.POST("/api/v1/ctms/letters/finalize", {
+        params: { query: { templateName } },
+        body: { ...payload, finalize: true },
         headers: buildAuditHeaders({
           changeReason:
             options.changeReason ?? payload.reasonForChange ?? undefined,
@@ -468,10 +500,33 @@ export const ctmsApi = {
     );
   },
 
-  /** Exports the 21 CFR Part 11 signed Delegation of Authority PDF log for a site. */
+  /** Exports an unsigned working Delegation of Authority PDF log for a site. */
   exportSiteDoaPdf(siteId: string): Promise<Blob> {
     return fetchAuthenticatedPdf(
       `/api/v1/ctms/doa/sites/${encodeURIComponent(siteId)}/export-pdf`
+    );
+  },
+
+  /** Exports a 21 CFR Part 11 signed Delegation of Authority PDF log for a site (POST /api/v1/ctms/doa/sites/{site_id}/export-signed-pdf). */
+  exportSignedSiteDoaPdf(
+    siteId: string,
+    changeReason: string,
+    sigToken: string,
+    studyId?: string | null
+  ): Promise<Blob> {
+    return fetchAuthenticatedPdf(
+      `/api/v1/ctms/doa/sites/${encodeURIComponent(siteId)}/export-signed-pdf`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          study_id: studyId || null,
+          reason_for_change: changeReason,
+        }),
+        extraHeaders: {
+          "Content-Type": "application/json",
+          ...buildAuditHeaders({ changeReason, sigToken }),
+        },
+      }
     );
   },
 };

@@ -54,6 +54,20 @@ Indexes:
 - `IX_clinical_queries_TestCode`: (`TestCode`)
 - `IX_clinical_queries_tenant_id`: (`tenant_id`)
 
+## interop.consumed_signature_tokens
+
+Entity: `ConsumedSignatureToken`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `TokenId` | `character varying(128)` | no |  | PK |
+| `ConsumedAt` | `timestamp with time zone` | no |  |  |
+| `RetainUntil` | `timestamp with time zone` | no |  |  |
+
+Indexes:
+
+- `IX_consumed_signature_tokens_RetainUntil`: (`RetainUntil`)
+
 ## interop.device_registrations
 
 Entity: `DeviceRegistrationRecord`

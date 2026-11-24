@@ -34,7 +34,8 @@ public static class LabRangeEndpoints
     public static RouteGroupBuilder MapLabRangeEndpoints(this IEndpointRouteBuilder routes)
     {
         var rangesGroup = routes.MapGroup("/api/v1/execution/lab-ranges")
-            .WithTags("Laboratory Reference Ranges");
+            .WithTags("Laboratory Reference Ranges")
+            .AddEndpointFilter<ChangeReasonHeaderFilter>();
 
         rangesGroup.MapGet("/", GetReferenceRangesAsync)
             .WithName("GetReferenceRanges")
@@ -54,7 +55,6 @@ public static class LabRangeEndpoints
         rangesGroup.MapPost("/", CreateReferenceRangeAsync)
             .WithName("CreateReferenceRange")
             .WithSummary("Create laboratory reference range")
-            .AddEndpointFilter<ChangeReasonHeaderFilter>()
             .Produces<LabReferenceRangeResponse>(StatusCodes.Status201Created)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
@@ -63,7 +63,6 @@ public static class LabRangeEndpoints
         rangesGroup.MapPut("/{id:guid}", UpdateReferenceRangeAsync)
             .WithName("UpdateReferenceRange")
             .WithSummary("Update laboratory reference range")
-            .AddEndpointFilter<ChangeReasonHeaderFilter>()
             .Produces<LabReferenceRangeResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status403Forbidden)
@@ -72,16 +71,17 @@ public static class LabRangeEndpoints
         rangesGroup.MapDelete("/{id:guid}", DeleteReferenceRangeAsync)
             .WithName("DeleteReferenceRange")
             .WithSummary("Deactivate laboratory reference range")
-            .AddEndpointFilter<ChangeReasonHeaderFilter>()
             .Produces<object>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .RequirePermission("lab_range:delete").RequireCallerStudyScope();
 
         var labsGroup = routes.MapGroup("/api/v1/execution/labs")
-            .WithTags("Laboratory Import & Catalog");
+            .WithTags("Laboratory Import & Catalog")
+            .AddEndpointFilter<ChangeReasonHeaderFilter>();
 
         labsGroup.MapPost("/import/dry-run", DryRunImportAsync)
+            .AllowWithoutChangeReason()
             .WithName("DryRunLabRangeImport")
             .WithSummary("Pre-flight validation preview for bulk lab range CSV/XLSX file")
             .DisableAntiforgery()
@@ -94,7 +94,6 @@ public static class LabRangeEndpoints
             .WithName("CommitLabRangeImport")
             .WithSummary("Commit validated bulk lab ranges into persistent store with Part 11 audit logging")
             .DisableAntiforgery()
-            .AddEndpointFilter<ChangeReasonHeaderFilter>()
             .Produces<BulkLabRangeImportJobResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
@@ -116,6 +115,7 @@ public static class LabRangeEndpoints
             .RequirePermission(ImportHistory).RequireCallerStudyScope();
 
         labsGroup.MapPost("/convert-unit", ConvertUnit)
+            .AllowWithoutChangeReason()
             .WithName("ConvertLabUnit")
             .WithSummary("Convert clinical laboratory unit via UCUM SI formulas")
             .Produces<UnitConversionResponse>(StatusCodes.Status200OK)

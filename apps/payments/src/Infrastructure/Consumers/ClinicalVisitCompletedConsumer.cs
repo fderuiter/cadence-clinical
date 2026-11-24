@@ -10,6 +10,7 @@ using Cadence.Apps.Payments.Domain;
 using Cadence.Apps.Payments.Domain.Ledger;
 using Cadence.Apps.Payments.Infrastructure.Persistence;
 using Cadence.Contracts;
+using Cadence.Database;
 using Cadence.Kernel;
 using Cadence.Kernel.Time;
 
@@ -34,6 +35,7 @@ public sealed class ClinicalVisitCompletedConsumer(
 
     public async Task Consume(ConsumeContext<ClinicalVisitCompleted> context)
     {
+        using var _ = StandaloneAuditActorScope.Begin(SystemUserId);
         var msg = context.Message;
 
         if (string.IsNullOrWhiteSpace(msg.EventId) || string.IsNullOrWhiteSpace(msg.Study) || string.IsNullOrWhiteSpace(msg.Site))

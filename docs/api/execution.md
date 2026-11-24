@@ -67,5 +67,6 @@ Generated from `docs/openapi/execution_openapi.json` by `pnpm cadence generate-a
 | `POST` | `/api/v1/execution/subjects/{subjectId}/randomize` | RandomizeSubject | Randomises an enrolled participant under the live scheme and assigns a kit when it needs one. |
 | `PATCH` | `/api/v1/execution/subjects/{subjectId}/site` | AssignSubjectSite | Assigns a clinical site to a screening subject and synchronizes screening enrollment with the kernel. |
 | `PATCH` | `/api/v1/execution/subjects/{subjectId}/state` | UpdateSubjectState |  |
+| `POST` | `/api/v1/execution/subjects/{subjectId}/unblind` | UnblindSubject | Performs an emergency unblinding on a randomized participant with a Part 11 electronic signature. |
 | `POST` | `/api/v1/execution/webhooks/etmf` | EtmfCompletenessWebhook |  |
 | `GET` | `/healthz` | ExecutionHealthCheck | Execution engine health probe. |

@@ -84,6 +84,13 @@ public sealed class CtmsStudySiteScopeIsolationTests : IAsyncLifetime
                 record_id = "DEL-BETA-SHARED",
                 reason_for_change = "Cross-study sign-off attempt",
             });
+        signCrossReq.Headers.Add(
+            GatewayHeaders.SigToken,
+            TestSecurityContext.CreateSigToken(
+                "pi-alpha-shared",
+                DoaEndpoints.SignOffDelegationAction,
+                DoaEndpoints.SignOffDelegationSemanticAction,
+                [Cadence.Security.Rbac.RoleNormalization.ROLE_PRINCIPAL_INVESTIGATOR]));
 
         using var revCrossReq = JsonPost(
             "/api/v1/ctms/doa/revoke",
@@ -197,14 +204,21 @@ public sealed class CtmsStudySiteScopeIsolationTests : IAsyncLifetime
         var created = await delegateRes.Content.ReadFromJsonAsync<DelegationResponseDto>(Ct);
         created.Should().NotBeNull();
 
-        var signRes = await alphaPiShared.PostAsJsonAsync(
+        using var signReq = JsonPost(
             "/api/v1/ctms/doa/sign-off",
             new
             {
                 record_id = created!.RecordId,
                 reason_for_change = "PI sign-off for STUDY-ALPHA delegation",
-            },
-            Ct);
+            });
+        signReq.Headers.Add(
+            GatewayHeaders.SigToken,
+            TestSecurityContext.CreateSigToken(
+                "pi-alpha-shared",
+                DoaEndpoints.SignOffDelegationAction,
+                DoaEndpoints.SignOffDelegationSemanticAction,
+                [Cadence.Security.Rbac.RoleNormalization.ROLE_PRINCIPAL_INVESTIGATOR]));
+        var signRes = await alphaPiShared.SendAsync(signReq, Ct);
         signRes.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var pdfRes = await alphaPiShared.GetAsync("/api/v1/ctms/doa/sites/SITE-SHARED/export-pdf", Ct);
@@ -216,6 +230,21 @@ public sealed class CtmsStudySiteScopeIsolationTests : IAsyncLifetime
             .And.NotContain("DEL-BETA-SHARED")
             .And.NotContain("Dr-Beta-PI-Marker")
             .And.NotContain("staff-beta-shared-marker");
+
+        using var signedPdfReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ctms/doa/sites/SITE-SHARED/export-signed-pdf");
+        signedPdfReq.Headers.Add("X-Change-Reason", "Official signed DoA export for STUDY-ALPHA");
+        signedPdfReq.Headers.Add(
+            GatewayHeaders.SigToken,
+            TestSecurityContext.CreateSigToken(
+                "pi-alpha-shared",
+                DoaEndpoints.ExportSignedPdfAction("SITE-SHARED"),
+                DoaEndpoints.ExportSignedPdfSemanticAction,
+                [Cadence.Security.Rbac.RoleNormalization.ROLE_PRINCIPAL_INVESTIGATOR]));
+        var signedPdfRes = await alphaPiShared.SendAsync(signedPdfReq, Ct);
+        signedPdfRes.StatusCode.Should().Be(HttpStatusCode.OK);
+        string signedPdfText = Encoding.UTF8.GetString(await signedPdfRes.Content.ReadAsByteArrayAsync(Ct));
+        signedPdfText.Should().Contain("DEL-ALPHA-SHARED")
+            .And.NotContain("DEL-BETA-SHARED");
 
         await using var scope = _factory.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<CtmsDbContext>();
@@ -525,12 +554,14 @@ public sealed class CtmsStudySiteScopeIsolationTests : IAsyncLifetime
             builder.ConfigureTestServices(services =>
             {
                 foreach (var descriptor in services
-                    .Where(d => d.ServiceType == typeof(IHostedService)
-                        && d.ImplementationType != typeof(SigTokenUseStoreStartupCheck))
+                    .Where(d => d.ServiceType == typeof(IHostedService))
                     .ToList())
                 {
                     services.Remove(descriptor);
                 }
+
+                services.RemoveAll<ISigTokenUseStore>();
+                services.AddSingleton<ISigTokenUseStore>(sp => new ReplayCache(sp.GetRequiredService<IClock>()));
 
                 var inMemoryServices = new ServiceCollection()
                     .AddEntityFrameworkInMemoryDatabase()

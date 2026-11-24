@@ -2,6 +2,7 @@ using Cadence.Apps.Payments.Endpoints;
 using Cadence.Apps.Payments.Infrastructure.Consumers;
 using Cadence.Apps.Payments.Infrastructure.Persistence;
 using Cadence.Database;
+using Cadence.Database.Signatures;
 using Cadence.Kernel.Time;
 using Cadence.Security.DependencyInjection;
 using Cadence.Security.FieldProtection;
@@ -18,6 +19,7 @@ builder.Services.AddCadenceSecurity();
 // Processor references are encrypted at rest; FIELD_ENCRYPTION_KEY is required and validated at startup (#4770).
 builder.Services.AddCadenceFieldEncryption();
 builder.AddCadencePostgresDbContext<PaymentsDbContext>();
+builder.Services.AddCadenceDurableSigTokenStore<PaymentsDbContext>();
 builder.Services.AddSingleton<IClock>(SystemClock.Instance);
 
 builder.Services.AddMassTransit(x =>

@@ -112,6 +112,7 @@ export const SHARED_SIGNATURE_MODAL_PROPS = {
   signerRole: { type: String, default: "" },
   role: { type: String, default: "" },
   semanticAction: { type: String, default: "" },
+  batchId: { type: String, default: "" },
   onSign: { type: Function, default: null },
   reasons: { type: Array, default: null },
 };
@@ -346,6 +347,7 @@ async function confirm() {
         (props.actionUrl.includes("capture-consent")
           ? "econsent.consent.capture"
           : undefined),
+      ...(props.batchId ? { batchId: props.batchId } : {}),
     });
 
     const sigToken = reauthRes.sig_token;

@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Domain.Randomization;
 using Cadence.Apps.Execution.Domain.Subjects;
+using Cadence.Apps.Execution.Endpoints;
 using Cadence.Apps.Execution.Infrastructure.Persistence;
 using Cadence.Kernel.Time;
 using Cadence.Security.Authentication;
@@ -126,40 +127,57 @@ public sealed class SubjectRouteAuthorityTests(ExecutionPostgresApiFactory facto
         (await ReadSubjectAsync(subject)).Status.Should().Be(SubjectState.Randomized);
     }
 
-    /// <summary>Site roles may change a participant's state, but the handler refuses them an unblinding.</summary>
+    /// <summary>The unsigned PATCH /state route refuses UNBLINDED and directs callers to POST /unblind.</summary>
+    [Fact]
+    public async Task StateRoute_WithUnblindedStatus_Returns400_AndTheParticipantStaysBlinded()
+    {
+        factory.SkipIfUnavailable();
+        string subject = await SeedAsync(SubjectState.Randomized);
+        using var client = factory.CreateSignedClient(Caller("pi-via-state", "Principal Investigator"));
+
+        var state = await client.PatchAsJsonAsync($"/api/v1/execution/subjects/{subject}/state", new { status = "UNBLINDED" }, Ct);
+
+        state.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await state.Content.ReadAsStringAsync(Ct)).Should().Contain("UNBLIND_REQUIRES_DEDICATED_ROUTE");
+        (await ReadSubjectAsync(subject)).Status.Should().Be(SubjectState.Randomized);
+    }
+
+    /// <summary>Roles holding rtsm_unblind:write other than PI or Authorized ER Physician are refused by SubjectAuthority.AuthorizeUnblinding.</summary>
     [Theory]
-    [InlineData("crc")]
     [InlineData("Site Investigator")]
     [InlineData("Lead Investigator")]
+    [InlineData("Emergency Unblinder")]
     public async Task Unblinding_WithoutUnblindingAuthority_Returns403_AndTheParticipantStaysBlinded(string role)
     {
         factory.SkipIfUnavailable();
         string subject = await SeedAsync(SubjectState.Randomized);
-        using var client = factory.CreateSignedClient(Caller($"no-unblind-{role}", role));
+        var caller = CallerSignedForUnblind($"no-unblind-{role}", role, subject);
+        using var client = factory.CreateSignedClient(caller);
 
-        var state = await client.PatchAsJsonAsync($"/api/v1/execution/subjects/{subject}/state", new { status = "UNBLINDED" }, Ct);
+        var response = await client.PostAsync(SubjectEndpoints.UnblindSubjectAction(subject), null, Ct);
 
-        state.StatusCode.Should().Be(HttpStatusCode.Forbidden);
-        (await state.Content.ReadAsStringAsync(Ct)).Should().Contain("UNAUTHORIZED_UNBLIND_ROLE");
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await response.Content.ReadAsStringAsync(Ct)).Should().Contain("UNAUTHORIZED_UNBLIND_ROLE");
         (await ReadSubjectAsync(subject)).Status.Should().Be(SubjectState.Randomized);
     }
 
     /// <summary>
-    /// A data manager and the RTSM emergency unblinder may not change a participant's state through this route at all,
-    /// so the route refuses them before the handler (ADR-2516).
+    /// A CRC and a Data Manager hold no <c>rtsm_unblind:write</c> route permission,
+    /// so the dedicated unblind route refuses them before the handler (ADR-2516).
     /// </summary>
     [Theory]
+    [InlineData("crc")]
     [InlineData("Data Manager")]
-    [InlineData("Emergency Unblinder")]
     public async Task Unblinding_ByARoleWithoutTheRoutePermission_Returns403_AndTheParticipantStaysBlinded(string role)
     {
         factory.SkipIfUnavailable();
         string subject = await SeedAsync(SubjectState.Randomized);
-        using var client = factory.CreateSignedClient(Caller($"no-route-{role}", role));
+        var caller = CallerSignedForUnblind($"no-route-{role}", role, subject);
+        using var client = factory.CreateSignedClient(caller);
 
-        var state = await client.PatchAsJsonAsync($"/api/v1/execution/subjects/{subject}/state", new { status = "UNBLINDED" }, Ct);
+        var response = await client.PostAsync(SubjectEndpoints.UnblindSubjectAction(subject), null, Ct);
 
-        state.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
         (await ReadSubjectAsync(subject)).Status.Should().Be(SubjectState.Randomized);
     }
 
@@ -170,12 +188,12 @@ public sealed class SubjectRouteAuthorityTests(ExecutionPostgresApiFactory facto
     {
         factory.SkipIfUnavailable();
         string subject = await SeedAsync(SubjectState.Randomized);
-        var unblinder = Caller($"unblinder-{role}", role);
+        var unblinder = CallerSignedForUnblind($"unblinder-{role}", role, subject);
         using var client = factory.CreateSignedClient(unblinder);
 
-        var state = await client.PatchAsJsonAsync($"/api/v1/execution/subjects/{subject}/state", new { status = "UNBLINDED" }, Ct);
+        var response = await client.PostAsync(SubjectEndpoints.UnblindSubjectAction(subject), null, Ct);
 
-        state.StatusCode.Should().Be(HttpStatusCode.OK, await state.Content.ReadAsStringAsync(Ct));
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync(Ct));
         var stored = await ReadSubjectAsync(subject);
         stored.Status.Should().Be(SubjectState.Unblinded);
         stored.IsUnblinded.Should().BeTrue();
@@ -185,15 +203,29 @@ public sealed class SubjectRouteAuthorityTests(ExecutionPostgresApiFactory facto
     }
 
     [Fact]
+    public async Task Unblinding_WithoutElectronicSignature_Returns401_AndTheParticipantStaysBlinded()
+    {
+        factory.SkipIfUnavailable();
+        string subject = await SeedAsync(SubjectState.Randomized);
+        using var client = factory.CreateSignedClient(Caller("unblinder-nosig", "Principal Investigator"));
+
+        var response = await client.PostAsync(SubjectEndpoints.UnblindSubjectAction(subject), null, Ct);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        (await ReadSubjectAsync(subject)).Status.Should().Be(SubjectState.Randomized);
+    }
+
+    [Fact]
     public async Task Unblinding_WithoutReasonForChange_Returns400()
     {
         factory.SkipIfUnavailable();
         string subject = await SeedAsync(SubjectState.Randomized);
-        using var client = factory.CreateSignedClient(Caller("unblinder-noreason", "Principal Investigator") with { ChangeReason = null });
+        var caller = CallerSignedForUnblind("unblinder-noreason", "Principal Investigator", subject) with { ChangeReason = null };
+        using var client = factory.CreateSignedClient(caller);
 
-        var state = await client.PatchAsJsonAsync($"/api/v1/execution/subjects/{subject}/state", new { status = "UNBLINDED" }, Ct);
+        var response = await client.PostAsync(SubjectEndpoints.UnblindSubjectAction(subject), null, Ct);
 
-        state.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         (await ReadSubjectAsync(subject)).Status.Should().Be(SubjectState.Randomized);
     }
 
@@ -202,12 +234,13 @@ public sealed class SubjectRouteAuthorityTests(ExecutionPostgresApiFactory facto
     {
         factory.SkipIfUnavailable();
         string subject = await SeedAsync(SubjectState.Randomized);
-        using var client = factory.CreateSignedClient(Caller("unblinder-short", "Principal Investigator") with { ChangeReason = "SAE" });
+        var caller = CallerSignedForUnblind("unblinder-short", "Principal Investigator", subject) with { ChangeReason = "SAE" };
+        using var client = factory.CreateSignedClient(caller);
 
-        var state = await client.PatchAsJsonAsync($"/api/v1/execution/subjects/{subject}/state", new { status = "UNBLINDED" }, Ct);
+        var response = await client.PostAsync(SubjectEndpoints.UnblindSubjectAction(subject), null, Ct);
 
-        state.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        (await state.Content.ReadAsStringAsync(Ct)).Should().Contain("UNBLINDING_REASON_TOO_SHORT");
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await response.Content.ReadAsStringAsync(Ct)).Should().Contain("UNBLINDING_REASON_TOO_SHORT");
         var stored = await ReadSubjectAsync(subject);
         stored.Status.Should().Be(SubjectState.Randomized);
         stored.IsUnblinded.Should().BeFalse();
@@ -251,6 +284,19 @@ public sealed class SubjectRouteAuthorityTests(ExecutionPostgresApiFactory facto
             SiteIds = RoleNormalization.GetNormalizedRoles([role]).Any(SiteAccessEvaluator.SITE_SCOPED_ROLES.Contains) ? ["SITE-01"] : [],
             ChangeReason = Reason,
         };
+
+    private GatewayIdentity CallerSignedForUnblind(string name, string role, string subject)
+    {
+        var identity = Caller(name, role);
+        return identity with
+        {
+            SigToken = TestSecurityContext.CreateSigToken(
+                identity.UserId,
+                SubjectEndpoints.UnblindSubjectAction(subject),
+                SubjectEndpoints.UnblindSubjectSemanticAction,
+                [role]),
+        };
+    }
 
     /// <summary>Seeds a subject in <paramref name="state"/>, walking the transition graph.</summary>
     private async Task<string> SeedAsync(SubjectState state)

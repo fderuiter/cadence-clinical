@@ -269,6 +269,8 @@ app.MapIpKitEndpoints();
 if (args.Contains("--seed"))
 {
     using var scope = app.Services.CreateScope();
+    var actorScope = scope.ServiceProvider.GetRequiredService<IAuditActorScope>();
+    actorScope.RunAs(ServiceAccounts.DatabaseSeeder);
     var dbContext = scope.ServiceProvider.GetRequiredService<ExecutionDbContext>();
     var tenantScope = scope.ServiceProvider.GetService<Cadence.Database.Tenancy.ITenantScope>();
     await ExecutionDbSeeder.SeedAsync(dbContext, tenantScope);

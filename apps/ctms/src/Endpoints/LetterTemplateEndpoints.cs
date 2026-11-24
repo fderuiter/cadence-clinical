@@ -10,7 +10,9 @@ using System.Threading.Tasks;
 using Cadence.Apps.Ctms.Domain;
 using Cadence.Apps.Ctms.Infrastructure.Persistence;
 using Cadence.Compliance;
+using Cadence.Database;
 using Cadence.Kernel.Time;
+using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
 using Cadence.Security.Rbac;
 using Cadence.Templating;
@@ -34,6 +36,12 @@ public static class LetterTemplateEndpoints
     /// <summary>The permission that rendering a visit letter requires.</summary>
     public const string RenderPermission = "ctms_monitoring_visit:create";
 
+    /// <summary>The concrete action a visit letter finalization step-up token is bound to.</summary>
+    public const string FinalizeLetterAction = "/api/v1/ctms/letters/finalize";
+
+    /// <summary>The semantic action a visit letter finalization step-up token must carry.</summary>
+    public const string FinalizeLetterSemanticAction = "ctms.letter.finalize";
+
     /// <summary>The letters CTMS can render, keyed by the value callers pass as <c>templateName</c>.</summary>
     public static TemplateCatalog Catalog { get; } = new(
         typeof(LetterTemplateEndpoints).Assembly,
@@ -55,12 +63,22 @@ public static class LetterTemplateEndpoints
 
         group.MapPost("/letters/compile", CompileAndDispatchLetterAsync)
             .WithName("CompileSiteVisitLetterPdf")
-            .WithSummary("Compiles a GxP-compliant PDF visit letter with Part 11 electronic signature, eTMF filing, and automated email dispatch.")
+            .WithSummary("Compiles an unsigned draft GxP visit letter PDF for review.")
             .Produces<VisitLetterCompilationResultDto>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .RequirePermission(RenderPermission).RequireCallerStudyAndSiteScope();
+
+        group.MapPost("/letters/finalize", FinalizeAndDispatchLetterAsync)
+            .WithName("FinalizeSiteVisitLetterPdf")
+            .WithSummary("Finalizes a GxP-compliant PDF visit letter with Part 11 electronic signature, eTMF filing, and automated email dispatch.")
+            .Produces<VisitLetterCompilationResultDto>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .RequirePermission(RenderPermission).RequireCallerStudyAndSiteScope()
+            .RequireElectronicSignature(FinalizeLetterSemanticAction, _ => FinalizeLetterAction);
 
         group.MapGet("/letters/{letterId}/pdf", GetLetterPdfAsync)
             .WithName("GetSiteVisitLetterPdf")
@@ -101,7 +119,7 @@ public static class LetterTemplateEndpoints
     }
 
     /// <summary>
-    /// Compiles a GxP PDF letter, attaches Part 11 signatures if finalized, files to eTMF, and dispatches email notification.
+    /// Compiles an unsigned draft GxP PDF letter. Finalizing a visit letter requires <see cref="FinalizeAndDispatchLetterAsync"/>.
     /// </summary>
     public static async Task<IResult> CompileAndDispatchLetterAsync(
         [FromQuery] string templateName,
@@ -110,6 +128,80 @@ public static class LetterTemplateEndpoints
         [FromServices] CtmsDbContext dbContext,
         [FromServices] IClock clock,
         [FromServices] IServiceProvider serviceProvider,
+        HttpContext httpContext,
+        CancellationToken ct)
+    {
+        if (request.Finalize)
+        {
+            return TypedResults.Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "Finalization requires signed endpoint",
+                detail: "Use POST /api/v1/ctms/letters/finalize with an electronic signature to finalize a visit letter.",
+                extensions: new Dictionary<string, object?> { ["code"] = "FINALIZE_REQUIRES_DEDICATED_ROUTE" });
+        }
+
+        return await ExecuteLetterCompilationPipelineAsync(
+            templateName,
+            request with { Finalize = false },
+            finalize: false,
+            explicitReasonForChange: null,
+            renderer,
+            dbContext,
+            clock,
+            serviceProvider,
+            httpContext,
+            ct);
+    }
+
+    /// <summary>
+    /// Finalizes a GxP PDF letter under a verified Part 11 step-up signature, files to eTMF, and dispatches email notification.
+    /// </summary>
+    public static async Task<IResult> FinalizeAndDispatchLetterAsync(
+        [FromQuery] string templateName,
+        [FromBody] SiteVisitLetterModel request,
+        [FromServices] ITemplateRenderer renderer,
+        [FromServices] CtmsDbContext dbContext,
+        [FromServices] IClock clock,
+        [FromServices] IServiceProvider serviceProvider,
+        HttpContext httpContext,
+        CancellationToken ct)
+    {
+        if (!MonitoringVisitEndpoints.TryExtractReasonForChange(httpContext, request.ReasonForChange, out string reason, out var problem))
+        {
+            return problem!;
+        }
+
+        string verifiedSigner = CallerScope.UserId(httpContext)
+            ?? httpContext.User?.Identity?.Name
+            ?? request.CraId;
+
+        return await ExecuteLetterCompilationPipelineAsync(
+            templateName,
+            request with
+            {
+                Finalize = true,
+                SignerName = string.IsNullOrWhiteSpace(request.SignerName) ? verifiedSigner : request.SignerName,
+                ReasonForChange = reason,
+            },
+            finalize: true,
+            explicitReasonForChange: reason,
+            renderer,
+            dbContext,
+            clock,
+            serviceProvider,
+            httpContext,
+            ct);
+    }
+
+    private static async Task<IResult> ExecuteLetterCompilationPipelineAsync(
+        string templateName,
+        SiteVisitLetterModel request,
+        bool finalize,
+        string? explicitReasonForChange,
+        ITemplateRenderer renderer,
+        CtmsDbContext dbContext,
+        IClock clock,
+        IServiceProvider serviceProvider,
         HttpContext httpContext,
         CancellationToken ct)
     {
@@ -174,10 +266,10 @@ public static class LetterTemplateEndpoints
             visitId = "VISIT-" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
         }
 
-        var user = httpContext.User?.Identity?.Name ?? request.CraId;
+        var user = CallerScope.UserId(httpContext) ?? httpContext.User?.Identity?.Name ?? request.CraId;
         var now = clock.UtcNow;
 
-        var normalizedRequest = request with { StudyId = trimmedStudyId, SiteId = trimmedSiteId, VisitId = visitId };
+        var normalizedRequest = request with { StudyId = trimmedStudyId, SiteId = trimmedSiteId, VisitId = visitId, Finalize = finalize };
         var pdfResult = await GxpPdfCompiler.CompileLetterPdfAsync(
             templateName,
             normalizedRequest,
@@ -215,6 +307,11 @@ public static class LetterTemplateEndpoints
             }
         }
 
+        string effectiveReason = explicitReasonForChange
+            ?? ChangeReasonHeader.Read(httpContext.Request)
+            ?? request.ReasonForChange
+            ?? "Compiled GxP visit letter PDF and executed automated dispatch pipeline.";
+
         // Persist CtmsGeneratedLetter
         var letterStatus = pdfResult.IsSigned ? CtmsGeneratedLetterStatus.Finalized : CtmsGeneratedLetterStatus.Draft;
         var entity = new CtmsGeneratedLetter(letterId, letterStatus)
@@ -234,7 +331,7 @@ public static class LetterTemplateEndpoints
             CreatedAt = now.UtcDateTime,
             CreatedBy = user,
             VersionIndex = 1,
-            ReasonForChange = request.ReasonForChange ?? "Compiled GxP visit letter PDF and executed automated dispatch pipeline."
+            ReasonForChange = effectiveReason
         };
 
         dbContext.CtmsGeneratedLetters.Add(entity);
@@ -252,11 +349,12 @@ public static class LetterTemplateEndpoints
             CreatedAt = now.UtcDateTime,
             CreatedBy = user,
             VersionIndex = 1,
-            ReasonForChange = request.ReasonForChange ?? "Visit letter PDF compilation and audit trail persistence."
+            ReasonForChange = effectiveReason
         };
 
         dbContext.CtmsAuditLogs.Add(audit);
 
+        using var _ = StandaloneAuditActorScope.Begin(string.IsNullOrWhiteSpace(user) ? "svc:ctms-letter-pipeline" : user);
         await dbContext.SaveChangesAsync(ct);
 
         var resultDto = new VisitLetterCompilationResultDto(
@@ -582,6 +680,7 @@ public static class EtmfFilingHelper
         var saveChangesMethod = dbContextType.GetMethod("SaveChangesAsync", [typeof(CancellationToken)]);
         if (saveChangesMethod is not null)
         {
+            using var _ = StandaloneAuditActorScope.Begin(string.IsNullOrWhiteSpace(user) ? "svc:ctms-letter-pipeline" : user);
             await (Task)saveChangesMethod.Invoke(etmfDb, [ct])!;
         }
 
@@ -674,6 +773,7 @@ public static class EmailDispatchHelper
         var saveChangesMethod = dbContextType.GetMethod("SaveChangesAsync", [typeof(CancellationToken)]);
         if (saveChangesMethod is not null)
         {
+            using var _ = StandaloneAuditActorScope.Begin(string.IsNullOrWhiteSpace(user) ? "svc:ctms-letter-pipeline" : user);
             await (Task)saveChangesMethod.Invoke(notificationsDb, [ct])!;
         }
 

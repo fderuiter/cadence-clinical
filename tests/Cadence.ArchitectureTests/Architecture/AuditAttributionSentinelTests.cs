@@ -47,11 +47,32 @@ public partial class AuditAttributionSentinelTests
     [InlineData("    public const string SystemUserId = \"system-pubsub\";", true)]
     [InlineData("    public string CreatedBy { get; set; } = string.Empty;", false)]
     [InlineData("    public required string CreatedBy { get; set; }", false)]
-    [InlineData("    private const string DefaultChangeReason = \"system_operation\";", false)]
+    [InlineData("    private const string ChangeReasonHeaderName = \"X-Change-Reason\";", false)]
     [InlineData("        new(\"svc:econsent-consumer\", \"Automated consent-completion enrollment\");", false)]
     public void AnonymousActorDefaultPatternCatchesKnownShapes(string line, bool flagged)
     {
         AnonymousActorDefault().IsMatch(line).Should().Be(flagged);
+    }
+
+    [Fact(DisplayName = "ChangeReason_MustNeverFallbackTo_SystemOperation")]
+    [Trait("Category", "Architecture")]
+    [GxPRequirement("PRD-SYS-001")]
+    public void ChangeReasonMustNeverFallbackToSystemOperation()
+    {
+        string root = FindRepositoryRoot();
+        var offenders = new[] { "apps", "packages" }
+            .Select(dir => Path.Combine(root, dir))
+            .Where(Directory.Exists)
+            .SelectMany(dir => Directory.EnumerateFiles(dir, "*.cs", SearchOption.AllDirectories))
+            .Where(IsProductionSource)
+            .SelectMany(file => File.ReadLines(file)
+                .Select((line, index) => (file, line, number: index + 1)))
+            .Where(x => x.line.Contains("\"system_operation\"", StringComparison.Ordinal))
+            .Select(x => $"{Path.GetRelativePath(root, x.file)}:{x.number}: {x.line.Trim()}")
+            .ToList();
+
+        offenders.Should().BeEmpty(
+            "audit change reasons must come from the caller's X-Change-Reason header or an explicit ServiceAccount, never a \"system_operation\" fallback");
     }
 
     // An actor-named member or local (…By, …UserId, …ReaderId, …Actor), optionally a { get; set; } property,

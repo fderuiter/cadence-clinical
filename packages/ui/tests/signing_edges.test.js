@@ -6,6 +6,9 @@ import {
   encryptAESGCM,
   decryptAESGCM,
   validateField,
+  SEMANTIC_ACTIONS,
+  isValidSemanticAction,
+  buildStepUpVerificationPayload,
 } from "../signing.js";
 
 // Edge cases of the Part 11 signing helpers, checked against node:crypto as an independent reference (#5335).
@@ -188,6 +191,64 @@ describe("validateField", () => {
   it("skips format and range checks on an empty optional value", () => {
     expect(validateField(field({ pattern: "^x$", min: 1 }), "")).toEqual({
       valid: true,
+    });
+  });
+});
+
+describe("SEMANTIC_ACTIONS and step-up batch_id binding", () => {
+  it("keeps every canonical semantic_action compliant with the v3 grammar", () => {
+    expect(SEMANTIC_ACTIONS.CTMS_DOA_EXPORT_SIGNED_PDF).toBe(
+      "ctms.doa.export_signed_pdf"
+    );
+    expect(SEMANTIC_ACTIONS.CTMS_GREENLIGHT_CERTIFY).toBe(
+      "ctms.greenlight.certify"
+    );
+    expect(SEMANTIC_ACTIONS.CTMS_GREENLIGHT_BATCH_CERTIFY).toBe(
+      "ctms.greenlight.batch_certify"
+    );
+    expect(SEMANTIC_ACTIONS.CTMS_MONITORING_VISIT_SIGN_OFF).toBe(
+      "ctms.monitoring_visit.sign_off"
+    );
+    expect(SEMANTIC_ACTIONS.CTMS_LETTER_FINALIZE).toBe("ctms.letter.finalize");
+    expect(SEMANTIC_ACTIONS.EXECUTION_SUBJECT_UNBLIND).toBe(
+      "execution.subject.unblind"
+    );
+
+    for (const value of Object.values(SEMANTIC_ACTIONS)) {
+      expect(isValidSemanticAction(value)).toBe(true);
+    }
+  });
+
+  it("includes trimmed batch_id in step-up verification payloads when batchId is provided", () => {
+    const payload = buildStepUpVerificationPayload({
+      password: "Password123!", // pragma: allowlist secret
+      action: "/api/v1/ctms/greenlight/batch-certify",
+      semanticAction: SEMANTIC_ACTIONS.CTMS_GREENLIGHT_BATCH_CERTIFY,
+      batchId:
+        "  9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08  ",
+    });
+
+    expect(payload).toEqual({
+      password: "Password123!", // pragma: allowlist secret
+      action: "/api/v1/ctms/greenlight/batch-certify",
+      semantic_action: "ctms.greenlight.batch_certify",
+      batch_id:
+        "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+    });
+  });
+
+  it("omits batch_id when batchId is null or blank", () => {
+    const payload = buildStepUpVerificationPayload({
+      password: "Password123!", // pragma: allowlist secret
+      action: "/api/v1/execution/subjects/sub-001/unblind",
+      semanticAction: SEMANTIC_ACTIONS.EXECUTION_SUBJECT_UNBLIND,
+      batchId: "   ",
+    });
+
+    expect(payload).toEqual({
+      password: "Password123!", // pragma: allowlist secret
+      action: "/api/v1/execution/subjects/sub-001/unblind",
+      semantic_action: "execution.subject.unblind",
     });
   });
 });

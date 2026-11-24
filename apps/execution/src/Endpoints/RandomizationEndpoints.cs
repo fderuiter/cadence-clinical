@@ -39,7 +39,9 @@ public static class RandomizationEndpoints
 
     public static IEndpointRouteBuilder MapRandomizationEndpoints(this IEndpointRouteBuilder app)
     {
-        var schemes = app.MapGroup("/api/v1/execution/randomization/schemes").WithTags("Randomization");
+        var schemes = app.MapGroup("/api/v1/execution/randomization/schemes")
+            .WithTags("Randomization")
+            .AddEndpointFilter<ChangeReasonHeaderFilter>();
 
         schemes.MapPost("/", DraftSchemeAsync)
             .WithName("DraftRandomizationScheme")
@@ -48,8 +50,7 @@ public static class RandomizationEndpoints
             .ProducesValidationProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .RequirePermission("randomization_scheme:draft").RequireCallerStudyScope()
-            .AddEndpointFilter<ValidationFilter<RandomizationSchemeDraftRequest>>()
-            .AddEndpointFilter<ChangeReasonHeaderFilter>();
+            .AddEndpointFilter<ValidationFilter<RandomizationSchemeDraftRequest>>();
 
         schemes.MapPost("/{schemeId:guid}/approve", ApproveSchemeAsync)
             .WithName("ApproveRandomizationScheme")
@@ -60,8 +61,7 @@ public static class RandomizationEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict)
             .RequirePermission("randomization_scheme:approve").RequireCallerStudyScope()
-            .RequireElectronicSignature(ApproveSchemeSemanticAction, ApproveSchemeActionFor)
-            .AddEndpointFilter<ChangeReasonHeaderFilter>();
+            .RequireElectronicSignature(ApproveSchemeSemanticAction, ApproveSchemeActionFor);
 
         schemes.MapGet("/", ListSchemesAsync)
             .WithName("ListRandomizationSchemes")
@@ -71,8 +71,11 @@ public static class RandomizationEndpoints
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .RequirePermission("randomization_scheme:read").RequireCallerStudyScope();
 
-        app.MapGroup("/api/v1/execution/subjects").WithTags("Subjects")
-            .MapPost("/{subjectId}/randomize", RandomizeSubjectAsync)
+        var subjects = app.MapGroup("/api/v1/execution/subjects")
+            .WithTags("Subjects")
+            .AddEndpointFilter<ChangeReasonHeaderFilter>();
+
+        subjects.MapPost("/{subjectId}/randomize", RandomizeSubjectAsync)
             .WithName("RandomizeSubject")
             .WithSummary("Randomises an enrolled participant under the live scheme and assigns a kit when it needs one.")
             .Produces<RandomizationResponse>(StatusCodes.Status200OK)
@@ -82,8 +85,7 @@ public static class RandomizationEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict)
             .RequirePermission("subject_enrollment:randomize").RequireCallerStudyScope()
-            .RequireElectronicSignature(RandomizeSubjectSemanticAction, RandomizeSubjectActionFor)
-            .AddEndpointFilter<ChangeReasonHeaderFilter>();
+            .RequireElectronicSignature(RandomizeSubjectSemanticAction, RandomizeSubjectActionFor);
 
         return app;
     }

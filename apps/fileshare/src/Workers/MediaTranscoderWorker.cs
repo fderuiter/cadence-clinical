@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 
 using Cadence.Apps.Fileshare.Domain;
 using Cadence.Apps.Fileshare.Infrastructure.Persistence;
+using Cadence.Database;
 using Cadence.Database.Tenancy;
 
 using Microsoft.EntityFrameworkCore;
@@ -76,14 +77,18 @@ public sealed class MediaTranscoderWorker : FileshareWorkerBase
             () => ProcessSingleRecordAsync(dbContext, processor, record, ct), ct))).ConfigureAwait(false);
     }
 
+    private const string MediaTranscoderServiceAccount = "svc:fileshare-media-transcoder";
+
     private async Task ProcessSingleRecordAsync(
         FileshareDbContext dbContext,
         IMediaTranscoderProcessor processor,
         FileRecord record,
         CancellationToken ct)
     {
+        using var _ = StandaloneAuditActorScope.Begin(MediaTranscoderServiceAccount);
         record.TranscodeStatus = "PROCESSING";
         record.TranscodeError = null;
+        record.ReasonForChange = "Automated HLS media transcoding started";
         await dbContext.SaveChangesAsync(ct).ConfigureAwait(false);
 
         int attempt = 0;
@@ -116,11 +121,13 @@ public sealed class MediaTranscoderWorker : FileshareWorkerBase
             record.TranscodeStatus = "COMPLETED";
             record.HlsManifestKey = manifestKey;
             record.TranscodeError = null;
+            record.ReasonForChange = "Automated HLS media transcoding completed";
         }
         else
         {
             record.TranscodeStatus = "FAILED";
             record.TranscodeError = lastError ?? "Transcode failed after maximum retries.";
+            record.ReasonForChange = "Automated HLS media transcoding failed";
         }
 
         await dbContext.SaveChangesAsync(ct).ConfigureAwait(false);

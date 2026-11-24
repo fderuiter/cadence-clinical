@@ -890,7 +890,9 @@ public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionPostgresAp
     /// Signs the scenario as the caller a deployment would (ADR-2516, #5361): the eTMF completeness webhook as the eTMF
     /// service, which alone holds <c>site_compliance:etmf_sync</c>; site activation and compliance reads, which name a
     /// site, as the sponsor data manager, who certifies activation and is not site-scoped. Every other route uses the
-    /// default test identity.
+    /// default test identity. Mutating HTTP fixtures recorded before route-group <c>ChangeReasonHeaderFilter</c>
+    /// enforcement that omit an explicit <c>X-Change-Reason</c> header receive a scenario-attributed change reason
+    /// (<see cref="TestSecurityContext.GatewaySigningHandler"/> preserves any explicit fixture header first).
     /// </summary>
     private HttpClient CreateClientFor(GoldenMasterScenario scenario)
     {
@@ -917,6 +919,11 @@ public sealed class SubjectGoldenMasterTests : IClassFixture<ExecutionPostgresAp
         else if (route.StartsWith("/api/v1/execution/sites/", StringComparison.Ordinal))
         {
             identity = TestSecurityContext.Identity("sponsor-dm", RoleNormalization.ROLE_SPONSOR_DM);
+        }
+
+        if (scenario.Method is "POST" or "PUT" or "PATCH" or "DELETE")
+        {
+            identity = identity with { ChangeReason = $"Golden-master scenario {scenario.ScenarioId}" };
         }
 
         return _testApi.CreateSignedClient(identity);

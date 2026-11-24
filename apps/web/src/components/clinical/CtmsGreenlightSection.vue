@@ -236,15 +236,29 @@
         </div>
       </template>
     </div>
+
+    <SignatureCaptureModal
+      :is-open="sigModalOpen"
+      :username="signerUsername"
+      :signer-name="signerDisplayName"
+      :reasons="GREENLIGHT_SIGNING_REASONS"
+      :action-url="sigActionUrl"
+      :semantic-action="sigSemanticAction"
+      :batch-id="sigBatchId"
+      :on-sign="handleGreenlightSigned"
+      @cancel="sigModalOpen = false"
+    />
   </section>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
+import { SEMANTIC_ACTIONS, sha256 } from "ui";
 import { ctmsApi, type SiteGreenlightGate } from "../../api/ctmsApi";
 import { canCertifyGreenlight } from "../../canvas/authority";
 import { useScopedWorkspaceSection } from "../../composables/useScopedWorkspaceSection";
 import { formatClinicalStatus } from "../../utils/clinicalLabels";
+import SignatureCaptureModal from "../SignatureCaptureModal.vue";
 import CtmsSectionScopeBar from "./CtmsSectionScopeBar.vue";
 import "./ctmsWorkspaceSection.css";
 
@@ -280,6 +294,12 @@ const {
   fallbackErrorMessage: "Startup readiness could not be loaded.",
 });
 
+const GREENLIGHT_SIGNING_REASONS = [
+  "I certify that all startup greenlight facets are satisfied for trial activation",
+  "SPONSOR_APPROVAL",
+  "APPROVAL",
+];
+
 const canCertify = computed(() => canCertifyGreenlight(authStore));
 const countryCode = ref("US");
 const singleGate = ref<SiteGreenlightGate | null>(null);
@@ -288,6 +308,23 @@ const selectedMatrixSites = ref<string[]>([]);
 const certifyReason = ref("");
 const batchReason = ref("");
 const certifying = ref(false);
+
+const sigModalOpen = ref(false);
+const sigMode = ref<"single" | "batch">("single");
+const sigActionUrl = ref("");
+const sigSemanticAction = ref("");
+const sigBatchId = ref("");
+
+const signerUsername = computed(
+  () =>
+    authStore.identity?.username ||
+    authStore.user?.username ||
+    authStore.userId ||
+    ""
+);
+const signerDisplayName = computed(
+  () => authStore.user?.displayName || signerUsername.value
+);
 
 function formatUtcDate(iso?: string | null): string {
   if (!iso) return "";
@@ -328,31 +365,15 @@ async function loadReadiness() {
   }
 }
 
-async function certifySingleSite() {
+function certifySingleSite() {
   if (!singleGate.value || !certifyReason.value.trim() || !canCertify.value) {
     return;
   }
-  certifying.value = true;
-  try {
-    const updated = await ctmsApi.certifySiteGreenlight(
-      singleGate.value.site_id,
-      singleGate.value.study_id,
-      certifyReason.value.trim(),
-      singleGate.value.country_code
-    );
-    singleGate.value = updated;
-    certifyReason.value = "";
-    toasts.push({
-      tone: "success",
-      title: `Site ${updated.site_id} certified`,
-      message: "Startup greenlight certification recorded.",
-    });
-    await loadReadiness();
-  } catch (err) {
-    toasts.apiError("Site certification failed", err);
-  } finally {
-    certifying.value = false;
-  }
+  sigMode.value = "single";
+  sigActionUrl.value = `/api/v1/ctms/startup/sites/${encodeURIComponent(singleGate.value.site_id)}/greenlight/certify`;
+  sigSemanticAction.value = SEMANTIC_ACTIONS.CTMS_GREENLIGHT_CERTIFY;
+  sigBatchId.value = "";
+  sigModalOpen.value = true;
 }
 
 async function certifyBatch() {
@@ -365,26 +386,77 @@ async function certifyBatch() {
   ) {
     return;
   }
+  const canonicalSites = [...selectedMatrixSites.value]
+    .map((s) => s.trim())
+    .sort()
+    .join(",");
+  sigMode.value = "batch";
+  sigActionUrl.value = "/api/v1/ctms/startup/matrix/batch-certify";
+  sigSemanticAction.value = SEMANTIC_ACTIONS.CTMS_GREENLIGHT_BATCH_CERTIFY;
+  sigBatchId.value = await sha256(canonicalSites);
+  sigModalOpen.value = true;
+}
+
+async function handleGreenlightSigned(sigToken: string, signingReason: string) {
   certifying.value = true;
   try {
+    if (sigMode.value === "single") {
+      if (!singleGate.value) {
+        return { status: "FAILED", message: "No site selected." };
+      }
+      const reason = certifyReason.value.trim() || signingReason;
+      const updated = await ctmsApi.certifySiteGreenlight(
+        singleGate.value.site_id,
+        singleGate.value.study_id,
+        reason,
+        singleGate.value.country_code,
+        sigToken
+      );
+      singleGate.value = updated;
+      certifyReason.value = "";
+      sigModalOpen.value = false;
+      toasts.push({
+        tone: "success",
+        title: `Site ${updated.site_id} certified`,
+        message: "Startup greenlight certification recorded.",
+      });
+      await loadReadiness();
+      return { kind: "signed" };
+    }
+
+    const study = studyInput.value.trim();
+    const reason = batchReason.value.trim() || signingReason;
     const res = await ctmsApi.batchCertifyCountrySites(
       {
         study_id: study,
         country_code: countryCode.value,
         site_ids: selectedMatrixSites.value,
       },
-      batchReason.value.trim()
+      reason,
+      sigToken
     );
     batchReason.value = "";
     selectedMatrixSites.value = [];
+    sigModalOpen.value = false;
     toasts.push({
       tone: "success",
-      title: `Certified ${res.total_certified} site(s)`,
+      title: `Certified ${res.total_certified ?? res.certified_count ?? 0} site(s)`,
       message: `Country ${res.country_code} startup greenlight updated.`,
     });
     await loadReadiness();
+    return { kind: "signed" };
   } catch (err) {
-    toasts.apiError("Batch certification failed", err);
+    toasts.apiError(
+      sigMode.value === "single"
+        ? "Site certification failed"
+        : "Batch certification failed",
+      err
+    );
+    return {
+      status: "FAILED",
+      message:
+        err instanceof Error ? err.message : "Greenlight certification failed.",
+    };
   } finally {
     certifying.value = false;
   }

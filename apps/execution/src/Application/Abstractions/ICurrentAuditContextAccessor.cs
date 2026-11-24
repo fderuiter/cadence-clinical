@@ -15,9 +15,10 @@ public interface ICurrentAuditContextAccessor
     string UserId { get; }
 
     /// <summary>
-    /// The reason for change: the service account's declared reason, else the caller's
-    /// <c>X-Change-Reason</c> header, else <c>"system_operation"</c>.
+    /// The reason for change: the service account's declared reason, or the caller's <c>X-Change-Reason</c> header.
+    /// Throws <see cref="AuditChangeReasonUnresolvedException"/> when neither is present.
     /// </summary>
+    /// <exception cref="AuditChangeReasonUnresolvedException">No <c>X-Change-Reason</c> header and no service account.</exception>
     string ChangeReason { get; }
 }
 
@@ -38,3 +39,12 @@ public interface IAuditActorScope
 public sealed class AuditActorUnresolvedException()
     : InvalidOperationException(
         "No audit actor: the request has no authenticated 'sub' claim and no service account was declared for this scope.");
+
+/// <summary>
+/// Thrown when an audited write has no resolvable reason for change. Mutating HTTP routes reject missing
+/// <c>X-Change-Reason</c> headers ahead of the handler via <c>ChangeReasonHeaderFilter</c>, while background
+/// consumers and seeders bind a <see cref="ServiceAccount"/>.
+/// </summary>
+public sealed class AuditChangeReasonUnresolvedException()
+    : InvalidOperationException(
+        "No audit change reason: the request has no 'X-Change-Reason' header and no service account was declared for this scope.");

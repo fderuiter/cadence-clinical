@@ -1,11 +1,13 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
+import { sha256 } from "ui";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { nextTick } from "vue";
 import {
   ctmsApi,
   type SiteGreenlightGateResponse,
 } from "../../src/api/ctmsApi";
+import { etmfService } from "../../src/api/etmf";
 import SsuGreenlightConsole from "../../src/components/clinical/SsuGreenlightConsole.vue";
 import { useAuthStore } from "../../src/stores/auth";
 import { useToastStore } from "../../src/stores/toasts";
@@ -66,6 +68,9 @@ describe("SsuGreenlightConsole Country-Level Multi-Site Activation Matrix", () =
     vi.spyOn(ctmsApi, "getCountryMatrix").mockResolvedValue(
       structuredClone(SAMPLE_MATRIX)
     );
+    vi.spyOn(etmfService, "verifySignature").mockResolvedValue({
+      sig_token: "sig-ssu-batch-001",
+    });
     vi.spyOn(ctmsApi, "batchCertifyCountrySites").mockResolvedValue({
       success: true,
       study_id: "PROTOCOL-2026-01",
@@ -160,15 +165,92 @@ describe("SsuGreenlightConsole Country-Level Multi-Site Activation Matrix", () =
     await nextTick();
 
     await wrapper.find(".btn-submit-batch-certify").trigger("click");
+    await vi.waitFor(() => {
+      expect(wrapper.find("#sig-password").exists()).toBe(true);
+    });
+
+    await wrapper.find("#sig-password").setValue("Password123!"); // pragma: allowlist secret
+    await wrapper.find("#sig-reason").setValue("SPONSOR_APPROVAL");
+    await wrapper.find("#btn-confirm-sig").trigger("click");
     await flushPromises();
     await nextTick();
 
-    expect(ctmsApi.batchCertifyCountrySites).toHaveBeenCalledTimes(1);
+    const expectedBatchHash = await sha256("SITE-101");
+    expect(etmfService.verifySignature).toHaveBeenCalledWith(
+      expect.objectContaining({
+        username: "sponsor_dm_01",
+        action: "/api/v1/ctms/startup/matrix/batch-certify",
+        semanticAction: "ctms.greenlight.batch_certify",
+        batchId: expectedBatchHash,
+      })
+    );
+    expect(ctmsApi.batchCertifyCountrySites).toHaveBeenCalledWith(
+      expect.objectContaining({
+        study_id: "PROTOCOL-2026-01",
+        country_code: "US",
+        site_ids: ["SITE-101"],
+      }),
+      expect.any(String),
+      "sig-ssu-batch-001"
+    );
     expect(wrapper.find(".matrix-table").text()).toContain(
       "Greenlight Certified"
     );
     expect(wrapper.text()).toContain("server-signed-token-site-101");
     expect(wrapper.text()).not.toContain("hmac_sha256_token_");
+  });
+
+  it("executes single-site greenlight certification via SignatureCaptureModal and forwards X-Sig-Token", async () => {
+    vi.spyOn(ctmsApi, "evaluateSiteGreenlight").mockResolvedValue(
+      structuredClone(SAMPLE_MATRIX[0])
+    );
+    vi.spyOn(ctmsApi, "certifySiteGreenlight").mockResolvedValue({
+      ...SAMPLE_MATRIX[0],
+      overall_status: "APPROVED",
+      greenlight_certified_at: "2026-10-05T12:00:00Z",
+      greenlight_certified_by: "sponsor_dm_01",
+      greenlight_token: "server-signed-single-site-101",
+    });
+    vi.mocked(etmfService.verifySignature).mockResolvedValue({
+      sig_token: "sig-ssu-single-001",
+    });
+
+    const wrapper = mount(SsuGreenlightConsole, {
+      props: {
+        studyId: "PROTOCOL-2026-01",
+        siteId: "SITE-101",
+        countryCode: "US",
+        initialViewMode: "single",
+      },
+      global: { plugins: [pinia] },
+    });
+    await flushPromises();
+    await nextTick();
+
+    await wrapper.find("#btn-ssu-certify-single").trigger("click");
+    await nextTick();
+    await wrapper.find("#btn-confirm-single-certify").trigger("click");
+    await flushPromises();
+
+    await wrapper.find("#sig-password").setValue("Password123!"); // pragma: allowlist secret
+    await wrapper.find("#sig-reason").setValue("SPONSOR_APPROVAL");
+    await wrapper.find("#btn-confirm-sig").trigger("click");
+    await flushPromises();
+
+    expect(etmfService.verifySignature).toHaveBeenCalledWith(
+      expect.objectContaining({
+        username: "sponsor_dm_01",
+        action: "/api/v1/ctms/startup/sites/SITE-101/greenlight/certify",
+        semanticAction: "ctms.greenlight.certify",
+      })
+    );
+    expect(ctmsApi.certifySiteGreenlight).toHaveBeenCalledWith(
+      "SITE-101",
+      "PROTOCOL-2026-01",
+      "All 6 startup facets verified and approved",
+      "US",
+      "sig-ssu-single-001"
+    );
   });
 
   it("surfaces HTTP failures without synthesizing fallback sites, APPROVED states, or hmac_sha256_token_ strings", async () => {

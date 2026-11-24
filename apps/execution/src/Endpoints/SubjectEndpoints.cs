@@ -43,6 +43,16 @@ namespace Cadence.Apps.Execution.Endpoints;
 /// </summary>
 public static partial class SubjectEndpoints
 {
+    /// <summary>The semantic action an emergency subject unblinding step-up token must carry.</summary>
+    public const string UnblindSubjectSemanticAction = "execution.subject.unblind";
+
+    /// <summary>The concrete action an emergency subject unblinding step-up token is bound to.</summary>
+    public static string UnblindSubjectAction(string subjectId) =>
+        $"/api/v1/execution/subjects/{Uri.EscapeDataString(subjectId)}/unblind";
+
+    private static string UnblindSubjectActionFor(HttpContext context) =>
+        UnblindSubjectAction(context.Request.RouteValues["subjectId"]?.ToString() ?? string.Empty);
+
     [LoggerMessage(
         EventId = 3001,
         Level = LogLevel.Information,
@@ -91,6 +101,12 @@ public static partial class SubjectEndpoints
         Message = "Assigning site '{SiteId}' to subject '{SubjectId}' with reason '{ChangeReason}'")]
     public static partial void LogAssigningSubjectSite(this ILogger logger, string subjectId, string? siteId, string changeReason);
 
+    [LoggerMessage(
+        EventId = 3009,
+        Level = LogLevel.Warning,
+        Message = "Emergency unblinding subject '{SubjectId}' with reason '{ChangeReason}'")]
+    public static partial void LogUnblindingSubject(this ILogger logger, string subjectId, string changeReason);
+
     public static IEndpointRouteBuilder MapSubjectEndpoints(this IEndpointRouteBuilder app)
     {
         // `.WithOpenApi()` from the design doc's own §3.3 sample is deliberately not reproduced here: it is
@@ -100,7 +116,8 @@ public static partial class SubjectEndpoints
         // registered/mapped by whichever ticket wires `Program.cs`) needs no per-group opt-in call to include
         // these routes, so dropping it changes no observable behavior.
         var group = app.MapGroup("/api/v1/execution/subjects")
-            .WithTags("Subjects");
+            .WithTags("Subjects")
+            .AddEndpointFilter<ChangeReasonHeaderFilter>();
 
         group.MapPost("/", CreateSubjectAsync)
             .WithName("CreateSubject")
@@ -146,8 +163,18 @@ public static partial class SubjectEndpoints
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
             .RequirePermission("subject_enrollment:update").RequireCallerStudyScope()
-            .AddEndpointFilter<ValidationFilter<SubjectStateUpdateRequest>>()
-            .AddEndpointFilter<ChangeReasonHeaderFilter>();
+            .AddEndpointFilter<ValidationFilter<SubjectStateUpdateRequest>>();
+
+        group.MapPost("/{subjectId}/unblind", UnblindSubjectAsync)
+            .WithName("UnblindSubject")
+            .WithSummary("Performs an emergency unblinding on a randomized participant with a Part 11 electronic signature.")
+            .Produces<SubjectResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .RequirePermission("rtsm_unblind:write").RequireCallerStudyScope()
+            .RequireElectronicSignature(UnblindSubjectSemanticAction, UnblindSubjectActionFor);
 
         group.MapPatch("/{subjectId}/site", AssignSubjectSiteAsync)
             .WithName("AssignSubjectSite")
@@ -158,8 +185,7 @@ public static partial class SubjectEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict)
             .RequirePermission("subject_enrollment:update").RequireCallerStudyScope()
-            .AddEndpointFilter<ValidationFilter<SubjectSiteAssignmentRequest>>()
-            .AddEndpointFilter<ChangeReasonHeaderFilter>();
+            .AddEndpointFilter<ValidationFilter<SubjectSiteAssignmentRequest>>();
 
         group.MapGet("/", ListSubjectsAsync)
             .WithName("ListSubjects")
@@ -190,14 +216,12 @@ public static partial class SubjectEndpoints
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
-            .RequirePermission("subject_enrollment:update").RequireCallerStudyScope()
-            .AddEndpointFilter<ChangeReasonHeaderFilter>();
+            .RequirePermission("subject_enrollment:update").RequireCallerStudyScope();
 
         group.MapDelete("/{subjectId}/demographics", DeleteSubjectDemographicsAsync)
             .WithName("DeleteSubjectDemographics")
             .ProducesProblem(StatusCodes.Status403Forbidden)
-            .RequirePermission("subject_enrollment:update").RequireCallerStudyScope()
-            .AddEndpointFilter<ChangeReasonHeaderFilter>();
+            .RequirePermission("subject_enrollment:update").RequireCallerStudyScope();
 
         return app;
     }
@@ -298,7 +322,12 @@ public static partial class SubjectEndpoints
         string changeReason = ChangeReasonHeader.Read(http.Request)
             ?? throw new InvalidOperationException("ChangeReasonHeaderFilter should have rejected this request.");
 
-        if (SubjectAuthority.AuthorizeStateChange(http.User.ToAuthenticatedCaller(), request.Target) is { } forbidden)
+        if (SubjectStateCodec.TryParse(request.Target, out var parsedTarget) && parsedTarget == SubjectState.Unblinded)
+        {
+            return SubjectErrors.UnblindThroughDedicatedEndpoint().ToProblemResult();
+        }
+
+        if (SubjectAuthority.AuthorizeParticipantChange(http.User.ToAuthenticatedCaller()) is { } forbidden)
         {
             return forbidden.ToProblemResult();
         }
@@ -314,6 +343,38 @@ public static partial class SubjectEndpoints
         }
 
         var result = await svc.AdvanceStateAsync(subjectId, request, changeReason, ct).ConfigureAwait(false);
+        return result.Match(r => Results.Ok(r), e => e.ToProblemResult());
+    }
+
+    /// <summary>
+    /// <c>POST /api/v1/execution/subjects/{subjectId}/unblind</c>. Requires a verified Part 11 step-up signature
+    /// (<c>X-Sig-Token</c>), <c>X-Change-Reason</c> of at least 50 characters, and emergency unblinding authority
+    /// (<see cref="SubjectAuthority.AuthorizeUnblinding"/>).
+    /// </summary>
+    public static async Task<IResult> UnblindSubjectAsync(
+        string subjectId, HttpContext http, ISubjectApplicationService svc, CancellationToken ct, [FromServices] ILogger? logger = null)
+    {
+        ct.ThrowIfCancellationRequested();
+
+        string changeReason = ChangeReasonHeader.Read(http.Request)
+            ?? throw new InvalidOperationException("ChangeReasonHeaderFilter should have rejected this request.");
+
+        if (SubjectAuthority.AuthorizeUnblinding(http.User.ToAuthenticatedCaller()) is { } forbidden)
+        {
+            return forbidden.ToProblemResult();
+        }
+
+        if (await GuardSubjectScopeAsync(subjectId, http, svc, ct).ConfigureAwait(false) is { } scopeDenied)
+        {
+            return scopeDenied;
+        }
+
+        if (logger != null)
+        {
+            logger.LogUnblindingSubject(subjectId, changeReason);
+        }
+
+        var result = await svc.UnblindAsync(subjectId, changeReason, ct).ConfigureAwait(false);
         return result.Match(r => Results.Ok(r), e => e.ToProblemResult());
     }
 

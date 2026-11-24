@@ -15,8 +15,9 @@ namespace Cadence.UnitTests.Execution.Security;
 
 /// <summary>
 /// Coverage for <see cref="AmbientAuditContextAccessor"/>: the caller's <c>sub</c> claim is the actor, a
-/// declared <see cref="ServiceAccount"/> overrides it, and with neither the actor is unresolved and reading
-/// it throws instead of defaulting to <c>"system"</c> (#4767). The change reason keeps its default.
+/// declared <see cref="ServiceAccount"/> overrides it, and with neither an actor nor an explicit
+/// <c>X-Change-Reason</c> header, reading <c>UserId</c> or <c>ChangeReason</c> throws instead of falling back
+/// to <c>"system"</c> or <c>"system_operation"</c> (#4767).
 /// </summary>
 public class CurrentAuditContextAccessorTests
 {
@@ -91,39 +92,39 @@ public class CurrentAuditContextAccessorTests
     // ---- AmbientAuditContextAccessor.ChangeReason ----------------------------------------------
 
     [Fact]
-    public void ChangeReason_GivenNoHttpContext_ReturnsSystemOperationDefault()
+    [GxPRequirement("PRD-SYS-001")]
+    public void ChangeReason_GivenNoHttpContext_Throws()
     {
         var accessor = new AmbientAuditContextAccessor(new FakeHttpContextAccessor(null));
 
-        accessor.ChangeReason.Should().Be("system_operation");
+        FluentActions.Invoking(() => accessor.ChangeReason).Should().Throw<AuditChangeReasonUnresolvedException>();
     }
 
     [Fact]
-    public void ChangeReason_GivenNoHeader_ReturnsSystemOperationDefault()
+    [GxPRequirement("PRD-SYS-001")]
+    public void ChangeReason_GivenNoHeader_Throws()
     {
         var accessor = CreateAccessor(changeReasonHeader: null);
 
-        accessor.ChangeReason.Should().Be("system_operation");
+        FluentActions.Invoking(() => accessor.ChangeReason).Should().Throw<AuditChangeReasonUnresolvedException>();
     }
 
     [Fact]
-    public void ChangeReason_GivenExplicitlyEmptyHeader_ReturnsSameDefaultAsAbsentHeader()
+    [GxPRequirement("PRD-SYS-001")]
+    public void ChangeReason_GivenExplicitlyEmptyHeader_Throws()
     {
-        // Boundary check: an explicitly-empty header ("", present but blank) must resolve to the same
-        // default as a fully-absent one, not be distinguished from it.
         var accessor = CreateAccessor(changeReasonHeader: string.Empty);
 
-        accessor.ChangeReason.Should().Be("system_operation");
+        FluentActions.Invoking(() => accessor.ChangeReason).Should().Throw<AuditChangeReasonUnresolvedException>();
     }
 
     [Fact]
-    public void ChangeReason_GivenWhitespaceOnlyHeader_ReturnsSameDefaultAsAbsentHeader()
+    [GxPRequirement("PRD-SYS-001")]
+    public void ChangeReason_GivenWhitespaceOnlyHeader_Throws()
     {
-        // Boundary check (AC): whitespace-only, not merely absent, must still resolve to the default —
-        // one consistent falsy-check, not a null-only check that would treat "" (or "   ") differently.
         var accessor = CreateAccessor(changeReasonHeader: "   ");
 
-        accessor.ChangeReason.Should().Be("system_operation");
+        FluentActions.Invoking(() => accessor.ChangeReason).Should().Throw<AuditChangeReasonUnresolvedException>();
     }
 
     [Fact]

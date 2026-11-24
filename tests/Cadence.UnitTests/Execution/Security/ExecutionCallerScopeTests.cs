@@ -376,7 +376,7 @@ public sealed class ExecutionCallerScopeTests : IDisposable
         }
 
         // 5. eTMF webhook scoped to STUDY-ALPHA cannot write STUDY-BETA compliance
-        var etmfAlpha = new GatewayIdentity(UserId: "svc:etmf-alpha", Roles: [PermissionMatrix.EtmfServiceRole], SiteIds: [], TenantId: "tenant-alpha", StudyIds: [StudyAlpha]);
+        var etmfAlpha = new GatewayIdentity(UserId: "svc:etmf-alpha", Roles: [PermissionMatrix.EtmfServiceRole], SiteIds: [], TenantId: "tenant-alpha", StudyIds: [StudyAlpha], ChangeReason: Reason);
         using (var etmfClient = _factory.CreateSignedClient(etmfAlpha))
         {
             (await etmfClient.PostAsJsonAsync(

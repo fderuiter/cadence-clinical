@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 
 using Cadence.Apps.Fileshare.Domain;
 using Cadence.Apps.Fileshare.Infrastructure.Persistence;
+using Cadence.Database;
 using Cadence.Database.Tenancy;
 
 using Microsoft.EntityFrameworkCore;
@@ -74,14 +75,18 @@ public sealed class DocumentConversionWorker : FileshareWorkerBase
         }
     }
 
+    private const string DocumentConverterServiceAccount = "svc:fileshare-document-converter";
+
     private async Task ProcessSingleRecordAsync(
         FileshareDbContext dbContext,
         IDocumentConverterProcessor processor,
         FileRecord record,
         CancellationToken ct)
     {
+        using var _ = StandaloneAuditActorScope.Begin(DocumentConverterServiceAccount);
         record.ConversionStatus = "PROCESSING";
         record.ConversionError = null;
+        record.ReasonForChange = "Automated PDF rendition conversion started";
         await dbContext.SaveChangesAsync(ct).ConfigureAwait(false);
 
         int attempt = 0;
@@ -114,11 +119,13 @@ public sealed class DocumentConversionWorker : FileshareWorkerBase
             record.ConversionStatus = "COMPLETED";
             record.PdfRenditionKey = pdfKey;
             record.ConversionError = null;
+            record.ReasonForChange = "Automated PDF rendition conversion completed";
         }
         else
         {
             record.ConversionStatus = "FAILED";
             record.ConversionError = lastError ?? "Document conversion failed after maximum retries.";
+            record.ReasonForChange = "Automated PDF rendition conversion failed";
         }
 
         await dbContext.SaveChangesAsync(ct).ConfigureAwait(false);

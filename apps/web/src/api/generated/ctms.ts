@@ -64,8 +64,25 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Compiles a GxP-compliant PDF visit letter with Part 11 electronic signature, eTMF filing, and automated email dispatch. */
+    /** Compiles an unsigned draft GxP visit letter PDF for review. */
     post: operations["CompileSiteVisitLetterPdf"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/ctms/letters/finalize": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Finalizes a GxP-compliant PDF visit letter with Part 11 electronic signature, eTMF filing, and automated email dispatch. */
+    post: operations["FinalizeSiteVisitLetterPdf"];
     delete?: never;
     options?: never;
     head?: never;
@@ -353,10 +370,27 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** Export 21 CFR Part 11 signed DOA PDF log. */
+    /** Export unsigned working DOA PDF log for review. */
     get: operations["ExportSiteDoaPdf"];
     put?: never;
     post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/ctms/doa/sites/{site_id}/export-signed-pdf": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Export 21 CFR Part 11 signed DOA PDF log and record an export audit entry. */
+    post: operations["ExportSignedSiteDoaPdf"];
     delete?: never;
     options?: never;
     head?: never;
@@ -741,6 +775,68 @@ export interface operations {
       };
     };
   };
+  FinalizeSiteVisitLetterPdf: {
+    parameters: {
+      query: {
+        templateName: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Ctms_SiteVisitLetterModel"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Ctms_VisitLetterCompilationResultDto"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Ctms_ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Ctms_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Ctms_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Ctms_ProblemDetails"];
+        };
+      };
+    };
+  };
   GetSiteVisitLetterPdf: {
     parameters: {
       query?: never;
@@ -930,6 +1026,15 @@ export interface operations {
       };
       /** @description Bad Request */
       400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Ctms_ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
         headers: {
           [name: string]: unknown;
         };
@@ -1242,6 +1347,15 @@ export interface operations {
           "application/problem+json": components["schemas"]["Ctms_ProblemDetails"];
         };
       };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Ctms_ProblemDetails"];
+        };
+      };
       /** @description Forbidden */
       403: {
         headers: {
@@ -1329,6 +1443,15 @@ export interface operations {
       };
       /** @description Bad Request */
       400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Ctms_ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
         headers: {
           [name: string]: unknown;
         };
@@ -1495,6 +1618,15 @@ export interface operations {
           "application/problem+json": components["schemas"]["Ctms_ProblemDetails"];
         };
       };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Ctms_ProblemDetails"];
+        };
+      };
       /** @description Forbidden */
       403: {
         headers: {
@@ -1587,6 +1719,64 @@ export interface operations {
           [name: string]: unknown;
         };
         content?: never;
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Ctms_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Ctms_ProblemDetails"];
+        };
+      };
+    };
+  };
+  ExportSignedSiteDoaPdf: {
+    parameters: {
+      query?: {
+        study_id?: string;
+      };
+      header?: never;
+      path: {
+        site_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Ctms_ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Ctms_ProblemDetails"];
+        };
       };
       /** @description Forbidden */
       403: {

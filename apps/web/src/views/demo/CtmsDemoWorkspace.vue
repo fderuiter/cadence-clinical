@@ -3927,16 +3927,20 @@ async function confirmCompleteVisit() {
 // Supervisory Sign-off on Completed Visit (Monitor / Sponsor DM / Sysadmin)
 function signOffVisit(visit) {
   if (!canSignOffVisits.value) return;
-  promptJustification(
-    "Supervisory Sign-off on Visit",
-    "Enter the review endorsement statement for signing off this completed visit...",
-    async (reason) => {
+  promptSignature(
+    async (sigToken, reason) => {
       try {
-        await ctmsApi.signOffMonitoringVisit(visit.id, reason);
+        await ctmsApi.signOffMonitoringVisit(visit.id, reason, sigToken);
         await loadOperationsData();
       } catch (err) {
         useToastStore().apiError("Failed to sign off monitoring visit", err);
       }
+    },
+    {
+      action: `/api/v1/ctms/monitoring-visits/${encodeURIComponent(visit.id)}/sign-off`,
+      semanticAction: "ctms.monitoring_visit.sign_off",
+      defaultSigningReason: "APPROVAL",
+      initialReason: "",
     }
   );
 }
@@ -4002,14 +4006,14 @@ async function executeLetterCompilation(reason, sigToken = undefined) {
   compileLetterError.value = "";
   try {
     const payload = buildVisitLetterPayload(reason);
-    const compiled = await ctmsApi.compileVisitLetter(
-      compileTemplateName.value,
-      payload,
-      {
-        changeReason: reason,
-        sigToken,
-      }
-    );
+    const compiled = payload.finalize
+      ? await ctmsApi.finalizeVisitLetter(compileTemplateName.value, payload, {
+          changeReason: reason,
+          sigToken,
+        })
+      : await ctmsApi.compileVisitLetter(compileTemplateName.value, payload, {
+          changeReason: reason,
+        });
     compiledLetters.value = [
       compiled,
       ...compiledLetters.value.filter((l) => l.letterId !== compiled.letterId),
@@ -4042,8 +4046,8 @@ async function confirmCompileLetter() {
         await executeLetterCompilation(signedReason || reason, sigToken);
       },
       {
-        action: "/api/v1/ctms/letters/compile",
-        semanticAction: "ctms.letter.compile",
+        action: "/api/v1/ctms/letters/finalize",
+        semanticAction: "ctms.letter.finalize",
         defaultSigningReason: "APPROVAL",
         initialReason: reason,
       }

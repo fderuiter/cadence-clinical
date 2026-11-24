@@ -81,20 +81,37 @@ public class SubjectApplicationServiceStateTests
         result.Error!.Code.Should().Be("SUBJECT_NOT_FOUND");
     }
 
-    // -- AdvanceStateAsync: unblinding (#4951, #4982) ---------------------------------------------
+    // -- AdvanceStateAsync & UnblindAsync: unblinding (#4951, #4982) ------------------------------
 
     private const string UnblindingReason =
         "SAE: anaphylaxis after dose 3; the ER team needs the allocation to choose treatment.";
 
     [Fact]
-    public async Task AdvanceStateAsync_ToUnblinded_RecordsWhoUnblindedWhyAndWhen()
+    public async Task AdvanceStateAsync_ToUnblinded_IsRefusedAndRequiresDedicatedSignedRoute()
+    {
+        var harness = new Harness { AuditContext = new FakeCurrentAuditContextAccessor { UserId = "unblinder-1" } };
+        var subject = await SeedSubjectAsync(harness.Subjects, "SUBJ-UB0", status: SubjectState.Enrolled);
+        subject.TransitionTo(SubjectState.Randomized).IsSuccess.Should().BeTrue();
+
+        var result = await harness.Service.AdvanceStateAsync("SUBJ-UB0",
+            new SubjectStateUpdateRequest(Status: "UNBLINDED", State: null), UnblindingReason,
+            TestContext.Current.CancellationToken);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error!.Code.Should().Be("UNBLIND_REQUIRES_DEDICATED_ROUTE");
+        subject.Status.Should().Be(SubjectState.Randomized);
+        subject.IsUnblinded.Should().BeFalse();
+        harness.AuditLog.Calls.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task UnblindAsync_RecordsWhoUnblindedWhyAndWhen()
     {
         var harness = new Harness { AuditContext = new FakeCurrentAuditContextAccessor { UserId = "unblinder-1" } };
         var subject = await SeedSubjectAsync(harness.Subjects, "SUBJ-UB1", status: SubjectState.Enrolled);
         subject.TransitionTo(SubjectState.Randomized).IsSuccess.Should().BeTrue();
 
-        var result = await harness.Service.AdvanceStateAsync("SUBJ-UB1",
-            new SubjectStateUpdateRequest(Status: "UNBLINDED", State: null), UnblindingReason,
+        var result = await harness.Service.UnblindAsync("SUBJ-UB1", UnblindingReason,
             TestContext.Current.CancellationToken);
 
         result.IsSuccess.Should().BeTrue();
@@ -108,13 +125,12 @@ public class SubjectApplicationServiceStateTests
     }
 
     [Fact]
-    public async Task AdvanceStateAsync_ToUnblindedFromScreening_IsRefused_AndRecordsNothing()
+    public async Task UnblindAsync_FromScreening_IsRefused_AndRecordsNothing()
     {
         var harness = new Harness();
         var subject = await SeedSubjectAsync(harness.Subjects, "SUBJ-UB2");
 
-        var result = await harness.Service.AdvanceStateAsync("SUBJ-UB2",
-            new SubjectStateUpdateRequest(Status: "UNBLINDED", State: null), UnblindingReason,
+        var result = await harness.Service.UnblindAsync("SUBJ-UB2", UnblindingReason,
             TestContext.Current.CancellationToken);
 
         result.Error!.Code.Should().Be("INVALID_STATE_TRANSITION");
@@ -131,14 +147,13 @@ public class SubjectApplicationServiceStateTests
     [InlineData("SAE")]
     [InlineData("Life-threatening event; allocation needed now.")]
     [InlineData("   Life-threatening event; allocation needed now.      ")]
-    public async Task AdvanceStateAsync_ToUnblinded_WithAReasonUnder50Characters_IsRefused(string reason)
+    public async Task UnblindAsync_WithAReasonUnder50Characters_IsRefused(string reason)
     {
         var harness = new Harness();
         var subject = await SeedSubjectAsync(harness.Subjects, "SUBJ-UB3", status: SubjectState.Enrolled);
         subject.TransitionTo(SubjectState.Randomized).IsSuccess.Should().BeTrue();
 
-        var result = await harness.Service.AdvanceStateAsync("SUBJ-UB3",
-            new SubjectStateUpdateRequest(Status: "UNBLINDED", State: null), reason,
+        var result = await harness.Service.UnblindAsync("SUBJ-UB3", reason,
             TestContext.Current.CancellationToken);
 
         result.Error!.Code.Should().Be("UNBLINDING_REASON_TOO_SHORT");

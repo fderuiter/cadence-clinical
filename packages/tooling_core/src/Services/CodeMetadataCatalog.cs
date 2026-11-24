@@ -290,13 +290,14 @@ public static partial class CodeMetadataCatalog
             }
 
             string source = File.ReadAllText(file);
-            if (!NewGxpAuditInterceptorRegex().IsMatch(source))
+            var dbMatch = AddPostgresDbContextRegex().Match(source);
+            if (!dbMatch.Success && !NewGxpAuditInterceptorRegex().IsMatch(source))
             {
                 continue;
             }
 
             string host = ResolveHostFromRelativePath(rel);
-            string dbContext = AddPostgresDbContextRegex().Match(source) is { Success: true } dbMatch
+            string dbContext = dbMatch.Success
                 ? dbMatch.Groups[1].Value
                 : $"{char.ToUpperInvariant(host[0])}{host[1..]}DbContext";
             string schema = ResolveSchemaForDbContext(repoRoot, dbContext, host, dbModules);
@@ -450,7 +451,7 @@ public static partial class CodeMetadataCatalog
             if (secondArg is null)
             {
                 // Overload `RequireElectronicSignature(DelegationSignOffBinding)` returning `new SigTokenBinding(action, semanticAction, batchId)`
-                var bindingMatch = SigTokenBindingCtorRegex().Match(source);
+                var bindingMatch = ResolveSigTokenBindingFromHelper(source, firstArg);
                 if (bindingMatch.Success)
                 {
                     actionTemplate = constants.GetValueOrDefault(bindingMatch.Groups[1].Value, fullRoute);
@@ -519,6 +520,23 @@ public static partial class CodeMetadataCatalog
         }
 
         return fallbackRoute;
+    }
+
+    private static Match ResolveSigTokenBindingFromHelper(string source, string helperName)
+    {
+        if (Regex.IsMatch(helperName, "^[A-Za-z0-9_]+$", RegexOptions.CultureInvariant))
+        {
+            var scopedRegex = new Regex(
+                $@"SigTokenBinding(?:\?|>)\s+{Regex.Escape(helperName)}\s*\([\s\S]*?new\s+SigTokenBinding\s*\(\s*([A-Za-z0-9_]+)\s*,\s*([A-Za-z0-9_]+)\s*,",
+                RegexOptions.CultureInvariant);
+            var scopedMatch = scopedRegex.Match(source);
+            if (scopedMatch.Success)
+            {
+                return scopedMatch;
+            }
+        }
+
+        return SigTokenBindingCtorRegex().Match(source);
     }
 
     private static string ResolveActionFromHelper(
@@ -628,6 +646,16 @@ public static partial class CodeMetadataCatalog
 
     private static string ResolveDefaultGroupPrefix(string relativePath)
     {
+        if (relativePath.StartsWith("apps/ctms/", StringComparison.Ordinal))
+        {
+            return "/api/v1/ctms";
+        }
+
+        if (relativePath.StartsWith("apps/notifications/", StringComparison.Ordinal))
+        {
+            return "/api/v1/notifications";
+        }
+
         if (relativePath.StartsWith("apps/safety/", StringComparison.Ordinal))
         {
             return "/api/v1/safety";

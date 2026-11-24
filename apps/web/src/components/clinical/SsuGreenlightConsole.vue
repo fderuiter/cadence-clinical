@@ -1062,11 +1062,30 @@
         </template>
       </ClinicalModal>
     </div>
+
+    <SignatureCaptureModal
+      :is-open="sigModalOpen"
+      :username="signerUsername"
+      :signer-name="sigSignerName"
+      :signer-role="sigSignerRole"
+      :reasons="GREENLIGHT_SIGNING_REASONS"
+      :action-url="sigActionUrl"
+      :semantic-action="sigSemanticAction"
+      :batch-id="sigBatchId"
+      :on-sign="handleSsuGreenlightSigned"
+      @cancel="sigModalOpen = false"
+    />
   </div>
 </template>
 
 <script setup>
-import { ClinicalIconButton, ClinicalModal, ClinicalTabs } from "ui";
+import {
+  ClinicalIconButton,
+  ClinicalModal,
+  ClinicalTabs,
+  SEMANTIC_ACTIONS,
+  sha256,
+} from "ui";
 import { computed, onMounted, reactive, ref, watch } from "vue";
 import { ctmsApi } from "../../api/ctmsApi";
 import { etmfService } from "../../api/etmf";
@@ -1076,6 +1095,7 @@ import {
 } from "../../canvas/authority";
 import { useAuthStore } from "../../stores/auth";
 import { useToastStore } from "../../stores/toasts.js";
+import SignatureCaptureModal from "../SignatureCaptureModal.vue";
 
 const DOC_TYPE_TAXONOMY = {
   FDA_1572: {
@@ -1154,6 +1174,28 @@ const showCertifyModal = ref(false);
 const showUploadDocModal = ref(false);
 const gateErrorMessage = ref("");
 const certifyErrorMessage = ref("");
+
+const GREENLIGHT_SIGNING_REASONS = [
+  "I certify under 21 CFR Part 11 that all selected sites meet statutory greenlight requirements",
+  "SPONSOR_APPROVAL",
+  "APPROVAL",
+];
+
+const sigModalOpen = ref(false);
+const sigMode = ref("batch");
+const sigActionUrl = ref("");
+const sigSemanticAction = ref("");
+const sigBatchId = ref("");
+const sigSignerName = ref("");
+const sigSignerRole = ref("Data Manager");
+
+const signerUsername = computed(
+  () =>
+    authStore.identity?.username ||
+    authStore.user?.username ||
+    authStore.userId ||
+    ""
+);
 
 // Forms
 const sigForm = reactive({
@@ -1468,37 +1510,19 @@ async function fetchCountryMatrix() {
 }
 
 async function executeBatchCertification() {
-  if (!canCertify.value) return;
-  isSubmitting.value = true;
+  if (!canCertify.value || selectedSiteIds.value.size === 0) return;
   batchErrorMessage.value = null;
-  const selectedIds = Array.from(selectedSiteIds.value);
-  try {
-    const data = await ctmsApi.batchCertifyCountrySites(
-      {
-        study_id: activeStudyId.value.trim(),
-        country_code: activeCountry.value,
-        site_ids: selectedIds,
-        meaning: batchSigForm.changeReason,
-      },
-      batchSigForm.changeReason
-    );
-    batchSuccessData.value = data;
-    showBatchCertifyModal.value = false;
-    selectedSiteIds.value.clear();
-    await fetchCountryMatrix();
-  } catch (err) {
-    const toasts = useToastStore();
-    const toastId = toasts.apiError(
-      "Batch greenlight certification failed",
-      err
-    );
-    batchErrorMessage.value =
-      toasts.toasts.find((t) => t.id === toastId)?.message ||
-      err?.message ||
-      "Batch certification rejected";
-  } finally {
-    isSubmitting.value = false;
-  }
+  const selectedIds = Array.from(selectedSiteIds.value).map((s) =>
+    String(s).trim()
+  );
+  const canonicalSites = [...selectedIds].sort().join(",");
+  sigMode.value = "batch";
+  sigSignerName.value = batchSigForm.name || signerUsername.value;
+  sigSignerRole.value = "Data Manager";
+  sigActionUrl.value = "/api/v1/ctms/startup/matrix/batch-certify";
+  sigSemanticAction.value = SEMANTIC_ACTIONS.CTMS_GREENLIGHT_BATCH_CERTIFY;
+  sigBatchId.value = await sha256(canonicalSites);
+  sigModalOpen.value = true;
 }
 
 async function evaluateGreenlight() {
@@ -1552,20 +1576,72 @@ function openCertifyModal() {
   showCertifyModal.value = true;
 }
 
-async function executeGreenlightCertification() {
-  if (!canCertify.value) return;
-  isSubmitting.value = true;
+function executeGreenlightCertification() {
+  if (!canCertify.value || !activeSiteId.value?.trim()) return;
   certifyErrorMessage.value = "";
+  sigMode.value = "single";
+  sigSignerName.value = sigForm.name || signerUsername.value;
+  sigSignerRole.value = "Data Manager";
+  sigActionUrl.value = `/api/v1/ctms/startup/sites/${encodeURIComponent(activeSiteId.value.trim())}/greenlight/certify`;
+  sigSemanticAction.value = SEMANTIC_ACTIONS.CTMS_GREENLIGHT_CERTIFY;
+  sigBatchId.value = "";
+  sigModalOpen.value = true;
+}
+
+async function handleSsuGreenlightSigned(sigToken, signingReason) {
+  isSubmitting.value = true;
+  if (sigMode.value === "batch") {
+    batchErrorMessage.value = null;
+    const selectedIds = Array.from(selectedSiteIds.value);
+    const reason = batchSigForm.changeReason?.trim() || signingReason;
+    try {
+      const data = await ctmsApi.batchCertifyCountrySites(
+        {
+          study_id: activeStudyId.value.trim(),
+          country_code: activeCountry.value,
+          site_ids: selectedIds,
+          meaning: reason,
+        },
+        reason,
+        sigToken
+      );
+      batchSuccessData.value = data;
+      sigModalOpen.value = false;
+      showBatchCertifyModal.value = false;
+      selectedSiteIds.value.clear();
+      await fetchCountryMatrix();
+      return { kind: "signed" };
+    } catch (err) {
+      const toasts = useToastStore();
+      const toastId = toasts.apiError(
+        "Batch greenlight certification failed",
+        err
+      );
+      batchErrorMessage.value =
+        toasts.toasts.find((t) => t.id === toastId)?.message ||
+        err?.message ||
+        "Batch certification rejected";
+      return { status: "FAILED", message: batchErrorMessage.value };
+    } finally {
+      isSubmitting.value = false;
+    }
+  }
+
+  certifyErrorMessage.value = "";
+  const reason = sigForm.changeReason?.trim() || signingReason;
   try {
     const certified = await ctmsApi.certifySiteGreenlight(
       activeSiteId.value.trim(),
       activeStudyId.value.trim(),
-      sigForm.changeReason,
-      activeCountry.value
+      reason,
+      activeCountry.value,
+      sigToken
     );
     gateData.value = certified;
+    sigModalOpen.value = false;
     showCertifyModal.value = false;
     emit("greenlight-certified", certified);
+    return { kind: "signed" };
   } catch (err) {
     const toasts = useToastStore();
     const toastId = toasts.apiError(
@@ -1576,6 +1652,7 @@ async function executeGreenlightCertification() {
       toasts.toasts.find((t) => t.id === toastId)?.message ||
       err?.message ||
       "Certification rejected";
+    return { status: "FAILED", message: certifyErrorMessage.value };
   } finally {
     isSubmitting.value = false;
   }

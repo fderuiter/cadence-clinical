@@ -7,9 +7,11 @@ Generated from `docs/openapi/ctms_openapi.json` by `pnpm cadence generate-api-do
 | `POST` | `/api/v1/ctms/doa/delegate` | DelegateSiteTasks | Assign site trial task delegation requiring Principal Investigator sign-off. |
 | `POST` | `/api/v1/ctms/doa/revoke` | RevokeSiteTasks | Revoke or end a delegated trial duty with reason for change. |
 | `POST` | `/api/v1/ctms/doa/sign-off` | SignOffDelegation | Endorse Delegation of Authority task assignment with Principal Investigator eSignature. |
-| `GET` | `/api/v1/ctms/doa/sites/{site_id}/export-pdf` | ExportSiteDoaPdf | Export 21 CFR Part 11 signed DOA PDF log. |
+| `GET` | `/api/v1/ctms/doa/sites/{site_id}/export-pdf` | ExportSiteDoaPdf | Export unsigned working DOA PDF log for review. |
+| `POST` | `/api/v1/ctms/doa/sites/{site_id}/export-signed-pdf` | ExportSignedSiteDoaPdf | Export 21 CFR Part 11 signed DOA PDF log and record an export audit entry. |
 | `GET` | `/api/v1/ctms/doa/sites/{site_id}/log` | GetSiteDoaLog | Fetch active and historical DOA log matrix for a site. |
-| `POST` | `/api/v1/ctms/letters/compile` | CompileSiteVisitLetterPdf | Compiles a GxP-compliant PDF visit letter with Part 11 electronic signature, eTMF filing, and automated email dispatch. |
+| `POST` | `/api/v1/ctms/letters/compile` | CompileSiteVisitLetterPdf | Compiles an unsigned draft GxP visit letter PDF for review. |
+| `POST` | `/api/v1/ctms/letters/finalize` | FinalizeSiteVisitLetterPdf | Finalizes a GxP-compliant PDF visit letter with Part 11 electronic signature, eTMF filing, and automated email dispatch. |
 | `POST` | `/api/v1/ctms/letters/render` | RenderSiteVisitLetter | Renders a CTMS site visit monitoring letter via Liquid template. |
 | `GET` | `/api/v1/ctms/letters/{letterId}/pdf` | GetSiteVisitLetterPdf | Downloads or views the compiled GxP PDF visit letter. |
 | `GET` | `/api/v1/ctms/monitoring-visits` | ListMonitoringVisits | List monitoring visits filtered by study, site, CRA, or status. |

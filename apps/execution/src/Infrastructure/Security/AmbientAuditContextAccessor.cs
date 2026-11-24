@@ -9,14 +9,12 @@ namespace Cadence.Apps.Execution.Infrastructure.Security;
 /// <summary>
 /// Scoped <see cref="ICurrentAuditContextAccessor"/> and <see cref="IAuditActorScope"/>. A service account set
 /// with <see cref="RunAs"/> wins; otherwise the actor is the authenticated caller's <c>sub</c> claim and the
-/// reason comes from the <c>X-Change-Reason</c> header, decoded by <see cref="ChangeReasonHeader"/>. With neither, <see cref="UserId"/> throws rather than
-/// defaulting to an anonymous identity.
+/// reason comes from the <c>X-Change-Reason</c> header, decoded by <see cref="ChangeReasonHeader"/>. With neither,
+/// both properties fail closed rather than fabricating a fallback actor or reason.
 /// </summary>
 public sealed class AmbientAuditContextAccessor(IHttpContextAccessor httpContextAccessor)
     : ICurrentAuditContextAccessor, IAuditActorScope
 {
-    private const string DefaultChangeReason = "system_operation";
-
     private ServiceAccount? _serviceAccount;
 
     public string UserId =>
@@ -27,7 +25,7 @@ public sealed class AmbientAuditContextAccessor(IHttpContextAccessor httpContext
     public string ChangeReason =>
         _serviceAccount?.ChangeReason
         ?? (httpContextAccessor.HttpContext is { } http ? ChangeReasonHeader.Read(http.Request) : null)
-        ?? DefaultChangeReason;
+        ?? throw new AuditChangeReasonUnresolvedException();
 
     public void RunAs(ServiceAccount account)
     {

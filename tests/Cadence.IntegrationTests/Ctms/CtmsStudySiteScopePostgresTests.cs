@@ -15,6 +15,7 @@ using Cadence.Apps.Ctms.Infrastructure.Persistence;
 using Cadence.Database;
 using Cadence.Database.Tenancy;
 using Cadence.IntegrationTests.Database;
+using Cadence.Security.Authentication;
 using Cadence.Testing.Hosting;
 using Cadence.Testing.Security;
 
@@ -52,6 +53,7 @@ public sealed class CtmsStudySiteScopePostgresTests(CtmsPostgresApiFactory facto
 
         await using (var scope = factory.Services.CreateAsyncScope())
         {
+            using var actorScope = StandaloneAuditActorScope.Begin("svc:integration-test");
             var db = scope.ServiceProvider.GetRequiredService<CtmsDbContext>();
 
             db.CtmsDelegations.Add(new CtmsDelegation("DEL-BETA-ONLY")
@@ -212,7 +214,16 @@ public sealed class CtmsStudySiteScopePostgresTests(CtmsPostgresApiFactory facto
 
         using var alphaDm = factory.CreateSignedClient("Data Manager", "dm-alpha-1", ["STUDY-ALPHA"], []);
         using var alphaPiSite1 = factory.CreateSignedClient("Principal Investigator", "pi-alpha-site1", ["STUDY-ALPHA"], ["SITE-1"]);
-        using var alphaPiShared = factory.CreateSignedClient("Principal Investigator", "pi-alpha-shared", ["STUDY-ALPHA"], ["SITE-SHARED"]);
+        using var alphaPiShared = factory.CreateSignedClient(
+            "Principal Investigator",
+            "pi-alpha-shared",
+            ["STUDY-ALPHA"],
+            ["SITE-SHARED"],
+            TestSecurityContext.CreateSigToken(
+                "pi-alpha-shared",
+                DoaEndpoints.SignOffDelegationAction,
+                DoaEndpoints.SignOffDelegationSemanticAction,
+                ["Principal Investigator"]));
         using var alphaCraUnassignedSite = factory.CreateSignedClient("CRA", "cra-alpha-nosite", ["STUDY-ALPHA"], []);
         using var alphaCraSite1 = factory.CreateSignedClient("CRA", "cra-alpha-1", ["STUDY-ALPHA"], ["SITE-1"]);
 
@@ -420,12 +431,14 @@ public sealed class CtmsPostgresApiFactory : WebApplicationFactory<Cadence.Apps.
         string role,
         string userId,
         IReadOnlyList<string> studyIds,
-        IReadOnlyList<string> siteIds)
+        IReadOnlyList<string> siteIds,
+        string? sigToken = null)
     {
         var identity = TestSecurityContext.Identity(userId, role) with
         {
             StudyIds = studyIds,
             SiteIds = siteIds,
+            SigToken = sigToken,
         };
         return SignedClientExtensions.CreateSignedClient(this, identity);
     }

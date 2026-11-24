@@ -328,15 +328,6 @@
             />
             Finalize with Part 11 signature &amp; eTMF filing
           </label>
-          <template v-if="compileFinalize">
-            <label for="compile-sig-password">Password (Part 11)</label>
-            <input
-              id="compile-sig-password"
-              v-model="compilePassword"
-              v-bind="SIGNATURE_PASSWORD_INPUT_ATTRS"
-              placeholder="Re-enter password to sign"
-            />
-          </template>
           <label for="compile-letter-reason">Reason for change</label>
           <input
             id="compile-letter-reason"
@@ -348,14 +339,16 @@
             id="btn-confirm-compile-letter"
             type="button"
             class="btn btn-primary"
-            :disabled="
-              !compileReason.trim() ||
-              (compileFinalize && !compilePassword) ||
-              saving
-            "
+            :disabled="!compileReason.trim() || saving"
             @click="confirmCompileLetter"
           >
-            {{ saving ? "Compiling..." : "Compile letter" }}
+            {{
+              saving
+                ? "Compiling..."
+                : compileFinalize
+                  ? "Sign & finalize letter"
+                  : "Compile draft letter"
+            }}
           </button>
           <button
             type="button"
@@ -455,15 +448,23 @@
         </div>
       </form>
     </template>
+
+    <SignatureCaptureModal
+      :is-open="sigModalOpen"
+      :username="signerUsername"
+      :signer-name="signerDisplayName"
+      :reasons="MONITORING_SIGNING_REASONS"
+      :action-url="sigActionUrl"
+      :semantic-action="sigSemanticAction"
+      :on-sign="handleMonitoringSigned"
+      @cancel="sigModalOpen = false"
+    />
   </section>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
-import {
-  buildStepUpVerificationPayload,
-  SIGNATURE_PASSWORD_INPUT_ATTRS,
-} from "ui";
+import { SEMANTIC_ACTIONS } from "ui";
 import {
   ctmsApi,
   type GeneratedVisitLetter,
@@ -482,11 +483,11 @@ import {
   formatIsoDateShort,
   useScopedWorkspaceSection,
 } from "../../composables/useScopedWorkspaceSection";
-import apiClient from "../../services/api";
 import {
   formatClinicalEnum,
   formatClinicalStatus,
 } from "../../utils/clinicalLabels";
+import SignatureCaptureModal from "../SignatureCaptureModal.vue";
 import SupportDetails from "../canvas/SupportDetails.vue";
 import CtmsSectionScopeBar from "./CtmsSectionScopeBar.vue";
 import "./ctmsWorkspaceSection.css";
@@ -561,15 +562,37 @@ const completeFindingDesc = ref("");
 const structuredFindings = ref<StructuredFindingDraft[]>([]);
 const completeReason = ref("");
 
+const MONITORING_SIGNING_REASONS = [
+  "Monitoring Visit Report Issuance",
+  "Supervisory Monitoring Visit Report Approval",
+  "REVIEW",
+  "APPROVAL",
+];
+
 const activeCompileVisit = ref<MonitoringVisit | null>(null);
 const compileTemplateName = ref("follow_up_letter");
 const compileFinalize = ref(true);
-const compilePassword = ref("");
 const compileReason = ref("");
 const compiledLetters = ref<VisitLetterCompilationResult[]>([]);
 
 const activeSignOffVisit = ref<MonitoringVisit | null>(null);
 const signOffReason = ref("");
+
+const sigModalOpen = ref(false);
+const sigMode = ref<"finalize-letter" | "visit-signoff">("finalize-letter");
+const sigActionUrl = ref("");
+const sigSemanticAction = ref("");
+
+const signerUsername = computed(
+  () =>
+    authStore.identity?.username ||
+    authStore.user?.username ||
+    authStore.userId ||
+    ""
+);
+const signerDisplayName = computed(
+  () => authStore.user?.displayName || signerUsername.value
+);
 
 const selectedLettersVisit = ref<MonitoringVisit | null>(null);
 const letters = ref<GeneratedVisitLetter[]>([]);
@@ -717,56 +740,33 @@ function prepareCompileLetter(visit: MonitoringVisit) {
   compileTemplateName.value =
     visit.status === "SCHEDULED" ? "confirmation_letter" : "follow_up_letter";
   compileFinalize.value = true;
-  compilePassword.value = "";
   compileReason.value = "";
 }
 
 function cancelCompileLetter() {
-  compilePassword.value = "";
   activeCompileVisit.value = null;
 }
 
 async function confirmCompileLetter() {
   const visit = activeCompileVisit.value;
   const reason = compileReason.value.trim();
-  const password = compilePassword.value;
-  compilePassword.value = "";
   if (!visit || !reason || !canSchedule.value) return;
-  if (compileFinalize.value && !password) return;
+
+  if (compileFinalize.value) {
+    sigMode.value = "finalize-letter";
+    sigActionUrl.value = "/api/v1/ctms/letters/finalize";
+    sigSemanticAction.value = SEMANTIC_ACTIONS.CTMS_LETTER_FINALIZE;
+    sigModalOpen.value = true;
+    return;
+  }
 
   saving.value = true;
   try {
-    let sigToken: string | undefined;
-    const signerUsername =
-      authStore.identity?.username ||
-      authStore.user?.username ||
-      authStore.userId ||
-      visit.cra_id;
-
-    if (compileFinalize.value) {
-      const verificationPayload = buildStepUpVerificationPayload({
-        username: signerUsername,
-        password,
-        totp: null,
-        action: "/api/v1/ctms/letters/compile",
-        semanticAction: "ctms.letter.compile",
-      });
-      const verifyRes = await apiClient.post(
-        "/api/v1/auth/signature-verification",
-        verificationPayload
-      );
-      sigToken = verifyRes?.sig_token;
-      if (!sigToken) {
-        throw new Error(
-          "Signature verification did not return a signature token."
-        );
-      }
-    }
-
+    const fallbackCra = visit.cra_id || signerUsername.value || "cra_monitor";
     const compiled = await ctmsApi.compileVisitLetter(
       compileTemplateName.value,
       {
-        craId: visit.cra_id || signerUsername,
+        craId: fallbackCra,
         createdAt: new Date().toISOString(),
         studyId: visit.study_id || studyInput.value.trim(),
         siteId: visit.site_id,
@@ -779,17 +779,14 @@ async function confirmCompileLetter() {
           resolutionStatus: f.resolution_status || "OPEN",
         })),
         visitId: visit.id,
-        finalize: compileFinalize.value,
-        signerName: compileFinalize.value ? signerUsername : null,
-        signingPurpose: compileFinalize.value
-          ? "Monitoring Visit Report Issuance"
-          : null,
+        finalize: false,
+        signerName: null,
+        signingPurpose: null,
         investigatorEmail: null,
         reasonForChange: reason,
       },
       {
         changeReason: reason,
-        sigToken,
       }
     );
 
@@ -832,24 +829,117 @@ function prepareSignOff(visit: MonitoringVisit) {
   signOffReason.value = "";
 }
 
-async function confirmSignOff() {
+function confirmSignOff() {
   const visit = activeSignOffVisit.value;
   const reason = signOffReason.value.trim();
   if (!visit || !reason || !canSignOff.value) return;
 
+  sigMode.value = "visit-signoff";
+  sigActionUrl.value = `/api/v1/ctms/monitoring-visits/${encodeURIComponent(visit.id)}/sign-off`;
+  sigSemanticAction.value = SEMANTIC_ACTIONS.CTMS_MONITORING_VISIT_SIGN_OFF;
+  sigModalOpen.value = true;
+}
+
+async function handleMonitoringSigned(
+  sigToken: string,
+  signingReason: string,
+  metadata?: { signerName?: string }
+) {
+  if (sigMode.value === "finalize-letter") {
+    const visit = activeCompileVisit.value;
+    const reason = compileReason.value.trim() || signingReason;
+    if (!visit || !reason) {
+      return { status: "FAILED", message: "No monitoring visit selected." };
+    }
+    saving.value = true;
+    try {
+      const effectiveSigner =
+        metadata?.signerName ||
+        signerUsername.value ||
+        visit.cra_id ||
+        "cra_monitor";
+      const finalized = await ctmsApi.finalizeVisitLetter(
+        compileTemplateName.value,
+        {
+          craId: visit.cra_id || effectiveSigner,
+          createdAt: new Date().toISOString(),
+          studyId: visit.study_id || studyInput.value.trim(),
+          siteId: visit.site_id,
+          visitType: visit.visit_type,
+          scheduledDate: visit.scheduled_date,
+          actualDate: visit.actual_date ?? null,
+          findings: (visit.findings ?? []).map((f) => ({
+            text: f.text,
+            severity: f.severity,
+            resolutionStatus: f.resolution_status || "OPEN",
+          })),
+          visitId: visit.id,
+          finalize: true,
+          signerName: effectiveSigner,
+          signingPurpose: signingReason || "Monitoring Visit Report Issuance",
+          investigatorEmail: null,
+          reasonForChange: reason,
+        },
+        {
+          changeReason: reason,
+          sigToken,
+        }
+      );
+
+      compiledLetters.value = [
+        finalized,
+        ...compiledLetters.value.filter(
+          (c) => c.letterId !== finalized.letterId
+        ),
+      ];
+      activeCompileVisit.value = null;
+      compileReason.value = "";
+      sigModalOpen.value = false;
+      toasts.push({
+        tone: "success",
+        title: "Visit letter finalized",
+        message: `${finalized.letterId} (${finalized.status}) signed and filed.`,
+      });
+      return { kind: "signed" };
+    } catch (err) {
+      toasts.apiError("Visit letter could not be finalized", err);
+      return {
+        status: "FAILED",
+        message:
+          err instanceof Error
+            ? err.message
+            : "Visit letter could not be finalized.",
+      };
+    } finally {
+      saving.value = false;
+    }
+  }
+
+  const visit = activeSignOffVisit.value;
+  const reason = signOffReason.value.trim() || signingReason;
+  if (!visit || !reason) {
+    return { status: "FAILED", message: "No monitoring visit selected." };
+  }
   saving.value = true;
   try {
-    await ctmsApi.signOffMonitoringVisit(visit.id, reason);
+    await ctmsApi.signOffMonitoringVisit(visit.id, reason, sigToken);
     activeSignOffVisit.value = null;
     signOffReason.value = "";
+    sigModalOpen.value = false;
     toasts.push({
       tone: "success",
       title: "Supervisory sign-off recorded",
       message: `${visit.visit_type} visit for ${visit.site_id} signed off.`,
     });
     await loadVisits();
+    return { kind: "signed" };
   } catch (err) {
     toasts.apiError("Supervisory sign-off failed", err);
+    return {
+      status: "FAILED",
+      message:
+        err instanceof Error ? err.message : "Supervisory sign-off failed.",
+    };
   } finally {
     saving.value = false;
   }

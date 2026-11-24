@@ -174,18 +174,37 @@ public sealed class CtmsRoutingTests : IAsyncDisposable
         var compDoc = await compRes.Content.ReadFromJsonAsync<JsonElement>(TestContext.Current.CancellationToken);
         compDoc.GetProperty("status").GetString().Should().Be("COMPLETED");
 
-        // 3. Sign-off
+        // 3. Sign-off requires X-Sig-Token (401 without token, 200 with step-up token, 401 on replay)
         using var monitorClient = CreateClient("monitor", "manager-1");
-        using var signReq = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/ctms/monitoring-visits/{visitId}/sign-off")
+        string signOffPath = $"/api/v1/ctms/monitoring-visits/{visitId}/sign-off";
+        using var unsignedSignReq = new HttpRequestMessage(HttpMethod.Post, signOffPath) { Content = JsonContent.Create(new { }) };
+        unsignedSignReq.Headers.Add("X-Change-Reason", "Trip report endorsed");
+        (await monitorClient.SendAsync(unsignedSignReq, TestContext.Current.CancellationToken))
+            .StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+
+        string sigToken = TestSecurityContext.CreateSigToken(
+            "manager-1",
+            MonitoringVisitEndpoints.SignOffVisitAction(visitId),
+            MonitoringVisitEndpoints.SignOffVisitSemanticAction,
+            [RoleNormalization.ROLE_CRA_CANONICAL],
+            issuedAt: new DateTimeOffset(2026, 11, 1, 10, 0, 0, TimeSpan.Zero));
+        using var signReq = new HttpRequestMessage(HttpMethod.Post, signOffPath)
         {
             Content = JsonContent.Create(new { })
         };
         signReq.Headers.Add("X-Change-Reason", "Trip report endorsed");
+        signReq.Headers.Add(GatewayHeaders.SigToken, sigToken);
         var signRes = await monitorClient.SendAsync(signReq, TestContext.Current.CancellationToken);
         signRes.StatusCode.Should().Be(HttpStatusCode.OK);
         var signDoc = await signRes.Content.ReadFromJsonAsync<JsonElement>(TestContext.Current.CancellationToken);
         signDoc.GetProperty("status").GetString().Should().Be("SIGNED_OFF");
         signDoc.GetProperty("signer").GetString().Should().Be("manager-1");
+
+        using var replayReq = new HttpRequestMessage(HttpMethod.Post, signOffPath) { Content = JsonContent.Create(new { }) };
+        replayReq.Headers.Add("X-Change-Reason", "Trip report endorsed");
+        replayReq.Headers.Add(GatewayHeaders.SigToken, sigToken);
+        (await monitorClient.SendAsync(replayReq, TestContext.Current.CancellationToken))
+            .StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]

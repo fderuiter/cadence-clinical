@@ -75,6 +75,7 @@ const loadRtsm = () =>
 const RTSM_METHODS = [
   "addSubject",
   "changeSubjectState",
+  "unblindSubject",
   "assignSubjectSite",
   "getSiteComplianceStatus",
   "activateSite",

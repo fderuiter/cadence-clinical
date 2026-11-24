@@ -53,6 +53,11 @@ public static class SubjectErrors
         DomainError.Validation("UNBLINDING_REASON_TOO_SHORT",
             $"An emergency unblinding needs a reason for change of at least {minimumLength} characters explaining the clinical necessity.");
 
+    /// <summary>Emergency unblinding is a signed command, never a bare state change on <c>PATCH .../state</c>.</summary>
+    public static DomainError UnblindThroughDedicatedEndpoint() =>
+        DomainError.Validation("UNBLIND_REQUIRES_DEDICATED_ROUTE",
+            "Emergency unblinding requires an electronic signature on POST /api/v1/execution/subjects/{subjectId}/unblind.");
+
     /// <summary>A signed consent was submitted without <c>icf_signed_date</c> and no date is on file for that
     /// consent version. The legacy system defaulted the date to the time of the request; this port rejects it
     /// instead (#4824).</summary>

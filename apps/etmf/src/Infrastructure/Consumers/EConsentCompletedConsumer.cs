@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Cadence.Apps.Etmf.Domain;
 using Cadence.Apps.Etmf.Infrastructure.Persistence;
 using Cadence.Contracts;
+using Cadence.Database;
 using Cadence.Kernel.Time;
 
 using MassTransit;
@@ -23,10 +24,13 @@ public sealed class EConsentCompletedConsumer(
     IClock? clock = null,
     ILogger<EConsentCompletedConsumer>? logger = null) : IConsumer<EConsentCompleted>
 {
+    private const string ServiceAccountId = "svc:etmf-econsent-consumer";
+
     private readonly IClock _clock = clock ?? SystemClock.Instance;
 
     public async Task Consume(ConsumeContext<EConsentCompleted> context)
     {
+        using var _ = StandaloneAuditActorScope.Begin(ServiceAccountId);
         var msg = context.Message;
 
         if (string.IsNullOrWhiteSpace(msg.SubjectId) || string.IsNullOrWhiteSpace(msg.StudyId))

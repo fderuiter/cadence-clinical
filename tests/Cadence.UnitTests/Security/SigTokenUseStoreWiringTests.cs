@@ -40,7 +40,7 @@ public sealed class SigTokenUseStoreWiringTests
     {
         await using var host = ServiceHosts.All[service](null);
         bool mapsSignedRoute = host.Endpoints.Any(e => e.Metadata.GetMetadata<ElectronicSignatureRequired>() is not null);
-        if (service is "econsent" or "knowledge" or "execution" or "tickets")
+        if (service is "ctms" or "econsent" or "execution" or "imaging" or "interop" or "knowledge" or "payments" or "safety" or "tickets")
         {
             mapsSignedRoute.Should().BeTrue("{0} maps e-signature routes", service);
         }

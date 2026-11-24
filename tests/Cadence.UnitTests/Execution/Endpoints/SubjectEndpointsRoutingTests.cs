@@ -88,7 +88,8 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
                 null, "SCREENING", "1.0.0", null));
         var request = new SubjectCreateRequest("SUBJ-777", "STUDY-001", null, null);
 
-        var response = await SendJsonAsync(HttpMethod.Post, "/api/v1/execution/subjects", request);
+        var response = await SendJsonAsync(HttpMethod.Post, "/api/v1/execution/subjects", request,
+            changeReason: "Initial subject registration");
 
         response.StatusCode.Should().Be(HttpStatusCode.Created);
         response.Headers.Location.Should().NotBeNull();
@@ -97,12 +98,24 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
     }
 
     [Fact]
+    public async Task CreateSubject_GivenMissingChangeReasonHeader_Returns400AndNeverInvokesApplicationService()
+    {
+        var request = new SubjectCreateRequest("SUBJ-777", "STUDY-001", null, null);
+
+        var response = await SendJsonAsync(HttpMethod.Post, "/api/v1/execution/subjects", request, changeReason: null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        _factory.Service.CreateAsyncCalls.Should().Be(0);
+    }
+
+    [Fact]
     public async Task CreateSubject_GivenInvalidRequest_ShortCircuitsWith400AndNeverInvokesApplicationService()
     {
         // Empty subject_id fails SubjectCreateRequestValidator's NotEmpty() rule -- ValidationFilter<T> must
         // short-circuit before CreateAsync is ever reached.
         var response = await SendRawJsonAsync(HttpMethod.Post, "/api/v1/execution/subjects",
-            """{"subject_id": "", "study_id": "STUDY-001"}""");
+            """{"subject_id": "", "study_id": "STUDY-001"}""",
+            changeReason: "Initial subject registration");
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         _factory.Service.CreateAsyncCalls.Should().Be(0);
@@ -117,7 +130,8 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
     {
         var request = new SubjectConsentRequest(new ProtocolVersionPayload("STUDY-001", "2.0", 2), IcfSigned: true, IcfSignedDate: null);
 
-        var response = await SendJsonAsync(HttpMethod.Post, "/api/v1/execution/subjects/SUBJ-001/consent", request);
+        var response = await SendJsonAsync(HttpMethod.Post, "/api/v1/execution/subjects/SUBJ-001/consent", request,
+            changeReason: "Record signed informed consent");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         _factory.Service.RecordConsentAsyncCalls.Should().Be(1);
@@ -132,7 +146,8 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
         _factory.Service.RecordConsentResult = SubjectErrors.NotFound("SUBJ-404");
         var request = new SubjectConsentRequest(new ProtocolVersionPayload("STUDY-001", "2.0", 2), IcfSigned: true, IcfSignedDate: null);
 
-        var response = await SendJsonAsync(HttpMethod.Post, "/api/v1/execution/subjects/SUBJ-404/consent", request);
+        var response = await SendJsonAsync(HttpMethod.Post, "/api/v1/execution/subjects/SUBJ-404/consent", request,
+            changeReason: "Record signed informed consent");
 
         await AssertProblemDetailAsync(response, HttpStatusCode.NotFound, "Subject not found");
     }
@@ -142,7 +157,8 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
     {
         // Missing protocol_version entirely fails SubjectConsentRequestValidator's NotNull() rule.
         var response = await SendRawJsonAsync(HttpMethod.Post, "/api/v1/execution/subjects/SUBJ-001/consent",
-            """{"icf_signed": true}""");
+            """{"icf_signed": true}""",
+            changeReason: "Record signed informed consent");
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         _factory.Service.RecordConsentAsyncCalls.Should().Be(0);
@@ -153,7 +169,8 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
     {
         var request = new SubjectConsentRequest(new ProtocolVersionPayload("STUDY-001", "2.0", 2), IcfSigned: true, IcfSignedDate: null);
 
-        var response = await SendJsonAsync(HttpMethod.Post, "/api/v1/execution/subjects/SUBJ-001/consents", request);
+        var response = await SendJsonAsync(HttpMethod.Post, "/api/v1/execution/subjects/SUBJ-001/consents", request,
+            changeReason: "Record signed informed consent");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK, "the plural alias must behave identically to /consent");
         _factory.Service.RecordConsentAsyncCalls.Should().Be(1);
@@ -166,7 +183,8 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
         // SubjectEndpoints.MapSubjectEndpoints's own remarks on why this is necessary for true behavioral
         // parity, unlike the design doc's un-filtered illustrative alias sample).
         var response = await SendRawJsonAsync(HttpMethod.Post, "/api/v1/execution/subjects/SUBJ-001/consents",
-            """{"icf_signed": true}""");
+            """{"icf_signed": true}""",
+            changeReason: "Record signed informed consent");
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         _factory.Service.RecordConsentAsyncCalls.Should().Be(0);

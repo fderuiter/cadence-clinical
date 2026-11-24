@@ -521,8 +521,18 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
         await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var caller = Caller(RoleNormalization.ROLE_INVESTIGATOR, "investigator-01");
+        caller.Request.Headers["X-Change-Reason"] = "Official Part 11 signed DoA PDF export";
 
-        var result = await DoaEndpoints.ExportSiteDoaPdfAsync(
+        // Unsigned GET exports working copy without PKCS#7 signature or DOA_EXPORT_PDF audit row
+        var unsignedResult = await DoaEndpoints.ExportSiteDoaPdfAsync(
+            SiteId, _db, caller, _clock, TestContext.Current.CancellationToken);
+        var unsignedFile = unsignedResult.Should().BeOfType<FileContentHttpResult>().Subject;
+        FluentActions.Invoking(() => new ESignatureVerifier().VerifyPdf(unsignedFile.FileContents.ToArray()))
+            .Should().Throw<TamperDetectedException>();
+        (await _db.CtmsAuditLogs.AnyAsync(a => a.Action == "DOA_EXPORT_PDF", TestContext.Current.CancellationToken)).Should().BeFalse();
+
+        // Dedicated signed POST exports PKCS#7-signed PDF and records DOA_EXPORT_PDF audit row
+        var result = await DoaEndpoints.ExportSignedSiteDoaPdfAsync(
             SiteId, _db, caller, _clock, TestContext.Current.CancellationToken);
 
         result.Should().NotBeNull();
@@ -581,10 +591,25 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
             "/api/v1/ctms/doa/sign-off", signOffPayload, TestContext.Current.CancellationToken);
         investigatorSignOffResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
 
-        // 3. Authorized Principal Investigator CAN reach sign-off endpoint (returns 404 for non-existent record rather than 403 Forbidden)
+        // 3. Principal Investigator without X-Sig-Token is refused with 401; with valid X-Sig-Token reaches handler (404 for non-existent record)
         using var piClient = CreateClient(RoleNormalization.ROLE_PRINCIPAL_INVESTIGATOR, "pi-1");
-        var piSignOffResponse = await piClient.PostAsJsonAsync(
+        var unsignedPiSignOffResponse = await piClient.PostAsJsonAsync(
             "/api/v1/ctms/doa/sign-off", signOffPayload, TestContext.Current.CancellationToken);
+        unsignedPiSignOffResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+
+        using var signedPiSignOffReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ctms/doa/sign-off")
+        {
+            Content = JsonContent.Create(signOffPayload),
+        };
+        signedPiSignOffReq.Headers.Add(
+            GatewayHeaders.SigToken,
+            TestSecurityContext.CreateSigToken(
+                "pi-1",
+                DoaEndpoints.SignOffDelegationAction,
+                DoaEndpoints.SignOffDelegationSemanticAction,
+                [RoleNormalization.ROLE_PRINCIPAL_INVESTIGATOR],
+                issuedAt: _clock.UtcNow));
+        var piSignOffResponse = await piClient.SendAsync(signedPiSignOffReq, TestContext.Current.CancellationToken);
         piSignOffResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
 
         // 4. Investigator assigned only to SITE-999 is blocked at route scope middleware on GET /sites/{site_id}/log,
@@ -775,7 +800,7 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
             unendorsed.SignedOff.Should().BeFalse();
         }
 
-        // 2. Principal Investigator receives HTTP 200 and SignedOff transitions to true
+        // 2. Principal Investigator without X-Sig-Token receives 401; with valid X-Sig-Token receives HTTP 200 and SignedOff transitions to true
         using var piClient = SignedClientExtensions.CreateSignedClient(
             factory,
             TestSecurityContext.Identity("pi-1", "principal_investigator") with
@@ -783,8 +808,17 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
                 StudyIds = [StudyId],
                 SiteIds = [SiteId],
             });
+        using (var unsignedReq = BuildSignOffRequest(requestJson))
+        {
+            using var unsignedRes = await piClient.SendAsync(unsignedReq, ct);
+            unsignedRes.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        }
+
         using (var req = BuildSignOffRequest(requestJson))
         {
+            req.Headers.Add(
+                GatewayHeaders.SigToken,
+                TestSecurityContext.CreateSigToken("pi-1", DoaEndpoints.SignOffDelegationAction, DoaEndpoints.SignOffDelegationSemanticAction, [RoleNormalization.ROLE_PRINCIPAL_INVESTIGATOR]));
             using var res = await piClient.SendAsync(req, ct);
             res.StatusCode.Should().Be(HttpStatusCode.OK);
             var dto = await res.Content.ReadFromJsonAsync<DelegationResponseDto>(ct);

@@ -121,12 +121,8 @@ public sealed class SubjectApplicationService(
 
             var subject = ClinicalSubject.Create(subjectCode, studyCode, siteCode, enrollmentIndex,
                 encryptedDemographics, stratFactors: null, id: subjectId);
-            // MIG-SUBJ-017: the .NET replacement for the legacy's own `current_change_reason.get() or "..."`
-            // per-endpoint idiom is this one, uniformly-defaulting accessor — see ICurrentAuditContextAccessor's
-            // own doc comment ("closing the legacy's two-idiom split... giving every reader exactly one
-            // resolution path"). This deliberately does not reproduce the router's distinct literal fallback
-            // text ("Initial Subject Creation"); MIG-SUBJ-017 already unified every such fallback onto one
-            // constant ("system_operation").
+            // ReasonForChange is resolved strictly from the caller's X-Change-Reason header or a declared
+            // background ServiceAccount via ICurrentAuditContextAccessor.
             subject.ReasonForChange = auditContext.ChangeReason;
 
             await subjects.AddAsync(subject, token).ConfigureAwait(false);
@@ -301,7 +297,52 @@ public sealed class SubjectApplicationService(
             return SubjectErrors.InvalidStateTransition(SubjectStateCodec.ToCode(subject.Status), request.Target ?? "");
         }
 
+        if (target == SubjectState.Unblinded)
+        {
+            return SubjectErrors.UnblindThroughDedicatedEndpoint();
+        }
+
         return await TransitionSubjectAsync(subject, target, changeReason, ct).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Performs an emergency unblinding on a randomized participant, requiring a clinical justification of at least
+    /// <see cref="SubjectAuthority.MinimumUnblindingReasonLength"/> characters and recording who broke the blind,
+    /// why, and when on both the aggregate and the audit chain.
+    /// </summary>
+    public async Task<Result<SubjectResponse>> UnblindAsync(
+        string subjectIdOrCode, string changeReason, CancellationToken ct)
+    {
+        var subject = await ResolveSubjectAsync(subjectIdOrCode, ct).ConfigureAwait(false);
+        if (subject is null)
+        {
+            return SubjectErrors.NotFound(subjectIdOrCode);
+        }
+
+        if (changeReason.Trim().Length < SubjectAuthority.MinimumUnblindingReasonLength)
+        {
+            return SubjectErrors.UnblindingReasonTooShort(SubjectAuthority.MinimumUnblindingReasonLength);
+        }
+
+        var unblindResult = subject.Unblind(auditContext.UserId, changeReason, _clock);
+        if (unblindResult.IsFailure)
+        {
+            return Result<SubjectResponse>.Failure(unblindResult.Error!);
+        }
+
+        subject.ReasonForChange = changeReason;
+        await auditLog.WriteAsync(
+            nameof(ClinicalSubject),
+            subject.Id.ToString(),
+            $"TRANSITION_{SubjectStateCodec.ToCode(SubjectState.Unblinded)}",
+            auditContext.UserId,
+            changeReason,
+            oldValues: null,
+            newValues: null,
+            ct).ConfigureAwait(false);
+        await subjects.SaveChangesAsync(ct).ConfigureAwait(false);
+
+        return SubjectResponse.FromAggregate(subject);
     }
 
     /// <summary>

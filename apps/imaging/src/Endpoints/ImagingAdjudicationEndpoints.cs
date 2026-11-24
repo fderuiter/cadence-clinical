@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Cadence.Apps.Imaging.Domain;
 using Cadence.Apps.Imaging.Infrastructure.Persistence;
 using Cadence.Kernel.Time;
+using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
 using Cadence.Security.Rbac;
 
@@ -62,6 +63,14 @@ public record AdjudicationSessionResponse(
 
 public static class ImagingAdjudicationEndpoints
 {
+    public const string ChairAdjudicateSemanticAction = "imaging.adjudication.chair_adjudicate";
+
+    public static string ChairAdjudicateAction(string sessionId) =>
+        $"/api/v1/imaging/adjudications/{Uri.EscapeDataString(sessionId)}/chair-adjudicate";
+
+    private static string ChairAdjudicateActionFor(HttpContext httpContext) =>
+        ChairAdjudicateAction(httpContext.Request.RouteValues["sessionId"]?.ToString() ?? string.Empty);
+
     public static IEndpointRouteBuilder MapImagingAdjudicationEndpoints(this IEndpointRouteBuilder routes)
     {
         var group = routes.MapGroup("/api/v1/imaging/adjudications")
@@ -84,6 +93,7 @@ public static class ImagingAdjudicationEndpoints
         group.MapPost("/{sessionId}/chair-adjudicate", ChairAdjudicateSessionAsync)
             .WithName("ChairAdjudicateImagingSession")
             .RequirePermission("imaging_adjudication:adjudicate").RequireCallerStudyAndSiteScope()
+            .RequireElectronicSignature(ChairAdjudicateSemanticAction, ChairAdjudicateActionFor)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<AdjudicationSessionResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status400BadRequest)
@@ -105,6 +115,7 @@ public static class ImagingAdjudicationEndpoints
     private static async Task<IResult> SubmitOrEvaluateSessionAsync(
         SubmitAdjudicationSessionRequest request,
         ImagingDbContext dbContext,
+        IClock clock,
         HttpContext httpContext,
         CancellationToken cancellationToken)
     {
@@ -118,7 +129,7 @@ public static class ImagingAdjudicationEndpoints
             return OutsideStudy();
         }
 
-        DateTimeOffset now = SystemClock.Instance.UtcNow;
+        DateTimeOffset now = clock.UtcNow;
 
         double r1Sld = request.Reader1Assessment.SumLongestDiametersMm;
         double r2Sld = request.Reader2Assessment.SumLongestDiametersMm;
@@ -175,6 +186,7 @@ public static class ImagingAdjudicationEndpoints
             FinalConsensusSldMm = isDiscordant ? null : request.Reader1Assessment.SumLongestDiametersMm,
             BindingReader = isDiscordant ? null : "CONCORDANT_READERS",
             SessionDigest = sessionDigest,
+            ReasonForChange = ChangeReasonHeader.Read(httpContext.Request) ?? "Submitted dual-reader imaging adjudication session",
             CreatedAt = now,
             CreatedBy = Caller(httpContext),
             UpdatedAt = now
@@ -222,6 +234,7 @@ public static class ImagingAdjudicationEndpoints
         string sessionId,
         ChairAdjudicateImagingRequest request,
         ImagingDbContext dbContext,
+        IClock clock,
         HttpContext httpContext,
         CancellationToken cancellationToken)
     {
@@ -247,7 +260,7 @@ public static class ImagingAdjudicationEndpoints
             return TypedResults.Conflict(new { code = "SESSION_ALREADY_FINALIZED", message = $"Adjudication session '{sessionId}' is already finalized in status '{session.WorkflowStatus}'." });
         }
 
-        DateTimeOffset now = SystemClock.Instance.UtcNow;
+        DateTimeOffset now = clock.UtcNow;
 
         string payloadToHash = $"{session.Id}|{request.FinalConsensusResponse}|{request.FinalConsensusSldMm}|{request.BindingReader}|{request.AdjudicationRationale}";
         string payloadHash = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(payloadToHash)));
@@ -270,6 +283,8 @@ public static class ImagingAdjudicationEndpoints
         session.BindingReader = request.BindingReader;
         session.AdjudicationRationale = request.AdjudicationRationale;
         session.ElectronicSignatureJson = JsonSerializer.Serialize(signatureManifest);
+        session.ReasonForChange = ChangeReasonHeader.Read(httpContext.Request)
+            ?? (string.IsNullOrWhiteSpace(request.AdjudicationRationale) ? request.SignatureMeaning : request.AdjudicationRationale);
         session.LockedAt = now;
         session.LockedBy = signerId;
         session.UpdatedAt = now;

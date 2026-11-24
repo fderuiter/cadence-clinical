@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Apps.Execution.Application.Supply;
+using Cadence.Apps.Execution.Endpoints.Filters;
 using Cadence.Security.DependencyInjection;
 
 using Microsoft.AspNetCore.Builder;
@@ -20,7 +21,8 @@ public static class IpKitEndpoints
         // Route permissions (ADR-2516): kit scans, reconciliation and inventory are blinded supply data, so only the
         // pharmacist (rtsm_supply) reaches them; seeding a site's kit inventory is a sponsor operation.
         var group = routes.MapGroup("/api/v1/execution/rtsm/kits")
-            .WithTags("IP Kit Reconciliation");
+            .WithTags("IP Kit Reconciliation")
+            .AddEndpointFilter<ChangeReasonHeaderFilter>();
 
         group.MapPost("/validate-scan", async (
             IpKitScanValidateRequest request,
@@ -36,6 +38,7 @@ public static class IpKitEndpoints
             var result = await service.ValidateScannedBarcodeAsync(request, ct);
             return Results.Ok(result);
         })
+        .AllowWithoutChangeReason()
         .RequirePermission("rtsm_supply:read").RequireCallerStudyAndSiteScope();
 
         group.MapPost("/reconcile-batch", async (

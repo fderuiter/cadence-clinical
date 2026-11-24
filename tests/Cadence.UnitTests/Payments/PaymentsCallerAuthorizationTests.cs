@@ -8,8 +8,11 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Apps.Payments.Domain;
+using Cadence.Apps.Payments.Endpoints;
 using Cadence.Apps.Payments.Infrastructure.Persistence;
 using Cadence.Kernel.Time;
+using Cadence.Security.Authentication;
+using Cadence.Security.Rbac;
 using Cadence.Testing.Hosting;
 using Cadence.Testing.Security;
 
@@ -49,6 +52,9 @@ public sealed class PaymentsCallerAuthorizationTests : IAsyncDisposable
             host.UseTestGatewaySecret().UseTestPostgresConnectionString().UseTestFieldProtectionKeys();
             host.ConfigureTestServices(services =>
             {
+                services.RemoveAll<Microsoft.Extensions.Hosting.IHostedService>();
+                services.RemoveAll<ISigTokenUseStore>();
+                services.AddSingleton<ISigTokenUseStore>(sp => new ReplayCache(sp.GetRequiredService<IClock>()));
                 services.RemoveAll<DbContextOptions<PaymentsDbContext>>();
                 services.RemoveAll<IDbContextOptionsConfiguration<PaymentsDbContext>>();
                 services.AddDbContext<PaymentsDbContext>(options => options.UseSqlite(_connection));
@@ -147,12 +153,28 @@ public sealed class PaymentsCallerAuthorizationTests : IAsyncDisposable
     public async Task RemittanceSignature_IsTheSignedCaller_NotTheBodysName_AndNotTheApprover()
     {
         await SeedAsync();
+        string signPath = $"/api/v1/payments/invoices/{InvoiceId}/remittance-advice/sign";
+
         using (var approver = Client("finance-1", "Grants Manager"))
         {
             (await approver.PostAsync($"/api/v1/payments/invoices/{InvoiceId}/approve", null, Ct)).StatusCode.Should().Be(HttpStatusCode.OK);
 
-            using var ownSignature = await approver.PostAsJsonAsync(
-                $"/api/v1/payments/invoices/{InvoiceId}/remittance-advice/sign", new { signature_reason = "Approve and sign" }, Ct);
+            // Missing X-Sig-Token is refused with 401 Unauthorized before handler executes
+            using var unsignedAttempt = await approver.PostAsJsonAsync(signPath, new { signature_reason = "Approve and sign" }, Ct);
+            unsignedAttempt.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+
+            using var ownSignatureReq = new HttpRequestMessage(HttpMethod.Post, signPath)
+            {
+                Content = JsonContent.Create(new { signature_reason = "Approve and sign" }),
+            };
+            ownSignatureReq.Headers.Add(
+                GatewayHeaders.SigToken,
+                TestSecurityContext.CreateSigToken(
+                    "finance-1",
+                    PaymentEndpoints.SignRemittanceAction(InvoiceId),
+                    PaymentEndpoints.SignRemittanceSemanticAction,
+                    [RoleNormalization.ROLE_FINANCE_OFFICER]));
+            using var ownSignature = await approver.SendAsync(ownSignatureReq, Ct);
             ownSignature.StatusCode.Should().Be(HttpStatusCode.Conflict, "the approver may not also sign the remittance");
         }
 
@@ -162,10 +184,17 @@ public sealed class PaymentsCallerAuthorizationTests : IAsyncDisposable
         }
 
         using var signer = Client("finance-2", "finance officer");
-        using var response = await signer.PostAsync(
-            $"/api/v1/payments/invoices/{InvoiceId}/remittance-advice/sign",
-            new StringContent("""{"signer_name":"Mallory","signer_role":"CFO","signature_reason":"Remittance statement"}""", Encoding.UTF8, "application/json"),
-            Ct);
+        string signerSigToken = TestSecurityContext.CreateSigToken(
+            "finance-2",
+            PaymentEndpoints.SignRemittanceAction(InvoiceId),
+            PaymentEndpoints.SignRemittanceSemanticAction,
+            [RoleNormalization.ROLE_FINANCE_OFFICER]);
+        using var signReq = new HttpRequestMessage(HttpMethod.Post, signPath)
+        {
+            Content = new StringContent("""{"signer_name":"Mallory","signer_role":"CFO","signature_reason":"Remittance statement"}""", Encoding.UTF8, "application/json"),
+        };
+        signReq.Headers.Add(GatewayHeaders.SigToken, signerSigToken);
+        using var response = await signer.SendAsync(signReq, Ct);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         await using var after = OpenDb();
@@ -177,6 +206,14 @@ public sealed class PaymentsCallerAuthorizationTests : IAsyncDisposable
         audit.UserId.Should().Be("finance-2");
         audit.UserRoles.Should().Be("finance_officer");
         audit.Details.Should().NotContain("Mallory");
+
+        // Replaying the consumed X-Sig-Token fails closed with 401 Unauthorized
+        using var replayReq = new HttpRequestMessage(HttpMethod.Post, signPath)
+        {
+            Content = new StringContent("""{"signature_reason":"Replay attempt"}""", Encoding.UTF8, "application/json"),
+        };
+        replayReq.Headers.Add(GatewayHeaders.SigToken, signerSigToken);
+        (await signer.SendAsync(replayReq, Ct)).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]

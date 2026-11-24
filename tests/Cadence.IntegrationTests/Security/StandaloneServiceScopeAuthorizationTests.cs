@@ -613,6 +613,7 @@ public sealed class StandaloneServiceScopeAuthorizationTests(StandaloneScopePost
         string greenlightToken)
     {
         await using var scope = fixture.Ctms.Services.CreateAsyncScope();
+        using var actorScope = StandaloneAuditActorScope.Begin("svc:integration-test");
         var tenantScope = scope.ServiceProvider.GetRequiredService<ITenantScope>();
         using var _ = tenantScope.Bind(tenantUuid);
         var db = scope.ServiceProvider.GetRequiredService<CtmsDbContext>();

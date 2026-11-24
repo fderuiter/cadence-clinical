@@ -1,13 +1,16 @@
 using System;
+using System.Linq;
 using System.Text.RegularExpressions;
 
 using Cadence.Database.Concurrency;
 using Cadence.Database.Tenancy;
+using Cadence.Kernel.Time;
 using Cadence.Security.Rbac;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -40,7 +43,9 @@ public static partial class CadenceDatabaseExtensions
     /// <summary>
     /// Registers <typeparamref name="TDbContext"/> against PostgreSQL with transient-failure retries,
     /// <c>cadence.tenant_id</c> session binding + SaveChanges tenant stamping (ADR-2250, K-ID-2),
-    /// a readiness health check, and migrations when <see cref="CadenceMigrationOptions"/> asks for it.
+    /// default 21 CFR Part 11 SHA-256 Merkle audit chaining + transactional outbox draining via
+    /// <see cref="GxPAuditInterceptor"/> (ADR-2446), a readiness health check, and migrations when
+    /// <see cref="CadenceMigrationOptions"/> asks for it.
     /// The connection string is resolved by <see cref="ResolvePostgresConnectionString"/>.
     /// </summary>
     public static WebApplicationBuilder AddCadencePostgresDbContext<TDbContext>(
@@ -66,6 +71,8 @@ public static partial class CadenceDatabaseExtensions
             builder.Services.AddCadencePostgresTenancy(baseConnectionString);
         }
 
+        builder.Services.AddHttpContextAccessor();
+        builder.Services.TryAddSingleton<IClock>(SystemClock.Instance);
         builder.Services.AddProblemDetails();
         builder.Services.TryAddEnumerable(
             ServiceDescriptor.Singleton<IExceptionHandler, StandaloneConcurrencyExceptionHandler>());
@@ -75,6 +82,18 @@ public static partial class CadenceDatabaseExtensions
             options.UseNpgsql(connectionString, npgsql => npgsql.EnableRetryOnFailure());
             options.UseCadenceStandaloneTenancy(sp.GetService<ICurrentTenantAccessor>(), isRelational: true);
             configureOptions?.Invoke(sp, options);
+
+            bool hasAuditInterceptor = options.Options.FindExtension<CoreOptionsExtension>()?
+                .Interceptors is { } interceptors
+                && interceptors.OfType<GxPAuditInterceptor>().Any();
+            if (!hasAuditInterceptor)
+            {
+                options.AddInterceptors(
+                    new GxPAuditInterceptor(
+                        () => StandaloneAuditActorScope.ResolveRequiredActor(sp),
+                        sp.GetService<IClock>() ?? SystemClock.Instance));
+            }
+
             options.AddInterceptors(
                 StandaloneTenantConnectionInterceptor.Instance,
                 StandaloneTenantSaveChangesInterceptor.Instance,

@@ -34,6 +34,10 @@ public interface ISubjectApplicationService
     /// <summary>Transitions a subject's state (SCN-003/SCN-005). Implemented by MIG-SUBJ-019.</summary>
     Task<Result<SubjectResponse>> AdvanceStateAsync(string subjectIdOrCode, SubjectStateUpdateRequest request, string changeReason, CancellationToken ct);
 
+    /// <summary>Performs an emergency unblinding under a verified Part 11 step-up signature.</summary>
+    Task<Result<SubjectResponse>> UnblindAsync(string subjectIdOrCode, string changeReason, CancellationToken ct) =>
+        Task.FromResult(Result<SubjectResponse>.Failure(SubjectErrors.UnblindThroughDedicatedEndpoint()));
+
     /// <summary>Re-encrypts and replaces demographics/strat factors, subject to the post-randomization lock
     /// (SCN-004/SCN-006). Implemented by MIG-SUBJ-019.</summary>
     Task<Result<SubjectResponse>> UpdateDemographicsAsync(string subjectIdOrCode, SubjectDemographicsUpdateRequest request, string changeReason, CancellationToken ct);

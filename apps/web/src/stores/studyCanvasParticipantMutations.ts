@@ -269,6 +269,42 @@ export async function recordParticipantConsentMutation(
   return true;
 }
 
+export async function unblindParticipantMutation(
+  store: StudyCanvasMutationStore,
+  participant: SubjectSummary,
+  reason: string,
+  sigToken: string
+): Promise<boolean> {
+  const toasts = useToastStore();
+  try {
+    const updated = await executionApi.unblindSubject(
+      participant.id,
+      reason,
+      sigToken
+    );
+    const changed = {
+      ...participant,
+      status: updated.status || "UNBLINDED",
+    };
+    store.rememberParticipants([changed]);
+    const index = store.participants.findIndex((p) => p.id === participant.id);
+    if (index >= 0) store.participants.splice(index, 1, changed);
+    toasts.push({
+      tone: "success",
+      title: `${participant.subject_id} is now unblinded`,
+      message: "",
+    });
+  } catch (err) {
+    toasts.apiError(`${participant.subject_id} was not unblinded`, err);
+    return false;
+  }
+  await Promise.all([
+    store.refreshAfterChange(),
+    refreshParticipantDetailMutation(store, participant.id),
+  ]);
+  return true;
+}
+
 export async function randomizeParticipantMutation(
   store: StudyCanvasMutationStore,
   participant: SubjectSummary,

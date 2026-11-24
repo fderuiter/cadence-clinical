@@ -38,6 +38,16 @@ public static class DoaEndpoints
     public const string AssignPermission = "ctms_doa:assign";
     public const string RevokePermission = "ctms_doa:revoke";
     public const string SignOffPermission = "ctms_doa:sign_off";
+    public const string ExportPermission = "ctms_doa:export";
+    public const string SignOffDelegationAction = "/api/v1/ctms/doa/sign-off";
+    public const string SignOffDelegationSemanticAction = "ctms.doa.sign_off";
+    public const string ExportSignedPdfSemanticAction = "ctms.doa.export_signed_pdf";
+
+    public static string ExportSignedPdfAction(string siteId) =>
+        $"/api/v1/ctms/doa/sites/{Uri.EscapeDataString(siteId)}/export-signed-pdf";
+
+    private static string ExportSignedPdfActionFor(HttpContext httpContext) =>
+        ExportSignedPdfAction(httpContext.Request.RouteValues["site_id"]?.ToString() ?? string.Empty);
 
     public static RouteGroupBuilder MapDoaEndpoints(this RouteGroupBuilder group)
     {
@@ -70,7 +80,8 @@ public static class DoaEndpoints
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict)
-            .RequirePermission(SignOffPermission).RequireCallerStudyAndSiteScope();
+            .RequirePermission(SignOffPermission).RequireCallerStudyAndSiteScope()
+            .RequireElectronicSignature(SignOffDelegationSemanticAction, _ => SignOffDelegationAction);
 
         doa.MapGet("/sites/{site_id}/log", GetSiteDoaLogAsync)
             .WithName("GetSiteDoaLog")
@@ -82,11 +93,21 @@ public static class DoaEndpoints
 
         doa.MapGet("/sites/{site_id}/export-pdf", ExportSiteDoaPdfAsync)
             .WithName("ExportSiteDoaPdf")
-            .WithSummary("Export 21 CFR Part 11 signed DOA PDF log.")
+            .WithSummary("Export unsigned working DOA PDF log for review.")
             .Produces(StatusCodes.Status200OK, contentType: "application/pdf")
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .RequirePermission(ReadPermission).RequireSiteScope("site_id");
+
+        doa.MapPost("/sites/{site_id}/export-signed-pdf", ExportSignedSiteDoaPdfAsync)
+            .WithName("ExportSignedSiteDoaPdf")
+            .WithSummary("Export 21 CFR Part 11 signed DOA PDF log and record an export audit entry.")
+            .Produces(StatusCodes.Status200OK, contentType: "application/pdf")
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .RequirePermission(ExportPermission).RequireSiteScope("site_id")
+            .RequireElectronicSignature(ExportSignedPdfSemanticAction, ExportSignedPdfActionFor);
 
         return group;
     }
@@ -558,8 +579,105 @@ public static class DoaEndpoints
         }
 
         string trimmedSite = siteId.Trim();
-        var authorizedStudies = scope.AuthorizedStudies;
+        var (user, role) = ResolveCaller(httpContext, "investigator");
+        DateTimeOffset now = clock.UtcNow;
 
+        var (_, rawPdfBytes) = await BuildSiteDoaRawPdfAsync(
+            db,
+            siteId,
+            trimmedSite,
+            scope.AuthorizedStudies,
+            user,
+            role,
+            now,
+            isSignedExport: false,
+            ct);
+
+        return Results.File(rawPdfBytes, "application/pdf", $"DOA_Log_{trimmedSite}_working_copy.pdf");
+    }
+
+    public static async Task<IResult> ExportSignedSiteDoaPdfAsync(
+        [FromRoute(Name = "site_id")] string siteId,
+        CtmsDbContext db,
+        HttpContext httpContext,
+        [FromServices] IClock clock,
+        CancellationToken ct,
+        [FromQuery(Name = "study_id")] string? studyId = null)
+    {
+        var scope = await CtmsScopeGuard.ResolveDoaSiteScopeAsync(httpContext, db, siteId, studyId, ct);
+        if (scope.Error is not null)
+        {
+            return scope.Error;
+        }
+
+        if (!TryExtractReasonForChange(httpContext, null, out string reason, out var problem))
+        {
+            return problem!;
+        }
+
+        string trimmedSite = siteId.Trim();
+        var authorizedStudies = scope.AuthorizedStudies;
+        var (user, role) = ResolveCaller(httpContext, "investigator");
+        DateTimeOffset now = clock.UtcNow;
+
+        var (delegationCount, rawPdfBytes) = await BuildSiteDoaRawPdfAsync(
+            db,
+            siteId,
+            trimmedSite,
+            authorizedStudies,
+            user,
+            role,
+            now,
+            isSignedExport: true,
+            ct);
+
+        var (cert, key) = Pkcs7Signer.GenerateSigningCredentials(user, clock);
+        var signer = new Pkcs7Signer(cert, key);
+        byte[] signedPdfBytes = signer.SignPdf(rawPdfBytes);
+
+        string hash = Convert.ToHexStringLower(SHA256.HashData(signedPdfBytes));
+
+        string? resolvedExportStudyId = null;
+        if (authorizedStudies.Count == 1)
+        {
+            resolvedExportStudyId = authorizedStudies.First();
+        }
+        else if (!string.IsNullOrWhiteSpace(studyId))
+        {
+            resolvedExportStudyId = studyId.Trim();
+        }
+
+        var auditEntry = new CtmsAuditLog
+        {
+            Timestamp = now,
+            UserId = user,
+            UserRole = role,
+            Action = "DOA_EXPORT_PDF",
+            Details = $"Exported GxP Delegation of Authority PDF for site {trimmedSite} with {delegationCount} records. SHA-256: {hash}",
+            StudyId = resolvedExportStudyId,
+            SiteId = trimmedSite,
+            ReasonForChange = reason,
+            CreatedAt = now.UtcDateTime,
+            CreatedBy = user,
+            VersionIndex = 1,
+        };
+        db.CtmsAuditLogs.Add(auditEntry);
+        await db.SaveChangesAsync(ct);
+
+        return Results.File(signedPdfBytes, "application/pdf", $"DOA_Log_{trimmedSite}.pdf");
+    }
+
+    private static async Task<(int DelegationCount, byte[] RawPdfBytes)> BuildSiteDoaRawPdfAsync(
+        CtmsDbContext db,
+        string rawSiteId,
+        string trimmedSite,
+        IReadOnlyCollection<string> authorizedStudies,
+        string user,
+        string role,
+        DateTimeOffset now,
+        bool isSignedExport,
+        CancellationToken ct)
+    {
         var delegations = await db.CtmsDelegations.AsNoTracking()
             .Where(d => d.SiteId == trimmedSite && authorizedStudies.Contains(d.StudyId))
             .OrderBy(d => d.StartDate)
@@ -582,19 +700,20 @@ public static class DoaEndpoints
             ? gate.GreenlightCertifiedBy
             : "Principal Investigator";
 
-        var (user, role) = ResolveCaller(httpContext, "investigator");
-        DateTimeOffset now = clock.UtcNow;
-
         var pdfBuilder = new StringBuilder();
         pdfBuilder.AppendLine("%PDF-1.7");
         pdfBuilder.AppendLine("% Cadence Clinical GxP PDF Document - Delegation of Authority Log");
-        pdfBuilder.AppendLine($"% Site: {siteId} | Principal Investigator: {piName}");
+        pdfBuilder.AppendLine($"% Site: {rawSiteId} | Principal Investigator: {piName}");
         pdfBuilder.AppendLine($"% Generated: {now:O} | Exported By: {user} ({role})");
+        if (!isSignedExport)
+        {
+            pdfBuilder.AppendLine("% Watermark: UNSIGNED WORKING COPY");
+        }
         pdfBuilder.AppendLine();
         pdfBuilder.AppendLine("================================================================================");
         pdfBuilder.AppendLine("               DELEGATION OF AUTHORITY (DOA) COMPLIANCE LOG                     ");
         pdfBuilder.AppendLine("================================================================================");
-        pdfBuilder.AppendLine($"Site ID: {siteId}");
+        pdfBuilder.AppendLine($"Site ID: {rawSiteId}");
         pdfBuilder.AppendLine($"Principal Investigator: {piName}");
         pdfBuilder.AppendLine($"Export Timestamp: {now:u}");
         pdfBuilder.AppendLine($"Total Delegations: {delegations.Count}");
@@ -624,41 +743,7 @@ public static class DoaEndpoints
         pdfBuilder.AppendLine("%%EOF");
 
         byte[] rawPdfBytes = Encoding.UTF8.GetBytes(pdfBuilder.ToString().TrimEnd());
-
-        var (cert, key) = Pkcs7Signer.GenerateSigningCredentials(user, clock);
-        var signer = new Pkcs7Signer(cert, key);
-        byte[] signedPdfBytes = signer.SignPdf(rawPdfBytes);
-
-        string hash = Convert.ToHexStringLower(SHA256.HashData(signedPdfBytes));
-
-        string? resolvedExportStudyId = null;
-        if (authorizedStudies.Count == 1)
-        {
-            resolvedExportStudyId = authorizedStudies.First();
-        }
-        else if (!string.IsNullOrWhiteSpace(studyId))
-        {
-            resolvedExportStudyId = studyId.Trim();
-        }
-
-        var auditEntry = new CtmsAuditLog
-        {
-            Timestamp = now,
-            UserId = user,
-            UserRole = role,
-            Action = "DOA_EXPORT_PDF",
-            Details = $"Exported GxP Delegation of Authority PDF for site {trimmedSite} with {delegations.Count} records. SHA-256: {hash}",
-            StudyId = resolvedExportStudyId,
-            SiteId = trimmedSite,
-            ReasonForChange = "Export GxP Delegation of Authority PDF",
-            CreatedAt = now.UtcDateTime,
-            CreatedBy = user,
-            VersionIndex = 1,
-        };
-        db.CtmsAuditLogs.Add(auditEntry);
-        await db.SaveChangesAsync(ct);
-
-        return Results.File(signedPdfBytes, "application/pdf", $"DOA_Log_{trimmedSite}.pdf");
+        return (delegations.Count, rawPdfBytes);
     }
 
     public static async Task<bool> SiteExistsAsync(CtmsDbContext db, string siteId, CancellationToken ct)

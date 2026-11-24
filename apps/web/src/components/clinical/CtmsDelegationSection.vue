@@ -14,16 +14,26 @@
           revocations, and compliant PDF export.
         </p>
       </div>
-      <button
-        v-if="loaded"
-        id="btn-export-doa-pdf"
-        type="button"
-        class="btn btn-secondary"
-        :disabled="!siteInput.trim() || exporting"
-        @click="exportPdf"
-      >
-        {{ exporting ? "Exporting..." : "Export PDF" }}
-      </button>
+      <div v-if="loaded" class="header-actions-group">
+        <button
+          id="btn-export-doa-pdf"
+          type="button"
+          class="btn btn-secondary"
+          :disabled="!siteInput.trim() || exporting"
+          @click="exportPdf"
+        >
+          {{ exporting ? "Exporting..." : "Export working PDF" }}
+        </button>
+        <button
+          id="btn-export-signed-doa-pdf"
+          type="button"
+          class="btn btn-primary"
+          :disabled="!siteInput.trim() || exporting"
+          @click="prepareSignedPdfExport"
+        >
+          {{ exporting ? "Signing PDF..." : "Sign & export PDF" }}
+        </button>
+      </div>
     </div>
 
     <CtmsSectionScopeBar
@@ -51,7 +61,7 @@
         Principal Investigator: <strong>{{ doaLog.pi_name }}</strong>
       </p>
 
-      <p v-if="!doaLog.delegated_staff.length" class="muted-status">
+      <p v-if="!delegatedStaffRows.length" class="muted-status">
         No delegated staff entries recorded for site {{ doaLog.site_id }}.
       </p>
       <div v-else class="table-wrap">
@@ -66,7 +76,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="rec in doaLog.delegated_staff" :key="rec.record_id">
+            <tr v-for="rec in delegatedStaffRows" :key="rec.record_id">
               <td>
                 <strong>{{ rec.staff_name || rec.staff_user_id }}</strong>
                 <span v-if="rec.role" class="role-hint">
@@ -120,9 +130,7 @@
       <p
         v-if="
           !canSignOff &&
-          doaLog.delegated_staff.some(
-            (r) => r.status === 'PENDING_PI_SIGNATURE'
-          )
+          delegatedStaffRows.some((r) => r.status === 'PENDING_PI_SIGNATURE')
         "
         id="doa-pi-separation-note"
         class="readonly-note"
@@ -250,11 +258,24 @@
         </div>
       </form>
     </template>
+
+    <SignatureCaptureModal
+      :is-open="sigModalOpen"
+      :username="signerUsername"
+      :signer-name="signerDisplayName"
+      signer-role="PI"
+      :reasons="DOA_SIGNING_REASONS"
+      :action-url="sigActionUrl"
+      :semantic-action="sigSemanticAction"
+      :on-sign="handleDoaSigned"
+      @cancel="sigModalOpen = false"
+    />
   </section>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
+import { SEMANTIC_ACTIONS } from "ui";
 import { ctmsApi, type DelegationRecord, type DoaLog } from "../../api/ctmsApi";
 import { canManageDoa, canSignOffDoa } from "../../canvas/authority";
 import { useScopedWorkspaceSection } from "../../composables/useScopedWorkspaceSection";
@@ -263,6 +284,7 @@ import {
   formatClinicalStatus,
   formatRoleLabel,
 } from "../../utils/clinicalLabels";
+import SignatureCaptureModal from "../SignatureCaptureModal.vue";
 import CtmsSectionScopeBar from "./CtmsSectionScopeBar.vue";
 import "./ctmsWorkspaceSection.css";
 
@@ -298,10 +320,64 @@ const {
   fallbackErrorMessage: "Delegation log could not be loaded.",
 });
 
+const DOA_SIGNING_REASONS = [
+  "I attest this staff member is qualified for the delegated trial duties",
+  "I certify the accuracy and completeness of this Delegation of Authority log",
+  "INVESTIGATOR_SIGNATURE",
+  "APPROVAL",
+];
+
 const canManage = computed(() => canManageDoa(authStore));
 const canSignOff = computed(() => canSignOffDoa(authStore));
 const exporting = ref(false);
 const doaLog = ref<DoaLog | null>(null);
+
+type RawDelegationRecord = Partial<DelegationRecord> & {
+  id?: string;
+  staff_id?: string;
+  tasks?: string[];
+  signed_at?: string | null;
+};
+
+const delegatedStaffRows = computed<DelegationRecord[]>(() => {
+  const rows = (doaLog.value?.delegated_staff ?? []) as RawDelegationRecord[];
+  return rows.map((rec, index) => ({
+    ...rec,
+    record_id: rec.record_id || rec.id || `doa-row-${index}`,
+    site_id: rec.site_id || doaLog.value?.site_id || siteInput.value.trim(),
+    staff_user_id: rec.staff_user_id || rec.staff_id || "",
+    staff_name: rec.staff_name ?? null,
+    role: rec.role ?? null,
+    task_codes: Array.isArray(rec.task_codes)
+      ? rec.task_codes
+      : Array.isArray(rec.tasks)
+        ? rec.tasks
+        : [],
+    start_date:
+      rec.start_date ||
+      (typeof rec.signed_at === "string" ? rec.signed_at.slice(0, 10) : "—"),
+    end_date: rec.end_date ?? null,
+    status: rec.status || "PENDING_PI_SIGNATURE",
+    is_active: rec.is_active ?? rec.status === "ACTIVE",
+    signed_off: rec.signed_off ?? rec.status === "ACTIVE",
+  })) as DelegationRecord[];
+});
+
+const sigModalOpen = ref(false);
+const sigMode = ref<"signoff" | "export">("signoff");
+const sigActionUrl = ref("");
+const sigSemanticAction = ref("");
+
+const signerUsername = computed(
+  () =>
+    authStore.identity?.username ||
+    authStore.user?.username ||
+    authStore.userId ||
+    ""
+);
+const signerDisplayName = computed(
+  () => authStore.user?.displayName || signerUsername.value
+);
 
 const newStaffUserId = ref("");
 const newTaskCode = ref("CRF_DATA_ENTRY");
@@ -377,32 +453,107 @@ function prepareSignOff(rec: DelegationRecord) {
   signOffReason.value = "";
 }
 
-async function confirmSignOff() {
+function confirmSignOff() {
   const rec = activeSignOffRecord.value;
   const reason = signOffReason.value.trim();
   if (!rec || !reason || !canSignOff.value) return;
 
-  saving.value = true;
+  sigMode.value = "signoff";
+  sigActionUrl.value = "/api/v1/ctms/doa/sign-off";
+  sigSemanticAction.value = SEMANTIC_ACTIONS.CTMS_DOA_SIGN_OFF;
+  sigModalOpen.value = true;
+}
+
+function prepareSignedPdfExport() {
+  const site = siteInput.value.trim();
+  if (!site) return;
+
+  sigMode.value = "export";
+  sigActionUrl.value = `/api/v1/ctms/doa/sites/${encodeURIComponent(site)}/export-signed-pdf`;
+  sigSemanticAction.value = SEMANTIC_ACTIONS.CTMS_DOA_EXPORT_SIGNED_PDF;
+  sigModalOpen.value = true;
+}
+
+function triggerPdfDownload(blob: Blob, filename: string) {
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.URL.revokeObjectURL(url);
+}
+
+async function handleDoaSigned(sigToken: string, signingReason: string) {
+  if (sigMode.value === "signoff") {
+    const rec = activeSignOffRecord.value;
+    const reason = signOffReason.value.trim() || signingReason;
+    if (!rec || !reason) {
+      return { status: "FAILED", message: "No delegation record selected." };
+    }
+    saving.value = true;
+    try {
+      await ctmsApi.signOffDelegation(
+        {
+          record_id: rec.record_id,
+          reason_for_change: reason,
+        },
+        reason,
+        sigToken
+      );
+      activeSignOffRecord.value = null;
+      signOffReason.value = "";
+      sigModalOpen.value = false;
+      toasts.push({
+        tone: "success",
+        title: "PI signature recorded",
+        message: `Delegation active for ${rec.staff_name || rec.staff_user_id}.`,
+      });
+      await loadDoaLog();
+      return { kind: "signed" };
+    } catch (err) {
+      toasts.apiError("PI sign-off failed", err);
+      return {
+        status: "FAILED",
+        message: err instanceof Error ? err.message : "PI sign-off failed.",
+      };
+    } finally {
+      saving.value = false;
+    }
+  }
+
+  const site = siteInput.value.trim();
+  if (!site) {
+    return { status: "FAILED", message: "No site selected." };
+  }
+  const reason =
+    signingReason || "Export signed Delegation of Authority PDF log";
+  exporting.value = true;
   try {
-    await ctmsApi.signOffDelegation(
-      {
-        record_id: rec.record_id,
-        reason_for_change: reason,
-      },
-      reason
+    const blob = await ctmsApi.exportSignedSiteDoaPdf(
+      site,
+      reason,
+      sigToken,
+      props.studyCode || clinicalStore.activeStudyId || null
     );
-    activeSignOffRecord.value = null;
-    signOffReason.value = "";
+    triggerPdfDownload(blob, `DOA_Log_Signed_${site}.pdf`);
+    sigModalOpen.value = false;
     toasts.push({
       tone: "success",
-      title: "PI signature recorded",
-      message: `Delegation active for ${rec.staff_name || rec.staff_user_id}.`,
+      title: "Signed DoA PDF exported",
+      message: `Part 11 signed Delegation of Authority PDF exported for ${site}.`,
     });
-    await loadDoaLog();
+    return { kind: "signed" };
   } catch (err) {
-    toasts.apiError("PI sign-off failed", err);
+    toasts.apiError("Signed PDF export failed", err);
+    return {
+      status: "FAILED",
+      message:
+        err instanceof Error ? err.message : "Signed DoA PDF export failed.",
+    };
   } finally {
-    saving.value = false;
+    exporting.value = false;
   }
 }
 
@@ -446,14 +597,7 @@ async function exportPdf() {
   exporting.value = true;
   try {
     const blob = await ctmsApi.exportSiteDoaPdf(site);
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `DOA_Log_${site}.pdf`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
+    triggerPdfDownload(blob, `DOA_Log_${site}.pdf`);
   } catch (err) {
     toasts.apiError("PDF export failed", err);
   } finally {
@@ -469,6 +613,13 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.header-actions-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
 .pi-banner {
   margin: 0;
   font-size: 0.9rem;

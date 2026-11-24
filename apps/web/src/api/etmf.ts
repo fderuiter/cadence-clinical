@@ -29,6 +29,7 @@ export interface SignatureVerificationPayload {
   totp?: string | null;
   action: string;
   semanticAction?: string;
+  batchId?: string | null;
 }
 
 export interface DocumentSignOffPayload {
@@ -517,6 +518,7 @@ export const etmfService = {
       totp = null,
       action,
       semanticAction,
+      batchId = null,
     }: SignatureVerificationPayload,
     options: Record<string, unknown> = {}
   ) {
@@ -526,6 +528,21 @@ export const etmfService = {
         semantic = SEMANTIC_ACTIONS.ECONSENT_CAPTURE;
       } else if (action.includes("doa/sign-off")) {
         semantic = SEMANTIC_ACTIONS.CTMS_DOA_SIGN_OFF;
+      } else if (action.includes("export-signed-pdf")) {
+        semantic = SEMANTIC_ACTIONS.CTMS_DOA_EXPORT_SIGNED_PDF;
+      } else if (action.includes("letters/finalize")) {
+        semantic = SEMANTIC_ACTIONS.CTMS_LETTER_FINALIZE;
+      } else if (
+        action.includes("monitoring-visits/") &&
+        action.includes("sign-off")
+      ) {
+        semantic = SEMANTIC_ACTIONS.CTMS_MONITORING_VISIT_SIGN_OFF;
+      } else if (action.includes("matrix/batch-certify")) {
+        semantic = SEMANTIC_ACTIONS.CTMS_GREENLIGHT_BATCH_CERTIFY;
+      } else if (action.includes("greenlight/certify")) {
+        semantic = SEMANTIC_ACTIONS.CTMS_GREENLIGHT_CERTIFY;
+      } else if (action.endsWith("/unblind")) {
+        semantic = SEMANTIC_ACTIONS.EXECUTION_SUBJECT_UNBLIND;
       } else if (action.includes("sign-off")) {
         semantic = SEMANTIC_ACTIONS.ETMF_DOCUMENT_SIGN_OFF;
       } else if (action.includes("chair-adjudicate")) {
@@ -543,6 +560,7 @@ export const etmfService = {
       totp,
       action,
       semanticAction: semantic,
+      batchId,
     });
 
     return unwrapResponse(

@@ -1522,6 +1522,25 @@ namespace Cadence.Apps.Ctms.Infrastructure.Persistence.Migrations
                     b.ToTable("transactional_outbox", (string)null);
                 });
 
+            modelBuilder.Entity("Cadence.Database.Signatures.ConsumedSignatureToken", b =>
+                {
+                    b.Property<string>("TokenId")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<DateTimeOffset>("ConsumedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("RetainUntil")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("TokenId");
+
+                    b.HasIndex("RetainUntil");
+
+                    b.ToTable("consumed_signature_tokens", (string)null);
+                });
+
             modelBuilder.Entity("Cadence.Apps.Ctms.Domain.CtmsBudgetLineItem", b =>
                 {
                     b.HasOne("Cadence.Apps.Ctms.Domain.CtmsInvestigatorGrant", null)

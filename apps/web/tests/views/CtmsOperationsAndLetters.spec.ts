@@ -2,6 +2,7 @@ import { flushPromises, mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ctmsApi } from "../../src/api/ctmsApi";
+import { etmfService } from "../../src/api/etmf";
 import apiClient from "../../src/services/api";
 import { useAuthStore } from "../../src/stores/auth";
 import CtmsView from "../../src/views/CtmsView.vue";
@@ -74,6 +75,20 @@ describe("CtmsMonitoringSection in live CTMS workspace: structured findings, com
       status: "SIGNED_OFF",
     });
     vi.spyOn(ctmsApi, "compileVisitLetter").mockResolvedValue({
+      letterId: "LTR-DRAFT999",
+      visitId: "visit-comp-1",
+      letterType: "follow_up_letter",
+      pdfSha256Hash: "d4e5f6a1b2c3", // pragma: allowlist secret
+      pdfObjectKey: "letters/CAD-101/SITE-101/LTR-DRAFT999.pdf",
+      isSigned: false,
+      status: "COMPILED",
+      signatureManifestation: null,
+      etmfDocumentId: null,
+      dispatchedAt: "2026-10-12T12:00:00Z",
+      pdfAccessUrl: "/api/v1/ctms/letters/LTR-DRAFT999/pdf",
+      pdfBase64: "JVBERi0xLjc=",
+    });
+    vi.spyOn(ctmsApi, "finalizeVisitLetter").mockResolvedValue({
       letterId: "LTR-ABCD1234",
       visitId: "visit-comp-1",
       letterType: "follow_up_letter",
@@ -87,7 +102,7 @@ describe("CtmsMonitoringSection in live CTMS workspace: structured findings, com
       pdfAccessUrl: "/api/v1/ctms/letters/LTR-ABCD1234/pdf",
       pdfBase64: "JVBERi0xLjc=",
     });
-    vi.spyOn(apiClient, "post").mockResolvedValue({
+    vi.spyOn(etmfService, "verifySignature").mockResolvedValue({
       sig_token: "sig-token-letter-1",
     });
   });
@@ -96,7 +111,7 @@ describe("CtmsMonitoringSection in live CTMS workspace: structured findings, com
     vi.restoreAllMocks();
   });
 
-  it("enforces CRA execution (complete visit with structured findings + compile signed letter) vs Monitor sign-off", async () => {
+  it("enforces CRA execution (complete visit, compile unsigned draft via /compile, and finalize signed letter via /finalize + SignatureCaptureModal)", async () => {
     signInAs(useAuthStore(), ["CRA"], { username: "cra_alice" });
 
     const wrapper = mount(CtmsView, {
@@ -148,26 +163,58 @@ describe("CtmsMonitoringSection in live CTMS workspace: structured findings, com
       "Completed on-site IMV review"
     );
 
-    // Compile a signed follow-up letter via POST /api/v1/ctms/letters/compile
+    // 1. Compile unsigned draft letter (finalize=false) via POST /api/v1/ctms/letters/compile without opening SignatureCaptureModal
     await wrapper
       .find('[data-testid="btn-compile-letter-visit-comp-1"]')
       .trigger("click");
     expect(wrapper.find("#modal-compile-letter").exists()).toBe(true);
-    await wrapper.find("#compile-sig-password").setValue("Password123!");
+    expect(wrapper.find("#compile-sig-password").exists()).toBe(false);
+    await wrapper.find("#compile-letter-finalize").setValue(false);
+    await wrapper
+      .find("#compile-letter-reason")
+      .setValue("Compile draft SIV follow-up report");
+    await wrapper.find("#btn-confirm-compile-letter").trigger("click");
+    await flushPromises();
+
+    expect(etmfService.verifySignature).not.toHaveBeenCalled();
+    expect(ctmsApi.compileVisitLetter).toHaveBeenCalledWith(
+      "follow_up_letter",
+      expect.objectContaining({
+        studyId: "CAD-101",
+        siteId: "SITE-101",
+        visitId: "visit-comp-1",
+        finalize: false,
+      }),
+      expect.objectContaining({
+        changeReason: "Compile draft SIV follow-up report",
+      })
+    );
+
+    // 2. Finalize signed follow-up letter via SignatureCaptureModal + POST /api/v1/ctms/letters/finalize
+    await wrapper
+      .find('[data-testid="btn-compile-letter-visit-comp-1"]')
+      .trigger("click");
     await wrapper
       .find("#compile-letter-reason")
       .setValue("Issue signed SIV follow-up report");
     await wrapper.find("#btn-confirm-compile-letter").trigger("click");
     await flushPromises();
 
-    expect(apiClient.post).toHaveBeenCalledWith(
-      "/api/v1/auth/signature-verification",
+    await wrapper.find("#sig-password").setValue("Password123!"); // pragma: allowlist secret
+    await wrapper
+      .find("#sig-reason")
+      .setValue("Monitoring Visit Report Issuance");
+    await wrapper.find("#btn-confirm-sig").trigger("click");
+    await flushPromises();
+
+    expect(etmfService.verifySignature).toHaveBeenCalledWith(
       expect.objectContaining({
-        action: "/api/v1/ctms/letters/compile",
-        semantic_action: "ctms.letter.compile",
+        username: "cra_alice",
+        action: "/api/v1/ctms/letters/finalize",
+        semanticAction: "ctms.letter.finalize",
       })
     );
-    expect(ctmsApi.compileVisitLetter).toHaveBeenCalledWith(
+    expect(ctmsApi.finalizeVisitLetter).toHaveBeenCalledWith(
       "follow_up_letter",
       expect.objectContaining({
         studyId: "CAD-101",
@@ -195,8 +242,11 @@ describe("CtmsMonitoringSection in live CTMS workspace: structured findings, com
     );
   });
 
-  it("allows Monitor role to perform supervisory visit sign-off while gating CRA scheduling and letter compilation", async () => {
+  it("allows Monitor role to perform supervisory visit sign-off via SignatureCaptureModal while gating CRA scheduling and letter compilation", async () => {
     signInAs(useAuthStore(), ["Monitor"], { username: "monitor_lead" });
+    vi.mocked(etmfService.verifySignature).mockResolvedValue({
+      sig_token: "sig-token-visit-signoff-1",
+    });
 
     const wrapper = mount(CtmsView, {
       global: { plugins: [pinia] },
@@ -222,9 +272,24 @@ describe("CtmsMonitoringSection in live CTMS workspace: structured findings, com
     await wrapper.find("#btn-confirm-signoff-visit").trigger("click");
     await flushPromises();
 
+    await wrapper.find("#sig-password").setValue("Password123!"); // pragma: allowlist secret
+    await wrapper
+      .find("#sig-reason")
+      .setValue("Supervisory Monitoring Visit Report Approval");
+    await wrapper.find("#btn-confirm-sig").trigger("click");
+    await flushPromises();
+
+    expect(etmfService.verifySignature).toHaveBeenCalledWith(
+      expect.objectContaining({
+        username: "monitor_lead",
+        action: "/api/v1/ctms/monitoring-visits/visit-comp-1/sign-off",
+        semanticAction: "ctms.monitoring_visit.sign_off",
+      })
+    );
     expect(ctmsApi.signOffMonitoringVisit).toHaveBeenCalledWith(
       "visit-comp-1",
-      "Supervisory MVR review complete"
+      "Supervisory MVR review complete",
+      "sig-token-visit-signoff-1"
     );
   });
 });

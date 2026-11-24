@@ -15,6 +15,7 @@ using Cadence.Apps.Payments.Domain;
 using Cadence.Apps.Payments.Infrastructure.Persistence;
 using Cadence.Database;
 using Cadence.Kernel.Time;
+using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
 
 using Microsoft.AspNetCore.Builder;
@@ -460,6 +461,14 @@ public record ReconcileInvoiceRequest(
 
 public static class PaymentEndpoints
 {
+    public const string SignRemittanceSemanticAction = "payments.remittance_advice.sign";
+
+    public static string SignRemittanceAction(string invoiceId) =>
+        $"/api/v1/payments/invoices/{Uri.EscapeDataString(invoiceId)}/remittance-advice/sign";
+
+    private static string SignRemittanceActionFor(HttpContext httpContext) =>
+        SignRemittanceAction(httpContext.Request.RouteValues["id"]?.ToString() ?? string.Empty);
+
     public static IEndpointRouteBuilder MapPaymentEndpoints(this IEndpointRouteBuilder routes)
     {
         // Every route names the permission it needs (ADR-2516, #5361); PermissionMatrix.Payments.cs says which roles
@@ -637,6 +646,7 @@ public static class PaymentEndpoints
         group.MapPost("/invoices/{id}/remittance-advice/sign", SignRemittanceAdvice)
             .WithName("SignRemittanceAdvice")
             .RequirePermission("payments_invoice:sign_remittance").RequireCallerStudyScope()
+            .RequireElectronicSignature(SignRemittanceSemanticAction, SignRemittanceActionFor)
             .WithSummary("Applies 21 CFR Part 11 electronic signature to cryptographic remittance advice.");
 
         group.MapGet("/invoices/{id}/remittance-advice/pdf", DownloadRemittancePdf)

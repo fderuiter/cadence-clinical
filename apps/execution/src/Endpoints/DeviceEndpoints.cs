@@ -4,6 +4,8 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Apps.Execution.Application.Devices;
+using Cadence.Apps.Execution.Endpoints.Filters;
+using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
 
 using Microsoft.AspNetCore.Builder;
@@ -21,11 +23,16 @@ namespace Cadence.Apps.Execution.Endpoints;
 /// </summary>
 public static class DeviceEndpoints
 {
+    public const string ReleaseQuarantineAction = "/api/v1/execution/devices/quarantine/release";
+    public const string ReleaseQuarantineSemanticAction = "execution.device.release_quarantine";
+
     public static IEndpointRouteBuilder MapDeviceEndpoints(this IEndpointRouteBuilder routes)
     {
-        var group = routes.MapGroup("/api/v1/execution/devices");
+        var group = routes.MapGroup("/api/v1/execution/devices")
+            .AddEndpointFilter<ChangeReasonHeaderFilter>();
 
         group.MapPost("/parse-udi", ParseUdi)
+            .AllowWithoutChangeReason()
             .WithName("ParseUdi")
             .WithSummary("Parse UDI Barcode")
             .WithDescription("Parses and validates GS1-128, GS1-DataMatrix, and HIBCC barcode strings into structured UDI attributes.")
@@ -107,7 +114,8 @@ public static class DeviceEndpoints
             .Produces<DeviceQuarantineResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status403Forbidden)
-            .RequirePermission("device_accountability:release").RequireCallerStudyAndSiteScope();
+            .RequirePermission("device_accountability:release").RequireCallerStudyAndSiteScope()
+            .RequireElectronicSignature(ReleaseQuarantineSemanticAction, _ => ReleaseQuarantineAction);
 
         group.MapGet("/investigation-summary", GetInvestigationSummaryAsync)
             .WithName("GetDeviceInvestigationSummary")

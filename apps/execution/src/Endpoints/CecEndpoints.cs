@@ -31,7 +31,8 @@ public static class CecEndpoints
 
     public static IEndpointRouteBuilder MapCecEndpoints(this IEndpointRouteBuilder routes)
     {
-        var group = routes.MapGroup("/api/v1/execution/cec/dossiers");
+        var group = routes.MapGroup("/api/v1/execution/cec/dossiers")
+            .AddEndpointFilter<ChangeReasonHeaderFilter>();
 
         group.MapPost("/{id}/chair-adjudicate", ChairAdjudicateAsync)
             .WithName("ChairAdjudicateDossier")

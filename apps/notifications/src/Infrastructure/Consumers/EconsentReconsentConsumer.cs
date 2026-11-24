@@ -7,6 +7,7 @@ using Cadence.Apps.Notifications.Domain;
 using Cadence.Apps.Notifications.Endpoints;
 using Cadence.Apps.Notifications.Infrastructure.Persistence;
 using Cadence.Contracts;
+using Cadence.Database;
 using Cadence.Kernel.Time;
 using Cadence.Templating;
 
@@ -31,8 +32,11 @@ public sealed class EconsentReconsentConsumer(
     IClock? clock = null,
     ILogger<EconsentReconsentConsumer>? logger = null) : IConsumer<EconsentReconsentRequired>
 {
+    private const string ServiceAccountId = "svc:econsent-outbox";
+
     public async Task Consume(ConsumeContext<EconsentReconsentRequired> context)
     {
+        using var _ = StandaloneAuditActorScope.Begin(ServiceAccountId);
         var msg = context.Message;
 
         if (string.IsNullOrWhiteSpace(msg.StudyId) || string.IsNullOrWhiteSpace(msg.TemplateId))

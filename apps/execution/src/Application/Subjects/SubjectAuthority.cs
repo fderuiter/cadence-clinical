@@ -65,6 +65,15 @@ public static class SubjectAuthority
             : null;
 
     /// <summary>
+    /// <see langword="null"/> when <paramref name="caller"/> holds emergency unblinding authority
+    /// (<see cref="CanUnblind"/>), otherwise the <c>403</c> to return.
+    /// </summary>
+    public static DomainError? AuthorizeUnblinding(AuthenticatedCaller? caller) =>
+        caller?.FirstRoleMatching(CanUnblind) is null
+            ? SubjectErrors.UnauthorizedUnblindRole(Roles(caller))
+            : null;
+
+    /// <summary>
     /// <see langword="null"/> when <paramref name="caller"/> may move a participant to
     /// <paramref name="target"/>, otherwise the <c>403</c> to return. A target that does not parse is left to the
     /// application service, which answers it as an invalid transition.
@@ -73,9 +82,7 @@ public static class SubjectAuthority
     {
         if (SubjectStateCodec.TryParse(target, out var state) && state == SubjectState.Unblinded)
         {
-            return caller?.FirstRoleMatching(CanUnblind) is null
-                ? SubjectErrors.UnauthorizedUnblindRole(Roles(caller))
-                : null;
+            return AuthorizeUnblinding(caller);
         }
 
         return AuthorizeParticipantChange(caller);

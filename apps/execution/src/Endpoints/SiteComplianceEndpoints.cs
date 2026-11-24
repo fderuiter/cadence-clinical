@@ -48,8 +48,11 @@ public static class SiteComplianceEndpoints
         // `.WithOpenApi()` is deliberately omitted -- see SubjectEndpoints.MapSubjectEndpoints's own remarks:
         // it is obsolete (ASPDEPR002) under this repo's pinned ASP.NET Core version, and this solution treats
         // every warning (deprecation diagnostics included) as a build error under <TreatWarningsAsErrors>.
-        app.MapPost("/api/v1/execution/webhooks/etmf", ApplyEtmfWebhookAsync)
+        var group = app.MapGroup("/api/v1/execution")
             .WithTags("SiteCompliance")
+            .AddEndpointFilter<ChangeReasonHeaderFilter>();
+
+        group.MapPost("/webhooks/etmf", ApplyEtmfWebhookAsync)
             .WithName("EtmfCompletenessWebhook")
             .Produces<OperationEnvelopeResponse>(StatusCodes.Status200OK)
             .ProducesValidationProblem(StatusCodes.Status400BadRequest)
@@ -58,8 +61,7 @@ public static class SiteComplianceEndpoints
             .RequirePermission("site_compliance:etmf_sync").RequireCallerStudyScope()
             .AddEndpointFilter<ValidationFilter<EtmfCompletenessWebhookPayload>>();
 
-        app.MapPost("/api/v1/execution/sites/{siteId}/activate", ActivateSiteAsync)
-            .WithTags("SiteCompliance")
+        group.MapPost("/sites/{siteId}/activate", ActivateSiteAsync)
             .WithName("ActivateSite")
             .Produces<OperationEnvelopeResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status400BadRequest)
@@ -67,8 +69,7 @@ public static class SiteComplianceEndpoints
             .RequirePermission("site_compliance:activate")
             .RequireSiteScope("siteId");
 
-        app.MapGet("/api/v1/execution/sites/{siteId}/compliance-status", GetSiteComplianceStatusAsync)
-            .WithTags("SiteCompliance")
+        group.MapGet("/sites/{siteId}/compliance-status", GetSiteComplianceStatusAsync)
             .WithName("GetSiteComplianceStatus")
             .Produces<ComplianceStatusResponse>(StatusCodes.Status200OK) // always 200 per §1.2 -- never 404
             .ProducesProblem(StatusCodes.Status403Forbidden)

@@ -178,6 +178,21 @@
       :on-sign="handleRandomizeSigned"
       @cancel="randomizeModalOpen = false"
     />
+
+    <SignatureCaptureModal
+      v-if="changes.unblindingWithheld && canUnblind"
+      :is-open="unblindModalOpen"
+      :username="authStore.user?.username || ''"
+      :signer-name="
+        authStore.user?.displayName || authStore.user?.username || ''
+      "
+      signer-role="PI"
+      :reasons="UNBLIND_SIGNING_REASONS"
+      :action-url="unblindSubjectAction(participant.id)"
+      :semantic-action="UNBLIND_SUBJECT_SEMANTIC_ACTION"
+      :on-sign="handleEmergencyUnblindSigned"
+      @cancel="unblindModalOpen = false"
+    />
   </section>
 </template>
 
@@ -187,16 +202,19 @@ import type { SubjectSummary } from "../../api/executionApi";
 import { canUnblindParticipant } from "../../canvas/authority";
 import {
   RANDOMIZE_SUBJECT_SEMANTIC_ACTION,
+  UNBLIND_SUBJECT_SEMANTIC_ACTION,
   canRandomizeParticipant,
   participantStateChanges,
   participantStateLabel,
   randomizeSubjectAction,
+  unblindSubjectAction,
 } from "../../canvas/lifecycle";
 import { useAuthStore } from "../../stores/auth.js";
 import { useStudyCanvasStore } from "../../stores/studyCanvas";
 import {
   changeParticipantStateMutation,
   randomizeParticipantMutation,
+  unblindParticipantMutation,
 } from "../../stores/studyCanvasParticipantMutations";
 import SignatureCaptureModal from "../SignatureCaptureModal.vue";
 
@@ -215,6 +233,12 @@ const RANDOMIZE_SIGNING_REASONS = [
   "APPROVAL",
 ];
 
+const UNBLIND_SIGNING_REASONS = [
+  "I authorize emergency unblinding for immediate participant clinical management",
+  "INVESTIGATOR_SIGNATURE",
+  "APPROVAL",
+];
+
 const authStore = useAuthStore();
 const canvas = useStudyCanvasStore();
 const target = ref("");
@@ -227,6 +251,7 @@ const randomizeModalOpen = ref(false);
 
 const unblindOpen = ref(false);
 const unblindReason = ref("");
+const unblindModalOpen = ref(false);
 
 const changes = computed(() =>
   participantStateChanges(props.participant.status)
@@ -253,6 +278,7 @@ watch([() => props.participant.id, () => props.participant.status], () => {
   randomizeModalOpen.value = false;
   unblindOpen.value = false;
   unblindReason.value = "";
+  unblindModalOpen.value = false;
 });
 
 function addStratFactor() {
@@ -309,21 +335,39 @@ async function handleRandomizeSigned(sigToken: string, signingReason: string) {
   }
 }
 
-async function submitEmergencyUnblind() {
+function submitEmergencyUnblind() {
   const why = unblindReason.value.trim();
   if (!canUnblind.value || why.length < 50) return;
+  unblindModalOpen.value = true;
+}
+
+async function handleEmergencyUnblindSigned(sigToken: string) {
+  const why = unblindReason.value.trim();
+  if (!canUnblind.value || why.length < 50) {
+    return {
+      status: "FAILED",
+      message:
+        "Emergency unblinding requires a clinical justification of at least 50 characters.",
+    };
+  }
   busy.value = true;
   try {
-    const ok = await changeParticipantStateMutation(
+    const ok = await unblindParticipantMutation(
       canvas,
       props.participant,
-      "UNBLINDED",
-      why
+      why,
+      sigToken
     );
-    if (ok) {
-      unblindOpen.value = false;
-      unblindReason.value = "";
+    if (!ok) {
+      return {
+        status: "FAILED",
+        message: "Emergency unblinding could not be completed.",
+      };
     }
+    unblindModalOpen.value = false;
+    unblindOpen.value = false;
+    unblindReason.value = "";
+    return { kind: "signed" };
   } finally {
     busy.value = false;
   }

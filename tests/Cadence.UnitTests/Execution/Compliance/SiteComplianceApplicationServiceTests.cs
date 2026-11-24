@@ -52,7 +52,7 @@ public class SiteComplianceApplicationServiceTests
         ExecutionDbContext context, RecordingAuditLogWriter? auditLog = null, IClock? clock = null) =>
         new(new SiteComplianceRepository(context),
             auditLog ?? new RecordingAuditLogWriter(),
-            new FakeCurrentAuditContextAccessor("user-compliance-1", "system_operation"),
+            new FakeCurrentAuditContextAccessor("user-compliance-1", "eTMF completeness evaluation sync"),
             clock ?? new FakeClock(FixedActivatedAt));
 
     // ---- ApplyEtmfWebhookAsync: create branch ------------------------------------------------------
@@ -233,7 +233,7 @@ public class SiteComplianceApplicationServiceTests
             var service = new SiteComplianceApplicationService(
                 new SiteComplianceRepository(context),
                 new EfAuditLogWriter(context),
-                new FakeCurrentAuditContextAccessor("user-compliance-1", "system_operation"),
+                new FakeCurrentAuditContextAccessor("user-compliance-1", "Site activation check"),
                 new FakeClock(FixedActivatedAt));
 
             var result = await service.ActivateSiteAsync(

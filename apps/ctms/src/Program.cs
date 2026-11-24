@@ -2,6 +2,7 @@ using Cadence.Apps.Ctms.Domain;
 using Cadence.Apps.Ctms.Endpoints;
 using Cadence.Apps.Ctms.Infrastructure.Persistence;
 using Cadence.Database;
+using Cadence.Database.Signatures;
 using Cadence.Kernel.Time;
 using Cadence.Security.DependencyInjection;
 using Cadence.Telemetry;
@@ -18,6 +19,7 @@ builder.AddCadenceWebDefaults();
 builder.Services.AddCadenceSecurity();
 builder.Services.AddSingleton<IClock>(SystemClock.Instance);
 builder.AddCadencePostgresDbContext<CtmsDbContext>();
+builder.Services.AddCadenceDurableSigTokenStore<CtmsDbContext>();
 builder.Services.AddFluidTemplating();
 
 builder.Services.AddMassTransit(x =>

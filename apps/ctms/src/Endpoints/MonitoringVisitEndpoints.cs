@@ -36,6 +36,13 @@ public static class MonitoringVisitEndpoints
     public const string SignOffPermission = "ctms_monitoring_visit:sign_off";
     public const string ReadLetterPermission = "ctms_monitoring_letter:read";
     public const string ReadLetterTypePermission = "ctms_monitoring_letter:read_type";
+    public const string SignOffVisitSemanticAction = "ctms.monitoring_visit.sign_off";
+
+    public static string SignOffVisitAction(string visitId) =>
+        $"/api/v1/ctms/monitoring-visits/{Uri.EscapeDataString(visitId)}/sign-off";
+
+    private static string SignOffVisitActionFor(HttpContext httpContext) =>
+        SignOffVisitAction(httpContext.Request.RouteValues["visit_id"]?.ToString() ?? string.Empty);
 
     public static RouteGroupBuilder MapMonitoringVisitEndpoints(this RouteGroupBuilder group)
     {
@@ -70,7 +77,8 @@ public static class MonitoringVisitEndpoints
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
-            .RequirePermission(SignOffPermission).RequireCallerStudyAndSiteScope();
+            .RequirePermission(SignOffPermission).RequireCallerStudyAndSiteScope()
+            .RequireElectronicSignature(SignOffVisitSemanticAction, SignOffVisitActionFor);
 
         group.MapGet("/monitoring-visits/{visit_id}/letters", GetMonitoringVisitLettersAsync)
             .WithName("GetMonitoringVisitLetters")

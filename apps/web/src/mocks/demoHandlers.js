@@ -105,6 +105,7 @@ export function createWebDemoHandlers(store = webDemoStore) {
         sig_token: `demo_sig_tok_${Date.now()}`,
         action: body.action,
         semantic_action: body.semantic_action,
+        ...(body.batch_id ? { batch_id: body.batch_id } : {}),
         expires_in: 300,
       });
     }),
@@ -911,6 +912,21 @@ export function createWebDemoHandlers(store = webDemoStore) {
       "*/api/v1/execution/subjects/:subjectId/state",
       async ({ params, request }) => {
         const body = await readJsonBody(request);
+        const requested = String(body?.status ?? body?.state ?? "")
+          .trim()
+          .toUpperCase();
+        if (requested === "UNBLINDED") {
+          return HttpResponse.json(
+            {
+              title: "Dedicated Unblinding Route Required",
+              status: 400,
+              code: "UNBLIND_REQUIRES_DEDICATED_ROUTE",
+              detail:
+                "Emergency unblinding requires POST /api/v1/execution/subjects/{subjectId}/unblind with an electronic signature.",
+            },
+            { status: 400 }
+          );
+        }
         return HttpResponse.json(
           store.updateSubjectState(
             decodeURIComponent(String(params.subjectId)),
@@ -918,6 +934,13 @@ export function createWebDemoHandlers(store = webDemoStore) {
           )
         );
       }
+    ),
+    http.post("*/api/v1/execution/subjects/:subjectId/unblind", ({ params }) =>
+      HttpResponse.json(
+        store.updateSubjectState(decodeURIComponent(String(params.subjectId)), {
+          status: "UNBLINDED",
+        })
+      )
     ),
     http.get(
       "*/api/v1/execution/sites/:siteId/compliance-status",
@@ -1488,6 +1511,17 @@ export function createWebDemoHandlers(store = webDemoStore) {
     http.post("*/api/v1/ctms/letters/compile", async ({ request }) => {
       const url = new URL(request.url);
       const body = await readJsonBody(request);
+      if (body?.finalize) {
+        return HttpResponse.json(
+          {
+            title: "Dedicated Finalize Route Required",
+            status: 400,
+            detail:
+              "Finalizing a visit letter requires POST /api/v1/ctms/letters/finalize with an electronic signature.",
+          },
+          { status: 400 }
+        );
+      }
       const step = nextDemoStep("ctms-letter-compile");
       const letterId = `LTR-DEMO-${step}`;
       const templateName =
@@ -1504,8 +1538,35 @@ export function createWebDemoHandlers(store = webDemoStore) {
         dispatchedAt: demoNowIso(step),
         pdfSha256Hash: `sha256-demo-letter-${step}`,
         sha256_hash: `sha256-demo-letter-${step}`,
-        isSigned: Boolean(body?.finalize),
-        status: body?.finalize ? "FINALIZED" : "COMPILED",
+        isSigned: false,
+        status: "COMPILED",
+        etmfDocumentId: null,
+        etmf_document_id: null,
+        pdfAccessUrl: `/api/v1/ctms/letters/${letterId}/pdf`,
+        pdf_download_url: `/api/v1/ctms/letters/${letterId}/pdf`,
+      });
+    }),
+    http.post("*/api/v1/ctms/letters/finalize", async ({ request }) => {
+      const url = new URL(request.url);
+      const body = await readJsonBody(request);
+      const step = nextDemoStep("ctms-letter-finalize");
+      const letterId = `LTR-DEMO-${step}`;
+      const templateName =
+        url.searchParams.get("templateName") || "follow_up_letter";
+      return HttpResponse.json({
+        letterId,
+        letter_id: letterId,
+        visitId: body?.visitId || null,
+        letterType: templateName,
+        template_name: templateName,
+        study_id: body?.studyId || "CADENCE-101",
+        site_name: body?.siteName || body?.siteId || "SITE-101",
+        compiled_at: demoNowIso(step),
+        dispatchedAt: demoNowIso(step),
+        pdfSha256Hash: `sha256-demo-letter-${step}`,
+        sha256_hash: `sha256-demo-letter-${step}`,
+        isSigned: true,
+        status: "FINALIZED",
         etmfDocumentId: `DOC-LTR-${step}`,
         etmf_document_id: `DOC-LTR-${step}`,
         pdfAccessUrl: `/api/v1/ctms/letters/${letterId}/pdf`,
@@ -1564,19 +1625,62 @@ export function createWebDemoHandlers(store = webDemoStore) {
           }
         )
     ),
+    http.post(
+      "*/api/v1/ctms/doa/sites/:siteId/export-signed-pdf",
+      ({ params }) =>
+        new HttpResponse(
+          `%PDF-1.4\n% Demo Signed Delegation of Authority Log ${params.siteId}\n`,
+          {
+            status: 200,
+            headers: { "Content-Type": "application/pdf" },
+          }
+        )
+    ),
     http.post("*/api/v1/ctms/doa/:action", async ({ params, request }) => {
       const body = await readJsonBody(request);
-      const log = store.state.doaLogs.get("SITE-101");
+      const siteId = body?.site_id || "SITE-101";
+      const log =
+        store.state.doaLogs.get(siteId) || store.state.doaLogs.get("SITE-101");
       if (params.action === "delegate" && log) {
+        const recordId = `doa-${Date.now()}`;
+        const staffId = body?.staff_user_id || body?.staff_id || "usr-crc-02";
+        const tasks = body?.task_codes || body?.tasks || ["CRF_DATA_ENTRY"];
         log.delegated_staff.push({
-          id: `doa-${Date.now()}`,
-          staff_id: body?.staff_id || "usr-crc-02",
+          id: recordId,
+          record_id: recordId,
+          site_id: log.site_id || siteId,
+          staff_id: staffId,
+          staff_user_id: staffId,
           staff_name: body?.staff_name || "Delegated Site Coordinator",
           role: body?.role || "CRC",
-          tasks: body?.tasks || ["CRF_DATA_ENTRY"],
+          tasks,
+          task_codes: tasks,
+          start_date: body?.start_date || "2026-11-23", // deid-ignore
           status: "PENDING_PI_SIGNATURE",
+          is_active: false,
+          signed_off: false,
           signed_at: null,
         });
+      } else if (params.action === "sign-off" && log) {
+        const targetId = body?.record_id || body?.id;
+        const target = log.delegated_staff.find(
+          (item) => (item.record_id || item.id) === targetId
+        );
+        if (target) {
+          target.status = "ACTIVE";
+          target.is_active = true;
+          target.signed_off = true;
+          target.signed_at = new Date().toISOString();
+        }
+      } else if (params.action === "revoke" && log) {
+        const targetId = body?.record_id || body?.id;
+        const target = log.delegated_staff.find(
+          (item) => (item.record_id || item.id) === targetId
+        );
+        if (target) {
+          target.status = "REVOKED";
+          target.is_active = false;
+        }
       }
       return HttpResponse.json({ status: "OK", action: params.action });
     }),

@@ -11,12 +11,18 @@ using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Fileshare.Domain;
 using Cadence.Apps.Quality.Domain;
 using Cadence.Core.Domain;
+using Cadence.Core.Domain.Audit;
+using Cadence.Database;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Testing;
+using Cadence.Testing.Security;
 
 using FluentAssertions;
 
+using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.Extensions.DependencyInjection;
 
 using Xunit;
 
@@ -331,6 +337,81 @@ public class ArchitectureSentinelTests
             "eisf_document_revisions",
             "knowledge_article_versions",
         ]);
+    }
+
+    /// <summary>
+    /// Verifies that all 15 standalone persistence DbContexts attach exactly one <see cref="GxPAuditInterceptor"/>
+    /// by default when registered via <see cref="CadenceDatabaseExtensions.AddCadencePostgresDbContext{TContext}"/>,
+    /// map the immutable <c>audit_logs</c> Merkle chain table (<see cref="AuditLogEntry"/>), and map
+    /// <c>transactional_outbox</c> (<see cref="TransactionalOutboxMessage"/>) whenever the context tracks
+    /// <see cref="IStatefulAggregate"/> roots.
+    /// </summary>
+    [Fact(DisplayName = "StandaloneDbContexts_MustAttachSingleGxPAuditInterceptorByDefault_AndMapAuditLogs")]
+    [Trait("Category", "Architecture")]
+    public void StandaloneDbContextsMustAttachSingleGxPAuditInterceptorByDefaultAndMapAuditLogs()
+    {
+        (Type ContextType, string Schema)[] standaloneRegistrations =
+        [
+            (typeof(Cadence.Apps.Ctms.Infrastructure.Persistence.CtmsDbContext), "ctms"),
+            (typeof(Cadence.Apps.Econsent.Infrastructure.Persistence.EconsentDbContext), "econsent"),
+            (typeof(Cadence.Apps.Eisf.Infrastructure.Persistence.EisfDbContext), "eisf"),
+            (typeof(Cadence.Apps.Etmf.Infrastructure.Persistence.EtmfDbContext), "etmf"),
+            (typeof(Cadence.Apps.Execution.Infrastructure.Persistence.ExecutionDbContext), "edc"),
+            (typeof(Cadence.Apps.Fileshare.Infrastructure.Persistence.FileshareDbContext), "fileshare"),
+            (typeof(Cadence.Apps.Imaging.Infrastructure.Persistence.ImagingDbContext), "imaging"),
+            (typeof(Cadence.Apps.Interop.Infrastructure.Persistence.InteropDbContext), "interop"),
+            (typeof(Cadence.Apps.Knowledge.Infrastructure.Persistence.KnowledgeDbContext), "knowledge"),
+            (typeof(Cadence.Apps.Notifications.Infrastructure.Persistence.NotificationsDbContext), "notifications"),
+            (typeof(Cadence.Apps.Org.Infrastructure.Persistence.OrgDbContext), "org"),
+            (typeof(Cadence.Apps.Payments.Infrastructure.Persistence.PaymentsDbContext), "payments"),
+            (typeof(Cadence.Apps.Quality.Infrastructure.Persistence.QualityDbContext), "quality"),
+            (typeof(Cadence.Apps.Safety.Infrastructure.Persistence.SafetyDbContext), "safety"),
+            (typeof(Cadence.Apps.Tickets.Infrastructure.Persistence.TicketsDbContext), "tickets"),
+        ];
+
+        var addMethod = typeof(CadenceDatabaseExtensions)
+            .GetMethods(BindingFlags.Public | BindingFlags.Static)
+            .Single(m => m.Name == nameof(CadenceDatabaseExtensions.AddCadencePostgresDbContext) && m.IsGenericMethodDefinition);
+
+        foreach (var (contextType, schema) in standaloneRegistrations)
+        {
+            var builder = WebApplication.CreateBuilder();
+            builder.Configuration[$"ConnectionStrings:{CadenceDatabaseExtensions.DefaultConnectionName}"] =
+                "Host=localhost;Database=cadence_sentinel;Username=postgres;Password=postgres"; // pragma: allowlist secret
+            builder.Configuration["Database:MigrateOnStartup"] = "false";
+            builder.Services.AddSingleton(TestFieldProtection.CreateEncryptor());
+
+            addMethod.MakeGenericMethod(contextType).Invoke(null, [builder, schema, CadenceDatabaseExtensions.DefaultConnectionName, null]);
+
+            using var app = builder.Build();
+            using var scope = app.Services.CreateScope();
+
+            var optionsType = typeof(DbContextOptions<>).MakeGenericType(contextType);
+            var options = (DbContextOptions)scope.ServiceProvider.GetRequiredService(optionsType);
+            var coreOptions = options.FindExtension<CoreOptionsExtension>();
+            coreOptions.Should().NotBeNull($"{contextType.Name} must resolve CoreOptionsExtension");
+
+            var auditInterceptors = (coreOptions!.Interceptors ?? [])
+                .OfType<GxPAuditInterceptor>()
+                .ToList();
+            auditInterceptors.Should().ContainSingle(
+                $"{contextType.Name} ({schema}) must attach exactly one GxPAuditInterceptor by default (zero omissions, zero duplicates)");
+
+            var context = (DbContext)scope.ServiceProvider.GetRequiredService(contextType);
+            var auditEntity = context.Model.FindEntityType(typeof(AuditLogEntry));
+            auditEntity.Should().NotBeNull($"{contextType.Name} ({schema}) must map AuditLogEntry");
+            auditEntity!.GetTableName().Should().BeOneOf("audit_log_entries", "audit_logs", "AuditLogEntries");
+
+            bool hasStatefulAggregates = context.Model.GetEntityTypes()
+                .Any(e => typeof(IStatefulAggregate).IsAssignableFrom(e.ClrType));
+            if (hasStatefulAggregates)
+            {
+                var outboxEntity = context.Model.FindEntityType(typeof(TransactionalOutboxMessage));
+                outboxEntity.Should().NotBeNull(
+                    $"{contextType.Name} ({schema}) tracks IStatefulAggregate entities and must map TransactionalOutboxMessage");
+                outboxEntity!.GetTableName().Should().BeOneOf("transactional_outbox", "transactional_outbox_messages", "TransactionalOutboxMessages");
+            }
+        }
     }
 
     private static IEnumerable<Type> GetLoadableTypes(Assembly assembly)

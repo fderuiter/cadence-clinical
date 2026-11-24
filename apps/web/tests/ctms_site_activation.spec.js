@@ -66,6 +66,7 @@ vi.mock("../src/api/ctmsApi", () => ({
     listMonitoringVisitLetters: vi.fn().mockResolvedValue([]),
     getMonitoringVisitLetters: vi.fn().mockResolvedValue([]),
     compileVisitLetter: vi.fn(),
+    finalizeVisitLetter: vi.fn(),
     downloadVisitLetterPdf: vi.fn(),
     getSiteDoaLog: vi.fn().mockResolvedValue({
       site_id: "SITE-7",
@@ -76,6 +77,7 @@ vi.mock("../src/api/ctmsApi", () => ({
     revokeSiteTasks: vi.fn(),
     signOffDelegation: vi.fn(),
     exportSiteDoaPdf: vi.fn(),
+    exportSignedSiteDoaPdf: vi.fn(),
   },
 }));
 

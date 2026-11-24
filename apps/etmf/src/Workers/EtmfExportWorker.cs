@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 
 using Cadence.Apps.Etmf.Infrastructure.Persistence;
 using Cadence.Apps.Etmf.Services;
+using Cadence.Database;
 using Cadence.Database.Tenancy;
 using Cadence.Kernel.Time;
 using Cadence.Storage;
@@ -124,8 +125,11 @@ public sealed class EtmfExportWorker : BackgroundService
         return true;
     }
 
+    private const string ExportWorkerServiceAccount = "svc:etmf-export-worker";
+
     public async Task ProcessJobAsync(string jobId, CancellationToken ct)
     {
+        using var actorScope = StandaloneAuditActorScope.Begin(ExportWorkerServiceAccount);
         using var scope = _serviceProvider.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<EtmfDbContext>();
         var clock = scope.ServiceProvider.GetRequiredService<IClock>();
@@ -142,6 +146,7 @@ public sealed class EtmfExportWorker : BackgroundService
         {
             job.Status = "PROCESSING";
             job.ProgressPercentage = 5.0;
+            job.ReasonForChange = "Automated eTMF export archive generation started";
             await db.SaveChangesAsync(ct);
 
             // Fetch documents for the target study in batches
@@ -156,6 +161,7 @@ public sealed class EtmfExportWorker : BackgroundService
 
             job.TotalDocuments = documents.Count;
             job.ProgressPercentage = 15.0;
+            job.ReasonForChange = "Automated eTMF export document inventory enumerated";
             await db.SaveChangesAsync(ct);
 
             var now = clock.UtcNow;
@@ -192,6 +198,7 @@ public sealed class EtmfExportWorker : BackgroundService
             job.ProcessedDocuments = documents.Count;
             job.DownloadUrl = $"/api/v1/etmf/export-jobs/{job.Id}/download";
             job.ExpiresAt = now.AddHours(24);
+            job.ReasonForChange = "Automated eTMF export archive generation completed";
 
             await db.SaveChangesAsync(ct);
             _logger.LogInformation("Export job {JobId} completed successfully with {DocCount} documents.", job.Id, documents.Count);
@@ -200,6 +207,7 @@ public sealed class EtmfExportWorker : BackgroundService
         {
             _logger.LogError(ex, "Failed to execute export job {JobId}.", jobId);
             job.Status = "FAILED";
+            job.ReasonForChange = "Automated eTMF export archive generation failed";
             await db.SaveChangesAsync(ct);
         }
     }

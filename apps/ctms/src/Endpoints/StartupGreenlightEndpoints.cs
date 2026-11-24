@@ -12,6 +12,7 @@ using Cadence.Apps.Ctms.Domain;
 using Cadence.Apps.Ctms.Infrastructure.Persistence;
 using Cadence.Compliance;
 using Cadence.Kernel.Time;
+using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
 using Cadence.Security.Rbac;
 
@@ -35,6 +36,23 @@ public static class StartupGreenlightEndpoints
 {
     public const string CertifyPermission = "ctms_greenlight:certify";
     public const string ReadPermission = "ctms_greenlight:read";
+    public const string CertifySiteGreenlightSemanticAction = "ctms.greenlight.certify";
+    public const string BatchCertifyGreenlightAction = "/api/v1/ctms/startup/matrix/batch-certify";
+    public const string BatchCertifyGreenlightSemanticAction = "ctms.greenlight.batch_certify";
+
+    public static string CertifySiteGreenlightAction(string siteId) =>
+        $"/api/v1/ctms/startup/sites/{Uri.EscapeDataString(siteId)}/greenlight/certify";
+
+    private static string CertifySiteGreenlightActionFor(HttpContext httpContext) =>
+        CertifySiteGreenlightAction(httpContext.Request.RouteValues["siteId"]?.ToString() ?? string.Empty);
+
+    private static SigTokenBinding? BatchCertifyGreenlightBinding(EndpointFilterInvocationContext context)
+    {
+        var request = context.Arguments.OfType<BatchCertifyRequestDto>().FirstOrDefault();
+        return request is null
+            ? null
+            : new SigTokenBinding(BatchCertifyGreenlightAction, BatchCertifyGreenlightSemanticAction, request.BatchBindingId());
+    }
 
     public static RouteGroupBuilder MapStartupGreenlightEndpoints(this RouteGroupBuilder group)
     {
@@ -53,6 +71,7 @@ public static class StartupGreenlightEndpoints
             .WithName("CertifySiteGreenlight")
             .RequirePermission(CertifyPermission)
             .RequireSiteScope("siteId")
+            .RequireElectronicSignature(CertifySiteGreenlightSemanticAction, CertifySiteGreenlightActionFor)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .WithSummary("Certifies greenlight activation for a single trial site, issuing an HMAC-SHA256 token.")
             .Produces<SiteGreenlightGateResponseDto>(StatusCodes.Status200OK)
@@ -70,6 +89,7 @@ public static class StartupGreenlightEndpoints
         startup.MapPost("/matrix/batch-certify", BatchCertifyCountrySitesAsync)
             .WithName("BatchCertifyCountrySites")
             .RequirePermission(CertifyPermission).RequireCallerStudyAndSiteScope()
+            .RequireElectronicSignature(BatchCertifyGreenlightBinding)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .WithSummary("Batch-certifies all selected 100% compliant sites in a target country with a single e-signature.")
             .Produces<BatchCertifyResponseDto>(StatusCodes.Status200OK)
@@ -161,8 +181,12 @@ public static class StartupGreenlightEndpoints
         string token = GreenlightTokenGenerator.GenerateToken(
             gate.SiteId, gate.StudyId, gate.CountryCode, signer, secret, issuedAt, expiresAt, gate.IsOverridden);
 
+        string reason = ChangeReasonHeader.Read(httpContext.Request)
+            ?? (string.IsNullOrWhiteSpace(changeReasonHeader) ? null : changeReasonHeader.Trim())
+            ?? "Greenlight activation certified";
+
         gate.Approve(signer, now, token);
-        gate.ReasonForChange = changeReasonHeader ?? "Greenlight activation certified";
+        gate.ReasonForChange = reason;
 
         var auditEntry = new CtmsAuditLog
         {
@@ -173,6 +197,10 @@ public static class StartupGreenlightEndpoints
             Details = $"Greenlight activation certified for site {gate.SiteId} in study {gate.StudyId} ({gate.CountryCode})",
             StudyId = gate.StudyId,
             SiteId = gate.SiteId,
+            ReasonForChange = reason,
+            CreatedAt = now.UtcDateTime,
+            CreatedBy = signer,
+            VersionIndex = 1,
         };
         db.CtmsAuditLogs.Add(auditEntry);
 
@@ -296,13 +324,18 @@ public static class StartupGreenlightEndpoints
 
         var certifiedItems = new List<CertifiedSiteItemDto>();
 
+        string batchReason = ChangeReasonHeader.Read(httpContext.Request)
+            ?? (string.IsNullOrWhiteSpace(changeReasonHeader) ? null : changeReasonHeader.Trim())
+            ?? request.Meaning
+            ?? "21 CFR Part 11 Country-Level Batch Certification";
+
         foreach (var gate in gates)
         {
             string token = GreenlightTokenGenerator.GenerateToken(
                 gate.SiteId, gate.StudyId, gate.CountryCode, signer, secret, issuedAt, expiresAt, gate.IsOverridden);
 
             gate.Approve(signer, now, token);
-            gate.ReasonForChange = changeReasonHeader ?? request.Meaning ?? "21 CFR Part 11 Country-Level Batch Certification";
+            gate.ReasonForChange = batchReason;
 
             var auditEntry = new CtmsAuditLog
             {
@@ -313,6 +346,10 @@ public static class StartupGreenlightEndpoints
                 Details = $"21 CFR Part 11 Batch Greenlight Certified for site {gate.SiteId} ({gate.SiteName}) in {gate.CountryCode} for study {gate.StudyId}.",
                 StudyId = gate.StudyId,
                 SiteId = gate.SiteId,
+                ReasonForChange = batchReason,
+                CreatedAt = now.UtcDateTime,
+                CreatedBy = signer,
+                VersionIndex = 1,
             };
             db.CtmsAuditLogs.Add(auditEntry);
 
@@ -477,7 +514,11 @@ public record BatchCertifyRequestDto(
     [property: JsonPropertyName("country_code")] string CountryCode,
     [property: JsonPropertyName("site_ids")] List<string> SiteIds,
     [property: JsonPropertyName("meaning")] string? Meaning
-);
+)
+{
+    public string BatchBindingId() => Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(
+        string.Join(",", (SiteIds ?? []).Select(id => id.Trim()).Order(StringComparer.Ordinal)))));
+}
 
 public record CertifiedSiteItemDto(
     [property: JsonPropertyName("site_id")] string SiteId,

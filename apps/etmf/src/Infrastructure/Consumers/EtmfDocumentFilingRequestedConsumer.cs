@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Cadence.Apps.Etmf.Domain;
 using Cadence.Apps.Etmf.Infrastructure.Persistence;
 using Cadence.Contracts;
+using Cadence.Database;
 
 using MassTransit;
 
@@ -21,8 +22,11 @@ public sealed class EtmfDocumentFilingRequestedConsumer(
     EtmfDbContext dbContext,
     ILogger<EtmfDocumentFilingRequestedConsumer>? logger = null) : IConsumer<EtmfDocumentFilingRequested>
 {
+    private const string ServiceAccountId = "svc:etmf-outbox";
+
     public async Task Consume(ConsumeContext<EtmfDocumentFilingRequested> context)
     {
+        using var _ = StandaloneAuditActorScope.Begin(ServiceAccountId);
         var msg = context.Message;
 
         if (string.IsNullOrWhiteSpace(msg.DocumentId) || string.IsNullOrWhiteSpace(msg.StudyId))
