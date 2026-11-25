@@ -453,6 +453,71 @@ public sealed class KernelStudyImportEndpointsTests : IDisposable
     }
 
     [Fact]
+    public async Task ImportProtocolDraft_RejectsDeeplyNestedAndWideFormalExpressions_AndHostRemainsHealthy()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var designerClient = CreateClient(DesignerIdentity);
+
+        string[] maliciousExpressions =
+        [
+            new string('(', 4000) + "IT.SYS == 120" + new string(')', 4000),
+            new string('!', 40) + "IT.SYS == 120",
+            new string('!', 4000) + "IT.SYS == 120",
+            string.Concat(Enumerable.Repeat("length(", 4000)) + "IT.SYS" + new string(')', 4000) + " == 3",
+            string.Join(" or ", Enumerable.Repeat("IT.SYS == 120", 1500)),
+        ];
+
+        for (int i = 0; i < maliciousExpressions.Length; i++)
+        {
+            var odmPayload = $$"""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <ODM xmlns="http://www.cdisc.org/ns/odm/v1.3" FileOID="ODM.DEEP.{{i}}" FileType="Snapshot" ODMVersion="1.3.2">
+                  <Study OID="S.CADENCE">
+                    <GlobalVariables>
+                      <StudyName>Cardiovascular Outcomes Protocol</StudyName>
+                      <StudyDescription>Regression</StudyDescription>
+                      <ProtocolName>CADENCE-101</ProtocolName>
+                    </GlobalVariables>
+                    <MetaDataVersion OID="MDV.1" Name="Draft 1">
+                      <FormDef OID="F.VS" Name="Vital Signs" Repeating="No">
+                        <ItemGroupRef ItemGroupOID="IG.VS" OrderNumber="1" Mandatory="Yes"/>
+                      </FormDef>
+                      <ItemGroupDef OID="IG.VS" Name="Vital Signs Measurements" Repeating="No">
+                        <ItemRef ItemOID="IT.SYS" OrderNumber="1" Mandatory="Yes"/>
+                      </ItemGroupDef>
+                      <ItemDef OID="IT.SYS" Name="SYSBP" DataType="integer">
+                        <Alias Context="prompt" Name="Systolic Blood Pressure"/>
+                        <RangeCheck SoftHard="Hard">
+                          <FormalExpression Context="XPath">{{maliciousExpressions[i]}}</FormalExpression>
+                        </RangeCheck>
+                      </ItemDef>
+                    </MetaDataVersion>
+                  </Study>
+                </ODM>
+                """;
+
+            using var importReq = MultipartOdmPost(
+                "/api/v1/kernel/studies/CADENCE-101/protocol-imports",
+                odmPayload,
+                $"deep-{i}.xml",
+                $"deep-expr-{i}",
+                "Reject oversized FormalExpression without crashing host");
+            using var importRes = await designerClient.SendAsync(importReq, ct);
+            importRes.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+            importRes.Content.Headers.ContentType!.MediaType.Should().Be("application/problem+json");
+        }
+
+        _world.Concepts.Should().BeEmpty();
+        _world.Versions.Should().BeEmpty();
+
+        using var studiesRes = await designerClient.GetAsync(new Uri("/api/v1/kernel/studies", UriKind.Relative), ct);
+        studiesRes.StatusCode.Should().Be(HttpStatusCode.OK);
+        var studies = await studiesRes.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: ct);
+        studies.EnumerateArray().Select(s => s.GetProperty("code").GetString())
+            .Should().Contain("CADENCE-101");
+    }
+
+    [Fact]
     public async Task LifecycleVersionResolution_HandlesWithdrawnInReviewAndSupersededVersionsWithoutDeadlock()
     {
         var ct = TestContext.Current.CancellationToken;

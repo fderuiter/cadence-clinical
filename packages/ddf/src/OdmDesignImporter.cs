@@ -1225,7 +1225,8 @@ public static partial class OdmDesignImporter
                         token => ResolveVariableForForm(token, meta.FormId, itemsByLookup),
                         meta.Item.Id,
                         out var parsedFormal,
-                        out var parseError) && parsedFormal is not null)
+                        out var parseError,
+                        out var limitExceeded) && parsedFormal is not null)
                     {
                         condition = rawExpr.StartsWith('{')
                             ? parsedFormal
@@ -1235,6 +1236,10 @@ public static partial class OdmDesignImporter
                                     new FunctionExpression(RuleFunction.IsNotEmpty, [new VariableExpression(meta.Item.Id)]),
                                     new NotExpression(parsedFormal),
                                 ]);
+                    }
+                    else if (limitExceeded)
+                    {
+                        problems.Add($"Item '{meta.ItemOid}' RangeCheck #{rcIndex} FormalExpression exceeds expression complexity limits ({parseError}).");
                     }
                     else
                     {
@@ -1298,14 +1303,33 @@ public static partial class OdmDesignImporter
 
             RuleExpression? rawParsed = null;
             string? lastParseError = null;
+            var conditionLimitExceeded = false;
             foreach (var fe in formalElements)
             {
-                if (OdmFormalExpressionParser.TryParse(fe.Value, null, null, out var candidateExpr, out lastParseError)
+                if (OdmFormalExpressionParser.TryParse(
+                    fe.Value,
+                    null,
+                    null,
+                    out var candidateExpr,
+                    out lastParseError,
+                    out var feLimitExceeded)
                     && candidateExpr is not null)
                 {
                     rawParsed = candidateExpr;
                     break;
                 }
+
+                if (feLimitExceeded)
+                {
+                    conditionLimitExceeded = true;
+                    break;
+                }
+            }
+
+            if (conditionLimitExceeded)
+            {
+                problems.Add($"ODM <ConditionDef> '{condOid}' FormalExpression exceeds expression complexity limits ({lastParseError}).");
+                continue;
             }
 
             if (rawParsed is null)
@@ -1316,25 +1340,57 @@ public static partial class OdmDesignImporter
                 continue;
             }
 
-            if (targetsByCondition.TryGetValue(condOid, out var targets) && targets.Count > 0)
+            try
             {
-                foreach (var target in targets)
+                if (targetsByCondition.TryGetValue(condOid, out var targets) && targets.Count > 0)
                 {
+                    foreach (var target in targets)
+                    {
+                        var resolvedCond = OdmFormalExpressionParser.RewriteVariables(
+                            rawParsed,
+                            token => ResolveVariableForForm(token, target.FormId, itemsByLookup),
+                            target.Item.Id);
+                        var exceptionViolation = new LogicalExpression(
+                            LogicalOperator.And,
+                            [
+                                resolvedCond,
+                                new FunctionExpression(RuleFunction.IsNotEmpty, [new VariableExpression(target.Item.Id)]),
+                            ]);
+                        var ruleId = AllocateRuleId($"CD.{condOid}.{target.Item.Id}", usedRuleIds);
+                        var explanation = TruncateText(
+                            FirstNonBlank(
+                                condDesc,
+                                $"Item '{target.Item.Prompt ?? target.ItemName}' must not be collected when condition '{condName}' holds.")!,
+                            RulePackJson.MaxTextLength);
+
+                        rules.Add(new Rule(
+                            ruleId,
+                            1,
+                            RuleAuthority.Study,
+                            new SourceCitation(docTitle, condOid, null),
+                            new RuleApplicability(ValidationStage.Collection, null, null, null, target.FormId),
+                            ValidationSeverity.Warning,
+                            exceptionViolation,
+                            explanation,
+                            RemediationGuidance: "Confirm whether the conditional collection exception applies or clear the unneeded item.",
+                            EffectivePeriod.Always));
+                    }
+                }
+                else
+                {
+                    var referencedVars = RuleExpressionJson.Variables(rawParsed);
+                    var primaryFormId = ResolvePrimaryFormForStandaloneCondition(referencedVars, importedItems, itemsByLookup);
+                    if (primaryFormId is null)
+                    {
+                        continue;
+                    }
+
                     var resolvedCond = OdmFormalExpressionParser.RewriteVariables(
                         rawParsed,
-                        token => ResolveVariableForForm(token, target.FormId, itemsByLookup),
-                        target.Item.Id);
-                    var exceptionViolation = new LogicalExpression(
-                        LogicalOperator.And,
-                        [
-                            resolvedCond,
-                            new FunctionExpression(RuleFunction.IsNotEmpty, [new VariableExpression(target.Item.Id)]),
-                        ]);
-                    var ruleId = AllocateRuleId($"CD.{condOid}.{target.Item.Id}", usedRuleIds);
+                        token => ResolveVariableForForm(token, primaryFormId, itemsByLookup));
+                    var ruleId = AllocateRuleId($"CD.{condOid}", usedRuleIds);
                     var explanation = TruncateText(
-                        FirstNonBlank(
-                            condDesc,
-                            $"Item '{target.Item.Prompt ?? target.ItemName}' must not be collected when condition '{condName}' holds.")!,
+                        FirstNonBlank(condDesc, condName, $"Condition '{condOid}' reported a discrepancy.")!,
                         RulePackJson.MaxTextLength);
 
                     rules.Add(new Rule(
@@ -1342,42 +1398,17 @@ public static partial class OdmDesignImporter
                         1,
                         RuleAuthority.Study,
                         new SourceCitation(docTitle, condOid, null),
-                        new RuleApplicability(ValidationStage.Collection, null, null, null, target.FormId),
+                        new RuleApplicability(ValidationStage.Collection, null, null, null, primaryFormId),
                         ValidationSeverity.Warning,
-                        exceptionViolation,
+                        resolvedCond,
                         explanation,
-                        RemediationGuidance: "Confirm whether the conditional collection exception applies or clear the unneeded item.",
+                        RemediationGuidance: "Verify the related clinical items and resolve the conditional discrepancy.",
                         EffectivePeriod.Always));
                 }
             }
-            else
+            catch (FormatException ex)
             {
-                var referencedVars = RuleExpressionJson.Variables(rawParsed);
-                var primaryFormId = ResolvePrimaryFormForStandaloneCondition(referencedVars, importedItems, itemsByLookup);
-                if (primaryFormId is null)
-                {
-                    continue;
-                }
-
-                var resolvedCond = OdmFormalExpressionParser.RewriteVariables(
-                    rawParsed,
-                    token => ResolveVariableForForm(token, primaryFormId, itemsByLookup));
-                var ruleId = AllocateRuleId($"CD.{condOid}", usedRuleIds);
-                var explanation = TruncateText(
-                    FirstNonBlank(condDesc, condName, $"Condition '{condOid}' reported a discrepancy.")!,
-                    RulePackJson.MaxTextLength);
-
-                rules.Add(new Rule(
-                    ruleId,
-                    1,
-                    RuleAuthority.Study,
-                    new SourceCitation(docTitle, condOid, null),
-                    new RuleApplicability(ValidationStage.Collection, null, null, null, primaryFormId),
-                    ValidationSeverity.Warning,
-                    resolvedCond,
-                    explanation,
-                    RemediationGuidance: "Verify the related clinical items and resolve the conditional discrepancy.",
-                    EffectivePeriod.Always));
+                problems.Add($"ODM <ConditionDef> '{condOid}' FormalExpression exceeds expression complexity limits ({ex.Message}).");
             }
         }
 

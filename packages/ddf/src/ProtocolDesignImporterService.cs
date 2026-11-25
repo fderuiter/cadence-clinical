@@ -484,22 +484,30 @@ public sealed class ProtocolDesignImporterService : IProtocolDesignImporter
         if (incomingRules is { Count: > 0 })
         {
             var usedRuleIds = new HashSet<string>(StringComparer.Ordinal);
-            var remappedRules = incomingRules.Select(rule =>
+            List<Rule> remappedRules;
+            try
             {
-                var mappedDataset = rule.Applicability.Dataset is not null && idRenameMap.TryGetValue(rule.Applicability.Dataset, out var ds)
-                    ? ds
-                    : rule.Applicability.Dataset;
-                var mappedCondition = OdmFormalExpressionParser.RewriteVariables(
-                    rule.Condition,
-                    varName => idRenameMap.TryGetValue(varName, out var mappedVar) ? mappedVar : varName);
-                var uniqueRuleId = OdmDesignImporter.AllocateRuleId(rule.Id, usedRuleIds);
-                return rule with
+                remappedRules = incomingRules.Select(rule =>
                 {
-                    Id = uniqueRuleId,
-                    Applicability = rule.Applicability with { Dataset = mappedDataset },
-                    Condition = mappedCondition,
-                };
-            }).ToList();
+                    var mappedDataset = rule.Applicability.Dataset is not null && idRenameMap.TryGetValue(rule.Applicability.Dataset, out var ds)
+                        ? ds
+                        : rule.Applicability.Dataset;
+                    var mappedCondition = OdmFormalExpressionParser.RewriteVariables(
+                        rule.Condition,
+                        varName => idRenameMap.TryGetValue(varName, out var mappedVar) ? mappedVar : varName);
+                    var uniqueRuleId = OdmDesignImporter.AllocateRuleId(rule.Id, usedRuleIds);
+                    return rule with
+                    {
+                        Id = uniqueRuleId,
+                        Applicability = rule.Applicability with { Dataset = mappedDataset },
+                        Condition = mappedCondition,
+                    };
+                }).ToList();
+            }
+            catch (FormatException ex)
+            {
+                return new ProtocolDesignImportResult(null, [ex.Message], mergedNotes);
+            }
 
             var packTitle = $"{title} Edit Checks";
             if (packTitle.Length > RulePackJson.MaxTextLength)
@@ -508,7 +516,16 @@ public sealed class ProtocolDesignImporterService : IProtocolDesignImporter
             }
 
             var pack = new RulePack(RuleAuthority.Study, packTitle, remappedRules);
-            var packJson = RulePackJson.ToJson(pack);
+            JsonElement packJson;
+            try
+            {
+                packJson = RulePackJson.ToJson(pack);
+            }
+            catch (JsonException ex)
+            {
+                return new ProtocolDesignImportResult(null, [$"Compiled rule pack exceeds JSON limits: {ex.Message}"], mergedNotes);
+            }
+
             var (_, packProblems) = RulePackJson.Read(packJson);
             if (packProblems.Count > 0)
             {

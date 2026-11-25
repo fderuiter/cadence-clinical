@@ -15,6 +15,8 @@ using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.Protocol.Import;
 using Cadence.Kernel.Trust;
+using Cadence.Rules.Expressions;
+using Cadence.Rules.Packs;
 using Cadence.Testing;
 
 using FluentAssertions;
@@ -877,5 +879,174 @@ public sealed class OdmDesignImporterTests
                     new DataPurpose { SafetyRuleIds = ["rule.safety_monitoring"] }),
             ],
         };
+    }
+
+    [Fact]
+    public async Task OdmFormalExpressionParser_AcceptsMaxDepthBoundary_AndWrappedRulesPassRulePackRead()
+    {
+        var maxDepthParens = new string('(', OdmFormalExpressionParser.MaxDepth)
+            + "IT.SYS == 120"
+            + new string(')', OdmFormalExpressionParser.MaxDepth);
+        OdmFormalExpressionParser.TryParse(maxDepthParens, null, null, out var parsedParens, out var parensErr).Should().BeTrue(parensErr);
+        parsedParens.Should().NotBeNull();
+
+        // 27 unary/function ops (54 JSON levels) + comparison (2 JSON levels) + variable (1 JSON level) = 57 JSON levels,
+        // which hits System.Text.Json's exact 64-level limit after RangeCheck (+4) and RulePack (+3) wrapping.
+        var maxWrappableUnary = new string('!', 27) + "IT.SYS == 120";
+        var maxWrappableFunctions = string.Concat(Enumerable.Repeat("length(", 27))
+            + "IT.SYS"
+            + new string(')', 27)
+            + " > 0";
+
+        foreach (var (rangeExpr, condExpr) in new[]
+        {
+            (maxDepthParens, maxDepthParens),
+            (maxWrappableUnary, maxWrappableFunctions),
+        })
+        {
+            var odm = BuildSingleFormOdmWithExpressions(
+                rangeCheckExpression: rangeExpr,
+                conditionExpression: condExpr);
+
+            var service = new ProtocolDesignImporterService();
+            var result = await service.ImportAsync(
+                new ProtocolDesignImportRequest(RawBytes: Encoding.UTF8.GetBytes(odm), FileName: "boundary-rules.xml"),
+                AlwaysSponsorConcept(),
+                TestContext.Current.CancellationToken);
+
+            result.IsSuccess.Should().BeTrue(string.Join("; ", result.Problems));
+            result.RulePack.Should().NotBeNull();
+            result.RulePack!.RuleCount.Should().Be(2);
+
+            var (pack, packProblems) = RulePackJson.Read(result.RulePack.Content);
+            packProblems.Should().BeEmpty();
+            pack.Should().NotBeNull();
+            pack!.Rules.Should().HaveCount(2);
+        }
+    }
+
+    [Fact]
+    public async Task OdmFormalExpressionParser_RejectsDeeplyNestedAndWideExpressions_WithoutStackOverflow()
+    {
+        int overDepth = OdmFormalExpressionParser.MaxDepth + 1;
+        string[] oversizedExpressions =
+        [
+            new string('(', overDepth) + "IT.SYS == 120" + new string(')', overDepth),
+            new string('(', 4000) + "IT.SYS == 120" + new string(')', 4000),
+            new string('!', 28) + "IT.SYS == 120",
+            new string('!', overDepth) + "true",
+            new string('!', 4000) + "true",
+            string.Concat(Enumerable.Repeat("not ", overDepth)) + "true",
+            string.Concat(Enumerable.Repeat("not(", overDepth)) + "true" + new string(')', overDepth),
+            new string('-', overDepth) + "IT.SYS",
+            string.Concat(Enumerable.Repeat("length(", 28)) + "IT.SYS" + new string(')', 28) + " > 0",
+            string.Concat(Enumerable.Repeat("length(", overDepth)) + "IT.SYS" + new string(')', overDepth),
+            string.Concat(Enumerable.Repeat("length(", 4000)) + "IT.SYS" + new string(')', 4000),
+            new string('(', overDepth - 1) + "IT.SYS in (1, 2)" + new string(')', overDepth - 1),
+            string.Join(" + ", Enumerable.Repeat("1", overDepth + 1)) + " > 0",
+            string.Join(" and ", Enumerable.Repeat("IT.SYS == 120", 1400)),
+            string.Join(" or ", Enumerable.Repeat("true", RuleExpressionJson.MaxNodes)),
+            string.Join(" + ", Enumerable.Repeat("1", (OdmFormalExpressionParser.MaxTokens / 2) + 2)),
+            new string(' ', OdmFormalExpressionParser.MaxExpressionLength + 10) + "IT.SYS == 120",
+        ];
+
+        foreach (var expr in oversizedExpressions)
+        {
+            OdmFormalExpressionParser.TryParse(expr, null, null, out var parsed, out var error).Should().BeFalse();
+            parsed.Should().BeNull();
+            error.Should().NotBeNullOrWhiteSpace();
+        }
+
+        // Unsupported vendor syntax within bounds still skips with an import note rather than failing the ODM import.
+        var vendorOdm = BuildSingleFormOdmWithExpressions(
+            rangeCheckExpression: "VendorCustomCheck(IT.SYS)",
+            conditionExpression: null);
+        var service = new ProtocolDesignImporterService();
+        var vendorResult = await service.ImportAsync(
+            new ProtocolDesignImportRequest(RawBytes: Encoding.UTF8.GetBytes(vendorOdm), FileName: "vendor-fn.xml"),
+            AlwaysSponsorConcept(),
+            TestContext.Current.CancellationToken);
+        vendorResult.IsSuccess.Should().BeTrue(string.Join("; ", vendorResult.Problems));
+        vendorResult.Notes.Should().Contain(n => n.Message.Contains("VendorCustomCheck", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void OdmFormalExpressionParser_RewriteVariables_EnforcesMaxDepthAndMaxNodes()
+    {
+        RuleExpression atMaxDepth = new VariableExpression(".");
+        for (int i = 0; i < RuleExpressionJson.MaxDepth; i++)
+        {
+            atMaxDepth = new NotExpression(atMaxDepth);
+        }
+
+        var rewritten = OdmFormalExpressionParser.RewriteVariables(atMaxDepth, name => $"mapped.{name}", "IT.SYS");
+        RuleExpressionJson.Variables(rewritten).Should().Equal("mapped.IT.SYS");
+
+        var overMaxDepth = new NotExpression(atMaxDepth);
+        Action actDeep = () => OdmFormalExpressionParser.RewriteVariables(overMaxDepth, static name => name);
+        actDeep.Should().Throw<FormatException>()
+            .WithMessage($"*nested more than {RuleExpressionJson.MaxDepth} levels*");
+
+        var maxNodeOperands = Enumerable.Range(0, RuleExpressionJson.MaxNodes - 1)
+            .Select(_ => (RuleExpression)new LiteralExpression(RuleValue.True))
+            .ToList();
+        var atMaxNodes = new LogicalExpression(LogicalOperator.Or, maxNodeOperands);
+        OdmFormalExpressionParser.RewriteVariables(atMaxNodes, static name => name).Should().NotBeNull();
+
+        var overMaxNodes = new LogicalExpression(
+            LogicalOperator.Or,
+            [.. maxNodeOperands, new LiteralExpression(RuleValue.True)]);
+        Action actWide = () => OdmFormalExpressionParser.RewriteVariables(overMaxNodes, static name => name);
+        actWide.Should().Throw<FormatException>()
+            .WithMessage($"*more than {RuleExpressionJson.MaxNodes} nodes*");
+    }
+
+    private static string BuildSingleFormOdmWithExpressions(string rangeCheckExpression, string? conditionExpression)
+    {
+        var escapedRange = new XText(rangeCheckExpression).ToString();
+        var conditionItemAttr = conditionExpression is not null
+            ? " CollectionExceptionConditionOID=\"CD.TEST\""
+            : string.Empty;
+        var conditionBlock = conditionExpression is not null
+            ? $"""
+                  <ConditionDef OID="CD.TEST" Name="Test Condition">
+                    <Description><TranslatedText xml:lang="en">Conditional check</TranslatedText></Description>
+                    <FormalExpression Context="XPath">{new XText(conditionExpression)}</FormalExpression>
+                  </ConditionDef>
+              """
+            : string.Empty;
+
+        return $"""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <ODM xmlns="http://www.cdisc.org/ns/odm/v1.3" FileOID="ODM.EXPR" FileType="Snapshot" ODMVersion="1.3.2">
+              <Study OID="S.EXPR">
+                <GlobalVariables>
+                  <StudyName>Expression Bounds Study</StudyName>
+                  <StudyDescription>Bounds</StudyDescription>
+                  <ProtocolName>EXPR-101</ProtocolName>
+                </GlobalVariables>
+                <MetaDataVersion OID="MDV.1" Name="v1">
+                  <FormDef OID="F.VS" Name="Vital Signs" Repeating="No">
+                    <ItemGroupRef ItemGroupOID="IG.VS" OrderNumber="1" Mandatory="Yes"/>
+                  </FormDef>
+                  <ItemGroupDef OID="IG.VS" Name="Vitals" Repeating="No">
+                    <ItemRef ItemOID="IT.SYS" OrderNumber="1" Mandatory="Yes"/>
+                    <ItemRef ItemOID="IT.DIA" OrderNumber="2" Mandatory="No"{conditionItemAttr}/>
+                  </ItemGroupDef>
+                  <ItemDef OID="IT.SYS" Name="SYSBP" DataType="integer">
+                    <Question><TranslatedText xml:lang="en">Systolic BP</TranslatedText></Question>
+                    <RangeCheck SoftHard="Hard">
+                      <FormalExpression Context="XPath">{escapedRange}</FormalExpression>
+                      <ErrorMessage><TranslatedText xml:lang="en">Invalid systolic BP.</TranslatedText></ErrorMessage>
+                    </RangeCheck>
+                  </ItemDef>
+                  <ItemDef OID="IT.DIA" Name="DIABP" DataType="integer">
+                    <Question><TranslatedText xml:lang="en">Diastolic BP</TranslatedText></Question>
+                  </ItemDef>
+            {conditionBlock}
+                </MetaDataVersion>
+              </Study>
+            </ODM>
+            """;
     }
 }
