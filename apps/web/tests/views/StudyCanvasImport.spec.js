@@ -514,6 +514,104 @@ describe("Clinical Canvas study directory, study creation, and ODM/USDM protocol
     expect(alertSpy).not.toHaveBeenCalled();
   });
 
+  it("passes customized template visit assignments and highlights repeating CDISC templates", async () => {
+    vi.mocked(kernelApi.listProtocolTemplates).mockResolvedValue([
+      ...TEMPLATES,
+      {
+        id: "tobacco-product-events-or-malfunctions",
+        category: "Events",
+        form_oid: "TPEM",
+        form_name: "Tobacco Product Events or Malfunctions",
+        file_name: "TIG_Tobacco_Product_Events_or_Malfunctions_XML.xml",
+        item_count: 9,
+        repeating: true,
+      },
+    ]);
+    const draftVersion = {
+      ref: "protocol_version:0192f3c4-5e6a-7b8c-9d0e-0000000000f9@1",
+      study: DEMO_STUDY.ref,
+      number: 1,
+      parent_version: null,
+      status: "Draft",
+      content_hash: null,
+      amendment_intent: null,
+      approval_attestation: null,
+      withdrawal_reason: null,
+      mask: null,
+    };
+    const draftSummary = {
+      version: draftVersion,
+      title: "CADENCE-101 Scheduled Template Draft",
+      form_count: 2,
+      item_count: 15,
+      forms: [],
+      import_notes: [],
+    };
+    vi.mocked(kernelApi.importProtocolDraft).mockResolvedValue(draftSummary);
+    vi.mocked(kernelApi.getProtocolDesignSummary).mockResolvedValue(
+      draftSummary
+    );
+    vi.mocked(kernelApi.getProtocolVersion).mockResolvedValue(draftVersion);
+    vi.mocked(kernelApi.listProtocolVersions).mockResolvedValue([draftVersion]);
+
+    await open("/studies/CADENCE-101?stage=design&section=protocol-versions");
+
+    expect(wrapper.text()).toContain("Repeating");
+
+    await wrapper.find("#protocol-import-tpl-vital-signs-vs").setValue(true);
+    await wrapper
+      .find("#protocol-import-tpl-tobacco-product-events-or-malfunctions")
+      .setValue(true);
+    await flushPromises();
+
+    expect(wrapper.find("#protocol-import-template-assignments").exists()).toBe(
+      true
+    );
+    await wrapper
+      .find("#protocol-import-assign-mode-vital-signs-vs")
+      .setValue("custom");
+    await flushPromises();
+
+    // Uncheck Week 4 and End of Study so Vital Signs is assigned only to Screening and Baseline
+    await wrapper
+      .find('[id="protocol-import-assign-visit-vital-signs-vs-V.WEEK4"]')
+      .setValue(false);
+    await wrapper
+      .find('[id="protocol-import-assign-visit-vital-signs-vs-V.EOS"]')
+      .setValue(false);
+    await wrapper
+      .find(
+        "#protocol-import-assign-mode-tobacco-product-events-or-malfunctions"
+      )
+      .setValue("unscheduled");
+    await wrapper
+      .find("#protocol-import-reason")
+      .setValue("Import scheduled Vital Signs and repeating event log");
+
+    await wrapper.find("#protocol-import-form").trigger("submit");
+    await flushPromises();
+
+    expect(kernelApi.importProtocolDraft).toHaveBeenCalledWith(
+      expect.objectContaining({
+        studyRef: DEMO_STUDY.ref,
+        templateIds: [
+          "vital-signs-vs",
+          "tobacco-product-events-or-malfunctions",
+        ],
+        templateAssignments: expect.arrayContaining([
+          expect.objectContaining({
+            templateId: "vital-signs-vs",
+            activityIds: ["V.SCREENING", "V.BASELINE"],
+          }),
+          expect.objectContaining({
+            templateId: "tobacco-product-events-or-malfunctions",
+            activityIds: [],
+          }),
+        ]),
+      })
+    );
+  });
+
   it("submits selected AmendmentClassification and TransitionPolicy alongside file and templateIds and renders amendment metadata", async () => {
     const forkedVersion = {
       ref: "protocol_version:0192f3c4-5e6a-7b8c-9d0e-0000000000f2@1",
@@ -640,7 +738,7 @@ describe("Clinical Canvas study directory, study creation, and ODM/USDM protocol
     expect(amendmentBox.text()).toContain("DM");
   });
 
-  it("serializes file, template_ids, replace_forms, amendment_classification, and transition_policy in kernelStudiesApi.importProtocolDraft FormData", async () => {
+  it("serializes file, template_ids, template_assignments, replace_forms, amendment_classification, and transition_policy in kernelStudiesApi.importProtocolDraft FormData", async () => {
     const { kernelStudiesApi } = await import("../../src/api/kernel/studies");
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(
@@ -674,6 +772,12 @@ describe("Clinical Canvas study directory, study creation, and ODM/USDM protocol
       studyRef: "CADENCE-101",
       file: uploadFile,
       templateIds: ["vital-signs-vs", "demographics-dm"],
+      templateAssignments: [
+        {
+          templateId: "vital-signs-vs",
+          activityIds: ["V.SCREENING", "V.BASELINE"],
+        },
+      ],
       replaceForms: true,
       amendmentClassification: "UrgentSafetyMeasure",
       transitionPolicy: "ByCohort",
@@ -689,6 +793,12 @@ describe("Clinical Canvas study directory, study creation, and ODM/USDM protocol
     expect(formData.getAll("template_ids")).toEqual([
       "vital-signs-vs",
       "demographics-dm",
+    ]);
+    expect(JSON.parse(formData.get("template_assignments"))).toEqual([
+      {
+        template_id: "vital-signs-vs",
+        activity_ids: ["V.SCREENING", "V.BASELINE"],
+      },
     ]);
     expect(formData.get("replace_forms")).toBe("true");
     expect(formData.get("amendment_classification")).toBe(

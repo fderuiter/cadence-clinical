@@ -55,12 +55,14 @@
       <ParticipantFormsPanel
         v-if="!formId && enrollmentId"
         :study-code="studyCode"
+        :site-code="participant?.site_id"
         :subject-code="participant?.subject_id || 'participant'"
         :enrollment-id="enrollmentId"
-        :schedule="scheduleForStudy"
+        :schedule="effectiveSchedule"
         :form-location="formLocation"
         :new-form-location="null"
         :new-form-cell-location="resolvedNewFormCellLocation"
+        @forms-loaded="onFormsLoaded"
       />
 
       <EcrfFormPanel
@@ -76,7 +78,7 @@
         :highlight-item-id="highlightItemId"
         :form-location="formLocation"
         :observation-location="observationLocation"
-        @retry-schedule="canvas.retryScheduleOptions(studyCode)"
+        @retry-schedule="onRetrySchedule"
         @dirty-change="emit('dirty-change', $event)"
         @form-loaded="emit('form-loaded', $event)"
         @closed="emit('closed')"
@@ -86,9 +88,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onUnmounted, watch } from "vue";
+import { computed, onUnmounted, ref, watch } from "vue";
 import type { RouteLocationRaw } from "vue-router";
-import type { EcrfForm } from "../../api/ecrfFormsApi";
+import type { EcrfForm, EcrfFormSummary } from "../../api/ecrfFormsApi";
 import type { SubjectSummary } from "../../api/executionApi";
 import { formatNodeRef, tryNodeRef } from "../../canvas/nodeRef";
 import { useScopedNavigation } from "../../composables/useScopedNavigation";
@@ -137,20 +139,52 @@ const emit = defineEmits<{
 
 const canvas = useStudyCanvasStore();
 const { scopedStudyLocation } = useScopedNavigation(() => props.studyCode);
+const loadedEnrollmentForms = ref<EcrfFormSummary[]>([]);
+
+function onFormsLoaded(forms: EcrfFormSummary[]) {
+  loadedEnrollmentForms.value = forms;
+}
 
 onUnmounted(() => {
   emit("dirty-change", false);
 });
 
 watch(
-  () => [props.studyCode, props.formId] as const,
-  ([code, formId]) => {
+  () => [props.studyCode, props.participant?.site_id, props.formId] as const,
+  ([code, siteId, formId]) => {
     if (code && !formId) {
-      void canvas.loadScheduleOptions(code);
+      void canvas.loadScheduleOptions(code, { siteCode: siteId ?? null });
     }
   },
   { immediate: true }
 );
+
+watch(
+  () => [props.enrollmentId, props.formId] as const,
+  ([enrollmentId, formId]) => {
+    if (
+      enrollmentId &&
+      !formId &&
+      typeof canvas.loadEnrollmentSchedule === "function"
+    ) {
+      void canvas.loadEnrollmentSchedule(enrollmentId);
+    }
+  },
+  { immediate: true }
+);
+
+function onRetrySchedule() {
+  void canvas.retryScheduleOptions(
+    props.studyCode,
+    props.participant?.site_id ?? null
+  );
+  if (
+    props.enrollmentId &&
+    typeof canvas.loadEnrollmentSchedule === "function"
+  ) {
+    void canvas.loadEnrollmentSchedule(props.enrollmentId, { force: true });
+  }
+}
 
 const workspaceTitle = computed(() => {
   if (props.formLabel) return props.formLabel;
@@ -158,12 +192,16 @@ const workspaceTitle = computed(() => {
 });
 
 const scheduleForStudy = computed(() =>
-  Object.prototype.hasOwnProperty.call(
-    canvas.scheduleOptionsByStudy,
-    props.studyCode
-  )
-    ? canvas.scheduleOptionsByStudy[props.studyCode]
-    : canvas.scheduleOptions
+  canvas.getScheduleFor(props.studyCode, props.participant?.site_id ?? null)
+);
+
+const enrollmentSchedule = computed(() => {
+  if (!props.enrollmentId || !canvas.enrollmentSchedulesById) return null;
+  return canvas.enrollmentSchedulesById[props.enrollmentId] ?? null;
+});
+
+const effectiveSchedule = computed(
+  () => enrollmentSchedule.value ?? scheduleForStudy.value
 );
 
 const resolvedNewFormCellLocation = computed(() => {
@@ -188,13 +226,17 @@ const resolvedNewFormCellLocation = computed(() => {
 
 const enrollmentContext = computed<CanvasFormEnrollmentContext | null>(() => {
   if (!props.enrollmentId) return null;
+  const active = effectiveSchedule.value;
   return {
     enrollmentId: props.enrollmentId,
     subjectCode: props.participant?.subject_id,
-    collectionSpecs: scheduleForStudy.value?.collectionSpecs ?? [],
-    plannedActivities: scheduleForStudy.value?.plannedActivities ?? [],
+    governanceStatus: active?.governanceStatus,
+    guidance: active?.guidance ?? null,
+    collectionSpecs: active?.collectionSpecs ?? [],
+    plannedActivities: active?.plannedActivities ?? [],
     scheduleLoading: !props.formId && canvas.scheduleLoading,
     scheduleError: !props.formId ? canvas.scheduleError : null,
+    existingForms: loadedEnrollmentForms.value,
   };
 });
 </script>

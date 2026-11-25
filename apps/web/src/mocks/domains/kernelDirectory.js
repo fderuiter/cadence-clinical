@@ -15,6 +15,7 @@ import {
   SITE_101_UUID,
   SITE_102_UUID,
   STUDY_REF,
+  VERSION_V2_REF,
   cloneJson,
   makeUuidFromIndex,
   resolveSiteUuid,
@@ -324,13 +325,19 @@ export function createKernelDirectoryDomain(ctx) {
             },
           ];
 
-    const buildStudySitesForStudy = (studyRef, studyCode) =>
+    const buildStudySitesForStudy = (
+      studyRef,
+      studyCode,
+      { allEffective = false } = {}
+    ) =>
       DEMO_SITES.length > 0
         ? DEMO_SITES.map((site, idx) => {
             const unversionedStudySiteRef =
               studyRef === canonicalStudyEntry.ref && site.studySiteRef
                 ? String(site.studySiteRef).split("@")[0]
                 : `study_site:${makeUuidFromIndex("00000400", idx + 1)}`;
+            const isEffective =
+              allEffective || site.complianceStage === "CONDUCT";
             return {
               ref: `${unversionedStudySiteRef}@1`,
               study_site_id: unversionedStudySiteRef.replace(
@@ -347,14 +354,22 @@ export function createKernelDirectoryDomain(ctx) {
               institution_ref: `organization:${site.institutionUuid}@1`,
               institution_code: site.institutionCode,
               institution_name: `${site.name} Institution`,
-              status:
-                site.complianceStage === "CONDUCT" ? "Active" : "Selected",
+              status: isEffective ? "Active" : "Selected",
               is_active: true,
-              effective_versions: [],
+              effective_versions: isEffective
+                ? [
+                    {
+                      protocol_version_ref: `${VERSION_V2_REF}@1`,
+                      number: 2,
+                      effectivity_ref: `effectivity:${makeUuidFromIndex("00000450", idx + 1)}@1`,
+                      level: "StudySite",
+                    },
+                  ]
+                : [],
               mask: null,
             };
           })
-        : state.sites.map((site) => {
+        : state.sites.map((site, idx) => {
             const siteUuid = resolveSiteUuid(site.code);
             return {
               ref: `study_site:${siteUuid}@1`,
@@ -371,7 +386,16 @@ export function createKernelDirectoryDomain(ctx) {
               institution_name: site.institution_name,
               status: "Active",
               is_active: true,
-              effective_versions: [],
+              effective_versions: allEffective
+                ? [
+                    {
+                      protocol_version_ref: `${VERSION_V2_REF}@1`,
+                      number: 2,
+                      effectivity_ref: `effectivity:${makeUuidFromIndex("00000450", idx + 1)}@1`,
+                      level: "StudySite",
+                    },
+                  ]
+                : [],
               mask: null,
             };
           });
@@ -381,12 +405,16 @@ export function createKernelDirectoryDomain(ctx) {
         canonicalStudyCode.toUpperCase(),
         buildStudySitesForStudy(canonicalStudyEntry.ref, canonicalStudyCode),
       ],
-      ["DEMO-01", buildStudySitesForStudy(STUDY_REF, "DEMO-01")],
+      [
+        "DEMO-01",
+        buildStudySitesForStudy(STUDY_REF, "DEMO-01", { allEffective: true }),
+      ],
       [
         "STUDY-USDM-001",
         buildStudySitesForStudy(
           "study:00000000-0000-0000-0000-000000000002", // deid-ignore
-          "STUDY-USDM-001"
+          "STUDY-USDM-001",
+          { allEffective: true }
         ),
       ],
     ]);

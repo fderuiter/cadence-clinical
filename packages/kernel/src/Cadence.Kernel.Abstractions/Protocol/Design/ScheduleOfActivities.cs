@@ -43,6 +43,7 @@ public sealed record SoaEpoch(string EpochId, string Name, int Order, int FirstC
 /// <param name="WindowAfter">Days allowed after the planned day.</param>
 /// <param name="Locations">Where it may take place.</param>
 /// <param name="Footnotes">The numbers of its footnotes.</param>
+/// <param name="Repeating">Whether multiple instances of this planned activity may occur for one enrollment.</param>
 public sealed record SoaColumn(
     string ActivityId,
     string Name,
@@ -51,7 +52,8 @@ public sealed record SoaColumn(
     int WindowBefore,
     int WindowAfter,
     IReadOnlyList<ActivityLocation> Locations,
-    IReadOnlyList<int> Footnotes);
+    IReadOnlyList<int> Footnotes,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] bool Repeating = false);
 
 /// <summary>A row: one collection specification and the columns that collect it.</summary>
 /// <param name="CollectionSpecId">The collection specification's element id.</param>
@@ -60,13 +62,15 @@ public sealed record SoaColumn(
 /// <param name="Concepts">The concept versions its items record, in item order, each once.</param>
 /// <param name="Columns">The indexes of the columns that collect it, ascending.</param>
 /// <param name="Footnotes">The numbers of its footnotes.</param>
+/// <param name="Repeating">Whether multiple instances of this collection specification may be opened per planned activity or as a repeating log.</param>
 public sealed record SoaRow(
     string CollectionSpecId,
     string Name,
     IReadOnlyList<string> ItemIds,
     IReadOnlyList<ConceptRef> Concepts,
     IReadOnlyList<int> Columns,
-    IReadOnlyList<int> Footnotes)
+    IReadOnlyList<int> Footnotes,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] bool Repeating = false)
 {
     /// <summary>How many planned activities collect it.</summary>
     public int Frequency => Columns.Count;
@@ -125,7 +129,8 @@ public static class ScheduleOfActivities
             activity.Timing?.WindowBefore ?? 0,
             activity.Timing?.WindowAfter ?? 0,
             [.. activity.Locations.Distinct().Order()],
-            footnotes.OfColumn(activity))).ToList();
+            footnotes.OfColumn(activity),
+            activity.Repeating)).ToList();
 
         var rows = design.CollectionSpecs.Select(spec =>
         {
@@ -138,7 +143,8 @@ public static class ScheduleOfActivities
                 [.. spec.Items.Select(i => i.Id)],
                 [.. spec.Items.Select(i => i.Concept).Distinct()],
                 collectedAt,
-                footnotes.OfRow(spec, collectedAt.Length));
+                footnotes.OfRow(spec, collectedAt.Length),
+                spec.Repeating);
         }).ToList();
 
         var groups = columns

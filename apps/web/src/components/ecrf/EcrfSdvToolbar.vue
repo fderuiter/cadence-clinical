@@ -6,8 +6,48 @@
     <dd>{{ form.collection_spec_id }}</dd>
     <dt>Visit</dt>
     <dd>{{ form.planned_activity_id ?? "Unscheduled" }}</dd>
+    <template v-if="form.visit_timing">
+      <dt>Visit timing</dt>
+      <dd
+        class="ecrf-visit-timing-cell"
+        data-testid="ecrf-form-visit-timing"
+        :data-visit-timing="form.visit_timing"
+      >
+        <span
+          class="clinical-badge"
+          :class="
+            form.visit_timing === 'InWindow'
+              ? 'clinical-badge--verified'
+              : 'clinical-badge--warning'
+          "
+        >
+          {{ visitTimingBadgeText }}
+        </span>
+        <span
+          v-if="form.deviation_category"
+          id="ecrf-visit-deviation-badge"
+          class="clinical-badge clinical-badge--error"
+          data-testid="ecrf-form-visit-deviation"
+        >
+          {{ form.deviation_category }}
+        </span>
+        <span v-if="form.target_date" class="ecrf-visit-window-range">
+          Target {{ form.target_date
+          }}<template
+            v-if="
+              form.window_start &&
+              form.window_end &&
+              (form.window_start !== form.target_date ||
+                form.window_end !== form.target_date)
+            "
+          >
+            ({{ form.window_start }} – {{ form.window_end }})</template
+          >
+        </span>
+      </dd>
+    </template>
     <dt>Collected</dt>
-    <dd>{{ form.collected_at }}</dd>
+    <dd class="ecrf-form-collected-at">{{ form.collected_at }}</dd>
     <dt>Version</dt>
     <dd data-testid="ecrf-form-version">{{ form.version }}</dd>
     <dt>Status</dt>
@@ -187,7 +227,7 @@
 
 <script setup lang="ts">
 import { computed, type UnwrapNestedRefs } from "vue";
-import type { EcrfForm } from "../../api/ecrfFormsApi";
+import { toSignedFormDayOffset, type EcrfForm } from "../../api/ecrfFormsApi";
 import {
   toCoveringScopeLocks,
   toDirectScopeLocks,
@@ -232,6 +272,19 @@ const nonMissingReadinessBlockers = computed(() =>
     (blocker) => !/required items? without a value/i.test(blocker)
   )
 );
+
+const visitTimingBadgeText = computed(() => {
+  const timing = props.form.visit_timing;
+  if (!timing) return "";
+  const outside = toSignedFormDayOffset(props.form.days_outside_window);
+  if (timing === "Early" && outside && outside > 0) {
+    return `Early (-${outside}d)`;
+  }
+  if (timing === "Late" && outside && outside > 0) {
+    return `Late (+${outside}d)`;
+  }
+  return timing;
+});
 </script>
 
 <style scoped>
@@ -249,11 +302,24 @@ const nonMissingReadinessBlockers = computed(() =>
   margin: 0;
   min-width: 0;
   overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+.ecrf-visit-timing-cell {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.ecrf-visit-window-range {
+  font-size: 0.8rem;
+  color: var(--semantic-color-text-secondary);
+  font-variant-numeric: tabular-nums;
 }
 [data-testid="ecrf-form-id"],
 .ecrf-form-summary dd:nth-of-type(2),
 .ecrf-form-summary dd:nth-of-type(3),
-.ecrf-form-summary dd:nth-of-type(4),
+.ecrf-form-summary dd:nth-of-type(4):not(.ecrf-visit-timing-cell),
+.ecrf-form-collected-at,
 [data-testid="ecrf-form-version"],
 .ecrf-bulk-sdv-results strong {
   font-family: var(--semantic-font-mono);

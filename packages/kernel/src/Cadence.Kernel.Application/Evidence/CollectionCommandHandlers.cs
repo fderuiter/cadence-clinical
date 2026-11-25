@@ -43,6 +43,7 @@ internal sealed class OpenCollectionInstanceHandler : ICommandHandler<OpenCollec
             return KernelErrors.AlreadyExists;
         }
 
+        await context.Work.LockAsync<Enrollment>(command.EnrollmentId, cancellationToken).ConfigureAwait(false);
         if (await context.Work.ReadAsync<Enrollment>(command.EnrollmentId, cancellationToken).ConfigureAwait(false) is not { } enrollment)
         {
             return CollectionErrors.EnrollmentUnknown;
@@ -82,6 +83,24 @@ internal sealed class OpenCollectionInstanceHandler : ICommandHandler<OpenCollec
             return CollectionErrors.SpecUnknown.WithMessage(problem);
         }
 
+        if (command.PlannedActivityId is not null)
+        {
+            var spec = design!.CollectionSpecs.First(s => string.Equals(s.Id, command.CollectionSpecId, StringComparison.Ordinal));
+            var activity = design.PlannedActivities.First(a => string.Equals(a.Id, command.PlannedActivityId, StringComparison.Ordinal));
+            if (!spec.Repeating && !activity.Repeating)
+            {
+                var existingForCell = await context.Work.ReadAllAsync<CollectionInstance>(
+                    c => c.EnrollmentId == enrollment.Id
+                        && c.CollectionSpecId == command.CollectionSpecId
+                        && c.PlannedActivityId == command.PlannedActivityId,
+                    cancellationToken).ConfigureAwait(false);
+                if (existingForCell.Any(c => c.Id != command.CollectionInstanceId))
+                {
+                    return CollectionErrors.DuplicateSingletonInstance;
+                }
+            }
+        }
+
         var elements = await ProtocolElementLineage.ElementsAsync(context.Work, version, cancellationToken).ConfigureAwait(false);
         var instance = CollectionInstance.Open(
             command.CollectionInstanceId, enrollment, version.Id, command.CollectionSpecId, command.PlannedActivityId, collectedAt,
@@ -117,8 +136,9 @@ internal sealed class OpenCollectionInstanceHandler : ICommandHandler<OpenCollec
             return null;
         }
 
-        var referenceStart = DateOnly.FromDateTime(enrolled.Period.Valid.Start.UtcDateTime);
-        var actual = DateOnly.FromDateTime(collectedAt.UtcDateTime);
+        var enrolledAt = enrolled.Period.Valid.Start;
+        var referenceStart = DateOnly.FromDateTime(enrolledAt.DateTime);
+        var actual = DateOnly.FromDateTime(collectedAt.ToOffset(enrolledAt.Offset).DateTime);
         var expected = ExpectedSchedule.Compute(design, referenceStart, actual)
             .FirstOrDefault(v => string.Equals(v.Visit.ActivityId, plannedActivityId, StringComparison.Ordinal));
         return expected is null ? null : ExpectedSchedule.Assess(expected, actual);

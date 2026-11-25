@@ -277,11 +277,12 @@ internal sealed class KernelCollectionInstanceRecords(
             .ConfigureAwait(false);
         var (complete, missingRequired, openQueries, answeredQueries, errorFindings, blockers) =
             EvaluateFormReadiness(items, values, assertions, found.Id.Value, memberGuids, activeErrorTargets);
-        var enrollmentVersion = await db.Enrollments.AsNoTracking()
-            .Where(e => e.Id == found.EnrollmentId)
-            .Select(e => (long?)e.VersionIndex)
-            .SingleOrDefaultAsync(cancellationToken)
-            .ConfigureAwait(false) ?? 1L;
+        var enrollmentEntity = await db.Enrollments.AsNoTracking()
+            .SingleOrDefaultAsync(e => e.Id == found.EnrollmentId, cancellationToken)
+            .ConfigureAwait(false);
+        var enrollmentVersion = enrollmentEntity?.VersionIndex ?? 1L;
+        var enrollmentReferenceAt = ResolveEnrollmentReferenceAt(enrollmentEntity);
+        var visitTimingAssessment = AssessVisitTiming(resolvedGoverningDesign, found.PlannedActivityId, found.CollectedAt, enrollmentReferenceAt);
 
         return new CollectionInstanceRecord(
             found.Id,
@@ -312,7 +313,10 @@ internal sealed class KernelCollectionInstanceRecords(
             blockers,
             blindedItemIds,
             blindedObservationIds,
-            itemCodelists);
+            itemCodelists,
+            enrollmentReferenceAt,
+            visitTimingAssessment,
+            VisitTimingEvaluated: true);
     }
 
     public async Task<IReadOnlyList<CollectionInstanceSummary>> ListForEnrollmentAsync(
@@ -337,9 +341,12 @@ internal sealed class KernelCollectionInstanceRecords(
             .Select(v => new { v.Id, v.Content })
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
-        var specsByVersion = rawVersions.ToDictionary(
+        var designsByVersion = rawVersions.ToDictionary(
             v => v.Id,
-            v => ProtocolDesignDocument.Read(v.Content).Design?.CollectionSpecs ?? []);
+            v => ProtocolDesignDocument.Read(v.Content).Design);
+        var specsByVersion = designsByVersion.ToDictionary(
+            kv => kv.Key,
+            kv => kv.Value?.CollectionSpecs ?? []);
 
         var allMemberIds = instances.SelectMany(c => c.Members.Select(m => m.ObservationId)).Distinct().ToList();
         var observations = allMemberIds.Count == 0
@@ -378,18 +385,24 @@ internal sealed class KernelCollectionInstanceRecords(
         var signaturesByInstance = rawSignatures.ToLookup(a => a.TargetId, a => a.TargetContentHash);
         var activeErrorTargets = await KernelValidationStore.LoadActiveErrorFindingTargetsAsync(db, first.StudyId, cancellationToken)
             .ConfigureAwait(false);
+        var enrollmentEntity = await db.Enrollments.AsNoTracking()
+            .SingleOrDefaultAsync(e => e.Id == enrollment, cancellationToken)
+            .ConfigureAwait(false);
+        var enrollmentReferenceAt = ResolveEnrollmentReferenceAt(enrollmentEntity);
 
         return
         [
             .. instances.Select(instance => ToSummary(
                 instance,
+                designsByVersion.GetValueOrDefault(instance.ProtocolVersionId),
                 specsByVersion.GetValueOrDefault(instance.ProtocolVersionId) ?? [],
                 observations,
                 allLocks,
                 allMemberAssertions,
                 verifiedRevisions,
                 signaturesByInstance[instance.Id.Value],
-                activeErrorTargets)),
+                activeErrorTargets,
+                enrollmentReferenceAt)),
         ];
     }
 
@@ -1362,10 +1375,9 @@ internal sealed class KernelCollectionInstanceRecords(
         var codelistGroups = await LoadCodelistGroupsAsync(db, allItems, cancellationToken).ConfigureAwait(false);
 
         var enrollmentIds = instances.Select(i => i.EnrollmentId).Distinct().ToList();
-        var enrollmentVersions = await db.Enrollments.AsNoTracking()
+        var enrollmentEntities = await db.Enrollments.AsNoTracking()
             .Where(e => enrollmentIds.Contains(e.Id))
-            .Select(e => new { e.Id, e.VersionIndex })
-            .ToDictionaryAsync(e => e.Id, e => e.VersionIndex, cancellationToken)
+            .ToDictionaryAsync(e => e.Id, cancellationToken)
             .ConfigureAwait(false);
 
         var records = new List<CollectionInstanceRecord>(instances.Count);
@@ -1414,6 +1426,9 @@ internal sealed class KernelCollectionInstanceRecords(
             var (complete, missingRequired, openQueries, answeredQueries, errorFindings, blockers) =
                 EvaluateFormReadiness(items, values, assertions, instance.Id.Value, memberGuids, activeErrorTargets);
 
+            var matchedEnrollment = enrollmentEntities.GetValueOrDefault(instance.EnrollmentId);
+            var enrollmentReferenceAt = ResolveEnrollmentReferenceAt(matchedEnrollment);
+            var governingDesign = designsByVersion.GetValueOrDefault(instance.ProtocolVersionId);
             records.Add(new CollectionInstanceRecord(
                 instance.Id,
                 instance.EnrollmentId,
@@ -1434,7 +1449,7 @@ internal sealed class KernelCollectionInstanceRecords(
                 attestations,
                 contentHash,
                 collectionTitle,
-                enrollmentVersions.GetValueOrDefault(instance.EnrollmentId, 1L),
+                matchedEnrollment?.VersionIndex ?? 1L,
                 complete,
                 missingRequired,
                 openQueries,
@@ -1443,7 +1458,10 @@ internal sealed class KernelCollectionInstanceRecords(
                 blockers,
                 blindedItemIds,
                 blindedObservationIds,
-                itemCodelists));
+                itemCodelists,
+                enrollmentReferenceAt,
+                AssessVisitTiming(governingDesign, instance.PlannedActivityId, instance.CollectedAt, enrollmentReferenceAt),
+                VisitTimingEvaluated: true));
         }
 
         return records;
@@ -1505,13 +1523,15 @@ internal sealed class KernelCollectionInstanceRecords(
 
     private static CollectionInstanceSummary ToSummary(
         CollectionInstance instance,
+        ProtocolDesign? governingDesign,
         IReadOnlyList<CollectionSpec> specs,
         IReadOnlyDictionary<ObservationId, ObservationSummaryRow> observations,
         IReadOnlyList<LockView> allLocks,
         IReadOnlyList<AssertionView> allMemberAssertions,
         IReadOnlySet<(Guid ObservationId, int Revision)> verifiedRevisions,
         IEnumerable<string> signatureHashes,
-        IReadOnlyList<(ValidationFindingId Id, FindingTarget Target)> activeErrorTargets)
+        IReadOnlyList<(ValidationFindingId Id, FindingTarget Target)> activeErrorTargets,
+        DateTimeOffset? enrollmentReferenceAt = null)
     {
         var spec = specs.FirstOrDefault(s => string.Equals(s.Id, instance.CollectionSpecId, StringComparison.Ordinal));
         var specItems = spec?.Items ?? [];
@@ -1605,8 +1625,43 @@ internal sealed class KernelCollectionInstanceRecords(
             answeredQueryCount,
             openErrorFindingCount,
             blockers,
+            enrollmentReferenceAt,
             activeQueryAssertionIds,
-            answeredQueryAssertionIds);
+            answeredQueryAssertionIds,
+            AssessVisitTiming(governingDesign, instance.PlannedActivityId, instance.CollectedAt, enrollmentReferenceAt),
+            VisitTimingEvaluated: true);
+    }
+
+    private static VisitTimingAssessment? AssessVisitTiming(
+        ProtocolDesign? design,
+        string? plannedActivityId,
+        DateTimeOffset collectedAt,
+        DateTimeOffset? enrollmentReferenceAt)
+    {
+        if (design is null || string.IsNullOrWhiteSpace(plannedActivityId) || enrollmentReferenceAt is not { } anchor)
+        {
+            return null;
+        }
+
+        var referenceStart = DateOnly.FromDateTime(anchor.DateTime);
+        var actualDate = DateOnly.FromDateTime(collectedAt.ToOffset(anchor.Offset).DateTime);
+        var expected = ExpectedSchedule.Compute(design, referenceStart, actualDate)
+            .FirstOrDefault(v => string.Equals(v.Visit.ActivityId, plannedActivityId, StringComparison.Ordinal));
+        return expected is null ? null : ExpectedSchedule.Assess(expected, actualDate);
+    }
+
+    private static DateTimeOffset? ResolveEnrollmentReferenceAt(Enrollment? enrollment)
+    {
+        if (enrollment is null)
+        {
+            return null;
+        }
+
+        var enrolledPeriod = enrollment.Periods
+            .Where(p => p.Status == Cadence.Kernel.Execution.EnrollmentStatus.Enrolled && p.Period.Recorded.End is null)
+            .OrderBy(p => p.Period.Valid.Start)
+            .FirstOrDefault();
+        return enrolledPeriod?.Period.Valid.Start ?? enrollment.StatusSince;
     }
 
     internal static List<AssertionView> FilterFormAssertions(

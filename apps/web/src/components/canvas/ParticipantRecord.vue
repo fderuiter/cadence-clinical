@@ -179,6 +179,7 @@
 
       <ParticipantFormsPanel
         :study-code="canvas.studyCode"
+        :site-code="participant.site_id"
         :subject-code="participant.subject_id"
         :enrollment-id="record.enrollmentId"
         :enrollment-loading="record.loading"
@@ -457,12 +458,15 @@ watch(
   [
     () => canvas.studyCode,
     () => props.participant.id,
+    () => props.participant.site_id,
     () => Boolean(props.newFormCellLocation),
   ],
-  ([code, , needsSchedule]) => {
+  ([code, , siteId, needsSchedule]) => {
     casebookOutcome.value = null;
     if (code && needsSchedule) {
-      void canvas.loadScheduleOptions(code).catch(() => null);
+      void canvas
+        .loadScheduleOptions(code, { siteCode: siteId ?? null })
+        .catch(() => null);
     }
   },
   { immediate: true }

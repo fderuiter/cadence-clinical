@@ -104,6 +104,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
+import { getActivePinia } from "pinia";
 import type { RouteLocationRaw } from "vue-router";
 import {
   ecrfQueriesApi,
@@ -117,6 +118,7 @@ import {
 import { isAgentProposal } from "../../ai/proposals";
 import {
   findKernelStudyRef,
+  peekKernelStudyRef,
   seedKernelStudyRef,
 } from "../../canvas/kernelStudy";
 import {
@@ -126,6 +128,8 @@ import {
 } from "../../canvas/nodeRef";
 import { useScopedNavigation } from "../../composables/useScopedNavigation";
 import { maskReasonWords, seedNodeSummary } from "../../canvas/nodeResolver";
+import { useAuthStore } from "../../stores/auth";
+import { isDemoBuild } from "../../utils/demoMode";
 import SupportDetails from "../canvas/SupportDetails.vue";
 import AiLabel from "./AiLabel.vue";
 
@@ -139,6 +143,16 @@ import AiLabel from "./AiLabel.vue";
 const props = defineProps<{ studyCode: string }>();
 
 const LIMIT = 20;
+
+function hasActiveCallerSession(): boolean {
+  if (isDemoBuild()) return true;
+  const pinia = getActivePinia();
+  if (!pinia) return false;
+  const authStore = useAuthStore(pinia);
+  return Boolean(
+    authStore.user || authStore.accessToken || authStore.isAuthenticated
+  );
+}
 
 const proposals = ref<KernelProposal[]>([]);
 const findings = ref<KernelValidationFinding[]>([]);
@@ -256,24 +270,31 @@ async function loadAttention(rawCode: string): Promise<void> {
           : Promise.resolve({ findings: [] as KernelValidationFinding[] }),
       ]);
     if (!isCurrent()) return;
-    proposals.value = openProposals;
+    const safeProposals = Array.isArray(openProposals) ? openProposals : [];
+    proposals.value = safeProposals;
+    const canQuerySdvAlerts =
+      typeof ecrfQueriesApi?.listSdvAlerts === "function" &&
+      hasActiveCallerSession();
     const hintedStudyRef =
-      openProposals.find((p) => p.study)?.study ??
+      safeProposals.find((p) => p.study)?.study ??
       openFindingsPage?.findings?.[0]?.study_ref ??
       investigatingFindingsPage?.findings?.[0]?.study_ref ??
-      (typeof kernelApi.search === "function"
+      peekKernelStudyRef(code) ??
+      (canQuerySdvAlerts && typeof kernelApi.search === "function"
         ? await findKernelStudyRef(code).catch(() => null)
         : null);
     if (!isCurrent()) return;
     if (hintedStudyRef) {
       seedKernelStudyRef(code, hintedStudyRef);
     }
-    seedProposalSummaries(openProposals);
+    seedProposalSummaries(safeProposals);
     findings.value = dedupeCappedFindings([
       ...(openFindingsPage?.findings ?? []),
       ...(investigatingFindingsPage?.findings ?? []),
     ]);
-    await hydrateStudySdvAlerts(hintedStudyRef, isCurrent);
+    if (canQuerySdvAlerts) {
+      await hydrateStudySdvAlerts(hintedStudyRef, isCurrent);
+    }
   } catch (err) {
     if (seq !== requestSeq) return;
     if ((err as { status?: number | null } | null)?.status === 404) {
