@@ -128,6 +128,89 @@ public sealed class SiteComplianceEndpointsRoutingTests : IDisposable
     }
 
     // ================================================================================================
+    // POST /api/v1/execution/webhooks/etmf/batch (EtmfCompletenessBatchWebhook)
+    // ================================================================================================
+
+    [Fact]
+    public async Task EtmfBatchWebhook_GivenValidPayloadAndScopedSites_Returns200WithExactSuccessEnvelope()
+    {
+        using var scopedEtmf = _factory.CreateSignedClient(
+            TestSecurityContext.Identity("svc:etmf", PermissionMatrix.EtmfServiceRole) with
+            {
+                SiteIds = ["SITE-001", "SITE-002"],
+                StudyIds = ["STUDY-001"],
+                ChangeReason = "Automated eTMF batch completeness webhook sync",
+            });
+
+        var payload = new EtmfCompletenessBatchWebhookPayload(
+            new StudyCode("STUDY-001"),
+            "SITE_ACTIVATION",
+            [
+                new EtmfSiteCompletenessItem(new SiteCode("SITE-001"), true, []),
+                new EtmfSiteCompletenessItem(new SiteCode("SITE-002"), false, ["FDA Form 1572"]),
+            ]);
+
+        var response = await SendJsonAsync(HttpMethod.Post, "/api/v1/execution/webhooks/etmf/batch", payload, scopedEtmf);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        _factory.Service.ApplyEtmfWebhookBatchAsyncCalls.Should().Be(1);
+        _factory.Service.LastBatchPayload.Should().NotBeNull();
+        _factory.Service.LastBatchPayload!.Sites.Should().HaveCount(2);
+        var body = await response.Content.ReadFromJsonAsync<OperationEnvelopeResponse>(JsonOptions, TestContext.Current.CancellationToken);
+        body.Should().Be(new OperationEnvelopeResponse("success", "Compliance cache updated successfully."));
+    }
+
+    [Fact]
+    public async Task EtmfBatchWebhook_GivenInvalidPayload_ShortCircuitsWith400AndNeverInvokesApplicationService()
+    {
+        var response = await SendRawJsonAsync(HttpMethod.Post, "/api/v1/execution/webhooks/etmf/batch", "{}", _etmf);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        _factory.Service.ApplyEtmfWebhookBatchAsyncCalls.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task EtmfBatchWebhook_WhenCallerLacksScopeForAnySiteInBatch_Returns403Forbidden()
+    {
+        using var partiallyScopedEtmf = _factory.CreateSignedClient(
+            TestSecurityContext.Identity("svc:etmf", PermissionMatrix.EtmfServiceRole) with
+            {
+                SiteIds = ["SITE-001"],
+                StudyIds = ["STUDY-001"],
+                ChangeReason = "Automated eTMF batch completeness webhook sync",
+            });
+
+        var payload = new EtmfCompletenessBatchWebhookPayload(
+            new StudyCode("STUDY-001"),
+            "SITE_ACTIVATION",
+            [
+                new EtmfSiteCompletenessItem(new SiteCode("SITE-001"), true, []),
+                new EtmfSiteCompletenessItem(new SiteCode("SITE-002"), true, []),
+            ]);
+
+        var response = await SendJsonAsync(HttpMethod.Post, "/api/v1/execution/webhooks/etmf/batch", payload, partiallyScopedEtmf);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        _factory.Service.ApplyEtmfWebhookBatchAsyncCalls.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task ApplyEtmfWebhookBatchAsync_GivenPreCancelledToken_ThrowsOperationCanceledException()
+    {
+        var service = new FakeSiteComplianceApplicationService();
+        var payload = new EtmfCompletenessBatchWebhookPayload(
+            new StudyCode("STUDY-001"),
+            "SITE_ACTIVATION",
+            [new EtmfSiteCompletenessItem(new SiteCode("SITE-001"), true, null)]);
+        using var cts = new CancellationTokenSource();
+        await cts.CancelAsync();
+
+        var act = () => SiteComplianceEndpoints.ApplyEtmfWebhookBatchAsync(payload, service, cts.Token);
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
+    }
+
+    // ================================================================================================
     // POST /api/v1/execution/sites/{siteId}/activate (ActivateSite)
     // ================================================================================================
 
@@ -277,6 +360,10 @@ public sealed class SiteComplianceEndpointsRoutingTests : IDisposable
     {
         public int ApplyEtmfWebhookAsyncCalls { get; private set; }
 
+        public int ApplyEtmfWebhookBatchAsyncCalls { get; private set; }
+
+        public EtmfCompletenessBatchWebhookPayload? LastBatchPayload { get; private set; }
+
         public int ActivateSiteAsyncCalls { get; private set; }
 
         public int GetComplianceStatusAsyncCalls { get; private set; }
@@ -299,6 +386,14 @@ public sealed class SiteComplianceEndpointsRoutingTests : IDisposable
             // doc comment is explicit that it "always upserts" and has no documented failure path, so no
             // test in this file ever needs this fake to return anything other than success.
             ApplyEtmfWebhookAsyncCalls++;
+            ct.ThrowIfCancellationRequested();
+            return Task.FromResult(Result<bool>.Success(true));
+        }
+
+        public Task<Result<bool>> ApplyEtmfWebhookBatchAsync(EtmfCompletenessBatchWebhookPayload payload, CancellationToken ct)
+        {
+            ApplyEtmfWebhookBatchAsyncCalls++;
+            LastBatchPayload = payload;
             ct.ThrowIfCancellationRequested();
             return Task.FromResult(Result<bool>.Success(true));
         }
@@ -351,6 +446,7 @@ public sealed class SiteComplianceEndpointsRoutingTests : IDisposable
                         services.ConfigureHttpJsonOptions(ApplyExecutionJsonConventions);
                         services.AddSingleton<ISiteComplianceApplicationService>(Service);
                         services.AddSingleton<IValidator<EtmfCompletenessWebhookPayload>, EtmfCompletenessWebhookPayloadValidator>();
+                        services.AddSingleton<IValidator<EtmfCompletenessBatchWebhookPayload>, EtmfCompletenessBatchWebhookPayloadValidator>();
                     })
                     .Configure(app =>
                     {
@@ -444,6 +540,7 @@ public sealed class ExecutionProgramStartupTests : IDisposable
         sp.GetRequiredService<IValidator<SubjectConsentRequest>>().Should().NotBeNull();
         sp.GetRequiredService<IValidator<SubjectStateUpdateRequest>>().Should().NotBeNull();
         sp.GetRequiredService<IValidator<EtmfCompletenessWebhookPayload>>().Should().NotBeNull();
+        sp.GetRequiredService<IValidator<EtmfCompletenessBatchWebhookPayload>>().Should().NotBeNull();
     }
 
     [Fact]

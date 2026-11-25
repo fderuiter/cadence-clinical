@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Json;
@@ -23,6 +24,14 @@ using Microsoft.Extensions.Options;
 
 namespace Cadence.Apps.Etmf.Services;
 
+public readonly record struct EtmfArtifactTaxonomy(
+    string? ArtifactType,
+    string? ArtifactCode);
+
+public sealed record EtmfDocumentReviewContext(
+    EtmfArtifactTaxonomy Current,
+    EtmfArtifactTaxonomy? Previous = null);
+
 public interface IEtmfCompletenessWebhookPublisher
 {
     Task PublishSiteActivationCompletenessAsync(
@@ -32,6 +41,22 @@ public interface IEtmfCompletenessWebhookPublisher
         string? tenantId,
         string reasonForChange,
         CancellationToken ct);
+
+    Task PublishSiteActivationCompletenessAsync(
+        EtmfDbContext dbContext,
+        string studyId,
+        string? siteId,
+        string? tenantId,
+        string reasonForChange,
+        EtmfDocumentReviewContext? reviewContext,
+        CancellationToken ct) =>
+        PublishSiteActivationCompletenessAsync(
+            dbContext,
+            studyId,
+            siteId,
+            tenantId,
+            reasonForChange,
+            ct);
 }
 
 public sealed class HttpEtmfCompletenessWebhookPublisher(
@@ -45,6 +70,7 @@ public sealed class HttpEtmfCompletenessWebhookPublisher(
     private const string SiteActivationMilestone = "SITE_ACTIVATION";
     private const string ServiceUserId = "svc:etmf";
     private const string WebhookPath = "/api/v1/execution/webhooks/etmf";
+    private const string BatchWebhookPath = "/api/v1/execution/webhooks/etmf/batch";
     private static readonly IReadOnlyList<string> DefaultOrbitFamilies = [nameof(ProductFamily.Orbit)];
 
     private static readonly JsonSerializerOptions WebhookJsonOptions = new()
@@ -53,12 +79,29 @@ public sealed class HttpEtmfCompletenessWebhookPublisher(
         DefaultIgnoreCondition = JsonIgnoreCondition.Never,
     };
 
+    public Task PublishSiteActivationCompletenessAsync(
+        EtmfDbContext dbContext,
+        string studyId,
+        string? siteId,
+        string? tenantId,
+        string reasonForChange,
+        CancellationToken ct) =>
+        PublishSiteActivationCompletenessAsync(
+            dbContext,
+            studyId,
+            siteId,
+            tenantId,
+            reasonForChange,
+            reviewContext: null,
+            ct);
+
     public async Task PublishSiteActivationCompletenessAsync(
         EtmfDbContext dbContext,
         string studyId,
         string? siteId,
         string? tenantId,
         string reasonForChange,
+        EtmfDocumentReviewContext? reviewContext,
         CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(studyId))
@@ -83,44 +126,101 @@ public sealed class HttpEtmfCompletenessWebhookPublisher(
             return;
         }
 
-        var targetSites = await ResolveTargetSitesAsync(dbContext, studyId, siteId, ct);
-        if (targetSites.Count == 0)
+        if (!string.IsNullOrWhiteSpace(siteId))
         {
-            return;
-        }
+            if (!TryEnsureWebhookConfigured(studyId, out var secretBytes))
+            {
+                return;
+            }
 
-        byte[]? secretBytes = ResolveGatewaySecretBytes();
-        if (secretBytes is null || secretBytes.Length == 0)
-        {
-            logger.LogWarning(
-                "Skipping eTMF completeness webhook for study {StudyId}: GATEWAY_SECRET is not configured.",
-                studyId);
-            return;
-        }
-
-        if (httpClient.BaseAddress is null)
-        {
-            logger.LogWarning(
-                "Skipping eTMF completeness webhook for study {StudyId}: EXECUTION_SERVICE_URL is not configured.",
-                studyId);
-            return;
-        }
-
-        foreach (string targetSiteId in targetSites)
-        {
             var (isComplete, missingArtifacts) = await EvaluateSiteActivationCompletenessAsync(
-                dbContext, studyId, targetSiteId, ct);
+                dbContext, studyId, siteId, ct);
 
             await PostWebhookAsync(
                 studyId: studyId,
-                siteId: targetSiteId,
+                siteId: siteId,
                 tenantId: tenantId,
                 reasonForChange: reasonForChange,
                 isComplete: isComplete,
                 missingArtifacts: missingArtifacts,
                 secretBytes: secretBytes,
                 ct: ct);
+            return;
         }
+
+        if (!TryEnsureWebhookConfigured(studyId, out var batchSecretBytes))
+        {
+            return;
+        }
+
+        List<ProjectedExpectedDoc> allExpectedDocs;
+        List<ProjectedDoc> allStudyDocs;
+
+        bool openedConnection = await OpenConnectionIfNeededAsync(dbContext, ct);
+        try
+        {
+            allExpectedDocs = await dbContext.TmfExpectedDocuments
+                .AsNoTracking()
+                .Where(e => e.StudyId == studyId && e.Milestone == SiteActivationMilestone)
+                .Select(e => new ProjectedExpectedDoc(e.SiteId, e.ArtifactType))
+                .ToListAsync(ct);
+
+            if (reviewContext is not null)
+            {
+                bool affectsStartupReadiness = allExpectedDocs.Any(e =>
+                    string.IsNullOrWhiteSpace(e.SiteCode)
+                    && (MatchesTaxonomy(reviewContext.Current, e.ArtifactType)
+                        || (reviewContext.Previous is { } previous
+                            && MatchesTaxonomy(previous, e.ArtifactType))));
+
+                if (!affectsStartupReadiness)
+                {
+                    return;
+                }
+            }
+
+            allStudyDocs = await dbContext.TmfDocuments
+                .AsNoTracking()
+                .Where(d => d.StudyId == studyId)
+                .Select(d => new ProjectedDoc(
+                    d.SiteId,
+                    d.Status,
+                    d.ArtifactType,
+                    d.ArtifactCode,
+                    d.Filename))
+                .ToListAsync(ct);
+        }
+        finally
+        {
+            if (openedConnection)
+            {
+                await dbContext.Database.CloseConnectionAsync();
+            }
+        }
+
+        var targetSites = allExpectedDocs
+            .Where(e => !string.IsNullOrWhiteSpace(e.SiteCode))
+            .Select(e => e.SiteCode!)
+            .Concat(allStudyDocs
+                .Where(d => !string.IsNullOrWhiteSpace(d.SiteCode))
+                .Select(d => d.SiteCode!))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (targetSites.Count == 0)
+        {
+            return;
+        }
+
+        var batchItems = EvaluateStudySitesInMemory(targetSites, allExpectedDocs, allStudyDocs);
+        await PostBatchWebhookAsync(
+            studyId: studyId,
+            tenantId: tenantId,
+            reasonForChange: reasonForChange,
+            targetSites: targetSites,
+            sites: batchItems,
+            secretBytes: batchSecretBytes,
+            ct: ct);
     }
 
     public static async Task<(bool IsComplete, IReadOnlyList<string> MissingArtifacts)> EvaluateSiteActivationCompletenessAsync(
@@ -129,23 +229,184 @@ public sealed class HttpEtmfCompletenessWebhookPublisher(
         string siteId,
         CancellationToken ct)
     {
-        var expectedDocs = await dbContext.TmfExpectedDocuments
-            .AsNoTracking()
-            .Where(e => e.StudyId == studyId
-                        && e.Milestone == SiteActivationMilestone
-                        && (e.SiteId == siteId || e.SiteId == null || e.SiteId == string.Empty))
-            .ToListAsync(ct);
+        List<ProjectedExpectedDoc> expectedDocs;
+        List<ProjectedDoc> studyAndSiteDocs;
 
-        var studyAndSiteDocs = await dbContext.TmfDocuments
-            .AsNoTracking()
-            .Where(d => d.StudyId == studyId
-                        && (d.SiteId == siteId || d.SiteId == null || d.SiteId == string.Empty))
-            .ToListAsync(ct);
+        bool openedConnection = await OpenConnectionIfNeededAsync(dbContext, ct);
+        try
+        {
+            expectedDocs = await dbContext.TmfExpectedDocuments
+                .AsNoTracking()
+                .Where(e => e.StudyId == studyId
+                            && e.Milestone == SiteActivationMilestone
+                            && (e.SiteId == siteId || e.SiteId == null || e.SiteId == string.Empty))
+                .Select(e => new ProjectedExpectedDoc(e.SiteId, e.ArtifactType))
+                .ToListAsync(ct);
 
-        var siteDocs = studyAndSiteDocs
-            .Where(d => string.Equals(d.SiteId, siteId, StringComparison.OrdinalIgnoreCase))
-            .ToList();
+            studyAndSiteDocs = await dbContext.TmfDocuments
+                .AsNoTracking()
+                .Where(d => d.StudyId == studyId
+                            && (d.SiteId == siteId || d.SiteId == null || d.SiteId == string.Empty))
+                .Select(d => new ProjectedDoc(
+                    d.SiteId,
+                    d.Status,
+                    d.ArtifactType,
+                    d.ArtifactCode,
+                    d.Filename))
+                .ToListAsync(ct);
+        }
+        finally
+        {
+            if (openedConnection)
+            {
+                await dbContext.Database.CloseConnectionAsync();
+            }
+        }
 
+        var centralDocs = new List<ProjectedDoc>();
+        var siteDocs = new List<ProjectedDoc>();
+        foreach (var doc in studyAndSiteDocs)
+        {
+            if (string.Equals(doc.SiteCode, siteId, StringComparison.OrdinalIgnoreCase))
+            {
+                siteDocs.Add(doc);
+            }
+            else if (string.IsNullOrWhiteSpace(doc.SiteCode))
+            {
+                centralDocs.Add(doc);
+            }
+        }
+
+        return ComputeSiteActivationCompleteness(expectedDocs, centralDocs, siteDocs);
+    }
+
+    private static IReadOnlyList<BatchSiteSnapshot> EvaluateStudySitesInMemory(
+        IReadOnlyList<string> targetSites,
+        IReadOnlyList<ProjectedExpectedDoc> allExpectedDocs,
+        IReadOnlyList<ProjectedDoc> allStudyDocs)
+    {
+        var centralExpected = new List<(int Index, ProjectedExpectedDoc Doc)>();
+        var expectedBySite = new Dictionary<string, List<(int Index, ProjectedExpectedDoc Doc)>>(StringComparer.OrdinalIgnoreCase);
+        for (int i = 0; i < allExpectedDocs.Count; i++)
+        {
+            var expected = allExpectedDocs[i];
+            if (string.IsNullOrWhiteSpace(expected.SiteCode))
+            {
+                centralExpected.Add((i, expected));
+                continue;
+            }
+
+            if (!expectedBySite.TryGetValue(expected.SiteCode, out var list))
+            {
+                list = [];
+                expectedBySite[expected.SiteCode] = list;
+            }
+
+            list.Add((i, expected));
+        }
+
+        var centralDocs = new List<ProjectedDoc>();
+        var docsBySite = new Dictionary<string, List<ProjectedDoc>>(StringComparer.OrdinalIgnoreCase);
+        foreach (var doc in allStudyDocs)
+        {
+            if (string.IsNullOrWhiteSpace(doc.SiteCode))
+            {
+                centralDocs.Add(doc);
+                continue;
+            }
+
+            if (!docsBySite.TryGetValue(doc.SiteCode, out var list))
+            {
+                list = [];
+                docsBySite[doc.SiteCode] = list;
+            }
+
+            list.Add(doc);
+        }
+
+        var results = new List<BatchSiteSnapshot>(targetSites.Count);
+        foreach (string targetSiteId in targetSites)
+        {
+            var siteExpected = MergeExpectedByIndex(
+                centralExpected,
+                expectedBySite.GetValueOrDefault(targetSiteId));
+            var siteDocs = docsBySite.GetValueOrDefault(targetSiteId) ?? (IReadOnlyList<ProjectedDoc>)[];
+
+            var (isComplete, missingArtifacts) = ComputeSiteActivationCompleteness(
+                siteExpected,
+                centralDocs,
+                siteDocs);
+            results.Add(new BatchSiteSnapshot(targetSiteId, isComplete, missingArtifacts));
+        }
+
+        return results;
+    }
+
+    private static IReadOnlyList<ProjectedExpectedDoc> MergeExpectedByIndex(
+        List<(int Index, ProjectedExpectedDoc Doc)> centralExpected,
+        List<(int Index, ProjectedExpectedDoc Doc)>? siteExpected)
+    {
+        if (siteExpected is null || siteExpected.Count == 0)
+        {
+            if (centralExpected.Count == 0)
+            {
+                return [];
+            }
+
+            var onlyCentral = new ProjectedExpectedDoc[centralExpected.Count];
+            for (int i = 0; i < centralExpected.Count; i++)
+            {
+                onlyCentral[i] = centralExpected[i].Doc;
+            }
+
+            return onlyCentral;
+        }
+
+        if (centralExpected.Count == 0)
+        {
+            var onlySite = new ProjectedExpectedDoc[siteExpected.Count];
+            for (int i = 0; i < siteExpected.Count; i++)
+            {
+                onlySite[i] = siteExpected[i].Doc;
+            }
+
+            return onlySite;
+        }
+
+        var merged = new ProjectedExpectedDoc[centralExpected.Count + siteExpected.Count];
+        int c = 0;
+        int s = 0;
+        int m = 0;
+        while (c < centralExpected.Count && s < siteExpected.Count)
+        {
+            if (centralExpected[c].Index <= siteExpected[s].Index)
+            {
+                merged[m++] = centralExpected[c++].Doc;
+            }
+            else
+            {
+                merged[m++] = siteExpected[s++].Doc;
+            }
+        }
+
+        while (c < centralExpected.Count)
+        {
+            merged[m++] = centralExpected[c++].Doc;
+        }
+
+        while (s < siteExpected.Count)
+        {
+            merged[m++] = siteExpected[s++].Doc;
+        }
+
+        return merged;
+    }
+
+    private static (bool IsComplete, IReadOnlyList<string> MissingArtifacts) ComputeSiteActivationCompleteness(
+        IReadOnlyList<ProjectedExpectedDoc> expectedDocs,
+        IReadOnlyList<ProjectedDoc> centralDocs,
+        IReadOnlyList<ProjectedDoc> siteDocs)
+    {
         var missing = new List<string>();
         var seenMissing = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -161,12 +422,11 @@ public sealed class HttpEtmfCompletenessWebhookPublisher(
         {
             foreach (var expected in expectedDocs)
             {
-                bool expectSiteSpecific = !string.IsNullOrWhiteSpace(expected.SiteId);
-                var candidatePool = expectSiteSpecific ? siteDocs : studyAndSiteDocs;
-
-                bool satisfied = candidatePool.Any(doc =>
-                    IsApprovedOrFiled(doc.Status)
-                    && MatchesExpectedArtifact(doc, expected.ArtifactType));
+                bool expectSiteSpecific = !string.IsNullOrWhiteSpace(expected.SiteCode);
+                bool satisfied = expectSiteSpecific
+                    ? AnyApprovedMatching(siteDocs, expected.ArtifactType)
+                    : AnyApprovedMatching(centralDocs, expected.ArtifactType)
+                      || AnyApprovedMatching(siteDocs, expected.ArtifactType);
 
                 if (!satisfied)
                 {
@@ -178,7 +438,7 @@ public sealed class HttpEtmfCompletenessWebhookPublisher(
             {
                 string label = ArtifactLabel(doc);
                 bool hasApprovedCounterpart = siteDocs.Any(other =>
-                    IsApprovedOrFiled(other)
+                    IsApprovedOrFiled(other.Status)
                     && MatchesArtifactLabel(other, label));
 
                 if (!hasApprovedCounterpart)
@@ -207,51 +467,55 @@ public sealed class HttpEtmfCompletenessWebhookPublisher(
         return (isComplete, missing);
     }
 
-    private static async Task<IReadOnlyList<string>> ResolveTargetSitesAsync(
+    private static async Task<bool> OpenConnectionIfNeededAsync(
         EtmfDbContext dbContext,
-        string studyId,
-        string? siteId,
         CancellationToken ct)
     {
-        if (!string.IsNullOrWhiteSpace(siteId))
+        if (!dbContext.Database.IsRelational())
         {
-            return [siteId];
+            return false;
         }
 
-        var expectedSiteIds = await dbContext.TmfExpectedDocuments
-            .AsNoTracking()
-            .Where(e => e.StudyId == studyId
-                        && e.Milestone == SiteActivationMilestone
-                        && e.SiteId != null
-                        && e.SiteId != string.Empty)
-            .Select(e => e.SiteId!)
-            .Distinct()
-            .ToListAsync(ct);
+        var connection = dbContext.Database.GetDbConnection();
+        if (connection.State == ConnectionState.Open)
+        {
+            return false;
+        }
 
-        var docSiteIds = await dbContext.TmfDocuments
-            .AsNoTracking()
-            .Where(d => d.StudyId == studyId
-                        && d.SiteId != null
-                        && d.SiteId != string.Empty)
-            .Select(d => d.SiteId!)
-            .Distinct()
-            .ToListAsync(ct);
-
-        return expectedSiteIds
-            .Concat(docSiteIds)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
+        await dbContext.Database.OpenConnectionAsync(ct);
+        return true;
     }
 
-    private async Task PostWebhookAsync(
+    private bool TryEnsureWebhookConfigured(string studyId, out byte[] secretBytes)
+    {
+        byte[]? resolved = ResolveGatewaySecretBytes();
+        if (resolved is null || resolved.Length == 0)
+        {
+            logger.LogWarning(
+                "Skipping eTMF completeness webhook for study {StudyId}: GATEWAY_SECRET is not configured.",
+                studyId);
+            secretBytes = [];
+            return false;
+        }
+
+        if (httpClient.BaseAddress is null)
+        {
+            logger.LogWarning(
+                "Skipping eTMF completeness webhook for study {StudyId}: EXECUTION_SERVICE_URL is not configured.",
+                studyId);
+            secretBytes = [];
+            return false;
+        }
+
+        secretBytes = resolved;
+        return true;
+    }
+
+    private GatewayIdentity BuildServiceIdentity(
         string studyId,
-        string siteId,
+        IReadOnlyList<string> siteIds,
         string? tenantId,
-        string reasonForChange,
-        bool isComplete,
-        IReadOnlyList<string> missingArtifacts,
-        byte[] secretBytes,
-        CancellationToken ct)
+        string reasonForChange)
     {
         Principal? ambientPrincipal = httpContextAccessor?.HttpContext?.Items[GatewayAuthenticationHandler.PrincipalItemKey] as Principal;
         IReadOnlyList<string>? productFamilies;
@@ -264,10 +528,10 @@ public sealed class HttpEtmfCompletenessWebhookPublisher(
             productFamilies = string.IsNullOrWhiteSpace(tenantId) ? null : DefaultOrbitFamilies;
         }
 
-        var identity = new GatewayIdentity(
+        return new GatewayIdentity(
             UserId: ServiceUserId,
             Roles: [PermissionMatrix.EtmfServiceRole],
-            SiteIds: [siteId],
+            SiteIds: siteIds,
             UnblindedAccess: false,
             TenantId: tenantId,
             ChangeReason: string.IsNullOrWhiteSpace(reasonForChange)
@@ -277,7 +541,19 @@ public sealed class HttpEtmfCompletenessWebhookPublisher(
             TenantReadOnly: ambientPrincipal?.TenantReadOnly ?? false,
             ProductFamilies: productFamilies,
             TenantScoping: ambientPrincipal?.TenantScoping);
+    }
 
+    private async Task PostWebhookAsync(
+        string studyId,
+        string siteId,
+        string? tenantId,
+        string reasonForChange,
+        bool isComplete,
+        IReadOnlyList<string> missingArtifacts,
+        byte[] secretBytes,
+        CancellationToken ct)
+    {
+        var identity = BuildServiceIdentity(studyId, [siteId], tenantId, reasonForChange);
         var signedHeaders = identity.ToSignedHeaders(clock.UtcNow, secretBytes);
         var payload = new Dictionary<string, object?>(StringComparer.Ordinal)
         {
@@ -320,6 +596,67 @@ public sealed class HttpEtmfCompletenessWebhookPublisher(
         }
     }
 
+    private async Task PostBatchWebhookAsync(
+        string studyId,
+        string? tenantId,
+        string reasonForChange,
+        IReadOnlyList<string> targetSites,
+        IReadOnlyList<BatchSiteSnapshot> sites,
+        byte[] secretBytes,
+        CancellationToken ct)
+    {
+        var identity = BuildServiceIdentity(studyId, targetSites, tenantId, reasonForChange);
+        var signedHeaders = identity.ToSignedHeaders(clock.UtcNow, secretBytes);
+        var wireSites = new List<Dictionary<string, object?>>(sites.Count);
+        foreach (var site in sites)
+        {
+            wireSites.Add(new Dictionary<string, object?>(StringComparer.Ordinal)
+            {
+                ["site_id"] = site.SiteCode,
+                ["is_complete"] = site.IsComplete,
+                ["missing_artifacts"] = site.MissingArtifacts,
+            });
+        }
+
+        var payload = new Dictionary<string, object?>(StringComparer.Ordinal)
+        {
+            ["study_id"] = studyId,
+            ["milestone"] = SiteActivationMilestone,
+            ["sites"] = wireSites,
+        };
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, BatchWebhookPath)
+        {
+            Content = JsonContent.Create(payload, options: WebhookJsonOptions),
+        };
+
+        foreach (var (headerName, headerValue) in signedHeaders)
+        {
+            request.Headers.TryAddWithoutValidation(headerName, headerValue);
+        }
+
+        try
+        {
+            using var response = await httpClient.SendAsync(request, ct);
+            if (!response.IsSuccessStatusCode)
+            {
+                logger.LogWarning(
+                    "Execution batch completeness webhook returned HTTP {StatusCode} for study {StudyId} ({SiteCount} sites).",
+                    (int)response.StatusCode,
+                    studyId,
+                    sites.Count);
+            }
+        }
+        catch (HttpRequestException ex)
+        {
+            logger.LogWarning(
+                ex,
+                "Failed to deliver eTMF batch completeness webhook to Execution for study {StudyId} ({SiteCount} sites).",
+                studyId,
+                sites.Count);
+        }
+    }
+
     private byte[]? ResolveGatewaySecretBytes()
     {
         var configuredBytes = gatewayOptions.CurrentValue.GatewaySecretBytes;
@@ -332,13 +669,25 @@ public sealed class HttpEtmfCompletenessWebhookPublisher(
         return string.IsNullOrEmpty(secret) ? null : GatewayIdentity.EncodeSecret(secret);
     }
 
-    private static bool IsApprovedOrFiled(TmfDocument doc) => IsApprovedOrFiled(doc.Status);
+    private static bool AnyApprovedMatching(IReadOnlyList<ProjectedDoc> docs, string expectedArtifact)
+    {
+        for (int i = 0; i < docs.Count; i++)
+        {
+            var doc = docs[i];
+            if (IsApprovedOrFiled(doc.Status) && MatchesExpectedArtifact(doc, expectedArtifact))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     private static bool IsApprovedOrFiled(string? status) =>
         string.Equals(status, TmfDocumentLifecycleState.Approved, StringComparison.OrdinalIgnoreCase)
         || string.Equals(status, TmfDocumentLifecycleState.Filed, StringComparison.OrdinalIgnoreCase);
 
-    private static string ArtifactLabel(TmfDocument doc)
+    private static string ArtifactLabel(ProjectedDoc doc)
     {
         if (!string.IsNullOrWhiteSpace(doc.ArtifactType))
         {
@@ -353,12 +702,34 @@ public sealed class HttpEtmfCompletenessWebhookPublisher(
         return doc.Filename;
     }
 
-    private static bool MatchesExpectedArtifact(TmfDocument doc, string expectedArtifact) =>
+    private static bool MatchesTaxonomy(EtmfArtifactTaxonomy taxonomy, string expectedArtifact) =>
+        (!string.IsNullOrWhiteSpace(taxonomy.ArtifactType)
+            && string.Equals(taxonomy.ArtifactType, expectedArtifact, StringComparison.OrdinalIgnoreCase))
+        || (!string.IsNullOrWhiteSpace(taxonomy.ArtifactCode)
+            && string.Equals(taxonomy.ArtifactCode, expectedArtifact, StringComparison.OrdinalIgnoreCase));
+
+    private static bool MatchesExpectedArtifact(ProjectedDoc doc, string expectedArtifact) =>
         string.Equals(doc.ArtifactType, expectedArtifact, StringComparison.OrdinalIgnoreCase)
         || string.Equals(doc.ArtifactCode, expectedArtifact, StringComparison.OrdinalIgnoreCase);
 
-    private static bool MatchesArtifactLabel(TmfDocument doc, string label) =>
+    private static bool MatchesArtifactLabel(ProjectedDoc doc, string label) =>
         string.Equals(ArtifactLabel(doc), label, StringComparison.OrdinalIgnoreCase)
         || (!string.IsNullOrWhiteSpace(doc.ArtifactCode)
             && string.Equals(doc.ArtifactCode, label, StringComparison.OrdinalIgnoreCase));
+
+    private sealed record ProjectedExpectedDoc(
+        string? SiteCode,
+        string ArtifactType);
+
+    private sealed record ProjectedDoc(
+        string? SiteCode,
+        string Status,
+        string? ArtifactType,
+        string? ArtifactCode,
+        string Filename);
+
+    private sealed record BatchSiteSnapshot(
+        string SiteCode,
+        bool IsComplete,
+        IReadOnlyList<string> MissingArtifacts);
 }

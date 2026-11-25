@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -39,6 +40,37 @@ public sealed class SiteComplianceRepository(ExecutionDbContext context)
             cancellationToken);
     }
 
+    public async Task<IReadOnlyDictionary<SiteCode, SiteComplianceCache>> GetBySitesAsync(
+        StudyCode studyCode,
+        IReadOnlyCollection<SiteCode> siteCodes,
+        string milestone,
+        CancellationToken cancellationToken)
+    {
+        EnsureVerifiedTenantContext();
+        if (siteCodes.Count == 0)
+        {
+            return new Dictionary<SiteCode, SiteComplianceCache>();
+        }
+
+        List<SiteCode> distinctSites = siteCodes.Distinct().ToList();
+        Guid? relationalTenantFilter = Context.ActiveRelationalTenantFilter;
+        var rows = await Context.SiteComplianceCaches
+            .Where(c => c.StudyCode == studyCode
+                && c.Milestone == milestone
+                && distinctSites.Contains(c.SiteCode)
+                && (relationalTenantFilter == null || c.TenantId == relationalTenantFilter))
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var bySite = new Dictionary<SiteCode, SiteComplianceCache>(rows.Count);
+        foreach (var row in rows)
+        {
+            bySite.TryAdd(row.SiteCode, row);
+        }
+
+        return bySite;
+    }
+
     public async Task AddAsync(SiteComplianceCache cache, CancellationToken cancellationToken)
     {
         EnsureVerifiedTenantContext();
@@ -50,73 +82,109 @@ public sealed class SiteComplianceRepository(ExecutionDbContext context)
         await Context.SiteComplianceCaches.AddAsync(cache, cancellationToken).ConfigureAwait(false);
     }
 
-    public async Task RecordActivationPeriodAsync(
+    public Task RecordActivationPeriodAsync(
         SiteComplianceCache cache,
+        DateTimeOffset recordedAt,
+        string? reasonForChange,
+        CancellationToken cancellationToken) =>
+        RecordActivationPeriodsBatchAsync(
+            [cache],
+            new HashSet<Guid> { cache.Id },
+            recordedAt,
+            reasonForChange,
+            cancellationToken);
+
+    public async Task RecordActivationPeriodsBatchAsync(
+        IReadOnlyList<SiteComplianceCache> caches,
+        IReadOnlySet<Guid> existingCacheIds,
         DateTimeOffset recordedAt,
         string? reasonForChange,
         CancellationToken cancellationToken)
     {
         EnsureVerifiedTenantContext();
-        var existingPeriods = await Context.SiteActivationPeriods
-            .Where(p => p.SiteComplianceCacheId == cache.Id)
-            .ToListAsync(cancellationToken)
-            .ConfigureAwait(false);
-
-        var activeOpenPeriods = existingPeriods
-            .Where(p => p.RecordedPeriod.UpperBoundInfinite && p.ValidPeriod.UpperBoundInfinite)
-            .ToList();
-
-        DateTimeOffset recordedCutover = recordedAt;
-        foreach (var openPeriod in activeOpenPeriods)
+        if (caches.Count == 0)
         {
-            var closed = StandaloneBitemporalModelExtensions.CloseRecordedAt(openPeriod.RecordedPeriod, recordedAt);
-            openPeriod.RecordedPeriod = closed;
-            if (closed.UpperBound > recordedCutover)
+            return;
+        }
+
+        var periodsByCacheId = new Dictionary<Guid, List<SiteActivationPeriod>>();
+        if (existingCacheIds.Count > 0)
+        {
+            List<Guid> ids = existingCacheIds.ToList();
+            var existingPeriods = await Context.SiteActivationPeriods
+                .Where(p => ids.Contains(p.SiteComplianceCacheId))
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+
+            foreach (var period in existingPeriods)
             {
-                recordedCutover = closed.UpperBound;
+                if (!periodsByCacheId.TryGetValue(period.SiteComplianceCacheId, out var list))
+                {
+                    list = [];
+                    periodsByCacheId[period.SiteComplianceCacheId] = list;
+                }
+
+                list.Add(period);
             }
         }
 
-        var openRecorded = StandaloneBitemporalModelExtensions.CreateOpenPeriod(recordedCutover);
-
-        Guid? effectiveTenantId = Context.ActiveBoundTenantId ?? (cache.TenantId != Guid.Empty ? cache.TenantId : null);
-
-        foreach (var prior in activeOpenPeriods.Where(p => p.ValidPeriod.LowerBound < recordedCutover))
+        foreach (var cache in caches)
         {
-            var closedPrior = new SiteActivationPeriod
+            var activeOpenPeriods = periodsByCacheId.TryGetValue(cache.Id, out var candidates)
+                ? candidates.Where(p => p.RecordedPeriod.UpperBoundInfinite && p.ValidPeriod.UpperBoundInfinite).ToList()
+                : [];
+
+            DateTimeOffset recordedCutover = recordedAt;
+            foreach (var openPeriod in activeOpenPeriods)
             {
-                SiteComplianceCacheId = prior.SiteComplianceCacheId,
-                StudyCode = prior.StudyCode,
-                SiteCode = prior.SiteCode,
-                Milestone = prior.Milestone,
-                IsComplete = prior.IsComplete,
-                MissingDocuments = prior.MissingDocuments.ToList(),
-                IsActivated = prior.IsActivated,
-                ActivatedAt = prior.ActivatedAt,
-                ActivatedBy = prior.ActivatedBy,
-                ReasonForChange = prior.ReasonForChange,
-                ValidPeriod = StandaloneBitemporalModelExtensions.CreateClosedPeriod(prior.ValidPeriod.LowerBound, recordedCutover),
+                var closed = StandaloneBitemporalModelExtensions.CloseRecordedAt(openPeriod.RecordedPeriod, recordedAt);
+                openPeriod.RecordedPeriod = closed;
+                if (closed.UpperBound > recordedCutover)
+                {
+                    recordedCutover = closed.UpperBound;
+                }
+            }
+
+            var openRecorded = StandaloneBitemporalModelExtensions.CreateOpenPeriod(recordedCutover);
+            Guid? effectiveTenantId = Context.ActiveBoundTenantId ?? (cache.TenantId != Guid.Empty ? cache.TenantId : null);
+
+            foreach (var prior in activeOpenPeriods.Where(p => p.ValidPeriod.LowerBound < recordedCutover))
+            {
+                var closedPrior = new SiteActivationPeriod
+                {
+                    SiteComplianceCacheId = prior.SiteComplianceCacheId,
+                    StudyCode = prior.StudyCode,
+                    SiteCode = prior.SiteCode,
+                    Milestone = prior.Milestone,
+                    IsComplete = prior.IsComplete,
+                    MissingDocuments = prior.MissingDocuments.ToList(),
+                    IsActivated = prior.IsActivated,
+                    ActivatedAt = prior.ActivatedAt,
+                    ActivatedBy = prior.ActivatedBy,
+                    ReasonForChange = prior.ReasonForChange,
+                    ValidPeriod = StandaloneBitemporalModelExtensions.CreateClosedPeriod(prior.ValidPeriod.LowerBound, recordedCutover),
+                    RecordedPeriod = openRecorded,
+                };
+                await AddActivationPeriodAsync(closedPrior, effectiveTenantId, cancellationToken).ConfigureAwait(false);
+            }
+
+            var currentPeriod = new SiteActivationPeriod
+            {
+                SiteComplianceCacheId = cache.Id,
+                StudyCode = cache.StudyCode,
+                SiteCode = cache.SiteCode,
+                Milestone = cache.Milestone,
+                IsComplete = cache.IsComplete,
+                MissingDocuments = cache.MissingDocuments.ToList(),
+                IsActivated = cache.IsActivated,
+                ActivatedAt = cache.ActivatedAt,
+                ActivatedBy = cache.ActivatedBy,
+                ReasonForChange = reasonForChange,
+                ValidPeriod = StandaloneBitemporalModelExtensions.CreateOpenPeriod(recordedCutover),
                 RecordedPeriod = openRecorded,
             };
-            await AddActivationPeriodAsync(closedPrior, effectiveTenantId, cancellationToken).ConfigureAwait(false);
+            await AddActivationPeriodAsync(currentPeriod, effectiveTenantId, cancellationToken).ConfigureAwait(false);
         }
-
-        var currentPeriod = new SiteActivationPeriod
-        {
-            SiteComplianceCacheId = cache.Id,
-            StudyCode = cache.StudyCode,
-            SiteCode = cache.SiteCode,
-            Milestone = cache.Milestone,
-            IsComplete = cache.IsComplete,
-            MissingDocuments = cache.MissingDocuments.ToList(),
-            IsActivated = cache.IsActivated,
-            ActivatedAt = cache.ActivatedAt,
-            ActivatedBy = cache.ActivatedBy,
-            ReasonForChange = reasonForChange,
-            ValidPeriod = StandaloneBitemporalModelExtensions.CreateOpenPeriod(recordedCutover),
-            RecordedPeriod = openRecorded,
-        };
-        await AddActivationPeriodAsync(currentPeriod, effectiveTenantId, cancellationToken).ConfigureAwait(false);
     }
 
     private async Task AddActivationPeriodAsync(

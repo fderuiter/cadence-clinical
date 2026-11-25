@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
@@ -21,8 +22,9 @@ using Microsoft.Extensions.Options;
 namespace Cadence.Apps.Execution.Infrastructure.Kernel;
 
 /// <summary>
-/// Queries <c>GET /api/v1/kernel/locks/in-force</c> on the Clinical Kernel host with a gateway-signed identity and
-/// rejects standalone execution mutations when any covering <c>Frozen</c> or <c>Locked</c> assertion is active.
+/// Queries <c>GET /api/v1/kernel/locks/in-force</c> and <c>POST /api/v1/kernel/locks/in-force/batch</c> on the
+/// Clinical Kernel host with a gateway-signed identity and rejects standalone execution mutations when any covering
+/// <c>Frozen</c> or <c>Locked</c> assertion is active.
 /// </summary>
 public sealed class HttpKernelLockGuard(
     HttpClient httpClient,
@@ -60,61 +62,138 @@ public sealed class HttpKernelLockGuard(
             return true;
         }
 
+        string normalizedTenant = tenantId.Trim();
         string normalizedStudy = studyCode.Trim();
         string? normalizedSite = string.IsNullOrWhiteSpace(siteCode) ? null : siteCode.Trim();
         string? normalizedSubject = string.IsNullOrWhiteSpace(subjectCode) ? null : subjectCode.Trim();
-        string cacheKey = $"{CacheItemsPrefix}{tenantId.Trim()}|{normalizedStudy}|{normalizedSite}|{normalizedSubject}";
+        string cacheKey = $"{CacheItemsPrefix}{normalizedTenant}|{normalizedStudy}|{normalizedSite}|{normalizedSubject}";
         if (context.Items.TryGetValue(cacheKey, out object? cachedObj) && cachedObj is Result<bool> cachedResult)
         {
             return cachedResult;
         }
 
-        string? gatewaySecret = gatewayOptions.CurrentValue.GatewaySecret
-            ?? gatewayOptions.Get(GatewayAuthenticationHandler.SchemeName).GatewaySecret;
-        if (string.IsNullOrEmpty(gatewaySecret))
+        var auth = TryResolveCallerAuth(context, normalizedTenant);
+        if (auth.Error is { } authError)
         {
-            return DomainError.Conflict(
-                "KERNEL_LOCK_CHECK_MISCONFIGURED",
-                "Gateway secret is required to verify Clinical Kernel lock state.");
+            return authError;
         }
-
-        var principal = context.Items[GatewayAuthenticationHandler.PrincipalItemKey] as Principal;
-        string userId = principal?.UserId
-            ?? context.User.FindFirst(CadenceClaimTypes.Subject)?.Value
-            ?? string.Empty;
-        if (string.IsNullOrWhiteSpace(userId))
-        {
-            return DomainError.Forbidden(
-                "KERNEL_ACTOR_MISSING",
-                "Authenticated caller identity is required to verify Clinical Kernel lock state.");
-        }
-
-        IReadOnlyList<string> forwardedFamilies = principal?.ProductFamilies is { Count: > 0 } explicitFamilies
-            ? explicitFamilies
-            : [nameof(ProductFamily.Capture)];
-
-        var identity = new GatewayIdentity(
-            UserId: userId,
-            Roles: principal?.RawRoles ?? [],
-            SiteIds: principal?.AssignedSites ?? [],
-            SponsorId: principal?.SponsorId,
-            UnblindedAccess: principal?.UnblindedAccess ?? false,
-            TenantId: tenantId.Trim(),
-            ChangeReason: null,
-            StudyIds: principal?.AssignedStudies,
-            TenantReadOnly: principal?.TenantReadOnly ?? false,
-            ProductFamilies: forwardedFamilies,
-            TenantScoping: principal?.TenantScoping);
 
         var result = await QueryInForceAsync(
-            identity,
-            gatewaySecret,
+            auth.Identity!,
+            auth.GatewaySecret!,
             normalizedStudy,
             normalizedSite,
             normalizedSubject,
             cancellationToken).ConfigureAwait(false);
 
         context.Items[cacheKey] = result;
+        return result;
+    }
+
+    /// <inheritdoc />
+    public async Task<Result<bool>> EnsureUnlockedBatchAsync(
+        string? studyCode,
+        IReadOnlyCollection<string> siteCodes,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(studyCode))
+        {
+            return true;
+        }
+
+        if (siteCodes is null || siteCodes.Count == 0)
+        {
+            return await EnsureUnlockedAsync(studyCode, null, null, cancellationToken).ConfigureAwait(false);
+        }
+
+        var context = httpContextAccessor.HttpContext;
+        string? tenantId = context?.User.FindFirst(CadenceClaimTypes.TenantId)?.Value;
+        if (context is null || string.IsNullOrWhiteSpace(tenantId))
+        {
+            return true;
+        }
+
+        string normalizedTenant = tenantId.Trim();
+        string normalizedStudy = studyCode.Trim();
+        string studyCacheKey = $"{CacheItemsPrefix}{normalizedTenant}|{normalizedStudy}||";
+        if (context.Items.TryGetValue(studyCacheKey, out object? cachedStudyObj)
+            && cachedStudyObj is Result<bool> { IsFailure: true } cachedStudyFailure)
+        {
+            return cachedStudyFailure;
+        }
+
+        var uncachedSites = new List<string>();
+        var seenSites = new HashSet<string>(StringComparer.Ordinal);
+        foreach (string rawSite in siteCodes)
+        {
+            if (string.IsNullOrWhiteSpace(rawSite))
+            {
+                continue;
+            }
+
+            string normalizedSite = rawSite.Trim();
+            if (!seenSites.Add(normalizedSite))
+            {
+                continue;
+            }
+
+            string siteCacheKey = $"{CacheItemsPrefix}{normalizedTenant}|{normalizedStudy}|{normalizedSite}|";
+            if (context.Items.TryGetValue(siteCacheKey, out object? cachedSiteObj) && cachedSiteObj is Result<bool> cachedSiteResult)
+            {
+                if (cachedSiteResult.IsFailure)
+                {
+                    return cachedSiteResult;
+                }
+
+                continue;
+            }
+
+            uncachedSites.Add(normalizedSite);
+        }
+
+        if (uncachedSites.Count == 0)
+        {
+            if (seenSites.Count == 0)
+            {
+                return await EnsureUnlockedAsync(normalizedStudy, null, null, cancellationToken).ConfigureAwait(false);
+            }
+
+            return true;
+        }
+
+        string batchCacheKey = $"{CacheItemsPrefix}batch:{normalizedTenant}|{normalizedStudy}|{string.Join(',', uncachedSites.OrderBy(static s => s, StringComparer.Ordinal))}";
+        if (context.Items.TryGetValue(batchCacheKey, out object? cachedBatchObj) && cachedBatchObj is Result<bool> cachedBatchResult)
+        {
+            return cachedBatchResult;
+        }
+
+        var auth = TryResolveCallerAuth(context, normalizedTenant);
+        if (auth.Error is { } authError)
+        {
+            return authError;
+        }
+
+        var (result, scopeKind) = await QueryBatchInForceAsync(
+            auth.Identity!,
+            auth.GatewaySecret!,
+            normalizedStudy,
+            uncachedSites,
+            cancellationToken).ConfigureAwait(false);
+
+        context.Items[batchCacheKey] = result;
+        if (result.IsSuccess)
+        {
+            context.Items[studyCacheKey] = result;
+            foreach (string site in uncachedSites)
+            {
+                context.Items[$"{CacheItemsPrefix}{normalizedTenant}|{normalizedStudy}|{site}|"] = result;
+            }
+        }
+        else if (string.Equals(scopeKind, "study", StringComparison.Ordinal))
+        {
+            context.Items[studyCacheKey] = result;
+        }
+
         return result;
     }
 
@@ -162,6 +241,60 @@ public sealed class HttpKernelLockGuard(
             cancellationToken).ConfigureAwait(false);
     }
 
+    private (GatewayIdentity? Identity, string? GatewaySecret, DomainError? Error) TryResolveCallerAuth(
+        HttpContext context,
+        string normalizedTenant)
+    {
+        string? gatewaySecret = gatewayOptions.CurrentValue.GatewaySecret
+            ?? gatewayOptions.Get(GatewayAuthenticationHandler.SchemeName).GatewaySecret;
+        if (string.IsNullOrEmpty(gatewaySecret))
+        {
+            return (null, null, DomainError.Conflict(
+                "KERNEL_LOCK_CHECK_MISCONFIGURED",
+                "Gateway secret is required to verify Clinical Kernel lock state."));
+        }
+
+        var principal = context.Items[GatewayAuthenticationHandler.PrincipalItemKey] as Principal;
+        string userId = principal?.UserId
+            ?? context.User.FindFirst(CadenceClaimTypes.Subject)?.Value
+            ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return (null, null, DomainError.Forbidden(
+                "KERNEL_ACTOR_MISSING",
+                "Authenticated caller identity is required to verify Clinical Kernel lock state."));
+        }
+
+        IReadOnlyList<string> forwardedFamilies = principal?.ProductFamilies is { Count: > 0 } explicitFamilies
+            ? explicitFamilies
+            : [nameof(ProductFamily.Capture)];
+
+        IReadOnlyList<string> forwardedRoles = principal?.RawRoles ?? [];
+        bool isVerifiedEtmfService = userId.StartsWith(ServiceAccount.IdPrefix, StringComparison.Ordinal)
+            && userId.AsSpan(ServiceAccount.IdPrefix.Length).Trim().Length > 0
+            && (forwardedRoles.Any(r => string.Equals(r, PermissionMatrix.EtmfServiceRole, StringComparison.OrdinalIgnoreCase))
+                || context.User.IsInRole(PermissionMatrix.EtmfServiceRole));
+        if (isVerifiedEtmfService && !forwardedRoles.Any(r => string.Equals(r, "SYSTEM_SERVICE", StringComparison.OrdinalIgnoreCase)))
+        {
+            forwardedRoles = [.. forwardedRoles, "SYSTEM_SERVICE"];
+        }
+
+        var identity = new GatewayIdentity(
+            UserId: userId,
+            Roles: forwardedRoles,
+            SiteIds: principal?.AssignedSites ?? [],
+            SponsorId: principal?.SponsorId,
+            UnblindedAccess: principal?.UnblindedAccess ?? false,
+            TenantId: normalizedTenant,
+            ChangeReason: null,
+            StudyIds: principal?.AssignedStudies,
+            TenantReadOnly: principal?.TenantReadOnly ?? false,
+            ProductFamilies: forwardedFamilies,
+            TenantScoping: principal?.TenantScoping);
+
+        return (identity, gatewaySecret, null);
+    }
+
     private async Task<Result<bool>> QueryInForceAsync(
         GatewayIdentity identity,
         string gatewaySecret,
@@ -188,6 +321,35 @@ public sealed class HttpKernelLockGuard(
             request.Headers.TryAddWithoutValidation(header, value);
         }
 
+        var (result, _) = await SendAndReadLockResponseAsync(request, cancellationToken).ConfigureAwait(false);
+        return result;
+    }
+
+    private async Task<(Result<bool> Result, string? ScopeKind)> QueryBatchInForceAsync(
+        GatewayIdentity identity,
+        string gatewaySecret,
+        string studyCode,
+        IReadOnlyList<string> siteCodes,
+        CancellationToken cancellationToken)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/kernel/locks/in-force/batch")
+        {
+            Content = JsonContent.Create(
+                new KernelBatchScopeWriteLockPayload(studyCode, siteCodes),
+                options: WireJson),
+        };
+        foreach (var (header, value) in identity.ToSignedHeaders(clock.UtcNow, GatewayIdentity.EncodeSecret(gatewaySecret)))
+        {
+            request.Headers.TryAddWithoutValidation(header, value);
+        }
+
+        return await SendAndReadLockResponseAsync(request, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<(Result<bool> Result, string? ScopeKind)> SendAndReadLockResponseAsync(
+        HttpRequestMessage request,
+        CancellationToken cancellationToken)
+    {
         HttpResponseMessage response;
         try
         {
@@ -195,9 +357,9 @@ public sealed class HttpKernelLockGuard(
         }
         catch (HttpRequestException ex)
         {
-            return DomainError.Conflict(
+            return (DomainError.Conflict(
                 "KERNEL_LOCK_CHECK_UNAVAILABLE",
-                $"Could not reach the Clinical Kernel to verify lock state: {ex.Message}");
+                $"Could not reach the Clinical Kernel to verify lock state: {ex.Message}"), null);
         }
 
         using (response)
@@ -211,15 +373,15 @@ public sealed class HttpKernelLockGuard(
                 {
                     string lockKind = string.IsNullOrWhiteSpace(check.LockKind) ? "Locked" : check.LockKind;
                     string scopeKind = string.IsNullOrWhiteSpace(check.ScopeKind) ? "study" : check.ScopeKind;
-                    return DomainError.Conflict(
+                    return (DomainError.Conflict(
                         ObservationLockedCode,
-                        $"Scope is frozen or locked in the Clinical Kernel ({lockKind} on {scopeKind}); mutations are denied.");
+                        $"Scope is frozen or locked in the Clinical Kernel ({lockKind} on {scopeKind}); mutations are denied."), scopeKind);
                 }
 
-                return true;
+                return (true, null);
             }
 
-            return await ReadProblemErrorAsync(response, cancellationToken).ConfigureAwait(false);
+            return (await ReadProblemErrorAsync(response, cancellationToken).ConfigureAwait(false), null);
         }
     }
 
@@ -268,6 +430,10 @@ public sealed class HttpKernelLockGuard(
 
     private sealed record KernelProblemPayload(string? Code, string? Detail, string? Title);
 
+    private sealed record KernelBatchScopeWriteLockPayload(
+        string StudyCode,
+        IReadOnlyList<string> SiteCodes);
+
     private sealed record KernelScopeWriteLockPayload(
         bool StudyExists,
         bool Locked,
@@ -289,6 +455,13 @@ public sealed class NoOpKernelLockGuard : IKernelLockGuard
         string? studyCode,
         string? siteCode = null,
         string? subjectCode = null,
+        CancellationToken cancellationToken = default) =>
+        Task.FromResult(Result<bool>.Success(true));
+
+    /// <inheritdoc />
+    public Task<Result<bool>> EnsureUnlockedBatchAsync(
+        string? studyCode,
+        IReadOnlyCollection<string> siteCodes,
         CancellationToken cancellationToken = default) =>
         Task.FromResult(Result<bool>.Success(true));
 

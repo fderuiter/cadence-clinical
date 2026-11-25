@@ -1529,6 +1529,70 @@ public sealed class KernelApiHostTests : IDisposable
         }
     }
 
+    [Fact]
+    [GxPRequirement("PRD-SYS-001")]
+    public async Task BatchInForceLockEndpoint_EnforcesNonConfirming404OnHiddenSitesAndEvaluatesBatchLocksForSystemService()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        _ = SeedLockVisibilityScenario();
+        var host = CreateKestrelHost(hostVisibility: true);
+
+        using var coordinatorClient = host.CreateKestrelSignedClient(
+            TestSecurityContext.Identity("crc.site01@site.test", "Coordinator"));
+
+        // Coordinator can batch-check their own visible unlocked site (SITE-01).
+        using var ownSiteBatch = await coordinatorClient.PostAsJsonAsync(
+            "/api/v1/kernel/locks/in-force/batch",
+            new { study_code = "STD-VISIBLE-MARKER", site_codes = new[] { "SITE-01" } },
+            ct);
+        ownSiteBatch.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var ownDoc = JsonDocument.Parse(await ownSiteBatch.Content.ReadAsStringAsync(ct));
+        ownDoc.RootElement.GetProperty("locked").GetBoolean().Should().BeFalse();
+
+        // Including an unassigned site (SITE-03) in the batch yields a non-confirming 404 matching a nonexistent site.
+        using var hiddenSiteBatch = await coordinatorClient.PostAsJsonAsync(
+            "/api/v1/kernel/locks/in-force/batch",
+            new { study_code = "STD-VISIBLE-MARKER", site_codes = new[] { "SITE-01", "SITE-03" } },
+            ct);
+        using var nonexistentSiteBatch = await coordinatorClient.PostAsJsonAsync(
+            "/api/v1/kernel/locks/in-force/batch",
+            new { study_code = "STD-VISIBLE-MARKER", site_codes = new[] { "SITE-01", "SITE-NONEXISTENT" } },
+            ct);
+        hiddenSiteBatch.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        nonexistentSiteBatch.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        string hiddenBody = await hiddenSiteBatch.Content.ReadAsStringAsync(ct);
+        string nonexistentBody = await nonexistentSiteBatch.Content.ReadAsStringAsync(ct);
+        hiddenBody.Should().NotContain("SITE-03").And.NotContain(nameof(MaskReason.NotPermitted));
+        using var hiddenDoc = JsonDocument.Parse(hiddenBody);
+        using var nonexistentDoc = JsonDocument.Parse(nonexistentBody);
+        hiddenDoc.RootElement.GetProperty("title").GetString()
+            .Should().Be(nonexistentDoc.RootElement.GetProperty("title").GetString());
+        hiddenDoc.RootElement.GetProperty("detail").GetString()
+            .Should().Be(nonexistentDoc.RootElement.GetProperty("detail").GetString());
+
+        // Verified SYSTEM_SERVICE caller (svc:etmf) evaluates multi-site locks in one batch call.
+        using var systemServiceClient = host.CreateKestrelSignedClient(
+            TestSecurityContext.Identity("svc:etmf", Cadence.Security.Rbac.PermissionMatrix.EtmfServiceRole, "SYSTEM_SERVICE"));
+
+        using var unlockedServiceBatch = await systemServiceClient.PostAsJsonAsync(
+            "/api/v1/kernel/locks/in-force/batch",
+            new { study_code = "STD-VISIBLE-MARKER", site_codes = new[] { "SITE-01" } },
+            ct);
+        unlockedServiceBatch.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var unlockedDoc = JsonDocument.Parse(await unlockedServiceBatch.Content.ReadAsStringAsync(ct));
+        unlockedDoc.RootElement.GetProperty("locked").GetBoolean().Should().BeFalse();
+
+        using var lockedServiceBatch = await systemServiceClient.PostAsJsonAsync(
+            "/api/v1/kernel/locks/in-force/batch",
+            new { study_code = "STD-VISIBLE-MARKER", site_codes = new[] { "SITE-01", "SITE-02" } },
+            ct);
+        lockedServiceBatch.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var lockedDoc = JsonDocument.Parse(await lockedServiceBatch.Content.ReadAsStringAsync(ct));
+        lockedDoc.RootElement.GetProperty("locked").GetBoolean().Should().BeTrue();
+        lockedDoc.RootElement.GetProperty("lock_kind").GetString().Should().Be("Locked");
+        lockedDoc.RootElement.GetProperty("scope_kind").GetString().Should().Be("study_site");
+    }
+
     private LockVisibilityFixture SeedLockVisibilityScenario()
     {
         var confidentialStudyId = StudyId.New();

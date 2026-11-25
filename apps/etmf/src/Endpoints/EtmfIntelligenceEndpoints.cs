@@ -465,6 +465,7 @@ public static class EtmfIntelligenceEndpoints
         var now = clock.UtcNow;
         var user = CallerScope.RequiredUserId(httpContext, "An admitted eTMF request has no signed caller.");
         var roles = CallerScope.Roles(httpContext);
+        var previousTaxonomy = new EtmfArtifactTaxonomy(doc.ArtifactType, doc.ArtifactCode);
 
         if (decision == "OVERRIDE" && !string.IsNullOrWhiteSpace(request.OverrideArtifactCode))
         {
@@ -514,12 +515,17 @@ public static class EtmfIntelligenceEndpoints
 
         if (completenessPublisher is not null)
         {
+            var reviewContext = new EtmfDocumentReviewContext(
+                Current: new EtmfArtifactTaxonomy(doc.ArtifactType, doc.ArtifactCode),
+                Previous: previousTaxonomy);
+
             await completenessPublisher.PublishSiteActivationCompletenessAsync(
                 dbContext: dbContext,
                 studyId: doc.StudyId,
                 siteId: doc.SiteId,
                 tenantId: CallerScope.TenantId(httpContext),
                 reasonForChange: reason,
+                reviewContext: reviewContext,
                 ct: ct);
         }
 

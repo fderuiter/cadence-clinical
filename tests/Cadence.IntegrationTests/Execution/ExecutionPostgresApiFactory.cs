@@ -38,6 +38,9 @@ public sealed class ExecutionPostgresApiFactory : WebApplicationFactory<Cadence.
     /// <summary>Warnings and errors the host logged, for assertion messages when a request fails unexpectedly.</summary>
     public IReadOnlyCollection<string> ServerWarnings => _serverWarnings;
 
+    /// <summary>Underlying application-role PostgreSQL connection string when available.</summary>
+    public string? ConnectionString => _database.ConnectionString;
+
     /// <summary>Skips the calling test unless a PostgreSQL database is available.</summary>
     public void SkipIfUnavailable() => _database.SkipIfUnavailable();
 

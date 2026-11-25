@@ -3,6 +3,7 @@ using System.Collections.Generic;
 
 using Cadence.Apps.Execution.Application.Compliance;
 using Cadence.Apps.Execution.Application.Subjects;
+using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Testing;
 using Cadence.Testing.Time;
 
@@ -278,6 +279,40 @@ public class RequestValidatorTests
 
         result.IsValid.Should().BeFalse();
         result.Errors.Should().Contain(e => e.PropertyName == "Milestone");
+    }
+
+    // ---- EtmfCompletenessBatchWebhookPayloadValidator ----------------------------------------------
+
+    [Fact]
+    public void EtmfCompletenessBatchWebhookPayloadValidator_ValidBatchPayload_Passes()
+    {
+        var payload = new EtmfCompletenessBatchWebhookPayload(
+            new StudyCode("STUDY-001"),
+            "SITE_ACTIVATION",
+            [
+                new EtmfSiteCompletenessItem(new SiteCode("SITE-001"), true, null),
+                new EtmfSiteCompletenessItem(new SiteCode("SITE-002"), false, ["Form 1572"]),
+            ]);
+
+        var result = new EtmfCompletenessBatchWebhookPayloadValidator().Validate(payload);
+
+        result.IsValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public void EtmfCompletenessBatchWebhookPayloadValidator_BlankMilestoneOrNullSites_Fails()
+    {
+        var blankMilestone = new EtmfCompletenessBatchWebhookPayload(
+            new StudyCode("STUDY-001"),
+            "   ",
+            [new EtmfSiteCompletenessItem(new SiteCode("SITE-001"), true, null)]);
+        var nullSites = new EtmfCompletenessBatchWebhookPayload(
+            new StudyCode("STUDY-001"),
+            "SITE_ACTIVATION",
+            null!);
+
+        new EtmfCompletenessBatchWebhookPayloadValidator().Validate(blankMilestone).IsValid.Should().BeFalse();
+        new EtmfCompletenessBatchWebhookPayloadValidator().Validate(nullSites).IsValid.Should().BeFalse();
     }
 
     // ---- SiteActivationRequest / SubjectDemographicsUpdateRequest (no dedicated validator) ---------

@@ -68,4 +68,5 @@ Generated from `docs/openapi/execution_openapi.json` by `pnpm cadence generate-a
 | `PATCH` | `/api/v1/execution/subjects/{subjectId}/site` | AssignSubjectSite | Assigns a clinical site to a screening subject and synchronizes screening enrollment with the kernel. |
 | `PATCH` | `/api/v1/execution/subjects/{subjectId}/state` | UpdateSubjectState |  |
 | `POST` | `/api/v1/execution/webhooks/etmf` | EtmfCompletenessWebhook |  |
+| `POST` | `/api/v1/execution/webhooks/etmf/batch` | EtmfCompletenessBatchWebhook |  |
 | `GET` | `/healthz` | ExecutionHealthCheck | Execution engine health probe. |

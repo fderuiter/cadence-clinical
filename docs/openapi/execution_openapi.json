@@ -81,6 +81,56 @@
         }
       }
     },
+    "/api/v1/execution/webhooks/etmf/batch": {
+      "post": {
+        "tags": [
+          "SiteCompliance"
+        ],
+        "operationId": "EtmfCompletenessBatchWebhook",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Execution_EtmfCompletenessBatchWebhookPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_OperationEnvelopeResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_HttpValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Execution_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/execution/sites/{siteId}/activate": {
       "post": {
         "tags": [
@@ -5264,6 +5314,28 @@
           }
         }
       },
+      "Execution_EtmfCompletenessBatchWebhookPayload": {
+        "required": [
+          "study_id",
+          "milestone",
+          "sites"
+        ],
+        "type": "object",
+        "properties": {
+          "study_id": {
+            "$ref": "#/components/schemas/Execution_StudyCode"
+          },
+          "milestone": {
+            "type": "string"
+          },
+          "sites": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Execution_EtmfSiteCompletenessItem"
+            }
+          }
+        }
+      },
       "Execution_EtmfCompletenessWebhookPayload": {
         "required": [
           "study_id",
@@ -5285,6 +5357,31 @@
           },
           "milestone": {
             "type": "string"
+          },
+          "is_complete": {
+            "type": "boolean"
+          },
+          "missing_artifacts": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "Execution_EtmfSiteCompletenessItem": {
+        "required": [
+          "site_id",
+          "is_complete",
+          "missing_artifacts"
+        ],
+        "type": "object",
+        "properties": {
+          "site_id": {
+            "$ref": "#/components/schemas/Execution_SiteCode"
           },
           "is_complete": {
             "type": "boolean"
