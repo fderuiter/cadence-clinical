@@ -25,6 +25,45 @@ public class EnvVarExtractorServiceTests
     }
 
     [Fact]
+    public void ValidateStartupKeysInEnvFile_FailsClosed_WhenCryptoKeyIsBlankInvalidOrDuplicated()
+    {
+        string repoRoot = QualityGateOrchestratorFindRepoRoot();
+        string realEnvExample = File.ReadAllText(Path.Combine(repoRoot, ".env.example"));
+        string tempDir = Path.Combine(Path.GetTempPath(), $"env-startup-keys-{Guid.NewGuid():N}");
+        try
+        {
+            Directory.CreateDirectory(tempDir);
+            string envFile = Path.Combine(tempDir, ".env.example");
+
+            File.WriteAllText(envFile, realEnvExample);
+            EnvVarExtractorService.ValidateStartupKeysInEnvFile(envFile).Should().BeTrue();
+
+            string blankFieldKey = Regex.Replace(realEnvExample, @"(?m)^FIELD_ENCRYPTION_KEY=.*$", "FIELD_ENCRYPTION_KEY=");
+            File.WriteAllText(envFile, blankFieldKey);
+            EnvVarExtractorService.ValidateStartupKeysInEnvFile(envFile).Should().BeFalse();
+
+            string shortBase64Key = Regex.Replace(realEnvExample, @"(?m)^CADENCE_BIOMETRIC_LIVENESS_KEY=.*$", "CADENCE_BIOMETRIC_LIVENESS_KEY=dG9vLXNob3J0");
+            File.WriteAllText(envFile, shortBase64Key);
+            EnvVarExtractorService.ValidateStartupKeysInEnvFile(envFile).Should().BeFalse();
+
+            var realValues = EnvVarExtractorService.ExtractKeyValuesFromEnvFile(Path.Combine(repoRoot, ".env.example"));
+            string duplicatedKey = Regex.Replace(
+                realEnvExample,
+                @"(?m)^FIELD_LOOKUP_HASH_KEY=.*$",
+                $"FIELD_LOOKUP_HASH_KEY={realValues["FIELD_ENCRYPTION_KEY"]}");
+            File.WriteAllText(envFile, duplicatedKey);
+            EnvVarExtractorService.ValidateStartupKeysInEnvFile(envFile).Should().BeFalse();
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir))
+            {
+                Directory.Delete(tempDir, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
     public void ExtractAndValidateEnvVars_ReturnsExitCode1_WhenCodeVarIsMissingFromEnvExample()
     {
         string tempDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
@@ -391,6 +430,37 @@ public class EnvVarExtractorServiceTests
         }
 
         return [.. tokens];
+    }
+
+    [Fact]
+    public void ValidateStartupKeysInEnvFile_RejectsUnquotedShellSeparatorsOrWhitespace()
+    {
+        string repoRoot = QualityGateOrchestratorFindRepoRoot();
+        string envExampleText = File.ReadAllText(Path.Combine(repoRoot, ".env.example"));
+        string tempFile = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+        try
+        {
+            string unquotedSemicolon = envExampleText.Replace(
+                "ConnectionStrings__cadence=\"Host=localhost;Port=5432;Database=cadence;Username=cadence;Password=cadence_password\"",
+                "ConnectionStrings__cadence=Host=localhost;Port=5432;Database=cadence;Username=cadence;Password=cadence_password",
+                StringComparison.Ordinal);
+            File.WriteAllText(tempFile, unquotedSemicolon);
+            EnvVarExtractorService.ValidateStartupKeysInEnvFile(tempFile).Should().BeFalse();
+
+            string unquotedSpaces = envExampleText.Replace(
+                "Notifications__BrandName=\"Cadence Clinical Platform\"",
+                "Notifications__BrandName=Cadence Clinical Platform",
+                StringComparison.Ordinal);
+            File.WriteAllText(tempFile, unquotedSpaces);
+            EnvVarExtractorService.ValidateStartupKeysInEnvFile(tempFile).Should().BeFalse();
+        }
+        finally
+        {
+            if (File.Exists(tempFile))
+            {
+                File.Delete(tempFile);
+            }
+        }
     }
 
     private static string QualityGateOrchestratorFindRepoRoot()

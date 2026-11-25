@@ -47,8 +47,17 @@ public static class GateDocs
     public const string ArchitectureSignaturesBeginMarker = "<!-- architecture-signatures:begin (generated from RequireElectronicSignature and AddCadenceDurableSigTokenStore call sites by `pnpm cadence generate-cli-docs`; do not edit) -->";
     public const string ArchitectureSignaturesEndMarker = "<!-- architecture-signatures:end -->";
 
+    public const string ArchitectureSignedProseBeginMarker = "<!-- architecture-signed-prose:begin (generated from RequireElectronicSignature and AddCadenceDurableSigTokenStore call sites by `pnpm cadence generate-cli-docs`; do not edit) -->";
+    public const string ArchitectureSignedProseEndMarker = "<!-- architecture-signed-prose:end -->";
+
     public const string ArchitectureAuditHostsBeginMarker = "<!-- architecture-audit-hosts:begin (generated from GxPAuditInterceptor registrations by `pnpm cadence generate-cli-docs`; do not edit) -->";
     public const string ArchitectureAuditHostsEndMarker = "<!-- architecture-audit-hosts:end -->";
+
+    public const string ArchitectureAuditProseBeginMarker = "<!-- architecture-audit-prose:begin (generated from GxPAuditInterceptor registrations in CadenceDatabaseExtensions.cs by `pnpm cadence generate-cli-docs`; do not edit) -->";
+    public const string ArchitectureAuditProseEndMarker = "<!-- architecture-audit-prose:end -->";
+
+    public const string ClinicalCanvasTopologyProseBeginMarker = "<!-- clinical-canvas-topology-prose:begin (generated from ServiceTopology.cs, PersistenceModuleCatalog.cs, and RequireElectronicSignature call sites by `pnpm cadence generate-cli-docs`; do not edit) -->";
+    public const string ClinicalCanvasTopologyProseEndMarker = "<!-- clinical-canvas-topology-prose:end -->";
 
     public const string DatabaseModulesBeginMarker = "<!-- database-module-schemas:begin (generated from docs/schema/README.md and PersistenceModuleCatalog.cs by `pnpm cadence generate-cli-docs`; do not edit) -->";
     public const string DatabaseModulesEndMarker = "<!-- database-module-schemas:end -->";
@@ -78,7 +87,7 @@ public static class GateDocs
         new("econsent", "Cadence.Apps.Econsent", "`EconsentDbContext`", "Features on its own schema", "Module (#5378)"),
         new("knowledge", "Cadence.Apps.Knowledge", "`KnowledgeDbContext`", "Features on its own schema", "Module (#5378)"),
         new("designer", "Cadence.Apps.Designer", "none yet", "Scaffold", "Module (#5378)"),
-        new("tickets", "Cadence.Apps.Tickets", "`TicketsDbContext`", "Scaffold", "Module, built out in the host (#5377)"),
+        new("tickets", "Cadence.Apps.Tickets", "`TicketsDbContext`", "Features on its own schema", "Module, built out in the host (#5377)"),
         new("quality", "Cadence.Apps.Quality", "`QualityDbContext`", "Scaffold", "Module, built out in the host (#5376)"),
         new("org", "Cadence.Apps.Org", "`OrgDbContext`", "Scaffold", "Module over kernel Grants and Qualifications (#5375)"),
         new("eisf", "Cadence.Apps.Eisf", "`EisfDbContext`", "Scaffold", "Merges into etmf (#5371)"),
@@ -108,8 +117,11 @@ public static class GateDocs
         new("docs/LOCAL_DEV_ENVIRONMENT.md", "dev-service-ports", DevServicePortsBeginMarker, DevServicePortsEndMarker, RenderLocalDevPortsTable),
         new("ARCHITECTURE.md", "running-services", RunningServicesBeginMarker, RunningServicesEndMarker, RenderArchitectureServicesTable),
         new("ARCHITECTURE.md", "runtime-components", RuntimeComponentsBeginMarker, RuntimeComponentsEndMarker, RenderArchitectureRuntimeComponentsTable),
+        new("ARCHITECTURE.md", "architecture-signed-prose", ArchitectureSignedProseBeginMarker, ArchitectureSignedProseEndMarker, RenderArchitectureSignedProseRegion),
         new("ARCHITECTURE.md", "architecture-signatures", ArchitectureSignaturesBeginMarker, ArchitectureSignaturesEndMarker, RenderArchitectureSignaturesRegion),
+        new("ARCHITECTURE.md", "architecture-audit-prose", ArchitectureAuditProseBeginMarker, ArchitectureAuditProseEndMarker, RenderArchitectureAuditProseRegion),
         new("ARCHITECTURE.md", "architecture-audit-hosts", ArchitectureAuditHostsBeginMarker, ArchitectureAuditHostsEndMarker, RenderArchitectureAuditHostsRegion),
+        new("docs/ux/CLINICAL_CANVAS.md", "clinical-canvas-topology-prose", ClinicalCanvasTopologyProseBeginMarker, ClinicalCanvasTopologyProseEndMarker, RenderClinicalCanvasTopologyProseRegion),
         new("docs/OPERATIONAL_DATABASE.md", "database-module-schemas", DatabaseModulesBeginMarker, DatabaseModulesEndMarker, RenderOperationalDatabaseModulesTable),
         new("docs/SDLC/Signature_Token_Cryptographic_Contract.md", "signed-endpoints", SignedEndpointsBeginMarker, SignedEndpointsEndMarker, RenderSignatureContractEndpointsTable),
         new("docs/SDLC/Signature_Token_Cryptographic_Contract.md", "durable-sig-token-stores", DurableSigStoresBeginMarker, DurableSigStoresEndMarker, RenderSignatureContractStoresTable),
@@ -282,6 +294,27 @@ public static class GateDocs
         return RenderTable(["Component", "Path", "Notes"], rows);
     }
 
+    /// <summary>The <c>ARCHITECTURE.md</c> §4 prose bullet summarizing step-up single-use tokens across signed routes and durable stores.</summary>
+    public static string RenderArchitectureSignedProseRegion(string repoRoot)
+    {
+        var endpoints = CodeMetadataCatalog.GetSignedEndpoints(repoRoot);
+        var stores = CodeMetadataCatalog.GetDurableSigTokenStores(repoRoot);
+        string storeHosts = JoinOxfordList(
+            stores.Select(s => string.Equals(s.Host, "kernel", StringComparison.Ordinal)
+                ? $"`{s.Host}` via `{s.DbContext}`"
+                : $"`{s.Host}`").ToList());
+
+        return
+            "- Signing a regulated action needs a fresh re-authentication: the gateway re-checks the signer's\n" +
+            "  password with Keycloak and issues a 60-second `X-Sig-Token` bound to the user, resource and meaning\n" +
+            "  ([ADR-2259](docs/adr/2026-09-29-electronic-signature-step-up-re-authentication.md)). Multi-target actions such as\n" + // deid-ignore
+            "  delegation-log bulk sign-off also bind the token to the exact targets (`batch_id`). Each token signs once: every host\n" +
+            $"  that maps any of the `{endpoints.Count.ToString(CultureInfo.InvariantCulture)}` `RequireElectronicSignature` endpoints registers `AddCadenceDurableSigTokenStore<TContext>()`\n" +
+            $"  (`{stores.Count.ToString(CultureInfo.InvariantCulture)}` registrations across {storeHosts}, writing `consumed_signature_tokens` in its own schema) so single use holds across instances and restarts,\n" +
+            "  and a host that maps a signed route without a durable store refuses to start outside Development (#5434)\n" +
+            "  ([ADR-2515](docs/adr/2026-10-15-step-up-tokens-are-single-use-across-instances-and-restarts.md))."; // deid-ignore
+    }
+
     /// <summary>The <c>ARCHITECTURE.md</c> §4 electronic-signature routes and durable token-store summary.</summary>
     public static string RenderArchitectureSignaturesRegion(string repoRoot)
     {
@@ -301,6 +334,21 @@ public static class GateDocs
             endpointTable;
     }
 
+    /// <summary>The <c>ARCHITECTURE.md</c> §5 prose bullet describing default <c>GxPAuditInterceptor</c> registration and outbox flushing.</summary>
+    public static string RenderArchitectureAuditProseRegion(string repoRoot)
+    {
+        var hosts = CodeMetadataCatalog.GetAuditInterceptorHosts(repoRoot);
+        return
+            "- **Audit:** `AddCadencePostgresDbContext<TDbContext>` (`packages/database/src/CadenceDatabaseExtensions.cs`) registers the EF Core\n" +
+            $"  `GxPAuditInterceptor` (`packages/database/src/GxPAuditInterceptor.cs`) by default via `AddCadenceGxPAuditInterceptor` across all `{hosts.Count.ToString(CultureInfo.InvariantCulture)}` standalone\n" +
+            "  database-backed service hosts (listed below; `designer` is stateless), while the `kernel` host writes its own\n" +
+            "  command-pipeline audit chain (`kernel`). In `SavingChangesAsync`, `GxPAuditInterceptor` increments standalone\n" +
+            "  concurrency tokens, flushes pending `IStatefulAggregate` domain events into `TransactionalOutboxMessage` rows in the\n" +
+            "  same transaction when the context maps an outbox set, populates `CreatedAt`, `CreatedBy`, `ReasonForChange` and\n" +
+            "  `VersionIndex` (21 CFR Part 11), and attributes every audited write to a real user or a named `svc:` service account\n" +
+            "  ([ADR-2257](docs/adr/2026-09-29-attributable-audit-actors-and-named-service-accounts.md))."; // deid-ignore
+    }
+
     /// <summary>The <c>ARCHITECTURE.md</c> §5 <c>GxPAuditInterceptor</c> host registrations table.</summary>
     public static string RenderArchitectureAuditHostsRegion(string repoRoot)
     {
@@ -314,6 +362,50 @@ public static class GateDocs
                 $"`{h.Schema}`",
                 $"`{h.RelativeFilePath}`",
             }));
+    }
+
+    /// <summary>The <c>docs/ux/CLINICAL_CANVAS.md</c> §8 topology, module-schema, and electronic-signature prose summary.</summary>
+    public static string RenderClinicalCanvasTopologyProseRegion(string repoRoot)
+    {
+        var topology = CodeMetadataCatalog.GetTopology(repoRoot);
+        var dbModules = CodeMetadataCatalog.GetDatabaseModules(repoRoot);
+        var endpoints = CodeMetadataCatalog.GetSignedEndpoints(repoRoot);
+        var stores = CodeMetadataCatalog.GetDurableSigTokenStores(repoRoot);
+
+        int serviceCount = topology.Services.Count;
+        int productServiceCount = topology.Services.Count(s => !string.Equals(s.Directory, "kernel-api", StringComparison.Ordinal));
+        string[] kernelSchemas = dbModules
+            .Where(m => string.Equals(m.Host, "kernel", StringComparison.Ordinal))
+            .Select(m => m.Schema)
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(s => s switch
+            {
+                "kernel" => 0,
+                "intelligence" => 1,
+                "execution" => 2,
+                _ => 3,
+            })
+            .ThenBy(s => s, StringComparer.Ordinal)
+            .Select(s => $"`{s}`")
+            .ToArray();
+        if (kernelSchemas.Length == 0)
+        {
+            kernelSchemas = ["`kernel`", "`intelligence`", "`execution`"];
+        }
+
+        string kernelSchemasList = JoinOxfordList(kernelSchemas);
+        string signedHostList = JoinOxfordList(
+            stores.Select(s => $"`{s.Host}`").Distinct(StringComparer.Ordinal).OrderBy(h => h, StringComparer.Ordinal).ToList());
+
+        return
+            $"`apps/web` is a Vue 3 client backed by the `.NET 10` service topology (`{serviceCount.ToString(CultureInfo.InvariantCulture)}` services — `{productServiceCount.ToString(CultureInfo.InvariantCulture)}` product services and `apps/kernel-api` — behind `apps/gateway` on port `{topology.GatewayPort.ToString(CultureInfo.InvariantCulture)}`;\n" +
+            "epic #4833). Its API layer in `apps/web/src/api/` compiles against OpenAPI-generated TypeScript definitions\n" +
+            "(`apps/web/scripts/generate-api-types.js` -> `apps/web/src/api/generated/<contract>.ts`, enforced by `cadence check api-clients`)\n" +
+            "discovered automatically from every `docs/openapi/*_openapi.json` service and module contract (excluding the aggregated\n" +
+            "`cdisc_openapi.json` snapshot; [docs/web/API_MIGRATION.md](../web/API_MIGRATION.md)). On the backend,\n" +
+            $"`apps/kernel-api` composes `{kernelSchemas.Length.ToString(CultureInfo.InvariantCulture)}` EF Core module schemas ({kernelSchemasList}), and `{endpoints.Count.ToString(CultureInfo.InvariantCulture)}` mutating\n" +
+            $"routes across `{stores.Count.ToString(CultureInfo.InvariantCulture)}` hosts ({signedHostList}) enforce 21 CFR Part 11 electronic\n" +
+            "signatures via `.RequireElectronicSignature(...)` ([Signature Token Cryptographic Contract](../SDLC/Signature_Token_Cryptographic_Contract.md)).";
     }
 
     /// <summary>The <c>docs/OPERATIONAL_DATABASE.md</c> table synchronized with all 18 modules in <c>docs/schema/README.md</c> and <c>PersistenceModuleCatalog</c>.</summary>
@@ -553,6 +645,15 @@ public static class GateDocs
 
         sb.Append('\n');
     }
+
+    private static string JoinOxfordList(IReadOnlyList<string> items) =>
+        items.Count switch
+        {
+            0 => string.Empty,
+            1 => items[0],
+            2 => $"{items[0]} and {items[1]}",
+            _ => $"{string.Join(", ", items.Take(items.Count - 1))}, and {items[^1]}",
+        };
 
     private static string Escape(string cell) => cell.Replace("|", "\\|", StringComparison.Ordinal);
 }

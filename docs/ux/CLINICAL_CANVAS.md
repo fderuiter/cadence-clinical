@@ -2,7 +2,7 @@
 
 |                  |                                                                                                                                                                         |
 | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Status**       | Proposed. Direction for all new Cadence UI; normative for the kernel read APIs it names once their module specs land.                                                   |
+| **Status**       | Current. Direction for all new Cadence UI; normative for the kernel read APIs it names.                                                                                 |
 | **Scope**        | The primary interaction model of the Cadence web experience, and the kernel and API capabilities that model needs                                                       |
 | **Builds on**    | [Kernel specification v0.2](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) (cited below as `§n`), its [§15 roadmap](../kernel/CLINICAL_KERNEL_SPECIFICATION.md#15-roadmap) |
 | **Mockup**       | Clinical Canvas primary screen (artifact `YJJUUy1LaUz8mYRN4P9jDT`, clickable, ONC-401 sample data, light and dark)                                                      |
@@ -354,14 +354,19 @@ issue under epic #4719.
 
 ## 8. Relationship to the current web app
 
-`apps/web` is a Vue 3 client backed by the `.NET 10` service topology (`18` hosts behind `apps/gateway` on port `8000`;
+<!-- clinical-canvas-topology-prose:begin (generated from ServiceTopology.cs, PersistenceModuleCatalog.cs, and RequireElectronicSignature call sites by `pnpm cadence generate-cli-docs`; do not edit) -->
+
+`apps/web` is a Vue 3 client backed by the `.NET 10` service topology (`17` services — `16` product services and `apps/kernel-api` — behind `apps/gateway` on port `8000`;
 epic #4833). Its API layer in `apps/web/src/api/` compiles against OpenAPI-generated TypeScript definitions
 (`apps/web/scripts/generate-api-types.js` -> `apps/web/src/api/generated/<contract>.ts`, enforced by `cadence check api-clients`)
 discovered automatically from every `docs/openapi/*_openapi.json` service and module contract (excluding the aggregated
 `cdisc_openapi.json` snapshot; [docs/web/API_MIGRATION.md](../web/API_MIGRATION.md)). On the backend,
-`apps/kernel-api` composes three EF Core module schemas (`kernel`, `intelligence`, and `execution`), and `13` mutating
-routes across `econsent`, `execution`, `kernel`, `knowledge`, `safety`, and `tickets` enforce 21 CFR Part 11 electronic
+`apps/kernel-api` composes `3` EF Core module schemas (`kernel`, `intelligence`, and `execution`), and `34` mutating
+routes across `10` hosts (`ctms`, `econsent`, `execution`, `imaging`, `interop`, `kernel`, `knowledge`, `payments`, `safety`, and `tickets`) enforce 21 CFR Part 11 electronic
 signatures via `.RequireElectronicSignature(...)` ([Signature Token Cryptographic Contract](../SDLC/Signature_Token_Cryptographic_Contract.md)).
+
+<!-- clinical-canvas-topology-prose:end -->
+
 Screens still migrating off legacy contracts are tracked in [docs/web/API_MIGRATION.md](../web/API_MIGRATION.md); this
 document sets three constraints for every screen built or rebuilt:
 

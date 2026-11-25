@@ -40,6 +40,12 @@ public sealed class ArchitectureDriftValidatorServiceTests : IDisposable
     [InlineData("docs/OPERATIONAL_DATABASE.md", "| [kernel](schema/kernel.md)                   | `kernel` (`apps/kernel-api`) | `kernel`        | `KernelDbContext`          |", "| [kernel](schema/kernel.md)                   | `kernel` (`apps/kernel-api`) | `wrong_schema`  | `KernelDbContext`          |")]
     [InlineData("docs/SDLC/Signature_Token_Cryptographic_Contract.md", "`POST /api/v1/execution/forms/{formId}/signatures`", "`POST /api/v1/execution/forms/{formId}/mutated-signatures`")]
     [InlineData("docs/SDLC/Signature_Token_Cryptographic_Contract.md", "`execution.consumed_signature_tokens`", "`edc_wrong.consumed_signature_tokens`")]
+    [InlineData("ARCHITECTURE.md", "any of the `34` `RequireElectronicSignature` endpoints", "any of the `13` `RequireElectronicSignature` endpoints")]
+    [InlineData("ARCHITECTURE.md", "all `15` standalone", "all `4` standalone")]
+    [InlineData("ARCHITECTURE.md", "16 ASP.NET Core 10 product services and the kernel API host", "17 ASP.NET Core 10 product services and the kernel API host")]
+    [InlineData("README.md", "16 ASP.NET Core 10 product services and the kernel API host (`17` services)", "17 ASP.NET Core 10 product services and the kernel API host")]
+    [InlineData("docs/ux/CLINICAL_CANVAS.md", "| **Status**       | Current.", "| **Status**       | Proposed.")]
+    [InlineData("docs/ux/CLINICAL_CANVAS.md", "`34` mutating", "`13` mutating")]
     public void ValidateArchitectureDrift_WhenPortSchemaOrSignedRouteMutated_FailsClosed(
         string relativeDocPath,
         string originalFragment,
@@ -61,6 +67,9 @@ public sealed class ArchitectureDriftValidatorServiceTests : IDisposable
         CopyFile(realRoot, destRoot, "Cadence.sln");
         CopyFile(realRoot, destRoot, "docker/docker-compose.yml");
         CopyFile(realRoot, destRoot, "ARCHITECTURE.md");
+        CopyFile(realRoot, destRoot, "README.md");
+        CopyFile(realRoot, destRoot, "docs/DOCUMENTATION_INDEX.md");
+        CopyFile(realRoot, destRoot, "docs/ux/CLINICAL_CANVAS.md");
         CopyFile(realRoot, destRoot, "docs/OPERATIONAL_DATABASE.md");
         CopyFile(realRoot, destRoot, "docs/SDLC/Signature_Token_Cryptographic_Contract.md");
 

@@ -339,23 +339,25 @@ Validates the declarative GitHub Repository Rulesets in `.github/rulesets/*.json
 `version_tags.json`) against `.github/workflows/*.yml` and reconciles them to GitHub via `gh api`.
 
 ```bash
-pnpm cadence rulesets --dry-run                         # validate locally and preview planned gh api operations (paused-actions)
-pnpm cadence rulesets                                   # reconcile .github/rulesets/*.json using paused-actions profile
-pnpm cadence rulesets --profile active-actions          # reconcile full rulesets including status checks and merge queue
+pnpm cadence rulesets --dry-run                         # validate locally and preview planned gh api operations (active-actions)
+pnpm cadence rulesets --verify-live                     # verify live GitHub rulesets and GitHub Pages deployment match HEAD
+pnpm cadence rulesets                                   # reconcile .github/rulesets/*.json using active-actions profile
+pnpm cadence rulesets --profile paused-actions          # break-glass profile omitting status checks and merge queue while runners are paused
 pnpm cadence rulesets --repo fderuiter/cadence-clinical # target an explicit owner/repo
 ```
 
 | Option                                       | Description                                                                                                                                                                                                                   |
 | -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `--dry-run`                                  | Validates `CI Gate` upstream job coverage in `.github/workflows/ci.yml` (and `.github/rulesets/*.json` plus planned `gh api` operations for the selected profile when `.github/rulesets` is present) without mutating GitHub. |
+| `--verify-live`                              | Queries live GitHub Repository Rulesets and the `github-pages` deployment via read-only `gh api` calls, failing with exit `1` when remote rulesets or GitHub Pages lag behind local definitions or `HEAD`.                    |
 | `--repo <owner/repo>`                        | Target GitHub repository (`owner/repo`). Defaults to `GITHUB_REPOSITORY`, then `git remote get-url origin`.                                                                                                                   |
-| `--profile <paused-actions\|active-actions>` | Reconciliation profile. `paused-actions` (default while Actions runners are paused) omits `required_status_checks` and `merge_queue` from synced payloads; `active-actions` applies the full declarative ruleset payload.     |
+| `--profile <active-actions\|paused-actions>` | Reconciliation profile. `active-actions` (default) applies the full declarative ruleset payload including `required_status_checks` and `merge_queue`; `paused-actions` omits them when hosted Actions runners are paused.     |
 
 Before making any API request, `cadence rulesets` runs the `rulesets` quality gate (`RulesetService.Validate`, which also validates staged index blobs under `cadence check --pre-commit`): `.github/rulesets/` must contain `main.json`, `release_branches.json`, and `version_tags.json`; every branch ruleset must restrict any `bypass_actors` entries to repository admins (`RepositoryRole` `5`) with `bypass_mode: "pull_request"` (`"always"` bypasses are rejected on branches), while `version_tags.json` requires `creation`, `required_signatures`, `deletion`, and `non_fast_forward` on `refs/tags/v*` with `bypass_actors` pinned to release admins (`RepositoryRole` `5`, `bypass_mode: "always"`); `main.json` must configure a `merge_queue` rule (`SQUASH`, `ALLGREEN`); every branch ruleset must set `strict_required_status_checks_policy: true`, pin required status checks to GitHub Actions (`integration_id: 15368`), require `CI Gate` and `Check for Merge Conflicts`, and match active `pull_request` and `merge_group` workflow jobs (`CI Gate` in `.github/workflows/ci.yml` must use `if: always()` and evaluate every pull-request validation job, `.github/workflows/conflict-check.yml` must run on `opened`, `synchronize`, `reopened`, and `edited` plus `merge_group` and fail closed via `git merge-tree --write-tree`, and no workflow may run `automerge` or `gh pr merge` with `GITHUB_TOKEN`). When `.github/rulesets` is absent, `cadence rulesets --dry-run` still validates `CI Gate` and conflict-check workflow coverage and exits `0` when valid (or `1` if workflow validation fails), whereas `cadence check rulesets` and non-dry-run reconciliation both fail closed (`1`) without `.github/rulesets/*.json`.
 
-Without `--dry-run`, it fetches `gh api --paginate repos/<owner>/<repo>/rulesets?per_page=100`, updates existing
+With `--verify-live`, it performs read-only `gh api` probes against `repos/<owner>/<repo>/rulesets`, each live ruleset endpoint (`repos/<owner>/<repo>/rulesets/<id>`), `repos/<owner>/<repo>/pages`, and `repos/<owner>/<repo>/deployments?environment=github-pages&per_page=1`, exiting `1` whenever any remote ruleset rule/check/queue parameter differs from the profile-projected `.github/rulesets/*.json` definition or the deployed GitHub Pages commit lags `HEAD`. Without `--dry-run` or `--verify-live`, it fetches `gh api --paginate repos/<owner>/<repo>/rulesets?per_page=100`, updates existing
 rulesets by `name` (`PUT repos/<owner>/<repo>/rulesets/<id> --input <file>`), and creates missing ones
-(`POST repos/<owner>/<repo>/rulesets --input <file>`). Requires `gh` authenticated with `Administration: write` on the
+(`POST repos/<owner>/<repo>/rulesets --input <file>`). Requires `gh` authenticated with `Administration: write` (or `Administration: read` for `--verify-live`) on the
 target repository, and exits `1` whenever validation fails or any `gh api` call returns a non-zero exit code or invalid
 JSON.
 
@@ -368,7 +370,7 @@ Starts the .NET Aspire AppHost: `dotnet run --project apps/apphost/src/Cadence.A
 Resolves the repository root from any working directory (`Cadence.sln`) and runs the self-healing pipeline in order:
 
 1. `dotnet format whitespace` and `dotnet format style` in the repository root (scoped to changed C# files by default; full `Cadence.sln` with `--full`).
-2. Synthesized documentation marker regions (`GateDocs.Write`) across `docs/cli.md`, `docs/CI.md`, `docs/LOCAL_DEV_ENVIRONMENT.md`, `ARCHITECTURE.md`, `docs/OPERATIONAL_DATABASE.md`, and `docs/SDLC/Signature_Token_Cryptographic_Contract.md`, followed by root-wide Prettier auto-formatting across tracked JS, TS, Vue, CSS, JSON, Markdown and YAML files respecting `.prettierignore`.
+2. Synthesized documentation marker regions (`GateDocs.Write`) across `docs/cli.md`, `docs/CI.md`, `docs/LOCAL_DEV_ENVIRONMENT.md`, `ARCHITECTURE.md`, `docs/ux/CLINICAL_CANVAS.md`, `docs/OPERATIONAL_DATABASE.md`, and `docs/SDLC/Signature_Token_Cryptographic_Contract.md`, followed by root-wide Prettier auto-formatting across tracked JS, TS, Vue, CSS, JSON, Markdown and YAML files respecting `.prettierignore`.
 3. `baselines/secrets/` shard normalization (`SecretsBaselineCleanerService.CleanSecretsBaseline`) and upper-case `@req:PRD-...` tag sanitization in `docs/**/*.md` (excluding `docs/SDLC/runs/`).
 4. ADR index synchronization (`docs/adr/index.md`) and schema validation (`AdrValidatorService.ValidateAdrs` without git diff), documentation index sync (`docs/DOCUMENTATION_INDEX.md`), and demo study manifest sync (`packages/demo-fixtures`).
 5. Diff-based EF Core schema documentation (`docs/schema/`): runs `generate-schema-doc` when EF Core entities, configurations, or migrations changed (or with `--full`), skipping otherwise.

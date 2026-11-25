@@ -19,6 +19,12 @@ public static partial class ArchitectureDriftValidatorService
     [GeneratedRegex(@"\b(?:5173|7687|8017|8019)\b")]
     private static partial Regex RetiredPortRegex();
 
+    [GeneratedRegex(@"^\|\s*\[[^\]]+\]\((?<path>[^)#\s]+)(?:#[^)]*)?\)\s*\|\s*(?<status>[^|]+?)\s*\|", RegexOptions.Multiline)]
+    private static partial Regex DocIndexRowRegex();
+
+    [GeneratedRegex(@"^\|\s*\*\*Status\*\*\s*\|\s*(?<status>[^|]+?)\s*\|", RegexOptions.Multiline)]
+    private static partial Regex DocStatusHeaderRegex();
+
     public static int ValidateArchitectureDrift(string? repoRoot = null)
     {
         repoRoot ??= FindRepoRoot();
@@ -26,9 +32,13 @@ public static partial class ArchitectureDriftValidatorService
 
         string composePath = Path.Combine(repoRoot, "docker", "docker-compose.yml");
         string archPath = Path.Combine(repoRoot, "ARCHITECTURE.md");
+        string readmePath = Path.Combine(repoRoot, "README.md");
+        string canvasPath = Path.Combine(repoRoot, "docs", "ux", "CLINICAL_CANVAS.md");
+        string docIndexPath = Path.Combine(repoRoot, "docs", "DOCUMENTATION_INDEX.md");
         string opDbPath = Path.Combine(repoRoot, "docs", "OPERATIONAL_DATABASE.md");
         string sigContractPath = Path.Combine(repoRoot, "docs", "SDLC", "Signature_Token_Cryptographic_Contract.md");
         bool hasTopology = File.Exists(Path.Combine(repoRoot, "packages", "topology", "src", "ServiceTopology.cs"));
+        bool hasGitCheckout = Directory.Exists(Path.Combine(repoRoot, ".git"));
 
         if (!File.Exists(composePath))
         {
@@ -83,6 +93,16 @@ public static partial class ArchitectureDriftValidatorService
             hasError |= !ValidateSignatureContractDoc(repoRoot, sigContractPath);
         }
 
+        if (hasGitCheckout || File.Exists(readmePath))
+        {
+            hasError |= !ValidateRootReadme(repoRoot, readmePath);
+        }
+
+        if (hasGitCheckout || File.Exists(canvasPath) || File.Exists(docIndexPath))
+        {
+            hasError |= !ValidateClinicalCanvasAndIndexStatus(repoRoot, canvasPath, docIndexPath);
+        }
+
         if (hasError)
         {
             Console.WriteLine("❌ Architecture drift validation failed.");
@@ -114,12 +134,42 @@ public static partial class ArchitectureDriftValidatorService
             ok = false;
         }
 
+        int totalServices = topology.Services.Count;
+        int productServices = topology.Services.Count(s => !string.Equals(s.Directory, "kernel-api", StringComparison.Ordinal));
+        string expectedRunningSummary = $"{productServices.ToString(CultureInfo.InvariantCulture)} ASP.NET Core 10 product services and the kernel API host — `{totalServices.ToString(CultureInfo.InvariantCulture)}` services behind `apps/gateway`";
+        if (!archText.Contains(expectedRunningSummary, StringComparison.Ordinal))
+        {
+            Console.WriteLine($"[ERROR] ARCHITECTURE.md opening prose must state '{expectedRunningSummary}'.");
+            ok = false;
+        }
+
+        string expectedModuleMigrationCount = $"Each of the {productServices.ToString(CultureInfo.InvariantCulture)} product services";
+        if (!archText.Contains(expectedModuleMigrationCount, StringComparison.Ordinal))
+        {
+            Console.WriteLine($"[ERROR] ARCHITECTURE.md §2 ADR-2610 decision row must state '{expectedModuleMigrationCount}'.");
+            ok = false;
+        }
+
         string[] lines = archText.Split('\n');
         CheckArchitectureServiceRow(lines, "gateway", "apps/gateway/README.md", topology.GatewayPort, [], ref ok);
 
         foreach (var svc in topology.Services)
         {
             CheckArchitectureServiceRow(lines, svc.Directory, $"apps/{svc.Directory}/README.md", svc.Port, svc.RoutePrefixes, ref ok);
+        }
+
+        if (File.Exists(Path.Combine(repoRoot, "apps", "tickets", "src", "Endpoints", "TicketEndpoints.cs")))
+        {
+            string? ticketsRow = lines.FirstOrDefault(l => l.TrimStart().StartsWith('|') && l.Contains("(apps/tickets/README.md)", StringComparison.Ordinal));
+            if (ticketsRow is not null)
+            {
+                string[] ticketsCells = ticketsRow.Split('|');
+                if (ticketsCells.Length >= 7 && string.Equals(ticketsCells[6].Trim(), "Scaffold", StringComparison.OrdinalIgnoreCase))
+                {
+                    Console.WriteLine("[ERROR] ARCHITECTURE.md §3 classifies 'tickets' as 'Scaffold' despite active mapped routes in TicketEndpoints.cs.");
+                    ok = false;
+                }
+            }
         }
 
         if (!HasTableRowContaining(lines, "`apps/web`", $"port {topology.WebPort.ToString(CultureInfo.InvariantCulture)}"))
@@ -154,6 +204,15 @@ public static partial class ArchitectureDriftValidatorService
 
         ok &= ValidateSignedEndpointRows("ARCHITECTURE.md", lines, signedEndpoints);
 
+        string expectedSignedProse = $"any of the `{signedEndpoints.Count.ToString(CultureInfo.InvariantCulture)}` `RequireElectronicSignature` endpoints registers `AddCadenceDurableSigTokenStore<TContext>()`";
+        string expectedStoresProse = $"(`{durableStores.Count.ToString(CultureInfo.InvariantCulture)}` registrations across";
+        if (!archText.Contains(expectedSignedProse, StringComparison.Ordinal) ||
+            !archText.Contains(expectedStoresProse, StringComparison.Ordinal))
+        {
+            Console.WriteLine($"[ERROR] ARCHITECTURE.md §4 prose must state '{expectedSignedProse} {expectedStoresProse} ...)'.");
+            ok = false;
+        }
+
         foreach (var store in durableStores)
         {
             if (!archText.Contains($"`{store.Host}` (`{store.DbContext}` → `{store.Table}`)", StringComparison.Ordinal))
@@ -161,6 +220,16 @@ public static partial class ArchitectureDriftValidatorService
                 Console.WriteLine($"[ERROR] ARCHITECTURE.md omits durable signature token store '{store.Host} ({store.DbContext} -> {store.Table})'.");
                 ok = false;
             }
+        }
+
+        string expectedAuditProse = $"all `{auditHosts.Count.ToString(CultureInfo.InvariantCulture)}` standalone";
+        if (!archText.Contains(expectedAuditProse, StringComparison.Ordinal) ||
+            !archText.Contains("`AddCadencePostgresDbContext<TDbContext>`", StringComparison.Ordinal) ||
+            !archText.Contains("`TransactionalOutboxMessage`", StringComparison.Ordinal) ||
+            archText.Contains("Four standalone", StringComparison.OrdinalIgnoreCase))
+        {
+            Console.WriteLine($"[ERROR] ARCHITECTURE.md §5 prose must describe default GxPAuditInterceptor registration across '{expectedAuditProse}' database-backed service hosts and 'TransactionalOutboxMessage' outbox flushing.");
+            ok = false;
         }
 
         ok &= ValidateAuditHostRows("ARCHITECTURE.md", lines, auditHosts);
@@ -326,6 +395,141 @@ public static partial class ArchitectureDriftValidatorService
         ok &= ValidateDurableStoreRows("docs/SDLC/Signature_Token_Cryptographic_Contract.md", lines, expectedStores);
         return ok;
     }
+
+    private static bool ValidateRootReadme(string repoRoot, string readmePath)
+    {
+        if (!File.Exists(readmePath))
+        {
+            Console.WriteLine($"[ERROR] README.md not found at {readmePath}");
+            return false;
+        }
+
+        var topology = CodeMetadataCatalog.GetTopology(repoRoot);
+        int totalServices = topology.Services.Count;
+        int productServices = topology.Services.Count(s => !string.Equals(s.Directory, "kernel-api", StringComparison.Ordinal));
+        string readmeText = File.ReadAllText(readmePath);
+        string expectedFragment = $"{productServices.ToString(CultureInfo.InvariantCulture)} ASP.NET Core 10 product services and the kernel API host (`{totalServices.ToString(CultureInfo.InvariantCulture)}` services)";
+        if (!readmeText.Contains(expectedFragment, StringComparison.Ordinal))
+        {
+            Console.WriteLine($"[ERROR] README.md service count drift: expected '{expectedFragment}' matching ServiceTopology.cs.");
+            return false;
+        }
+
+        return true;
+    }
+
+    private static bool ValidateClinicalCanvasAndIndexStatus(string repoRoot, string canvasPath, string docIndexPath)
+    {
+        bool ok = true;
+        if (!File.Exists(canvasPath))
+        {
+            Console.WriteLine($"[ERROR] docs/ux/CLINICAL_CANVAS.md not found at {canvasPath}");
+            return false;
+        }
+
+        string canvasText = File.ReadAllText(canvasPath);
+        var topology = CodeMetadataCatalog.GetTopology(repoRoot);
+        var dbModules = CodeMetadataCatalog.GetDatabaseModules(repoRoot);
+        var signedEndpoints = CodeMetadataCatalog.GetSignedEndpoints(repoRoot);
+        var durableStores = CodeMetadataCatalog.GetDurableSigTokenStores(repoRoot);
+
+        int totalServices = topology.Services.Count;
+        int productServices = topology.Services.Count(s => !string.Equals(s.Directory, "kernel-api", StringComparison.Ordinal));
+        int kernelSchemaCount = dbModules
+            .Where(m => string.Equals(m.Host, "kernel", StringComparison.Ordinal))
+            .Select(m => m.Schema)
+            .Distinct(StringComparer.Ordinal)
+            .Count();
+        if (kernelSchemaCount == 0)
+        {
+            kernelSchemaCount = 3;
+        }
+
+        string expectedTopologyProse = $"`{totalServices.ToString(CultureInfo.InvariantCulture)}` services — `{productServices.ToString(CultureInfo.InvariantCulture)}` product services and `apps/kernel-api` — behind `apps/gateway` on port `{topology.GatewayPort.ToString(CultureInfo.InvariantCulture)}`";
+        string expectedSchemaProse = $"`apps/kernel-api` composes `{kernelSchemaCount.ToString(CultureInfo.InvariantCulture)}` EF Core module schemas";
+        string expectedSignedProse = $"`{signedEndpoints.Count.ToString(CultureInfo.InvariantCulture)}` mutating\nroutes across `{durableStores.Count.ToString(CultureInfo.InvariantCulture)}` hosts";
+        string normalizedCanvas = canvasText.ReplaceLineEndings("\n");
+        if (!normalizedCanvas.Contains(expectedTopologyProse, StringComparison.Ordinal) ||
+            !normalizedCanvas.Contains(expectedSchemaProse, StringComparison.Ordinal) ||
+            !normalizedCanvas.Contains(expectedSignedProse, StringComparison.Ordinal))
+        {
+            Console.WriteLine("[ERROR] docs/ux/CLINICAL_CANVAS.md §8 prose counts disagree with ServiceTopology, PersistenceModuleCatalog, or RequireElectronicSignature metadata.");
+            ok = false;
+        }
+
+        string expectedCanvasStatus = "Current";
+        if (File.Exists(docIndexPath))
+        {
+            string indexText = File.ReadAllText(docIndexPath);
+            var indexStatuses = new Dictionary<string, string>(StringComparer.Ordinal);
+            foreach (Match m in DocIndexRowRegex().Matches(indexText))
+            {
+                string relDoc = m.Groups["path"].Value.Trim();
+                string status = m.Groups["status"].Value.Trim();
+                if (!relDoc.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
+                    !relDoc.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+                {
+                    indexStatuses[relDoc] = status;
+                }
+            }
+
+            if (indexStatuses.TryGetValue("ux/CLINICAL_CANVAS.md", out string? indexedCanvasStatus) &&
+                !string.IsNullOrWhiteSpace(indexedCanvasStatus))
+            {
+                expectedCanvasStatus = indexedCanvasStatus;
+            }
+
+            foreach ((string relDoc, string indexedStatus) in indexStatuses)
+            {
+                if (!string.Equals(indexedStatus, "Current", StringComparison.Ordinal) &&
+                    !string.Equals(indexedStatus, "Historical", StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                string fullDocPath = Path.GetFullPath(Path.Combine(repoRoot, "docs", relDoc.Replace('/', Path.DirectorySeparatorChar)));
+                if (!File.Exists(fullDocPath))
+                {
+                    continue;
+                }
+
+                var headerMatch = DocStatusHeaderRegex().Match(File.ReadAllText(fullDocPath));
+                if (!headerMatch.Success)
+                {
+                    continue;
+                }
+
+                string headerCell = headerMatch.Groups["status"].Value.Trim();
+                if (StartsWithLifecycleKeyword(headerCell) && !StartsWithWord(headerCell, indexedStatus))
+                {
+                    Console.WriteLine($"[ERROR] docs/{relDoc} Status header ('{headerCell}') disagrees with docs/DOCUMENTATION_INDEX.md ('{indexedStatus}').");
+                    ok = false;
+                }
+            }
+        }
+
+        var canvasStatusMatch = DocStatusHeaderRegex().Match(canvasText);
+        if (!canvasStatusMatch.Success || !StartsWithWord(canvasStatusMatch.Groups["status"].Value.Trim(), expectedCanvasStatus))
+        {
+            string actual = canvasStatusMatch.Success ? canvasStatusMatch.Groups["status"].Value.Trim() : "<missing>";
+            Console.WriteLine($"[ERROR] docs/ux/CLINICAL_CANVAS.md Status header must start with '{expectedCanvasStatus}' (found '{actual}').");
+            ok = false;
+        }
+
+        return ok;
+    }
+
+    private static bool StartsWithLifecycleKeyword(string text) =>
+        StartsWithWord(text, "Current") ||
+        StartsWithWord(text, "Proposed") ||
+        StartsWithWord(text, "Draft") ||
+        StartsWithWord(text, "Historical") ||
+        StartsWithWord(text, "Deprecated") ||
+        StartsWithWord(text, "Superseded");
+
+    private static bool StartsWithWord(string text, string word) =>
+        text.StartsWith(word, StringComparison.Ordinal) &&
+        (text.Length == word.Length || !char.IsLetterOrDigit(text[word.Length]));
 
     private static bool ValidateSignedEndpointRows(
         string docLabel,

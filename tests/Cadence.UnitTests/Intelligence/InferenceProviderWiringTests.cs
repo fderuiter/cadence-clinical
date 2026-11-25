@@ -77,6 +77,50 @@ public sealed class InferenceProviderWiringTests
         build.Should().Throw<InvalidOperationException>().WithMessage("*inside the deployment*models.example.com*");
     }
 
+    /// <summary>
+    /// Blank provider subsections exported from <c>.env.example</c> are skipped so local hosts start cleanly, while a
+    /// partially populated subsection still fails closed at start.
+    /// </summary>
+    [Fact]
+    public async Task BlankProviderSubsections_AreSkipped_WhilePartialSubsectionsStillFailClosed()
+    {
+        var blankConfig = new Dictionary<string, string?>
+        {
+            ["Intelligence:Inference:Providers:AnthropicAws:Region"] = "",
+            ["Intelligence:Inference:Providers:AnthropicAws:WorkspaceId"] = "   ",
+            ["Intelligence:Inference:Providers:Bedrock:Region"] = "",
+            ["Intelligence:Inference:Providers:Vertex:ProjectId"] = "",
+            ["Intelligence:Inference:Providers:Vertex:Region"] = "",
+            ["Intelligence:Inference:Providers:Foundry:Resource"] = "",
+            ["Intelligence:Inference:Providers:Foundry:ApiKey"] = "",
+            ["Intelligence:Inference:Providers:OpenAiCompatible:Endpoint"] = "",
+            ["Intelligence:Inference:Providers:OpenAiCompatible:ApiKey"] = "",
+        };
+
+        var services = new ServiceCollection();
+        services.AddSingleton<IClock>(new FakeClock());
+        services.AddSingleton<ITenantResidencyReader>(new StubResidencies());
+        services.AddSingleton<ITenantInferencePolicies>(_policies);
+        services.AddIntelligenceInference(
+            new ConfigurationBuilder().AddInMemoryCollection(blankConfig).Build(),
+            new HostingEnvironment { EnvironmentName = Environments.Development });
+
+        using var provider = services.BuildServiceProvider();
+        provider.GetServices<IInferenceProvider>().Should().BeEmpty();
+        foreach (var hosted in provider.GetServices<IHostedService>())
+        {
+            await hosted.StartAsync(TestContext.Current.CancellationToken);
+        }
+
+        var partialServices = Services(new()
+        {
+            ["Intelligence:Inference:Providers:AnthropicAws:Region"] = "eu-west-1",
+            ["Intelligence:Inference:Providers:AnthropicAws:WorkspaceId"] = "",
+        });
+        var buildPartial = () => partialServices.GetServices<IInferenceProvider>().ToList();
+        buildPartial.Should().Throw<InvalidOperationException>().WithMessage("*AnthropicAws:WorkspaceId is required*");
+    }
+
     /// <summary>A global Vertex endpoint cannot claim a residency.</summary>
     [Fact]
     public void GlobalVertexEndpoint_CannotDeclareAResidency()

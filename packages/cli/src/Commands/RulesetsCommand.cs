@@ -25,18 +25,31 @@ public static class RulesetsCommand
         repo.Validators.Add(RejectOptionLikeValue);
         var profile = new Option<string>("--profile")
         {
-            Description = $"Reconciliation profile: '{RulesetService.PausedActionsProfile}' (default while Actions is paused; omits status checks and merge_queue) or '{RulesetService.ActiveActionsProfile}' (full declarative rulesets)",
-            DefaultValueFactory = _ => RulesetService.PausedActionsProfile,
+            Description = $"Reconciliation profile: '{RulesetService.ActiveActionsProfile}' (default; full declarative rulesets including status checks and merge_queue) or '{RulesetService.PausedActionsProfile}' (omits status checks and merge_queue while hosted Actions runners are paused)",
+            DefaultValueFactory = _ => RulesetService.ActiveActionsProfile,
         };
         profile.Validators.Add(ValidateProfileOption);
+        var verifyLive = new Option<bool>("--verify-live")
+        {
+            Description = "Query live GitHub Repository Rulesets and GitHub Pages deployment status via gh api and exit non-zero on drift without modifying GitHub",
+        };
 
         command.Options.Add(dryRun);
         command.Options.Add(repo);
         command.Options.Add(profile);
+        command.Options.Add(verifyLive);
+        command.Validators.Add(result =>
+        {
+            if (result.GetValue(dryRun) && result.GetValue(verifyLive))
+            {
+                result.AddError("Options '--dry-run' and '--verify-live' cannot be used together.");
+            }
+        });
         command.SetAction(result => RulesetService.Sync(
             dryRun: result.GetValue(dryRun),
             repoOverride: result.GetValue(repo),
-            profile: result.GetValue(profile) ?? RulesetService.PausedActionsProfile));
+            profile: result.GetValue(profile) ?? RulesetService.ActiveActionsProfile,
+            verifyLive: result.GetValue(verifyLive)));
     }
 
     private static void RejectOptionLikeValue(OptionResult optionResult)

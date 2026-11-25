@@ -48,6 +48,8 @@ Regulated history is kept: `TmfDocumentQcTransition` and `TmfDocumentExpirationA
 
 ```bash
 export GATEWAY_SECRET="<at least 32 characters>"
+export Storage__Provider="filesystem"
+export Storage__RootPath="/tmp/cadence-etmf-storage"
 export ConnectionStrings__cadence="Host=localhost;Port=5432;Database=cadence;Username=cadence;Password=<password>"
 dotnet run --project apps/etmf/src/Cadence.Apps.Etmf.csproj
 ```

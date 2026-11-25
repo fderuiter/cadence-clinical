@@ -58,6 +58,26 @@ public static partial class EnvVarExtractorService
         "NO_COLOR",
     };
 
+    private static readonly string[] RequiredBase6432StartupKeys =
+    [
+        "DemographicsEncryption__KeyBase64",
+        "RANDOMIZATION_ALLOCATION_KEY",
+        "CGT_BARCODE_HMAC_KEY",
+        "FIELD_ENCRYPTION_KEY",
+        "FIELD_LOOKUP_HASH_KEY",
+        "CADENCE_SCE_SIGNING_KEY",
+        "CADENCE_IMAGING_DEID_SIGNING_KEY",
+        "CADENCE_IMAGING_DEID_PSEUDONYMIZATION_KEY",
+        "CADENCE_BIOMETRIC_LIVENESS_KEY",
+    ];
+
+    private static readonly (string KeyA, string KeyB)[] DistinctStartupKeyPairs =
+    [
+        ("FIELD_ENCRYPTION_KEY", "FIELD_LOOKUP_HASH_KEY"),
+        ("CADENCE_IMAGING_DEID_SIGNING_KEY", "CADENCE_IMAGING_DEID_PSEUDONYMIZATION_KEY"),
+        ("RANDOMIZATION_ALLOCATION_KEY", "CGT_BARCODE_HMAC_KEY"),
+    ];
+
     public static int ExtractAndValidateEnvVars(bool checkOnly = true, string? repoRoot = null)
     {
         repoRoot ??= FindRepoRoot();
@@ -191,6 +211,11 @@ public static partial class EnvVarExtractorService
                 Console.WriteLine($"[ERROR] Documentation file not found at {envDocPath}");
                 hasError = true;
             }
+
+            if (File.Exists(Path.Combine(repoRoot, "packages", "topology", "src", "ServiceTopology.cs")))
+            {
+                hasError |= !ValidateStartupKeysInEnvFile(envExamplePath);
+            }
         }
 
         if (hasError)
@@ -269,22 +294,188 @@ public static partial class EnvVarExtractorService
 
     public static HashSet<string> ExtractVarsFromEnvFile(string filePath)
     {
-        var vars = new HashSet<string>(StringComparer.Ordinal);
+        return new HashSet<string>(ExtractKeyValuesFromEnvFile(filePath).Keys, StringComparer.Ordinal);
+    }
+
+    public static Dictionary<string, string> ExtractKeyValuesFromEnvFile(string filePath)
+    {
+        var kvps = new Dictionary<string, string>(StringComparer.Ordinal);
         foreach (var line in File.ReadLines(filePath))
         {
             string trimmed = line.Trim();
             if (string.IsNullOrEmpty(trimmed) || trimmed.StartsWith('#')) continue;
 
-            if (trimmed.Contains('=', StringComparison.Ordinal))
+            int eq = trimmed.IndexOf('=', StringComparison.Ordinal);
+            if (eq <= 0)
             {
-                string key = trimmed.Split('=', 2)[0].Trim();
-                if (!string.IsNullOrEmpty(key))
-                {
-                    vars.Add(key);
-                }
+                continue;
+            }
+
+            string key = trimmed[..eq].Trim();
+            if (string.IsNullOrEmpty(key))
+            {
+                continue;
+            }
+
+            string rawValue = StripEnvInlineCommentAndQuotes(trimmed[(eq + 1)..]);
+            kvps[key] = rawValue;
+        }
+        return kvps;
+    }
+
+    private static string StripEnvInlineCommentAndQuotes(string raw)
+    {
+        string s = raw.Trim();
+        if (s.Length >= 2 && ((s[0] == '"' && s.Contains('"', StringComparison.Ordinal)) || (s[0] == '\'' && s.Contains('\'', StringComparison.Ordinal))))
+        {
+            char quote = s[0];
+            int closing = s.IndexOf(quote, 1);
+            if (closing >= 1)
+            {
+                return s[1..closing];
             }
         }
-        return vars;
+
+        int commentIdx = s.IndexOf(" #", StringComparison.Ordinal);
+        if (commentIdx >= 0)
+        {
+            s = s[..commentIdx].TrimEnd();
+        }
+        else if (s.StartsWith('#'))
+        {
+            return string.Empty;
+        }
+
+        return s;
+    }
+
+    private static bool ValidateShellExportQuoting(string envExamplePath)
+    {
+        bool ok = true;
+        foreach (string line in File.ReadLines(envExamplePath))
+        {
+            string trimmed = line.Trim();
+            if (string.IsNullOrEmpty(trimmed) || trimmed.StartsWith('#'))
+            {
+                continue;
+            }
+
+            int eq = trimmed.IndexOf('=', StringComparison.Ordinal);
+            if (eq <= 0)
+            {
+                continue;
+            }
+
+            string key = trimmed[..eq].Trim();
+            string rawAfterEq = trimmed[(eq + 1)..].Trim();
+            if (rawAfterEq.Length == 0 || rawAfterEq.StartsWith('#'))
+            {
+                continue;
+            }
+
+            if (rawAfterEq[0] is '"' or '\'')
+            {
+                char quote = rawAfterEq[0];
+                int closing = rawAfterEq.IndexOf(quote, 1);
+                if (closing < 1)
+                {
+                    Console.WriteLine($"[ERROR] .env.example key '{key}' has an unterminated {quote} quote.");
+                    ok = false;
+                }
+
+                continue;
+            }
+
+            int commentIdx = rawAfterEq.IndexOf(" #", StringComparison.Ordinal);
+            string unquotedValue = commentIdx >= 0 ? rawAfterEq[..commentIdx].TrimEnd() : rawAfterEq;
+            if (unquotedValue.IndexOfAny([';', ' ', '\t']) >= 0)
+            {
+                Console.WriteLine($"[ERROR] .env.example key '{key}' must quote its value so 'set -a; . ./.env; set +a' preserves semicolons and spaces.");
+                ok = false;
+            }
+        }
+
+        return ok;
+    }
+
+    public static bool ValidateStartupKeysInEnvFile(string envExamplePath)
+    {
+        var values = ExtractKeyValuesFromEnvFile(envExamplePath);
+        bool ok = ValidateShellExportQuoting(envExamplePath);
+
+        if (!values.TryGetValue("GATEWAY_SECRET", out string? gatewaySecret) || gatewaySecret.Trim().Length < 32)
+        {
+            Console.WriteLine("[ERROR] .env.example must define GATEWAY_SECRET with at least 32 characters.");
+            ok = false;
+        }
+
+        if (!values.TryGetValue("OIDC_AUTHORITY", out string? oidcAuthority) ||
+            !Uri.TryCreate(oidcAuthority, UriKind.Absolute, out Uri? oidcUri) ||
+            (oidcUri.Scheme != Uri.UriSchemeHttp && oidcUri.Scheme != Uri.UriSchemeHttps))
+        {
+            Console.WriteLine("[ERROR] .env.example must define OIDC_AUTHORITY as an absolute http(s) URL.");
+            ok = false;
+        }
+
+        if (!values.TryGetValue("AUDIT_LOG_SECRET_KEY", out string? auditSecret) || string.IsNullOrWhiteSpace(auditSecret))
+        {
+            Console.WriteLine("[ERROR] .env.example must define a non-empty AUDIT_LOG_SECRET_KEY.");
+            ok = false;
+        }
+
+        bool hasConn = values.TryGetValue("ConnectionStrings__cadence", out string? cadenceConn) && !string.IsNullOrWhiteSpace(cadenceConn);
+        bool hasLegacyConn = values.TryGetValue("POSTGRES_CONNECTION_STRING", out string? legacyConn) && !string.IsNullOrWhiteSpace(legacyConn);
+        if (!hasConn || !hasLegacyConn)
+        {
+            Console.WriteLine("[ERROR] .env.example must define non-empty ConnectionStrings__cadence and POSTGRES_CONNECTION_STRING values.");
+            ok = false;
+        }
+
+        if (!values.TryGetValue("Storage__Provider", out string? storageProvider) ||
+            (storageProvider is not ("filesystem" or "s3" or "minio" or "memory")))
+        {
+            Console.WriteLine("[ERROR] .env.example must define Storage__Provider as 'filesystem', 's3', 'minio', or 'memory'.");
+            ok = false;
+        }
+        else if (string.Equals(storageProvider, "filesystem", StringComparison.Ordinal) &&
+                 (!values.TryGetValue("Storage__RootPath", out string? rootPath) ||
+                  string.IsNullOrWhiteSpace(rootPath) ||
+                  !Path.IsPathRooted(rootPath)))
+        {
+            Console.WriteLine("[ERROR] .env.example must define an absolute Storage__RootPath when Storage__Provider=filesystem.");
+            ok = false;
+        }
+
+        Span<byte> buffer = stackalloc byte[64];
+        foreach (string key in RequiredBase6432StartupKeys)
+        {
+            if (!values.TryGetValue(key, out string? b64) || string.IsNullOrWhiteSpace(b64))
+            {
+                Console.WriteLine($"[ERROR] .env.example startup sentinel key '{key}' is missing or blank.");
+                ok = false;
+                continue;
+            }
+
+            if (!Convert.TryFromBase64String(b64, buffer, out int bytesWritten) || bytesWritten != 32)
+            {
+                Console.WriteLine($"[ERROR] .env.example startup sentinel key '{key}' must decode to exactly 32 Base64 bytes.");
+                ok = false;
+            }
+        }
+
+        foreach ((string keyA, string keyB) in DistinctStartupKeyPairs)
+        {
+            if (values.TryGetValue(keyA, out string? valA) &&
+                values.TryGetValue(keyB, out string? valB) &&
+                !string.IsNullOrWhiteSpace(valA) &&
+                string.Equals(valA, valB, StringComparison.Ordinal))
+            {
+                Console.WriteLine($"[ERROR] .env.example startup keys '{keyA}' and '{keyB}' must not share identical key material.");
+                ok = false;
+            }
+        }
+
+        return ok;
     }
 
     public static HashSet<string> ExtractConcreteDocKeys(string docText)

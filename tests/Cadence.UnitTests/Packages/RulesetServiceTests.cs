@@ -396,7 +396,10 @@ public sealed class RulesetServiceTests : IDisposable
         exitCode.Should().Be(0);
         calls.Should().ContainSingle(c => c.FileName == "git");
         calls.Should().NotContain(c => c.FileName == "gh");
-        writer.ToString().Should().Contain("Dry-run complete: 3 rulesets validated for owner/repo");
+        writer.ToString().Should().Contain("profile=active-actions")
+            .And.Contain("CI Gate (integration_id=15368)")
+            .And.Contain("merge_queue")
+            .And.Contain("Dry-run complete: 3 rulesets validated for owner/repo under profile 'active-actions'");
     }
 
     [Fact]
@@ -818,6 +821,96 @@ public sealed class RulesetServiceTests : IDisposable
             profile: "invalid-profile",
             output: badProfileWriter).Should().Be(1);
         badProfileWriter.ToString().Should().Contain("Unsupported ruleset profile");
+    }
+
+    [Fact]
+    public void Sync_VerifyLive_PassesWhenRemoteRulesetsAndPagesMatchHead_AndFlagsStaleRuleset20000159AndPagesDrift()
+    {
+        const string headSha = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+        const string stalePagesSha = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+        string mainFullJson = File.ReadAllText(Path.Combine(_root, ".github", "rulesets", "main.json"));
+        string mainPausedJson = RulesetService.ProjectRulesetPayloadForProfile(mainFullJson, RulesetService.PausedActionsProfile);
+        string releaseFullJson = File.ReadAllText(Path.Combine(_root, ".github", "rulesets", "release_branches.json"));
+        string tagsFullJson = File.ReadAllText(Path.Combine(_root, ".github", "rulesets", "version_tags.json"));
+
+        var liveCalls = new List<(string FileName, IReadOnlyList<string> Args)>();
+        RulesetService.ProcessRunner MakeLiveRunner(string mainPayload, string deployedPagesSha) => (_, file, args) =>
+        {
+            liveCalls.Add((file, args));
+            if (file == "git" && args.Count == 2 && args[0] == "rev-parse" && args[1] == "HEAD")
+            {
+                return new RulesetService.ProcessOutcome(0, headSha + "\n", "");
+            }
+
+            if (file == "gh" && args.Count >= 2 && args[0] == "api")
+            {
+                if (args[1] == "--paginate" && args[2] == "repos/fderuiter/cadence-clinical/rulesets?per_page=100")
+                {
+                    return new RulesetService.ProcessOutcome(
+                        0,
+                        """[{"id": 20000159, "name": "main-branch-protection"}, {"id": 20000160, "name": "release-branches-protection"}, {"id": 20000161, "name": "version-tags-protection"}]""",
+                        "");
+                }
+
+                return args[1] switch
+                {
+                    "repos/fderuiter/cadence-clinical/rulesets/20000159" => new RulesetService.ProcessOutcome(0, mainPayload, ""),
+                    "repos/fderuiter/cadence-clinical/rulesets/20000160" => new RulesetService.ProcessOutcome(0, releaseFullJson, ""),
+                    "repos/fderuiter/cadence-clinical/rulesets/20000161" => new RulesetService.ProcessOutcome(0, tagsFullJson, ""),
+                    "repos/fderuiter/cadence-clinical/pages" => new RulesetService.ProcessOutcome(
+                        0,
+                        """{"html_url": "https://fderuiter.github.io/cadence-clinical/", "build_type": "workflow"}""",
+                        ""),
+                    "repos/fderuiter/cadence-clinical/deployments?environment=github-pages&per_page=1" => new RulesetService.ProcessOutcome(
+                        0,
+                        $$"""[{"id": 1, "sha": "{{deployedPagesSha}}", "environment": "github-pages"}]""",
+                        ""),
+                    _ => new RulesetService.ProcessOutcome(1, "", $"unexpected gh api endpoint: {string.Join(' ', args)}"),
+                };
+            }
+
+            return new RulesetService.ProcessOutcome(1, "", $"unexpected command: {file} {string.Join(' ', args)}");
+        };
+
+        using (var cleanWriter = new StringWriter())
+        {
+            int ok = RulesetService.Sync(
+                repoRoot: _root,
+                repoOverride: "fderuiter/cadence-clinical",
+                runner: MakeLiveRunner(mainFullJson, headSha),
+                environment: _ => null,
+                output: cleanWriter,
+                verifyLive: true);
+            ok.Should().Be(0, cleanWriter.ToString());
+            cleanWriter.ToString().Should().Contain("Live verification passed");
+            liveCalls.Should().NotContain(c => c.FileName == "gh" && c.Args.Contains("--method"));
+        }
+
+        using (var driftWriter = new StringWriter())
+        {
+            int drifted = RulesetService.Sync(
+                repoRoot: _root,
+                repoOverride: "fderuiter/cadence-clinical",
+                runner: MakeLiveRunner(mainPausedJson, stalePagesSha),
+                environment: _ => null,
+                output: driftWriter,
+                verifyLive: true);
+            drifted.Should().Be(1);
+            driftWriter.ToString().Should().Contain("20000159")
+                .And.Contain("required_status_checks")
+                .And.Contain("merge_queue")
+                .And.Contain("https://fderuiter.github.io/cadence-clinical/")
+                .And.Contain(stalePagesSha);
+        }
+
+        using var conflictWriter = new StringWriter();
+        RulesetService.Sync(
+            repoRoot: _root,
+            dryRun: true,
+            verifyLive: true,
+            repoOverride: "fderuiter/cadence-clinical",
+            output: conflictWriter).Should().Be(1);
+        conflictWriter.ToString().Should().Contain("cannot be used together");
     }
 
     private void SeedValidFixture()

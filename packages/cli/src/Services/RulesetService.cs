@@ -138,12 +138,12 @@ public static partial class RulesetService
         public bool OnPullRequest => PullRequestTrigger.OnPullRequest;
     }
 
-    /// <summary>Normalizes a ruleset sync profile (<c>paused-actions</c> or <c>active-actions</c>).</summary>
+    /// <summary>Normalizes a ruleset sync profile (<c>active-actions</c> by default, or <c>paused-actions</c>).</summary>
     public static bool TryNormalizeProfile(string? rawProfile, out string normalizedProfile)
     {
         if (string.IsNullOrWhiteSpace(rawProfile))
         {
-            normalizedProfile = PausedActionsProfile;
+            normalizedProfile = ActiveActionsProfile;
             return true;
         }
 
@@ -196,9 +196,10 @@ public static partial class RulesetService
 
     /// <summary>
     /// Validates declarative rulesets (or <c>CI Gate</c> workflow coverage when <c>.github/rulesets</c> is absent in
-    /// <paramref name="dryRun"/> mode) and either previews (<paramref name="dryRun"/>) or reconciles them to GitHub
-    /// Repository Rulesets using <c>gh api</c> under <paramref name="profile"/> (<c>paused-actions</c> by default, or
-    /// <c>active-actions</c>). Fails with exit code <c>1</c> on validation or API errors.
+    /// <paramref name="dryRun"/> mode) and previews (<paramref name="dryRun"/>), verifies live remote parity
+    /// (<paramref name="verifyLive"/>), or reconciles them to GitHub Repository Rulesets using <c>gh api</c> under
+    /// <paramref name="profile"/> (<c>active-actions</c> by default, or <c>paused-actions</c>). Fails with exit code
+    /// <c>1</c> on validation, drift, or API errors.
     /// </summary>
     public static int Sync(
         string? repoRoot = null,
@@ -207,22 +208,29 @@ public static partial class RulesetService
         ProcessRunner? runner = null,
         Func<string, string?>? environment = null,
         TextWriter? output = null,
-        string? profile = null)
+        string? profile = null,
+        bool verifyLive = false)
     {
         repoRoot ??= QualityGateOrchestrator.FindRepoRoot();
         runner ??= DefaultProcessRunner;
         environment ??= Environment.GetEnvironmentVariable;
         output ??= Console.Out;
 
+        if (dryRun && verifyLive)
+        {
+            output.WriteLine($"{Tag} [ERROR] Options '--dry-run' and '--verify-live' cannot be used together.");
+            return 1;
+        }
+
         if (!TryNormalizeProfile(profile, out string normalizedProfile))
         {
             output.WriteLine(
-                $"{Tag} [ERROR] Unsupported ruleset profile '{profile}'. Expected '{PausedActionsProfile}' or '{ActiveActionsProfile}'.");
+                $"{Tag} [ERROR] Unsupported ruleset profile '{profile}'. Expected '{ActiveActionsProfile}' or '{PausedActionsProfile}'.");
             return 1;
         }
 
         var errors = new List<string>();
-        var definitions = ValidateCore(repoRoot, reader: null, errors, requireRulesetsDirectory: !dryRun);
+        var definitions = ValidateCore(repoRoot, reader: null, errors, requireRulesetsDirectory: !dryRun || verifyLive);
 
         if (errors.Count > 0)
         {
@@ -253,6 +261,11 @@ public static partial class RulesetService
         {
             WriteDryRunPreview(repoRoot, repo, normalizedProfile, definitions, output);
             return 0;
+        }
+
+        if (verifyLive)
+        {
+            return VerifyLiveViaGhApi(repoRoot, repo, normalizedProfile, definitions, runner, output);
         }
 
         return ApplyRulesetsViaGhApi(repoRoot, repo, normalizedProfile, definitions, runner, output);
@@ -513,6 +526,310 @@ public static partial class RulesetService
         return 0;
     }
 
+    private static int VerifyLiveViaGhApi(
+        string repoRoot,
+        string repo,
+        string profile,
+        IReadOnlyList<RulesetDefinition> definitions,
+        ProcessRunner runner,
+        TextWriter output)
+    {
+        var listOutcome = runner(repoRoot, "gh", ["api", "--paginate", $"repos/{repo}/rulesets?per_page=100"]);
+        if (listOutcome.ExitCode != 0)
+        {
+            output.WriteLine($"{Tag} [ERROR] Failed to fetch existing rulesets from 'repos/{repo}/rulesets' (exit code {listOutcome.ExitCode}).");
+            WriteProcessDetails(listOutcome, output);
+            return 1;
+        }
+
+        if (!TryParseExistingRulesets(listOutcome.Stdout, out var existingByName, out string? parseError))
+        {
+            output.WriteLine($"{Tag} [ERROR] Could not parse GitHub rulesets API response: {parseError}");
+            return 1;
+        }
+
+        var drifts = new List<string>();
+        foreach (var def in definitions)
+        {
+            if (!existingByName.TryGetValue(def.Name, out long existingId))
+            {
+                drifts.Add($"Ruleset '{def.Name}' (.github/rulesets/{def.FileName}) is missing on '{repo}'.");
+                continue;
+            }
+
+            var detailOutcome = runner(repoRoot, "gh", ["api", $"repos/{repo}/rulesets/{existingId}"]);
+            if (detailOutcome.ExitCode != 0)
+            {
+                output.WriteLine($"{Tag} [ERROR] Failed to fetch live ruleset '{def.Name}' (id {existingId}) from 'repos/{repo}/rulesets/{existingId}' (exit code {detailOutcome.ExitCode}).");
+                WriteProcessDetails(detailOutcome, output);
+                return 1;
+            }
+
+            string expectedJson = ProjectRulesetPayloadForProfile(File.ReadAllText(def.FullPath), profile);
+            var parseErrors = new List<string>();
+            var expectedSnapshot = ParseRulesetJson($"expected:{def.FileName}", def.FileName, def.FullPath, expectedJson, parseErrors);
+            var liveSnapshot = ParseRulesetJson($"repos/{repo}/rulesets/{existingId}", def.FileName, def.FullPath, detailOutcome.Stdout, parseErrors);
+            if (expectedSnapshot is null || liveSnapshot is null || parseErrors.Count > 0)
+            {
+                WriteErrors(parseErrors, output);
+                return 1;
+            }
+
+            CompareRulesetSnapshots(def.Name, existingId, expectedSnapshot, liveSnapshot, drifts);
+        }
+
+        int pagesCheckStatus = VerifyGitHubPagesDeployment(repoRoot, repo, runner, output, drifts, out string pagesSummary);
+        if (pagesCheckStatus != 0)
+        {
+            return pagesCheckStatus;
+        }
+
+        if (drifts.Count > 0)
+        {
+            foreach (string drift in drifts)
+            {
+                output.WriteLine($"{Tag} [DRIFT] {drift}");
+            }
+
+            output.WriteLine($"{Tag} [ERROR] Live verification detected {drifts.Count} drift item(s) on '{repo}' (profile={profile}).");
+            return 1;
+        }
+
+        output.WriteLine($"{Tag} ✔ Live verification passed: {definitions.Count} rulesets and GitHub Pages ({pagesSummary}) match '{repo}' (profile={profile}).");
+        return 0;
+    }
+
+    private static void CompareRulesetSnapshots(
+        string name,
+        long rulesetId,
+        RulesetDefinition expected,
+        RulesetDefinition live,
+        List<string> drifts)
+    {
+        string label = $"Ruleset '{name}' (id {rulesetId})";
+
+        if (!string.Equals(expected.Target, live.Target, StringComparison.Ordinal))
+        {
+            drifts.Add($"{label}: target is '{live.Target}', expected '{expected.Target}'.");
+        }
+
+        if (!string.Equals(expected.Enforcement, live.Enforcement, StringComparison.Ordinal))
+        {
+            drifts.Add($"{label}: enforcement is '{live.Enforcement}', expected '{expected.Enforcement}'.");
+        }
+
+        if (!expected.IncludeRefs.OrderBy(r => r, StringComparer.Ordinal).SequenceEqual(live.IncludeRefs.OrderBy(r => r, StringComparer.Ordinal), StringComparer.Ordinal))
+        {
+            drifts.Add($"{label}: conditions.ref_name.include is [{string.Join(", ", live.IncludeRefs)}], expected [{string.Join(", ", expected.IncludeRefs)}].");
+        }
+
+        var expectedActors = expected.BypassActors
+            .Select(a => $"{a.ActorType}:{a.ActorId}:{a.BypassMode}")
+            .OrderBy(s => s, StringComparer.Ordinal)
+            .ToArray();
+        var liveActors = live.BypassActors
+            .Select(a => $"{a.ActorType}:{a.ActorId}:{a.BypassMode}")
+            .OrderBy(s => s, StringComparer.Ordinal)
+            .ToArray();
+        if (!expectedActors.SequenceEqual(liveActors, StringComparer.Ordinal))
+        {
+            drifts.Add($"{label}: bypass_actors [{string.Join(", ", liveActors)}] differ from expected [{string.Join(", ", expectedActors)}].");
+        }
+
+        var missingRules = expected.RuleTypes.Where(r => !live.RuleTypes.Contains(r, StringComparer.Ordinal)).ToArray();
+        if (missingRules.Length > 0)
+        {
+            drifts.Add($"{label}: missing rules [{string.Join(", ", missingRules)}].");
+        }
+
+        var extraRules = live.RuleTypes.Where(r => !expected.RuleTypes.Contains(r, StringComparer.Ordinal)).ToArray();
+        if (extraRules.Length > 0)
+        {
+            drifts.Add($"{label}: unexpected rules [{string.Join(", ", extraRules)}].");
+        }
+
+        if (expected.RuleTypes.Contains("pull_request", StringComparer.Ordinal)
+            && live.RuleTypes.Contains("pull_request", StringComparer.Ordinal)
+            && (expected.RequiredApprovingReviews != live.RequiredApprovingReviews
+                || expected.RequireCodeOwnerReview != live.RequireCodeOwnerReview))
+        {
+            drifts.Add($"{label}: pull_request parameters (reviews={live.RequiredApprovingReviews}, codeOwners={live.RequireCodeOwnerReview}) differ from expected (reviews={expected.RequiredApprovingReviews}, codeOwners={expected.RequireCodeOwnerReview}).");
+        }
+
+        if (expected.RuleTypes.Contains("required_status_checks", StringComparer.Ordinal)
+            && live.RuleTypes.Contains("required_status_checks", StringComparer.Ordinal))
+        {
+            if (expected.StrictStatusChecks != live.StrictStatusChecks)
+            {
+                drifts.Add($"{label}: strict_required_status_checks_policy is '{live.StrictStatusChecks}', expected '{expected.StrictStatusChecks}'.");
+            }
+
+            var expectedChecks = expected.RequiredStatusChecks
+                .Select(c => $"{c.Context}@{c.IntegrationId}")
+                .OrderBy(s => s, StringComparer.Ordinal)
+                .ToArray();
+            var liveChecks = live.RequiredStatusChecks
+                .Select(c => $"{c.Context}@{c.IntegrationId}")
+                .OrderBy(s => s, StringComparer.Ordinal)
+                .ToArray();
+            if (!expectedChecks.SequenceEqual(liveChecks, StringComparer.Ordinal))
+            {
+                drifts.Add($"{label}: required_status_checks [{string.Join(", ", liveChecks)}] differ from expected [{string.Join(", ", expectedChecks)}].");
+            }
+        }
+
+        if (expected.RuleTypes.Contains("merge_queue", StringComparer.Ordinal)
+            && live.RuleTypes.Contains("merge_queue", StringComparer.Ordinal)
+            && expected.MergeQueue != live.MergeQueue)
+        {
+            drifts.Add($"{label}: merge_queue parameters ({live.MergeQueue}) differ from expected ({expected.MergeQueue}).");
+        }
+    }
+
+    private static int VerifyGitHubPagesDeployment(
+        string repoRoot,
+        string repo,
+        ProcessRunner runner,
+        TextWriter output,
+        List<string> drifts,
+        out string pagesSummary)
+    {
+        pagesSummary = string.Empty;
+
+        var headOutcome = runner(repoRoot, "git", ["rev-parse", "HEAD"]);
+        string headSha = headOutcome.Stdout.Trim();
+        if (headOutcome.ExitCode != 0 || string.IsNullOrWhiteSpace(headSha))
+        {
+            output.WriteLine($"{Tag} [ERROR] Failed to resolve local HEAD commit SHA via 'git rev-parse HEAD'.");
+            WriteProcessDetails(headOutcome, output);
+            return 1;
+        }
+
+        string defaultPagesUrl = BuildDefaultPagesUrl(repo);
+        var pagesOutcome = runner(repoRoot, "gh", ["api", $"repos/{repo}/pages"]);
+        if (pagesOutcome.ExitCode != 0)
+        {
+            output.WriteLine($"{Tag} [ERROR] Failed to query GitHub Pages configuration from 'repos/{repo}/pages' (exit code {pagesOutcome.ExitCode}).");
+            WriteProcessDetails(pagesOutcome, output);
+            return 1;
+        }
+
+        string pagesUrl = defaultPagesUrl;
+        try
+        {
+            using var pagesDoc = JsonDocument.Parse(pagesOutcome.Stdout);
+            if (pagesDoc.RootElement.ValueKind == JsonValueKind.Object
+                && GetStringProperty(pagesDoc.RootElement, "html_url") is { Length: > 0 } htmlUrl)
+            {
+                pagesUrl = htmlUrl;
+            }
+        }
+        catch (JsonException ex)
+        {
+            output.WriteLine($"{Tag} [ERROR] Invalid JSON from 'repos/{repo}/pages': {ex.Message}");
+            return 1;
+        }
+
+        var deploymentsOutcome = runner(repoRoot, "gh", ["api", $"repos/{repo}/deployments?environment=github-pages&per_page=1"]);
+        if (deploymentsOutcome.ExitCode != 0)
+        {
+            output.WriteLine($"{Tag} [ERROR] Failed to query GitHub Pages deployments from 'repos/{repo}/deployments?environment=github-pages&per_page=1' (exit code {deploymentsOutcome.ExitCode}).");
+            WriteProcessDetails(deploymentsOutcome, output);
+            return 1;
+        }
+
+        string? deployedSha = TryExtractDeploymentSha(deploymentsOutcome.Stdout, out string? deployParseError);
+        if (deployParseError is not null)
+        {
+            output.WriteLine($"{Tag} [ERROR] Invalid JSON from GitHub Pages deployments endpoint: {deployParseError}");
+            return 1;
+        }
+
+        if (string.IsNullOrWhiteSpace(deployedSha))
+        {
+            var latestBuildOutcome = runner(repoRoot, "gh", ["api", $"repos/{repo}/pages/builds/latest"]);
+            if (latestBuildOutcome.ExitCode == 0 && !string.IsNullOrWhiteSpace(latestBuildOutcome.Stdout))
+            {
+                try
+                {
+                    using var buildDoc = JsonDocument.Parse(latestBuildOutcome.Stdout);
+                    if (buildDoc.RootElement.ValueKind == JsonValueKind.Object)
+                    {
+                        deployedSha = GetStringProperty(buildDoc.RootElement, "commit");
+                    }
+                }
+                catch (JsonException)
+                {
+                    // Fall through to missing deployment drift check.
+                }
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(deployedSha))
+        {
+            drifts.Add($"GitHub Pages ({pagesUrl}) has no recorded deployment (expected HEAD '{headSha}').");
+            return 0;
+        }
+
+        if (!string.Equals(deployedSha, headSha, StringComparison.OrdinalIgnoreCase))
+        {
+            drifts.Add($"GitHub Pages ({pagesUrl}) deployed commit '{deployedSha}' lags HEAD '{headSha}'.");
+            return 0;
+        }
+
+        pagesSummary = $"{pagesUrl} @ {deployedSha}";
+        return 0;
+    }
+
+    private static string BuildDefaultPagesUrl(string repo)
+    {
+        int slash = repo.IndexOf('/', StringComparison.Ordinal);
+        if (slash <= 0 || slash >= repo.Length - 1)
+        {
+            return $"https://github.com/{repo}";
+        }
+
+        string owner = repo[..slash].ToLowerInvariant();
+        string name = repo[(slash + 1)..];
+        return $"https://{owner}.github.io/{name}/";
+    }
+
+    private static string? TryExtractDeploymentSha(string json, out string? error)
+    {
+        error = null;
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            error = "empty response body";
+            return null;
+        }
+
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            if (doc.RootElement.ValueKind != JsonValueKind.Array)
+            {
+                error = $"expected JSON array of deployments, got {doc.RootElement.ValueKind}";
+                return null;
+            }
+
+            foreach (JsonElement item in doc.RootElement.EnumerateArray())
+            {
+                if (item.ValueKind == JsonValueKind.Object
+                    && GetStringProperty(item, "sha") is { Length: > 0 } sha)
+                {
+                    return sha;
+                }
+            }
+
+            return null;
+        }
+        catch (JsonException ex)
+        {
+            error = ex.Message;
+            return null;
+        }
+    }
+
     private static void WriteProcessDetails(ProcessOutcome outcome, TextWriter output)
     {
         if (!string.IsNullOrWhiteSpace(outcome.Stderr))
@@ -714,6 +1031,16 @@ public static partial class RulesetService
             }
         }
 
+        return ParseRulesetJson(prefix, fileName, fullPath, jsonText, errors);
+    }
+
+    private static RulesetDefinition? ParseRulesetJson(
+        string prefix,
+        string fileName,
+        string fullPath,
+        string jsonText,
+        List<string> errors)
+    {
         JsonDocument doc;
         try
         {

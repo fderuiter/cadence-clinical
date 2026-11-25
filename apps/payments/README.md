@@ -165,6 +165,7 @@ refuses to encrypt or decrypt.
 
 ```bash
 export GATEWAY_SECRET="<at least 32 characters>"
+export FIELD_ENCRYPTION_KEY="$(openssl rand -base64 32)"
 export ConnectionStrings__cadence="Host=localhost;Port=5432;Database=cadence;Username=cadence;Password=<password>"
 dotnet run --project apps/payments/src/Cadence.Apps.Payments.csproj
 ```

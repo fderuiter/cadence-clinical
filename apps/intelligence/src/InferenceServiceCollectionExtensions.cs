@@ -42,13 +42,12 @@ public static class InferenceServiceCollectionExtensions
         services.TryAddSingleton(new InferenceModelSettings(intelligence.Anthropic.Tiers, intelligence.Prices));
         services.AddOptions<InferenceOptions>().Bind(section);
         services.AddOptions<SandboxEgressOptions>().Bind(configuration.GetSection(SandboxEgressOptions.Section));
-        var providers = section.GetSection("Providers").Get<InferenceProvidersOptions>() ?? new InferenceProvidersOptions();
-
-        AddProvider(services, ClaudePlatformAwsProvider.ProviderId, providers.AnthropicAws, (sp, o) => new ClaudePlatformAwsProvider(sp.GetRequiredService<IHttpClientFactory>(), o));
-        AddProvider(services, BedrockProvider.ProviderId, providers.Bedrock, (sp, o) => new BedrockProvider(sp.GetRequiredService<IHttpClientFactory>(), o));
-        AddProvider(services, VertexProvider.ProviderId, providers.Vertex, (sp, o) => new VertexProvider(sp.GetRequiredService<IHttpClientFactory>(), o));
-        AddProvider(services, FoundryProvider.ProviderId, providers.Foundry, (sp, o) => new FoundryProvider(sp.GetRequiredService<IHttpClientFactory>(), o));
-        AddProvider(services, OpenAiCompatibleProvider.ProviderId, providers.OpenAiCompatible, (sp, o) => new OpenAiCompatibleProvider(sp.GetRequiredService<IHttpClientFactory>(), o));
+        var providersSection = section.GetSection("Providers");
+        AddProvider(services, ClaudePlatformAwsProvider.ProviderId, BindIfConfigured<ClaudePlatformAwsOptions>(providersSection.GetSection("AnthropicAws")), (sp, o) => new ClaudePlatformAwsProvider(sp.GetRequiredService<IHttpClientFactory>(), o));
+        AddProvider(services, BedrockProvider.ProviderId, BindIfConfigured<BedrockOptions>(providersSection.GetSection("Bedrock")), (sp, o) => new BedrockProvider(sp.GetRequiredService<IHttpClientFactory>(), o));
+        AddProvider(services, VertexProvider.ProviderId, BindIfConfigured<VertexOptions>(providersSection.GetSection("Vertex")), (sp, o) => new VertexProvider(sp.GetRequiredService<IHttpClientFactory>(), o));
+        AddProvider(services, FoundryProvider.ProviderId, BindIfConfigured<FoundryOptions>(providersSection.GetSection("Foundry")), (sp, o) => new FoundryProvider(sp.GetRequiredService<IHttpClientFactory>(), o));
+        AddProvider(services, OpenAiCompatibleProvider.ProviderId, BindIfConfigured<OpenAiCompatibleOptions>(providersSection.GetSection("OpenAiCompatible")), (sp, o) => new OpenAiCompatibleProvider(sp.GetRequiredService<IHttpClientFactory>(), o));
 
         var overlays = section.GetSection("Suppliers").Get<Dictionary<string, SupplierOverlayOptions>>()
             ?? new Dictionary<string, SupplierOverlayOptions>(StringComparer.Ordinal);
@@ -82,6 +81,17 @@ public static class InferenceServiceCollectionExtensions
             .AddHttpMessageHandler(sp => new ProviderEndpointHandler(
                 providerId, sp.GetServices<IInferenceProvider>().Single(p => p.Id == providerId).EndpointHosts));
         return services;
+    }
+
+    private static TOptions? BindIfConfigured<TOptions>(IConfigurationSection subsection)
+        where TOptions : class
+    {
+        if (!subsection.AsEnumerable(makePathsRelative: true).Any(kv => !string.IsNullOrWhiteSpace(kv.Value)))
+        {
+            return null;
+        }
+
+        return subsection.Get<TOptions>();
     }
 
     private static void AddProvider<TOptions>(IServiceCollection services, string providerId, TOptions? options, Func<IServiceProvider, TOptions, IInferenceProvider> create)
