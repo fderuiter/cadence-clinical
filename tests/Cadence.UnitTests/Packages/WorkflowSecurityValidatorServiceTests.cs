@@ -914,7 +914,10 @@ public sealed class WorkflowSecurityValidatorServiceTests : IDisposable
         ciContent.Should().NotContain("Failed to apply label. Ignoring.", "classify must fail loudly on label errors");
         ciContent.Should().NotContain("check-action-pinning.py", "retired Python pinning script must not be invoked");
         ciContent.Should().NotContain("gh pr merge", "GITHUB_TOKEN automerge must remain retired so merges trigger push workflows");
-        ciContent.Should().Contain("steps.classify.outputs.is_safe == 'true' && github.event.pull_request.head.repo.full_name == github.repository");
+        ciContent.Should().Contain("if: github.event_name == 'pull_request' || github.event_name == 'merge_group'");
+        ciContent.Should().Contain("if: github.event_name == 'pull_request' && steps.classify.outputs.is_safe == 'true' && github.event.pull_request.head.repo.full_name == github.repository");
+
+        WorkflowSecurityValidatorService.ValidateWorkflowSecurity(repoRoot: RepoRoot()).Should().Be(0);
 
         File.Exists(Path.Combine(RepoRoot(), "scripts", "check-action-pinning.py")).Should().BeFalse();
 
@@ -927,6 +930,112 @@ public sealed class WorkflowSecurityValidatorServiceTests : IDisposable
             "GITHUB_TOKEN cannot edit issue comments authored by external GitHub Apps");
         sanitizeContent.Should().NotContain("pull-requests: write");
         sanitizeContent.Should().Contain("issues: write");
+    }
+
+    [Fact]
+    public void CiWorkflowClassifyJob_ComputesMergeGroupDiffViaGitAndFailsClosedOnMissingBase()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        string ciPath = Path.Combine(RepoRoot(), ".github", "workflows", "ci.yml");
+        string[] ciLines = File.ReadAllLines(ciPath);
+        string classifySection = ExtractClassifyJobSection(ciLines);
+        classifySection.Should().Contain("if: github.event_name == 'pull_request' || github.event_name == 'merge_group'")
+            .And.Contain("if: github.event_name == 'merge_group'")
+            .And.Contain("persist-credentials: false")
+            .And.Contain("fetch-depth: 0")
+            .And.Contain("git diff --name-only \"origin/${BASE_BRANCH}...HEAD\"")
+            .And.Contain("if: github.event_name == 'pull_request' && steps.classify.outputs.is_safe == 'true' && github.event.pull_request.head.repo.full_name == github.repository");
+
+        string classifyScript = ExtractFullClassifyStepScript(ciLines);
+        string originPath = Directory.CreateDirectory(Path.Combine(_root, "classify-origin.git")).FullName;
+        string authorPath = Directory.CreateDirectory(Path.Combine(_root, "classify-author")).FullName;
+        string mergeQueueClone = Path.Combine(_root, "classify-runner");
+
+        RunGit(originPath, "init", "--bare", "--initial-branch=main");
+        RunGit(authorPath, "init", "--initial-branch=main");
+        RunGit(authorPath, "config", "user.email", "ci@example.invalid");
+        RunGit(authorPath, "config", "user.name", "Classify Fixture");
+        RunGit(authorPath, "remote", "add", "origin", originPath);
+
+        CommitFileAndPush(authorPath, "README.md", "# Baseline\n", "seed baseline", "HEAD:refs/heads/main");
+        CommitBranchAndPushQueueRef(authorPath, "mg-docs", "docs/CI.md", "# Updated CI docs\n", "refs/gh-readonly-queue/main/pr-1");
+        CommitBranchAndPushQueueRef(authorPath, "mg-container", "apps/gateway/src/Program.cs", "// gateway change\n", "refs/gh-readonly-queue/main/pr-2");
+        CommitBranchAndPushQueueRef(authorPath, "mg-web", "apps/web/src/App.vue", "<template></template>\n", "refs/gh-readonly-queue/main/pr-3");
+
+        RunGit(_root, "clone", "--branch", "main", originPath, mergeQueueClone);
+        RunGit(mergeQueueClone, "fetch", "--no-tags", "origin", "+refs/gh-readonly-queue/main/*:refs/remotes/queue/*");
+
+        // 1. Empty diff against origin/main -> is_safe=false, container_scan=false
+        var emptyRun = RunFullClassifyScript(mergeQueueClone, classifyScript, "refs/heads/main");
+        emptyRun.ExitCode.Should().Be(0, emptyRun.Stderr);
+        emptyRun.Outputs.Should().Contain("is_safe=false").And.Contain("container_scan=false");
+
+        // 2. Safe prose-only merge_group diff -> is_safe=true, container_scan=false
+        RunGit(mergeQueueClone, "checkout", "--detach", "refs/remotes/queue/pr-1");
+        var docsRun = RunFullClassifyScript(mergeQueueClone, classifyScript, "refs/heads/main");
+        docsRun.ExitCode.Should().Be(0, docsRun.Stderr);
+        docsRun.Outputs.Should().Contain("is_safe=true").And.Contain("container_scan=false");
+
+        // 3. Container/C# merge_group diff -> is_safe=false, container_scan=true
+        RunGit(mergeQueueClone, "checkout", "--detach", "refs/remotes/queue/pr-2");
+        var containerRun = RunFullClassifyScript(mergeQueueClone, classifyScript, "refs/heads/main");
+        containerRun.ExitCode.Should().Be(0, containerRun.Stderr);
+        containerRun.Outputs.Should().Contain("is_safe=false").And.Contain("container_scan=true");
+
+        // 4. Non-container code merge_group diff -> is_safe=false, container_scan=false
+        RunGit(mergeQueueClone, "checkout", "--detach", "refs/remotes/queue/pr-3");
+        var webRun = RunFullClassifyScript(mergeQueueClone, classifyScript, "refs/heads/main");
+        webRun.ExitCode.Should().Be(0, webRun.Stderr);
+        webRun.Outputs.Should().Contain("is_safe=false").And.Contain("container_scan=false");
+
+        // 5. Missing base branch fails closed
+        var missingBaseRun = RunFullClassifyScript(mergeQueueClone, classifyScript, "refs/heads/nonexistent-branch");
+        missingBaseRun.ExitCode.Should().NotBe(0);
+    }
+
+    [Theory]
+    [InlineData("true", "github.event_name == 'pull_request' && steps.classify.outputs.is_safe == 'true' && github.event.pull_request.head.repo.full_name == github.repository", 1)]
+    [InlineData("false", "github.event_name == 'pull_request' && steps.classify.outputs.is_safe == 'true'", 1)]
+    [InlineData("false", "github.event_name == 'pull_request' && steps.classify.outputs.is_safe == 'true' && github.event.pull_request.head.repo.full_name == github.repository", 0)]
+    public void ValidateWorkflowSecurity_EnforcesClassifyMergeGroupCheckoutAndSameRepoLabelGuards(
+        string persistCredentials,
+        string applyLabelIf,
+        int expectedExitCode)
+    {
+        Write(".github/workflows/classify-check.yml", $$$"""
+            name: Classify Security Check
+            on:
+              pull_request:
+              merge_group:
+            permissions:
+              contents: read
+            jobs:
+              classify:
+                if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
+                runs-on: ubuntu-latest
+                permissions:
+                  contents: read
+                  pull-requests: write
+                steps:
+                  - name: Check out repository for merge group diff
+                    if: github.event_name == 'merge_group'
+                    uses: actions/checkout@{{{ValidCheckoutSha}}} # v7
+                    with:
+                      persist-credentials: {{{persistCredentials}}}
+                      fetch-depth: 0
+                  - name: Apply label
+                    if: {{{applyLabelIf}}}
+                    env:
+                      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                      PR_NUMBER: ${{ github.event.pull_request && github.event.pull_request.number || '0' }}
+                    run: gh pr edit "$PR_NUMBER" --repo "${{ github.repository }}" --add-label "safe-change"
+            """);
+
+        WorkflowSecurityValidatorService.ValidateWorkflowSecurity(repoRoot: _root).Should().Be(expectedExitCode);
     }
 
     private static string ExtractConflictCheckScript(string[] lines)
@@ -986,6 +1095,87 @@ public sealed class WorkflowSecurityValidatorServiceTests : IDisposable
         string stdout = proc.StandardOutput.ReadToEnd();
         proc.WaitForExit();
         return (proc.ExitCode, stdout, stderr);
+    }
+
+    private static string ExtractClassifyJobSection(string[] lines)
+    {
+        int start = Array.FindIndex(lines, l => l == "  classify:");
+        start.Should().BeGreaterThan(0);
+
+        var sectionLines = lines[(start + 1)..]
+            .TakeWhile(l => l.Length == 0 || !l.StartsWith("  ", StringComparison.Ordinal) || l.StartsWith("    ", StringComparison.Ordinal));
+        return string.Join('\n', sectionLines);
+    }
+
+    private static string ExtractFullClassifyStepScript(string[] lines)
+    {
+        int classifyIdIdx = Array.FindIndex(lines, l => l.Trim() == "id: classify");
+        int runIdx = Array.FindIndex(lines, classifyIdIdx, l => l == "        run: |");
+        classifyIdIdx.Should().BeGreaterThan(0);
+        runIdx.Should().BeGreaterThan(classifyIdIdx);
+
+        var scriptLines = lines[(runIdx + 1)..]
+            .TakeWhile(l => l.Length == 0 || l.StartsWith("          ", StringComparison.Ordinal))
+            .Select(l => l.Length >= 10 ? l[10..] : string.Empty);
+        return string.Join('\n', scriptLines);
+    }
+
+    private static void CommitBranchAndPushQueueRef(
+        string repoDir,
+        string branchName,
+        string relativeFile,
+        string content,
+        string targetRef)
+    {
+        RunGit(repoDir, "checkout", "-b", branchName, "main");
+        CommitFileAndPush(repoDir, relativeFile, content, $"change {relativeFile}", $"HEAD:{targetRef}");
+    }
+
+    private static void CommitFileAndPush(
+        string repoDir,
+        string relativeFile,
+        string content,
+        string message,
+        string refspec)
+    {
+        string fullPath = Path.Combine(repoDir, relativeFile);
+        Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
+        File.WriteAllText(fullPath, content);
+        RunGit(repoDir, "add", relativeFile);
+        RunGit(repoDir, "commit", "-m", message);
+        RunGit(repoDir, "push", "origin", refspec);
+    }
+
+    private static (int ExitCode, string Outputs, string Stderr) RunFullClassifyScript(
+        string workingDir,
+        string script,
+        string baseRef)
+    {
+        string outputFile = Path.Combine(workingDir, $"gh-output-{Guid.NewGuid():N}.txt");
+        File.WriteAllText(outputFile, string.Empty);
+
+        var psi = new ProcessStartInfo("bash")
+        {
+            WorkingDirectory = workingDir,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+        };
+        psi.Environment["EVENT_NAME"] = "merge_group";
+        psi.Environment["BASE_REF"] = baseRef;
+        psi.Environment["GITHUB_OUTPUT"] = outputFile;
+        psi.ArgumentList.Add("-eo");
+        psi.ArgumentList.Add("pipefail");
+        psi.ArgumentList.Add("-c");
+        psi.ArgumentList.Add(script);
+
+        using var proc = Process.Start(psi)!;
+        string stderr = proc.StandardError.ReadToEnd();
+        proc.StandardOutput.ReadToEnd();
+        proc.WaitForExit();
+        string outputs = File.ReadAllText(outputFile);
+        File.Delete(outputFile);
+        return (proc.ExitCode, outputs, stderr);
     }
 
     private static string ExtractClassifyLoopFromCiWorkflow(string[] lines)

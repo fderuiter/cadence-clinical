@@ -1327,6 +1327,7 @@ public static partial class RulesetService
         }
 
         ValidateCiGateResultEvaluations(ciGate, expectedValidationJobs, errors);
+        ValidateMergeGroupClassifyParity(ciGate, ciJobs, expectedValidationJobs, errors);
     }
 
     private static void ValidateCiGateResultEvaluations(
@@ -1357,27 +1358,144 @@ public static partial class RulesetService
                 continue;
             }
 
-            bool isPathConditionalOnPr = job.IfCondition?.Contains("needs.classify.outputs.", StringComparison.Ordinal) is true;
-            if (!isPathConditionalOnPr && matchingEnv.Any(envVar => AllowsSkippedForEnvVar(ciGate.StepRun, envVar)))
+            bool isPathConditional = job.IfCondition?.Contains("needs.classify.outputs.", StringComparison.Ordinal) is true;
+            if (!isPathConditional && matchingEnv.Any(envVar => AllowsSkippedForEnvVar(ciGate.StepRun, envVar)))
             {
                 errors.Add($".github/workflows/ci.yml: '{CiGateJobKey}' must fail when required job '{job.Key}' is skipped.");
             }
+            else if (isPathConditional && ciGate.OnMergeGroup && !HasPullRequestAndMergeGroupOnlySkipAllowance(ciGate.StepRun, matchingEnv))
+            {
+                errors.Add($".github/workflows/ci.yml: '{CiGateJobKey}' must allow 'skipped' for conditional job '{job.Key}' on both 'pull_request' and 'merge_group' while failing skipped 'push'/'workflow_dispatch' runs.");
+            }
         }
     }
 
-    private static bool AllowsSkippedForEnvVar(string stepRun, string envVar)
+    private static void ValidateMergeGroupClassifyParity(
+        WorkflowJobInfo ciGate,
+        IReadOnlyList<WorkflowJobInfo> ciJobs,
+        IReadOnlyList<WorkflowJobInfo> validationJobs,
+        List<string> errors)
     {
-        foreach (string line in stepRun.Split('\n'))
+        if (!ciGate.OnMergeGroup)
         {
-            if ((line.Contains($"${envVar}", StringComparison.Ordinal) || line.Contains($"${{{envVar}}}", StringComparison.Ordinal))
-                && line.Contains("skipped", StringComparison.Ordinal))
+            return;
+        }
+
+        var classifyConditionalJobs = validationJobs
+            .Where(j => j.IfCondition?.Contains("needs.classify.outputs.", StringComparison.Ordinal) is true)
+            .ToList();
+        if (classifyConditionalJobs.Count == 0)
+        {
+            return;
+        }
+
+        var classify = ciJobs.FirstOrDefault(j => j.Key == "classify");
+        if (classify is null)
+        {
+            errors.Add(".github/workflows/ci.yml: missing 'classify' job required by path-conditional validation jobs.");
+            return;
+        }
+
+        if (!EvaluatesJobIf(classify.IfCondition, "pull_request", classifyOutputTrue: false, "refs/heads/main") ||
+            !EvaluatesJobIf(classify.IfCondition, "merge_group", classifyOutputTrue: false, "refs/heads/main"))
+        {
+            errors.Add(".github/workflows/ci.yml: job 'classify' must run on both 'pull_request' and 'merge_group' events.");
+        }
+
+        foreach (var job in classifyConditionalJobs)
+        {
+            bool runsWhenMergeGroupFalse = EvaluatesJobIf(job.IfCondition, "merge_group", classifyOutputTrue: false, "refs/heads/main");
+            bool runsWhenMergeGroupTrue = EvaluatesJobIf(job.IfCondition, "merge_group", classifyOutputTrue: true, "refs/heads/main");
+            if (runsWhenMergeGroupFalse || !runsWhenMergeGroupTrue)
             {
-                return true;
+                errors.Add($".github/workflows/ci.yml: job '{job.Key}' must trigger on 'merge_group' only when 'needs.classify.outputs.*' is 'true'.");
+            }
+
+            if (!EvaluatesJobIf(job.IfCondition, "push", classifyOutputTrue: false, "refs/heads/main"))
+            {
+                errors.Add($".github/workflows/ci.yml: job '{job.Key}' must keep 'push' runs unconditional.");
+            }
+
+            if (job.IfCondition!.Contains("workflow_dispatch", StringComparison.Ordinal) &&
+                (!EvaluatesJobIf(job.IfCondition, "workflow_dispatch", classifyOutputTrue: false, "refs/heads/main") ||
+                 !EvaluatesJobIf(job.IfCondition, "workflow_dispatch", classifyOutputTrue: false, "refs/heads/release/1.0") ||
+                 !EvaluatesJobIf(job.IfCondition, "workflow_dispatch", classifyOutputTrue: false, "refs/tags/v1.0.0") ||
+                 EvaluatesJobIf(job.IfCondition, "workflow_dispatch", classifyOutputTrue: false, "refs/heads/feature/unprotected")))
+            {
+                errors.Add($".github/workflows/ci.yml: job '{job.Key}' must keep protected 'workflow_dispatch' refs ('main', 'release/*', 'v*') unconditional while rejecting unprotected refs.");
+            }
+        }
+    }
+
+    private static bool HasPullRequestAndMergeGroupOnlySkipAllowance(string stepRun, IReadOnlyList<string> envVars)
+    {
+        if (envVars.Count == 0 || !envVars.Any(envVar => AllowsSkippedForEnvVar(stepRun, envVar)))
+        {
+            return false;
+        }
+
+        int guardDepth = 0;
+        bool sawNonConditionalFailureBranch = false;
+        foreach (string rawLine in stepRun.Split('\n'))
+        {
+            string line = rawLine.Trim();
+            if (guardDepth == 0)
+            {
+                if (IsPullRequestAndMergeGroupShellIf(line) && !EndsWithInlineFi(line))
+                {
+                    guardDepth = 1;
+                    continue;
+                }
+            }
+            else
+            {
+                UpdateShellGuardDepth(line, ref guardDepth, ref sawNonConditionalFailureBranch);
+            }
+
+            if (envVars.Any(envVar => AllowsSkippedOnLine(line, envVar)) && guardDepth == 0)
+            {
+                return false;
             }
         }
 
-        return false;
+        return sawNonConditionalFailureBranch;
     }
+
+    private static void UpdateShellGuardDepth(string line, ref int guardDepth, ref bool sawNonConditionalFailureBranch)
+    {
+        if (guardDepth == 1 && (line.StartsWith("elif ", StringComparison.Ordinal) || line == "else"))
+        {
+            guardDepth = 0;
+            sawNonConditionalFailureBranch = true;
+            return;
+        }
+
+        if (line.StartsWith("if ", StringComparison.Ordinal) && !EndsWithInlineFi(line))
+        {
+            guardDepth++;
+        }
+        else if (line == "fi" || line.StartsWith("fi;", StringComparison.Ordinal))
+        {
+            guardDepth--;
+        }
+    }
+
+    private static bool IsPullRequestAndMergeGroupShellIf(string trimmedLine) =>
+        trimmedLine.StartsWith("if ", StringComparison.Ordinal)
+        && trimmedLine.Contains("EVENT_NAME", StringComparison.Ordinal)
+        && trimmedLine.Contains("pull_request", StringComparison.Ordinal)
+        && trimmedLine.Contains("merge_group", StringComparison.Ordinal);
+
+    private static bool EndsWithInlineFi(string trimmedLine) =>
+        trimmedLine.EndsWith("; fi", StringComparison.Ordinal)
+        || trimmedLine.EndsWith("\tfi", StringComparison.Ordinal);
+
+    private static bool AllowsSkippedForEnvVar(string stepRun, string envVar) =>
+        stepRun.Split('\n').Any(line => AllowsSkippedOnLine(line, envVar));
+
+    private static bool AllowsSkippedOnLine(string line, string envVar) =>
+        (line.Contains($"${envVar}", StringComparison.Ordinal) || line.Contains($"${{{envVar}}}", StringComparison.Ordinal))
+        && line.Contains("skipped", StringComparison.Ordinal);
 
     private static void ValidateConflictCheckAndMergePolicy(IReadOnlyList<WorkflowJobInfo> workflowJobs, List<string> errors)
     {
@@ -1483,6 +1601,80 @@ public static partial class RulesetService
             || normalized == $"github.event_name == \"{eventName}\""
             || normalized == $"'{eventName}' == github.event_name"
             || normalized == $"\"{eventName}\" == github.event_name");
+    }
+
+    private static bool EvaluatesJobIf(string? expression, string eventName, bool classifyOutputTrue, string gitRef)
+    {
+        if (string.IsNullOrWhiteSpace(expression))
+        {
+            return true;
+        }
+
+        string trimmed = UnwrapExpression(expression);
+        if (trimmed.Length == 0)
+        {
+            return true;
+        }
+
+        var orClauses = SplitTopLevelLogical(trimmed, "||");
+        if (orClauses.Count > 1)
+        {
+            return orClauses.Any(clause => EvaluatesJobIf(clause, eventName, classifyOutputTrue, gitRef));
+        }
+
+        var andClauses = SplitTopLevelLogical(trimmed, "&&");
+        if (andClauses.Count > 1)
+        {
+            return andClauses.All(clause => EvaluatesJobIf(clause, eventName, classifyOutputTrue, gitRef));
+        }
+
+        if (trimmed.StartsWith('!'))
+        {
+            return !EvaluatesJobIf(trimmed[1..], eventName, classifyOutputTrue, gitRef);
+        }
+
+        return EvaluateAtomicIfClause(WhitespaceRegex().Replace(trimmed, " "), eventName, classifyOutputTrue, gitRef);
+    }
+
+    private static bool EvaluateAtomicIfClause(string normalized, string eventName, bool classifyOutputTrue, string gitRef)
+    {
+        if (normalized is "always()" or "success()" or "true")
+        {
+            return true;
+        }
+
+        if (normalized is "cancelled()" or "failure()" or "false")
+        {
+            return false;
+        }
+
+        var eventEq = EventNameComparisonRegex().Match(normalized);
+        if (eventEq.Success)
+        {
+            string op = eventEq.Groups["op"].Value;
+            string target = eventEq.Groups["val"].Success ? eventEq.Groups["val"].Value : eventEq.Groups["val2"].Value;
+            bool matches = string.Equals(eventName, target, StringComparison.Ordinal);
+            return op == "==" ? matches : !matches;
+        }
+
+        if (ClassifyOutputTrueRegex().IsMatch(normalized))
+        {
+            return classifyOutputTrue;
+        }
+
+        var refEq = GitRefEqualsRegex().Match(normalized);
+        if (refEq.Success)
+        {
+            return string.Equals(gitRef, refEq.Groups["ref"].Value, StringComparison.Ordinal);
+        }
+
+        var refPrefix = GitRefStartsWithRegex().Match(normalized);
+        if (refPrefix.Success)
+        {
+            return gitRef.StartsWith(refPrefix.Groups["prefix"].Value, StringComparison.Ordinal);
+        }
+
+        return false;
     }
 
     private static string UnwrapExpression(string expression)
@@ -2160,4 +2352,16 @@ public static partial class RulesetService
 
     [GeneratedRegex(@"\s+", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
     private static partial Regex WhitespaceRegex();
+
+    [GeneratedRegex(@"^(?:github\.event_name\s*(?<op>==|!=)\s*['""](?<val>[A-Za-z0-9_]+)['""]|['""](?<val2>[A-Za-z0-9_]+)['""]\s*(?<op>==|!=)\s*github\.event_name)$", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex EventNameComparisonRegex();
+
+    [GeneratedRegex(@"^needs\.classify\.outputs\.[A-Za-z0-9_-]+\s*==\s*['""]true['""]$", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex ClassifyOutputTrueRegex();
+
+    [GeneratedRegex(@"^github\.ref\s*==\s*['""](?<ref>[^'""]+)['""]$", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex GitRefEqualsRegex();
+
+    [GeneratedRegex(@"^startsWith\(\s*github\.ref\s*,\s*['""](?<prefix>[^'""]+)['""]\s*\)$", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex GitRefStartsWithRegex();
 }
