@@ -933,4 +933,50 @@ describe("CommandPaletteOverlay.vue - Unified Global Command Palette", () => {
       vi.unstubAllEnvs();
     }
   });
+
+  it("renders a 44px accessible #canvas-palette-close button, scrollable .palette-body, and visualViewport-clamped maxHeight", async () => {
+    const originalVisualViewport = window.visualViewport;
+    Object.defineProperty(window, "visualViewport", {
+      configurable: true,
+      writable: true,
+      value: {
+        width: 320,
+        height: 256,
+        offsetLeft: 0,
+        offsetTop: 0,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      },
+    });
+
+    const wrapper = mount(CommandPaletteOverlay, {
+      props: { isOpen: true },
+      global: { plugins: [pinia, router] },
+    });
+    await flushPromises();
+
+    try {
+      const body = new DOMWrapper(document.body);
+      const palette = body.find("#canvas-palette");
+      expect(palette.attributes("style")).toContain("max-height: 232px");
+
+      const closeBtn = body.find("#canvas-palette-close");
+      expect(closeBtn.exists()).toBe(true);
+      expect(closeBtn.attributes("aria-label")).toBe("Close command palette");
+      expect(closeBtn.find("svg").exists()).toBe(true);
+      expect(
+        body.find("#canvas-palette .palette-body .palette-footnote").exists()
+      ).toBe(true);
+
+      await closeBtn.trigger("click");
+      expect(wrapper.emitted("close")).toBeTruthy();
+    } finally {
+      wrapper.unmount();
+      Object.defineProperty(window, "visualViewport", {
+        configurable: true,
+        writable: true,
+        value: originalVisualViewport,
+      });
+    }
+  });
 });

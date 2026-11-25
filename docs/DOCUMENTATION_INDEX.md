@@ -647,6 +647,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2666: Atomic Dual-Signer Step-Up Verification and Startup-Validated CGT Barcode Key](adr/2026-11-24-atomic-dual-signer-step-up-verification-and-startup-validated-cgt-barcode-key.md) | Current | - Status: Accepted |
 | [ADR-2667: Fail-Closed Site Scope for Pharmacist and Subject Roles](adr/2026-11-23-fail-closed-site-scope-for-pharmacist-and-subject-roles.md) | Current | - Status: Accepted |
 | [ADR-2677: Retire Dead UI and Web Exports and Enforce UI Consumer Reachability](adr/2026-11-24-retire-dead-ui-exports-and-enforce-consumer-guard.md) | Current | - Status: Accepted |
+| [ADR-2689: Centralize Floating Primitives and Top-Right Toast Stack](adr/2026-11-25-centralize-floating-primitives-and-top-right-toast-stack.md) | Current | - Status: Accepted |
 
 ## Developing and running
 
