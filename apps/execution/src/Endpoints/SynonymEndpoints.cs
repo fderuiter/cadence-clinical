@@ -119,7 +119,7 @@ public static class SynonymEndpoints
 
             return TypedResults.Ok(report);
         }
-        catch (InvalidOperationException ex)
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
         {
             return TypedResults.Problem(detail: ex.Message, statusCode: StatusCodes.Status400BadRequest);
         }
@@ -208,7 +208,7 @@ public static class SynonymEndpoints
 
             return TypedResults.Ok(result);
         }
-        catch (InvalidOperationException ex)
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
         {
             return TypedResults.Problem(detail: ex.Message, statusCode: StatusCodes.Status400BadRequest);
         }

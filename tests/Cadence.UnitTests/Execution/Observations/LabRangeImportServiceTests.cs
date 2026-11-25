@@ -374,6 +374,63 @@ public sealed class LabRangeImportServiceTests
         await Task.CompletedTask;
     }
 
+    [Fact]
+    public async Task CommitImportAsync_ValidXlsx_ParsesOnceAndPersistsRanges()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync(ct);
+        await using var db = CreateInMemoryDbContext(connection);
+
+        var countingUcum = new CountingUcumNormalizationService(new UcumNormalizationService());
+        var clock = new FakeClock();
+        var service = new LabRangeImportService(db, countingUcum, clock);
+
+        byte[] xlsxBytes = CreateSampleXlsxBytes();
+        var request = new BulkLabRangeImportCommitRequest(
+            StudyId: "STUDY-101",
+            LabSource: "CENTRAL",
+            FileName: "commit_ranges.xlsx",
+            FileContentBase64: Convert.ToBase64String(xlsxBytes),
+            ReasonForChange: "Single-pass XLSX lab reference range import");
+
+        var response = await service.CommitImportAsync(request, "dm@cadence.clinical", ct);
+
+        response.Status.Should().Be("COMPLETED");
+        response.TotalRows.Should().Be(1);
+        response.SuccessRows.Should().Be(1);
+        countingUcum.LoincLookupCount.Should().Be(1);
+    }
+
+    private sealed class CountingUcumNormalizationService(Cadence.Apps.Execution.Application.Abstractions.IUcumNormalizationService inner)
+        : Cadence.Apps.Execution.Application.Abstractions.IUcumNormalizationService
+    {
+        public int LoincLookupCount { get; private set; }
+
+        public string NormalizeUnitName(string unit) => inner.NormalizeUnitName(unit);
+
+        public double ConvertUnit(double value, string fromUnit, string toUnit) =>
+            inner.ConvertUnit(value, fromUnit, toUnit);
+
+        public (double? NormalizedValue, string? NormalizedUnit) GetNormalizedRepresentation(double? value, string? unit) =>
+            inner.GetNormalizedRepresentation(value, unit);
+
+        public (double ConvertedValue, double Factor) ConvertLabUnit(double value, string fromUnit, string toUnit, string? testCode = null) =>
+            inner.ConvertLabUnit(value, fromUnit, toUnit, testCode);
+
+        public string GetTargetSiUnit(string testCode, string currentUnit) =>
+            inner.GetTargetSiUnit(testCode, currentUnit);
+
+        public string? MapLoincCode(string testCode)
+        {
+            LoincLookupCount++;
+            return inner.MapLoincCode(testCode);
+        }
+
+        public System.Collections.Generic.IReadOnlyList<LoincCatalogItemResponse> GetLoincCatalog() =>
+            inner.GetLoincCatalog();
+    }
+
     private static byte[] CreateSampleXlsxBytes()
     {
         using var ms = new MemoryStream();
