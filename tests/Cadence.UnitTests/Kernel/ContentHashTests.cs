@@ -87,4 +87,52 @@ public sealed class ContentHashTests
         CanonicalJson.Serialize(document.RootElement).Should().Be(ContentHash.Canonicalize(json));
         CanonicalJson.Hash(document.RootElement).Should().Be(ContentHash.Compute(json));
     }
+
+    /// <summary>
+    /// Streaming canonical JSON directly into incremental SHA-256 produces the exact same <c>sha256:</c> digest as
+    /// <see cref="ContentHash.Compute(string)"/> across relaxed-escaped characters and multi-chunk payloads.
+    /// </summary>
+    [Fact(DisplayName = "ComputeStreaming_MatchesCanonicalComputeAcrossRelaxedEscapingAndMultiChunkPayloads")]
+    public void ComputeStreamingMatchesCanonicalComputeAcrossRelaxedEscapingAndMultiChunkPayloads()
+    {
+        var sb = new StringBuilder(96 * 1024);
+        sb.Append("""{"alpha":"é <&>'\"\n","items":[""");
+        for (var i = 0; i < 1500; i++)
+        {
+            if (i > 0)
+            {
+                sb.Append(',');
+            }
+
+            sb.Append("""{"flag":""").Append(i % 2 == 0 ? "true" : "false")
+              .Append(""","index":""").Append(i)
+              .Append(""","label":"item-""").Append(i).Append(""" <&>","note":null}""");
+        }
+
+        sb.Append("""],"omega":42}""");
+        var expectedJson = sb.ToString();
+
+        var streamedHash = ContentHash.ComputeStreaming(writer =>
+        {
+            writer.WriteStartObject();
+            writer.WriteString("alpha", "é <&>'\"\n");
+            writer.WritePropertyName("items");
+            writer.WriteStartArray();
+            for (var i = 0; i < 1500; i++)
+            {
+                writer.WriteStartObject();
+                writer.WriteBoolean("flag", i % 2 == 0);
+                writer.WriteNumber("index", i);
+                writer.WriteString("label", $"item-{i} <&>");
+                writer.WriteNull("note");
+                writer.WriteEndObject();
+            }
+
+            writer.WriteEndArray();
+            writer.WriteNumber("omega", 42);
+            writer.WriteEndObject();
+        });
+
+        streamedHash.Should().Be(ContentHash.Compute(expectedJson));
+    }
 }
