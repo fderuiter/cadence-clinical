@@ -535,6 +535,8 @@ function hasDialogSibling(node) {
 const rawModalOverlayClassRegex =
   /(?:modal|dialog)-(?:overlay|backdrop|mask|bg)|overlay-backdrop/i;
 
+const rawDrawerOverlayClassRegex = /drawer-(?:overlay|backdrop|mask|bg)/i;
+
 // Shrink-only legacy allowlist of unmigrated apps/web modal files that still rely on
 // manual useFocusTrap + dialog ARIA markup. Do not add new entries; migrate to ClinicalModal.
 const LEGACY_WEB_RAW_MODAL_OVERLAY_ALLOWLIST = new Set([
@@ -542,9 +544,7 @@ const LEGACY_WEB_RAW_MODAL_OVERLAY_ALLOWLIST = new Set([
   "components/DictionaryBrowserModal.vue",
   "components/auditor/AuditorExportModal.vue",
   "components/clinical/AggregateSafetyConsole.vue",
-  "components/clinical/BulkIpKitReconciliationDrawer.vue",
   "components/clinical/DeviceInvestigationConsole.vue",
-  "components/clinical/EhrReconciliationDrawer.vue",
   "components/clinical/LabGovernanceConsole.vue",
   "components/clinical/TelehealthDtpConsole.vue",
   "components/etmf/CraQcQueue.vue",
@@ -557,7 +557,6 @@ const LEGACY_WEB_RAW_MODAL_OVERLAY_ALLOWLIST = new Set([
   "components/quality/StatisticalForensicsViewer.vue",
   "components/shared/ReAuthModal.vue",
   "components/tickets/TicketCreateModal.vue",
-  "components/tickets/TicketDetailDrawer.vue",
   "views/AmendmentDiffView.vue",
   "views/MdrView.vue",
 ]);
@@ -572,7 +571,7 @@ const noRawOverlaysRule = {
     },
     messages: {
       noRawOverlay:
-        'Raw overlay container "{{className}}" is prohibited. Migrate to ClinicalModal or ClinicalDrawer from "ui" (ADR-2545 / ADR-2653).',
+        'Raw overlay container "{{className}}" is prohibited. Migrate to ClinicalModal or ClinicalDrawer from "ui" (ADR-2545 / ADR-2653 / ADR-2674).',
       noBackdropSuppression:
         'Suppressing vuejs-accessibility rules on overlay/backdrop elements is prohibited. Migrate to ClinicalModal or ClinicalDrawer (or use role="presentation" on focus-trapped backdrops).',
     },
@@ -622,12 +621,18 @@ const noRawOverlaysRule = {
 
           nativeOverlayElements.push(node);
 
+          const isDisallowedRawDrawerOverlay =
+            rawDrawerOverlayClassRegex.test(overlayClass) &&
+            !filename.endsWith(
+              "/apps/subject-portal/src/components/SyncDrawer.vue"
+            );
+
           const isDisallowedWebRawModalOverlay =
             relWebSrcPath !== null &&
             rawModalOverlayClassRegex.test(overlayClass) &&
             !LEGACY_WEB_RAW_MODAL_OVERLAY_ALLOWLIST.has(relWebSrcPath);
 
-          if (isDisallowedWebRawModalOverlay) {
+          if (isDisallowedRawDrawerOverlay || isDisallowedWebRawModalOverlay) {
             context.report({
               node: node.startTag,
               messageId: "noRawOverlay",
@@ -2866,8 +2871,6 @@ const noRawClinicalTableRule = {
 const LEGACY_WEB_UNGUARDED_BUTTON_ALLOWLIST = new Set([
   "components/AppShell.vue",
   "components/CodingQueueTable.vue",
-  "components/ContextualHelpDrawer.vue",
-  "components/OnboardingChecklistDrawer.vue",
   "components/auditor/AuditorExportModal.vue",
   "components/clinical/AdaptiveDoseEscalationConsole.vue",
   "components/clinical/AggregateSafetyConsole.vue",
@@ -2875,7 +2878,6 @@ const LEGACY_WEB_UNGUARDED_BUTTON_ALLOWLIST = new Set([
   "components/clinical/CecAdjudicationConsole.vue",
   "components/clinical/ClinicalLakehouseConsole.vue",
   "components/clinical/DeviceInvestigationConsole.vue",
-  "components/clinical/EhrReconciliationDrawer.vue",
   "components/clinical/LabGovernanceConsole.vue",
   "components/clinical/ProtocolTrainingConsole.vue",
   "components/clinical/SensorTelemetryConsole.vue",
@@ -2889,11 +2891,8 @@ const LEGACY_WEB_UNGUARDED_BUTTON_ALLOWLIST = new Set([
   "components/crf/RuleTracerPanel.vue",
   "components/econsent/ComprehensionQuizBuilder.vue",
   "components/econsent/IcfSectionEditor.vue",
-  "components/econsent/QuizTemplateDrawer.vue",
-  "components/econsent/ReadabilityDrawer.vue",
   "components/fileshare/ActivityFeed.vue",
   "components/fileshare/MediaPreviewModal.vue",
-  "components/fileshare/ShareDrawer.vue",
   "components/imaging/BatchDicomDropzoneModal.vue",
   "components/imaging/DicomMprViewer.vue",
   "components/imaging/DualReaderAdjudicationPanel.vue",

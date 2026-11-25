@@ -157,6 +157,14 @@
             🧪 Load Sample Protocol (NSCLC Phase II)
           </button>
           <button
+            id="btn-stage-biomedical-concepts"
+            type="button"
+            class="btn btn-secondary"
+            @click="triggerConceptStaging()"
+          >
+            Stage Biomedical Concepts
+          </button>
+          <button
             type="button"
             class="btn btn-primary"
             :disabled="!selectedFile && !rawExtractionData"
@@ -989,7 +997,6 @@ const startExtraction = () => {
   }, 400);
 };
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars -- not wired to the UI yet; ProtocolDigitizationView.spec.ts calls it on the component instance (audit under #5164)
 const triggerConceptStaging = (tokens = []) => {
   if (tokens && tokens.length > 0) {
     unmappedConceptTokens.value = tokens;
