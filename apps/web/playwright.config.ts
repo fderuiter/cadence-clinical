@@ -48,7 +48,7 @@ const chromiumLaunchOptions = buildChromiumLaunchOptions(chromium, {
 
 const accessibilityProject = {
   name: "accessibility",
-  testMatch: /web-accessibility\.spec\.ts/,
+  testMatch: /(?:web-accessibility|drawer-reflow)\.spec\.ts/,
   use: {
     ...devices["Desktop Chrome"],
     channel: "chromium",

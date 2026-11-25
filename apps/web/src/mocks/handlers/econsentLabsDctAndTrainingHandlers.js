@@ -286,6 +286,74 @@ export function createEconsentLabsDctAndTrainingHandlers() {
         });
       }
     ),
+    http.get("*/api/v1/interop/esource/candidates", ({ request }) => {
+      const url = new URL(request.url);
+      const studyId = url.searchParams.get("study_id") || "CADENCE-101";
+      const subjectId = url.searchParams.get("subject_id") || "SUBJ-1001";
+      return HttpResponse.json({
+        candidates: [
+          {
+            id: "cand-demo-1",
+            study_id: studyId,
+            site_id: "SITE-101",
+            subject_id: subjectId,
+            subject_pseudonym: subjectId,
+            ehr_system_id: "EPIC-HEALTH",
+            fhir_resource_type: "Observation",
+            fhir_resource_id: "obs-sysbp-1",
+            source_timestamp: "2026-08-02T10:00:00Z",
+            target_domain: "VS",
+            target_variable: "SYSBP",
+            cdash_testcd: "SYSBP",
+            cdash_test: "Systolic Blood Pressure",
+            candidate_value: 128,
+            candidate_unit: "mmHg",
+            current_ecrf_value: 140,
+            current_ecrf_updated_at: "2026-08-01T10:00:00Z",
+            discrepancy_type: "VALUE_MISMATCH",
+            confidence_score: 0.98,
+            mapping_provenance: "LOINC 8480-6 -> VS.SYSBP",
+            raw_fhir_resource: {
+              resourceType: "Observation",
+              valueQuantity: { value: 128, unit: "mmHg" },
+            },
+            status: "PENDING_REVIEW",
+            version_index: 1,
+            created_at: "2026-08-02T10:00:00Z",
+          },
+          {
+            id: "cand-demo-2",
+            study_id: studyId,
+            site_id: "SITE-101",
+            subject_id: subjectId,
+            subject_pseudonym: subjectId,
+            ehr_system_id: "EPIC-HEALTH",
+            fhir_resource_type: "Observation",
+            fhir_resource_id: "obs-gluc-2",
+            source_timestamp: "2026-08-02T10:05:00Z",
+            target_domain: "LB",
+            target_variable: "GLUC",
+            cdash_testcd: "GLUC",
+            cdash_test: "Glucose",
+            candidate_value: 105,
+            candidate_unit: "mg/dL",
+            current_ecrf_value: null,
+            current_ecrf_updated_at: null,
+            discrepancy_type: "NEW_FIELD",
+            confidence_score: 0.95,
+            mapping_provenance: "LOINC 2339-0 -> LB.GLUC",
+            raw_fhir_resource: {
+              resourceType: "Observation",
+              valueQuantity: { value: 105, unit: "mg/dL" },
+            },
+            status: "PENDING_REVIEW",
+            version_index: 1,
+            created_at: "2026-08-02T10:05:00Z",
+          },
+        ],
+        total: 2,
+      });
+    }),
     http.get("*/api/v1/interop/sensors/devices", () =>
       HttpResponse.json({ data: { devices: [] } })
     ),

@@ -1,5 +1,6 @@
 <script setup>
 import { computed, ref, watch } from "vue";
+import { Sparkles, X } from "lucide-vue-next";
 import ClinicalDrawer from "./ClinicalDrawer.vue";
 import ConfidenceBadge from "./ConfidenceBadge.vue";
 
@@ -198,7 +199,9 @@ const toggleEdit = () => {
       <header class="ai-drawer-header">
         <div class="ai-drawer-title-group">
           <div class="ai-header-badge-row">
-            <span class="ai-drawer-sparkle" aria-hidden="true">✨</span>
+            <span class="ai-drawer-sparkle" aria-hidden="true">
+              <Sparkles :size="18" aria-hidden="true" />
+            </span>
             <h2 class="ai-drawer-title">
               {{ title }}
             </h2>
@@ -222,24 +225,22 @@ const toggleEdit = () => {
           aria-label="Close AI suggestion drawer"
           @click="closeDrawer"
         >
-          ✕
+          <X :size="18" aria-hidden="true" />
         </button>
       </header>
     </template>
 
-    <template #subheader>
-      <!-- Provenance Info Banner -->
-      <div v-if="modelIdentifier || promptSummary" class="ai-provenance-banner">
-        <div v-if="modelIdentifier" class="ai-provenance-item">
-          <span class="ai-provenance-label">Model:</span>
-          <code class="ai-provenance-val">{{ modelIdentifier }}</code>
-        </div>
-        <div v-if="promptSummary" class="ai-provenance-item">
-          <span class="ai-provenance-label">Rationale:</span>
-          <span class="ai-provenance-val">{{ promptSummary }}</span>
-        </div>
+    <!-- Provenance Info Banner inside scrollable body -->
+    <div v-if="modelIdentifier || promptSummary" class="ai-provenance-banner">
+      <div v-if="modelIdentifier" class="ai-provenance-item">
+        <span class="ai-provenance-label">Model:</span>
+        <code class="ai-provenance-val">{{ modelIdentifier }}</code>
       </div>
-    </template>
+      <div v-if="promptSummary" class="ai-provenance-item">
+        <span class="ai-provenance-label">Rationale:</span>
+        <span class="ai-provenance-val">{{ promptSummary }}</span>
+      </div>
+    </div>
 
     <!-- Diff Content (div inside ClinicalDrawer body, avoiding nested main landmarks) -->
     <div class="ai-diff-container">
@@ -412,14 +413,14 @@ const toggleEdit = () => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: var(--semantic-control-target-min, 24px);
-  min-width: var(--semantic-control-target-min, 24px);
+  min-height: max(44px, var(--semantic-control-target-min, 24px));
+  min-width: max(44px, var(--semantic-control-target-min, 24px));
   background: transparent;
   border: none;
   font-size: 16px;
   color: var(--color-text-muted);
   cursor: pointer;
-  padding: 4px 8px;
+  padding: 6px;
   border-radius: 4px;
   transition: background 0.15s;
 }
@@ -431,9 +432,10 @@ const toggleEdit = () => {
 
 /* Provenance Banner */
 .ai-provenance-banner {
-  padding: 10px 24px;
+  padding: 10px 14px;
   background: var(--color-primary-light);
-  border-bottom: 1px solid var(--semantic-color-info-border-accent);
+  border: 1px solid var(--semantic-color-info-border-accent);
+  border-radius: var(--radius-md, 6px);
   font-size: var(--font-size-xs, 12px);
   display: flex;
   flex-direction: column;

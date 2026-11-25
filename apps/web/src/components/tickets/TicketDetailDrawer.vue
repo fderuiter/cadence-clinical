@@ -1,67 +1,24 @@
 <template>
-  <div
-    v-if="isOpen"
-    class="drawer-backdrop"
-    role="presentation"
-    @click.self="close"
+  <ClinicalDrawer
+    ref="clinicalDrawerRef"
+    :model-value="isOpen"
+    :teleport="false"
+    size="lg"
+    fallback-focus="#btn-create-ticket"
+    overlay-class="drawer-backdrop"
+    panel-class="drawer-panel ticket-detail-drawer-panel"
+    aria-labelledby="drawer-ticket-title"
+    @close="close"
   >
-    <div
-      ref="drawerRef"
-      class="drawer-panel"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="drawer-ticket-title"
-      tabindex="-1"
-    >
-      <!-- Drawer Header -->
+    <template #header>
       <div class="drawer-header">
-        <div class="drawer-header-meta">
+        <div class="drawer-header-title-row">
           <span class="ref-badge">{{
             ticket.reference || `#${ticket.id?.substring(0, 8)}`
           }}</span>
-          <span
-            class="badge"
-            :class="`badge-cat-${ticket.category?.toLowerCase()}`"
-          >
-            {{ formatCategory(ticket.category) }}
-          </span>
-          <span
-            class="badge"
-            :class="`badge-sev-${ticket.gxp_severity?.toLowerCase()}`"
-          >
-            {{ ticket.gxp_severity }}
-          </span>
-          <span
-            class="badge"
-            :class="`badge-status-${ticket.status?.toLowerCase()}`"
-          >
-            {{ formatStatus(ticket.status) }}
-          </span>
-          <span v-if="ticket.signature_token" class="badge badge-signed">
-            ✍️ Part 11 Signed
-          </span>
-        </div>
-
-        <h2 id="drawer-ticket-title" class="drawer-title" tabindex="-1">
-          {{ ticket.title }}
-        </h2>
-
-        <div
-          v-if="ticket.sla_target_at"
-          class="sla-banner"
-          :class="slaBannerClass"
-        >
-          <div class="sla-banner-left">
-            <span class="sla-icon">{{ slaIcon }}</span>
-            <span class="sla-text">{{ slaStatusText }}</span>
-          </div>
-          <div class="sla-progress-track">
-            <div
-              class="sla-progress-fill"
-              :style="{ width: `${Math.min(slaElapsedPercent, 100)}%` }"
-              :class="slaProgressClass"
-            />
-          </div>
+          <h2 id="drawer-ticket-title" class="drawer-title" tabindex="-1">
+            {{ ticket.title }}
+          </h2>
         </div>
 
         <button
@@ -71,15 +28,68 @@
           aria-label="Close"
           @click="close"
         >
-          ✕
+          <X :size="18" aria-hidden="true" />
         </button>
+      </div>
+    </template>
+
+    <div class="drawer-body">
+      <div class="drawer-header-meta">
+        <span
+          class="badge"
+          :class="`badge-cat-${ticket.category?.toLowerCase()}`"
+        >
+          {{ formatCategory(ticket.category) }}
+        </span>
+        <span
+          class="badge"
+          :class="`badge-sev-${ticket.gxp_severity?.toLowerCase()}`"
+        >
+          {{ ticket.gxp_severity }}
+        </span>
+        <span
+          class="badge"
+          :class="`badge-status-${ticket.status?.toLowerCase()}`"
+        >
+          {{ formatStatus(ticket.status) }}
+        </span>
+        <span v-if="ticket.signature_token" class="badge badge-signed">
+          <FileSignature :size="12" aria-hidden="true" />
+          <span>Part 11 Signed</span>
+        </span>
+      </div>
+
+      <div
+        v-if="ticket.sla_target_at"
+        class="sla-banner"
+        :class="slaBannerClass"
+      >
+        <div class="sla-banner-left">
+          <component
+            :is="slaIconComponent"
+            :size="15"
+            class="sla-icon"
+            aria-hidden="true"
+          />
+          <span class="sla-text">{{ slaStatusText }}</span>
+        </div>
+        <div class="sla-progress-track">
+          <div
+            class="sla-progress-fill"
+            :style="{ width: `${Math.min(slaElapsedPercent, 100)}%` }"
+            :class="slaProgressClass"
+          />
+        </div>
       </div>
 
       <!-- Action Bar -->
       <div class="drawer-actions">
         <div v-if="isSigned" class="signed-lock-notice">
-          🔒 Locked under 21 CFR Part 11 — Ticket record and notes are
-          immutable.
+          <Lock :size="14" aria-hidden="true" />
+          <span
+            >Locked under 21 CFR Part 11 — Ticket record and notes are
+            immutable.</span
+          >
         </div>
         <div v-else-if="canMutateTicket" class="action-btn-group">
           <button
@@ -89,7 +99,8 @@
             :disabled="actionLoading"
             @click="transitionTicket('IN_PROGRESS')"
           >
-            Start Work
+            <Play :size="14" aria-hidden="true" />
+            <span>Start Work</span>
           </button>
           <button
             v-if="ticket.status === 'IN_PROGRESS'"
@@ -98,7 +109,8 @@
             :disabled="actionLoading"
             @click="transitionTicket('WAITING_ON_SITE')"
           >
-            Pause (Wait Site)
+            <Pause :size="14" aria-hidden="true" />
+            <span>Pause (Wait Site)</span>
           </button>
           <button
             v-if="ticket.status === 'IN_PROGRESS'"
@@ -107,7 +119,8 @@
             :disabled="actionLoading"
             @click="transitionTicket('WAITING_ON_SPONSOR')"
           >
-            Pause (Wait Sponsor)
+            <Pause :size="14" aria-hidden="true" />
+            <span>Pause (Wait Sponsor)</span>
           </button>
           <button
             v-if="
@@ -119,7 +132,8 @@
             :disabled="actionLoading"
             @click="transitionTicket('IN_PROGRESS')"
           >
-            Resume Work
+            <Play :size="14" aria-hidden="true" />
+            <span>Resume Work</span>
           </button>
           <button
             v-if="
@@ -133,7 +147,8 @@
             :disabled="actionLoading"
             @click="openResolveModal"
           >
-            Resolve Issue
+            <Check :size="14" aria-hidden="true" />
+            <span>Resolve Issue</span>
           </button>
           <button
             v-if="ticket.status === 'RESOLVED'"
@@ -142,7 +157,8 @@
             :disabled="actionLoading"
             @click="transitionTicket('CLOSED')"
           >
-            Final Close
+            <Lock :size="14" aria-hidden="true" />
+            <span>Final Close</span>
           </button>
           <ClinicalInput
             v-if="ticket.status !== 'CLOSED'"
@@ -152,7 +168,8 @@
             hide-label
             density="compact"
             :show-query-flag="false"
-            control-class="form-control transition-reason-field"
+            extra-class="transition-reason-field"
+            control-class="form-control"
             placeholder="GxP transition reason..."
             :attributes="{
               'aria-label': 'Reason for workflow status transition',
@@ -160,7 +177,11 @@
           />
         </div>
         <div v-else class="signed-lock-notice">
-          Read-only view — Status transitions require operational staff access.
+          <Eye :size="14" aria-hidden="true" />
+          <span
+            >Read-only view — Status transitions require operational staff
+            access.</span
+          >
         </div>
 
         <button
@@ -170,11 +191,12 @@
           class="btn btn-sm btn-sign"
           @click="isSignModalOpen = true"
         >
-          Part 11 eSign
+          <FileSignature :size="14" aria-hidden="true" />
+          <span>Part 11 eSign</span>
         </button>
       </div>
 
-      <!-- Inline Root-Cause Resolution Panel -->
+      <!-- Inline Root-Cause Resolution Panel (inside .clinical-drawer-body per Req 5) -->
       <div
         v-if="isResolveModalOpen && canMutateTicket && !isSigned"
         class="resolve-panel"
@@ -259,7 +281,8 @@
             "
             @click="submitResolution"
           >
-            Confirm Resolution
+            <Check :size="14" aria-hidden="true" />
+            <span>Confirm Resolution</span>
           </button>
         </div>
       </div>
@@ -275,542 +298,552 @@
         tab-class="tab-item"
       />
 
-      <!-- Drawer Content -->
-      <div class="drawer-body">
-        <!-- TAB 1: OVERVIEW -->
-        <div
-          v-if="activeTab === 'overview'"
-          id="ticket-drawer-panel-overview"
-          role="tabpanel"
-          aria-labelledby="ticket-drawer-tab-overview"
-          class="tab-pane"
-        >
-          <div class="section-card">
-            <h4 class="card-title">Clinical Narrative</h4>
-            <p class="narrative-text">
-              {{ ticket.description }}
-            </p>
-          </div>
+      <!-- TAB 1: OVERVIEW -->
+      <div
+        v-if="activeTab === 'overview'"
+        id="ticket-drawer-panel-overview"
+        role="tabpanel"
+        aria-labelledby="ticket-drawer-tab-overview"
+        class="tab-pane"
+      >
+        <div class="section-card">
+          <h4 class="card-title">Clinical Narrative</h4>
+          <p class="narrative-text">
+            {{ ticket.description }}
+          </p>
+        </div>
 
-          <div class="section-card">
-            <h4 class="card-title">Trial &amp; Site Context</h4>
-            <div class="meta-grid">
-              <div class="meta-item">
-                <span class="meta-label">Study ID</span>
-                <span class="meta-value">{{ ticket.study_id || "N/A" }}</span>
-              </div>
-              <div class="meta-item">
-                <span class="meta-label">Site ID</span>
-                <span class="meta-value">{{ ticket.site_id || "N/A" }}</span>
-              </div>
-              <div class="meta-item">
-                <span class="meta-label">Subject ID</span>
-                <span class="meta-value">{{ ticket.subject_id || "N/A" }}</span>
-              </div>
-              <div class="meta-item">
-                <span class="meta-label">Priority</span>
-                <span
-                  class="meta-value priority-tag"
-                  :class="`priority-${ticket.priority?.toLowerCase()}`"
-                >
-                  {{ ticket.priority }}
-                </span>
-              </div>
-              <div class="meta-item">
-                <span class="meta-label">Created By</span>
-                <span class="meta-value">{{ ticket.created_by }}</span>
-              </div>
-              <div class="meta-item">
-                <span class="meta-label">Created At</span>
-                <span class="meta-value">{{
-                  formatDate(ticket.created_at)
-                }}</span>
-              </div>
+        <div class="section-card">
+          <h4 class="card-title">Trial &amp; Site Context</h4>
+          <div class="meta-grid">
+            <div class="meta-item">
+              <span class="meta-label">Study ID</span>
+              <span class="meta-value">{{ ticket.study_id || "N/A" }}</span>
             </div>
-          </div>
-
-          <!-- Grounded Protocol RAG Triage Card -->
-          <div v-if="aiTriage" class="section-card ai-triage-card">
-            <div class="ai-card-header">
-              <div class="ai-card-title-group">
-                <span class="ai-robot-icon">🤖</span>
-                <h4 class="card-title ai-title">
-                  Grounded Protocol RAG Triage
-                </h4>
-              </div>
+            <div class="meta-item">
+              <span class="meta-label">Site ID</span>
+              <span class="meta-value">{{ ticket.site_id || "N/A" }}</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">Subject ID</span>
+              <span class="meta-value">{{ ticket.subject_id || "N/A" }}</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">Priority</span>
               <span
-                class="badge"
-                :class="
-                  aiTriage.rag_status === 'DRAFT_AVAILABLE'
-                    ? 'badge-ai-grounded'
-                    : 'badge-ai-failclosed'
-                "
+                class="meta-value priority-tag"
+                :class="`priority-${ticket.priority?.toLowerCase()}`"
               >
-                {{
-                  aiTriage.rag_status === "DRAFT_AVAILABLE"
-                    ? `🎯 ${Math.round(aiTriage.faithfulness_score * 100)}% Faithfulness (Grounded)`
-                    : "⚠️ Routed to Human Queue (< 85% Confidence)"
-                }}
+                {{ ticket.priority }}
               </span>
             </div>
-
-            <div
-              v-if="aiTriage.rag_status === 'DRAFT_AVAILABLE'"
-              class="ai-draft-content"
-            >
-              <p class="ai-draft-text">
-                {{ aiTriage.draft_answer }}
-              </p>
-              <div
-                v-if="aiTriage.citations && aiTriage.citations.length > 0"
-                class="citation-badge-list"
-              >
-                <span class="citation-label">Verified Protocol Citations:</span>
-                <button
-                  v-for="(cit, cIdx) in aiTriage.citations"
-                  :key="cIdx"
-                  type="button"
-                  class="citation-chip-btn"
-                  title="Open protocol document viewer at referenced page"
-                  @click="openCitationViewer(cit)"
-                >
-                  📖
-                  {{
-                    cit.citation_marker ||
-                    `Protocol ${cit.protocol_version} §${cit.section_number || "General"} p.${cit.page_number}`
-                  }}
-                </button>
-              </div>
-              <div class="ai-draft-actions">
-                <button
-                  type="button"
-                  class="btn btn-sm btn-secondary"
-                  @click="applyAiDraftToComment"
-                >
-                  💬 Use Draft as Public Comment
-                </button>
-              </div>
+            <div class="meta-item">
+              <span class="meta-label">Created By</span>
+              <span class="meta-value">{{ ticket.created_by }}</span>
             </div>
-
-            <div v-else class="ai-failclosed-box">
-              <p class="ai-failclosed-text">
-                {{
-                  aiTriage.routing_reason ||
-                  "Inquiry confidence is below the 85% gating threshold. Automatically routed to human Data Manager review."
-                }}
-              </p>
-              <div class="human-routed-badge">
-                👤 Assigned Queue: <strong>Data Manager Review</strong>
-              </div>
+            <div class="meta-item">
+              <span class="meta-label">Created At</span>
+              <span class="meta-value">{{
+                formatDate(ticket.created_at)
+              }}</span>
             </div>
-          </div>
-
-          <div v-if="relatedEntityType" class="section-card">
-            <h4 class="card-title">Cross-App Entity Linkage</h4>
-            <div class="entity-badge-box">
-              <span class="entity-type-badge">{{ relatedEntityType }}</span>
-              <span class="entity-id-value">{{ relatedEntityId }}</span>
-            </div>
-          </div>
-
-          <div
-            v-if="ticket.root_cause_category || ticket.root_cause_summary"
-            class="section-card rca-card"
-          >
-            <h4 class="card-title">Root Cause Analysis (5-Whys)</h4>
-            <div class="rca-category-pill">
-              Category: {{ formatRCA(ticket.root_cause_category) }}
-            </div>
-            <div v-if="ticket.resolution_code" class="rca-category-pill">
-              Resolution: {{ ticket.resolution_code }}
-            </div>
-            <p class="rca-summary">
-              {{ ticket.root_cause_summary }}
-            </p>
-          </div>
-
-          <div
-            v-if="
-              ticket.context_payload &&
-              Object.keys(ticket.context_payload).length > 0
-            "
-            class="section-card"
-          >
-            <h4 class="card-title">Structured Ingestion Payload</h4>
-            <pre class="json-viewer">{{
-              JSON.stringify(ticket.context_payload, null, 2)
-            }}</pre>
           </div>
         </div>
 
-        <!-- TAB 2: DISCUSSION -->
-        <div
-          v-if="activeTab === 'discussion'"
-          id="ticket-drawer-panel-discussion"
-          role="tabpanel"
-          aria-labelledby="ticket-drawer-tab-discussion"
-          class="tab-pane"
-        >
-          <div class="comments-filter-bar">
-            <button
-              type="button"
-              class="filter-chip"
-              :class="{ active: commentFilter === 'ALL' }"
-              @click="commentFilter = 'ALL'"
+        <!-- Grounded Protocol RAG Triage Card -->
+        <div v-if="aiTriage" class="section-card ai-triage-card">
+          <div class="ai-card-header">
+            <div class="ai-card-title-group">
+              <Bot :size="17" class="ai-robot-icon" aria-hidden="true" />
+              <h4 class="card-title ai-title">Grounded Protocol RAG Triage</h4>
+            </div>
+            <span
+              class="badge"
+              :class="
+                aiTriage.rag_status === 'DRAFT_AVAILABLE'
+                  ? 'badge-ai-grounded'
+                  : 'badge-ai-failclosed'
+              "
             >
-              All Notes
-            </button>
-            <button
-              type="button"
-              class="filter-chip"
-              :class="{ active: commentFilter === 'PUBLIC' }"
-              @click="commentFilter = 'PUBLIC'"
-            >
-              Public (Site &amp; Sponsor)
-            </button>
-            <button
-              v-if="canViewInternalSponsorNotes"
-              type="button"
-              class="filter-chip"
-              :class="{ active: commentFilter === 'INTERNAL_SPONSOR' }"
-              @click="commentFilter = 'INTERNAL_SPONSOR'"
-            >
-              Internal Sponsor Only
-            </button>
+              <Target
+                v-if="aiTriage.rag_status === 'DRAFT_AVAILABLE'"
+                :size="12"
+                aria-hidden="true"
+              />
+              <AlertTriangle v-else :size="12" aria-hidden="true" />
+              <span>{{
+                aiTriage.rag_status === "DRAFT_AVAILABLE"
+                  ? `${Math.round(aiTriage.faithfulness_score * 100)}% Faithfulness (Grounded)`
+                  : "Routed to Human Queue (< 85% Confidence)"
+              }}</span>
+            </span>
           </div>
 
-          <div class="comment-stream">
+          <div
+            v-if="aiTriage.rag_status === 'DRAFT_AVAILABLE'"
+            class="ai-draft-content"
+          >
+            <p class="ai-draft-text">
+              {{ aiTriage.draft_answer }}
+            </p>
             <div
-              v-for="c in filteredComments"
-              :key="c.id"
-              class="comment-card"
-              :class="{
-                'comment-internal': c.visibility === 'INTERNAL_SPONSOR',
-              }"
+              v-if="aiTriage.citations && aiTriage.citations.length > 0"
+              class="citation-badge-list"
             >
-              <div class="comment-header">
-                <span class="comment-author">{{
-                  c.created_by || c.user_id
+              <span class="citation-label">Verified Protocol Citations:</span>
+              <button
+                v-for="(cit, cIdx) in aiTriage.citations"
+                :key="cIdx"
+                type="button"
+                class="citation-chip-btn"
+                title="Open protocol document viewer at referenced page"
+                @click="openCitationViewer(cit)"
+              >
+                <BookOpen :size="13" aria-hidden="true" />
+                <span>{{
+                  cit.citation_marker ||
+                  `Protocol ${cit.protocol_version} §${cit.section_number || "General"} p.${cit.page_number}`
                 }}</span>
-                <span
-                  class="badge"
-                  :class="
-                    c.visibility === 'INTERNAL_SPONSOR'
-                      ? 'badge-internal'
-                      : 'badge-public'
-                  "
-                >
-                  {{
-                    c.visibility === "INTERNAL_SPONSOR"
-                      ? "🔒 Internal Note"
-                      : "🌐 Public"
-                  }}
-                </span>
-                <span class="comment-time">{{ formatDate(c.created_at) }}</span>
-              </div>
-              <div class="comment-body">
-                {{ c.body ?? c.content }}
-              </div>
+              </button>
             </div>
-
-            <div v-if="filteredComments.length === 0" class="empty-placeholder">
-              No comments match the selected visibility filter.
+            <div class="ai-draft-actions">
+              <button
+                type="button"
+                class="btn btn-sm btn-secondary"
+                @click="applyAiDraftToComment"
+              >
+                <MessageSquare :size="14" aria-hidden="true" />
+                <span>Use Draft as Public Comment</span>
+              </button>
             </div>
           </div>
 
-          <div v-if="canMutateTicket && !isSigned" class="new-comment-box">
-            <div class="visibility-selector">
-              <label class="radio-label">
-                <input
-                  v-model="newCommentVisibility"
-                  type="radio"
-                  value="PUBLIC"
-                />
-                <span>🌐 Public (Site Visible)</span>
-              </label>
-              <label v-if="canViewInternalSponsorNotes" class="radio-label">
-                <input
-                  v-model="newCommentVisibility"
-                  type="radio"
-                  value="INTERNAL_SPONSOR"
-                />
-                <span>🔒 Internal Sponsor Note</span>
-              </label>
+          <div v-else class="ai-failclosed-box">
+            <p class="ai-failclosed-text">
+              {{
+                aiTriage.routing_reason ||
+                "Inquiry confidence is below the 85% gating threshold. Automatically routed to human Data Manager review."
+              }}
+            </p>
+            <div class="human-routed-badge">
+              <User :size="13" aria-hidden="true" />
+              <span>Assigned Queue: <strong>Data Manager Review</strong></span>
             </div>
+          </div>
+        </div>
+
+        <div v-if="relatedEntityType" class="section-card">
+          <h4 class="card-title">Cross-App Entity Linkage</h4>
+          <div class="entity-badge-box">
+            <span class="entity-type-badge">{{ relatedEntityType }}</span>
+            <span class="entity-id-value">{{ relatedEntityId }}</span>
+          </div>
+        </div>
+
+        <div
+          v-if="ticket.root_cause_category || ticket.root_cause_summary"
+          class="section-card rca-card"
+        >
+          <h4 class="card-title">Root Cause Analysis (5-Whys)</h4>
+          <div class="rca-category-pill">
+            Category: {{ formatRCA(ticket.root_cause_category) }}
+          </div>
+          <div v-if="ticket.resolution_code" class="rca-category-pill">
+            Resolution: {{ ticket.resolution_code }}
+          </div>
+          <p class="rca-summary">
+            {{ ticket.root_cause_summary }}
+          </p>
+        </div>
+
+        <div
+          v-if="
+            ticket.context_payload &&
+            Object.keys(ticket.context_payload).length > 0
+          "
+          class="section-card"
+        >
+          <h4 class="card-title">Structured Ingestion Payload</h4>
+          <pre class="json-viewer">{{
+            JSON.stringify(ticket.context_payload, null, 2)
+          }}</pre>
+        </div>
+      </div>
+
+      <!-- TAB 2: DISCUSSION -->
+      <div
+        v-if="activeTab === 'discussion'"
+        id="ticket-drawer-panel-discussion"
+        role="tabpanel"
+        aria-labelledby="ticket-drawer-tab-discussion"
+        class="tab-pane"
+      >
+        <div class="comments-filter-bar">
+          <button
+            type="button"
+            class="filter-chip"
+            :class="{ active: commentFilter === 'ALL' }"
+            @click="commentFilter = 'ALL'"
+          >
+            All Notes
+          </button>
+          <button
+            type="button"
+            class="filter-chip"
+            :class="{ active: commentFilter === 'PUBLIC' }"
+            @click="commentFilter = 'PUBLIC'"
+          >
+            <Globe :size="13" aria-hidden="true" />
+            <span>Public (Site &amp; Sponsor)</span>
+          </button>
+          <button
+            v-if="canViewInternalSponsorNotes"
+            type="button"
+            class="filter-chip"
+            :class="{ active: commentFilter === 'INTERNAL_SPONSOR' }"
+            @click="commentFilter = 'INTERNAL_SPONSOR'"
+          >
+            <Lock :size="13" aria-hidden="true" />
+            <span>Internal Sponsor Only</span>
+          </button>
+        </div>
+
+        <div class="comment-stream">
+          <div
+            v-for="c in filteredComments"
+            :key="c.id"
+            class="comment-card"
+            :class="{
+              'comment-internal': c.visibility === 'INTERNAL_SPONSOR',
+            }"
+          >
+            <div class="comment-header">
+              <span class="comment-author">{{
+                c.created_by || c.user_id
+              }}</span>
+              <span
+                class="badge"
+                :class="
+                  c.visibility === 'INTERNAL_SPONSOR'
+                    ? 'badge-internal'
+                    : 'badge-public'
+                "
+              >
+                <Lock
+                  v-if="c.visibility === 'INTERNAL_SPONSOR'"
+                  :size="11"
+                  aria-hidden="true"
+                />
+                <Globe v-else :size="11" aria-hidden="true" />
+                <span>{{
+                  c.visibility === "INTERNAL_SPONSOR"
+                    ? "Internal Note"
+                    : "Public"
+                }}</span>
+              </span>
+              <span class="comment-time">{{ formatDate(c.created_at) }}</span>
+            </div>
+            <div class="comment-body">
+              {{ c.body ?? c.content }}
+            </div>
+          </div>
+
+          <div v-if="filteredComments.length === 0" class="empty-placeholder">
+            No comments match the selected visibility filter.
+          </div>
+        </div>
+
+        <div v-if="canMutateTicket && !isSigned" class="new-comment-box">
+          <div class="visibility-selector">
+            <label class="radio-label">
+              <input
+                v-model="newCommentVisibility"
+                type="radio"
+                value="PUBLIC"
+              />
+              <Globe :size="14" aria-hidden="true" />
+              <span>Public (Site Visible)</span>
+            </label>
+            <label v-if="canViewInternalSponsorNotes" class="radio-label">
+              <input
+                v-model="newCommentVisibility"
+                type="radio"
+                value="INTERNAL_SPONSOR"
+              />
+              <Lock :size="14" aria-hidden="true" />
+              <span>Internal Sponsor Note</span>
+            </label>
+          </div>
+          <ClinicalInput
+            id="ticket-new-comment-body"
+            v-model="newCommentContent"
+            as="textarea"
+            :rows="3"
+            label="Clinical discussion note"
+            hide-label
+            density="compact"
+            :show-query-flag="false"
+            control-class="form-control"
+            placeholder="Add a clinical note, investigator response, or internal audit review (no participant PII)..."
+            :attributes="{ 'aria-label': 'Clinical discussion note' }"
+          />
+          <div class="comment-submit-row">
             <ClinicalInput
-              id="ticket-new-comment-body"
-              v-model="newCommentContent"
-              as="textarea"
-              :rows="3"
-              label="Clinical discussion note"
+              id="ticket-new-comment-reason"
+              v-model="newCommentReason"
+              label="Reason for adding note"
+              hide-label
+              density="compact"
+              :show-query-flag="false"
+              extra-class="flex-1"
+              control-class="form-control"
+              placeholder="Reason for change (GxP justification)..."
+              :attributes="{ 'aria-label': 'Reason for adding note' }"
+            />
+            <button
+              id="btn-post-ticket-comment"
+              type="button"
+              class="btn btn-primary"
+              :disabled="
+                !newCommentContent.trim() ||
+                !newCommentReason.trim() ||
+                commentSubmitting
+              "
+              @click="submitComment"
+            >
+              Post Note
+            </button>
+          </div>
+        </div>
+        <div v-else class="empty-placeholder">
+          {{
+            isSigned
+              ? "Discussion is locked because this ticket has been signed under 21 CFR Part 11."
+              : "Read-only auditor view — adding discussion notes is disabled."
+          }}
+        </div>
+      </div>
+
+      <!-- TAB 3: ATTACHMENTS (Demo mode only while blob storage is out of scope) -->
+      <div
+        v-if="demoBuild && activeTab === 'attachments'"
+        id="ticket-drawer-panel-attachments"
+        role="tabpanel"
+        aria-labelledby="ticket-drawer-tab-attachments"
+        class="tab-pane"
+      >
+        <div class="attachment-upload-box">
+          <h4 class="card-title">Upload Audited Evidence Blob</h4>
+          <p class="upload-hint">
+            Upload logs, temperature traces, source certificates, or PDFs (21
+            CFR Part 11 &amp; DEID scanned).
+          </p>
+          <div class="upload-inputs">
+            <input
+              ref="fileInput"
+              type="file"
+              aria-label="Evidence attachment file"
+              class="file-input"
+              @change="onFileSelected"
+            />
+            <ClinicalInput
+              id="ticket-attachment-reason"
+              v-model="attachmentReason"
+              label="Reason for attaching evidence"
               hide-label
               density="compact"
               :show-query-flag="false"
               control-class="form-control"
-              placeholder="Add a clinical note, investigator response, or internal audit review (no participant PII)..."
-              :attributes="{ 'aria-label': 'Clinical discussion note' }"
+              placeholder="Mandatory GxP reason for attachment..."
+              :attributes="{ 'aria-label': 'Reason for attaching evidence' }"
             />
-            <div class="comment-submit-row">
-              <ClinicalInput
-                id="ticket-new-comment-reason"
-                v-model="newCommentReason"
-                label="Reason for adding note"
-                hide-label
-                density="compact"
-                :show-query-flag="false"
-                extra-class="flex-1"
-                control-class="form-control"
-                placeholder="Reason for change (GxP justification)..."
-                :attributes="{ 'aria-label': 'Reason for adding note' }"
-              />
-              <button
-                id="btn-post-ticket-comment"
-                type="button"
-                class="btn btn-primary"
-                :disabled="
-                  !newCommentContent.trim() ||
-                  !newCommentReason.trim() ||
-                  commentSubmitting
-                "
-                @click="submitComment"
-              >
-                Post Note
-              </button>
-            </div>
-          </div>
-          <div v-else class="empty-placeholder">
-            {{
-              isSigned
-                ? "Discussion is locked because this ticket has been signed under 21 CFR Part 11."
-                : "Read-only auditor view — adding discussion notes is disabled."
-            }}
-          </div>
-        </div>
-
-        <!-- TAB 3: ATTACHMENTS (Demo mode only while blob storage is out of scope) -->
-        <div
-          v-if="demoBuild && activeTab === 'attachments'"
-          id="ticket-drawer-panel-attachments"
-          role="tabpanel"
-          aria-labelledby="ticket-drawer-tab-attachments"
-          class="tab-pane"
-        >
-          <div class="attachment-upload-box">
-            <h4 class="card-title">Upload Audited Evidence Blob</h4>
-            <p class="upload-hint">
-              Upload logs, temperature traces, source certificates, or PDFs (21
-              CFR Part 11 &amp; DEID scanned).
-            </p>
-            <div class="upload-inputs">
-              <input
-                ref="fileInput"
-                type="file"
-                aria-label="Evidence attachment file"
-                class="file-input"
-                @change="onFileSelected"
-              />
-              <ClinicalInput
-                id="ticket-attachment-reason"
-                v-model="attachmentReason"
-                label="Reason for attaching evidence"
-                hide-label
-                density="compact"
-                :show-query-flag="false"
-                control-class="form-control"
-                placeholder="Mandatory GxP reason for attachment..."
-                :attributes="{ 'aria-label': 'Reason for attaching evidence' }"
-              />
-              <button
-                type="button"
-                class="btn btn-primary"
-                :disabled="
-                  !selectedFile || !attachmentReason.trim() || uploadSubmitting
-                "
-                @click="uploadAttachment"
-              >
-                Attach Evidence
-              </button>
-            </div>
-          </div>
-
-          <div class="attachments-list">
-            <div
-              v-for="att in attachments"
-              :key="att.id"
-              class="attachment-card"
-            >
-              <div class="attachment-icon">📄</div>
-              <div class="attachment-details">
-                <div class="attachment-filename">
-                  {{ att.filename }}
-                </div>
-                <div class="attachment-meta">
-                  <span>{{ (att.file_size_bytes / 1024).toFixed(1) }} KB</span>
-                  • <span>Uploaded by {{ att.uploaded_by }}</span> •
-                  <span>{{ formatDate(att.uploaded_at) }}</span>
-                </div>
-                <div class="sha-hash" :title="att.sha256_hash">
-                  SHA-256:
-                  <code>{{ att.sha256_hash?.substring(0, 16) }}...</code>
-                </div>
-              </div>
-              <div class="attachment-badges">
-                <span v-if="att.deid_scrubbed" class="badge badge-deid"
-                  >🛡️ DEID Verified</span
-                >
-              </div>
-            </div>
-
-            <div v-if="attachments.length === 0" class="empty-placeholder">
-              <EmptyState
-                icon="📎"
-                title="No Evidence Attached"
-                message="No evidence files have been attached to this ticket yet."
-              />
-            </div>
-          </div>
-        </div>
-
-        <!-- TAB 4: SIGNATURES -->
-        <div
-          v-if="activeTab === 'signatures'"
-          id="ticket-drawer-panel-signatures"
-          role="tabpanel"
-          aria-labelledby="ticket-drawer-tab-signatures"
-          class="tab-pane"
-        >
-          <div v-if="ticket.signature_token" class="signature-record-card">
-            <div class="sig-card-header">
-              <span class="sig-seal-icon">🛡️</span>
-              <div>
-                <h4 class="sig-card-title">
-                  Authoritative 21 CFR Part 11 Electronic Signature
-                </h4>
-                <p class="sig-card-subtitle">
-                  Legally binding sign-off recorded in tamper-evident ledger
-                </p>
-              </div>
-            </div>
-            <div class="sig-details-grid">
-              <div class="sig-item">
-                <span class="sig-label">Signer Identity:</span>
-                <span class="sig-val">{{ ticket.signature_user }}</span>
-              </div>
-              <div class="sig-item">
-                <span class="sig-label">Timestamp (UTC):</span>
-                <span class="sig-val">{{
-                  formatDate(ticket.signature_timestamp)
-                }}</span>
-              </div>
-              <div class="sig-item full-width">
-                <span class="sig-label">Signature Meaning:</span>
-                <span class="sig-val meaning-val">{{
-                  ticket.signature_meaning
-                }}</span>
-              </div>
-              <div class="sig-item full-width">
-                <span class="sig-label">Cryptographic Token:</span>
-                <span class="sig-val token-val"
-                  ><code>{{ ticket.signature_token }}</code></span
-                >
-              </div>
-            </div>
-          </div>
-
-          <div v-else class="empty-sig-box">
-            <p>
-              No 21 CFR Part 11 electronic signature has been captured for this
-              ticket.
-            </p>
             <button
-              v-if="canSignTicket"
               type="button"
-              class="btn btn-primary btn-sign-action"
-              @click="isSignModalOpen = true"
+              class="btn btn-primary"
+              :disabled="
+                !selectedFile || !attachmentReason.trim() || uploadSubmitting
+              "
+              @click="uploadAttachment"
             >
-              Sign &amp; Authorize Ticket
+              <Paperclip :size="15" aria-hidden="true" />
+              <span>Attach Evidence</span>
             </button>
-            <p v-else class="sig-prereq-hint">
-              {{
-                canMutateTicket
-                  ? "Resolve the clinical issue first to unlock 21 CFR Part 11 closure sign-off."
-                  : "Read-only auditor view — electronic signature capture requires operational staff access."
-              }}
-            </p>
           </div>
         </div>
 
-        <!-- TAB 5: AUDIT TRAIL -->
-        <div
-          v-if="activeTab === 'audit'"
-          id="ticket-drawer-panel-audit"
-          role="tabpanel"
-          aria-labelledby="ticket-drawer-tab-audit"
-          class="tab-pane"
-        >
-          <div class="audit-timeline">
-            <template v-if="isAuditLoading">
-              <SkeletonLoader type="timeline" :count="3" />
-            </template>
-            <template v-else-if="auditLogs && auditLogs.length > 0">
-              <div v-for="(log, idx) in auditLogs" :key="idx" class="audit-row">
-                <div class="audit-bullet" />
-                <div class="audit-content">
-                  <div class="audit-row-header">
-                    <span class="audit-action">{{ log.action }}</span>
-                    <span class="audit-user">{{ log.user_id }}</span>
-                    <span class="audit-time">{{
-                      formatDate(log.timestamp)
-                    }}</span>
-                  </div>
-                  <div class="audit-reason">
-                    Reason: {{ log.reason_for_change || log.change_reason }}
-                  </div>
-                  <div v-if="log.block_hash" class="audit-hash">
-                    Ledger Hash:
-                    <code
-                      >{{ String(log.block_hash).substring(0, 16) }}...</code
-                    >
-                  </div>
-                </div>
+        <div class="attachments-list">
+          <div v-for="att in attachments" :key="att.id" class="attachment-card">
+            <div class="attachment-icon">
+              <FileText :size="20" aria-hidden="true" />
+            </div>
+            <div class="attachment-details">
+              <div class="attachment-filename">
+                {{ att.filename }}
               </div>
-            </template>
-            <template v-else>
-              <EmptyState
-                icon="🔒"
-                title="No Audit Entries Found"
-                message="No GxP 21 CFR Part 11 audit trail events have been recorded for this ticket."
-              />
-            </template>
+              <div class="attachment-meta">
+                <span>{{ (att.file_size_bytes / 1024).toFixed(1) }} KB</span>
+                &bull; <span>Uploaded by {{ att.uploaded_by }}</span> &bull;
+                <span>{{ formatDate(att.uploaded_at) }}</span>
+              </div>
+              <div class="sha-hash" :title="att.sha256_hash">
+                SHA-256:
+                <code>{{ att.sha256_hash?.substring(0, 16) }}...</code>
+              </div>
+            </div>
+            <div class="attachment-badges">
+              <span v-if="att.deid_scrubbed" class="badge badge-deid">
+                <ShieldCheck :size="12" aria-hidden="true" />
+                <span>DEID Verified</span>
+              </span>
+            </div>
+          </div>
+
+          <div v-if="attachments.length === 0" class="empty-placeholder">
+            <EmptyState
+              title="No Evidence Attached"
+              message="No evidence files have been attached to this ticket yet."
+            />
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- Protocol Document Viewer Modal -->
-    <div
-      v-if="isCitationViewerOpen && activeCitation"
-      class="citation-modal-backdrop"
-      role="presentation"
-      @click.self="closeCitationViewer"
-    >
+      <!-- TAB 4: SIGNATURES -->
       <div
-        ref="citationModalRef"
-        class="citation-modal-panel"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="citation-viewer-title"
-        tabindex="-1"
+        v-if="activeTab === 'signatures'"
+        id="ticket-drawer-panel-signatures"
+        role="tabpanel"
+        aria-labelledby="ticket-drawer-tab-signatures"
+        class="tab-pane"
       >
-        <div class="citation-modal-header">
-          <div class="citation-modal-meta">
-            <span class="badge badge-gxp">21 CFR Part 11 Verified</span>
-            <span class="badge badge-standard"
+        <div v-if="ticket.signature_token" class="signature-record-card">
+          <div class="sig-card-header">
+            <ShieldCheck :size="24" class="sig-seal-icon" aria-hidden="true" />
+            <div>
+              <h4 class="sig-card-title">
+                Authoritative 21 CFR Part 11 Electronic Signature
+              </h4>
+              <p class="sig-card-subtitle">
+                Legally binding sign-off recorded in tamper-evident ledger
+              </p>
+            </div>
+          </div>
+          <div class="sig-details-grid">
+            <div class="sig-item">
+              <span class="sig-label">Signer Identity:</span>
+              <span class="sig-val">{{ ticket.signature_user }}</span>
+            </div>
+            <div class="sig-item">
+              <span class="sig-label">Timestamp (UTC):</span>
+              <span class="sig-val">{{
+                formatDate(ticket.signature_timestamp)
+              }}</span>
+            </div>
+            <div class="sig-item full-width">
+              <span class="sig-label">Signature Meaning:</span>
+              <span class="sig-val meaning-val">{{
+                ticket.signature_meaning
+              }}</span>
+            </div>
+            <div class="sig-item full-width">
+              <span class="sig-label">Cryptographic Token:</span>
+              <span class="sig-val token-val"
+                ><code>{{ ticket.signature_token }}</code></span
+              >
+            </div>
+          </div>
+        </div>
+
+        <div v-else class="empty-sig-box">
+          <p>
+            No 21 CFR Part 11 electronic signature has been captured for this
+            ticket.
+          </p>
+          <button
+            v-if="canSignTicket"
+            type="button"
+            class="btn btn-primary btn-sign-action"
+            @click="isSignModalOpen = true"
+          >
+            <FileSignature :size="15" aria-hidden="true" />
+            <span>Sign &amp; Authorize Ticket</span>
+          </button>
+          <p v-else class="sig-prereq-hint">
+            {{
+              canMutateTicket
+                ? "Resolve the clinical issue first to unlock 21 CFR Part 11 closure sign-off."
+                : "Read-only auditor view — electronic signature capture requires operational staff access."
+            }}
+          </p>
+        </div>
+      </div>
+
+      <!-- TAB 5: AUDIT TRAIL -->
+      <div
+        v-if="activeTab === 'audit'"
+        id="ticket-drawer-panel-audit"
+        role="tabpanel"
+        aria-labelledby="ticket-drawer-tab-audit"
+        class="tab-pane"
+      >
+        <div class="audit-timeline">
+          <template v-if="isAuditLoading">
+            <SkeletonLoader type="timeline" :count="3" />
+          </template>
+          <template v-else-if="auditLogs && auditLogs.length > 0">
+            <div v-for="(log, idx) in auditLogs" :key="idx" class="audit-row">
+              <div class="audit-bullet" />
+              <div class="audit-content">
+                <div class="audit-row-header">
+                  <span class="audit-action">{{ log.action }}</span>
+                  <span class="audit-user">{{ log.user_id }}</span>
+                  <span class="audit-time">{{
+                    formatDate(log.timestamp)
+                  }}</span>
+                </div>
+                <div class="audit-reason">
+                  Reason: {{ log.reason_for_change || log.change_reason }}
+                </div>
+                <div v-if="log.block_hash" class="audit-hash">
+                  Ledger Hash:
+                  <code>{{ String(log.block_hash).substring(0, 16) }}...</code>
+                </div>
+              </div>
+            </div>
+          </template>
+          <template v-else>
+            <EmptyState
+              title="No Audit Entries Found"
+              message="No GxP 21 CFR Part 11 audit trail events have been recorded for this ticket."
+            />
+          </template>
+        </div>
+      </div>
+    </div>
+  </ClinicalDrawer>
+
+  <!-- Sibling Protocol Document Viewer Modal (Req 7) -->
+  <ClinicalModal
+    :model-value="Boolean(isCitationViewerOpen && activeCitation)"
+    :teleport="false"
+    size="lg"
+    fallback-focus="#ticket-drawer-close-btn"
+    :show-close="false"
+    backdrop-class="citation-modal-backdrop"
+    dialog-class="citation-modal-panel"
+    aria-labelledby="citation-viewer-title"
+    @close="closeCitationViewer"
+  >
+    <template #header>
+      <div class="citation-modal-header">
+        <div class="citation-header-content">
+          <div v-if="activeCitation" class="citation-modal-meta">
+            <span class="badge badge-signed">21 CFR Part 11 Verified</span>
+            <span class="badge badge-public"
               >Protocol {{ activeCitation.protocol_version }}</span
             >
             <span
               v-if="activeCitation.section_number"
-              class="badge badge-primary"
+              class="badge badge-status-open"
             >
               Section {{ activeCitation.section_number }}
             </span>
@@ -819,80 +852,110 @@
             >
           </div>
           <h3 id="citation-viewer-title" class="citation-modal-title">
-            📖 {{ activeCitation.section_title || "Study Protocol Reference" }}
+            <BookOpen :size="16" aria-hidden="true" />
+            <span>{{
+              activeCitation?.section_title || "Study Protocol Reference"
+            }}</span>
           </h3>
-          <button
-            type="button"
-            class="drawer-close"
-            aria-label="Close"
-            @click="closeCitationViewer"
-          >
-            ✕
-          </button>
         </div>
-        <div class="citation-modal-body">
-          <div class="citation-coordinates-box">
-            <div class="coord-item">
-              <span class="coord-label">Citation Tag:</span>
-              <span class="coord-val"
-                ><code>{{
-                  activeCitation.citation_marker ||
-                  `[Protocol ${activeCitation.protocol_version}, Section ${activeCitation.section_number || "General"}, Page ${activeCitation.page_number}]`
-                }}</code></span
-              >
-            </div>
-            <div class="coord-item">
-              <span class="coord-label">Status:</span>
-              <span class="coord-val text-success"
-                >✓ Approved Protocol Version</span
-              >
-            </div>
-          </div>
-          <div class="citation-excerpt-card">
-            <h4 class="excerpt-heading">
-              Page {{ activeCitation.page_number }} Protocol Excerpt
-            </h4>
-            <div class="excerpt-body">
-              {{
-                activeCitation.chunk_text ||
-                "Referenced protocol section content verified for clinical compliance."
-              }}
-            </div>
-          </div>
-        </div>
-        <div class="citation-modal-footer">
-          <button
-            type="button"
-            class="btn btn-secondary"
-            @click="closeCitationViewer"
+        <button
+          type="button"
+          class="citation-close-btn"
+          aria-label="Close"
+          @click="closeCitationViewer"
+        >
+          <X :size="18" aria-hidden="true" />
+        </button>
+      </div>
+    </template>
+
+    <div v-if="activeCitation" class="citation-modal-body">
+      <div class="citation-coordinates-box">
+        <div class="coord-item">
+          <span class="coord-label">Citation Tag:</span>
+          <span class="coord-val"
+            ><code>{{
+              activeCitation.citation_marker ||
+              `[Protocol ${activeCitation.protocol_version}, Section ${activeCitation.section_number || "General"}, Page ${activeCitation.page_number}]`
+            }}</code></span
           >
-            Close Preview
-          </button>
+        </div>
+        <div class="coord-item">
+          <span class="coord-label">Status:</span>
+          <span class="coord-val text-success">
+            <Check :size="14" aria-hidden="true" />
+            <span>Approved Protocol Version</span>
+          </span>
+        </div>
+      </div>
+      <div class="citation-excerpt-card">
+        <h4 class="excerpt-heading">
+          Page {{ activeCitation.page_number }} Protocol Excerpt
+        </h4>
+        <div class="excerpt-body">
+          {{
+            activeCitation.chunk_text ||
+            "Referenced protocol section content verified for clinical compliance."
+          }}
         </div>
       </div>
     </div>
 
-    <!-- Sign Modal -->
-    <TicketSignModal
-      :is-open="isSignModalOpen"
-      :ticket="ticket"
-      fallback-focus="#ticket-drawer-close-btn"
-      @close="isSignModalOpen = false"
-      @signed="onTicketSigned"
-    />
-  </div>
+    <template #footer>
+      <div class="citation-modal-footer">
+        <button
+          type="button"
+          class="btn btn-secondary"
+          @click="closeCitationViewer"
+        >
+          Close Preview
+        </button>
+      </div>
+    </template>
+  </ClinicalModal>
+
+  <!-- Sign Modal -->
+  <TicketSignModal
+    :is-open="isSignModalOpen"
+    :ticket="ticket"
+    fallback-focus="#ticket-drawer-close-btn"
+    @close="isSignModalOpen = false"
+    @signed="onTicketSigned"
+  />
 </template>
 
 <script setup>
 import { ref, reactive, computed, watch } from "vue";
 import {
+  ClinicalDrawer,
   ClinicalInput,
+  ClinicalModal,
   ClinicalTabs,
   EmptyState,
   handoffFocus,
-  useFocusTrap,
   useInlineFocusHandoff,
 } from "ui";
+import {
+  AlertTriangle,
+  BookOpen,
+  Bot,
+  Check,
+  Clock,
+  Eye,
+  FileSignature,
+  FileText,
+  Globe,
+  Lock,
+  MessageSquare,
+  Paperclip,
+  Pause,
+  Play,
+  ShieldCheck,
+  Siren,
+  Target,
+  User,
+  X,
+} from "lucide-vue-next";
 import TicketSignModal from "./TicketSignModal.vue";
 import SkeletonLoader from "../common/SkeletonLoader.vue";
 import { useAuthStore } from "../../stores/auth";
@@ -953,10 +1016,10 @@ const emit = defineEmits([
   "signed",
 ]);
 
+const clinicalDrawerRef = ref(null);
+const drawerRef = computed(() => clinicalDrawerRef.value?.drawerRef ?? null);
 const demoBuild = isDemoBuild();
 const authStore = useAuthStore();
-const drawerRef = ref(null);
-const citationModalRef = ref(null);
 const activeTab = ref("overview");
 const actionLoading = ref(false);
 const isSignModalOpen = ref(false);
@@ -1061,18 +1124,6 @@ const close = () => {
   emit("close");
 };
 
-useFocusTrap(drawerRef, {
-  isOpen: () => props.isOpen,
-  onEscape: close,
-  fallbackFocus: "#btn-create-ticket",
-});
-
-useFocusTrap(citationModalRef, {
-  isOpen: () => Boolean(isCitationViewerOpen.value && activeCitation.value),
-  onEscape: closeCitationViewer,
-  fallbackFocus: "#ticket-drawer-close-btn",
-});
-
 // SLA calculations
 const slaElapsedPercent = computed(() => {
   if (!props.ticket?.sla_target_at || !props.ticket?.created_at) return 0;
@@ -1102,12 +1153,12 @@ const slaProgressClass = computed(() => {
   return "fill-normal";
 });
 
-const slaIcon = computed(() => {
-  if (props.ticket.sla_breached) return "🚨";
+const slaIconComponent = computed(() => {
+  if (props.ticket.sla_breached) return Siren;
   if (props.ticket.sla_amber_warned || slaElapsedPercent.value >= 75)
-    return "⚠️";
-  if (props.ticket.status?.startsWith("WAITING_")) return "⏸";
-  return "⏱";
+    return AlertTriangle;
+  if (props.ticket.status?.startsWith("WAITING_")) return Pause;
+  return Clock;
 });
 
 const slaStatusText = computed(() => {
@@ -1362,74 +1413,124 @@ const onTicketSigned = (sigPayload) => {
 </script>
 
 <style scoped>
-.drawer-backdrop {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  max-width: 100vw;
-  background: var(--semantic-color-backdrop);
-  backdrop-filter: blur(3px);
-  display: flex;
-  justify-content: flex-end;
-  z-index: 999;
+:deep(.drawer-backdrop) {
   overscroll-behavior: contain;
   touch-action: pan-y;
 }
 
-.drawer-panel {
+:global(.ticket-detail-drawer-panel) {
   width: var(
     --semantic-drawer-width-lg,
     var(--drawer-width-lg, min(100vw, 640px))
   );
   max-width: 100vw;
-  height: 100vh;
-  background: var(--semantic-color-surface);
-  display: flex;
-  flex-direction: column;
-  box-shadow: var(--shadow-drawer-left);
-  border-left: 1px solid var(--semantic-color-border-control);
-  animation: slideLeft 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   overscroll-behavior: contain;
   touch-action: pan-y;
 }
 
-@keyframes slideLeft {
-  from {
-    transform: translateX(100%);
-  }
-  to {
-    transform: translateX(0);
+.drawer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  padding: 8px 16px;
+  min-height: 52px;
+  box-sizing: border-box;
+  background: var(--semantic-color-surface-inverse);
+  color: var(--semantic-color-text-inverse);
+  border-bottom: 1px solid var(--semantic-color-border-inverse);
+}
+
+.drawer-header-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.ref-badge {
+  font-family: var(--semantic-font-mono);
+  font-size: 0.78rem;
+  font-weight: 700;
+  background: var(--semantic-color-inverse-tint);
+  padding: 2px 7px;
+  border-radius: 4px;
+  color: var(--semantic-color-text-inverse);
+  flex-shrink: 0;
+}
+
+.drawer-title {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--semantic-color-text-inverse);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.drawer-close,
+.citation-close-btn {
+  background: none;
+  border: none;
+  color: var(--semantic-color-text-inverse-muted);
+  cursor: pointer;
+  padding: 0;
+  border-radius: 6px;
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.citation-close-btn {
+  color: var(--semantic-color-text-secondary);
+}
+
+.drawer-close:hover:not(:disabled) {
+  background: var(--semantic-color-inverse-tint);
+  color: var(--semantic-color-text-inverse);
+}
+
+.citation-close-btn:hover:not(:disabled) {
+  background: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text);
+}
+
+@media (max-height: 540px) {
+  .drawer-close,
+  .citation-close-btn {
+    min-width: 36px;
+    min-height: 36px;
   }
 }
 
-.drawer-header {
-  padding: 20px 24px;
-  background: var(--semantic-color-surface-inverse);
-  color: var(--semantic-color-text-inverse);
-  position: relative;
+.drawer-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  font-variant-numeric: tabular-nums;
 }
 
 .drawer-header-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
   align-items: center;
-  margin-bottom: 8px;
-}
-
-.ref-badge {
-  font-family: var(--semantic-font-mono);
-  font-size: 0.85rem;
-  font-weight: 700;
-  background: var(--semantic-color-inverse-tint);
-  padding: 3px 8px;
-  border-radius: 4px;
-  color: var(--semantic-color-text-inverse);
 }
 
 .badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-size: var(--font-size-2xs);
   font-weight: 600;
   padding: 3px 8px;
@@ -1485,36 +1586,6 @@ const onTicketSigned = (sigPayload) => {
   color: var(--semantic-color-text-on-solid);
 }
 
-.drawer-title {
-  font-size: 1.25rem;
-  font-weight: 700;
-  margin: 0 0 12px 0;
-  line-height: 1.3;
-}
-
-.drawer-close {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  background: none;
-  border: none;
-  color: var(--semantic-color-text-inverse-muted);
-  font-size: 1.3rem;
-  cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 4px;
-  min-width: 44px;
-  min-height: 44px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.drawer-close:hover:not(:disabled) {
-  background: var(--semantic-color-inverse-tint);
-  color: var(--semantic-color-text-inverse);
-}
-
 .sla-banner {
   padding: 8px 12px;
   border-radius: 6px;
@@ -1525,23 +1596,27 @@ const onTicketSigned = (sigPayload) => {
 }
 
 .sla-banner.sla-normal {
-  background: var(--semantic-color-surface-elevated);
-  border: 1px solid var(--semantic-color-divider-accent);
+  background: var(--semantic-color-info-bg);
+  border: 1px solid var(--semantic-color-info-border);
+  color: var(--semantic-color-info);
 }
 
 .sla-banner.sla-warning {
-  background: var(--semantic-color-surface-elevated);
-  border: 1px solid var(--semantic-color-warning-action-border);
+  background: var(--semantic-color-warning-bg-soft);
+  border: 1px solid var(--semantic-color-warning-border);
+  color: var(--semantic-color-warning-text);
 }
 
 .sla-banner.sla-breached {
-  background: var(--semantic-color-surface-elevated);
+  background: var(--semantic-color-error-bg-soft);
   border: 1px solid var(--semantic-color-error-border);
+  color: var(--semantic-color-error-text-dark);
 }
 
 .sla-banner.sla-paused {
-  background: var(--semantic-color-surface-elevated);
-  border: 1px solid var(--semantic-color-border-inverse);
+  background: var(--semantic-color-surface-muted);
+  border: 1px solid var(--semantic-color-border);
+  color: var(--semantic-color-text-secondary);
 }
 
 .sla-banner-left {
@@ -1552,9 +1627,13 @@ const onTicketSigned = (sigPayload) => {
   font-weight: 600;
 }
 
+.sla-icon {
+  flex-shrink: 0;
+}
+
 .sla-progress-track {
   height: 4px;
-  background: var(--semantic-color-inverse-tint-strong);
+  background: var(--semantic-color-surface-header);
   border-radius: 2px;
   overflow: hidden;
 }
@@ -1581,36 +1660,35 @@ const onTicketSigned = (sigPayload) => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 24px;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 10px 12px;
   background: var(--semantic-color-surface-muted);
-  border-bottom: 1px solid var(--semantic-color-border);
+  border: 1px solid var(--semantic-color-border);
+  border-radius: 8px;
 }
 
 .action-btn-group {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
-}
-
-.drawer-body {
-  flex: 1;
-  overflow-y: auto;
-  padding: 20px 24px;
-  background: var(--semantic-color-surface-header);
-  overscroll-behavior: contain;
-  touch-action: pan-y;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .tab-pane {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
+  min-width: 0;
 }
 
 .section-card {
   background: var(--semantic-color-surface);
   border-radius: 8px;
-  padding: 16px;
+  padding: 14px;
   border: 1px solid var(--semantic-color-border);
+  min-width: 0;
 }
 
 .card-title {
@@ -1625,11 +1703,12 @@ const onTicketSigned = (sigPayload) => {
   color: var(--semantic-color-text-body);
   line-height: 1.5;
   white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .meta-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 }
 
@@ -1637,6 +1716,7 @@ const onTicketSigned = (sigPayload) => {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 0;
 }
 
 .meta-label {
@@ -1650,6 +1730,7 @@ const onTicketSigned = (sigPayload) => {
   font-size: 0.875rem;
   color: var(--semantic-color-text-dark);
   font-weight: 500;
+  word-break: break-word;
   font-variant-numeric: tabular-nums;
 }
 
@@ -1657,6 +1738,7 @@ const onTicketSigned = (sigPayload) => {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
 .entity-type-badge {
@@ -1673,6 +1755,7 @@ const onTicketSigned = (sigPayload) => {
   font-size: 0.875rem;
   font-weight: 600;
   color: var(--semantic-color-text);
+  word-break: break-all;
 }
 
 .rca-card {
@@ -1699,23 +1782,29 @@ const onTicketSigned = (sigPayload) => {
   font-size: 0.78rem;
   font-family: var(--semantic-font-mono);
   overflow-x: auto;
+  max-width: 100%;
 }
 
 /* Discussion tab */
 .comments-filter-bar {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
 .filter-chip {
-  padding: 5px 10px;
+  min-height: 44px;
+  padding: 6px 12px;
   background: var(--semantic-color-surface);
   border: 1px solid var(--semantic-color-border-control);
-  border-radius: 20px;
+  border-radius: 999px;
   font-size: 0.78rem;
   font-weight: 600;
   color: var(--semantic-color-text-secondary);
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .filter-chip.active {
@@ -1747,6 +1836,7 @@ const onTicketSigned = (sigPayload) => {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
   margin-bottom: 6px;
 }
 
@@ -1777,6 +1867,7 @@ const onTicketSigned = (sigPayload) => {
   font-size: 0.85rem;
   color: var(--semantic-color-text-body);
   line-height: 1.45;
+  word-break: break-word;
 }
 
 .new-comment-box {
@@ -1791,13 +1882,15 @@ const onTicketSigned = (sigPayload) => {
 
 .visibility-selector {
   display: flex;
-  gap: 16px;
+  flex-wrap: wrap;
+  gap: 12px;
 }
 
 .radio-label {
   display: flex;
   align-items: center;
   gap: 6px;
+  min-height: 44px;
   font-size: 0.8rem;
   font-weight: 600;
   color: var(--semantic-color-text-body);
@@ -1806,6 +1899,7 @@ const onTicketSigned = (sigPayload) => {
 
 .comment-submit-row {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
@@ -1814,7 +1908,7 @@ const onTicketSigned = (sigPayload) => {
   background: var(--semantic-color-surface);
   border: 1px dashed var(--semantic-color-border-control);
   border-radius: 8px;
-  padding: 16px;
+  padding: 14px;
 }
 
 .upload-hint {
@@ -1827,6 +1921,12 @@ const onTicketSigned = (sigPayload) => {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.file-input {
+  max-width: 100%;
+  min-height: 44px;
+  font-size: 1rem;
 }
 
 .attachments-list {
@@ -1843,20 +1943,23 @@ const onTicketSigned = (sigPayload) => {
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-wrap: wrap;
 }
 
 .attachment-icon {
-  font-size: 1.5rem;
+  color: var(--semantic-color-primary);
 }
 
 .attachment-details {
-  flex: 1;
+  flex: 1 1 180px;
+  min-width: 0;
 }
 
 .attachment-filename {
   font-size: 0.85rem;
   font-weight: 700;
   color: var(--semantic-color-text);
+  word-break: break-all;
 }
 
 .attachment-meta {
@@ -1893,7 +1996,8 @@ const onTicketSigned = (sigPayload) => {
 }
 
 .sig-seal-icon {
-  font-size: 1.75rem;
+  color: var(--semantic-color-success-dark);
+  flex-shrink: 0;
 }
 
 .sig-card-title {
@@ -1911,7 +2015,7 @@ const onTicketSigned = (sigPayload) => {
 
 .sig-details-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
 }
 
@@ -1919,10 +2023,11 @@ const onTicketSigned = (sigPayload) => {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 0;
 }
 
 .sig-item.full-width {
-  grid-column: span 2;
+  grid-column: 1 / -1;
 }
 
 .sig-label {
@@ -1936,6 +2041,7 @@ const onTicketSigned = (sigPayload) => {
   font-size: 0.85rem;
   color: var(--semantic-color-text);
   font-weight: 500;
+  word-break: break-word;
   font-variant-numeric: tabular-nums;
 }
 
@@ -1954,7 +2060,7 @@ const onTicketSigned = (sigPayload) => {
   background: var(--semantic-color-surface);
   border: 1px dashed var(--semantic-color-border-control);
   border-radius: 8px;
-  padding: 32px;
+  padding: 24px 16px;
   text-align: center;
   display: flex;
   flex-direction: column;
@@ -2004,12 +2110,14 @@ const onTicketSigned = (sigPayload) => {
   border-radius: 6px;
   padding: 10px 12px;
   width: 100%;
+  min-width: 0;
 }
 
 .audit-row-header {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
   margin-bottom: 4px;
 }
 
@@ -2037,7 +2145,7 @@ const onTicketSigned = (sigPayload) => {
 }
 
 .empty-placeholder {
-  padding: 24px;
+  padding: 20px;
   text-align: center;
   color: var(--semantic-color-text-secondary);
   font-size: 0.85rem;
@@ -2056,11 +2164,12 @@ const onTicketSigned = (sigPayload) => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 6px;
   box-sizing: border-box;
 }
 
 .btn-sm {
-  padding: 4px 10px;
+  padding: 6px 10px;
   font-size: 0.78rem;
 }
 
@@ -2107,21 +2216,25 @@ const onTicketSigned = (sigPayload) => {
   cursor: not-allowed;
 }
 
-.form-control {
-  padding: 6px 10px;
+:deep(.form-control) {
+  min-height: 44px;
+  padding: 8px 10px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
-  font-size: 0.82rem;
+  font-size: 1rem;
   color: var(--semantic-color-text-dark);
   background: var(--semantic-color-surface);
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
-.form-control:focus-visible {
+:deep(.form-control:focus-visible) {
   border-color: var(--semantic-color-interactive-primary);
 }
 
-.flex-1 {
-  flex: 1;
+:deep(.flex-1) {
+  flex: 1 1 180px;
+  min-width: 0;
 }
 
 /* AI RAG Triage Styles */
@@ -2146,7 +2259,7 @@ const onTicketSigned = (sigPayload) => {
 }
 
 .ai-robot-icon {
-  font-size: 1.15rem;
+  color: var(--semantic-color-interactive-primary);
 }
 
 .ai-title {
@@ -2188,7 +2301,6 @@ const onTicketSigned = (sigPayload) => {
   align-items: center;
   flex-wrap: wrap;
   gap: 6px;
-  margin-top: 4px;
 }
 
 .citation-label {
@@ -2201,27 +2313,21 @@ const onTicketSigned = (sigPayload) => {
   background: var(--semantic-color-info-bg);
   border: 1px solid var(--semantic-color-info-border);
   color: var(--semantic-color-interactive-primary);
-  padding: 3px 8px;
-  border-radius: 4px;
+  min-height: 44px;
+  padding: 6px 10px;
+  border-radius: 6px;
   font-size: 0.76rem;
   font-weight: 600;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  transition: all 0.15s ease-in-out;
-}
-
-.citation-chip-btn:hover:not(:disabled) {
-  background: var(--semantic-color-info-light);
-  border-color: var(--semantic-color-divider-accent);
-  color: var(--semantic-color-info);
+  gap: 6px;
 }
 
 .ai-draft-actions {
   display: flex;
   gap: 8px;
-  margin-top: 4px;
+  flex-wrap: wrap;
 }
 
 .ai-failclosed-box {
@@ -2238,43 +2344,29 @@ const onTicketSigned = (sigPayload) => {
 }
 
 .human-routed-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: 0.78rem;
   color: var(--semantic-color-text-secondary);
 }
 
-/* Citation Document Viewer Modal */
-.citation-modal-backdrop {
-  position: fixed;
-  inset: 0;
-  background: var(--semantic-color-backdrop);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1200;
-  backdrop-filter: blur(2px);
-}
-
-.citation-modal-panel {
-  background: var(--semantic-color-surface);
-  border-radius: 10px;
-  width: 90%;
-  max-width: 650px;
-  max-height: 85vh;
-  display: flex;
-  flex-direction: column;
-  box-shadow: var(--shadow-xl);
-  border: 1px solid var(--semantic-color-border-control);
-  overflow: hidden;
-}
-
+/* Citation Document Viewer Modal (ClinicalModal slots) */
 .citation-modal-header {
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--semantic-color-border);
-  background: var(--semantic-color-surface-muted);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+
+.citation-header-content {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  position: relative;
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
 .citation-modal-meta {
@@ -2285,8 +2377,11 @@ const onTicketSigned = (sigPayload) => {
 
 .citation-modal-title {
   margin: 0;
-  font-size: 1.05rem;
+  font-size: 1rem;
   color: var(--semantic-color-text);
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .badge-page {
@@ -2296,8 +2391,6 @@ const onTicketSigned = (sigPayload) => {
 }
 
 .citation-modal-body {
-  padding: 20px;
-  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -2317,22 +2410,26 @@ const onTicketSigned = (sigPayload) => {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
   font-size: 0.82rem;
 }
 
 .coord-label {
   font-weight: 600;
   color: var(--semantic-color-text-secondary);
-  min-width: 90px;
 }
 
 .coord-val {
   color: var(--semantic-color-text);
+  word-break: break-word;
 }
 
 .text-success {
   color: var(--semantic-color-success);
   font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .citation-excerpt-card {
@@ -2359,34 +2456,34 @@ const onTicketSigned = (sigPayload) => {
 }
 
 .citation-modal-footer {
-  padding: 12px 20px;
-  border-top: 1px solid var(--semantic-color-border);
-  background: var(--semantic-color-surface-muted);
   display: flex;
   justify-content: flex-end;
+  width: 100%;
 }
 
 .signed-lock-notice {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: 0.78rem;
   font-weight: 600;
   color: var(--semantic-color-text-secondary);
-  background: var(--semantic-color-surface-muted);
+  background: var(--semantic-color-surface);
   border: 1px solid var(--semantic-color-border);
   border-radius: 6px;
   padding: 6px 10px;
 }
 
-.transition-reason-field {
-  min-width: 190px;
-  max-width: 240px;
-  padding: 4px 8px;
-  font-size: 0.78rem;
+:deep(.transition-reason-field) {
+  flex: 1 1 180px;
+  min-width: 0;
 }
 
 .resolve-panel {
-  padding: 14px 24px;
+  padding: 14px;
   background: var(--semantic-color-surface-muted);
-  border-bottom: 1px solid var(--semantic-color-border);
+  border: 1px solid var(--semantic-color-border);
+  border-radius: 8px;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -2394,7 +2491,7 @@ const onTicketSigned = (sigPayload) => {
 
 .resolve-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 10px;
 }
 
@@ -2402,6 +2499,7 @@ const onTicketSigned = (sigPayload) => {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 0;
 }
 
 .sig-prereq-hint {
@@ -2419,5 +2517,26 @@ const onTicketSigned = (sigPayload) => {
   font-size: var(--font-size-2xs);
   font-family: var(--semantic-font-mono);
   color: var(--semantic-color-text-secondary);
+}
+
+@media (max-width: 640px) {
+  .meta-grid,
+  .sig-details-grid,
+  .resolve-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .comment-submit-row,
+  .drawer-actions,
+  .action-btn-group {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .action-btn-group .btn,
+  .comment-submit-row .btn,
+  .drawer-actions > .btn {
+    width: 100%;
+  }
 }
 </style>

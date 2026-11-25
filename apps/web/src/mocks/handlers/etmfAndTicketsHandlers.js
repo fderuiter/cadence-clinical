@@ -115,6 +115,39 @@ export function createEtmfAndTicketsHandlers(store) {
       }
     ),
     http.get("*/api/v1/etmf/export-jobs", () => HttpResponse.json([])),
+    http.post("*/api/v1/etmf/documents/export", async ({ request }) => {
+      const body = await readJsonBody(request);
+      const studyId = body?.study_id || "CADENCE-101";
+      const totalDocs = store.state.etmfDocuments.length;
+      return HttpResponse.json(
+        {
+          job_id: "EXP-DEMO-101",
+          study_id: studyId,
+          status: "COMPLETED",
+          progress_percentage: 100,
+          processed_documents: totalDocs,
+          total_documents: totalDocs,
+          created_at: "2026-08-02T12:00:00Z",
+          expires_at: "2026-08-03T12:00:00Z",
+          download_url: "/api/v1/etmf/export-jobs/EXP-DEMO-101/download", // pragma: allowlist secret
+        },
+        { status: 202 }
+      );
+    }),
+    http.get("*/api/v1/etmf/export-jobs/:jobId", ({ params }) => {
+      const totalDocs = store.state.etmfDocuments.length;
+      return HttpResponse.json({
+        job_id: String(params.jobId || "EXP-DEMO-101"),
+        study_id: "CADENCE-101",
+        status: "COMPLETED",
+        progress_percentage: 100,
+        processed_documents: totalDocs,
+        total_documents: totalDocs,
+        created_at: "2026-08-02T12:00:00Z",
+        expires_at: "2026-08-03T12:00:00Z",
+        download_url: `/api/v1/etmf/export-jobs/${encodeURIComponent(String(params.jobId || "EXP-DEMO-101"))}/download`,
+      });
+    }),
     http.get("*/api/v1/execution/audit/integrity", () =>
       HttpResponse.json({
         verified: true,
