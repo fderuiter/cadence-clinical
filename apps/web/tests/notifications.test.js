@@ -7,6 +7,7 @@ import { useNotificationsStore } from "../src/stores/notifications";
 import { notificationsService } from "../src/api/notifications";
 import NotificationsView from "../src/views/NotificationsView.vue";
 import App from "../src/App.vue";
+import { jsonResponse } from "./fetch_mock.js";
 
 // These tests cover screens that are hidden until their .NET backend exists
 // (#4829), so they treat every screen as available.
@@ -647,12 +648,9 @@ describe("Notifications System End-to-End Visual Integration", () => {
       authStore.isAuthenticated = true;
       authStore.accessToken = "dummy-jwt-signature-token";
 
-      globalThis.fetch.mockResolvedValue({
-        ok: true,
-        status: 200,
-        headers: new Headers({ "content-type": "application/json" }),
-        json: async () => [{ id: "notif-01" }],
-      });
+      globalThis.fetch.mockImplementation(async () =>
+        jsonResponse([{ id: "notif-01" }])
+      );
 
       // Import actual notificationsService
       const { notificationsService: realService } = await vi.importActual(
@@ -684,12 +682,9 @@ describe("Notifications System End-to-End Visual Integration", () => {
       authStore.isAuthenticated = true;
       authStore.accessToken = "dummy-jwt-signature-token";
 
-      globalThis.fetch.mockResolvedValue({
-        ok: true,
-        status: 200,
-        headers: new Headers({ "content-type": "application/json" }),
-        json: async () => ({ id: "notif-01", status: "ACKNOWLEDGED" }),
-      });
+      globalThis.fetch.mockImplementation(async () =>
+        jsonResponse({ id: "notif-01", status: "ACKNOWLEDGED" })
+      );
 
       const { notificationsService: realService } = await vi.importActual(
         "../src/api/notifications"
