@@ -986,6 +986,7 @@ internal sealed class KernelLockRecords(KernelTenantDbContextFactory contexts, I
         }
 
         var obsIds = obsList.Select(o => o.Id).ToList();
+        var obsIdSet = obsIds.ToHashSet();
         var instances = await db.CollectionInstances.AsNoTracking()
             .Include(c => c.Members)
             .Where(c => c.StudyId == studyId
@@ -999,7 +1000,7 @@ internal sealed class KernelLockRecords(KernelTenantDbContextFactory contexts, I
         if (validAt is { } vAt && knownAt is { } kAt)
         {
             var referencedVersionIds = instances
-                .Where(c => c.Members.Any(m => m.JoinedAt <= kAt && obsIds.Contains(m.ObservationId)))
+                .Where(c => c.Members.Any(m => m.JoinedAt <= kAt && obsIdSet.Contains(m.ObservationId)))
                 .Select(c => c.ProtocolVersionId)
                 .ToHashSet();
             var protocols = await KernelExportReader.ReadProtocolsAsync(db, studyId, vAt, kAt, referencedVersionIds, cancellationToken)
@@ -1037,6 +1038,7 @@ internal sealed class KernelLockRecords(KernelTenantDbContextFactory contexts, I
             }
         }
 
+        var blindingLookup = BlindedObservationClassifier.CreateLookup(concepts, designs);
         var blinded = new HashSet<ObservationId>();
         foreach (var obs in obsList)
         {
@@ -1055,15 +1057,12 @@ internal sealed class KernelLockRecords(KernelTenantDbContextFactory contexts, I
                 valueAtCut = latestAtCut.Value;
             }
 
-            concepts.TryGetValue(obs.ConceptId, out var concept);
             itemByObs.TryGetValue(obs.Id, out var membership);
-            if (BlindedObservationClassifier.IsBlindedTreatment(
+            if (blindingLookup.IsBlindedTreatment(
                     obs.ConceptId,
                     valueAtCut,
-                    concept,
                     membership.SpecId,
-                    membership.ItemId,
-                    designs))
+                    membership.ItemId))
             {
                 blinded.Add(obs.Id);
             }
@@ -1098,4 +1097,75 @@ internal static class BlindedObservationClassifier
         concept is null
             ? null
             : new BlindedConceptMetadata(concept.ExternalCode, concept.PreferredLabel, concept.Definition);
+
+    public static BlindedObservationLookup CreateLookup(
+        IReadOnlyDictionary<ConceptId, Concept> conceptsById,
+        IReadOnlyList<ProtocolDesign> designs) =>
+        new(conceptsById, designs);
+}
+
+internal sealed class BlindedObservationLookup(
+    IReadOnlyDictionary<ConceptId, Concept> conceptsById,
+    IReadOnlyList<ProtocolDesign> designs)
+{
+    private readonly Dictionary<BlindingKey, bool> _cache = new(BlindingKeyComparer.Instance);
+    private readonly Dictionary<ConceptId, BlindedConceptMetadata?> _metadataByConcept = [];
+
+    public bool IsBlindedTreatment(
+        ConceptId conceptId,
+        ObservationValue valueAtCut,
+        string? collectionSpecId,
+        string? itemId)
+    {
+        // Check per-observation NullFlavor.Masked before consulting or populating the memo cache so a masked
+        // value never marks unmasked siblings on the same (ConceptId, CollectionSpecId, ItemId) as blinded.
+        if (valueAtCut is MissingValue { Reason: NullFlavor.Masked })
+        {
+            return true;
+        }
+
+        var key = new BlindingKey(conceptId, collectionSpecId, itemId);
+        if (_cache.TryGetValue(key, out var cached))
+        {
+            return cached;
+        }
+
+        if (!_metadataByConcept.TryGetValue(conceptId, out var metadata))
+        {
+            conceptsById.TryGetValue(conceptId, out var concept);
+            metadata = BlindedObservationClassifier.ToMetadata(concept);
+            _metadataByConcept[conceptId] = metadata;
+        }
+
+        var isBlinded = BlindedTreatmentClassifier.Instance.IsBlindedObservation(
+            conceptId,
+            value: null,
+            metadata,
+            collectionSpecId,
+            itemId,
+            designs);
+        _cache[key] = isBlinded;
+        return isBlinded;
+    }
+
+    private readonly record struct BlindingKey(ConceptId ConceptId, string? CollectionSpecId, string? ItemId);
+
+    private sealed class BlindingKeyComparer : IEqualityComparer<BlindingKey>
+    {
+        public static readonly BlindingKeyComparer Instance = new();
+
+        public bool Equals(BlindingKey x, BlindingKey y) =>
+            x.ConceptId == y.ConceptId
+            && string.Equals(x.CollectionSpecId, y.CollectionSpecId, StringComparison.Ordinal)
+            && string.Equals(x.ItemId, y.ItemId, StringComparison.Ordinal);
+
+        public int GetHashCode(BlindingKey obj)
+        {
+            var hash = new HashCode();
+            hash.Add(obj.ConceptId);
+            hash.Add(obj.CollectionSpecId, StringComparer.Ordinal);
+            hash.Add(obj.ItemId, StringComparer.Ordinal);
+            return hash.ToHashCode();
+        }
+    }
 }
