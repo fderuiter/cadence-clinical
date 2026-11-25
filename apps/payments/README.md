@@ -8,7 +8,7 @@ Site and participant payments scaffold. It holds the budget contract, fee schedu
 
 - Project: `apps/payments/src/Cadence.Apps.Payments.csproj` (assembly `Cadence.Apps.Payments`).
 - `Program.cs`: composition root and route mapping.
-- `Application/`: `ReceiptOcrEngine` (deterministic raster/vector receipt OCR extraction for PNG, BMP, PNM, JPEG, SVG, and PDF inputs with sharpness/completeness confidence scoring and zero fallback fabrication on unreadable images).
+- `Application/`: `ReceiptOcrEngine` and `PngReceiptDecoder` (deterministic raster/vector receipt OCR extraction for PNG, BMP, PNM, JPEG, SVG, and PDF inputs with 10 MiB payload limits, bounded PNG chunk/ZLib decompression and ratio quotas, sharpness/completeness confidence scoring, and zero fallback fabrication on unreadable images).
 - `Domain/`: EF Core entity classes (budget contracts, fee schedules, split payees, payables and allocations, holdback reserves, invoices, remittance advice, participant wallets, audit log).
   Every timestamp is a `DateTimeOffset`; the ones a writer must supply are `required` with no default, and the project bans `DateTime.Now/UtcNow` (K-TIME-3, #4784), so time comes from `Cadence.Kernel.Time.IClock`.
 - `Domain/Ledger/`: the grant payables ledger, ported from `packages/engine_core/financial/` ([ADR-2521](../../docs/adr/2026-09-30-grant-payables-ledger-in-decimal-with-kernel-ids.md)), in `decimal` throughout.
@@ -156,6 +156,7 @@ refuses to encrypt or decrypt.
 - `tests/Cadence.UnitTests/Payments/ContractCalculationsTests.cs` and `PayableLedgerTests.cs`: the ledger, pinned to the Python reference's amounts and digests.
 - `tests/Cadence.UnitTests/Payments/PaymentsCallerAuthorizationTests.cs`: the host over SQLite; a caller without a write route's role gets `403` and no row changes, and audit rows record the signed caller.
 - `tests/Cadence.UnitTests/Payments/ParticipantSelfServiceAndOcrTests.cs`: caller-bound `/participant/me/*` self-service wallet balances and masks, cross-participant and staff-route `403` isolation, `ReceiptOcrEngine` raster/SVG extraction and zero-fabrication guardrails, `$100` / `$75` meal / `0.90` confidence / `$600` W-9 claim policies, on-demand balance payouts, and server-rule diary stipends.
+- `tests/Cadence.UnitTests/Payments/ReceiptOcrPngQuotaTests.cs`: bounded 10 MiB base64/`data:` payload decoding and PNG `IHDR`/chunk-count/`zTXt`/`iTXt`/`IDAT` ZLib decompression ratio and memory-allocation regression suites across participant self-service and staff OCR/expense endpoints.
 - `tests/Cadence.IntegrationTests/Payments/PaymentsStudySiteScopeTests.cs`: the host on PostgreSQL as the application role; a CRC at one site gets `404` or `403` on another site's participants and never sees them in lists, a caller outside the study sees none of its rows, nothing is written, and in-scope flows still complete. Needs `CADENCE_TEST_POSTGRES` or `CADENCE_TEST_DOCKER=1`.
 - `tests/Cadence.UnitTests/Payments/PaymentDecimalCalculationTests.cs`: `dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Payments"`.
 - Architecture rules (`tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`) scan this assembly: `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`.
