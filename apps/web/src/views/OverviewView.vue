@@ -315,7 +315,11 @@ import {
   isScreenAvailable,
   listDemoCatalogModules,
 } from "../router/availability";
-import { hasRequiredRole } from "../router";
+import { hasRequiredRole } from "../router/helpers.js";
+import {
+  findRouteDescriptorBySpec,
+  isRouteRoleAuthorized,
+} from "../router/registry.js";
 import { isDemoBuild } from "../utils/demoMode";
 
 const router = useRouter();
@@ -409,58 +413,6 @@ function resolveAuthorizedRoute(routeSpec) {
   const participantRef = scope.participantRef;
   const enrollmentId = scope.enrollmentId;
 
-  if (
-    routeSpec === "study" ||
-    routeSpec === "/studies" ||
-    (typeof routeSpec === "string" && routeSpec.startsWith("/studies/"))
-  ) {
-    if (!isScreenAvailable("study")) return null;
-    return buildStudiesWorkspacePath({
-      studyCode,
-      siteId,
-      subjectCode,
-      participantRef,
-    });
-  }
-  if (routeSpec === "ecrf" || routeSpec === "/ecrf") {
-    if (isDemoBuild()) {
-      return isScreenAvailable("ecrf") &&
-        hasRequiredRole(effectiveRoles.value, [
-          "site_investigator",
-          "crc",
-          "data_manager",
-          "sponsor_admin",
-          "cra",
-          "monitor",
-        ])
-        ? buildDataCollectionPath({
-            studyCode,
-            siteId: explicitSiteId,
-            subjectCode,
-            enrollmentId,
-          })
-        : null;
-    }
-    return isScreenAvailable("study") &&
-      hasRequiredRole(effectiveRoles.value, [
-        "site_investigator",
-        "crc",
-        "data_manager",
-        "sponsor_admin",
-        "cra",
-        "monitor",
-      ])
-      ? studyCode || explicitSiteId || participantRef || subjectCode
-        ? buildDataCollectionPath({
-            studyCode,
-            siteId: explicitSiteId,
-            participantRef,
-            subjectCode,
-            enrollmentId,
-          })
-        : "/studies"
-      : null;
-  }
   if (routeSpec === "site-readiness") {
     return resolveSiteReadinessPath(effectiveRoles.value, {
       studyCode,
@@ -468,69 +420,56 @@ function resolveAuthorizedRoute(routeSpec) {
       subjectCode,
     });
   }
-  if (routeSpec === "ctms" || routeSpec === "/ctms") {
-    return isScreenAvailable("ctms") &&
-      hasRequiredRole(effectiveRoles.value, [
-        "cra",
-        "monitor",
-        "data_manager",
-        "sponsor_admin",
-        "unblinded_statistician",
-        "pharmacist",
-        "trial_coordinator",
-      ])
-      ? buildScopedWorkflowPath("/ctms", { studyCode, siteId, subjectCode })
-      : null;
-  }
-  if (routeSpec === "ssu" || routeSpec === "/ssu") {
-    return isScreenAvailable("ssu") &&
-      hasRequiredRole(effectiveRoles.value, [
-        "cra",
-        "monitor",
-        "data_manager",
-        "sponsor_admin",
-        "site_investigator",
-        "crc",
-        "trial_coordinator",
-        "unblinded_statistician",
-        "pharmacist",
-      ])
-      ? buildScopedWorkflowPath("/ssu", { studyCode, siteId, subjectCode })
-      : null;
-  }
-  if (routeSpec === "etmf" || routeSpec === "/etmf") {
-    return isScreenAvailable("etmf") &&
-      hasRequiredRole(effectiveRoles.value, [
-        "cra",
-        "monitor",
-        "data_manager",
-        "site_investigator",
-        "crc",
-        "auditor",
-        "tmf_auditor",
-        "sponsor_admin",
-      ])
-      ? buildScopedWorkflowPath("/etmf", { studyCode, siteId, subjectCode })
-      : null;
-  }
-  if (routeSpec === "training" || routeSpec === "/training") {
-    return isScreenAvailable("training")
-      ? buildScopedWorkflowPath("/training", { studyCode, siteId, subjectCode })
-      : null;
-  }
-  if (routeSpec === "tickets" || routeSpec === "/tickets") {
-    return isScreenAvailable("tickets")
-      ? buildScopedWorkflowPath("/tickets", { studyCode, siteId, subjectCode })
-      : null;
-  }
-  if (routeSpec === "knowledge" || routeSpec === "/knowledge") {
-    return isScreenAvailable("knowledge")
-      ? buildScopedWorkflowPath("/knowledge", {
-          studyCode,
-          siteId,
-          subjectCode,
-        })
-      : null;
+  const descriptor = findRouteDescriptorBySpec(routeSpec);
+  if (descriptor) {
+    const routeName = descriptor.route.name;
+
+    if (routeName === "study") {
+      if (!isScreenAvailable("study")) return null;
+      return buildStudiesWorkspacePath({
+        studyCode,
+        siteId,
+        subjectCode,
+        participantRef,
+      });
+    }
+
+    if (descriptor.dataCollectionHub) {
+      if (isDemoBuild()) {
+        return isScreenAvailable(routeName) &&
+          isRouteRoleAuthorized(routeName, effectiveRoles.value)
+          ? buildDataCollectionPath({
+              studyCode,
+              siteId: explicitSiteId,
+              subjectCode,
+              enrollmentId,
+            })
+          : null;
+      }
+      return isScreenAvailable("study") &&
+        isRouteRoleAuthorized(routeName, effectiveRoles.value)
+        ? studyCode || explicitSiteId || participantRef || subjectCode
+          ? buildDataCollectionPath({
+              studyCode,
+              siteId: explicitSiteId,
+              participantRef,
+              subjectCode,
+              enrollmentId,
+            })
+          : "/studies"
+        : null;
+    }
+
+    if (descriptor.siteReadinessTier || descriptor.studyScopedLaunch) {
+      return isScreenAvailable(routeName) &&
+        isRouteRoleAuthorized(routeName, effectiveRoles.value)
+        ? buildScopedWorkflowPath(descriptor.route.path, {
+            studyCode,
+            siteId,
+            subjectCode,
+          })
+        : null;
+    }
   }
   const normalizedName = normalizeSpecToRouteName(routeSpec);
   const catalogEntry = isDemoBuild()

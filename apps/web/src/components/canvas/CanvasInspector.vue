@@ -26,22 +26,29 @@
       v-show="!isCollapsed"
       class="inspector-body"
     >
-      <template v-if="hasSelection">
+      <template v-if="activeInspectorHeader && activeInspectorRender">
         <header class="inspector-header">
-          <span class="inspector-kind">{{ headerKind }}</span>
+          <span class="inspector-kind">{{
+            activeInspectorHeader.kindLabel
+          }}</span>
           <h2
             id="canvas-inspector-title"
             class="inspector-title"
-            :class="{ 'inspector-title--code': isCodeTitle }"
+            :class="{
+              'inspector-title--code': activeInspectorHeader.isCodeTitle,
+            }"
             tabindex="-1"
           >
-            {{ headerTitle }}
+            {{ activeInspectorHeader.title }}
           </h2>
-          <details v-if="activeNodeRef" class="inspector-ref-details">
+          <details
+            v-if="activeInspectorHeader.activeNodeRef"
+            class="inspector-ref-details"
+          >
             <summary class="inspector-ref-summary">Record reference</summary>
             <div class="inspector-ref-row">
               <code id="canvas-inspector-ref" class="inspector-ref">{{
-                activeNodeRef
+                activeInspectorHeader.activeNodeRef
               }}</code>
               <button
                 id="btn-copy-inspector-ref"
@@ -390,288 +397,12 @@
           </div>
         </section>
 
-        <dl v-else-if="protocolVersion" id="inspector-version" class="details">
-          <dt>Status</dt>
-          <dd id="inspector-version-status">
-            {{ protocolVersion.status }}
-          </dd>
-          <dt>Amends</dt>
-          <dd>
-            <NodeRefChip
-              v-if="protocolVersion.parent_version"
-              :node-ref="protocolVersion.parent_version"
-            />
-            <template v-else
-              >Nothing: this is the study's first version</template
-            >
-          </dd>
-          <dt>Amendment intent</dt>
-          <dd>{{ protocolVersion.amendment_intent || "None recorded" }}</dd>
-          <template v-if="protocolVersion.approval_attestation">
-            <dt>Approved by</dt>
-            <dd>
-              <NodeRefChip :node-ref="protocolVersion.approval_attestation" />
-            </dd>
-          </template>
-          <template v-if="protocolVersion.withdrawal_reason">
-            <dt>Withdrawn because</dt>
-            <dd>{{ protocolVersion.withdrawal_reason }}</dd>
-          </template>
-          <dt>Verification</dt>
-          <dd>
-            <details
-              v-if="protocolVersion.content_hash"
-              class="inspector-ref-details"
-            >
-              <summary class="inspector-ref-summary">Content digest</summary>
-              <code class="inspector-ref">{{
-                protocolVersion.content_hash
-              }}</code>
-            </details>
-            <template v-else>Not sealed yet</template>
-          </dd>
-          <template v-if="designSummary">
-            <dt>Design forms</dt>
-            <dd id="inspector-version-forms">
-              {{ designSummary.form_count }}
-              {{ designSummary.form_count === 1 ? "form" : "forms" }} ({{
-                designSummary.item_count
-              }}
-              {{ designSummary.item_count === 1 ? "item" : "items" }})
-            </dd>
-            <template
-              v-if="
-                designSummary.import_notes &&
-                designSummary.import_notes.length > 0
-              "
-            >
-              <dt>Import notes</dt>
-              <dd id="inspector-version-notes">
-                {{ designSummary.import_notes.length }} recorded
-              </dd>
-            </template>
-          </template>
-        </dl>
-
-        <template v-else-if="participant">
-          <dl class="details">
-            <dt>State</dt>
-            <dd id="inspector-state">
-              {{ participantStateLabel(participant.status) }}
-            </dd>
-            <dt>Study</dt>
-            <dd class="inspector-mono">{{ participant.study_id }}</dd>
-            <dt>Site</dt>
-            <dd
-              id="inspector-site"
-              :class="{ 'inspector-mono': Boolean(participant.site_id) }"
-            >
-              {{ participant.site_id || "Not assigned" }}
-            </dd>
-            <dt>Protocol version</dt>
-            <dd class="numeric">
-              {{ participant.active_protocol_version || "Not recorded" }}
-            </dd>
-            <dt>Enrollment number</dt>
-            <dd class="numeric">
-              {{ participant.enrollment_index }}
-            </dd>
-            <template v-if="assignedKitDisplay">
-              <dt>Assigned kit</dt>
-              <dd id="inspector-assigned-kit" class="inspector-mono">
-                {{ assignedKitDisplay }}
-              </dd>
-            </template>
-            <template v-if="participant.treatment_group">
-              <dt>Treatment arm</dt>
-              <dd id="inspector-treatment-group">
-                {{ participant.treatment_group }}
-              </dd>
-            </template>
-          </dl>
-
-          <ParticipantSiteAssignment
-            v-if="canManageParticipants && !participant.site_id"
-            :participant="participant"
-            :study-code="studyCode"
-          />
-
-          <section
-            v-if="canManageParticipants"
-            id="inspector-consent"
-            class="consent-panel"
-            aria-labelledby="inspector-consent-title"
-          >
-            <div class="consent-header">
-              <h3 id="inspector-consent-title">Informed consent</h3>
-              <button
-                id="btn-toggle-consent-form"
-                type="button"
-                class="btn btn-secondary btn-sm"
-                @click="consentFormOpen = !consentFormOpen"
-              >
-                {{ consentFormOpen ? "Cancel" : "Record consent" }}
-              </button>
-            </div>
-            <form
-              v-if="consentFormOpen"
-              id="inspector-consent-form"
-              class="consent-form"
-              @submit.prevent="submitConsent"
-            >
-              <label for="consent-version-tag">Protocol version</label>
-              <input
-                id="consent-version-tag"
-                v-model="consentVersionTag"
-                type="text"
-                placeholder="1.0"
-              />
-              <label for="consent-version-index">Version number</label>
-              <input
-                id="consent-version-index"
-                v-model.number="consentVersionIndex"
-                type="number"
-                min="1"
-              />
-              <label for="consent-signed-date">Signed date</label>
-              <input
-                id="consent-signed-date"
-                v-model="consentSignedDate"
-                type="date"
-              />
-              <label class="consent-checkbox" for="consent-paper-override">
-                <input
-                  id="consent-paper-override"
-                  v-model="consentPaperOverride"
-                  type="checkbox"
-                />
-                Verified paper ICF override
-              </label>
-              <label for="consent-reason">Reason</label>
-              <textarea
-                id="consent-reason"
-                v-model="consentReason"
-                rows="2"
-                placeholder="Why consent is recorded (recorded in the audit trail)"
-              />
-              <button
-                id="btn-record-consent"
-                type="submit"
-                class="btn btn-primary"
-                :disabled="
-                  consentBusy ||
-                  !consentVersionTag.trim() ||
-                  (!consentSignedDate && !consentPaperOverride) ||
-                  !consentReason.trim()
-                "
-              >
-                Save informed consent
-              </button>
-            </form>
-          </section>
-
-          <ParticipantStateChange
-            v-if="showParticipantStateActions"
-            :participant="participant"
-            :can-manage-participants="Boolean(canManageParticipants)"
-          />
-
-          <router-link
-            v-if="recordLocation"
-            id="inspector-open-record"
-            class="inspector-link"
-            :to="recordLocation"
-          >
-            Open participant's data
-          </router-link>
-          <router-link
-            v-if="dataEntryLocation"
-            id="inspector-open-data-entry"
-            class="inspector-link"
-            :to="dataEntryLocation"
-          >
-            Open in data entry
-          </router-link>
-          <router-link
-            v-if="isDemoBuild() && handoffLocation"
-            id="inspector-handoff-standalone"
-            data-testid="inspector-ecrf-handoff"
-            class="inspector-link"
-            :to="handoffLocation"
-          >
-            Open standalone form view
-          </router-link>
-        </template>
-
-        <template v-else-if="genericDisplay">
-          <p
-            v-if="genericNodeLoading"
-            id="inspector-generic-loading"
-            class="inspector-empty"
-            role="status"
-          >
-            Loading record details…
-          </p>
-          <p
-            v-else-if="genericDisplay.masked"
-            id="inspector-generic-masked"
-            class="inspector-empty"
-          >
-            Details for this {{ genericDisplay.kindLabel.toLowerCase() }} are
-            hidden ({{ genericDisplay.maskReason }}).
-          </p>
-          <dl v-else id="inspector-generic" class="details">
-            <dt>Record type</dt>
-            <dd id="inspector-generic-kind">{{ genericDisplay.kindLabel }}</dd>
-            <template v-if="genericDisplay.code">
-              <dt>Code</dt>
-              <dd id="inspector-generic-code" class="inspector-mono">
-                {{ genericDisplay.code }}
-              </dd>
-            </template>
-            <template
-              v-if="
-                genericDisplay.title &&
-                genericDisplay.title !== genericDisplay.code
-              "
-            >
-              <dt>Title</dt>
-              <dd id="inspector-generic-title">{{ genericDisplay.title }}</dd>
-            </template>
-            <template v-if="genericDisplay.status">
-              <dt>Status</dt>
-              <dd id="inspector-generic-status">{{ genericDisplay.status }}</dd>
-            </template>
-            <dt>Study</dt>
-            <dd class="inspector-mono">{{ studyCode }}</dd>
-          </dl>
-
-          <router-link
-            v-if="recordLocation"
-            id="inspector-open-record"
-            class="inspector-link"
-            :to="recordLocation"
-          >
-            Open participant's data
-          </router-link>
-          <router-link
-            v-if="dataEntryLocation"
-            id="inspector-open-data-entry"
-            class="inspector-link"
-            :to="dataEntryLocation"
-          >
-            Open in data entry
-          </router-link>
-          <router-link
-            v-if="isDemoBuild() && handoffLocation"
-            id="inspector-handoff-standalone"
-            data-testid="inspector-ecrf-handoff"
-            class="inspector-link"
-            :to="handoffLocation"
-          >
-            Open standalone form view
-          </router-link>
-        </template>
+        <component
+          :is="activeInspectorRender.component"
+          v-else
+          :key="activeInspectorRender.key"
+          v-bind="activeInspectorRender.props"
+        />
       </template>
 
       <template v-else-if="protocolVersionError">
@@ -753,17 +484,9 @@ import {
 } from "vue";
 import type { RouteLocationRaw } from "vue-router";
 import {
-  participantStateChanges,
-  participantStateLabel,
-} from "../../canvas/lifecycle";
-import { canUnblindParticipant } from "../../canvas/authority";
-import { useAuthStore } from "../../stores/auth";
-import {
   useStudyCanvasStore,
   type CanvasParticipant,
 } from "../../stores/studyCanvas";
-import ParticipantSiteAssignment from "./ParticipantSiteAssignment.vue";
-import ParticipantStateChange from "./ParticipantStateChange.vue";
 import CanvasErrorAlert from "./CanvasErrorAlert.vue";
 import KernelActPanel from "./KernelActPanel.vue";
 import KernelExplanation from "./KernelExplanation.vue";
@@ -775,12 +498,13 @@ import {
   type KernelCommand,
   type KernelNode,
   type KernelPlannedVisit,
-  type KernelProtocolDraftSummary,
   type KernelProtocolVersion,
   type KernelScheduleChange,
   type KernelSimulationResult,
 } from "../../api/kernelApi";
-import { formatNodeRef, parseNodeRef } from "../../canvas/nodeRef";
+import { resolveActiveInspector } from "../../canvas/inspectors/registry";
+import type { CanvasInspectorContext } from "../../canvas/inspectors/types";
+import { parseNodeRef } from "../../canvas/nodeRef";
 import {
   ensureNodesResolved,
   formatCommandTitle,
@@ -792,14 +516,12 @@ import {
 import { useAiAssistance } from "../../ai/aiAssistance";
 import { useKernelCanI } from "../../composables/useKernelCanI";
 import { useRovingToolbar } from "../../composables/useRovingToolbar";
-import { recordParticipantConsentMutation } from "../../stores/studyCanvasParticipantMutations";
-import { isDemoBuild } from "../../utils/demoMode";
 import AssistPanel from "../ai/AssistPanel.vue";
 
 /**
- * The Clinical Canvas inspector (docs/ux/CLINICAL_CANVAS.md §2.4, UX-3, UX-5): displays the selected object's
- * human-readable kind and code/title first, with the canonical NodeRef tucked inside a copyable secondary disclosure,
- * and exposes Trace, Impact, Explain, Simulate, Act, and Assist verbs for the active selection.
+ * The Clinical Canvas inspector (docs/ux/CLINICAL_CANVAS.md §2.4, UX-3, UX-5): resolves object-specific header
+ * metadata and Details panes via glob-discovered `*.inspector.ts` descriptors while keeping the universal
+ * Trace, Impact, Explain, Simulate, Act, and Assist verb toolbar shared across every study object.
  */
 const props = defineProps<{
   studyCode: string;
@@ -839,86 +561,9 @@ const emit = defineEmits<{
 }>();
 
 const { enabled: aiEnabled } = useAiAssistance();
-const authStore = useAuthStore();
 const canvas = useStudyCanvasStore();
 const versionErrorCanI = useKernelCanI();
 const forceExplainOpen = ref(false);
-
-const effectiveCanUnblind = computed(
-  () => props.canUnblindParticipants ?? canUnblindParticipant(authStore)
-);
-const showParticipantStateActions = computed(() => {
-  if (!props.participant) return false;
-  if (props.canManageParticipants) return true;
-  return (
-    effectiveCanUnblind.value &&
-    participantStateChanges(props.participant.status).unblindingWithheld
-  );
-});
-
-const assignedKitDisplay = computed(
-  () =>
-    props.participant?.investigational_product_id ||
-    props.participant?.kit_number ||
-    ""
-);
-
-const consentFormOpen = ref(false);
-const consentVersionTag = ref("1.0");
-const consentVersionIndex = ref(1);
-const consentSignedDate = ref(new Date().toISOString().slice(0, 10));
-const consentPaperOverride = ref(false);
-const consentReason = ref("");
-const consentBusy = ref(false);
-
-watch(
-  () => [props.participant?.id, props.participant?.active_protocol_version],
-  () => {
-    consentFormOpen.value = false;
-    consentVersionTag.value =
-      props.participant?.active_protocol_version || "1.0";
-    consentVersionIndex.value = 1;
-    consentSignedDate.value = new Date().toISOString().slice(0, 10);
-    consentPaperOverride.value = false;
-    consentReason.value = "";
-  },
-  { immediate: true }
-);
-
-async function submitConsent() {
-  if (!props.participant) return;
-  const tag = consentVersionTag.value.trim();
-  const reason = consentReason.value.trim();
-  if (
-    !tag ||
-    (!consentSignedDate.value && !consentPaperOverride.value) ||
-    !reason
-  ) {
-    return;
-  }
-  consentBusy.value = true;
-  try {
-    const ok = await recordParticipantConsentMutation(
-      canvas,
-      props.participant,
-      {
-        versionTag: tag,
-        versionIndex: Math.max(1, Number(consentVersionIndex.value) || 1),
-        icfSignedDate: consentSignedDate.value
-          ? `${consentSignedDate.value}T00:00:00Z`
-          : null,
-        isPaperOverride: consentPaperOverride.value,
-        reason,
-      }
-    );
-    if (ok) {
-      consentFormOpen.value = false;
-      consentReason.value = "";
-    }
-  } finally {
-    consentBusy.value = false;
-  }
-}
 
 const SIMULATION_PART_LABELS: Record<string, string> = {
   structural_diff: "Protocol element changes",
@@ -964,58 +609,47 @@ function formatScheduleChange(change: KernelScheduleChange): string {
   }
   return "";
 }
-
 const genericDisplay = computed(() => {
   if (!props.genericNodeRef || props.missing) return null;
   return getNodeDisplay(props.genericNodeRef, props.genericNode?.title ?? null);
 });
 
-const hasSelection = computed(() =>
-  Boolean(props.participant || props.protocolVersion || genericDisplay.value)
+const inspectorContext = computed<CanvasInspectorContext>(() => ({
+  studyCode: props.studyCode,
+  nodeRef: props.nodeRef,
+  participant: props.participant,
+  missing: props.missing,
+  protocolVersion: props.protocolVersion ?? null,
+  protocolVersionError: props.protocolVersionError ?? "",
+  genericNodeRef: props.genericNodeRef ?? "",
+  genericNode: props.genericNode ?? null,
+  genericNodeLoading: Boolean(props.genericNodeLoading),
+  genericDisplay: genericDisplay.value,
+  recordLocation: props.recordLocation ?? null,
+  dataEntryLocation: props.dataEntryLocation ?? null,
+  handoffLocation: props.handoffLocation ?? null,
+  canManageParticipants: Boolean(props.canManageParticipants),
+  canUnblindParticipants: props.canUnblindParticipants,
+}));
+
+const activeInspectorDescriptor = computed(() =>
+  resolveActiveInspector(inspectorContext.value)
 );
 
-const headerKind = computed(() => {
-  if (props.participant) return "Participant";
-  if (props.protocolVersion) return "Protocol version";
-  return genericDisplay.value?.kindLabel ?? "Record";
-});
-
-const headerTitle = computed(() => {
-  if (props.participant) return props.participant.subject_id;
-  if (props.protocolVersion) return `Version ${props.protocolVersion.number}`;
-  return genericDisplay.value?.label ?? "Record";
-});
-
-const isCodeTitle = computed(() =>
-  Boolean(
-    props.participant ||
-    (genericDisplay.value?.code &&
-      headerTitle.value === genericDisplay.value.code)
-  )
+const activeInspectorHeader = computed(() =>
+  activeInspectorDescriptor.value?.resolveHeader(inspectorContext.value)
 );
 
-const canonicalParticipantEnrollmentRef = computed(() => {
-  if (!props.participant) return "";
-  const parsed = parseNodeRef(props.participant.enrollment_ref);
-  return parsed?.kind === "enrollment"
-    ? formatNodeRef({ kind: "enrollment", id: parsed.id })
-    : "";
-});
-
-const activeNodeRef = computed(() => {
-  if (props.participant) {
-    return canonicalParticipantEnrollmentRef.value || props.nodeRef;
-  }
-  if (props.protocolVersion?.ref) return props.protocolVersion.ref;
-  if (props.genericNode?.ref) return props.genericNode.ref;
-  return genericDisplay.value?.ref ?? "";
-});
+const activeInspectorRender = computed(() =>
+  activeInspectorDescriptor.value?.resolveDetailsRender(inspectorContext.value)
+);
 
 const copiedRef = ref(false);
 async function copyInspectorRef() {
-  if (!activeNodeRef.value) return;
+  const refText = activeInspectorHeader.value?.activeNodeRef;
+  if (!refText) return;
   try {
-    await globalThis.navigator?.clipboard?.writeText?.(activeNodeRef.value);
+    await globalThis.navigator?.clipboard?.writeText?.(refText);
     copiedRef.value = true;
     setTimeout(() => {
       copiedRef.value = false;
@@ -1027,7 +661,7 @@ async function copyInspectorRef() {
 
 const hasActiveContent = computed(() =>
   Boolean(
-    hasSelection.value ||
+    activeInspectorDescriptor.value ||
     props.protocolVersionError ||
     props.missing ||
     forceExplainOpen.value ||
@@ -1051,42 +685,19 @@ function expand() {
 const NO_RECORD_REF =
   "this selection doesn't have a linked study reference yet.";
 
-/** The selection's canonical reference when Trace, Impact, Explain, Act, and Assist can query it. */
-const kernelRef = computed(() => {
-  if (props.participant) {
-    if (canonicalParticipantEnrollmentRef.value) {
-      return canonicalParticipantEnrollmentRef.value;
-    }
-    return parseNodeRef(props.nodeRef) ? props.nodeRef : "";
-  }
-  const version = props.protocolVersion?.ref;
-  if (version && parseNodeRef(version)) return version;
-  if (
-    genericDisplay.value &&
-    !genericDisplay.value.masked &&
-    parseNodeRef(genericDisplay.value.ref)
-  ) {
-    return genericDisplay.value.ref;
-  }
-  return "";
-});
+const kernelRef = computed(() => activeInspectorHeader.value?.kernelRef ?? "");
+const canSimulate = computed(() =>
+  Boolean(activeInspectorHeader.value?.canSimulate)
+);
 
-/** Impact on an amendment is the amendment's impact (K-PROT-2); on anything else, what depends on it. */
+type VerbId =
+  "details" | "trace" | "impact" | "act" | "explain" | "simulate" | "assist";
+const currentVerb = ref<VerbId>("details");
+
 const lineageMode = computed(() => {
   if (currentVerb.value === "trace") return "trace";
-  return props.protocolVersion?.parent_version && !props.participant
-    ? "amendment"
-    : "impact";
+  return activeInspectorHeader.value?.impactLineageMode ?? "impact";
 });
-
-/** Simulate runs in-memory evaluation and schedule matrix gap checks on a stored protocol version. */
-const canSimulate = computed(() =>
-  Boolean(
-    !props.participant &&
-    props.protocolVersion?.ref &&
-    parseNodeRef(props.protocolVersion.ref)?.kind === "protocol_version"
-  )
-);
 
 interface Verb {
   id: "trace" | "impact" | "explain" | "simulate" | "act" | "assist";
@@ -1138,9 +749,6 @@ const verbs = computed<Verb[]>(() => [
     : []),
 ]);
 
-type VerbId =
-  "details" | "trace" | "impact" | "act" | "explain" | "simulate" | "assist";
-const currentVerb = ref<VerbId>("details");
 const explained = ref<KernelCommand | null>(null);
 const shownVerb = ref<string | null>(null);
 const toolbarRef = ref<HTMLElement | null>(null);
@@ -1156,29 +764,6 @@ const simulationResult = ref<KernelSimulationResult | null>(null);
 const simulationLoading = ref(false);
 const simulationError = ref("");
 let simulationRequest = 0;
-const designSummary = ref<KernelProtocolDraftSummary | null>(null);
-let designSummaryReq = 0;
-
-watch(
-  () => props.protocolVersion?.ref,
-  async (versionRef) => {
-    const req = ++designSummaryReq;
-    designSummary.value = null;
-    if (
-      !versionRef ||
-      typeof kernelApi.getProtocolDesignSummary !== "function"
-    ) {
-      return;
-    }
-    try {
-      const summary = await kernelApi.getProtocolDesignSummary(versionRef);
-      if (req === designSummaryReq) designSummary.value = summary;
-    } catch {
-      // Optional summary when protocol content exists.
-    }
-  },
-  { immediate: true }
-);
 
 async function runSimulation() {
   if (!canSimulate.value || !kernelRef.value) return;
@@ -1272,7 +857,6 @@ function openExplain(options?: {
     return true;
   }
   if (options?.targetNodeRef) {
-    // Allow StudyCanvasView's fallback coordinator to select targetNodeRef first.
     return false;
   }
   forceExplainOpen.value = true;
@@ -1311,7 +895,6 @@ watch(
   }
 );
 
-// A question from the palette opens Assist on the selection; this runs after the reset above.
 watch(
   () => [
     props.assistPrompt,
@@ -1351,7 +934,6 @@ watch(
   { immediate: true }
 );
 
-// Turning AI assistance off closes Assist.
 watch(aiEnabled, (on) => {
   if (!on && currentVerb.value === "assist") choose("details");
 });
@@ -1522,24 +1104,20 @@ watch(aiEnabled, (on) => {
   overflow-wrap: anywhere;
 }
 
-.inspector-title--code,
-.inspector-mono {
+.inspector-title--code {
   font-family: var(--semantic-font-mono);
 }
 
-#inspector-version-forms,
-#inspector-version-notes {
-  font-variant-numeric: tabular-nums;
-}
-
-.inspector-ref {
+.inspector-ref,
+:deep(.inspector-ref) {
   font-family: var(--semantic-font-mono);
   font-size: 0.75rem;
   color: var(--neutral-dark);
   overflow-wrap: anywhere;
 }
 
-.inspector-ref-details {
+.inspector-ref-details,
+:deep(.inspector-ref-details) {
   margin-top: 2px;
   font-size: 0.78rem;
   color: var(--neutral-dark);
@@ -1547,7 +1125,8 @@ watch(aiEnabled, (on) => {
   max-width: 100%;
 }
 
-.inspector-ref-summary {
+.inspector-ref-summary,
+:deep(.inspector-ref-summary) {
   display: inline-flex;
   flex-wrap: wrap;
   align-items: center;
@@ -1557,6 +1136,51 @@ watch(aiEnabled, (on) => {
   overflow-wrap: anywhere;
   cursor: pointer;
   user-select: none;
+}
+
+:deep(.inspector-details-pane) {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+:deep(.details) {
+  display: grid;
+  grid-template-columns: minmax(0, max-content) minmax(0, 1fr);
+  gap: 6px 12px;
+  margin: 0;
+  min-width: 0;
+  max-width: 100%;
+}
+
+:deep(.details dt) {
+  color: var(--neutral-dark);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+:deep(.details dd) {
+  margin: 0;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 640px) {
+  :deep(.details) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.numeric,
+:deep(.numeric) {
+  font-variant-numeric: tabular-nums;
+}
+
+:deep(.inspector-empty) {
+  margin: 0;
+  color: var(--neutral-dark);
 }
 
 .inspector-ref-row {
@@ -1621,48 +1245,9 @@ watch(aiEnabled, (on) => {
   color: var(--neutral-dark);
 }
 
-.details {
-  display: grid;
-  grid-template-columns: minmax(0, max-content) minmax(0, 1fr);
-  gap: 6px 12px;
-  margin: 0;
-  min-width: 0;
-  max-width: 100%;
-}
-
-.details dt {
-  color: var(--neutral-dark);
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
-.details dd {
-  margin: 0;
-  min-width: 0;
-  max-width: 100%;
-  overflow-wrap: anywhere;
-}
-
-@media (max-width: 640px) {
-  .details {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
-.numeric {
-  font-variant-numeric: tabular-nums;
-}
-
 .inspector-empty {
   margin: 0;
   color: var(--neutral-dark);
-}
-
-.inspector-link {
-  align-self: flex-start;
-  color: var(--accent);
-  max-width: 100%;
-  overflow-wrap: anywhere;
 }
 
 .sdv {
@@ -1676,61 +1261,5 @@ watch(aiEnabled, (on) => {
 .sdv h3 {
   margin: 0;
   font-size: 0.95rem;
-}
-
-.sdv-status {
-  margin: 0;
-}
-
-.sdv textarea {
-  padding: 8px;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-}
-
-.sdv button {
-  align-self: flex-start;
-}
-
-.consent-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding-top: 10px;
-  border-top: 1px solid var(--border);
-}
-
-.consent-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-}
-
-.consent-header h3 {
-  margin: 0;
-  font-size: 0.95rem;
-}
-
-.consent-form {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.consent-form input[type="text"],
-.consent-form input[type="number"],
-.consent-form input[type="date"],
-.consent-form textarea {
-  padding: 6px 8px;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-}
-
-.consent-checkbox {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.86rem;
 }
 </style>

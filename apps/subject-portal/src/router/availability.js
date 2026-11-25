@@ -1,43 +1,48 @@
 import { state } from "../stores/state.js";
 import { isDemoModeActive } from "../utils/demoMode.js";
+import { portalRouteDescriptors } from "./routes.js";
 
 /**
- * Screens available to any session outside explicit demo builds (docs/web/API_MIGRATION.md).
- *
- * Python-era ePRO (`tasks`, `questionnaire`, `compliance`, `inbox`), eConsent
- * (`consent`), and plain-language trial results (`lay-summaries`) have no .NET
- * backend yet and live in `DEMO_AVAILABLE_SCREENS` (ADR-2819). Participant
- * wallet (`wallet`) is enabled for authenticated participants via signed
- * self-service endpoints (`/api/v1/payments/participant/me/*`) and in explicit
- * demo builds.
+ * Screens available to any session outside explicit demo builds (docs/web/API_MIGRATION.md),
+ * populated dynamically from per-screen `routes/*.route.js` descriptors.
  */
-export const AVAILABLE_SCREENS = new Set();
+export const AVAILABLE_SCREENS = new Set(
+  portalRouteDescriptors
+    .filter((descriptor) => descriptor.availability === "available")
+    .map((descriptor) => descriptor.route.name)
+);
 
-export const DEMO_AVAILABLE_SCREENS = new Set([
-  "tasks",
-  "questionnaire",
-  "compliance",
-  "inbox",
-  "consent",
-  "lay-summaries",
-]);
+export const DEMO_AVAILABLE_SCREENS = new Set(
+  portalRouteDescriptors
+    .filter((descriptor) => descriptor.availability === "demo")
+    .map((descriptor) => descriptor.route.name)
+);
 
-export const AUTHENTICATED_SCREENS = new Set(["wallet"]);
+export const AUTHENTICATED_SCREENS = new Set(
+  portalRouteDescriptors
+    .filter((descriptor) => descriptor.availability === "authenticated")
+    .map((descriptor) => descriptor.route.name)
+);
 
-const ALWAYS_AVAILABLE = new Set(["unavailable"]);
+const ALWAYS_AVAILABLE = new Set(
+  [
+    "unavailable",
+    ...portalRouteDescriptors
+      .filter((descriptor) => descriptor.availability === "always")
+      .map((descriptor) => descriptor.route.name),
+  ].filter(Boolean)
+);
 
 export const UNAVAILABLE_SCREENS_ISSUE =
   "https://github.com/fderuiter/cadence-clinical/issues/4829";
 
-const SCREEN_TITLES = {
-  tasks: "My Tasks",
-  questionnaire: "Questionnaire",
-  compliance: "My Compliance",
-  inbox: "My Inbox",
-  consent: "My Consent",
-  wallet: "Participant Financial Wallet",
-  "lay-summaries": "Plain-Language Clinical Trial Results",
-};
+const SCREEN_TITLES = Object.freeze(
+  Object.fromEntries(
+    portalRouteDescriptors
+      .filter((descriptor) => descriptor.route?.name && descriptor.title)
+      .map((descriptor) => [descriptor.route.name, descriptor.title])
+  )
+);
 
 export function screenTitle(routeName) {
   return SCREEN_TITLES[routeName] || "This workflow";

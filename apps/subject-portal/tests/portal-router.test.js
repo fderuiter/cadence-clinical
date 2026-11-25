@@ -4,8 +4,19 @@ import "fake-indexeddb/auto";
 import { describe, it, expect, beforeAll, beforeEach, vi } from "vitest";
 
 import { initializeApp, showView, state, unmountApp } from "../src/index.js";
+import {
+  AUTHENTICATED_SCREENS,
+  AVAILABLE_SCREENS,
+  DEMO_AVAILABLE_SCREENS,
+  screenTitle,
+} from "../src/router/availability.js";
 import { getPortalRouter } from "../src/router/index.js";
-import { tabs, viewRoutes } from "../src/router/routes.js";
+import {
+  activeTabForView,
+  portalRouteDescriptors,
+  tabs,
+  viewRoutes,
+} from "../src/router/routes.js";
 import { useSyncStore } from "../src/stores/sync.js";
 import { useUiStore } from "../src/stores/ui.js";
 
@@ -171,5 +182,35 @@ describe("Subject portal router and stores", () => {
 
     state.someUndeclaredKey = 42;
     expect(state.someUndeclaredKey).toBe(42);
+  });
+
+  it("sorts glob-discovered portalRouteDescriptors deterministically and derives availability sets", () => {
+    expect(portalRouteDescriptors.length).toBe(7);
+    for (let i = 1; i < portalRouteDescriptors.length; i++) {
+      const prev = portalRouteDescriptors[i - 1];
+      const curr = portalRouteDescriptors[i];
+      const cmp =
+        (prev.order ?? 0) !== (curr.order ?? 0)
+          ? (prev.order ?? 0) - (curr.order ?? 0)
+          : String(prev.route.name).localeCompare(String(curr.route.name));
+      expect(cmp).toBeLessThanOrEqual(0);
+    }
+
+    expect(activeTabForView("view-questionnaire")?.id).toBe("tasks");
+    expect(activeTabForView("view-wallet")?.id).toBe("wallet");
+    expect([...AUTHENTICATED_SCREENS]).toEqual(["wallet"]);
+    expect([...AVAILABLE_SCREENS]).toEqual([]);
+    expect([...DEMO_AVAILABLE_SCREENS]).toEqual(
+      expect.arrayContaining([
+        "tasks",
+        "questionnaire",
+        "compliance",
+        "inbox",
+        "consent",
+        "lay-summaries",
+      ])
+    );
+    expect(screenTitle("wallet")).toBe("Participant Financial Wallet");
+    expect(screenTitle("unknown-route")).toBe("This workflow");
   });
 });

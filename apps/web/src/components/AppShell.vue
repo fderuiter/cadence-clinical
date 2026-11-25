@@ -474,6 +474,16 @@ import { hasUserScopedDrafts } from "../utils/userScopedStorage.js";
 import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 import { isScreenAvailable } from "../router/availability";
 import { isRouteAuthorizedForRoles } from "../router";
+import {
+  NON_WORKFLOW_PATHS,
+  NON_WORKFLOW_ROUTE_NAMES,
+  SITE_READINESS_DESCRIPTORS,
+  TOUR_ALWAYS_HIDDEN_PATHS,
+  TOUR_ALWAYS_HIDDEN_ROUTE_NAMES,
+  TOUR_HIDDEN_PATHS,
+  TOUR_HIDDEN_ROUTE_NAMES,
+  WORKFLOW_CONTEXT_LABELS,
+} from "../router/registry.js";
 import { isDemoBuild } from "../utils/demoMode.js";
 import {
   buildDataCollectionPath,
@@ -662,59 +672,12 @@ const isStudiesRoute = computed(
   () => isCanvasRoute.value && !isConductCanvasRoute.value
 );
 
-const NON_WORKFLOW_ROUTE_NAMES = new Set([
-  "landing",
-  "home",
-  "overview",
-  "login",
-  "plans",
-  "trial-onboarding",
-  "forbidden",
-  "unavailable",
-]);
-const NON_WORKFLOW_PATHS = new Set([
-  "/",
-  "/overview",
-  "/login",
-  "/plans",
-  "/onboarding/trial",
-  "/forbidden",
-  "/unavailable",
-]);
-const WORKFLOW_CONTEXT_LABELS = Object.freeze({
-  ecrf: "Data collection",
-  observation: "Observation",
-  ctms: "Site readiness",
-  ssu: "Site startup",
-  etmf: "Regulatory documents",
-  documents: "Controlled documents",
-  training: "Protocol training",
-  tickets: "Support",
-  knowledge: "Knowledge",
-  mdr: "Protocol design",
-  digitization: "Protocol digitization",
-  "icf-builder": "Informed consent",
-  "econsent-authoring": "Consent authoring",
-  "amendment-diff": "Protocol amendments",
-  imaging: "Medical imaging",
-  devices: "Medical devices",
-  "device-investigation": "Device investigation",
-  adjudication: "Endpoint adjudication",
-  cec: "Endpoint adjudication",
-  audit: "Audit ledger",
-  auditor: "Inspection review",
-  rules: "Validation rules",
-  coding: "Medical coding",
-  lakehouse: "Clinical analytics",
-  sensors: "Connected sensors",
-  labs: "Laboratory governance",
-  dct: "Decentralized visits",
-  safety: "Safety review",
-  quality: "Quality management",
-  notifications: "Notifications",
-  "participant-wallet": "Participant reimbursements",
-  "lay-summaries": "Plain-language summaries",
-});
+const SITE_READINESS_ROUTE_NAMES = new Set(
+  SITE_READINESS_DESCRIPTORS.map((descriptor) => descriptor.route.name)
+);
+const SITE_READINESS_PATHS = new Set(
+  SITE_READINESS_DESCRIPTORS.map((descriptor) => descriptor.route.path)
+);
 
 const showContextBar = computed(() => {
   if (!authStore.isAuthenticated || isCanvasRoute.value) {
@@ -788,10 +751,8 @@ const isDataCollectionRoute = computed(
 );
 const isSiteReadinessRoute = computed(
   () =>
-    route?.name === "ctms" ||
-    route?.name === "ssu" ||
-    route?.path === "/ctms" ||
-    route?.path === "/ssu"
+    SITE_READINESS_ROUTE_NAMES.has(String(route?.name || "")) ||
+    SITE_READINESS_PATHS.has(String(route?.path || ""))
 );
 const isSupportRoute = computed(
   () =>
@@ -809,17 +770,11 @@ const activeTab = computed(() => String(route?.name || "study"));
 const showOnboardingTour = computed(
   () =>
     Boolean(authStore.isAuthenticated) &&
-    route?.name !== "login" &&
-    route?.path !== "/login" &&
-    route?.name !== "plans" &&
-    route?.path !== "/plans" &&
-    route?.name !== "trial-onboarding" &&
-    route?.path !== "/onboarding/trial" &&
+    !TOUR_ALWAYS_HIDDEN_ROUTE_NAMES.has(String(route?.name || "")) &&
+    !TOUR_ALWAYS_HIDDEN_PATHS.has(String(route?.path || "")) &&
     (isOnboardingTourActive.value ||
-      (route?.name !== "forbidden" &&
-        route?.path !== "/forbidden" &&
-        route?.name !== "unavailable" &&
-        route?.path !== "/unavailable"))
+      (!TOUR_HIDDEN_ROUTE_NAMES.has(String(route?.name || "")) &&
+        !TOUR_HIDDEN_PATHS.has(String(route?.path || ""))))
 );
 
 const checkActiveRouteAuth = () =>

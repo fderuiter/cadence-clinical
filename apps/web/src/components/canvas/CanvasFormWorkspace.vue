@@ -99,7 +99,7 @@ import EcrfFormPanel, {
 } from "../ecrf/EcrfFormPanel.vue";
 import ParticipantFormsPanel from "./ParticipantFormsPanel.vue";
 
-const props = defineProps<{
+export interface CanvasFormWorkspaceProps {
   studyCode: string;
   participant: SubjectSummary | null;
   enrollmentId: string | null;
@@ -126,7 +126,9 @@ const props = defineProps<{
     formId: string,
     itemId?: string | null
   ) => RouteLocationRaw;
-}>();
+}
+
+const props = defineProps<CanvasFormWorkspaceProps>();
 
 const emit = defineEmits<{
   (e: "dirty-change", dirty: boolean): void;

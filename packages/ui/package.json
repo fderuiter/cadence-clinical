@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
-  "types": "./index.d.ts",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": "./index.js",
     "./testing": "./mockGateway.js",
@@ -16,9 +16,9 @@
     "./package.json": "./package.json"
   },
   "scripts": {
-    "build": "node scripts/generate-types.js && vite build",
-    "test": "vitest run --coverage --testTimeout=30000",
-    "typecheck": "vue-tsc --noEmit",
+    "build": "node scripts/generate-types.js && vite build && node scripts/generate-types.js",
+    "test": "node scripts/generate-types.js && vitest run --coverage --testTimeout=30000",
+    "typecheck": "node scripts/generate-types.js && vue-tsc --noEmit",
     "lint": "eslint .",
     "format": "prettier --write ."
   },

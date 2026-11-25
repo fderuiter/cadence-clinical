@@ -17,7 +17,7 @@
     "allowJs": true
   },
   "include": [
-    "index.d.ts",
+    "dist/index.d.ts",
     "accessibility-matcher.d.ts",
     "src/**/*.ts",
     "src/**/*.d.ts",

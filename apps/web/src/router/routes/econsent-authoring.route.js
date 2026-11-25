@@ -1,0 +1,28 @@
+export default {
+  order: 110,
+  availability: "demo",
+  contextLabel: "Consent authoring",
+  sopEscalation: {
+    prefixes: ["/econsent-authoring"],
+    category: "REGULATORY_QUERY",
+  },
+  catalog: {
+    title: "eConsent authoring",
+    family: "Engage",
+    minimumTier: "Select",
+    isBaselineCapability: false,
+    roadmapStage: "Pre-release Engage module roadmap",
+    summary:
+      "Structured consent document templates and multi-language site localization.",
+  },
+  route: {
+    path: "/econsent-authoring",
+    name: "econsent-authoring",
+    component: () => import("../../views/ConsentAuthoringView.vue"),
+    meta: {
+      requiresAuth: true,
+      requiresI18n: true,
+      requiresRole: ["sponsor_designer", "data_manager", "sponsor_admin"],
+    },
+  },
+};

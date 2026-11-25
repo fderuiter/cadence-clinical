@@ -1,4 +1,3 @@
-import { getActivePinia } from "pinia";
 import {
   isNavigationFailure,
   type LocationQuery,
@@ -8,73 +7,38 @@ import {
 import type { SubjectSummary } from "../api/executionApi";
 import { formatNodeRef, parseNodeRef, tryNodeRef } from "./nodeRef";
 import {
+  canonicalParticipantNodeFromSummary,
+  cleanQueryString,
+  readInstantiatedClinicalScope,
+  resolveActiveWorkspaceScope,
+  resolveCanvasParticipantContext,
+  syncInstantiatedClinicalScope,
+  type WorkspaceScopeSnapshot,
+} from "./workspaceScopeResolver";
+import {
   isScreenAvailable,
   listDemoCatalogModules,
 } from "../router/availability.js";
-import { ROLE_ALIASES } from "../stores/auth.js";
+import { hasRequiredRole } from "../router/helpers.js";
+import {
+  DATA_COLLECTION_HUB_DESCRIPTOR,
+  getRouteDescriptor,
+  getRouteRequiredRoles,
+  isRouteHubAuthorized,
+  isRouteRoleAuthorized,
+  PALETTE_DESCRIPTORS,
+  SITE_READINESS_DESCRIPTORS,
+} from "../router/registry.js";
 import { getSyncedStudyScope } from "../stores/studyScopeBridge";
 import { isDemoBuild } from "../utils/demoMode.js";
 
-function hasRequiredRole(
-  userRoles: readonly string[],
-  requiredRoles: readonly string[]
-): boolean {
-  const aliasesMap = ROLE_ALIASES as Record<string, readonly string[]>;
-  return userRoles.some((uRole) => {
-    if (requiredRoles.includes(uRole)) return true;
-    const aliases = aliasesMap[uRole] || [];
-    return aliases.some((alias) => requiredRoles.includes(alias));
-  });
-}
-
-export function readInstantiatedClinicalScope(): {
-  activeStudyId?: string;
-  activeSiteId?: string;
-  activeSubjectId?: string;
-} | null {
-  const stateRoot = getActivePinia()?.state.value as
-    | {
-        clinicalScope?: {
-          activeStudyId?: string;
-          activeSiteId?: string;
-          activeSubjectId?: string;
-        };
-        clinical?: {
-          activeStudyId?: string;
-          activeSiteId?: string;
-          activeSubjectId?: string;
-        };
-      }
-    | undefined;
-  const state = stateRoot?.clinicalScope ?? stateRoot?.clinical;
-  if (!state) return null;
-  return {
-    activeStudyId: state.activeStudyId,
-    activeSiteId: state.activeSiteId,
-    activeSubjectId: state.activeSubjectId,
-  };
-}
-
-export function syncInstantiatedClinicalScope(next: {
-  activeStudyId: string;
-  activeSiteId: string;
-  activeSubjectId: string;
-}): void {
-  const stateRoot = getActivePinia()?.state.value as
-    | {
-        clinicalScope?: {
-          activeStudyId?: string;
-          activeSiteId?: string;
-          activeSubjectId?: string;
-        };
-      }
-    | undefined;
-  const scopeState = stateRoot?.clinicalScope;
-  if (!scopeState) return;
-  scopeState.activeStudyId = next.activeStudyId;
-  scopeState.activeSiteId = next.activeSiteId;
-  scopeState.activeSubjectId = next.activeSubjectId;
-}
+export {
+  readInstantiatedClinicalScope,
+  resolveActiveWorkspaceScope,
+  resolveCanvasParticipantContext,
+  syncInstantiatedClinicalScope,
+  type WorkspaceScopeSnapshot,
+};
 
 export type PaletteWorkspaceAction =
   | { kind: "open-help" }
@@ -104,82 +68,22 @@ export interface WorkspacePaletteOption {
   target: PaletteTarget;
 }
 
-export interface WorkspaceScopeSnapshot {
-  studyCode: string;
-  siteId: string;
-  explicitSiteId: string;
-  subjectCode: string;
-  participantRef: string;
-  enrollmentId: string;
-  recordParticipantParam?: string;
-  inspectorNodeParam?: string;
-}
-
-const DATA_COLLECTION_SPONSOR_ROLES = [
-  "cra",
-  "monitor",
-  "data_manager",
-  "sponsor_admin",
-];
-const DATA_COLLECTION_SITE_ROLES = [
-  "site_investigator",
-  "crc",
-  "trial_coordinator",
-];
-export const SITE_READINESS_SPONSOR_ROLES = [
-  ...DATA_COLLECTION_SPONSOR_ROLES,
-  "unblinded_statistician",
-];
-export const SITE_READINESS_SITE_ROLES = [
-  ...DATA_COLLECTION_SITE_ROLES,
-  "pharmacist",
-];
-export const DATA_COLLECTION_ROLES = [
-  ...DATA_COLLECTION_SITE_ROLES,
-  ...DATA_COLLECTION_SPONSOR_ROLES,
-];
-export const ETMF_ROLES = [
-  "cra",
-  "monitor",
-  "data_manager",
-  "site_investigator",
-  "crc",
-  "trial_coordinator",
-  "auditor",
-  "tmf_auditor",
-  "sponsor_admin",
-];
-
-const STAFF_HUB_ROLES = [
-  "sponsor_admin",
-  "sponsor_designer",
-  "data_manager",
-  "unblinded_statistician",
-  "pharmacist",
-  "safety_reviewer",
-  "safety_officer",
-  "safety_physician",
-  "sponsor_mm",
-  "cra",
-  "monitor",
-  "principal_investigator",
-  "site_investigator",
-  "crc",
-  "trial_coordinator",
-  "auditor",
-  "tmf_auditor",
-];
-
+export const SITE_READINESS_SPONSOR_ROLES: string[] =
+  getRouteDescriptor("ctms")?.siteReadinessRoles ||
+  getRouteRequiredRoles("ctms");
+export const SITE_READINESS_SITE_ROLES: string[] =
+  getRouteDescriptor("ssu")?.siteReadinessRoles || [];
+export const DATA_COLLECTION_ROLES: string[] =
+  getRouteDescriptor("ecrf")?.dataCollectionRoles ||
+  getRouteRequiredRoles("ecrf");
+export const ETMF_ROLES: string[] =
+  getRouteDescriptor("etmf")?.etmfRoles || getRouteRequiredRoles("etmf");
 export function buildStudyScopedPath(
   basePath: string,
   studyCode?: string
 ): string {
   const code = studyCode?.trim() || "";
   return code ? `${basePath}?studyId=${encodeURIComponent(code)}` : basePath;
-}
-
-function cleanQueryString(value: unknown): string {
-  return typeof value === "string" ? value.trim() : "";
 }
 
 export function buildScopedRoutePath(
@@ -205,16 +109,17 @@ export function resolveSiteReadinessPath(
       ? { studyCode: scopeOrStudyCode }
       : scopeOrStudyCode;
   let basePath: string | null = null;
-  if (
-    isScreenAvailable("ctms") &&
-    hasRequiredRole(normalizedRoles, SITE_READINESS_SPONSOR_ROLES)
-  ) {
-    basePath = "/ctms";
-  } else if (
-    isScreenAvailable("ssu") &&
-    hasRequiredRole(normalizedRoles, SITE_READINESS_SITE_ROLES)
-  ) {
-    basePath = "/ssu";
+  for (const descriptor of SITE_READINESS_DESCRIPTORS) {
+    const routeName = descriptor.route.name;
+    const roles =
+      descriptor.siteReadinessRoles || getRouteRequiredRoles(routeName);
+    if (
+      isScreenAvailable(routeName) &&
+      hasRequiredRole(normalizedRoles, roles)
+    ) {
+      basePath = descriptor.route.path;
+      break;
+    }
   }
   if (!basePath) return null;
   return buildScopedWorkflowPath(basePath, scope);
@@ -380,330 +285,25 @@ export function buildStudiesWorkspacePath(scope?: {
 }
 
 export function canAccessDataCollection(normalizedRoles: string[]): boolean {
+  const hubName = DATA_COLLECTION_HUB_DESCRIPTOR?.route.name || "ecrf";
   const screenAvailable = isDemoBuild()
-    ? isScreenAvailable("ecrf")
-    : isScreenAvailable("study") || isScreenAvailable("ecrf");
-  return (
-    screenAvailable && hasRequiredRole(normalizedRoles, DATA_COLLECTION_ROLES)
-  );
+    ? isScreenAvailable(hubName)
+    : isScreenAvailable("study") || isScreenAvailable(hubName);
+  return screenAvailable && isRouteRoleAuthorized(hubName, normalizedRoles);
 }
 
 export function canAccessSupportHub(normalizedRoles: string[]): boolean {
   return (
     isScreenAvailable("tickets") &&
-    hasRequiredRole(normalizedRoles, STAFF_HUB_ROLES)
+    isRouteHubAuthorized("tickets", normalizedRoles)
   );
 }
 
 export function canAccessKnowledgeHub(normalizedRoles: string[]): boolean {
   return (
     isScreenAvailable("knowledge") &&
-    hasRequiredRole(normalizedRoles, STAFF_HUB_ROLES)
+    isRouteHubAuthorized("knowledge", normalizedRoles)
   );
-}
-
-function extractParticipantNodeFromQueryValue(
-  value: unknown
-): { kind: "enrollment" | "participant"; id: string } | null {
-  const parsed = parseNodeRef(value);
-  if (parsed?.kind === "enrollment" || parsed?.kind === "participant") {
-    return { kind: parsed.kind, id: parsed.id };
-  }
-  if (typeof value === "string") {
-    for (const kind of ["enrollment", "participant"] as const) {
-      const prefix = `${kind}:`;
-      if (value.startsWith(prefix)) {
-        const rawId = value.slice(prefix.length).split("@")[0]?.trim() || "";
-        if (rawId) return { kind, id: rawId };
-      }
-    }
-  }
-  return null;
-}
-
-function canonicalParticipantNodeFromSummary(
-  item: SubjectSummary | undefined
-): { kind: "enrollment" | "participant"; id: string } | null {
-  if (!item) return null;
-  const enrollment = parseNodeRef(item.enrollment_ref);
-  if (enrollment?.kind === "enrollment") {
-    return { kind: "enrollment", id: enrollment.id };
-  }
-  const fallback = tryNodeRef("participant", item.id);
-  return fallback ? { kind: "participant", id: fallback.id } : null;
-}
-
-/**
- * Resolves the active participant and kernel enrollment ID from Clinical Canvas state
- * when the current study matches the canvas store's loaded study.
- */
-export function resolveCanvasParticipantContext(
-  activeStudyCode: string,
-  routeQuery: LocationQuery | Record<string, unknown> | undefined,
-  canvasStore: {
-    studyCode?: string;
-    knownParticipants?: Record<string, SubjectSummary>;
-    knownParticipantsByEnrollmentId?: Record<string, SubjectSummary>;
-    record?: { subjectCode?: string; enrollmentId?: string | null };
-  }
-): { subjectCode: string; participantRef: string; enrollmentId: string } {
-  const study = activeStudyCode.trim();
-  if (!study || canvasStore.studyCode !== study) {
-    return { subjectCode: "", participantRef: "", enrollmentId: "" };
-  }
-  const parsedRef =
-    parseNodeRef(routeQuery?.participant) ?? parseNodeRef(routeQuery?.node);
-  const participantNode =
-    parsedRef?.kind === "enrollment" || parsedRef?.kind === "participant"
-      ? { kind: parsedRef.kind, id: parsedRef.id }
-      : null;
-  const extractedNode =
-    participantNode ??
-    extractParticipantNodeFromQueryValue(routeQuery?.participant) ??
-    extractParticipantNodeFromQueryValue(routeQuery?.node);
-  const rawParticipantParam = cleanQueryString(routeQuery?.participant);
-  const rawParticipantCode =
-    !extractedNode && !rawParticipantParam.includes(":")
-      ? rawParticipantParam
-      : "";
-  const knownById = extractedNode
-    ? extractedNode.kind === "enrollment"
-      ? (canvasStore.knownParticipantsByEnrollmentId?.[extractedNode.id] ??
-        canvasStore.knownParticipants?.[extractedNode.id])
-      : canvasStore.knownParticipants?.[extractedNode.id]
-    : undefined;
-  const knownByCode =
-    !knownById && rawParticipantCode
-      ? Object.values(canvasStore.knownParticipants || {}).find(
-          (item) => item?.subject_id === rawParticipantCode
-        )
-      : undefined;
-  const known = knownById ?? knownByCode;
-  const subjectCode =
-    known?.subject_id ||
-    rawParticipantCode ||
-    canvasStore.record?.subjectCode ||
-    "";
-  const persistedEnrollment = parseNodeRef(known?.enrollment_ref);
-  let resolvedRefNode: {
-    kind: "enrollment" | "participant";
-    id: string;
-  } | null =
-    persistedEnrollment?.kind === "enrollment"
-      ? { kind: "enrollment", id: persistedEnrollment.id }
-      : participantNode
-        ? participantNode
-        : canonicalParticipantNodeFromSummary(known);
-  if (!resolvedRefNode && subjectCode && canvasStore.knownParticipants) {
-    const matched = Object.values(canvasStore.knownParticipants).find(
-      (item) => item?.subject_id === subjectCode
-    );
-    resolvedRefNode = canonicalParticipantNodeFromSummary(matched);
-  }
-  const participantRef = resolvedRefNode ? formatNodeRef(resolvedRefNode) : "";
-  const enrollmentId =
-    (persistedEnrollment?.kind === "enrollment"
-      ? persistedEnrollment.id
-      : "") ||
-    (extractedNode?.kind === "enrollment" ? extractedNode.id : "") ||
-    (subjectCode &&
-    canvasStore.record?.subjectCode === subjectCode &&
-    canvasStore.record?.enrollmentId
-      ? canvasStore.record.enrollmentId
-      : "");
-  return { subjectCode, participantRef, enrollmentId };
-}
-
-/**
- * Resolves URL-first study, site, and participant scope with read-only fallback
- * to in-memory `studyCanvas` and `clinicalScope` stores (never fabricating IDs outside demo mode).
- */
-export function resolveActiveWorkspaceScope(
-  route:
-    | {
-        params?: Record<string, unknown>;
-        query?: LocationQuery | Record<string, unknown>;
-      }
-    | null
-    | undefined,
-  canvasStore?: {
-    studyCode?: string;
-    knownParticipants?: Record<string, SubjectSummary>;
-    knownParticipantsByEnrollmentId?: Record<string, SubjectSummary>;
-    record?: { subjectCode?: string; enrollmentId?: string | null };
-    participantsFilter?: { siteId?: string };
-  } | null,
-  clinicalStore?: {
-    activeStudyId?: string;
-    activeSiteId?: string;
-    activeSubjectId?: string;
-    subjects?: Array<{ id?: string }>;
-  } | null
-): WorkspaceScopeSnapshot {
-  const effectiveClinical =
-    clinicalStore !== undefined
-      ? clinicalStore
-      : readInstantiatedClinicalScope();
-  const allowClinicalFallback = Boolean(effectiveClinical);
-  const routeParamStudy = cleanQueryString(route?.params?.studyCode);
-  const routeQueryStudy =
-    cleanQueryString(route?.query?.studyId) ||
-    cleanQueryString(route?.query?.study);
-  const routeStudy = routeParamStudy || routeQueryStudy;
-
-  const canvasStudy = cleanQueryString(canvasStore?.studyCode);
-  const clinicalStudy = allowClinicalFallback
-    ? cleanQueryString(effectiveClinical?.activeStudyId)
-    : "";
-  const bridgedStudy = cleanQueryString(getSyncedStudyScope());
-  const studyCode = routeStudy || canvasStudy || clinicalStudy || bridgedStudy;
-
-  const hasExplicitStandaloneStudyQuery = Boolean(
-    !routeParamStudy && routeQueryStudy
-  );
-  const routeSite =
-    cleanQueryString(route?.query?.site) ||
-    cleanQueryString(route?.query?.siteId);
-
-  let participantSite = "";
-  if (!routeSite && studyCode && canvasStore?.studyCode === studyCode) {
-    const extractedNode =
-      extractParticipantNodeFromQueryValue(route?.query?.participant) ??
-      extractParticipantNodeFromQueryValue(route?.query?.node);
-    if (extractedNode?.kind === "enrollment") {
-      const known =
-        canvasStore.knownParticipantsByEnrollmentId?.[extractedNode.id] ??
-        canvasStore.knownParticipants?.[extractedNode.id];
-      participantSite = cleanQueryString(known?.site_id);
-    } else if (extractedNode?.kind === "participant") {
-      participantSite = cleanQueryString(
-        canvasStore.knownParticipants?.[extractedNode.id]?.site_id
-      );
-    }
-  }
-
-  let storeSite = "";
-  if (!routeSite && studyCode) {
-    if (canvasStore?.studyCode === studyCode) {
-      storeSite = cleanQueryString(canvasStore.participantsFilter?.siteId);
-    }
-    if (
-      !storeSite &&
-      allowClinicalFallback &&
-      !hasExplicitStandaloneStudyQuery &&
-      cleanQueryString(effectiveClinical?.activeStudyId) === studyCode
-    ) {
-      storeSite = cleanQueryString(effectiveClinical?.activeSiteId);
-    }
-  }
-
-  const explicitSiteId = routeSite || storeSite;
-  const siteId = routeSite || participantSite || storeSite;
-
-  const rawParticipantParam = cleanQueryString(route?.query?.participant);
-  const rawNodeParam = cleanQueryString(route?.query?.node);
-  const parsedParticipantParam = parseNodeRef(rawParticipantParam);
-  const parsedNodeParam = parseNodeRef(rawNodeParam);
-  const routeSubject =
-    cleanQueryString(route?.query?.subjectId) ||
-    cleanQueryString(route?.query?.subject) ||
-    (!parsedParticipantParam && !rawParticipantParam.includes(":")
-      ? rawParticipantParam
-      : "");
-  const routeEnrollment = cleanQueryString(route?.query?.enrollmentId);
-  const canvasParticipant = canvasStore
-    ? resolveCanvasParticipantContext(studyCode, route?.query, canvasStore)
-    : { subjectCode: "", participantRef: "", enrollmentId: "" };
-
-  const rawClinicalSubject = cleanQueryString(
-    effectiveClinical?.activeSubjectId
-  );
-  const clinicalSubjects =
-    clinicalStore?.subjects ??
-    (
-      getActivePinia()?.state.value as
-        { clinical?: { subjects?: Array<{ id?: string }> } } | undefined
-    )?.clinical?.subjects;
-  const verifiedClinicalSubject =
-    rawClinicalSubject &&
-    (rawClinicalSubject !== "SUBJ-001" ||
-      Boolean(clinicalSubjects?.some((s) => s?.id === rawClinicalSubject)))
-      ? rawClinicalSubject
-      : "";
-
-  const subjectCode =
-    routeSubject ||
-    canvasParticipant.subjectCode ||
-    (allowClinicalFallback &&
-    !hasExplicitStandaloneStudyQuery &&
-    studyCode &&
-    cleanQueryString(effectiveClinical?.activeStudyId) === studyCode
-      ? verifiedClinicalSubject
-      : "");
-
-  let participantRef =
-    routeSubject && routeSubject !== canvasParticipant.subjectCode
-      ? ""
-      : canvasParticipant.participantRef;
-  if (
-    !participantRef &&
-    (parsedParticipantParam?.kind === "enrollment" ||
-      parsedParticipantParam?.kind === "participant")
-  ) {
-    participantRef = formatNodeRef({
-      kind: parsedParticipantParam.kind,
-      id: parsedParticipantParam.id,
-    });
-  }
-  if (
-    !participantRef &&
-    subjectCode &&
-    studyCode &&
-    canvasStore?.studyCode === studyCode &&
-    canvasStore.knownParticipants
-  ) {
-    const matched = Object.values(canvasStore.knownParticipants).find(
-      (item) => item?.subject_id === subjectCode
-    );
-    const refNode = canonicalParticipantNodeFromSummary(matched);
-    if (refNode) {
-      participantRef = formatNodeRef(refNode);
-    }
-  }
-
-  const enrollmentId =
-    (routeSubject
-      ? routeEnrollment
-      : routeEnrollment || canvasParticipant.enrollmentId) || "";
-
-  const recordParticipantParam = routeParamStudy
-    ? parsedParticipantParam?.kind === "enrollment" ||
-      parsedParticipantParam?.kind === "participant"
-      ? formatNodeRef({
-          kind: parsedParticipantParam.kind,
-          id: parsedParticipantParam.id,
-        })
-      : !rawParticipantParam.includes(":")
-        ? rawParticipantParam
-        : ""
-    : "";
-  const inspectorNodeParam =
-    routeParamStudy && parsedNodeParam
-      ? formatNodeRef(parsedNodeParam)
-      : routeParamStudy
-        ? rawNodeParam
-        : "";
-
-  return {
-    studyCode,
-    siteId,
-    explicitSiteId,
-    subjectCode,
-    participantRef,
-    enrollmentId,
-    recordParticipantParam,
-    inspectorNodeParam,
-  };
 }
 
 export function resolveWorkspaceNavigationScope(
@@ -821,32 +421,26 @@ export function buildWorkspacePaletteItems(options: {
   const items: WorkspacePaletteOption[] = [];
   const includedRoutes = new Set<string>();
 
-  if (isScreenAvailable("study")) {
-    includedRoutes.add("study");
-    const studyPath = buildStudiesWorkspacePath({
-      studyCode: options.activeStudyCode,
-      siteId: options.activeSiteId,
-      subjectCode: options.activeSubjectCode,
-      participantRef: options.activeParticipantRef,
-    });
-    items.push({
-      key: "workspace:studies",
-      group: "Workspace",
-      label: "Studies",
-      detail: "Open a study and navigate its lifecycle",
-      target: { routePath: studyPath },
-    });
-  }
+  for (const descriptor of PALETTE_DESCRIPTORS) {
+    const routeName = descriptor.route.name;
+    const paletteMeta = descriptor.palette;
+    let routePath: string | null = null;
 
-  if (canAccessDataCollection(roles)) {
-    includedRoutes.add("ecrf");
-    items.push({
-      key: "workspace:data-collection",
-      group: "Workspace",
-      label: "Data collection",
-      detail: "Clinical casebooks, forms, and discrepancy review",
-      target: {
-        routePath: buildDataCollectionPath({
+    if (paletteMeta.scopeMode === "studies-workspace") {
+      if (
+        isScreenAvailable(routeName) &&
+        isRouteRoleAuthorized(routeName, roles)
+      ) {
+        routePath = buildStudiesWorkspacePath({
+          studyCode: options.activeStudyCode,
+          siteId: options.activeSiteId,
+          subjectCode: options.activeSubjectCode,
+          participantRef: options.activeParticipantRef,
+        });
+      }
+    } else if (paletteMeta.scopeMode === "data-collection") {
+      if (canAccessDataCollection(roles)) {
+        routePath = buildDataCollectionPath({
           studyCode: options.activeStudyCode,
           siteId:
             options.activeExplicitSiteId !== undefined
@@ -855,114 +449,55 @@ export function buildWorkspacePaletteItems(options: {
           participantRef: options.activeParticipantRef,
           subjectCode: options.activeSubjectCode,
           enrollmentId: options.activeEnrollmentId,
-        }),
-      },
-    });
-  }
-
-  const siteReadinessPath = resolveSiteReadinessPath(roles, {
-    studyCode: options.activeStudyCode,
-    siteId: options.activeSiteId,
-    subjectCode: options.activeSubjectCode,
-  });
-  if (siteReadinessPath) {
-    if (siteReadinessPath.startsWith("/ctms")) {
-      includedRoutes.add("ctms");
-    } else if (siteReadinessPath.startsWith("/ssu")) {
-      includedRoutes.add("ssu");
+        });
+      }
+    } else if (paletteMeta.scopeMode === "site-readiness") {
+      routePath = resolveSiteReadinessPath(roles, {
+        studyCode: options.activeStudyCode,
+        siteId: options.activeSiteId,
+        subjectCode: options.activeSubjectCode,
+      });
+    } else if (paletteMeta.scopeMode === "workflow") {
+      if (
+        isScreenAvailable(routeName) &&
+        isRouteHubAuthorized(routeName, roles)
+      ) {
+        routePath = buildScopedWorkflowPath(descriptor.route.path, {
+          studyCode: options.activeStudyCode,
+          siteId: options.activeSiteId,
+          subjectCode: options.activeSubjectCode,
+        });
+      }
+    } else if (paletteMeta.scopeMode === "study") {
+      if (
+        isScreenAvailable(routeName) &&
+        isRouteRoleAuthorized(routeName, roles)
+      ) {
+        routePath = buildStudyScopedPath(
+          descriptor.route.path,
+          options.activeStudyCode
+        );
+      }
     }
-    items.push({
-      key: "workspace:site-readiness",
-      group: "Workspace",
-      label: "Site readiness",
-      detail: "Site activation, milestones, and readiness workflows",
-      target: { routePath: siteReadinessPath },
-    });
-  }
 
-  if (isScreenAvailable("etmf") && hasRequiredRole(roles, ETMF_ROLES)) {
-    includedRoutes.add("etmf");
-    items.push({
-      key: "workspace:trial-documents",
-      group: "Workspace",
-      label: "Trial documents",
-      detail: "Study binder, document classification, and clinical review",
-      target: {
-        routePath: buildScopedWorkflowPath("/etmf", {
-          studyCode: options.activeStudyCode,
-          siteId: options.activeSiteId,
-          subjectCode: options.activeSubjectCode,
-        }),
-      },
-    });
-  }
-
-  if (isScreenAvailable("training")) {
-    includedRoutes.add("training");
-    items.push({
-      key: "workspace:training",
-      group: "Workspace",
-      label: "Study training",
-      detail: "Protocol curricula, staff assignments, and delegation sign-off",
-      target: {
-        routePath: buildScopedWorkflowPath("/training", {
-          studyCode: options.activeStudyCode,
-          siteId: options.activeSiteId,
-          subjectCode: options.activeSubjectCode,
-        }),
-      },
-    });
-  }
-
-  if (canAccessSupportHub(roles)) {
-    includedRoutes.add("tickets");
-    items.push({
-      key: "workspace:support",
-      group: "Workspace",
-      label: "Support tickets",
-      detail: "Operational issues, deviations, and resolution sign-off",
-      target: {
-        routePath: buildScopedWorkflowPath("/tickets", {
-          studyCode: options.activeStudyCode,
-          siteId: options.activeSiteId,
-          subjectCode: options.activeSubjectCode,
-        }),
-      },
-    });
-  }
-
-  if (canAccessKnowledgeHub(roles)) {
-    includedRoutes.add("knowledge");
-    items.push({
-      key: "workspace:knowledge",
-      group: "Workspace",
-      label: "Knowledge & procedures",
-      detail: "Published standard operating procedures and version history",
-      target: {
-        routePath: buildScopedWorkflowPath("/knowledge", {
-          studyCode: options.activeStudyCode,
-          siteId: options.activeSiteId,
-          subjectCode: options.activeSubjectCode,
-        }),
-      },
-    });
-  }
-
-  if (isScreenAvailable("overview")) {
-    includedRoutes.add("overview");
-    items.push({
-      key: "workspace:orientation",
-      group: "Workspace",
-      label: "Orientation",
-      detail: "Role-tailored workspace orientation and setup",
-      target: {
-        routePath: buildScopedWorkflowPath("/overview", {
-          studyCode: options.activeStudyCode,
-          siteId: options.activeSiteId,
-          subjectCode: options.activeSubjectCode,
-        }),
-      },
-    });
+    if (routePath) {
+      if (paletteMeta.scopeMode === "site-readiness") {
+        if (routePath.startsWith("/ctms")) {
+          includedRoutes.add("ctms");
+        } else if (routePath.startsWith("/ssu")) {
+          includedRoutes.add("ssu");
+        }
+      } else {
+        includedRoutes.add(routeName);
+      }
+      items.push({
+        key: paletteMeta.key,
+        group: "Workspace",
+        label: paletteMeta.label,
+        detail: paletteMeta.detail,
+        target: { routePath },
+      });
+    }
   }
 
   if (isDemoBuild()) {

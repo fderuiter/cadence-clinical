@@ -2,6 +2,7 @@ import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { describe, it, expect } from "vitest";
 import { isScreenAvailable } from "../src/router/availability";
+import { webRouteDescriptors } from "../src/router/registry";
 
 // #4529: a screen gets its own view test when it becomes available (moves onto the real API), not before.
 // Hidden screens are demo code waiting for a backend; testing them now would pin behaviour that is replaced
@@ -10,13 +11,10 @@ const webRoot = join(__dirname, "..");
 const testsRoot = join(webRoot, "tests");
 
 function routeViews() {
-  const router = readFileSync(join(webRoot, "src/router/index.js"), "utf8");
-  const pattern =
-    /name:\s*"([\w-]+)",\s*component:\s*\(\)\s*=>\s*import\("\.\.\/views\/(\w+)\.vue"\)/g;
-  return [...router.matchAll(pattern)].map(([, name, view]) => ({
-    name,
-    view,
-  }));
+  return webRouteDescriptors.flatMap((descriptor) => {
+    const match = /views\/(\w+)\.vue/.exec(String(descriptor.route?.component));
+    return match ? [{ name: descriptor.route.name, view: match[1] }] : [];
+  });
 }
 
 function testSources(dir = testsRoot) {

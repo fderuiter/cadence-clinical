@@ -47,7 +47,7 @@
     "test:e2e": "playwright test --project=accessibility --project=staged-demo-subpath",
     "test:e2e:stack": "playwright test",
     "test:e2e:workflows": "playwright test --project=setup --project=chromium",
-    "typecheck": "node ../../scripts/check_duplicate_identifiers.js && vue-tsc --noEmit"
+    "typecheck": "node ../../packages/ui/scripts/generate-types.js && node ../../scripts/check_duplicate_identifiers.js && vue-tsc --noEmit"
   },
   "type": "module",
   "version": "1.0.0"

@@ -10,8 +10,18 @@ import {
   resolveSiteReadinessPath,
 } from "../canvas/palette";
 import { DEMO_MODULE_CATALOG, isScreenAvailable } from "../router/availability";
+import { hasRequiredRole } from "../router/helpers.js";
+import {
+  findRouteDescriptorBySpec,
+  getRouteDescriptor,
+  isRouteRoleAuthorized,
+  isRouteTourRoleAuthorized,
+  NON_ONBOARDING_ROUTE_NAMES,
+} from "../router/registry.js";
 import { isDemoBuild } from "../utils/demoMode";
-import { PERSONA_PRESETS, ROLE_ALIASES, useAuthStore } from "./auth";
+import { PERSONA_PRESETS, useAuthStore } from "./auth";
+
+export { hasRequiredRole };
 
 export function resolveStorePinia(store) {
   return store?._p || getActivePinia() || null;
@@ -23,28 +33,6 @@ export {
   SITE_READINESS_SITE_ROLES,
   SITE_READINESS_SPONSOR_ROLES,
 };
-
-const CTMS_AUTHORIZED_ROLES = [
-  ...SITE_READINESS_SPONSOR_ROLES,
-  "pharmacist",
-  "trial_coordinator",
-];
-
-const NON_ONBOARDING_ROUTES = new Set([
-  "landing",
-  "login",
-  "forbidden",
-  "unavailable",
-]);
-
-export function hasRequiredRole(userRoles, requiredRoles) {
-  if (!requiredRoles || requiredRoles.length === 0) return true;
-  return (userRoles || []).some((uRole) => {
-    if (requiredRoles.includes(uRole)) return true;
-    const aliases = ROLE_ALIASES[uRole] || [];
-    return aliases.some((alias) => requiredRoles.includes(alias));
-  });
-}
 
 export function effectiveRolesForPersona(personaKey, explicitAuthStore = null) {
   const preset = PERSONA_PRESETS.find((p) => p.key === personaKey);
@@ -69,16 +57,8 @@ function normalizeTaskRouteName(task) {
   const rawRoute = typeof task?.route === "string" ? task.route.trim() : "";
   if (!rawRoute) return null;
   const cleanPath = rawRoute.split("?")[0];
-  if (cleanPath === "/studies" || cleanPath.startsWith("/studies/")) {
-    return "study";
-  }
-  if (cleanPath === "/observations" || cleanPath.startsWith("/observations/")) {
-    return "observation";
-  }
-  if (cleanPath === "/overview") return "overview";
-  if (cleanPath === "/ecrf") return "ecrf";
-  if (cleanPath === "/ctms") return "ctms";
-  if (cleanPath === "/ssu") return "ssu";
+  const matched = findRouteDescriptorBySpec(cleanPath);
+  if (matched) return matched.route.name;
   return cleanPath.startsWith("/") ? cleanPath.slice(1) : cleanPath;
 }
 
@@ -147,7 +127,7 @@ export function resolveAuthorizedTaskRoute(
 ) {
   if (!task) return null;
   const routeName = normalizeTaskRouteName(task);
-  if (!routeName || NON_ONBOARDING_ROUTES.has(routeName)) return null;
+  if (!routeName || NON_ONBOARDING_ROUTE_NAMES.has(routeName)) return null;
   const scope = readOnboardingWorkspaceScope(explicitScope, explicitPinia);
 
   const studyCode = scope?.studyCode?.trim() || "";
@@ -158,8 +138,19 @@ export function resolveAuthorizedTaskRoute(
   const participantRef = scope?.participantRef?.trim() || "";
   const enrollmentId = scope?.enrollmentId?.trim() || "";
 
+  if (routeName === "site-readiness") {
+    return resolveSiteReadinessPath(userRoles, {
+      studyCode,
+      siteId,
+      subjectCode,
+    });
+  }
+
+  const descriptor = getRouteDescriptor(routeName);
+
   if (routeName === "study") {
-    return isScreenAvailable("study")
+    return isScreenAvailable("study") &&
+      isRouteRoleAuthorized("study", userRoles)
       ? buildStudiesWorkspacePath({
           studyCode,
           siteId,
@@ -168,19 +159,11 @@ export function resolveAuthorizedTaskRoute(
         })
       : null;
   }
-  if (routeName === "overview") {
-    return isScreenAvailable("overview")
-      ? buildScopedWorkflowPath("/overview", {
-          studyCode,
-          siteId,
-          subjectCode,
-        })
-      : null;
-  }
-  if (routeName === "ecrf") {
+
+  if (descriptor?.dataCollectionHub) {
     if (isDemoBuild()) {
-      return isScreenAvailable("ecrf") &&
-        hasRequiredRole(userRoles, DATA_COLLECTION_ROLES)
+      return isScreenAvailable(routeName) &&
+        isRouteRoleAuthorized(routeName, userRoles)
         ? buildDataCollectionPath({
             studyCode,
             siteId: explicitSiteId,
@@ -191,10 +174,12 @@ export function resolveAuthorizedTaskRoute(
     }
     if (
       !isScreenAvailable("study") ||
-      !hasRequiredRole(userRoles, DATA_COLLECTION_ROLES)
+      !isRouteRoleAuthorized(routeName, userRoles)
     ) {
       return null;
     }
+    const fallbackStudyPath =
+      getRouteDescriptor("study")?.onboardingTaskPath || "/studies";
     return studyCode || explicitSiteId || participantRef || subjectCode
       ? buildDataCollectionPath({
           studyCode,
@@ -203,74 +188,20 @@ export function resolveAuthorizedTaskRoute(
           subjectCode,
           enrollmentId,
         })
-      : "/studies";
+      : fallbackStudyPath;
   }
-  if (routeName === "site-readiness") {
-    return resolveSiteReadinessPath(userRoles, {
-      studyCode,
-      siteId,
-      subjectCode,
-    });
-  }
-  if (routeName === "ctms") {
-    return isScreenAvailable("ctms") &&
-      hasRequiredRole(userRoles, CTMS_AUTHORIZED_ROLES)
-      ? buildScopedWorkflowPath("/ctms", {
+
+  if (descriptor?.onboardingTaskPath) {
+    return isScreenAvailable(routeName) &&
+      isRouteRoleAuthorized(routeName, userRoles)
+      ? buildScopedWorkflowPath(descriptor.onboardingTaskPath, {
           studyCode,
           siteId,
           subjectCode,
         })
       : null;
   }
-  if (routeName === "ssu") {
-    return isScreenAvailable("ssu") &&
-      hasRequiredRole(userRoles, [
-        ...SITE_READINESS_SPONSOR_ROLES,
-        ...SITE_READINESS_SITE_ROLES,
-      ])
-      ? buildScopedWorkflowPath("/ssu", {
-          studyCode,
-          siteId,
-          subjectCode,
-        })
-      : null;
-  }
-  if (routeName === "training") {
-    return isScreenAvailable("training")
-      ? buildScopedWorkflowPath("/training", {
-          studyCode,
-          siteId,
-          subjectCode,
-        })
-      : null;
-  }
-  if (routeName === "tickets") {
-    return isScreenAvailable("tickets")
-      ? buildScopedWorkflowPath("/tickets", {
-          studyCode,
-          siteId,
-          subjectCode,
-        })
-      : null;
-  }
-  if (routeName === "knowledge") {
-    return isScreenAvailable("knowledge")
-      ? buildScopedWorkflowPath("/knowledge", {
-          studyCode,
-          siteId,
-          subjectCode,
-        })
-      : null;
-  }
-  if (routeName === "etmf") {
-    return isScreenAvailable("etmf") && hasRequiredRole(userRoles, ETMF_ROLES)
-      ? buildScopedWorkflowPath("/etmf", {
-          studyCode,
-          siteId,
-          subjectCode,
-        })
-      : null;
-  }
+
   const catalogEntry = isDemoBuild() ? DEMO_MODULE_CATALOG[routeName] : null;
   if (catalogEntry) {
     if (!isScreenAvailable(routeName)) return null;
@@ -294,39 +225,9 @@ export function resolveAuthorizedTaskRoute(
 
 export function isTourRouteAuthorized(routeName, userRoles) {
   if (!routeName) return true;
-  if (NON_ONBOARDING_ROUTES.has(routeName)) return false;
+  if (NON_ONBOARDING_ROUTE_NAMES.has(routeName)) return false;
   if (!isScreenAvailable(routeName)) return false;
-  if (routeName === "study" || routeName === "overview") return true;
-  if (routeName === "ecrf") {
-    return hasRequiredRole(userRoles, DATA_COLLECTION_ROLES);
-  }
-  if (routeName === "observation") {
-    const obsRoles = DEMO_MODULE_CATALOG.observation?.requiresRole || [
-      "site_investigator",
-      "crc",
-      "data_manager",
-    ];
-    return hasRequiredRole(userRoles, obsRoles);
-  }
-  if (routeName === "ctms") {
-    return hasRequiredRole(userRoles, CTMS_AUTHORIZED_ROLES);
-  }
-  if (routeName === "ssu") {
-    return hasRequiredRole(userRoles, [
-      ...SITE_READINESS_SPONSOR_ROLES,
-      ...SITE_READINESS_SITE_ROLES,
-    ]);
-  }
-  if (
-    routeName === "training" ||
-    routeName === "tickets" ||
-    routeName === "knowledge"
-  ) {
-    return true;
-  }
-  if (routeName === "etmf") {
-    return hasRequiredRole(userRoles, ETMF_ROLES);
-  }
+  if (isRouteTourRoleAuthorized(routeName, userRoles)) return true;
   const catalogEntry = isDemoBuild() ? DEMO_MODULE_CATALOG[routeName] : null;
   if (catalogEntry) {
     return (

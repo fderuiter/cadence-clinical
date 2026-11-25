@@ -483,23 +483,14 @@ import {
   collectionInstanceRef,
   observationNodeRef,
 } from "../../canvas/nodeRef";
+import type { StudyQueriesFilterState } from "../../canvas/sections/types";
 import { useFormQueries } from "../../composables/useFormQueries";
 import { useKernelStudyRef } from "../../composables/useKernelStudyRef";
 import { useStudyCanvasStore } from "../../stores/studyCanvas";
 import FormQueryList from "../ecrf/FormQueryList.vue";
 import CanvasErrorAlert from "./CanvasErrorAlert.vue";
 
-export interface StudyQueriesFilterState {
-  status: string;
-  owner: string;
-  origin: string;
-  priority: string;
-  escalated: string;
-  assignee: string;
-  site: string;
-  participant: string;
-  changed: string;
-}
+export type { StudyQueriesFilterState };
 
 const FILTER_DELAY_MS = 250;
 

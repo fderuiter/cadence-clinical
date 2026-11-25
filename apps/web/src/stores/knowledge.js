@@ -1,6 +1,7 @@
 import { defineStore, getActivePinia } from "pinia";
 import { findSection, findStage } from "../canvas/lifecycle";
 import { collectionInstanceId, parseNodeRef } from "../canvas/nodeRef";
+import { resolveSopEscalationCategory } from "../router/registry.js";
 import { describeApiError } from "../utils/apiErrors.js";
 import { demoNowIso, isDemoBuild } from "../utils/demoMode.js";
 import { useAuthStore } from "./auth.js";
@@ -194,35 +195,6 @@ function resolveAuthorizedScope(candidate, lists, allowAll = false) {
   return allowed.some((s) => String(s).toUpperCase() === upper) ? clean : "";
 }
 
-const ROUTE_CATEGORY_GROUPS = [
-  ["PROTOCOL_DEVIATION", ["/ecrf"]],
-  [
-    "DATA_QUERY",
-    ["/rules", "/coding", "/data-lock", "/observations", "/lakehouse", "/labs"],
-  ],
-  ["MONITORING_FINDING", ["/ctms"]],
-  ["SITE_OPERATIONS", ["/ssu", "/dct", "/sensors"]],
-  ["SUPPLY_EXCURSION", ["/devices", "/device-investigation"]],
-  ["SAFETY_ADVERSE_EVENT", ["/safety", "/adjudication", "/cec"]],
-  [
-    "REGULATORY_QUERY",
-    [
-      "/audit",
-      "/auditor",
-      "/etmf",
-      "/documents",
-      "/quality",
-      "/training",
-      "/icf-builder",
-      "/econsent-authoring",
-      "/exports",
-      "/lay-summaries",
-    ],
-  ],
-  ["ACCESS_CONTROL", ["/forbidden"]],
-  ["TECHNICAL_SYSTEM", ["/unavailable"]],
-];
-
 const CANVAS_DATA_SECTIONS = new Set(["queries", "locks", "validation"]);
 const CANVAS_REG_SECTIONS = new Set(["documents", "training", "exports"]);
 const CANVAS_SITE_SECTIONS = new Set([
@@ -266,10 +238,7 @@ function inferEscalationCategory({
     return "SYSTEM_SUPPORT";
   }
 
-  for (const [category, prefixes] of ROUTE_CATEGORY_GROUPS) {
-    if (prefixes.some((p) => path.startsWith(p))) return category;
-  }
-  return "SYSTEM_SUPPORT";
+  return resolveSopEscalationCategory(path, "SYSTEM_SUPPORT");
 }
 
 function basePathOf(routeStr) {

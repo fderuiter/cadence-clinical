@@ -9,39 +9,6 @@ const webSrcDir = path.join(repoRoot, "apps/web/src");
 const portalSrcDir = path.join(repoRoot, "apps/subject-portal/src");
 const docsComponentsDir = path.join(repoRoot, "docs/components");
 
-const EXPECTED_SHARED_COMPONENTS = [
-  "AiActionButton",
-  "AiSuggestionDrawer",
-  "AuditLogViewer",
-  "ClinicalBreadcrumbs",
-  "ClinicalContextBar",
-  "ClinicalDataTable",
-  "ClinicalDrawer",
-  "ClinicalDropzone",
-  "ClinicalExplanation",
-  "ClinicalFieldLayout",
-  "ClinicalFormField",
-  "ClinicalGatedAction",
-  "ClinicalIcon",
-  "ClinicalIconButton",
-  "ClinicalInput",
-  "ClinicalLookupInput",
-  "ClinicalModal",
-  "ClinicalQueryFlag",
-  "ClinicalQueryPanel",
-  "ClinicalRadioGroup",
-  "ClinicalTabs",
-  "ClinicalToastHost",
-  "ConfidenceBadge",
-  "EmptyState",
-  "EntityLink",
-  "FileUploadModal",
-  "MediaPlayer",
-  "ModalErrorAlert",
-  "PersonaSwitcher",
-  "SignOutConfirmModal",
-];
-
 const EXPECTED_KEYBOARD_HELPERS = [
   "useFocusTrap",
   "hasActiveModalFocusTrap",
@@ -201,18 +168,17 @@ function resolveCssColorExpr(expr, themeMap) {
 
 describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", () => {
   describe("Requirement 1: Complete Root Package Exports & Type Definitions", () => {
-    it("exposes all 30 shared Vue components from root index.js with zero unexported SFCs", () => {
-      const discoveredVueNames = walkFiles(path.join(uiDir, "src/components"), [
-        ".vue",
-      ])
-        .map((f) => path.basename(f, ".vue"))
-        .sort();
+    const discoveredVueNames = walkFiles(path.join(uiDir, "src/components"), [
+      ".vue",
+    ])
+      .map((f) => path.basename(f, ".vue"))
+      .sort();
 
-      expect(discoveredVueNames).toEqual(
-        [...EXPECTED_SHARED_COMPONENTS].sort()
-      );
-      expect(EXPECTED_SHARED_COMPONENTS).toHaveLength(30);
-      for (const name of EXPECTED_SHARED_COMPONENTS) {
+    it("exposes every shared Vue component in src/components/ from root index.js with zero unexported SFCs", () => {
+      expect(discoveredVueNames.length).toBeGreaterThanOrEqual(30);
+      expect(new Set(discoveredVueNames).size).toBe(discoveredVueNames.length);
+      expect(Object.keys(rootUi.UI_COMPONENTS)).toEqual(discoveredVueNames);
+      for (const name of discoveredVueNames) {
         expect(rootUi[name], `root index.js missing ${name}`).toBeDefined();
       }
     });
@@ -231,17 +197,27 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       }
     });
 
-    it("declares complete TypeScript definitions for all 30 components and helpers in index.d.ts", () => {
-      const dts = fs.readFileSync(path.join(uiDir, "index.d.ts"), "utf-8");
-      for (const componentName of EXPECTED_SHARED_COMPONENTS) {
+    it("declares complete TypeScript definitions for all discovered components and helpers in generated dist/index.d.ts", () => {
+      const dtsPath = path.join(uiDir, "dist/index.d.ts");
+      expect(fs.existsSync(dtsPath)).toBe(true);
+      expect(fs.existsSync(path.join(uiDir, "index.d.ts"))).toBe(false);
+      const dts = fs.readFileSync(dtsPath, "utf-8");
+      for (const componentName of discoveredVueNames) {
         expect(dts).toMatch(
           new RegExp(`export (?:declare )?const ${componentName}:`)
         );
       }
       for (const helperName of [
         ...EXPECTED_KEYBOARD_HELPERS,
+        "handoffFocus",
+        "useInlineFocusHandoff",
+        "handoffRetryFocus",
+        "useRetryFocusHandoff",
         "createSrOnlyActionButton",
         "useAsyncRetry",
+        "registerEntityPeekHandler",
+        "parseNodeRef",
+        "requestStepUpSignature",
       ]) {
         expect(dts).toMatch(
           new RegExp(`export (?:declare )?(?:function|const) ${helperName}\\b`)
@@ -1515,9 +1491,18 @@ const thresholdAmount = ref(600);
       const requiredTypographyTargets = [
         {
           file: path.join(webSrcDir, "views/StudyCanvasView.vue"),
+          monoSelectors: ["#zoom-study", "#zoom-participant"],
+          tabularSelectors: [],
+        },
+        {
+          file: path.join(
+            webSrcDir,
+            "components/canvas/OpenStudyWorkspace.vue"
+          ),
           monoSelectors: [
-            "#zoom-study",
-            "#zoom-participant",
+            "#open-study-code",
+            "#create-study-code",
+            "#create-study-sponsor-code",
             ".study-card-code",
           ],
           tabularSelectors: [".directory-status", ".study-card-sponsor"],
@@ -1532,15 +1517,35 @@ const thresholdAmount = ref(600);
         },
         {
           file: path.join(webSrcDir, "components/canvas/CanvasInspector.vue"),
-          monoSelectors: [
-            ".inspector-title--code",
-            ".inspector-mono",
-            ".inspector-ref",
-          ],
+          monoSelectors: [".inspector-title--code", ".inspector-ref"],
+          tabularSelectors: [],
+        },
+        {
+          file: path.join(
+            webSrcDir,
+            "components/canvas/ParticipantInspectorPane.vue"
+          ),
+          monoSelectors: [".inspector-mono"],
+          tabularSelectors: [".numeric"],
+        },
+        {
+          file: path.join(
+            webSrcDir,
+            "components/canvas/ProtocolVersionInspectorPane.vue"
+          ),
+          monoSelectors: [],
           tabularSelectors: [
             "#inspector-version-forms",
             "#inspector-version-notes",
           ],
+        },
+        {
+          file: path.join(
+            webSrcDir,
+            "components/canvas/GenericNodeInspectorPane.vue"
+          ),
+          monoSelectors: [".inspector-mono"],
+          tabularSelectors: [],
         },
         {
           file: path.join(webSrcDir, "views/ObservationView.vue"),
