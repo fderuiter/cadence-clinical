@@ -8,7 +8,7 @@ Site and participant payments scaffold. It holds the budget contract, fee schedu
 
 - Project: `apps/payments/src/Cadence.Apps.Payments.csproj` (assembly `Cadence.Apps.Payments`).
 - `Program.cs`: composition root and route mapping.
-- `Application/`: `ReceiptOcrEngine` (deterministic raster/vector receipt OCR extraction for PNG, BMP, PNM, JPEG, SVG, and PDF inputs with sharpness/completeness confidence scoring and zero fallback fabrication on unreadable images).
+- `Application/`: `ReceiptOcrEngine` (deterministic raster/vector receipt OCR extraction for PNG, BMP, PNM, JPEG, SVG, and PDF inputs with 10 MiB payload limits, bounded PNG chunk/ZLib decompression and ratio quotas, sharpness/completeness confidence scoring, and zero fallback fabrication on unreadable images).
 - `Domain/`: EF Core entity classes (budget contracts, fee schedules, split payees, payables and allocations, holdback reserves, invoices, remittance advice, participant wallets, audit log).
   Every timestamp is a `DateTimeOffset`; the ones a writer must supply are `required` with no default, and the project bans `DateTime.Now/UtcNow` (K-TIME-3, #4784), so time comes from `Cadence.Kernel.Time.IClock`.
 - `Domain/Ledger/`: the grant payables ledger, ported from `packages/engine_core/financial/` ([ADR-2521](../../docs/adr/2026-09-30-grant-payables-ledger-in-decimal-with-kernel-ids.md)), in `decimal` throughout.

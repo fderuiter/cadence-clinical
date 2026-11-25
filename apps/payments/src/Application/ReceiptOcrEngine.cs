@@ -1,4 +1,5 @@
 using System;
+using System.Buffers;
 using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.Globalization;
@@ -37,6 +38,19 @@ public static class ReceiptOcrEngine
 {
     private const int GlyphWidth = 5;
     private const int GlyphHeight = 7;
+
+    public const int MaxReceiptPayloadBytes = 10 * 1024 * 1024; // 10 MiB
+    public const int MaxBase64NonWhitespaceChars = ((MaxReceiptPayloadBytes + 2) / 3) * 4;
+    public const int MaxEncodedReceiptPayloadChars = 15 * 1024 * 1024; // Covers 10 MiB base64 + data: header + line wraps
+    public const int MaxPngDimension = 4_096;
+    public const int MaxPngChunkCount = 2_048;
+    public const int MaxPngMetadataChunkBytes = 64 * 1024; // 64 KiB
+    public const int MaxPngTotalMetadataBytes = 256 * 1024; // 256 KiB
+    public const int MaxPngCompressionRatio = 100;
+    public const int PngMetadataRatioFloorBytes = 16 * 1024; // 16 KiB
+    public const int PngIdatRatioFloorBytes = 4 * 1024 * 1024; // 4 MiB
+    public const int MaxExtractedRawTextChars = 256 * 1024; // 262,144 chars
+    private const int PngDecompressBufferSize = 4_096;
 
     private static readonly Dictionary<char, string[]> CanonicalFont5x7 = BuildCanonicalFont5x7();
     private static readonly List<(char Ch, double[] Grid, double Aspect)> GlyphTemplates = BuildNormalizedTemplates();
@@ -95,7 +109,7 @@ public static class ReceiptOcrEngine
 
         if (!string.IsNullOrWhiteSpace(rawText))
         {
-            extractedText = NormalizeText(rawText);
+            extractedText = CapRawText(NormalizeText(rawText));
             legibilityFactor = string.IsNullOrWhiteSpace(extractedText) ? 0.0 : 1.0;
         }
         else if (!string.IsNullOrWhiteSpace(imageBase64))
@@ -105,12 +119,33 @@ public static class ReceiptOcrEngine
                 return UnreadableResult("The uploaded receipt file could not be decoded as valid image data.");
             }
 
-            (extractedText, legibilityFactor, warning) = ExtractTextFromBytes(bytes);
+            return ExtractFromBytes(bytes, categoryHint);
         }
         else
         {
             return UnreadableResult("No receipt image or text content was provided for OCR extraction.");
         }
+
+        return BuildExtractionResult(extractedText, legibilityFactor, warning, categoryHint);
+    }
+
+    internal static ReceiptOcrExtractionResult ExtractFromBytes(byte[] bytes, string? categoryHint = null)
+    {
+        if (bytes.Length == 0 || bytes.Length > MaxReceiptPayloadBytes)
+        {
+            return UnreadableResult("The uploaded receipt file could not be decoded as valid image data.");
+        }
+
+        var (extractedText, legibilityFactor, warning) = ExtractTextFromBytes(bytes);
+        return BuildExtractionResult(CapRawText(extractedText), legibilityFactor, warning, categoryHint);
+    }
+
+    private static ReceiptOcrExtractionResult BuildExtractionResult(
+        string extractedText,
+        double legibilityFactor,
+        string? warning,
+        string? categoryHint)
+    {
 
         if (string.IsNullOrWhiteSpace(extractedText) || !ContainsMeaningfulTokens(extractedText))
         {
@@ -281,58 +316,152 @@ public static class ReceiptOcrEngine
             Warning: warning
         );
 
-    internal static bool TryDecodeReceiptPayload(string? payload, out byte[] bytes)
+    public static bool TryDecodeReceiptPayload(string? payload, out byte[] bytes)
     {
         bytes = [];
-        if (string.IsNullOrWhiteSpace(payload))
+        if (string.IsNullOrWhiteSpace(payload) || payload.Length > MaxEncodedReceiptPayloadChars)
         {
             return false;
         }
 
-        string trimmed = payload.Trim();
-        if (trimmed.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
+        ReadOnlySpan<char> span = payload.AsSpan().Trim();
+        if (span.IsEmpty)
         {
-            int commaIdx = trimmed.IndexOf(',', StringComparison.Ordinal);
+            return false;
+        }
+
+        if (span.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
+        {
+            int commaIdx = span.IndexOf(',');
             if (commaIdx < 0)
             {
                 return false;
             }
 
-            string header = trimmed[..commaIdx];
-            string dataPart = trimmed[(commaIdx + 1)..];
-            string[] headerSegments = header[5..].Split(';');
-            string mediaType = headerSegments[0].Trim();
-            bool isBase64 = headerSegments
-                .Skip(1)
-                .Any(segment => segment.Trim().Equals("base64", StringComparison.OrdinalIgnoreCase));
+            ReadOnlySpan<char> header = span[5..commaIdx];
+            ReadOnlySpan<char> dataPart = span[(commaIdx + 1)..];
+            ParseDataUriHeader(header, out ReadOnlySpan<char> mediaType, out bool isBase64);
 
             if (!isBase64)
             {
-                if (!mediaType.Equals("image/svg+xml", StringComparison.OrdinalIgnoreCase))
+                if (!mediaType.Equals("image/svg+xml", StringComparison.OrdinalIgnoreCase)
+                    || dataPart.IsEmpty
+                    || dataPart.Length > MaxEncodedReceiptPayloadChars)
                 {
                     return false;
                 }
 
-                bytes = Encoding.UTF8.GetBytes(Uri.UnescapeDataString(dataPart));
-                return bytes.Length > 0;
+                string unescaped;
+                try
+                {
+                    unescaped = Uri.UnescapeDataString(dataPart);
+                }
+                catch (UriFormatException)
+                {
+                    return false;
+                }
+
+                if (unescaped.Length == 0 || Encoding.UTF8.GetByteCount(unescaped) > MaxReceiptPayloadBytes)
+                {
+                    return false;
+                }
+
+                bytes = Encoding.UTF8.GetBytes(unescaped);
+                return bytes.Length > 0 && bytes.Length <= MaxReceiptPayloadBytes;
             }
 
-            trimmed = dataPart;
+            span = dataPart;
         }
 
-        trimmed = trimmed.Replace("\r", string.Empty, StringComparison.Ordinal)
-                         .Replace("\n", string.Empty, StringComparison.Ordinal)
-                         .Replace(" ", string.Empty, StringComparison.Ordinal);
-        try
+        int nonWhitespaceCount = 0;
+        char last1 = '\0';
+        char last2 = '\0';
+        foreach (char ch in span)
         {
-            bytes = Convert.FromBase64String(trimmed);
-            return bytes.Length > 0;
+            if (ch is ' ' or '\t' or '\r' or '\n')
+            {
+                continue;
+            }
+
+            nonWhitespaceCount++;
+            if (nonWhitespaceCount > MaxBase64NonWhitespaceChars)
+            {
+                return false;
+            }
+
+            last2 = last1;
+            last1 = ch;
         }
-        catch (FormatException)
+
+        if (nonWhitespaceCount == 0 || (nonWhitespaceCount & 3) != 0)
         {
             return false;
         }
+
+        int padding = 0;
+        if (last1 == '=')
+        {
+            padding++;
+            if (last2 == '=')
+            {
+                padding++;
+            }
+        }
+
+        long expectedDecodedBytes = ((long)(nonWhitespaceCount / 4) * 3) - padding;
+        if (expectedDecodedBytes <= 0 || expectedDecodedBytes > MaxReceiptPayloadBytes)
+        {
+            return false;
+        }
+
+        byte[] decoded = new byte[(int)expectedDecodedBytes];
+        if (!Convert.TryFromBase64Chars(span, decoded, out int bytesWritten)
+            || bytesWritten <= 0
+            || bytesWritten > MaxReceiptPayloadBytes)
+        {
+            return false;
+        }
+
+        bytes = bytesWritten == decoded.Length ? decoded : decoded[..bytesWritten];
+        return true;
     }
+
+    private static void ParseDataUriHeader(
+        ReadOnlySpan<char> header,
+        out ReadOnlySpan<char> mediaType,
+        out bool isBase64)
+    {
+        isBase64 = false;
+        int firstSemicolon = header.IndexOf(';');
+        if (firstSemicolon < 0)
+        {
+            mediaType = header.Trim();
+            return;
+        }
+
+        mediaType = header[..firstSemicolon].Trim();
+        ReadOnlySpan<char> rest = header[(firstSemicolon + 1)..];
+        while (!rest.IsEmpty)
+        {
+            int semi = rest.IndexOf(';');
+            ReadOnlySpan<char> segment = semi < 0 ? rest : rest[..semi];
+            if (segment.Trim().Equals("base64", StringComparison.OrdinalIgnoreCase))
+            {
+                isBase64 = true;
+                return;
+            }
+
+            if (semi < 0)
+            {
+                break;
+            }
+
+            rest = rest[(semi + 1)..];
+        }
+    }
+
+    private static string CapRawText(string text) =>
+        text.Length <= MaxExtractedRawTextChars ? text : text[..MaxExtractedRawTextChars];
 
     private static (string Text, double Legibility, string? Warning) ExtractTextFromBytes(byte[] bytes)
     {
@@ -394,7 +523,18 @@ public static class ReceiptOcrEngine
     private static (string Text, double Legibility, string? Warning) ExtractFromPng(byte[] bytes)
     {
         var embeddedChunks = new List<string>();
-        bool decodedPixels = TryDecodePngGrayscale(bytes, embeddedChunks, out byte[] gray, out int width, out int height);
+        bool decodedPixels = TryDecodePngGrayscale(
+            bytes,
+            embeddedChunks,
+            out byte[] gray,
+            out int width,
+            out int height,
+            out bool quotaOrStructureFailed);
+
+        if (quotaOrStructureFailed)
+        {
+            return (string.Empty, 0.0, "Uploaded PNG image could not be decoded within safety limits.");
+        }
 
         double imageClarity = decodedPixels ? MeasureImageClarity(gray, width, height) : 1.0;
 
@@ -404,18 +544,21 @@ public static class ReceiptOcrEngine
             if (!string.IsNullOrWhiteSpace(rasterText) && ContainsMeaningfulTokens(rasterText))
             {
                 // If PNG also carries exact OCR text metadata chunk (e.g. tEXt/iTXt), use its text while preserving true pixel clarity!
-                string joinedMeta = NormalizeText(string.Join("\n", embeddedChunks));
+                string joinedMeta = CapRawText(NormalizeText(string.Join("\n", embeddedChunks)));
                 if (!string.IsNullOrWhiteSpace(joinedMeta) && ContainsMeaningfulTokens(joinedMeta))
                 {
                     double combinedLegibility = Math.Min(rasterLegibility, imageClarity);
-                    return (joinedMeta, combinedLegibility, combinedLegibility < 0.90 ? "Image appears blurry or low contrast; please confirm extracted details." : null);
+                    string? clarityWarning = combinedLegibility < 0.90
+                        ? "Image appears blurry or low contrast; please confirm extracted details."
+                        : null;
+                    return (joinedMeta, combinedLegibility, clarityWarning);
                 }
 
-                return (rasterText, rasterLegibility, rasterWarning);
+                return (CapRawText(rasterText), rasterLegibility, rasterWarning);
             }
         }
 
-        string metaText = NormalizeText(string.Join("\n", embeddedChunks));
+        string metaText = CapRawText(NormalizeText(string.Join("\n", embeddedChunks)));
         if (!string.IsNullOrWhiteSpace(metaText) && ContainsMeaningfulTokens(metaText))
         {
             double legibility = decodedPixels ? Math.Clamp(imageClarity, 0.35, 0.98) : 0.96;
@@ -426,81 +569,334 @@ public static class ReceiptOcrEngine
         return (string.Empty, 0.0, "Uploaded PNG image contains no readable receipt text.");
     }
 
+    private struct PngQuotaTracker
+    {
+        private int _chunkCount;
+        private long _totalMetadataBytes;
+
+        public bool QuotaExceeded { get; private set; }
+
+        public bool TryRecordChunk()
+        {
+            _chunkCount++;
+            if (_chunkCount > MaxPngChunkCount)
+            {
+                QuotaExceeded = true;
+                return false;
+            }
+
+            return true;
+        }
+
+        public bool TryRecordUncompressedMetadataBytes(int byteCount)
+        {
+            if (byteCount < 0
+                || byteCount > MaxPngMetadataChunkBytes
+                || _totalMetadataBytes + byteCount > MaxPngTotalMetadataBytes)
+            {
+                QuotaExceeded = true;
+                return false;
+            }
+
+            _totalMetadataBytes += byteCount;
+            return true;
+        }
+
+        public bool TryValidateInflatedMetadataStep(
+            int chunkBytesBeforeStep,
+            int stepBytes,
+            long effectiveCompressedBytes,
+            out int updatedChunkBytes)
+        {
+            long nextChunkBytes = (long)chunkBytesBeforeStep + stepBytes;
+            if (nextChunkBytes > MaxPngMetadataChunkBytes
+                || _totalMetadataBytes + nextChunkBytes > MaxPngTotalMetadataBytes
+                || (nextChunkBytes > PngMetadataRatioFloorBytes
+                    && (Int128)nextChunkBytes > (Int128)effectiveCompressedBytes * MaxPngCompressionRatio))
+            {
+                updatedChunkBytes = chunkBytesBeforeStep;
+                QuotaExceeded = true;
+                return false;
+            }
+
+            updatedChunkBytes = (int)nextChunkBytes;
+            return true;
+        }
+
+        public void CommitInflatedMetadataChunk(int chunkBytes)
+        {
+            _totalMetadataBytes += chunkBytes;
+        }
+    }
+
     private static bool TryDecodePngGrayscale(
         byte[] bytes,
         List<string> textChunks,
         out byte[] gray,
         out int width,
-        out int height)
+        out int height,
+        out bool quotaOrStructureFailed)
     {
         gray = [];
         width = 0;
         height = 0;
+        quotaOrStructureFailed = false;
+
+        if (bytes.Length < 37 || bytes.Length > MaxReceiptPayloadBytes)
+        {
+            quotaOrStructureFailed = true;
+            return false;
+        }
 
         int bitDepth = 0;
         int colorType = 0;
         int interlace = 0;
+        int channels = 0;
+        bool seenIhdr = false;
         byte[]? palette = null;
-        using var idatStream = new MemoryStream();
 
-        int pos = 8;
-        while (pos + 8 <= bytes.Length)
+        int firstIdatOffset = -1;
+        int firstIdatLength = 0;
+        MemoryStream? multiIdatStream = null;
+        long totalIdatCompressedBytes = 0;
+
+        var quotaTracker = new PngQuotaTracker();
+        try
         {
-            uint chunkLen = BinaryPrimitives.ReadUInt32BigEndian(bytes.AsSpan(pos, 4));
-            string chunkType = Encoding.ASCII.GetString(bytes, pos + 4, 4);
-            pos += 8;
-
-            if (chunkLen > (uint)(bytes.Length - pos - 4))
+            int pos = 8;
+            int chunkIndex = 0;
+            while (pos < bytes.Length)
             {
-                break;
-            }
-
-            ReadOnlySpan<byte> data = bytes.AsSpan(pos, (int)chunkLen);
-
-            switch (chunkType)
-            {
-                case "IHDR" when data.Length >= 13:
-                    width = (int)BinaryPrimitives.ReadUInt32BigEndian(data[..4]);
-                    height = (int)BinaryPrimitives.ReadUInt32BigEndian(data.Slice(4, 4));
-                    bitDepth = data[8];
-                    colorType = data[9];
-                    interlace = data[12];
+                if (bytes.Length - pos < 12)
+                {
+                    quotaOrStructureFailed = true;
                     break;
+                }
 
-                case "PLTE":
+                uint chunkLen = BinaryPrimitives.ReadUInt32BigEndian(bytes.AsSpan(pos, 4));
+                ReadOnlySpan<byte> chunkType = bytes.AsSpan(pos + 4, 4);
+                pos += 8;
+
+                if (chunkLen > (uint)(bytes.Length - pos - 4))
+                {
+                    quotaOrStructureFailed = true;
+                    break;
+                }
+
+                if (!quotaTracker.TryRecordChunk())
+                {
+                    quotaOrStructureFailed = true;
+                    break;
+                }
+
+                var chunkSegment = new ArraySegment<byte>(bytes, pos, (int)chunkLen);
+                ReadOnlySpan<byte> data = chunkSegment;
+
+                if (chunkIndex == 0)
+                {
+                    if (!chunkType.SequenceEqual("IHDR"u8)
+                        || !TryParseValidPngIhdr(data, out width, out height, out bitDepth, out colorType, out interlace, out channels))
+                    {
+                        quotaOrStructureFailed = true;
+                        break;
+                    }
+
+                    seenIhdr = true;
+                }
+                else if (chunkType.SequenceEqual("IHDR"u8))
+                {
+                    quotaOrStructureFailed = true;
+                    break;
+                }
+                else if (chunkType.SequenceEqual("PLTE"u8))
+                {
+                    if (data.Length > 768 || (data.Length % 3) != 0)
+                    {
+                        quotaOrStructureFailed = true;
+                        break;
+                    }
+
                     palette = data.ToArray();
-                    break;
+                }
+                else if (chunkType.SequenceEqual("IDAT"u8))
+                {
+                    totalIdatCompressedBytes += data.Length;
+                    if (bitDepth == 8 && interlace == 0 && channels > 0 && data.Length > 0)
+                    {
+                        if (firstIdatOffset < 0)
+                        {
+                            firstIdatOffset = pos;
+                            firstIdatLength = (int)chunkLen;
+                        }
+                        else
+                        {
+                            if (multiIdatStream is null)
+                            {
+                                multiIdatStream = new MemoryStream();
+                                multiIdatStream.Write(bytes, firstIdatOffset, firstIdatLength);
+                            }
 
-                case "IDAT":
-                    idatStream.Write(data);
-                    break;
+                            multiIdatStream.Write(data);
+                        }
+                    }
+                }
+                else if (chunkType.SequenceEqual("tEXt"u8))
+                {
+                    if (!TryExtractPngLatin1Chunk(data, ref quotaTracker, textChunks))
+                    {
+                        quotaOrStructureFailed = true;
+                        break;
+                    }
+                }
+                else if (chunkType.SequenceEqual("zTXt"u8))
+                {
+                    if (!TryExtractPngCompressedChunk(chunkSegment, ref quotaTracker, textChunks))
+                    {
+                        quotaOrStructureFailed = true;
+                        break;
+                    }
+                }
+                else if (chunkType.SequenceEqual("iTXt"u8))
+                {
+                    if (!TryExtractPngInternationalChunk(chunkSegment, ref quotaTracker, textChunks))
+                    {
+                        quotaOrStructureFailed = true;
+                        break;
+                    }
+                }
+                else if (chunkType.SequenceEqual("IEND"u8))
+                {
+                    if (chunkLen != 0)
+                    {
+                        quotaOrStructureFailed = true;
+                    }
 
-                case "tEXt":
-                    ExtractPngLatin1Chunk(data, textChunks);
                     break;
+                }
 
-                case "zTXt":
-                    ExtractPngCompressedChunk(data, textChunks);
-                    break;
-
-                case "iTXt":
-                    ExtractPngInternationalChunk(data, textChunks);
-                    break;
-
-                case "IEND":
-                    pos = bytes.Length;
-                    continue;
+                pos += (int)chunkLen + 4; // skip CRC
+                chunkIndex++;
             }
 
-            pos += (int)chunkLen + 4; // skip CRC
-        }
+            if (!seenIhdr || quotaOrStructureFailed)
+            {
+                quotaOrStructureFailed = true;
+                textChunks.Clear();
+                return false;
+            }
 
-        if (width <= 0 || height <= 0 || width > 4096 || height > 4096 || bitDepth != 8 || interlace != 0 || idatStream.Length == 0)
+            if (bitDepth != 8 || interlace != 0 || channels == 0 || totalIdatCompressedBytes == 0)
+            {
+                return false;
+            }
+
+            Stream idatSource;
+            bool disposeIdatSource;
+            if (multiIdatStream is not null)
+            {
+                multiIdatStream.Position = 0;
+                idatSource = multiIdatStream;
+                disposeIdatSource = false;
+            }
+            else if (firstIdatOffset >= 0 && firstIdatLength > 0)
+            {
+                idatSource = new MemoryStream(bytes, firstIdatOffset, firstIdatLength, writable: false);
+                disposeIdatSource = true;
+            }
+            else
+            {
+                return false;
+            }
+
+            try
+            {
+                if (!TryInflateAndConvertPngScanlines(
+                        idatSource,
+                        totalIdatCompressedBytes,
+                        width,
+                        height,
+                        colorType,
+                        channels,
+                        palette,
+                        out gray))
+                {
+                    quotaOrStructureFailed = true;
+                    textChunks.Clear();
+                    return false;
+                }
+
+                return true;
+            }
+            finally
+            {
+                if (disposeIdatSource)
+                {
+                    idatSource.Dispose();
+                }
+            }
+        }
+        finally
+        {
+            multiIdatStream?.Dispose();
+        }
+    }
+
+    private static bool TryParseValidPngIhdr(
+        ReadOnlySpan<byte> data,
+        out int width,
+        out int height,
+        out int bitDepth,
+        out int colorType,
+        out int interlace,
+        out int channels)
+    {
+        width = 0;
+        height = 0;
+        bitDepth = 0;
+        colorType = 0;
+        interlace = 0;
+        channels = 0;
+
+        if (data.Length != 13)
         {
             return false;
         }
 
-        int channels = colorType switch
+        uint rawWidth = BinaryPrimitives.ReadUInt32BigEndian(data[..4]);
+        uint rawHeight = BinaryPrimitives.ReadUInt32BigEndian(data.Slice(4, 4));
+        byte rawBitDepth = data[8];
+        byte rawColorType = data[9];
+        byte compressionMethod = data[10];
+        byte filterMethod = data[11];
+        byte rawInterlace = data[12];
+
+        if (rawWidth == 0
+            || rawWidth > MaxPngDimension
+            || rawHeight == 0
+            || rawHeight > MaxPngDimension
+            || compressionMethod != 0
+            || filterMethod != 0
+            || rawInterlace > 1)
+        {
+            return false;
+        }
+
+        bool validColorDepth = rawColorType switch
+        {
+            0 => rawBitDepth is 1 or 2 or 4 or 8 or 16,
+            2 => rawBitDepth is 8 or 16,
+            3 => rawBitDepth is 1 or 2 or 4 or 8,
+            4 => rawBitDepth is 8 or 16,
+            6 => rawBitDepth is 8 or 16,
+            _ => false
+        };
+
+        if (!validColorDepth)
+        {
+            return false;
+        }
+
+        channels = rawColorType switch
         {
             0 => 1, // Grayscale
             2 => 3, // RGB
@@ -510,82 +906,113 @@ public static class ReceiptOcrEngine
             _ => 0
         };
 
-        if (channels == 0)
+        width = (int)rawWidth;
+        height = (int)rawHeight;
+        bitDepth = rawBitDepth;
+        colorType = rawColorType;
+        interlace = rawInterlace;
+        return true;
+    }
+
+    private static bool TryInflateAndConvertPngScanlines(
+        Stream idatSource,
+        long compressedIdatBytes,
+        int width,
+        int height,
+        int colorType,
+        int channels,
+        byte[]? palette,
+        out byte[] gray)
+    {
+        gray = [];
+        int stride = width * channels;
+        long expectedRawBytes = (long)(stride + 1) * height;
+        long effectiveCompressed = Math.Max(1L, compressedIdatBytes);
+
+        if (expectedRawBytes <= 0
+            || (expectedRawBytes > PngIdatRatioFloorBytes
+                && (Int128)expectedRawBytes > (Int128)effectiveCompressed * MaxPngCompressionRatio))
         {
             return false;
         }
 
-        int stride = width * channels;
-        int expectedRawBytes = (stride + 1) * height;
-        byte[] decompressed;
+        byte[] currScanline = ArrayPool<byte>.Shared.Rent(stride + 1);
+        byte[] prevRow = ArrayPool<byte>.Shared.Rent(stride);
+        byte[] currRow = ArrayPool<byte>.Shared.Rent(stride);
+        prevRow.AsSpan(0, stride).Clear();
+
         try
         {
-            idatStream.Position = 0;
-            using var zlib = new ZLibStream(idatStream, CompressionMode.Decompress);
-            using var rawOut = new MemoryStream(expectedRawBytes);
-            zlib.CopyTo(rawOut);
-            decompressed = rawOut.ToArray();
+            using var zlib = new ZLibStream(idatSource, CompressionMode.Decompress, leaveOpen: true);
+            byte[]? grayOut = null;
+            int bpp = channels;
+
+            for (int y = 0; y < height; y++)
+            {
+                int read = zlib.ReadAtLeast(currScanline.AsSpan(0, stride + 1), stride + 1, throwOnEndOfStream: false);
+                if (read < stride + 1)
+                {
+                    return false;
+                }
+
+                grayOut ??= new byte[width * height];
+                byte filterType = currScanline[0];
+
+                for (int x = 0; x < stride; x++)
+                {
+                    byte raw = currScanline[1 + x];
+                    byte left = x >= bpp ? currRow[x - bpp] : (byte)0;
+                    byte up = y > 0 ? prevRow[x] : (byte)0;
+                    byte upLeft = (y > 0 && x >= bpp) ? prevRow[x - bpp] : (byte)0;
+
+                    currRow[x] = filterType switch
+                    {
+                        0 => raw,
+                        1 => (byte)(raw + left),
+                        2 => (byte)(raw + up),
+                        3 => (byte)(raw + ((left + up) >> 1)),
+                        4 => (byte)(raw + PaethPredictor(left, up, upLeft)),
+                        _ => raw
+                    };
+                }
+
+                int grayRowOffset = y * width;
+                for (int x = 0; x < width; x++)
+                {
+                    int px = x * channels;
+                    grayOut[grayRowOffset + x] = colorType switch
+                    {
+                        0 => currRow[px],
+                        2 => RgbToLum(currRow[px], currRow[px + 1], currRow[px + 2]),
+                        3 => PaletteToLum(palette, currRow[px]),
+                        4 => BlendAlphaOnWhite(currRow[px], currRow[px + 1]),
+                        6 => BlendAlphaOnWhite(RgbToLum(currRow[px], currRow[px + 1], currRow[px + 2]), currRow[px + 3]),
+                        _ => (byte)255
+                    };
+                }
+
+                (prevRow, currRow) = (currRow, prevRow);
+            }
+
+            Span<byte> trailingProbe = stackalloc byte[1];
+            if (zlib.Read(trailingProbe) > 0 || grayOut is null)
+            {
+                return false;
+            }
+
+            gray = grayOut;
+            return true;
         }
         catch
         {
             return false;
         }
-
-        if (decompressed.Length < expectedRawBytes)
+        finally
         {
-            return false;
+            ArrayPool<byte>.Shared.Return(currRow);
+            ArrayPool<byte>.Shared.Return(prevRow);
+            ArrayPool<byte>.Shared.Return(currScanline);
         }
-
-        byte[] unfiltered = new byte[stride * height];
-        int bpp = channels;
-
-        for (int y = 0; y < height; y++)
-        {
-            int srcRow = y * (stride + 1);
-            byte filterType = decompressed[srcRow];
-            int dstRow = y * stride;
-            int prevRow = (y - 1) * stride;
-
-            for (int x = 0; x < stride; x++)
-            {
-                byte raw = decompressed[srcRow + 1 + x];
-                byte left = x >= bpp ? unfiltered[dstRow + x - bpp] : (byte)0;
-                byte up = y > 0 ? unfiltered[prevRow + x] : (byte)0;
-                byte upLeft = (y > 0 && x >= bpp) ? unfiltered[prevRow + x - bpp] : (byte)0;
-
-                unfiltered[dstRow + x] = filterType switch
-                {
-                    0 => raw,
-                    1 => (byte)(raw + left),
-                    2 => (byte)(raw + up),
-                    3 => (byte)(raw + ((left + up) >> 1)),
-                    4 => (byte)(raw + PaethPredictor(left, up, upLeft)),
-                    _ => raw
-                };
-            }
-        }
-
-        gray = new byte[width * height];
-        for (int y = 0; y < height; y++)
-        {
-            int rowStart = y * stride;
-            for (int x = 0; x < width; x++)
-            {
-                int px = rowStart + x * channels;
-                byte lum = colorType switch
-                {
-                    0 => unfiltered[px],
-                    2 => RgbToLum(unfiltered[px], unfiltered[px + 1], unfiltered[px + 2]),
-                    3 => PaletteToLum(palette, unfiltered[px]),
-                    4 => BlendAlphaOnWhite(unfiltered[px], unfiltered[px + 1]),
-                    6 => BlendAlphaOnWhite(RgbToLum(unfiltered[px], unfiltered[px + 1], unfiltered[px + 2]), unfiltered[px + 3]),
-                    _ => (byte)255
-                };
-                gray[y * width + x] = lum;
-            }
-        }
-
-        return true;
     }
 
     private static int PaethPredictor(int a, int b, int c)
@@ -617,68 +1044,100 @@ public static class ReceiptOcrEngine
         return RgbToLum(palette[offset], palette[offset + 1], palette[offset + 2]);
     }
 
-    private static void ExtractPngLatin1Chunk(ReadOnlySpan<byte> data, List<string> chunks)
+    private static bool TryExtractPngLatin1Chunk(
+        ReadOnlySpan<byte> data,
+        ref PngQuotaTracker quotaTracker,
+        List<string> chunks)
     {
         int nul = data.IndexOf((byte)0);
-        if (nul < 0 || nul + 1 >= data.Length)
+        if (nul <= 0 || nul > 79 || nul + 1 >= data.Length)
         {
-            return;
+            return true;
         }
+
         string keyword = Encoding.Latin1.GetString(data[..nul]);
         if (IsIgnoredMetadataKeyword(keyword))
         {
-            return;
+            return true;
         }
-        string val = Encoding.UTF8.GetString(data[(nul + 1)..]).Trim();
+
+        ReadOnlySpan<byte> rawTextBytes = data[(nul + 1)..];
+        if (!quotaTracker.TryRecordUncompressedMetadataBytes(rawTextBytes.Length))
+        {
+            return false;
+        }
+
+        string val = Encoding.UTF8.GetString(rawTextBytes).Trim();
         if (!string.IsNullOrWhiteSpace(val))
         {
             chunks.Add(val);
         }
+
+        return true;
     }
 
-    private static void ExtractPngCompressedChunk(ReadOnlySpan<byte> data, List<string> chunks)
+    private static bool TryExtractPngCompressedChunk(
+        ArraySegment<byte> segment,
+        ref PngQuotaTracker quotaTracker,
+        List<string> chunks)
     {
+        ReadOnlySpan<byte> data = segment;
         int nul = data.IndexOf((byte)0);
-        if (nul < 0 || nul + 2 >= data.Length || data[nul + 1] != 0)
+        if (nul <= 0 || nul > 79 || nul + 2 >= data.Length || data[nul + 1] != 0)
         {
-            return;
+            return true;
         }
+
         string keyword = Encoding.Latin1.GetString(data[..nul]);
         if (IsIgnoredMetadataKeyword(keyword))
         {
-            return;
+            return true;
         }
-        try
+
+        int compressedOffset = nul + 2;
+        var compressedPayload = new ArraySegment<byte>(
+            segment.Array!,
+            segment.Offset + compressedOffset,
+            segment.Count - compressedOffset);
+
+        if (!TryInflatePngMetadataText(compressedPayload, ref quotaTracker, out string val))
         {
-            using var ms = new MemoryStream(data[(nul + 2)..].ToArray());
-            using var zlib = new ZLibStream(ms, CompressionMode.Decompress);
-            using var sr = new StreamReader(zlib, Encoding.UTF8);
-            string val = sr.ReadToEnd().Trim();
-            if (!string.IsNullOrWhiteSpace(val))
-            {
-                chunks.Add(val);
-            }
+            return false;
         }
-        catch
+
+        if (!string.IsNullOrWhiteSpace(val))
         {
-            // Ignore malformed compressed metadata chunk.
+            chunks.Add(val);
         }
+
+        return true;
     }
 
-    private static void ExtractPngInternationalChunk(ReadOnlySpan<byte> data, List<string> chunks)
+    private static bool TryExtractPngInternationalChunk(
+        ArraySegment<byte> segment,
+        ref PngQuotaTracker quotaTracker,
+        List<string> chunks)
     {
+        ReadOnlySpan<byte> data = segment;
         int nul = data.IndexOf((byte)0);
-        if (nul < 0 || nul + 5 >= data.Length)
+        if (nul <= 0 || nul > 79 || nul + 5 >= data.Length)
         {
-            return;
+            return true;
         }
+
         string keyword = Encoding.Latin1.GetString(data[..nul]);
         if (IsIgnoredMetadataKeyword(keyword))
         {
-            return;
+            return true;
         }
 
         byte compressionFlag = data[nul + 1];
+        byte compressionMethod = data[nul + 2];
+        if (compressionFlag > 1 || (compressionFlag == 1 && compressionMethod != 0))
+        {
+            return true;
+        }
+
         int cursor = nul + 3; // skip compressionFlag + compressionMethod
         // Skip language tag (null-terminated) and translated keyword (null-terminated)
         for (int i = 0; i < 2; i++)
@@ -686,40 +1145,106 @@ public static class ReceiptOcrEngine
             int nextNull = data[cursor..].IndexOf((byte)0);
             if (nextNull < 0)
             {
-                return;
+                return true;
             }
+
             cursor += nextNull + 1;
         }
 
         if (cursor >= data.Length)
         {
-            return;
+            return true;
         }
 
-        ReadOnlySpan<byte> textBytes = data[cursor..];
-        try
+        string val;
+        if (compressionFlag == 1)
         {
-            string val;
-            if (compressionFlag == 1)
+            var compressedPayload = new ArraySegment<byte>(
+                segment.Array!,
+                segment.Offset + cursor,
+                segment.Count - cursor);
+            if (!TryInflatePngMetadataText(compressedPayload, ref quotaTracker, out val))
             {
-                using var ms = new MemoryStream(textBytes.ToArray());
-                using var zlib = new ZLibStream(ms, CompressionMode.Decompress);
-                using var sr = new StreamReader(zlib, Encoding.UTF8);
-                val = sr.ReadToEnd().Trim();
+                return false;
             }
-            else
+        }
+        else
+        {
+            ReadOnlySpan<byte> textBytes = data[cursor..];
+            if (!quotaTracker.TryRecordUncompressedMetadataBytes(textBytes.Length))
             {
-                val = Encoding.UTF8.GetString(textBytes).Trim();
+                return false;
             }
 
-            if (!string.IsNullOrWhiteSpace(val))
+            val = Encoding.UTF8.GetString(textBytes).Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(val))
+        {
+            chunks.Add(val);
+        }
+
+        return true;
+    }
+
+    private static bool TryInflatePngMetadataText(
+        ArraySegment<byte> compressedPayload,
+        ref PngQuotaTracker quotaTracker,
+        out string text)
+    {
+        text = string.Empty;
+        if (compressedPayload.Count <= 0)
+        {
+            return true;
+        }
+
+        long effectiveCompressedBytes = Math.Max(1L, compressedPayload.Count);
+        byte[] scratch = ArrayPool<byte>.Shared.Rent(PngDecompressBufferSize);
+        byte[] output = ArrayPool<byte>.Shared.Rent(MaxPngMetadataChunkBytes);
+        try
+        {
+            using var ms = new MemoryStream(
+                compressedPayload.Array!,
+                compressedPayload.Offset,
+                compressedPayload.Count,
+                writable: false);
+            using var zlib = new ZLibStream(ms, CompressionMode.Decompress);
+
+            int chunkBytesRead = 0;
+            while (true)
             {
-                chunks.Add(val);
+                int readLimit = Math.Min(scratch.Length, PngDecompressBufferSize);
+                int bytesRead = zlib.Read(scratch, 0, readLimit);
+                if (bytesRead <= 0)
+                {
+                    break;
+                }
+
+                if (!quotaTracker.TryValidateInflatedMetadataStep(
+                        chunkBytesBeforeStep: chunkBytesRead,
+                        stepBytes: bytesRead,
+                        effectiveCompressedBytes: effectiveCompressedBytes,
+                        out int updatedChunkBytes))
+                {
+                    return false;
+                }
+
+                Buffer.BlockCopy(scratch, 0, output, chunkBytesRead, bytesRead);
+                chunkBytesRead = updatedChunkBytes;
             }
+
+            quotaTracker.CommitInflatedMetadataChunk(chunkBytesRead);
+            text = Encoding.UTF8.GetString(output, 0, chunkBytesRead).Trim();
+            return true;
         }
         catch
         {
-            // Ignore malformed iTXt chunk.
+            return !quotaTracker.QuotaExceeded;
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(output);
+            ArrayPool<byte>.Shared.Return(scratch);
         }
     }
 

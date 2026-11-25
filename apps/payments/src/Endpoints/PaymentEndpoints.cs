@@ -2036,10 +2036,18 @@ public static class PaymentEndpoints
         return true;
     }
 
-    private static byte[] DecodeReceiptImageBytes(string? imageBase64) =>
-        ReceiptOcrEngine.TryDecodeReceiptPayload(imageBase64, out byte[] bytes)
+    private static byte[] DecodeReceiptImageBytes(string? imageBase64)
+    {
+        if (string.IsNullOrWhiteSpace(imageBase64)
+            || imageBase64.Length > ReceiptOcrEngine.MaxEncodedReceiptPayloadChars)
+        {
+            return [];
+        }
+
+        return ReceiptOcrEngine.TryDecodeReceiptPayload(imageBase64, out byte[] bytes)
             ? bytes
             : [];
+    }
 
     private static string? TryExtractOcrTokenFromObject(object? ocrData)
     {
@@ -2132,9 +2140,8 @@ public static class PaymentEndpoints
         if (receiptBytes.Length > 0)
         {
             string imageSha256 = HmacSigner.ComputeSha256Hash(receiptBytes);
-            var extracted = ReceiptOcrEngine.Extract(
-                rawText: null,
-                imageBase64: receiptImageBase64,
+            var extracted = ReceiptOcrEngine.ExtractFromBytes(
+                receiptBytes,
                 categoryHint: normalizedCategory);
 
             if (hasCandidateToken)
@@ -2692,10 +2699,19 @@ public static class PaymentEndpoints
         }
 
         byte[] receiptBytes = DecodeReceiptImageBytes(request.ImageBase64);
-        var extracted = ReceiptOcrEngine.Extract(
-            rawText: receiptBytes.Length > 0 ? null : request.RawText,
-            imageBase64: request.ImageBase64,
-            categoryHint: request.CategoryHint);
+        ReceiptOcrExtractionResult extracted;
+        if (receiptBytes.Length > 0)
+        {
+            extracted = ReceiptOcrEngine.ExtractFromBytes(receiptBytes, request.CategoryHint);
+        }
+        else
+        {
+            string? fallbackRawText = string.IsNullOrWhiteSpace(request.ImageBase64) ? request.RawText : null;
+            extracted = ReceiptOcrEngine.Extract(
+                rawText: fallbackRawText,
+                imageBase64: request.ImageBase64,
+                categoryHint: request.CategoryHint);
+        }
 
         string? receiptSha256 = receiptBytes.Length > 0 ? HmacSigner.ComputeSha256Hash(receiptBytes) : null;
         string scanId = "OCR_SCAN_" + Guid.NewGuid().ToString("N");
