@@ -515,23 +515,18 @@ internal static class FormEndpoints
         {
             if (record.BlindedItemIds is not null)
             {
-                foreach (var itemId in record.BlindedItemIds)
-                {
-                    blindedItemIds.Add(itemId);
-                }
+                blindedItemIds.UnionWith(record.BlindedItemIds);
             }
 
             if (record.BlindedObservationIds is not null)
             {
-                foreach (var observationId in record.BlindedObservationIds)
-                {
-                    blindedObservationIds.Add(observationId);
-                }
+                blindedObservationIds.UnionWith(record.BlindedObservationIds);
             }
 
             var classifier = services?.GetService<IBlindedTreatmentClassifier>()
                 ?? BlindedTreatmentClassifier.Instance;
             var reuseKernelBlinding = record.BlindedItemIds is not null
+                && record.BlindedObservationIds is not null
                 && ReferenceEquals(classifier, BlindedTreatmentClassifier.Instance);
             IReadOnlyList<ProtocolDesign>? designs = null;
             IReadOnlyDictionary<ConceptId, BlindedConceptMetadata>? concepts = null;
@@ -621,50 +616,36 @@ internal static class FormEndpoints
             return [];
         }
 
-        var designs = new List<ProtocolDesign>();
-        if (await reader.GetDesignAsync(tenant, governingVersionId, cancellationToken).ConfigureAwait(false) is { } governing)
+        var studyDesigns = await reader.GetDesignsForStudyAsync(tenant, studyId, cancellationToken).ConfigureAwait(false);
+        if (studyDesigns.TryGetValue(governingVersionId, out var governing))
         {
-            designs.Add(governing);
-            return designs;
+            return [governing];
         }
 
-        var summaries = await reader.ListForStudyAsync(tenant, studyId, cancellationToken).ConfigureAwait(false);
-        foreach (var summaryId in summaries.Select(summary => summary.Id))
+        if (studyDesigns.Count > 0)
         {
-            if (await reader.GetDesignAsync(tenant, summaryId, cancellationToken).ConfigureAwait(false) is { } design)
-            {
-                designs.Add(design);
-            }
+            return [.. studyDesigns.Values];
         }
 
-        return designs;
+        if (!governingVersionId.IsEmpty
+            && await reader.GetDesignAsync(tenant, governingVersionId, cancellationToken).ConfigureAwait(false) is { } fallback)
+        {
+            return [fallback];
+        }
+
+        return [];
     }
 
-    private static async Task<IReadOnlyDictionary<ConceptId, BlindedConceptMetadata>> LoadItemConceptsAsync(
+    private static Task<IReadOnlyDictionary<ConceptId, BlindedConceptMetadata>> LoadItemConceptsAsync(
         TenantId tenant,
         IReadOnlyList<CollectionItem> items,
         IServiceProvider? services,
-        CancellationToken cancellationToken)
-    {
-        var concepts = services?.GetService<IConceptRegistry>();
-        if (concepts is null || items.Count == 0)
-        {
-            return new Dictionary<ConceptId, BlindedConceptMetadata>();
-        }
-
-        var resolved = new Dictionary<ConceptId, BlindedConceptMetadata>();
-        foreach (var conceptRef in items.Select(i => i.Concept).Distinct())
-        {
-            var view = await concepts.ResolveAsync(tenant, conceptRef, cancellationToken).ConfigureAwait(false)
-                ?? await concepts.GetCurrentAsync(tenant, conceptRef.ConceptId, cancellationToken).ConfigureAwait(false);
-            if (view is not null)
-            {
-                resolved[conceptRef.ConceptId] = new BlindedConceptMetadata(view.ExternalCode, view.PreferredLabel, view.Definition);
-            }
-        }
-
-        return resolved;
-    }
+        CancellationToken cancellationToken) =>
+        BlindedConceptMetadata.ResolveManyAsync(
+            services?.GetService<IConceptRegistry>(),
+            tenant,
+            items.Select(i => i.Concept),
+            cancellationToken);
 
     private static ProblemHttpResult BadRequest(string title, string detail) =>
         TypedResults.Problem(title: title, detail: detail, statusCode: StatusCodes.Status400BadRequest);

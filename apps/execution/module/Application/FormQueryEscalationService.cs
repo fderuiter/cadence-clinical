@@ -318,34 +318,26 @@ internal static class FormQueryDigestBlinding
             .Select(static e => CollectionInstanceId.FromGuid(e.FormId))
             .Distinct()
             .ToList();
-        IReadOnlySet<EnrollmentId> unblindedEnrollments = FrozenSet<EnrollmentId>.Empty;
-        var targetFormIds = distinctFormIds;
-        if (!alwaysMaskBlinded && access is not null && distinctFormIds.Count > 0)
-        {
-            var headersByFormId = await forms.FindHeadersAsync(tenant, distinctFormIds, cancellationToken).ConfigureAwait(false);
-            var unblinded = new HashSet<EnrollmentId>();
-            foreach (var enrollmentId in headersByFormId.Values.Select(static h => h.EnrollmentId).Distinct())
-            {
-                if (await access.CanUnblindAsync(tenant, enrollmentId, cancellationToken).ConfigureAwait(false))
-                {
-                    unblinded.Add(enrollmentId);
-                }
-            }
-
-            unblindedEnrollments = unblinded;
-            targetFormIds = [
-                .. distinctFormIds.Where(id =>
-                    !headersByFormId.TryGetValue(id, out var header)
-                    || !unblinded.Contains(header.EnrollmentId)),
-            ];
-        }
-
-        var targetsByFormId = targetFormIds.Count > 0
-            ? await forms.FindQueryTargetsAsync(tenant, targetFormIds, unblindedEnrollments, cancellationToken).ConfigureAwait(false)
+        var targetsByFormId = distinctFormIds.Count > 0
+            ? await forms.FindQueryTargetsAsync(tenant, distinctFormIds, FrozenSet<EnrollmentId>.Empty, cancellationToken).ConfigureAwait(false)
             : new Dictionary<CollectionInstanceId, CollectionInstanceQueryTarget>();
 
+        IReadOnlySet<EnrollmentId> unblindedEnrollments = FrozenSet<EnrollmentId>.Empty;
+        if (!alwaysMaskBlinded && access is not null && targetsByFormId.Count > 0)
+        {
+            var blindedEnrollments = targetsByFormId.Values
+                .Where(static t => t.BlindedItemIds is { Count: > 0 } || t.BlindedObservationIds is { Count: > 0 })
+                .Select(static t => t.EnrollmentId)
+                .Distinct()
+                .ToList();
+            if (blindedEnrollments.Count > 0)
+            {
+                unblindedEnrollments = await access.CanUnblindManyAsync(tenant, blindedEnrollments, cancellationToken).ConfigureAwait(false);
+            }
+        }
+
         Dictionary<Guid, ObservationId> observationByQueryId;
-        if (targetsByFormId.Values.Any(static t => t.BlindedObservationIds is { Count: > 0 }))
+        if (targetsByFormId.Values.Any(t => t.BlindedObservationIds is { Count: > 0 } && !unblindedEnrollments.Contains(t.EnrollmentId)))
         {
             var distinctQueryIds = allEntries
                 .Where(static e => e.QueryId != Guid.Empty)

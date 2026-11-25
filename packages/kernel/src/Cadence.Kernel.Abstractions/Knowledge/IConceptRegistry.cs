@@ -15,8 +15,64 @@ public interface IConceptRegistry
     /// <summary>The concept exactly as it was at <paramref name="concept"/>'s version, or null if there is no such version.</summary>
     Task<ConceptVersionView?> ResolveAsync(TenantId tenant, ConceptRef concept, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Every concept in <paramref name="concepts"/> that exists at its pinned version, keyed by <see cref="ConceptRef"/>.
+    /// Missing concepts or versions are omitted from the returned dictionary.
+    /// </summary>
+    async Task<IReadOnlyDictionary<ConceptRef, ConceptVersionView>> ResolveManyAsync(
+        TenantId tenant,
+        IReadOnlyCollection<ConceptRef> concepts,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(concepts);
+        var resolved = new Dictionary<ConceptRef, ConceptVersionView>();
+        var seen = new HashSet<ConceptRef>();
+        foreach (var concept in concepts)
+        {
+            if (concept.ConceptId.IsEmpty || !seen.Add(concept))
+            {
+                continue;
+            }
+
+            if (await ResolveAsync(tenant, concept, cancellationToken).ConfigureAwait(false) is { } view)
+            {
+                resolved[concept] = view;
+            }
+        }
+
+        return resolved;
+    }
+
     /// <summary>The concept's current version, for authoring a new reference. Facts store the returned <see cref="ConceptRef"/>.</summary>
     Task<ConceptVersionView?> GetCurrentAsync(TenantId tenant, ConceptId concept, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// The current version of every concept in <paramref name="concepts"/> that exists in the tenant, keyed by
+    /// <see cref="ConceptId"/>. Missing concepts are omitted from the returned dictionary.
+    /// </summary>
+    async Task<IReadOnlyDictionary<ConceptId, ConceptVersionView>> GetCurrentManyAsync(
+        TenantId tenant,
+        IReadOnlyCollection<ConceptId> concepts,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(concepts);
+        var resolved = new Dictionary<ConceptId, ConceptVersionView>();
+        var seen = new HashSet<ConceptId>();
+        foreach (var concept in concepts)
+        {
+            if (concept.IsEmpty || !seen.Add(concept))
+            {
+                continue;
+            }
+
+            if (await GetCurrentAsync(tenant, concept, cancellationToken).ConfigureAwait(false) is { } view)
+            {
+                resolved[concept] = view;
+            }
+        }
+
+        return resolved;
+    }
 
     /// <summary>The CDISC Biomedical Concept with this CDISC concept code, at its current version.</summary>
     Task<ConceptVersionView?> FindBiomedicalConceptAsync(TenantId tenant, string cdiscConceptCode, CancellationToken cancellationToken = default);

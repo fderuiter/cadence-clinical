@@ -839,24 +839,25 @@ internal static class FormQueryEndpoints
             return [];
         }
 
-        var canUnblindByEnrollment = new Dictionary<EnrollmentId, bool>();
-        var unblindedEnrollments = new HashSet<EnrollmentId>();
-        foreach (var enrollmentId in queries.Select(q => q.EnrollmentId).Distinct())
-        {
-            var canUnblind = await access.CanUnblindAsync(tenant, enrollmentId, cancellationToken).ConfigureAwait(false);
-            canUnblindByEnrollment[enrollmentId] = canUnblind;
-            if (canUnblind)
-            {
-                unblindedEnrollments.Add(enrollmentId);
-            }
-        }
-
         var distinctFormIds = queries.Select(q => q.FormId).Distinct().ToList();
         var targetsById = await forms.FindQueryTargetsAsync(
             tenant,
             distinctFormIds,
-            unblindedEnrollments,
+            FrozenSet<EnrollmentId>.Empty,
             cancellationToken).ConfigureAwait(false);
+
+        var blindedQueryIds = queries
+            .Where(q => targetsById.TryGetValue(q.FormId, out var target) && target.IsQueryBlinded(q.ItemId, q.ObservationId))
+            .Select(q => q.QueryId)
+            .ToHashSet();
+        var blindedEnrollmentIds = queries
+            .Where(q => blindedQueryIds.Contains(q.QueryId))
+            .Select(q => q.EnrollmentId)
+            .Distinct()
+            .ToList();
+        var unblindedEnrollments = blindedEnrollmentIds.Count > 0
+            ? await access.CanUnblindManyAsync(tenant, blindedEnrollmentIds, cancellationToken).ConfigureAwait(false)
+            : FrozenSet<EnrollmentId>.Empty;
 
         var revisions = preloadedRevisions is not null
             ? new Dictionary<ObservationId, int>(preloadedRevisions)
@@ -923,9 +924,8 @@ internal static class FormQueryEndpoints
         return [
             .. queries.Select(q =>
             {
-                var maskBlinded = !canUnblindByEnrollment[q.EnrollmentId]
-                    && targetsById.TryGetValue(q.FormId, out var target)
-                    && target.IsQueryBlinded(q.ItemId, q.ObservationId);
+                var maskBlinded = blindedQueryIds.Contains(q.QueryId)
+                    && !unblindedEnrollments.Contains(q.EnrollmentId);
                 int? itemRev = itemRevisions.TryGetValue((q.FormId, q.ItemId), out var foundRev) ? foundRev : null;
                 return FormQueryResponse.From(q, revisions, formContexts.GetValueOrDefault(q.FormId), maskBlinded, itemRev);
             }),
@@ -973,41 +973,39 @@ internal static class FormQueryEndpoints
             return states;
         }
 
-        var unblindedEnrollments = new HashSet<EnrollmentId>();
-        var hasBlindedEnrollment = false;
-        foreach (var enrollmentId in states.Select(s => s.EnrollmentId).Distinct())
-        {
-            if (await access.CanUnblindAsync(tenant, enrollmentId, cancellationToken).ConfigureAwait(false))
-            {
-                unblindedEnrollments.Add(enrollmentId);
-            }
-            else
-            {
-                hasBlindedEnrollment = true;
-            }
-        }
-
-        if (!hasBlindedEnrollment)
-        {
-            return states;
-        }
-
         var candidateFormIds = states
-            .Where(s => !unblindedEnrollments.Contains(s.EnrollmentId))
-            .Select(s => s.FormId)
+            .Select(static s => s.FormId)
             .Distinct()
             .ToList();
         var targetsById = await forms.FindQueryTargetsAsync(
             tenant,
             candidateFormIds,
-            unblindedEnrollments,
+            FrozenSet<EnrollmentId>.Empty,
+            cancellationToken).ConfigureAwait(false);
+
+        var blindedQueryIds = states
+            .Where(s => targetsById.TryGetValue(s.FormId, out var target) && target.IsQueryBlinded(s.ItemId, s.ObservationId))
+            .Select(static s => s.QueryId)
+            .ToHashSet();
+        if (blindedQueryIds.Count == 0)
+        {
+            return states;
+        }
+
+        var blindedEnrollmentIds = states
+            .Where(s => blindedQueryIds.Contains(s.QueryId))
+            .Select(static s => s.EnrollmentId)
+            .Distinct()
+            .ToList();
+        var unblindedEnrollments = await access.CanUnblindManyAsync(
+            tenant,
+            blindedEnrollmentIds,
             cancellationToken).ConfigureAwait(false);
 
         return [
             .. states.Where(s =>
-                unblindedEnrollments.Contains(s.EnrollmentId)
-                || !targetsById.TryGetValue(s.FormId, out var target)
-                || !target.IsQueryBlinded(s.ItemId, s.ObservationId)),
+                !blindedQueryIds.Contains(s.QueryId)
+                || unblindedEnrollments.Contains(s.EnrollmentId)),
         ];
     }
 

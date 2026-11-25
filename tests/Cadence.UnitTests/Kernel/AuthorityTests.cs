@@ -420,19 +420,22 @@ public sealed class AuthorityTests
         var trainedOnV1 = Qualify(kind: QualificationKind.ProtocolTraining, code: "protocol_training", version: v1).Value!;
         var trainedOnV2 = Qualify(kind: QualificationKind.ProtocolTraining, code: "protocol_training", version: v2).Value!;
 
-        var denied = await Evaluate(
-            new Store(grant)
-            {
-                Requirements = [requirement],
-                Qualifications = [trainedOnV1],
-                VersionNumbers = new System.Collections.Generic.Dictionary<ProtocolVersionId, int> { [v2] = 2 },
-            },
-            Crc,
-            Record,
-            SiteA1Ref);
+        var deniedStore = new Store(grant)
+        {
+            Requirements = [requirement],
+            Qualifications = [trainedOnV1],
+            VersionNumbers = new System.Collections.Generic.Dictionary<ProtocolVersionId, int> { [v2] = 2 },
+        };
+        var denied = await Evaluate(deniedStore, Crc, Record, SiteA1Ref);
         denied.Reason.Should().EndWith(": Obtain protocol_training for protocol version 2.");
         denied.Reason.Should().NotContain(v2.Value.ToString("D"));
         denied.Conditions.Single(c => !c.Met).Evidence.Should().Contain(NodeRef.For(v2));
+
+        var batchEvaluator = new AuthorityEvaluator(deniedStore, new KernelAuthorityOptions(new HashSet<string>(["svc:platform"])));
+        var batchDenied = (await batchEvaluator.EvaluateManyAsync(Crc, Tenant, Record, [SiteA1Ref], T0, T0, CancellationToken.None))[SiteA1Ref];
+        batchDenied.Reason.Should().Be(denied.Reason);
+        batchDenied.Conditions.Should().Equal(denied.Conditions);
+
         (await Evaluate(new Store(grant) { Requirements = [requirement], Qualifications = [trainedOnV1, trainedOnV2] }, Crc, Record, SiteA1Ref))
             .Permitted.Should().BeTrue();
     }
@@ -455,6 +458,21 @@ public sealed class AuthorityTests
         noGrant.Reason.Should().StartWith("The signed-in user holds no grant");
         noGrant.Conditions.Should().ContainSingle()
             .Which.Evidence.Should().Equal(SiteA1Ref, NodeRef.For(personId));
+
+        var readCap = new Capability("simulation.run", VerbClass.Read);
+        var uuidAgent = Actor.AutomationAgent(Guid.NewGuid().ToString("D"));
+        var agentStore = new Store(Issue(grantee: uuidAgent, capability: readCap.Token, scope: AuthorityScope.Tenant()).Value!);
+        var evaluator = new AuthorityEvaluator(agentStore, new KernelAuthorityOptions(new HashSet<string>(["svc:platform"])));
+
+        var batchNoGrant = (await evaluator.EvaluateManyAsync(uuidActor, Tenant, Record, [SiteA1Ref], T0, T0, CancellationToken.None))[SiteA1Ref];
+        batchNoGrant.Reason.Should().Be(noGrant.Reason);
+        batchNoGrant.Conditions.Should().Equal(noGrant.Conditions);
+
+        var singleAgent = await Evaluate(agentStore, uuidAgent.ActingFor(uuidActor), readCap, SiteA1Ref);
+        var batchAgent = (await evaluator.EvaluateManyAsync(uuidAgent.ActingFor(uuidActor), Tenant, readCap, [SiteA1Ref], T0, T0, CancellationToken.None))[SiteA1Ref];
+        batchAgent.Reason.Should().Be(singleAgent.Reason);
+        batchAgent.Reason.Should().NotContain(personId.Value.ToString("D"));
+        batchAgent.Conditions.Should().Equal(singleAgent.Conditions);
     }
 
     /// <summary>
@@ -516,6 +534,18 @@ public sealed class AuthorityTests
         permittedCasebook.Permitted.Should().BeTrue("the coordinator holds enrollment.export covering SiteA1");
         deniedCasebook.Permitted.Should().BeFalse("a SiteA1 grant does not cover an enrollment at SiteA2");
         deniedCasebook.Conditions.Should().ContainSingle(c => c.Code == AuthorityEvaluator.GrantCondition && !c.Met);
+
+        var evaluator = new AuthorityEvaluator(store, new KernelAuthorityOptions(new HashSet<string>(["svc:platform"])));
+        var batchStudyDecisions = await evaluator.EvaluateManyAsync(
+            Crc, Tenant, studyExport, [NodeRef.For(StudyA)], T0, T0, CancellationToken.None);
+        var batchCasebookDecisions = await evaluator.EvaluateManyAsync(
+            Crc, Tenant, enrollmentExport, [NodeRef.For(enrollmentAtSiteA1), NodeRef.For(enrollmentAtSiteA2)], T0, T0, CancellationToken.None);
+
+        batchStudyDecisions[NodeRef.For(StudyA)].Permitted.Should().BeTrue("batch evaluation preserves site-scoped study.export entry");
+        batchCasebookDecisions[NodeRef.For(enrollmentAtSiteA1)].Permitted.Should().BeTrue("batch evaluation permits covered SiteA1 enrollment");
+        batchCasebookDecisions[NodeRef.For(enrollmentAtSiteA2)].Permitted.Should().BeFalse("batch evaluation fails closed for uncovered SiteA2 enrollment");
+        batchCasebookDecisions[NodeRef.For(enrollmentAtSiteA2)].Conditions
+            .Should().ContainSingle(c => c.Code == AuthorityEvaluator.GrantCondition && !c.Met);
     }
 
     private static CommandResult<Grant> Issue(
@@ -663,6 +693,19 @@ public sealed class AuthorityTests
         // KernelAuthorization.AuthorizeAsync denies Attest on a blinded validation_finding (even if Scope names StudyA)
         // for blinded and lapsed callers, and permits for the qualified pharmacist.
         var evaluator = new AuthorityEvaluator(store, new KernelAuthorityOptions(new HashSet<string>(["svc:platform"])));
+        var batchNodes = new[] { blindedFinding, undetectedFinding };
+        foreach (var actor in new[] { Crc, studyDm, lapsedPharmacist, wrongSitePharmacist, pharmacist })
+        {
+            var batchDecisions = await evaluator.EvaluateManyAsync(actor, Tenant, findingCapabilities[0], batchNodes, T0, T0, CancellationToken.None);
+            foreach (var node in batchNodes)
+            {
+                var single = await Evaluate(store, actor, findingCapabilities[0], node);
+                batchDecisions[node].Permitted.Should().Be(single.Permitted);
+                batchDecisions[node].Reason.Should().Be(single.Reason);
+                batchDecisions[node].Conditions.Should().Equal(single.Conditions);
+            }
+        }
+
         var authorizer = new KernelAuthorization(
             evaluator,
             new FixedActor(Crc),
@@ -739,6 +782,10 @@ public sealed class AuthorityTests
         (await Evaluate(store, unblindedAgentId.ActingFor(lapsedPharmacist), readCapability, blindedFinding)).Permitted.Should().BeFalse();
         (await Evaluate(store, blindedAgentId.ActingFor(qualifiedPharmacist), readCapability, blindedFinding)).Permitted.Should().BeFalse();
         (await Evaluate(store, unblindedAgentId.ActingFor(qualifiedPharmacist), readCapability, blindedFinding)).Permitted.Should().BeTrue();
+
+        var evaluator = new AuthorityEvaluator(store, new KernelAuthorityOptions(new HashSet<string>(["svc:platform"])));
+        (await evaluator.EvaluateManyAsync(unblindedAgentId.ActingFor(Crc), Tenant, readCapability, [blindedFinding], T0, T0, CancellationToken.None))[blindedFinding].Permitted.Should().BeFalse();
+        (await evaluator.EvaluateManyAsync(unblindedAgentId.ActingFor(qualifiedPharmacist), Tenant, readCapability, [blindedFinding], T0, T0, CancellationToken.None))[blindedFinding].Permitted.Should().BeTrue();
     }
 
     private sealed class FixedActor(Actor? actor) : ICurrentActor

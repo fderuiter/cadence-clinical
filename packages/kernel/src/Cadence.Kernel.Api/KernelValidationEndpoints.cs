@@ -272,11 +272,19 @@ public static class KernelValidationEndpoints
         if (probe is not null && collections is not null)
         {
             var studyForms = await collections.ListForStudyAsync(tenant, resolved.StudyId, cancellationToken).ConfigureAwait(false);
+            var enrollmentNodes = studyForms
+                .Select(f => (EnrollmentId: f.EnrollmentId, Node: NodeRef.For(f.EnrollmentId)))
+                .DistinctBy(x => x.EnrollmentId)
+                .ToArray();
+            var decisions = await probe.CanIManyAsync(
+                tenant,
+                EnrollmentUnblindCapability,
+                [.. enrollmentNodes.Select(x => x.Node)],
+                cancellationToken).ConfigureAwait(false);
             var permitted = new HashSet<EnrollmentId>();
-            foreach (var enrollmentId in studyForms.Select(f => f.EnrollmentId).Distinct())
+            foreach (var (enrollmentId, node) in enrollmentNodes)
             {
-                var decision = await probe.CanIAsync(tenant, EnrollmentUnblindCapability, NodeRef.For(enrollmentId), cancellationToken).ConfigureAwait(false);
-                if (decision.Permitted)
+                if (decisions.TryGetValue(node, out var decision) && decision.Permitted)
                 {
                     permitted.Add(enrollmentId);
                 }
@@ -1381,10 +1389,10 @@ public static class KernelValidationEndpoints
         var masks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, allNodesToCheck, cancellationToken).ConfigureAwait(false);
 
         IReadOnlyList<ProtocolDesign>? designs = null;
-        Dictionary<ConceptId, BlindedConceptMetadata>? conceptCache = null;
-        var unblindCache = new Dictionary<NodeRef, bool>();
+        IReadOnlyDictionary<ConceptId, BlindedConceptMetadata>? conceptCache = null;
 
-        var visible = new List<ValidationFindingView>(candidates.Count);
+        var unmaskedCandidates = new List<(ValidationFindingView Finding, NodeRef? BlindedScope)>(candidates.Count);
+        var blindedScopes = new HashSet<NodeRef>();
         foreach (var finding in candidates)
         {
             var refs = perFindingRefs[finding.Id];
@@ -1393,6 +1401,7 @@ public static class KernelValidationEndpoints
                 continue;
             }
 
+            NodeRef? blindedScope = null;
             if (probe is not null)
             {
                 designs ??= await LoadStudyDesignsAsync(tenant, studyId, protocols, formsByKey.Values, cancellationToken).ConfigureAwait(false);
@@ -1414,18 +1423,33 @@ public static class KernelValidationEndpoints
 
                 if (isBlinded)
                 {
-                    if (!unblindCache.TryGetValue(unblindScope, out var canUnblind))
-                    {
-                        var decision = await probe.CanIAsync(tenant, EnrollmentUnblindCapability, unblindScope, cancellationToken).ConfigureAwait(false);
-                        canUnblind = decision.Permitted;
-                        unblindCache[unblindScope] = canUnblind;
-                    }
-
-                    if (!canUnblind)
-                    {
-                        continue;
-                    }
+                    blindedScope = unblindScope;
+                    blindedScopes.Add(unblindScope);
                 }
+            }
+
+            unmaskedCandidates.Add((finding, blindedScope));
+        }
+
+        IReadOnlyDictionary<NodeRef, AuthorizationDecision>? unblindDecisions = null;
+        if (probe is not null && blindedScopes.Count > 0)
+        {
+            unblindDecisions = await probe.CanIManyAsync(
+                tenant,
+                EnrollmentUnblindCapability,
+                blindedScopes,
+                cancellationToken).ConfigureAwait(false);
+        }
+
+        var visible = new List<ValidationFindingView>(unmaskedCandidates.Count);
+        foreach (var (finding, blindedScope) in unmaskedCandidates)
+        {
+            if (blindedScope is { } scope
+                && (unblindDecisions is null
+                    || !unblindDecisions.TryGetValue(scope, out var decision)
+                    || !decision.Permitted))
+            {
+                continue;
             }
 
             visible.Add(finding);
@@ -1504,6 +1528,13 @@ public static class KernelValidationEndpoints
     {
         bool IsFormBlindedItem(CollectionInstanceRecord form, string itemId)
         {
+            if (ReferenceEquals(classifier, BlindedTreatmentClassifier.Instance)
+                && form.BlindedItemIds is not null
+                && form.BlindedItemIds.Contains(itemId))
+            {
+                return true;
+            }
+
             var specItem = form.Items.FirstOrDefault(i => string.Equals(i.Id, itemId, StringComparison.Ordinal));
             var recorded = form.Values.FirstOrDefault(v => string.Equals(v.ItemId, itemId, StringComparison.Ordinal));
             BlindedConceptMetadata? meta = specItem is not null && conceptCache.TryGetValue(specItem.Concept.ConceptId, out var m)
@@ -1550,62 +1581,46 @@ public static class KernelValidationEndpoints
             return [];
         }
 
-        var designs = new List<ProtocolDesign>();
-        var seen = new HashSet<ProtocolVersionId>();
-        foreach (var versionId in forms.Select(f => f.ProtocolVersionId).Distinct())
+        var distinctFormVersions = forms.Select(f => f.ProtocolVersionId).Distinct().ToList();
+        var studyDesigns = await protocols.GetDesignsForStudyAsync(tenant, studyId, cancellationToken).ConfigureAwait(false);
+        if (studyDesigns.Count > 0)
         {
-            if (seen.Add(versionId)
-                && await protocols.GetDesignAsync(tenant, versionId, cancellationToken).ConfigureAwait(false) is { } design)
+            var formDesigns = new List<ProtocolDesign>();
+            foreach (var versionId in distinctFormVersions)
             {
-                designs.Add(design);
+                if (studyDesigns.TryGetValue(versionId, out var design))
+                {
+                    formDesigns.Add(design);
+                }
+            }
+
+            return formDesigns.Count > 0 ? formDesigns : [.. studyDesigns.Values];
+        }
+
+        var fallbackDesigns = new List<ProtocolDesign>();
+        foreach (var versionId in distinctFormVersions.Where(id => !id.IsEmpty))
+        {
+            if (await protocols.GetDesignAsync(tenant, versionId, cancellationToken).ConfigureAwait(false) is { } design)
+            {
+                fallbackDesigns.Add(design);
             }
         }
 
-        if (designs.Count > 0)
-        {
-            return designs;
-        }
-
-        var summaries = await protocols.ListForStudyAsync(tenant, studyId, cancellationToken).ConfigureAwait(false);
-        foreach (var summaryId in summaries.Select(summary => summary.Id).Where(seen.Add))
-        {
-            if (await protocols.GetDesignAsync(tenant, summaryId, cancellationToken).ConfigureAwait(false) is { } design)
-            {
-                designs.Add(design);
-            }
-        }
-
-        return designs;
+        return fallbackDesigns;
     }
 
-    private static async Task<Dictionary<ConceptId, BlindedConceptMetadata>> LoadStudyConceptsAsync(
+    private static Task<IReadOnlyDictionary<ConceptId, BlindedConceptMetadata>> LoadStudyConceptsAsync(
         TenantId tenant,
         IConceptRegistry? concepts,
         IEnumerable<CollectionInstanceRecord> forms,
         IReadOnlyList<ProtocolDesign> designs,
-        CancellationToken cancellationToken)
-    {
-        var resolved = new Dictionary<ConceptId, BlindedConceptMetadata>();
-        if (concepts is null)
-        {
-            return resolved;
-        }
-
-        var refs = forms.SelectMany(f => f.Items).Select(i => i.Concept)
-            .Concat(designs.SelectMany(d => d.CollectionSpecs).SelectMany(s => s.Items).Select(i => i.Concept))
-            .Distinct();
-        foreach (var conceptRef in refs)
-        {
-            var view = await concepts.ResolveAsync(tenant, conceptRef, cancellationToken).ConfigureAwait(false)
-                ?? await concepts.GetCurrentAsync(tenant, conceptRef.ConceptId, cancellationToken).ConfigureAwait(false);
-            if (view is not null)
-            {
-                resolved[conceptRef.ConceptId] = new BlindedConceptMetadata(view.ExternalCode, view.PreferredLabel, view.Definition);
-            }
-        }
-
-        return resolved;
-    }
+        CancellationToken cancellationToken) =>
+        BlindedConceptMetadata.ResolveManyAsync(
+            concepts,
+            tenant,
+            forms.SelectMany(f => f.Items).Select(i => i.Concept)
+                .Concat(designs.SelectMany(d => d.CollectionSpecs).SelectMany(s => s.Items).Select(i => i.Concept)),
+            cancellationToken);
 
     private static Guid DeriveGuid(TenantId tenant, string kind, string seed)
     {
