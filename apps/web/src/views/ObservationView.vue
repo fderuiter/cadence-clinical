@@ -1324,7 +1324,7 @@ watch(
   overflow-wrap: anywhere;
   margin-bottom: 12px;
   color: var(--semantic-color-interactive-primary);
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 .observation-summary {
   display: grid;
@@ -1368,7 +1368,7 @@ watch(
 }
 .observation-sdv-meta {
   margin-left: 8px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-secondary);
 }
 .observation-context-links {
@@ -1379,7 +1379,7 @@ watch(
 }
 .observation-context-link {
   color: var(--semantic-color-interactive-primary);
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   font-weight: 500;
 }
 .observation-sdv-warning {
@@ -1389,7 +1389,7 @@ watch(
   border: 1px solid var(--semantic-color-warning-border-strong);
   background: var(--semantic-color-warning-bg-soft);
   color: var(--semantic-color-warning-text-dark);
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
 }
 .observation-queries-section {
   margin-bottom: 16px;
@@ -1413,7 +1413,7 @@ watch(
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 .observation-query-meta {
   color: var(--semantic-color-text-secondary);
@@ -1428,7 +1428,7 @@ watch(
 .observation-query-answers {
   margin: 8px 0 0;
   padding-left: 18px;
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
 }
 .observation-query-links {
   display: flex;

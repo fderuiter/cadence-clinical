@@ -493,13 +493,13 @@ defineExpose({
 
 .header-titles h3 {
   margin: 0 0 4px 0;
-  font-size: 1.2rem;
+  font-size: var(--font-size-lg);
   color: var(--neutral-dark);
 }
 
 .subtitle {
   margin: 0;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -521,7 +521,7 @@ defineExpose({
 
 .mode-tab-btn {
   padding: 6px 12px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   border: none;
   background: transparent;
@@ -545,7 +545,7 @@ defineExpose({
 
 .threshold-control label {
   font-weight: 600;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--neutral-dark);
 }
 
@@ -566,7 +566,7 @@ defineExpose({
   position: absolute;
   right: 6px;
   font-weight: bold;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   pointer-events: none;
   color: var(--semantic-color-text-secondary);
 }
@@ -613,7 +613,7 @@ defineExpose({
 .question-item-header h4 {
   margin: 0;
   color: var(--text-main);
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
 }
 
 .btn-delete {
@@ -622,7 +622,7 @@ defineExpose({
   border: none;
   cursor: pointer;
   font-weight: bold;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   padding: 4px 8px;
   border-radius: 4px;
 }
@@ -639,7 +639,7 @@ defineExpose({
 
 .form-group label {
   font-weight: 600;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--neutral-dark);
 }
 
@@ -647,7 +647,7 @@ defineExpose({
   padding: 8px 12px;
   border: 1px solid var(--border);
   border-radius: 6px;
-  font-size: 0.9rem;
+  font-size: var(--font-size-md);
 }
 
 .options-builder {
@@ -658,7 +658,7 @@ defineExpose({
 
 .options-builder label {
   font-weight: 600;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--neutral-dark);
 }
 
@@ -682,7 +682,7 @@ defineExpose({
   background-color: transparent;
   color: var(--semantic-color-text-secondary);
   border: none;
-  font-size: 1.1rem;
+  font-size: var(--font-size-lg);
   cursor: pointer;
   padding: 4px 8px;
 }
@@ -698,7 +698,7 @@ defineExpose({
 
 .btn-small {
   align-self: flex-start;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   padding: 4px 8px;
 }
 
@@ -724,7 +724,7 @@ defineExpose({
   border-left: 4px solid var(--primary);
   padding: 12px 16px;
   border-radius: 4px;
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-info);
 }
 
@@ -753,7 +753,7 @@ defineExpose({
 }
 
 .result-icon {
-  font-size: 2rem;
+  font-size: var(--font-size-4xl);
 }
 
 .result-details {
@@ -764,14 +764,14 @@ defineExpose({
 
 .result-title {
   margin: 0;
-  font-size: 1.1rem;
+  font-size: var(--font-size-lg);
   font-weight: bold;
 }
 
 .result-score,
 .result-message {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
   line-height: 1.4;
 }
 
@@ -786,7 +786,7 @@ defineExpose({
 
 .question-legend {
   font-weight: 600;
-  font-size: 1rem;
+  font-size: var(--font-size-md);
   color: var(--neutral-dark);
   margin-bottom: 8px;
   display: flex;
@@ -813,7 +813,7 @@ defineExpose({
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s;
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
 }
 
 .assessment-option-label:hover {
@@ -848,7 +848,7 @@ defineExpose({
 }
 
 .feedback-badge {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: bold;
   padding: 2px 8px;
   border-radius: 4px;
@@ -873,7 +873,7 @@ defineExpose({
   color: var(--semantic-color-warning-text);
   padding: 8px 12px;
   border-radius: 6px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   margin-top: 4px;
 }
 

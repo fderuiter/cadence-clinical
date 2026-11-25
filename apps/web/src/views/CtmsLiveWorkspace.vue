@@ -171,6 +171,6 @@ defineExpose({ liveTab });
   border: 1px solid var(--semantic-color-border);
   background: var(--semantic-color-surface-muted);
   color: var(--semantic-color-text-secondary);
-  font-size: 0.88rem;
+  font-size: var(--font-size-sm);
 }
 </style>

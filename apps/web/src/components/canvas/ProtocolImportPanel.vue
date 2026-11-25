@@ -669,19 +669,19 @@ defineExpose({
 
 .import-card-header h3 {
   margin: 0 0 4px;
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
 }
 
 .import-subtitle {
   margin: 0;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--neutral-dark);
 }
 
 .banner {
   padding: 10px 12px;
   border-radius: 6px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 
 .banner-progress {
@@ -738,13 +738,13 @@ defineExpose({
   color: var(--semantic-color-interactive-primary);
   cursor: pointer;
   padding: 4px 8px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 
 .file-meta,
 .file-hint {
   margin: 0;
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   color: var(--neutral-dark);
 }
 
@@ -763,7 +763,7 @@ defineExpose({
 }
 
 .field-label {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
 }
 
@@ -772,7 +772,7 @@ defineExpose({
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   font: inherit;
-  font-size: 0.85rem;
+  font-size: var(--font-size-md);
   width: 100%;
   box-sizing: border-box;
   background: var(--semantic-color-surface);
@@ -781,7 +781,7 @@ defineExpose({
 
 @media (pointer: coarse) {
   .text-input {
-    font-size: 1rem;
+    font-size: var(--font-size-md);
   }
 }
 
@@ -808,7 +808,7 @@ defineExpose({
   min-width: 0;
   padding: 4px 6px;
   border-radius: 4px;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   cursor: pointer;
 }
 
@@ -849,7 +849,7 @@ defineExpose({
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   cursor: pointer;
   padding: 8px 0;
 }
@@ -868,7 +868,7 @@ defineExpose({
 }
 
 .summary-eyebrow {
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
   color: var(--neutral-dark);
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -885,18 +885,18 @@ defineExpose({
 
 .summary-title {
   margin: 4px 0 0;
-  font-size: 1rem;
+  font-size: var(--font-size-md);
 }
 
 .summary-counts {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--neutral-dark);
 }
 
 .governance-note {
   margin: 0;
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   color: var(--neutral-dark);
 }
 
@@ -908,7 +908,7 @@ defineExpose({
   border-radius: 6px;
   background: var(--semantic-color-info-bg);
   border: 1px solid var(--semantic-color-info-border);
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
 }
 
 .amendment-summary-header {
@@ -932,7 +932,7 @@ defineExpose({
   border: 1px solid var(--semantic-color-info-border);
   color: var(--semantic-color-info);
   font-weight: 600;
-  font-size: 0.76rem;
+  font-size: var(--font-size-2xs);
 }
 
 .amendment-rationale {
@@ -957,7 +957,7 @@ defineExpose({
   border-radius: 4px;
   background: var(--semantic-color-surface);
   border: 1px solid var(--border);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
 }
 
 .import-notes-box {
@@ -969,7 +969,7 @@ defineExpose({
 
 .notes-heading {
   margin: 0 0 6px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-warning-text);
 }
 
@@ -979,7 +979,7 @@ defineExpose({
   display: flex;
   flex-direction: column;
   gap: 4px;
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-warning-text-dark);
 }
 
@@ -1019,11 +1019,11 @@ defineExpose({
 
 .draft-form-name {
   margin: 0;
-  font-size: 0.92rem;
+  font-size: var(--font-size-base);
 }
 
 .draft-form-meta {
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
   color: var(--neutral-dark);
 }
 
@@ -1033,7 +1033,7 @@ defineExpose({
   display: flex;
   flex-direction: column;
   gap: 4px;
-  font-size: 0.84rem;
+  font-size: var(--font-size-xs);
 }
 
 .draft-item-row {
@@ -1055,7 +1055,7 @@ defineExpose({
   flex-wrap: wrap;
   align-items: center;
   gap: 6px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
 }
 
 .badge-mandatory {

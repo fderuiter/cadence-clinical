@@ -15,7 +15,7 @@
 .ctms-section .section-subtitle {
   margin: 4px 0 0;
   color: var(--semantic-color-text-secondary);
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
 }
 
 .ctms-section .scope-bar,
@@ -41,7 +41,7 @@
 .ctms-section .form-row label {
   margin-bottom: 0;
   font-weight: 600;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   white-space: nowrap;
 }
 
@@ -58,7 +58,7 @@
   padding: 6px 10px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
-  font-size: 0.88rem;
+  font-size: var(--font-size-md);
 }
 
 .ctms-section .scope-guidance {
@@ -94,7 +94,7 @@
 .ctms-section .status-pill {
   padding: 2px 8px;
   border-radius: 999px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
 }
 
@@ -113,7 +113,7 @@
 .ctms-section .mutation-card h4,
 .ctms-section .mutation-card h5 {
   margin: 0 0 10px;
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
 }
 
 .ctms-section .readonly-note {
@@ -123,7 +123,7 @@
   background: var(--semantic-color-surface-muted);
   border: 1px solid var(--semantic-color-border);
   color: var(--semantic-color-text-secondary);
-  font-size: 0.88rem;
+  font-size: var(--font-size-sm);
 }
 
 .ctms-section .btn-sm {
@@ -133,6 +133,6 @@
   min-height: var(--semantic-control-target-min, 24px);
   min-width: var(--semantic-control-target-min, 24px);
   padding: 4px 8px;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   box-sizing: border-box;
 }

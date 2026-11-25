@@ -1081,7 +1081,7 @@ onMounted(() => {
 .letter-body {
   margin: 8px 0 0;
   white-space: pre-wrap;
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-body);
 }
 </style>

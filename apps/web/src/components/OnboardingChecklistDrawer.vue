@@ -372,27 +372,27 @@ async function startGuidedTour() {
 }
 
 .header-icon {
-  font-size: 1.6rem;
+  font-size: var(--font-size-2xl);
   line-height: 1;
 }
 
 .drawer-title {
   margin: 0;
-  font-size: 1.15rem;
+  font-size: var(--font-size-lg);
   font-weight: 700;
   color: var(--semantic-color-text);
 }
 
 .drawer-subtitle {
   margin: 2px 0 0 0;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-secondary);
 }
 
 .btn-close {
   background: none;
   border: none;
-  font-size: 1.25rem;
+  font-size: var(--font-size-lg);
   color: var(--semantic-color-text-secondary);
   cursor: pointer;
   padding: 4px 8px;
@@ -418,7 +418,7 @@ async function startGuidedTour() {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   margin-bottom: 8px;
 }
 
@@ -429,7 +429,7 @@ async function startGuidedTour() {
 
 .progress-counts {
   color: var(--semantic-color-text-secondary);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
 }
 
 .progress-bar-track {
@@ -452,7 +452,7 @@ async function startGuidedTour() {
   background-color: var(--semantic-color-success-bg-soft);
   border: 1px solid var(--semantic-color-success-border);
   color: var(--semantic-color-success-dark);
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   border-radius: 6px;
   text-align: center;
@@ -514,7 +514,7 @@ async function startGuidedTour() {
 
 .task-title {
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text);
   cursor: pointer;
 }
@@ -544,7 +544,7 @@ async function startGuidedTour() {
 
 .task-desc {
   margin: 0 0 10px 0;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-secondary);
   line-height: 1.35;
   padding-left: 24px;
@@ -557,7 +557,7 @@ async function startGuidedTour() {
 }
 
 .btn-navigate-task {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   padding: 4px 10px;
   background-color: var(--semantic-color-surface-header);
   color: var(--semantic-color-text);

@@ -2,6 +2,8 @@
 
 /* WCAG 2.2 AA contrast recalibration aligned with packages/ui/tokens.css (ADR-2820) */
 :root {
+  --vp-font-family-base: var(--semantic-font-family);
+  --vp-font-family-mono: var(--semantic-font-mono);
   --vp-c-text-1: var(--color-text);
   --vp-c-text-2: var(--color-text-muted);
   --vp-c-text-3: var(--color-text-muted);
@@ -183,7 +185,7 @@
   margin: 0;
   padding: 4px 0;
   line-height: 24px;
-  font-size: 14px;
+  font-size: var(--font-size-sm);
   transition: color 0.25s;
 }
 
@@ -235,7 +237,7 @@
 }
 
 .VPSidebarItem .caret-icon {
-  font-size: 18px;
+  font-size: var(--font-size-lg);
   transform: rotate(90deg);
   transition: transform 0.25s;
 }
@@ -368,7 +370,7 @@
   clip-path: inset(50%);
   white-space: nowrap;
   border: 0;
-  font-size: 13px;
+  font-size: var(--font-size-xs);
   font-weight: 500;
   color: var(--vp-c-text-2);
   transition: color 0.5s;
@@ -416,8 +418,8 @@
   width: auto;
   height: 22px;
   line-height: 22px;
-  font-family: var(--vp-font-family-base);
-  font-size: 12px;
+  font-family: var(--semantic-font-family);
+  font-size: var(--font-size-2xs);
   font-weight: 500;
   color: var(--docsearch-muted-color);
   transition:
@@ -439,7 +441,7 @@
 
 .DocSearch-Button .DocSearch-Button-Key:first-child::after {
   content: "Ctrl";
-  font-size: 12px;
+  font-size: var(--font-size-2xs);
   letter-spacing: normal;
   color: var(--docsearch-muted-color);
 }
@@ -533,7 +535,7 @@
   border-radius: 4px;
   cursor: pointer;
   font-weight: bold;
-  font-size: 14px;
+  font-size: var(--font-size-sm);
   user-select: none;
   transition:
     background-color 0.2s,
@@ -572,7 +574,7 @@
 .blog-count {
   margin: 0 !important;
   color: var(--vp-c-text-2);
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
 }
 
 .blog-rss-button {
@@ -584,7 +586,7 @@
   border: 1px solid var(--vp-c-brand-1);
   background-color: var(--vp-c-bg-soft);
   color: var(--vp-c-brand-1) !important;
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   text-decoration: none !important;
   transition:
@@ -612,7 +614,7 @@
   border: 1px solid var(--vp-c-divider);
   background-color: var(--vp-c-bg-soft);
   color: var(--vp-c-text-2);
-  font-size: 0.84rem;
+  font-size: var(--font-size-xs);
   font-weight: 500;
   cursor: pointer;
   transition:
@@ -656,7 +658,7 @@
   align-items: center;
   gap: 8px;
   color: var(--vp-c-text-2);
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
 }
 
 .blog-date {
@@ -667,7 +669,7 @@
   margin: 10px 0 8px !important;
   padding-top: 0 !important;
   border-top: none !important;
-  font-size: 1.35rem !important;
+  font-size: var(--font-size-xl) !important;
   line-height: 1.35 !important;
 }
 
@@ -701,7 +703,7 @@
   border: 1px solid var(--vp-c-divider);
   background-color: var(--vp-c-bg);
   color: var(--vp-c-brand-1) !important;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   font-weight: 500;
   cursor: pointer;
   text-decoration: none !important;
@@ -718,7 +720,7 @@
   gap: 10px;
   padding-top: 10px;
   border-top: 1px dashed var(--vp-c-divider);
-  font-size: 0.84rem;
+  font-size: var(--font-size-xs);
 }
 
 .blog-related-label {
@@ -745,7 +747,7 @@
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 10px;
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
 }
 
 .blog-back-link,
@@ -763,7 +765,7 @@
 .blog-post-lead {
   margin: 10px 0 12px;
   color: var(--vp-c-text-1);
-  font-size: 1.02rem;
+  font-size: var(--font-size-md);
   line-height: 1.6;
 }
 
@@ -783,7 +785,7 @@
 
 .blog-related-heading {
   margin: 0 0 10px;
-  font-size: 1.05rem;
+  font-size: var(--font-size-md);
   font-weight: 600;
   color: var(--vp-c-text-1);
 }
@@ -825,13 +827,13 @@
 }
 
 .blog-chrono-label {
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   color: var(--vp-c-text-2);
 }
 
 .blog-chrono-title {
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
   font-weight: 600;
   color: var(--vp-c-brand-1);
 }

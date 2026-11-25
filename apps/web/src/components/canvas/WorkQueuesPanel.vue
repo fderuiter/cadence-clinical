@@ -347,14 +347,14 @@ watch(() => props.studyCode, load, { immediate: true });
 
 .work-queues-header h2 {
   margin: 0;
-  font-size: 1rem;
+  font-size: var(--font-size-md);
 }
 
 .work-queues-subtitle,
 .work-queues-status,
 .work-queue-empty {
   margin: 2px 0 0;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -362,7 +362,7 @@ watch(() => props.studyCode, load, { immediate: true });
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
 }
 
 .work-queues-total {
@@ -401,7 +401,7 @@ watch(() => props.studyCode, load, { immediate: true });
 
 .work-queue-title {
   margin: 0;
-  font-size: 0.92rem;
+  font-size: var(--font-size-base);
   overflow-wrap: anywhere;
 }
 
@@ -428,7 +428,7 @@ watch(() => props.studyCode, load, { immediate: true });
   min-width: 24px;
   padding: 2px 8px;
   border-radius: 999px;
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   background: var(--semantic-color-surface-subtle);
@@ -459,7 +459,7 @@ watch(() => props.studyCode, load, { immediate: true });
   gap: 2px;
   padding-top: 8px;
   border-top: 1px solid var(--border);
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 
 .work-queue-item:first-child {
@@ -489,7 +489,7 @@ watch(() => props.studyCode, load, { immediate: true });
 
 .work-item-detail {
   margin: 0;
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
   font-variant-numeric: tabular-nums;
   color: var(--semantic-color-text-secondary);
 }

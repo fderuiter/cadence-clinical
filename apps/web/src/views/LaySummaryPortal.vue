@@ -907,7 +907,7 @@ onMounted(() => {
   align-items: center;
   padding: 4px 8px;
   border-radius: 4px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   letter-spacing: 0.02em;
 }
@@ -931,14 +931,14 @@ onMounted(() => {
 }
 
 .view-title {
-  font-size: 1.5rem;
+  font-size: var(--font-size-2xl);
   font-weight: 700;
   color: var(--semantic-color-text);
   margin: 0 0 6px 0;
 }
 
 .view-subtitle {
-  font-size: 0.88rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-secondary);
   margin: 0;
   max-width: 900px;
@@ -953,7 +953,7 @@ onMounted(() => {
 }
 
 .stat-label {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-secondary);
   margin-top: 2px;
 }
@@ -970,7 +970,7 @@ onMounted(() => {
   background: none;
   border: none;
   border-bottom: 2px solid transparent;
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--semantic-color-text-secondary);
   cursor: pointer;
@@ -1019,7 +1019,7 @@ onMounted(() => {
 }
 
 .panel-title {
-  font-size: 1rem;
+  font-size: var(--font-size-md);
   font-weight: 600;
   color: var(--semantic-color-text);
   margin: 0;
@@ -1066,14 +1066,14 @@ onMounted(() => {
 }
 
 .item-title {
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
   font-weight: 700;
   margin: 0 0 4px 0;
   color: var(--semantic-color-text);
 }
 
 .item-meta {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
   margin: 0 0 4px 0;
 }
@@ -1093,14 +1093,14 @@ onMounted(() => {
 }
 
 .section-heading {
-  font-size: 1rem;
+  font-size: var(--font-size-md);
   font-weight: 700;
   margin: 0 0 8px 0;
   color: var(--semantic-color-text);
 }
 
 .overview-text {
-  font-size: 0.92rem;
+  font-size: var(--font-size-base);
   color: var(--semantic-color-text-body);
   line-height: 1.5;
   margin: 0;
@@ -1129,19 +1129,19 @@ onMounted(() => {
 }
 
 .card-icon {
-  font-size: 1.6rem;
+  font-size: var(--font-size-2xl);
   line-height: 1;
 }
 
 .card-content h5 {
-  font-size: 0.92rem;
+  font-size: var(--font-size-base);
   font-weight: 700;
   margin: 0 0 6px 0;
   color: var(--semantic-color-text);
 }
 
 .card-content p {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-secondary);
   line-height: 1.45;
   margin: 0;
@@ -1169,7 +1169,7 @@ onMounted(() => {
 .star-btn {
   background: none;
   border: none;
-  font-size: 1.8rem;
+  font-size: var(--font-size-3xl);
   color: var(--semantic-color-text-secondary);
   cursor: pointer;
   padding: 0;
@@ -1182,7 +1182,7 @@ onMounted(() => {
 }
 
 .score-display {
-  font-size: 0.88rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--semantic-color-text-secondary);
   margin-left: 8px;
@@ -1200,7 +1200,7 @@ onMounted(() => {
 }
 
 .formal-acknowledgment-box label {
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-body);
   line-height: 1.4;
   cursor: pointer;
@@ -1227,7 +1227,7 @@ onMounted(() => {
 }
 
 .cert-seal {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   font-weight: 800;
   letter-spacing: 0.08em;
   color: var(--semantic-color-primary);
@@ -1235,19 +1235,19 @@ onMounted(() => {
 
 .cert-id {
   font-family: var(--semantic-font-mono);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
 }
 
 .cert-title {
-  font-size: 1.1rem;
+  font-size: var(--font-size-lg);
   font-weight: 700;
   color: var(--semantic-color-text);
   margin: 0 0 10px 0;
 }
 
 .cert-body p {
-  font-size: 0.88rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-body);
   line-height: 1.5;
   margin-bottom: 12px;
@@ -1256,7 +1256,7 @@ onMounted(() => {
 .cert-meta-row {
   display: flex;
   justify-content: space-between;
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-secondary);
   margin-bottom: 12px;
 }
@@ -1266,7 +1266,7 @@ onMounted(() => {
   color: var(--semantic-color-text-inverse);
   padding: 10px;
   border-radius: 4px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
 }
 
 .hash-label {
@@ -1288,12 +1288,12 @@ onMounted(() => {
 }
 
 .empty-cert-icon {
-  font-size: 2.5rem;
+  font-size: var(--font-size-5xl);
   margin-bottom: 10px;
 }
 
 .studio-subheading {
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
   font-weight: 700;
   color: var(--semantic-color-text);
   margin: 16px 0 12px 0;
@@ -1308,7 +1308,7 @@ onMounted(() => {
 .data-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.88rem;
+  font-size: var(--font-size-sm);
   text-align: left;
 }
 
@@ -1336,12 +1336,12 @@ onMounted(() => {
   padding: 2px 6px;
   border-radius: 4px;
   font-weight: 700;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
 }
 
 .hash-code {
   font-family: var(--semantic-font-mono);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   color: var(--text-main);
 }
 
@@ -1364,7 +1364,7 @@ onMounted(() => {
 
 .btn-sm {
   padding: 4px 8px;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
 }
 
 .btn-block {
@@ -1377,7 +1377,7 @@ onMounted(() => {
 
 .form-group label {
   display: block;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   color: var(--semantic-color-text-secondary);
   margin-bottom: 4px;
@@ -1390,7 +1390,7 @@ onMounted(() => {
   padding: 8px 10px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
-  font-size: 0.88rem;
+  font-size: var(--font-size-md);
   color: var(--semantic-color-text-dark);
   background-color: var(--semantic-color-surface);
   box-sizing: border-box;
@@ -1413,6 +1413,6 @@ onMounted(() => {
   border: 1px solid var(--semantic-color-success-border);
   color: var(--semantic-color-success-dark);
   border-radius: 6px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 </style>

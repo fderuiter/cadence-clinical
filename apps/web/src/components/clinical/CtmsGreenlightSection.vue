@@ -487,7 +487,7 @@ onMounted(() => {
 .gate-badge {
   padding: 3px 9px;
   border-radius: 999px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
 }
 
@@ -520,7 +520,7 @@ onMounted(() => {
   background: var(--semantic-color-surface);
   border: 1px solid var(--semantic-color-border);
   border-radius: 6px;
-  font-size: 0.88rem;
+  font-size: var(--font-size-sm);
 }
 
 @media (max-width: 640px) {
@@ -551,7 +551,7 @@ onMounted(() => {
 .certified-meta {
   margin: 0;
   color: var(--semantic-color-success-dark);
-  font-size: 0.88rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
 }
 
@@ -573,7 +573,7 @@ onMounted(() => {
 
 .subsection-title {
   margin: 0 0 8px;
-  font-size: 1rem;
+  font-size: var(--font-size-md);
 }
 
 .muted-inline {

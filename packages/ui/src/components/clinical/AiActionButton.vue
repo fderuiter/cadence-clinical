@@ -161,19 +161,19 @@ const handleClick = (e) => {
 /* Sizes */
 .ai-btn-sm {
   padding: 4px 10px;
-  font-size: var(--font-size-xs, 12px);
+  font-size: var(--font-size-xs);
   min-height: 28px;
 }
 
 .ai-btn-md {
   padding: 6px 14px;
-  font-size: var(--font-size-sm, 14px);
+  font-size: var(--font-size-sm);
   min-height: 36px;
 }
 
 .ai-btn-lg {
   padding: 10px 18px;
-  font-size: var(--font-size-base, 15px);
+  font-size: var(--font-size-base);
   min-height: 44px;
 }
 
@@ -246,6 +246,6 @@ const handleClick = (e) => {
 }
 
 .ai-icon {
-  font-size: 1.1em;
+  font-size: var(--font-size-lg);
 }
 </style>

@@ -46,7 +46,7 @@
         <div style="padding: 8px 0">
           <p
             style="
-              font-size: 13px;
+              font-size: var(--font-size-xs);
               color: var(--semantic-color-text-secondary);
               margin-bottom: 12px;
             "
@@ -84,15 +84,18 @@
             "
           >
             <div style="display: flex; align-items: center; gap: 8px">
-              <span style="font-size: 20px">🟢</span>
+              <span style="font-size: var(--font-size-lg)">🟢</span>
               <div>
                 <strong
-                  style="color: var(--semantic-color-success); font-size: 14px"
+                  style="
+                    color: var(--semantic-color-success);
+                    font-size: var(--font-size-sm);
+                  "
                   >INTEGRITY VERIFIED</strong
                 >
                 <p
                   style="
-                    font-size: 12px;
+                    font-size: var(--font-size-2xs);
                     margin: 4px 0 0 0;
                     color: var(--semantic-color-text);
                   "
@@ -116,14 +119,15 @@
             "
           >
             <div style="display: flex; align-items: center; gap: 8px">
-              <span style="font-size: 20px">🔴</span>
+              <span style="font-size: var(--font-size-lg)">🔴</span>
               <div>
-                <strong style="color: var(--error); font-size: 14px"
+                <strong
+                  style="color: var(--error); font-size: var(--font-size-sm)"
                   >INTEGRITY BREACH / TAMPERED</strong
                 >
                 <p
                   style="
-                    font-size: 12px;
+                    font-size: var(--font-size-2xs);
                     margin: 4px 0 0 0;
                     color: var(--semantic-color-text);
                   "
@@ -149,7 +153,7 @@
           >
             <span
               style="
-                font-size: 13px;
+                font-size: var(--font-size-xs);
                 color: var(--semantic-color-text-secondary);
               "
             >
@@ -168,7 +172,7 @@
         <div style="padding: 8px 0">
           <p
             style="
-              font-size: 13px;
+              font-size: var(--font-size-xs);
               color: var(--semantic-color-text-secondary);
               margin-bottom: 12px;
             "
@@ -183,7 +187,7 @@
                 for="binder-study-id-input"
                 style="
                   font-weight: 600;
-                  font-size: 12px;
+                  font-size: var(--font-size-2xs);
                   margin-bottom: 4px;
                   display: block;
                 "
@@ -220,7 +224,11 @@
               />
               <label
                 for="chk-history"
-                style="font-size: 13px; cursor: pointer; user-select: none"
+                style="
+                  font-size: var(--font-size-xs);
+                  cursor: pointer;
+                  user-select: none;
+                "
                 >Include complete document version histories (audit
                 files)</label
               >
@@ -249,7 +257,7 @@
         <div style="padding: 8px 0">
           <p
             style="
-              font-size: 13px;
+              font-size: var(--font-size-xs);
               color: var(--semantic-color-text-secondary);
               margin-bottom: 12px;
             "
@@ -263,7 +271,7 @@
                 for="tmf-file-input"
                 style="
                   font-weight: 600;
-                  font-size: 12px;
+                  font-size: var(--font-size-2xs);
                   margin-bottom: 4px;
                   display: block;
                 "
@@ -289,7 +297,7 @@
                   for="tmf-zone-select"
                   style="
                     font-weight: 600;
-                    font-size: 12px;
+                    font-size: var(--font-size-2xs);
                     margin-bottom: 4px;
                     display: block;
                   "
@@ -323,7 +331,7 @@
                   for="tmf-section-input"
                   style="
                     font-weight: 600;
-                    font-size: 12px;
+                    font-size: var(--font-size-2xs);
                     margin-bottom: 4px;
                     display: block;
                   "
@@ -378,7 +386,7 @@
 
       <p
         style="
-          font-size: 13px;
+          font-size: var(--font-size-xs);
           color: var(--semantic-color-text-secondary);
           margin: 8px 0 16px 0;
         "
@@ -391,7 +399,11 @@
       <div style="overflow-x: auto">
         <table
           class="clinical-table"
-          style="width: 100%; border-collapse: collapse; font-size: 13px"
+          style="
+            width: 100%;
+            border-collapse: collapse;
+            font-size: var(--font-size-xs);
+          "
         >
           <thead>
             <tr
@@ -557,7 +569,7 @@
           "
         >
           <div style="display: flex; align-items: center; gap: 8px">
-            <span style="font-size: 16px">🔍</span>
+            <span style="font-size: var(--font-size-md)">🔍</span>
             <span style="font-weight: 600"
               >Secure Preview: {{ previewDoc.filename }}</span
             >
@@ -590,7 +602,7 @@
             background: var(--semantic-color-surface);
             color: var(--semantic-color-text-dark);
             font-family: var(--semantic-font-mono);
-            font-size: 13px;
+            font-size: var(--font-size-xs);
             line-height: 1.5;
             overflow-y: auto;
             max-height: 450px;
@@ -630,7 +642,7 @@
             padding: 16px;
             border-top: 1px solid var(--border);
             background: var(--semantic-color-surface-muted);
-            font-size: 13px;
+            font-size: var(--font-size-xs);
           "
         >
           <div
@@ -734,7 +746,7 @@
 
       <p
         style="
-          font-size: 13px;
+          font-size: var(--font-size-xs);
           color: var(--semantic-color-text-secondary);
           margin: 8px 0 16px 0;
         "
@@ -780,7 +792,8 @@
             style="
               width: 100%;
               padding: 6px 8px;
-              font-size: 12px;
+              font-size: var(--font-size-md);
+              font-family: var(--semantic-font-mono);
               border-radius: 4px;
               border: 1px solid var(--border);
               background: var(--semantic-color-surface);
@@ -809,7 +822,7 @@
             style="
               width: 100%;
               padding: 6px 8px;
-              font-size: 12px;
+              font-size: var(--font-size-md);
               border-radius: 4px;
               border: 1px solid var(--border);
               background: var(--semantic-color-surface);
@@ -854,7 +867,7 @@
             style="
               width: 100%;
               padding: 6px 8px;
-              font-size: 12px;
+              font-size: var(--font-size-md);
               border-radius: 4px;
               border: 1px solid var(--border);
               background: var(--semantic-color-surface);
@@ -891,7 +904,7 @@
             style="
               width: 100%;
               padding: 6px 8px;
-              font-size: 12px;
+              font-size: var(--font-size-md);
               border-radius: 4px;
               border: 1px solid var(--border);
               background: var(--semantic-color-surface);
@@ -921,7 +934,7 @@
             style="
               width: 100%;
               padding: 6px 8px;
-              font-size: 12px;
+              font-size: var(--font-size-md);
               border-radius: 4px;
               border: 1px solid var(--border);
               background: var(--semantic-color-surface);
@@ -952,7 +965,8 @@
             style="
               width: 100%;
               padding: 6px 8px;
-              font-size: 12px;
+              font-size: var(--font-size-md);
+              font-family: var(--semantic-font-mono);
               border-radius: 4px;
               border: 1px solid var(--border);
               background: var(--semantic-color-surface);
@@ -971,14 +985,22 @@
         >
           <button
             class="btn btn-secondary btn-clear-filters"
-            style="padding: 6px 12px; font-size: 12px; cursor: pointer"
+            style="
+              padding: 6px 12px;
+              font-size: var(--font-size-2xs);
+              cursor: pointer;
+            "
             @click="clearFilters"
           >
             Clear Filters
           </button>
           <button
             class="btn btn-primary btn-apply-filters"
-            style="padding: 6px 12px; font-size: 12px; cursor: pointer"
+            style="
+              padding: 6px 12px;
+              font-size: var(--font-size-2xs);
+              cursor: pointer;
+            "
             :disabled="auditLoading"
             @click="applyFilters"
           >
@@ -991,7 +1013,11 @@
       <div style="overflow-x: auto">
         <table
           class="clinical-table audit-ledger-table"
-          style="width: 100%; border-collapse: collapse; font-size: 13px"
+          style="
+            width: 100%;
+            border-collapse: collapse;
+            font-size: var(--font-size-xs);
+          "
         >
           <thead>
             <tr
@@ -1056,10 +1082,16 @@
                 >
                   {{ formatTimestamp(log.timestamp) }}
                 </td>
-                <td style="padding: 10px; font-weight: 500">
+                <td
+                  style="
+                    padding: 10px;
+                    font-weight: 500;
+                    font-family: var(--semantic-font-mono);
+                  "
+                >
                   {{ log.user_id }}
                 </td>
-                <td style="padding: 10px; font-size: 12px">
+                <td style="padding: 10px; font-size: var(--font-size-2xs)">
                   <span
                     class="badge"
                     style="
@@ -1079,7 +1111,13 @@
                     {{ log.action }}
                   </span>
                 </td>
-                <td style="padding: 10px; font-size: 12px; line-height: 1.4">
+                <td
+                  style="
+                    padding: 10px;
+                    font-size: var(--font-size-2xs);
+                    line-height: 1.4;
+                  "
+                >
                   {{ log.details }}
                 </td>
                 <td style="padding: 10px; text-align: right">
@@ -1117,7 +1155,7 @@
                       display: flex;
                       flex-direction: column;
                       gap: 12px;
-                      font-size: 12px;
+                      font-size: var(--font-size-2xs);
                     "
                   >
                     <!-- Header Info -->
@@ -1135,6 +1173,7 @@
                         <code
                           style="
                             margin-left: 6px;
+                            font-family: var(--semantic-font-mono);
                             font-size: var(--font-size-2xs);
                           "
                           >{{ log.id }}</code
@@ -1148,9 +1187,10 @@
                       >
                         Actor Role: <strong>{{ log.user_role }}</strong> |
                         Record:
-                        <strong>{{
-                          log.record_id || log.document_id || "-"
-                        }}</strong>
+                        <strong
+                          style="font-family: var(--semantic-font-mono)"
+                          >{{ log.record_id || log.document_id || "-" }}</strong
+                        >
                       </div>
                     </div>
 
@@ -1215,6 +1255,7 @@
                         <pre
                           style="
                             margin: 0;
+                            font-family: var(--semantic-font-mono);
                             font-size: var(--font-size-2xs);
                             white-space: pre-wrap;
                             word-break: break-all;
@@ -1253,6 +1294,7 @@
                         <pre
                           style="
                             margin: 0;
+                            font-family: var(--semantic-font-mono);
                             font-size: var(--font-size-2xs);
                             white-space: pre-wrap;
                             word-break: break-all;
@@ -1282,13 +1324,14 @@
                       "
                     >
                       <div style="display: flex; align-items: center; gap: 8px">
-                        <span style="font-size: 14px">🛡️</span>
+                        <span style="font-size: var(--font-size-sm)">🛡️</span>
                         <span
                           ><strong>Cryptographic SHA-256 Digest:</strong></span
                         >
                         <code
                           class="hash-code"
                           style="
+                            font-family: var(--semantic-font-mono);
                             font-size: var(--font-size-2xs);
                             color: var(--text-main);
                             word-break: break-all;
@@ -1323,7 +1366,10 @@
         "
       >
         <span
-          style="font-size: 12px; color: var(--semantic-color-text-secondary)"
+          style="
+            font-size: var(--font-size-2xs);
+            color: var(--semantic-color-text-secondary);
+          "
         >
           Showing records {{ offset + 1 }} to
           {{ Math.min(offset + limit, totalLogs) }} of {{ totalLogs }}
@@ -1331,7 +1377,11 @@
         <div style="display: flex; gap: 8px">
           <button
             class="btn btn-secondary btn-prev-page"
-            style="padding: 4px 12px; font-size: 12px; cursor: pointer"
+            style="
+              padding: 4px 12px;
+              font-size: var(--font-size-2xs);
+              cursor: pointer;
+            "
             :disabled="offset === 0 || auditLoading"
             @click="prevPage"
           >
@@ -1339,7 +1389,11 @@
           </button>
           <button
             class="btn btn-secondary btn-next-page"
-            style="padding: 4px 12px; font-size: 12px; cursor: pointer"
+            style="
+              padding: 4px 12px;
+              font-size: var(--font-size-2xs);
+              cursor: pointer;
+            "
             :disabled="offset + limit >= totalLogs || auditLoading"
             @click="nextPage"
           >
@@ -1369,7 +1423,7 @@
 
       <p
         style="
-          font-size: 13px;
+          font-size: var(--font-size-xs);
           color: var(--semantic-color-text-secondary);
           margin: 8px 0 16px 0;
         "
@@ -1415,7 +1469,7 @@
             style="
               width: 100%;
               padding: 6px 8px;
-              font-size: 12px;
+              font-size: var(--font-size-md);
               border-radius: 4px;
               border: 1px solid var(--border);
               background: var(--semantic-color-surface);
@@ -1444,7 +1498,7 @@
             style="
               width: 100%;
               padding: 6px 8px;
-              font-size: 12px;
+              font-size: var(--font-size-md);
               border-radius: 4px;
               border: 1px solid var(--border);
               background: var(--semantic-color-surface);
@@ -1479,7 +1533,7 @@
             style="
               width: 100%;
               padding: 6px 8px;
-              font-size: 12px;
+              font-size: var(--font-size-md);
               border-radius: 4px;
               border: 1px solid var(--border);
               background: var(--semantic-color-surface);
@@ -1498,7 +1552,11 @@
         >
           <button
             class="btn btn-primary btn-run-completeness"
-            style="padding: 6px 12px; font-size: 12px; cursor: pointer"
+            style="
+              padding: 6px 12px;
+              font-size: var(--font-size-2xs);
+              cursor: pointer;
+            "
             :disabled="
               completenessLoading || !completenessParams.study_id.trim()
             "
@@ -1558,7 +1616,7 @@
             "
           >
             <div style="display: flex; align-items: center; gap: 8px">
-              <span style="font-size: 20px">{{
+              <span style="font-size: var(--font-size-lg)">{{
                 completenessResult.is_complete ? "🟢" : "🟡"
               }}</span>
               <div>
@@ -1567,7 +1625,7 @@
                     color: completenessResult.is_complete
                       ? 'var(--semantic-color-success)'
                       : 'var(--semantic-color-warning)',
-                    fontSize: '15px',
+                    fontSize: 'var(--font-size-base)',
                   }"
                 >
                   {{
@@ -1578,7 +1636,7 @@
                 </strong>
                 <p
                   style="
-                    font-size: 12px;
+                    font-size: var(--font-size-2xs);
                     margin: 4px 0 0 0;
                     color: var(--semantic-color-text);
                   "
@@ -1592,7 +1650,7 @@
                 </p>
               </div>
             </div>
-            <div style="font-size: 13px; font-weight: 600">
+            <div style="font-size: var(--font-size-xs); font-weight: 600">
               Score:
               {{
                 (completenessResult.present_artifacts &&
@@ -1616,7 +1674,11 @@
         <div style="overflow-x: auto">
           <table
             class="clinical-table"
-            style="width: 100%; border-collapse: collapse; font-size: 13px"
+            style="
+              width: 100%;
+              border-collapse: collapse;
+              font-size: var(--font-size-xs);
+            "
           >
             <thead>
               <tr
@@ -1693,7 +1755,7 @@
                     v-else
                     style="
                       color: var(--semantic-color-text-secondary);
-                      font-size: 12px;
+                      font-size: var(--font-size-2xs);
                       font-style: italic;
                     "
                     >Missing Document</span

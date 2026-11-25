@@ -80,10 +80,19 @@
         margin-bottom: 16px;
       "
     >
-      <p style="color: var(--danger); font-weight: bold; font-size: 16px">
+      <p
+        style="
+          color: var(--danger);
+          font-weight: bold;
+          font-size: var(--font-size-md);
+        "
+      >
         Failed to load consent form.
       </p>
-      <p id="consent-error-msg" style="font-size: 14px; margin-bottom: 12px">
+      <p
+        id="consent-error-msg"
+        style="font-size: var(--font-size-sm); margin-bottom: 12px"
+      >
         Unknown error
       </p>
       <button id="btn-retry-consent" type="button" class="btn btn-primary">
@@ -104,7 +113,7 @@
         <div
           id="consent-metadata-display"
           style="
-            font-size: 12px;
+            font-size: var(--font-size-2xs);
             color: var(--text-muted);
             border-bottom: 1px solid var(--semantic-color-border);
             padding-bottom: 12px;
@@ -139,7 +148,11 @@
           <span>Step 1: Quick Understanding Check</span>
         </h3>
         <p
-          style="font-size: 14px; color: var(--text-muted); margin-bottom: 16px"
+          style="
+            font-size: var(--font-size-sm);
+            color: var(--text-muted);
+            margin-bottom: 16px;
+          "
         >
           Please answer these short questions to confirm the key study details,
           benefits, and risks.
@@ -153,7 +166,7 @@
             padding: 12px;
             border-radius: 6px;
             margin-bottom: 16px;
-            font-size: 14px;
+            font-size: var(--font-size-sm);
             font-weight: 600;
           "
           role="status"
@@ -190,7 +203,11 @@
           <span>Step 2: Quick Camera Check</span>
         </h3>
         <p
-          style="font-size: 14px; color: var(--text-muted); margin-bottom: 16px"
+          style="
+            font-size: var(--font-size-sm);
+            color: var(--text-muted);
+            margin-bottom: 16px;
+          "
         >
           Please complete a quick camera check so we can confirm it is really
           you signing. Your camera preview stays in temporary memory and no
@@ -205,7 +222,7 @@
             padding: 12px;
             border-radius: 6px;
             margin-bottom: 16px;
-            font-size: 14px;
+            font-size: var(--font-size-sm);
             font-weight: 600;
           "
           role="status"
@@ -228,11 +245,17 @@
           <div style="margin-bottom: 8px">
             <ClinicalIcon name="camera" :size="32" />
           </div>
-          <p style="margin: 0; font-size: 14px; font-weight: 500">
+          <p
+            style="margin: 0; font-size: var(--font-size-sm); font-weight: 500"
+          >
             Camera Ready for Quick Check
           </p>
           <p
-            style="margin: 4px 0 0 0; font-size: 12px; color: var(--text-muted)"
+            style="
+              margin: 4px 0 0 0;
+              font-size: var(--font-size-2xs);
+              color: var(--text-muted);
+            "
           >
             Center your face in view, then select Complete Camera Check.
           </p>
@@ -271,7 +294,11 @@
           <span>Step 3: Electronic Signature</span>
         </h3>
         <p
-          style="font-size: 14px; color: var(--text-muted); margin-bottom: 12px"
+          style="
+            font-size: var(--font-size-sm);
+            color: var(--text-muted);
+            margin-bottom: 12px;
+          "
         >
           By signing this document, you confirm that you have read this informed
           consent, have passed the verification, and agree to participate.
@@ -336,7 +363,11 @@
           <span>Informed Consent Signed &amp; Archived</span>
         </h3>
         <p
-          style="margin: 0; font-size: 14px; color: var(--semantic-color-text)"
+          style="
+            margin: 0;
+            font-size: var(--font-size-sm);
+            color: var(--semantic-color-text);
+          "
         >
           Your electronic signature has been verified and recorded for this
           study consent version.

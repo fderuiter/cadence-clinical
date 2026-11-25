@@ -258,7 +258,7 @@ function handleClick(event) {
   background: transparent;
   color: var(--color-text);
   font-family: var(--font-sans);
-  font-size: 0.8125rem;
+  font-size: var(--font-size-xs);
   font-weight: 500;
   line-height: 1.25;
   text-align: left;
@@ -299,7 +299,7 @@ function handleClick(event) {
 
 .entity-link__code {
   font-family: var(--font-mono);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   color: var(--text-muted);
 }
 

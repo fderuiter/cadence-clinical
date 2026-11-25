@@ -30,7 +30,7 @@
         background: var(--semantic-color-error-bg);
         border: 1px solid var(--semantic-color-error);
         color: var(--semantic-color-error);
-        font-size: 14px;
+        font-size: var(--font-size-sm);
         font-weight: 600;
       "
     >
@@ -54,10 +54,19 @@
         margin-bottom: 16px;
       "
     >
-      <p style="color: var(--danger); font-weight: bold; font-size: 16px">
+      <p
+        style="
+          color: var(--danger);
+          font-weight: bold;
+          font-size: var(--font-size-md);
+        "
+      >
         Failed to load assigned tasks.
       </p>
-      <p id="tasks-error-msg" style="font-size: 14px; margin-bottom: 12px">
+      <p
+        id="tasks-error-msg"
+        style="font-size: var(--font-size-sm); margin-bottom: 12px"
+      >
         Unknown error
       </p>
       <button id="btn-retry-tasks" type="button" class="btn btn-primary">
@@ -96,7 +105,7 @@
           id="btn-sync-now"
           type="button"
           class="btn btn-secondary"
-          style="padding: 6px 12px; font-size: 13px"
+          style="padding: 6px 12px; font-size: var(--font-size-xs)"
         >
           Sync Now
         </button>
@@ -104,7 +113,7 @@
       <div
         id="sync-queue-status-text"
         class="text-muted"
-        style="font-size: 14px; margin-bottom: 12px"
+        style="font-size: var(--font-size-sm); margin-bottom: 12px"
         role="status"
         aria-live="polite"
       >

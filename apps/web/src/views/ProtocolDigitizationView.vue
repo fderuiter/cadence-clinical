@@ -399,7 +399,7 @@
             <p
               style="
                 margin: 0 0 12px 0;
-                font-size: 0.85rem;
+                font-size: var(--font-size-sm);
                 color: var(--semantic-color-warning-text);
               "
             >
@@ -1313,7 +1313,7 @@ const commitAndActivateEDC = async () => {
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -1330,7 +1330,7 @@ const commitAndActivateEDC = async () => {
 }
 
 .step-label {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--semantic-color-text-body);
 }
@@ -1369,19 +1369,19 @@ const commitAndActivateEDC = async () => {
 }
 
 .dropzone-icon {
-  font-size: 3rem;
+  font-size: var(--font-size-5xl);
   margin-bottom: 12px;
 }
 
 .dropzone-title {
-  font-size: 1.1rem;
+  font-size: var(--font-size-lg);
   font-weight: 700;
   margin: 0 0 6px 0;
   color: var(--text-main);
 }
 
 .dropzone-hint {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-secondary);
   margin: 0 0 16px 0;
 }
@@ -1397,7 +1397,7 @@ const commitAndActivateEDC = async () => {
   color: var(--semantic-color-text-body);
   padding: 4px 10px;
   border-radius: 4px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
 }
 
@@ -1417,7 +1417,7 @@ const commitAndActivateEDC = async () => {
 
 .file-hash-row {
   margin-top: 8px;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -1456,7 +1456,7 @@ const commitAndActivateEDC = async () => {
 .extraction-header p {
   margin: 0 0 20px 0;
   color: var(--semantic-color-text-secondary);
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
 }
 
 .progress-bar-container {
@@ -1475,7 +1475,7 @@ const commitAndActivateEDC = async () => {
 }
 
 .progress-percentage-label {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   font-weight: 700;
   color: var(--semantic-color-success);
   text-align: right;
@@ -1510,13 +1510,13 @@ const commitAndActivateEDC = async () => {
 }
 
 .stage-name {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--semantic-color-text-dark);
 }
 
 .stage-desc {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -1532,7 +1532,7 @@ const commitAndActivateEDC = async () => {
 }
 
 .confidence-title {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-weight: 700;
   color: var(--semantic-color-success-dark);
 }
@@ -1551,7 +1551,7 @@ const commitAndActivateEDC = async () => {
 }
 
 .confidence-value {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-weight: 700;
   color: var(--semantic-color-success-dark);
 }
@@ -1578,14 +1578,14 @@ const commitAndActivateEDC = async () => {
 }
 
 .meta-label {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   color: var(--semantic-color-text-secondary);
   text-transform: uppercase;
 }
 
 .meta-value {
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
   font-weight: 700;
   color: var(--semantic-color-text-dark);
 }
@@ -1596,7 +1596,7 @@ const commitAndActivateEDC = async () => {
   color: var(--semantic-color-info);
   padding: 2px 8px;
   border-radius: 4px;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   width: fit-content;
 }
 
@@ -1612,7 +1612,7 @@ const commitAndActivateEDC = async () => {
   color: var(--semantic-color-text-inverse);
   padding: 16px;
   border-radius: 6px;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   overflow-x: auto;
   max-height: 480px;
 }
@@ -1630,7 +1630,7 @@ const commitAndActivateEDC = async () => {
 .synthesis-header p {
   margin: 0 0 20px 0;
   color: var(--semantic-color-text-secondary);
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
 }
 
 .synthesized-forms-grid {
@@ -1656,7 +1656,7 @@ const commitAndActivateEDC = async () => {
 }
 
 .domain-badge {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 2px 8px;
   border-radius: 4px;
@@ -1684,13 +1684,13 @@ const commitAndActivateEDC = async () => {
 }
 
 .field-count {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
 }
 
 .form-title {
   margin: 0 0 8px 0;
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
   font-weight: 600;
   color: var(--semantic-color-text-dark);
 }
@@ -1699,7 +1699,7 @@ const commitAndActivateEDC = async () => {
   list-style: none;
   padding: 0;
   margin: 0 0 12px 0;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -1708,7 +1708,7 @@ const commitAndActivateEDC = async () => {
 }
 
 .widget-pill {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   padding: 4px 8px;
   border-radius: 4px;
@@ -1735,7 +1735,7 @@ const commitAndActivateEDC = async () => {
 
 .gxp-label {
   display: block;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-dark);
   margin-bottom: 8px;
 }
@@ -1745,13 +1745,13 @@ const commitAndActivateEDC = async () => {
   padding: 8px 12px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
-  font-size: 0.9rem;
+  font-size: var(--font-size-md);
 }
 
 .btn-commit-edc {
   background-color: var(--semantic-color-success);
   border-color: var(--semantic-color-success);
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
   padding: 10px 20px;
 }
 
@@ -1767,7 +1767,7 @@ const commitAndActivateEDC = async () => {
 }
 
 .success-icon {
-  font-size: 2rem;
+  font-size: var(--font-size-4xl);
 }
 
 .success-title {
@@ -1779,7 +1779,7 @@ const commitAndActivateEDC = async () => {
 .success-desc {
   margin: 0 0 16px 0;
   color: var(--semantic-color-success);
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
 }
 
 .success-actions {
@@ -1805,7 +1805,7 @@ const commitAndActivateEDC = async () => {
 .escalation-header h4 {
   margin: 0;
   color: var(--semantic-color-warning-text);
-  font-size: 1.1rem;
+  font-size: var(--font-size-lg);
 }
 
 .badge-escalation {
@@ -1814,7 +1814,7 @@ const commitAndActivateEDC = async () => {
   padding: 4px 8px;
   border-radius: 4px;
   font-weight: 700;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
 }
 
 .escalation-description {
@@ -1895,7 +1895,7 @@ const commitAndActivateEDC = async () => {
   border: 2px solid var(--semantic-color-border);
   border-radius: 8px;
   font-weight: 700;
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
   color: var(--semantic-color-text-secondary);
   cursor: pointer;
   transition: all 0.2s ease;

@@ -1715,7 +1715,7 @@ onMounted(() => {
 }
 
 .badge {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 2px 8px;
   border-radius: 4px;
@@ -1754,14 +1754,14 @@ onMounted(() => {
 }
 
 .console-title {
-  font-size: 1.5rem;
+  font-size: var(--font-size-2xl);
   font-weight: 700;
   color: var(--semantic-color-text);
   margin: 0;
 }
 
 .console-subtitle {
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-secondary);
   margin: 0;
 }
@@ -1778,7 +1778,7 @@ onMounted(() => {
 .role-note {
   margin: 0;
   padding: 8px 12px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-warning-text);
   background: var(--semantic-color-warning-bg-soft);
   border: 1px solid var(--semantic-color-warning-border);
@@ -1791,7 +1791,7 @@ onMounted(() => {
   align-items: flex-start;
   padding: 12px 14px;
   border-radius: 6px;
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
 }
 
 .alert-danger {
@@ -1827,7 +1827,7 @@ onMounted(() => {
   gap: 8px;
   min-width: 0;
   max-width: 100%;
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--semantic-color-text-body);
   min-width: 0;
@@ -1839,7 +1839,7 @@ onMounted(() => {
   padding: 6px 12px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
-  font-size: 0.875rem;
+  font-size: var(--font-size-md);
   background: var(--semantic-color-surface);
   color: var(--semantic-color-text);
   min-width: 0;
@@ -1877,20 +1877,20 @@ onMounted(() => {
 }
 
 .metric-label {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   color: var(--semantic-color-text-secondary);
   text-transform: uppercase;
 }
 
 .metric-value {
-  font-size: 1.8rem;
+  font-size: var(--font-size-3xl);
   font-weight: 800;
   color: var(--semantic-color-text);
 }
 
 .metric-sub {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-subtle);
 }
 
@@ -1919,7 +1919,7 @@ onMounted(() => {
 }
 
 .selection-count-text {
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-info);
 }
 
@@ -1927,7 +1927,7 @@ onMounted(() => {
   padding: 8px 16px;
   border-radius: 6px;
   font-weight: 600;
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -1962,7 +1962,7 @@ onMounted(() => {
 .btn-counter-badge {
   background: var(--semantic-color-surface);
   color: var(--semantic-color-interactive-primary);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 800;
   border-radius: 999px;
   padding: 2px 8px;
@@ -1986,7 +1986,7 @@ onMounted(() => {
 .matrix-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   text-align: left;
 }
 
@@ -2028,12 +2028,12 @@ onMounted(() => {
 }
 
 .site-name-text {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-secondary);
 }
 
 .site-jurisdiction-tag {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   color: var(--text-main);
   font-weight: 600;
 }
@@ -2062,7 +2062,7 @@ onMounted(() => {
 }
 
 .readiness-score-badge {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-weight: 800;
   padding: 2px 8px;
   border-radius: 12px;
@@ -2087,7 +2087,7 @@ onMounted(() => {
 }
 
 .status-chip {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 3px 8px;
   border-radius: 12px;
@@ -2131,7 +2131,7 @@ onMounted(() => {
 }
 
 .banner-icon {
-  font-size: 1.5rem;
+  font-size: var(--font-size-2xl);
 }
 
 .banner-tokens-list {
@@ -2146,7 +2146,7 @@ onMounted(() => {
 
 .token-code {
   font-family: var(--semantic-font-mono);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-success-dark);
 }
 
@@ -2191,7 +2191,7 @@ onMounted(() => {
 
 .modal-header h3 {
   margin: 0;
-  font-size: 1.1rem;
+  font-size: var(--font-size-lg);
   font-weight: 700;
   color: var(--semantic-color-text);
 }
@@ -2221,7 +2221,7 @@ onMounted(() => {
   color: var(--semantic-color-info);
   padding: 4px 8px;
   border-radius: 4px;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   font-weight: 700;
 }
 
@@ -2237,7 +2237,7 @@ onMounted(() => {
 
 .esign-title {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
   font-weight: 700;
   color: var(--semantic-color-warning-text);
 }
@@ -2258,7 +2258,7 @@ onMounted(() => {
   padding: 8px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
-  font-size: 0.875rem;
+  font-size: var(--font-size-md);
   background: var(--semantic-color-surface);
   color: var(--semantic-color-text);
 }
@@ -2275,7 +2275,7 @@ onMounted(() => {
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 1rem;
+  font-size: var(--font-size-md);
 }
 
 /* Scorecard Grid for Single View */
@@ -2321,7 +2321,7 @@ onMounted(() => {
 }
 
 .facet-icon {
-  font-size: 1.2rem;
+  font-size: var(--font-size-lg);
 }
 
 .facet-titles {
@@ -2332,12 +2332,12 @@ onMounted(() => {
 
 .facet-name {
   font-weight: 700;
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text);
 }
 
 .facet-rule-tag {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -2359,7 +2359,7 @@ onMounted(() => {
 }
 
 .facet-desc {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-secondary);
   margin: 0;
 }
@@ -2394,7 +2394,7 @@ onMounted(() => {
 }
 
 .gauge-text {
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   font-weight: 700;
 }
 

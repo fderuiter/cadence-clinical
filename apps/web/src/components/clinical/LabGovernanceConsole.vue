@@ -2885,7 +2885,7 @@ onMounted(() => {
 
 .console-title {
   margin: 0;
-  font-size: 1.25rem;
+  font-size: var(--font-size-lg);
   font-weight: 700;
   color: var(--semantic-color-text);
 }
@@ -2894,7 +2894,7 @@ onMounted(() => {
   display: flex;
   gap: 1rem;
   margin-top: 0.5rem;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 
 .header-actions {
@@ -2915,7 +2915,7 @@ onMounted(() => {
   padding: 0.75rem 1.25rem;
   border: none;
   background: transparent;
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--semantic-color-text-secondary);
   cursor: pointer;
@@ -2960,14 +2960,14 @@ onMounted(() => {
   padding: 0.75rem 1rem;
   border-radius: 6px;
   color: var(--semantic-color-error-text-dark);
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 
 .filter-group {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 
 .text-input,
@@ -2976,7 +2976,7 @@ onMounted(() => {
   padding: 0.5rem 0.75rem;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-md);
   background-color: var(--semantic-color-surface);
 }
 
@@ -2987,7 +2987,7 @@ onMounted(() => {
 .data-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   text-align: left;
 }
 
@@ -3022,13 +3022,13 @@ onMounted(() => {
 
 .mini-tag {
   background: var(--semantic-color-surface-header);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   padding: 0.15rem 0.35rem;
   border-radius: 3px;
 }
 
 .status-pill {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   padding: 0.25rem 0.5rem;
   border-radius: 9999px;
@@ -3063,7 +3063,7 @@ onMounted(() => {
   padding: 0.25rem 0.5rem;
   font-weight: 700;
   border-radius: 4px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-variant-numeric: var(--font-variant-numeric-tabular);
 }
 
@@ -3095,7 +3095,7 @@ onMounted(() => {
 }
 
 .safety-tag {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   padding: 0.2rem 0.4rem;
   border-radius: 4px;
   font-weight: 700;
@@ -3113,7 +3113,7 @@ onMounted(() => {
 .btn {
   padding: 0.5rem 0.875rem;
   font-weight: 600;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   border-radius: 4px;
   cursor: pointer;
   border: 1px solid transparent;
@@ -3121,7 +3121,7 @@ onMounted(() => {
 
 .btn-sm {
   padding: 0.25rem 0.5rem;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
 }
 .btn-primary {
   background: var(--semantic-color-interactive-primary);
@@ -3171,7 +3171,7 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   margin-bottom: 0.25rem;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 
 .modal-backdrop {
@@ -3245,7 +3245,7 @@ onMounted(() => {
 }
 
 .kpi-label {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   text-transform: uppercase;
   font-weight: 700;
   color: var(--semantic-color-text-muted);
@@ -3253,14 +3253,14 @@ onMounted(() => {
 }
 
 .kpi-value {
-  font-size: 1.35rem;
+  font-size: var(--font-size-xl);
   font-weight: 800;
   color: var(--text-main);
   font-variant-numeric: var(--font-variant-numeric-tabular);
 }
 
 .kpi-sub {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-secondary);
   font-variant-numeric: var(--font-variant-numeric-tabular);
 }
@@ -3285,7 +3285,7 @@ onMounted(() => {
 
 .chart-header h4 {
   margin: 0;
-  font-size: 1rem;
+  font-size: var(--font-size-md);
   font-weight: 700;
   color: var(--text-main);
 }
@@ -3293,7 +3293,7 @@ onMounted(() => {
 .chart-legend {
   display: flex;
   gap: 1rem;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-secondary);
   flex-wrap: wrap;
 }
@@ -3337,7 +3337,7 @@ onMounted(() => {
 }
 
 .delta-tag {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   padding: 0.2rem 0.45rem;
   border-radius: 4px;
   font-weight: 700;
@@ -3374,7 +3374,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 1rem;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
 }
 
@@ -3389,12 +3389,12 @@ onMounted(() => {
   border-radius: 6px;
   padding: 0.75rem 1rem;
   color: var(--semantic-color-error-text-dark);
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 
 .error-summary h5 {
   margin: 0 0 0.5rem 0;
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
   font-weight: 700;
 }
 
@@ -3413,7 +3413,7 @@ onMounted(() => {
   color: var(--semantic-color-error);
   padding: 0.25rem 0.5rem;
   border-radius: 4px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   cursor: pointer;
 }
 
@@ -3425,7 +3425,7 @@ onMounted(() => {
   display: block;
   width: 100%;
   padding: 0.4rem;
-  font-size: 0.85rem;
+  font-size: var(--font-size-md);
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
 }

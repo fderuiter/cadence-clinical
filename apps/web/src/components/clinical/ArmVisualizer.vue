@@ -148,14 +148,14 @@ const formatArmType = (type) => {
 
 .title {
   margin: 0;
-  font-size: 1.05rem;
+  font-size: var(--font-size-md);
   font-weight: 700;
   color: var(--text-main);
 }
 
 .subtitle {
   margin: 4px 0 0 0;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -169,7 +169,7 @@ const formatArmType = (type) => {
   border: 1px solid var(--semantic-color-border-control);
   padding: 4px 10px;
   border-radius: 6px;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-body);
 }
 
@@ -201,7 +201,7 @@ const formatArmType = (type) => {
 }
 
 .arm-type-badge {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 2px 8px;
   border-radius: 4px;
@@ -230,21 +230,21 @@ const formatArmType = (type) => {
 }
 
 .sample-badge {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   color: var(--semantic-color-text);
 }
 
 .arm-name {
   margin: 0 0 4px 0;
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
   font-weight: 600;
   color: var(--semantic-color-text-dark);
 }
 
 .arm-desc {
   margin: 0 0 12px 0;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-secondary);
   line-height: 1.4;
 }
@@ -273,7 +273,7 @@ const formatArmType = (type) => {
 }
 
 .epoch-block-name {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   margin: 2px 0;
 }
@@ -318,7 +318,7 @@ const formatArmType = (type) => {
 
 .sequence-title {
   margin: 0 0 10px 0;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-weight: 700;
   color: var(--semantic-color-text-body);
 }
@@ -347,7 +347,7 @@ const formatArmType = (type) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
 }
 
@@ -373,7 +373,7 @@ const formatArmType = (type) => {
 }
 
 .step-name {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   color: var(--semantic-color-text-dark);
 }
@@ -385,6 +385,6 @@ const formatArmType = (type) => {
 
 .sequence-arrow {
   color: var(--semantic-color-text-secondary);
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
 }
 </style>

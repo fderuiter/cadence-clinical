@@ -1067,12 +1067,12 @@ onMounted(() => {
 
 .subpanel h4 {
   margin: 0;
-  font-size: 0.98rem;
+  font-size: var(--font-size-md);
 }
 
 .subpanel-meta {
   margin: 0;
-  font-size: 0.88rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-secondary);
   font-variant-numeric: tabular-nums;
 }
@@ -1102,7 +1102,7 @@ onMounted(() => {
 .milestone-list {
   margin: 6px 0 0;
   padding-left: 18px;
-  font-size: 0.86rem;
+  font-size: var(--font-size-sm);
 }
 
 .kit-toolbar {
@@ -1116,13 +1116,13 @@ onMounted(() => {
 .unavailable-note {
   margin: 0;
   color: var(--semantic-color-text-secondary);
-  font-size: 0.88rem;
+  font-size: var(--font-size-sm);
 }
 
 .self-approval-note {
   display: block;
   margin-top: 4px;
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
 }
 

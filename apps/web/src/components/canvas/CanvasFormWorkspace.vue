@@ -10,8 +10,13 @@
           {{ workspaceTitle }}
         </h2>
         <span v-if="participant" class="workspace-meta">
-          {{ participant.subject_id }} ·
-          {{ participant.site_id ? `Site ${participant.site_id}` : "No site" }}
+          <span class="workspace-meta-code">{{ participant.subject_id }}</span>
+          ·
+          <template v-if="participant.site_id">
+            Site
+            <span class="workspace-meta-code">{{ participant.site_id }}</span>
+          </template>
+          <template v-else>No site</template>
         </span>
       </div>
       <router-link
@@ -209,7 +214,7 @@ const enrollmentContext = computed<CanvasFormEnrollmentContext | null>(() => {
 .back {
   align-self: flex-start;
   color: var(--semantic-color-interactive-primary);
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 
 .workspace-header {
@@ -228,20 +233,27 @@ const enrollmentContext = computed<CanvasFormEnrollmentContext | null>(() => {
 }
 
 .workspace-handoff-btn {
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   padding: 4px 10px;
   text-decoration: none;
 }
 
 .workspace-header h2 {
   margin: 0;
-  font-size: 1.1rem;
+  font-size: var(--font-size-lg);
 }
 
 .workspace-meta,
 .status-line {
   margin: 0;
   color: var(--semantic-color-text-secondary);
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
+}
+
+.workspace-meta-code {
+  font-family: var(--semantic-font-mono);
+  font-variant-numeric: var(--font-variant-numeric-tabular);
+  color: var(--semantic-color-text);
+  font-weight: 500;
 }
 </style>

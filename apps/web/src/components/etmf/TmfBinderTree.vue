@@ -667,7 +667,7 @@ function getDocumentCount(node) {
   background-color: var(--semantic-color-interactive-primary);
   color: var(--semantic-color-surface);
   font-weight: 600;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   border: 1px solid var(--semantic-color-interactive-primary);
   border-radius: 6px;
   cursor: pointer;
@@ -694,7 +694,7 @@ function getDocumentCount(node) {
   background-color: var(--semantic-color-surface-muted);
   color: var(--semantic-color-text);
   border: 1px solid var(--semantic-color-border-control);
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   cursor: pointer;
   padding: 4px 8px;
@@ -721,7 +721,7 @@ function getDocumentCount(node) {
   padding: 10px 12px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
-  font-size: 0.9rem;
+  font-size: var(--font-size-md);
   transition: border-color 0.2s;
   box-sizing: border-box;
 }
@@ -736,7 +736,7 @@ function getDocumentCount(node) {
   padding: 8px 10px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-md);
   background-color: var(--semantic-color-surface-muted);
   box-sizing: border-box;
 }
@@ -752,7 +752,7 @@ function getDocumentCount(node) {
   text-align: center;
   color: var(--semantic-color-text-secondary);
   font-style: italic;
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
 }
 
 .tree-node {
@@ -786,7 +786,7 @@ function getDocumentCount(node) {
   cursor: pointer;
   user-select: none;
   transition: background-color 0.2s;
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
 }
 
 .node-header:hover {
@@ -802,7 +802,7 @@ function getDocumentCount(node) {
 .folder-icon,
 .file-icon {
   margin-right: 8px;
-  font-size: 1.1rem;
+  font-size: var(--font-size-lg);
 }
 
 .zone-label {
@@ -819,7 +819,7 @@ function getDocumentCount(node) {
 
 .artifact-code {
   font-family: var(--semantic-font-mono);
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-interactive-primary);
   background-color: var(--semantic-color-info-bg);
   padding: 2px 4px;
@@ -837,7 +837,7 @@ function getDocumentCount(node) {
 .doc-count-badge {
   background-color: var(--semantic-color-primary-dark);
   color: var(--semantic-color-text-on-primary);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 10px;
@@ -853,7 +853,7 @@ function getDocumentCount(node) {
 
 .export-role-note {
   margin: 6px 0 0 0;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
   line-height: 1.35;
 }

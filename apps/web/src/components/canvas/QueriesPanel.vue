@@ -144,13 +144,13 @@ watch(
 
 .queries h3 {
   margin: 0;
-  font-size: 1rem;
+  font-size: var(--font-size-md);
 }
 
 .status-line {
   margin: 0;
   color: var(--neutral-dark);
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 
 .status-line:empty {

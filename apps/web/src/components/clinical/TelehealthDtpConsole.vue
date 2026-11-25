@@ -1465,14 +1465,14 @@ onMounted(() => {
 }
 
 .console-title {
-  font-size: 20px;
+  font-size: var(--font-size-lg);
   font-weight: 700;
   color: var(--semantic-color-text);
   margin: 0 0 6px 0;
 }
 
 .console-subtitle {
-  font-size: 13px;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-secondary);
   margin: 0;
   max-width: 900px;
@@ -1489,7 +1489,7 @@ onMounted(() => {
   align-items: center;
   gap: 6px;
   padding: 8px 14px;
-  font-size: 13px;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   border-radius: var(--radius-md, 6px);
   border: 1px solid transparent;
@@ -1527,7 +1527,7 @@ onMounted(() => {
 
 .btn-sm {
   padding: 6px 12px;
-  font-size: 12px;
+  font-size: var(--font-size-2xs);
 }
 
 .btn-xs {
@@ -1560,11 +1560,11 @@ onMounted(() => {
   width: 44px;
   height: 44px;
   border-radius: var(--radius-md, 8px);
-  font-size: 20px;
+  font-size: var(--font-size-lg);
 }
 
 .metric-value {
-  font-size: 22px;
+  font-size: var(--font-size-xl);
   font-weight: 700;
   color: var(--semantic-color-text);
 }
@@ -1577,7 +1577,7 @@ onMounted(() => {
 
 .tab-button {
   padding: 10px 16px;
-  font-size: 13px;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   background: transparent;
   border: none;
@@ -1607,13 +1607,13 @@ onMounted(() => {
 }
 
 .panel-title {
-  font-size: 16px;
+  font-size: var(--font-size-md);
   font-weight: 700;
   margin: 0 0 4px 0;
 }
 
 .panel-desc {
-  font-size: 12px;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
   margin: 0;
 }
@@ -1625,7 +1625,7 @@ onMounted(() => {
 .data-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 13px;
+  font-size: var(--font-size-xs);
 }
 
 .data-table th {
@@ -1648,7 +1648,7 @@ onMounted(() => {
   background: var(--semantic-color-surface-header);
   padding: 2px 6px;
   border-radius: 4px;
-  font-size: 12px;
+  font-size: var(--font-size-2xs);
 }
 
 .status-chip {
@@ -1711,7 +1711,7 @@ onMounted(() => {
 
 .room-sim-header h4 {
   margin: 4px 0 0 0;
-  font-size: 15px;
+  font-size: var(--font-size-base);
 }
 
 .video-grid {
@@ -1749,10 +1749,10 @@ onMounted(() => {
 }
 
 .avatar-large {
-  font-size: 48px;
+  font-size: var(--font-size-5xl);
 }
 .avatar-small {
-  font-size: 32px;
+  font-size: var(--font-size-4xl);
 }
 
 .video-controls {
@@ -1768,7 +1768,7 @@ onMounted(() => {
   padding: 6px 10px;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 12px;
+  font-size: var(--font-size-2xs);
 }
 
 .token-info-bar {
@@ -1832,19 +1832,19 @@ onMounted(() => {
 
 .clause-box h5 {
   margin: 0 0 4px 0;
-  font-size: 13px;
+  font-size: var(--font-size-xs);
   font-weight: 700;
 }
 
 .clause-box p {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--font-size-2xs);
   line-height: 1.4;
 }
 
 .card-subtitle {
   margin: 0 0 10px 0;
-  font-size: 14px;
+  font-size: var(--font-size-sm);
   font-weight: 700;
 }
 
@@ -1880,13 +1880,13 @@ onMounted(() => {
 
 .modal-header h3 {
   margin: 0;
-  font-size: 16px;
+  font-size: var(--font-size-md);
 }
 
 .btn-close {
   background: transparent;
   border: none;
-  font-size: 16px;
+  font-size: var(--font-size-md);
   cursor: pointer;
 }
 
@@ -1911,14 +1911,14 @@ onMounted(() => {
 }
 
 .form-label {
-  font-size: 12px;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   color: var(--semantic-color-text);
 }
 
 .form-control {
   padding: 8px 10px;
-  font-size: 13px;
+  font-size: var(--font-size-md);
   border: 1px solid var(--border);
   border-radius: 4px;
 }
@@ -1964,7 +1964,7 @@ onMounted(() => {
   font-weight: 700;
 }
 .text-sm {
-  font-size: 12px;
+  font-size: var(--font-size-2xs);
 }
 .text-xs {
   font-size: var(--font-size-2xs);

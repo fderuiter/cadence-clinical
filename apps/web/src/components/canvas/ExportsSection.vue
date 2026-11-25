@@ -330,12 +330,12 @@ async function downloadSnapshot() {
 
 .study-exports-header h2 {
   margin: 0;
-  font-size: 1.2rem;
+  font-size: var(--font-size-lg);
 }
 
 .study-exports-subtitle {
   margin: 4px 0 0;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-body);
 }
 
@@ -366,7 +366,7 @@ async function downloadSnapshot() {
 }
 
 .field-group label {
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   color: var(--semantic-color-text-dark);
 }
@@ -380,7 +380,7 @@ async function downloadSnapshot() {
   padding: 6px 10px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-md);
   color: var(--semantic-color-text);
   background: var(--semantic-color-surface);
 }
@@ -389,13 +389,13 @@ async function downloadSnapshot() {
   .field-group select,
   .field-group input {
     min-height: 44px;
-    font-size: 1rem;
+    font-size: var(--font-size-md);
   }
 }
 
 .privacy-note {
   margin: 0;
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-body);
 }
 
@@ -426,7 +426,7 @@ async function downloadSnapshot() {
   border: 1px solid var(--semantic-color-border-muted);
   background: var(--semantic-color-surface);
   color: var(--semantic-color-text-body);
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
 }
 </style>
 

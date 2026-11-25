@@ -1098,7 +1098,7 @@ const activePersonaLabel = computed(() => {
   const pKey =
     authStore.currentPersona || knowledgeStore.activePersona || "super_admin";
   const p = PERSONA_PRESETS.find((preset) => preset.key === pKey);
-  return p ? p.label.replace(/^.+?\s/, "") : "Super Admin";
+  return p ? p.label.replace(/^[^\p{L}\p{N}]+\s*/u, "") : "Super Admin";
 });
 
 const displayedArticleHtml = computed(() => {
@@ -1757,7 +1757,7 @@ onUnmounted(() => {
 
 .drawer-title {
   margin: 0;
-  font-size: 1.05rem;
+  font-size: var(--font-size-md);
   font-weight: 700;
   color: var(--text-main);
 }
@@ -1799,7 +1799,7 @@ onUnmounted(() => {
 }
 
 .btn-icon-toggle {
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
 }
 
 .btn-icon-toggle.active {
@@ -1808,7 +1808,7 @@ onUnmounted(() => {
 }
 
 .btn-close {
-  font-size: 1rem;
+  font-size: var(--font-size-md);
   line-height: 1;
 }
 
@@ -1844,7 +1844,7 @@ onUnmounted(() => {
   border-radius: 4px;
   background: transparent;
   color: var(--semantic-color-text-secondary);
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   cursor: pointer;
   transition: all 0.15s;
@@ -1878,7 +1878,7 @@ onUnmounted(() => {
   padding: 8px 38px 8px 10px;
   border: 1px solid var(--border);
   border-radius: 6px;
-  font-size: 1rem;
+  font-size: var(--font-size-md);
   background-color: var(--semantic-color-surface);
   color: var(--text-main);
   box-sizing: border-box;
@@ -1891,7 +1891,7 @@ onUnmounted(() => {
 .btn-clear-search {
   position: absolute;
   right: 4px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 
 :deep(.drawer-body) {
@@ -1929,12 +1929,12 @@ onUnmounted(() => {
 .empty-state h4 {
   margin: 0;
   color: var(--text-main);
-  font-size: 0.98rem;
+  font-size: var(--font-size-md);
 }
 
 .empty-state p {
   margin: 0;
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   line-height: 1.4;
 }
 
@@ -1975,7 +1975,7 @@ onUnmounted(() => {
   background: none;
   border: none;
   color: var(--accent);
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   cursor: pointer;
   padding: 0;
@@ -2047,7 +2047,7 @@ onUnmounted(() => {
 
 .sop-title {
   margin: 0;
-  font-size: 1.08rem;
+  font-size: var(--font-size-lg);
   font-weight: 700;
   color: var(--text-main);
   line-height: 1.35;
@@ -2081,7 +2081,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-warning-text);
 }
 
@@ -2102,7 +2102,7 @@ onUnmounted(() => {
   color: var(--semantic-color-warning-text);
   padding: 2px 6px;
   border-radius: 4px;
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   cursor: pointer;
   text-align: left;
@@ -2121,7 +2121,7 @@ onUnmounted(() => {
 }
 
 .body-toggle-label {
-  font-size: 0.76rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   color: var(--semantic-color-text-secondary);
   text-transform: uppercase;
@@ -2132,7 +2132,7 @@ onUnmounted(() => {
   background: transparent;
   border: none;
   color: var(--accent);
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   cursor: pointer;
   padding: 2px 4px;
@@ -2143,7 +2143,7 @@ onUnmounted(() => {
 }
 
 .sop-body {
-  font-size: 0.86rem;
+  font-size: var(--font-size-sm);
   line-height: 1.55;
   color: var(--semantic-color-text-body);
   border-top: 1px dashed var(--semantic-color-border);
@@ -2167,11 +2167,11 @@ onUnmounted(() => {
 }
 
 .sop-body :deep(h2) {
-  font-size: 0.98rem;
+  font-size: var(--font-size-md);
 }
 
 .sop-body :deep(h3) {
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
 }
 
 .sop-body :deep(p) {
@@ -2193,7 +2193,7 @@ onUnmounted(() => {
   padding: 2px 4px;
   border-radius: 3px;
   font-family: var(--semantic-font-mono);
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
 }
 
 .markdown-pre {
@@ -2209,7 +2209,7 @@ onUnmounted(() => {
 
 .related-title {
   margin: 0;
-  font-size: 0.84rem;
+  font-size: var(--font-size-xs);
   font-weight: 700;
   color: var(--semantic-color-text-secondary);
   text-transform: uppercase;
@@ -2262,7 +2262,7 @@ onUnmounted(() => {
 }
 
 .related-card-title {
-  font-size: 0.84rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   color: var(--text-main);
 }
@@ -2290,7 +2290,7 @@ onUnmounted(() => {
 
 .section-subhead h4 {
   margin: 0;
-  font-size: 0.88rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -2298,7 +2298,7 @@ onUnmounted(() => {
   background: none;
   border: none;
   color: var(--accent);
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
   cursor: pointer;
   padding: 0;
 }
@@ -2343,7 +2343,7 @@ onUnmounted(() => {
 
 .result-title {
   margin: 0;
-  font-size: 0.86rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--text-main);
 }
@@ -2352,7 +2352,7 @@ onUnmounted(() => {
   padding: 20px;
   text-align: center;
   color: var(--semantic-color-text-secondary);
-  font-size: 0.84rem;
+  font-size: var(--font-size-xs);
 }
 
 /* Inline Support Tickets Panel */
@@ -2369,7 +2369,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 5px;
-  font-size: 0.76rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -2386,7 +2386,7 @@ onUnmounted(() => {
 
 .btn-compact {
   padding: 5px 10px;
-  font-size: 0.76rem;
+  font-size: var(--font-size-2xs);
 }
 
 .tickets-list {
@@ -2429,7 +2429,7 @@ onUnmounted(() => {
 
 .ticket-ref-code {
   font-family: var(--semantic-font-mono);
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   color: var(--semantic-color-indigo-text);
   background-color: var(--semantic-color-indigo-bg);
@@ -2438,7 +2438,7 @@ onUnmounted(() => {
 }
 
 .drawer-ticket-title {
-  font-size: 0.88rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--primary);
   line-height: 1.35;
@@ -2487,7 +2487,7 @@ onUnmounted(() => {
 
 .ticket-detail-title {
   margin: 0;
-  font-size: 1rem;
+  font-size: var(--font-size-md);
   font-weight: 700;
   color: var(--primary);
   line-height: 1.35;
@@ -2495,7 +2495,7 @@ onUnmounted(() => {
 
 .ticket-detail-description {
   margin: 0;
-  font-size: 0.84rem;
+  font-size: var(--font-size-xs);
   line-height: 1.5;
   color: var(--semantic-color-text-body);
   white-space: pre-wrap;
@@ -2526,7 +2526,7 @@ onUnmounted(() => {
 
 .ticket-meta-item dd {
   margin: 0;
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
   color: var(--primary);
   display: inline-flex;
   align-items: center;
@@ -2558,14 +2558,14 @@ onUnmounted(() => {
 
 .error-alert-title {
   margin: 0;
-  font-size: 0.92rem;
+  font-size: var(--font-size-base);
   font-weight: 700;
   color: var(--semantic-color-error-text-deep);
 }
 
 .error-alert-message {
   margin: 0;
-  font-size: 0.84rem;
+  font-size: var(--font-size-xs);
   line-height: 1.45;
   color: var(--semantic-color-error-text-dark);
 }
@@ -2605,7 +2605,7 @@ onUnmounted(() => {
 
 .auditor-readonly-note {
   margin: 0;
-  font-size: 0.76rem;
+  font-size: var(--font-size-2xs);
   line-height: 1.4;
   color: var(--semantic-color-text-secondary);
   background-color: var(--semantic-color-surface-header);
@@ -2626,7 +2626,7 @@ onUnmounted(() => {
   border: none;
   padding: 0;
   color: var(--semantic-color-interactive-primary);
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   cursor: pointer;
 }
@@ -2637,12 +2637,12 @@ onUnmounted(() => {
 
 .hub-link-sep {
   color: var(--semantic-color-text-secondary);
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
 }
 
 .btn {
   padding: 8px 14px;
-  font-size: 0.84rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   border-radius: 6px;
   cursor: pointer;

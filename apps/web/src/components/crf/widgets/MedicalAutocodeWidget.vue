@@ -125,7 +125,7 @@ const selectTerm = (term) => {
 }
 
 .widget-label {
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--semantic-color-text);
 }
@@ -145,7 +145,7 @@ const selectTerm = (term) => {
   padding: 8px 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius-md, 6px);
-  font-size: 0.9375rem;
+  font-size: var(--font-size-md);
   background-color: var(--semantic-color-surface);
   color: var(--semantic-color-text);
 }
@@ -157,7 +157,7 @@ const selectTerm = (term) => {
 .autocode-spinner {
   position: absolute;
   right: 12px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -195,7 +195,7 @@ const selectTerm = (term) => {
 }
 
 .term-badge {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -204,7 +204,7 @@ const selectTerm = (term) => {
   padding: 4px 8px;
   background-color: var(--semantic-color-info-bg);
   border-left: 3px solid var(--primary);
-  font-size: 0.8125rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-primary-dark);
 }
 </style>

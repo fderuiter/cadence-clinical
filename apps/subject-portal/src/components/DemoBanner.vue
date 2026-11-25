@@ -56,7 +56,7 @@ const showBanner = computed(() => {
   color: var(--semantic-color-warning);
   border-bottom: 1px solid var(--semantic-color-warning);
   padding: 4px 16px;
-  font-size: 13px;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   line-height: 1.35;
 }
@@ -98,7 +98,7 @@ const showBanner = computed(() => {
 @media (max-width: 767px) {
   .demo-mode-banner {
     padding: 6px 12px;
-    font-size: 0.75rem;
+    font-size: var(--font-size-2xs);
     line-height: 1.35;
   }
 }

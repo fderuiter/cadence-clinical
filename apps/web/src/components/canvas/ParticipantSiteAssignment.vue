@@ -168,7 +168,7 @@ async function submit() {
 }
 
 .field label {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
 }
 
@@ -180,7 +180,7 @@ async function submit() {
   background: var(--semantic-color-surface);
   color: var(--semantic-color-text);
   font: inherit;
-  font-size: 0.9rem;
+  font-size: var(--font-size-md);
 }
 
 .site-assign button {

@@ -420,7 +420,7 @@ const MESSAGE_LABELS: Record<string, string> = {
   padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: 8px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   min-width: 0;
   max-width: 100%;
   box-sizing: border-box;
@@ -438,7 +438,7 @@ const MESSAGE_LABELS: Record<string, string> = {
   border-radius: 999px;
   background: var(--neutral-light);
   color: var(--semantic-color-text-dark);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
 }
 .form-query-code {
@@ -454,7 +454,7 @@ const MESSAGE_LABELS: Record<string, string> = {
   color: var(--semantic-color-error-text-dark);
 }
 .form-query-due {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   color: var(--neutral-dark);
   font-variant-numeric: tabular-nums;
 }
@@ -469,7 +469,7 @@ const MESSAGE_LABELS: Record<string, string> = {
 .form-query-sod-hint {
   margin: 0;
   color: var(--neutral-dark);
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
 }
 .form-query-form {
   display: flex;
@@ -488,7 +488,7 @@ const MESSAGE_LABELS: Record<string, string> = {
   .form-query-form textarea,
   .form-query-form input,
   .form-query-form select {
-    font-size: 1rem;
+    font-size: var(--font-size-md);
   }
 }
 .form-query-buttons {

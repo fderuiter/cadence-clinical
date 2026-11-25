@@ -162,7 +162,7 @@ const hasExplanation = computed(
   background: transparent;
   color: var(--color-text);
   font-family: var(--font-sans);
-  font-size: 0.8125rem;
+  font-size: var(--font-size-xs);
   font-weight: 500;
   cursor: pointer;
 }

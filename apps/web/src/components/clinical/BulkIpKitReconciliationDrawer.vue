@@ -964,14 +964,14 @@ onMounted(() => {
 
 .drawer-title {
   margin: 0 0 6px 0;
-  font-size: 1.4rem;
+  font-size: var(--font-size-xl);
   font-weight: 700;
   color: var(--semantic-color-text-inverse);
 }
 
 .drawer-subtitle {
   margin: 0;
-  font-size: 0.88rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-secondary);
   max-width: 800px;
 }
@@ -980,7 +980,7 @@ onMounted(() => {
   background: transparent;
   border: none;
   color: var(--semantic-color-text-secondary);
-  font-size: 1.5rem;
+  font-size: var(--font-size-2xl);
   cursor: pointer;
   padding: 4px 8px;
   border-radius: 4px;
@@ -998,7 +998,7 @@ onMounted(() => {
   padding: 12px 24px;
   background: var(--semantic-color-surface-inverse);
   border-bottom: 1px solid var(--semantic-color-text-dark);
-  font-size: 0.88rem;
+  font-size: var(--font-size-sm);
 }
 
 .context-item {
@@ -1043,7 +1043,7 @@ onMounted(() => {
 
 .scanner-label {
   font-weight: 700;
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
   color: var(--semantic-color-text-inverse);
   display: flex;
   align-items: center;
@@ -1066,7 +1066,7 @@ onMounted(() => {
   border-radius: 6px;
   padding: 10px 14px;
   color: var(--semantic-color-text-inverse);
-  font-size: 1.05rem;
+  font-size: var(--font-size-md);
   font-family: var(--semantic-font-mono);
 }
 
@@ -1076,7 +1076,7 @@ onMounted(() => {
 
 .scanner-help {
   margin: 8px 0 0 0;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -1094,7 +1094,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 0.88rem;
+  font-size: var(--font-size-sm);
 }
 
 .alert-warning {
@@ -1130,7 +1130,7 @@ onMounted(() => {
 }
 
 .metric-num {
-  font-size: 1.4rem;
+  font-size: var(--font-size-xl);
   font-weight: 800;
   color: var(--semantic-color-text-inverse);
 }
@@ -1173,7 +1173,7 @@ onMounted(() => {
 }
 
 .toolbar-label {
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-secondary);
   font-weight: 600;
 }
@@ -1193,7 +1193,7 @@ onMounted(() => {
 }
 
 .empty-icon {
-  font-size: 3rem;
+  font-size: var(--font-size-5xl);
   margin-bottom: 12px;
 }
 .empty-state-box h3 {
@@ -1205,7 +1205,7 @@ onMounted(() => {
   color: var(--semantic-color-text-secondary);
   max-width: 500px;
   margin: 0 auto;
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
 }
 
 .table-container {
@@ -1215,7 +1215,7 @@ onMounted(() => {
 .batch-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.88rem;
+  font-size: var(--font-size-sm);
   background: var(--semantic-color-surface-elevated);
   border-radius: 8px;
   overflow: hidden;
@@ -1228,7 +1228,7 @@ onMounted(() => {
   padding: 12px 14px;
   font-weight: 700;
   border-bottom: 2px solid var(--semantic-color-border-inverse);
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   text-transform: uppercase;
 }
 
@@ -1262,7 +1262,7 @@ onMounted(() => {
   border-radius: 4px;
   padding: 4px 6px;
   color: var(--semantic-color-text-inverse);
-  font-size: 0.82rem;
+  font-size: var(--font-size-md);
 }
 
 .select-sm {
@@ -1271,7 +1271,7 @@ onMounted(() => {
   border-radius: 4px;
   padding: 6px 8px;
   color: var(--semantic-color-text-inverse);
-  font-size: 0.82rem;
+  font-size: var(--font-size-md);
 }
 
 .disp-returned_to_site {
@@ -1288,7 +1288,7 @@ onMounted(() => {
 }
 
 .status-flag {
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 4px;
@@ -1312,7 +1312,7 @@ onMounted(() => {
   border: none;
   color: var(--semantic-color-text-secondary);
   cursor: pointer;
-  font-size: 1rem;
+  font-size: var(--font-size-md);
   padding: 4px 8px;
   border-radius: 4px;
 }
@@ -1335,7 +1335,7 @@ onMounted(() => {
 
 .esign-title {
   margin: 0 0 14px 0;
-  font-size: 0.98rem;
+  font-size: var(--font-size-md);
   color: var(--semantic-color-text-inverse);
   font-weight: 700;
 }
@@ -1357,7 +1357,7 @@ onMounted(() => {
 }
 
 .form-label {
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   color: var(--semantic-color-text-secondary);
 }
@@ -1369,7 +1369,7 @@ onMounted(() => {
   border-radius: 6px;
   padding: 8px 12px;
   color: var(--semantic-color-text-inverse);
-  font-size: 0.88rem;
+  font-size: var(--font-size-md);
 }
 
 .input-text:focus-visible,
@@ -1387,7 +1387,7 @@ onMounted(() => {
 }
 
 .summary-text {
-  font-size: 0.88rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-secondary);
 }
 .summary-text strong {
@@ -1403,7 +1403,7 @@ onMounted(() => {
   padding: 8px 16px;
   border-radius: 6px;
   font-weight: 600;
-  font-size: 0.88rem;
+  font-size: var(--font-size-sm);
   cursor: pointer;
   border: 1px solid transparent;
   transition: all 0.15s ease;
@@ -1488,14 +1488,14 @@ onMounted(() => {
 }
 
 .cert-badge {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   font-weight: 700;
   color: var(--semantic-color-success);
   margin-bottom: 4px;
 }
 .cert-modal-title {
   margin: 0;
-  font-size: 1.3rem;
+  font-size: var(--font-size-xl);
   color: var(--semantic-color-text-inverse);
 }
 
@@ -1507,7 +1507,7 @@ onMounted(() => {
   padding: 14px;
   border-radius: 8px;
   margin-bottom: 18px;
-  font-size: 0.88rem;
+  font-size: var(--font-size-sm);
 }
 
 .cert-meta-item {
@@ -1517,7 +1517,7 @@ onMounted(() => {
 }
 .cert-meta-item .lbl {
   color: var(--semantic-color-text-secondary);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
 }
 .cert-meta-item .val {
@@ -1530,7 +1530,7 @@ onMounted(() => {
 .cert-section h4 {
   margin: 0 0 8px 0;
   color: var(--semantic-color-text-secondary);
-  font-size: 0.88rem;
+  font-size: var(--font-size-sm);
   text-transform: uppercase;
 }
 
@@ -1545,7 +1545,7 @@ onMounted(() => {
   border: 1px solid var(--semantic-color-border-inverse);
   padding: 4px 8px;
   border-radius: 4px;
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-accent-inverse);
 }
 
@@ -1560,13 +1560,13 @@ onMounted(() => {
 }
 
 .sig-label {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   text-transform: uppercase;
 }
 .sig-hash {
   font-family: var(--semantic-font-mono);
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
   word-break: break-all;
 }
 

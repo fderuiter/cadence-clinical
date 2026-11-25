@@ -480,13 +480,13 @@ onMounted(() => {
 
 .add-participant h3 {
   margin: 0;
-  font-size: 1rem;
+  font-size: var(--font-size-md);
 }
 
 .hint {
   margin: 0;
   color: var(--neutral-dark);
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 
 .site-shortcuts {
@@ -500,7 +500,7 @@ onMounted(() => {
   background: none;
   border: none;
   padding: 0;
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-interactive-primary);
   text-decoration: underline;
   cursor: pointer;
@@ -519,13 +519,13 @@ onMounted(() => {
 
 .inline-site-panel legend {
   font-weight: 600;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   padding: 0 4px;
 }
 
 .inline-site-error {
   margin: 0;
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-error);
 }
 

@@ -2186,7 +2186,7 @@ onMounted(() => {
 }
 
 .forensics-title {
-  font-size: 1.45rem;
+  font-size: var(--font-size-2xl);
   font-weight: 800;
   color: var(--semantic-color-text);
   letter-spacing: -0.02em;
@@ -2194,7 +2194,7 @@ onMounted(() => {
 }
 
 .forensics-subtitle {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-secondary);
   max-width: 820px;
   line-height: 1.45;
@@ -2215,14 +2215,14 @@ onMounted(() => {
 }
 
 .meta-label {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   color: var(--semantic-color-text-secondary);
 }
 
 .csm-select {
   padding: 6px 12px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-md);
   font-weight: 600;
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -2237,7 +2237,7 @@ onMounted(() => {
 .status-pill {
   padding: 4px 10px;
   border-radius: 20px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
 }
 
@@ -2264,7 +2264,7 @@ onMounted(() => {
   align-items: center;
   gap: 6px;
   padding: 8px 16px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   border-radius: 6px;
   cursor: pointer;
@@ -2308,7 +2308,7 @@ onMounted(() => {
 
 .csm-btn-sm {
   padding: 4px 10px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
 }
 
 /* KPI Cards Grid */
@@ -2343,7 +2343,7 @@ onMounted(() => {
 }
 
 .kpi-icon {
-  font-size: 1.8rem;
+  font-size: var(--font-size-3xl);
 }
 
 .kpi-content {
@@ -2352,13 +2352,13 @@ onMounted(() => {
 }
 
 .kpi-value {
-  font-size: 1.35rem;
+  font-size: var(--font-size-xl);
   font-weight: 800;
   color: var(--semantic-color-text);
 }
 
 .kpi-label {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
   font-weight: 600;
 }
@@ -2373,7 +2373,7 @@ onMounted(() => {
 
 .tab-btn {
   padding: 10px 18px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-weight: 700;
   color: var(--semantic-color-text-secondary);
   background: none;
@@ -2412,13 +2412,13 @@ onMounted(() => {
 }
 
 .pane-title {
-  font-size: 1.15rem;
+  font-size: var(--font-size-lg);
   font-weight: 700;
   color: var(--semantic-color-text);
 }
 
 .pane-caption {
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
   display: block;
   margin-top: 2px;
@@ -2431,7 +2431,7 @@ onMounted(() => {
 }
 
 .checkbox-label {
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   color: var(--semantic-color-text-body);
   display: flex;
@@ -2448,7 +2448,7 @@ onMounted(() => {
 .forensics-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
 }
 
 .forensics-table th {
@@ -2702,7 +2702,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   color: var(--semantic-color-text-secondary);
 }
@@ -2764,7 +2764,7 @@ onMounted(() => {
   background-color: var(--semantic-color-surface);
   border-left: 4px solid var(--semantic-color-primary);
   border-radius: 4px;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   line-height: 1.4;
 }
 
@@ -2814,7 +2814,7 @@ onMounted(() => {
 .nested-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
   margin-top: 8px;
 }
 
@@ -2849,7 +2849,7 @@ onMounted(() => {
 .highlight-item {
   display: flex;
   justify-content: space-between;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
 }
 
 .highlight-label {
@@ -2890,13 +2890,13 @@ onMounted(() => {
 }
 
 .ratio-num {
-  font-size: 1.8rem;
+  font-size: var(--font-size-3xl);
   font-weight: 900;
   color: var(--semantic-color-text);
 }
 
 .ratio-desc {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
   font-weight: 600;
 }
@@ -2907,12 +2907,12 @@ onMounted(() => {
   border-radius: 8px;
   padding: 14px;
   color: var(--semantic-color-error-text-dark);
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   line-height: 1.45;
 }
 
 .fabrication-alert-card h4 {
-  font-size: 0.88rem;
+  font-size: var(--font-size-sm);
   margin-bottom: 4px;
 }
 
@@ -2926,7 +2926,7 @@ onMounted(() => {
 .dossier-row {
   display: flex;
   justify-content: space-between;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   padding-bottom: 6px;
   border-bottom: 1px solid var(--semantic-color-border);
 }
@@ -2963,7 +2963,7 @@ onMounted(() => {
 }
 
 .modal-header h3 {
-  font-size: 1.1rem;
+  font-size: var(--font-size-lg);
   font-weight: 800;
   color: var(--semantic-color-text);
 }
@@ -2971,14 +2971,14 @@ onMounted(() => {
 .close-btn {
   background: none;
   border: none;
-  font-size: 1.4rem;
+  font-size: var(--font-size-xl);
   cursor: pointer;
   color: var(--semantic-color-text-secondary);
 }
 
 .modal-body {
   padding: 20px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-body);
   line-height: 1.5;
 }
@@ -3030,7 +3030,7 @@ onMounted(() => {
 }
 
 .metric-num {
-  font-size: 1.4rem;
+  font-size: var(--font-size-xl);
   font-weight: 800;
   color: var(--semantic-color-text);
 }
@@ -3044,7 +3044,7 @@ onMounted(() => {
 }
 
 .metric-label {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   color: var(--semantic-color-text-secondary);
 }
@@ -3092,7 +3092,7 @@ onMounted(() => {
   padding: 4px 10px;
   background-color: var(--semantic-color-error-bg);
   color: var(--semantic-color-error-text-dark);
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   font-weight: 800;
   border-radius: 16px;
 }
@@ -3121,13 +3121,13 @@ onMounted(() => {
 }
 
 .subject-id-val {
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
   font-weight: 800;
   color: var(--semantic-color-text);
 }
 
 .subject-site-val {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -3139,7 +3139,7 @@ onMounted(() => {
 }
 
 .finding-evidence-text {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-body);
   line-height: 1.45;
 }
@@ -3154,7 +3154,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
 }
 
 .subscore-label {
@@ -3190,7 +3190,7 @@ onMounted(() => {
 
 .csm-btn-sm {
   padding: 6px 12px;
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
 }
 
 /* Temporal Cards */
@@ -3217,19 +3217,19 @@ onMounted(() => {
 }
 
 .site-tag {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   color: var(--semantic-color-text-secondary);
 }
 
 .temporal-title {
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
   font-weight: 800;
   color: var(--semantic-color-text);
 }
 
 .temporal-evidence {
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-secondary);
   line-height: 1.45;
   flex: 1;
@@ -3244,7 +3244,7 @@ onMounted(() => {
 }
 
 .confidence-text {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   color: var(--semantic-color-text-secondary);
 }
@@ -3278,7 +3278,7 @@ onMounted(() => {
   justify-content: center;
   border-radius: 8px;
   font-weight: 700;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   border: 2px solid var(--semantic-color-border-inverse);
 }
 
@@ -3288,7 +3288,7 @@ onMounted(() => {
 }
 
 .image-meta {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
   line-height: 1.4;
 }
@@ -3317,7 +3317,7 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   font-weight: 800;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 
 .phash-vs-badge span {

@@ -427,7 +427,7 @@ function resolveItemId(index) {
   border: none;
   background: transparent;
   color: var(--semantic-color-text);
-  font-size: 1.1rem;
+  font-size: var(--font-size-lg);
   cursor: pointer;
   line-height: 1;
   padding: var(--spacing-2xs) 6px;

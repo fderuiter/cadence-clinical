@@ -20,7 +20,7 @@
     >
       <div
         style="
-          font-size: 0.9rem;
+          font-size: var(--font-size-sm);
           font-weight: 600;
           color: var(--semantic-color-info);
         "
@@ -37,7 +37,7 @@
           color: var(--semantic-color-surface);
           font-weight: bold;
           padding: 6px 14px;
-          font-size: 0.85rem;
+          font-size: var(--font-size-sm);
           border-radius: 6px;
           cursor: pointer;
         "
@@ -72,7 +72,7 @@
               backgroundColor: 'var(--semantic-color-info-light)',
               color: 'var(--semantic-color-info)',
               fontWeight: 600,
-              fontSize: '0.75rem',
+              fontSize: 'var(--font-size-2xs)',
             }"
           >
             ICH GCP E6(R2) Monitored
@@ -98,7 +98,7 @@
         <div class="form-group" style="margin: 0; min-width: 180px">
           <label
             for="cra-subject-selector"
-            style="font-weight: bold; font-size: 0.75rem"
+            style="font-weight: bold; font-size: var(--font-size-2xs)"
             >Subject ID</label
           >
           <select
@@ -124,7 +124,7 @@
         <div class="form-group" style="margin: 0; min-width: 180px">
           <label
             for="cra-visit-selector"
-            style="font-weight: bold; font-size: 0.75rem"
+            style="font-weight: bold; font-size: var(--font-size-2xs)"
             >Encounter / Visit</label
           >
           <select
@@ -149,7 +149,7 @@
             display: flex;
             gap: 12px;
             align-items: center;
-            font-size: 0.85rem;
+            font-size: var(--font-size-sm);
             color: var(--semantic-color-text-muted);
           "
         >
@@ -236,7 +236,7 @@
                 <span
                   style="
                     color: var(--semantic-color-text-secondary);
-                    font-size: 0.85rem;
+                    font-size: var(--font-size-sm);
                   "
                 >
                   {{ getSourceValue(field.id) }}
@@ -278,7 +278,7 @@
                   </span>
                   <div
                     style="
-                      font-size: 0.75rem;
+                      font-size: var(--font-size-2xs);
                       color: var(--semantic-color-text-body);
                       margin-top: 2px;
                     "
@@ -313,7 +313,7 @@
                   <span
                     style="
                       color: var(--semantic-color-text-subtle);
-                      font-size: 0.8rem;
+                      font-size: var(--font-size-xs);
                     "
                     >— Clean —</span
                   >
@@ -329,7 +329,7 @@
                     :id="`btn-raise-query-${field.id}`"
                     type="button"
                     class="btn btn-secondary btn-sm"
-                    style="padding: 2px 8px; font-size: 0.75rem"
+                    style="padding: 2px 8px; font-size: var(--font-size-2xs)"
                     @click="openRaiseQueryModal(field)"
                   >
                     ⚠️ Raise Query
@@ -347,7 +347,7 @@
                     class="btn btn-primary btn-sm"
                     style="
                       padding: 2px 8px;
-                      font-size: 0.75rem;
+                      font-size: var(--font-size-2xs);
                       background-color: var(
                         --semantic-color-interactive-primary
                       );
@@ -368,7 +368,7 @@
                     class="btn btn-success btn-sm"
                     style="
                       padding: 2px 8px;
-                      font-size: 0.75rem;
+                      font-size: var(--font-size-2xs);
                       background-color: var(
                         --semantic-color-success-interactive
                       );
@@ -395,7 +395,7 @@
     >
       <p
         style="
-          font-size: 0.85rem;
+          font-size: var(--font-size-sm);
           color: var(--semantic-color-text-muted);
           margin-bottom: 12px;
         "
@@ -424,7 +424,10 @@
       <div
         v-if="modalError"
         class="error-msg"
-        style="color: var(--semantic-color-error-dark); font-size: 0.8rem"
+        style="
+          color: var(--semantic-color-error-dark);
+          font-size: var(--font-size-xs);
+        "
       >
         ⚠️ {{ modalError }}
       </div>
@@ -459,7 +462,7 @@
     >
       <p
         style="
-          font-size: 0.85rem;
+          font-size: var(--font-size-sm);
           color: var(--semantic-color-text-muted);
           margin-bottom: 8px;
         "
@@ -489,7 +492,10 @@
       <div
         v-if="modalError"
         class="error-msg"
-        style="color: var(--semantic-color-error-dark); font-size: 0.8rem"
+        style="
+          color: var(--semantic-color-error-dark);
+          font-size: var(--font-size-xs);
+        "
       >
         ⚠️ {{ modalError }}
       </div>
@@ -524,7 +530,7 @@
     >
       <p
         style="
-          font-size: 0.85rem;
+          font-size: var(--font-size-sm);
           color: var(--semantic-color-text-muted);
           margin-bottom: 8px;
         "
@@ -550,7 +556,10 @@
       <div
         v-if="modalError"
         class="error-msg"
-        style="color: var(--semantic-color-error-dark); font-size: 0.8rem"
+        style="
+          color: var(--semantic-color-error-dark);
+          font-size: var(--font-size-xs);
+        "
       >
         ⚠️ {{ modalError }}
       </div>
@@ -925,7 +934,7 @@ function confirmCloseQuery() {
   padding: 14px 16px;
   border-bottom: 1px solid var(--semantic-color-border);
   font-weight: 600;
-  font-size: 15px;
+  font-size: var(--font-size-base);
   color: var(--semantic-color-text);
 }
 

@@ -15,12 +15,12 @@
 
 .consolidated-header h1 {
   margin: 0;
-  font-size: 1.35rem;
+  font-size: var(--font-size-xl);
 }
 
 .consolidated-subtitle {
   margin: 4px 0 0;
-  font-size: 0.88rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-body);
 }
 
@@ -32,7 +32,7 @@
 }
 
 .consolidated-controls label {
-  font-size: 0.84rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
 }
 
@@ -42,7 +42,7 @@
   padding: 6px 10px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-md);
   color: var(--semantic-color-text);
   background: var(--semantic-color-surface);
   box-sizing: border-box;
@@ -50,7 +50,7 @@
 
 .status-line {
   margin: 0;
-  font-size: 0.88rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-body);
 }
 

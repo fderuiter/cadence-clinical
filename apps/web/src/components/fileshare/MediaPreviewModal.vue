@@ -1126,7 +1126,7 @@ function getStatusClass(status) {
 
 .header-details h3 {
   margin: 0;
-  font-size: 1.1rem;
+  font-size: var(--font-size-lg);
   font-weight: 700;
   color: var(--text-main);
   display: flex;
@@ -1136,7 +1136,7 @@ function getStatusClass(status) {
 
 .gxp-tracking-subtitle {
   margin: 4px 0 0 0;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   color: var(--neutral-dark);
 }
 
@@ -1181,7 +1181,7 @@ function getStatusClass(status) {
 
 .meta-section h4 {
   margin: 0 0 12px 0;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-weight: 700;
   color: var(--semantic-color-text);
   text-transform: uppercase;
@@ -1192,7 +1192,7 @@ function getStatusClass(status) {
   display: flex;
   justify-content: space-between;
   margin-bottom: 8px;
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
 }
 
 .meta-label {
@@ -1210,13 +1210,13 @@ function getStatusClass(status) {
 .change-reason-block h5,
 .checksum-block h5 {
   margin: 0 0 6px 0;
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   color: var(--semantic-color-text-secondary);
 }
 
 .reason-text {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-dark);
   background-color: var(--semantic-color-surface-muted);
   padding: 8px;
@@ -1240,7 +1240,7 @@ function getStatusClass(status) {
 .manifest-card {
   border-radius: 6px;
   padding: 10px;
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
 }
 
 .manifest-card.signed {
@@ -1270,7 +1270,7 @@ function getStatusClass(status) {
   gap: 6px;
   padding: 4px 10px;
   border-radius: 9999px;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
 }
 
@@ -1293,7 +1293,7 @@ function getStatusClass(status) {
 }
 
 .badge-signer {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-success-dark);
 }
 
@@ -1302,7 +1302,7 @@ function getStatusClass(status) {
   color: var(--semantic-color-surface);
   border: 1px solid var(--semantic-color-success);
   padding: 6px 12px;
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   border-radius: 6px;
   cursor: pointer;
@@ -1342,7 +1342,7 @@ function getStatusClass(status) {
 /* Dynamic rotating diagonal watermark */
 .watermark-text {
   font-family: var(--semantic-font-family);
-  font-size: 1rem;
+  font-size: var(--font-size-md);
   font-weight: 900;
   color: var(--semantic-color-error);
   letter-spacing: 0.15em;
@@ -1417,7 +1417,7 @@ function getStatusClass(status) {
   border: 1px solid var(--semantic-color-border-inverse);
   border-radius: 4px;
   padding: 2px 6px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-md);
   font-weight: 500;
   cursor: pointer;
   box-sizing: border-box;
@@ -1468,27 +1468,27 @@ function getStatusClass(status) {
 }
 
 .processing-icon {
-  font-size: 2.5rem;
+  font-size: var(--font-size-5xl);
   margin-bottom: 12px;
 }
 
 .processing-title {
   margin: 0 0 8px 0;
-  font-size: 1.15rem;
+  font-size: var(--font-size-lg);
   font-weight: 700;
   color: var(--semantic-color-text-inverse);
 }
 
 .processing-subtitle {
   margin: 0 0 16px 0;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-secondary);
   max-width: 420px;
   line-height: 1.5;
 }
 
 .polling-status {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
   margin: 0;
 }
@@ -1499,7 +1499,7 @@ function getStatusClass(status) {
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
   padding: 6px 12px;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   cursor: pointer;
   transition: background-color 0.15s ease;
@@ -1515,7 +1515,7 @@ function getStatusClass(status) {
   padding: 8px 12px;
   background-color: var(--semantic-color-surface-elevated);
   color: var(--semantic-color-text-inverse-muted);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   text-align: center;
 }
 
@@ -1537,7 +1537,7 @@ function getStatusClass(status) {
 }
 
 .audio-icon-display {
-  font-size: 3rem;
+  font-size: var(--font-size-5xl);
   background-color: var(--semantic-color-info-bg);
   width: 72px;
   height: 72px;
@@ -1549,14 +1549,14 @@ function getStatusClass(status) {
 
 .audio-filename {
   margin: 0;
-  font-size: 1.1rem;
+  font-size: var(--font-size-lg);
   font-weight: 700;
   color: var(--text-main);
 }
 
 .audio-duration-meta {
   margin: 0;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--neutral-dark);
 }
 
@@ -1597,7 +1597,7 @@ function getStatusClass(status) {
 .doc-sheet-header {
   display: flex;
   justify-content: space-between;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
   font-weight: 600;
   text-transform: uppercase;
@@ -1610,14 +1610,14 @@ function getStatusClass(status) {
 
 .doc-display-title {
   margin: 0 0 6px 0;
-  font-size: 1.4rem;
+  font-size: var(--font-size-xl);
   font-weight: 800;
   color: var(--semantic-color-text);
 }
 
 .doc-display-subtitle {
   margin: 0 0 16px 0;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -1633,14 +1633,14 @@ function getStatusClass(status) {
 
 .doc-text-section h4 {
   margin: 0 0 8px 0;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-weight: 700;
   color: var(--semantic-color-text-dark);
 }
 
 .doc-text-section p {
   margin: 0;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   line-height: 1.6;
   color: var(--semantic-color-text-body);
 }
@@ -1684,21 +1684,21 @@ function getStatusClass(status) {
 }
 
 .audit-alert-card .alert-icon {
-  font-size: 2rem;
+  font-size: var(--font-size-4xl);
   display: block;
   margin-bottom: 12px;
 }
 
 .audit-alert-card .alert-title {
   margin: 0 0 8px 0;
-  font-size: 1.1rem;
+  font-size: var(--font-size-lg);
   font-weight: 700;
   color: var(--semantic-color-text-inverse);
 }
 
 .audit-alert-card .alert-message {
   margin: 0 0 16px 0;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-secondary);
   line-height: 1.5;
 }
@@ -1709,7 +1709,7 @@ function getStatusClass(status) {
   border: none;
   border-radius: 6px;
   padding: 8px 16px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   cursor: pointer;
   transition: background-color 0.15s ease;

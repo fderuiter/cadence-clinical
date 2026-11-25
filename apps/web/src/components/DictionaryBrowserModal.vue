@@ -543,19 +543,19 @@ useFocusTrap(modalRef, {
 
 .header-titles h3 {
   margin: 0;
-  font-size: 1.25rem;
+  font-size: var(--font-size-lg);
   color: var(--text-main);
 }
 
 .header-subtitle {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--neutral-dark);
 }
 
 .btn-close {
   background: transparent;
   border: none;
-  font-size: 1.3rem;
+  font-size: var(--font-size-xl);
   cursor: pointer;
   color: var(--neutral-dark);
 }
@@ -623,7 +623,7 @@ useFocusTrap(modalRef, {
 
 .column-header h4 {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
   color: var(--text-main);
 }
 
@@ -671,11 +671,11 @@ useFocusTrap(modalRef, {
 .result-term-name {
   font-weight: 600;
   color: var(--text-main);
-  font-size: 0.92rem;
+  font-size: var(--font-size-base);
 }
 
 .match-score-badge {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   color: var(--accent);
   background-color: var(--semantic-color-surface);
@@ -692,7 +692,7 @@ useFocusTrap(modalRef, {
 }
 
 .code-pill {
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
   background-color: var(--semantic-color-surface-header);
   color: var(--semantic-color-text-body);
   padding: 2px 6px;
@@ -717,13 +717,13 @@ useFocusTrap(modalRef, {
 }
 
 .concept-title {
-  font-size: 1.1rem;
+  font-size: var(--font-size-lg);
   font-weight: 700;
   color: var(--text-main);
 }
 
 .concept-code {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--text-main);
   margin-top: 2px;
 }
@@ -737,7 +737,7 @@ useFocusTrap(modalRef, {
 
 .hierarchy-tree-view h5,
 .whodrug-details-view h5 {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--neutral-dark);
@@ -767,7 +767,7 @@ useFocusTrap(modalRef, {
 
 .node-tag {
   font-weight: 800;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   width: 44px;
   text-align: center;
   padding: 2px 6px;
@@ -783,19 +783,19 @@ useFocusTrap(modalRef, {
 
 .node-name {
   font-weight: 600;
-  font-size: 0.88rem;
+  font-size: var(--font-size-sm);
   color: var(--text-main);
 }
 
 .node-code {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   color: var(--neutral-dark);
 }
 
 .tree-connector {
   text-align: center;
   color: var(--neutral-dark);
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   line-height: 1;
 }
 
@@ -818,14 +818,14 @@ useFocusTrap(modalRef, {
 .atc-code-pill {
   font-family: var(--semantic-font-mono);
   font-weight: 700;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   background-color: var(--semantic-color-surface-header);
   padding: 2px 8px;
   border-radius: 4px;
 }
 
 .atc-description {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--text-main);
 }
 
@@ -840,7 +840,7 @@ useFocusTrap(modalRef, {
   border: 1px solid var(--semantic-color-border-control);
   padding: 4px 10px;
   border-radius: 16px;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
 }
 
 .gxp-confirmation-box {
@@ -870,11 +870,11 @@ useFocusTrap(modalRef, {
   padding: 36px 16px;
   text-align: center;
   color: var(--neutral-dark);
-  font-size: 0.88rem;
+  font-size: var(--font-size-sm);
 }
 
 .text-muted-notice {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   color: var(--neutral-dark);
   font-style: italic;
 }
@@ -886,7 +886,7 @@ useFocusTrap(modalRef, {
 }
 
 .form-group label {
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   color: var(--text-main);
 }
@@ -895,7 +895,7 @@ useFocusTrap(modalRef, {
   padding: 8px 12px;
   border: 1px solid var(--border);
   border-radius: 6px;
-  font-size: 0.88rem;
+  font-size: var(--font-size-md);
   font-family: inherit;
 }
 

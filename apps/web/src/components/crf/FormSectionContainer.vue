@@ -365,7 +365,7 @@ function moveFieldDown(index) {
 .section-drag-handle {
   cursor: grab;
   color: var(--semantic-color-text-secondary);
-  font-size: 1.1rem;
+  font-size: var(--font-size-lg);
   padding: 0 4px;
   touch-action: none;
   user-select: none;
@@ -376,7 +376,7 @@ function moveFieldDown(index) {
 }
 
 .section-title {
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
   font-weight: 700;
   color: var(--semantic-color-text-dark);
   margin: 0;
@@ -406,7 +406,7 @@ function moveFieldDown(index) {
 
 .btn-add-field {
   padding: 5px 10px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   background-color: var(--semantic-color-primary-light);
   border: 1px solid var(--semantic-color-border-control);
@@ -426,7 +426,7 @@ function moveFieldDown(index) {
 
 .btn-section-toggle {
   padding: 5px 10px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   background-color: var(--semantic-color-surface-header);
   border: 1px solid var(--semantic-color-border-control);
@@ -444,7 +444,7 @@ function moveFieldDown(index) {
   border-radius: 8px;
   padding: 24px;
   text-align: center;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-secondary);
   background-color: var(--semantic-color-surface);
 }

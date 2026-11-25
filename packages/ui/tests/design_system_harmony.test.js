@@ -1080,13 +1080,16 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
         expect(selectorPart).not.toMatch(/\btextarea\b/i);
       }
 
-      // Verify touch viewports preserve >= 16px (1rem) font-size to prevent iOS auto-zoom
+      // Verify touch viewports preserve >= 16px (1rem) font-size globally and on clinical/table controls to prevent mobile auto-zoom
       const coarsePointerMatch = tokensCss.match(
         /@media\s*\(\s*pointer:\s*coarse\s*\)\s*\{([\s\S]*?\})\s*\}/
       );
       expect(coarsePointerMatch).not.toBeNull();
       expect(coarsePointerMatch[1]).toContain(
-        "font-size: max(1rem, var(--font-size-md, 16px))"
+        ':where(input, select, textarea):not([type="checkbox"]):not([type="radio"])'
+      );
+      expect(coarsePointerMatch[1]).toContain(
+        "font-size: max(1rem, var(--font-size-md))"
       );
 
       const dataTableVue = fs.readFileSync(
@@ -1367,8 +1370,23 @@ const thresholdAmount = ref(600);
       );
 
       expect(rootVars["--semantic-font-mono"]).toBe("var(--font-mono)");
-      expect(rootVars["--font-size-2xs"]).toBe("12px");
-      expect(resolveVar("--semantic-font-size-2xs", rootVars)).toBe("12px");
+      expect(rootVars["--font-size-2xs"]).toBe("0.75rem");
+      expect(resolveVar("--semantic-font-size-2xs", rootVars)).toBe("0.75rem");
+      for (const [tok, expectedRem] of [
+        ["--font-size-2xs", "0.75rem"],
+        ["--font-size-xs", "0.8125rem"],
+        ["--font-size-sm", "0.875rem"],
+        ["--font-size-base", "0.9375rem"],
+        ["--font-size-md", "1rem"],
+        ["--font-size-lg", "1.125rem"],
+        ["--font-size-xl", "1.375rem"],
+        ["--font-size-2xl", "1.5rem"],
+        ["--font-size-3xl", "1.75rem"],
+        ["--font-size-4xl", "2rem"],
+        ["--font-size-5xl", "2.5rem"],
+      ]) {
+        expect(rootVars[tok]).toBe(expectedRem);
+      }
 
       const fontMonoProps = parseRuleProps(tokensCss, /\.font-mono\s*\{/);
       expect(fontMonoProps).not.toBeNull();
@@ -1470,7 +1488,11 @@ const thresholdAmount = ref(600);
         }
 
         const styleSources = file.endsWith(".css")
-          ? [clean]
+          ? [
+              file.endsWith("/packages/ui/tokens.css")
+                ? clean.replace(/@font-face\s*\{[\s\S]*?\}/gi, "")
+                : clean,
+            ]
           : Array.from(
               clean.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/gi),
               (m) => m[1]
@@ -1806,10 +1828,185 @@ const thresholdAmount = ref(600);
         [
           "custom-vue/no-sub12px-font-size",
           "custom-vue/no-custom-font-stack",
+          "custom-vue/no-untokenized-font-size",
+          "custom-vue/no-sub1rem-touch-control",
           "custom-vue/require-tabular-nums",
         ].includes(m.ruleId)
       );
       expect(typographyErrors).toEqual([]);
+    });
+
+    it("bundles self-hosted subsetted variable Inter and JetBrains Mono WOFF2 fonts (65 KB to 95 KB combined) with OFL 1.1 notices, clinical monospace IDs, and ESLint gates for untokenized font-size and sub-1rem touch controls", async () => {
+      const fontsDir = path.join(uiDir, "fonts");
+      const interWoff2 = path.join(fontsDir, "InterVariable-latin.woff2");
+      const jbWoff2 = path.join(fontsDir, "JetBrainsMonoVariable-latin.woff2");
+      const interOfl = path.join(fontsDir, "OFL-Inter.txt");
+      const jbOfl = path.join(fontsDir, "OFL-JetBrainsMono.txt");
+
+      expect(fs.existsSync(interWoff2)).toBe(true);
+      expect(fs.existsSync(jbWoff2)).toBe(true);
+      expect(fs.existsSync(interOfl)).toBe(true);
+      expect(fs.existsSync(jbOfl)).toBe(true);
+
+      const interBytes = fs.statSync(interWoff2).size;
+      const jbBytes = fs.statSync(jbWoff2).size;
+      const combinedBytes = interBytes + jbBytes;
+      // Valid WOFF2 magic header ("wOF2") and combined budget 65 KB..95 KB
+      expect(fs.readFileSync(interWoff2).subarray(0, 4).toString("ascii")).toBe(
+        "wOF2"
+      );
+      expect(fs.readFileSync(jbWoff2).subarray(0, 4).toString("ascii")).toBe(
+        "wOF2"
+      );
+      expect(combinedBytes).toBeGreaterThanOrEqual(65 * 1024);
+      expect(combinedBytes).toBeLessThanOrEqual(95 * 1000);
+
+      expect(fs.readFileSync(interOfl, "utf-8")).toContain(
+        "SIL OPEN FONT LICENSE Version 1.1"
+      );
+      expect(fs.readFileSync(jbOfl, "utf-8")).toContain(
+        "SIL OPEN FONT LICENSE Version 1.1"
+      );
+
+      const tokensCss = fs.readFileSync(
+        path.join(uiDir, "tokens.css"),
+        "utf-8"
+      );
+      expect(tokensCss).toContain(
+        'src: url("./fonts/InterVariable-latin.woff2") format("woff2")'
+      );
+      expect(tokensCss).toContain(
+        'src: url("./fonts/JetBrainsMonoVariable-latin.woff2") format("woff2")'
+      );
+
+      const webStyleCss = fs.readFileSync(
+        path.join(webSrcDir, "style.css"),
+        "utf-8"
+      );
+      expect(webStyleCss).toMatch(
+        /@media\s*\(\s*pointer:\s*coarse\s*\)[\s\S]*?:where\(input,\s*select,\s*textarea\):not\(\[type="checkbox"\]\):not\(\[type="radio"\]\)/
+      );
+
+      // Verify clinical monospace on NodeRefChip, EcrfSignaturesSection, and AuditView
+      const nodeRefChip = fs.readFileSync(
+        path.join(webSrcDir, "components/canvas/NodeRefChip.vue"),
+        "utf-8"
+      );
+      const nodeRefChipRule = parseRuleProps(
+        nodeRefChip,
+        /\.noderef-chip\s*\{/
+      );
+      expect(nodeRefChipRule["font-family"]).toBe("var(--semantic-font-mono)");
+      expect(nodeRefChipRule["border"]).toBe(
+        "1px solid var(--semantic-color-border-control)"
+      );
+      expect(nodeRefChipRule["background-color"]).toBe(
+        "var(--semantic-color-surface)"
+      );
+
+      const authStoreSrc = fs.readFileSync(
+        path.join(webSrcDir, "stores/auth.js"),
+        "utf-8"
+      );
+      const personaBlockMatch = authStoreSrc.match(
+        /export const PERSONA_PRESETS\s*=\s*\[[\s\S]*?\];/
+      );
+      expect(personaBlockMatch).not.toBeNull();
+      expect(personaBlockMatch[0]).not.toMatch(/\p{Extended_Pictographic}/u);
+
+      const sigSection = fs.readFileSync(
+        path.join(webSrcDir, "components/ecrf/EcrfSignaturesSection.vue"),
+        "utf-8"
+      );
+      expect(sigSection).toContain(".ecrf-signature-actor");
+      expect(sigSection).toContain("var(--semantic-font-mono)");
+
+      const auditView = fs.readFileSync(
+        path.join(webSrcDir, "views/AuditView.vue"),
+        "utf-8"
+      );
+      expect(auditView).toMatch(
+        /class="hash-code"[\s\S]*?font-family:\s*var\(--semantic-font-mono\)/
+      );
+
+      // Verify ESLint gates reject untokenized font-size and sub-1rem touch controls
+      const { ESLint } = await import("eslint");
+      const eslint = new ESLint({
+        cwd: repoRoot,
+        overrideConfigFile: path.join(repoRoot, "eslint.config.mjs"),
+      });
+
+      const badControlVue = await eslint.lintText(
+        `<template>
+  <div>
+    <label for="bad-sel">Filter</label>
+    <select id="bad-sel" class="compact-select" style="font-size: var(--font-size-xs)">
+      <option value="all">All</option>
+    </select>
+    <p style="font-size: 14px">Untokenized prose</p>
+  </div>
+</template>
+<style scoped>
+.compact-select {
+  font-size: var(--font-size-sm);
+}
+</style>
+`,
+        {
+          filePath: path.join(
+            webSrcDir,
+            "views/__SyntheticTouchControlBad.vue"
+          ),
+        }
+      );
+      const badMsgs = badControlVue[0].messages;
+      expect(
+        badMsgs.filter(
+          (m) => m.ruleId === "custom-vue/no-untokenized-font-size"
+        )
+      ).toHaveLength(1);
+      expect(
+        badMsgs.filter(
+          (m) => m.ruleId === "custom-vue/no-sub1rem-touch-control"
+        )
+      ).toHaveLength(2);
+
+      const goodControlVue = await eslint.lintText(
+        `<template>
+  <div>
+    <label for="good-sel">Filter</label>
+    <select id="good-sel" class="touch-safe-select">
+      <option value="all">All</option>
+    </select>
+  </div>
+</template>
+<style scoped>
+.touch-safe-select {
+  font-size: var(--font-size-md);
+}
+@media (pointer: fine) {
+  .touch-safe-select {
+    font-size: var(--font-size-sm);
+  }
+}
+</style>
+`,
+        {
+          filePath: path.join(
+            webSrcDir,
+            "views/__SyntheticTouchControlGood.vue"
+          ),
+        }
+      );
+      const goodErrors = goodControlVue[0].messages.filter((m) =>
+        [
+          "custom-vue/no-untokenized-font-size",
+          "custom-vue/no-sub1rem-touch-control",
+          "custom-vue/no-sub12px-font-size",
+          "custom-vue/no-custom-font-stack",
+        ].includes(m.ruleId)
+      );
+      expect(goodErrors).toEqual([]);
     });
   });
 
@@ -2390,7 +2587,10 @@ const open = () => {};
     it("standardizes .clinical-badge at 0.75rem with tabular-nums and >= 4.5:1 light/dark contrast across all 8 GxP and readiness modifiers", () => {
       const baseBadge = parseRuleProps(tokensCss, /\.clinical-badge\s*\{/);
       expect(baseBadge).not.toBeNull();
-      expect(baseBadge["font-size"]).toBe("0.75rem");
+      expect(baseBadge["font-size"]).toBe("var(--font-size-2xs)");
+      expect(resolveCssColorExpr(baseBadge["font-size"], lightTheme)).toBe(
+        "0.75rem"
+      );
       expect(
         resolveCssColorExpr(baseBadge["font-variant-numeric"], lightTheme)
       ).toBe("tabular-nums");

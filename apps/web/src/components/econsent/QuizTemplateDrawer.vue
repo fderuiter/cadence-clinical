@@ -405,25 +405,25 @@ defineExpose({
 }
 
 .drawer-icon {
-  font-size: 1.5rem;
+  font-size: var(--font-size-2xl);
 }
 
 .drawer-title {
   margin: 0 0 4px 0;
-  font-size: 1.15rem;
+  font-size: var(--font-size-lg);
   color: var(--neutral-dark);
 }
 
 .drawer-subtitle {
   margin: 0;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-secondary);
 }
 
 .btn-close-drawer {
   background: transparent;
   border: none;
-  font-size: 1.2rem;
+  font-size: var(--font-size-lg);
   color: var(--semantic-color-text-secondary);
   cursor: pointer;
   padding: 4px 8px;
@@ -451,7 +451,7 @@ defineExpose({
 }
 
 .control-label {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   color: var(--neutral-dark);
 }
@@ -469,7 +469,7 @@ defineExpose({
 .search-icon {
   position: absolute;
   left: 10px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   pointer-events: none;
   color: var(--semantic-color-text-secondary);
 }
@@ -487,7 +487,7 @@ defineExpose({
   border: none;
   color: var(--semantic-color-text-secondary);
   cursor: pointer;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 
 .domain-pills {
@@ -500,7 +500,7 @@ defineExpose({
 
 .domain-pill {
   padding: 4px 10px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   border-radius: 12px;
   border: 1px solid var(--border);
@@ -533,7 +533,7 @@ defineExpose({
   background-color: var(--neutral-light);
   border-radius: 6px;
   border: 1px solid var(--border);
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 
 .select-all-label {
@@ -623,7 +623,7 @@ defineExpose({
 
 .template-question-text {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
   color: var(--neutral-dark);
   line-height: 1.4;
 }
@@ -639,7 +639,7 @@ defineExpose({
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -653,7 +653,7 @@ defineExpose({
 }
 
 .correct-tag {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-success-dark);
   font-style: italic;
   margin-left: 4px;
@@ -665,7 +665,7 @@ defineExpose({
   background-color: var(--semantic-color-warning-bg-soft);
   border-left: 3px solid var(--semantic-color-warning-border-strong);
   border-radius: 4px;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-warning-text);
   display: flex;
   align-items: center;

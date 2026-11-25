@@ -498,14 +498,14 @@ const confirmAndApply = () => {
 
 .drawer-title {
   margin: 0 0 6px 0;
-  font-size: 1.25rem;
+  font-size: var(--font-size-lg);
   font-weight: 700;
   color: var(--text-main);
 }
 
 .drawer-subtitle {
   margin: 0;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-secondary);
   line-height: 1.4;
 }
@@ -513,7 +513,7 @@ const confirmAndApply = () => {
 .btn-close-drawer {
   background: none;
   border: none;
-  font-size: 1.2rem;
+  font-size: var(--font-size-lg);
   cursor: pointer;
   color: var(--semantic-color-text-secondary);
   padding: 4px;
@@ -530,7 +530,7 @@ const confirmAndApply = () => {
 .progress-info {
   display: flex;
   justify-content: space-between;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-body);
   margin-bottom: 8px;
 }
@@ -559,7 +559,7 @@ const confirmAndApply = () => {
   color: var(--semantic-color-warning-text);
   padding: 8px 12px;
   border-radius: 6px;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
 }
 
 .alert-success-inline {
@@ -568,7 +568,7 @@ const confirmAndApply = () => {
   color: var(--semantic-color-success-dark);
   padding: 8px 12px;
   border-radius: 6px;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
 }
 
 .filter-bar {
@@ -580,7 +580,7 @@ const confirmAndApply = () => {
   padding: 8px 12px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-md);
 }
 
 .unmapped-tokens-list {
@@ -622,26 +622,26 @@ const confirmAndApply = () => {
 .badge-node {
   background-color: var(--semantic-color-surface-header);
   color: var(--semantic-color-text-body);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   padding: 2px 6px;
   border-radius: 4px;
 }
 
 .token-code {
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
   color: var(--text-main);
   font-family: var(--semantic-font-mono);
 }
 
 .token-name {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-secondary);
 }
 
 .badge-danger {
   background-color: var(--semantic-color-error-bg);
   color: var(--semantic-color-error-text-dark);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   padding: 2px 8px;
   border-radius: 4px;
   font-weight: 700;
@@ -650,7 +650,7 @@ const confirmAndApply = () => {
 .badge-success {
   background-color: var(--semantic-color-success-bg);
   color: var(--semantic-color-success-dark);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   padding: 2px 8px;
   border-radius: 4px;
   font-weight: 700;
@@ -665,7 +665,7 @@ const confirmAndApply = () => {
 .tab-btn {
   flex: 1;
   padding: 6px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   border: 1px solid var(--semantic-color-border-control);
   background-color: var(--semantic-color-surface-muted);
   color: var(--semantic-color-text-secondary);
@@ -690,7 +690,7 @@ const confirmAndApply = () => {
 
 .form-label {
   display: block;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   color: var(--semantic-color-text-body);
   margin-bottom: 6px;
@@ -706,7 +706,7 @@ const confirmAndApply = () => {
   padding: 6px 10px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-md);
 }
 
 .alias-grid {
@@ -722,7 +722,7 @@ const confirmAndApply = () => {
   padding: 6px 10px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-md);
 }
 
 .textarea-finding {
@@ -730,7 +730,7 @@ const confirmAndApply = () => {
   padding: 8px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-md);
   margin-bottom: 8px;
 }
 
@@ -744,7 +744,7 @@ const confirmAndApply = () => {
 
 .audit-title {
   margin: 0 0 12px 0;
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
   font-weight: 700;
   color: var(--semantic-color-text-dark);
 }
@@ -761,7 +761,7 @@ const confirmAndApply = () => {
   padding: 8px 10px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-md);
 }
 
 .drawer-footer {
@@ -778,7 +778,7 @@ const confirmAndApply = () => {
   border-color: var(--semantic-color-success);
   color: var(--semantic-color-surface);
   padding: 10px 18px;
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   border-radius: 6px;
 }

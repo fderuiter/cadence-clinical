@@ -554,13 +554,13 @@ onMounted(() => {
 <style scoped>
 .pi-banner {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-dark);
 }
 
 .role-hint {
   color: var(--semantic-color-text-secondary);
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
 }
 
 .doa-active {

@@ -276,7 +276,7 @@ function resetSimulation() {
 
 .tracer-title h3 {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
   font-weight: 700;
   color: var(--semantic-color-text-dark);
 }
@@ -310,7 +310,7 @@ function resetSimulation() {
 }
 
 .control-label {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   color: var(--semantic-color-text-secondary);
   text-transform: uppercase;
@@ -324,7 +324,7 @@ function resetSimulation() {
 .profile-select {
   flex: 1;
   padding: 6px 10px;
-  font-size: 0.8rem;
+  font-size: var(--font-size-md);
   border: 1px solid var(--semantic-color-border);
   border-radius: 6px;
   background-color: var(--semantic-color-surface);
@@ -332,7 +332,7 @@ function resetSimulation() {
 
 .btn-reset-simulation {
   padding: 6px 12px;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   background-color: var(--semantic-color-surface-muted);
   border: 1px solid var(--semantic-color-border);
@@ -353,7 +353,7 @@ function resetSimulation() {
 }
 
 .empty-rules-box {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-muted);
   padding: 12px;
   text-align: center;
@@ -419,7 +419,7 @@ function resetSimulation() {
 }
 
 .rule-target-name {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   color: var(--semantic-color-text-dark);
 }
@@ -466,7 +466,7 @@ function resetSimulation() {
 .rule-message {
   margin: 0;
   padding: 6px 12px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-body);
   background-color: var(--semantic-color-error-bg-soft);
   border-bottom: 1px solid var(--semantic-color-border-muted);
@@ -494,7 +494,7 @@ function resetSimulation() {
   padding: 8px;
   color: var(--semantic-color-text-inverse);
   font-family: var(--semantic-font-mono);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   overflow-x: auto;
 }
 

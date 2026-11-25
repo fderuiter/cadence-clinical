@@ -356,20 +356,20 @@ useFocusTrap(drawerRef, {
 
 .header-titles h3 {
   margin: 0;
-  font-size: 1.2rem;
+  font-size: var(--font-size-lg);
   color: var(--text-main);
 }
 
 .header-titles p {
   margin: 4px 0 0 0;
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   color: var(--neutral-dark);
 }
 
 .btn-close {
   background: transparent;
   border: none;
-  font-size: 1.3rem;
+  font-size: var(--font-size-xl);
   cursor: pointer;
   color: var(--neutral-dark);
 }
@@ -395,7 +395,7 @@ useFocusTrap(drawerRef, {
 
 .config-card h4 {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
   color: var(--text-main);
 }
 
@@ -419,7 +419,7 @@ useFocusTrap(drawerRef, {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 0.88rem;
+  font-size: var(--font-size-sm);
 }
 
 .results-container {
@@ -436,7 +436,7 @@ useFocusTrap(drawerRef, {
 
 .results-summary-header h4 {
   margin: 0;
-  font-size: 1.05rem;
+  font-size: var(--font-size-md);
   color: var(--text-main);
 }
 
@@ -473,7 +473,7 @@ useFocusTrap(drawerRef, {
 }
 
 .metric-value {
-  font-size: 1.8rem;
+  font-size: var(--font-size-3xl);
   font-weight: 800;
   line-height: 1;
   color: var(--text-main);
@@ -481,11 +481,11 @@ useFocusTrap(drawerRef, {
 
 .metric-label {
   font-weight: 700;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 
 .metric-desc {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   color: var(--neutral-dark);
   line-height: 1.3;
 }
@@ -504,7 +504,7 @@ useFocusTrap(drawerRef, {
 .delta-bar-card h5,
 .recommendations-card h5 {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
   color: var(--text-main);
 }
 
@@ -532,7 +532,7 @@ useFocusTrap(drawerRef, {
   display: flex;
   gap: 16px;
   flex-wrap: wrap;
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
 }
 
 .legend-item {
@@ -565,7 +565,7 @@ useFocusTrap(drawerRef, {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   color: var(--neutral-dark);
 }
 
@@ -585,7 +585,7 @@ useFocusTrap(drawerRef, {
 }
 
 .placeholder-icon {
-  font-size: 3rem;
+  font-size: var(--font-size-5xl);
   margin-bottom: 12px;
 }
 
@@ -604,7 +604,7 @@ useFocusTrap(drawerRef, {
 }
 
 .drawer-input-label {
-  font-size: 0.84rem;
+  font-size: var(--font-size-xs);
   font-weight: 700;
   color: var(--text-main);
   letter-spacing: 0.01em;
@@ -615,7 +615,7 @@ useFocusTrap(drawerRef, {
   padding: 9px 12px;
   border: 1.5px solid var(--border);
   border-radius: 6px;
-  font-size: 0.9rem;
+  font-size: var(--font-size-md);
   font-family: inherit;
   background-color: var(--semantic-color-surface);
   color: var(--text-main);
@@ -630,7 +630,7 @@ useFocusTrap(drawerRef, {
 .badge {
   display: inline-block;
   padding: 4px 10px;
-  font-size: 0.76rem;
+  font-size: var(--font-size-2xs);
   font-weight: 800;
   border-radius: 12px;
 }

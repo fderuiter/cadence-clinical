@@ -2,7 +2,13 @@
   <div class="audit-trail-viewer">
     <!-- Filter Panel -->
     <div class="card" style="padding: 16px; margin-bottom: 20px">
-      <h3 style="margin-top: 0; margin-bottom: 12px; font-size: 15px">
+      <h3
+        style="
+          margin-top: 0;
+          margin-bottom: 12px;
+          font-size: var(--font-size-base);
+        "
+      >
         Search &amp; Filter Logs
       </h3>
       <div
@@ -145,7 +151,11 @@
     <div class="card" style="padding: 0; overflow-x: auto">
       <table
         class="clinical-table"
-        style="width: 100%; border-collapse: collapse; font-size: 13px"
+        style="
+          width: 100%;
+          border-collapse: collapse;
+          font-size: var(--font-size-xs);
+        "
       >
         <thead>
           <tr
@@ -188,7 +198,7 @@
               style="
                 padding: 12px 16px;
                 font-family: var(--semantic-font-mono);
-                font-size: 12px;
+                font-size: var(--font-size-2xs);
                 color: var(--semantic-color-text-secondary);
               "
             >

@@ -108,7 +108,7 @@ const ariaLabel = computed(() => {
 
 .confidence-size-md {
   padding: 3px 8px;
-  font-size: var(--font-size-xs, 12px);
+  font-size: var(--font-size-xs);
 }
 .confidence-size-md .confidence-dot {
   width: 7px;
@@ -117,7 +117,7 @@ const ariaLabel = computed(() => {
 
 .confidence-size-lg {
   padding: 5px 12px;
-  font-size: var(--font-size-sm, 14px);
+  font-size: var(--font-size-sm);
 }
 .confidence-size-lg .confidence-dot {
   width: 8px;

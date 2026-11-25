@@ -415,21 +415,21 @@ const handleSubmit = async () => {
 }
 
 .modal-header-icon {
-  font-size: 1.5rem;
+  font-size: var(--font-size-2xl);
   line-height: 1.2;
   flex-shrink: 0;
 }
 
 .modal-title {
   margin: 0;
-  font-size: 1.15rem;
+  font-size: var(--font-size-lg);
   font-weight: 700;
   color: var(--semantic-color-text);
 }
 
 .modal-subtitle {
   margin: 4px 0 0 0;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-secondary);
 }
 

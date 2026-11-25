@@ -13,6 +13,7 @@
     },
     "./tokens.css": "./tokens.css",
     "./responsive.css": "./responsive.css",
+    "./fonts/*": "./fonts/*",
     "./package.json": "./package.json"
   },
   "scripts": {

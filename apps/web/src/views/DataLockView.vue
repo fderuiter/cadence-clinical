@@ -108,7 +108,7 @@ const isGovernanceModalOpen = ref(false);
   display: flex;
   flex-direction: column;
   gap: 10px;
-  font-size: 0.88rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-body);
 }
 

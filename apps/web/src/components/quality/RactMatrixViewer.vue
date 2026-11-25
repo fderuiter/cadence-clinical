@@ -1569,7 +1569,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.3rem;
+  font-size: var(--font-size-xl);
   flex-shrink: 0;
 }
 
@@ -1579,7 +1579,7 @@ onMounted(() => {
 }
 
 .kpi-value {
-  font-size: 1.4rem;
+  font-size: var(--font-size-xl);
   font-weight: 800;
   color: var(--semantic-color-text);
   line-height: 1.1;
@@ -1658,7 +1658,7 @@ onMounted(() => {
   padding: 7px 12px;
   border-radius: 6px;
   border: 1px solid var(--semantic-color-border);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-md);
   min-width: 280px;
 }
 
@@ -1828,7 +1828,7 @@ onMounted(() => {
   background: transparent;
   border: none;
   cursor: pointer;
-  font-size: 1.1rem;
+  font-size: var(--font-size-lg);
   padding: 4px;
   border-radius: 4px;
 }
@@ -2018,7 +2018,7 @@ onMounted(() => {
 }
 
 .empty-icon {
-  font-size: 2.5rem;
+  font-size: var(--font-size-5xl);
 }
 
 /* Modal Backdrops & Cards */
@@ -2073,7 +2073,7 @@ onMounted(() => {
 .modal-close-btn {
   background: transparent;
   border: none;
-  font-size: 1.2rem;
+  font-size: var(--font-size-lg);
   cursor: pointer;
   color: var(--semantic-color-text-muted);
 }
@@ -2125,7 +2125,7 @@ onMounted(() => {
   padding: 8px 12px;
   border-radius: 6px;
   border: 1px solid var(--semantic-color-border);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-md);
   background: var(--semantic-color-surface);
   color: var(--semantic-color-text);
 }

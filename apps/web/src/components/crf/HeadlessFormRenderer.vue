@@ -383,7 +383,7 @@ defineExpose({
 
 .form-title-badge h3 {
   margin: 0;
-  font-size: 1.125rem;
+  font-size: var(--font-size-lg);
   color: var(--semantic-color-text);
 }
 
@@ -391,7 +391,7 @@ defineExpose({
   padding: 2px 6px;
   background-color: var(--semantic-color-surface-muted);
   border-radius: var(--radius-sm, 4px);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   color: var(--semantic-color-text-secondary);
 }
@@ -406,7 +406,7 @@ defineExpose({
   border: 1px solid var(--border);
   background-color: var(--semantic-color-surface);
   border-radius: var(--radius-md, 6px);
-  font-size: 0.8125rem;
+  font-size: var(--font-size-xs);
   font-weight: 500;
   cursor: pointer;
 }
@@ -449,7 +449,7 @@ defineExpose({
 
 .section-title {
   margin: 0 0 12px 0;
-  font-size: 1rem;
+  font-size: var(--font-size-md);
   font-weight: 600;
   color: var(--semantic-color-text);
   border-bottom: 1px solid var(--semantic-color-border);
@@ -468,7 +468,7 @@ defineExpose({
 }
 
 .field-label {
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--semantic-color-text);
 }
@@ -482,7 +482,7 @@ defineExpose({
   padding: 8px 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius-md, 6px);
-  font-size: 0.9375rem;
+  font-size: var(--font-size-md);
   background-color: var(--semantic-color-surface);
   color: var(--semantic-color-text);
 }
@@ -492,7 +492,7 @@ defineExpose({
 }
 
 .field-error-message {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   color: var(--error);
   font-weight: 500;
 }
@@ -509,7 +509,7 @@ defineExpose({
   color: var(--semantic-color-surface);
   border: none;
   border-radius: var(--radius-md, 6px);
-  font-size: 0.9375rem;
+  font-size: var(--font-size-base);
   font-weight: 600;
   cursor: pointer;
 }

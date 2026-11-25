@@ -385,14 +385,14 @@ useFocusTrap(drawerRef, {
 
 .clinical-drawer-title {
   margin: 0;
-  font-size: var(--font-size-md, 16px);
+  font-size: var(--font-size-md);
   font-weight: 600;
   color: var(--color-text);
 }
 
 .clinical-drawer-subtitle {
   margin: 4px 0 0 0;
-  font-size: var(--font-size-xs, 12px);
+  font-size: var(--font-size-xs);
   color: var(--color-text-muted);
 }
 
@@ -404,7 +404,7 @@ useFocusTrap(drawerRef, {
   min-height: 36px;
   background: transparent;
   border: none;
-  font-size: 16px;
+  font-size: var(--font-size-md);
   color: var(--color-text-muted);
   cursor: pointer;
   padding: 4px 8px;

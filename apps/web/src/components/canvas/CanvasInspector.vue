@@ -338,20 +338,20 @@
                   :key="idx"
                   class="gap-card reasoning-modal-s-2"
                 >
-                  <div style="font-weight: 600; font-size: 0.85rem">
+                  <div style="font-weight: 600; font-size: var(--font-size-sm)">
                     <span class="gap-badge">{{ gap.severity }}</span>
                     {{ formatCommandTitle(String(gap.kind || "Finding")) }}
                     <span v-if="gap.json_pointer_path">
                       ({{ formatFieldPath(String(gap.json_pointer_path)) }})
                     </span>
                   </div>
-                  <div style="font-size: 0.8rem; margin-top: 2px">
+                  <div style="font-size: var(--font-size-xs); margin-top: 2px">
                     {{ gap.description }}
                   </div>
                   <div
                     v-if="gap.recommendation"
                     style="
-                      font-size: 0.75rem;
+                      font-size: var(--font-size-2xs);
                       color: var(--semantic-color-text-secondary);
                       margin-top: 2px;
                     "
@@ -1362,7 +1362,7 @@ watch(aiEnabled, (on) => {
   background: var(--neutral-light);
   padding: 8px;
   border-radius: 4px;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   font-family: var(--semantic-font-mono);
 }
 
@@ -1381,7 +1381,7 @@ watch(aiEnabled, (on) => {
 
 .simulation-subheading {
   margin: 4px 0 0;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 
 .simulation-list,
@@ -1391,7 +1391,7 @@ watch(aiEnabled, (on) => {
   gap: 6px;
   margin: 0;
   padding-left: 18px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 
 .simulation-item {
@@ -1406,13 +1406,13 @@ watch(aiEnabled, (on) => {
 .simulation-meta,
 .simulation-note {
   margin: 0;
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   color: var(--neutral-dark);
 }
 
 .simulation-total {
   margin: 0;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
 }
 
@@ -1444,7 +1444,7 @@ watch(aiEnabled, (on) => {
 
 .simulation-success {
   margin: 0;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-success);
 }
 
@@ -1482,7 +1482,7 @@ watch(aiEnabled, (on) => {
   border-radius: 6px;
   background: transparent;
   color: var(--neutral-dark);
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   line-height: 1;
   cursor: pointer;
 }
@@ -1510,7 +1510,7 @@ watch(aiEnabled, (on) => {
 
 .inspector-kind {
   color: var(--neutral-dark);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   overflow-wrap: anywhere;
@@ -1518,7 +1518,7 @@ watch(aiEnabled, (on) => {
 
 .inspector-title {
   margin: 0;
-  font-size: 1.15rem;
+  font-size: var(--font-size-lg);
   overflow-wrap: anywhere;
 }
 
@@ -1534,14 +1534,14 @@ watch(aiEnabled, (on) => {
 
 .inspector-ref {
   font-family: var(--semantic-font-mono);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   color: var(--neutral-dark);
   overflow-wrap: anywhere;
 }
 
 .inspector-ref-details {
   margin-top: 2px;
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
   color: var(--neutral-dark);
   min-width: 0;
   max-width: 100%;
@@ -1600,7 +1600,7 @@ watch(aiEnabled, (on) => {
   border-radius: 6px;
   background: transparent;
   color: inherit;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   cursor: pointer;
   box-sizing: border-box;
 }
@@ -1617,7 +1617,7 @@ watch(aiEnabled, (on) => {
 
 .verb-note {
   margin: 0;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--neutral-dark);
 }
 
@@ -1675,7 +1675,7 @@ watch(aiEnabled, (on) => {
 
 .sdv h3 {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
 }
 
 .sdv-status {
@@ -1709,7 +1709,7 @@ watch(aiEnabled, (on) => {
 
 .consent-header h3 {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
 }
 
 .consent-form {
@@ -1731,6 +1731,6 @@ watch(aiEnabled, (on) => {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 0.86rem;
+  font-size: var(--font-size-sm);
 }
 </style>

@@ -713,7 +713,7 @@ function submitOpenNew() {
   overflow-wrap: anywhere;
 }
 .ecrf-form-hint {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-secondary);
 }
 .ecrf-form-row {
@@ -763,7 +763,7 @@ function submitOpenNew() {
   grid-column: 1 / -1;
 }
 .ecrf-direct-id-disclosure {
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-secondary);
 }
 .ecrf-direct-id-summary {

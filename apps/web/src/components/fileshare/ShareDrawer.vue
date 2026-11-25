@@ -750,19 +750,19 @@ onUnmounted(() => {
 }
 
 .share-header-icon {
-  font-size: 1.4rem;
+  font-size: var(--font-size-xl);
 }
 
 .drawer-title {
   margin: 0;
-  font-size: 1.1rem;
+  font-size: var(--font-size-lg);
   font-weight: 700;
   color: var(--text-main);
 }
 
 .drawer-subtitle {
   margin: 2px 0 0 0;
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
   color: var(--neutral-dark);
   max-width: 320px;
   white-space: nowrap;
@@ -773,7 +773,7 @@ onUnmounted(() => {
 .close-drawer-btn {
   background: none;
   border: none;
-  font-size: 1.2rem;
+  font-size: var(--font-size-lg);
   color: var(--semantic-color-text-secondary);
   cursor: pointer;
   padding: 4px 8px;
@@ -800,7 +800,7 @@ onUnmounted(() => {
   padding: 12px 8px;
   border: none;
   background: none;
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   color: var(--semantic-color-text-secondary);
   cursor: pointer;
@@ -848,7 +848,7 @@ onUnmounted(() => {
 }
 
 .form-label {
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   color: var(--semantic-color-text-body);
 }
@@ -864,7 +864,7 @@ onUnmounted(() => {
   padding: 8px 12px;
   border: 1px solid var(--border);
   border-radius: 6px;
-  font-size: 0.88rem;
+  font-size: var(--font-size-md);
   font-family: inherit;
   box-sizing: border-box;
 }
@@ -898,7 +898,7 @@ onUnmounted(() => {
   justify-content: space-between;
   align-items: center;
   cursor: pointer;
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   border-bottom: 1px solid var(--semantic-color-surface-header);
 }
 
@@ -923,7 +923,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-body);
   cursor: pointer;
 }
@@ -944,7 +944,7 @@ onUnmounted(() => {
   background-color: var(--semantic-color-success-bg-soft);
   border: 1px solid var(--semantic-color-success-border-soft);
   color: var(--semantic-color-success-dark);
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   border-radius: 6px;
 }
 
@@ -953,7 +953,7 @@ onUnmounted(() => {
   background-color: var(--semantic-color-info-bg);
   border-left: 3px solid var(--accent);
   color: var(--semantic-color-info);
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   line-height: 1.4;
   border-radius: 4px;
 }
@@ -975,7 +975,7 @@ onUnmounted(() => {
 }
 
 .expires-text {
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -986,7 +986,7 @@ onUnmounted(() => {
 
 .url-input {
   font-family: var(--semantic-font-mono);
-  font-size: 0.8rem;
+  font-size: var(--font-size-md);
   background-color: var(--semantic-color-surface);
 }
 
@@ -1002,7 +1002,7 @@ onUnmounted(() => {
   padding: 24px;
   text-align: center;
   color: var(--semantic-color-text-secondary);
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-style: italic;
 }
 
@@ -1027,7 +1027,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
 }
 
 .grant-header-line {
@@ -1043,14 +1043,14 @@ onUnmounted(() => {
 
 .grant-meta-line {
   color: var(--semantic-color-text-secondary);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   display: flex;
   gap: 12px;
 }
 
 .grant-reason-line {
   color: var(--semantic-color-text-secondary);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
 }
 
 .revoke-confirm-card {
@@ -1064,12 +1064,12 @@ onUnmounted(() => {
 .revoke-confirm-card h4 {
   margin: 0 0 6px 0;
   color: var(--semantic-color-error);
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
 }
 
 .revoke-confirm-card p {
   margin: 0 0 10px 0;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-error-text-dark);
 }
 

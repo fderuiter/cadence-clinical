@@ -71,20 +71,20 @@ defineEmits(["action"]);
 }
 
 .empty-state-icon {
-  font-size: 2.25rem;
+  font-size: var(--font-size-4xl);
   line-height: 1;
   margin-bottom: 12px;
 }
 
 .empty-state-title {
-  font-size: 1.1rem;
+  font-size: var(--font-size-lg);
   font-weight: 600;
   color: var(--semantic-color-text-dark);
   margin: 0 0 6px 0;
 }
 
 .empty-state-message {
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-secondary);
   max-width: 480px;
   margin: 0 0 16px 0;

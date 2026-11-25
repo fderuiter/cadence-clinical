@@ -764,7 +764,7 @@ function synthesizeProtocol() {
   padding: 12px 16px;
   margin-bottom: 20px;
   color: var(--semantic-color-warning-text);
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
 }
 
 .banner-content {
@@ -774,7 +774,7 @@ function synthesizeProtocol() {
 }
 
 .banner-icon {
-  font-size: 1.2rem;
+  font-size: var(--font-size-lg);
 }
 
 .banner-text {
@@ -795,7 +795,7 @@ function synthesizeProtocol() {
   padding: 4px 10px;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   transition: all 0.2s ease;
 }
 
@@ -810,7 +810,7 @@ function synthesizeProtocol() {
   font-weight: 600;
   cursor: pointer;
   padding: 4px 8px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   text-decoration: underline;
 }
 
@@ -822,13 +822,13 @@ function synthesizeProtocol() {
   margin: 0 0 4px 0;
   font-weight: 700;
   color: var(--text-main);
-  font-size: 1.25rem;
+  font-size: var(--font-size-lg);
 }
 
 .header-title-box p {
   margin: 0;
   color: var(--semantic-color-text-secondary);
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
 }
 
 .wizard-badges {
@@ -842,7 +842,7 @@ function synthesizeProtocol() {
   padding: 4px 10px;
   border-radius: 4px;
   font-weight: 600;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
 }
 
 .badge-gxp {
@@ -851,11 +851,11 @@ function synthesizeProtocol() {
   padding: 4px 10px;
   border-radius: 4px;
   font-weight: 600;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
 }
 
 .section-subtitle {
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
   font-weight: 700;
   color: var(--semantic-color-text-body);
   margin: 0 0 16px 0;
@@ -898,7 +898,7 @@ function synthesizeProtocol() {
 }
 
 .ta-icon {
-  font-size: 1.75rem;
+  font-size: var(--font-size-3xl);
 }
 
 .badge-category {
@@ -912,13 +912,13 @@ function synthesizeProtocol() {
 
 .ta-title {
   margin: 0 0 8px 0;
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
   font-weight: 700;
   color: var(--semantic-color-text-dark);
 }
 
 .ta-desc {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-secondary);
   margin: 0 0 12px 0;
   line-height: 1.4;
@@ -959,7 +959,7 @@ function synthesizeProtocol() {
 
 .form-label {
   display: block;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   color: var(--semantic-color-text-secondary);
   margin-bottom: 6px;
@@ -970,14 +970,14 @@ function synthesizeProtocol() {
   padding: 8px 12px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
-  font-size: 0.875rem;
+  font-size: var(--font-size-md);
   color: var(--semantic-color-text-dark);
   background-color: var(--semantic-color-surface);
 }
 
 .form-control-sm {
   padding: 4px 8px;
-  font-size: 0.8rem;
+  font-size: var(--font-size-md);
 }
 
 .customization-tabs-nav {
@@ -991,7 +991,7 @@ function synthesizeProtocol() {
 .btn-tab {
   background: none;
   border: none;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--semantic-color-text-secondary);
   padding: 8px 16px;
@@ -1022,7 +1022,7 @@ function synthesizeProtocol() {
 
 .pane-header h5 {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
   font-weight: 700;
   color: var(--semantic-color-text-dark);
 }
@@ -1030,13 +1030,13 @@ function synthesizeProtocol() {
 .table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 
 .table th {
   text-align: left;
   padding: 8px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   color: var(--semantic-color-text-secondary);
   text-transform: uppercase;
@@ -1090,7 +1090,7 @@ function synthesizeProtocol() {
 }
 
 .summary-pill {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-success-dark);
 }
 
@@ -1111,7 +1111,7 @@ function synthesizeProtocol() {
   color: var(--semantic-color-surface);
   font-weight: 700;
   padding: 10px 24px;
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
   border-radius: 6px;
   cursor: pointer;
 }

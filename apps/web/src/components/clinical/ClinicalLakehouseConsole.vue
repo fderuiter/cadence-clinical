@@ -1008,7 +1008,7 @@ onMounted(() => {
 }
 
 .badge {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 4px 8px;
   border-radius: 4px;
@@ -1032,14 +1032,14 @@ onMounted(() => {
 
 .console-title {
   margin: 0 0 6px 0;
-  font-size: 1.35rem;
+  font-size: var(--font-size-xl);
   font-weight: 700;
   color: var(--semantic-color-text);
 }
 
 .console-subtitle {
   margin: 0;
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-secondary);
   max-width: 850px;
   line-height: 1.45;
@@ -1066,7 +1066,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   cursor: pointer;
 }
@@ -1080,7 +1080,7 @@ onMounted(() => {
   align-items: center;
   gap: 6px;
   padding: 8px 16px;
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   border-radius: 6px;
   border: 1px solid transparent;
@@ -1136,7 +1136,7 @@ onMounted(() => {
   width: 44px;
   height: 44px;
   border-radius: 8px;
-  font-size: 1.3rem;
+  font-size: var(--font-size-xl);
 }
 
 .stream-details {
@@ -1145,7 +1145,7 @@ onMounted(() => {
 }
 
 .stream-name {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   color: var(--semantic-color-text-secondary);
 }
@@ -1157,7 +1157,7 @@ onMounted(() => {
 }
 
 .stream-count {
-  font-size: 1.2rem;
+  font-size: var(--font-size-lg);
   font-weight: 700;
   color: var(--semantic-color-text);
 }
@@ -1182,7 +1182,7 @@ onMounted(() => {
 
 .tab-button {
   padding: 10px 18px;
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--semantic-color-text-secondary);
   background: transparent;
@@ -1216,7 +1216,7 @@ onMounted(() => {
 
 .card-title {
   margin: 0;
-  font-size: 1.1rem;
+  font-size: var(--font-size-lg);
   font-weight: 700;
   display: flex;
   align-items: center;
@@ -1225,7 +1225,7 @@ onMounted(() => {
 
 .card-sub {
   margin: 4px 0 0 0;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -1242,7 +1242,7 @@ onMounted(() => {
 }
 
 .snap-badge {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   background-color: var(--semantic-color-info-light);
   color: var(--semantic-color-info);
   padding: 2px 6px;
@@ -1260,7 +1260,7 @@ onMounted(() => {
 .form-input,
 .form-textarea {
   padding: 6px 10px;
-  font-size: 0.825rem;
+  font-size: var(--font-size-md);
   border: 1px solid var(--border);
   border-radius: 6px;
   background-color: var(--semantic-color-surface);
@@ -1278,7 +1278,7 @@ onMounted(() => {
 .data-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.825rem;
+  font-size: var(--font-size-xs);
   text-align: left;
 }
 
@@ -1318,7 +1318,7 @@ onMounted(() => {
   color: var(--semantic-color-indigo-text);
   padding: 2px 6px;
   border-radius: 4px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
 }
 
 .milestone-badge {
@@ -1337,14 +1337,14 @@ onMounted(() => {
   background-color: var(--semantic-color-surface-header);
   padding: 2px 6px;
   border-radius: 4px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
 }
 
 .partition-ratio {
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
 }
 
 .part-blinded {
@@ -1362,7 +1362,7 @@ onMounted(() => {
 
 .btn-mini {
   padding: 4px 8px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   border-radius: 4px;
   border: 1px solid var(--border);
@@ -1407,7 +1407,7 @@ onMounted(() => {
   color: var(--semantic-color-warning-text);
   padding: 2px 6px;
   border-radius: 4px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
 }
 
@@ -1431,7 +1431,7 @@ onMounted(() => {
 }
 
 .domain-pill {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   color: var(--semantic-color-accent);
 }
@@ -1480,23 +1480,23 @@ onMounted(() => {
 }
 
 .verify-icon-col {
-  font-size: 1.5rem;
+  font-size: var(--font-size-2xl);
 }
 
 .verify-content h4 {
   margin: 0 0 4px 0;
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
 }
 
 .verify-content p {
   margin: 0 0 8px 0;
-  font-size: 0.825rem;
+  font-size: var(--font-size-xs);
 }
 
 .digest-compare-row {
   display: flex;
   gap: 8px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   margin-top: 2px;
 }
 
@@ -1506,7 +1506,7 @@ onMounted(() => {
   right: 12px;
   background: transparent;
   border: none;
-  font-size: 1.2rem;
+  font-size: var(--font-size-lg);
   cursor: pointer;
   color: inherit;
 }
@@ -1535,7 +1535,7 @@ onMounted(() => {
 }
 
 .role-tag {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   background-color: var(--semantic-color-surface-header);
   padding: 2px 4px;
   border-radius: 3px;
@@ -1593,14 +1593,14 @@ onMounted(() => {
 
 .modal-header h3 {
   margin: 0;
-  font-size: 1.1rem;
+  font-size: var(--font-size-lg);
   font-weight: 700;
 }
 
 .btn-modal-close {
   background: transparent;
   border: none;
-  font-size: 1.4rem;
+  font-size: var(--font-size-xl);
   cursor: pointer;
   color: var(--semantic-color-text-secondary);
 }
@@ -1619,7 +1619,7 @@ onMounted(() => {
 }
 
 .form-label {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   color: var(--semantic-color-text);
 }

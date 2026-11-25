@@ -643,6 +643,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2824: Standardize Clinical Typography Utilities, 12px Floor, and AST Lints](adr/2026-11-24-standardize-clinical-typography-utilities-12px-floor-and-ast-lints.md) | Current | - Status: Accepted |
 | [ADR-2666: Atomic Dual-Signer Step-Up Verification and Startup-Validated CGT Barcode Key](adr/2026-11-24-atomic-dual-signer-step-up-verification-and-startup-validated-cgt-barcode-key.md) | Current | - Status: Accepted |
 | [ADR-2667: Fail-Closed Site Scope for Pharmacist and Subject Roles](adr/2026-11-23-fail-closed-site-scope-for-pharmacist-and-subject-roles.md) | Current | - Status: Accepted |
+| [ADR-2834: Bundle Self-Hosted Clinical WOFF2 Fonts, Rem Typography Scale, and Touch Control Lint Gates](adr/2026-11-24-bundle-clinical-woff2-fonts-rem-typography-and-touch-lint-gates.md) | Current | - Status: Accepted |
 
 ## Developing and running
 

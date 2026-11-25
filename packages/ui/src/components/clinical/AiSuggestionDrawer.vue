@@ -392,19 +392,19 @@ const toggleEdit = () => {
 }
 
 .ai-drawer-sparkle {
-  font-size: 1.25rem;
+  font-size: var(--font-size-lg);
 }
 
 .ai-drawer-title {
   margin: 0;
-  font-size: var(--font-size-md, 16px);
+  font-size: var(--font-size-md);
   font-weight: 600;
   color: var(--color-text);
 }
 
 .ai-drawer-subtitle {
   margin: 4px 0 0 0;
-  font-size: var(--font-size-xs, 12px);
+  font-size: var(--font-size-xs);
   color: var(--color-text-muted);
 }
 
@@ -416,7 +416,7 @@ const toggleEdit = () => {
   min-width: var(--semantic-control-target-min, 24px);
   background: transparent;
   border: none;
-  font-size: 16px;
+  font-size: var(--font-size-md);
   color: var(--color-text-muted);
   cursor: pointer;
   padding: 4px 8px;
@@ -434,7 +434,7 @@ const toggleEdit = () => {
   padding: 10px 24px;
   background: var(--color-primary-light);
   border-bottom: 1px solid var(--semantic-color-info-border-accent);
-  font-size: var(--font-size-xs, 12px);
+  font-size: var(--font-size-xs);
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -536,7 +536,7 @@ code.ai-provenance-val {
 .ai-diff-pre {
   margin: 0;
   font-family: var(--semantic-font-mono);
-  font-size: var(--font-size-xs, 12px);
+  font-size: var(--font-size-xs);
   white-space: pre-wrap;
   word-break: break-word;
   color: var(--color-text);
@@ -557,7 +557,7 @@ code.ai-provenance-val {
   width: 100%;
   padding: 8px;
   font-family: var(--semantic-font-mono);
-  font-size: 12px;
+  font-size: var(--font-size-md);
   border: 1px solid var(--color-primary);
   border-radius: 4px;
   box-sizing: border-box;
@@ -572,7 +572,7 @@ code.ai-provenance-val {
 }
 
 .ai-reason-label {
-  font-size: var(--font-size-xs, 12px);
+  font-size: var(--font-size-xs);
   font-weight: 600;
   color: var(--color-text);
 }
@@ -585,7 +585,7 @@ code.ai-provenance-val {
   width: 100%;
   min-height: var(--semantic-control-target-min, 24px);
   padding: 8px 12px;
-  font-size: var(--font-size-sm, 13px);
+  font-size: var(--font-size-md);
   border: 1px solid var(--semantic-color-border-control);
   border-radius: var(--radius-md, 6px);
   box-sizing: border-box;
@@ -605,7 +605,7 @@ code.ai-provenance-val {
 
 .ai-validation-error {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--font-size-2xs);
   color: var(--color-error);
 }
 
@@ -624,7 +624,7 @@ code.ai-provenance-val {
 
 .btn {
   padding: 8px 16px;
-  font-size: 13px;
+  font-size: var(--font-size-xs);
   font-weight: 500;
   border-radius: var(--radius-md, 6px);
   border: 1px solid transparent;

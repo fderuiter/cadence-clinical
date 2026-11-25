@@ -35,7 +35,7 @@ defineProps({
 }
 
 .reconsent-channel {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   cursor: pointer;
   display: flex;
   align-items: center;

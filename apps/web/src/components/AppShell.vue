@@ -152,21 +152,29 @@
             class="persona-switcher-wrapper"
           >
             <label for="persona-select" class="persona-label">View</label>
-            <select
-              id="persona-select"
-              :value="authStore.currentPersona"
-              class="persona-select"
-              title="Switch workspace view orientation and help emphasis"
-              @change="handlePersonaChange"
-            >
-              <option
-                v-for="persona in availablePersonas"
-                :key="persona.key"
-                :value="persona.key"
+            <div class="persona-select-shell">
+              <Shield
+                :size="14"
+                :stroke-width="1.75"
+                aria-hidden="true"
+                class="persona-shield-icon"
+              />
+              <select
+                id="persona-select"
+                :value="authStore.currentPersona"
+                class="persona-select"
+                title="Switch workspace view orientation and help emphasis"
+                @change="handlePersonaChange"
               >
-                {{ persona.label }}
-              </option>
-            </select>
+                <option
+                  v-for="persona in availablePersonas"
+                  :key="persona.key"
+                  :value="persona.key"
+                >
+                  {{ persona.label }}
+                </option>
+              </select>
+            </div>
           </div>
 
           <div
@@ -461,6 +469,7 @@ import {
   watch,
 } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import { Shield } from "lucide-vue-next";
 import { useSignOutGuard } from "ui";
 import { rehydrateOnboardingPersona } from "../auth/sessionCoordinator.js";
 import { PRE_RELEASE_ENVIRONMENT_NOTICE } from "../catalog/environmentNotice.js";
@@ -1186,7 +1195,7 @@ onUnmounted(() => {
   background-color: var(--semantic-color-warning-bg);
   color: var(--semantic-color-warning);
   border-bottom: 1px solid var(--semantic-color-warning);
-  font-size: 0.8125rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
 }
 
@@ -1260,7 +1269,7 @@ onUnmounted(() => {
 
 .brand-mark {
   color: var(--semantic-color-interactive-primary);
-  font-size: 1rem;
+  font-size: var(--font-size-md);
   line-height: 1;
   flex-shrink: 0;
 }
@@ -1271,7 +1280,7 @@ onUnmounted(() => {
 
 .header-title-area h1 {
   margin: 0;
-  font-size: 1rem;
+  font-size: var(--font-size-md);
   line-height: 1.2;
   font-weight: 700;
   letter-spacing: -0.01em;
@@ -1294,7 +1303,7 @@ onUnmounted(() => {
   box-sizing: border-box;
   padding: 6px 12px;
   border-radius: 6px;
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
   font-weight: 500;
   color: var(--semantic-color-text-body);
   text-decoration: none;
@@ -1332,7 +1341,7 @@ onUnmounted(() => {
   min-height: 24px;
   padding: 4px 10px;
   border-radius: 999px;
-  font-size: 0.76rem;
+  font-size: var(--font-size-2xs);
   line-height: 1.2;
   font-weight: 700;
   text-decoration: none;
@@ -1372,7 +1381,7 @@ onUnmounted(() => {
   background: var(--semantic-color-error-bg);
   border-bottom: 1px solid var(--semantic-color-error-border);
   color: var(--semantic-color-error-dark);
-  font-size: 0.86rem;
+  font-size: var(--font-size-sm);
 }
 
 .shell-expired-copy {
@@ -1398,7 +1407,7 @@ onUnmounted(() => {
   border-radius: 6px;
   background: var(--semantic-color-surface-muted);
   color: var(--semantic-color-text-body);
-  font-size: 0.84rem;
+  font-size: var(--font-size-xs);
   line-height: 1.2;
   font-weight: 500;
   cursor: pointer;
@@ -1415,7 +1424,7 @@ onUnmounted(() => {
 
 .palette-kbd {
   font-family: var(--semantic-font-mono);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   padding: 1px 5px;
   border-radius: 4px;
   background: var(--semantic-color-surface);
@@ -1434,20 +1443,37 @@ onUnmounted(() => {
 }
 
 .persona-label {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   color: var(--semantic-color-text-secondary);
+}
+
+.persona-select-shell {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.persona-shield-icon {
+  position: absolute;
+  left: 7px;
+  color: var(--semantic-color-interactive-primary);
+  pointer-events: none;
+  flex-shrink: 0;
 }
 
 .persona-select {
   min-height: 28px;
   box-sizing: border-box;
-  padding: 5px 8px;
+  padding: 5px 8px 5px 25px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   background: var(--semantic-color-surface);
   color: var(--semantic-color-text);
-  font-size: 0.83rem;
+  font-size: var(--font-size-md);
+  line-height: 1.2;
   max-width: min(220px, 100%);
   min-width: 0;
 }
@@ -1464,7 +1490,7 @@ onUnmounted(() => {
   border-radius: 6px;
   background: var(--semantic-color-surface);
   color: var(--semantic-color-text-dark);
-  font-size: 0.84rem;
+  font-size: var(--font-size-xs);
   line-height: 1.2;
   font-weight: 500;
   cursor: pointer;
@@ -1480,7 +1506,7 @@ onUnmounted(() => {
 }
 
 .setup-progress-pill {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   font-variant-numeric: var(--font-variant-numeric-tabular);
   padding: 1px 6px;
@@ -1519,7 +1545,7 @@ onUnmounted(() => {
 }
 
 .user-badge {
-  font-size: 0.83rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   color: var(--semantic-color-text-body);
   max-width: 120px;
@@ -1560,7 +1586,7 @@ onUnmounted(() => {
   border-radius: 6px;
   background: var(--semantic-color-surface);
   color: var(--semantic-color-text);
-  font-size: 1rem;
+  font-size: var(--font-size-md);
   line-height: 1;
   cursor: pointer;
 }
@@ -1613,7 +1639,7 @@ onUnmounted(() => {
   }
 
   .header-title-area h1 {
-    font-size: 0.9rem;
+    font-size: var(--font-size-sm);
     white-space: nowrap;
   }
 
@@ -1625,7 +1651,7 @@ onUnmounted(() => {
 
   .primary-nav-link {
     padding: 4px 6px;
-    font-size: 0.78rem;
+    font-size: var(--font-size-2xs);
     line-height: 1.2;
     white-space: nowrap;
   }
@@ -1649,29 +1675,35 @@ onUnmounted(() => {
 
   .persona-switcher-wrapper {
     gap: 4px;
+    flex-wrap: nowrap;
   }
 
   .persona-label {
-    font-size: 0.76rem;
+    font-size: var(--font-size-2xs);
+  }
+
+  .persona-shield-icon {
+    left: 6px;
   }
 
   .persona-select {
-    max-width: 104px;
-    padding: 4px 6px;
-    font-size: 0.76rem;
+    max-width: 128px;
+    padding: 2px 6px 2px 22px;
+    font-size: var(--font-size-md);
+    line-height: 1.2;
   }
 
   .shell-control-btn,
   .command-palette-trigger {
     padding: 4px 7px;
-    font-size: 0.76rem;
+    font-size: var(--font-size-2xs);
     line-height: 1.2;
     white-space: nowrap;
   }
 
   .mobile-menu-toggle {
     padding: 4px 8px;
-    font-size: 0.9rem;
+    font-size: var(--font-size-sm);
     line-height: 1.2;
   }
 
@@ -1686,7 +1718,7 @@ onUnmounted(() => {
 
   .user-session-controls :deep(.btn) {
     padding: 4px 8px;
-    font-size: 0.78rem;
+    font-size: var(--font-size-2xs);
     line-height: 1.2;
     white-space: nowrap;
   }
@@ -1722,12 +1754,12 @@ onUnmounted(() => {
   }
 
   .persona-select {
-    max-width: 96px;
+    max-width: 110px;
   }
 
   .user-badge {
     max-width: 72px;
-    font-size: 0.78rem;
+    font-size: var(--font-size-2xs);
   }
 }
 
@@ -1807,12 +1839,12 @@ onUnmounted(() => {
   }
 
   .header-title-area h1 {
-    font-size: 0.86rem;
+    font-size: var(--font-size-sm);
   }
 
   .primary-nav-link {
     padding: 4px 5px;
-    font-size: 0.75rem;
+    font-size: var(--font-size-2xs);
   }
 
   .plan-status-badge {
@@ -1820,7 +1852,7 @@ onUnmounted(() => {
   }
 
   .persona-select {
-    max-width: 90px;
+    max-width: 102px;
   }
 }
 

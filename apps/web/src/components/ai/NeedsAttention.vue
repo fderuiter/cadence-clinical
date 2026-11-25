@@ -372,12 +372,12 @@ function maskWords(mask: string | null | undefined): string {
 
 .attention h2 {
   margin: 0;
-  font-size: 1rem;
+  font-size: var(--font-size-md);
 }
 
 .attention-status {
   margin: 0;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--neutral-dark);
 }
 
@@ -421,7 +421,7 @@ function maskWords(mask: string | null | undefined): string {
   min-width: 0;
   max-width: 100%;
   overflow-wrap: anywhere;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   color: var(--neutral-dark);
 }
 

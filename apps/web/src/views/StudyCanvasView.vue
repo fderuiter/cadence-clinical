@@ -44,7 +44,7 @@
               "
               :aria-current="zoomCurrent === 'site' ? 'page' : undefined"
             >
-              Site {{ zoomSite }}
+              Site <span class="zoom-site-code">{{ zoomSite }}</span>
             </router-link>
           </li>
           <li v-if="zoomParticipantCode">
@@ -3639,7 +3639,7 @@ onUnmounted(() => {
   margin: 0;
   padding: 0;
   list-style: none;
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
   min-width: 0;
 }
 
@@ -3691,7 +3691,7 @@ onUnmounted(() => {
   .zoom-path ol {
     flex-wrap: nowrap;
     overflow-x: auto;
-    font-size: 0.85rem;
+    font-size: var(--font-size-sm);
   }
 }
 
@@ -3704,7 +3704,7 @@ onUnmounted(() => {
   .zoom-path ol {
     flex-wrap: nowrap;
     overflow-x: auto;
-    font-size: 0.84rem;
+    font-size: var(--font-size-xs);
   }
 
   .study-header {
@@ -3761,14 +3761,14 @@ onUnmounted(() => {
 
 .palette-trigger kbd {
   font-family: inherit;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
 }
 
 .user {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
 }
 
 .study-header {
@@ -3783,12 +3783,12 @@ onUnmounted(() => {
 
 .study-header h1 {
   margin: 0;
-  font-size: 1.25rem;
+  font-size: var(--font-size-lg);
   font-family: var(--semantic-font-mono);
 }
 
 #zoom-study,
-#zoom-site,
+.zoom-site-code,
 #zoom-participant,
 #zoom-form,
 #zoom-observation,
@@ -3822,7 +3822,7 @@ onUnmounted(() => {
   border-radius: 999px;
   color: var(--neutral-dark);
   text-decoration: none;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -3894,7 +3894,7 @@ onUnmounted(() => {
   border-radius: 6px;
   background: transparent;
   color: var(--neutral-dark);
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   line-height: 1;
   cursor: pointer;
 }
@@ -3913,7 +3913,7 @@ onUnmounted(() => {
 .nav-group-title {
   margin: 16px 0 4px;
   color: var(--neutral-dark);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -3941,7 +3941,7 @@ onUnmounted(() => {
   margin: 0;
   padding: 0 8px;
   color: var(--neutral-dark);
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 
 .workspace {
@@ -3970,7 +3970,7 @@ onUnmounted(() => {
 
 .stage-overview h2 {
   margin: 0 0 4px;
-  font-size: 1rem;
+  font-size: var(--font-size-md);
 }
 
 .stage-scope,
@@ -4011,6 +4011,7 @@ onUnmounted(() => {
   flex: 1 1 12rem;
   min-width: 0;
   padding: 8px;
+  font-size: var(--font-size-md);
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
 }
@@ -4027,7 +4028,7 @@ onUnmounted(() => {
 
 .directory-section h2 {
   margin: 0;
-  font-size: 1.05rem;
+  font-size: var(--font-size-md);
 }
 
 .directory-header {
@@ -4039,7 +4040,7 @@ onUnmounted(() => {
 }
 
 .directory-status {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--neutral-dark);
 }
 
@@ -4079,7 +4080,7 @@ onUnmounted(() => {
 }
 
 .study-card-code {
-  font-size: 0.98rem;
+  font-size: var(--font-size-md);
 }
 
 .study-phase-badge {
@@ -4088,16 +4089,16 @@ onUnmounted(() => {
   border-radius: 999px;
   background: var(--semantic-color-primary-light);
   color: var(--semantic-color-primary-dark);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
 }
 
 .study-card-title {
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
 }
 
 .study-card-sponsor {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   color: var(--neutral-dark);
 }
 
@@ -4115,7 +4116,7 @@ onUnmounted(() => {
   gap: 10px;
   padding: 10px 12px;
   border-radius: 6px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 
 .inline-banner-progress {
@@ -4162,7 +4163,7 @@ onUnmounted(() => {
 }
 
 .create-field label {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
 }
 
@@ -4172,7 +4173,7 @@ onUnmounted(() => {
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   font: inherit;
-  font-size: 0.9rem;
+  font-size: var(--font-size-md);
   width: 100%;
   box-sizing: border-box;
 }
@@ -4185,7 +4186,7 @@ onUnmounted(() => {
 }
 
 .create-file-note {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--neutral-dark);
 }
 

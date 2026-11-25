@@ -380,7 +380,7 @@ defineExpose({
 
 .modal-title {
   margin: 0;
-  font-size: 16px;
+  font-size: var(--font-size-md);
   font-weight: 600;
   color: var(--semantic-color-text);
 }
@@ -388,7 +388,7 @@ defineExpose({
 .close-btn {
   background: transparent;
   border: none;
-  font-size: 18px;
+  font-size: var(--font-size-lg);
   color: var(--semantic-color-text-muted);
   cursor: pointer;
 }
@@ -405,7 +405,7 @@ defineExpose({
   border: 1px solid var(--semantic-color-error-border-soft);
   color: var(--semantic-color-error-text-dark);
   border-radius: var(--radius-sm);
-  font-size: 13px;
+  font-size: var(--font-size-xs);
 }
 
 .dropzone {
@@ -436,19 +436,19 @@ defineExpose({
 }
 
 .upload-icon {
-  font-size: 32px;
+  font-size: var(--font-size-4xl);
 }
 
 .dropzone-title {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--semantic-color-text);
 }
 
 .dropzone-hint {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-muted);
 }
 
@@ -460,7 +460,7 @@ defineExpose({
 }
 
 .file-icon {
-  font-size: 36px;
+  font-size: var(--font-size-4xl);
 }
 
 .file-details {
@@ -471,7 +471,7 @@ defineExpose({
 
 .file-name {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--semantic-color-text);
 }
@@ -480,7 +480,7 @@ defineExpose({
 .file-checksum,
 .file-hashing {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-muted);
 }
 
@@ -491,7 +491,7 @@ defineExpose({
 }
 
 .form-label {
-  font-size: 13px;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   color: var(--semantic-color-text);
 }
@@ -505,7 +505,7 @@ defineExpose({
   padding: 10px 12px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--semantic-color-border-control);
-  font-size: 13px;
+  font-size: var(--font-size-md);
   font-family: inherit;
   resize: vertical;
   box-sizing: border-box;
@@ -559,7 +559,7 @@ defineExpose({
 
 .btn {
   padding: 8px 16px;
-  font-size: 13px;
+  font-size: var(--font-size-xs);
   font-weight: 500;
   border-radius: var(--radius-sm);
   cursor: pointer;

@@ -208,7 +208,7 @@ const addCriterion = () => {
 }
 
 .stat-pill {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   padding: 4px 10px;
   border-radius: 6px;
   border: 1px solid transparent;
@@ -256,7 +256,7 @@ const addCriterion = () => {
   padding: 7px 12px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
-  font-size: 0.88rem;
+  font-size: var(--font-size-md);
   background-color: var(--semantic-color-surface);
 }
 
@@ -270,7 +270,7 @@ const addCriterion = () => {
 .criteria-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   text-align: left;
 }
 
@@ -308,7 +308,7 @@ const addCriterion = () => {
   display: inline-block;
   padding: 2px 8px;
   border-radius: 4px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
 }
 
@@ -328,21 +328,21 @@ const addCriterion = () => {
   padding: 2px 6px;
   border-radius: 4px;
   font-family: var(--semantic-font-mono);
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-primary);
 }
 
 .text-muted {
   color: var(--semantic-color-text-secondary);
   font-style: italic;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
 }
 
 .syntax-badge {
   display: inline-block;
   padding: 2px 8px;
   border-radius: 4px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
 }
 

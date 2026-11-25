@@ -633,14 +633,14 @@ function completeAndClose() {
 }
 
 .modal-title {
-  font-size: 1.25rem;
+  font-size: var(--font-size-lg);
   font-weight: 800;
   color: var(--semantic-color-text-inverse);
   margin: 0;
 }
 
 .modal-subtitle {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-inverse-muted);
   margin: 0;
   line-height: 1.3;
@@ -650,7 +650,7 @@ function completeAndClose() {
   background: none;
   border: none;
   color: var(--semantic-color-text-inverse-muted);
-  font-size: 1.5rem;
+  font-size: var(--font-size-2xl);
   line-height: 1;
   cursor: pointer;
   padding: 0;
@@ -681,7 +681,7 @@ function completeAndClose() {
 }
 
 .param-label {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   color: var(--semantic-color-text-inverse-muted);
 }
@@ -690,7 +690,7 @@ function completeAndClose() {
   padding: 8px 12px;
   border: 1px solid var(--semantic-color-border-inverse);
   border-radius: 6px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-md);
   font-weight: 600;
   color: var(--semantic-color-text-dark);
 }
@@ -723,18 +723,18 @@ function completeAndClose() {
 }
 
 .dropzone-icon {
-  font-size: 2.5rem;
+  font-size: var(--font-size-5xl);
 }
 
 .dropzone-title {
-  font-size: 1rem;
+  font-size: var(--font-size-md);
   font-weight: 700;
   color: var(--semantic-color-text);
   margin: 0;
 }
 
 .dropzone-hint {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-inverse-muted);
   margin: 0;
 }
@@ -762,7 +762,7 @@ function completeAndClose() {
 }
 
 .summary-title {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-weight: 700;
   color: var(--semantic-color-text);
 }
@@ -783,7 +783,7 @@ function completeAndClose() {
 }
 
 .stat-num {
-  font-size: 1.1rem;
+  font-size: var(--font-size-lg);
   font-weight: 800;
 }
 
@@ -808,7 +808,7 @@ function completeAndClose() {
   padding: 10px 12px;
   display: flex;
   gap: 10px;
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-warning-text);
 }
 
@@ -830,7 +830,7 @@ function completeAndClose() {
 }
 
 .spinner-icon {
-  font-size: 2rem;
+  font-size: var(--font-size-4xl);
   animation: spin 1.5s linear infinite;
 }
 
@@ -844,14 +844,14 @@ function completeAndClose() {
 }
 
 .uploading-title {
-  font-size: 1.05rem;
+  font-size: var(--font-size-md);
   font-weight: 800;
   color: var(--semantic-color-text);
   margin: 0;
 }
 
 .uploading-desc {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-inverse-muted);
   margin: 0;
 }
@@ -872,7 +872,7 @@ function completeAndClose() {
 }
 
 .progress-text {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   color: var(--text-main);
 }
@@ -894,18 +894,18 @@ function completeAndClose() {
 }
 
 .cert-icon {
-  font-size: 2rem;
+  font-size: var(--font-size-4xl);
 }
 
 .cert-title {
-  font-size: 1rem;
+  font-size: var(--font-size-md);
   font-weight: 800;
   color: var(--semantic-color-success-dark);
   margin: 0;
 }
 
 .cert-subtitle {
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-success);
   margin: 0;
 }
@@ -918,7 +918,7 @@ function completeAndClose() {
   border: 1px solid var(--semantic-color-success-border-soft);
   border-radius: 6px;
   padding: 12px;
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
 }
 
 .detail-row {
@@ -948,7 +948,7 @@ function completeAndClose() {
 }
 
 .skipped-report-box {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-warning-text);
   background-color: var(--semantic-color-warning-bg-soft);
   padding: 8px 12px;
@@ -967,7 +967,7 @@ function completeAndClose() {
   border-radius: 6px;
   padding: 10px 12px;
   color: var(--semantic-color-error-text-dark);
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   display: flex;
   gap: 8px;
   align-items: center;
@@ -985,7 +985,7 @@ function completeAndClose() {
 .btn {
   padding: 8px 16px;
   border-radius: 6px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-weight: 700;
   cursor: pointer;
   border: 1px solid transparent;

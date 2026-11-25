@@ -401,7 +401,7 @@ const outcomeBadgeText = computed(() => {
 
 .card-title {
   margin: 0;
-  font-size: 1.15rem;
+  font-size: var(--font-size-lg);
   font-weight: 700;
   color: var(--semantic-color-text);
   display: flex;
@@ -411,7 +411,7 @@ const outcomeBadgeText = computed(() => {
 
 .card-subtitle {
   margin: 4px 0 0 0;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -473,11 +473,11 @@ const outcomeBadgeText = computed(() => {
   align-items: center;
   gap: 8px;
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
 }
 
 .criteria-list-section {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
 }
 
 .criteria-list-title {
@@ -494,7 +494,7 @@ const outcomeBadgeText = computed(() => {
 
 .criterion-chip {
   padding: 2px 8px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   border-radius: 4px;
 }
 
@@ -511,7 +511,7 @@ const outcomeBadgeText = computed(() => {
   align-items: center;
   gap: 6px;
   padding: 8px 16px;
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   border-radius: var(--radius-sm, 6px);
   cursor: pointer;
@@ -546,7 +546,7 @@ const outcomeBadgeText = computed(() => {
 .badge {
   display: inline-block;
   padding: 3px 8px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   border-radius: 9999px;
   text-transform: uppercase;

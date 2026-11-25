@@ -394,7 +394,7 @@ watch(() => [props.nodeRef, props.mode], load, { immediate: true });
 
 .lineage h3 {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
 }
 
 .lineage-list,
@@ -404,7 +404,7 @@ watch(() => [props.nodeRef, props.mode], load, { immediate: true });
   gap: 6px;
   margin: 0;
   padding-left: 18px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 
 .lineage-edge {
@@ -418,7 +418,7 @@ watch(() => [props.nodeRef, props.mode], load, { immediate: true });
 
 .lineage-subheading {
   margin: 4px 0 0;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 
 .amendment-change {
@@ -449,7 +449,7 @@ watch(() => [props.nodeRef, props.mode], load, { immediate: true });
   padding: 6px 8px;
   border-left: 3px solid var(--warning);
   background: var(--semantic-color-warning-bg-soft);
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
 }
 
 .lineage-total,
@@ -479,7 +479,7 @@ watch(() => [props.nodeRef, props.mode], load, { immediate: true });
 
 .lineage-note {
   margin: 0;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--neutral-dark);
 }
 </style>

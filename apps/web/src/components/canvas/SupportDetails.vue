@@ -43,7 +43,7 @@ const hasDetails = computed(() =>
 <style scoped>
 .support-details {
   margin-top: 6px;
-  font-size: 0.8125rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-muted);
 }
 
@@ -74,6 +74,6 @@ const hasDetails = computed(() =>
 }
 
 .support-details-code code {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
 }
 </style>

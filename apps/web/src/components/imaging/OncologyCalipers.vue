@@ -553,7 +553,7 @@ function getTimepointClass(tp) {
 }
 
 .panel-title {
-  font-size: 1rem;
+  font-size: var(--font-size-md);
   font-weight: 700;
   color: var(--semantic-color-text-inverse);
 }
@@ -569,7 +569,7 @@ function getTimepointClass(tp) {
 }
 
 .section-subtitle {
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -592,7 +592,7 @@ function getTimepointClass(tp) {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -624,7 +624,7 @@ function getTimepointClass(tp) {
 }
 
 .field-label {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   color: var(--semantic-color-text-inverse-muted);
 }
@@ -638,7 +638,7 @@ function getTimepointClass(tp) {
   border: 1px solid var(--semantic-color-border-inverse);
   border-radius: 4px;
   padding: 6px 8px;
-  font-size: 0.8rem;
+  font-size: var(--font-size-md);
   box-sizing: border-box;
 }
 
@@ -666,7 +666,7 @@ function getTimepointClass(tp) {
 }
 
 .empty-state {
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-inverse-muted);
   padding: 12px;
   background-color: var(--semantic-color-surface-sunken);
@@ -686,7 +686,7 @@ function getTimepointClass(tp) {
 .annotations-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
 }
 
 .annotations-table th {
@@ -787,13 +787,13 @@ function getTimepointClass(tp) {
 }
 
 .summary-title {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-weight: 700;
   color: var(--semantic-color-text-inverse);
 }
 
 .response-pill {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   font-weight: 800;
   padding: 3px 10px;
   border-radius: 999px;
@@ -837,7 +837,7 @@ function getTimepointClass(tp) {
 }
 
 .metric-value {
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
   font-weight: 700;
   color: var(--semantic-color-text-inverse);
 }
@@ -861,7 +861,7 @@ function getTimepointClass(tp) {
   border: none;
   border-radius: 6px;
   padding: 10px 14px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-weight: 700;
   cursor: pointer;
   display: flex;
@@ -898,7 +898,7 @@ function getTimepointClass(tp) {
 }
 
 .modal-title {
-  font-size: 1rem;
+  font-size: var(--font-size-md);
   font-weight: 700;
 }
 
@@ -912,13 +912,13 @@ function getTimepointClass(tp) {
   background: none;
   border: none;
   color: var(--semantic-color-text-inverse-muted);
-  font-size: 1.1rem;
+  font-size: var(--font-size-lg);
   cursor: pointer;
   box-sizing: border-box;
 }
 
 .modal-disclaimer {
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-inverse-muted);
   background-color: var(--semantic-color-surface-elevated);
   padding: 8px 12px;
@@ -981,7 +981,7 @@ function getTimepointClass(tp) {
   border: 1px solid var(--semantic-color-border-inverse);
   border-radius: 4px;
   padding: 2px 6px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-md);
   box-sizing: border-box;
 }
 

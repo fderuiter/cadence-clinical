@@ -421,13 +421,13 @@ onMounted(() => {
 
 .header-text-group h2 {
   margin: 0 0 6px 0;
-  font-size: 1.5rem;
+  font-size: var(--font-size-2xl);
   color: var(--text-main);
 }
 
 .header-text-group p {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
   color: var(--neutral-dark);
 }
 
@@ -449,7 +449,7 @@ onMounted(() => {
   border: none;
   background: transparent;
   padding: 6px 12px;
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   color: var(--semantic-color-text-secondary);
   border-radius: 4px;
@@ -469,7 +469,7 @@ onMounted(() => {
   align-items: center;
   padding: 12px 16px;
   border-radius: 6px;
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
   font-weight: 500;
   margin-bottom: var(--spacing-xs);
 }
@@ -501,7 +501,7 @@ onMounted(() => {
 .alert-close-btn {
   background: transparent;
   border: none;
-  font-size: 1rem;
+  font-size: var(--font-size-md);
   cursor: pointer;
   color: inherit;
   opacity: 0.7;
@@ -525,18 +525,18 @@ onMounted(() => {
 }
 
 .gating-icon {
-  font-size: 2rem;
+  font-size: var(--font-size-4xl);
 }
 
 .gating-content h3 {
   margin: 0 0 6px 0;
-  font-size: 1.1rem;
+  font-size: var(--font-size-lg);
   color: var(--error);
 }
 
 .gating-content p {
   margin: 0;
-  font-size: 0.88rem;
+  font-size: var(--font-size-sm);
   color: var(--text-main);
 }
 
@@ -571,14 +571,14 @@ onMounted(() => {
 }
 
 .stat-number {
-  font-size: 1.8rem;
+  font-size: var(--font-size-3xl);
   font-weight: 800;
   line-height: 1;
   color: var(--text-main);
 }
 
 .stat-title {
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   color: var(--neutral-dark);
 }
@@ -634,7 +634,7 @@ onMounted(() => {
   background: transparent;
   border: none;
   padding: 6px 12px;
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   color: var(--semantic-color-text-secondary);
   border-radius: 4px;
@@ -654,7 +654,7 @@ onMounted(() => {
 
 .dict-select-box select,
 .confidence-select-box select {
-  font-size: 0.82rem;
+  font-size: var(--font-size-md);
   padding: 6px 10px;
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -677,7 +677,7 @@ onMounted(() => {
   padding: 6px 12px;
   border: 1px solid var(--border);
   border-radius: 6px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-md);
 }
 
 .search-input:focus-visible {

@@ -1651,14 +1651,14 @@ onMounted(() => {
 
 .sce-title {
   margin: 0 0 6px;
-  font-size: 24px;
+  font-size: var(--font-size-2xl);
   font-weight: 700;
   color: var(--semantic-color-text);
 }
 
 .sce-subtitle {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-secondary);
   line-height: 1.5;
 }
@@ -1685,7 +1685,7 @@ onMounted(() => {
 }
 
 .status-icon {
-  font-size: 18px;
+  font-size: var(--font-size-lg);
 }
 
 .status-info {
@@ -1694,7 +1694,7 @@ onMounted(() => {
 }
 
 .status-label {
-  font-size: 12px;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
 }
 
@@ -1713,7 +1713,7 @@ onMounted(() => {
 
 .tab-btn {
   padding: 12px 18px;
-  font-size: 13px;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   border: none;
   background: transparent;
@@ -1751,18 +1751,18 @@ onMounted(() => {
 
 .card-title {
   margin: 0;
-  font-size: 16px;
+  font-size: var(--font-size-md);
   font-weight: 700;
 }
 
 .card-sub {
   margin: 4px 0 0;
-  font-size: 12px;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
 }
 
 .total-badge {
-  font-size: 12px;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   color: var(--semantic-color-text-secondary);
 }
@@ -1796,7 +1796,7 @@ onMounted(() => {
 
 .lang-btn {
   padding: 8px 14px;
-  font-size: 12px;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
@@ -1837,14 +1837,14 @@ onMounted(() => {
 }
 
 .form-label {
-  font-size: 12px;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
 }
 
 .form-input,
 .form-select {
   padding: 10px 12px;
-  font-size: 13px;
+  font-size: var(--font-size-md);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background: var(--semantic-color-surface);
@@ -1864,7 +1864,7 @@ onMounted(() => {
   padding: 8px 16px;
   background: var(--semantic-color-surface-elevated);
   color: var(--semantic-color-text-inverse-muted);
-  font-size: 12px;
+  font-size: var(--font-size-2xs);
   font-family: var(--font-mono);
 }
 
@@ -1872,7 +1872,7 @@ onMounted(() => {
   width: 100%;
   padding: 16px;
   font-family: var(--font-mono);
-  font-size: 13px;
+  font-size: var(--font-size-md);
   line-height: 1.6;
   background: var(--semantic-color-surface-inverse);
   color: var(--semantic-color-text-inverse);
@@ -1927,7 +1927,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 13px;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   cursor: pointer;
 }
@@ -1959,7 +1959,7 @@ onMounted(() => {
 
 .bounds-title {
   margin: 0 0 10px;
-  font-size: 12px;
+  font-size: var(--font-size-2xs);
   text-transform: uppercase;
   color: var(--semantic-color-text-secondary);
 }
@@ -1973,7 +1973,7 @@ onMounted(() => {
 .bound-item {
   display: flex;
   justify-content: space-between;
-  font-size: 12px;
+  font-size: var(--font-size-2xs);
 }
 
 .bound-name {
@@ -1994,7 +1994,7 @@ onMounted(() => {
   justify-content: center;
   gap: 8px;
   padding: 10px 18px;
-  font-size: 13px;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   border-radius: var(--radius-sm);
   border: 1px solid transparent;
@@ -2005,7 +2005,7 @@ onMounted(() => {
 
 .btn-lg {
   padding: 14px 24px;
-  font-size: 14px;
+  font-size: var(--font-size-sm);
   min-height: 50px;
 }
 
@@ -2044,7 +2044,7 @@ onMounted(() => {
 .btn-close {
   background: transparent;
   border: none;
-  font-size: 20px;
+  font-size: var(--font-size-lg);
   cursor: pointer;
 }
 
@@ -2121,7 +2121,7 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   margin-top: 4px;
-  font-size: 12px;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
 }
 
@@ -2133,7 +2133,7 @@ onMounted(() => {
 .data-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 12px;
+  font-size: var(--font-size-2xs);
 }
 
 .data-table th,
@@ -2279,7 +2279,7 @@ onMounted(() => {
 
 .sig-title {
   margin: 0 0 12px;
-  font-size: 13px;
+  font-size: var(--font-size-xs);
   font-weight: 700;
   color: var(--semantic-color-info);
 }
@@ -2306,7 +2306,7 @@ onMounted(() => {
 }
 
 .sig-val {
-  font-size: 12px;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
 }
 
@@ -2337,7 +2337,7 @@ onMounted(() => {
 }
 
 .art-icon {
-  font-size: 20px;
+  font-size: var(--font-size-lg);
 }
 
 .art-meta {
@@ -2348,7 +2348,7 @@ onMounted(() => {
 
 .art-name {
   font-weight: 700;
-  font-size: 13px;
+  font-size: var(--font-size-xs);
 }
 
 .art-sub {
@@ -2390,7 +2390,7 @@ onMounted(() => {
   background: var(--semantic-color-surface-inverse);
   color: var(--semantic-color-text-inverse-muted);
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--font-size-2xs);
   line-height: 1.5;
   max-height: 300px;
   overflow-y: auto;
@@ -2454,7 +2454,7 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   font-weight: 700;
-  font-size: 12px;
+  font-size: var(--font-size-2xs);
 }
 
 .pkg-footer {
@@ -2501,7 +2501,7 @@ onMounted(() => {
 
 .modal-title {
   margin: 0;
-  font-size: 16px;
+  font-size: var(--font-size-md);
   font-weight: 700;
 }
 

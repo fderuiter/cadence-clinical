@@ -1263,7 +1263,7 @@ function findingFormLocation(
 .status-line,
 .rule-pack-meta {
   margin: 0;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-secondary);
 }
 .validation-card {
@@ -1296,7 +1296,7 @@ function findingFormLocation(
 .status-pill {
   padding: 2px 8px;
   border-radius: 999px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   background: var(--neutral-light);
 }
@@ -1310,7 +1310,7 @@ function findingFormLocation(
 }
 .finding-decision-note {
   margin: 0;
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-secondary);
 }
 .finding-action-box {
@@ -1321,7 +1321,7 @@ function findingFormLocation(
   padding: 8px 10px;
   border-radius: 6px;
   background: var(--semantic-color-surface-muted);
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
 }
 .finding-action-box label {
   display: flex;
@@ -1335,11 +1335,11 @@ function findingFormLocation(
   padding: 6px 8px;
   border: 1px solid var(--border);
   border-radius: 4px;
-  font-size: 0.84rem;
+  font-size: var(--font-size-md);
 }
 .severity-tag {
   font-weight: 600;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
 }
 .compiled-rules-list,
 .pack-preview-box {
@@ -1347,7 +1347,7 @@ function findingFormLocation(
   padding: 8px 12px;
   border-radius: 6px;
   background: var(--semantic-color-surface-muted);
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
 }
 .rule-expr {
   display: flex;
@@ -1357,7 +1357,7 @@ function findingFormLocation(
 .banner {
   padding: 8px 12px;
   border-radius: 6px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 .banner-error {
   background: var(--semantic-color-error-bg-soft);

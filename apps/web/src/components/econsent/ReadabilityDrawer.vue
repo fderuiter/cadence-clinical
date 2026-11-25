@@ -381,14 +381,14 @@ onMounted(() => {
 
 .drawer-title h3 {
   margin: 0;
-  font-size: 1.05rem;
+  font-size: var(--font-size-md);
   color: var(--semantic-color-text);
 }
 
 .btn-close {
   background: transparent;
   border: none;
-  font-size: 1.2rem;
+  font-size: var(--font-size-lg);
   cursor: pointer;
   color: var(--semantic-color-text-secondary);
   border-radius: 4px;
@@ -426,7 +426,7 @@ onMounted(() => {
 }
 
 .metric-label {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   text-transform: uppercase;
   font-weight: 600;
   color: var(--semantic-color-text-secondary);
@@ -439,13 +439,13 @@ onMounted(() => {
 }
 
 .metric-value {
-  font-size: 1.4rem;
+  font-size: var(--font-size-xl);
   font-weight: 700;
   color: var(--semantic-color-text);
 }
 
 .metric-sub {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -479,7 +479,7 @@ onMounted(() => {
 .action-bar .btn {
   flex: 1;
   padding: 8px 12px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   border-radius: 6px;
   cursor: pointer;
@@ -519,14 +519,14 @@ onMounted(() => {
 
 .section-title-row h4 {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text);
 }
 
 .count-badge {
   background-color: var(--semantic-color-info-bg);
   color: var(--primary);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   padding: 2px 8px;
   border-radius: 10px;
   font-weight: 600;
@@ -538,7 +538,7 @@ onMounted(() => {
   background-color: var(--semantic-color-surface-muted);
   border: 1px dashed var(--border);
   border-radius: 8px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -561,7 +561,7 @@ onMounted(() => {
 .sub-header {
   display: flex;
   justify-content: space-between;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
 }
 
 .category-tag {
@@ -607,24 +607,24 @@ onMounted(() => {
 }
 
 .diff-text.del-text {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   text-decoration: line-through;
   color: var(--error);
 }
 
 .diff-text.ins-text {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--success);
 }
 
 .arrow {
   color: var(--semantic-color-text-secondary);
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
 }
 
 .rationale-text {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-secondary);
   margin: 0;
   line-height: 1.4;
@@ -636,7 +636,7 @@ onMounted(() => {
   color: var(--primary);
   padding: 4px 10px;
   border-radius: 4px;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   cursor: pointer;
   align-self: flex-start;
@@ -675,7 +675,7 @@ onMounted(() => {
 
 .audit-link-section h4 {
   margin: 0;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text);
 }
 
@@ -686,7 +686,7 @@ onMounted(() => {
 }
 
 .form-group label {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
   font-weight: 500;
 }
@@ -695,7 +695,7 @@ onMounted(() => {
   border: 1px solid var(--border);
   border-radius: 4px;
   padding: 6px 10px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-md);
   background-color: var(--semantic-color-surface);
   color: var(--semantic-color-text);
   max-width: 100%;

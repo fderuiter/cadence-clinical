@@ -1852,7 +1852,7 @@ const exportAuditTrail = (format) => {
 }
 
 .view-title {
-  font-size: 1.6rem;
+  font-size: var(--font-size-2xl);
   font-weight: 800;
   color: var(--semantic-color-text);
   margin: 0 0 6px 0;
@@ -1860,7 +1860,7 @@ const exportAuditTrail = (format) => {
 }
 
 .view-subtitle {
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-secondary);
   max-width: 820px;
   line-height: 1.45;
@@ -1892,7 +1892,7 @@ const exportAuditTrail = (format) => {
   margin: 0;
   max-width: 100%;
   width: min(100%, 420px);
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
   line-height: 1.4;
   color: var(--semantic-color-text-secondary);
   text-align: right;
@@ -1939,7 +1939,7 @@ const exportAuditTrail = (format) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.3rem;
+  font-size: var(--font-size-xl);
   background: var(--semantic-color-surface-header);
 }
 
@@ -1965,7 +1965,7 @@ const exportAuditTrail = (format) => {
 }
 
 .stat-value {
-  font-size: 1.4rem;
+  font-size: var(--font-size-xl);
   font-weight: 800;
   color: var(--semantic-color-text);
   line-height: 1.2;
@@ -1973,7 +1973,7 @@ const exportAuditTrail = (format) => {
 }
 
 .stat-label {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   color: var(--semantic-color-text-secondary);
   margin-top: 2px;
@@ -2017,7 +2017,7 @@ const exportAuditTrail = (format) => {
 }
 
 .search-icon {
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
   flex-shrink: 0;
 }
 
@@ -2030,7 +2030,7 @@ const exportAuditTrail = (format) => {
   border: none;
   border-radius: 4px;
   background: transparent;
-  font-size: 0.85rem;
+  font-size: var(--font-size-md);
   width: 100%;
   min-width: 0;
   min-height: var(--semantic-control-target-min, 24px);
@@ -2045,7 +2045,7 @@ const exportAuditTrail = (format) => {
   padding: 6px 10px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
-  font-size: 0.82rem;
+  font-size: var(--font-size-md);
   background: var(--semantic-color-surface);
   color: var(--semantic-color-text-body);
   width: 128px;
@@ -2053,7 +2053,7 @@ const exportAuditTrail = (format) => {
 
 @media (pointer: coarse) {
   .filter-input {
-    font-size: 1rem;
+    font-size: var(--font-size-md);
     min-height: 44px;
   }
 }
@@ -2082,7 +2082,7 @@ const exportAuditTrail = (format) => {
   padding: 6px 12px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
-  font-size: 0.82rem;
+  font-size: var(--font-size-md);
   background: var(--semantic-color-surface);
   color: var(--semantic-color-text-body);
   min-width: 0;
@@ -2153,7 +2153,7 @@ const exportAuditTrail = (format) => {
 }
 
 .column-title {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-weight: 700;
   color: var(--semantic-color-text-dark);
 }
@@ -2161,7 +2161,7 @@ const exportAuditTrail = (format) => {
 .column-count {
   background: var(--semantic-color-surface-header);
   color: var(--semantic-color-text-secondary);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 2px 7px;
   border-radius: 10px;
@@ -2216,14 +2216,14 @@ const exportAuditTrail = (format) => {
 
 .ref-tag {
   font-family: var(--semantic-font-mono);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   color: var(--semantic-color-interactive-primary);
 }
 
 .card-ticket-title {
   display: block;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--semantic-color-text);
   margin: 0;
@@ -2313,7 +2313,7 @@ const exportAuditTrail = (format) => {
   width: 100%;
   border-collapse: collapse;
   text-align: left;
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
 }
 
 .clinical-table th {
@@ -2377,7 +2377,7 @@ const exportAuditTrail = (format) => {
 .btn {
   padding: 8px 14px;
   border-radius: 6px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   cursor: pointer;
   display: inline-flex;
@@ -2391,7 +2391,7 @@ const exportAuditTrail = (format) => {
   min-height: var(--semantic-control-target-min, 24px);
   min-width: var(--semantic-control-target-min, 24px);
   padding: 3px 8px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
 }
 
 .btn-primary {
@@ -2426,7 +2426,7 @@ const exportAuditTrail = (format) => {
 }
 
 .bulk-count-badge {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-weight: 700;
   color: var(--semantic-color-info);
   background: var(--semantic-color-info-light);
@@ -2449,7 +2449,7 @@ const exportAuditTrail = (format) => {
 }
 
 .batch-select {
-  font-size: 0.82rem;
+  font-size: var(--font-size-md);
   padding: 5px 10px;
 }
 
@@ -2475,7 +2475,7 @@ const exportAuditTrail = (format) => {
   min-height: var(--semantic-control-target-min, 24px);
   min-width: var(--semantic-control-target-min, 24px);
   padding: 5px 10px;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
 }
 
 .btn-secondary:hover:not(:disabled) {

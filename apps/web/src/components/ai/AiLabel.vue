@@ -49,7 +49,7 @@ const title = computed(
   border-radius: 12px;
   background: var(--semantic-color-ai-bg);
   color: var(--semantic-color-ai);
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
   line-height: 1.6;
 }
 

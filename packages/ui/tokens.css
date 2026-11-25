@@ -1,4 +1,21 @@
 /* Design System Tokens for Cadence Clinical Platform */
+
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("./fonts/InterVariable-latin.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  font-style: normal;
+  font-weight: 300 800;
+  font-display: swap;
+  src: url("./fonts/JetBrainsMonoVariable-latin.woff2") format("woff2");
+}
+
 :root {
   /* Color Roles */
   --color-primary: #026597;
@@ -48,16 +65,18 @@
   --spacing-3xl: 48px;
   --spacing-4xl: 64px;
 
-  /* Typography Scale */
-  --font-size-2xs: 12px;
-  --font-size-xs: 13px;
-  --font-size-sm: 14px;
-  --font-size-base: 15px;
-  --font-size-md: 16px;
-  --font-size-lg: 18px;
-  --font-size-xl: 22px;
-  --font-size-2xl: 24px;
-  --font-size-3xl: 28px;
+  /* Typography Scale (rem-based, 0.75rem / 12px minimum floor) */
+  --font-size-2xs: 0.75rem;
+  --font-size-xs: 0.8125rem;
+  --font-size-sm: 0.875rem;
+  --font-size-base: 0.9375rem;
+  --font-size-md: 1rem;
+  --font-size-lg: 1.125rem;
+  --font-size-xl: 1.375rem;
+  --font-size-2xl: 1.5rem;
+  --font-size-3xl: 1.75rem;
+  --font-size-4xl: 2rem;
+  --font-size-5xl: 2.5rem;
 
   /* Font Stack */
   --font-sans:
@@ -285,6 +304,8 @@
   --semantic-font-size-xl: var(--font-size-xl);
   --semantic-font-size-2xl: var(--font-size-2xl);
   --semantic-font-size-3xl: var(--font-size-3xl);
+  --semantic-font-size-4xl: var(--font-size-4xl);
+  --semantic-font-size-5xl: var(--font-size-5xl);
 
   /* Semantic Spacing Scale */
   --semantic-spacing-2xs: var(--spacing-2xs);
@@ -756,6 +777,13 @@ html[data-theme="dark"] {
   padding: 0;
 }
 
+:where(body) {
+  font-family: var(--semantic-font-family);
+  font-feature-settings:
+    "cv05" 1,
+    "cv08" 1;
+}
+
 :where(
   input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
   select,
@@ -763,10 +791,14 @@ html[data-theme="dark"] {
 ) {
   color: var(--semantic-color-text);
   background-color: var(--semantic-color-surface);
+  font-family: inherit;
+  font-size: var(--font-size-md);
 }
 
 :where(button) {
   color: inherit;
+  font-family: inherit;
+  font-size: inherit;
 }
 
 /* Global Keyboard Navigation Two-Color Focus Indicators (WCAG 2.2 SC 2.4.7 / SC 1.4.11 via Techniques C40, C45, G195).
@@ -938,7 +970,7 @@ td select,
 .clinical-radio-grid legend {
   display: block;
   font-weight: 600;
-  font-size: var(--semantic-font-size-base, 15px);
+  font-size: var(--semantic-font-size-base);
   margin-bottom: var(--semantic-spacing-xs, 8px);
   color: var(--semantic-color-text-muted);
   overflow-wrap: anywhere;
@@ -1010,7 +1042,7 @@ td select,
   border: 1px solid var(--semantic-color-border-control);
   border-radius: var(--radius-sm);
   font-family: var(--semantic-font-family);
-  font-size: var(--semantic-font-size-base, 15px);
+  font-size: var(--semantic-font-size-md);
   background-color: var(--semantic-color-surface);
   color: var(--semantic-color-text);
   transition:
@@ -1042,7 +1074,7 @@ td select,
 
 .clinical-input--compact label,
 .clinical-input--compact legend {
-  font-size: 0.8125rem;
+  font-size: var(--font-size-xs);
   margin-bottom: 4px;
   color: var(--semantic-color-text-secondary);
 }
@@ -1054,11 +1086,30 @@ td select,
 .clinical-input--compact .clinical-input-control {
   min-height: 36px;
   padding: 6px 10px;
-  font-size: 0.875rem;
+  font-size: var(--font-size-md);
 }
 
-/* Prevent iOS auto-zoom on touch viewports by preserving >= 16px (1rem) font-size on form controls */
+@media (pointer: fine) and (min-width: 769px) {
+  .clinical-input
+    input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+  .clinical-input select,
+  .clinical-input textarea,
+  .clinical-input .clinical-input-control {
+    font-size: var(--semantic-font-size-base);
+  }
+
+  .clinical-input--compact
+    input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+  .clinical-input--compact select,
+  .clinical-input--compact textarea,
+  .clinical-input--compact .clinical-input-control {
+    font-size: var(--font-size-sm);
+  }
+}
+
+/* Prevent iOS/Android auto-zoom on touch viewports by preserving >= 16px (1rem) font-size on form controls */
 @media (pointer: coarse) {
+  :where(input, select, textarea):not([type="checkbox"]):not([type="radio"]),
   .clinical-input
     input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
   .clinical-input select,
@@ -1072,7 +1123,7 @@ td select,
   td input:not([type="checkbox"]):not([type="radio"]),
   td select,
   td textarea {
-    font-size: max(1rem, var(--font-size-md, 16px));
+    font-size: max(1rem, var(--font-size-md));
   }
 }
 
@@ -1087,7 +1138,7 @@ td select,
   .clinical-input--compact select,
   .clinical-input--compact textarea,
   .clinical-input--compact .clinical-input-control {
-    font-size: max(1rem, var(--font-size-md, 16px));
+    font-size: max(1rem, var(--font-size-md));
   }
 }
 
@@ -1098,7 +1149,7 @@ td select,
 
 .clinical-field-hint {
   margin-top: var(--semantic-spacing-2xs, 4px);
-  font-size: 0.78rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -1172,7 +1223,7 @@ textarea[aria-invalid="true"]:focus-visible {
 
 .validation-error-msg {
   color: var(--semantic-color-error);
-  font-size: 13px;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   margin-top: var(--semantic-spacing-2xs, 4px);
 }
@@ -1207,7 +1258,7 @@ textarea[aria-invalid="true"]:focus-visible {
   /* Centralized styles maintain WCAG 2.1 minimum target dimensions of 48px for interactive elements */
   min-height: var(--semantic-touch-target-min, 48px);
   font-weight: 500;
-  font-size: var(--semantic-font-size-base, 15px);
+  font-size: var(--semantic-font-size-base);
   color: var(--semantic-color-text);
 }
 
@@ -1229,13 +1280,13 @@ textarea[aria-invalid="true"]:focus-visible {
 .radio-option .radio-option-label {
   cursor: pointer;
   font-weight: 500;
-  font-size: var(--semantic-font-size-base, 15px);
+  font-size: var(--semantic-font-size-base);
   color: var(--semantic-color-text);
 }
 
 /* Standardized Badge, Tab, Button, and Query Panel Contrast Primitives (Requirement 5) */
 .query-restriction-note {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-secondary);
   font-style: italic;
 }
@@ -1246,7 +1297,7 @@ textarea[aria-invalid="true"]:focus-visible {
   gap: var(--semantic-spacing-2xs, 4px);
   padding: 2px 8px;
   border-radius: var(--radius-full);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   line-height: 1.25;
   font-variant-numeric: tabular-nums;
@@ -1389,7 +1440,7 @@ textarea[aria-invalid="true"]:focus-visible {
 
 .clinical-soa-matrix th.grouped-header {
   text-align: center;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   border-bottom: 2px solid var(--border);
@@ -1412,7 +1463,7 @@ textarea[aria-invalid="true"]:focus-visible {
 
 .clinical-soa-matrix th.encounter-header {
   background-color: var(--neutral-light);
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--neutral-dark);
   text-align: center;
@@ -1451,7 +1502,7 @@ textarea[aria-invalid="true"]:focus-visible {
 
 .cell-details {
   display: block;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: normal;
   color: var(--semantic-color-text-secondary);
   margin-top: 4px;
@@ -1465,7 +1516,7 @@ textarea[aria-invalid="true"]:focus-visible {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   margin-top: 6px;
   padding: 6px 10px;
@@ -1503,7 +1554,7 @@ textarea[aria-invalid="true"]:focus-visible {
 }
 
 .lookup-status-icon {
-  font-size: 1rem;
+  font-size: var(--font-size-md);
 }
 
 .clinical-tab {

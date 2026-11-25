@@ -20,7 +20,7 @@
 }
 
 .metric-label {
-  font-size: 12px;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
   font-weight: 500;
 }

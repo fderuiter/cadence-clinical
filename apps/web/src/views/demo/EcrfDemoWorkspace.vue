@@ -30,7 +30,7 @@
           type="button"
           class="btn btn-secondary"
           style="
-            font-size: 0.8rem;
+            font-size: var(--font-size-xs);
             display: inline-flex;
             align-items: center;
             gap: 4px;
@@ -47,7 +47,7 @@
 
         <label
           for="role-tester-select"
-          style="font-size: 0.8rem; font-weight: bold"
+          style="font-size: var(--font-size-xs); font-weight: bold"
           >{{ $t("ecrf.demoRoleToggle") }}</label
         >
         <select
@@ -154,7 +154,7 @@
             <div class="card-title">{{ $t("ecrf.cdashTitle") }}</div>
             <p
               style="
-                font-size: 0.85rem;
+                font-size: var(--font-size-sm);
                 color: var(--semantic-color-text-secondary);
                 margin-bottom: 8px;
               "
@@ -173,7 +173,7 @@
           >
             <h3
               style="
-                font-size: 0.9rem;
+                font-size: var(--font-size-sm);
                 font-weight: 700;
                 margin-bottom: 8px;
                 color: var(--text-main);
@@ -183,7 +183,7 @@
             </h3>
             <ul
               style="
-                font-size: 0.8rem;
+                font-size: var(--font-size-xs);
                 padding-left: 20px;
                 color: var(--semantic-color-text-secondary);
                 display: flex;
@@ -208,7 +208,7 @@
           >
             <h3
               style="
-                font-size: 0.9rem;
+                font-size: var(--font-size-sm);
                 font-weight: 700;
                 margin-bottom: 8px;
                 color: var(--text-main);
@@ -218,7 +218,7 @@
             </h3>
             <p
               style="
-                font-size: 0.8rem;
+                font-size: var(--font-size-xs);
                 color: var(--semantic-color-text-secondary);
                 line-height: 1.4;
               "

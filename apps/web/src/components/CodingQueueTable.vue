@@ -1526,7 +1526,7 @@ async function acceptAllSuggestions() {
   align-items: center;
   gap: 8px;
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
   color: var(--text-main);
 }
 
@@ -1571,19 +1571,19 @@ async function acceptAllSuggestions() {
 }
 
 .instance-count-badge {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   background-color: var(--semantic-color-indigo-bg);
   color: var(--semantic-color-indigo-text);
   font-weight: 600;
 }
 
 .blocked-count-badge {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
 }
 
 .cluster-verbatim-text {
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
   color: var(--text-main);
 }
 
@@ -1611,13 +1611,13 @@ async function acceptAllSuggestions() {
 
 .drawer-header h4 {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
   color: var(--text-main);
 }
 
 .instances-subtable {
   width: 100%;
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
 }
 
 .subtable-actions {
@@ -1627,7 +1627,7 @@ async function acceptAllSuggestions() {
 
 .btn-xs {
   padding: 2px 6px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   border-radius: 4px;
 }
 
@@ -1690,14 +1690,14 @@ async function acceptAllSuggestions() {
 
 .modal-header h3 {
   margin: 0;
-  font-size: 1rem;
+  font-size: var(--font-size-md);
   color: inherit;
 }
 
 .btn-close {
   background: none;
   border: none;
-  font-size: 1.2rem;
+  font-size: var(--font-size-lg);
   color: inherit;
   cursor: pointer;
   padding: 4px 8px;

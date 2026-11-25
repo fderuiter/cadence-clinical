@@ -804,13 +804,13 @@ function handleBatchIngested(result) {
 }
 
 .view-title {
-  font-size: 1.5rem;
+  font-size: var(--font-size-2xl);
   font-weight: 800;
   color: var(--semantic-color-text);
 }
 
 .view-subtitle {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-muted);
   line-height: 1.4;
 }
@@ -826,7 +826,7 @@ function handleBatchIngested(result) {
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   padding: 8px 12px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-md);
   font-weight: 600;
   color: var(--semantic-color-text-dark);
   box-shadow: var(--shadow-sm);
@@ -844,7 +844,7 @@ function handleBatchIngested(result) {
   color: var(--semantic-color-text-body);
   border-radius: 6px;
   padding: 8px 12px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-weight: 700;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -871,7 +871,7 @@ function handleBatchIngested(result) {
 }
 
 .series-group-title {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   color: var(--semantic-color-accent-inverse);
   text-transform: uppercase;
@@ -907,7 +907,7 @@ function handleBatchIngested(result) {
   }
 
   .view-title {
-    font-size: 1.2rem;
+    font-size: var(--font-size-lg);
   }
 
   .header-action-group {
@@ -947,7 +947,7 @@ function handleBatchIngested(result) {
 }
 
 .panel-heading {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-weight: 700;
   color: var(--semantic-color-text-inverse);
 }
@@ -984,7 +984,7 @@ function handleBatchIngested(result) {
 }
 
 .series-thumb {
-  font-size: 1.4rem;
+  font-size: var(--font-size-xl);
 }
 
 .series-meta {
@@ -994,7 +994,7 @@ function handleBatchIngested(result) {
 }
 
 .series-title {
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   color: var(--semantic-color-text-inverse);
   line-height: 1.2;
@@ -1074,13 +1074,13 @@ function handleBatchIngested(result) {
 }
 
 .trajectory-title {
-  font-size: 1rem;
+  font-size: var(--font-size-md);
   font-weight: 700;
   color: var(--semantic-color-text);
 }
 
 .trajectory-count {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-muted);
   font-weight: 600;
 }
@@ -1092,7 +1092,7 @@ function handleBatchIngested(result) {
 .trajectory-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
 }
 
 .trajectory-table th {

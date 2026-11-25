@@ -13,7 +13,10 @@
         Protocol Draft Import: ODM v1.3.2 XML &amp; USDM v4 JSON
       </div>
       <p
-        style="font-size: 0.85rem; color: var(--semantic-color-text-secondary)"
+        style="
+          font-size: var(--font-size-sm);
+          color: var(--semantic-color-text-secondary);
+        "
       >
         Upload an ODM v1.3.2 XML or USDM v4 JSON file (up to 10 MB) or pick
         bundled CDISC Library eCRF templates to create or revise a
@@ -30,7 +33,7 @@
           border-radius: 6px;
           padding: 10px 12px;
           color: var(--semantic-color-info);
-          font-size: 0.85rem;
+          font-size: var(--font-size-sm);
         "
       >
         Importing protocol definition and validating forms and items…
@@ -46,7 +49,7 @@
           border-radius: 6px;
           padding: 10px 12px;
           color: var(--semantic-color-success-dark);
-          font-size: 0.85rem;
+          font-size: var(--font-size-sm);
         "
       >
         {{ importSuccessMessage }}
@@ -62,7 +65,7 @@
           border-radius: 6px;
           padding: 10px 12px;
           color: var(--semantic-color-error-text-dark);
-          font-size: 0.85rem;
+          font-size: var(--font-size-sm);
         "
       >
         {{ importErrorMessage || `Error: ${store.ingestionError}` }}
@@ -71,7 +74,7 @@
       <div class="form-group">
         <label
           for="designer-import-reason"
-          style="font-size: 0.85rem; font-weight: 600"
+          style="font-size: var(--font-size-sm); font-weight: 600"
           >Reason for change (required)</label
         >
         <input
@@ -84,7 +87,7 @@
             padding: 8px;
             border: 1px solid var(--border);
             border-radius: 4px;
-            font-size: 0.85rem;
+            font-size: var(--font-size-md);
             box-sizing: border-box;
           "
           @input="$emit('update:importChangeReason', $event.target.value)"
@@ -137,7 +140,7 @@
           v-if="selectedFileName"
           style="
             margin-top: 8px;
-            font-size: 0.8rem;
+            font-size: var(--font-size-xs);
             color: var(--semantic-color-text-secondary);
           "
         >
@@ -168,7 +171,7 @@
             gap: 8px;
           "
         >
-          <span style="font-size: 0.85rem; font-weight: 600">
+          <span style="font-size: var(--font-size-sm); font-weight: 600">
             CDISC Library eCRF Templates
             <template
               v-if="availableTemplates && availableTemplates.length > 0"
@@ -219,7 +222,7 @@
               display: flex;
               align-items: center;
               gap: 6px;
-              font-size: 0.8rem;
+              font-size: var(--font-size-xs);
               cursor: pointer;
             "
           >
@@ -258,7 +261,7 @@
             gap: 8px;
           "
         >
-          <strong style="font-size: 0.92rem">
+          <strong style="font-size: var(--font-size-base)">
             {{ importedDraftSummary.title }} · Version
             {{ importedDraftSummary.version.number }} ({{
               importedDraftSummary.version.status
@@ -266,7 +269,7 @@
           </strong>
           <span
             style="
-              font-size: 0.82rem;
+              font-size: var(--font-size-xs);
               color: var(--semantic-color-text-secondary);
             "
           >
@@ -286,7 +289,7 @@
             border: 1px solid var(--semantic-color-warning-border);
             border-radius: 6px;
             padding: 8px 10px;
-            font-size: 0.8rem;
+            font-size: var(--font-size-xs);
             color: var(--semantic-color-warning-text-dark);
           "
         >
@@ -313,10 +316,16 @@
             background-color: var(--semantic-color-surface-subtle);
           "
         >
-          <div style="font-weight: 600; font-size: 0.85rem">
+          <div style="font-weight: 600; font-size: var(--font-size-sm)">
             {{ form.name }} ({{ form.item_count }} items)
           </div>
-          <ol style="margin: 6px 0 0; padding-left: 18px; font-size: 0.8rem">
+          <ol
+            style="
+              margin: 6px 0 0;
+              padding-left: 18px;
+              font-size: var(--font-size-xs);
+            "
+          >
             <li v-for="item in form.items" :key="item.id">
               {{ item.prompt }} —
               <strong>{{ item.required ? "Mandatory" : "Optional" }}</strong>
@@ -345,7 +354,7 @@
             padding-bottom: 8px;
           "
         >
-          <span style="font-size: 0.9rem; font-weight: 700">
+          <span style="font-size: var(--font-size-sm); font-weight: 700">
             Candidate ID:
             <code
               style="
@@ -364,7 +373,11 @@
                 ? 'lookup-valid'
                 : 'lookup-degraded',
             ]"
-            style="font-size: 0.8rem; padding: 4px 8px; border-radius: 4px"
+            style="
+              font-size: var(--font-size-xs);
+              padding: 4px 8px;
+              border-radius: 4px;
+            "
             class="candidate-status"
           >
             {{ store.candidateDraft.status }}
@@ -372,7 +385,11 @@
         </div>
 
         <div
-          style="font-size: 0.85rem; font-weight: bold; color: var(--text-main)"
+          style="
+            font-size: var(--font-size-sm);
+            font-weight: bold;
+            color: var(--text-main);
+          "
         >
           Candidate Items Under Review:
         </div>
@@ -412,7 +429,7 @@
                   style="
                     background-color: var(--semantic-color-surface-header);
                     color: var(--semantic-color-text-secondary);
-                    font-size: 0.75rem;
+                    font-size: var(--font-size-2xs);
                     text-transform: uppercase;
                     margin-right: 6px;
                   "
@@ -438,7 +455,7 @@
                 </span>
                 <span
                   style="
-                    font-size: 0.75rem;
+                    font-size: var(--font-size-2xs);
                     color: var(--semantic-color-text-secondary);
                   "
                   title="Source Reference"
@@ -465,7 +482,7 @@
               <div class="form-group">
                 <label
                   :for="`designer-edit-item-value-${item.id}`"
-                  style="font-size: 0.75rem"
+                  style="font-size: var(--font-size-2xs)"
                   >Modify Candidate Name/Label</label
                 >
                 <input
@@ -477,7 +494,7 @@
                     padding: 6px;
                     border: 1px solid var(--border);
                     border-radius: 4px;
-                    font-size: 0.8rem;
+                    font-size: var(--font-size-md);
                   "
                   class="edit-item-input"
                   @input="$emit('update:editItemValue', $event.target.value)"
@@ -486,7 +503,7 @@
               <div class="form-group">
                 <label
                   :for="`designer-edit-item-reason-${item.id}`"
-                  style="font-size: 0.75rem"
+                  style="font-size: var(--font-size-2xs)"
                   >Change Reason Justification (Mandatory)</label
                 >
                 <input
@@ -499,7 +516,7 @@
                     padding: 6px;
                     border: 1px solid var(--border);
                     border-radius: 4px;
-                    font-size: 0.8rem;
+                    font-size: var(--font-size-md);
                   "
                   class="edit-item-reason"
                   @input="$emit('update:editItemReason', $event.target.value)"
@@ -535,7 +552,7 @@
                 <label
                   :for="`designer-reject-item-reason-${item.id}`"
                   style="
-                    font-size: 0.75rem;
+                    font-size: var(--font-size-2xs);
                     color: var(--semantic-color-error);
                     font-weight: bold;
                   "
@@ -551,7 +568,7 @@
                     padding: 6px;
                     border: 1px solid var(--border);
                     border-radius: 4px;
-                    font-size: 0.8rem;
+                    font-size: var(--font-size-md);
                   "
                   class="reject-item-reason"
                   @input="$emit('update:rejectItemReason', $event.target.value)"
@@ -578,14 +595,14 @@
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                font-size: 0.8rem;
+                font-size: var(--font-size-xs);
               "
             >
               <div style="color: var(--semantic-color-text-secondary)">
                 Status:
                 <span
                   :class="['badge', getStatusClass(item.review_status)]"
-                  style="font-size: 0.75rem"
+                  style="font-size: var(--font-size-2xs)"
                   class="item-review-status"
                 >
                   {{ item.review_status }}
@@ -606,7 +623,7 @@
                 <button
                   :id="`btn-accept-candidate-${item.id}`"
                   class="btn btn-sm accept-btn"
-                  style="padding: 2px 8px; font-size: 0.75rem"
+                  style="padding: 2px 8px; font-size: var(--font-size-2xs)"
                   @click="$emit('accept-item', item.id)"
                 >
                   ✔️ Accept
@@ -614,7 +631,7 @@
                 <button
                   :id="`btn-edit-candidate-${item.id}`"
                   class="btn btn-sm edit-btn"
-                  style="padding: 2px 8px; font-size: 0.75rem"
+                  style="padding: 2px 8px; font-size: var(--font-size-2xs)"
                   @click="$emit('start-edit-item', item)"
                 >
                   ✏️ Edit
@@ -624,7 +641,7 @@
                   class="btn btn-sm reject-btn"
                   style="
                     padding: 2px 8px;
-                    font-size: 0.75rem;
+                    font-size: var(--font-size-2xs);
                     background-color: var(--semantic-color-error-border-soft);
                     color: var(--semantic-color-error-text-dark);
                   "
@@ -677,7 +694,7 @@
           >
             <span
               style="
-                font-size: 0.8rem;
+                font-size: var(--font-size-xs);
                 color: var(--semantic-color-text-secondary);
               "
               class="remaining-reviews-text"
@@ -713,7 +730,7 @@
             border-radius: 8px;
             padding: 12px;
             color: var(--semantic-color-success-dark);
-            font-size: 0.85rem;
+            font-size: var(--font-size-sm);
             text-align: center;
           "
         >

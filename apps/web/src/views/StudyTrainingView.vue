@@ -366,7 +366,7 @@ onMounted(() => {
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--semantic-color-text-dark);
   max-width: 100%;
@@ -381,7 +381,7 @@ onMounted(() => {
   padding: 6px 10px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
-  font-size: 0.875rem;
+  font-size: var(--font-size-md);
   background: var(--semantic-color-surface);
   color: var(--semantic-color-text);
   box-sizing: border-box;
@@ -404,7 +404,7 @@ onMounted(() => {
   font-weight: 700;
   padding: 4px 8px;
   border-radius: 4px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
 }
 
 .badge-regulatory {
@@ -413,7 +413,7 @@ onMounted(() => {
   font-weight: 600;
   padding: 4px 8px;
   border-radius: 4px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   border: 1px solid var(--semantic-badge-regulatory-border);
 }
 
@@ -423,18 +423,18 @@ onMounted(() => {
   border: 1px solid var(--semantic-color-border);
   padding: 4px 8px;
   border-radius: 4px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
 }
 
 .view-title {
-  font-size: 1.6rem;
+  font-size: var(--font-size-2xl);
   font-weight: 800;
   color: var(--semantic-color-text);
   margin: 0 0 6px 0;
 }
 
 .view-subtitle {
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
   color: var(--semantic-color-text-secondary);
   margin: 0;
   max-width: 900px;
@@ -448,7 +448,7 @@ onMounted(() => {
   background: var(--semantic-color-error-bg-soft);
   border: 1px solid var(--semantic-color-error-border-soft);
   color: var(--semantic-color-error-text-dark);
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
 }
 
 .stats-grid {
@@ -480,7 +480,7 @@ onMounted(() => {
 }
 
 .stat-icon {
-  font-size: 2rem;
+  font-size: var(--font-size-4xl);
 }
 
 .stat-details {
@@ -489,13 +489,13 @@ onMounted(() => {
 }
 
 .stat-value {
-  font-size: 1.5rem;
+  font-size: var(--font-size-2xl);
   font-weight: 800;
   color: var(--semantic-color-text);
 }
 
 .stat-label {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-secondary);
 }
 

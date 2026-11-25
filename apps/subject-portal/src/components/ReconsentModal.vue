@@ -18,7 +18,7 @@
           Updated Study Consent Review
         </div>
         <div class="modal-body">
-          <p style="font-size: 14px; margin-bottom: 12px">
+          <p style="font-size: var(--font-size-sm); margin-bottom: 12px">
             Your study consent form has been updated. Please review what changed
             below and sign to continue with your study surveys.
           </p>
@@ -32,7 +32,7 @@
               background-color: var(--semantic-color-error-bg);
               color: var(--semantic-color-error);
               margin-bottom: 12px;
-              font-size: 13px;
+              font-size: var(--font-size-xs);
               font-weight: 600;
             "
             role="status"
@@ -55,7 +55,7 @@
             <h4
               style="
                 margin: 0 0 6px 0;
-                font-size: 0.875rem;
+                font-size: var(--font-size-sm);
                 color: var(--semantic-color-text-dark);
               "
             >
@@ -64,7 +64,7 @@
             <p
               style="
                 margin: 0;
-                font-size: 13px;
+                font-size: var(--font-size-xs);
                 color: var(--semantic-color-text-muted);
               "
             >
@@ -90,7 +90,7 @@
             <h4
               style="
                 margin: 0 0 10px 0;
-                font-size: 14px;
+                font-size: var(--font-size-sm);
                 color: var(--semantic-color-text-dark);
               "
             >
@@ -117,13 +117,13 @@
                   margin-bottom: 6px;
                 "
               >
-                <strong style="font-size: 13px">{{
+                <strong style="font-size: var(--font-size-xs)">{{
                   clause.clause_title
                 }}</strong>
                 <span
                   class="reconsent-diff-badge"
                   style="
-                    font-size: 0.75rem;
+                    font-size: var(--font-size-2xs);
                     font-weight: 700;
                     text-transform: uppercase;
                     padding: 2px 6px;
@@ -139,7 +139,7 @@
                 class="reconsent-clause-removed"
                 style="
                   margin: 0 0 6px 0;
-                  font-size: 13px;
+                  font-size: var(--font-size-xs);
                   padding: 6px 8px;
                   border-radius: 4px;
                   background-color: var(--semantic-color-error-bg);
@@ -154,7 +154,7 @@
                 class="reconsent-clause-added"
                 style="
                   margin: 0;
-                  font-size: 13px;
+                  font-size: var(--font-size-xs);
                   padding: 6px 8px;
                   border-radius: 4px;
                   background-color: var(--semantic-color-success-bg-soft);
@@ -183,7 +183,7 @@
             <h4
               style="
                 margin: 0 0 8px 0;
-                font-size: 14px;
+                font-size: var(--font-size-sm);
                 color: var(--semantic-color-text-dark);
               "
             >
@@ -197,7 +197,7 @@
             >
               <legend
                 style="
-                  font-size: 13px;
+                  font-size: var(--font-size-xs);
                   font-weight: 600;
                   margin-bottom: 6px;
                   color: var(--semantic-color-text-dark);
@@ -213,7 +213,7 @@
                   display: flex;
                   align-items: center;
                   gap: 8px;
-                  font-size: 0.875rem;
+                  font-size: var(--font-size-sm);
                   min-height: 44px;
                   padding: 6px 8px;
                   cursor: pointer;

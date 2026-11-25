@@ -583,7 +583,7 @@ defineExpose({
   background-color: transparent;
   box-shadow: none;
   font-family: var(--semantic-font-family);
-  font-size: var(--font-size-sm, 0.875rem);
+  font-size: var(--font-size-sm);
   font-weight: 600;
   line-height: 1.25;
   font-variant-numeric: tabular-nums;
@@ -724,7 +724,7 @@ defineExpose({
   margin-left: 6px;
   padding: 1px 6px;
   border-radius: var(--radius-full, 9999px);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   background-color: var(--semantic-color-surface-muted);
@@ -756,7 +756,7 @@ defineExpose({
 
   .clinical-tabs-trigger {
     padding: 10px 10px;
-    font-size: 0.8125rem;
+    font-size: var(--font-size-xs);
   }
 }
 

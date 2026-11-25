@@ -15,7 +15,7 @@
         <div
           class="stat-label"
           style="
-            font-size: 0.8rem;
+            font-size: var(--font-size-xs);
             font-weight: 700;
             color: var(--semantic-color-text-secondary);
             text-transform: uppercase;
@@ -26,7 +26,7 @@
         <div
           class="stat-value tabular-nums"
           style="
-            font-size: 1.75rem;
+            font-size: var(--font-size-3xl);
             font-weight: 800;
             color: var(--semantic-color-text);
             margin-top: 4px;
@@ -37,7 +37,7 @@
         <div
           class="stat-subtext"
           style="
-            font-size: 0.75rem;
+            font-size: var(--font-size-2xs);
             color: var(--semantic-color-text-secondary);
             margin-top: 2px;
           "
@@ -54,7 +54,7 @@
         <div
           class="stat-label"
           style="
-            font-size: 0.8rem;
+            font-size: var(--font-size-xs);
             font-weight: 700;
             color: var(--semantic-color-text-secondary);
             text-transform: uppercase;
@@ -65,7 +65,7 @@
         <div
           class="stat-value tabular-nums"
           style="
-            font-size: 1.75rem;
+            font-size: var(--font-size-3xl);
             font-weight: 800;
             color: var(--semantic-color-interactive-primary);
             margin-top: 4px;
@@ -76,7 +76,7 @@
         <div
           class="stat-subtext"
           style="
-            font-size: 0.75rem;
+            font-size: var(--font-size-2xs);
             color: var(--semantic-color-text-secondary);
             margin-top: 2px;
           "
@@ -89,7 +89,7 @@
         <div
           class="stat-label"
           style="
-            font-size: 0.8rem;
+            font-size: var(--font-size-xs);
             font-weight: 700;
             color: var(--semantic-color-text-secondary);
             text-transform: uppercase;
@@ -100,7 +100,7 @@
         <div
           class="stat-value tabular-nums"
           style="
-            font-size: 1.75rem;
+            font-size: var(--font-size-3xl);
             font-weight: 800;
             color: var(--semantic-color-success-dark);
             margin-top: 4px;
@@ -111,7 +111,7 @@
         <div
           class="stat-subtext"
           style="
-            font-size: 0.75rem;
+            font-size: var(--font-size-2xs);
             color: var(--semantic-color-success-dark);
             margin-top: 2px;
           "
@@ -124,7 +124,7 @@
         <div
           class="stat-label"
           style="
-            font-size: 0.8rem;
+            font-size: var(--font-size-xs);
             font-weight: 700;
             color: var(--semantic-color-text-secondary);
             text-transform: uppercase;
@@ -135,7 +135,7 @@
         <div
           class="stat-value tabular-nums"
           style="
-            font-size: 1.75rem;
+            font-size: var(--font-size-3xl);
             font-weight: 800;
             color: var(--semantic-color-warning);
             margin-top: 4px;
@@ -146,7 +146,7 @@
         <div
           class="stat-subtext"
           style="
-            font-size: 0.75rem;
+            font-size: var(--font-size-2xs);
             color: var(--semantic-color-warning);
             margin-top: 2px;
           "
@@ -178,7 +178,7 @@
         flex-wrap: wrap;
         gap: 16px 24px;
         align-items: center;
-        font-size: 14px;
+        font-size: var(--font-size-sm);
         color: var(--semantic-color-text-body);
       "
     >
@@ -897,7 +897,7 @@
         <div
           style="
             margin-bottom: 16px;
-            font-size: 14px;
+            font-size: var(--font-size-sm);
             background: var(--semantic-color-surface-muted);
             padding: 12px;
             border-radius: 6px;
@@ -1096,7 +1096,9 @@
             </thead>
             <tbody>
               <tr v-for="audit in auditHistory" :key="audit.id">
-                <td style="white-space: nowrap; font-size: 12px">
+                <td
+                  style="white-space: nowrap; font-size: var(--font-size-2xs)"
+                >
                   {{ new Date(audit.timestamp).toLocaleString() }}
                 </td>
                 <td>{{ audit.user_id }}</td>
@@ -1106,7 +1108,7 @@
                     audit.action
                   }}</span>
                 </td>
-                <td style="font-size: 12px">
+                <td style="font-size: var(--font-size-2xs)">
                   {{ audit.details }}
                 </td>
               </tr>
@@ -1193,7 +1195,7 @@
             </div>
             <div
               style="
-                font-size: 15px;
+                font-size: var(--font-size-base);
                 font-weight: 700;
                 color: var(--semantic-color-text);
                 margin-top: 2px;
@@ -1205,7 +1207,7 @@
             </div>
             <div
               style="
-                font-size: 12px;
+                font-size: var(--font-size-2xs);
                 color: var(--semantic-color-text-secondary);
               "
             >
@@ -1231,7 +1233,7 @@
             </div>
             <div
               style="
-                font-size: 18px;
+                font-size: var(--font-size-lg);
                 font-weight: 800;
                 color: var(--semantic-color-primary-dark);
                 margin-top: 2px;
@@ -1244,7 +1246,10 @@
               }}
             </div>
             <div
-              style="font-size: 12px; color: var(--semantic-color-success-dark)"
+              style="
+                font-size: var(--font-size-2xs);
+                color: var(--semantic-color-success-dark);
+              "
             >
               Status: {{ investigatorGrant?.status || "ACTIVE" }}
             </div>
@@ -1263,7 +1268,7 @@
             </div>
             <div
               style="
-                font-size: 13px;
+                font-size: var(--font-size-xs);
                 color: var(--semantic-color-text-body);
                 margin-top: 4px;
               "
@@ -1275,7 +1280,7 @@
             </div>
             <div
               style="
-                font-size: 12px;
+                font-size: var(--font-size-2xs);
                 color: var(--semantic-color-text-secondary);
               "
             >
@@ -1299,7 +1304,7 @@
               <select
                 id="select-budget-template"
                 v-model="selectedTemplateId"
-                style="padding: 4px 8px; font-size: 12px"
+                style="padding: 4px 8px; font-size: var(--font-size-md)"
               >
                 <option value="">-- Select Template --</option>
                 <option
@@ -1338,7 +1343,7 @@
             <select
               id="select-grid-version"
               v-model="filteredVersionIndex"
-              style="padding: 4px 8px; font-size: 12px"
+              style="padding: 4px 8px; font-size: var(--font-size-md)"
               @change="loadProcedureGrids"
             >
               <option value="ALL">All Versions</option>
@@ -1413,7 +1418,7 @@
                 <td
                   style="
                     font-family: var(--semantic-font-mono);
-                    font-size: 12px;
+                    font-size: var(--font-size-2xs);
                   "
                 >
                   {{ grid.procedure_code }}
@@ -1523,7 +1528,7 @@
               style="
                 display: flex;
                 justify-content: space-between;
-                font-size: 13px;
+                font-size: var(--font-size-xs);
                 margin-bottom: 6px;
               "
             >
@@ -1541,7 +1546,7 @@
               style="
                 display: flex;
                 justify-content: space-between;
-                font-size: 13px;
+                font-size: var(--font-size-xs);
                 margin-bottom: 6px;
               "
             >
@@ -1556,7 +1561,7 @@
               style="
                 display: flex;
                 justify-content: space-between;
-                font-size: 13px;
+                font-size: var(--font-size-xs);
                 margin-bottom: 6px;
               "
             >
@@ -1571,7 +1576,7 @@
               style="
                 display: flex;
                 justify-content: space-between;
-                font-size: 13px;
+                font-size: var(--font-size-xs);
                 margin-bottom: 6px;
               "
             >
@@ -1586,7 +1591,7 @@
               style="
                 display: flex;
                 justify-content: space-between;
-                font-size: 13px;
+                font-size: var(--font-size-xs);
                 margin-bottom: 6px;
                 border-top: 1px dashed var(--semantic-color-border-control);
                 padding-top: 6px;
@@ -1601,7 +1606,7 @@
               style="
                 display: flex;
                 justify-content: space-between;
-                font-size: 13px;
+                font-size: var(--font-size-xs);
                 margin-bottom: 6px;
               "
             >
@@ -1616,7 +1621,7 @@
               style="
                 display: flex;
                 justify-content: space-between;
-                font-size: 16px;
+                font-size: var(--font-size-md);
                 font-weight: 800;
                 color: var(--semantic-color-primary-dark);
                 border-top: 2px solid var(--semantic-color-primary-dark);
@@ -1639,7 +1644,7 @@
                 margin-top: 8px;
                 padding-top: 8px;
                 border-top: 1px solid var(--semantic-color-border);
-                font-size: 13px;
+                font-size: var(--font-size-xs);
                 color: var(--semantic-color-text-secondary);
               "
             >
@@ -1702,7 +1707,7 @@
                       {{ adj.adjustment_type }}
                     </span>
                   </td>
-                  <td style="font-size: 12px">
+                  <td style="font-size: var(--font-size-2xs)">
                     {{ adj.description }}
                   </td>
                   <td
@@ -1796,7 +1801,9 @@
                 >
                   #{{ amend.amendment_number }}
                 </td>
-                <td style="font-size: 12px; white-space: nowrap">
+                <td
+                  style="font-size: var(--font-size-2xs); white-space: nowrap"
+                >
                   {{ new Date(amend.effective_date).toLocaleDateString() }}
                 </td>
                 <td>${{ Number(amend.previous_budget).toLocaleString() }}</td>
@@ -1815,7 +1822,7 @@
                     }}
                   </span>
                 </td>
-                <td style="font-size: 12px">
+                <td style="font-size: var(--font-size-2xs)">
                   {{ amend.summary_of_changes }}
                 </td>
                 <td>{{ amend.approved_by || amend.created_by }}</td>
@@ -2217,7 +2224,7 @@
     >
       <p
         style="
-          font-size: 13px;
+          font-size: var(--font-size-xs);
           color: var(--semantic-color-text-secondary);
           margin-bottom: 12px;
           line-height: 1.4;
@@ -2269,7 +2276,7 @@
     >
       <p
         style="
-          font-size: 13px;
+          font-size: var(--font-size-xs);
           color: var(--semantic-color-text-secondary);
           margin-bottom: 16px;
           line-height: 1.4;
@@ -2711,7 +2718,7 @@
           <span
             style="
               font-weight: 600;
-              font-size: 13px;
+              font-size: var(--font-size-xs);
               color: var(--semantic-color-text-body);
             "
             >Monitoring Findings</span
@@ -2728,7 +2735,7 @@
         <div
           v-if="completeVisitFindings.length === 0"
           style="
-            font-size: 12px;
+            font-size: var(--font-size-2xs);
             color: var(--semantic-color-text-secondary);
             margin-bottom: 6px;
           "
@@ -2987,7 +2994,7 @@
             style="
               margin: 0;
               color: var(--semantic-color-text-inverse);
-              font-size: 16px;
+              font-size: var(--font-size-md);
             "
           >
             RTSM Site Inventory &amp; Return Accountability
@@ -2996,7 +3003,7 @@
             style="
               margin: 4px 0 0;
               color: var(--semantic-color-text-inverse-muted);
-              font-size: 13px;
+              font-size: var(--font-size-xs);
             "
           >
             Manage site IP kit returns, barcode scanning, residual volumes, and
@@ -4686,7 +4693,7 @@ defineExpose({
   padding: 16px;
   border-bottom: 1px solid var(--semantic-color-border);
   font-weight: 600;
-  font-size: 16px;
+  font-size: var(--font-size-md);
   background: var(--semantic-color-primary-dark);
   color: var(--semantic-color-text-on-primary);
 }
@@ -4705,7 +4712,7 @@ label {
   display: block;
   font-weight: 500;
   margin-bottom: 4px;
-  font-size: 13px;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -4716,7 +4723,7 @@ textarea {
   padding: 8px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
-  font-size: 13px;
+  font-size: var(--font-size-md);
   background: var(--semantic-color-surface);
   color: var(--semantic-color-text);
   box-sizing: border-box;
@@ -4730,7 +4737,7 @@ textarea {
 .error-msg {
   margin: 8px 0 0;
   color: var(--semantic-color-error);
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   font-weight: 500;
 }
 
@@ -4745,7 +4752,7 @@ textarea {
 
 .btn {
   padding: 6px 12px;
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   cursor: pointer;
   border-radius: 6px;
   font-weight: 500;
@@ -4800,7 +4807,7 @@ textarea {
 .form-legend {
   display: block;
   font-weight: 600;
-  font-size: 13px;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-body);
   margin-bottom: 4px;
 }
@@ -4812,12 +4819,12 @@ textarea {
   border-radius: 6px;
   background: var(--semantic-color-error-bg-soft);
   color: var(--semantic-color-error);
-  font-size: 14px;
+  font-size: var(--font-size-sm);
 }
 
 .role-note {
   margin: 8px 0 0;
-  font-size: 12px;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
 }
 

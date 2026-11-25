@@ -149,7 +149,7 @@ const selectPersona = (persona) => {
 }
 
 .persona-label {
-  font-size: 13px;
+  font-size: var(--font-size-xs);
   font-weight: 500;
   color: var(--semantic-color-text);
 }
@@ -224,7 +224,7 @@ const selectPersona = (persona) => {
 }
 
 .item-title {
-  font-size: 13px;
+  font-size: var(--font-size-xs);
   font-weight: 500;
   color: var(--semantic-color-text);
 }

@@ -316,7 +316,7 @@ function openRelease(lockRef: string, lockKind: string) {
 }
 
 .scope-lock-label {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--semantic-color-text-dark);
   min-width: 0;
@@ -332,7 +332,7 @@ function openRelease(lockRef: string, lockKind: string) {
   padding: 6px 10px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-md);
   color: var(--semantic-color-text);
   background: var(--semantic-color-surface);
 }
@@ -341,7 +341,7 @@ function openRelease(lockRef: string, lockKind: string) {
   margin: 8px 0 0;
   padding: 6px 10px;
   border-radius: 4px;
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   min-width: 0;
   max-width: 100%;
   box-sizing: border-box;
@@ -395,19 +395,19 @@ function openRelease(lockRef: string, lockKind: string) {
   border: 1px solid var(--semantic-color-border);
   background: var(--semantic-color-surface);
   color: var(--semantic-color-text-dark);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
 }
 
 @media (pointer: coarse), (max-width: 1024px) {
   .scope-lock-input {
-    font-size: 1rem;
+    font-size: var(--font-size-md);
   }
 }
 
 .scope-lock-outcome {
   margin: 8px 0 0;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   padding: 6px 10px;
   border-radius: 4px;
   min-width: 0;

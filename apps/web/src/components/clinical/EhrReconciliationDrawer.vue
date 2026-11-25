@@ -1282,7 +1282,7 @@ function formatResolutionAction(act?: string | null): string {
 }
 
 .drawer-title {
-  font-size: 1.35rem;
+  font-size: var(--font-size-xl);
   font-weight: 800;
   color: var(--semantic-color-surface);
   margin: 0;
@@ -1290,7 +1290,7 @@ function formatResolutionAction(act?: string | null): string {
 }
 
 .drawer-subtitle {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-secondary);
   margin: 0;
   max-width: 750px;
@@ -1301,7 +1301,7 @@ function formatResolutionAction(act?: string | null): string {
   background: transparent;
   border: none;
   color: var(--semantic-color-text-secondary);
-  font-size: 1.25rem;
+  font-size: var(--font-size-lg);
   cursor: pointer;
   padding: 4px 8px;
   border-radius: 4px;
@@ -1328,7 +1328,7 @@ function formatResolutionAction(act?: string | null): string {
   display: flex;
   align-items: center;
   gap: 20px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   flex-wrap: wrap;
 }
 
@@ -1398,7 +1398,7 @@ function formatResolutionAction(act?: string | null): string {
 }
 
 .metric-num {
-  font-size: 1.25rem;
+  font-size: var(--font-size-lg);
   font-weight: 800;
   color: var(--semantic-color-text);
 }
@@ -1433,7 +1433,7 @@ function formatResolutionAction(act?: string | null): string {
   color: var(--semantic-color-text-secondary);
   padding: 6px 12px;
   border-radius: 6px;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
@@ -1465,7 +1465,7 @@ function formatResolutionAction(act?: string | null): string {
 }
 
 .filter-label {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   color: var(--semantic-color-text-secondary);
 }
@@ -1473,7 +1473,7 @@ function formatResolutionAction(act?: string | null): string {
 .select-input,
 .search-input {
   padding: 6px 12px;
-  font-size: 0.82rem;
+  font-size: var(--font-size-md);
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
   background-color: var(--semantic-color-surface);
@@ -1507,7 +1507,7 @@ function formatResolutionAction(act?: string | null): string {
 }
 
 .empty-icon {
-  font-size: 3rem;
+  font-size: var(--font-size-5xl);
   margin-bottom: 12px;
 }
 
@@ -1581,19 +1581,19 @@ function formatResolutionAction(act?: string | null): string {
   background-color: var(--semantic-color-surface-header);
   color: var(--semantic-color-text-body);
   font-weight: 700;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   padding: 2px 6px;
   border-radius: 4px;
 }
 
 .variable-tag {
   font-weight: 700;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--text-main);
 }
 
 .test-name {
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-secondary);
   font-weight: 600;
 }
@@ -1694,7 +1694,7 @@ function formatResolutionAction(act?: string | null): string {
 }
 
 .pane-title {
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   color: var(--semantic-color-text-secondary);
   text-transform: uppercase;
@@ -1719,19 +1719,19 @@ function formatResolutionAction(act?: string | null): string {
 }
 
 .val-num {
-  font-size: 1.25rem;
+  font-size: var(--font-size-lg);
   font-weight: 800;
   color: var(--semantic-color-text);
 }
 
 .val-unit {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--semantic-color-text-secondary);
 }
 
 .val-empty {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -1739,7 +1739,7 @@ function formatResolutionAction(act?: string | null): string {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   border-top: 1px dashed var(--semantic-color-border);
   padding-top: 6px;
 }
@@ -1772,7 +1772,7 @@ function formatResolutionAction(act?: string | null): string {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   border-top: 1px solid var(--semantic-color-border);
   flex-wrap: wrap;
   gap: 8px;
@@ -1826,7 +1826,7 @@ function formatResolutionAction(act?: string | null): string {
 
 .btn {
   padding: 6px 12px;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   border-radius: 4px;
   border: 1px solid transparent;
@@ -1844,7 +1844,7 @@ function formatResolutionAction(act?: string | null): string {
 
 .btn-sm {
   padding: 4px 8px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
 }
 
 .btn-primary {
@@ -1893,7 +1893,7 @@ function formatResolutionAction(act?: string | null): string {
   background: none;
   border: none;
   color: var(--semantic-color-primary);
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   cursor: pointer;
   text-decoration: underline;
@@ -1940,7 +1940,7 @@ function formatResolutionAction(act?: string | null): string {
 }
 
 .modal-header h3 {
-  font-size: 1.1rem;
+  font-size: var(--font-size-lg);
   font-weight: 700;
   margin: 0;
 }
@@ -1950,7 +1950,7 @@ function formatResolutionAction(act?: string | null): string {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   max-height: 70vh;
   overflow-y: auto;
 }
@@ -1966,7 +1966,7 @@ function formatResolutionAction(act?: string | null): string {
   border: 1px solid var(--semantic-color-border);
   border-radius: 6px;
   padding: 10px 14px;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   line-height: 1.5;
 }
 
@@ -1984,7 +1984,7 @@ function formatResolutionAction(act?: string | null): string {
 .textarea-input {
   width: 100%;
   padding: 10px 12px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-md);
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
   font-family: inherit;
@@ -2025,12 +2025,12 @@ function formatResolutionAction(act?: string | null): string {
 }
 
 .prov-stat .val {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text);
 }
 
 .section-subheading {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-weight: 700;
   color: var(--semantic-color-text);
   margin: 10px 0 6px 0;
@@ -2046,7 +2046,7 @@ function formatResolutionAction(act?: string | null): string {
   color: var(--semantic-color-accent-inverse);
   padding: 12px;
   border-radius: 6px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   max-height: 250px;
   overflow: auto;
   margin: 0;
@@ -2185,7 +2185,7 @@ function formatResolutionAction(act?: string | null): string {
   color: var(--semantic-color-primary);
   border-radius: 4px;
   padding: 4px 10px;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -2201,7 +2201,7 @@ function formatResolutionAction(act?: string | null): string {
   color: var(--semantic-color-text-secondary);
   border-radius: 4px;
   padding: 4px 10px;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -2224,7 +2224,7 @@ function formatResolutionAction(act?: string | null): string {
 }
 
 .batch-count-summary {
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   display: flex;
   align-items: center;
@@ -2237,7 +2237,7 @@ function formatResolutionAction(act?: string | null): string {
   font-weight: 700;
   border-radius: 12px;
   padding: 2px 8px;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
 }
 
 .batch-actions {
@@ -2253,7 +2253,7 @@ function formatResolutionAction(act?: string | null): string {
   padding: 6px 14px;
   border-radius: 6px;
   font-weight: 600;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   cursor: pointer;
 }
 
@@ -2268,7 +2268,7 @@ function formatResolutionAction(act?: string | null): string {
   padding: 6px 14px;
   border-radius: 6px;
   font-weight: 600;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   cursor: pointer;
 }
 
@@ -2282,7 +2282,7 @@ function formatResolutionAction(act?: string | null): string {
   color: var(--semantic-color-text-inverse-muted);
   padding: 6px 12px;
   border-radius: 6px;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   cursor: pointer;
 }
 

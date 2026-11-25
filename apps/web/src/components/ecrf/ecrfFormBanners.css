@@ -12,12 +12,12 @@
 }
 
 .ecrf-role-banner__label {
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
 }
 
 .ecrf-form-error {
   color: var(--semantic-color-error);
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   margin: 2px 0 0;
   display: flex;
   flex-wrap: wrap;
@@ -28,7 +28,7 @@
 .ecrf-form-outcome {
   border-radius: 6px;
   padding: 8px 12px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   display: flex;
   gap: 8px;
   align-items: center;

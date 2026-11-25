@@ -12,7 +12,7 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        font-size: 13px;
+        font-size: var(--font-size-xs);
       "
     >
       <span
@@ -39,7 +39,7 @@
         margin-bottom: 20px;
       "
     >
-      <h2 style="margin: 0; font-size: 20px; font-weight: 600">
+      <h2 style="margin: 0; font-size: var(--font-size-lg); font-weight: 600">
         Regulatory Audit &amp; Inspection Trail
       </h2>
       <button class="btn btn-secondary" @click="showExportModal = true">

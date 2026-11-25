@@ -201,7 +201,7 @@ onMounted(() => {
   min-width: 0;
   min-height: var(--semantic-control-target-min, 44px);
   padding: 8px 10px;
-  font-size: 1rem;
+  font-size: var(--font-size-md);
   border: 1px solid var(--semantic-color-border-control, var(--border));
   border-radius: 4px;
   background: var(--semantic-color-surface);
@@ -209,7 +209,7 @@ onMounted(() => {
 }
 
 .study-code-disclosure {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -229,6 +229,6 @@ onMounted(() => {
 
 .study-subjects-bar .status {
   color: var(--semantic-color-text-secondary);
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
 }
 </style>

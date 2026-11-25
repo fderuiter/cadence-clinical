@@ -160,7 +160,7 @@ function openFullView() {
   gap: 0.5rem;
 }
 .entity-peek-host__meta dt {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   color: var(--text-muted);
 }
 .entity-peek-host__meta dd {
@@ -168,11 +168,11 @@ function openFullView() {
 }
 .entity-peek-host__mono {
   font-family: var(--font-mono);
-  font-size: 0.8125rem;
+  font-size: var(--font-size-xs);
 }
 .entity-peek-host__summary {
   margin: 0;
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   line-height: 1.5;
 }
 </style>

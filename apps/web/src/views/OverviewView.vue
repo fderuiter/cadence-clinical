@@ -998,7 +998,7 @@ function startGuidedTour() {
 }
 
 .persona-icon-badge {
-  font-size: 3rem;
+  font-size: var(--font-size-5xl);
   background: var(--semantic-color-inverse-tint);
   padding: 12px;
   border-radius: 12px;
@@ -1009,7 +1009,7 @@ function startGuidedTour() {
 }
 
 .welcome-title {
-  font-size: 1.8rem;
+  font-size: var(--font-size-3xl);
   font-weight: 700;
   margin: 0 0 4px 0;
   color: var(--semantic-color-text-inverse);
@@ -1017,14 +1017,14 @@ function startGuidedTour() {
 }
 
 .welcome-subtitle {
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
   color: var(--semantic-color-text-inverse-muted);
   margin: 0 0 10px 0;
   font-weight: 500;
 }
 
 .persona-description {
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-inverse-muted);
   line-height: 1.5;
   max-width: 650px;
@@ -1048,7 +1048,7 @@ function startGuidedTour() {
   align-items: center;
   gap: 8px;
   font-weight: 600;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-inverse);
   margin-bottom: 12px;
 }
@@ -1073,7 +1073,7 @@ function startGuidedTour() {
 }
 
 .toggle-text {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-inverse-muted);
   line-height: 1.4;
 }
@@ -1082,7 +1082,7 @@ function startGuidedTour() {
   margin-top: 12px;
   padding: 6px 10px;
   border-radius: 6px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   background: var(--semantic-badge-candidate-bg);
   color: var(--semantic-badge-candidate-text);
@@ -1121,7 +1121,7 @@ function startGuidedTour() {
   align-items: center;
   padding: 4px 10px;
   border-radius: 999px;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   font-weight: 700;
   background: var(--semantic-color-info-bg);
   border: 1px solid var(--semantic-color-info-border);
@@ -1135,24 +1135,24 @@ function startGuidedTour() {
 }
 
 .overview-families-text {
-  font-size: 0.86rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-dark);
 }
 
 .overview-countdown-text {
-  font-size: 0.86rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-dark);
   font-variant-numeric: var(--font-variant-numeric-tabular);
 }
 
 .overview-expired-text {
-  font-size: 0.86rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--semantic-color-error-dark);
 }
 
 .overview-prerelease-note {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-warning-text);
   background: var(--semantic-color-warning-bg-light);
   border: 1px solid var(--semantic-color-warning-border-strong);
@@ -1161,7 +1161,7 @@ function startGuidedTour() {
 }
 
 .overview-plans-link {
-  font-size: 0.84rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   text-decoration: none;
   padding: 6px 12px;
@@ -1218,7 +1218,7 @@ function startGuidedTour() {
 }
 
 .section-title {
-  font-size: 1.2rem;
+  font-size: var(--font-size-lg);
   font-weight: 700;
   margin: 0;
   display: flex;
@@ -1232,7 +1232,7 @@ function startGuidedTour() {
 .progress-badge {
   background: var(--semantic-color-surface-header);
   color: var(--semantic-color-text);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   padding: 4px 8px;
   border-radius: 12px;
@@ -1240,13 +1240,13 @@ function startGuidedTour() {
 }
 
 .subtitle-tag {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-secondary);
   font-weight: 500;
 }
 
 .section-intro {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-secondary);
   margin: 0 0 16px 0;
 }
@@ -1329,7 +1329,7 @@ function startGuidedTour() {
 }
 
 .task-title {
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--semantic-color-text-dark);
 }
@@ -1340,14 +1340,14 @@ function startGuidedTour() {
 }
 
 .task-desc {
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
   line-height: 1.3;
 }
 
 .btn-task-launch {
   padding: 4px 8px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   background: var(--semantic-color-surface);
   border: 1px solid var(--semantic-color-border-control);
   color: var(--semantic-color-interactive-primary);
@@ -1372,7 +1372,7 @@ function startGuidedTour() {
 .btn-start-tour {
   width: 100%;
   padding: 10px;
-  font-size: 0.88rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   border-radius: 8px;
   cursor: pointer;
@@ -1427,7 +1427,7 @@ function startGuidedTour() {
 }
 
 .launcher-icon {
-  font-size: 1.8rem;
+  font-size: var(--font-size-3xl);
   line-height: 1;
 }
 
@@ -1449,14 +1449,14 @@ function startGuidedTour() {
 }
 
 .launcher-title {
-  font-size: 1rem;
+  font-size: var(--font-size-md);
   font-weight: 700;
   color: var(--semantic-color-text);
   margin: 0 0 6px 0;
 }
 
 .launcher-description {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-secondary);
   margin: 0 0 16px 0;
   line-height: 1.4;
@@ -1466,7 +1466,7 @@ function startGuidedTour() {
 .btn-launcher-action {
   width: 100%;
   padding: 8px 12px;
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   background: var(--semantic-color-surface);
   color: var(--semantic-color-interactive-primary);
@@ -1499,14 +1499,14 @@ function startGuidedTour() {
 
 .demo-catalog-heading {
   margin: 0;
-  font-size: 1.05rem;
+  font-size: var(--font-size-md);
   font-weight: 700;
   color: var(--semantic-color-text);
 }
 
 .demo-catalog-subcopy {
   margin: 0;
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -1525,13 +1525,13 @@ function startGuidedTour() {
 
 .demo-family-title {
   margin: 0;
-  font-size: 0.92rem;
+  font-size: var(--font-size-base);
   font-weight: 700;
   color: var(--semantic-color-text-dark);
 }
 
 .demo-family-count {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   color: var(--semantic-color-text-secondary);
   background: var(--semantic-color-surface-header);

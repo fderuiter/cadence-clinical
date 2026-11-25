@@ -82,13 +82,13 @@ const clearPins = () => {
 }
 
 .widget-label {
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--semantic-color-text);
 }
 
 .widget-hint {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
   margin: 0 0 4px 0;
 }
@@ -160,7 +160,7 @@ const clearPins = () => {
   align-items: center;
   justify-content: space-between;
   margin-top: 6px;
-  font-size: 0.8125rem;
+  font-size: var(--font-size-xs);
 }
 
 .btn-clear {
@@ -170,6 +170,6 @@ const clearPins = () => {
   cursor: pointer;
   text-decoration: underline;
   padding: 0;
-  font-size: 0.8125rem;
+  font-size: var(--font-size-xs);
 }
 </style>
