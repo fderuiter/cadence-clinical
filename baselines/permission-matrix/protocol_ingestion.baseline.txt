@@ -1,0 +1,15 @@
+# Shrink-only RBAC role-to-permission grant baseline shard for resource 'protocol_ingestion'.
+# Sorted ordinally as <role>|<resource>|<action> (lowercase).
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check permission-matrix or CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.
+protocol_reviewer|protocol_ingestion|promote
+protocol_reviewer|protocol_ingestion|read
+protocol_reviewer|protocol_ingestion|review
+protocol_reviewer|protocol_ingestion|upload
+sponsor_designer|protocol_ingestion|promote
+sponsor_designer|protocol_ingestion|read
+sponsor_designer|protocol_ingestion|review
+sponsor_designer|protocol_ingestion|upload
+sysadmin|protocol_ingestion|promote
+sysadmin|protocol_ingestion|read
+sysadmin|protocol_ingestion|review
+sysadmin|protocol_ingestion|upload

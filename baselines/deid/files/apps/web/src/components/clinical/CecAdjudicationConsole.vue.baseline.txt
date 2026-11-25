@@ -1,0 +1,18 @@
+# DEID scan ratchet baseline shard (pnpm cadence check deid). Findings that predate the full detector and are not PHI.
+# One per line: path|category|first 16 hex digits of SHA-256(trimmed matched value). Sorted ordinally. Shards may only shrink.
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check deid [files...] (docs/cli.md).
+apps/web/src/components/clinical/CecAdjudicationConsole.vue|dates|1e96549e39569b78
+apps/web/src/components/clinical/CecAdjudicationConsole.vue|dates|1e96549e39569b78
+apps/web/src/components/clinical/CecAdjudicationConsole.vue|dates|1e96549e39569b78
+apps/web/src/components/clinical/CecAdjudicationConsole.vue|dates|1e96549e39569b78
+apps/web/src/components/clinical/CecAdjudicationConsole.vue|dates|1e96549e39569b78
+apps/web/src/components/clinical/CecAdjudicationConsole.vue|dates|a910217238932289
+apps/web/src/components/clinical/CecAdjudicationConsole.vue|dates|a910217238932289
+apps/web/src/components/clinical/CecAdjudicationConsole.vue|dates|a910217238932289
+apps/web/src/components/clinical/CecAdjudicationConsole.vue|dates|a910217238932289
+apps/web/src/components/clinical/CecAdjudicationConsole.vue|dates|f7f6076e9bcd47f5
+apps/web/src/components/clinical/CecAdjudicationConsole.vue|dates|f7f6076e9bcd47f5
+apps/web/src/components/clinical/CecAdjudicationConsole.vue|telephone_fax|1de9d9dfa9cacba9
+apps/web/src/components/clinical/CecAdjudicationConsole.vue|telephone_fax|42d7a1c390e21bc7
+apps/web/src/components/clinical/CecAdjudicationConsole.vue|telephone_fax|94804e6b0ca05271
+apps/web/src/components/clinical/CecAdjudicationConsole.vue|telephone_fax|94804e6b0ca05271

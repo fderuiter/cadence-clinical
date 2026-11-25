@@ -1,0 +1,6 @@
+# Direct state-write ratchet baseline shard for Cadence.Apps.Knowledge (SaveChanges / SaveChangesAsync outside the central kernel command pipeline).
+# One compiled IL call site per line: Assembly|OuterType.LogicalMethod->TargetMethod[#N]. Sorted ordinally. The list may only shrink.
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.
+Cadence.Apps.Knowledge|Cadence.Apps.Knowledge.Application.KnowledgeCatalogSeeder.EnsureSeededAsync->DbContext.SaveChangesAsync
+Cadence.Apps.Knowledge|Cadence.Apps.Knowledge.Endpoints.TrainingEndpoints.BatchAssignCurriculumAsync->DbContext.SaveChangesAsync
+Cadence.Apps.Knowledge|Cadence.Apps.Knowledge.Endpoints.TrainingEndpoints.BulkSignOffDelegationsAsync->DbContext.SaveChangesAsync

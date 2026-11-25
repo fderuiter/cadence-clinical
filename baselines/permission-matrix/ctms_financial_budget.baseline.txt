@@ -1,0 +1,10 @@
+# Shrink-only RBAC role-to-permission grant baseline shard for resource 'ctms_financial_budget'.
+# Sorted ordinally as <role>|<resource>|<action> (lowercase).
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check permission-matrix or CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.
+admin|ctms_financial_budget|create
+admin|ctms_financial_budget|read
+auditor|ctms_financial_budget|read
+sponsor_dm|ctms_financial_budget|create
+sponsor_dm|ctms_financial_budget|read
+sysadmin|ctms_financial_budget|create
+sysadmin|ctms_financial_budget|read

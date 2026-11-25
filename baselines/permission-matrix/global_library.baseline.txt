@@ -1,0 +1,19 @@
+# Shrink-only RBAC role-to-permission grant baseline shard for resource 'global_library'.
+# Sorted ordinally as <role>|<resource>|<action> (lowercase).
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check permission-matrix or CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.
+admin|global_library|read
+admin|global_library|transition
+sponsor_designer|global_library|amend
+sponsor_designer|global_library|create
+sponsor_designer|global_library|instantiate
+sponsor_designer|global_library|read
+sponsor_designer|global_library|transition
+sponsor_designer|global_library|update
+sponsor_dm|global_library|read
+sponsor_dm|global_library|transition
+sysadmin|global_library|amend
+sysadmin|global_library|create
+sysadmin|global_library|instantiate
+sysadmin|global_library|read
+sysadmin|global_library|transition
+sysadmin|global_library|update

@@ -1,0 +1,44 @@
+# Direct state-write ratchet baseline shard for Cadence.Apps.Execution (SaveChanges / SaveChangesAsync outside the central kernel command pipeline).
+# One compiled IL call site per line: Assembly|OuterType.LogicalMethod->TargetMethod[#N]. Sorted ordinally. The list may only shrink.
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.
+Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Cec.CecApplicationService.ChairAdjudicateAsync->ICecRepository.SaveChangesAsync
+Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Cgt.CgtApplicationService.BindManufacturingBatchAsync->DbContext.SaveChangesAsync
+Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Cgt.CgtApplicationService.ExecuteInfusionAsync->DbContext.SaveChangesAsync
+Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Cgt.CgtApplicationService.GenerateDestructionCertificateAsync->DbContext.SaveChangesAsync
+Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Cgt.CgtApplicationService.InitializeApheresisAsync->DbContext.SaveChangesAsync
+Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Cgt.CgtApplicationService.LogVialReturnAsync->DbContext.SaveChangesAsync
+Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Cgt.CgtApplicationService.RecordMilestoneAsync->DbContext.SaveChangesAsync
+Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Cgt.CgtApplicationService.VerifyBedsideAsync->DbContext.SaveChangesAsync
+Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Coding.SynonymImportService.DeactivateRuleAsync->DbContext.SaveChangesAsync
+Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Coding.SynonymImportService.ImportSynonymRulesAsync->DbContext.SaveChangesAsync
+Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Compliance.SiteComplianceApplicationService.ActivateSiteAsync->ISiteComplianceRepository.SaveChangesAsync
+Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Compliance.SiteComplianceApplicationService.ActivateSiteAsync->ISiteComplianceRepository.SaveChangesAsync#2
+Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Compliance.SiteComplianceApplicationService.ApplyEtmfWebhookAsync->ISiteComplianceRepository.SaveChangesAsync
+Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Devices.DeviceApplicationService.DispenseDeviceAsync->IDeviceRepository.SaveChangesAsync
+Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Devices.DeviceApplicationService.InitiateQuarantineAsync->IDeviceRepository.SaveChangesAsync
+Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Devices.DeviceApplicationService.LogDeficiencyAsync->IDeviceRepository.SaveChangesAsync
+Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Devices.DeviceApplicationService.RegisterInventoryAsync->IDeviceRepository.SaveChangesAsync
+Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Devices.DeviceApplicationService.ReleaseQuarantineAsync->IDeviceRepository.SaveChangesAsync
+Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Observations.LabRangeImportService.CommitImportAsync->DbContext.SaveChangesAsync
+Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Observations.LabRangeImportService.CreateReferenceRangeAsync->DbContext.SaveChangesAsync
+Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Observations.LabRangeImportService.DeleteReferenceRangeAsync->DbContext.SaveChangesAsync
+Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Observations.LabRangeImportService.UpdateReferenceRangeAsync->DbContext.SaveChangesAsync
+Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Randomization.RandomizationApplicationService.ApproveSchemeAsync->IRandomizationRepository.SaveChangesAsync
+Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Randomization.RandomizationApplicationService.ApproveSchemeAsync->IRandomizationRepository.SaveChangesAsync#2
+Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Randomization.RandomizationApplicationService.DraftSchemeAsync->IRandomizationRepository.SaveChangesAsync
+Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Randomization.RandomizationApplicationService.RandomizeAsync->IRandomizationRepository.SaveChangesAsync
+Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Randomization.RandomizationApplicationService.RefuseAsync->IRandomizationRepository.SaveChangesAsync
+Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Subjects.SubjectApplicationService.AssignSiteAsync->ISubjectRepository.SaveChangesAsync
+Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Subjects.SubjectApplicationService.CreateAsync->ISubjectRepository.SaveChangesAsync
+Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Subjects.SubjectApplicationService.DeleteDemographicsAsync->ISubjectRepository.SaveChangesAsync
+Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Subjects.SubjectApplicationService.RecordConsentAsync->IConsentRepository.SaveChangesAsync
+Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Subjects.SubjectApplicationService.TransitionSubjectAsync->ISubjectRepository.SaveChangesAsync
+Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Subjects.SubjectApplicationService.TransitionSubjectAsync->ISubjectRepository.SaveChangesAsync#2
+Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Subjects.SubjectApplicationService.UpdateDemographicsAsync->ISubjectRepository.SaveChangesAsync
+Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Supply.IpKitApplicationService.ProcessBatchReconciliationAsync->DbContext.SaveChangesAsync
+Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Supply.IpKitApplicationService.SeedSiteInventoryAsync->DbContext.SaveChangesAsync
+Cadence.Apps.Execution|Cadence.Apps.Execution.Application.Toxicity.LabToxicityGovernanceService.ExecuteActionAsync->IStagedAdverseEventReviewRepository.SaveChangesAsync
+Cadence.Apps.Execution|Cadence.Apps.Execution.Infrastructure.Consumers.EConsentCompletedConsumer.Consume->ISubjectRepository.SaveChangesAsync
+Cadence.Apps.Execution|Cadence.Apps.Execution.Infrastructure.Persistence.ExecutionDbSeeder.SeedAsync->DbContext.SaveChangesAsync
+Cadence.Apps.Execution|Cadence.Apps.Execution.Infrastructure.Persistence.Repositories.ExecutionRepositoryBase.SaveChangesAsync->DbContext.SaveChangesAsync
+Cadence.Apps.Execution|Cadence.Apps.Execution.Infrastructure.Persistence.Repositories.RandomizationRepository.InsertInMemorySlotsUntrackedAsync->DbContext.SaveChangesAsync

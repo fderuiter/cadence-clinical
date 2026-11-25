@@ -1,0 +1,34 @@
+# Direct state-write ratchet baseline shard for Cadence.Apps.Payments (SaveChanges / SaveChangesAsync outside the central kernel command pipeline).
+# One compiled IL call site per line: Assembly|OuterType.LogicalMethod->TargetMethod[#N]. Sorted ordinally. The list may only shrink.
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.
+Cadence.Apps.Payments|Cadence.Apps.Payments.Endpoints.PaymentEndpoints.ApproveInvoice->DbContext.SaveChangesAsync
+Cadence.Apps.Payments|Cadence.Apps.Payments.Endpoints.PaymentEndpoints.BatchCompileBillingCycles->DbContext.SaveChangesAsync
+Cadence.Apps.Payments|Cadence.Apps.Payments.Endpoints.PaymentEndpoints.BatchCompileBillingCycles->DbContext.SaveChangesAsync#2
+Cadence.Apps.Payments|Cadence.Apps.Payments.Endpoints.PaymentEndpoints.CompileBillingCycle->DbContext.SaveChangesAsync
+Cadence.Apps.Payments|Cadence.Apps.Payments.Endpoints.PaymentEndpoints.CreateStipendRule->DbContext.SaveChangesAsync
+Cadence.Apps.Payments|Cadence.Apps.Payments.Endpoints.PaymentEndpoints.CreateStipendRule->DbContext.SaveChangesAsync#2
+Cadence.Apps.Payments|Cadence.Apps.Payments.Endpoints.PaymentEndpoints.CreditSelfDiaryStipend->DbContext.SaveChangesAsync
+Cadence.Apps.Payments|Cadence.Apps.Payments.Endpoints.PaymentEndpoints.CreditSelfDiaryStipend->DbContext.SaveChangesAsync#2
+Cadence.Apps.Payments|Cadence.Apps.Payments.Endpoints.PaymentEndpoints.CreditSelfDiaryStipend->DbContext.SaveChangesAsync#3
+Cadence.Apps.Payments|Cadence.Apps.Payments.Endpoints.PaymentEndpoints.DisburseParticipantFunds->DbContext.SaveChangesAsync
+Cadence.Apps.Payments|Cadence.Apps.Payments.Endpoints.PaymentEndpoints.DisburseSelfWalletBalance->DbContext.SaveChangesAsync
+Cadence.Apps.Payments|Cadence.Apps.Payments.Endpoints.PaymentEndpoints.DisburseSelfWalletBalance->DbContext.SaveChangesAsync#2
+Cadence.Apps.Payments|Cadence.Apps.Payments.Endpoints.PaymentEndpoints.DisburseStipendDirect->DbContext.SaveChangesAsync
+Cadence.Apps.Payments|Cadence.Apps.Payments.Endpoints.PaymentEndpoints.ExportInvoiceToErp->DbContext.SaveChangesAsync
+Cadence.Apps.Payments|Cadence.Apps.Payments.Endpoints.PaymentEndpoints.ExtractReceiptOcrCore->DbContext.SaveChangesAsync
+Cadence.Apps.Payments|Cadence.Apps.Payments.Endpoints.PaymentEndpoints.IngestVisitVerifiedEvent->DbContext.SaveChangesAsync
+Cadence.Apps.Payments|Cadence.Apps.Payments.Endpoints.PaymentEndpoints.IngestVisitVerifiedEvent->DbContext.SaveChangesAsync#2
+Cadence.Apps.Payments|Cadence.Apps.Payments.Endpoints.PaymentEndpoints.IngestVisitVerifiedEvent->DbContext.SaveChangesAsync#3
+Cadence.Apps.Payments|Cadence.Apps.Payments.Endpoints.PaymentEndpoints.IngestVisitVerifiedEvent->DbContext.SaveChangesAsync#4
+Cadence.Apps.Payments|Cadence.Apps.Payments.Endpoints.PaymentEndpoints.IssueReloadableCard->DbContext.SaveChangesAsync
+Cadence.Apps.Payments|Cadence.Apps.Payments.Endpoints.PaymentEndpoints.ReconcileInvoice->DbContext.SaveChangesAsync
+Cadence.Apps.Payments|Cadence.Apps.Payments.Endpoints.PaymentEndpoints.ReviewExpenseClaim->DbContext.SaveChangesAsync
+Cadence.Apps.Payments|Cadence.Apps.Payments.Endpoints.PaymentEndpoints.SettleDisbursement->DbContext.SaveChangesAsync
+Cadence.Apps.Payments|Cadence.Apps.Payments.Endpoints.PaymentEndpoints.SignRemittanceAdvice->DbContext.SaveChangesAsync
+Cadence.Apps.Payments|Cadence.Apps.Payments.Endpoints.PaymentEndpoints.SubmitExpenseClaimCore->DbContext.SaveChangesAsync
+Cadence.Apps.Payments|Cadence.Apps.Payments.Endpoints.PaymentEndpoints.SubmitSelfExpenseClaim->DbContext.SaveChangesAsync
+Cadence.Apps.Payments|Cadence.Apps.Payments.Endpoints.PaymentEndpoints.SubmitW9Form->DbContext.SaveChangesAsync
+Cadence.Apps.Payments|Cadence.Apps.Payments.Endpoints.PaymentEndpoints.VerifyW9Form->DbContext.SaveChangesAsync
+Cadence.Apps.Payments|Cadence.Apps.Payments.Infrastructure.Consumers.ClinicalVisitCompletedConsumer.Consume->DbContext.SaveChangesAsync
+Cadence.Apps.Payments|Cadence.Apps.Payments.Infrastructure.Consumers.ClinicalVisitCompletedConsumer.Consume->DbContext.SaveChangesAsync#2
+Cadence.Apps.Payments|Cadence.Apps.Payments.Infrastructure.Consumers.ClinicalVisitCompletedConsumer.Consume->DbContext.SaveChangesAsync#3

@@ -1,0 +1,16 @@
+# Shrink-only RBAC role-to-permission grant baseline shard for resource 'delegation_log'.
+# Sorted ordinally as <role>|<resource>|<action> (lowercase).
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check permission-matrix or CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.
+admin|delegation_log|read
+auditor|delegation_log|read
+authorized_er_physician|delegation_log|read
+authorized_er_physician|delegation_log|sign
+cra|delegation_log|read
+crc|delegation_log|read
+investigator|delegation_log|read
+lead_investigator|delegation_log|read
+lead_investigator|delegation_log|sign
+monitor|delegation_log|read
+principal_investigator|delegation_log|read
+principal_investigator|delegation_log|sign
+sponsor_dm|delegation_log|read

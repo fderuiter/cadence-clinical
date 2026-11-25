@@ -289,7 +289,9 @@ public static class FrontendQualityGateService
                     ? PreCommitOpenApiService.GetStagedFiles(repoRoot)
                     : (IReadOnlyList<string>)targetFiles!;
 
-                var matching = SelectExistingFiles(repoRoot, rawFiles, TypecheckExtensions, reader);
+                var matching = SelectExistingFiles(repoRoot, rawFiles, TypecheckExtensions, reader)
+                    .Where(rel => !rel.StartsWith(BaselineGateCatalog.BaselinesRootPrefix, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
                 if (matching.Count == 0)
                 {
                     return 0;

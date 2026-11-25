@@ -1,0 +1,27 @@
+# Shrink-only RBAC role-to-permission grant baseline shard for resource 'ecrf_data_entry'.
+# Sorted ordinally as <role>|<resource>|<action> (lowercase).
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check permission-matrix or CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.
+admin|ecrf_data_entry|read
+auditor|ecrf_data_entry|read
+authorized_er_physician|ecrf_data_entry|create
+authorized_er_physician|ecrf_data_entry|read
+authorized_er_physician|ecrf_data_entry|update
+cra|ecrf_data_entry|read
+crc|ecrf_data_entry|create
+crc|ecrf_data_entry|read
+crc|ecrf_data_entry|update
+investigator|ecrf_data_entry|create
+investigator|ecrf_data_entry|read
+investigator|ecrf_data_entry|update
+lead_investigator|ecrf_data_entry|create
+lead_investigator|ecrf_data_entry|read
+lead_investigator|ecrf_data_entry|update
+monitor|ecrf_data_entry|read
+principal_investigator|ecrf_data_entry|create
+principal_investigator|ecrf_data_entry|read
+principal_investigator|ecrf_data_entry|update
+sponsor_dm|ecrf_data_entry|read
+sponsor_mm|ecrf_data_entry|read
+trial_coordinator|ecrf_data_entry|create
+trial_coordinator|ecrf_data_entry|read
+trial_coordinator|ecrf_data_entry|update

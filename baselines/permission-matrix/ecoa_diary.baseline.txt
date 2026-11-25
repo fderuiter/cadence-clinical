@@ -1,0 +1,39 @@
+# Shrink-only RBAC role-to-permission grant baseline shard for resource 'ecoa_diary'.
+# Sorted ordinally as <role>|<resource>|<action> (lowercase).
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check permission-matrix or CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.
+admin|ecoa_diary|alert
+admin|ecoa_diary|create
+admin|ecoa_diary|read
+authorized_er_physician|ecoa_diary|alert
+authorized_er_physician|ecoa_diary|create
+authorized_er_physician|ecoa_diary|read
+cra|ecoa_diary|alert
+cra|ecoa_diary|create
+cra|ecoa_diary|read
+crc|ecoa_diary|alert
+crc|ecoa_diary|create
+crc|ecoa_diary|read
+investigator|ecoa_diary|alert
+investigator|ecoa_diary|create
+investigator|ecoa_diary|read
+lead_investigator|ecoa_diary|alert
+lead_investigator|ecoa_diary|create
+lead_investigator|ecoa_diary|read
+monitor|ecoa_diary|alert
+monitor|ecoa_diary|create
+monitor|ecoa_diary|read
+principal_investigator|ecoa_diary|alert
+principal_investigator|ecoa_diary|create
+principal_investigator|ecoa_diary|read
+sponsor_designer|ecoa_diary|create
+sponsor_designer|ecoa_diary|read
+sponsor_dm|ecoa_diary|alert
+sponsor_dm|ecoa_diary|create
+sponsor_dm|ecoa_diary|read
+subject|ecoa_diary|read
+sysadmin|ecoa_diary|alert
+sysadmin|ecoa_diary|create
+sysadmin|ecoa_diary|read
+trial_coordinator|ecoa_diary|alert
+trial_coordinator|ecoa_diary|create
+trial_coordinator|ecoa_diary|read

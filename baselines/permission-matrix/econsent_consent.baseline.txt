@@ -1,0 +1,8 @@
+# Shrink-only RBAC role-to-permission grant baseline shard for resource 'econsent_consent'.
+# Sorted ordinally as <role>|<resource>|<action> (lowercase).
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check permission-matrix or CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.
+authorized_er_physician|econsent_consent|capture
+crc|econsent_consent|capture
+investigator|econsent_consent|capture
+lead_investigator|econsent_consent|capture
+principal_investigator|econsent_consent|capture

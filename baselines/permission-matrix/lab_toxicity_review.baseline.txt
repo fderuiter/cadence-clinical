@@ -1,0 +1,19 @@
+# Shrink-only RBAC role-to-permission grant baseline shard for resource 'lab_toxicity_review'.
+# Sorted ordinally as <role>|<resource>|<action> (lowercase).
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check permission-matrix or CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.
+admin|lab_toxicity_review|read
+auditor|lab_toxicity_review|read
+authorized_er_physician|lab_toxicity_review|read
+authorized_er_physician|lab_toxicity_review|review
+cra|lab_toxicity_review|read
+crc|lab_toxicity_review|read
+investigator|lab_toxicity_review|read
+investigator|lab_toxicity_review|review
+lead_investigator|lab_toxicity_review|read
+lead_investigator|lab_toxicity_review|review
+monitor|lab_toxicity_review|read
+principal_investigator|lab_toxicity_review|read
+principal_investigator|lab_toxicity_review|review
+sponsor_dm|lab_toxicity_review|read
+sponsor_mm|lab_toxicity_review|read
+sysadmin|lab_toxicity_review|read

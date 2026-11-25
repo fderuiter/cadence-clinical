@@ -1,0 +1,8 @@
+# Shrink-only RBAC role-to-permission grant baseline shard for resource 'sce_program'.
+# Sorted ordinally as <role>|<resource>|<action> (lowercase).
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check permission-matrix or CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.
+idmc|sce_program|read
+sponsor_statistician|sce_program|create
+sponsor_statistician|sce_program|read
+unblinded_statistician|sce_program|create
+unblinded_statistician|sce_program|read

@@ -1,0 +1,33 @@
+# Shrink-only RBAC role-to-permission grant baseline shard for resource 'ctms_monitoring_visit'.
+# Sorted ordinally as <role>|<resource>|<action> (lowercase).
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check permission-matrix or CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.
+admin|ctms_monitoring_visit|create
+admin|ctms_monitoring_visit|read
+admin|ctms_monitoring_visit|sign_off
+admin|ctms_monitoring_visit|sync
+admin|ctms_monitoring_visit|update
+auditor|ctms_monitoring_visit|read
+authorized_er_physician|ctms_monitoring_visit|read
+cra|ctms_monitoring_visit|create
+cra|ctms_monitoring_visit|read
+cra|ctms_monitoring_visit|sync
+cra|ctms_monitoring_visit|update
+crc|ctms_monitoring_visit|read
+investigator|ctms_monitoring_visit|read
+lead_investigator|ctms_monitoring_visit|read
+monitor|ctms_monitoring_visit|read
+monitor|ctms_monitoring_visit|sign_off
+monitor|ctms_monitoring_visit|sync
+monitor|ctms_monitoring_visit|update
+principal_investigator|ctms_monitoring_visit|read
+sponsor_dm|ctms_monitoring_visit|create
+sponsor_dm|ctms_monitoring_visit|read
+sponsor_dm|ctms_monitoring_visit|sign_off
+sponsor_dm|ctms_monitoring_visit|sync
+sponsor_dm|ctms_monitoring_visit|update
+sponsor_mm|ctms_monitoring_visit|read
+sysadmin|ctms_monitoring_visit|create
+sysadmin|ctms_monitoring_visit|read
+sysadmin|ctms_monitoring_visit|sign_off
+sysadmin|ctms_monitoring_visit|sync
+sysadmin|ctms_monitoring_visit|update

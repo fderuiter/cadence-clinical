@@ -241,9 +241,7 @@ public sealed class QualityGateRegistryTests : IDisposable
         },
         ["permission-matrix"] = () =>
         {
-            Write(
-                PermissionMatrixRatchetService.BaselineRelativePath,
-                "# Shrink-only RBAC baseline\n" + string.Join('\n', PermissionMatrixRatchetService.GetRuntimeGrants()) + "\n");
+            PermissionMatrixRatchetService.WriteBaselineShards(_root, PermissionMatrixRatchetService.GetRuntimeGrants());
             Write(
                 "packages/security/src/Rbac/PermissionMatrix.Shadow.cs",
                 "namespace Cadence.Security.Rbac;\npublic static partial class PermissionMatrix\n{\n    static void Extra() => Grant(\"crc\", \"shadow_resource\", \"escalate\");\n}\n");
@@ -420,10 +418,9 @@ public sealed class QualityGateRegistryTests : IDisposable
     public void RunQualityGates_SkipsExcludedGatesByNameOrAlias_AndFailsClosedOnInvalidExcludeUsage()
     {
         Write("scratch/notes.txt", "left behind\n");
-        string[] unrelatedGates = QualityGates.All
+        string[] unrelatedGates = [.. QualityGates.All
             .Select(g => g.Name)
-            .Where(n => n is not "dependencies" and not "path-patterns")
-            .ToArray();
+            .Where(n => n is not "dependencies" and not "path-patterns")];
 
         QualityGateOrchestrator.RunQualityGates(excludedGates: ["no-such-gate"], repoRoot: _root)
             .Should().Be(1, "unknown excluded gate names must fail closed");
@@ -438,10 +435,9 @@ public sealed class QualityGateRegistryTests : IDisposable
     [Fact]
     public void RunQualityGates_SkipsPublicBundleOnlyWhenAllThreeBundleDirectoriesAreAbsent_AndFailsClosedOnPartialDistOrDirectCall()
     {
-        string[] allOtherGates = QualityGates.All
+        string[] allOtherGates = [.. QualityGates.All
             .Select(g => g.Name)
-            .Where(n => n != "public-bundle")
-            .ToArray();
+            .Where(n => n != "public-bundle")];
 
         QualityGateOrchestrator.RunQualityGates(excludedGates: allOtherGates, repoRoot: _root)
             .Should().Be(0, "unscoped cadence check must skip post-build public-bundle when no dist/ directory exists");
@@ -579,10 +575,9 @@ public sealed class QualityGateRegistryTests : IDisposable
         gate.Run(vueScope).Should().BeFalse("unbaselined Vue duplicates over 15 lines must fail");
 
         var summary = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(Path.Combine(_root, "duplication_summary.json")))!;
-        string[] vueKeys = summary["duplicates"]!.AsArray()
+        string[] vueKeys = [.. summary["duplicates"]!.AsArray()
             .Select(n => n!["key"]!.GetValue<string>())
-            .Where(k => k.Contains("ViewA.vue", StringComparison.Ordinal))
-            .ToArray();
+            .Where(k => k.Contains("ViewA.vue", StringComparison.Ordinal))];
         vueKeys.Should().NotBeEmpty();
 
         Cadence.ToolingCore.Services.DuplicationDetectorService.WriteBaseline(_root, vueKeys);
@@ -704,10 +699,9 @@ public sealed class QualityGateRegistryTests : IDisposable
         Git("rm", "-q", "obsolete.md");
         Cadence.ToolingCore.Services.PreCommitOpenApiService.GetStagedFiles(_root).Should().BeEmpty();
 
-        string[] nonFileGates = QualityGates.All
+        string[] nonFileGates = [.. QualityGates.All
             .Where(g => !g.TakesFiles)
-            .Select(g => g.Name)
-            .ToArray();
+            .Select(g => g.Name)];
         QualityGateOrchestrator.RunQualityGates(excludedGates: nonFileGates, preCommit: true, repoRoot: _root)
             .Should().Be(0, "a delete-only commit has zero surviving staged files and must complete all pre-commit file gates without scanning the full repository");
     }
@@ -786,10 +780,9 @@ public sealed class QualityGateRegistryTests : IDisposable
         Git("config", "commit.gpgsign", "false");
         Git("add", "docs/note.md", "scratch/notes.txt");
 
-        string[] excluded = QualityGates.All
+        string[] excluded = [.. QualityGates.All
             .Select(g => g.Name)
-            .Where(n => n is not "trailing-whitespace" and not "path-patterns")
-            .ToArray();
+            .Where(n => n is not "trailing-whitespace" and not "path-patterns")];
 
         string preCommitOutput = CaptureConsoleOutput(() =>
             QualityGateOrchestrator.RunQualityGates(excludedGates: excluded, preCommit: true, repoRoot: _root)
@@ -840,8 +833,8 @@ public sealed class QualityGateRegistryTests : IDisposable
         gate.Run(Context(files: ["apps/payments/src/Endpoints/PaymentEndpoints.cs"], preCommit: true))
             .Should().BeFalse("pre-commit hook must run architecture-tests when backend C# files are staged");
 
-        gate.Run(Context(files: ["tests/Cadence.ArchitectureTests/ArchitectureBaselines/direct-state-writes.baseline.txt"], preCommit: true))
-            .Should().BeFalse("pre-commit hook must run architecture-tests when ratchet baselines are staged");
+        gate.Run(Context(files: ["baselines/direct-state-writes/Cadence.Apps.Payments.baseline.txt"], preCommit: true))
+            .Should().BeFalse("pre-commit hook must run architecture-tests when sharded ratchet baselines are staged");
 
         gate.Run(Context(files: ["apps/subject-portal/tests/e2e/portal-accessibility.spec.js"], preCommit: true))
             .Should().BeFalse("pre-commit hook must run architecture-tests when frontend test specs are staged");
@@ -856,9 +849,7 @@ public sealed class QualityGateRegistryTests : IDisposable
         QualityGates.Find("imports")!.Run(Context())
             .Should().BeFalse("cross-service reflection string literals must fail the imports gate when unbaselined");
 
-        Write(
-            PermissionMatrixRatchetService.BaselineRelativePath,
-            "# baseline\n" + string.Join('\n', PermissionMatrixRatchetService.GetRuntimeGrants()) + "\n");
+        PermissionMatrixRatchetService.WriteBaselineShards(_root, PermissionMatrixRatchetService.GetRuntimeGrants());
         var permissionGate = QualityGates.Find("permission-matrix")!;
         permissionGate.Run(Context()).Should().BeTrue("runtime PermissionMatrix grants matching the baseline must pass");
 

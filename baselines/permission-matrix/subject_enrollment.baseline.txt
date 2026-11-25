@@ -1,0 +1,35 @@
+# Shrink-only RBAC role-to-permission grant baseline shard for resource 'subject_enrollment'.
+# Sorted ordinally as <role>|<resource>|<action> (lowercase).
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check permission-matrix or CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.
+admin|subject_enrollment|read
+auditor|subject_enrollment|read
+authorized_er_physician|subject_enrollment|create
+authorized_er_physician|subject_enrollment|randomize
+authorized_er_physician|subject_enrollment|read
+authorized_er_physician|subject_enrollment|update
+cra|subject_enrollment|read
+crc|subject_enrollment|create
+crc|subject_enrollment|randomize
+crc|subject_enrollment|read
+crc|subject_enrollment|update
+investigator|subject_enrollment|create
+investigator|subject_enrollment|randomize
+investigator|subject_enrollment|read
+investigator|subject_enrollment|update
+lead_investigator|subject_enrollment|create
+lead_investigator|subject_enrollment|randomize
+lead_investigator|subject_enrollment|read
+lead_investigator|subject_enrollment|update
+monitor|subject_enrollment|read
+pharmacist|subject_enrollment|read
+principal_investigator|subject_enrollment|create
+principal_investigator|subject_enrollment|randomize
+principal_investigator|subject_enrollment|read
+principal_investigator|subject_enrollment|update
+sponsor_dm|subject_enrollment|read
+sponsor_mm|subject_enrollment|read
+trial_coordinator|subject_enrollment|create
+trial_coordinator|subject_enrollment|randomize
+trial_coordinator|subject_enrollment|read
+trial_coordinator|subject_enrollment|update
+unblinded_statistician|subject_enrollment|read

@@ -1,0 +1,7 @@
+# Shrink-only RBAC role-to-permission grant baseline shard for resource 'quality_audit_logs'.
+# Sorted ordinally as <role>|<resource>|<action> (lowercase).
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check permission-matrix or CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.
+admin|quality_audit_logs|read
+auditor|quality_audit_logs|read
+sponsor_dm|quality_audit_logs|read
+sysadmin|quality_audit_logs|read

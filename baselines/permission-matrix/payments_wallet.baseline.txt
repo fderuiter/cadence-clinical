@@ -1,0 +1,19 @@
+# Shrink-only RBAC role-to-permission grant baseline shard for resource 'payments_wallet'.
+# Sorted ordinally as <role>|<resource>|<action> (lowercase).
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check permission-matrix or CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.
+admin|payments_wallet|read
+auditor|payments_wallet|read
+authorized_er_physician|payments_wallet|issue_card
+authorized_er_physician|payments_wallet|read
+crc|payments_wallet|issue_card
+crc|payments_wallet|read
+finance_officer|payments_wallet|disburse
+finance_officer|payments_wallet|issue_card
+finance_officer|payments_wallet|read
+investigator|payments_wallet|issue_card
+investigator|payments_wallet|read
+lead_investigator|payments_wallet|issue_card
+lead_investigator|payments_wallet|read
+principal_investigator|payments_wallet|issue_card
+principal_investigator|payments_wallet|read
+sponsor_dm|payments_wallet|read

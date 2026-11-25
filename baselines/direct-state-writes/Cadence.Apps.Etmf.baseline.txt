@@ -1,0 +1,15 @@
+# Direct state-write ratchet baseline shard for Cadence.Apps.Etmf (SaveChanges / SaveChangesAsync outside the central kernel command pipeline).
+# One compiled IL call site per line: Assembly|OuterType.LogicalMethod->TargetMethod[#N]. Sorted ordinally. The list may only shrink.
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.
+Cadence.Apps.Etmf|Cadence.Apps.Etmf.Endpoints.EtmfIntelligenceEndpoints.ExportDocuments->DbContext.SaveChangesAsync
+Cadence.Apps.Etmf|Cadence.Apps.Etmf.Endpoints.EtmfIntelligenceEndpoints.IngestDocument->DbContext.SaveChangesAsync
+Cadence.Apps.Etmf|Cadence.Apps.Etmf.Endpoints.EtmfIntelligenceEndpoints.ReviewQcDocument->DbContext.SaveChangesAsync
+Cadence.Apps.Etmf|Cadence.Apps.Etmf.Endpoints.EtmfIntelligenceEndpoints.StageQcDocument->DbContext.SaveChangesAsync
+Cadence.Apps.Etmf|Cadence.Apps.Etmf.Endpoints.EtmfIntelligenceEndpoints.SubmitDocumentForQc->DbContext.SaveChangesAsync
+Cadence.Apps.Etmf|Cadence.Apps.Etmf.Endpoints.EtmfIntelligenceEndpoints.UpdateDocumentTaxonomy->DbContext.SaveChangesAsync
+Cadence.Apps.Etmf|Cadence.Apps.Etmf.Infrastructure.Consumers.EConsentCompletedConsumer.Consume->DbContext.SaveChangesAsync
+Cadence.Apps.Etmf|Cadence.Apps.Etmf.Infrastructure.Consumers.EtmfDocumentFilingRequestedConsumer.Consume->DbContext.SaveChangesAsync
+Cadence.Apps.Etmf|Cadence.Apps.Etmf.Workers.EtmfExportWorker.ProcessJobAsync->DbContext.SaveChangesAsync
+Cadence.Apps.Etmf|Cadence.Apps.Etmf.Workers.EtmfExportWorker.ProcessJobAsync->DbContext.SaveChangesAsync#2
+Cadence.Apps.Etmf|Cadence.Apps.Etmf.Workers.EtmfExportWorker.ProcessJobAsync->DbContext.SaveChangesAsync#3
+Cadence.Apps.Etmf|Cadence.Apps.Etmf.Workers.EtmfExportWorker.ProcessJobAsync->DbContext.SaveChangesAsync#4

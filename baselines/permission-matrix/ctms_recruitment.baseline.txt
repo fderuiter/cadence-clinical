@@ -1,0 +1,20 @@
+# Shrink-only RBAC role-to-permission grant baseline shard for resource 'ctms_recruitment'.
+# Sorted ordinally as <role>|<resource>|<action> (lowercase).
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check permission-matrix or CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.
+admin|ctms_recruitment|create
+admin|ctms_recruitment|read
+auditor|ctms_recruitment|read
+authorized_er_physician|ctms_recruitment|read
+cra|ctms_recruitment|create
+cra|ctms_recruitment|read
+crc|ctms_recruitment|read
+investigator|ctms_recruitment|read
+lead_investigator|ctms_recruitment|read
+monitor|ctms_recruitment|create
+monitor|ctms_recruitment|read
+principal_investigator|ctms_recruitment|read
+sponsor_dm|ctms_recruitment|create
+sponsor_dm|ctms_recruitment|read
+sysadmin|ctms_recruitment|create
+sysadmin|ctms_recruitment|read
+trial_coordinator|ctms_recruitment|read

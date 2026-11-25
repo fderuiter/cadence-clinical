@@ -1,0 +1,7 @@
+# Direct state-write ratchet baseline shard for Cadence.Apps.Fileshare (SaveChanges / SaveChangesAsync outside the central kernel command pipeline).
+# One compiled IL call site per line: Assembly|OuterType.LogicalMethod->TargetMethod[#N]. Sorted ordinally. The list may only shrink.
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.
+Cadence.Apps.Fileshare|Cadence.Apps.Fileshare.Workers.DocumentConversionWorker.ProcessSingleRecordAsync->DbContext.SaveChangesAsync
+Cadence.Apps.Fileshare|Cadence.Apps.Fileshare.Workers.DocumentConversionWorker.ProcessSingleRecordAsync->DbContext.SaveChangesAsync#2
+Cadence.Apps.Fileshare|Cadence.Apps.Fileshare.Workers.MediaTranscoderWorker.ProcessSingleRecordAsync->DbContext.SaveChangesAsync
+Cadence.Apps.Fileshare|Cadence.Apps.Fileshare.Workers.MediaTranscoderWorker.ProcessSingleRecordAsync->DbContext.SaveChangesAsync#2

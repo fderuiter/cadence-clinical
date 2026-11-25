@@ -1,0 +1,26 @@
+# Shrink-only RBAC role-to-permission grant baseline shard for resource 'sdv'.
+# Sorted ordinally as <role>|<resource>|<action> (lowercase).
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check permission-matrix or CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.
+admin|sdv|flag
+admin|sdv|read
+admin|sdv|update
+authorized_er_physician|sdv|read
+cra|sdv|create
+cra|sdv|delete
+cra|sdv|flag
+cra|sdv|read
+cra|sdv|update
+external_monitor|sdv|flag
+external_monitor|sdv|read
+external_monitor|sdv|update
+investigator|sdv|read
+lead_investigator|sdv|read
+monitor|sdv|create
+monitor|sdv|delete
+monitor|sdv|flag
+monitor|sdv|read
+monitor|sdv|update
+principal_investigator|sdv|read
+sponsor_dm|sdv|flag
+sponsor_dm|sdv|read
+sponsor_dm|sdv|update

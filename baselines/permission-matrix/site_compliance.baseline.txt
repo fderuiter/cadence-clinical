@@ -1,0 +1,20 @@
+# Shrink-only RBAC role-to-permission grant baseline shard for resource 'site_compliance'.
+# Sorted ordinally as <role>|<resource>|<action> (lowercase).
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check permission-matrix or CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.
+admin|site_compliance|activate
+admin|site_compliance|read
+auditor|site_compliance|read
+authorized_er_physician|site_compliance|read
+cra|site_compliance|read
+crc|site_compliance|read
+etmf_service|site_compliance|etmf_sync
+investigator|site_compliance|read
+lead_investigator|site_compliance|read
+monitor|site_compliance|read
+principal_investigator|site_compliance|read
+sponsor_dm|site_compliance|activate
+sponsor_dm|site_compliance|read
+sponsor_mm|site_compliance|read
+sysadmin|site_compliance|activate
+sysadmin|site_compliance|read
+trial_coordinator|site_compliance|read

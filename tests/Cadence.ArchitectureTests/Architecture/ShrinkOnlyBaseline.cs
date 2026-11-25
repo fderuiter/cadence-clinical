@@ -3,29 +3,42 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
+using Cadence.ToolingCore.Services;
+
 namespace Cadence.ArchitectureTests.Architecture;
 
 /// <summary>
-/// Shared shrink-only ratchet baseline evaluator for architecture sentinels
-/// (<c>direct-state-writes.baseline.txt</c>, <c>permission-matrix.baseline.txt</c>,
-/// <c>cross-service-isolation.baseline.txt</c>, <c>prd-requirement-coverage.baseline.txt</c>). Uses <see cref="KernelBoundaryBaseline.UpdateEnvironmentVariable"/>
-/// (<c>CADENCE_UPDATE_BASELINE=1</c>) to regenerate baseline files when paying down debt.
+/// Shared shrink-only ratchet baseline evaluator for leaf-sharded architecture sentinels
+/// (<c>baselines/direct-state-writes</c>, <c>baselines/permission-matrix</c>,
+/// <c>baselines/cross-service-isolation</c>) and standalone shrink-only baselines
+/// (<c>prd-requirement-coverage.baseline.txt</c>). Uses <see cref="KernelBoundaryBaseline.UpdateEnvironmentVariable"/>
+/// (<c>CADENCE_UPDATE_BASELINE=1</c>) strictly to subtract resolved entries and delete empty shards/directories—never
+/// adding new violations.
 /// </summary>
 public static class ShrinkOnlyBaseline
 {
-    private static readonly object Gate = new();
+    private static readonly Lock Gate = new();
 
     /// <summary>Result of comparing actual entries against a recorded shrink-only baseline.</summary>
     public sealed record Comparison(
         string RelativePath,
         IReadOnlyList<string> NewViolations,
-        IReadOnlyList<string> StaleEntries)
+        IReadOnlyList<string> StaleEntries,
+        IReadOnlyList<string>? StructureErrors = null)
     {
-        public bool IsClean => NewViolations.Count == 0 && StaleEntries.Count == 0;
+        public IReadOnlyList<string> ValidationErrors => StructureErrors ?? [];
+
+        public bool IsClean => NewViolations.Count == 0 && StaleEntries.Count == 0 && ValidationErrors.Count == 0;
 
         public string Describe(string ruleName, string filterHint, string? remediationHint = null)
         {
             var lines = new List<string>();
+            if (ValidationErrors.Count > 0)
+            {
+                lines.Add($"{ruleName}: {ValidationErrors.Count} baseline shard structure error(s) under {RelativePath}:");
+                lines.AddRange(ValidationErrors.Select(v => "  ! " + v));
+            }
+
             if (NewViolations.Count > 0)
             {
                 lines.Add($"{ruleName}: {NewViolations.Count} NEW violation(s) not in {RelativePath}:");
@@ -62,63 +75,170 @@ public static class ShrinkOnlyBaseline
             [.. baselineSet.Except(actualSet, StringComparer.Ordinal)]);
     }
 
-    /// <summary>Reads non-comment, non-empty lines from <paramref name="relativePath"/> under the repository root.</summary>
-    public static IReadOnlyList<string> Read(string relativePath)
+    /// <summary>Reads non-comment, non-empty lines from <paramref name="relativePath"/> under <paramref name="repoRoot"/>.</summary>
+    public static IReadOnlyList<string> Read(string relativePath, string? repoRoot = null)
     {
-        string path = Path.Combine(KernelBoundaryBaseline.RepositoryRoot(), relativePath);
+        string root = repoRoot ?? KernelBoundaryBaseline.RepositoryRoot();
+        string path = Path.Combine(root, relativePath);
         if (!File.Exists(path))
         {
             return [];
         }
 
-        return File.ReadAllLines(path)
-            .Select(line => line.Trim())
-            .Where(line => line.Length > 0 && !line.StartsWith('#'))
-            .ToList();
+        return TextBaselineShardStore.ParseEntries(File.ReadAllLines(path));
+    }
+
+    /// <summary>Reads all entries across all <c>*.baseline.txt</c> shards under <paramref name="relativeDirectory"/>.</summary>
+    public static IReadOnlyList<string> ReadSharded(string relativeDirectory, string? repoRoot = null)
+    {
+        string root = repoRoot ?? KernelBoundaryBaseline.RepositoryRoot();
+        return TextBaselineShardStore.ReadAllEntries(root, relativeDirectory);
     }
 
     /// <summary>
-    /// Verifies <paramref name="actual"/> against <paramref name="relativePath"/>, or rewrites the file when
-    /// <see cref="KernelBoundaryBaseline.UpdateRequested"/> is enabled.
+    /// Verifies <paramref name="actual"/> against leaf-owner shards under <paramref name="relativeDirectory"/>,
+    /// rejecting legacy monolithic baseline files, empty shards, unsorted/duplicate entries, and misplaced entries.
+    /// When <see cref="KernelBoundaryBaseline.UpdateRequested"/> (or <paramref name="updateOverride"/>) is enabled,
+    /// subtracts only resolved entries from existing shards and deletes empty shards and empty parent directories
+    /// without ever adding new violations.
     /// </summary>
-    public static Comparison Verify(
-        string relativePath,
-        IReadOnlyList<string> headerLines,
-        IEnumerable<string> actual)
+    public static Comparison VerifySharded(
+        string relativeDirectory,
+        string legacyRelativePath,
+        IEnumerable<string> actual,
+        Func<string, string> getShardRelativePathForEntry,
+        Func<string, IReadOnlyList<string>> buildHeaderForShardRelativePath,
+        string? repoRoot = null,
+        bool? updateOverride = null)
     {
+        string root = repoRoot ?? KernelBoundaryBaseline.RepositoryRoot();
+        bool update = updateOverride ?? KernelBoundaryBaseline.UpdateRequested;
+
         var sortedActual = actual
             .Distinct(StringComparer.Ordinal)
             .Order(StringComparer.Ordinal)
             .ToList();
 
-        if (!KernelBoundaryBaseline.UpdateRequested)
+        static bool HasShardExtension(string relPath) =>
+            relPath.EndsWith(TextBaselineShardStore.ShardSuffix, StringComparison.Ordinal);
+
+        string? TryResolveShardPath(string entry)
         {
-            return Compare(relativePath, sortedActual, Read(relativePath));
+            try
+            {
+                return getShardRelativePathForEntry(entry);
+            }
+            catch (Exception ex) when (ex is FormatException or ArgumentException)
+            {
+                return null;
+            }
         }
 
         lock (Gate)
         {
-            string fullPath = Path.Combine(KernelBoundaryBaseline.RepositoryRoot(), relativePath);
-            Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
+            var structureErrors = TextBaselineShardStore.ValidateAndReadShards(
+                root,
+                relativeDirectory,
+                legacyRelativePath,
+                HasShardExtension,
+                TryResolveShardPath,
+                out var entriesByShard,
+                reader: null,
+                requireNonEmptyDirectory: true,
+                allowDuplicateEntries: false);
 
-            List<string> nextEntries;
+            if (structureErrors.Count == 0 && update)
+            {
+                var actualSet = sortedActual.ToHashSet(StringComparer.Ordinal);
+                var staleEntries = entriesByShard.Values
+                    .SelectMany(entries => entries)
+                    .Where(entry => !actualSet.Contains(entry))
+                    .Distinct(StringComparer.Ordinal)
+                    .ToList();
+
+                if (staleEntries.Count > 0)
+                {
+                    TextBaselineShardStore.SubtractStaleEntries(
+                        root,
+                        relativeDirectory,
+                        entriesByShard,
+                        staleEntries,
+                        buildHeaderForShardRelativePath,
+                        multiset: false);
+
+                    structureErrors = TextBaselineShardStore.ValidateAndReadShards(
+                        root,
+                        relativeDirectory,
+                        legacyRelativePath,
+                        HasShardExtension,
+                        TryResolveShardPath,
+                        out entriesByShard,
+                        reader: null,
+                        requireNonEmptyDirectory: false,
+                        allowDuplicateEntries: false);
+                }
+            }
+
+            var recorded = entriesByShard
+                .OrderBy(kv => kv.Key, StringComparer.Ordinal)
+                .SelectMany(kv => kv.Value)
+                .ToList();
+
+            var comparison = Compare(relativeDirectory, sortedActual, recorded);
+            return structureErrors.Count == 0
+                ? comparison
+                : comparison with { StructureErrors = structureErrors };
+        }
+    }
+
+    /// <summary>
+    /// Verifies <paramref name="actual"/> against a single baseline file at <paramref name="relativePath"/>,
+    /// strictly subtracting resolved entries when <see cref="KernelBoundaryBaseline.UpdateRequested"/> is enabled.
+    /// </summary>
+    public static Comparison Verify(
+        string relativePath,
+        IReadOnlyList<string> headerLines,
+        IEnumerable<string> actual,
+        string? repoRoot = null,
+        bool? updateOverride = null)
+    {
+        string root = repoRoot ?? KernelBoundaryBaseline.RepositoryRoot();
+        bool update = updateOverride ?? KernelBoundaryBaseline.UpdateRequested;
+
+        var sortedActual = actual
+            .Distinct(StringComparer.Ordinal)
+            .Order(StringComparer.Ordinal)
+            .ToList();
+
+        if (!update)
+        {
+            return Compare(relativePath, sortedActual, Read(relativePath, root));
+        }
+
+        lock (Gate)
+        {
+            string fullPath = Path.Combine(root, relativePath);
             if (File.Exists(fullPath))
             {
-                var existing = Read(relativePath);
+                var existing = Read(relativePath, root);
                 var actualSet = sortedActual.ToHashSet(StringComparer.Ordinal);
-                nextEntries = existing
+                var nextEntries = existing
                     .Where(actualSet.Contains)
                     .Distinct(StringComparer.Ordinal)
                     .Order(StringComparer.Ordinal)
                     .ToList();
-            }
-            else
-            {
-                nextEntries = sortedActual;
+
+                if (nextEntries.Count == 0)
+                {
+                    File.Delete(fullPath);
+                }
+                else
+                {
+                    File.WriteAllText(fullPath, string.Join("\n", headerLines.Concat(nextEntries)) + "\n");
+                }
             }
 
-            File.WriteAllText(fullPath, string.Join("\n", headerLines.Concat(nextEntries)) + "\n");
-            return Compare(relativePath, sortedActual, Read(relativePath));
+            return Compare(relativePath, sortedActual, Read(relativePath, root));
         }
     }
 }

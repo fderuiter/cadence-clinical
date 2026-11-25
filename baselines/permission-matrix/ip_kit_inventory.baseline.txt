@@ -1,0 +1,6 @@
+# Shrink-only RBAC role-to-permission grant baseline shard for resource 'ip_kit_inventory'.
+# Sorted ordinally as <role>|<resource>|<action> (lowercase).
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check permission-matrix or CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.
+admin|ip_kit_inventory|seed
+sponsor_dm|ip_kit_inventory|seed
+sysadmin|ip_kit_inventory|seed

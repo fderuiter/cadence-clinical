@@ -11,8 +11,9 @@ namespace Cadence.Cli.Services;
 
 /// <summary>
 /// The <c>baseline-ratchet</c> gate (#5318): a ratchet baseline may only shrink. Every tracked ratchet baseline (the
-/// kernel-boundary shards, kernel-rule-coverage shards, <c>baselines/deid/*.baseline.txt</c> shards,
-/// <c>baselines/secrets/*.secrets.baseline.json</c> shards, and any standalone <c>*.baseline.txt</c> or
+/// kernel-boundary, kernel-rule-coverage, <c>baselines/permission-matrix</c>, <c>baselines/direct-state-writes</c>,
+/// <c>baselines/cross-service-isolation</c>, <c>baselines/deid/files/*.baseline.txt</c>, and
+/// <c>baselines/secrets/files/*.secrets.baseline.json</c> shards, plus any standalone <c>*.baseline.txt</c> or
 /// <c>*-baseline.txt</c> file) is aggregated per gate as one multiset across every commit in <c>compareBase..HEAD</c>
 /// and in the working tree. Any commit that grows a baseline gate must carry a file-and-count-scoped
 /// <c>Baseline-Growth: &lt;path&gt; +&lt;count&gt; - &lt;reason&gt;</c> trailer, and dirty working-tree baseline growth
@@ -34,17 +35,16 @@ public static class BaselineRatchetService
     /// <summary>Admits staged baseline growth in the pre-commit hook, before the commit (and its trailer) exists.</summary>
     public const string GrowthEnvironmentVariable = "CADENCE_BASELINE_GROWTH";
 
-    public const string KernelBoundariesGate = "tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-boundaries";
-    public const string KernelRuleCoverageGate = "tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-rule-coverage";
-    public const string DeidGate = BaselinesRootPrefix + "deid";
-    public const string SecretsGate = SecretsBaselineCleanerService.SecretsDirectory;
+    public const string KernelBoundariesGate = BaselineGateCatalog.KernelBoundariesGate;
+    public const string KernelRuleCoverageGate = BaselineGateCatalog.KernelRuleCoverageGate;
+    public const string PermissionMatrixGate = BaselineGateCatalog.PermissionMatrixGate;
+    public const string DirectStateWritesGate = BaselineGateCatalog.DirectStateWritesGate;
+    public const string CrossServiceIsolationGate = BaselineGateCatalog.CrossServiceIsolationGate;
+    public const string DeidGate = BaselineGateCatalog.DeidGate;
+    public const string SecretsGate = BaselineGateCatalog.SecretsGate;
 
-    private const string BaselinesRootPrefix = "baselines/";
     private const string Tag = "[BASELINE RATCHET]";
-    private const string LegacySecretsBaseline = ".secrets.baseline";
-    private const string LegacyDeidBaseline = ".deid-baseline.txt";
-    private const string LegacyKernelBoundariesBaseline = "tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-boundaries.baseline.txt";
-    private const string LegacyKernelRuleCoverageBaseline = "tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-rule-coverage.baseline.txt";
+    private const string LegacySecretsBaseline = BaselineGateCatalog.LegacySecretsBaseline;
     private const int MaxListed = 20;
 
     /// <summary>One baseline file or gate that gained entries.</summary>
@@ -78,42 +78,11 @@ public static class BaselineRatchetService
     public static string GetGateKey(string path)
     {
         string normalized = NormalizeBaselinePath(path);
-        if (normalized.Equals(LegacyKernelBoundariesBaseline, StringComparison.Ordinal) ||
-            normalized.Equals(KernelBoundariesGate, StringComparison.Ordinal) ||
-            normalized.StartsWith(KernelBoundariesGate + "/", StringComparison.Ordinal))
-        {
-            return KernelBoundariesGate;
-        }
-
-        if (normalized.Equals(LegacyKernelRuleCoverageBaseline, StringComparison.Ordinal) ||
-            normalized.Equals(KernelRuleCoverageGate, StringComparison.Ordinal) ||
-            normalized.StartsWith(KernelRuleCoverageGate + "/", StringComparison.Ordinal))
-        {
-            return KernelRuleCoverageGate;
-        }
-
-        if (normalized.Equals(LegacyDeidBaseline, StringComparison.Ordinal) ||
-            normalized.Equals(DeidGate, StringComparison.Ordinal) ||
-            normalized.StartsWith(DeidGate + "/", StringComparison.Ordinal))
-        {
-            return DeidGate;
-        }
-
-        if (normalized.Equals(LegacySecretsBaseline, StringComparison.Ordinal) ||
-            normalized.Equals(SecretsGate, StringComparison.Ordinal) ||
-            normalized.StartsWith(SecretsGate + "/", StringComparison.Ordinal))
-        {
-            return SecretsGate;
-        }
-
-        return normalized;
+        return BaselineGateCatalog.TryResolveShardedGateKey(normalized) ?? normalized;
     }
 
-    public static bool IsKnownGateKey(string path)
-    {
-        string normalized = NormalizeBaselinePath(path);
-        return normalized is KernelBoundariesGate or KernelRuleCoverageGate or DeidGate or SecretsGate;
-    }
+    public static bool IsKnownGateKey(string path) =>
+        BaselineGateCatalog.IsShardedGateKey(NormalizeBaselinePath(path));
 
     /// <summary>
     /// Parses a file-and-count-scoped <c>Baseline-Growth</c> trailer value of the form

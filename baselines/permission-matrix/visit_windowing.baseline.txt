@@ -1,0 +1,22 @@
+# Shrink-only RBAC role-to-permission grant baseline shard for resource 'visit_windowing'.
+# Sorted ordinally as <role>|<resource>|<action> (lowercase).
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check permission-matrix or CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.
+admin|visit_windowing|read
+authorized_er_physician|visit_windowing|read
+cra|visit_windowing|read
+crc|visit_windowing|read
+investigator|visit_windowing|read
+lead_investigator|visit_windowing|read
+monitor|visit_windowing|read
+principal_investigator|visit_windowing|read
+protocol_reviewer|visit_windowing|read
+sponsor_designer|visit_windowing|create
+sponsor_designer|visit_windowing|read
+sponsor_designer|visit_windowing|update
+sponsor_dm|visit_windowing|read
+sponsor_mm|visit_windowing|read
+sponsor_statistician|visit_windowing|read
+sysadmin|visit_windowing|create
+sysadmin|visit_windowing|read
+sysadmin|visit_windowing|update
+trial_coordinator|visit_windowing|read

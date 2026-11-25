@@ -1,0 +1,4 @@
+# Direct state-write ratchet baseline shard for Cadence.Database (SaveChanges / SaveChangesAsync outside the central kernel command pipeline).
+# One compiled IL call site per line: Assembly|OuterType.LogicalMethod->TargetMethod[#N]. Sorted ordinally. The list may only shrink.
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.
+Cadence.Database|Cadence.Database.Signatures.PostgresSigTokenUseStore`1.TryRecordFirstUseAsync->DbContext.SaveChangesAsync

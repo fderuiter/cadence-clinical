@@ -1,0 +1,7 @@
+# Direct state-write ratchet baseline shard for Cadence.Apps.Imaging (SaveChanges / SaveChangesAsync outside the central kernel command pipeline).
+# One compiled IL call site per line: Assembly|OuterType.LogicalMethod->TargetMethod[#N]. Sorted ordinally. The list may only shrink.
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.
+Cadence.Apps.Imaging|Cadence.Apps.Imaging.Endpoints.ImagingAdjudicationEndpoints.ChairAdjudicateSessionAsync->DbContext.SaveChangesAsync
+Cadence.Apps.Imaging|Cadence.Apps.Imaging.Endpoints.ImagingAdjudicationEndpoints.SubmitOrEvaluateSessionAsync->DbContext.SaveChangesAsync
+Cadence.Apps.Imaging|Cadence.Apps.Imaging.Services.DicomIngestionService.IngestBatchAsync->DbContext.SaveChangesAsync
+Cadence.Apps.Imaging|Cadence.Apps.Imaging.Services.DicomIngestionService.IngestInstanceAsync->DbContext.SaveChangesAsync

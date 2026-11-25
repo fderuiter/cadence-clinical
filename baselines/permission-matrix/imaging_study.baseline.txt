@@ -1,0 +1,21 @@
+# Shrink-only RBAC role-to-permission grant baseline shard for resource 'imaging_study'.
+# Sorted ordinally as <role>|<resource>|<action> (lowercase).
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check permission-matrix or CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.
+admin|imaging_study|read
+admin|imaging_study|upload
+auditor|imaging_study|read
+authorized_er_physician|imaging_study|read
+authorized_er_physician|imaging_study|upload
+cra|imaging_study|read
+crc|imaging_study|read
+crc|imaging_study|upload
+investigator|imaging_study|read
+investigator|imaging_study|upload
+lead_investigator|imaging_study|read
+lead_investigator|imaging_study|upload
+monitor|imaging_study|read
+principal_investigator|imaging_study|read
+principal_investigator|imaging_study|upload
+sponsor_dm|imaging_study|read
+sponsor_dm|imaging_study|upload
+sponsor_mm|imaging_study|read

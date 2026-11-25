@@ -1,0 +1,21 @@
+# Shrink-only RBAC role-to-permission grant baseline shard for resource 'etmf_edl'.
+# Sorted ordinally as <role>|<resource>|<action> (lowercase).
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check permission-matrix or CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.
+admin|etmf_edl|create
+admin|etmf_edl|read
+auditor|etmf_edl|read
+authorized_er_physician|etmf_edl|read
+cra|etmf_edl|create
+cra|etmf_edl|read
+crc|etmf_edl|read
+external_monitor|etmf_edl|read
+investigator|etmf_edl|read
+lead_investigator|etmf_edl|read
+monitor|etmf_edl|create
+monitor|etmf_edl|read
+principal_investigator|etmf_edl|read
+sponsor_dm|etmf_edl|create
+sponsor_dm|etmf_edl|read
+sysadmin|etmf_edl|create
+sysadmin|etmf_edl|read
+trial_coordinator|etmf_edl|read

@@ -1,0 +1,11 @@
+# Shrink-only RBAC role-to-permission grant baseline shard for resource 'protocol_export'.
+# Sorted ordinally as <role>|<resource>|<action> (lowercase).
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check permission-matrix or CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.
+admin|protocol_export|generate
+admin|protocol_export|read
+sponsor_designer|protocol_export|generate
+sponsor_designer|protocol_export|read
+sponsor_dm|protocol_export|generate
+sponsor_dm|protocol_export|read
+sysadmin|protocol_export|generate
+sysadmin|protocol_export|read

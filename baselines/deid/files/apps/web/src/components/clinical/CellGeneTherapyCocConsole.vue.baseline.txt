@@ -1,0 +1,8 @@
+# DEID scan ratchet baseline shard (pnpm cadence check deid). Findings that predate the full detector and are not PHI.
+# One per line: path|category|first 16 hex digits of SHA-256(trimmed matched value). Sorted ordinally. Shards may only shrink.
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check deid [files...] (docs/cli.md).
+apps/web/src/components/clinical/CellGeneTherapyCocConsole.vue|telephone_fax|323a985dc9d68d39
+apps/web/src/components/clinical/CellGeneTherapyCocConsole.vue|telephone_fax|42d7a1c390e21bc7
+apps/web/src/components/clinical/CellGeneTherapyCocConsole.vue|telephone_fax|42d7a1c390e21bc7
+apps/web/src/components/clinical/CellGeneTherapyCocConsole.vue|telephone_fax|42d7a1c390e21bc7
+apps/web/src/components/clinical/CellGeneTherapyCocConsole.vue|telephone_fax|42d7a1c390e21bc7

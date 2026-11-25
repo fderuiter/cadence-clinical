@@ -1,0 +1,15 @@
+# Shrink-only RBAC role-to-permission grant baseline shard for resource 'export_masked'.
+# Sorted ordinally as <role>|<resource>|<action> (lowercase).
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check permission-matrix or CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.
+admin|export_masked|create
+admin|export_masked|read
+admin|export_masked|update
+cra|export_masked|read
+sponsor_dm|export_masked|create
+sponsor_dm|export_masked|read
+sponsor_dm|export_masked|update
+sponsor_mm|export_masked|read
+sponsor_statistician|export_masked|create
+sponsor_statistician|export_masked|read
+sponsor_statistician|export_masked|update
+sysadmin|export_masked|read

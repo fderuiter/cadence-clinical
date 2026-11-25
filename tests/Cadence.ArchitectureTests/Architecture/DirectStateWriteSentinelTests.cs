@@ -16,7 +16,7 @@ namespace Cadence.ArchitectureTests.Architecture;
 /// <summary>
 /// Enforces the direct state-write ratchet: no assembly outside the central kernel command pipeline may add a new
 /// <c>SaveChanges</c> or <c>SaveChangesAsync</c> call (direct, async state machine, closure lambda, or reflection
-/// lookup) beyond the shrink-only baseline at <see cref="DirectStateWriteRules.BaselineRelativePath"/>.
+/// lookup) beyond the shrink-only per-assembly shards under <see cref="DirectStateWriteRules.BaselineDirectory"/>.
 /// </summary>
 public class DirectStateWriteSentinelTests
 {
@@ -42,15 +42,17 @@ public class DirectStateWriteSentinelTests
         // Central kernel command pipeline types are exempted, never recorded as legacy debt.
         actual.Should().NotContain(e => e.Contains("KernelCommandTransaction", StringComparison.Ordinal));
 
-        var comparison = ShrinkOnlyBaseline.Verify(
-            DirectStateWriteRules.BaselineRelativePath,
-            DirectStateWriteRules.BaselineHeader,
-            actual);
+        var comparison = ShrinkOnlyBaseline.VerifySharded(
+            DirectStateWriteRules.BaselineDirectory,
+            DirectStateWriteRules.LegacyBaselineRelativePath,
+            actual,
+            DirectStateWriteRules.GetShardRelativePathForEntry,
+            DirectStateWriteRules.BuildShardHeaderFromShardPath);
 
         comparison.IsClean.Should().BeTrue(
             comparison.Describe("DirectStateWrites", nameof(DirectStateWriteSentinelTests), RemediationGuidance));
 
-        var recorded = ShrinkOnlyBaseline.Read(DirectStateWriteRules.BaselineRelativePath);
+        var recorded = ShrinkOnlyBaseline.ReadSharded(DirectStateWriteRules.BaselineDirectory);
         recorded.Should().BeInAscendingOrder(StringComparer.Ordinal).And.OnlyHaveUniqueItems();
     }
 
@@ -73,9 +75,9 @@ public class DirectStateWriteSentinelTests
             prefix + "SaveViaReflectionLookup->Reflection.SaveChangesAsync");
 
         var ratchet = ShrinkOnlyBaseline.Compare(
-            DirectStateWriteRules.BaselineRelativePath,
+            DirectStateWriteRules.BaselineDirectory,
             syntheticSites,
-            ShrinkOnlyBaseline.Read(DirectStateWriteRules.BaselineRelativePath));
+            ShrinkOnlyBaseline.ReadSharded(DirectStateWriteRules.BaselineDirectory));
 
         ratchet.IsClean.Should().BeFalse("unbaselined SaveChanges* calls must fail verification");
         ratchet.NewViolations.Should().Equal(syntheticSites);

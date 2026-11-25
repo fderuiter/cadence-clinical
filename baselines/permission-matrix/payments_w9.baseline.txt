@@ -1,0 +1,13 @@
+# Shrink-only RBAC role-to-permission grant baseline shard for resource 'payments_w9'.
+# Sorted ordinally as <role>|<resource>|<action> (lowercase).
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check permission-matrix or CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.
+authorized_er_physician|payments_w9|submit
+authorized_er_physician|payments_w9|verify
+crc|payments_w9|submit
+crc|payments_w9|verify
+investigator|payments_w9|submit
+investigator|payments_w9|verify
+lead_investigator|payments_w9|submit
+lead_investigator|payments_w9|verify
+principal_investigator|payments_w9|submit
+principal_investigator|payments_w9|verify

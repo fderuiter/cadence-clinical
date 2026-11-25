@@ -1,0 +1,13 @@
+# Shrink-only RBAC role-to-permission grant baseline shard for resource 'lab_range_import'.
+# Sorted ordinally as <role>|<resource>|<action> (lowercase).
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check permission-matrix or CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.
+admin|lab_range_import|commit
+admin|lab_range_import|preview
+admin|lab_range_import|read
+auditor|lab_range_import|read
+sponsor_dm|lab_range_import|commit
+sponsor_dm|lab_range_import|preview
+sponsor_dm|lab_range_import|read
+sysadmin|lab_range_import|commit
+sysadmin|lab_range_import|preview
+sysadmin|lab_range_import|read

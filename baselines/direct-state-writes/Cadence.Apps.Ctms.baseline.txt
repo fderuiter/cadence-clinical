@@ -1,0 +1,17 @@
+# Direct state-write ratchet baseline shard for Cadence.Apps.Ctms (SaveChanges / SaveChangesAsync outside the central kernel command pipeline).
+# One compiled IL call site per line: Assembly|OuterType.LogicalMethod->TargetMethod[#N]. Sorted ordinally. The list may only shrink.
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.
+Cadence.Apps.Ctms|Cadence.Apps.Ctms.Endpoints.DoaEndpoints.DelegateTasksAsync->DbContext.SaveChangesAsync
+Cadence.Apps.Ctms|Cadence.Apps.Ctms.Endpoints.DoaEndpoints.ExportSiteDoaPdfAsync->DbContext.SaveChangesAsync
+Cadence.Apps.Ctms|Cadence.Apps.Ctms.Endpoints.DoaEndpoints.RevokeDelegationAsync->DbContext.SaveChangesAsync
+Cadence.Apps.Ctms|Cadence.Apps.Ctms.Endpoints.DoaEndpoints.SignOffDelegationAsync->DbContext.SaveChangesAsync
+Cadence.Apps.Ctms|Cadence.Apps.Ctms.Endpoints.EmailDispatchHelper.DispatchEmailNotificationAsync->Reflection.SaveChangesAsync
+Cadence.Apps.Ctms|Cadence.Apps.Ctms.Endpoints.EtmfFilingHelper.FileToEtmfAsync->Reflection.SaveChangesAsync
+Cadence.Apps.Ctms|Cadence.Apps.Ctms.Endpoints.LetterTemplateEndpoints.CompileAndDispatchLetterAsync->DbContext.SaveChangesAsync
+Cadence.Apps.Ctms|Cadence.Apps.Ctms.Endpoints.MonitoringVisitEndpoints.CompleteMonitoringVisitAsync->DbContext.SaveChangesAsync
+Cadence.Apps.Ctms|Cadence.Apps.Ctms.Endpoints.MonitoringVisitEndpoints.ScheduleMonitoringVisitAsync->DbContext.SaveChangesAsync
+Cadence.Apps.Ctms|Cadence.Apps.Ctms.Endpoints.MonitoringVisitEndpoints.SignOffMonitoringVisitAsync->DbContext.SaveChangesAsync
+Cadence.Apps.Ctms|Cadence.Apps.Ctms.Endpoints.SiteMilestoneEndpoints.CreateSiteMilestoneAsync->DbContext.SaveChangesAsync
+Cadence.Apps.Ctms|Cadence.Apps.Ctms.Endpoints.SiteMilestoneEndpoints.UpdateSiteMilestoneAsync->DbContext.SaveChangesAsync
+Cadence.Apps.Ctms|Cadence.Apps.Ctms.Endpoints.StartupGreenlightEndpoints.BatchCertifyCountrySitesAsync->DbContext.SaveChangesAsync
+Cadence.Apps.Ctms|Cadence.Apps.Ctms.Endpoints.StartupGreenlightEndpoints.CertifySiteGreenlightAsync->DbContext.SaveChangesAsync

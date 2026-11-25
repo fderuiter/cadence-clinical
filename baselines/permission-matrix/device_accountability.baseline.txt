@@ -1,0 +1,40 @@
+# Shrink-only RBAC role-to-permission grant baseline shard for resource 'device_accountability'.
+# Sorted ordinally as <role>|<resource>|<action> (lowercase).
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check permission-matrix or CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.
+admin|device_accountability|read
+admin|device_accountability|register
+auditor|device_accountability|read
+authorized_er_physician|device_accountability|dispense
+authorized_er_physician|device_accountability|read
+authorized_er_physician|device_accountability|report_deficiency
+cra|device_accountability|read
+cra|device_accountability|report_deficiency
+crc|device_accountability|dispense
+crc|device_accountability|read
+crc|device_accountability|report_deficiency
+investigator|device_accountability|dispense
+investigator|device_accountability|read
+investigator|device_accountability|report_deficiency
+lead_investigator|device_accountability|dispense
+lead_investigator|device_accountability|read
+lead_investigator|device_accountability|report_deficiency
+monitor|device_accountability|read
+monitor|device_accountability|report_deficiency
+pharmacist|device_accountability|dispense
+pharmacist|device_accountability|quarantine
+pharmacist|device_accountability|read
+pharmacist|device_accountability|register
+pharmacist|device_accountability|report_deficiency
+principal_investigator|device_accountability|dispense
+principal_investigator|device_accountability|read
+principal_investigator|device_accountability|report_deficiency
+sponsor_dm|device_accountability|read
+sponsor_dm|device_accountability|register
+sponsor_mm|device_accountability|quarantine
+sponsor_mm|device_accountability|read
+sponsor_mm|device_accountability|release
+sponsor_mm|device_accountability|report_deficiency
+sysadmin|device_accountability|quarantine
+sysadmin|device_accountability|read
+sysadmin|device_accountability|register
+sysadmin|device_accountability|release

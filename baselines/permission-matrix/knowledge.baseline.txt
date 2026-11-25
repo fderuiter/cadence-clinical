@@ -1,0 +1,25 @@
+# Shrink-only RBAC role-to-permission grant baseline shard for resource 'knowledge'.
+# Sorted ordinally as <role>|<resource>|<action> (lowercase).
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check permission-matrix or CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.
+admin|knowledge|read
+auditor|knowledge|read
+authorized_er_physician|knowledge|read
+cra|knowledge|read
+crc|knowledge|read
+external_monitor|knowledge|read
+finance_officer|knowledge|read
+idmc|knowledge|read
+investigator|knowledge|read
+lead_investigator|knowledge|read
+monitor|knowledge|read
+pharmacist|knowledge|read
+principal_investigator|knowledge|read
+protocol_reviewer|knowledge|read
+sponsor_designer|knowledge|read
+sponsor_dm|knowledge|read
+sponsor_mm|knowledge|read
+sponsor_statistician|knowledge|read
+sysadmin|knowledge|read
+terminology_manager|knowledge|read
+trial_coordinator|knowledge|read
+unblinded_statistician|knowledge|read

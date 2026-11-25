@@ -1,7 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
+
+using Cadence.ToolingCore.Services;
 
 using Mono.Cecil;
 using Mono.Cecil.Cil;
@@ -16,15 +19,44 @@ namespace Cadence.ArchitectureTests.Architecture;
 /// </summary>
 public static class DirectStateWriteRules
 {
-    public const string BaselineRelativePath =
-        "tests/Cadence.ArchitectureTests/ArchitectureBaselines/direct-state-writes.baseline.txt";
+    public const string BaselineDirectory = BaselineGateCatalog.DirectStateWritesGate;
 
-    public static readonly IReadOnlyList<string> BaselineHeader =
+    public const string LegacyBaselineRelativePath = BaselineGateCatalog.LegacyDirectStateWritesBaseline;
+
+    private const string ShardSuffix = TextBaselineShardStore.ShardSuffix;
+
+    public static IReadOnlyList<string> BuildShardHeader(string assemblyName) =>
     [
-        "# Direct state-write ratchet baseline (SaveChanges / SaveChangesAsync outside the central kernel command pipeline).",
+        $"# Direct state-write ratchet baseline shard for {assemblyName} (SaveChanges / SaveChangesAsync outside the central kernel command pipeline).",
         "# One compiled IL call site per line: Assembly|OuterType.LogicalMethod->TargetMethod[#N]. Sorted ordinally. The list may only shrink.",
-        $"# Regenerate with {KernelBoundaryBaseline.UpdateEnvironmentVariable}=1 (see tests/Cadence.ArchitectureTests/Architecture/DirectStateWriteSentinelTests.cs).",
+        $"# Prune resolved entries with {KernelBoundaryBaseline.UpdateEnvironmentVariable}=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.",
     ];
+
+    public static string GetShardRelativePathForEntry(string entry)
+    {
+        int pipeIdx = entry.IndexOf('|', StringComparison.Ordinal);
+        if (pipeIdx <= 0)
+        {
+            throw new FormatException($"Direct state-write entry '{entry}' is missing its 'Assembly|' prefix.");
+        }
+
+        string assemblyName = entry[..pipeIdx];
+        if (!assemblyName.All(c => char.IsAsciiLetterOrDigit(c) || c is '.' or '_' or '-'))
+        {
+            throw new FormatException($"Direct state-write entry '{entry}' has invalid assembly token '{assemblyName}'.");
+        }
+
+        return $"{BaselineDirectory}/{assemblyName}{ShardSuffix}";
+    }
+
+    public static IReadOnlyList<string> BuildShardHeaderFromShardPath(string shardRelativePath)
+    {
+        string fileName = Path.GetFileName(shardRelativePath);
+        string assemblyName = fileName.EndsWith(ShardSuffix, StringComparison.Ordinal)
+            ? fileName[..^ShardSuffix.Length]
+            : fileName;
+        return BuildShardHeader(assemblyName);
+    }
 
     /// <summary>
     /// Exact kernel persistence types permitted to invoke <c>DbContext.SaveChanges*</c> under

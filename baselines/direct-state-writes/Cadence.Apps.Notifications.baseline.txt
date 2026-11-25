@@ -1,0 +1,4 @@
+# Direct state-write ratchet baseline shard for Cadence.Apps.Notifications (SaveChanges / SaveChangesAsync outside the central kernel command pipeline).
+# One compiled IL call site per line: Assembly|OuterType.LogicalMethod->TargetMethod[#N]. Sorted ordinally. The list may only shrink.
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.
+Cadence.Apps.Notifications|Cadence.Apps.Notifications.Infrastructure.Consumers.EconsentReconsentConsumer.Consume->DbContext.SaveChangesAsync

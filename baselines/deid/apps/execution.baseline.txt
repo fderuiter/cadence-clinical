@@ -1,9 +1,0 @@
-# DEID scan ratchet baseline shard (pnpm cadence check deid). Findings that predate the full detector and are not PHI.
-# One per line: path|category|first 16 hex digits of SHA-256(trimmed matched value). Sorted ordinally. Shards may only shrink.
-# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check deid [files...] (docs/cli.md).
-apps/execution/src/Domain/Devices/UdiParser.cs|telephone_fax|254aa248acb47dd6
-apps/execution/src/Domain/Devices/UdiParser.cs|telephone_fax|254aa248acb47dd6
-apps/execution/src/Domain/Devices/UdiParser.cs|telephone_fax|844ed43cb07ceea3
-apps/execution/src/Domain/Devices/UdiParser.cs|telephone_fax|d1d76592f36e43d7
-apps/execution/src/Infrastructure/Persistence/Migrations/20260905174215_AddExecutionSubjectsSlice.cs|telephone_fax|972dcafa6fb4c2c8
-apps/execution/src/Infrastructure/Security/AesGcmDemographicsEncryptionService.cs|device_serial|9e47ed7853b55634

@@ -1,0 +1,10 @@
+# Shrink-only RBAC role-to-permission grant baseline shard for resource 'cec_adjudication'.
+# Sorted ordinally as <role>|<resource>|<action> (lowercase).
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check permission-matrix or CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.
+admin|cec_adjudication|read
+auditor|cec_adjudication|read
+cec_chair|cec_adjudication|adjudicate
+cec_chair|cec_adjudication|read
+sponsor_dm|cec_adjudication|read
+sponsor_mm|cec_adjudication|read
+sysadmin|cec_adjudication|read

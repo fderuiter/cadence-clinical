@@ -1,0 +1,27 @@
+# Shrink-only RBAC role-to-permission grant baseline shard for resource 'ctms_monitoring_letter'.
+# Sorted ordinally as <role>|<resource>|<action> (lowercase).
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check permission-matrix or CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.
+admin|ctms_monitoring_letter|read
+admin|ctms_monitoring_letter|read_type
+auditor|ctms_monitoring_letter|read
+auditor|ctms_monitoring_letter|read_type
+authorized_er_physician|ctms_monitoring_letter|read
+authorized_er_physician|ctms_monitoring_letter|read_type
+cra|ctms_monitoring_letter|read
+cra|ctms_monitoring_letter|read_type
+crc|ctms_monitoring_letter|read
+crc|ctms_monitoring_letter|read_type
+investigator|ctms_monitoring_letter|read
+investigator|ctms_monitoring_letter|read_type
+lead_investigator|ctms_monitoring_letter|read
+lead_investigator|ctms_monitoring_letter|read_type
+monitor|ctms_monitoring_letter|read
+monitor|ctms_monitoring_letter|read_type
+principal_investigator|ctms_monitoring_letter|read
+principal_investigator|ctms_monitoring_letter|read_type
+sponsor_dm|ctms_monitoring_letter|read
+sponsor_dm|ctms_monitoring_letter|read_type
+sponsor_mm|ctms_monitoring_letter|read
+sponsor_mm|ctms_monitoring_letter|read_type
+sysadmin|ctms_monitoring_letter|read
+sysadmin|ctms_monitoring_letter|read_type

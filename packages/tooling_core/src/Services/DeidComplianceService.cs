@@ -124,10 +124,16 @@ public static partial class DeidComplianceService
     private static readonly string[] DateContextWords =
         ["version", "package", "href", "release", "sas", "epoch", "format", "test", "example", "default"];
 
-    /// <summary>Directory containing per-unit ratchet baseline shards, relative to the repository root.</summary>
-    public const string BaselineDirectory = "baselines/deid";
+    /// <summary>Directory containing per-file ratchet baseline shards, relative to the repository root.</summary>
+    public const string BaselineDirectory = BaselineGateCatalog.DeidGate;
 
-    private const string ShardSuffix = ".baseline.txt";
+    /// <summary>Subdirectory under <see cref="BaselineDirectory"/> storing one shard per tracked file path.</summary>
+    public const string FilesDirectory = BaselineGateCatalog.DeidFilesDirectory;
+
+    /// <summary>Retired root-level monolithic DEID baseline path.</summary>
+    public const string LegacyBaselineFile = BaselineGateCatalog.LegacyDeidBaseline;
+
+    private const string ShardSuffix = TextBaselineShardStore.ShardSuffix;
 
     private static readonly string[] BaselineShardHeader =
     [
@@ -137,7 +143,7 @@ public static partial class DeidComplianceService
     ];
 
     public static string GetShardRelativePath(string filePath) =>
-        $"{BaselineDirectory}/{BaselineUnitPath.ResolveUnit(filePath)}{ShardSuffix}";
+        BaselineUnitPath.ResolvePerFileShardRelativePath(BaselineDirectory, filePath, ShardSuffix);
 
     /// <summary>
     /// Scans <paramref name="files"/>, or the resolved <see cref="GitRevisionScopeService"/> candidate files when none are
@@ -206,7 +212,11 @@ public static partial class DeidComplianceService
                 findings.AddRange(ScanTextWithKeys(relativePath, content, detector, profile));
             }
 
-            var entriesByShard = ReadBaselineShards(repoRoot, reader);
+            if (!TryReadAndValidateBaselineShards(repoRoot, reader, out var entriesByShard))
+            {
+                return 1;
+            }
+
             var allBaselineEntries = entriesByShard
                 .OrderBy(kv => kv.Key, StringComparer.Ordinal)
                 .SelectMany(kv => kv.Value)
@@ -233,11 +243,11 @@ public static partial class DeidComplianceService
                     }
                 }
 
-                baseline = allBaselineEntries.Where(k =>
+                baseline = [.. allBaselineEntries.Where(k =>
                 {
                     int pipeIdx = k.IndexOf('|', StringComparison.Ordinal);
                     return pipeIdx > 0 && inScopeSet.Contains(k[..pipeIdx]);
-                }).ToList();
+                })];
             }
 
             var (newFindings, stale) = CompareWithBaseline(findings, baseline);
@@ -245,7 +255,13 @@ public static partial class DeidComplianceService
             int prunedCount = 0;
             if (updateBaseline)
             {
-                prunedCount = SubtractStaleEntriesFromShards(repoRoot, entriesByShard, stale);
+                prunedCount = TextBaselineShardStore.SubtractStaleEntries(
+                    repoRoot,
+                    BaselineDirectory,
+                    entriesByShard,
+                    stale,
+                    _ => BaselineShardHeader,
+                    multiset: true);
                 if (prunedCount > 0)
                 {
                     Console.WriteLine($"✔ Pruned {prunedCount} stale DEID baseline entr{(prunedCount == 1 ? "y" : "ies")} under '{BaselineDirectory}/'.");
@@ -326,157 +342,58 @@ public static partial class DeidComplianceService
         return $"{finding.File}|{finding.Category}|{Convert.ToHexStringLower(hash)[..16]}";
     }
 
-    /// <summary>Writes per-unit DEID baseline shards under <see cref="BaselineDirectory"/> and deletes empty shards.</summary>
-    public static void WriteBaselineShards(string repoRoot, IEnumerable<string> keys)
-    {
-        string deidRootFull = Path.Combine(repoRoot, BaselineDirectory);
-        var grouped = keys
-            .GroupBy(key => GetShardRelativePath(ExtractFileFromBaselineEntry(key)), StringComparer.Ordinal)
-            .ToDictionary(
-                g => g.Key,
-                g => g.Order(StringComparer.Ordinal).ToList(),
-                StringComparer.Ordinal);
+    /// <summary>Writes per-file DEID baseline shards under <see cref="FilesDirectory"/> and deletes empty shards.</summary>
+    public static void WriteBaselineShards(string repoRoot, IEnumerable<string> keys) =>
+        TextBaselineShardStore.WriteShards(
+            repoRoot,
+            BaselineDirectory,
+            keys,
+            key => GetShardRelativePath(ExtractFileFromBaselineEntry(key)),
+            _ => BaselineShardHeader,
+            allowDuplicateEntries: true);
 
-        if (Directory.Exists(deidRootFull))
-        {
-            foreach (string existingFull in Directory.GetFiles(deidRootFull, "*" + ShardSuffix, SearchOption.AllDirectories))
-            {
-                string rel = Path.GetRelativePath(repoRoot, existingFull).Replace('\\', '/');
-                if (!grouped.TryGetValue(rel, out var shardKeys) || shardKeys.Count == 0)
-                {
-                    File.Delete(existingFull);
-                    BaselineUnitPath.DeleteEmptyParentDirectories(existingFull, deidRootFull);
-                }
-            }
-        }
-
-        foreach (var (shardRel, shardKeys) in grouped.OrderBy(kv => kv.Key, StringComparer.Ordinal))
-        {
-            if (shardKeys.Count == 0)
-            {
-                continue;
-            }
-
-            string fullPath = Path.Combine(repoRoot, shardRel);
-            WriteShardFile(fullPath, shardKeys);
-        }
-    }
-
-    private static Dictionary<string, List<string>> ReadBaselineShards(string repoRoot, GitIndexReader? reader)
-    {
-        var result = new Dictionary<string, List<string>>(StringComparer.Ordinal);
-        if (reader is { HasAuthoritativeIndex: true })
-        {
-            foreach (string relPath in reader.Paths
-                .Where(p => p.StartsWith(BaselineDirectory + "/", StringComparison.Ordinal) &&
-                            p.EndsWith(ShardSuffix, StringComparison.Ordinal))
-                .Order(StringComparer.Ordinal))
-            {
-                if (reader.TryReadLines(relPath, out string[] indexedLines))
-                {
-                    result[relPath] = [.. indexedLines.Select(l => l.Trim()).Where(l => l.Length > 0 && !l.StartsWith('#'))];
-                }
-            }
-
-            return result;
-        }
-
-        string deidRootFull = Path.Combine(repoRoot, BaselineDirectory);
-        if (!Directory.Exists(deidRootFull))
-        {
-            return result;
-        }
-
-        foreach (string fullPath in Directory.EnumerateFiles(deidRootFull, "*" + ShardSuffix, SearchOption.AllDirectories))
-        {
-            string relPath = Path.GetRelativePath(repoRoot, fullPath).Replace('\\', '/');
-            result[relPath] = [.. File.ReadAllLines(fullPath).Select(l => l.Trim()).Where(l => l.Length > 0 && !l.StartsWith('#'))];
-        }
-
-        return result;
-    }
-
-    private static int SubtractStaleEntriesFromShards(
+    private static bool TryReadAndValidateBaselineShards(
         string repoRoot,
-        Dictionary<string, List<string>> entriesByShard,
-        IReadOnlyList<string> staleEntries)
+        GitIndexReader? reader,
+        out Dictionary<string, List<string>> entriesByShard)
     {
-        string deidRootFull = Path.Combine(repoRoot, BaselineDirectory);
-        var staleCountsByShard = new Dictionary<string, Dictionary<string, int>>(StringComparer.Ordinal);
-        foreach (string staleKey in staleEntries)
-        {
-            string shardRel = GetShardRelativePath(ExtractFileFromBaselineEntry(staleKey));
-            if (!staleCountsByShard.TryGetValue(shardRel, out var counts))
-            {
-                counts = new Dictionary<string, int>(StringComparer.Ordinal);
-                staleCountsByShard[shardRel] = counts;
-            }
+        var errors = TextBaselineShardStore.ValidateAndReadShards(
+            repoRoot,
+            BaselineDirectory,
+            LegacyBaselineFile,
+            relPath => BaselineUnitPath.TryExtractPerFileSourcePath(relPath, BaselineDirectory, ShardSuffix, out _),
+            TryResolveExpectedShardPath,
+            out entriesByShard,
+            reader: reader,
+            requireNonEmptyDirectory: false,
+            allowDuplicateEntries: true,
+            expectedShardPatternHint: $"{FilesDirectory}/<source-path>{ShardSuffix}");
 
-            counts[staleKey] = counts.GetValueOrDefault(staleKey) + 1;
+        foreach (string error in errors)
+        {
+            Console.WriteLine($"[ERROR] {error}");
         }
 
-        int totalPruned = 0;
-        foreach (var (shardRel, existingEntries) in entriesByShard)
+        return errors.Count == 0;
+    }
+
+    private static string? TryResolveExpectedShardPath(string entry)
+    {
+        string entryFile = ExtractFileFromBaselineEntry(entry);
+        try
         {
-            string shardFullPath = Path.Combine(repoRoot, shardRel);
-            if (existingEntries.Count == 0)
-            {
-                if (File.Exists(shardFullPath))
-                {
-                    File.Delete(shardFullPath);
-                    BaselineUnitPath.DeleteEmptyParentDirectories(shardFullPath, deidRootFull);
-                }
-
-                continue;
-            }
-
-            if (!staleCountsByShard.TryGetValue(shardRel, out var toSubtract) || toSubtract.Count == 0)
-            {
-                continue;
-            }
-
-            var kept = new List<string>(existingEntries.Count);
-            foreach (string entry in existingEntries)
-            {
-                if (toSubtract.TryGetValue(entry, out int remainingToDrop) && remainingToDrop > 0)
-                {
-                    toSubtract[entry] = remainingToDrop - 1;
-                    totalPruned++;
-                }
-                else
-                {
-                    kept.Add(entry);
-                }
-            }
-
-            kept.Sort(StringComparer.Ordinal);
-            if (kept.Count == 0)
-            {
-                if (File.Exists(shardFullPath))
-                {
-                    File.Delete(shardFullPath);
-                    BaselineUnitPath.DeleteEmptyParentDirectories(shardFullPath, deidRootFull);
-                }
-            }
-            else if (!existingEntries.SequenceEqual(kept, StringComparer.Ordinal))
-            {
-                WriteShardFile(shardFullPath, kept);
-            }
+            return GetShardRelativePath(entryFile);
         }
-
-        return totalPruned;
+        catch (ArgumentException)
+        {
+            return null;
+        }
     }
 
     private static string ExtractFileFromBaselineEntry(string entry)
     {
         int pipeIdx = entry.IndexOf('|', StringComparison.Ordinal);
         return pipeIdx > 0 ? entry[..pipeIdx] : entry;
-    }
-
-    private static void WriteShardFile(string fullPath, IReadOnlyList<string> sortedKeys)
-    {
-        Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
-        File.WriteAllText(fullPath, string.Join('\n', BaselineShardHeader.Concat(sortedKeys)) + "\n");
     }
 
     /// <summary>

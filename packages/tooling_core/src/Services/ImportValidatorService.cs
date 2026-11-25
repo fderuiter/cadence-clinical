@@ -10,15 +10,19 @@ namespace Cadence.ToolingCore.Services;
 /// Validates cross-service isolation across <c>apps/&lt;service&gt;</c>: blocks direct <c>using</c> directives
 /// (<c>using</c>, <c>global using</c>, <c>using static</c>, <c>using Alias = ...</c>), fully qualified
 /// <c>Cadence.Apps.&lt;Sibling&gt;</c> references, and indirect runtime reflection/type-lookup string literals naming
-/// sibling <c>Cadence.Apps.&lt;Sibling&gt;</c> namespaces, ratcheted against the shrink-only baseline at
-/// <see cref="BaselineRelativePath"/>.
+/// sibling <c>Cadence.Apps.&lt;Sibling&gt;</c> namespaces, ratcheted against per-service-pair shards under
+/// <see cref="BaselineDirectory"/>.
 /// </summary>
 public static partial class ImportValidatorService
 {
-    public const string BaselineRelativePath =
-        "tests/Cadence.ArchitectureTests/ArchitectureBaselines/cross-service-isolation.baseline.txt";
+    public const string BaselineDirectory = BaselineGateCatalog.CrossServiceIsolationGate;
+
+    public const string LegacyBaselineRelativePath = BaselineGateCatalog.LegacyCrossServiceIsolationBaseline;
 
     public const string SourceRulePrefix = "SOURCE|";
+    public const string IlRulePrefix = "IL|";
+
+    private const string ShardSuffix = TextBaselineShardStore.ShardSuffix;
 
     private static readonly HashSet<string> ExemptAppFolders = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -28,7 +32,163 @@ public static partial class ImportValidatorService
         "subject-portal",
     };
 
-    /// <summary>Validates cross-service boundaries across <c>apps/</c> against the shrink-only baseline.</summary>
+    /// <summary>Builds the canonical header lines for a <c>&lt;sourceService&gt;/&lt;targetService&gt;.baseline.txt</c> shard.</summary>
+    public static IReadOnlyList<string> BuildShardHeader(string sourceService, string targetService) =>
+    [
+        $"# Cross-service isolation ratchet baseline shard for {sourceService} -> {targetService} (ImportValidatorService source scan + Mono.Cecil Ldstr / reference IL scan).",
+        "# Records pre-existing sibling-service debt. Entries are sorted ordinally and may only shrink.",
+        "# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check imports or CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.",
+    ];
+
+    public static IReadOnlyList<string> BuildShardHeaderFromShardPath(string shardRelativePath)
+    {
+        _ = TryExtractOwnerPairFromShardPath(shardRelativePath, out string src, out string dst);
+        return BuildShardHeader(src, dst);
+    }
+
+    public static string GetShardRelativePath(string sourceService, string targetService)
+    {
+        string normalizedSource = NormalizeAppName(sourceService).ToLowerInvariant();
+        string normalizedTarget = NormalizeAppName(targetService).ToLowerInvariant();
+        if (!IsSafeServiceToken(normalizedSource) ||
+            !IsSafeServiceToken(normalizedTarget) ||
+            string.Equals(normalizedSource, normalizedTarget, StringComparison.Ordinal))
+        {
+            throw new ArgumentException($"Invalid cross-service baseline owner pair '{sourceService}' -> '{targetService}'.");
+        }
+
+        return $"{BaselineDirectory}/{normalizedSource}/{normalizedTarget}{ShardSuffix}";
+    }
+
+    public static string GetShardRelativePathForEntry(string entry) =>
+        TryResolveOwnerPair(entry, out string sourceService, out string targetService)
+            ? GetShardRelativePath(sourceService, targetService)
+            : throw new FormatException($"Invalid cross-service isolation baseline entry '{entry}'.");
+
+    public static bool TryResolveOwnerPair(string entry, out string sourceService, out string targetService)
+    {
+        sourceService = string.Empty;
+        targetService = string.Empty;
+        if (string.IsNullOrWhiteSpace(entry))
+        {
+            return false;
+        }
+
+        if (entry.StartsWith(SourceRulePrefix, StringComparison.Ordinal))
+        {
+            string[] parts = entry.Split('|', 4);
+            if (parts.Length != 4)
+            {
+                return false;
+            }
+
+            int colonIdx = parts[3].IndexOf(':', StringComparison.Ordinal);
+            if (colonIdx <= 0)
+            {
+                return false;
+            }
+
+            string kind = parts[3][..colonIdx];
+            if (kind is not ("code" or "string"))
+            {
+                return false;
+            }
+
+            string reference = parts[3][(colonIdx + 1)..];
+            var match = SiblingAppNamespaceRegex().Match(reference);
+            if (!match.Success)
+            {
+                return false;
+            }
+
+            string src = NormalizeAppName(parts[1]).ToLowerInvariant();
+            string dst = NormalizeAppName(match.Groups["app"].Value).ToLowerInvariant();
+            if (!IsSafeServiceToken(src) || !IsSafeServiceToken(dst) || string.Equals(src, dst, StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            sourceService = src;
+            targetService = dst;
+            return true;
+        }
+
+        if (entry.StartsWith(IlRulePrefix, StringComparison.Ordinal))
+        {
+            string[] parts = entry.Split('|', 3);
+            if (parts.Length != 3 || !parts[1].StartsWith("Cadence.Apps.", StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            int arrowIdx = parts[2].IndexOf("->", StringComparison.Ordinal);
+            if (arrowIdx <= 0)
+            {
+                return false;
+            }
+
+            string rawSourceApp = parts[1]["Cadence.Apps.".Length..];
+            string targetExpr = parts[2][(arrowIdx + 2)..];
+            var match = SiblingAppNamespaceRegex().Match(targetExpr);
+            if (!match.Success)
+            {
+                return false;
+            }
+
+            string src = NormalizeAppName(rawSourceApp).ToLowerInvariant();
+            string dst = NormalizeAppName(match.Groups["app"].Value).ToLowerInvariant();
+            if (!IsSafeServiceToken(src) || !IsSafeServiceToken(dst) || string.Equals(src, dst, StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            sourceService = src;
+            targetService = dst;
+            return true;
+        }
+
+        return false;
+    }
+
+    public static bool TryExtractOwnerPairFromShardPath(
+        string shardRelativePath,
+        out string sourceService,
+        out string targetService)
+    {
+        sourceService = string.Empty;
+        targetService = string.Empty;
+        string normalized = BaselineUnitPath.NormalizeRepoRelativePath(shardRelativePath);
+        string prefix = BaselineDirectory + "/";
+
+        if (!normalized.StartsWith(prefix, StringComparison.Ordinal) ||
+            !normalized.EndsWith(ShardSuffix, StringComparison.Ordinal) ||
+            normalized.Length <= prefix.Length + ShardSuffix.Length)
+        {
+            return false;
+        }
+
+        string remainder = normalized[prefix.Length..^ShardSuffix.Length];
+        string[] segments = remainder.Split('/');
+        if (segments.Length != 2)
+        {
+            return false;
+        }
+
+        string src = segments[0];
+        string dst = segments[1];
+        if (!IsSafeServiceToken(src) ||
+            !IsSafeServiceToken(dst) ||
+            string.Equals(src, dst, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        sourceService = src;
+        targetService = dst;
+        return true;
+    }
+
+    /// <summary>Validates cross-service boundaries across <c>apps/</c> against the shrink-only sharded baseline.</summary>
     public static int ValidateImports(
         string? repoRoot = null,
         bool preCommit = false,
@@ -37,34 +197,79 @@ public static partial class ImportValidatorService
         repoRoot ??= FindRepoRoot();
         Console.WriteLine("Validating cross-service architectural import and reflection boundaries...");
 
+        bool updateBaseline = !preCommit &&
+                              Environment.GetEnvironmentVariable("CADENCE_UPDATE_BASELINE") == "1";
+
         var reader = GitIndexReader.ResolvePreCommitReader(repoRoot, preCommit, indexReader, out var ownedReader);
         using (ownedReader)
         {
             bool useStagedIndex = preCommit && reader is { HasAuthoritativeIndex: true };
-            if (!useStagedIndex && !Directory.Exists(Path.Combine(repoRoot, "apps")))
+
+            var shardErrors = TextBaselineShardStore.ValidateAndReadShards(
+                repoRoot,
+                BaselineDirectory,
+                LegacyBaselineRelativePath,
+                relPath => TryExtractOwnerPairFromShardPath(relPath, out _, out _),
+                entry => TryResolveOwnerPair(entry, out string src, out string dst) ? GetShardRelativePath(src, dst) : null,
+                out var entriesByShard,
+                reader: useStagedIndex ? reader : null,
+                requireNonEmptyDirectory: false,
+                allowDuplicateEntries: false,
+                expectedShardPatternHint: $"{BaselineDirectory}/<source>/<target>{ShardSuffix}");
+            if (shardErrors.Count > 0)
             {
-                Console.WriteLine("✔ Apps directory not found, skipping import validation.");
-                return 0;
+                foreach (string error in shardErrors)
+                {
+                    Console.WriteLine($"[ERROR] {error}");
+                }
+
+                return 1;
             }
 
-            if (useStagedIndex && !reader!.Paths.Any(p => p.StartsWith("apps/", StringComparison.OrdinalIgnoreCase)))
+            bool hasApps = useStagedIndex
+                ? reader!.Paths.Any(p => p.StartsWith("apps/", StringComparison.OrdinalIgnoreCase))
+                : Directory.Exists(Path.Combine(repoRoot, "apps"));
+
+            if (!hasApps && entriesByShard.Count == 0)
             {
-                Console.WriteLine("✔ Apps directory not found in staged index, skipping import validation.");
+                Console.WriteLine(useStagedIndex
+                    ? "✔ Apps directory not found in staged index, skipping import validation."
+                    : "✔ Apps directory not found, skipping import validation.");
                 return 0;
             }
 
             var actual = useStagedIndex
                 ? ScanStagedSourceViolations(reader!)
                 : ScanSourceViolations(repoRoot);
-            var baseline = useStagedIndex
-                ? ReadStagedSourceBaseline(reader!)
-                : ReadSourceBaseline(repoRoot);
+            var baseline = entriesByShard
+                .OrderBy(kv => kv.Key, StringComparer.Ordinal)
+                .SelectMany(kv => kv.Value)
+                .Where(line => line.StartsWith(SourceRulePrefix, StringComparison.Ordinal))
+                .ToList();
 
             var actualSet = new SortedSet<string>(actual, StringComparer.Ordinal);
             var baselineSet = new SortedSet<string>(baseline, StringComparer.Ordinal);
 
             var newViolations = actualSet.Except(baselineSet, StringComparer.Ordinal).ToList();
             var staleEntries = baselineSet.Except(actualSet, StringComparer.Ordinal).ToList();
+
+            if (updateBaseline && staleEntries.Count > 0)
+            {
+                int pruned = TextBaselineShardStore.SubtractStaleEntries(
+                    repoRoot,
+                    BaselineDirectory,
+                    entriesByShard,
+                    staleEntries,
+                    BuildShardHeaderFromShardPath,
+                    multiset: false);
+                if (pruned > 0)
+                {
+                    Console.WriteLine(
+                        $"✔ Pruned {pruned} stale SOURCE cross-service baseline entr{(pruned == 1 ? "y" : "ies")} under '{BaselineDirectory}/'.");
+                }
+
+                staleEntries.Clear();
+            }
 
             if (newViolations.Count > 0)
             {
@@ -85,10 +290,12 @@ public static partial class ImportValidatorService
             {
                 foreach (string stale in staleEntries)
                 {
-                    Console.WriteLine($"[STALE BASELINE] {stale} no longer occurs; remove it from {BaselineRelativePath}.");
+                    Console.WriteLine($"[STALE BASELINE] {stale} no longer occurs; remove it from {GetShardRelativePathForEntry(stale)}.");
                 }
 
-                Console.WriteLine($"\n[ERROR] Found {staleEntries.Count} stale entry/entries in {BaselineRelativePath}.");
+                Console.WriteLine(
+                    $"\n[ERROR] Found {staleEntries.Count} stale entry/entries under '{BaselineDirectory}/'. " +
+                    "Run 'CADENCE_UPDATE_BASELINE=1 pnpm cadence check imports' to prune them.");
                 return 1;
             }
 
@@ -189,17 +396,14 @@ public static partial class ImportValidatorService
         return [.. results];
     }
 
-    /// <summary>Reads <c>SOURCE|...</c> baseline entries from <see cref="BaselineRelativePath"/> if present.</summary>
-    public static IReadOnlyList<string> ReadSourceBaseline(string repoRoot)
-    {
-        string fullPath = Path.Combine(repoRoot, BaselineRelativePath);
-        if (!File.Exists(fullPath))
-        {
-            return [];
-        }
+    /// <summary>Reads <c>SOURCE|...</c> baseline entries across all shards under <see cref="BaselineDirectory"/>.</summary>
+    public static IReadOnlyList<string> ReadSourceBaseline(string repoRoot) =>
+        [.. TextBaselineShardStore.ReadAllEntries(repoRoot, BaselineDirectory)
+            .Where(line => line.StartsWith(SourceRulePrefix, StringComparison.Ordinal))
+            .Order(StringComparer.Ordinal)];
 
-        return ParseSourceBaselineLines(File.ReadAllLines(fullPath));
-    }
+    private static bool IsSafeServiceToken(string value) =>
+        !string.IsNullOrEmpty(value) && value.All(c => char.IsAsciiLetterLower(c) || char.IsAsciiDigit(c));
 
     private static IReadOnlyList<string> ScanStagedSourceViolations(GitIndexReader reader)
     {
@@ -240,18 +444,6 @@ public static partial class ImportValidatorService
 
         return [.. violations];
     }
-
-    private static IReadOnlyList<string> ReadStagedSourceBaseline(GitIndexReader reader) =>
-        reader.TryReadText(BaselineRelativePath, out string content)
-            ? ParseSourceBaselineLines(content.Split('\n'))
-            : [];
-
-    private static IReadOnlyList<string> ParseSourceBaselineLines(IEnumerable<string> lines) =>
-        lines
-            .Select(line => line.Trim())
-            .Where(line => line.Length > 0 && !line.StartsWith('#'))
-            .Where(line => line.StartsWith(SourceRulePrefix, StringComparison.Ordinal))
-            .ToList();
 
     private static (string CodeWithoutCommentsOrStrings, List<string> StringLiterals) ExtractCodeAndStringLiterals(string source)
     {

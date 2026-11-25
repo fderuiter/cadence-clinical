@@ -1,0 +1,10 @@
+# Shrink-only RBAC role-to-permission grant baseline shard for resource 'sce_lock_token'.
+# Sorted ordinally as <role>|<resource>|<action> (lowercase).
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check permission-matrix or CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.
+admin|sce_lock_token|issue
+admin|sce_lock_token|read
+admin|sce_lock_token|revoke
+sponsor_dm|sce_lock_token|issue
+sponsor_dm|sce_lock_token|read
+sponsor_dm|sce_lock_token|revoke
+unblinded_statistician|sce_lock_token|read

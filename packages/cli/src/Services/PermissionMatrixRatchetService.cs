@@ -13,14 +13,15 @@ namespace Cadence.Cli.Services;
 /// Native-AOT-safe static role-to-permission grant inventory ratchet (<c>permission-matrix</c> gate).
 /// Inventories <see cref="PermissionMatrix.ROLE_PERMISSIONS"/> alongside literal <c>Grant(...)</c> calls in
 /// <c>packages/security/src/Rbac</c> and <c>apps/</c> (or staged blobs in <c>--pre-commit</c>) without dynamic
-/// reflection, and rejects any unbaselined grant addition or unremoved stale grant against
-/// <see cref="BaselineRelativePath"/>.
+/// reflection, and ratchets them against per-resource shards under <see cref="BaselineDirectory"/>.
 /// </summary>
 public static partial class PermissionMatrixRatchetService
 {
-    public const string BaselineRelativePath =
-        "tests/Cadence.ArchitectureTests/ArchitectureBaselines/permission-matrix.baseline.txt";
+    public const string BaselineDirectory = BaselineGateCatalog.PermissionMatrixGate;
 
+    public const string LegacyBaselineRelativePath = BaselineGateCatalog.LegacyPermissionMatrixBaseline;
+
+    private const string ShardSuffix = TextBaselineShardStore.ShardSuffix;
     private const string Tag = "[PERMISSION MATRIX]";
 
     private static readonly Dictionary<string, string> RoleConstantLookup = new(StringComparer.Ordinal)
@@ -54,35 +55,162 @@ public static partial class PermissionMatrixRatchetService
         ["CecChairRole"] = PermissionMatrix.CecChairRole,
     };
 
+    /// <summary>Builds the canonical header lines for a <c>baselines/permission-matrix/&lt;resource&gt;.baseline.txt</c> shard.</summary>
+    public static IReadOnlyList<string> BuildShardHeader(string resource) =>
+    [
+        $"# Shrink-only RBAC role-to-permission grant baseline shard for resource '{resource}'.",
+        "# Sorted ordinally as <role>|<resource>|<action> (lowercase).",
+        "# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check permission-matrix or CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.",
+    ];
+
+    public static IReadOnlyList<string> BuildShardHeaderFromShardPath(string shardRelativePath)
+    {
+        _ = TryExtractResourceFromShardPath(shardRelativePath, out string resource);
+        return BuildShardHeader(resource);
+    }
+
+    public static string GetShardRelativePath(string resource)
+    {
+        if (!IsSafeResourceToken(resource))
+        {
+            throw new ArgumentException($"Invalid RBAC resource shard token '{resource}'.", nameof(resource));
+        }
+
+        return $"{BaselineDirectory}/{resource}{ShardSuffix}";
+    }
+
+    public static string GetShardRelativePathForGrant(string grant) =>
+        TryExtractResourceOwner(grant, out string resource)
+            ? GetShardRelativePath(resource)
+            : throw new FormatException($"Invalid RBAC grant baseline entry '{grant}'.");
+
+    public static bool TryExtractResourceOwner(string grant, out string resource)
+    {
+        resource = string.Empty;
+        if (string.IsNullOrWhiteSpace(grant))
+        {
+            return false;
+        }
+
+        string[] parts = grant.Split('|');
+        if (parts.Length != 3 ||
+            parts[0].Length == 0 ||
+            !IsSafeResourceToken(parts[1]) ||
+            parts[2].Length == 0)
+        {
+            return false;
+        }
+
+        resource = parts[1];
+        return true;
+    }
+
+    public static bool TryExtractResourceFromShardPath(string shardRelativePath, out string resource)
+    {
+        resource = string.Empty;
+        string normalized = BaselineUnitPath.NormalizeRepoRelativePath(shardRelativePath);
+        string prefix = BaselineDirectory + "/";
+        if (!normalized.StartsWith(prefix, StringComparison.Ordinal) ||
+            !normalized.EndsWith(ShardSuffix, StringComparison.Ordinal) ||
+            normalized.Length <= prefix.Length + ShardSuffix.Length)
+        {
+            return false;
+        }
+
+        string candidate = normalized[prefix.Length..^ShardSuffix.Length];
+        if (candidate.Contains('/', StringComparison.Ordinal) || !IsSafeResourceToken(candidate))
+        {
+            return false;
+        }
+
+        resource = candidate;
+        return true;
+    }
+
+    /// <summary>Writes per-resource RBAC baseline shards under <see cref="BaselineDirectory"/> and deletes empty shards.</summary>
+    public static void WriteBaselineShards(string repoRoot, IEnumerable<string> grants) =>
+        TextBaselineShardStore.WriteShards(
+            repoRoot,
+            BaselineDirectory,
+            grants,
+            GetShardRelativePathForGrant,
+            BuildShardHeaderFromShardPath,
+            allowDuplicateEntries: false);
+
     /// <summary>
-    /// Verifies static role-to-permission grants against <see cref="BaselineRelativePath"/> in <paramref name="repoRoot"/>.
-    /// Returns <c>0</c> when clean and <c>1</c> when the baseline is missing, contains stale entries, or misses new grants.
+    /// Verifies static role-to-permission grants against <see cref="BaselineDirectory"/> shards in <paramref name="repoRoot"/>.
+    /// Returns <c>0</c> when clean and <c>1</c> when the baseline is missing, contains stale/unsorted/empty shards, or misses new grants.
     /// </summary>
     public static int Check(
         string repoRoot,
         bool preCommit = false,
         GitIndexReader? indexReader = null)
     {
-        string? baselineContent = ReadBaselineContent(repoRoot, preCommit, indexReader);
-        if (baselineContent is null)
+        bool updateBaseline = !preCommit &&
+                              Environment.GetEnvironmentVariable("CADENCE_UPDATE_BASELINE") == "1";
+
+        var reader = GitIndexReader.ResolvePreCommitReader(repoRoot, preCommit, indexReader, out var ownedReader);
+        Dictionary<string, List<string>> entriesByShard;
+        IReadOnlyList<string> actual;
+        using (ownedReader)
         {
-            Console.WriteLine($"{Tag} [ERROR] Required baseline '{BaselineRelativePath}' was not found.");
-            return 1;
+            bool useStagedIndex = preCommit && reader is { HasAuthoritativeIndex: true };
+            var shardErrors = TextBaselineShardStore.ValidateAndReadShards(
+                repoRoot,
+                BaselineDirectory,
+                LegacyBaselineRelativePath,
+                relPath => TryExtractResourceFromShardPath(relPath, out _),
+                entry => TryExtractResourceOwner(entry, out string res) ? GetShardRelativePath(res) : null,
+                out entriesByShard,
+                reader: useStagedIndex ? reader : null,
+                requireNonEmptyDirectory: true,
+                allowDuplicateEntries: false,
+                expectedShardPatternHint: $"{BaselineDirectory}/<resource>{ShardSuffix}");
+            if (shardErrors.Count > 0)
+            {
+                foreach (string error in shardErrors)
+                {
+                    Console.WriteLine($"{Tag} [ERROR] {error}");
+                }
+
+                return 1;
+            }
+
+            actual = InventoryGrants(repoRoot, preCommit, useStagedIndex ? reader : null);
         }
 
-        var baseline = ParseBaselineLines(baselineContent);
-        var actual = InventoryGrants(repoRoot, preCommit, indexReader);
+        var baseline = entriesByShard
+            .OrderBy(kv => kv.Key, StringComparer.Ordinal)
+            .SelectMany(kv => kv.Value)
+            .ToList();
 
         var (added, stale) = Compare(actual, baseline);
+        if (updateBaseline && stale.Count > 0)
+        {
+            int pruned = TextBaselineShardStore.SubtractStaleEntries(
+                repoRoot,
+                BaselineDirectory,
+                entriesByShard,
+                stale,
+                BuildShardHeaderFromShardPath,
+                multiset: false);
+            if (pruned > 0)
+            {
+                Console.WriteLine($"{Tag} ✔ Pruned {pruned} stale RBAC grant(s) under '{BaselineDirectory}/'.");
+            }
+
+            stale = [];
+        }
+
         if (added.Count == 0 && stale.Count == 0)
         {
-            Console.WriteLine($"{Tag} ✔ {actual.Count} static role-to-permission grant(s) match {BaselineRelativePath}.");
+            Console.WriteLine($"{Tag} ✔ {actual.Count} static role-to-permission grant(s) match '{BaselineDirectory}/'.");
             return 0;
         }
 
         if (added.Count > 0)
         {
-            Console.WriteLine($"{Tag} [ERROR] {added.Count} unbaselined role-to-permission grant(s) not in {BaselineRelativePath}:");
+            Console.WriteLine($"{Tag} [ERROR] {added.Count} unbaselined role-to-permission grant(s) not in '{BaselineDirectory}/':");
             foreach (string grant in added.Take(25))
             {
                 Console.WriteLine($"  + {grant}");
@@ -102,7 +230,9 @@ public static partial class PermissionMatrixRatchetService
 
         if (stale.Count > 0)
         {
-            Console.WriteLine($"{Tag} [ERROR] {stale.Count} stale baseline grant(s) no longer exist in PermissionMatrix; remove them from {BaselineRelativePath}:");
+            Console.WriteLine(
+                $"{Tag} [ERROR] {stale.Count} stale baseline grant(s) no longer exist in PermissionMatrix; " +
+                $"run 'CADENCE_UPDATE_BASELINE=1 pnpm cadence check permission-matrix' to prune them from '{BaselineDirectory}/':");
             foreach (string grant in stale.Take(25))
             {
                 Console.WriteLine($"  - {grant}");
@@ -255,26 +385,11 @@ public static partial class PermissionMatrixRatchetService
     }
 
     public static IReadOnlyList<string> ParseBaselineLines(string content) =>
-        [.. content.Split('\n')
-            .Select(line => line.Trim())
-            .Where(line => line.Length > 0 && !line.StartsWith('#'))];
+        TextBaselineShardStore.ParseEntries(content.Split('\n'));
 
-    private static string? ReadBaselineContent(string repoRoot, bool preCommit, GitIndexReader? indexReader)
-    {
-        var reader = GitIndexReader.ResolvePreCommitReader(repoRoot, preCommit, indexReader, out var ownedReader);
-        using (ownedReader)
-        {
-            if (preCommit && reader is { HasAuthoritativeIndex: true })
-            {
-                return reader.TryReadText(BaselineRelativePath, out string stagedText)
-                    ? stagedText
-                    : null;
-            }
-        }
-
-        string fullPath = Path.Combine(repoRoot, BaselineRelativePath);
-        return File.Exists(fullPath) ? File.ReadAllText(fullPath) : null;
-    }
+    private static bool IsSafeResourceToken(string token) =>
+        !string.IsNullOrEmpty(token) &&
+        token.All(c => char.IsAsciiLetterLower(c) || char.IsAsciiDigit(c) || c is '_' or '-');
 
     private static bool IsRbacScanCandidate(string relativePath)
     {

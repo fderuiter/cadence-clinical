@@ -152,14 +152,14 @@ public static class QualityGates
             ctx => FileHygieneValidatorService.ValidateEndOfFileNewline(ctx.TargetFiles, ctx.RepoRoot, ctx.PreCommit, ctx.IndexReader) == 0)
         { TakesFiles = true },
         new("clean-secrets", ["clean-secrets-baseline"],
-            "Verifies `baselines/secrets/config.json` and `baselines/secrets/*.secrets.baseline.json` shards are valid, normalized JSON with the canonical exclusion filter without mutating them",
+            "Verifies `baselines/secrets/config.json` and per-file `baselines/secrets/files/<sourceFile>.secrets.baseline.json` shards are valid, normalized JSON with the canonical exclusion filter without mutating them",
             ctx => SecretsBaselineCleanerService.CleanSecretsBaseline(repoRoot: ctx.RepoRoot, check: true, preCommit: ctx.PreCommit, indexReader: ctx.IndexReader) == 0)
         {
             PreCommit = PreCommitMode.Quick,
-            PreCommitNote = "validates staged `baselines/secrets/` JSON shards without mutating the working tree",
+            PreCommitNote = "validates staged `baselines/secrets/` config and per-file JSON shards without mutating the working tree",
         },
         new("detect-secrets", ["secrets-scan"],
-            "Scans changed or tracked files against merged `baselines/secrets/` shards using `detect-secrets-hook` from `.cadence/venv`, `PATH` or `uvx` (fails closed when missing)",
+            "Scans changed or tracked files against merged `baselines/secrets/files/` shards using `detect-secrets-hook` from `.cadence/venv`, `PATH` or `uvx` (fails closed when missing)",
             ctx => DetectSecretsGateService.Scan(ctx.RepoRoot, ctx.TargetFiles, ctx.PreCommit, indexReader: ctx.IndexReader, baseRef: ctx.BaseRef, pushBefore: ctx.PushBefore, eventName: ctx.EventName, gitRef: ctx.GitRef) == 0)
         {
             TakesFiles = true,
@@ -216,24 +216,24 @@ public static class QualityGates
             PreCommitNote = "validates staged `.github/rulesets` and `.github/workflows` blobs",
         },
         new("imports", ["validate-imports"],
-            "No cross-service direct imports, qualified namespace references, or reflection string lookups across `apps/<service>` (ratcheted by `cross-service-isolation.baseline.txt`)",
+            "No cross-service direct imports, qualified namespace references, or reflection string lookups across `apps/<service>` (ratcheted by per-service-pair `baselines/cross-service-isolation/<source>/<target>.baseline.txt` shards)",
             ctx => ImportValidatorService.ValidateImports(ctx.RepoRoot, ctx.PreCommit, ctx.IndexReader) == 0)
         {
             PreCommit = PreCommitMode.Quick,
-            PreCommitNote = "validates staged `apps/<service>` C# blobs and `cross-service-isolation.baseline.txt` against cross-service imports and reflection lookups",
+            PreCommitNote = "validates staged `apps/<service>` C# blobs and `baselines/cross-service-isolation/` shards against cross-service imports and reflection lookups",
         },
         new("permission-matrix", ["validate-permission-matrix", "rbac-matrix"],
-            "Static role-to-permission grants in `PermissionMatrix` and repository RBAC sources do not exceed the shrink-only `permission-matrix.baseline.txt` inventory",
+            "Static role-to-permission grants in `PermissionMatrix` and repository RBAC sources do not exceed the shrink-only `baselines/permission-matrix/<resource>.baseline.txt` shards",
             ctx => PermissionMatrixRatchetService.Check(ctx.RepoRoot, ctx.PreCommit, ctx.IndexReader) == 0)
         {
             PreCommit = PreCommitMode.Quick,
-            PreCommitNote = "checks staged RBAC sources and `permission-matrix.baseline.txt` against the shrink-only grant inventory",
+            PreCommitNote = "checks staged RBAC sources and `baselines/permission-matrix/` shards against the shrink-only grant inventory",
         },
         new("security", ["audit-security"], "Hard-coded secret patterns across source, Vue templates and build scripts (private keys, cloud keys, API tokens, compliance secrets)",
             ctx => SecurityAuditorService.AuditSecurity(ctx.Files, ctx.RepoRoot, ctx.PreCommit, ctx.IndexReader) == 0)
         { TakesFiles = true },
         new("deid", ["deid-compliance-scan"],
-            "PHI/PII in changed or tracked files including authored `docs/`, root portal docs, `.vue` templates and `stores/` (vendored `docs/CDISC/`, `docs/NCI/`, `docs/SDLC/runs/` and `baselines/` excluded), ratcheted by per-unit `baselines/deid/<unit>.baseline.txt` shards; a line that is not PHI takes a `deid-ignore` comment",
+            "PHI/PII in changed or tracked files including authored `docs/`, root portal docs, `.vue` templates and `stores/` (vendored `docs/CDISC/`, `docs/NCI/`, `docs/SDLC/runs/` and `baselines/` excluded), ratcheted by per-file `baselines/deid/files/<sourceFile>.baseline.txt` shards; a line that is not PHI takes a `deid-ignore` comment",
             ctx => DeidComplianceService.ScanDeidCompliance(ctx.Files, ctx.RepoRoot, preCommit: ctx.PreCommit, indexReader: ctx.IndexReader, baseRef: ctx.BaseRef, pushBefore: ctx.PushBefore, eventName: ctx.EventName, gitRef: ctx.GitRef) == 0)
         { TakesFiles = true },
         new("openapi", ["auto-stage-openapi"], "`docs/openapi` matches what the .NET services serve, and `docs/api` matches `docs/openapi`",
@@ -302,7 +302,7 @@ public static class QualityGates
             PreCommitNote = "checks the staged files instead of the branch",
         },
         new("baseline-ratchet", ["baselines"],
-            "No ratchet baseline gate (`*.baseline.txt`, `*-baseline.txt`, `baselines/deid/*.baseline.txt`, `baselines/secrets/*.secrets.baseline.json`) gained an entry without a `Baseline-Growth: <path> +<count> - <reason>` trailer on the commit that grew it",
+            "No ratchet baseline gate (`*.baseline.txt`, `*-baseline.txt`, `baselines/permission-matrix/`, `baselines/direct-state-writes/`, `baselines/cross-service-isolation/`, `baselines/deid/files/`, `baselines/secrets/files/`) gained an entry without a `Baseline-Growth: <path> +<count> - <reason>` trailer on the commit that grew it",
             ctx => BaselineRatchetService.Check(ctx.RepoRoot, ctx.PreCommit, baseRef: ctx.BaseRef, pushBefore: ctx.PushBefore, eventName: ctx.EventName, gitRef: ctx.GitRef) == 0)
         {
             PreCommit = PreCommitMode.Quick,

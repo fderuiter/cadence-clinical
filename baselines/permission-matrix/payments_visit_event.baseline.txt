@@ -1,0 +1,8 @@
+# Shrink-only RBAC role-to-permission grant baseline shard for resource 'payments_visit_event'.
+# Sorted ordinally as <role>|<resource>|<action> (lowercase).
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check permission-matrix or CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.
+authorized_er_physician|payments_visit_event|record
+crc|payments_visit_event|record
+investigator|payments_visit_event|record
+lead_investigator|payments_visit_event|record
+principal_investigator|payments_visit_event|record

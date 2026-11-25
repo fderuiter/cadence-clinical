@@ -1,0 +1,31 @@
+# Shrink-only RBAC role-to-permission grant baseline shard for resource 'quality_event'.
+# Sorted ordinally as <role>|<resource>|<action> (lowercase).
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check permission-matrix or CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.
+admin|quality_event|create
+admin|quality_event|delete
+admin|quality_event|investigate
+admin|quality_event|read
+admin|quality_event|update
+auditor|quality_event|read
+authorized_er_physician|quality_event|read
+cra|quality_event|create
+cra|quality_event|read
+cra|quality_event|update
+crc|quality_event|read
+investigator|quality_event|read
+lead_investigator|quality_event|read
+monitor|quality_event|create
+monitor|quality_event|read
+monitor|quality_event|update
+principal_investigator|quality_event|read
+sponsor_dm|quality_event|create
+sponsor_dm|quality_event|delete
+sponsor_dm|quality_event|investigate
+sponsor_dm|quality_event|read
+sponsor_dm|quality_event|update
+sysadmin|quality_event|create
+sysadmin|quality_event|delete
+sysadmin|quality_event|investigate
+sysadmin|quality_event|read
+sysadmin|quality_event|update
+trial_coordinator|quality_event|read

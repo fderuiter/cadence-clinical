@@ -19,7 +19,7 @@ namespace Cadence.ArchitectureTests.Architecture;
 /// Enforces cross-service isolation across <c>Cadence.Apps.*</c> microservices: blocks both direct compile-time
 /// imports/references and indirect runtime reflection string lookups (<c>OpCodes.Ldstr</c> operands naming sibling
 /// <c>Cadence.Apps.&lt;Sibling&gt;</c> types/namespaces such as <c>AppDomain.CurrentDomain.GetAssemblies()</c> lookups),
-/// ratcheted against the shrink-only baseline at <see cref="ImportValidatorService.BaselineRelativePath"/>.
+/// ratcheted against per-service-pair shrink-only shards under <see cref="ImportValidatorService.BaselineDirectory"/>.
 /// </summary>
 public partial class CrossServiceIsolationTests
 {
@@ -27,13 +27,6 @@ public partial class CrossServiceIsolationTests
         "Route cross-module clinical mutations through IKernelCommandSender in the central kernel command pipeline " +
         "(ADR-2600) and asynchronous cross-service notifications through Cadence.Contracts events (ADR-2524) rather " +
         "than importing or reflecting over sibling Cadence.Apps.* types.";
-
-    private static readonly IReadOnlyList<string> BaselineHeader =
-    [
-        "# Cross-service isolation ratchet baseline (ImportValidatorService source scan + Mono.Cecil Ldstr / reference IL scan).",
-        "# Records pre-existing sibling-service debt (such as LetterTemplateEndpoints.cs reflection lookups). The list may only shrink.",
-        $"# Regenerate with {KernelBoundaryBaseline.UpdateEnvironmentVariable}=1 (see tests/Cadence.ArchitectureTests/Architecture/CrossServiceIsolationTests.cs).",
-    ];
 
     private static readonly Lazy<IReadOnlyList<Assembly>> NonKernelAssemblies =
         new(KernelBoundaryRules.LoadNonKernelCadenceAssemblies);
@@ -48,16 +41,22 @@ public partial class CrossServiceIsolationTests
         var ilViolations = EvaluateCompiledAppAssemblies(NonKernelAssemblies.Value);
         var combined = sourceViolations.Concat(ilViolations).ToList();
 
-        var comparison = ShrinkOnlyBaseline.Verify(
-            ImportValidatorService.BaselineRelativePath,
-            BaselineHeader,
-            combined);
+        var comparison = ShrinkOnlyBaseline.VerifySharded(
+            ImportValidatorService.BaselineDirectory,
+            ImportValidatorService.LegacyBaselineRelativePath,
+            combined,
+            ImportValidatorService.GetShardRelativePathForEntry,
+            shardRelPath =>
+            {
+                _ = ImportValidatorService.TryExtractOwnerPairFromShardPath(shardRelPath, out string src, out string dst);
+                return ImportValidatorService.BuildShardHeader(src, dst);
+            });
 
         comparison.IsClean.Should().BeTrue(
             comparison.Describe("CrossServiceIsolation", nameof(CrossServiceIsolationTests), RemediationGuidance));
 
-        var recorded = ShrinkOnlyBaseline.Read(ImportValidatorService.BaselineRelativePath);
-        recorded.Should().BeInAscendingOrder(StringComparer.Ordinal).And.OnlyHaveUniqueItems();
+        var recorded = ShrinkOnlyBaseline.ReadSharded(ImportValidatorService.BaselineDirectory);
+        recorded.Should().OnlyHaveUniqueItems();
 
         // Also confirm the CLI's ImportValidatorService agrees cleanly with the shared baseline.
         ImportValidatorService.ValidateImports(repoRoot).Should().Be(0);
@@ -108,9 +107,9 @@ public partial class CrossServiceIsolationTests
             "IL|Cadence.Apps.Ctms|Cadence.ArchitectureTests.Architecture.SyntheticCrossServiceReflectionFixture.LookupSiblingDbContext->Cadence.Apps.Etmf.Infrastructure.Persistence.EtmfDbContext");
 
         var ratchet = ShrinkOnlyBaseline.Compare(
-            ImportValidatorService.BaselineRelativePath,
+            ImportValidatorService.BaselineDirectory,
             ilHits,
-            ShrinkOnlyBaseline.Read(ImportValidatorService.BaselineRelativePath));
+            ShrinkOnlyBaseline.ReadSharded(ImportValidatorService.BaselineDirectory));
         ratchet.IsClean.Should().BeFalse("unbaselined cross-service reflection strings must fail verification");
     }
 

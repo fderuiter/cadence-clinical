@@ -1,0 +1,15 @@
+# Shrink-only RBAC role-to-permission grant baseline shard for resource 'esource_endpoint'.
+# Sorted ordinally as <role>|<resource>|<action> (lowercase).
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check permission-matrix or CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.
+admin|esource_endpoint|configure
+admin|esource_endpoint|read
+authorized_er_physician|esource_endpoint|read
+cra|esource_endpoint|read
+crc|esource_endpoint|read
+investigator|esource_endpoint|read
+lead_investigator|esource_endpoint|read
+principal_investigator|esource_endpoint|read
+sponsor_dm|esource_endpoint|configure
+sponsor_dm|esource_endpoint|read
+sysadmin|esource_endpoint|configure
+sysadmin|esource_endpoint|read

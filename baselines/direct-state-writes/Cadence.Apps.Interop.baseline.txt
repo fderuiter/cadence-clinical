@@ -1,0 +1,14 @@
+# Direct state-write ratchet baseline shard for Cadence.Apps.Interop (SaveChanges / SaveChangesAsync outside the central kernel command pipeline).
+# One compiled IL call site per line: Assembly|OuterType.LogicalMethod->TargetMethod[#N]. Sorted ordinally. The list may only shrink.
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.
+Cadence.Apps.Interop|Cadence.Apps.Interop.Endpoints.EsourceEndpoints.AcceptCandidateAsync->DbContext.SaveChangesAsync
+Cadence.Apps.Interop|Cadence.Apps.Interop.Endpoints.EsourceEndpoints.BatchAcceptCandidatesAsync->DbContext.SaveChangesAsync
+Cadence.Apps.Interop|Cadence.Apps.Interop.Endpoints.EsourceEndpoints.BatchRejectCandidatesAsync->DbContext.SaveChangesAsync
+Cadence.Apps.Interop|Cadence.Apps.Interop.Endpoints.EsourceEndpoints.IngestFhirBundleAsync->DbContext.SaveChangesAsync
+Cadence.Apps.Interop|Cadence.Apps.Interop.Endpoints.EsourceEndpoints.RaiseClinicalQueryAsync->DbContext.SaveChangesAsync
+Cadence.Apps.Interop|Cadence.Apps.Interop.Endpoints.EsourceEndpoints.RegisterEhrEndpointAsync->DbContext.SaveChangesAsync
+Cadence.Apps.Interop|Cadence.Apps.Interop.Endpoints.EsourceEndpoints.RejectCandidateAsync->DbContext.SaveChangesAsync
+Cadence.Apps.Interop|Cadence.Apps.Interop.Endpoints.SceEndpoints.MapSceEndpoints->DbContext.SaveChangesAsync
+Cadence.Apps.Interop|Cadence.Apps.Interop.Endpoints.SceEndpoints.MapSceEndpoints->DbContext.SaveChangesAsync#2
+Cadence.Apps.Interop|Cadence.Apps.Interop.Endpoints.SceEndpoints.MapSceEndpoints->DbContext.SaveChangesAsync#3
+Cadence.Apps.Interop|Cadence.Apps.Interop.Endpoints.SceEndpoints.MapSceEndpoints->DbContext.SaveChangesAsync#4

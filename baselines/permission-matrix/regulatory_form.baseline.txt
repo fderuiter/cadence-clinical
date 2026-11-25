@@ -1,0 +1,41 @@
+# Shrink-only RBAC role-to-permission grant baseline shard for resource 'regulatory_form'.
+# Sorted ordinally as <role>|<resource>|<action> (lowercase).
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check permission-matrix or CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.
+admin|regulatory_form|create
+admin|regulatory_form|read
+admin|regulatory_form|sign
+auditor|regulatory_form|read
+authorized_er_physician|regulatory_form|create
+authorized_er_physician|regulatory_form|read
+authorized_er_physician|regulatory_form|sign
+cra|regulatory_form|create
+cra|regulatory_form|read
+cra|regulatory_form|sign
+crc|regulatory_form|create
+crc|regulatory_form|read
+crc|regulatory_form|sign
+external_monitor|regulatory_form|read
+investigator|regulatory_form|create
+investigator|regulatory_form|read
+investigator|regulatory_form|sign
+lead_investigator|regulatory_form|create
+lead_investigator|regulatory_form|read
+lead_investigator|regulatory_form|sign
+monitor|regulatory_form|create
+monitor|regulatory_form|read
+monitor|regulatory_form|sign
+principal_investigator|regulatory_form|create
+principal_investigator|regulatory_form|read
+principal_investigator|regulatory_form|sign
+sponsor_designer|regulatory_form|read
+sponsor_dm|regulatory_form|create
+sponsor_dm|regulatory_form|read
+sponsor_dm|regulatory_form|sign
+sponsor_mm|regulatory_form|read
+sponsor_statistician|regulatory_form|read
+sysadmin|regulatory_form|create
+sysadmin|regulatory_form|read
+sysadmin|regulatory_form|sign
+trial_coordinator|regulatory_form|create
+trial_coordinator|regulatory_form|read
+trial_coordinator|regulatory_form|sign

@@ -1,0 +1,30 @@
+# Shrink-only RBAC role-to-permission grant baseline shard for resource 'esource_candidate'.
+# Sorted ordinally as <role>|<resource>|<action> (lowercase).
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check permission-matrix or CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.
+admin|esource_candidate|ingest
+admin|esource_candidate|query
+admin|esource_candidate|read
+auditor|esource_candidate|read
+authorized_er_physician|esource_candidate|ingest
+authorized_er_physician|esource_candidate|read
+authorized_er_physician|esource_candidate|reconcile
+cra|esource_candidate|query
+cra|esource_candidate|read
+crc|esource_candidate|ingest
+crc|esource_candidate|read
+crc|esource_candidate|reconcile
+investigator|esource_candidate|ingest
+investigator|esource_candidate|read
+investigator|esource_candidate|reconcile
+lead_investigator|esource_candidate|ingest
+lead_investigator|esource_candidate|read
+lead_investigator|esource_candidate|reconcile
+monitor|esource_candidate|query
+monitor|esource_candidate|read
+principal_investigator|esource_candidate|ingest
+principal_investigator|esource_candidate|read
+principal_investigator|esource_candidate|reconcile
+sponsor_dm|esource_candidate|ingest
+sponsor_dm|esource_candidate|query
+sponsor_dm|esource_candidate|read
+sysadmin|esource_candidate|ingest

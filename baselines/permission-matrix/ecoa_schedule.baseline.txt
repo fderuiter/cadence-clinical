@@ -1,0 +1,28 @@
+# Shrink-only RBAC role-to-permission grant baseline shard for resource 'ecoa_schedule'.
+# Sorted ordinally as <role>|<resource>|<action> (lowercase).
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check permission-matrix or CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.
+admin|ecoa_schedule|create
+admin|ecoa_schedule|read
+authorized_er_physician|ecoa_schedule|create
+authorized_er_physician|ecoa_schedule|read
+cra|ecoa_schedule|create
+cra|ecoa_schedule|read
+crc|ecoa_schedule|create
+crc|ecoa_schedule|read
+investigator|ecoa_schedule|create
+investigator|ecoa_schedule|read
+lead_investigator|ecoa_schedule|create
+lead_investigator|ecoa_schedule|read
+monitor|ecoa_schedule|create
+monitor|ecoa_schedule|read
+principal_investigator|ecoa_schedule|create
+principal_investigator|ecoa_schedule|read
+sponsor_designer|ecoa_schedule|create
+sponsor_designer|ecoa_schedule|read
+sponsor_dm|ecoa_schedule|create
+sponsor_dm|ecoa_schedule|read
+subject|ecoa_schedule|read
+sysadmin|ecoa_schedule|create
+sysadmin|ecoa_schedule|read
+trial_coordinator|ecoa_schedule|create
+trial_coordinator|ecoa_schedule|read
