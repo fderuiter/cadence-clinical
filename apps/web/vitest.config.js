@@ -15,12 +15,15 @@ function eagerDemoWorkspacesForVitest() {
       const cleanId = id.split("?", 1)[0].replaceAll("\\", "/");
       if (
         !cleanId.endsWith("/src/views/EcrfView.vue") &&
-        !cleanId.endsWith("/src/views/CtmsView.vue")
+        !cleanId.endsWith("/src/views/CtmsView.vue") &&
+        !cleanId.endsWith("/src/views/KnowledgeView.vue") &&
+        !cleanId.endsWith("/src/views/TicketsView.vue") &&
+        !cleanId.endsWith("/src/components/tickets/TicketDetailDrawer.vue")
       ) {
         return null;
       }
       const next = code.replace(
-        /const\s+(EcrfDemoWorkspace|CtmsDemoWorkspace)\s*=\s*defineAsyncComponent\(\s*\(\)\s*=>\s*import\((["']\.\/demo\/(?:Ecrf|Ctms)DemoWorkspace\.vue["'])\)\s*,?\s*\);?/g,
+        /const\s+(EcrfDemoWorkspace|CtmsDemoWorkspace|KnowledgeDemoWorkspace|TicketsDemoWorkspace|TicketAttachmentsDemoPanel)\s*=\s*defineAsyncComponent\(\s*\(\)\s*=>\s*import\((["'](?:\.\.?\/)+views\/demo\/[^"']+\.vue["']|["']\.\/demo\/[^"']+\.vue["'])\)\s*,?\s*\);?/g,
         "import $1 from $2;"
       );
       return next === code ? null : { code: next, map: null };

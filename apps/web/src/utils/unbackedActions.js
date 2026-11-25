@@ -10,7 +10,7 @@ import { isDemoBuild } from "./demoMode.js";
  * Remove the call when the action is moved onto a real endpoint (docs/web/API_MIGRATION.md).
  */
 const webUnbackedActionGuard = createUnbackedActionGuard({
-  isAllowed: (env) => isDemoBuild(env),
+  isAllowed: (env) => (env === undefined ? isDemoBuild() : isDemoBuild(env)),
   defaultDetail:
     "No Cadence service records this action yet, so nothing was saved.",
   onRefuse({ title, detail }) {

@@ -16,17 +16,19 @@ export const DEMO_PERSONAS = DEMO_MANIFEST.personas;
 export const DEFAULT_DEMO_SITE = DEMO_SITES[0] || null;
 export const DEFAULT_DEMO_PARTICIPANT = DEMO_PARTICIPANTS[0] || null;
 
-export const DEMO_PERSONA_BY_WORKFLOW = Object.freeze(
-  Object.fromEntries(
-    DEMO_PERSONAS.map((persona) => [persona.workflow, persona])
-  )
-);
+export const DEMO_PERSONA_BY_WORKFLOW = /* @__PURE__ */ (() =>
+  Object.freeze(
+    Object.fromEntries(
+      DEMO_PERSONAS.map((persona) => [persona.workflow, persona])
+    )
+  ))();
 
-export const DEMO_PERSONA_BY_WORKSPACE = Object.freeze(
-  Object.fromEntries(
-    DEMO_PERSONAS.map((persona) => [persona.workspacePersona, persona])
-  )
-);
+export const DEMO_PERSONA_BY_WORKSPACE = /* @__PURE__ */ (() =>
+  Object.freeze(
+    Object.fromEntries(
+      DEMO_PERSONAS.map((persona) => [persona.workspacePersona, persona])
+    )
+  ))();
 
 export function getDemoSiteByCode(siteCode) {
   if (!siteCode) return null;

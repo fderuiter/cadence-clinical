@@ -1,19 +1,24 @@
 import { defineStore } from "pinia";
-import { DEMO_STUDY, getDemoPersonaByWorkflow } from "demo-fixtures";
 import { etmfService } from "../api/etmf";
 import { getSyncedStudyScope, syncActiveStudyScope } from "./studyScopeBridge";
 import {
   formatScopeForbiddenGuidance,
   isForbiddenScopeError,
 } from "../utils/callerScope";
-import {
-  demoNowIso,
-  demoNowMs,
-  demoRandomToken,
-  isDemoBuild,
-  nextDemoStep,
-} from "../utils/demoMode.js";
+import { isDemoBuild } from "../utils/demoMode.js";
 import { useAuthStore } from "./auth.js";
+import {
+  buildLocalIntelligenceReport,
+  fallbackDeriveDemoQcQueue,
+  fallbackReviewDemoQcDocument,
+  fallbackStageDemoQcDocument,
+  fallbackSubmitDemoDraftForQc,
+  fetchDemoDocumentContent,
+  fetchDemoEtmfDocuments,
+  resetDemoEtmfStorage,
+  resolveDemoEtmfStudyId,
+  uploadDemoEtmfDocument,
+} from "./demo/etmfDemo.js";
 
 export function arrayBufferToBase64(buffer) {
   const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
@@ -24,220 +29,6 @@ export function arrayBufferToBase64(buffer) {
     binary += String.fromCharCode(...slice);
   }
   return btoa(binary);
-}
-
-function buildDefaultDocuments() {
-  const studyId = DEMO_STUDY.code || "CADENCE-101";
-  const leadUsername =
-    getDemoPersonaByWorkflow("designer_lead")?.username || "designer.lead";
-  const piPersona = getDemoPersonaByWorkflow("investigator");
-  const piUsername = piPersona?.username || "pi.site101";
-  const piFullName = piPersona
-    ? `${piPersona.firstName} ${piPersona.lastName}`
-    : "Site 101 Investigator";
-  return [
-    {
-      id: "DOC-100",
-      study_id: studyId,
-      zone: 1,
-      section: "01.01",
-      artifact_code: "01.01.01",
-      artifact_type: "Clinical Trial Protocol",
-      filename: "protocol_v1_draft.pdf",
-      mime_type: "application/pdf",
-      created_at: "2026-01-06T12:00:00Z",
-      created_by: leadUsername,
-      version_index: 1,
-      status: "DRAFT",
-      reason_for_change: "Initial version",
-    },
-    {
-      id: "DOC-999",
-      study_id: studyId,
-      zone: 5,
-      section: "05.02",
-      artifact_code: "05.02.05",
-      artifact_type: "Informed Consent Form",
-      filename: "icf_v1.0_signed.pdf",
-      mime_type: "application/pdf",
-      created_at: "2026-01-10T09:30:00Z",
-      created_by: piUsername,
-      version_index: 1,
-      status: "APPROVED",
-      reason_for_change: "Initial signed consent.",
-      signer: piFullName,
-      signing_timestamp: "2026-01-10T09:35:00Z",
-      signature_manifestation: {
-        signing_reason: "Consent approval",
-      },
-    },
-  ];
-}
-
-function getDefaultDocuments() {
-  return isDemoBuild() ? buildDefaultDocuments() : [];
-}
-
-function localPredictTaxonomy(filename = "", content = "") {
-  const text = `${filename} ${content}`.toLowerCase();
-  if (text.includes("protocol") || text.includes("amendment")) {
-    return {
-      zone: 1,
-      section: "01.01",
-      artifact_code: "01.01.01",
-      artifact_type: "Clinical Trial Protocol",
-      confidence: 0.96,
-    };
-  }
-  if (text.includes("1572") || text.includes("fda 1572")) {
-    return {
-      zone: 5,
-      section: "05.02",
-      artifact_code: "05.02.01",
-      artifact_type: "FDA Form 1572",
-      confidence: 0.98,
-    };
-  }
-  if (text.includes("financial") || text.includes("disclosure")) {
-    return {
-      zone: 5,
-      section: "05.02",
-      artifact_code: "05.02.02",
-      artifact_type: "Financial Disclosure",
-      confidence: 0.94,
-    };
-  }
-  if (
-    text.includes("cv") ||
-    text.includes("curriculum") ||
-    text.includes("resume")
-  ) {
-    return {
-      zone: 5,
-      section: "05.02",
-      artifact_code: "05.02.03",
-      artifact_type: "Investigator CV",
-      confidence: 0.95,
-    };
-  }
-  if (
-    text.includes("delegation") ||
-    text.includes("doa") ||
-    text.includes("log")
-  ) {
-    return {
-      zone: 5,
-      section: "05.02",
-      artifact_code: "05.02.04",
-      artifact_type: "Delegation of Authority Log",
-      confidence: 0.92,
-    };
-  }
-  if (
-    text.includes("consent") ||
-    text.includes("icf") ||
-    text.includes("informed")
-  ) {
-    return {
-      zone: 5,
-      section: "05.02",
-      artifact_code: "05.02.05",
-      artifact_type: "Informed Consent Form",
-      confidence: 0.97,
-    };
-  }
-  if (text.includes("brochure") || text.includes("ib")) {
-    return {
-      zone: 2,
-      section: "02.01",
-      artifact_code: "02.01.01",
-      artifact_type: "Investigator's Brochure",
-      confidence: 0.95,
-    };
-  }
-  if (
-    text.includes("irb") ||
-    text.includes("approval") ||
-    text.includes("iec")
-  ) {
-    return {
-      zone: 4,
-      section: "04.02",
-      artifact_code: "04.02.01",
-      artifact_type: "IRB/IEC Approval Notification",
-      confidence: 0.91,
-    };
-  }
-  if (
-    text.includes("sae") ||
-    text.includes("adverse") ||
-    text.includes("safety")
-  ) {
-    return {
-      zone: 7,
-      section: "07.01",
-      artifact_code: "07.01.01",
-      artifact_type: "Serious Adverse Event Report",
-      confidence: 0.93,
-    };
-  }
-  if (text.includes("lab") || text.includes("certificate")) {
-    return {
-      zone: 8,
-      section: "08.01",
-      artifact_code: "08.01.01",
-      artifact_type: "Central Laboratory Certificate",
-      confidence: 0.89,
-    };
-  }
-  if (text.includes("sap") || text.includes("statistic")) {
-    return {
-      zone: 11,
-      section: "11.01",
-      artifact_code: "11.01.01",
-      artifact_type: "Statistical Analysis Plan",
-      confidence: 0.92,
-    };
-  }
-  return {
-    zone: 1,
-    section: "01.01",
-    artifact_code: "01.01.01",
-    artifact_type: "General Clinical Document",
-    confidence: 0.65,
-  };
-}
-
-function buildLocalIntelligenceReport(
-  filename,
-  content = "",
-  mimeType = "application/pdf"
-) {
-  const primary = localPredictTaxonomy(filename, content);
-  const tier =
-    primary.confidence >= 0.85
-      ? "HIGH"
-      : primary.confidence >= 0.7
-        ? "MEDIUM"
-        : "LOW";
-  return {
-    filename,
-    mime_type: mimeType,
-    sha256_hash:
-      "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", // pragma: allowlist secret
-    modality: mimeType.includes("pdf") ? "PDF_BINARY" : "TEXT",
-    primary_classification: primary,
-    alternative_candidates: [],
-    confidence_tier: tier,
-    qc_recommendation: tier === "HIGH" ? "AUTO_CLASSIFY" : "CRA_QC_REQUIRED",
-    ai_generation_manifest: {
-      model: "Cadence-eTMF-Classifier-v3.2",
-      prompt_hash: "a1b2c3d4e5f6", // pragma: allowlist secret
-      confidence: primary.confidence,
-      confidence_tier: tier,
-      timestamp: new Date().toISOString(),
-    },
-  };
 }
 
 /**
@@ -290,8 +81,7 @@ export const useEtmfStore = defineStore("etmf", {
     activeDocument: null,
     isUploading: false,
     currentStudyId:
-      getSyncedStudyScope() ||
-      (isDemoBuild() && DEMO_STUDY.code ? DEMO_STUDY.code : ""),
+      getSyncedStudyScope() || (isDemoBuild() ? resolveDemoEtmfStudyId() : ""),
     currentSiteId: "",
     scopeForbiddenGuidance: "",
     documentsError: "",
@@ -363,9 +153,12 @@ export const useEtmfStore = defineStore("etmf", {
       if (typeof studyId === "string" && studyId.trim()) {
         this.currentStudyId = studyId.trim();
         syncActiveStudyScope(this.currentStudyId);
-      } else if (!this.currentStudyId && isDemoBuild() && DEMO_STUDY.code) {
-        this.currentStudyId = DEMO_STUDY.code;
-        syncActiveStudyScope(this.currentStudyId);
+      } else if (!this.currentStudyId && isDemoBuild()) {
+        const demoStudyId = resolveDemoEtmfStudyId();
+        if (demoStudyId) {
+          this.currentStudyId = demoStudyId;
+          syncActiveStudyScope(this.currentStudyId);
+        }
       }
 
       // Seed hierarchical DIA TMF Reference Model v3.2.0-complete hierarchy
@@ -895,40 +688,16 @@ export const useEtmfStore = defineStore("etmf", {
       this.documentsError = "";
       const authStore = useAuthStore();
       try {
-        const isMocked =
-          etmfService.getDocuments &&
-          (etmfService.getDocuments._isMockFunction ||
-            typeof etmfService.getDocuments.mock === "object");
-        if (
-          isDemoBuild() &&
-          authStore.isDemoMode &&
-          !authStore.token &&
-          !isMocked
-        ) {
-          let allDocs = [];
-          if (typeof window !== "undefined" && window.localStorage) {
-            const stored = window.localStorage.getItem("demo_documents");
-            if (stored) {
-              allDocs = JSON.parse(stored);
-            } else {
-              allDocs = getDefaultDocuments();
-              window.localStorage.setItem(
-                "demo_documents",
-                JSON.stringify(allDocs)
-              );
-            }
-          } else {
-            allDocs = getDefaultDocuments();
+        if (isDemoBuild()) {
+          const demoResult = fetchDemoEtmfDocuments({
+            authStore,
+            etmfService,
+            selectedArtifactId: this.selectedArtifactId,
+          });
+          if (demoResult?.handled) {
+            this.documentsList = demoResult.documentsList;
+            return;
           }
-
-          if (this.selectedArtifactId) {
-            this.documentsList = allDocs.filter(
-              (doc) => doc.artifact_code === this.selectedArtifactId
-            );
-          } else {
-            this.documentsList = allDocs;
-          }
-          return;
         }
 
         const queryParams = {};
@@ -970,12 +739,6 @@ export const useEtmfStore = defineStore("etmf", {
     async uploadDocument(formData) {
       this.isUploading = true;
       try {
-        const authStore = useAuthStore();
-        const isMocked =
-          etmfService.ingestDocument &&
-          (etmfService.ingestDocument._isMockFunction ||
-            typeof etmfService.ingestDocument.mock === "object");
-
         let body = {};
         let changeReason = "Initial upload";
 
@@ -1041,62 +804,20 @@ export const useEtmfStore = defineStore("etmf", {
           };
         }
 
-        if (
-          isDemoBuild() &&
-          authStore.isDemoMode &&
-          !authStore.token &&
-          !isMocked
-        ) {
-          await new Promise((resolve) => setTimeout(resolve, 300));
-          const step = nextDemoStep("etmf-upload");
-          const newDoc = {
-            id: "DOC-" + demoNowMs(step),
-            study_id: body.study_id,
-            site_id: body.site_id,
-            zone: body.zone,
-            section: body.section,
-            artifact_code: body.artifact_code,
-            artifact_type: body.artifact_type,
-            filename: body.filename,
-            mime_type: body.mime_type,
-            content: body.content,
-            content_base64: body.content_base64,
-            created_at: demoNowIso(step),
-            created_by:
-              authStore.identity?.username ||
-              getDemoPersonaByWorkflow("designer_lead")?.username ||
-              "designer.lead",
-            version_index: 1,
-            status: "DRAFT",
-            reason_for_change: changeReason,
-          };
-
-          let allDocs = [];
-          if (typeof window !== "undefined" && window.localStorage) {
-            const stored = window.localStorage.getItem("demo_documents");
-            if (stored) {
-              allDocs = JSON.parse(stored);
-            } else {
-              allDocs = getDefaultDocuments();
+        if (isDemoBuild()) {
+          const demoUpload = await uploadDemoEtmfDocument({
+            authStore: useAuthStore(),
+            etmfService,
+            body,
+            changeReason,
+            documentsList: this.documentsList,
+          });
+          if (demoUpload?.handled) {
+            if (this.selectedArtifactId) {
+              await this.fetchDocuments(this.selectedArtifactId);
             }
-            allDocs.push(newDoc);
-            window.localStorage.setItem(
-              "demo_documents",
-              JSON.stringify(allDocs)
-            );
-          } else {
-            this.documentsList.push(newDoc);
+            return demoUpload.response;
           }
-
-          if (this.selectedArtifactId) {
-            await this.fetchDocuments(this.selectedArtifactId);
-          }
-
-          return {
-            status: "success",
-            document_id: newDoc.id,
-            version_index: 1,
-          };
         }
 
         const res = await etmfService.ingestDocument(body, { changeReason });
@@ -1114,13 +835,6 @@ export const useEtmfStore = defineStore("etmf", {
       docId,
       { reason_for_change, assigned_cra = null } = {}
     ) {
-      const authStore = useAuthStore();
-      const offlineDemo =
-        isDemoBuild() && authStore.isDemoMode && !authStore.token;
-      const isMocked =
-        etmfService.submitDocumentForQc &&
-        (etmfService.submitDocumentForQc._isMockFunction ||
-          typeof etmfService.submitDocumentForQc.mock === "object");
       try {
         const res = await etmfService.submitDocumentForQc(
           docId,
@@ -1134,23 +848,27 @@ export const useEtmfStore = defineStore("etmf", {
         await this.fetchQcQueue(this.currentStudyId, this.currentSiteId);
         return res;
       } catch (err) {
-        if (!offlineDemo || isMocked) {
-          throw err;
+        if (isDemoBuild()) {
+          const demoFallback = fallbackSubmitDemoDraftForQc({
+            authStore: useAuthStore(),
+            etmfService,
+            documentsList: this.documentsList,
+            docId,
+            reason_for_change,
+          });
+          if (demoFallback?.handled) {
+            return demoFallback.result;
+          }
         }
-        const doc = this.documentsList.find((d) => d.id === docId);
-        if (doc) {
-          doc.status = "TECHNICAL_QC";
-          doc.approval_status = "TECHNICAL_QC";
-          doc.reason_for_change = reason_for_change;
-        }
-        return doc || { id: docId, status: "TECHNICAL_QC" };
+        throw err;
       }
     },
     resetDemoStorage() {
-      if (typeof window !== "undefined" && window.localStorage) {
-        window.localStorage.removeItem("demo_documents");
+      if (!isDemoBuild()) {
+        this.documentsList = [];
+        return;
       }
-      this.documentsList = getDefaultDocuments();
+      this.documentsList = resetDemoEtmfStorage();
     },
 
     async classifyIntelligence(
@@ -1167,16 +885,15 @@ export const useEtmfStore = defineStore("etmf", {
           content_hint: contentHint,
           taxonomy_version: "v3.2.0-complete",
         });
-      } catch {
-        // Deterministic local heuristic fallback (<100ms)
-        return buildLocalIntelligenceReport(filename, content, mimeType);
+      } catch (err) {
+        if (isDemoBuild()) {
+          return buildLocalIntelligenceReport(filename, content, mimeType);
+        }
+        throw err;
       }
     },
 
     async stageQcDocument(payload) {
-      const authStore = useAuthStore();
-      const offlineDemo =
-        isDemoBuild() && authStore.isDemoMode && !authStore.token;
       const scopedPayload = {
         ...payload,
         study_id: payload.study_id || payload.studyId || this.currentStudyId,
@@ -1188,55 +905,19 @@ export const useEtmfStore = defineStore("etmf", {
         await this.fetchQcQueue(scopedPayload.study_id, scopedPayload.site_id);
         return result;
       } catch (err) {
-        if (!offlineDemo) {
-          throw err;
+        if (isDemoBuild()) {
+          const demoStage = fallbackStageDemoQcDocument({
+            authStore: useAuthStore(),
+            scopedPayload,
+            currentStudyId: this.currentStudyId,
+            documentsList: this.documentsList,
+            qcQueue: this.qcQueue,
+          });
+          if (demoStage?.handled) {
+            return demoStage.item;
+          }
         }
-        // Fallback for offline demo builds only
-        const report = buildLocalIntelligenceReport(
-          scopedPayload.filename,
-          scopedPayload.content,
-          scopedPayload.mime_type
-        );
-        const step = nextDemoStep("etmf-qc-stage");
-        const newDoc = {
-          id: "DOC-" + demoRandomToken(7, 36, "etmf-qc-stage").toUpperCase(),
-          study_id: scopedPayload.study_id || this.currentStudyId,
-          site_id: scopedPayload.site_id || null,
-          zone: report.primary_classification.zone,
-          section: report.primary_classification.section,
-          artifact_code: report.primary_classification.artifact_code,
-          artifact_type: report.primary_classification.artifact_type,
-          filename: scopedPayload.filename,
-          mime_type: scopedPayload.mime_type || "application/pdf",
-          created_at: demoNowIso(step),
-          created_by: "crc.site101",
-          version_index: 1,
-          status: "TECHNICAL_QC",
-          approval_status: "TECHNICAL_QC",
-          reason_for_change: scopedPayload.reason_for_change,
-          metadata_json: {
-            document_intelligence: report,
-            assigned_cra: scopedPayload.assigned_cra || null,
-          },
-        };
-        this.documentsList.push(newDoc);
-        const item = {
-          document_id: newDoc.id,
-          study_id: newDoc.study_id,
-          site_id: newDoc.site_id,
-          filename: newDoc.filename,
-          status: "TECHNICAL_QC",
-          intelligence_report: report,
-          staged_at: newDoc.created_at,
-          staged_by: newDoc.created_by,
-          qc_assigned_to: scopedPayload.assigned_cra || null,
-          discrepancy_notes:
-            report.confidence_tier === "LOW"
-              ? ["Low classification confidence score"]
-              : [],
-        };
-        this.qcQueue.unshift(item);
-        return item;
+        throw err;
       }
     },
 
@@ -1245,8 +926,6 @@ export const useEtmfStore = defineStore("etmf", {
       siteId = this.currentSiteId
     ) {
       const authStore = useAuthStore();
-      const offlineDemo =
-        isDemoBuild() && authStore.isDemoMode && !authStore.token;
       if (typeof etmfService.getQcQueue !== "function") {
         this.qcQueue = [];
         return this.qcQueue;
@@ -1258,43 +937,27 @@ export const useEtmfStore = defineStore("etmf", {
         this.qcQueue = Array.isArray(queue) ? queue : [];
         return this.qcQueue;
       } catch (err) {
-        if (!offlineDemo) {
-          this.qcQueue = [];
-          if (isForbiddenScopeError(err)) {
-            this.scopeForbiddenGuidance = formatScopeForbiddenGuidance(err, {
-              studyId: studyId || undefined,
-              siteId: siteId || undefined,
-              assignedStudies: authStore.assignedStudies || [],
-              assignedSites: authStore.assignedSites || [],
-              hasAllStudiesScope: authStore.hasAllStudiesScope,
-            });
-          }
-          throw err;
-        }
-        // Fallback: derive from documentsList in offline demo state only
-        this.qcQueue = this.documentsList
-          .filter((d) => d.status === "TECHNICAL_QC")
-          .map((d) => {
-            const report =
-              d.metadata_json?.document_intelligence ||
-              buildLocalIntelligenceReport(d.filename, d.content, d.mime_type);
-            return {
-              document_id: d.id,
-              study_id: d.study_id,
-              site_id: d.site_id,
-              filename: d.filename,
-              status: d.status,
-              intelligence_report: report,
-              staged_at: d.created_at,
-              staged_by: d.created_by,
-              qc_assigned_to: null,
-              discrepancy_notes:
-                report.confidence_tier === "LOW"
-                  ? ["Low classification confidence score"]
-                  : [],
-            };
+        if (isDemoBuild()) {
+          const demoQueue = fallbackDeriveDemoQcQueue({
+            authStore,
+            documentsList: this.documentsList,
           });
-        return this.qcQueue;
+          if (demoQueue?.handled) {
+            this.qcQueue = demoQueue.qcQueue;
+            return this.qcQueue;
+          }
+        }
+        this.qcQueue = [];
+        if (isForbiddenScopeError(err)) {
+          this.scopeForbiddenGuidance = formatScopeForbiddenGuidance(err, {
+            studyId: studyId || undefined,
+            siteId: siteId || undefined,
+            assignedStudies: authStore.assignedStudies || [],
+            assignedSites: authStore.assignedSites || [],
+            hasAllStudiesScope: authStore.hasAllStudiesScope,
+          });
+        }
+        throw err;
       }
     },
 
@@ -1307,9 +970,6 @@ export const useEtmfStore = defineStore("etmf", {
         discrepancy_comment,
       }
     ) {
-      const authStore = useAuthStore();
-      const offlineDemo =
-        isDemoBuild() && authStore.isDemoMode && !authStore.token;
       try {
         const res = await etmfService.submitQcReview(docId, {
           decision,
@@ -1321,26 +981,22 @@ export const useEtmfStore = defineStore("etmf", {
         await this.fetchDocuments(this.selectedArtifactId);
         return res;
       } catch (err) {
-        if (!offlineDemo) {
-          throw err;
-        }
-        // Fallback for offline demo state only
-        const doc = this.documentsList.find((d) => d.id === docId);
-        if (doc) {
-          if (decision === "ACCEPT" || decision === "OVERRIDE") {
-            if (override_artifact_code) {
-              doc.artifact_code = override_artifact_code;
-            }
-            doc.status = "APPROVED";
-            doc.approval_status = "APPROVED";
-          } else if (decision === "REJECT") {
-            doc.status = "REJECTED";
-            doc.approval_status = "REJECTED";
+        if (isDemoBuild()) {
+          const demoReview = fallbackReviewDemoQcDocument({
+            authStore: useAuthStore(),
+            documentsList: this.documentsList,
+            qcQueue: this.qcQueue,
+            docId,
+            decision,
+            reason_for_change,
+            override_artifact_code,
+          });
+          if (demoReview?.handled) {
+            this.qcQueue = demoReview.qcQueue;
+            return demoReview.result;
           }
-          doc.reason_for_change = reason_for_change;
         }
-        this.qcQueue = this.qcQueue.filter((i) => i.document_id !== docId);
-        return { success: true };
+        throw err;
       }
     },
 
@@ -1436,34 +1092,21 @@ export const useEtmfStore = defineStore("etmf", {
       if (!docId) {
         throw new Error("Document identifier is required for preview.");
       }
-      const authStore = useAuthStore();
-      const offlineDemo =
-        isDemoBuild() && authStore.isDemoMode && !authStore.token;
-      const isMocked =
-        etmfService.downloadDocumentContent &&
-        (etmfService.downloadDocumentContent._isMockFunction ||
-          typeof etmfService.downloadDocumentContent.mock === "object");
-
-      if (
-        typeof etmfService.downloadDocumentContent === "function" &&
-        (!offlineDemo || isMocked)
-      ) {
-        return await etmfService.downloadDocumentContent(docId);
+      if (isDemoBuild()) {
+        const demoContent = fetchDemoDocumentContent({
+          authStore: useAuthStore(),
+          etmfService,
+          docOrId,
+          docId,
+          documentsList: this.documentsList,
+        });
+        if (demoContent?.handled) {
+          return demoContent.result;
+        }
       }
 
-      if (offlineDemo) {
-        const doc =
-          (typeof docOrId === "object" ? docOrId : null) ||
-          this.documentsList.find((d) => d.id === docId);
-        const mimeType = doc?.mime_type || "application/pdf";
-        const bodyText =
-          doc?.content || `Demo document: ${doc?.filename || docId}`;
-        const blob = new Blob([bodyText], { type: mimeType });
-        return {
-          blob,
-          mimeType,
-          sha256: doc?.content_checksum || doc?.contentChecksum || "",
-        };
+      if (typeof etmfService.downloadDocumentContent === "function") {
+        return await etmfService.downloadDocumentContent(docId);
       }
 
       throw new Error("Document content streaming service is unavailable.");
