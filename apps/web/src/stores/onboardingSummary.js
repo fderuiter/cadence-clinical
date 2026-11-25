@@ -203,7 +203,7 @@ export function resolveAuthorizedTaskRoute(
           subjectCode,
           enrollmentId,
         })
-      : "/studies";
+      : buildStudiesWorkspacePath({});
   }
   if (routeName === "site-readiness") {
     return resolveSiteReadinessPath(userRoles, {
@@ -279,9 +279,6 @@ export function resolveAuthorizedTaskRoute(
       !hasRequiredRole(userRoles, catalogEntry.requiresRole)
     ) {
       return null;
-    }
-    if (catalogEntry.routeName === "observation") {
-      return catalogEntry.defaultPath;
     }
     return buildScopedWorkflowPath(catalogEntry.defaultPath, {
       studyCode,

@@ -642,10 +642,10 @@
               created active eCRF schemas.
             </p>
             <div class="success-actions">
-              <router-link to="/ecrf" class="btn btn-primary">
+              <router-link :to="ecrfWorkspacePath" class="btn btn-primary">
                 🩺 Open eCRF Data Capture Workspace
               </router-link>
-              <router-link to="/mdr" class="btn btn-secondary">
+              <router-link :to="mdrWorkspacePath" class="btn btn-secondary">
                 📋 Inspect in MDR Protocol Designer
               </router-link>
             </div>
@@ -668,6 +668,7 @@ import { computed, ref } from "vue";
 import { apiClient } from "../api/apiClient";
 import { allowUnbackedAction } from "../utils/unbackedActions.js";
 import { useErrorPresenter } from "../composables/useErrorPresenter";
+import { useScopedNavigation } from "../composables/useScopedNavigation";
 import ArmVisualizer from "../components/clinical/ArmVisualizer.vue";
 import IECriteriaTable from "../components/clinical/IECriteriaTable.vue";
 import SoaMatrixGrid from "../components/clinical/SoaMatrixGrid.vue";
@@ -675,6 +676,9 @@ import UsdmConceptStagingDrawer from "../components/clinical/UsdmConceptStagingD
 import TherapeuticAreaWizard from "../components/clinical/TherapeuticAreaWizard.vue";
 
 const { presentError } = useErrorPresenter();
+const { scopedWorkflowPath } = useScopedNavigation();
+const ecrfWorkspacePath = computed(() => scopedWorkflowPath("/ecrf"));
+const mdrWorkspacePath = computed(() => scopedWorkflowPath("/mdr"));
 
 const currentStep = ref(1);
 const step1Mode = ref("upload"); // 'upload' | 'wizard'

@@ -39,11 +39,7 @@
           v-if="selectedStudyCode"
           class="btn btn-secondary"
           data-testid="open-canvas-locks-link"
-          :to="{
-            name: 'study',
-            params: { studyCode: selectedStudyCode },
-            query: { stage: 'data', section: 'locks' },
-          }"
+          :to="canvasLocksLocation"
         >
           Open in Clinical Canvas
         </router-link>
@@ -90,13 +86,20 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import { ClinicalModal } from "ui";
 import LocksSection from "../components/canvas/LocksSection.vue";
 import { useConsolidatedStudyList } from "../composables/useConsolidatedStudyList";
+import { useScopedNavigation } from "../composables/useScopedNavigation";
 
 const { studies, studiesLoading, studiesError, selectedStudyCode } =
   useConsolidatedStudyList();
+const { scopedStudyLocation } = useScopedNavigation(
+  () => selectedStudyCode.value
+);
+const canvasLocksLocation = computed(() =>
+  scopedStudyLocation({ stage: "data", section: "locks" })
+);
 const isGovernanceModalOpen = ref(false);
 </script>
 
