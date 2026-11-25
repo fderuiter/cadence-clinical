@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 
+using Cadence.Apps.Etmf.Application;
 using Cadence.Apps.Etmf.Domain;
 using Cadence.Apps.Etmf.Endpoints;
 using Cadence.Apps.Etmf.Infrastructure.Persistence;
@@ -21,6 +22,12 @@ namespace Cadence.UnitTests.Etmf;
 public class EtmfIntelligenceEndpointsTests
 {
     private readonly FakeClock _clock = new(new DateTimeOffset(2026, 10, 1, 12, 0, 0, TimeSpan.Zero));
+
+    private IEtmfQcService CreateQcService(EtmfDbContext dbContext) =>
+        new EtmfQcService(dbContext, new EtmfUnitOfWork(dbContext), _clock);
+
+    private IEtmfDocumentService CreateDocumentService(EtmfDbContext dbContext) =>
+        new EtmfDocumentService(dbContext, new EtmfUnitOfWork(dbContext), _clock);
 
     private static DefaultHttpContext Caller(string studyId = "STUDY-01", string siteId = "SITE-01")
     {
@@ -128,8 +135,7 @@ public class EtmfIntelligenceEndpointsTests
 
         var result = await EtmfIntelligenceEndpoints.StageQcDocument(
             request,
-            dbContext,
-            _clock,
+            CreateQcService(dbContext),
             Caller("STUDY-01"),
             ct);
 
@@ -176,10 +182,9 @@ public class EtmfIntelligenceEndpointsTests
             TaxonomyVersion: "v3.2.0-complete",
             ReasonForChange: "Ingest intake validation test reason");
 
-        var result = await EtmfIntelligenceEndpoints.IngestDocument(
+        var result = await EtmfDocumentEndpoints.IngestDocument(
             request,
-            dbContext,
-            _clock,
+            CreateDocumentService(dbContext),
             Caller("STUDY-01", "SITE-01"),
             ct);
 
@@ -218,11 +223,10 @@ public class EtmfIntelligenceEndpointsTests
             ArtifactType: "FDA Form 1572",
             ReasonForChange: "Attempting taxonomy section update");
 
-        var result = await EtmfIntelligenceEndpoints.UpdateDocumentTaxonomy(
+        var result = await EtmfDocumentEndpoints.UpdateDocumentTaxonomy(
             "DOC-TAX-1",
             request,
-            dbContext,
-            _clock,
+            CreateDocumentService(dbContext),
             Caller("STUDY-01", "SITE-01"),
             ct);
 

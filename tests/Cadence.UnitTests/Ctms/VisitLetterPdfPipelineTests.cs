@@ -9,6 +9,8 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Apps.Ctms.Application;
+using Cadence.Apps.Ctms.Application.Services;
 using Cadence.Apps.Ctms.Domain;
 using Cadence.Apps.Ctms.Endpoints;
 using Cadence.Apps.Ctms.Infrastructure.Persistence;
@@ -246,9 +248,7 @@ public sealed class VisitLetterPdfPipelineTests
         var response = await LetterTemplateEndpoints.CompileAndDispatchLetterAsync(
             "confirmation_letter",
             model,
-            FluidTemplateRenderer.Instance,
-            _ctmsDb,
-            _clock,
+            new LetterTemplateApplicationService(_ctmsDb, new CtmsUnitOfWork(_ctmsDb), FluidTemplateRenderer.Instance, _clock),
             _serviceProvider,
             httpContext,
             ct);

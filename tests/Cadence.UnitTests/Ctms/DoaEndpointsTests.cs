@@ -9,6 +9,9 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 
+using Cadence.Apps.Ctms;
+using Cadence.Apps.Ctms.Application;
+using Cadence.Apps.Ctms.Application.Services;
 using Cadence.Apps.Ctms.Domain;
 using Cadence.Apps.Ctms.Endpoints;
 using Cadence.Apps.Ctms.Infrastructure.Persistence;
@@ -66,6 +69,7 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
                     services.AddRouting();
                     services.AddSingleton<IClock>(_clock);
                     services.AddSingleton(_db);
+                    services.AddCtmsApplicationServices();
                     services.AddCadenceSecurity();
                 });
                 webHost.Configure(app =>
@@ -153,6 +157,12 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
         await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
 
+    private DoaMutationService CreateMutationService() =>
+        new(_db, new CtmsUnitOfWork(_db), new CtmsSiteScopeService(_db), _clock);
+
+    private DoaQueryAndExportService CreateQueryService() =>
+        new(_db, new CtmsUnitOfWork(_db), new CtmsSiteScopeService(_db), _clock);
+
     [Fact]
     [GxPRequirement("PRD-SYS-001")]
     public async Task DelegateTasks_WithValidRequest_CreatesDelegationAndAuditLog()
@@ -170,7 +180,7 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
             ReasonForChange: "Initial delegation assignment for data entry");
 
         var result = await DoaEndpoints.DelegateTasksAsync(
-            request, _db, caller, _clock, TestContext.Current.CancellationToken);
+            request, CreateMutationService(), caller, TestContext.Current.CancellationToken);
 
         var created = result.Should().BeOfType<Created<DelegationResponseDto>>().Subject;
         created.Value.Should().NotBeNull();
@@ -213,7 +223,7 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
             ReasonForChange: "Delegation test");
 
         var result = await DoaEndpoints.DelegateTasksAsync(
-            request, _db, caller, _clock, TestContext.Current.CancellationToken);
+            request, CreateMutationService(), caller, TestContext.Current.CancellationToken);
 
         var problem = result.Should().BeOfType<ProblemHttpResult>().Subject;
         problem.StatusCode.Should().Be(StatusCodes.Status404NotFound);
@@ -236,7 +246,7 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
             ReasonForChange: "   ");
 
         var result = await DoaEndpoints.DelegateTasksAsync(
-            request, _db, caller, _clock, TestContext.Current.CancellationToken);
+            request, CreateMutationService(), caller, TestContext.Current.CancellationToken);
 
         var problem = result.Should().BeOfType<ProblemHttpResult>().Subject;
         problem.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
@@ -274,7 +284,7 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
             ReasonForChange: "Principal Investigator eSignature review and endorsement");
 
         var result = await DoaEndpoints.SignOffDelegationAsync(
-            request, _db, caller, _clock, TestContext.Current.CancellationToken);
+            request, CreateMutationService(), caller, TestContext.Current.CancellationToken);
 
         var okResult = result.Should().BeOfType<Ok<DelegationResponseDto>>().Subject;
         okResult.Value.Should().NotBeNull();
@@ -304,7 +314,7 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
             ReasonForChange: "Sign-off attempt");
 
         var result = await DoaEndpoints.SignOffDelegationAsync(
-            request, _db, caller, _clock, TestContext.Current.CancellationToken);
+            request, CreateMutationService(), caller, TestContext.Current.CancellationToken);
 
         var problem = result.Should().BeOfType<ProblemHttpResult>().Subject;
         problem.StatusCode.Should().Be(StatusCodes.Status404NotFound);
@@ -340,7 +350,7 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
             ReasonForChange: "Duplicate sign-off attempt");
 
         var result = await DoaEndpoints.SignOffDelegationAsync(
-            request, _db, caller, _clock, TestContext.Current.CancellationToken);
+            request, CreateMutationService(), caller, TestContext.Current.CancellationToken);
 
         var problem = result.Should().BeOfType<ProblemHttpResult>().Subject;
         problem.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
@@ -377,7 +387,7 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
             ReasonForChange: "Staff member transitioned off the clinical trial study protocol");
 
         var result = await DoaEndpoints.RevokeDelegationAsync(
-            request, _db, caller, _clock, TestContext.Current.CancellationToken);
+            request, CreateMutationService(), caller, TestContext.Current.CancellationToken);
 
         var okResult = result.Should().BeOfType<Ok<DelegationResponseDto>>().Subject;
         okResult.Value.Should().NotBeNull();
@@ -427,7 +437,7 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
             ReasonForChange: "Re-revocation attempt");
 
         var result = await DoaEndpoints.RevokeDelegationAsync(
-            request, _db, caller, _clock, TestContext.Current.CancellationToken);
+            request, CreateMutationService(), caller, TestContext.Current.CancellationToken);
 
         var problem = result.Should().BeOfType<ProblemHttpResult>().Subject;
         problem.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
@@ -474,7 +484,7 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
         await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var result = await DoaEndpoints.GetSiteDoaLogAsync(
-            SiteId, _db, Caller(), TestContext.Current.CancellationToken);
+            SiteId, CreateQueryService(), Caller(), TestContext.Current.CancellationToken);
 
         var okResult = result.Should().BeOfType<Ok<DoaLogResponseDto>>().Subject;
         okResult.Value.Should().NotBeNull();
@@ -492,7 +502,7 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
     public async Task GetSiteDoaLog_WithNonExistentSite_Returns404NotFound()
     {
         var result = await DoaEndpoints.GetSiteDoaLogAsync(
-            "SITE-UNKNOWN", _db, Caller(), TestContext.Current.CancellationToken);
+            "SITE-UNKNOWN", CreateQueryService(), Caller(), TestContext.Current.CancellationToken);
 
         var problem = result.Should().BeOfType<ProblemHttpResult>().Subject;
         problem.StatusCode.Should().Be(StatusCodes.Status404NotFound);
@@ -524,7 +534,7 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
         var caller = Caller(RoleNormalization.ROLE_INVESTIGATOR, "investigator-01");
 
         var result = await DoaEndpoints.ExportSiteDoaPdfAsync(
-            SiteId, _db, caller, _clock, TestContext.Current.CancellationToken);
+            SiteId, CreateQueryService(), caller, TestContext.Current.CancellationToken);
 
         result.Should().NotBeNull();
 
@@ -554,7 +564,7 @@ public sealed class DoaEndpointsTests : IAsyncDisposable
         var caller = Caller();
 
         var result = await DoaEndpoints.ExportSiteDoaPdfAsync(
-            "SITE-NONEXISTENT", _db, caller, _clock, TestContext.Current.CancellationToken);
+            "SITE-NONEXISTENT", CreateQueryService(), caller, TestContext.Current.CancellationToken);
 
         var problem = result.Should().BeOfType<ProblemHttpResult>().Subject;
         problem.StatusCode.Should().Be(StatusCodes.Status404NotFound);

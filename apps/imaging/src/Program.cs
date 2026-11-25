@@ -1,3 +1,4 @@
+using Cadence.Apps.Imaging.Application;
 using Cadence.Apps.Imaging.Endpoints;
 using Cadence.Apps.Imaging.Infrastructure.Persistence;
 using Cadence.Apps.Imaging.Infrastructure.Security;
@@ -18,6 +19,9 @@ builder.Services.AddCadenceSecurity();
 // CADENCE_IMAGING_DEID_PSEUDONYMIZATION_KEY, both required and validated at startup (#5399).
 builder.Services.AddSingleton<IClock>(SystemClock.Instance);
 builder.Services.AddImagingDeidentification();
+builder.Services.AddScoped<IImagingUnitOfWork, ImagingUnitOfWork>();
+builder.Services.AddScoped<IImagingQueryService, ImagingQueryService>();
+builder.Services.AddScoped<IImagingAdjudicationService, ImagingAdjudicationService>();
 builder.Services.AddScoped<IDicomIngestionService, DicomIngestionService>();
 builder.Services.AddScoped<IImagingSegmentationService, ImagingSegmentationService>();
 builder.AddCadencePostgresDbContext<ImagingDbContext>();

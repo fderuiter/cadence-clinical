@@ -4,6 +4,7 @@ using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
 
+using Cadence.Apps.Payments.Application.Services;
 using Cadence.Apps.Payments.Domain;
 using Cadence.Apps.Payments.Endpoints;
 using Cadence.Apps.Payments.Infrastructure.Persistence;
@@ -41,6 +42,15 @@ public class ParticipantStipendDisbursementTests
         return dbContext;
     }
 
+    private static StipendApplicationService CreateStipendService(PaymentsDbContext db) =>
+        new(db, new PaymentsUnitOfWork(db), new WalletRowLockRepository(db), SystemClock.Instance);
+
+    private static TaxApplicationService CreateTaxService(PaymentsDbContext db) =>
+        new(db, new PaymentsUnitOfWork(db), new WalletRowLockRepository(db), SystemClock.Instance);
+
+    private static ExpenseApplicationService CreateExpenseService(PaymentsDbContext db) =>
+        new(db, new PaymentsUnitOfWork(db), new WalletRowLockRepository(db), SystemClock.Instance);
+
     [Fact]
     public async Task IngestVisitVerifiedEvent_WithinThreshold_CreditsWalletAndRecordsAudit()
     {
@@ -77,9 +87,8 @@ public class ParticipantStipendDisbursementTests
         );
 
         // Act
-        var result = await (Task<Microsoft.AspNetCore.Http.IResult>)typeof(PaymentEndpoints)
-            .GetMethod("IngestVisitVerifiedEvent", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!
-            .Invoke(null, [evt, dbContext, SiteCoordinatorContext()])!;
+        var result = await WalletEndpoints.IngestVisitVerifiedEvent(
+            evt, CreateStipendService(dbContext), SiteCoordinatorContext());
 
         // Assert
         result.Should().BeOfType<Ok<VisitVerificationResponseDto>>();
@@ -140,14 +149,11 @@ public class ParticipantStipendDisbursementTests
         );
 
         // Act 1: First call
-        await (Task<Microsoft.AspNetCore.Http.IResult>)typeof(PaymentEndpoints)
-            .GetMethod("IngestVisitVerifiedEvent", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!
-            .Invoke(null, [evt, dbContext, SiteCoordinatorContext()])!;
+        var stipendService = CreateStipendService(dbContext);
+        await WalletEndpoints.IngestVisitVerifiedEvent(evt, stipendService, SiteCoordinatorContext());
 
         // Act 2: Duplicate call with same EventId
-        var dupResult = await (Task<Microsoft.AspNetCore.Http.IResult>)typeof(PaymentEndpoints)
-            .GetMethod("IngestVisitVerifiedEvent", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!
-            .Invoke(null, [evt, dbContext, SiteCoordinatorContext()])!;
+        var dupResult = await WalletEndpoints.IngestVisitVerifiedEvent(evt, stipendService, SiteCoordinatorContext());
 
         // Assert
         dupResult.Should().BeOfType<Ok<VisitVerificationResponseDto>>();
@@ -221,9 +227,8 @@ public class ParticipantStipendDisbursementTests
         );
 
         // Act
-        var result = await (Task<Microsoft.AspNetCore.Http.IResult>)typeof(PaymentEndpoints)
-            .GetMethod("IngestVisitVerifiedEvent", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!
-            .Invoke(null, [evt, dbContext, SiteCoordinatorContext()])!;
+        var result = await WalletEndpoints.IngestVisitVerifiedEvent(
+            evt, CreateStipendService(dbContext), SiteCoordinatorContext());
 
         // Assert
         result.Should().BeOfType<Ok<VisitVerificationResponseDto>>();
@@ -277,9 +282,8 @@ public class ParticipantStipendDisbursementTests
         );
 
         // Act
-        var result = await (Task<Microsoft.AspNetCore.Http.IResult>)typeof(PaymentEndpoints)
-            .GetMethod("IngestVisitVerifiedEvent", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!
-            .Invoke(null, [evt, dbContext, SiteCoordinatorContext()])!;
+        var result = await WalletEndpoints.IngestVisitVerifiedEvent(
+            evt, CreateStipendService(dbContext), SiteCoordinatorContext());
 
         // Assert
         result.Should().BeOfType<Ok<VisitVerificationResponseDto>>();
@@ -329,9 +333,8 @@ public class ParticipantStipendDisbursementTests
         );
 
         // Act
-        var result = await (Task<Microsoft.AspNetCore.Http.IResult>)typeof(PaymentEndpoints)
-            .GetMethod("IngestVisitVerifiedEvent", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!
-            .Invoke(null, [evt, dbContext, SiteCoordinatorContext()])!;
+        var result = await WalletEndpoints.IngestVisitVerifiedEvent(
+            evt, CreateStipendService(dbContext), SiteCoordinatorContext());
 
         // Assert
         result.Should().BeOfType<Ok<VisitVerificationResponseDto>>();
@@ -366,9 +369,8 @@ public class ParticipantStipendDisbursementTests
         );
 
         // Act
-        var result = await (Task<Microsoft.AspNetCore.Http.IResult>)typeof(PaymentEndpoints)
-            .GetMethod("DisburseStipendDirect", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!
-            .Invoke(null, [req, dbContext, SiteCoordinatorContext()])!;
+        var result = await WalletEndpoints.DisburseStipendDirect(
+            req, CreateStipendService(dbContext), SiteCoordinatorContext());
 
         // Assert
         result.Should().BeOfType<Ok<DisburseStipendResponse>>();
@@ -408,29 +410,25 @@ public class ParticipantStipendDisbursementTests
             "pi-1", TestSecurityContext.AllStudies, ["SITE-101"], "investigator");
         var secondReviewerContext = new DefaultHttpContext { User = secondReviewer };
 
-        var disburseMethod = typeof(PaymentEndpoints)
-            .GetMethod("DisburseStipendDirect", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!;
-        var submitW9Method = typeof(PaymentEndpoints)
-            .GetMethod("SubmitW9Form", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!;
-        var verifyW9Method = typeof(PaymentEndpoints)
-            .GetMethod("VerifyW9Form", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!;
+        var stipendService = CreateStipendService(dbContext);
+        var taxService = CreateTaxService(dbContext);
 
         // 1. Negative or zero stipend amounts fail with 400 Bad Request
         var negReq = new DisburseStipendRequest("SUBJ-GUARD-01", "STUDY-DCT-001", "SITE-101", 1, null, null, -10.00m, "k-neg", null);
-        var negResult = await (Task<Microsoft.AspNetCore.Http.IResult>)disburseMethod.Invoke(null, [negReq, dbContext, SiteCoordinatorContext()])!;
+        var negResult = await WalletEndpoints.DisburseStipendDirect(negReq, stipendService, SiteCoordinatorContext());
         negResult.Should().BeAssignableTo<Microsoft.AspNetCore.Http.IStatusCodeHttpResult>()
             .Which.StatusCode.Should().Be(400);
 
         // 2. Short idempotency key "1" on Subject A does NOT collide with Subject B (even when Subject A's audit JSON contains "1")
         var subjAReq = new DisburseStipendRequest("SUBJ-GUARD-A", "STUDY-DCT-001", "SITE-101", 1, "A-1", "D-1", 50.00m, "1", null);
-        var subjARes = await (Task<Microsoft.AspNetCore.Http.IResult>)disburseMethod.Invoke(null, [subjAReq, dbContext, SiteCoordinatorContext()])!;
+        var subjARes = await WalletEndpoints.DisburseStipendDirect(subjAReq, stipendService, SiteCoordinatorContext());
         subjARes.Should().BeOfType<Ok<DisburseStipendResponse>>().Which.Value!.Status.Should().Be("COMPLETED");
 
-        var subjAReplay = await (Task<Microsoft.AspNetCore.Http.IResult>)disburseMethod.Invoke(null, [subjAReq, dbContext, SiteCoordinatorContext()])!;
+        var subjAReplay = await WalletEndpoints.DisburseStipendDirect(subjAReq, stipendService, SiteCoordinatorContext());
         subjAReplay.Should().BeOfType<Ok<DisburseStipendResponse>>().Which.Value!.Status.Should().Be("DUPLICATE_SKIPPED");
 
         var subjBReq = new DisburseStipendRequest("SUBJ-GUARD-B", "STUDY-DCT-001", "SITE-101", 1, "A-1", "D-1", 50.00m, "1", null);
-        var subjBRes = await (Task<Microsoft.AspNetCore.Http.IResult>)disburseMethod.Invoke(null, [subjBReq, dbContext, SiteCoordinatorContext()])!;
+        var subjBRes = await WalletEndpoints.DisburseStipendDirect(subjBReq, stipendService, SiteCoordinatorContext());
         subjBRes.Should().BeOfType<Ok<DisburseStipendResponse>>().Which.Value!.Status.Should().Be("COMPLETED");
 
         // 3. Stipend reaching $600 YTD without verified W-9 is rejected with 409 Conflict; once dual-verified, it succeeds and sets Is1099ThresholdExceeded
@@ -440,29 +438,29 @@ public class ParticipantStipendDisbursementTests
         await dbContext.SaveChangesAsync(ct);
 
         var overCapReq = new DisburseStipendRequest("SUBJ-GUARD-B", "STUDY-DCT-001", "SITE-101", 2, null, null, 650.00m, "k-cap", null);
-        var overCapRes = await (Task<Microsoft.AspNetCore.Http.IResult>)disburseMethod.Invoke(null, [overCapReq, dbContext, SiteCoordinatorContext()])!;
+        var overCapRes = await WalletEndpoints.DisburseStipendDirect(overCapReq, stipendService, SiteCoordinatorContext());
         overCapRes.Should().BeAssignableTo<Microsoft.AspNetCore.Http.IStatusCodeHttpResult>()
             .Which.StatusCode.Should().Be(422);
 
         var reach600Req = new DisburseStipendRequest("SUBJ-GUARD-B", "STUDY-DCT-001", "SITE-101", 3, null, null, 550.00m, "k-600", null);
-        var holdRes = await (Task<Microsoft.AspNetCore.Http.IResult>)disburseMethod.Invoke(null, [reach600Req, dbContext, SiteCoordinatorContext()])!;
+        var holdRes = await WalletEndpoints.DisburseStipendDirect(reach600Req, stipendService, SiteCoordinatorContext());
         holdRes.Should().BeAssignableTo<Microsoft.AspNetCore.Http.IStatusCodeHttpResult>()
             .Which.StatusCode.Should().Be(409);
 
-        var submitRes = await (Task<Microsoft.AspNetCore.Http.IResult>)submitW9Method.Invoke(
-            null, [walletB.Id, new SubmitW9RequestDto("Participant B", "4321", "100 Clinical Way", true), dbContext, SiteCoordinatorContext()])!;
+        var submitRes = await TaxEndpoints.SubmitW9Form(
+            walletB.Id, new SubmitW9RequestDto("Participant B", "4321", "100 Clinical Way", true), taxService, SiteCoordinatorContext());
         submitRes.Should().BeOfType<Ok<WalletResponse>>();
 
-        var selfVerifyRes = await (Task<Microsoft.AspNetCore.Http.IResult>)verifyW9Method.Invoke(
-            null, [walletB.Id, new VerifyW9RequestDto("self-verify"), dbContext, SiteCoordinatorContext()])!;
+        var selfVerifyRes = await TaxEndpoints.VerifyW9Form(
+            walletB.Id, new VerifyW9RequestDto("self-verify"), taxService, SiteCoordinatorContext());
         selfVerifyRes.Should().BeAssignableTo<Microsoft.AspNetCore.Http.IStatusCodeHttpResult>()
             .Which.StatusCode.Should().Be(409);
 
-        var dualVerifyRes = await (Task<Microsoft.AspNetCore.Http.IResult>)verifyW9Method.Invoke(
-            null, [walletB.Id, new VerifyW9RequestDto("dual-verify"), dbContext, secondReviewerContext])!;
+        var dualVerifyRes = await TaxEndpoints.VerifyW9Form(
+            walletB.Id, new VerifyW9RequestDto("dual-verify"), taxService, secondReviewerContext);
         dualVerifyRes.Should().BeOfType<Ok<WalletResponse>>().Which.Value!.W9Status.Should().Be("VERIFIED");
 
-        var unlockedRes = await (Task<Microsoft.AspNetCore.Http.IResult>)disburseMethod.Invoke(null, [reach600Req, dbContext, SiteCoordinatorContext()])!;
+        var unlockedRes = await WalletEndpoints.DisburseStipendDirect(reach600Req, stipendService, SiteCoordinatorContext());
         unlockedRes.Should().BeOfType<Ok<DisburseStipendResponse>>().Which.Value!.NewBalance.Should().Be(600.00m);
 
         var refreshedWalletB = await dbContext.ParticipantWallets.AsNoTracking().SingleAsync(w => w.Id == walletB.Id, ct);
@@ -529,9 +527,8 @@ public class ParticipantStipendDisbursementTests
         );
 
         // Act
-        var result = await (Task<Microsoft.AspNetCore.Http.IResult>)typeof(PaymentEndpoints)
-            .GetMethod("ReviewExpenseClaim", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!
-            .Invoke(null, ["claim-001", reviewReq, dbContext, SiteCoordinatorContext()])!;
+        var result = await ExpenseEndpoints.ReviewExpenseClaim(
+            "claim-001", reviewReq, CreateExpenseService(dbContext), SiteCoordinatorContext());
 
         // Assert
         result.Should().BeOfType<Ok<ParticipantExpenseClaim>>();

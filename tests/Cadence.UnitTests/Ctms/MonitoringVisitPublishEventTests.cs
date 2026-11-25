@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 
+using Cadence.Apps.Ctms.Application.Services;
 using Cadence.Apps.Ctms.Domain;
 using Cadence.Apps.Ctms.Endpoints;
 using Cadence.Apps.Ctms.Infrastructure.Persistence;
@@ -81,7 +82,7 @@ public sealed class MonitoringVisitPublishEventTests
         var publishEndpoint = Substitute.For<IPublishEndpoint>();
 
         var result = await MonitoringVisitEndpoints.SignOffMonitoringVisitAsync(
-            visit.Id, _db, caller, _clock, TestContext.Current.CancellationToken, publishEndpoint);
+            visit.Id, new MonitoringVisitApplicationService(_db, new CtmsUnitOfWork(_db), _clock), caller, TestContext.Current.CancellationToken, publishEndpoint);
 
         var ok = result.Should().BeOfType<Ok<MonitoringVisitResponseDto>>().Subject;
         ok.Value.Should().NotBeNull();
