@@ -107,11 +107,11 @@ every table, column, key, index, and check constraint per module without volatil
 
 ## Troubleshooting
 
-| Symptom                                                         | Cause                                                                     | Fix                                                                       |
-| --------------------------------------------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| `PendingModelChangesWarning` at startup or `schema-doc` failure | Model changed without a migration                                         | Run `pnpm cadence migrations add <module> <MigrationName>`                |
-| `missing its '*.Designer.cs' companion`                         | Hand-authored migration committed without EF Core `.Designer.cs` metadata | Scaffold via `pnpm cadence migrations add` so `.Designer.cs` is generated |
-| `duplicates CreateTable` / `duplicates AddColumn`               | Parallel branches added migrations creating the same table or column      | Re-scaffold the later branch's migration on top of the merged snapshot    |
-| `relation ... already exists`                                   | A local database created before ADR-2447 has tables in `public`           | Drop and recreate the local database (`docker compose down -v`)           |
-| Service exits with `No PostgreSQL connection string configured` | Neither connection key set outside Development                            | Set `ConnectionStrings__cadence`                                          |
-| `/healthz/ready` returns 503                                    | Database unreachable or credentials wrong                                 | Check connectivity from the service's network                             |
+| Symptom                                                         | Cause                                                                                     | Fix                                                                       |
+| --------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `PendingModelChangesWarning` at startup or `schema-doc` failure | Model changed without a migration                                                         | Run `pnpm cadence migrations add <module> <MigrationName>`                |
+| `missing its '*.Designer.cs' companion`                         | Hand-authored migration committed without EF Core `.Designer.cs` metadata                 | Scaffold via `pnpm cadence migrations add` so `.Designer.cs` is generated |
+| `duplicates CreateTable` / `duplicates AddColumn`               | Parallel branches added migrations creating the same table or column                      | Re-scaffold the later branch's migration on top of the merged snapshot    |
+| `relation ... already exists`                                   | A local database created before ADR-2447 has tables in `public`                           | Drop and recreate the local database (`docker compose down -v`)           |
+| Service exits with `No PostgreSQL connection string configured` | Neither connection key set (`ConnectionStrings__cadence` or `POSTGRES_CONNECTION_STRING`) | Set `ConnectionStrings__cadence`                                          |
+| `/healthz/ready` returns 503                                    | Database unreachable or credentials wrong                                                 | Check connectivity from the service's network                             |

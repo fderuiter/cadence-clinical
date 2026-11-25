@@ -414,4 +414,43 @@ public sealed class DocIndexSyncServiceTests : IDisposable
         afterRevertIndex.Should().NotContain("blog/2026-11-19-milestone.md");
         afterRevertIndex.Should().Contain("blog/index.md");
     }
+
+    [Fact]
+    public void SyncDocIndex_CheckMode_FailsWhenExplicitDocumentStatusHeaderDriftsFromIndex()
+    {
+        string docsDir = Path.Combine(_tempDir, "docs");
+        string uxDir = Path.Combine(docsDir, "ux");
+        string kernelDir = Path.Combine(docsDir, "kernel");
+        Directory.CreateDirectory(uxDir);
+        Directory.CreateDirectory(kernelDir);
+
+        string canvasPath = Path.Combine(uxDir, "CLINICAL_CANVAS.md");
+        File.WriteAllText(
+            canvasPath,
+            "# Clinical Canvas\n\n| | |\n| --- | --- |\n| **Status** | Proposed. Direction for all new Cadence UI. |\n\n## 1. Overview\n");
+        File.WriteAllText(
+            Path.Combine(kernelDir, "CLINICAL_KERNEL_SPECIFICATION.md"),
+            "# Kernel Specification v0.2\n\n| | |\n| --- | --- |\n| **Status** | Proposed. Normative once accepted (then v1.0). |\n\n## 0. North Star\n");
+
+        File.WriteAllText(
+            Path.Combine(docsDir, "DOCUMENTATION_INDEX.md"),
+            """
+            # Documentation Index
+
+            ## Kernel and roadmap
+
+            | Document | Status | What it is |
+            | --- | --- | --- |
+            | [Kernel specification v0.2](kernel/CLINICAL_KERNEL_SPECIFICATION.md) | Normative | The model every capability builds on |
+            | [Clinical Canvas](ux/CLINICAL_CANVAS.md) | Current | UI interaction model |
+            """);
+
+        DocIndexSyncService.SyncDocIndex(check: true, repoRoot: _tempDir).Should().Be(1);
+
+        File.WriteAllText(
+            canvasPath,
+            "# Clinical Canvas\n\n| | |\n| --- | --- |\n| **Status** | Current. Direction for all new Cadence UI. |\n\n## 1. Overview\n");
+
+        DocIndexSyncService.SyncDocIndex(check: true, repoRoot: _tempDir).Should().Be(0);
+    }
 }

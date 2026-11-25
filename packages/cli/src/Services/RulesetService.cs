@@ -143,7 +143,7 @@ public static partial class RulesetService
     {
         if (string.IsNullOrWhiteSpace(rawProfile))
         {
-            normalizedProfile = PausedActionsProfile;
+            normalizedProfile = ActiveActionsProfile;
             return true;
         }
 
@@ -196,9 +196,10 @@ public static partial class RulesetService
 
     /// <summary>
     /// Validates declarative rulesets (or <c>CI Gate</c> workflow coverage when <c>.github/rulesets</c> is absent in
-    /// <paramref name="dryRun"/> mode) and either previews (<paramref name="dryRun"/>) or reconciles them to GitHub
-    /// Repository Rulesets using <c>gh api</c> under <paramref name="profile"/> (<c>paused-actions</c> by default, or
-    /// <c>active-actions</c>). Fails with exit code <c>1</c> on validation or API errors.
+    /// <paramref name="dryRun"/> mode) and previews (<paramref name="dryRun"/>), audits live GitHub state without
+    /// mutating (<paramref name="verifyLive"/>), or reconciles rulesets to GitHub Repository Rulesets using <c>gh api</c>
+    /// under <paramref name="profile"/> (<c>active-actions</c> by default, or <c>paused-actions</c>). Fails with exit
+    /// code <c>1</c> on validation, drift, or API errors.
     /// </summary>
     public static int Sync(
         string? repoRoot = null,
@@ -207,17 +208,24 @@ public static partial class RulesetService
         ProcessRunner? runner = null,
         Func<string, string?>? environment = null,
         TextWriter? output = null,
-        string? profile = null)
+        string? profile = null,
+        bool verifyLive = false)
     {
         repoRoot ??= QualityGateOrchestrator.FindRepoRoot();
         runner ??= DefaultProcessRunner;
         environment ??= Environment.GetEnvironmentVariable;
         output ??= Console.Out;
 
+        if (dryRun && verifyLive)
+        {
+            output.WriteLine($"{Tag} [ERROR] Options '--dry-run' and '--verify-live' cannot be used together.");
+            return 1;
+        }
+
         if (!TryNormalizeProfile(profile, out string normalizedProfile))
         {
             output.WriteLine(
-                $"{Tag} [ERROR] Unsupported ruleset profile '{profile}'. Expected '{PausedActionsProfile}' or '{ActiveActionsProfile}'.");
+                $"{Tag} [ERROR] Unsupported ruleset profile '{profile}'. Expected '{ActiveActionsProfile}' or '{PausedActionsProfile}'.");
             return 1;
         }
 
@@ -253,6 +261,11 @@ public static partial class RulesetService
         {
             WriteDryRunPreview(repoRoot, repo, normalizedProfile, definitions, output);
             return 0;
+        }
+
+        if (verifyLive)
+        {
+            return VerifyLiveRulesetsViaGhApi(repoRoot, repo, normalizedProfile, definitions, runner, output);
         }
 
         return ApplyRulesetsViaGhApi(repoRoot, repo, normalizedProfile, definitions, runner, output);
@@ -526,12 +539,368 @@ public static partial class RulesetService
         }
     }
 
+    private static int VerifyLiveRulesetsViaGhApi(
+        string repoRoot,
+        string repo,
+        string profile,
+        IReadOnlyList<RulesetDefinition> definitions,
+        ProcessRunner runner,
+        TextWriter output)
+    {
+        var listOutcome = runner(repoRoot, "gh", ["api", "--paginate", $"repos/{repo}/rulesets?per_page=100"]);
+        if (listOutcome.ExitCode != 0)
+        {
+            output.WriteLine($"{Tag} [ERROR] Failed to fetch existing rulesets from 'repos/{repo}/rulesets' (exit code {listOutcome.ExitCode}).");
+            WriteProcessDetails(listOutcome, output);
+            output.WriteLine($"{Tag} Ensure 'gh' is authenticated with read access to rulesets on '{repo}'.");
+            return 1;
+        }
+
+        if (!TryParseExistingRulesetEntries(listOutcome.Stdout, out var remoteEntries, out string? parseError))
+        {
+            output.WriteLine($"{Tag} [ERROR] Could not parse GitHub rulesets API response: {parseError}");
+            return 1;
+        }
+
+        var driftErrors = new List<string>();
+        var idsByName = new Dictionary<string, List<long>>(StringComparer.Ordinal);
+        foreach (var (id, name) in remoteEntries)
+        {
+            if (!idsByName.TryGetValue(name, out var ids))
+            {
+                ids = [];
+                idsByName[name] = ids;
+            }
+
+            ids.Add(id);
+        }
+
+        foreach (var def in definitions)
+        {
+            string relPath = Path.GetRelativePath(repoRoot, def.FullPath).Replace('\\', '/');
+            if (!idsByName.TryGetValue(def.Name, out var matchingIds) || matchingIds.Count == 0)
+            {
+                driftErrors.Add($"Live GitHub repository '{repo}' is missing ruleset '{def.Name}' (declared in '{relPath}').");
+                continue;
+            }
+
+            if (matchingIds.Count > 1)
+            {
+                driftErrors.Add($"Live GitHub repository '{repo}' has {matchingIds.Count} duplicate rulesets named '{def.Name}' (ids: {string.Join(", ", matchingIds)}).");
+                continue;
+            }
+
+            long rulesetId = matchingIds[0];
+            string endpoint = $"repos/{repo}/rulesets/{rulesetId}";
+            var detailOutcome = runner(repoRoot, "gh", ["api", endpoint]);
+            if (detailOutcome.ExitCode != 0)
+            {
+                output.WriteLine($"{Tag} [ERROR] Failed to fetch live ruleset '{def.Name}' (id {rulesetId}) from '{endpoint}' (exit code {detailOutcome.ExitCode}).");
+                WriteProcessDetails(detailOutcome, output);
+                return 1;
+            }
+
+            JsonDocument remoteDoc;
+            try
+            {
+                remoteDoc = JsonDocument.Parse(detailOutcome.Stdout);
+            }
+            catch (JsonException ex)
+            {
+                output.WriteLine($"{Tag} [ERROR] Could not parse live ruleset '{def.Name}' (id {rulesetId}) JSON from '{endpoint}': {ex.Message}");
+                return 1;
+            }
+
+            using (remoteDoc)
+            {
+                if (remoteDoc.RootElement.ValueKind != JsonValueKind.Object)
+                {
+                    output.WriteLine($"{Tag} [ERROR] Expected JSON object for live ruleset '{def.Name}' (id {rulesetId}), got {remoteDoc.RootElement.ValueKind}.");
+                    return 1;
+                }
+
+                string projectedJson = ProjectRulesetPayloadForProfile(File.ReadAllText(def.FullPath), profile);
+                using var expectedDoc = JsonDocument.Parse(projectedJson);
+                CompareProjectedAndLiveRuleset(def.Name, rulesetId, profile, expectedDoc.RootElement, remoteDoc.RootElement, driftErrors);
+            }
+        }
+
+        if (driftErrors.Count > 0)
+        {
+            WriteErrors(driftErrors, output);
+            return 1;
+        }
+
+        output.WriteLine($"{Tag} ✔ Verified {definitions.Count} live GitHub rulesets on '{repo}' match local profile '{profile}'.");
+        return 0;
+    }
+
+    private static void CompareProjectedAndLiveRuleset(
+        string name,
+        long rulesetId,
+        string profile,
+        JsonElement expected,
+        JsonElement actual,
+        List<string> driftErrors)
+    {
+        string prefix = $"Live ruleset '{name}' (id {rulesetId})";
+
+        string expectedTarget = GetStringProperty(expected, "target") ?? "";
+        string actualTarget = GetStringProperty(actual, "target") ?? "";
+        if (!string.Equals(expectedTarget, actualTarget, StringComparison.Ordinal))
+        {
+            driftErrors.Add($"{prefix}: 'target' is '{actualTarget}', expected '{expectedTarget}'.");
+        }
+
+        string expectedEnforcement = GetStringProperty(expected, "enforcement") ?? "";
+        string actualEnforcement = GetStringProperty(actual, "enforcement") ?? "";
+        if (!string.Equals(expectedEnforcement, actualEnforcement, StringComparison.Ordinal))
+        {
+            driftErrors.Add($"{prefix}: 'enforcement' is '{actualEnforcement}', expected '{expectedEnforcement}'.");
+        }
+
+        CompareStringSet(
+            $"{prefix}: 'conditions.ref_name.include'",
+            ReadRefConditionList(expected, "include"),
+            ReadRefConditionList(actual, "include"),
+            driftErrors);
+        CompareStringSet(
+            $"{prefix}: 'conditions.ref_name.exclude'",
+            ReadRefConditionList(expected, "exclude"),
+            ReadRefConditionList(actual, "exclude"),
+            driftErrors);
+
+        var parseBypassErrors = new List<string>();
+        var expectedActors = ReadBypassActors(expected, prefix, parseBypassErrors)
+            .Select(a => $"{a.ActorType}:{a.ActorId?.ToString() ?? "null"}:{a.BypassMode}")
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+        var actualActors = ReadBypassActors(actual, prefix, parseBypassErrors)
+            .Select(a => $"{a.ActorType}:{a.ActorId?.ToString() ?? "null"}:{a.BypassMode}")
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+        if (!expectedActors.SequenceEqual(actualActors, StringComparer.Ordinal))
+        {
+            driftErrors.Add(
+                $"{prefix}: 'bypass_actors' is [{string.Join(", ", actualActors)}], expected [{string.Join(", ", expectedActors)}].");
+        }
+
+        var expectedRules = IndexRulesByType(expected);
+        var actualRules = IndexRulesByType(actual);
+
+        string[] missingRules = expectedRules.Keys
+            .Where(t => !actualRules.ContainsKey(t))
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+        if (missingRules.Length > 0)
+        {
+            driftErrors.Add(
+                $"{prefix}: missing required rule(s) [{string.Join(", ", missingRules)}] for profile '{profile}'.");
+        }
+
+        string[] extraRules = actualRules.Keys
+            .Where(t => !expectedRules.ContainsKey(t))
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+        if (extraRules.Length > 0)
+        {
+            driftErrors.Add(
+                $"{prefix}: enables unexpected rule(s) [{string.Join(", ", extraRules)}] not present in profile '{profile}'.");
+        }
+
+        foreach (var (ruleType, expectedRule) in expectedRules.OrderBy(kvp => kvp.Key, StringComparer.Ordinal))
+        {
+            if (!actualRules.TryGetValue(ruleType, out JsonElement actualRule))
+            {
+                continue;
+            }
+
+            if (!expectedRule.TryGetProperty("parameters", out JsonElement expectedParams) ||
+                expectedParams.ValueKind != JsonValueKind.Object)
+            {
+                continue;
+            }
+
+            if (!actualRule.TryGetProperty("parameters", out JsonElement actualParams) ||
+                actualParams.ValueKind != JsonValueKind.Object)
+            {
+                driftErrors.Add($"{prefix}: rule '{ruleType}' is missing 'parameters' object.");
+                continue;
+            }
+
+            foreach (JsonProperty expectedProp in expectedParams.EnumerateObject())
+            {
+                if (ruleType == "required_status_checks" && expectedProp.NameEquals("required_status_checks"))
+                {
+                    CompareStatusCheckLists(prefix, expectedProp.Value, actualParams, driftErrors);
+                    continue;
+                }
+
+                if (!actualParams.TryGetProperty(expectedProp.Name, out JsonElement actualVal))
+                {
+                    if (expectedProp.NameEquals("do_not_enforce_on_create") && expectedProp.Value.ValueKind == JsonValueKind.False)
+                    {
+                        continue;
+                    }
+
+                    driftErrors.Add($"{prefix}: rule '{ruleType}' is missing parameter '{expectedProp.Name}'.");
+                    continue;
+                }
+
+                if (!JsonScalarEquals(expectedProp.Value, actualVal))
+                {
+                    driftErrors.Add(
+                        $"{prefix}: rule '{ruleType}' parameter '{expectedProp.Name}' is '{FormatJsonScalar(actualVal)}', expected '{FormatJsonScalar(expectedProp.Value)}'.");
+                }
+            }
+        }
+    }
+
+    private static Dictionary<string, JsonElement> IndexRulesByType(JsonElement root)
+    {
+        var byType = new Dictionary<string, JsonElement>(StringComparer.Ordinal);
+        if (root.TryGetProperty("rules", out JsonElement rulesEl) && rulesEl.ValueKind == JsonValueKind.Array)
+        {
+            foreach (JsonElement rule in rulesEl.EnumerateArray())
+            {
+                if (rule.ValueKind == JsonValueKind.Object && GetStringProperty(rule, "type") is { Length: > 0 } type)
+                {
+                    byType[type] = rule;
+                }
+            }
+        }
+
+        return byType;
+    }
+
+    private static List<string> ReadRefConditionList(JsonElement root, string listProperty)
+    {
+        var refs = new List<string>();
+        if (root.TryGetProperty("conditions", out JsonElement cond)
+            && cond.ValueKind == JsonValueKind.Object
+            && cond.TryGetProperty("ref_name", out JsonElement refName)
+            && refName.ValueKind == JsonValueKind.Object
+            && refName.TryGetProperty(listProperty, out JsonElement arr)
+            && arr.ValueKind == JsonValueKind.Array)
+        {
+            foreach (JsonElement item in arr.EnumerateArray())
+            {
+                if (item.ValueKind == JsonValueKind.String && item.GetString() is { Length: > 0 } value)
+                {
+                    refs.Add(value);
+                }
+            }
+        }
+
+        return refs;
+    }
+
+    private static void CompareStringSet(
+        string label,
+        IReadOnlyList<string> expected,
+        IReadOnlyList<string> actual,
+        List<string> driftErrors)
+    {
+        string[] expectedSorted = [.. expected.Order(StringComparer.Ordinal)];
+        string[] actualSorted = [.. actual.Order(StringComparer.Ordinal)];
+        if (!expectedSorted.SequenceEqual(actualSorted, StringComparer.Ordinal))
+        {
+            driftErrors.Add(
+                $"{label} is [{string.Join(", ", actualSorted)}], expected [{string.Join(", ", expectedSorted)}].");
+        }
+    }
+
+    private static void CompareStatusCheckLists(
+        string prefix,
+        JsonElement expectedChecksArray,
+        JsonElement actualParams,
+        List<string> driftErrors)
+    {
+        if (!actualParams.TryGetProperty("required_status_checks", out JsonElement actualChecksArray) ||
+            actualChecksArray.ValueKind != JsonValueKind.Array)
+        {
+            driftErrors.Add($"{prefix}: rule 'required_status_checks' is missing 'required_status_checks' array.");
+            return;
+        }
+
+        static string[] FormatChecks(JsonElement arr)
+        {
+            var items = new List<string>();
+            if (arr.ValueKind == JsonValueKind.Array)
+            {
+                foreach (JsonElement check in arr.EnumerateArray())
+                {
+                    if (check.ValueKind != JsonValueKind.Object)
+                    {
+                        continue;
+                    }
+
+                    string ctx = GetStringProperty(check, "context") ?? "";
+                    string intId = check.TryGetProperty("integration_id", out JsonElement idEl) && idEl.TryGetInt64(out long id)
+                        ? id.ToString()
+                        : "null";
+                    items.Add($"{ctx}@{intId}");
+                }
+            }
+
+            return [.. items.Order(StringComparer.Ordinal)];
+        }
+
+        string[] expectedFormatted = FormatChecks(expectedChecksArray);
+        string[] actualFormatted = FormatChecks(actualChecksArray);
+        if (!expectedFormatted.SequenceEqual(actualFormatted, StringComparer.Ordinal))
+        {
+            driftErrors.Add(
+                $"{prefix}: 'required_status_checks' entries are [{string.Join(", ", actualFormatted)}], expected [{string.Join(", ", expectedFormatted)}].");
+        }
+    }
+
+    private static bool JsonScalarEquals(JsonElement expected, JsonElement actual)
+    {
+        if (expected.ValueKind != actual.ValueKind)
+        {
+            return false;
+        }
+
+        return expected.ValueKind switch
+        {
+            JsonValueKind.True or JsonValueKind.False or JsonValueKind.Null => true,
+            JsonValueKind.String => string.Equals(expected.GetString(), actual.GetString(), StringComparison.Ordinal),
+            JsonValueKind.Number => expected.TryGetInt64(out long expLong) && actual.TryGetInt64(out long actLong)
+                ? expLong == actLong
+                : string.Equals(expected.GetRawText(), actual.GetRawText(), StringComparison.Ordinal),
+            _ => string.Equals(expected.GetRawText(), actual.GetRawText(), StringComparison.Ordinal),
+        };
+    }
+
+    private static string FormatJsonScalar(JsonElement element) =>
+        element.ValueKind == JsonValueKind.String ? element.GetString() ?? "" : element.GetRawText();
+
     private static bool TryParseExistingRulesets(
         string json,
         out Dictionary<string, long> rulesetsByName,
         out string? error)
     {
         rulesetsByName = new Dictionary<string, long>(StringComparer.Ordinal);
+        if (!TryParseExistingRulesetEntries(json, out var entries, out error))
+        {
+            return false;
+        }
+
+        foreach (var (id, name) in entries)
+        {
+            rulesetsByName[name] = id;
+        }
+
+        return true;
+    }
+
+    private static bool TryParseExistingRulesetEntries(
+        string json,
+        out List<(long Id, string Name)> entries,
+        out string? error)
+    {
+        entries = [];
         error = null;
 
         if (string.IsNullOrWhiteSpace(json))
@@ -556,7 +925,7 @@ public static partial class RulesetService
                 }
 
                 parsedAnyArray = true;
-                CollectRulesetIds(doc.RootElement, rulesetsByName);
+                CollectRulesetEntries(doc.RootElement, entries);
             }
 
             if (!parsedAnyArray)
@@ -574,13 +943,13 @@ public static partial class RulesetService
         }
     }
 
-    private static void CollectRulesetIds(JsonElement arrayElement, Dictionary<string, long> rulesetsByName)
+    private static void CollectRulesetEntries(JsonElement arrayElement, List<(long Id, string Name)> entries)
     {
         foreach (JsonElement item in arrayElement.EnumerateArray())
         {
             if (item.ValueKind == JsonValueKind.Array)
             {
-                CollectRulesetIds(item, rulesetsByName);
+                CollectRulesetEntries(item, entries);
                 continue;
             }
 
@@ -591,7 +960,7 @@ public static partial class RulesetService
                 && idEl.TryGetInt64(out long id)
                 && nameEl.GetString() is { Length: > 0 } name)
             {
-                rulesetsByName[name] = id;
+                entries.Add((id, name));
             }
         }
     }

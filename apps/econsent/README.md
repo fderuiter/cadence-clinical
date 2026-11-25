@@ -28,7 +28,7 @@ Publishing a template needs `econsent_template:publish` (sponsor data management
 
 ## Persistence
 
-`AddCadencePostgresDbContext<EconsentDbContext>()` from [packages/database](../../packages/database/README.md) connects to the shared `cadence` database with its search path set to the `econsent` schema ([ADR-2447](../../docs/adr/2026-09-29-module-schemas-via-search-path-and-migration-deployment.md)). The connection string comes from `ConnectionStrings:cadence`, then `POSTGRES_CONNECTION_STRING`; only the Development environment falls back to `cadence` on `localhost:5432`, and other environments fail at startup. `docker/docker-compose.yml` points it at the compose PostgreSQL and sets `Database__MigrateOnStartup=true`, so the service applies its migrations when it starts.
+`AddCadencePostgresDbContext<EconsentDbContext>()` from [packages/database](../../packages/database/README.md) connects to the shared `cadence` database with its search path set to the `econsent` schema ([ADR-2447](../../docs/adr/2026-09-29-module-schemas-via-search-path-and-migration-deployment.md)). The connection string comes from `ConnectionStrings:cadence`, then `POSTGRES_CONNECTION_STRING`; there is no built-in default in any environment, and startup fails when neither is set ([ADR-2260](../../docs/adr/2026-09-29-no-default-credentials-and-fail-closed-secret-resolution.md)). `docker/docker-compose.yml` points it at the compose PostgreSQL and sets `Database__MigrateOnStartup=true`, so the service applies its migrations when it starts.
 
 ## Key dependencies
 

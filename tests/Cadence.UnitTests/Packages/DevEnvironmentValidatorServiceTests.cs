@@ -105,6 +105,28 @@ public sealed class DevEnvironmentValidatorServiceTests : IDisposable
         DevEnvironmentValidatorService.ValidateDevEnvironment(_tempRoot).Should().Be(1);
     }
 
+    [Theory]
+    [InlineData("apps/payments/README.md", "there is no built-in default in any environment, and startup fails when neither is set", "falls back to a local PostgreSQL 18 instance on `localhost:5432` in `Development`")]
+    [InlineData("apps/payments/README.md", "FIELD_ENCRYPTION_KEY", "OMITTED_KEY")]
+    [InlineData("apps/interop/README.md", "CADENCE_SCE_SIGNING_KEY", "OMITTED_KEY")]
+    [InlineData("apps/execution/README.md", "RANDOMIZATION_ALLOCATION_KEY", "OMITTED_KEY")]
+    public void ValidateDevEnvironment_WhenServiceReadmeReintroducesFallbackOrOmitsStartupKeys_FailsClosed(
+        string relativeReadmePath,
+        string originalFragment,
+        string mutatedFragment)
+    {
+        string realRoot = FindRepoRoot();
+        CloneMinimalDevEnvWorkspace(realRoot, _tempRoot);
+        CopyRelativeFile(realRoot, _tempRoot, relativeReadmePath);
+
+        string readmePath = Path.Combine(_tempRoot, relativeReadmePath.Replace('/', Path.DirectorySeparatorChar));
+        string content = File.ReadAllText(readmePath);
+        content.Should().Contain(originalFragment);
+        File.WriteAllText(readmePath, content.Replace(originalFragment, mutatedFragment, StringComparison.Ordinal));
+
+        DevEnvironmentValidatorService.ValidateDevEnvironment(_tempRoot).Should().Be(1);
+    }
+
     [Fact]
     public void ValidateDevEnvironment_ParsesMultiPortSlashCellsAndDetectsFrontendDocDrift()
     {

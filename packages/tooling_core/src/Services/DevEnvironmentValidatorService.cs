@@ -29,6 +29,22 @@ public static partial class DevEnvironmentValidatorService
         "CGT_BARCODE_HMAC_KEY",
     ];
 
+    private static readonly Dictionary<string, string[]> RequiredServiceRunLocallyExtraKeys = new(StringComparer.Ordinal)
+    {
+        ["econsent"] = ["FIELD_ENCRYPTION_KEY", "CADENCE_BIOMETRIC_LIVENESS_KEY"],
+        ["execution"] = ["AUDIT_LOG_SECRET_KEY", "DemographicsEncryption__KeyBase64", "RANDOMIZATION_ALLOCATION_KEY", "CGT_BARCODE_HMAC_KEY"],
+        ["imaging"] = ["CADENCE_IMAGING_DEID_SIGNING_KEY", "CADENCE_IMAGING_DEID_PSEUDONYMIZATION_KEY"],
+        ["interop"] = ["AUDIT_LOG_SECRET_KEY", "FIELD_LOOKUP_HASH_KEY", "CADENCE_SCE_SIGNING_KEY"],
+        ["kernel-api"] = ["CADENCE_BIOMETRIC_LIVENESS_KEY"],
+        ["payments"] = ["AUDIT_LOG_SECRET_KEY", "FIELD_ENCRYPTION_KEY"],
+    };
+
+    [GeneratedRegex(@"(?:falls\s+back|fallback)[^\r\n.]{0,140}(?:localhost:5432|local\s+(?:PostgreSQL|Postgres|database))|Neither\s+connection\s+key\s+set\s+outside\s+`?Development`?|fails\s+outside\s+`?Development`?\s+when\s+neither\s+is\s+set", RegexOptions.IgnoreCase)]
+    private static partial Regex StalePostgresFallbackRegex();
+
+    [GeneratedRegex(@"^##\s+Run\s+locally\b(?<body>[\s\S]*?)(?=^##\s+|\z)", RegexOptions.Multiline)]
+    private static partial Regex RunLocallySectionRegex();
+
     [GeneratedRegex(@"GetServiceUrl\s*\(\s*""([^""]+)""\s*,\s*(\d+)\s*\)")]
     private static partial Regex GatewayServiceUrlRegex();
 
@@ -246,6 +262,73 @@ public static partial class DevEnvironmentValidatorService
             {
                 Console.WriteLine($"[ERROR] {relativeDocPath} Option C standalone startup instructions omit required key '{requiredKey}'.");
                 ok = false;
+            }
+        }
+
+        var docStaleFallback = StalePostgresFallbackRegex().Match(docContent);
+        if (docStaleFallback.Success)
+        {
+            Console.WriteLine($"[ERROR] {relativeDocPath} contains stale Development PostgreSQL fallback claim ('{docStaleFallback.Value}').");
+            ok = false;
+        }
+
+        ok &= ValidateServiceReadmes(repoRoot, topology);
+
+        return ok;
+    }
+
+    private static bool ValidateServiceReadmes(string repoRoot, CodeMetadataCatalog.TopologySnapshot topology)
+    {
+        bool ok = true;
+
+        foreach (var svc in topology.Services)
+        {
+            string relReadmePath = $"apps/{svc.Directory}/README.md";
+            string fullReadmePath = Path.Combine(repoRoot, "apps", svc.Directory, "README.md");
+            if (!File.Exists(fullReadmePath))
+            {
+                continue;
+            }
+
+            string readmeText = File.ReadAllText(fullReadmePath);
+            var staleMatch = StalePostgresFallbackRegex().Match(readmeText);
+            if (staleMatch.Success)
+            {
+                Console.WriteLine($"[ERROR] {relReadmePath} contains stale Development PostgreSQL fallback claim ('{staleMatch.Value}'). AddCadenceNpgsql fails closed in every environment.");
+                ok = false;
+            }
+
+            var runLocallyMatch = RunLocallySectionRegex().Match(readmeText);
+            if (!runLocallyMatch.Success)
+            {
+                Console.WriteLine($"[ERROR] {relReadmePath} is missing a '## Run locally' section.");
+                ok = false;
+                continue;
+            }
+
+            string runLocallyBody = runLocallyMatch.Groups["body"].Value;
+            if (!runLocallyBody.Contains("GATEWAY_SECRET", StringComparison.Ordinal))
+            {
+                Console.WriteLine($"[ERROR] {relReadmePath} '## Run locally' section omits required key 'GATEWAY_SECRET'.");
+                ok = false;
+            }
+
+            if (svc.Database && !runLocallyBody.Contains("ConnectionStrings__cadence", StringComparison.Ordinal))
+            {
+                Console.WriteLine($"[ERROR] {relReadmePath} '## Run locally' section omits required database key 'ConnectionStrings__cadence'.");
+                ok = false;
+            }
+
+            if (RequiredServiceRunLocallyExtraKeys.TryGetValue(svc.Directory, out string[]? extraKeys))
+            {
+                foreach (string extraKey in extraKeys)
+                {
+                    if (!runLocallyBody.Contains(extraKey, StringComparison.Ordinal))
+                    {
+                        Console.WriteLine($"[ERROR] {relReadmePath} '## Run locally' section omits required startup key '{extraKey}'.");
+                        ok = false;
+                    }
+                }
             }
         }
 

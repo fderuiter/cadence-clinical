@@ -93,6 +93,56 @@ public sealed class InferenceProviderWiringTests
         build.Should().Throw<InvalidOperationException>().WithMessage("*global endpoint*");
     }
 
+    /// <summary>Blank exported environment keys under <c>Intelligence:Inference:Providers</c> are skipped rather than bound as empty provider sections.</summary>
+    [Fact]
+    public async Task BlankProviderSubsections_AreSkippedAtStartup()
+    {
+        var config = new Dictionary<string, string?>
+        {
+            ["Intelligence:Inference:Mode"] = "Standard",
+            ["Intelligence:Inference:Providers:AnthropicAws:Region"] = "",
+            ["Intelligence:Inference:Providers:AnthropicAws:WorkspaceId"] = "   ",
+            ["Intelligence:Inference:Providers:Bedrock:Region"] = "",
+            ["Intelligence:Inference:Providers:Vertex:ProjectId"] = "",
+            ["Intelligence:Inference:Providers:Vertex:Region"] = "",
+            ["Intelligence:Inference:Providers:Foundry:Resource"] = "",
+            ["Intelligence:Inference:Providers:Foundry:ApiKey"] = "",
+            ["Intelligence:Inference:Providers:OpenAiCompatible:Endpoint"] = "",
+            ["Intelligence:Inference:Providers:OpenAiCompatible:ApiKey"] = "",
+        };
+
+        var services = new ServiceCollection();
+        services.AddSingleton<IClock>(new FakeClock());
+        services.AddSingleton<ITenantResidencyReader>(new StubResidencies());
+        services.AddSingleton<ITenantInferencePolicies>(_policies);
+        services.AddIntelligenceInference(
+            new ConfigurationBuilder().AddInMemoryCollection(config).Build(),
+            new HostingEnvironment { EnvironmentName = Environments.Development });
+
+        using var provider = services.BuildServiceProvider();
+        provider.GetServices<IInferenceProvider>().Should().BeEmpty();
+        provider.GetRequiredService<Microsoft.Extensions.Options.IOptions<InferenceOptions>>().Value.Mode.Should().Be(InferenceDeploymentMode.Standard);
+        foreach (var hosted in provider.GetServices<IHostedService>())
+        {
+            await hosted.StartAsync(TestContext.Current.CancellationToken);
+        }
+    }
+
+    /// <summary>A partially configured provider subsection still binds and fails closed at startup when a required field is blank.</summary>
+    [Fact]
+    public void PartiallyConfiguredProviderSubsection_StillFailsClosedAtStartup()
+    {
+        var services = Services(new()
+        {
+            ["Intelligence:Inference:Providers:AnthropicAws:Region"] = "eu-west-1",
+            ["Intelligence:Inference:Providers:AnthropicAws:WorkspaceId"] = "",
+        });
+
+        var build = () => services.GetServices<IInferenceProvider>().ToList();
+
+        build.Should().Throw<InvalidOperationException>().WithMessage("*WorkspaceId*");
+    }
+
     /// <summary>Each cloud provider pins the host its SDK calls, so it cannot be pointed elsewhere at run time.</summary>
     [Fact]
     public async Task ProviderClients_ReachOnlyTheirEndpointHosts()

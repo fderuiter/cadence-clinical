@@ -396,7 +396,9 @@ public sealed class RulesetServiceTests : IDisposable
         exitCode.Should().Be(0);
         calls.Should().ContainSingle(c => c.FileName == "git");
         calls.Should().NotContain(c => c.FileName == "gh");
-        writer.ToString().Should().Contain("Dry-run complete: 3 rulesets validated for owner/repo");
+        writer.ToString().Should().Contain("Dry-run complete: 3 rulesets validated for owner/repo under profile 'active-actions'")
+            .And.Contain("CI Gate")
+            .And.Contain("merge_queue");
     }
 
     [Fact]
@@ -818,6 +820,83 @@ public sealed class RulesetServiceTests : IDisposable
             profile: "invalid-profile",
             output: badProfileWriter).Should().Be(1);
         badProfileWriter.ToString().Should().Contain("Unsupported ruleset profile");
+    }
+
+    [Fact]
+    public void TryNormalizeProfile_DefaultsToActiveActions_WhenOmittedOrBlank()
+    {
+        RulesetService.TryNormalizeProfile(null, out string nullProfile).Should().BeTrue();
+        nullProfile.Should().Be(RulesetService.ActiveActionsProfile);
+
+        RulesetService.TryNormalizeProfile("   ", out string blankProfile).Should().BeTrue();
+        blankProfile.Should().Be(RulesetService.ActiveActionsProfile);
+    }
+
+    [Fact]
+    public void Sync_VerifyLive_PassesWhenRemoteMatchesActiveActions_AndFailsOnPausedOrMissingRulesets()
+    {
+        string mainActiveJson = File.ReadAllText(Path.Combine(_root, ".github", "rulesets", "main.json"));
+        string mainPausedJson = RulesetService.ProjectRulesetPayloadForProfile(mainActiveJson, RulesetService.PausedActionsProfile);
+        string releaseActiveJson = File.ReadAllText(Path.Combine(_root, ".github", "rulesets", "release_branches.json"));
+        string tagsActiveJson = File.ReadAllText(Path.Combine(_root, ".github", "rulesets", "version_tags.json"));
+
+        var ghCalls = new List<IReadOnlyList<string>>();
+        RulesetService.ProcessRunner MakeLiveRunner(string mainRemoteJson) => (_, file, args) =>
+        {
+            file.Should().Be("gh");
+            ghCalls.Add(args);
+            args.Should().NotContain("--method", "--verify-live must never mutate GitHub rulesets");
+            if (args.Count >= 2 && args[1] == "--paginate")
+            {
+                return new RulesetService.ProcessOutcome(
+                    0,
+                    """
+                    [
+                      {"id": 20000159, "name": "main-branch-protection"},
+                      {"id": 20000160, "name": "release-branches-protection"},
+                      {"id": 20000161, "name": "version-tags-protection"}
+                    ]
+                    """,
+                    "");
+            }
+
+            return args[1] switch
+            {
+                "repos/owner/repo/rulesets/20000159" => new RulesetService.ProcessOutcome(0, mainRemoteJson, ""),
+                "repos/owner/repo/rulesets/20000160" => new RulesetService.ProcessOutcome(0, releaseActiveJson, ""),
+                "repos/owner/repo/rulesets/20000161" => new RulesetService.ProcessOutcome(0, tagsActiveJson, ""),
+                _ => new RulesetService.ProcessOutcome(1, "", $"unexpected endpoint {args[1]}"),
+            };
+        };
+
+        using var staleWriter = new StringWriter();
+        int staleExit = RulesetService.Sync(
+            repoRoot: _root,
+            repoOverride: "owner/repo",
+            runner: MakeLiveRunner(mainPausedJson),
+            environment: _ => null,
+            output: staleWriter,
+            verifyLive: true);
+
+        staleExit.Should().Be(1);
+        staleWriter.ToString().Should().Contain("main-branch-protection")
+            .And.Contain("20000159")
+            .And.Contain("required_status_checks")
+            .And.Contain("merge_queue");
+
+        ghCalls.Clear();
+        using var okWriter = new StringWriter();
+        int okExit = RulesetService.Sync(
+            repoRoot: _root,
+            repoOverride: "owner/repo",
+            runner: MakeLiveRunner(mainActiveJson),
+            environment: _ => null,
+            output: okWriter,
+            verifyLive: true);
+
+        okExit.Should().Be(0, okWriter.ToString());
+        ghCalls.Should().HaveCount(4);
+        okWriter.ToString().Should().Contain("Verified 3 live GitHub rulesets on 'owner/repo' match local profile 'active-actions'");
     }
 
     private void SeedValidFixture()

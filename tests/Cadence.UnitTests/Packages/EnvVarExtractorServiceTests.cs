@@ -24,6 +24,48 @@ public class EnvVarExtractorServiceTests
         exitCode.Should().Be(0);
     }
 
+    [Theory]
+    [InlineData("FIELD_ENCRYPTION_KEY=AwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISI= # pragma: allowlist secret", "FIELD_ENCRYPTION_KEY=")]
+    [InlineData("CADENCE_BIOMETRIC_LIVENESS_KEY=CAkKCwwNDg8QERITFBUWFxgZGhscHR4fICEiIyQlJic= # pragma: allowlist secret", "CADENCE_BIOMETRIC_LIVENESS_KEY=AwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISI= # pragma: allowlist secret")]
+    [InlineData("CADENCE_SCE_SIGNING_KEY=BQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4fICEiIyQ= # pragma: allowlist secret", "CADENCE_SCE_SIGNING_KEY=dG9vLXNob3J0 # pragma: allowlist secret")]
+    [InlineData("Notifications__BrandName=\"Cadence Clinical Platform\"", "Notifications__BrandName=Cadence Clinical Platform")]
+    [InlineData("ConnectionStrings__cadence=\"Host=localhost;Port=5432;Database=cadence;Username=cadence;Password=cadence_password\" # pragma: allowlist secret", "ConnectionStrings__cadence=Host=localhost;Port=5432;Database=cadence;Username=cadence;Password=cadence_password # pragma: allowlist secret")]
+    public void ExtractAndValidateEnvVars_ReturnsExitCode1_WhenRequiredEnvExampleKeyIsBlankDuplicateOrMalformed(
+        string originalLine,
+        string mutatedLine)
+    {
+        string realRoot = QualityGateOrchestratorFindRepoRoot();
+        string tempDir = Path.Combine(Path.GetTempPath(), "env-vars-crypto-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            Directory.CreateDirectory(tempDir);
+            File.Copy(Path.Combine(realRoot, "Cadence.sln"), Path.Combine(tempDir, "Cadence.sln"));
+            File.Copy(Path.Combine(realRoot, "README.md"), Path.Combine(tempDir, "README.md"));
+            Directory.CreateSymbolicLink(Path.Combine(tempDir, "docs"), Path.Combine(realRoot, "docs"));
+            Directory.CreateSymbolicLink(Path.Combine(tempDir, "apps"), Path.Combine(realRoot, "apps"));
+            Directory.CreateSymbolicLink(Path.Combine(tempDir, "packages"), Path.Combine(realRoot, "packages"));
+            Directory.CreateSymbolicLink(Path.Combine(tempDir, "scripts"), Path.Combine(realRoot, "scripts"));
+            Directory.CreateSymbolicLink(Path.Combine(tempDir, "tests"), Path.Combine(realRoot, "tests"));
+            Directory.CreateSymbolicLink(Path.Combine(tempDir, ".github"), Path.Combine(realRoot, ".github"));
+
+            string envText = File.ReadAllText(Path.Combine(realRoot, ".env.example"));
+            File.WriteAllText(Path.Combine(tempDir, ".env.example"), envText);
+            EnvVarExtractorService.ExtractAndValidateEnvVars(checkOnly: true, repoRoot: tempDir).Should().Be(0);
+
+            envText.Should().Contain(originalLine);
+            File.WriteAllText(Path.Combine(tempDir, ".env.example"), envText.Replace(originalLine, mutatedLine, StringComparison.Ordinal));
+
+            EnvVarExtractorService.ExtractAndValidateEnvVars(checkOnly: true, repoRoot: tempDir).Should().Be(1);
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir))
+            {
+                Directory.Delete(tempDir, recursive: true);
+            }
+        }
+    }
+
     [Fact]
     public void ExtractAndValidateEnvVars_ReturnsExitCode1_WhenCodeVarIsMissingFromEnvExample()
     {

@@ -42,13 +42,13 @@ public static class InferenceServiceCollectionExtensions
         services.TryAddSingleton(new InferenceModelSettings(intelligence.Anthropic.Tiers, intelligence.Prices));
         services.AddOptions<InferenceOptions>().Bind(section);
         services.AddOptions<SandboxEgressOptions>().Bind(configuration.GetSection(SandboxEgressOptions.Section));
-        var providers = section.GetSection("Providers").Get<InferenceProvidersOptions>() ?? new InferenceProvidersOptions();
+        var providersSection = section.GetSection("Providers");
 
-        AddProvider(services, ClaudePlatformAwsProvider.ProviderId, providers.AnthropicAws, (sp, o) => new ClaudePlatformAwsProvider(sp.GetRequiredService<IHttpClientFactory>(), o));
-        AddProvider(services, BedrockProvider.ProviderId, providers.Bedrock, (sp, o) => new BedrockProvider(sp.GetRequiredService<IHttpClientFactory>(), o));
-        AddProvider(services, VertexProvider.ProviderId, providers.Vertex, (sp, o) => new VertexProvider(sp.GetRequiredService<IHttpClientFactory>(), o));
-        AddProvider(services, FoundryProvider.ProviderId, providers.Foundry, (sp, o) => new FoundryProvider(sp.GetRequiredService<IHttpClientFactory>(), o));
-        AddProvider(services, OpenAiCompatibleProvider.ProviderId, providers.OpenAiCompatible, (sp, o) => new OpenAiCompatibleProvider(sp.GetRequiredService<IHttpClientFactory>(), o));
+        AddProvider<ClaudePlatformAwsOptions>(services, ClaudePlatformAwsProvider.ProviderId, providersSection.GetSection(nameof(InferenceProvidersOptions.AnthropicAws)), (sp, o) => new ClaudePlatformAwsProvider(sp.GetRequiredService<IHttpClientFactory>(), o));
+        AddProvider<BedrockOptions>(services, BedrockProvider.ProviderId, providersSection.GetSection(nameof(InferenceProvidersOptions.Bedrock)), (sp, o) => new BedrockProvider(sp.GetRequiredService<IHttpClientFactory>(), o));
+        AddProvider<VertexOptions>(services, VertexProvider.ProviderId, providersSection.GetSection(nameof(InferenceProvidersOptions.Vertex)), (sp, o) => new VertexProvider(sp.GetRequiredService<IHttpClientFactory>(), o));
+        AddProvider<FoundryOptions>(services, FoundryProvider.ProviderId, providersSection.GetSection(nameof(InferenceProvidersOptions.Foundry)), (sp, o) => new FoundryProvider(sp.GetRequiredService<IHttpClientFactory>(), o));
+        AddProvider<OpenAiCompatibleOptions>(services, OpenAiCompatibleProvider.ProviderId, providersSection.GetSection(nameof(InferenceProvidersOptions.OpenAiCompatible)), (sp, o) => new OpenAiCompatibleProvider(sp.GetRequiredService<IHttpClientFactory>(), o));
 
         var overlays = section.GetSection("Suppliers").Get<Dictionary<string, SupplierOverlayOptions>>()
             ?? new Dictionary<string, SupplierOverlayOptions>(StringComparer.Ordinal);
@@ -84,14 +84,27 @@ public static class InferenceServiceCollectionExtensions
         return services;
     }
 
-    private static void AddProvider<TOptions>(IServiceCollection services, string providerId, TOptions? options, Func<IServiceProvider, TOptions, IInferenceProvider> create)
+    private static void AddProvider<TOptions>(
+        IServiceCollection services,
+        string providerId,
+        IConfigurationSection section,
+        Func<IServiceProvider, TOptions, IInferenceProvider> create)
         where TOptions : class
     {
-        if (options is not null)
+        if (!HasConfiguredValue(section))
+        {
+            return;
+        }
+
+        if (section.Get<TOptions>() is { } options)
         {
             services.AddInferenceProvider(providerId, sp => create(sp, options));
         }
     }
+
+    private static bool HasConfiguredValue(IConfigurationSection section) =>
+        section.AsEnumerable(makePathsRelative: true)
+            .Any(entry => !string.IsNullOrWhiteSpace(entry.Value));
 
     /// <summary>Builds every provider and the supplier catalogue at start, so a bad endpoint or approval stops the host.</summary>
     private sealed class InferenceStartupCheck(IEnumerable<IInferenceProvider> providers, ISupplierCatalog suppliers) : IHostedService

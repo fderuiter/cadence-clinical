@@ -75,7 +75,7 @@ public key alone is `422` and signs nothing. Neither route, nor polling, accepts
 
 ## Persistence
 
-`AddCadencePostgresDbContext<InteropDbContext>()` from [packages/database](../../packages/database/README.md) connects to the shared `cadence` database with its search path set to the `interop` schema ([ADR-2447](../../docs/adr/2026-09-29-module-schemas-via-search-path-and-migration-deployment.md)). The connection string comes from `ConnectionStrings:cadence`, then `POSTGRES_CONNECTION_STRING`; only the Development environment falls back to `cadence` on `localhost:5432`, and other environments fail at startup. `docker/docker-compose.yml` points it at the compose PostgreSQL and sets `Database__MigrateOnStartup=true`, so the service applies its migrations when it starts.
+`AddCadencePostgresDbContext<InteropDbContext>()` from [packages/database](../../packages/database/README.md) connects to the shared `cadence` database with its search path set to the `interop` schema ([ADR-2447](../../docs/adr/2026-09-29-module-schemas-via-search-path-and-migration-deployment.md)). The connection string comes from `ConnectionStrings:cadence`, then `POSTGRES_CONNECTION_STRING`; there is no built-in default in any environment, and startup fails when neither is set ([ADR-2260](../../docs/adr/2026-09-29-no-default-credentials-and-fail-closed-secret-resolution.md)). `docker/docker-compose.yml` points it at the compose PostgreSQL and sets `Database__MigrateOnStartup=true`, so the service applies its migrations when it starts.
 
 ## Key dependencies
 
@@ -109,6 +109,9 @@ device is re-registered); run `VACUUM FULL` on those four tables afterwards. See
 
 ```bash
 export GATEWAY_SECRET="<at least 32 characters>"
+export AUDIT_LOG_SECRET_KEY="$(openssl rand -hex 24)" # pragma: allowlist secret
+export FIELD_LOOKUP_HASH_KEY="$(openssl rand -base64 32)"
+export CADENCE_SCE_SIGNING_KEY="$(openssl rand -base64 32)"
 export ConnectionStrings__cadence="Host=localhost;Port=5432;Database=cadence;Username=cadence;Password=<password>"
 dotnet run --project apps/interop/src/Cadence.Apps.Interop.csproj
 ```
