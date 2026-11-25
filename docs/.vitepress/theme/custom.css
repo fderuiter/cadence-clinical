@@ -8,10 +8,12 @@
   --vp-c-brand-1: var(--color-primary);
   --vp-c-brand-2: var(--color-primary-dark);
   --vp-c-brand-3: var(--color-primary);
+  --vp-c-brand-soft: var(--color-primary-light);
   --vp-c-brand: var(--vp-c-brand-1);
   --vp-c-tip-1: var(--vp-c-brand-1);
   --vp-c-tip-2: var(--vp-c-brand-2);
   --vp-c-tip-3: var(--vp-c-brand-3);
+  --vp-c-tip-soft: var(--color-primary-light);
   --vp-button-brand-text: var(--semantic-color-text-on-primary);
   --vp-button-brand-bg: var(--color-primary);
   --vp-button-brand-hover-text: var(--semantic-color-text-on-primary);
@@ -31,6 +33,8 @@
   --vp-c-brand-1: var(--color-primary);
   --vp-c-brand-2: var(--color-primary-dark);
   --vp-c-brand-3: var(--color-primary);
+  --vp-c-brand-soft: var(--color-primary-light);
+  --vp-c-tip-soft: var(--color-primary-light);
   --vp-button-brand-text: var(--semantic-color-text-on-primary);
   --vp-button-brand-bg: var(--color-primary);
   --vp-button-brand-hover-text: var(--semantic-color-text-on-primary);
@@ -512,7 +516,7 @@
   border: 1px solid var(--vp-c-divider);
   border-radius: 6px;
   padding: 4px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-md);
   opacity: 0.6;
   transition: opacity 0.2s ease;
 }

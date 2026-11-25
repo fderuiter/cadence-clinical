@@ -20,7 +20,7 @@ const EXPLICIT_PORTAL_A11Y_RULE_IDS = [
   "label-content-name-mismatch",
 ];
 
-const VIEWPORT_WIDTHS = [375, 768, 960, 1024, 1280, 1440, 1600];
+const VIEWPORT_WIDTHS = [375, 768, 960, 1024, 1280, 1366, 1440, 1600, 1920];
 
 const SUBDIRECTORY_HUBS = [
   { route: "blog/", prefix: "/cadence-clinical/blog/" },
@@ -49,12 +49,14 @@ const AXE_AUDIT_PAGES = [
   { name: "Documentation Index", route: "DOCUMENTATION_INDEX.html" },
   { name: "API Hub", route: "api/" },
   { name: "API Reference (Kernel)", route: "api/kernel.html" },
+  { name: "Components Hub", route: "components/" },
   { name: "ADR Hub", route: "adr/" },
   {
     name: "ADR-2820 Contrast Tokens",
     route:
       "adr/2026-11-19-recalibrate-shared-color-tokens-and-wcag-22-aa-contrast-gates.html",
   },
+  { name: "Migration Hub", route: "migration/" },
   { name: "Schema Hub", route: "schema/README.html" },
   { name: "Schema Reference (Kernel)", route: "schema/kernel.html" },
 ];
@@ -195,10 +197,10 @@ test.describe("Documentation Portal Accessibility, Navigation & Table Integrity 
       (sum, tbody) => sum + (tbody.match(/<tr(?:\s|>)/gi) || []).length,
       0
     );
-    expect(dataRowCount).toBeGreaterThanOrEqual(659);
+    expect(dataRowCount).toBeGreaterThanOrEqual(715);
   });
 
-  test("navbar items and portal layout render without clipping, overlap, or horizontal scroll across 375px–1600px viewports", async ({
+  test("navbar items and portal layout render without clipping, overlap, or horizontal scroll across 375px–1920px viewports", async ({
     page,
   }) => {
     const routesToMeasure = ["./", "api/", "DOCUMENTATION_INDEX.html"];
@@ -309,17 +311,14 @@ test.describe("Documentation Portal Accessibility, Navigation & Table Integrity 
           expect(metrics.hamburgerVisible).toBe(true);
           expect(metrics.hamburgerInViewport).toBe(true);
         } else {
-          expect(metrics.menuItemCount).toBe(6);
+          expect(metrics.menuItemCount).toBe(5);
         }
       }
     }
 
-    // Verify <= 2 click reachability of /demo/, /subject-portal/, and /feed.xml from an interior page
+    // Verify <= 2 click reachability of /demo/, /subject-portal/, /blog/, and /feed.xml from an interior page
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto("api/", { waitUntil: "domcontentloaded" });
-
-    const rssLink = page.locator('.VPNavBarMenu a[href$="/feed.xml"]');
-    await expect(rssLink).toBeVisible();
 
     const demosTrigger = page.locator(".VPNavBarMenu .VPNavBarMenuGroup", {
       hasText: "Demos",
@@ -331,6 +330,15 @@ test.describe("Documentation Portal Accessibility, Navigation & Table Integrity 
     await expect(
       demosTrigger.locator('a[href$="/cadence-clinical/subject-portal/"]')
     ).toBeVisible();
+
+    const blogTrigger = page.locator(".VPNavBarMenu .VPNavBarMenuGroup", {
+      hasText: "Blog",
+    });
+    await blogTrigger.locator("button").click();
+    await expect(
+      blogTrigger.locator('a[href$="/cadence-clinical/blog/"]')
+    ).toBeVisible();
+    await expect(blogTrigger.locator('a[href$="/feed.xml"]')).toBeVisible();
   });
 
   test("all 5 subdirectory hubs highlight the active sidebar link, expand parent groups without nested buttons, and expose a sequential Next link", async ({
@@ -365,6 +373,10 @@ test.describe("Documentation Portal Accessibility, Navigation & Table Integrity 
           )
         ).map((el) => el.outerHTML.slice(0, 120));
 
+        const roleButtons = Array.from(
+          document.querySelectorAll(".VPSidebar [role='button']")
+        ).map((el) => el.outerHTML.slice(0, 120));
+
         const toggleButtons = Array.from(
           document.querySelectorAll(".VPSidebar button.item-toggle")
         );
@@ -381,6 +393,7 @@ test.describe("Documentation Portal Accessibility, Navigation & Table Integrity 
           activeItems,
           collapsedAncestorCount,
           nestedInteractive,
+          roleButtons,
           toggleButtonCount: toggleButtons.length,
           invalidExpandedAttrs,
           nextHref,
@@ -394,7 +407,8 @@ test.describe("Documentation Portal Accessibility, Navigation & Table Integrity 
       ).toBe(true);
       expect(sidebarState.collapsedAncestorCount).toBe(0);
       expect(sidebarState.nestedInteractive).toEqual([]);
-      expect(sidebarState.toggleButtonCount).toBeGreaterThan(0);
+      expect(sidebarState.roleButtons).toEqual([]);
+      expect(sidebarState.toggleButtonCount).toBe(0);
       expect(sidebarState.invalidExpandedAttrs).toEqual([]);
       expect(sidebarState.nextHref).not.toBeNull();
       expect(sidebarState.nextHref).toContain(hub.prefix);

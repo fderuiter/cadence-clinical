@@ -64,9 +64,9 @@ export function toSidebarLink(rawHref, { docsDir, repoRoot }) {
   }
 
   if (href.startsWith("/")) {
-    const [cleanRootPath] = splitAnchor(href);
-    const normalizedPage = cleanRootPath
-      .split("?")[0]
+    const [cleanRootPath, rootAnchor = ""] = splitAnchor(href);
+    const rawRootPath = cleanRootPath.split("?")[0];
+    const normalizedPage = rawRootPath
       .replace(/^\//, "")
       .replace(/\.(html|md)$/i, "");
     if (normalizedPage) {
@@ -77,6 +77,13 @@ export function toSidebarLink(rawHref, { docsDir, repoRoot }) {
       if (isExcludedPortalDocFile(rootCandidate, docsDir)) {
         return toRepoUrl(href, docsDir, docsDir, repoRoot);
       }
+    }
+    if (/^\/index(?:\.(?:html|md))?$/i.test(rawRootPath)) {
+      return `/${rootAnchor}`;
+    }
+    if (/\/index(?:\.(?:html|md))?$/i.test(rawRootPath)) {
+      const hubPrefix = rawRootPath.replace(/\/index(?:\.(?:html|md))?$/i, "/");
+      return `${hubPrefix}${rootAnchor}`;
     }
     return href;
   }
@@ -395,7 +402,6 @@ export function buildAdrSidebarGroups(adrIndexContent, indexAdrEntries = []) {
   const groups = [
     {
       text: "ADR Overview",
-      collapsed: false,
       items: overviewItems,
     },
   ];
@@ -403,7 +409,6 @@ export function buildAdrSidebarGroups(adrIndexContent, indexAdrEntries = []) {
   if (compactKernelItems.length > 0) {
     groups.push({
       text: kernelHeading,
-      collapsed: false,
       items: compactKernelItems,
     });
   }
@@ -411,7 +416,6 @@ export function buildAdrSidebarGroups(adrIndexContent, indexAdrEntries = []) {
   if (domainLogItems.length > 0) {
     groups.push({
       text: "Domain Decision Logs",
-      collapsed: false,
       items: domainLogItems,
     });
   }
@@ -434,14 +438,10 @@ function normalizeRouteKey(link) {
   return splitAnchor(link)[0];
 }
 
-function makeGroup(text, rawItems, collapsed) {
+function makeGroup(text, rawItems) {
   const items = dedupeItems(rawItems);
   if (items.length === 0) return null;
-  const group = { text, items };
-  if (typeof collapsed === "boolean") {
-    group.collapsed = collapsed;
-  }
-  return group;
+  return { text, items };
 }
 
 /**
@@ -702,80 +702,46 @@ export function synthesizeSidebarFromIndex(indexPath, options = {}) {
     ? [{ text: "REST API Reference", link: "/api/" }, ...openapiItems]
     : openapiItems;
 
-  assignSection(
-    ["/blog/"],
-    [makeGroup("Engineering Blog", resolvedBlogItems, false)]
-  );
-  assignSection(
-    ["/kernel/"],
-    [makeGroup("Kernel & Roadmap", kernelItems, false)]
-  );
-  assignSection(
-    ["/ai/"],
-    [makeGroup("AI Agents & Governance", aiItems, false)]
-  );
-  assignSection(["/ux/"], [makeGroup("Clinical Canvas & UX", uxItems, false)]);
+  assignSection(["/blog/"], [makeGroup("Engineering Blog", resolvedBlogItems)]);
+  assignSection(["/kernel/"], [makeGroup("Kernel & Roadmap", kernelItems)]);
+  assignSection(["/ai/"], [makeGroup("AI Agents & Governance", aiItems)]);
+  assignSection(["/ux/"], [makeGroup("Clinical Canvas & UX", uxItems)]);
   assignSection(
     ["/strategy/"],
-    [makeGroup("Product & Strategy", productItems, false)]
+    [makeGroup("Product & Strategy", productItems)]
   );
-  assignSection(
-    ["/components/"],
-    [makeGroup("UI Components", componentItems, false)]
-  );
-  assignSection(["/api/"], [makeGroup("REST API Reference", apiItems, false)]);
+  assignSection(["/components/"], [makeGroup("UI Components", componentItems)]);
+  assignSection(["/api/"], [makeGroup("REST API Reference", apiItems)]);
   assignSection(
     ["/openapi/"],
-    [makeGroup("OpenAPI Specifications", openapiSectionItems, false)]
+    [makeGroup("OpenAPI Specifications", openapiSectionItems)]
   );
-  assignSection(
-    ["/schema/"],
-    [makeGroup("Data Model Reference", schemaItems, false)]
-  );
+  assignSection(["/schema/"], [makeGroup("Data Model Reference", schemaItems)]);
 
   assignSection(
     ["/SDLC/"],
     [
-      makeGroup("GxP & Validation", sdlcActiveItems, false),
-      makeGroup(
-        "Baseline Specifications (Pre-Kernel)",
-        sdlcBaselineItems,
-        true
-      ),
+      makeGroup("GxP & Validation", sdlcActiveItems),
+      makeGroup("Baseline Specifications (Pre-Kernel)", sdlcBaselineItems),
     ]
   );
   assignSection(
     ["/CDISC/"],
-    [makeGroup("Standards Reference", standardsItems, false)]
+    [makeGroup("Standards Reference", standardsItems)]
   );
-  assignSection(
-    ["/agents/"],
-    [makeGroup("Repository Policies", policyItems, false)]
-  );
+  assignSection(["/agents/"], [makeGroup("Repository Policies", policyItems)]);
   assignSection(
     ["/specs/"],
-    [makeGroup("Design Proposals (Pre-Kernel)", specsBaselineItems, false)]
+    [makeGroup("Design Proposals (Pre-Kernel)", specsBaselineItems)]
   );
 
   assignSection(
     ["/migration/"],
-    [
-      makeGroup(
-        "Historical & Migration Records",
-        migrationHistoricalItems,
-        false
-      ),
-    ]
+    [makeGroup("Historical & Migration Records", migrationHistoricalItems)]
   );
   assignSection(
     ["/architecture/repository-migration/"],
-    [
-      makeGroup(
-        "Former Repository Migration",
-        repoMigrationHistoricalItems,
-        false
-      ),
-    ]
+    [makeGroup("Former Repository Migration", repoMigrationHistoricalItems)]
   );
 
   if (adrIndexContent || adrEntries.length > 0) {
@@ -804,13 +770,13 @@ export function synthesizeSidebarFromIndex(indexPath, options = {}) {
   ].filter((item) => seenRoutes.has(item.link));
 
   const rootGroups = [
-    makeGroup("Start Here", startHereItems, false),
-    makeGroup("Developing & Running", devItems, false),
+    makeGroup("Start Here", startHereItems),
+    makeGroup("Developing & Running", devItems),
     ...[...customActiveSections.entries()].map(([title, items]) =>
-      makeGroup(title, items, false)
+      makeGroup(title, items)
     ),
-    makeGroup("Repository Policies", rootPolicyItems, true),
-    makeGroup("Portal Sections", candidatePortalSections, false),
+    makeGroup("Repository Policies", rootPolicyItems),
+    makeGroup("Portal Sections", candidatePortalSections),
   ];
 
   assignSection(["/"], rootGroups);
