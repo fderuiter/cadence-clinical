@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Apps.Econsent.Application;
 using Cadence.Apps.Econsent.Domain;
 using Cadence.Apps.Econsent.Endpoints;
 using Cadence.Apps.Econsent.Infrastructure.Persistence;
@@ -144,7 +145,7 @@ public sealed class EconsentEndpointsTests : IDisposable
             DeviceTimestamp: clock.UtcNow);
 
         var result = await EconsentEndpoints.ProcessCaptureConsentAsync(
-            "tpl-001", 1, request, context, Caller(), TestSecurityContext.BiometricLivenessOptions, new ReplayCache(clock), clock, TestContext.Current.CancellationToken);
+            "tpl-001", 1, request, CreateService(context, clock), Caller(), TestSecurityContext.BiometricLivenessOptions, new ReplayCache(clock), TestContext.Current.CancellationToken);
 
         result.Should().BeOfType<ValidationProblem>();
         var valProblem = (ValidationProblem)result;
@@ -181,7 +182,7 @@ public sealed class EconsentEndpointsTests : IDisposable
             DeviceTimestamp: clock.UtcNow);
 
         var result = await EconsentEndpoints.ProcessCaptureConsentAsync(
-            "tpl-001", 2, request, context, Caller(), TestSecurityContext.BiometricLivenessOptions, new ReplayCache(clock), clock, TestContext.Current.CancellationToken);
+            "tpl-001", 2, request, CreateService(context, clock), Caller(), TestSecurityContext.BiometricLivenessOptions, new ReplayCache(clock), TestContext.Current.CancellationToken);
 
         result.Should().BeOfType<Ok<CaptureConsentResponse>>();
 
@@ -222,7 +223,7 @@ public sealed class EconsentEndpointsTests : IDisposable
             DeviceTimestamp: clock.UtcNow);
 
         var result = await EconsentEndpoints.ProcessCaptureConsentAsync(
-            "tpl-001", 1, request, context, Caller(), TestSecurityContext.BiometricLivenessOptions, new ReplayCache(clock), clock, TestContext.Current.CancellationToken);
+            "tpl-001", 1, request, CreateService(context, clock), Caller(), TestSecurityContext.BiometricLivenessOptions, new ReplayCache(clock), TestContext.Current.CancellationToken);
 
         result.Should().BeOfType<Ok<CaptureConsentResponse>>();
         var okResult = (Ok<CaptureConsentResponse>)result;
@@ -268,7 +269,7 @@ public sealed class EconsentEndpointsTests : IDisposable
             DeviceTimestamp: clock.UtcNow);
 
         var result = await EconsentEndpoints.ProcessCaptureConsentAsync(
-            "tpl-001", 1, request, context, Caller(), TestSecurityContext.BiometricLivenessOptions, new ReplayCache(clock), clock, TestContext.Current.CancellationToken);
+            "tpl-001", 1, request, CreateService(context, clock), Caller(), TestSecurityContext.BiometricLivenessOptions, new ReplayCache(clock), TestContext.Current.CancellationToken);
 
         result.Should().BeOfType<ValidationProblem>();
         var valProblem = (ValidationProblem)result;
@@ -291,7 +292,7 @@ public sealed class EconsentEndpointsTests : IDisposable
             Channels: new[] { "SMS", "Mobile Push", "Email" });
 
         var result = await EconsentEndpoints.ProcessPublishTemplateAsync(
-            "tpl-reconsent-01", 1, request, context, publishEndpoint, Caller(), new FakeClock(), TestContext.Current.CancellationToken);
+            "tpl-reconsent-01", 1, request, CreateService(context, new FakeClock()), publishEndpoint, Caller(), TestContext.Current.CancellationToken);
 
         result.Should().BeOfType<Ok<PublishTemplateResponse>>();
         var okResult = (Ok<PublishTemplateResponse>)result;
@@ -330,7 +331,7 @@ public sealed class EconsentEndpointsTests : IDisposable
             Channels: null);
 
         var result = await EconsentEndpoints.ProcessPublishTemplateAsync(
-            "tpl-minor-01", 1, request, context, publishEndpoint, Caller(), new FakeClock(), TestContext.Current.CancellationToken);
+            "tpl-minor-01", 1, request, CreateService(context, new FakeClock()), publishEndpoint, Caller(), TestContext.Current.CancellationToken);
 
         result.Should().BeOfType<Ok<PublishTemplateResponse>>();
         var okResult = (Ok<PublishTemplateResponse>)result;
@@ -359,7 +360,7 @@ public sealed class EconsentEndpointsTests : IDisposable
             "SUBJ-1", "STUDY-1", "SITE-1", "Signer", null, "Subject", "I agree", null, "v1.0", "digest123", "sigdata123", livenessToken, clock.UtcNow);
 
         var result = await EconsentEndpoints.ProcessCaptureConsentAsync(
-            "tpl-001", 1, request, context, Caller("STUDY-2"), TestSecurityContext.BiometricLivenessOptions, useStore, clock, TestContext.Current.CancellationToken);
+            "tpl-001", 1, request, CreateService(context, clock), Caller("STUDY-2"), TestSecurityContext.BiometricLivenessOptions, useStore, TestContext.Current.CancellationToken);
 
         result.Should().BeOfType<ProblemHttpResult>().Which.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
         (await context.SubjectConsents.CountAsync(TestContext.Current.CancellationToken)).Should().Be(0);
@@ -367,7 +368,7 @@ public sealed class EconsentEndpointsTests : IDisposable
 
         // Study mismatch must not burn the subject's fresh liveness check; retrying with authorized caller succeeds.
         var retry = await EconsentEndpoints.ProcessCaptureConsentAsync(
-            "tpl-001", 1, request, context, Caller("STUDY-1"), TestSecurityContext.BiometricLivenessOptions, useStore, clock, TestContext.Current.CancellationToken);
+            "tpl-001", 1, request, CreateService(context, clock), Caller("STUDY-1"), TestSecurityContext.BiometricLivenessOptions, useStore, TestContext.Current.CancellationToken);
         retry.Should().BeOfType<Ok<CaptureConsentResponse>>();
     }
 
@@ -411,11 +412,10 @@ public sealed class EconsentEndpointsTests : IDisposable
             "tpl-verify-01",
             1,
             request,
-            context,
+            CreateService(context, clock),
             Caller(),
             TestSecurityContext.BiometricLivenessOptions,
             new ReplayCache(clock),
-            clock,
             TestContext.Current.CancellationToken);
 
         result.Should().BeOfType<ValidationProblem>();
@@ -460,11 +460,10 @@ public sealed class EconsentEndpointsTests : IDisposable
             "tpl-verify-01",
             1,
             firstRequest,
-            context,
+            CreateService(context, clock),
             Caller(),
             TestSecurityContext.BiometricLivenessOptions,
             sharedUseStore,
-            clock,
             TestContext.Current.CancellationToken);
         firstResult.Should().BeOfType<Ok<CaptureConsentResponse>>();
 
@@ -477,11 +476,10 @@ public sealed class EconsentEndpointsTests : IDisposable
             "tpl-verify-01",
             2,
             secondRequest,
-            context,
+            CreateService(context, clock),
             Caller(),
             TestSecurityContext.BiometricLivenessOptions,
             sharedUseStore,
-            clock,
             TestContext.Current.CancellationToken);
 
         replayResult.Should().BeOfType<ValidationProblem>();
@@ -524,11 +522,10 @@ public sealed class EconsentEndpointsTests : IDisposable
             "tpl-retry-01",
             1,
             incompleteRequest,
-            context,
+            CreateService(context, clock),
             Caller(),
             TestSecurityContext.BiometricLivenessOptions,
             sharedUseStore,
-            clock,
             TestContext.Current.CancellationToken);
         badResult.Should().BeOfType<ValidationProblem>();
 
@@ -537,11 +534,10 @@ public sealed class EconsentEndpointsTests : IDisposable
             "tpl-retry-01",
             1,
             validRequest,
-            context,
+            CreateService(context, clock),
             Caller(),
             TestSecurityContext.BiometricLivenessOptions,
             sharedUseStore,
-            clock,
             TestContext.Current.CancellationToken);
         retryResult.Should().BeOfType<Ok<CaptureConsentResponse>>();
     }
@@ -599,7 +595,7 @@ public sealed class EconsentEndpointsTests : IDisposable
         var request = new PublishTemplateRequest("STUDY-101", "v2.0", "Change", "Amendment", true, null);
 
         var result = await EconsentEndpoints.ProcessPublishTemplateAsync(
-            "tpl-outside", 1, request, context, publishEndpoint, Caller("STUDY-2"), new FakeClock(), TestContext.Current.CancellationToken);
+            "tpl-outside", 1, request, CreateService(context, new FakeClock()), publishEndpoint, Caller("STUDY-2"), TestContext.Current.CancellationToken);
 
         result.Should().BeOfType<ProblemHttpResult>().Which.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
         (await context.ConsentTemplates.CountAsync(TestContext.Current.CancellationToken)).Should().Be(0);
@@ -618,6 +614,9 @@ public sealed class EconsentEndpointsTests : IDisposable
         };
         return httpContext;
     }
+
+    private static EconsentApplicationService CreateService(EconsentDbContext context, IClock clock) =>
+        new(new EconsentUnitOfWork(context), clock);
 
     private EconsentDbContext CreateContext() =>
         new(new DbContextOptionsBuilder<EconsentDbContext>().UseSqlite(_connection).Options, TestFieldProtection.CreateEncryptor());

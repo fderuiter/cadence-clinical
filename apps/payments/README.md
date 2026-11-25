@@ -1,14 +1,17 @@
 # Payments service
 
-Site and participant payments scaffold. It holds the budget contract, fee schedule, payee split, payable, holdback, invoice, remittance and participant wallet model, and maps the participant wallet, stipend, expense and self-billing invoice routes under `/api/v1/payments` (`Endpoints/PaymentEndpoints.cs`).
+Site and participant payments scaffold. It holds the budget contract, fee schedule, payee split, payable, holdback, invoice, remittance and participant wallet model, and maps the participant wallet, stipend, tax, expense and self-billing invoice routes under `/api/v1/payments` (`Endpoints/PaymentEndpoints.cs`, delegating to `WalletEndpoints`, `TaxEndpoints`, `ExpenseEndpoints`, and `InvoiceEndpoints`).
 
 **Status:** a standalone ASP.NET Core 10 scaffold service. Under [ADR-2244](../../docs/adr/2026-09-29-clinical-kernel-modular-monolith-architecture.md) and the [clinical kernel specification](../../docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md) (§12 capability map, §15 roadmap) it becomes an application module over the clinical kernel. The disposition of the scaffold services is tracked in issue #4787.
 
 ## Project
 
 - Project: `apps/payments/src/Cadence.Apps.Payments.csproj` (assembly `Cadence.Apps.Payments`).
-- `Program.cs`: composition root and route mapping.
-- `Application/`: `ReceiptOcrEngine` and `PngReceiptDecoder` (deterministic raster/vector receipt OCR extraction for PNG, BMP, PNM, JPEG, SVG, and PDF inputs with 10 MiB payload limits, bounded PNG chunk/ZLib decompression and ratio quotas, sharpness/completeness confidence scoring, and zero fallback fabrication on unreadable images).
+- `Program.cs`: composition root (`AddPaymentsApplicationServices()`) and route mapping (`MapPaymentEndpoints()`).
+- `Endpoints/`: bounded route and DTO contract slices (`PaymentEndpoints`, `WalletEndpoints` / `WalletContracts`, `TaxEndpoints` / `TaxContracts`, `ExpenseEndpoints` / `ExpenseContracts`, and `InvoiceEndpoints` / `InvoiceContracts`).
+- `Application/`:
+  - `ReceiptOcrEngine` and `PngReceiptDecoder` (deterministic raster/vector receipt OCR extraction for PNG, BMP, PNM, JPEG, SVG, and PDF inputs with 10 MiB payload limits, bounded PNG chunk/ZLib decompression and ratio quotas, sharpness/completeness confidence scoring, and zero fallback fabrication on unreadable images).
+  - `ParticipantWalletApplicationService`, `ParticipantStipendApplicationService`, `ParticipantDiaryStipendEvaluator`, `TaxWithholdingApplicationService`, `ReceiptOcrApplicationService`, `ExpenseReceiptPolicyService`, `ExpenseClaimApplicationService`, `InvoiceBillingApplicationService`, `PaymentTokenService`, and `PaymentScopeAndFormatting`.
 - `Domain/`: EF Core entity classes (budget contracts, fee schedules, split payees, payables and allocations, holdback reserves, invoices, remittance advice, participant wallets, audit log).
   Every timestamp is a `DateTimeOffset`; the ones a writer must supply are `required` with no default, and the project bans `DateTime.Now/UtcNow` (K-TIME-3, #4784), so time comes from `Cadence.Kernel.Time.IClock`.
 - `Domain/Ledger/`: the grant payables ledger, ported from `packages/engine_core/financial/` ([ADR-2521](../../docs/adr/2026-09-30-grant-payables-ledger-in-decimal-with-kernel-ids.md)), in `decimal` throughout.
@@ -17,7 +20,7 @@ Site and participant payments scaffold. It holds the budget contract, fee schedu
   - `GrantContractValidator`: the contract limits (rates, holdback of at most 50%, splits that total 100%).
   - `PayableLedger` is integrated with `ClinicalVisitCompletedConsumer` to calculate investigator fee line items, split payee allocations, and holdback retention reserves upon signed visit milestone completion via the transactional outbox.
 - `Infrastructure/Consumers/`: `ClinicalVisitCompletedConsumer` listens for `ClinicalVisitCompleted` domain events and writes `Payable`, `PayableAllocation`, `HoldbackReserve`, and `PaymentAuditLog` entities.
-- `Infrastructure/Persistence/`: `PaymentsDbContext`, a design-time `PaymentsDbContextFactory`, and `Configurations/` (Fluent API mappings).
+- `Infrastructure/Persistence/`: `PaymentsDbContext`, `PaymentsUnitOfWork` (scoped `SaveChangesAsync` and PostgreSQL `FOR UPDATE` wallet lock seam), a design-time `PaymentsDbContextFactory`, and `Configurations/` (Fluent API mappings).
 - `Infrastructure/Persistence/Migrations/`: `20260924145423_InitialCreate`, `20260925183437_ConvertPaymentPropertiesToDecimal`, `20260929203006_StoreProcessorReferencesInsteadOfPaymentSecrets`, `20261001161305_AddParticipantCompensationTables`, `20261006193258_AddDisbursementReferenceToExpenseClaims`, `20261121012903_AddPaymentStatusCheckConstraints`, `20261121053614_EnforceTenantRowLevelSecurity`, `20261121150826_AddSelfServiceIdempotencyKeys`.
 
 ## HTTP surface

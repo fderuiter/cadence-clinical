@@ -13,6 +13,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Apps.Etmf.Application;
 using Cadence.Apps.Etmf.Domain;
 using Cadence.Apps.Etmf.Endpoints;
 using Cadence.Apps.Etmf.Infrastructure.Persistence;
@@ -150,7 +151,8 @@ public class EtmfExportTests
         var queue = new EtmfExportQueue();
         var request = new ExportDocumentsRequest("STUDY-01", ["DOC-201"], IsFullBinder: false);
 
-        var result = await EtmfIntelligenceEndpoints.ExportDocuments(request, dbContext, queue, _clock, Caller("STUDY-01"), ct);
+        var result = await new EtmfExportApplicationService(new EtmfUnitOfWork(dbContext), queue, _clock)
+            .ExportDocumentsAsync(request, Caller("STUDY-01"), ct);
 
         result.Should().BeOfType<FileContentHttpResult>();
         var fileResult = (FileContentHttpResult)result;
@@ -171,7 +173,8 @@ public class EtmfExportTests
         var queue = new EtmfExportQueue();
         var request = new ExportDocumentsRequest("STUDY-01", null, IsFullBinder: true);
 
-        var result = await EtmfIntelligenceEndpoints.ExportDocuments(request, dbContext, queue, _clock, Caller("STUDY-01"), ct);
+        var result = await new EtmfExportApplicationService(new EtmfUnitOfWork(dbContext), queue, _clock)
+            .ExportDocumentsAsync(request, Caller("STUDY-01"), ct);
 
         result.GetType().IsGenericType.Should().BeTrue();
         result.GetType().GetGenericTypeDefinition().Should().Be(typeof(Accepted<>));
@@ -207,7 +210,8 @@ public class EtmfExportTests
         var queue = new EtmfExportQueue();
         var request = new ExportDocumentsRequest("STUDY-EMPTY", Zone: 1, IsFullBinder: false);
 
-        var result = await EtmfIntelligenceEndpoints.ExportDocuments(request, dbContext, queue, _clock, Caller("STUDY-EMPTY"), ct);
+        var result = await new EtmfExportApplicationService(new EtmfUnitOfWork(dbContext), queue, _clock)
+            .ExportDocumentsAsync(request, Caller("STUDY-EMPTY"), ct);
 
         var fileResult = result.Should().BeOfType<FileContentHttpResult>().Subject;
         fileResult.ContentType.Should().Be("application/zip");
@@ -314,7 +318,8 @@ public class EtmfExportTests
         var queue = new EtmfExportQueue();
         var request = new ExportDocumentsRequest("STUDY-SQLITE", Zone: 1, IsFullBinder: isFullBinder);
 
-        var result = await EtmfIntelligenceEndpoints.ExportDocuments(request, dbContext, queue, _clock, Caller("STUDY-SQLITE"), ct);
+        var result = await new EtmfExportApplicationService(new EtmfUnitOfWork(dbContext), queue, _clock)
+            .ExportDocumentsAsync(request, Caller("STUDY-SQLITE"), ct);
 
         result.GetType().IsGenericType.Should().BeTrue();
         result.GetType().GetGenericTypeDefinition().Should().Be(typeof(Accepted<>));
@@ -453,7 +458,8 @@ public class EtmfExportTests
         var queue = new EtmfExportQueue();
         var request = new ExportDocumentsRequest("STUDY-SYNC", IsFullBinder: false);
 
-        var result = await EtmfIntelligenceEndpoints.ExportDocuments(request, dbContext, queue, _clock, Caller("STUDY-SYNC"), ct);
+        var result = await new EtmfExportApplicationService(new EtmfUnitOfWork(dbContext), queue, _clock)
+            .ExportDocumentsAsync(request, Caller("STUDY-SYNC"), ct);
 
         var fileResult = result.Should().BeOfType<FileContentHttpResult>().Subject;
         using var memoryStream = new MemoryStream(fileResult.FileContents.ToArray());
@@ -517,7 +523,8 @@ public class EtmfExportTests
             var queue = new EtmfExportQueue();
             var request = new ExportDocumentsRequest("STUDY-RACE", Zone: 1, IsFullBinder: false);
 
-            var result = await EtmfIntelligenceEndpoints.ExportDocuments(request, dbContext, queue, _clock, Caller("STUDY-RACE"), ct);
+            var result = await new EtmfExportApplicationService(new EtmfUnitOfWork(dbContext), queue, _clock)
+                .ExportDocumentsAsync(request, Caller("STUDY-RACE"), ct);
 
             result.GetType().IsGenericType.Should().BeTrue();
             result.GetType().GetGenericTypeDefinition().Should().Be(typeof(Accepted<>));
@@ -618,8 +625,9 @@ public class EtmfExportTests
         await using var dbContext = new EtmfDbContext(options);
         var queue = new EtmfExportQueue();
 
-        var result = await EtmfIntelligenceEndpoints.ExportDocuments(
-            new ExportDocumentsRequest("STUDY-01", null, IsFullBinder: true), dbContext, queue, _clock, Caller("STUDY-99"), ct);
+        var result = await new EtmfExportApplicationService(new EtmfUnitOfWork(dbContext), queue, _clock)
+            .ExportDocumentsAsync(
+                new ExportDocumentsRequest("STUDY-01", null, IsFullBinder: true), Caller("STUDY-99"), ct);
 
         result.Should().BeOfType<ProblemHttpResult>().Which.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
         (await dbContext.TmfExportJobs.CountAsync(ct)).Should().Be(0);
@@ -640,10 +648,12 @@ public class EtmfExportTests
         dbContext.TmfExportJobs.Add(new TmfExportJob("JOB-B") { StudyId = "STUDY-B", RequestedBy = "u", Status = "COMPLETED", CreatedAt = _clock.UtcNow.UtcDateTime });
         await dbContext.SaveChangesAsync(ct);
 
-        var documents = await EtmfIntelligenceEndpoints.GetDocuments(null, null, dbContext, Caller("STUDY-A"), ct);
-        var other = await EtmfIntelligenceEndpoints.GetDocumentById("DOC-B", dbContext, Caller("STUDY-A"), ct);
-        var download = await EtmfIntelligenceEndpoints.DownloadExportJob("JOB-B", dbContext, _clock, Caller("STUDY-A"), ct);
-        var unassigned = await EtmfIntelligenceEndpoints.GetDocuments(null, null, dbContext, Caller(), ct);
+        var docService = new EtmfDocumentApplicationService(new EtmfUnitOfWork(dbContext), _clock);
+        var exportService = new EtmfExportApplicationService(new EtmfUnitOfWork(dbContext), new EtmfExportQueue(), _clock);
+        var documents = await docService.GetDocumentsAsync(null, null, Caller("STUDY-A"), ct);
+        var other = await docService.GetDocumentByIdAsync("DOC-B", Caller("STUDY-A"), ct);
+        var download = await exportService.DownloadExportJobAsync("JOB-B", Caller("STUDY-A"), ct);
+        var unassigned = await docService.GetDocumentsAsync(null, null, Caller(), ct);
 
         documents.Should().BeOfType<Ok<List<TmfDocument>>>().Which.Value!.Select(d => d.Id).Should().Equal("DOC-A");
         other.GetType().Name.Should().StartWith("NotFound");

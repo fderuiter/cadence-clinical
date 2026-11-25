@@ -27,6 +27,7 @@ builder.Services.AddSingleton<ISmartSigningKeys, ConfigurationSmartSigningKeys>(
 builder.AddCadencePostgresDbContext<InteropDbContext>();
 builder.Services.AddCadenceDurableSigTokenStore<InteropDbContext>();
 builder.Services.AddSingleton<IClock>(SystemClock.Instance);
+builder.Services.AddInteropApplicationServices();
 
 var app = builder.Build();
 app.UseCadenceWebDefaults();

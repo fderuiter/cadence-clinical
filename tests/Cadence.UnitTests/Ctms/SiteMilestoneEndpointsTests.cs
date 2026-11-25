@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Apps.Ctms.Application;
 using Cadence.Apps.Ctms.Domain;
 using Cadence.Apps.Ctms.Endpoints;
 using Cadence.Apps.Ctms.Infrastructure.Persistence;
@@ -31,6 +32,7 @@ public sealed class SiteMilestoneEndpointsTests
 
     private readonly CtmsDbContext _db;
     private readonly FakeClock _clock;
+    private readonly SiteMilestoneApplicationService _service;
 
     public SiteMilestoneEndpointsTests()
     {
@@ -39,6 +41,7 @@ public sealed class SiteMilestoneEndpointsTests
             .Options;
         _db = new CtmsDbContext(options);
         _clock = new FakeClock(new DateTimeOffset(2026, 10, 15, 10, 0, 0, TimeSpan.Zero));
+        _service = new SiteMilestoneApplicationService(_db, new CtmsUnitOfWork(_db), _clock);
     }
 
     private static DefaultHttpContext Caller(
@@ -77,7 +80,7 @@ public sealed class SiteMilestoneEndpointsTests
         );
 
         var result = await SiteMilestoneEndpoints.CreateSiteMilestoneAsync(
-            request, _db, caller, _clock, TestContext.Current.CancellationToken);
+            request, _service, caller, TestContext.Current.CancellationToken);
 
         var created = result.Should().BeOfType<Created<SiteMilestoneResponseDto>>().Subject;
         created.Value.Should().NotBeNull();
@@ -111,7 +114,7 @@ public sealed class SiteMilestoneEndpointsTests
         );
 
         var result = await SiteMilestoneEndpoints.CreateSiteMilestoneAsync(
-            request, _db, caller, _clock, TestContext.Current.CancellationToken);
+            request, _service, caller, TestContext.Current.CancellationToken);
 
         result.Should().BeOfType<ProblemHttpResult>()
             .Which.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
@@ -144,7 +147,7 @@ public sealed class SiteMilestoneEndpointsTests
         await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var result = await SiteMilestoneEndpoints.GetSiteMilestonesAsync(
-            StudyId, SiteId, _db, Caller(), TestContext.Current.CancellationToken);
+            StudyId, SiteId, _service, Caller(), TestContext.Current.CancellationToken);
 
         var ok = result.Should().BeOfType<Ok<List<SiteMilestoneResponseDto>>>().Subject;
         ok.Value.Should().HaveCount(1);
@@ -178,7 +181,7 @@ public sealed class SiteMilestoneEndpointsTests
         );
 
         var result = await SiteMilestoneEndpoints.UpdateSiteMilestoneAsync(
-            milestone.Id, request, _db, caller, _clock, TestContext.Current.CancellationToken);
+            milestone.Id, request, _service, caller, TestContext.Current.CancellationToken);
 
         var ok = result.Should().BeOfType<Ok<SiteMilestoneResponseDto>>().Subject;
         ok.Value.Should().NotBeNull();
@@ -206,7 +209,7 @@ public sealed class SiteMilestoneEndpointsTests
         var request = new SiteMilestoneUpdateDto(Status: "ACHIEVED");
 
         var result = await SiteMilestoneEndpoints.UpdateSiteMilestoneAsync(
-            "NON-EXISTENT", request, _db, caller, _clock, TestContext.Current.CancellationToken);
+            "NON-EXISTENT", request, _service, caller, TestContext.Current.CancellationToken);
 
         result.Should().BeOfType<ProblemHttpResult>()
             .Which.StatusCode.Should().Be(StatusCodes.Status404NotFound);
@@ -241,7 +244,7 @@ public sealed class SiteMilestoneEndpointsTests
         // Site-scoped CRA omitting site_id sees only assigned site milestones
         var scopedCra = Caller("CRA", "cra-1", [StudyId], [SiteId]);
         var listResult = await SiteMilestoneEndpoints.GetSiteMilestonesAsync(
-            StudyId, null, _db, scopedCra, TestContext.Current.CancellationToken);
+            StudyId, null, _service, scopedCra, TestContext.Current.CancellationToken);
         var okList = listResult.Should().BeOfType<Ok<List<SiteMilestoneResponseDto>>>().Subject;
         okList.Value!.Select(m => m.Site).Should().Equal(SiteId);
 
@@ -249,12 +252,12 @@ public sealed class SiteMilestoneEndpointsTests
         scopedCra.Request.Headers["X-Change-Reason"] = "Unauthorized site mutation";
         var createDenied = await SiteMilestoneEndpoints.CreateSiteMilestoneAsync(
             new SiteMilestoneCreateDto("SITE-999", StudyId, "SITE_ACTIVATION"),
-            _db, scopedCra, _clock, TestContext.Current.CancellationToken);
+            _service, scopedCra, TestContext.Current.CancellationToken);
         createDenied.Should().BeOfType<ProblemHttpResult>().Which.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
 
         var updateDenied = await SiteMilestoneEndpoints.UpdateSiteMilestoneAsync(
             foreignMilestone.Id, new SiteMilestoneUpdateDto(Status: "ACHIEVED"),
-            _db, scopedCra, _clock, TestContext.Current.CancellationToken);
+            _service, scopedCra, TestContext.Current.CancellationToken);
         var deniedProblem = updateDenied.Should().BeOfType<ProblemHttpResult>().Subject;
         deniedProblem.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
         deniedProblem.ProblemDetails.Extensions.Should().ContainKey("code").WhoseValue.Should().Be(CtmsScopeGuard.ForbiddenCode);
@@ -262,7 +265,7 @@ public sealed class SiteMilestoneEndpointsTests
         // Cross-study read fails closed with 403 FORBIDDEN_SCOPE
         var crossStudyCaller = Caller(RoleNormalization.ROLE_SPONSOR_DM, "dm-1", ["OTHER-STUDY"], []);
         var crossStudyRead = await SiteMilestoneEndpoints.GetSiteMilestonesAsync(
-            StudyId, SiteId, _db, crossStudyCaller, TestContext.Current.CancellationToken);
+            StudyId, SiteId, _service, crossStudyCaller, TestContext.Current.CancellationToken);
         crossStudyRead.Should().BeOfType<ProblemHttpResult>().Which.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
     }
 }

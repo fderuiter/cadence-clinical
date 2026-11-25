@@ -1,3 +1,4 @@
+using Cadence.Apps.Tickets.Application;
 using Cadence.Apps.Tickets.Endpoints;
 using Cadence.Apps.Tickets.Infrastructure.Persistence;
 using Cadence.Database;
@@ -15,6 +16,7 @@ builder.Services.AddCadenceSecurity();
 builder.Services.AddCadenceDurableSigTokenStore<TicketsDbContext>();
 builder.Services.AddSingleton<IClock>(SystemClock.Instance);
 builder.AddCadencePostgresDbContext<TicketsDbContext>();
+builder.Services.AddTicketsApplicationServices();
 
 var app = builder.Build();
 app.UseCadenceWebDefaults();

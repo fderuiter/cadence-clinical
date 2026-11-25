@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Apps.Ctms.Application;
 using Cadence.Apps.Ctms.Domain;
 using Cadence.Apps.Ctms.Endpoints;
 using Cadence.Apps.Ctms.Infrastructure.Persistence;
@@ -31,6 +32,7 @@ public sealed class StartupGreenlightEndpointsTests
     private readonly CtmsDbContext _db;
     private readonly FakeClock _clock;
     private readonly IConfiguration _config;
+    private readonly StartupGreenlightApplicationService _service;
 
     public StartupGreenlightEndpointsTests()
     {
@@ -46,6 +48,7 @@ public sealed class StartupGreenlightEndpointsTests
             ["GATEWAY_SECRET"] = "test-gateway-secret-32-chars-long-12345"
         };
         _config = new ConfigurationBuilder().AddInMemoryCollection(inMemorySettings).Build();
+        _service = new StartupGreenlightApplicationService(_db, new CtmsUnitOfWork(_db), _clock, _config);
     }
 
     /// <summary>
@@ -85,7 +88,7 @@ public sealed class StartupGreenlightEndpointsTests
     [Fact]
     public async Task GetCountryMatrix_WithoutAStudy_IsRefused()
     {
-        var result = await StartupGreenlightEndpoints.GetCountryMatrixAsync(" ", "US", _db, Caller(), TestContext.Current.CancellationToken);
+        var result = await StartupGreenlightEndpoints.GetCountryMatrixAsync(" ", "US", _service, Caller(), TestContext.Current.CancellationToken);
 
         result.Result.Should().BeOfType<ProblemHttpResult>().Which.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
     }
@@ -97,9 +100,9 @@ public sealed class StartupGreenlightEndpointsTests
     public async Task SiteGreenlight_WithNoRecordedGate_IsNotFoundAndWritesNothing()
     {
         var read = await StartupGreenlightEndpoints.GetSiteGreenlightAsync(
-            "SITE-NEW", Study, "US", _db, Caller(), TestContext.Current.CancellationToken);
+            "SITE-NEW", Study, "US", _service, Caller(), TestContext.Current.CancellationToken);
         var certify = await StartupGreenlightEndpoints.CertifySiteGreenlightAsync(
-            "SITE-NEW", Study, "US", "Certify", _db, Caller(), _clock, _config, TestContext.Current.CancellationToken);
+            "SITE-NEW", Study, "US", "Certify", _service, Caller(), TestContext.Current.CancellationToken);
 
         read.Result.Should().BeOfType<ProblemHttpResult>().Which.StatusCode.Should().Be(StatusCodes.Status404NotFound);
         certify.Result.Should().BeOfType<ProblemHttpResult>().Which.StatusCode.Should().Be(StatusCodes.Status404NotFound);
@@ -117,7 +120,7 @@ public sealed class StartupGreenlightEndpointsTests
         await AddGatesAsync(("SITE-US-1", "US", true));
 
         var result = await StartupGreenlightEndpoints.CertifySiteGreenlightAsync(
-            "SITE-US-1", Study, "US", "Certify", _db, Caller(), _clock, _config, TestContext.Current.CancellationToken);
+            "SITE-US-1", Study, "US", "Certify", _service, Caller(), TestContext.Current.CancellationToken);
 
         var dto = result.Result.Should().BeOfType<Ok<SiteGreenlightGateResponseDto>>().Subject.Value!;
         dto.OverallStatus.Should().Be("APPROVED");
@@ -143,7 +146,7 @@ public sealed class StartupGreenlightEndpointsTests
         var request = new BatchCertifyRequestDto(Study, "US", ["SITE-US-1", "SITE-US-9"], "Certify");
 
         var result = await StartupGreenlightEndpoints.BatchCertifyCountrySitesAsync(
-            request, "Certify", _db, Caller(), _clock, _config, TestContext.Current.CancellationToken);
+            request, "Certify", _service, Caller(), TestContext.Current.CancellationToken);
 
         result.Result.Should().BeOfType<BadRequest<Microsoft.AspNetCore.Mvc.ProblemDetails>>()
             .Which.Value!.Detail.Should().Contain("SITE-US-9");
@@ -161,7 +164,7 @@ public sealed class StartupGreenlightEndpointsTests
         var request = new BatchCertifyRequestDto("", "US", ["SITE-US-1"], "Certify");
 
         var result = await StartupGreenlightEndpoints.BatchCertifyCountrySitesAsync(
-            request, "Certify", _db, Caller(), _clock, _config, TestContext.Current.CancellationToken);
+            request, "Certify", _service, Caller(), TestContext.Current.CancellationToken);
 
         result.Result.Should().BeOfType<ProblemHttpResult>().Which.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
     }
@@ -188,7 +191,7 @@ public sealed class StartupGreenlightEndpointsTests
 
         // Act
         var result = await StartupGreenlightEndpoints.BatchCertifyCountrySitesAsync(
-            request, "21 CFR Part 11 Batch Certification", _db, Caller(), _clock, _config, TestContext.Current.CancellationToken);
+            request, "21 CFR Part 11 Batch Certification", _service, Caller(), TestContext.Current.CancellationToken);
 
         // Assert
         result.Result.Should().BeOfType<BadRequest<Microsoft.AspNetCore.Mvc.ProblemDetails>>();
@@ -220,7 +223,7 @@ public sealed class StartupGreenlightEndpointsTests
 
         // Act
         var result = await StartupGreenlightEndpoints.BatchCertifyCountrySitesAsync(
-            request, "Batch activation approved", _db, Caller(), _clock, _config, TestContext.Current.CancellationToken);
+            request, "Batch activation approved", _service, Caller(), TestContext.Current.CancellationToken);
 
         // Assert
         var okResult = result.Result.Should().BeOfType<Ok<BatchCertifyResponseDto>>().Subject;
@@ -285,7 +288,7 @@ public sealed class StartupGreenlightEndpointsTests
 
         // Act
         var result = await StartupGreenlightEndpoints.BatchCertifyCountrySitesAsync(
-            request, "Performance test batch certification", _db, Caller(), _clock, _config, TestContext.Current.CancellationToken);
+            request, "Performance test batch certification", _service, Caller(), TestContext.Current.CancellationToken);
 
         // Assert: the whole batch is certified. How long it took is the machine's business, not the test's (#5415).
         result.Result.Should().BeOfType<Ok<BatchCertifyResponseDto>>();
@@ -330,7 +333,7 @@ public sealed class StartupGreenlightEndpointsTests
 
         // Act
         var result = await StartupGreenlightEndpoints.BatchCertifyCountrySitesAsync(
-            request, "Override batch certification", _db, Caller(), _clock, _config, TestContext.Current.CancellationToken);
+            request, "Override batch certification", _service, Caller(), TestContext.Current.CancellationToken);
 
         // Assert
         var okResult = result.Result.Should().BeOfType<Ok<BatchCertifyResponseDto>>().Subject;
@@ -354,9 +357,9 @@ public sealed class StartupGreenlightEndpointsTests
         var request = new BatchCertifyRequestDto("PROTOCOL-2026-01", "GB", compliantSiteIds, "Certify");
 
         var otherStudy = await StartupGreenlightEndpoints.BatchCertifyCountrySitesAsync(
-            request, "Certify", _db, Caller(["sponsor_dm"], ["PROTOCOL-2027-09"]), _clock, _config, TestContext.Current.CancellationToken);
+            request, "Certify", _service, Caller(["sponsor_dm"], ["PROTOCOL-2027-09"]), TestContext.Current.CancellationToken);
         var otherSite = await StartupGreenlightEndpoints.BatchCertifyCountrySitesAsync(
-            request, "Certify", _db, Caller(["cra"], ["*"], ["SITE-ELSEWHERE"]), _clock, _config, TestContext.Current.CancellationToken);
+            request, "Certify", _service, Caller(["cra"], ["*"], ["SITE-ELSEWHERE"]), TestContext.Current.CancellationToken);
 
         otherStudy.Result.Should().BeOfType<ProblemHttpResult>().Which.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
         otherSite.Result.Should().BeOfType<ProblemHttpResult>().Which.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
@@ -370,18 +373,18 @@ public sealed class StartupGreenlightEndpointsTests
         await AddGatesAsync(("SITE-DE-1", "DE", true), ("SITE-DE-2", "DE", true));
 
         var scopedResult = await StartupGreenlightEndpoints.GetCountryMatrixAsync(
-            Study, "DE", _db, Caller(["cra"], [Study], ["SITE-DE-1"]), TestContext.Current.CancellationToken);
+            Study, "DE", _service, Caller(["cra"], [Study], ["SITE-DE-1"]), TestContext.Current.CancellationToken);
         var scopedDtos = scopedResult.Result.Should().BeOfType<Ok<List<SiteGreenlightGateResponseDto>>>().Subject.Value!;
         scopedDtos.Select(d => d.SiteId).Should().Equal("SITE-DE-1");
 
         var unassignedSiteCaller = await StartupGreenlightEndpoints.GetCountryMatrixAsync(
-            Study, "DE", _db, Caller(["cra"], [Study], []), TestContext.Current.CancellationToken);
+            Study, "DE", _service, Caller(["cra"], [Study], []), TestContext.Current.CancellationToken);
         var problem = unassignedSiteCaller.Result.Should().BeOfType<ProblemHttpResult>().Subject;
         problem.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
         problem.ProblemDetails.Extensions.Should().ContainKey("code").WhoseValue.Should().Be(CtmsScopeGuard.ForbiddenCode);
 
         var crossSiteRead = await StartupGreenlightEndpoints.GetSiteGreenlightAsync(
-            "SITE-DE-2", Study, "DE", _db, Caller(["cra"], [Study], ["SITE-DE-1"]), TestContext.Current.CancellationToken);
+            "SITE-DE-2", Study, "DE", _service, Caller(["cra"], [Study], ["SITE-DE-1"]), TestContext.Current.CancellationToken);
         crossSiteRead.Result.Should().BeOfType<ProblemHttpResult>().Which.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
     }
 
@@ -413,7 +416,7 @@ public sealed class StartupGreenlightEndpointsTests
 
     private async Task<List<SiteGreenlightGateResponseDto>> MatrixAsync(string country)
     {
-        var result = await StartupGreenlightEndpoints.GetCountryMatrixAsync(Study, country, _db, Caller(), TestContext.Current.CancellationToken);
+        var result = await StartupGreenlightEndpoints.GetCountryMatrixAsync(Study, country, _service, Caller(), TestContext.Current.CancellationToken);
         return result.Result.Should().BeOfType<Ok<List<SiteGreenlightGateResponseDto>>>().Subject.Value!;
     }
 

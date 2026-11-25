@@ -18,8 +18,7 @@ builder.Services.AddCadenceSecurity();
 // CADENCE_IMAGING_DEID_PSEUDONYMIZATION_KEY, both required and validated at startup (#5399).
 builder.Services.AddSingleton<IClock>(SystemClock.Instance);
 builder.Services.AddImagingDeidentification();
-builder.Services.AddScoped<IDicomIngestionService, DicomIngestionService>();
-builder.Services.AddScoped<IImagingSegmentationService, ImagingSegmentationService>();
+builder.Services.AddImagingApplicationServices();
 builder.AddCadencePostgresDbContext<ImagingDbContext>();
 builder.Services.AddCadenceDurableSigTokenStore<ImagingDbContext>();
 

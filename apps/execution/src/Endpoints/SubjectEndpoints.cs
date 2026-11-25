@@ -4,7 +4,6 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Apps.Execution.Application.Abstractions;
-using Cadence.Apps.Execution.Application.Randomization;
 using Cadence.Apps.Execution.Application.Subjects;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Execution.Endpoints.Filters;
@@ -49,6 +48,7 @@ public static partial class SubjectEndpoints
     public const string WithdrawSubjectSemanticAction = "execution.subject.withdraw";
 
     public static string SubjectStateAction(string subjectId) => $"/api/v1/execution/subjects/{subjectId}/state";
+
     [LoggerMessage(
         EventId = 3001,
         Level = LogLevel.Information,
@@ -99,12 +99,6 @@ public static partial class SubjectEndpoints
 
     public static IEndpointRouteBuilder MapSubjectEndpoints(this IEndpointRouteBuilder app)
     {
-        // `.WithOpenApi()` from the design doc's own §3.3 sample is deliberately not reproduced here: it is
-        // obsolete (ASPDEPR002) under this repo's pinned .NET 10 SDK/ASP.NET Core version and this solution
-        // treats warnings (including deprecation diagnostics) as build errors -- the newer
-        // `Microsoft.AspNetCore.OpenApi` document-generation pipeline (`AddOpenApi()`/`MapOpenApi()`, already
-        // registered/mapped by whichever ticket wires `Program.cs`) needs no per-group opt-in call to include
-        // these routes, so dropping it changes no observable behavior.
         var group = app.MapGroup("/api/v1/execution/subjects")
             .WithTags("Subjects");
 
@@ -127,19 +121,7 @@ public static partial class SubjectEndpoints
             .RequireChangeReasonHeader()
             .AddEndpointFilter<ValidationFilter<SubjectConsentRequest>>();
 
-        // Legacy dual-route compatibility alias (`01_spec.md` §3 trap table): the legacy router declared
-        // both `/consent` and `/consents` for the exact same handler. Removing the plural route would be a
-        // breaking API change out of this ticket's scope, so it is reproduced here as a deliberate, minimal,
-        // undocumented alias. Reusing the very same `RecordSubjectConsentAsync` method group (rather than a
-        // second, textually-duplicated handler) is what makes AC's "behaves identically to `/consent`"
-        // requirement structurally guaranteed rather than merely maintained-by-convention; the design doc's
-        // own §3.3 illustrative sample instead returns the un-matched `Task<Result<SubjectConsentResponse>>`
-        // directly for the alias (skipping both `.Match(...)` and `ValidationFilter<T>`), which would make
-        // the alias always answer 200 with the raw `Result<T>` envelope shape and skip request validation —
-        // observably *not* identical to `/consent` for a failure or an invalid body. Applying the same
-        // handler and the same `ValidationFilter<SubjectConsentRequest>` here closes that gap. Excluded from
-        // the generated OpenAPI document since it was never a documented, public contract — only a
-        // legacy accidental-dual-registration quirk existing callers may still depend on.
+        // Legacy dual-route compatibility alias (`01_spec.md` §3 trap table): identical behavior to `/consent`.
         group.MapPost("/{subjectId}/consents", RecordSubjectConsentAsync)
             .WithName("RecordSubjectConsentAlias")
             .RequirePermission("subject_enrollment:update").RequireCallerStudyScope()
@@ -217,12 +199,6 @@ public static partial class SubjectEndpoints
         return app;
     }
 
-    /// <summary>
-    /// <c>POST /api/v1/execution/subjects</c>. <see cref="ValidationFilter{TRequest}"/> guarantees
-    /// <paramref name="request"/> already passed <see cref="SubjectCreateRequestValidator"/> by the time this
-    /// runs. Success maps to <c>201 Created</c> with a <c>Location</c> header built from the domain subject
-    /// code (<see cref="SubjectResponse.SubjectId_"/>), per `02_technical_design.md` §3.3.
-    /// </summary>
     public static async Task<IResult> CreateSubjectAsync(
         SubjectCreateRequest request,
         HttpContext http,
@@ -276,11 +252,6 @@ public static partial class SubjectEndpoints
             onFailure: e => e.ToProblemResult());
     }
 
-    /// <summary>
-    /// <c>POST /api/v1/execution/subjects/{subjectId}/consent</c>, and the undocumented plural
-    /// <c>/consents</c> alias registered against this same method group (see
-    /// <see cref="MapSubjectEndpoints"/>'s own remarks).
-    /// </summary>
     public static async Task<IResult> RecordSubjectConsentAsync(
         string subjectId,
         SubjectConsentRequest request,
@@ -328,17 +299,6 @@ public static partial class SubjectEndpoints
         return result.Match(Results.Ok, e => e.ToProblemResult());
     }
 
-    /// <summary>
-    /// <c>PATCH /api/v1/execution/subjects/{subjectId}/state</c>. <see cref="ChangeReasonHeaderFilter"/> runs
-    /// ahead of this handler and short-circuits with a <c>400</c> whenever <c>X-Change-Reason</c> is absent or
-    /// whitespace-only, so <paramref name="svc"/>'s <see cref="ISubjectApplicationService.AdvanceStateAsync"/>
-    /// is never reached for such a request. The <c>throw</c> below is unreachable in production traffic for
-    /// exactly that reason — it exists only to fail loudly (rather than silently miscompute a reason of
-    /// <c>""</c>) if this filter is ever removed from the route without updating this delegate, matching
-    /// `02_technical_design.md` §3.3's own reference implementation for this route verbatim. The caller needs a
-    /// role that may change a participant's record, and an unblinding authority when the target is
-    /// <c>UNBLINDED</c> (<see cref="SubjectAuthority.AuthorizeStateChange"/>).
-    /// </summary>
     public static async Task<IResult> AdvanceSubjectStateAsync(
         string subjectId,
         SubjectStateUpdateRequest request,
@@ -378,380 +338,6 @@ public static partial class SubjectEndpoints
         var result = await svc.AdvanceStateAsync(subjectId, request, changeReason, ct).ConfigureAwait(false);
         return result.Match(r => Results.Ok(r), e => e.ToProblemResult());
     }
-
-    /// <summary>
-    /// <c>PATCH /api/v1/execution/subjects/{subjectId}/site</c>. Assigns a clinical site to an unassigned subject and
-    /// synchronizes screening enrollment with the kernel. Verifies both existing subject scope (allowing an unassigned
-    /// subject within the caller's study) and target site scope (requiring a site-scoped caller to hold the target
-    /// <c>site_id</c> in their assigned sites).
-    /// </summary>
-    public static async Task<IResult> AssignSubjectSiteAsync(
-        string subjectId,
-        SubjectSiteAssignmentRequest request,
-        HttpContext http,
-        ISubjectApplicationService svc,
-        CancellationToken ct,
-        [FromServices] ILogger? logger = null,
-        [FromServices] IKernelLockGuard? lockGuard = null)
-    {
-        ct.ThrowIfCancellationRequested();
-
-        string changeReason = ChangeReasonHeader.Read(http.Request)
-            ?? throw new InvalidOperationException("ChangeReasonHeaderFilter should have rejected this request.");
-
-        if (SubjectAuthority.AuthorizeParticipantChange(ResolveCaller(http)) is { } forbidden)
-        {
-            return forbidden.ToProblemResult();
-        }
-
-        if (ClinicalScopeGuard.RequireVerifiedTenant(http, ClinicalScopeGuard.ForbiddenCode) is { } tenantDenied)
-        {
-            return tenantDenied;
-        }
-
-        var scope = await svc.GetSubjectScopeAsync(subjectId, ct).ConfigureAwait(false);
-        var lockScope = await svc.GetSubjectLockScopeAsync(subjectId, ct).ConfigureAwait(false);
-        if (scope is { } s)
-        {
-            if (ClinicalScopeGuard.RequireStudyAndOptionalSite(
-                    http,
-                    s.StudyId.Value,
-                    s.SiteId?.Value,
-                    allowUnassignedSiteForScopedCaller: true,
-                    code: ClinicalScopeGuard.ForbiddenCode,
-                    requireVerifiedTenant: true) is { } existingScopeDenied)
-            {
-                return existingScopeDenied;
-            }
-
-            if (!string.IsNullOrWhiteSpace(request.SiteCode)
-                && ClinicalScopeGuard.RequireStudyAndOptionalSite(
-                    http,
-                    s.StudyId.Value,
-                    request.SiteCode.Trim(),
-                    allowUnassignedSiteForScopedCaller: false,
-                    code: ClinicalScopeGuard.ForbiddenCode,
-                    requireVerifiedTenant: true) is { } targetScopeDenied)
-            {
-                return targetScopeDenied;
-            }
-
-            string resolvedSubjectCode = lockScope?.SubjectCode.Value ?? subjectId;
-            if (await ExecutionLockGuard.EnsureUnlockedAsync(
-                    lockGuard,
-                    s.StudyId.Value,
-                    s.SiteId?.Value,
-                    resolvedSubjectCode,
-                    ct).ConfigureAwait(false) is { } existingLocked)
-            {
-                return existingLocked;
-            }
-
-            if (!string.IsNullOrWhiteSpace(request.SiteCode)
-                && !string.Equals(s.SiteId?.Value, request.SiteCode.Trim(), StringComparison.Ordinal)
-                && await ExecutionLockGuard.EnsureUnlockedAsync(
-                    lockGuard,
-                    s.StudyId.Value,
-                    request.SiteCode.Trim(),
-                    resolvedSubjectCode,
-                    ct).ConfigureAwait(false) is { } targetLocked)
-            {
-                return targetLocked;
-            }
-        }
-        else
-        {
-            if (GuardMissingRecordScope(http) is { } missingDenied)
-            {
-                return missingDenied;
-            }
-
-            if (!string.IsNullOrWhiteSpace(request.SiteCode)
-                && ClinicalScopeGuard.RequireSite(
-                    http,
-                    request.SiteCode.Trim(),
-                    ClinicalScopeGuard.ForbiddenCode,
-                    requireVerifiedTenant: true) is { } targetSiteDenied)
-            {
-                return targetSiteDenied;
-            }
-        }
-
-        if (logger != null)
-        {
-            logger.LogAssigningSubjectSite(subjectId, request.SiteCode, changeReason);
-        }
-
-        var result = await svc.AssignSiteAsync(subjectId, request, changeReason, ct).ConfigureAwait(false);
-        return result.Match(r => Results.Ok(r), e => e.ToProblemResult());
-    }
-
-    /// <summary>
-    /// <c>GET /api/v1/execution/subjects?study_id=&amp;site_id=&amp;status=&amp;q=&amp;limit=&amp;offset=</c>. The list
-    /// carries no treatment group, so it needs no blinding check.
-    /// </summary>
-    public static async Task<IResult> ListSubjectsAsync(
-        [FromQuery(Name = "study_id")] string? studyId,
-        [FromQuery(Name = "site_id")] string? siteId,
-        [FromQuery(Name = "status")] string? status,
-        [FromQuery(Name = "limit")] int? limit,
-        [FromQuery(Name = "offset")] int? offset,
-        HttpContext http,
-        ISubjectApplicationService svc,
-        CancellationToken ct,
-        [FromQuery(Name = "q")] string? q = null)
-    {
-        ct.ThrowIfCancellationRequested();
-
-        IResult? studyDenied = !string.IsNullOrWhiteSpace(studyId)
-            ? ClinicalScopeGuard.RequireStudy(http, studyId, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true)
-            : ClinicalScopeGuard.RequireAnyStudyScope(http, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true);
-        if (studyDenied is not null)
-        {
-            return studyDenied;
-        }
-
-        if (ClinicalScopeGuard.ResolveSingleSiteFilter(http, siteId, out var siteFilter, out _, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } siteDenied)
-        {
-            return siteDenied;
-        }
-
-        var result = await svc.ListAsync(
-                studyId,
-                siteId,
-                status,
-                limit,
-                offset,
-                ct,
-                string.IsNullOrWhiteSpace(siteId) ? siteFilter : null,
-                q)
-            .ConfigureAwait(false);
-        return result.Match(Results.Ok, e => e.ToProblemResult());
-    }
-
-    /// <summary>
-    /// <c>GET /api/v1/execution/subjects/counts?study_id=&amp;site_id=</c>. Counts subjects grouped by lifecycle status
-    /// under the same study and site scope guard as <see cref="ListSubjectsAsync"/>.
-    /// </summary>
-    public static async Task<IResult> GetSubjectCountsAsync(
-        [FromQuery(Name = "study_id")] string? studyId,
-        [FromQuery(Name = "site_id")] string? siteId,
-        HttpContext http,
-        ISubjectApplicationService svc,
-        CancellationToken ct)
-    {
-        ct.ThrowIfCancellationRequested();
-
-        IResult? studyDenied = !string.IsNullOrWhiteSpace(studyId)
-            ? ClinicalScopeGuard.RequireStudy(http, studyId, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true)
-            : ClinicalScopeGuard.RequireAnyStudyScope(http, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true);
-        if (studyDenied is not null)
-        {
-            return studyDenied;
-        }
-
-        if (ClinicalScopeGuard.ResolveSingleSiteFilter(http, siteId, out var siteFilter, out _, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true) is { } siteDenied)
-        {
-            return siteDenied;
-        }
-
-        var result = await svc.GetCountsAsync(
-                studyId,
-                siteId,
-                ct,
-                string.IsNullOrWhiteSpace(siteId) ? siteFilter : null)
-            .ConfigureAwait(false);
-        return result.Match(Results.Ok, e => e.ToProblemResult());
-    }
-
-    /// <summary>
-    /// <c>GET /api/v1/execution/subjects/{subjectId}</c>. Blinded by default: the treatment group and kit are revealed
-    /// from the randomisation allocation only to a caller whose signed identity carries
-    /// <see cref="CadenceClaimTypes.UnblindedAccess"/>, or to an unblinding authority
-    /// (<see cref="SubjectAuthority.CanUnblind"/>) inspecting an emergency-<c>UNBLINDED</c> subject (#4943, #5607).
-    /// Study and site scope on the loaded <see cref="ClinicalSubject"/> are verified before <c>RevealAsync</c> runs.
-    /// </summary>
-    public static async Task<IResult> GetSubjectDetailAsync(
-        string subjectId, HttpContext http, ISubjectApplicationService svc, IRandomizationApplicationService randomization,
-        CancellationToken ct, [FromServices] ILogger? logger = null)
-    {
-        ct.ThrowIfCancellationRequested();
-
-        if (ClinicalScopeGuard.RequireVerifiedTenant(http, ClinicalScopeGuard.ForbiddenCode) is { } tenantDenied)
-        {
-            return tenantDenied;
-        }
-
-        bool hasUnblindedAccess = ClinicalScopeGuard.ResolvePrincipal(http)?.UnblindedAccess is true;
-        bool isBlindedCaller = !hasUnblindedAccess;
-
-        if (logger != null)
-        {
-            logger.LogFetchingSubjectDetail(subjectId, isBlindedCaller);
-        }
-
-        var result = await svc.GetDetailAsync(subjectId, ct).ConfigureAwait(false);
-        if (result.IsFailure)
-        {
-            return GuardMissingRecordScope(http) ?? result.Error!.ToProblemResult();
-        }
-
-        var detail = result.Value!;
-        if (ClinicalScopeGuard.RequireStudyAndOptionalSite(
-                http,
-                detail.StudyId.Value,
-                detail.SiteId?.Value,
-                allowUnassignedSiteForScopedCaller: true,
-                code: ClinicalScopeGuard.ForbiddenCode,
-                requireVerifiedTenant: true) is { } scopeDenied)
-        {
-            return scopeDenied;
-        }
-
-        bool canRevealEmergencyUnblinded =
-            string.Equals(detail.Status, SubjectStateCodec.ToCode(SubjectState.Unblinded), StringComparison.Ordinal)
-            && ResolveCaller(http)?.FirstRoleMatching(SubjectAuthority.CanUnblind) is not null;
-
-        if (!hasUnblindedAccess && !canRevealEmergencyUnblinded)
-        {
-            return Results.Ok(detail);
-        }
-
-        var revealed = await randomization.RevealAsync(subjectId, ct).ConfigureAwait(false);
-        return Results.Ok(revealed is null
-            ? detail
-            : detail with { TreatmentGroup = revealed.Arm, InvestigationalProductId = revealed.KitNumber });
-    }
-
-    /// <summary>
-    /// <c>PUT /api/v1/execution/subjects/{subjectId}/demographics</c>. The null-forgiving <c>!</c> below is
-    /// provably safe, not a suppressed nullable warning: <see cref="ChangeReasonHeaderFilter"/> (applied to
-    /// this route, see <see cref="MapSubjectEndpoints"/>) guarantees <c>X-Change-Reason</c> is present and
-    /// non-whitespace before this delegate ever runs — matching that filter's own doc comment and
-    /// `02_technical_design.md` §3.3's reference implementation for this exact route.
-    /// </summary>
-    public static async Task<IResult> UpdateSubjectDemographicsAsync(
-        string subjectId,
-        SubjectDemographicsUpdateRequest request,
-        HttpContext http,
-        ISubjectApplicationService svc,
-        CancellationToken ct,
-        [FromServices] ILogger? logger = null,
-        [FromServices] IKernelLockGuard? lockGuard = null)
-    {
-        ct.ThrowIfCancellationRequested();
-
-        string changeReason = ChangeReasonHeader.Read(http.Request)!;
-
-        if (SubjectAuthority.AuthorizeParticipantChange(ResolveCaller(http)) is { } forbidden)
-        {
-            return forbidden.ToProblemResult();
-        }
-
-        var (scopeDenied, resolvedScope) = await GuardSubjectAndResolveLockScopeAsync(subjectId, http, svc, ct).ConfigureAwait(false);
-        if (scopeDenied is not null)
-        {
-            return scopeDenied;
-        }
-
-        if (resolvedScope is { } ls
-            && await ExecutionLockGuard.EnsureUnlockedAsync(lockGuard, ls.StudyCode, ls.SiteCode, ls.SubjectCode, ct).ConfigureAwait(false) is { } locked)
-        {
-            return locked;
-        }
-
-        if (logger != null)
-        {
-            logger.LogUpdatingSubjectDemographics(subjectId, changeReason);
-        }
-
-        var result = await svc.UpdateDemographicsAsync(subjectId, request, changeReason, ct).ConfigureAwait(false);
-        return result.Match(r => Results.Ok(r), e => e.ToProblemResult());
-    }
-
-    /// <summary>
-    /// <c>DELETE /api/v1/execution/subjects/{subjectId}/demographics</c>, closing MIG-SUBJ-022's noted
-    /// `!`-safety gap: this route did not exist before this ticket, so <see cref="ChangeReasonHeaderFilter"/>
-    /// is applied here for the first time rather than retrofitted. The null-forgiving <c>!</c> below has the
-    /// exact same justification as <see cref="UpdateSubjectDemographicsAsync"/>'s.
-    /// </summary>
-    public static async Task<IResult> DeleteSubjectDemographicsAsync(
-        string subjectId,
-        HttpContext http,
-        ISubjectApplicationService svc,
-        CancellationToken ct,
-        [FromServices] ILogger? logger = null,
-        [FromServices] IKernelLockGuard? lockGuard = null)
-    {
-        ct.ThrowIfCancellationRequested();
-
-        string changeReason = ChangeReasonHeader.Read(http.Request)!;
-
-        if (SubjectAuthority.AuthorizeParticipantChange(ResolveCaller(http)) is { } forbidden)
-        {
-            return forbidden.ToProblemResult();
-        }
-
-        var (scopeDenied, resolvedScope) = await GuardSubjectAndResolveLockScopeAsync(subjectId, http, svc, ct).ConfigureAwait(false);
-        if (scopeDenied is not null)
-        {
-            return scopeDenied;
-        }
-
-        if (resolvedScope is { } ls
-            && await ExecutionLockGuard.EnsureUnlockedAsync(lockGuard, ls.StudyCode, ls.SiteCode, ls.SubjectCode, ct).ConfigureAwait(false) is { } locked)
-        {
-            return locked;
-        }
-
-        if (logger != null)
-        {
-            logger.LogDeletingSubjectDemographics(subjectId, changeReason);
-        }
-
-        var result = await svc.DeleteDemographicsAsync(subjectId, changeReason, ct).ConfigureAwait(false);
-        return result.Match(r => Results.Ok(r), e => e.ToProblemResult());
-    }
-
-    private static async Task<(IResult? Denied, (string StudyCode, string? SiteCode, string SubjectCode)? Scope)> GuardSubjectAndResolveLockScopeAsync(
-        string subjectId, HttpContext http, ISubjectApplicationService svc, CancellationToken ct)
-    {
-        if (ClinicalScopeGuard.RequireVerifiedTenant(http, ClinicalScopeGuard.ForbiddenCode) is { } tenantDenied)
-        {
-            return (tenantDenied, null);
-        }
-
-        var scope = await svc.GetSubjectScopeAsync(subjectId, ct).ConfigureAwait(false);
-        var lockScope = await svc.GetSubjectLockScopeAsync(subjectId, ct).ConfigureAwait(false);
-        if (scope is { } s)
-        {
-            var denied = ClinicalScopeGuard.RequireStudyAndOptionalSite(
-                http,
-                s.StudyId.Value,
-                s.SiteId?.Value,
-                allowUnassignedSiteForScopedCaller: true,
-                code: ClinicalScopeGuard.ForbiddenCode,
-                requireVerifiedTenant: true);
-            return (denied, (s.StudyId.Value, s.SiteId?.Value, lockScope?.SubjectCode.Value ?? subjectId));
-        }
-
-        if (lockScope is { } ls)
-        {
-            var denied = ClinicalScopeGuard.RequireStudyAndOptionalSite(
-                http,
-                ls.StudyCode.Value,
-                ls.SiteCode?.Value,
-                allowUnassignedSiteForScopedCaller: true,
-                code: ClinicalScopeGuard.ForbiddenCode,
-                requireVerifiedTenant: true);
-            return (denied, (ls.StudyCode.Value, ls.SiteCode?.Value, ls.SubjectCode.Value));
-        }
-
-        return (GuardMissingRecordScope(http), null);
-    }
-
-    private static IResult? GuardMissingRecordScope(HttpContext http) =>
-        ClinicalScopeGuard.RequireAnyStudyAndSiteScope(http, ClinicalScopeGuard.ForbiddenCode, requireVerifiedTenant: true);
 
     private const string TargetSubjectStateItemKey = "Cadence.Execution.TargetSubjectState";
 

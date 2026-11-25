@@ -1,3 +1,4 @@
+using Cadence.Apps.Safety.Application;
 using Cadence.Apps.Safety.Domain;
 using Cadence.Apps.Safety.Endpoints;
 using Cadence.Apps.Safety.Infrastructure.Persistence;
@@ -20,6 +21,7 @@ builder.Services.AddHttpContextAccessor();
 // GxPAuditInterceptor is attached by default via AddCadencePostgresDbContext; its actor is the request's verified
 // caller (or an explicit svc: IAuditActorScope), failing closed rather than defaulting (#5462).
 builder.AddCadencePostgresDbContext<SafetyDbContext>();
+builder.Services.AddSafetyApplicationServices();
 // DSUR approval is e-signed; each token is single use across instances and restarts (ADR-2515, #5434, #5462).
 builder.Services.AddCadenceDurableSigTokenStore<SafetyDbContext>();
 builder.Services.AddFluidTemplating();
