@@ -8,7 +8,8 @@
     <ToolCommandName>cadence</ToolCommandName>
     <PackageId>Cadence.Cli</PackageId>
     <Version>10.0.0</Version>
-    <PublishAot>true</PublishAot>
+    <IsAotCompatible>true</IsAotCompatible>
+    <PublishAot Condition="'$(Configuration)' == 'Release' and '$(RuntimeIdentifier)' != ''">true</PublishAot>
     <RuntimeIdentifiers>linux-x64;linux-arm64;osx-x64;osx-arm64;win-x64;win-arm64</RuntimeIdentifiers>
     <OptimizationPreference>Speed</OptimizationPreference>
     <StackTraceSupport>true</StackTraceSupport>
@@ -18,8 +19,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\engine_core\src\Cadence.Core.Domain.csproj" />
-    <ProjectReference Include="..\..\database\src\Cadence.Database.csproj" />
     <ProjectReference Include="..\..\compliance\src\Cadence.Compliance.csproj" />
     <ProjectReference Include="..\..\security\src\Cadence.Security.csproj" />
     <ProjectReference Include="..\..\tooling_core\src\Cadence.ToolingCore.csproj" />
@@ -29,7 +28,7 @@
   <ItemGroup>
     <PackageReference Include="Spectre.Console" />
     <PackageReference Include="System.CommandLine" />
-    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <PackageReference Include="Npgsql" />
     <KnownILCompilerPack Update="Microsoft.DotNet.ILCompiler" ILCompilerPackVersion="$(DotNetServicingVersion)" />
   </ItemGroup>
 </Project>
