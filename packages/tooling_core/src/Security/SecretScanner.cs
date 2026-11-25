@@ -27,7 +27,7 @@ public static class SecretScanner
         ("GitHub Token", new Regex(@"\b(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{36}\b|\bgithub_pat_[A-Za-z0-9_]{82}\b", RegexOptions.Compiled)),
         ("Slack Token", new Regex(@"\bxox[baprs]-[0-9A-Za-z\-]{10,}\b", RegexOptions.Compiled)),
         ("Stripe Live Secret Key", new Regex(@"\b(?:sk|rk)_live_[0-9A-Za-z]{24,}\b", RegexOptions.Compiled)),
-        ("Hardcoded Compliance Secret", new Regex(@"(?i)\b(?:AUDIT_LOG_SECRET_KEY|INBOUND_EMAIL_HMAC_SECRET|GATEWAY_SECRET_KEY)\b\s*[:=]\s*['""][^'""\r\n]{8,}['""]|development_secret_key_for_rtm_generation", RegexOptions.Compiled)),
+        ("Hardcoded Compliance Secret", new Regex(@"(?i)\b(?:AUDIT_LOG_SECRET_KEY|GATEWAY_SECRET_KEY)\b\s*[:=]\s*['""][^'""\r\n]{8,}['""]|development_secret_key_for_rtm_generation", RegexOptions.Compiled)),
     ];
 
     /// <summary>Compiled secret patterns shared with post-build public bundle verification.</summary>

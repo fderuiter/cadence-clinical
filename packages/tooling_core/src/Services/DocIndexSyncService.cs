@@ -62,6 +62,9 @@ public static partial class DocIndexSyncService
     [GeneratedRegex(@"^(\d{4}-\d{2}-\d{2})")]
     private static partial Regex IsoDatePrefixRegex();
 
+    [GeneratedRegex(@"^\s*\|\s*\[ADR-(\d+)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex AdrTableRowNumberRegex();
+
     [GeneratedRegex(@"^\s*(?:[-*]\s*)?(?:\*\*)?Status:?(?:\*\*)?:?\s*(?:\*\*)?Superseded\b|^\s*>\s*(?:\[!(?:WARNING|IMPORTANT|NOTE)\]\s*)?(?:\*\*)?Superseded\b|^\s*Superseded\s+by\b|^\s*##\s+Status\s*\r?\n+\s*Superseded\b", RegexOptions.IgnoreCase | RegexOptions.Multiline)]
     private static partial Regex AdrSupersededRegex();
 
@@ -353,7 +356,8 @@ public static partial class DocIndexSyncService
             return IsHistoricalAdr(relPath, fileContent) ? "Historical" : "Current";
         }
         if (relPath.StartsWith("migration/", StringComparison.OrdinalIgnoreCase) ||
-            relPath.StartsWith("architecture/repository-migration/", StringComparison.OrdinalIgnoreCase)) return "Historical";
+            relPath.StartsWith("architecture/repository-migration/", StringComparison.OrdinalIgnoreCase) ||
+            relPath.Equals("PYTHON_REFERENCE_INVENTORY.md", StringComparison.OrdinalIgnoreCase)) return "Historical";
         if (relPath.StartsWith("api/", StringComparison.OrdinalIgnoreCase) || relPath.StartsWith("schema/", StringComparison.OrdinalIgnoreCase)) return "Generated";
         if (relPath.StartsWith("SDLC/", StringComparison.OrdinalIgnoreCase))
         {
@@ -1167,22 +1171,30 @@ public static partial class DocIndexSyncService
                     }
                 }
 
-                var renderedRows = RenderDocRows(pendingDocs, hasStatusCol);
                 if (lastTableLine >= 0)
                 {
-                    bool needsTrailingBlankLine =
-                        lastTableLine + 1 == end &&
-                        end < lines.Count &&
-                        !string.IsNullOrWhiteSpace(lines[end]);
-                    if (needsTrailingBlankLine)
+                    if (string.Equals(categoryHeader, "## Architecture decision records", StringComparison.OrdinalIgnoreCase))
                     {
-                        renderedRows.Add(string.Empty);
+                        InsertAdrRowsByNumber(lines, start, ref end, ref lastTableLine, pendingDocs, hasStatusCol);
                     }
+                    else
+                    {
+                        var renderedRows = RenderDocRows(pendingDocs, hasStatusCol);
+                        bool needsTrailingBlankLine =
+                            lastTableLine + 1 == end &&
+                            end < lines.Count &&
+                            !string.IsNullOrWhiteSpace(lines[end]);
+                        if (needsTrailingBlankLine)
+                        {
+                            renderedRows.Add(string.Empty);
+                        }
 
-                    lines.InsertRange(lastTableLine + 1, renderedRows);
+                        lines.InsertRange(lastTableLine + 1, renderedRows);
+                    }
                 }
                 else
                 {
+                    var renderedRows = RenderDocRows(pendingDocs, hasStatusCol);
                     var newTable = new List<string>
                     {
                         "",
@@ -1351,6 +1363,85 @@ public static partial class DocIndexSyncService
             newBlock.AddRange(rebuiltTable);
             lines.InsertRange(end, newBlock);
         }
+    }
+
+    private static void InsertAdrRowsByNumber(
+        List<string> lines,
+        int start,
+        ref int end,
+        ref int lastTableLine,
+        List<MarkdownDocInfo> pendingDocs,
+        bool hasStatusCol)
+    {
+        var renderedPending = pendingDocs
+            .Select(doc =>
+            {
+                string row = RenderSingleDocRow(doc, hasStatusCol, includeBlogDate: false);
+                return (Doc: doc, Row: row, AdrNumber: TryExtractAdrNumberFromRow(row));
+            })
+            .OrderBy(item => item.AdrNumber.HasValue ? 0 : 1)
+            .ThenBy(item => item.AdrNumber ?? int.MaxValue)
+            .ThenBy(item => item.Doc.RelativePath, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        foreach (var item in renderedPending)
+        {
+            int insertIndex = lastTableLine + 1;
+            if (item.AdrNumber is int targetAdrNumber)
+            {
+                int bestPredecessorLine = -1;
+                int bestPredecessorNumber = int.MinValue;
+                int smallestSuccessorLine = -1;
+                int smallestSuccessorNumber = int.MaxValue;
+
+                for (int i = start; i <= lastTableLine; i++)
+                {
+                    if (TryExtractAdrNumberFromRow(lines[i]) is not int existingAdrNumber)
+                    {
+                        continue;
+                    }
+
+                    if (existingAdrNumber <= targetAdrNumber && existingAdrNumber >= bestPredecessorNumber)
+                    {
+                        bestPredecessorNumber = existingAdrNumber;
+                        bestPredecessorLine = i;
+                    }
+                    else if (existingAdrNumber > targetAdrNumber && existingAdrNumber < smallestSuccessorNumber)
+                    {
+                        smallestSuccessorNumber = existingAdrNumber;
+                        smallestSuccessorLine = i;
+                    }
+                }
+
+                if (bestPredecessorLine >= 0)
+                {
+                    insertIndex = bestPredecessorLine + 1;
+                }
+                else if (smallestSuccessorLine >= 0)
+                {
+                    insertIndex = smallestSuccessorLine;
+                }
+            }
+
+            lines.Insert(insertIndex, item.Row);
+            lastTableLine++;
+            end++;
+        }
+
+        if (lastTableLine + 1 == end &&
+            end < lines.Count &&
+            !string.IsNullOrWhiteSpace(lines[end]))
+        {
+            lines.Insert(lastTableLine + 1, string.Empty);
+        }
+    }
+
+    private static int? TryExtractAdrNumberFromRow(string row)
+    {
+        Match match = AdrTableRowNumberRegex().Match(row);
+        return match.Success && int.TryParse(match.Groups[1].Value, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out int adrNumber)
+            ? adrNumber
+            : null;
     }
 
     private static List<string> RenderDocRows(List<MarkdownDocInfo> docs, bool hasStatusCol)

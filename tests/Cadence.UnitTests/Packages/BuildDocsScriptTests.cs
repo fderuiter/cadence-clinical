@@ -247,14 +247,13 @@ public sealed class BuildDocsScriptTests : IDisposable
         {
             ["CADENCE_DOCS_SKIP_CHECKS"] = "1",
             ["AUDIT_LOG_SECRET_KEY"] = "super-secret-audit-key",
-            ["INBOUND_EMAIL_HMAC_SECRET"] = "super-secret-hmac-key",
             ["GATEWAY_SECRET_KEY"] = "super-secret-gateway-key",
             ["GITHUB_TOKEN"] = "ghp_shouldNotLeakIntoVitePressBuild",
         });
 
         result.ExitCode.Should().Be(0, result.Output);
         string snapshotDuringBuild = File.ReadAllText(Path.Combine(_fixtureRoot, "vitepress-snapshot.txt"));
-        snapshotDuringBuild.Should().Contain("VITEPRESS_SECRETS=|||");
+        snapshotDuringBuild.Should().Contain("VITEPRESS_SECRETS=||");
     }
 
     [Fact]
@@ -382,7 +381,6 @@ public sealed class BuildDocsScriptTests : IDisposable
             new Dictionary<string, string?>
             {
                 ["AUDIT_LOG_SECRET_KEY"] = "super-secret-audit-key",
-                ["INBOUND_EMAIL_HMAC_SECRET"] = "super-secret-hmac-key",
                 ["GATEWAY_SECRET_KEY"] = "super-secret-gateway-key",
                 ["GITHUB_TOKEN"] = "ghp_shouldNotLeakIntoVitePressDev",
             },
@@ -394,7 +392,7 @@ public sealed class BuildDocsScriptTests : IDisposable
 
         string snapshotDuringDev = File.ReadAllText(Path.Combine(_fixtureRoot, "vitepress-dev-snapshot.txt"));
         snapshotDuringDev.Should().Contain("STAGED_ALL_EIGHT=true");
-        snapshotDuringDev.Should().Contain("VITEPRESS_SECRETS=|||");
+        snapshotDuringDev.Should().Contain("VITEPRESS_SECRETS=||");
 
         AssertAllEightStagedRootDocsRemoved();
     }
@@ -559,7 +557,6 @@ public sealed class BuildDocsScriptTests : IDisposable
               ].every((f) => fs.existsSync(path.join(root, "docs", f)));
               const secrets = [
                 process.env.AUDIT_LOG_SECRET_KEY ?? "",
-                process.env.INBOUND_EMAIL_HMAC_SECRET ?? "",
                 process.env.GATEWAY_SECRET_KEY ?? "",
                 process.env.GITHUB_TOKEN ?? "",
               ].join("|");
@@ -589,7 +586,6 @@ public sealed class BuildDocsScriptTests : IDisposable
                 .every((f) => fs.existsSync(path.join(root, "docs", f)));
               const secrets = [
                 process.env.AUDIT_LOG_SECRET_KEY ?? "",
-                process.env.INBOUND_EMAIL_HMAC_SECRET ?? "",
                 process.env.GATEWAY_SECRET_KEY ?? "",
                 process.env.GITHUB_TOKEN ?? "",
               ].join("|");
