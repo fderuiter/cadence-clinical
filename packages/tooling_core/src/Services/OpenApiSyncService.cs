@@ -10,7 +10,6 @@ namespace Cadence.ToolingCore.Services;
 /// <summary>
 /// Keeps <c>docs/openapi/*.json</c> equal to the OpenAPI documents the .NET services actually serve.
 /// The specs are produced by <c>Cadence.OpenApiExporter</c>, which boots each service in memory.
-/// Files under <c>docs/openapi/legacy/</c> are the Python-era contract and are not touched.
 /// </summary>
 public static class OpenApiSyncService
 {
@@ -82,8 +81,7 @@ public static class OpenApiSyncService
     }
 
     /// <summary>
-    /// Compares freshly exported specs with the committed ones. Only top-level files are compared,
-    /// so <c>docs/openapi/legacy/</c> is ignored. JSON is compared structurally, not textually.
+    /// Compares freshly exported specs with the committed ones. JSON is compared structurally, not textually.
     /// </summary>
     public static IReadOnlyList<string> FindDrift(string exportedDir, string committedDir, bool isTargetedExport = false)
     {

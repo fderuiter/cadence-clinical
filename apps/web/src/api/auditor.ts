@@ -1,4 +1,5 @@
-import { openApiClient, unwrapResponse, getBaseUrl } from "./client";
+import { unwrapResponse, getBaseUrl } from "./client";
+import { openApiClient } from "./legacyClient";
 
 export interface AuditLogParams {
   user_id?: string;

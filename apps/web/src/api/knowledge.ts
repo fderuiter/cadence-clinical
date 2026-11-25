@@ -1,8 +1,9 @@
 import { findSection, findStage } from "../canvas/lifecycle";
 import { listDemoCatalogModules } from "../router/availability.js";
 import { isDemoBuild } from "../utils/demoMode.js";
-import { createOpenApiClient, openApiClient, unwrapResponse } from "./client";
+import { createOpenApiClient, unwrapResponse } from "./client";
 import type { paths as KnowledgePaths } from "./generated/knowledge";
+import { openApiClient } from "./legacyClient";
 
 const knowledgeClient = createOpenApiClient<KnowledgePaths>();
 
