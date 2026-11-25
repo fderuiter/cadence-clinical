@@ -30,9 +30,7 @@ const webBaseUrl = useLiveKeycloak
 const requestedProjects = getRequestedProjects(process.argv);
 const junitSlug =
   requestedProjects.length > 0
-    ? requestedProjects
-        .map((p) => p.replace(/[^a-zA-Z0-9_-]/g, "-"))
-        .join("-")
+    ? requestedProjects.map((p) => p.replace(/[^a-zA-Z0-9_-]/g, "-")).join("-")
     : "all";
 const isStandalonePreviewOnly =
   requestedProjects.length > 0 &&
