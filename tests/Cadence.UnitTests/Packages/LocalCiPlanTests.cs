@@ -1212,7 +1212,7 @@ public partial class LocalCiPlanTests
             "--check",
             "--ignore-path",
             ".prettierignore",
-            "**/*.{js,jsx,ts,tsx,mjs,cjs,vue,json,css,md,yaml,yml}");
+            "**/*.{js,jsx,ts,tsx,mjs,cjs,mts,cts,vue,json,css,md,yaml,yml}");
 
         var securityJob = CiPlan.Jobs.Single(j => j.Key == "security");
         var secretStep = securityJob.Steps.Single(s => s.Name == "Run secret detection");

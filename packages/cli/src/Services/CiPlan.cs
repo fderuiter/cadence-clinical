@@ -350,8 +350,8 @@ public static class CiPlan
                 EnvironmentIfPassed = NativeAotCacheHit,
                 Commands =
                 [
-                    Pnpm("exec", "prettier", "--check", "--ignore-path", ".prettierignore", "**/*.{js,jsx,ts,tsx,mjs,cjs,vue,json,css,md,yaml,yml}")
-                        with { CiText = "pnpm exec prettier --check --ignore-path .prettierignore \"**/*.{js,jsx,ts,tsx,mjs,cjs,vue,json,css,md,yaml,yml}\"" },
+                    Pnpm("exec", "prettier", "--check", "--ignore-path", ".prettierignore", "**/*.{js,jsx,ts,tsx,mjs,cjs,mts,cts,vue,json,css,md,yaml,yml}")
+                        with { CiText = "pnpm exec prettier --check --ignore-path .prettierignore \"**/*.{js,jsx,ts,tsx,mjs,cjs,mts,cts,vue,json,css,md,yaml,yml}\"" },
                     NodeCli("check", "eslint"),
                     Pnpm("-r", "typecheck"),
                 ],
