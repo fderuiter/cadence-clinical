@@ -13,13 +13,14 @@ namespace Cadence.ToolingCore.Services;
 
 /// <summary>
 /// Validates JSON, XML, and YAML dependency manifests, lockstep MSBuild and <c>pnpm</c> catalog cohorts,
-/// <c>.github/dependabot.yml</c> target/ignore uniqueness and group/ignore guardrails, synchronized
-/// <c>PostgresTestImage</c> <c>@sha256</c> digests, and forbidden client-side crypto or runtime test-harness packages
-/// across the workspace or staged Git index.
+/// <c>.github/dependabot.yml</c> target/ignore uniqueness, cohort and trailing catch-all group ordering,
+/// <c>open-pull-requests-limit</c> caps, synchronized <c>PostgresTestImage</c> <c>@sha256</c> digests, and forbidden
+/// client-side crypto or runtime test-harness packages across the workspace or staged Git index.
 /// </summary>
 public static partial class DependencyValidatorService
 {
     private const string DependabotRelativePath = ".github/dependabot.yml";
+    private const int MaxTotalDependabotOpenPullRequestsLimit = 20;
     private static readonly UTF8Encoding StrictUtf8 = new(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true);
     private static readonly string[] WorkspaceContainers = ["apps", "packages"];
     private static readonly string[] ForbiddenPackages = ["node-forge", "elliptic", "jose"];
@@ -74,6 +75,7 @@ public static partial class DependencyValidatorService
                 "Microsoft.Extensions.*",
                 "System.Security.Cryptography.*",
                 "System.IO.*",
+                "dotnet-ef",
             ],
             ["Microsoft.Extensions.AI*"]
         ),
@@ -111,6 +113,8 @@ public static partial class DependencyValidatorService
         ("OpenTelemetry*", ">= 1.21.0"),
         ("SonarAnalyzer.CSharp", ">= 10.7.0"),
     ];
+    private static readonly HashSet<string> RequiredNugetGroupNames =
+        RequiredNugetGroups.Select(g => g.GroupName).ToHashSet(StringComparer.Ordinal);
     private static readonly string[] RequiredNpmGroups =
     [
         "typescript-eslint",
@@ -118,6 +122,8 @@ public static partial class DependencyValidatorService
         "playwright",
         "vue-vite",
     ];
+    private static readonly HashSet<string> RequiredNpmGroupNames =
+        RequiredNpmGroups.ToHashSet(StringComparer.Ordinal);
     private static readonly string[] RequiredDockerDotnetPatterns =
     [
         "mcr.microsoft.com/dotnet/*",
@@ -192,6 +198,8 @@ public static partial class DependencyValidatorService
 
     private sealed class DependabotGroup
     {
+        public required string Name { get; init; }
+
         public HashSet<string> Patterns { get; } = new(StringComparer.Ordinal);
 
         public HashSet<string> ExcludePatterns { get; } = new(StringComparer.Ordinal);
@@ -213,6 +221,12 @@ public static partial class DependencyValidatorService
         public List<string> Directories { get; } = [];
 
         public string? TargetBranch { get; set; }
+
+        public string? RawOpenPullRequestsLimit { get; set; }
+
+        public int? OpenPullRequestsLimit { get; set; }
+
+        public List<DependabotGroup> OrderedGroups { get; } = [];
 
         public Dictionary<string, DependabotGroup> Groups { get; } = new(StringComparer.Ordinal);
 
@@ -1168,12 +1182,14 @@ public static partial class DependencyValidatorService
         }
 
         int errors = structuralErrors.Count;
+        errors += ValidateDependabotOpenPullRequestsLimits(dependabotPath, parsed.Updates);
         errors += ValidateNugetDependabotBlock(dependabotPath, FindDependabotBlock(parsed.Updates, "nuget", "/"));
         errors += ValidateNpmDependabotBlock(dependabotPath, FindDependabotBlock(parsed.Updates, "npm", "/"));
         errors += ValidateDockerDotnetDependabotBlock(dependabotPath, FindDependabotBlock(parsed.Updates, "docker", "/docker"));
         errors += ValidateDockerSceDependabotBlock(dependabotPath, FindDependabotBlock(parsed.Updates, "docker", "/docker/sce/python"), "/docker/sce/python", "python", ScePythonIgnoredUpdateTypes);
         errors += ValidateDockerSceDependabotBlock(dependabotPath, FindDependabotBlock(parsed.Updates, "docker", "/docker/sce/r"), "/docker/sce/r", "r-base", SceRIgnoredUpdateTypes);
         errors += ValidateDockerComposeDependabotBlock(dependabotPath, FindDependabotBlock(parsed.Updates, "docker-compose", "/docker"));
+        errors += ValidateGitHubActionsDependabotBlock(dependabotPath, FindDependabotBlock(parsed.Updates, "github-actions", "/"));
 
         return errors;
     }
@@ -1400,6 +1416,7 @@ public static partial class DependencyValidatorService
             }
         }
 
+        errors += ValidateTrailingCatchAllGroup(relativePath, "nuget '/'", block, RequiredNugetGroupNames);
         return errors;
     }
 
@@ -1433,6 +1450,7 @@ public static partial class DependencyValidatorService
             errors++;
         }
 
+        errors += ValidateTrailingCatchAllGroup(relativePath, "npm '/'", block, RequiredNpmGroupNames);
         return errors;
     }
 
@@ -1444,7 +1462,7 @@ public static partial class DependencyValidatorService
             return 1;
         }
 
-        int errors = 0;
+        int errors = RejectNonFinalCatchAllGroups(relativePath, "docker '/docker'", block);
         if (!block.Groups.TryGetValue("dotnet-containers", out var group))
         {
             Console.WriteLine($"[DEPENDENCY VIOLATION] {relativePath} (docker '/docker') is missing lockstep group 'dotnet-containers'.");
@@ -1506,6 +1524,7 @@ public static partial class DependencyValidatorService
             return 1;
         }
 
+        int errors = 0;
         bool blocksAllPostgresUpdates = block.Ignores.Any(i =>
             string.Equals(i.DependencyName, "postgres", StringComparison.Ordinal) &&
             !i.HasUpdateTypes &&
@@ -1515,10 +1534,117 @@ public static partial class DependencyValidatorService
         {
             Console.WriteLine(
                 $"[DEPENDENCY VIOLATION] {relativePath} (docker-compose '/docker') must ignore 'postgres' without 'update-types' scoping so standalone compose @sha256 digest bumps cannot drift from PostgresTestImage.cs (ADR-2533).");
+            errors++;
+        }
+
+        errors += ValidateTrailingCatchAllGroup(relativePath, "docker-compose '/docker'", block);
+        return errors;
+    }
+
+    private static int ValidateGitHubActionsDependabotBlock(string relativePath, DependabotUpdateEntry? block)
+    {
+        if (block is null)
+        {
+            Console.WriteLine($"[DEPENDENCY VIOLATION] {relativePath} is missing the 'github-actions' update block for directory '/'.");
             return 1;
         }
 
-        return 0;
+        return ValidateTrailingCatchAllGroup(relativePath, "github-actions '/'", block);
+    }
+
+    private static int ValidateDependabotOpenPullRequestsLimits(
+        string relativePath,
+        IReadOnlyList<DependabotUpdateEntry> updates)
+    {
+        int errors = 0;
+        long totalLimit = 0;
+
+        for (int i = 0; i < updates.Count; i++)
+        {
+            DependabotUpdateEntry update = updates[i];
+            string ecosystem = string.IsNullOrWhiteSpace(update.PackageEcosystem) ? $"#/updates/{i}" : update.PackageEcosystem!;
+            string directory = ResolveUpdateDirectories(update).FirstOrDefault() ?? "?";
+
+            if (update.OpenPullRequestsLimit is not int limit || limit <= 0)
+            {
+                string rawDisplay = update.RawOpenPullRequestsLimit is null ? "<missing>" : $"'{update.RawOpenPullRequestsLimit}'";
+                Console.WriteLine(
+                    $"[DEPENDENCY VIOLATION] {relativePath} ({ecosystem} '{directory}') must specify a positive integer 'open-pull-requests-limit' (found {rawDisplay}).");
+                errors++;
+                continue;
+            }
+
+            totalLimit += limit;
+        }
+
+        if (totalLimit > MaxTotalDependabotOpenPullRequestsLimit)
+        {
+            Console.WriteLine(
+                $"[DEPENDENCY VIOLATION] {relativePath} total 'open-pull-requests-limit' sum ({totalLimit}) must not exceed {MaxTotalDependabotOpenPullRequestsLimit}.");
+            errors++;
+        }
+
+        return errors;
+    }
+
+    private static int RejectNonFinalCatchAllGroups(
+        string relativePath,
+        string ecosystemLabel,
+        DependabotUpdateEntry block)
+    {
+        int errors = 0;
+        for (int i = 0; i < block.OrderedGroups.Count - 1; i++)
+        {
+            DependabotGroup earlier = block.OrderedGroups[i];
+            if (earlier.Patterns.Contains("*"))
+            {
+                Console.WriteLine(
+                    $"[DEPENDENCY VIOLATION] {relativePath} ({ecosystemLabel}) catch-all group '{earlier.Name}' must appear last after all cohort groups.");
+                errors++;
+            }
+        }
+
+        return errors;
+    }
+
+    private static int ValidateTrailingCatchAllGroup(
+        string relativePath,
+        string ecosystemLabel,
+        DependabotUpdateEntry block,
+        IReadOnlySet<string>? reservedCohortGroupNames = null)
+    {
+        int errors = RejectNonFinalCatchAllGroups(relativePath, ecosystemLabel, block);
+        if (block.OrderedGroups.Count == 0)
+        {
+            Console.WriteLine(
+                $"[DEPENDENCY VIOLATION] {relativePath} ({ecosystemLabel}) must define a trailing catch-all group with patterns [\"*\"].");
+            return errors + 1;
+        }
+
+        DependabotGroup lastGroup = block.OrderedGroups[^1];
+        if (reservedCohortGroupNames is not null && reservedCohortGroupNames.Contains(lastGroup.Name))
+        {
+            Console.WriteLine(
+                $"[DEPENDENCY VIOLATION] {relativePath} ({ecosystemLabel}) must append a dedicated trailing catch-all group with patterns [\"*\"] after cohort group '{lastGroup.Name}'.");
+            errors++;
+            return errors;
+        }
+
+        if (lastGroup.Patterns.Count != 1 || !lastGroup.Patterns.Contains("*"))
+        {
+            Console.WriteLine(
+                $"[DEPENDENCY VIOLATION] {relativePath} ({ecosystemLabel}) final group '{lastGroup.Name}' must define patterns [\"*\"] after all cohort groups.");
+            errors++;
+        }
+
+        if (lastGroup.ExcludePatterns.Count > 0)
+        {
+            Console.WriteLine(
+                $"[DEPENDENCY VIOLATION] {relativePath} ({ecosystemLabel}) trailing catch-all group '{lastGroup.Name}' must not define exclude-patterns.");
+            errors++;
+        }
+
+        return errors;
     }
 
     private static bool HasIgnoreUpdateType(DependabotUpdateEntry block, string dependencyName, string updateType) =>
@@ -1746,8 +1872,9 @@ public static partial class DependencyValidatorService
             groupItemIndent = indent;
             if (!update.Groups.TryGetValue(key, out currentGroup))
             {
-                currentGroup = new DependabotGroup();
+                currentGroup = new DependabotGroup { Name = key };
                 update.Groups[key] = currentGroup;
+                update.OrderedGroups.Add(currentGroup);
             }
 
             return;
@@ -1810,6 +1937,13 @@ public static partial class DependencyValidatorService
                 break;
             case "target-branch":
                 update.TargetBranch = ReadScalarValue(lines, ref lineIdx, propIndent, val);
+                break;
+            case "open-pull-requests-limit":
+                string rawLimit = ReadScalarValue(lines, ref lineIdx, propIndent, val);
+                update.RawOpenPullRequestsLimit = rawLimit;
+                update.OpenPullRequestsLimit = int.TryParse(rawLimit, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsedLimit)
+                    ? parsedLimit
+                    : null;
                 break;
             case "groups":
                 inGroups = true;

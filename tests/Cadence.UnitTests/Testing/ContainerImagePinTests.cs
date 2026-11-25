@@ -451,6 +451,7 @@ public sealed partial class ContainerImagePinTests
 
         dependabot.Should().Contain("package-ecosystem: \"nuget\"")
             .And.Contain("dotnet-10-servicing:")
+            .And.Contain("- \"dotnet-ef\"")
             .And.Contain("dotnet-ai:")
             .And.Contain("aspire:")
             .And.Contain("identitymodel:")
@@ -460,17 +461,29 @@ public sealed partial class ContainerImagePinTests
             .And.Contain("dotnet-testing:")
             .And.Contain("analyzers:")
             .And.Contain("anthropic:")
+            .And.Contain("nuget-other:")
             .And.Contain("package-ecosystem: \"npm\"")
             .And.Contain("typescript-eslint:")
             .And.Contain("vitest:")
             .And.Contain("playwright:")
             .And.Contain("vue-vite:")
+            .And.Contain("npm-other:")
             .And.Contain("package-ecosystem: \"docker\"")
             .And.Contain("dotnet-containers:")
             .And.Contain("directory: \"/docker\"")
             .And.Contain("directory: \"/docker/sce/python\"")
             .And.Contain("directory: \"/docker/sce/r\"")
-            .And.Contain("package-ecosystem: \"docker-compose\"");
+            .And.Contain("package-ecosystem: \"docker-compose\"")
+            .And.Contain("compose-images:")
+            .And.Contain("package-ecosystem: \"github-actions\"")
+            .And.Contain("github-actions:");
+
+        DotnetServicingDotnetEfGroupRule().IsMatch(dependabot).Should().BeTrue(
+            "dotnet-10-servicing must group dotnet-ef with $(DotNetServicingVersion)");
+        OpenPullRequestsLimitLine().Matches(dependabot)
+            .Select(m => int.Parse(m.Groups["limit"].Value, System.Globalization.CultureInfo.InvariantCulture))
+            .Should().Equal([5, 5, 1, 1, 1, 1, 2],
+                "dependabot.yml open-pull-requests-limit values must sum to 16 across nuget, npm, container, and github-actions blocks");
 
         DotnetMajorIgnoreRule().IsMatch(dependabot).Should().BeTrue(
             "dependabot.yml must ignore version-update:semver-major for mcr.microsoft.com/dotnet/*");
@@ -802,6 +815,73 @@ public sealed partial class ContainerImagePinTests
                   interval: "weekly"
             """);
 
+        AssertMalformedManifestFails(
+            ".github/dependabot.yml",
+            dependabotContent.Replace("          - \"dotnet-ef\"\n", string.Empty, StringComparison.Ordinal));
+
+        AssertMalformedManifestFails(
+            ".github/dependabot.yml",
+            dependabotContent.Replace(
+                "      nuget-other:\n        patterns:\n          - \"*\"\n",
+                string.Empty,
+                StringComparison.Ordinal));
+
+        AssertMalformedManifestFails(
+            ".github/dependabot.yml",
+            dependabotContent.Replace(
+                "      npm-other:\n        patterns:\n          - \"*\"\n",
+                string.Empty,
+                StringComparison.Ordinal));
+
+        AssertMalformedManifestFails(
+            ".github/dependabot.yml",
+            dependabotContent.Replace(
+                "    groups:\n      compose-images:\n        patterns:\n          - \"*\"\n",
+                string.Empty,
+                StringComparison.Ordinal));
+
+        AssertMalformedManifestFails(
+            ".github/dependabot.yml",
+            dependabotContent.Replace(
+                "    groups:\n      github-actions:\n        patterns:\n          - \"*\"",
+                string.Empty,
+                StringComparison.Ordinal));
+
+        AssertMalformedManifestFails(
+            ".github/dependabot.yml",
+            dependabotContent
+                .Replace("      nuget-other:\n        patterns:\n          - \"*\"\n", string.Empty, StringComparison.Ordinal)
+                .Replace(
+                    "      dotnet-10-servicing:",
+                    "      nuget-other:\n        patterns:\n          - \"*\"\n      dotnet-10-servicing:",
+                    StringComparison.Ordinal));
+
+        AssertMalformedManifestFails(
+            ".github/dependabot.yml",
+            dependabotContent.Replace(
+                "      typescript-eslint:",
+                "      early-catchall:\n        patterns:\n          - \"*\"\n      typescript-eslint:",
+                StringComparison.Ordinal));
+
+        AssertMalformedManifestFails(
+            ".github/dependabot.yml",
+            dependabotContent.Replace(
+                "      nuget-other:\n        patterns:\n          - \"*\"",
+                "      nuget-other:\n        patterns:\n          - \"*\"\n        exclude-patterns:\n          - \"Serilog*\"",
+                StringComparison.Ordinal));
+
+        AssertMalformedManifestFails(
+            ".github/dependabot.yml",
+            dependabotContent.Replace("    open-pull-requests-limit: 2\n", string.Empty, StringComparison.Ordinal));
+
+        AssertMalformedManifestFails(
+            ".github/dependabot.yml",
+            dependabotContent.Replace("    open-pull-requests-limit: 2", "    open-pull-requests-limit: 0", StringComparison.Ordinal));
+
+        AssertMalformedManifestFails(
+            ".github/dependabot.yml",
+            dependabotContent.Replace("    open-pull-requests-limit: 2", "    open-pull-requests-limit: 7", StringComparison.Ordinal));
+
         VerifyPreCommitIndexValidation(buildPropsContent, packagesPropsContent, dependabotContent);
     }
 
@@ -880,6 +960,44 @@ public sealed partial class ContainerImagePinTests
                     preCommit: true,
                     indexReader: dependabotReader).Should().Be(1,
                     "pre-commit dependency validation must fail closed on duplicate ignore rules in staged .github/dependabot.yml blobs");
+            }
+
+            string misorderedCatchAllDependabot = dependabotContent
+                .Replace("      npm-other:\n        patterns:\n          - \"*\"\n", string.Empty, StringComparison.Ordinal)
+                .Replace(
+                    "      typescript-eslint:",
+                    "      npm-other:\n        patterns:\n          - \"*\"\n      typescript-eslint:",
+                    StringComparison.Ordinal);
+            File.WriteAllText(Path.Combine(tempGit, ".github", "dependabot.yml"), misorderedCatchAllDependabot);
+            RunGit(tempGit, "add", ".github/dependabot.yml");
+            File.WriteAllText(Path.Combine(tempGit, ".github", "dependabot.yml"), dependabotContent);
+
+            using (var misorderedReader = GitIndexReader.TryOpen(tempGit)!)
+            {
+                misorderedReader.Should().NotBeNull();
+                DependencyValidatorService.ValidateDependencies(
+                    tempGit,
+                    preCommit: true,
+                    indexReader: misorderedReader).Should().Be(1,
+                    "pre-commit dependency validation must reject catch-all '*' groups placed before cohort groups in staged .github/dependabot.yml blobs");
+            }
+
+            string excessiveLimitsDependabot = dependabotContent.Replace(
+                "    open-pull-requests-limit: 2",
+                "    open-pull-requests-limit: 7",
+                StringComparison.Ordinal);
+            File.WriteAllText(Path.Combine(tempGit, ".github", "dependabot.yml"), excessiveLimitsDependabot);
+            RunGit(tempGit, "add", ".github/dependabot.yml");
+            File.WriteAllText(Path.Combine(tempGit, ".github", "dependabot.yml"), dependabotContent);
+
+            using (var limitReader = GitIndexReader.TryOpen(tempGit)!)
+            {
+                limitReader.Should().NotBeNull();
+                DependencyValidatorService.ValidateDependencies(
+                    tempGit,
+                    preCommit: true,
+                    indexReader: limitReader).Should().Be(1,
+                    "pre-commit dependency validation must fail closed when staged .github/dependabot.yml open-pull-requests-limit sum exceeds 20");
             }
 
             RunGit(tempGit, "add", ".github/dependabot.yml");
@@ -1150,6 +1268,12 @@ public sealed partial class ContainerImagePinTests
 
     [GeneratedRegex(@"dependency-name:\s*""python""\s*\r?\n\s*update-types:\s*\[""version-update:semver-major"",\s*""version-update:semver-minor""\]")]
     private static partial Regex ScePythonIgnoreRule();
+
+    [GeneratedRegex(@"dotnet-10-servicing:\s*\r?\n\s*patterns:(?:\s*\r?\n\s*-\s*""[^""]+"")*\s*\r?\n\s*-\s*""dotnet-ef""")]
+    private static partial Regex DotnetServicingDotnetEfGroupRule();
+
+    [GeneratedRegex(@"^\s*open-pull-requests-limit:\s*(?<limit>\d+)\s*$", RegexOptions.Multiline)]
+    private static partial Regex OpenPullRequestsLimitLine();
 
     [GeneratedRegex(@"dependency-name:\s*""r-base""\s*\r?\n\s*update-types:\s*\[\s*""version-update:semver-major"",\s*""version-update:semver-minor"",\s*""version-update:semver-patch"",?\s*\]")]
     private static partial Regex SceRIgnoreRule();
