@@ -44,7 +44,14 @@ public sealed class LabRangeImportService : ILabRangeImportService
         byte[] bytes;
         if (!string.IsNullOrWhiteSpace(request.FileContentBase64))
         {
-            bytes = Convert.FromBase64String(request.FileContentBase64);
+            try
+            {
+                bytes = Convert.FromBase64String(request.FileContentBase64);
+            }
+            catch (FormatException ex)
+            {
+                throw new InvalidOperationException("Uploaded file content is not valid Base64.", ex);
+            }
         }
         else if (!string.IsNullOrWhiteSpace(request.RawFileContent))
         {
@@ -183,21 +190,11 @@ public sealed class LabRangeImportService : ILabRangeImportService
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        byte[] bytes;
-        if (!string.IsNullOrWhiteSpace(request.FileContentBase64))
-        {
-            bytes = Convert.FromBase64String(request.FileContentBase64);
-        }
-        else if (!string.IsNullOrWhiteSpace(request.RawFileContent))
-        {
-            bytes = Encoding.UTF8.GetBytes(request.RawFileContent);
-        }
-        else
+        if (string.IsNullOrWhiteSpace(request.FileContentBase64) && string.IsNullOrWhiteSpace(request.RawFileContent))
         {
             throw new ArgumentException("No file content provided in commit request.", nameof(request));
         }
 
-        var parsedRows = BulkLabRangeFileParser.Parse(bytes, request.FileName);
         var dryRunResult = await DryRunAsync(new BulkLabRangeDryRunRequest(
             StudyId: request.StudyId,
             SiteId: request.SiteId,
@@ -272,7 +269,7 @@ public sealed class LabRangeImportService : ILabRangeImportService
             fileName: request.FileName,
             fileType: string.IsNullOrWhiteSpace(fileType) ? "CSV" : fileType,
             status: status,
-            totalRows: parsedRows.Count,
+            totalRows: dryRunResult.TotalRows,
             successRows: successCount,
             errorRows: errorCount,
             errorSummaryJson: errorSummaryJson,

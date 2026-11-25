@@ -43,7 +43,11 @@ eCRF queries no longer live here either. A query is raised on a form value (or o
 
 Custom lab reference ranges are imported and managed per study (`/api/v1/execution/lab-ranges`,
 `/api/v1/execution/labs/import/*`) with LOINC mapping and UCUM unit conversion, persisted in PostgreSQL
-(`LabReferenceRanges`, `BulkLabRangeImportJobs`), and queried directly per study (and optional site). Standalone
+(`LabReferenceRanges`, `BulkLabRangeImportJobs`), and queried directly per study (and optional site). Bulk `.xlsx`
+uploads across `/api/v1/execution/labs/import/*` and `/api/v1/execution/coding/synonyms/*` enforce ZIP entry count,
+uncompressed byte, and 100:1 decompression ratio quotas, DTD-prohibited XML character ceilings, and bounded worksheet
+row and column caps in `TabularParsingHelpers`, rejecting malformed or oversized spreadsheets with HTTP `400`
+`ProblemDetails`. Standalone
 observation range evaluation retired with `ClinicalObservation` ([ADR-2622](../../docs/adr/2026-10-19-ecrf-forms-are-collection-instances-saved-in-one-command.md)).
 
 Grade 3/4 lab toxicity reviews (`/api/v1/execution/labs/toxicity`) keep their queue, the investigator's confirm,

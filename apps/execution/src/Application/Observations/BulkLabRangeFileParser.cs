@@ -35,6 +35,8 @@ public static class BulkLabRangeFileParser
 {
     public const long MaxFileSizeBytes = 50 * 1024 * 1024; // 50 MB
     public const int MaxRowCount = 10000; // deid-ignore
+    public const int MaxColumnIndex = 63;
+    private const int MaxWorksheetRowElements = MaxRowCount + 1_024;
 
     public static List<ParsedLabRangeRow> Parse(byte[] fileBytes, string fileName)
     {
@@ -107,18 +109,24 @@ public static class BulkLabRangeFileParser
 
     private static List<ParsedLabRangeRow> ParseXlsx(byte[] fileBytes)
     {
-        using var stream = new MemoryStream(fileBytes);
-        using var zip = new ZipArchive(stream, ZipArchiveMode.Read);
+        using var stream = new MemoryStream(fileBytes, writable: false);
+        var quotas = TabularArchiveQuotas.Default with
+        {
+            MaxCompressedArchiveBytes = MaxFileSizeBytes,
+            MaxWorksheetRows = MaxWorksheetRowElements,
+        };
+        var quotaTracker = new TabularQuotaTracker(quotas, fileBytes.LongLength);
+        using var zip = TabularParsingHelpers.OpenArchive(stream, quotaTracker);
 
-        var sharedStrings = TabularParsingHelpers.LoadSharedStrings(zip);
-        var xmlRows = TabularParsingHelpers.LoadWorksheetRows(zip);
+        var sharedStrings = TabularParsingHelpers.LoadSharedStrings(zip, quotaTracker);
+        var xmlRows = TabularParsingHelpers.LoadWorksheetRows(zip, quotaTracker);
         if (xmlRows.Count == 0)
         {
             return new List<ParsedLabRangeRow>();
         }
 
         var headerRow = xmlRows[0];
-        List<string> headers = TabularParsingHelpers.ExtractRowValues(headerRow, sharedStrings);
+        List<string> headers = TabularParsingHelpers.ExtractRowValues(headerRow, sharedStrings, MaxColumnIndex);
         var colIndices = MapHeaders(headers);
 
         var resultRows = new List<ParsedLabRangeRow>();
@@ -133,7 +141,7 @@ public static class BulkLabRangeFileParser
             }
 
             var xmlRow = xmlRows[i];
-            List<string> values = TabularParsingHelpers.ExtractRowValues(xmlRow, sharedStrings);
+            List<string> values = TabularParsingHelpers.ExtractRowValues(xmlRow, sharedStrings, MaxColumnIndex);
 
             var parsed = BuildRow(rowNumber, values, colIndices);
             if (parsed != null)

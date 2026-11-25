@@ -50,17 +50,45 @@ public sealed class TabularParsingHelpersTests
     [InlineData("BA", 52)]
     [InlineData("ZZ", 701)]
     [InlineData("AAA", 702)]
+    [InlineData("XFD", 16_383)]
     [InlineData("A1", 0)]
     [InlineData("b2", 1)]
     [InlineData("C10", 2)]
     [InlineData("aa100", 26)]
-    [InlineData("", 0)]
-    [InlineData(null, 0)]
-    [InlineData("123", 0)]
-    public void ColumnNameToIndex_CalculatesExpectedIndex(string? cellRef, int expectedIndex)
+    [InlineData("XFD1048576", 16_383)]
+    public void ColumnNameToIndex_CalculatesExpectedIndex(string cellRef, int expectedIndex)
     {
-        int index = TabularParsingHelpers.ColumnNameToIndex(cellRef!);
+        int index = TabularParsingHelpers.ColumnNameToIndex(cellRef);
         index.Should().Be(expectedIndex);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData(null)]
+    [InlineData("123")]
+    [InlineData("A0")]
+    [InlineData("$A$1")]
+    [InlineData("1A")]
+    [InlineData("A1B2")]
+    [InlineData("XFE")]
+    [InlineData("XFE1")]
+    [InlineData("AAAA1")]
+    [InlineData("BZZZZ1")]
+    [InlineData("ZZZZZZZZZZ1")]
+    public void ColumnNameToIndex_InvalidCoordinatesOrExceedingCeiling_ThrowsInvalidOperationException(string? cellRef)
+    {
+        var act = () => TabularParsingHelpers.ColumnNameToIndex(cellRef!);
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void ColumnNameToIndex_WithCustomMaxColumnIndex_RejectsAboveConfiguredCap()
+    {
+        TabularParsingHelpers.ColumnNameToIndex("BL1", maxColumnIndex: 63).Should().Be(63);
+
+        var act = () => TabularParsingHelpers.ColumnNameToIndex("BM1", maxColumnIndex: 63);
+        act.Should().Throw<InvalidOperationException>().WithMessage("*63*");
     }
 
     [Fact]
@@ -251,5 +279,142 @@ public sealed class TabularParsingHelpersTests
 
         var rows = TabularParsingHelpers.LoadWorksheetRows(readArchive);
         rows.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void ExtractRowValues_ExtremeOrMissingCellCoordinates_ThrowsInvalidOperationException()
+    {
+        XNamespace ns = TabularParsingHelpers.SpreadsheetNamespace;
+
+        var extremeRow = new XElement(ns + "row",
+            new XAttribute("r", "1"),
+            new XElement(ns + "c",
+                new XAttribute("r", "BZZZZ1"),
+                new XAttribute("t", "inlineStr"),
+                new XElement(ns + "is", new XElement(ns + "t", "MARKER_COL"))));
+
+        var missingCoordinateRow = new XElement(ns + "row",
+            new XAttribute("r", "1"),
+            new XElement(ns + "c", new XElement(ns + "v", "1")));
+
+        var duplicateCoordinateRow = new XElement(ns + "row",
+            new XAttribute("r", "1"),
+            new XElement(ns + "c", new XAttribute("r", "B1"), new XElement(ns + "v", "1")),
+            new XElement(ns + "c", new XAttribute("r", "A1"), new XElement(ns + "v", "2")));
+
+        var cappedRow = new XElement(ns + "row",
+            new XAttribute("r", "1"),
+            new XElement(ns + "c", new XAttribute("r", "E1"), new XElement(ns + "v", "1")));
+
+        FluentActions.Invoking(() => TabularParsingHelpers.ExtractRowValues(extremeRow, []))
+            .Should().Throw<InvalidOperationException>();
+        FluentActions.Invoking(() => TabularParsingHelpers.ExtractRowValues(missingCoordinateRow, []))
+            .Should().Throw<InvalidOperationException>();
+        FluentActions.Invoking(() => TabularParsingHelpers.ExtractRowValues(duplicateCoordinateRow, []))
+            .Should().Throw<InvalidOperationException>();
+        FluentActions.Invoking(() => TabularParsingHelpers.ExtractRowValues(cappedRow, [], maxColumnIndex: 3))
+            .Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void LoadWorksheetRows_ExceedingCompressionRatio_ThrowsInvalidOperationException()
+    {
+        using var stream = new MemoryStream();
+        using (var archive = new ZipArchive(stream, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            var sheetEntry = archive.CreateEntry("xl/worksheets/sheet1.xml", CompressionLevel.SmallestSize);
+            using var writer = new StreamWriter(sheetEntry.Open(), Encoding.UTF8);
+            writer.Write("<?xml version=\"1.0\" encoding=\"UTF-8\"?><worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"><sheetData>");
+            writer.Write(new string(' ', 250_000));
+            writer.Write("</sheetData></worksheet>");
+        }
+
+        stream.Position = 0;
+        using var readArchive = TabularParsingHelpers.OpenArchive(stream);
+
+        FluentActions.Invoking(() => TabularParsingHelpers.LoadWorksheetRows(readArchive))
+            .Should().Throw<InvalidOperationException>()
+            .WithMessage("*100:1 decompression ratio*");
+    }
+
+    [Fact]
+    public void LoadWorksheetRows_ExceedingEntryCountOrUncompressedBytesOrRowCap_ThrowsInvalidOperationException()
+    {
+        using var manyEntriesStream = new MemoryStream();
+        using (var archive = new ZipArchive(manyEntriesStream, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            for (int i = 0; i < 6; i++)
+            {
+                archive.CreateEntry($"xl/extra_{i}.xml");
+            }
+        }
+
+        manyEntriesStream.Position = 0;
+        var smallEntryQuota = TabularArchiveQuotas.Default with { MaxEntryCount = 5 };
+        FluentActions.Invoking(() => TabularParsingHelpers.OpenArchive(manyEntriesStream, smallEntryQuota))
+            .Should().Throw<InvalidOperationException>()
+            .WithMessage("*entry count*");
+
+        using var rowOverflowStream = new MemoryStream();
+        using (var archive = new ZipArchive(rowOverflowStream, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            var sheetEntry = archive.CreateEntry("xl/worksheets/sheet1.xml");
+            using var writer = new StreamWriter(sheetEntry.Open(), Encoding.UTF8);
+            writer.Write("<?xml version=\"1.0\" encoding=\"UTF-8\"?><worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"><sheetData>");
+            for (int r = 1; r <= 5; r++)
+            {
+                writer.Write($"<row r=\"{r}\"><c r=\"A{r}\"><v>{r}</v></c></row>");
+            }
+
+            writer.Write("</sheetData></worksheet>");
+        }
+
+        rowOverflowStream.Position = 0;
+        using var rowArchive = TabularParsingHelpers.OpenArchive(rowOverflowStream);
+        FluentActions.Invoking(() => TabularParsingHelpers.LoadWorksheetRows(rowArchive, maxRows: 3))
+            .Should().Throw<InvalidOperationException>()
+            .WithMessage("*maximum limit of 3 row elements*");
+
+        rowOverflowStream.Position = 0;
+        using var byteArchive = TabularParsingHelpers.OpenArchive(rowOverflowStream);
+        var tinyByteQuota = TabularArchiveQuotas.Default with { MaxEntryUncompressedBytes = 64 };
+        FluentActions.Invoking(() => TabularParsingHelpers.LoadWorksheetRows(byteArchive, null, tinyByteQuota))
+            .Should().Throw<InvalidOperationException>()
+            .WithMessage("*per-entry limit*");
+    }
+
+    [Fact]
+    public void LoadWorksheetRows_WithDtdOrExceededCharacterCeilingOrCorruptZip_ThrowsInvalidOperationException()
+    {
+        using var dtdStream = new MemoryStream();
+        using (var archive = new ZipArchive(dtdStream, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            var sheetEntry = archive.CreateEntry("xl/worksheets/sheet1.xml");
+            using var writer = new StreamWriter(sheetEntry.Open(), Encoding.UTF8);
+            writer.Write("<?xml version=\"1.0\"?><!DOCTYPE worksheet [<!ENTITY x \"boom\">]><worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"><sheetData/></worksheet>");
+        }
+
+        dtdStream.Position = 0;
+        using var dtdArchive = TabularParsingHelpers.OpenArchive(dtdStream);
+        FluentActions.Invoking(() => TabularParsingHelpers.LoadWorksheetRows(dtdArchive))
+            .Should().Throw<InvalidOperationException>();
+
+        using var charCeilingStream = new MemoryStream();
+        using (var archive = new ZipArchive(charCeilingStream, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            var sheetEntry = archive.CreateEntry("xl/worksheets/sheet1.xml", CompressionLevel.NoCompression);
+            using var writer = new StreamWriter(sheetEntry.Open(), Encoding.UTF8);
+            writer.Write("<?xml version=\"1.0\"?><worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"><sheetData><row r=\"1\"><c r=\"A1\" t=\"inlineStr\"><is><t>ABCDEFGHIJKLMNOPQRSTUVWXYZ</t></is></c></row></sheetData></worksheet>");
+        }
+
+        charCeilingStream.Position = 0;
+        using var charArchive = TabularParsingHelpers.OpenArchive(charCeilingStream);
+        var charQuota = TabularArchiveQuotas.Default with { MaxCharactersInDocument = 64 };
+        FluentActions.Invoking(() => TabularParsingHelpers.LoadWorksheetRows(charArchive, null, charQuota))
+            .Should().Throw<InvalidOperationException>();
+
+        using var corruptZipStream = new MemoryStream([0x50, 0x4B, 0x03, 0x04, 0xFF, 0x00, 0x11, 0x22]);
+        FluentActions.Invoking(() => TabularParsingHelpers.OpenArchive(corruptZipStream))
+            .Should().Throw<InvalidOperationException>();
     }
 }
