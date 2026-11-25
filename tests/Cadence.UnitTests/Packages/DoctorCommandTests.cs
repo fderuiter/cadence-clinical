@@ -141,6 +141,9 @@ public sealed class DoctorCommandTests : IDisposable
 
                 if (fileName == "dotnet" && args.Count == 2 && args[0] == "restore")
                 {
+                    string objDir = Path.Combine(workingDir, "packages", "sample", "obj");
+                    Directory.CreateDirectory(objDir);
+                    File.WriteAllText(Path.Combine(objDir, "project.assets.json"), "{ \"version\": 3 }\n");
                     return new ProcessExecutionResult(0, "Restored Cadence.sln", string.Empty);
                 }
 
@@ -163,6 +166,8 @@ public sealed class DoctorCommandTests : IDisposable
 
                 if (fileName == "pnpm" && args.SequenceEqual(["install", "--frozen-lockfile"]))
                 {
+                    Directory.CreateDirectory(Path.Combine(workingDir, "node_modules"));
+                    File.WriteAllText(Path.Combine(workingDir, "node_modules", ".modules.yaml"), "hoistPattern: ['*']\n");
                     return new ProcessExecutionResult(0, "Done", string.Empty);
                 }
 
@@ -670,6 +675,290 @@ public sealed class DoctorCommandTests : IDisposable
         makefile.Should().Contain("bash scripts/setup_wizard.sh --dev --minimal");
     }
 
+    [Fact]
+    public void Execute_WithoutAutoFix_ReturnsOneWithZeroWrites_WhenNodeModulesIsMissing()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        (string repoRoot, FakeDoctorRuntime runtime) = CreateHealthyReadOnlyFixture(
+            createNodeModules: false,
+            createProjectAssetsInObj: true);
+
+        int exitCode = DoctorCommand.Execute(autoFix: false, repoRoot: repoRoot, runtime: runtime);
+
+        exitCode.Should().Be(1);
+        Directory.Exists(Path.Combine(repoRoot, "node_modules")).Should().BeFalse("read-only cadence doctor must not create node_modules");
+        File.Exists(Path.Combine(repoRoot, ".env")).Should().BeFalse("read-only cadence doctor must not initialize .env");
+        runtime.Invocations.Should().NotContain(inv =>
+            inv.Contains("install", StringComparison.Ordinal) ||
+            inv.Contains("restore", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Execute_WithoutAutoFix_ReturnsOneWhenAnySolutionProjectLacksAssets_AndZeroWhenRestored()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        (string repoRoot, FakeDoctorRuntime runtime) = CreateHealthyReadOnlyFixture(
+            createNodeModules: true,
+            createProjectAssetsInObj: true);
+
+        string secondProjectDir = Path.Combine(repoRoot, "apps", "gateway", "src");
+        Directory.CreateDirectory(secondProjectDir);
+        File.WriteAllText(
+            Path.Combine(secondProjectDir, "Cadence.Apps.Gateway.csproj"),
+            "<Project Sdk=\"Microsoft.NET.Sdk\"><PropertyGroup><TargetFramework>net10.0</TargetFramework></PropertyGroup></Project>\n");
+        File.AppendAllText(
+            Path.Combine(repoRoot, "Cadence.sln"),
+            "\nProject(\"{9A19103F-16F7-4668-BE54-9A1E7A4F7556}\") = \"Cadence.Apps.Gateway\", \"apps\\gateway\\src\\Cadence.Apps.Gateway.csproj\", \"{22222222-2222-2222-2222-222222222222}\"\nEndProject\n");
+
+        int missingExit = DoctorCommand.Execute(autoFix: false, repoRoot: repoRoot, runtime: runtime);
+        missingExit.Should().Be(1);
+        Directory.Exists(Path.Combine(secondProjectDir, "obj")).Should().BeFalse("read-only cadence doctor must not create obj directories");
+        runtime.Invocations.Should().NotContain(inv => inv.Contains("restore", StringComparison.Ordinal));
+
+        Directory.CreateDirectory(Path.Combine(secondProjectDir, "obj"));
+        File.WriteAllText(Path.Combine(secondProjectDir, "obj", "project.assets.json"), "{ \"version\": 3 }\n");
+
+        int restoredExit = DoctorCommand.Execute(autoFix: false, repoRoot: repoRoot, runtime: runtime);
+        restoredExit.Should().Be(0);
+    }
+
+    [Fact]
+    public void Execute_WithoutAutoFix_ReturnsZero_WhenProjectAssetsExistUnderCustomArtifactsPath()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        string customArtifactsPath = Path.Combine(_tempDir, "var-cache-cadence-msbuild");
+        (string repoRoot, FakeDoctorRuntime runtime) = CreateHealthyReadOnlyFixture(
+            createNodeModules: true,
+            createProjectAssetsInObj: false,
+            extraEnvironment: new Dictionary<string, string?>(StringComparer.Ordinal)
+            {
+                ["ArtifactsPath"] = customArtifactsPath,
+                ["UseArtifactsOutput"] = "true",
+            });
+
+        int beforeRestoreExit = DoctorCommand.Execute(autoFix: false, repoRoot: repoRoot, runtime: runtime);
+        beforeRestoreExit.Should().Be(1);
+
+        string artifactsObjDir = Path.Combine(customArtifactsPath, "obj", "Cadence.Sample");
+        Directory.CreateDirectory(artifactsObjDir);
+        File.WriteAllText(Path.Combine(artifactsObjDir, "project.assets.json"), "{ \"version\": 3 }\n");
+
+        int exitCode = DoctorCommand.Execute(autoFix: false, repoRoot: repoRoot, runtime: runtime);
+        exitCode.Should().Be(0);
+        Directory.Exists(Path.Combine(repoRoot, "packages", "sample", "obj")).Should().BeFalse();
+    }
+
+    [Fact]
+    public void ClaudeSessionStartSh_RunsSetupWizardFirst_VerifiesOrInstallsChromium_AndGatesBrowserEnvVar()
+    {
+        if (OperatingSystem.IsWindows() || !File.Exists("/bin/bash"))
+        {
+            return;
+        }
+
+        string realRepoRoot = QualityGateOrchestrator.FindRepoRoot();
+        string sessionScriptSource = File.ReadAllText(Path.Combine(realRepoRoot, "scripts", "claude_session_start.sh"));
+
+        // Case 1: Chromium missing initially -> setup_wizard runs first, playwright install runs, verified, CADENCE_TEST_BROWSER=1 written.
+        (int installExit, string installLog, string installEnvFile) = RunClaudeSessionStartScenario(
+            sessionScriptSource,
+            preexistingChromiumExecutable: null,
+            playwrightInstallCreatesBinary: true);
+        installExit.Should().Be(0);
+        installLog.Split('\n', StringSplitOptions.RemoveEmptyEntries)
+            .Should().Equal("setup_wizard:--dev --minimal", "playwright-probe", "playwright-install:chromium", "playwright-probe");
+        installEnvFile.Should().Contain("export CADENCE_TEST_BROWSER=1");
+
+        // Case 2: Preinstalled PLAYWRIGHT_CHROMIUM_PATH executable exists -> setup_wizard runs first, playwright install skipped.
+        string preinstalledBin = Path.Combine(_tempDir, "preinstalled-chromium");
+        WritePosixExecutable(preinstalledBin, "#!/bin/sh\nexit 0\n");
+        (int preinstalledExit, string preinstalledLog, string preinstalledEnvFile) = RunClaudeSessionStartScenario(
+            sessionScriptSource,
+            preexistingChromiumExecutable: preinstalledBin,
+            playwrightInstallCreatesBinary: false);
+        preinstalledExit.Should().Be(0);
+        preinstalledLog.Split('\n', StringSplitOptions.RemoveEmptyEntries)
+            .Should().Equal("setup_wizard:--dev --minimal");
+        preinstalledEnvFile.Should().Contain("export CADENCE_TEST_BROWSER=1");
+
+        // Case 3: Playwright install fails to materialize Chromium -> exits non-zero without setting CADENCE_TEST_BROWSER=1.
+        (int failedExit, _, string failedEnvFile) = RunClaudeSessionStartScenario(
+            sessionScriptSource,
+            preexistingChromiumExecutable: null,
+            playwrightInstallCreatesBinary: false);
+        failedExit.Should().NotBe(0);
+        failedEnvFile.Should().NotContain("CADENCE_TEST_BROWSER");
+    }
+
+    private (string RepoRoot, FakeDoctorRuntime Runtime) CreateHealthyReadOnlyFixture(
+        bool createNodeModules,
+        bool createProjectAssetsInObj,
+        IReadOnlyDictionary<string, string?>? extraEnvironment = null)
+    {
+        string repoRoot = CreateMinimalRepoFixture();
+        string binDir = Path.Combine(repoRoot, ".cadence", "bin");
+        string venvBinDir = Path.Combine(repoRoot, ".cadence", "venv", "bin");
+        string emptyPathDir = Path.Combine(_tempDir, $"readonly-path-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(binDir);
+        Directory.CreateDirectory(venvBinDir);
+        Directory.CreateDirectory(emptyPathDir);
+
+        WritePosixExecutable(Path.Combine(binDir, "actionlint"), "#!/bin/sh\necho '1.7.12'\n");
+        WritePosixExecutable(Path.Combine(binDir, "hadolint"), "#!/bin/sh\necho 'Haskell Dockerfile Linter 2.15.1'\n");
+        WritePosixExecutable(Path.Combine(binDir, "shellcheck"), "#!/bin/sh\necho 'version: 0.11.0'\n");
+        WritePosixExecutable(Path.Combine(venvBinDir, "detect-secrets-hook"), $"#!/bin/sh\necho '{DetectSecretsGateService.PinnedVersion}'\n");
+
+        if (createNodeModules)
+        {
+            Directory.CreateDirectory(Path.Combine(repoRoot, "node_modules"));
+        }
+
+        if (createProjectAssetsInObj)
+        {
+            string objDir = Path.Combine(repoRoot, "packages", "sample", "obj");
+            Directory.CreateDirectory(objDir);
+            File.WriteAllText(Path.Combine(objDir, "project.assets.json"), "{ \"version\": 3 }\n");
+        }
+
+        RunGit(repoRoot, ["config", "core.hooksPath", ".githooks"]).ExitCode.Should().Be(0);
+
+        var env = new Dictionary<string, string?>(StringComparer.Ordinal)
+        {
+            ["PATH"] = emptyPathDir,
+            [DoctorProvisioningService.CadenceBinDirEnvVar] = binDir,
+        };
+        if (extraEnvironment is not null)
+        {
+            foreach (var kvp in extraEnvironment)
+            {
+                env[kvp.Key] = kvp.Value;
+            }
+        }
+
+        var runtime = new FakeDoctorRuntime(
+            ProvisioningPlatform.Linux,
+            Architecture.X64,
+            env,
+            (fileName, args, workingDir) =>
+            {
+                if (fileName == "dotnet" && args.SequenceEqual(["--version"]))
+                {
+                    return new ProcessExecutionResult(0, "10.0.202", string.Empty);
+                }
+
+                if (fileName == "dotnet" && args.SequenceEqual(["tool", "run", "dotnet-ef", "--version"]))
+                {
+                    return new ProcessExecutionResult(0, "10.0.15", string.Empty);
+                }
+
+                if (fileName == "pnpm" && args.SequenceEqual(["--version"]))
+                {
+                    return new ProcessExecutionResult(0, "10.30.3", string.Empty);
+                }
+
+                if (fileName == "git")
+                {
+                    return RunGit(workingDir, args);
+                }
+
+                if (File.Exists(fileName))
+                {
+                    return RunPosixBinary(fileName, args, workingDir);
+                }
+
+                return new ProcessExecutionResult(127, string.Empty, $"Unexpected command: {fileName}");
+            });
+
+        return (repoRoot, runtime);
+    }
+
+    private (int ExitCode, string EventLog, string EnvFileContent) RunClaudeSessionStartScenario(
+        string sessionScriptContent,
+        string? preexistingChromiumExecutable,
+        bool playwrightInstallCreatesBinary)
+    {
+        string sandboxDir = Path.Combine(_tempDir, $"claude-session-{Guid.NewGuid():N}");
+        string scriptsDir = Path.Combine(sandboxDir, "scripts");
+        string binDir = Path.Combine(sandboxDir, "mock-bin");
+        string logFile = Path.Combine(sandboxDir, "events.log");
+        string envFile = Path.Combine(sandboxDir, "claude.env");
+        string fakeBrowser = Path.Combine(sandboxDir, "installed-chromium");
+        Directory.CreateDirectory(scriptsDir);
+        Directory.CreateDirectory(binDir);
+        File.WriteAllText(envFile, string.Empty);
+        SymlinkBasicPosixTools(binDir);
+
+        string hookScript = Path.Combine(scriptsDir, "claude_session_start.sh");
+        WritePosixExecutable(hookScript, sessionScriptContent);
+        WritePosixExecutable(
+            Path.Combine(scriptsDir, "setup_wizard.sh"),
+            $"#!/bin/sh\necho \"setup_wizard:$*\" >> \"{logFile}\"\nexit 0\n");
+        WritePosixExecutable(
+            Path.Combine(binDir, "pnpm"),
+            $$"""
+            #!/bin/sh
+            if [ "$1" = "--filter" ] && [ "$2" = "web" ] && [ "$3" = "exec" ] && [ "$4" = "node" ]; then
+              echo "playwright-probe" >> "{{logFile}}"
+              [ -x "{{fakeBrowser}}" ] && exit 0
+              exit 1
+            fi
+            if [ "$1" = "--filter" ] && [ "$2" = "web" ] && [ "$3" = "exec" ] && [ "$4" = "playwright" ] && [ "$5" = "install" ]; then
+              echo "playwright-install:$6" >> "{{logFile}}"
+              if [ "{{(playwrightInstallCreatesBinary ? "1" : "0")}}" = "1" ]; then
+                printf '#!/bin/sh\nexit 0\n' > "{{fakeBrowser}}"
+                chmod +x "{{fakeBrowser}}"
+                exit 0
+              fi
+              exit 1
+            fi
+            exit 1
+            """);
+
+        var psi = new ProcessStartInfo("/bin/bash")
+        {
+            WorkingDirectory = sandboxDir,
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+        };
+        psi.ArgumentList.Add(hookScript);
+        psi.Environment["PATH"] = binDir;
+        psi.Environment["HOME"] = Path.Combine(sandboxDir, "home");
+        Directory.CreateDirectory(psi.Environment["HOME"]!);
+        psi.Environment["CLAUDE_CODE_REMOTE"] = "true";
+        psi.Environment["CLAUDE_PROJECT_DIR"] = sandboxDir;
+        psi.Environment["CLAUDE_ENV_FILE"] = envFile;
+        if (preexistingChromiumExecutable is not null)
+        {
+            psi.Environment["PLAYWRIGHT_CHROMIUM_PATH"] = preexistingChromiumExecutable;
+        }
+        else
+        {
+            psi.Environment.Remove("PLAYWRIGHT_CHROMIUM_PATH");
+        }
+
+        using var proc = Process.Start(psi)!;
+        _ = proc.StandardOutput.ReadToEnd();
+        _ = proc.StandardError.ReadToEnd();
+        proc.WaitForExit();
+
+        string logContent = File.Exists(logFile) ? File.ReadAllText(logFile) : string.Empty;
+        string envContent = File.Exists(envFile) ? File.ReadAllText(envFile) : string.Empty;
+        return (proc.ExitCode, logContent, envContent);
+    }
+
     private string CreateMinimalRepoFixture()
     {
         string repoRoot = Path.Combine(_tempDir, $"repo-{Guid.NewGuid():N}");
@@ -677,8 +966,20 @@ public sealed class DoctorCommandTests : IDisposable
         Directory.CreateDirectory(Path.Combine(repoRoot, ".config"));
         Directory.CreateDirectory(Path.Combine(repoRoot, ".githooks"));
         Directory.CreateDirectory(Path.Combine(repoRoot, "packages", "ui"));
+        Directory.CreateDirectory(Path.Combine(repoRoot, "packages", "sample"));
 
-        File.WriteAllText(Path.Combine(repoRoot, "Cadence.sln"), string.Empty);
+        File.WriteAllText(
+            Path.Combine(repoRoot, "Cadence.sln"),
+            """
+            Microsoft Visual Studio Solution File, Format Version 12.00
+            Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Packages", "Packages", "{F9DF34EE-B937-4EBE-B5AE-48566FFDFE73}"
+            EndProject
+            Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Cadence.Sample", "packages\sample\Cadence.Sample.csproj", "{11111111-1111-1111-1111-111111111111}"
+            EndProject
+            """ + "\n");
+        File.WriteAllText(
+            Path.Combine(repoRoot, "packages", "sample", "Cadence.Sample.csproj"),
+            "<Project Sdk=\"Microsoft.NET.Sdk\"><PropertyGroup><TargetFramework>net10.0</TargetFramework></PropertyGroup></Project>\n");
         File.WriteAllText(Path.Combine(repoRoot, "Directory.Packages.props"), "<Project />\n");
         File.WriteAllText(
             Path.Combine(repoRoot, "package.json"),

@@ -56,13 +56,15 @@ Checks the local environment (read-only unless `--auto-fix` is passed). In full 
 - the .NET 10 SDK version (from `dotnet --version`, satisfying `global.json`)
 - whether `Directory.Packages.props` exists in the repository root
 - whether local `.NET` tools declared in `.config/dotnet-tools.json` (`dotnet-ef` `10.0.15` with `rollForward: false`, ADR-2527) are restored
+- whether `project.assets.json` exists for every `.csproj` in `Cadence.sln` (checking both per-project `obj` directories and MSBuild `ArtifactsPath` output layouts)
 - whether the `pnpm` on `PATH` runs and matches the `packageManager` pin in `package.json` (ADR-2508)
+- whether `node_modules` exists at the repository root when `package.json` is present
 - whether `detect-secrets-hook` runs from `.cadence/venv`, `.venv`, `PATH`, or `uvx`
 - whether `actionlint`, `hadolint`, and `shellcheck` run from `.cadence/bin` (or `CADENCE_BIN_DIR`) or `PATH`
 - whether Git pre-commit hooks are active (`core.hooksPath` set to `.githooks`)
 - whether PostgreSQL answers on `127.0.0.1:5432` (informational; does not affect the exit code)
 
-Without `--auto-fix`, `cadence doctor` performs zero filesystem or Git configuration writes and exits `1` when any required tool or workspace configuration above is missing, and `0` otherwise.
+Without `--auto-fix`, `cadence doctor` performs zero filesystem writes, Git configuration edits, or network calls and exits `1` when any required tool, restore artifact, or workspace configuration above is missing, and `0` otherwise.
 
 With `-f|--auto-fix`, `DoctorProvisioningService` (`packages/tooling_core/src/Services/DoctorProvisioningService.cs`) verifies `dotnet`, `node`, and `pnpm` (running `corepack enable` if needed), runs `dotnet tool restore` and `dotnet restore Cadence.sln`, provisions `detect-secrets==1.5.0` in `.cadence/venv`, downloads and SHA-256-verifies `actionlint` (`1.7.12`), `hadolint` (`2.15.1`), and `shellcheck` (`0.11.0`) into `.cadence/bin` (verifying binary execution such as `hadolint.exe --version` on Windows `arm64`), runs `pnpm install --frozen-lockfile`, initializes `.env` from `.env.example` when absent, optionally installs Playwright Chromium (skipped with `--minimal`), and enables `.githooks/pre-commit` (`git config core.hooksPath .githooks`) only after all blocking steps succeed.
 

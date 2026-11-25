@@ -1,9 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.CommandLine;
-using System.ComponentModel;
-using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Net.Sockets;
+using System.Text.RegularExpressions;
+using System.Xml.Linq;
 
 using Cadence.Cli.Services;
 using Cadence.ToolingCore.Services;
@@ -12,8 +14,11 @@ using Spectre.Console;
 
 namespace Cadence.Cli.Commands;
 
-public static class DoctorCommand
+public static partial class DoctorCommand
 {
+    [GeneratedRegex(@"^\s*Project\(""\{[^}]+\}""\)\s*=\s*""[^""]+"",\s*""(?<path>[^""]+\.csproj)""", RegexOptions.CultureInvariant)]
+    private static partial Regex SolutionCsprojEntryRegex();
+
     public static void Configure(Command command)
     {
         var autoFixOption = new Option<bool>("--auto-fix", "-f")
@@ -97,28 +102,36 @@ public static class DoctorCommand
         // 3. Local .NET tools (.config/dotnet-tools.json, read-only)
         bool dotnetToolsOk = CheckLocalDotnetTools(root, runtime);
 
-        // 4. pnpm against the packageManager pin (#5331, read-only)
+        // 4. NuGet restore assets (project.assets.json across obj and ArtifactsPath, read-only)
+        bool dotnetRestoreOk = CheckDotnetRestoreAssets(root, runtime.GetEnvironmentVariable);
+
+        // 5. pnpm against the packageManager pin (#5331, read-only)
         bool pnpmOk = CheckPnpm(root, runtime);
 
-        // 5. detect-secrets guardrail tool (.cadence/venv, PATH, or uvx, read-only)
+        // 6. Workspace node_modules (read-only)
+        bool nodeModulesOk = CheckNodeModules(root);
+
+        // 7. detect-secrets guardrail tool (.cadence/venv, PATH, or uvx, read-only)
         bool detectSecretsOk = CheckDetectSecrets(root, runtime.GetEnvironmentVariable);
 
-        // 6. CLI linters (.cadence/bin or PATH, read-only)
+        // 8. CLI linters (.cadence/bin or PATH, read-only)
         bool actionlintOk = CheckActionlint(root, runtime.GetEnvironmentVariable);
         bool hadolintOk = CheckHadolint(root, runtime.GetEnvironmentVariable);
         bool shellcheckOk = CheckShellcheck(root, runtime.GetEnvironmentVariable);
 
-        // 7. Git pre-commit hook (.githooks/pre-commit, read-only)
+        // 9. Git pre-commit hook (.githooks/pre-commit, read-only)
         bool gitHooksOk = CheckGitHooks(root, runtime);
 
-        // 8. PostgreSQL connectivity (informational, non-blocking)
+        // 10. PostgreSQL connectivity (informational, non-blocking)
         ProbePostgres();
 
         return provisioningOk &&
                dotnetOk &&
                cpm &&
                dotnetToolsOk &&
+               dotnetRestoreOk &&
                pnpmOk &&
+               nodeModulesOk &&
                detectSecretsOk &&
                actionlintOk &&
                hadolintOk &&
@@ -126,6 +139,173 @@ public static class DoctorCommand
                gitHooksOk
             ? 0
             : 1;
+    }
+
+    private static bool CheckDotnetRestoreAssets(string repoRoot, Func<string, string?> getEnvironmentVariable)
+    {
+        string solutionPath = Path.Combine(repoRoot, "Cadence.sln");
+        if (!File.Exists(solutionPath))
+        {
+            return true;
+        }
+
+        var csprojRelativePaths = ReadSolutionProjectPaths(solutionPath);
+        if (csprojRelativePaths.Count == 0)
+        {
+            return true;
+        }
+
+        var candidateArtifactsPaths = ResolveCandidateArtifactsPaths(repoRoot, getEnvironmentVariable);
+        var missingProjects = new List<string>();
+
+        foreach (string rawRelPath in csprojRelativePaths)
+        {
+            if (!HasProjectAssetsJson(repoRoot, rawRelPath, candidateArtifactsPaths))
+            {
+                missingProjects.Add(rawRelPath.Replace('\\', '/'));
+            }
+        }
+
+        if (missingProjects.Count == 0)
+        {
+            AnsiConsole.MarkupLine($"  NuGet Restore Assets (Cadence.sln): [green]Restored ({csprojRelativePaths.Count} projects)[/]");
+            return true;
+        }
+
+        string sample = string.Join(", ", missingProjects.Take(3));
+        if (missingProjects.Count > 3)
+        {
+            sample += $", +{missingProjects.Count - 3} more";
+        }
+
+        AnsiConsole.MarkupLine(
+            $"  NuGet Restore Assets (Cadence.sln): [red]Missing project.assets.json for {missingProjects.Count}/{csprojRelativePaths.Count} project(s) ({Markup.Escape(sample)})[/] (run 'dotnet restore Cadence.sln' or 'pnpm cadence doctor --auto-fix')");
+        return false;
+    }
+
+    private static List<string> ReadSolutionProjectPaths(string solutionPath)
+    {
+        var paths = new List<string>();
+        foreach (string line in File.ReadLines(solutionPath))
+        {
+            var match = SolutionCsprojEntryRegex().Match(line);
+            if (match.Success)
+            {
+                paths.Add(match.Groups["path"].Value);
+            }
+        }
+
+        return paths;
+    }
+
+    private static bool HasProjectAssetsJson(
+        string repoRoot,
+        string rawRelativeCsprojPath,
+        IReadOnlyList<string> candidateArtifactsPaths)
+    {
+        string normalizedRel = rawRelativeCsprojPath
+            .Replace('\\', Path.DirectorySeparatorChar)
+            .Replace('/', Path.DirectorySeparatorChar);
+        string fullCsprojPath = Path.GetFullPath(Path.Combine(repoRoot, normalizedRel));
+        string projectDir = Path.GetDirectoryName(fullCsprojPath) ?? repoRoot;
+
+        if (File.Exists(Path.Combine(projectDir, "obj", "project.assets.json")))
+        {
+            return true;
+        }
+
+        string projectName = Path.GetFileNameWithoutExtension(fullCsprojPath);
+        return candidateArtifactsPaths.Any(artifactsDir =>
+            File.Exists(Path.Combine(artifactsDir, "obj", projectName, "project.assets.json")));
+    }
+
+    private static List<string> ResolveCandidateArtifactsPaths(string repoRoot, Func<string, string?> getEnvironmentVariable)
+    {
+        var candidates = new HashSet<string>(
+            OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+
+        AddNormalizedArtifactsPath(candidates, repoRoot, getEnvironmentVariable("ArtifactsPath"));
+        if (IsMsBuildTrue(getEnvironmentVariable("UseArtifactsOutput")))
+        {
+            AddNormalizedArtifactsPath(candidates, repoRoot, "artifacts");
+        }
+
+        ReadDirectoryBuildPropsArtifactsPaths(repoRoot, candidates);
+        return [.. candidates];
+    }
+
+    private static void ReadDirectoryBuildPropsArtifactsPaths(string repoRoot, HashSet<string> candidates)
+    {
+        string buildPropsPath = Path.Combine(repoRoot, "Directory.Build.props");
+        if (!File.Exists(buildPropsPath))
+        {
+            return;
+        }
+
+        try
+        {
+            var document = XDocument.Load(buildPropsPath);
+            foreach (var element in document.Descendants())
+            {
+                if (string.Equals(element.Name.LocalName, "ArtifactsPath", StringComparison.OrdinalIgnoreCase))
+                {
+                    AddNormalizedArtifactsPath(candidates, repoRoot, element.Value);
+                }
+                else if (string.Equals(element.Name.LocalName, "UseArtifactsOutput", StringComparison.OrdinalIgnoreCase) &&
+                         IsMsBuildTrue(element.Value))
+                {
+                    AddNormalizedArtifactsPath(candidates, repoRoot, "artifacts");
+                }
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Xml.XmlException)
+        {
+            // Keep read-only diagnostics resilient when Directory.Build.props cannot be parsed.
+        }
+    }
+
+    private static void AddNormalizedArtifactsPath(HashSet<string> candidates, string repoRoot, string? rawPath)
+    {
+        if (string.IsNullOrWhiteSpace(rawPath))
+        {
+            return;
+        }
+
+        string expanded = rawPath.Trim().Replace(
+            "$(MSBuildThisFileDirectory)",
+            repoRoot + Path.DirectorySeparatorChar,
+            StringComparison.OrdinalIgnoreCase);
+        if (expanded.Contains("$(", StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        string normalized = Path.IsPathRooted(expanded)
+            ? Path.GetFullPath(expanded)
+            : Path.GetFullPath(Path.Combine(repoRoot, expanded));
+        candidates.Add(normalized);
+    }
+
+    private static bool IsMsBuildTrue(string? value) =>
+        string.Equals(value?.Trim(), "true", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(value?.Trim(), "1", StringComparison.Ordinal);
+
+    private static bool CheckNodeModules(string repoRoot)
+    {
+        if (!File.Exists(Path.Combine(repoRoot, "package.json")))
+        {
+            return true;
+        }
+
+        if (Directory.Exists(Path.Combine(repoRoot, "node_modules")))
+        {
+            AnsiConsole.MarkupLine("  Workspace node_modules: [green]Present[/]");
+            return true;
+        }
+
+        AnsiConsole.MarkupLine(
+            "  Workspace node_modules: [red]Missing[/] (run 'pnpm install --frozen-lockfile' or 'pnpm cadence doctor --auto-fix')");
+        return false;
     }
 
     private static bool CheckDotnetSdk(string repoRoot, IDoctorProvisioningRuntime runtime)
