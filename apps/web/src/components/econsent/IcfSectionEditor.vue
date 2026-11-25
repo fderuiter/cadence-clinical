@@ -153,10 +153,18 @@
     </ClinicalModal>
 
     <!-- Glossary Popover definition -->
-    <div
-      v-if="hoveredGlossaryTerm && popoverX !== null && popoverY !== null"
-      class="glossary-popover"
-      :style="{ top: popoverY + 'px', left: popoverX + 'px' }"
+    <ClinicalPopover
+      :model-value="Boolean(hoveredGlossaryTerm && activeGlossaryAnchor)"
+      :anchor="activeGlossaryAnchor"
+      :teleport="false"
+      :viewport-margin="12"
+      :preferred-width="280"
+      hover-bridge
+      role="tooltip"
+      popover-class="glossary-popover"
+      @update:model-value="handlePopoverModelUpdate"
+      @mouseleave="handlePopoverMouseLeave"
+      @focusout="handleCanvasFocusOut"
     >
       <div class="popover-title">
         {{ $t("econsent.editor.glossaryDefinition") }}
@@ -165,7 +173,7 @@
         <strong>{{ hoveredGlossaryTerm }}</strong>:
         {{ hoveredGlossaryDefinition }}
       </div>
-    </div>
+    </ClinicalPopover>
 
     <!-- Readability Assistant Split-Screen Drawer -->
     <ReadabilityDrawer
@@ -180,8 +188,8 @@
 </template>
 
 <script setup>
-import { ClinicalModal } from "ui";
-import { ref, computed, watch, onMounted, onUnmounted } from "vue";
+import { ClinicalModal, ClinicalPopover } from "ui";
+import { ref, computed, watch, nextTick, onMounted } from "vue";
 import { useConfirmDialog } from "../../composables/useConfirmDialog.js";
 import { useToastStore } from "../../stores/toasts.js";
 import ReadabilityDrawer from "./ReadabilityDrawer.vue";
@@ -269,24 +277,17 @@ let savedSelection = null;
 // Popover State
 const hoveredGlossaryTerm = ref(null);
 const hoveredGlossaryDefinition = ref(null);
-const popoverX = ref(null);
-const popoverY = ref(null);
+const activeGlossaryAnchor = ref(null);
 const isHoverSupported = ref(true);
 
-const handleDocumentClick = (e) => {
-  if (!hoveredGlossaryTerm.value) return;
-
-  const target = e.target;
-  if (target && target.classList.contains("glossary-term")) {
-    return;
-  }
-
-  const popoverEl = document.querySelector(".glossary-popover");
-  if (popoverEl && popoverEl.contains(target)) {
-    return;
-  }
-
-  hidePopover();
+const syncGlossaryTermFocusable = () => {
+  if (!editorRef.value) return;
+  const terms = editorRef.value.querySelectorAll(".glossary-term");
+  terms.forEach((node) => {
+    if (!node.hasAttribute("tabindex")) {
+      node.setAttribute("tabindex", "0");
+    }
+  });
 };
 
 // Synchronize with prop changes
@@ -297,6 +298,7 @@ watch(
     if (editorRef.value) {
       editorRef.value.innerHTML = props.section.html;
     }
+    nextTick(syncGlossaryTermFocusable);
   },
   { immediate: true }
 );
@@ -304,11 +306,7 @@ watch(
 onMounted(() => {
   localHtml.value = props.section.html;
   isHoverSupported.value = window.matchMedia("(hover: hover)").matches;
-  document.addEventListener("click", handleDocumentClick);
-});
-
-onUnmounted(() => {
-  document.removeEventListener("click", handleDocumentClick);
+  syncGlossaryTermFocusable();
 });
 
 // Format actions via standard execCommand (or manual DOM fallback)
@@ -420,6 +418,7 @@ const applyGlossaryAnnotation = () => {
   if (savedSelection && glossaryDefinition.value) {
     const span = document.createElement("span");
     span.className = "glossary-term";
+    span.setAttribute("tabindex", "0");
     span.setAttribute("data-definition", glossaryDefinition.value);
     span.style.borderBottom =
       "2px dashed var(--semantic-color-interactive-primary)";
@@ -450,10 +449,41 @@ const handleInput = () => {
   }
 };
 
-// Canvas Interaction (Hover popover logic)
+// Canvas Interaction (Hover, focus, and tap popover logic)
+const resolveGlossaryTarget = (target) => {
+  if (!target || typeof target !== "object") return null;
+  if (typeof target.closest === "function") {
+    return target.closest(".glossary-term");
+  }
+  return target.classList?.contains("glossary-term") ? target : null;
+};
+
+const showPopoverForElement = (target) => {
+  if (!target) return false;
+  const definition = target.getAttribute("data-definition");
+  const term = target.innerText || target.textContent;
+  if (!definition) return false;
+  hoveredGlossaryTerm.value = term;
+  hoveredGlossaryDefinition.value = definition;
+  activeGlossaryAnchor.value = target;
+  return true;
+};
+
+const isWithinActivePopoverOrAnchor = (node) => {
+  if (!node) return false;
+  if (activeGlossaryAnchor.value?.contains?.(node)) {
+    return true;
+  }
+  const popoverEl =
+    typeof document !== "undefined"
+      ? document.querySelector(".glossary-popover")
+      : null;
+  return Boolean(popoverEl?.contains?.(node));
+};
+
 const handleCanvasClick = (e) => {
-  const target = e.target;
-  if (target && target.classList.contains("glossary-term")) {
+  const target = resolveGlossaryTarget(e.target);
+  if (target) {
     const definition = target.getAttribute("data-definition");
     const term = target.innerText || target.textContent;
     if (definition) {
@@ -461,15 +491,13 @@ const handleCanvasClick = (e) => {
         e.preventDefault();
         e.stopPropagation();
 
-        if (hoveredGlossaryTerm.value === term) {
+        if (
+          hoveredGlossaryTerm.value === term &&
+          activeGlossaryAnchor.value === target
+        ) {
           hidePopover();
         } else {
-          hoveredGlossaryTerm.value = term;
-          hoveredGlossaryDefinition.value = definition;
-
-          const rect = target.getBoundingClientRect();
-          popoverX.value = rect.left + window.scrollX;
-          popoverY.value = rect.bottom + window.scrollY + 8;
+          showPopoverForElement(target);
         }
       } else {
         toastStore.push({
@@ -484,37 +512,47 @@ const handleCanvasClick = (e) => {
 
 const handleCanvasMouseOver = (e) => {
   if (!isHoverSupported.value) return;
-
-  const target = e.target;
-  if (target && target.classList.contains("glossary-term")) {
-    const definition = target.getAttribute("data-definition");
-    const term = target.innerText || target.textContent;
-    if (definition) {
-      hoveredGlossaryTerm.value = term;
-      hoveredGlossaryDefinition.value = definition;
-
-      const rect = target.getBoundingClientRect();
-      // Calculate popover positioning absolute coordinates
-      popoverX.value = rect.left + window.scrollX;
-      popoverY.value = rect.bottom + window.scrollY + 8;
-    }
+  const target = resolveGlossaryTarget(e.target);
+  if (target) {
+    showPopoverForElement(target);
   }
 };
 
-const handleCanvasMouseOut = (_e) => {
-  if (isHoverSupported.value) {
-    hidePopover();
+const handleCanvasMouseOut = (e) => {
+  if (!isHoverSupported.value) return;
+  if (isWithinActivePopoverOrAnchor(e?.relatedTarget)) {
+    return;
   }
+  hidePopover();
+};
+
+const handlePopoverMouseLeave = (e) => {
+  if (!isHoverSupported.value) return;
+  if (
+    e?.relatedTarget &&
+    activeGlossaryAnchor.value?.contains?.(e.relatedTarget)
+  ) {
+    return;
+  }
+  hidePopover();
 };
 
 const handleCanvasFocusIn = (e) => {
-  if (isHoverSupported.value) {
-    handleCanvasMouseOver(e);
+  const target = resolveGlossaryTarget(e.target);
+  if (target) {
+    showPopoverForElement(target);
   }
 };
 
-const handleCanvasFocusOut = (_e) => {
-  if (isHoverSupported.value) {
+const handleCanvasFocusOut = (e) => {
+  if (isWithinActivePopoverOrAnchor(e?.relatedTarget)) {
+    return;
+  }
+  hidePopover();
+};
+
+const handlePopoverModelUpdate = (nextOpen) => {
+  if (!nextOpen) {
     hidePopover();
   }
 };
@@ -522,8 +560,7 @@ const handleCanvasFocusOut = (_e) => {
 const hidePopover = () => {
   hoveredGlossaryTerm.value = null;
   hoveredGlossaryDefinition.value = null;
-  popoverX.value = null;
-  popoverY.value = null;
+  activeGlossaryAnchor.value = null;
 };
 </script>
 
@@ -531,6 +568,9 @@ const hidePopover = () => {
 .icf-section-editor-container {
   display: flex;
   flex-direction: column;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
   border: 1px solid var(--border);
   border-radius: 8px;
   background-color: var(--semantic-color-surface);
@@ -539,6 +579,8 @@ const hidePopover = () => {
 
 .editor-header {
   display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 12px;
@@ -673,17 +715,16 @@ const hidePopover = () => {
 }
 
 /* Popover styles */
-.glossary-popover {
-  position: absolute;
+:deep(.glossary-popover) {
   background-color: var(--semantic-color-surface-elevated);
   color: var(--semantic-color-text-inverse);
+  border-color: var(--semantic-color-border-control);
   padding: 8px 12px;
   border-radius: 6px;
   font-size: 0.8rem;
   max-width: 280px;
   box-shadow: var(--shadow-md);
   z-index: 1050;
-  pointer-events: none;
 }
 
 .popover-title {

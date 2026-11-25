@@ -359,5 +359,39 @@ describe("API error reporting (#4523)", () => {
       }
       expect(totalPushCalls).toBe(17);
     });
+
+    it("mounts staff ToastHost at top-right with vector dismiss icons and clears >= 4 stacked toasts via Clear all", async () => {
+      const pinia = createPinia();
+      setActivePinia(pinia);
+      const toasts = useToastStore();
+
+      for (let i = 1; i <= 6; i += 1) {
+        toasts.push({
+          tone: "info",
+          title: `Rule Saved ${i}`,
+          message: `Signed rule ${i} stored.`,
+          timeoutMs: 0,
+        });
+      }
+
+      const wrapper = mount(ToastHost, { global: { plugins: [pinia] } });
+      const host = wrapper.find(".toast-host");
+      expect(host.classes()).toContain("toast-host--top-right");
+      expect(host.attributes("data-position")).toBe("top-right");
+
+      const firstDismiss = wrapper.find(".toast-dismiss");
+      expect(firstDismiss.find("svg").exists()).toBe(true);
+      expect(firstDismiss.text()).not.toContain("×");
+
+      const clearAllBtn = wrapper.find(".toast-clear-all");
+      expect(clearAllBtn.exists()).toBe(true);
+      expect(clearAllBtn.text()).toContain("Clear all");
+      expect(clearAllBtn.text()).toContain("(6)");
+
+      await clearAllBtn.trigger("click");
+      expect(toasts.toasts).toHaveLength(0);
+      expect(wrapper.find(".toast-clear-all").exists()).toBe(false);
+      wrapper.unmount();
+    });
   });
 });
