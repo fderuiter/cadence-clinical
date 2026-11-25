@@ -127,7 +127,7 @@
           role="tabpanel"
           aria-labelledby="btn-etmf-tab-qc-queue"
         >
-          <CraQcQueue />
+          <CraQcQueue v-if="activeWorkspaceTab === 'qc-queue'" />
         </div>
       </main>
     </template>
@@ -488,9 +488,23 @@
     />
 
     <!-- Real-time eTMF Export Job Progress Drawer -->
-    <ExportJobDrawer />
+    <ExportJobDrawer v-if="etmfStore.isExportDrawerOpen" />
   </div>
 </template>
+
+<script>
+import { defineLazyOverlay } from "../utils/lazyOverlay.js";
+
+const CraQcQueue = defineLazyOverlay(
+  () => import("../components/etmf/CraQcQueue.vue")
+);
+const ExportJobDrawer = defineLazyOverlay(
+  () => import("../components/etmf/ExportJobDrawer.vue")
+);
+const PdfPreviewModal = defineLazyOverlay(
+  () => import("../components/etmf/PdfPreviewModal.vue")
+);
+</script>
 
 <script setup>
 import { ClinicalDrawer, ClinicalInput, ClinicalTabs, handoffFocus } from "ui";
@@ -510,14 +524,11 @@ import {
   canStageEtmfQc,
 } from "../canvas/authority";
 import SupportDetails from "../components/canvas/SupportDetails.vue";
-import CraQcQueue from "../components/etmf/CraQcQueue.vue";
 import DocumentGrid from "../components/etmf/DocumentGrid.vue";
-import ExportJobDrawer from "../components/etmf/ExportJobDrawer.vue";
-import PdfPreviewModal from "../components/etmf/PdfPreviewModal.vue";
 import TmfBinderTree from "../components/etmf/TmfBinderTree.vue";
 import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 import { useAuthStore } from "../stores/auth";
-import { useClinicalStore } from "../stores/clinical";
+import { useClinicalScopeStore } from "../stores/clinicalScope";
 import { useEtmfStore } from "../stores/etmf";
 import { useStudyCanvasStore } from "../stores/studyCanvas";
 import { useToastStore } from "../stores/toasts.js";
@@ -544,7 +555,7 @@ const props = defineProps({
 
 const authStore = useAuthStore();
 const etmfStore = useEtmfStore();
-const clinicalStore = useClinicalStore();
+const clinicalStore = useClinicalScopeStore();
 const canvasStore = useStudyCanvasStore();
 const { route, router } = resolveRouteAndRouter();
 const { activeStudyCode, setActiveStudyCode } = useActiveStudyScope();

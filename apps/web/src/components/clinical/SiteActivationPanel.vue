@@ -569,7 +569,7 @@ import {
 } from "../../canvas/kernelStudy";
 import { useKernelCanI } from "../../composables/useKernelCanI";
 import { useAuthStore } from "../../stores/auth";
-import { useClinicalStore } from "../../stores/clinical";
+import { useClinicalScopeStore } from "../../stores/clinicalScope";
 import { syncActiveStudyScope } from "../../stores/studyScopeBridge";
 import { useToastStore } from "../../stores/toasts.js";
 import { syncWorkspaceScope } from "../../stores/workspaceScope";
@@ -599,7 +599,7 @@ const props = defineProps({
 });
 
 const authStore = useAuthStore();
-const store = useClinicalStore();
+const store = useClinicalScopeStore();
 const toasts = useToastStore();
 const route =
   typeof VueRouter.useRoute === "function" ? VueRouter.useRoute() : null;

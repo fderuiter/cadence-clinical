@@ -2,7 +2,7 @@ import path from "node:path";
 import zlib from "node:zlib";
 import { fileURLToPath } from "node:url";
 import { build, type Rollup } from "vite";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -71,6 +71,74 @@ const FORBIDDEN_BOOT_PATTERNS: ReadonlyArray<{
   { label: "keycloak-js", pattern: /(?:^|\/)keycloak-js(?:\/|$)/ },
 ];
 
+const STUDY_HOME_EAGER_COMPONENTS: ReadonlyArray<string> = [
+  "src/components/canvas/StudyPulse.vue",
+  "src/components/canvas/StudySitesPanel.vue",
+  "src/components/ai/NeedsAttention.vue",
+  "src/components/canvas/WorkQueuesPanel.vue",
+  "src/components/canvas/StudyActivity.vue",
+  "src/components/canvas/CanvasInspector.vue",
+];
+
+const STUDY_CANVAS_DEFERRED_BRANCHES_AND_OVERLAYS: ReadonlyArray<string> = [
+  "src/components/ai/ProposalReview.vue",
+  "src/views/ObservationView.vue",
+  "src/components/canvas/CanvasFormWorkspace.vue",
+  "src/components/canvas/ParticipantRecord.vue",
+  "src/components/canvas/ParticipantsSection.vue",
+  "src/components/canvas/SitesSection.vue",
+  "src/components/canvas/ProtocolVersionsSection.vue",
+  "src/components/clinical/SiteActivationPanel.vue",
+  "src/components/clinical/CtmsGreenlightSection.vue",
+  "src/components/clinical/CtmsMilestonesSection.vue",
+  "src/components/clinical/CtmsDelegationSection.vue",
+  "src/components/clinical/CtmsMonitoringSection.vue",
+  "src/components/clinical/RtsmSupplySection.vue",
+  "src/views/DocumentManagerView.vue",
+  "src/views/StudyTrainingView.vue",
+  "src/components/canvas/QueriesSection.vue",
+  "src/components/canvas/LocksSection.vue",
+  "src/components/canvas/ValidationSection.vue",
+  "src/components/canvas/ExportsSection.vue",
+  "src/components/canvas/CanvasPalette.vue",
+  "SignOutConfirmModal.vue",
+  "SignatureCaptureModal.vue",
+];
+
+const CTMS_TAB_PANEL_MODULES: ReadonlyArray<string> = [
+  "src/components/clinical/SiteActivationPanel.vue",
+  "src/components/clinical/CtmsGreenlightSection.vue",
+  "src/components/clinical/CtmsMilestonesSection.vue",
+  "src/components/clinical/CtmsMonitoringSection.vue",
+  "src/components/clinical/CtmsDelegationSection.vue",
+  "src/components/clinical/RtsmSupplySection.vue",
+];
+
+const DOCUMENT_MANAGER_DEFERRED_OVERLAYS: ReadonlyArray<string> = [
+  "src/components/etmf/CraQcQueue.vue",
+  "src/components/etmf/PdfPreviewModal.vue",
+  "src/components/etmf/ExportJobDrawer.vue",
+  "src/components/etmf/BatchUploadDrawer.vue",
+];
+
+interface BundleSnapshot {
+  htmlSource: string;
+  chunksByFile: Map<string, Rollup.OutputChunk>;
+  assetsByFile: Map<string, Rollup.OutputAsset>;
+  bootChunkFiles: Set<string>;
+  bootCssFiles: Set<string>;
+}
+
+function getChunkImportedCss(
+  chunk: Rollup.OutputChunk
+): ReadonlySet<string> | undefined {
+  return (
+    chunk as Rollup.OutputChunk & {
+      viteMetadata?: { importedCss?: ReadonlySet<string> };
+    }
+  ).viteMetadata?.importedCss;
+}
+
 function extractInitialJsAssetsFromHtml(
   html: string,
   knownChunkNames: ReadonlySet<string>
@@ -99,8 +167,114 @@ function extractInitialJsAssetsFromHtml(
   return Array.from(assetRefs);
 }
 
+function collectStaticClosure(
+  seedFiles: ReadonlyArray<string>,
+  chunksByFile: ReadonlyMap<string, Rollup.OutputChunk>
+): { jsFiles: Set<string>; cssFiles: Set<string>; moduleIds: string[] } {
+  const jsFiles = new Set<string>(seedFiles);
+  const queue = [...seedFiles];
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    const chunk = chunksByFile.get(current);
+    expect(chunk, `Expected output chunk for ${current}`).toBeDefined();
+    for (const imported of chunk!.imports) {
+      if (imported.endsWith(".js") && !jsFiles.has(imported)) {
+        jsFiles.add(imported);
+        queue.push(imported);
+      }
+    }
+  }
+
+  const cssFiles = new Set<string>();
+  const moduleIds: string[] = [];
+  for (const fileName of jsFiles) {
+    const chunk = chunksByFile.get(fileName)!;
+    const importedCss = getChunkImportedCss(chunk);
+    if (importedCss) {
+      for (const cssFile of importedCss) {
+        cssFiles.add(cssFile);
+      }
+    }
+    for (const moduleId of Object.keys(chunk.modules)) {
+      moduleIds.push(moduleId.replace(/\\/g, "/"));
+    }
+  }
+  return { jsFiles, cssFiles, moduleIds };
+}
+
+function measureJsBytes(
+  fileNames: Iterable<string>,
+  chunksByFile: ReadonlyMap<string, Rollup.OutputChunk>
+): { rawBytes: number; gzipBytes: number } {
+  let rawBytes = 0;
+  let gzipBytes = 0;
+  for (const fileName of fileNames) {
+    const chunk = chunksByFile.get(fileName)!;
+    const codeBuffer = Buffer.from(chunk.code, "utf8");
+    rawBytes += codeBuffer.byteLength;
+    gzipBytes += zlib.gzipSync(codeBuffer).byteLength;
+  }
+  return { rawBytes, gzipBytes };
+}
+
+function measureCssBytes(
+  fileNames: Iterable<string>,
+  assetsByFile: ReadonlyMap<string, Rollup.OutputAsset>
+): number {
+  let rawBytes = 0;
+  for (const fileName of fileNames) {
+    const asset = assetsByFile.get(fileName);
+    expect(asset, `Expected CSS output asset for ${fileName}`).toBeDefined();
+    const buf =
+      typeof asset!.source === "string"
+        ? Buffer.from(asset!.source, "utf8")
+        : Buffer.from(asset!.source);
+    rawBytes += buf.byteLength;
+  }
+  return rawBytes;
+}
+
+function findEntryChunkBySuffix(
+  suffix: string,
+  chunksByFile: ReadonlyMap<string, Rollup.OutputChunk>
+): string {
+  for (const [fileName, chunk] of chunksByFile.entries()) {
+    if (
+      chunk.facadeModuleId &&
+      chunk.facadeModuleId.replace(/\\/g, "/").endsWith(suffix)
+    ) {
+      return fileName;
+    }
+  }
+  for (const [fileName, chunk] of chunksByFile.entries()) {
+    const hasModule = Object.keys(chunk.modules).some((modId) =>
+      modId.replace(/\\/g, "/").split("?", 1)[0].endsWith(suffix)
+    );
+    if (hasModule) return fileName;
+  }
+  throw new Error(`Unable to locate output chunk for ${suffix}`);
+}
+
+function assertZeroMatchingModules(
+  closureLabel: string,
+  moduleIds: ReadonlyArray<string>,
+  forbiddenSuffixes: ReadonlyArray<string>
+): void {
+  for (const suffix of forbiddenSuffixes) {
+    const offending = moduleIds.filter((id) =>
+      id.split("?", 1)[0].endsWith(suffix)
+    );
+    expect(
+      offending,
+      `${closureLabel} static closure must contain 0 B of ${suffix}, found in: ${offending.join(", ")}`
+    ).toEqual([]);
+  }
+}
+
 describe("apps/web cold-boot bundle budget & chunk isolation", () => {
-  it("keeps index.html initial JS within budget and excludes authoring, USDM/zod, and route-only API modules", async () => {
+  let snapshot: BundleSnapshot;
+
+  beforeAll(async () => {
     const previousNodeEnv = process.env.NODE_ENV;
     process.env.NODE_ENV = "production";
     let result: Awaited<ReturnType<typeof build>>;
@@ -130,23 +304,22 @@ describe("apps/web cold-boot bundle budget & chunk isolation", () => {
       "output" in entry ? entry.output : []
     );
 
-    const htmlAsset = bundleItems.find(
-      (item): item is Rollup.OutputAsset =>
-        item.type === "asset" && item.fileName === "index.html"
-    );
-    expect(htmlAsset).toBeDefined();
+    const chunksByFile = new Map<string, Rollup.OutputChunk>();
+    const assetsByFile = new Map<string, Rollup.OutputAsset>();
+    for (const item of bundleItems) {
+      if (item.type === "chunk") {
+        chunksByFile.set(item.fileName, item);
+      } else {
+        assetsByFile.set(item.fileName, item);
+      }
+    }
 
+    const htmlAsset = assetsByFile.get("index.html");
+    expect(htmlAsset).toBeDefined();
     const htmlSource =
       typeof htmlAsset!.source === "string"
         ? htmlAsset!.source
         : Buffer.from(htmlAsset!.source).toString("utf8");
-
-    const chunksByFile = new Map<string, Rollup.OutputChunk>();
-    for (const item of bundleItems) {
-      if (item.type === "chunk") {
-        chunksByFile.set(item.fileName, item);
-      }
-    }
 
     const initialJsFiles = extractInitialJsAssetsFromHtml(
       htmlSource,
@@ -154,34 +327,26 @@ describe("apps/web cold-boot bundle budget & chunk isolation", () => {
     );
     expect(initialJsFiles.length).toBeGreaterThan(0);
 
-    // Collect all initial chunks referenced in index.html plus any transitive static imports.
-    const bootChunkFiles = new Set<string>(initialJsFiles);
-    const queue = [...initialJsFiles];
-    while (queue.length > 0) {
-      const current = queue.shift()!;
-      const chunk = chunksByFile.get(current);
-      expect(chunk, `Expected output chunk for ${current}`).toBeDefined();
-      for (const imported of chunk!.imports) {
-        if (imported.endsWith(".js") && !bootChunkFiles.has(imported)) {
-          bootChunkFiles.add(imported);
-          queue.push(imported);
-        }
-      }
-    }
+    const bootClosure = collectStaticClosure(initialJsFiles, chunksByFile);
+    snapshot = {
+      htmlSource,
+      chunksByFile,
+      assetsByFile,
+      bootChunkFiles: bootClosure.jsFiles,
+      bootCssFiles: bootClosure.cssFiles,
+    };
+  }, 60_000);
 
-    let rawBytes = 0;
-    let gzipBytes = 0;
-    const bootModuleIds: string[] = [];
-
-    for (const fileName of bootChunkFiles) {
-      const chunk = chunksByFile.get(fileName)!;
-      const codeBuffer = Buffer.from(chunk.code, "utf8");
-      rawBytes += codeBuffer.byteLength;
-      gzipBytes += zlib.gzipSync(codeBuffer).byteLength;
-      for (const moduleId of Object.keys(chunk.modules)) {
-        bootModuleIds.push(moduleId.replace(/\\/g, "/"));
-      }
-    }
+  it("keeps index.html initial JS within budget and excludes authoring, USDM/zod, and route-only API modules", () => {
+    const { chunksByFile, bootChunkFiles } = snapshot;
+    const bootClosure = collectStaticClosure(
+      Array.from(bootChunkFiles),
+      chunksByFile
+    );
+    const { rawBytes, gzipBytes } = measureJsBytes(
+      bootClosure.jsFiles,
+      chunksByFile
+    );
 
     // Cold-boot budget after deferring i18n, closed overlays, canvas/onboarding stores, and kernelApi barrel:
     // <= 250 kB raw JS and <= 90 kB gzip JS.
@@ -189,7 +354,7 @@ describe("apps/web cold-boot bundle budget & chunk isolation", () => {
     expect(gzipBytes).toBeLessThanOrEqual(Math.floor(90 * 1024));
 
     for (const { label, pattern } of FORBIDDEN_BOOT_PATTERNS) {
-      const offending = bootModuleIds.filter((id) => pattern.test(id));
+      const offending = bootClosure.moduleIds.filter((id) => pattern.test(id));
       expect(
         offending,
         `Cold-boot chunks must contain 0 B of ${label}, found in: ${offending.join(", ")}`
@@ -227,5 +392,106 @@ describe("apps/web cold-boot bundle budget & chunk isolation", () => {
     expect(draggableModules.some((m) => /(?:^|\/)sortablejs\//.test(m))).toBe(
       true
     );
-  }, 60_000);
+  });
+
+  it("enforces static closure budgets and async branch/overlay splits for StudyCanvasView, CtmsView, and DocumentManagerView", () => {
+    const { chunksByFile, assetsByFile, bootChunkFiles, bootCssFiles } =
+      snapshot;
+
+    const incrementalMetrics = (entrySuffixes: ReadonlyArray<string>) => {
+      const entryFiles = entrySuffixes.map((suffix) =>
+        findEntryChunkBySuffix(suffix, chunksByFile)
+      );
+      const closure = collectStaticClosure(entryFiles, chunksByFile);
+      const incJsFiles = Array.from(closure.jsFiles).filter(
+        (f) => !bootChunkFiles.has(f)
+      );
+      const incCssFiles = Array.from(closure.cssFiles).filter(
+        (f) => !bootCssFiles.has(f)
+      );
+      const { rawBytes: incJsBytes } = measureJsBytes(incJsFiles, chunksByFile);
+      const incCssBytes = measureCssBytes(incCssFiles, assetsByFile);
+      return { closure, incJsBytes, incCssBytes };
+    };
+
+    // 1. Study Home (StudyCanvasView): <= 315 kB incremental JS, <= 45 kB incremental CSS,
+    //    6 Study Home/layout components eager, and 0 B of the 19 inactive branches or standalone overlays.
+    const studyHome = incrementalMetrics(["src/views/StudyCanvasView.vue"]);
+    expect(studyHome.incJsBytes).toBeLessThanOrEqual(315_000);
+    expect(studyHome.incCssBytes).toBeLessThanOrEqual(45_000);
+
+    for (const eagerSuffix of STUDY_HOME_EAGER_COMPONENTS) {
+      expect(
+        studyHome.closure.moduleIds.some((id) =>
+          id.split("?", 1)[0].endsWith(eagerSuffix)
+        ),
+        `StudyCanvasView static closure should retain eager Study Home component ${eagerSuffix}`
+      ).toBe(true);
+    }
+    assertZeroMatchingModules(
+      "StudyCanvasView",
+      studyHome.closure.moduleIds,
+      STUDY_CANVAS_DEFERRED_BRANCHES_AND_OVERLAYS
+    );
+
+    // 2. CTMS & Site Startup (CtmsView / CtmsLiveWorkspace):
+    //    CtmsView static closure contains 0 B of the 6 lazy tab panels, and landing on /ctms
+    //    (SiteActivationPanel) or /ssu (CtmsGreenlightSection) stays <= 195 kB incremental JS.
+    const ctmsShell = incrementalMetrics(["src/views/CtmsView.vue"]);
+    expect(ctmsShell.incJsBytes).toBeLessThanOrEqual(195_000);
+    assertZeroMatchingModules(
+      "CtmsView",
+      ctmsShell.closure.moduleIds,
+      CTMS_TAB_PANEL_MODULES
+    );
+
+    const ctmsEntryWithActivation = incrementalMetrics([
+      "src/views/CtmsView.vue",
+      "src/components/clinical/SiteActivationPanel.vue",
+    ]);
+    expect(ctmsEntryWithActivation.incJsBytes).toBeLessThanOrEqual(195_000);
+    assertZeroMatchingModules(
+      "/ctms initial entry",
+      ctmsEntryWithActivation.closure.moduleIds,
+      CTMS_TAB_PANEL_MODULES.filter(
+        (m) => !m.endsWith("SiteActivationPanel.vue")
+      )
+    );
+
+    const ssuEntryWithGreenlight = incrementalMetrics([
+      "src/views/CtmsView.vue",
+      "src/components/clinical/CtmsGreenlightSection.vue",
+    ]);
+    expect(ssuEntryWithGreenlight.incJsBytes).toBeLessThanOrEqual(195_000);
+    assertZeroMatchingModules(
+      "/ssu initial entry",
+      ssuEntryWithGreenlight.closure.moduleIds,
+      CTMS_TAB_PANEL_MODULES.filter(
+        (m) => !m.endsWith("CtmsGreenlightSection.vue")
+      )
+    );
+
+    // 3. Embedded eTMF (DocumentManagerView) & RTSM Supply (RtsmSupplySection):
+    //    DocumentManagerView stays <= 246 kB incremental JS and excludes closed drawers/modals/QC queue;
+    //    RtsmSupplySection excludes closed reconciliation drawer and signature modal.
+    const etmfHub = incrementalMetrics(["src/views/DocumentManagerView.vue"]);
+    expect(etmfHub.incJsBytes).toBeLessThanOrEqual(246_000);
+    assertZeroMatchingModules(
+      "DocumentManagerView",
+      etmfHub.closure.moduleIds,
+      DOCUMENT_MANAGER_DEFERRED_OVERLAYS
+    );
+
+    const rtsmSupply = incrementalMetrics([
+      "src/components/clinical/RtsmSupplySection.vue",
+    ]);
+    assertZeroMatchingModules(
+      "RtsmSupplySection",
+      rtsmSupply.closure.moduleIds,
+      [
+        "src/components/clinical/BulkIpKitReconciliationDrawer.vue",
+        "SignatureCaptureModal.vue",
+      ]
+    );
+  });
 });

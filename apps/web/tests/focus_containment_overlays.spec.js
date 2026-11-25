@@ -516,6 +516,10 @@ describe("Centralized Focus Containment & Reactive Inert Primitives", () => {
     const DocumentManagerView = (
       await import("../src/views/DocumentManagerView.vue")
     ).default;
+    const pendingLazy = globalThis.__CADENCE_LAZY_OVERLAY_PROMISES__;
+    while (pendingLazy && pendingLazy.size > 0) {
+      await Promise.all(Array.from(pendingLazy));
+    }
     const { useAuthStore } = await import("../src/stores/auth.js");
     const { useEtmfStore } = await import("../src/stores/etmf.js");
     const { etmfService } = await import("../src/api/etmf.js");

@@ -555,6 +555,7 @@
 
     <!-- Batch Ingestion Drawer -->
     <BatchUploadDrawer
+      v-if="isBatchDrawerOpen"
       :is-open="isBatchDrawerOpen"
       :study-id="etmfStore.currentStudyId"
       :site-id="etmfStore.currentSiteId || null"
@@ -562,6 +563,14 @@
     />
   </div>
 </template>
+
+<script>
+import { defineLazyOverlay } from "../../utils/lazyOverlay.js";
+
+const BatchUploadDrawer = defineLazyOverlay(
+  () => import("./BatchUploadDrawer.vue")
+);
+</script>
 
 <script setup>
 import { ref, computed, watch, nextTick } from "vue";
@@ -579,7 +588,6 @@ import {
   ETMF_TAG_ROLE_REASON,
   ETMF_EXPORT_ROLE_REASON,
 } from "../../canvas/authority.ts";
-import BatchUploadDrawer from "./BatchUploadDrawer.vue";
 import SkeletonLoader from "../common/SkeletonLoader.vue";
 
 const isBatchDrawerOpen = ref(false);

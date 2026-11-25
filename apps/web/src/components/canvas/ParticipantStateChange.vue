@@ -191,7 +191,7 @@
     </template>
 
     <SignatureCaptureModal
-      v-if="hasStepUpCapableAction"
+      v-if="hasStepUpCapableAction && activeSignatureFlow !== null"
       :is-open="activeSignatureFlow !== null"
       :fallback-focus="signatureModalFallbackFocus"
       :username="authStore.user?.username || ''"
@@ -205,6 +205,14 @@
     />
   </section>
 </template>
+
+<script lang="ts">
+import { defineLazyOverlay } from "../../utils/lazyOverlay";
+
+const SignatureCaptureModal = defineLazyOverlay(
+  () => import("../SignatureCaptureModal.vue")
+);
+</script>
 
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
@@ -231,7 +239,6 @@ import {
   changeParticipantStateMutation,
   randomizeParticipantMutation,
 } from "../../stores/studyCanvasParticipantMutations";
-import SignatureCaptureModal from "../SignatureCaptureModal.vue";
 
 /**
  * Moves the inspected participant to another state, dispatches step-up randomization from ENROLLED,

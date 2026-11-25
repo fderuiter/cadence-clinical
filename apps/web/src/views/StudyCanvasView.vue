@@ -1007,7 +1007,7 @@
     />
 
     <SignOutConfirmModal
-      v-if="!inAppShell"
+      v-if="!inAppShell && isCanvasSignOutConfirmOpen"
       id="canvas-signout-confirm-modal"
       v-model="isCanvasSignOutConfirmOpen"
       @confirm="confirmCanvasSignOut"
@@ -1015,6 +1015,74 @@
     />
   </div>
 </template>
+
+<script lang="ts">
+import { defineLazyOverlay } from "../utils/lazyOverlay";
+
+const CanvasFormWorkspace = defineLazyOverlay(
+  () => import("../components/canvas/CanvasFormWorkspace.vue")
+);
+const CanvasPalette = defineLazyOverlay(
+  () => import("../components/canvas/CanvasPalette.vue")
+);
+const SignOutConfirmModal = defineLazyOverlay(
+  () => import("../components/shell/LazySignOutConfirmModal.js")
+);
+const ExportsSection = defineLazyOverlay(
+  () => import("../components/canvas/ExportsSection.vue")
+);
+const LocksSection = defineLazyOverlay(
+  () => import("../components/canvas/LocksSection.vue")
+);
+const ValidationSection = defineLazyOverlay(
+  () => import("../components/canvas/ValidationSection.vue")
+);
+const ParticipantRecord = defineLazyOverlay(
+  () => import("../components/canvas/ParticipantRecord.vue")
+);
+const ParticipantsSection = defineLazyOverlay(
+  () => import("../components/canvas/ParticipantsSection.vue")
+);
+const ProtocolVersionsSection = defineLazyOverlay(
+  () => import("../components/canvas/ProtocolVersionsSection.vue")
+);
+const SitesSection = defineLazyOverlay(
+  () => import("../components/canvas/SitesSection.vue")
+);
+const QueriesSection = defineLazyOverlay(
+  () => import("../components/canvas/QueriesSection.vue")
+);
+const SiteActivationPanel = defineLazyOverlay(
+  () => import("../components/clinical/SiteActivationPanel.vue")
+);
+const CtmsGreenlightSection = defineLazyOverlay(
+  () => import("../components/clinical/CtmsGreenlightSection.vue")
+);
+const CtmsMilestonesSection = defineLazyOverlay(
+  () => import("../components/clinical/CtmsMilestonesSection.vue")
+);
+const CtmsDelegationSection = defineLazyOverlay(
+  () => import("../components/clinical/CtmsDelegationSection.vue")
+);
+const CtmsMonitoringSection = defineLazyOverlay(
+  () => import("../components/clinical/CtmsMonitoringSection.vue")
+);
+const RtsmSupplySection = defineLazyOverlay(
+  () => import("../components/clinical/RtsmSupplySection.vue")
+);
+const ProposalReview = defineLazyOverlay(
+  () => import("../components/ai/ProposalReview.vue")
+);
+const DocumentManagerView = defineLazyOverlay(
+  () => import("./DocumentManagerView.vue")
+);
+const ObservationView = defineLazyOverlay(
+  () => import("./ObservationView.vue")
+);
+const StudyTrainingView = defineLazyOverlay(
+  () => import("./StudyTrainingView.vue")
+);
+</script>
 
 <script setup lang="ts">
 import {
@@ -1081,12 +1149,7 @@ import {
   syncInstantiatedClinicalScope,
   type PaletteTarget,
 } from "../canvas/palette";
-import {
-  SignOutConfirmModal,
-  handoffFocus,
-  hasActiveModalFocusTrap,
-  useSignOutGuard,
-} from "ui";
+import { handoffFocus, hasActiveModalFocusTrap, useSignOutGuard } from "ui";
 import { useAuthStore } from "../stores/auth";
 import { useCanvasSelection } from "../composables/useCanvasSelection";
 import { useKnowledgeStore } from "../stores/knowledge.js";
@@ -1099,34 +1162,13 @@ import {
   useStudyCanvasStore,
 } from "../stores/studyCanvas";
 import { hasUserScopedDrafts } from "../utils/userScopedStorage.js";
-import CanvasFormWorkspace from "../components/canvas/CanvasFormWorkspace.vue";
 import CanvasInspector from "../components/canvas/CanvasInspector.vue";
-import CanvasPalette from "../components/canvas/CanvasPalette.vue";
-import ExportsSection from "../components/canvas/ExportsSection.vue";
-import LocksSection from "../components/canvas/LocksSection.vue";
-import ValidationSection from "../components/canvas/ValidationSection.vue";
-import ParticipantRecord from "../components/canvas/ParticipantRecord.vue";
-import ParticipantsSection from "../components/canvas/ParticipantsSection.vue";
-import ProtocolVersionsSection from "../components/canvas/ProtocolVersionsSection.vue";
-import SitesSection from "../components/canvas/SitesSection.vue";
-import QueriesSection, {
-  type StudyQueriesFilterState,
-} from "../components/canvas/QueriesSection.vue";
+import type { StudyQueriesFilterState } from "../components/canvas/QueriesSection.vue";
 import StudyActivity from "../components/canvas/StudyActivity.vue";
 import StudyPulse from "../components/canvas/StudyPulse.vue";
 import StudySitesPanel from "../components/canvas/StudySitesPanel.vue";
 import WorkQueuesPanel from "../components/canvas/WorkQueuesPanel.vue";
-import SiteActivationPanel from "../components/clinical/SiteActivationPanel.vue";
-import CtmsGreenlightSection from "../components/clinical/CtmsGreenlightSection.vue";
-import CtmsMilestonesSection from "../components/clinical/CtmsMilestonesSection.vue";
-import CtmsDelegationSection from "../components/clinical/CtmsDelegationSection.vue";
-import CtmsMonitoringSection from "../components/clinical/CtmsMonitoringSection.vue";
-import RtsmSupplySection from "../components/clinical/RtsmSupplySection.vue";
 import NeedsAttention from "../components/ai/NeedsAttention.vue";
-import ProposalReview from "../components/ai/ProposalReview.vue";
-import DocumentManagerView from "./DocumentManagerView.vue";
-import ObservationView from "./ObservationView.vue";
-import StudyTrainingView from "./StudyTrainingView.vue";
 import { useAiAssistance } from "../ai/aiAssistance";
 import { demoRandomToken, isDemoBuild } from "../utils/demoMode";
 import {
