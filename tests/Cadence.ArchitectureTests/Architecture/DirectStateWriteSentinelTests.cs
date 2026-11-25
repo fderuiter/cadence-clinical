@@ -41,6 +41,9 @@ public class DirectStateWriteSentinelTests
 
         // Central kernel command pipeline types are exempted, never recorded as legacy debt.
         actual.Should().NotContain(e => e.Contains("KernelCommandTransaction", StringComparison.Ordinal));
+        actual.Should().NotContain(
+            e => e.Contains(".Endpoints.", StringComparison.Ordinal),
+            "Minimal API endpoints must delegate persistence commits to Application/Infrastructure services and never invoke SaveChanges* directly");
 
         var comparison = ShrinkOnlyBaseline.Verify(
             DirectStateWriteRules.BaselineRelativePath,
@@ -52,6 +55,7 @@ public class DirectStateWriteSentinelTests
 
         var recorded = ShrinkOnlyBaseline.Read(DirectStateWriteRules.BaselineRelativePath);
         recorded.Should().BeInAscendingOrder(StringComparer.Ordinal).And.OnlyHaveUniqueItems();
+        recorded.Should().NotContain(e => e.Contains(".Endpoints.", StringComparison.Ordinal));
     }
 
     [Fact(DisplayName = "DirectStateWrites_Bites_OnSyntheticSyncAsyncClosureAndReflectionSaveChanges")]

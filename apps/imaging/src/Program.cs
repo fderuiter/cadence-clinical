@@ -20,6 +20,9 @@ builder.Services.AddSingleton<IClock>(SystemClock.Instance);
 builder.Services.AddImagingDeidentification();
 builder.Services.AddScoped<IDicomIngestionService, DicomIngestionService>();
 builder.Services.AddScoped<IImagingSegmentationService, ImagingSegmentationService>();
+builder.Services.AddScoped<ImagingUnitOfWork>();
+builder.Services.AddScoped<DicomQueryService>();
+builder.Services.AddScoped<ImagingAdjudicationService>();
 builder.AddCadencePostgresDbContext<ImagingDbContext>();
 builder.Services.AddCadenceDurableSigTokenStore<ImagingDbContext>();
 

@@ -7,9 +7,11 @@ using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Apps.Interop.Application.Services;
 using Cadence.Apps.Interop.Endpoints;
 using Cadence.Apps.Interop.Infrastructure.Persistence;
 using Cadence.Apps.Interop.Infrastructure.Security;
+using Cadence.Kernel.Time;
 using Cadence.Security.Authentication;
 using Cadence.Security.Rbac;
 using Cadence.Testing;
@@ -87,10 +89,19 @@ public class EsourceReconciliationTests
         }
         """;
 
+    private static EsourceConfigurationService ConfigService(InteropDbContext db, IClock clock, ISmartSigningKeys? keys = null) =>
+        new(new InteropUnitOfWork(db), clock, keys);
+
+    private static EsourceIngestionAndQueryService IngestService(InteropDbContext db, IClock? clock = null) =>
+        new(new InteropUnitOfWork(db), clock ?? SystemClock.Instance);
+
+    private static EsourceReconciliationService ReconcileService(InteropDbContext db, IClock clock) =>
+        new(new InteropUnitOfWork(db), clock);
+
     private static async Task IngestSampleBundleAsync(InteropDbContext db, FakeClock clock, HttpContext httpContext, CancellationToken ct)
     {
-        var result = await EsourceEndpoints.IngestFhirBundleAsync(
-            new FhirBundleIngestRequest("STUDY-101", "SITE-01", "PAT-001", null, "EPIC", SampleBundle), db, clock, httpContext, ct);
+        var result = await IngestService(db, clock).IngestFhirBundleAsync(
+            new FhirBundleIngestRequest("STUDY-101", "SITE-01", "PAT-001", null, "EPIC", SampleBundle), httpContext, ct);
         result.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.Ok<FhirBundleIngestResponse>>();
     }
 
@@ -116,8 +127,9 @@ public class EsourceReconciliationTests
             ReasonForChange: "Initial endpoint setup for Trial STUDY-101");
 
         // Act
-        var createResult = await EsourceEndpoints.RegisterEhrEndpointAsync(request, db, clock, httpContext, TestContext.Current.CancellationToken);
-        var listResult = await EsourceEndpoints.ListEhrEndpointsAsync(active_only: true, db, TestContext.Current.CancellationToken);
+        var configService = ConfigService(db, clock);
+        var createResult = await configService.RegisterEhrEndpointAsync(request, httpContext, TestContext.Current.CancellationToken);
+        var listResult = await configService.ListEhrEndpointsAsync(activeOnly: true, TestContext.Current.CancellationToken);
 
         // Assert
         createResult.Should().NotBeNull();
@@ -137,12 +149,12 @@ public class EsourceReconciliationTests
 
     private static async Task<string> RegisterSmartEndpointAsync(InteropDbContext db, FakeClock clock, string? keyRef)
     {
-        var created = await EsourceEndpoints.RegisterEhrEndpointAsync(
+        var created = await ConfigService(db, clock).RegisterEhrEndpointAsync(
             new EhrEndpointCreateRequest(
                 Name: "Metro General", SystemType: "EPIC", FhirBaseUrl: "https://ehr.hospital.org/r4", TokenUrl: TokenUrl,
                 ClientId: "cadence-client-99", PublicKeyJwksUrl: null, Scopes: null, PollingIntervalSec: 300,
                 ReasonForChange: "SMART endpoint", SigningKeyRef: keyRef, SigningKeyId: "key-1"),
-            db, clock, CreateMockHttpContext(), TestContext.Current.CancellationToken);
+            CreateMockHttpContext(), TestContext.Current.CancellationToken);
         return created.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.Created<Cadence.Apps.Interop.Domain.EhrEndpointRecord>>().Subject.Value!.Id;
     }
 
@@ -161,7 +173,7 @@ public class EsourceReconciliationTests
         var keys = Keys(("METRO_GENERAL", rsa.ExportPkcs8PrivateKeyPem()));
         string endpointId = await RegisterSmartEndpointAsync(db, clock, "METRO_GENERAL");
 
-        var generated = await EsourceEndpoints.GenerateClientAssertionAsync(new SmartAssertionRequest(endpointId, 300), db, keys, clock, ct);
+        var generated = await ConfigService(db, clock, keys).GenerateClientAssertionAsync(new SmartAssertionRequest(endpointId, 300), ct);
         var assertion = generated.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.Ok<SmartAssertionResponse>>().Subject.Value!;
 
         assertion.ClientAssertionType.Should().Be("urn:ietf:params:oauth:client-assertion-type:jwt-bearer");
@@ -178,7 +190,7 @@ public class EsourceReconciliationTests
         jwt.Header.Kid.Should().Be("key-1");
         jwt.Subject.Should().Be("cadence-client-99");
 
-        var verified = await EsourceEndpoints.VerifyClientAssertionAsync(new SmartVerifyRequest(assertion.ClientAssertionToken, endpointId), db, keys, clock, ct);
+        var verified = await ConfigService(db, clock, keys).VerifyClientAssertionAsync(new SmartVerifyRequest(assertion.ClientAssertionToken, endpointId), ct);
         verified.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.Ok<SmartVerifyResponse>>().Subject.Value!.IsValid.Should().BeTrue();
     }
 
@@ -195,14 +207,14 @@ public class EsourceReconciliationTests
         var keys = Keys(("METRO_GENERAL", endpointKey.ExportPkcs8PrivateKeyPem()));
         var foreignKeys = Keys(("METRO_GENERAL", otherKey.ExportPkcs8PrivateKeyPem()));
 
-        var foreign = await EsourceEndpoints.GenerateClientAssertionAsync(new SmartAssertionRequest(endpointId, 60), db, foreignKeys, clock, ct);
+        var foreign = await ConfigService(db, clock, foreignKeys).GenerateClientAssertionAsync(new SmartAssertionRequest(endpointId, 60), ct);
         string foreignToken = foreign.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.Ok<SmartAssertionResponse>>().Subject.Value!.ClientAssertionToken;
-        var own = await EsourceEndpoints.GenerateClientAssertionAsync(new SmartAssertionRequest(endpointId, 60), db, keys, clock, ct);
+        var own = await ConfigService(db, clock, keys).GenerateClientAssertionAsync(new SmartAssertionRequest(endpointId, 60), ct);
         string ownToken = own.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.Ok<SmartAssertionResponse>>().Subject.Value!.ClientAssertionToken;
 
-        var foreignResult = await EsourceEndpoints.VerifyClientAssertionAsync(new SmartVerifyRequest(foreignToken, endpointId), db, keys, clock, ct);
+        var foreignResult = await ConfigService(db, clock, keys).VerifyClientAssertionAsync(new SmartVerifyRequest(foreignToken, endpointId), ct);
         clock.Advance(TimeSpan.FromSeconds(61));
-        var expiredResult = await EsourceEndpoints.VerifyClientAssertionAsync(new SmartVerifyRequest(ownToken, endpointId), db, keys, clock, ct);
+        var expiredResult = await ConfigService(db, clock, keys).VerifyClientAssertionAsync(new SmartVerifyRequest(ownToken, endpointId), ct);
 
         foreignResult.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.Ok<SmartVerifyResponse>>().Subject.Value!.IsValid.Should().BeFalse();
         expiredResult.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.Ok<SmartVerifyResponse>>().Subject.Value!.IsValid.Should().BeFalse();
@@ -233,7 +245,7 @@ public class EsourceReconciliationTests
         var keys = configured is null ? Keys() : Keys(("METRO_GENERAL", configured));
         string endpointId = await RegisterSmartEndpointAsync(db, clock, keyRef);
 
-        var result = await EsourceEndpoints.GenerateClientAssertionAsync(new SmartAssertionRequest(endpointId, 300), db, keys, clock, ct);
+        var result = await ConfigService(db, clock, keys).GenerateClientAssertionAsync(new SmartAssertionRequest(endpointId, 300), ct);
 
         result.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.ProblemHttpResult>().Which.StatusCode.Should().Be(422);
     }
@@ -249,11 +261,11 @@ public class EsourceReconciliationTests
         var keys = Keys(("METRO_GENERAL", rsa.ExportPkcs8PrivateKeyPem()));
         string endpointId = await RegisterSmartEndpointAsync(db, clock, "METRO_GENERAL");
 
-        var unknown = await EsourceEndpoints.GenerateClientAssertionAsync(new SmartAssertionRequest("no-such-endpoint", 300), db, keys, clock, ct);
-        var tooLong = await EsourceEndpoints.GenerateClientAssertionAsync(new SmartAssertionRequest(endpointId, 301), db, keys, clock, ct);
-        var badRef = await EsourceEndpoints.RegisterEhrEndpointAsync(
+        var unknown = await ConfigService(db, clock, keys).GenerateClientAssertionAsync(new SmartAssertionRequest("no-such-endpoint", 300), ct);
+        var tooLong = await ConfigService(db, clock, keys).GenerateClientAssertionAsync(new SmartAssertionRequest(endpointId, 301), ct);
+        var badRef = await ConfigService(db, clock, keys).RegisterEhrEndpointAsync(
             new EhrEndpointCreateRequest("X", null, "https://x/r4", null, null, null, null, 300, null, SigningKeyRef: "../etc/passwd"),
-            db, clock, CreateMockHttpContext(), ct);
+            CreateMockHttpContext(), ct);
 
         unknown.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.ProblemHttpResult>().Which.StatusCode.Should().Be(404);
         tooLong.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.ProblemHttpResult>().Which.StatusCode.Should().Be(400);
@@ -272,8 +284,8 @@ public class EsourceReconciliationTests
         var clock = new FakeClock(new DateTimeOffset(2026, 10, 1, 12, 0, 0, TimeSpan.Zero));
         var ct = TestContext.Current.CancellationToken;
 
-        var result = await EsourceEndpoints.IngestFhirBundleAsync(
-            new FhirBundleIngestRequest("STUDY-101", "SITE-01", "PAT-001", null, "EPIC", SampleBundle), db, clock, CreateMockHttpContext(), ct);
+        var result = await IngestService(db, clock).IngestFhirBundleAsync(
+            new FhirBundleIngestRequest("STUDY-101", "SITE-01", "PAT-001", null, "EPIC", SampleBundle), CreateMockHttpContext(), ct);
 
         var response = result.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.Ok<FhirBundleIngestResponse>>().Subject.Value!;
         response.CandidateCount.Should().Be(2);
@@ -319,8 +331,8 @@ public class EsourceReconciliationTests
         var clock = new FakeClock(new DateTimeOffset(2026, 10, 1, 12, 0, 0, TimeSpan.Zero));
         var ct = TestContext.Current.CancellationToken;
 
-        var result = await EsourceEndpoints.IngestFhirBundleAsync(
-            new FhirBundleIngestRequest("STUDY-101", "SITE-01", "PAT-001", null, "EPIC", bundle), db, clock, CreateMockHttpContext(), ct);
+        var result = await IngestService(db, clock).IngestFhirBundleAsync(
+            new FhirBundleIngestRequest("STUDY-101", "SITE-01", "PAT-001", null, "EPIC", bundle), CreateMockHttpContext(), ct);
 
         result.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.ProblemHttpResult>().Which.StatusCode.Should().Be(400);
         (await db.EhrReconciliationCandidateRecords.CountAsync(ct)).Should().Be(0);
@@ -344,7 +356,7 @@ public class EsourceReconciliationTests
         using var db = CreateDbContext($"EhrListEmpty_{Guid.NewGuid():N}");
         var ct = TestContext.Current.CancellationToken;
 
-        var result = await EsourceEndpoints.ListCandidatesAsync("STUDY-101", "PAT-001", "SITE-01", "ALL", "ALL", 0, 50, db, CreateMockHttpContext(), ct);
+        var result = await IngestService(db).ListCandidatesAsync("STUDY-101", "PAT-001", "SITE-01", "ALL", "ALL", 0, 50, CreateMockHttpContext(), ct);
 
         var page = result.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.Ok<EhrCandidateListResponse>>().Subject.Value!;
         page.TotalCount.Should().Be(0);
@@ -372,7 +384,7 @@ public class EsourceReconciliationTests
             ChangeReason: "CRC eSource Reconciliation Accept & Commit");
 
         // Act
-        var result = await EsourceEndpoints.AcceptCandidateAsync(acceptReq, db, clock, httpContext, TestContext.Current.CancellationToken);
+        var result = await ReconcileService(db, clock).AcceptCandidateAsync(acceptReq, httpContext, TestContext.Current.CancellationToken);
 
         // Assert
         var actionObj = result.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.Ok<EhrReconcileActionResponse>>().Subject.Value;
@@ -405,7 +417,7 @@ public class EsourceReconciliationTests
 
         // Test 1: Empty rationale fails
         var emptyReject = new EhrReconcileRejectRequest(CandidateId: firstCandidate.Id, RejectionReason: "", ChangeReason: "Reject attempt");
-        var failResult = await EsourceEndpoints.RejectCandidateAsync(emptyReject, db, clock, httpContext, TestContext.Current.CancellationToken);
+        var failResult = await ReconcileService(db, clock).RejectCandidateAsync(emptyReject, httpContext, TestContext.Current.CancellationToken);
         failResult.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.ProblemHttpResult>();
 
         // Test 2: Valid rationale succeeds
@@ -414,7 +426,7 @@ public class EsourceReconciliationTests
             RejectionReason: "Out of visit window observation taken prior to screening consent",
             ChangeReason: "CRC eSource Reconciliation Reject");
 
-        var successResult = await EsourceEndpoints.RejectCandidateAsync(validReject, db, clock, httpContext, TestContext.Current.CancellationToken);
+        var successResult = await ReconcileService(db, clock).RejectCandidateAsync(validReject, httpContext, TestContext.Current.CancellationToken);
 
         // Assert
         var actionObj = successResult.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.Ok<EhrReconcileActionResponse>>().Subject.Value;
@@ -451,7 +463,7 @@ public class EsourceReconciliationTests
             ChangeReason: "CRC Raised eSource Discrepancy Query");
 
         // Act
-        var result = await EsourceEndpoints.RaiseClinicalQueryAsync(queryReq, db, clock, httpContext, TestContext.Current.CancellationToken);
+        var result = await ReconcileService(db, clock).RaiseClinicalQueryAsync(queryReq, httpContext, TestContext.Current.CancellationToken);
 
         // Assert
         var actionObj = result.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.Ok<EhrReconcileActionResponse>>().Subject.Value;
@@ -480,10 +492,10 @@ public class EsourceReconciliationTests
         var candidate = await db.EhrReconciliationCandidateRecords.FirstAsync(TestContext.Current.CancellationToken);
 
         // Perform an accept action to generate audit log
-        await EsourceEndpoints.AcceptCandidateAsync(new EhrReconcileAcceptRequest(candidate.Id, "Verified against source", "Accept"), db, clock, httpContext, TestContext.Current.CancellationToken);
+        await ReconcileService(db, clock).AcceptCandidateAsync(new EhrReconcileAcceptRequest(candidate.Id, "Verified against source", "Accept"), httpContext, TestContext.Current.CancellationToken);
 
         // Act
-        var provResult = await EsourceEndpoints.GetProvenanceAuditAsync(candidate.Id, db, httpContext, TestContext.Current.CancellationToken);
+        var provResult = await IngestService(db, clock).GetProvenanceAuditAsync(candidate.Id, httpContext, TestContext.Current.CancellationToken);
 
         // Assert
         var provObj = provResult.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.Ok<EhrProvenanceResponse>>().Subject.Value;
@@ -514,7 +526,7 @@ public class EsourceReconciliationTests
             ChangeReason: "CRC eSource Batch Accept");
 
         // Act
-        var result = await EsourceEndpoints.BatchAcceptCandidatesAsync(batchReq, db, clock, httpContext, TestContext.Current.CancellationToken);
+        var result = await ReconcileService(db, clock).BatchAcceptCandidatesAsync(batchReq, httpContext, TestContext.Current.CancellationToken);
 
         // Assert
         var batchObj = result.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.Ok<EhrReconcileBatchActionResponse>>().Subject.Value;
@@ -546,7 +558,7 @@ public class EsourceReconciliationTests
 
         // 1. Empty rationale fails
         var emptyReq = new EhrReconcileBatchRejectRequest(CandidateIds: idsToReject, RejectionReason: "", ChangeReason: "Reject");
-        var failResult = await EsourceEndpoints.BatchRejectCandidatesAsync(emptyReq, db, clock, httpContext, TestContext.Current.CancellationToken);
+        var failResult = await ReconcileService(db, clock).BatchRejectCandidatesAsync(emptyReq, httpContext, TestContext.Current.CancellationToken);
         failResult.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.ProblemHttpResult>();
 
         // 2. Valid rationale succeeds
@@ -555,7 +567,7 @@ public class EsourceReconciliationTests
             RejectionReason: "Out of visit window observations",
             ChangeReason: "CRC eSource Batch Reject");
 
-        var successResult = await EsourceEndpoints.BatchRejectCandidatesAsync(validReq, db, clock, httpContext, TestContext.Current.CancellationToken);
+        var successResult = await ReconcileService(db, clock).BatchRejectCandidatesAsync(validReq, httpContext, TestContext.Current.CancellationToken);
 
         // Assert
         var batchObj = successResult.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.Ok<EhrReconcileBatchActionResponse>>().Subject.Value;
@@ -586,7 +598,7 @@ public class EsourceReconciliationTests
         var req = new EhrReconcileBatchAcceptRequest(CandidateIds: overLimitIds, CommitReason: "Batch accept", ChangeReason: null);
 
         // Act
-        var result = await EsourceEndpoints.BatchAcceptCandidatesAsync(req, db, clock, httpContext, TestContext.Current.CancellationToken);
+        var result = await ReconcileService(db, clock).BatchAcceptCandidatesAsync(req, httpContext, TestContext.Current.CancellationToken);
 
         // Assert
         var problem = result.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.ProblemHttpResult>().Subject;
@@ -610,7 +622,7 @@ public class EsourceReconciliationTests
         var batchReq = new EhrReconcileBatchAcceptRequest(CandidateIds: mixedIds, CommitReason: "Test rollback", ChangeReason: null);
 
         // Act
-        var result = await EsourceEndpoints.BatchAcceptCandidatesAsync(batchReq, db, clock, httpContext, TestContext.Current.CancellationToken);
+        var result = await ReconcileService(db, clock).BatchAcceptCandidatesAsync(batchReq, httpContext, TestContext.Current.CancellationToken);
 
         // Assert
         var problem = result.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.ProblemHttpResult>().Subject;
@@ -636,10 +648,10 @@ public class EsourceReconciliationTests
         var candidate = await db.EhrReconciliationCandidateRecords.FirstAsync(ct);
         var outsider = CreateMockHttpContext("crc_other", "crc", "STUDY-202");
 
-        var list = await EsourceEndpoints.ListCandidatesAsync(null, null, null, "ALL", "ALL", 0, 50, db, outsider, ct);
-        var lookup = await EsourceEndpoints.GetCandidateByIdAsync(candidate.Id, db, outsider, ct);
-        var accept = await EsourceEndpoints.AcceptCandidateAsync(
-            new EhrReconcileAcceptRequest(candidate.Id, "Verified", "Accept"), db, clock, outsider, ct);
+        var list = await IngestService(db, clock).ListCandidatesAsync(null, null, null, "ALL", "ALL", 0, 50, outsider, ct);
+        var lookup = await IngestService(db, clock).GetCandidateByIdAsync(candidate.Id, outsider, ct);
+        var accept = await ReconcileService(db, clock).AcceptCandidateAsync(
+            new EhrReconcileAcceptRequest(candidate.Id, "Verified", "Accept"), outsider, ct);
 
         var listed = list.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.Ok<EhrCandidateListResponse>>().Subject.Value!;
         listed.Candidates.Should().NotContain(c => c.StudyId == "STUDY-101");
@@ -660,9 +672,9 @@ public class EsourceReconciliationTests
 
         var poll = EsourceEndpoints.PollHospitalEhrAsync(
             new EhrPollRequest(EndpointId: "none", StudyId: "STUDY-101", SiteId: "SITE-01", SubjectId: "PAT-001"), outsider);
-        var ingest = await EsourceEndpoints.IngestFhirBundleAsync(
+        var ingest = await IngestService(db, clock).IngestFhirBundleAsync(
             new FhirBundleIngestRequest(StudyId: "STUDY-101", SiteId: "SITE-01", SubjectId: "PAT-001", SubjectPseudonym: null, EhrSystemId: "EPIC", RawFhirBundleJson: SampleBundle),
-            db, clock, outsider, ct);
+            outsider, ct);
 
         poll.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.ProblemHttpResult>().Which.StatusCode.Should().Be(403);
         ingest.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.ProblemHttpResult>().Which.StatusCode.Should().Be(403);
@@ -718,18 +730,18 @@ public class EsourceReconciliationTests
             }
             """;
 
-        var firstResult = await EsourceEndpoints.IngestFhirBundleAsync(
+        var firstResult = await IngestService(db, clock).IngestFhirBundleAsync(
             new FhirBundleIngestRequest("STUDY-101", "SITE-01", "PAT-001", "PSEUDO-001", "EPIC", duplicateEntryBundle),
-            db, clock, site1Caller, ct);
+            site1Caller, ct);
 
         var firstResponse = firstResult.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.Ok<FhirBundleIngestResponse>>().Subject.Value!;
         firstResponse.CandidateCount.Should().Be(1);
         firstResponse.Candidates.Should().ContainSingle();
         string candidateId = firstResponse.Candidates[0].Id;
 
-        var paddedRetryResult = await EsourceEndpoints.IngestFhirBundleAsync(
+        var paddedRetryResult = await IngestService(db, clock).IngestFhirBundleAsync(
             new FhirBundleIngestRequest("  STUDY-101  ", "  SITE-01  ", "  PAT-001  ", "  PSEUDO-001  ", "  EPIC  ", duplicateEntryBundle),
-            db, clock, site1Caller, ct);
+            site1Caller, ct);
 
         var retryResponse = paddedRetryResult.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.Ok<FhirBundleIngestResponse>>().Subject.Value!;
         retryResponse.CandidateCount.Should().Be(1);
@@ -751,12 +763,12 @@ public class EsourceReconciliationTests
         var crcSite1 = CreateSiteScopedHttpContext("crc_site1", "crc", ["STUDY-01"], ["SITE-01"]);
         var crcSite2 = CreateSiteScopedHttpContext("crc_site2", "crc", ["STUDY-01"], ["SITE-02"]);
 
-        var site1Result = await EsourceEndpoints.IngestFhirBundleAsync(
+        var site1Result = await IngestService(db, clock).IngestFhirBundleAsync(
             new FhirBundleIngestRequest("STUDY-01", "SITE-01", "SUBJ-01", "PSEUDO-01", "EPIC-S1", SampleBundle),
-            db, clock, crcSite1, ct);
-        var site2Result = await EsourceEndpoints.IngestFhirBundleAsync(
+            crcSite1, ct);
+        var site2Result = await IngestService(db, clock).IngestFhirBundleAsync(
             new FhirBundleIngestRequest("STUDY-01", "SITE-02", "SUBJ-02", "PSEUDO-02", "EPIC-S2", SampleBundle),
-            db, clock, crcSite2, ct);
+            crcSite2, ct);
 
         site1Result.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.Ok<FhirBundleIngestResponse>>()
             .Subject.Value!.CandidateCount.Should().Be(2);
@@ -778,14 +790,14 @@ public class EsourceReconciliationTests
         var crcSite1 = CreateSiteScopedHttpContext("crc_site1", "crc", ["STUDY-01"], ["SITE-01"]);
         var crcMultiSite = CreateSiteScopedHttpContext("crc_both", "crc", ["STUDY-01"], ["SITE-01", "SITE-02"]);
 
-        var seedResult = await EsourceEndpoints.IngestFhirBundleAsync(
+        var seedResult = await IngestService(db, clock).IngestFhirBundleAsync(
             new FhirBundleIngestRequest("STUDY-01", "SITE-02", "SUBJ-02", "PSEUDO-SITE02-CANARY", "SITE02-HOSPITAL-EHR-CANARY", SampleBundle),
-            db, clock, crcSite2, ct);
+            crcSite2, ct);
         seedResult.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.Ok<FhirBundleIngestResponse>>();
 
-        var singleSiteProbe = await EsourceEndpoints.IngestFhirBundleAsync(
+        var singleSiteProbe = await IngestService(db, clock).IngestFhirBundleAsync(
             new FhirBundleIngestRequest("STUDY-01", "SITE-01", "SUBJ-02", "PROBE", "EPIC-METRO", SampleBundle),
-            db, clock, crcSite1, ct);
+            crcSite1, ct);
 
         var forbidden = singleSiteProbe.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.ProblemHttpResult>().Subject;
         forbidden.StatusCode.Should().Be(403);
@@ -793,9 +805,9 @@ public class EsourceReconciliationTests
             .And.NotContain("SITE02-HOSPITAL-EHR-CANARY")
             .And.NotContain("SITE-02");
 
-        var multiSiteConflict = await EsourceEndpoints.IngestFhirBundleAsync(
+        var multiSiteConflict = await IngestService(db, clock).IngestFhirBundleAsync(
             new FhirBundleIngestRequest("STUDY-01", "SITE-01", "SUBJ-02", "PROBE", "EPIC-METRO", SampleBundle),
-            db, clock, crcMultiSite, ct);
+            crcMultiSite, ct);
 
         var conflict = multiSiteConflict.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.ProblemHttpResult>().Subject;
         conflict.StatusCode.Should().Be(409);

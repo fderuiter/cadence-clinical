@@ -4,6 +4,7 @@ using System.Data.Common;
 using System.Linq;
 using System.Threading.Tasks;
 
+using Cadence.Apps.Payments.Application;
 using Cadence.Apps.Payments.Domain;
 using Cadence.Apps.Payments.Endpoints;
 using Cadence.Apps.Payments.Infrastructure.Persistence;
@@ -890,11 +891,9 @@ public sealed class FinancialStateMachineTests : IDisposable
         var caller = TestSecurityContext.CreateScopedPrincipal("crc-1", ["STUDY-01"], ["SITE-01"], "crc");
         var req = new ReviewExpenseClaimRequestDto(Status: "APPROVED", ReviewNotes: "Second approval");
 
-        var method = typeof(PaymentEndpoints).GetMethod("ReviewExpenseClaim",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!;
-
-        var task = (Task<Microsoft.AspNetCore.Http.IResult>)method.Invoke(null, ["claim-001", req, db, new DefaultHttpContext { User = caller }])!;
-        var result = await task;
+        var uow = new PaymentsUnitOfWork(db);
+        var expenseService = new ExpenseClaimApplicationService(uow, new FakeClock(_now), new ExpenseReceiptPolicyService(uow, new FakeClock(_now)));
+        var result = await expenseService.ReviewExpenseClaimAsync("claim-001", req, new DefaultHttpContext { User = caller });
 
         var conflict = result as IStatusCodeHttpResult;
         conflict.Should().NotBeNull("Method must return standard 409 Conflict on illegal state transition");
@@ -924,11 +923,8 @@ public sealed class FinancialStateMachineTests : IDisposable
         var caller = TestSecurityContext.CreateScopedPrincipal("finance-1", ["STUDY-01"], ["SITE-01"], "Grants Manager");
         var clock = new FakeClock();
 
-        var method = typeof(PaymentEndpoints).GetMethod("ExportInvoiceToErp",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!;
-
-        var task = (Task<Microsoft.AspNetCore.Http.IResult>)method.Invoke(null, ["inv-001", db, clock, new DefaultHttpContext { User = caller }, "SAP"])!;
-        var result = await task;
+        var invoiceService = new InvoiceBillingApplicationService(new PaymentsUnitOfWork(db), clock);
+        var result = await invoiceService.ExportInvoiceToErpAsync("inv-001", new DefaultHttpContext { User = caller }, "SAP");
 
         var conflict = result as IStatusCodeHttpResult;
         conflict.Should().NotBeNull("Method must return 409 Conflict when attempting to export unapproved invoice");
@@ -959,11 +955,8 @@ public sealed class FinancialStateMachineTests : IDisposable
         var clock = new FakeClock();
         var req = new ReconcileInvoiceRequest(PaymentReference: "WIRE-123");
 
-        var method = typeof(PaymentEndpoints).GetMethod("ReconcileInvoice",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!;
-
-        var task = (Task<Microsoft.AspNetCore.Http.IResult>)method.Invoke(null, ["inv-002", req, db, clock, new DefaultHttpContext { User = caller }])!;
-        var result = await task;
+        var invoiceService = new InvoiceBillingApplicationService(new PaymentsUnitOfWork(db), clock);
+        var result = await invoiceService.ReconcileInvoiceAsync("inv-002", req, new DefaultHttpContext { User = caller });
 
         var conflict = result as IStatusCodeHttpResult;
         conflict.Should().NotBeNull("Method must return 409 Conflict when attempting to reconcile unapproved invoice");
@@ -994,11 +987,8 @@ public sealed class FinancialStateMachineTests : IDisposable
         var caller = TestSecurityContext.CreateScopedPrincipal("finance-1", ["STUDY-01"], ["SITE-01"], "Grants Manager");
         var clock = new FakeClock();
 
-        var method = typeof(PaymentEndpoints).GetMethod("ApproveInvoice",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!;
-
-        var task = (Task<Microsoft.AspNetCore.Http.IResult>)method.Invoke(null, ["inv-003", db, clock, new DefaultHttpContext { User = caller }])!;
-        var result = await task;
+        var invoiceService = new InvoiceBillingApplicationService(new PaymentsUnitOfWork(db), clock);
+        var result = await invoiceService.ApproveInvoiceAsync("inv-003", new DefaultHttpContext { User = caller });
 
         var conflict = result as IStatusCodeHttpResult;
         conflict.Should().NotBeNull("Method must return 409 Conflict on redundant approval");
@@ -1039,11 +1029,8 @@ public sealed class FinancialStateMachineTests : IDisposable
         var caller = TestSecurityContext.CreateScopedPrincipal("finance-1", ["STUDY-01"], ["SITE-01"], "Grants Manager");
         var clock = new FakeClock();
 
-        var method = typeof(PaymentEndpoints).GetMethod("SettleDisbursement",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!;
-
-        var task = (Task<Microsoft.AspNetCore.Http.IResult>)method.Invoke(null, ["disb-001", db, clock, new DefaultHttpContext { User = caller }])!;
-        var result = await task;
+        var walletService = new ParticipantWalletApplicationService(new PaymentsUnitOfWork(db), clock);
+        var result = await walletService.SettleDisbursementAsync("disb-001", new DefaultHttpContext { User = caller });
 
         var okResult = result as Ok<ParticipantDisbursement>;
         okResult.Should().NotBeNull();
@@ -1089,11 +1076,8 @@ public sealed class FinancialStateMachineTests : IDisposable
         var caller = TestSecurityContext.CreateScopedPrincipal("finance-1", ["STUDY-01"], ["SITE-01"], "Grants Manager");
         var clock = new FakeClock();
 
-        var method = typeof(PaymentEndpoints).GetMethod("SettleDisbursement",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!;
-
-        var task = (Task<Microsoft.AspNetCore.Http.IResult>)method.Invoke(null, ["disb-002", db, clock, new DefaultHttpContext { User = caller }])!;
-        var result = await task;
+        var walletService = new ParticipantWalletApplicationService(new PaymentsUnitOfWork(db), clock);
+        var result = await walletService.SettleDisbursementAsync("disb-002", new DefaultHttpContext { User = caller });
 
         var conflict = result as IStatusCodeHttpResult;
         conflict.Should().NotBeNull("Method must return 409 Conflict on redundant settlement attempt");
@@ -1167,11 +1151,8 @@ public sealed class FinancialStateMachineTests : IDisposable
         var clock = new FakeClock();
         var caller = PaymentEndpointsTestInvoker.FinanceOfficerContext();
 
-        var method = typeof(PaymentEndpoints).GetMethod("CompileBillingCycle",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!;
-
-        var task = (Task<Microsoft.AspNetCore.Http.IResult>)method.Invoke(null, [req, db, clock, caller])!;
-        var result = await task;
+        var invoiceService = new InvoiceBillingApplicationService(new PaymentsUnitOfWork(db), clock);
+        var result = await invoiceService.CompileBillingCycleAsync(req, caller);
 
         var created = result as Created<SelfBillingInvoiceResponse>;
         created.Should().NotBeNull();

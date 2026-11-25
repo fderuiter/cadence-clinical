@@ -241,12 +241,14 @@ public sealed class DicomWebEndpointsTests
             AssignedSites = ["SITE-WADO-01"]
         };
 
+        var queryService = new DicomQueryService(new ImagingUnitOfWork(dbContext), DicomIngestionServiceTests.TestDeidentifier());
+
         var validFrame = await DicomWebEndpoints.GetInstanceFramesAsync(
             site1Ingested.AnonymizedStudyUid,
             site1Ingested.AnonymizedSeriesUid,
             site1Ingested.AnonymizedSopUid,
             "1",
-            dbContext,
+            queryService,
             site1Caller,
             ct);
         validFrame.Should().BeOfType<FileContentHttpResult>();
@@ -256,7 +258,7 @@ public sealed class DicomWebEndpointsTests
             site1Ingested.AnonymizedSeriesUid,
             site1Ingested.AnonymizedSopUid,
             "1",
-            dbContext,
+            queryService,
             site1Caller,
             ct);
         mismatchedStudy.Should().BeAssignableTo<IStatusCodeHttpResult>()
@@ -267,7 +269,7 @@ public sealed class DicomWebEndpointsTests
             site2Ingested.AnonymizedSeriesUid,
             site1Ingested.AnonymizedSopUid,
             "1",
-            dbContext,
+            queryService,
             site1Caller,
             ct);
         mismatchedSeries.Should().BeAssignableTo<IStatusCodeHttpResult>()
@@ -278,7 +280,7 @@ public sealed class DicomWebEndpointsTests
             site2Ingested.AnonymizedSeriesUid,
             site2Ingested.AnonymizedSopUid,
             "1",
-            dbContext,
+            queryService,
             site1Caller,
             ct);
         crossSiteFrame.Should().BeAssignableTo<IStatusCodeHttpResult>()
@@ -438,7 +440,8 @@ public sealed class DicomWebEndpointsTests
 
         async Task<bool> IsValidAsync(DicomDeidentifier key)
         {
-            var result = await DicomWebEndpoints.GetCertificateByIdAsync(ingested.CertificateId, dbContext, key, caller, ct);
+            var queryService = new DicomQueryService(new ImagingUnitOfWork(dbContext), key);
+            var result = await DicomWebEndpoints.GetCertificateByIdAsync(ingested.CertificateId, queryService, caller, ct);
             return result.Should().BeOfType<Ok<CertificateResponse>>().Which.Value!.IsSignatureValid;
         }
 
@@ -812,13 +815,14 @@ public sealed class DicomWebEndpointsTests
 
         var (studyUid, seriesUid, instanceUid) = await SeedStudySeriesAndInstanceAsync(dbContext, "STUDY-FRAME-422", "SITE-01", rows, columns, ct);
         var caller = CreateAuthorizedHttpContext("STUDY-FRAME-422", "SITE-01");
+        var queryService = new DicomQueryService(new ImagingUnitOfWork(dbContext), DicomIngestionServiceTests.TestDeidentifier());
 
         var result = await DicomWebEndpoints.GetInstanceFramesAsync(
             studyUid: studyUid,
             seriesUid: seriesUid,
             instanceUid: instanceUid,
             frameList: "1",
-            dbContext: dbContext,
+            queryService: queryService,
             httpContext: caller,
             cancellationToken: ct);
 
@@ -838,13 +842,14 @@ public sealed class DicomWebEndpointsTests
 
         var (studyUid, seriesUid, instanceUid) = await SeedStudySeriesAndInstanceAsync(dbContext, "STUDY-FRAME-200", "SITE-01", rows: 64, columns: 64, ct);
         var caller = CreateAuthorizedHttpContext("STUDY-FRAME-200", "SITE-01");
+        var queryService = new DicomQueryService(new ImagingUnitOfWork(dbContext), DicomIngestionServiceTests.TestDeidentifier());
 
         var result = await DicomWebEndpoints.GetInstanceFramesAsync(
             studyUid: studyUid,
             seriesUid: seriesUid,
             instanceUid: instanceUid,
             frameList: "1",
-            dbContext: dbContext,
+            queryService: queryService,
             httpContext: caller,
             cancellationToken: ct);
 

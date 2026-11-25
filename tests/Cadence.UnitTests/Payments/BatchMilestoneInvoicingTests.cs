@@ -5,6 +5,7 @@ using System.Security.Claims;
 using System.Text.Json;
 using System.Threading.Tasks;
 
+using Cadence.Apps.Payments.Application;
 using Cadence.Apps.Payments.Domain;
 using Cadence.Apps.Payments.Endpoints;
 using Cadence.Apps.Payments.Infrastructure.Persistence;
@@ -304,14 +305,8 @@ public static class PaymentEndpointsTestInvoker
     public static async Task<BatchBillingCompilationResponse> InvokeBatchCompileAsync(
         BatchBillingCycleCompilationRequest request, PaymentsDbContext db, IClock clock)
     {
-        var method = typeof(PaymentEndpoints).GetMethod(
-            "BatchCompileBillingCycles",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
-
-        method.Should().NotBeNull("BatchCompileBillingCycles method should exist on PaymentEndpoints");
-
-        var task = (Task<IResult>)method!.Invoke(null, new object[] { request, db, clock, FinanceOfficerContext() })!;
-        var result = await task;
+        var service = new InvoiceBillingApplicationService(new PaymentsUnitOfWork(db), clock);
+        var result = await service.BatchCompileBillingCyclesAsync(request, FinanceOfficerContext());
 
         var createdResult = result as Created<BatchBillingCompilationResponse>;
         createdResult.Should().NotBeNull("Method should return Created<BatchBillingCompilationResponse>");
@@ -321,14 +316,8 @@ public static class PaymentEndpointsTestInvoker
     public static async Task<SelfBillingInvoiceResponse> InvokeCompileAsync(
         BillingCycleCompilationRequest request, PaymentsDbContext db, IClock clock)
     {
-        var method = typeof(PaymentEndpoints).GetMethod(
-            "CompileBillingCycle",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
-
-        method.Should().NotBeNull("CompileBillingCycle method should exist on PaymentEndpoints");
-
-        var task = (Task<IResult>)method!.Invoke(null, new object[] { request, db, clock, FinanceOfficerContext() })!;
-        var result = await task;
+        var service = new InvoiceBillingApplicationService(new PaymentsUnitOfWork(db), clock);
+        var result = await service.CompileBillingCycleAsync(request, FinanceOfficerContext());
 
         var createdResult = result as Created<SelfBillingInvoiceResponse>;
         createdResult.Should().NotBeNull("Method should return Created<SelfBillingInvoiceResponse>");

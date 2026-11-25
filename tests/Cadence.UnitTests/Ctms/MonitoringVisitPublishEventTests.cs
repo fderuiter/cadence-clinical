@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 
+using Cadence.Apps.Ctms.Application;
 using Cadence.Apps.Ctms.Domain;
 using Cadence.Apps.Ctms.Endpoints;
 using Cadence.Apps.Ctms.Infrastructure.Persistence;
@@ -79,9 +80,10 @@ public sealed class MonitoringVisitPublishEventTests
         caller.Request.Headers["X-Change-Reason"] = "Trip report endorsed.";
 
         var publishEndpoint = Substitute.For<IPublishEndpoint>();
+        var service = new MonitoringVisitApplicationService(_db, new CtmsUnitOfWork(_db), _clock, publishEndpoint);
 
         var result = await MonitoringVisitEndpoints.SignOffMonitoringVisitAsync(
-            visit.Id, _db, caller, _clock, TestContext.Current.CancellationToken, publishEndpoint);
+            visit.Id, service, caller, TestContext.Current.CancellationToken, publishEndpoint);
 
         var ok = result.Should().BeOfType<Ok<MonitoringVisitResponseDto>>().Subject;
         ok.Value.Should().NotBeNull();

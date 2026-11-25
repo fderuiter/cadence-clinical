@@ -64,9 +64,8 @@ public class ExpenseClaimAutoApprovalTests
         );
 
         // Act
-        var result = await (Task<Microsoft.AspNetCore.Http.IResult>)typeof(PaymentEndpoints)
-            .GetMethod("ExtractReceiptOcr", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!
-            .Invoke(null, [req, dbContext, SiteCoordinatorContext()])!;
+        var policyService = new ExpenseReceiptPolicyService(new PaymentsUnitOfWork(dbContext), SystemClock.Instance);
+        var result = await policyService.ExtractReceiptOcrAsync(req, SiteCoordinatorContext());
 
         // Assert
         result.Should().NotBeNull();
@@ -142,9 +141,9 @@ public class ExpenseClaimAutoApprovalTests
         );
 
         // Act
-        var result = await (Task<Microsoft.AspNetCore.Http.IResult>)typeof(PaymentEndpoints)
-            .GetMethod("SubmitExpenseClaim", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!
-            .Invoke(null, [claimReq, dbContext, SiteCoordinatorContext()])!;
+        var uow = new PaymentsUnitOfWork(dbContext);
+        var expenseService = new ExpenseClaimApplicationService(uow, SystemClock.Instance, new ExpenseReceiptPolicyService(uow, SystemClock.Instance));
+        var result = await expenseService.SubmitStaffExpenseClaimAsync(claimReq, SiteCoordinatorContext());
 
         // Assert
         result.Should().BeOfType<Ok<ParticipantExpenseClaim>>();
@@ -201,9 +200,9 @@ public class ExpenseClaimAutoApprovalTests
         );
 
         // Act
-        var result = await (Task<Microsoft.AspNetCore.Http.IResult>)typeof(PaymentEndpoints)
-            .GetMethod("SubmitExpenseClaim", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!
-            .Invoke(null, [claimReq, dbContext, SiteCoordinatorContext()])!;
+        var uow = new PaymentsUnitOfWork(dbContext);
+        var expenseService = new ExpenseClaimApplicationService(uow, SystemClock.Instance, new ExpenseReceiptPolicyService(uow, SystemClock.Instance));
+        var result = await expenseService.SubmitStaffExpenseClaimAsync(claimReq, SiteCoordinatorContext());
 
         // Assert
         result.Should().BeOfType<Ok<ParticipantExpenseClaim>>();
@@ -244,9 +243,9 @@ public class ExpenseClaimAutoApprovalTests
         );
 
         // Act
-        var result = await (Task<Microsoft.AspNetCore.Http.IResult>)typeof(PaymentEndpoints)
-            .GetMethod("SubmitExpenseClaim", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!
-            .Invoke(null, [claimReq, dbContext, SiteCoordinatorContext()])!;
+        var uow = new PaymentsUnitOfWork(dbContext);
+        var expenseService = new ExpenseClaimApplicationService(uow, SystemClock.Instance, new ExpenseReceiptPolicyService(uow, SystemClock.Instance));
+        var result = await expenseService.SubmitStaffExpenseClaimAsync(claimReq, SiteCoordinatorContext());
 
         // Assert
         result.Should().BeOfType<Ok<ParticipantExpenseClaim>>();
@@ -303,9 +302,9 @@ public class ExpenseClaimAutoApprovalTests
         );
 
         // Act
-        var result = await (Task<Microsoft.AspNetCore.Http.IResult>)typeof(PaymentEndpoints)
-            .GetMethod("SubmitExpenseClaim", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!
-            .Invoke(null, [claimReq, dbContext, SiteCoordinatorContext()])!;
+        var uow = new PaymentsUnitOfWork(dbContext);
+        var expenseService = new ExpenseClaimApplicationService(uow, SystemClock.Instance, new ExpenseReceiptPolicyService(uow, SystemClock.Instance));
+        var result = await expenseService.SubmitStaffExpenseClaimAsync(claimReq, SiteCoordinatorContext());
 
         // Assert
         result.Should().BeOfType<Ok<ParticipantExpenseClaim>>();
@@ -325,8 +324,8 @@ public class ExpenseClaimAutoApprovalTests
         string dbPath = NewTempDbPath();
         await using var dbContext = await CreateDbContextAsync(dbPath);
 
-        var submitMethod = typeof(PaymentEndpoints)
-            .GetMethod("SubmitExpenseClaim", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!;
+        var uow = new PaymentsUnitOfWork(dbContext);
+        var expenseService = new ExpenseClaimApplicationService(uow, SystemClock.Instance, new ExpenseReceiptPolicyService(uow, SystemClock.Instance));
 
         // Staff submits unscanned $95.00 MEAL claim with client perDiemCap=100.00 and spoofed OcrConfidence -> must route to PENDING_REVIEW with $3.00 taxDeduction
         var unscannedMealReq = new SubmitExpenseClaimRequestDto(
@@ -342,8 +341,7 @@ public class ExpenseClaimAutoApprovalTests
             ReceiptOcrData: new { confidence_score = 0.99 },
             OcrConfidence: 0.99);
 
-        var result = await (Task<Microsoft.AspNetCore.Http.IResult>)submitMethod
-            .Invoke(null, [unscannedMealReq, dbContext, SiteCoordinatorContext()])!;
+        var result = await expenseService.SubmitStaffExpenseClaimAsync(unscannedMealReq, SiteCoordinatorContext());
 
         result.Should().BeOfType<Ok<ParticipantExpenseClaim>>();
         var claim = ((Ok<ParticipantExpenseClaim>)result).Value!;
@@ -363,8 +361,7 @@ public class ExpenseClaimAutoApprovalTests
             GrossAmount: 22.00m,
             ExpenseDate: "2026-11-21");
 
-        var transitResult = await (Task<Microsoft.AspNetCore.Http.IResult>)submitMethod
-            .Invoke(null, [unscannedTransitReq, dbContext, SiteCoordinatorContext()])!;
+        var transitResult = await expenseService.SubmitStaffExpenseClaimAsync(unscannedTransitReq, SiteCoordinatorContext());
         var transitClaim = ((Ok<ParticipantExpenseClaim>)transitResult).Value!;
         transitClaim.Status.Should().Be("PENDING_REVIEW");
         transitClaim.DisbursementReference.Should().BeNull();
@@ -380,10 +377,8 @@ public class ExpenseClaimAutoApprovalTests
         string dbPath = NewTempDbPath();
         await using var dbContext = await CreateDbContextAsync(dbPath);
 
-        var submitMethod = typeof(PaymentEndpoints)
-            .GetMethod("SubmitExpenseClaim", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!;
-        var reviewMethod = typeof(PaymentEndpoints)
-            .GetMethod("ReviewExpenseClaim", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!;
+        var uow = new PaymentsUnitOfWork(dbContext);
+        var expenseService = new ExpenseClaimApplicationService(uow, SystemClock.Instance, new ExpenseReceiptPolicyService(uow, SystemClock.Instance));
 
         // Submitting CRC creates a $500.00 PENDING_REVIEW claim
         var highClaimReq = new SubmitExpenseClaimRequestDto(
@@ -394,14 +389,13 @@ public class ExpenseClaimAutoApprovalTests
             MerchantName: "Conference Hotel",
             GrossAmount: 500.00m,
             ExpenseDate: "2026-11-21");
-        var submitResult = await (Task<Microsoft.AspNetCore.Http.IResult>)submitMethod
-            .Invoke(null, [highClaimReq, dbContext, SiteCoordinatorContext()])!;
+        var submitResult = await expenseService.SubmitStaffExpenseClaimAsync(highClaimReq, SiteCoordinatorContext());
         var highClaim = ((Ok<ParticipantExpenseClaim>)submitResult).Value!;
         highClaim.Status.Should().Be("PENDING_REVIEW");
 
         // Submitting CRC attempting to self-approve must receive 409 Conflict
-        var selfApproveResult = await (Task<Microsoft.AspNetCore.Http.IResult>)reviewMethod
-            .Invoke(null, [highClaim.Id, new ReviewExpenseClaimRequestDto("APPROVED", "Self-approved by submitting CRC"), dbContext, SiteCoordinatorContext()])!;
+        var selfApproveResult = await expenseService.ReviewExpenseClaimAsync(
+            highClaim.Id, new ReviewExpenseClaimRequestDto("APPROVED", "Self-approved by submitting CRC"), SiteCoordinatorContext());
         selfApproveResult.GetType().Name.Should().StartWith("Conflict");
 
         // Direct domain entity Approve also enforces separation of duties
@@ -409,12 +403,12 @@ public class ExpenseClaimAutoApprovalTests
         selfDomainApprove.Should().Throw<PaymentDomainException>().WithMessage("*cannot also approve*");
 
         // Out-of-bounds AdjustedAmount (< 0.01 or > GrossAmount) is rejected with 409 Conflict
-        var zeroAdjustResult = await (Task<Microsoft.AspNetCore.Http.IResult>)reviewMethod
-            .Invoke(null, [highClaim.Id, new ReviewExpenseClaimRequestDto("APPROVED", "Zero", AdjustedAmount: 0m), dbContext, SiteInvestigatorContext()])!;
+        var zeroAdjustResult = await expenseService.ReviewExpenseClaimAsync(
+            highClaim.Id, new ReviewExpenseClaimRequestDto("APPROVED", "Zero", AdjustedAmount: 0m), SiteInvestigatorContext());
         zeroAdjustResult.GetType().Name.Should().StartWith("Conflict");
 
-        var overAdjustResult = await (Task<Microsoft.AspNetCore.Http.IResult>)reviewMethod
-            .Invoke(null, [highClaim.Id, new ReviewExpenseClaimRequestDto("APPROVED", "Inflated", AdjustedAmount: 550.00m), dbContext, SiteInvestigatorContext()])!;
+        var overAdjustResult = await expenseService.ReviewExpenseClaimAsync(
+            highClaim.Id, new ReviewExpenseClaimRequestDto("APPROVED", "Inflated", AdjustedAmount: 550.00m), SiteInvestigatorContext());
         overAdjustResult.GetType().Name.Should().StartWith("Conflict");
 
         // Submit a $95.00 MEAL claim (initial taxDeduction = $3.00, net = $92.00) and adjust to $85.00 during dual review
@@ -427,14 +421,13 @@ public class ExpenseClaimAutoApprovalTests
             GrossAmount: 95.00m,
             IsMealAllowance: true,
             ExpenseDate: "2026-11-21");
-        var mealSubmitRes = await (Task<Microsoft.AspNetCore.Http.IResult>)submitMethod
-            .Invoke(null, [mealClaimReq, dbContext, SiteCoordinatorContext()])!;
+        var mealSubmitRes = await expenseService.SubmitStaffExpenseClaimAsync(mealClaimReq, SiteCoordinatorContext());
         var mealClaim = ((Ok<ParticipantExpenseClaim>)mealSubmitRes).Value!;
         mealClaim.TaxDeduction.Should().Be(3.00m);
         mealClaim.NetAmount.Should().Be(92.00m);
 
-        var mealApproveRes = await (Task<Microsoft.AspNetCore.Http.IResult>)reviewMethod
-            .Invoke(null, [mealClaim.Id, new ReviewExpenseClaimRequestDto("APPROVED", "Adjusted meal reimbursement", AdjustedAmount: 85.00m), dbContext, SiteInvestigatorContext()])!;
+        var mealApproveRes = await expenseService.ReviewExpenseClaimAsync(
+            mealClaim.Id, new ReviewExpenseClaimRequestDto("APPROVED", "Adjusted meal reimbursement", AdjustedAmount: 85.00m), SiteInvestigatorContext());
         mealApproveRes.Should().BeOfType<Ok<ParticipantExpenseClaim>>();
         var approvedMeal = ((Ok<ParticipantExpenseClaim>)mealApproveRes).Value!;
         approvedMeal.Status.Should().Be("APPROVED");

@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 
+using Cadence.Apps.Etmf.Application;
 using Cadence.Apps.Etmf.Domain;
 using Cadence.Apps.Etmf.Endpoints;
 using Cadence.Apps.Etmf.Infrastructure.Persistence;
@@ -126,12 +127,11 @@ public class EtmfIntelligenceEndpointsTests
             StudyId: "STUDY-01",
             ReasonForChange: "Staging QC document for binder manifest check");
 
-        var result = await EtmfIntelligenceEndpoints.StageQcDocument(
-            request,
-            dbContext,
-            _clock,
-            Caller("STUDY-01"),
-            ct);
+        var result = await new EtmfQcApplicationService(new EtmfUnitOfWork(dbContext), _clock)
+            .StageQcDocumentAsync(
+                request,
+                Caller("STUDY-01"),
+                ct);
 
         result.Should().BeAssignableTo<IStatusCodeHttpResult>()
             .Which.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
@@ -176,12 +176,11 @@ public class EtmfIntelligenceEndpointsTests
             TaxonomyVersion: "v3.2.0-complete",
             ReasonForChange: "Ingest intake validation test reason");
 
-        var result = await EtmfIntelligenceEndpoints.IngestDocument(
-            request,
-            dbContext,
-            _clock,
-            Caller("STUDY-01", "SITE-01"),
-            ct);
+        var result = await new EtmfDocumentApplicationService(new EtmfUnitOfWork(dbContext), _clock)
+            .IngestDocumentAsync(
+                request,
+                Caller("STUDY-01", "SITE-01"),
+                ct);
 
         result.Should().BeAssignableTo<IStatusCodeHttpResult>()
             .Which.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
@@ -218,13 +217,12 @@ public class EtmfIntelligenceEndpointsTests
             ArtifactType: "FDA Form 1572",
             ReasonForChange: "Attempting taxonomy section update");
 
-        var result = await EtmfIntelligenceEndpoints.UpdateDocumentTaxonomy(
-            "DOC-TAX-1",
-            request,
-            dbContext,
-            _clock,
-            Caller("STUDY-01", "SITE-01"),
-            ct);
+        var result = await new EtmfDocumentApplicationService(new EtmfUnitOfWork(dbContext), _clock)
+            .UpdateDocumentTaxonomyAsync(
+                "DOC-TAX-1",
+                request,
+                Caller("STUDY-01", "SITE-01"),
+                ct);
 
         result.Should().BeAssignableTo<IStatusCodeHttpResult>()
             .Which.StatusCode.Should().Be(StatusCodes.Status400BadRequest);

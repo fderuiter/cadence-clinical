@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Security.Claims;
 using System.Threading.Tasks;
 
+using Cadence.Apps.Etmf.Application;
 using Cadence.Apps.Etmf.Domain;
 using Cadence.Apps.Etmf.Endpoints;
 using Cadence.Apps.Etmf.Infrastructure.Persistence;
@@ -234,7 +235,8 @@ public class EtmfDocumentLifecycleTests
         var request = new CraqcReviewRequest("ACCEPT", "Valid reason for approving protocol document");
 
         // Act
-        var result = await EtmfIntelligenceEndpoints.ReviewQcDocument("DOC-DRAFT-100", request, dbContext, _clock, httpContext, ct);
+        var result = await new EtmfQcApplicationService(new EtmfUnitOfWork(dbContext), _clock)
+            .ReviewQcDocumentAsync("DOC-DRAFT-100", request, httpContext, ct);
 
         // Assert
         result.Should().BeAssignableTo<IStatusCodeHttpResult>().Which.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
@@ -272,7 +274,8 @@ public class EtmfDocumentLifecycleTests
         var request = new CraqcReviewRequest("ACCEPT", "Approved after technical and credential verification");
 
         // Act
-        var result = await EtmfIntelligenceEndpoints.ReviewQcDocument("DOC-QC-200", request, dbContext, _clock, httpContext, ct);
+        var result = await new EtmfQcApplicationService(new EtmfUnitOfWork(dbContext), _clock)
+            .ReviewQcDocumentAsync("DOC-QC-200", request, httpContext, ct);
 
         // Assert
         result.Should().BeOfType<Ok<TmfDocument>>();
@@ -328,7 +331,8 @@ public class EtmfDocumentLifecycleTests
         var request = new CraqcReviewRequest("OVERRIDE", "Reclassifying document as FDA Form 1572", OverrideArtifactCode: "05.02.01");
 
         // Act
-        var result = await EtmfIntelligenceEndpoints.ReviewQcDocument("DOC-QC-300", request, dbContext, _clock, httpContext, ct);
+        var result = await new EtmfQcApplicationService(new EtmfUnitOfWork(dbContext), _clock)
+            .ReviewQcDocumentAsync("DOC-QC-300", request, httpContext, ct);
 
         // Assert
         result.Should().BeOfType<Ok<TmfDocument>>();
@@ -365,7 +369,8 @@ public class EtmfDocumentLifecycleTests
         var request = new CraqcReviewRequest("REJECT", "Laboratory accreditation certificate has expired");
 
         // Act
-        var result = await EtmfIntelligenceEndpoints.ReviewQcDocument("DOC-QC-400", request, dbContext, _clock, httpContext, ct);
+        var result = await new EtmfQcApplicationService(new EtmfUnitOfWork(dbContext), _clock)
+            .ReviewQcDocumentAsync("DOC-QC-400", request, httpContext, ct);
 
         // Assert
         result.Should().BeOfType<Ok<TmfDocument>>();
