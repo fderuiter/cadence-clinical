@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
+using System.Xml.Linq;
 
 using Cadence.Cli.Services;
 
@@ -1151,6 +1152,43 @@ public partial class LocalCiPlanTests
         unitTestsStep.Commands.Select(c => c.MatchText).Should().Equal(
             "pnpm -r test",
             "pnpm exec vitest run --config vitest.config.mjs");
+    }
+
+    [Fact]
+    public void CliProjectAndWorkflowCaches_ConditionPublishAotPruneUnusedDepsAndStayAlignedWithRunCliWrapper()
+    {
+        string root = RepoRoot();
+        var csprojDoc = XDocument.Load(Path.Combine(root, "packages", "cli", "src", "Cadence.Cli.csproj"));
+
+        csprojDoc.Descendants("IsAotCompatible").Select(e => e.Value).Should().ContainSingle().Which.Should().Be("true");
+        var publishAot = csprojDoc.Descendants("PublishAot").Should().ContainSingle().Subject;
+        publishAot.Value.Should().Be("true");
+        publishAot.Attribute("Condition")?.Value.Should().Be("'$(Configuration)' == 'Release' and '$(RuntimeIdentifier)' != ''");
+
+        var projectRefs = csprojDoc.Descendants("ProjectReference")
+            .Select(e => (e.Attribute("Include")?.Value ?? string.Empty).Replace('\\', '/'))
+            .ToList();
+        projectRefs.Should().NotContain(p => p.Contains("engine_core", StringComparison.Ordinal) || p.Contains("database", StringComparison.Ordinal));
+        projectRefs.Should().Contain(p => p.EndsWith("packages/security/src/Cadence.Security.csproj", StringComparison.Ordinal) || p.EndsWith("../../security/src/Cadence.Security.csproj", StringComparison.Ordinal));
+
+        var packageRefs = csprojDoc.Descendants("PackageReference")
+            .Select(e => e.Attribute("Include")?.Value ?? string.Empty)
+            .ToList();
+        packageRefs.Should().Contain("Npgsql")
+            .And.NotContain("Npgsql.EntityFrameworkCore.PostgreSQL");
+
+        string runCliSource = File.ReadAllText(Path.Combine(root, "scripts", "run-cli.js"));
+        string cliSourceDirsBlock = Regex.Match(runCliSource, @"const cliSourceDirs = \[(?<items>[\s\S]*?)\];").Groups["items"].Value;
+        cliSourceDirsBlock.Should().NotContain("engine_core").And.NotContain("database");
+
+        string expectedCacheKey = "key: cadence-cli-${{ runner.os }}-${{ hashFiles('global.json', 'Directory.Build.props', 'Directory.Build.targets', 'Directory.Packages.props', 'NuGet.Config', 'BannedSymbols.txt', 'packages/cli/src/**', 'packages/compliance/src/**', 'packages/security/src/**', 'packages/tooling_core/src/**', 'packages/kernel/src/Cadence.Kernel.Abstractions/**', 'packages/deid/src/**', 'packages/topology/src/**') }}";
+
+        foreach (string workflowFile in new[] { "ci.yml", "production-pipeline.yml", "deploy-docs.yml" })
+        {
+            string workflowContent = File.ReadAllText(Path.Combine(root, ".github", "workflows", workflowFile));
+            workflowContent.Should().Contain(expectedCacheKey, $"{workflowFile} must keep Cache Cadence CLI inputs aligned with scripts/run-cli.js");
+            workflowContent.Should().NotContain("'packages/engine_core/src/**'").And.NotContain("'packages/database/src/**'");
+        }
     }
 
     private static List<string> FindIncompleteSetupDotnetCaches(string workflowFile, string[] lines, out int stepCount)

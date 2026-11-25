@@ -20,7 +20,7 @@ Package: `FluentValidation`.
 
 ## Referenced by
 
-Every .NET service, `packages/database`, `packages/kernel` (`Cadence.Kernel.Domain`), `packages/testing`, `packages/cli`, and all three test projects.
+Every .NET service, `packages/database`, `packages/kernel` (`Cadence.Kernel.Domain`), `packages/testing`, and all three test projects.
 
 ## Tests
 

@@ -1,12 +1,12 @@
 # Cadence CLI
 
-Developer and CI command-line tool, published as a Native AOT binary. System.CommandLine parses the command line and Spectre.Console renders the output. It runs the repository quality gates, test wrappers, database and GxP tooling, and scaffolding.
+Developer and CI command-line tool, AOT-compatible (`IsAotCompatible=true`) and published as a Native AOT binary in CI and releases. System.CommandLine parses the command line and Spectre.Console renders the output. It runs the repository quality gates, test wrappers, database and GxP tooling, and scaffolding.
 
 ## Project
 
 - Project: `packages/cli/src/Cadence.Cli.csproj` (assembly `cadence`; `PackAsTool` with command name `cadence`).
 - `Program.cs`: command tree, registered with `AddCommand` and `AddBranch` (the `cli-docs` gate reads these calls). `Commands/`: static classes for commands that take options or have their own logic. `Services/`: the gate registry (`QualityGates.cs`: each gate's name, aliases, check and pre-commit behaviour; `cadence check`, its help text, the gate count and the gate tables in `docs/cli.md` and `docs/CI.md` come from it, the tables through `GateDocs.cs`), the local CI runner, the hooks and the GxP guards; most checks delegate to [packages/tooling_core](../tooling_core/README.md).
-- The tool is not registered in `.config/dotnet-tools.json`, so run it with `dotnet run` (or `pnpm cadence`, which does the same).
+- The tool is not registered in `.config/dotnet-tools.json`. `pnpm cadence <command>` invokes `scripts/run-cli.js`, which builds `./bin/cadence` on demand as a framework-dependent `Debug` executable locally (or a self-contained `Release` Native AOT binary when `GITHUB_ACTIONS=true` or `CADENCE_CLI_AOT=true`); you can also run `dotnet run --project packages/cli/src/Cadence.Cli.csproj -- <command>` directly.
 - Output without a terminal: `Services/CliConsole.cs` runs first in `Main`. When standard output is redirected (a pipe, a log
   file, a git hook, an agent shell) or the terminal has no ANSI support, it swaps `AnsiConsole.Console` for a plain
   console: no escape codes or colours, not interactive, 120 columns. Spectre's own detection measured such a console as
@@ -17,8 +17,10 @@ Developer and CI command-line tool, published as a Native AOT binary. System.Com
 ## Usage
 
 ```bash
+pnpm cadence <command> [options]
+pnpm cadence --help
+# or directly via dotnet run:
 dotnet run --project packages/cli/src/Cadence.Cli.csproj -- <command> [options]
-dotnet run --project packages/cli/src/Cadence.Cli.csproj -- --help
 ```
 
 Common commands:
@@ -43,8 +45,8 @@ Validation commands such as `validate-readmes`, `validate-markdown`, `validate-i
 
 ## Key dependencies
 
-- Project references: `Cadence.Core.Domain`, `Cadence.Database`, `Cadence.Compliance`, `Cadence.Security`, `Cadence.ToolingCore`, `Cadence.Kernel.Abstractions`.
-- Packages: `System.CommandLine`, `Spectre.Console`, `Npgsql.EntityFrameworkCore.PostgreSQL`.
+- Project references: `Cadence.Compliance`, `Cadence.Security`, `Cadence.ToolingCore`, `Cadence.Kernel.Abstractions`.
+- Packages: `System.CommandLine`, `Spectre.Console`, `Npgsql`.
 
 ## Referenced by
 
@@ -52,9 +54,7 @@ Validation commands such as `validate-readmes`, `validate-markdown`, `validate-i
 
 ## Native AOT
 
-`PublishAot` is on and no trim or AOT warning (IL2xxx/IL3xxx) is suppressed. Warnings are errors, so code that is
-not AOT-safe fails `dotnet publish packages/cli/src/Cadence.Cli.csproj -c Release -r linux-x64`, which CI runs
-(ADR-2249, ADR-2496). Make targets that use the CLI delegate to `pnpm cadence` and share its on-demand build.
+`IsAotCompatible` is enabled across all builds, `PublishAot` activates on `Release` publishes with a `RuntimeIdentifier`, and no trim or AOT warning (IL2xxx/IL3xxx) is suppressed. Warnings are errors, so code that is not AOT-safe fails both local builds and `dotnet publish packages/cli/src/Cadence.Cli.csproj -c Release -r linux-x64`, which CI runs (ADR-2249, ADR-2496). Locally, `scripts/run-cli.js` publishes a fast framework-dependent `Debug` binary to `./bin/cadence` (`-c Debug -p:PublishAot=false`) unless `CADENCE_CLI_AOT=true` or `GITHUB_ACTIONS=true` requests a self-contained `Release` Native AOT build. Make targets that use the CLI delegate to `pnpm cadence` and share its on-demand build.
 
 ## Tests
 

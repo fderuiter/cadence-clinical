@@ -1,6 +1,6 @@
 # Continuous Integration
 
-How CI is set up, which checks run where, and how to reproduce and fix each failure locally. The Cadence CLI runs as `pnpm cadence <command>` (a wrapper for `dotnet run --project packages/cli/src/Cadence.Cli.csproj --`).
+How CI is set up, which checks run where, and how to reproduce and fix each failure locally. The Cadence CLI runs as `pnpm cadence <command>` (via `scripts/run-cli.js`, which builds `./bin/cadence` on demand as a local `Debug` binary or reuses/publishes a `Release` Native AOT binary in CI).
 
 ## Workflows
 

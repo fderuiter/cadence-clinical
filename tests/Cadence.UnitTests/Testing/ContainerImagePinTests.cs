@@ -222,6 +222,7 @@ public sealed partial class ContainerImagePinTests
         ReadMsBuildProperty(propsDoc, "OpenTelemetryInstrumentationVersion").Should().Be("1.20.2");
         ReadMsBuildProperty(propsDoc, "MassTransitVersion").Should().Be("8.5.12");
         ReadMsBuildProperty(propsDoc, "FluentValidationVersion").Should().Be("12.2.0");
+        ReadMsBuildProperty(propsDoc, "NpgsqlVersion").Should().Be("10.0.4");
 
         var appHostDoc = XDocument.Load(Path.Combine(Root, "apps", "apphost", "src", "Cadence.AppHost.csproj"));
         string? appHostSdkVersion = appHostDoc.Descendants("Sdk")
@@ -260,6 +261,11 @@ public sealed partial class ContainerImagePinTests
                      id.StartsWith("System.IdentityModel.", StringComparison.Ordinal))
             {
                 version.Should().Be("$(IdentityModelVersion)", $"{id} must reference $(IdentityModelVersion)");
+            }
+            else if (string.Equals(id, "Npgsql", StringComparison.Ordinal) ||
+                     string.Equals(id, "Npgsql.EntityFrameworkCore.PostgreSQL", StringComparison.Ordinal))
+            {
+                version.Should().Be("$(NpgsqlVersion)", $"{id} must reference $(NpgsqlVersion)");
             }
         }
 

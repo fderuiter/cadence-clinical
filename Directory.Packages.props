@@ -34,7 +34,8 @@
     <PackageVersion Include="Aspire.Hosting.Testing" Version="$(AspireHostingVersion)" />
 
     <!-- Persistence & Database Drivers -->
-    <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.4" />
+    <PackageVersion Include="Npgsql" Version="$(NpgsqlVersion)" />
+    <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="$(NpgsqlVersion)" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="$(DotNetServicingVersion)" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="$(DotNetServicingVersion)" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="$(DotNetServicingVersion)" />

@@ -994,6 +994,155 @@ public sealed class PreCommitGuardrailsTests : IDisposable
     }
 
     [Fact]
+    public void RunCli_LocalDebugVsAotModesAndPrunedWatchedDirs_CleanStaleOutputsAndSkipDomainDatabaseEdits()
+    {
+        if (OperatingSystem.IsWindows() || !File.Exists("/bin/sh"))
+        {
+            return;
+        }
+
+        string repoRoot = QualityGateOrchestrator.FindRepoRoot();
+        string realNodeDir = Path.GetDirectoryName(PosixProcessLauncher.ResolveExecutablePath("node")!)!;
+
+        string cliRepo = Path.Combine(_tempDir, "cli-mode-repo");
+        Directory.CreateDirectory(Path.Combine(cliRepo, "scripts"));
+        Directory.CreateDirectory(Path.Combine(cliRepo, "packages", "cli", "src"));
+        string runCliPath = Path.Combine(cliRepo, "scripts", "run-cli.js");
+        File.Copy(Path.Combine(repoRoot, "scripts", "run-cli.js"), runCliPath);
+        File.Copy(Path.Combine(repoRoot, "global.json"), Path.Combine(cliRepo, "global.json"));
+        File.WriteAllText(Path.Combine(cliRepo, "packages", "cli", "src", "Cadence.Cli.csproj"), "<Project />\n");
+
+        string homeDir = Path.Combine(_tempDir, "cli-mode-home");
+        string homeDotnet = Path.Combine(homeDir, ".dotnet");
+        Directory.CreateDirectory(Path.Combine(homeDotnet, "host", "fxr", "10.0.0"));
+        Directory.CreateDirectory(Path.Combine(homeDotnet, "sdk", "10.0.100"));
+        string publishLog = Path.Combine(_tempDir, "publish-calls.log");
+        string homeDotnetExe = Path.Combine(homeDotnet, "dotnet");
+        File.WriteAllText(
+            homeDotnetExe,
+            "#!/bin/sh\n" +
+            "if [ \"${1:-}\" = \"--version\" ]; then\n" +
+            "  echo '10.0.100'\n" +
+            "  exit 0\n" +
+            "fi\n" +
+            "if [ \"${1:-}\" = \"publish\" ]; then\n" +
+            $"  printf '%s\\n' \"$*\" >> '{publishLog}'\n" +
+            "  out=''\n" +
+            "  cfg=''\n" +
+            "  while [ \"$#\" -gt 0 ]; do\n" +
+            "    if [ \"$1\" = \"-o\" ]; then out=\"$2\"; shift 2;\n" +
+            "    elif [ \"$1\" = \"-c\" ]; then cfg=\"$2\"; shift 2;\n" +
+            "    else shift; fi\n" +
+            "  done\n" +
+            "  mkdir -p \"$out\"\n" +
+            "  printf '#!/bin/sh\\necho 1.0.0-test\\nexit 0\\n' > \"$out/cadence\"\n" +
+            "  chmod +x \"$out/cadence\"\n" +
+            "  if [ \"$cfg\" = \"Debug\" ]; then\n" +
+            "    printf 'managed' > \"$out/cadence.dll\"\n" +
+            "    printf '{}' > \"$out/cadence.runtimeconfig.json\"\n" +
+            "  else\n" +
+            "    printf 'symbols' > \"$out/cadence.dbg\"\n" +
+            "  fi\n" +
+            "  exit 0\n" +
+            "fi\n" +
+            "exit 0\n");
+        File.SetUnixFileMode(homeDotnetExe, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+
+        string pathEnv = $"{homeDotnet}:{realNodeDir}:/bin:/usr/bin";
+        string binDir = Path.Combine(cliRepo, "bin");
+        string binCadence = Path.Combine(binDir, "cadence");
+
+        // 1. Default local invocation publishes a framework-dependent Debug binary without --self-contained.
+        (int debugExit, string debugOut, string debugErr) = RunNodeCli(runCliPath, ["--version"], pathEnv, homeDir);
+        debugExit.Should().Be(0, debugOut + debugErr);
+        string[] callsAfterFirst = File.ReadAllLines(publishLog);
+        callsAfterFirst.Should().ContainSingle();
+        callsAfterFirst[0].Should().Contain("-c Debug")
+            .And.Contain("-p:PublishAot=false")
+            .And.Contain(Path.Combine(".cadence", "cli-artifacts", "debug"))
+            .And.NotContain("--self-contained");
+        File.Exists(Path.Combine(binDir, "cadence.dll")).Should().BeTrue();
+        File.Exists(Path.Combine(binDir, "cadence.runtimeconfig.json")).Should().BeTrue();
+
+        // 2. Edits under pruned packages/engine_core/src and packages/database/src do NOT rebuild ./bin/cadence.
+        DateTime futureMtime = File.GetLastWriteTimeUtc(binCadence).AddMinutes(5);
+        string engineCoreFile = Path.Combine(cliRepo, "packages", "engine_core", "src", "DomainModel.cs");
+        string databaseFile = Path.Combine(cliRepo, "packages", "database", "src", "CadenceDbContext.cs");
+        Directory.CreateDirectory(Path.GetDirectoryName(engineCoreFile)!);
+        Directory.CreateDirectory(Path.GetDirectoryName(databaseFile)!);
+        File.WriteAllText(engineCoreFile, "namespace Cadence.Core.Domain;\n");
+        File.WriteAllText(databaseFile, "namespace Cadence.Database;\n");
+        File.SetLastWriteTimeUtc(engineCoreFile, futureMtime);
+        File.SetLastWriteTimeUtc(databaseFile, futureMtime);
+
+        (int skipExit, string skipOut, string skipErr) = RunNodeCli(runCliPath, ["--version"], pathEnv, homeDir);
+        skipExit.Should().Be(0, skipOut + skipErr);
+        File.ReadAllLines(publishLog).Should().HaveCount(1,
+            "edits to pruned engine_core and database directories must not force CLI rebuilds");
+
+        // Touching a retained watched directory (packages/tooling_core/src) DOES trigger a rebuild.
+        string toolingFile = Path.Combine(cliRepo, "packages", "tooling_core", "src", "Validator.cs");
+        Directory.CreateDirectory(Path.GetDirectoryName(toolingFile)!);
+        File.WriteAllText(toolingFile, "namespace Cadence.ToolingCore;\n");
+        File.SetLastWriteTimeUtc(toolingFile, futureMtime);
+
+        (int watchedExit, string watchedOut, string watchedErr) = RunNodeCli(runCliPath, ["--version"], pathEnv, homeDir);
+        watchedExit.Should().Be(0, watchedOut + watchedErr);
+        File.ReadAllLines(publishLog).Should().HaveCount(2,
+            "edits to retained watched CLI dependency directories must rebuild ./bin/cadence");
+        File.SetLastWriteTimeUtc(binCadence, futureMtime.AddMinutes(1));
+
+        // 3. CADENCE_CLI_AOT=true switches to Release self-contained Native AOT and cleans stale Debug sidecar DLLs.
+        var aotEnv = new Dictionary<string, string?> { ["CADENCE_CLI_AOT"] = "true" };
+        (int aotExit, string aotOut, string aotErr) = RunNodeCli(runCliPath, ["--version"], pathEnv, homeDir, aotEnv);
+        aotExit.Should().Be(0, aotOut + aotErr);
+        string[] callsAfterAot = File.ReadAllLines(publishLog);
+        callsAfterAot.Should().HaveCount(3);
+        callsAfterAot[2].Should().Contain("-c Release")
+            .And.Contain("-r ")
+            .And.Contain("--self-contained")
+            .And.NotContain("-p:PublishAot=")
+            .And.Contain(Path.Combine(".cadence", "cli-artifacts", "aot"));
+        File.Exists(Path.Combine(binDir, "cadence.dll")).Should().BeFalse(
+            "switching from Debug to CADENCE_CLI_AOT=true must clean stale managed sidecar DLLs");
+        File.Exists(Path.Combine(binDir, "cadence.runtimeconfig.json")).Should().BeFalse();
+        File.Exists(Path.Combine(binDir, "cadence.dbg")).Should().BeTrue();
+        File.SetLastWriteTimeUtc(binCadence, futureMtime.AddMinutes(2));
+
+        // Subsequent CADENCE_CLI_AOT=true run reuses the AOT binary without recompiling.
+        (int aotReuseExit, _, _) = RunNodeCli(runCliPath, ["--version"], pathEnv, homeDir, aotEnv);
+        aotReuseExit.Should().Be(0);
+        File.ReadAllLines(publishLog).Should().HaveCount(3);
+
+        // 4. Switching back to local Debug cleans stale native symbols (.dbg) and publishes Debug again.
+        (int backToDebugExit, string backOut, string backErr) = RunNodeCli(runCliPath, ["--version"], pathEnv, homeDir);
+        backToDebugExit.Should().Be(0, backOut + backErr);
+        string[] callsAfterDebugSwitch = File.ReadAllLines(publishLog);
+        callsAfterDebugSwitch.Should().HaveCount(4);
+        callsAfterDebugSwitch[3].Should().Contain("-c Debug").And.Contain("-p:PublishAot=false");
+        File.Exists(Path.Combine(binDir, "cadence.dbg")).Should().BeFalse(
+            "switching from CADENCE_CLI_AOT=true back to Debug must clean stale native debug symbols");
+        File.Exists(Path.Combine(binDir, "cadence.dll")).Should().BeTrue();
+
+        // 5. GITHUB_ACTIONS=true reuses existing ./bin/cadence on cache hit, and publishes Native AOT on cache miss.
+        var ciEnv = new Dictionary<string, string?> { ["GITHUB_ACTIONS"] = "true" };
+        (int ciHitExit, _, _) = RunNodeCli(runCliPath, ["--version"], pathEnv, homeDir, ciEnv);
+        ciHitExit.Should().Be(0);
+        File.ReadAllLines(publishLog).Should().HaveCount(4);
+
+        File.Delete(binCadence);
+        (int ciMissExit, string ciMissOut, string ciMissErr) = RunNodeCli(runCliPath, ["--version"], pathEnv, homeDir, ciEnv);
+        ciMissExit.Should().Be(0, ciMissOut + ciMissErr);
+        string[] callsAfterCiMiss = File.ReadAllLines(publishLog);
+        callsAfterCiMiss.Should().HaveCount(5);
+        callsAfterCiMiss[4].Should().Contain("-c Release")
+            .And.Contain("-r ")
+            .And.Contain("--self-contained")
+            .And.NotContain("-p:PublishAot=");
+        File.Exists(Path.Combine(binDir, "cadence.dll")).Should().BeFalse();
+    }
+
+    [Fact]
     public void SetupWizard_NonAptHost_SourcesResolveDotnetEnvSoRestoreAndDoctorRunAfterHomeDotnetInstall()
     {
         if (OperatingSystem.IsWindows() || !File.Exists("/bin/bash"))
@@ -1766,6 +1915,7 @@ public sealed class PreCommitGuardrailsTests : IDisposable
         psi.Environment.Remove("USERPROFILE");
         psi.Environment.Remove("GITHUB_ACTIONS");
         psi.Environment.Remove("CADENCE_CLI_CACHE_HIT");
+        psi.Environment.Remove("CADENCE_CLI_AOT");
         if (extraEnv is not null)
         {
             foreach (var (key, value) in extraEnv)
