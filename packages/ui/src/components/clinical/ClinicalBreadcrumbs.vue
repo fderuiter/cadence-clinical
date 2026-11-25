@@ -2,7 +2,7 @@
   <nav
     v-if="normalizedItems.length > 0"
     :aria-label="ariaLabel"
-    class="clinical-breadcrumbs"
+    :class="['clinical-breadcrumbs', { 'is-compact-mobile': compactMobile }]"
   >
     <ol class="clinical-breadcrumbs-list">
       <li
@@ -61,6 +61,10 @@ const props = defineProps({
   ariaLabel: {
     type: String,
     default: "Breadcrumb",
+  },
+  compactMobile: {
+    type: Boolean,
+    default: false,
   },
 });
 
@@ -158,6 +162,33 @@ function onItemClick(item, index, event) {
   .clinical-breadcrumb-button {
     min-height: var(--touch-target-min, 48px);
     padding: 6px 8px;
+  }
+
+  .clinical-breadcrumbs.is-compact-mobile {
+    margin-bottom: var(--spacing-xs, 8px);
+  }
+
+  .clinical-breadcrumbs.is-compact-mobile .clinical-breadcrumbs-list {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+    font-size: 0.8125rem;
+  }
+
+  .clinical-breadcrumbs.is-compact-mobile .clinical-breadcrumbs-item {
+    flex-shrink: 0;
+  }
+
+  .clinical-breadcrumbs.is-compact-mobile .clinical-breadcrumb-link,
+  .clinical-breadcrumbs.is-compact-mobile .clinical-breadcrumb-button {
+    min-height: var(--control-target-min, 32px);
+    padding: 2px 6px;
+  }
+
+  .clinical-breadcrumbs.is-compact-mobile .clinical-breadcrumb-current {
+    padding: 2px 6px;
   }
 }
 </style>

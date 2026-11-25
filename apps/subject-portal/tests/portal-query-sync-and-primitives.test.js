@@ -377,7 +377,30 @@ describe("Shared UI primitives, bootstrap ordering, and query-synced portal rout
     expect(router.currentRoute.value.query.notifId).toBeTruthy();
     const peekDialog = document.getElementById("portal-peek-drawer");
     expect(peekDialog).not.toBeNull();
+    // Default jsdom viewport is 1024px (>= 768px): renders right slide-over size-md
+    expect(peekDialog.classList.contains("position-right")).toBe(true);
+    expect(peekDialog.classList.contains("size-md")).toBe(true);
+    expect(peekDialog.classList.contains("drawer-bottom-sheet")).toBe(false);
+
+    // Below 768px: switches dynamically to position-bottom (drawer-bottom-sheet)
+    const prevInnerWidth = window.innerWidth;
+    Object.defineProperty(window, "innerWidth", {
+      configurable: true,
+      writable: true,
+      value: 390,
+    });
+    window.dispatchEvent(new Event("resize"));
+    await flushUi();
+    expect(peekDialog.classList.contains("position-bottom")).toBe(true);
     expect(peekDialog.classList.contains("drawer-bottom-sheet")).toBe(true);
+
+    Object.defineProperty(window, "innerWidth", {
+      configurable: true,
+      writable: true,
+      value: prevInnerWidth,
+    });
+    window.dispatchEvent(new Event("resize"));
+    await flushUi();
 
     document.getElementById("btn-peek-close").click();
     await flushUi();
@@ -567,6 +590,23 @@ describe("Shared UI primitives, bootstrap ordering, and query-synced portal rout
     reviewLink.click();
     await flushUi();
     expect(state.currentView).toBe("view-consent");
+
+    // 5. Opening ReconsentModal focuses top #reconsent-change-summary at scrollTop 0 (not #reconsent-sign-password)
+    const { openReconsentModal, closeReconsentModal } =
+      await import("../src/features/reconsent.js");
+    openModalBtn.focus();
+    openReconsentModal();
+    await flushUi();
+
+    const changeSummary = document.getElementById("reconsent-change-summary");
+    const modalBody = document.querySelector(
+      "#portal-reconsent-modal .modal-body"
+    );
+    expect(changeSummary).not.toBeNull();
+    expect(document.activeElement).toBe(changeSummary);
+    expect(modalBody?.scrollTop).toBe(0);
+    closeReconsentModal();
+    await flushUi();
   });
 
   it("defers peek bottom sheet focus trap while PIN setup modal is open on cold /wallet?claimId=... hydration and opens after PIN setup", async () => {

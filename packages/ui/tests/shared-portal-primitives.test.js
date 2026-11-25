@@ -81,7 +81,7 @@ describe("packages/ui shared portal & callerScope primitives", () => {
     );
   });
 
-  it("renders ClinicalBreadcrumbs with aria-label=Breadcrumb, aria-current=page, and navigation handler", async () => {
+  it("renders ClinicalBreadcrumbs with aria-label=Breadcrumb, aria-current=page, compactMobile option, and navigation handler", async () => {
     const onSelect = vi.fn();
     const container = document.createElement("div");
     document.body.appendChild(container);
@@ -91,6 +91,7 @@ describe("packages/ui shared portal & callerScope primitives", () => {
         setup() {
           return () =>
             h(ClinicalBreadcrumbs, {
+              compactMobile: true,
               items: [
                 {
                   id: "study",
@@ -117,6 +118,7 @@ describe("packages/ui shared portal & callerScope primitives", () => {
 
     const nav = container.querySelector('nav[aria-label="Breadcrumb"]');
     expect(nav).not.toBeNull();
+    expect(nav.classList.contains("is-compact-mobile")).toBe(true);
     const current = nav.querySelector('[aria-current="page"]');
     expect(current?.textContent?.trim()).toBe("Daily Health & Vital Diary");
 
@@ -152,6 +154,9 @@ describe("packages/ui shared portal & callerScope primitives", () => {
               h(ClinicalIcon, { name: "clipboard-list" }),
               h(ClinicalIcon, { name: "globe" }),
               h(ClinicalIcon, { name: "check" }),
+              h(ClinicalIcon, { name: "user" }),
+              h(ClinicalIcon, { name: "refresh" }),
+              h(ClinicalIcon, { name: "alert-circle" }),
             ]);
         },
       })
@@ -174,7 +179,7 @@ describe("packages/ui shared portal & callerScope primitives", () => {
     expect(onPeek.mock.calls[0][0].triggerEl).toBe(btn);
 
     const icons = container.querySelectorAll("svg.clinical-icon");
-    expect(icons.length).toBe(4);
+    expect(icons.length).toBe(7);
     expect(icons[0].getAttribute("aria-hidden")).toBe("true");
 
     app.unmount();

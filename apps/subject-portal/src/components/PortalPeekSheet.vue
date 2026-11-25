@@ -3,7 +3,8 @@
     id="portal-peek-drawer"
     overlay-id="portal-peek-overlay"
     :model-value="isPeekDrawerOpen"
-    position="bottom"
+    :position="isMobileViewport ? 'bottom' : 'right'"
+    size="md"
     mobile-bottom-sheet
     :restore-focus="false"
     :title="ui.peekRecord?.title || 'Item Details'"
@@ -89,6 +90,7 @@ import {
   openPeekFullView,
   syncPeekFromQuery,
 } from "../features/peek.js";
+import { usePortalViewport } from "../composables/usePortalViewport.js";
 import { useAuditStore } from "../stores/audit.js";
 import { useComplianceStore } from "../stores/compliance.js";
 import { useConsentStore } from "../stores/consent.js";
@@ -99,6 +101,7 @@ import { useUiStore } from "../stores/ui.js";
 import { useWalletStore } from "../stores/wallet.js";
 import SiteContactLinks from "./SiteContactLinks.vue";
 
+const { isMobileViewport } = usePortalViewport();
 const route = inject(routeLocationKey, null);
 const ui = useUiStore();
 const sessionStore = useSessionStore();

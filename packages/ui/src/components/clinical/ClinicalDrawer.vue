@@ -508,18 +508,21 @@ defineExpose({
   }
 }
 
-@media (max-width: 640px) {
+@media (min-width: 768px) {
+  .clinical-drawer-panel:not(.position-bottom) .clinical-drawer-sheet-handle {
+    display: none;
+  }
+}
+
+@media (max-width: 767px) {
   .clinical-drawer-backdrop.mobile-bottom-sheet {
     justify-content: center;
     align-items: flex-end;
   }
 
-  .clinical-drawer-panel {
+  .clinical-drawer-panel.drawer-mobile-bottom-sheet {
     width: 100vw;
     max-width: 100vw;
-  }
-
-  .clinical-drawer-panel.drawer-mobile-bottom-sheet {
     height: auto;
     max-height: 90dvh;
     border-left: none;
@@ -529,6 +532,13 @@ defineExpose({
     box-shadow: var(--shadow-drawer-bottom);
     animation-name: clinical-drawer-slide-in-bottom;
     padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+}
+
+@media (max-width: 640px) {
+  .clinical-drawer-panel {
+    width: 100vw;
+    max-width: 100vw;
   }
 
   .clinical-drawer-close-btn {

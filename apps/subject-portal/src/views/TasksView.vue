@@ -90,7 +90,8 @@
         "
       >
         <h3 style="margin: 0; display: flex; align-items: center; gap: 8px">
-          <span>🔄</span> Offline Sync Queue
+          <ClinicalIcon name="refresh" :size="18" />
+          <span>Offline Sync Queue</span>
         </h3>
         <button
           id="btn-sync-now"
@@ -122,6 +123,7 @@
 
 <script setup>
 import { computed } from "vue";
+import { ClinicalIcon } from "ui";
 import { isScreenAvailable } from "../router/availability.js";
 import { useSessionStore } from "../stores/session.js";
 import { useTasksStore } from "../stores/tasks.js";

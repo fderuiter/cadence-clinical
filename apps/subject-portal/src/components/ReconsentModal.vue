@@ -17,8 +17,8 @@
         <div id="portal-reconsent-modal-title" class="modal-header">
           Updated Study Consent Review
         </div>
-        <div class="modal-body">
-          <p style="font-size: 14px; margin-bottom: 12px">
+        <div ref="modalBodyRef" class="modal-body">
+          <p class="reconsent-intro-copy">
             Your study consent form has been updated. Please review what changed
             below and sign to continue with your study surveys.
           </p>
@@ -43,14 +43,10 @@
 
           <div
             id="reconsent-change-summary"
-            class="card"
-            style="
-              background-color: var(--semantic-color-surface-muted);
-              border: 1px solid var(--semantic-color-border);
-              padding: 12px 16px;
-              margin-bottom: 14px;
-              border-radius: 6px;
-            "
+            class="card reconsent-change-summary-card"
+            role="region"
+            aria-label="What changed in your study consent"
+            tabindex="-1"
           >
             <h4
               style="
@@ -316,7 +312,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from "vue";
+import { computed, nextTick, ref, watch } from "vue";
 import {
   SIGNATURE_PASSWORD_INPUT_ATTRS,
   requiresCustomSignatureReason,
@@ -333,7 +329,20 @@ import { useConsentStore } from "../stores/consent.js";
 import { state } from "../stores/state.js";
 
 const modalRef = ref(null);
+const modalBodyRef = ref(null);
 const consent = useConsentStore();
+
+watch(
+  () => consent.reconsentModalOpen,
+  async (open) => {
+    if (!open) return;
+    await nextTick();
+    if (modalBodyRef.value) {
+      modalBodyRef.value.scrollTop = 0;
+    }
+  },
+  { immediate: true }
+);
 
 const clauseDiffs = computed(() =>
   resolveReconsentClauseDiffs(consent.pendingReconsent)
@@ -356,7 +365,7 @@ function formatChangeTypeLabel(changeType) {
 useFocusTrap(modalRef, {
   isOpen: () => consent.reconsentModalOpen,
   onEscape: closeReconsentModal,
-  initialFocus: "#reconsent-sign-password",
+  initialFocus: "#reconsent-change-summary",
   restoreFocus: () => {
     const prev = state.reconsentPreviouslyFocusedElement;
     state.reconsentPreviouslyFocusedElement = null;
@@ -364,3 +373,36 @@ useFocusTrap(modalRef, {
   },
 });
 </script>
+
+<style scoped>
+.reconsent-intro-copy {
+  font-size: 14px;
+  margin-bottom: 12px;
+}
+
+.reconsent-change-summary-card {
+  background-color: var(--semantic-color-surface-muted);
+  border: 1px solid var(--semantic-color-border);
+  padding: 12px 16px;
+  margin-bottom: 14px;
+  border-radius: 6px;
+}
+
+.reconsent-change-summary-card:focus {
+  outline: 2px solid var(--semantic-color-accent);
+  outline-offset: 2px;
+}
+
+@media (max-height: 480px) {
+  .reconsent-intro-copy {
+    font-size: 13px;
+    margin-bottom: 8px;
+    line-height: 1.4;
+  }
+
+  .reconsent-change-summary-card {
+    padding: 8px 12px;
+    margin-bottom: 8px;
+  }
+}
+</style>
