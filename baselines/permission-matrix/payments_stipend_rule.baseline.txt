@@ -1,0 +1,14 @@
+# Shrink-only RBAC role-to-permission grant baseline shard for resource 'payments_stipend_rule'.
+# Sorted ordinally as <role>|<resource>|<action> (lowercase).
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check permission-matrix or CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.
+admin|payments_stipend_rule|read
+auditor|payments_stipend_rule|read
+authorized_er_physician|payments_stipend_rule|read
+crc|payments_stipend_rule|read
+finance_officer|payments_stipend_rule|configure
+finance_officer|payments_stipend_rule|read
+investigator|payments_stipend_rule|read
+lead_investigator|payments_stipend_rule|read
+principal_investigator|payments_stipend_rule|read
+sponsor_dm|payments_stipend_rule|read
+sysadmin|payments_stipend_rule|read

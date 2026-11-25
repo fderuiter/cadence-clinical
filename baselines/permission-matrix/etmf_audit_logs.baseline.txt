@@ -1,0 +1,6 @@
+# Shrink-only RBAC role-to-permission grant baseline shard for resource 'etmf_audit_logs'.
+# Sorted ordinally as <role>|<resource>|<action> (lowercase).
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check permission-matrix or CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.
+auditor|etmf_audit_logs|read
+external_monitor|etmf_audit_logs|read
+sysadmin|etmf_audit_logs|read

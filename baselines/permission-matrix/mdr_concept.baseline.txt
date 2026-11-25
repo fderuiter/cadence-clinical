@@ -1,0 +1,15 @@
+# Shrink-only RBAC role-to-permission grant baseline shard for resource 'mdr_concept'.
+# Sorted ordinally as <role>|<resource>|<action> (lowercase).
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check permission-matrix or CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.
+admin|mdr_concept|read
+sponsor_designer|mdr_concept|create
+sponsor_designer|mdr_concept|delete
+sponsor_designer|mdr_concept|read
+sponsor_designer|mdr_concept|rename
+sponsor_designer|mdr_concept|update
+sponsor_dm|mdr_concept|read
+sysadmin|mdr_concept|create
+sysadmin|mdr_concept|delete
+sysadmin|mdr_concept|read
+sysadmin|mdr_concept|rename
+sysadmin|mdr_concept|update

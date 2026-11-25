@@ -1,0 +1,9 @@
+# Shrink-only RBAC role-to-permission grant baseline shard for resource 'randomization_scheme'.
+# Sorted ordinally as <role>|<resource>|<action> (lowercase).
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check permission-matrix or CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.
+admin|randomization_scheme|read
+auditor|randomization_scheme|read
+sponsor_dm|randomization_scheme|read
+unblinded_statistician|randomization_scheme|approve
+unblinded_statistician|randomization_scheme|draft
+unblinded_statistician|randomization_scheme|read

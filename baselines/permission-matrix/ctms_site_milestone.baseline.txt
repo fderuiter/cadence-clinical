@@ -1,0 +1,26 @@
+# Shrink-only RBAC role-to-permission grant baseline shard for resource 'ctms_site_milestone'.
+# Sorted ordinally as <role>|<resource>|<action> (lowercase).
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check permission-matrix or CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.
+admin|ctms_site_milestone|create
+admin|ctms_site_milestone|read
+admin|ctms_site_milestone|update
+auditor|ctms_site_milestone|read
+authorized_er_physician|ctms_site_milestone|read
+cra|ctms_site_milestone|create
+cra|ctms_site_milestone|read
+cra|ctms_site_milestone|update
+crc|ctms_site_milestone|read
+investigator|ctms_site_milestone|read
+lead_investigator|ctms_site_milestone|read
+monitor|ctms_site_milestone|create
+monitor|ctms_site_milestone|read
+monitor|ctms_site_milestone|update
+principal_investigator|ctms_site_milestone|read
+sponsor_dm|ctms_site_milestone|create
+sponsor_dm|ctms_site_milestone|read
+sponsor_dm|ctms_site_milestone|update
+sponsor_mm|ctms_site_milestone|read
+sysadmin|ctms_site_milestone|create
+sysadmin|ctms_site_milestone|read
+sysadmin|ctms_site_milestone|update
+trial_coordinator|ctms_site_milestone|read

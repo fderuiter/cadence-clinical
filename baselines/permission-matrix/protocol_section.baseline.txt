@@ -1,0 +1,17 @@
+# Shrink-only RBAC role-to-permission grant baseline shard for resource 'protocol_section'.
+# Sorted ordinally as <role>|<resource>|<action> (lowercase).
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check permission-matrix or CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.
+admin|protocol_section|read
+protocol_reviewer|protocol_section|read
+protocol_reviewer|protocol_section|review
+sponsor_designer|protocol_section|approve
+sponsor_designer|protocol_section|lock
+sponsor_designer|protocol_section|read
+sponsor_designer|protocol_section|review
+sponsor_designer|protocol_section|unlock
+sponsor_dm|protocol_section|read
+sysadmin|protocol_section|approve
+sysadmin|protocol_section|lock
+sysadmin|protocol_section|read
+sysadmin|protocol_section|review
+sysadmin|protocol_section|unlock

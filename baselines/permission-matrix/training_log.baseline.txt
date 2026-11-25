@@ -1,0 +1,41 @@
+# Shrink-only RBAC role-to-permission grant baseline shard for resource 'training_log'.
+# Sorted ordinally as <role>|<resource>|<action> (lowercase).
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check permission-matrix or CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.
+admin|training_log|create
+admin|training_log|read
+admin|training_log|sign
+auditor|training_log|read
+authorized_er_physician|training_log|create
+authorized_er_physician|training_log|read
+authorized_er_physician|training_log|sign
+cra|training_log|create
+cra|training_log|read
+cra|training_log|sign
+crc|training_log|create
+crc|training_log|read
+crc|training_log|sign
+external_monitor|training_log|read
+investigator|training_log|create
+investigator|training_log|read
+investigator|training_log|sign
+lead_investigator|training_log|create
+lead_investigator|training_log|read
+lead_investigator|training_log|sign
+monitor|training_log|create
+monitor|training_log|read
+monitor|training_log|sign
+principal_investigator|training_log|create
+principal_investigator|training_log|read
+principal_investigator|training_log|sign
+sponsor_designer|training_log|read
+sponsor_dm|training_log|create
+sponsor_dm|training_log|read
+sponsor_dm|training_log|sign
+sponsor_mm|training_log|read
+sponsor_statistician|training_log|read
+sysadmin|training_log|create
+sysadmin|training_log|read
+sysadmin|training_log|sign
+trial_coordinator|training_log|create
+trial_coordinator|training_log|read
+trial_coordinator|training_log|sign

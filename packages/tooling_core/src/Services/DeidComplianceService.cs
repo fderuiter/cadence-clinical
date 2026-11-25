@@ -124,8 +124,14 @@ public static partial class DeidComplianceService
     private static readonly string[] DateContextWords =
         ["version", "package", "href", "release", "sas", "epoch", "format", "test", "example", "default"];
 
-    /// <summary>Directory containing per-unit ratchet baseline shards, relative to the repository root.</summary>
+    /// <summary>Directory containing per-file ratchet baseline shards, relative to the repository root.</summary>
     public const string BaselineDirectory = "baselines/deid";
+
+    /// <summary>Subdirectory under <see cref="BaselineDirectory"/> storing one shard per tracked file path.</summary>
+    public const string FilesDirectory = "baselines/deid/files";
+
+    /// <summary>Retired root-level monolithic DEID baseline path.</summary>
+    public const string LegacyBaselineFile = ".deid-baseline.txt";
 
     private const string ShardSuffix = ".baseline.txt";
 
@@ -137,7 +143,7 @@ public static partial class DeidComplianceService
     ];
 
     public static string GetShardRelativePath(string filePath) =>
-        $"{BaselineDirectory}/{BaselineUnitPath.ResolveUnit(filePath)}{ShardSuffix}";
+        BaselineUnitPath.ResolvePerFileShardRelativePath(BaselineDirectory, filePath, ShardSuffix);
 
     /// <summary>
     /// Scans <paramref name="files"/>, or the resolved <see cref="GitRevisionScopeService"/> candidate files when none are
@@ -206,7 +212,11 @@ public static partial class DeidComplianceService
                 findings.AddRange(ScanTextWithKeys(relativePath, content, detector, profile));
             }
 
-            var entriesByShard = ReadBaselineShards(repoRoot, reader);
+            if (!TryReadAndValidateBaselineShards(repoRoot, reader, out var entriesByShard))
+            {
+                return 1;
+            }
+
             var allBaselineEntries = entriesByShard
                 .OrderBy(kv => kv.Key, StringComparer.Ordinal)
                 .SelectMany(kv => kv.Value)
@@ -362,38 +372,96 @@ public static partial class DeidComplianceService
         }
     }
 
-    private static Dictionary<string, List<string>> ReadBaselineShards(string repoRoot, GitIndexReader? reader)
+    private static bool TryReadAndValidateBaselineShards(
+        string repoRoot,
+        GitIndexReader? reader,
+        out Dictionary<string, List<string>> result)
     {
-        var result = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+        result = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+        bool hasLegacy = reader is { HasAuthoritativeIndex: true }
+            ? reader.FileExists(LegacyBaselineFile)
+            : File.Exists(Path.Combine(repoRoot, LegacyBaselineFile));
+        if (hasLegacy)
+        {
+            Console.WriteLine($"[ERROR] Legacy monolithic DEID baseline '{LegacyBaselineFile}' must be removed; use per-file shards under '{FilesDirectory}/'.");
+            return false;
+        }
+
+        List<string> candidateFiles;
         if (reader is { HasAuthoritativeIndex: true })
         {
-            foreach (string relPath in reader.Paths
-                .Where(p => p.StartsWith(BaselineDirectory + "/", StringComparison.Ordinal) &&
-                            p.EndsWith(ShardSuffix, StringComparison.Ordinal))
-                .Order(StringComparer.Ordinal))
+            candidateFiles = reader.Paths
+                .Where(p => p.StartsWith(BaselineDirectory + "/", StringComparison.Ordinal))
+                .Order(StringComparer.Ordinal)
+                .ToList();
+        }
+        else
+        {
+            string deidRootFull = Path.Combine(repoRoot, BaselineDirectory);
+            if (!Directory.Exists(deidRootFull))
             {
-                if (reader.TryReadLines(relPath, out string[] indexedLines))
+                return true;
+            }
+
+            candidateFiles = Directory.EnumerateFiles(deidRootFull, "*", SearchOption.AllDirectories)
+                .Select(f => Path.GetRelativePath(repoRoot, f).Replace('\\', '/'))
+                .Order(StringComparer.Ordinal)
+                .ToList();
+        }
+
+        foreach (string relPath in candidateFiles)
+        {
+            if (!BaselineUnitPath.TryExtractPerFileSourcePath(relPath, BaselineDirectory, ShardSuffix, out string expectedSourceFile))
+            {
+                Console.WriteLine($"[ERROR] Legacy or misplaced DEID baseline shard '{relPath}'; expected per-file shards under '{FilesDirectory}/<source-path>{ShardSuffix}'.");
+                return false;
+            }
+
+            string[] rawLines;
+            if (reader is { HasAuthoritativeIndex: true })
+            {
+                if (!reader.TryReadLines(relPath, out rawLines))
                 {
-                    result[relPath] = [.. indexedLines.Select(l => l.Trim()).Where(l => l.Length > 0 && !l.StartsWith('#'))];
+                    Console.WriteLine($"[ERROR] DEID baseline shard '{relPath}' could not be read from the Git index.");
+                    return false;
+                }
+            }
+            else
+            {
+                rawLines = File.ReadAllLines(Path.Combine(repoRoot, relPath));
+            }
+
+            var entries = rawLines
+                .Select(l => l.Trim())
+                .Where(l => l.Length > 0 && !l.StartsWith('#'))
+                .ToList();
+
+            if (entries.Count == 0)
+            {
+                Console.WriteLine($"[ERROR] Empty DEID baseline shard '{relPath}' must be deleted.");
+                return false;
+            }
+
+            for (int i = 0; i < entries.Count; i++)
+            {
+                string entryFile = ExtractFileFromBaselineEntry(entries[i]);
+                if (!string.Equals(entryFile, expectedSourceFile, StringComparison.Ordinal))
+                {
+                    Console.WriteLine($"[ERROR] Entry '{entries[i]}' in '{relPath}' belongs in '{GetShardRelativePath(entryFile)}'.");
+                    return false;
+                }
+
+                if (i > 0 && StringComparer.Ordinal.Compare(entries[i - 1], entries[i]) > 0)
+                {
+                    Console.WriteLine($"[ERROR] DEID baseline shard '{relPath}' is not sorted ordinally at '{entries[i]}'.");
+                    return false;
                 }
             }
 
-            return result;
+            result[relPath] = entries;
         }
 
-        string deidRootFull = Path.Combine(repoRoot, BaselineDirectory);
-        if (!Directory.Exists(deidRootFull))
-        {
-            return result;
-        }
-
-        foreach (string fullPath in Directory.EnumerateFiles(deidRootFull, "*" + ShardSuffix, SearchOption.AllDirectories))
-        {
-            string relPath = Path.GetRelativePath(repoRoot, fullPath).Replace('\\', '/');
-            result[relPath] = [.. File.ReadAllLines(fullPath).Select(l => l.Trim()).Where(l => l.Length > 0 && !l.StartsWith('#'))];
-        }
-
-        return result;
+        return true;
     }
 
     private static int SubtractStaleEntriesFromShards(

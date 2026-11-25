@@ -1,0 +1,13 @@
+# Shrink-only RBAC role-to-permission grant baseline shard for resource 'payments_invoice'.
+# Sorted ordinally as <role>|<resource>|<action> (lowercase).
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check permission-matrix or CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.
+admin|payments_invoice|read
+auditor|payments_invoice|read
+finance_officer|payments_invoice|approve
+finance_officer|payments_invoice|compile
+finance_officer|payments_invoice|export_erp
+finance_officer|payments_invoice|read
+finance_officer|payments_invoice|reconcile
+finance_officer|payments_invoice|sign_remittance
+sponsor_dm|payments_invoice|read
+sysadmin|payments_invoice|read

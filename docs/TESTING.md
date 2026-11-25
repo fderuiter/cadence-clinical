@@ -36,20 +36,20 @@ pushing so failures are caught before opening or updating a pull request.
 Some checks record pre-existing debt in checked-in per-owner baseline shards or shrink-only baseline files instead of failing on it: the kernel boundary rules
 (`tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-boundaries/<Assembly>.baseline.txt`), the kernel rule coverage ratchet
 (`tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-rule-coverage/<AREA>.baseline.txt`), the direct state-write IL sentinel
-(`tests/Cadence.ArchitectureTests/ArchitectureBaselines/direct-state-writes.baseline.txt`), the static RBAC role-permission grant inventory
-(`tests/Cadence.ArchitectureTests/ArchitectureBaselines/permission-matrix.baseline.txt`), the cross-service isolation sentinel
-(`tests/Cadence.ArchitectureTests/ArchitectureBaselines/cross-service-isolation.baseline.txt`), the `deid` gate
-(`baselines/deid/<unit>.baseline.txt`), and the detect-secrets allowlist (`baselines/secrets/config.json` plus
-`baselines/secrets/<unit>.secrets.baseline.json`). Any other `*.baseline.txt` or `*-baseline.txt` file is treated the same way.
-Empty shards are deleted automatically, and each baseline gate may only shrink:
+(`baselines/direct-state-writes/<Assembly>.baseline.txt`), the static RBAC role-permission grant inventory
+(`baselines/permission-matrix/<resource>.baseline.txt`), the cross-service isolation sentinel
+(`baselines/cross-service-isolation/<sourceService>/<targetService>.baseline.txt`), the `deid` gate
+(`baselines/deid/files/<path>.baseline.txt`), and the detect-secrets allowlist (`baselines/secrets/config.json` plus
+`baselines/secrets/files/<path>.secrets.baseline.json`). Any other `*.baseline.txt` or `*-baseline.txt` file is treated the same way, and retired monolithic or unit-level baseline files are rejected fail-closed.
+Empty shards and empty parent directories are deleted automatically, and each baseline gate may only shrink:
 
 - Fix a new violation instead of recording it. `CADENCE_UPDATE_BASELINE=1` subtracts resolved entries from touched shards
-  (including scoped `CADENCE_UPDATE_BASELINE=1 pnpm cadence check deid <files>`) and deletes empty shards; it never adds
-  new violations.
+  (including `CADENCE_UPDATE_BASELINE=1 pnpm cadence check permission-matrix`, `CADENCE_UPDATE_BASELINE=1 pnpm cadence check imports`, and scoped `CADENCE_UPDATE_BASELINE=1 pnpm cadence check deid <files>`) and deletes empty shards; it never adds
+  new violations or creates new shards.
 - The `baseline-ratchet` gate (`pnpm cadence check baseline-ratchet`) rejects uncommitted working-tree growth, compares
   every baseline gate across each commit in `compareBase..HEAD` (`git merge-base <base> HEAD` with `--base <ref>`, or
   `<sha>..HEAD` with `--push-before <sha>`), and fails when any commit adds an entry without authorization. Shard entries
-  for each gate (`kernel-boundaries`, `kernel-rule-coverage`, `baselines/deid`, `baselines/secrets`, or standalone baseline
+  for each gate (`kernel-boundaries`, `kernel-rule-coverage`, `baselines/permission-matrix`, `baselines/direct-state-writes`, `baselines/cross-service-isolation`, `baselines/deid`, `baselines/secrets`, or standalone baseline
   files) are aggregated as one multiset, so reordering, splitting across shards, comment lines, and removed entries pass.
 - When debt really must be accepted, say why in the exact commit that adds it, with a file-and-count-scoped trailer naming the gate prefix or
   grown shard path and exact added entry count: `git commit --trailer "Baseline-Growth: <path> +<count> - <reason>"` (for example

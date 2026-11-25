@@ -1,0 +1,8 @@
+# Shrink-only RBAC role-to-permission grant baseline shard for resource 'rtsm_unblind'.
+# Sorted ordinally as <role>|<resource>|<action> (lowercase).
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check permission-matrix or CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.
+authorized_er_physician|rtsm_unblind|write
+emergency_unblinder|rtsm_unblind|write
+investigator|rtsm_unblind|write
+lead_investigator|rtsm_unblind|write
+principal_investigator|rtsm_unblind|write

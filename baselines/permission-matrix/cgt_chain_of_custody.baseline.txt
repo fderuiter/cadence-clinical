@@ -1,0 +1,23 @@
+# Shrink-only RBAC role-to-permission grant baseline shard for resource 'cgt_chain_of_custody'.
+# Sorted ordinally as <role>|<resource>|<action> (lowercase).
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check permission-matrix or CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.
+admin|cgt_chain_of_custody|read
+auditor|cgt_chain_of_custody|read
+authorized_er_physician|cgt_chain_of_custody|read
+authorized_er_physician|cgt_chain_of_custody|write
+cra|cgt_chain_of_custody|read
+crc|cgt_chain_of_custody|read
+crc|cgt_chain_of_custody|write
+investigator|cgt_chain_of_custody|read
+investigator|cgt_chain_of_custody|write
+lead_investigator|cgt_chain_of_custody|read
+lead_investigator|cgt_chain_of_custody|write
+monitor|cgt_chain_of_custody|read
+pharmacist|cgt_chain_of_custody|read
+pharmacist|cgt_chain_of_custody|write
+principal_investigator|cgt_chain_of_custody|read
+principal_investigator|cgt_chain_of_custody|write
+sponsor_dm|cgt_chain_of_custody|read
+sponsor_mm|cgt_chain_of_custody|read
+sysadmin|cgt_chain_of_custody|read
+trial_coordinator|cgt_chain_of_custody|read

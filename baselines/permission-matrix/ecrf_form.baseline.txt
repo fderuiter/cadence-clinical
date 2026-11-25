@@ -1,0 +1,9 @@
+# Shrink-only RBAC role-to-permission grant baseline shard for resource 'ecrf_form'.
+# Sorted ordinally as <role>|<resource>|<action> (lowercase).
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check permission-matrix or CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.
+admin|ecrf_form|unlock
+authorized_er_physician|ecrf_form|sign
+investigator|ecrf_form|sign
+lead_investigator|ecrf_form|sign
+principal_investigator|ecrf_form|sign
+sponsor_dm|ecrf_form|unlock

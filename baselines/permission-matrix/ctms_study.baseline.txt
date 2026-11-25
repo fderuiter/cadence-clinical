@@ -1,0 +1,20 @@
+# Shrink-only RBAC role-to-permission grant baseline shard for resource 'ctms_study'.
+# Sorted ordinally as <role>|<resource>|<action> (lowercase).
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check permission-matrix or CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.
+admin|ctms_study|create
+admin|ctms_study|read
+auditor|ctms_study|read
+authorized_er_physician|ctms_study|read
+cra|ctms_study|create
+cra|ctms_study|read
+crc|ctms_study|read
+investigator|ctms_study|read
+lead_investigator|ctms_study|read
+monitor|ctms_study|create
+monitor|ctms_study|read
+principal_investigator|ctms_study|read
+sponsor_dm|ctms_study|create
+sponsor_dm|ctms_study|read
+sysadmin|ctms_study|create
+sysadmin|ctms_study|read
+trial_coordinator|ctms_study|read

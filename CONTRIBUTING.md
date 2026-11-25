@@ -168,19 +168,20 @@ Every PR updates what its change makes stale, in the same PR:
 ## 6. Repository hygiene
 
 - Never commit `.env`, secrets, `.docx` files, test reports (`*.trx`, `report.xml`) or build output.
-  `baselines/secrets/` (`config.json` and `<unit>.secrets.baseline.json` shards) tracks accepted detect-secrets findings.
+  `baselines/secrets/` (`config.json` and per-file `files/<path>.secrets.baseline.json` shards) tracks accepted detect-secrets findings.
 - Never commit PHI or PII. The `deid` gate runs the full de-identification detector (14 categories) over
   application code, authored `docs/`, root portal documents, `.vue` templates, and client `stores/` — excluding
   `tests/`, `baselines/`, `scripts/`, `docker/`, vendored standards (`docs/CDISC/`, `docs/NCI/`), generated `docs/openapi/` and
   `docs/schema/`, and the GxP snapshot outputs (`docs/SDLC/runs/`, `Requirements_Traceability_Matrix.md`,
-  `IQ_OQ_PQ_Execution_Report.md`) — and fails on any finding not in `baselines/deid/<unit>.baseline.txt`
+  `IQ_OQ_PQ_Execution_Report.md`) — and fails on any finding not in `baselines/deid/files/<path>.baseline.txt`
   (`DeidComplianceService.cs`). Those shards may only shrink. When a flagged line is not PHI (demo data, a code-system
   URL), put a `deid-ignore` comment on that line rather than adding to the baseline. When the gate reports stale
   baseline entries, drop them with `CADENCE_UPDATE_BASELINE=1 pnpm cadence check deid [files]`.
 - Ratchet baselines (`tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-boundaries/<Assembly>.baseline.txt`,
   `tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-rule-coverage/<AREA>.baseline.txt`,
-  `tests/Cadence.ArchitectureTests/ArchitectureBaselines/{direct-state-writes,permission-matrix,cross-service-isolation}.baseline.txt`,
-  `baselines/deid/<unit>.baseline.txt`, `baselines/secrets/<unit>.secrets.baseline.json`, and any other
+  `baselines/direct-state-writes/<Assembly>.baseline.txt`, `baselines/permission-matrix/<resource>.baseline.txt`,
+  `baselines/cross-service-isolation/<sourceService>/<targetService>.baseline.txt`,
+  `baselines/deid/files/<path>.baseline.txt`, `baselines/secrets/files/<path>.secrets.baseline.json`, and any other
   `*.baseline.txt`) may only shrink, aggregated per gate across all shards. The `baseline-ratchet` gate fails on uncommitted
   working-tree growth and when any commit on the branch or push range adds an entry without a matching file-and-count-scoped
   `Baseline-Growth: <path> +<count> - <reason>` trailer on that commit covering the gate (`git commit --trailer "Baseline-Growth: <path> +<count> - <reason>"`).

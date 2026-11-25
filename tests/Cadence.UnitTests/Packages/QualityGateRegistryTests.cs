@@ -241,9 +241,7 @@ public sealed class QualityGateRegistryTests : IDisposable
         },
         ["permission-matrix"] = () =>
         {
-            Write(
-                PermissionMatrixRatchetService.BaselineRelativePath,
-                "# Shrink-only RBAC baseline\n" + string.Join('\n', PermissionMatrixRatchetService.GetRuntimeGrants()) + "\n");
+            PermissionMatrixRatchetService.WriteBaselineShards(_root, PermissionMatrixRatchetService.GetRuntimeGrants());
             Write(
                 "packages/security/src/Rbac/PermissionMatrix.Shadow.cs",
                 "namespace Cadence.Security.Rbac;\npublic static partial class PermissionMatrix\n{\n    static void Extra() => Grant(\"crc\", \"shadow_resource\", \"escalate\");\n}\n");
@@ -840,8 +838,8 @@ public sealed class QualityGateRegistryTests : IDisposable
         gate.Run(Context(files: ["apps/payments/src/Endpoints/PaymentEndpoints.cs"], preCommit: true))
             .Should().BeFalse("pre-commit hook must run architecture-tests when backend C# files are staged");
 
-        gate.Run(Context(files: ["tests/Cadence.ArchitectureTests/ArchitectureBaselines/direct-state-writes.baseline.txt"], preCommit: true))
-            .Should().BeFalse("pre-commit hook must run architecture-tests when ratchet baselines are staged");
+        gate.Run(Context(files: ["baselines/direct-state-writes/Cadence.Apps.Payments.baseline.txt"], preCommit: true))
+            .Should().BeFalse("pre-commit hook must run architecture-tests when sharded ratchet baselines are staged");
 
         gate.Run(Context(files: ["apps/subject-portal/tests/e2e/portal-accessibility.spec.js"], preCommit: true))
             .Should().BeFalse("pre-commit hook must run architecture-tests when frontend test specs are staged");
@@ -856,9 +854,7 @@ public sealed class QualityGateRegistryTests : IDisposable
         QualityGates.Find("imports")!.Run(Context())
             .Should().BeFalse("cross-service reflection string literals must fail the imports gate when unbaselined");
 
-        Write(
-            PermissionMatrixRatchetService.BaselineRelativePath,
-            "# baseline\n" + string.Join('\n', PermissionMatrixRatchetService.GetRuntimeGrants()) + "\n");
+        PermissionMatrixRatchetService.WriteBaselineShards(_root, PermissionMatrixRatchetService.GetRuntimeGrants());
         var permissionGate = QualityGates.Find("permission-matrix")!;
         permissionGate.Run(Context()).Should().BeTrue("runtime PermissionMatrix grants matching the baseline must pass");
 

@@ -5,20 +5,69 @@ using System.Linq;
 namespace Cadence.ToolingCore.Services;
 
 /// <summary>
-/// Maps repository-relative paths to their owning baseline shard unit (<c>apps/&lt;name&gt;</c>,
-/// <c>packages/&lt;name&gt;</c>, or <c>root</c>) and removes empty parent directories when shards shrink to zero.
+/// Maps repository-relative paths to their owning baseline shard paths (<c>&lt;gate&gt;/files/&lt;source-path&gt;&lt;suffix&gt;</c>
+/// or legacy workspace units) and removes empty parent directories when shards shrink to zero.
 /// </summary>
 public static class BaselineUnitPath
 {
     public const string RootUnit = "root";
+    public const string FilesSubdirectory = "files";
 
-    public static string ResolveUnit(string relativePath)
+    public static string NormalizeRepoRelativePath(string relativePath)
     {
+        ArgumentNullException.ThrowIfNull(relativePath);
         string normalized = relativePath.Replace('\\', '/').TrimStart('/');
         while (normalized.StartsWith("./", StringComparison.Ordinal))
         {
             normalized = normalized[2..];
         }
+
+        return normalized;
+    }
+
+    public static string ResolvePerFileShardRelativePath(string gateDirectory, string sourceRelativePath, string shardSuffix)
+    {
+        string normalizedGate = NormalizeRepoRelativePath(gateDirectory).TrimEnd('/');
+        string normalizedSource = NormalizeRepoRelativePath(sourceRelativePath);
+        if (!IsSafeRelativeFilePath(normalizedSource))
+        {
+            throw new ArgumentException($"Invalid repository-relative file path '{sourceRelativePath}'.", nameof(sourceRelativePath));
+        }
+
+        return $"{normalizedGate}/{FilesSubdirectory}/{normalizedSource}{shardSuffix}";
+    }
+
+    public static bool TryExtractPerFileSourcePath(
+        string shardRelativePath,
+        string gateDirectory,
+        string shardSuffix,
+        out string sourceRelativePath)
+    {
+        sourceRelativePath = string.Empty;
+        string normalizedShard = NormalizeRepoRelativePath(shardRelativePath);
+        string normalizedGate = NormalizeRepoRelativePath(gateDirectory).TrimEnd('/');
+        string prefix = $"{normalizedGate}/{FilesSubdirectory}/";
+
+        if (!normalizedShard.StartsWith(prefix, StringComparison.Ordinal) ||
+            !normalizedShard.EndsWith(shardSuffix, StringComparison.Ordinal) ||
+            normalizedShard.Length <= prefix.Length + shardSuffix.Length)
+        {
+            return false;
+        }
+
+        string candidate = normalizedShard[prefix.Length..^shardSuffix.Length];
+        if (!IsSafeRelativeFilePath(candidate))
+        {
+            return false;
+        }
+
+        sourceRelativePath = candidate;
+        return true;
+    }
+
+    public static string ResolveUnit(string relativePath)
+    {
+        string normalized = NormalizeRepoRelativePath(relativePath);
 
         string[] parts = normalized.Split('/', StringSplitOptions.RemoveEmptyEntries);
         if (parts.Length >= 2 &&
@@ -29,6 +78,20 @@ public static class BaselineUnitPath
         }
 
         return RootUnit;
+    }
+
+    private static bool IsSafeRelativeFilePath(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path) ||
+            path.StartsWith('/') ||
+            path.EndsWith('/') ||
+            path.Contains("//", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        string[] segments = path.Split('/');
+        return segments.All(seg => seg.Length > 0 && seg != "." && seg != "..");
     }
 
     public static void DeleteEmptyParentDirectories(string deletedFilePath, string stopDirectory)

@@ -580,6 +580,16 @@ public static class DetectSecretsGateService
 
         foreach (string shardRelPath in shardPaths)
         {
+            if (!BaselineUnitPath.TryExtractPerFileSourcePath(
+                    shardRelPath,
+                    SecretsBaselineCleanerService.SecretsDirectory,
+                    SecretsBaselineCleanerService.ShardSuffix,
+                    out string expectedSourceFile))
+            {
+                Console.WriteLine($"[ERROR] Legacy or misplaced secrets baseline shard '{shardRelPath}'; expected per-file shards under '{SecretsBaselineCleanerService.FilesDirectory}/'.");
+                return false;
+            }
+
             string shardText;
             if (reader is { HasAuthoritativeIndex: true })
             {
@@ -608,6 +618,12 @@ public static class DetectSecretsGateService
                     shardObj["results"] is not JsonObject shardResults)
                 {
                     Console.WriteLine($"[ERROR] Secrets baseline shard '{shardRelPath}' must contain a 'results' JSON object.");
+                    return false;
+                }
+
+                if (shardResults.Count != 1 || !shardResults.ContainsKey(expectedSourceFile))
+                {
+                    Console.WriteLine($"[ERROR] Secrets baseline shard '{shardRelPath}' must contain a single 'results' entry for '{expectedSourceFile}'.");
                     return false;
                 }
 

@@ -182,11 +182,13 @@ public sealed class PreCommitGuardrailsTests : IDisposable
         filter["pattern"]!.AsArray().Select(p => p!.GetValue<string>())
             .Should().Equal(SecretsBaselineCleanerService.CanonicalExcludePattern);
 
-        var webShard = JsonNode.Parse(File.ReadAllText(Path.Combine(_tempDir, "baselines/secrets/apps/web.secrets.baseline.json")))!.AsObject();
+        var webShard = JsonNode.Parse(File.ReadAllText(Path.Combine(_tempDir, "baselines/secrets/files/apps/web/src/Sample.ts.secrets.baseline.json")))!.AsObject();
+        webShard["results"]!.AsObject().Count.Should().Be(1);
         webShard["results"]!.AsObject()["apps/web/src/Sample.ts"]!.AsArray()[0]!.AsObject().ContainsKey("line_number").Should().BeFalse();
 
-        var rootShard = JsonNode.Parse(File.ReadAllText(Path.Combine(_tempDir, "baselines/secrets/root.secrets.baseline.json")))!.AsObject();
-        rootShard["results"]!.AsObject().ContainsKey("pnpm-lock.yaml").Should().BeFalse();
+        File.Exists(Path.Combine(_tempDir, "baselines/secrets/files/pnpm-lock.yaml.secrets.baseline.json")).Should().BeFalse();
+        var rootShard = JsonNode.Parse(File.ReadAllText(Path.Combine(_tempDir, "baselines/secrets/files/src/RootSample.cs.secrets.baseline.json")))!.AsObject();
+        rootShard["results"]!.AsObject().Count.Should().Be(1);
         rootShard["results"]!.AsObject().ContainsKey("src/RootSample.cs").Should().BeTrue();
 
         SecretsBaselineCleanerService.CleanSecretsBaseline(repoRoot: _tempDir, check: true).Should().Be(0);
@@ -519,7 +521,7 @@ public sealed class PreCommitGuardrailsTests : IDisposable
         string boolLiteralExpr = "== " + "true";
 
         Write(SecretsBaselineCleanerService.ConfigFile, baselineJson);
-        Write("baselines/deid/root.baseline.txt", "# header\nREADME.md|dates|0123456789abcdef\n");
+        Write("baselines/deid/files/README.md.baseline.txt", "# header\nREADME.md|dates|0123456789abcdef\n");
         Write("docs/trailing.txt", "staged trailing space   \n");
         Write("docs/no-eof.txt", "staged missing newline");
         Write(".github/workflows/ci.yml",
@@ -2225,11 +2227,11 @@ public sealed class PreCommitGuardrailsTests : IDisposable
     }
 
     [Fact]
-    public void ConcurrentShardPaydowns_AcrossAssembliesRuleAreasDeidUnitsAndSecretsUnits_MergeCleanlyViaGitMergeFileAndMergeTree()
+    public void ConcurrentShardPaydowns_AcrossAllSevenShardedBaselineGates_MergeCleanlyViaGitMergeFileAndMergeTree()
     {
         InitGitRepo();
 
-        // Seed initial per-owner shards across all four baseline gates with zero .gitattributes merge drivers.
+        // Seed initial per-leaf-owner shards across all seven baseline gates with zero .gitattributes merge drivers.
         Write("tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-boundaries/Cadence.Apps.Execution.baseline.txt",
             "# boundary\nK-MOD-1|Cadence.Apps.Execution|ExecEntity.StudyId\nK-XS-1|Cadence.Apps.Execution|ExecDto.StudyId\n");
         Write("tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-boundaries/Cadence.Apps.Ctms.baseline.txt",
@@ -2238,16 +2240,28 @@ public sealed class PreCommitGuardrailsTests : IDisposable
             "# coverage\nK-MOD-2\nK-MOD-3\n");
         Write("tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-rule-coverage/SIM.baseline.txt",
             "# coverage\nK-SIM-1\n");
-        Write("baselines/deid/apps/web.baseline.txt",
-            "# deid\napps/web/src/View.vue|dates|0011223344556677\napps/web/src/Store.ts|dates|8899aabbccddeeff\n");
-        Write("baselines/deid/packages/ui.baseline.txt",
-            "# deid\npackages/ui/src/Badge.vue|dates|fedcba9876543210\n");
+        Write("baselines/permission-matrix/payments_invoice.baseline.txt",
+            "# rbac\ncrc|payments_invoice|read\npi|payments_invoice|approve\n");
+        Write("baselines/permission-matrix/audit_event.baseline.txt",
+            "# rbac\ncrc|audit_event|read\n");
+        Write("baselines/direct-state-writes/Cadence.Apps.Payments.baseline.txt",
+            "# writes\nCadence.Apps.Payments|InvoiceEndpoints.Approve->SaveChangesAsync\nCadence.Apps.Payments|InvoiceEndpoints.Void->SaveChangesAsync\n");
+        Write("baselines/direct-state-writes/Cadence.Apps.Ctms.baseline.txt",
+            "# writes\nCadence.Apps.Ctms|SiteEndpoints.Create->SaveChangesAsync\n");
+        Write("baselines/cross-service-isolation/ctms/etmf.baseline.txt",
+            "# isolation\nIL|Cadence.Apps.Ctms|Cadence.Apps.Ctms.Endpoints.SiteEndpoints.Sync->Cadence.Apps.Etmf.Domain.TmfDocument\nSOURCE|ctms|apps/ctms/src/EtmfRef.cs|code:Cadence.Apps.Etmf.Domain.TmfDocument\n");
+        Write("baselines/cross-service-isolation/ctms/notifications.baseline.txt",
+            "# isolation\nSOURCE|ctms|apps/ctms/src/NotifyRef.cs|code:Cadence.Apps.Notifications.Domain.NotificationRecord\n");
+        Write("baselines/deid/files/apps/web/src/View.vue.baseline.txt",
+            "# deid\napps/web/src/View.vue|dates|0011223344556677\napps/web/src/View.vue|urls|8899aabbccddeeff\n");
+        Write("baselines/deid/files/apps/web/src/Store.ts.baseline.txt",
+            "# deid\napps/web/src/Store.ts|dates|fedcba9876543210\n");
         Write(SecretsBaselineCleanerService.ConfigFile,
             "{\n  \"version\": \"1.5.0\",\n  \"plugins_used\": [],\n  \"filters_used\": []\n}\n");
-        Write("baselines/secrets/apps/execution.secrets.baseline.json",
+        Write("baselines/secrets/files/apps/execution/src/Auth.cs.secrets.baseline.json",
             "{\n  \"results\": {\n    \"apps/execution/src/Auth.cs\": [\n      {\n        \"hashed_secret\": \"aaa\",\n        \"type\": \"Secret Keyword\"\n      },\n      {\n        \"hashed_secret\": \"bbb\",\n        \"type\": \"Secret Keyword\"\n      }\n    ]\n  }\n}\n");
-        Write("baselines/secrets/packages/auth.secrets.baseline.json",
-            "{\n  \"results\": {\n    \"packages/auth/src/Jwt.cs\": [\n      {\n        \"hashed_secret\": \"ccc\",\n        \"type\": \"Secret Keyword\"\n      }\n    ]\n  }\n}\n");
+        Write("baselines/secrets/files/apps/execution/src/Jwt.cs.secrets.baseline.json",
+            "{\n  \"results\": {\n    \"apps/execution/src/Jwt.cs\": [\n      {\n        \"hashed_secret\": \"ccc\",\n        \"type\": \"Secret Keyword\"\n      }\n    ]\n  }\n}\n");
 
         RunGit("add", ".");
         RunGit("commit", "-q", "-m", "seed sharded baselines");
@@ -2264,26 +2278,35 @@ public sealed class PreCommitGuardrailsTests : IDisposable
         RunGit("merge-file", "-p", oursFile, baseFile, theirsFile);
         Directory.Delete(mergeSimDir, recursive: true);
 
-        // Branch A pays down Execution boundary, MOD rule, apps/web DEID, and apps/execution secret.
+        // Branch A pays down one leaf owner in each of the 7 baseline gates.
         RunGit("checkout", "-q", "-b", "branch-a");
         Write("tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-boundaries/Cadence.Apps.Execution.baseline.txt",
             "# boundary\nK-XS-1|Cadence.Apps.Execution|ExecDto.StudyId\n");
         Write("tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-rule-coverage/MOD.baseline.txt",
             "# coverage\nK-MOD-3\n");
-        Write("baselines/deid/apps/web.baseline.txt",
-            "# deid\napps/web/src/Store.ts|dates|8899aabbccddeeff\n");
-        Write("baselines/secrets/apps/execution.secrets.baseline.json",
+        Write("baselines/permission-matrix/payments_invoice.baseline.txt",
+            "# rbac\npi|payments_invoice|approve\n");
+        Write("baselines/direct-state-writes/Cadence.Apps.Payments.baseline.txt",
+            "# writes\nCadence.Apps.Payments|InvoiceEndpoints.Void->SaveChangesAsync\n");
+        Write("baselines/cross-service-isolation/ctms/etmf.baseline.txt",
+            "# isolation\nIL|Cadence.Apps.Ctms|Cadence.Apps.Ctms.Endpoints.SiteEndpoints.Sync->Cadence.Apps.Etmf.Domain.TmfDocument\n");
+        Write("baselines/deid/files/apps/web/src/View.vue.baseline.txt",
+            "# deid\napps/web/src/View.vue|urls|8899aabbccddeeff\n");
+        Write("baselines/secrets/files/apps/execution/src/Auth.cs.secrets.baseline.json",
             "{\n  \"results\": {\n    \"apps/execution/src/Auth.cs\": [\n      {\n        \"hashed_secret\": \"bbb\",\n        \"type\": \"Secret Keyword\"\n      }\n    ]\n  }\n}\n");
         RunGit("add", "-A");
         RunGit("commit", "-q", "-m", "branch A paydown");
 
-        // Branch B concurrently deletes empty Ctms boundary shard, SIM rule shard, packages/ui DEID shard, and packages/auth secret shard!
+        // Branch B concurrently deletes empty sibling leaf-owner shards across all 7 baseline gates (including adjacent files in the same service/app)!
         RunGit("checkout", "-q", "main");
         RunGit("checkout", "-q", "-b", "branch-b");
         File.Delete(Path.Combine(_tempDir, "tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-boundaries/Cadence.Apps.Ctms.baseline.txt"));
         File.Delete(Path.Combine(_tempDir, "tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-rule-coverage/SIM.baseline.txt"));
-        File.Delete(Path.Combine(_tempDir, "baselines/deid/packages/ui.baseline.txt"));
-        File.Delete(Path.Combine(_tempDir, "baselines/secrets/packages/auth.secrets.baseline.json"));
+        File.Delete(Path.Combine(_tempDir, "baselines/permission-matrix/audit_event.baseline.txt"));
+        File.Delete(Path.Combine(_tempDir, "baselines/direct-state-writes/Cadence.Apps.Ctms.baseline.txt"));
+        File.Delete(Path.Combine(_tempDir, "baselines/cross-service-isolation/ctms/notifications.baseline.txt"));
+        File.Delete(Path.Combine(_tempDir, "baselines/deid/files/apps/web/src/Store.ts.baseline.txt"));
+        File.Delete(Path.Combine(_tempDir, "baselines/secrets/files/apps/execution/src/Jwt.cs.secrets.baseline.json"));
         RunGit("add", "-A");
         RunGit("commit", "-q", "-m", "branch B paydown");
 
@@ -2292,6 +2315,179 @@ public sealed class PreCommitGuardrailsTests : IDisposable
         mergeResult.Succeeded.Should().BeTrue();
         mergeResult.HasConflicts.Should().BeFalse();
         mergeResult.ConflictingFiles.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void SecretsBaselineCleaner_RejectsMultiFileShardsMismatchedPathsAndLegacyUnitShards_InCheckAndGateModes()
+    {
+        const string legacyJson =
+            """
+            {
+              "version": "1.5.0",
+              "plugins_used": [{ "name": "PrivateKeyDetector" }],
+              "filters_used": [],
+              "results": {
+                "apps/web/src/One.ts": [{ "type": "Secret Keyword", "hashed_secret": "111" }]
+              }
+            }
+            """;
+        string baselinePath = Write(".secrets.baseline", legacyJson);
+        SecretsBaselineCleanerService.CleanSecretsBaseline(baselinePath, _tempDir, check: false).Should().Be(0);
+        SecretsBaselineCleanerService.CleanSecretsBaseline(repoRoot: _tempDir, check: true).Should().Be(0);
+
+        // 1. Multi-file shard under baselines/secrets/files/ must be rejected by both clean-secrets --check and DetectSecretsGateService.
+        string oneShardRel = SecretsBaselineCleanerService.GetShardRelativePath("apps/web/src/One.ts");
+        Write(oneShardRel,
+            """
+            {
+              "results": {
+                "apps/web/src/One.ts": [{ "hashed_secret": "111", "type": "Secret Keyword" }],
+                "apps/web/src/Two.ts": [{ "hashed_secret": "222", "type": "Secret Keyword" }]
+              }
+            }
+            """);
+        SecretsBaselineCleanerService.CleanSecretsBaseline(repoRoot: _tempDir, check: true).Should().Be(1);
+
+        string stubBinDir = CreateDetectSecretsHookStub();
+        string systemPath = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
+        var stubEnv = new Dictionary<string, string?>(StringComparer.Ordinal)
+        {
+            ["PATH"] = string.IsNullOrEmpty(systemPath) ? stubBinDir : $"{stubBinDir}{Path.PathSeparator}{systemPath}",
+            [DetectSecretsGateService.DisableUvxFallbackEnvVar] = "1",
+        };
+        Write("apps/web/src/One.ts", "export const ok = 1;\n");
+        DetectSecretsGateService.Scan(_tempDir, ["apps/web/src/One.ts"], preCommit: false, key => stubEnv.GetValueOrDefault(key))
+            .Should().Be(1, "DetectSecretsGateService must fail closed when a secrets shard contains multiple files");
+
+        // Restore valid single-file shard via CleanSecretsBaseline(check: false), which splits Two.ts into its own normalized shard.
+        SecretsBaselineCleanerService.CleanSecretsBaseline(repoRoot: _tempDir, check: false).Should().Be(0);
+        File.Exists(Path.Combine(_tempDir, SecretsBaselineCleanerService.GetShardRelativePath("apps/web/src/Two.ts"))).Should().BeTrue();
+        SecretsBaselineCleanerService.CleanSecretsBaseline(repoRoot: _tempDir, check: true).Should().Be(0);
+
+        // 2. Legacy unit-level shard outside baselines/secrets/files/ must be rejected in check mode.
+        Write("baselines/secrets/apps/web.secrets.baseline.json",
+            "{\n  \"results\": {\n    \"apps/web/src/One.ts\": [\n      {\n        \"hashed_secret\": \"111\",\n        \"type\": \"Secret Keyword\"\n      }\n    ]\n  }\n}\n");
+        SecretsBaselineCleanerService.CleanSecretsBaseline(repoRoot: _tempDir, check: true).Should().Be(1);
+    }
+
+    [Fact]
+    public void PermissionMatrixRatchetService_ShardsPerResource_PrunesStaleGrantsOnUpdate_DeletesEmptyShards_AndRejectsInvalidShards()
+    {
+        var runtimeGrants = PermissionMatrixRatchetService.GetRuntimeGrants();
+        string staleGrant = "zzz_retired_role|zzz_retired_resource|read";
+        var seededGrants = new SortedSet<string>(runtimeGrants, StringComparer.Ordinal) { staleGrant };
+        PermissionMatrixRatchetService.WriteBaselineShards(_tempDir, seededGrants);
+
+        string retiredShardPath = Path.Combine(_tempDir, PermissionMatrixRatchetService.GetShardRelativePath("zzz_retired_resource"));
+        File.Exists(retiredShardPath).Should().BeTrue();
+
+        // Without CADENCE_UPDATE_BASELINE=1, the retired grant is reported as stale and Check fails (1).
+        PermissionMatrixRatchetService.Check(_tempDir).Should().Be(1);
+        File.Exists(retiredShardPath).Should().BeTrue();
+
+        string? prevUpdate = Environment.GetEnvironmentVariable("CADENCE_UPDATE_BASELINE");
+        try
+        {
+            Environment.SetEnvironmentVariable("CADENCE_UPDATE_BASELINE", "1");
+
+            // With CADENCE_UPDATE_BASELINE=1, stale grant is pruned and its empty shard is deleted.
+            PermissionMatrixRatchetService.Check(_tempDir).Should().Be(0);
+            File.Exists(retiredShardPath).Should().BeFalse("empty resource shard must be deleted");
+
+            // Unbaselined static Grant(...) call must still fail (1) and never create a new shard under CADENCE_UPDATE_BASELINE=1!
+            Write(
+                "apps/payments/src/Rbac/ShadowGrant.cs",
+                "namespace Cadence.Apps.Payments.Rbac;\npublic static class ShadowGrant\n{\n    public static void Init() => Grant(\"pi\", \"unbaselined_shadow_res\", \"approve\");\n}\n");
+            PermissionMatrixRatchetService.Check(_tempDir).Should().Be(1);
+            File.Exists(Path.Combine(_tempDir, PermissionMatrixRatchetService.GetShardRelativePath("unbaselined_shadow_res")))
+                .Should().BeFalse("CADENCE_UPDATE_BASELINE=1 must never create new permission-matrix shards");
+            File.Delete(Path.Combine(_tempDir, "apps/payments/src/Rbac/ShadowGrant.cs"));
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("CADENCE_UPDATE_BASELINE", prevUpdate);
+        }
+
+        PermissionMatrixRatchetService.Check(_tempDir).Should().Be(0);
+
+        // Legacy monolithic permission-matrix.baseline.txt must fail closed.
+        Write(PermissionMatrixRatchetService.LegacyBaselineRelativePath, "# legacy\n");
+        PermissionMatrixRatchetService.Check(_tempDir).Should().Be(1);
+        File.Delete(Path.Combine(_tempDir, PermissionMatrixRatchetService.LegacyBaselineRelativePath));
+
+        // Empty shard and mismatched resource owner must fail closed.
+        Write("baselines/permission-matrix/zzz_empty.baseline.txt", "# empty\n");
+        PermissionMatrixRatchetService.Check(_tempDir).Should().Be(1);
+
+        Write("baselines/permission-matrix/zzz_empty.baseline.txt", "crc|wrong_resource|read\n");
+        PermissionMatrixRatchetService.Check(_tempDir).Should().Be(1);
+    }
+
+    [Fact]
+    public void ImportValidatorService_ShardsPerServicePair_PrunesOnlyStaleSourceEntriesPreservingIlEntries_DeletesEmptyShards_AndRejectsLegacyShards()
+    {
+        Write("apps/ctms/src/Endpoints/SiteEndpoints.cs", "namespace Cadence.Apps.Ctms.Endpoints;\npublic static class SiteEndpoints {}\n");
+        Write("apps/etmf/src/Endpoints/DocEndpoints.cs", "namespace Cadence.Apps.Etmf.Endpoints;\npublic static class DocEndpoints {}\n");
+        Write("apps/notifications/src/Endpoints/NotifyEndpoints.cs", "namespace Cadence.Apps.Notifications.Endpoints;\npublic static class NotifyEndpoints {}\n");
+
+        string etmfShardRel = ImportValidatorService.GetShardRelativePath("ctms", "etmf");
+        string notifyShardRel = ImportValidatorService.GetShardRelativePath("ctms", "notifications");
+
+        // Seed mixed IL + stale SOURCE in ctms/etmf, and stale SOURCE-only in ctms/notifications.
+        Write(etmfShardRel,
+            ImportValidatorService.BuildShardHeader("ctms", "etmf").Aggregate(string.Empty, (acc, l) => acc + l + "\n") +
+            "IL|Cadence.Apps.Ctms|Cadence.Apps.Ctms.Endpoints.SiteEndpoints.Sync->Cadence.Apps.Etmf.Endpoints.DocEndpoints\n" +
+            "SOURCE|ctms|apps/ctms/src/Endpoints/SiteEndpoints.cs|code:Cadence.Apps.Etmf.Endpoints\n");
+        Write(notifyShardRel,
+            ImportValidatorService.BuildShardHeader("ctms", "notifications").Aggregate(string.Empty, (acc, l) => acc + l + "\n") +
+            "SOURCE|ctms|apps/ctms/src/Endpoints/SiteEndpoints.cs|code:Cadence.Apps.Notifications.Endpoints\n");
+
+        // Without CADENCE_UPDATE_BASELINE=1, stale SOURCE entries fail ValidateImports (1).
+        ImportValidatorService.ValidateImports(_tempDir).Should().Be(1);
+
+        string? prevUpdate = Environment.GetEnvironmentVariable("CADENCE_UPDATE_BASELINE");
+        try
+        {
+            Environment.SetEnvironmentVariable("CADENCE_UPDATE_BASELINE", "1");
+
+            // With CADENCE_UPDATE_BASELINE=1, stale SOURCE entries are pruned, IL entries are preserved in ctms/etmf, and empty ctms/notifications shard is deleted!
+            ImportValidatorService.ValidateImports(_tempDir).Should().Be(0);
+            File.Exists(Path.Combine(_tempDir, notifyShardRel)).Should().BeFalse("empty ctms/notifications shard must be deleted");
+            File.ReadAllText(Path.Combine(_tempDir, etmfShardRel))
+                .Should().Contain("IL|Cadence.Apps.Ctms|Cadence.Apps.Ctms.Endpoints.SiteEndpoints.Sync->Cadence.Apps.Etmf.Endpoints.DocEndpoints")
+                .And.NotContain("SOURCE|");
+
+            // Introducing a brand-new cross-service reference under CADENCE_UPDATE_BASELINE=1 must still fail (1) and never write to disk!
+            Write("apps/ctms/src/Endpoints/SiteEndpoints.cs",
+                "using Cadence.Apps.Notifications.Endpoints;\nnamespace Cadence.Apps.Ctms.Endpoints;\npublic static class SiteEndpoints {}\n");
+            ImportValidatorService.ValidateImports(_tempDir).Should().Be(1);
+            File.Exists(Path.Combine(_tempDir, notifyShardRel)).Should().BeFalse("CADENCE_UPDATE_BASELINE=1 must never recreate shards for new violations");
+            Write("apps/ctms/src/Endpoints/SiteEndpoints.cs", "namespace Cadence.Apps.Ctms.Endpoints;\npublic static class SiteEndpoints {}\n");
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("CADENCE_UPDATE_BASELINE", prevUpdate);
+        }
+
+        // Pruning the remaining shard down to zero deletes empty parent directory baselines/cross-service-isolation/ctms as well.
+        Write(etmfShardRel,
+            ImportValidatorService.BuildShardHeader("ctms", "etmf").Aggregate(string.Empty, (acc, l) => acc + l + "\n") +
+            "SOURCE|ctms|apps/ctms/src/Endpoints/SiteEndpoints.cs|code:Cadence.Apps.Etmf.Endpoints\n");
+        try
+        {
+            Environment.SetEnvironmentVariable("CADENCE_UPDATE_BASELINE", "1");
+            ImportValidatorService.ValidateImports(_tempDir).Should().Be(0);
+            Directory.Exists(Path.Combine(_tempDir, "baselines/cross-service-isolation/ctms"))
+                .Should().BeFalse("empty source-service directory under baselines/cross-service-isolation must be deleted");
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("CADENCE_UPDATE_BASELINE", prevUpdate);
+        }
+
+        // Legacy monolithic cross-service-isolation.baseline.txt must fail closed.
+        Write(ImportValidatorService.LegacyBaselineRelativePath, "# legacy\n");
+        ImportValidatorService.ValidateImports(_tempDir).Should().Be(1);
     }
 
     private static (int ExitCode, string CombinedOutput) RunWizardWithCustomPath(

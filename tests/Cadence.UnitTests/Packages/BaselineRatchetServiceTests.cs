@@ -54,6 +54,11 @@ public sealed class BaselineRatchetServiceTests : IDisposable
     [Theory]
     [InlineData("tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-boundaries/Cadence.Apps.Execution.baseline.txt", true)]
     [InlineData("tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-rule-coverage/MOD.baseline.txt", true)]
+    [InlineData("baselines/permission-matrix/payments_invoice.baseline.txt", true)]
+    [InlineData("baselines/direct-state-writes/Cadence.Apps.Payments.baseline.txt", true)]
+    [InlineData("baselines/cross-service-isolation/ctms/etmf.baseline.txt", true)]
+    [InlineData("baselines/deid/files/apps/web/src/App.vue.baseline.txt", true)]
+    [InlineData("baselines/secrets/files/apps/web/src/Sample.ts.secrets.baseline.json", true)]
     [InlineData("baselines/deid/apps/web.baseline.txt", true)]
     [InlineData("baselines/deid/root.baseline.txt", true)]
     [InlineData("baselines/secrets/apps/web.secrets.baseline.json", true)]
@@ -598,6 +603,82 @@ public sealed class BaselineRatchetServiceTests : IDisposable
             pushBefore: GitRevisionScopeService.AllZeroSha,
             eventName: "push",
             gitRef: "refs/heads/release/1.2").Should().Be(0);
+    }
+
+    [Fact]
+    public void SentinelAndComplianceGates_MapLegacyAndShardedPathsToSameGateKeys_AllowZeroNetSplits_AndEnforceScopedTrailers()
+    {
+        BaselineRatchetService.IsKnownGateKey("tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-boundaries").Should().BeTrue();
+        BaselineRatchetService.IsKnownGateKey("tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-rule-coverage").Should().BeTrue();
+        BaselineRatchetService.IsKnownGateKey("baselines/permission-matrix").Should().BeTrue();
+        BaselineRatchetService.IsKnownGateKey("baselines/direct-state-writes").Should().BeTrue();
+        BaselineRatchetService.IsKnownGateKey("baselines/cross-service-isolation").Should().BeTrue();
+        BaselineRatchetService.IsKnownGateKey("baselines/deid").Should().BeTrue();
+        BaselineRatchetService.IsKnownGateKey("baselines/secrets").Should().BeTrue();
+
+        BaselineRatchetService.GetGateKey("tests/Cadence.ArchitectureTests/ArchitectureBaselines/permission-matrix.baseline.txt")
+            .Should().Be("baselines/permission-matrix");
+        BaselineRatchetService.GetGateKey("baselines/permission-matrix/payments_invoice.baseline.txt")
+            .Should().Be("baselines/permission-matrix");
+
+        BaselineRatchetService.GetGateKey("tests/Cadence.ArchitectureTests/ArchitectureBaselines/direct-state-writes.baseline.txt")
+            .Should().Be("baselines/direct-state-writes");
+        BaselineRatchetService.GetGateKey("baselines/direct-state-writes/Cadence.Apps.Payments.baseline.txt")
+            .Should().Be("baselines/direct-state-writes");
+
+        BaselineRatchetService.GetGateKey("tests/Cadence.ArchitectureTests/ArchitectureBaselines/cross-service-isolation.baseline.txt")
+            .Should().Be("baselines/cross-service-isolation");
+        BaselineRatchetService.GetGateKey("baselines/cross-service-isolation/ctms/etmf.baseline.txt")
+            .Should().Be("baselines/cross-service-isolation");
+
+        BaselineRatchetService.GetGateKey("baselines/deid/files/apps/web/src/App.vue.baseline.txt")
+            .Should().Be("baselines/deid");
+        BaselineRatchetService.GetGateKey("baselines/secrets/files/apps/web/src/Sample.ts.secrets.baseline.json")
+            .Should().Be("baselines/secrets");
+
+        // Seed legacy monolithic sentinel baselines on main, then split them into leaf-owner shards on feature with zero net additions.
+        Git("checkout", "-q", "main");
+        Write(
+            "tests/Cadence.ArchitectureTests/ArchitectureBaselines/permission-matrix.baseline.txt",
+            "# rbac\ncrc|audit_event|read\npi|payments_invoice|approve\n");
+        Write(
+            "tests/Cadence.ArchitectureTests/ArchitectureBaselines/direct-state-writes.baseline.txt",
+            "# writes\nCadence.Apps.Ctms|SiteEndpoints.Create->SaveChangesAsync\nCadence.Apps.Payments|InvoiceEndpoints.Approve->SaveChangesAsync\n");
+        Write(
+            "tests/Cadence.ArchitectureTests/ArchitectureBaselines/cross-service-isolation.baseline.txt",
+            "# isolation\nIL|Cadence.Apps.Ctms->Cadence.Apps.Etmf.EtmfClient\nSOURCE|apps/ctms/src/A.cs|Cadence.Apps.Notifications.NotifyClient\n");
+        Commit("chore: seed legacy sentinel baselines on main\n\n" +
+               "Baseline-Growth: baselines/permission-matrix +2 - seed rbac\n" +
+               "Baseline-Growth: baselines/direct-state-writes +2 - seed writes\n" +
+               "Baseline-Growth: baselines/cross-service-isolation +2 - seed isolation");
+        Git("update-ref", "refs/remotes/origin/main", "HEAD");
+
+        Git("checkout", "-q", "-B", "feature");
+        File.Delete(Path.Combine(_dir, "tests/Cadence.ArchitectureTests/ArchitectureBaselines/permission-matrix.baseline.txt"));
+        File.Delete(Path.Combine(_dir, "tests/Cadence.ArchitectureTests/ArchitectureBaselines/direct-state-writes.baseline.txt"));
+        File.Delete(Path.Combine(_dir, "tests/Cadence.ArchitectureTests/ArchitectureBaselines/cross-service-isolation.baseline.txt"));
+
+        Write("baselines/permission-matrix/audit_event.baseline.txt", "# rbac\ncrc|audit_event|read\n");
+        Write("baselines/permission-matrix/payments_invoice.baseline.txt", "# rbac\npi|payments_invoice|approve\n");
+        Write("baselines/direct-state-writes/Cadence.Apps.Ctms.baseline.txt", "# writes\nCadence.Apps.Ctms|SiteEndpoints.Create->SaveChangesAsync\n");
+        Write("baselines/direct-state-writes/Cadence.Apps.Payments.baseline.txt", "# writes\nCadence.Apps.Payments|InvoiceEndpoints.Approve->SaveChangesAsync\n");
+        Write("baselines/cross-service-isolation/ctms/etmf.baseline.txt", "# isolation\nIL|Cadence.Apps.Ctms->Cadence.Apps.Etmf.EtmfClient\n");
+        Write("baselines/cross-service-isolation/ctms/notifications.baseline.txt", "# isolation\nSOURCE|apps/ctms/src/A.cs|Cadence.Apps.Notifications.NotifyClient\n");
+        Commit("refactor: shard sentinel baselines per leaf owner without net additions");
+        Check().Should().Be(0, "splitting legacy sentinel baselines into per-owner shards preserves each gate multiset");
+
+        // Net growth in a shard requires an exact shard-scoped or gate-scoped Baseline-Growth trailer.
+        Write("baselines/permission-matrix/payments_invoice.baseline.txt", "# rbac\ncrc|payments_invoice|read\npi|payments_invoice|approve\n");
+        Commit("feat: add unaccepted rbac grant");
+        Check().Should().Be(1);
+
+        Git("commit", "--amend", "-q", "-m",
+            "feat: admit rbac shard growth\n\nBaseline-Growth: baselines/permission-matrix/payments_invoice.baseline.txt +1 - legacy role migration");
+        Check().Should().Be(0);
+
+        Git("commit", "--amend", "-q", "-m",
+            "feat: admit rbac gate growth\n\nBaseline-Growth: baselines/permission-matrix +1 - legacy role migration");
+        Check().Should().Be(0);
     }
 
     private int Check() => BaselineRatchetService.Check(_dir, preCommit: false, environment: NoEnvironment);

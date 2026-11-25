@@ -120,8 +120,10 @@ public sealed class DeidComplianceServiceTests : IDisposable
     [InlineData("apps/web/src/views/Home.test.ts", true)]
     [InlineData(".deid-baseline.txt", true)]
     [InlineData("baselines/deid/apps/web.baseline.txt", true)]
+    [InlineData("baselines/deid/files/apps/web/src/App.vue.baseline.txt", true)]
     [InlineData("baselines/secrets/config.json", true)]
     [InlineData("baselines/secrets/apps/web.secrets.baseline.json", true)]
+    [InlineData("baselines/secrets/files/apps/web/src/Sample.ts.secrets.baseline.json", true)]
     [InlineData("packages/deid/src/DeidDetector.cs", true)]
     [InlineData("README.md", false)]
     [InlineData("AGENTS.md", false)]
@@ -259,17 +261,18 @@ public sealed class DeidComplianceServiceTests : IDisposable
     public void ScanDeidCompliance_FailsOnAStaleEntryForAScannedFile_ButIgnoresEntriesForOtherFiles()
     {
         string clean = Write("apps/x/Clean.cs", "var answer = 42;\n");
-        string shardRel = DeidComplianceService.GetShardRelativePath("apps/x/Clean.cs");
+        string otherShardRel = DeidComplianceService.GetShardRelativePath("apps/x/Other.cs");
+        string cleanShardRel = DeidComplianceService.GetShardRelativePath("apps/x/Clean.cs");
 
-        Write(shardRel, "apps/x/Other.cs|dates|0123456789abcdef\n");
+        Write(otherShardRel, "apps/x/Other.cs|dates|0123456789abcdef\n");
         DeidComplianceService.ScanDeidCompliance([clean], _dir).Should().Be(0);
 
-        Write(shardRel, "apps/x/Clean.cs|dates|0123456789abcdef\n");
+        Write(cleanShardRel, "apps/x/Clean.cs|dates|0123456789abcdef\n");
         DeidComplianceService.ScanDeidCompliance([clean], _dir).Should().Be(1);
     }
 
     [Fact]
-    public void ScanDeidCompliance_ScopedUpdateBaseline_SubtractsOnlyResolvedEntries_DeletesEmptyShards_AndNeverAddsNewFindings()
+    public void ScanDeidCompliance_ScopedUpdateBaseline_SubtractsOnlyResolvedEntries_DeletesEmptyShardsAndParentDirs_AndNeverAddsNewFindings()
     {
         string alphaFixed = Write("apps/alpha/Fixed.cs", "var clean = 1;\n");
         string alphaKept = Write("apps/alpha/Kept.cs", "var dob = \"1971-03-14\";\n");
@@ -290,32 +293,69 @@ public sealed class DeidComplianceServiceTests : IDisposable
             "1982-06-01");
 
         DeidComplianceService.WriteBaselineShards(_dir, [keptKey, staleAlphaKey, staleBetaKey, gammaKey]);
-        string gammaShardPath = Path.Combine(_dir, "baselines/deid/packages/gamma.baseline.txt");
-        string betaShardPath = Path.Combine(_dir, "baselines/deid/apps/beta.baseline.txt");
-        string alphaShardPath = Path.Combine(_dir, "baselines/deid/apps/alpha.baseline.txt");
+        string gammaShardPath = Path.Combine(_dir, DeidComplianceService.GetShardRelativePath("packages/gamma/Untouched.cs"));
+        string betaShardPath = Path.Combine(_dir, DeidComplianceService.GetShardRelativePath("apps/beta/Resolved.cs"));
+        string alphaFixedShardPath = Path.Combine(_dir, DeidComplianceService.GetShardRelativePath("apps/alpha/Fixed.cs"));
+        string alphaKeptShardPath = Path.Combine(_dir, DeidComplianceService.GetShardRelativePath("apps/alpha/Kept.cs"));
         string gammaBefore = File.ReadAllText(gammaShardPath);
+        string alphaKeptBefore = File.ReadAllText(alphaKeptShardPath);
 
         string? prevUpdate = Environment.GetEnvironmentVariable("CADENCE_UPDATE_BASELINE");
         try
         {
             Environment.SetEnvironmentVariable("CADENCE_UPDATE_BASELINE", "1");
 
-            // Scoped update on apps/alpha/Fixed.cs and apps/beta/Resolved.cs prunes staleAlphaKey, deletes empty beta shard, and leaves gamma untouched.
+            // Scoped update on apps/alpha/Fixed.cs and apps/beta/Resolved.cs deletes empty Fixed.cs and Resolved.cs shards (and empty apps/beta dir) while leaving Kept.cs and Untouched.cs untouched.
             DeidComplianceService.ScanDeidCompliance([alphaFixed, betaResolved], _dir).Should().Be(0);
-            File.Exists(betaShardPath).Should().BeFalse("empty apps/beta shard must be deleted");
+            File.Exists(alphaFixedShardPath).Should().BeFalse("empty per-file Fixed.cs shard must be deleted");
+            File.Exists(betaShardPath).Should().BeFalse("empty per-file Resolved.cs shard must be deleted");
+            Directory.Exists(Path.Combine(_dir, "baselines/deid/files/apps/beta")).Should().BeFalse("empty parent directory under baselines/deid/files must be pruned");
             File.ReadAllText(gammaShardPath).Should().Be(gammaBefore, "untouched shard must not be rewritten");
-            File.ReadAllText(alphaShardPath).Should().Contain(keptKey).And.NotContain(staleAlphaKey);
+            File.ReadAllText(alphaKeptShardPath).Should().Be(alphaKeptBefore, "sibling per-file shard in apps/alpha must remain untouched");
 
-            // Introducing a brand-new violation under CADENCE_UPDATE_BASELINE=1 must still fail (1) and never write the new finding to disk.
+            // Introducing a brand-new violation under CADENCE_UPDATE_BASELINE=1 must still fail (1) and never write a new shard or finding to disk.
             string alphaNewViolation = Write("apps/alpha/NewViolation.cs", "var ssn = \"000-12-3456\";\n");
-            string alphaBeforeNewViolation = File.ReadAllText(alphaShardPath);
+            string newViolationShardPath = Path.Combine(_dir, DeidComplianceService.GetShardRelativePath("apps/alpha/NewViolation.cs"));
             DeidComplianceService.ScanDeidCompliance([alphaNewViolation, alphaKept], _dir).Should().Be(1);
-            File.ReadAllText(alphaShardPath).Should().Be(alphaBeforeNewViolation, "CADENCE_UPDATE_BASELINE=1 must never add new findings");
+            File.Exists(newViolationShardPath).Should().BeFalse("CADENCE_UPDATE_BASELINE=1 must never create new shards");
+            File.ReadAllText(alphaKeptShardPath).Should().Be(alphaKeptBefore, "CADENCE_UPDATE_BASELINE=1 must never mutate sibling shards");
         }
         finally
         {
             Environment.SetEnvironmentVariable("CADENCE_UPDATE_BASELINE", prevUpdate);
         }
+    }
+
+    [Fact]
+    public void ScanDeidCompliance_RejectsLegacyMonolithicLegacyUnitEmptyUnsortedAndMismatchedFileShards()
+    {
+        string clean = Write("apps/x/Clean.cs", "var answer = 42;\n");
+
+        // 1. Legacy root .deid-baseline.txt is rejected.
+        Write(".deid-baseline.txt", "# legacy\n");
+        DeidComplianceService.ScanDeidCompliance([clean], _dir).Should().Be(1);
+        File.Delete(Path.Combine(_dir, ".deid-baseline.txt"));
+
+        // 2. Legacy unit-level shard outside baselines/deid/files/ is rejected.
+        Write("baselines/deid/apps/x.baseline.txt", "# legacy unit\napps/x/Clean.cs|dates|0123456789abcdef\n");
+        DeidComplianceService.ScanDeidCompliance([clean], _dir).Should().Be(1);
+        File.Delete(Path.Combine(_dir, "baselines/deid/apps/x.baseline.txt"));
+
+        // 3. Empty per-file shard is rejected.
+        string otherShardRel = DeidComplianceService.GetShardRelativePath("apps/x/Other.cs");
+        Write(otherShardRel, "# empty shard\n");
+        DeidComplianceService.ScanDeidCompliance([clean], _dir).Should().Be(1);
+
+        // 4. Mismatched source file inside per-file shard is rejected.
+        Write(otherShardRel, "apps/x/WrongFile.cs|dates|0123456789abcdef\n");
+        DeidComplianceService.ScanDeidCompliance([clean], _dir).Should().Be(1);
+
+        // 5. Unsorted entries inside per-file shard are rejected, while sorted (including repeated multiset tokens) pass.
+        Write(otherShardRel, "apps/x/Other.cs|urls|bbbbbbbbbbbbbbbb\napps/x/Other.cs|dates|aaaaaaaaaaaaaaaa\n");
+        DeidComplianceService.ScanDeidCompliance([clean], _dir).Should().Be(1);
+
+        Write(otherShardRel, "apps/x/Other.cs|dates|aaaaaaaaaaaaaaaa\napps/x/Other.cs|dates|aaaaaaaaaaaaaaaa\napps/x/Other.cs|urls|bbbbbbbbbbbbbbbb\n");
+        DeidComplianceService.ScanDeidCompliance([clean], _dir).Should().Be(0);
     }
 
     private string Write(string relativePath, string content)

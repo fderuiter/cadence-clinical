@@ -1,0 +1,29 @@
+# Shrink-only RBAC role-to-permission grant baseline shard for resource 'ecoa_submission'.
+# Sorted ordinally as <role>|<resource>|<action> (lowercase).
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check permission-matrix or CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.
+admin|ecoa_submission|create
+admin|ecoa_submission|read
+authorized_er_physician|ecoa_submission|create
+authorized_er_physician|ecoa_submission|read
+cra|ecoa_submission|create
+cra|ecoa_submission|read
+crc|ecoa_submission|create
+crc|ecoa_submission|read
+investigator|ecoa_submission|create
+investigator|ecoa_submission|read
+lead_investigator|ecoa_submission|create
+lead_investigator|ecoa_submission|read
+monitor|ecoa_submission|create
+monitor|ecoa_submission|read
+principal_investigator|ecoa_submission|create
+principal_investigator|ecoa_submission|read
+sponsor_designer|ecoa_submission|create
+sponsor_designer|ecoa_submission|read
+sponsor_dm|ecoa_submission|create
+sponsor_dm|ecoa_submission|read
+subject|ecoa_submission|create
+subject|ecoa_submission|read
+sysadmin|ecoa_submission|create
+sysadmin|ecoa_submission|read
+trial_coordinator|ecoa_submission|create
+trial_coordinator|ecoa_submission|read

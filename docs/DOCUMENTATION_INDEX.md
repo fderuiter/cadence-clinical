@@ -641,6 +641,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2675: Standardize Semantic Role Tokens, Dark-Theme Parity, and ESLint AST Color Gates](adr/2026-11-23-standardize-semantic-role-tokens-and-eslint-color-gates.md) | Current | - Status: Accepted |
 | [ADR-2676: Focus-Trap Detachment Recovery, Shared Retry Focus Primitives, and Inline Focus-Handoff AST Gates](adr/2026-11-24-focus-trap-detachment-recovery-and-retry-focus-primitives.md) | Current | - Status: Accepted |
 | [ADR-2824: Standardize Clinical Typography Utilities, 12px Floor, and AST Lints](adr/2026-11-24-standardize-clinical-typography-utilities-12px-floor-and-ast-lints.md) | Current | - Status: Accepted |
+| [ADR-2834: Shard Sentinel and Compliance Baselines Per Leaf Owner](adr/2026-11-24-shard-sentinel-and-compliance-baselines-per-leaf-owner.md) | Current | - Status: Accepted |
 
 ## Developing and running
 

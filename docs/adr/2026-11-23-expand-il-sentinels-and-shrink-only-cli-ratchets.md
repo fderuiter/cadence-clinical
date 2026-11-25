@@ -57,8 +57,8 @@ Architectural sentinels and CLI ratchet gates previously left seven enforcement 
 ## 5. Consequences & Trade-offs
 
 - **Positive Impact:** Unapproved `SaveChanges*` mutations, unbaselined RBAC grants or shadow role maps, unreferenced production projects, raw `SubjectId`/`TenantId` or wire-alias leaks, cross-service reflection coupling, and unscoped baseline growth fail immediately in pre-commit, `pnpm cadence check`, and CI.
-- **Negative Impact / Technical Debt:** Existing legacy call sites are captured in shrink-only baselines (`direct-state-writes.baseline.txt`, `permission-matrix.baseline.txt`, `cross-service-isolation.baseline.txt`, and `kernel-boundaries/*.baseline.txt`).
-- **Mitigation Strategy:** `ShrinkOnlyBaseline` and `KernelBoundaryBaseline` automatically prune resolved legacy entries under `CADENCE_UPDATE_BASELINE=1` while refusing to add new entries unless an explicit file-and-count-scoped `Baseline-Growth` approval is supplied.
+- **Negative Impact / Technical Debt:** Existing legacy call sites are captured in shrink-only baselines (`direct-state-writes`, `permission-matrix`, `cross-service-isolation`, and `kernel-boundaries`, subsequently sharded per leaf owner under `baselines/` in [ADR-2834](2026-11-24-shard-sentinel-and-compliance-baselines-per-leaf-owner.md)).
+- **Mitigation Strategy:** `ShrinkOnlyBaseline`, `PermissionMatrixRatchetService`, `ImportValidatorService`, and `KernelBoundaryBaseline` automatically prune resolved legacy entries (and delete empty shards) under `CADENCE_UPDATE_BASELINE=1` while refusing to add new entries unless an explicit file-and-count-scoped `Baseline-Growth` approval is supplied.
 
 ## 6. Implementation & Verification
 

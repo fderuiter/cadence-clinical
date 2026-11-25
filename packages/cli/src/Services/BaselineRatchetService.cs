@@ -11,8 +11,9 @@ namespace Cadence.Cli.Services;
 
 /// <summary>
 /// The <c>baseline-ratchet</c> gate (#5318): a ratchet baseline may only shrink. Every tracked ratchet baseline (the
-/// kernel-boundary shards, kernel-rule-coverage shards, <c>baselines/deid/*.baseline.txt</c> shards,
-/// <c>baselines/secrets/*.secrets.baseline.json</c> shards, and any standalone <c>*.baseline.txt</c> or
+/// kernel-boundary, kernel-rule-coverage, <c>baselines/permission-matrix</c>, <c>baselines/direct-state-writes</c>,
+/// <c>baselines/cross-service-isolation</c>, <c>baselines/deid/files/*.baseline.txt</c>, and
+/// <c>baselines/secrets/files/*.secrets.baseline.json</c> shards, plus any standalone <c>*.baseline.txt</c> or
 /// <c>*-baseline.txt</c> file) is aggregated per gate as one multiset across every commit in <c>compareBase..HEAD</c>
 /// and in the working tree. Any commit that grows a baseline gate must carry a file-and-count-scoped
 /// <c>Baseline-Growth: &lt;path&gt; +&lt;count&gt; - &lt;reason&gt;</c> trailer, and dirty working-tree baseline growth
@@ -36,6 +37,9 @@ public static class BaselineRatchetService
 
     public const string KernelBoundariesGate = "tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-boundaries";
     public const string KernelRuleCoverageGate = "tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-rule-coverage";
+    public const string PermissionMatrixGate = PermissionMatrixRatchetService.BaselineDirectory;
+    public const string DirectStateWritesGate = BaselinesRootPrefix + "direct-state-writes";
+    public const string CrossServiceIsolationGate = ImportValidatorService.BaselineDirectory;
     public const string DeidGate = BaselinesRootPrefix + "deid";
     public const string SecretsGate = SecretsBaselineCleanerService.SecretsDirectory;
 
@@ -45,6 +49,9 @@ public static class BaselineRatchetService
     private const string LegacyDeidBaseline = ".deid-baseline.txt";
     private const string LegacyKernelBoundariesBaseline = "tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-boundaries.baseline.txt";
     private const string LegacyKernelRuleCoverageBaseline = "tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-rule-coverage.baseline.txt";
+    private const string LegacyPermissionMatrixBaseline = PermissionMatrixRatchetService.LegacyBaselineRelativePath;
+    private const string LegacyDirectStateWritesBaseline = "tests/Cadence.ArchitectureTests/ArchitectureBaselines/direct-state-writes.baseline.txt";
+    private const string LegacyCrossServiceIsolationBaseline = ImportValidatorService.LegacyBaselineRelativePath;
     private const int MaxListed = 20;
 
     /// <summary>One baseline file or gate that gained entries.</summary>
@@ -92,6 +99,27 @@ public static class BaselineRatchetService
             return KernelRuleCoverageGate;
         }
 
+        if (normalized.Equals(LegacyPermissionMatrixBaseline, StringComparison.Ordinal) ||
+            normalized.Equals(PermissionMatrixGate, StringComparison.Ordinal) ||
+            normalized.StartsWith(PermissionMatrixGate + "/", StringComparison.Ordinal))
+        {
+            return PermissionMatrixGate;
+        }
+
+        if (normalized.Equals(LegacyDirectStateWritesBaseline, StringComparison.Ordinal) ||
+            normalized.Equals(DirectStateWritesGate, StringComparison.Ordinal) ||
+            normalized.StartsWith(DirectStateWritesGate + "/", StringComparison.Ordinal))
+        {
+            return DirectStateWritesGate;
+        }
+
+        if (normalized.Equals(LegacyCrossServiceIsolationBaseline, StringComparison.Ordinal) ||
+            normalized.Equals(CrossServiceIsolationGate, StringComparison.Ordinal) ||
+            normalized.StartsWith(CrossServiceIsolationGate + "/", StringComparison.Ordinal))
+        {
+            return CrossServiceIsolationGate;
+        }
+
         if (normalized.Equals(LegacyDeidBaseline, StringComparison.Ordinal) ||
             normalized.Equals(DeidGate, StringComparison.Ordinal) ||
             normalized.StartsWith(DeidGate + "/", StringComparison.Ordinal))
@@ -112,7 +140,14 @@ public static class BaselineRatchetService
     public static bool IsKnownGateKey(string path)
     {
         string normalized = NormalizeBaselinePath(path);
-        return normalized is KernelBoundariesGate or KernelRuleCoverageGate or DeidGate or SecretsGate;
+        return normalized is
+            KernelBoundariesGate or
+            KernelRuleCoverageGate or
+            PermissionMatrixGate or
+            DirectStateWritesGate or
+            CrossServiceIsolationGate or
+            DeidGate or
+            SecretsGate;
     }
 
     /// <summary>

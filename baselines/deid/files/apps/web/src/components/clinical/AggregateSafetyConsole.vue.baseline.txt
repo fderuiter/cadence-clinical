@@ -1,0 +1,17 @@
+# DEID scan ratchet baseline shard (pnpm cadence check deid). Findings that predate the full detector and are not PHI.
+# One per line: path|category|first 16 hex digits of SHA-256(trimmed matched value). Sorted ordinally. Shards may only shrink.
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check deid [files...] (docs/cli.md).
+apps/web/src/components/clinical/AggregateSafetyConsole.vue|dates|414302dbf5eaf5ea
+apps/web/src/components/clinical/AggregateSafetyConsole.vue|dates|414302dbf5eaf5ea
+apps/web/src/components/clinical/AggregateSafetyConsole.vue|dates|43833086dcbaea83
+apps/web/src/components/clinical/AggregateSafetyConsole.vue|dates|484a658e2e6d5980
+apps/web/src/components/clinical/AggregateSafetyConsole.vue|dates|49e9ac6b2833d611
+apps/web/src/components/clinical/AggregateSafetyConsole.vue|dates|a910217238932289
+apps/web/src/components/clinical/AggregateSafetyConsole.vue|dates|a9309ae11917bf0a
+apps/web/src/components/clinical/AggregateSafetyConsole.vue|dates|aa939a761f410928
+apps/web/src/components/clinical/AggregateSafetyConsole.vue|dates|cde101dfb8021e2c
+apps/web/src/components/clinical/AggregateSafetyConsole.vue|dates|cde101dfb8021e2c
+apps/web/src/components/clinical/AggregateSafetyConsole.vue|dates|cde101dfb8021e2c
+apps/web/src/components/clinical/AggregateSafetyConsole.vue|dates|db22407c8b91f445
+apps/web/src/components/clinical/AggregateSafetyConsole.vue|dates|dc791cac3a41d7be
+apps/web/src/components/clinical/AggregateSafetyConsole.vue|dates|f7f6076e9bcd47f5

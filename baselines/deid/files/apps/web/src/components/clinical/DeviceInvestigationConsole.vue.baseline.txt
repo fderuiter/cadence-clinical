@@ -1,0 +1,38 @@
+# DEID scan ratchet baseline shard (pnpm cadence check deid). Findings that predate the full detector and are not PHI.
+# One per line: path|category|first 16 hex digits of SHA-256(trimmed matched value). Sorted ordinally. Shards may only shrink.
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check deid [files...] (docs/cli.md).
+apps/web/src/components/clinical/DeviceInvestigationConsole.vue|dates|0843736d83f2676f
+apps/web/src/components/clinical/DeviceInvestigationConsole.vue|dates|0843736d83f2676f
+apps/web/src/components/clinical/DeviceInvestigationConsole.vue|dates|0843736d83f2676f
+apps/web/src/components/clinical/DeviceInvestigationConsole.vue|dates|41b62fb4518505d3
+apps/web/src/components/clinical/DeviceInvestigationConsole.vue|dates|41b62fb4518505d3
+apps/web/src/components/clinical/DeviceInvestigationConsole.vue|dates|f3fd061701409ed8
+apps/web/src/components/clinical/DeviceInvestigationConsole.vue|dates|f3fd061701409ed8
+apps/web/src/components/clinical/DeviceInvestigationConsole.vue|dates|f6e7fbb5d03c4be7
+apps/web/src/components/clinical/DeviceInvestigationConsole.vue|dates|f6e7fbb5d03c4be7
+apps/web/src/components/clinical/DeviceInvestigationConsole.vue|telephone_fax|254aa248acb47dd6
+apps/web/src/components/clinical/DeviceInvestigationConsole.vue|telephone_fax|254aa248acb47dd6
+apps/web/src/components/clinical/DeviceInvestigationConsole.vue|telephone_fax|42d7a1c390e21bc7
+apps/web/src/components/clinical/DeviceInvestigationConsole.vue|telephone_fax|42d7a1c390e21bc7
+apps/web/src/components/clinical/DeviceInvestigationConsole.vue|telephone_fax|42d7a1c390e21bc7
+apps/web/src/components/clinical/DeviceInvestigationConsole.vue|telephone_fax|83cda0b7492cec3c
+apps/web/src/components/clinical/DeviceInvestigationConsole.vue|telephone_fax|83cda0b7492cec3c
+apps/web/src/components/clinical/DeviceInvestigationConsole.vue|telephone_fax|83cda0b7492cec3c
+apps/web/src/components/clinical/DeviceInvestigationConsole.vue|telephone_fax|9a604d1e0c9526ee
+apps/web/src/components/clinical/DeviceInvestigationConsole.vue|telephone_fax|9a604d1e0c9526ee
+apps/web/src/components/clinical/DeviceInvestigationConsole.vue|telephone_fax|9a604d1e0c9526ee
+apps/web/src/components/clinical/DeviceInvestigationConsole.vue|telephone_fax|9a604d1e0c9526ee
+apps/web/src/components/clinical/DeviceInvestigationConsole.vue|telephone_fax|9a604d1e0c9526ee
+apps/web/src/components/clinical/DeviceInvestigationConsole.vue|telephone_fax|9a604d1e0c9526ee
+apps/web/src/components/clinical/DeviceInvestigationConsole.vue|telephone_fax|9a604d1e0c9526ee
+apps/web/src/components/clinical/DeviceInvestigationConsole.vue|telephone_fax|9a604d1e0c9526ee
+apps/web/src/components/clinical/DeviceInvestigationConsole.vue|telephone_fax|9a604d1e0c9526ee
+apps/web/src/components/clinical/DeviceInvestigationConsole.vue|telephone_fax|9a604d1e0c9526ee
+apps/web/src/components/clinical/DeviceInvestigationConsole.vue|telephone_fax|9a604d1e0c9526ee
+apps/web/src/components/clinical/DeviceInvestigationConsole.vue|telephone_fax|9a604d1e0c9526ee
+apps/web/src/components/clinical/DeviceInvestigationConsole.vue|telephone_fax|9a604d1e0c9526ee
+apps/web/src/components/clinical/DeviceInvestigationConsole.vue|telephone_fax|9a604d1e0c9526ee
+apps/web/src/components/clinical/DeviceInvestigationConsole.vue|telephone_fax|d0199008beddcab7
+apps/web/src/components/clinical/DeviceInvestigationConsole.vue|telephone_fax|e3f14e9c7700a549
+apps/web/src/components/clinical/DeviceInvestigationConsole.vue|telephone_fax|e3f14e9c7700a549
+apps/web/src/components/clinical/DeviceInvestigationConsole.vue|telephone_fax|e3f14e9c7700a549

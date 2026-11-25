@@ -1,0 +1,6 @@
+# Shrink-only RBAC role-to-permission grant baseline shard for resource 'payments_audit_log'.
+# Sorted ordinally as <role>|<resource>|<action> (lowercase).
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check permission-matrix or CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.
+auditor|payments_audit_log|read
+finance_officer|payments_audit_log|read
+sysadmin|payments_audit_log|read

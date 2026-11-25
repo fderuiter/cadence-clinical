@@ -12,6 +12,7 @@ namespace Cadence.ToolingCore.Services;
 public static partial class SecretsBaselineCleanerService
 {
     public const string SecretsDirectory = "baselines/secrets"; // pragma: allowlist secret
+    public const string FilesDirectory = "baselines/secrets/files"; // pragma: allowlist secret
     public const string ConfigFile = "baselines/secrets/config.json";
     public const string ShardSuffix = ".secrets.baseline.json";
     public const string LegacyBaselineFile = ".secrets.baseline";
@@ -27,7 +28,7 @@ public static partial class SecretsBaselineCleanerService
     private static partial Regex ExcludePatternRegex();
 
     public static string GetShardRelativePath(string filePath) =>
-        $"{SecretsDirectory}/{BaselineUnitPath.ResolveUnit(filePath)}{ShardSuffix}";
+        BaselineUnitPath.ResolvePerFileShardRelativePath(SecretsDirectory, filePath, ShardSuffix);
 
     public static bool IsExcludedFile(string relativePath)
     {
@@ -130,13 +131,12 @@ public static partial class SecretsBaselineCleanerService
                 continue;
             }
 
-            if (!relPath.EndsWith(ShardSuffix, StringComparison.Ordinal))
+            if (!BaselineUnitPath.TryExtractPerFileSourcePath(relPath, SecretsDirectory, ShardSuffix, out string expectedSourceFile))
             {
-                Console.WriteLine($"[ERROR] Unexpected file '{relPath}' under '{SecretsDirectory}/'; expected '{ConfigFile}' or '*{ShardSuffix}'.");
+                Console.WriteLine($"[ERROR] Legacy or misplaced secrets baseline shard '{relPath}'; expected '{ConfigFile}' or '{FilesDirectory}/<source-path>{ShardSuffix}'. Run 'pnpm cadence clean-secrets-baseline' or 'pnpm cadence fix'.");
                 return 1;
             }
 
-            string expectedUnit = relPath[(SecretsDirectory.Length + 1)..^ShardSuffix.Length];
             if (!TryReadSecretsFile(repoRoot, relPath, reader, out string shardText))
             {
                 Console.WriteLine($"[ERROR] Could not read secrets baseline shard '{relPath}'.");
@@ -161,6 +161,12 @@ public static partial class SecretsBaselineCleanerService
                 return 1;
             }
 
+            if (resultsObj.Count != 1)
+            {
+                Console.WriteLine($"[ERROR] Multi-file secrets baseline shard '{relPath}' contains {resultsObj.Count} file entries; expected a single entry for '{expectedSourceFile}'.");
+                return 1;
+            }
+
             var cleanedShardResults = new JsonObject();
             foreach (var prop in resultsObj.OrderBy(p => p.Key, StringComparer.Ordinal))
             {
@@ -171,8 +177,7 @@ public static partial class SecretsBaselineCleanerService
                     return 1;
                 }
 
-                string fileUnit = BaselineUnitPath.ResolveUnit(filename);
-                if (!string.Equals(fileUnit, expectedUnit, StringComparison.Ordinal))
+                if (!string.Equals(filename, expectedSourceFile, StringComparison.Ordinal))
                 {
                     Console.WriteLine($"[ERROR] Entry '{filename}' in '{relPath}' belongs in '{GetShardRelativePath(filename)}'.");
                     return 1;

@@ -1,0 +1,25 @@
+# Shrink-only RBAC role-to-permission grant baseline shard for resource 'soa'.
+# Sorted ordinally as <role>|<resource>|<action> (lowercase).
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check permission-matrix or CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.
+admin|soa|read
+auditor|soa|read
+authorized_er_physician|soa|read
+cra|soa|read
+crc|soa|read
+investigator|soa|read
+lead_investigator|soa|read
+monitor|soa|read
+principal_investigator|soa|read
+protocol_reviewer|soa|read
+sponsor_designer|soa|create
+sponsor_designer|soa|delete
+sponsor_designer|soa|read
+sponsor_designer|soa|update
+sponsor_dm|soa|read
+sponsor_mm|soa|read
+sponsor_statistician|soa|read
+sysadmin|soa|create
+sysadmin|soa|delete
+sysadmin|soa|read
+sysadmin|soa|update
+trial_coordinator|soa|read

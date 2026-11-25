@@ -1,0 +1,30 @@
+# Shrink-only RBAC role-to-permission grant baseline shard for resource 'study_design'.
+# Sorted ordinally as <role>|<resource>|<action> (lowercase).
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check permission-matrix or CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.
+admin|study_design|approve
+admin|study_design|read
+authorized_er_physician|study_design|read
+cra|study_design|read
+crc|study_design|read
+investigator|study_design|read
+lead_investigator|study_design|read
+monitor|study_design|read
+principal_investigator|study_design|read
+protocol_reviewer|study_design|read
+sponsor_designer|study_design|approve
+sponsor_designer|study_design|create
+sponsor_designer|study_design|delete
+sponsor_designer|study_design|read
+sponsor_designer|study_design|reorder
+sponsor_designer|study_design|update
+sponsor_dm|study_design|approve
+sponsor_dm|study_design|read
+sponsor_mm|study_design|read
+sponsor_statistician|study_design|read
+sysadmin|study_design|approve
+sysadmin|study_design|create
+sysadmin|study_design|delete
+sysadmin|study_design|read
+sysadmin|study_design|reorder
+sysadmin|study_design|update
+trial_coordinator|study_design|read

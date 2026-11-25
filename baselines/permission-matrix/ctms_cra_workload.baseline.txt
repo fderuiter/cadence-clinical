@@ -1,0 +1,15 @@
+# Shrink-only RBAC role-to-permission grant baseline shard for resource 'ctms_cra_workload'.
+# Sorted ordinally as <role>|<resource>|<action> (lowercase).
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check permission-matrix or CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.
+admin|ctms_cra_workload|read
+auditor|ctms_cra_workload|read
+authorized_er_physician|ctms_cra_workload|read
+cra|ctms_cra_workload|read
+crc|ctms_cra_workload|read
+investigator|ctms_cra_workload|read
+lead_investigator|ctms_cra_workload|read
+monitor|ctms_cra_workload|read
+principal_investigator|ctms_cra_workload|read
+sponsor_dm|ctms_cra_workload|read
+sysadmin|ctms_cra_workload|read
+trial_coordinator|ctms_cra_workload|read

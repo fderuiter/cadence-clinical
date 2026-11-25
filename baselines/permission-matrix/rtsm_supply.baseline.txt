@@ -1,0 +1,5 @@
+# Shrink-only RBAC role-to-permission grant baseline shard for resource 'rtsm_supply'.
+# Sorted ordinally as <role>|<resource>|<action> (lowercase).
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check permission-matrix or CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.
+pharmacist|rtsm_supply|read
+pharmacist|rtsm_supply|write

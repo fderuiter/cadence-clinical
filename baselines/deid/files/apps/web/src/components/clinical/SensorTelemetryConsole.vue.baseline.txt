@@ -1,0 +1,8 @@
+# DEID scan ratchet baseline shard (pnpm cadence check deid). Findings that predate the full detector and are not PHI.
+# One per line: path|category|first 16 hex digits of SHA-256(trimmed matched value). Sorted ordinally. Shards may only shrink.
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check deid [files...] (docs/cli.md).
+apps/web/src/components/clinical/SensorTelemetryConsole.vue|ip_mac_addresses|89d9cd2b655daedc
+apps/web/src/components/clinical/SensorTelemetryConsole.vue|ip_mac_addresses|89d9cd2b655daedc
+apps/web/src/components/clinical/SensorTelemetryConsole.vue|telephone_fax|bf1314b3a93976bd
+apps/web/src/components/clinical/SensorTelemetryConsole.vue|telephone_fax|bf1314b3a93976bd
+apps/web/src/components/clinical/SensorTelemetryConsole.vue|zip_geographic|a935083e5740644c

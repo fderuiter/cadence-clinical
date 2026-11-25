@@ -1,0 +1,16 @@
+# Shrink-only RBAC role-to-permission grant baseline shard for resource 'etmf_taxonomy'.
+# Sorted ordinally as <role>|<resource>|<action> (lowercase).
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check permission-matrix or CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.
+admin|etmf_taxonomy|read
+auditor|etmf_taxonomy|read
+authorized_er_physician|etmf_taxonomy|read
+cra|etmf_taxonomy|read
+crc|etmf_taxonomy|read
+external_monitor|etmf_taxonomy|read
+investigator|etmf_taxonomy|read
+lead_investigator|etmf_taxonomy|read
+monitor|etmf_taxonomy|read
+principal_investigator|etmf_taxonomy|read
+sponsor_dm|etmf_taxonomy|read
+sysadmin|etmf_taxonomy|read
+trial_coordinator|etmf_taxonomy|read

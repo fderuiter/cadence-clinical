@@ -1,0 +1,41 @@
+# Shrink-only RBAC role-to-permission grant baseline shard for resource 'lab_range'.
+# Sorted ordinally as <role>|<resource>|<action> (lowercase).
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check permission-matrix or CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.
+admin|lab_range|alert
+admin|lab_range|create
+admin|lab_range|delete
+admin|lab_range|read
+admin|lab_range|update
+auditor|lab_range|read
+authorized_er_physician|lab_range|alert
+authorized_er_physician|lab_range|read
+cra|lab_range|alert
+cra|lab_range|create
+cra|lab_range|delete
+cra|lab_range|read
+cra|lab_range|update
+crc|lab_range|alert
+crc|lab_range|read
+investigator|lab_range|alert
+investigator|lab_range|read
+lead_investigator|lab_range|alert
+lead_investigator|lab_range|read
+monitor|lab_range|alert
+monitor|lab_range|create
+monitor|lab_range|delete
+monitor|lab_range|read
+monitor|lab_range|update
+principal_investigator|lab_range|alert
+principal_investigator|lab_range|read
+sponsor_dm|lab_range|alert
+sponsor_dm|lab_range|create
+sponsor_dm|lab_range|delete
+sponsor_dm|lab_range|read
+sponsor_dm|lab_range|update
+sysadmin|lab_range|alert
+sysadmin|lab_range|create
+sysadmin|lab_range|delete
+sysadmin|lab_range|read
+sysadmin|lab_range|update
+trial_coordinator|lab_range|alert
+trial_coordinator|lab_range|read

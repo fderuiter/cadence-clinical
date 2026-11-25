@@ -1,0 +1,20 @@
+# Shrink-only RBAC role-to-permission grant baseline shard for resource 'library_object'.
+# Sorted ordinally as <role>|<resource>|<action> (lowercase).
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check permission-matrix or CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.
+admin|library_object|approve
+admin|library_object|publish
+admin|library_object|read
+sponsor_designer|library_object|create
+sponsor_designer|library_object|delete
+sponsor_designer|library_object|read
+sponsor_designer|library_object|update
+sponsor_dm|library_object|approve
+sponsor_dm|library_object|publish
+sponsor_dm|library_object|read
+sysadmin|library_object|approve
+sysadmin|library_object|create
+sysadmin|library_object|delete
+sysadmin|library_object|publish
+sysadmin|library_object|read
+sysadmin|library_object|release
+sysadmin|library_object|update

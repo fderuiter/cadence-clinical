@@ -1,0 +1,11 @@
+# DEID scan ratchet baseline shard (pnpm cadence check deid). Findings that predate the full detector and are not PHI.
+# One per line: path|category|first 16 hex digits of SHA-256(trimmed matched value). Sorted ordinally. Shards may only shrink.
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check deid [files...] (docs/cli.md).
+apps/web/src/views/MdrView.vue|dates|05e9ff24ee0dbd34
+apps/web/src/views/MdrView.vue|dates|05e9ff24ee0dbd34
+apps/web/src/views/MdrView.vue|dates|2377dc2308770094
+apps/web/src/views/MdrView.vue|dates|7cd45c1acf8a9ce6
+apps/web/src/views/MdrView.vue|dates|7cd45c1acf8a9ce6
+apps/web/src/views/MdrView.vue|dates|aa939a761f410928
+apps/web/src/views/MdrView.vue|dates|cf60422aa0bf1b03
+apps/web/src/views/MdrView.vue|dates|cf60422aa0bf1b03

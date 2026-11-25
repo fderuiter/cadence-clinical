@@ -1,0 +1,20 @@
+# Shrink-only RBAC role-to-permission grant baseline shard for resource 'medical_coding'.
+# Sorted ordinally as <role>|<resource>|<action> (lowercase).
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check permission-matrix or CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.
+admin|medical_coding|create
+admin|medical_coding|manage_synonyms
+admin|medical_coding|read
+admin|medical_coding|update
+cra|medical_coding|read
+sponsor_designer|medical_coding|manage_synonyms
+sponsor_designer|medical_coding|read
+sponsor_dm|medical_coding|create
+sponsor_dm|medical_coding|manage_synonyms
+sponsor_dm|medical_coding|read
+sponsor_dm|medical_coding|update
+sysadmin|medical_coding|create
+sysadmin|medical_coding|read
+sysadmin|medical_coding|update
+terminology_manager|medical_coding|create
+terminology_manager|medical_coding|read
+terminology_manager|medical_coding|update

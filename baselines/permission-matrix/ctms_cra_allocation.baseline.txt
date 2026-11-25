@@ -1,0 +1,21 @@
+# Shrink-only RBAC role-to-permission grant baseline shard for resource 'ctms_cra_allocation'.
+# Sorted ordinally as <role>|<resource>|<action> (lowercase).
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check permission-matrix or CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.
+admin|ctms_cra_allocation|create
+admin|ctms_cra_allocation|read
+admin|ctms_cra_allocation|update
+auditor|ctms_cra_allocation|read
+authorized_er_physician|ctms_cra_allocation|read
+cra|ctms_cra_allocation|read
+crc|ctms_cra_allocation|read
+investigator|ctms_cra_allocation|read
+lead_investigator|ctms_cra_allocation|read
+monitor|ctms_cra_allocation|read
+principal_investigator|ctms_cra_allocation|read
+sponsor_dm|ctms_cra_allocation|create
+sponsor_dm|ctms_cra_allocation|read
+sponsor_dm|ctms_cra_allocation|update
+sysadmin|ctms_cra_allocation|create
+sysadmin|ctms_cra_allocation|read
+sysadmin|ctms_cra_allocation|update
+trial_coordinator|ctms_cra_allocation|read

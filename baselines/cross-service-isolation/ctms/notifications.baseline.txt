@@ -1,0 +1,9 @@
+# Cross-service isolation ratchet baseline shard for ctms -> notifications (ImportValidatorService source scan + Mono.Cecil Ldstr / reference IL scan).
+# Records pre-existing sibling-service debt. Entries are sorted ordinally and may only shrink.
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check imports or CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj.
+IL|Cadence.Apps.Ctms|Cadence.Apps.Ctms.Endpoints.EmailDispatchHelper.DispatchEmailNotificationAsync->Cadence.Apps.Notifications.Domain.NotificationDelivery
+IL|Cadence.Apps.Ctms|Cadence.Apps.Ctms.Endpoints.EmailDispatchHelper.DispatchEmailNotificationAsync->Cadence.Apps.Notifications.Domain.NotificationRecord
+IL|Cadence.Apps.Ctms|Cadence.Apps.Ctms.Endpoints.LetterTemplateEndpoints.CompileAndDispatchLetterAsync->Cadence.Apps.Notifications.Infrastructure.Persistence.NotificationsDbContext
+SOURCE|ctms|apps/ctms/src/Endpoints/LetterTemplateEndpoints.cs|string:Cadence.Apps.Notifications.Domain.NotificationDelivery
+SOURCE|ctms|apps/ctms/src/Endpoints/LetterTemplateEndpoints.cs|string:Cadence.Apps.Notifications.Domain.NotificationRecord
+SOURCE|ctms|apps/ctms/src/Endpoints/LetterTemplateEndpoints.cs|string:Cadence.Apps.Notifications.Infrastructure.Persistence.NotificationsDbContext
