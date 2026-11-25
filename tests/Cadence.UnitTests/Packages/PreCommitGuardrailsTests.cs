@@ -2294,6 +2294,138 @@ public sealed class PreCommitGuardrailsTests : IDisposable
         mergeResult.ConflictingFiles.Should().BeEmpty();
     }
 
+    [Fact]
+    public void GitAttributes_MarksGeneratedArtifactsAsLinguistGenerated_PreservesBinaryAndSeedRules_AndDefinesZeroMergeDrivers()
+    {
+        string repoRoot = QualityGateOrchestrator.FindRepoRoot();
+        string gitAttributesPath = Path.Combine(repoRoot, ".gitattributes");
+        File.Exists(gitAttributesPath).Should().BeTrue();
+
+        string[] activeLines = File.ReadAllLines(gitAttributesPath)
+            .Select(line => line.Trim())
+            .Where(line => line.Length > 0 && !line.StartsWith('#'))
+            .ToArray();
+
+        activeLines.Should().NotBeEmpty();
+        activeLines.Should().OnlyContain(
+            line => !line.Contains("merge=", StringComparison.OrdinalIgnoreCase),
+            "ADR-2532 prohibits custom merge drivers and merge=union in .gitattributes");
+
+        string[] generatedPaths =
+        [
+            "pnpm-lock.yaml",
+            "docs/openapi/execution_openapi.json",
+            "docs/openapi/cdisc_openapi.json",
+            "docs/openapi/legacy/cdisc_openapi.json",
+            "apps/web/src/api/generated/execution.ts",
+            "docs/api/index.md",
+            "docs/api/execution.md",
+            "docs/schema/README.md",
+            "docs/schema/execution.md",
+            "docs/SDLC/Requirements_Traceability_Matrix.md",
+            "docs/SDLC/IQ_OQ_PQ_Execution_Report.md",
+            "docs/SDLC/runs/IQ_OQ_PQ_Execution_Report_20260822_042845.md",
+            "apps/execution/src/Infrastructure/Persistence/Migrations/20260905174215_AddExecutionSubjectsSlice.Designer.cs",
+            "apps/execution/module/Infrastructure/Migrations/20261020043127_FormInstances.Designer.cs",
+            "packages/kernel/src/Cadence.Kernel.Persistence/Migrations/20261120152149_CommercialSubscriptionsAndEntitlements.Designer.cs",
+            "apps/execution/src/Infrastructure/Persistence/Migrations/ExecutionDbContextModelSnapshot.cs",
+            "apps/execution/module/Infrastructure/Migrations/ExecutionModuleDbContextModelSnapshot.cs",
+            "packages/kernel/src/Cadence.Kernel.Persistence/Migrations/KernelDbContextModelSnapshot.cs",
+        ];
+
+        var generatedAttrs = CheckGitAttributes(repoRoot, ["linguist-generated", "merge"], generatedPaths);
+        foreach (string path in generatedPaths)
+        {
+            generatedAttrs[(path, "linguist-generated")].Should().Be(
+                "true",
+                $"{path} is machine-generated and must be marked linguist-generated=true");
+            generatedAttrs[(path, "merge")].Should().Be(
+                "unspecified",
+                $"{path} must not define a custom merge driver or merge=union");
+        }
+
+        string[] handAuthoredPaths =
+        [
+            "README.md",
+            "docs/openapi/README.md",
+            "apps/web/src/App.vue",
+            "apps/execution/src/Infrastructure/Persistence/Migrations/20260905174215_AddExecutionSubjectsSlice.cs",
+            "packages/kernel/src/Cadence.Standards/Seed/manifest.json",
+            "packages/kernel/src/Cadence.Standards/Blocks/demographics.json",
+            "baselines/secrets/config.json",
+        ];
+
+        var handAuthoredAttrs = CheckGitAttributes(repoRoot, ["linguist-generated", "merge"], handAuthoredPaths);
+        foreach (string path in handAuthoredPaths)
+        {
+            handAuthoredAttrs[(path, "linguist-generated")].Should().Be(
+                "unspecified",
+                $"{path} is hand-authored or seed/baseline data and must not be marked linguist-generated");
+            handAuthoredAttrs[(path, "merge")].Should().Be(
+                "unspecified",
+                $"{path} must not define a custom merge driver or merge=union");
+        }
+
+        string[] binaryPaths = ["artifact.docx", "protocol.pdf", "diagram.png", "photo.jpg", "favicon.ico"];
+        var binaryAttrs = CheckGitAttributes(repoRoot, ["binary"], binaryPaths);
+        foreach (string path in binaryPaths)
+        {
+            binaryAttrs[(path, "binary")].Should().Be("set", $"{path} must preserve its binary rule in .gitattributes");
+        }
+
+        string[] standardsSeedPaths =
+        [
+            "packages/kernel/src/Cadence.Standards/Seed/manifest.json",
+            "packages/kernel/src/Cadence.Standards/Blocks/demographics.json",
+        ];
+        var seedAttrs = CheckGitAttributes(repoRoot, ["text"], standardsSeedPaths);
+        foreach (string path in standardsSeedPaths)
+        {
+            seedAttrs[(path, "text")].Should().Be("unset", $"{path} must preserve its -text checksum rule in .gitattributes");
+        }
+    }
+
+    private static Dictionary<(string Path, string Attribute), string> CheckGitAttributes(
+        string repoRoot,
+        IReadOnlyList<string> attributes,
+        IReadOnlyList<string> paths)
+    {
+        var psi = new ProcessStartInfo("git")
+        {
+            WorkingDirectory = repoRoot,
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+        };
+        psi.ArgumentList.Add("check-attr");
+        psi.ArgumentList.Add("-z");
+        foreach (string attr in attributes)
+        {
+            psi.ArgumentList.Add(attr);
+        }
+
+        psi.ArgumentList.Add("--");
+        foreach (string path in paths)
+        {
+            psi.ArgumentList.Add(path);
+        }
+
+        using var process = Process.Start(psi)!;
+        string stdout = process.StandardOutput.ReadToEnd();
+        string stderr = process.StandardError.ReadToEnd();
+        process.WaitForExit();
+        process.ExitCode.Should().Be(0, stderr);
+
+        string[] fields = stdout.Split('\0', StringSplitOptions.None);
+        var results = new Dictionary<(string Path, string Attribute), string>();
+        for (int i = 0; i + 2 < fields.Length; i += 3)
+        {
+            results[(fields[i], fields[i + 1])] = fields[i + 2];
+        }
+
+        return results;
+    }
+
     private static (int ExitCode, string CombinedOutput) RunWizardWithCustomPath(
         string wizardPath,
         string pathEnv,
