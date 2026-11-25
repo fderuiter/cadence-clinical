@@ -224,7 +224,7 @@ describe("ClinicalInput.vue", () => {
 
     const errorMsg = wrapper.find(".validation-error-msg");
     expect(errorMsg.attributes("id")).toBe(`validation-error-${id}`);
-    expect(errorMsg.attributes("role")).toBe("status");
+    expect(errorMsg.attributes("role")).toBe("alert");
     expect(errorMsg.attributes("aria-live")).toBe("polite");
 
     // Verify it passes accessibility audit
@@ -297,7 +297,7 @@ describe("ClinicalRadioGroup.vue", () => {
     expect(errorMsg.exists()).toBe(true);
     expect(errorMsg.text()).toContain("Gender selection is required");
     expect(errorMsg.attributes("id")).toBe(`validation-error-${id}`);
-    expect(errorMsg.attributes("role")).toBe("status");
+    expect(errorMsg.attributes("role")).toBe("alert");
     expect(errorMsg.attributes("aria-live")).toBe("polite");
 
     await expect(wrapper).toBeAccessible();
@@ -349,7 +349,7 @@ describe("ClinicalLookupInput.vue", () => {
 
     const errorMsg = wrapper.find(".validation-error-msg");
     expect(errorMsg.exists()).toBe(true);
-    expect(errorMsg.attributes("role")).toBe("status");
+    expect(errorMsg.attributes("role")).toBe("alert");
     expect(errorMsg.attributes("aria-live")).toBe("polite");
 
     await expect(wrapper).toBeAccessible();

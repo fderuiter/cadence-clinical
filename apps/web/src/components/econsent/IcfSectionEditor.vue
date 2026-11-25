@@ -1,7 +1,9 @@
 <template>
   <div class="icf-section-editor-container card">
     <div class="editor-header">
-      <h3>{{ $t("econsent.editor.editSection", { title: section.title }) }}</h3>
+      <h3 :id="editorHeadingId">
+        {{ $t("econsent.editor.editSection", { title: section.title }) }}
+      </h3>
       <span class="section-id-badge">{{
         $t("econsent.editor.sectionId", { id: section.id })
       }}</span>
@@ -63,7 +65,8 @@
         :title="$t('econsent.editor.insertTable')"
         @click="insertTable"
       >
-        📊 {{ $t("econsent.editor.table") }}
+        <Table :size="14" aria-hidden="true" />
+        {{ $t("econsent.editor.table") }}
       </button>
       <button
         type="button"
@@ -71,7 +74,8 @@
         :title="$t('econsent.editor.insertImage')"
         @click="insertImage"
       >
-        🖼️ {{ $t("econsent.editor.image") }}
+        <Image :size="14" aria-hidden="true" />
+        {{ $t("econsent.editor.image") }}
       </button>
       <button
         type="button"
@@ -79,7 +83,8 @@
         :title="$t('econsent.editor.annotateGlossary')"
         @click="promptGlossary"
       >
-        🏷️ {{ $t("econsent.editor.glossaryTerm") }}
+        <Tag :size="14" aria-hidden="true" />
+        {{ $t("econsent.editor.glossaryTerm") }}
       </button>
       <button
         type="button"
@@ -87,21 +92,24 @@
         :title="$t('econsent.editor.readabilityHarmonizerTitle')"
         @click="showReadabilityDrawer = true"
       >
-        📖 {{ $t("econsent.editor.readabilityHarmonizer") }}
+        <BookOpen :size="14" aria-hidden="true" />
+        {{ $t("econsent.editor.readabilityHarmonizer") }}
       </button>
     </div>
 
     <!-- Main Contenteditable Editor -->
-    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
     <div
       ref="editorRef"
       class="editor-canvas"
       contenteditable="true"
       role="textbox"
+      aria-multiline="true"
+      :aria-labelledby="editorHeadingId"
       tabindex="0"
       @input="handleInput"
       @blur="handleInput"
       @click="handleCanvasClick"
+      @keydown="handleCanvasKeyDown"
       @mouseover="handleCanvasMouseOver"
       @mouseout="handleCanvasMouseOut"
       @focusin="handleCanvasFocusIn"
@@ -188,6 +196,7 @@
 </template>
 
 <script setup>
+import { BookOpen, Image, Table, Tag } from "lucide-vue-next";
 import { ClinicalModal, ClinicalPopover } from "ui";
 import { ref, computed, watch, nextTick, onMounted } from "vue";
 import { useConfirmDialog } from "../../composables/useConfirmDialog.js";
@@ -211,6 +220,9 @@ const localHtml = ref("");
 const showGlossaryModal = ref(false);
 const showReadabilityDrawer = ref(false);
 const selectedText = ref("");
+const editorHeadingId = computed(
+  () => `icf-section-editor-heading-${props.section.id}`
+);
 
 const rawSectionText = computed(() => {
   const div = document.createElement("div");
@@ -510,6 +522,12 @@ const handleCanvasClick = (e) => {
   }
 };
 
+const handleCanvasKeyDown = (e) => {
+  if (e.key === "Escape" && hoveredGlossaryTerm.value) {
+    hidePopover();
+  }
+};
+
 const handleCanvasMouseOver = (e) => {
   if (!isHoverSupported.value) return;
   const target = resolveGlossaryTarget(e.target);
@@ -736,5 +754,11 @@ const hidePopover = () => {
   text-transform: uppercase;
   font-size: var(--font-size-2xs);
   letter-spacing: 0.05em;
+}
+@media (max-width: 1024px), (pointer: coarse) {
+  .editor-canvas,
+  .form-control {
+    font-size: 1rem;
+  }
 }
 </style>

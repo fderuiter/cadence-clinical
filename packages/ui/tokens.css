@@ -1096,7 +1096,20 @@ td select,
   margin-left: 2px;
 }
 
+.clinical-field-unit {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 var(--semantic-spacing-xs, 8px);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--semantic-color-text-secondary);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.clinical-field-range,
 .clinical-field-hint {
+  display: block;
   margin-top: var(--semantic-spacing-2xs, 4px);
   font-size: 0.78rem;
   color: var(--semantic-color-text-secondary);

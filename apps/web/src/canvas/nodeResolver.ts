@@ -343,6 +343,13 @@ async function flushPendingNodeBatch(scheduledEpoch: number): Promise<void> {
           return;
         }
         for (const k of chunk) {
+          if (
+            resolvedEntries[k]?.status === "resolved" &&
+            resolvedEntries[k]?.node
+          ) {
+            batchWaiters.get(k)?.resolve(resolvedEntries[k].node);
+            continue;
+          }
           const node = Object.prototype.hasOwnProperty.call(nodesMap, k)
             ? nodesMap[k]
             : null;

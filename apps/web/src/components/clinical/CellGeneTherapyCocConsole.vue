@@ -244,9 +244,11 @@
             }}</span>
           </div>
           <div class="raw-payload-box">
-            <span class="raw-label">Encoded 2D Barcode Payload:</span>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <label for="cgt-encoded-barcode-payload" class="raw-label"
+              >Encoded 2D Barcode Payload:</label
+            >
             <textarea
+              id="cgt-encoded-barcode-payload"
               readonly
               class="payload-textarea"
               :value="cocData.tamper_evident_barcode || ''"
@@ -256,8 +258,11 @@
         </div>
         <div class="barcode-scan-simulator">
           <h4 class="scan-title">Direct Scanner Verification</h4>
-          <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+          <label for="cgt-scan-test-input" class="sr-only">
+            Direct Scanner Verification Barcode Payload
+          </label>
           <input
+            id="cgt-scan-test-input"
             v-model="scanTestInput"
             type="text"
             placeholder="Scan / paste barcode payload here..."
@@ -386,65 +391,78 @@
       <form @submit.prevent="submitApheresis">
         <div class="form-grid">
           <div class="form-group">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label>Study Protocol</label>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-            <input v-model="apheresisForm.study_id" type="text" required />
-          </div>
-          <div class="form-group">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label>{{ formatDatabaseKey("site_id") }}</label>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-            <input v-model="apheresisForm.site_id" type="text" required />
-          </div>
-          <div class="form-group">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label>{{ formatDatabaseKey("subject_id") }}</label>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-            <input v-model="apheresisForm.subject_id" type="text" required />
-          </div>
-          <div class="form-group">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label>Donation ID (ISBT 128 DIN)</label>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <label for="apheresis-study-id">Study Protocol</label>
             <input
+              id="apheresis-study-id"
+              v-model="apheresisForm.study_id"
+              type="text"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label for="apheresis-site-id">{{
+              formatDatabaseKey("site_id")
+            }}</label>
+            <input
+              id="apheresis-site-id"
+              v-model="apheresisForm.site_id"
+              type="text"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label for="apheresis-subject-id">{{
+              formatDatabaseKey("subject_id")
+            }}</label>
+            <input
+              id="apheresis-subject-id"
+              v-model="apheresisForm.subject_id"
+              type="text"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label for="apheresis-din">Donation ID (ISBT 128 DIN)</label>
+            <input
+              id="apheresis-din"
               v-model="apheresisForm.din"
               type="text"
               placeholder="Auto-generated if empty"
             />
           </div>
           <div class="form-group">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label>Collector User ID</label>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-            <input v-model="apheresisForm.collector_id" type="text" required />
-          </div>
-          <div class="form-group">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label>Collector Name</label>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <label for="apheresis-collector-id">Collector User ID</label>
             <input
-              v-model="apheresisForm.collector_name"
-              type="text"
+              id="apheresis-collector-id"
+              v-model="apheresisForm.collector_id"
+              v-bind="SIGNATURE_USERNAME_INPUT_ATTRS"
               required
             />
           </div>
           <div class="form-group">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label>Initial Cryo Temp (°C)</label>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <label for="apheresis-collector-name">Collector Name</label>
             <input
+              id="apheresis-collector-name"
+              v-model="apheresisForm.collector_name"
+              v-bind="SIGNATURE_SIGNER_NAME_INPUT_ATTRS"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label for="apheresis-initial-temp">Initial Cryo Temp (°C)</label>
+            <input
+              id="apheresis-initial-temp"
               v-model.number="apheresisForm.initial_temp_celsius"
               type="number"
               step="0.1"
+              data-tabular-nums="true"
               required
             />
           </div>
           <div class="form-group">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label>Dry Shipper / Dewar ID</label>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <label for="apheresis-dry-shipper-id">Dry Shipper / Dewar ID</label>
             <input
+              id="apheresis-dry-shipper-id"
               v-model="apheresisForm.dry_shipper_id"
               type="text"
               placeholder="e.g. MVE-LN2-9901"
@@ -530,7 +548,7 @@
               <input
                 :id="`${panel.prefix}-id`"
                 v-model="bedsideForm[panel.idField]"
-                type="text"
+                v-bind="SIGNATURE_USERNAME_INPUT_ATTRS"
                 required
                 :placeholder="panel.idPlaceholder"
               />
@@ -540,7 +558,7 @@
               <input
                 :id="`${panel.prefix}-name`"
                 v-model="bedsideForm[panel.nameField]"
-                type="text"
+                v-bind="SIGNATURE_SIGNER_NAME_INPUT_ATTRS"
                 required
                 :placeholder="panel.namePlaceholder"
               />
@@ -601,28 +619,38 @@
         </div>
         <div class="form-grid">
           <div class="form-group">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label>Study Protocol</label>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-            <input v-model="destructionForm.study_id" type="text" required />
-          </div>
-          <div class="form-group">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label>Site ID</label>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-            <input v-model="destructionForm.site_id" type="text" required />
-          </div>
-          <div class="form-group">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label>Lot Number</label>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-            <input v-model="destructionForm.lot_number" type="text" required />
-          </div>
-          <div class="form-group">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label>Kit Numbers (Comma-separated)</label>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <label for="destruction-study-id">Study Protocol</label>
             <input
+              id="destruction-study-id"
+              v-model="destructionForm.study_id"
+              type="text"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label for="destruction-site-id">Site ID</label>
+            <input
+              id="destruction-site-id"
+              v-model="destructionForm.site_id"
+              type="text"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label for="destruction-lot-number">Lot Number</label>
+            <input
+              id="destruction-lot-number"
+              v-model="destructionForm.lot_number"
+              type="text"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label for="destruction-kit-numbers"
+              >Kit Numbers (Comma-separated)</label
+            >
+            <input
+              id="destruction-kit-numbers"
               v-model="destructionForm.kit_numbers_str"
               type="text"
               required
@@ -630,10 +658,11 @@
             />
           </div>
           <div class="form-group">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label>Vial Identifiers (Comma-separated)</label>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <label for="destruction-vial-ids"
+              >Vial Identifiers (Comma-separated)</label
+            >
             <input
+              id="destruction-vial-ids"
               v-model="destructionForm.vial_identifiers_str"
               type="text"
               required
@@ -641,10 +670,12 @@
             />
           </div>
           <div class="form-group">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label>Destruction Method</label>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-            <select v-model="destructionForm.destruction_method" required>
+            <label for="destruction-method">Destruction Method</label>
+            <select
+              id="destruction-method"
+              v-model="destructionForm.destruction_method"
+              required
+            >
               <option value="HIGH_TEMPERATURE_INCINERATION">
                 High Temperature Incineration
               </option>
@@ -660,10 +691,9 @@
             </select>
           </div>
           <div class="form-group col-full">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label>Destruction Facility</label>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <label for="destruction-facility">Destruction Facility</label>
             <input
+              id="destruction-facility"
               v-model="destructionForm.destruction_facility"
               type="text"
               required
@@ -671,10 +701,9 @@
             />
           </div>
           <div class="form-group col-full">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label>Destruction Reason</label>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <label for="destruction-reason">Destruction Reason</label>
             <input
+              id="destruction-reason"
               v-model="destructionForm.destruction_reason"
               type="text"
               required
@@ -693,7 +722,7 @@
               <input
                 :id="`${witness.prefix}-id`"
                 v-model="destructionForm[witness.idField]"
-                type="text"
+                v-bind="SIGNATURE_USERNAME_INPUT_ATTRS"
                 required
                 :placeholder="witness.idPlaceholder"
               />
@@ -703,7 +732,7 @@
               <input
                 :id="`${witness.prefix}-name`"
                 v-model="destructionForm[witness.nameField]"
-                type="text"
+                v-bind="SIGNATURE_SIGNER_NAME_INPUT_ATTRS"
                 required
                 :placeholder="witness.namePlaceholder"
               />
@@ -766,10 +795,9 @@
       <div class="milestone-modal-content">
         <!-- File Dropzone Section -->
         <div class="dropzone-section">
-          <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-          <label class="section-label"
-            >Logger Telemetry Upload (Sensitech / TempTale CSV or JSON)</label
-          >
+          <div id="cgt-telemetry-upload-label" class="section-label">
+            Logger Telemetry Upload (Sensitech / TempTale CSV or JSON)
+          </div>
           <ClinicalDropzone
             class="dropzone-box"
             :class="{ 'dropzone-has-file': parsedTelemetry !== null }"
@@ -1015,10 +1043,12 @@
         <form class="milestone-form" @submit.prevent="submitMilestone">
           <div class="form-grid">
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Transit Stage</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-              <select v-model="milestoneForm.stage" required>
+              <label for="milestone-stage">Transit Stage</label>
+              <select
+                id="milestone-stage"
+                v-model="milestoneForm.stage"
+                required
+              >
                 <option value="APHERESIS_COLLECTION">
                   1. Apheresis Collection
                 </option>
@@ -1039,10 +1069,12 @@
             </div>
 
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Milestone Event Type</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-              <select v-model="milestoneForm.milestone_type" required>
+              <label for="milestone-type">Milestone Event Type</label>
+              <select
+                id="milestone-type"
+                v-model="milestoneForm.milestone_type"
+                required
+              >
                 <option value="TRANSIT_CHECKPOINT">Transit Checkpoint</option>
                 <option value="FACILITY_HANDOVER">Facility Handover</option>
                 <option value="TEMPERATURE_AUDIT">Temperature Audit</option>
@@ -1051,10 +1083,9 @@
             </div>
 
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Location / Waypoint</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <label for="milestone-location">Location / Waypoint</label>
               <input
+                id="milestone-location"
                 v-model="milestoneForm.location_name"
                 type="text"
                 required
@@ -1063,44 +1094,41 @@
             </div>
 
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Recorded Checkpoint Temp (°C)</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <label for="milestone-temp">Recorded Checkpoint Temp (°C)</label>
               <input
+                id="milestone-temp"
                 v-model.number="milestoneForm.temperature_celsius"
                 type="number"
                 step="0.1"
+                data-tabular-nums="true"
                 required
               />
             </div>
 
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Custodian User ID</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <label for="milestone-custodian-id">Custodian User ID</label>
               <input
+                id="milestone-custodian-id"
                 v-model="milestoneForm.custodian_id"
-                type="text"
+                v-bind="SIGNATURE_USERNAME_INPUT_ATTRS"
                 required
               />
             </div>
 
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Custodian Full Name</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <label for="milestone-custodian-name">Custodian Full Name</label>
               <input
+                id="milestone-custodian-name"
                 v-model="milestoneForm.custodian_name"
-                type="text"
+                v-bind="SIGNATURE_SIGNER_NAME_INPUT_ATTRS"
                 required
               />
             </div>
 
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Courier / Carrier</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <label for="milestone-carrier">Courier / Carrier</label>
               <input
+                id="milestone-carrier"
                 v-model="milestoneForm.carrier"
                 type="text"
                 placeholder="e.g. WorldCourier Cryo"
@@ -1108,10 +1136,9 @@
             </div>
 
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Tracking Number</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <label for="milestone-tracking-number">Tracking Number</label>
               <input
+                id="milestone-tracking-number"
                 v-model="milestoneForm.tracking_number"
                 type="text"
                 placeholder="e.g. WC-TRACK-01"
@@ -1119,10 +1146,11 @@
             </div>
 
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Dry Shipper / Dewar ID</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <label for="milestone-dry-shipper-id"
+                >Dry Shipper / Dewar ID</label
+              >
               <input
+                id="milestone-dry-shipper-id"
                 v-model="milestoneForm.dry_shipper_id"
                 type="text"
                 placeholder="e.g. DEWAR-LN2-9901"
@@ -1130,10 +1158,9 @@
             </div>
 
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Tamper Seal ID</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <label for="milestone-seal-id">Tamper Seal ID</label>
               <input
+                id="milestone-seal-id"
                 v-model="milestoneForm.seal_id"
                 type="text"
                 placeholder="e.g. SEAL-4482"
@@ -1141,8 +1168,7 @@
             </div>
 
             <div class="form-group col-full">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>
+              <label for="milestone-notes">
                 GxP Justification Notes &amp; Observations
                 <span
                   v-if="parsedTelemetry && parsedTelemetry.excursionCount > 0"
@@ -1150,8 +1176,8 @@
                   >* (Required for Excursion)</span
                 >
               </label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
               <textarea
+                id="milestone-notes"
                 v-model="milestoneForm.notes"
                 rows="3"
                 :required="
@@ -1190,16 +1216,20 @@
       <form @submit.prevent="submitManufacturingBind">
         <div class="form-grid">
           <div class="form-group col-full">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label>Manufacturing Batch ID</label>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-            <input v-model="manufacturingForm.batch_id" type="text" required />
+            <label for="manufacturing-batch-id">Manufacturing Batch ID</label>
+            <input
+              id="manufacturing-batch-id"
+              v-model="manufacturingForm.batch_id"
+              type="text"
+              required
+            />
           </div>
           <div class="form-group col-full">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label>Manufacturing Facility ID</label>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <label for="manufacturing-facility-id"
+              >Manufacturing Facility ID</label
+            >
             <input
+              id="manufacturing-facility-id"
               v-model="manufacturingForm.manufacturing_facility_id"
               type="text"
               required
@@ -1247,7 +1277,7 @@
             <input
               id="infusion-primary-verifier-id"
               v-model="infusionForm.primary_verifier_id"
-              type="text"
+              v-bind="SIGNATURE_USERNAME_INPUT_ATTRS"
               required
             />
           </div>
@@ -1256,7 +1286,7 @@
             <input
               id="infusion-admin-name"
               v-model="infusionForm.administrator_name"
-              type="text"
+              v-bind="SIGNATURE_SIGNER_NAME_INPUT_ATTRS"
               required
             />
           </div>
@@ -1266,7 +1296,7 @@
               id="infusion-unlock-token"
               v-model="infusionForm.unlock_token"
               type="password"
-              autocomplete="off"
+              autocomplete="one-time-code"
               required
             />
           </div>
@@ -1296,6 +1326,8 @@ import {
   formatCgtDestructionBindingId,
   SEMANTIC_ACTIONS,
   SIGNATURE_PASSWORD_INPUT_ATTRS,
+  SIGNATURE_SIGNER_NAME_INPUT_ATTRS,
+  SIGNATURE_USERNAME_INPUT_ATTRS,
 } from "ui";
 import { ref, reactive, onMounted } from "vue";
 import { requestStepUpSignature } from "@/api/signatureVerification";

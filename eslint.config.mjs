@@ -963,7 +963,6 @@ const LEGACY_WEB_RAW_MODAL_OVERLAY_ALLOWLIST = new Set([
   "components/imaging/DualReaderAdjudicationPanel.vue",
   "components/imaging/OncologyCalipers.vue",
   "components/quality/StatisticalForensicsViewer.vue",
-  "components/shared/ReAuthModal.vue",
   "components/tickets/TicketCreateModal.vue",
   "views/AmendmentDiffView.vue",
   "views/MdrView.vue",
@@ -3718,6 +3717,320 @@ const requireInlineFocusHandoffRule = {
   },
 };
 
+const VALID_PASSWORD_AUTOCOMPLETE_TOKENS = new Set([
+  "current-password",
+  "new-password",
+  "one-time-code",
+]);
+
+const KNOWN_PASSWORD_ATTR_PRESETS = new Set([
+  "SIGNATURE_PASSWORD_INPUT_ATTRS",
+  "OFFLINE_SECURITY_PIN_INPUT_ATTRS",
+  "OFFLINE_SECURITY_NEW_PIN_INPUT_ATTRS",
+  "passwordInputAttrs",
+  "pinInputAttrs",
+  "newPinInputAttrs",
+]);
+
+function isValidPasswordAutocompleteString(rawValue) {
+  if (typeof rawValue !== "string") return false;
+  const trimmed = rawValue.trim().toLowerCase();
+  if (!trimmed) return false;
+  const tokens = trimmed.split(/\s+/);
+  if (tokens.includes("off") || tokens.includes("false")) return false;
+  return tokens.some((token) => VALID_PASSWORD_AUTOCOMPLETE_TOKENS.has(token));
+}
+
+function exprContainsPasswordLiteral(expr) {
+  if (!expr) return false;
+  if (expr.type === "Literal" && typeof expr.value === "string") {
+    return expr.value.trim().toLowerCase() === "password";
+  }
+  if (expr.type === "TemplateLiteral" && expr.expressions.length === 0) {
+    const raw = expr.quasis.map((q) => q.value.cooked ?? "").join("");
+    return raw.trim().toLowerCase() === "password";
+  }
+  if (expr.type === "ConditionalExpression") {
+    return (
+      exprContainsPasswordLiteral(expr.consequent) ||
+      exprContainsPasswordLiteral(expr.alternate)
+    );
+  }
+  if (expr.type === "LogicalExpression") {
+    return (
+      exprContainsPasswordLiteral(expr.left) ||
+      exprContainsPasswordLiteral(expr.right)
+    );
+  }
+  return false;
+}
+
+function validateAutocompleteJsExpr(expr) {
+  if (!expr) return "missing";
+  if (expr.type === "Literal") {
+    if (typeof expr.value !== "string") return "invalid";
+    return isValidPasswordAutocompleteString(expr.value) ? "valid" : "invalid";
+  }
+  if (expr.type === "TemplateLiteral" && expr.expressions.length === 0) {
+    const raw = expr.quasis.map((q) => q.value.cooked ?? "").join("");
+    return isValidPasswordAutocompleteString(raw) ? "valid" : "invalid";
+  }
+  if (expr.type === "Identifier") {
+    if (expr.name === "undefined") return "invalid";
+    return "valid";
+  }
+  if (expr.type === "ConditionalExpression") {
+    const cons = validateAutocompleteJsExpr(expr.consequent);
+    const alt = validateAutocompleteJsExpr(expr.alternate);
+    return cons === "valid" && alt === "valid" ? "valid" : "invalid";
+  }
+  return "valid";
+}
+
+function isKnownPasswordPresetExpr(expr) {
+  if (!expr) return false;
+  if (expr.type === "Identifier") {
+    return KNOWN_PASSWORD_ATTR_PRESETS.has(expr.name);
+  }
+  if (
+    expr.type === "MemberExpression" &&
+    !expr.computed &&
+    expr.property?.type === "Identifier"
+  ) {
+    return KNOWN_PASSWORD_ATTR_PRESETS.has(expr.property.name);
+  }
+  if (expr.type === "ConditionalExpression") {
+    return (
+      isKnownPasswordPresetExpr(expr.consequent) &&
+      isKnownPasswordPresetExpr(expr.alternate)
+    );
+  }
+  if (expr.type === "ObjectExpression") {
+    let hasPresetSpread = false;
+    let explicitAutocomplete = null;
+    for (const prop of expr.properties || []) {
+      if (prop.type === "SpreadElement") {
+        if (isKnownPasswordPresetExpr(prop.argument)) {
+          hasPresetSpread = true;
+        }
+      } else if (prop.type === "Property" && !prop.computed) {
+        const keyName =
+          prop.key?.type === "Identifier"
+            ? prop.key.name
+            : typeof prop.key?.value === "string"
+              ? prop.key.value
+              : "";
+        if (keyName === "autocomplete") {
+          explicitAutocomplete = validateAutocompleteJsExpr(prop.value);
+        }
+      }
+    }
+    if (explicitAutocomplete !== null) {
+      return explicitAutocomplete === "valid";
+    }
+    return hasPresetSpread;
+  }
+  return false;
+}
+
+const requirePasswordAutocompleteRule = {
+  meta: {
+    type: "problem",
+    docs: {
+      description:
+        "Require standard autocomplete tokens (current-password, new-password, or one-time-code) on password and PIN inputs (WCAG 2.2 SC 1.3.5 / ADR-2679).",
+      category: "Accessibility",
+    },
+    messages: {
+      missingPasswordAutocomplete:
+        'Password/PIN input must declare a standard autocomplete token ("current-password", "new-password", or "one-time-code") or bind SIGNATURE_PASSWORD_INPUT_ATTRS / OFFLINE_SECURITY_PIN_INPUT_ATTRS (WCAG 2.2 SC 1.3.5).',
+      invalidPasswordAutocomplete:
+        'Invalid password autocomplete "{{value}}". Use "current-password", "new-password", or "one-time-code" (WCAG 2.2 SC 1.3.5).',
+    },
+  },
+  create(context) {
+    const parserServices =
+      context.sourceCode?.parserServices || context.parserServices;
+
+    function inspectInputAttrsObject(objNode) {
+      let isPasswordType = false;
+      let autocompleteProp = null;
+      for (const prop of objNode.properties || []) {
+        if (prop.type !== "Property" || prop.computed) continue;
+        const keyName =
+          prop.key?.type === "Identifier"
+            ? prop.key.name
+            : typeof prop.key?.value === "string"
+              ? prop.key.value
+              : "";
+        if (keyName === "type" && exprContainsPasswordLiteral(prop.value)) {
+          isPasswordType = true;
+        } else if (keyName === "autocomplete") {
+          autocompleteProp = prop;
+        }
+      }
+      if (!isPasswordType) return;
+      if (!autocompleteProp) {
+        context.report({
+          node: objNode,
+          messageId: "missingPasswordAutocomplete",
+        });
+        return;
+      }
+      const status = validateAutocompleteJsExpr(autocompleteProp.value);
+      if (status !== "valid") {
+        const rawVal =
+          autocompleteProp.value?.type === "Literal"
+            ? String(autocompleteProp.value.value ?? "")
+            : "";
+        context.report({
+          node: autocompleteProp,
+          messageId: "invalidPasswordAutocomplete",
+          data: { value: rawVal },
+        });
+      }
+    }
+
+    const scriptVisitor = {
+      "ExportNamedDeclaration VariableDeclarator"(declarator) {
+        if (
+          declarator.id?.type === "Identifier" &&
+          /_INPUT_ATTRS$/.test(declarator.id.name)
+        ) {
+          let target = declarator.init;
+          if (
+            target?.type === "CallExpression" &&
+            target.callee?.type === "MemberExpression" &&
+            target.callee.object?.type === "Identifier" &&
+            target.callee.object.name === "Object" &&
+            target.callee.property?.type === "Identifier" &&
+            target.callee.property.name === "freeze" &&
+            target.arguments?.[0]?.type === "ObjectExpression"
+          ) {
+            target = target.arguments[0];
+          }
+          if (target?.type === "ObjectExpression") {
+            inspectInputAttrsObject(target);
+          }
+        }
+      },
+    };
+
+    if (parserServices?.defineTemplateBodyVisitor) {
+      return parserServices.defineTemplateBodyVisitor(
+        {
+          VElement(node) {
+            const rawTag = (node.rawName || node.name || "").toLowerCase();
+            if (
+              rawTag !== "input" &&
+              rawTag !== "clinicalinput" &&
+              rawTag !== "clinical-input"
+            ) {
+              return;
+            }
+
+            let hasPasswordType = false;
+            let hasPresetVBind = false;
+            let explicitStaticAutocomplete = null;
+            let explicitDynamicAutocomplete = null;
+
+            for (const attr of node.startTag?.attributes || []) {
+              if (!attr.directive && attr.key?.type === "VIdentifier") {
+                if (
+                  attr.key.name === "type" &&
+                  typeof attr.value?.value === "string" &&
+                  attr.value.value.trim().toLowerCase() === "password"
+                ) {
+                  hasPasswordType = true;
+                } else if (attr.key.name === "autocomplete") {
+                  explicitStaticAutocomplete = attr;
+                }
+              } else if (
+                attr.directive &&
+                attr.key?.type === "VDirectiveKey" &&
+                attr.key.name?.name === "bind"
+              ) {
+                const argName =
+                  attr.key.argument?.type === "VIdentifier"
+                    ? attr.key.argument.name
+                    : null;
+                if (
+                  argName === "type" &&
+                  exprContainsPasswordLiteral(attr.value?.expression)
+                ) {
+                  hasPasswordType = true;
+                } else if (argName === "autocomplete") {
+                  explicitDynamicAutocomplete = attr;
+                } else if (!attr.key.argument) {
+                  if (isKnownPasswordPresetExpr(attr.value?.expression)) {
+                    hasPasswordType = true;
+                    hasPresetVBind = true;
+                  } else if (
+                    attr.value?.expression?.type === "ObjectExpression"
+                  ) {
+                    for (const prop of attr.value.expression.properties || []) {
+                      if (
+                        prop.type === "Property" &&
+                        !prop.computed &&
+                        (prop.key?.name === "type" ||
+                          prop.key?.value === "type") &&
+                        exprContainsPasswordLiteral(prop.value)
+                      ) {
+                        hasPasswordType = true;
+                      }
+                    }
+                  }
+                }
+              }
+            }
+
+            if (!hasPasswordType) return;
+
+            if (explicitStaticAutocomplete) {
+              const rawVal = explicitStaticAutocomplete.value?.value ?? "";
+              if (!isValidPasswordAutocompleteString(rawVal)) {
+                context.report({
+                  node: explicitStaticAutocomplete,
+                  messageId: "invalidPasswordAutocomplete",
+                  data: { value: String(rawVal) },
+                });
+              }
+              return;
+            }
+
+            if (explicitDynamicAutocomplete) {
+              const status = validateAutocompleteJsExpr(
+                explicitDynamicAutocomplete.value?.expression
+              );
+              if (status !== "valid") {
+                const expr = explicitDynamicAutocomplete.value?.expression;
+                const rawVal =
+                  expr?.type === "Literal" ? String(expr.value ?? "") : "";
+                context.report({
+                  node: explicitDynamicAutocomplete,
+                  messageId: "invalidPasswordAutocomplete",
+                  data: { value: rawVal },
+                });
+              }
+              return;
+            }
+
+            if (!hasPresetVBind) {
+              context.report({
+                node: node.startTag || node,
+                messageId: "missingPasswordAutocomplete",
+              });
+            }
+          },
+        },
+        scriptVisitor
+      );
+    }
+
+    return scriptVisitor;
+  },
+};
+
 const customVuePlugin = {
   rules: {
     "no-inline-hex": noInlineHexRule,
@@ -3736,6 +4049,7 @@ const customVuePlugin = {
     "no-unguarded-button-state": noUnguardedButtonStateRule,
     "require-inline-focus-handoff": requireInlineFocusHandoffRule,
     "no-unscoped-navigation": noUnscopedNavigationRule,
+    "require-password-autocomplete": requirePasswordAutocompleteRule,
   },
 };
 
@@ -3798,6 +4112,7 @@ export default [
       "custom-vue/no-unguarded-button-state": "error",
       "custom-vue/require-inline-focus-handoff": "error",
       "custom-vue/no-unscoped-navigation": "error",
+      "custom-vue/require-password-autocomplete": "error",
       "vue/max-attributes-per-line": "off",
       "vue/singleline-html-element-content-newline": "off",
       "vue/multiline-html-element-content-newline": "off",
@@ -3843,6 +4158,7 @@ export default [
   {
     files: [
       "packages/ui/index.js",
+      "packages/ui/signing.js",
       "packages/ui/src/**/*.js",
       "packages/ui/src/**/*.ts",
       "apps/subject-portal/src/**/*.js",
@@ -3863,6 +4179,7 @@ export default [
       "custom-vue/no-custom-font-stack": "error",
       "custom-vue/require-inline-focus-handoff": "error",
       "custom-vue/no-unscoped-navigation": "error",
+      "custom-vue/require-password-autocomplete": "error",
     },
   },
   {
@@ -4100,43 +4417,11 @@ export default [
   {
     files: [
       "packages/ui/index.js",
+      "packages/ui/signing.js",
       "packages/ui/src/**/*.{js,ts,vue}",
       "apps/subject-portal/src/**/*.{js,ts,vue}",
       "docs/.vitepress/theme/**/*.{js,vue}",
-      "apps/web/src/App.vue",
-      "apps/web/src/composables/**/*.{js,ts}",
-      "apps/web/src/components/*.vue",
-      "apps/web/src/components/canvas/**/*.vue",
-      "apps/web/src/components/common/**/*.vue",
-      "apps/web/src/components/shared/**/*.vue",
-      "apps/web/src/components/ctms/**/*.vue",
-      "apps/web/src/components/ecrf/**/*.vue",
-      "apps/web/src/components/etmf/**/*.vue",
-      "apps/web/src/components/tickets/**/*.vue",
-      "apps/web/src/components/clinical/SsuGreenlightConsole.vue",
-      "apps/web/src/components/clinical/ProtocolTrainingConsole.vue",
-      "apps/web/src/components/clinical/SensorTelemetryConsole.vue",
-      "apps/web/src/components/clinical/LabGovernanceConsole.vue",
-      "apps/web/src/views/OverviewView.vue",
-      "apps/web/src/views/PlansView.vue",
-      "apps/web/src/views/TrialSetupView.vue",
-      "apps/web/src/views/LoginView.vue",
-      "apps/web/src/views/ForbiddenView.vue",
-      "apps/web/src/views/UnavailableView.vue",
-      "apps/web/src/views/StudyCanvasView.vue",
-      "apps/web/src/views/ObservationView.vue",
-      "apps/web/src/views/EcrfView.vue",
-      "apps/web/src/views/EcrfLiveWorkspace.vue",
-      "apps/web/src/views/demo/EcrfDemoWorkspace.vue",
-      "apps/web/src/views/CtmsView.vue",
-      "apps/web/src/views/CtmsLiveWorkspace.vue",
-      "apps/web/src/views/demo/CtmsDemoWorkspace.vue",
-      "apps/web/src/views/DocumentManagerView.vue",
-      "apps/web/src/views/StudyTrainingView.vue",
-      "apps/web/src/views/TicketsView.vue",
-      "apps/web/src/views/KnowledgeView.vue",
-      "apps/web/src/views/DataLockView.vue",
-      "apps/web/src/views/ExportWizardView.vue",
+      "apps/web/src/**/*.{js,ts,vue}",
     ],
     plugins: {
       "custom-vue": customVuePlugin,

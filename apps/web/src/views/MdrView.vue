@@ -697,11 +697,11 @@
                     box-shadow: var(--shadow-sm);
                   "
                 >
-                  <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-                  <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
                   <div
                     v-for="sug in armSuggestions"
                     :key="sug.concept_code"
+                    role="button"
+                    tabindex="0"
                     style="
                       padding: 6px;
                       cursor: pointer;
@@ -709,6 +709,8 @@
                         var(--semantic-color-surface-header);
                     "
                     @click="selectArmConcept(sug)"
+                    @keydown.enter.prevent="selectArmConcept(sug)"
+                    @keydown.space.prevent="selectArmConcept(sug)"
                   >
                     <strong>{{ sug.concept_code }}</strong> -
                     {{ sug.preferred_name }}
@@ -860,11 +862,11 @@
                     box-shadow: var(--shadow-sm);
                   "
                 >
-                  <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-                  <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
                   <div
                     v-for="sug in encSuggestions"
                     :key="sug.concept_code"
+                    role="button"
+                    tabindex="0"
                     style="
                       padding: 6px;
                       cursor: pointer;
@@ -872,6 +874,8 @@
                         var(--semantic-color-surface-header);
                     "
                     @click="selectEncConcept(sug)"
+                    @keydown.enter.prevent="selectEncConcept(sug)"
+                    @keydown.space.prevent="selectEncConcept(sug)"
                   >
                     <strong>{{ sug.concept_code }}</strong> -
                     {{ sug.preferred_name }}
@@ -1304,40 +1308,45 @@
                 gap: 8px;
               "
             >
-              <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-              <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-              <li
-                v-for="c in conceptResults"
-                :key="c.concept_code"
-                style="
-                  padding: 10px;
-                  border: 1px solid var(--border);
-                  border-radius: 6px;
-                  cursor: pointer;
-                  background-color: var(--semantic-color-surface-muted);
-                "
-                @click="selectConceptForEdit(c)"
-              >
-                <div
+              <li v-for="c in conceptResults" :key="c.concept_code">
+                <button
+                  type="button"
                   style="
-                    display: flex;
-                    justify-content: space-between;
-                    font-weight: bold;
-                    font-size: 0.85rem;
-                    margin-bottom: 4px;
+                    width: 100%;
+                    text-align: left;
+                    padding: 10px;
+                    border: 1px solid var(--border);
+                    border-radius: 6px;
+                    cursor: pointer;
+                    background-color: var(--semantic-color-surface-muted);
+                    font: inherit;
+                    color: inherit;
                   "
+                  @click="selectConceptForEdit(c)"
                 >
-                  <span style="color: var(--accent)">{{ c.concept_code }}</span>
-                  <span>{{ c.preferred_name }}</span>
-                </div>
-                <div
-                  style="
-                    font-size: 0.75rem;
-                    color: var(--semantic-color-text-secondary);
-                  "
-                >
-                  {{ c.definition || "No definition available." }}
-                </div>
+                  <div
+                    style="
+                      display: flex;
+                      justify-content: space-between;
+                      font-weight: bold;
+                      font-size: 0.85rem;
+                      margin-bottom: 4px;
+                    "
+                  >
+                    <span style="color: var(--accent)">{{
+                      c.concept_code
+                    }}</span>
+                    <span>{{ c.preferred_name }}</span>
+                  </div>
+                  <div
+                    style="
+                      font-size: 0.75rem;
+                      color: var(--semantic-color-text-secondary);
+                    "
+                  >
+                    {{ c.definition || "No definition available." }}
+                  </div>
+                </button>
               </li>
             </ul>
           </div>
@@ -1684,9 +1693,9 @@
           </p>
 
           <!-- Dropzone Area -->
-          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
           <div
+            role="button"
+            tabindex="0"
             class="dropzone-area"
             :class="{ dragging: isDragging }"
             style="
@@ -1703,9 +1712,14 @@
             @dragleave.prevent="isDragging = false"
             @drop.prevent="handleFileDrop"
             @click="triggerFileInput"
+            @keydown.enter.prevent="triggerFileInput"
+            @keydown.space.prevent="triggerFileInput"
           >
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <label for="mdr-usdm-file-input" class="sr-only"
+              >Upload CDISC USDM protocol JSON file</label
+            >
             <input
+              id="mdr-usdm-file-input"
               ref="fileInputRef"
               type="file"
               accept=".json,application/json"

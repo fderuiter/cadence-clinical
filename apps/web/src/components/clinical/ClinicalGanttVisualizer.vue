@@ -217,9 +217,10 @@
                   />
 
                   <!-- Visit Node Circle -->
-                  <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-                  <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
                   <circle
+                    role="button"
+                    tabindex="0"
+                    :aria-label="`Edit encounter timing for ${visit.encounter_name}`"
                     :cx="
                       getVisitX(
                         getEpochForLane(arm.arm_id, seq).epoch_id,
@@ -239,6 +240,8 @@
                       );
                     "
                     @click="openEditModal(visit)"
+                    @keydown.enter.prevent="openEditModal(visit)"
+                    @keydown.space.prevent="openEditModal(visit)"
                   />
 
                   <!-- Sequence Number Inside Circle -->
@@ -400,8 +403,8 @@
       <div style="display: flex; flex-direction: column; gap: 14px">
         <!-- Target / Planned Day -->
         <div class="form-group">
-          <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
           <label
+            for="gantt-planned-day"
             style="
               font-weight: 600;
               display: block;
@@ -412,8 +415,8 @@
           >
             Target Day Offset
           </label>
-          <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
           <input
+            id="gantt-planned-day"
             v-model.number="form.planned_day"
             type="number"
             min="0"
@@ -431,8 +434,8 @@
         <!-- Min/Max Offsets -->
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px">
           <div class="form-group">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
             <label
+              for="gantt-min-offset"
               style="
                 font-weight: 600;
                 display: block;
@@ -443,8 +446,8 @@
             >
               Min Offset (Days)
             </label>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
             <input
+              id="gantt-min-offset"
               v-model.number="form.min_offset"
               type="number"
               min="0"
@@ -459,8 +462,8 @@
             />
           </div>
           <div class="form-group">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
             <label
+              for="gantt-max-offset"
               style="
                 font-weight: 600;
                 display: block;
@@ -471,8 +474,8 @@
             >
               Max Offset (Days)
             </label>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
             <input
+              id="gantt-max-offset"
               v-model.number="form.max_offset"
               type="number"
               min="0"
@@ -490,8 +493,8 @@
 
         <!-- Anchor Reference -->
         <div class="form-group">
-          <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
           <label
+            for="gantt-anchor-ref"
             style="
               font-weight: 600;
               display: block;
@@ -502,8 +505,8 @@
           >
             Anchor Reference Milestone
           </label>
-          <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
           <input
+            id="gantt-anchor-ref"
             v-model="form.anchor_reference"
             type="text"
             style="
@@ -526,8 +529,8 @@
             margin-top: 4px;
           "
         >
-          <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
           <label
+            for="gantt-justification"
             style="
               font-weight: bold;
               display: block;
@@ -538,8 +541,8 @@
           >
             Compliance Change Justification *
           </label>
-          <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
           <textarea
+            id="gantt-justification"
             v-model="form.justification"
             rows="2.5"
             style="

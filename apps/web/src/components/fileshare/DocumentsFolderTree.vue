@@ -1,5 +1,4 @@
 <template>
-  <!-- eslint-disable vuejs-accessibility/interactive-supports-focus, vuejs-accessibility/click-events-have-key-events -->
   <div class="documents-tree-container">
     <div class="tree-header">
       <div class="tree-title-row">
@@ -50,6 +49,8 @@
         :class="{ 'is-selected': !selectedNodeKey }"
         tabindex="0"
         @click="selectGlobalRoot"
+        @keydown.enter.prevent="selectGlobalRoot"
+        @keydown.space.prevent="selectGlobalRoot"
       >
         <div class="node-header">
           <span class="folder-icon">📂</span>
@@ -79,6 +80,8 @@
           }"
           tabindex="0"
           @click="clickStudy(study)"
+          @keydown.enter.prevent="clickStudy(study)"
+          @keydown.space.prevent="clickStudy(study)"
         >
           <span class="toggle-icon">{{
             isExpanded(study.id) ? "▼" : "▶"
@@ -111,6 +114,8 @@
               }"
               tabindex="0"
               @click="clickSite(study, site)"
+              @keydown.enter.prevent="clickSite(study, site)"
+              @keydown.space.prevent="clickSite(study, site)"
             >
               <span class="toggle-icon">{{
                 isExpanded(study.id + "-" + site.id) ? "▼" : "▶"
@@ -142,6 +147,8 @@
                   }"
                   tabindex="0"
                   @click="clickZone(zone)"
+                  @keydown.enter.prevent="clickZone(zone)"
+                  @keydown.space.prevent="clickZone(zone)"
                 >
                   <span class="toggle-icon">{{
                     isExpanded(zone.id) ? "▼" : "▶"
@@ -174,6 +181,8 @@
                       }"
                       tabindex="0"
                       @click="clickSection(sec)"
+                      @keydown.enter.prevent="clickSection(sec)"
+                      @keydown.space.prevent="clickSection(sec)"
                     >
                       <span class="toggle-icon">{{
                         isExpanded(sec.id) ? "▼" : "▶"
@@ -201,6 +210,8 @@
                         }"
                         tabindex="0"
                         @click="clickFolder(folder)"
+                        @keydown.enter.prevent="clickFolder(folder)"
+                        @keydown.space.prevent="clickFolder(folder)"
                       >
                         <div class="node-header folder-header">
                           <span class="folder-icon">📄</span>

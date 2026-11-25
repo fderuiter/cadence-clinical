@@ -32,9 +32,7 @@
             <input
               id="setup-pin"
               v-model="sessionStore.pinSetup.pin"
-              type="password"
-              inputmode="numeric"
-              pattern="[0-9]*"
+              v-bind="OFFLINE_SECURITY_NEW_PIN_INPUT_ATTRS"
               placeholder="••••"
               required
             />
@@ -44,9 +42,7 @@
             <input
               id="confirm-setup-pin"
               v-model="sessionStore.pinSetup.confirmPin"
-              type="password"
-              inputmode="numeric"
-              pattern="[0-9]*"
+              v-bind="OFFLINE_SECURITY_NEW_PIN_INPUT_ATTRS"
               placeholder="••••"
               required
             />
@@ -94,7 +90,12 @@
 
 <script setup>
 import { ref } from "vue";
-import { SignOutConfirmModal, useFocusTrap, useSignOutGuard } from "ui";
+import {
+  OFFLINE_SECURITY_NEW_PIN_INPUT_ATTRS,
+  SignOutConfirmModal,
+  useFocusTrap,
+  useSignOutGuard,
+} from "ui";
 
 import {
   hasUnsavedOrUnsyncedLocalData,

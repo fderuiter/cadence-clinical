@@ -94,27 +94,37 @@
           </div>
 
           <!-- Choices/Options Builder -->
-          <div class="options-builder">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label
-              >Answer Choices (Select the radio button for the correct
-              choice):</label
-            >
+          <div
+            class="options-builder"
+            role="group"
+            :aria-labelledby="'q-choices-label-' + q.id"
+          >
+            <div :id="'q-choices-label-' + q.id" class="options-builder-label">
+              Answer Choices (Select the radio button for the correct choice):
+            </div>
             <div
               v-for="(opt, optIndex) in q.options"
               :key="optIndex"
               class="option-row"
             >
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <label
+                :for="'correct-opt-' + q.id + '-' + optIndex"
+                class="sr-only"
+                >Mark option {{ optIndex + 1 }} as correct answer</label
+              >
               <input
+                :id="'correct-opt-' + q.id + '-' + optIndex"
                 type="radio"
                 :name="'correct-opt-' + q.id"
                 :checked="q.correctAnswerIndex === optIndex"
                 title="Mark as correct answer"
                 @change="q.correctAnswerIndex = optIndex"
               />
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <label :for="'opt-text-' + q.id + '-' + optIndex" class="sr-only"
+                >Answer option {{ optIndex + 1 }}</label
+              >
               <input
+                :id="'opt-text-' + q.id + '-' + optIndex"
                 v-model="q.options[optIndex]"
                 type="text"
                 :placeholder="'Option ' + (optIndex + 1)"
@@ -656,7 +666,8 @@ defineExpose({
   gap: 8px;
 }
 
-.options-builder label {
+.options-builder label,
+.options-builder-label {
   font-weight: 600;
   font-size: 0.85rem;
   color: var(--neutral-dark);

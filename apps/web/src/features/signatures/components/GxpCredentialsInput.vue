@@ -6,12 +6,13 @@
       <input
         :id="usernameId"
         :value="username"
-        type="text"
+        v-bind="SIGNATURE_USERNAME_INPUT_ATTRS"
         :placeholder="usernamePlaceholder"
         :disabled="disabled"
         :class="usernameClass"
         :style="inputStyle"
         @input="$emit('update:username', $event.target.value)"
+        @keydown.enter="handleFormEnter"
       />
     </div>
 
@@ -32,6 +33,7 @@
           passwordReentryRequired ? `${passwordId}-reentry-cue` : undefined
         "
         @input="$emit('update:password', $event.target.value)"
+        @keydown.enter="handleFormEnter"
         @keyup.enter="$emit('keyup-enter')"
       />
       <p
@@ -52,19 +54,34 @@
       <input
         :id="totpId"
         :value="totp"
-        type="text"
+        v-bind="SIGNATURE_TOTP_INPUT_ATTRS"
         :placeholder="totpPlaceholder"
         :disabled="disabled"
         :class="totpClass"
         :style="inputStyle"
         @input="$emit('update:totp', $event.target.value)"
+        @keydown.enter="handleFormEnter"
       />
     </div>
   </div>
 </template>
 
 <script setup>
-import { SIGNATURE_PASSWORD_INPUT_ATTRS } from "ui";
+import {
+  SIGNATURE_PASSWORD_INPUT_ATTRS,
+  SIGNATURE_TOTP_INPUT_ATTRS,
+  SIGNATURE_USERNAME_INPUT_ATTRS,
+} from "ui";
+
+function handleFormEnter(event) {
+  const form = event.target?.form;
+  if (form) {
+    event.preventDefault();
+    form.dispatchEvent(
+      new Event("submit", { bubbles: true, cancelable: true })
+    );
+  }
+}
 
 defineProps({
   username: {

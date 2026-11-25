@@ -106,6 +106,7 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import {
+  OFFLINE_SECURITY_PIN_INPUT_ATTRS,
   SIGNATURE_PASSWORD_INPUT_ATTRS,
   requiresCustomSignatureReason,
   useFocusTrap,
@@ -117,16 +118,6 @@ import { checkOnline } from "../features/sync-status.js";
 import { useSessionStore } from "../stores/session.js";
 import { state } from "../stores/state.js";
 import { useUiStore } from "../stores/ui.js";
-
-const OFFLINE_SECURITY_PIN_INPUT_ATTRS = Object.freeze({
-  type: "password",
-  inputmode: "numeric",
-  pattern: "[0-9]*",
-  autocomplete: "off",
-  autocapitalize: "off",
-  autocorrect: "off",
-  spellcheck: "false",
-});
 
 const modalRef = ref(null);
 const selectedReason = ref("Initial Questionnaire Completion");

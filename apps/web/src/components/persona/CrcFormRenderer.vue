@@ -421,12 +421,10 @@
         class="clinical-form responsive-grid"
         @submit.prevent
       >
-        <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-        <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
         <fieldset
+          ref="fieldsetEl"
           :disabled="isReconsentGated"
           style="border: none; padding: 0; margin: 0; display: contents"
-          @click="handleFieldsetInteraction"
         >
           <template v-for="field in renderedFields" :key="field.id">
             <div
@@ -881,14 +879,16 @@
         <strong>{{ selectedSubjectId }}</strong>.
       </p>
       <div class="form-group" style="margin-bottom: 12px">
-        <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-        <label style="font-size: 0.85rem; font-weight: 600"
+        <label
+          for="paper-icf-signed-date"
+          style="font-size: 0.85rem; font-weight: 600"
           >Date ICF Signed by Subject:</label
         >
-        <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
         <input
+          id="paper-icf-signed-date"
           :value="paperIcfDate"
           type="date"
+          data-tabular-nums="true"
           class="form-control"
           style="
             width: 100%;
@@ -901,12 +901,13 @@
         />
       </div>
       <div class="form-group" style="margin-bottom: 12px">
-        <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-        <label style="font-size: 0.85rem; font-weight: 600"
+        <label
+          for="paper-icf-verification-note"
+          style="font-size: 0.85rem; font-weight: 600"
           >Investigator Verification Note:</label
         >
-        <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
         <input
+          id="paper-icf-verification-note"
           :value="paperIcfNote"
           type="text"
           class="form-control"
@@ -948,7 +949,7 @@
 </template>
 
 <script setup>
-import { computed, reactive, ref } from "vue";
+import { computed, reactive, ref, watch } from "vue";
 import { ClinicalFormField, ClinicalModal } from "ui";
 import { useScopedNavigation } from "../../composables/useScopedNavigation";
 import { isScreenAvailable } from "../../router/availability.js";
@@ -1163,11 +1164,23 @@ function raiseQueryForAlert(fieldId, message) {
   emit("create-query", fieldId, message);
 }
 
+const fieldsetEl = ref(null);
+
 function handleFieldsetInteraction() {
   if (props.isReconsentGated) {
     showReconsentGateModal.value = true;
   }
 }
+
+watch(
+  fieldsetEl,
+  (el, _prev, onCleanup) => {
+    if (!el) return;
+    el.addEventListener("click", handleFieldsetInteraction);
+    onCleanup(() => el.removeEventListener("click", handleFieldsetInteraction));
+  },
+  { immediate: true }
+);
 
 function handleSubmitClick() {
   if (!props.canEditForm) return;

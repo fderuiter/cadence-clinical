@@ -130,9 +130,7 @@
             <input
               id="unlock-pin"
               v-model="sessionStore.pinUnlock.pin"
-              type="password"
-              inputmode="numeric"
-              pattern="[0-9]*"
+              v-bind="OFFLINE_SECURITY_PIN_INPUT_ATTRS"
               placeholder="••••"
               :disabled="isLockedOut"
               required
@@ -193,7 +191,12 @@
 
 <script setup>
 import { computed, ref } from "vue";
-import { SignOutConfirmModal, useFocusTrap, useSignOutGuard } from "ui";
+import {
+  OFFLINE_SECURITY_PIN_INPUT_ATTRS,
+  SignOutConfirmModal,
+  useFocusTrap,
+  useSignOutGuard,
+} from "ui";
 
 import {
   hasUnsavedOrUnsyncedLocalData,

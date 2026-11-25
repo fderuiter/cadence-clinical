@@ -636,9 +636,16 @@
                     Investigation</span
                   >
                 </label>
-                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+                <label
+                  v-if="deficForm.device_returned_to_sponsor"
+                  for="defic-return-tracking-number"
+                  class="sr-only"
+                >
+                  Carrier Tracking Number
+                </label>
                 <input
                   v-if="deficForm.device_returned_to_sponsor"
+                  id="defic-return-tracking-number"
                   v-model="deficForm.return_tracking_number"
                   type="text"
                   class="text-input text-input-sm mt-2"
@@ -1209,7 +1216,7 @@
           <input
             id="modal-rel-sig"
             v-model="releaseForm.signature_token"
-            type="password"
+            v-bind="SIGNATURE_PASSWORD_INPUT_ATTRS"
             class="text-input"
             placeholder="Enter authorized signature key / token..."
             required
@@ -1321,7 +1328,7 @@
           <input
             id="modal-adj-sig"
             v-model="adjudicateForm.signature_token"
-            type="password"
+            v-bind="SIGNATURE_PASSWORD_INPUT_ATTRS"
             class="text-input"
             placeholder="Enter e-signature credential..."
             required
@@ -1347,7 +1354,7 @@
 
 <script setup>
 import { computed, onMounted, ref } from "vue";
-import { useFocusTrap } from "ui";
+import { SIGNATURE_PASSWORD_INPUT_ATTRS, useFocusTrap } from "ui";
 import { demoRandomInt } from "../../utils/demoMode.js";
 
 // State

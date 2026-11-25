@@ -22,13 +22,16 @@
           class="btn btn-secondary btn-sign"
           @click="openSignatureModal"
         >
-          ✍️ eConsent Sign-off
+          <PenTool :size="16" aria-hidden="true" />
+          <span>eConsent Sign-off</span>
         </button>
         <button
+          type="button"
           class="btn btn-primary btn-publish"
           @click="showPublishModal = true"
         >
-          🚀 Publish Version
+          <Send :size="16" aria-hidden="true" />
+          <span>Publish Version</span>
         </button>
       </div>
     </header>
@@ -41,7 +44,7 @@
       role="status"
     >
       <div class="manifest-header">
-        <span class="manifest-icon">🔒</span>
+        <Lock :size="16" class="manifest-icon" aria-hidden="true" />
         <strong style="color: var(--success); font-size: 0.95rem">
           21 CFR Part 11 Electronic Signature Manifest Verified
         </strong>
@@ -81,8 +84,6 @@
         <div class="outline-group">
           <h4>Modular Consent Clauses</h4>
           <ul id="consent-clauses-list">
-            <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-            <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
             <li
               v-for="(sec, sIdx) in econsentStore.sections"
               :key="sec.id"
@@ -90,12 +91,20 @@
                 'outline-item',
                 { active: activeSectionId === sec.id && !showQuiz },
               ]"
-              @click="selectSection(sec.id)"
             >
-              <span class="item-icon">📄</span>
-              <span class="item-title">{{ sec.title }}</span>
+              <button
+                type="button"
+                class="outline-item-btn"
+                :aria-current="
+                  activeSectionId === sec.id && !showQuiz ? 'true' : undefined
+                "
+                @click="selectSection(sec.id)"
+              >
+                <FileText :size="16" class="item-icon" aria-hidden="true" />
+                <span class="item-title">{{ sec.title }}</span>
+              </button>
 
-              <div class="clause-controls" @click.stop>
+              <div class="clause-controls">
                 <ClinicalIconButton
                   class="btn-clause-ctrl btn-move-up"
                   title="Move Up"
@@ -103,7 +112,7 @@
                   :label="`Move section ${sec.title} up`"
                   @click="econsentStore.reorderSections(sIdx, sIdx - 1)"
                 >
-                  ▲
+                  <ChevronUp :size="14" aria-hidden="true" />
                 </ClinicalIconButton>
                 <ClinicalIconButton
                   class="btn-clause-ctrl btn-move-down"
@@ -112,7 +121,7 @@
                   :label="`Move section ${sec.title} down`"
                   @click="econsentStore.reorderSections(sIdx, sIdx + 1)"
                 >
-                  ▼
+                  <ChevronDown :size="14" aria-hidden="true" />
                 </ClinicalIconButton>
                 <ClinicalIconButton
                   class="btn-clause-ctrl btn-delete-clause"
@@ -120,7 +129,7 @@
                   :label="`Remove section ${sec.title}`"
                   @click="econsentStore.removeSection(sec.id)"
                 >
-                  ✕
+                  <X :size="14" aria-hidden="true" />
                 </ClinicalIconButton>
               </div>
             </li>
@@ -128,8 +137,11 @@
 
           <!-- Add New Section form -->
           <div class="add-section-form">
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <label for="icf-new-section-title" class="sr-only"
+              >New Section Title</label
+            >
             <input
+              id="icf-new-section-title"
               v-model="newSectionTitle"
               type="text"
               placeholder="New Section Title..."
@@ -149,14 +161,20 @@
         <div class="outline-group separator">
           <h4>Interactive Checks</h4>
           <ul>
-            <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-            <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-            <li
-              :class="['outline-item', { active: showQuiz }]"
-              @click="selectQuiz"
-            >
-              <span class="item-icon">📝</span>
-              <span class="item-title">Comprehension Quiz</span>
+            <li :class="['outline-item', { active: showQuiz }]">
+              <button
+                type="button"
+                class="outline-item-btn"
+                :aria-current="showQuiz ? 'true' : undefined"
+                @click="selectQuiz"
+              >
+                <ClipboardCheck
+                  :size="16"
+                  class="item-icon"
+                  aria-hidden="true"
+                />
+                <span class="item-title">Comprehension Quiz</span>
+              </button>
             </li>
           </ul>
         </div>
@@ -225,9 +243,12 @@
       title="21 CFR Part 11 Change Reason Capture"
     >
       <p class="warning-text">
-        ⚠️ Publishing this Informed Consent Form (ICF) increments the active
-        protocol design version. All future subject enrollments and re-consents
-        will bind to the new version index.
+        <AlertTriangle :size="16" aria-hidden="true" />
+        <span
+          >Publishing this Informed Consent Form (ICF) increments the active
+          protocol design version. All future subject enrollments and
+          re-consents will bind to the new version index.</span
+        >
       </p>
       <div class="form-group">
         <label for="publish-reason"
@@ -260,6 +281,17 @@
 
 <script setup>
 import { ref, computed, onMounted } from "vue";
+import {
+  AlertTriangle,
+  ChevronDown,
+  ChevronUp,
+  ClipboardCheck,
+  FileText,
+  Lock,
+  PenTool,
+  Send,
+  X,
+} from "lucide-vue-next";
 import { ClinicalIconButton, ClinicalModal } from "ui";
 import {
   ECONSENT_CAPTURE_SEMANTIC_ACTION,
@@ -549,8 +581,23 @@ const formatTime = (isoString) => {
   font-weight: 600;
 }
 
+.outline-item-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: none;
+  padding: 2px 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  min-height: 24px;
+}
+
 .item-icon {
-  font-size: 1rem;
+  flex-shrink: 0;
 }
 
 .item-title {
@@ -596,7 +643,7 @@ const formatTime = (isoString) => {
 }
 
 .inline-input {
-  font-size: 0.85rem;
+  font-size: 1rem;
   padding: 6px 10px;
 }
 
@@ -730,7 +777,7 @@ const formatTime = (isoString) => {
   padding: 8px 12px;
   border: 1px solid var(--border);
   border-radius: 6px;
-  font-size: 0.9rem;
+  font-size: 1rem;
 }
 
 .error-text {

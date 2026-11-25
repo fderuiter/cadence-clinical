@@ -624,3 +624,25 @@ describe("Shared Part 11 step-up verification & credential helpers (signing.js)"
     ).rejects.toThrow(/options\.post/i);
   });
 });
+
+describe("Signing credential and offline PIN autocomplete presets (ADR-2679)", () => {
+  it("exports WCAG 2.2 SC 1.3.5 / SC 3.3.8 autocomplete presets", async () => {
+    const signing = await import("../signing.js");
+    expect(signing.SIGNATURE_PASSWORD_INPUT_ATTRS.autocomplete).toBe(
+      "current-password"
+    );
+    expect(signing.SIGNATURE_USERNAME_INPUT_ATTRS.autocomplete).toBe(
+      "username"
+    );
+    expect(signing.SIGNATURE_SIGNER_NAME_INPUT_ATTRS.autocomplete).toBe("name");
+    expect(signing.SIGNATURE_TOTP_INPUT_ATTRS.autocomplete).toBe(
+      "one-time-code"
+    );
+    expect(signing.OFFLINE_SECURITY_PIN_INPUT_ATTRS.autocomplete).toBe(
+      "current-password"
+    );
+    expect(signing.OFFLINE_SECURITY_NEW_PIN_INPUT_ATTRS.autocomplete).toBe(
+      "new-password"
+    );
+  });
+});

@@ -627,7 +627,7 @@
         <input
           id="bulk-signer-name"
           v-model="bulkSignForm.signerName"
-          type="text"
+          v-bind="SIGNATURE_SIGNER_NAME_INPUT_ATTRS"
           class="text-input"
           :disabled="submittingBulkSign"
           placeholder="Your full name"
@@ -649,7 +649,7 @@
         <input
           id="bulk-password"
           v-model="bulkSignForm.password"
-          type="password"
+          v-bind="SIGNATURE_PASSWORD_INPUT_ATTRS"
           class="text-input"
           :disabled="submittingBulkSign"
           placeholder="Enter password to verify identity"
@@ -683,7 +683,10 @@
           @click="handleExecuteBulkSignOff"
         >
           <span v-if="submittingBulkSign">Executing Part 11 Signature...</span>
-          <span v-else>Confirm &amp; Execute Signature ✍️</span>
+          <span v-else
+            >Confirm &amp; Execute Signature
+            <FileSignature :size="14" aria-hidden="true"
+          /></span>
         </button>
       </template>
     </ClinicalModal>
@@ -691,7 +694,14 @@
 </template>
 
 <script setup>
-import { ClinicalModal, ClinicalTabs, handoffFocus } from "ui";
+import { FileSignature } from "lucide-vue-next";
+import {
+  ClinicalModal,
+  ClinicalTabs,
+  handoffFocus,
+  SIGNATURE_PASSWORD_INPUT_ATTRS,
+  SIGNATURE_SIGNER_NAME_INPUT_ATTRS,
+} from "ui";
 import { computed, onMounted, ref, watch } from "vue";
 import { requestStepUpSignature } from "../../api/signatureVerification";
 import { trainingApi } from "../../api/training";

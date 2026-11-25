@@ -309,8 +309,14 @@
           </div>
 
           <div class="filter-controls">
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-            <select v-model="filterDomain" class="form-select">
+            <label for="lakehouse-filter-domain" class="sr-only"
+              >Filter by Domain</label
+            >
+            <select
+              id="lakehouse-filter-domain"
+              v-model="filterDomain"
+              class="form-select"
+            >
               <option value="">All Domains</option>
               <option value="VS">VS - Vital Signs</option>
               <option value="LB">LB - Laboratory</option>
@@ -322,8 +328,14 @@
               <option value="EX">EX - Exposure</option>
             </select>
 
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-            <select v-model="filterStream" class="form-select">
+            <label for="lakehouse-filter-stream" class="sr-only"
+              >Filter by Stream</label
+            >
+            <select
+              id="lakehouse-filter-stream"
+              v-model="filterStream"
+              class="form-select"
+            >
               <option value="">All Streams</option>
               <option value="EDC_ECRF">EDC eCRFs</option>
               <option value="EPRO_ECOA">ePRO / eCOA</option>
@@ -334,8 +346,11 @@
               <option value="MEDICAL_IMAGING">Medical Imaging</option>
             </select>
 
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <label for="lakehouse-filter-subject" class="sr-only"
+              >Filter by Subject ID</label
+            >
             <input
+              id="lakehouse-filter-subject"
               v-model="filterSubject"
               type="text"
               class="form-input search-input"

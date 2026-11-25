@@ -1346,7 +1346,7 @@
             <input
               id="bulk-signer-name"
               v-model="bulkReconsentForm.signer_name"
-              type="text"
+              v-bind="SIGNATURE_USERNAME_INPUT_ATTRS"
               class="form-control"
               placeholder="e.g. crc.user"
             />
@@ -1359,7 +1359,7 @@
             <input
               id="bulk-signer-pin"
               v-model="bulkReconsentForm.signer_pin"
-              type="password"
+              v-bind="SIGNATURE_PASSWORD_INPUT_ATTRS"
               class="form-control"
               placeholder="••••"
             />
@@ -1504,7 +1504,12 @@
 import ReconsentChannelPicker from "../components/econsent/ReconsentChannelPicker.vue";
 import { ref, computed, onMounted } from "vue";
 import { DEMO_SITES } from "demo-fixtures";
-import { ClinicalIconButton, useFocusTrap } from "ui";
+import {
+  ClinicalIconButton,
+  SIGNATURE_PASSWORD_INPUT_ATTRS,
+  SIGNATURE_USERNAME_INPUT_ATTRS,
+  useFocusTrap,
+} from "ui";
 import { apiClient } from "../api/apiClient";
 import { designerService } from "../api/designer";
 import { useClinicalStore } from "../stores/clinical";

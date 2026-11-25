@@ -109,14 +109,16 @@
           </div>
           <div class="panel-body compact-body">
             <div class="summary-list">
-              <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-              <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
               <div
                 v-for="s in summaries"
                 :key="s.id"
+                role="button"
+                tabindex="0"
                 class="summary-item-card"
                 :class="{ selected: selectedSummary?.id === s.id }"
                 @click="selectedSummary = s"
+                @keydown.enter.prevent="selectedSummary = s"
+                @keydown.space.prevent="selectedSummary = s"
               >
                 <div class="item-badge-row">
                   <span class="badge badge-gxp">{{ s.trial_phase }}</span>
@@ -269,10 +271,11 @@
           </div>
           <div class="panel-body">
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Select Clinical Trial Lay Summary:</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <label for="lay-confirm-summary"
+                >Select Clinical Trial Lay Summary:</label
+              >
               <select
+                id="lay-confirm-summary"
                 v-model="confirmForm.summary_id"
                 class="form-select"
                 @change="onConfirmSummarySelect"
@@ -283,24 +286,35 @@
               </select>
             </div>
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Participant Subject ID / MRN:</label>
-              <input v-model="confirmForm.subject_id" class="form-input" />
+              <label for="lay-confirm-subject"
+                >Participant Subject ID / MRN:</label
+              >
+              <input
+                id="lay-confirm-subject"
+                v-model="confirmForm.subject_id"
+                class="form-input"
+              />
             </div>
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Study Protocol ID:</label>
-              <input v-model="confirmForm.study_id" class="form-input" />
+              <label for="lay-confirm-study">Study Protocol ID:</label>
+              <input
+                id="lay-confirm-study"
+                v-model="confirmForm.study_id"
+                class="form-input"
+              />
             </div>
 
             <!-- 5-Star Comprehension Assessment -->
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label class="rating-label">
+              <div id="lay-confirm-rating-label" class="rating-label">
                 How clear and understandable was this trial summary? (1 = Very
                 Difficult, 5 = Very Clear)
-              </label>
-              <div class="star-rating-box">
+              </div>
+              <div
+                class="star-rating-box"
+                role="group"
+                aria-labelledby="lay-confirm-rating-label"
+              >
                 <ClinicalIconButton
                   v-for="star in [1, 2, 3, 4, 5]"
                   :key="star"
@@ -319,10 +333,11 @@
             </div>
 
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Participant Feedback or Questions (Optional):</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <label for="lay-confirm-feedback"
+                >Participant Feedback or Questions (Optional):</label
+              >
               <textarea
+                id="lay-confirm-feedback"
                 v-model="confirmForm.comprehension_feedback"
                 class="form-textarea"
                 rows="3"
@@ -414,21 +429,30 @@
         <div class="panel-body">
           <div class="form-row-2">
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Study Protocol ID:</label>
-              <input v-model="studioForm.study_id" class="form-input" />
+              <label for="lay-studio-study-id">Study Protocol ID:</label>
+              <input
+                id="lay-studio-study-id"
+                v-model="studioForm.study_id"
+                class="form-input"
+              />
             </div>
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Protocol Code / Phase:</label>
+              <label for="lay-studio-protocol-id">Protocol Code / Phase:</label>
               <div class="form-row-2">
                 <input
+                  id="lay-studio-protocol-id"
                   v-model="studioForm.protocol_id"
                   class="form-input"
                   placeholder="e.g. PROTOCOL-CAD-001"
                 />
-                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-                <select v-model="studioForm.trial_phase" class="form-select">
+                <label for="lay-studio-trial-phase" class="sr-only"
+                  >Trial Phase</label
+                >
+                <select
+                  id="lay-studio-trial-phase"
+                  v-model="studioForm.trial_phase"
+                  class="form-select"
+                >
                   <option value="Phase I">Phase I</option>
                   <option value="Phase II">Phase II</option>
                   <option value="Phase III">Phase III</option>
@@ -440,37 +464,49 @@
 
           <div class="form-row-2">
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Therapeutic Area / Indication:</label>
-              <input v-model="studioForm.therapeutic_area" class="form-input" />
+              <label for="lay-studio-ta">Therapeutic Area / Indication:</label>
+              <input
+                id="lay-studio-ta"
+                v-model="studioForm.therapeutic_area"
+                class="form-input"
+              />
             </div>
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Sponsor Organization:</label>
-              <input v-model="studioForm.sponsor_name" class="form-input" />
+              <label for="lay-studio-sponsor">Sponsor Organization:</label>
+              <input
+                id="lay-studio-sponsor"
+                v-model="studioForm.sponsor_name"
+                class="form-input"
+              />
             </div>
           </div>
 
           <div class="form-group">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label>Plain-Language Lay Summary Title:</label>
-            <input v-model="studioForm.title" class="form-input" />
+            <label for="lay-studio-title"
+              >Plain-Language Lay Summary Title:</label
+            >
+            <input
+              id="lay-studio-title"
+              v-model="studioForm.title"
+              class="form-input"
+            />
           </div>
 
           <div class="form-row-2">
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>IRB/Ethics Committee Approval Number:</label>
+              <label for="lay-studio-irb-num"
+                >IRB/Ethics Committee Approval Number:</label
+              >
               <input
+                id="lay-studio-irb-num"
                 v-model="studioForm.irb_approval_number"
                 class="form-input"
               />
             </div>
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>IRB Approval Date:</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <label for="lay-studio-irb-date">IRB Approval Date:</label>
               <input
+                id="lay-studio-irb-date"
                 v-model="studioForm.irb_approval_date"
                 type="date"
                 class="form-input"
@@ -479,10 +515,11 @@
           </div>
 
           <div class="form-group">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label>Narrative Summary Overview:</label>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <label for="lay-studio-summary-text"
+              >Narrative Summary Overview:</label
+            >
             <textarea
+              id="lay-studio-summary-text"
               v-model="studioForm.summary_text"
               class="form-textarea"
               rows="3"
@@ -492,20 +529,22 @@
           <h4 class="studio-subheading">Plain Language Section Content</h4>
           <div class="form-row-2">
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>1. Study Goal / Objective:</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <label for="lay-studio-sec-objective"
+                >1. Study Goal / Objective:</label
+              >
               <textarea
+                id="lay-studio-sec-objective"
                 v-model="studioForm.sections.objective"
                 class="form-textarea"
                 rows="2"
               />
             </div>
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>2. Participant Demographics:</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <label for="lay-studio-sec-participants"
+                >2. Participant Demographics:</label
+              >
               <textarea
+                id="lay-studio-sec-participants"
                 v-model="studioForm.sections.participants"
                 class="form-textarea"
                 rows="2"
@@ -515,20 +554,22 @@
 
           <div class="form-row-2">
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>3. Treatments Studied:</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <label for="lay-studio-sec-treatments"
+                >3. Treatments Studied:</label
+              >
               <textarea
+                id="lay-studio-sec-treatments"
                 v-model="studioForm.sections.treatments"
                 class="form-textarea"
                 rows="2"
               />
             </div>
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>4. Key Results &amp; Findings:</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <label for="lay-studio-sec-results"
+                >4. Key Results &amp; Findings:</label
+              >
               <textarea
+                id="lay-studio-sec-results"
                 v-model="studioForm.sections.results"
                 class="form-textarea"
                 rows="2"
@@ -538,20 +579,22 @@
 
           <div class="form-row-2">
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>5. Side Effects &amp; Safety Profile:</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <label for="lay-studio-sec-side-effects"
+                >5. Side Effects &amp; Safety Profile:</label
+              >
               <textarea
+                id="lay-studio-sec-side-effects"
                 v-model="studioForm.sections.side_effects"
                 class="form-textarea"
                 rows="2"
               />
             </div>
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>6. Future Plans &amp; Next Steps:</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <label for="lay-studio-sec-future"
+                >6. Future Plans &amp; Next Steps:</label
+              >
               <textarea
+                id="lay-studio-sec-future"
                 v-model="studioForm.sections.future_plans"
                 class="form-textarea"
                 rows="2"
@@ -1375,7 +1418,8 @@ onMounted(() => {
   margin-bottom: 12px;
 }
 
-.form-group label {
+.form-group label,
+.form-group .rating-label {
   display: block;
   font-size: 0.8rem;
   font-weight: 600;

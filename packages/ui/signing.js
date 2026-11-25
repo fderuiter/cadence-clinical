@@ -785,18 +785,72 @@ export async function requestStepUpSignature(input = {}, options = {}) {
  */
 export const SIGNATURE_OTHER_REASON = "Other";
 
+const NO_AUTOCORRECT_ATTRS = {
+  autocapitalize: "off",
+  autocorrect: "off",
+  spellcheck: "false",
+};
+
+const NUMERIC_SECRET_ATTRS = {
+  inputmode: "numeric",
+  pattern: "[0-9]*",
+  ...NO_AUTOCORRECT_ATTRS,
+};
+
 /**
  * Shared HTML input attributes for 21 CFR Part 11 re-authentication password fields.
- * Uses alphanumeric `inputmode="text"` so mobile virtual keyboards never lock out
- * Keycloak account passwords with digits-only keypads.
  */
 export const SIGNATURE_PASSWORD_INPUT_ATTRS = Object.freeze({
   type: "password",
   inputmode: "text",
   autocomplete: "current-password",
-  autocapitalize: "off",
+  ...NO_AUTOCORRECT_ATTRS,
+});
+
+/**
+ * Shared HTML input attributes for local device-bound numeric PIN verification controls.
+ */
+export const OFFLINE_SECURITY_PIN_INPUT_ATTRS = Object.freeze({
+  type: "password",
+  autocomplete: "current-password",
+  ...NUMERIC_SECRET_ATTRS,
+});
+
+/**
+ * Shared HTML input attributes for creating/confirming a new numeric security PIN.
+ */
+export const OFFLINE_SECURITY_NEW_PIN_INPUT_ATTRS = Object.freeze({
+  type: "password",
+  autocomplete: "new-password",
+  ...NUMERIC_SECRET_ATTRS,
+});
+
+/**
+ * Shared HTML input attributes for 21 CFR Part 11 step-up username / user ID fields.
+ */
+export const SIGNATURE_USERNAME_INPUT_ATTRS = Object.freeze({
+  type: "text",
+  autocomplete: "username",
+  autocapitalize: "none",
   autocorrect: "off",
   spellcheck: "false",
+});
+
+/**
+ * Shared HTML input attributes for 21 CFR Part 11 step-up TOTP / MFA code fields.
+ */
+export const SIGNATURE_TOTP_INPUT_ATTRS = Object.freeze({
+  type: "text",
+  autocomplete: "one-time-code",
+  ...NUMERIC_SECRET_ATTRS,
+});
+
+/**
+ * Shared HTML input attributes for 21 CFR Part 11 printed signer full-name fields.
+ */
+export const SIGNATURE_SIGNER_NAME_INPUT_ATTRS = Object.freeze({
+  type: "text",
+  autocomplete: "name",
 });
 
 /**

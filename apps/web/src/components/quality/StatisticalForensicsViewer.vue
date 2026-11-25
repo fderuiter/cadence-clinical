@@ -90,13 +90,16 @@
 
     <!-- KPI Summary Grid -->
     <div class="kpi-grid">
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <div
+        role="button"
+        tabindex="0"
         class="kpi-card"
         :class="{ 'kpi-card-alert': anomalousSitesCount > 0 }"
         @click="activeSubTab = 'overview'"
+        @keydown.enter.prevent="activeSubTab = 'overview'"
+        @keydown.space.prevent="activeSubTab = 'overview'"
       >
-        <div class="kpi-icon">🚨</div>
+        <div class="kpi-icon" aria-hidden="true">🚨</div>
         <div class="kpi-content">
           <div class="kpi-value tabular-nums">
             {{ anomalousSitesCount }} / {{ siteRecords.length || 0 }}
@@ -105,9 +108,15 @@
         </div>
       </div>
 
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-      <div class="kpi-card" @click="activeSubTab = 'benford'">
-        <div class="kpi-icon">📊</div>
+      <div
+        role="button"
+        tabindex="0"
+        class="kpi-card"
+        @click="activeSubTab = 'benford'"
+        @keydown.enter.prevent="activeSubTab = 'benford'"
+        @keydown.space.prevent="activeSubTab = 'benford'"
+      >
+        <div class="kpi-icon" aria-hidden="true">📊</div>
         <div class="kpi-content">
           <div class="kpi-value tabular-nums">
             {{ benfordNonConformCount }}
@@ -116,9 +125,15 @@
         </div>
       </div>
 
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-      <div class="kpi-card" @click="activeSubTab = 'rounding'">
-        <div class="kpi-icon">🎯</div>
+      <div
+        role="button"
+        tabindex="0"
+        class="kpi-card"
+        @click="activeSubTab = 'rounding'"
+        @keydown.enter.prevent="activeSubTab = 'rounding'"
+        @keydown.space.prevent="activeSubTab = 'rounding'"
+      >
+        <div class="kpi-icon" aria-hidden="true">🎯</div>
         <div class="kpi-content">
           <div class="kpi-value tabular-nums">
             {{ severeRoundingCount }}
@@ -127,9 +142,15 @@
         </div>
       </div>
 
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-      <div class="kpi-card" @click="activeSubTab = 'variance'">
-        <div class="kpi-icon">🔬</div>
+      <div
+        role="button"
+        tabindex="0"
+        class="kpi-card"
+        @click="activeSubTab = 'variance'"
+        @keydown.enter.prevent="activeSubTab = 'variance'"
+        @keydown.space.prevent="activeSubTab = 'variance'"
+      >
+        <div class="kpi-icon" aria-hidden="true">🔬</div>
         <div class="kpi-content">
           <div class="kpi-value tabular-nums">
             {{ varianceShrunkCount }}
@@ -138,9 +159,15 @@
         </div>
       </div>
 
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-      <div class="kpi-card" @click="activeSubTab = 'mahalanobis'">
-        <div class="kpi-icon">🌐</div>
+      <div
+        role="button"
+        tabindex="0"
+        class="kpi-card"
+        @click="activeSubTab = 'mahalanobis'"
+        @keydown.enter.prevent="activeSubTab = 'mahalanobis'"
+        @keydown.space.prevent="activeSubTab = 'mahalanobis'"
+      >
+        <div class="kpi-icon" aria-hidden="true">🌐</div>
         <div class="kpi-content">
           <div class="kpi-value tabular-nums">
             {{ maxMahalanobisDistance.toFixed(2) }}

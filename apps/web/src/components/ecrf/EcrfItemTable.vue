@@ -58,12 +58,22 @@
                   :id="`ecrf-item-${item.item_id}`"
                   class="ecrf-item-value-control"
                   :value="formState.entries[item.item_id]?.text ?? ''"
+                  :required="
+                    (item.required &&
+                      !formState.entries[item.item_id]?.missing) ||
+                    undefined
+                  "
+                  :aria-required="
+                    item.required && !formState.entries[item.item_id]?.missing
+                      ? 'true'
+                      : undefined
+                  "
                   :disabled="
                     formState.locked ||
                     formState.saving ||
                     !!formState.entries[item.item_id]?.missing
                   "
-                  :aria-invalid="!!formState.itemErrors[item.item_id]"
+                  :aria-invalid="!!formState.itemErrors[item.item_id]?.length"
                   :aria-describedby="itemDescribedBy(item)"
                   @change="
                     emit(
@@ -105,6 +115,16 @@
                   :value="formState.entries[item.item_id]?.text ?? ''"
                   type="text"
                   autocomplete="off"
+                  :required="
+                    (item.required &&
+                      !formState.entries[item.item_id]?.missing) ||
+                    undefined
+                  "
+                  :aria-required="
+                    item.required && !formState.entries[item.item_id]?.missing
+                      ? 'true'
+                      : undefined
+                  "
                   :data-tabular-nums="
                     item.value_kind !== 'text' ? 'true' : undefined
                   "
@@ -113,7 +133,7 @@
                     formState.saving ||
                     !!formState.entries[item.item_id]?.missing
                   "
-                  :aria-invalid="!!formState.itemErrors[item.item_id]"
+                  :aria-invalid="!!formState.itemErrors[item.item_id]?.length"
                   :aria-describedby="itemDescribedBy(item)"
                   @input="
                     emit(
@@ -123,9 +143,12 @@
                     )
                   "
                 />
-                <span v-if="item.unit" class="ecrf-item-unit">{{
-                  item.unit
-                }}</span>
+                <span
+                  v-if="item.unit"
+                  :id="`ecrf-item-${item.item_id}-unit`"
+                  class="ecrf-item-unit"
+                  >{{ item.unit }}</span
+                >
                 <div
                   v-if="formState.isEdited(item)"
                   class="ecrf-item-draft"
@@ -159,6 +182,11 @@
                 <p
                   :id="`ecrf-item-${item.item_id}-error`"
                   class="ecrf-form-error"
+                  :role="
+                    formState.itemErrors[item.item_id]?.length
+                      ? 'alert'
+                      : undefined
+                  "
                 >
                   {{ (formState.itemErrors[item.item_id] ?? []).join(" ") }}
                 </p>
@@ -771,8 +799,14 @@ const allPreviewWarnings = computed(() =>
 
 function itemDescribedBy(item: EcrfFormItem): string {
   const ids: string[] = [];
+  if (item.unit) {
+    ids.push(`ecrf-item-${item.item_id}-unit`);
+  }
   if (props.formState.comparingBaseline && props.formState.isEdited(item)) {
     ids.push(`ecrf-committed-baseline-${item.item_id}`);
+  }
+  if (props.formState.previewWarnings[item.item_id]?.length) {
+    ids.push(`ecrf-item-${item.item_id}-warnings`);
   }
   ids.push(`ecrf-item-${item.item_id}-error`);
   if (props.sdv.activeVerification(item) && props.formState.isEdited(item)) {
@@ -987,6 +1021,13 @@ function formatUnsavedEntry(entry: EcrfUnsavedItem): string {
   background: var(--warning-bg);
   color: var(--warning);
   font-size: 0.85rem;
+}
+@media (max-width: 1024px), (pointer: coarse) {
+  #ecrf-form-page input,
+  #ecrf-form-page select,
+  #ecrf-form-page textarea {
+    font-size: 16px;
+  }
 }
 </style>
 

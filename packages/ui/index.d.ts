@@ -39,6 +39,9 @@ export const ClinicalFormField: DefineComponent<
       status: "none" | "loading" | "valid" | "invalid" | "degraded";
       message?: string;
     } | null;
+    canManageQueries?: boolean;
+    queryLabel?: string;
+    disabled?: boolean;
   },
   {},
   any
@@ -64,6 +67,8 @@ export const ClinicalInput: DefineSlotsComponent<
     required?: boolean;
     density?: "comfortable" | "compact" | string;
     hint?: string;
+    unit?: string;
+    range?: string;
     hideLabel?: boolean;
     showQueryFlag?: boolean;
     rows?: number | string;
@@ -110,6 +115,17 @@ export const ClinicalRadioGroup: DefineComponent<
     query?: any;
     gridSpan?: number | string;
     error?: string | null;
+    attributes?: Record<string, any>;
+    canManageQueries?: boolean;
+    queryLabel?: string;
+    density?: "comfortable" | "compact" | string;
+    required?: boolean;
+    disabled?: boolean;
+    hint?: string;
+    unit?: string;
+    range?: string;
+    hideLabel?: boolean;
+    showQueryFlag?: boolean;
   },
   {},
   any
@@ -120,12 +136,26 @@ export const ClinicalLookupInput: DefineComponent<
     id: string;
     label: string;
     modelValue?: string | number;
+    type?: string;
     status?: "none" | "loading" | "valid" | "invalid" | "degraded";
     statusMessage?: string;
     gridSpan?: number | string;
     error?: string | null;
     query?: any;
     attributes?: Record<string, any>;
+    canManageQueries?: boolean;
+    queryLabel?: string;
+    required?: boolean;
+    disabled?: boolean;
+    min?: number | string | null;
+    max?: number | string | null;
+    step?: number | string | null;
+    hint?: string;
+    unit?: string;
+    range?: string;
+    density?: "comfortable" | "compact" | string;
+    hideLabel?: boolean;
+    showQueryFlag?: boolean;
   },
   {},
   any
@@ -469,6 +499,8 @@ export const ClinicalFieldLayout: DefineSlotsComponent<
     density?: "comfortable" | "compact" | string;
     required?: boolean;
     hint?: string;
+    unit?: string;
+    range?: string;
     hideLabel?: boolean;
     showQueryFlag?: boolean;
   },
@@ -478,8 +510,11 @@ export const ClinicalFieldLayout: DefineSlotsComponent<
       error?: string | null;
       errorId: string;
       hintId?: string;
+      unitId?: string;
+      rangeId?: string;
       describedBy?: string;
       hasError: boolean;
+      required: boolean;
     }) => any;
     "after-input"?: (props: Record<string, never>) => any;
   }
@@ -1039,6 +1074,44 @@ export const SIGNATURE_PASSWORD_INPUT_ATTRS: Readonly<{
   autocapitalize: "off";
   autocorrect: "off";
   spellcheck: "false";
+}>;
+export const OFFLINE_SECURITY_PIN_INPUT_ATTRS: Readonly<{
+  type: "password";
+  inputmode: "numeric";
+  pattern: "[0-9]*";
+  autocomplete: "current-password";
+  autocapitalize: "off";
+  autocorrect: "off";
+  spellcheck: "false";
+}>;
+export const OFFLINE_SECURITY_NEW_PIN_INPUT_ATTRS: Readonly<{
+  type: "password";
+  inputmode: "numeric";
+  pattern: "[0-9]*";
+  autocomplete: "new-password";
+  autocapitalize: "off";
+  autocorrect: "off";
+  spellcheck: "false";
+}>;
+export const SIGNATURE_USERNAME_INPUT_ATTRS: Readonly<{
+  type: "text";
+  autocomplete: "username";
+  autocapitalize: "none";
+  autocorrect: "off";
+  spellcheck: "false";
+}>;
+export const SIGNATURE_TOTP_INPUT_ATTRS: Readonly<{
+  type: "text";
+  inputmode: "numeric";
+  pattern: "[0-9]*";
+  autocomplete: "one-time-code";
+  autocapitalize: "off";
+  autocorrect: "off";
+  spellcheck: "false";
+}>;
+export const SIGNATURE_SIGNER_NAME_INPUT_ATTRS: Readonly<{
+  type: "text";
+  autocomplete: "name";
 }>;
 export function requiresCustomSignatureReason(
   selectedReason: string | null | undefined

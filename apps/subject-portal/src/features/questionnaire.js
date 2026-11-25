@@ -324,8 +324,13 @@ export async function startQuestionnaire(assignmentId) {
   formHtml += `<h2 class="form-title">Enter Clinical Findings</h2>`;
 
   Object.entries(instrument.items).forEach(([id, field]) => {
+    const sharedDataAttrs = field.cdash ? { "data-cdash": field.cdash } : {};
     if (isSliderField(field)) {
-      formHtml += createClinicalSlider(id, field.label, "", null, 12, field);
+      formHtml += createClinicalSlider(id, field.label, "", null, 12, {
+        ...field,
+        ...sharedDataAttrs,
+        required: Boolean(field.required),
+      });
     } else if (field.type === "choice_single") {
       formHtml += createClinicalRadioGrid(
         id,
@@ -333,13 +338,28 @@ export async function startQuestionnaire(assignmentId) {
         field.options,
         "",
         null,
-        12
+        12,
+        {
+          ...sharedDataAttrs,
+          required: Boolean(field.required),
+        }
       );
     } else {
       const isNumeric = field.type === "numeric" || field.type === "number";
       const inputAttrs = {
-        type: isNumeric ? "number" : "text",
+        ...sharedDataAttrs,
+        type: isNumeric ? "number" : field.type || "text",
         ...(isNumeric ? { inputmode: "numeric" } : {}),
+        ...(field.required ? { required: true, "aria-required": "true" } : {}),
+        ...(field.min !== undefined && field.min !== null
+          ? { min: field.min }
+          : {}),
+        ...(field.max !== undefined && field.max !== null
+          ? { max: field.max }
+          : {}),
+        ...(field.step !== undefined && field.step !== null
+          ? { step: field.step }
+          : {}),
       };
       formHtml += createClinicalInput(
         id,

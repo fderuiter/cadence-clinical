@@ -1,5 +1,9 @@
 <template>
-  <div ref="elRef" :style="wrapperStyle" class="clinical-form-field-wrapper">
+  <div
+    ref="elRef"
+    :class="['clinical-form-field-wrapper', attrs.class]"
+    :style="[wrapperStyle, attrs.style]"
+  >
     <template v-if="shouldRender">
       <ClinicalRadioGroup
         v-if="field.type === 'radio' || field.type === 'choice_single'"
@@ -10,6 +14,12 @@
         :query="query"
         :grid-span="field.gridSpan || 12"
         :error="error ?? undefined"
+        :attributes="customAttributes"
+        :required="resolvedRequired"
+        :disabled="resolvedDisabled"
+        :hint="resolvedHint"
+        :unit="resolvedUnit"
+        :range="resolvedRange"
         :can-manage-queries="canManageQueries"
         :query-label="queryLabel"
         @update:model-value="$emit('update:modelValue', $event)"
@@ -31,6 +41,14 @@
         :status="lookupStatus ? lookupStatus.status : 'none'"
         :status-message="lookupStatus ? lookupStatus.message : ''"
         :attributes="customAttributes"
+        :required="resolvedRequired"
+        :disabled="resolvedDisabled"
+        :min="resolvedMin"
+        :max="resolvedMax"
+        :step="resolvedStep"
+        :hint="resolvedHint"
+        :unit="resolvedUnit"
+        :range="resolvedRange"
         :can-manage-queries="canManageQueries"
         :query-label="queryLabel"
         @update:model-value="$emit('update:modelValue', $event)"
@@ -46,11 +64,22 @@
         v-else
         :id="field.id"
         :label="field.label"
+        :type="resolvedInputType"
+        :options="field.options ?? undefined"
         :model-value="modelValue"
         :query="query"
         :grid-span="field.gridSpan || 12"
         :error="error ?? undefined"
         :attributes="customAttributes"
+        :required="resolvedRequired"
+        :disabled="resolvedDisabled"
+        :min="resolvedMin"
+        :max="resolvedMax"
+        :step="resolvedStep"
+        :data-tabular-nums="isTabularField ? 'true' : undefined"
+        :hint="resolvedHint"
+        :unit="resolvedUnit"
+        :range="resolvedRange"
         :can-manage-queries="canManageQueries"
         :query-label="queryLabel"
         @update:model-value="$emit('update:modelValue', $event)"
@@ -65,11 +94,22 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted, type CSSProperties } from "vue";
+import {
+  computed,
+  ref,
+  useAttrs,
+  onMounted,
+  onUnmounted,
+  type CSSProperties,
+} from "vue";
 import ClinicalInput from "./ClinicalInput.vue";
 import ClinicalRadioGroup from "./ClinicalRadioGroup.vue";
 import ClinicalLookupInput from "./ClinicalLookupInput.vue";
 import type { CdashField } from "../../types/cdash";
+
+defineOptions({ inheritAttrs: false });
+
+const attrs = useAttrs();
 
 const props = withDefaults(
   defineProps<{
@@ -83,6 +123,7 @@ const props = withDefaults(
     } | null;
     canManageQueries?: boolean;
     queryLabel?: string;
+    disabled?: boolean;
   }>(),
   {
     modelValue: "",
@@ -91,6 +132,7 @@ const props = withDefaults(
     lookupStatus: null,
     canManageQueries: false,
     queryLabel: "",
+    disabled: false,
   }
 );
 
@@ -119,20 +161,80 @@ const TABULAR_FIELD_TYPES = new Set([
   "tel",
 ]);
 
-const customAttributes = computed(() => {
-  const attrs: Record<string, string> = {};
-  if (props.field.cdash) {
-    attrs["data-cdash"] = props.field.cdash;
-  }
-  if (
+const resolvedInputType = computed(() => {
+  const raw = String(props.field.type || "text").trim();
+  return raw || "text";
+});
+
+const resolvedRequired = computed(() =>
+  Boolean(props.field.required ?? props.field.validation?.required)
+);
+
+const resolvedDisabled = computed(() =>
+  Boolean(props.disabled || props.field.disabled)
+);
+
+const resolvedMin = computed(
+  () => props.field.min ?? props.field.validation?.min ?? undefined
+);
+
+const resolvedMax = computed(
+  () => props.field.max ?? props.field.validation?.max ?? undefined
+);
+
+const resolvedStep = computed(
+  () => props.field.step ?? props.field.validation?.step ?? undefined
+);
+
+const resolvedHint = computed(() =>
+  props.field.hint ? String(props.field.hint) : ""
+);
+
+const resolvedUnit = computed(() =>
+  props.field.unit ? String(props.field.unit) : ""
+);
+
+const resolvedRange = computed(() =>
+  props.field.range ? String(props.field.range) : ""
+);
+
+const isTabularField = computed(
+  () =>
     TABULAR_FIELD_TYPES.has(String(props.field.type || "").toLowerCase()) ||
     props.field.tabularNums === true ||
     props.field["data-tabular-nums"] === true ||
-    props.field["data-tabular-nums"] === "true"
-  ) {
-    attrs["data-tabular-nums"] = "true";
+    props.field["data-tabular-nums"] === "true" ||
+    resolvedMin.value !== undefined ||
+    resolvedMax.value !== undefined ||
+    resolvedStep.value !== undefined
+);
+
+const customAttributes = computed(() => {
+  const merged: Record<string, any> = {};
+  for (const [k, v] of Object.entries(attrs)) {
+    if (
+      k !== "class" &&
+      k !== "style" &&
+      !(k.startsWith("on") && k.length > 2) &&
+      v !== undefined
+    ) {
+      merged[k] = v;
+    }
   }
-  return attrs;
+  if (props.field.attributes && typeof props.field.attributes === "object") {
+    Object.assign(merged, props.field.attributes);
+  }
+  if (props.field.cdash) {
+    merged["data-cdash"] = props.field.cdash;
+  }
+  const pattern = props.field.pattern ?? props.field.validation?.pattern;
+  if (pattern) {
+    merged.pattern = String(pattern);
+  }
+  if (isTabularField.value) {
+    merged["data-tabular-nums"] = "true";
+  }
+  return merged;
 });
 
 const elRef = ref<HTMLElement | null>(null);

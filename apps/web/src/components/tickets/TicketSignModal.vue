@@ -12,7 +12,9 @@
   >
     <template #header>
       <div class="ticket-sign-header">
-        <div class="modal-header-icon" aria-hidden="true">✍️</div>
+        <div class="modal-header-icon" aria-hidden="true">
+          <FileSignature :size="22" aria-hidden="true" />
+        </div>
         <div class="ticket-sign-header-text">
           <h2 id="sign-modal-title" class="modal-title">
             21 CFR Part 11 Electronic Signature
@@ -24,120 +26,135 @@
       </div>
     </template>
 
-    <div class="compliance-alert">
-      <strong>GxP Regulatory Manifestation:</strong> Executing this action is
-      equivalent to a handwritten signature under 21 CFR Part 11. Your identity,
-      timestamp, role, and intent will be immutably recorded in the audit trail.
-    </div>
+    <form
+      id="ticket-sign-form"
+      ref="formRef"
+      novalidate
+      @submit.prevent="handleSign"
+    >
+      <div class="compliance-alert">
+        <strong>GxP Regulatory Manifestation:</strong> Executing this action is
+        equivalent to a handwritten signature under 21 CFR Part 11. Your
+        identity, timestamp, role, and intent will be immutably recorded in the
+        audit trail.
+      </div>
 
-    <div class="form-group">
-      <ClinicalInput
-        id="ticket-signer-identity"
-        :model-value="currentUser"
-        label="Signer Identity"
-        density="compact"
-        :show-query-flag="false"
-        control-class="form-control"
-        readonly
-        disabled
-      />
-    </div>
+      <div class="form-group">
+        <ClinicalInput
+          id="ticket-signer-identity"
+          :model-value="currentUser"
+          label="Signer Identity"
+          density="compact"
+          :show-query-flag="false"
+          control-class="form-control"
+          v-bind="SIGNATURE_USERNAME_INPUT_ATTRS"
+          readonly
+          disabled
+        />
+      </div>
 
-    <div class="form-group">
-      <ClinicalInput
-        id="ticket-signer-role"
-        :model-value="currentRole"
-        label="Active Role"
-        density="compact"
-        :show-query-flag="false"
-        control-class="form-control"
-        readonly
-        disabled
-      />
-    </div>
+      <div class="form-group">
+        <ClinicalInput
+          id="ticket-signer-role"
+          :model-value="currentRole"
+          label="Active Role"
+          density="compact"
+          :show-query-flag="false"
+          control-class="form-control"
+          readonly
+          disabled
+        />
+      </div>
 
-    <div class="form-group">
-      <ClinicalInput
-        id="signature-meaning"
-        v-model="meaning"
-        as="select"
-        label="Signature Meaning / Intent"
-        required
-        density="compact"
-        :show-query-flag="false"
-        control-class="form-control"
-      >
-        <option
-          value="I approve the clinical assessment and corrective medical action."
+      <div class="form-group">
+        <ClinicalInput
+          id="signature-meaning"
+          v-model="meaning"
+          as="select"
+          label="Signature Meaning / Intent"
+          required
+          density="compact"
+          :show-query-flag="false"
+          control-class="form-control"
+          @keydown.enter.prevent="handleSign"
         >
-          I approve the clinical assessment and corrective medical action.
-        </option>
-        <option
-          value="I authoritatively verify and close this clinical deviation/query."
-        >
-          I authoritatively verify and close this clinical deviation/query.
-        </option>
-        <option
-          value="I confirm that all root-cause analyses and CAPA actions are fulfilled."
-        >
-          I confirm that all root-cause analyses and CAPA actions are fulfilled.
-        </option>
-        <option
-          value="I acknowledge and endorse this technical/system operational resolution."
-        >
-          I acknowledge and endorse this technical/system operational
-          resolution.
-        </option>
-      </ClinicalInput>
-    </div>
+          <option
+            value="I approve the clinical assessment and corrective medical action."
+          >
+            I approve the clinical assessment and corrective medical action.
+          </option>
+          <option
+            value="I authoritatively verify and close this clinical deviation/query."
+          >
+            I authoritatively verify and close this clinical deviation/query.
+          </option>
+          <option
+            value="I confirm that all root-cause analyses and CAPA actions are fulfilled."
+          >
+            I confirm that all root-cause analyses and CAPA actions are
+            fulfilled.
+          </option>
+          <option
+            value="I acknowledge and endorse this technical/system operational resolution."
+          >
+            I acknowledge and endorse this technical/system operational
+            resolution.
+          </option>
+        </ClinicalInput>
+      </div>
 
-    <div class="form-group">
-      <ClinicalInput
-        id="signature-reason"
-        v-model="reasonForChange"
-        label="GxP Reason for Change"
-        required
-        density="compact"
-        :show-query-flag="false"
-        control-class="form-control"
-        placeholder="Mandatory regulatory justification for closure sign-off"
+      <div class="form-group">
+        <ClinicalInput
+          id="signature-reason"
+          v-model="reasonForChange"
+          label="GxP Reason for Change"
+          required
+          density="compact"
+          :show-query-flag="false"
+          control-class="form-control"
+          placeholder="Mandatory regulatory justification for closure sign-off"
+          @keydown.enter.prevent="handleSign"
+        />
+      </div>
+
+      <div class="form-group">
+        <ClinicalInput
+          id="signature-password"
+          v-model="password"
+          v-bind="SIGNATURE_PASSWORD_INPUT_ATTRS"
+          label="Re-Authenticate Password / Security Token"
+          required
+          density="compact"
+          :show-query-flag="false"
+          control-class="form-control"
+          placeholder="Enter your user password to confirm identity"
+          @keydown.enter.prevent="handleSign"
+        />
+      </div>
+
+      <div class="form-group">
+        <ClinicalInput
+          id="signature-totp"
+          v-model="totp"
+          v-bind="SIGNATURE_TOTP_INPUT_ATTRS"
+          label="One-Time Verification Code (TOTP, if MFA enabled)"
+          density="compact"
+          :show-query-flag="false"
+          control-class="form-control"
+          placeholder="Optional 6-digit authenticator code"
+          @keydown.enter.prevent="handleSign"
+        />
+      </div>
+
+      <ModalErrorAlert
+        id="ticket-sign-error"
+        :error="errorMessage"
+        retry-label="Retry"
+        dismiss-label="Dismiss"
+        @retry="handleRetry"
+        @dismiss="errorMessage = ''"
       />
-    </div>
-
-    <div class="form-group">
-      <ClinicalInput
-        id="signature-password"
-        v-model="password"
-        type="password"
-        label="Re-Authenticate Password / Security Token"
-        required
-        density="compact"
-        :show-query-flag="false"
-        control-class="form-control"
-        placeholder="Enter your user password to confirm identity"
-        autocomplete="current-password"
-        @keyup.enter="handleSign"
-      />
-    </div>
-
-    <div class="form-group">
-      <ClinicalInput
-        id="signature-totp"
-        v-model="totp"
-        label="One-Time Verification Code (TOTP, if MFA enabled)"
-        density="compact"
-        :show-query-flag="false"
-        inputmode="numeric"
-        autocomplete="one-time-code"
-        control-class="form-control"
-        placeholder="Optional 6-digit authenticator code"
-        @keyup.enter="handleSign"
-      />
-    </div>
-
-    <div v-if="errorMessage" class="error-banner" role="alert">
-      {{ errorMessage }}
-    </div>
+    </form>
 
     <template #footer>
       <button
@@ -149,10 +166,11 @@
         Cancel
       </button>
       <button
-        type="button"
+        type="submit"
+        form="ticket-sign-form"
         class="btn btn-primary btn-sign-action"
-        :disabled="loading || !password.trim() || !reasonForChange.trim()"
-        @click="handleSign"
+        :disabled="loading"
+        @click.prevent="handleSign"
       >
         <span v-if="loading" class="spinner" aria-hidden="true" />
         <span v-else>Sign &amp; Authorize</span>
@@ -163,7 +181,15 @@
 
 <script setup>
 import { ref, computed } from "vue";
-import { ClinicalInput, ClinicalModal } from "ui";
+import { FileSignature } from "lucide-vue-next";
+import {
+  ClinicalInput,
+  ClinicalModal,
+  ModalErrorAlert,
+  SIGNATURE_PASSWORD_INPUT_ATTRS,
+  SIGNATURE_TOTP_INPUT_ATTRS,
+  SIGNATURE_USERNAME_INPUT_ATTRS,
+} from "ui";
 import { ticketsApi } from "../../api/ticketsApi";
 import { useAuthStore } from "../../stores/auth";
 import { describeApiError } from "../../utils/apiErrors.js";
@@ -187,6 +213,7 @@ const props = defineProps({
 const emit = defineEmits(["close", "signed"]);
 
 const authStore = useAuthStore();
+const formRef = ref(null);
 const meaning = ref(
   "I approve the clinical assessment and corrective medical action."
 );
@@ -219,17 +246,45 @@ const close = () => {
   emit("close");
 };
 
+const focusModalField = (selector) => {
+  const el =
+    formRef.value?.querySelector(selector) ||
+    (typeof document !== "undefined" ? document.querySelector(selector) : null);
+  if (el && typeof el.focus === "function") {
+    el.focus();
+  }
+};
+
+const handleRetry = async () => {
+  if (!reasonForChange.value.trim()) {
+    focusModalField("#signature-reason");
+    return;
+  }
+  if (!password.value.trim()) {
+    focusModalField("#signature-password");
+    return;
+  }
+  await handleSign();
+};
+
 const handleSign = async () => {
   if (!password.value.trim()) {
     errorMessage.value =
       "Password is required for 21 CFR Part 11 re-authentication.";
+    focusModalField("#signature-password");
     return;
   }
   if (!reasonForChange.value.trim()) {
     errorMessage.value =
       "Reason for change is required for 21 CFR Part 11 sign-off.";
+    focusModalField("#signature-reason");
     return;
   }
+
+  const submittedPassword = password.value;
+  const submittedTotp = totp.value.trim() || null;
+  password.value = "";
+  totp.value = "";
 
   loading.value = true;
   errorMessage.value = "";
@@ -240,8 +295,8 @@ const handleSign = async () => {
         const verified = await ticketsApi.verifyTicketSignature({
           ticketId: props.ticket.id,
           username: currentUser.value,
-          password: password.value,
-          totp: totp.value.trim() || null,
+          password: submittedPassword,
+          totp: submittedTotp,
         });
         demoToken = verified?.signature_token || "";
       } catch {
@@ -262,8 +317,8 @@ const handleSign = async () => {
     const verified = await ticketsApi.verifyTicketSignature({
       ticketId: props.ticket.id,
       username: currentUser.value,
-      password: password.value,
-      totp: totp.value.trim() || null,
+      password: submittedPassword,
+      totp: submittedTotp,
     });
     const signedTicket = await ticketsApi.signTicket(
       props.ticket.id,
@@ -312,8 +367,12 @@ const handleSign = async () => {
 }
 
 .modal-header-icon {
-  font-size: 1.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--semantic-color-interactive-primary);
   flex-shrink: 0;
+  margin-top: 2px;
 }
 
 .modal-title {

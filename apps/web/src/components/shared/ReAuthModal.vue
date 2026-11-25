@@ -1,126 +1,148 @@
 <template>
-  <div
-    v-if="isOpen"
-    class="modal-backdrop"
-    role="presentation"
-    @click.self="handleCancel"
+  <ClinicalModal
+    id="re-auth-modal"
+    :is-open="isOpen"
+    :teleport="false"
+    :dismissible="!busy"
+    :initial-focus="credentialInputRef"
+    size="sm"
+    dialog-class="modal-card reauth-modal-card"
+    aria-labelledby="reauth-modal-title"
+    close-label="Close modal"
+    @close="handleCancel"
+    @contextmenu.prevent
   >
-    <div
-      id="re-auth-modal"
-      ref="modalRef"
-      class="modal-card reauth-modal-card"
-      role="dialog"
-      aria-modal="true"
-      :aria-labelledby="'reauth-modal-title'"
-      tabindex="-1"
-      @contextmenu.prevent
-    >
-      <div class="modal-header">
+    <template #header>
+      <div class="reauth-header-row">
         <h3 id="reauth-modal-title">
-          <span class="lock-icon" aria-hidden="true">🔐</span>
-          {{ title }}
+          <Lock class="lock-icon" :size="18" aria-hidden="true" />
+          <span>{{ title }}</span>
         </h3>
         <button
+          type="button"
           class="close-btn"
           aria-label="Close modal"
           :disabled="busy"
           @click="handleCancel"
         >
-          ×
+          <X :size="18" aria-hidden="true" />
         </button>
       </div>
+    </template>
 
-      <div class="modal-body">
-        <p class="modal-instructions">
-          In compliance with <strong>FDA 21 CFR Part 11 / EU Annex 11</strong>,
-          document approval requires an electronic signature. Please re-enter
-          your credential (PIN or password) and confirm your signing reason.
-        </p>
+    <form
+      id="reauth-form"
+      ref="formRef"
+      class="reauth-form-stack"
+      novalidate
+      @submit.prevent="handleConfirm"
+    >
+      <p class="modal-instructions">
+        In compliance with <strong>FDA 21 CFR Part 11 / EU Annex 11</strong>,
+        document approval requires an electronic signature. Please re-enter your
+        credential (PIN or password) and confirm your signing reason.
+      </p>
 
-        <div v-if="filename" class="document-context-card">
-          <span class="context-label">Target Document:</span>
-          <span class="context-value font-mono">{{ filename }}</span>
-        </div>
+      <div v-if="filename" class="document-context-card">
+        <span class="context-label">Target Document:</span>
+        <span class="context-value font-mono">{{ filename }}</span>
+      </div>
 
-        <div class="form-group">
-          <label for="reauth-username">Signer Identity</label>
-          <input
-            id="reauth-username"
-            type="text"
-            class="form-control"
-            :value="username || 'Current User'"
-            disabled
-            readonly
-          />
-        </div>
-
-        <div class="form-group">
-          <label for="reauth-credential">
-            Credential (PIN or Password) <span class="required-star">*</span>
-          </label>
-          <input
-            id="reauth-credential"
-            ref="credentialInputRef"
-            v-model="credentialVal"
-            type="password"
-            class="form-control"
-            placeholder="Enter your PIN or password"
-            autocomplete="current-password"
-            :disabled="busy"
-            @keyup.enter="handleConfirm"
-          />
-        </div>
-
-        <div class="form-group">
-          <label for="reauth-signing-reason">
-            Meaning of Signature / Reason <span class="required-star">*</span>
-          </label>
-          <select
-            id="reauth-signing-reason"
-            v-model="signingReasonVal"
-            class="form-control"
-            :disabled="busy"
-          >
-            <option v-for="r in availableReasons" :key="r" :value="r">
-              {{ r }}
-            </option>
-          </select>
-        </div>
-
-        <ModalErrorAlert
-          :error="effectiveError"
-          retry-label="Retry"
-          dismiss-label="Dismiss"
-          @retry="handleConfirm"
-          @dismiss="localError = ''"
+      <div class="form-group">
+        <label for="reauth-username">Signer Identity</label>
+        <input
+          id="reauth-username"
+          v-bind="SIGNATURE_USERNAME_INPUT_ATTRS"
+          class="form-control"
+          :value="username || 'Current User'"
+          disabled
+          readonly
         />
       </div>
 
-      <div class="modal-footer">
-        <button
-          type="button"
-          class="btn btn-secondary"
+      <div class="form-group">
+        <label for="reauth-credential">
+          Credential (PIN or Password) <span class="required-star">*</span>
+        </label>
+        <input
+          id="reauth-credential"
+          ref="credentialInputRef"
+          v-model="credentialVal"
+          v-bind="SIGNATURE_PASSWORD_INPUT_ATTRS"
+          class="form-control"
+          placeholder="Enter your PIN or password"
+          required
+          aria-required="true"
+          :aria-invalid="effectiveError ? 'true' : undefined"
+          :aria-describedby="effectiveError ? 'reauth-error-alert' : undefined"
           :disabled="busy"
-          @click="handleCancel"
-        >
-          Cancel
-        </button>
-        <button
-          type="button"
-          class="btn btn-primary"
-          :disabled="busy || !credentialVal.trim()"
-          @click="handleConfirm"
-        >
-          {{ busy ? "Verifying & Signing..." : "Confirm & Sign" }}
-        </button>
+          @keydown.enter.prevent="handleConfirm"
+        />
       </div>
-    </div>
-  </div>
+
+      <div class="form-group">
+        <label for="reauth-signing-reason">
+          Meaning of Signature / Reason <span class="required-star">*</span>
+        </label>
+        <select
+          id="reauth-signing-reason"
+          ref="signingReasonRef"
+          v-model="signingReasonVal"
+          class="form-control"
+          required
+          aria-required="true"
+          :disabled="busy"
+          @keydown.enter.prevent="handleConfirm"
+        >
+          <option v-for="r in availableReasons" :key="r" :value="r">
+            {{ r }}
+          </option>
+        </select>
+      </div>
+
+      <ModalErrorAlert
+        id="reauth-error-alert"
+        :error="effectiveError"
+        retry-label="Retry"
+        dismiss-label="Dismiss"
+        @retry="handleRetry"
+        @dismiss="handleDismissError"
+      />
+    </form>
+
+    <template #footer>
+      <button
+        id="btn-cancel-reauth"
+        type="button"
+        class="btn btn-secondary"
+        :disabled="busy"
+        @click="handleCancel"
+      >
+        Cancel
+      </button>
+      <button
+        id="btn-confirm-reauth"
+        type="submit"
+        form="reauth-form"
+        class="btn btn-primary"
+        :disabled="busy"
+        @click.prevent="handleConfirm"
+      >
+        {{ busy ? "Verifying & Signing..." : "Confirm & Sign" }}
+      </button>
+    </template>
+  </ClinicalModal>
 </template>
 
 <script setup>
 import { ref, computed, watch } from "vue";
-import { ModalErrorAlert, useFocusTrap } from "ui";
+import { Lock, X } from "lucide-vue-next";
+import {
+  ClinicalModal,
+  ModalErrorAlert,
+  SIGNATURE_PASSWORD_INPUT_ATTRS,
+  SIGNATURE_USERNAME_INPUT_ATTRS,
+} from "ui";
 
 const props = defineProps({
   isOpen: {
@@ -167,18 +189,14 @@ const props = defineProps({
 
 const emit = defineEmits(["close", "cancel", "confirm"]);
 
-const modalRef = ref(null);
+const formRef = ref(null);
 const credentialInputRef = ref(null);
+const signingReasonRef = ref(null);
 
 const credentialVal = ref("");
 const signingReasonVal = ref(props.defaultReason || "APPROVAL");
 const localError = ref("");
-
-useFocusTrap(modalRef, {
-  isOpen: () => props.isOpen,
-  onEscape: handleCancel,
-  initialFocus: credentialInputRef,
-});
+const propErrorDismissed = ref(false);
 
 const availableReasons = computed(() => {
   return props.reasons && props.reasons.length > 0
@@ -187,8 +205,17 @@ const availableReasons = computed(() => {
 });
 
 const effectiveError = computed(() => {
-  return props.errorMessage || localError.value;
+  if (localError.value) return localError.value;
+  if (propErrorDismissed.value) return "";
+  return props.errorMessage;
 });
+
+watch(
+  () => props.errorMessage,
+  () => {
+    propErrorDismissed.value = false;
+  }
+);
 
 watch(
   () => props.isOpen,
@@ -197,28 +224,73 @@ watch(
       credentialVal.value = "";
       signingReasonVal.value = props.defaultReason || "APPROVAL";
       localError.value = "";
+      propErrorDismissed.value = false;
     } else {
       // Clear sensitive credentials immediately on modal close
       credentialVal.value = "";
       localError.value = "";
+      propErrorDismissed.value = false;
     }
   }
 );
 
+function focusCredentialInput() {
+  const el =
+    credentialInputRef.value ||
+    formRef.value?.querySelector("#reauth-credential");
+  if (el && typeof el.focus === "function") {
+    el.focus();
+  }
+}
+
+function focusSigningReason() {
+  const el =
+    signingReasonRef.value ||
+    formRef.value?.querySelector("#reauth-signing-reason");
+  if (el && typeof el.focus === "function") {
+    el.focus();
+  }
+}
+
+function handleDismissError() {
+  localError.value = "";
+  propErrorDismissed.value = true;
+}
+
+function handleRetry() {
+  propErrorDismissed.value = true;
+  localError.value = "";
+  if (!credentialVal.value || !credentialVal.value.trim()) {
+    localError.value = "PIN or password credential is required.";
+    focusCredentialInput();
+    return;
+  }
+  if (!signingReasonVal.value) {
+    localError.value = "Please select a controlled signing reason.";
+    focusSigningReason();
+    return;
+  }
+  handleConfirm();
+}
+
 function handleCancel() {
   credentialVal.value = "";
   localError.value = "";
+  propErrorDismissed.value = false;
   emit("cancel");
   emit("close");
 }
 
 function handleConfirm() {
+  propErrorDismissed.value = true;
   if (!credentialVal.value || !credentialVal.value.trim()) {
     localError.value = "PIN or password credential is required.";
+    focusCredentialInput();
     return;
   }
   if (!signingReasonVal.value) {
     localError.value = "Please select a controlled signing reason.";
+    focusSigningReason();
     return;
   }
 
@@ -239,66 +311,52 @@ defineExpose({
   credentialVal,
   signingReasonVal,
   handleConfirm,
+  handleRetry,
   handleCancel,
 });
 </script>
 
 <style scoped>
-.modal-backdrop {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: var(--semantic-color-backdrop);
-  backdrop-filter: blur(3px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1100;
-  padding: 16px;
-}
-
-.reauth-modal-card {
-  background: var(--semantic-color-surface);
-  border-radius: var(--radius-lg, 12px);
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow-xl);
-  width: 100%;
+:deep(.reauth-modal-card) {
   max-width: 480px;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
 }
 
-.modal-header {
+.reauth-header-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--border);
-  background: var(--semantic-color-surface-muted);
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
 }
 
-.modal-header h3 {
+.reauth-header-row h3 {
   margin: 0;
-  font-size: 1.1rem;
+  font-size: 1.05rem;
   font-weight: 600;
   color: var(--semantic-color-text);
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
+}
+
+.lock-icon {
+  flex-shrink: 0;
+  color: var(--semantic-color-interactive-primary);
 }
 
 .close-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: transparent;
   border: none;
-  font-size: 1.5rem;
-  line-height: 1;
   color: var(--semantic-color-text-secondary);
   cursor: pointer;
-  padding: 4px 8px;
+  padding: 6px;
   border-radius: 4px;
+  flex-shrink: 0;
 }
 
 .close-btn:hover:not(:disabled) {
@@ -306,11 +364,11 @@ defineExpose({
   background: var(--border);
 }
 
-.modal-body {
-  padding: 20px;
+.reauth-form-stack {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  min-width: 0;
 }
 
 .modal-instructions {
@@ -348,6 +406,7 @@ defineExpose({
   display: flex;
   flex-direction: column;
   gap: 6px;
+  min-width: 0;
 }
 
 .form-group label {
@@ -361,6 +420,9 @@ defineExpose({
 }
 
 .form-control {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   padding: 9px 12px;
   font-size: 0.9rem;
   border: 1px solid var(--border);
@@ -382,32 +444,6 @@ defineExpose({
   cursor: not-allowed;
 }
 
-.alert-box {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
-  border-radius: var(--radius-md, 6px);
-  font-size: 0.85rem;
-  line-height: 1.35;
-}
-
-.error-box {
-  background: var(--semantic-color-error-bg-soft);
-  border: 1px solid var(--semantic-color-error-border-soft);
-  color: var(--semantic-color-error-text-dark);
-}
-
-.modal-footer {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 12px;
-  padding: 14px 20px;
-  border-top: 1px solid var(--border);
-  background: var(--semantic-color-surface-muted);
-}
-
 .btn {
   display: inline-flex;
   align-items: center;
@@ -417,6 +453,8 @@ defineExpose({
   font-weight: 500;
   border-radius: var(--radius-md, 6px);
   cursor: pointer;
+  max-width: 100%;
+  box-sizing: border-box;
   transition:
     background-color 0.15s ease,
     border-color 0.15s ease;
@@ -446,5 +484,12 @@ defineExpose({
 
 .btn-primary:hover:not(:disabled) {
   background: var(--semantic-color-interactive-primary-hover);
+}
+
+@media (max-width: 1024px), (pointer: coarse) {
+  .form-control {
+    min-height: 48px;
+    font-size: 16px;
+  }
 }
 </style>

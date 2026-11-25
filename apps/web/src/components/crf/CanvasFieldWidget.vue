@@ -59,10 +59,10 @@
     <!-- Interactive Field Preview -->
     <div class="field-preview-container">
       <template v-if="field.type === 'text'">
-        <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
         <input
           type="text"
           disabled
+          :aria-label="field.label || 'Untitled Field'"
           class="field-preview-input"
           :class="{
             'touch-target-interactive': designerStore.viewport !== 'desktop',
@@ -72,10 +72,10 @@
       </template>
 
       <template v-else-if="field.type === 'numeric'">
-        <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
         <input
           type="number"
           disabled
+          :aria-label="field.label || 'Untitled Field'"
           class="field-preview-input"
           :class="{
             'touch-target-interactive': designerStore.viewport !== 'desktop',
@@ -85,10 +85,10 @@
       </template>
 
       <template v-else-if="field.type === 'date'">
-        <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
         <input
           type="date"
           disabled
+          :aria-label="field.label || 'Untitled Field'"
           class="field-preview-input"
           :class="{
             'touch-target-interactive': designerStore.viewport !== 'desktop',
@@ -97,9 +97,9 @@
       </template>
 
       <template v-else-if="field.type === 'select'">
-        <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
         <select
           disabled
+          :aria-label="field.label || 'Untitled Field'"
           class="field-preview-input"
           :class="{
             'touch-target-interactive': designerStore.viewport !== 'desktop',

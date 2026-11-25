@@ -206,9 +206,8 @@
     </div>
 
     <!-- High Density Matrix Table -->
-    <!-- eslint-disable vuejs-accessibility/mouse-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
     <div class="matrix-table-container">
-      <table class="soa-interactive-table">
+      <table class="soa-interactive-table" role="grid">
         <thead>
           <tr>
             <th class="col-procedure-header" scope="col">
@@ -256,7 +255,7 @@
             :key="act.activity_name"
             class="soa-row"
           >
-            <td class="cell-procedure-name">
+            <td class="cell-procedure-name" role="gridcell">
               <div class="row-procedure-flex">
                 <input
                   type="checkbox"
@@ -278,7 +277,7 @@
                 </div>
               </div>
             </td>
-            <td class="cell-domain-tag">
+            <td class="cell-domain-tag" role="gridcell">
               <span
                 class="cdash-badge"
                 :class="`cdash-${act.cdash_domain.toLowerCase()}`"
@@ -289,6 +288,8 @@
             <td
               v-for="(visit, cIdx) in visits"
               :key="visit.visit_name"
+              role="gridcell"
+              tabindex="-1"
               class="cell-toggle"
               :class="{
                 active: isAssigned(act, visit.visit_name),
@@ -302,8 +303,12 @@
               @pointercancel="handleCellPointerCancel($event)"
               @mousedown="handleCellPointerDown(rIdx, cIdx, $event)"
               @mouseenter="handleCellMouseEnter(rIdx, cIdx)"
+              @focusin="handleCellMouseEnter(rIdx, cIdx)"
               @mouseup="handleCellPointerUp(rIdx, cIdx, $event)"
               @click="
+                handleCellClick(act, visit.visit_name, rIdx, cIdx, $event)
+              "
+              @keydown.enter.prevent="
                 handleCellClick(act, visit.visit_name, rIdx, cIdx, $event)
               "
             >

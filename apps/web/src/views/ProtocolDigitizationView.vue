@@ -24,45 +24,53 @@
 
     <!-- Stepper Navigation -->
     <div class="wizard-stepper">
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <div
+        role="button"
+        tabindex="0"
         class="step-item"
         :class="{ active: currentStep === 1, completed: currentStep > 1 }"
         @click="goToStep(1)"
+        @keydown.enter.prevent="goToStep(1)"
+        @keydown.space.prevent="goToStep(1)"
       >
         <div class="step-circle">1</div>
         <div class="step-label">Document Ingestion</div>
       </div>
       <div class="step-divider" :class="{ completed: currentStep > 1 }" />
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <div
+        role="button"
+        tabindex="0"
         class="step-item"
         :class="{ active: currentStep === 2, completed: currentStep > 2 }"
         @click="goToStep(2)"
+        @keydown.enter.prevent="goToStep(2)"
+        @keydown.space.prevent="goToStep(2)"
       >
         <div class="step-circle">2</div>
         <div class="step-label">AI Extraction Pipeline</div>
       </div>
       <div class="step-divider" :class="{ completed: currentStep > 2 }" />
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <div
+        role="button"
+        tabindex="0"
         class="step-item"
         :class="{ active: currentStep === 3, completed: currentStep > 3 }"
         @click="goToStep(3)"
+        @keydown.enter.prevent="goToStep(3)"
+        @keydown.space.prevent="goToStep(3)"
       >
         <div class="step-circle">3</div>
         <div class="step-label">Interactive SoA &amp; Verification</div>
       </div>
       <div class="step-divider" :class="{ completed: currentStep > 3 }" />
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <div
+        role="button"
+        tabindex="0"
         class="step-item"
         :class="{ active: currentStep === 4, completed: committed }"
         @click="goToStep(4)"
+        @keydown.enter.prevent="goToStep(4)"
+        @keydown.space.prevent="goToStep(4)"
       >
         <div class="step-circle">4</div>
         <div class="step-label">eCRF Synthesis &amp; Activation</div>
@@ -92,16 +100,21 @@
 
       <!-- Mode A: Document Ingestion Dropzone -->
       <div v-if="step1Mode === 'upload'" class="card upload-card">
-        <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-        <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
         <div
+          role="button"
+          tabindex="0"
           class="dropzone"
           :class="{ dragging: isDragging }"
           @dragover.prevent="isDragging = true"
           @dragleave.prevent="isDragging = false"
           @drop.prevent="handleFileDrop"
           @click="triggerFileInput"
+          @keydown.enter.prevent="triggerFileInput"
+          @keydown.space.prevent="triggerFileInput"
         >
+          <label for="protocol-file-input" class="sr-only"
+            >Upload protocol document</label
+          >
           <input
             id="protocol-file-input"
             ref="fileInputRef"
@@ -1301,13 +1314,6 @@ const commitAndActivateEDC = async () => {
   align-items: center;
   gap: 10px;
   cursor: pointer;
-  opacity: 0.6;
-  transition: opacity 0.2s ease;
-}
-
-.step-item.active,
-.step-item.completed {
-  opacity: 1;
 }
 
 .step-circle {
@@ -1339,6 +1345,11 @@ const commitAndActivateEDC = async () => {
 .step-label {
   font-size: 0.85rem;
   font-weight: 600;
+  color: var(--semantic-color-text-muted);
+}
+
+.step-item.active .step-label,
+.step-item.completed .step-label {
   color: var(--semantic-color-text-body);
 }
 

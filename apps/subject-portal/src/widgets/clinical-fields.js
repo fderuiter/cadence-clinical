@@ -37,6 +37,39 @@ export function markClinicalSliderTouched(inputEl, explicitValue = undefined) {
   }
 }
 
+const QUERY_ICON_MESSAGE_SVG =
+  '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
+
+const QUERY_ICON_ALERT_SVG =
+  '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>';
+
+function escapeAttr(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function isTruthyBooleanAttr(value) {
+  return value === "" || (Boolean(value) && value !== "false");
+}
+
+function buildContainerDataAttrs(attributes = {}) {
+  if (!attributes || typeof attributes !== "object") return "";
+  const pairs = Object.entries(attributes)
+    .filter(
+      ([k, v]) =>
+        k.startsWith("data-") &&
+        k !== "data-tabular-nums" &&
+        v !== undefined &&
+        v !== null &&
+        v !== false
+    )
+    .map(([k, v]) => `${k}="${escapeAttr(v === "" ? "true" : v)}"`);
+  return pairs.length > 0 ? ` ${pairs.join(" ")}` : "";
+}
+
 export function createClinicalSlider(
   id,
   label,
@@ -45,9 +78,19 @@ export function createClinicalSlider(
   gridSpan = 12,
   attributes = {}
 ) {
-  const minVal = attributes.min !== undefined ? attributes.min : 0;
-  const maxVal = attributes.max !== undefined ? attributes.max : 100;
-  const stepVal = attributes.step !== undefined ? attributes.step : 1;
+  const minVal =
+    attributes.min !== undefined && attributes.min !== null
+      ? attributes.min
+      : 0;
+  const maxVal =
+    attributes.max !== undefined && attributes.max !== null
+      ? attributes.max
+      : 100;
+  const stepVal =
+    attributes.step !== undefined && attributes.step !== null
+      ? attributes.step
+      : 1;
+  const isRequired = isTruthyBooleanAttr(attributes.required);
   const hasExplicitValue =
     value !== "" && value !== null && value !== undefined;
   const initialValue = hasExplicitValue ? value : minVal;
@@ -65,24 +108,47 @@ export function createClinicalSlider(
   const ariaValueTextAttr = hasExplicitValue
     ? ""
     : '\n        aria-valuetext="Not answered"';
+  const requiredAttrs = isRequired
+    ? '\n        required\n        aria-required="true"'
+    : isTruthyBooleanAttr(attributes["aria-required"])
+      ? '\n        aria-required="true"'
+      : "";
   const minLabel = attributes.min_label || attributes.minLabel || `${minVal}`;
   const maxLabel = attributes.max_label || attributes.maxLabel || `${maxVal}`;
+  const describedByTokens = [
+    `${id}_min_label`,
+    `${id}_display`,
+    `${id}_max_label`,
+  ];
+  if (attributes["aria-describedby"]) {
+    for (const token of String(attributes["aria-describedby"])
+      .trim()
+      .split(/\s+/)) {
+      if (token && !describedByTokens.includes(token)) {
+        describedByTokens.push(token);
+      }
+    }
+  }
+  const containerAttrs = buildContainerDataAttrs(attributes);
+  const requiredBadge = isRequired
+    ? '<span class="clinical-field-required" aria-hidden="true">*</span>'
+    : "";
 
-  const queryFlagHTML = createClinicalQueryFlag(id, query);
-  const queryPanelHTML = createQueryPanel(id, query);
+  const queryFlagHTML = createClinicalQueryFlag(id, query, label);
+  const queryPanelHTML = createQueryPanel(id, query, label);
 
   return `
-<div class="clinical-input vas-slider-container grid-span-${gridSpan}" style="grid-column: span ${gridSpan}; margin-bottom: 20px;" id="field-container-${id}">
+<div class="clinical-input vas-slider-container grid-span-${gridSpan}" style="grid-column: span ${gridSpan}; margin-bottom: 20px;" id="field-container-${id}"${containerAttrs}>
   <label for="${id}" class="vas-slider-label" style="font-weight: 600; display: block; margin-bottom: 8px;">
-    ${label}
+    ${label}${requiredBadge}
   </label>
   <div class="vas-slider-wrapper" style="background: var(--semantic-color-surface-muted); padding: 16px; border: 1px solid var(--semantic-color-border-control); border-radius: 8px;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-      <span class="vas-min-label tabular-nums" style="font-size: 12px; color: var(--semantic-color-text-secondary); font-weight: 500;">${minLabel}</span>
+      <span class="vas-min-label tabular-nums" id="${id}_min_label" style="font-size: 12px; color: var(--semantic-color-text-secondary); font-weight: 500;">${minLabel}</span>
       <span class="vas-value-badge tabular-nums" id="${id}_display" data-state="${initialBadgeState}" style="${initialBadgeStyle}">
         ${initialDisplay}
       </span>
-      <span class="vas-max-label tabular-nums" style="font-size: 12px; color: var(--semantic-color-text-secondary); font-weight: 500;">${maxLabel}</span>
+      <span class="vas-max-label tabular-nums" id="${id}_max_label" style="font-size: 12px; color: var(--semantic-color-text-secondary); font-weight: 500;">${maxLabel}</span>
     </div>
     <div class="input-wrapper" style="position: relative;">
       <input
@@ -93,8 +159,9 @@ export function createClinicalSlider(
         max="${maxVal}"
         step="${stepVal}"
         value="${initialValue}"
+        aria-describedby="${escapeAttr(describedByTokens.join(" "))}"
         data-tabular-nums="true"
-        data-touched="${initialTouched}"${ariaValueTextAttr}
+        data-touched="${initialTouched}"${requiredAttrs}${ariaValueTextAttr}
         class="vas-slider-input"
         style="width: 100%; cursor: pointer; accent-color: ${initialAccentColor}; min-height: var(--touch-target-min); height: var(--touch-target-min);"
       />
@@ -120,7 +187,7 @@ export function createClinicalInput(
   const resolvedInputMode =
     attributes.inputmode || (isNumeric ? "numeric" : "");
   const inputModeAttr = resolvedInputMode
-    ? ` inputmode="${resolvedInputMode}"`
+    ? ` inputmode="${escapeAttr(resolvedInputMode)}"`
     : "";
   const explicitTabular = attributes["data-tabular-nums"];
   const shouldUseTabularNums =
@@ -139,22 +206,58 @@ export function createClinicalInput(
       ? String(explicitTabular)
       : "true";
   const tabularNumsAttr = shouldUseTabularNums
-    ? ` data-tabular-nums="${tabularAttrValue}"`
+    ? ` data-tabular-nums="${escapeAttr(tabularAttrValue)}"`
     : "";
 
-  const containerAttrs = Object.entries(attributes)
-    .filter(([k]) => k !== "type" && k !== "inputmode")
-    .map(([k, v]) => `${k}="${v}"`)
-    .join(" ");
+  const containerAttrs = buildContainerDataAttrs(attributes);
+  const isRequired = isTruthyBooleanAttr(attributes.required);
+  const requiredBadge = isRequired
+    ? '<span class="clinical-field-required" aria-hidden="true">*</span>'
+    : "";
 
-  const queryFlagHTML = createClinicalQueryFlag(id, query);
-  const queryPanelHTML = createQueryPanel(id, query);
+  const controlAttrParts = [];
+  if (isRequired) {
+    controlAttrParts.push("required", 'aria-required="true"');
+  } else if (isTruthyBooleanAttr(attributes["aria-required"])) {
+    controlAttrParts.push('aria-required="true"');
+  }
+
+  for (const [key, val] of Object.entries(attributes || {})) {
+    if (
+      key === "type" ||
+      key === "inputmode" ||
+      key === "required" ||
+      key === "aria-required" ||
+      key === "data-tabular-nums" ||
+      key.startsWith("data-") ||
+      val === undefined ||
+      val === null ||
+      val === false
+    ) {
+      continue;
+    }
+    if (val === true || val === "") {
+      if (key === "disabled" || key === "readonly") {
+        controlAttrParts.push(key);
+      } else if (val === true) {
+        controlAttrParts.push(`${key}="true"`);
+      }
+      continue;
+    }
+    controlAttrParts.push(`${key}="${escapeAttr(val)}"`);
+  }
+
+  const controlAttrsStr =
+    controlAttrParts.length > 0 ? ` ${controlAttrParts.join(" ")}` : "";
+
+  const queryFlagHTML = createClinicalQueryFlag(id, query, label);
+  const queryPanelHTML = createQueryPanel(id, query, label);
 
   return `
-<div class="clinical-input grid-span-${gridSpan}" style="grid-column: span ${gridSpan};" id="field-container-${id}" ${containerAttrs}>
-  <label for="${id}">${label}</label>
+<div class="clinical-input grid-span-${gridSpan}" style="grid-column: span ${gridSpan};" id="field-container-${id}"${containerAttrs}>
+  <label for="${id}">${label}${requiredBadge}</label>
   <div class="input-wrapper">
-    <input type="${inputType}" id="${id}" name="${id}" value="${value}"${inputModeAttr}${tabularNumsAttr} />
+    <input type="${escapeAttr(inputType)}" id="${id}" name="${id}" value="${escapeAttr(value)}"${inputModeAttr}${tabularNumsAttr}${controlAttrsStr} />
     ${queryFlagHTML}
   </div>
   ${queryPanelHTML}
@@ -168,8 +271,23 @@ export function createClinicalRadioGrid(
   options = [],
   selectedValue = "",
   query = null,
-  gridSpan = 12
+  gridSpan = 12,
+  attributes = {}
 ) {
+  const isRequired = isTruthyBooleanAttr(attributes?.required);
+  const requiredAttrs = isRequired
+    ? ' required aria-required="true"'
+    : isTruthyBooleanAttr(attributes?.["aria-required"])
+      ? ' aria-required="true"'
+      : "";
+  const describedByAttr = attributes?.["aria-describedby"]
+    ? ` aria-describedby="${escapeAttr(attributes["aria-describedby"])}"`
+    : "";
+  const containerAttrs = buildContainerDataAttrs(attributes);
+  const requiredBadge = isRequired
+    ? '<span class="clinical-field-required" aria-hidden="true">*</span>'
+    : "";
+
   const optionsHTML = options
     .map((opt, idx) => {
       const optVal = typeof opt === "string" ? opt : opt.value;
@@ -178,19 +296,19 @@ export function createClinicalRadioGrid(
       const optionId = `${id}_option_${idx}`;
       return `
       <label class="radio-option" for="${optionId}">
-        <input type="radio" id="${optionId}" name="${id}" value="${optVal}"${isChecked} />
+        <input type="radio" id="${optionId}" name="${id}" value="${escapeAttr(optVal)}"${isChecked}${requiredAttrs}${describedByAttr} />
         <span class="radio-option-label">${optLabel}</span>
       </label>
       `.trim();
     })
     .join("\n");
 
-  const queryFlagHTML = createClinicalQueryFlag(id, query);
-  const queryPanelHTML = createQueryPanel(id, query);
+  const queryFlagHTML = createClinicalQueryFlag(id, query, label);
+  const queryPanelHTML = createQueryPanel(id, query, label);
 
   return `
-<fieldset class="clinical-radio-grid grid-span-${gridSpan}" style="grid-column: span ${gridSpan};" id="field-container-${id}">
-  <legend>${label}</legend>
+<fieldset class="clinical-radio-grid grid-span-${gridSpan}" style="grid-column: span ${gridSpan};" id="field-container-${id}"${containerAttrs}>
+  <legend>${label}${requiredBadge}</legend>
   <div class="radio-options-wrapper">
     <div class="radio-options">
       ${optionsHTML}
@@ -202,14 +320,24 @@ export function createClinicalRadioGrid(
   `.trim();
 }
 
-export function createClinicalQueryFlag(fieldId, query) {
+export function createClinicalQueryFlag(
+  fieldId,
+  query = null,
+  fieldLabel = ""
+) {
   const status = query && query.status ? query.status.toUpperCase() : "NONE";
   const statusClass = status.toLowerCase();
+  const cleanField = typeof fieldLabel === "string" ? fieldLabel.trim() : "";
   const label =
     status === "NONE"
-      ? "No active queries. Click to create."
-      : `Query status: ${status}`;
-  const icon = status === "NONE" ? "💬" : "⚠️";
+      ? cleanField
+        ? `No active queries for ${escapeAttr(cleanField)}. Click to create.`
+        : "No active queries. Click to create."
+      : cleanField
+        ? `Query status for ${escapeAttr(cleanField)}: ${status}`
+        : `Query status: ${status}`;
+  const icon =
+    status === "NONE" ? QUERY_ICON_MESSAGE_SVG : QUERY_ICON_ALERT_SVG;
 
   return `
 <button class="query-flag query-status-${statusClass}"
@@ -218,13 +346,18 @@ export function createClinicalQueryFlag(fieldId, query) {
         aria-expanded="false"
         aria-controls="query-panel-${fieldId}"
         aria-label="${label}">
-  ${icon}
+  <span aria-hidden="true">${icon}</span>
 </button>
   `.trim();
 }
 
-export function createQueryPanel(fieldId, query) {
+export function createQueryPanel(fieldId, query = null, fieldLabel = "") {
   const status = query && query.status ? query.status.toUpperCase() : "NONE";
+  const cleanField = typeof fieldLabel === "string" ? fieldLabel.trim() : "";
+  const panelTitleLabel = cleanField ? escapeAttr(cleanField) : fieldId;
+  const closeAriaLabel = cleanField
+    ? `Close query panel for ${escapeAttr(cleanField)}`
+    : "Close query panel";
   let bodyHTML = "";
 
   if (status === "NONE") {
@@ -281,8 +414,8 @@ export function createQueryPanel(fieldId, query) {
   return `
 <div class="query-panel" id="query-panel-${fieldId}" style="display: none;" role="region" aria-labelledby="query-flag-${fieldId}">
   <div class="query-panel-header">
-    <span class="query-panel-title">Query Manager - ${fieldId}</span>
-    <button type="button" class="btn-close-panel" data-field-id="${fieldId}" aria-label="Close query panel">×</button>
+    <span class="query-panel-title">Query Manager - ${panelTitleLabel}</span>
+    <button type="button" class="btn-close-panel" data-field-id="${fieldId}" aria-label="${closeAriaLabel}">×</button>
   </div>
   <div class="query-panel-body">
     ${bodyHTML}

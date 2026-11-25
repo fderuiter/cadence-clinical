@@ -12,8 +12,8 @@
           class="form-group"
           style="margin-bottom: 0; flex: 1; min-width: 150px"
         >
-          <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
           <label
+            for="audit-filter-user-id"
             style="
               font-size: var(--font-size-2xs);
               font-weight: 600;
@@ -22,8 +22,8 @@
             "
             >User ID</label
           >
-          <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
           <input
+            id="audit-filter-user-id"
             v-model="userIdInput"
             type="text"
             placeholder="Filter by User ID"
@@ -44,8 +44,8 @@
           class="form-group"
           style="margin-bottom: 0; flex: 1; min-width: 150px"
         >
-          <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
           <label
+            for="audit-filter-action-type"
             style="
               font-size: var(--font-size-2xs);
               font-weight: 600;
@@ -54,8 +54,8 @@
             "
             >Action Type</label
           >
-          <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
           <select
+            id="audit-filter-action-type"
             v-model="actionInput"
             class="filter-action-type"
             style="
@@ -81,8 +81,8 @@
           class="form-group"
           style="margin-bottom: 0; flex: 1; min-width: 150px"
         >
-          <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
           <label
+            for="audit-filter-start-date"
             style="
               font-size: var(--font-size-2xs);
               font-weight: 600;
@@ -91,8 +91,8 @@
             "
             >Start Date</label
           >
-          <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
           <input
+            id="audit-filter-start-date"
             v-model="startDateInput"
             type="date"
             class="filter-start-date"
@@ -112,8 +112,8 @@
           class="form-group"
           style="margin-bottom: 0; flex: 1; min-width: 150px"
         >
-          <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
           <label
+            for="audit-filter-end-date"
             style="
               font-size: var(--font-size-2xs);
               font-weight: 600;
@@ -122,8 +122,8 @@
             "
             >End Date</label
           >
-          <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
           <input
+            id="audit-filter-end-date"
             v-model="endDateInput"
             type="date"
             class="filter-end-date"
@@ -325,5 +325,19 @@ function getActionBadgeClass(action) {
 <style scoped>
 .clinical-table tr:hover {
   background-color: var(--semantic-color-surface-muted);
+}
+
+.filter-start-date,
+.filter-end-date {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 1024px), (pointer: coarse) {
+  .filter-user-id,
+  .filter-action-type,
+  .filter-start-date,
+  .filter-end-date {
+    font-size: 1rem;
+  }
 }
 </style>

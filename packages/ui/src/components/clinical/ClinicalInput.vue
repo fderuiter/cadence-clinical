@@ -1,6 +1,8 @@
 <template>
   <ClinicalFieldLayout
     :id="id"
+    :class="attrs.class"
+    :style="attrs.style"
     :label="label"
     :query="query"
     :grid-span="gridSpan"
@@ -9,8 +11,10 @@
     :can-manage-queries="canManageQueries"
     :query-label="queryLabel"
     :density="density"
-    :required="required"
+    :required="effectiveRequired"
     :hint="hint"
+    :unit="unit"
+    :range="range"
     :hide-label="hideLabel"
     :show-query-flag="showQueryFlag"
     :extra-class="extraClass"
@@ -21,23 +25,24 @@
     @close-query="$emit('close-query')"
     @reopen-query="$emit('reopen-query')"
   >
-    <template #default="{ id: slotId, describedBy, hasError }">
+    <template
+      #default="{ id: slotId, describedBy, hasError, required: slotRequired }"
+    >
       <select
         v-if="isSelect"
-        v-bind="resolvedControlAttributes"
-        :id="slotId"
+        v-bind="buildSharedAttrs(slotId, describedBy, hasError, slotRequired)"
         :class="['clinical-input-control', controlClass]"
-        :name="name || slotId"
         :value="modelValue"
-        :disabled="effectiveDisabled || undefined"
-        :required="required || undefined"
+        :aria-label="effectiveAriaLabel"
         :data-tabular-nums="resolvedTabularNums"
-        :aria-describedby="mergeDescribedBy(describedBy)"
-        :aria-invalid="hasError ? 'true' : undefined"
         @change="onSelectChange"
         @blur="$emit('blur', $event)"
       >
-        <option v-if="effectivePlaceholder" value="" :disabled="required">
+        <option
+          v-if="effectivePlaceholder"
+          value=""
+          :disabled="effectiveRequired"
+        >
           {{ effectivePlaceholder }}
         </option>
         <template v-if="options && options.length">
@@ -55,20 +60,14 @@
 
       <textarea
         v-else-if="isTextarea"
-        v-bind="resolvedControlAttributes"
-        :id="slotId"
+        v-bind="buildSharedAttrs(slotId, describedBy, hasError, slotRequired)"
         :class="['clinical-input-control', controlClass]"
-        :name="name || slotId"
         :value="modelValue"
         :rows="rows"
+        :aria-label="effectiveAriaLabel"
         :placeholder="effectivePlaceholder || undefined"
-        :disabled="effectiveDisabled || undefined"
         :readonly="effectiveReadonly || undefined"
-        :required="required || undefined"
-        :maxlength="maxlength ?? undefined"
-        :data-tabular-nums="resolvedTabularNums"
-        :aria-describedby="mergeDescribedBy(describedBy)"
-        :aria-invalid="hasError ? 'true' : undefined"
+        :maxlength="effectiveMaxlength"
         @input="onInput"
         @change="$emit('change', $event.target.value, $event.target)"
         @blur="$emit('blur', $event)"
@@ -78,26 +77,21 @@
 
       <input
         v-else
-        v-bind="resolvedControlAttributes"
-        :id="slotId"
+        v-bind="buildSharedAttrs(slotId, describedBy, hasError, slotRequired)"
         :type="resolvedType"
         :class="['clinical-input-control', controlClass]"
-        :name="name || slotId"
         :value="modelValue"
-        :placeholder="effectivePlaceholder || undefined"
-        :disabled="effectiveDisabled || undefined"
-        :readonly="effectiveReadonly || undefined"
-        :required="required || undefined"
-        :min="min ?? undefined"
-        :max="max ?? undefined"
-        :step="step ?? undefined"
-        :maxlength="maxlength ?? undefined"
-        :autocomplete="autocomplete || undefined"
-        :inputmode="resolvedInputMode"
+        :aria-label="effectiveAriaLabel"
         :data-tabular-nums="resolvedTabularNums"
+        :placeholder="effectivePlaceholder || undefined"
+        :readonly="effectiveReadonly || undefined"
+        :min="effectiveMin"
+        :max="effectiveMax"
+        :step="effectiveStep"
+        :maxlength="effectiveMaxlength"
+        :autocomplete="effectiveAutocomplete"
+        :inputmode="resolvedInputMode"
         :list="list || undefined"
-        :aria-describedby="mergeDescribedBy(describedBy)"
-        :aria-invalid="hasError ? 'true' : undefined"
         @input="onInput"
         @change="$emit('change', $event.target.value, $event.target)"
         @blur="$emit('blur', $event)"
@@ -112,127 +106,53 @@
 </template>
 
 <script setup>
-import { computed } from "vue";
+import { computed, useAttrs } from "vue";
 import ClinicalFieldLayout from "./ClinicalFieldLayout.vue";
-import { clinicalFieldBaseProps } from "./sharedProps.js";
+import {
+  clinicalFieldBaseProps,
+  splitContainerAndControlAttributes,
+  firstDefinedAttr,
+  resolveBooleanAttr,
+  mergeDescribedByIds,
+  resolveAriaInvalidValue,
+  resolveTabularNumsAttr,
+} from "./sharedProps.js";
 
-const CONTAINER_ONLY_ATTR_KEYS = new Set(["data-cdash"]);
-const CONTROL_STRIPPED_ATTR_KEYS = new Set([
-  "type",
-  "inputmode",
-  "data-tabular-nums",
-  "placeholder",
-  "disabled",
-  "readonly",
-]);
+defineOptions({ inheritAttrs: false });
 
-const NUMERIC_OR_DATE_INPUT_TYPES = new Set([
-  "number",
-  "date",
-  "datetime-local",
-  "time",
-  "month",
-  "week",
-  "tel",
-  "range",
-]);
+const attrs = useAttrs();
 
-const NUMERIC_INPUT_MODES = new Set(["numeric", "decimal"]);
+const STRIPPED_KEYS = new Set(
+  "class style type inputmode data-tabular-nums placeholder disabled readonly required aria-required min max step maxlength autocomplete aria-label aria-describedby aria-invalid".split(
+    " "
+  )
+);
 
 const props = defineProps({
   ...clinicalFieldBaseProps,
-  modelValue: {
-    type: [String, Number],
-    default: "",
-  },
-  type: {
-    type: String,
-    default: "",
-  },
-  as: {
-    type: String,
-    default: "",
-  },
-  options: {
-    type: Array,
-    default: null,
-  },
-  placeholder: {
-    type: String,
-    default: "",
-  },
-  disabled: {
-    type: Boolean,
-    default: false,
-  },
-  readonly: {
-    type: Boolean,
-    default: false,
-  },
-  rows: {
-    type: [Number, String],
-    default: 3,
-  },
-  min: {
-    type: [Number, String],
-    default: null,
-  },
-  max: {
-    type: [Number, String],
-    default: null,
-  },
-  step: {
-    type: [Number, String],
-    default: null,
-  },
-  maxlength: {
-    type: [Number, String],
-    default: null,
-  },
-  autocomplete: {
-    type: String,
-    default: "",
-  },
-  inputmode: {
-    type: String,
-    default: "",
-  },
-  tabularNums: {
-    type: Boolean,
-    default: undefined,
-  },
-  list: {
-    type: String,
-    default: "",
-  },
-  name: {
-    type: String,
-    default: "",
-  },
-  ariaLabel: {
-    type: String,
-    default: "",
-  },
-  ariaDescribedby: {
-    type: String,
-    default: "",
-  },
-  extraClass: {
-    type: String,
-    default: "",
-  },
-  labelClass: {
-    type: [String, Array, Object],
-    default: "",
-  },
-  controlClass: {
-    type: [String, Array, Object],
-    default: "",
-  },
-  controlAttrs: {
-    type: Object,
-    default: () => ({}),
-  },
+  modelValue: { type: [String, Number], default: "" },
+  type: String,
+  as: String,
+  options: Array,
+  placeholder: String,
+  disabled: Boolean,
+  readonly: Boolean,
+  rows: { type: [Number, String], default: 3 },
+  min: [Number, String],
+  max: [Number, String],
+  step: [Number, String],
+  maxlength: [Number, String],
+  autocomplete: String,
+  inputmode: String,
+  tabularNums: { type: Boolean, default: undefined },
+  list: String,
+  name: String,
+  ariaLabel: String,
+  ariaDescribedby: String,
+  extraClass: String,
+  labelClass: [String, Array, Object],
+  controlClass: [String, Array, Object],
+  controlAttrs: Object,
 });
 
 const emit = defineEmits([
@@ -248,142 +168,180 @@ const emit = defineEmits([
   "reopen-query",
 ]);
 
-const isSelect = computed(
-  () =>
-    props.as === "select" ||
-    props.type === "select" ||
-    props.attributes?.type === "select"
+const splitAttrs = computed(() =>
+  splitContainerAndControlAttributes(props.attributes, attrs, STRIPPED_KEYS)
 );
-const isTextarea = computed(
-  () =>
-    props.as === "textarea" ||
-    props.type === "textarea" ||
-    props.attributes?.type === "textarea"
+const containerAttributes = computed(() => splitAttrs.value.container);
+
+const rawTagType = computed(
+  () => props.as || props.type || attrs.type || props.attributes?.type
 );
+const isSelect = computed(() => rawTagType.value === "select");
+const isTextarea = computed(() => rawTagType.value === "textarea");
 
 const resolvedType = computed(() => {
-  const rawType = props.type || props.attributes?.type || "text";
-  return rawType === "numeric" ? "number" : rawType;
+  const candidate = firstDefinedAttr(
+    props.type,
+    attrs.type,
+    props.attributes?.type
+  );
+  if (!candidate || candidate === "select" || candidate === "textarea")
+    return "text";
+  return candidate === "numeric" ? "number" : String(candidate);
 });
+
+const pickAttr = (key, propVal) =>
+  firstDefinedAttr(
+    propVal,
+    props.controlAttrs?.[key],
+    attrs[key],
+    props.attributes?.[key]
+  );
+
+const pickBool = (key, propVal) =>
+  resolveBooleanAttr(
+    propVal ? true : undefined,
+    props.controlAttrs?.[key],
+    attrs[key],
+    props.attributes?.[key]
+  );
 
 const resolvedInputMode = computed(() => {
-  const rawMode = props.inputmode || props.attributes?.inputmode || "";
-  if (rawMode) return rawMode;
-  const rawType = props.type || props.attributes?.type || "";
+  const rawMode = pickAttr("inputmode", props.inputmode);
+  if (rawMode) return String(rawMode);
+  const rawType = firstDefinedAttr(
+    props.type,
+    attrs.type,
+    props.attributes?.type
+  );
   return rawType === "numeric" ? "numeric" : undefined;
 });
+const effectivePlaceholder = computed(
+  () => pickAttr("placeholder", props.placeholder) || ""
+);
+const effectiveDisabled = computed(() => pickBool("disabled", props.disabled));
+const effectiveReadonly = computed(() => pickBool("readonly", props.readonly));
+const effectiveRequired = computed(
+  () => pickBool("required", props.required) || pickBool("aria-required", false)
+);
+const effectiveAriaRequired = computed(() => {
+  const raw = pickAttr("aria-required");
+  return raw === true || raw === "true"
+    ? "true"
+    : raw === "false"
+      ? "false"
+      : undefined;
+});
+const effectiveMin = computed(() => pickAttr("min", props.min));
+const effectiveMax = computed(() => pickAttr("max", props.max));
+const effectiveStep = computed(() => pickAttr("step", props.step));
+const effectiveMaxlength = computed(() =>
+  pickAttr("maxlength", props.maxlength)
+);
+const effectiveAutocomplete = computed(() =>
+  pickAttr("autocomplete", props.autocomplete)
+);
+const effectiveAriaLabel = computed(() =>
+  pickAttr("aria-label", props.ariaLabel)
+);
 
 const resolvedTabularNums = computed(() => {
-  const attrVal = props.attributes?.["data-tabular-nums"];
-  if (props.tabularNums === false || attrVal === false || attrVal === "false") {
+  const explicitAttr =
+    props.controlAttrs?.["data-tabular-nums"] ??
+    attrs["data-tabular-nums"] ??
+    props.attributes?.["data-tabular-nums"];
+  if (
+    props.tabularNums === false ||
+    explicitAttr === false ||
+    explicitAttr === "false"
+  ) {
     return undefined;
   }
   if (props.tabularNums === true) {
     return "true";
   }
-  if (attrVal !== undefined && attrVal !== null) {
-    return attrVal === "" ? "true" : String(attrVal);
+  if (explicitAttr !== undefined && explicitAttr !== null) {
+    return explicitAttr === "" || explicitAttr === true
+      ? "true"
+      : String(explicitAttr);
   }
-  if (
-    !isTextarea.value &&
-    (NUMERIC_OR_DATE_INPUT_TYPES.has(resolvedType.value) ||
-      NUMERIC_INPUT_MODES.has(resolvedInputMode.value || ""))
-  ) {
-    return "true";
+  if (isTextarea.value) {
+    return undefined;
   }
-  return undefined;
-});
-
-const containerAttributes = computed(() => {
-  const out = {};
-  if (props.attributes && typeof props.attributes === "object") {
-    for (const [key, value] of Object.entries(props.attributes)) {
-      if (CONTAINER_ONLY_ATTR_KEYS.has(key)) {
-        out[key] = value;
-      }
-    }
-  }
-  return out;
+  return resolveTabularNumsAttr(
+    undefined,
+    isSelect.value ? "" : resolvedType.value,
+    resolvedInputMode.value || "",
+    effectiveMin.value,
+    effectiveMax.value,
+    effectiveStep.value
+  );
 });
 
 const resolvedControlAttributes = computed(() => {
-  const out = {};
-  if (props.attributes && typeof props.attributes === "object") {
-    for (const [key, value] of Object.entries(props.attributes)) {
-      if (
-        !CONTAINER_ONLY_ATTR_KEYS.has(key) &&
-        !CONTROL_STRIPPED_ATTR_KEYS.has(key)
-      ) {
-        out[key] = value;
-      }
-    }
-  }
+  const base = { ...splitAttrs.value.control };
   if (props.controlAttrs && typeof props.controlAttrs === "object") {
     for (const [key, value] of Object.entries(props.controlAttrs)) {
-      if (!CONTROL_STRIPPED_ATTR_KEYS.has(key)) {
-        out[key] = value;
+      if (!STRIPPED_KEYS.has(key) && value !== undefined && value !== null) {
+        base[key] = value;
       }
     }
   }
-  if (props.ariaLabel) {
-    out["aria-label"] = props.ariaLabel;
-  }
-  return out;
+  return base;
 });
 
-const effectivePlaceholder = computed(
-  () =>
-    props.placeholder ||
-    props.controlAttrs?.placeholder ||
-    props.attributes?.placeholder ||
-    ""
-);
+function buildSharedAttrs(slotId, describedBy, hasError, slotRequired) {
+  return {
+    ...resolvedControlAttributes.value,
+    id: slotId,
+    name: props.name || slotId,
+    disabled: effectiveDisabled.value || undefined,
+    required: slotRequired || undefined,
+    "aria-required": slotRequired ? "true" : effectiveAriaRequired.value,
+    "aria-describedby": mergeDescribedBy(describedBy),
+    "aria-invalid": resolveAriaInvalid(hasError),
+  };
+}
 
-const effectiveDisabled = computed(() =>
-  Boolean(
-    props.disabled || props.controlAttrs?.disabled || props.attributes?.disabled
+const normalizedOptions = computed(() =>
+  (props.options || []).map((opt) =>
+    typeof opt === "object" && opt !== null
+      ? {
+          value: opt.value ?? opt.code ?? opt.id ?? "",
+          label: opt.label ?? String(opt.value ?? opt.code ?? opt.id ?? ""),
+          disabled: Boolean(opt.disabled),
+        }
+      : { value: opt, label: String(opt), disabled: false }
   )
 );
 
-const effectiveReadonly = computed(() =>
-  Boolean(
-    props.readonly || props.controlAttrs?.readonly || props.attributes?.readonly
-  )
-);
+function mergeDescribedBy(slotDescribedBy) {
+  return mergeDescribedByIds(
+    slotDescribedBy,
+    props.ariaDescribedby,
+    attrs["aria-describedby"],
+    props.attributes?.["aria-describedby"]
+  );
+}
 
-const normalizedOptions = computed(() => {
-  if (!Array.isArray(props.options)) return [];
-  return props.options.map((item) => {
-    if (item && typeof item === "object") {
-      const value = item.value ?? item.code ?? item.id ?? "";
-      return {
-        value,
-        label: item.label ?? String(value),
-        disabled: Boolean(item.disabled),
-      };
-    }
-    return {
-      value: item,
-      label: String(item),
-      disabled: false,
-    };
-  });
-});
-
-function mergeDescribedBy(layoutDescribedBy) {
-  const parts = [props.ariaDescribedby, layoutDescribedBy].filter(Boolean);
-  return parts.length > 0 ? parts.join(" ") : undefined;
+function resolveAriaInvalid(hasError) {
+  return resolveAriaInvalidValue(
+    hasError,
+    attrs["aria-invalid"],
+    props.attributes?.["aria-invalid"]
+  );
 }
 
 function onInput(event) {
-  const val = event.target.value;
+  const val = event?.target ? event.target.value : "";
   emit("update:modelValue", val);
   emit("input", val, event);
 }
 
 function onSelectChange(event) {
-  const val = event.target.value;
+  const target = event?.target;
+  const val = target ? target.value : "";
   emit("update:modelValue", val);
-  emit("change", val, event.target);
+  emit("change", val, target);
 }
 </script>

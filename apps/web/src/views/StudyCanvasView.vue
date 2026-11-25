@@ -1116,6 +1116,7 @@ import {
 } from "../api/kernelApi";
 import {
   canResolveNodesRemotely,
+  getCachedNodeEntry,
   resolveNode,
   seedNodeSummary,
 } from "../canvas/nodeResolver";
@@ -1944,7 +1945,14 @@ watch(
   { immediate: true }
 );
 
-const inspectedGenericNode = ref<KernelNode | null>(null);
+const rawInspectedGenericNode = ref<KernelNode | null>(null);
+const inspectedGenericNode = computed<KernelNode | null>(() => {
+  if (!selectedGenericNodeRef.value) return null;
+  return (
+    getCachedNodeEntry(selectedGenericNodeRef.value)?.node ??
+    rawInspectedGenericNode.value
+  );
+});
 const inspectedGenericLoading = ref(false);
 let genericNodeRequest = 0;
 watch(inspectedNodeText, (next, prev) => {
@@ -1956,14 +1964,14 @@ watch(
   selectedGenericNodeRef,
   async (text) => {
     const request = ++genericNodeRequest;
-    inspectedGenericNode.value = null;
+    rawInspectedGenericNode.value = null;
     inspectedGenericLoading.value = false;
     if (!text) return;
     inspectedGenericLoading.value = true;
     const resolved = await resolveNode(text);
     if (request !== genericNodeRequest) return;
     inspectedGenericLoading.value = false;
-    inspectedGenericNode.value = resolved;
+    rawInspectedGenericNode.value = resolved;
   },
   { immediate: true }
 );

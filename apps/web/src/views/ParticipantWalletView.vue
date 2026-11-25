@@ -455,10 +455,12 @@
 
             <div class="disburse-action-bar">
               <div class="disburse-input-group">
-                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-                <label>Payout Method:</label>
-                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-                <select v-model="disburseForm.type" class="form-select">
+                <label for="wallet-disburse-type">Payout Method:</label>
+                <select
+                  id="wallet-disburse-type"
+                  v-model="disburseForm.type"
+                  class="form-select"
+                >
                   <option value="VIRTUAL_CARD">
                     Instant Reloadable Debit Card
                   </option>
@@ -466,10 +468,9 @@
                 </select>
               </div>
               <div class="disburse-input-group">
-                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-                <label>Amount ($):</label>
-                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+                <label for="wallet-disburse-amount">Amount ($):</label>
                 <input
+                  id="wallet-disburse-amount"
                   v-model.number="disburseForm.amount"
                   type="number"
                   step="0.01"
@@ -574,25 +575,36 @@
               tax counters.
             </p>
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Study Protocol:</label>
-              <input v-model="visitEventForm.study_id" class="form-input" />
+              <label for="wallet-visit-study-id">Study Protocol:</label>
+              <input
+                id="wallet-visit-study-id"
+                v-model="visitEventForm.study_id"
+                class="form-input"
+              />
             </div>
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Site ID:</label>
-              <input v-model="visitEventForm.site_id" class="form-input" />
+              <label for="wallet-visit-site-id">Site ID:</label>
+              <input
+                id="wallet-visit-site-id"
+                v-model="visitEventForm.site_id"
+                class="form-input"
+              />
             </div>
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Subject ID / MRN:</label>
-              <input v-model="visitEventForm.subject_id" class="form-input" />
+              <label for="wallet-visit-subject-id">Subject ID / MRN:</label>
+              <input
+                id="wallet-visit-subject-id"
+                v-model="visitEventForm.subject_id"
+                class="form-input"
+              />
             </div>
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Completed Visit:</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-              <select v-model="visitEventForm.visit_code" class="form-select">
+              <label for="wallet-visit-code">Completed Visit:</label>
+              <select
+                id="wallet-visit-code"
+                v-model="visitEventForm.visit_code"
+                class="form-select"
+              >
                 <option
                   v-for="r in stipendRules"
                   :key="r.id"
@@ -725,23 +737,40 @@
           </div>
           <div class="panel-body">
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Participant Subject ID:</label>
-              <input v-model="expenseForm.subject_id" class="form-input" />
+              <label for="wallet-claim-subject-id"
+                >Participant Subject ID:</label
+              >
+              <input
+                id="wallet-claim-subject-id"
+                v-model="expenseForm.subject_id"
+                class="form-input"
+              />
             </div>
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Study ID / Site ID:</label>
+              <label for="wallet-claim-study-id">Study ID / Site ID:</label>
               <div class="form-row-2">
-                <input v-model="expenseForm.study_id" class="form-input" />
-                <input v-model="expenseForm.site_id" class="form-input" />
+                <input
+                  id="wallet-claim-study-id"
+                  v-model="expenseForm.study_id"
+                  class="form-input"
+                />
+                <label for="wallet-claim-site-id" class="sr-only"
+                  >Site ID</label
+                >
+                <input
+                  id="wallet-claim-site-id"
+                  v-model="expenseForm.site_id"
+                  class="form-input"
+                />
               </div>
             </div>
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Category:</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-              <select v-model="expenseForm.category" class="form-select">
+              <label for="wallet-claim-category">Category:</label>
+              <select
+                id="wallet-claim-category"
+                v-model="expenseForm.category"
+                class="form-select"
+              >
                 <option value="MILEAGE">Mileage</option>
                 <option value="FUEL">Fuel / Service Station</option>
                 <option value="PARKING">Parking Fee / Garage</option>
@@ -752,16 +781,18 @@
               </select>
             </div>
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Merchant / Vendor Name:</label>
-              <input v-model="expenseForm.merchant_name" class="form-input" />
+              <label for="wallet-claim-merchant">Merchant / Vendor Name:</label>
+              <input
+                id="wallet-claim-merchant"
+                v-model="expenseForm.merchant_name"
+                class="form-input"
+              />
             </div>
             <div class="form-row-2">
               <div class="form-group">
-                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-                <label>Gross Amount ($):</label>
-                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+                <label for="wallet-claim-gross-amount">Gross Amount ($):</label>
                 <input
+                  id="wallet-claim-gross-amount"
                   v-model.number="expenseForm.gross_amount"
                   type="number"
                   step="0.01"
@@ -769,10 +800,9 @@
                 />
               </div>
               <div class="form-group">
-                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-                <label>Expense Date:</label>
-                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+                <label for="wallet-claim-expense-date">Expense Date:</label>
                 <input
+                  id="wallet-claim-expense-date"
                   v-model="expenseForm.expense_date"
                   type="date"
                   class="form-input"
@@ -969,18 +999,18 @@
         Number (TIN) provided below is accurate.
       </p>
       <div class="form-group">
-        <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-        <label>Legal Taxpayer Name:</label>
+        <label for="wallet-w9-legal-name">Legal Taxpayer Name:</label>
         <input
+          id="wallet-w9-legal-name"
           v-model="w9Form.full_legal_name"
           class="form-input"
           placeholder="e.g. Jane Doe"
         />
       </div>
       <div class="form-group">
-        <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-        <label>Last 4 Digits of SSN / ITIN:</label>
+        <label for="wallet-w9-tax-id">Last 4 Digits of SSN / ITIN:</label>
         <input
+          id="wallet-w9-tax-id"
           v-model="w9Form.tax_id_last_four"
           maxlength="4"
           class="form-input"
@@ -988,9 +1018,9 @@
         />
       </div>
       <div class="form-group">
-        <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-        <label>Mailing Address:</label>
+        <label for="wallet-w9-address">Mailing Address:</label>
         <input
+          id="wallet-w9-address"
           v-model="w9Form.address"
           class="form-input"
           placeholder="123 Clinical Way, City, State"

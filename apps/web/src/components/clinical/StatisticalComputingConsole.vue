@@ -120,8 +120,11 @@
               >
             </div>
             <div class="header-right">
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <label for="stat-program-selector" class="sr-only">
+                Select or Template Program
+              </label>
               <select
+                id="stat-program-selector"
                 v-model="selectedProgramId"
                 class="form-select program-selector"
                 @change="onProgramSelected"
@@ -227,8 +230,11 @@
                 <code>{{ computedCodeHash.slice(0, 16) }}...</code></span
               >
             </div>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <label for="stat-source-code" class="sr-only">
+              Statistical Analysis Source Code
+            </label>
             <textarea
+              id="stat-source-code"
               v-model="sourceCode"
               class="code-textarea"
               placeholder="# Author validated statistical analysis code here..."

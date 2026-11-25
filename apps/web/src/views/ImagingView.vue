@@ -161,15 +161,19 @@
         </div>
         <div class="series-list">
           <template v-if="viewMode === 'single'">
-            <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
             <div
               v-for="s in availableSeries"
               :key="s.seriesUid"
+              role="button"
+              tabindex="0"
               class="series-item"
               :class="{ active: activeSeriesUid === s.seriesUid }"
+              :aria-pressed="activeSeriesUid === s.seriesUid"
               @click="activeSeriesUid = s.seriesUid"
+              @keydown.enter.prevent="activeSeriesUid = s.seriesUid"
+              @keydown.space.prevent="activeSeriesUid = s.seriesUid"
             >
-              <div class="series-thumb">🖼️</div>
+              <div class="series-thumb" aria-hidden="true">🖼️</div>
               <div class="series-meta">
                 <div class="series-title">
                   {{ s.description }}
@@ -184,15 +188,19 @@
 
           <template v-else>
             <div class="series-group-title">Viewport A Series</div>
-            <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
             <div
               v-for="s in availableSeriesA"
               :key="'a-' + s.seriesUid"
+              role="button"
+              tabindex="0"
               class="series-item"
               :class="{ active: activeSeriesUidA === s.seriesUid }"
+              :aria-pressed="activeSeriesUidA === s.seriesUid"
               @click="activeSeriesUidA = s.seriesUid"
+              @keydown.enter.prevent="activeSeriesUidA = s.seriesUid"
+              @keydown.space.prevent="activeSeriesUidA = s.seriesUid"
             >
-              <div class="series-thumb">🖼️</div>
+              <div class="series-thumb" aria-hidden="true">🖼️</div>
               <div class="series-meta">
                 <div class="series-title">
                   {{ s.description }}
@@ -207,15 +215,19 @@
             <div class="series-group-title margin-top-sm">
               Viewport B Series
             </div>
-            <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
             <div
               v-for="s in availableSeriesB"
               :key="'b-' + s.seriesUid"
+              role="button"
+              tabindex="0"
               class="series-item"
               :class="{ active: activeSeriesUidB === s.seriesUid }"
+              :aria-pressed="activeSeriesUidB === s.seriesUid"
               @click="activeSeriesUidB = s.seriesUid"
+              @keydown.enter.prevent="activeSeriesUidB = s.seriesUid"
+              @keydown.space.prevent="activeSeriesUidB = s.seriesUid"
             >
-              <div class="series-thumb">🖼️</div>
+              <div class="series-thumb" aria-hidden="true">🖼️</div>
               <div class="series-meta">
                 <div class="series-title">
                   {{ s.description }}

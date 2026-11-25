@@ -245,6 +245,10 @@
             <select
               id="select-activation-tier"
               v-model="scopingForm.tier"
+              required
+              aria-required="true"
+              :aria-invalid="scopingErrors.tier ? 'true' : undefined"
+              :aria-describedby="scopingErrors.tier ? 'error-tier' : undefined"
               :disabled="isBusy"
             >
               <option
@@ -255,7 +259,12 @@
                 {{ tierOption.name }}
               </option>
             </select>
-            <p v-if="scopingErrors.tier" class="field-error" role="alert">
+            <p
+              v-if="scopingErrors.tier"
+              id="error-tier"
+              class="field-error"
+              role="alert"
+            >
               {{ scopingErrors.tier.join(" ") }}
             </p>
           </div>
@@ -265,6 +274,12 @@
             <select
               id="select-study-phase"
               v-model="scopingForm.studyPhase"
+              required
+              aria-required="true"
+              :aria-invalid="scopingErrors.study_phase ? 'true' : undefined"
+              :aria-describedby="
+                scopingErrors.study_phase ? 'error-study-phase' : undefined
+              "
               :disabled="isBusy"
             >
               <option value="">Select study phase</option>
@@ -296,6 +311,16 @@
               type="number"
               min="1"
               max="240"
+              required
+              aria-required="true"
+              :aria-invalid="
+                scopingErrors.study_duration_months ? 'true' : undefined
+              "
+              :aria-describedby="
+                scopingErrors.study_duration_months
+                  ? 'error-study-duration-months'
+                  : undefined
+              "
               placeholder="e.g. 18"
               :disabled="isBusy"
             />
@@ -317,6 +342,12 @@
               id="input-study-countries"
               v-model="scopingForm.countriesInput"
               type="text"
+              required
+              aria-required="true"
+              :aria-invalid="scopingErrors.countries ? 'true' : undefined"
+              :aria-describedby="
+                scopingErrors.countries ? 'error-countries' : undefined
+              "
               placeholder="e.g. US, DE, NL"
               :disabled="isBusy"
             />
@@ -338,6 +369,12 @@
               type="number"
               min="1"
               max="10000"
+              required
+              aria-required="true"
+              :aria-invalid="scopingErrors.site_count ? 'true' : undefined"
+              :aria-describedby="
+                scopingErrors.site_count ? 'error-site-count' : undefined
+              "
               placeholder="e.g. 12"
               :disabled="isBusy"
             />
@@ -361,6 +398,16 @@
               type="number"
               min="1"
               :max="MAX_PARTICIPANT_COUNT"
+              required
+              aria-required="true"
+              :aria-invalid="
+                scopingErrors.participant_count ? 'true' : undefined
+              "
+              :aria-describedby="
+                scopingErrors.participant_count
+                  ? 'error-participant-count'
+                  : undefined
+              "
               placeholder="e.g. 240"
               :disabled="isBusy"
             />
@@ -384,6 +431,16 @@
               type="number"
               min="1"
               max="1000"
+              required
+              aria-required="true"
+              :aria-invalid="
+                scopingErrors.active_study_count ? 'true' : undefined
+              "
+              :aria-describedby="
+                scopingErrors.active_study_count
+                  ? 'error-active-study-count'
+                  : undefined
+              "
               placeholder="e.g. 2"
               :disabled="isBusy"
             />
@@ -405,6 +462,16 @@
               id="input-billing-confirmation"
               v-model="scopingForm.billingConfirmation"
               type="text"
+              required
+              aria-required="true"
+              :aria-invalid="
+                scopingErrors.billing_confirmation ? 'true' : undefined
+              "
+              :aria-describedby="
+                scopingErrors.billing_confirmation
+                  ? 'error-billing-confirmation'
+                  : undefined
+              "
               placeholder="e.g. qtk1.eyJ0ZW5hbnRfaWQiOi..."
               :disabled="isBusy"
             />
@@ -900,6 +967,13 @@ async function handleActivateSubscription() {
   background: var(--semantic-color-surface);
   color: var(--semantic-color-text);
   font-size: 0.92rem;
+}
+
+@media (max-width: 1024px), (pointer: coarse) {
+  .scoping-field input,
+  .scoping-field select {
+    font-size: 16px;
+  }
 }
 
 .field-error {

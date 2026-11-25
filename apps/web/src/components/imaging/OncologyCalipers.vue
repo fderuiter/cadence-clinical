@@ -371,7 +371,7 @@
             <input
               id="signature-input"
               v-model="signaturePin"
-              type="password"
+              v-bind="SIGNATURE_PASSWORD_INPUT_ATTRS"
               class="field-input"
               placeholder="Enter signature or password..."
             />
@@ -401,7 +401,11 @@
 
 <script setup>
 import { ref, computed } from "vue";
-import { ClinicalIconButton, useFocusTrap } from "ui";
+import {
+  ClinicalIconButton,
+  SIGNATURE_PASSWORD_INPUT_ATTRS,
+  useFocusTrap,
+} from "ui";
 
 const props = defineProps({
   annotations: {
@@ -654,11 +658,11 @@ function getTimepointClass(tp) {
   justify-content: center;
   min-height: var(--semantic-control-target-min, 24px);
   min-width: var(--semantic-control-target-min, 24px);
-  padding: 2px 6px;
+  padding: 2px 8px;
   border-radius: 4px;
-  background: none;
-  border: none;
-  color: var(--semantic-color-error);
+  background-color: var(--semantic-badge-error-bg);
+  border: 1px solid var(--semantic-badge-error-border);
+  color: var(--semantic-badge-error-text);
   font-size: var(--font-size-2xs);
   font-weight: 600;
   cursor: pointer;

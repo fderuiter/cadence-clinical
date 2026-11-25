@@ -11,7 +11,13 @@
     close-label="Close electronic signature dialog"
     @close="cancel"
   >
-    <div ref="bodyRootRef" class="signature-capture-fields">
+    <form
+      id="signature-capture-form"
+      ref="bodyRootRef"
+      class="signature-capture-fields"
+      novalidate
+      @submit.prevent="confirm"
+    >
       <p class="modal-desc">
         To comply with <strong>FDA 21 CFR Part 11 / EU Annex 11</strong>, you
         must re-verify your credentials and select a controlled signing reason
@@ -24,16 +30,22 @@
         <input
           id="sig-signer-name"
           v-model="signerNameVal"
-          type="text"
+          v-bind="SIGNATURE_SIGNER_NAME_INPUT_ATTRS"
           placeholder="e.g. John Doe"
           :disabled="busy"
           class="form-control"
+          @keydown.enter.prevent="confirm"
         />
       </div>
 
       <div class="form-group">
         <label for="sig-role">Signer Role</label>
-        <select id="sig-role" v-model="signerRoleVal" :disabled="busy">
+        <select
+          id="sig-role"
+          v-model="signerRoleVal"
+          :disabled="busy"
+          @keydown.enter.prevent="confirm"
+        >
           <option value="Subject">Subject / Participant</option>
           <option value="PI">PI / Principal Investigator</option>
           <option value="Site CRC">Site CRC</option>
@@ -54,7 +66,6 @@
         :password-reentry-required="needsPasswordReentry"
         data-pragma="pragma: allowlist secret"
         :disabled="busy"
-        @keyup-enter="confirm"
         v-model:password="password"/><!-- pragma: allowlist secret -->
 
       <div class="form-group last-group">
@@ -64,6 +75,7 @@
           v-model="signingReason"
           data-testid="sig-meaning-select"
           :disabled="busy"
+          @keydown.enter.prevent="confirm"
         >
           <option value="" disabled>-- Select Meaning / Reason --</option>
           <option v-for="r in availableReasons" :key="r" :value="r">
@@ -80,7 +92,7 @@
         @retry="handleRetry"
         @dismiss="error = ''"
       />
-    </div>
+    </form>
 
     <template #footer>
       <button
@@ -94,10 +106,11 @@
       </button>
       <button
         id="btn-confirm-sig"
-        type="button"
+        type="submit"
+        form="signature-capture-form"
         class="btn btn-primary"
         :disabled="busy"
-        @click="confirm"
+        @click.prevent="confirm"
       >
         {{ busy ? "Signing..." : "Verify & Sign" }}
       </button>
@@ -119,7 +132,12 @@ export const SHARED_SIGNATURE_MODAL_PROPS = {
 
 <script setup>
 import { computed, ref, watch, inject } from "vue";
-import { ClinicalModal, deriveSignerRoleFromClaims, ModalErrorAlert } from "ui";
+import {
+  ClinicalModal,
+  deriveSignerRoleFromClaims,
+  ModalErrorAlert,
+  SIGNATURE_SIGNER_NAME_INPUT_ATTRS,
+} from "ui";
 import { useAuthStore } from "../../../stores/auth.js";
 import GxpCredentialsInput from "./GxpCredentialsInput.vue";
 
@@ -267,13 +285,17 @@ function focusModalField(selector) {
 }
 
 async function handleRetry() {
-  if (!usernameVal.value) {
+  if (!usernameVal.value || !usernameVal.value.trim()) {
     focusModalField("#sig-username");
     return;
   }
   if (!password.value) {
     needsPasswordReentry.value = true;
     focusModalField("#sig-password");
+    return;
+  }
+  if (!signingReason.value) {
+    focusModalField("#sig-reason");
     return;
   }
   await confirm();
@@ -302,16 +324,19 @@ function isFailedSignoffOutcome(result) {
 }
 
 async function confirm() {
-  if (!usernameVal.value) {
+  if (!usernameVal.value || !usernameVal.value.trim()) {
     error.value = "Username is required.";
+    focusModalField("#sig-username");
     return;
   }
   if (!password.value) {
     error.value = "Password is required.";
+    focusModalField("#sig-password");
     return;
   }
   if (!signingReason.value) {
     error.value = "Signing reason is required.";
+    focusModalField("#sig-reason");
     return;
   }
 
@@ -533,7 +558,8 @@ button:focus-visible {
 }
 
 /* Touch Target Sizes for mobile and tablet devices */
-@media (max-width: 1024px) {
+@media (max-width: 1024px), (pointer: coarse) {
+  .form-control,
   select,
   .btn {
     min-height: 48px;

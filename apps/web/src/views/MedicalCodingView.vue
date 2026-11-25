@@ -308,8 +308,11 @@
 
           <!-- Dictionary Filter -->
           <div class="dict-select-box">
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <label for="coding-filter-dictionary" class="sr-only"
+              >Filter by dictionary system</label
+            >
             <select
+              id="coding-filter-dictionary"
               v-model="codingStore.filters.dictionaryType"
               class="form-control-sm"
               title="Filter by dictionary system"
@@ -322,8 +325,11 @@
 
           <!-- Confidence Threshold Filter -->
           <div class="confidence-select-box">
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <label for="coding-filter-confidence" class="sr-only"
+              >Filter by match confidence threshold</label
+            >
             <select
+              id="coding-filter-confidence"
               v-model="codingStore.confidenceThreshold"
               class="form-control-sm confidence-select"
               title="Filter by match confidence threshold"
@@ -338,8 +344,11 @@
 
         <!-- Search Input -->
         <div class="search-box">
-          <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+          <label for="coding-filter-search" class="sr-only"
+            >Search verbatim, code, or term</label
+          >
           <input
+            id="coding-filter-search"
             v-model="codingStore.filters.search"
             type="text"
             class="form-control-sm search-input"

@@ -806,37 +806,44 @@
         <div class="modal-body">
           <form class="form-grid" @submit.prevent="submitScheduleSession">
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label class="form-label">Study ID *</label>
+              <label for="dtp-session-study-id" class="form-label"
+                >Study ID *</label
+              >
               <input
+                id="dtp-session-study-id"
                 v-model="newSessionForm.study_id"
                 class="form-control"
                 required
               />
             </div>
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label class="form-label">Subject ID *</label>
+              <label for="dtp-session-subject-id" class="form-label"
+                >Subject ID *</label
+              >
               <input
+                id="dtp-session-subject-id"
                 v-model="newSessionForm.subject_id"
                 class="form-control"
                 required
               />
             </div>
             <div class="form-group span-2">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label class="form-label">Consultation Title *</label>
+              <label for="dtp-session-title" class="form-label"
+                >Consultation Title *</label
+              >
               <input
+                id="dtp-session-title"
                 v-model="newSessionForm.title"
                 class="form-control"
                 required
               />
             </div>
             <div class="form-group span-2">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label class="form-label">Scheduled Start (UTC) *</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <label for="dtp-session-start-utc" class="form-label"
+                >Scheduled Start (UTC) *</label
+              >
               <input
+                id="dtp-session-start-utc"
                 v-model="newSessionForm.scheduled_start_utc"
                 type="datetime-local"
                 class="form-control"
@@ -882,55 +889,64 @@
         <div class="modal-body">
           <form class="form-grid" @submit.prevent="submitDispatchDtp">
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label class="form-label">Study ID *</label>
+              <label for="dtp-ship-study-id" class="form-label"
+                >Study ID *</label
+              >
               <input
+                id="dtp-ship-study-id"
                 v-model="newShipmentForm.study_id"
                 class="form-control"
                 required
               />
             </div>
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label class="form-label">Site ID *</label>
+              <label for="dtp-ship-site-id" class="form-label">Site ID *</label>
               <input
+                id="dtp-ship-site-id"
                 v-model="newShipmentForm.site_id"
                 class="form-control"
                 required
               />
             </div>
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label class="form-label">Subject Pseudonym *</label>
+              <label for="dtp-ship-subject-id" class="form-label"
+                >Subject Pseudonym *</label
+              >
               <input
+                id="dtp-ship-subject-id"
                 v-model="newShipmentForm.subject_pseudonym_id"
                 class="form-control"
                 required
               />
             </div>
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label class="form-label">Destination Address Pseudonym *</label>
+              <label for="dtp-ship-dest-addr" class="form-label"
+                >Destination Address Pseudonym *</label
+              >
               <input
+                id="dtp-ship-dest-addr"
                 v-model="newShipmentForm.destination_address_pseudonym"
                 class="form-control"
                 required
               />
             </div>
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label class="form-label">Specialty Courier *</label>
+              <label for="dtp-ship-courier" class="form-label"
+                >Specialty Courier *</label
+              >
               <input
+                id="dtp-ship-courier"
                 v-model="newShipmentForm.courier_name"
                 class="form-control"
                 required
               />
             </div>
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label class="form-label">Temperature Zone *</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <label for="dtp-ship-temp-zone" class="form-label"
+                >Temperature Zone *</label
+              >
               <select
+                id="dtp-ship-temp-zone"
                 v-model="newShipmentForm.temperature_zone"
                 class="form-control"
                 required
@@ -945,9 +961,11 @@
               </select>
             </div>
             <div class="form-group span-2">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label class="form-label">Kit Serials (Comma-separated) *</label>
+              <label for="dtp-ship-kit-serials" class="form-label"
+                >Kit Serials (Comma-separated) *</label
+              >
               <input
+                id="dtp-ship-kit-serials"
                 v-model="newShipmentForm.kit_serials_input"
                 class="form-control"
                 required
@@ -955,9 +973,11 @@
               />
             </div>
             <div class="form-group span-2">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label class="form-label">Tamper-Evident RFID Seal ID *</label>
+              <label for="dtp-ship-tamper-seal" class="form-label"
+                >Tamper-Evident RFID Seal ID *</label
+              >
               <input
+                id="dtp-ship-tamper-seal"
                 v-model="newShipmentForm.tamper_seal_id"
                 class="form-control"
                 required

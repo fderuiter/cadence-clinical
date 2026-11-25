@@ -2284,7 +2284,7 @@
         <input
           id="sig-username"
           v-model="sigUsername"
-          type="text"
+          v-bind="SIGNATURE_USERNAME_INPUT_ATTRS"
           placeholder="Username"
           :disabled="sigBusy"
         />
@@ -2306,7 +2306,7 @@
         <input
           id="sig-totp"
           v-model="sigTotp"
-          type="text"
+          v-bind="SIGNATURE_TOTP_INPUT_ATTRS"
           placeholder="MFA Token"
           :disabled="sigBusy"
         />
@@ -3031,6 +3031,8 @@ import {
   ClinicalTabs,
   SEMANTIC_ACTIONS,
   SIGNATURE_PASSWORD_INPUT_ATTRS,
+  SIGNATURE_TOTP_INPUT_ATTRS,
+  SIGNATURE_USERNAME_INPUT_ATTRS,
 } from "ui";
 import { useClinicalStore } from "../../stores/clinical";
 import { useAuthStore } from "../../stores/auth";

@@ -662,3 +662,140 @@ describe("Shared UI primitives, bootstrap ordering, and query-synced portal rout
     );
   });
 });
+
+describe("Subject portal field constraints, VAS scale links, error token preservation, and PIN autocomplete (ADR-2679)", () => {
+  it("splits data-* containerAttrs from input constraints, links VAS scale IDs, forwards fieldLabel to query flag/panel, and binds PIN autocomplete presets", async () => {
+    const fs = await import("node:fs");
+    const path = await import("node:path");
+    const {
+      createClinicalInput,
+      createClinicalSlider,
+      createClinicalQueryFlag,
+      createQueryPanel,
+    } = await import("../src/widgets/clinical-fields.js");
+    const { markFieldInvalid, clearFieldInvalid } =
+      await import("../src/widgets/field-errors.js");
+    const {
+      OFFLINE_SECURITY_NEW_PIN_INPUT_ATTRS,
+      OFFLINE_SECURITY_PIN_INPUT_ATTRS,
+    } = await import("ui");
+
+    const host = document.createElement("div");
+    host.innerHTML = createClinicalInput(
+      "sysbp",
+      "Systolic BP",
+      "",
+      { status: "OPEN", message: "Verify reading" },
+      12,
+      {
+        type: "number",
+        required: true,
+        min: 50,
+        max: 250,
+        step: 1,
+        "data-cdash": "VSORRES",
+        placeholder: "120",
+        "aria-describedby": "unit-sysbp",
+      }
+    );
+    document.body.appendChild(host);
+
+    const wrapper = host.querySelector("#field-container-sysbp");
+    expect(wrapper.getAttribute("data-cdash")).toBe("VSORRES");
+    expect(wrapper.hasAttribute("placeholder")).toBe(false);
+    expect(wrapper.hasAttribute("min")).toBe(false);
+
+    const input = wrapper.querySelector("input#sysbp");
+    expect(input.required).toBe(true);
+    expect(input.getAttribute("aria-required")).toBe("true");
+    expect(input.getAttribute("min")).toBe("50");
+    expect(input.getAttribute("max")).toBe("250");
+    expect(input.getAttribute("step")).toBe("1");
+    expect(input.getAttribute("aria-describedby")).toContain("unit-sysbp");
+
+    const qBtn = wrapper.querySelector("#query-flag-sysbp");
+    expect(qBtn.getAttribute("aria-label")).toContain("Systolic BP");
+    const qPanel = wrapper.querySelector("#query-panel-sysbp");
+    expect(qPanel.textContent).toContain("Systolic BP");
+
+    markFieldInvalid("sysbp", "Out of range");
+    expect(input.getAttribute("aria-describedby")).toContain("unit-sysbp");
+    expect(input.getAttribute("aria-describedby")).toContain("error-msg-sysbp");
+    expect(wrapper.querySelector("#error-msg-sysbp").getAttribute("role")).toBe(
+      "alert"
+    );
+
+    clearFieldInvalid("sysbp");
+    expect(input.getAttribute("aria-describedby")).toBe("unit-sysbp");
+
+    const standaloneFlagHtml = createClinicalQueryFlag(
+      "diabp",
+      { status: "ANSWERED" },
+      "Diastolic BP"
+    );
+    expect(standaloneFlagHtml).toContain("Diastolic BP");
+    const standalonePanelHtml = createQueryPanel(
+      "diabp",
+      { status: "ANSWERED", message: "Check" },
+      "Diastolic BP"
+    );
+    expect(standalonePanelHtml).toContain("Diastolic BP");
+
+    const vasHost = document.createElement("div");
+    vasHost.innerHTML = createClinicalSlider(
+      "pain_vas",
+      "Pain Score",
+      "",
+      null,
+      12,
+      {
+        min: 0,
+        max: 100,
+        min_label: "No pain",
+        max_label: "Worst pain",
+        required: true,
+      }
+    );
+    document.body.appendChild(vasHost);
+
+    const vasInput = vasHost.querySelector('input[type="range"]#pain_vas');
+    expect(vasInput.required).toBe(true);
+    expect(vasInput.getAttribute("aria-describedby")).toContain(
+      "pain_vas_min_label pain_vas_display pain_vas_max_label"
+    );
+    expect(vasInput.getAttribute("aria-valuetext")).toBe("Not answered");
+
+    markFieldInvalid("pain_vas", "Pain score required");
+    expect(vasInput.getAttribute("aria-describedby")).toContain(
+      "pain_vas_min_label"
+    );
+    expect(vasInput.getAttribute("aria-describedby")).toContain(
+      "error-msg-pain_vas"
+    );
+    clearFieldInvalid("pain_vas");
+    expect(vasInput.getAttribute("aria-describedby")).toBe(
+      "pain_vas_min_label pain_vas_display pain_vas_max_label"
+    );
+
+    expect(OFFLINE_SECURITY_NEW_PIN_INPUT_ATTRS.autocomplete).toBe(
+      "new-password"
+    );
+    expect(OFFLINE_SECURITY_PIN_INPUT_ATTRS.autocomplete).toBe(
+      "current-password"
+    );
+
+    const setupSrc = fs.readFileSync(
+      path.resolve(__dirname, "../src/components/PinSetupModal.vue"),
+      "utf8"
+    );
+    const unlockSrc = fs.readFileSync(
+      path.resolve(__dirname, "../src/components/PinUnlockModal.vue"),
+      "utf8"
+    );
+    expect(setupSrc).toContain('v-bind="OFFLINE_SECURITY_NEW_PIN_INPUT_ATTRS"');
+    expect(unlockSrc).toContain('v-bind="OFFLINE_SECURITY_PIN_INPUT_ATTRS"');
+
+    host.remove();
+    vasHost.remove();
+  });
+});

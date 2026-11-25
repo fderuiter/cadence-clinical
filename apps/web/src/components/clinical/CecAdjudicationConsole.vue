@@ -200,8 +200,11 @@
           </div>
 
           <div class="filter-toolbar">
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <label for="cec-dossier-search" class="sr-only">
+              Search event, term, or subject
+            </label>
             <input
+              id="cec-dossier-search"
               v-model="searchQuery"
               type="text"
               placeholder="Search event, term, or subject..."
@@ -219,18 +222,20 @@
             </div>
           </div>
 
-          <div class="dossier-list" role="list">
-            <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-            <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+          <div class="dossier-list">
             <div
               v-for="item in filteredDossiers"
               :key="item.dossier_id"
-              role="listitem"
+              role="button"
+              tabindex="0"
+              :aria-pressed="selectedDossierId === item.dossier_id"
               :class="[
                 'dossier-card',
                 { active: selectedDossierId === item.dossier_id },
               ]"
               @click="selectDossier(item.dossier_id)"
+              @keydown.enter.prevent="selectDossier(item.dossier_id)"
+              @keydown.space.prevent="selectDossier(item.dossier_id)"
             >
               <div class="card-top">
                 <span class="category-tag">{{
@@ -996,9 +1001,14 @@
 
             <!-- Criteria Checklist -->
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Confirmed Diagnostic Criteria Checklist:</label>
-              <div class="criteria-checkbox-list">
+              <div id="cec-chair-criteria-label" class="group-heading-label">
+                Confirmed Diagnostic Criteria Checklist:
+              </div>
+              <div
+                class="criteria-checkbox-list"
+                role="group"
+                aria-labelledby="cec-chair-criteria-label"
+              >
                 <label
                   v-for="(crit, idx) in availableCriteria"
                   :key="idx"
@@ -1042,7 +1052,7 @@
                   <input
                     id="chair-signer-name"
                     v-model="chairForm.signer_name"
-                    type="text"
+                    v-bind="SIGNATURE_SIGNER_NAME_INPUT_ATTRS"
                     class="text-input"
                   />
                 </div>
@@ -1051,7 +1061,7 @@
                   <input
                     id="chair-password"
                     v-model="chairForm.password"
-                    type="password"
+                    v-bind="SIGNATURE_PASSWORD_INPUT_ATTRS"
                     class="text-input"
                     placeholder="Confirm password to seal decision"
                   />
@@ -1137,9 +1147,17 @@
                 />
               </div>
               <div class="form-group">
-                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-                <label>Attendance Checklist (Live Quorum Calc):</label>
-                <div class="attendee-checkbox-list">
+                <div
+                  id="cec-meeting-attendance-label"
+                  class="group-heading-label"
+                >
+                  Attendance Checklist (Live Quorum Calc):
+                </div>
+                <div
+                  class="attendee-checkbox-list"
+                  role="group"
+                  aria-labelledby="cec-meeting-attendance-label"
+                >
                   <label
                     v-for="mem in activeCharter.eligible_members"
                     :key="mem.member_id"
@@ -1346,9 +1364,14 @@
       </div>
 
       <div class="form-group">
-        <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-        <label>Diagnostic Criteria Satisfied:</label>
-        <div class="criteria-checkbox-list">
+        <div id="cec-reader-criteria-label" class="group-heading-label">
+          Diagnostic Criteria Satisfied:
+        </div>
+        <div
+          class="criteria-checkbox-list"
+          role="group"
+          aria-labelledby="cec-reader-criteria-label"
+        >
           <label
             v-for="(crit, idx) in availableCriteria"
             :key="idx"
@@ -1411,7 +1434,12 @@
 
 <script setup>
 import { ref, computed, onMounted } from "vue";
-import { ClinicalModal, SEMANTIC_ACTIONS } from "ui";
+import {
+  ClinicalModal,
+  SEMANTIC_ACTIONS,
+  SIGNATURE_PASSWORD_INPUT_ATTRS,
+  SIGNATURE_SIGNER_NAME_INPUT_ATTRS,
+} from "ui";
 import { isDemoBuild } from "../../utils/demoMode.js";
 import { allowUnbackedAction } from "../../utils/unbackedActions.js";
 import { apiClient } from "../../api/apiClient";

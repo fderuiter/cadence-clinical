@@ -160,6 +160,8 @@
             v-if="observation.expected_codelist_options?.length"
             id="observation-new-value"
             v-model="newValue"
+            required
+            aria-required="true"
             :disabled="saving"
             :aria-invalid="parseError !== null"
             :aria-describedby="correctionDescribedBy"
@@ -194,12 +196,19 @@
             v-model="newValue"
             type="text"
             autocomplete="off"
+            required
+            aria-required="true"
             :data-tabular-nums="isTabularObservation ? 'true' : undefined"
             :disabled="saving"
             :aria-invalid="parseError !== null"
             :aria-describedby="correctionDescribedBy"
           />
-          <span v-if="unit" data-testid="observation-unit">{{ unit }}</span>
+          <span
+            v-if="unit"
+            id="observation-unit"
+            data-testid="observation-unit"
+            >{{ unit }}</span
+          >
           <button
             id="observation-save"
             class="btn btn-primary"
@@ -441,6 +450,8 @@
       id-prefix="observation-"
       title="Reason for correction"
       :description="reasonModalDescription"
+      :options="OBSERVATION_CORRECTION_REASON_OPTIONS"
+      default-option="Typographical Error"
       confirm-text="Save correction"
       @confirm="onReason"
       @cancel="reasonOpen = false"
@@ -881,11 +892,36 @@ const studyQueriesLocation = computed<RouteLocationRaw | null>(() => {
   };
 });
 
-const correctionDescribedBy = computed(() =>
-  activeVerification.value
-    ? "observation-sdv-edit-warning observation-new-value-hint"
-    : "observation-new-value-hint"
-);
+const OBSERVATION_CORRECTION_REASON_OPTIONS = [
+  {
+    value: "Typographical Error",
+    text: "Correction of typographical error",
+  },
+  {
+    value: "Transcription Error",
+    text: "Source-to-eCRF transcription discrepancy",
+  },
+  {
+    value: "Source Clarification",
+    text: "Updated per investigator source clarification",
+  },
+  {
+    value: "Other",
+    text: "Other (specify below)",
+  },
+];
+
+const correctionDescribedBy = computed(() => {
+  const ids: string[] = [];
+  if (unit.value) {
+    ids.push("observation-unit");
+  }
+  if (activeVerification.value && !locked.value && canCorrect.value) {
+    ids.push("observation-sdv-edit-warning");
+  }
+  ids.push("observation-new-value-hint");
+  return ids.join(" ");
+});
 
 const reasonModalDescription = computed(() =>
   activeVerification.value
@@ -1547,5 +1583,10 @@ td {
 .observation-audit td:nth-child(2),
 .observation-audit td:nth-child(5) {
   font-family: var(--semantic-font-mono);
+}
+@media (max-width: 1024px), (pointer: coarse) {
+  #observation-new-value {
+    font-size: 16px;
+  }
 }
 </style>

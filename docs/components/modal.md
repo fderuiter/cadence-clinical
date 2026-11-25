@@ -84,3 +84,7 @@ const handleConfirm = () => {
   </ClinicalModal>
 </template>
 ```
+
+## Regulated `<form>` Submission & Error Recovery (ADR-2679)
+
+Regulated 21 CFR Part 11 and step-up dialogs (`ReasonModal`, `ReAuthModal`, `SignatureCaptureModal`, and `TicketSignModal`) render inside `ClinicalModal`, wrap inputs inside `<form novalidate @submit.prevent>` paired with `<button type="submit" :form="...">` footer actions, bind `ui` signing `autocomplete` presets on credential fields, keep `ModalErrorAlert` non-stealing on mount (`tabindex="-1"`, `role="alert"`), and return focus to the invalid or failed credential field on validation or `Retry` ([ADR-2679](../adr/2026-11-25-extend-ui-primitives-modal-forms-and-eslint-gates.md)).

@@ -14,10 +14,11 @@
     :style="
       effectiveGridSpan ? `grid-column: span ${effectiveGridSpan};` : undefined
     "
-    v-bind="attributes"
+    v-bind="outerDataAttributes"
   >
-    <legend
-      v-if="tag === 'fieldset'"
+    <component
+      :is="tag === 'fieldset' ? 'legend' : 'label'"
+      :for="tag === 'fieldset' ? undefined : id"
       :class="[hideLabel ? 'sr-only' : null, labelClass || null]"
     >
       {{ label
@@ -30,23 +31,7 @@
         aria-hidden="true"
         >*</span
       >
-    </legend>
-    <label
-      v-else
-      :for="id"
-      :class="[hideLabel ? 'sr-only' : null, labelClass || null]"
-    >
-      {{ label
-      }}<span
-        v-if="required"
-        :class="[
-          'clinical-field-required',
-          labelClass === 'form-label' ? 'text-danger' : null,
-        ]"
-        aria-hidden="true"
-        >*</span
-      >
-    </label>
+    </component>
 
     <div
       :class="tag === 'fieldset' ? 'radio-options-wrapper' : 'input-wrapper'"
@@ -56,9 +41,17 @@
         :error="error"
         :error-id="`validation-error-${id}`"
         :hint-id="hint ? `field-hint-${id}` : undefined"
+        :unit-id="unit ? `field-unit-${id}` : undefined"
+        :range-id="range ? `field-range-${id}` : undefined"
         :described-by="describedBy"
         :has-error="showError"
+        :required="Boolean(required)"
       />
+
+      <!-- Optional Unit -->
+      <span v-if="unit" :id="`field-unit-${id}`" class="clinical-field-unit">
+        {{ unit }}
+      </span>
 
       <!-- Query Flag -->
       <ClinicalQueryFlag
@@ -74,6 +67,11 @@
     <!-- Additional markup like lookup status indicators -->
     <slot name="after-input" />
 
+    <!-- Optional Range -->
+    <span v-if="range" :id="`field-range-${id}`" class="clinical-field-range">
+      {{ range }}
+    </span>
+
     <!-- Optional Hint -->
     <p v-if="hint" :id="`field-hint-${id}`" class="clinical-field-hint">
       {{ hint }}
@@ -84,7 +82,7 @@
       v-if="showError"
       :id="`validation-error-${id}`"
       class="validation-error-msg"
-      role="status"
+      role="alert"
       aria-live="polite"
     >
       {{ error }}
@@ -110,7 +108,11 @@
 import { ref, computed } from "vue";
 import ClinicalQueryFlag from "./ClinicalQueryFlag.vue";
 import ClinicalQueryPanel from "./ClinicalQueryPanel.vue";
-import { clinicalFieldBaseProps } from "./sharedProps.js";
+import {
+  clinicalFieldBaseProps,
+  pickDataOnlyAttributes,
+  mergeDescribedByIds,
+} from "./sharedProps.js";
 
 const props = defineProps({
   ...clinicalFieldBaseProps,
@@ -143,10 +145,16 @@ const effectiveGridSpan = computed(() => {
   return props.density === "compact" ? 0 : 12;
 });
 
-const describedBy = computed(() => {
-  const ids = [];
-  if (props.hint) ids.push(`field-hint-${props.id}`);
-  if (showError.value) ids.push(`validation-error-${props.id}`);
-  return ids.length > 0 ? ids.join(" ") : undefined;
-});
+const outerDataAttributes = computed(() =>
+  pickDataOnlyAttributes(props.attributes)
+);
+
+const describedBy = computed(() =>
+  mergeDescribedByIds(
+    props.unit ? `field-unit-${props.id}` : "",
+    props.range ? `field-range-${props.id}` : "",
+    props.hint ? `field-hint-${props.id}` : "",
+    showError.value ? `validation-error-${props.id}` : ""
+  )
+);
 </script>

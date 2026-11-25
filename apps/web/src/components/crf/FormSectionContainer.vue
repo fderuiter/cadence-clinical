@@ -6,12 +6,14 @@
     }"
   >
     <!-- Section Header Card -->
-    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
     <div
       v-keyboard-click="toggleCollapse"
+      role="button"
+      tabindex="0"
       class="section-header-card section-header"
       :aria-expanded="!section.isCollapsed"
       @click="toggleCollapse"
+      @keydown="onHeaderKeydown"
     >
       <div class="section-header-left">
         <!-- Drag Handle for Section Reordering -->
@@ -55,9 +57,6 @@
         </div>
         <button class="btn-add-field btn-add-item" @click="addNewItem">
           <span>➕</span> Add Field
-        </button>
-        <button class="btn-section-toggle" @click="toggleCollapse">
-          {{ section.isCollapsed ? "Expand" : "Collapse" }}
         </button>
       </div>
     </div>
@@ -217,6 +216,10 @@ const items = computed({
     itemsRevision.value++;
   },
 });
+
+function onHeaderKeydown() {
+  // Handled by v-keyboard-click directive
+}
 
 function toggleCollapse() {
   const storeSection = designerStore.activeForm?.sections?.find(

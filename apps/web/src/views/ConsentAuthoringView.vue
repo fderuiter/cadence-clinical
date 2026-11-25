@@ -458,8 +458,11 @@
                   "
                   >{{ index + 1 }}.</span
                 >
-                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+                <label :for="`consent-clause-id-${index}`" class="sr-only">
+                  Clause {{ index + 1 }} identifier
+                </label>
                 <input
+                  :id="`consent-clause-id-${index}`"
                   v-model="editorForm.clauses[index]"
                   type="text"
                   placeholder="e.g. clause-risk-disclosure"

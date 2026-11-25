@@ -361,8 +361,11 @@
       >
         <div class="table-toolbar">
           <div class="search-box">
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <label for="safety-tabulation-search" class="sr-only">
+              Search MedDRA PT or SOC
+            </label>
             <input
+              id="safety-tabulation-search"
               v-model="tabulationSearchTerm"
               type="text"
               placeholder="Search MedDRA PT or SOC..."
@@ -589,15 +592,19 @@
         </div>
 
         <div class="section-card">
-          <h3 class="section-title">
+          <h3 id="benefit-risk-heading" class="section-title">
             Executive Benefit-Risk Assessment &amp; Conclusions
           </h3>
           <div class="narrative-editor">
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <label for="benefit-risk-narrative" class="sr-only">
+              Executive Benefit-Risk Assessment and Conclusions
+            </label>
             <textarea
+              id="benefit-risk-narrative"
               v-model="benefitRiskNarrative"
               rows="6"
               class="textarea-control"
+              aria-labelledby="benefit-risk-heading"
               placeholder="Benefit-risk narrative synthesis..."
             />
           </div>
@@ -963,11 +970,17 @@
             </div>
 
             <div class="sim-column">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label class="form-label-header"
-                >Seriousness Criteria (ICH E2A § II.B):</label
+              <div
+                id="sim-seriousness-criteria-label"
+                class="form-label-header"
               >
-              <div class="checkbox-group-grid">
+                Seriousness Criteria (ICH E2A § II.B):
+              </div>
+              <div
+                class="checkbox-group-grid"
+                role="group"
+                aria-labelledby="sim-seriousness-criteria-label"
+              >
                 <label class="checkbox-label">
                   <input v-model="simSeriousnessDeath" type="checkbox" />
                   <strong>Results in Death (7-Day Fatal)</strong>
@@ -1153,7 +1166,7 @@
             <input
               id="qppv-user-id"
               v-model="qppvUserId"
-              type="text"
+              v-bind="SIGNATURE_USERNAME_INPUT_ATTRS"
               class="text-control"
             />
           </div>
@@ -1191,7 +1204,7 @@
             <input
               id="qppv-secret"
               v-model="qppvSecret"
-              type="password"
+              v-bind="SIGNATURE_PASSWORD_INPUT_ATTRS"
               class="text-control"
               placeholder="Enter signing secret / password..."
             />
@@ -1264,7 +1277,7 @@
             <input
               id="physician-user-id"
               v-model="physicianUserId"
-              type="text"
+              v-bind="SIGNATURE_USERNAME_INPUT_ATTRS"
               class="text-control"
             />
           </div>
@@ -1306,7 +1319,7 @@
             <input
               id="physician-secret"
               v-model="physicianSecret"
-              type="password"
+              v-bind="SIGNATURE_PASSWORD_INPUT_ATTRS"
               class="text-control"
               placeholder="Enter re-authentication PIN..."
             />
@@ -1347,7 +1360,12 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
-import { ClinicalIconButton, useFocusTrap } from "ui";
+import {
+  ClinicalIconButton,
+  SIGNATURE_PASSWORD_INPUT_ATTRS,
+  SIGNATURE_USERNAME_INPUT_ATTRS,
+  useFocusTrap,
+} from "ui";
 
 import { useToastStore } from "../../stores/toasts.js";
 import { ensureOk } from "../../utils/apiErrors.js";

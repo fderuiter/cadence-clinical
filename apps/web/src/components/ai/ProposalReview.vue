@@ -310,6 +310,7 @@ import {
   maskReasonWords,
   resolveNode,
   seedNodeSummary,
+  seedResolvedNodes,
 } from "../../canvas/nodeResolver";
 import { useScopedNavigation } from "../../composables/useScopedNavigation";
 import NodeRefChip from "../canvas/NodeRefChip.vue";
@@ -492,6 +493,18 @@ async function load(refText: string) {
     const loaded = await kernelApi.getProposal(refText);
     proposal.value = loaded;
     if (loaded.ref) {
+      const proposalNode: KernelNode = {
+        ref: loaded.ref,
+        kind: "proposal",
+        title: loaded.intent,
+        code: null,
+        status: loaded.status,
+        mask: loaded.mask ?? null,
+      };
+      seedResolvedNodes({
+        [refText]: proposalNode,
+        [loaded.ref]: proposalNode,
+      });
       seedNodeSummary(loaded.ref, {
         kind: "proposal",
         title: loaded.intent,

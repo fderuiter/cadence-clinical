@@ -1,32 +1,32 @@
 <template>
   <ClinicalFieldLayout
-    :id="id"
-    :label="label"
-    :query="query"
-    :grid-span="gridSpan"
-    :error="error ?? undefined"
-    :can-manage-queries="canManageQueries"
-    :query-label="queryLabel"
+    v-bind="layoutProps"
     tag="div"
     extra-class="clinical-lookup-container"
+    @create-query="$emit('create-query', $event)"
+    @respond-query="$emit('respond-query', $event)"
+    @close-query="$emit('close-query')"
+    @reopen-query="$emit('reopen-query')"
   >
-    <template #default="{ id: slotId, errorId, hasError }">
+    <template
+      #default="{ id: slotId, describedBy, hasError, required: slotRequired }"
+    >
       <input
+        v-bind="controlAttributes"
         :id="slotId"
-        type="text"
+        :type="resolvedType"
         :name="slotId"
         :value="modelValue"
+        :disabled="effectiveDisabled || undefined"
+        :required="slotRequired || undefined"
+        :aria-required="slotRequired ? 'true' : effectiveAriaRequired"
+        :min="effectiveMin"
+        :max="effectiveMax"
+        :step="effectiveStep"
+        :data-tabular-nums="effectiveDataTabularNums"
         autocomplete="off"
-        v-bind="attributes"
-        :aria-describedby="
-          [
-            status !== 'none' ? `lookup-status-${id}` : '',
-            hasError ? errorId : '',
-          ]
-            .filter(Boolean)
-            .join(' ') || undefined
-        "
-        :aria-invalid="status === 'invalid' || hasError ? 'true' : undefined"
+        :aria-describedby="mergeDescribedBy(describedBy)"
+        :aria-invalid="resolveAriaInvalid(hasError)"
         @input="handleInput"
         @change="handleChange"
       />
@@ -60,44 +60,87 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, useAttrs } from "vue";
 import ClinicalFieldLayout from "./ClinicalFieldLayout.vue";
+import {
+  buildFieldLayoutProps,
+  splitContainerAndControlAttributes,
+  firstDefinedAttr,
+  resolveBooleanAttr,
+  resolveEffectiveRequiredAndAria,
+  mergeDescribedByIds,
+  resolveAriaInvalidValue,
+  resolveTabularNumsAttr,
+} from "./sharedProps.js";
+
+defineOptions({ inheritAttrs: false });
+
+const attrs = useAttrs();
+
+const STRIPPED_KEYS = new Set([
+  "class",
+  "style",
+  "type",
+  "inputmode",
+  "data-tabular-nums",
+  "disabled",
+  "required",
+  "aria-required",
+  "min",
+  "max",
+  "step",
+  "aria-describedby",
+  "aria-invalid",
+]);
 
 interface Props {
-  // Status message explanation helper
   statusMessage?: string;
-  // Active lookup status
   status?: "none" | "loading" | "valid" | "invalid" | "degraded";
-  // Field identifier
   id: string;
-  // Label for field
   label: string;
-  // Active model value
   modelValue?: string | number;
-  // Validation error string
+  type?: string;
   error?: string | null;
-  // Grid width span
   gridSpan?: number | string;
-  // Query details
   query?: any;
-  // Custom element attributes mapping
   attributes?: Record<string, any>;
-  // Query permission check
   canManageQueries?: boolean;
-  // Formatted query status label
   queryLabel?: string;
+  required?: boolean;
+  disabled?: boolean;
+  min?: number | string | null;
+  max?: number | string | null;
+  step?: number | string | null;
+  hint?: string;
+  unit?: string;
+  range?: string;
+  density?: string;
+  hideLabel?: boolean;
+  showQueryFlag?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   statusMessage: "",
   status: "none",
   modelValue: "",
+  type: "text",
   error: null,
   gridSpan: 12,
   query: null,
   attributes: () => ({}),
   canManageQueries: false,
   queryLabel: "",
+  required: false,
+  disabled: false,
+  min: null,
+  max: null,
+  step: null,
+  hint: "",
+  unit: "",
+  range: "",
+  density: "comfortable",
+  hideLabel: false,
+  showQueryFlag: true,
 });
 
 const emit = defineEmits<{
@@ -109,6 +152,87 @@ const emit = defineEmits<{
   (e: "close-query"): void;
   (e: "reopen-query"): void;
 }>();
+
+const splitAttrs = computed(() =>
+  splitContainerAndControlAttributes(props.attributes, attrs, STRIPPED_KEYS)
+);
+const containerAttributes = computed(() => splitAttrs.value.container);
+const controlAttributes = computed(() => splitAttrs.value.control);
+
+const resolvedType = computed(() => {
+  const raw =
+    firstDefinedAttr(props.type, attrs.type, props.attributes?.type) || "text";
+  return raw === "concept_code" ? "text" : String(raw);
+});
+
+const effectiveDisabled = computed(() =>
+  resolveBooleanAttr(
+    props.disabled ? true : undefined,
+    attrs.disabled,
+    props.attributes?.disabled
+  )
+);
+
+const reqState = computed(() => resolveEffectiveRequiredAndAria(props, attrs));
+const effectiveRequired = computed(() => reqState.value.required);
+const effectiveAriaRequired = computed(
+  () => reqState.value.ariaRequired as "true" | "false" | undefined
+);
+const layoutProps = computed(() =>
+  buildFieldLayoutProps(
+    props,
+    attrs,
+    containerAttributes.value,
+    effectiveRequired.value
+  )
+);
+
+const effectiveMin = computed(() =>
+  firstDefinedAttr(props.min, attrs.min, props.attributes?.min)
+);
+const effectiveMax = computed(() =>
+  firstDefinedAttr(props.max, attrs.max, props.attributes?.max)
+);
+const effectiveStep = computed(() =>
+  firstDefinedAttr(props.step, attrs.step, props.attributes?.step)
+);
+const effectiveDataTabularNums = computed(() => {
+  const explicitAttr =
+    attrs["data-tabular-nums"] ?? props.attributes?.["data-tabular-nums"];
+  const explicit =
+    explicitAttr !== undefined && explicitAttr !== null
+      ? explicitAttr !== false && explicitAttr !== "false"
+      : undefined;
+  return resolveTabularNumsAttr(
+    explicit,
+    resolvedType.value.toLowerCase(),
+    String(
+      firstDefinedAttr(attrs.inputmode, props.attributes?.inputmode) || ""
+    ),
+    effectiveMin.value,
+    effectiveMax.value,
+    effectiveStep.value
+  );
+});
+
+function resolveAriaInvalid(
+  hasError: boolean
+): "true" | "false" | "grammar" | "spelling" | undefined {
+  return resolveAriaInvalidValue(
+    props.status === "invalid" || hasError,
+    attrs["aria-invalid"],
+    props.attributes?.["aria-invalid"]
+  ) as "true" | "false" | "grammar" | "spelling" | undefined;
+}
+
+function mergeDescribedBy(layoutDescribedBy?: string): string | undefined {
+  return mergeDescribedByIds(
+    props.status !== "none" ? `lookup-status-${props.id}` : "",
+    props.attributes?.["aria-describedby"],
+    attrs["aria-describedby"],
+    layoutDescribedBy
+  );
+}
 
 function handleInput(event: Event) {
   const target = event.target as HTMLInputElement | null;

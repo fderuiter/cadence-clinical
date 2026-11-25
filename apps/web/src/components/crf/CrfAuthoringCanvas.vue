@@ -149,11 +149,11 @@
               overflow-y: auto;
             "
           >
-            <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-            <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
             <div
               v-for="warning in layoutWarnings"
               :key="warning.fieldId"
+              role="button"
+              tabindex="0"
               class="warning-item"
               style="
                 border: 1px solid var(--semantic-color-warning-border);
@@ -163,6 +163,8 @@
                 cursor: pointer;
               "
               @click="onSelectField(warning.fieldId)"
+              @keydown.enter.prevent="onSelectField(warning.fieldId)"
+              @keydown.space.prevent="onSelectField(warning.fieldId)"
             >
               <div
                 style="
@@ -279,8 +281,7 @@
             </div>
 
             <div class="inspector-field-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Field Label</label>
+              <label for="inspect-field-label">Field Label</label>
               <input
                 id="inspect-field-label"
                 v-model="selectedFieldLabel"
@@ -290,8 +291,7 @@
             </div>
 
             <div class="inspector-field-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Grid Span (1-12 Columns)</label>
+              <label for="inspect-field-span">Grid Span (1-12 Columns)</label>
               <select
                 id="inspect-field-span"
                 v-model="selectedFieldGridSpan"
@@ -311,10 +311,12 @@
             </div>
 
             <div class="inspector-field-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Field Type</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-              <select v-model="selectedFieldType" class="inspector-select">
+              <label for="inspect-field-type">Field Type</label>
+              <select
+                id="inspect-field-type"
+                v-model="selectedFieldType"
+                class="inspector-select"
+              >
                 <option value="text">Text Input</option>
                 <option value="numeric">Numeric Input</option>
                 <option value="date">Date Picker</option>

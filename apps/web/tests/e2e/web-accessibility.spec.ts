@@ -4522,4 +4522,160 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
       });
     }
   });
+
+  test("ADR-2679: passes WCAG 2.2 Level A & AA axe-core across all 40 web routes (including /auditor and /icf-builder) and verifies modal <form> Enter submit & retry focus", async ({
+    page,
+  }) => {
+    test.setTimeout(180_000);
+    const captureScreenshots = process.env.CAPTURE_ADR2679_SCREENSHOTS === "1";
+    await page.setViewportSize({ width: 1280, height: 800 });
+
+    const SEEDED_OBSERVATION_REF =
+      "observation:00000000-0000-0000-0000-000000000001@1"; // deid-ignore
+
+    const ALL_WEB_ROUTES = [
+      "/overview",
+      "/plans",
+      "/onboarding/trial",
+      "/login",
+      "/forbidden",
+      "/unavailable",
+      "/studies",
+      "/studies/DEMO-01",
+      "/mdr",
+      "/digitization",
+      "/icf-builder",
+      "/econsent-authoring",
+      "/amendment-diff",
+      `/observations/${SEEDED_OBSERVATION_REF}`,
+      "/ecrf",
+      "/imaging",
+      "/devices",
+      "/device-investigation",
+      "/adjudication",
+      "/cec",
+      "/ctms",
+      "/ssu",
+      "/audit",
+      "/auditor",
+      "/rules",
+      "/coding",
+      "/data-lock",
+      "/lakehouse",
+      "/sensors",
+      "/labs",
+      "/dct",
+      "/safety",
+      "/exports",
+      "/etmf",
+      "/quality",
+      "/notifications",
+      "/tickets",
+      "/documents",
+      "/knowledge",
+      "/training",
+      "/participant-wallet",
+      "/lay-summaries",
+    ];
+    expect(ALL_WEB_ROUTES.length).toBeGreaterThanOrEqual(40);
+
+    const routeViolations: Array<{
+      routePath: string;
+      violations: Array<{
+        id: string;
+        impact?: string | null;
+        nodes: Array<{ target: unknown; failureSummary?: string }>;
+      }>;
+    }> = [];
+
+    for (const routePath of ALL_WEB_ROUTES) {
+      await gotoHashRoute(page, routePath);
+      await expect(
+        page.locator("main").first(),
+        `Expected <main> on ${routePath}`
+      ).toBeVisible();
+      await page.evaluate(
+        () =>
+          new Promise<void>((resolve) =>
+            requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+          )
+      );
+
+      if (routePath === "/auditor") {
+        await expect(page.locator(".auditor-workspace")).toBeVisible();
+        await expect(page.locator(".audit-trail-viewer")).toBeVisible();
+        if (captureScreenshots) {
+          await page.screenshot({ path: "/tmp/adr2679-auditor-a11y.png" });
+        }
+      }
+
+      if (routePath === "/icf-builder") {
+        const editorCanvas = page.locator(".editor-canvas").first();
+        if ((await editorCanvas.count()) > 0) {
+          await expect(editorCanvas).toHaveAttribute("aria-multiline", "true");
+          const labelledBy = await editorCanvas.getAttribute("aria-labelledby");
+          expect(labelledBy).toBeTruthy();
+        }
+        if (captureScreenshots) {
+          await page.screenshot({ path: "/tmp/adr2679-icf-builder-a11y.png" });
+        }
+      }
+
+      const results = await new AxeBuilder({ page })
+        .exclude(".watermark-overlay-container")
+        .exclude(".watermark-overlay")
+        .options({ rules: { "target-size": { enabled: true } } })
+        .withTags(WCAG_AA_TAGS)
+        .analyze();
+
+      if (results.violations.length > 0) {
+        routeViolations.push({
+          routePath,
+          violations: results.violations.map((v) => ({
+            id: v.id,
+            impact: v.impact,
+            nodes: v.nodes.map((n) => ({
+              target: n.target,
+              failureSummary: n.failureSummary,
+            })),
+          })),
+        });
+      }
+    }
+
+    expect(
+      routeViolations,
+      `WCAG 2.2 AA violations across all 40+ routes: ${JSON.stringify(routeViolations, null, 2)}`
+    ).toEqual([]);
+
+    // Verify regulated SignatureCaptureModal <form> Enter submission, non-stealing ModalErrorAlert, and Retry focus
+    await gotoHashRoute(page, "/icf-builder");
+    const openSigBtn = page.locator("#btn-open-sign-modal");
+    await expect(openSigBtn).toBeVisible();
+    await openSigBtn.click();
+
+    const sigModal = page.locator("#signature-capture-modal");
+    await expect(sigModal).toBeVisible();
+    const sigUsername = sigModal.locator("#sig-username");
+    await sigUsername.fill("");
+    await sigUsername.focus();
+    await page.keyboard.press("Enter");
+
+    const modalAlert = sigModal.locator('[role="alert"]').first();
+    await expect(modalAlert).toBeVisible();
+    // ModalErrorAlert must not steal focus on mount; Retry focuses the invalid #sig-username input
+    const retryBtn = sigModal.locator('[data-testid="modal-error-retry-btn"]');
+    await expect(retryBtn).toBeVisible();
+    await expectNoWcagViolations(
+      page,
+      "SignatureCaptureModal error state on /icf-builder"
+    );
+    if (captureScreenshots) {
+      await page.screenshot({ path: "/tmp/adr2679-signature-modal-retry.png" });
+    }
+    await retryBtn.click();
+    await expect(sigUsername).toBeFocused();
+    await page.keyboard.press("Escape");
+    await expect(sigModal).toBeHidden();
+  });
 });

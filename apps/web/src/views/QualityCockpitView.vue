@@ -61,10 +61,15 @@
 
     <!-- Quick Stats Cards Grid -->
     <div class="stats-grid">
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-      <div class="stat-card" @click="activeTab = 'deviations'">
-        <div class="stat-icon alert-icon">⚠️</div>
+      <div
+        role="button"
+        tabindex="0"
+        class="stat-card"
+        @click="activeTab = 'deviations'"
+        @keydown.enter.prevent="activeTab = 'deviations'"
+        @keydown.space.prevent="activeTab = 'deviations'"
+      >
+        <div class="stat-icon alert-icon" aria-hidden="true">⚠️</div>
         <div class="stat-details">
           <div class="stat-value tabular-nums">
             {{ deviations.length }}
@@ -75,10 +80,15 @@
           </div>
         </div>
       </div>
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-      <div class="stat-card" @click="activeTab = 'capa'">
-        <div class="stat-icon capa-icon">🔄</div>
+      <div
+        role="button"
+        tabindex="0"
+        class="stat-card"
+        @click="activeTab = 'capa'"
+        @keydown.enter.prevent="activeTab = 'capa'"
+        @keydown.space.prevent="activeTab = 'capa'"
+      >
+        <div class="stat-icon capa-icon" aria-hidden="true">🔄</div>
         <div class="stat-details">
           <div class="stat-value tabular-nums">
             {{ activeCapasCount }}
@@ -86,10 +96,15 @@
           <div class="stat-label">Active CAPAs (6-Stage Gates)</div>
         </div>
       </div>
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-      <div class="stat-card" @click="activeTab = 'rbqm'">
-        <div class="stat-icon rbqm-icon">🎯</div>
+      <div
+        role="button"
+        tabindex="0"
+        class="stat-card"
+        @click="activeTab = 'rbqm'"
+        @keydown.enter.prevent="activeTab = 'rbqm'"
+        @keydown.space.prevent="activeTab = 'rbqm'"
+      >
+        <div class="stat-icon rbqm-icon" aria-hidden="true">🎯</div>
         <div class="stat-details">
           <div class="stat-value tabular-nums">
             {{ highRiskSitesCount }} / {{ siteRiskProfiles.length || 4 }}
@@ -97,10 +112,15 @@
           <div class="stat-label">High-Risk Sites (Z &ge; 2.0)</div>
         </div>
       </div>
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-      <div class="stat-card" @click="activeTab = 'rbqm'">
-        <div class="stat-icon qtl-icon">📊</div>
+      <div
+        role="button"
+        tabindex="0"
+        class="stat-card"
+        @click="activeTab = 'rbqm'"
+        @keydown.enter.prevent="activeTab = 'rbqm'"
+        @keydown.space.prevent="activeTab = 'rbqm'"
+      >
+        <div class="stat-icon qtl-icon" aria-hidden="true">📊</div>
         <div class="stat-details">
           <div class="stat-value tabular-nums">
             {{ qtlBreaches.length }}
@@ -108,10 +128,15 @@
           <div class="stat-label">QTL Breaches (CSR 9.6 Alerts)</div>
         </div>
       </div>
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-      <div class="stat-card" @click="activeTab = 'serious-breaches'">
-        <div class="stat-icon breach-icon">🚨</div>
+      <div
+        role="button"
+        tabindex="0"
+        class="stat-card"
+        @click="activeTab = 'serious-breaches'"
+        @keydown.enter.prevent="activeTab = 'serious-breaches'"
+        @keydown.space.prevent="activeTab = 'serious-breaches'"
+      >
+        <div class="stat-icon breach-icon" aria-hidden="true">🚨</div>
         <div class="stat-details">
           <div
             class="stat-value tabular-nums"
@@ -131,10 +156,15 @@
           <div class="stat-label">7-Day Serious Breach Clock</div>
         </div>
       </div>
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-      <div class="stat-card" @click="openDossierModal">
-        <div class="stat-icon seal-icon">🔒</div>
+      <div
+        role="button"
+        tabindex="0"
+        class="stat-card"
+        @click="openDossierModal"
+        @keydown.enter.prevent="openDossierModal"
+        @keydown.space.prevent="openDossierModal"
+      >
+        <div class="stat-icon seal-icon" aria-hidden="true">🔒</div>
         <div class="stat-details">
           <div class="stat-value text-success tabular-nums">100% GxP</div>
           <div class="stat-label">Inspection Readiness Seal</div>
@@ -464,8 +494,11 @@
             </p>
           </div>
           <div class="filter-group">
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <label for="qc-deviation-severity-filter" class="sr-only"
+              >Filter deviations by severity</label
+            >
             <select
+              id="qc-deviation-severity-filter"
               v-model="deviationSeverityFilter"
               class="form-select form-select-sm"
             >
@@ -932,55 +965,67 @@
       <div v-if="rcaMethod === 'ISHIKAWA'" class="fishbone-container">
         <div class="fishbone-grid">
           <div class="fishbone-branch">
-            <h5>👨 Man (Personnel / Human Factor)</h5>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <h5 id="rca-fishbone-man-label">
+              👨 Man (Personnel / Human Factor)
+            </h5>
             <textarea
               v-model="rcaForm.fishbone.man"
+              aria-labelledby="rca-fishbone-man-label"
               class="form-textarea"
               placeholder="Staffing, training gaps, fatigue..."
             />
           </div>
           <div class="fishbone-branch">
-            <h5>⚙️ Machine (Equipment / Systems)</h5>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <h5 id="rca-fishbone-machine-label">
+              ⚙️ Machine (Equipment / Systems)
+            </h5>
             <textarea
               v-model="rcaForm.fishbone.machine"
+              aria-labelledby="rca-fishbone-machine-label"
               class="form-textarea"
               placeholder="Hardware faults, software bugs, EDC validation..."
             />
           </div>
           <div class="fishbone-branch">
-            <h5>📦 Material (Investigational Product / Supplies)</h5>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <h5 id="rca-fishbone-material-label">
+              📦 Material (Investigational Product / Supplies)
+            </h5>
             <textarea
               v-model="rcaForm.fishbone.material"
+              aria-labelledby="rca-fishbone-material-label"
               class="form-textarea"
               placeholder="IP batch quality, temperature logs, lab kits..."
             />
           </div>
           <div class="fishbone-branch">
-            <h5>📜 Method (SOPs / Protocol Procedures)</h5>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <h5 id="rca-fishbone-method-label">
+              📜 Method (SOPs / Protocol Procedures)
+            </h5>
             <textarea
               v-model="rcaForm.fishbone.method"
+              aria-labelledby="rca-fishbone-method-label"
               class="form-textarea"
               placeholder="Ambiguous study protocol, outdated SOPs..."
             />
           </div>
           <div class="fishbone-branch">
-            <h5>📏 Measurement (Calibration / Metrics)</h5>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <h5 id="rca-fishbone-measurement-label">
+              📏 Measurement (Calibration / Metrics)
+            </h5>
             <textarea
               v-model="rcaForm.fishbone.measurement"
+              aria-labelledby="rca-fishbone-measurement-label"
               class="form-textarea"
               placeholder="Thermometer calibration, lab precision..."
             />
           </div>
           <div class="fishbone-branch">
-            <h5>🌍 Milieu (Environment / Clinic Context)</h5>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <h5 id="rca-fishbone-milieu-label">
+              🌍 Milieu (Environment / Clinic Context)
+            </h5>
             <textarea
               v-model="rcaForm.fishbone.milieu"
+              aria-labelledby="rca-fishbone-milieu-label"
               class="form-textarea"
               placeholder="Clinic layout, weather, regional transport..."
             />
@@ -989,9 +1034,11 @@
       </div>
 
       <div class="form-group mt-3">
-        <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-        <label class="form-label">Root Cause Summary Statement:</label>
+        <label for="qc-rca-summary" class="form-label"
+          >Root Cause Summary Statement:</label
+        >
         <input
+          id="qc-rca-summary"
           v-model="rcaForm.root_cause_summary"
           class="form-input"
           placeholder="Synthesized root cause finding"
@@ -1092,8 +1139,11 @@
       dialog-class="modal-content"
       title="CSR Section 9.6 Quality Tolerance Limit Summary"
     >
-      <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+      <label for="qc-csr-narrative-textarea" class="sr-only"
+        >CSR Section 9.6 Quality Tolerance Limit Summary Narrative</label
+      >
       <textarea
+        id="qc-csr-narrative-textarea"
         readonly
         class="form-textarea"
         rows="10"
@@ -1125,20 +1175,22 @@
         {{ activeFindingToPromote?.condition }}
       </div>
       <div class="form-group mt-2">
-        <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-        <label class="form-label">Action Plan:</label>
-        <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+        <label for="qc-promote-action-plan" class="form-label"
+          >Action Plan:</label
+        >
         <textarea
+          id="qc-promote-action-plan"
           v-model="promoteForm.action_plan"
           class="form-textarea"
           placeholder="Corrective actions to remediate finding..."
         />
       </div>
       <div class="form-group mt-2">
-        <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-        <label class="form-label">Preventive Measures:</label>
-        <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+        <label for="qc-promote-preventive" class="form-label"
+          >Preventive Measures:</label
+        >
         <textarea
+          id="qc-promote-preventive"
           v-model="promoteForm.preventive_measures"
           class="form-textarea"
           placeholder="Systemic prevention measures..."

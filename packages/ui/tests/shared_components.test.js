@@ -322,7 +322,7 @@ describe("Shared UI Vue Components Behavior & SSR Rendering", () => {
       );
       expect(divHtml).toContain("Systolic Blood Pressure");
       expect(divHtml).toContain("Value exceeds physiological range");
-      expect(divHtml).toContain('role="status"');
+      expect(divHtml).toContain('role="alert"');
 
       const fieldsetHtml = await renderToString(
         createSSRApp(ClinicalFieldLayout, {

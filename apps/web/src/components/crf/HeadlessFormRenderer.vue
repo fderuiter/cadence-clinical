@@ -14,7 +14,8 @@
           :class="{ active: currentViewport === 'desktop_edc' }"
           @click="currentViewport = 'desktop_edc'"
         >
-          🖥️ Desktop EDC
+          <Monitor class="viewport-icon" :size="14" aria-hidden="true" />
+          Desktop EDC
         </button>
         <button
           type="button"
@@ -22,7 +23,8 @@
           :class="{ active: currentViewport === 'mobile_epro' }"
           @click="currentViewport = 'mobile_epro'"
         >
-          📱 Mobile ePRO
+          <Smartphone class="viewport-icon" :size="14" aria-hidden="true" />
+          Mobile ePRO
         </button>
         <button
           type="button"
@@ -30,7 +32,8 @@
           :class="{ active: currentViewport === 'tablet_esource' }"
           @click="currentViewport = 'tablet_esource'"
         >
-          📋 Tablet eSource
+          <Tablet class="viewport-icon" :size="14" aria-hidden="true" />
+          Tablet eSource
         </button>
       </div>
     </div>
@@ -69,12 +72,18 @@
               <!-- Field Label & Constraints -->
               <label class="field-label" :for="'widget-' + widget.variable_id">
                 {{ getVariable(widget.variable_id)?.name }}
-                <span
-                  v-if="getVariable(widget.variable_id)?.constraints?.required"
-                  class="required-star"
+                <span v-if="isWidgetRequired(widget)" class="required-star"
                   >*</span
                 >
               </label>
+
+              <span
+                v-if="getWidgetUnit(widget)"
+                :id="'widget-unit-' + widget.variable_id"
+                class="field-unit"
+              >
+                Unit: {{ getWidgetUnit(widget) }}
+              </span>
 
               <!-- Widget Rendering -->
               <template v-if="widget.widget === 'number_input'">
@@ -84,6 +93,15 @@
                   type="number"
                   class="form-input"
                   :placeholder="widget.placeholder || ''"
+                  :required="isWidgetRequired(widget) || undefined"
+                  :aria-required="isWidgetRequired(widget) ? 'true' : undefined"
+                  :min="getWidgetMin(widget)"
+                  :max="getWidgetMax(widget)"
+                  :step="getWidgetStep(widget)"
+                  :aria-invalid="
+                    fieldErrors[widget.variable_id] ? 'true' : undefined
+                  "
+                  :aria-describedby="getWidgetDescribedBy(widget)"
                   @input="evaluateRules"
                 />
               </template>
@@ -117,6 +135,12 @@
                   type="text"
                   class="form-input"
                   :placeholder="widget.placeholder || ''"
+                  :required="isWidgetRequired(widget) || undefined"
+                  :aria-required="isWidgetRequired(widget) ? 'true' : undefined"
+                  :aria-invalid="
+                    fieldErrors[widget.variable_id] ? 'true' : undefined
+                  "
+                  :aria-describedby="getWidgetDescribedBy(widget)"
                   @input="evaluateRules"
                 />
               </template>
@@ -124,9 +148,16 @@
               <!-- Inline AST Validation Queries / Errors -->
               <div
                 v-if="fieldErrors[widget.variable_id]"
+                :id="'widget-error-' + widget.variable_id"
                 class="field-error-message"
+                role="alert"
               >
-                ⚠️ {{ fieldErrors[widget.variable_id] }}
+                <AlertTriangle
+                  class="error-icon"
+                  :size="14"
+                  aria-hidden="true"
+                />
+                <span>{{ fieldErrors[widget.variable_id] }}</span>
               </div>
             </div>
           </div>
@@ -145,6 +176,7 @@
 
 <script setup>
 import { computed, ref, reactive, watch, onMounted } from "vue";
+import { AlertTriangle, Monitor, Smartphone, Tablet } from "lucide-vue-next";
 import { evaluateAST, renderFormFromJSON } from "../../evaluator.js";
 import MedicalAutocodeWidget from "./widgets/MedicalAutocodeWidget.vue";
 import BodyMapWidget from "./widgets/BodyMapWidget.vue";
@@ -186,6 +218,46 @@ const getVariable = (varId) => {
   return props.formDefinition.data_schema?.variables?.find(
     (v) => v.id === varId
   );
+};
+
+const isWidgetRequired = (widget) => {
+  const variable = getVariable(widget.variable_id);
+  return Boolean(
+    variable?.constraints?.required || variable?.required || widget.required
+  );
+};
+
+const getWidgetUnit = (widget) => {
+  const variable = getVariable(widget.variable_id);
+  return variable?.unit || variable?.constraints?.unit || widget.unit || "";
+};
+
+const getWidgetMin = (widget) => {
+  const variable = getVariable(widget.variable_id);
+  return variable?.constraints?.min ?? variable?.min ?? widget.min ?? undefined;
+};
+
+const getWidgetMax = (widget) => {
+  const variable = getVariable(widget.variable_id);
+  return variable?.constraints?.max ?? variable?.max ?? widget.max ?? undefined;
+};
+
+const getWidgetStep = (widget) => {
+  const variable = getVariable(widget.variable_id);
+  return (
+    variable?.constraints?.step ?? variable?.step ?? widget.step ?? undefined
+  );
+};
+
+const getWidgetDescribedBy = (widget) => {
+  const ids = [];
+  if (getWidgetUnit(widget)) {
+    ids.push(`widget-unit-${widget.variable_id}`);
+  }
+  if (fieldErrors[widget.variable_id]) {
+    ids.push(`widget-error-${widget.variable_id}`);
+  }
+  return ids.length > 0 ? ids.join(" ") : undefined;
 };
 
 const evaluateRules = () => {
@@ -402,6 +474,9 @@ defineExpose({
 }
 
 .btn-viewport {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   padding: 6px 12px;
   border: 1px solid var(--border);
   background-color: var(--semantic-color-surface);
@@ -477,12 +552,18 @@ defineExpose({
   color: var(--error);
 }
 
+.field-unit {
+  font-size: 0.75rem;
+  color: var(--semantic-color-text-secondary);
+}
+
 .form-input {
   width: 100%;
+  box-sizing: border-box;
   padding: 8px 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius-md, 6px);
-  font-size: 0.9375rem;
+  font-size: 1rem;
   background-color: var(--semantic-color-surface);
   color: var(--semantic-color-text);
 }
@@ -492,6 +573,9 @@ defineExpose({
 }
 
 .field-error-message {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-size: 0.75rem;
   color: var(--error);
   font-weight: 500;

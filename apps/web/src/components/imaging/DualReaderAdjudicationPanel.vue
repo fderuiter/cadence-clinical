@@ -489,11 +489,12 @@
           </div>
 
           <div class="form-group">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label class="form-label">Signer Identity:</label>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <label for="chair-signer-identity" class="form-label"
+              >Signer Identity:</label
+            >
             <input
-              type="text"
+              id="chair-signer-identity"
+              v-bind="SIGNATURE_SIGNER_NAME_INPUT_ATTRS"
               class="form-input"
               value="Dr. Arthur Smith (Adjudication Committee Chair)"
               disabled
@@ -501,10 +502,11 @@
           </div>
 
           <div class="form-group">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label class="form-label">Signing Reason:</label>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <label for="chair-signing-reason" class="form-label"
+              >Signing Reason:</label
+            >
             <input
+              id="chair-signing-reason"
               type="text"
               class="form-input"
               value="BLINDED_IRC_ADJUDICATION_SIGN_OFF"
@@ -519,7 +521,7 @@
             <input
               id="chair-password-input"
               v-model="chairPassword"
-              type="password"
+              v-bind="SIGNATURE_PASSWORD_INPUT_ATTRS"
               class="form-input"
               placeholder="Enter Part 11 credential..."
             />
@@ -631,7 +633,12 @@
 
 <script setup>
 import { ref, computed } from "vue";
-import { ClinicalIconButton, useFocusTrap } from "ui";
+import {
+  ClinicalIconButton,
+  SIGNATURE_PASSWORD_INPUT_ATTRS,
+  SIGNATURE_SIGNER_NAME_INPUT_ATTRS,
+  useFocusTrap,
+} from "ui";
 
 const props = defineProps({
   subjectId: {

@@ -119,12 +119,12 @@
           >
         </div>
         <div class="canvas-wrapper">
-          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
           <canvas
             ref="axialCanvasRef"
             class="mpr-canvas"
             width="380"
             height="380"
+            aria-hidden="true"
             @mousedown="startPanOrMeasure($event, 'AXIAL')"
             @mousemove="onCanvasMouseMove($event, 'AXIAL')"
             @mouseup="stopPanOrMeasure"
@@ -158,12 +158,12 @@
           <span class="slice-loc-label">Reconstructed</span>
         </div>
         <div class="canvas-wrapper">
-          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
           <canvas
             ref="sagittalCanvasRef"
             class="mpr-canvas"
             width="380"
             height="380"
+            aria-hidden="true"
             @mousedown="startPanOrMeasure($event, 'SAGITTAL')"
             @mousemove="onCanvasMouseMove($event, 'SAGITTAL')"
             @mouseup="stopPanOrMeasure"
@@ -197,12 +197,12 @@
           <span class="slice-loc-label">Reconstructed</span>
         </div>
         <div class="canvas-wrapper">
-          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
           <canvas
             ref="coronalCanvasRef"
             class="mpr-canvas"
             width="380"
             height="380"
+            aria-hidden="true"
             @mousedown="startPanOrMeasure($event, 'CORONAL')"
             @mousemove="onCanvasMouseMove($event, 'CORONAL')"
             @mouseup="stopPanOrMeasure"

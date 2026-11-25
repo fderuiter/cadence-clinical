@@ -14,50 +14,58 @@
       {{ description }}
     </p>
 
-    <div class="form-group" style="margin-bottom: 12px">
-      <label :for="idPrefix + 'change-reason-select'"
-        >Select Standard Reason</label
-      >
-      <select
-        :id="idPrefix + 'change-reason-select'"
-        v-model="selectedOption"
-        class="reason-control"
-        @change="handleSelectChange"
-      >
-        <option v-for="opt in options" :key="opt.value" :value="opt.value">
-          {{ opt.text }}
-        </option>
-      </select>
-    </div>
+    <form :id="formId" ref="formRef" novalidate @submit.prevent="onConfirm">
+      <div class="form-group" style="margin-bottom: 12px">
+        <label :for="idPrefix + 'change-reason-select'"
+          >Select Standard Reason</label
+        >
+        <select
+          :id="idPrefix + 'change-reason-select'"
+          v-model="selectedOption"
+          class="reason-control"
+          @change="handleSelectChange"
+          @keydown.enter.prevent="onConfirm"
+        >
+          <option v-for="opt in options" :key="opt.value" :value="opt.value">
+            {{ opt.text }}
+          </option>
+        </select>
+      </div>
 
-    <div class="form-group">
-      <label :for="idPrefix + 'change-reason-text'"
-        >Custom Explanation (Optional)</label
-      >
-      <textarea
-        :id="idPrefix + 'change-reason-text'"
-        v-model="customText"
-        class="reason-control"
-        :placeholder="placeholder"
-        @input="clearError"
-      />
-    </div>
+      <div class="form-group">
+        <label :for="idPrefix + 'change-reason-text'"
+          >Custom Explanation (Optional)</label
+        >
+        <textarea
+          :id="idPrefix + 'change-reason-text'"
+          ref="customTextRef"
+          v-model="customText"
+          class="reason-control"
+          :placeholder="placeholder"
+          :aria-invalid="validationError ? 'true' : undefined"
+          :aria-describedby="
+            validationError ? idPrefix + 'reason-error' : undefined
+          "
+          @input="clearError"
+        />
+      </div>
 
-    <!-- Accessible Validation Feedback -->
-    <div
-      v-if="validationError"
-      :id="idPrefix + 'reason-error'"
-      class="validation-error-msg"
-      style="
-        color: var(--semantic-color-error);
-        margin-top: 8px;
-        font-weight: 600;
-      "
-      role="status"
-      aria-live="polite"
-    >
-      ⚠️ {{ validationError }}
-    </div>
+      <!-- Accessible Validation Feedback -->
+      <div
+        v-if="validationError"
+        :id="idPrefix + 'reason-error'"
+        class="validation-error-msg"
+        role="status"
+        aria-live="polite"
+      >
+        <AlertTriangle
+          class="validation-error-icon"
+          :size="14"
+          aria-hidden="true"
+        />
+        <span>{{ validationError }}</span>
+      </div>
+    </form>
 
     <template #footer>
       <button
@@ -71,8 +79,9 @@
       <button
         :id="idPrefix + 'btn-save-change'"
         class="btn btn-primary"
-        type="button"
-        @click="onConfirm"
+        type="submit"
+        :form="formId"
+        @click.prevent="onConfirm"
       >
         {{ confirmText }}
       </button>
@@ -81,7 +90,8 @@
 </template>
 
 <script setup>
-import { ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
+import { AlertTriangle } from "lucide-vue-next";
 import { ClinicalModal } from "ui";
 
 const props = defineProps({
@@ -133,9 +143,15 @@ const props = defineProps({
 
 const emit = defineEmits(["confirm", "cancel"]);
 
+const formRef = ref(null);
+const customTextRef = ref(null);
 const selectedOption = ref("");
 const customText = ref("");
 const validationError = ref("");
+
+const formId = computed(() =>
+  props.idPrefix ? `${props.idPrefix}reason-form` : "reason-form"
+);
 
 // Watch show to reset state on open
 watch(
@@ -159,6 +175,15 @@ function clearError() {
   validationError.value = "";
 }
 
+function focusCustomReasonInput() {
+  const el =
+    customTextRef.value ||
+    formRef.value?.querySelector(`#${props.idPrefix}change-reason-text`);
+  if (el && typeof el.focus === "function") {
+    el.focus();
+  }
+}
+
 function onCancel() {
   emit("cancel");
 }
@@ -172,6 +197,7 @@ function onConfirm() {
     if (!cust) {
       validationError.value =
         "Custom explanation is required when selecting 'Other'.";
+      focusCustomReasonInput();
       return;
     }
   }
@@ -182,6 +208,7 @@ function onConfirm() {
   if (!finalReason.trim()) {
     validationError.value =
       "A non-empty reason for change is strictly required.";
+    focusCustomReasonInput();
     return;
   }
 
@@ -222,8 +249,27 @@ textarea.reason-control {
   resize: vertical;
 }
 
+.validation-error-msg {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--semantic-color-error);
+  margin-top: 8px;
+  font-weight: 600;
+}
+
+.validation-error-icon {
+  flex-shrink: 0;
+}
+
 .btn {
   max-width: 100%;
   box-sizing: border-box;
+}
+
+@media (max-width: 1024px), (pointer: coarse) {
+  .reason-control {
+    font-size: 16px;
+  }
 }
 </style>
