@@ -1,15 +1,23 @@
-import { openApiClient, unwrapResponse } from "./client";
+import { unwrapResponse } from "./client";
+import {
+  esourceApi,
+  type CandidateListParams,
+  type NormalizedEhrCandidate,
+  type NormalizedEhrCandidateListResponse,
+  type NormalizedEhrReconcileActionResponse,
+  type NormalizedEhrReconcileBatchActionResponse,
+} from "./interop/esource";
+import { openApiClient } from "./legacyClient";
 import type { paths } from "./types";
 
-export interface CandidateListParams {
-  studyId?: string;
-  subjectId?: string;
-  siteId?: string;
-  domain?: string;
-  status?: string;
-  skip?: number;
-  limit?: number;
-}
+export { esourceApi };
+export type {
+  CandidateListParams,
+  NormalizedEhrCandidate,
+  NormalizedEhrCandidateListResponse,
+  NormalizedEhrReconcileActionResponse,
+  NormalizedEhrReconcileBatchActionResponse,
+};
 
 export interface TelehealthSessionParams {
   studyId?: string;
@@ -106,78 +114,7 @@ export const interopService = {
     );
   },
 
-  listEhrCandidates(
-    params: CandidateListParams = {},
-    options: Record<string, unknown> = {}
-  ) {
-    return unwrapResponse(
-      openApiClient.GET("/api/v1/interop/esource/candidates", {
-        params: {
-          query: {
-            study_id: params.studyId,
-            subject_id: params.subjectId,
-            site_id: params.siteId,
-            domain: params.domain,
-            status: params.status,
-            skip: params.skip,
-            limit: params.limit,
-          },
-        },
-        ...options,
-      })
-    );
-  },
-
-  acceptEhrCandidate(body: unknown, options: Record<string, unknown> = {}) {
-    return unwrapResponse(
-      openApiClient.POST("/api/v1/interop/esource/reconcile/accept", {
-        body: body as paths["/api/v1/interop/esource/reconcile/accept"]["post"]["requestBody"]["content"]["application/json"],
-        ...options,
-      })
-    );
-  },
-
-  batchAcceptEhrCandidates(
-    body: unknown,
-    options: Record<string, unknown> = {}
-  ) {
-    return unwrapResponse(
-      openApiClient.POST("/api/v1/interop/esource/reconcile/batch-accept", {
-        body: body as paths["/api/v1/interop/esource/reconcile/batch-accept"]["post"]["requestBody"]["content"]["application/json"],
-        ...options,
-      })
-    );
-  },
-
-  rejectEhrCandidate(body: unknown, options: Record<string, unknown> = {}) {
-    return unwrapResponse(
-      openApiClient.POST("/api/v1/interop/esource/reconcile/reject", {
-        body: body as paths["/api/v1/interop/esource/reconcile/reject"]["post"]["requestBody"]["content"]["application/json"],
-        ...options,
-      })
-    );
-  },
-
-  batchRejectEhrCandidates(
-    body: unknown,
-    options: Record<string, unknown> = {}
-  ) {
-    return unwrapResponse(
-      openApiClient.POST("/api/v1/interop/esource/reconcile/batch-reject", {
-        body: body as paths["/api/v1/interop/esource/reconcile/batch-reject"]["post"]["requestBody"]["content"]["application/json"],
-        ...options,
-      })
-    );
-  },
-
-  raiseEhrClinicalQuery(body: unknown, options: Record<string, unknown> = {}) {
-    return unwrapResponse(
-      openApiClient.POST("/api/v1/interop/esource/reconcile/query", {
-        body: body as paths["/api/v1/interop/esource/reconcile/query"]["post"]["requestBody"]["content"]["application/json"],
-        ...options,
-      })
-    );
-  },
+  ...esourceApi,
 
   // Telehealth & DCT Methods
   scheduleTelehealthSession(

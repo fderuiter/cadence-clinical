@@ -1,6 +1,5 @@
 import { encodeChangeReason } from "./changeReason";
 import createClient, { type Middleware } from "openapi-fetch";
-import type { paths } from "./types";
 import {
   applyDemoIdentityHeaders,
   fetchWithSingleFlightRetry,
@@ -106,8 +105,6 @@ export function createOpenApiClient<T extends {} = Record<string, unknown>>(
   });
 }
 
-export const openApiClient = createOpenApiClient<paths>();
-
 export async function unwrapResponse<T>(
   promise: Promise<{ data?: T; error?: unknown; response: Response }>
 ): Promise<T> {
@@ -132,5 +129,3 @@ export async function unwrapResponse<T>(
   }
   return data as T;
 }
-
-export default openApiClient;

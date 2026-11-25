@@ -1,5 +1,6 @@
 import { encodeChangeReason } from "./changeReason";
-import { ApiError, openApiClient, unwrapResponse, getBaseUrl } from "./client";
+import { ApiError, unwrapResponse, getBaseUrl } from "./client";
+import { openApiClient } from "./legacyClient";
 import {
   applyDemoIdentityHeaders,
   fetchWithSingleFlightRetry,

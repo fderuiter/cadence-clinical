@@ -511,7 +511,7 @@ public sealed class CollectionValidationService(
         return fallback is not null && fallback.Length <= FindingTarget.MaxNameLength ? fallback : null;
     }
 
-    private static bool TryStripSpecPrefix(string variable, string specId, out string stripped)
+    internal static bool TryStripSpecPrefix(string variable, string specId, out string stripped)
     {
         if (variable.Length > specId.Length + 1
             && variable.StartsWith(specId, StringComparison.Ordinal)
@@ -812,7 +812,7 @@ public sealed class CollectionValidationService(
         return ownValues;
     }
 
-    private static List<TForm> SelectLatestFormsBySpec<TForm>(
+    internal static List<TForm> SelectLatestFormsBySpec<TForm>(
         IReadOnlyList<TForm> enrollmentForms,
         Func<TForm, CollectionInstanceId> getId,
         Func<TForm, string> getSpecId,
@@ -871,7 +871,7 @@ public sealed class CollectionValidationService(
         return Comparer<CollectionInstanceId>.Default.Compare(candidateId, currentId) >= 0;
     }
 
-    private static EnrollmentSiblingIndex BuildSiblingIndex<TForm>(
+    internal static EnrollmentSiblingIndex BuildSiblingIndex<TForm>(
         List<TForm> latestBySpec,
         Func<TForm, string> getSpecId,
         Func<TForm, Dictionary<string, RuleValue>> resolveOwnValues)
@@ -1140,25 +1140,65 @@ public sealed class CollectionValidationService(
         return formsByKey.TryGetValue(recordKey, out var resolved) ? resolved : null;
     }
 
-    private readonly record struct QualifiedSiblingEntry(
+    internal readonly record struct QualifiedSiblingEntry(
         string SpecId,
         RuleValue Value,
         bool HasPrior,
         RuleValue PriorValue);
 
-    private readonly record struct UnqualifiedSiblingEntry(
+    internal readonly record struct UnqualifiedSiblingEntry(
         string FirstSpecId,
         RuleValue FirstValue,
         bool HasSecond,
         RuleValue SecondValue);
 
-    private sealed record EnrollmentSiblingIndex(
+    internal sealed record EnrollmentSiblingIndex(
         Dictionary<string, QualifiedSiblingEntry> QualifiedValues,
         Dictionary<string, UnqualifiedSiblingEntry> UnqualifiedValues)
     {
         public static readonly EnrollmentSiblingIndex Empty = new(
             new Dictionary<string, QualifiedSiblingEntry>(0, StringComparer.Ordinal),
             new Dictionary<string, UnqualifiedSiblingEntry>(0, StringComparer.Ordinal));
+
+        public RuleValue ResolveVariable(string targetSpec, Dictionary<string, RuleValue> ownValues, string name)
+        {
+            if (QualifiedValues.TryGetValue(name, out var qualifiedSibling))
+            {
+                if (!string.Equals(qualifiedSibling.SpecId, targetSpec, StringComparison.Ordinal))
+                {
+                    return qualifiedSibling.Value;
+                }
+
+                if (qualifiedSibling.HasPrior)
+                {
+                    return qualifiedSibling.PriorValue;
+                }
+            }
+
+            if (ownValues.TryGetValue(name, out var ownValue))
+            {
+                return ownValue;
+            }
+
+            if (name.Length <= FindingTarget.MaxNameLength
+                && TryStripSpecPrefix(name, targetSpec, out var stripped)
+                && ownValues.TryGetValue(stripped, out var ownQualifiedValue))
+            {
+                return ownQualifiedValue;
+            }
+
+            if (UnqualifiedValues.TryGetValue(name, out var unqualifiedSibling))
+            {
+                if (!string.Equals(unqualifiedSibling.FirstSpecId, targetSpec, StringComparison.Ordinal))
+                {
+                    return unqualifiedSibling.FirstValue;
+                }
+
+                return unqualifiedSibling.HasSecond ? unqualifiedSibling.SecondValue : RuleValue.Null;
+            }
+
+            return RuleValue.Null;
+        }
     }
 
     private sealed class IndexedCollectionForm(
@@ -1180,11 +1220,13 @@ public sealed class CollectionValidationService(
         public bool Unblinded { get; } = unblinded;
     }
 
-    private sealed class CollectionFormCursor(IndexedCollectionForm[] forms) : IRuleRecordCursor
+    private sealed class CollectionFormCursor(IndexedCollectionForm[] forms) : IResettableRuleRecordCursor
     {
         private int _index = -1;
 
         public IndexedCollectionForm? CurrentForm { get; private set; }
+
+        public bool IsEmpty => forms.Length == 0;
 
         public string Dataset => CurrentForm!.Form.CollectionSpecId;
 
@@ -1195,45 +1237,14 @@ public sealed class CollectionValidationService(
             get
             {
                 var current = CurrentForm!;
-                var targetSpec = current.Form.CollectionSpecId;
-
-                if (current.Siblings.QualifiedValues.TryGetValue(name, out var qualifiedSibling))
-                {
-                    if (!string.Equals(qualifiedSibling.SpecId, targetSpec, StringComparison.Ordinal))
-                    {
-                        return qualifiedSibling.Value;
-                    }
-
-                    if (qualifiedSibling.HasPrior)
-                    {
-                        return qualifiedSibling.PriorValue;
-                    }
-                }
-
-                if (current.OwnValues.TryGetValue(name, out var ownValue))
-                {
-                    return ownValue;
-                }
-
-                if (name.Length <= FindingTarget.MaxNameLength
-                    && TryStripSpecPrefix(name, targetSpec, out var stripped)
-                    && current.OwnValues.TryGetValue(stripped, out var ownQualifiedValue))
-                {
-                    return ownQualifiedValue;
-                }
-
-                if (current.Siblings.UnqualifiedValues.TryGetValue(name, out var unqualifiedSibling))
-                {
-                    if (!string.Equals(unqualifiedSibling.FirstSpecId, targetSpec, StringComparison.Ordinal))
-                    {
-                        return unqualifiedSibling.FirstValue;
-                    }
-
-                    return unqualifiedSibling.HasSecond ? unqualifiedSibling.SecondValue : RuleValue.Null;
-                }
-
-                return RuleValue.Null;
+                return current.Siblings.ResolveVariable(current.Form.CollectionSpecId, current.OwnValues, name);
             }
+        }
+
+        public void Reset()
+        {
+            _index = -1;
+            CurrentForm = null;
         }
 
         public bool MoveNext()

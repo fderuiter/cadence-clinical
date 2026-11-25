@@ -424,8 +424,9 @@ module conversion follows the fold-in rules: one owner per authoritative fact, q
 command contracts and durable events between modules, and no competing authoritative copies.
 
 Work is tracked in epic [#4719](https://github.com/fderuiter/cadence-clinical/issues/4719). The
-Python-to-.NET port that preceded this is complete; its playbook remains in
-[docs/MIGRATION_WORKFLOW.md](docs/MIGRATION_WORKFLOW.md) for porting the remaining Python reference
-sources listed in [docs/PYTHON_REFERENCE_INVENTORY.md](docs/PYTHON_REFERENCE_INVENTORY.md)
-([#4789](https://github.com/fderuiter/cadence-clinical/issues/4789)); each is deleted once its port is tested
-([ADR-2492](docs/adr/2026-09-30-retire-python-reference-sources-once-ports-are-tested.md)).
+Python-to-.NET port that preceded this is complete, and all Python reference files have been retired
+([ADR-2492](docs/adr/2026-09-30-retire-python-reference-sources-once-ports-are-tested.md),
+[ADR-2509](docs/adr/2026-11-24-retire-remaining-python-references-and-scanner-residue.md)); the historical
+playbook and disposition archive remain in [docs/MIGRATION_WORKFLOW.md](docs/MIGRATION_WORKFLOW.md) and
+[docs/PYTHON_REFERENCE_INVENTORY.md](docs/PYTHON_REFERENCE_INVENTORY.md)
+([#4789](https://github.com/fderuiter/cadence-clinical/issues/4789)).

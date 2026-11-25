@@ -1,4 +1,5 @@
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -173,9 +174,11 @@ internal static class SimulationSnapshotMasking
         IAuthorizationProbe? probe,
         CancellationToken cancellationToken,
         IAuthorizationEvaluator? evaluator = null,
-        SimulationAsOf? asOf = null)
+        SimulationAsOf? asOf = null,
+        bool includeVisibleDigest = true)
     {
-        var nodes = new List<NodeRef>();
+        var estimatedNodeCount = (raw.Sites.Count * 2) + raw.Enrollments.Count + raw.Collections.Count + raw.Observations.Count;
+        var nodes = new HashSet<NodeRef>(estimatedNodeCount);
         foreach (var site in raw.Sites)
         {
             nodes.Add(NodeRef.For(site.Id));
@@ -199,7 +202,7 @@ internal static class SimulationSnapshotMasking
 
         var masks = nodes.Count == 0
             ? new Dictionary<NodeRef, MaskReason>()
-            : await visibility.MaskAsync(tenant, actor, [.. nodes.Distinct()], cancellationToken).ConfigureAwait(false);
+            : await visibility.MaskAsync(tenant, actor, nodes, cancellationToken).ConfigureAwait(false);
 
         var hiddenReasons = new HashSet<MaskReason>();
         var maskedParts = new SortedSet<(string Part, MaskReason Reason)>(
@@ -267,9 +270,13 @@ internal static class SimulationSnapshotMasking
         }
 
         var allDesigns = raw.ProtocolDesigns.Values.Concat(extraDesigns).ToList();
+        var firstSpecById = ProtocolBlindingIndex.IndexFirstSpecsById(allDesigns);
+        var blindingIndex = blinding is BlindedTreatmentClassifier
+            ? ProtocolBlindingIndex.Create(allDesigns, raw.Concepts)
+            : null;
         var canUnblindStudy = await CanUnblindResourceAsync(NodeRef.For(studyId)).ConfigureAwait(false);
 
-        var unblindByEnrollment = new Dictionary<EnrollmentId, bool>();
+        var unblindByEnrollment = new Dictionary<EnrollmentId, bool>(visibleEnrollments.Count);
         var unblindedEnrollments = new HashSet<EnrollmentId>();
 
         async ValueTask<bool> CanUnblindEnrollmentAsync(EnrollmentId enrollmentId)
@@ -308,18 +315,12 @@ internal static class SimulationSnapshotMasking
                 obsMask = MaskOf(masks, NodeRef.For(cid));
             }
 
-            if (obsMask is null)
+            if (obsMask is null && IsObservationBlinded(obs, raw.Concepts, allDesigns, blinding, blindingIndex))
             {
-                BlindedConceptMetadata? conceptMeta = raw.Concepts.TryGetValue(obs.Concept.ConceptId, out var foundConcept)
-                    ? foundConcept
-                    : null;
-                if (blinding.IsBlindedObservation(obs.Concept.ConceptId, obs.Value, conceptMeta, obs.CollectionSpecId, obs.ItemId, allDesigns))
+                var canUnblind = await CanUnblindEnrollmentAsync(obs.EnrollmentId).ConfigureAwait(false);
+                if (!canUnblind)
                 {
-                    var canUnblind = await CanUnblindEnrollmentAsync(obs.EnrollmentId).ConfigureAwait(false);
-                    if (!canUnblind)
-                    {
-                        obsMask = MaskReason.Blinded;
-                    }
+                    obsMask = MaskReason.Blinded;
                 }
             }
 
@@ -344,7 +345,7 @@ internal static class SimulationSnapshotMasking
             }
 
             var collectionMask = MaskOf(masks, NodeRef.For(collection.Id));
-            if (collectionMask is null && blinding.IsBlindedCollectionSpec(collection.CollectionSpecId, designs: allDesigns))
+            if (collectionMask is null && IsCollectionSpecBlinded(collection.CollectionSpecId, allDesigns, blinding, blindingIndex))
             {
                 var canUnblind = await CanUnblindEnrollmentAsync(collection.EnrollmentId).ConfigureAwait(false);
                 if (!canUnblind)
@@ -361,23 +362,20 @@ internal static class SimulationSnapshotMasking
                 continue;
             }
 
-            var matchingSpec = allDesigns
-                .SelectMany(d => d.CollectionSpecs)
-                .FirstOrDefault(s => string.Equals(s.Id, collection.CollectionSpecId, StringComparison.Ordinal));
+            firstSpecById.TryGetValue(collection.CollectionSpecId, out var matchingSpecIndex);
+            var matchingSpec = matchingSpecIndex?.Spec;
 
-            var filteredItems = new Dictionary<string, SimulationCollectedItemSnapshot>(StringComparer.Ordinal);
-            foreach (var (itemId, itemValue) in collection.ValuesByItemId.OrderBy(kv => kv.Key, StringComparer.Ordinal))
+            var filteredItems = new Dictionary<string, SimulationCollectedItemSnapshot>(collection.ValuesByItemId.Count, StringComparer.Ordinal);
+            foreach (var (itemId, itemValue) in collection.ValuesByItemId)
             {
                 if (maskedObservationIds.Contains(itemValue.ObservationId))
                 {
                     continue;
                 }
 
-                var specItem = matchingSpec?.Items.FirstOrDefault(i => string.Equals(i.Id, itemId, StringComparison.Ordinal));
-                BlindedConceptMetadata? itemConceptMeta = raw.Concepts.TryGetValue(itemValue.Concept.ConceptId, out var foundMeta)
-                    ? foundMeta
-                    : null;
-                if (blinding.IsBlindedCollectionItem(collection.CollectionSpecId, matchingSpec?.Name, specItem, itemValue.Value, itemConceptMeta, allDesigns))
+                CollectionItem? specItem = null;
+                matchingSpecIndex?.ItemsById.TryGetValue(itemId, out specItem);
+                if (IsCollectionItemBlinded(collection.CollectionSpecId, matchingSpec?.Name, specItem, itemValue, raw.Concepts, allDesigns, blinding, blindingIndex))
                 {
                     var canUnblind = await CanUnblindEnrollmentAsync(collection.EnrollmentId).ConfigureAwait(false);
                     if (!canUnblind)
@@ -397,7 +395,9 @@ internal static class SimulationSnapshotMasking
         var orderedReasons = hiddenReasons.OrderBy(r => r).ToArray();
         var hidden = orderedReasons.Length == 0 ? HiddenObjects.None : new HiddenObjects(MoreExist: true, orderedReasons);
         var parts = maskedParts.Select(p => new MaskedPart(p.Part, p.Reason)).ToList();
-        var digest = ComputeVisibleDigest(visibleSites, visibleEffectivities, visibleEnrollments, visibleObservations, visibleCollections);
+        var digest = includeVisibleDigest
+            ? ComputeVisibleDigest(visibleSites, visibleEffectivities, visibleEnrollments, visibleObservations, visibleCollections)
+            : string.Empty;
 
         return new MaskedSimulationSnapshot(
             visibleSites,
@@ -470,66 +470,1026 @@ internal static class SimulationSnapshotMasking
     private static MaskReason? MaskOf(IReadOnlyDictionary<NodeRef, MaskReason> masks, NodeRef node) =>
         masks.TryGetValue(node, out var reason) ? reason : null;
 
-    private static string ComputeVisibleDigest(
+    private static bool IsObservationBlinded(
+        SimulationObservationSnapshot obs,
+        IReadOnlyDictionary<ConceptId, BlindedConceptMetadata> concepts,
+        IReadOnlyList<ProtocolDesign> allDesigns,
+        IBlindedTreatmentClassifier blinding,
+        ProtocolBlindingIndex? blindingIndex)
+    {
+        if (blindingIndex is not null)
+        {
+            return blindingIndex.IsBlindedObservation(
+                obs.Concept.ConceptId,
+                obs.Value,
+                obs.Concept.ConceptId,
+                obs.CollectionSpecId,
+                obs.ItemId);
+        }
+
+        BlindedConceptMetadata? conceptMeta = concepts.TryGetValue(obs.Concept.ConceptId, out var foundConcept)
+            ? foundConcept
+            : null;
+        return blinding.IsBlindedObservation(obs.Concept.ConceptId, obs.Value, conceptMeta, obs.CollectionSpecId, obs.ItemId, allDesigns);
+    }
+
+    private static bool IsCollectionSpecBlinded(
+        string collectionSpecId,
+        IReadOnlyList<ProtocolDesign> allDesigns,
+        IBlindedTreatmentClassifier blinding,
+        ProtocolBlindingIndex? blindingIndex) =>
+        blindingIndex is not null
+            ? blindingIndex.IsBlindedCollectionSpec(collectionSpecId)
+            : blinding.IsBlindedCollectionSpec(collectionSpecId, designs: allDesigns);
+
+    private static bool IsCollectionItemBlinded(
+        string collectionSpecId,
+        string? collectionTitle,
+        CollectionItem? specItem,
+        SimulationCollectedItemSnapshot itemValue,
+        IReadOnlyDictionary<ConceptId, BlindedConceptMetadata> concepts,
+        IReadOnlyList<ProtocolDesign> allDesigns,
+        IBlindedTreatmentClassifier blinding,
+        ProtocolBlindingIndex? blindingIndex)
+    {
+        if (blindingIndex is not null)
+        {
+            return blindingIndex.IsBlindedCollectionItem(
+                collectionSpecId,
+                collectionTitle,
+                specItem,
+                itemValue.Value,
+                itemValue.Concept.ConceptId);
+        }
+
+        BlindedConceptMetadata? itemConceptMeta = concepts.TryGetValue(itemValue.Concept.ConceptId, out var foundMeta)
+            ? foundMeta
+            : null;
+        return blinding.IsBlindedCollectionItem(collectionSpecId, collectionTitle, specItem, itemValue.Value, itemConceptMeta, allDesigns);
+    }
+
+    internal static string ComputeVisibleDigest(
         IReadOnlyList<SimulationSiteSnapshot> sites,
         IReadOnlyList<SimulationEffectivitySnapshot> effectivities,
         IReadOnlyList<SimulationEnrollmentSnapshot> enrollments,
         IReadOnlyList<SimulationObservationSnapshot> observations,
-        IReadOnlyList<SimulationCollectionSnapshot> collections)
-    {
-        var doc = new JsonObject
+        IReadOnlyList<SimulationCollectionSnapshot> collections) =>
+        ContentHash.ComputeStreaming(writer =>
         {
-            ["sites"] = new JsonArray([.. sites
-                .OrderBy(s => s.Id.Value)
-                .Select(s => (JsonNode?)new JsonObject
+            writer.WriteStartObject();
+
+            writer.WritePropertyName("collections"u8);
+            writer.WriteStartArray();
+            ZeroLohOrdering.ForEachOrderedByGuid(
+                collections,
+                static c => c.Id.Value,
+                writer,
+                static (w, c) => WriteCollectionDigestEntry(w, c));
+            writer.WriteEndArray();
+
+            writer.WritePropertyName("effectivities"u8);
+            writer.WriteStartArray();
+            ZeroLohOrdering.ForEachOrderedByGuid(
+                effectivities,
+                static e => e.Id.Value,
+                writer,
+                static (w, e) => WriteEffectivityDigestEntry(w, e));
+            writer.WriteEndArray();
+
+            writer.WritePropertyName("enrollments"u8);
+            writer.WriteStartArray();
+            ZeroLohOrdering.ForEachOrderedByGuid(
+                enrollments,
+                static e => e.Id.Value,
+                writer,
+                static (w, e) => WriteEnrollmentDigestEntry(w, e));
+            writer.WriteEndArray();
+
+            writer.WritePropertyName("observations"u8);
+            writer.WriteStartArray();
+            ZeroLohOrdering.ForEachOrderedByGuid(
+                observations,
+                static o => o.Id.Value,
+                writer,
+                static (w, o) => WriteObservationDigestEntry(w, o));
+            writer.WriteEndArray();
+
+            writer.WritePropertyName("sites"u8);
+            writer.WriteStartArray();
+            ZeroLohOrdering.ForEachOrderedByGuid(
+                sites,
+                static s => s.Id.Value,
+                writer,
+                static (w, s) => WriteSiteDigestEntry(w, s));
+            writer.WriteEndArray();
+
+            writer.WriteEndObject();
+        });
+
+    private static void WriteCollectionDigestEntry(Utf8JsonWriter writer, SimulationCollectionSnapshot collection)
+    {
+        Span<char> guidChars = stackalloc char[36];
+        writer.WriteStartObject();
+        writer.WriteString("activity"u8, collection.PlannedActivityId);
+        WriteGuidProperty(writer, "id"u8, collection.Id.Value, guidChars);
+        writer.WritePropertyName("items"u8);
+        writer.WriteStartArray();
+        WriteSortedCollectionItems(writer, collection.ValuesByItemId);
+        writer.WriteEndArray();
+        writer.WriteString("spec"u8, collection.CollectionSpecId);
+        writer.WriteEndObject();
+    }
+
+    private static void WriteSortedCollectionItems(
+        Utf8JsonWriter writer,
+        IReadOnlyDictionary<string, SimulationCollectedItemSnapshot> items)
+    {
+        var count = items.Count;
+        if (count == 0)
+        {
+            return;
+        }
+
+        if (count <= ZeroLohOrdering.MaxSohChunkLength)
+        {
+            var rented = ArrayPool<KeyValuePair<string, SimulationCollectedItemSnapshot>>.Shared.Rent(count);
+            try
+            {
+                var idx = 0;
+                foreach (var kv in items)
                 {
-                    ["id"] = s.Id.Value.ToString("D", CultureInfo.InvariantCulture),
-                    ["country"] = s.Country,
-                    ["status"] = s.Status,
-                    ["active"] = s.IsActive,
-                })]),
-            ["effectivities"] = new JsonArray([.. effectivities
-                .OrderBy(e => e.Id.Value)
-                .Select(e => (JsonNode?)new JsonObject
+                    rented[idx++] = kv;
+                }
+
+                if (idx > 1)
                 {
-                    ["id"] = e.Id.Value.ToString("D", CultureInfo.InvariantCulture),
-                    ["protocolVersion"] = e.ProtocolVersionId.Value.ToString("D", CultureInfo.InvariantCulture),
-                    ["status"] = e.StatusAsOf?.ToString(),
-                })]),
-            ["enrollments"] = new JsonArray([.. enrollments
-                .OrderBy(e => e.Id.Value)
-                .Select(e => (JsonNode?)new JsonObject
+                    Array.Sort(rented, 0, idx, CollectedItemKeyComparer.Instance);
+                }
+
+                for (var i = 0; i < idx; i++)
                 {
-                    ["id"] = e.Id.Value.ToString("D", CultureInfo.InvariantCulture),
-                    ["subjectCode"] = e.SubjectCode,
-                    ["status"] = e.StatusAsOf.ToString(),
-                    ["referenceStart"] = e.ReferenceStartDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
-                })]),
-            ["observations"] = new JsonArray([.. observations
-                .OrderBy(o => o.Id.Value)
-                .Select(o => (JsonNode?)new JsonObject
+                    var entry = rented[i];
+                    writer.WriteStartObject();
+                    writer.WriteString("item"u8, entry.Key);
+                    WriteObservationDisplayValue(writer, "value"u8, entry.Value.Value);
+                    writer.WriteEndObject();
+                }
+            }
+            finally
+            {
+                ArrayPool<KeyValuePair<string, SimulationCollectedItemSnapshot>>.Shared.Return(rented, clearArray: true);
+            }
+
+            return;
+        }
+
+        ZeroLohOrdering.ForEachOrderedByKey(
+            items,
+            static kv => kv.Key,
+            writer,
+            static (w, entry) =>
+            {
+                w.WriteStartObject();
+                w.WriteString("item"u8, entry.Key);
+                WriteObservationDisplayValue(w, "value"u8, entry.Value.Value);
+                w.WriteEndObject();
+            });
+    }
+
+    private static void WriteEffectivityDigestEntry(Utf8JsonWriter writer, SimulationEffectivitySnapshot effectivity)
+    {
+        Span<char> guidChars = stackalloc char[36];
+        writer.WriteStartObject();
+        WriteGuidProperty(writer, "id"u8, effectivity.Id.Value, guidChars);
+        WriteGuidProperty(writer, "protocolVersion"u8, effectivity.ProtocolVersionId.Value, guidChars);
+        writer.WriteString("status"u8, effectivity.StatusAsOf?.ToString());
+        writer.WriteEndObject();
+    }
+
+    private static void WriteEnrollmentDigestEntry(Utf8JsonWriter writer, SimulationEnrollmentSnapshot enrollment)
+    {
+        Span<char> guidChars = stackalloc char[36];
+        Span<char> dateChars = stackalloc char[10];
+        writer.WriteStartObject();
+        WriteGuidProperty(writer, "id"u8, enrollment.Id.Value, guidChars);
+        _ = enrollment.ReferenceStartDate.TryFormat(dateChars, out var dateLen, "yyyy-MM-dd", CultureInfo.InvariantCulture);
+        writer.WriteString("referenceStart"u8, dateChars[..dateLen]);
+        writer.WriteString("status"u8, enrollment.StatusAsOf.ToString());
+        writer.WriteString("subjectCode"u8, enrollment.SubjectCode);
+        writer.WriteEndObject();
+    }
+
+    private static void WriteObservationDigestEntry(Utf8JsonWriter writer, SimulationObservationSnapshot observation)
+    {
+        Span<char> scratch = stackalloc char[64];
+        writer.WriteStartObject();
+        WriteConceptRefProperty(writer, "concept"u8, observation.Concept, scratch);
+        WriteGuidProperty(writer, "id"u8, observation.Id.Value, scratch[..36]);
+        WriteObservationDisplayValue(writer, "value"u8, observation.Value);
+        writer.WriteEndObject();
+    }
+
+    private static void WriteSiteDigestEntry(Utf8JsonWriter writer, SimulationSiteSnapshot site)
+    {
+        Span<char> guidChars = stackalloc char[36];
+        writer.WriteStartObject();
+        writer.WriteBoolean("active"u8, site.IsActive);
+        writer.WriteString("country"u8, site.Country);
+        WriteGuidProperty(writer, "id"u8, site.Id.Value, guidChars);
+        writer.WriteString("status"u8, site.Status);
+        writer.WriteEndObject();
+    }
+
+    private static void WriteGuidProperty(Utf8JsonWriter writer, ReadOnlySpan<byte> propertyName, Guid id, Span<char> scratch)
+    {
+        _ = id.TryFormat(scratch, out var len, "D");
+        writer.WriteString(propertyName, scratch[..len]);
+    }
+
+    private static void WriteConceptRefProperty(Utf8JsonWriter writer, ReadOnlySpan<byte> propertyName, ConceptRef concept, Span<char> scratch)
+    {
+        _ = concept.ConceptId.Value.TryFormat(scratch, out var guidLen, "D");
+        scratch[guidLen] = '@';
+        _ = concept.Version.TryFormat(scratch[(guidLen + 1)..], out var verLen, default, CultureInfo.InvariantCulture);
+        writer.WriteString(propertyName, scratch[..(guidLen + 1 + verLen)]);
+    }
+
+    private static void WriteObservationDisplayValue(Utf8JsonWriter writer, ReadOnlySpan<byte> propertyName, ObservationValue value)
+    {
+        switch (value)
+        {
+            case QuantityValue q:
+                var comp = q.Comparator switch
                 {
-                    ["id"] = o.Id.Value.ToString("D", CultureInfo.InvariantCulture),
-                    ["concept"] = o.Concept.ToString(),
-                    ["value"] = o.Value.ToDisplayString(),
-                })]),
-            ["collections"] = new JsonArray([.. collections
-                .OrderBy(c => c.Id.Value)
-                .Select(c => (JsonNode?)new JsonObject
+                    QuantityComparator.LessThan => "<",
+                    QuantityComparator.LessOrEqual => "<=",
+                    QuantityComparator.GreaterThan => ">",
+                    QuantityComparator.GreaterOrEqual => ">=",
+                    _ => string.Empty,
+                };
+                Span<char> scratch = stackalloc char[160];
+                comp.AsSpan().CopyTo(scratch);
+                var pos = comp.Length;
+                if (q.Value.TryFormat(scratch[pos..], out var valLen, default, CultureInfo.InvariantCulture)
+                    && pos + valLen + 1 + q.Unit.Length <= scratch.Length)
                 {
-                    ["id"] = c.Id.Value.ToString("D", CultureInfo.InvariantCulture),
-                    ["spec"] = c.CollectionSpecId,
-                    ["activity"] = c.PlannedActivityId,
-                    ["items"] = new JsonArray([.. c.ValuesByItemId
-                        .OrderBy(kv => kv.Key, StringComparer.Ordinal)
-                        .Select(kv => (JsonNode?)new JsonObject
-                        {
-                            ["item"] = kv.Key,
-                            ["value"] = kv.Value.Value.ToDisplayString(),
-                        })]),
-                })]),
-        };
-        return ContentHash.Compute(doc.ToJsonString());
+                    pos += valLen;
+                    scratch[pos++] = ' ';
+                    q.Unit.AsSpan().CopyTo(scratch[pos..]);
+                    pos += q.Unit.Length;
+                    writer.WriteString(propertyName, scratch[..pos]);
+                    return;
+                }
+
+                writer.WriteString(propertyName, q.ToDisplayString());
+                return;
+            case CodedValue coded:
+                writer.WriteString(propertyName, coded.Code);
+                return;
+            case TextValue text:
+                writer.WriteString(propertyName, text.Value);
+                return;
+            case BooleanValue boolean:
+                writer.WriteString(propertyName, boolean.Value ? "true"u8 : "false"u8);
+                return;
+            case DateTimeValue dateTime:
+                writer.WriteString(propertyName, dateTime.Value);
+                return;
+            case MissingValue { Detail: null } missing:
+                writer.WriteString(propertyName, missing.Reason.ToString());
+                return;
+            default:
+                writer.WriteString(propertyName, value.ToDisplayString());
+                return;
+        }
+    }
+
+    private sealed class CollectedItemKeyComparer : IComparer<KeyValuePair<string, SimulationCollectedItemSnapshot>>
+    {
+        public static readonly CollectedItemKeyComparer Instance = new();
+
+        public int Compare(KeyValuePair<string, SimulationCollectedItemSnapshot> x, KeyValuePair<string, SimulationCollectedItemSnapshot> y) =>
+            string.CompareOrdinal(x.Key, y.Key);
+    }
+}
+
+/// <summary>
+/// Pre-indexed protocol blinding markers built once per snapshot masking or validation call so observation, item, and
+/// finding checks run in constant time without rescanning <see cref="ProtocolDesign"/> trees.
+/// </summary>
+internal sealed class ProtocolBlindingIndex
+{
+    private readonly HashSet<ConceptId> _interventionProductConcepts;
+    private readonly HashSet<ConceptId> _blindedRawConcepts;
+    private readonly HashSet<string> _blindedDesignSpecIds;
+    private readonly HashSet<ConceptId> _conceptsInBlindedSpecs;
+    private readonly HashSet<(string SpecId, string ItemId)> _blindedSpecItemPairs;
+    private readonly HashSet<(string SpecId, ConceptId ConceptId)> _blindedSpecConceptPairs;
+    private readonly HashSet<string> _blindedAnySpecItemIds;
+    private readonly HashSet<ConceptId> _blindedAnySpecItemConcepts;
+    private readonly HashSet<(string SpecId, string ItemId)> _blindedVariablesBySpecAndItem;
+    private readonly HashSet<string> _blindedVariablesAnySpecByItem;
+    private readonly Dictionary<string, bool> _markerMemo = new(StringComparer.Ordinal);
+
+    private ProtocolBlindingIndex(
+        HashSet<ConceptId> interventionProductConcepts,
+        HashSet<ConceptId> blindedRawConcepts,
+        HashSet<string> blindedDesignSpecIds,
+        HashSet<ConceptId> conceptsInBlindedSpecs,
+        HashSet<(string SpecId, string ItemId)> blindedSpecItemPairs,
+        HashSet<(string SpecId, ConceptId ConceptId)> blindedSpecConceptPairs,
+        HashSet<string> blindedAnySpecItemIds,
+        HashSet<ConceptId> blindedAnySpecItemConcepts,
+        HashSet<(string SpecId, string ItemId)> blindedVariablesBySpecAndItem,
+        HashSet<string> blindedVariablesAnySpecByItem)
+    {
+        _interventionProductConcepts = interventionProductConcepts;
+        _blindedRawConcepts = blindedRawConcepts;
+        _blindedDesignSpecIds = blindedDesignSpecIds;
+        _conceptsInBlindedSpecs = conceptsInBlindedSpecs;
+        _blindedSpecItemPairs = blindedSpecItemPairs;
+        _blindedSpecConceptPairs = blindedSpecConceptPairs;
+        _blindedAnySpecItemIds = blindedAnySpecItemIds;
+        _blindedAnySpecItemConcepts = blindedAnySpecItemConcepts;
+        _blindedVariablesBySpecAndItem = blindedVariablesBySpecAndItem;
+        _blindedVariablesAnySpecByItem = blindedVariablesAnySpecByItem;
+    }
+
+    internal sealed record IndexedDesignSpec(
+        CollectionSpec Spec,
+        Dictionary<string, CollectionItem> ItemsById);
+
+    public static Dictionary<string, IndexedDesignSpec> IndexFirstSpecsById(IReadOnlyList<ProtocolDesign> designs)
+    {
+        var map = new Dictionary<string, IndexedDesignSpec>(StringComparer.Ordinal);
+        for (var d = 0; d < designs.Count; d++)
+        {
+            var specs = designs[d].CollectionSpecs;
+            for (var s = 0; s < specs.Count; s++)
+            {
+                var spec = specs[s];
+                if (map.ContainsKey(spec.Id))
+                {
+                    continue;
+                }
+
+                var itemsById = new Dictionary<string, CollectionItem>(spec.Items.Count, StringComparer.Ordinal);
+                for (var i = 0; i < spec.Items.Count; i++)
+                {
+                    var item = spec.Items[i];
+                    itemsById.TryAdd(item.Id, item);
+                }
+
+                map.Add(spec.Id, new IndexedDesignSpec(spec, itemsById));
+            }
+        }
+
+        return map;
+    }
+
+    public static ProtocolBlindingIndex Create(
+        IReadOnlyList<ProtocolDesign> designs,
+        IReadOnlyDictionary<ConceptId, BlindedConceptMetadata> concepts)
+    {
+        var interventionProductConcepts = new HashSet<ConceptId>();
+        var blindedRawConcepts = new HashSet<ConceptId>();
+        var blindedDesignSpecIds = new HashSet<string>(StringComparer.Ordinal);
+        var conceptsInBlindedSpecs = new HashSet<ConceptId>();
+        var blindedSpecItemPairs = new HashSet<(string SpecId, string ItemId)>();
+        var blindedSpecConceptPairs = new HashSet<(string SpecId, ConceptId ConceptId)>();
+        var blindedAnySpecItemIds = new HashSet<string>(StringComparer.Ordinal);
+        var blindedAnySpecItemConcepts = new HashSet<ConceptId>();
+        var blindedVariablesBySpecAndItem = new HashSet<(string SpecId, string ItemId)>();
+        var blindedVariablesAnySpecByItem = new HashSet<string>(StringComparer.Ordinal);
+
+        foreach (var (conceptId, meta) in concepts)
+        {
+            if (MatchesConceptMarkers(meta))
+            {
+                blindedRawConcepts.Add(conceptId);
+            }
+        }
+
+        for (var d = 0; d < designs.Count; d++)
+        {
+            var design = designs[d];
+            var designInterventions = new HashSet<ConceptId>();
+            for (var i = 0; i < design.Interventions.Count; i++)
+            {
+                if (design.Interventions[i].Product is { } product)
+                {
+                    interventionProductConcepts.Add(product.ConceptId);
+                    designInterventions.Add(product.ConceptId);
+                }
+            }
+
+            for (var s = 0; s < design.CollectionSpecs.Count; s++)
+            {
+                var spec = design.CollectionSpecs[s];
+                var specBlinded = MatchesSpecMarkers(spec);
+                if (specBlinded)
+                {
+                    blindedDesignSpecIds.Add(spec.Id);
+                }
+
+                var seenSpecItems = new HashSet<string>(spec.Items.Count, StringComparer.Ordinal);
+                for (var i = 0; i < spec.Items.Count; i++)
+                {
+                    var item = spec.Items[i];
+                    var itemConceptId = item.Concept.ConceptId;
+                    if (specBlinded)
+                    {
+                        conceptsInBlindedSpecs.Add(itemConceptId);
+                    }
+
+                    var itemBlinded = MatchesItemMarkers(item);
+                    if (itemBlinded)
+                    {
+                        blindedSpecItemPairs.Add((spec.Id, item.Id));
+                        blindedSpecConceptPairs.Add((spec.Id, itemConceptId));
+                        blindedAnySpecItemIds.Add(item.Id);
+                        blindedAnySpecItemConcepts.Add(itemConceptId);
+                    }
+
+                    if (seenSpecItems.Add(item.Id)
+                        && (specBlinded
+                            || itemBlinded
+                            || designInterventions.Contains(itemConceptId)
+                            || blindedRawConcepts.Contains(itemConceptId)))
+                    {
+                        blindedVariablesBySpecAndItem.Add((spec.Id, item.Id));
+                        blindedVariablesAnySpecByItem.Add(item.Id);
+                    }
+                }
+            }
+        }
+
+        return new ProtocolBlindingIndex(
+            interventionProductConcepts,
+            blindedRawConcepts,
+            blindedDesignSpecIds,
+            conceptsInBlindedSpecs,
+            blindedSpecItemPairs,
+            blindedSpecConceptPairs,
+            blindedAnySpecItemIds,
+            blindedAnySpecItemConcepts,
+            blindedVariablesBySpecAndItem,
+            blindedVariablesAnySpecByItem);
+    }
+
+    public bool IsBlindedObservation(
+        ConceptId conceptId,
+        ObservationValue? value,
+        ConceptId metadataConceptId,
+        string? collectionSpecId,
+        string? itemId)
+    {
+        if (value is MissingValue { Reason: NullFlavor.Masked })
+        {
+            return true;
+        }
+
+        if (MatchesMarkersCached(collectionSpecId) || MatchesMarkersCached(itemId))
+        {
+            return true;
+        }
+
+        if (_interventionProductConcepts.Contains(conceptId))
+        {
+            return true;
+        }
+
+        if (collectionSpecId is not null)
+        {
+            if (_blindedDesignSpecIds.Contains(collectionSpecId))
+            {
+                return true;
+            }
+
+            var itemMatch = itemId is not null
+                ? _blindedSpecItemPairs.Contains((collectionSpecId, itemId))
+                : _blindedSpecConceptPairs.Contains((collectionSpecId, conceptId));
+            if (itemMatch)
+            {
+                return true;
+            }
+        }
+        else
+        {
+            if (_conceptsInBlindedSpecs.Contains(conceptId))
+            {
+                return true;
+            }
+
+            var anySpecItemMatch = itemId is not null
+                ? _blindedAnySpecItemIds.Contains(itemId)
+                : _blindedAnySpecItemConcepts.Contains(conceptId);
+            if (anySpecItemMatch)
+            {
+                return true;
+            }
+        }
+
+        return _blindedRawConcepts.Contains(metadataConceptId);
+    }
+
+    public bool IsBlindedCollectionSpec(string? collectionSpecId, string? collectionTitle = null) =>
+        MatchesMarkersCached(collectionSpecId)
+        || MatchesMarkersCached(collectionTitle)
+        || (!string.IsNullOrWhiteSpace(collectionSpecId) && _blindedDesignSpecIds.Contains(collectionSpecId));
+
+    public bool IsBlindedCollectionItem(
+        string? collectionSpecId,
+        string? collectionTitle,
+        CollectionItem? item,
+        ObservationValue? value,
+        ConceptId valueConceptId)
+    {
+        if (value is MissingValue { Reason: NullFlavor.Masked })
+        {
+            return true;
+        }
+
+        if (IsBlindedCollectionSpec(collectionSpecId, collectionTitle))
+        {
+            return true;
+        }
+
+        if (item is not null)
+        {
+            if (MatchesItemMarkersCached(item))
+            {
+                return true;
+            }
+
+            return IsBlindedObservation(item.Concept.ConceptId, value, valueConceptId, collectionSpecId, item.Id);
+        }
+
+        return _blindedRawConcepts.Contains(valueConceptId);
+    }
+
+    public bool IsBlindedViolation(RuleViolation violation)
+    {
+        if (IsBlindedCollectionSpec(violation.Dataset))
+        {
+            return true;
+        }
+
+        var observed = violation.Observed;
+        if (observed.Count == 0)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < observed.Count; i++)
+        {
+            if (IsBlindedVariable(violation.Dataset, observed[i].Variable))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private bool IsBlindedVariable(string? defaultDataset, string? variable)
+    {
+        if (MatchesMarkersCached(defaultDataset) || MatchesMarkersCached(variable))
+        {
+            return true;
+        }
+
+        if (string.IsNullOrWhiteSpace(variable))
+        {
+            return false;
+        }
+
+        string? targetSpec = defaultDataset;
+        var targetItem = variable;
+        var dot = variable.IndexOf('.', StringComparison.Ordinal);
+        if (dot > 0 && dot < variable.Length - 1)
+        {
+            targetSpec = variable[..dot];
+            targetItem = variable[(dot + 1)..];
+            if (MatchesMarkersCached(targetSpec) || MatchesMarkersCached(targetItem))
+            {
+                return true;
+            }
+        }
+
+        return !string.IsNullOrWhiteSpace(targetSpec)
+            ? _blindedVariablesBySpecAndItem.Contains((targetSpec, targetItem))
+            : _blindedVariablesAnySpecByItem.Contains(targetItem);
+    }
+
+    private bool MatchesItemMarkersCached(CollectionItem item) =>
+        MatchesMarkersCached(item.Id)
+        || MatchesMarkersCached(item.Purpose?.OperationalNeed)
+        || MatchesMarkersCached(item.Prompt);
+
+    private bool MatchesMarkersCached(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return false;
+        }
+
+        if (!_markerMemo.TryGetValue(text, out var matched))
+        {
+            matched = BlindedTreatmentClassifier.MatchesMarkers(text);
+            _markerMemo[text] = matched;
+        }
+
+        return matched;
+    }
+
+    private static bool MatchesSpecMarkers(CollectionSpec spec) =>
+        BlindedTreatmentClassifier.MatchesMarkers(spec.Id)
+        || BlindedTreatmentClassifier.MatchesMarkers(spec.Name)
+        || BlindedTreatmentClassifier.MatchesMarkers(spec.Purpose?.OperationalNeed);
+
+    private static bool MatchesItemMarkers(CollectionItem item) =>
+        BlindedTreatmentClassifier.MatchesMarkers(item.Id)
+        || BlindedTreatmentClassifier.MatchesMarkers(item.Purpose?.OperationalNeed)
+        || BlindedTreatmentClassifier.MatchesMarkers(item.Prompt);
+
+    private static bool MatchesConceptMarkers(BlindedConceptMetadata concept) =>
+        BlindedTreatmentClassifier.MatchesMarkers(concept.ExternalCode)
+        || BlindedTreatmentClassifier.MatchesMarkers(concept.PreferredLabel)
+        || BlindedTreatmentClassifier.MatchesMarkers(concept.Definition);
+}
+
+/// <summary>
+/// SOH-bounded stable ordering helpers that stream items in <see cref="Guid"/> or ordinal key order without ever
+/// allocating buffers on the Large Object Heap (<c>&gt;= 85,000</c> bytes).
+/// </summary>
+internal static class ZeroLohOrdering
+{
+    public const int MaxSohChunkLength = 1024;
+
+    public static void ForEachOrderedByGuid<TItem, TState>(
+        IReadOnlyList<TItem> items,
+        Func<TItem, Guid> getId,
+        TState state,
+        Action<TState, TItem> visit)
+    {
+        var count = items.Count;
+        if (count == 0)
+        {
+            return;
+        }
+
+        if (count == 1 || IsSortedByGuid(items, getId))
+        {
+            for (var i = 0; i < count; i++)
+            {
+                visit(state, items[i]);
+            }
+
+            return;
+        }
+
+        if (count <= MaxSohChunkLength)
+        {
+            var singleChunk = BuildGuidChunk(items, 0, count, getId);
+            for (var i = 0; i < singleChunk.Length; i++)
+            {
+                visit(state, singleChunk[i].Value);
+            }
+
+            return;
+        }
+
+        var chunkCount = (count + MaxSohChunkLength - 1) / MaxSohChunkLength;
+        var chunks = new IndexedGuidItem<TItem>[chunkCount][];
+        for (var c = 0; c < chunkCount; c++)
+        {
+            var start = c * MaxSohChunkLength;
+            var length = Math.Min(MaxSohChunkLength, count - start);
+            chunks[c] = BuildGuidChunk(items, start, length, getId);
+        }
+
+        MergeGuidChunks(chunks, state, visit);
+    }
+
+    public static void ForEachOrderedByKey<TItem, TState>(
+        IEnumerable<TItem> items,
+        Func<TItem, string> getKey,
+        TState state,
+        Action<TState, TItem> visit)
+    {
+        var chunks = new List<IndexedKeyItem<TItem>[]>();
+        var current = new IndexedKeyItem<TItem>[MaxSohChunkLength];
+        var currentCount = 0;
+        var order = 0;
+
+        foreach (var item in items)
+        {
+            current[currentCount++] = new IndexedKeyItem<TItem>(getKey(item), order++, item);
+            if (currentCount == MaxSohChunkLength)
+            {
+                Array.Sort(current, 0, currentCount, IndexedKeyItemComparer<TItem>.Instance);
+                chunks.Add(current);
+                current = new IndexedKeyItem<TItem>[MaxSohChunkLength];
+                currentCount = 0;
+            }
+        }
+
+        if (currentCount > 0)
+        {
+            var tail = new IndexedKeyItem<TItem>[currentCount];
+            Array.Copy(current, tail, currentCount);
+            Array.Sort(tail, 0, currentCount, IndexedKeyItemComparer<TItem>.Instance);
+            chunks.Add(tail);
+        }
+
+        if (chunks.Count == 0)
+        {
+            return;
+        }
+
+        if (chunks.Count == 1)
+        {
+            var only = chunks[0];
+            for (var i = 0; i < only.Length; i++)
+            {
+                visit(state, only[i].Value);
+            }
+
+            return;
+        }
+
+        MergeKeyChunks([.. chunks], state, visit);
+    }
+
+    private static bool IsSortedByGuid<TItem>(IReadOnlyList<TItem> items, Func<TItem, Guid> getId)
+    {
+        var previous = getId(items[0]);
+        for (var i = 1; i < items.Count; i++)
+        {
+            var current = getId(items[i]);
+            if (previous.CompareTo(current) > 0)
+            {
+                return false;
+            }
+
+            previous = current;
+        }
+
+        return true;
+    }
+
+    private static IndexedGuidItem<TItem>[] BuildGuidChunk<TItem>(
+        IReadOnlyList<TItem> items,
+        int start,
+        int length,
+        Func<TItem, Guid> getId)
+    {
+        var chunk = new IndexedGuidItem<TItem>[length];
+        for (var i = 0; i < length; i++)
+        {
+            var index = start + i;
+            var item = items[index];
+            chunk[i] = new IndexedGuidItem<TItem>(getId(item), index, item);
+        }
+
+        Array.Sort(chunk, 0, length, IndexedGuidItemComparer<TItem>.Instance);
+        return chunk;
+    }
+
+    private static void MergeGuidChunks<TItem, TState>(
+        IndexedGuidItem<TItem>[][] chunks,
+        TState state,
+        Action<TState, TItem> visit)
+    {
+        var chunkCount = chunks.Length;
+        var positions = new int[chunkCount];
+        var heap = new int[chunkCount];
+        var heapSize = 0;
+
+        for (var c = 0; c < chunkCount; c++)
+        {
+            if (chunks[c].Length > 0)
+            {
+                heap[heapSize] = c;
+                SiftUpGuid(heap, heapSize, chunks, positions);
+                heapSize++;
+            }
+        }
+
+        while (heapSize > 0)
+        {
+            var topChunk = heap[0];
+            var topPos = positions[topChunk];
+            visit(state, chunks[topChunk][topPos].Value);
+
+            topPos++;
+            positions[topChunk] = topPos;
+            if (topPos < chunks[topChunk].Length)
+            {
+                SiftDownGuid(heap, heapSize, 0, chunks, positions);
+            }
+            else
+            {
+                heapSize--;
+                if (heapSize > 0)
+                {
+                    heap[0] = heap[heapSize];
+                    SiftDownGuid(heap, heapSize, 0, chunks, positions);
+                }
+            }
+        }
+    }
+
+    private static void SiftUpGuid<TItem>(
+        int[] heap,
+        int index,
+        IndexedGuidItem<TItem>[][] chunks,
+        int[] positions)
+    {
+        while (index > 0)
+        {
+            var parent = (index - 1) >> 1;
+            var childChunk = heap[index];
+            var parentChunk = heap[parent];
+            if (CompareGuidEntry(chunks[childChunk][positions[childChunk]], chunks[parentChunk][positions[parentChunk]]) >= 0)
+            {
+                break;
+            }
+
+            heap[index] = parentChunk;
+            heap[parent] = childChunk;
+            index = parent;
+        }
+    }
+
+    private static void SiftDownGuid<TItem>(
+        int[] heap,
+        int heapSize,
+        int index,
+        IndexedGuidItem<TItem>[][] chunks,
+        int[] positions)
+    {
+        while (true)
+        {
+            var left = (index << 1) + 1;
+            if (left >= heapSize)
+            {
+                return;
+            }
+
+            var smallest = index;
+            if (CompareGuidEntry(chunks[heap[left]][positions[heap[left]]], chunks[heap[smallest]][positions[heap[smallest]]]) < 0)
+            {
+                smallest = left;
+            }
+
+            var right = left + 1;
+            if (right < heapSize
+                && CompareGuidEntry(chunks[heap[right]][positions[heap[right]]], chunks[heap[smallest]][positions[heap[smallest]]]) < 0)
+            {
+                smallest = right;
+            }
+
+            if (smallest == index)
+            {
+                return;
+            }
+
+            (heap[index], heap[smallest]) = (heap[smallest], heap[index]);
+            index = smallest;
+        }
+    }
+
+    private static int CompareGuidEntry<TItem>(in IndexedGuidItem<TItem> x, in IndexedGuidItem<TItem> y)
+    {
+        var cmp = x.Id.CompareTo(y.Id);
+        return cmp != 0 ? cmp : x.Order.CompareTo(y.Order);
+    }
+
+    private static void MergeKeyChunks<TItem, TState>(
+        IndexedKeyItem<TItem>[][] chunks,
+        TState state,
+        Action<TState, TItem> visit)
+    {
+        var chunkCount = chunks.Length;
+        var positions = new int[chunkCount];
+        var heap = new int[chunkCount];
+        var heapSize = 0;
+
+        for (var c = 0; c < chunkCount; c++)
+        {
+            if (chunks[c].Length > 0)
+            {
+                heap[heapSize] = c;
+                SiftUpKey(heap, heapSize, chunks, positions);
+                heapSize++;
+            }
+        }
+
+        while (heapSize > 0)
+        {
+            var topChunk = heap[0];
+            var topPos = positions[topChunk];
+            visit(state, chunks[topChunk][topPos].Value);
+
+            topPos++;
+            positions[topChunk] = topPos;
+            if (topPos < chunks[topChunk].Length)
+            {
+                SiftDownKey(heap, heapSize, 0, chunks, positions);
+            }
+            else
+            {
+                heapSize--;
+                if (heapSize > 0)
+                {
+                    heap[0] = heap[heapSize];
+                    SiftDownKey(heap, heapSize, 0, chunks, positions);
+                }
+            }
+        }
+    }
+
+    private static void SiftUpKey<TItem>(
+        int[] heap,
+        int index,
+        IndexedKeyItem<TItem>[][] chunks,
+        int[] positions)
+    {
+        while (index > 0)
+        {
+            var parent = (index - 1) >> 1;
+            if (CompareKeyEntry(chunks[heap[index]][positions[heap[index]]], chunks[heap[parent]][positions[heap[parent]]]) >= 0)
+            {
+                return;
+            }
+
+            (heap[index], heap[parent]) = (heap[parent], heap[index]);
+            index = parent;
+        }
+    }
+
+    private static void SiftDownKey<TItem>(
+        int[] heap,
+        int heapSize,
+        int index,
+        IndexedKeyItem<TItem>[][] chunks,
+        int[] positions)
+    {
+        while (true)
+        {
+            var left = (index << 1) + 1;
+            if (left >= heapSize)
+            {
+                return;
+            }
+
+            var smallest = index;
+            if (CompareKeyEntry(chunks[heap[left]][positions[heap[left]]], chunks[heap[smallest]][positions[heap[smallest]]]) < 0)
+            {
+                smallest = left;
+            }
+
+            var right = left + 1;
+            if (right < heapSize
+                && CompareKeyEntry(chunks[heap[right]][positions[heap[right]]], chunks[heap[smallest]][positions[heap[smallest]]]) < 0)
+            {
+                smallest = right;
+            }
+
+            if (smallest == index)
+            {
+                return;
+            }
+
+            (heap[index], heap[smallest]) = (heap[smallest], heap[index]);
+            index = smallest;
+        }
+    }
+
+    private static int CompareKeyEntry<TItem>(in IndexedKeyItem<TItem> x, in IndexedKeyItem<TItem> y)
+    {
+        var cmp = string.CompareOrdinal(x.Key, y.Key);
+        return cmp != 0 ? cmp : x.Order.CompareTo(y.Order);
+    }
+
+    private readonly record struct IndexedGuidItem<TItem>(Guid Id, int Order, TItem Value);
+
+    private readonly record struct IndexedKeyItem<TItem>(string Key, int Order, TItem Value);
+
+    private sealed class IndexedGuidItemComparer<TItem> : IComparer<IndexedGuidItem<TItem>>
+    {
+        public static readonly IndexedGuidItemComparer<TItem> Instance = new();
+
+        public int Compare(IndexedGuidItem<TItem> x, IndexedGuidItem<TItem> y) => CompareGuidEntry(x, y);
+    }
+
+    private sealed class IndexedKeyItemComparer<TItem> : IComparer<IndexedKeyItem<TItem>>
+    {
+        public static readonly IndexedKeyItemComparer<TItem> Instance = new();
+
+        public int Compare(IndexedKeyItem<TItem> x, IndexedKeyItem<TItem> y) => CompareKeyEntry(x, y);
     }
 }
 
@@ -844,6 +1804,17 @@ internal static class SimulationProjectionAndValidationEvaluator
         ProtocolDesign? candidateDesign)
     {
         var decoder = new SnapshotCodelistDecoder(snapshot.CodelistDecodes);
+        if (CanShareProjections(baselineSpecs, candidateSpecs, baselineDesign, candidateDesign))
+        {
+            var sharedRecords = ProjectRuleRecordsSinglePass(
+                mappingEngine,
+                snapshot.VisibleObservations,
+                baselineSpecs,
+                baselineDesign,
+                decoder);
+            return ([], sharedRecords, sharedRecords, []);
+        }
+
         var baselineProjected = ProjectObservations(mappingEngine, snapshot.VisibleObservations, baselineSpecs, baselineDesign, decoder);
         var candidateProjected = ProjectObservations(mappingEngine, snapshot.VisibleObservations, candidateSpecs, candidateDesign, decoder);
 
@@ -905,63 +1876,75 @@ internal static class SimulationProjectionAndValidationEvaluator
         IReadOnlyList<RuleRecord> baselineProjectedRecords,
         IReadOnlyList<RuleRecord> candidateProjectedRecords)
     {
-        var (baselineCollectionRecords, enrollmentByCollectionKey) = BuildCollectionRuleRecords(snapshot, baselineDesign);
-        var (candidateCollectionRecords, candidateEnrollmentByCollectionKey) = BuildCollectionRuleRecords(snapshot, candidateDesign);
-        foreach (var kv in candidateEnrollmentByCollectionKey)
+        if (baselinePacks.Count == 0 && candidatePacks.Count == 0)
         {
-            enrollmentByCollectionKey[kv.Key] = kv.Value;
+            return (new ValidationDeltaSummary([], [], 0), [], false);
         }
 
-        var enrollmentByObservationKey = snapshot.VisibleObservations
-            .ToDictionary(o => o.Id.Value.ToString("D", CultureInfo.InvariantCulture), o => o.EnrollmentId, StringComparer.Ordinal);
+        var sameCollectionDesign = CollectionDesignsMatch(baselineDesign, candidateDesign);
+        var sameRulePacks = RulePacksMatch(baselinePacks, candidatePacks);
+
+        var baselineCollectionIndex = BuildCollectionIndex(snapshot, baselineDesign);
+        var candidateCollectionIndex = sameCollectionDesign
+            ? baselineCollectionIndex
+            : BuildCollectionIndex(snapshot, candidateDesign);
+
+        var enrollmentLookup = new LazyRecordEnrollmentLookup(
+            baselineCollectionIndex,
+            candidateCollectionIndex,
+            snapshot.VisibleObservations);
 
         var allDesigns = snapshot.ProtocolDesigns.Values
             .Concat(new[] { baselineDesign, candidateDesign }.OfType<ProtocolDesign>())
             .ToList();
+        var blindingIndex = blinding is BlindedTreatmentClassifier
+            ? ProtocolBlindingIndex.Create(allDesigns, snapshot.Concepts)
+            : null;
 
         BlindedConceptMetadata? ResolveConcept(ConceptId cid) =>
             snapshot.Concepts.TryGetValue(cid, out var meta) ? meta : null;
 
         bool IsRecordUnblinded(string recordKey)
         {
-            if (enrollmentByCollectionKey.TryGetValue(recordKey, out var fromCollection))
+            if (enrollmentLookup.TryResolveEnrollment(recordKey, out var enrollmentId))
             {
-                return snapshot.UnblindedEnrollments.Contains(fromCollection);
-            }
-
-            if (enrollmentByObservationKey.TryGetValue(recordKey, out var fromObs))
-            {
-                return snapshot.UnblindedEnrollments.Contains(fromObs);
+                return snapshot.UnblindedEnrollments.Contains(enrollmentId);
             }
 
             return snapshot.CanUnblindStudy;
         }
 
         var baselineDesignRecords = BuildDesignRuleRecords(baselineDesign);
-        var candidateDesignRecords = BuildDesignRuleRecords(candidateDesign);
+        var sameDesignRecords = DesignRecordsMatch(baselineDesign, candidateDesign);
+        var candidateDesignRecords = sameDesignRecords ? baselineDesignRecords : BuildDesignRuleRecords(candidateDesign);
 
         var maskedBlindedFinding = false;
+        var unchanged = 0;
         var (baselineFindings, candidateFindings) = EvaluateAllStages(
             evaluator,
             blinding,
+            blindingIndex,
             allDesigns,
             ResolveConcept,
             IsRecordUnblinded,
             asOfDate,
             snapshot.DeclaredStandards,
             baselinePacks,
-            baselineCollectionRecords,
-            baselineProjectedRecords,
-            baselineDesignRecords,
             candidatePacks,
-            candidateCollectionRecords,
+            sameRulePacks,
+            baselineCollectionIndex,
+            candidateCollectionIndex,
+            sameCollectionDesign,
+            baselineProjectedRecords,
             candidateProjectedRecords,
+            baselineDesignRecords,
             candidateDesignRecords,
+            sameDesignRecords,
+            ref unchanged,
             ref maskedBlindedFinding);
 
         var opening = new List<SimulatedValidationFinding>();
         var resolving = new List<SimulatedValidationFinding>();
-        var unchanged = 0;
         var impactedEnrollments = new HashSet<EnrollmentId>();
 
         foreach (var (key, finding) in candidateFindings.OrderBy(kv => kv.Key.RuleId, StringComparer.Ordinal)
@@ -976,7 +1959,7 @@ internal static class SimulationProjectionAndValidationEvaluator
             else
             {
                 opening.Add(finding);
-                TrackEnrollment(finding.Subject, enrollmentByCollectionKey, enrollmentByObservationKey, impactedEnrollments);
+                enrollmentLookup.TrackEnrollment(finding.Subject, impactedEnrollments);
             }
         }
 
@@ -988,11 +1971,61 @@ internal static class SimulationProjectionAndValidationEvaluator
             if (!candidateFindings.ContainsKey(key))
             {
                 resolving.Add(finding);
-                TrackEnrollment(finding.Subject, enrollmentByCollectionKey, enrollmentByObservationKey, impactedEnrollments);
+                enrollmentLookup.TrackEnrollment(finding.Subject, impactedEnrollments);
             }
         }
 
         return (new ValidationDeltaSummary(opening, resolving, unchanged), impactedEnrollments, maskedBlindedFinding);
+    }
+
+    private static IReadOnlyList<RuleRecord> ProjectRuleRecordsSinglePass(
+        IMappingEngine engine,
+        IReadOnlyList<SimulationObservationSnapshot> observations,
+        IReadOnlyList<MappingSpecification> specifications,
+        ProtocolDesign? designOverlay,
+        ICodelistDecoder decoder)
+    {
+        if (specifications.Count == 0 || observations.Count == 0)
+        {
+            return [];
+        }
+
+        var winningSpecByConcept = IndexWinningMappingSpecs(specifications);
+        if (winningSpecByConcept.Count == 0)
+        {
+            return [];
+        }
+
+        var designBindings = designOverlay is not null ? IndexDesignConceptBindings(designOverlay) : null;
+        var records = new List<RuleRecord>();
+        var state = new SinglePassProjectionState(engine, winningSpecByConcept, designBindings, decoder, records);
+
+        ZeroLohOrdering.ForEachOrderedByGuid(
+            observations,
+            static o => o.Id.Value,
+            state,
+            static (s, obs) =>
+            {
+                if (!TryMapObservation(obs, s.Engine, s.WinningSpecByConcept, s.DesignBindings, s.Decoder, out var mapped))
+                {
+                    return;
+                }
+
+                var obsKey = obs.Id.Value.ToString("D", CultureInfo.InvariantCulture);
+                var ruleRecord = ToRuleRecordFromMapped(mapped.Dataset!, obsKey, mapped.Values);
+                if (s.HasPrevious && s.PreviousObservationId == obs.Id)
+                {
+                    s.Records[^1] = ruleRecord;
+                }
+                else
+                {
+                    s.HasPrevious = true;
+                    s.PreviousObservationId = obs.Id;
+                    s.Records.Add(ruleRecord);
+                }
+            });
+
+        return records;
     }
 
     private static Dictionary<string, ProjectedObservation> ProjectObservations(
@@ -1008,144 +2041,257 @@ internal static class SimulationProjectionAndValidationEvaluator
             return projected;
         }
 
-        var designItemsByKey = designOverlay?.CollectionSpecs
-            .SelectMany(spec => spec.Items.Select(item => (Key: $"{spec.Id}::{item.Id}", Item: item)))
-            .ToDictionary(x => x.Key, x => x.Item, StringComparer.Ordinal);
-        var designSpecIds = designOverlay?.CollectionSpecs
-            .Select(s => s.Id)
-            .ToHashSet(StringComparer.Ordinal);
-
-        foreach (var obs in observations.OrderBy(o => o.Id.Value))
+        var winningSpecByConcept = IndexWinningMappingSpecs(specifications);
+        if (winningSpecByConcept.Count == 0)
         {
-            var concept = obs.Concept;
-            if (designOverlay is not null && obs.CollectionSpecId is not null && obs.ItemId is not null)
-            {
-                if (!designSpecIds!.Contains(obs.CollectionSpecId))
-                {
-                    continue;
-                }
-
-                if (!designItemsByKey!.TryGetValue($"{obs.CollectionSpecId}::{obs.ItemId}", out var designItem))
-                {
-                    continue;
-                }
-
-                concept = designItem.Concept;
-            }
-
-            var input = MappingInput.From(concept, obs.Value);
-            MappingSpecification? winningSpec = null;
-            foreach (var spec in specifications)
-            {
-                if (spec.For(concept.ConceptId) is not null)
-                {
-                    winningSpec = spec;
-                }
-            }
-
-            if (winningSpec is null)
-            {
-                continue;
-            }
-
-            var mapped = engine.Map(winningSpec, input, decoder);
-            if (!mapped.Succeeded || string.IsNullOrWhiteSpace(mapped.Dataset) || mapped.Values.Count == 0)
-            {
-                continue;
-            }
-
-            var obsKey = obs.Id.Value.ToString("D", CultureInfo.InvariantCulture);
-            var vars = new SortedDictionary<string, string?>(StringComparer.Ordinal);
-            foreach (var mv in mapped.Values)
-            {
-                vars[mv.Variable] = mv.Value;
-            }
-
-            projected[obsKey] = new ProjectedObservation(obsKey, obs.EnrollmentId, mapped.Dataset, vars);
+            return projected;
         }
+
+        var designBindings = designOverlay is not null ? IndexDesignConceptBindings(designOverlay) : null;
+        var state = (Engine: engine, WinningSpecByConcept: winningSpecByConcept, DesignBindings: designBindings, Decoder: decoder, Projected: projected);
+
+        ZeroLohOrdering.ForEachOrderedByGuid(
+            observations,
+            static o => o.Id.Value,
+            state,
+            static (s, obs) =>
+            {
+                if (!TryMapObservation(obs, s.Engine, s.WinningSpecByConcept, s.DesignBindings, s.Decoder, out var mapped))
+                {
+                    return;
+                }
+
+                var obsKey = obs.Id.Value.ToString("D", CultureInfo.InvariantCulture);
+                var vars = new SortedDictionary<string, string?>(StringComparer.Ordinal);
+                for (var i = 0; i < mapped.Values.Count; i++)
+                {
+                    var mv = mapped.Values[i];
+                    vars[mv.Variable] = mv.Value;
+                }
+
+                s.Projected[obsKey] = new ProjectedObservation(obsKey, obs.EnrollmentId, mapped.Dataset!, vars);
+            });
 
         return projected;
     }
 
-    private static (IReadOnlyList<RuleRecord> Records, Dictionary<string, EnrollmentId> EnrollmentByRecordKey) BuildCollectionRuleRecords(
+    private static bool TryMapObservation(
+        SimulationObservationSnapshot obs,
+        IMappingEngine engine,
+        Dictionary<ConceptId, MappingSpecification> winningSpecByConcept,
+        Dictionary<string, Dictionary<string, ConceptRef>>? designBindings,
+        ICodelistDecoder decoder,
+        out MappingResult mapped)
+    {
+        var concept = obs.Concept;
+        if (designBindings is not null
+            && obs.CollectionSpecId is not null
+            && obs.ItemId is not null
+            && (!designBindings.TryGetValue(obs.CollectionSpecId, out var specItems)
+                || !specItems.TryGetValue(obs.ItemId, out concept)))
+        {
+            mapped = default!;
+            return false;
+        }
+
+        if (!winningSpecByConcept.TryGetValue(concept.ConceptId, out var winningSpec))
+        {
+            mapped = default!;
+            return false;
+        }
+
+        var input = MappingInput.From(concept, obs.Value);
+        mapped = engine.Map(winningSpec, input, decoder);
+        return mapped.Succeeded && !string.IsNullOrWhiteSpace(mapped.Dataset) && mapped.Values.Count > 0;
+    }
+
+    private static Dictionary<ConceptId, MappingSpecification> IndexWinningMappingSpecs(IReadOnlyList<MappingSpecification> specifications)
+    {
+        var map = new Dictionary<ConceptId, MappingSpecification>();
+        for (var s = 0; s < specifications.Count; s++)
+        {
+            var spec = specifications[s];
+            for (var m = 0; m < spec.Mappings.Count; m++)
+            {
+                map[spec.Mappings[m].Concept.ConceptId] = spec;
+            }
+        }
+
+        return map;
+    }
+
+    private static Dictionary<string, Dictionary<string, ConceptRef>> IndexDesignConceptBindings(ProtocolDesign design)
+    {
+        var bySpec = new Dictionary<string, Dictionary<string, ConceptRef>>(design.CollectionSpecs.Count, StringComparer.Ordinal);
+        for (var s = 0; s < design.CollectionSpecs.Count; s++)
+        {
+            var spec = design.CollectionSpecs[s];
+            if (!bySpec.TryGetValue(spec.Id, out var byItem))
+            {
+                byItem = new Dictionary<string, ConceptRef>(spec.Items.Count, StringComparer.Ordinal);
+                bySpec.Add(spec.Id, byItem);
+            }
+
+            for (var i = 0; i < spec.Items.Count; i++)
+            {
+                var item = spec.Items[i];
+                byItem[item.Id] = item.Concept;
+            }
+        }
+
+        return bySpec;
+    }
+
+    private static SimulationCollectionIndex BuildCollectionIndex(
         MaskedSimulationSnapshot snapshot,
         ProtocolDesign? designOverlay)
     {
-        var records = new List<RuleRecord>(snapshot.VisibleCollections.Count);
-        var enrollmentMap = new Dictionary<string, EnrollmentId>(StringComparer.Ordinal);
-        if (snapshot.VisibleCollections.Count == 0)
+        var collections = snapshot.VisibleCollections;
+        if (collections.Count == 0)
         {
-            return (records, enrollmentMap);
+            return SimulationCollectionIndex.Empty;
         }
 
-        var byEnrollment = snapshot.VisibleCollections
-            .GroupBy(c => c.EnrollmentId)
-            .ToDictionary(g => g.Key, g => g.ToList());
+        var overlaySpecsById = designOverlay is not null ? IndexSpecsById(designOverlay) : null;
+        Dictionary<ProtocolVersionId, Dictionary<string, CollectionSpec>>? storedSpecsByVersion = null;
 
-        foreach (var collection in snapshot.VisibleCollections.OrderBy(c => c.Id.Value))
+        CollectionSpec? ResolveSpec(SimulationCollectionSnapshot form)
         {
-            var effectiveDesign = designOverlay;
-            if (effectiveDesign is null && snapshot.ProtocolDesigns.TryGetValue(collection.ProtocolVersionId, out var storedDesign))
+            if (overlaySpecsById is not null)
             {
-                effectiveDesign = storedDesign;
+                return overlaySpecsById.GetValueOrDefault(form.CollectionSpecId);
             }
 
-            CollectionSpec? spec = null;
-            if (effectiveDesign is not null)
+            if (snapshot.ProtocolDesigns.Count == 0
+                || !snapshot.ProtocolDesigns.TryGetValue(form.ProtocolVersionId, out var storedDesign))
             {
-                spec = effectiveDesign.CollectionSpecs.FirstOrDefault(s => string.Equals(s.Id, collection.CollectionSpecId, StringComparison.Ordinal));
-                if (designOverlay is not null && spec is null)
+                return null;
+            }
+
+            storedSpecsByVersion ??= new Dictionary<ProtocolVersionId, Dictionary<string, CollectionSpec>>(snapshot.ProtocolDesigns.Count);
+            if (!storedSpecsByVersion.TryGetValue(form.ProtocolVersionId, out var storedById))
+            {
+                storedById = IndexSpecsById(storedDesign);
+                storedSpecsByVersion.Add(form.ProtocolVersionId, storedById);
+            }
+
+            return storedById.GetValueOrDefault(form.CollectionSpecId);
+        }
+
+        var byEnrollment = new Dictionary<EnrollmentId, List<SimulationCollectionSnapshot>>();
+        for (var i = 0; i < collections.Count; i++)
+        {
+            var form = collections[i];
+            if (!byEnrollment.TryGetValue(form.EnrollmentId, out var group))
+            {
+                group = [];
+                byEnrollment.Add(form.EnrollmentId, group);
+            }
+
+            group.Add(form);
+        }
+
+        var ownValuesByFormId = new Dictionary<CollectionInstanceId, Dictionary<string, RuleValue>>(collections.Count);
+        var resolvedSpecByFormId = new Dictionary<CollectionInstanceId, CollectionSpec?>(collections.Count);
+        var siblingIndexByEnrollment = new Dictionary<EnrollmentId, CollectionValidationService.EnrollmentSiblingIndex>(byEnrollment.Count);
+
+        foreach (var (enrollmentId, enrollmentForms) in byEnrollment)
+        {
+            for (var i = 0; i < enrollmentForms.Count; i++)
+            {
+                var form = enrollmentForms[i];
+                if (!ownValuesByFormId.ContainsKey(form.Id))
+                {
+                    var spec = ResolveSpec(form);
+                    resolvedSpecByFormId.Add(form.Id, spec);
+                    ownValuesByFormId.Add(form.Id, BuildSimulationOwnValues(form, spec));
+                }
+            }
+
+            var latestBySpec = CollectionValidationService.SelectLatestFormsBySpec(
+                enrollmentForms,
+                static f => f.Id,
+                static f => f.CollectionSpecId,
+                static f => f.OpenedAt);
+            siblingIndexByEnrollment.Add(
+                enrollmentId,
+                CollectionValidationService.BuildSiblingIndex(
+                    latestBySpec,
+                    static sibling => sibling.CollectionSpecId,
+                    sibling => ownValuesByFormId[sibling.Id]));
+        }
+
+        var indexedForms = new List<IndexedSimulationForm>(collections.Count);
+        var orderState = (
+            DesignOverlay: designOverlay,
+            ResolvedSpecs: resolvedSpecByFormId,
+            OwnValues: ownValuesByFormId,
+            Siblings: siblingIndexByEnrollment,
+            Output: indexedForms);
+
+        ZeroLohOrdering.ForEachOrderedByGuid(
+            collections,
+            static c => c.Id.Value,
+            orderState,
+            static (s, collection) =>
+            {
+                var spec = s.ResolvedSpecs[collection.Id];
+                if (s.DesignOverlay is not null && spec is null)
+                {
+                    return;
+                }
+
+                s.Output.Add(new IndexedSimulationForm(
+                    collection,
+                    s.OwnValues[collection.Id],
+                    s.Siblings[collection.EnrollmentId]));
+            });
+
+        return new SimulationCollectionIndex(indexedForms);
+    }
+
+    private static Dictionary<string, CollectionSpec> IndexSpecsById(ProtocolDesign design)
+    {
+        var map = new Dictionary<string, CollectionSpec>(design.CollectionSpecs.Count, StringComparer.Ordinal);
+        for (var i = 0; i < design.CollectionSpecs.Count; i++)
+        {
+            var spec = design.CollectionSpecs[i];
+            map.TryAdd(spec.Id, spec);
+        }
+
+        return map;
+    }
+
+    private static Dictionary<string, RuleValue> BuildSimulationOwnValues(
+        SimulationCollectionSnapshot collection,
+        CollectionSpec? spec)
+    {
+        var specItemCount = spec?.Items.Count ?? 0;
+        var ownValues = new Dictionary<string, RuleValue>(specItemCount + collection.ValuesByItemId.Count, StringComparer.Ordinal);
+        if (spec is not null)
+        {
+            for (var i = 0; i < spec.Items.Count; i++)
+            {
+                var itemId = spec.Items[i].Id;
+                if (ownValues.ContainsKey(itemId))
                 {
                     continue;
                 }
-            }
 
-            var values = new Dictionary<string, RuleValue>(StringComparer.Ordinal);
-            var itemIds = (spec?.Items.Select(i => i.Id) ?? [])
-                .Concat(collection.ValuesByItemId.Keys)
-                .Distinct(StringComparer.Ordinal);
-
-            foreach (var itemId in itemIds)
-            {
                 var raw = collection.ValuesByItemId.TryGetValue(itemId, out var entry) ? entry.Value : null;
-                var converted = CollectionValidationService.ToRuleValue(raw);
-                values[itemId] = converted;
-                var qualified = $"{collection.CollectionSpecId}.{itemId}";
-                if (qualified.Length <= FindingTarget.MaxNameLength)
-                {
-                    values[qualified] = converted;
-                }
+                ownValues.Add(itemId, CollectionValidationService.ToRuleValue(raw));
             }
-
-            var siblings = byEnrollment[collection.EnrollmentId]
-                .Where(s => s.Id != collection.Id && !string.Equals(s.CollectionSpecId, collection.CollectionSpecId, StringComparison.Ordinal))
-                .GroupBy(s => s.CollectionSpecId, StringComparer.Ordinal)
-                .Select(g => g.OrderBy(s => s.OpenedAt).ThenBy(s => s.Id.Value).Last());
-
-            foreach (var sibling in siblings)
-            {
-                foreach (var (sibItem, sibVal) in sibling.ValuesByItemId)
-                {
-                    var converted = CollectionValidationService.ToRuleValue(sibVal.Value);
-                    var qualified = $"{sibling.CollectionSpecId}.{sibItem}";
-                    if (qualified.Length <= FindingTarget.MaxNameLength)
-                    {
-                        values[qualified] = converted;
-                    }
-
-                    if (!values.ContainsKey(sibItem) && sibItem.Length <= FindingTarget.MaxNameLength)
-                    {
-                        values[sibItem] = converted;
-                    }
-                }
-            }
-
-            var recordKey = collection.Id.Value.ToString("D", CultureInfo.InvariantCulture);
-            enrollmentMap[recordKey] = collection.EnrollmentId;
-            records.Add(new RuleRecord(collection.CollectionSpecId, recordKey, values));
         }
 
-        return (records, enrollmentMap);
+        foreach (var (itemId, entry) in collection.ValuesByItemId)
+        {
+            if (!ownValues.ContainsKey(itemId))
+            {
+                ownValues.Add(itemId, CollectionValidationService.ToRuleValue(entry.Value));
+            }
+        }
+
+        return ownValues;
     }
 
     private static IReadOnlyList<RuleRecord> BuildDesignRuleRecords(ProtocolDesign? design)
@@ -1171,82 +2317,189 @@ internal static class SimulationProjectionAndValidationEvaluator
         Dictionary<DeltaFindingKey, SimulatedValidationFinding> Candidate) EvaluateAllStages(
         IRuleEvaluator evaluator,
         IBlindedTreatmentClassifier blinding,
+        ProtocolBlindingIndex? blindingIndex,
         IReadOnlyList<ProtocolDesign> designs,
         Func<ConceptId, BlindedConceptMetadata?> resolveConcept,
         Func<string, bool> isRecordUnblinded,
         DateOnly asOfDate,
         IReadOnlyList<(string Standard, string Version)> declaredStandards,
         IReadOnlyList<RulePack> baselinePacks,
-        IReadOnlyList<RuleRecord> baselineCollectionRecords,
-        IReadOnlyList<RuleRecord> baselineProjectedRecords,
-        IReadOnlyList<RuleRecord> baselineDesignRecords,
         IReadOnlyList<RulePack> candidatePacks,
-        IReadOnlyList<RuleRecord> candidateCollectionRecords,
+        bool sameRulePacks,
+        SimulationCollectionIndex baselineCollectionIndex,
+        SimulationCollectionIndex candidateCollectionIndex,
+        bool sameCollectionDesign,
+        IReadOnlyList<RuleRecord> baselineProjectedRecords,
         IReadOnlyList<RuleRecord> candidateProjectedRecords,
+        IReadOnlyList<RuleRecord> baselineDesignRecords,
         IReadOnlyList<RuleRecord> candidateDesignRecords,
+        bool sameDesignRecords,
+        ref int unchangedCount,
         ref bool maskedBlindedFinding)
     {
         var baseline = new Dictionary<DeltaFindingKey, SimulatedValidationFinding>();
         var candidate = new Dictionary<DeltaFindingKey, SimulatedValidationFinding>();
-        if (baselinePacks.Count == 0 && candidatePacks.Count == 0)
+
+        if (sameCollectionDesign && sameRulePacks)
         {
-            return (baseline, candidate);
+            unchangedCount += EvaluateUnchangedStage(
+                evaluator,
+                blinding,
+                blindingIndex,
+                designs,
+                resolveConcept,
+                isRecordUnblinded,
+                ValidationStage.Collection,
+                asOfDate,
+                declaredStandards,
+                baselinePacks,
+                baselineCollectionIndex.CreateCursor(),
+                ref maskedBlindedFinding);
+        }
+        else
+        {
+            EvaluateStagePair(
+                evaluator,
+                blinding,
+                blindingIndex,
+                designs,
+                resolveConcept,
+                isRecordUnblinded,
+                ValidationStage.Collection,
+                asOfDate,
+                declaredStandards,
+                baselinePacks,
+                baselineCollectionIndex.CreateCursor(),
+                candidatePacks,
+                candidateCollectionIndex.CreateCursor(),
+                baseline,
+                candidate,
+                ref maskedBlindedFinding);
         }
 
-        EvaluateStagePair(
-            evaluator,
-            blinding,
-            designs,
-            resolveConcept,
-            isRecordUnblinded,
-            ValidationStage.Collection,
-            asOfDate,
-            declaredStandards,
-            baselinePacks,
-            baselineCollectionRecords,
-            candidatePacks,
-            candidateCollectionRecords,
-            baseline,
-            candidate,
-            ref maskedBlindedFinding);
-        EvaluateStagePair(
-            evaluator,
-            blinding,
-            designs,
-            resolveConcept,
-            isRecordUnblinded,
-            ValidationStage.Standardization,
-            asOfDate,
-            declaredStandards,
-            baselinePacks,
-            baselineProjectedRecords,
-            candidatePacks,
-            candidateProjectedRecords,
-            baseline,
-            candidate,
-            ref maskedBlindedFinding);
-        EvaluateStagePair(
-            evaluator,
-            blinding,
-            designs,
-            resolveConcept,
-            isRecordUnblinded,
-            ValidationStage.Design,
-            asOfDate,
-            declaredStandards,
-            baselinePacks,
-            baselineDesignRecords,
-            candidatePacks,
-            candidateDesignRecords,
-            baseline,
-            candidate,
-            ref maskedBlindedFinding);
+        if (ReferenceEquals(baselineProjectedRecords, candidateProjectedRecords) && sameRulePacks)
+        {
+            unchangedCount += EvaluateUnchangedStage(
+                evaluator,
+                blinding,
+                blindingIndex,
+                designs,
+                resolveConcept,
+                isRecordUnblinded,
+                ValidationStage.Standardization,
+                asOfDate,
+                declaredStandards,
+                baselinePacks,
+                new RuleRecordListCursor(baselineProjectedRecords),
+                ref maskedBlindedFinding);
+        }
+        else
+        {
+            EvaluateStagePair(
+                evaluator,
+                blinding,
+                blindingIndex,
+                designs,
+                resolveConcept,
+                isRecordUnblinded,
+                ValidationStage.Standardization,
+                asOfDate,
+                declaredStandards,
+                baselinePacks,
+                new RuleRecordListCursor(baselineProjectedRecords),
+                candidatePacks,
+                new RuleRecordListCursor(candidateProjectedRecords),
+                baseline,
+                candidate,
+                ref maskedBlindedFinding);
+        }
+
+        if (sameDesignRecords && sameRulePacks)
+        {
+            unchangedCount += EvaluateUnchangedStage(
+                evaluator,
+                blinding,
+                blindingIndex,
+                designs,
+                resolveConcept,
+                isRecordUnblinded,
+                ValidationStage.Design,
+                asOfDate,
+                declaredStandards,
+                baselinePacks,
+                new RuleRecordListCursor(baselineDesignRecords),
+                ref maskedBlindedFinding);
+        }
+        else
+        {
+            EvaluateStagePair(
+                evaluator,
+                blinding,
+                blindingIndex,
+                designs,
+                resolveConcept,
+                isRecordUnblinded,
+                ValidationStage.Design,
+                asOfDate,
+                declaredStandards,
+                baselinePacks,
+                new RuleRecordListCursor(baselineDesignRecords),
+                candidatePacks,
+                new RuleRecordListCursor(candidateDesignRecords),
+                baseline,
+                candidate,
+                ref maskedBlindedFinding);
+        }
+
         return (baseline, candidate);
+    }
+
+    private static int EvaluateUnchangedStage(
+        IRuleEvaluator evaluator,
+        IBlindedTreatmentClassifier blinding,
+        ProtocolBlindingIndex? blindingIndex,
+        IReadOnlyList<ProtocolDesign> designs,
+        Func<ConceptId, BlindedConceptMetadata?> resolveConcept,
+        Func<string, bool> isRecordUnblinded,
+        ValidationStage stage,
+        DateOnly asOfDate,
+        IReadOnlyList<(string Standard, string Version)> declaredStandards,
+        IReadOnlyList<RulePack> packs,
+        IResettableRuleRecordCursor cursor,
+        ref bool maskedBlindedFinding)
+    {
+        var violations = AmendmentRegressionEngine.EvaluateStage(
+            evaluator,
+            stage,
+            asOfDate,
+            packs,
+            cursor,
+            declaredStandards);
+        if (violations.Count == 0)
+        {
+            return 0;
+        }
+
+        var uniqueVisible = new HashSet<DeltaFindingKey>(violations.Count);
+        for (var i = 0; i < violations.Count; i++)
+        {
+            var violation = violations[i];
+            if (ShouldMaskViolation(violation, blinding, blindingIndex, designs, resolveConcept, isRecordUnblinded))
+            {
+                maskedBlindedFinding = true;
+                continue;
+            }
+
+            uniqueVisible.Add(new DeltaFindingKey(violation.RuleId, stage, violation.Dataset, violation.RecordKey));
+        }
+
+        return uniqueVisible.Count;
     }
 
     private static void EvaluateStagePair(
         IRuleEvaluator evaluator,
         IBlindedTreatmentClassifier blinding,
+        ProtocolBlindingIndex? blindingIndex,
         IReadOnlyList<ProtocolDesign> designs,
         Func<ConceptId, BlindedConceptMetadata?> resolveConcept,
         Func<string, bool> isRecordUnblinded,
@@ -1254,9 +2507,9 @@ internal static class SimulationProjectionAndValidationEvaluator
         DateOnly asOfDate,
         IReadOnlyList<(string Standard, string Version)> declaredStandards,
         IReadOnlyList<RulePack> baselinePacks,
-        IReadOnlyList<RuleRecord> baselineRecords,
+        IResettableRuleRecordCursor baselineCursor,
         IReadOnlyList<RulePack> candidatePacks,
-        IReadOnlyList<RuleRecord> candidateRecords,
+        IResettableRuleRecordCursor candidateCursor,
         Dictionary<DeltaFindingKey, SimulatedValidationFinding> baselineSink,
         Dictionary<DeltaFindingKey, SimulatedValidationFinding> candidateSink,
         ref bool maskedBlindedFinding)
@@ -1266,16 +2519,17 @@ internal static class SimulationProjectionAndValidationEvaluator
             stage,
             asOfDate,
             baselinePacks,
-            baselineRecords,
+            baselineCursor,
             candidatePacks,
-            candidateRecords,
+            candidateCursor,
             declaredStandards);
-        CollectStageViolations(blinding, designs, resolveConcept, isRecordUnblinded, stage, baselineViolations, baselineSink, ref maskedBlindedFinding);
-        CollectStageViolations(blinding, designs, resolveConcept, isRecordUnblinded, stage, targetViolations, candidateSink, ref maskedBlindedFinding);
+        CollectStageViolations(blinding, blindingIndex, designs, resolveConcept, isRecordUnblinded, stage, baselineViolations, baselineSink, ref maskedBlindedFinding);
+        CollectStageViolations(blinding, blindingIndex, designs, resolveConcept, isRecordUnblinded, stage, targetViolations, candidateSink, ref maskedBlindedFinding);
     }
 
     private static void CollectStageViolations(
         IBlindedTreatmentClassifier blinding,
+        ProtocolBlindingIndex? blindingIndex,
         IReadOnlyList<ProtocolDesign> designs,
         Func<ConceptId, BlindedConceptMetadata?> resolveConcept,
         Func<string, bool> isRecordUnblinded,
@@ -1284,23 +2538,13 @@ internal static class SimulationProjectionAndValidationEvaluator
         Dictionary<DeltaFindingKey, SimulatedValidationFinding> sink,
         ref bool maskedBlindedFinding)
     {
-        foreach (var violation in violations)
+        for (var i = 0; i < violations.Count; i++)
         {
-            if (!isRecordUnblinded(violation.RecordKey))
+            var violation = violations[i];
+            if (ShouldMaskViolation(violation, blinding, blindingIndex, designs, resolveConcept, isRecordUnblinded))
             {
-                var target = new FindingTarget(
-                    FindingTargetKind.DatasetRecord,
-                    violation.Dataset,
-                    violation.RecordKey,
-                    violation.Observed.FirstOrDefault()?.Variable);
-                var observedVars = violation.Observed
-                    .Select(o => new ObservedVariable(o.Variable, o.Value.ToString()))
-                    .ToList();
-                if (blinding.IsBlindedFinding(target, observedVars, designs, resolveConcept))
-                {
-                    maskedBlindedFinding = true;
-                    continue;
-                }
+                maskedBlindedFinding = true;
+                continue;
             }
 
             var key = new DeltaFindingKey(violation.RuleId, stage, violation.Dataset, violation.RecordKey);
@@ -1317,42 +2561,293 @@ internal static class SimulationProjectionAndValidationEvaluator
         }
     }
 
-    private static void TrackEnrollment(
-        string subjectKey,
-        IReadOnlyDictionary<string, EnrollmentId> byCollection,
-        IReadOnlyDictionary<string, EnrollmentId> byObservation,
-        HashSet<EnrollmentId> sink)
+    private static bool ShouldMaskViolation(
+        RuleViolation violation,
+        IBlindedTreatmentClassifier blinding,
+        ProtocolBlindingIndex? blindingIndex,
+        IReadOnlyList<ProtocolDesign> designs,
+        Func<ConceptId, BlindedConceptMetadata?> resolveConcept,
+        Func<string, bool> isRecordUnblinded)
     {
-        if (byCollection.TryGetValue(subjectKey, out var fromCollection))
+        if (isRecordUnblinded(violation.RecordKey))
         {
-            sink.Add(fromCollection);
+            return false;
         }
-        else if (byObservation.TryGetValue(subjectKey, out var fromObservation))
+
+        if (blindingIndex is not null)
         {
-            sink.Add(fromObservation);
+            return blindingIndex.IsBlindedViolation(violation);
         }
+
+        var target = new FindingTarget(
+            FindingTargetKind.DatasetRecord,
+            violation.Dataset,
+            violation.RecordKey,
+            violation.Observed.FirstOrDefault()?.Variable);
+        var observedVars = violation.Observed
+            .Select(o => new ObservedVariable(o.Variable, o.Value.ToString()))
+            .ToList();
+        return blinding.IsBlindedFinding(target, observedVars, designs, resolveConcept);
     }
+
+    private static bool CanShareProjections(
+        IReadOnlyList<MappingSpecification> baselineSpecs,
+        IReadOnlyList<MappingSpecification> candidateSpecs,
+        ProtocolDesign? baselineDesign,
+        ProtocolDesign? candidateDesign) =>
+        MappingSpecsMatch(baselineSpecs, candidateSpecs)
+        && DesignConceptBindingsMatch(baselineDesign, candidateDesign);
+
+    private static bool MappingSpecsMatch(
+        IReadOnlyList<MappingSpecification> left,
+        IReadOnlyList<MappingSpecification> right)
+    {
+        if (ReferenceEquals(left, right))
+        {
+            return true;
+        }
+
+        if (left.Count != right.Count)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < left.Count; i++)
+        {
+            if (!MappingSpecificationEqual(left[i], right[i]))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool MappingSpecificationEqual(MappingSpecification left, MappingSpecification right)
+    {
+        if (ReferenceEquals(left, right))
+        {
+            return true;
+        }
+
+        if (!string.Equals(left.Title, right.Title, StringComparison.Ordinal)
+            || !string.Equals(left.Overrides, right.Overrides, StringComparison.Ordinal)
+            || !left.ControlledTerminology.SequenceEqual(right.ControlledTerminology)
+            || !left.Units.SequenceEqual(right.Units)
+            || left.Mappings.Count != right.Mappings.Count)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < left.Mappings.Count; i++)
+        {
+            var lm = left.Mappings[i];
+            var rm = right.Mappings[i];
+            if (!string.Equals(lm.Id, rm.Id, StringComparison.Ordinal)
+                || lm.Concept != rm.Concept
+                || !string.Equals(lm.Dataset, rm.Dataset, StringComparison.Ordinal)
+                || lm.Result != rm.Result
+                || !string.Equals(lm.StandardUnit, rm.StandardUnit, StringComparison.Ordinal)
+                || lm.Decimals != rm.Decimals
+                || !string.Equals(lm.Codelist, rm.Codelist, StringComparison.Ordinal)
+                || !lm.Conversions.SequenceEqual(rm.Conversions)
+                || !StringDictionaryEqual(lm.Assign, rm.Assign))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool StringDictionaryEqual(
+        IReadOnlyDictionary<string, string> left,
+        IReadOnlyDictionary<string, string> right) =>
+        ReferenceEquals(left, right)
+        || (left.Count == right.Count
+            && left.All(kv => right.TryGetValue(kv.Key, out var rv) && string.Equals(kv.Value, rv, StringComparison.Ordinal)));
+
+    private static bool DesignConceptBindingsMatch(ProtocolDesign? left, ProtocolDesign? right)
+    {
+        if (ReferenceEquals(left, right))
+        {
+            return true;
+        }
+
+        if (left is null || right is null || left.CollectionSpecs.Count != right.CollectionSpecs.Count)
+        {
+            return false;
+        }
+
+        var leftBindings = IndexDesignConceptBindings(left);
+        var rightBindings = IndexDesignConceptBindings(right);
+        if (leftBindings.Count != rightBindings.Count)
+        {
+            return false;
+        }
+
+        foreach (var (specId, leftItems) in leftBindings)
+        {
+            if (!rightBindings.TryGetValue(specId, out var rightItems)
+                || leftItems.Count != rightItems.Count)
+            {
+                return false;
+            }
+
+            foreach (var (itemId, leftConcept) in leftItems)
+            {
+                if (!rightItems.TryGetValue(itemId, out var rightConcept) || leftConcept != rightConcept)
+                {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    private static bool CollectionDesignsMatch(ProtocolDesign? left, ProtocolDesign? right)
+    {
+        if (ReferenceEquals(left, right))
+        {
+            return true;
+        }
+
+        if (left is null || right is null || left.CollectionSpecs.Count != right.CollectionSpecs.Count)
+        {
+            return false;
+        }
+
+        for (var s = 0; s < left.CollectionSpecs.Count; s++)
+        {
+            var ls = left.CollectionSpecs[s];
+            var rs = right.CollectionSpecs[s];
+            if (!string.Equals(ls.Id, rs.Id, StringComparison.Ordinal)
+                || ls.Items.Count != rs.Items.Count)
+            {
+                return false;
+            }
+
+            for (var i = 0; i < ls.Items.Count; i++)
+            {
+                if (!string.Equals(ls.Items[i].Id, rs.Items[i].Id, StringComparison.Ordinal))
+                {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    private static bool DesignRecordsMatch(ProtocolDesign? left, ProtocolDesign? right)
+    {
+        if (ReferenceEquals(left, right))
+        {
+            return true;
+        }
+
+        if (left is null || right is null)
+        {
+            return false;
+        }
+
+        return string.Equals(left.Title, right.Title, StringComparison.Ordinal)
+            && left.Objectives.Count == right.Objectives.Count
+            && left.Endpoints.Count == right.Endpoints.Count
+            && left.PlannedActivities.Count == right.PlannedActivities.Count
+            && left.CollectionSpecs.Count == right.CollectionSpecs.Count;
+    }
+
+    private static bool RulePacksMatch(IReadOnlyList<RulePack> left, IReadOnlyList<RulePack> right)
+    {
+        if (ReferenceEquals(left, right))
+        {
+            return true;
+        }
+
+        if (left.Count != right.Count)
+        {
+            return false;
+        }
+
+        for (var p = 0; p < left.Count; p++)
+        {
+            var lp = left[p];
+            var rp = right[p];
+            if (ReferenceEquals(lp, rp))
+            {
+                continue;
+            }
+
+            if (lp.Authority != rp.Authority
+                || !string.Equals(lp.Title, rp.Title, StringComparison.Ordinal)
+                || lp.Rules.Count != rp.Rules.Count)
+            {
+                return false;
+            }
+
+            for (var r = 0; r < lp.Rules.Count; r++)
+            {
+                if (!RulesMatch(lp.Rules[r], rp.Rules[r]))
+                {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    private static bool RulesMatch(Rule left, Rule right) =>
+        ReferenceEquals(left, right)
+        || (string.Equals(left.Id, right.Id, StringComparison.Ordinal)
+            && left.Version == right.Version
+            && left.Authority == right.Authority
+            && left.Citation == right.Citation
+            && left.Applicability == right.Applicability
+            && left.Severity == right.Severity
+            && string.Equals(left.Condition.ToString(), right.Condition.ToString(), StringComparison.Ordinal)
+            && string.Equals(left.Explanation, right.Explanation, StringComparison.Ordinal)
+            && string.Equals(left.RemediationGuidance, right.RemediationGuidance, StringComparison.Ordinal)
+            && left.Effective == right.Effective);
 
     private static RuleRecord ToRuleRecord(ProjectedObservation projected)
     {
-        var values = new Dictionary<string, RuleValue>(StringComparer.Ordinal);
+        var values = new Dictionary<string, RuleValue>(projected.Variables.Count, StringComparer.Ordinal);
         foreach (var (variable, raw) in projected.Variables)
         {
-            if (raw is null)
-            {
-                values[variable] = RuleValue.Null;
-            }
-            else if (decimal.TryParse(raw, NumberStyles.Number, CultureInfo.InvariantCulture, out var numeric))
-            {
-                values[variable] = RuleValue.FromNumber(numeric);
-            }
-            else
-            {
-                values[variable] = RuleValue.FromText(raw);
-            }
+            values[variable] = ConvertProjectedVariableValue(raw);
         }
 
         return new RuleRecord(projected.Dataset, projected.RecordKey, values);
+    }
+
+    private static RuleRecord ToRuleRecordFromMapped(
+        string dataset,
+        string recordKey,
+        IReadOnlyList<MappedValue> mappedValues)
+    {
+        var values = new Dictionary<string, RuleValue>(mappedValues.Count, StringComparer.Ordinal);
+        for (var i = 0; i < mappedValues.Count; i++)
+        {
+            var mv = mappedValues[i];
+            values[mv.Variable] = ConvertProjectedVariableValue(mv.Value);
+        }
+
+        return new RuleRecord(dataset, recordKey, values);
+    }
+
+    private static RuleValue ConvertProjectedVariableValue(string? raw)
+    {
+        if (raw is null)
+        {
+            return RuleValue.Null;
+        }
+
+        return decimal.TryParse(raw, NumberStyles.Number, CultureInfo.InvariantCulture, out var numeric)
+            ? RuleValue.FromNumber(numeric)
+            : RuleValue.FromText(raw);
     }
 
     private static bool VariablesEqual(
@@ -1383,6 +2878,199 @@ internal static class SimulationProjectionAndValidationEvaluator
         EnrollmentId EnrollmentId,
         string Dataset,
         IReadOnlyDictionary<string, string?> Variables);
+
+    private sealed class SinglePassProjectionState(
+        IMappingEngine engine,
+        Dictionary<ConceptId, MappingSpecification> winningSpecByConcept,
+        Dictionary<string, Dictionary<string, ConceptRef>>? designBindings,
+        ICodelistDecoder decoder,
+        List<RuleRecord> records)
+    {
+        public IMappingEngine Engine { get; } = engine;
+
+        public Dictionary<ConceptId, MappingSpecification> WinningSpecByConcept { get; } = winningSpecByConcept;
+
+        public Dictionary<string, Dictionary<string, ConceptRef>>? DesignBindings { get; } = designBindings;
+
+        public ICodelistDecoder Decoder { get; } = decoder;
+
+        public List<RuleRecord> Records { get; } = records;
+
+        public bool HasPrevious { get; set; }
+
+        public ObservationId PreviousObservationId { get; set; }
+    }
+
+    private sealed class IndexedSimulationForm(
+        SimulationCollectionSnapshot form,
+        Dictionary<string, RuleValue> ownValues,
+        CollectionValidationService.EnrollmentSiblingIndex siblings)
+    {
+        private string? _key;
+
+        public SimulationCollectionSnapshot Form { get; } = form;
+
+        public string Key => _key ??= Form.Id.Value.ToString("D", CultureInfo.InvariantCulture);
+
+        public Dictionary<string, RuleValue> OwnValues { get; } = ownValues;
+
+        public CollectionValidationService.EnrollmentSiblingIndex Siblings { get; } = siblings;
+    }
+
+    private sealed class SimulationCollectionIndex(IReadOnlyList<IndexedSimulationForm> forms)
+    {
+        public static readonly SimulationCollectionIndex Empty = new([]);
+
+        public IReadOnlyList<IndexedSimulationForm> Forms { get; } = forms;
+
+        public SimulationCollectionFormCursor CreateCursor() => new(Forms);
+    }
+
+    private sealed class SimulationCollectionFormCursor(IReadOnlyList<IndexedSimulationForm> forms) : IResettableRuleRecordCursor
+    {
+        private int _index = -1;
+        private IndexedSimulationForm? _current;
+
+        public bool IsEmpty => forms.Count == 0;
+
+        public string Dataset => _current!.Form.CollectionSpecId;
+
+        public string Key => _current!.Key;
+
+        public RuleValue this[string name] =>
+            _current!.Siblings.ResolveVariable(_current.Form.CollectionSpecId, _current.OwnValues, name);
+
+        public void Reset()
+        {
+            _index = -1;
+            _current = null;
+        }
+
+        public bool MoveNext()
+        {
+            var next = _index + 1;
+            if (next < forms.Count)
+            {
+                _index = next;
+                _current = forms[next];
+                return true;
+            }
+
+            _index = forms.Count;
+            _current = null;
+            return false;
+        }
+    }
+
+    private sealed class LazyRecordEnrollmentLookup(
+        SimulationCollectionIndex baselineCollections,
+        SimulationCollectionIndex candidateCollections,
+        IReadOnlyList<SimulationObservationSnapshot> visibleObservations)
+    {
+        private const int ShardCount = 64;
+        private const int ShardMask = ShardCount - 1;
+
+        private Dictionary<Guid, EnrollmentId>[]? _collectionShards;
+        private Dictionary<Guid, EnrollmentId>[]? _observationShards;
+
+        public bool TryResolveEnrollment(string recordKey, out EnrollmentId enrollmentId)
+        {
+            if (!Guid.TryParseExact(recordKey, "D", out var id))
+            {
+                enrollmentId = default;
+                return false;
+            }
+
+            var shard = id.GetHashCode() & ShardMask;
+            var collections = EnsureCollectionShards();
+            if (collections[shard] is { } collectionShard && collectionShard.TryGetValue(id, out enrollmentId))
+            {
+                return true;
+            }
+
+            var observations = EnsureObservationShards();
+            if (observations[shard] is { } observationShard && observationShard.TryGetValue(id, out enrollmentId))
+            {
+                return true;
+            }
+
+            enrollmentId = default;
+            return false;
+        }
+
+        public void TrackEnrollment(string subjectKey, HashSet<EnrollmentId> sink)
+        {
+            if (TryResolveEnrollment(subjectKey, out var enrollmentId))
+            {
+                sink.Add(enrollmentId);
+            }
+        }
+
+        private Dictionary<Guid, EnrollmentId>?[] EnsureCollectionShards()
+        {
+            if (_collectionShards is not null)
+            {
+                return _collectionShards;
+            }
+
+            var shards = new Dictionary<Guid, EnrollmentId>[ShardCount];
+            AddCollectionForms(shards, baselineCollections.Forms);
+            if (!ReferenceEquals(baselineCollections, candidateCollections))
+            {
+                AddCollectionForms(shards, candidateCollections.Forms);
+            }
+
+            _collectionShards = shards;
+            return shards;
+        }
+
+        private Dictionary<Guid, EnrollmentId>?[] EnsureObservationShards()
+        {
+            if (_observationShards is not null)
+            {
+                return _observationShards;
+            }
+
+            var shards = new Dictionary<Guid, EnrollmentId>[ShardCount];
+            for (var i = 0; i < visibleObservations.Count; i++)
+            {
+                var obs = visibleObservations[i];
+                var id = obs.Id.Value;
+                var idx = id.GetHashCode() & ShardMask;
+                var map = shards[idx];
+                if (map is null)
+                {
+                    map = [];
+                    shards[idx] = map;
+                }
+
+                map[id] = obs.EnrollmentId;
+            }
+
+            _observationShards = shards;
+            return shards;
+        }
+
+        private static void AddCollectionForms(
+            Dictionary<Guid, EnrollmentId>?[] shards,
+            IReadOnlyList<IndexedSimulationForm> forms)
+        {
+            for (var i = 0; i < forms.Count; i++)
+            {
+                var form = forms[i].Form;
+                var id = form.Id.Value;
+                var idx = id.GetHashCode() & ShardMask;
+                var map = shards[idx];
+                if (map is null)
+                {
+                    map = [];
+                    shards[idx] = map;
+                }
+
+                map[id] = form.EnrollmentId;
+            }
+        }
+    }
 
     private sealed class SnapshotCodelistDecoder(IReadOnlyDictionary<(string Codelist, string Code), string> decodes) : ICodelistDecoder
     {

@@ -1,8 +1,7 @@
 /**
  * Generates TypeScript types for the web API clients from the .NET services' and modules' OpenAPI documents in
- * docs/openapi/ (the real specs, not the Python-era ones in docs/openapi/legacy/). Output goes to
- * src/api/generated/<contract>.ts and is checked in; tests/api/generated_types.test.js fails when it no longer matches
- * the spec.
+ * docs/openapi/. Output goes to src/api/generated/<contract>.ts and is checked in; tests/api/generated_types.test.js
+ * fails when it no longer matches the spec.
  *
  * Every `docs/openapi/*_openapi.json` contract except the aggregated `cdisc_openapi.json` is discovered automatically
  * (docs/web/API_MIGRATION.md).

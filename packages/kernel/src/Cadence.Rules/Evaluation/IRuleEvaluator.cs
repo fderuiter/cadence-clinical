@@ -154,6 +154,19 @@ public interface IRuleRecordCursor : IRuleVariables
     }
 }
 
+/// <summary>
+/// A <see cref="IRuleRecordCursor"/> that can rewind to its first record so multi-pack and multi-standard evaluations
+/// stream the same underlying snapshot without re-materializing <see cref="RuleRecord"/> lists.
+/// </summary>
+public interface IResettableRuleRecordCursor : IRuleRecordCursor
+{
+    /// <summary>True when the cursor has zero records to yield after <see cref="Reset"/>.</summary>
+    bool IsEmpty { get; }
+
+    /// <summary>Rewinds the cursor to the position before the first record.</summary>
+    void Reset();
+}
+
 /// <summary>Receives streaming rule violations in record order, then in rule order (K-RULE-4).</summary>
 public interface IRuleViolationSink
 {
@@ -237,10 +250,11 @@ public readonly ref struct RuleViolationHit
     }
 }
 
-internal sealed class RuleRecordListCursor : IRuleRecordCursor
+internal sealed class RuleRecordListCursor : IResettableRuleRecordCursor
 {
     private readonly IReadOnlyList<RuleRecord> _records;
     private readonly HashSet<string>? _datasetFilter;
+    private readonly int _start;
     private readonly int _end;
     private int _index;
     private RuleRecord? _current;
@@ -249,6 +263,7 @@ internal sealed class RuleRecordListCursor : IRuleRecordCursor
     {
         _records = records;
         _datasetFilter = datasetFilter;
+        _start = 0;
         _index = -1;
         _end = records.Count;
     }
@@ -257,15 +272,24 @@ internal sealed class RuleRecordListCursor : IRuleRecordCursor
     {
         _records = records;
         _datasetFilter = null;
+        _start = offset;
         _index = offset - 1;
         _end = offset + count;
     }
+
+    public bool IsEmpty => _end <= _start;
 
     public string Dataset => _current!.Dataset;
 
     public string Key => _current!.Key;
 
     public RuleValue this[string name] => _current![name];
+
+    public void Reset()
+    {
+        _index = _start - 1;
+        _current = null;
+    }
 
     public bool MoveNext()
     {

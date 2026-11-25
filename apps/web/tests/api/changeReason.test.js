@@ -2,7 +2,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { createPinia, setActivePinia } from "pinia";
 import { encodeChangeReason } from "../../src/api/changeReason";
 import { apiClient } from "../../src/api/apiClient";
-import { createOpenApiClient, openApiClient } from "../../src/api/client";
+import { createOpenApiClient } from "../../src/api/client";
+import { openApiClient } from "../../src/api/legacyClient";
 
 // The same values the .NET ChangeReasonHeader tests decode (ADR-2495, #4895).
 const EM_DASH_AND_CJK = "IRB approval — 治験審査委員会の承認";

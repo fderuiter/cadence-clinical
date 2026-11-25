@@ -1,5 +1,6 @@
-import { createOpenApiClient, openApiClient, unwrapResponse } from "./client";
+import { createOpenApiClient, unwrapResponse } from "./client";
 import type { paths as EconsentPaths } from "./generated/econsent";
+import { openApiClient } from "./legacyClient";
 import type { paths } from "./types";
 
 const econsentClient = createOpenApiClient<EconsentPaths>();

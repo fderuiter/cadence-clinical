@@ -155,6 +155,7 @@ public sealed class DeidComplianceServiceTests : IDisposable
         DeidComplianceService.ShouldScanFile("Makefile").Should().BeTrue();
         DeidComplianceService.ShouldScanFile("Pipfile").Should().BeTrue();
         DeidComplianceService.ShouldScanFile("apps/web/public/logo.png").Should().BeFalse();
+        DeidComplianceService.ShouldScanFile("packages/security/rbac.py").Should().BeFalse();
         DeidComplianceService.ShouldScanFile(text).Should().BeTrue();
         DeidComplianceService.ShouldScanFile(binary).Should().BeFalse();
     }

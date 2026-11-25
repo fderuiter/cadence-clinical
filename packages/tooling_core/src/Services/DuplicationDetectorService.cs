@@ -489,7 +489,6 @@ public static class DuplicationDetectorService
             return false;
         }
 
-        // Python files are porting references, not live code (#4789), so they are not scanned.
         return norm.EndsWith(".cs", StringComparison.OrdinalIgnoreCase) ||
                norm.EndsWith(".js", StringComparison.OrdinalIgnoreCase) ||
                norm.EndsWith(".ts", StringComparison.OrdinalIgnoreCase) ||
