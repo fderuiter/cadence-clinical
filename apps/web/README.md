@@ -67,9 +67,13 @@ Run from the repository root with pnpm (the workspace is defined in `pnpm-worksp
 
 ## Dependencies
 
-- Runtime: `vue`, `vue-router`, `pinia`, `keycloak-js`, `openapi-fetch`, `hls.js`, `vuedraggable`, and the workspace packages [ui](../../packages/ui/README.md) and [usdm-schemas](../../packages/usdm-schemas/README.md).
+- Runtime: `vue`, `vue-router`, `pinia`, `keycloak-js`, `openapi-fetch`, `hls.js`, `lucide-vue-next`, `vuedraggable`, and the workspace packages [ui](../../packages/ui/README.md) and [usdm-schemas](../../packages/usdm-schemas/README.md).
 - Development: Vite, Vitest, Playwright with `@axe-core/playwright`, MSW, `openapi-typescript`, TypeScript, `vue-tsc`.
 
 ## Running against the backend
 
 Start Keycloak and the services (for example `docker compose -f docker/docker-compose.yml up`, or the gateway and services with `dotnet run`), then `pnpm --filter web dev` and sign in with a user from the `cadence` realm.
+
+## Bounded Drawer & Nested Modal Chrome
+
+All 13 `*Drawer.vue` slide-overs in `src/components/` mount through shared `ClinicalDrawer` (`100dvh` panel height, `90dvh` mobile bottom sheets at `<= 480px`, `@media (max-height: 540px)` short-viewport panel scrolling, `src/components/shared/drawerHeaderChrome.css`, and `ClinicalModal` for nested confirmation/rejection dialogs per [ADR-2674](../../docs/adr/2026-11-24-migrate-web-drawers-to-bounded-clinical-drawer.md)). Bespoke `.drawer-overlay` / `.drawer-backdrop` wrappers are rejected by `scripts/eslint-drawer-overlay-guard.mjs`.

@@ -45,3 +45,8 @@ in `vite.config.js` are a ratchet floor: raise them when coverage rises, never l
 - `EntityLink`: Renders Clinical Kernel `NodeRef` links in monospace with K-EXP-2 masked badge support and scope-preserving peek-drawer activation.
 - `ClinicalExplanation`: Renders ADR-2482 `Explanation` claims, evaluated met/unmet conditions, reasoning steps, and clickable `NextAction.Target` links.
 - `ClinicalGatedAction`: Keeps blocked clinical controls visible with accessible why-blocked explanations.
+
+### Bounded Drawer & Mobile Record-Card Primitives
+
+- `ClinicalDrawer`: Bounded-chrome `100dvh` side drawer (`#header` + scrollable `.clinical-drawer-body` + optional `#footer`), `keepMounted` state retention, `@media (max-height: 540px)` compact short-viewport scrolling, and `@media (max-width: 480px)` `90dvh` safe-area bottom sheet ([ADR-2674](../../docs/adr/2026-11-24-migrate-web-drawers-to-bounded-clinical-drawer.md)).
+- `ClinicalDataTable`: Emits `:data-label="col.label"` on body cells so narrow mobile drawers (`<= 480px` / `<= 640px`) can style `attr(data-label)` stacked record cards without raw `<table>` markup.

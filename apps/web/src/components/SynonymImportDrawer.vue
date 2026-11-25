@@ -1,657 +1,543 @@
 <template>
-  <div
-    v-if="codingStore.isSynonymDrawerOpen"
-    class="synonym-drawer-overlay fixed inset-0 z-50 flex justify-end bg-slate-900/60 backdrop-blur-xs transition-opacity"
-    role="presentation"
-    @click.self="close"
+  <ClinicalDrawer
+    :model-value="codingStore.isSynonymDrawerOpen"
+    :teleport="false"
+    size="lg"
+    :dismissible="!codingStore.synonymImportLoading"
+    overlay-class="synonym-drawer-overlay"
+    panel-class="synonym-drawer-panel"
+    aria-labelledby="synonym-drawer-title"
+    @close="close"
   >
-    <div
-      ref="drawerRef"
-      class="synonym-drawer-panel flex h-full w-full max-w-2xl flex-col bg-white shadow-2xl dark:bg-slate-900"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="synonym-drawer-title"
-      tabindex="-1"
-    >
-      <!-- Header -->
-      <div
-        class="flex items-center justify-between border-b border-slate-200 px-6 py-4 dark:border-slate-800"
-      >
-        <div>
-          <h2
-            id="synonym-drawer-title"
-            class="text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2"
-          >
-            <span>📥</span> Bulk Synonym Dictionary Import
+    <template #header>
+      <div class="drawer-header">
+        <div class="header-title-wrap">
+          <FolderDown :size="18" class="header-icon" aria-hidden="true" />
+          <h2 id="synonym-drawer-title" class="drawer-title">
+            Bulk Synonym Dictionary Import
           </h2>
-          <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Ingest MedDRA and WHODrug verbatim synonym dictionaries with
-            pre-flight validation and Part 11 audit lineage.
-          </p>
         </div>
         <button
           type="button"
           aria-label="Close synonym import drawer"
-          class="close-btn rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+          class="close-btn"
+          :disabled="codingStore.synonymImportLoading"
           @click="close"
         >
-          ✕
+          <X :size="18" aria-hidden="true" />
         </button>
       </div>
+    </template>
+
+    <div class="synonym-drawer-content">
+      <p class="drawer-subtitle">
+        Ingest MedDRA and WHODrug verbatim synonym dictionaries with pre-flight
+        validation and Part 11 audit lineage.
+      </p>
 
       <!-- Navigation Tabs -->
       <div
-        class="flex border-b border-slate-200 px-6 bg-slate-50 dark:border-slate-800 dark:bg-slate-900/50"
+        class="synonym-tabs"
+        role="tablist"
+        aria-label="Synonym Import Views"
       >
         <button
           type="button"
-          class="border-b-2 px-4 py-3 text-xs font-semibold transition-colors"
-          :class="
-            activeTab === 'import'
-              ? 'border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400'
-              : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400'
-          "
+          role="tab"
+          :aria-selected="activeTab === 'import'"
+          class="synonym-tab-btn"
+          :class="{ active: activeTab === 'import' }"
           @click="activeTab = 'import'"
         >
-          📁 Import New Rules
+          <FolderInput :size="15" aria-hidden="true" />
+          <span>Import New Rules</span>
         </button>
         <button
           type="button"
-          class="border-b-2 px-4 py-3 text-xs font-semibold transition-colors"
-          :class="
-            activeTab === 'history'
-              ? 'border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400'
-              : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400'
-          "
+          role="tab"
+          :aria-selected="activeTab === 'history'"
+          class="synonym-tab-btn"
+          :class="{ active: activeTab === 'history' }"
           @click="switchToHistoryTab"
         >
-          📜 Audit History
+          <History :size="15" aria-hidden="true" />
+          <span>Audit History</span>
         </button>
         <button
           type="button"
-          class="border-b-2 px-4 py-3 text-xs font-semibold transition-colors"
-          :class="
-            activeTab === 'rules'
-              ? 'border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400'
-              : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400'
-          "
+          role="tab"
+          :aria-selected="activeTab === 'rules'"
+          class="synonym-tab-btn"
+          :class="{ active: activeTab === 'rules' }"
           @click="switchToRulesTab"
         >
-          ⚡ Active Rules ({{ codingStore.synonymRules.length }})
+          <Zap :size="15" aria-hidden="true" />
+          <span>Active Rules ({{ codingStore.synonymRules.length }})</span>
         </button>
       </div>
 
-      <!-- Drawer Body -->
-      <div class="flex-1 overflow-y-auto p-6 space-y-6">
-        <!-- Access Restricted Banner -->
-        <div
-          v-if="!isAuthorized"
-          class="access-restricted-banner rounded-lg border border-amber-200 bg-amber-50 p-4 text-xs text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-300"
-        >
-          <div class="font-bold flex items-center gap-1.5 text-sm">
-            <span>⚠️</span> Access Restricted
-          </div>
-          <p class="mt-1">
-            Bulk synonym dictionary import requires
-            <strong>DATA_MANAGER</strong> or
-            <strong>SPONSOR_DESIGNER</strong> authorization. You can view
-            existing history and active rules in read-only mode.
-          </p>
+      <!-- Access Restricted Banner -->
+      <div v-if="!isAuthorized" class="access-restricted-banner">
+        <div class="banner-heading">
+          <AlertTriangle :size="16" aria-hidden="true" />
+          <span>Access Restricted</span>
         </div>
+        <p class="banner-body">
+          Bulk synonym dictionary import requires
+          <strong>DATA_MANAGER</strong> or
+          <strong>SPONSOR_DESIGNER</strong> authorization. You can view existing
+          history and active rules in read-only mode.
+        </p>
+      </div>
 
-        <!-- TAB 1: IMPORT NEW RULES -->
-        <div v-if="activeTab === 'import'" class="space-y-6">
-          <!-- Configuration Card -->
-          <div
-            class="rounded-xl border border-slate-200 bg-white p-4 shadow-xs dark:border-slate-800 dark:bg-slate-900 space-y-4"
-          >
-            <h3
-              class="text-xs font-bold uppercase tracking-wider text-slate-500"
-            >
-              1. Scope & Target Configuration
-            </h3>
+      <!-- TAB 1: IMPORT NEW RULES -->
+      <div v-if="activeTab === 'import'" class="tab-panel">
+        <!-- Configuration Card -->
+        <div class="section-card">
+          <h3 class="section-heading">1. Scope &amp; Target Configuration</h3>
 
-            <div class="grid grid-cols-2 gap-4">
-              <div>
-                <label
-                  for="synonym-scope"
-                  class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1"
-                >
-                  Import Scope
-                </label>
-                <select
-                  id="synonym-scope"
-                  v-model="scope"
-                  class="scope-select w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-900 focus:border-indigo-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
-                  :disabled="!isAuthorized || codingStore.synonymImportLoading"
-                >
-                  <option value="STUDY">
-                    STUDY (Study-Specific Rule Store)
-                  </option>
-                  <option value="ENTERPRISE">
-                    ENTERPRISE (Cross-Study Master Rule Store)
-                  </option>
-                </select>
-              </div>
+          <div class="config-grid">
+            <div class="field-group">
+              <label for="synonym-scope" class="field-label">
+                Import Scope
+              </label>
+              <select
+                id="synonym-scope"
+                v-model="scope"
+                class="form-control scope-select"
+                :disabled="!isAuthorized || codingStore.synonymImportLoading"
+              >
+                <option value="STUDY">STUDY (Study-Specific Rule Store)</option>
+                <option value="ENTERPRISE">
+                  ENTERPRISE (Cross-Study Master Rule Store)
+                </option>
+              </select>
+            </div>
 
-              <div v-if="scope === 'STUDY'">
-                <label
-                  for="synonym-study-id"
-                  class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1"
-                >
-                  Study ID
-                </label>
-                <input
-                  id="synonym-study-id"
-                  v-model="studyId"
-                  type="text"
-                  placeholder="e.g. STUDY-101"
-                  class="study-id-input w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-900 focus:border-indigo-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
-                  :disabled="!isAuthorized || codingStore.synonymImportLoading"
-                />
-              </div>
+            <div v-if="scope === 'STUDY'" class="field-group">
+              <label for="synonym-study-id" class="field-label">
+                Study ID
+              </label>
+              <input
+                id="synonym-study-id"
+                v-model="studyId"
+                type="text"
+                placeholder="e.g. STUDY-101"
+                class="form-control study-id-input"
+                :disabled="!isAuthorized || codingStore.synonymImportLoading"
+              />
             </div>
           </div>
+        </div>
 
-          <!-- File Dropzone -->
-          <div
-            class="rounded-xl border border-slate-200 bg-white p-4 shadow-xs dark:border-slate-800 dark:bg-slate-900 space-y-4"
+        <!-- File Dropzone -->
+        <div class="section-card">
+          <h3 class="section-heading">2. Select Synonym Dictionary File</h3>
+
+          <ClinicalDropzone
+            class="dropzone"
+            accept=".csv,.xlsx"
+            :disabled="!isAuthorized || codingStore.synonymImportLoading"
+            :has-selection="!!selectedFile"
+            :button-label="
+              selectedFile
+                ? 'Replace Synonym File'
+                : 'Select Synonym Dictionary File'
+            "
+            input-aria-label="Synonym dictionary file"
+            removable
+            remove-label="Remove File"
+            :remove-context="selectedFile ? selectedFile.name : ''"
+            @file-selected="onSynonymFileSelected"
+            @remove="clearSelectedFile"
           >
-            <h3
-              class="text-xs font-bold uppercase tracking-wider text-slate-500"
-            >
-              2. Select Synonym Dictionary File
-            </h3>
-
-            <ClinicalDropzone
-              class="dropzone border-2 border-dashed rounded-xl p-6 text-center transition-colors"
-              accept=".csv,.xlsx"
-              :disabled="!isAuthorized || codingStore.synonymImportLoading"
-              :has-selection="!!selectedFile"
-              :icon="selectedFile ? '📄' : '📤'"
-              :button-label="
-                selectedFile
-                  ? 'Replace Synonym File'
-                  : 'Select Synonym Dictionary File'
-              "
-              input-aria-label="Synonym dictionary file"
-              removable
-              remove-label="Remove File"
-              :remove-context="selectedFile ? selectedFile.name : ''"
-              @file-selected="onSynonymFileSelected"
-              @remove="clearSelectedFile"
-            >
-              <template #prompt>
-                <div
-                  v-if="!selectedFile"
-                  class="text-xs font-medium text-slate-700 dark:text-slate-300"
-                >
+            <template #prompt>
+              <div v-if="!selectedFile" class="dropzone-prompt">
+                <UploadCloud :size="20" aria-hidden="true" />
+                <span>
                   Drag and drop a <strong>.csv</strong> or
                   <strong>.xlsx</strong> synonym dictionary file here
-                </div>
-              </template>
-              <template #hint>
-                <span v-if="!selectedFile" class="text-[11px] text-slate-400">
-                  Must include headers: <code>verbatim_text</code>,
-                  <code>dictionary_type</code>, <code>dictionary_version</code>,
-                  <code>target_code</code>, <code>target_term</code>
                 </span>
-              </template>
-              <template #selected>
-                <div v-if="selectedFile" class="space-y-1">
-                  <div
-                    class="text-xs font-bold text-slate-800 dark:text-slate-200"
-                  >
+              </div>
+            </template>
+            <template #hint>
+              <span v-if="!selectedFile" class="dropzone-hint">
+                Must include headers: <code>verbatim_text</code>,
+                <code>dictionary_type</code>, <code>dictionary_version</code>,
+                <code>target_code</code>, <code>target_term</code>
+              </span>
+            </template>
+            <template #selected>
+              <div v-if="selectedFile" class="selected-file-summary">
+                <FileSpreadsheet :size="18" aria-hidden="true" />
+                <div>
+                  <div class="selected-file-name">
                     {{ selectedFile.name }}
                   </div>
-                  <div class="text-[11px] text-slate-500">
+                  <div class="selected-file-size">
                     {{ formatFileSize(selectedFile.size) }}
                   </div>
                 </div>
-              </template>
-            </ClinicalDropzone>
+              </div>
+            </template>
+          </ClinicalDropzone>
 
-            <div class="flex justify-end">
+          <div class="card-actions-end">
+            <button
+              type="button"
+              class="validate-btn btn btn-primary"
+              :disabled="
+                !selectedFile ||
+                !isAuthorized ||
+                codingStore.synonymImportLoading
+              "
+              @click="runPreflightValidation"
+            >
+              <Search :size="15" aria-hidden="true" />
+              <span>{{
+                codingStore.synonymImportLoading
+                  ? "Validating File..."
+                  : "Run Pre-flight Validation"
+              }}</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Error Alert -->
+        <div v-if="codingStore.synonymImportError" class="import-error-alert">
+          <div class="banner-heading">
+            <OctagonAlert :size="16" aria-hidden="true" />
+            <span>Import Error</span>
+          </div>
+          <p class="banner-body">
+            {{ codingStore.synonymImportError }}
+          </p>
+        </div>
+
+        <!-- Pre-flight Validation Summary Report -->
+        <div v-if="report" class="preflight-report-card section-card">
+          <div class="report-header-row">
+            <h3 class="section-heading">
+              3. Pre-flight Validation Summary Report
+            </h3>
+            <span
+              class="preflight-status-pill"
+              :class="report.canImport ? 'pill-passed' : 'pill-failed'"
+            >
+              <CheckCircle2
+                v-if="report.canImport"
+                :size="14"
+                aria-hidden="true"
+              />
+              <XCircle v-else :size="14" aria-hidden="true" />
+              <span>{{
+                report.canImport ? "Pre-flight Passed" : "Validation Failed"
+              }}</span>
+            </span>
+          </div>
+
+          <!-- Metrics Badges Grid -->
+          <div class="report-metrics-grid">
+            <div class="report-metric metric-neutral">
+              <div class="report-metric-value">{{ report.totalRows }}</div>
+              <div class="report-metric-label">Total Rows</div>
+            </div>
+            <div class="report-metric metric-valid">
+              <div class="report-metric-value">{{ report.validCount }}</div>
+              <div class="report-metric-label">Valid Rows</div>
+            </div>
+            <div class="report-metric metric-dup">
+              <div class="report-metric-value">{{ report.duplicateCount }}</div>
+              <div class="report-metric-label">Duplicates</div>
+            </div>
+            <div class="report-metric metric-invalid">
+              <div class="report-metric-value">{{ report.invalidCount }}</div>
+              <div class="report-metric-label">Invalid Rows</div>
+            </div>
+          </div>
+
+          <!-- Invalid Rows Error Table -->
+          <div
+            v-if="report.invalidRows && report.invalidRows.length > 0"
+            class="invalid-breakdown"
+          >
+            <div class="invalid-breakdown-title">
+              Invalid Row Breakdown ({{ report.invalidRows.length }} rows
+              require correction):
+            </div>
+            <div class="table-scroll-box">
+              <table class="synonym-table stacked-mobile-table">
+                <thead>
+                  <tr>
+                    <th>Row #</th>
+                    <th>Verbatim</th>
+                    <th>Dict</th>
+                    <th>Error Detail</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    v-for="errRow in report.invalidRows"
+                    :key="errRow.rowNumber"
+                  >
+                    <td data-label="Row #" class="mono-cell">
+                      #{{ errRow.rowNumber }}
+                    </td>
+                    <td data-label="Verbatim" class="strong-cell">
+                      {{ errRow.verbatimText || "—" }}
+                    </td>
+                    <td data-label="Dict">
+                      {{ errRow.dictionaryType || "—" }}
+                    </td>
+                    <td data-label="Error Detail" class="error-cell">
+                      {{ errRow.errorReason }}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- 21 CFR Part 11 Reason For Change Input & Confirm Button -->
+          <div class="confirm-section">
+            <div class="field-group">
+              <label for="synonym-reason-for-change" class="field-label">
+                21 CFR Part 11 Reason for Change / Ingestion Justification
+                <span class="required-mark">*</span>
+              </label>
+              <input
+                id="synonym-reason-for-change"
+                v-model="reasonForChange"
+                type="text"
+                placeholder="e.g. Ingesting MedDRA 26.0 protocol verbatim synonym dictionary mappings"
+                class="form-control reason-for-change-input"
+                :disabled="!isAuthorized || codingStore.synonymImportLoading"
+              />
+            </div>
+
+            <div class="confirm-actions">
               <button
                 type="button"
-                class="validate-btn btn rounded-lg bg-indigo-600 px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-indigo-700 disabled:opacity-50"
+                class="btn btn-secondary"
+                @click="clearSelectedFile"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                class="confirm-import-btn btn btn-success"
                 :disabled="
-                  !selectedFile ||
+                  !report.canImport ||
+                  !reasonForChange.trim() ||
                   !isAuthorized ||
                   codingStore.synonymImportLoading
                 "
-                @click="runPreflightValidation"
+                @click="executeImport"
               >
-                {{
+                <CheckCircle2 :size="15" aria-hidden="true" />
+                <span>{{
                   codingStore.synonymImportLoading
-                    ? "Validating File..."
-                    : "🔍 Run Pre-flight Validation"
-                }}
+                    ? "Ingesting Synonym Rules..."
+                    : `Confirm & Ingest ${report.validCount} Valid Rules`
+                }}</span>
               </button>
             </div>
           </div>
+        </div>
+      </div>
 
-          <!-- Error Alert -->
-          <div
-            v-if="codingStore.synonymImportError"
-            class="rounded-lg border border-rose-200 bg-rose-50 p-4 text-xs text-rose-800 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-300"
+      <!-- TAB 2: AUDIT HISTORY -->
+      <div v-else-if="activeTab === 'history'" class="tab-panel">
+        <div class="panel-toolbar-row">
+          <h3 class="section-heading">Bulk Synonym Import Job Ledger</h3>
+          <button
+            type="button"
+            class="refresh-btn"
+            @click="
+              codingStore.fetchSynonymImportJobs(
+                scope === 'STUDY' ? studyId : null
+              )
+            "
           >
-            <div class="font-bold flex items-center gap-1.5">
-              <span>🛑</span> Import Error
-            </div>
-            <p class="mt-1">
-              {{ codingStore.synonymImportError }}
-            </p>
-          </div>
-
-          <!-- Pre-flight Validation Summary Report -->
-          <div
-            v-if="report"
-            class="preflight-report-card rounded-xl border border-slate-200 bg-white p-4 shadow-xs dark:border-slate-800 dark:bg-slate-900 space-y-4"
-          >
-            <div class="flex items-center justify-between">
-              <h3
-                class="text-xs font-bold uppercase tracking-wider text-slate-500"
-              >
-                3. Pre-flight Validation Summary Report
-              </h3>
-              <span
-                class="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold"
-                :class="
-                  report.canImport
-                    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
-                    : 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300'
-                "
-              >
-                {{
-                  report.canImport
-                    ? "✅ Pre-flight Passed"
-                    : "❌ Validation Failed"
-                }}
-              </span>
-            </div>
-
-            <!-- Metrics Badges Grid -->
-            <div class="grid grid-cols-4 gap-3 text-center">
-              <div class="rounded-lg bg-slate-50 p-3 dark:bg-slate-800/60">
-                <div
-                  class="text-lg font-bold text-slate-900 dark:text-slate-100"
-                >
-                  {{ report.totalRows }}
-                </div>
-                <div class="text-[10px] uppercase font-semibold text-slate-500">
-                  Total Rows
-                </div>
-              </div>
-              <div class="rounded-lg bg-emerald-50 p-3 dark:bg-emerald-950/30">
-                <div
-                  class="text-lg font-bold text-emerald-700 dark:text-emerald-400"
-                >
-                  {{ report.validCount }}
-                </div>
-                <div
-                  class="text-[10px] uppercase font-semibold text-emerald-600"
-                >
-                  Valid Rows
-                </div>
-              </div>
-              <div class="rounded-lg bg-amber-50 p-3 dark:bg-amber-950/30">
-                <div
-                  class="text-lg font-bold text-amber-700 dark:text-amber-400"
-                >
-                  {{ report.duplicateCount }}
-                </div>
-                <div class="text-[10px] uppercase font-semibold text-amber-600">
-                  Duplicates
-                </div>
-              </div>
-              <div class="rounded-lg bg-rose-50 p-3 dark:bg-rose-950/30">
-                <div class="text-lg font-bold text-rose-700 dark:text-rose-400">
-                  {{ report.invalidCount }}
-                </div>
-                <div class="text-[10px] uppercase font-semibold text-rose-600">
-                  Invalid Rows
-                </div>
-              </div>
-            </div>
-
-            <!-- Invalid Rows Error Table -->
-            <div
-              v-if="report.invalidRows && report.invalidRows.length > 0"
-              class="space-y-2"
-            >
-              <div class="text-xs font-bold text-rose-700 dark:text-rose-400">
-                Invalid Row Breakdown ({{ report.invalidRows.length }} rows
-                require correction):
-              </div>
-              <div
-                class="max-h-48 overflow-y-auto rounded-lg border border-slate-200 dark:border-slate-800"
-              >
-                <table class="w-full text-left text-[11px]">
-                  <thead
-                    class="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold"
-                  >
-                    <tr>
-                      <th class="px-3 py-1.5">Row #</th>
-                      <th class="px-3 py-1.5">Verbatim</th>
-                      <th class="px-3 py-1.5">Dict</th>
-                      <th class="px-3 py-1.5">Error Detail</th>
-                    </tr>
-                  </thead>
-                  <tbody
-                    class="divide-y divide-slate-100 dark:divide-slate-800"
-                  >
-                    <tr
-                      v-for="errRow in report.invalidRows"
-                      :key="errRow.rowNumber"
-                      class="hover:bg-slate-50 dark:hover:bg-slate-800/40"
-                    >
-                      <td
-                        class="px-3 py-1.5 font-mono font-bold text-slate-600 dark:text-slate-400"
-                      >
-                        #{{ errRow.rowNumber }}
-                      </td>
-                      <td
-                        class="px-3 py-1.5 font-medium text-slate-800 dark:text-slate-200"
-                      >
-                        {{ errRow.verbatimText || "—" }}
-                      </td>
-                      <td
-                        class="px-3 py-1.5 text-slate-600 dark:text-slate-400"
-                      >
-                        {{ errRow.dictionaryType || "—" }}
-                      </td>
-                      <td class="px-3 py-1.5 text-rose-600 dark:text-rose-400">
-                        {{ errRow.errorReason }}
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <!-- 21 CFR Part 11 Reason For Change Input & Confirm Button -->
-            <div
-              class="pt-2 border-t border-slate-200 dark:border-slate-800 space-y-3"
-            >
-              <div>
-                <label
-                  for="synonym-reason-for-change"
-                  class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1"
-                >
-                  21 CFR Part 11 Reason for Change / Ingestion Justification
-                  <span class="text-rose-500">*</span>
-                </label>
-                <input
-                  id="synonym-reason-for-change"
-                  v-model="reasonForChange"
-                  type="text"
-                  placeholder="e.g. Ingesting MedDRA 26.0 protocol verbatim synonym dictionary mappings"
-                  class="reason-for-change-input w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 focus:border-indigo-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
-                  :disabled="!isAuthorized || codingStore.synonymImportLoading"
-                />
-              </div>
-
-              <div class="flex justify-end gap-2">
-                <button
-                  type="button"
-                  class="btn rounded-lg border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-                  @click="clearSelectedFile"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  class="confirm-import-btn btn rounded-lg bg-emerald-600 px-5 py-2 text-xs font-bold text-white shadow-xs hover:bg-emerald-700 disabled:opacity-50"
-                  :disabled="
-                    !report.canImport ||
-                    !reasonForChange.trim() ||
-                    !isAuthorized ||
-                    codingStore.synonymImportLoading
-                  "
-                  @click="executeImport"
-                >
-                  {{
-                    codingStore.synonymImportLoading
-                      ? "Ingesting Synonym Rules..."
-                      : `🚀 Confirm & Ingest ${report.validCount} Valid Rules`
-                  }}
-                </button>
-              </div>
-            </div>
-          </div>
+            <RefreshCw :size="14" aria-hidden="true" />
+            <span>Refresh</span>
+          </button>
         </div>
 
-        <!-- TAB 2: AUDIT HISTORY -->
-        <div v-else-if="activeTab === 'history'" class="space-y-4">
-          <div class="flex items-center justify-between">
-            <h3
-              class="text-xs font-bold uppercase tracking-wider text-slate-500"
-            >
-              Bulk Synonym Import Job Ledger
-            </h3>
-            <button
-              type="button"
-              class="text-xs text-indigo-600 hover:underline dark:text-indigo-400"
-              @click="
-                codingStore.fetchSynonymImportJobs(
-                  scope === 'STUDY' ? studyId : null
-                )
-              "
-            >
-              🔄 Refresh
-            </button>
-          </div>
-
-          <div
-            v-if="codingStore.synonymImportJobs.length === 0"
-            class="rounded-xl border border-slate-200 bg-slate-50 p-8 text-center text-xs text-slate-500 dark:border-slate-800 dark:bg-slate-900/50"
-          >
-            No previous bulk synonym import jobs recorded for this scope.
-          </div>
-
-          <div
-            v-else
-            class="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800"
-          >
-            <table class="w-full text-left text-xs">
-              <thead
-                class="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold"
-              >
-                <tr>
-                  <th class="px-3 py-2">File / Hash</th>
-                  <th class="px-3 py-2">Scope</th>
-                  <th class="px-3 py-2">Metrics</th>
-                  <th class="px-3 py-2">Status</th>
-                  <th class="px-3 py-2">Created By / Date</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-slate-200 dark:divide-slate-800">
-                <tr
-                  v-for="job in codingStore.synonymImportJobs"
-                  :key="job.id"
-                  class="hover:bg-slate-50 dark:hover:bg-slate-800/40"
-                >
-                  <td class="px-3 py-2.5">
-                    <div class="font-bold text-slate-900 dark:text-slate-100">
-                      {{ job.fileName }}
-                    </div>
-                    <div
-                      class="font-mono text-[10px] text-slate-400 truncate max-w-[160px]"
-                    >
-                      {{ job.fileHash }}
-                    </div>
-                  </td>
-                  <td class="px-3 py-2.5">
-                    <span
-                      class="inline-block rounded-xs px-1.5 py-0.5 text-[10px] font-bold"
-                      :class="
-                        job.scope === 'ENTERPRISE'
-                          ? 'bg-purple-100 text-purple-800 dark:bg-purple-950/60 dark:text-purple-300'
-                          : 'bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300'
-                      "
-                    >
-                      {{ job.scope
-                      }}{{ job.studyId ? ` (${job.studyId})` : "" }}
-                    </span>
-                  </td>
-                  <td class="px-3 py-2.5">
-                    <div class="text-[11px]">
-                      <span class="font-bold text-emerald-600"
-                        >{{ job.validRows }} valid</span
-                      >
-                      /
-                      <span class="text-amber-600"
-                        >{{ job.duplicateRows }} dup</span
-                      >
-                      /
-                      <span class="text-rose-600"
-                        >{{ job.invalidRows }} err</span
-                      >
-                    </div>
-                    <div class="text-[10px] text-slate-400">
-                      Total: {{ job.totalRows }} rows
-                    </div>
-                  </td>
-                  <td class="px-3 py-2.5">
-                    <span
-                      class="inline-block rounded-full px-2 py-0.5 text-[10px] font-bold"
-                      :class="
-                        job.status === 'COMPLETED'
-                          ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
-                          : 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300'
-                      "
-                    >
-                      {{ job.status }}
-                    </span>
-                  </td>
-                  <td
-                    class="px-3 py-2.5 text-slate-600 dark:text-slate-400 text-[11px]"
-                  >
-                    <div>{{ job.createdBy }}</div>
-                    <div class="text-[10px] text-slate-400">
-                      {{ formatDate(job.createdAt) }}
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+        <div
+          v-if="codingStore.synonymImportJobs.length === 0"
+          class="empty-ledger-card"
+        >
+          No previous bulk synonym import jobs recorded for this scope.
         </div>
 
-        <!-- TAB 3: ACTIVE RULES -->
-        <div v-else-if="activeTab === 'rules'" class="space-y-4">
-          <div class="flex items-center justify-between">
-            <h3
-              class="text-xs font-bold uppercase tracking-wider text-slate-500"
-            >
-              Active Synonym Rules Store
-            </h3>
-            <button
-              type="button"
-              class="text-xs text-indigo-600 hover:underline dark:text-indigo-400"
-              @click="codingStore.fetchActiveSynonymRules(studyId)"
-            >
-              🔄 Refresh Rules
-            </button>
-          </div>
-
-          <div
-            v-if="codingStore.synonymRules.length === 0"
-            class="rounded-xl border border-slate-200 bg-slate-50 p-8 text-center text-xs text-slate-500 dark:border-slate-800 dark:bg-slate-900/50"
-          >
-            No active synonym rules configured for this study or enterprise
-            scope.
-          </div>
-
-          <div
-            v-else
-            class="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800"
-          >
-            <table class="w-full text-left text-xs">
-              <thead
-                class="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold"
-              >
-                <tr>
-                  <th class="px-3 py-2">Verbatim</th>
-                  <th class="px-3 py-2">Target Term & Code</th>
-                  <th class="px-3 py-2">Scope</th>
-                  <th class="px-3 py-2">Dict</th>
-                  <th class="px-3 py-2 text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-slate-200 dark:divide-slate-800">
-                <tr
-                  v-for="rule in codingStore.synonymRules"
-                  :key="rule.id"
-                  class="hover:bg-slate-50 dark:hover:bg-slate-800/40"
-                >
-                  <td
-                    class="px-3 py-2.5 font-bold text-slate-900 dark:text-slate-100"
+        <div v-else class="table-scroll-box">
+          <table class="synonym-table stacked-mobile-table">
+            <thead>
+              <tr>
+                <th>File / Hash</th>
+                <th>Scope</th>
+                <th>Metrics</th>
+                <th>Status</th>
+                <th>Created By / Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="job in codingStore.synonymImportJobs" :key="job.id">
+                <td data-label="File / Hash">
+                  <div class="strong-cell">{{ job.fileName }}</div>
+                  <div class="hash-subtext">{{ job.fileHash }}</div>
+                </td>
+                <td data-label="Scope">
+                  <span
+                    class="scope-badge"
+                    :class="
+                      job.scope === 'ENTERPRISE'
+                        ? 'scope-enterprise'
+                        : 'scope-study'
+                    "
                   >
-                    {{ rule.verbatim_text || rule.verbatimText }}
-                  </td>
-                  <td class="px-3 py-2.5">
-                    <div class="font-medium text-slate-800 dark:text-slate-200">
-                      {{ rule.target_term || rule.targetTerm }}
-                    </div>
-                    <div class="font-mono text-[10px] text-slate-400">
-                      {{ rule.target_code || rule.targetCode }}
-                      {{
-                        rule.target_level || rule.targetLevel
-                          ? `(${rule.target_level || rule.targetLevel})`
-                          : ""
-                      }}
-                    </div>
-                  </td>
-                  <td class="px-3 py-2.5">
-                    <span
-                      class="inline-block rounded-xs px-1.5 py-0.5 text-[10px] font-bold"
-                      :class="
-                        (rule.scope || '').toUpperCase() === 'ENTERPRISE'
-                          ? 'bg-purple-100 text-purple-800 dark:bg-purple-950/60 dark:text-purple-300'
-                          : 'bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300'
-                      "
-                    >
-                      {{ rule.scope
-                      }}{{
-                        rule.study_id || rule.studyId
-                          ? ` (${rule.study_id || rule.studyId})`
-                          : ""
-                      }}
-                    </span>
-                  </td>
-                  <td
-                    class="px-3 py-2.5 text-slate-600 dark:text-slate-400 text-[11px]"
+                    {{ job.scope }}{{ job.studyId ? ` (${job.studyId})` : "" }}
+                  </span>
+                </td>
+                <td data-label="Metrics">
+                  <div class="job-metrics-inline">
+                    <span class="text-valid">{{ job.validRows }} valid</span> /
+                    <span class="text-dup">{{ job.duplicateRows }} dup</span> /
+                    <span class="text-invalid">{{ job.invalidRows }} err</span>
+                  </div>
+                  <div class="subtle-meta">Total: {{ job.totalRows }} rows</div>
+                </td>
+                <td data-label="Status">
+                  <span
+                    class="preflight-status-pill"
+                    :class="
+                      job.status === 'COMPLETED' ? 'pill-passed' : 'pill-failed'
+                    "
                   >
-                    {{ rule.dictionary_type || rule.dictionaryType }}
-                    {{ rule.dictionary_version || rule.dictionaryVersion }}
-                  </td>
-                  <td class="px-3 py-2.5 text-right">
-                    <button
-                      type="button"
-                      class="deactivate-rule-btn text-xs font-semibold text-rose-600 hover:underline dark:text-rose-400 disabled:opacity-50"
-                      :disabled="
-                        !isAuthorized || codingStore.synonymImportLoading
-                      "
-                      @click="deactivateRule(rule)"
-                    >
-                      Deactivate
-                    </button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+                    {{ job.status }}
+                  </span>
+                </td>
+                <td data-label="Created By / Date">
+                  <div>{{ job.createdBy }}</div>
+                  <div class="subtle-meta">{{ formatDate(job.createdAt) }}</div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- TAB 3: ACTIVE RULES -->
+      <div v-else-if="activeTab === 'rules'" class="tab-panel">
+        <div class="panel-toolbar-row">
+          <h3 class="section-heading">Active Synonym Rules Store</h3>
+          <button
+            type="button"
+            class="refresh-btn"
+            @click="codingStore.fetchActiveSynonymRules(studyId)"
+          >
+            <RefreshCw :size="14" aria-hidden="true" />
+            <span>Refresh Rules</span>
+          </button>
+        </div>
+
+        <div
+          v-if="codingStore.synonymRules.length === 0"
+          class="empty-ledger-card"
+        >
+          No active synonym rules configured for this study or enterprise scope.
+        </div>
+
+        <div v-else class="table-scroll-box">
+          <table class="synonym-table stacked-mobile-table">
+            <thead>
+              <tr>
+                <th>Verbatim</th>
+                <th>Target Term &amp; Code</th>
+                <th>Scope</th>
+                <th>Dict</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="rule in codingStore.synonymRules" :key="rule.id">
+                <td data-label="Verbatim" class="strong-cell">
+                  {{ rule.verbatim_text || rule.verbatimText }}
+                </td>
+                <td data-label="Target Term & Code">
+                  <div class="strong-cell">
+                    {{ rule.target_term || rule.targetTerm }}
+                  </div>
+                  <div class="mono-cell subtle-meta">
+                    {{ rule.target_code || rule.targetCode }}
+                    {{
+                      rule.target_level || rule.targetLevel
+                        ? `(${rule.target_level || rule.targetLevel})`
+                        : ""
+                    }}
+                  </div>
+                </td>
+                <td data-label="Scope">
+                  <span
+                    class="scope-badge"
+                    :class="
+                      (rule.scope || '').toUpperCase() === 'ENTERPRISE'
+                        ? 'scope-enterprise'
+                        : 'scope-study'
+                    "
+                  >
+                    {{ rule.scope
+                    }}{{
+                      rule.study_id || rule.studyId
+                        ? ` (${rule.study_id || rule.studyId})`
+                        : ""
+                    }}
+                  </span>
+                </td>
+                <td data-label="Dict">
+                  {{ rule.dictionary_type || rule.dictionaryType }}
+                  {{ rule.dictionary_version || rule.dictionaryVersion }}
+                </td>
+                <td data-label="Action">
+                  <button
+                    type="button"
+                    class="deactivate-rule-btn"
+                    :disabled="
+                      !isAuthorized || codingStore.synonymImportLoading
+                    "
+                    @click="deactivateRule(rule)"
+                  >
+                    Deactivate
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
-  </div>
+  </ClinicalDrawer>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from "vue";
-import { ClinicalDropzone, useFocusTrap } from "ui";
+import { ClinicalDrawer, ClinicalDropzone } from "ui";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  FileSpreadsheet,
+  FolderDown,
+  FolderInput,
+  History,
+  OctagonAlert,
+  RefreshCw,
+  Search,
+  UploadCloud,
+  X,
+  XCircle,
+  Zap,
+} from "lucide-vue-next";
 import { useConfirmDialog } from "../composables/useConfirmDialog.js";
 import { useCodingStore } from "../stores/coding.js";
 import { useAuthStore } from "../stores/auth.js";
@@ -661,7 +547,6 @@ const codingStore = useCodingStore();
 const authStore = useAuthStore();
 const toastStore = useToastStore();
 const { promptDialog } = useConfirmDialog();
-const drawerRef = ref(null);
 
 const activeTab = ref("import"); // 'import' | 'history' | 'rules'
 const scope = ref("STUDY");
@@ -683,11 +568,6 @@ const report = computed(() => codingStore.synonymPreflightReport);
 function close() {
   codingStore.closeSynonymDrawer();
 }
-
-useFocusTrap(drawerRef, {
-  isOpen: () => codingStore.isSynonymDrawerOpen,
-  onEscape: close,
-});
 
 function onSynonymFileSelected(file) {
   if (!isAuthorized.value || codingStore.synonymImportLoading || !file) return;
@@ -794,3 +674,518 @@ onMounted(() => {
   codingStore.fetchActiveSynonymRules(studyId.value);
 });
 </script>
+
+<style scoped src="./shared/drawerHeaderChrome.css"></style>
+
+<style scoped>
+.header-icon {
+  color: var(--semantic-color-primary);
+}
+
+@media (max-height: 540px) {
+  .close-btn {
+    min-width: 36px;
+    min-height: 36px;
+  }
+}
+
+.synonym-drawer-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.drawer-subtitle {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--semantic-color-text-secondary);
+  line-height: 1.4;
+}
+
+.synonym-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  border-bottom: 1px solid var(--semantic-color-border);
+  padding-bottom: 8px;
+}
+
+.synonym-tab-btn {
+  flex: 1 1 140px;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--semantic-color-border);
+  border-radius: 6px;
+  background-color: var(--semantic-color-surface-muted);
+  color: var(--semantic-color-text-secondary);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+
+.synonym-tab-btn.active {
+  background-color: var(--semantic-color-primary);
+  border-color: var(--semantic-color-primary);
+  color: var(--semantic-color-text-inverse);
+}
+
+.access-restricted-banner,
+.import-error-alert {
+  border-radius: 8px;
+  padding: 12px 14px;
+  font-size: 0.8125rem;
+}
+
+.access-restricted-banner {
+  background-color: var(--semantic-color-warning-bg-soft);
+  border: 1px solid var(--semantic-color-warning-border);
+  color: var(--semantic-color-warning-dark);
+}
+
+.import-error-alert {
+  background-color: var(--semantic-color-error-bg-soft);
+  border: 1px solid var(--semantic-color-error-border);
+  color: var(--semantic-color-error-text-dark);
+}
+
+.banner-heading {
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.banner-body {
+  margin: 0;
+  line-height: 1.45;
+}
+
+.tab-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.section-card {
+  border: 1px solid var(--semantic-color-border);
+  background-color: var(--semantic-color-surface);
+  border-radius: 8px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.section-heading {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--semantic-color-text-secondary);
+}
+
+.config-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.field-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--semantic-color-text-body);
+}
+
+.required-mark {
+  color: var(--semantic-color-error);
+}
+
+.form-control {
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--semantic-color-border-control);
+  border-radius: 6px;
+  background-color: var(--semantic-color-surface);
+  color: var(--semantic-color-text);
+  font-size: 1rem;
+  box-sizing: border-box;
+}
+
+.dropzone {
+  border: 2px dashed var(--semantic-color-border-control);
+  border-radius: 8px;
+  padding: 18px;
+  text-align: center;
+  background-color: var(--semantic-color-surface-muted);
+}
+
+.dropzone-prompt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8125rem;
+  color: var(--semantic-color-text-body);
+}
+
+.dropzone-hint {
+  font-size: 0.75rem;
+  color: var(--semantic-color-text-secondary);
+  word-break: break-word;
+}
+
+.selected-file-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+}
+
+.selected-file-name {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--semantic-color-text);
+  word-break: break-all;
+}
+
+.selected-file-size {
+  font-size: 0.75rem;
+  color: var(--semantic-color-text-secondary);
+}
+
+.card-actions-end {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.btn {
+  min-height: 44px;
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid transparent;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background-color: var(--semantic-color-primary);
+  color: var(--semantic-color-text-inverse);
+}
+
+.btn-secondary {
+  background-color: var(--semantic-color-surface);
+  border-color: var(--semantic-color-border-control);
+  color: var(--semantic-color-text);
+}
+
+.btn-success {
+  background-color: var(--semantic-color-success);
+  color: var(--semantic-color-surface);
+}
+
+.report-header-row,
+.panel-toolbar-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.preflight-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.pill-passed {
+  background-color: var(--semantic-color-success-bg);
+  color: var(--semantic-color-success-dark);
+}
+
+.pill-failed {
+  background-color: var(--semantic-color-error-bg);
+  color: var(--semantic-color-error-text-dark);
+}
+
+.report-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  text-align: center;
+}
+
+.report-metric {
+  border-radius: 8px;
+  padding: 10px;
+  border: 1px solid var(--semantic-color-border);
+}
+
+.metric-neutral {
+  background-color: var(--semantic-color-surface-muted);
+}
+
+.metric-valid {
+  background-color: var(--semantic-color-success-bg-soft);
+}
+
+.metric-dup {
+  background-color: var(--semantic-color-warning-bg-soft);
+}
+
+.metric-invalid {
+  background-color: var(--semantic-color-error-bg-soft);
+}
+
+.report-metric-value {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--semantic-color-text);
+}
+
+.report-metric-label {
+  font-size: var(--font-size-2xs);
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--semantic-color-text-secondary);
+}
+
+.invalid-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.invalid-breakdown-title {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--semantic-color-error-text-dark);
+}
+
+.table-scroll-box {
+  border: 1px solid var(--semantic-color-border);
+  border-radius: 8px;
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+.synonym-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+  text-align: left;
+}
+
+.synonym-table th,
+.synonym-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--semantic-color-border);
+  vertical-align: top;
+}
+
+.synonym-table th {
+  background-color: var(--semantic-color-surface-muted);
+  font-weight: 600;
+  color: var(--semantic-color-text-body);
+}
+
+.mono-cell {
+  font-family: var(--semantic-font-mono);
+}
+
+.strong-cell {
+  font-weight: 700;
+  color: var(--semantic-color-text);
+  word-break: break-word;
+}
+
+.error-cell {
+  color: var(--semantic-color-error-text-dark);
+}
+
+.hash-subtext {
+  font-family: var(--semantic-font-mono);
+  font-size: var(--font-size-2xs);
+  color: var(--semantic-color-text-secondary);
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scope-badge {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: var(--font-size-2xs);
+  font-weight: 700;
+}
+
+.scope-enterprise {
+  background-color: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-dark);
+}
+
+.scope-study {
+  background-color: var(--semantic-color-info-bg);
+  color: var(--semantic-color-primary);
+}
+
+.job-metrics-inline {
+  font-size: 0.75rem;
+}
+
+.text-valid {
+  font-weight: 700;
+  color: var(--semantic-color-success-dark);
+}
+
+.text-dup {
+  color: var(--semantic-color-warning-dark);
+}
+
+.text-invalid {
+  color: var(--semantic-color-error-text-dark);
+}
+
+.subtle-meta {
+  font-size: var(--font-size-2xs);
+  color: var(--semantic-color-text-secondary);
+}
+
+.confirm-section {
+  border-top: 1px solid var(--semantic-color-border);
+  padding-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.refresh-btn,
+.deactivate-rule-btn {
+  min-height: 44px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--semantic-color-border-control);
+  background-color: var(--semantic-color-surface);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.refresh-btn {
+  color: var(--semantic-color-primary);
+}
+
+.deactivate-rule-btn {
+  color: var(--semantic-color-error);
+}
+
+.deactivate-rule-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.empty-ledger-card {
+  border: 1px dashed var(--semantic-color-border-control);
+  background-color: var(--semantic-color-surface-muted);
+  border-radius: 8px;
+  padding: 24px 16px;
+  text-align: center;
+  font-size: 0.8125rem;
+  color: var(--semantic-color-text-secondary);
+}
+
+@media (max-width: 640px) {
+  .config-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .report-metrics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .confirm-actions,
+  .card-actions-end {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .confirm-actions .btn,
+  .card-actions-end .btn {
+    width: 100%;
+  }
+
+  .stacked-mobile-table,
+  .stacked-mobile-table tbody,
+  .stacked-mobile-table tr,
+  .stacked-mobile-table td {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .stacked-mobile-table thead {
+    display: none;
+  }
+
+  .stacked-mobile-table tr {
+    padding: 10px;
+    border-bottom: 1px solid var(--semantic-color-border);
+  }
+
+  .stacked-mobile-table td {
+    border-bottom: none;
+    padding: 4px 0;
+  }
+
+  .stacked-mobile-table td::before {
+    content: attr(data-label) ": ";
+    font-weight: 700;
+    color: var(--semantic-color-text-secondary);
+  }
+}
+</style>

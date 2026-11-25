@@ -242,4 +242,50 @@ describe("Drawer Responsiveness & Viewport Tokens", () => {
       });
     });
   });
+
+  describe("Requirement 6 & ADR-2674: Bounded ClinicalDrawer Adoption Across All 13 Web Drawers", () => {
+    it("renders all 13 *Drawer.vue components in apps/web/src/components through ClinicalDrawer with bounded body scroll", () => {
+      const drawerPaths = [
+        "components/ContextualHelpDrawer.vue",
+        "components/OnboardingChecklistDrawer.vue",
+        "components/SynonymImportDrawer.vue",
+        "components/UpversioningImpactDrawer.vue",
+        "components/clinical/BulkIpKitReconciliationDrawer.vue",
+        "components/clinical/EhrReconciliationDrawer.vue",
+        "components/clinical/UsdmConceptStagingDrawer.vue",
+        "components/econsent/QuizTemplateDrawer.vue",
+        "components/econsent/ReadabilityDrawer.vue",
+        "components/etmf/BatchUploadDrawer.vue",
+        "components/etmf/ExportJobDrawer.vue",
+        "components/fileshare/ShareDrawer.vue",
+        "components/tickets/TicketDetailDrawer.vue",
+      ];
+
+      for (const relPath of drawerPaths) {
+        const src = fs.readFileSync(path.join(webSrcDir, relPath), "utf-8");
+        expect(src, `${relPath} must use <ClinicalDrawer`).toContain(
+          "<ClinicalDrawer"
+        );
+        expect(src, `${relPath} must not use #subheader slot`).not.toContain(
+          "#subheader"
+        );
+      }
+
+      const bulkSrc = fs.readFileSync(
+        path.join(
+          webSrcDir,
+          "components/clinical/BulkIpKitReconciliationDrawer.vue"
+        ),
+        "utf-8"
+      );
+      expect(bulkSrc).toContain("@media (max-width: 480px)");
+      expect(bulkSrc).toContain("attr(data-label)");
+
+      const synonymSrc = fs.readFileSync(
+        path.join(webSrcDir, "components/SynonymImportDrawer.vue"),
+        "utf-8"
+      );
+      expect(synonymSrc).not.toContain("fixed inset-0");
+    });
+  });
 });
