@@ -373,27 +373,6 @@ internal sealed class KernelAuthorityStore(
         """;
 
     private const string ObservationClassificationSql = """
-        WITH requested_obs AS (
-            SELECT
-                o.id,
-                o.tenant_id,
-                o.study_id,
-                o.enrollment_id,
-                o.concept_id,
-                o.value::text AS value_json
-            FROM kernel.observations AS o
-            WHERE o.tenant_id = @tenant AND o.id = ANY(@ids)
-        ),
-        study_protocols AS (
-            SELECT
-                ds.study_id,
-                COALESCE(
-                    (SELECT jsonb_agg(to_jsonb(pv.content))::text
-                     FROM kernel.protocol_versions AS pv
-                     WHERE pv.tenant_id = @tenant AND pv.study_id = ds.study_id),
-                    '[]') AS protocol_contents_json
-            FROM (SELECT DISTINCT study_id FROM requested_obs) AS ds
-        )
         SELECT
             o.id AS "Id",
             s.sponsor_id AS "OrganizationId",
@@ -401,14 +380,13 @@ internal sealed class KernelAuthorityStore(
             ss_site.country AS "Country",
             ss.id AS "StudySiteId",
             o.concept_id AS "ConceptId",
-            o.value_json AS "ValueJson",
+            CASE WHEN @includeAllValues OR o.value ->> 'type' = 'missing' THEN o.value::text END AS "ValueJson",
             c.external_code AS "ConceptExternalCode",
             c.preferred_label AS "ConceptPreferredLabel",
             c.definition AS "ConceptDefinition",
             ci.collection_spec_id AS "CollectionSpecId",
-            cim.item_id AS "ItemId",
-            COALESCE(sp.protocol_contents_json, '[]') AS "ProtocolContentsJson"
-        FROM requested_obs AS o
+            cim.item_id AS "ItemId"
+        FROM kernel.observations AS o
         JOIN kernel.studies AS s
             ON s.tenant_id = o.tenant_id AND s.id = o.study_id
         LEFT JOIN kernel.enrollments AS e
@@ -423,8 +401,7 @@ internal sealed class KernelAuthorityStore(
             ON cim.tenant_id = o.tenant_id AND cim.observation_id = o.id
         LEFT JOIN kernel.collection_instances AS ci
             ON ci.tenant_id = cim.tenant_id AND ci.id = cim.collection_instance_id
-        LEFT JOIN study_protocols AS sp
-            ON sp.study_id = o.study_id
+        WHERE o.tenant_id = @tenant AND o.id = ANY(@ids)
         """;
 
     private const string FindingTargetSiteJoinsSql = """
@@ -520,62 +497,6 @@ internal sealed class KernelAuthorityStore(
                 ON r.tenant_id = d.tenant_id AND r.id = d.run_id
             WHERE d.tenant_id = @tenant AND d.finding_id = ANY(@ids)
             ORDER BY d.finding_id, r.completed_at DESC, r.created_at DESC, r.id DESC
-        ),
-        study_protocols AS (
-            SELECT
-                ds.study_id,
-                COALESCE(
-                    (SELECT jsonb_agg(to_jsonb(pv.content))::text
-                     FROM kernel.protocol_versions AS pv
-                     WHERE pv.tenant_id = @tenant AND pv.study_id = ds.study_id),
-                    '[]') AS protocol_contents_json,
-                COALESCE(
-                    (SELECT jsonb_agg(jsonb_build_object(
-                        'id', c.id,
-                        'externalCode', c.external_code,
-                        'preferredLabel', c.preferred_label,
-                        'definition', c.definition))::text
-                     FROM (
-                         SELECT DISTINCT (m[1])::uuid AS concept_id
-                         FROM kernel.protocol_versions AS pv,
-                              LATERAL regexp_matches(pv.content, '"conceptId"\s*:\s*"({UuidPatternSql})"', 'gi') AS m
-                         WHERE pv.tenant_id = @tenant AND pv.study_id = ds.study_id
-                     ) AS pc
-                     JOIN kernel.concepts AS c
-                         ON c.tenant_id = @tenant AND c.id = pc.concept_id),
-                    '[]') AS study_concepts_json
-            FROM (SELECT DISTINCT study_id FROM detected) AS ds
-        ),
-        enrollment_siblings AS (
-            SELECT
-                ef.enrollment_id,
-                COALESCE(
-                    (SELECT jsonb_agg(jsonb_build_object(
-                        'formId', sib.id,
-                        'collectionSpecId', sib.collection_spec_id,
-                        'itemId', cim.item_id,
-                        'observationId', obs.id,
-                        'conceptId', obs.concept_id,
-                        'valueJson', obs.value::text,
-                        'conceptExternalCode', c.external_code,
-                        'conceptPreferredLabel', c.preferred_label,
-                        'conceptDefinition', c.definition))::text
-                     FROM kernel.collection_instances AS sib
-                     JOIN kernel.collection_instance_members AS cim
-                         ON cim.tenant_id = sib.tenant_id AND cim.collection_instance_id = sib.id
-                     JOIN kernel.observations AS obs
-                         ON obs.tenant_id = cim.tenant_id AND obs.id = cim.observation_id
-                     LEFT JOIN kernel.concepts AS c
-                         ON c.tenant_id = obs.tenant_id AND c.id = obs.concept_id
-                     WHERE sib.tenant_id = @tenant AND sib.enrollment_id = ef.enrollment_id),
-                    '[]') AS members_json
-            FROM (
-                SELECT DISTINCT vf_ci.enrollment_id
-                FROM detected AS d
-                JOIN kernel.collection_instances AS vf_ci
-                    ON d.collection_instance_id IS NOT NULL
-                   AND vf_ci.tenant_id = d.tenant_id AND vf_ci.id = d.collection_instance_id AND vf_ci.study_id = d.study_id
-            ) AS ef
         )
         SELECT
             d.finding_id AS "Id",
@@ -590,6 +511,7 @@ internal sealed class KernelAuthorityStore(
             d.observed_json AS "ObservedJson",
             vf_ci.id AS "TargetFormId",
             vf_ci.collection_spec_id AS "TargetFormSpecId",
+            vf_ci.enrollment_id AS "TargetFormEnrollmentId",
             vf_obs.id AS "TargetObservationId",
             vf_obs.concept_id AS "TargetObsConceptId",
             vf_obs.value::text AS "TargetObsValueJson",
@@ -597,10 +519,7 @@ internal sealed class KernelAuthorityStore(
             vf_obs_c.preferred_label AS "TargetObsConceptPreferredLabel",
             vf_obs_c.definition AS "TargetObsConceptDefinition",
             vf_obs_ci.collection_spec_id AS "TargetObsSpecId",
-            vf_obs_cim.item_id AS "TargetObsItemId",
-            COALESCE(sp.protocol_contents_json, '[]') AS "ProtocolContentsJson",
-            COALESCE(sp.study_concepts_json, '[]') AS "StudyConceptsJson",
-            COALESCE(es.members_json, '[]') AS "SiblingMembersJson"
+            vf_obs_cim.item_id AS "TargetObsItemId"
         FROM detected AS d
         JOIN kernel.studies AS s
             ON s.tenant_id = d.tenant_id AND s.id = d.study_id
@@ -617,10 +536,29 @@ internal sealed class KernelAuthorityStore(
             ON vf_obs.id IS NOT NULL AND vf_obs_cim.tenant_id = vf_obs.tenant_id AND vf_obs_cim.observation_id = vf_obs.id
         LEFT JOIN kernel.collection_instances AS vf_obs_ci
             ON vf_obs_cim.id IS NOT NULL AND vf_obs_ci.tenant_id = vf_obs_cim.tenant_id AND vf_obs_ci.id = vf_obs_cim.collection_instance_id
-        LEFT JOIN study_protocols AS sp
-            ON sp.study_id = d.study_id
-        LEFT JOIN enrollment_siblings AS es
-            ON vf_ci.id IS NOT NULL AND es.enrollment_id = vf_ci.enrollment_id
+        """;
+
+    private const string EnrollmentSiblingMembersSql = """
+        SELECT
+            sib.enrollment_id AS "EnrollmentId",
+            sib.study_id AS "StudyId",
+            sib.id AS "FormId",
+            sib.collection_spec_id AS "CollectionSpecId",
+            cim.item_id AS "ItemId",
+            obs.id AS "ObservationId",
+            obs.concept_id AS "ConceptId",
+            obs.value::text AS "ValueJson",
+            c.external_code AS "ConceptExternalCode",
+            c.preferred_label AS "ConceptPreferredLabel",
+            c.definition AS "ConceptDefinition"
+        FROM kernel.collection_instances AS sib
+        JOIN kernel.collection_instance_members AS cim
+            ON cim.tenant_id = sib.tenant_id AND cim.collection_instance_id = sib.id
+        JOIN kernel.observations AS obs
+            ON obs.tenant_id = cim.tenant_id AND obs.id = cim.observation_id
+        LEFT JOIN kernel.concepts AS c
+            ON c.tenant_id = obs.tenant_id AND c.id = obs.concept_id
+        WHERE sib.tenant_id = @tenant AND sib.enrollment_id = ANY(@enrollmentIds)
         """;
 
     private const string AttestationPathsSql = $"""
@@ -830,8 +768,9 @@ internal sealed class KernelAuthorityStore(
             return new Dictionary<NodeRef, EvidenceNodeClassification>();
         }
 
-        var resolvedPaths = new Dictionary<(string Kind, Guid Id), ScopePath>();
-        var resolvedEvidence = new Dictionary<(string Kind, Guid Id), EvidenceNodeClassification>();
+        var expectedEvidenceCount = obsIds.Length + findingIds.Length + assertionIds.Count + formQueryIds.Count;
+        var resolvedPaths = new Dictionary<(string Kind, Guid Id), ScopePath>(expectedEvidenceCount);
+        var resolvedEvidence = new Dictionary<(string Kind, Guid Id), EvidenceNodeClassification>(expectedEvidenceCount);
         await using var db = contexts.Create(tenant);
         await db.Database.OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
         try
@@ -853,7 +792,7 @@ internal sealed class KernelAuthorityStore(
             await db.Database.CloseConnectionAsync().ConfigureAwait(false);
         }
 
-        var result = new Dictionary<NodeRef, EvidenceNodeClassification>();
+        var result = new Dictionary<NodeRef, EvidenceNodeClassification>(distinct.Count);
         foreach (var node in distinct)
         {
             if (resolvedEvidence.TryGetValue((node.Kind, node.Id), out var info))
@@ -882,7 +821,7 @@ internal sealed class KernelAuthorityStore(
             .GroupBy(r => r.Kind, StringComparer.Ordinal)
             .ToList();
 
-        var resolvedPaths = new Dictionary<(string Kind, Guid Id), ScopePath>();
+        var resolvedPaths = new Dictionary<(string Kind, Guid Id), ScopePath>(distinct.Count);
         var resolvedEvidence = new Dictionary<(string Kind, Guid Id), EvidenceNodeClassification>();
         var dummyPotentiallyBlinded = new HashSet<NodeRef>();
         if (byKind.Count > 0)
@@ -1054,24 +993,45 @@ internal sealed class KernelAuthorityStore(
             }
         }
 
-        if (extraObsGuids.Count > 0)
+        var obsRows = extraObsGuids.Count > 0
+            ? await QueryObservationClassificationRowsAsync(db, tenant, [.. extraObsGuids], cancellationToken).ConfigureAwait(false)
+            : [];
+        var findingRows = requestedFindingIds.Length > 0
+            ? await QueryValidationFindingClassificationRowsAsync(db, tenant, requestedFindingIds, cancellationToken).ConfigureAwait(false)
+            : [];
+
+        var distinctStudyIds = new HashSet<StudyId>();
+        foreach (var row in obsRows)
         {
-            await LoadObservationClassificationsAsync(
-                    db,
-                    tenant,
-                    [.. extraObsGuids],
-                    resolvedPaths,
-                    resolvedEvidence,
-                    cancellationToken)
-                .ConfigureAwait(false);
+            if (row.StudyId is { } studyGuid)
+            {
+                distinctStudyIds.Add(StudyId.FromGuid(studyGuid));
+            }
         }
 
-        if (requestedFindingIds.Length > 0)
+        foreach (var row in findingRows)
+        {
+            if (row.StudyId is { } studyGuid)
+            {
+                distinctStudyIds.Add(StudyId.FromGuid(studyGuid));
+            }
+        }
+
+        var designsByStudy = await LoadStudyDesignsAsync(db, tenant, distinctStudyIds, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (obsRows.Count > 0)
+        {
+            ClassifyObservationRows(obsRows, designsByStudy, resolvedPaths, resolvedEvidence);
+        }
+
+        if (findingRows.Count > 0)
         {
             await LoadValidationFindingClassificationsAsync(
                     db,
                     tenant,
-                    requestedFindingIds,
+                    findingRows,
+                    designsByStudy,
                     resolvedPaths,
                     resolvedEvidence,
                     cancellationToken)
@@ -1200,52 +1160,28 @@ internal sealed class KernelAuthorityStore(
         }
     }
 
-    private async Task LoadObservationClassificationsAsync(
+    private Task<List<ObservationClassificationRow>> QueryObservationClassificationRowsAsync(
         KernelDbContext db,
         TenantId tenant,
         Guid[] rawIds,
-        Dictionary<(string Kind, Guid Id), ScopePath> resolvedPaths,
-        Dictionary<(string Kind, Guid Id), EvidenceNodeClassification> resolvedEvidence,
         CancellationToken ct)
     {
+        var includeAllValues = !ReferenceEquals(_blinding, BlindedTreatmentClassifier.Instance);
         object[] parameters =
         [
             new NpgsqlParameter<Guid>("tenant", tenant.Value),
             new NpgsqlParameter<Guid[]>("ids", rawIds),
+            new NpgsqlParameter<bool>("includeAllValues", includeAllValues),
         ];
-        var rows = await db.Database
+        return db.Database
             .SqlQueryRaw<ObservationClassificationRow>(ObservationClassificationSql, parameters)
-            .ToListAsync(ct)
-            .ConfigureAwait(false);
-
-        var designsByStudy = new Dictionary<Guid, IReadOnlyList<ProtocolDesign>>();
-        foreach (var row in rows)
-        {
-            var scope = row.ToScopePath() ?? ScopePath.TenantWide;
-            resolvedPaths[(NodeKinds.Observation, row.Id)] = scope;
-
-            var designs = GetParsedDesigns(row.StudyId, row.ProtocolContentsJson, designsByStudy);
-            var value = JsonSerializer.Deserialize<ObservationValue>(row.ValueJson, WebJsonOptions);
-            BlindedConceptMetadata? concept = row.ConceptPreferredLabel is not null
-                ? new BlindedConceptMetadata(row.ConceptExternalCode, row.ConceptPreferredLabel, row.ConceptDefinition)
-                : null;
-            var isBlinded = _blinding.IsBlindedObservation(
-                ConceptId.FromGuid(row.ConceptId),
-                value,
-                concept,
-                row.CollectionSpecId,
-                row.ItemId,
-                designs);
-            resolvedEvidence[(NodeKinds.Observation, row.Id)] = new EvidenceNodeClassification(scope, isBlinded);
-        }
+            .ToListAsync(ct);
     }
 
-    private async Task LoadValidationFindingClassificationsAsync(
+    private static Task<List<ValidationFindingClassificationRow>> QueryValidationFindingClassificationRowsAsync(
         KernelDbContext db,
         TenantId tenant,
         Guid[] rawIds,
-        Dictionary<(string Kind, Guid Id), ScopePath> resolvedPaths,
-        Dictionary<(string Kind, Guid Id), EvidenceNodeClassification> resolvedEvidence,
         CancellationToken ct)
     {
         object[] parameters =
@@ -1253,139 +1189,341 @@ internal sealed class KernelAuthorityStore(
             new NpgsqlParameter<Guid>("tenant", tenant.Value),
             new NpgsqlParameter<Guid[]>("ids", rawIds),
         ];
-        var rows = await db.Database
+        return db.Database
             .SqlQueryRaw<ValidationFindingClassificationRow>(ValidationFindingClassificationSql, parameters)
+            .ToListAsync(ct);
+    }
+
+    private static async Task<Dictionary<Guid, List<ProtocolDesign>>> LoadStudyDesignsAsync(
+        KernelDbContext db,
+        TenantId tenant,
+        HashSet<StudyId> studyIds,
+        CancellationToken ct)
+    {
+        if (studyIds.Count == 0)
+        {
+            return [];
+        }
+
+        var ids = studyIds.ToList();
+        var rows = await db.ProtocolVersions.AsNoTracking()
+            .Where(pv => pv.TenantId == tenant && ids.Contains(pv.StudyId))
+            .OrderBy(pv => pv.Number)
+            .Select(pv => new { pv.StudyId, pv.Content })
             .ToListAsync(ct)
             .ConfigureAwait(false);
 
-        var designsByStudy = new Dictionary<Guid, IReadOnlyList<ProtocolDesign>>();
-        var conceptsByStudy = new Dictionary<Guid, IReadOnlyDictionary<ConceptId, BlindedConceptMetadata>>();
+        var designsByStudy = new Dictionary<Guid, List<ProtocolDesign>>(ids.Count);
         foreach (var row in rows)
         {
-            var scope = row.ToScopePath() ?? ScopePath.TenantWide;
-            resolvedPaths[(NodeKinds.ValidationFinding, row.Id)] = scope;
-
-            var designs = GetParsedDesigns(row.StudyId, row.ProtocolContentsJson, designsByStudy);
-            var studyConcepts = GetParsedStudyConcepts(row.StudyId, row.StudyConceptsJson, conceptsByStudy);
-            BlindedConceptMetadata? ResolveConcept(ConceptId id) => studyConcepts.TryGetValue(id, out var meta) ? meta : null;
-
-            var targetKind = Enum.Parse<FindingTargetKind>(row.TargetKind, ignoreCase: true);
-            var target = new FindingTarget(targetKind, row.Dataset, row.TargetKey, row.Variable);
-            var observedValues = (JsonSerializer.Deserialize<string?[][]>(row.ObservedJson) ?? [])
-                .Select(pair => new ObservedVariable(pair[0]!, pair[1]))
-                .ToList();
-
-            var isBlinded = _blinding.IsBlindedFinding(target, observedValues, designs, ResolveConcept);
-            if (!isBlinded && row.TargetObservationId is not null && row.TargetObsConceptId is { } targetObsConceptGuid && row.TargetObsValueJson is not null)
+            if (!designsByStudy.TryGetValue(row.StudyId.Value, out var designs))
             {
-                var targetObsValue = JsonSerializer.Deserialize<ObservationValue>(row.TargetObsValueJson, WebJsonOptions);
-                BlindedConceptMetadata? targetObsConcept = row.TargetObsConceptPreferredLabel is not null
-                    ? new BlindedConceptMetadata(row.TargetObsConceptExternalCode, row.TargetObsConceptPreferredLabel, row.TargetObsConceptDefinition)
-                    : null;
-                isBlinded = _blinding.IsBlindedObservation(
-                    ConceptId.FromGuid(targetObsConceptGuid),
-                    targetObsValue,
-                    targetObsConcept,
-                    row.TargetObsSpecId,
-                    row.TargetObsItemId,
-                    designs);
-            }
-            else if (!isBlinded && row.TargetFormId is { } targetFormId && row.TargetFormSpecId is not null)
-            {
-                var siblingMembers = DeserializeClassifiedSiblingMembers(row.SiblingMembersJson, designs);
-                isBlinded = ReferencesBlindedSiblingMember(
-                    row.TargetFormSpecId,
-                    row.Variable,
-                    observedValues,
-                    targetFormId,
-                    siblingMembers);
+                designs = [];
+                designsByStudy[row.StudyId.Value] = designs;
             }
 
-            resolvedEvidence[(NodeKinds.ValidationFinding, row.Id)] = new EvidenceNodeClassification(scope, isBlinded);
+            if (ProtocolDesignDocument.Read(row.Content).Design is { } design)
+            {
+                designs.Add(design);
+            }
         }
+
+        return designsByStudy;
     }
 
-    private static IReadOnlyList<ProtocolDesign> GetParsedDesigns(
-        Guid? studyId,
-        string protocolContentsJson,
-        Dictionary<Guid, IReadOnlyList<ProtocolDesign>> cache)
+    private static async Task<Dictionary<ConceptId, BlindedConceptMetadata>> LoadConceptMetadataAsync(
+        KernelDbContext db,
+        TenantId tenant,
+        HashSet<ConceptId> conceptIds,
+        CancellationToken ct)
     {
-        if (studyId is { } key && cache.TryGetValue(key, out var cached))
+        if (conceptIds.Count == 0)
         {
-            return cached;
+            return [];
         }
 
-        var contents = JsonSerializer.Deserialize<string[]>(protocolContentsJson) ?? [];
-        var parsed = new List<ProtocolDesign>(contents.Length);
-        foreach (var content in contents)
-        {
-            if (ProtocolDesignDocument.Read(content).Design is { } design)
-            {
-                parsed.Add(design);
-            }
-        }
+        var ids = conceptIds.ToList();
+        var rows = await db.Concepts.AsNoTracking()
+            .Where(c => c.TenantId == tenant && ids.Contains(c.Id))
+            .Select(c => new { c.Id, c.ExternalCode, c.PreferredLabel, c.Definition })
+            .ToListAsync(ct)
+            .ConfigureAwait(false);
 
-        if (studyId is { } storeKey)
-        {
-            cache[storeKey] = parsed;
-        }
-
-        return parsed;
-    }
-
-    private static IReadOnlyDictionary<ConceptId, BlindedConceptMetadata> GetParsedStudyConcepts(
-        Guid? studyId,
-        string studyConceptsJson,
-        Dictionary<Guid, IReadOnlyDictionary<ConceptId, BlindedConceptMetadata>> cache)
-    {
-        if (studyId is { } key && cache.TryGetValue(key, out var cached))
-        {
-            return cached;
-        }
-
-        var rows = JsonSerializer.Deserialize<StudyConceptDto[]>(studyConceptsJson, WebJsonOptions) ?? [];
-        var map = new Dictionary<ConceptId, BlindedConceptMetadata>(rows.Length);
+        var map = new Dictionary<ConceptId, BlindedConceptMetadata>(rows.Count);
         foreach (var row in rows)
         {
-            map[ConceptId.FromGuid(row.Id)] = new BlindedConceptMetadata(row.ExternalCode, row.PreferredLabel, row.Definition);
-        }
-
-        if (studyId is { } storeKey)
-        {
-            cache[storeKey] = map;
+            map[row.Id] = new BlindedConceptMetadata(row.ExternalCode, row.PreferredLabel, row.Definition);
         }
 
         return map;
     }
 
-    private IReadOnlyList<ClassifiedSiblingMember> DeserializeClassifiedSiblingMembers(
-        string siblingMembersJson,
-        IReadOnlyList<ProtocolDesign> designs)
+    private void ClassifyObservationRows(
+        List<ObservationClassificationRow> rows,
+        Dictionary<Guid, List<ProtocolDesign>> designsByStudy,
+        Dictionary<(string Kind, Guid Id), ScopePath> resolvedPaths,
+        Dictionary<(string Kind, Guid Id), EvidenceNodeClassification> resolvedEvidence)
     {
-        var rawMembers = JsonSerializer.Deserialize<SiblingMemberDto[]>(siblingMembersJson, WebJsonOptions) ?? [];
-        if (rawMembers.Length == 0)
+        var isDefaultClassifier = ReferenceEquals(_blinding, BlindedTreatmentClassifier.Instance);
+        Dictionary<(Guid? StudyId, Guid ConceptId, string? SpecId, string? ItemId), bool>? batchMemo =
+            isDefaultClassifier ? new() : null;
+
+        foreach (var row in rows)
         {
-            return [];
+            var scope = row.ToScopePath() ?? ScopePath.TenantWide;
+            resolvedPaths[(NodeKinds.Observation, row.Id)] = scope;
+
+            var value = DeserializeValueForClassifier(row.ValueJson);
+            if (batchMemo is not null && value is null)
+            {
+                var key = (row.StudyId, row.ConceptId, row.CollectionSpecId, row.ItemId);
+                if (!batchMemo.TryGetValue(key, out var cachedBlinded))
+                {
+                    cachedBlinded = ClassifyObservationRow(row, value, designsByStudy);
+                    batchMemo[key] = cachedBlinded;
+                }
+
+                resolvedEvidence[(NodeKinds.Observation, row.Id)] = new EvidenceNodeClassification(scope, cachedBlinded);
+                continue;
+            }
+
+            var isBlinded = ClassifyObservationRow(row, value, designsByStudy);
+            resolvedEvidence[(NodeKinds.Observation, row.Id)] = new EvidenceNodeClassification(scope, isBlinded);
+        }
+    }
+
+    private bool ClassifyObservationRow(
+        ObservationClassificationRow row,
+        ObservationValue? value,
+        Dictionary<Guid, List<ProtocolDesign>> designsByStudy)
+    {
+        IReadOnlyList<ProtocolDesign> designs = row.StudyId is { } studyGuid
+            && designsByStudy.TryGetValue(studyGuid, out var studyDesigns)
+            ? studyDesigns
+            : [];
+        BlindedConceptMetadata? concept = row.ConceptPreferredLabel is not null
+            ? new BlindedConceptMetadata(row.ConceptExternalCode, row.ConceptPreferredLabel, row.ConceptDefinition)
+            : null;
+        return _blinding.IsBlindedObservation(
+            ConceptId.FromGuid(row.ConceptId),
+            value,
+            concept,
+            row.CollectionSpecId,
+            row.ItemId,
+            designs);
+    }
+
+    private ObservationValue? DeserializeValueForClassifier(string? valueJson)
+    {
+        if (string.IsNullOrEmpty(valueJson))
+        {
+            return null;
         }
 
-        var result = new List<ClassifiedSiblingMember>(rawMembers.Length);
-        foreach (var m in rawMembers)
+        if (ReferenceEquals(_blinding, BlindedTreatmentClassifier.Instance)
+            && !valueJson.Contains("missing", StringComparison.OrdinalIgnoreCase))
         {
-            var value = JsonSerializer.Deserialize<ObservationValue>(m.ValueJson, WebJsonOptions);
-            BlindedConceptMetadata? concept = m.ConceptPreferredLabel is not null
-                ? new BlindedConceptMetadata(m.ConceptExternalCode, m.ConceptPreferredLabel, m.ConceptDefinition)
+            return null;
+        }
+
+        return JsonSerializer.Deserialize<ObservationValue>(valueJson, WebJsonOptions);
+    }
+
+    private async Task LoadValidationFindingClassificationsAsync(
+        KernelDbContext db,
+        TenantId tenant,
+        List<ValidationFindingClassificationRow> rows,
+        Dictionary<Guid, List<ProtocolDesign>> designsByStudy,
+        Dictionary<(string Kind, Guid Id), ScopePath> resolvedPaths,
+        Dictionary<(string Kind, Guid Id), EvidenceNodeClassification> resolvedEvidence,
+        CancellationToken ct)
+    {
+        var conceptIdsByStudy = new Dictionary<Guid, HashSet<ConceptId>>();
+        var distinctConceptIds = new HashSet<ConceptId>();
+        foreach (var row in rows)
+        {
+            if (row.StudyId is not { } studyGuid || conceptIdsByStudy.ContainsKey(studyGuid))
+            {
+                continue;
+            }
+
+            var studyConceptIds = new HashSet<ConceptId>();
+            if (designsByStudy.TryGetValue(studyGuid, out var studyDesigns))
+            {
+                foreach (var design in studyDesigns)
+                {
+                    foreach (var conceptRef in design.ExternalReferences().Concepts)
+                    {
+                        if (!conceptRef.ConceptId.IsEmpty)
+                        {
+                            studyConceptIds.Add(conceptRef.ConceptId);
+                            distinctConceptIds.Add(conceptRef.ConceptId);
+                        }
+                    }
+                }
+            }
+
+            conceptIdsByStudy[studyGuid] = studyConceptIds;
+        }
+
+        var conceptsById = await LoadConceptMetadataAsync(db, tenant, distinctConceptIds, ct).ConfigureAwait(false);
+        var pendingSiblingFindings = new List<PendingSiblingFinding>();
+        var pendingEnrollmentIds = new HashSet<Guid>();
+
+        foreach (var row in rows)
+        {
+            var scope = row.ToScopePath() ?? ScopePath.TenantWide;
+            resolvedPaths[(NodeKinds.ValidationFinding, row.Id)] = scope;
+
+            IReadOnlyList<ProtocolDesign> designs = row.StudyId is { } studyGuid
+                && designsByStudy.TryGetValue(studyGuid, out var studyDesigns)
+                ? studyDesigns
+                : [];
+            var studyConcepts = row.StudyId is { } conceptStudyGuid
+                && conceptIdsByStudy.TryGetValue(conceptStudyGuid, out var referencedIds)
+                ? referencedIds
                 : null;
-            var isBlinded = _blinding.IsBlindedObservation(
-                ConceptId.FromGuid(m.ConceptId),
-                value,
-                concept,
-                m.CollectionSpecId,
-                m.ItemId,
-                designs);
-            result.Add(new ClassifiedSiblingMember(m.FormId, m.CollectionSpecId, m.ItemId, isBlinded));
+            BlindedConceptMetadata? ResolveConcept(ConceptId id) =>
+                studyConcepts is not null && studyConcepts.Contains(id) && conceptsById.TryGetValue(id, out var meta)
+                    ? meta
+                    : null;
+
+            var targetKind = Enum.Parse<FindingTargetKind>(row.TargetKind, ignoreCase: true);
+            var target = new FindingTarget(targetKind, row.Dataset, row.TargetKey, row.Variable);
+            var rawObserved = JsonSerializer.Deserialize<string?[][]>(row.ObservedJson) ?? [];
+            var observedValues = new List<ObservedVariable>(rawObserved.Length);
+            foreach (var pair in rawObserved)
+            {
+                observedValues.Add(new ObservedVariable(pair[0]!, pair[1]));
+            }
+
+            var isBlinded = _blinding.IsBlindedFinding(target, observedValues, designs, ResolveConcept);
+            if (!isBlinded && row.TargetObservationId is { } targetObsGuid && row.TargetObsConceptId is { } targetObsConceptGuid && row.TargetObsValueJson is not null)
+            {
+                if (resolvedEvidence.TryGetValue((NodeKinds.Observation, targetObsGuid), out var classifiedTargetObs))
+                {
+                    isBlinded = classifiedTargetObs.IsBlinded;
+                }
+                else
+                {
+                    var targetObsValue = DeserializeValueForClassifier(row.TargetObsValueJson);
+                    BlindedConceptMetadata? targetObsConcept = row.TargetObsConceptPreferredLabel is not null
+                        ? new BlindedConceptMetadata(row.TargetObsConceptExternalCode, row.TargetObsConceptPreferredLabel, row.TargetObsConceptDefinition)
+                        : null;
+                    isBlinded = _blinding.IsBlindedObservation(
+                        ConceptId.FromGuid(targetObsConceptGuid),
+                        targetObsValue,
+                        targetObsConcept,
+                        row.TargetObsSpecId,
+                        row.TargetObsItemId,
+                        designs);
+                }
+            }
+            else if (!isBlinded
+                && row.TargetFormId is { } targetFormId
+                && row.TargetFormSpecId is not null
+                && row.TargetFormEnrollmentId is { } targetEnrollmentId)
+            {
+                pendingSiblingFindings.Add(new PendingSiblingFinding(
+                    row.Id,
+                    scope,
+                    row.TargetFormSpecId,
+                    row.Variable,
+                    observedValues,
+                    targetFormId,
+                    targetEnrollmentId));
+                pendingEnrollmentIds.Add(targetEnrollmentId);
+                continue;
+            }
+
+            resolvedEvidence[(NodeKinds.ValidationFinding, row.Id)] = new EvidenceNodeClassification(scope, isBlinded);
         }
 
-        return result;
+        if (pendingSiblingFindings.Count == 0)
+        {
+            return;
+        }
+
+        var siblingsByEnrollment = await LoadClassifiedSiblingMembersByEnrollmentAsync(
+                db,
+                tenant,
+                [.. pendingEnrollmentIds],
+                designsByStudy,
+                resolvedEvidence,
+                ct)
+            .ConfigureAwait(false);
+
+        foreach (var pending in pendingSiblingFindings)
+        {
+            IReadOnlyList<ClassifiedSiblingMember> siblingMembers =
+                siblingsByEnrollment.TryGetValue(pending.EnrollmentId, out var cachedSiblings)
+                    ? cachedSiblings
+                    : [];
+            var isBlinded = ReferencesBlindedSiblingMember(
+                pending.TargetFormSpecId,
+                pending.Variable,
+                pending.ObservedValues,
+                pending.TargetFormId,
+                siblingMembers);
+            resolvedEvidence[(NodeKinds.ValidationFinding, pending.FindingId)] =
+                new EvidenceNodeClassification(pending.Scope, isBlinded);
+        }
+    }
+
+    private async Task<Dictionary<Guid, List<ClassifiedSiblingMember>>> LoadClassifiedSiblingMembersByEnrollmentAsync(
+        KernelDbContext db,
+        TenantId tenant,
+        Guid[] enrollmentIds,
+        Dictionary<Guid, List<ProtocolDesign>> designsByStudy,
+        Dictionary<(string Kind, Guid Id), EvidenceNodeClassification> resolvedEvidence,
+        CancellationToken ct)
+    {
+        object[] parameters =
+        [
+            new NpgsqlParameter<Guid>("tenant", tenant.Value),
+            new NpgsqlParameter<Guid[]>("enrollmentIds", enrollmentIds),
+        ];
+        var rows = await db.Database
+            .SqlQueryRaw<SiblingMemberRow>(EnrollmentSiblingMembersSql, parameters)
+            .ToListAsync(ct)
+            .ConfigureAwait(false);
+
+        var byEnrollment = new Dictionary<Guid, List<ClassifiedSiblingMember>>(enrollmentIds.Length);
+        foreach (var m in rows)
+        {
+            if (!byEnrollment.TryGetValue(m.EnrollmentId, out var members))
+            {
+                members = [];
+                byEnrollment[m.EnrollmentId] = members;
+            }
+
+            bool isBlinded;
+            if (resolvedEvidence.TryGetValue((NodeKinds.Observation, m.ObservationId), out var classifiedObs))
+            {
+                isBlinded = classifiedObs.IsBlinded;
+            }
+            else
+            {
+                IReadOnlyList<ProtocolDesign> designs = designsByStudy.TryGetValue(m.StudyId, out var studyDesigns)
+                    ? studyDesigns
+                    : [];
+                var value = DeserializeValueForClassifier(m.ValueJson);
+                BlindedConceptMetadata? concept = m.ConceptPreferredLabel is not null
+                    ? new BlindedConceptMetadata(m.ConceptExternalCode, m.ConceptPreferredLabel, m.ConceptDefinition)
+                    : null;
+                isBlinded = _blinding.IsBlindedObservation(
+                    ConceptId.FromGuid(m.ConceptId),
+                    value,
+                    concept,
+                    m.CollectionSpecId,
+                    m.ItemId,
+                    designs);
+            }
+
+            members.Add(new ClassifiedSiblingMember(m.FormId, m.CollectionSpecId, m.ItemId, isBlinded));
+        }
+
+        return byEnrollment;
     }
 
     private static bool ReferencesBlindedSiblingMember(
@@ -1905,13 +2043,12 @@ internal sealed class KernelAuthorityStore(
         string? Country,
         Guid? StudySiteId,
         Guid ConceptId,
-        string ValueJson,
+        string? ValueJson,
         string? ConceptExternalCode,
         string? ConceptPreferredLabel,
         string? ConceptDefinition,
         string? CollectionSpecId,
-        string? ItemId,
-        string ProtocolContentsJson)
+        string? ItemId)
     {
         public ScopePath? ToScopePath() => BuildScopePath(OrganizationId, StudyId, Country, StudySiteId);
     }
@@ -1929,6 +2066,7 @@ internal sealed class KernelAuthorityStore(
         string ObservedJson,
         Guid? TargetFormId,
         string? TargetFormSpecId,
+        Guid? TargetFormEnrollmentId,
         Guid? TargetObservationId,
         Guid? TargetObsConceptId,
         string? TargetObsValueJson,
@@ -1936,21 +2074,14 @@ internal sealed class KernelAuthorityStore(
         string? TargetObsConceptPreferredLabel,
         string? TargetObsConceptDefinition,
         string? TargetObsSpecId,
-        string? TargetObsItemId,
-        string ProtocolContentsJson,
-        string StudyConceptsJson,
-        string SiblingMembersJson)
+        string? TargetObsItemId)
     {
         public ScopePath? ToScopePath() => BuildScopePath(OrganizationId, StudyId, Country, StudySiteId);
     }
 
-    private sealed record StudyConceptDto(
-        Guid Id,
-        string? ExternalCode,
-        string PreferredLabel,
-        string Definition);
-
-    private sealed record SiblingMemberDto(
+    private sealed record SiblingMemberRow(
+        Guid EnrollmentId,
+        Guid StudyId,
         Guid FormId,
         string CollectionSpecId,
         string ItemId,
@@ -1960,6 +2091,15 @@ internal sealed class KernelAuthorityStore(
         string? ConceptExternalCode,
         string? ConceptPreferredLabel,
         string? ConceptDefinition);
+
+    private sealed record PendingSiblingFinding(
+        Guid FindingId,
+        ScopePath Scope,
+        string TargetFormSpecId,
+        string? Variable,
+        IReadOnlyList<ObservedVariable> ObservedValues,
+        Guid TargetFormId,
+        Guid EnrollmentId);
 
     private sealed record ClassifiedSiblingMember(
         Guid FormId,
