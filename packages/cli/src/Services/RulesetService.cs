@@ -1662,6 +1662,23 @@ public static partial class RulesetService
             return classifyOutputTrue;
         }
 
+        var needsResult = NeedsResultComparisonRegex().Match(normalized);
+        if (needsResult.Success)
+        {
+            string neededJob = needsResult.Groups["job"].Value;
+            string op = needsResult.Groups["op"].Value;
+            string target = needsResult.Groups["val"].Value;
+            string simulatedResult = "success";
+            if (string.Equals(neededJob, "classify", StringComparison.Ordinal)
+                && eventName is not ("pull_request" or "merge_group"))
+            {
+                simulatedResult = "skipped";
+            }
+
+            bool matches = string.Equals(simulatedResult, target, StringComparison.Ordinal);
+            return op == "==" ? matches : !matches;
+        }
+
         var refEq = GitRefEqualsRegex().Match(normalized);
         if (refEq.Success)
         {
@@ -2358,6 +2375,9 @@ public static partial class RulesetService
 
     [GeneratedRegex(@"^needs\.classify\.outputs\.[A-Za-z0-9_-]+\s*==\s*['""]true['""]$", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
     private static partial Regex ClassifyOutputTrueRegex();
+
+    [GeneratedRegex(@"^needs\.(?<job>[A-Za-z0-9_-]+)\.result\s*(?<op>==|!=)\s*['""](?<val>[A-Za-z0-9_-]+)['""]$", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex NeedsResultComparisonRegex();
 
     [GeneratedRegex(@"^github\.ref\s*==\s*['""](?<ref>[^'""]+)['""]$", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
     private static partial Regex GitRefEqualsRegex();

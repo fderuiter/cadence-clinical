@@ -37,7 +37,7 @@ public sealed class RouteAuthorizationTests
     /// <summary>The only anonymous routes: liveness and readiness, the service status probe, and development API documents.</summary>
     private static readonly string[] AnonymousRoutes =
     [
-        "/healthz", "/healthz/live", "/healthz/ready",
+        "/healthz", "/healthz/live", "/healthz/ready", "/health/ready",
         "/openapi/{documentName}.json", "/scalar/{documentName?}", "/scalar/scalar.js", "/scalar/scalar.aspnetcore.js", "/scalar/favicon.svg",
     ];
 

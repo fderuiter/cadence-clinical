@@ -176,6 +176,9 @@ public sealed record CiContainerScanTarget(string Target, string Context, string
 /// </summary>
 public static class CiPlan
 {
+    /// <summary>The job key of the Boot-to-Seed smoke gate in <c>ci.yml</c>.</summary>
+    public const string BootToSeedSmokeJobKey = "boot-to-seed-smoke";
+
     /// <summary>The job key of the container build and Trivy scan job in <c>ci.yml</c>.</summary>
     public const string ContainerSecurityJobKey = "container-security";
 
@@ -478,6 +481,41 @@ public static class CiPlan
             Needs = ["native-aot-build"],
         };
 
+        var bootToSeedSmoke = new CiJob(BootToSeedSmokeJobKey, "Boot-to-Seed Smoke Gate",
+        [
+            new(BootToSeedSmokeJobKey, "Restore Smoke Test Project")
+            {
+                NeedsDocker = true,
+                Commands = [Dotnet("restore", "tests/Cadence.IntegrationTests/Cadence.IntegrationTests.csproj")],
+            },
+            new(BootToSeedSmokeJobKey, "Build Smoke Test Project")
+            {
+                NeedsDocker = true,
+                Commands = [Dotnet("build", "tests/Cadence.IntegrationTests/Cadence.IntegrationTests.csproj", "--configuration", "Release", "--no-restore")],
+            },
+            new(BootToSeedSmokeJobKey, "Run Boot-to-Seed Smoke Test")
+            {
+                NeedsDocker = true,
+                CleanDirectories = ["TestResults/smoke"],
+                Environment = new Dictionary<string, string> { ["TESTCONTAINERS_RYUK_DISABLED"] = "true" },
+                Commands =
+                [
+                    Dotnet(
+                        "test",
+                        "tests/Cadence.IntegrationTests/Cadence.IntegrationTests.csproj",
+                        "--configuration",
+                        "Release",
+                        "--no-build",
+                        "--filter",
+                        "Category=Smoke",
+                        "--results-directory",
+                        "TestResults/smoke",
+                        "--logger",
+                        "trx;LogFilePrefix=smoke"),
+                ],
+            },
+        ]);
+
         var containerSecurity = new CiJob(ContainerSecurityJobKey, "Container Build & Vulnerability Scan",
         [
             new(ContainerSecurityJobKey, "Validate Docker Compose configuration")
@@ -519,7 +557,7 @@ public static class CiPlan
             },
         ])
         {
-            Needs = ["classify"],
+            Needs = ["classify", BootToSeedSmokeJobKey],
         };
 
         var frontend = new CiJob("unit-tests", "Frontend Unit Tests",
@@ -724,7 +762,7 @@ public static class CiPlan
             },
         };
 
-        return [actionlint, nativeAotBuild, lintAndStatic, dotnetQuality, docsBuild, security, containerSecurity, frontend, dotnetTests, e2e, compliance];
+        return [actionlint, nativeAotBuild, lintAndStatic, dotnetQuality, docsBuild, security, bootToSeedSmoke, containerSecurity, frontend, dotnetTests, e2e, compliance];
     }
 
     /// <summary>

@@ -144,7 +144,11 @@ builder.Services.AddKeycloakOnboarding(builder.Configuration);
 builder.Services.AddScoped<TrialOnboardingService>();
 
 builder.Services.AddHealthChecks()
-    .AddCheck("kernel-database", new KernelDatabaseHealthCheck(connectionString), tags: [CadenceTelemetryExtensions.ReadinessTag]);
+    .Add(new Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckRegistration(
+        "kernel-database",
+        sp => new KernelDatabaseHealthCheck(connectionString, sp.GetService<DevelopmentTenantBootstrapReadiness>()),
+        failureStatus: null,
+        tags: [CadenceTelemetryExtensions.ReadinessTag]));
 
 var app = builder.Build();
 app.UseCadenceWebDefaults();

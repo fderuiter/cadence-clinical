@@ -327,15 +327,17 @@ public class TelemetryUnitTests
 
         var live = await client.GetAsync("/healthz/live", TestContext.Current.CancellationToken);
         var ready = await client.GetAsync("/healthz/ready", TestContext.Current.CancellationToken);
+        var readyAlias = await client.GetAsync("/health/ready", TestContext.Current.CancellationToken);
 
         live.StatusCode.Should().Be(HttpStatusCode.OK);
         ready.StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
+        readyAlias.StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
 
         var probes = app.Services.GetRequiredService<EndpointDataSource>().Endpoints
             .OfType<RouteEndpoint>()
-            .Where(e => e.RoutePattern.RawText is "/healthz/live" or "/healthz/ready")
+            .Where(e => e.RoutePattern.RawText is "/healthz/live" or "/healthz/ready" or "/health/ready")
             .ToList();
-        probes.Should().HaveCount(2);
+        probes.Should().HaveCount(3);
         probes.Should().OnlyContain(e => e.Metadata.GetMetadata<IAllowAnonymous>() != null);
 
         await app.StopAsync(TestContext.Current.CancellationToken);

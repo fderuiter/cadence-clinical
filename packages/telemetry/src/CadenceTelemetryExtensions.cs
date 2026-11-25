@@ -78,7 +78,8 @@ public static partial class CadenceTelemetryExtensions
             {
                 tracing
                     .AddAspNetCoreInstrumentation(options =>
-                        options.Filter = context => !context.Request.Path.StartsWithSegments("/healthz"))
+                        options.Filter = context => !context.Request.Path.StartsWithSegments("/healthz")
+                            && !context.Request.Path.StartsWithSegments("/health/ready"))
                     .AddHttpClientInstrumentation()
                     .AddSource("Npgsql");
             })
@@ -246,9 +247,9 @@ public static partial class CadenceTelemetryExtensions
     }
 
     /// <summary>
-    /// Maps <c>/healthz/live</c> (process is up; runs no checks) and <c>/healthz/ready</c> (every check
-    /// tagged <see cref="ReadinessTag"/>, e.g. the service's database, must pass). Orchestrators should use
-    /// these rather than the static <c>/healthz</c> payload.
+    /// Maps <c>/healthz/live</c> (process is up; runs no checks) and <c>/healthz/ready</c> plus <c>/health/ready</c>
+    /// (every check tagged <see cref="ReadinessTag"/>, e.g. the service's database, must pass). Orchestrators should
+    /// use these rather than the static <c>/healthz</c> payload.
     /// </summary>
     public static IEndpointRouteBuilder MapCadenceProbeEndpoints(this IEndpointRouteBuilder endpoints)
     {
@@ -256,12 +257,15 @@ public static partial class CadenceTelemetryExtensions
 
         // Orchestrators probe without credentials, so the probes opt out of the services' authenticate-by-default
         // fallback policy. They return only Healthy/Unhealthy.
-        endpoints.MapHealthChecks("/healthz/live", new HealthCheckOptions { Predicate = _ => false })
-            .AllowAnonymous();
-        endpoints.MapHealthChecks("/healthz/ready", new HealthCheckOptions
+        var readinessOptions = new HealthCheckOptions
         {
             Predicate = check => check.Tags.Contains(ReadinessTag)
-        })
+        };
+        endpoints.MapHealthChecks("/healthz/live", new HealthCheckOptions { Predicate = _ => false })
+            .AllowAnonymous();
+        endpoints.MapHealthChecks("/healthz/ready", readinessOptions)
+            .AllowAnonymous();
+        endpoints.MapHealthChecks("/health/ready", readinessOptions)
             .AllowAnonymous();
 
         return endpoints;

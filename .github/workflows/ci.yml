@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
     inputs:
       target:
-        description: "Downstream workflow caller to run after all 11 CI gates succeed on main, release/*, or v*"
+        description: "Downstream workflow caller to run after all 12 CI gates succeed on main, release/*, or v*"
         required: false
         default: "all"
         type: choice
@@ -508,11 +508,67 @@ jobs:
           fi
           node scripts/run-cli.js check deid "${SCOPE_ARGS[@]}"
 
+  boot-to-seed-smoke:
+    name: Boot-to-Seed Smoke Gate
+    if: >-
+      github.event_name != 'workflow_dispatch' ||
+      github.ref == 'refs/heads/main' ||
+      startsWith(github.ref, 'refs/heads/release/') ||
+      startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    env:
+      TESTCONTAINERS_RYUK_DISABLED: "true"
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
+        with:
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: |
+            global.json
+            Directory.Build.props
+            Directory.Build.targets
+            Directory.Packages.props
+            NuGet.Config
+            **/*.csproj
+
+      - name: Restore Smoke Test Project
+        run: dotnet restore tests/Cadence.IntegrationTests/Cadence.IntegrationTests.csproj
+
+      - name: Build Smoke Test Project
+        run: dotnet build tests/Cadence.IntegrationTests/Cadence.IntegrationTests.csproj --configuration Release --no-restore
+
+      - name: Run Boot-to-Seed Smoke Test
+        run: |
+          dotnet test tests/Cadence.IntegrationTests/Cadence.IntegrationTests.csproj --configuration Release --no-build --filter Category=Smoke --results-directory TestResults/smoke --logger "trx;LogFilePrefix=smoke"
+          mapfile -t smoke_trx < <(find TestResults/smoke -maxdepth 1 -name '*.trx' 2>/dev/null | sort)
+          if [ "${#smoke_trx[@]}" -eq 0 ] || ! grep -q 'outcome="Passed"' "${smoke_trx[@]}" || grep -q 'outcome="NotExecuted"' "${smoke_trx[@]}"; then
+            echo "::error::Boot-to-Seed smoke gate must execute at least one passing smoke test with zero skipped tests."
+            exit 1
+          fi
+
+      - name: Upload Smoke Test TRX Report
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: trx-report-smoke-${{ github.run_id }}-${{ github.run_attempt }}
+          path: TestResults/smoke/*.trx
+          retention-days: 400
+
   container-security:
     name: Container Build & Vulnerability Scan
-    needs: [classify]
+    needs: [classify, boot-to-seed-smoke]
     if: >-
-      always() && !cancelled() && (
+      always() && !cancelled() &&
+      needs.boot-to-seed-smoke.result == 'success' && (
         github.event_name == 'push' ||
         (github.event_name == 'workflow_dispatch' && (
           github.ref == 'refs/heads/main' ||
@@ -1113,6 +1169,7 @@ jobs:
         native-aot-build,
         docs-build,
         security,
+        boot-to-seed-smoke,
         container-security,
         unit-tests,
         dotnet-tests,
@@ -1134,6 +1191,7 @@ jobs:
           NATIVE_AOT_BUILD_RESULT: ${{ needs.native-aot-build.result }}
           DOCS_BUILD_RESULT: ${{ needs.docs-build.result }}
           SECURITY_RESULT: ${{ needs.security.result }}
+          BOOT_TO_SEED_SMOKE_RESULT: ${{ needs.boot-to-seed-smoke.result }}
           CONTAINER_SECURITY_RESULT: ${{ needs.container-security.result }}
           UNIT_TESTS_RESULT: ${{ needs.unit-tests.result }}
           DOTNET_TESTS_RESULT: ${{ needs.dotnet-tests.result }}
@@ -1170,6 +1228,7 @@ jobs:
           check_required "native-aot-build" "$NATIVE_AOT_BUILD_RESULT"
           check_required "docs-build" "$DOCS_BUILD_RESULT"
           check_required "security" "$SECURITY_RESULT"
+          check_required "boot-to-seed-smoke" "$BOOT_TO_SEED_SMOKE_RESULT"
           check_required "unit-tests" "$UNIT_TESTS_RESULT"
           check_required "dotnet-tests" "$DOTNET_TESTS_RESULT"
           check_required "accessibility-e2e" "$ACCESSIBILITY_E2E_RESULT"
@@ -1292,6 +1351,7 @@ jobs:
         native-aot-build,
         docs-build,
         security,
+        boot-to-seed-smoke,
         container-security,
         unit-tests,
         dotnet-tests,
@@ -1319,6 +1379,7 @@ jobs:
       needs.native-aot-build.result == 'success' &&
       needs.docs-build.result == 'success' &&
       needs.security.result == 'success' &&
+      needs.boot-to-seed-smoke.result == 'success' &&
       needs.container-security.result == 'success' &&
       needs.unit-tests.result == 'success' &&
       needs.dotnet-tests.result == 'success' &&
@@ -1341,6 +1402,7 @@ jobs:
         native-aot-build,
         docs-build,
         security,
+        boot-to-seed-smoke,
         container-security,
         unit-tests,
         dotnet-tests,
@@ -1364,6 +1426,7 @@ jobs:
       needs.native-aot-build.result == 'success' &&
       needs.docs-build.result == 'success' &&
       needs.security.result == 'success' &&
+      needs.boot-to-seed-smoke.result == 'success' &&
       needs.container-security.result == 'success' &&
       needs.unit-tests.result == 'success' &&
       needs.dotnet-tests.result == 'success' &&

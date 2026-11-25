@@ -590,6 +590,7 @@ public partial class LocalCiPlanTests
             "dotnet-quality",
             "docs-build",
             "security",
+            "boot-to-seed-smoke",
             "container-security",
             "unit-tests",
             "dotnet-tests",
@@ -607,6 +608,7 @@ public partial class LocalCiPlanTests
             "native-aot-build",
             "docs-build",
             "security",
+            "boot-to-seed-smoke",
             "container-security",
             "unit-tests",
             "dotnet-tests",
@@ -814,7 +816,9 @@ public partial class LocalCiPlanTests
         string raw = string.Join('\n', lines);
 
         var containerJob = CiPlan.Jobs.Single(j => j.Key == CiPlan.ContainerSecurityJobKey);
-        containerJob.Needs.Should().Equal("classify");
+        containerJob.Needs.Should().Equal("classify", CiPlan.BootToSeedSmokeJobKey);
+        Workflow.Single(j => j.Key == CiPlan.ContainerSecurityJobKey).If
+            .Should().Contain("needs.boot-to-seed-smoke.result == 'success'");
         CiPlan.ContainerScanTargets.Should().HaveCount(20);
 
         var composeStep = containerJob.Steps.Single(s => s.Name == "Validate Docker Compose configuration");
@@ -877,7 +881,8 @@ public partial class LocalCiPlanTests
     [Fact]
     public void Select_AddsTheJobsANamedJobNeeds_InPlanOrder()
     {
-        CiPlan.Select(["container-security"]).Select(j => j.Key).Should().Equal("container-security");
+        CiPlan.Select(["boot-to-seed-smoke"]).Select(j => j.Key).Should().Equal("boot-to-seed-smoke");
+        CiPlan.Select(["container-security"]).Select(j => j.Key).Should().Equal("boot-to-seed-smoke", "container-security");
         CiPlan.Select(["compliance"]).Select(j => j.Key).Should().Equal("native-aot-build", "unit-tests", "dotnet-tests", "accessibility-e2e", "compliance");
         CiPlan.Select(["lint-and-static"]).Select(j => j.Key).Should().Equal("native-aot-build", "lint-and-static");
         CiPlan.Select(["docs-build"]).Select(j => j.Key).Should().Equal("native-aot-build", "docs-build");
@@ -919,6 +924,7 @@ public partial class LocalCiPlanTests
             "native-aot-build",
             "docs-build",
             "security",
+            "boot-to-seed-smoke",
             "container-security",
             "unit-tests",
             "dotnet-tests",
@@ -1053,7 +1059,7 @@ public partial class LocalCiPlanTests
             setupDotnetCount += countInFile;
         }
 
-        setupDotnetCount.Should().Be(10);
+        setupDotnetCount.Should().Be(11);
         violations.Should().BeEmpty(
             "every actions/setup-dotnet step must hash global.json, Directory.Build.props, Directory.Build.targets, Directory.Packages.props, NuGet.Config, and **/*.csproj");
 

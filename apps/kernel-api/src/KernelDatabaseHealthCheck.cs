@@ -8,11 +8,18 @@ using Npgsql;
 
 namespace Cadence.Kernel.Host;
 
-/// <summary>Readiness: the kernel database accepts a connection as the application role.</summary>
-internal sealed class KernelDatabaseHealthCheck(string connectionString) : IHealthCheck
+/// <summary>Readiness: startup tenant bootstrap/seeding (when configured) has completed and the kernel database accepts a connection.</summary>
+internal sealed class KernelDatabaseHealthCheck(
+    string connectionString,
+    DevelopmentTenantBootstrapReadiness? bootstrapReadiness = null) : IHealthCheck
 {
     public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
     {
+        if (bootstrapReadiness is { IsCompleted: false })
+        {
+            return HealthCheckResult.Unhealthy("Development tenant bootstrap and demo seeding have not completed.");
+        }
+
         try
         {
             await using var connection = new NpgsqlConnection(connectionString);

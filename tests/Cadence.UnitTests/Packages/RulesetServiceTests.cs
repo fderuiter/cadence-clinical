@@ -357,6 +357,48 @@ public sealed class RulesetServiceTests : IDisposable
             $"ci-gate outcome mismatch for event={eventName}, ref={refName}, container-security={containerSecurityResult}: {stdout}\n{stderr}");
     }
 
+    [Theory]
+    [InlineData("failure")]
+    [InlineData("skipped")]
+    [InlineData("cancelled")]
+    public void CiWorkflowCiGate_FailsWhenBootToSeedSmokeDoesNotSucceed_EvenWhenContainerSecurityIsSkippedOnPullRequest(string smokeOutcome)
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        string ciPath = Path.Combine(FindRepositoryRoot(), ".github", "workflows", "ci.yml");
+        string ciGateScript = ExtractCiGateScript(File.ReadAllLines(ciPath));
+        var psi = new ProcessStartInfo("bash")
+        {
+            WorkingDirectory = _root,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+        };
+        psi.Environment["EVENT_NAME"] = "pull_request";
+        psi.Environment["REF_NAME"] = "refs/pull/42/merge";
+        psi.Environment["CONTAINER_SECURITY_RESULT"] = "skipped";
+        foreach (string requiredResultVar in RequiredCiGateEnvVars)
+        {
+            psi.Environment[requiredResultVar] = "success";
+        }
+
+        psi.Environment["BOOT_TO_SEED_SMOKE_RESULT"] = smokeOutcome;
+        psi.ArgumentList.Add("-eo");
+        psi.ArgumentList.Add("pipefail");
+        psi.ArgumentList.Add("-c");
+        psi.ArgumentList.Add(ciGateScript);
+
+        using var proc = Process.Start(psi)!;
+        string stderr = proc.StandardError.ReadToEnd();
+        string stdout = proc.StandardOutput.ReadToEnd();
+        proc.WaitForExit();
+        proc.ExitCode.Should().Be(1, $"ci-gate must reject BOOT_TO_SEED_SMOKE_RESULT={smokeOutcome}: {stdout}\n{stderr}");
+        (stdout + stderr).Should().Contain("boot-to-seed-smoke");
+    }
+
     [Fact]
     public void Validate_FailsWhenConflictCheckOmitsEditedTrigger()
     {
@@ -1115,6 +1157,7 @@ public sealed class RulesetServiceTests : IDisposable
         "NATIVE_AOT_BUILD_RESULT",
         "DOCS_BUILD_RESULT",
         "SECURITY_RESULT",
+        "BOOT_TO_SEED_SMOKE_RESULT",
         "UNIT_TESTS_RESULT",
         "DOTNET_TESTS_RESULT",
         "ACCESSIBILITY_E2E_RESULT",

@@ -14,27 +14,52 @@ using Microsoft.Extensions.Logging;
 namespace Cadence.Kernel.Host;
 
 /// <summary>
-/// The kernel tenant a local stack's sign-ins name (ADR-2542): with <c>Kernel:DevelopmentTenant:Code</c> set, the host
+/// Tracks whether <see cref="DevelopmentTenantBootstrap"/> has finished provisioning the tenant and seeding demo data.
+/// </summary>
+internal sealed class DevelopmentTenantBootstrapReadiness
+{
+    private volatile bool _completed;
+
+    /// <summary>True once startup tenant provisioning and configured demo seeding have completed.</summary>
+    public bool IsCompleted => _completed;
+
+    /// <summary>Marks startup tenant provisioning and demo seeding complete.</summary>
+    public void MarkCompleted() => _completed = true;
+}
+
+/// <summary>
+/// The kernel tenant a local or demo stack's sign-ins name (ADR-2542): with <c>Kernel:DevelopmentTenant:Code</c> set, the host
 /// provisions that tenant on start, if no active tenant has the code yet, through the kernel command pipeline as the
 /// <see cref="Operator"/> service account, so the row, its event and its audit entry are written like any other
 /// provisioning. With <c>Kernel:DevelopmentTenant:DemoData</c> also true, it then writes the demo study and the local
-/// realm's grants into the tenant (<see cref="DevelopmentDemoData"/>, ADR-2543). Only in the Development environment:
-/// anywhere else the host refuses to start with the setting.
+/// realm's grants into the tenant (<see cref="DevelopmentDemoData"/>, ADR-2543). Only in the Development or Demo
+/// environments: anywhere else the host refuses to start with the setting.
 /// </summary>
 internal sealed partial class DevelopmentTenantBootstrap(
     string code,
     string name,
     bool demoData,
+    DevelopmentTenantBootstrapReadiness readiness,
     IServiceScopeFactory scopes,
     ILogger<DevelopmentTenantBootstrap> logger) : IHostedService
 {
     /// <summary>The configuration section.</summary>
     public const string SectionName = "Kernel:DevelopmentTenant";
 
+    /// <summary>Environment name used by isolated demo and boot-to-seed smoke stacks.</summary>
+    public const string DemoEnvironmentName = "Demo";
+
     /// <summary>The platform operator that provisions the development tenant; the host names no other.</summary>
     public static readonly Actor Operator = Actor.ServiceAccount("kernel-development-bootstrap");
 
     private const string Reason = "Provision the local development tenant that the local identity provider's users sign in to (ADR-2542)";
+
+    /// <summary>True when <paramref name="environment"/> is <c>Development</c> or <c>Demo</c>.</summary>
+    public static bool IsAllowedEnvironment(IHostEnvironment environment)
+    {
+        ArgumentNullException.ThrowIfNull(environment);
+        return environment.IsDevelopment() || environment.IsEnvironment(DemoEnvironmentName);
+    }
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
@@ -44,6 +69,8 @@ internal sealed partial class DevelopmentTenantBootstrap(
             await DevelopmentDemoData.SeedAsync(tenant, scopes, cancellationToken).ConfigureAwait(false);
             LogDemoData(logger, DevelopmentDemoData.StudyCode, code);
         }
+
+        readiness.MarkCompleted();
     }
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
@@ -73,7 +100,7 @@ internal sealed partial class DevelopmentTenantBootstrap(
 
     /// <summary>
     /// Registers the bootstrap when <c>Kernel:DevelopmentTenant:Code</c> is set, and returns the platform operators the
-    /// authority evaluator needs for it (none otherwise). Throws outside the Development environment.
+    /// authority evaluator needs for it (none otherwise). Throws outside the Development and Demo environments.
     /// </summary>
     public static string[] Register(IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
     {
@@ -83,18 +110,21 @@ internal sealed partial class DevelopmentTenantBootstrap(
             return [];
         }
 
-        if (!environment.IsDevelopment())
+        if (!IsAllowedEnvironment(environment))
         {
             throw new InvalidOperationException(
-                $"{SectionName}:Code is set in the {environment.EnvironmentName} environment. The kernel host provisions a development tenant only in Development (ADR-2542).");
+                $"{SectionName}:Code is set in the {environment.EnvironmentName} environment. The kernel host provisions a development tenant only in Development or {DemoEnvironmentName} (ADR-2542).");
         }
 
         string name = section["Name"] is { Length: > 0 } configured ? configured : $"Local development ({code})";
         bool demoData = section.GetValue<bool>("DemoData");
+        var readiness = new DevelopmentTenantBootstrapReadiness();
+        services.AddSingleton(readiness);
         services.AddHostedService(sp => new DevelopmentTenantBootstrap(
             code,
             name,
             demoData,
+            readiness,
             sp.GetRequiredService<IServiceScopeFactory>(),
             sp.GetRequiredService<ILogger<DevelopmentTenantBootstrap>>()));
         return [Operator.Id];

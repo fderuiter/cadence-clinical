@@ -816,35 +816,66 @@ public class LocalCiRunnerTests
         var env = Environment(docker: false);
 
         var strictResults = LocalCiRunner.Run(jobs, Defaults with { RequestedJobs = ["container-security"] }, env);
-        strictResults.Select(r => r.Outcome).Should().Equal(CiOutcome.Failed, CiOutcome.NotRun, CiOutcome.NotRun, CiOutcome.Skipped);
+        strictResults.Select(r => r.Outcome).Should().Equal(
+            CiOutcome.Failed,
+            CiOutcome.NotRun,
+            CiOutcome.NotRun,
+            CiOutcome.NotRun,
+            CiOutcome.NotRun,
+            CiOutcome.NotRun,
+            CiOutcome.NotRun);
         strictResults[0].Note.Should().Contain("Docker daemon is not reachable").And.Contain("--allow-missing-tools");
+        strictResults[3].Note.Should().Contain("needs job 'boot-to-seed-smoke' to pass");
         _ran.Should().BeEmpty();
 
         var dbSkipOnlyResults = LocalCiRunner.Run(jobs, Defaults with { AllowDbSkip = true, RequestedJobs = ["container-security"] }, env);
-        dbSkipOnlyResults.Select(r => r.Outcome).Should().Equal(CiOutcome.Failed, CiOutcome.NotRun, CiOutcome.NotRun, CiOutcome.Skipped);
+        dbSkipOnlyResults.Select(r => r.Outcome).Should().Equal(
+            CiOutcome.Failed,
+            CiOutcome.NotRun,
+            CiOutcome.NotRun,
+            CiOutcome.NotRun,
+            CiOutcome.NotRun,
+            CiOutcome.NotRun,
+            CiOutcome.NotRun);
 
         var skipResults = LocalCiRunner.Run(jobs, Defaults with { AllowMissingTools = true, RequestedJobs = ["container-security"] }, env);
-        skipResults.Select(r => r.Outcome).Should().Equal(CiOutcome.Skipped, CiOutcome.Skipped, CiOutcome.Skipped, CiOutcome.Skipped);
+        skipResults.Select(r => r.Outcome).Should().Equal(
+            CiOutcome.Skipped,
+            CiOutcome.Skipped,
+            CiOutcome.Skipped,
+            CiOutcome.Skipped,
+            CiOutcome.Skipped,
+            CiOutcome.Skipped,
+            CiOutcome.Skipped);
         skipResults[0].Note.Should().Contain("Docker daemon unavailable (--allow-missing-tools)");
-        skipResults[1].Note.Should().Contain("Docker daemon unavailable (--allow-missing-tools)");
-        skipResults[2].Note.Should().Contain("Docker daemon unavailable (--allow-missing-tools)");
+        skipResults[3].Note.Should().Contain("Docker daemon unavailable (--allow-missing-tools)");
+        skipResults[4].Note.Should().Contain("Docker daemon unavailable (--allow-missing-tools)");
+        skipResults[5].Note.Should().Contain("Docker daemon unavailable (--allow-missing-tools)");
         _ran.Should().BeEmpty();
     }
 
     [Fact]
-    public void ContainerSecurity_ValidatesComposeAndBuildsAndScansAllTwentyImages_AndRespectsDiffScopeUnlessExplicitlyRequested()
+    public void ContainerSecurity_ValidatesComposeAndBuildsAndScansAllTwentyImages_AfterBootToSeedSmokeGate_AndRespectsDiffScopeUnlessExplicitlyRequested()
     {
-        var jobs = CiPlan.Select(["container-security"]);
+        var smokeAndContainer = CiPlan.Select(["container-security"]);
         var skippedScope = new CiContainerScanScope(false, "no container or dependency changes against origin/main (pass --job container-security to force)");
-        var envWhenNoDiffAndMissingTools = Environment(
-            docker: false,
-            tools: _ => false,
+        var envWhenNoDiffAndMissingTrivy = Environment(
+            docker: true,
+            tools: tool => tool == "docker",
             containerSecurityScope: skippedScope);
 
-        var defaultRunResults = LocalCiRunner.Run(jobs, Defaults, envWhenNoDiffAndMissingTools);
-        defaultRunResults.Select(r => r.Outcome).Should().Equal(CiOutcome.Skipped, CiOutcome.Skipped, CiOutcome.Skipped, CiOutcome.Skipped);
-        defaultRunResults[0].Note.Should().Contain("no container or dependency changes");
+        var defaultRunResults = LocalCiRunner.Run(smokeAndContainer, Defaults, envWhenNoDiffAndMissingTrivy);
+        defaultRunResults.Select(r => r.Outcome).Should().Equal(
+            CiOutcome.Passed,
+            CiOutcome.Passed,
+            CiOutcome.Passed,
+            CiOutcome.Skipped,
+            CiOutcome.Skipped,
+            CiOutcome.Skipped,
+            CiOutcome.Skipped);
+        defaultRunResults[3].Note.Should().Contain("no container or dependency changes");
 
+        var jobs = CiPlan.Select(["container-security"]);
         var capturedCommands = new List<string>();
         var readyEnv = new LocalCiEnvironment
         {
@@ -866,11 +897,22 @@ public class LocalCiRunnerTests
             jobs,
             Defaults with { RequestedJobs = ["container-security"] },
             readyEnv);
-        forcedResults.Select(r => r.Outcome).Should().Equal(CiOutcome.Passed, CiOutcome.Passed, CiOutcome.Passed, CiOutcome.Skipped);
-        capturedCommands.Should().HaveCount(41);
-        capturedCommands[0].Should().Be("docker compose -f docker/docker-compose.yml config -q");
-        capturedCommands.Skip(1).Take(20).Should().OnlyContain(c => c.StartsWith("docker build ", StringComparison.Ordinal));
-        capturedCommands.Skip(21).Should().OnlyContain(c => c.StartsWith("trivy image ", StringComparison.Ordinal));
+        forcedResults.Select(r => r.Outcome).Should().Equal(
+            CiOutcome.Passed,
+            CiOutcome.Passed,
+            CiOutcome.Passed,
+            CiOutcome.Passed,
+            CiOutcome.Passed,
+            CiOutcome.Passed,
+            CiOutcome.Skipped);
+        capturedCommands.Should().HaveCount(44);
+        capturedCommands[0].Should().Be("dotnet restore tests/Cadence.IntegrationTests/Cadence.IntegrationTests.csproj");
+        capturedCommands[1].Should().Be("dotnet build tests/Cadence.IntegrationTests/Cadence.IntegrationTests.csproj --configuration Release --no-restore");
+        capturedCommands[2].Should().Contain("dotnet test tests/Cadence.IntegrationTests/Cadence.IntegrationTests.csproj")
+            .And.Contain("--filter Category=Smoke");
+        capturedCommands[3].Should().Be("docker compose -f docker/docker-compose.yml config -q");
+        capturedCommands.Skip(4).Take(20).Should().OnlyContain(c => c.StartsWith("docker build ", StringComparison.Ordinal));
+        capturedCommands.Skip(24).Should().OnlyContain(c => c.StartsWith("trivy image ", StringComparison.Ordinal));
     }
 
     [Fact]

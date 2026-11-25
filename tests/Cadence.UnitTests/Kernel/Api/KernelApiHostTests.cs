@@ -1013,14 +1013,16 @@ public sealed class KernelApiHostTests : IDisposable
     }
 
     /// <summary>
-    /// The development tenant bootstrap runs only in Development (ADR-2542): with its setting in any other environment
-    /// the host refuses to start, so no deployed host carries a platform operator.
+    /// The development tenant bootstrap runs only in Development or Demo (ADR-2542): in Production, Staging, or any
+    /// other environment the host refuses to start, so no deployed host carries a platform operator.
     /// </summary>
-    [Fact]
-    public void DevelopmentTenantSetting_OutsideDevelopment_StopsTheHost()
+    [Theory]
+    [InlineData("Production")]
+    [InlineData("Staging")]
+    public void DevelopmentTenantSetting_OutsideDevelopmentAndDemo_StopsTheHost(string environmentName)
     {
         using var factory = new WebApplicationFactory<Cadence.Kernel.Host.Program>().WithWebHostBuilder(builder => builder
-            .UseEnvironment("Production")
+            .UseEnvironment(environmentName)
             .UseTestGatewaySecret()
             .UseTestBiometricLivenessKey()
             .UseTestPostgresConnectionString()
@@ -1028,7 +1030,34 @@ public sealed class KernelApiHostTests : IDisposable
 
         var start = () => factory.CreateClient();
 
-        start.Should().Throw<InvalidOperationException>().WithMessage("*only in Development (ADR-2542)*");
+        start.Should().Throw<InvalidOperationException>().WithMessage("*only in Development or Demo (ADR-2542)*");
+    }
+
+    /// <summary>
+    /// Booting in the Demo environment loads <c>appsettings.Demo.json</c> (enabling startup migrations and demo seeding)
+    /// and permits <c>DevelopmentTenantBootstrap</c> alongside Development.
+    /// </summary>
+    [Fact]
+    public void DemoEnvironment_LoadsDemoConfigurationDefaultsAndPermitsBootstrap()
+    {
+        using var factory = new WebApplicationFactory<Cadence.Kernel.Host.Program>().WithWebHostBuilder(builder => builder
+            .UseEnvironment("Demo")
+            .UseTestGatewaySecret()
+            .UseTestBiometricLivenessKey()
+            .UseTestPostgresConnectionString()
+            .ConfigureServices(services =>
+            {
+                // Unit test verifies Demo configuration and bootstrap registration without connecting to PostgreSQL.
+                services.RemoveAll<Microsoft.Extensions.Hosting.IHostedService>();
+            }));
+
+        using var _ = factory.CreateClient();
+        var configuration = factory.Services.GetRequiredService<Microsoft.Extensions.Configuration.IConfiguration>();
+
+        configuration.GetSection("Database")["MigrateOnStartup"].Should().Be("True");
+        configuration["Kernel:DevelopmentTenant:Code"].Should().Be("cadence-local");
+        configuration["Kernel:DevelopmentTenant:Name"].Should().Be("Cadence Local");
+        configuration["Kernel:DevelopmentTenant:DemoData"].Should().Be("True");
     }
 
     private HttpClient Client(bool knownTenant = true, bool hostVisibility = false) =>

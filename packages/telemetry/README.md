@@ -9,7 +9,7 @@ Shared web host defaults for the .NET services: HTTP hardening, JSON console log
   - `AddCadenceWebDefaults()`: JSON console logging, OpenTelemetry (ASP.NET Core, HttpClient, runtime and Npgsql instrumentation), health checks, ProblemDetails and OpenAPI. OTLP export of traces, metrics and logs is enabled only when `OTEL_EXPORTER_OTLP_ENDPOINT` is set (the Aspire AppHost sets it); `OTEL_SERVICE_NAME` overrides the service name.
   - HTTP hardening (`CadenceHttpHardening`, ADR-2491): no `Server` header; `X-Forwarded-For` and `X-Forwarded-Proto` honoured only from the proxies listed in `CADENCE_TRUSTED_PROXIES` (IP addresses or CIDR ranges; loopback is always trusted), walking back through every trusted hop to the real client; `Strict-Transport-Security` (one year) on HTTPS responses outside Development.
   - `UseCadenceWebDefaults()`: forwarded headers, HSTS outside Development, exception handler, `traceparent` response header, OpenAPI and Scalar UI in Development only, and the probe endpoints.
-  - `MapCadenceProbeEndpoints()`: `GET /healthz/live` (no checks) and `GET /healthz/ready` (checks tagged `ready`, such as a service's DbContext).
+  - `MapCadenceProbeEndpoints()`: `GET /healthz/live` (no checks) and `GET /healthz/ready` plus `GET /health/ready` (checks tagged `ready`, such as a service's DbContext).
   - `MapCadenceHealthAndStatusEndpoints(serviceName, routePrefix, ...)`: anonymous `GET /healthz` and `GET /api/v1/{routePrefix}/status`.
 
 ## Key dependencies
