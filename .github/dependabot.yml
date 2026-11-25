@@ -6,7 +6,7 @@ updates:
     schedule:
       interval: "weekly"
       day: "monday"
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 5
     labels:
       - "dependencies"
     groups:
@@ -17,6 +17,7 @@ updates:
           - "Microsoft.Extensions.*"
           - "System.Security.Cryptography.*"
           - "System.IO.*"
+          - "dotnet-ef"
         exclude-patterns:
           - "Microsoft.Extensions.AI*"
       dotnet-ai:
@@ -50,6 +51,9 @@ updates:
       anthropic:
         patterns:
           - "Anthropic*"
+      nuget-other:
+        patterns:
+          - "*"
     ignore:
       # MassTransit 9 is commercial and needs a license key; 8.x stays under Apache 2.0 (#5520, ADR-2524).
       - dependency-name: "MassTransit*"
@@ -101,7 +105,7 @@ updates:
     schedule:
       interval: "weekly"
       day: "monday"
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 5
     labels:
       - "dependencies"
       - "nodejs"
@@ -131,6 +135,9 @@ updates:
           - "vite"
           - "@vitejs/*"
           - "vitepress*"
+      npm-other:
+        patterns:
+          - "*"
     ignore:
       # Node runtime baseline is pinned via package.json engines (ADR-2508).
       - dependency-name: "@types/node"
@@ -142,7 +149,7 @@ updates:
     schedule:
       interval: "weekly"
       day: "monday"
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 1
     labels:
       - "dependencies"
     groups:
@@ -163,7 +170,7 @@ updates:
     schedule:
       interval: "weekly"
       day: "monday"
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 1
     labels:
       - "dependencies"
     ignore:
@@ -177,7 +184,7 @@ updates:
     schedule:
       interval: "weekly"
       day: "monday"
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 1
     labels:
       - "dependencies"
     ignore:
@@ -196,9 +203,13 @@ updates:
     schedule:
       interval: "weekly"
       day: "monday"
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 1
     labels:
       - "dependencies"
+    groups:
+      compose-images:
+        patterns:
+          - "*"
     ignore:
       # PostgreSQL image tag and @sha256 digest are locked across PostgresTestImage.cs, CI, AppHost, and compose (ADR-2533);
       # block standalone compose bumps until all four locations are updated in lockstep.
@@ -210,7 +221,11 @@ updates:
     schedule:
       interval: "weekly"
       day: "monday"
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 2
     labels:
       - "dependencies"
       - "actions"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
