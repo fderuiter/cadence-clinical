@@ -33,8 +33,17 @@ const ConfirmationDialogHost = defineLazyOverlay(
 </script>
 
 <script setup>
-import { computed, onMounted, onUnmounted, ref, watch } from "vue";
+import {
+  computed,
+  onMounted,
+  onUnmounted,
+  provide,
+  ref,
+  shallowRef,
+  watch,
+} from "vue";
 import { useRoute } from "vue-router";
+import { hasRegisteredUnsavedDrafts } from "ui";
 import AppShell from "./components/AppShell.vue";
 import { useEntityPeekDrawer } from "./composables/useEntityPeekDrawer";
 import { useAuthStore } from "./stores/auth.js";
@@ -65,6 +74,58 @@ watch(
   },
   { immediate: true }
 );
+
+const loadedNodeResolver = shallowRef(null);
+let nodeResolverPromise = null;
+
+function loadNodeResolver() {
+  if (loadedNodeResolver.value) {
+    return Promise.resolve(loadedNodeResolver.value);
+  }
+  if (!nodeResolverPromise) {
+    nodeResolverPromise = import("./canvas/nodeResolver").then((mod) => {
+      loadedNodeResolver.value = mod;
+      return mod;
+    });
+  }
+  return nodeResolverPromise;
+}
+
+provide("cadenceEntityResolver", {
+  ensure(refs) {
+    if (loadedNodeResolver.value) {
+      loadedNodeResolver.value.ensureNodesResolved(refs);
+      return;
+    }
+    void loadNodeResolver().then((mod) => mod.ensureNodesResolved(refs));
+  },
+  getDisplay(refText, fallbackTitle = null) {
+    if (loadedNodeResolver.value) {
+      return loadedNodeResolver.value.getNodeDisplay(refText, fallbackTitle);
+    }
+    void loadNodeResolver();
+    return null;
+  },
+  resolve(refText) {
+    if (loadedNodeResolver.value) {
+      return loadedNodeResolver.value.resolveNode(refText);
+    }
+    return loadNodeResolver().then((mod) => mod.resolveNode(refText));
+  },
+});
+
+provide("cadenceConfirmUnsavedDrafts", {
+  hasUnsaved: () => hasRegisteredUnsavedDrafts(),
+  confirm: () =>
+    confirmStore.confirm({
+      title: "Unsaved Form Changes",
+      message:
+        "You have unsaved eCRF draft changes. Are you sure you want to leave?",
+      confirmLabel: "Leave Without Saving",
+      cancelLabel: "Stay on Form",
+      variant: "warning",
+    }),
+});
 
 const showContextualHelp = computed(
   () =>

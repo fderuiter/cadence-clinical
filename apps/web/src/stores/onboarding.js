@@ -272,7 +272,8 @@ export const ROLE_STEP_SEQUENCES = {
     {
       step: 4,
       routeName: "overview",
-      targetSelector: "#btn-onboarding-checklist-trigger",
+      targetSelector:
+        "#btn-onboarding-checklist-trigger, #btn-header-actions-menu",
       title: "Workspace Orientation",
       description:
         "Review role-tailored setup milestones and customize your default sign-in landing preference.",
@@ -282,7 +283,7 @@ export const ROLE_STEP_SEQUENCES = {
     {
       step: 5,
       routeName: "study",
-      targetSelector: "#btn-contextual-help-trigger",
+      targetSelector: "#btn-contextual-help-trigger, #btn-header-actions-menu",
       title: "Tour Complete!",
       description:
         "Your protocol design workspace orientation is complete. Open Help anytime for standard operating procedure guidance.",
@@ -335,7 +336,7 @@ export const ROLE_STEP_SEQUENCES = {
     {
       step: 5,
       routeName: "ecrf",
-      targetSelector: "#btn-contextual-help-trigger",
+      targetSelector: "#btn-contextual-help-trigger, #btn-header-actions-menu",
       title: "Tour Complete!",
       description:
         "Your data management orientation is complete. Access SOP guidance via Help in the top bar anytime.",
@@ -388,7 +389,7 @@ export const ROLE_STEP_SEQUENCES = {
     {
       step: 5,
       routeName: "ctms",
-      targetSelector: "#btn-contextual-help-trigger",
+      targetSelector: "#btn-contextual-help-trigger, #btn-header-actions-menu",
       title: "Tour Complete!",
       description:
         "Your clinical monitoring orientation is complete. Use Search (⌘K), Orientation, and Help anytime.",
@@ -431,7 +432,8 @@ export const ROLE_STEP_SEQUENCES = {
     {
       step: 4,
       routeName: "overview",
-      targetSelector: "#btn-onboarding-checklist-trigger",
+      targetSelector:
+        "#btn-onboarding-checklist-trigger, #btn-header-actions-menu",
       title: "Inspection Orientation",
       description:
         "Review inspection readiness tasks and configure your workspace landing preferences.",
@@ -441,7 +443,7 @@ export const ROLE_STEP_SEQUENCES = {
     {
       step: 5,
       routeName: "study",
-      targetSelector: "#btn-contextual-help-trigger",
+      targetSelector: "#btn-contextual-help-trigger, #btn-header-actions-menu",
       title: "Tour Complete!",
       description:
         "Your regulatory audit orientation is complete. Open Help anytime to consult compliance SOPs.",
@@ -547,7 +549,7 @@ export const ROLE_STEP_SEQUENCES = {
     {
       step: 5,
       routeName: "study",
-      targetSelector: "#btn-contextual-help-trigger",
+      targetSelector: "#btn-contextual-help-trigger, #btn-header-actions-menu",
       title: "Tour Complete!",
       description:
         "Use Search (⌘K), View switcher, Orientation, and Help anytime from the persistent header.",
@@ -575,7 +577,7 @@ function buildOverviewFallbackSteps(baseSequence) {
     {
       step: 2,
       routeName: "overview",
-      targetSelector: "#btn-contextual-help-trigger",
+      targetSelector: "#btn-contextual-help-trigger, #btn-header-actions-menu",
       title: lastStep?.title || "Tour Complete!",
       description:
         lastStep?.description ||

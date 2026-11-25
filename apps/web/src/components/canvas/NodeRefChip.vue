@@ -1,31 +1,33 @@
 <template>
-  <span v-if="summary.masked" class="noderef-masked">{{ summary.label }}</span>
-  <component
-    :is="linkTag"
-    v-else-if="toLocation"
-    :to="toLocation"
-    class="noderef-chip node-ref-chip"
-    :title="tooltipText"
-    @click="onSelectClick"
-  >
-    <span class="noderef-chip-label">{{ displayText }}</span>
-  </component>
-  <button
-    v-else
-    type="button"
-    class="noderef-chip node-ref-chip noderef-chip-button"
-    :title="tooltipText"
-    @click="emit('select', summary.ref)"
-  >
-    <span class="noderef-chip-label">{{ displayText }}</span>
-  </button>
+  <EntityLink
+    :node-ref="summary.ref"
+    :label="summary.masked ? '' : summary.label"
+    :kind="summary.kind"
+    :code="summary.code || ''"
+    :status="summary.status || ''"
+    :include-kind="includeKind"
+    :masked="summary.masked ? summary.maskReason || true : false"
+    :masked-label="summary.masked ? summary.label : ''"
+    :to="fullViewLocation ?? undefined"
+    :inspector-to="inspectorLocation ?? undefined"
+    :preview-mode="effectivePreviewMode"
+    :subtitle="previewSubtitle"
+    :resolve-remotely="false"
+    @select="emit('select', summary.ref)"
+    @inspect="requestCanvasFocus"
+    @navigate="requestCanvasFocus"
+  />
 </template>
 
 <script setup lang="ts">
 import { computed, getCurrentInstance, nextTick, watch } from "vue";
 import { getActivePinia } from "pinia";
 import type { RouteLocationRaw } from "vue-router";
+import { EntityLink } from "ui";
+import { resolveEntityFullViewLocation } from "../../canvas/entityDestination";
 import { ensureNodesResolved, getNodeDisplay } from "../../canvas/nodeResolver";
+import { promoteParticipantInspectorNode } from "../../canvas/palette";
+import { useScopedNavigation } from "../../composables/useScopedNavigation";
 import { useStudyCanvasStore } from "../../stores/studyCanvas";
 
 const props = withDefaults(
@@ -36,6 +38,8 @@ const props = withDefaults(
     to?: RouteLocationRaw | null;
     autoLink?: boolean;
     resolveRemotely?: boolean;
+    studyCode?: string | null;
+    previewMode?: "drawer" | "inspector" | "navigate" | null;
   }>(),
   {
     fallbackTitle: null,
@@ -43,6 +47,8 @@ const props = withDefaults(
     to: null,
     autoLink: true,
     resolveRemotely: true,
+    studyCode: null,
+    previewMode: null,
   }
 );
 
@@ -52,7 +58,6 @@ const emit = defineEmits<{
 
 const instance = getCurrentInstance();
 const hasRouter = Boolean(instance?.appContext.config.globalProperties.$router);
-const routerLinkComponent = instance?.appContext.components.RouterLink ?? null;
 const currentRoute = computed(
   () =>
     (
@@ -78,54 +83,83 @@ const summary = computed(() =>
   getNodeDisplay(props.nodeRef, props.fallbackTitle)
 );
 
-const displayText = computed(() => {
-  const s = summary.value;
-  if (!props.includeKind) return s.label;
-  if (s.label.toLowerCase().startsWith(s.kindLabel.toLowerCase())) {
-    return s.label;
+const activeStudyCode = computed(() => {
+  if (props.studyCode && props.studyCode.trim()) {
+    return props.studyCode.trim();
   }
-  return `${s.kindLabel}: ${s.label}`;
-});
-
-const tooltipText = computed(() => {
-  const s = summary.value;
-  return `Inspect ${s.kindLabel.toLowerCase()} (${s.label})`;
-});
-
-const toLocation = computed<RouteLocationRaw | null>(() => {
-  if (!hasRouter || !routerLinkComponent) return null;
-  if (props.to) return props.to;
-  if (props.autoLink === false) return null;
   const route = currentRoute.value;
-  const studyCode =
+  return typeof route?.params?.studyCode === "string"
+    ? route.params.studyCode.trim()
+    : "";
+});
+
+const { workspaceScope } = useScopedNavigation(() => activeStudyCode.value);
+
+const activeSiteCode = computed(() => {
+  const route = currentRoute.value;
+  const site = route?.query?.site;
+  if (typeof site === "string" && site.trim()) return site.trim();
+  return workspaceScope.value.siteId || "";
+});
+
+const inspectorLocation = computed<RouteLocationRaw | null>(() => {
+  if (!hasRouter || props.autoLink === false) return null;
+  const route = currentRoute.value;
+  const routeStudy =
     typeof route?.params?.studyCode === "string"
       ? route.params.studyCode.trim()
       : "";
-  if (route?.name === "study" && studyCode && summary.value.ref) {
+  if (route?.name === "study" && routeStudy && summary.value.ref) {
+    const routeQuery = route.query ?? {};
+    const currentInspectorNode =
+      typeof routeQuery.node === "string" ? routeQuery.node : "";
+    const promotedParticipant = promoteParticipantInspectorNode(
+      currentInspectorNode,
+      summary.value.ref
+    );
     return {
       name: "study",
-      params: { studyCode },
-      query: { ...(route.query ?? {}), node: summary.value.ref },
+      params: { studyCode: routeStudy },
+      query: {
+        ...routeQuery,
+        ...(promotedParticipant && !routeQuery.participant
+          ? { participant: promotedParticipant }
+          : {}),
+        node: summary.value.ref,
+      },
     };
   }
   return null;
 });
 
-const linkTag = computed(() => routerLinkComponent ?? "a");
+const fullViewLocation = computed<RouteLocationRaw | null>(() => {
+  if (!hasRouter) return null;
+  if (props.to) return props.to;
+  if (props.autoLink === false) return null;
+  return resolveEntityFullViewLocation(summary.value.ref, {
+    studyCode: activeStudyCode.value,
+    site: activeSiteCode.value,
+    entityCode: summary.value.code,
+    scope: workspaceScope.value,
+  });
+});
 
-function onSelectClick(event?: MouseEvent) {
-  emit("select", summary.value.ref);
-  if (
-    event &&
-    (event.defaultPrevented ||
-      (typeof event.button === "number" && event.button !== 0) ||
-      event.metaKey ||
-      event.ctrlKey ||
-      event.shiftKey ||
-      event.altKey)
-  ) {
-    return;
+const effectivePreviewMode = computed<"drawer" | "inspector" | "navigate">(
+  () => {
+    if (props.previewMode) return props.previewMode;
+    if (props.to) return "navigate";
+    if (props.autoLink === false) return "inspector";
+    if (inspectorLocation.value) return "inspector";
+    return "drawer";
   }
+);
+
+const previewSubtitle = computed(() => {
+  if (!activeStudyCode.value) return "";
+  return `Study ${activeStudyCode.value}`;
+});
+
+function requestCanvasFocus() {
   if (currentRoute.value?.name === "study" && summary.value.ref) {
     const pinia = getActivePinia();
     if (pinia) {
@@ -143,48 +177,3 @@ function onSelectClick(event?: MouseEvent) {
   }
 }
 </script>
-
-<style scoped>
-.noderef-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  min-height: var(--semantic-control-target-min, 24px);
-  min-width: var(--semantic-control-target-min, 24px);
-  max-width: 100%;
-  box-sizing: border-box;
-  color: var(--semantic-color-primary);
-  font-weight: 500;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-  background: none;
-  border: 0;
-  padding: 0;
-  font-family: inherit;
-  font-size: inherit;
-  cursor: pointer;
-  text-align: left;
-}
-
-.noderef-chip-label {
-  min-width: 0;
-  max-width: 100%;
-  overflow-wrap: anywhere;
-}
-
-.noderef-chip:hover {
-  color: var(--semantic-color-primary-dark);
-}
-
-.noderef-chip:focus-visible {
-  outline: 2px solid var(--semantic-color-accent);
-  outline-offset: 2px;
-  border-radius: 3px;
-}
-
-.noderef-masked {
-  color: var(--semantic-color-text-muted);
-  font-style: italic;
-  overflow-wrap: anywhere;
-}
-</style>

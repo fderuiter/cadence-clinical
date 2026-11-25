@@ -704,11 +704,11 @@ describe("CommandPaletteOverlay.vue - Unified Global Command Palette", () => {
       expect(workspaceReadiness).toBeTruthy();
       await workspaceReadiness.trigger("click");
       expect(pushSpy).toHaveBeenLastCalledWith(
-        "/ctms?studyId=CADENCE-101&siteId=SITE-101"
+        "/studies/CADENCE-101?stage=start&section=startup-greenlight&site=SITE-101"
       );
       canvasPalette.unmount();
 
-      // 2. At /ctms?studyId=CADENCE-101 -> Studies dispatches /studies/CADENCE-101 and Data collection dispatches /ecrf?studyId=CADENCE-101
+      // 2. At /ctms?studyId=CADENCE-101 -> Studies dispatches /studies/CADENCE-101 and Data collection dispatches Conduct canvas
       await router.push("/ctms?studyId=CADENCE-101");
       const ctmsPalette = mount(CommandPaletteOverlay, {
         props: { isOpen: true },
@@ -761,6 +761,26 @@ describe("CommandPaletteOverlay.vue - Unified Global Command Palette", () => {
           "/ecrf?studyId=CADENCE-101&siteId=SITE-101"
         );
         demoPalette.unmount();
+
+        const demoReadinessPalette = mount(CommandPaletteOverlay, {
+          props: { isOpen: true },
+          global: { plugins: [pinia, router] },
+        });
+        await flushPromises();
+        await body.find("#canvas-palette-input").setValue("Site readiness");
+        const demoReadinessOption = body
+          .findAll("#canvas-palette [role='option']")
+          .find(
+            (o) =>
+              o.find(".palette-label").text() === "Site readiness" &&
+              o.find(".palette-group").text() === "Workspace"
+          );
+        expect(demoReadinessOption).toBeTruthy();
+        await demoReadinessOption.trigger("click");
+        expect(pushSpy).toHaveBeenLastCalledWith(
+          "/ctms?studyId=CADENCE-101&siteId=SITE-101"
+        );
+        demoReadinessPalette.unmount();
       } finally {
         vi.unstubAllEnvs();
       }

@@ -183,6 +183,30 @@ function cleanQueryString(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
+export function buildCanvasSectionPath(
+  stage: string,
+  section: string,
+  scope?: {
+    studyCode?: string;
+    siteId?: string;
+    subjectCode?: string;
+    participantRef?: string;
+  }
+): string {
+  const studyCode = scope?.studyCode?.trim() || "";
+  const siteId = scope?.siteId?.trim() || "";
+  const participant =
+    scope?.participantRef?.trim() || scope?.subjectCode?.trim() || "";
+  const params = new URLSearchParams();
+  params.set("stage", stage);
+  params.set("section", section);
+  if (siteId) params.set("site", siteId);
+  if (participant) params.set("participant", participant);
+  return studyCode
+    ? `/studies/${encodeURIComponent(studyCode)}?${params.toString()}`
+    : `/studies?${params.toString()}`;
+}
+
 export function buildScopedRoutePath(
   basePath: string,
   scope?: { studyCode?: string; siteId?: string }
@@ -199,12 +223,28 @@ export function buildScopedRoutePath(
 export function resolveSiteReadinessPath(
   normalizedRoles: string[],
   scopeOrStudyCode?:
-    string | { studyCode?: string; siteId?: string; subjectCode?: string }
+    | string
+    | {
+        studyCode?: string;
+        siteId?: string;
+        subjectCode?: string;
+        participantRef?: string;
+      }
 ): string | null {
   const scope =
     typeof scopeOrStudyCode === "string"
       ? { studyCode: scopeOrStudyCode }
       : scopeOrStudyCode;
+  if (!isDemoBuild()) {
+    if (!isScreenAvailable("study")) return null;
+    if (hasRequiredRole(normalizedRoles, SITE_READINESS_SPONSOR_ROLES)) {
+      return buildCanvasSectionPath("start", "startup-greenlight", scope);
+    }
+    if (hasRequiredRole(normalizedRoles, SITE_READINESS_SITE_ROLES)) {
+      return buildCanvasSectionPath("start", "site-activation", scope);
+    }
+    return null;
+  }
   let basePath: string | null = null;
   if (
     isScreenAvailable("ctms") &&
@@ -953,6 +993,7 @@ export function buildWorkspacePaletteItems(options: {
     studyCode: options.activeStudyCode,
     siteId: options.activeSiteId,
     subjectCode: options.activeSubjectCode,
+    participantRef: options.activeParticipantRef,
   });
   if (siteReadinessPath) {
     if (siteReadinessPath.startsWith("/ctms")) {
@@ -969,7 +1010,10 @@ export function buildWorkspacePaletteItems(options: {
     });
   }
 
-  if (isScreenAvailable("etmf") && hasRequiredRole(roles, ETMF_ROLES)) {
+  const canOpenDocuments = isDemoBuild()
+    ? isScreenAvailable("etmf") && hasRequiredRole(roles, ETMF_ROLES)
+    : isScreenAvailable("study") && hasRequiredRole(roles, ETMF_ROLES);
+  if (canOpenDocuments) {
     includedRoutes.add("etmf");
     items.push({
       key: "workspace:trial-documents",
@@ -977,16 +1021,26 @@ export function buildWorkspacePaletteItems(options: {
       label: "Trial documents",
       detail: "Study binder, document classification, and clinical review",
       target: {
-        routePath: buildScopedWorkflowPath("/etmf", {
-          studyCode: options.activeStudyCode,
-          siteId: options.activeSiteId,
-          subjectCode: options.activeSubjectCode,
-        }),
+        routePath: isDemoBuild()
+          ? buildScopedWorkflowPath("/etmf", {
+              studyCode: options.activeStudyCode,
+              siteId: options.activeSiteId,
+              subjectCode: options.activeSubjectCode,
+            })
+          : buildCanvasSectionPath("start", "documents", {
+              studyCode: options.activeStudyCode,
+              siteId: options.activeSiteId,
+              subjectCode: options.activeSubjectCode,
+              participantRef: options.activeParticipantRef,
+            }),
       },
     });
   }
 
-  if (isScreenAvailable("training")) {
+  const canOpenTraining = isDemoBuild()
+    ? isScreenAvailable("training")
+    : isScreenAvailable("study");
+  if (canOpenTraining) {
     includedRoutes.add("training");
     items.push({
       key: "workspace:training",
@@ -994,11 +1048,18 @@ export function buildWorkspacePaletteItems(options: {
       label: "Study training",
       detail: "Protocol curricula, staff assignments, and delegation sign-off",
       target: {
-        routePath: buildScopedWorkflowPath("/training", {
-          studyCode: options.activeStudyCode,
-          siteId: options.activeSiteId,
-          subjectCode: options.activeSubjectCode,
-        }),
+        routePath: isDemoBuild()
+          ? buildScopedWorkflowPath("/training", {
+              studyCode: options.activeStudyCode,
+              siteId: options.activeSiteId,
+              subjectCode: options.activeSubjectCode,
+            })
+          : buildCanvasSectionPath("start", "training", {
+              studyCode: options.activeStudyCode,
+              siteId: options.activeSiteId,
+              subjectCode: options.activeSubjectCode,
+              participantRef: options.activeParticipantRef,
+            }),
       },
     });
   }
@@ -1037,7 +1098,7 @@ export function buildWorkspacePaletteItems(options: {
     });
   }
 
-  if (isScreenAvailable("overview")) {
+  if (isDemoBuild() && isScreenAvailable("overview")) {
     includedRoutes.add("overview");
     items.push({
       key: "workspace:orientation",
@@ -1051,6 +1112,14 @@ export function buildWorkspacePaletteItems(options: {
           subjectCode: options.activeSubjectCode,
         }),
       },
+    });
+  } else if (!isDemoBuild()) {
+    items.push({
+      key: "workspace:orientation",
+      group: "Workspace",
+      label: "Orientation",
+      detail: "Role-tailored workspace orientation and setup checklist",
+      target: { action: { kind: "open-checklist" } },
     });
   }
 

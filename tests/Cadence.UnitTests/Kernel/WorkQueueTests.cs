@@ -122,6 +122,30 @@ public sealed class WorkQueueTests
         filtered.Select(q => q.Code).Should().Equal("zeta");
     }
 
+    [Fact(DisplayName = "Read_ScopesWithinStudyOrAcrossAllStudies_WhenWithinIsProvidedOrOmitted")]
+    public async Task ReadScopesWithinStudyOrAcrossAllStudiesWhenWithinIsProvidedOrOmitted()
+    {
+        var studyA = NodeRef.For(StudyId.New());
+        var studyB = NodeRef.For(StudyId.New());
+        var protocolA = new WorkItemCandidate(
+            NodeRef.For(ProtocolVersionId.New(), 1),
+            "CAD-101 Protocol v1.0",
+            Start.AddDays(1));
+        var protocolB = new WorkItemCandidate(
+            NodeRef.For(ProtocolVersionId.New(), 1),
+            "ONC-204 Protocol v1.0",
+            Start.AddDays(2));
+        var probe = new Probe(protocolA.Subject, protocolB.Subject);
+        var scopedSource = new StudyScopedSource(Source, [(studyA, protocolA), (studyB, protocolB)]);
+
+        var crossStudy = (await Read(probe, [Definition("protocol_approvals")], [scopedSource], query: new WorkQueueQuery(Within: null))).Single();
+        var studyScoped = (await Read(probe, [Definition("protocol_approvals")], [scopedSource], query: new WorkQueueQuery(Within: studyA))).Single();
+
+        crossStudy.Items.Select(i => i.Subject).Should().Equal(protocolA.Subject, protocolB.Subject);
+        studyScoped.Items.Select(i => i.Subject).Should().Equal(protocolA.Subject);
+        scopedSource.WithinAsked.Should().Equal(null, studyA);
+    }
+
     [Fact(DisplayName = "Read_WithoutAnActorOrWithAnInvalidLimit_Fails")]
     public async Task ReadWithoutAnActorOrWithAnInvalidLimitFails()
     {
@@ -177,6 +201,21 @@ public sealed class WorkQueueTests
 
         public Task<IReadOnlyList<WorkItemCandidate>> CandidatesAsync(TenantId tenant, NodeRef? within, int take, CancellationToken cancellationToken) =>
             Task.FromResult<IReadOnlyList<WorkItemCandidate>>([.. items.Take(take)]);
+    }
+
+    private sealed class StudyScopedSource(string name, IReadOnlyList<(NodeRef Study, WorkItemCandidate Candidate)> items) : IWorkItemSource
+    {
+        public string Name { get; } = name;
+
+        public List<NodeRef?> WithinAsked { get; } = [];
+
+        public Task<IReadOnlyList<WorkItemCandidate>> CandidatesAsync(TenantId tenant, NodeRef? within, int take, CancellationToken cancellationToken)
+        {
+            WithinAsked.Add(within);
+            return Task.FromResult<IReadOnlyList<WorkItemCandidate>>([
+                .. items.Where(i => within == null || i.Study == within).Select(i => i.Candidate).Take(take),
+            ]);
+        }
     }
 
     private sealed class Probe(params NodeRef[] permitted) : IAuthorizationProbe

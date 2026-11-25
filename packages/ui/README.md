@@ -42,7 +42,7 @@ in `vite.config.js` are a ratchet floor: raise them when coverage rises, never l
 
 ### Inline Explanation & Gated Action Primitives
 
-- `EntityLink`: Renders Clinical Kernel `NodeRef` links in monospace with K-EXP-2 masked badge support and scope-preserving peek-drawer activation.
+- `EntityLink`: Renders Clinical Kernel `NodeRef` links with human-readable labels, K-EXP-2 masked badge support, bounded `ClinicalDrawer` preview-first inspection, and unsaved-draft confirmation before full-view navigation ([ADR-2594](../../docs/adr/2026-11-23-unify-studies-home-work-queues-and-entity-link.md)).
 - `ClinicalExplanation`: Renders ADR-2482 `Explanation` claims, evaluated met/unmet conditions, reasoning steps, and clickable `NextAction.Target` links.
 - `ClinicalGatedAction`: Keeps blocked clinical controls visible with accessible why-blocked explanations.
 

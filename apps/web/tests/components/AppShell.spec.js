@@ -62,7 +62,7 @@ describe("AppShell.vue - Unified Study-Centric Application Shell", () => {
     const authStore = useAuthStore();
     authStore.isAuthenticated = true;
 
-    // 1. Site Investigator / Coordinator sees Studies, Data collection (Clinical Canvas Conduct), and Site readiness (/ssu)
+    // 1. Site Investigator / Coordinator sees Studies, Data collection (Clinical Canvas Conduct), and Site readiness (Clinical Canvas Start site-activation)
     authStore.rawRoles = ["Site Investigator"];
     const crcWrapper = mount(AppShell, {
       global: { plugins: [router] },
@@ -72,11 +72,11 @@ describe("AppShell.vue - Unified Study-Centric Application Shell", () => {
       "/studies?stage=conduct&section=participants"
     );
     expect(crcWrapper.find("#nav-site-readiness").attributes("href")).toBe(
-      "/ssu"
+      "/studies?stage=start&section=site-activation"
     );
     crcWrapper.unmount();
 
-    // In static demo mode, #nav-data-collection targets /ecrf
+    // In static demo mode, #nav-data-collection targets /ecrf and #nav-site-readiness targets /ssu
     vi.stubEnv("VITE_DEMO_MODE", "true");
     const demoCrcWrapper = mount(AppShell, {
       global: { plugins: [router] },
@@ -84,10 +84,13 @@ describe("AppShell.vue - Unified Study-Centric Application Shell", () => {
     expect(demoCrcWrapper.find("#nav-data-collection").attributes("href")).toBe(
       "/ecrf"
     );
+    expect(demoCrcWrapper.find("#nav-site-readiness").attributes("href")).toBe(
+      "/ssu"
+    );
     demoCrcWrapper.unmount();
     vi.unstubAllEnvs();
 
-    // 2. CRA / Monitor sees Studies, Data collection (/ecrf), and Site readiness (/ctms)
+    // 2. CRA / Monitor sees Studies, Data collection, and Site readiness (startup-greenlight)
     authStore.rawRoles = ["CRA"];
     const craWrapper = mount(AppShell, {
       global: { plugins: [router] },
@@ -95,11 +98,11 @@ describe("AppShell.vue - Unified Study-Centric Application Shell", () => {
     expect(craWrapper.find("#nav-studies").exists()).toBe(true);
     expect(craWrapper.find("#nav-data-collection").exists()).toBe(true);
     expect(craWrapper.find("#nav-site-readiness").attributes("href")).toBe(
-      "/ctms"
+      "/studies?stage=start&section=startup-greenlight"
     );
     craWrapper.unmount();
 
-    // 3. Data Manager sees Studies, Data collection (/ecrf), and Site readiness (/ctms)
+    // 3. Data Manager sees Studies, Data collection, and Site readiness (startup-greenlight)
     authStore.rawRoles = ["Data Manager"];
     const dmWrapper = mount(AppShell, {
       global: { plugins: [router] },
@@ -107,7 +110,7 @@ describe("AppShell.vue - Unified Study-Centric Application Shell", () => {
     expect(dmWrapper.find("#nav-studies").exists()).toBe(true);
     expect(dmWrapper.find("#nav-data-collection").exists()).toBe(true);
     expect(dmWrapper.find("#nav-site-readiness").attributes("href")).toBe(
-      "/ctms"
+      "/studies?stage=start&section=startup-greenlight"
     );
     dmWrapper.unmount();
 
@@ -487,7 +490,7 @@ describe("AppShell.vue - Unified Study-Centric Application Shell", () => {
     clinicalStore.activeStudyId = "STALE-CLINICAL";
     clinicalStore.activeSiteId = "STALE-SITE";
 
-    // 1. Sponsor/Monitor at /studies/CADENCE-101?site=SITE-101 -> /ctms?studyId=CADENCE-101&siteId=SITE-101
+    // 1. Sponsor/Monitor at /studies/CADENCE-101?site=SITE-101 -> Start startup-greenlight
     authStore.rawRoles = ["CRA"];
     await router.push("/studies/CADENCE-101?site=SITE-101");
     await router.isReady();
@@ -496,7 +499,7 @@ describe("AppShell.vue - Unified Study-Centric Application Shell", () => {
       global: { plugins: [router] },
     });
     expect(craWrapper.find("#nav-site-readiness").attributes("href")).toBe(
-      "/ctms?studyId=CADENCE-101&siteId=SITE-101"
+      "/studies/CADENCE-101?stage=start&section=startup-greenlight&site=SITE-101"
     );
     expect(craWrapper.find("#nav-studies").attributes("href")).toBe(
       "/studies/CADENCE-101?site=SITE-101"
@@ -507,7 +510,7 @@ describe("AppShell.vue - Unified Study-Centric Application Shell", () => {
     expect(craWrapper.find("#shell-context-bar").exists()).toBe(false);
     craWrapper.unmount();
 
-    // Static demo builds preserve /ecrf?studyId=CADENCE-101&siteId=SITE-101
+    // Static demo builds preserve /ecrf and /ctms?studyId=CADENCE-101&siteId=SITE-101
     vi.stubEnv("VITE_DEMO_MODE", "true");
     try {
       const demoCraWrapper = mount(AppShell, {
@@ -516,18 +519,21 @@ describe("AppShell.vue - Unified Study-Centric Application Shell", () => {
       expect(
         demoCraWrapper.find("#nav-data-collection").attributes("href")
       ).toBe("/ecrf?studyId=CADENCE-101&siteId=SITE-101");
+      expect(
+        demoCraWrapper.find("#nav-site-readiness").attributes("href")
+      ).toBe("/ctms?studyId=CADENCE-101&siteId=SITE-101");
       demoCraWrapper.unmount();
     } finally {
       vi.unstubAllEnvs();
     }
 
-    // 2. Site coordinator/investigator at /studies/CADENCE-101?site=SITE-101 -> /ssu?studyId=CADENCE-101&siteId=SITE-101
+    // 2. Site coordinator/investigator at /studies/CADENCE-101?site=SITE-101 -> Start site-activation
     authStore.rawRoles = ["Site Investigator"];
     const crcWrapper = mount(AppShell, {
       global: { plugins: [router] },
     });
     expect(crcWrapper.find("#nav-site-readiness").attributes("href")).toBe(
-      "/ssu?studyId=CADENCE-101&siteId=SITE-101"
+      "/studies/CADENCE-101?stage=start&section=site-activation&site=SITE-101"
     );
     crcWrapper.unmount();
 
@@ -544,7 +550,7 @@ describe("AppShell.vue - Unified Study-Centric Application Shell", () => {
       "/studies/CADENCE-101?stage=conduct&section=participants"
     );
     expect(fromEcrf.find("#nav-site-readiness").attributes("href")).toBe(
-      "/ctms?studyId=CADENCE-101"
+      "/studies/CADENCE-101?stage=start&section=startup-greenlight"
     );
     fromEcrf.unmount();
 

@@ -1181,6 +1181,16 @@ export interface EntityLinkNodeRef {
   siteId?: string | null;
 }
 
+export interface EntityLinkPeekPayload {
+  nodeRef: string | EntityLinkNodeRef;
+  objectNodeRef?: EntityLinkNodeRef;
+  label?: string;
+  parsed?: ParsedNodeRef | null;
+  triggerEl: HTMLElement | null;
+  event?: MouseEvent;
+  originalEvent?: MouseEvent;
+}
+
 export interface ParsedNodeRef {
   raw: string;
   masked: boolean;
@@ -1199,17 +1209,40 @@ export const EntityLink: DefineSlotsComponent<
     entityType?: string;
     entityId?: string;
     label?: string;
-    srContext?: string;
+    kind?: string;
+    code?: string;
+    status?: string;
+    subtitle?: string;
+    includeKind?: boolean;
+    masked?: boolean | string;
+    maskedLabel?: string;
+    to?: string | Record<string, any> | null;
+    inspectorTo?: string | Record<string, any> | null;
     href?: string;
     preventNavigation?: boolean;
     tabular?: boolean;
+    previewMode?: "drawer" | "inspector" | "navigate" | "peek" | string;
+    fullViewLabel?: string;
+    srContext?: string;
+    teleport?: boolean | string;
+    resolveRemotely?: boolean;
+    resolveNode?: (nodeRef: string) => any;
+    confirmDiscardDrafts?: () => boolean | Promise<boolean>;
     compact?: boolean;
     showCode?: boolean;
-    onPeek?: (payload: any) => void;
-    onSelect?: (payload: any) => void;
+    onPeek?: (payload: EntityLinkPeekPayload) => void;
+    onSelect?: (value: any) => void;
+    onPreview?: (summary: Record<string, any>) => void;
+    onInspect?: (nodeRef: string) => void;
+    onNavigate?: (target: any) => void;
   },
   {
     default?: (props: Record<string, never>) => any;
+    preview?: (props: {
+      summary: Record<string, any>;
+      close: () => void;
+      openFullView: () => Promise<void>;
+    }) => any;
   }
 >;
 

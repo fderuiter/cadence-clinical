@@ -71,38 +71,61 @@ function primaryFallbackScreens() {
     : new Set(["study", "ctms", "ssu"]);
 }
 
-function redirectToCanvasSection(stage, section) {
+function resolveCanvasRedirectScope(to) {
+  const canvasState = getActivePinia()?.state.value?.studyCanvas;
+  const scope = resolveActiveWorkspaceScope(to, canvasState);
+  const rawCode =
+    (typeof to.query?.studyCode === "string" && to.query.studyCode.trim()) ||
+    (typeof to.query?.studyId === "string" && to.query.studyId.trim()) ||
+    (typeof to.query?.study === "string" && to.query.study.trim()) ||
+    scope.studyCode ||
+    "";
+  const rawSite =
+    (typeof to.query?.site === "string" && to.query.site.trim()) ||
+    (typeof to.query?.siteId === "string" && to.query.siteId.trim()) ||
+    scope.siteId ||
+    "";
+  const nextQuery = { ...to.query };
+  if (
+    !nextQuery.participant &&
+    typeof nextQuery.subjectId === "string" &&
+    nextQuery.subjectId.trim()
+  ) {
+    nextQuery.participant = nextQuery.subjectId.trim();
+  }
+  delete nextQuery.studyCode;
+  delete nextQuery.studyId;
+  delete nextQuery.study;
+  delete nextQuery.siteId;
+  delete nextQuery.subjectId;
+  if (rawSite) {
+    nextQuery.site = rawSite;
+  }
+  return { rawCode, nextQuery };
+}
+
+function redirectOverviewToStudies() {
   return (to) => {
-    const canvasState = getActivePinia()?.state.value?.studyCanvas;
-    const scope = resolveActiveWorkspaceScope(to, canvasState);
-    const rawCode =
-      (typeof to.query?.studyCode === "string" && to.query.studyCode.trim()) ||
-      (typeof to.query?.studyId === "string" && to.query.studyId.trim()) ||
-      scope.studyCode ||
-      "";
-    const rawSite =
-      (typeof to.query?.site === "string" && to.query.site.trim()) ||
-      (typeof to.query?.siteId === "string" && to.query.siteId.trim()) ||
-      scope.siteId ||
-      "";
-    const nextQuery = { ...to.query, stage, section };
-    if (
-      !nextQuery.participant &&
-      typeof nextQuery.subjectId === "string" &&
-      nextQuery.subjectId.trim()
-    ) {
-      nextQuery.participant = nextQuery.subjectId.trim();
+    if (isDemoBuild()) {
+      return true;
     }
-    delete nextQuery.studyCode;
-    delete nextQuery.studyId;
-    delete nextQuery.siteId;
-    delete nextQuery.subjectId;
-    if (rawSite) {
-      nextQuery.site = rawSite;
-    }
+    const { rawCode, nextQuery } = resolveCanvasRedirectScope(to);
     return rawCode
       ? { name: "study", params: { studyCode: rawCode }, query: nextQuery }
       : { name: "study", query: nextQuery };
+  };
+}
+
+function redirectToCanvasSection(stage, section, { allowInDemo = false } = {}) {
+  return (to) => {
+    if (allowInDemo && isDemoBuild()) {
+      return true;
+    }
+    const { rawCode, nextQuery } = resolveCanvasRedirectScope(to);
+    const scopedQuery = { ...nextQuery, stage, section };
+    return rawCode
+      ? { name: "study", params: { studyCode: rawCode }, query: scopedQuery }
+      : { name: "study", query: scopedQuery };
   };
 }
 
@@ -117,6 +140,11 @@ const routes = [
       }
       if (authStore.needsTrialOnboarding) {
         return { name: "trial-onboarding" };
+      }
+      if (!isDemoBuild()) {
+        return isScreenAvailable("study")
+          ? { name: "study" }
+          : { name: "unavailable" };
       }
       if (
         !readPassiveOnboardingBypassOverview(
@@ -154,6 +182,7 @@ const routes = [
     path: "/overview",
     name: "overview",
     component: () => import("../views/OverviewView.vue"),
+    beforeEnter: redirectOverviewToStudies(),
     meta: { requiresAuth: true },
   },
   {
@@ -389,6 +418,9 @@ const routes = [
     path: "/ctms",
     name: "ctms",
     component: () => import("../views/CtmsView.vue"),
+    beforeEnter: redirectToCanvasSection("start", "startup-greenlight", {
+      allowInDemo: true,
+    }),
     meta: {
       requiresAuth: true,
       requiresRole: [
@@ -406,6 +438,9 @@ const routes = [
     path: "/ssu",
     name: "ssu",
     component: () => import("../views/CtmsView.vue"),
+    beforeEnter: redirectToCanvasSection("start", "site-activation", {
+      allowInDemo: true,
+    }),
     meta: {
       requiresAuth: true,
       requiresRole: [
@@ -589,6 +624,9 @@ const routes = [
     path: "/etmf",
     name: "etmf",
     component: () => import("../views/DocumentManagerView.vue"),
+    beforeEnter: redirectToCanvasSection("start", "documents", {
+      allowInDemo: true,
+    }),
     meta: {
       requiresAuth: true,
       requiresRole: [
@@ -659,6 +697,9 @@ const routes = [
     path: "/training",
     name: "training",
     component: () => import("../views/StudyTrainingView.vue"),
+    beforeEnter: redirectToCanvasSection("start", "training", {
+      allowInDemo: true,
+    }),
     meta: {
       requiresAuth: true,
     },

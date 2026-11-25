@@ -504,8 +504,8 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
     expect(taskLaunchBorderRatio).toBeGreaterThanOrEqual(3);
 
     // Open OnboardingChecklistDrawer (via compact Account menu when <= 1280px) and audit pending status pills and task navigation buttons
-    const compactActionsBtn = page.locator("#btn-header-actions-menu");
     const openOnboardingChecklistDrawer = async (auditCompactMenu = false) => {
+      const compactActionsBtn = page.locator("#btn-header-actions-menu");
       if (await compactActionsBtn.isVisible().catch(() => false)) {
         const menuOpen = await page
           .locator("#header-secondary-menu.is-open")
@@ -525,9 +525,9 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
         }
       }
       await page.locator("#btn-onboarding-checklist-trigger").click();
+      await expect(page.locator("#onboarding-checklist-drawer")).toBeVisible();
     };
     await openOnboardingChecklistDrawer(true);
-    await expect(page.locator("#onboarding-checklist-drawer")).toBeVisible();
     await expect(
       page.locator("#onboarding-checklist-drawer .status-pending").first()
     ).toBeVisible();
@@ -601,7 +601,6 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
 
     await gotoHashRoute(page, "/overview");
     await openOnboardingChecklistDrawer();
-    await expect(page.locator("#onboarding-checklist-drawer")).toBeVisible();
     await page.locator("#btn-drawer-start-tour").click();
     await expect(tourPopover).toBeVisible();
 
@@ -1399,35 +1398,62 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
           if (method === "GET" && url.includes("/api/v1/kernel/proposals")) {
             return json([]);
           }
-          if (method === "GET" && url.includes("/api/v1/kernel/nodes/")) {
-            if (url.includes("proposal")) {
-              return json({
-                ref: proposalRef,
+          const resolveMockNode = (target: string, exactRef?: string) => {
+            if (target.includes("proposal")) {
+              return {
+                ref: exactRef || proposalRef,
                 kind: "proposal",
                 title: "Query the out-of-range systolic pressure at visit 3",
                 code: null,
                 status: "Open",
                 mask: null,
-              });
+              };
             }
-            if (url.includes("study_site")) {
-              return json({
-                ref: siteRef,
+            if (target.includes("study_site")) {
+              return {
+                ref: exactRef || siteRef,
                 kind: "study_site",
                 title: "Mayo Clinic Oncology",
                 code: "SITE-101",
                 status: "PENDING",
                 mask: null,
-              });
+              };
             }
-            return json({
-              ref: `${participantRef}@4`,
+            if (target.startsWith("study:") || target.includes("/study:")) {
+              return {
+                ref: exactRef || studyRef,
+                kind: "study",
+                title: "Phase III Melanoma",
+                code: "CADENCE-101",
+                status: "Active",
+                mask: null,
+              };
+            }
+            return {
+              ref: exactRef || `${participantRef}@4`,
               kind: "participant",
               title: "017-0001",
               code: "017-0001",
               status: "ACTIVE",
               mask: null,
-            });
+            };
+          };
+          const parsedReqUrl = new URL(url, window.location.origin);
+          if (
+            method === "GET" &&
+            parsedReqUrl.pathname.endsWith("/api/v1/kernel/nodes")
+          ) {
+            const refs = parsedReqUrl.searchParams.getAll("ref");
+            const nodes: Record<string, unknown> = {};
+            for (const refKey of refs) {
+              if (refKey) {
+                nodes[refKey] = resolveMockNode(refKey, refKey);
+              }
+            }
+            return json({ nodes });
+          }
+          if (method === "GET" && url.includes("/api/v1/kernel/nodes/")) {
+            return json(resolveMockNode(url));
           }
           if (
             method === "GET" &&
@@ -1459,6 +1485,12 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
               limit: 50,
               offset: 0,
             });
+          }
+          if (
+            method === "GET" &&
+            url.includes("/api/v1/execution/forms/queries/digests")
+          ) {
+            return json([]);
           }
           if (
             method === "GET" &&

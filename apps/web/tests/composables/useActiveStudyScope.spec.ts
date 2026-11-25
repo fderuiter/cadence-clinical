@@ -109,7 +109,7 @@ describe("useActiveStudyScope bidirectional navigation", () => {
     );
     await flushPromises();
 
-    // AppShell primary navigation forwards active study to unified Conduct canvas and /ctms
+    // AppShell primary navigation forwards active study to unified Conduct and Start canvas stages
     expect(shell.find("#nav-studies").attributes("href")).toBe(
       "/studies/CADENCE-101"
     );
@@ -117,10 +117,10 @@ describe("useActiveStudyScope bidirectional navigation", () => {
       "/studies/CADENCE-101?stage=conduct&section=participants"
     );
     expect(shell.find("#nav-site-readiness").attributes("href")).toBe(
-      "/ctms?studyId=CADENCE-101"
+      "/studies/CADENCE-101?stage=start&section=startup-greenlight"
     );
 
-    // Navigate via CommandPaletteOverlay to /etmf, /training, /overview, /ctms, Conduct canvas, and back to /studies/CADENCE-101
+    // Navigate via CommandPaletteOverlay to Canvas Start sections (documents, training, startup-greenlight), Orientation checklist drawer, Conduct canvas, and back to /studies/CADENCE-101
     const palette = mount(CommandPaletteOverlay, {
       props: { isOpen: true },
       global: { plugins: [pinia, router] },
@@ -135,11 +135,10 @@ describe("useActiveStudyScope bidirectional navigation", () => {
     expect(optionsText).toContain("Orientation");
     expect(optionsText).not.toMatch(/\b(EDC|CTMS|eTMF|RTSM)\b/);
 
-    for (const [labelText, expectedPath, expectedQueryStudy] of [
-      ["Trial documents", "/etmf", "CADENCE-101"],
-      ["Study training", "/training", "CADENCE-101"],
-      ["Orientation", "/overview", "CADENCE-101"],
-      ["Site readiness", "/ctms", "CADENCE-101"],
+    for (const [labelText, expectedSection] of [
+      ["Trial documents", "documents"],
+      ["Study training", "training"],
+      ["Site readiness", "startup-greenlight"],
     ] as const) {
       await palette.setProps({ isOpen: true });
       await flushPromises();
@@ -150,8 +149,11 @@ describe("useActiveStudyScope bidirectional navigation", () => {
       await btn!.trigger("click");
       await flushPromises();
 
-      expect(router.currentRoute.value.path).toBe(expectedPath);
-      expect(router.currentRoute.value.query.studyId).toBe(expectedQueryStudy);
+      expect(router.currentRoute.value.path).toBe("/studies/CADENCE-101");
+      expect(router.currentRoute.value.query).toMatchObject({
+        stage: "start",
+        section: expectedSection,
+      });
       expect(shell.find("[data-testid='probe-study']").text()).toBe(
         "CADENCE-101"
       );
@@ -172,13 +174,13 @@ describe("useActiveStudyScope bidirectional navigation", () => {
       "CADENCE-101"
     );
 
-    // Reverse direction: entering via /ssu?studyId=CADENCE-303 as a site CRC updates AppShell + palette back to /studies/CADENCE-303 and /training (even without query param)
+    // Reverse direction: entering via /ssu?studyId=CADENCE-303 as a site CRC updates AppShell + palette back to /studies/CADENCE-303
     signInAs(authStore, ["CRC"], { username: "site_crc" });
     await router.push("/ssu?studyId=CADENCE-303");
     await flushPromises();
 
     expect(shell.find("#nav-site-readiness").attributes("href")).toBe(
-      "/ssu?studyId=CADENCE-303"
+      "/studies/CADENCE-303?stage=start&section=site-activation"
     );
     expect(shell.find("#nav-studies").attributes("href")).toBe(
       "/studies/CADENCE-303"

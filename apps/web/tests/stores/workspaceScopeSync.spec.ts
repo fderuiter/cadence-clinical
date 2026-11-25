@@ -318,7 +318,7 @@ describe("workspaceScope cross-view synchronization", () => {
     });
     ticketsWrapper.unmount();
 
-    // 3. OverviewView forwards active study and site parameters on workflow launchers
+    // 3. OverviewView forwards active study and site parameters on quick-start task actions
     await localRouter.push("/overview");
     const pushSpy = vi.spyOn(localRouter, "push");
     const overviewWrapper = mount(OverviewView, {
@@ -326,9 +326,13 @@ describe("workspaceScope cross-view synchronization", () => {
     });
     await flushPromises();
 
-    const launcherBtns = overviewWrapper.findAll(".btn-launcher-action");
-    expect(launcherBtns.length).toBeGreaterThanOrEqual(3);
-    await launcherBtns[0].trigger("click");
+    const taskBtns = overviewWrapper.findAll(".btn-task-launch");
+    expect(taskBtns.length).toBeGreaterThanOrEqual(3);
+    const studyTaskBtn = taskBtns.find((b) =>
+      b.attributes("title")?.includes("Study Conduct")
+    );
+    expect(studyTaskBtn).toBeDefined();
+    await studyTaskBtn!.trigger("click");
     expect(pushSpy).toHaveBeenCalledWith(
       "/studies/CADENCE-TKT-02?site=SITE-088"
     );

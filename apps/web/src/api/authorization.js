@@ -291,6 +291,31 @@ function withRefreshedBearerHeader(headers, token) {
 }
 
 /**
+ * @param {Response} response
+ * @returns {Response}
+ */
+function ensureResponseTextReader(response) {
+  if (
+    response &&
+    typeof response === "object" &&
+    typeof response.text !== "function" &&
+    typeof response.json === "function"
+  ) {
+    return Object.assign(
+      Object.create(Object.getPrototypeOf(response)),
+      response,
+      {
+        text: async () => {
+          const payload = await response.json();
+          return payload === undefined ? "" : JSON.stringify(payload);
+        },
+      }
+    );
+  }
+  return response;
+}
+
+/**
  * Executes a gateway `fetch` call and performs at most one single-flight OIDC
  * token refresh + retry when the gateway answers HTTP 401 (excluding 21 CFR
  * Part 11 step-up authentication failures).
@@ -311,7 +336,7 @@ export async function fetchWithSingleFlightRetry(input, init, options = {}) {
       ? input.clone()
       : null;
 
-  const response = await fetchImpl(input, init);
+  const response = ensureResponseTextReader(await fetchImpl(input, init));
   if (response.status !== 401 || !canRetry) {
     return response;
   }

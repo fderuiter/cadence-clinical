@@ -441,7 +441,9 @@ describe("OnboardingChecklistDrawer.vue & AppShell Integration", () => {
     const readinessTask = onboardingStore.visibleTasks.find(
       (t) => t.id === "task_rules"
     );
-    expect(readinessTask?.route).toBe("/ssu");
+    expect(readinessTask?.route).toBe(
+      "/studies?stage=start&section=site-activation"
+    );
 
     // Attempt to invoke navigateToTask with an unavailable task via store state injection
     const pushSpy = vi.spyOn(router, "push");
@@ -458,13 +460,33 @@ describe("OnboardingChecklistDrawer.vue & AppShell Integration", () => {
     expect(pushSpy).not.toHaveBeenCalled();
     expect(onboardingStore.isDrawerOpen).toBe(true);
 
-    // Clicking live CRC site readiness task navigates to /ssu
+    // Clicking live CRC site readiness task navigates to Canvas Start site-activation
     const readinessIndex = onboardingStore.visibleTasks.findIndex(
       (t) => t.id === "task_rules"
     );
     const navBtns = wrapper.findAll(".btn-navigate-task");
     await navBtns[readinessIndex].trigger("click");
-    expect(pushSpy).toHaveBeenCalledWith("/ssu");
+    expect(pushSpy).toHaveBeenCalledWith(
+      "/studies?stage=start&section=site-activation"
+    );
+
+    vi.stubEnv("VITE_DEMO_MODE", "true");
+    try {
+      const demoPinia = createPinia();
+      setActivePinia(demoPinia);
+      const demoAuth = useAuthStore();
+      demoAuth.isAuthenticated = true;
+      demoAuth.rawRoles = ["CRC"];
+      demoAuth.currentPersona = "site_crc";
+      const demoOnboarding = useOnboardingStore();
+      demoOnboarding.loadPersonaState("site_crc");
+      const demoReadiness = demoOnboarding.visibleTasks.find(
+        (t) => t.id === "task_rules"
+      );
+      expect(demoReadiness?.route).toBe("/ssu");
+    } finally {
+      vi.unstubAllEnvs();
+    }
     pushSpy.mockRestore();
   });
 

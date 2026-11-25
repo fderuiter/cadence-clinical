@@ -123,6 +123,7 @@
         <div class="drawer-footer">
           <div class="footer-actions">
             <button
+              v-if="showOrientationHubButton"
               id="btn-open-orientation-hub"
               type="button"
               class="btn btn-sm btn-secondary"
@@ -167,6 +168,7 @@ import { ArrowUpRight, CheckCircle2, Rocket, X } from "lucide-vue-next";
 import { ClinicalDrawer } from "ui";
 import {
   buildScopedWorkflowPath,
+  buildStudiesWorkspacePath,
   resolveWorkspaceNavigationScope,
 } from "../canvas/palette";
 import { useActiveStudyScope } from "../composables/useActiveStudyScope";
@@ -178,6 +180,7 @@ import { resolveStorePinia } from "../stores/onboardingSummary.js";
 import { PERSONA_PRESETS, useAuthStore } from "../stores/auth";
 import { isScreenAvailable } from "../router/availability";
 import { hasRequiredRole } from "../router";
+import { isDemoBuild } from "../utils/demoMode";
 
 const props = defineProps({
   openOnMount: {
@@ -207,6 +210,7 @@ watch(
   { immediate: true }
 );
 const router = useRouter();
+const showOrientationHubButton = computed(() => isDemoBuild());
 let activeRoute = null;
 try {
   activeRoute = useRoute();
@@ -272,13 +276,16 @@ function navigateToTask(task) {
 }
 
 function openOrientationHub() {
-  const targetPath = buildScopedWorkflowPath("/overview", {
-    studyCode: workspaceScope.value.studyCode,
-    siteId: workspaceScope.value.siteId,
-    subjectCode: workspaceScope.value.subjectCode,
-  });
-  if (isScreenAvailable("overview") && canPushResolvedPath(targetPath)) {
-    router.push(targetPath);
+  const destination = isDemoBuild()
+    ? buildScopedWorkflowPath("/overview", {
+        studyCode: workspaceScope.value.studyCode,
+        siteId: workspaceScope.value.siteId,
+        subjectCode: workspaceScope.value.subjectCode,
+      })
+    : buildStudiesWorkspacePath(workspaceScope.value);
+  const screenName = isDemoBuild() ? "overview" : "study";
+  if (isScreenAvailable(screenName) && canPushResolvedPath(destination)) {
+    router.push(destination);
     onboardingStore.closeDrawer();
   }
 }

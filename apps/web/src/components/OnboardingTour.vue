@@ -317,8 +317,8 @@ watch(
       const fallbackOrder = launchedFromChecklistDrawer
         ? [
             "#btn-onboarding-checklist-trigger",
-            ".btn-start-tour",
             "#btn-header-actions-menu",
+            ".btn-start-tour",
           ]
         : [
             ".btn-start-tour",

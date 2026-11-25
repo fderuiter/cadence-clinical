@@ -4,6 +4,7 @@ import {
   ETMF_ROLES,
   SITE_READINESS_SITE_ROLES,
   SITE_READINESS_SPONSOR_ROLES,
+  buildCanvasSectionPath,
   buildDataCollectionPath,
   buildScopedWorkflowPath,
   buildStudiesWorkspacePath,
@@ -69,10 +70,18 @@ function normalizeTaskRouteName(task) {
   const rawRoute = typeof task?.route === "string" ? task.route.trim() : "";
   if (!rawRoute) return null;
   const cleanPath = rawRoute.split("?")[0];
-  if (cleanPath === "/studies" || cleanPath.startsWith("/studies/")) {
+  if (
+    cleanPath === "study" ||
+    cleanPath === "/studies" ||
+    cleanPath.startsWith("/studies/")
+  ) {
     return "study";
   }
-  if (cleanPath === "/observations" || cleanPath.startsWith("/observations/")) {
+  if (
+    cleanPath === "observation" ||
+    cleanPath === "/observations" ||
+    cleanPath.startsWith("/observations/")
+  ) {
     return "observation";
   }
   if (cleanPath === "/overview") return "overview";
@@ -169,11 +178,21 @@ export function resolveAuthorizedTaskRoute(
       : null;
   }
   if (routeName === "overview") {
-    return isScreenAvailable("overview")
-      ? buildScopedWorkflowPath("/overview", {
+    if (isDemoBuild()) {
+      return isScreenAvailable("overview")
+        ? buildScopedWorkflowPath("/overview", {
+            studyCode,
+            siteId,
+            subjectCode,
+          })
+        : null;
+    }
+    return isScreenAvailable("study")
+      ? buildStudiesWorkspacePath({
           studyCode,
           siteId,
           subjectCode,
+          participantRef,
         })
       : null;
   }
@@ -210,9 +229,21 @@ export function resolveAuthorizedTaskRoute(
       studyCode,
       siteId,
       subjectCode,
+      participantRef,
     });
   }
   if (routeName === "ctms") {
+    if (!isDemoBuild()) {
+      return isScreenAvailable("study") &&
+        hasRequiredRole(userRoles, CTMS_AUTHORIZED_ROLES)
+        ? buildCanvasSectionPath("start", "startup-greenlight", {
+            studyCode,
+            siteId,
+            subjectCode,
+            participantRef,
+          })
+        : null;
+    }
     return isScreenAvailable("ctms") &&
       hasRequiredRole(userRoles, CTMS_AUTHORIZED_ROLES)
       ? buildScopedWorkflowPath("/ctms", {
@@ -223,11 +254,21 @@ export function resolveAuthorizedTaskRoute(
       : null;
   }
   if (routeName === "ssu") {
-    return isScreenAvailable("ssu") &&
-      hasRequiredRole(userRoles, [
-        ...SITE_READINESS_SPONSOR_ROLES,
-        ...SITE_READINESS_SITE_ROLES,
-      ])
+    const allowed = hasRequiredRole(userRoles, [
+      ...SITE_READINESS_SPONSOR_ROLES,
+      ...SITE_READINESS_SITE_ROLES,
+    ]);
+    if (!isDemoBuild()) {
+      return isScreenAvailable("study") && allowed
+        ? buildCanvasSectionPath("start", "site-activation", {
+            studyCode,
+            siteId,
+            subjectCode,
+            participantRef,
+          })
+        : null;
+    }
+    return isScreenAvailable("ssu") && allowed
       ? buildScopedWorkflowPath("/ssu", {
           studyCode,
           siteId,
@@ -236,6 +277,16 @@ export function resolveAuthorizedTaskRoute(
       : null;
   }
   if (routeName === "training") {
+    if (!isDemoBuild()) {
+      return isScreenAvailable("study")
+        ? buildCanvasSectionPath("start", "training", {
+            studyCode,
+            siteId,
+            subjectCode,
+            participantRef,
+          })
+        : null;
+    }
     return isScreenAvailable("training")
       ? buildScopedWorkflowPath("/training", {
           studyCode,
@@ -263,7 +314,19 @@ export function resolveAuthorizedTaskRoute(
       : null;
   }
   if (routeName === "etmf") {
-    return isScreenAvailable("etmf") && hasRequiredRole(userRoles, ETMF_ROLES)
+    const allowed = hasRequiredRole(userRoles, ETMF_ROLES);
+    if (!allowed) return null;
+    if (!isDemoBuild()) {
+      return isScreenAvailable("study")
+        ? buildCanvasSectionPath("start", "documents", {
+            studyCode,
+            siteId,
+            subjectCode,
+            participantRef,
+          })
+        : null;
+    }
+    return isScreenAvailable("etmf")
       ? buildScopedWorkflowPath("/etmf", {
           studyCode,
           siteId,

@@ -1,17 +1,34 @@
 <template>
   <section
     v-if="hasWorkQueueService"
-    id="study-work-queues"
+    :id="isCrossStudy ? 'cross-study-action-items' : 'study-work-queues'"
+    :data-testid="isCrossStudy ? 'my-action-items' : 'study-work-queues'"
     class="work-queues"
-    aria-labelledby="study-work-queues-title"
+    :aria-labelledby="
+      isCrossStudy
+        ? 'cross-study-action-items-title'
+        : 'study-work-queues-title'
+    "
     :aria-busy="loading"
   >
     <div class="work-queues-header">
       <div>
-        <h2 id="study-work-queues-title" tabindex="-1">Work queues</h2>
+        <h2
+          :id="
+            isCrossStudy
+              ? 'cross-study-action-items-title'
+              : 'study-work-queues-title'
+          "
+          tabindex="-1"
+        >
+          {{ isCrossStudy ? "My Action Items" : "Work queues" }}
+        </h2>
         <p class="work-queues-subtitle">
-          Capability-keyed actionable queues for your authority on
-          {{ studyCode }}.
+          {{
+            isCrossStudy
+              ? "Actionable items waiting on your authority across your visible studies."
+              : `Capability-keyed actionable queues for your authority on ${normalizedStudyCode}.`
+          }}
         </p>
       </div>
       <div v-if="queues.length > 0" class="work-queues-controls">
@@ -37,7 +54,11 @@
       role="alert"
     >
       <p class="work-queues-status">
-        Work queues couldn't be loaded right now.
+        {{
+          isCrossStudy
+            ? "Action items couldn't be loaded right now."
+            : "Work queues couldn't be loaded right now."
+        }}
       </p>
       <SupportDetails :detail="error" />
     </div>
@@ -64,7 +85,9 @@
         <header class="work-queue-top">
           <div>
             <h3 class="work-queue-title">{{ queue.title }}</h3>
-            <code class="work-queue-capability">{{ queue.capability }}</code>
+            <p class="work-queue-capability">
+              {{ describeCapability(queue.capability) }}
+            </p>
           </div>
           <div class="work-queue-badges">
             <span
@@ -80,11 +103,48 @@
             >
               Truncated (200+)
             </span>
+            <button
+              v-if="canExplainQueue(queue)"
+              type="button"
+              class="btn btn-secondary work-queue-explain-btn"
+              :data-testid="`work-queue-explain-btn-${queue.code}`"
+              :aria-expanded="Boolean(openExplanations[queue.code])"
+              :aria-controls="`work-queue-explanation-${queue.code}`"
+              @click="toggleQueueExplanation(queue)"
+            >
+              {{
+                openExplanations[queue.code] ? "Hide explanation" : "Explain"
+              }}
+            </button>
           </div>
         </header>
 
+        <div
+          v-if="openExplanations[queue.code]"
+          :id="`work-queue-explanation-${queue.code}`"
+          :data-testid="`work-queue-explanation-${queue.code}`"
+          class="work-queue-explanation"
+          role="region"
+          :aria-label="`Authority explanation for ${queue.title}`"
+        >
+          <p
+            v-if="explanationLoading[queue.code]"
+            class="work-queue-empty"
+            role="status"
+          >
+            Checking capability rules…
+          </p>
+          <KernelExplanation
+            v-else-if="queueExplanations[queue.code]"
+            :explanation="queueExplanations[queue.code]!"
+          />
+          <p v-else class="work-queue-empty">
+            No additional capability conditions were reported for this queue.
+          </p>
+        </div>
+
         <p v-if="queue.items.length === 0" class="work-queue-empty">
-          No items waiting for this capability.
+          No items waiting for your review in this queue.
         </p>
 
         <ul v-else class="work-queue-items">
@@ -104,16 +164,29 @@
             </template>
             <template v-else>
               <div class="work-item-main">
-                <router-link
+                <EntityLink
                   :data-testid="`work-item-link-${queue.code}-${idx}`"
                   class="work-item-link"
-                  :to="workItemLocation(item)"
-                >
-                  {{ item.title || item.subject || "Open item" }}
-                </router-link>
-                <span v-if="item.subject_kind" class="work-item-kind">
-                  {{ item.subject_kind }}
-                </span>
+                  :node-ref="item.subject || ''"
+                  :label="workItemDisplayLabel(item)"
+                  :kind="item.subject_kind || ''"
+                  :subtitle="workItemSubtitle(item)"
+                  :to="workItemLocation(item) ?? undefined"
+                  preview-mode="drawer"
+                  :resolve-remotely="!item.title"
+                />
+                <div class="work-item-tags">
+                  <span
+                    v-if="isCrossStudy && itemStudyCode(item)"
+                    class="work-item-study font-mono"
+                    :data-testid="`work-item-study-${queue.code}-${idx}`"
+                  >
+                    {{ itemStudyCode(item) }}
+                  </span>
+                  <span v-if="item.subject_kind" class="work-item-kind">
+                    {{ formatKindTitle(item.subject_kind) }}
+                  </span>
+                </div>
               </div>
               <p v-if="item.since" class="work-item-detail">
                 Since {{ formatSince(item.since) }}
@@ -127,39 +200,113 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed, reactive, ref, watch } from "vue";
 import type { RouteLocationRaw } from "vue-router";
+import { EntityLink } from "ui";
 import {
   kernelApi,
+  type KernelExplanation as KernelExplanationDto,
+  type KernelStudySummary,
   type KernelWorkItem,
   type KernelWorkQueue,
 } from "../../api/kernelApi";
-import { seedKernelStudyRef } from "../../canvas/kernelStudy";
+import {
+  findKernelStudyRef,
+  seedKernelStudyRef,
+} from "../../canvas/kernelStudy";
+import { resolveEntityFullViewLocation } from "../../canvas/entityDestination";
 import {
   collectionInstanceRef,
   formatNodeRef,
   observationNodeRef,
+  parseNodeRef,
   tryNodeRef,
 } from "../../canvas/nodeRef";
-import { maskReasonWords } from "../../canvas/nodeResolver";
+import {
+  ensureNodesResolved,
+  formatCommandTitle,
+  formatKindTitle,
+  getNodeDisplay,
+  maskReasonWords,
+  normalizeLookupNodeRef,
+  sanitizeDiagnosticSummary,
+  seedNodeSummary,
+} from "../../canvas/nodeResolver";
 import { useScopedNavigation } from "../../composables/useScopedNavigation";
+import KernelExplanation from "./KernelExplanation.vue";
 import SupportDetails from "./SupportDetails.vue";
 
-const props = defineProps<{
-  studyCode: string;
-}>();
+const CAPABILITY_LABELS: Record<string, string> = {
+  "protocol.approve": "Approve protocol versions in review",
+  "protocol_version.approve": "Approve protocol versions in review",
+  "proposal.approve": "Review and adjudicate proposed changes",
+  "proposal.review": "Review and adjudicate proposed changes",
+  "observation.verify": "Verify source clinical observations",
+  "collection_instance.sign": "Sign completed clinical forms",
+  "collection.sign": "Sign completed clinical forms",
+  "form.sign": "Sign completed clinical forms",
+  "execution.query.answer": "Answer open data queries",
+  "execution.query.manage": "Review answered queries and close",
+  "observation.query.answer": "Answer open data queries",
+  "observation.query": "Raise and manage clinical data queries",
+  "query.answer": "Answer open data queries",
+  "query.close": "Review answered queries and close",
+  "validation_finding.investigate":
+    "Investigate and resolve validation findings",
+  "validation_finding.resolve": "Review and resolve validation findings",
+  "validation_finding.classify": "Classify and explain validation findings",
+};
 
-const { scopedStudyLocation } = useScopedNavigation(() => props.studyCode);
+const props = withDefaults(
+  defineProps<{
+    studyCode?: string;
+    studies?: KernelStudySummary[];
+  }>(),
+  {
+    studyCode: "",
+    studies: undefined,
+  }
+);
+
+const normalizedStudyCode = computed(() => (props.studyCode ?? "").trim());
+const isCrossStudy = computed(() => !normalizedStudyCode.value);
+
+const { workspaceScope, scopedStudyLocation } = useScopedNavigation(
+  () => normalizedStudyCode.value
+);
 
 const hasWorkQueueService = computed(
   () => typeof kernelApi.listWorkQueues === "function"
 );
+const hasCanIService = computed(() => typeof kernelApi.canI === "function");
 
 const queues = ref<KernelWorkQueue[]>([]);
+const resolvedStudyRef = ref<string | null>(null);
+const loadedStudies = ref<KernelStudySummary[]>([]);
 const loading = ref(false);
 const error = ref("");
 const noStudy = ref(false);
 const showEmpty = ref(false);
+
+const openExplanations = reactive<Record<string, boolean>>({});
+const explanationLoading = reactive<Record<string, boolean>>({});
+const queueExplanations = reactive<Record<string, KernelExplanationDto | null>>(
+  {}
+);
+
+const studyCodeByRef = computed<Record<string, string>>(() => {
+  const map: Record<string, string> = {};
+  for (const s of [...(props.studies ?? []), ...loadedStudies.value]) {
+    if (!s?.code || !s?.ref) continue;
+    const normalized = normalizeLookupNodeRef(s.ref) ?? s.ref;
+    map[normalized] = s.code;
+    const parsed = parseNodeRef(normalized);
+    if (parsed) {
+      map[`${parsed.kind}:${parsed.id}`] = s.code;
+    }
+  }
+  return map;
+});
 
 const totalItems = computed(() =>
   queues.value.reduce((sum, q) => sum + q.items.length, 0)
@@ -174,15 +321,126 @@ const visibleQueues = computed(() =>
 );
 
 const statusLine = computed(() => {
-  if (loading.value) return "Loading capability work queues…";
-  if (noStudy.value) {
-    return `Study ${props.studyCode} wasn't found or isn't visible to your account.`;
+  if (loading.value) {
+    return isCrossStudy.value
+      ? "Loading cross-study action items…"
+      : "Loading capability work queues…";
+  }
+  if (!isCrossStudy.value && noStudy.value) {
+    return `Study ${normalizedStudyCode.value} wasn't found or isn't visible to your account.`;
   }
   if (queues.value.length === 0 || totalItems.value === 0) {
-    return "All capability work queues are clear for your permissions on this study.";
+    return isCrossStudy.value
+      ? "No action items are waiting on your authority across your visible studies."
+      : "All capability work queues are clear for your permissions on this study.";
   }
   return "";
 });
+
+function describeCapability(capability: string): string {
+  const clean = (capability ?? "").trim();
+  if (!clean) return "Authorized review";
+  if (CAPABILITY_LABELS[clean]) return CAPABILITY_LABELS[clean];
+  return formatCommandTitle(clean);
+}
+
+function humanizeExplanationText(text: string): string {
+  if (!text) return "";
+  let cleaned = sanitizeDiagnosticSummary(text);
+  cleaned = cleaned.replace(
+    /\b([a-z][a-z0-9_]*\.[a-z][a-z0-9_.]*)\b/g,
+    (match) =>
+      CAPABILITY_LABELS[match]?.toLowerCase() ??
+      formatCommandTitle(match).toLowerCase()
+  );
+  return cleaned;
+}
+
+function normalizeExplanation(
+  explanation: KernelExplanationDto
+): KernelExplanationDto {
+  return {
+    ...explanation,
+    claim: humanizeExplanationText(explanation.claim),
+    steps: (explanation.steps ?? []).map((s) => ({
+      claim: humanizeExplanationText(s.claim),
+      evidence: s.evidence ?? [],
+    })),
+    conditions: (explanation.conditions ?? []).map((c) => ({
+      code: c.code,
+      description: humanizeExplanationText(c.description),
+      met: c.met,
+      evidence: c.evidence ?? [],
+    })),
+    next_actions: (explanation.next_actions ?? []).map((n) => ({
+      description: humanizeExplanationText(n.description),
+      capability: n.capability ?? null,
+      target: n.target,
+    })),
+  };
+}
+
+function explainTargetForQueue(queue: KernelWorkQueue): string | null {
+  for (const item of queue.items) {
+    if (!item.masked && item.subject && parseNodeRef(item.subject)) {
+      return item.subject;
+    }
+    if (item.target?.study_ref && parseNodeRef(item.target.study_ref)) {
+      return item.target.study_ref;
+    }
+  }
+  if (resolvedStudyRef.value && parseNodeRef(resolvedStudyRef.value)) {
+    return resolvedStudyRef.value;
+  }
+  const fallbackStudy =
+    props.studies?.[0]?.ref ?? loadedStudies.value[0]?.ref ?? null;
+  return fallbackStudy && parseNodeRef(fallbackStudy) ? fallbackStudy : null;
+}
+
+function canExplainQueue(queue: KernelWorkQueue): boolean {
+  return (
+    hasCanIService.value &&
+    (Boolean(explainTargetForQueue(queue)) || !isCrossStudy.value)
+  );
+}
+
+async function toggleQueueExplanation(queue: KernelWorkQueue) {
+  const code = queue.code;
+  if (openExplanations[code]) {
+    openExplanations[code] = false;
+    return;
+  }
+  openExplanations[code] = true;
+  if (queueExplanations[code] !== undefined || explanationLoading[code]) {
+    return;
+  }
+  if (typeof kernelApi.canI !== "function") {
+    queueExplanations[code] = null;
+    return;
+  }
+  explanationLoading[code] = true;
+  try {
+    let target = explainTargetForQueue(queue);
+    if (!target && !isCrossStudy.value && normalizedStudyCode.value) {
+      target = await findKernelStudyRef(normalizedStudyCode.value);
+      if (target) {
+        resolvedStudyRef.value = target;
+      }
+    }
+    if (!target) {
+      queueExplanations[code] = null;
+      return;
+    }
+    const decision = await kernelApi.canI(queue.capability, target);
+    queueExplanations[code] = decision?.explanation
+      ? normalizeExplanation(decision.explanation)
+      : null;
+  } catch {
+    queueExplanations[code] = null;
+  } finally {
+    explanationLoading[code] = false;
+  }
+}
 
 function maskWords(mask: string | null | undefined): string {
   return maskReasonWords(mask);
@@ -198,7 +456,60 @@ function formatSince(value: string): string {
       });
 }
 
+function itemStudyCode(item: KernelWorkItem): string {
+  if (normalizedStudyCode.value) return normalizedStudyCode.value;
+  const rawStudyRef = item.target?.study_ref;
+  if (!rawStudyRef) return "";
+  const normalized = normalizeLookupNodeRef(rawStudyRef) ?? rawStudyRef;
+  if (studyCodeByRef.value[normalized]) {
+    return studyCodeByRef.value[normalized];
+  }
+  const parsed = parseNodeRef(normalized);
+  if (parsed && studyCodeByRef.value[`${parsed.kind}:${parsed.id}`]) {
+    return studyCodeByRef.value[`${parsed.kind}:${parsed.id}`];
+  }
+  const display = getNodeDisplay(normalized);
+  return display.code ?? "";
+}
+
+function workItemDisplayLabel(item: KernelWorkItem): string {
+  if (item.title && item.title.trim()) {
+    return item.title.trim();
+  }
+  if (item.subject) {
+    const display = getNodeDisplay(item.subject);
+    if (display.label) return display.label;
+  }
+  if (item.subject_kind) {
+    return formatKindTitle(item.subject_kind);
+  }
+  return "Open item";
+}
+
+function activeSiteForStudy(targetStudyCode: string): string {
+  if (!targetStudyCode) return "";
+  const scope = workspaceScope.value;
+  const activeSite = (scope.siteId ?? "").trim();
+  if (!activeSite) return "";
+  const scopeStudy = (scope.studyCode ?? "").trim();
+  if (!scopeStudy || scopeStudy === targetStudyCode) {
+    return activeSite;
+  }
+  return "";
+}
+
+function workItemSubtitle(item: KernelWorkItem): string {
+  const code = itemStudyCode(item);
+  const site = activeSiteForStudy(code);
+  if (code && site) return `Study ${code} · Site ${site}`;
+  return code ? `Study ${code}` : "";
+}
+
 function workItemLocation(item: KernelWorkItem): RouteLocationRaw {
+  const code = itemStudyCode(item);
+  if (!code) {
+    return scopedStudyLocation({ preserveStageSection: false }, "");
+  }
   const target = item.target;
   const targetEnrollmentNode = target?.enrollment_id
     ? tryNodeRef("enrollment", target.enrollment_id)
@@ -208,80 +519,84 @@ function workItemLocation(item: KernelWorkItem): RouteLocationRaw {
     : undefined;
 
   if (target?.proposal_ref) {
-    return scopedStudyLocation({ proposal: target.proposal_ref });
+    return scopedStudyLocation({ proposal: target.proposal_ref }, code);
   }
   if (target?.protocol_version_ref) {
-    return scopedStudyLocation({
-      stage: "design",
-      section: "protocol-versions",
-      node: target.protocol_version_ref,
-    });
+    return scopedStudyLocation(
+      {
+        stage: "design",
+        section: "protocol-versions",
+        node: target.protocol_version_ref,
+      },
+      code
+    );
   }
   if (target?.finding_ref) {
-    return scopedStudyLocation({
-      stage: "data",
-      section: "validation",
-    });
+    return scopedStudyLocation(
+      {
+        stage: "data",
+        section: "validation",
+        node: target.finding_ref,
+      },
+      code
+    );
   }
   if (target?.form_id) {
     const formRef = collectionInstanceRef(target.form_id);
     if (formRef) {
-      return scopedStudyLocation({
-        stage: "conduct",
-        form: formRef,
-        ...(targetEnrollmentParticipant
-          ? { participant: targetEnrollmentParticipant }
-          : {}),
-      });
+      return scopedStudyLocation(
+        {
+          stage: "conduct",
+          form: formRef,
+          ...(targetEnrollmentParticipant
+            ? { participant: targetEnrollmentParticipant }
+            : {}),
+        },
+        code
+      );
     }
   }
   if (target?.observation_ref) {
     const obsRef = observationNodeRef(target.observation_ref);
     if (obsRef) {
-      return scopedStudyLocation({
-        stage: "conduct",
-        observation: obsRef,
-        ...(targetEnrollmentParticipant
-          ? { participant: targetEnrollmentParticipant }
-          : {}),
-      });
+      return scopedStudyLocation(
+        {
+          stage: "conduct",
+          observation: obsRef,
+          ...(targetEnrollmentParticipant
+            ? { participant: targetEnrollmentParticipant }
+            : {}),
+        },
+        code
+      );
     }
   }
-  if (item.subject?.startsWith("proposal:")) {
-    return scopedStudyLocation({ proposal: item.subject });
-  }
-  if (item.subject?.startsWith("protocol_version:")) {
-    return scopedStudyLocation({
-      stage: "design",
-      section: "protocol-versions",
-      node: item.subject,
+  if (item.subject) {
+    const subjectLocation = resolveEntityFullViewLocation(item.subject, {
+      studyCode: code,
+      site: activeSiteForStudy(code) || undefined,
+      ...(targetEnrollmentParticipant
+        ? { participant: targetEnrollmentParticipant }
+        : {}),
+      scope: workspaceScope.value,
     });
-  }
-  if (item.subject?.startsWith("validation_finding:")) {
-    return scopedStudyLocation({
-      stage: "data",
-      section: "validation",
-    });
-  }
-  if (item.subject?.startsWith("collection_instance:")) {
-    const formRef = collectionInstanceRef(item.subject);
-    if (formRef) {
-      return scopedStudyLocation({
-        stage: "conduct",
-        form: formRef,
-      });
+    if (subjectLocation) {
+      return subjectLocation;
     }
   }
-  if (item.subject?.startsWith("observation:")) {
-    const obsRef = observationNodeRef(item.subject);
-    if (obsRef) {
-      return scopedStudyLocation({
-        stage: "conduct",
-        observation: obsRef,
-      });
-    }
+  return scopedStudyLocation({ preserveStageSection: false }, code);
+}
+
+function resetExplanationState() {
+  for (const key of Object.keys(openExplanations)) {
+    delete openExplanations[key];
   }
-  return scopedStudyLocation();
+  for (const key of Object.keys(explanationLoading)) {
+    delete explanationLoading[key];
+  }
+  for (const key of Object.keys(queueExplanations)) {
+    delete queueExplanations[key];
+  }
 }
 
 let requestSeq = 0;
@@ -293,13 +608,57 @@ async function load() {
   loading.value = true;
   error.value = "";
   noStudy.value = false;
+  resolvedStudyRef.value = null;
   queues.value = [];
-  if (!code) {
-    noStudy.value = true;
-    loading.value = false;
-    return;
-  }
+  resetExplanationState();
   try {
+    if (isCrossStudy.value) {
+      if (
+        props.studies === undefined &&
+        loadedStudies.value.length === 0 &&
+        typeof kernelApi.listStudies === "function"
+      ) {
+        try {
+          const fetched = await kernelApi.listStudies();
+          if (seq === requestSeq && Array.isArray(fetched)) {
+            loadedStudies.value = fetched;
+            for (const s of fetched) {
+              if (s?.ref) {
+                seedNodeSummary(s.ref, {
+                  kind: "study",
+                  code: s.code,
+                  title: s.title,
+                });
+              }
+            }
+          }
+        } catch {
+          // Cross-study work queues can still resolve study labels via nodeResolver.
+        }
+      }
+      const page = await kernelApi.listWorkQueues();
+      if (seq !== requestSeq) return;
+      const nextQueues = page?.queues ?? [];
+      queues.value = nextQueues;
+
+      const missingStudyRefs = new Set<string>();
+      for (const q of nextQueues) {
+        for (const item of q.items) {
+          const studyRef = item.target?.study_ref;
+          if (studyRef && !studyCodeByRef.value[studyRef]) {
+            missingStudyRefs.add(studyRef);
+          }
+          if (!item.masked && !item.title && item.subject) {
+            missingStudyRefs.add(item.subject);
+          }
+        }
+      }
+      if (missingStudyRefs.size > 0) {
+        ensureNodesResolved(missingStudyRefs);
+      }
+      return;
+    }
+
     const page = await kernelApi.listWorkQueues({ within: code });
     if (seq === requestSeq) {
       const nextQueues = page?.queues ?? [];
@@ -308,6 +667,7 @@ async function load() {
         const studyRefHint = q.items.find((it) => it.target?.study_ref)?.target
           ?.study_ref;
         if (studyRefHint) {
+          resolvedStudyRef.value = studyRefHint;
           seedKernelStudyRef(code, studyRefHint);
           break;
         }
@@ -326,7 +686,23 @@ async function load() {
   }
 }
 
-watch(() => props.studyCode, load, { immediate: true });
+watch(
+  () => props.studies,
+  (studiesList) => {
+    for (const s of studiesList ?? []) {
+      if (s?.ref) {
+        seedNodeSummary(s.ref, {
+          kind: "study",
+          code: s.code,
+          title: s.title,
+        });
+      }
+    }
+  },
+  { immediate: true }
+);
+
+watch(normalizedStudyCode, load, { immediate: true });
 </script>
 
 <style scoped>
@@ -334,7 +710,7 @@ watch(() => props.studyCode, load, { immediate: true });
   display: flex;
   flex-direction: column;
   gap: 12px;
-  margin-top: 24px;
+  margin-bottom: 20px;
 }
 
 .work-queues-header {
@@ -367,8 +743,8 @@ watch(() => props.studyCode, load, { immediate: true });
 
 .work-queues-total {
   font-weight: 600;
+  font-variant-numeric: var(--font-variant-numeric-tabular);
   color: var(--semantic-color-text-dark);
-  font-variant-numeric: tabular-nums;
 }
 
 .work-queues-grid {
@@ -407,18 +783,32 @@ watch(() => props.studyCode, load, { immediate: true });
 
 .work-queue-capability {
   display: inline-block;
-  margin-top: 2px;
+  margin: 2px 0 0;
   max-width: 100%;
   overflow-wrap: anywhere;
-  font-family: var(--semantic-font-mono);
-  font-size: var(--font-size-2xs);
+  font-size: 0.78rem;
   color: var(--semantic-color-text-secondary);
 }
 
 .work-queue-badges {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
+  justify-content: flex-end;
   gap: 6px;
+}
+
+.work-queue-explain-btn {
+  padding: 2px 8px;
+  min-height: 28px;
+  font-size: 0.76rem;
+}
+
+.work-queue-explanation {
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--semantic-color-surface-muted);
 }
 
 .work-queue-count {
@@ -430,8 +820,8 @@ watch(() => props.studyCode, load, { immediate: true });
   border-radius: 999px;
   font-size: 0.78rem;
   font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  background: var(--semantic-color-surface-subtle);
+  font-variant-numeric: var(--font-variant-numeric-tabular);
+  background: var(--semantic-color-surface-muted);
   color: var(--semantic-color-text-dark);
 }
 
@@ -440,7 +830,8 @@ watch(() => props.studyCode, load, { immediate: true });
   border-radius: 4px;
   font-size: var(--font-size-2xs);
   font-weight: 600;
-  background: var(--semantic-color-warning-bg-soft);
+  font-variant-numeric: var(--font-variant-numeric-tabular);
+  background: var(--semantic-color-warning-bg-light);
   color: var(--semantic-color-warning-text-dark);
 }
 
@@ -475,6 +866,22 @@ watch(() => props.studyCode, load, { immediate: true });
   gap: 6px;
 }
 
+.work-item-tags {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.work-item-study {
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-family: var(--semantic-font-mono);
+  font-size: var(--font-size-2xs);
+  font-weight: 600;
+  background: var(--semantic-color-surface-muted);
+  color: var(--semantic-color-text-dark);
+}
+
 .work-item-link {
   font-weight: 500;
   color: var(--primary);
@@ -482,7 +889,6 @@ watch(() => props.studyCode, load, { immediate: true });
 }
 
 .work-item-kind {
-  font-family: var(--semantic-font-mono);
   font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
 }
@@ -490,7 +896,7 @@ watch(() => props.studyCode, load, { immediate: true });
 .work-item-detail {
   margin: 0;
   font-size: 0.78rem;
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: var(--font-variant-numeric-tabular);
   color: var(--semantic-color-text-secondary);
 }
 

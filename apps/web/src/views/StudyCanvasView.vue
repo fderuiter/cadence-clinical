@@ -381,6 +381,10 @@
           </template>
 
           <template v-else-if="!stage">
+            <WorkQueuesPanel
+              :key="`work-queues-${studyCode}`"
+              :study-code="studyCode"
+            />
             <StudyPulse @drill="drillToParticipants" />
             <StudySitesPanel
               v-if="hasStudySitesService"
@@ -398,10 +402,6 @@
             />
             <NeedsAttention
               :key="`attention-${studyCode}`"
-              :study-code="studyCode"
-            />
-            <WorkQueuesPanel
-              :key="`work-queues-${studyCode}`"
               :study-code="studyCode"
             />
             <StudyActivity :key="studyCode" :study-code="studyCode" />
@@ -650,36 +650,20 @@
       id="canvas-workspace"
       class="open-study"
       :role="inAppShell ? 'region' : undefined"
-      :aria-label="inAppShell ? 'Open a study' : undefined"
+      :aria-label="
+        inAppShell
+          ? hasCrossStudyHome
+            ? 'Studies'
+            : 'Open a study'
+          : undefined
+      "
       tabindex="-1"
     >
-      <h1 id="canvas-study-title" tabindex="-1">Open a study</h1>
-      <form
-        id="open-study-form"
-        class="open-study-form"
-        @submit.prevent="openTypedStudy"
-      >
-        <label for="open-study-code">Study code</label>
-        <input
-          id="open-study-code"
-          v-model="typedStudy"
-          type="text"
-          autocomplete="off"
-          maxlength="255"
-          placeholder="e.g. CADENCE-101"
-        />
-        <button
-          id="btn-open-study"
-          type="submit"
-          class="btn btn-primary"
-          :disabled="!typedStudy.trim()"
-        >
-          Open
-        </button>
-      </form>
-      <p v-if="!hasStudyDirectoryService" class="open-study-note">
-        Enter a study code such as CADENCE-101 to open its workspace.
-      </p>
+      <h1 id="canvas-study-title" tabindex="-1">
+        {{ hasCrossStudyHome ? "Studies" : "Open a study" }}
+      </h1>
+
+      <WorkQueuesPanel v-if="hasWorkQueueService" :studies="visibleStudies" />
 
       <section
         v-if="hasStudyDirectoryService"
@@ -756,6 +740,33 @@
           </li>
         </ul>
       </section>
+
+      <form
+        id="open-study-form"
+        class="open-study-form"
+        @submit.prevent="openTypedStudy"
+      >
+        <label for="open-study-code">Study code</label>
+        <input
+          id="open-study-code"
+          v-model="typedStudy"
+          type="text"
+          autocomplete="off"
+          maxlength="255"
+          placeholder="e.g. CADENCE-101"
+        />
+        <button
+          id="btn-open-study"
+          type="submit"
+          class="btn btn-primary"
+          :disabled="!typedStudy.trim()"
+        >
+          Open
+        </button>
+      </form>
+      <p v-if="!hasStudyDirectoryService" class="open-study-note">
+        Enter a study code such as CADENCE-101 to open its workspace.
+      </p>
 
       <section
         v-if="hasCreateStudyService"
@@ -1023,6 +1034,7 @@ import {
   nextTick,
   onMounted,
   onUnmounted,
+  provide,
   ref,
   watch,
 } from "vue";
@@ -1048,6 +1060,8 @@ import {
 } from "../api/kernelApi";
 import {
   canResolveNodesRemotely,
+  ensureNodesResolved,
+  getNodeDisplay,
   resolveNode,
   seedNodeSummary,
 } from "../canvas/nodeResolver";
@@ -1085,6 +1099,7 @@ import {
   SignOutConfirmModal,
   handoffFocus,
   hasActiveModalFocusTrap,
+  hasRegisteredUnsavedDrafts,
   useSignOutGuard,
 } from "ui";
 import { useAuthStore } from "../stores/auth";
@@ -1180,6 +1195,12 @@ const knowledgeStore = useKnowledgeStore();
 const canvas = useStudyCanvasStore();
 const { setActiveStudyCode } = useActiveStudyScope();
 const inAppShell = inject<boolean>("inAppShell", false);
+
+provide("cadenceEntityResolver", {
+  ensure: ensureNodesResolved,
+  getDisplay: getNodeDisplay,
+  resolve: resolveNode,
+});
 
 const { enabled: aiEnabled, setEnabled: setAiEnabled } = useAiAssistance();
 
@@ -1281,6 +1302,12 @@ function handleStandaloneCanvasFocusIn(event: FocusEvent) {
 
 const hasStudyDirectoryService = computed(
   () => typeof kernelApi.listStudies === "function"
+);
+const hasWorkQueueService = computed(
+  () => typeof kernelApi.listWorkQueues === "function"
+);
+const hasCrossStudyHome = computed(
+  () => hasStudyDirectoryService.value || hasWorkQueueService.value
 );
 const hasCreateStudyService = computed(
   () => typeof kernelApi.createStudy === "function"
@@ -1430,6 +1457,15 @@ async function loadStudyDirectory() {
   studyDirectoryError.value = "";
   try {
     visibleStudies.value = await kernelApi.listStudies();
+    for (const study of visibleStudies.value) {
+      if (study?.ref) {
+        seedNodeSummary(study.ref, {
+          kind: "study",
+          code: study.code,
+          title: study.title,
+        });
+      }
+    }
     if (
       !studyCode.value &&
       (route.query.section === "locks" || route.query.section === "exports") &&
@@ -1488,6 +1524,9 @@ function openStudyByCode(code: string) {
         {
           stage: stage.value?.id,
           section: section.value?.id,
+          site: siteFilter.value || undefined,
+          participant: rawParticipantQuery.value || undefined,
+          subject: single(route.query.subject).trim() || undefined,
         },
         clean
       )
@@ -2680,7 +2719,20 @@ async function goToPaletteTarget(target: PaletteTarget) {
 
 function openTypedStudy() {
   const code = typedStudy.value.trim();
-  if (code) router.push(studyLocation({}, code));
+  if (code) {
+    router.push(
+      studyLocation(
+        {
+          stage: stage.value?.id,
+          section: section.value?.id,
+          site: siteFilter.value || undefined,
+          participant: rawParticipantQuery.value || undefined,
+          subject: single(route.query.subject).trim() || undefined,
+        },
+        code
+      )
+    );
+  }
 }
 
 // Switching study drops everything read for the previous one.
@@ -3025,8 +3077,16 @@ function leavesActiveObservation(to: RouteLocationNormalized): boolean {
   );
 }
 
+function hasUnsavedFormChanges(): boolean {
+  if (formWorkspaceDirty.value) return true;
+  if (openObservationRef.value || observationWorkspaceDirty.value) {
+    return false;
+  }
+  return Boolean(hasRegisteredUnsavedDrafts());
+}
+
 useUnsavedNavigationGuard({
-  isDirty: () => formWorkspaceDirty.value || observationWorkspaceDirty.value,
+  isDirty: () => hasUnsavedFormChanges() || observationWorkspaceDirty.value,
   guardSignOut: false,
   dialogCopy: (to, from) => {
     const sameStudyRoute = Boolean(to.name && to.name === from.name);
@@ -3042,7 +3102,7 @@ useUnsavedNavigationGuard({
       };
     }
     const leavingForm =
-      formWorkspaceDirty.value && (!sameStudyRoute || leavesActiveForm(to));
+      hasUnsavedFormChanges() && (!sameStudyRoute || leavesActiveForm(to));
     if (leavingForm) {
       return {
         title: "Unsaved Form Changes",
@@ -3055,7 +3115,7 @@ useUnsavedNavigationGuard({
   },
   shouldPromptOnUpdate: (to) =>
     (observationWorkspaceDirty.value && leavesActiveObservation(to)) ||
-    (formWorkspaceDirty.value && leavesActiveForm(to)),
+    (hasUnsavedFormChanges() && leavesActiveForm(to)),
   onConfirmedDiscard: () => {
     if (observationWorkspaceDirty.value) {
       observationViewRef.value?.discardCorrection?.();

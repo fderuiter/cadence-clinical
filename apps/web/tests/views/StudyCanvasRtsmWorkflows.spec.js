@@ -958,10 +958,31 @@ describe("Clinical Canvas RTSM workflows", () => {
       );
 
       await appRouter.push("/ctms");
-      expect(appRouter.currentRoute.value.path).toBe("/ctms");
+      expect(appRouter.currentRoute.value.path).toBe("/studies");
+      expect(appRouter.currentRoute.value.query).toMatchObject({
+        stage: "start",
+        section: "startup-greenlight",
+      });
 
       await appRouter.push("/ssu");
-      expect(appRouter.currentRoute.value.path).toBe("/ssu");
+      expect(appRouter.currentRoute.value.path).toBe("/studies");
+      expect(appRouter.currentRoute.value.query).toMatchObject({
+        stage: "start",
+        section: "site-activation",
+      });
+
+      try {
+        vi.stubEnv("VITE_DEMO_MODE", "true");
+        await appRouter.push("/login");
+        await appRouter.push("/ctms");
+        expect(appRouter.currentRoute.value.path).toBe("/ctms");
+
+        await appRouter.push("/ssu");
+        expect(appRouter.currentRoute.value.path).toBe("/ssu");
+      } finally {
+        vi.unstubAllEnvs();
+      }
+      await appRouter.push("/login");
     }
   });
 });

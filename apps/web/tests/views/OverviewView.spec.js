@@ -8,8 +8,11 @@ import { useOnboardingStore } from "../../src/stores/onboarding";
 import { signInAs } from "../helpers/signIn.js";
 
 describe("OverviewView Orientation Hub Component", () => {
+  let pinia;
+
   beforeEach(async () => {
-    setActivePinia(createPinia());
+    pinia = createPinia();
+    setActivePinia(pinia);
     if (typeof window !== "undefined") {
       window.localStorage.clear();
     }
@@ -43,7 +46,7 @@ describe("OverviewView Orientation Hub Component", () => {
     authStore.currentPersona = "sponsor_designer";
 
     const wrapper = mount(OverviewView, {
-      global: { plugins: [router] },
+      global: { plugins: [pinia, router] },
     });
 
     // Verify task items exist
@@ -67,7 +70,7 @@ describe("OverviewView Orientation Hub Component", () => {
     onboardingStore.loadPersonaState("site_crc");
 
     const wrapper = mount(OverviewView, {
-      global: { plugins: [router] },
+      global: { plugins: [pinia, router] },
     });
     const toggle = wrapper.find("#toggle-bypass-overview");
 
@@ -85,42 +88,52 @@ describe("OverviewView Orientation Hub Component", () => {
     expect(saved).toBe("true");
   });
 
-  it("navigates only to live authorized operational views when clicking workflow launcher cards and checklist links across all six personas", async () => {
+  it("retires commercial Blueprint, Capture, and Orbit launcher cards while routing checklist links to authorized Canvas and demo views across all six personas", async () => {
     const personaExpectations = [
       {
         roles: ["Sponsor Admin"],
         persona: "super_admin",
-        expectedLaunchers: ["/studies", "/studies", "/ctms"],
-        expectedChecklistRoutes: ["/studies", "/ctms"],
+        expectedChecklistRoutes: [
+          "/studies",
+          "/studies?stage=start&section=startup-greenlight",
+        ],
       },
       {
         roles: ["Sponsor Designer"],
         persona: "sponsor_designer",
-        expectedLaunchers: ["/studies"],
         expectedChecklistRoutes: ["/studies", "/studies", "/studies"],
       },
       {
         roles: ["Data Manager"],
         persona: "data_manager",
-        expectedLaunchers: ["/studies", "/studies", "/ctms"],
-        expectedChecklistRoutes: ["/studies", "/studies", "/studies", "/ctms"],
+        expectedChecklistRoutes: [
+          "/studies",
+          "/studies",
+          "/studies",
+          "/studies?stage=start&section=startup-greenlight",
+        ],
       },
       {
         roles: ["CRC"],
         persona: "site_crc",
-        expectedLaunchers: ["/studies", "/studies", "/ssu"],
-        expectedChecklistRoutes: ["/ssu", "/studies", "/studies"],
+        expectedChecklistRoutes: [
+          "/studies?stage=start&section=site-activation",
+          "/studies",
+          "/studies",
+        ],
       },
       {
         roles: ["CRA"],
         persona: "cra_monitor",
-        expectedLaunchers: ["/studies", "/studies", "/ctms"],
-        expectedChecklistRoutes: ["/ctms", "/studies", "/studies"],
+        expectedChecklistRoutes: [
+          "/studies?stage=start&section=startup-greenlight",
+          "/studies",
+          "/studies",
+        ],
       },
       {
         roles: ["Auditor"],
         persona: "auditor",
-        expectedLaunchers: ["/studies"],
         expectedChecklistRoutes: ["/studies", "/studies", "/studies"],
       },
     ];
@@ -128,34 +141,24 @@ describe("OverviewView Orientation Hub Component", () => {
     for (const {
       roles,
       persona,
-      expectedLaunchers,
       expectedChecklistRoutes,
     } of personaExpectations) {
       const authStore = signInAs(useAuthStore(), roles);
       authStore.isDemoMode = true;
       authStore.currentPersona = persona;
-      await router.push("/overview");
+      await router.push("/login");
 
       const pushSpy = vi.spyOn(router, "push");
       const wrapper = mount(OverviewView, {
         global: { plugins: [router] },
       });
 
-      const launcherBtns = wrapper.findAll(".btn-launcher-action");
-      expect(launcherBtns.length, `${persona} launchers`).toBe(
-        expectedLaunchers.length
-      );
-
-      for (let i = 0; i < launcherBtns.length; i++) {
-        await router.push("/overview");
-        pushSpy.mockClear();
-        await launcherBtns[i].trigger("click");
-        expect(pushSpy, `${persona} launcher ${i}`).toHaveBeenCalledWith(
-          expectedLaunchers[i]
-        );
-        await pushSpy.mock.results[0].value;
-        expect(router.currentRoute.value.path).toBe(expectedLaunchers[i]);
-      }
+      expect(wrapper.find(".launchers-section").exists()).toBe(false);
+      expect(wrapper.findAll(".launcher-card")).toHaveLength(0);
+      const gridText = wrapper.find(".overview-grid").text();
+      expect(gridText).not.toContain("Blueprint");
+      expect(gridText).not.toContain("Capture");
+      expect(gridText).not.toContain("Orbit");
 
       const taskLaunchBtns = wrapper.findAll(".btn-task-launch");
       expect(taskLaunchBtns.length, `${persona} checklist links`).toBe(
@@ -163,18 +166,20 @@ describe("OverviewView Orientation Hub Component", () => {
       );
 
       for (let i = 0; i < taskLaunchBtns.length; i++) {
-        await router.push("/overview");
+        await router.push("/login");
         pushSpy.mockClear();
         await taskLaunchBtns[i].trigger("click");
         expect(pushSpy, `${persona} checklist ${i}`).toHaveBeenCalledWith(
           expectedChecklistRoutes[i]
         );
         await pushSpy.mock.results[0].value;
-        expect(router.currentRoute.value.path).toBe(expectedChecklistRoutes[i]);
+        expect(router.currentRoute.value.fullPath).toBe(
+          expectedChecklistRoutes[i]
+        );
       }
 
       // Guard blocks direct unauthorized/unavailable route invocation
-      await router.push("/overview");
+      await router.push("/login");
       pushSpy.mockClear();
       wrapper.vm.$.setupState.navigateToRoute("/mdr");
       if (persona === "auditor") {
@@ -186,7 +191,7 @@ describe("OverviewView Orientation Hub Component", () => {
       wrapper.unmount();
     }
 
-    // Static demo builds preserve standalone /ecrf launchers and checklist routes
+    // Static demo builds preserve standalone /overview, /ssu, and /ecrf checklist routes without launcher cards
     vi.stubEnv("VITE_DEMO_MODE", "true");
     try {
       const authStore = signInAs(useAuthStore(), ["CRC"]);
@@ -198,7 +203,17 @@ describe("OverviewView Orientation Hub Component", () => {
       const wrapper = mount(OverviewView, {
         global: { plugins: [router] },
       });
-      await wrapper.findAll(".btn-launcher-action")[1].trigger("click");
+      expect(wrapper.find(".launchers-section").exists()).toBe(false);
+      expect(wrapper.find("#overview-demo-catalog").exists()).toBe(true);
+      const demoChecklistBtns = wrapper.findAll(".btn-task-launch");
+      await demoChecklistBtns[0].trigger("click");
+      expect(pushSpy).toHaveBeenCalledWith("/ssu");
+      await pushSpy.mock.results[0].value;
+      expect(router.currentRoute.value.path).toBe("/ssu");
+
+      await router.push("/overview");
+      pushSpy.mockClear();
+      await demoChecklistBtns[1].trigger("click");
       expect(pushSpy).toHaveBeenCalledWith("/ecrf");
       await pushSpy.mock.results[0].value;
       expect(router.currentRoute.value.path).toBe("/ecrf");

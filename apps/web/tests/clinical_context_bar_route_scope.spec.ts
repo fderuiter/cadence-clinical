@@ -248,7 +248,13 @@ const trainingLink = computed(() => scopedWorkflowPath("/training"));
       `/studies/CADENCE-101?site=SITE-101&participant=${encodeURIComponent(PARTICIPANT_NODE_REF)}`
     );
     expect(byKey["workspace:site-readiness"]).toBe(
-      "/ctms?studyId=CADENCE-101&siteId=SITE-101&subjectId=017-0001"
+      `/studies/CADENCE-101?stage=start&section=startup-greenlight&site=SITE-101&participant=${encodeURIComponent(PARTICIPANT_NODE_REF)}`
+    );
+    expect(byKey["workspace:trial-documents"]).toBe(
+      `/studies/CADENCE-101?stage=start&section=documents&site=SITE-101&participant=${encodeURIComponent(PARTICIPANT_NODE_REF)}`
+    );
+    expect(byKey["workspace:training"]).toBe(
+      `/studies/CADENCE-101?stage=start&section=training&site=SITE-101&participant=${encodeURIComponent(PARTICIPANT_NODE_REF)}`
     );
     expect(byKey["workspace:data-collection"]).toBe(
       `/studies/CADENCE-101?stage=conduct&site=SITE-101&participant=${encodeURIComponent(PARTICIPANT_NODE_REF)}`
@@ -276,6 +282,9 @@ const trainingLink = computed(() => scopedWorkflowPath("/training"));
       );
       expect(demoByKey["workspace:data-collection"]).toBe(
         "/ecrf?studyId=CADENCE-101&siteId=SITE-101&subjectId=017-0001&enrollmentId=enr-001"
+      );
+      expect(demoByKey["workspace:site-readiness"]).toBe(
+        "/ctms?studyId=CADENCE-101&siteId=SITE-101&subjectId=017-0001"
       );
     } finally {
       vi.unstubAllEnvs();
@@ -759,9 +768,9 @@ const trainingLink = computed(() => scopedWorkflowPath("/training"));
     overlayWrapper.unmount();
   });
 
-  it("includes studyId, siteId, and subjectId on /etmf, /training, and /overview workspace palette items", () => {
+  it("includes study, site, and participant scope on Trial documents, Study training, and Orientation workspace palette items across live and demo builds", () => {
     vi.spyOn(availabilityModule, "isScreenAvailable").mockReturnValue(true);
-    const items = buildWorkspacePaletteItems({
+    const liveItems = buildWorkspacePaletteItems({
       isAuthenticated: true,
       normalizedRoles: ["sponsor_admin", "cra", "data_manager"],
       activeStudyCode: "CADENCE-101",
@@ -769,16 +778,38 @@ const trainingLink = computed(() => scopedWorkflowPath("/training"));
       activeSubjectCode: "SUBJ-102-001",
     });
 
-    const byKey = Object.fromEntries(
-      items.map((item) => [item.key, item.target.routePath])
+    const liveByKey = Object.fromEntries(
+      liveItems.map((item) => [item.key, item.target])
     );
-    expect(byKey["workspace:trial-documents"]).toBe(
+    expect(liveByKey["workspace:trial-documents"]?.routePath).toBe(
+      "/studies/CADENCE-101?stage=start&section=documents&site=SITE-102&participant=SUBJ-102-001"
+    );
+    expect(liveByKey["workspace:training"]?.routePath).toBe(
+      "/studies/CADENCE-101?stage=start&section=training&site=SITE-102&participant=SUBJ-102-001"
+    );
+    expect(liveByKey["workspace:orientation"]).toEqual({
+      action: { kind: "open-checklist" },
+    });
+
+    vi.stubEnv("VITE_DEMO_MODE", "true");
+    const demoItems = buildWorkspacePaletteItems({
+      isAuthenticated: true,
+      normalizedRoles: ["sponsor_admin", "cra", "data_manager"],
+      activeStudyCode: "CADENCE-101",
+      activeSiteId: "SITE-102",
+      activeSubjectCode: "SUBJ-102-001",
+    });
+
+    const demoByKey = Object.fromEntries(
+      demoItems.map((item) => [item.key, item.target.routePath])
+    );
+    expect(demoByKey["workspace:trial-documents"]).toBe(
       "/etmf?studyId=CADENCE-101&siteId=SITE-102&subjectId=SUBJ-102-001"
     );
-    expect(byKey["workspace:training"]).toBe(
+    expect(demoByKey["workspace:training"]).toBe(
       "/training?studyId=CADENCE-101&siteId=SITE-102&subjectId=SUBJ-102-001"
     );
-    expect(byKey["workspace:orientation"]).toBe(
+    expect(demoByKey["workspace:orientation"]).toBe(
       "/overview?studyId=CADENCE-101&siteId=SITE-102&subjectId=SUBJ-102-001"
     );
   });
@@ -879,7 +910,9 @@ const trainingLink = computed(() => scopedWorkflowPath("/training"));
           scopeSnapshot
         )
       ).toBe(
-        "/ctms?studyId=CADENCE-101&siteId=SITE-101&subjectId=SUBJ-101-001"
+        demoMode === "true"
+          ? "/ctms?studyId=CADENCE-101&siteId=SITE-101&subjectId=SUBJ-101-001"
+          : `/studies/CADENCE-101?stage=start&section=startup-greenlight&site=SITE-101&participant=${encodeURIComponent(PARTICIPANT_NODE_REF)}`
       );
       expect(
         resolveAuthorizedTaskRoute(
@@ -911,12 +944,24 @@ const trainingLink = computed(() => scopedWorkflowPath("/training"));
       const orientationBtn = document.getElementById(
         "btn-open-orientation-hub"
       );
-      expect(orientationBtn).toBeTruthy();
-      orientationBtn?.click();
-      await flushPromises();
-      expect(pushSpy).toHaveBeenLastCalledWith(
-        "/overview?studyId=CADENCE-101&siteId=SITE-101&subjectId=SUBJ-101-001"
-      );
+      if (demoMode === "true") {
+        expect(orientationBtn).toBeTruthy();
+        orientationBtn?.click();
+        await flushPromises();
+        expect(pushSpy).toHaveBeenLastCalledWith(
+          "/overview?studyId=CADENCE-101&siteId=SITE-101&subjectId=SUBJ-101-001"
+        );
+      } else {
+        expect(orientationBtn).toBeNull();
+        const taskButtons = drawerWrapper.findAll(".btn-navigate-task");
+        expect(taskButtons.length).toBeGreaterThan(0);
+        await taskButtons[0].trigger("click");
+        await flushPromises();
+        const drawerPushed = String(pushSpy.mock.calls.at(-1)?.[0] || "");
+        expect(drawerPushed).toContain("CADENCE-101");
+        expect(drawerPushed).toContain("SITE-101");
+        expect(drawerPushed).toContain("SUBJ-101-001");
+      }
       drawerWrapper.unmount();
 
       const overviewWrapper = mount(OverviewView, {
@@ -924,9 +969,9 @@ const trainingLink = computed(() => scopedWorkflowPath("/training"));
       });
       await flushPromises();
 
-      const launcherButtons = overviewWrapper.findAll(".launcher-card button");
-      expect(launcherButtons.length).toBeGreaterThan(0);
-      await launcherButtons[0].trigger("click");
+      const taskLaunchButtons = overviewWrapper.findAll(".btn-task-launch");
+      expect(taskLaunchButtons.length).toBeGreaterThan(0);
+      await taskLaunchButtons[0].trigger("click");
       await flushPromises();
       const pushedTarget = String(pushSpy.mock.calls.at(-1)?.[0] || "");
       expect(pushedTarget).toContain("CADENCE-101");

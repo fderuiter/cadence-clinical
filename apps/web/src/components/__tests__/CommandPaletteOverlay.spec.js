@@ -53,11 +53,13 @@ describe("Global Command Palette Shell Integration", () => {
     await wrapper.find("#btn-open-palette").trigger("click");
     expect(body.find("#canvas-palette").exists()).toBe(true);
 
-    // Site CRC Site readiness navigates to /ssu
+    // Site CRC Site readiness navigates to Clinical Canvas Start site-activation outside demo mode
     const pushSpy = vi.spyOn(router, "push");
     await body.find("#canvas-palette-input").setValue("Site readiness");
     await body.find("#canvas-palette [role='option']").trigger("click");
-    expect(pushSpy).toHaveBeenCalledWith("/ssu");
+    expect(pushSpy).toHaveBeenCalledWith(
+      "/studies?stage=start&section=site-activation"
+    );
     expect(body.find("#canvas-palette").exists()).toBe(false);
 
     // Reopen with global Cmd+K shortcut
@@ -68,6 +70,22 @@ describe("Global Command Palette Shell Integration", () => {
     expect(body.find("#canvas-palette").exists()).toBe(true);
 
     wrapper.unmount();
+
+    // Static demo builds preserve /ssu
+    vi.stubEnv("VITE_DEMO_MODE", "true");
+    let demoWrapper;
+    try {
+      demoWrapper = mount(AppShell, {
+        global: { plugins: [pinia, router] },
+      });
+      await demoWrapper.find("#btn-open-palette").trigger("click");
+      await body.find("#canvas-palette-input").setValue("Site readiness");
+      await body.find("#canvas-palette [role='option']").trigger("click");
+      expect(pushSpy).toHaveBeenLastCalledWith("/ssu");
+    } finally {
+      demoWrapper?.unmount();
+      vi.unstubAllEnvs();
+    }
   });
 
   it("keeps Open study and static destinations usable when kernelApi.search fails", async () => {
