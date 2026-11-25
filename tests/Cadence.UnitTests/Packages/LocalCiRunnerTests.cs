@@ -816,19 +816,23 @@ public class LocalCiRunnerTests
         var env = Environment(docker: false);
 
         var strictResults = LocalCiRunner.Run(jobs, Defaults with { RequestedJobs = ["container-security"] }, env);
-        strictResults.Select(r => r.Outcome).Should().Equal(CiOutcome.Failed, CiOutcome.NotRun, CiOutcome.NotRun, CiOutcome.Skipped);
-        strictResults[0].Note.Should().Contain("Docker daemon is not reachable").And.Contain("--allow-missing-tools");
-        _ran.Should().BeEmpty();
+        strictResults.Where(r => r.Step.Job == CiPlan.ContainerSecurityJobKey).Select(r => r.Outcome)
+            .Should().Equal(CiOutcome.Failed, CiOutcome.NotRun, CiOutcome.NotRun, CiOutcome.NotRun, CiOutcome.Skipped);
+        strictResults.First(r => r.Step.Job == CiPlan.ContainerSecurityJobKey).Note
+            .Should().Contain("Docker daemon is not reachable").And.Contain("--allow-missing-tools");
 
         var dbSkipOnlyResults = LocalCiRunner.Run(jobs, Defaults with { AllowDbSkip = true, RequestedJobs = ["container-security"] }, env);
-        dbSkipOnlyResults.Select(r => r.Outcome).Should().Equal(CiOutcome.Failed, CiOutcome.NotRun, CiOutcome.NotRun, CiOutcome.Skipped);
+        dbSkipOnlyResults.Where(r => r.Step.Job == CiPlan.ContainerSecurityJobKey).Select(r => r.Outcome)
+            .Should().Equal(CiOutcome.Failed, CiOutcome.NotRun, CiOutcome.NotRun, CiOutcome.NotRun, CiOutcome.Skipped);
 
         var skipResults = LocalCiRunner.Run(jobs, Defaults with { AllowMissingTools = true, RequestedJobs = ["container-security"] }, env);
-        skipResults.Select(r => r.Outcome).Should().Equal(CiOutcome.Skipped, CiOutcome.Skipped, CiOutcome.Skipped, CiOutcome.Skipped);
-        skipResults[0].Note.Should().Contain("Docker daemon unavailable (--allow-missing-tools)");
-        skipResults[1].Note.Should().Contain("Docker daemon unavailable (--allow-missing-tools)");
-        skipResults[2].Note.Should().Contain("Docker daemon unavailable (--allow-missing-tools)");
-        _ran.Should().BeEmpty();
+        var containerSkipResults = skipResults.Where(r => r.Step.Job == CiPlan.ContainerSecurityJobKey).ToList();
+        containerSkipResults.Select(r => r.Outcome)
+            .Should().Equal(CiOutcome.Skipped, CiOutcome.Skipped, CiOutcome.Skipped, CiOutcome.Skipped, CiOutcome.Skipped);
+        containerSkipResults[0].Note.Should().Contain("Docker daemon unavailable (--allow-missing-tools)");
+        containerSkipResults[1].Note.Should().Contain("Docker daemon unavailable (--allow-missing-tools)");
+        containerSkipResults[2].Note.Should().Contain("Docker daemon unavailable (--allow-missing-tools)");
+        containerSkipResults[3].Note.Should().Contain("skipped because 'Run container vulnerability scan' was skipped");
     }
 
     [Fact]
@@ -838,12 +842,14 @@ public class LocalCiRunnerTests
         var skippedScope = new CiContainerScanScope(false, "no container or dependency changes against origin/main (pass --job container-security to force)");
         var envWhenNoDiffAndMissingTools = Environment(
             docker: false,
-            tools: _ => false,
+            tools: tool => tool == "dotnet",
             containerSecurityScope: skippedScope);
 
         var defaultRunResults = LocalCiRunner.Run(jobs, Defaults, envWhenNoDiffAndMissingTools);
-        defaultRunResults.Select(r => r.Outcome).Should().Equal(CiOutcome.Skipped, CiOutcome.Skipped, CiOutcome.Skipped, CiOutcome.Skipped);
-        defaultRunResults[0].Note.Should().Contain("no container or dependency changes");
+        var defaultContainerResults = defaultRunResults.Where(r => r.Step.Job == CiPlan.ContainerSecurityJobKey).ToList();
+        defaultContainerResults.Select(r => r.Outcome)
+            .Should().Equal(CiOutcome.Skipped, CiOutcome.Skipped, CiOutcome.Skipped, CiOutcome.Skipped, CiOutcome.Skipped);
+        defaultContainerResults[0].Note.Should().Contain("no container or dependency changes");
 
         var capturedCommands = new List<string>();
         var readyEnv = new LocalCiEnvironment
@@ -866,11 +872,13 @@ public class LocalCiRunnerTests
             jobs,
             Defaults with { RequestedJobs = ["container-security"] },
             readyEnv);
-        forcedResults.Select(r => r.Outcome).Should().Equal(CiOutcome.Passed, CiOutcome.Passed, CiOutcome.Passed, CiOutcome.Skipped);
-        capturedCommands.Should().HaveCount(41);
-        capturedCommands[0].Should().Be("docker compose -f docker/docker-compose.yml config -q");
-        capturedCommands.Skip(1).Take(20).Should().OnlyContain(c => c.StartsWith("docker build ", StringComparison.Ordinal));
-        capturedCommands.Skip(21).Should().OnlyContain(c => c.StartsWith("trivy image ", StringComparison.Ordinal));
+        forcedResults.Where(r => r.Step.Job == CiPlan.ContainerSecurityJobKey).Select(r => r.Outcome)
+            .Should().Equal(CiOutcome.Passed, CiOutcome.Passed, CiOutcome.Passed, CiOutcome.Passed, CiOutcome.Skipped);
+        capturedCommands.Should().HaveCount(62);
+        capturedCommands[1].Should().Be("docker compose -f docker/docker-compose.yml config -q");
+        capturedCommands.Skip(2).Take(20).Should().OnlyContain(c => c.StartsWith("docker build ", StringComparison.Ordinal));
+        capturedCommands.Skip(22).Take(20).Should().OnlyContain(c => c.StartsWith("trivy image ", StringComparison.Ordinal));
+        capturedCommands.Skip(42).Take(20).Should().OnlyContain(c => c.StartsWith("node scripts/run-cli.js validate-vulnerabilities --trivy-report ", StringComparison.Ordinal));
     }
 
     [Fact]
