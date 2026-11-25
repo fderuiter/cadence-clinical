@@ -95,7 +95,6 @@ describe("CrcFormRenderer.vue", () => {
 
   it("renders dynamic forms derived from the subject's active protocol schema version", async () => {
     /**
-     * @req: PRD-SYS-001
      * Verify that subject with protocol v2.0.0 projects amended lab and temperature fields,
      * whereas protocol v1.0.0 only renders baseline fields.
      */
@@ -124,7 +123,6 @@ describe("CrcFormRenderer.vue", () => {
     // Enrolment runs on local data only in a demo build (#4827); unbacked_actions.test.js covers the refusal.
     vi.stubEnv("VITE_DEMO_MODE", "true");
     /**
-     * @req: PRD-SYS-001, PRD-SUB-007
      * Verify subject enrollment flow assigns identifier, site ID, consent date, and arm.
      */
     const wrapper = createWrapper();
@@ -168,7 +166,7 @@ describe("CrcFormRenderer.vue", () => {
 
   it("evaluates live edit checks in real-time displaying Warning and Discrepancy badges", async () => {
     /**
-     * @req: PRD-SYS-001, PRD-EDC-005
+     * @req: PRD-CRF-004
      * Verify real-time evaluation of edit check rules:
      * - Systolic BP > 180 mmHg triggers Warning badge
      * - Diastolic BP >= Systolic BP triggers Discrepancy badge
@@ -206,7 +204,7 @@ describe("CrcFormRenderer.vue", () => {
 
   it("triggers explicit Re-Consent Gate blocking modal when subject has pending re-consent", async () => {
     /**
-     * @req: PRD-SYS-001, PRD-SUB-007
+     * @req: PRD-SUB-007
      * Verify that attempting to submit or interact while isReconsentGated triggers blocking modal.
      */
     const wrapper = createWrapper({

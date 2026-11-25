@@ -823,6 +823,85 @@ public sealed class KernelProtocolGovernanceEndpointsTests : IDisposable
         }
     }
 
+    [Fact]
+    public async Task ApproveProtocolVersion_WhenCurrentActorAndSigTokenSubjectAreUnresolved_ReturnsActorUnresolved()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var factory = CreateFactory();
+        using var designer = factory.CreateSignedClient(DesignerIdentity);
+
+        var v1Id = _store.SeedDraftProtocolVersion(ProtocolDesignSamples.Minimal);
+        var v1Ref = NodeRef.For(v1Id).ToString();
+        string v1Hash;
+        using (var submitV1 = await designer.SendAsync(BuildPost($"/api/v1/kernel/protocol-versions/{v1Ref}/submit-for-review", "actor-unresolved-v1-submit", "Freeze v1", null), ct))
+        {
+            submitV1.StatusCode.Should().Be(HttpStatusCode.OK);
+            v1Hash = JsonDocument.Parse(await submitV1.Content.ReadAsStringAsync(ct)).RootElement.GetProperty("content_hash").GetString()!;
+        }
+
+        int attestationsBefore = _store.ReadAll<Attestation>().Count;
+        await using var scope = factory.Services.CreateAsyncScope();
+        var services = new ServiceCollection();
+        services.AddSingleton<ICurrentActor>(new NullCurrentActor());
+        services.AddSingleton<IKernelUnitOfWorkFactory>(_store);
+        services.AddSingleton<IAttestationVerifier>(_store);
+        services.AddSingleton<ITenantEntitlementReader>(_store);
+        services.AddSingleton<IClock>(_clock);
+        await using var requestProvider = services.BuildServiceProvider();
+
+        var httpContext = new Microsoft.AspNetCore.Http.DefaultHttpContext
+        {
+            RequestServices = requestProvider,
+        };
+        KernelRequestTenant.Set(httpContext, Tenant);
+        httpContext.Items[ElectronicSignatureEndpointFilter.VerifiedTokenItemKey] =
+            new System.IdentityModel.Tokens.Jwt.JwtSecurityToken(
+                claims: [new System.Security.Claims.Claim("sub", "   ")]);
+        httpContext.Request.Headers["Idempotency-Key"] = "actor-unresolved-v1-approve";
+        httpContext.Request.Headers[GatewayHeaders.ChangeReason] = "Attempt approval with unresolved actor";
+
+        var response = await KernelProtocolGovernanceEndpoints.ApproveProtocolVersionAsync(
+            v1Ref,
+            new KernelApproveProtocolVersionRequest("Approved", v1Hash, null, null),
+            httpContext,
+            _store,
+            scope.ServiceProvider.GetRequiredService<IKernelCommandSender>(),
+            new PermittedAuthorizationProbe(),
+            new FixedKernelChangeReason("Attempt approval with unresolved actor"),
+            ct);
+
+        var problem = response.Result.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.ProblemHttpResult>().Subject;
+        problem.StatusCode.Should().Be((int)HttpStatusCode.Unauthorized);
+        problem.ProblemDetails.Extensions["code"].Should().Be(KernelErrors.ActorUnresolved.Code);
+        _store.ReadAll<Attestation>().Should().HaveCount(attestationsBefore, "unresolved actor must fail closed before recording any attestation");
+    }
+
+    private sealed class NullCurrentActor : ICurrentActor
+    {
+        public Actor? Actor => null;
+    }
+
+    private sealed class FixedKernelChangeReason(string reason) : IKernelChangeReason
+    {
+        public string? Read(Microsoft.AspNetCore.Http.HttpContext context) => reason;
+    }
+
+    private sealed class PermittedAuthorizationProbe : IAuthorizationProbe
+    {
+        public ValueTask<AuthorizationDecision> CanIAsync(
+            TenantId tenant,
+            Capability capability,
+            NodeRef resource,
+            CancellationToken cancellationToken) =>
+            ValueTask.FromResult(AuthorizationDecision.Permit());
+
+        public ValueTask<IReadOnlyList<CommandAvailability>> GetCommandsAsync(
+            TenantId tenant,
+            NodeRef resource,
+            CancellationToken cancellationToken) =>
+            ValueTask.FromResult<IReadOnlyList<CommandAvailability>>([]);
+    }
+
     private WebApplicationFactory<Cadence.Kernel.Host.Program> CreateFactory()
     {
         var factory = new WebApplicationFactory<Cadence.Kernel.Host.Program>().WithWebHostBuilder(builder =>

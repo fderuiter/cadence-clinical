@@ -20,4 +20,8 @@
     <ProjectReference Include="..\..\..\security\src\Cadence.Security.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="Cadence.UnitTests" />
+  </ItemGroup>
+
 </Project>

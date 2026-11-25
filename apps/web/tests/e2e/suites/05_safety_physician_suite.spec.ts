@@ -19,7 +19,7 @@ test.describe("Suite 5: Safety Physician & Medical Reviewer Golden Path", () => 
   /**
    * Exercise Safety Physician aggregate safety, CEC adjudication, and lab governance.
    *
-   * @req:PRD-SYS-105
+   * @req:PRD-SYS-050
    */
   test("05_safety_pv_and_cec_adjudication", async ({ page }) => {
     // Authenticate as Safety Physician / PV Officer

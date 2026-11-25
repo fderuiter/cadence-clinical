@@ -19,7 +19,7 @@ test.describe("Suite 6: Advanced Clinical, Devices & GxP Compliance Golden Path"
   /**
    * Exercise advanced clinical modules: DICOM imaging, device tracking, DCT sensors, training, and 21 CFR Part 11 audit trails.
    *
-   * @req:PRD-SYS-105
+   * @req:PRD-SYS-050
    */
   test("06_advanced_imaging_devices_and_audit", async ({ page }) => {
     // Authenticate as GxP Auditor / Super Admin

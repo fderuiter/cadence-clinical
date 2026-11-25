@@ -209,6 +209,66 @@ public sealed class PaymentsStudySiteScopeTests(PaymentsPostgresApiFactory facto
         (await credit.Content.ReadFromJsonAsync<JsonElement>(Ct)).GetProperty("status").GetString().Should().Be("CREDITED");
     }
 
+    /// <summary>
+    /// PRD-PAY-006: Financial mutations record append-only <see cref="PaymentAuditLog"/> rows in PostgreSQL capturing
+    /// actor identity, timestamps, state snapshots, and step-up signature context, and PostgreSQL insert-only triggers
+    /// reject UPDATE and DELETE statements on <c>payments.payments_audit_logs</c> with SQLSTATE <c>KA001</c>.
+    /// </summary>
+    [Fact]
+    [GxPRequirement("PRD-PAY-006")]
+    public async Task FinancialMutations_RecordAppendOnlyPaymentAuditLogs_AndRejectDatabaseTampering()
+    {
+        factory.SkipIfUnavailable();
+        var study = await SeedStudyAsync();
+        const string actorId = "finance-part11-auditor";
+
+        using (var finance = Client(TestSecurityContext.Identity(actorId, "Grants Manager") with { StudyIds = [study.StudyId] }))
+        {
+            string approvePath = $"{Base}/invoices/{study.InvoiceA}/approve";
+            using var approveReq = new HttpRequestMessage(HttpMethod.Post, approvePath);
+            approveReq.Headers.Add(
+                GatewayHeaders.SigToken,
+                TestSecurityContext.CreateSigToken(actorId, approvePath, "payments.invoice.approve", ["finance_officer"]));
+            (await finance.SendAsync(approveReq, Ct)).StatusCode.Should().Be(HttpStatusCode.OK);
+            (await finance.PostAsync($"{Base}/invoices/{study.InvoiceA}/erp-export", null, Ct)).StatusCode.Should().Be(HttpStatusCode.OK);
+            (await finance.PostAsJsonAsync($"{Base}/invoices/{study.InvoiceA}/reconcile", new { payment_reference = "WIRE-PART11-006" }, Ct))
+                .StatusCode.Should().Be(HttpStatusCode.OK);
+        }
+
+        await using var scope = factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<PaymentsDbContext>();
+        var logs = await db.PaymentAuditLogs.AsNoTracking()
+            .Where(l => l.EntityId == study.InvoiceA)
+            .OrderBy(l => l.CreatedAt)
+            .ToListAsync(Ct);
+
+        logs.Should().HaveCount(3);
+        logs.Should().OnlyContain(l =>
+            l.UserId == actorId &&
+            !string.IsNullOrWhiteSpace(l.EntityType) &&
+            !string.IsNullOrWhiteSpace(l.Action) &&
+            !string.IsNullOrWhiteSpace(l.PreviousStateJson) &&
+            !string.IsNullOrWhiteSpace(l.NewStateJson) &&
+            l.CreatedAt > DateTimeOffset.UnixEpoch);
+        var approvalLog = logs.Single(l => l.Action == "INVOICE_APPROVED");
+        approvalLog.PreviousStateJson.Should().Contain("DRAFT");
+        approvalLog.NewStateJson.Should().Contain("APPROVED").And.Contain(actorId);
+        approvalLog.Details.Should().Contain("payments.invoice.approve").And.Contain(actorId);
+        string targetId = approvalLog.Id;
+
+        var updateEx = await FluentActions.Invoking(() => db.Database.ExecuteSqlInterpolatedAsync(
+                $"UPDATE payments.payments_audit_logs SET \"Action\" = 'TAMPERED' WHERE \"Id\" = {targetId}", Ct))
+            .Should().ThrowAsync<Npgsql.PostgresException>();
+        updateEx.Which.SqlState.Should().Be("KA001");
+
+        var deleteEx = await FluentActions.Invoking(() => db.Database.ExecuteSqlInterpolatedAsync(
+                $"DELETE FROM payments.payments_audit_logs WHERE \"Id\" = {targetId}", Ct))
+            .Should().ThrowAsync<Npgsql.PostgresException>();
+        deleteEx.Which.SqlState.Should().Be("KA001");
+
+        (await db.PaymentAuditLogs.AsNoTracking().CountAsync(l => l.EntityId == study.InvoiceA, Ct)).Should().Be(3);
+    }
+
     private sealed record SeededStudy(string StudyId, string SiteA, string SiteB, string SubjectA, string SubjectB)
     {
         public string WalletA => $"W-{SubjectA}";

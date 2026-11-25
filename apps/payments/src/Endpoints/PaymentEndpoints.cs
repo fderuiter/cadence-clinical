@@ -5350,6 +5350,9 @@ public static class PaymentEndpoints
         }
 
         DateTimeOffset now = clock.UtcNow;
+        string priorStatus = inv.Status;
+        string? priorApprovedBy = inv.ApprovedBy;
+        DateTimeOffset? priorApprovedAt = inv.ApprovedAt;
         try
         {
             inv.Approve(userId, now);
@@ -5359,6 +5362,7 @@ public static class PaymentEndpoints
             return Results.Conflict(new { detail = ex.Message });
         }
 
+        var sigToken = httpContext.VerifiedSigToken();
         var audit = new PaymentAuditLog
         {
             Id = Guid.NewGuid().ToString(),
@@ -5367,7 +5371,17 @@ public static class PaymentEndpoints
             Action = "INVOICE_APPROVED",
             UserId = userId,
             UserRoles = CallerScope.Roles(httpContext, MaxRolesLength),
-            Details = JsonSerializer.Serialize(new { invoice_id = inv.Id, invoice_number = inv.InvoiceNumber, status = inv.Status }),
+            PreviousStateJson = JsonSerializer.Serialize(new { status = priorStatus, approved_by = priorApprovedBy, approved_at = priorApprovedAt }),
+            NewStateJson = JsonSerializer.Serialize(new { status = inv.Status, approved_by = inv.ApprovedBy, approved_at = inv.ApprovedAt }),
+            Details = JsonSerializer.Serialize(new
+            {
+                invoice_id = inv.Id,
+                invoice_number = inv.InvoiceNumber,
+                status = inv.Status,
+                signature_subject = sigToken?.Subject,
+                signature_token_id = sigToken?.Id,
+                signature_semantic_action = "payments.invoice.approve"
+            }),
             CreatedAt = now,
             CreatedBy = userId,
             ReasonForChange = "Self-billing invoice approved for ERP sync and payment processing",
@@ -5490,6 +5504,8 @@ public static class PaymentEndpoints
         }
 
         DateTimeOffset now = clock.UtcNow;
+        string priorStatus = inv.Status;
+        string? priorReconciliationReference = inv.ReconciliationReference;
         try
         {
             inv.Reconcile(userId, now, request.PaymentReference, request.Notes, request.ErpSystem);
@@ -5507,6 +5523,8 @@ public static class PaymentEndpoints
             Action = "INVOICE_SETTLEMENT_RECONCILED",
             UserId = userId,
             UserRoles = CallerScope.Roles(httpContext, MaxRolesLength),
+            PreviousStateJson = JsonSerializer.Serialize(new { status = priorStatus, reconciliation_reference = priorReconciliationReference }),
+            NewStateJson = JsonSerializer.Serialize(new { status = inv.Status, reconciled_by = inv.ReconciledBy, reconciliation_reference = inv.ReconciliationReference }),
             Details = JsonSerializer.Serialize(new { invoice_id = inv.Id, reference = request.PaymentReference, amount_paid = request.AmountPaid ?? inv.TotalNetAmount }),
             CreatedAt = now,
             CreatedBy = userId,
@@ -5538,6 +5556,8 @@ public static class PaymentEndpoints
         DateTimeOffset now = clock.UtcNow;
         string sys = erp_system ?? "SAP";
         string erpRef = $"ERP-{sys}-{Guid.NewGuid():N}"[..16].ToUpperInvariant();
+        string priorErpSyncStatus = inv.ErpSyncStatus;
+        string? priorErpReferenceId = inv.ErpReferenceId;
 
         try
         {
@@ -5572,6 +5592,8 @@ public static class PaymentEndpoints
             Action = "INVOICE_ERP_EXPORTED",
             UserId = userId,
             UserRoles = CallerScope.Roles(httpContext, MaxRolesLength),
+            PreviousStateJson = JsonSerializer.Serialize(new { status = inv.Status, erp_sync_status = priorErpSyncStatus, erp_reference_id = priorErpReferenceId }),
+            NewStateJson = JsonSerializer.Serialize(new { status = inv.Status, erp_sync_status = inv.ErpSyncStatus, erp_system = inv.ErpSystem, erp_reference_id = inv.ErpReferenceId }),
             Details = JsonSerializer.Serialize(new { invoice_id = inv.Id, erp_system = sys, erp_reference_id = erpRef }),
             CreatedAt = now,
             CreatedBy = userId,

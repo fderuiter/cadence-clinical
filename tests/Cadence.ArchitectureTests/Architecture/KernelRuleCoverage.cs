@@ -143,9 +143,9 @@ public static partial class KernelRuleCoverage
     public static IReadOnlyList<string> ReadDefinedRules() =>
         ParseDefinedRules(File.ReadAllText(Path.Combine(KernelBoundaryBaseline.RepositoryRoot(), SpecificationPath)));
 
-    /// <summary>Every test method under <c>tests/</c>, with the rules it names.</summary>
+    /// <summary>Every test across <see cref="RtmGeneratorService.TestSearchDirs"/>, with the rules it names.</summary>
     public static IReadOnlyList<DiscoveredTest> ScanTests() =>
-        RequirementTagScanner.ScanDirectories(KernelBoundaryBaseline.RepositoryRoot(), ["tests"]);
+        RequirementTagScanner.ScanDirectories(KernelBoundaryBaseline.RepositoryRoot(), RtmGeneratorService.TestSearchDirs);
 
     /// <summary>The baseline entries across all area shards, ordered by <c>K-&lt;AREA&gt;-</c> prefix and shard line order.</summary>
     public static IReadOnlyList<string> ReadBaseline(string? baselineDirectory = null)

@@ -21,8 +21,7 @@ describe("MediaPreviewModal.vue - Document Approval & Signatures", () => {
 
   it("displays '✅ Approved' badge and signer metadata when fileRecord.approval_status is APPROVED", () => {
     /**
-     * @req: PRD-SYS-001
-     * @req: PRD-DOC-001
+     * @req: PRD-DOC-003
      */
     const fileRecord = {
       id: "doc-101",
@@ -59,10 +58,6 @@ describe("MediaPreviewModal.vue - Document Approval & Signatures", () => {
   });
 
   it("displays 'Approve this document' button when permissions.canApprove is true and document is not yet approved", () => {
-    /**
-     * @req: PRD-SYS-001
-     * @req: PRD-DOC-001
-     */
     const fileRecord = {
       id: "doc-102",
       filename: "Pending_Protocol_v1.0.pdf",
@@ -89,10 +84,6 @@ describe("MediaPreviewModal.vue - Document Approval & Signatures", () => {
   });
 
   it("hides 'Approve this document' button when permissions.canApprove is false", () => {
-    /**
-     * @req: PRD-SYS-001
-     * @req: PRD-DOC-001
-     */
     const fileRecord = {
       id: "doc-103",
       filename: "Pending_Protocol_v1.0.pdf",
@@ -120,8 +111,7 @@ describe("MediaPreviewModal.vue - Document Approval & Signatures", () => {
 
   it("invokes fileshareService.approveFile when ReAuthModal confirms and updates document state", async () => {
     /**
-     * @req: PRD-SYS-001
-     * @req: PRD-DOC-001
+     * @req: PRD-DOC-003
      */
     const fileRecord = {
       id: "doc-104",

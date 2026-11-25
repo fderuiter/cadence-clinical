@@ -1,5 +1,4 @@
 /**
- * @req: PRD-PAT-001 PRD-PAT-002 PRD-PAY-006
  * Verifies zero blocking native alerts across questionnaire, consent, signature, and sync-queue flows,
  * .btn-start-task busy guard during instrument fetch, shared currency formatting, and 48px touch targets.
  */

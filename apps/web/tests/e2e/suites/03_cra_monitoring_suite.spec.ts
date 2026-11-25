@@ -19,7 +19,7 @@ test.describe("Suite 3: CRA Clinical Monitor Golden Path", () => {
   /**
    * Exercise CRA Clinical Monitor workflows across CTMS, SSU greenlight, and eTMF.
    *
-   * @req:PRD-SYS-105
+   * @req:PRD-SYS-050
    */
   test("03_cra_ctms_and_ssu_monitoring", async ({ page }) => {
     // Authenticate as CRA Clinical Monitor

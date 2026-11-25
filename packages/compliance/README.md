@@ -36,9 +36,14 @@ exports `CADENCE_GXP_SNAPSHOT=1` on repository-owner PRs, `merge_group` runs, an
 `GenerateRtm(requireCurrentSnapshot: …)` checks that the committed RTM's test mapping matches the
 tags only in snapshot mode, so a branch with new or moved tags passes `check rtm` without committing a new snapshot.
 
-`RequirementTagScanner` finds the test methods under `tests/` and the requirement IDs each declares. The same scan
-reports the kernel rules a method names with `[KernelRule("K-…")]` (`DiscoveredTest.KernelRuleIds`), which
-`KernelRuleCoverageTests` in `Cadence.ArchitectureTests` compares with the kernel specification (#5467).
+`RequirementTagScanner` scans C#, Vitest, and Playwright test files across `RtmGeneratorService.TestSearchDirs`
+(`tests/`, `apps/web/tests/`, `apps/subject-portal/tests/`, and test directories under `packages/`), extracting per-test
+requirement tags (`[GxPRequirement("PRD-…")]` and method/test-level `@req:PRD-…`) while rejecting file-level,
+`describe`-level, class-level, and restricted requirement tags. `RtmGeneratorService.ParseTestResults` merges xUnit
+`.trx` reports with Vitest and Playwright JUnit XML reports while preserving PostgreSQL evidence rules. On `refs/heads/main`
+outside snapshot mode, `GenerateRtm` also enforces a bounded commit-lag check (`DefaultMaxMainSnapshotCommitLag`) against
+the tested revision recorded in `docs/SDLC/Requirements_Traceability_Matrix.md`. The same scan reports `[KernelRule("K-…")]`
+(`DiscoveredTest.KernelRuleIds`) for `KernelRuleCoverageTests` and canonical `PRD-*` coverage for `PrdRequirementCoverageTests`.
 
 ## Key dependencies
 

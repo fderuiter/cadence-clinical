@@ -20,7 +20,7 @@ test.describe("Suite 1: Sponsor Protocol Designer Golden Path", () => {
    * Exercise full Sponsor Protocol Designer workflows across SoA matrix,
    * eCRF visual canvas, digitization DAG, eConsent, and amendment diffs.
    *
-   * @req:PRD-SYS-105
+   * @req:PRD-SYS-050
    */
   test("01_protocol_designer_and_soa_matrix", async ({ page }) => {
     // Authenticate as Sponsor Protocol Designer

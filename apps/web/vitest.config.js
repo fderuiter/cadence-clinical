@@ -1,6 +1,11 @@
+import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig, mergeConfig } from "vitest/config";
 import viteConfig from "./vite.config.js";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const repoRoot = path.resolve(__dirname, "../..");
+const evidenceDir = process.env.CADENCE_TEST_EVIDENCE_DIR?.trim();
 
 /**
  * Resolves lazy demo workspace boundaries (`defineAsyncComponent(() => import("./demo/..."))`)
@@ -47,6 +52,14 @@ export default mergeConfig(
         "**/tests/e2e/**",
         "**/tests/browser/**",
       ],
+      ...(evidenceDir
+        ? {
+            reporters: ["default", "junit"],
+            outputFile: {
+              junit: path.resolve(repoRoot, evidenceDir, "vitest-web.xml"),
+            },
+          }
+        : {}),
       coverage: {
         provider: "v8",
         reporter: ["text", "json", "html"],
