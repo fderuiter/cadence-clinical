@@ -68,6 +68,16 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller",
+          "signed_in_reason": "Matches fixed patterns, reads and writes no record, and filters recommendations by the caller\u0027s signed roles."
         }
       }
     },
@@ -106,6 +116,16 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller",
+          "signed_in_reason": "Reads are limited to the caller\u0027s own runs and the tenant\u0027s settings; every write is a kernel command authorized against the caller\u0027s grants."
         }
       }
     },
@@ -148,6 +168,16 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller",
+          "signed_in_reason": "Reads are limited to the caller\u0027s own runs and the tenant\u0027s settings; every write is a kernel command authorized against the caller\u0027s grants."
         }
       }
     },
@@ -172,6 +202,16 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller",
+          "signed_in_reason": "Reads are limited to the caller\u0027s own runs and the tenant\u0027s settings; every write is a kernel command authorized against the caller\u0027s grants."
         }
       }
     },
@@ -182,6 +222,29 @@
         ],
         "summary": "Stores an evaluation run record after checking it against its task configuration version, set, criteria and case results (evaluation_run.record, ADR-2634).",
         "operationId": "AiRecordEvaluationRun",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry.",
+            "required": true,
+            "schema": {
+              "maxLength": 255,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8\u0027\u0027 percent-encoded UTF-8.",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -253,6 +316,16 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller",
+          "signed_in_reason": "Reads are limited to the caller\u0027s own runs and the tenant\u0027s settings; every write is a kernel command authorized against the caller\u0027s grants."
         },
         "x-kernel-errors": [
           {
@@ -353,6 +426,16 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller",
+          "signed_in_reason": "Reads are limited to the caller\u0027s own runs and the tenant\u0027s settings; every write is a kernel command authorized against the caller\u0027s grants."
         }
       }
     },
@@ -411,6 +494,16 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller",
+          "signed_in_reason": "Reads are limited to the caller\u0027s own runs and the tenant\u0027s settings; every write is a kernel command authorized against the caller\u0027s grants."
         }
       }
     },
@@ -438,6 +531,27 @@
               "pattern": "^-?(?:0|[1-9]\\d*)$",
               "type": "integer",
               "format": "int32"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry.",
+            "required": true,
+            "schema": {
+              "maxLength": 255,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8\u0027\u0027 percent-encoded UTF-8.",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
             }
           }
         ],
@@ -512,6 +626,16 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller",
+          "signed_in_reason": "Reads are limited to the caller\u0027s own runs and the tenant\u0027s settings; every write is a kernel command authorized against the caller\u0027s grants."
         },
         "x-kernel-errors": [
           {
@@ -606,6 +730,27 @@
               "type": "integer",
               "format": "int32"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry.",
+            "required": true,
+            "schema": {
+              "maxLength": 255,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8\u0027\u0027 percent-encoded UTF-8.",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -669,6 +814,16 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller",
+          "signed_in_reason": "Reads are limited to the caller\u0027s own runs and the tenant\u0027s settings; every write is a kernel command authorized against the caller\u0027s grants."
         },
         "x-kernel-errors": [
           {
@@ -735,6 +890,16 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller",
+          "signed_in_reason": "Reads are limited to the caller\u0027s own runs and the tenant\u0027s settings; every write is a kernel command authorized against the caller\u0027s grants."
         }
       }
     },
@@ -751,6 +916,27 @@
             "in": "path",
             "required": true,
             "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry.",
+            "required": true,
+            "schema": {
+              "maxLength": 255,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8\u0027\u0027 percent-encoded UTF-8.",
+            "required": true,
+            "schema": {
+              "minLength": 1,
               "type": "string"
             }
           }
@@ -816,6 +1002,16 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller",
+          "signed_in_reason": "Reads are limited to the caller\u0027s own runs and the tenant\u0027s settings; every write is a kernel command authorized against the caller\u0027s grants."
         },
         "x-kernel-errors": [
           {
@@ -906,12 +1102,118 @@
             }
           }
         },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller",
+          "signed_in_reason": "Anti-spoof facial liveness verification generates short-lived HMAC signed tokens for consent capture."
+        },
         "x-kernel-errors": [
           {
             "code": "K.Actor.Unresolved",
             "status": 401
           }
         ]
+      }
+    },
+    "/api/v1/ai/mcp": {
+      "post": {
+        "tags": [
+          "Intelligence"
+        ],
+        "summary": "Executes stateless Streamable HTTP Model Context Protocol (MCP) JSON-RPC 2.0 requests for governed read-only clinical tools.",
+        "description": "Stateless Streamable HTTP MCP transport (ADR-2633 \u00A74.8) accepting JSON-RPC 2.0 requests (initialize, notifications/initialized, ping, tools/list, tools/call) and answering with application/json or text/event-stream envelopes. Requires a gateway-verified OIDC BearerAuth token (SignedInCaller): every tool executes as the signed-in caller acting through agent:mcp over KernelToolNames.McpProfile, masked in place for both caller and agent (K-AUTH-4, ADR-2471), with zero write capabilities. Subject-partitioned fixed-window gateway rate limiting applies (GATEWAY_RATE_LIMIT_PER_MINUTE, default 600 requests/minute per authenticated sub; 429 Too Many Requests with Retry-After).",
+        "operationId": "IntelligenceMcpStreamableHttp",
+        "requestBody": {
+          "description": "JSON-RPC 2.0 MCP message (initialize, ping, tools/list, tools/call, or notification).",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Intelligence_McpJsonRpcRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "JSON-RPC 2.0 MCP response envelope (application/json or text/event-stream).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Intelligence_McpJsonRpcResponse"
+                }
+              },
+              "text/event-stream": {
+                "schema": {
+                  "type": "string",
+                  "description": "Server-Sent Events stream of JSON-RPC 2.0 MCP messages."
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Accepted JSON-RPC 2.0 client notification with no response body."
+          },
+          "400": {
+            "description": "Malformed JSON-RPC 2.0 payload or unsupported Streamable HTTP MCP transport headers.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Intelligence_ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid gateway-verified OIDC BearerAuth credentials.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Intelligence_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is denied by gateway authorization or auditor/tenant guardrails.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Intelligence_ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Caller exceeded the per-subject gateway fixed-window rate limit (includes Retry-After header).",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Intelligence_ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller",
+          "signed_in_reason": "Read-only agent tools: every read runs as the signed-in caller, masked for both the caller and the agent, and no tool writes."
+        },
+        "x-cadence-scopes": [
+          "Tenant"
+        ],
+        "x-cadence-rate-limit": "600 requests/minute per authenticated subject (GATEWAY_RATE_LIMIT_PER_MINUTE fixed window; answers 429 with Retry-After)"
       }
     }
   },
@@ -1484,6 +1786,122 @@
         }
       },
       "Intelligence_JsonElement": {},
+      "Intelligence_McpJsonRpcError": {
+        "required": [
+          "code",
+          "message"
+        ],
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "type": [
+              "null",
+              "object"
+            ]
+          }
+        },
+        "description": "JSON-RPC 2.0 error object returned when protocol parsing or method dispatch fails."
+      },
+      "Intelligence_McpJsonRpcRequest": {
+        "required": [
+          "jsonrpc",
+          "method"
+        ],
+        "type": "object",
+        "properties": {
+          "jsonrpc": {
+            "enum": [
+              "2.0"
+            ],
+            "type": "string",
+            "description": "JSON-RPC protocol version (must be \u00222.0\u0022)."
+          },
+          "id": {
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "description": "Caller request correlation identifier (omitted on notifications such as notifications/initialized)."
+          },
+          "method": {
+            "enum": [
+              "initialize",
+              "notifications/initialized",
+              "ping",
+              "tools/list",
+              "tools/call"
+            ],
+            "type": "string",
+            "description": "MCP JSON-RPC method name."
+          },
+          "params": {
+            "type": [
+              "null",
+              "object"
+            ],
+            "description": "Method parameters (for tools/call, conforms to McpToolCallParams)."
+          }
+        },
+        "description": "JSON-RPC 2.0 request or notification message sent over the Streamable HTTP MCP transport."
+      },
+      "Intelligence_McpJsonRpcResponse": {
+        "required": [
+          "jsonrpc",
+          "id"
+        ],
+        "type": "object",
+        "properties": {
+          "jsonrpc": {
+            "enum": [
+              "2.0"
+            ],
+            "type": "string"
+          },
+          "id": {
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ]
+          },
+          "result": {
+            "type": [
+              "null",
+              "object"
+            ],
+            "description": "Method result payload (InitializeResult, ListToolsResult, or CallToolResult with ToolResultEnvelope)."
+          },
+          "error": {
+            "$ref": "#/components/schemas/Intelligence_McpJsonRpcError"
+          }
+        },
+        "description": "JSON-RPC 2.0 response envelope carrying governed read-only tool metadata or ToolResultEnvelope content."
+      },
+      "Intelligence_McpToolCallParams": {
+        "required": [
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Registered read-only tool identifier in KernelToolNames.McpProfile."
+          },
+          "arguments": {
+            "type": "object",
+            "description": "Tool-specific JSON arguments validated against the tool\u0027s InputSchema."
+          }
+        },
+        "description": "Parameters for a JSON-RPC 2.0 tools/call invocation against KernelToolNames.McpProfile."
+      },
       "Intelligence_ProblemDetails": {
         "type": "object",
         "properties": {
@@ -1703,6 +2121,14 @@
           }
         }
       }
+    },
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "description": "Keycloak OIDC bearer JWT verified at the Cadence API Gateway and forwarded downstream as HMAC-SHA256 signed identity headers (ADR-2256).",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
     }
   },
   "tags": [
@@ -1714,6 +2140,10 @@
     },
     {
       "name": "Biometrics AI Gateway"
+    },
+    {
+      "name": "Intelligence",
+      "description": "Governed Streamable HTTP MCP server for read-only clinical agent tools (ADR-2633)."
     }
   ]
 }

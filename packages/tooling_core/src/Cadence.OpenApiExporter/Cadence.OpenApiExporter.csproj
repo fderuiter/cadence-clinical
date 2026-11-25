@@ -34,6 +34,7 @@
     <ProjectReference Include="..\..\..\..\apps\safety\src\Cadence.Apps.Safety.csproj" Aliases="safety" />
     <ProjectReference Include="..\..\..\..\apps\tickets\src\Cadence.Apps.Tickets.csproj" Aliases="tickets" />
     <ProjectReference Include="..\..\..\..\apps\designer\src\Cadence.Apps.Designer.csproj" Aliases="designer" />
+    <ProjectReference Include="..\..\..\..\apps\gateway\src\Cadence.Apps.Gateway.csproj" Aliases="gateway" />
     <ProjectReference Include="..\..\..\..\apps\kernel-api\src\Cadence.Kernel.Host.csproj" Aliases="kernel" />
     <ProjectReference Include="..\..\..\kernel\src\Cadence.Kernel.Modules\Cadence.Kernel.Modules.csproj" />
     <ProjectReference Include="..\Cadence.ToolingCore.csproj" />

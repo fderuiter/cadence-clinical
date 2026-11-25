@@ -70,6 +70,7 @@ public static class ImagingAdjudicationEndpoints
 
         group.MapPost("/", SubmitOrEvaluateSessionAsync)
             .WithName("SubmitOrEvaluateAdjudicationSession")
+            .WithSummary("Submits dual-reader RECIST assessments and evaluates discordance for adjudication.")
             .RequirePermission("imaging_adjudication:submit").RequireCallerStudyAndSiteScope()
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<AdjudicationSessionResponse>(StatusCodes.Status200OK)
@@ -77,6 +78,7 @@ public static class ImagingAdjudicationEndpoints
 
         group.MapGet("/{sessionId}", GetSessionByIdAsync)
             .WithName("GetImagingAdjudicationSession")
+            .WithSummary("Retrieves an imaging adjudication session and reader assessments by session ID.")
             .RequirePermission("imaging_adjudication:read").RequireCallerStudyAndSiteScope()
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<ImagingAdjudicationSession>(StatusCodes.Status200OK)
@@ -84,6 +86,7 @@ public static class ImagingAdjudicationEndpoints
 
         group.MapPost("/{sessionId}/chair-adjudicate", ChairAdjudicateSessionAsync)
             .WithName("ChairAdjudicateImagingSession")
+            .WithSummary("Records the adjudication chair's binding consensus response and rationale for a discordant session.")
             .RequirePermission("imaging_adjudication:adjudicate").RequireCallerStudyAndSiteScope()
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<AdjudicationSessionResponse>(StatusCodes.Status200OK)

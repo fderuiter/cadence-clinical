@@ -152,13 +152,13 @@ app.UseAuthorization();
 app.UseChangeReasonValidation();
 app.UseTenantEntitlementPosture();
 
-app.MapGet("/healthz", () => TypedResults.Ok(new { status = "healthy", service = "Cadence.Apps.Gateway", version = "10.0" }))
+app.MapGet("/healthz", () => TypedResults.Ok(new GatewayHealthResponse("healthy", "Cadence.Apps.Gateway", "10.0")))
     .WithName("HealthCheck")
     .WithSummary("Gateway liveness and readiness probe.")
     .AllowAnonymous();
 
 var api = app.MapGroup("/api/v1");
-api.MapGet("/status", () => TypedResults.Ok(new { mode = "Active", gateway = "Cadence.Gateway.NET10" }))
+api.MapGet("/status", () => TypedResults.Ok(new GatewayStatusResponse("Active", "Cadence.Gateway.NET10")))
     .WithName("GatewayStatus")
     .WithSummary("Returns gateway dispatch status.")
     .AllowAnonymous();
@@ -170,6 +170,10 @@ await app.RunAsync();
 
 namespace Cadence.Apps.Gateway
 {
+    public sealed record GatewayHealthResponse(string status, string service, string version);
+
+    public sealed record GatewayStatusResponse(string mode, string gateway);
+
     public partial class Program
     {
         protected Program()

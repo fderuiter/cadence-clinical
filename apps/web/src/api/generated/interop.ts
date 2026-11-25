@@ -45,8 +45,10 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
+    /** Lists registered hospital SMART on FHIR endpoints. */
     get: operations["ListEhrEndpoints"];
     put?: never;
+    /** Registers a hospital SMART on FHIR endpoint configuration and server-side signing key reference. */
     post: operations["RegisterEhrEndpoint"];
     delete?: never;
     options?: never;
@@ -63,6 +65,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
+    /** Signs a SMART Backend Services OAuth 2.0 JWT client assertion for a registered EHR endpoint. */
     post: operations["GenerateClientAssertion"];
     delete?: never;
     options?: never;
@@ -79,6 +82,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
+    /** Verifies a SMART Backend Services client assertion JWT signature, audience, and lifetime. */
     post: operations["VerifyClientAssertion"];
     delete?: never;
     options?: never;
@@ -95,6 +99,10 @@ export interface paths {
     };
     get?: never;
     put?: never;
+    /**
+     * Polls a hospital EHR endpoint for eSource observations (returns 501 Not Implemented; ingest FHIR bundles via POST /ingest).
+     * @description HTTP 501 Not Implemented stub: live outbound SMART on FHIR EHR polling is not wired, so this route validates study/site scope and returns RFC 7807 ProblemDetails (501) without synthesizing candidate records.
+     */
     post: operations["PollHospitalEhr"];
     delete?: never;
     options?: never;
@@ -111,6 +119,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
+    /** Maps an exported HL7 FHIR Observation bundle into side-by-side eSource reconciliation candidates. */
     post: operations["IngestFhirBundle"];
     delete?: never;
     options?: never;
@@ -125,6 +134,7 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
+    /** Lists eSource reconciliation candidates filtered by study, site, subject, domain, or status. */
     get: operations["ListCandidates"];
     put?: never;
     post?: never;
@@ -141,6 +151,7 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
+    /** Retrieves a single eSource reconciliation candidate record by ID. */
     get: operations["GetCandidate"];
     put?: never;
     post?: never;
@@ -159,6 +170,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
+    /** Accepts and commits a hospital eSource candidate value into the eCRF with Part 11 audit trail. */
     post: operations["AcceptCandidate"];
     delete?: never;
     options?: never;
@@ -175,6 +187,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
+    /** Batch-accepts up to 100 hospital eSource candidate values atomically into the eCRF. */
     post: operations["BatchAcceptCandidates"];
     delete?: never;
     options?: never;
@@ -191,6 +204,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
+    /** Rejects an eSource candidate value with mandatory GxP clinical rationale. */
     post: operations["RejectCandidate"];
     delete?: never;
     options?: never;
@@ -207,6 +221,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
+    /** Batch-rejects up to 100 eSource candidate values with mandatory GxP clinical rationale. */
     post: operations["BatchRejectCandidates"];
     delete?: never;
     options?: never;
@@ -223,6 +238,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
+    /** Raises a clinical discrepancy query from an eSource reconciliation candidate. */
     post: operations["RaiseClinicalQuery"];
     delete?: never;
     options?: never;
@@ -237,6 +253,7 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
+    /** Retrieves FHIR resource provenance and reconciliation audit lineage for an eSource candidate. */
     get: operations["GetProvenanceAudit"];
     put?: never;
     post?: never;
@@ -253,53 +270,11 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    get: {
-      parameters: {
-        query: {
-          study_id: string;
-        };
-        header?: never;
-        path?: never;
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description OK */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            "application/json": components["schemas"]["Interop_ProgramListResponseDto"];
-          };
-        };
-      };
-    };
+    /** Lists statistical analysis programs registered for a study. */
+    get: operations["ListScePrograms"];
     put?: never;
-    post: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path?: never;
-        cookie?: never;
-      };
-      requestBody: {
-        content: {
-          "application/json": components["schemas"]["Interop_CreateProgramRequestDto"];
-        };
-      };
-      responses: {
-        /** @description Created */
-        201: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            "application/json": components["schemas"]["Interop_ProgramResponseDto"];
-          };
-        };
-      };
-    };
+    /** Registers a versioned R or Python statistical program with SHA-256 code and lockfile digests. */
+    post: operations["CreateSceProgram"];
     delete?: never;
     options?: never;
     head?: never;
@@ -313,28 +288,8 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    get: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          program_id: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description OK */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            "application/json": components["schemas"]["Interop_ProgramResponseDto"];
-          };
-        };
-      };
-    };
+    /** Retrieves a registered statistical program by ID or program name. */
+    get: operations["GetSceProgram"];
     put?: never;
     post?: never;
     delete?: never;
@@ -352,30 +307,8 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    post: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path?: never;
-        cookie?: never;
-      };
-      requestBody: {
-        content: {
-          "application/json": components["schemas"]["Interop_ValidateLockfileRequestDto"];
-        };
-      };
-      responses: {
-        /** @description OK */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            "application/json": components["schemas"]["Interop_ValidateLockfileResponseDto"];
-          };
-        };
-      };
-    };
+    /** Validates an R renv.lock or Python uv.lock package lockfile against qualified GxP package digests. */
+    post: operations["ValidateSceLockfile"];
     delete?: never;
     options?: never;
     head?: never;
@@ -389,53 +322,11 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    get: {
-      parameters: {
-        query: {
-          study_id: string;
-        };
-        header?: never;
-        path?: never;
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description OK */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            "application/json": components["schemas"]["Interop_LockTokenListResponseDto"];
-          };
-        };
-      };
-    };
+    /** Lists active database lock authorization tokens for unblinded statistical runs. */
+    get: operations["ListSceLockTokens"];
     put?: never;
-    post: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path?: never;
-        cookie?: never;
-      };
-      requestBody: {
-        content: {
-          "application/json": components["schemas"]["Interop_IssueLockTokenRequestDto"];
-        };
-      };
-      responses: {
-        /** @description Created */
-        201: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            "application/json": components["schemas"]["Interop_LockTokenResponseDto"];
-          };
-        };
-      };
-    };
+    /** Issues a signed database lock authorization token for unblinded statistical execution. */
+    post: operations["IssueSceLockToken"];
     delete?: never;
     options?: never;
     head?: never;
@@ -451,30 +342,8 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    post: {
-      parameters: {
-        query?: {
-          reason?: string;
-        };
-        header?: never;
-        path: {
-          token_id: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description OK */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            "application/json": Record<string, never>;
-          };
-        };
-      };
-    };
+    /** Revokes an active database lock authorization token and logs the revocation. */
+    post: operations["RevokeSceLockToken"];
     delete?: never;
     options?: never;
     head?: never;
@@ -490,30 +359,8 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    post: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path?: never;
-        cookie?: never;
-      };
-      requestBody: {
-        content: {
-          "application/json": components["schemas"]["Interop_ExecuteProgramRequestDto"];
-        };
-      };
-      responses: {
-        /** @description OK */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            "application/json": components["schemas"]["Interop_ExecuteProgramResponseDto"];
-          };
-        };
-      };
-    };
+    /** Executes a statistical program inside an isolated SCE container and seals the run manifest. */
+    post: operations["ExecuteSceProgram"];
     delete?: never;
     options?: never;
     head?: never;
@@ -527,30 +374,8 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    get: {
-      parameters: {
-        query: {
-          study_id: string;
-          program_id?: string;
-          snapshot_id?: string;
-        };
-        header?: never;
-        path?: never;
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description OK */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            "application/json": components["schemas"]["Interop_ExecutionRunListResponseDto"];
-          };
-        };
-      };
-    };
+    /** Lists historical statistical execution runs and manifests for a study. */
+    get: operations["ListSceRuns"];
     put?: never;
     post?: never;
     delete?: never;
@@ -566,28 +391,8 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    get: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          run_id: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description OK */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            "application/json": components["schemas"]["Interop_ExecutionRunDetailResponseDto"];
-          };
-        };
-      };
-    };
+    /** Retrieves a single statistical execution run manifest by run ID. */
+    get: operations["GetSceRun"];
     put?: never;
     post?: never;
     delete?: never;
@@ -605,28 +410,8 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    post: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          run_id: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description OK */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            "application/json": components["schemas"]["Interop_VerifyManifestResponseDto"];
-          };
-        };
-      };
-    };
+    /** Recomputes and verifies the SHA-256 cryptographic seal of an SCE execution run manifest. */
+    post: operations["VerifySceRunManifest"];
     delete?: never;
     options?: never;
     head?: never;
@@ -640,29 +425,8 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    get: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          run_id: string;
-          artifact_id: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description OK */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            "application/json": Record<string, never>;
-          };
-        };
-      };
-    };
+    /** Retrieves metadata, SHA-256 digest, and preview for an output artifact from an SCE run. */
+    get: operations["GetSceRunArtifact"];
     put?: never;
     post?: never;
     delete?: never;
@@ -1058,6 +822,24 @@ export interface components {
     };
     Interop_ProgramResponseDto: {
       program: components["schemas"]["Interop_StatisticalProgramDto"];
+    };
+    Interop_RevokeLockTokenResponseDto: {
+      status: string;
+      token_id: string;
+      revoked_at: string;
+      reason: string;
+    };
+    Interop_SceArtifactDetailResponseDto: {
+      artifact_id: string;
+      run_id: string;
+      name: string;
+      artifact_type: string;
+      file_path: string;
+      mime_type: string;
+      /** Format: int64 */
+      size_bytes: number | string;
+      sha256_digest: string;
+      content_preview: null | string;
     };
     Interop_SmartAssertionRequest: {
       endpointId: string;
@@ -1532,7 +1314,10 @@ export interface operations {
   AcceptCandidate: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Single-use 60-second step-up electronic signature JWT issued by POST /api/v1/auth/signature-verification and bound to this exact action and semantic meaning (21 CFR 11.200(a)(1)). */
+        "X-Sig-Token"?: string;
+      };
       path?: never;
       cookie?: never;
     };
@@ -1592,7 +1377,10 @@ export interface operations {
   BatchAcceptCandidates: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Single-use 60-second step-up electronic signature JWT issued by POST /api/v1/auth/signature-verification and bound to this exact action and semantic meaning (21 CFR 11.200(a)(1)). */
+        "X-Sig-Token"?: string;
+      };
       path?: never;
       cookie?: never;
     };
@@ -1652,7 +1440,10 @@ export interface operations {
   RejectCandidate: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Single-use 60-second step-up electronic signature JWT issued by POST /api/v1/auth/signature-verification and bound to this exact action and semantic meaning (21 CFR 11.200(a)(1)). */
+        "X-Sig-Token"?: string;
+      };
       path?: never;
       cookie?: never;
     };
@@ -1712,7 +1503,10 @@ export interface operations {
   BatchRejectCandidates: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Single-use 60-second step-up electronic signature JWT issued by POST /api/v1/auth/signature-verification and bound to this exact action and semantic meaning (21 CFR 11.200(a)(1)). */
+        "X-Sig-Token"?: string;
+      };
       path?: never;
       cookie?: never;
     };
@@ -1847,6 +1641,427 @@ export interface operations {
         };
         content: {
           "application/problem+json": components["schemas"]["Interop_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Interop_ProblemDetails"];
+        };
+      };
+    };
+  };
+  ListScePrograms: {
+    parameters: {
+      query: {
+        study_id: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Interop_ProgramListResponseDto"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Interop_ProblemDetails"];
+        };
+      };
+    };
+  };
+  CreateSceProgram: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Interop_CreateProgramRequestDto"];
+      };
+    };
+    responses: {
+      /** @description Created */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Interop_ProgramResponseDto"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Interop_ProblemDetails"];
+        };
+      };
+    };
+  };
+  GetSceProgram: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        program_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Interop_ProgramResponseDto"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Interop_ProblemDetails"];
+        };
+      };
+    };
+  };
+  ValidateSceLockfile: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Interop_ValidateLockfileRequestDto"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Interop_ValidateLockfileResponseDto"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Interop_ProblemDetails"];
+        };
+      };
+    };
+  };
+  ListSceLockTokens: {
+    parameters: {
+      query: {
+        study_id: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Interop_LockTokenListResponseDto"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Interop_ProblemDetails"];
+        };
+      };
+    };
+  };
+  IssueSceLockToken: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Interop_IssueLockTokenRequestDto"];
+      };
+    };
+    responses: {
+      /** @description Created */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Interop_LockTokenResponseDto"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Interop_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Interop_ProblemDetails"];
+        };
+      };
+    };
+  };
+  RevokeSceLockToken: {
+    parameters: {
+      query?: {
+        reason?: string;
+      };
+      header?: never;
+      path: {
+        token_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Interop_RevokeLockTokenResponseDto"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Interop_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Interop_ProblemDetails"];
+        };
+      };
+    };
+  };
+  ExecuteSceProgram: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Interop_ExecuteProgramRequestDto"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Interop_ExecuteProgramResponseDto"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Interop_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Interop_ProblemDetails"];
+        };
+      };
+      /** @description Unprocessable Entity */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Interop_ProblemDetails"];
+        };
+      };
+    };
+  };
+  ListSceRuns: {
+    parameters: {
+      query: {
+        study_id: string;
+        program_id?: string;
+        snapshot_id?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Interop_ExecutionRunListResponseDto"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Interop_ProblemDetails"];
+        };
+      };
+    };
+  };
+  GetSceRun: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        run_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Interop_ExecutionRunDetailResponseDto"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Interop_ProblemDetails"];
+        };
+      };
+    };
+  };
+  VerifySceRunManifest: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        run_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Interop_VerifyManifestResponseDto"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Interop_ProblemDetails"];
+        };
+      };
+    };
+  };
+  GetSceRunArtifact: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        run_id: string;
+        artifact_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Interop_SceArtifactDetailResponseDto"];
         };
       };
       /** @description Not Found */

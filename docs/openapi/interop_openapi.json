@@ -28,6 +28,10 @@
               }
             }
           }
+        },
+        "x-cadence-auth": {
+          "anonymous": true,
+          "mode": "Anonymous"
         }
       }
     },
@@ -49,6 +53,10 @@
               }
             }
           }
+        },
+        "x-cadence-auth": {
+          "anonymous": true,
+          "mode": "Anonymous"
         }
       }
     },
@@ -57,6 +65,7 @@
         "tags": [
           "eSource Reconciliation \u0026 SMART on FHIR"
         ],
+        "summary": "Lists registered hospital SMART on FHIR endpoints.",
         "operationId": "ListEhrEndpoints",
         "parameters": [
           {
@@ -89,12 +98,28 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "esource_endpoint:read"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       },
       "post": {
         "tags": [
           "eSource Reconciliation \u0026 SMART on FHIR"
         ],
+        "summary": "Registers a hospital SMART on FHIR endpoint configuration and server-side signing key reference.",
         "operationId": "RegisterEhrEndpoint",
         "requestBody": {
           "content": {
@@ -137,7 +162,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "esource_endpoint:configure"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       }
     },
     "/api/v1/interop/esource/smart/assertion": {
@@ -145,6 +185,7 @@
         "tags": [
           "eSource Reconciliation \u0026 SMART on FHIR"
         ],
+        "summary": "Signs a SMART Backend Services OAuth 2.0 JWT client assertion for a registered EHR endpoint.",
         "operationId": "GenerateClientAssertion",
         "requestBody": {
           "content": {
@@ -207,7 +248,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "esource_endpoint:configure"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       }
     },
     "/api/v1/interop/esource/smart/verify": {
@@ -215,6 +271,7 @@
         "tags": [
           "eSource Reconciliation \u0026 SMART on FHIR"
         ],
+        "summary": "Verifies a SMART Backend Services client assertion JWT signature, audience, and lifetime.",
         "operationId": "VerifyClientAssertion",
         "requestBody": {
           "content": {
@@ -277,7 +334,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "esource_endpoint:configure"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       }
     },
     "/api/v1/interop/esource/poll": {
@@ -285,6 +357,8 @@
         "tags": [
           "eSource Reconciliation \u0026 SMART on FHIR"
         ],
+        "summary": "Polls a hospital EHR endpoint for eSource observations (returns 501 Not Implemented; ingest FHIR bundles via POST /ingest).",
+        "description": "HTTP 501 Not Implemented stub: live outbound SMART on FHIR EHR polling is not wired, so this route validates study/site scope and returns RFC 7807 ProblemDetails (501) without synthesizing candidate records.",
         "operationId": "PollHospitalEhr",
         "requestBody": {
           "content": {
@@ -327,7 +401,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "esource_candidate:ingest"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       }
     },
     "/api/v1/interop/esource/ingest": {
@@ -335,6 +424,7 @@
         "tags": [
           "eSource Reconciliation \u0026 SMART on FHIR"
         ],
+        "summary": "Maps an exported HL7 FHIR Observation bundle into side-by-side eSource reconciliation candidates.",
         "operationId": "IngestFhirBundle",
         "requestBody": {
           "content": {
@@ -387,7 +477,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "esource_candidate:ingest"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       }
     },
     "/api/v1/interop/esource/candidates": {
@@ -395,6 +500,7 @@
         "tags": [
           "eSource Reconciliation \u0026 SMART on FHIR"
         ],
+        "summary": "Lists eSource reconciliation candidates filtered by study, site, subject, domain, or status.",
         "operationId": "ListCandidates",
         "parameters": [
           {
@@ -480,7 +586,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "esource_candidate:read"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       }
     },
     "/api/v1/interop/esource/candidates/{candidate_id}": {
@@ -488,6 +609,7 @@
         "tags": [
           "eSource Reconciliation \u0026 SMART on FHIR"
         ],
+        "summary": "Retrieves a single eSource reconciliation candidate record by ID.",
         "operationId": "GetCandidate",
         "parameters": [
           {
@@ -530,7 +652,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "esource_candidate:read"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       }
     },
     "/api/v1/interop/esource/reconcile/accept": {
@@ -538,7 +675,20 @@
         "tags": [
           "eSource Reconciliation \u0026 SMART on FHIR"
         ],
+        "summary": "Accepts and commits a hospital eSource candidate value into the eCRF with Part 11 audit trail.",
         "operationId": "AcceptCandidate",
+        "parameters": [
+          {
+            "name": "X-Sig-Token",
+            "in": "header",
+            "description": "Single-use 60-second step-up electronic signature JWT issued by POST /api/v1/auth/signature-verification and bound to this exact action and semantic meaning (21 CFR 11.200(a)(1)).",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -600,7 +750,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "esource_candidate:reconcile"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       }
     },
     "/api/v1/interop/esource/reconcile/batch-accept": {
@@ -608,7 +773,20 @@
         "tags": [
           "eSource Reconciliation \u0026 SMART on FHIR"
         ],
+        "summary": "Batch-accepts up to 100 hospital eSource candidate values atomically into the eCRF.",
         "operationId": "BatchAcceptCandidates",
+        "parameters": [
+          {
+            "name": "X-Sig-Token",
+            "in": "header",
+            "description": "Single-use 60-second step-up electronic signature JWT issued by POST /api/v1/auth/signature-verification and bound to this exact action and semantic meaning (21 CFR 11.200(a)(1)).",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -670,7 +848,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "esource_candidate:reconcile"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       }
     },
     "/api/v1/interop/esource/reconcile/reject": {
@@ -678,7 +871,20 @@
         "tags": [
           "eSource Reconciliation \u0026 SMART on FHIR"
         ],
+        "summary": "Rejects an eSource candidate value with mandatory GxP clinical rationale.",
         "operationId": "RejectCandidate",
+        "parameters": [
+          {
+            "name": "X-Sig-Token",
+            "in": "header",
+            "description": "Single-use 60-second step-up electronic signature JWT issued by POST /api/v1/auth/signature-verification and bound to this exact action and semantic meaning (21 CFR 11.200(a)(1)).",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -740,7 +946,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "esource_candidate:reconcile"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       }
     },
     "/api/v1/interop/esource/reconcile/batch-reject": {
@@ -748,7 +969,20 @@
         "tags": [
           "eSource Reconciliation \u0026 SMART on FHIR"
         ],
+        "summary": "Batch-rejects up to 100 eSource candidate values with mandatory GxP clinical rationale.",
         "operationId": "BatchRejectCandidates",
+        "parameters": [
+          {
+            "name": "X-Sig-Token",
+            "in": "header",
+            "description": "Single-use 60-second step-up electronic signature JWT issued by POST /api/v1/auth/signature-verification and bound to this exact action and semantic meaning (21 CFR 11.200(a)(1)).",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -810,7 +1044,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "esource_candidate:reconcile"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       }
     },
     "/api/v1/interop/esource/reconcile/query": {
@@ -818,6 +1067,7 @@
         "tags": [
           "eSource Reconciliation \u0026 SMART on FHIR"
         ],
+        "summary": "Raises a clinical discrepancy query from an eSource reconciliation candidate.",
         "operationId": "RaiseClinicalQuery",
         "requestBody": {
           "content": {
@@ -870,7 +1120,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "esource_candidate:query"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       }
     },
     "/api/v1/interop/esource/provenance/{candidate_id}": {
@@ -878,6 +1143,7 @@
         "tags": [
           "eSource Reconciliation \u0026 SMART on FHIR"
         ],
+        "summary": "Retrieves FHIR resource provenance and reconciliation audit lineage for an eSource candidate.",
         "operationId": "GetProvenanceAudit",
         "parameters": [
           {
@@ -920,14 +1186,31 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "esource_candidate:read"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       }
     },
     "/api/v1/interop/sce/programs": {
       "get": {
         "tags": [
-          "Cadence.Apps.Interop"
+          "Statistical Computing Environment"
         ],
+        "summary": "Lists statistical analysis programs registered for a study.",
+        "operationId": "ListScePrograms",
         "parameters": [
           {
             "name": "study_id",
@@ -948,13 +1231,40 @@
                 }
               }
             }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
+                }
+              }
+            }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "sce_program:read"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudy"
+        ]
       },
       "post": {
         "tags": [
-          "Cadence.Apps.Interop"
+          "Statistical Computing Environment"
         ],
+        "summary": "Registers a versioned R or Python statistical program with SHA-256 code and lockfile digests.",
+        "operationId": "CreateSceProgram",
         "requestBody": {
           "content": {
             "application/json": {
@@ -975,15 +1285,42 @@
                 }
               }
             }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
+                }
+              }
+            }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "sce_program:create"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudy"
+        ]
       }
     },
     "/api/v1/interop/sce/programs/{program_id}": {
       "get": {
         "tags": [
-          "Cadence.Apps.Interop"
+          "Statistical Computing Environment"
         ],
+        "summary": "Retrieves a registered statistical program by ID or program name.",
+        "operationId": "GetSceProgram",
         "parameters": [
           {
             "name": "program_id",
@@ -1004,15 +1341,42 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
+                }
+              }
+            }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "sce_program:read"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudy"
+        ]
       }
     },
     "/api/v1/interop/sce/validate-lockfile": {
       "post": {
         "tags": [
-          "Cadence.Apps.Interop"
+          "Statistical Computing Environment"
         ],
+        "summary": "Validates an R renv.lock or Python uv.lock package lockfile against qualified GxP package digests.",
+        "operationId": "ValidateSceLockfile",
         "requestBody": {
           "content": {
             "application/json": {
@@ -1033,15 +1397,42 @@
                 }
               }
             }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
+                }
+              }
+            }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "sce_program:read"
+        ],
+        "x-cadence-scopes": [
+          "Tenant"
+        ]
       }
     },
     "/api/v1/interop/sce/lock-tokens": {
       "get": {
         "tags": [
-          "Cadence.Apps.Interop"
+          "Statistical Computing Environment"
         ],
+        "summary": "Lists active database lock authorization tokens for unblinded statistical runs.",
+        "operationId": "ListSceLockTokens",
         "parameters": [
           {
             "name": "study_id",
@@ -1062,13 +1453,40 @@
                 }
               }
             }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
+                }
+              }
+            }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "sce_lock_token:read"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudy"
+        ]
       },
       "post": {
         "tags": [
-          "Cadence.Apps.Interop"
+          "Statistical Computing Environment"
         ],
+        "summary": "Issues a signed database lock authorization token for unblinded statistical execution.",
+        "operationId": "IssueSceLockToken",
         "requestBody": {
           "content": {
             "application/json": {
@@ -1089,15 +1507,52 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
+                }
+              }
+            }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "sce_lock_token:issue"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudy"
+        ]
       }
     },
     "/api/v1/interop/sce/lock-tokens/{token_id}/revoke": {
       "post": {
         "tags": [
-          "Cadence.Apps.Interop"
+          "Statistical Computing Environment"
         ],
+        "summary": "Revokes an active database lock authorization token and logs the revocation.",
+        "operationId": "RevokeSceLockToken",
         "parameters": [
           {
             "name": "token_id",
@@ -1121,19 +1576,56 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/Interop_RevokeLockTokenResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
                 }
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "sce_lock_token:revoke"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudy"
+        ]
       }
     },
     "/api/v1/interop/sce/execute": {
       "post": {
         "tags": [
-          "Cadence.Apps.Interop"
+          "Statistical Computing Environment"
         ],
+        "summary": "Executes a statistical program inside an isolated SCE container and seals the run manifest.",
+        "operationId": "ExecuteSceProgram",
         "requestBody": {
           "content": {
             "application/json": {
@@ -1154,15 +1646,62 @@
                 }
               }
             }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
+                }
+              }
+            }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "sce_run:execute"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudy"
+        ]
       }
     },
     "/api/v1/interop/sce/runs": {
       "get": {
         "tags": [
-          "Cadence.Apps.Interop"
+          "Statistical Computing Environment"
         ],
+        "summary": "Lists historical statistical execution runs and manifests for a study.",
+        "operationId": "ListSceRuns",
         "parameters": [
           {
             "name": "study_id",
@@ -1197,15 +1736,42 @@
                 }
               }
             }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
+                }
+              }
+            }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "sce_run:read"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudy"
+        ]
       }
     },
     "/api/v1/interop/sce/runs/{run_id}": {
       "get": {
         "tags": [
-          "Cadence.Apps.Interop"
+          "Statistical Computing Environment"
         ],
+        "summary": "Retrieves a single statistical execution run manifest by run ID.",
+        "operationId": "GetSceRun",
         "parameters": [
           {
             "name": "run_id",
@@ -1226,15 +1792,42 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
+                }
+              }
+            }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "sce_run:read"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudy"
+        ]
       }
     },
     "/api/v1/interop/sce/runs/{run_id}/verify": {
       "post": {
         "tags": [
-          "Cadence.Apps.Interop"
+          "Statistical Computing Environment"
         ],
+        "summary": "Recomputes and verifies the SHA-256 cryptographic seal of an SCE execution run manifest.",
+        "operationId": "VerifySceRunManifest",
         "parameters": [
           {
             "name": "run_id",
@@ -1255,15 +1848,42 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
+                }
+              }
+            }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "sce_run:read"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudy"
+        ]
       }
     },
     "/api/v1/interop/sce/runs/{run_id}/artifacts/{artifact_id}": {
       "get": {
         "tags": [
-          "Cadence.Apps.Interop"
+          "Statistical Computing Environment"
         ],
+        "summary": "Retrieves metadata, SHA-256 digest, and preview for an output artifact from an SCE run.",
+        "operationId": "GetSceRunArtifact",
         "parameters": [
           {
             "name": "run_id",
@@ -1288,12 +1908,37 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/Interop_SceArtifactDetailResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Interop_ProblemDetails"
                 }
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "sce_run:read"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudy"
+        ]
       }
     }
   },
@@ -2861,6 +3506,80 @@
           }
         }
       },
+      "Interop_RevokeLockTokenResponseDto": {
+        "required": [
+          "status",
+          "token_id",
+          "revoked_at",
+          "reason"
+        ],
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "token_id": {
+            "type": "string"
+          },
+          "revoked_at": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "Interop_SceArtifactDetailResponseDto": {
+        "required": [
+          "artifact_id",
+          "run_id",
+          "name",
+          "artifact_type",
+          "file_path",
+          "mime_type",
+          "size_bytes",
+          "sha256_digest",
+          "content_preview"
+        ],
+        "type": "object",
+        "properties": {
+          "artifact_id": {
+            "type": "string"
+          },
+          "run_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "artifact_type": {
+            "type": "string"
+          },
+          "file_path": {
+            "type": "string"
+          },
+          "mime_type": {
+            "type": "string"
+          },
+          "size_bytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "sha256_digest": {
+            "type": "string"
+          },
+          "content_preview": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "Interop_SmartAssertionRequest": {
         "required": [
           "endpointId"
@@ -3075,6 +3794,14 @@
           }
         }
       }
+    },
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "description": "Keycloak OIDC bearer JWT verified at the Cadence API Gateway and forwarded downstream as HMAC-SHA256 signed identity headers (ADR-2256).",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
     }
   },
   "tags": [
@@ -3083,6 +3810,9 @@
     },
     {
       "name": "eSource Reconciliation \u0026 SMART on FHIR"
+    },
+    {
+      "name": "Statistical Computing Environment"
     }
   ]
 }

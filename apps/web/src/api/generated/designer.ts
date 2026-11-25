@@ -30,7 +30,10 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Executes study-wide parallel batch compilation and validation across pinned edit check rule packs. */
+    /**
+     * Executes study-wide parallel batch compilation and validation across pinned edit check rule packs.
+     * @description Validates inline or study-pinned rule packs and retains asynchronous job reports in the volatile in-memory BatchJobStore.
+     */
     post: operations["BatchValidateRules"];
     delete?: never;
     options?: never;
@@ -45,7 +48,10 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** Retrieves the aggregated report for an asynchronous batch validation job. */
+    /**
+     * Retrieves the aggregated report for an asynchronous batch validation job.
+     * @description Scaffold service endpoint: reads batch validation reports from the volatile in-memory BatchJobStore.
+     */
     get: operations["GetBatchValidationJob"];
     put?: never;
     post?: never;
@@ -64,7 +70,10 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Compares baseline and target rule pack versions during protocol amendments to highlight rule diffs and broken dependencies. */
+    /**
+     * Compares baseline and target rule pack versions during protocol amendments to highlight rule diffs and broken dependencies.
+     * @description Compares inline or study-pinned baseline and target rule pack versions without persisting amendment history.
+     */
     post: operations["AmendmentRegression"];
     delete?: never;
     options?: never;
@@ -79,7 +88,10 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** Lists active CDISC USDM study protocol definitions. */
+    /**
+     * Lists active CDISC USDM study protocol definitions.
+     * @description Scaffold placeholder returning an empty study list; persistent CDISC USDM study governance is served by the Clinical Kernel (/api/v1/kernel/studies).
+     */
     get: operations["ListStudies"];
     put?: never;
     post?: never;
@@ -98,7 +110,10 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Compiles CDISC USDM protocol JSON into DDF IR and EDC runtime schemas. */
+    /**
+     * Compiles CDISC USDM protocol JSON into DDF IR and EDC runtime schemas.
+     * @description Stateless CDISC USDM compiler endpoint (Scaffold service maturity); compiles supplied USDM JSON in memory without persisting study definitions.
+     */
     post: operations["CompileProtocol"];
     delete?: never;
     options?: never;

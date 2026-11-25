@@ -83,14 +83,21 @@ public sealed class ElectronicSignatureEndpointFilter(
             });
 }
 
-/// <summary>Endpoint metadata marking a route gated by <c>RequireElectronicSignature</c>.</summary>
+/// <summary>Endpoint metadata marking a route gated by <c>RequireElectronicSignature</c> or <c>RequireElectronicSignatureWhen</c>.</summary>
 public sealed class ElectronicSignatureRequired
 {
-    /// <summary>The shared instance.</summary>
-    public static ElectronicSignatureRequired Instance { get; } = new();
+    /// <summary>The shared instance for unconditionally step-up-gated routes.</summary>
+    public static ElectronicSignatureRequired Instance { get; } = new(isConditional: false);
 
-    private ElectronicSignatureRequired()
+    /// <summary>The shared instance for conditionally step-up-gated routes (<c>RequireElectronicSignatureWhen</c>).</summary>
+    public static ElectronicSignatureRequired Conditional { get; } = new(isConditional: true);
+
+    /// <summary>True when only a subset of requests on the route require an <c>X-Sig-Token</c> header.</summary>
+    public bool IsConditional { get; }
+
+    private ElectronicSignatureRequired(bool isConditional)
     {
+        IsConditional = isConditional;
     }
 }
 
@@ -150,7 +157,7 @@ public static class ElectronicSignatureEndpointExtensions
 
         return builder
             .AddEndpointFilter(new ElectronicSignatureEndpointFilter(resolveBinding, requiresSignature))
-            .WithMetadata(ElectronicSignatureRequired.Instance)
+            .WithMetadata(ElectronicSignatureRequired.Conditional)
             .ProducesProblem(StatusCodes.Status401Unauthorized);
     }
 

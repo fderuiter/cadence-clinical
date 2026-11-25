@@ -45,8 +45,10 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
+    /** Lists operational tickets filtered by study, site, status, priority, or queue. */
     get: operations["ListTickets"];
     put?: never;
+    /** Creates a GxP support or operational issue ticket with SLA targets and hash-chained audit entry. */
     post: operations["CreateTicket"];
     delete?: never;
     options?: never;
@@ -61,12 +63,14 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
+    /** Retrieves a single operational ticket by ID or reference code. */
     get: operations["GetTicket"];
     put?: never;
     post?: never;
     delete?: never;
     options?: never;
     head?: never;
+    /** Updates mutable ticket fields with optimistic concurrency and Part 11 change reason. */
     patch: operations["UpdateTicket"];
     trace?: never;
   };
@@ -77,8 +81,10 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
+    /** Lists role-filtered public and sponsor-internal comments on a ticket. */
     get: operations["ListTicketComments"];
     put?: never;
+    /** Appends a visibility-scoped comment to an operational ticket. */
     post: operations["CreateTicketComment"];
     delete?: never;
     options?: never;
@@ -95,6 +101,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
+    /** Transitions a ticket across workflow states and updates SLA pause timers. */
     post: operations["TransitionTicket"];
     delete?: never;
     options?: never;
@@ -111,6 +118,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
+    /** Applies a 21 CFR Part 11 step-up electronic signature to close or attest a GxP ticket. */
     post: operations["SignTicket"];
     delete?: never;
     options?: never;
@@ -125,6 +133,7 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
+    /** Retrieves the hash-chained GxP audit trail for an operational ticket. */
     get: operations["GetTicketAuditTrail"];
     put?: never;
     post?: never;
@@ -376,7 +385,10 @@ export interface operations {
   CreateTicket: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. */
+        "X-Change-Reason"?: string;
+      };
       path?: never;
       cookie?: never;
     };
@@ -479,7 +491,10 @@ export interface operations {
   UpdateTicket: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. */
+        "X-Change-Reason"?: string;
+      };
       path: {
         ticket_id: string;
       };
@@ -599,7 +614,10 @@ export interface operations {
   CreateTicketComment: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. */
+        "X-Change-Reason"?: string;
+      };
       path: {
         ticket_id: string;
       };
@@ -670,7 +688,10 @@ export interface operations {
   TransitionTicket: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. */
+        "X-Change-Reason"?: string;
+      };
       path: {
         ticket_id: string;
       };
@@ -741,7 +762,12 @@ export interface operations {
   SignTicket: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Single-use 60-second step-up electronic signature JWT issued by POST /api/v1/auth/signature-verification and bound to this exact action and semantic meaning (21 CFR 11.200(a)(1)). */
+        "X-Sig-Token"?: string;
+        /** @description Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. */
+        "X-Change-Reason"?: string;
+      };
       path: {
         ticket_id: string;
       };

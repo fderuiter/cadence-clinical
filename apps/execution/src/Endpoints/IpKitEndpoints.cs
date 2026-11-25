@@ -43,6 +43,10 @@ public static class IpKitEndpoints
             var result = await service.ValidateScannedBarcodeAsync(request, ct);
             return Results.Ok(result);
         })
+        .WithName("ValidateIpKitBarcodeScan")
+        .WithSummary("Validates a scanned investigational product kit GS1 barcode against site inventory.")
+        .Produces<IpKitScanValidateResponse>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status403Forbidden)
         .RequirePermission("rtsm_supply:read").RequireCallerStudyAndSiteScope();
 
         group.MapPost("/reconcile-batch", async (
@@ -74,6 +78,11 @@ public static class IpKitEndpoints
                 return Results.BadRequest(new { detail = ex.Message });
             }
         })
+        .WithName("ReconcileIpKitBatch")
+        .WithSummary("Reconciles a batch of investigational product kits and issues an accountability certificate.")
+        .Produces<IpKitReconciliationBatchResponse>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status403Forbidden)
         .RequirePermission("rtsm_supply:write").RequireCallerStudyAndSiteScope()
         .RequireElectronicSignature(ReconcileBatchSemanticAction, http => http.Request.Path.Value ?? string.Empty)
         .RequireChangeReasonHeader();
@@ -102,6 +111,11 @@ public static class IpKitEndpoints
 
             return Results.Ok(result);
         })
+        .WithName("GetIpKitCertificate")
+        .WithSummary("Retrieves a signed investigational product kit accountability certificate by identifier.")
+        .Produces<IpKitCertificateResponse>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status403Forbidden)
+        .ProducesProblem(StatusCodes.Status404NotFound)
         .RequirePermission("rtsm_supply:read").RequireCallerStudyAndSiteScope();
 
         group.MapGet("/inventory/{studyId}/{siteId}", async (
@@ -119,6 +133,10 @@ public static class IpKitEndpoints
             var result = await service.GetSiteInventoryAsync(studyId, siteId, ct);
             return Results.Ok(result);
         })
+        .WithName("GetSiteIpKitInventory")
+        .WithSummary("Lists investigational product kit inventory and disposition statuses for a clinical site.")
+        .Produces<List<IpKitInventoryResponse>>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status403Forbidden)
         .RequirePermission("rtsm_supply:read")
         .RequireStudyScope("studyId")
         .RequireSiteScope("siteId");
@@ -145,6 +163,10 @@ public static class IpKitEndpoints
             var result = await service.SeedSiteInventoryAsync(request.StudyId, request.SiteId, request.Kits ?? [], ct);
             return Results.Ok(result);
         })
+        .WithName("SeedSiteIpKitInventory")
+        .WithSummary("Seeds sponsor investigational product kit inventory records for a clinical site.")
+        .Produces<List<IpKitInventoryResponse>>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status403Forbidden)
         .RequirePermission("ip_kit_inventory:seed").RequireCallerStudyAndSiteScope()
         .RequireChangeReasonHeader();
 

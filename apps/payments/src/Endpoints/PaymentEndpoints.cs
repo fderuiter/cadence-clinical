@@ -496,189 +496,341 @@ public static class PaymentEndpoints
         group.MapPost("/disburse", DisburseStipendDirect)
             .WithName("DisburseStipendDirect")
             .RequirePermission("payments_stipend:disburse").RequireCallerStudyScope()
+            .Produces<DisburseStipendResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .WithSummary("Direct disburse ePRO stipend to participant wallet with strict idempotency and audit trail.");
 
         group.MapPost("/participant/wallets/disburse", DisburseStipendDirect)
             .WithName("DisburseStipendWallet")
             .RequirePermission("payments_stipend:disburse").RequireCallerStudyScope()
+            .Produces<DisburseStipendResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .WithSummary("Disburse stipend to participant wallet.");
 
         // Participant Wallets Directory & Management
         group.MapGet("/participant/wallets", ListWallets)
             .WithName("ListWallets")
             .RequirePermission("payments_wallet:read").RequireCallerStudyScope()
+            .Produces<List<WalletResponse>>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .WithSummary("List all participant wallets.");
 
         group.MapGet("/participant/wallets/subject/{subjectId}", GetSubjectWallet)
             .WithName("GetSubjectWallet")
             .RequirePermission("payments_wallet:read").RequireCallerStudyScope()
+            .Produces<WalletResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
             .WithSummary("Retrieve participant wallet balance and details.");
 
         group.MapGet("/participant/wallets/{walletId}", GetWalletById)
             .WithName("GetWalletById")
             .RequirePermission("payments_wallet:read").RequireCallerStudyScope()
+            .Produces<WalletResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
             .WithSummary("Retrieve participant wallet details by wallet ID.");
 
         group.MapGet("/participant/wallets/{walletId}/tax-1099-status", GetTax1099Status)
             .WithName("GetTax1099Status")
             .RequirePermission("payments_wallet:read").RequireCallerStudyScope()
+            .Produces<Tax1099StatusResponseDto>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
             .WithSummary("Retrieve IRS 1099 tax status and threshold monitoring tracer.");
 
         group.MapGet("/participant/wallets/{walletId}/balance", GetBalanceInquiry)
             .WithName("GetBalanceInquiry")
             .RequirePermission("payments_wallet:read").RequireCallerStudyScope()
+            .Produces<WalletBalanceInquiryResponseDto>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
             .WithSummary("Real-time balance inquiry for participant wallet.");
 
         group.MapPost("/participant/wallets/{walletId}/issue-card", IssueReloadableCard)
             .WithName("IssueReloadableCard")
             .RequirePermission("payments_wallet:issue_card").RequireCallerStudyScope()
+            .Produces<WalletResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
             .WithSummary("Issue or re-issue reloadable debit card for participant wallet.");
 
         group.MapPost("/participant/wallets/{walletId}/submit-w9", SubmitW9Form)
             .WithName("SubmitW9Form")
             .RequirePermission("payments_w9:submit").RequireCallerStudyScope()
+            .Produces<WalletResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
             .WithSummary("Submit Form W-9 taxpayer identification certification.");
 
         group.MapPost("/participant/wallets/{walletId}/verify-w9", VerifyW9Form)
             .WithName("VerifyW9Form")
             .RequirePermission("payments_w9:verify").RequireCallerStudyScope()
+            .Produces<WalletResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
             .WithSummary("Verify participant Form W-9 submission.");
 
         group.MapPost("/participant/wallets/{walletId}/disburse", DisburseParticipantFunds)
             .WithName("DisburseParticipantFunds")
             .RequirePermission("payments_wallet:disburse").RequireCallerStudyScope()
+            .Produces<ParticipantDisbursement>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict)
             .WithSummary("Disburse digital funds from participant wallet to debit card or bank account.");
 
         // SoA Stipend Rules & Visit Verification Event Trigger
         group.MapGet("/participant/stipend-rules", ListStipendRules)
             .WithName("ListStipendRules")
             .RequirePermission("payments_stipend_rule:read").RequireCallerStudyScope()
+            .Produces<List<ParticipantStipendRule>>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .WithSummary("List SoA protocol visit stipend compensation rules.");
 
         group.MapPost("/participant/stipend-rules", CreateStipendRule)
             .WithName("CreateStipendRule")
             .RequirePermission("payments_stipend_rule:configure").RequireCallerStudyScope()
+            .Produces<ParticipantStipendRule>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
             .WithSummary("Configure participant visit compensation rules linked to Schedule of Activities.");
 
         group.MapPost("/participant/events/visit-verified", IngestVisitVerifiedEvent)
             .WithName("IngestVisitVerifiedEvent")
             .RequirePermission("payments_visit_event:record").RequireCallerStudyScope()
+            .Produces<VisitVerificationResponseDto>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .WithSummary("Receives verified eCRF visit completion event and evaluates automated stipend disbursement rules.");
 
         // Travel Expenses & OCR Scanner
         group.MapGet("/participant/expenses", ListExpenseClaims)
             .WithName("ListExpenseClaims")
             .RequirePermission("payments_expense:read").RequireCallerStudyScope()
+            .Produces<List<ParticipantExpenseClaim>>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .WithSummary("List travel and meal expense reimbursement claims.");
 
         group.MapPost("/participant/expenses", SubmitStaffExpenseClaim)
             .WithName("SubmitExpenseClaim")
             .RequirePermission("payments_expense:submit").RequireCallerStudyScope()
+            .Produces<ParticipantExpenseClaim>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .WithSummary("Submit travel/meal expense claim for coordinator review.");
 
         group.MapPost("/participant/expenses/ocr-extract", ExtractStaffReceiptOcr)
             .WithName("ExtractReceiptOcr")
             .RequirePermission("payments_expense:submit").RequireCallerStudyScope()
+            .Produces<ReceiptOcrExtractResponseDto>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .WithSummary("Extract metadata from receipt image/text using rule-based OCR engine.");
 
         group.MapPost("/participant/expenses/{claimId}/review", ReviewExpenseClaim)
             .WithName("ReviewExpenseClaim")
             .RequirePermission("payments_expense:review").RequireCallerStudyScope()
+            .Produces<ParticipantExpenseClaim>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict)
             .WithSummary("Coordinator 1-click review and approval/rejection of expense claim.");
 
         // Authenticated Participant Self-Service Wallet, Receipt OCR, Expense Claims, Payouts & Diary Stipends
         group.MapGet("/participant/me/wallet", GetSelfParticipantWallet)
             .WithName("GetSelfParticipantWallet")
             .RequirePermission("payments_self_wallet:read").RequireCallerStudyScope()
+            .Produces<SelfServiceWalletSummaryResponseDto>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .WithSummary("Retrieves the authenticated participant's own study wallet balances, masks, and ledger activity.");
 
         group.MapPost("/participant/me/expenses/ocr-extract", ExtractSelfReceiptOcr)
             .WithName("ExtractSelfReceiptOcr")
             .RequirePermission("payments_self_expense:ocr_scan").RequireCallerStudyScope()
+            .Produces<ReceiptOcrExtractResponseDto>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .WithSummary("Extracts merchant, date, category, and amount from an uploaded receipt image for the signed participant.");
 
         group.MapPost("/participant/me/expenses", SubmitSelfExpenseClaim)
             .WithName("SubmitSelfExpenseClaim")
             .RequirePermission("payments_self_expense:submit").RequireCallerStudyScope()
+            .Produces<SelfServiceExpenseClaimResponseDto>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .WithSummary("Submits a travel or meal expense claim for the signed participant with policy auto-approval and direct ACH dispatch.");
 
         group.MapPost("/participant/me/disburse", DisburseSelfWalletBalance)
             .WithName("DisburseSelfWalletBalance")
             .RequirePermission("payments_self_wallet:disburse").RequireCallerStudyScope()
+            .Produces<SelfServiceDisburseResponseDto>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status409Conflict)
             .WithSummary("Triggers an on-demand payout of the signed participant's available wallet balance.");
 
         group.MapPost("/participant/me/diary-stipend", CreditSelfDiaryStipend)
             .WithName("CreditSelfDiaryStipend")
             .RequirePermission("payments_self_stipend:credit").RequireCallerStudyScope()
+            .WithIdempotencyKeyHeader(
+                required: false,
+                description: "Optional caller-supplied idempotency key (max 255 characters) deduplicating participant diary stipend credits.")
+            .Produces<SelfServiceDiaryStipendResponseDto>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .WithSummary("Credits protocol stipend for a synchronized participant diary strictly from server rules.");
 
         // Transactions, Disbursements & Audit Logs
         group.MapGet("/participant/transactions", ListTransactions)
             .WithName("ListTransactions")
             .RequirePermission("payments_wallet:read").RequireCallerStudyScope()
+            .Produces<List<ParticipantTransaction>>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .WithSummary("List participant wallet transactions ledger.");
 
         group.MapGet("/participant/disbursements", ListDisbursements)
             .WithName("ListDisbursements")
             .RequirePermission("payments_wallet:read").RequireCallerStudyScope()
+            .Produces<List<ParticipantDisbursement>>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .WithSummary("List digital disbursement dispatches.");
 
         group.MapPost("/participant/disbursements/{id}/settle", SettleDisbursement)
             .WithName("SettleDisbursement")
             .RequirePermission("payments_wallet:disburse").RequireCallerStudyScope()
+            .Produces<ParticipantDisbursement>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict)
             .WithSummary("Marks a dispatched digital disbursement as settled upon confirmation.");
 
         group.MapGet("/audit-logs", GetAuditLogs)
             .WithName("GetPaymentAuditLogs")
             .RequirePermission("payments_audit_log:read").RequireCallerStudyScope()
+            .Produces<List<PaymentAuditLog>>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .WithSummary("Retrieve payment audit ledger records.");
 
         // Self-Billing Invoices & Automated Batch Milestone Invoicing
         group.MapGet("/invoices", ListInvoices)
             .WithName("ListInvoices")
             .RequirePermission("payments_invoice:read").RequireCallerStudyScope()
+            .Produces<List<SelfBillingInvoiceResponse>>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .WithSummary("Lists compiled self-billing invoices matching filter criteria.");
 
         group.MapGet("/invoices/{id}", GetInvoiceById)
             .WithName("GetInvoiceById")
             .RequirePermission("payments_invoice:read").RequireCallerStudyScope()
+            .Produces<SelfBillingInvoiceResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
             .WithSummary("Retrieve single self-billing invoice details with line items.");
 
         group.MapPost("/invoices/compile", CompileBillingCycle)
             .WithName("CompileBillingCycle")
             .RequirePermission("payments_invoice:compile").RequireCallerStudyScope()
+            .Produces<SelfBillingInvoiceResponse>(StatusCodes.Status201Created)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .WithSummary("Automates single-site billing cycle compilation into a self-billing invoice.");
 
         group.MapPost("/invoices/batch-compile", BatchCompileBillingCycles)
             .WithName("BatchCompileBillingCycles")
             .RequirePermission("payments_invoice:compile").RequireCallerStudyScope()
+            .Produces<BatchBillingCompilationResponse>(StatusCodes.Status201Created)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .WithSummary("Executes study-wide batch milestone invoice compilation across all active trial sites.");
 
         group.MapPost("/invoices/{id}/approve", ApproveInvoice)
             .WithName("ApproveInvoice")
             .RequirePermission("payments_invoice:approve").RequireCallerStudyScope()
+            .Produces<SelfBillingInvoiceResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict)
             .WithSummary("Approve draft self-billing invoice for ERP export and settlement.")
             .RequireElectronicSignature("payments.invoice.approve", http => http.Request.Path.Value ?? string.Empty);
 
         group.MapPost("/invoices/{id}/remittance-advice/sign", SignRemittanceAdvice)
             .WithName("SignRemittanceAdvice")
             .RequirePermission("payments_invoice:sign_remittance").RequireCallerStudyScope()
+            .Produces<RemittanceAdviceDto>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict)
             .WithSummary("Applies 21 CFR Part 11 electronic signature to cryptographic remittance advice.")
             .RequireElectronicSignature("payments.remittance.sign", http => http.Request.Path.Value ?? string.Empty);
 
         group.MapGet("/invoices/{id}/remittance-advice/pdf", DownloadRemittancePdf)
             .WithName("DownloadRemittancePdf")
             .RequirePermission("payments_invoice:read").RequireCallerStudyScope()
+            .Produces(StatusCodes.Status200OK, contentType: "application/pdf")
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
             .WithSummary("Downloads cryptographic PDF remittance statement.");
 
         group.MapPost("/invoices/{id}/reconcile", ReconcileInvoice)
             .WithName("ReconcileInvoice")
             .RequirePermission("payments_invoice:reconcile").RequireCallerStudyScope()
+            .Produces<SelfBillingInvoiceResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict)
             .WithSummary("Reconciles invoice settlement against bank wire or ERP clearing statement.");
 
         group.MapPost("/invoices/{id}/erp-export", ExportInvoiceToErp)
             .WithName("ExportInvoiceToErp")
             .RequirePermission("payments_invoice:export_erp").RequireCallerStudyScope()
+            .Produces<SelfBillingInvoiceResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict)
             .WithSummary("Exports self-billing invoice to ERP gateway (e.g. SAP).");
 
         return routes;

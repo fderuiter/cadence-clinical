@@ -68,7 +68,12 @@ function onCaretClick() {
       @click="toggle"
     >
       <span class="indicator" aria-hidden="true" />
-      <span class="text">{{ item.text }}</span>
+      <span class="text">
+        {{ item.text }}
+        <span v-if="item.badge" class="VPBadge" :class="item.badge.variant">{{
+          item.badge.text
+        }}</span>
+      </span>
       <span v-if="hasCollapsibleCaret" class="caret" aria-hidden="true">
         <span class="vpi-chevron-right caret-icon" />
       </span>
@@ -85,9 +90,19 @@ function onCaretClick() {
         :rel="item.rel"
         :target="item.target"
       >
-        <component :is="textTag" class="text">{{ item.text }}</component>
+        <component :is="textTag" class="text">
+          {{ item.text }}
+          <span v-if="item.badge" class="VPBadge" :class="item.badge.variant">{{
+            item.badge.text
+          }}</span>
+        </component>
       </VPLink>
-      <component :is="textTag" v-else class="text">{{ item.text }}</component>
+      <component :is="textTag" v-else class="text">
+        {{ item.text }}
+        <span v-if="item.badge" class="VPBadge" :class="item.badge.variant">{{
+          item.badge.text
+        }}</span>
+      </component>
 
       <button
         v-if="item.link && hasCollapsibleCaret"

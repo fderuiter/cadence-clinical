@@ -84,12 +84,27 @@ public sealed class ServiceTopologyTests
             appHost.Should().MatchRegex($@"\|\s*{port}\s*\|\s*{Regex.Escape(service.Name)}\s*\|", service.Name);
             architecture.Should().MatchRegex(
                 $@"\[{Regex.Escape(service.Directory)}\]\(apps/{Regex.Escape(service.Directory)}/README\.md\)\s*\|[^|]*\|\s*{port}\s*\|", service.Name);
+            var archRowMatch = Regex.Match(
+                architecture,
+                $@"^\|\s*\[{Regex.Escape(service.Directory)}\]\(apps/{Regex.Escape(service.Directory)}/README\.md\)\s*\|[^|]*\|\s*{port}\s*\|[^|]*\|[^|]*\|\s*([^|]+?)\s*\|",
+                RegexOptions.Multiline);
+            archRowMatch.Success.Should().BeTrue($"ARCHITECTURE.md §3 lists {service.Name}");
+            string todayColumn = archRowMatch.Groups[1].Value.Trim();
+            bool archIsScaffold = todayColumn.StartsWith("Scaffold", StringComparison.Ordinal);
+            service.Maturity.Should().Be(
+                archIsScaffold ? ServiceMaturity.Scaffold : ServiceMaturity.Active,
+                $"{service.Name} maturity must match ARCHITECTURE.md Today column ('{todayColumn}')");
             foreach (var prefix in service.RoutePrefixes)
             {
                 gatewayRoutes.Should().MatchRegex(
                     $@"\|\s*`/api/v1/{prefix}/\*\*`\s*\|\s*{Regex.Escape(service.Name)}\b[^|]*\|\s*`{service.UrlVariable}`\s*\|", service.Name);
             }
         }
+
+        ServiceTopology.GetContractMaturity("gateway").Should().Be(ServiceMaturity.Active);
+        ServiceTopology.GetContractMaturity("intelligence").Should().Be(ServiceMaturity.Active);
+        ServiceTopology.GetContractMaturity("execution_forms").Should().Be(ServiceMaturity.Active);
+        ServiceTopology.GetContractMaturity("designer").Should().Be(ServiceMaturity.Scaffold);
     }
 
     private static string Block(string compose, string service)

@@ -1606,10 +1606,15 @@ public sealed class PreCommitGuardrailsTests : IDisposable
         sharedContracts.TargetServices.Should().Equal("ctms", "econsent", "etmf", "execution", "notifications", "payments");
         sharedContracts.HasCsharpFiles.Should().BeTrue();
 
+        var gatewayHost = PreCommitOpenApiService.AnalyzeBackendContractChanges(["apps/gateway/src/Program.cs"], realRepoRoot);
+        gatewayHost.ShouldExport.Should().BeTrue();
+        gatewayHost.TargetServices.Should().Equal("gateway");
+        gatewayHost.HasCsharpFiles.Should().BeTrue();
+
         var nonExporterProjects = PreCommitOpenApiService.AnalyzeBackendContractChanges(
-            ["packages/testing/src/FakeClock.cs", "apps/gateway/src/Program.cs"],
+            ["packages/testing/src/FakeClock.cs", "packages/cli/src/Program.cs"],
             realRepoRoot);
-        nonExporterProjects.ShouldExport.Should().BeFalse("neither packages/testing nor apps/gateway is referenced by an OpenAPI-exporting host");
+        nonExporterProjects.ShouldExport.Should().BeFalse("neither packages/testing nor packages/cli is referenced by an OpenAPI-exporting host");
         nonExporterProjects.TargetServices.Should().BeNull();
         nonExporterProjects.HasCsharpFiles.Should().BeTrue();
 

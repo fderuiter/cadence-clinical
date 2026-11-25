@@ -581,6 +581,7 @@ public static class PreCommitOpenApiService
                 ? "execution_forms"
                 : "execution",
             "fileshare" => "fileshare",
+            "gateway" => "gateway",
             "imaging" => "imaging",
             "intelligence" => "intelligence",
             "interop" => "interop",

@@ -1,0 +1,374 @@
+{
+  "openapi": "3.1.1",
+  "info": {
+    "title": "Cadence.Apps.Gateway | v1",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost/"
+    }
+  ],
+  "paths": {
+    "/healthz": {
+      "get": {
+        "tags": [
+          "Cadence.Apps.Gateway"
+        ],
+        "summary": "Gateway liveness and readiness probe.",
+        "operationId": "HealthCheck",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Gateway_GatewayHealthResponse"
+                }
+              }
+            }
+          }
+        },
+        "x-cadence-auth": {
+          "anonymous": true,
+          "mode": "Anonymous"
+        }
+      }
+    },
+    "/api/v1/auth/signature-verification": {
+      "post": {
+        "tags": [
+          "Electronic Signatures"
+        ],
+        "summary": "Re-authenticates the signer and issues a single-use e-signature token for one action.",
+        "description": "21 CFR 11.200(a)(1) step-up credential check: verifies the signed-in caller\u0027s password (and optional TOTP) against Keycloak and returns a single-use 60-second X-Sig-Token bound to one canonical API path and semantic action.",
+        "operationId": "IssueSignatureToken",
+        "parameters": [
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "Optional reason-for-change header validated by GatewayIdentityForwarding (printable ASCII or RFC 8187 UTF-8\u0027\u0027); malformed values return 400 Bad Request.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Gateway_SignatureVerificationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Gateway_SignatureTokenResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Gateway_HttpValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Gateway_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Gateway_ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Gateway_ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Gateway_ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Authenticated"
+        },
+        "x-cadence-rate-limit": "5 requests/minute per authenticated signer (FixedWindow; answers 429 Too Many Requests with Retry-After)."
+      }
+    },
+    "/api/v1/status": {
+      "get": {
+        "tags": [
+          "Cadence.Apps.Gateway"
+        ],
+        "summary": "Returns gateway dispatch status.",
+        "operationId": "GatewayStatus",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Gateway_GatewayStatusResponse"
+                }
+              }
+            }
+          }
+        },
+        "x-cadence-auth": {
+          "anonymous": true,
+          "mode": "Anonymous"
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Gateway_GatewayHealthResponse": {
+        "required": [
+          "status",
+          "service",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "service": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          }
+        }
+      },
+      "Gateway_GatewayStatusResponse": {
+        "required": [
+          "mode",
+          "gateway"
+        ],
+        "type": "object",
+        "properties": {
+          "mode": {
+            "type": "string"
+          },
+          "gateway": {
+            "type": "string"
+          }
+        }
+      },
+      "Gateway_HttpValidationProblemDetails": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "detail": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "instance": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "errors": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "Gateway_ProblemDetails": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "detail": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "instance": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Gateway_SignatureTokenResponse": {
+        "required": [
+          "sig_token",
+          "expires_in"
+        ],
+        "type": "object",
+        "properties": {
+          "sig_token": {
+            "type": "string"
+          },
+          "expires_in": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "Gateway_SignatureVerificationRequest": {
+        "required": [
+          "username",
+          "password",
+          "totp",
+          "action",
+          "semantic_action",
+          "batch_id"
+        ],
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "password": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "totp": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "action": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "semantic_action": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "batch_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "description": "Keycloak OIDC bearer JWT verified at the Cadence API Gateway and forwarded downstream as HMAC-SHA256 signed identity headers (ADR-2256).",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Cadence.Apps.Gateway"
+    },
+    {
+      "name": "Electronic Signatures"
+    }
+  ]
+}

@@ -169,6 +169,7 @@ public static class OpenApiSyncService
 
         var aggregatedPaths = new JsonObject();
         var aggregatedSchemas = new JsonObject();
+        var aggregatedSecuritySchemes = new JsonObject();
 
         string fallbackDir = Path.Combine(repoRoot, "docs", "openapi");
 
@@ -239,16 +240,39 @@ public static class OpenApiSyncService
                 }
             }
 
-            if (doc["components"] is JsonObject components && components["schemas"] is JsonObject schemas)
+            if (doc["components"] is JsonObject components)
             {
-                foreach (var schemaKv in schemas)
+                if (components["schemas"] is JsonObject schemas)
                 {
-                    if (!aggregatedSchemas.ContainsKey(schemaKv.Key))
+                    foreach (var schemaKv in schemas)
                     {
-                        aggregatedSchemas[schemaKv.Key] = schemaKv.Value?.DeepClone();
+                        if (!aggregatedSchemas.ContainsKey(schemaKv.Key))
+                        {
+                            aggregatedSchemas[schemaKv.Key] = schemaKv.Value?.DeepClone();
+                        }
+                    }
+                }
+
+                if (components["securitySchemes"] is JsonObject securitySchemes)
+                {
+                    foreach (var schemeKv in securitySchemes)
+                    {
+                        if (!aggregatedSecuritySchemes.ContainsKey(schemeKv.Key))
+                        {
+                            aggregatedSecuritySchemes[schemeKv.Key] = schemeKv.Value?.DeepClone();
+                        }
                     }
                 }
             }
+        }
+
+        var aggregatedComponents = new JsonObject
+        {
+            ["schemas"] = aggregatedSchemas,
+        };
+        if (aggregatedSecuritySchemes.Count > 0)
+        {
+            aggregatedComponents["securitySchemes"] = aggregatedSecuritySchemes;
         }
 
         return new JsonObject
@@ -264,20 +288,17 @@ public static class OpenApiSyncService
             {
                 new JsonObject
                 {
-                    ["url"] = "https://api.ccrsoft.com/api/v1",
+                    ["url"] = "https://api.ccrsoft.com",
                     ["description"] = "Production API Gateway"
                 },
                 new JsonObject
                 {
-                    ["url"] = "http://localhost:8000/api/v1",
+                    ["url"] = "http://localhost:8000",
                     ["description"] = "Local Dev Gateway Proxy"
                 }
             },
             ["paths"] = aggregatedPaths,
-            ["components"] = new JsonObject
-            {
-                ["schemas"] = aggregatedSchemas
-            }
+            ["components"] = aggregatedComponents
         };
     }
 

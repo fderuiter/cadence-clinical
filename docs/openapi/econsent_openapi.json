@@ -28,6 +28,10 @@
               }
             }
           }
+        },
+        "x-cadence-auth": {
+          "anonymous": true,
+          "mode": "Anonymous"
         }
       }
     },
@@ -49,6 +53,10 @@
               }
             }
           }
+        },
+        "x-cadence-auth": {
+          "anonymous": true,
+          "mode": "Anonymous"
         }
       }
     },
@@ -57,6 +65,7 @@
         "tags": [
           "eConsent"
         ],
+        "summary": "Publishes a specific eConsent template version and records whether participant re-consent is required.",
         "operationId": "PublishTemplateVersioned",
         "parameters": [
           {
@@ -118,7 +127,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "econsent_template:publish"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       }
     },
     "/api/v1/econsent/templates/{template_id}/publish": {
@@ -126,6 +150,7 @@
         "tags": [
           "eConsent"
         ],
+        "summary": "Publishes the next version of an eConsent template for the specified protocol version.",
         "operationId": "PublishTemplate",
         "parameters": [
           {
@@ -174,7 +199,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "econsent_template:publish"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       }
     },
     "/api/v1/econsent/templates/{template_id}/versions/{version_index}/capture-consent": {
@@ -182,6 +222,7 @@
         "tags": [
           "eConsent"
         ],
+        "summary": "Captures a participant\u0027s 21 CFR Part 11 electronic consent signature against a versioned template.",
         "operationId": "CaptureConsentVersioned",
         "parameters": [
           {
@@ -204,74 +245,14 @@
               ],
               "format": "int32"
             }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Econsent_CaptureConsentRequest"
-              }
-            }
           },
-          "required": true
-        },
-        "responses": {
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/Econsent_ProblemDetails"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Econsent_CaptureConsentResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/Econsent_ProblemDetails"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/Econsent_ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/econsent/templates/{template_id}/capture-consent": {
-      "post": {
-        "tags": [
-          "eConsent"
-        ],
-        "operationId": "CaptureConsentLegacy",
-        "parameters": [
           {
-            "name": "template_id",
-            "in": "path",
+            "name": "X-Sig-Token",
+            "in": "header",
+            "description": "Single-use 60-second step-up electronic signature JWT issued by POST /api/v1/auth/signature-verification and bound to this exact action and semantic meaning (21 CFR 11.200(a)(1)).",
             "required": true,
             "schema": {
+              "minLength": 1,
               "type": "string"
             }
           }
@@ -327,7 +308,118 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "econsent_consent:capture"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
+      }
+    },
+    "/api/v1/econsent/templates/{template_id}/capture-consent": {
+      "post": {
+        "tags": [
+          "eConsent"
+        ],
+        "summary": "Captures a participant\u0027s 21 CFR Part 11 electronic consent signature against the latest published template.",
+        "operationId": "CaptureConsentLegacy",
+        "parameters": [
+          {
+            "name": "template_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Sig-Token",
+            "in": "header",
+            "description": "Single-use 60-second step-up electronic signature JWT issued by POST /api/v1/auth/signature-verification and bound to this exact action and semantic meaning (21 CFR 11.200(a)(1)).",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Econsent_CaptureConsentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Econsent_ProblemDetails"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Econsent_CaptureConsentResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Econsent_ProblemDetails"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Econsent_ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "econsent_consent:capture"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       }
     }
   },
@@ -628,6 +720,14 @@
             "format": "date-time"
           }
         }
+      }
+    },
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "description": "Keycloak OIDC bearer JWT verified at the Cadence API Gateway and forwarded downstream as HMAC-SHA256 signed identity headers (ADR-2256).",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
       }
     }
   },

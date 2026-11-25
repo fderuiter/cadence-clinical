@@ -61,6 +61,16 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller",
+          "signed_in_reason": "Every read checks the caller may see the form\u0027s enrollment; every write is a kernel command authorized against the caller\u0027s grants."
         }
       },
       "post": {
@@ -69,6 +79,29 @@
         ],
         "summary": "Opens a form for a participant\u0027s visit under the protocol version in force (collection.open).",
         "operationId": "ExecutionOpenForm",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry.",
+            "required": true,
+            "schema": {
+              "maxLength": 255,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8\u0027\u0027 percent-encoded UTF-8.",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -160,6 +193,16 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller",
+          "signed_in_reason": "Every read checks the caller may see the form\u0027s enrollment; every write is a kernel command authorized against the caller\u0027s grants."
         },
         "x-kernel-errors": [
           {
@@ -278,6 +321,16 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller",
+          "signed_in_reason": "Every read checks the caller may see the form\u0027s enrollment; every write is a kernel command authorized against the caller\u0027s grants."
         }
       }
     },
@@ -296,6 +349,27 @@
             "schema": {
               "type": "string",
               "format": "uuid"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry.",
+            "required": true,
+            "schema": {
+              "maxLength": 255,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8\u0027\u0027 percent-encoded UTF-8.",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
             }
           }
         ],
@@ -390,6 +464,16 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller",
+          "signed_in_reason": "Every read checks the caller may see the form\u0027s enrollment; every write is a kernel command authorized against the caller\u0027s grants."
         },
         "x-kernel-errors": [
           {
@@ -544,6 +628,16 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller",
+          "signed_in_reason": "Every read checks the caller may see the form\u0027s enrollment; every write is a kernel command authorized against the caller\u0027s grants."
         },
         "x-kernel-errors": [
           {
@@ -741,6 +835,16 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller",
+          "signed_in_reason": "Every read checks the caller may see the enrollment; every write is a module command authorized against the caller\u0027s grants."
         }
       }
     },
@@ -819,6 +923,16 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller",
+          "signed_in_reason": "Every read checks the caller may see the enrollment; every write is a module command authorized against the caller\u0027s grants."
         }
       }
     },
@@ -836,6 +950,27 @@
             "schema": {
               "type": "string",
               "format": "uuid"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry.",
+            "required": true,
+            "schema": {
+              "maxLength": 255,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8\u0027\u0027 percent-encoded UTF-8.",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
             }
           }
         ],
@@ -920,6 +1055,16 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller",
+          "signed_in_reason": "Every read checks the caller may see the enrollment; every write is a module command authorized against the caller\u0027s grants."
         },
         "x-kernel-errors": [
           {
@@ -1063,6 +1208,16 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller",
+          "signed_in_reason": "Every read checks the caller may see the enrollment; every write is a module command authorized against the caller\u0027s grants."
         }
       },
       "post": {
@@ -1079,6 +1234,27 @@
             "schema": {
               "type": "string",
               "format": "uuid"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry.",
+            "required": true,
+            "schema": {
+              "maxLength": 255,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8\u0027\u0027 percent-encoded UTF-8.",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
             }
           }
         ],
@@ -1174,6 +1350,16 @@
             }
           }
         },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller",
+          "signed_in_reason": "Every read checks the caller may see the enrollment; every write is a module command authorized against the caller\u0027s grants."
+        },
         "x-kernel-errors": [
           {
             "code": "K.Actor.Unresolved",
@@ -1259,6 +1445,27 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry.",
+            "required": true,
+            "schema": {
+              "maxLength": 255,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8\u0027\u0027 percent-encoded UTF-8.",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
@@ -1342,6 +1549,16 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller",
+          "signed_in_reason": "Every read checks the caller may see the enrollment; every write is a module command authorized against the caller\u0027s grants."
         },
         "x-kernel-errors": [
           {
@@ -1424,6 +1641,27 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry.",
+            "required": true,
+            "schema": {
+              "maxLength": 255,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8\u0027\u0027 percent-encoded UTF-8.",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
@@ -1508,6 +1746,16 @@
             }
           }
         },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller",
+          "signed_in_reason": "Every read checks the caller may see the enrollment; every write is a module command authorized against the caller\u0027s grants."
+        },
         "x-kernel-errors": [
           {
             "code": "K.Actor.Unresolved",
@@ -1588,6 +1836,27 @@
             "schema": {
               "type": "string",
               "format": "uuid"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry.",
+            "required": true,
+            "schema": {
+              "maxLength": 255,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8\u0027\u0027 percent-encoded UTF-8.",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
             }
           }
         ],
@@ -1683,6 +1952,16 @@
             }
           }
         },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller",
+          "signed_in_reason": "Every read checks the caller may see the enrollment; every write is a module command authorized against the caller\u0027s grants."
+        },
         "x-kernel-errors": [
           {
             "code": "K.Actor.Unresolved",
@@ -1763,6 +2042,27 @@
             "schema": {
               "type": "string",
               "format": "uuid"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry.",
+            "required": true,
+            "schema": {
+              "maxLength": 255,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8\u0027\u0027 percent-encoded UTF-8.",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
             }
           }
         ],
@@ -1846,6 +2146,16 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller",
+          "signed_in_reason": "Every read checks the caller may see the enrollment; every write is a module command authorized against the caller\u0027s grants."
         },
         "x-kernel-errors": [
           {
@@ -1932,6 +2242,27 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry.",
+            "required": true,
+            "schema": {
+              "maxLength": 255,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8\u0027\u0027 percent-encoded UTF-8.",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
@@ -2014,6 +2345,16 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller",
+          "signed_in_reason": "Every read checks the caller may see the enrollment; every write is a module command authorized against the caller\u0027s grants."
         },
         "x-kernel-errors": [
           {
@@ -2140,6 +2481,16 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller",
+          "signed_in_reason": "Answers only when the caller may see the requested study or enrollment and filters out blinded observations without unblinding authority."
         }
       }
     },
@@ -2158,6 +2509,37 @@
             "schema": {
               "type": "string",
               "format": "uuid"
+            }
+          },
+          {
+            "name": "X-Sig-Token",
+            "in": "header",
+            "description": "Single-use 60-second step-up electronic signature JWT issued by POST /api/v1/auth/signature-verification and bound to this exact action and semantic meaning (21 CFR 11.200(a)(1)).",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry.",
+            "required": true,
+            "schema": {
+              "maxLength": 255,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8\u0027\u0027 percent-encoded UTF-8.",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
             }
           }
         ],
@@ -2252,6 +2634,17 @@
               }
             }
           }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "SignedInCaller",
+          "signed_in_reason": "Signing is a kernel command authorized against the caller\u0027s grants at the form\u0027s enrollment, after a step-up re-authentication.",
+          "allow_expired_tenant_write": true
         },
         "x-kernel-errors": [
           {
@@ -4177,6 +4570,14 @@
             "format": "uuid"
           }
         }
+      }
+    },
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "description": "Keycloak OIDC bearer JWT verified at the Cadence API Gateway and forwarded downstream as HMAC-SHA256 signed identity headers (ADR-2256).",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
       }
     }
   },

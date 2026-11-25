@@ -135,6 +135,7 @@ public sealed class OpenApiDriftTests : IDisposable
     [InlineData("apps/kernel/src/Sample.cs", "kernel")]
     [InlineData("apps/ctms/src/Endpoints/CtmsEndpoints.cs", "ctms")]
     [InlineData("apps/intelligence/src/IntelligenceModule.cs", "intelligence")]
+    [InlineData("apps/gateway/src/Endpoints/SignatureTokenEndpoints.cs", "gateway")]
     [InlineData("packages/contracts/src/Dto/SubjectDto.cs", null)]
     [InlineData("apps/web/src/components/Footer.vue", null)]
     public void ResolveServiceFromPath_MapsMicroservicePathsCorrectly(string path, string? expectedService)
@@ -224,7 +225,10 @@ public sealed class OpenApiDriftTests : IDisposable
             {
               "openapi": "3.1.1",
               "paths": { "/api/v1/ctms/sites": { "get": { "operationId": "ListSites" } } },
-              "components": { "schemas": { "Ctms_SiteDto": { "type": "object" } } }
+              "components": {
+                "securitySchemes": { "BearerAuth": { "type": "http", "scheme": "bearer" } },
+                "schemas": { "Ctms_SiteDto": { "type": "object" } }
+              }
             }
             """;
         string ticketsJson = """
@@ -257,6 +261,10 @@ public sealed class OpenApiDriftTests : IDisposable
             .Should().Equal("/api/v1/ctms/sites", "/api/v1/tickets");
         aggregatedForward["components"]!["schemas"]!.AsObject().Select(kv => kv.Key)
             .Should().Equal("Ctms_SiteDto", "Tickets_TicketDto");
+        aggregatedForward["components"]!["securitySchemes"]!.AsObject().Select(kv => kv.Key)
+            .Should().Equal("BearerAuth");
+        aggregatedForward["servers"]!.AsArray().Select(n => n!["url"]!.GetValue<string>())
+            .Should().Equal("https://api.ccrsoft.com", "http://localhost:8000");
     }
 
     [Fact]
@@ -338,5 +346,216 @@ public sealed class OpenApiDriftTests : IDisposable
         File.WriteAllText(fullPath, content);
         File.SetLastWriteTimeUtc(fullPath, lastWriteUtc);
         return fullPath;
+    }
+
+    [Fact]
+    public void FindOperationMetadataGaps_ReportsMissingOperationIdAndBlankSummary_AndCommittedSpecsHaveZeroGaps()
+    {
+        File.WriteAllText(
+            Path.Combine(_committed, "sample_openapi.json"),
+            """
+            {
+              "openapi": "3.1.1",
+              "info": { "title": "Sample", "version": "1.0.0" },
+              "paths": {
+                "/api/v1/sample/ok": {
+                  "get": { "operationId": "GetSample", "summary": "Returns sample." }
+                },
+                "/api/v1/sample/no-op-id": {
+                  "post": { "summary": "Creates sample." }
+                },
+                "/api/v1/sample/blank-summary": {
+                  "delete": { "operationId": "DeleteSample", "summary": "   " }
+                }
+              }
+            }
+            """);
+
+        var gaps = OpenApiDriftValidatorService.FindOperationMetadataGaps(_committed);
+        gaps.Should().Equal(
+            "sample_openapi.json: DELETE /api/v1/sample/blank-summary (DeleteSample) is missing summary",
+            "sample_openapi.json: POST /api/v1/sample/no-op-id is missing operationId");
+
+        string repoRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+        OpenApiDriftValidatorService.FindOperationMetadataGaps(Path.Combine(repoRoot, "docs", "openapi"))
+            .Should().BeEmpty("every committed OpenAPI operation must declare a non-empty operationId and summary");
+    }
+
+    [Fact]
+    public void RenderAll_EmitsDetailsSchemaLinksMaturityBadgesStubCalloutsAndCompleteSchemaCatalog()
+    {
+        File.WriteAllText(
+            Path.Combine(_committed, "imaging_openapi.json"),
+            """
+            {
+              "openapi": "3.1.1",
+              "info": { "title": "Cadence.Apps.Imaging | v1", "version": "1.0.0" },
+              "components": {
+                "securitySchemes": { "BearerAuth": { "type": "http", "scheme": "bearer" } },
+                "schemas": {
+                  "RoiSeedRequest": {
+                    "type": "object",
+                    "required": ["seedX"],
+                    "properties": { "seedX": { "type": "integer", "format": "int32" } }
+                  },
+                  "ProblemDetails": {
+                    "type": "object",
+                    "properties": { "title": { "type": "string" }, "status": { "type": "integer" } }
+                  }
+                }
+              },
+              "paths": {
+                "/api/v1/imaging/studies/{studyId}/roi-seed": {
+                  "post": {
+                    "operationId": "SegmentRoiSeed",
+                    "summary": "Queues ROI seed segmentation (stub).",
+                    "security": [{ "BearerAuth": [] }],
+                    "x-cadence-permissions": ["imaging:write"],
+                    "x-cadence-electronic-signature": true,
+                    "parameters": [
+                      { "name": "studyId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
+                      { "name": "X-Sig-Token", "in": "header", "required": true, "schema": { "type": "string" } },
+                      { "name": "X-Change-Reason", "in": "header", "required": true, "schema": { "type": "string" } }
+                    ],
+                    "requestBody": {
+                      "required": true,
+                      "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RoiSeedRequest" } } }
+                    },
+                    "responses": {
+                      "501": {
+                        "description": "Not Implemented",
+                        "content": { "application/problem+json": { "schema": { "$ref": "#/components/schemas/ProblemDetails" } } }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+            """);
+        File.WriteAllText(
+            Path.Combine(_committed, "designer_openapi.json"),
+            """
+            {
+              "openapi": "3.1.1",
+              "info": { "title": "Cadence.Apps.Designer | v1", "version": "1.0.0" },
+              "paths": {
+                "/api/v1/designer/studies": {
+                  "get": { "operationId": "ListDesignerStudies", "summary": "Lists scaffold studies.", "responses": { "200": { "description": "OK" } } }
+                }
+              }
+            }
+            """);
+        File.WriteAllText(
+            Path.Combine(_committed, "kernel_openapi.json"),
+            """
+            {
+              "openapi": "3.1.1",
+              "info": { "title": "Cadence.Kernel.Host | kernel", "version": "1.0.0" },
+              "paths": {
+                "/api/v1/kernel/nodes/{nodeRef}": {
+                  "get": {
+                    "operationId": "GetKernelNode",
+                    "summary": "Gets a kernel node.",
+                    "x-kernel-errors": [{ "code": "K.Node.NotFound", "status": 404, "title": "Not Found" }],
+                    "responses": { "200": { "description": "OK" } }
+                  }
+                },
+                "/api/v1/ai/mcp": {
+                  "post": { "operationId": "IntelligenceMcpStreamableHttp", "summary": "Streamable HTTP MCP endpoint.", "x-cadence-signed-in-caller": true, "responses": { "200": { "description": "OK" } } }
+                },
+                "/api/v1/execution/forms": {
+                  "post": { "operationId": "OpenExecutionForm", "summary": "Opens an eCRF form.", "responses": { "200": { "description": "OK" } } }
+                }
+              }
+            }
+            """);
+
+        var pages = ApiDocsGeneratorService.RenderAll(_committed);
+
+        pages["imaging.md"].Should()
+            .Contain("<span class=\"VPBadge tip\">Active</span>")
+            .And.Contain("501 Not Implemented")
+            .And.Contain("<details class=\"api-operation-details\">")
+            .And.Contain("`X-Sig-Token`")
+            .And.Contain("`X-Change-Reason`")
+            .And.Contain("[`RoiSeedRequest`](#schema-roiseedrequest)")
+            .And.Contain("### `RoiSeedRequest` {#schema-roiseedrequest}")
+            .And.Contain("### `ProblemDetails` {#schema-problemdetails}");
+
+        pages["designer.md"].Should()
+            .Contain("<span class=\"VPBadge warning\">Scaffold</span>")
+            .And.Contain("> **Scaffold Service (`ServiceTopology`):**");
+
+        pages["kernel.md"].Should()
+            .Contain("## Kernel Module")
+            .And.Contain("## Intelligence Module")
+            .And.Contain("## Execution Module")
+            .And.Contain("`/api/v1/ai/mcp`")
+            .And.Contain("`K.Node.NotFound`");
+    }
+
+    [Fact]
+    public void RenderAll_EscapesVitePressHtmlPlaceholdersAndMustachesWhilePreservingCodeSpansAndComments()
+    {
+        File.WriteAllText(
+            Path.Combine(_committed, "kernel_openapi.json"),
+            """
+            {
+              "openapi": "3.1.1",
+              "info": { "title": "Cadence.Kernel.Host | kernel", "version": "1.0.0" },
+              "components": {
+                "schemas": {
+                  "Operator": {
+                    "type": "string",
+                    "enum": ["<", "<=", ">", ">="],
+                    "description": "Value <em>as entered</em> <!-- deid-ignore: ISO 8601 format examples, not PHI -->`2026-03-14` or <c>ProtocolVersion</c>."
+                  }
+                }
+              },
+              "paths": {
+                "/api/v1/kernel/work-queues": {
+                  "get": {
+                    "operationId": "KernelReadWorkQueues",
+                    "summary": "Reads queues for <tenant>.",
+                    "description": "within is study:<uuid> or {{scope}}; inline `study:<uuid>` stays literal.",
+                    "responses": { "200": { "description": "OK" } }
+                  }
+                }
+              }
+            }
+            """);
+
+        var pages = ApiDocsGeneratorService.RenderAll(_committed);
+
+        pages["kernel.md"].Should()
+            .Contain("Reads queues for &lt;tenant&gt;.")
+            .And.Contain("within is study:&lt;uuid&gt; or &#123;&#123;scope&#125;&#125;; inline `study:<uuid>` stays literal.")
+            .And.Contain("- **Allowed Values:** `<`, `<=`, `>`, `>=`")
+            .And.Contain("Value *as entered* <!-- deid-ignore: ISO 8601 format examples, not PHI -->`2026-03-14` or `ProtocolVersion`.");
+    }
+
+    [Fact]
+    public void CommittedApiReferencePages_AreSynchronizedWithOpenApiSpecs_AndIncludeGatewayWithoutVueFiles()
+    {
+        string repoRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+        string specDir = Path.Combine(repoRoot, "docs", "openapi");
+        string apiDocsDir = Path.Combine(repoRoot, "docs", "api");
+
+        Directory.GetFiles(apiDocsDir, "*.vue", SearchOption.AllDirectories)
+            .Should().BeEmpty("API reference rendering must stay pure Markdown + native HTML <details>");
+        PathPatternValidatorService.ValidatePathPatterns(repoRoot: repoRoot)
+            .Should().Be(0, "no .vue files may exist outside allowed paths");
+
+        var expectedPages = ApiDocsGeneratorService.RenderAll(specDir);
+        expectedPages.Should().ContainKey("gateway.md").And.ContainKey("kernel.md").And.ContainKey("index.md");
+        expectedPages.Count.Should().Be(21);
+
+        foreach (var (fileName, expectedContent) in expectedPages)
+        {
+            string actualPath = Path.Combine(apiDocsDir, fileName);
+            File.Exists(actualPath).Should().BeTrue($"{fileName} must be committed in docs/api/");
+            File.ReadAllText(actualPath).ReplaceLineEndings("\n")
+                .Should().Be(expectedContent.ReplaceLineEndings("\n"), $"{fileName} must not drift from docs/openapi/*.json");
+        }
     }
 }

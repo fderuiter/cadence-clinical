@@ -642,6 +642,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2676: Focus-Trap Detachment Recovery, Shared Retry Focus Primitives, and Inline Focus-Handoff AST Gates](adr/2026-11-24-focus-trap-detachment-recovery-and-retry-focus-primitives.md) | Current | - Status: Accepted |
 | [ADR-2824: Standardize Clinical Typography Utilities, 12px Floor, and AST Lints](adr/2026-11-24-standardize-clinical-typography-utilities-12px-floor-and-ast-lints.md) | Current | - Status: Accepted |
 | [ADR-2666: Atomic Dual-Signer Step-Up Verification and Startup-Validated CGT Barcode Key](adr/2026-11-24-atomic-dual-signer-step-up-verification-and-startup-validated-cgt-barcode-key.md) | Current | - Status: Accepted |
+| [ADR-2554: Schema-Linked Static API Reference, Enriched OpenAPI 3.1 Contracts, and Gateway Contract Export](adr/2026-11-23-schema-linked-api-reference-and-gateway-openapi-contract.md) | Current | - Status: Accepted |
 
 ## Developing and running
 
@@ -705,6 +706,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [safety database schema](schema/safety.md) | Generated | Generated from the EF Core model by `pnpm cadence generate-schema-doc`. Don't edit this file by hand. |
 | [tickets database schema](schema/tickets.md) | Generated | Generated from the EF Core model by `pnpm cadence generate-schema-doc`. Don't edit this file by hand. |
 | [executionmodule database schema](schema/executionmodule.md) | Generated | Generated from the EF Core model by `pnpm cadence generate-schema-doc`. Don't edit this file by hand. |
+| [gateway API](api/gateway.md) | Generated | Generated from `docs/openapi/gateway_openapi.json` by `pnpm cadence generate-api-docs`. Don't edit this file by hand. |
 
 ## Requirements, validation and GxP
 

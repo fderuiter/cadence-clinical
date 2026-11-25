@@ -28,6 +28,10 @@
               }
             }
           }
+        },
+        "x-cadence-auth": {
+          "anonymous": true,
+          "mode": "Anonymous"
         }
       }
     },
@@ -49,6 +53,10 @@
               }
             }
           }
+        },
+        "x-cadence-auth": {
+          "anonymous": true,
+          "mode": "Anonymous"
         }
       }
     },
@@ -110,7 +118,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "ctms_monitoring_visit:create"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       }
     },
     "/api/v1/ctms/letters/compile": {
@@ -126,6 +149,16 @@
             "in": "query",
             "required": true,
             "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Sig-Token",
+            "in": "header",
+            "description": "Single-use 60-second step-up electronic signature JWT issued by POST /api/v1/auth/signature-verification and bound to this exact action and semantic meaning (21 CFR 11.200(a)(1)).",
+            "required": true,
+            "schema": {
+              "minLength": 1,
               "type": "string"
             }
           }
@@ -191,7 +224,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "ctms_monitoring_visit:create"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       }
     },
     "/api/v1/ctms/letters/{letterId}/pdf": {
@@ -213,7 +261,15 @@
         ],
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK",
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
           },
           "403": {
             "description": "Forbidden",
@@ -235,7 +291,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "ctms_monitoring_visit:create"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       }
     },
     "/api/v1/ctms/monitoring-visits": {
@@ -299,7 +370,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "ctms_monitoring_visit:read"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       },
       "post": {
         "tags": [
@@ -307,6 +393,16 @@
         ],
         "summary": "Schedule a new monitoring visit.",
         "operationId": "ScheduleMonitoringVisit",
+        "parameters": [
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "Optional 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8\u0027\u0027 percent-encoded UTF-8.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -348,7 +444,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "ctms_monitoring_visit:create"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       }
     },
     "/api/v1/ctms/monitoring-visits/{visit_id}/complete": {
@@ -363,6 +474,14 @@
             "name": "visit_id",
             "in": "path",
             "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "Optional 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8\u0027\u0027 percent-encoded UTF-8.",
             "schema": {
               "type": "string"
             }
@@ -419,7 +538,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "ctms_monitoring_visit:update"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       }
     },
     "/api/v1/ctms/monitoring-visits/{visit_id}/sign-off": {
@@ -435,6 +569,26 @@
             "in": "path",
             "required": true,
             "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Sig-Token",
+            "in": "header",
+            "description": "Single-use 60-second step-up electronic signature JWT issued by POST /api/v1/auth/signature-verification and bound to this exact action and semantic meaning (21 CFR 11.200(a)(1)).",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Change-Reason",
+            "in": "header",
+            "description": "Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8\u0027\u0027 percent-encoded UTF-8.",
+            "required": true,
+            "schema": {
+              "minLength": 1,
               "type": "string"
             }
           }
@@ -490,7 +644,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "ctms_monitoring_visit:sign_off"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       }
     },
     "/api/v1/ctms/monitoring-visits/{visit_id}/letters": {
@@ -544,7 +713,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "ctms_monitoring_letter:read"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       }
     },
     "/api/v1/ctms/monitoring-visits/{visit_id}/letters/{letter_type}": {
@@ -603,7 +787,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "ctms_monitoring_letter:read_type"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       }
     },
     "/api/v1/ctms/site-milestones": {
@@ -653,7 +852,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "ctms_site_milestone:read"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       },
       "post": {
         "tags": [
@@ -702,7 +916,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "ctms_site_milestone:create"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       }
     },
     "/api/v1/ctms/site-milestones/{milestone_id}": {
@@ -773,7 +1002,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "ctms_site_milestone:update"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       }
     },
     "/api/v1/ctms/startup/sites/{siteId}/greenlight": {
@@ -839,7 +1083,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "ctms_greenlight:read"
+        ],
+        "x-cadence-scopes": [
+          "RouteSite:siteId"
+        ]
       }
     },
     "/api/v1/ctms/startup/sites/{siteId}/greenlight/certify": {
@@ -876,7 +1135,18 @@
           {
             "name": "X-Change-Reason",
             "in": "header",
+            "description": "Optional 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8\u0027\u0027 percent-encoded UTF-8.",
             "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Sig-Token",
+            "in": "header",
+            "description": "Single-use 60-second step-up electronic signature JWT issued by POST /api/v1/auth/signature-verification and bound to this exact action and semantic meaning (21 CFR 11.200(a)(1)).",
+            "required": true,
+            "schema": {
+              "minLength": 1,
               "type": "string"
             }
           }
@@ -932,7 +1202,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "ctms_greenlight:certify"
+        ],
+        "x-cadence-scopes": [
+          "RouteSite:siteId"
+        ]
       }
     },
     "/api/v1/ctms/startup/matrix": {
@@ -994,7 +1279,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "ctms_greenlight:read"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       }
     },
     "/api/v1/ctms/startup/matrix/batch-certify": {
@@ -1008,7 +1308,18 @@
           {
             "name": "X-Change-Reason",
             "in": "header",
+            "description": "Optional 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8\u0027\u0027 percent-encoded UTF-8.",
             "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Sig-Token",
+            "in": "header",
+            "description": "Single-use 60-second step-up electronic signature JWT issued by POST /api/v1/auth/signature-verification and bound to this exact action and semantic meaning (21 CFR 11.200(a)(1)).",
+            "required": true,
+            "schema": {
+              "minLength": 1,
               "type": "string"
             }
           }
@@ -1064,7 +1375,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "ctms_greenlight:certify"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       }
     },
     "/api/v1/ctms/doa/delegate": {
@@ -1134,7 +1460,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "ctms_doa:assign"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       }
     },
     "/api/v1/ctms/doa/revoke": {
@@ -1214,7 +1555,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "ctms_doa:revoke"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       }
     },
     "/api/v1/ctms/doa/sign-off": {
@@ -1229,6 +1585,16 @@
             "name": "study_id",
             "in": "query",
             "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Sig-Token",
+            "in": "header",
+            "description": "Single-use 60-second step-up electronic signature JWT issued by POST /api/v1/auth/signature-verification and bound to this exact action and semantic meaning (21 CFR 11.200(a)(1)).",
+            "required": true,
+            "schema": {
+              "minLength": 1,
               "type": "string"
             }
           }
@@ -1304,7 +1670,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "ctms_doa:sign_off"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       }
     },
     "/api/v1/ctms/doa/sites/{site_id}/log": {
@@ -1378,7 +1759,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "ctms_doa:read"
+        ],
+        "x-cadence-scopes": [
+          "RouteSite:site_id"
+        ]
       }
     },
     "/api/v1/ctms/doa/sites/{site_id}/export-pdf": {
@@ -1403,11 +1799,29 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "X-Sig-Token",
+            "in": "header",
+            "description": "Single-use 60-second step-up electronic signature JWT issued by POST /api/v1/auth/signature-verification and bound to this exact action and semantic meaning (21 CFR 11.200(a)(1)).",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            }
           }
         ],
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "OK",
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
           },
           "403": {
             "description": "Forbidden",
@@ -1439,7 +1853,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "ctms_doa:read"
+        ],
+        "x-cadence-scopes": [
+          "RouteSite:site_id"
+        ]
       }
     }
   },
@@ -2441,6 +2870,14 @@
             "type": "string"
           }
         }
+      }
+    },
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "description": "Keycloak OIDC bearer JWT verified at the Cadence API Gateway and forwarded downstream as HMAC-SHA256 signed identity headers (ADR-2256).",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
       }
     }
   },

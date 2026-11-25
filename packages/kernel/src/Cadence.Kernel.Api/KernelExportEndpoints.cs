@@ -18,6 +18,7 @@ using Cadence.Kernel.Navigation;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Time;
 using Cadence.Kernel.Trust;
+using Cadence.Security.DependencyInjection;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -58,10 +59,10 @@ public static class KernelExportEndpoints
             .WithName("KernelExportStudySnapshot")
             .WithSummary("Streams a bitemporal study snapshot as CSV, CDISC ODM v1.3.2 XML, CDISC Dataset-JSON, SAS bundle ZIP, R bundle ZIP, or Study Archive ZIP.")
             .WithDescription("Projects canonical kernel observations at as_of(valid_at, known_at), filtering to the caller's visible scope, reporting omitted scopes as a collapsed indicator, and masking blinded treatment values in place (K-TRUTH-1, K-AUTH-4, ADR-2590).")
-            .Produces(StatusCodes.Status200OK, contentType: "application/json")
-            .Produces(StatusCodes.Status200OK, contentType: "text/csv")
-            .Produces(StatusCodes.Status200OK, contentType: "application/xml")
-            .Produces(StatusCodes.Status200OK, contentType: "application/zip")
+            .WithIdempotencyKeyHeader(
+                required: false,
+                description: "Optional caller-supplied idempotency key recorded on the ExportStudySnapshot audit command; when omitted, the kernel generates a deterministic v7 export key.")
+            .Produces<KernelDatasetJsonExportResponse>(StatusCodes.Status200OK, "application/json", "text/csv", "application/xml", "application/zip")
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound);
@@ -70,10 +71,10 @@ public static class KernelExportEndpoints
             .WithName("KernelExportEnrollmentCasebook")
             .WithSummary("Streams a participant casebook with revisions, queries, verifications, attestations and SHA-256 digests.")
             .WithDescription("Streams JSON, CDISC ODM v1.3.2 XML, printable HTML, or certified PDF (%PDF-1.7) for one enrollment at as_of(valid_at, known_at), masking unauthorized or blinded content under K-AUTH-4.")
-            .Produces<KernelCasebookResponse>(StatusCodes.Status200OK, "application/json")
-            .Produces(StatusCodes.Status200OK, contentType: "application/xml")
-            .Produces(StatusCodes.Status200OK, contentType: "text/html")
-            .Produces(StatusCodes.Status200OK, contentType: "application/pdf")
+            .WithIdempotencyKeyHeader(
+                required: false,
+                description: "Optional caller-supplied idempotency key recorded on the ExportEnrollmentCasebook audit command; when omitted, the kernel generates a deterministic v7 export key.")
+            .Produces<KernelCasebookResponse>(StatusCodes.Status200OK, "application/json", "application/xml", "text/html", "application/pdf")
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound);
@@ -896,6 +897,45 @@ public static class KernelExportEndpoints
         return chars.Length == 0 ? "export" : new string(chars);
     }
 }
+
+/// <summary>Source system metadata block in a CDISC Dataset-JSON v1.1.0 study export.</summary>
+/// <param name="Name">Producer component name.</param>
+/// <param name="Version">Producer semantic version.</param>
+public sealed record KernelDatasetJsonSourceSystem(
+    [property: JsonPropertyName("name")] string Name,
+    [property: JsonPropertyName("version")] string Version);
+
+/// <summary>Bitemporal cut coordinates recorded on a CDISC Dataset-JSON v1.1.0 study export.</summary>
+/// <param name="ValidAt">Clinical validity cut timestamp.</param>
+/// <param name="KnownAt">System knowledge cut timestamp.</param>
+/// <param name="LockFilter">Effective lock filter applied to exported observations.</param>
+public sealed record KernelDatasetJsonAsOf(
+    [property: JsonPropertyName("valid_at")] DateTimeOffset ValidAt,
+    [property: JsonPropertyName("known_at")] DateTimeOffset KnownAt,
+    [property: JsonPropertyName("lock_filter")] string LockFilter);
+
+/// <summary>CDISC Dataset-JSON v1.1.0 envelope streamed when <c>format=dataset_json</c> is requested.</summary>
+/// <param name="DatasetJsonCreationDateTime">Creation timestamp of the exported Dataset-JSON payload.</param>
+/// <param name="DatasetJsonVersion">Dataset-JSON specification version (<c>1.1.0</c>).</param>
+/// <param name="FileOid">Unique file OID identifying the study and knowledge cut.</param>
+/// <param name="Originator">Originating clinical platform.</param>
+/// <param name="SourceSystem">Producer component and version metadata.</param>
+/// <param name="StudyOid">Study protocol code.</param>
+/// <param name="MetaDataVersionOid">Protocol metadata version OID.</param>
+/// <param name="MetaDataRef">Relative URI to the study's protocol version catalog.</param>
+/// <param name="AsOf">Bitemporal cut and lock filter applied to the export.</param>
+/// <param name="ItemGroupData">Keyed CDISC Dataset-JSON item groups projected from kernel observations.</param>
+public sealed record KernelDatasetJsonExportResponse(
+    [property: JsonPropertyName("datasetJSONCreationDateTime")] DateTimeOffset DatasetJsonCreationDateTime,
+    [property: JsonPropertyName("datasetJSONVersion")] string DatasetJsonVersion,
+    [property: JsonPropertyName("fileOID")] string FileOid,
+    [property: JsonPropertyName("originator")] string Originator,
+    [property: JsonPropertyName("sourceSystem")] KernelDatasetJsonSourceSystem SourceSystem,
+    [property: JsonPropertyName("studyOID")] string StudyOid,
+    [property: JsonPropertyName("metaDataVersionOID")] string MetaDataVersionOid,
+    [property: JsonPropertyName("metaDataRef")] string MetaDataRef,
+    [property: JsonPropertyName("asOf")] KernelDatasetJsonAsOf AsOf,
+    [property: JsonPropertyName("itemGroupData")] IReadOnlyDictionary<string, object?> ItemGroupData);
 
 internal enum StudyExportFormat
 {

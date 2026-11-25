@@ -47,6 +47,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
+    /** Ingests a DICOM instance via STOW-RS with PS3.15 de-identification and SHA-256 certificate generation. */
     post: operations["StowRsStoreInstances"];
     delete?: never;
     options?: never;
@@ -63,6 +64,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
+    /** Ingests a multi-file DICOM study folder in batch with PS3.15 de-identification. */
     post: operations["BatchIngestStudyFolder"];
     delete?: never;
     options?: never;
@@ -77,6 +79,7 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
+    /** Retrieves WADO-RS study, series, and de-identified instance metadata by Study Instance UID. */
     get: operations["WadoRsGetStudy"];
     put?: never;
     post?: never;
@@ -93,6 +96,7 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
+    /** Streams WADO-RS binary pixel frame bytes for a de-identified DICOM instance. */
     get: operations["WadoRsGetInstanceFrames"];
     put?: never;
     post?: never;
@@ -109,6 +113,7 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
+    /** Retrieves a DICOM PS3.15 de-identification audit certificate by certificate ID. */
     get: operations["GetDeidCertificate"];
     put?: never;
     post?: never;
@@ -127,6 +132,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
+    /** Submits dual-reader RECIST assessments and evaluates discordance for adjudication. */
     post: operations["SubmitOrEvaluateAdjudicationSession"];
     delete?: never;
     options?: never;
@@ -141,6 +147,7 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
+    /** Retrieves an imaging adjudication session and reader assessments by session ID. */
     get: operations["GetImagingAdjudicationSession"];
     put?: never;
     post?: never;
@@ -159,6 +166,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
+    /** Records the adjudication chair's binding consensus response and rationale for a discordant session. */
     post: operations["ChairAdjudicateImagingSession"];
     delete?: never;
     options?: never;
@@ -175,6 +183,10 @@ export interface paths {
     };
     get?: never;
     put?: never;
+    /**
+     * Requests automatic ROI lesion segmentation for a DICOM series (returns 501 Not Implemented until a segmentation model is wired).
+     * @description HTTP 501 Not Implemented stub: no automatic segmentation model is wired, so this route validates study/site scope and returns RFC 7807 ProblemDetails (501) without storing synthetic measurements.
+     */
     post: operations["SegmentRoiSeed"];
     delete?: never;
     options?: never;
@@ -638,7 +650,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/octet-stream": string;
+        };
       };
       /** @description Forbidden */
       403: {
@@ -794,7 +808,10 @@ export interface operations {
   ChairAdjudicateImagingSession: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Single-use 60-second step-up electronic signature JWT issued by POST /api/v1/auth/signature-verification and bound to this exact action and semantic meaning (21 CFR 11.200(a)(1)). */
+        "X-Sig-Token"?: string;
+      };
       path: {
         sessionId: string;
       };

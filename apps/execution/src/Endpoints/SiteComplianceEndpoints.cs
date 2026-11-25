@@ -54,6 +54,7 @@ public static class SiteComplianceEndpoints
         app.MapPost("/api/v1/execution/webhooks/etmf", ApplyEtmfWebhookAsync)
             .WithTags("SiteCompliance")
             .WithName("EtmfCompletenessWebhook")
+            .WithSummary("Applies an eTMF site-activation document completeness webhook to the execution compliance cache.")
             .Produces<OperationEnvelopeResponse>(StatusCodes.Status200OK)
             .ProducesValidationProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
@@ -65,6 +66,7 @@ public static class SiteComplianceEndpoints
         app.MapPost("/api/v1/execution/sites/{siteId}/activate", ActivateSiteAsync)
             .WithTags("SiteCompliance")
             .WithName("ActivateSite")
+            .WithSummary("Evaluates eTMF readiness and activates a clinical trial site for subject enrollment.")
             .Produces<OperationEnvelopeResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
@@ -75,6 +77,7 @@ public static class SiteComplianceEndpoints
         app.MapGet("/api/v1/execution/sites/{siteId}/compliance-status", GetSiteComplianceStatusAsync)
             .WithTags("SiteCompliance")
             .WithName("GetSiteComplianceStatus")
+            .WithSummary("Retrieves the current eTMF document completeness and activation gate status for a site.")
             .Produces<ComplianceStatusResponse>(StatusCodes.Status200OK) // always 200 per §1.2 -- never 404
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .RequirePermission("site_compliance:read")

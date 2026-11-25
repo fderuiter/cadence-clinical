@@ -47,6 +47,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
+    /** Publishes a specific eConsent template version and records whether participant re-consent is required. */
     post: operations["PublishTemplateVersioned"];
     delete?: never;
     options?: never;
@@ -63,6 +64,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
+    /** Publishes the next version of an eConsent template for the specified protocol version. */
     post: operations["PublishTemplate"];
     delete?: never;
     options?: never;
@@ -79,6 +81,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
+    /** Captures a participant's 21 CFR Part 11 electronic consent signature against a versioned template. */
     post: operations["CaptureConsentVersioned"];
     delete?: never;
     options?: never;
@@ -95,6 +98,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
+    /** Captures a participant's 21 CFR Part 11 electronic consent signature against the latest published template. */
     post: operations["CaptureConsentLegacy"];
     delete?: never;
     options?: never;
@@ -290,7 +294,10 @@ export interface operations {
   CaptureConsentVersioned: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Single-use 60-second step-up electronic signature JWT issued by POST /api/v1/auth/signature-verification and bound to this exact action and semantic meaning (21 CFR 11.200(a)(1)). */
+        "X-Sig-Token"?: string;
+      };
       path: {
         template_id: string;
         version_index: number | string;
@@ -344,7 +351,10 @@ export interface operations {
   CaptureConsentLegacy: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Single-use 60-second step-up electronic signature JWT issued by POST /api/v1/auth/signature-verification and bound to this exact action and semantic meaning (21 CFR 11.200(a)(1)). */
+        "X-Sig-Token"?: string;
+      };
       path: {
         template_id: string;
       };

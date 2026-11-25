@@ -842,3 +842,73 @@
   border-radius: 8px;
   color: var(--vp-c-text-2);
 }
+
+/* API Reference Maturity Badges & Collapsible Operation/Schema Blocks (WCAG 2.2 AA tokens) */
+.VPBadge {
+  display: inline-block;
+  margin-left: 4px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  padding: 0 8px;
+  line-height: 18px;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.VPBadge.tip {
+  border-color: var(--semantic-badge-candidate-border);
+  color: var(--semantic-badge-candidate-text);
+  background-color: var(--semantic-badge-candidate-bg);
+}
+
+.VPBadge.warning {
+  border-color: var(--semantic-badge-warning-border);
+  color: var(--semantic-badge-warning-text);
+  background-color: var(--semantic-badge-warning-bg);
+}
+
+.VPBadge.danger {
+  border-color: var(--semantic-badge-error-border);
+  color: var(--semantic-badge-error-text);
+  background-color: var(--semantic-badge-error-bg);
+}
+
+.VPBadge.info {
+  border-color: var(--semantic-badge-draft-border);
+  color: var(--semantic-badge-draft-text);
+  background-color: var(--semantic-badge-draft-bg);
+}
+
+.VPSidebarItem .text .VPBadge {
+  margin-left: 6px;
+  padding: 0 6px;
+  line-height: 16px;
+  font-size: var(--font-size-xs);
+}
+
+.api-operation-details,
+.api-schema-details {
+  margin: 12px 0 20px;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 8px;
+  background-color: var(--vp-c-bg-soft);
+  padding: 0 16px;
+}
+
+.api-operation-details > summary,
+.api-schema-details > summary {
+  cursor: pointer;
+  padding: 10px 0;
+  font-weight: 600;
+  font-size: 0.92rem;
+  color: var(--vp-c-text-1);
+  user-select: none;
+}
+
+.api-operation-details[open] > summary,
+.api-schema-details[open] > summary {
+  border-bottom: 1px solid var(--vp-c-divider);
+  margin-bottom: 12px;
+}

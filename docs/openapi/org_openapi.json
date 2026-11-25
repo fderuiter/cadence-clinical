@@ -28,6 +28,10 @@
               }
             }
           }
+        },
+        "x-cadence-auth": {
+          "anonymous": true,
+          "mode": "Anonymous"
         }
       }
     },
@@ -49,6 +53,10 @@
               }
             }
           }
+        },
+        "x-cadence-auth": {
+          "anonymous": true,
+          "mode": "Anonymous"
         }
       }
     }
@@ -75,6 +83,14 @@
             ]
           }
         }
+      }
+    },
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "description": "Keycloak OIDC bearer JWT verified at the Cadence API Gateway and forwarded downstream as HMAC-SHA256 signed identity headers (ADR-2256).",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
       }
     }
   },

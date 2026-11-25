@@ -15,6 +15,57 @@ const { STAGED_ROOT_DOCS } = rootDocsModule;
 const REPO_URL = "https://github.com/fderuiter/cadence-clinical";
 const BRANCH = "main";
 const GENERATED_STATIC_ENDPOINTS = new Set([BLOG_FEED_PATH]);
+export const PUBLISHED_OPENAPI_SPEC_FILE_RE =
+  /^(?:[a-z0-9_]+_openapi|cdisc_openapi)\.json$/i;
+export const PUBLISHED_OPENAPI_ROUTE_RE =
+  /^\/openapi\/(?:[a-z0-9_]+_openapi|cdisc_openapi)\.json$/i;
+
+export function isPublishedOpenApiSpecName(fileName) {
+  return PUBLISHED_OPENAPI_SPEC_FILE_RE.test(fileName);
+}
+
+export function isPublishedOpenApiSpecPath(relToDocs) {
+  const normalized = String(relToDocs || "")
+    .replace(/\\/g, "/")
+    .replace(/^\/+/, "");
+  const match = normalized.match(/^openapi\/([^/]+)$/);
+  return Boolean(match && isPublishedOpenApiSpecName(match[1]));
+}
+
+/**
+ * Copies top-level `docs/openapi/*_openapi.json` and `cdisc_openapi.json` contracts
+ * (excluding `docs/openapi/legacy/`) into `<outDir>/openapi/` without staging files into `docs/`.
+ *
+ * @param {string} docsDir
+ * @param {string} outDir
+ * @returns {string[]}
+ */
+export function publishOpenApiSpecs(docsDir, outDir) {
+  const openApiSrcDir = path.join(docsDir, "openapi");
+  if (!fs.existsSync(openApiSrcDir)) {
+    return [];
+  }
+
+  const entries = fs
+    .readdirSync(openApiSrcDir, { withFileTypes: true })
+    .filter((entry) => entry.isFile() && isPublishedOpenApiSpecName(entry.name))
+    .map((entry) => entry.name)
+    .sort((a, b) => a.localeCompare(b));
+
+  if (entries.length === 0) {
+    return [];
+  }
+
+  const targetDir = path.join(outDir, "openapi");
+  fs.mkdirSync(targetDir, { recursive: true });
+  for (const fileName of entries) {
+    fs.copyFileSync(
+      path.join(openApiSrcDir, fileName),
+      path.join(targetDir, fileName)
+    );
+  }
+  return entries;
+}
 
 export { EXCLUDED_PORTAL_DOCS };
 
@@ -562,6 +613,9 @@ export function repoLinksPlugin(
         if (resolution.rewrittenHref) {
           token.attrSet("href", resolution.rewrittenHref);
         }
+        if (resolution.isStaticAsset && !token.attrGet("target")) {
+          token.attrSet("target", "_blank");
+        }
 
         const fragment = decodeAnchorFragment(resolution.anchor);
         if (!fragment) continue;
@@ -631,12 +685,17 @@ function resolveLinkTarget(href, pageDir, docsDir, repoRoot, currentFile = "") {
   }
 
   if (href.startsWith("/")) {
-    if (isCohostedSubpathLink(href)) {
+    const cleanRootHref = splitAnchor(href)[0].split("?")[0];
+    if (
+      isCohostedSubpathLink(href) ||
+      PUBLISHED_OPENAPI_ROUTE_RE.test(cleanRootHref)
+    ) {
       return {
         rewrittenHref: null,
         portalTargetFile: null,
         anchor: "",
         samePage: false,
+        isStaticAsset: PUBLISHED_OPENAPI_ROUTE_RE.test(cleanRootHref),
       };
     }
     const [cleanRootPath, rawAnchor] = splitAnchor(href);
@@ -719,6 +778,16 @@ function resolveLinkTarget(href, pageDir, docsDir, repoRoot, currentFile = "") {
       };
     }
     if (exists && !isDir && !/\.(md|html)$/i.test(absolute)) {
+      const normalizedRelToDocs = relToDocs.replace(/\\/g, "/");
+      if (isPublishedOpenApiSpecPath(normalizedRelToDocs)) {
+        return {
+          rewrittenHref: `/${normalizedRelToDocs}${anchor}`,
+          portalTargetFile: null,
+          anchor: "",
+          samePage: false,
+          isStaticAsset: true,
+        };
+      }
       return {
         rewrittenHref: `${REPO_URL}/blob/${BRANCH}/${relToRepo}${anchor}`,
         portalTargetFile: null,
@@ -871,6 +940,14 @@ export function assertThemeLinksExist(themeConfig, docsDir, options = {}) {
         validatedLinks.add(link);
         const [cleanLink, rawAnchor] = splitAnchor(link);
         if (isGeneratedStaticEndpoint(cleanLink, siteBase)) {
+          visit(item.items);
+          continue;
+        }
+        if (PUBLISHED_OPENAPI_ROUTE_RE.test(cleanLink)) {
+          const specFile = path.join(docsDir, cleanLink.replace(/^\/+/, ""));
+          if (!fs.existsSync(specFile)) {
+            missingPages.push(link);
+          }
           visit(item.items);
           continue;
         }

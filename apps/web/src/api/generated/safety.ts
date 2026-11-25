@@ -133,6 +133,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
+    /** Compiles an aggregate periodic safety report with patient-years exposure and MedDRA cross-tabulation. */
     post: operations["CompilePeriodicReport"];
     delete?: never;
     options?: never;
@@ -149,6 +150,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
+    /** Signs and locks a periodic safety report with a step-up signature token and reason for change. */
     post: operations["ApprovePeriodicReport"];
     delete?: never;
     options?: never;
@@ -163,7 +165,9 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
+    /** Retrieves a periodic safety report record by identifier. */
     get: operations["GetPeriodicReportById"];
+    /** Updates a draft periodic safety report record; returns 409 Conflict when locked. */
     put: operations["UpdatePeriodicReport"];
     post?: never;
     delete?: never;
@@ -179,6 +183,7 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
+    /** Lists periodic safety report records within the caller's study scope. */
     get: operations["ListPeriodicReports"];
     put?: never;
     post?: never;
@@ -539,7 +544,10 @@ export interface operations {
   ApproveDsurReport: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Single-use 60-second step-up electronic signature JWT issued by POST /api/v1/auth/signature-verification and bound to this exact action and semantic meaning (21 CFR 11.200(a)(1)). */
+        "X-Sig-Token"?: string;
+      };
       path: {
         id: string;
       };
@@ -737,19 +745,51 @@ export interface operations {
       };
     };
     responses: {
-      /** @description OK */
-      200: {
+      /** @description Created */
+      201: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["Safety_PeriodicSafetyReportRecord"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Safety_ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Safety_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Safety_ProblemDetails"];
+        };
       };
     };
   };
   ApprovePeriodicReport: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Single-use 60-second step-up electronic signature JWT issued by POST /api/v1/auth/signature-verification and bound to this exact action and semantic meaning (21 CFR 11.200(a)(1)). */
+        "X-Sig-Token"?: string;
+      };
       path: {
         id: string;
       };
@@ -837,7 +877,27 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["Safety_PeriodicSafetyReportRecord"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Safety_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Safety_ProblemDetails"];
+        };
       };
     };
   };
@@ -861,7 +921,54 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["Safety_PeriodicSafetyReportRecord"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Safety_ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Safety_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Safety_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Safety_ProblemDetails"];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Safety_ProblemDetails"];
+        };
       };
     };
   };
@@ -879,7 +986,18 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["Safety_PeriodicSafetyReportRecord"][];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Safety_ProblemDetails"];
+        };
       };
     };
   };

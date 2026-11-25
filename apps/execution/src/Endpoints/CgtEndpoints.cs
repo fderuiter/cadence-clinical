@@ -66,6 +66,11 @@ public static class CgtEndpoints
                 return Results.BadRequest(new { detail = ex.Message });
             }
         })
+        .WithName("InitializeCgtApheresis")
+        .WithSummary("Initializes a cell and gene therapy chain of custody at apheresis collection with ISBT-128 DIN validation.")
+        .Produces<CgtChainOfCustodyResponse>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status403Forbidden)
         .RequirePermission("cgt_chain_of_custody:write").RequireCallerStudyAndSiteScope()
         .RequireChangeReasonHeader();
 
@@ -104,6 +109,11 @@ public static class CgtEndpoints
                 return Results.NotFound(new { detail = ex.Message });
             }
         })
+        .WithName("RecordCgtMilestone")
+        .WithSummary("Records a tamper-evident manufacturing or cold-chain logistics milestone on a CGT chain of custody.")
+        .Produces<CgtChainOfCustodyResponse>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status403Forbidden)
+        .ProducesProblem(StatusCodes.Status404NotFound)
         .RequirePermission("cgt_chain_of_custody:write").RequireCallerStudyScope()
         .RequireChangeReasonHeader();
 
@@ -142,6 +152,11 @@ public static class CgtEndpoints
                 return Results.NotFound(new { detail = ex.Message });
             }
         })
+        .WithName("BindCgtManufacturingBatch")
+        .WithSummary("Binds a finished autologous manufacturing lot and SEC/expiry metadata to a chain of custody.")
+        .Produces<CgtChainOfCustodyResponse>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status403Forbidden)
+        .ProducesProblem(StatusCodes.Status404NotFound)
         .RequirePermission("cgt_chain_of_custody:write").RequireCallerStudyScope()
         .RequireChangeReasonHeader();
 
@@ -201,14 +216,19 @@ public static class CgtEndpoints
                 return Results.BadRequest(new { detail = ex.Message });
             }
         })
+        .WithName("VerifyCgtBedside")
+        .WithSummary("Performs dual-operator bedside barcode verification prior to cell therapy infusion.")
+        .Produces<CgtBedsideVerificationResponse>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
+        .ProducesProblem(StatusCodes.Status403Forbidden)
+        .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
         .RequirePermission("cgt_chain_of_custody:write").RequireCallerStudyAndSiteScope()
         .RequireElectronicSignatureWhen(
             RequiresHeaderStepUpForBedsideVerify,
             ResolveBedsideVerifySemanticAction,
             http => http.Request.Path.Value ?? string.Empty)
-        .RequireChangeReasonHeader()
-        .ProducesProblem(StatusCodes.Status401Unauthorized)
-        .ProducesProblem(StatusCodes.Status403Forbidden);
+        .RequireChangeReasonHeader();
 
         group.MapPost("/infuse", async (
             CgtInfusionExecuteRequest request,
@@ -262,9 +282,14 @@ public static class CgtEndpoints
                 return Results.BadRequest(new { detail = ex.Message });
             }
         })
+        .WithName("ExecuteCgtInfusion")
+        .WithSummary("Records autologous cell therapy administration following verified bedside identity match.")
+        .Produces<CgtChainOfCustodyResponse>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status403Forbidden)
+        .ProducesProblem(StatusCodes.Status404NotFound)
         .RequirePermission("cgt_chain_of_custody:write").RequireCallerStudyAndSiteScope()
-        .RequireChangeReasonHeader()
-        .ProducesProblem(StatusCodes.Status403Forbidden);
+        .RequireChangeReasonHeader();
 
         group.MapPost("/returns", async (
             CgtVialReturnReconciliationRequest request,
@@ -298,6 +323,10 @@ public static class CgtEndpoints
             var result = await service.LogVialReturnAsync(request, callerUserId, ct);
             return Results.Ok(result);
         })
+        .WithName("LogCgtVialReturn")
+        .WithSummary("Logs post-infusion CGT bag or vial return accountability reconciliation.")
+        .Produces<CgtVialReturnReconciliationResponse>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status403Forbidden)
         .RequirePermission("cgt_chain_of_custody:write").RequireCallerStudyAndSiteScope()
         .RequireChangeReasonHeader();
 
@@ -353,14 +382,18 @@ public static class CgtEndpoints
                 return ElectronicSignatureEndpointFilter.ReauthenticationRequired();
             }
         })
+        .WithName("CreateCgtDestructionCertificate")
+        .WithSummary("Generates a dual-witness CGT biohazard destruction certificate.")
+        .Produces<CgtDestructionCertificateResponse>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
+        .ProducesProblem(StatusCodes.Status403Forbidden)
+        .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
         .RequirePermission("cgt_chain_of_custody:write").RequireCallerStudyAndSiteScope()
         .RequireElectronicSignatureWhen(
             RequiresHeaderStepUpForDestructionCertificate,
             ResolveDestructionCertificateSemanticAction,
             http => http.Request.Path.Value ?? string.Empty)
-        .RequireChangeReasonHeader()
-        .ProducesProblem(StatusCodes.Status401Unauthorized)
-        .ProducesProblem(StatusCodes.Status403Forbidden);
+        .RequireChangeReasonHeader();
 
         group.MapPost("/verify-barcode", (
             CgtBarcodeVerifyRequest request,
@@ -387,6 +420,10 @@ public static class CgtEndpoints
 
             return Results.Ok(result);
         })
+        .WithName("VerifyCgtBarcode")
+        .WithSummary("Parses and validates an ISBT-128 or GS1 CGT label barcode within the caller's clinical scope.")
+        .Produces<CgtBarcodeVerifyResponse>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status403Forbidden)
         .RequirePermission("cgt_chain_of_custody:read").RequireCallerStudyAndSiteScope();
 
         group.MapGet("/chain-of-custody/{studyId}/{subjectId}", async (
@@ -414,6 +451,10 @@ public static class CgtEndpoints
 
             return Results.Ok(result);
         })
+        .WithName("GetCgtFullTraceability")
+        .WithSummary("Retrieves end-to-end vein-to-vein CGT chain-of-custody traceability for a study subject.")
+        .Produces<CgtFullTraceabilityResponse>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status403Forbidden)
         .RequirePermission("cgt_chain_of_custody:read")
         .RequireStudyScope("studyId");
 
@@ -431,6 +472,10 @@ public static class CgtEndpoints
             var result = await service.ListDestructionCertificatesAsync(studyId, ct);
             return Results.Ok(ClinicalScopeGuard.ApplyFilters(result, null, siteFilter, x => x.StudyId, x => x.SiteId).ToList());
         })
+        .WithName("ListCgtDestructionCertificates")
+        .WithSummary("Lists CGT biohazard destruction certificates for a study within the caller's site scope.")
+        .Produces<System.Collections.Generic.List<CgtDestructionCertificateResponse>>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status403Forbidden)
         .RequirePermission("cgt_chain_of_custody:read")
         .RequireStudyScope("studyId");
 
@@ -448,6 +493,10 @@ public static class CgtEndpoints
             var result = await service.ListVialReconciliationsAsync(studyId, ct);
             return Results.Ok(ClinicalScopeGuard.ApplyFilters(result, null, siteFilter, x => x.StudyId, x => x.SiteId).ToList());
         })
+        .WithName("ListCgtVialReconciliations")
+        .WithSummary("Lists CGT vial and bag return accountability reconciliations for a study.")
+        .Produces<System.Collections.Generic.List<CgtVialReturnReconciliationResponse>>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status403Forbidden)
         .RequirePermission("cgt_chain_of_custody:read")
         .RequireStudyScope("studyId");
 

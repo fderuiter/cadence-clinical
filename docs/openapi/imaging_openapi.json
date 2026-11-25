@@ -28,6 +28,10 @@
               }
             }
           }
+        },
+        "x-cadence-auth": {
+          "anonymous": true,
+          "mode": "Anonymous"
         }
       }
     },
@@ -49,6 +53,10 @@
               }
             }
           }
+        },
+        "x-cadence-auth": {
+          "anonymous": true,
+          "mode": "Anonymous"
         }
       }
     },
@@ -57,6 +65,7 @@
         "tags": [
           "DICOMweb Integration"
         ],
+        "summary": "Ingests a DICOM instance via STOW-RS with PS3.15 de-identification and SHA-256 certificate generation.",
         "operationId": "StowRsStoreInstances",
         "responses": {
           "403": {
@@ -99,7 +108,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "imaging_study:upload"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       }
     },
     "/api/v1/imaging/studies/batch": {
@@ -107,6 +131,7 @@
         "tags": [
           "DICOMweb Integration"
         ],
+        "summary": "Ingests a multi-file DICOM study folder in batch with PS3.15 de-identification.",
         "operationId": "BatchIngestStudyFolder",
         "responses": {
           "403": {
@@ -149,7 +174,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "imaging_study:upload"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       }
     },
     "/api/v1/imaging/studies/{studyUid}": {
@@ -157,6 +197,7 @@
         "tags": [
           "DICOMweb Integration"
         ],
+        "summary": "Retrieves WADO-RS study, series, and de-identified instance metadata by Study Instance UID.",
         "operationId": "WadoRsGetStudy",
         "parameters": [
           {
@@ -199,7 +240,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "imaging_study:read"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       }
     },
     "/api/v1/imaging/studies/{studyUid}/series/{seriesUid}/instances/{instanceUid}/frames/{frameList}": {
@@ -207,6 +263,7 @@
         "tags": [
           "DICOMweb Integration"
         ],
+        "summary": "Streams WADO-RS binary pixel frame bytes for a de-identified DICOM instance.",
         "operationId": "WadoRsGetInstanceFrames",
         "parameters": [
           {
@@ -254,7 +311,15 @@
             }
           },
           "200": {
-            "description": "OK"
+            "description": "OK",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
           },
           "404": {
             "description": "Not Found",
@@ -276,7 +341,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "imaging_study:read"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       }
     },
     "/api/v1/imaging/certificates/{certificateId}": {
@@ -284,6 +364,7 @@
         "tags": [
           "DICOMweb Integration"
         ],
+        "summary": "Retrieves a DICOM PS3.15 de-identification audit certificate by certificate ID.",
         "operationId": "GetDeidCertificate",
         "parameters": [
           {
@@ -326,7 +407,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "imaging_study:read"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       }
     },
     "/api/v1/imaging/adjudications": {
@@ -334,6 +430,7 @@
         "tags": [
           "Imaging Adjudication"
         ],
+        "summary": "Submits dual-reader RECIST assessments and evaluates discordance for adjudication.",
         "operationId": "SubmitOrEvaluateAdjudicationSession",
         "requestBody": {
           "content": {
@@ -376,7 +473,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "imaging_adjudication:submit"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       }
     },
     "/api/v1/imaging/adjudications/{sessionId}": {
@@ -384,6 +496,7 @@
         "tags": [
           "Imaging Adjudication"
         ],
+        "summary": "Retrieves an imaging adjudication session and reader assessments by session ID.",
         "operationId": "GetImagingAdjudicationSession",
         "parameters": [
           {
@@ -426,7 +539,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "imaging_adjudication:read"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       }
     },
     "/api/v1/imaging/adjudications/{sessionId}/chair-adjudicate": {
@@ -434,6 +562,7 @@
         "tags": [
           "Imaging Adjudication"
         ],
+        "summary": "Records the adjudication chair\u0027s binding consensus response and rationale for a discordant session.",
         "operationId": "ChairAdjudicateImagingSession",
         "parameters": [
           {
@@ -441,6 +570,16 @@
             "in": "path",
             "required": true,
             "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Sig-Token",
+            "in": "header",
+            "description": "Single-use 60-second step-up electronic signature JWT issued by POST /api/v1/auth/signature-verification and bound to this exact action and semantic meaning (21 CFR 11.200(a)(1)).",
+            "required": true,
+            "schema": {
+              "minLength": 1,
               "type": "string"
             }
           }
@@ -516,7 +655,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "imaging_adjudication:adjudicate"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       }
     },
     "/api/v1/imaging/studies/{studyUid}/series/{seriesUid}/segment": {
@@ -524,6 +678,8 @@
         "tags": [
           "Imaging Segmentation"
         ],
+        "summary": "Requests automatic ROI lesion segmentation for a DICOM series (returns 501 Not Implemented until a segmentation model is wired).",
+        "description": "HTTP 501 Not Implemented stub: no automatic segmentation model is wired, so this route validates study/site scope and returns RFC 7807 ProblemDetails (501) without storing synthetic measurements.",
         "operationId": "SegmentRoiSeed",
         "parameters": [
           {
@@ -594,7 +750,22 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "x-cadence-auth": {
+          "anonymous": false,
+          "mode": "Permission"
+        },
+        "x-cadence-permissions": [
+          "imaging_adjudication:submit"
+        ],
+        "x-cadence-scopes": [
+          "CallerStudyAndSite"
+        ]
       }
     }
   },
@@ -1625,6 +1796,14 @@
             "default": "RECIST_1_1"
           }
         }
+      }
+    },
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "description": "Keycloak OIDC bearer JWT verified at the Cadence API Gateway and forwarded downstream as HMAC-SHA256 signed identity headers (ADR-2256).",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
       }
     }
   },

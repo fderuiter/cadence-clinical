@@ -15,6 +15,7 @@ import {
   extractMarkdownAnchors,
   githubSlugify,
   mermaidFencePlugin,
+  publishOpenApiSpecs,
   repoLinksPlugin,
   toRepoUrl,
   vitepressSlugify,
@@ -23,6 +24,7 @@ import { createRequire } from "module";
 import rootDocsModule from "./rootDocs.cjs";
 import {
   buildPortalSearchCatalog,
+  loadServiceContractMaturity,
   parseDocumentationIndex,
   synthesizeSidebarFromIndex,
   toSidebarLink,
@@ -77,7 +79,7 @@ describe("VitePress navigation synthesis and link/anchor plugins", () => {
     }
   });
 
-  it("includes all 82 active non-ADR pages from docs/DOCUMENTATION_INDEX.md across route-scoped sidebars", () => {
+  it("includes all 83 active non-ADR pages from docs/DOCUMENTATION_INDEX.md across route-scoped sidebars", () => {
     const indexContent = fs.readFileSync(indexPath, "utf-8");
     const parsedEntries = parseDocumentationIndex(indexContent, {
       docsDir,
@@ -98,7 +100,7 @@ describe("VitePress navigation synthesis and link/anchor plugins", () => {
         .map((entry) => entry.link.split("#")[0])
     );
 
-    expect(activeDocsAndHomeRoutes.size).toBe(82);
+    expect(activeDocsAndHomeRoutes.size).toBe(83);
 
     const allActiveNonAdrPortalRoutes = new Set(
       parsedEntries
@@ -112,8 +114,8 @@ describe("VitePress navigation synthesis and link/anchor plugins", () => {
         .map((entry) => entry.link.split("#")[0])
     );
 
-    // 82 active docs/ + home pages plus the 7 additional staged root guides/policies = 89 portal pages
-    expect(allActiveNonAdrPortalRoutes.size).toBe(89);
+    // 83 active docs/ + home pages plus the 7 additional staged root guides/policies = 90 portal pages
+    expect(allActiveNonAdrPortalRoutes.size).toBe(90);
 
     const sidebar = synthesizeSidebarFromIndex(indexPath, {
       docsDir,
@@ -138,6 +140,7 @@ describe("VitePress navigation synthesis and link/anchor plugins", () => {
     expect(sidebarLinks.has("/CONTRIBUTING")).toBe(true);
     expect(sidebarLinks.has("/SECURITY")).toBe(true);
     expect(sidebarLinks.has("/SUPPORT")).toBe(true);
+    expect(sidebarLinks.has("/api/gateway")).toBe(true);
     expect(sidebarLinks.has("/api/kernel")).toBe(true);
     expect(sidebarLinks.has("/api/execution_forms")).toBe(true);
     expect(sidebarLinks.has("/api/intelligence")).toBe(true);
@@ -274,6 +277,84 @@ describe("VitePress navigation synthesis and link/anchor plugins", () => {
     expect(archiveLinks.has("/schema/kernel")).toBe(false);
     expect(archiveLinks.has("/adr/2023-01-01-neo4j-graph-database")).toBe(
       false
+    );
+
+    const maturity = loadServiceContractMaturity(repoRoot);
+    expect(maturity.get("gateway")).toBe("Active");
+    expect(maturity.get("kernel")).toBe("Active");
+    expect(maturity.get("designer")).toBe("Scaffold");
+    expect(maturity.get("tickets")).toBe("Scaffold");
+
+    expect(apiGroup.items[0].text).toBe("REST API reference");
+    expect(apiGroup.items[0].badge).toBeUndefined();
+    const gatewayItem = apiGroup.items.find(
+      (item) => item.link === "/api/gateway"
+    );
+    const designerItem = apiGroup.items.find(
+      (item) => item.link === "/api/designer"
+    );
+    expect(gatewayItem?.badge).toEqual({ text: "Active", variant: "tip" });
+    expect(designerItem?.badge).toEqual({
+      text: "Scaffold",
+      variant: "warning",
+    });
+  });
+
+  it("publishes top-level OpenAPI specs as static /openapi/*.json portal assets while routing legacy specs to GitHub", async () => {
+    const tmpRepo = makeTempWorkspace();
+    const tmpDocs = path.join(tmpRepo, "docs");
+    const tmpApi = path.join(tmpDocs, "api");
+    const tmpOpenApi = path.join(tmpDocs, "openapi");
+    const tmpLegacy = path.join(tmpOpenApi, "legacy");
+    const tmpOut = path.join(tmpDocs, ".vitepress", "dist");
+    fs.mkdirSync(tmpApi, { recursive: true });
+    fs.mkdirSync(tmpLegacy, { recursive: true });
+
+    fs.writeFileSync(
+      path.join(tmpOpenApi, "gateway_openapi.json"),
+      '{"openapi":"3.1.1"}'
+    );
+    fs.writeFileSync(
+      path.join(tmpOpenApi, "cdisc_openapi.json"),
+      '{"openapi":"3.1.0"}'
+    );
+    fs.writeFileSync(path.join(tmpOpenApi, "README.md"), "# OpenAPI\n");
+    fs.writeFileSync(
+      path.join(tmpLegacy, "cdisc_openapi.json"),
+      '{"openapi":"3.0.0"}'
+    );
+
+    expect(
+      toRepoUrl("../openapi/gateway_openapi.json", tmpApi, tmpDocs, tmpRepo)
+    ).toBe("/openapi/gateway_openapi.json");
+    expect(toRepoUrl("cdisc_openapi.json", tmpOpenApi, tmpDocs, tmpRepo)).toBe(
+      "/openapi/cdisc_openapi.json"
+    );
+    expect(
+      toRepoUrl("legacy/cdisc_openapi.json", tmpOpenApi, tmpDocs, tmpRepo)
+    ).toBe(
+      "https://github.com/fderuiter/cadence-clinical/blob/main/docs/openapi/legacy/cdisc_openapi.json"
+    );
+
+    const published = publishOpenApiSpecs(tmpDocs, tmpOut);
+    expect(published).toEqual(["cdisc_openapi.json", "gateway_openapi.json"]);
+    expect(
+      fs.existsSync(path.join(tmpOut, "openapi", "gateway_openapi.json"))
+    ).toBe(true);
+    expect(
+      fs.existsSync(path.join(tmpOut, "openapi", "cdisc_openapi.json"))
+    ).toBe(true);
+    expect(fs.existsSync(path.join(tmpOut, "openapi", "legacy"))).toBe(false);
+
+    const md = await createMarkdownRenderer(tmpDocs);
+    md.use(repoLinksPlugin, { docsDir: tmpDocs, repoRoot: tmpRepo });
+    const rendered = md.render(
+      "Download [Gateway JSON](../openapi/gateway_openapi.json) or [Legacy](../openapi/legacy/cdisc_openapi.json).\n",
+      { relativePath: "api/gateway.md" }
+    );
+    expect(rendered).toContain('href="/openapi/gateway_openapi.json"');
+    expect(rendered).toContain(
+      'href="https://github.com/fderuiter/cadence-clinical/blob/main/docs/openapi/legacy/cdisc_openapi.json"'
     );
   });
 

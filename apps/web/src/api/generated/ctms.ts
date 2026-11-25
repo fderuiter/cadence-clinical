@@ -693,7 +693,10 @@ export interface operations {
       query: {
         templateName: string;
       };
-      header?: never;
+      header?: {
+        /** @description Single-use 60-second step-up electronic signature JWT issued by POST /api/v1/auth/signature-verification and bound to this exact action and semantic meaning (21 CFR 11.200(a)(1)). */
+        "X-Sig-Token"?: string;
+      };
       path?: never;
       cookie?: never;
     };
@@ -766,7 +769,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/pdf": string;
+        };
       };
       /** @description Forbidden */
       403: {
@@ -825,7 +830,10 @@ export interface operations {
   ScheduleMonitoringVisit: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Optional 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. */
+        "X-Change-Reason"?: string;
+      };
       path?: never;
       cookie?: never;
     };
@@ -867,7 +875,10 @@ export interface operations {
   CompleteMonitoringVisit: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Optional 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. */
+        "X-Change-Reason"?: string;
+      };
       path: {
         visit_id: string;
       };
@@ -920,7 +931,12 @@ export interface operations {
   SignOffMonitoringVisit: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Single-use 60-second step-up electronic signature JWT issued by POST /api/v1/auth/signature-verification and bound to this exact action and semantic meaning (21 CFR 11.200(a)(1)). */
+        "X-Sig-Token"?: string;
+        /** @description Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. */
+        "X-Change-Reason"?: string;
+      };
       path: {
         visit_id: string;
       };
@@ -1233,7 +1249,10 @@ export interface operations {
         country_code?: string;
       };
       header?: {
+        /** @description Optional 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. */
         "X-Change-Reason"?: string;
+        /** @description Single-use 60-second step-up electronic signature JWT issued by POST /api/v1/auth/signature-verification and bound to this exact action and semantic meaning (21 CFR 11.200(a)(1)). */
+        "X-Sig-Token"?: string;
       };
       path: {
         siteId: string;
@@ -1334,7 +1353,10 @@ export interface operations {
     parameters: {
       query?: never;
       header?: {
+        /** @description Optional 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. */
         "X-Change-Reason"?: string;
+        /** @description Single-use 60-second step-up electronic signature JWT issued by POST /api/v1/auth/signature-verification and bound to this exact action and semantic meaning (21 CFR 11.200(a)(1)). */
+        "X-Sig-Token"?: string;
       };
       path?: never;
       cookie?: never;
@@ -1503,7 +1525,10 @@ export interface operations {
       query?: {
         study_id?: string;
       };
-      header?: never;
+      header?: {
+        /** @description Single-use 60-second step-up electronic signature JWT issued by POST /api/v1/auth/signature-verification and bound to this exact action and semantic meaning (21 CFR 11.200(a)(1)). */
+        "X-Sig-Token"?: string;
+      };
       path?: never;
       cookie?: never;
     };
@@ -1618,7 +1643,10 @@ export interface operations {
       query?: {
         study_id?: string;
       };
-      header?: never;
+      header?: {
+        /** @description Single-use 60-second step-up electronic signature JWT issued by POST /api/v1/auth/signature-verification and bound to this exact action and semantic meaning (21 CFR 11.200(a)(1)). */
+        "X-Sig-Token"?: string;
+      };
       path: {
         site_id: string;
       };
@@ -1631,7 +1659,9 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/pdf": string;
+        };
       };
       /** @description Unauthorized */
       401: {

@@ -21,6 +21,8 @@ public static class ImagingSegmentationEndpoints
 
         group.MapPost("/{studyUid}/series/{seriesUid}/segment", SegmentRoiAsync)
             .WithName("SegmentRoiSeed")
+            .WithSummary("Requests automatic ROI lesion segmentation for a DICOM series (returns 501 Not Implemented until a segmentation model is wired).")
+            .WithDescription("HTTP 501 Not Implemented stub: no automatic segmentation model is wired, so this route validates study/site scope and returns RFC 7807 ProblemDetails (501) without storing synthetic measurements.")
             // Writing a measurement is a reader's act, not a read: the independent-review readers hold it (ADR-2516).
             .RequirePermission("imaging_adjudication:submit").RequireCallerStudyAndSiteScope()
             .ProducesProblem(StatusCodes.Status403Forbidden)

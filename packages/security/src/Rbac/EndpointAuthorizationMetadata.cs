@@ -56,3 +56,7 @@ public sealed record StudyScopeRouteParameter(string Name);
 
 /// <summary>Endpoint metadata naming the route value that holds the site id for <c>RequireSiteScope</c>.</summary>
 public sealed record SiteScopeRouteParameter(string Name);
+
+/// <summary>Explicit request header metadata projected into OpenAPI parameter contracts.</summary>
+public sealed record EndpointHeaderMetadata(string Name, bool Required, string Description, int? MaxLength = null);
+

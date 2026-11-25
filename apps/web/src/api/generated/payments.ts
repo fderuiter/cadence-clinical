@@ -626,6 +626,31 @@ export interface components {
       status: null | string;
       service: null | string;
     };
+    Payments_BatchBillingCompilationResponse: {
+      batch_execution_id: string;
+      study_id: string;
+      billing_cycle: string;
+      period_start: string;
+      period_end: string;
+      /** Format: int32 */
+      total_sites_processed: number | string;
+      /** Format: int32 */
+      successful_sites_count: number | string;
+      /** Format: int32 */
+      failed_sites_count: number | string;
+      /** Format: int32 */
+      total_invoices_generated: number | string;
+      /** Format: int32 */
+      total_payables_compiled: number | string;
+      /** Format: double */
+      total_gross_amount: number | string;
+      /** Format: double */
+      total_holdback_amount: number | string;
+      /** Format: double */
+      total_net_amount: number | string;
+      site_results: components["schemas"]["Payments_SiteBatchCompilationResult"][];
+      audit_logs: components["schemas"]["Payments_PaymentAuditLogDto"][];
+    };
     Payments_BatchBillingCycleCompilationRequest: {
       study_id: string;
       /** @default MONTHLY */
@@ -664,6 +689,52 @@ export interface components {
       idempotencyKey: null | string;
       disbursementType: null | string;
     };
+    Payments_DisburseStipendResponse: {
+      success: boolean;
+      id: string;
+      walletId: string;
+      subjectId: string;
+      /** Format: double */
+      amount: number | string;
+      /** Format: double */
+      newBalance: number | string;
+      currency: string;
+      status: string;
+      referenceNumber: string;
+      idempotencyKey: string;
+      /** Format: date-time */
+      dispatchedAt: string;
+    };
+    Payments_InvoiceLineItemDto: {
+      id: string;
+      invoice_id: string;
+      payable_id: null | string;
+      subject_id: string;
+      visit_code: string;
+      procedure_code: null | string;
+      procedure_name: null | string;
+      /** Format: double */
+      base_amount: number | string;
+      /** Format: double */
+      overhead_amount: number | string;
+      /** Format: double */
+      patient_stipend: number | string;
+      /** Format: double */
+      travel_reimbursement: number | string;
+      /** Format: double */
+      gross_amount: number | string;
+      /** Format: double */
+      withholding_rate: number | string;
+      /** Format: double */
+      withholding_amount: number | string;
+      /** Format: double */
+      net_amount: number | string;
+      currency: string;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: int32 */
+      version_index: number | string;
+    };
     Payments_IssueCardRequestDto: {
       /** @default RELOADABLE_DEBIT */
       cardType: null | string;
@@ -673,6 +744,83 @@ export interface components {
       imageBase64?: null | string;
       categoryHint?: null | string;
       filename?: null | string;
+    };
+    Payments_ParticipantDisbursement: {
+      id?: string;
+      walletId?: string;
+      subjectId?: string;
+      /** Format: double */
+      amount?: number | string;
+      disbursementType?: string;
+      referenceNumber?: string;
+      idempotencyKey?: null | string;
+      status?: string;
+      /** Format: date-time */
+      createdAt: string;
+      createdBy: string;
+      /** Format: int32 */
+      versionIndex?: number | string;
+    };
+    Payments_ParticipantExpenseClaim: {
+      id?: string;
+      walletId?: string;
+      subjectId?: string;
+      studyId?: string;
+      siteId?: string;
+      expenseDate?: string;
+      category?: string;
+      merchantName?: string;
+      /** Format: double */
+      grossAmount?: number | string;
+      /** Format: double */
+      taxDeduction?: number | string;
+      /** Format: double */
+      netAmount?: number | string;
+      status?: string;
+      receiptImageName?: null | string;
+      receiptOcrDataJson?: null | string;
+      idempotencyKey?: null | string;
+      reviewedBy?: null | string;
+      /** Format: date-time */
+      reviewedAt?: null | string;
+      reviewNotes?: null | string;
+      disbursementReference?: null | string;
+      /** Format: date-time */
+      createdAt: string;
+      createdBy: string;
+      /** Format: date-time */
+      updatedAt: string;
+      reasonForChange?: null | string;
+      /** Format: int32 */
+      versionIndex?: number | string;
+      isWalletCredited?: boolean;
+    };
+    Payments_ParticipantStipendRule: {
+      id?: string;
+      studyId?: string;
+      visitCode?: string;
+      visitName?: string;
+      procedureCode?: null | string;
+      /** Format: double */
+      amount?: number | string;
+      currency?: string;
+      requiresVerification?: boolean;
+      taxable?: boolean;
+      /** Format: double */
+      antiCoercionCap?: null | number | string;
+      /** Format: double */
+      autoDisbursementThreshold?: null | number | string;
+      isMilestone?: boolean;
+      milestoneCode?: null | string;
+      isActive?: boolean;
+      /** Format: date-time */
+      createdAt: string;
+      createdBy: string;
+      /** Format: date-time */
+      updatedAt: string;
+      reasonForChange?: null | string;
+      /** Format: int32 */
+      versionIndex?: number | string;
     };
     Payments_ParticipantStipendRuleCreateDto: {
       studyId: string;
@@ -695,6 +843,53 @@ export interface components {
       isMilestone: boolean;
       milestoneCode?: null | string;
     };
+    Payments_ParticipantTransaction: {
+      id?: string;
+      walletId?: string;
+      subjectId?: string;
+      studyId?: string;
+      transactionType?: string;
+      /** Format: double */
+      amount?: number | string;
+      /** Format: double */
+      balanceAfter?: number | string;
+      referenceId?: string;
+      idempotencyKey?: null | string;
+      description?: string;
+      /** Format: date-time */
+      createdAt: string;
+      createdBy: string;
+      /** Format: int32 */
+      versionIndex?: number | string;
+    };
+    Payments_PaymentAuditLog: {
+      id?: string;
+      entityType?: string;
+      entityId?: string;
+      action?: string;
+      previousStateJson?: null | string;
+      newStateJson?: null | string;
+      details?: null | string;
+      userId?: string;
+      userRoles?: string;
+      /** Format: date-time */
+      createdAt: string;
+      createdBy: string;
+      reasonForChange?: null | string;
+      /** Format: int32 */
+      versionIndex?: number | string;
+    };
+    Payments_PaymentAuditLogDto: {
+      id: string;
+      entity_type: string;
+      entity_id: string;
+      action: string;
+      user_id: string;
+      details: null | string;
+      /** Format: date-time */
+      created_at: string;
+      created_by: string;
+    };
     Payments_ProblemDetails: {
       type?: null | string;
       title?: null | string;
@@ -702,6 +897,24 @@ export interface components {
       status?: null | number | string;
       detail?: null | string;
       instance?: null | string;
+    };
+    Payments_ReceiptOcrExtractResponseDto: {
+      ocrReadable: boolean;
+      merchantName: string;
+      expenseDate: string;
+      /** Format: double */
+      grossAmount: number | string;
+      /** Format: double */
+      taxDeduction: number | string;
+      /** Format: double */
+      netAmount: number | string;
+      category: string;
+      /** Format: double */
+      confidenceScore: number | string;
+      rawText: string;
+      warning?: null | string;
+      ocrToken?: null | string;
+      receiptSha256?: null | string;
     };
     Payments_ReconcileInvoiceRequest: {
       payment_reference: string;
@@ -712,11 +925,89 @@ export interface components {
       payment_date?: null | string;
       notes?: null | string;
     };
+    Payments_RemittanceAdviceDto: {
+      id: string;
+      remittance_number: string;
+      invoice_id: string;
+      study_id: string;
+      site_id: string;
+      currency: string;
+      /** Format: double */
+      gross_amount: number | string;
+      /** Format: double */
+      overhead_amount: number | string;
+      /** Format: double */
+      holdback_amount: number | string;
+      /** Format: double */
+      net_amount: number | string;
+      pdf_sha256_hash: string;
+      is_sealed: boolean;
+      is_signed: boolean;
+      signed_by: null | string;
+      /** Format: date-time */
+      signed_at: null | string;
+      signer_role: null | string;
+      dispatch_status: string;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: int32 */
+      version_index: number | string;
+    };
     Payments_ReviewExpenseClaimRequestDto: {
       status: string;
       reviewNotes?: null | string;
       /** Format: double */
       adjustedAmount?: null | number | string;
+    };
+    Payments_SelfBillingInvoiceResponse: {
+      id: string;
+      invoice_number: string;
+      study_id: string;
+      site_id: string;
+      contract_id: string;
+      billing_cycle: string;
+      period_start: string;
+      period_end: string;
+      currency: string;
+      /** Format: double */
+      total_base_amount: number | string;
+      /** Format: double */
+      total_overhead_amount: number | string;
+      /** Format: double */
+      total_patient_stipend: number | string;
+      /** Format: double */
+      total_travel_reimbursement: number | string;
+      /** Format: double */
+      total_gross_amount: number | string;
+      /** Format: double */
+      total_holdback_amount: number | string;
+      /** Format: double */
+      total_net_amount: number | string;
+      /** Format: int32 */
+      payable_count: number | string;
+      status: string;
+      approved_by: null | string;
+      /** Format: date-time */
+      approved_at: null | string;
+      erp_system: null | string;
+      erp_reference_id: null | string;
+      erp_sync_status: string;
+      /** Format: date-time */
+      erp_synced_at: null | string;
+      reconciled_by: null | string;
+      /** Format: date-time */
+      reconciled_at: null | string;
+      reconciliation_reference: null | string;
+      reconciliation_notes: null | string;
+      /** Format: date-time */
+      created_at: string;
+      created_by: string;
+      reason_for_change: null | string;
+      /** Format: int32 */
+      version_index: number | string;
+      line_items: components["schemas"]["Payments_InvoiceLineItemDto"][];
+      remittance_advice:
+        null | components["schemas"]["Payments_RemittanceAdviceDto"];
     };
     Payments_SelfServiceDiaryStipendRequestDto: {
       diaryId?: null | string;
@@ -730,6 +1021,26 @@ export interface components {
       subjectId?: null | string;
       walletId?: null | string;
     };
+    Payments_SelfServiceDiaryStipendResponseDto: {
+      success: boolean;
+      status: string;
+      /** Format: double */
+      creditedAmount: number | string;
+      /** Format: double */
+      currentBalance: number | string;
+      /** Format: double */
+      lifetimeStipends: number | string;
+      walletId: string;
+      subjectId: string;
+      currency: string;
+      transactionId: null | string;
+      referenceNumber: null | string;
+      idempotencyKey: string;
+      reason?: null | string;
+      /** @default false */
+      requiresReview: boolean;
+      w9Status?: null | string;
+    };
     Payments_SelfServiceDisburseRequestDto: {
       /** @default DIRECT_ACH */
       disbursementType: null | string;
@@ -738,6 +1049,56 @@ export interface components {
       walletId?: null | string;
       subjectId?: null | string;
       idempotencyKey?: null | string;
+    };
+    Payments_SelfServiceDisburseResponseDto: {
+      id: string;
+      walletId: string;
+      subjectId: string;
+      /** Format: double */
+      amount: number | string;
+      /** Format: double */
+      currentBalance: number | string;
+      /** Format: double */
+      lifetimeDisbursements: number | string;
+      currency: string;
+      disbursementType: string;
+      destinationMask: string;
+      referenceNumber: string;
+      status: string;
+      /** Format: date-time */
+      createdAt: string;
+    };
+    Payments_SelfServiceExpenseClaimResponseDto: {
+      id: string;
+      walletId: string;
+      subjectId: string;
+      studyId: string;
+      siteId: string;
+      expenseDate: string;
+      category: string;
+      merchantName: string;
+      /** Format: double */
+      grossAmount: number | string;
+      /** Format: double */
+      taxDeduction: number | string;
+      /** Format: double */
+      netAmount: number | string;
+      status: string;
+      approvalDecision: string;
+      autoApproved: boolean;
+      disbursementReference: null | string;
+      reviewNotes: null | string;
+      receiptImageName: null | string;
+      /** Format: double */
+      walletCurrentBalance: number | string;
+      /** Format: double */
+      lifetimeStipends: number | string;
+      /** Format: double */
+      lifetimeReimbursements: number | string;
+      /** Format: double */
+      lifetimeDisbursements: number | string;
+      /** Format: date-time */
+      createdAt: string;
     };
     Payments_SelfServiceSubmitExpenseRequestDto: {
       category: string;
@@ -761,8 +1122,28 @@ export interface components {
       ocrToken?: null | string;
       receiptImageBase64?: null | string;
     };
+    Payments_SelfServiceWalletSummaryResponseDto: {
+      wallet: components["schemas"]["Payments_WalletResponse"];
+      recentTransactions: components["schemas"]["Payments_ParticipantTransaction"][];
+      expenseClaims: components["schemas"]["Payments_ParticipantExpenseClaim"][];
+    };
     Payments_SignRemittanceRequest: {
       signature_reason?: null | string;
+    };
+    Payments_SiteBatchCompilationResult: {
+      site_id: string;
+      success: boolean;
+      invoice_id: null | string;
+      invoice_number: null | string;
+      /** Format: int32 */
+      payable_count: number | string;
+      /** Format: double */
+      total_gross_amount: number | string;
+      /** Format: double */
+      total_holdback_amount: number | string;
+      /** Format: double */
+      total_net_amount: number | string;
+      error_message: null | string;
     };
     Payments_SubmitExpenseClaimRequestDto: {
       subjectId: string;
@@ -791,6 +1172,19 @@ export interface components {
       /** @default true */
       certifyAccurate: boolean;
     };
+    Payments_Tax1099StatusResponseDto: {
+      wallet_id: string;
+      subject_id: string;
+      /** Format: double */
+      taxable_ytd: number | string;
+      /** Format: double */
+      threshold_amount: number | string;
+      /** Format: double */
+      threshold_percentage: number | string;
+      is_1099_threshold_exceeded: boolean;
+      w9_status: string;
+      warning_level: string;
+    };
     Payments_VerifyW9RequestDto: {
       notes?: null | string;
     };
@@ -800,6 +1194,73 @@ export interface components {
       subjectId: string;
       visitCode: string;
       eventId: string;
+    };
+    Payments_VisitVerificationResponseDto: {
+      status: string;
+      /** Format: double */
+      amount: number | string;
+      /** Format: double */
+      currentBalance: number | string;
+      walletId: string;
+      transactionId: null | string;
+      eventId: string;
+      subjectId: string;
+      reason?: null | string;
+      /** @default false */
+      requiresReview: boolean;
+      w9Status?: null | string;
+    };
+    Payments_WalletBalanceInquiryResponseDto: {
+      wallet_id: string;
+      subject_id: string;
+      /** Format: double */
+      available_balance: number | string;
+      /** Format: double */
+      pending_claims_total: number | string;
+      /** Format: double */
+      lifetime_stipends: number | string;
+      /** Format: double */
+      lifetime_reimbursements: number | string;
+      /** Format: double */
+      lifetime_disbursements: number | string;
+      /** Format: double */
+      taxable_ytd: number | string;
+    };
+    Payments_WalletResponse: {
+      id: string;
+      subjectId: string;
+      studyId: string;
+      siteId: string;
+      /** Format: double */
+      currentBalance: number | string;
+      /** Format: double */
+      lifetimeStipends: number | string;
+      /** Format: double */
+      lifetimeReimbursements: number | string;
+      /** Format: double */
+      lifetimeDisbursements: number | string;
+      /** Format: double */
+      taxableYtd: number | string;
+      is1099ThresholdExceeded: boolean;
+      w9Status: string;
+      currency: string;
+      status: string;
+      virtualCardMask: null | string;
+      virtualCardExpiry: null | string;
+      achRoutingNumber: null | string;
+      achAccountMask: null | string;
+      achAccountHolder: null | string;
+      /** Format: double */
+      antiCoercionCap: null | number | string;
+      /** Format: double */
+      autoDisbursementThreshold: null | number | string;
+      /** Format: date-time */
+      updatedAt: string;
+      /** @default RELOADABLE_DEBIT */
+      cardType: string;
+      /** @default ACTIVE */
+      cardStatus: string;
+      achRoutingMask?: null | string;
     };
   };
   responses: never;
@@ -868,7 +1329,36 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["Payments_DisburseStipendResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
       };
     };
   };
@@ -890,7 +1380,36 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["Payments_DisburseStipendResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
       };
     };
   };
@@ -908,7 +1427,27 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["Payments_WalletResponse"][];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
       };
     };
   };
@@ -928,7 +1467,36 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["Payments_WalletResponse"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
       };
     };
   };
@@ -948,7 +1516,36 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["Payments_WalletResponse"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
       };
     };
   };
@@ -968,7 +1565,36 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["Payments_Tax1099StatusResponseDto"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
       };
     };
   };
@@ -988,7 +1614,36 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["Payments_WalletBalanceInquiryResponseDto"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
       };
     };
   };
@@ -1012,7 +1667,36 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["Payments_WalletResponse"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
       };
     };
   };
@@ -1036,7 +1720,45 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["Payments_WalletResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
       };
     };
   };
@@ -1060,7 +1782,45 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["Payments_WalletResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
       };
     };
   };
@@ -1084,7 +1844,54 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["Payments_ParticipantDisbursement"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
       };
     };
   };
@@ -1104,7 +1911,27 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["Payments_ParticipantStipendRule"][];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
       };
     };
   };
@@ -1126,7 +1953,36 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["Payments_ParticipantStipendRule"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Unprocessable Entity */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
       };
     };
   };
@@ -1148,7 +2004,36 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["Payments_VisitVerificationResponseDto"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
       };
     };
   };
@@ -1169,7 +2054,27 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["Payments_ParticipantExpenseClaim"][];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
       };
     };
   };
@@ -1191,7 +2096,36 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["Payments_ParticipantExpenseClaim"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
       };
     };
   };
@@ -1213,7 +2147,36 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["Payments_ReceiptOcrExtractResponseDto"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
       };
     };
   };
@@ -1237,7 +2200,54 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["Payments_ParticipantExpenseClaim"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
       };
     };
   };
@@ -1259,7 +2269,27 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["Payments_SelfServiceWalletSummaryResponseDto"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
       };
     };
   };
@@ -1281,7 +2311,36 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["Payments_ReceiptOcrExtractResponseDto"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
       };
     };
   };
@@ -1289,6 +2348,7 @@ export interface operations {
     parameters: {
       query?: never;
       header?: {
+        /** @description Optional caller-supplied idempotency key (max 255 characters) ensuring safe replay across retries. */
         "Idempotency-Key"?: string;
       };
       path?: never;
@@ -1305,7 +2365,36 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["Payments_SelfServiceExpenseClaimResponseDto"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
       };
     };
   };
@@ -1313,6 +2402,7 @@ export interface operations {
     parameters: {
       query?: never;
       header?: {
+        /** @description Optional caller-supplied idempotency key (max 255 characters) ensuring safe replay across retries. */
         "Idempotency-Key"?: string;
       };
       path?: never;
@@ -1329,14 +2419,55 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["Payments_SelfServiceDisburseResponseDto"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
       };
     };
   };
   CreditSelfDiaryStipend: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Optional caller-supplied idempotency key (max 255 characters) deduplicating participant diary stipend credits. */
+        "Idempotency-Key"?: string;
+      };
       path?: never;
       cookie?: never;
     };
@@ -1351,7 +2482,36 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["Payments_SelfServiceDiaryStipendResponseDto"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
       };
     };
   };
@@ -1372,7 +2532,27 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["Payments_ParticipantTransaction"][];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
       };
     };
   };
@@ -1393,7 +2573,27 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["Payments_ParticipantDisbursement"][];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
       };
     };
   };
@@ -1413,7 +2613,45 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["Payments_ParticipantDisbursement"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
       };
     };
   };
@@ -1433,7 +2671,27 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["Payments_PaymentAuditLog"][];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
       };
     };
   };
@@ -1458,7 +2716,27 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["Payments_SelfBillingInvoiceResponse"][];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
       };
     };
   };
@@ -1478,7 +2756,36 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["Payments_SelfBillingInvoiceResponse"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
       };
     };
   };
@@ -1495,12 +2802,41 @@ export interface operations {
       };
     };
     responses: {
-      /** @description OK */
-      200: {
+      /** @description Created */
+      201: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["Payments_SelfBillingInvoiceResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
       };
     };
   };
@@ -1517,19 +2853,51 @@ export interface operations {
       };
     };
     responses: {
-      /** @description OK */
-      200: {
+      /** @description Created */
+      201: {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["Payments_BatchBillingCompilationResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
       };
     };
   };
   ApproveInvoice: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Single-use 60-second step-up electronic signature JWT issued by POST /api/v1/auth/signature-verification and bound to this exact action and semantic meaning (21 CFR 11.200(a)(1)). */
+        "X-Sig-Token"?: string;
+      };
       path: {
         id: string;
       };
@@ -1537,8 +2905,44 @@ export interface operations {
     };
     requestBody?: never;
     responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Payments_SelfBillingInvoiceResponse"];
+        };
+      };
       /** @description Unauthorized */
       401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Conflict */
+      409: {
         headers: {
           [name: string]: unknown;
         };
@@ -1551,7 +2955,10 @@ export interface operations {
   SignRemittanceAdvice: {
     parameters: {
       query?: never;
-      header?: never;
+      header?: {
+        /** @description Single-use 60-second step-up electronic signature JWT issued by POST /api/v1/auth/signature-verification and bound to this exact action and semantic meaning (21 CFR 11.200(a)(1)). */
+        "X-Sig-Token"?: string;
+      };
       path: {
         id: string;
       };
@@ -1563,8 +2970,44 @@ export interface operations {
       };
     };
     responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Payments_RemittanceAdviceDto"];
+        };
+      };
       /** @description Unauthorized */
       401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Conflict */
+      409: {
         headers: {
           [name: string]: unknown;
         };
@@ -1590,7 +3033,36 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/pdf": string;
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
       };
     };
   };
@@ -1614,7 +3086,54 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["Payments_SelfBillingInvoiceResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
       };
     };
   };
@@ -1636,7 +3155,45 @@ export interface operations {
         headers: {
           [name: string]: unknown;
         };
-        content?: never;
+        content: {
+          "application/json": components["schemas"]["Payments_SelfBillingInvoiceResponse"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Payments_ProblemDetails"];
+        };
       };
     };
   };
