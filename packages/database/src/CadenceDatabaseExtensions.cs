@@ -29,6 +29,9 @@ public static partial class CadenceDatabaseExtensions
     /// <summary>Connection string name used when a caller does not pass one (matches the Aspire AppHost's database resource).</summary>
     public const string DefaultConnectionName = "cadence";
 
+    /// <summary>Primary environment variable binding <c>ConnectionStrings:cadence</c> across runtime hosts and design-time tools.</summary>
+    public const string PrimaryConnectionStringEnvVar = "ConnectionStrings__cadence";
+
     /// <summary>Legacy flat configuration key still honoured after <c>ConnectionStrings:{name}</c>.</summary>
     public const string LegacyConnectionStringKey = "POSTGRES_CONNECTION_STRING";
 
@@ -267,26 +270,40 @@ public static partial class CadenceDatabaseExtensions
     /// <summary>
     /// Resolves the connection string for <c>IDesignTimeDbContextFactory</c> implementations (the
     /// <c>dotnet ef</c> tooling process, which has no host configuration): the value after
-    /// <see cref="DesignTimeConnectionArgument"/> in <paramref name="args"/>, otherwise the
-    /// <c>POSTGRES_CONNECTION_STRING</c> environment variable. Throws when neither is set rather than falling
-    /// back to a hardcoded credential (ADR-2260).
+    /// <see cref="DesignTimeConnectionArgument"/> in <paramref name="args"/>, then
+    /// <c>ConnectionStrings__cadence</c>, then <c>POSTGRES_CONNECTION_STRING</c>. Throws when none is set
+    /// rather than falling back to a hardcoded credential (ADR-2260).
     /// </summary>
-    public static string ResolveDesignTimeConnectionString(string[]? args = null)
+    public static string ResolveDesignTimeConnectionString(
+        string[]? args = null,
+        Func<string, string?>? getEnvironmentVariable = null)
     {
+        var readEnv = getEnvironmentVariable ?? Environment.GetEnvironmentVariable;
+
         if (args is not null)
         {
             int index = Array.IndexOf(args, DesignTimeConnectionArgument);
-            if (index >= 0 && index + 1 < args.Length && args[index + 1] is { Length: > 0 } fromArgs)
+            if (index >= 0 && index + 1 < args.Length && !string.IsNullOrWhiteSpace(args[index + 1]))
             {
-                return fromArgs;
+                return args[index + 1];
             }
         }
 
-        return Environment.GetEnvironmentVariable(LegacyConnectionStringKey) is { Length: > 0 } configured
-            ? configured
-            : throw new InvalidOperationException(
-                $"{LegacyConnectionStringKey} is not set. Export it, or pass {DesignTimeConnectionArgument} \"...\" " +
-                "after -- on the dotnet ef command line.");
+        if (readEnv(PrimaryConnectionStringEnvVar) is { Length: > 0 } primary &&
+            !string.IsNullOrWhiteSpace(primary))
+        {
+            return primary;
+        }
+
+        if (readEnv(LegacyConnectionStringKey) is { Length: > 0 } legacy &&
+            !string.IsNullOrWhiteSpace(legacy))
+        {
+            return legacy;
+        }
+
+        throw new InvalidOperationException(
+            $"No PostgreSQL connection string configured. Set {PrimaryConnectionStringEnvVar} or {LegacyConnectionStringKey}, " +
+            $"or pass {DesignTimeConnectionArgument} \"...\" after -- on the dotnet ef command line.");
     }
 
     /// <summary>

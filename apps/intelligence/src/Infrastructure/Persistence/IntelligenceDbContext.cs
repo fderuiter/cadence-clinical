@@ -1,3 +1,5 @@
+using System;
+
 using Cadence.Kernel;
 using Cadence.Kernel.Modules;
 using Cadence.Modules.Intelligence.Domain;
@@ -165,13 +167,22 @@ public sealed class IntelligenceDbContext(DbContextOptions<IntelligenceDbContext
     }
 }
 
-/// <summary>Builds the context for <c>dotnet ef</c>; the connection string is only used to pick the provider.</summary>
+/// <summary>
+/// Design-time-only factory for <c>dotnet ef</c>. Resolves <c>--connection</c>, <c>ConnectionStrings__cadence</c>,
+/// or <c>POSTGRES_CONNECTION_STRING</c> and fails closed when all three are omitted (ADR-2260).
+/// </summary>
 internal sealed class IntelligenceDbContextDesignTimeFactory : IDesignTimeDbContextFactory<IntelligenceDbContext>
 {
     public IntelligenceDbContext CreateDbContext(string[] args) =>
         new(new DbContextOptionsBuilder<IntelligenceDbContext>()
+            .UseModuleDesignTimeMappings()
             .UseNpgsql(
-                "Host=localhost;Database=cadence_design",
+                ResolveConnectionString(args),
                 npgsql => npgsql.MigrationsHistoryTable(ModuleMigrationServiceCollectionExtensions.MigrationsHistoryTable, IntelligenceDbContext.Schema))
             .Options);
+
+    internal static string ResolveConnectionString(string[]? args, Func<string, string?>? getEnvironmentVariable = null) =>
+        ModuleMigrationServiceCollectionExtensions.ResolveDesignTimeConnectionString(
+            args,
+            getEnvironmentVariable ?? Environment.GetEnvironmentVariable);
 }

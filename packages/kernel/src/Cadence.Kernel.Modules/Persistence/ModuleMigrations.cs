@@ -1,11 +1,16 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
+
+using NpgsqlTypes;
 
 namespace Cadence.Kernel.Modules;
 
@@ -32,6 +37,70 @@ public static partial class ModuleMigrationServiceCollectionExtensions
 {
     /// <summary>The migrations history table in every module schema, named like the kernel's.</summary>
     public const string MigrationsHistoryTable = "__ef_migrations_history";
+
+    /// <summary>Design-time CLI argument supplying an explicit PostgreSQL connection string.</summary>
+    public const string DesignTimeConnectionArgument = "--connection";
+
+    /// <summary>Primary environment variable binding <c>ConnectionStrings:cadence</c> across runtime hosts and design-time tools.</summary>
+    public const string PrimaryConnectionStringEnvVar = "ConnectionStrings__cadence";
+
+    /// <summary>Legacy flat PostgreSQL connection string environment variable honoured after <c>ConnectionStrings__cadence</c>.</summary>
+    public const string LegacyConnectionStringEnvVar = "POSTGRES_CONNECTION_STRING";
+
+    /// <summary>
+    /// Resolves the PostgreSQL connection string for kernel and module design-time <c>DbContext</c> factories:
+    /// <c>--connection</c> first, <c>ConnectionStrings__cadence</c> second, and <c>POSTGRES_CONNECTION_STRING</c> third,
+    /// failing closed with <see cref="InvalidOperationException"/> when all three are omitted (ADR-2260).
+    /// </summary>
+    /// <param name="args">Command-line arguments passed after <c>--</c> to <c>dotnet ef</c>.</param>
+    /// <param name="getEnvironmentVariable">Optional environment variable lookup override for isolated testing.</param>
+    public static string ResolveDesignTimeConnectionString(
+        string[]? args = null,
+        Func<string, string?>? getEnvironmentVariable = null)
+    {
+        var lookupEnv = getEnvironmentVariable ?? Environment.GetEnvironmentVariable;
+
+        if (args is not null)
+        {
+            int idx = Array.IndexOf(args, DesignTimeConnectionArgument);
+            if (idx >= 0 && idx + 1 < args.Length && !string.IsNullOrWhiteSpace(args[idx + 1]))
+            {
+                return args[idx + 1];
+            }
+        }
+
+        if (lookupEnv(PrimaryConnectionStringEnvVar) is { Length: > 0 } named &&
+            !string.IsNullOrWhiteSpace(named))
+        {
+            return named;
+        }
+
+        if (lookupEnv(LegacyConnectionStringEnvVar) is { Length: > 0 } fallback &&
+            !string.IsNullOrWhiteSpace(fallback))
+        {
+            return fallback;
+        }
+
+        throw new InvalidOperationException(
+            $"No PostgreSQL connection string configured. Set {PrimaryConnectionStringEnvVar} or {LegacyConnectionStringEnvVar}, " +
+            $"or pass {DesignTimeConnectionArgument} \"...\" after -- on the dotnet ef command line.");
+    }
+
+    /// <summary>
+    /// Registers design-time Npgsql range mapping support on <paramref name="optionsBuilder"/> so <c>dotnet ef dbcontext optimize</c>
+    /// resolves <see cref="NpgsqlRange{T}"/> of <see cref="DateTimeOffset"/> sentinel literals cleanly offline.
+    /// </summary>
+    /// <typeparam name="TContext">The <see cref="DbContext"/> type.</typeparam>
+    /// <param name="optionsBuilder">The options builder to configure.</param>
+    public static DbContextOptionsBuilder<TContext> UseModuleDesignTimeMappings<TContext>(
+        this DbContextOptionsBuilder<TContext> optionsBuilder)
+        where TContext : DbContext
+    {
+        ArgumentNullException.ThrowIfNull(optionsBuilder);
+        ((IDbContextOptionsBuilderInfrastructure)optionsBuilder)
+            .AddOrUpdateExtension(ModuleDesignTimeRangeExtension.Instance);
+        return optionsBuilder;
+    }
 
     /// <summary>
     /// Registers <typeparamref name="TContext"/>'s migrations as <paramref name="module"/>'s. The host applies them after
@@ -88,4 +157,89 @@ public static partial class ModuleMigrationServiceCollectionExtensions
 
     [GeneratedRegex("^[a-z][a-z0-9_]{0,47}$", RegexOptions.CultureInvariant)]
     private static partial Regex SnakeCase();
+
+    private sealed class ModuleDesignTimeRangeExtension : IDbContextOptionsExtension
+    {
+        public static readonly ModuleDesignTimeRangeExtension Instance = new();
+        private DbContextOptionsExtensionInfo? _examInfo;
+
+        public DbContextOptionsExtensionInfo Info => _examInfo ??= new ModuleRangeInfo(this);
+
+        public void ApplyServices(IServiceCollection services)
+        {
+            services.AddSingleton<IRelationalTypeMappingSourcePlugin, ModuleRangeMappingPlugin>();
+            services.AddSingleton<Microsoft.EntityFrameworkCore.Metadata.Conventions.Infrastructure.IConventionSetPlugin, ModuleSentinelConventionPlugin>();
+        }
+
+        public void Validate(IDbContextOptions options)
+        {
+        }
+
+        private sealed class ModuleRangeInfo(IDbContextOptionsExtension extension) : DbContextOptionsExtensionInfo(extension)
+        {
+            public override bool IsDatabaseProvider => false;
+            public override string LogFragment => "ModuleDesignTimeRange ";
+            public override int GetServiceProviderHashCode() => 2;
+            public override bool ShouldUseSameServiceProvider(DbContextOptionsExtensionInfo other) => other is ModuleRangeInfo;
+            public override void PopulateDebugInfo(IDictionary<string, string> debugInfo) =>
+                debugInfo["Cadence:ModuleDesignTimeRange"] = "1";
+        }
+
+        private sealed class ModuleRangeMappingPlugin(IServiceProvider provider) : IRelationalTypeMappingSourcePlugin
+        {
+            private bool _active;
+
+            public RelationalTypeMapping? FindMapping(in RelationalTypeMappingInfo mappingInfo)
+            {
+                if (_active || mappingInfo.ClrType != typeof(NpgsqlRange<DateTimeOffset>) || mappingInfo.StoreTypeName is not null)
+                {
+                    return null;
+                }
+
+                _active = true;
+                try
+                {
+                    return provider.GetRequiredService<IRelationalTypeMappingSource>()
+                        .FindMapping(typeof(NpgsqlRange<DateTimeOffset>), "tstzrange");
+                }
+                finally
+                {
+                    _active = false;
+                }
+            }
+        }
+
+        private sealed class ModuleSentinelConventionPlugin
+            : Microsoft.EntityFrameworkCore.Metadata.Conventions.Infrastructure.IConventionSetPlugin,
+              Microsoft.EntityFrameworkCore.Metadata.Conventions.IModelFinalizingConvention
+        {
+            public Microsoft.EntityFrameworkCore.Metadata.Conventions.ConventionSet ModifyConventions(
+                Microsoft.EntityFrameworkCore.Metadata.Conventions.ConventionSet conventionSet)
+            {
+                conventionSet.ModelFinalizingConventions.Add(this);
+                return conventionSet;
+            }
+
+            public void ProcessModelFinalizing(
+                Microsoft.EntityFrameworkCore.Metadata.Builders.IConventionModelBuilder modelBuilder,
+                Microsoft.EntityFrameworkCore.Metadata.Conventions.IConventionContext<Microsoft.EntityFrameworkCore.Metadata.Builders.IConventionModelBuilder> context)
+            {
+                var allProps = modelBuilder.Metadata.GetEntityTypes()
+                    .SelectMany(static e => e.GetDeclaredProperties()
+                        .Concat(e.GetDeclaredComplexProperties().SelectMany(static cp => cp.ComplexType.GetDeclaredProperties())));
+
+                foreach (var prop in allProps)
+                {
+                    if (prop.ClrType is { IsValueType: true, IsPrimitive: false, IsEnum: false } valueType &&
+                        Nullable.GetUnderlyingType(valueType) is null &&
+                        prop.GetValueConverter() is { } conv &&
+                        conv.ProviderClrType == typeof(string) &&
+                        conv.ConvertToProvider(prop.Sentinel ?? Activator.CreateInstance(valueType)!) is null)
+                    {
+                        prop.SetSentinel(conv.ConvertFromProvider("__sentinel__"));
+                    }
+                }
+            }
+        }
+    }
 }

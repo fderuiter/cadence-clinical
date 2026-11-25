@@ -34,7 +34,7 @@ migration application.
   constructor delegate, with a second constructor overload supplying `DesignTimeFieldEncryptor.Instance` for
   field-encrypting contexts (ADR-2494).
 - `ResolveDesignTimeConnectionString(args)`: used by `CadenceDesignTimeDbContextFactory<TDbContext>` (`dotnet ef`). Reads
-  `--connection "..."` passed after `--`, then `POSTGRES_CONNECTION_STRING`, and throws when neither is set.
+  `--connection "..."` passed after `--`, then `ConnectionStrings__cadence`, then `POSTGRES_CONNECTION_STRING`, and throws when none is set.
 - `AddCadenceMigrations<TContext>()`: applies migrations according to the `Database` configuration section.
 - `AddCadenceDurableSigTokenStore<TContext>()` (`Cadence.Database.Signatures`): replaces the process-local e-signature
   `ReplayCache` with `PostgresSigTokenUseStore<TContext>`, which records each used token id in the context's
@@ -76,10 +76,10 @@ in the shared `cadence` database. The layout and the operations runbook are in
 For DBA review and GxP qualification, generate an idempotent script into `TestResults/migrations/<module>.sql`:
 
 ```bash
-pnpm cadence migrations script <module|all>   # or scripts/manage_migrations.sh / scripts/manage_migrations.ps1
+pnpm cadence migrations script [module|all]   # or bundle / optimize / apply / seed; scripts/manage_migrations.{sh,ps1} pass through
 ```
 
-After changing an entity or its configuration, run `pnpm cadence migrations add <module> <MigrationName>` and `pnpm cadence generate-schema-doc`, then commit `docs/schema`; the `schema-doc` gate in `pnpm cadence check` and CI fails while documentation is out of date, a module has pending model changes, or migration metadata/DDL uniqueness is broken.
+After changing an entity or its configuration, run `pnpm cadence migrations add <module> <MigrationName>` (which scaffolds the migration and formats generated `.cs` files with `dotnet format whitespace` and `dotnet format style`) and `pnpm cadence generate-schema-doc`, then commit `docs/schema`; the `schema-doc` gate in `pnpm cadence check` and CI fails while documentation is out of date, a module has pending model changes, or migration metadata/DDL uniqueness is broken.
 
 `tests/Cadence.UnitTests/Packages/MigrationUnitTests.cs` fails when a standalone service, `intelligence`, or `executionmodule` DbContext model has changes that no migration captures, which would otherwise surface as `PendingModelChangesWarning` at deploy time.
 

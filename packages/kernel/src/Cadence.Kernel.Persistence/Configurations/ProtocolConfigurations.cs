@@ -55,9 +55,9 @@ internal sealed class ProtocolVersionConfiguration : IEntityTypeConfiguration<Pr
     }
 
     /// <summary>Stores an amendment as JSON with enums by name.</summary>
-    private static class AmendmentJson
+    internal static class AmendmentJson
     {
-        private static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web)
+        public static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web)
         {
             Converters = { new JsonStringEnumConverter() },
         };

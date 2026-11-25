@@ -67,13 +67,15 @@ public static partial class StandaloneTenantIsolationSql
         string s = Quote(schema);
         string r = Quote(role);
         return $"""
-            GRANT USAGE ON SCHEMA {s} TO {r};
-            GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA {s} TO {r};
-            GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA {s} TO {r};
             DO $$
             BEGIN
-                IF to_regclass('{schema}."{MigrationsHistoryTable}"') IS NOT NULL THEN
-                    EXECUTE 'REVOKE ALL ON {s}."{MigrationsHistoryTable}" FROM {r}';
+                IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '{role}') THEN
+                    GRANT USAGE ON SCHEMA {s} TO {r};
+                    GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA {s} TO {r};
+                    GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA {s} TO {r};
+                    IF to_regclass('{schema}."{MigrationsHistoryTable}"') IS NOT NULL THEN
+                        REVOKE ALL ON {s}."{MigrationsHistoryTable}" FROM {r};
+                    END IF;
                 END IF;
             END $$;
             """;
