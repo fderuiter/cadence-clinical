@@ -476,6 +476,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2674: Migrate Web Drawers to Bounded `ClinicalDrawer` and Enforce Viewport Reflow](2026-11-24-migrate-web-drawers-to-bounded-clinical-drawer.md) (2026-11-24)
 - [ADR-2675: Standardize Semantic Role Tokens, Dark-Theme Parity, and ESLint AST Color Gates](2026-11-23-standardize-semantic-role-tokens-and-eslint-color-gates.md) (2026-11-23)
 - [ADR-2676: Focus-Trap Detachment Recovery, Shared Retry Focus Primitives, and Inline Focus-Handoff AST Gates](2026-11-24-focus-trap-detachment-recovery-and-retry-focus-primitives.md) (2026-11-24)
+- [ADR-2678: Centralize Floating Primitives and Top-Right Toast Stack](2026-11-24-centralize-floating-primitives-and-top-right-toast-stack.md) (2026-11-24)
 
 ### 7. DevOps, Tooling & CI/CD
 

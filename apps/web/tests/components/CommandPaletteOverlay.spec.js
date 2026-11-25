@@ -933,4 +933,81 @@ describe("CommandPaletteOverlay.vue - Unified Global Command Palette", () => {
       vi.unstubAllEnvs();
     }
   });
+
+  it("renders a labeled 44px close control with vector icon and bounds dialog height within short visualViewports", async () => {
+    const originalInnerHeight = window.innerHeight;
+    const originalVisualViewport = window.visualViewport;
+    const listSpy = vi
+      .spyOn(executionApi, "listSubjects")
+      .mockRejectedValueOnce(
+        Object.assign(new Error("Execution offline"), { status: 503 })
+      );
+    const searchSpy = vi.spyOn(kernelApi, "search").mockResolvedValue([]);
+
+    try {
+      Object.defineProperty(window, "innerHeight", {
+        configurable: true,
+        writable: true,
+        value: 256,
+      });
+      Object.defineProperty(window, "visualViewport", {
+        configurable: true,
+        writable: true,
+        value: {
+          width: 320,
+          height: 256,
+          offsetLeft: 0,
+          offsetTop: 0,
+          addEventListener: vi.fn(),
+          removeEventListener: vi.fn(),
+        },
+      });
+
+      const authStore = useAuthStore();
+      authStore.isAuthenticated = true;
+      authStore.rawRoles = ["CRA"];
+
+      const canvasStore = useStudyCanvasStore();
+      canvasStore.openStudy("CAD-101");
+      await router.push("/studies/CAD-101");
+
+      const wrapper = mount(CommandPaletteOverlay, {
+        props: { isOpen: true },
+        global: { plugins: [pinia, router] },
+      });
+      await flushPromises();
+
+      const closeBtn = body.find("#canvas-palette-close");
+      expect(closeBtn.exists()).toBe(true);
+      expect(closeBtn.attributes("aria-label")).toBe("Close command palette");
+      expect(closeBtn.find("svg.clinical-icon").exists()).toBe(true);
+      expect(closeBtn.text()).not.toContain("\u00d7");
+
+      const paletteEl = body.find("#canvas-palette").element;
+      const maxHeightPx = Number.parseFloat(paletteEl.style.maxHeight);
+      expect(maxHeightPx).toBeLessThanOrEqual(256 - 24);
+      expect(
+        body
+          .find("#canvas-palette .palette-body #canvas-palette-subject-note")
+          .exists()
+      ).toBe(true);
+
+      await closeBtn.trigger("click");
+      expect(wrapper.emitted("close")).toBeTruthy();
+      wrapper.unmount();
+    } finally {
+      Object.defineProperty(window, "innerHeight", {
+        configurable: true,
+        writable: true,
+        value: originalInnerHeight,
+      });
+      Object.defineProperty(window, "visualViewport", {
+        configurable: true,
+        writable: true,
+        value: originalVisualViewport,
+      });
+      listSpy.mockRestore();
+      searchSpy.mockRestore();
+    }
+  });
 });

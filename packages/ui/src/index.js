@@ -15,6 +15,7 @@ import ClinicalIconButton from "./components/clinical/ClinicalIconButton.vue";
 import ClinicalInput from "./components/clinical/ClinicalInput.vue";
 import ClinicalLookupInput from "./components/clinical/ClinicalLookupInput.vue";
 import ClinicalModal from "./components/clinical/ClinicalModal.vue";
+import ClinicalPopover from "./components/clinical/ClinicalPopover.vue";
 import ClinicalQueryFlag from "./components/clinical/ClinicalQueryFlag.vue";
 import ClinicalQueryPanel from "./components/clinical/ClinicalQueryPanel.vue";
 import ClinicalRadioGroup from "./components/clinical/ClinicalRadioGroup.vue";
@@ -30,6 +31,11 @@ import MediaPlayer from "./components/MediaPlayer.vue";
 import ModalErrorAlert from "./components/ModalErrorAlert.vue";
 import { useAsyncRetry } from "./composables/useAsyncRetry.js";
 import { useEscapeClose } from "./composables/useEscapeClose.js";
+import {
+  computeFloatingPosition,
+  getVisualViewportBounds,
+  useFloatingPosition,
+} from "./composables/useFloatingPosition.js";
 import {
   getFocusableElements,
   getTopActiveModalContainer,
@@ -70,6 +76,7 @@ export {
   ClinicalInput,
   ClinicalLookupInput,
   ClinicalModal,
+  ClinicalPopover,
   ClinicalQueryFlag,
   ClinicalQueryPanel,
   ClinicalRadioGroup,
@@ -83,10 +90,12 @@ export {
   ModalErrorAlert,
   PersonaSwitcher,
   SignOutConfirmModal,
+  computeFloatingPosition,
   flushRegisteredDraftSources,
   flushRegisteredDraftSourcesSync,
   getFocusableElements,
   getTopActiveModalContainer,
+  getVisualViewportBounds,
   handoffFocus,
   handoffRetryFocus,
   hasActiveModalFocusTrap,
@@ -96,6 +105,7 @@ export {
   trapTabFocus,
   useAsyncRetry,
   useEscapeClose,
+  useFloatingPosition,
   useFocusTrap,
   useInlineFocusHandoff,
   useRetryFocusHandoff,

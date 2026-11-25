@@ -1,5 +1,7 @@
 <script setup>
 import { computed, ref } from "vue";
+import ClinicalIcon from "./ClinicalIcon.vue";
+import ClinicalPopover from "./ClinicalPopover.vue";
 
 const props = defineProps({
   modelValue: {
@@ -52,6 +54,7 @@ const props = defineProps({
 const emit = defineEmits(["update:modelValue", "change"]);
 
 const isOpen = ref(false);
+const toggleBtnRef = ref(null);
 
 const activePersona = computed(() => {
   return (
@@ -69,6 +72,7 @@ const selectPersona = (persona) => {
 <template>
   <div class="persona-switcher-container">
     <button
+      ref="toggleBtnRef"
       type="button"
       class="persona-toggle-btn"
       :aria-expanded="isOpen"
@@ -81,18 +85,27 @@ const selectPersona = (persona) => {
         <span class="persona-badge">{{ activePersona.badge }}</span>
       </div>
       <span class="sr-only"> — Switch User Persona or Role</span>
-      <span class="dropdown-arrow" aria-hidden="true">{{
-        isOpen ? "▲" : "▼"
-      }}</span>
+      <span class="dropdown-arrow" aria-hidden="true">
+        <ClinicalIcon
+          :name="isOpen ? 'chevron-up' : 'chevron-down'"
+          :size="14"
+        />
+      </span>
     </button>
 
-    <div
-      v-if="isOpen"
+    <ClinicalPopover
+      v-model="isOpen"
+      :anchor="toggleBtnRef"
+      align="end"
+      :offset="4"
+      :viewport-margin="12"
+      :preferred-width="280"
+      :teleport="false"
       class="persona-menu"
       role="menu"
       aria-label="Available Personas"
     >
-      <div class="menu-header">Active Persona & Role Scope</div>
+      <div class="menu-header">Active Persona &amp; Role Scope</div>
       <button
         v-for="persona in personas"
         :key="persona.id"
@@ -107,7 +120,7 @@ const selectPersona = (persona) => {
         </div>
         <span class="item-badge">{{ persona.badge }}</span>
       </button>
-    </div>
+    </ClinicalPopover>
   </div>
 </template>
 
@@ -164,21 +177,20 @@ const selectPersona = (persona) => {
 }
 
 .dropdown-arrow {
-  font-size: var(--font-size-2xs);
+  display: inline-flex;
+  align-items: center;
   color: var(--semantic-color-text-muted);
 }
 
 .persona-menu {
-  position: absolute;
-  top: calc(100% + 4px);
-  right: 0;
-  width: 280px;
   background: var(--semantic-color-surface);
   border: 1px solid var(--semantic-color-border);
   border-radius: 8px;
   box-shadow: var(--shadow-lg);
   z-index: 1000;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .menu-header {

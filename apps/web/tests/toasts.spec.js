@@ -359,5 +359,40 @@ describe("API error reporting (#4523)", () => {
       }
       expect(totalPushCalls).toBe(17);
     });
+
+    it("anchors web ToastHost top-right with vector dismiss icons and batch-clears >= 4 persistent alerts", async () => {
+      const pinia = createPinia();
+      setActivePinia(pinia);
+      const toasts = useToastStore();
+
+      for (let i = 1; i <= 6; i += 1) {
+        toasts.apiError(
+          `Rule signature error ${i}`,
+          new Error(`Constraint ${i}`)
+        );
+      }
+
+      const wrapper = mount(ToastHost, { global: { plugins: [pinia] } });
+      expect(wrapper.find(".toast-host").attributes("data-position")).toBe(
+        "top-right"
+      );
+      expect(wrapper.find(".toast-host").classes()).toContain(
+        "toast-host--top-right"
+      );
+
+      const firstDismiss = wrapper.find(".toast-dismiss");
+      expect(firstDismiss.find("svg.clinical-icon").exists()).toBe(true);
+      expect(firstDismiss.text()).not.toContain("\u00d7");
+
+      const clearAllBtn = wrapper.find(".toast-clear-all");
+      expect(clearAllBtn.exists()).toBe(true);
+      expect(clearAllBtn.text()).toContain("Clear all");
+      expect(clearAllBtn.text()).toContain("(6)");
+
+      await clearAllBtn.trigger("click");
+      expect(toasts.toasts).toHaveLength(0);
+      expect(wrapper.findAll(".toast")).toHaveLength(0);
+      wrapper.unmount();
+    });
   });
 });

@@ -153,10 +153,25 @@
     </ClinicalModal>
 
     <!-- Glossary Popover definition -->
-    <div
-      v-if="hoveredGlossaryTerm && popoverX !== null && popoverY !== null"
+    <ClinicalPopover
+      ref="glossaryPopoverRef"
+      :model-value="isPopoverOpen"
+      :anchor="activeGlossaryAnchor"
+      placement="bottom"
+      align="start"
+      :offset="6"
+      :viewport-margin="12"
+      :preferred-width="280"
+      :teleport="false"
+      hover-bridge
+      :restore-focus-on-escape="false"
       class="glossary-popover"
-      :style="{ top: popoverY + 'px', left: popoverX + 'px' }"
+      role="tooltip"
+      @mouseenter="handlePopoverMouseEnter"
+      @mouseleave="handlePopoverMouseLeave"
+      @focusin="handlePopoverMouseEnter"
+      @focusout="handlePopoverMouseLeave"
+      @close="hidePopover"
     >
       <div class="popover-title">
         {{ $t("econsent.editor.glossaryDefinition") }}
@@ -165,7 +180,7 @@
         <strong>{{ hoveredGlossaryTerm }}</strong>:
         {{ hoveredGlossaryDefinition }}
       </div>
-    </div>
+    </ClinicalPopover>
 
     <!-- Readability Assistant Split-Screen Drawer -->
     <ReadabilityDrawer
@@ -180,8 +195,8 @@
 </template>
 
 <script setup>
-import { ClinicalModal } from "ui";
-import { ref, computed, watch, onMounted, onUnmounted } from "vue";
+import { ClinicalModal, ClinicalPopover } from "ui";
+import { ref, computed, nextTick, watch, onMounted } from "vue";
 import { useConfirmDialog } from "../../composables/useConfirmDialog.js";
 import { useToastStore } from "../../stores/toasts.js";
 import ReadabilityDrawer from "./ReadabilityDrawer.vue";
@@ -267,26 +282,28 @@ const glossaryDefinition = ref("");
 let savedSelection = null;
 
 // Popover State
+const glossaryPopoverRef = ref(null);
+const activeGlossaryAnchor = ref(null);
 const hoveredGlossaryTerm = ref(null);
 const hoveredGlossaryDefinition = ref(null);
-const popoverX = ref(null);
-const popoverY = ref(null);
+const isTermHovered = ref(false);
+const isPopoverHovered = ref(false);
+const isTermFocused = ref(false);
 const isHoverSupported = ref(true);
 
-const handleDocumentClick = (e) => {
-  if (!hoveredGlossaryTerm.value) return;
+const isPopoverOpen = computed(() =>
+  Boolean(hoveredGlossaryTerm.value && activeGlossaryAnchor.value)
+);
 
-  const target = e.target;
-  if (target && target.classList.contains("glossary-term")) {
-    return;
-  }
-
-  const popoverEl = document.querySelector(".glossary-popover");
-  if (popoverEl && popoverEl.contains(target)) {
-    return;
-  }
-
-  hidePopover();
+const ensureGlossaryTermsFocusable = () => {
+  const root = editorRef.value;
+  if (!root || typeof root.querySelectorAll !== "function") return;
+  const terms = root.querySelectorAll(".glossary-term");
+  terms.forEach((termEl) => {
+    if (!termEl.hasAttribute("tabindex")) {
+      termEl.setAttribute("tabindex", "0");
+    }
+  });
 };
 
 // Synchronize with prop changes
@@ -297,6 +314,8 @@ watch(
     if (editorRef.value) {
       editorRef.value.innerHTML = props.section.html;
     }
+    hidePopover();
+    nextTick(ensureGlossaryTermsFocusable);
   },
   { immediate: true }
 );
@@ -304,11 +323,7 @@ watch(
 onMounted(() => {
   localHtml.value = props.section.html;
   isHoverSupported.value = window.matchMedia("(hover: hover)").matches;
-  document.addEventListener("click", handleDocumentClick);
-});
-
-onUnmounted(() => {
-  document.removeEventListener("click", handleDocumentClick);
+  nextTick(ensureGlossaryTermsFocusable);
 });
 
 // Format actions via standard execCommand (or manual DOM fallback)
@@ -420,6 +435,7 @@ const applyGlossaryAnnotation = () => {
   if (savedSelection && glossaryDefinition.value) {
     const span = document.createElement("span");
     span.className = "glossary-term";
+    span.setAttribute("tabindex", "0");
     span.setAttribute("data-definition", glossaryDefinition.value);
     span.style.borderBottom =
       "2px dashed var(--semantic-color-interactive-primary)";
@@ -450,26 +466,53 @@ const handleInput = () => {
   }
 };
 
-// Canvas Interaction (Hover popover logic)
+const resolveGlossaryTermElement = (node) => {
+  if (!node) return null;
+  if (node.classList && node.classList.contains("glossary-term")) {
+    return node;
+  }
+  if (typeof node.closest === "function") {
+    return node.closest(".glossary-term");
+  }
+  return null;
+};
+
+const openPopoverForElement = (termEl) => {
+  if (!termEl) return false;
+  const definition = termEl.getAttribute("data-definition");
+  const term = (termEl.innerText || termEl.textContent || "").trim();
+  if (!definition || !term) return false;
+  activeGlossaryAnchor.value = termEl;
+  hoveredGlossaryTerm.value = term;
+  hoveredGlossaryDefinition.value = definition;
+  return true;
+};
+
+const isInsideRenderedPopover = (node) => {
+  if (!node) return false;
+  const popoverEl = glossaryPopoverRef.value?.popoverRef;
+  return Boolean(
+    popoverEl &&
+    typeof popoverEl.contains === "function" &&
+    popoverEl.contains(node)
+  );
+};
+
+// Canvas Interaction (Hover, tap & keyboard focus popover logic)
 const handleCanvasClick = (e) => {
-  const target = e.target;
-  if (target && target.classList.contains("glossary-term")) {
+  const target = resolveGlossaryTermElement(e.target);
+  if (target) {
     const definition = target.getAttribute("data-definition");
-    const term = target.innerText || target.textContent;
+    const term = (target.innerText || target.textContent || "").trim();
     if (definition) {
       if (!isHoverSupported.value) {
         e.preventDefault();
         e.stopPropagation();
 
-        if (hoveredGlossaryTerm.value === term) {
+        if (isPopoverOpen.value && activeGlossaryAnchor.value === target) {
           hidePopover();
         } else {
-          hoveredGlossaryTerm.value = term;
-          hoveredGlossaryDefinition.value = definition;
-
-          const rect = target.getBoundingClientRect();
-          popoverX.value = rect.left + window.scrollX;
-          popoverY.value = rect.bottom + window.scrollY + 8;
+          openPopoverForElement(target);
         }
       } else {
         toastStore.push({
@@ -485,46 +528,83 @@ const handleCanvasClick = (e) => {
 const handleCanvasMouseOver = (e) => {
   if (!isHoverSupported.value) return;
 
-  const target = e.target;
-  if (target && target.classList.contains("glossary-term")) {
-    const definition = target.getAttribute("data-definition");
-    const term = target.innerText || target.textContent;
-    if (definition) {
-      hoveredGlossaryTerm.value = term;
-      hoveredGlossaryDefinition.value = definition;
-
-      const rect = target.getBoundingClientRect();
-      // Calculate popover positioning absolute coordinates
-      popoverX.value = rect.left + window.scrollX;
-      popoverY.value = rect.bottom + window.scrollY + 8;
+  const target = resolveGlossaryTermElement(e.target);
+  if (target) {
+    if (openPopoverForElement(target)) {
+      isTermHovered.value = true;
     }
   }
 };
 
-const handleCanvasMouseOut = (_e) => {
-  if (isHoverSupported.value) {
+const handleCanvasMouseOut = (e) => {
+  if (!isHoverSupported.value) return;
+
+  const target = resolveGlossaryTermElement(e.target);
+  if (!target) return;
+
+  const related = e.relatedTarget;
+  if (related && target.contains?.(related)) {
+    return;
+  }
+
+  isTermHovered.value = false;
+  if (isInsideRenderedPopover(related) || isPopoverHovered.value) {
+    return;
+  }
+  if (isTermFocused.value && activeGlossaryAnchor.value === target) {
+    return;
+  }
+  hidePopover();
+};
+
+const handlePopoverMouseEnter = () => {
+  isPopoverHovered.value = true;
+};
+
+const handlePopoverMouseLeave = (e) => {
+  isPopoverHovered.value = false;
+  const related = e?.relatedTarget;
+  if (
+    related &&
+    activeGlossaryAnchor.value &&
+    activeGlossaryAnchor.value.contains?.(related)
+  ) {
+    isTermHovered.value = true;
+    return;
+  }
+  if (!isTermHovered.value && !isTermFocused.value) {
     hidePopover();
   }
 };
 
 const handleCanvasFocusIn = (e) => {
-  if (isHoverSupported.value) {
-    handleCanvasMouseOver(e);
+  const target = resolveGlossaryTermElement(e.target);
+  if (target && openPopoverForElement(target)) {
+    isTermFocused.value = true;
   }
 };
 
-const handleCanvasFocusOut = (_e) => {
-  if (isHoverSupported.value) {
+const handleCanvasFocusOut = (e) => {
+  const target = resolveGlossaryTermElement(e.target);
+  if (!target) return;
+  isTermFocused.value = false;
+  const related = e?.relatedTarget;
+  if (isInsideRenderedPopover(related) || isPopoverHovered.value) {
+    return;
+  }
+  if (!isTermHovered.value) {
     hidePopover();
   }
 };
 
-const hidePopover = () => {
+function hidePopover() {
+  isTermHovered.value = false;
+  isPopoverHovered.value = false;
+  isTermFocused.value = false;
+  activeGlossaryAnchor.value = null;
   hoveredGlossaryTerm.value = null;
   hoveredGlossaryDefinition.value = null;
-  popoverX.value = null;
-  popoverY.value = null;
-};
+}
 </script>
 
 <style scoped>
@@ -674,16 +754,15 @@ const hidePopover = () => {
 
 /* Popover styles */
 .glossary-popover {
-  position: absolute;
   background-color: var(--semantic-color-surface-elevated);
   color: var(--semantic-color-text-inverse);
   padding: 8px 12px;
   border-radius: 6px;
   font-size: 0.8rem;
-  max-width: 280px;
   box-shadow: var(--shadow-md);
   z-index: 1050;
-  pointer-events: none;
+  pointer-events: auto;
+  overflow-wrap: anywhere;
 }
 
 .popover-title {

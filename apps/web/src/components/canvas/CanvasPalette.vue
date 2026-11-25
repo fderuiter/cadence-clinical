@@ -10,99 +10,125 @@
         id="canvas-palette"
         ref="dialogRef"
         class="palette"
+        :style="dialogStyle"
         role="dialog"
         aria-modal="true"
         :aria-busy="isSearching ? 'true' : 'false'"
         aria-label="Go to or open anything in this study"
       >
-        <input
-          id="canvas-palette-input"
-          v-model="query"
-          type="text"
-          role="combobox"
-          aria-autocomplete="list"
-          aria-controls="canvas-palette-list"
-          :aria-expanded="results.length > 0"
-          :aria-busy="isSearching ? 'true' : 'false'"
-          :aria-activedescendant="
-            results.length ? `canvas-palette-item-${active}` : undefined
-          "
-          autocomplete="off"
-          :placeholder="
-            studyCode
-              ? 'Stage, section, participant, workflow or study code'
-              : 'Study code or workflow, e.g. CADENCE-101'
-          "
-          aria-label="Search"
-          @keydown="onKeydown"
-        />
-        <ul
-          v-if="results.length"
-          id="canvas-palette-list"
-          class="palette-list"
-          role="listbox"
-          :aria-busy="isSearching ? 'true' : 'false'"
-          aria-label="Results"
-        >
-          <li
-            v-for="(item, index) in results"
-            :id="`canvas-palette-item-${index}`"
-            :key="item.key"
-            class="palette-item"
-            :class="{ active: index === active }"
-            role="option"
-            tabindex="-1"
-            :aria-selected="index === active"
-            @click="choose(item)"
-            @keydown.enter.prevent="choose(item)"
-            @keydown.space.prevent="choose(item)"
-            @mouseenter="active = index"
-            @focus="active = index"
+        <div class="palette-header">
+          <input
+            id="canvas-palette-input"
+            v-model="query"
+            type="text"
+            role="combobox"
+            aria-autocomplete="list"
+            aria-controls="canvas-palette-list"
+            :aria-expanded="results.length > 0"
+            :aria-busy="isSearching ? 'true' : 'false'"
+            :aria-activedescendant="
+              results.length ? `canvas-palette-item-${active}` : undefined
+            "
+            autocomplete="off"
+            :placeholder="
+              studyCode
+                ? 'Stage, section, participant, workflow or study code'
+                : 'Study code or workflow, e.g. CADENCE-101'
+            "
+            aria-label="Search"
+            @keydown="onKeydown"
+          />
+          <button
+            id="canvas-palette-close"
+            type="button"
+            class="palette-close-btn"
+            aria-label="Close command palette"
+            @click="emit('close')"
           >
-            <span class="palette-group">{{ item.group }}</span>
-            <span class="palette-label">{{ item.label }}</span>
-            <span v-if="item.detail" class="palette-detail">{{
-              item.detail
-            }}</span>
-          </li>
-        </ul>
-        <p v-else id="canvas-palette-empty" class="palette-empty" role="status">
-          {{
-            query.trim()
-              ? "Nothing matches across studies, lifecycle stages, or authorized workflows."
-              : "Type a study code or choose a workflow destination."
-          }}
-        </p>
-        <p
-          v-if="kernelNote"
-          id="canvas-palette-kernel-note"
-          class="palette-footnote"
-          role="status"
-        >
-          {{ kernelNote }}
-        </p>
-        <p
-          v-if="displaySubjectNote"
-          id="canvas-palette-subject-note"
-          class="palette-footnote"
-          role="status"
-        >
-          {{ displaySubjectNote }}
-        </p>
-        <p class="palette-footnote">
-          Studies are found by code or title among those visible to your
-          account. Available actions for a selected participant are under Act in
-          the inspector.
-        </p>
+            <ClinicalIcon name="x" :size="18" />
+          </button>
+        </div>
+        <div class="palette-body">
+          <ul
+            v-if="results.length"
+            id="canvas-palette-list"
+            class="palette-list"
+            role="listbox"
+            :aria-busy="isSearching ? 'true' : 'false'"
+            aria-label="Results"
+          >
+            <li
+              v-for="(item, index) in results"
+              :id="`canvas-palette-item-${index}`"
+              :key="item.key"
+              class="palette-item"
+              :class="{ active: index === active }"
+              role="option"
+              tabindex="-1"
+              :aria-selected="index === active"
+              @click="choose(item)"
+              @keydown.enter.prevent="choose(item)"
+              @keydown.space.prevent="choose(item)"
+              @mouseenter="active = index"
+              @focus="active = index"
+            >
+              <span class="palette-group">{{ item.group }}</span>
+              <span class="palette-label">{{ item.label }}</span>
+              <span v-if="item.detail" class="palette-detail">{{
+                item.detail
+              }}</span>
+            </li>
+          </ul>
+          <p
+            v-else
+            id="canvas-palette-empty"
+            class="palette-empty"
+            role="status"
+          >
+            {{
+              query.trim()
+                ? "Nothing matches across studies, lifecycle stages, or authorized workflows."
+                : "Type a study code or choose a workflow destination."
+            }}
+          </p>
+          <p
+            v-if="kernelNote"
+            id="canvas-palette-kernel-note"
+            class="palette-footnote"
+            role="status"
+          >
+            {{ kernelNote }}
+          </p>
+          <p
+            v-if="displaySubjectNote"
+            id="canvas-palette-subject-note"
+            class="palette-footnote"
+            role="status"
+          >
+            {{ displaySubjectNote }}
+          </p>
+          <p class="palette-footnote">
+            Studies are found by code or title among those visible to your
+            account. Available actions for a selected participant are under Act
+            in the inspector.
+          </p>
+        </div>
       </div>
     </div>
   </Teleport>
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, ref, watch } from "vue";
+import {
+  computed,
+  nextTick,
+  onBeforeUnmount,
+  onMounted,
+  ref,
+  watch,
+} from "vue";
 import { getActivePinia } from "pinia";
-import { useFocusTrap } from "ui";
+import { ClinicalIcon, getVisualViewportBounds, useFocusTrap } from "ui";
 import { kernelApi, type KernelSearchHit } from "../../api/kernelApi";
 import { STAGES, participantStateLabel } from "../../canvas/lifecycle";
 import { executionApi, type SubjectSummary } from "../../api/executionApi";
@@ -152,6 +178,28 @@ const emit = defineEmits<{
 }>();
 
 const dialogRef = ref<HTMLElement | null>(null);
+const dialogMaxHeightPx = ref<number | null>(null);
+
+function syncDialogViewportBounds() {
+  if (typeof window === "undefined") return;
+  const vp = getVisualViewportBounds();
+  const isShortViewport = vp.height <= 520;
+  const topOffset = isShortViewport
+    ? 12
+    : Math.max(12, Math.min(80, Math.round(vp.height * 0.12)));
+  const bottomMargin = 12;
+  dialogMaxHeightPx.value = Math.max(
+    120,
+    Math.floor(vp.height - topOffset - bottomMargin)
+  );
+}
+
+const dialogStyle = computed(() =>
+  dialogMaxHeightPx.value !== null
+    ? { maxHeight: `${dialogMaxHeightPx.value}px` }
+    : undefined
+);
+
 useFocusTrap(dialogRef, {
   onEscape: () => emit("close"),
   initialFocus: "#canvas-palette-input",
@@ -318,11 +366,41 @@ watch([query, () => props.studyCode], ([value, study]) => {
   }
 });
 
+onMounted(() => {
+  syncDialogViewportBounds();
+  if (typeof window !== "undefined") {
+    window.addEventListener("resize", syncDialogViewportBounds, {
+      passive: true,
+    });
+    window.visualViewport?.addEventListener(
+      "resize",
+      syncDialogViewportBounds,
+      { passive: true }
+    );
+    window.visualViewport?.addEventListener(
+      "scroll",
+      syncDialogViewportBounds,
+      { passive: true }
+    );
+  }
+});
+
 onBeforeUnmount(() => {
   clearTimeout(searchTimer);
   isDebouncePending.value = false;
   latestSearch++;
   latestParticipantLookup++;
+  if (typeof window !== "undefined") {
+    window.removeEventListener("resize", syncDialogViewportBounds);
+    window.visualViewport?.removeEventListener(
+      "resize",
+      syncDialogViewportBounds
+    );
+    window.visualViewport?.removeEventListener(
+      "scroll",
+      syncDialogViewportBounds
+    );
+  }
 });
 
 const allParticipants = computed<SubjectSummary[]>(() => {
@@ -527,36 +605,82 @@ function onKeydown(event: KeyboardEvent) {
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  padding: 12vh 16px 16px;
+  padding: min(12vh, 80px) 12px 12px;
+  box-sizing: border-box;
   background: var(--semantic-color-backdrop);
 }
 
 .palette {
+  display: flex;
+  flex-direction: column;
   width: min(640px, 100%);
+  max-height: calc(100dvh - min(12vh, 80px) - 12px);
   background: var(--semantic-color-surface);
   border: 1px solid var(--border);
   border-radius: 10px;
   box-shadow: var(--shadow-xl);
   overflow: hidden;
+  box-sizing: border-box;
 }
 
-.palette input {
+.palette-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-right: 6px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.palette-header input {
+  flex: 1 1 auto;
+  min-width: 0;
   width: 100%;
   box-sizing: border-box;
-  padding: 14px 16px;
+  padding: 12px 12px 12px 16px;
   border: 0;
-  border-bottom: 1px solid var(--border);
   font-size: 1rem;
   background: transparent;
   color: inherit;
+}
+
+.palette-close-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--semantic-color-text-secondary);
+  cursor: pointer;
+}
+
+.palette-close-btn:not(:disabled):hover {
+  background: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text);
+}
+
+.palette-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .palette-list {
   list-style: none;
   margin: 0;
   padding: 6px;
+  flex: 1 1 auto;
+  min-height: 0;
   max-height: 50vh;
   overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .palette-item {
@@ -582,22 +706,65 @@ function onKeydown(event: KeyboardEvent) {
 
 .palette-label {
   font-weight: 600;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .palette-detail {
   color: var(--neutral-dark);
   font-size: 0.85rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .palette-empty,
 .palette-footnote {
   margin: 0;
-  padding: 12px 16px;
+  padding: 10px 16px;
   color: var(--neutral-dark);
   font-size: 0.85rem;
+  flex-shrink: 0;
 }
 
 .palette-footnote {
   border-top: 1px solid var(--border);
+}
+
+@media (max-width: 639px) {
+  .palette-item {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+
+  .palette-group {
+    grid-row: auto;
+  }
+}
+
+@media (max-height: 520px) {
+  .palette-backdrop {
+    padding: 12px;
+  }
+
+  .palette {
+    max-height: calc(100dvh - 24px);
+  }
+
+  .palette-header input {
+    padding: 10px 10px 10px 14px;
+  }
+
+  .palette-body {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .palette-list {
+    flex: 0 0 auto;
+    max-height: none;
+    overflow: visible;
+  }
 }
 </style>

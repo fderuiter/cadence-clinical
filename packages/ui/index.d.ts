@@ -628,15 +628,147 @@ export const ClinicalToastHost: DefineSlotsComponent<
     toasts?: ClinicalToastItem[];
     ariaLabel?: string;
     dismissLabel?: string;
+    clearAllLabel?: string;
+    position?: "bottom-right" | "top-right" | string;
     latestToastId?: string;
     manageTimers?: boolean;
     onDismiss?: (id: string | number) => void;
     onAction?: (toast: ClinicalToastItem) => void;
     onPause?: (id: string | number) => void;
     onResume?: (id: string | number) => void;
+    onClear?: () => void;
   },
   {
     extra?: (props: { toast: any }) => any;
+  }
+>;
+
+export interface VisualViewportBounds {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+  right: number;
+  bottom: number;
+}
+
+export interface FloatingPositionInput {
+  anchorRect?: {
+    left?: number;
+    top?: number;
+    right?: number;
+    bottom?: number;
+    width?: number;
+    height?: number;
+  } | null;
+  floatingSize?: {
+    width?: number;
+    height?: number;
+  } | null;
+  viewport?: Partial<VisualViewportBounds>;
+  placement?: "bottom" | "top" | string;
+  align?: "start" | "center" | "end" | string;
+  offset?: number;
+  margin?: number;
+  flip?: boolean;
+  preferredWidth?: number | null;
+  minHeight?: number;
+}
+
+export interface FloatingPositionResult {
+  left: number;
+  top: number;
+  maxWidth: number;
+  maxHeight: number;
+  placement: "bottom" | "top";
+}
+
+export function getVisualViewportBounds(): VisualViewportBounds;
+
+export function computeFloatingPosition(
+  options?: FloatingPositionInput
+): FloatingPositionResult;
+
+export function useFloatingPosition(
+  anchorRef:
+    | import("vue").Ref<Element | null | undefined>
+    | (() => Element | null | undefined)
+    | Element
+    | null
+    | undefined,
+  floatingRef:
+    | import("vue").Ref<HTMLElement | null | undefined>
+    | (() => HTMLElement | null | undefined),
+  options?: {
+    isOpen?: import("vue").Ref<boolean> | (() => boolean) | boolean;
+    anchorRect?:
+      | FloatingPositionInput["anchorRect"]
+      | (() => FloatingPositionInput["anchorRect"]);
+    placement?:
+      import("vue").Ref<string> | (() => string) | "bottom" | "top" | string;
+    align?:
+      | import("vue").Ref<string>
+      | (() => string)
+      | "start"
+      | "center"
+      | "end"
+      | string;
+    offset?: import("vue").Ref<number> | (() => number) | number;
+    margin?: import("vue").Ref<number> | (() => number) | number;
+    flip?: import("vue").Ref<boolean> | (() => boolean) | boolean;
+    preferredWidth?:
+      import("vue").Ref<number | null> | (() => number | null) | number | null;
+    minHeight?: import("vue").Ref<number> | (() => number) | number;
+  }
+): {
+  coordinates: import("vue").Ref<FloatingPositionResult>;
+  floatingStyle: import("vue").ComputedRef<Record<string, string>>;
+  placement: import("vue").ComputedRef<"bottom" | "top">;
+  updatePosition: () => FloatingPositionResult;
+};
+
+export const ClinicalPopover: DefineSlotsComponent<
+  {
+    modelValue?: boolean;
+    isOpen?: boolean;
+    open?: boolean;
+    anchor?:
+      | import("vue").Ref<Element | null | undefined>
+      | (() => Element | null | undefined)
+      | Element
+      | null;
+    placement?: "bottom" | "top" | string;
+    align?: "start" | "center" | "end" | string;
+    offset?: number;
+    viewportMargin?: number;
+    preferredWidth?: number | null;
+    minHeight?: number;
+    flip?: boolean;
+    teleport?: boolean | string;
+    id?: string;
+    role?: string;
+    ariaLabel?: string;
+    ariaLabelledby?: string;
+    closeOnEscape?: boolean;
+    closeOnOutsidePointer?: boolean;
+    restoreFocusOnEscape?: boolean;
+    hoverBridge?: boolean;
+    popoverClass?: string | any[] | Record<string, boolean>;
+    "onUpdate:modelValue"?: (value: boolean) => void;
+    onClose?: (payload: { reason: "escape" | "outside" | string }) => void;
+    onMouseenter?: (event: MouseEvent) => void;
+    onMouseleave?: (event: MouseEvent) => void;
+    onFocusin?: (event: FocusEvent) => void;
+    onFocusout?: (event: FocusEvent) => void;
+  },
+  {
+    default?: (props: Record<string, never>) => any;
+  },
+  {
+    popoverRef: HTMLElement | null;
+    scrollRef: HTMLElement | null;
+    placement: "bottom" | "top";
+    updatePosition: () => FloatingPositionResult;
   }
 >;
 

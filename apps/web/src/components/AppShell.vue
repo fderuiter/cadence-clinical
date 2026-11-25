@@ -197,8 +197,10 @@
 
             <div
               id="header-secondary-menu"
+              ref="secondaryMenuRef"
               class="header-secondary-actions"
               :class="{ 'is-open': isSecondaryMenuOpen }"
+              :style="secondaryMenuStyle"
             >
               <button
                 v-if="onboardingSummary.totalTasksCount > 0"
@@ -285,22 +287,31 @@
         <button
           v-if="authStore.isAuthenticated"
           id="btn-mobile-menu-toggle"
+          ref="mobileMenuToggleRef"
           type="button"
           class="mobile-menu-toggle"
           aria-label="Toggle navigation menu"
           aria-controls="mobile-nav-menu"
           :aria-expanded="isMobileMenuOpen ? 'true' : 'false'"
-          @click="isMobileMenuOpen = !isMobileMenuOpen"
+          @click="toggleMobileMenu"
         >
-          ☰
+          <X
+            v-if="isMobileMenuOpen"
+            :size="18"
+            :stroke-width="1.75"
+            aria-hidden="true"
+          />
+          <Menu v-else :size="18" :stroke-width="1.75" aria-hidden="true" />
         </button>
       </div>
 
       <nav
         v-if="authStore.isAuthenticated"
         id="mobile-nav-menu"
+        ref="mobileNavRef"
         class="mobile-nav-drawer"
         :class="{ 'is-open': isMobileMenuOpen }"
+        :style="mobileNavStyle"
         :hidden="!isMobileMenuOpen || undefined"
         aria-label="Mobile navigation"
       >
@@ -461,7 +472,12 @@ import {
   watch,
 } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { useSignOutGuard } from "ui";
+import { Menu, X } from "lucide-vue-next";
+import {
+  computeFloatingPosition,
+  getVisualViewportBounds,
+  useSignOutGuard,
+} from "ui";
 import { rehydrateOnboardingPersona } from "../auth/sessionCoordinator.js";
 import { PRE_RELEASE_ENVIRONMENT_NOTICE } from "../catalog/environmentNotice.js";
 import { useAuthStore } from "../stores/auth";
@@ -533,11 +549,99 @@ const isMobileMenuOpen = ref(false);
 const isSecondaryMenuOpen = ref(false);
 const secondaryMenuWrapperRef = ref(null);
 const secondaryMenuToggleRef = ref(null);
+const secondaryMenuRef = ref(null);
+const mobileMenuToggleRef = ref(null);
+const mobileNavRef = ref(null);
+const secondaryMenuStyle = ref({});
+const mobileNavStyle = ref({});
 const statusAnnouncement = ref("");
 const headerRef = ref(null);
 const headerHeight = ref(48);
 const effectiveHeaderHeight = ref(48);
 let headerResizeObserver = null;
+
+function buildClampedMenuStyle(
+  anchorEl,
+  panelEl,
+  vp,
+  align,
+  offset,
+  prefWidth,
+  minHeight,
+  stretchHorizontal
+) {
+  const anchorRect =
+    anchorEl && typeof anchorEl.getBoundingClientRect === "function"
+      ? anchorEl.getBoundingClientRect()
+      : null;
+  const height = panelEl
+    ? Math.max(panelEl.scrollHeight || 0, panelEl.offsetHeight || 0)
+    : 0;
+  const pos = computeFloatingPosition({
+    anchorRect,
+    floatingSize: { width: prefWidth, height },
+    viewport: vp,
+    placement: "bottom",
+    align,
+    offset,
+    margin: 12,
+    flip: true,
+    preferredWidth: prefWidth,
+    minHeight,
+  });
+  const horizontalWidth = Math.max(0, Math.round(vp.width) - 24);
+  return {
+    position: "fixed",
+    left: stretchHorizontal ? `${Math.round(vp.left) + 12}px` : `${pos.left}px`,
+    right: "auto",
+    ...(stretchHorizontal ? { width: `${horizontalWidth}px` } : {}),
+    top: `${pos.top}px`,
+    maxWidth: stretchHorizontal
+      ? `${pos.maxWidth}px`
+      : `${Math.min(280, pos.maxWidth)}px`,
+    maxHeight: `${pos.maxHeight}px`,
+    overflowY: "auto",
+  };
+}
+
+function syncOpenMenuBounds() {
+  if (typeof window === "undefined") return;
+  if (!isSecondaryMenuOpen.value && !isMobileMenuOpen.value) {
+    secondaryMenuStyle.value = {};
+    mobileNavStyle.value = {};
+    return;
+  }
+  const vp = getVisualViewportBounds();
+  const compactWidth = Math.max(0, vp.width - 24);
+
+  secondaryMenuStyle.value =
+    isSecondaryMenuOpen.value && vp.width <= 1280
+      ? buildClampedMenuStyle(
+          secondaryMenuToggleRef.value,
+          secondaryMenuRef.value,
+          vp,
+          "end",
+          6,
+          vp.width <= 640 ? compactWidth : 260,
+          112,
+          vp.width <= 640
+        )
+      : {};
+
+  mobileNavStyle.value =
+    isMobileMenuOpen.value && vp.width <= 860
+      ? buildClampedMenuStyle(
+          headerRef.value || mobileMenuToggleRef.value,
+          mobileNavRef.value,
+          vp,
+          "start",
+          4,
+          compactWidth,
+          96,
+          true
+        )
+      : {};
+}
 
 function focusSkipTarget(targetId) {
   const target = document.getElementById(targetId);
@@ -561,6 +665,7 @@ function syncHeaderHeight() {
 function handleViewportResize() {
   syncHeaderHeight();
   syncRootStickyChromeOffset();
+  syncOpenMenuBounds();
 }
 
 function handleGlobalFocusIn(event) {
@@ -940,7 +1045,10 @@ function closeMobileMenu({ restoreFocus = false } = {}) {
   isMobileMenuOpen.value = false;
   if (restoreFocus && typeof document !== "undefined") {
     nextTick(() => {
-      document.getElementById("btn-mobile-menu-toggle")?.focus?.();
+      (
+        mobileMenuToggleRef.value ||
+        document.getElementById("btn-mobile-menu-toggle")
+      )?.focus?.();
     });
   }
 }
@@ -955,8 +1063,20 @@ function closeSecondaryMenu({ restoreFocus = false } = {}) {
   }
 }
 
+function toggleMobileMenu() {
+  const next = !isMobileMenuOpen.value;
+  if (next) {
+    isSecondaryMenuOpen.value = false;
+  }
+  isMobileMenuOpen.value = next;
+}
+
 function toggleSecondaryMenu() {
-  isSecondaryMenuOpen.value = !isSecondaryMenuOpen.value;
+  const next = !isSecondaryMenuOpen.value;
+  if (next) {
+    isMobileMenuOpen.value = false;
+  }
+  isSecondaryMenuOpen.value = next;
 }
 
 function handleToggleChecklist() {
@@ -1002,10 +1122,23 @@ function handleDemoReset(message) {
 }
 
 function handleDocumentPointerDown(event) {
-  if (!isSecondaryMenuOpen.value) return;
-  const wrapperEl = secondaryMenuWrapperRef.value;
-  if (wrapperEl && event?.target && !wrapperEl.contains(event.target)) {
-    closeSecondaryMenu();
+  const target = event?.target;
+  if (isSecondaryMenuOpen.value) {
+    const wrapperEl = secondaryMenuWrapperRef.value;
+    if (wrapperEl && target && !wrapperEl.contains(target)) {
+      closeSecondaryMenu();
+    }
+  }
+  if (isMobileMenuOpen.value) {
+    const navEl = mobileNavRef.value;
+    const toggleEl = mobileMenuToggleRef.value;
+    const insideNav = Boolean(navEl && target && navEl.contains(target));
+    const insideToggle = Boolean(
+      toggleEl && target && toggleEl.contains(target)
+    );
+    if (target && !insideNav && !insideToggle) {
+      closeMobileMenu();
+    }
   }
 }
 
@@ -1037,10 +1170,13 @@ function handleGlobalKeydown(event) {
     if (isSecondaryMenuOpen.value || isMobileMenuOpen.value) {
       if (!hasBlockingModalOverlay()) {
         event.preventDefault();
-        if (isSecondaryMenuOpen.value) {
+        const wasSecondaryOpen = isSecondaryMenuOpen.value;
+        const wasMobileOpen = isMobileMenuOpen.value;
+        if (wasSecondaryOpen) {
           closeSecondaryMenu({ restoreFocus: true });
-        } else if (isMobileMenuOpen.value) {
-          closeMobileMenu({ restoreFocus: true });
+        }
+        if (wasMobileOpen) {
+          closeMobileMenu({ restoreFocus: !wasSecondaryOpen });
         }
       }
     }
@@ -1102,13 +1238,27 @@ watch(
     route?.fullPath,
   ],
   () => {
-    nextTick(syncHeaderHeight);
+    syncOpenMenuBounds();
+    nextTick(() => {
+      syncHeaderHeight();
+      syncOpenMenuBounds();
+    });
   }
 );
 
 onMounted(() => {
   window.addEventListener("keydown", handleGlobalKeydown);
   window.addEventListener("resize", handleViewportResize);
+  window.addEventListener("scroll", syncOpenMenuBounds, {
+    capture: true,
+    passive: true,
+  });
+  window.visualViewport?.addEventListener("resize", handleViewportResize, {
+    passive: true,
+  });
+  window.visualViewport?.addEventListener("scroll", syncOpenMenuBounds, {
+    passive: true,
+  });
   document.addEventListener("pointerdown", handleDocumentPointerDown);
   document.addEventListener("pointerdown", recordStickyChromePointerDown, true);
   document.addEventListener("focusin", handleGlobalFocusIn);
@@ -1128,6 +1278,9 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener("keydown", handleGlobalKeydown);
   window.removeEventListener("resize", handleViewportResize);
+  window.removeEventListener("scroll", syncOpenMenuBounds, true);
+  window.visualViewport?.removeEventListener("resize", handleViewportResize);
+  window.visualViewport?.removeEventListener("scroll", syncOpenMenuBounds);
   document.removeEventListener("pointerdown", handleDocumentPointerDown);
   document.removeEventListener(
     "pointerdown",
@@ -1570,8 +1723,17 @@ onUnmounted(() => {
   width: 100%;
   flex-direction: column;
   gap: 6px;
-  padding-top: 8px;
-  border-top: 1px solid var(--semantic-color-border);
+  padding: 8px;
+  box-sizing: border-box;
+  background: var(--semantic-color-surface);
+  border: 1px solid var(--semantic-color-border-control);
+  border-radius: 8px;
+  box-shadow: var(--semantic-shadow-xl);
+  z-index: 55;
+  max-height: calc(100dvh - 24px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .mobile-nav-drawer.is-open {
@@ -1750,6 +1912,7 @@ onUnmounted(() => {
     top: calc(100% + 6px);
     min-width: 210px;
     max-width: min(280px, calc(100vw - 24px));
+    max-height: calc(100dvh - 24px);
     padding: 10px;
     background: var(--semantic-color-surface);
     border: 1px solid var(--semantic-color-border-control);
@@ -1757,6 +1920,9 @@ onUnmounted(() => {
     box-shadow: var(--semantic-shadow-xl);
     z-index: 60;
     box-sizing: border-box;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
 
   .header-secondary-actions.is-open > .shell-control-btn {

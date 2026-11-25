@@ -681,4 +681,56 @@ describe("AppShell.vue - Unified Study-Centric Application Shell", () => {
       vi.unstubAllEnvs();
     }
   });
+
+  it("enforces mutual exclusion between #mobile-nav-menu and #header-secondary-menu, vector menu icon, and Escape/outside dismissal", async () => {
+    const authStore = useAuthStore();
+    authStore.isAuthenticated = true;
+    authStore.rawRoles = ["Sponsor Admin"];
+
+    const wrapper = mount(AppShell, {
+      attachTo: document.body,
+      global: { plugins: [router] },
+    });
+
+    try {
+      const mobileToggle = wrapper.find("#btn-mobile-menu-toggle");
+      const mobileMenu = wrapper.find("#mobile-nav-menu");
+      const secondaryToggle = wrapper.find("#btn-header-actions-menu");
+      const secondaryMenu = wrapper.find("#header-secondary-menu");
+
+      expect(mobileToggle.find("svg").exists()).toBe(true);
+      expect(mobileToggle.text()).not.toContain("\u2630");
+
+      // Open mobile menu, then open secondary menu -> mobile menu closes automatically
+      await mobileToggle.trigger("click");
+      expect(mobileMenu.classes()).toContain("is-open");
+      expect(secondaryMenu.classes()).not.toContain("is-open");
+
+      await secondaryToggle.trigger("click");
+      expect(secondaryMenu.classes()).toContain("is-open");
+      expect(mobileMenu.classes()).not.toContain("is-open");
+
+      // Open mobile menu while secondary menu is open -> secondary menu closes automatically
+      await mobileToggle.trigger("click");
+      expect(mobileMenu.classes()).toContain("is-open");
+      expect(secondaryMenu.classes()).not.toContain("is-open");
+
+      // Single Escape closes mobile menu and restores focus to #btn-mobile-menu-toggle
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Escape", bubbles: true })
+      );
+      await nextTick();
+      expect(mobileMenu.classes()).not.toContain("is-open");
+      expect(document.activeElement).toBe(mobileToggle.element);
+
+      // Re-open mobile menu and dismiss via outside pointerdown
+      await mobileToggle.trigger("click");
+      expect(mobileMenu.classes()).toContain("is-open");
+      document.body.dispatchEvent(new Event("pointerdown", { bubbles: true }));
+      await nextTick();
+      expect(mobileMenu.classes()).not.toContain("is-open");
+    } finally {
+      wrapper.unmount();
+    }
+  });
 });
