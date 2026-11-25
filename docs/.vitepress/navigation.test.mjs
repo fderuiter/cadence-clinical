@@ -77,7 +77,7 @@ describe("VitePress navigation synthesis and link/anchor plugins", () => {
     }
   });
 
-  it("includes all 82 active non-ADR pages from docs/DOCUMENTATION_INDEX.md across route-scoped sidebars", () => {
+  it("includes all 80 active non-ADR pages from docs/DOCUMENTATION_INDEX.md across route-scoped sidebars", () => {
     const indexContent = fs.readFileSync(indexPath, "utf-8");
     const parsedEntries = parseDocumentationIndex(indexContent, {
       docsDir,
@@ -98,7 +98,7 @@ describe("VitePress navigation synthesis and link/anchor plugins", () => {
         .map((entry) => entry.link.split("#")[0])
     );
 
-    expect(activeDocsAndHomeRoutes.size).toBe(82);
+    expect(activeDocsAndHomeRoutes.size).toBe(80);
 
     const allActiveNonAdrPortalRoutes = new Set(
       parsedEntries
@@ -112,8 +112,8 @@ describe("VitePress navigation synthesis and link/anchor plugins", () => {
         .map((entry) => entry.link.split("#")[0])
     );
 
-    // 82 active docs/ + home pages plus the 7 additional staged root guides/policies = 89 portal pages
-    expect(allActiveNonAdrPortalRoutes.size).toBe(89);
+    // 80 active docs/ + home pages plus the 7 additional staged root guides/policies = 87 portal pages
+    expect(allActiveNonAdrPortalRoutes.size).toBe(87);
 
     const sidebar = synthesizeSidebarFromIndex(indexPath, {
       docsDir,

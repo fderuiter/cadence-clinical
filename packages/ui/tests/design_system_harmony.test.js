@@ -10,9 +10,6 @@ const portalSrcDir = path.join(repoRoot, "apps/subject-portal/src");
 const docsComponentsDir = path.join(repoRoot, "docs/components");
 
 const EXPECTED_SHARED_COMPONENTS = [
-  "AiActionButton",
-  "AiSuggestionDrawer",
-  "AuditLogViewer",
   "ClinicalBreadcrumbs",
   "ClinicalContextBar",
   "ClinicalDataTable",
@@ -32,15 +29,17 @@ const EXPECTED_SHARED_COMPONENTS = [
   "ClinicalRadioGroup",
   "ClinicalTabs",
   "ClinicalToastHost",
-  "ConfidenceBadge",
   "EmptyState",
   "EntityLink",
-  "FileUploadModal",
   "MediaPlayer",
   "ModalErrorAlert",
-  "PersonaSwitcher",
   "SignOutConfirmModal",
 ];
+
+const STAGED_UI_PRIMITIVES = new Set([
+  "ClinicalExplanation",
+  "ClinicalGatedAction",
+]);
 
 const EXPECTED_KEYBOARD_HELPERS = [
   "useFocusTrap",
@@ -201,7 +200,154 @@ function resolveCssColorExpr(expr, themeMap) {
 
 describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", () => {
   describe("Requirement 1: Complete Root Package Exports & Type Definitions", () => {
-    it("exposes all 30 shared Vue components from root index.js with zero unexported SFCs", () => {
+    function toKebabCase(pascalName) {
+      return pascalName.replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase();
+    }
+
+    function hasComponentReference(corpus, componentName) {
+      const kebab = toKebabCase(componentName);
+      const pascalRe = new RegExp(`\\b${componentName}\\b`);
+      const kebabRe = new RegExp(`<${kebab}[\\s>/]`);
+      return pascalRe.test(corpus) || kebabRe.test(corpus);
+    }
+
+    function parseExportedBuilderBodies(buildersSource) {
+      const builders = [];
+      const declRe = /export\s+function\s+([A-Za-z0-9_]+)\s*\(/g;
+      let match;
+      while ((match = declRe.exec(buildersSource)) !== null) {
+        const name = match[1];
+        let parenDepth = 0;
+        let paramEnd = match.index;
+        for (
+          let i = buildersSource.indexOf("(", match.index);
+          i < buildersSource.length;
+          i++
+        ) {
+          if (buildersSource[i] === "(") parenDepth++;
+          else if (buildersSource[i] === ")") {
+            parenDepth--;
+            if (parenDepth === 0) {
+              paramEnd = i + 1;
+              break;
+            }
+          }
+        }
+        const openBrace = buildersSource.indexOf("{", paramEnd);
+        let depth = 0;
+        let closeBrace = openBrace;
+        for (let i = openBrace; i < buildersSource.length; i++) {
+          if (buildersSource[i] === "{") depth++;
+          else if (buildersSource[i] === "}") {
+            depth--;
+            if (depth === 0) {
+              closeBrace = i;
+              break;
+            }
+          }
+        }
+        builders.push({
+          name,
+          body: buildersSource.slice(openBrace + 1, closeBrace),
+        });
+      }
+      return builders;
+    }
+
+    function evaluateUiConsumerReachability({
+      componentSources,
+      composableModules,
+      builderEntries,
+      consumerCorpus,
+      stagedPrimitives,
+    }) {
+      const reachableComponents = new Set();
+      for (const comp of componentSources) {
+        if (
+          stagedPrimitives.has(comp.name) ||
+          hasComponentReference(consumerCorpus, comp.name)
+        ) {
+          reachableComponents.add(comp.name);
+        }
+      }
+
+      let changed = true;
+      while (changed) {
+        changed = false;
+        const reachableVueCorpus = componentSources
+          .filter((comp) => reachableComponents.has(comp.name))
+          .map((comp) => comp.source)
+          .join("\n");
+        for (const comp of componentSources) {
+          if (reachableComponents.has(comp.name)) continue;
+          if (hasComponentReference(reachableVueCorpus, comp.name)) {
+            reachableComponents.add(comp.name);
+            changed = true;
+          }
+        }
+      }
+
+      const reachableVueCorpus = componentSources
+        .filter((comp) => reachableComponents.has(comp.name))
+        .map((comp) => comp.source)
+        .join("\n");
+      const combinedConsumerAndLiveUiCorpus = `${consumerCorpus}\n${reachableVueCorpus}`;
+
+      const unreachableComposables = [];
+      for (const mod of composableModules) {
+        const isStaged =
+          stagedPrimitives.has(mod.stem) ||
+          mod.exportedSymbols.some((sym) => stagedPrimitives.has(sym));
+        const hasCaller = mod.exportedSymbols.some((sym) =>
+          new RegExp(`\\b${sym}\\b`).test(combinedConsumerAndLiveUiCorpus)
+        );
+        if (!isStaged && !hasCaller) {
+          unreachableComposables.push(mod.stem);
+        }
+      }
+
+      const reachableBuilders = new Set();
+      for (const builder of builderEntries) {
+        if (
+          stagedPrimitives.has(builder.name) ||
+          new RegExp(`\\b${builder.name}\\b`).test(
+            combinedConsumerAndLiveUiCorpus
+          )
+        ) {
+          reachableBuilders.add(builder.name);
+        }
+      }
+
+      changed = true;
+      while (changed) {
+        changed = false;
+        const reachableBuilderBodies = builderEntries
+          .filter((b) => reachableBuilders.has(b.name))
+          .map((b) => b.body)
+          .join("\n");
+        for (const builder of builderEntries) {
+          if (reachableBuilders.has(builder.name)) continue;
+          if (
+            new RegExp(`\\b${builder.name}\\s*\\(`).test(reachableBuilderBodies)
+          ) {
+            reachableBuilders.add(builder.name);
+            changed = true;
+          }
+        }
+      }
+
+      return {
+        unreachableComponents: componentSources
+          .map((c) => c.name)
+          .filter((name) => !reachableComponents.has(name)),
+        unreachableComposables,
+        unreachableBuilders: builderEntries
+          .map((b) => b.name)
+          .filter((name) => !reachableBuilders.has(name)),
+      };
+    }
+
+    it("exposes all 24 shared Vue components from root index.js with zero unexported SFCs", () => {
       const discoveredVueNames = walkFiles(path.join(uiDir, "src/components"), [
         ".vue",
       ])
@@ -211,18 +357,17 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       expect(discoveredVueNames).toEqual(
         [...EXPECTED_SHARED_COMPONENTS].sort()
       );
-      expect(EXPECTED_SHARED_COMPONENTS).toHaveLength(30);
+      expect(EXPECTED_SHARED_COMPONENTS).toHaveLength(24);
       for (const name of EXPECTED_SHARED_COMPONENTS) {
         expect(rootUi[name], `root index.js missing ${name}`).toBeDefined();
       }
     });
 
-    it("exposes all 5 keyboard interaction helpers, createSrOnlyActionButton, and useAsyncRetry from root index.js", () => {
+    it("exposes all 5 keyboard interaction helpers and createSrOnlyActionButton from root index.js", () => {
       expect(EXPECTED_KEYBOARD_HELPERS).toHaveLength(5);
       for (const helperName of [
         ...EXPECTED_KEYBOARD_HELPERS,
         "createSrOnlyActionButton",
-        "useAsyncRetry",
       ]) {
         expect(
           rootUi[helperName],
@@ -231,7 +376,7 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       }
     });
 
-    it("declares complete TypeScript definitions for all 30 components and helpers in index.d.ts", () => {
+    it("declares complete TypeScript definitions for all 24 components and helpers in index.d.ts", () => {
       const dts = fs.readFileSync(path.join(uiDir, "index.d.ts"), "utf-8");
       for (const componentName of EXPECTED_SHARED_COMPONENTS) {
         expect(dts).toMatch(
@@ -241,12 +386,146 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       for (const helperName of [
         ...EXPECTED_KEYBOARD_HELPERS,
         "createSrOnlyActionButton",
-        "useAsyncRetry",
       ]) {
         expect(dts).toMatch(
           new RegExp(`export (?:declare )?(?:function|const) ${helperName}\\b`)
         );
       }
+    });
+
+    it("rejects any non-staged packages/ui component, composable, or HTML builder with zero callers in apps/web/src or apps/subject-portal/src", () => {
+      expect([...STAGED_UI_PRIMITIVES].sort()).toEqual([
+        "ClinicalExplanation",
+        "ClinicalGatedAction",
+      ]);
+      for (const stagedName of STAGED_UI_PRIMITIVES) {
+        expect(
+          rootUi[stagedName],
+          `STAGED_UI_PRIMITIVES entry ${stagedName} must exist in packages/ui`
+        ).toBeDefined();
+      }
+
+      const isProductionAppFile = (filePath) =>
+        !/\.(?:test|spec)\.[jt]sx?$/.test(filePath);
+
+      const appConsumerFiles = [
+        ...walkFiles(
+          webSrcDir,
+          [".vue", ".ts", ".js"],
+          new Set(["__tests__"])
+        ).filter(isProductionAppFile),
+        ...walkFiles(
+          portalSrcDir,
+          [".vue", ".ts", ".js"],
+          new Set(["__tests__"])
+        ).filter(isProductionAppFile),
+      ];
+      expect(appConsumerFiles.length).toBeGreaterThan(50);
+
+      const consumerCorpus = appConsumerFiles
+        .map((filePath) => fs.readFileSync(filePath, "utf-8"))
+        .join("\n");
+
+      const componentSources = walkFiles(path.join(uiDir, "src/components"), [
+        ".vue",
+      ])
+        .map((filePath) => ({
+          name: path.basename(filePath, ".vue"),
+          source: fs.readFileSync(filePath, "utf-8"),
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+
+      const composableModules = walkFiles(path.join(uiDir, "src/composables"), [
+        ".js",
+      ])
+        .map((filePath) => {
+          const stem = path.basename(filePath, ".js");
+          const source = fs.readFileSync(filePath, "utf-8");
+          const exportedSymbols = new Set([stem]);
+          const exportRe =
+            /export\s+(?:async\s+)?(?:function|const)\s+([A-Za-z0-9_]+)\b/g;
+          let match;
+          while ((match = exportRe.exec(source)) !== null) {
+            if (match[1] in rootUi) {
+              exportedSymbols.add(match[1]);
+            }
+          }
+          return {
+            stem,
+            exportedSymbols: [...exportedSymbols],
+          };
+        })
+        .sort((a, b) => a.stem.localeCompare(b.stem));
+
+      const buildersSource = fs.readFileSync(
+        path.join(uiDir, "src/builders.js"),
+        "utf-8"
+      );
+      const builderEntries = parseExportedBuilderBodies(buildersSource);
+      expect(builderEntries.length).toBeGreaterThanOrEqual(5);
+
+      const liveReport = evaluateUiConsumerReachability({
+        componentSources,
+        composableModules,
+        builderEntries,
+        consumerCorpus,
+        stagedPrimitives: STAGED_UI_PRIMITIVES,
+      });
+
+      expect(
+        liveReport.unreachableComponents,
+        "Unreferenced packages/ui components outside STAGED_UI_PRIMITIVES"
+      ).toEqual([]);
+      expect(
+        liveReport.unreachableComposables,
+        "Unreferenced packages/ui composables outside STAGED_UI_PRIMITIVES"
+      ).toEqual([]);
+      expect(
+        liveReport.unreachableBuilders,
+        "Unreferenced packages/ui HTML builders outside STAGED_UI_PRIMITIVES"
+      ).toEqual([]);
+
+      // Verify negative detection for unreferenced components, composables, and chained dead builders
+      const syntheticReport = evaluateUiConsumerReachability({
+        componentSources: [
+          ...componentSources,
+          {
+            name: "SyntheticUnreferencedWidget",
+            source: "<template><div>Unused</div></template>",
+          },
+        ],
+        composableModules: [
+          ...composableModules,
+          {
+            stem: "useSyntheticOrphanComposable",
+            exportedSymbols: ["useSyntheticOrphanComposable"],
+          },
+        ],
+        builderEntries: [
+          ...builderEntries,
+          {
+            name: "createSyntheticInnerBuilder",
+            body: 'return "<div></div>";',
+          },
+          {
+            name: "createSyntheticOuterBuilder",
+            body: "return createSyntheticInnerBuilder();",
+          },
+        ],
+        consumerCorpus,
+        stagedPrimitives: STAGED_UI_PRIMITIVES,
+      });
+
+      expect(syntheticReport.unreachableComponents).toEqual([
+        "SyntheticUnreferencedWidget",
+      ]);
+      expect(syntheticReport.unreachableComposables).toEqual([
+        "useSyntheticOrphanComposable",
+      ]);
+      expect(syntheticReport.unreachableBuilders).toEqual([
+        "createSyntheticInnerBuilder",
+        "createSyntheticOuterBuilder",
+      ]);
     });
   });
 
@@ -256,7 +535,7 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
         path.join(uiDir, "README.md"),
         ...walkFiles(docsComponentsDir, [".md"]),
       ];
-      expect(docFiles.length).toBeGreaterThanOrEqual(6);
+      expect(docFiles.length).toBeGreaterThanOrEqual(4);
 
       for (const docPath of docFiles) {
         const content = fs.readFileSync(docPath, "utf-8");
@@ -2203,7 +2482,6 @@ const open = ref(true);
       expect(srOnlyProps.overflow).toBe("hidden");
 
       const dropzoneFiles = [
-        path.join(uiDir, "src/components/FileUploadModal.vue"),
         path.join(webSrcDir, "components/etmf/BatchUploadDrawer.vue"),
         path.join(webSrcDir, "components/etmf/DocumentGrid.vue"),
         path.join(webSrcDir, "components/SynonymImportDrawer.vue"),
@@ -2471,6 +2749,14 @@ const open = () => {};
           code: `export const BADGE_COLOR = "var(--semantic-color-ai)";\n`,
           expectedCount: 1,
         },
+        {
+          filePath: path.join(
+            uiDir,
+            "src/components/clinical/__SyntheticAiButton.vue"
+          ),
+          code: `<template><button type="button" class="ai-btn">Draft</button></template>\n<style scoped>\n.ai-btn { border-color: var(--semantic-color-ai-border); }\n</style>\n`,
+          expectedCount: 1,
+        },
       ];
 
       for (const probe of violationProbes) {
@@ -2491,13 +2777,6 @@ const open = () => {};
         {
           filePath: path.join(webSrcDir, "components/ai/AiLabel.vue"),
           code: `<template><span class="ai-pill">AI-assisted</span></template>\n<style scoped>\n.ai-pill { background: var(--semantic-color-ai-bg); color: var(--semantic-color-ai); }\n</style>\n`,
-        },
-        {
-          filePath: path.join(
-            uiDir,
-            "src/components/clinical/AiActionButton.vue"
-          ),
-          code: `<template><button type="button" class="ai-btn">Draft</button></template>\n<style scoped>\n.ai-btn { border-color: var(--semantic-color-ai-border); }\n</style>\n`,
         },
       ];
 

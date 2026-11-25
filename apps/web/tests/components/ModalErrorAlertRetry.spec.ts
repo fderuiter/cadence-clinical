@@ -4,7 +4,6 @@ import { createPinia, setActivePinia } from "pinia";
 import SignatureCaptureModal from "../../src/features/signatures/components/SignatureCaptureModal.vue";
 import UpversioningImpactDrawer from "../../src/components/UpversioningImpactDrawer.vue";
 import ReAuthModal from "../../src/components/shared/ReAuthModal.vue";
-import { FileUploadModal } from "ui";
 import { useCodingStore } from "../../src/stores/coding";
 
 describe("ModalErrorAlert Retry Actions Across Overlays (#4523)", () => {
@@ -232,89 +231,6 @@ describe("ModalErrorAlert Retry Actions Across Overlays (#4523)", () => {
         credential: "ValidPass123",
         signing_reason: "APPROVAL",
       });
-    });
-  });
-
-  describe("FileUploadModal.vue", () => {
-    it("displays ModalErrorAlert when upload fails and re-triggers startUpload on Retry click", async () => {
-      const wrapper = mount(FileUploadModal, {
-        props: {
-          modelValue: true,
-          studyId: "STUDY-2026",
-        },
-        attachTo: document.body,
-      });
-
-      const testFile = new File(["dummy data"], "consent_v2.pdf", {
-        type: "application/pdf",
-      });
-      wrapper.vm.selectedFile = testFile;
-      wrapper.vm.reasonForChange = "Updated ICF document protocol amendment";
-      wrapper.vm.errorMessage = "Presigned S3 URL allocation timeout";
-      await wrapper.vm.$nextTick();
-
-      const alertEl = document.body.querySelector(".modal-error-alert");
-      expect(alertEl).not.toBeNull();
-      expect(alertEl?.textContent).toContain(
-        "Presigned S3 URL allocation timeout"
-      );
-
-      // Mock fetch for upload
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          file_id: "file-123",
-          upload_url: "https://s3.amazonaws.com/upload",
-        }),
-      });
-
-      const retryBtn = document.body.querySelector(
-        '[data-testid="modal-error-retry-btn"]'
-      );
-      expect(retryBtn).not.toBeNull();
-      expect(retryBtn?.textContent?.trim()).toBe("Retry Upload");
-
-      (retryBtn as HTMLButtonElement).click();
-      await wrapper.vm.$nextTick();
-
-      expect(global.fetch).toHaveBeenCalledWith(
-        "/api/v1/files/upload/presigned-url",
-        expect.anything()
-      );
-      wrapper.unmount();
-    });
-
-    it("clears error and resets dropzone state when Dismiss is clicked in FileUploadModal", async () => {
-      const wrapper = mount(FileUploadModal, {
-        props: {
-          modelValue: true,
-          studyId: "STUDY-2026",
-        },
-        attachTo: document.body,
-      });
-
-      const testFile = new File(["dummy data"], "consent_v2.pdf", {
-        type: "application/pdf",
-      });
-      wrapper.vm.selectedFile = testFile;
-      wrapper.vm.errorMessage = "Invalid file type";
-      await wrapper.vm.$nextTick();
-
-      const alertEl = document.body.querySelector(".modal-error-alert");
-      expect(alertEl).not.toBeNull();
-
-      const dismissBtn = document.body.querySelector(
-        '[data-testid="modal-error-dismiss-btn"]'
-      );
-      expect(dismissBtn).not.toBeNull();
-
-      (dismissBtn as HTMLButtonElement).click();
-      await wrapper.vm.$nextTick();
-
-      expect(wrapper.vm.errorMessage).toBe("");
-      expect(wrapper.vm.selectedFile).toBe(null);
-      expect(document.body.querySelector(".modal-error-alert")).toBeNull();
-      wrapper.unmount();
     });
   });
 });

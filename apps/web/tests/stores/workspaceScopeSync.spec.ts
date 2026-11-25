@@ -5,7 +5,7 @@ import {
   runLogoutCleanups,
 } from "../../src/auth/sessionCoordinator.js";
 import {
-  buildScopedRoutePath,
+  buildScopedWorkflowPath,
   resolveActiveWorkspaceScope,
 } from "../../src/canvas/palette";
 import {
@@ -37,7 +37,7 @@ describe("workspaceScope cross-view synchronization", () => {
       studyId: "",
       siteId: "",
     });
-    expect(buildScopedRoutePath("/ecrf", scope)).toBe("/ecrf");
+    expect(buildScopedWorkflowPath("/ecrf", scope)).toBe("/ecrf");
   });
 
   it("synchronizes studyId and siteId across studyCanvas, clinicalScope, and router query", () => {

@@ -662,9 +662,9 @@ A regulatory narrative drafting pipeline in `apps/safety` that compiles chronolo
 
 An integration pattern in `apps/interop` combining pre-compiled deterministic FHIR-to-CDISC ConceptMaps with confidence-gated embedding and LLM fallbacks for unstructured electronic health record (EHR) data.
 
-### Embedded AI Action Primitive
+### Embedded AI Proposal & Explanation Pattern
 
-A standardized frontend component pattern (`<AiActionButton>`, `<AiSuggestionDrawer>`) providing contextual AI triggers, visual confidence indicators, diff inspections, and role-governed human review actions within high-density clinical workspaces.
+A standardized frontend review pattern combining `apps/web/src/components/ai/` proposal inspection surfaces (`ProposalReview`, `NeedsAttention`) with shared `packages/ui` clinical explanation and authority-gated action primitives for human-in-the-loop clinical workflows.
 
 ### Interactive Credential Bootstrapping
 

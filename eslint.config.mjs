@@ -28,8 +28,6 @@ const aiTokenRegex = /--(?:semantic-)?color-ai(?:-[a-zA-Z0-9_-]+)?\b/g;
 function isAllowedAiTokenFile(filename) {
   if (filename.endsWith("/packages/ui/tokens.css")) return true;
   if (filename.includes("/apps/web/src/components/ai/")) return true;
-  if (/\/packages\/ui\/src\/components\/clinical\/Ai[^/]*\.vue$/.test(filename))
-    return true;
   return false;
 }
 

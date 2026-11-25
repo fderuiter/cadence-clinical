@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
   isGatewayApiCall,
   validateGatewayRequest,
-  generateGatewaySignature,
   isWhitelistedSubjectRoute,
   isPathSignatureGated,
   normalizeMswBasePath,
@@ -12,6 +11,8 @@ import {
   createMswWorkerStarter,
   evaluateDemoBoundaryRequest,
 } from "../mockGateway.js";
+import * as mockGatewayModule from "../mockGateway.js";
+import { generateGatewaySignature } from "../signing.js";
 import * as uiRoot from "../index.js";
 
 // A per-test secret: the simulator ships none of its own (#5335).
@@ -536,5 +537,12 @@ describe("createMswWorkerStarter & evaluateDemoBoundaryRequest", () => {
     } finally {
       consoleSpy.mockRestore();
     }
+  });
+
+  it("retains verifyGatewaySignature re-export without unused HMAC or JWT re-exports", () => {
+    expect(mockGatewayModule.verifyGatewaySignature).toBeTypeOf("function");
+    expect(uiRoot.verifyGatewaySignature).toBeTypeOf("function");
+    expect("generateGatewaySignature" in mockGatewayModule).toBe(false);
+    expect("generateCanonicalSignature" in mockGatewayModule).toBe(false);
   });
 });
