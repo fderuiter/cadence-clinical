@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -47,6 +48,7 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
@@ -643,6 +645,214 @@ public sealed class TreatmentBlindingHostRegressionTests : IAsyncLifetime
         return SendAsync(client, HttpMethod.Post, path, jsonBody, extraHeaders: headers, ct: ct);
     }
 
+    /// <summary>
+    /// Regression scenario: batched protocol design, concept resolution, and enrollment unblind evaluation eliminate
+    /// per-concept and per-enrollment round-trips across form fallback reads, previews, study query worklists, and
+    /// <c>K-AI-6</c> automation-agent authorization while preserving <c>K-AUTH-4</c> and <c>K-AUTH-5</c>.
+    /// </summary>
+    [Fact(DisplayName = "BatchedBlindingClassification_AndStudyQueryWorklist_EnforceKAuth4KAuth5AndKAi6WithoutPerItemOrPerEnrollmentLoops")]
+    [KernelRule("K-AUTH-4")]
+    [KernelRule("K-AUTH-5")]
+    [KernelRule("K-AI-6")]
+    public async Task BatchedBlindingClassificationAndStudyQueryWorklistEnforceKAuth4KAuth5AndKAi6WithoutPerItemOrPerEnrollmentLoops()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var isolatedState = new SeededClinicalState(CanaryArm);
+        await using var host = new KestrelKernelHostFactory(isolatedState);
+        host.EnsureStarted();
+
+        var blindedQuery = FormQuery.Raise(
+            FormQueryId.New(),
+            isolatedState.Tenant,
+            isolatedState.FormId,
+            isolatedState.EnrollmentId,
+            "trt_arm",
+            isolatedState.BlindedObservationId,
+            1,
+            BlindedAssertionCanaryText,
+            AssertionId.New(),
+            "unblinded-dm@sponsor.test",
+            T0.AddMinutes(1),
+            "Kit audit").Query;
+        var nonBlindedQuery = FormQuery.Raise(
+            FormQueryId.New(),
+            isolatedState.Tenant,
+            isolatedState.FormId,
+            isolatedState.EnrollmentId,
+            "sbp",
+            isolatedState.NonBlindedObservationId,
+            1,
+            "Repeat seated BP check",
+            AssertionId.New(),
+            "cra@sponsor.test",
+            T0.AddMinutes(2),
+            "Vitals SDV").Query;
+
+        await using (var db = isolatedState.Create(isolatedState.Tenant))
+        {
+            using var _ = db.PermitCommandWrites();
+            db.FormQueries.AddRange(blindedQuery, nonBlindedQuery);
+            await db.SaveChangesAsync(ct);
+        }
+
+        var coordinatorIdentity = new GatewayIdentity(
+            UserId: BlindedPerson.Id,
+            Roles: ["Clinical Research Coordinator"],
+            SiteIds: ["SITE-01"],
+            TenantId: TestSecurityContext.TenantCode,
+            StudyIds: [isolatedState.StudyId.Value.ToString("D")],
+            UnblindedAccess: false);
+        using var coordinatorClient = host.CreateKestrelSignedClient(coordinatorIdentity);
+
+        var studyRef = Uri.EscapeDataString(isolatedState.StudyNode.ToString());
+        var rulePackRef = Uri.EscapeDataString(NodeRef.For(isolatedState.RulePackItemId).ToString());
+
+        isolatedState.ResetBatchTelemetry();
+        var (formStatus, formBody) = await SendAsync(coordinatorClient, HttpMethod.Get, $"/api/v1/execution/forms/{isolatedState.FormId.Value:D}", ct: ct);
+        formStatus.Should().Be(HttpStatusCode.OK, formBody);
+        formBody.Should().NotContain(CanaryArm);
+        isolatedState.SingleGetDesignCalls.Should().Be(0);
+        isolatedState.BatchGetDesignsCalls.Should().Be(1);
+        isolatedState.SingleResolveConceptCalls.Should().Be(0);
+        isolatedState.BatchResolveConceptCalls.Should().Be(1);
+
+        isolatedState.ResetBatchTelemetry();
+        var (previewStatus, previewBody) = await SendAsync(
+            coordinatorClient,
+            HttpMethod.Post,
+            $"/api/v1/execution/forms/{isolatedState.FormId.Value:D}/preview",
+            "{\"values\":[]}",
+            ct: ct);
+        previewStatus.Should().Be(HttpStatusCode.OK, previewBody);
+        previewBody.Should().NotContain(CanaryArm).And.NotContain(BlindedRuleId).And.Contain(NonBlindedRuleId);
+        isolatedState.SingleGetDesignCalls.Should().Be(0);
+        isolatedState.BatchGetDesignsCalls.Should().Be(1);
+        isolatedState.SingleResolveConceptCalls.Should().Be(0);
+        isolatedState.BatchResolveConceptCalls.Should().Be(1);
+
+        isolatedState.ResetBatchTelemetry();
+        var (packPreviewStatus, packPreviewBody) = await SendAsync(
+            coordinatorClient,
+            HttpMethod.Post,
+            $"/api/v1/kernel/studies/{studyRef}/rule-packs/{rulePackRef}/preview",
+            "{}",
+            ct: ct);
+        packPreviewStatus.Should().Be(HttpStatusCode.OK, packPreviewBody);
+        packPreviewBody.Should().NotContain(CanaryArm).And.NotContain(BlindedRuleId).And.Contain(NonBlindedRuleId);
+        isolatedState.SingleGetDesignCalls.Should().Be(0);
+        isolatedState.BatchGetDesignsCalls.Should().Be(1);
+        isolatedState.SingleResolveConceptCalls.Should().Be(0);
+        isolatedState.BatchResolveConceptCalls.Should().Be(1);
+        isolatedState.SinglePathOfCalls.Should().Be(0);
+
+        // Precomputed blinding sets (matching KernelCollectionInstanceRecords in PostgreSQL):
+        // GET /forms/{id} reuses BlindedItemIds/BlindedObservationIds with zero protocol/concept queries,
+        // and GET /forms/queries?study_id=... batches enrollment unblind checks with zero single PathOfAsync calls.
+        isolatedState.PopulateFormBlindingSets();
+        isolatedState.ResetBatchTelemetry();
+        var (precomputedFormStatus, precomputedFormBody) = await SendAsync(
+            coordinatorClient,
+            HttpMethod.Get,
+            $"/api/v1/execution/forms/{isolatedState.FormId.Value:D}",
+            ct: ct);
+        precomputedFormStatus.Should().Be(HttpStatusCode.OK, precomputedFormBody);
+        precomputedFormBody.Should().NotContain(CanaryArm);
+        isolatedState.SingleGetDesignCalls.Should().Be(0);
+        isolatedState.BatchGetDesignsCalls.Should().Be(0);
+        isolatedState.SingleResolveConceptCalls.Should().Be(0);
+        isolatedState.BatchResolveConceptCalls.Should().Be(0);
+
+        // Study query worklist: blinded coordinator gets masked blinded query, readable non-blinded query, zero single PathOfAsync calls.
+        isolatedState.ResetBatchTelemetry();
+        var (coordQueriesStatus, coordQueriesBody) = await SendAsync(
+            coordinatorClient,
+            HttpMethod.Get,
+            $"/api/v1/execution/forms/queries?study_id={isolatedState.StudyId.Value:D}",
+            ct: ct);
+        coordQueriesStatus.Should().Be(HttpStatusCode.OK, coordQueriesBody);
+        coordQueriesBody.Should().NotContain(CanaryArm)
+            .And.NotContain(BlindedAssertionCanaryText)
+            .And.Contain("\"text\":\"masked\"")
+            .And.Contain("Repeat seated BP check");
+        isolatedState.SinglePathOfCalls.Should().Be(0);
+
+        // Study query worklist: qualified pharmacist sees blinded query text via batched PathsOfAsync.
+        var pharmacistIdentity = new GatewayIdentity(
+            UserId: PharmacistPerson.Id,
+            Roles: ["Unblinded Pharmacist"],
+            SiteIds: ["SITE-01"],
+            TenantId: TestSecurityContext.TenantCode,
+            StudyIds: [isolatedState.StudyId.Value.ToString("D")],
+            UnblindedAccess: true);
+        using var pharmacistClient = host.CreateKestrelSignedClient(pharmacistIdentity);
+
+        isolatedState.ResetBatchTelemetry();
+        var (pharmQueriesStatus, pharmQueriesBody) = await SendAsync(
+            pharmacistClient,
+            HttpMethod.Get,
+            $"/api/v1/execution/forms/queries?study_id={isolatedState.StudyId.Value:D}",
+            ct: ct);
+        pharmQueriesStatus.Should().Be(HttpStatusCode.OK, pharmQueriesBody);
+        pharmQueriesBody.Should().Contain(BlindedAssertionCanaryText).And.Contain("Repeat seated BP check");
+        isolatedState.SinglePathOfCalls.Should().Be(0);
+        isolatedState.BatchPathsOfCalls.Should().BeGreaterThanOrEqualTo(1);
+
+        // Study query worklist: expired-qualification pharmacist (K-AUTH-5) is masked via batched evaluation.
+        using var expiredClient = host.CreateKestrelSignedClient(pharmacistIdentity with { UserId = UnqualifiedPharmacistPerson.Id });
+        isolatedState.ResetBatchTelemetry();
+        var (expiredQueriesStatus, expiredQueriesBody) = await SendAsync(
+            expiredClient,
+            HttpMethod.Get,
+            $"/api/v1/execution/forms/queries?study_id={isolatedState.StudyId.Value:D}",
+            ct: ct);
+        expiredQueriesStatus.Should().Be(HttpStatusCode.OK, expiredQueriesBody);
+        expiredQueriesBody.Should().NotContain(CanaryArm)
+            .And.NotContain(BlindedAssertionCanaryText)
+            .And.Contain("\"text\":\"masked\"")
+            .And.Contain("Repeat seated BP check");
+        isolatedState.SinglePathOfCalls.Should().Be(0);
+
+        // K-AI-6 batched AuthorityEvaluator.EvaluateManyAsync: automation agent intersects agent and requester across multiple enrollments.
+        var evaluator = new AuthorityEvaluator(isolatedState, new KernelAuthorityOptions(new HashSet<string>(StringComparer.Ordinal)));
+        var otherSiteEnrollment = NodeRef.For(EnrollmentId.New());
+        NodeRef[] targetEnrollments = [isolatedState.EnrollmentNode, otherSiteEnrollment];
+        var unblindCapability = new Capability("enrollment.unblind", VerbClass.Read);
+        var evalAt = T0.AddMinutes(5);
+
+        isolatedState.ResetBatchTelemetry();
+        var blindedRequesterDecisions = await evaluator.EvaluateManyAsync(
+            McpAgentActor.ActingFor(BlindedPerson),
+            isolatedState.Tenant,
+            unblindCapability,
+            targetEnrollments,
+            evalAt,
+            evalAt,
+            ct);
+        blindedRequesterDecisions[isolatedState.EnrollmentNode].Permitted.Should().BeFalse();
+        blindedRequesterDecisions[isolatedState.EnrollmentNode].Conditions
+            .Should().Contain(c => !c.Met && c.Code == AuthorityEvaluator.RequesterCondition);
+        blindedRequesterDecisions[otherSiteEnrollment].Permitted.Should().BeFalse();
+        blindedRequesterDecisions[otherSiteEnrollment].Conditions
+            .Should().Contain(c => !c.Met && c.Code == AuthorityEvaluator.RequesterCondition);
+        isolatedState.SinglePathOfCalls.Should().Be(0);
+
+        isolatedState.ResetBatchTelemetry();
+        var pharmacistRequesterDecisions = await evaluator.EvaluateManyAsync(
+            McpAgentActor.ActingFor(PharmacistPerson),
+            isolatedState.Tenant,
+            unblindCapability,
+            targetEnrollments,
+            evalAt,
+            evalAt,
+            ct);
+        pharmacistRequesterDecisions[isolatedState.EnrollmentNode].Permitted.Should().BeTrue();
+        pharmacistRequesterDecisions[otherSiteEnrollment].Permitted.Should().BeFalse();
+        pharmacistRequesterDecisions[otherSiteEnrollment].Conditions
+            .Should().Contain(c => !c.Met && c.Code == AuthorityEvaluator.RequesterCondition);
+        isolatedState.SinglePathOfCalls.Should().Be(0);
+        isolatedState.BatchPathsOfCalls.Should().BeGreaterThanOrEqualTo(1);
+    }
+
     private static string BuildMcpToolCall(string toolName, object arguments) =>
         JsonSerializer.Serialize(new
         {
@@ -794,6 +1004,7 @@ public sealed class TreatmentBlindingHostRegressionTests : IAsyncLifetime
     }
 
     private sealed class SeededClinicalState :
+        IDisposable,
         ITenantDirectory,
         ITenantEntitlementReader,
         IDurableSigTokenUseStore,
@@ -827,7 +1038,7 @@ public sealed class TreatmentBlindingHostRegressionTests : IAsyncLifetime
         private readonly ConceptVersionView _sbpConcept;
         private readonly ObservationRecord _blindedObservation;
         private readonly ObservationRecord _nonBlindedObservation;
-        private readonly CollectionInstanceRecord _formRecord;
+        private CollectionInstanceRecord _formRecord;
         private readonly StudyExportSnapshot _studySnapshot;
         private readonly EnrollmentCasebookSnapshot _casebookSnapshot;
         private readonly LibraryItemView _rulePackItem;
@@ -1411,6 +1622,50 @@ public sealed class TreatmentBlindingHostRegressionTests : IAsyncLifetime
 
         public NodeRef BlindedFindingNode => NodeRef.For(BlindedFindingId);
 
+        public int SingleGetDesignCalls => _singleGetDesignCalls;
+
+        public int BatchGetDesignsCalls => _batchGetDesignsCalls;
+
+        public int SingleResolveConceptCalls => _singleResolveConceptCalls;
+
+        public int BatchResolveConceptCalls => _batchResolveConceptCalls;
+
+        public int SinglePathOfCalls => _singlePathOfCalls;
+
+        public int BatchPathsOfCalls => _batchPathsOfCalls;
+
+        private int _singleGetDesignCalls;
+        private int _batchGetDesignsCalls;
+        private int _singleResolveConceptCalls;
+        private int _batchResolveConceptCalls;
+        private int _singlePathOfCalls;
+        private int _batchPathsOfCalls;
+
+        public void ResetBatchTelemetry()
+        {
+            Interlocked.Exchange(ref _singleGetDesignCalls, 0);
+            Interlocked.Exchange(ref _batchGetDesignsCalls, 0);
+            Interlocked.Exchange(ref _singleResolveConceptCalls, 0);
+            Interlocked.Exchange(ref _batchResolveConceptCalls, 0);
+            Interlocked.Exchange(ref _singlePathOfCalls, 0);
+            Interlocked.Exchange(ref _batchPathsOfCalls, 0);
+        }
+
+        public void PopulateFormBlindingSets()
+        {
+            _formRecord = _formRecord with
+            {
+                BlindedItemIds = FrozenSet.Create(StringComparer.Ordinal, "trt_arm"),
+                BlindedObservationIds = FrozenSet.Create(BlindedObservationId),
+            };
+        }
+
+        public void Dispose()
+        {
+            using var db = Create(Tenant);
+            db.Database.EnsureDeleted();
+        }
+
         public Task<TenantId?> FindActiveByCodeAsync(string code, CancellationToken cancellationToken) =>
             Task.FromResult(string.Equals(code, TestSecurityContext.TenantCode, StringComparison.Ordinal) ? (TenantId?)Tenant : null);
 
@@ -1550,6 +1805,15 @@ public sealed class TreatmentBlindingHostRegressionTests : IAsyncLifetime
         public Task<IReadOnlyList<ScopeChild>?> GetChildrenAsync(TenantId tenant, NodeRef node, CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<ScopeChild>?>(null);
 
+        public Task<IReadOnlyList<StudyEnrollmentNode>?> GetStudyEnrollmentsAsync(
+            TenantId tenant,
+            StudyId study,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<StudyEnrollmentNode>?>(
+                tenant == Tenant && study == StudyId
+                    ? [new StudyEnrollmentNode(EnrollmentId, "SUBJ-001", SiteId, "SITE-01")]
+                    : null);
+
         public Task<IReadOnlyList<Grant>> GrantsHeldAsync(TenantId tenant, Actor actor, CancellationToken cancellationToken) =>
             Task.FromResult<IReadOnlyList<Grant>>(tenant == Tenant ? [.. _grants.Where(g => g.Grantee == actor)] : []);
 
@@ -1561,26 +1825,51 @@ public sealed class TreatmentBlindingHostRegressionTests : IAsyncLifetime
 
         public Task<ScopePath> PathOfAsync(TenantId tenant, NodeRef resource, CancellationToken cancellationToken)
         {
+            Interlocked.Increment(ref _singlePathOfCalls);
+            return Task.FromResult(ResolveScopePath(tenant, resource));
+        }
+
+        public Task<IReadOnlyDictionary<NodeRef, ScopePath>> PathsOfAsync(
+            TenantId tenant,
+            IReadOnlyCollection<NodeRef> resources,
+            CancellationToken cancellationToken)
+        {
+            Interlocked.Increment(ref _batchPathsOfCalls);
+            var resolved = new Dictionary<NodeRef, ScopePath>();
+            foreach (var resource in resources)
+            {
+                var key = resource.Unversioned();
+                if (!resolved.ContainsKey(key))
+                {
+                    resolved[key] = ResolveScopePath(tenant, key);
+                }
+            }
+
+            return Task.FromResult<IReadOnlyDictionary<NodeRef, ScopePath>>(resolved);
+        }
+
+        private ScopePath ResolveScopePath(TenantId tenant, NodeRef resource)
+        {
             if (tenant != Tenant)
             {
-                return Task.FromResult(ScopePath.TenantWide);
+                return ScopePath.TenantWide;
             }
 
             var unversioned = new NodeRef(resource.Kind, resource.Id);
             if (unversioned.Kind == NodeKinds.Grant)
             {
                 var grant = _grants.SingleOrDefault(g => g.Id.Value == unversioned.Id);
-                return Task.FromResult(grant?.Scope.Level switch
+                return grant?.Scope.Level switch
                 {
                     ScopeLevel.Study => _studyPath,
                     ScopeLevel.StudySite => _sitePath,
                     _ => ScopePath.TenantWide,
-                });
+                };
             }
 
             if (unversioned == StudyNode || unversioned == NodeRef.For(ProtocolVersionId))
             {
-                return Task.FromResult(_studyPath);
+                return _studyPath;
             }
 
             if (unversioned == NodeRef.For(SiteId)
@@ -1591,10 +1880,10 @@ public sealed class TreatmentBlindingHostRegressionTests : IAsyncLifetime
                 || unversioned == BlindedFindingNode
                 || unversioned == NodeRef.For(NonBlindedFindingId))
             {
-                return Task.FromResult(_sitePath);
+                return _sitePath;
             }
 
-            return Task.FromResult(ScopePath.TenantWide);
+            return ScopePath.TenantWide;
         }
 
         public Task<IReadOnlyList<ScopePath>> StudySitePathsAsync(TenantId tenant, NodeRef node, CancellationToken cancellationToken) =>
@@ -1681,25 +1970,88 @@ public sealed class TreatmentBlindingHostRegressionTests : IAsyncLifetime
         public Task<SoaMatrix?> GetScheduleOfActivitiesAsync(TenantId tenant, ProtocolVersionId version, CancellationToken cancellationToken) =>
             Task.FromResult<SoaMatrix?>(null);
 
-        public Task<ProtocolDesign?> GetDesignAsync(TenantId tenant, ProtocolVersionId version, CancellationToken cancellationToken) =>
-            Task.FromResult(tenant == Tenant && version == ProtocolVersionId ? _design : null);
+        public Task<ProtocolDesign?> GetDesignAsync(TenantId tenant, ProtocolVersionId version, CancellationToken cancellationToken)
+        {
+            Interlocked.Increment(ref _singleGetDesignCalls);
+            return Task.FromResult(tenant == Tenant && version == ProtocolVersionId ? _design : null);
+        }
 
-        public Task<ConceptVersionView?> ResolveAsync(TenantId tenant, ConceptRef concept, CancellationToken cancellationToken = default) =>
-            GetCurrentAsync(tenant, concept.ConceptId, cancellationToken);
+        public Task<IReadOnlyDictionary<ProtocolVersionId, ProtocolDesign>> GetDesignsForStudyAsync(
+            TenantId tenant,
+            StudyId study,
+            CancellationToken cancellationToken)
+        {
+            Interlocked.Increment(ref _batchGetDesignsCalls);
+            var resolved = new Dictionary<ProtocolVersionId, ProtocolDesign>();
+            if (tenant == Tenant && study == StudyId)
+            {
+                resolved[ProtocolVersionId] = _design;
+            }
+
+            return Task.FromResult<IReadOnlyDictionary<ProtocolVersionId, ProtocolDesign>>(resolved);
+        }
+
+        public Task<ConceptVersionView?> ResolveAsync(TenantId tenant, ConceptRef concept, CancellationToken cancellationToken = default)
+        {
+            Interlocked.Increment(ref _singleResolveConceptCalls);
+            return Task.FromResult(ResolveCurrentConcept(tenant, concept.ConceptId));
+        }
+
+        public Task<IReadOnlyDictionary<ConceptRef, ConceptVersionView>> ResolveManyAsync(
+            TenantId tenant,
+            IReadOnlyCollection<ConceptRef> concepts,
+            CancellationToken cancellationToken = default)
+        {
+            Interlocked.Increment(ref _batchResolveConceptCalls);
+            var resolved = new Dictionary<ConceptRef, ConceptVersionView>();
+            foreach (var concept in concepts.Distinct())
+            {
+                if (ResolveCurrentConcept(tenant, concept.ConceptId) is { } view && view.Concept == concept)
+                {
+                    resolved[concept] = view;
+                }
+            }
+
+            return Task.FromResult<IReadOnlyDictionary<ConceptRef, ConceptVersionView>>(resolved);
+        }
 
         public Task<ConceptVersionView?> GetCurrentAsync(TenantId tenant, ConceptId concept, CancellationToken cancellationToken = default)
         {
+            Interlocked.Increment(ref _singleResolveConceptCalls);
+            return Task.FromResult(ResolveCurrentConcept(tenant, concept));
+        }
+
+        public Task<IReadOnlyDictionary<ConceptId, ConceptVersionView>> GetCurrentManyAsync(
+            TenantId tenant,
+            IReadOnlyCollection<ConceptId> concepts,
+            CancellationToken cancellationToken = default)
+        {
+            Interlocked.Increment(ref _batchResolveConceptCalls);
+            var resolved = new Dictionary<ConceptId, ConceptVersionView>();
+            foreach (var conceptId in concepts.Distinct())
+            {
+                if (ResolveCurrentConcept(tenant, conceptId) is { } view)
+                {
+                    resolved[conceptId] = view;
+                }
+            }
+
+            return Task.FromResult<IReadOnlyDictionary<ConceptId, ConceptVersionView>>(resolved);
+        }
+
+        private ConceptVersionView? ResolveCurrentConcept(TenantId tenant, ConceptId concept)
+        {
             if (tenant != Tenant)
             {
-                return Task.FromResult<ConceptVersionView?>(null);
+                return null;
             }
 
             if (concept == BlindedConceptRef.ConceptId)
             {
-                return Task.FromResult<ConceptVersionView?>(_blindedConcept);
+                return _blindedConcept;
             }
 
-            return Task.FromResult(concept == SbpConceptRef.ConceptId ? _sbpConcept : null);
+            return concept == SbpConceptRef.ConceptId ? _sbpConcept : null;
         }
 
         public Task<ConceptVersionView?> FindBiomedicalConceptAsync(TenantId tenant, string cdiscConceptCode, CancellationToken cancellationToken = default) =>
@@ -1839,8 +2191,19 @@ public sealed class TreatmentBlindingHostRegressionTests : IAsyncLifetime
         {
             var options = new DbContextOptionsBuilder<ExecutionModuleDbContext>()
                 .UseInMemoryDatabase($"{_inMemoryDbName}-{tenant.Value.ToString("N", CultureInfo.InvariantCulture)}")
+                .ReplaceService<IModelCustomizer, InMemoryExecutionModelCustomizer>()
                 .Options;
             return new ExecutionModuleDbContext(options);
+        }
+
+        private sealed class InMemoryExecutionModelCustomizer(ModelCustomizerDependencies dependencies) : ModelCustomizer(dependencies)
+        {
+            public override void Customize(ModelBuilder modelBuilder, DbContext context)
+            {
+                base.Customize(modelBuilder, context);
+                modelBuilder.Entity<FormQuery>().Ignore(q => q.Periods);
+                modelBuilder.Ignore<FormQueryPeriod>();
+            }
         }
 
         Task<CommandResult<TResult>> IKernelCommandSender.SendAsync<TResult>(

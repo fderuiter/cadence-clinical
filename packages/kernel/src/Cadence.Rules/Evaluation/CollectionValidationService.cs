@@ -732,7 +732,8 @@ public sealed class CollectionValidationService(
             }
 
             recordedByItem.TryGetValue(specItem.Id, out var entry);
-            var converted = !unblinded && IsBlindedItemFast(form.CollectionSpecId, form.CollectionTitle, specItem.Id, specItem, entry.Value, entry.ObservationId, designs, conceptMap, masks)
+            var itemBlindedIds = draftOverlay is not null && draftOverlay.ContainsKey(specItem.Id) ? null : form.BlindedItemIds;
+            var converted = !unblinded && IsBlindedItemFast(form.CollectionSpecId, form.CollectionTitle, specItem.Id, specItem, entry.Value, entry.ObservationId, designs, conceptMap, masks, itemBlindedIds)
                 ? RuleValue.Null
                 : ToRuleValue(entry.Value);
             ownValues.Add(specItem.Id, converted);
@@ -745,7 +746,8 @@ public sealed class CollectionValidationService(
                 continue;
             }
 
-            var converted = !unblinded && IsBlindedItemFast(form.CollectionSpecId, form.CollectionTitle, itemId, specItem: null, entry.Value, entry.ObservationId, designs, conceptMap, masks)
+            var itemBlindedIds = draftOverlay is not null && draftOverlay.ContainsKey(itemId) ? null : form.BlindedItemIds;
+            var converted = !unblinded && IsBlindedItemFast(form.CollectionSpecId, form.CollectionTitle, itemId, specItem: null, entry.Value, entry.ObservationId, designs, conceptMap, masks, itemBlindedIds)
                 ? RuleValue.Null
                 : ToRuleValue(entry.Value);
             ownValues.Add(itemId, converted);
@@ -976,6 +978,13 @@ public sealed class CollectionValidationService(
         IReadOnlyDictionary<ConceptId, BlindedConceptMetadata> conceptMap,
         IReadOnlyDictionary<NodeRef, MaskReason>? masks = null)
     {
+        if (ReferenceEquals(_blinding, BlindedTreatmentClassifier.Instance)
+            && form.BlindedItemIds is not null
+            && form.BlindedItemIds.Contains(itemId))
+        {
+            return true;
+        }
+
         ObservationId? observationId = null;
         if (masks is not null)
         {
@@ -984,7 +993,7 @@ public sealed class CollectionValidationService(
         }
 
         var specItem = form.Items.FirstOrDefault(i => string.Equals(i.Id, itemId, StringComparison.Ordinal));
-        return IsBlindedItemFast(form.CollectionSpecId, form.CollectionTitle, itemId, specItem, rawValue, observationId, designs, conceptMap, masks);
+        return IsBlindedItemFast(form.CollectionSpecId, form.CollectionTitle, itemId, specItem, rawValue, observationId, designs, conceptMap, masks, form.BlindedItemIds);
     }
 
     private bool IsBlindedItemFast(
@@ -996,9 +1005,17 @@ public sealed class CollectionValidationService(
         ObservationId? observationId,
         IReadOnlyList<ProtocolDesign> designs,
         IReadOnlyDictionary<ConceptId, BlindedConceptMetadata> conceptMap,
-        IReadOnlyDictionary<NodeRef, MaskReason>? masks)
+        IReadOnlyDictionary<NodeRef, MaskReason>? masks,
+        IReadOnlySet<string>? blindedItemIds = null)
     {
         if (masks is not null && observationId is { } obsId && masks.ContainsKey(NodeRef.For(obsId)))
+        {
+            return true;
+        }
+
+        if (ReferenceEquals(_blinding, BlindedTreatmentClassifier.Instance)
+            && blindedItemIds is not null
+            && blindedItemIds.Contains(itemId))
         {
             return true;
         }
@@ -1049,61 +1066,45 @@ public sealed class CollectionValidationService(
             return [];
         }
 
-        var designs = new List<ProtocolDesign>();
-        var seenVersions = new HashSet<ProtocolVersionId>();
-        foreach (var versionId in versionIds.Distinct())
+        var distinctVersionIds = versionIds.Distinct().ToList();
+        var studyDesigns = await protocols.GetDesignsForStudyAsync(tenant, studyId, cancellationToken).ConfigureAwait(false);
+        if (studyDesigns.Count > 0)
         {
-            if (seenVersions.Add(versionId)
-                && await protocols.GetDesignAsync(tenant, versionId, cancellationToken).ConfigureAwait(false) is { } design)
+            var formDesigns = new List<ProtocolDesign>();
+            foreach (var versionId in distinctVersionIds)
             {
-                designs.Add(design);
+                if (studyDesigns.TryGetValue(versionId, out var design))
+                {
+                    formDesigns.Add(design);
+                }
+            }
+
+            return formDesigns.Count > 0 ? formDesigns : [.. studyDesigns.Values];
+        }
+
+        var fallbackDesigns = new List<ProtocolDesign>();
+        foreach (var versionId in distinctVersionIds.Where(id => !id.IsEmpty))
+        {
+            if (await protocols.GetDesignAsync(tenant, versionId, cancellationToken).ConfigureAwait(false) is { } design)
+            {
+                fallbackDesigns.Add(design);
             }
         }
 
-        if (designs.Count > 0)
-        {
-            return designs;
-        }
-
-        var summaries = await protocols.ListForStudyAsync(tenant, studyId, cancellationToken).ConfigureAwait(false);
-        foreach (var summaryId in summaries.Select(summary => summary.Id).Where(seenVersions.Add))
-        {
-            if (await protocols.GetDesignAsync(tenant, summaryId, cancellationToken).ConfigureAwait(false) is { } design)
-            {
-                designs.Add(design);
-            }
-        }
-
-        return designs;
+        return fallbackDesigns;
     }
 
-    private async Task<IReadOnlyDictionary<ConceptId, BlindedConceptMetadata>> LoadConceptsAsync(
+    private Task<IReadOnlyDictionary<ConceptId, BlindedConceptMetadata>> LoadConceptsAsync(
         TenantId tenant,
         IEnumerable<CollectionItem> items,
         IReadOnlyList<ProtocolDesign> designs,
-        CancellationToken cancellationToken)
-    {
-        if (concepts is null)
-        {
-            return new Dictionary<ConceptId, BlindedConceptMetadata>();
-        }
-
-        var resolved = new Dictionary<ConceptId, BlindedConceptMetadata>();
-        var refs = items.Select(i => i.Concept)
-            .Concat(designs.SelectMany(d => d.CollectionSpecs).SelectMany(s => s.Items).Select(i => i.Concept))
-            .Distinct();
-        foreach (var conceptRef in refs)
-        {
-            var view = await concepts.ResolveAsync(tenant, conceptRef, cancellationToken).ConfigureAwait(false)
-                ?? await concepts.GetCurrentAsync(tenant, conceptRef.ConceptId, cancellationToken).ConfigureAwait(false);
-            if (view is not null)
-            {
-                resolved[conceptRef.ConceptId] = new BlindedConceptMetadata(view.ExternalCode, view.PreferredLabel, view.Definition);
-            }
-        }
-
-        return resolved;
-    }
+        CancellationToken cancellationToken) =>
+        BlindedConceptMetadata.ResolveManyAsync(
+            concepts,
+            tenant,
+            items.Select(i => i.Concept)
+                .Concat(designs.SelectMany(d => d.CollectionSpecs).SelectMany(s => s.Items).Select(i => i.Concept)),
+            cancellationToken);
 
     private static ValidationRunId DeriveRunId(TenantId tenant, StudyId study, string idempotencyKey)
     {

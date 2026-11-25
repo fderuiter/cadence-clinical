@@ -32,7 +32,39 @@ public sealed record AuthorizationRequest(
 /// </summary>
 public interface IAuthorizationEvaluator
 {
+    /// <summary>Evaluates <paramref name="request"/> and returns the decision with its checked conditions.</summary>
     ValueTask<AuthorizationDecision> EvaluateAsync(AuthorizationRequest request, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Evaluates whether <paramref name="actor"/> may exercise <paramref name="capability"/> on each resource in
+    /// <paramref name="resources"/> in <paramref name="tenant"/> as of <c>(at, knownAt)</c>, batching store lookups when
+    /// supported by the implementation.
+    /// </summary>
+    async ValueTask<IReadOnlyDictionary<NodeRef, AuthorizationDecision>> EvaluateManyAsync(
+        Actor actor,
+        TenantId tenant,
+        Capability capability,
+        IReadOnlyCollection<NodeRef> resources,
+        DateTimeOffset at,
+        DateTimeOffset knownAt,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(actor);
+        ArgumentNullException.ThrowIfNull(capability);
+        ArgumentNullException.ThrowIfNull(resources);
+        var decisions = new Dictionary<NodeRef, AuthorizationDecision>();
+        foreach (var resource in resources)
+        {
+            if (!decisions.ContainsKey(resource))
+            {
+                decisions[resource] = await EvaluateAsync(
+                    new AuthorizationRequest(actor, tenant, capability, resource, at, knownAt),
+                    cancellationToken).ConfigureAwait(false);
+            }
+        }
+
+        return decisions;
+    }
 }
 
 /// <summary>
@@ -44,6 +76,30 @@ public interface IAuthorizationProbe
     /// <summary>Whether the current actor may exercise <paramref name="capability"/> on <paramref name="resource"/> now.</summary>
     ValueTask<AuthorizationDecision> CanIAsync(
         TenantId tenant, Capability capability, NodeRef resource, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Whether the current actor may exercise <paramref name="capability"/> on each resource in <paramref name="resources"/>
+    /// now, evaluated in one batch when supported by the probe.
+    /// </summary>
+    async ValueTask<IReadOnlyDictionary<NodeRef, AuthorizationDecision>> CanIManyAsync(
+        TenantId tenant,
+        Capability capability,
+        IReadOnlyCollection<NodeRef> resources,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(capability);
+        ArgumentNullException.ThrowIfNull(resources);
+        var decisions = new Dictionary<NodeRef, AuthorizationDecision>();
+        foreach (var resource in resources)
+        {
+            if (!decisions.ContainsKey(resource))
+            {
+                decisions[resource] = await CanIAsync(tenant, capability, resource, cancellationToken).ConfigureAwait(false);
+            }
+        }
+
+        return decisions;
+    }
 
     /// <summary>
     /// The command catalogue for <paramref name="resource"/>: every kernel command offered on objects of its kind,

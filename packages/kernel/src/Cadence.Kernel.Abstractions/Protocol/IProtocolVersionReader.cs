@@ -34,6 +34,34 @@ public interface IProtocolVersionReader
         Task.FromResult<ProtocolDesign?>(null);
 
     /// <summary>
+    /// Every typed <see cref="ProtocolDesign"/> stored across <paramref name="study"/>'s protocol versions in
+    /// <paramref name="tenant"/>, keyed by <see cref="ProtocolVersionId"/> (newest version first). Versions whose content
+    /// is not a typed protocol design are omitted.
+    /// </summary>
+    async Task<IReadOnlyDictionary<ProtocolVersionId, ProtocolDesign>> GetDesignsForStudyAsync(
+        TenantId tenant,
+        StudyId study,
+        CancellationToken cancellationToken)
+    {
+        var summaries = await ListForStudyAsync(tenant, study, cancellationToken).ConfigureAwait(false);
+        if (summaries.Count == 0)
+        {
+            return new Dictionary<ProtocolVersionId, ProtocolDesign>();
+        }
+
+        var designs = new Dictionary<ProtocolVersionId, ProtocolDesign>(summaries.Count);
+        foreach (var summary in summaries)
+        {
+            if (await GetDesignAsync(tenant, summary.Id, cancellationToken).ConfigureAwait(false) is { } design)
+            {
+                designs[summary.Id] = design;
+            }
+        }
+
+        return designs;
+    }
+
+    /// <summary>
     /// The raw serialized content stored on one version, or null when the tenant has no such version.
     /// </summary>
     Task<string?> GetContentAsync(TenantId tenant, ProtocolVersionId version, CancellationToken cancellationToken) =>

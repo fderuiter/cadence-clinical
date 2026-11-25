@@ -258,4 +258,70 @@ describe("ecrfFormsApi (ADR-2622)", () => {
     expect(error.status).toBe(409);
     expect(formErrorCode(error)).toBe("K.Trust.TargetContentChanged");
   });
+
+  it("previews draft values and forwards an optional AbortSignal to fetch", async () => {
+    const preview = {
+      form_id: FORM,
+      evaluated_rule_packs: 1,
+      warnings: [
+        {
+          rule_pack_key: "vitals.pack",
+          rule_id: "VS_SYSBP_MAX",
+          rule_pack_version: 1,
+          severity: "Warning",
+          dataset: "VS",
+          item_id: "SYSBP",
+          message: "Systolic BP exceeds expected range.",
+        },
+      ],
+    };
+    fetchSpy.mockResolvedValueOnce(jsonResponse(200, preview));
+
+    const controller = new AbortController();
+    const draftValues = [
+      {
+        item_id: "SYSBP",
+        value: { type: "quantity", value: 245, unit: "mm[Hg]" },
+        expected_revision: 3,
+        observation_id: null,
+        observed_at: null,
+      },
+    ];
+
+    const result = await ecrfFormsApi.previewValues(FORM, draftValues, {
+      signal: controller.signal,
+    });
+
+    expect(result).toEqual(preview);
+    const request = lastRequest();
+    expect(request.method).toBe("POST");
+    expect(new URL(request.url).pathname).toBe(
+      `/api/v1/execution/forms/${FORM}/preview`
+    );
+    expect(request.signal.aborted).toBe(false);
+    expect(await request.json()).toEqual({ values: draftValues });
+
+    controller.abort();
+    expect(request.signal.aborted).toBe(true);
+
+    const directController = new AbortController();
+    fetchSpy.mockResolvedValueOnce(
+      jsonResponse(200, { form_id: FORM, warnings: [] })
+    );
+    await ecrfFormsApi.previewValues(
+      FORM,
+      draftValues,
+      directController.signal
+    );
+    const directRequest = lastRequest();
+    expect(directRequest.signal.aborted).toBe(false);
+    directController.abort();
+    expect(directRequest.signal.aborted).toBe(true);
+
+    fetchSpy.mockResolvedValueOnce(
+      jsonResponse(200, { form_id: FORM, warnings: [] })
+    );
+    await ecrfFormsApi.previewValues(FORM, draftValues);
+    expect(lastRequest().signal.aborted).toBe(false);
+  });
 });

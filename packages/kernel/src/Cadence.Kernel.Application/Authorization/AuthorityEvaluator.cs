@@ -296,6 +296,373 @@ public sealed partial class AuthorityEvaluator(IAuthorityStore store, KernelAuth
         return await EvaluateGrantsAsync(request, qualified: true, enforceEvidenceBlinding, cancellationToken).ConfigureAwait(false);
     }
 
+    /// <inheritdoc />
+    public async ValueTask<IReadOnlyDictionary<NodeRef, AuthorizationDecision>> EvaluateManyAsync(
+        Actor actor,
+        TenantId tenant,
+        Capability capability,
+        IReadOnlyCollection<NodeRef> resources,
+        DateTimeOffset at,
+        DateTimeOffset knownAt,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(actor);
+        ArgumentNullException.ThrowIfNull(capability);
+        ArgumentNullException.ThrowIfNull(resources);
+        var distinct = resources.Distinct().ToList();
+        if (distinct.Count == 0)
+        {
+            return new Dictionary<NodeRef, AuthorizationDecision>();
+        }
+
+        if (actor.Kind == ActorKind.AutomationAgent)
+        {
+            return await EvaluateAgentManyAsync(actor, tenant, capability, distinct, at, knownAt, cancellationToken).ConfigureAwait(false);
+        }
+
+        if (actor.RequestedBy is not null)
+        {
+            var denied = AuthorizationDecision.Deny(
+                "Only an automation agent acts for a requesting person.",
+                EvaluatedCondition.Unsatisfied(RequesterCondition, "Act as yourself"));
+            return distinct.ToDictionary(r => r, _ => denied);
+        }
+
+        var token = capability.Token;
+        if (actor.Kind == ActorKind.ServiceAccount && options.PlatformOperators.Contains(actor.Id))
+        {
+            if (KernelAuthorityOptions.PlatformCapabilities.Contains(token))
+            {
+                var permitted = AuthorizationDecision.Permit(
+                    conditions: EvaluatedCondition.Satisfied(PlatformOperatorCondition, $"{actor.Id} operates the platform"));
+                return distinct.ToDictionary(r => r, _ => permitted);
+            }
+
+            if (actor == CommercialOperators.BillingOperator
+                && KernelAuthorityOptions.CommercialBillingCapabilities.Contains(token))
+            {
+                var permitted = AuthorizationDecision.Permit(
+                    conditions: EvaluatedCondition.Satisfied(CommercialBillingOperatorCondition, $"{actor.Id} operates commercial billing"));
+                return distinct.ToDictionary(r => r, _ => permitted);
+            }
+        }
+
+        var decisions = new Dictionary<NodeRef, AuthorizationDecision>(distinct.Count);
+        var grantEvaluated = distinct;
+        if (token is "grant.delegate" or "grant.revoke")
+        {
+            grantEvaluated = new List<NodeRef>(distinct.Count);
+            foreach (var resource in distinct)
+            {
+                if (resource.Kind == NodeKinds.Grant)
+                {
+                    var decided = await DecideOnGrantAsync(
+                        new AuthorizationRequest(actor, tenant, capability, resource, at, knownAt),
+                        cancellationToken).ConfigureAwait(false);
+                    if (decided is not null)
+                    {
+                        decisions[resource] = decided;
+                        continue;
+                    }
+                }
+
+                grantEvaluated.Add(resource);
+            }
+        }
+
+        if (grantEvaluated.Count > 0)
+        {
+            var fromGrants = await EvaluateGrantsManyAsync(
+                actor,
+                tenant,
+                capability,
+                grantEvaluated,
+                at,
+                knownAt,
+                qualified: true,
+                cancellationToken).ConfigureAwait(false);
+            foreach (var (resource, decision) in fromGrants)
+            {
+                decisions[resource] = decision;
+            }
+        }
+
+        return decisions;
+    }
+
+    private async ValueTask<IReadOnlyDictionary<NodeRef, AuthorizationDecision>> EvaluateAgentManyAsync(
+        Actor actor,
+        TenantId tenant,
+        Capability capability,
+        IReadOnlyList<NodeRef> resources,
+        DateTimeOffset at,
+        DateTimeOffset knownAt,
+        CancellationToken cancellationToken)
+    {
+        if (actor.RequestedBy is not { } person)
+        {
+            var noRequester = AuthorizationDecision.Deny(
+                "An automation agent acts only for the person who asked it (K-AI-6).",
+                EvaluatedCondition.Unsatisfied(RequesterCondition, "Run the agent for the person it acts for"));
+            return resources.ToDictionary(r => r, _ => noRequester);
+        }
+
+        if (capability.VerbClass is VerbClass.Execute or VerbClass.Approve)
+        {
+            var verbDenied = AuthorizationDecision.Deny(
+                $"An automation agent cannot {capability.VerbClass.ToString().ToLowerInvariant()}; a person must.",
+                EvaluatedCondition.Unsatisfied(AgentVerbCondition, "Have a person perform this action"));
+            return resources.ToDictionary(r => r, _ => verbDenied);
+        }
+
+        var ownDecisions = await EvaluateGrantsManyAsync(
+            actor.AsIdentity(),
+            tenant,
+            capability,
+            resources,
+            at,
+            knownAt,
+            qualified: false,
+            cancellationToken).ConfigureAwait(false);
+
+        var permittedByAgent = resources.Where(r => ownDecisions[r].Permitted).ToList();
+        var personDecisions = permittedByAgent.Count == 0
+            ? new Dictionary<NodeRef, AuthorizationDecision>()
+            : await EvaluateManyAsync(person, tenant, capability, permittedByAgent, at, knownAt, cancellationToken).ConfigureAwait(false);
+
+        var personLabel = DescribeActor(person, "the requesting person");
+        var personRef = ActorEvidence(person);
+        NodeRef[] requesterEvidence = personRef is { } pRef ? [pRef] : [];
+        var agentLabel = DescribeActor(actor, "The automation agent");
+        var combined = new Dictionary<NodeRef, AuthorizationDecision>(resources.Count);
+        foreach (var resource in resources)
+        {
+            var own = ownDecisions[resource];
+            if (!own.Permitted)
+            {
+                combined[resource] = own;
+                continue;
+            }
+
+            var forPerson = personDecisions[resource];
+            var bounded = forPerson.Permitted
+                ? EvaluatedCondition.Satisfied(RequesterCondition, $"Acts for {personLabel}, who may {capability.Token}", requesterEvidence)
+                : EvaluatedCondition.Unsatisfied(RequesterCondition, $"Act for a person who may {capability.Token}", requesterEvidence);
+            EvaluatedCondition[] conditions = [.. own.Conditions, bounded, .. forPerson.Conditions];
+            combined[resource] = forPerson.Permitted
+                ? AuthorizationDecision.Permit(conditions: conditions)
+                : AuthorizationDecision.Deny($"{agentLabel} acts for {personLabel}, who may not {capability.Token}: {forPerson.Reason}", conditions);
+        }
+
+        return combined;
+    }
+
+    private async ValueTask<IReadOnlyDictionary<NodeRef, AuthorizationDecision>> EvaluateGrantsManyAsync(
+        Actor actor,
+        TenantId tenant,
+        Capability capability,
+        IReadOnlyList<NodeRef> resources,
+        DateTimeOffset at,
+        DateTimeOffset knownAt,
+        bool qualified,
+        CancellationToken cancellationToken)
+    {
+        var token = capability.Token;
+        var held = await store.GrantsHeldAsync(tenant, actor, cancellationToken).ConfigureAwait(false);
+        var roles = await RoleCapabilitiesFromStoreAsync(store, tenant, held, cancellationToken).ConfigureAwait(false);
+        var carrying = held.Where(g => Carries(g, token, roles)).ToList();
+
+        var decisions = new Dictionary<NodeRef, AuthorizationDecision>(resources.Count);
+        if (carrying.Count == 0)
+        {
+            foreach (var resource in resources)
+            {
+                decisions[resource] = DenyMissingGrant(actor, token, resource, carrying);
+            }
+
+            return decisions;
+        }
+
+        var inEffectIds = await GrantChain.FilterInEffectAsync(store, tenant, carrying, at, knownAt, cancellationToken).ConfigureAwait(false);
+        NodeRef[] carryingRefs = [.. carrying.Select(g => NodeRef.For(g.Id))];
+        if (inEffectIds.Count == 0)
+        {
+            foreach (var resource in resources)
+            {
+                decisions[resource] = DenyMissingGrant(actor, token, resource, carrying);
+            }
+
+            return decisions;
+        }
+
+        var unversionedResources = resources.Select(r => r.Unversioned()).Distinct().ToList();
+        var (paths, evidence) = await store.ResolveVisibilityBatchAsync(tenant, unversionedResources, cancellationToken).ConfigureAwait(false);
+
+        var checkBlindedEvidence = !string.Equals(token, EnrollmentUnblindToken, StringComparison.Ordinal)
+            && unversionedResources.Any(r => evidence.TryGetValue(r, out var ev) && ev.IsBlinded);
+        List<Grant>? unblindCarrying = null;
+        IReadOnlySet<GrantId>? unblindInEffectIds = null;
+        List<QualificationRequirement>? unblindActiveRequirements = null;
+        if (checkBlindedEvidence)
+        {
+            unblindCarrying = held.Where(g => Carries(g, EnrollmentUnblindToken, roles)).ToList();
+            unblindInEffectIds = unblindCarrying.Count > 0
+                ? await GrantChain.FilterInEffectAsync(store, tenant, unblindCarrying, at, knownAt, cancellationToken).ConfigureAwait(false)
+                : FrozenSet<GrantId>.Empty;
+            if (qualified && unblindInEffectIds.Count > 0)
+            {
+                unblindActiveRequirements = (await store.QualificationRequirementsAsync(tenant, EnrollmentUnblindToken, cancellationToken).ConfigureAwait(false))
+                    .Where(r => r.IsInEffect(at, knownAt))
+                    .OrderBy(r => r.Id)
+                    .ToList();
+            }
+        }
+
+        IReadOnlyDictionary<NodeRef, ScopePath>? exportGrantPaths = null;
+        var matched = new Dictionary<NodeRef, (Grant Grant, ScopePath QualificationPath, Grant? UnblindGrant, ScopePath? EvidenceScope)>(resources.Count);
+        foreach (var resource in resources)
+        {
+            var unversioned = resource.Unversioned();
+            var hasEvidence = evidence.TryGetValue(unversioned, out var evidenceInfo);
+            var path = paths.GetValueOrDefault(unversioned, ScopePath.TenantWide);
+            if (hasEvidence && path == ScopePath.TenantWide && evidenceInfo!.Scope != ScopePath.TenantWide)
+            {
+                path = evidenceInfo.Scope;
+            }
+
+            Grant? unblindGrant = null;
+            ScopePath? blindedEvidenceScope = null;
+            if (checkBlindedEvidence && hasEvidence && evidenceInfo!.IsBlinded)
+            {
+                unblindGrant = unblindCarrying!.FirstOrDefault(g => g.Scope.Covers(evidenceInfo.Scope) && unblindInEffectIds!.Contains(g.Id));
+                if (unblindGrant is null)
+                {
+                    decisions[resource] = DenyMissingGrant(actor, token, resource, carrying);
+                    continue;
+                }
+
+                blindedEvidenceScope = evidenceInfo.Scope;
+            }
+
+            var coveringGrant = carrying.FirstOrDefault(g => g.Scope.Covers(path) && inEffectIds.Contains(g.Id));
+            if (coveringGrant is not null)
+            {
+                matched[resource] = (coveringGrant, path, unblindGrant, blindedEvidenceScope);
+                continue;
+            }
+
+            if (token == "study.export" && path.Study is not null)
+            {
+                exportGrantPaths ??= await store.PathsOfAsync(tenant, carryingRefs, cancellationToken).ConfigureAwait(false);
+                foreach (var grant in carrying)
+                {
+                    if (!inEffectIds.Contains(grant.Id))
+                    {
+                        continue;
+                    }
+
+                    var grantPath = exportGrantPaths.GetValueOrDefault(NodeRef.For(grant.Id), ScopePath.TenantWide);
+                    if (grantPath.Study == path.Study)
+                    {
+                        matched[resource] = (grant, grantPath, unblindGrant, blindedEvidenceScope);
+                        break;
+                    }
+                }
+
+                if (matched.ContainsKey(resource))
+                {
+                    continue;
+                }
+            }
+
+            decisions[resource] = DenyMissingGrant(actor, token, resource, carrying);
+        }
+
+        if (matched.Count == 0)
+        {
+            return decisions;
+        }
+
+        if (!qualified)
+        {
+            foreach (var (resource, (grant, _, unblindGrant, _)) in matched)
+            {
+                EvaluatedCondition[] conditions = unblindGrant is null
+                    ? [EvaluatedCondition.Satisfied(GrantCondition, $"Holds {token} for {grant.Scope}", NodeRef.For(grant.Id))]
+                    :
+                    [
+                        EvaluatedCondition.Satisfied(GrantCondition, $"Holds {token} for {grant.Scope}", NodeRef.For(grant.Id)),
+                        EvaluatedCondition.Satisfied(GrantCondition, $"Holds {EnrollmentUnblindToken} for {unblindGrant.Scope}", NodeRef.For(unblindGrant.Id)),
+                    ];
+                decisions[resource] = AuthorizationDecision.Permit(conditions: conditions);
+            }
+
+            return decisions;
+        }
+
+        var activeRequirements = (await store.QualificationRequirementsAsync(tenant, token, cancellationToken).ConfigureAwait(false))
+            .Where(r => r.IsInEffect(at, knownAt))
+            .OrderBy(r => r.Id)
+            .ToList();
+        var needsPrimaryQualifications = activeRequirements.Count > 0
+            && matched.Values.Any(m => activeRequirements.Any(r => r.Scope.Covers(m.QualificationPath)));
+        var needsUnblindQualifications = unblindActiveRequirements is { Count: > 0 }
+            && matched.Values.Any(m => m.EvidenceScope is { } scope && unblindActiveRequirements.Any(r => r.Scope.Covers(scope)));
+        var heldQualifications = needsPrimaryQualifications || needsUnblindQualifications
+            ? await store.QualificationsHeldAsync(tenant, actor, cancellationToken).ConfigureAwait(false)
+            : [];
+        IReadOnlyDictionary<ProtocolVersionId, int> versionNumbers = EmptyVersionNumbers;
+        if (needsPrimaryQualifications || needsUnblindQualifications)
+        {
+            var versionIds = (needsPrimaryQualifications ? activeRequirements : Enumerable.Empty<QualificationRequirement>())
+                .Concat(needsUnblindQualifications && unblindActiveRequirements is not null ? unblindActiveRequirements : Enumerable.Empty<QualificationRequirement>())
+                .Where(r => r.ProtocolVersionId is not null)
+                .Select(r => r.ProtocolVersionId!.Value)
+                .Distinct()
+                .ToList();
+            if (versionIds.Count > 0)
+            {
+                versionNumbers = await store.ProtocolVersionNumbersAsync(tenant, versionIds, cancellationToken).ConfigureAwait(false);
+            }
+        }
+
+        var actorLabel = DescribeActor(actor, "The signed-in user");
+        foreach (var (resource, (grant, qualificationPath, unblindGrant, evidenceScope)) in matched)
+        {
+            EvaluatedCondition[] unblindConditions = [];
+            if (unblindGrant is not null && evidenceScope is not null)
+            {
+                var unblindQualConditions = unblindActiveRequirements is { Count: > 0 }
+                    ? EvaluateQualificationConditions(unblindActiveRequirements, heldQualifications, versionNumbers, evidenceScope, at, knownAt)
+                    : [];
+                if (unblindQualConditions.Any(c => !c.Met))
+                {
+                    decisions[resource] = DenyMissingGrant(actor, token, resource, carrying);
+                    continue;
+                }
+
+                unblindConditions =
+                [
+                    EvaluatedCondition.Satisfied(GrantCondition, $"Holds {EnrollmentUnblindToken} for {unblindGrant.Scope}", NodeRef.For(unblindGrant.Id)),
+                    .. unblindQualConditions,
+                ];
+            }
+
+            var qualConditions = EvaluateQualificationConditions(activeRequirements, heldQualifications, versionNumbers, qualificationPath, at, knownAt);
+            EvaluatedCondition[] conditions =
+            [
+                EvaluatedCondition.Satisfied(GrantCondition, $"Holds {token} for {grant.Scope}", NodeRef.For(grant.Id)),
+                .. unblindConditions,
+                .. qualConditions,
+            ];
+            decisions[resource] = conditions.FirstOrDefault(c => !c.Met) is { } missing
+                ? AuthorizationDecision.Deny($"{actorLabel} is not qualified to {token}: {missing.Description}.", conditions)
+                : AuthorizationDecision.Permit(conditions: conditions);
+        }
+
+        return decisions;
+    }
+
     /// <summary>
     /// An automation agent (spec §11, K-AI-1, K-AI-6, ADR-2632): it acts for exactly one requesting person, never
     /// executes or approves, and may do only what its own grants and the person's both allow. Its own grants are checked
@@ -596,16 +963,16 @@ public sealed partial class AuthorityEvaluator(IAuthorityStore store, KernelAuth
     private async Task<IReadOnlyList<EvaluatedCondition>> QualificationConditionsAsync(
         AuthorizationRequest request, string capabilityToken, ScopePath path, CancellationToken cancellationToken)
     {
-        var requirements = (await store.QualificationRequirementsAsync(request.Tenant, capabilityToken, cancellationToken).ConfigureAwait(false))
+        var activeRequirements = (await store.QualificationRequirementsAsync(request.Tenant, capabilityToken, cancellationToken).ConfigureAwait(false))
             .Where(r => r.IsInEffect(request.At, request.KnownAt) && r.Scope.Covers(path))
             .OrderBy(r => r.Id)
             .ToList();
-        if (requirements.Count == 0)
+        if (activeRequirements.Count == 0)
         {
             return [];
         }
 
-        var versionIds = requirements
+        var versionIds = activeRequirements
             .Where(r => r.ProtocolVersionId is not null)
             .Select(r => r.ProtocolVersionId!.Value)
             .Distinct()
@@ -615,12 +982,29 @@ public sealed partial class AuthorityEvaluator(IAuthorityStore store, KernelAuth
             : await store.ProtocolVersionNumbersAsync(request.Tenant, versionIds, cancellationToken).ConfigureAwait(false);
 
         var held = await store.QualificationsHeldAsync(request.Tenant, request.Actor, cancellationToken).ConfigureAwait(false);
+        return EvaluateQualificationConditions(activeRequirements, held, versionNumbers, path, request.At, request.KnownAt);
+    }
+
+    private static IReadOnlyList<EvaluatedCondition> EvaluateQualificationConditions(
+        IReadOnlyList<QualificationRequirement> activeRequirements,
+        IReadOnlyList<Qualification> held,
+        IReadOnlyDictionary<ProtocolVersionId, int> versionNumbers,
+        ScopePath path,
+        DateTimeOffset at,
+        DateTimeOffset knownAt)
+    {
+        var requirements = activeRequirements.Where(r => r.Scope.Covers(path)).ToList();
+        if (requirements.Count == 0)
+        {
+            return [];
+        }
+
         var conditions = new List<EvaluatedCondition>(requirements.Count);
         foreach (var requirement in requirements)
         {
             var matching = held.Where(requirement.IsMetBy).OrderBy(q => q.Id).ToList();
             var named = Named(requirement, versionNumbers);
-            if (matching.FirstOrDefault(q => q.IsInEffect(request.At, request.KnownAt)) is { } current)
+            if (matching.FirstOrDefault(q => q.IsInEffect(at, knownAt)) is { } current)
             {
                 conditions.Add(EvaluatedCondition.Satisfied(
                     QualificationCondition, $"Holds current {named}", NodeRef.For(requirement.Id), NodeRef.For(current.Id), NodeRef.For(current.EvidenceArtifactVersionId)));
@@ -628,7 +1012,7 @@ public sealed partial class AuthorityEvaluator(IAuthorityStore store, KernelAuth
             }
 
             var lapsed = matching
-                .Select(q => (Qualification: q, Ended: q.LapsedBy(request.At, request.KnownAt)))
+                .Select(q => (Qualification: q, Ended: q.LapsedBy(at, knownAt)))
                 .Where(x => x.Ended is not null)
                 .OrderByDescending(x => x.Ended)
                 .FirstOrDefault();

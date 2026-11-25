@@ -102,7 +102,7 @@ Parsers exist for NCI EVS CDISC CT text (`CdiscControlledTerminologyParser`), `u
 and `Loinc.csv` (`LoincTableParser`); any other source can send `ImportCodeSystemVersion` with its entries.
 
 Read through `IConceptRegistry` (registered by `AddKernelPersistence`): every lookup names a concept version
-(`ConceptRef`) or a code-system version; there is no "latest". Only confirmed mappings resolve a code to a concept.
+(`ConceptRef`) or a code-system version (`ResolveManyAsync` batches distinct `(ConceptId, Version)` pairs in one query); there is no "latest". Only confirmed mappings resolve a code to a concept.
 
 ## Protocol versions and attestations (ADR-2452)
 

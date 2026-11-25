@@ -34,12 +34,72 @@ internal sealed class KernelConceptRegistry(KernelTenantDbContextFactory context
         return revision is null ? null : await ToViewAsync(db, header, revision, cancellationToken).ConfigureAwait(false);
     }
 
+    public async Task<IReadOnlyDictionary<ConceptRef, ConceptVersionView>> ResolveManyAsync(
+        TenantId tenant,
+        IReadOnlyCollection<ConceptRef> concepts,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(concepts);
+        var distinctRefs = concepts.Where(c => !c.ConceptId.IsEmpty).Distinct().ToList();
+        if (distinctRefs.Count == 0)
+        {
+            return new Dictionary<ConceptRef, ConceptVersionView>();
+        }
+
+        await using var db = contexts.Create(tenant);
+        var conceptIds = distinctRefs.Select(c => c.ConceptId).Distinct().ToList();
+        var headers = await db.Concepts.AsNoTracking()
+            .Where(c => conceptIds.Contains(c.Id))
+            .ToDictionaryAsync(c => c.Id, cancellationToken)
+            .ConfigureAwait(false);
+        if (headers.Count == 0)
+        {
+            return new Dictionary<ConceptRef, ConceptVersionView>();
+        }
+
+        var targetRefs = distinctRefs.Where(r => headers.ContainsKey(r.ConceptId)).ToList();
+        return await BuildViewsAsync(db, headers, targetRefs, cancellationToken).ConfigureAwait(false);
+    }
+
     public async Task<ConceptVersionView?> GetCurrentAsync(TenantId tenant, ConceptId concept, CancellationToken cancellationToken = default)
     {
         await using var db = contexts.Create(tenant);
         var header = await db.Concepts.AsNoTracking()
             .FirstOrDefaultAsync(c => c.Id == concept, cancellationToken).ConfigureAwait(false);
         return header is null ? null : await CurrentViewAsync(db, header, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task<IReadOnlyDictionary<ConceptId, ConceptVersionView>> GetCurrentManyAsync(
+        TenantId tenant,
+        IReadOnlyCollection<ConceptId> concepts,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(concepts);
+        var distinctIds = concepts.Where(id => !id.IsEmpty).Distinct().ToList();
+        if (distinctIds.Count == 0)
+        {
+            return new Dictionary<ConceptId, ConceptVersionView>();
+        }
+
+        await using var db = contexts.Create(tenant);
+        var headers = await db.Concepts.AsNoTracking()
+            .Where(c => distinctIds.Contains(c.Id))
+            .ToDictionaryAsync(c => c.Id, cancellationToken)
+            .ConfigureAwait(false);
+        if (headers.Count == 0)
+        {
+            return new Dictionary<ConceptId, ConceptVersionView>();
+        }
+
+        var targetRefs = headers.Values.Select(h => new ConceptRef(h.Id, h.Version)).ToList();
+        var byRef = await BuildViewsAsync(db, headers, targetRefs, cancellationToken).ConfigureAwait(false);
+        var byId = new Dictionary<ConceptId, ConceptVersionView>(byRef.Count);
+        foreach (var (conceptRef, view) in byRef)
+        {
+            byId[conceptRef.ConceptId] = view;
+        }
+
+        return byId;
     }
 
     public async Task<ConceptVersionView?> FindBiomedicalConceptAsync(TenantId tenant, string cdiscConceptCode, CancellationToken cancellationToken = default)
@@ -106,6 +166,83 @@ internal sealed class KernelConceptRegistry(KernelTenantDbContextFactory context
             .OrderBy(m => m.Id)
             .ToListAsync(cancellationToken).ConfigureAwait(false);
         return [.. mappings.Select(ToView)];
+    }
+
+    private static async Task<IReadOnlyDictionary<ConceptRef, ConceptVersionView>> BuildViewsAsync(
+        KernelDbContext db,
+        IReadOnlyDictionary<ConceptId, Concept> headers,
+        IReadOnlyList<ConceptRef> targetRefs,
+        CancellationToken cancellationToken)
+    {
+        if (targetRefs.Count == 0)
+        {
+            return new Dictionary<ConceptRef, ConceptVersionView>();
+        }
+
+        var conceptIds = targetRefs.Select(r => r.ConceptId).Distinct().ToList();
+        var versions = targetRefs.Select(r => r.Version).Distinct().ToList();
+        var revisions = await db.ConceptRevisions.AsNoTracking()
+            .Where(r => conceptIds.Contains(r.ConceptId) && versions.Contains(r.Version))
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+        if (revisions.Count == 0)
+        {
+            return new Dictionary<ConceptRef, ConceptVersionView>();
+        }
+
+        var revisionByRef = new Dictionary<ConceptRef, ConceptRevision>(revisions.Count);
+        foreach (var revision in revisions)
+        {
+            revisionByRef[new ConceptRef(revision.ConceptId, revision.Version)] = revision;
+        }
+
+        var matchedRefs = targetRefs.Where(revisionByRef.ContainsKey).ToList();
+        if (matchedRefs.Count == 0)
+        {
+            return new Dictionary<ConceptRef, ConceptVersionView>();
+        }
+
+        var matchedConceptIds = matchedRefs.Select(r => r.ConceptId).Distinct().ToList();
+        var mappingRows = await db.ConceptMappings.AsNoTracking()
+            .Where(m => matchedConceptIds.Contains(m.ConceptId) && m.Status != MappingStatus.Rejected)
+            .Select(m => new { m.ConceptId, m.Status })
+            .Distinct()
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var mappingStates = new Dictionary<ConceptId, ConceptMappingState>(matchedConceptIds.Count);
+        foreach (var row in mappingRows)
+        {
+            if (row.Status == MappingStatus.Confirmed)
+            {
+                mappingStates[row.ConceptId] = ConceptMappingState.Mapped;
+            }
+            else if (!mappingStates.ContainsKey(row.ConceptId))
+            {
+                mappingStates[row.ConceptId] = ConceptMappingState.Proposed;
+            }
+        }
+
+        var views = new Dictionary<ConceptRef, ConceptVersionView>(matchedRefs.Count);
+        foreach (var conceptRef in matchedRefs)
+        {
+            var header = headers[conceptRef.ConceptId];
+            var revision = revisionByRef[conceptRef];
+            var state = mappingStates.GetValueOrDefault(header.Id, ConceptMappingState.Unmapped);
+            views[conceptRef] = new ConceptVersionView(
+                new ConceptRef(header.Id, revision.Version),
+                header.Origin,
+                header.ExternalCode,
+                header.Kind,
+                revision.PreferredLabel,
+                revision.Definition,
+                header.Status,
+                header.Version,
+                state,
+                revision.RecordedAt);
+        }
+
+        return views;
     }
 
     private static async Task<ConceptVersionView?> CurrentViewAsync(KernelDbContext db, Concept header, CancellationToken cancellationToken)

@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.Protocol.Design;
@@ -18,7 +20,57 @@ namespace Cadence.Kernel.Evidence;
 public readonly record struct BlindedConceptMetadata(
     string? ExternalCode,
     string? PreferredLabel,
-    string? Definition);
+    string? Definition)
+{
+    /// <summary>
+    /// Resolves <see cref="BlindedConceptMetadata"/> in batch for every non-empty <see cref="ConceptRef"/>,
+    /// falling back to the current concept revision for any unresolved pinned revision.
+    /// </summary>
+    public static async Task<IReadOnlyDictionary<ConceptId, BlindedConceptMetadata>> ResolveManyAsync(
+        IConceptRegistry? concepts,
+        TenantId tenant,
+        IEnumerable<ConceptRef> conceptRefs,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(conceptRefs);
+        if (concepts is null)
+        {
+            return new Dictionary<ConceptId, BlindedConceptMetadata>();
+        }
+
+        var distinctRefs = conceptRefs
+            .Where(c => !c.ConceptId.IsEmpty)
+            .Distinct()
+            .ToList();
+        if (distinctRefs.Count == 0)
+        {
+            return new Dictionary<ConceptId, BlindedConceptMetadata>();
+        }
+
+        var resolved = new Dictionary<ConceptId, BlindedConceptMetadata>(distinctRefs.Count);
+        var byRef = await concepts.ResolveManyAsync(tenant, distinctRefs, cancellationToken).ConfigureAwait(false);
+        foreach (var (conceptRef, view) in byRef)
+        {
+            resolved[conceptRef.ConceptId] = new BlindedConceptMetadata(view.ExternalCode, view.PreferredLabel, view.Definition);
+        }
+
+        var unresolvedIds = distinctRefs
+            .Select(r => r.ConceptId)
+            .Where(id => !resolved.ContainsKey(id))
+            .Distinct()
+            .ToList();
+        if (unresolvedIds.Count > 0)
+        {
+            var currentById = await concepts.GetCurrentManyAsync(tenant, unresolvedIds, cancellationToken).ConfigureAwait(false);
+            foreach (var (conceptId, view) in currentById)
+            {
+                resolved[conceptId] = new BlindedConceptMetadata(view.ExternalCode, view.PreferredLabel, view.Definition);
+            }
+        }
+
+        return resolved;
+    }
+}
 
 /// <summary>
 /// Classifies whether clinical observations, collection specifications, collection items, rule variables, or validation
