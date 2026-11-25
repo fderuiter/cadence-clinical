@@ -536,6 +536,7 @@ public sealed class ExecutionFormProjectionPerfPostgresTests(
             (Actor.ServiceAccount("execution-forms"), ["execution.form.open"], AuthorityScope.Tenant()),
             (Actor.ServiceAccount("execution-queries"), ["observation.query", "observation.query.answer", "assertion.retract"], AuthorityScope.Tenant()),
             (Actor.ServiceAccount(EvaluateEditChecksOnCollectionChanged.Name), ["validation_run.record", "collection.record_unasked", "execution.query.raise", "execution.query.manage"], AuthorityScope.Tenant()),
+            (Actor.ServiceAccount(FormQueryEscalationHostedService.ServiceAccountName), ["execution.query.manage"], AuthorityScope.Tenant()),
         })
         {
             foreach (var cap in capabilities)
@@ -549,6 +550,109 @@ public sealed class ExecutionFormProjectionPerfPostgresTests(
         // Create a fresh enrollment for clean form counts (since NewFormAsync opened 1 initial form on form.Subject.Enrollment).
         var cleanEnrollment = await _scenario.Observations.ScreenAsync(tenant, site, ct);
         return (code, tenant, study, site, cleanEnrollment, form.Version);
+    }
+
+    [Fact(DisplayName = "EscalationStudyPass_Across10Sites_MapsEnrollmentsInOneBatchWithZeroProtocolParsesInPostgres")]
+    public async Task EscalationStudyPassAcross10SitesMapsEnrollmentsInOneBatchWithZeroProtocolParsesInPostgres()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var (code, tenant, study, _, _, version) = await SeedStudyAndActorsAsync(ct);
+
+        // Seed 10 distinct sites with 1 enrollment + 1 form + 1 query each, then advance the shared clock past 14-day SLA.
+        var sitesAndForms = new List<(StudySiteId Site, EnrollmentId Enrollment, CollectionInstanceId Form, ObservationId Obs)>(10);
+        for (var i = 0; i < 10; i++)
+        {
+            var extraSite = await _scenario.Observations.AddStudySiteAsync(tenant, study, ct);
+            foreach (var cap in new[] { "collection.open", "collection.record", "execution.query.answer" })
+            {
+                await _scenario.Protocol.OkAsync(
+                    new IssueGrant(tenant, GrantId.New(), Actor.Person(Crc), cap, null, AuthorityScope.StudySite(extraSite), _scenario.Tick(), null, false, KernelProtocolScenario.Key(), "Site grant"),
+                    ct);
+            }
+
+            var enr = await _scenario.Observations.ScreenAsync(tenant, extraSite, ct);
+            var subject = new KernelObservationScenario.Subject(tenant, study, extraSite, enr);
+            var formId = (await _scenario.Protocol.OkAsync(Open(subject, CollectionInstanceId.New(), _scenario.Tick()), ct)).CollectionInstanceId;
+            var obsId = (await _scenario.Protocol.OkAsync(
+                Save(new Form(subject, version, formId), Value(Systolic, Mmhg(125 + i))), ct)).Values.Single().ObservationId;
+            sitesAndForms.Add((extraSite, enr, formId, obsId));
+        }
+
+        await RelayOutboxAsync(tenant, ct);
+
+        var escalationClock = new Cadence.Testing.Time.FakeClock(fixture.Clock.UtcNow.AddMinutes(1));
+        var escalationSpy = new DelegatingRecordsSpy(fixture.CollectionInstanceRecords);
+        using var escalationHost = new WebApplicationFactory<Cadence.Kernel.Host.Program>().WithWebHostBuilder(builder => builder
+            .UseTestGatewaySecret()
+            .UseTestBiometricLivenessKey()
+            .UseSetting("ConnectionStrings:cadence", fixture.ConnectionString)
+            .ConfigureTestServices(services =>
+            {
+                services.RemoveAll<IHostedService>();
+                services.RemoveAll<IClock>();
+                services.AddSingleton<IClock>(escalationClock);
+                services.AddDeclaredKernelErrorsCheck();
+                services.RemoveAll<ICollectionInstanceRecords>();
+                services.AddSingleton<ICollectionInstanceRecords>(escalationSpy);
+                services.RemoveAll<KernelBackgroundOptions>();
+                services.AddSingleton(new KernelBackgroundOptions
+                {
+                    RelayInterval = TimeSpan.FromHours(1),
+                    ActivityInterval = TimeSpan.FromHours(1),
+                });
+            }));
+        using var monitor = escalationHost.CreateSignedClient(new GatewayIdentity(Monitor, [], [], TenantId: code));
+        foreach (var (_, _, formId, obsId) in sitesAndForms.Take(2))
+        {
+            await SendAsync<FormQueryResponse>(
+                monitor,
+                HttpMethod.Post,
+                $"/{formId.Value:D}/queries",
+                "Monitor SDV",
+                new { observation_id = obsId.Value, revision = 1, text = "Confirm systolic value" },
+                HttpStatusCode.Created,
+                ct);
+        }
+
+        await RelayOutboxAsync(tenant, ct);
+        escalationClock.Advance(TimeSpan.FromDays(15));
+
+        escalationSpy.Reset();
+        using var sql = EfSqlCounter.Start();
+        using var parses = ProtocolDesignDocument.MeasureReads();
+
+        var firstPass = await SendAsync<JsonElement>(
+            monitor,
+            HttpMethod.Post,
+            $"/queries/escalate?study_id={study.Value:D}",
+            "14-day SLA pass",
+            null,
+            HttpStatusCode.OK,
+            ct);
+        firstPass.GetProperty("escalated_queries").GetInt32().Should().Be(2);
+        firstPass.GetProperty("digests").GetArrayLength().Should().Be(3, "1 study-wide digest + 2 site digests");
+        parses.Count.Should().Be(0, "escalation pass never parses ProtocolDesignDocument JSON");
+        escalationSpy.FindCalls.Should().Be(0, "escalation pass never calls full FindAsync");
+
+        // Second pass on the same date (0 new escalations, idempotent digest replay) isolates enrollment + digest read SQL across all 10+1 sites.
+        escalationSpy.Reset();
+        sql.Reset();
+        using var replayParses = ProtocolDesignDocument.MeasureReads();
+        var secondPass = await SendAsync<JsonElement>(
+            monitor,
+            HttpMethod.Post,
+            $"/queries/escalate?study_id={study.Value:D}",
+            "14-day SLA pass",
+            null,
+            HttpStatusCode.OK,
+            ct);
+        var replaySelects = sql.SelectCount;
+        output.WriteLine($"10-site escalation pass SELECT count: {replaySelects}");
+        secondPass.GetProperty("escalated_queries").GetInt32().Should().Be(0);
+        replayParses.Count.Should().Be(0);
+        escalationSpy.FindCalls.Should().Be(0);
+        replaySelects.Should().BeLessThanOrEqualTo(18, "GetStudyEnrollmentsAsync maps all 11 study sites in 1 SELECT instead of N+1 per-site GetChildrenAsync queries");
     }
 
     private HttpClient Client(string tenantCode, string userId)

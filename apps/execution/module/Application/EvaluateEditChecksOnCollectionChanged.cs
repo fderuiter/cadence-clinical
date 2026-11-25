@@ -335,6 +335,26 @@ internal sealed class EvaluateEditChecksOnCollectionChanged(
         }
 
         var formRecordCache = new Dictionary<CollectionInstanceId, CollectionInstanceRecord?>();
+        var recordFormIds = new HashSet<CollectionInstanceId>();
+        foreach (var finding in candidateFindings)
+        {
+            if (Guid.TryParse(finding.Target.Key, out var candidateFormGuid)
+                && candidateFormGuid != Guid.Empty
+                && NeedsFormRecord(tenant, finding, CollectionInstanceId.FromGuid(candidateFormGuid), queriesByForm))
+            {
+                recordFormIds.Add(CollectionInstanceId.FromGuid(candidateFormGuid));
+            }
+        }
+
+        if (recordFormIds.Count > 1)
+        {
+            var batchedRecords = await forms.FindManyAsync(tenant, recordFormIds, cancellationToken).ConfigureAwait(false);
+            foreach (var candidateFormId in recordFormIds)
+            {
+                formRecordCache[candidateFormId] = batchedRecords.GetValueOrDefault(candidateFormId);
+            }
+        }
+
         var ruleInputsByEnrollment = new Dictionary<EnrollmentId, IReadOnlyList<CollectionRuleInput>>();
         foreach (var finding in candidateFindings)
         {
@@ -774,6 +794,17 @@ internal sealed class EvaluateEditChecksOnCollectionChanged(
             }
         }
     }
+
+    private static bool NeedsFormRecord(
+        TenantId tenant,
+        ValidationFindingView finding,
+        CollectionInstanceId formId,
+        Dictionary<CollectionInstanceId, List<FormQuery>> queriesByForm) =>
+        finding.Status is FindingStatus.Open or FindingStatus.Investigating
+        || (finding.Status is FindingStatus.Accepted or FindingStatus.Explained
+            && (finding.Decision?.DecidedOnRun == finding.LastDetectedRun
+                || (queriesByForm.TryGetValue(formId, out var existingForForm)
+                    && existingForForm.Any(q => q.Id == DeriveAutoQueryId(tenant, finding.Id, 0)))));
 
     internal static FormQueryId DeriveAutoQueryId(TenantId tenant, ValidationFindingId findingId, int episode)
     {
