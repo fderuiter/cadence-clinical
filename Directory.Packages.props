@@ -71,7 +71,7 @@
     <PackageVersion Include="TngTech.ArchUnitNET.xUnitV3" Version="0.13.5" />
 
     <!-- AI model port and providers (ADR-2630; keep Microsoft.Extensions.AI.* aligned on 10.x for net10.0) -->
-    <PackageVersion Include="Anthropic" Version="13.13.0" />
+    <PackageVersion Include="Anthropic" Version="13.14.0" />
     <PackageVersion Include="Microsoft.Extensions.AI" Version="$(DotNetAiVersion)" />
     <PackageVersion Include="Anthropic.Aws" Version="1.0.2" />
     <PackageVersion Include="Anthropic.Bedrock" Version="1.0.6" />
