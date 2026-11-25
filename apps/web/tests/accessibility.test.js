@@ -4,9 +4,6 @@ import { h, ref, defineComponent, nextTick } from "vue";
 import {
   useFocusTrap,
   useEscapeClose,
-  createClinicalLookupInput,
-  createSoaBuilderMatrix,
-  createClinicalVisitMatrix,
   createConditionRowHTML,
   ClinicalDataTable,
   ClinicalQueryPanel,
@@ -188,66 +185,6 @@ describe("Accessibility Composables & Query Panel Integration", () => {
   });
 
   describe("Shared Clinical UI primitives accessibility audits", () => {
-    it("createClinicalLookupInput passes accessibility audit in normal and error states", async () => {
-      const normalHtml = createClinicalLookupInput(
-        "lookup-ok",
-        "Protocol ID",
-        "P-101",
-        "valid",
-        "Protocol code exists"
-      );
-      await expect(normalHtml).toBeAccessible();
-
-      const invalidHtml = createClinicalLookupInput(
-        "lookup-err",
-        "Protocol ID",
-        "P-999",
-        "invalid",
-        "Protocol code not found"
-      );
-      await expect(invalidHtml).toBeAccessible();
-    });
-
-    it("createSoaBuilderMatrix hierarchical table passes accessibility audit", async () => {
-      const soaData = {
-        arms: [{ arm_id: "ARM-1", arm_name: "Active Arm" }],
-        epochs: [
-          { epoch_id: "EP-1", epoch_name: "Screening", arm_id: "ARM-1" },
-        ],
-        encounters: [
-          {
-            encounter_id: "ENC-1",
-            encounter_name: "Visit 1",
-            epoch_id: "EP-1",
-          },
-        ],
-        rows: [
-          {
-            activity_id: "ACT-1",
-            activity_name: "Physical Exam",
-            cells: [
-              {
-                encounter_id: "ENC-1",
-                is_applicable: true,
-                details: "Mandatory",
-              },
-            ],
-          },
-        ],
-      };
-      const html = createSoaBuilderMatrix(soaData);
-      await expect(html).toBeAccessible();
-    });
-
-    it("createClinicalVisitMatrix fallback 2D table passes accessibility audit", async () => {
-      const visits = ["Screening", "Week 2"];
-      const forms = [
-        { name: "Vital Signs", statuses: ["Complete", "Pending"] },
-      ];
-      const html = createClinicalVisitMatrix(visits, forms);
-      await expect(html).toBeAccessible();
-    });
-
     it("createConditionRowHTML condition elements pass accessibility audit", async () => {
       const forms = [{ id: "f1", name: "Form 1" }];
       const fields = [{ id: "fld1", name: "Field 1", formId: "f1" }];

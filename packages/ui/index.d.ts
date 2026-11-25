@@ -11,36 +11,6 @@ type DefineSlotsComponent<
 export * from "./src/types/cdash.js";
 
 // Vue Components
-export const AiActionButton: DefineComponent<
-  {
-    label?: string;
-    icon?: string;
-    loading?: boolean;
-    loadingText?: string;
-    disabled?: boolean;
-    variant?: "primary" | "secondary" | "subtle" | "outline";
-    size?: "sm" | "md" | "lg";
-    requiredRoles?: string[] | string;
-    userRoles?: string[] | string;
-    unauthorizedTooltip?: string;
-    ariaLabel?: string;
-  },
-  {},
-  any
->;
-
-export const ConfidenceBadge: DefineComponent<
-  {
-    score: number;
-    thresholds?: { high?: number; medium?: number };
-    showLabel?: boolean;
-    showScore?: boolean;
-    size?: "sm" | "md" | "lg";
-  },
-  {},
-  any
->;
-
 export const ClinicalContextBar: DefineComponent<
   {
     studiesLabel?: string;
@@ -54,26 +24,6 @@ export const ClinicalContextBar: DefineComponent<
     participantTo?: string | Record<string, any>;
     currentLabel?: string;
     ariaLabel?: string;
-  },
-  {},
-  any
->;
-
-export const AiSuggestionDrawer: DefineComponent<
-  {
-    modelValue?: boolean;
-    isOpen?: boolean;
-    title?: string;
-    originalValue?: any;
-    suggestedValue: any;
-    confidenceScore?: number | null;
-    modelIdentifier?: string;
-    promptSummary?: string;
-    entityName?: string;
-    fieldLabel?: string;
-    requireReason?: boolean;
-    isApproving?: boolean;
-    isRejecting?: boolean;
   },
   {},
   any
@@ -291,20 +241,6 @@ export const ClinicalQueryPanel: DefineComponent<
   any
 >;
 
-export const FileUploadModal: DefineComponent<
-  {
-    modelValue: boolean;
-    studyId: string;
-    siteId?: string | null;
-    title?: string;
-    maxSizeBytes?: number;
-    multipartThresholdBytes?: number;
-    apiEndpoint?: string;
-  },
-  {},
-  any
->;
-
 export const ModalErrorAlert: DefineComponent<
   {
     error?: any;
@@ -436,24 +372,6 @@ export const ClinicalDrawer: DefineSlotsComponent<
   }
 >;
 
-export const AuditLogViewer: DefineComponent<
-  {
-    logs: Array<{
-      id: string | number;
-      timestamp?: string;
-      user_id?: string;
-      action?: string;
-      entity_type?: string;
-      entity_id?: string;
-      reason_for_change?: string;
-      changes?: Array<{ field: string; old_val?: any; new_val?: any }>;
-    }>;
-    title?: string;
-  },
-  {},
-  any
->;
-
 export interface ClinicalDataTableColumn {
   key: string;
   label: string;
@@ -576,20 +494,6 @@ export const MediaPlayer: DefineComponent<
     watermarkText?: string;
     autoplay?: boolean;
     initialZoom?: number;
-  },
-  {},
-  any
->;
-
-export const PersonaSwitcher: DefineComponent<
-  {
-    modelValue?: string;
-    personas?: Array<{
-      id: string;
-      label: string;
-      role: string;
-      badge?: string;
-    }>;
   },
   {},
   any
@@ -791,16 +695,6 @@ export function useEscapeClose(
   stop: () => void;
 };
 
-export function useAsyncRetry<T extends (...args: any[]) => any>(
-  asyncFn?: T
-): {
-  isLoading: import("vue").Ref<boolean>;
-  error: import("vue").Ref<any>;
-  execute: (...args: any[]) => Promise<any>;
-  retry: (...args: any[]) => Promise<any>;
-  clearError: () => void;
-};
-
 // Utility functions
 export type DebouncedFunction<T extends (...args: any[]) => any> = ((
   ...args: Parameters<T>
@@ -834,13 +728,6 @@ export function useSignOutGuard(options?: {
   confirmSignOut: () => Promise<void>;
   cancelSignOut: () => void;
 };
-export function createClinicalLookupInput(
-  id: string,
-  label: string,
-  value?: string,
-  status?: "none" | "loading" | "valid" | "invalid" | "degraded",
-  statusMessage?: string
-): string;
 export function createConditionRowHTML(
   index: number,
   forms?: any[],
@@ -860,11 +747,6 @@ export function deserializeConditionsTree(tree: any): {
   conditions: any[];
   matchOperator: string;
 };
-export function createSoaBuilderMatrix(soaData: any): string;
-export function createClinicalVisitMatrix(
-  visitsOrSoa: any,
-  forms?: any[]
-): string;
 export function initHoverDetection(): void;
 
 export function normalizeApprovedConsent(approved: any): any;
@@ -876,11 +758,6 @@ export function generateCanonicalSignature(
   obj: any,
   key: string | Uint8Array
 ): Promise<string>;
-export function verifyCanonicalSignature(
-  obj: any,
-  sig: string,
-  key: string | Uint8Array
-): Promise<boolean>;
 export function generateGatewaySignature(
   userId: string,
   roles: string,
@@ -898,10 +775,6 @@ export function verifyGatewaySignature(
   changeReason: string | null | undefined,
   secret: string | Uint8Array
 ): Promise<boolean>;
-export function generateJwtHS256(
-  payload: any,
-  secret: string | Uint8Array
-): Promise<string>;
 export function sha256(message: string): Promise<string>;
 export function validateField(value: any, rules: any): any;
 export function buildLedgerBlock(

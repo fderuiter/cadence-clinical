@@ -35,12 +35,7 @@ import type {
   KernelProposalState,
   KernelProposalStatus,
 } from "./proposals";
-import type {
-  KernelDefineWorkQueueInput,
-  KernelWorkQueueDefinition,
-  KernelWorkQueuesPage,
-  KernelWorkQueuesQuery,
-} from "./workQueues";
+import type { KernelWorkQueuesPage, KernelWorkQueuesQuery } from "./workQueues";
 import {
   describeKernelError,
   kernelClient,
@@ -86,7 +81,6 @@ import type {
   KernelCreateSiteInput,
   KernelCreateStudyRequest,
   KernelLinkSiteToStudyInput,
-  KernelMatrixGapFinding,
   KernelOrganizationSummary,
   KernelProtocolDraftSummary,
   KernelProtocolImportRequest,
@@ -266,16 +260,6 @@ export function executeSimulate(request: {
           ? { standard_version_ref: request.standardVersionRef }
           : {}),
       },
-    })
-  );
-}
-
-export function executeCheckMatrixGaps(
-  protocolContent: string
-): Promise<KernelMatrixGapFinding[]> {
-  return unwrapResponse(
-    kernelClient.POST("/api/v1/kernel/protocols/matrix-gap-check", {
-      body: { protocol_content: protocolContent },
     })
   );
 }
@@ -818,33 +802,6 @@ export function executeListWorkQueues(
           limit: query.limit,
         },
       },
-    })
-  );
-}
-
-export function executeDefineWorkQueue({
-  code,
-  title,
-  capability,
-  verbClass,
-  source,
-  workQueueDefinitionId,
-  reason,
-  idempotencyKey,
-}: KernelDefineWorkQueueInput): Promise<KernelWorkQueueDefinition> {
-  return unwrapResponse(
-    kernelClient.POST("/api/v1/kernel/work-queues", {
-      body: {
-        code,
-        title,
-        capability,
-        verb_class: verbClass,
-        source,
-        ...(workQueueDefinitionId
-          ? { work_queue_definition_id: workQueueDefinitionId }
-          : {}),
-      },
-      headers: mutationHeaders(reason, idempotencyKey),
     })
   );
 }

@@ -3,7 +3,6 @@ import { describe, it, expect } from "vitest";
 import {
   canonicalSerialize,
   generateCanonicalSignature,
-  verifyCanonicalSignature,
   generateGatewaySignature,
   verifyGatewaySignature,
   sha256,
@@ -43,7 +42,7 @@ describe("canonicalSerialize", () => {
   });
 });
 
-describe("generateCanonicalSignature and verifyCanonicalSignature", () => {
+describe("generateCanonicalSignature", () => {
   it("matches Python generate_canonical_signature output exactly", async () => {
     const payload = { a: 1, b: "hello", c: [1, 2, { x: "y" }] };
     const secret = "my-test-secret"; // pragma: allowlist secret
@@ -52,34 +51,20 @@ describe("generateCanonicalSignature and verifyCanonicalSignature", () => {
 
     const sig = await generateCanonicalSignature(payload, secret);
     expect(sig).toBe(expectedSig);
-
-    const isValid = await verifyCanonicalSignature(
-      payload,
-      expectedSig,
-      secret
-    );
-    expect(isValid).toBe(true);
   });
 
-  it("returns false for tampered payload or signature", async () => {
+  it("produces distinct signatures when payload or secret changes", async () => {
     const payload = { a: 1, b: "hello", c: [1, 2, { x: "y" }] };
     const secret = "my-test-secret"; // pragma: allowlist secret
     const sig = await generateCanonicalSignature(payload, secret);
 
     const tamperedPayload = { a: 2, b: "hello", c: [1, 2, { x: "y" }] };
-    const isValidPayload = await verifyCanonicalSignature(
-      tamperedPayload,
-      sig,
-      secret
+    expect(await generateCanonicalSignature(tamperedPayload, secret)).not.toBe(
+      sig
     );
-    expect(isValidPayload).toBe(false);
-
-    const isValidSig = await verifyCanonicalSignature(
-      payload,
-      sig + "a",
-      secret
-    );
-    expect(isValidSig).toBe(false);
+    expect(
+      await generateCanonicalSignature(payload, `${secret}-other`)
+    ).not.toBe(sig);
   });
 });
 

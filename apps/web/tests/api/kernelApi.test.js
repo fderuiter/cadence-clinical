@@ -590,37 +590,12 @@ describe("kernelApi simulation and matrix gap check", () => {
     });
   });
 
-  it("sends checkMatrixGaps through the authenticated OpenAPI client and surfaces 422 ApiError details", async () => {
+  it("surfaces 422 ApiError details from kernelApi.simulate", async () => {
     const { useAuthStore } = await import("../../src/stores/auth");
     useAuthStore().setAuth({
       authenticated: true,
       token: "gap-jwt-token",
       tokenParsed: { sub: "designer-1" },
-    });
-
-    const findings = [
-      {
-        element_id: "act.vs",
-        kind: "UnboundCollection",
-        severity: "Warning",
-        json_pointer_path: "/schedule/0",
-        description: "Unscheduled vital signs collection",
-        recommendation: "Bind VS to Visit 1",
-      },
-    ];
-    fetchSpy.mockResolvedValueOnce(jsonResponse(200, findings));
-
-    await expect(kernelApi.checkMatrixGaps('{"usdm":"3.0"}')).resolves.toEqual(
-      findings
-    );
-    const request = fetchSpy.mock.calls.at(-1)[0];
-    expect(request.method).toBe("POST");
-    expect(new URL(request.url).pathname).toBe(
-      "/api/v1/kernel/protocols/matrix-gap-check"
-    );
-    expect(request.headers.get("Authorization")).toBe("Bearer gap-jwt-token");
-    expect(await request.json()).toEqual({
-      protocol_content: '{"usdm":"3.0"}',
     });
 
     fetchSpy.mockResolvedValueOnce(

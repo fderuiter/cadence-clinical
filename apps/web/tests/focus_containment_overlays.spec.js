@@ -3,12 +3,7 @@ import { nextTick } from "vue";
 import { mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { createRouter, createWebHistory } from "vue-router";
-import {
-  ClinicalDrawer,
-  ClinicalModal,
-  ClinicalQueryPanel,
-  FileUploadModal,
-} from "ui";
+import { ClinicalDrawer, ClinicalModal, ClinicalQueryPanel } from "ui";
 import ContextualHelpDrawer from "../src/components/ContextualHelpDrawer.vue";
 import OnboardingTour from "../src/components/OnboardingTour.vue";
 import DictionaryBrowserModal from "../src/components/DictionaryBrowserModal.vue";
@@ -363,80 +358,7 @@ describe("Centralized Focus Containment & Reactive Inert Primitives", () => {
     );
   });
 
-  it("locks Escape dismissal on FileUploadModal while uploading and permits unmodified Tab exit from ClinicalQueryPanel", async () => {
-    const mountNode = document.createElement("div");
-    document.body.appendChild(mountNode);
-
-    const onCloseSpy = vi.fn();
-    const uploadWrapper = trackWrapper(
-      mount(FileUploadModal, {
-        attachTo: mountNode,
-        props: {
-          modelValue: true,
-          studyId: "study-001",
-          onClose: onCloseSpy,
-        },
-      })
-    );
-    await nextTick();
-    await nextTick();
-
-    // Verify FileUploadModal idle ClinicalDropzone semantics and WCAG 2.2 AA / SC 2.5.3 compliance
-    const dropzoneEl = document.body.querySelector(".clinical-dropzone");
-    expect(dropzoneEl).not.toBeNull();
-    expect(dropzoneEl.querySelectorAll('[role="button"]').length).toBe(0);
-    expect(
-      dropzoneEl.querySelector(
-        "button.clinical-dropzone-browse-btn[type='button']"
-      )
-    ).not.toBeNull();
-    await expect(document.body).toBeAccessible();
-
-    // Select a file and verify selected file details are exposed without aria-hidden + sibling Remove button
-    const mockPdf = new File(["%PDF-1.4 mock"], "site-01-protocol.pdf", {
-      type: "application/pdf",
-    });
-    await uploadWrapper.vm.handleSelectedFile(mockPdf);
-    await nextTick();
-    await nextTick();
-
-    const selectedInfo = document.body.querySelector(".dropzone-file-info");
-    expect(selectedInfo).not.toBeNull();
-    expect(selectedInfo.closest('[aria-hidden="true"]')).toBeNull();
-    expect(
-      dropzoneEl.querySelector(
-        "button.clinical-dropzone-remove-btn[type='button']"
-      )
-    ).not.toBeNull();
-    await expect(document.body).toBeAccessible();
-
-    // Enter active upload state to lock dismissal (21 CFR Part 11 safeguard)
-    uploadWrapper.vm.status = "uploading";
-    await nextTick();
-
-    // Escape is blocked while uploading
-    const escWhileUploading = new KeyboardEvent("keydown", {
-      key: "Escape",
-      bubbles: true,
-      cancelable: true,
-    });
-    document.dispatchEvent(escWhileUploading);
-    expect(escWhileUploading.defaultPrevented).toBe(true);
-    expect(onCloseSpy).not.toHaveBeenCalled();
-
-    // Returning to idle unlocks Escape dismissal
-    uploadWrapper.vm.status = "idle";
-    await nextTick();
-    document.dispatchEvent(
-      new KeyboardEvent("keydown", {
-        key: "Escape",
-        bubbles: true,
-        cancelable: true,
-      })
-    );
-    expect(onCloseSpy).toHaveBeenCalledTimes(1);
-    uploadWrapper.unmount();
-
+  it("permits unmodified Tab exit from inline ClinicalQueryPanel", async () => {
     // Inline ClinicalQueryPanel allows unmodified Tab navigation (no focus trap) while supporting Escape close
     const panelCloseSpy = vi.fn();
     const panelMount = document.createElement("div");

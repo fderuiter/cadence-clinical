@@ -2,8 +2,6 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { createSSRApp, h } from "vue";
 import { renderToString } from "vue/server-renderer";
 import {
-  AiActionButton,
-  AuditLogViewer,
   ClinicalDataTable,
   ClinicalDrawer,
   ClinicalDropzone,
@@ -16,7 +14,6 @@ import {
   ClinicalToastHost,
   EmptyState,
   MediaPlayer,
-  PersonaSwitcher,
   createSrOnlyActionButton,
 } from "../index.js";
 
@@ -112,114 +109,6 @@ describe("Shared UI Vue Components Behavior & SSR Rendering", () => {
       state.toggleRowSelection(rows[0]);
       expect(state.isRowSelected(rows[0])).toBe(false);
       expect(emit).toHaveBeenLastCalledWith("select", []);
-    });
-  });
-
-  describe("AuditLogViewer", () => {
-    const sampleLogs = [
-      {
-        id: "aud-1",
-        timestamp: "2026-11-19T10:00:00Z",
-        user_id: "crc_jones",
-        action: "UPDATE",
-        entity_type: "VitalSigns",
-        entity_id: "vs-101",
-        reason_for_change: "Corrected transcription typo",
-        changes: [{ field: "sysbp", old_val: "120", new_val: "128" }],
-      },
-      {
-        id: "aud-2",
-        timestamp: "2026-11-19T10:05:00Z",
-        user_id: "pi_smith",
-        action: "SIGN",
-        entity_type: "ConsentForm",
-        entity_id: "icf-202",
-        reason_for_change: "Investigator e-signature",
-        changes: [],
-      },
-    ];
-
-    it("renders 21 CFR Part 11 timeline entries and field diffs", async () => {
-      const html = await renderToString(
-        createSSRApp(AuditLogViewer, {
-          logs: sampleLogs,
-          title: "Subject Audit Trail",
-        })
-      );
-      expect(html).toContain("Subject Audit Trail");
-      expect(html).toContain("21 CFR Part 11 GxP Immutable");
-      expect(html).toContain("Corrected transcription typo");
-      expect(html).toContain("sysbp");
-      expect(html).toContain("128");
-    });
-
-    it("filters audit entries by action type and search query", async () => {
-      const { state } = await mountSetupSSR(AuditLogViewer, {
-        logs: sampleLogs,
-        title: "21 CFR Part 11 Audit Trail",
-      });
-
-      expect(state.filteredLogs.value).toHaveLength(2);
-
-      state.selectedFilter.value = "SIGN";
-      expect(state.filteredLogs.value).toHaveLength(1);
-      expect(state.filteredLogs.value[0].id).toBe("aud-2");
-
-      state.selectedFilter.value = "ALL";
-      state.searchQuery.value = "transcription";
-      expect(state.filteredLogs.value).toHaveLength(1);
-      expect(state.filteredLogs.value[0].user_id).toBe("crc_jones");
-
-      state.searchQuery.value = "nonexistent-token";
-      expect(state.filteredLogs.value).toHaveLength(0);
-    });
-  });
-
-  describe("PersonaSwitcher", () => {
-    const defaultPersonas = [
-      {
-        id: "super_admin",
-        label: "Super Administrator",
-        role: "admin",
-        badge: "Admin",
-      },
-      {
-        id: "cra_monitor",
-        label: "CRA Monitor",
-        role: "cra_monitor",
-        badge: "Monitor",
-      },
-    ];
-
-    it("renders active persona badge and emits selection updates", async () => {
-      const html = await renderToString(
-        createSSRApp(PersonaSwitcher, {
-          modelValue: "cra_monitor",
-          personas: defaultPersonas,
-        })
-      );
-      expect(html).toContain("CRA Monitor");
-      expect(html).toContain("Monitor");
-      expect(html).toContain('class="sr-only"');
-      expect(html).toContain("Switch User Persona or Role");
-      expect(html).not.toContain('aria-label="Switch User Persona / Role"');
-
-      const emit = vi.fn();
-      const { state } = await mountSetupSSR(
-        PersonaSwitcher,
-        {
-          modelValue: "unknown_role",
-          personas: defaultPersonas,
-        },
-        emit
-      );
-      expect(state.activePersona.value.id).toBe("super_admin");
-
-      state.isOpen.value = true;
-      state.selectPersona(defaultPersonas[1]);
-      expect(emit).toHaveBeenCalledWith("update:modelValue", "cra_monitor");
-      expect(emit).toHaveBeenCalledWith("change", defaultPersonas[1]);
-      expect(state.isOpen.value).toBe(false);
     });
   });
 
@@ -836,27 +725,7 @@ describe("Shared UI Vue Components Behavior & SSR Rendering", () => {
       }
     });
 
-    it("keeps visible text first in AiActionButton, includes fieldLabel in ClinicalQueryFlag, and escapes HTML in createSrOnlyActionButton", async () => {
-      const { state: aiState } = await mountSetupSSR(AiActionButton, {
-        label: "Generate Draft",
-        loadingText: "Synthesizing...",
-        requiredRoles: ["study_designer"],
-        userRoles: [],
-        unauthorizedTooltip: "Requires Study Designer role",
-      });
-      expect(aiState.computedAriaLabel.value).toBe(
-        "Generate Draft — Requires Study Designer role"
-      );
-
-      const { state: loadingAiState } = await mountSetupSSR(AiActionButton, {
-        label: "Generate Draft",
-        loading: true,
-        loadingText: "Synthesizing...",
-        requiredRoles: ["study_designer"],
-        userRoles: ["study_designer"],
-      });
-      expect(loadingAiState.computedAriaLabel.value).toBe("Synthesizing...");
-
+    it("includes fieldLabel in ClinicalQueryFlag and escapes HTML in createSrOnlyActionButton", async () => {
       const queryHtml = await renderToString(
         createSSRApp(ClinicalQueryFlag, {
           id: "VS.SYSBP",

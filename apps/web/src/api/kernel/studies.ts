@@ -22,8 +22,6 @@ export type KernelAmendmentImpact =
   KernelSchemas["Kernel_KernelAmendmentImpactResponse"];
 export type KernelSimulationResult =
   KernelSchemas["Kernel_KernelSimulationResponse"];
-export type KernelMatrixGapFinding =
-  KernelSchemas["Kernel_KernelMatrixGapFindingResponse"];
 export type KernelScheduleChange =
   KernelSchemas["Kernel_KernelScheduleChangeResponse"];
 export type KernelPlannedVisit =
@@ -242,13 +240,5 @@ export const kernelStudiesApi = {
   }): Promise<KernelSimulationResult> {
     const { executeSimulate } = await loadAuthoring();
     return executeSimulate(request);
-  },
-
-  /** Performs real-time schedule matrix gap check over a protocol design document. */
-  async checkMatrixGaps(
-    protocolContent: string
-  ): Promise<KernelMatrixGapFinding[]> {
-    const { executeCheckMatrixGaps } = await loadAuthoring();
-    return executeCheckMatrixGaps(protocolContent);
   },
 };

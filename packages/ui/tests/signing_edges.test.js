@@ -1,7 +1,6 @@
 import crypto from "node:crypto";
 import { describe, it, expect } from "vitest";
 import {
-  generateJwtHS256,
   deriveKeyFromPIN,
   encryptAESGCM,
   decryptAESGCM,
@@ -9,46 +8,6 @@ import {
 } from "../signing.js";
 
 // Edge cases of the Part 11 signing helpers, checked against node:crypto as an independent reference (#5335).
-
-const TEST_KEY = "signing-edges-test-key"; // pragma: allowlist secret
-
-function base64url(buffer) {
-  return Buffer.from(buffer)
-    .toString("base64")
-    .replace(/=/g, "")
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_");
-}
-
-describe("generateJwtHS256", () => {
-  it("produces an HS256 token whose signature node:crypto reproduces", async () => {
-    const payload = { sub: "usr-001", purpose: "sign", jti: "a1" };
-    const token = await generateJwtHS256(payload, TEST_KEY);
-    const [header, body, signature] = token.split(".");
-
-    expect(JSON.parse(Buffer.from(header, "base64url").toString())).toEqual({
-      alg: "HS256",
-      typ: "JWT",
-    });
-    expect(JSON.parse(Buffer.from(body, "base64url").toString())).toEqual(
-      payload
-    );
-    const expected = base64url(
-      crypto.createHmac("sha256", TEST_KEY).update(`${header}.${body}`).digest()
-    );
-    expect(signature).toBe(expected);
-  });
-
-  it("accepts the key as bytes and signs the same as the string form", async () => {
-    const payload = { sub: "usr-002" };
-    const fromString = await generateJwtHS256(payload, TEST_KEY);
-    const fromBytes = await generateJwtHS256(
-      payload,
-      new TextEncoder().encode(TEST_KEY)
-    );
-    expect(fromBytes).toBe(fromString);
-  });
-});
 
 describe("deriveKeyFromPIN", () => {
   it("matches PBKDF2-HMAC-SHA256 from node:crypto", async () => {

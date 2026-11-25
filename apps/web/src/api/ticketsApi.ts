@@ -246,7 +246,7 @@ function computeDemoSlaTargets(
   };
 }
 
-export function createSimulatedDemoTicket(
+function createSimulatedDemoTicket(
   payload: CreateTicketRequest,
   reasonForChange: string
 ): TicketResponse {

@@ -64,7 +64,6 @@ vi.mock("../src/api/ctmsApi", () => ({
     completeMonitoringVisit: vi.fn(),
     signOffMonitoringVisit: vi.fn(),
     listMonitoringVisitLetters: vi.fn().mockResolvedValue([]),
-    getMonitoringVisitLetters: vi.fn().mockResolvedValue([]),
     compileVisitLetter: vi.fn(),
     downloadVisitLetterPdf: vi.fn(),
     getSiteDoaLog: vi.fn().mockResolvedValue({
