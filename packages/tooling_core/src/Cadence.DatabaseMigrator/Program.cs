@@ -25,6 +25,8 @@ namespace Cadence.DatabaseMigrator;
 public static partial class Program
 {
     private const string ConnectionArgument = "--connection";
+    private const string ModuleArgument = "--module";
+    private const string ShortModuleArgument = "-m";
 
     /// <summary>
     /// Assemblies in <see cref="PersistenceModuleCatalog.All"/> that own a <see cref="DbContext"/> with an
@@ -32,15 +34,7 @@ public static partial class Program
     /// (<c>kernel</c> and <c>identity_vault</c>) runs before kernel modules and standalone services.
     /// </summary>
     public static readonly IReadOnlyList<string> ModuleAssemblies =
-        PersistenceModuleCatalog.All
-            .OrderBy(static m => m.Module switch
-            {
-                "kernel" => 0,
-                "executionmodule" => 1,
-                "intelligence" => 2,
-                _ => 3,
-            })
-            .ThenBy(static m => m.Module, StringComparer.Ordinal)
+        OrderModules(PersistenceModuleCatalog.All)
             .Select(static m => m.AssemblyName)
             .ToArray();
 
@@ -52,7 +46,8 @@ public static partial class Program
         try
         {
             string connectionString = ResolveConnectionString(args);
-            await MigrateAllAsync(connectionString).ConfigureAwait(false);
+            string? moduleOrAll = ResolveModuleFilter(args);
+            await MigrateAsync(connectionString, moduleOrAll).ConfigureAwait(false);
             return 0;
         }
         catch (Exception ex)
@@ -63,13 +58,25 @@ public static partial class Program
         }
     }
 
-    public static async Task MigrateAllAsync(string connectionString, CancellationToken cancellationToken = default)
+    public static Task MigrateAllAsync(string connectionString, CancellationToken cancellationToken = default) =>
+        MigrateAsync(connectionString, moduleOrAll: null, cancellationToken);
+
+    public static async Task MigrateAsync(
+        string connectionString,
+        string? moduleOrAll = null,
+        CancellationToken cancellationToken = default)
     {
+        if (!PersistenceModuleCatalog.TryResolveTargets(moduleOrAll, allowAll: true, out var rawTargets, out string error))
+        {
+            throw new ArgumentException(error, nameof(moduleOrAll));
+        }
+
+        var orderedModules = OrderModules(rawTargets);
         string normalizedConnectionString = NormalizeConnectionString(connectionString);
         string[] designTimeArgs = [ConnectionArgument, normalizedConnectionString];
 
-        var factories = ModuleAssemblies
-            .SelectMany(name => DesignTimeFactories(Assembly.Load(name)))
+        var factories = orderedModules
+            .SelectMany(module => DesignTimeFactories(Assembly.Load(module.AssemblyName), module.DbContextName))
             .ToList();
 
         var seenContexts = new HashSet<Type>();
@@ -289,9 +296,48 @@ public static partial class Program
         }
     }
 
-    private static IEnumerable<Type> DesignTimeFactories(Assembly assembly) =>
+    public static string? ResolveModuleFilter(string[]? args)
+    {
+        if (args is null || args.Length == 0)
+        {
+            return null;
+        }
+
+        for (int i = 0; i < args.Length; i++)
+        {
+            if (string.Equals(args[i], ModuleArgument, StringComparison.Ordinal) ||
+                string.Equals(args[i], ShortModuleArgument, StringComparison.Ordinal))
+            {
+                if (i + 1 >= args.Length || string.IsNullOrWhiteSpace(args[i + 1]) || args[i + 1].StartsWith('-'))
+                {
+                    throw new ArgumentException($"Expected a module name after '{args[i]}'.", nameof(args));
+                }
+
+                return args[i + 1].Trim();
+            }
+        }
+
+        return null;
+    }
+
+    private static IReadOnlyList<PersistenceModule> OrderModules(IEnumerable<PersistenceModule> modules) =>
+        modules
+            .OrderBy(static m => m.Module switch
+            {
+                "kernel" => 0,
+                "executionmodule" => 1,
+                "intelligence" => 2,
+                _ => 3,
+            })
+            .ThenBy(static m => m.Module, StringComparer.Ordinal)
+            .ToArray();
+
+    private static IEnumerable<Type> DesignTimeFactories(Assembly assembly, string expectedDbContextName) =>
         assembly.GetTypes()
-            .Where(t => t is { IsClass: true, IsAbstract: false } && t.GetInterfaces().Any(IsFactoryInterface))
+            .Where(t => t is { IsClass: true, IsAbstract: false } &&
+                        t.GetInterfaces().Any(i =>
+                            IsFactoryInterface(i) &&
+                            string.Equals(i.GetGenericArguments()[0].Name, expectedDbContextName, StringComparison.Ordinal)))
             .OrderBy(t => t.FullName, StringComparer.Ordinal);
 
     private static bool IsFactoryInterface(Type type) =>

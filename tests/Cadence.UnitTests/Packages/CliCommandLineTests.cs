@@ -80,6 +80,19 @@ public class CliCommandLineTests
     [InlineData("migrations", "list", "intelligence")]
     [InlineData("migrations", "verify")]
     [InlineData("migrations", "verify", "executionmodule")]
+    [InlineData("migrations", "apply")]
+    [InlineData("migrations", "apply", "ctms")]
+    [InlineData("migrations", "apply", "ctms", "--connection", "Host=localhost;Database=cadence")]
+    [InlineData("migrations", "apply", "ctms", "-c", "Host=localhost;Database=cadence")]
+    [InlineData("migrations", "bundle")]
+    [InlineData("migrations", "bundle", "kernel")]
+    [InlineData("migrations", "bundle", "all", "--output-dir", "TestResults/migrations")]
+    [InlineData("migrations", "optimize")]
+    [InlineData("migrations", "optimize", "ctms")]
+    [InlineData("migrations", "optimize", "kernel", "--output-dir", "CompiledModels")]
+    [InlineData("migrations", "seed")]
+    [InlineData("migrations", "seed", "execution")]
+    [InlineData("migrations", "seed", "all")]
     [InlineData("wizard", "onboarding")]
     public void Parse_AcceptsEachDocumentedInvocation(params string[] args)
     {
@@ -124,6 +137,13 @@ public class CliCommandLineTests
     [InlineData("migrations", "add")]
     [InlineData("migrations", "add", "ctms")]
     [InlineData("migrations", "verify", "--no-such-option")]
+    [InlineData("migrations", "apply", "--connection")]
+    [InlineData("migrations", "apply", "--no-such-option")]
+    [InlineData("migrations", "bundle", "--output-dir")]
+    [InlineData("migrations", "bundle", "--no-such-option")]
+    [InlineData("migrations", "optimize", "--output-dir")]
+    [InlineData("migrations", "optimize", "--no-such-option")]
+    [InlineData("migrations", "seed", "--no-such-option")]
     public void Parse_RejectsMissingArgumentsUnknownInputAndBareBranches(params string[] args)
     {
         Root.Parse(args).Errors.Should().NotBeEmpty();

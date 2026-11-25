@@ -151,13 +151,17 @@ public class DatabaseUnitTests
     }
 
     /// <summary>
-    /// Issue #4765: design-time factories read --connection or POSTGRES_CONNECTION_STRING and never fall back to a credential.
-    /// Environment variables are process-wide, so this test reads rather than mutates them.
+    /// Issue #4765: design-time factories read --connection, ConnectionStrings__cadence, or POSTGRES_CONNECTION_STRING
+    /// and never fall back to a credential. Environment variables are process-wide, so this test reads rather than mutates them.
     /// </summary>
     [Fact]
     public void ResolveDesignTimeConnectionString_UsesEnvironmentOrThrowsNamingTheVariable()
     {
-        string? configured = Environment.GetEnvironmentVariable(CadenceDatabaseExtensions.LegacyConnectionStringKey);
+        string? configured = Environment.GetEnvironmentVariable(CadenceDatabaseExtensions.PrimaryConnectionStringEnvVar);
+        if (string.IsNullOrWhiteSpace(configured))
+        {
+            configured = Environment.GetEnvironmentVariable(CadenceDatabaseExtensions.LegacyConnectionStringKey);
+        }
 
         Func<string> act = () => CadenceDatabaseExtensions.ResolveDesignTimeConnectionString([]);
 
@@ -165,14 +169,54 @@ public class DatabaseUnitTests
                 [CadenceDatabaseExtensions.DesignTimeConnectionArgument, TestHostSettings.PostgresConnectionString])
             .Should().Be(TestHostSettings.PostgresConnectionString);
 
-        if (string.IsNullOrEmpty(configured))
+        if (string.IsNullOrWhiteSpace(configured))
         {
-            act.Should().Throw<InvalidOperationException>().WithMessage("*POSTGRES_CONNECTION_STRING*");
+            act.Should().Throw<InvalidOperationException>()
+                .WithMessage("*ConnectionStrings__cadence*POSTGRES_CONNECTION_STRING*");
         }
         else
         {
             act().Should().Be(configured);
         }
+    }
+
+    [Theory]
+    [InlineData("Host=cli", "Host=primary", "Host=legacy", "Host=cli")]
+    [InlineData(null, "Host=primary", "Host=legacy", "Host=primary")]
+    [InlineData("   ", "Host=primary", "Host=legacy", "Host=primary")]
+    [InlineData(null, null, "Host=legacy", "Host=legacy")]
+    [InlineData(null, "   ", "Host=legacy", "Host=legacy")]
+    public void ResolveDesignTimeConnectionString_HonorsCliThenPrimaryEnvThenLegacyEnvPrecedence(
+        string? cliConnection,
+        string? primaryEnv,
+        string? legacyEnv,
+        string expected)
+    {
+        string[] args = cliConnection is null
+            ? []
+            : [CadenceDatabaseExtensions.DesignTimeConnectionArgument, cliConnection];
+
+        string resolved = CadenceDatabaseExtensions.ResolveDesignTimeConnectionString(
+            args,
+            key => key switch
+            {
+                CadenceDatabaseExtensions.PrimaryConnectionStringEnvVar => primaryEnv,
+                CadenceDatabaseExtensions.LegacyConnectionStringKey => legacyEnv,
+                _ => null,
+            });
+
+        resolved.Should().Be(expected);
+    }
+
+    [Fact]
+    public void ResolveDesignTimeConnectionString_WhenAllSourcesMissingOrBlank_FailsClosed()
+    {
+        Action act = () => CadenceDatabaseExtensions.ResolveDesignTimeConnectionString(
+            [CadenceDatabaseExtensions.DesignTimeConnectionArgument, "  "],
+            _ => " ");
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*ConnectionStrings__cadence*POSTGRES_CONNECTION_STRING*--connection*");
     }
 
     [Fact]
@@ -225,7 +269,12 @@ public class DatabaseUnitTests
     [Fact]
     public void CadenceDesignTimeDbContextFactory_WithoutConnectionArgument_UsesEnvironmentOrThrowsFailClosed()
     {
-        string? configured = Environment.GetEnvironmentVariable(CadenceDatabaseExtensions.LegacyConnectionStringKey);
+        string? configured = Environment.GetEnvironmentVariable(CadenceDatabaseExtensions.PrimaryConnectionStringEnvVar);
+        if (string.IsNullOrWhiteSpace(configured))
+        {
+            configured = Environment.GetEnvironmentVariable(CadenceDatabaseExtensions.LegacyConnectionStringKey);
+        }
+
         var factory = new DefaultSchemaTestDbContextFactory();
 
         Action act = () =>
@@ -233,9 +282,10 @@ public class DatabaseUnitTests
             using var _ = factory.CreateDbContext([]);
         };
 
-        if (string.IsNullOrEmpty(configured))
+        if (string.IsNullOrWhiteSpace(configured))
         {
-            act.Should().Throw<InvalidOperationException>().WithMessage("*POSTGRES_CONNECTION_STRING*");
+            act.Should().Throw<InvalidOperationException>()
+                .WithMessage("*ConnectionStrings__cadence*POSTGRES_CONNECTION_STRING*");
         }
         else
         {

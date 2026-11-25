@@ -505,11 +505,11 @@ Resolves the PostgreSQL connection string from `ConnectionStrings__cadence`, the
 
 ### `cadence migrations`
 
-Unified EF Core migration tooling across all 18 persistence modules in `PersistenceModuleCatalog` (`ctms`, `econsent`, `eisf`, `etmf`, `execution`, `executionmodule`, `fileshare`, `imaging`, `intelligence`, `interop`, `kernel`, `knowledge`, `notifications`, `org`, `payments`, `quality`, `safety`, `tickets`; [ADR-2536](adr/2026-11-22-unify-18-module-migrations-and-strip-schema-doc-counts.md)). `scripts/manage_migrations.sh` and `scripts/manage_migrations.ps1` delegate `add`, `script`, `list`, and `verify` to these subcommands.
+Unified EF Core migration tooling across all 18 persistence modules in `PersistenceModuleCatalog` (`ctms`, `econsent`, `eisf`, `etmf`, `execution`, `executionmodule`, `fileshare`, `imaging`, `intelligence`, `interop`, `kernel`, `knowledge`, `notifications`, `org`, `payments`, `quality`, `safety`, `tickets`; [ADR-2536](adr/2026-11-22-unify-18-module-migrations-and-strip-schema-doc-counts.md)). `scripts/manage_migrations.sh` and `scripts/manage_migrations.ps1` are thin pass-through wrappers that delegate all eight subcommands (`add`, `script`, `list`, `verify`, `apply`, `bundle`, `optimize`, `seed`) to `cadence migrations`.
 
 #### `cadence migrations add <module> <name>`
 
-Scaffolds a new EF Core migration in the module's configured `Migrations` directory (`MigrationToolingService.Add`). When `POSTGRES_CONNECTION_STRING` is unset, passes a credential-free design-time placeholder after `--` so fail-closed design-time factories build the model offline. Rejects `all` or unknown module names with exit code `1`.
+Scaffolds a new EF Core migration in the module's configured `Migrations` directory (`MigrationToolingService.Add`), then runs scoped `dotnet format whitespace` and `dotnet format style` over the newly generated or updated `.cs` files so file-scoped namespaces satisfy `.editorconfig` immediately. When neither `ConnectionStrings__cadence` nor `POSTGRES_CONNECTION_STRING` is set, passes a credential-free design-time placeholder after `--` so fail-closed design-time factories build the model offline. Rejects `all` or unknown module names with exit code `1`.
 
 #### `cadence migrations script [module|all]`
 
@@ -521,11 +521,39 @@ Generates idempotent SQL review scripts (`dotnet ef migrations script --idempote
 
 #### `cadence migrations list [module|all]`
 
-Lists migrations for one module or all 18 modules (`MigrationToolingService.List`). Uses live PostgreSQL state when `POSTGRES_CONNECTION_STRING` is set, or offline `--no-connect` / `.Designer.cs` inspection when unset.
+Lists migrations for one module or all 18 modules (`MigrationToolingService.List`). Uses live PostgreSQL state when `ConnectionStrings__cadence` or `POSTGRES_CONNECTION_STRING` is set, or offline `--no-connect` / `.Designer.cs` inspection when unset.
 
 #### `cadence migrations verify [module|all]`
 
 Runs `Cadence.SchemaDocExporter --verify-only` (`MigrationToolingService.Verify`) to verify `HasPendingModelChanges()`, `[DbContext]`, `[Migration]`, `.Designer.cs` companions, and unique `CreateTable`/`AddColumn` DDL targets across one module or all 18 modules without opening a database connection or rewriting `docs/schema`.
+
+#### `cadence migrations apply [module|all]`
+
+Applies pending EF Core migrations for one module or all 18 modules (`MigrationToolingService.Apply`) by invoking `Cadence.DatabaseMigrator`, pre-creating any missing `SearchPath` service schemas before migrating so `public` stays empty (ADR-2447). Resolves `--connection`, then `ConnectionStrings__cadence`, then `POSTGRES_CONNECTION_STRING`.
+
+| Option                   | Description                                                                                            |
+| ------------------------ | ------------------------------------------------------------------------------------------------------ |
+| `-c\|--connection <str>` | Optional PostgreSQL connection string override (falls back to `ConnectionStrings__cadence` or legacy). |
+
+#### `cadence migrations bundle [module|all]`
+
+Builds self-contained EF Core migration bundles (`dotnet ef migrations bundle --force`) for one module or all 18 modules (`MigrationToolingService.Bundle`), writing `<module>_migration_bundle` into `TestResults/migrations/` by default. Supplies a credential-free design-time placeholder when neither connection variable is set so offline bundling succeeds across standalone and kernel modules.
+
+| Option                   | Description                                                                                         |
+| ------------------------ | --------------------------------------------------------------------------------------------------- |
+| `-o\|--output-dir <dir>` | Destination directory for `<module>_migration_bundle` artifacts. Default: `TestResults/migrations`. |
+
+#### `cadence migrations optimize [module|all]`
+
+Generates compiled EF Core models (`dotnet ef dbcontext optimize`) in `<AssemblyName>.CompiledModels` for one module or all compatible modules (`MigrationToolingService.Optimize`). Supplies a credential-free design-time placeholder when neither connection variable is set; skips `execution` when targeting `all` (or exits `1` when `execution` is named directly) because `ExecutionDbContext` uses relational `HasQueryFilter` expressions unsupported by EF Core compiled models.
+
+| Option                   | Description                                                                            |
+| ------------------------ | -------------------------------------------------------------------------------------- |
+| `-o\|--output-dir <dir>` | Project-relative output directory for compiled model files. Default: `CompiledModels`. |
+
+#### `cadence migrations seed [module|all]`
+
+Runs module CLI sample-data seeders (`MigrationToolingService.Seed`). Invokes `dotnet run --project apps/execution/src/Cadence.Apps.Execution.csproj -- --seed` for `execution`, skips non-seeding modules cleanly when `all` is specified, and fails with actionable guidance citing `apps/kernel-api/src/DevelopmentTenantBootstrap.cs` (`Kernel__DevelopmentTenant__Code` and `Kernel__DevelopmentTenant__DemoData=true`) when `kernel`, `executionmodule`, or `intelligence` is requested directly.
 
 ### `cadence settings`
 

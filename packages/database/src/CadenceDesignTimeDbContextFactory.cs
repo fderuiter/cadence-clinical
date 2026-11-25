@@ -1,9 +1,15 @@
 using System;
+using System.Collections.Generic;
 
 using Cadence.Security.FieldProtection;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.Extensions.DependencyInjection;
+
+using NpgsqlTypes;
 
 namespace Cadence.Database;
 
@@ -61,6 +67,8 @@ public abstract class CadenceDesignTimeDbContextFactory<TDbContext> : IDesignTim
 
         var optionsBuilder = new DbContextOptionsBuilder<TDbContext>()
             .UseNpgsql(CadenceDatabaseExtensions.WithModuleSchema(connectionString, _schema));
+        ((IDbContextOptionsBuilderInfrastructure)optionsBuilder)
+            .AddOrUpdateExtension(DesignTimeTstzRangeOptionsExtension.Instance);
 
         return _createContext(optionsBuilder.Options);
     }
@@ -70,5 +78,104 @@ public abstract class CadenceDesignTimeDbContextFactory<TDbContext> : IDesignTim
     {
         ArgumentNullException.ThrowIfNull(createContext);
         return options => createContext(options, DesignTimeFieldEncryptor.Instance);
+    }
+}
+
+internal sealed class DesignTimeTstzRangeOptionsExtension : IDbContextOptionsExtension
+{
+    public static readonly DesignTimeTstzRangeOptionsExtension Instance = new();
+    private DbContextOptionsExtensionInfo? _info;
+
+    public DbContextOptionsExtensionInfo Info => _info ??= new ExtensionInfo(this);
+
+    public void ApplyServices(IServiceCollection services)
+    {
+        services.AddSingleton<IRelationalTypeMappingSourcePlugin, TstzRangeOffsetMappingPlugin>();
+        services.AddSingleton<Microsoft.EntityFrameworkCore.Metadata.Conventions.Infrastructure.IConventionSetPlugin, StandaloneSentinelConventionPlugin>();
+    }
+
+    public void Validate(IDbContextOptions options)
+    {
+    }
+
+    private sealed class ExtensionInfo(IDbContextOptionsExtension extension) : DbContextOptionsExtensionInfo(extension)
+    {
+        public override bool IsDatabaseProvider => false;
+        public override string LogFragment => "DesignTimeTstzRange ";
+        public override int GetServiceProviderHashCode() => 1;
+        public override bool ShouldUseSameServiceProvider(DbContextOptionsExtensionInfo other) => other is ExtensionInfo;
+        public override void PopulateDebugInfo(IDictionary<string, string> debugInfo) =>
+            debugInfo["Cadence:DesignTimeTstzRange"] = "1";
+    }
+
+    private sealed class TstzRangeOffsetMappingPlugin(IServiceProvider serviceProvider) : IRelationalTypeMappingSourcePlugin
+    {
+        private bool _resolving;
+
+        public RelationalTypeMapping? FindMapping(in RelationalTypeMappingInfo mappingInfo)
+        {
+            if (_resolving || mappingInfo.ClrType != typeof(NpgsqlRange<DateTimeOffset>) || mappingInfo.StoreTypeName is not null)
+            {
+                return null;
+            }
+
+            _resolving = true;
+            try
+            {
+                return serviceProvider.GetRequiredService<IRelationalTypeMappingSource>()
+                    .FindMapping(typeof(NpgsqlRange<DateTimeOffset>), "tstzrange");
+            }
+            finally
+            {
+                _resolving = false;
+            }
+        }
+    }
+
+    private sealed class StandaloneSentinelConventionPlugin
+        : Microsoft.EntityFrameworkCore.Metadata.Conventions.Infrastructure.IConventionSetPlugin,
+          Microsoft.EntityFrameworkCore.Metadata.Conventions.IModelFinalizingConvention
+    {
+        public Microsoft.EntityFrameworkCore.Metadata.Conventions.ConventionSet ModifyConventions(
+            Microsoft.EntityFrameworkCore.Metadata.Conventions.ConventionSet conventionSet)
+        {
+            conventionSet.ModelFinalizingConventions.Add(this);
+            return conventionSet;
+        }
+
+        public void ProcessModelFinalizing(
+            Microsoft.EntityFrameworkCore.Metadata.Builders.IConventionModelBuilder modelBuilder,
+            Microsoft.EntityFrameworkCore.Metadata.Conventions.IConventionContext<Microsoft.EntityFrameworkCore.Metadata.Builders.IConventionModelBuilder> context)
+        {
+            foreach (var entityType in modelBuilder.Metadata.GetEntityTypes())
+            {
+                AssignMissingStringStructSentinels(entityType.GetDeclaredProperties());
+                foreach (var complexProperty in entityType.GetDeclaredComplexProperties())
+                {
+                    AssignMissingStringStructSentinels(complexProperty.ComplexType.GetDeclaredProperties());
+                }
+            }
+        }
+
+        private static void AssignMissingStringStructSentinels(
+            IEnumerable<Microsoft.EntityFrameworkCore.Metadata.IConventionProperty> properties)
+        {
+            foreach (var property in properties)
+            {
+                if (property.ClrType is not { IsValueType: true, IsPrimitive: false, IsEnum: false } clrType ||
+                    Nullable.GetUnderlyingType(clrType) is not null ||
+                    property.GetValueConverter() is not { ProviderClrType: var providerType } converter ||
+                    providerType != typeof(string))
+                {
+                    continue;
+                }
+
+                object defaultSentinel = property.Sentinel ?? Activator.CreateInstance(clrType)!;
+                if (converter.ConvertToProvider(defaultSentinel) is null)
+                {
+                    property.SetSentinel(converter.ConvertFromProvider("__sentinel__"));
+                }
+            }
+        }
     }
 }

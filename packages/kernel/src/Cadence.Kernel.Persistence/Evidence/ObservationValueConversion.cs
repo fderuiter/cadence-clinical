@@ -16,7 +16,7 @@ namespace Cadence.Kernel.Persistence.Evidence;
 internal static class ObservationValueConversion
 {
     // jsonb reorders object members, so the "type" member may come back after the variant's own members.
-    private static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web) { AllowOutOfOrderMetadataProperties = true };
+    public static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web) { AllowOutOfOrderMetadataProperties = true };
 
     private static readonly ValueConverter<ObservationValue, string> Converter = new(
         value => JsonSerializer.Serialize(value, Options),

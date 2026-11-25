@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 
 using Cadence.Cli.Services;
 using Cadence.TestSupport.Database;
+using Cadence.ToolingCore.Services;
 
 using FluentAssertions;
 
@@ -73,6 +74,30 @@ public sealed class DatabaseResetAndMigratorPostgresTests(ThrowawayPostgresDatab
         int secondExitCode = DatabaseResetService.RunDatabaseMigrator(connectionString);
         secondExitCode.Should().Be(0, "incremental db migrate on an up-to-date database must be idempotent");
         (await TablesInSchemaAsync(connectionString, "public", ct)).Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task ApplySingleModule_CreatesTargetSearchPathSchema_AndKeepsPublicEmpty()
+    {
+        database.SkipIfUnavailable();
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        string connectionString = database.AdminDatabaseConnectionString!;
+
+        DatabaseResetService.ValidateLocalOnly("Postgres", connectionString);
+        await DatabaseResetService.ResetPostgresAsync(connectionString, ct);
+        (await NonSystemSchemasAsync(connectionString, ct)).Should().Equal("public");
+        (await TablesInSchemaAsync(connectionString, "public", ct)).Should().BeEmpty();
+
+        int exitCode = MigrationToolingService.Apply("ctms", connectionString);
+        exitCode.Should().Be(0, "single-module apply for ctms must create schema ctms and apply its migrations");
+
+        (await NonSystemSchemasAsync(connectionString, ct)).Should().BeEquivalentTo("ctms", "kernel", "public");
+        (await TablesInSchemaAsync(connectionString, "ctms", ct)).Should().NotBeEmpty(
+            "ctms migrations must populate tables inside schema 'ctms'");
+        (await TablesInSchemaAsync(connectionString, "kernel", ct)).Should().BeEmpty(
+            "standalone RLS bootstrap creates only kernel.current_tenant_id(), never kernel tables");
+        (await TablesInSchemaAsync(connectionString, "public", ct)).Should().BeEmpty(
+            "public must remain completely empty when applying a standalone SearchPath module");
     }
 
     private static async Task SeedStaleArtifactsAsync(string connectionString, CancellationToken ct)
