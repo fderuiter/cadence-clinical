@@ -641,6 +641,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2675: Standardize Semantic Role Tokens, Dark-Theme Parity, and ESLint AST Color Gates](adr/2026-11-23-standardize-semantic-role-tokens-and-eslint-color-gates.md) | Current | - Status: Accepted |
 | [ADR-2674: Migrate Web Drawers to Bounded `ClinicalDrawer` and Enforce Viewport Reflow](adr/2026-11-24-migrate-web-drawers-to-bounded-clinical-drawer.md) | Current | - Status: Accepted |
 | [ADR-2676: Focus-Trap Detachment Recovery, Shared Retry Focus Primitives, and Inline Focus-Handoff AST Gates](adr/2026-11-24-focus-trap-detachment-recovery-and-retry-focus-primitives.md) | Current | - Status: Accepted |
+| [ADR-2678: Retire Legacy OpenAPI Snapshot, Isolate Legacy Web Client, and Prune Uncalled Web Types](adr/2026-11-24-retire-legacy-openapi-snapshot-and-isolate-legacy-web-client.md) | Current | - Status: Accepted |
 | [ADR-2824: Standardize Clinical Typography Utilities, 12px Floor, and AST Lints](adr/2026-11-24-standardize-clinical-typography-utilities-12px-floor-and-ast-lints.md) | Current | - Status: Accepted |
 | [ADR-2666: Atomic Dual-Signer Step-Up Verification and Startup-Validated CGT Barcode Key](adr/2026-11-24-atomic-dual-signer-step-up-verification-and-startup-validated-cgt-barcode-key.md) | Current | - Status: Accepted |
 | [ADR-2667: Fail-Closed Site Scope for Pharmacist and Subject Roles](adr/2026-11-23-fail-closed-site-scope-for-pharmacist-and-subject-roles.md) | Current | - Status: Accepted |
@@ -658,7 +659,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [CLI reference](cli.md) | Generated | Every `pnpm cadence` command (`pnpm cadence generate-cli-docs`) |
 | [Service and package READMEs](../ARCHITECTURE.md#3-running-services-today) | Current | One README per `apps/*` and `packages/*` directory |
 | [REST API reference](api/index.md) | Generated | Per-service endpoint reference from `docs/openapi/*.json` (`pnpm cadence generate-api-docs`) |
-| [OpenAPI specifications](openapi/README.md) | Generated | Exported OpenAPI documents (`pnpm cadence sync-openapi-spec`); legacy aggregate snapshot in `openapi/legacy/cdisc_openapi.json` |
+| [OpenAPI specifications](openapi/README.md) | Generated | Exported `.NET` OpenAPI documents (`pnpm cadence sync-openapi-spec`) and remaining web client migration boundary |
 | [UI components](components/index.md) | Current | Shared Vue component catalog (`packages/ui`) |
 | [Moving the web app onto the .NET API](web/API_MIGRATION.md) | Current | Which web screens have a .NET backend, which are hidden, and how a screen moves over (epic #4833) |
 | [Migration workflow playbook](MIGRATION_WORKFLOW.md) | Current | How to port the remaining Python reference sources to C# |

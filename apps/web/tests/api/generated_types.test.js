@@ -27,14 +27,14 @@ describe("generated API types", () => {
     );
   });
 
-  it("ignores legacy subdirectories and cdisc_openapi.json when discovering contracts", () => {
+  it("ignores subdirectories and cdisc_openapi.json when discovering contracts", () => {
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "cadence-openapi-"));
     try {
       fs.writeFileSync(path.join(tmpDir, "kernel_openapi.json"), "{}");
       fs.writeFileSync(path.join(tmpDir, "execution_forms_openapi.json"), "{}");
       fs.writeFileSync(path.join(tmpDir, "cdisc_openapi.json"), "{}");
-      fs.mkdirSync(path.join(tmpDir, "legacy"));
-      fs.writeFileSync(path.join(tmpDir, "legacy", "old_openapi.json"), "{}");
+      fs.mkdirSync(path.join(tmpDir, "nested"));
+      fs.writeFileSync(path.join(tmpDir, "nested", "extra_openapi.json"), "{}");
 
       expect(discoverOpenApiServices(tmpDir)).toEqual([
         "execution_forms",

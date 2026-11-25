@@ -6,10 +6,11 @@ The top-level `*_openapi.json` files are the OpenAPI documents the .NET services
 - Regenerate the matching `docs/api/*.md` pages with `pnpm cadence generate-api-docs`.
 - The `openapi` quality gate (`pnpm cadence check openapi`) fails when either is out of date.
 
-## `legacy/`
+## Remaining Python-era Web Client Types
 
-`legacy/` retains only `legacy/cdisc_openapi.json`, the aggregated 878-path Python-era OpenAPI snapshot (the 19 per-service Python `*_openapi.json` snapshots were retired per [ADR-2816](../adr/2026-11-19-retire-orphaned-legacy-web-type-schemas.md)). Across the 19 exported `.NET` service and module specs in `docs/openapi/*_openapi.json`, the platform currently serves **342 total operations** (**310 non-probe operations** alongside 32 `GET /healthz` and `GET /api/v1/<service>/status` probes; **297 paths** and **326 operations** in the aggregated `docs/openapi/cdisc_openapi.json`).
+All legacy Python OpenAPI snapshots formerly kept under `docs/openapi/` have been retired ([ADR-2816](../adr/2026-11-19-retire-orphaned-legacy-web-type-schemas.md), [ADR-2678](../adr/2026-11-24-retire-legacy-openapi-snapshot-and-isolate-legacy-web-client.md)). Live per-service and per-module `.NET` operation counts are generated directly in [`docs/api/index.md`](../api/index.md).
 
-- `apps/web/src/api/types.ts` was originally generated from `legacy/cdisc_openapi.json` with `openapi-typescript` and is pruned in place to the **69 reachable paths** and **175 transitive schemas** still referenced by unmigrated web clients, while migrated clients bind directly to `apps/web/src/api/generated/<contract>.ts`.
+- Migrated web clients bind to `apps/web/src/api/generated/<contract>.ts` via `createOpenApiClient<Paths>()` in `apps/web/src/api/client.ts`.
+- Remaining unmigrated Python-era calls import `openApiClient` from `apps/web/src/api/legacyClient.ts` and compile against `apps/web/src/api/types.ts` (pruned in place to **63 paths**, **69 called operations**, and **156 reachable schemas**, enforced by `apps/web/tests/api/interop_esource_and_legacy_types.spec.ts`).
 
-[`docs/web/API_MIGRATION.md`](../web/API_MIGRATION.md) tracks moving the remaining web clients onto the `.NET` specs above. Once the remaining web calls migrate, `legacy/cdisc_openapi.json` and `apps/web/src/api/types.ts` can be deleted. No gate checks `legacy/cdisc_openapi.json`.
+[`docs/web/API_MIGRATION.md`](../web/API_MIGRATION.md) tracks moving the remaining web clients onto the `.NET` specs above; once the last legacy calls migrate, `apps/web/src/api/legacyClient.ts` and `apps/web/src/api/types.ts` can be deleted.

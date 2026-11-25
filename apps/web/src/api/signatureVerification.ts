@@ -4,7 +4,8 @@ import {
   type StepUpSignatureRequestInput,
   type StepUpVerificationPayload,
 } from "ui";
-import { openApiClient, unwrapResponse } from "./client";
+import { unwrapResponse } from "./client";
+import { openApiClient } from "./legacyClient";
 
 export { resolveDefaultSemanticAction };
 export type { StepUpSignatureRequestInput, StepUpVerificationPayload };
