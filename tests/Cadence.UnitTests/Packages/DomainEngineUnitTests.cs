@@ -415,6 +415,61 @@ public class DomainEngineUnitTests
         }
     }
 
+    [Fact]
+    public void DuplicationDetectorService_ScansScriptsDocsClaudeAndRootModules_WhileSkippingDmtsAndTests()
+    {
+        string tempRoot = Path.Combine(Path.GetTempPath(), $"cadence-dup-modules-{Guid.NewGuid():N}");
+        try
+        {
+            string scriptMjs = Path.Combine(tempRoot, "scripts", "build-helper.mjs");
+            string docsMts = Path.Combine(tempRoot, "docs", ".vitepress", "portal-helper.mts");
+            string claudeCjs = Path.Combine(tempRoot, ".claude", "skills", "run-cadence", "driver.cjs");
+            string rootCts = Path.Combine(tempRoot, "workspace-helper.cts");
+            string dmtsDecl = Path.Combine(tempRoot, "scripts", "playwright-chromium-launcher.d.mts");
+            string dctsDecl = Path.Combine(tempRoot, "scripts", "legacy.d.cts");
+            string docsTest = Path.Combine(tempRoot, "docs", ".vitepress", "navigation.test.mjs");
+            string specFile = Path.Combine(tempRoot, "apps", "web", "src", "components", "__tests__", "Overlay.spec.jsx");
+
+            foreach (string file in new[] { scriptMjs, docsMts, claudeCjs, rootCts, dmtsDecl, dctsDecl, docsTest, specFile })
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(file)!);
+            }
+
+            string dupLines = string.Join("\n", Enumerable.Range(1, 16).Select(i => $"  const stepValue{i} = input + {i};"));
+            string livePayload = $"export function computeSteps(input) {{\n{dupLines}\n  return stepValue16;\n}}\n";
+
+            // 1. Live script + excluded declarations/tests sharing identical 16-line block -> 0 duplicates
+            File.WriteAllText(scriptMjs, livePayload);
+            File.WriteAllText(dmtsDecl, livePayload);
+            File.WriteAllText(dctsDecl, livePayload);
+            File.WriteAllText(docsTest, livePayload);
+            File.WriteAllText(specFile, livePayload);
+
+            DuplicationDetectorService.DetectDuplication(repoRoot: tempRoot, preCommit: true).Should().Be(0);
+
+            // 2. Adding duplicate block in docs/.vitepress/*.mts fails closed
+            File.WriteAllText(docsMts, livePayload);
+            DuplicationDetectorService.DetectDuplication(repoRoot: tempRoot, preCommit: true).Should().Be(1);
+            File.Delete(docsMts);
+
+            // 3. Adding duplicate block in .claude/**/*.cjs fails closed
+            File.WriteAllText(claudeCjs, livePayload);
+            DuplicationDetectorService.DetectDuplication(repoRoot: tempRoot, preCommit: true).Should().Be(1);
+            File.Delete(claudeCjs);
+
+            // 4. Adding duplicate block in root *.cts fails closed
+            File.WriteAllText(rootCts, livePayload);
+            DuplicationDetectorService.DetectDuplication(repoRoot: tempRoot, preCommit: true).Should().Be(1);
+        }
+        finally
+        {
+            if (Directory.Exists(tempRoot))
+            {
+                Directory.Delete(tempRoot, recursive: true);
+            }
+        }
+    }
+
     private static string FindRepoRoot()
     {
         string? dir = AppContext.BaseDirectory;

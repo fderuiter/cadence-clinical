@@ -2138,6 +2138,81 @@ public sealed class PreCommitGuardrailsTests : IDisposable
     }
 
     [Fact]
+    public void FrontendGates_IncludeMtsAndCtsExtensions_AndRouteStagedDmtsAndVitePressCssInPreCommitMode()
+    {
+        FrontendQualityGateService.SupportedPrettierExtensions.Should().Contain([".mts", ".cts"]);
+        FrontendQualityGateService.SupportedEslintExtensions.Should().Contain([".mts", ".cts", ".css"]);
+        FrontendQualityGateService.SupportedTypecheckExtensions.Should().Contain([".mts", ".cts"]);
+
+        if (OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        InitGitRepo();
+        Directory.CreateDirectory(Path.Combine(_tempDir, "node_modules"));
+        Write(
+            "scripts/playwright-chromium-launcher.d.mts",
+            "export declare function resolveChromiumLaunchOptions(): Record<string, unknown>;\n");
+        Write(
+            "scripts/helper.cts",
+            "export const retries: number = 2;\n");
+        Write(
+            "docs/.vitepress/theme/custom.css",
+            ":root { --vp-layout-top-height: 0px; }\n.mermaid-btn:hover:not(:disabled) { color: var(--vp-c-bg); }\n");
+        RunGit(
+            "add",
+            "scripts/playwright-chromium-launcher.d.mts",
+            "scripts/helper.cts",
+            "docs/.vitepress/theme/custom.css");
+
+        string logFile = Path.Combine(_tempDir, "pnpm-mts-cts-invocations.log");
+        string stubBinDir = Path.Combine(_tempDir, "mts-cts-pnpm-bin");
+        Directory.CreateDirectory(stubBinDir);
+        string pnpmStub = Path.Combine(stubBinDir, "pnpm");
+        WriteExecutable(
+            pnpmStub,
+            "#!/bin/sh\n" +
+            "set -eu\n" +
+            "if [ \"${1:-}\" = \"--version\" ]; then\n" +
+            "    echo \"10.34.6\"\n" +
+            "    exit 0\n" +
+            "fi\n" +
+            $"printf '%s\\n' \"$*\" >> \"{logFile}\"\n" +
+            "if [ \"${1:-}\" = \"exec\" ]; then\n" +
+            "    cat >/dev/null\n" +
+            "fi\n" +
+            "exit 0\n");
+
+        string? originalPath = Environment.GetEnvironmentVariable("PATH");
+        try
+        {
+            Environment.SetEnvironmentVariable(
+                "PATH",
+                string.IsNullOrEmpty(originalPath) ? stubBinDir : $"{stubBinDir}{Path.PathSeparator}{originalPath}");
+
+            FrontendQualityGateService.CheckPrettier(_tempDir, targetFiles: null, preCommit: true)
+                .Should().Be(0);
+            FrontendQualityGateService.CheckEslint(_tempDir, targetFiles: null, preCommit: true)
+                .Should().Be(0);
+            FrontendQualityGateService.CheckTypecheck(_tempDir, targetFiles: null, preCommit: true)
+                .Should().Be(0);
+
+            string invocations = File.ReadAllText(logFile);
+            invocations.Should().Contain("--stdin-filepath scripts/playwright-chromium-launcher.d.mts");
+            invocations.Should().Contain("--stdin-filepath scripts/helper.cts");
+            invocations.Should().Contain("--stdin-filename scripts/playwright-chromium-launcher.d.mts");
+            invocations.Should().Contain("--stdin-filename scripts/helper.cts");
+            invocations.Should().Contain("--stdin-filename docs/.vitepress/theme/custom.css");
+            invocations.Should().Contain("-r typecheck");
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("PATH", originalPath);
+        }
+    }
+
+    [Fact]
     public void SetupWizard_LintersOnly_FailsClosedWhenXzIsMissing()
     {
         if (OperatingSystem.IsWindows() || !File.Exists("/bin/bash"))

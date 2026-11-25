@@ -210,8 +210,8 @@ public static class CiPlan
     /// <summary>Jobs of <c>ci.yml</c> that act on GitHub itself and have no local meaning, with the reason.</summary>
     public static IReadOnlyDictionary<string, string> GitHubOnlyJobs { get; } = new Dictionary<string, string>
     {
-        ["ci-gate"] = "aggregates pull-request validation job outcomes into one required branch ruleset status check",
-        ["classify"] = "classifies changed paths and labels same-repository pull requests through the GitHub API",
+        ["ci-gate"] = "aggregates pull-request and merge-group validation job outcomes into one required branch ruleset status check",
+        ["classify"] = "classifies changed paths on pull requests and merge-group runs and labels same-repository pull requests through the GitHub API",
         ["release-and-archive"] = "calls the production pipeline on pushes or ref-guarded dispatches to main, release/* and v* tags",
         ["deploy-docs"] = "deploys the documentation portal to GitHub Pages on pushes or ref-guarded dispatches to main",
     };
@@ -242,7 +242,7 @@ public static class CiPlan
     ];
 
     /// <summary>
-    /// File globs in <c>.github/workflows/ci.yml</c> (<c>classify</c>) that set <c>container_scan=true</c> on pull requests.
+    /// File globs in <c>.github/workflows/ci.yml</c> (<c>classify</c>) that set <c>container_scan=true</c> on pull requests and merge-group runs.
     /// </summary>
     public static IReadOnlyList<string> ContainerScanTriggerGlobs { get; } =
     [
@@ -350,8 +350,8 @@ public static class CiPlan
                 EnvironmentIfPassed = NativeAotCacheHit,
                 Commands =
                 [
-                    Pnpm("exec", "prettier", "--check", "--ignore-path", ".prettierignore", "**/*.{js,jsx,ts,tsx,mjs,cjs,vue,json,css,md,yaml,yml}")
-                        with { CiText = "pnpm exec prettier --check --ignore-path .prettierignore \"**/*.{js,jsx,ts,tsx,mjs,cjs,vue,json,css,md,yaml,yml}\"" },
+                    Pnpm("exec", "prettier", "--check", "--ignore-path", ".prettierignore", "**/*.{js,jsx,ts,tsx,mjs,cjs,mts,cts,vue,json,css,md,yaml,yml}")
+                        with { CiText = "pnpm exec prettier --check --ignore-path .prettierignore \"**/*.{js,jsx,ts,tsx,mjs,cjs,mts,cts,vue,json,css,md,yaml,yml}\"" },
                     NodeCli("check", "eslint"),
                     Pnpm("-r", "typecheck"),
                 ],

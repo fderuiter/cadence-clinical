@@ -93,19 +93,19 @@ public static class QualityGates
             PreCommit = PreCommitMode.Quick,
             PreCommitNote = "checks staged C# files and fails closed when `dotnet` is missing or unstaged edits overlap MSBuild inputs",
         },
-        new("prettier", [], "Prettier formatting across JS, TS, Vue, CSS, JSON, Markdown and YAML files",
+        new("prettier", [], "Prettier formatting across JS, TS (`.js`, `.jsx`, `.mjs`, `.cjs`, `.ts`, `.tsx`, `.mts`, `.cts`), Vue, CSS, JSON, Markdown and YAML files",
             ctx => FrontendQualityGateService.CheckPrettier(ctx.RepoRoot, ctx.TargetFiles, ctx.PreCommit, ctx.IndexReader) == 0)
         {
             TakesFiles = true,
             PreCommit = PreCommitMode.Quick,
-            PreCommitNote = "streams staged JS, TS, Vue, CSS, JSON, Markdown and YAML blobs over stdin; fails closed when `pnpm` or `node_modules` is missing",
+            PreCommitNote = "streams staged JS, TS (`.js`, `.jsx`, `.mjs`, `.cjs`, `.ts`, `.tsx`, `.mts`, `.cts`), Vue, CSS, JSON, Markdown and YAML blobs over stdin; fails closed when `pnpm` or `node_modules` is missing",
         },
-        new("eslint", [], "Frontend ESLint and duplicate store identifier checks across tracked JS, TS, Vue, and CSS files via root eslint.config.mjs",
+        new("eslint", [], "Frontend ESLint and duplicate store identifier checks across tracked JS, TS (`.js`, `.jsx`, `.mjs`, `.cjs`, `.ts`, `.tsx`, `.mts`, `.cts`), Vue, and CSS files via root eslint.config.mjs",
             ctx => FrontendQualityGateService.CheckEslint(ctx.RepoRoot, ctx.TargetFiles, ctx.PreCommit, ctx.IndexReader) == 0)
         {
             TakesFiles = true,
             PreCommit = PreCommitMode.Quick,
-            PreCommitNote = "lints staged JS, TS and Vue blobs over stdin; fails closed when `pnpm` or `node_modules` is missing",
+            PreCommitNote = "lints staged JS, TS (`.js`, `.jsx`, `.mjs`, `.cjs`, `.ts`, `.tsx`, `.mts`, `.cts`), Vue and CSS blobs over stdin; fails closed when `pnpm` or `node_modules` is missing",
         },
         new("typecheck", ["validate-typecheck"],
             "Workspace TypeScript and Vue SFC typecheck (`pnpm -r typecheck` via `vue-tsc` and `tsc`)",
@@ -113,7 +113,7 @@ public static class QualityGates
         {
             TakesFiles = true,
             PreCommit = PreCommitMode.Quick,
-            PreCommitNote = "runs `pnpm -r typecheck` when staged JS, TS, Vue, JSON or YAML files are present; fails closed when `pnpm` or `node_modules` is missing",
+            PreCommitNote = "runs `pnpm -r typecheck` when staged JS, TS (`.js`, `.jsx`, `.mjs`, `.cjs`, `.ts`, `.tsx`, `.mts`, `.cts`), Vue, JSON or YAML files are present; fails closed when `pnpm` or `node_modules` is missing",
         },
         new("actionlint", ["validate-workflows"],
             "GitHub Actions workflow and composite-action static analysis via `actionlint` from `.cadence/bin` or `PATH` (fails closed when missing)",
@@ -167,7 +167,7 @@ public static class QualityGates
             PreCommitNote = "scans materialized staged blobs instead of the working tree",
         },
         new("duplication", ["detect-code-duplication"],
-            "Duplicated code blocks over 15 normalized lines across `.cs`, `.js`, `.ts`, `.tsx`, `.vue` and `.css` files, ratcheted by `.duplication-baseline.txt`",
+            "Duplicated code blocks over 15 normalized lines across `.cs`, `.js`, `.jsx`, `.mjs`, `.cjs`, `.ts`, `.tsx`, `.mts`, `.cts`, `.vue` and `.css` files, ratcheted by `.duplication-baseline.txt`",
             ctx => DuplicationDetectorService.DetectDuplication(ctx.Files, ctx.RepoRoot, ctx.PreCommit, ctx.IndexReader) == 0)
         { TakesFiles = true },
         new("cli-docs", ["validate-cli-docs"],
