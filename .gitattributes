@@ -15,8 +15,8 @@ packages/kernel/src/Cadence.Standards/Blocks/*.json -text
 # Machine-generated artifacts (collapse in GitHub PR diffs and exclude from Linguist language stats)
 pnpm-lock.yaml linguist-generated=true
 docs/openapi/*.json linguist-generated=true
-docs/openapi/legacy/*.json linguist-generated=true
 apps/web/src/api/generated/*.ts linguist-generated=true
+apps/web/src/api/types.ts linguist-generated=true
 docs/api/*.md linguist-generated=true
 docs/schema/*.md linguist-generated=true
 docs/SDLC/** linguist-generated=true

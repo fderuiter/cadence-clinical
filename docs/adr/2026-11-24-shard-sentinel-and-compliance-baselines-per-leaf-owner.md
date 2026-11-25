@@ -14,7 +14,7 @@
 Concurrent feature branches paying down legacy architectural or compliance debt repeatedly collided in two classes of baseline artifacts (PRD-SYS-001, PRD-SEC-001):
 
 1. **Monolithic architecture sentinel baselines (`ADR-2832`):** Legacy sentinel files under `tests/Cadence.ArchitectureTests/ArchitectureBaselines/` (`permission-matrix.baseline.txt` with 1,400 grants across 83 RBAC resources, `direct-state-writes.baseline.txt` with 134 `SaveChanges*` call sites across 14 assemblies, and `cross-service-isolation.baseline.txt` with 12 sibling-service references across 2 service pairs) stored unrelated domains in single sorted text files. Parallel pull requests touching adjacent lines or pruning debt in different resources or assemblies produced avoidable merge conflicts.
-2. **Coarse unit-level compliance shards:** `baselines/deid/<unit>.baseline.txt` (for example `baselines/deid/apps/web.baseline.txt`, holding over 200 of the 253 baselined DEID entries across 33 tracked files) and `baselines/secrets/<unit>.secrets.baseline.json` (41 findings across 19 tracked files) grouped every file inside an entire app or package into one shared shard. Any two pull requests touching different Vue components or documents inside `apps/web`, `packages/ui`, or `root` risked `modify/modify` or `modify/delete` conflicts on the shared unit file.
+2. **Coarse unit-level compliance shards:** `baselines/deid/<unit>.baseline.txt` (for example `baselines/deid/apps/web.baseline.txt`, holding over 200 of the 252 baselined DEID entries across 32 tracked files) and `baselines/secrets/<unit>.secrets.baseline.json` (32 findings across 13 tracked files) grouped every file inside an entire app or package into one shared shard. Any two pull requests touching different Vue components or documents inside `apps/web`, `packages/ui`, or `root` risked `modify/modify` or `modify/delete` conflicts on the shared unit file.
 
 In addition, `CADENCE_UPDATE_BASELINE=1` was only partially wired across CLI and xUnit sentinels, and gate path constants and shard validation logic were duplicated across CLI and `ToolingCore` services.
 
@@ -33,14 +33,14 @@ In addition, `CADENCE_UPDATE_BASELINE=1` was only partially wired across CLI and
   - `baselines/permission-matrix/<resource>.baseline.txt` (83 resource shards, 1,400 entries)
   - `baselines/direct-state-writes/<Assembly>.baseline.txt` (14 assembly shards, 134 entries)
   - `baselines/cross-service-isolation/<sourceService>/<targetService>.baseline.txt` (2 service-pair shards, 12 entries)
-  - `baselines/deid/files/<sourceFile>.baseline.txt` (33 per-file shards, 253 entries)
-  - `baselines/secrets/files/<sourceFile>.secrets.baseline.json` plus `baselines/secrets/config.json` (19 per-file shards, 41 entries)
+  - `baselines/deid/files/<sourceFile>.baseline.txt` (32 per-file shards, 252 entries)
+  - `baselines/secrets/files/<sourceFile>.secrets.baseline.json` plus `baselines/secrets/config.json` (13 per-file shards, 32 entries)
 - **Pros:**
   - Paying down debt in one component, resource, assembly, or service pair modifies or deletes only its dedicated leaf file, turning concurrent debt paydowns into clean non-overlapping Git operations.
   - `BaselineRatchetService` aggregates entries across all 7 sharded gates (`kernel-boundaries`, `kernel-rule-coverage`, `permission-matrix`, `direct-state-writes`, `cross-service-isolation`, `baselines/deid`, and `baselines/secrets`) with legacy-path migration compatibility, preserving file-and-count-scoped `Baseline-Growth` trailer enforcement.
   - `BaselineGateCatalog` and `TextBaselineShardStore` remove duplicated path constants and shard validation code across `PermissionMatrixRatchetService`, `ImportValidatorService`, `DeidComplianceService`, `DetectSecretsGateService`, `SecretsBaselineCleanerService`, `BaselineRatchetService`, and `ShrinkOnlyBaseline`.
 - **Cons:**
-  - Increases the number of small files under `baselines/` (151 leaf shards across the five migrated gates), mitigated by automatic deletion of empty shards and empty parent directories.
+  - Increases the number of small files under `baselines/` (144 leaf shards across the five migrated gates), mitigated by automatic deletion of empty shards and empty parent directories.
 
 ### Option 2: Retain Monolithic Sentinel Files and App/Package Compliance Shards with Custom Merge Drivers
 

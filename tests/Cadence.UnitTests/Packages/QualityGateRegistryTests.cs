@@ -664,6 +664,7 @@ public sealed class QualityGateRegistryTests : IDisposable
             "    \"src/Sample.cs\": [{ \"type\": \"Hex High Entropy String\", \"hashed_secret\": \"abc\", \"line_number\": 12 }]\n" +
             "  }\n" +
             "}\n";
+        Write("src/Sample.cs", "internal static class Sample {}\n");
         Write(".secrets.baseline", unnormalized);
 
         var gate = QualityGates.Find("clean-secrets")!;

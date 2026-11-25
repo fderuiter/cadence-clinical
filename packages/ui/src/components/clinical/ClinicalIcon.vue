@@ -80,6 +80,17 @@
     <template v-else-if="name === 'chevron-right'">
       <polyline points="9 18 15 12 9 6" />
     </template>
+    <template v-else-if="name === 'chevron-down'">
+      <polyline points="6 9 12 15 18 9" />
+    </template>
+    <template v-else-if="name === 'chevron-up'">
+      <polyline points="18 15 12 9 6 15" />
+    </template>
+    <template v-else-if="name === 'menu'">
+      <line x1="4" x2="20" y1="6" y2="6" />
+      <line x1="4" x2="20" y1="12" y2="12" />
+      <line x1="4" x2="20" y1="18" y2="18" />
+    </template>
     <template v-else-if="name === 'camera'">
       <path
         d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"

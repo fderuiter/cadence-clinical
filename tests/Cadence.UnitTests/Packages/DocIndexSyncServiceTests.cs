@@ -452,4 +452,67 @@ public sealed class DocIndexSyncServiceTests : IDisposable
         repaired.Should().Contain("| [Doc A](doca.md) | Current | First doc |\n| [Doc B](docb.md) | Current | Split by intra-table blank line |");
         repaired.Should().Contain("| [Doc B](docb.md) | Current | Split by intra-table blank line |\n\n| Document | Status | What it is |");
     }
+
+    [Fact]
+    public void SyncDocIndex_WriteMode_AnchorsNewAdrRowsByNumberAndMarksPythonInventoryHistorical()
+    {
+        DocIndexSyncService.DetermineStatus("PYTHON_REFERENCE_INVENTORY.md", "# Python Reference Inventory\n")
+            .Should().Be("Historical");
+
+        string docsDir = Path.Combine(_tempDir, "docs");
+        string adrDir = Path.Combine(docsDir, "adr");
+        Directory.CreateDirectory(adrDir);
+
+        File.WriteAllText(Path.Combine(adrDir, "index.md"), "# Architectural Decision Records (Index)\nMaster ADR index.\n");
+        File.WriteAllText(Path.Combine(adrDir, "2026-10-16-pin-pnpm.md"), "# ADR-2508: Pin pnpm and Node\n- Status: Accepted\n");
+        File.WriteAllText(Path.Combine(adrDir, "2026-10-19-kernel-command-path.md"), "# ADR-2600: Kernel Command Path\n- Status: Accepted\n");
+        File.WriteAllText(Path.Combine(adrDir, "2026-11-24-retire-dead-ui.md"), "# ADR-2677: Retire Dead UI Exports\n- Status: Accepted\n");
+        File.WriteAllText(Path.Combine(adrDir, "2026-11-24-early-band.md"), "# ADR-2499: Early Band Decision\n- Status: Accepted\n");
+        File.WriteAllText(Path.Combine(adrDir, "2026-11-24-retire-python.md"), "# ADR-2509: Retire Remaining Python References\n- Status: Accepted\n");
+        File.WriteAllText(Path.Combine(adrDir, "2026-11-24-high-band.md"), "# ADR-2900: High Band Decision\n- Status: Accepted\n");
+        File.WriteAllText(Path.Combine(docsDir, "PYTHON_REFERENCE_INVENTORY.md"), "# Python Reference Inventory (#4789)\nArchived record.\n");
+
+        string initialIndex = string.Join(
+            '\n',
+            "# Documentation Index",
+            "",
+            "## Architecture decision records",
+            "",
+            "| Document | Status | What it is |",
+            "| --- | --- | --- |",
+            "| [Architectural Decision Records (Index)](adr/index.md) | Current | Master ADR index. |",
+            "| [ADR-2508: Pin pnpm and Node](adr/2026-10-16-pin-pnpm.md) | Current | - Status: Accepted |",
+            "| [ADR-2600: Kernel Command Path](adr/2026-10-19-kernel-command-path.md) | Current | - Status: Accepted |",
+            "| [ADR-2677: Retire Dead UI Exports](adr/2026-11-24-retire-dead-ui.md) | Current | - Status: Accepted |",
+            "## Developing and running",
+            "",
+            "| Document | Status | What it is |",
+            "| --- | --- | --- |",
+            "");
+
+        string indexPath = Path.Combine(docsDir, "DOCUMENTATION_INDEX.md");
+        File.WriteAllText(indexPath, initialIndex);
+
+        DocIndexSyncService.SyncDocIndex(check: true, repoRoot: _tempDir).Should().Be(1);
+        DocIndexSyncService.SyncDocIndex(check: false, repoRoot: _tempDir).Should().Be(0);
+        DocIndexSyncService.SyncDocIndex(check: true, repoRoot: _tempDir).Should().Be(0);
+
+        string updated = File.ReadAllText(indexPath);
+        int idxMaster = updated.IndexOf("adr/index.md", StringComparison.Ordinal);
+        int idx2499 = updated.IndexOf("ADR-2499:", StringComparison.Ordinal);
+        int idx2508 = updated.IndexOf("ADR-2508:", StringComparison.Ordinal);
+        int idx2509 = updated.IndexOf("ADR-2509:", StringComparison.Ordinal);
+        int idx2600 = updated.IndexOf("ADR-2600:", StringComparison.Ordinal);
+        int idx2677 = updated.IndexOf("ADR-2677:", StringComparison.Ordinal);
+        int idx2900 = updated.IndexOf("ADR-2900:", StringComparison.Ordinal);
+
+        idxMaster.Should().BeLessThan(idx2499);
+        idx2499.Should().BeLessThan(idx2508);
+        idx2508.Should().BeLessThan(idx2509);
+        idx2509.Should().BeLessThan(idx2600);
+        idx2600.Should().BeLessThan(idx2677);
+        idx2677.Should().BeLessThan(idx2900);
+        updated.Should().Contain("(adr/2026-11-24-high-band.md) | Current | - Status: Accepted |\n\n## Developing and running");
+        updated.Should().Contain("| [Python Reference Inventory (#4789)](PYTHON_REFERENCE_INVENTORY.md) | Historical |");
+    }
 }

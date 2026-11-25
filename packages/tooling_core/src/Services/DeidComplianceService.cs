@@ -22,8 +22,8 @@ public static partial class DeidComplianceService
 {
     private static readonly HashSet<string> TextExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
-        // The Python reference's list, plus the source and asset types of the .NET, Vue and VitePress code base.
-        ".py", ".js", ".mjs", ".cjs", ".ts", ".tsx", ".jsx", ".json", ".md", ".log", ".txt", ".yaml", ".yml", ".csv",
+        // Source, configuration, documentation, and asset text extensions across the .NET, Vue, and VitePress code base.
+        ".js", ".mjs", ".cjs", ".ts", ".tsx", ".jsx", ".json", ".md", ".log", ".txt", ".yaml", ".yml", ".csv",
         ".toml", ".xml", ".html", ".css", ".cs", ".vue", ".sql", ".svg",
     };
 
@@ -397,8 +397,7 @@ public static partial class DeidComplianceService
     }
 
     /// <summary>
-    /// The findings in one file's text after the pragma and development-value allowlists, as the Python reference's
-    /// <c>scan_file</c> filters them.
+    /// The findings in one file's text after applying inline pragma and development-value allowlists.
     /// </summary>
     public static IReadOnlyList<DeidFinding> ScanText(
         string relativePath,
@@ -624,7 +623,7 @@ public static partial class DeidComplianceService
     }
 
     // Explicit files, GitRevisionScopeService diff scope, or every file git tracks (git ls-files -z), filtered through
-    // IsExcludedPath and ShouldScanFile (all 22 TextExtensions, AlwaysScannedNames, and extensionless NUL-byte sniffing).
+    // IsExcludedPath and ShouldScanFile (TextExtensions, AlwaysScannedNames, and extensionless NUL-byte sniffing).
     public static IReadOnlyList<string> CandidateFiles(
         string repoRoot,
         string[]? files = null,

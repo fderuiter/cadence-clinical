@@ -1,4 +1,5 @@
-import { openApiClient, unwrapResponse } from "./client";
+import { unwrapResponse } from "./client";
+import { openApiClient } from "./legacyClient";
 import type { paths } from "./types";
 
 export type AmendmentBranchPayload =

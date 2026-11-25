@@ -255,6 +255,13 @@ public class EnvVarExtractorServiceTests
 
             int exactMatchResult = EnvVarExtractorService.ExtractAndValidateEnvVars(checkOnly: true, repoRoot: tempDir);
             exactMatchResult.Should().Be(0);
+
+            File.WriteAllText(
+                Path.Combine(tempDir, "packages", "tooling", "retired.py"),
+                "import os\nx = os.environ.get(\"RETIRED_PYTHON_ONLY_VAR\")\n");
+
+            EnvVarExtractorService.ExtractAndValidateEnvVars(checkOnly: true, repoRoot: tempDir)
+                .Should().Be(0, ".py files are no longer scanned for environment variables");
         }
         finally
         {

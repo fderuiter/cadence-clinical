@@ -197,8 +197,10 @@
 
             <div
               id="header-secondary-menu"
+              ref="secondaryMenuPanelRef"
               class="header-secondary-actions"
               :class="{ 'is-open': isSecondaryMenuOpen }"
+              :style="secondaryMenuStyle"
             >
               <button
                 v-if="onboardingSummary.totalTasksCount > 0"
@@ -285,22 +287,40 @@
         <button
           v-if="authStore.isAuthenticated"
           id="btn-mobile-menu-toggle"
+          ref="mobileMenuToggleRef"
           type="button"
           class="mobile-menu-toggle"
           aria-label="Toggle navigation menu"
           aria-controls="mobile-nav-menu"
           :aria-expanded="isMobileMenuOpen ? 'true' : 'false'"
-          @click="isMobileMenuOpen = !isMobileMenuOpen"
+          @click="toggleMobileMenu"
         >
-          ☰
+          <svg
+            class="clinical-icon"
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.75"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+            focusable="false"
+          >
+            <path v-if="isMobileMenuOpen" d="M18 6 6 18M6 6l12 12" />
+            <path v-else d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
         </button>
       </div>
 
       <nav
         v-if="authStore.isAuthenticated"
         id="mobile-nav-menu"
+        ref="mobileMenuPanelRef"
         class="mobile-nav-drawer"
         :class="{ 'is-open': isMobileMenuOpen }"
+        :style="mobileMenuStyle"
         :hidden="!isMobileMenuOpen || undefined"
         aria-label="Mobile navigation"
       >
@@ -308,7 +328,7 @@
           v-if="showStudiesNav"
           :to="studiesPath"
           class="mobile-nav-link"
-          @click="isMobileMenuOpen = false"
+          @click="closeMobileMenu()"
         >
           Studies
         </router-link>
@@ -316,7 +336,7 @@
           v-if="showDataCollectionNav"
           :to="dataCollectionPath"
           class="mobile-nav-link"
-          @click="isMobileMenuOpen = false"
+          @click="closeMobileMenu()"
         >
           Data collection
         </router-link>
@@ -324,7 +344,7 @@
           v-if="siteReadinessPath"
           :to="siteReadinessPath"
           class="mobile-nav-link"
-          @click="isMobileMenuOpen = false"
+          @click="closeMobileMenu()"
         >
           Site readiness
         </router-link>
@@ -332,7 +352,7 @@
           v-if="showSupportNav"
           :to="supportPath"
           class="mobile-nav-link"
-          @click="isMobileMenuOpen = false"
+          @click="closeMobileMenu()"
         >
           Support
         </router-link>
@@ -340,7 +360,7 @@
           v-if="showKnowledgeNav"
           :to="knowledgePath"
           class="mobile-nav-link"
-          @click="isMobileMenuOpen = false"
+          @click="closeMobileMenu()"
         >
           Knowledge
         </router-link>
@@ -472,6 +492,7 @@ import {
 } from "../stores/onboardingSummary.js";
 import { hasUserScopedDrafts } from "../utils/userScopedStorage.js";
 import { useActiveStudyScope } from "../composables/useActiveStudyScope";
+import { useHeaderMenuCoordination } from "../composables/useHeaderMenuCoordination.js";
 import { isScreenAvailable } from "../router/availability";
 import { isRouteAuthorizedForRoles } from "../router";
 import { isDemoBuild } from "../utils/demoMode.js";
@@ -529,10 +550,32 @@ const passiveCanvasState = computed(
   () =>
     (resolveStorePinia(authStore) || pinia)?.state?.value?.studyCanvas || null
 );
-const isMobileMenuOpen = ref(false);
-const isSecondaryMenuOpen = ref(false);
 const secondaryMenuWrapperRef = ref(null);
 const secondaryMenuToggleRef = ref(null);
+const secondaryMenuPanelRef = ref(null);
+const mobileMenuToggleRef = ref(null);
+const mobileMenuPanelRef = ref(null);
+const {
+  isMobileMenuOpen,
+  isSecondaryMenuOpen,
+  secondaryMenuStyle,
+  mobileMenuStyle,
+  closeMobileMenu,
+  closeSecondaryMenu,
+  closeAllHeaderMenus,
+  toggleMobileMenu,
+  toggleSecondaryMenu,
+  handleEscapeKey,
+} = useHeaderMenuCoordination({
+  refs: {
+    secondaryWrapper: secondaryMenuWrapperRef,
+    secondaryToggle: secondaryMenuToggleRef,
+    secondaryPanel: secondaryMenuPanelRef,
+    mobileToggle: mobileMenuToggleRef,
+    mobilePanel: mobileMenuPanelRef,
+  },
+  hasBlockingModalOverlay: () => hasBlockingModalOverlay(),
+});
 const statusAnnouncement = ref("");
 const headerRef = ref(null);
 const headerHeight = ref(48);
@@ -935,32 +978,8 @@ watch(
   }
 );
 
-function closeMobileMenu({ restoreFocus = false } = {}) {
-  if (!isMobileMenuOpen.value) return;
-  isMobileMenuOpen.value = false;
-  if (restoreFocus && typeof document !== "undefined") {
-    nextTick(() => {
-      document.getElementById("btn-mobile-menu-toggle")?.focus?.();
-    });
-  }
-}
-
-function closeSecondaryMenu({ restoreFocus = false } = {}) {
-  if (!isSecondaryMenuOpen.value) return;
-  isSecondaryMenuOpen.value = false;
-  if (restoreFocus) {
-    nextTick(() => {
-      secondaryMenuToggleRef.value?.focus?.();
-    });
-  }
-}
-
-function toggleSecondaryMenu() {
-  isSecondaryMenuOpen.value = !isSecondaryMenuOpen.value;
-}
-
 function handleToggleChecklist() {
-  isSecondaryMenuOpen.value = false;
+  closeSecondaryMenu();
   const targetPinia = resolveStorePinia(authStore) || pinia;
   const mountedOnboarding = targetPinia?._s?.get("onboarding");
   if (
@@ -976,7 +995,7 @@ function handleToggleChecklist() {
 }
 
 function handleToggleContextualHelp() {
-  isSecondaryMenuOpen.value = false;
+  closeSecondaryMenu();
   const targetPinia = resolveStorePinia(authStore) || pinia;
   const mountedKnowledge = targetPinia?._s?.get("knowledge");
   if (mountedKnowledge && typeof mountedKnowledge.toggleDrawer === "function") {
@@ -992,21 +1011,13 @@ function handleToggleContextualHelp() {
 }
 
 function handleLogoutClick() {
-  isSecondaryMenuOpen.value = false;
+  closeSecondaryMenu();
   handleLogout();
 }
 
 function handleDemoReset(message) {
-  isSecondaryMenuOpen.value = false;
+  closeSecondaryMenu();
   statusAnnouncement.value = message;
-}
-
-function handleDocumentPointerDown(event) {
-  if (!isSecondaryMenuOpen.value) return;
-  const wrapperEl = secondaryMenuWrapperRef.value;
-  if (wrapperEl && event?.target && !wrapperEl.contains(event.target)) {
-    closeSecondaryMenu();
-  }
 }
 
 function hasBlockingModalOverlay(excludeId = "") {
@@ -1034,16 +1045,7 @@ function hasBlockingModalOverlay(excludeId = "") {
 
 function handleGlobalKeydown(event) {
   if (event.key === "Escape" && !event.defaultPrevented) {
-    if (isSecondaryMenuOpen.value || isMobileMenuOpen.value) {
-      if (!hasBlockingModalOverlay()) {
-        event.preventDefault();
-        if (isSecondaryMenuOpen.value) {
-          closeSecondaryMenu({ restoreFocus: true });
-        } else if (isMobileMenuOpen.value) {
-          closeMobileMenu({ restoreFocus: true });
-        }
-      }
-    }
+    handleEscapeKey(event);
     return;
   }
   if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "e") {
@@ -1081,8 +1083,7 @@ watch(
 watch(
   () => route?.fullPath,
   () => {
-    isSecondaryMenuOpen.value = false;
-    isMobileMenuOpen.value = false;
+    closeAllHeaderMenus();
   }
 );
 
@@ -1109,7 +1110,6 @@ watch(
 onMounted(() => {
   window.addEventListener("keydown", handleGlobalKeydown);
   window.addEventListener("resize", handleViewportResize);
-  document.addEventListener("pointerdown", handleDocumentPointerDown);
   document.addEventListener("pointerdown", recordStickyChromePointerDown, true);
   document.addEventListener("focusin", handleGlobalFocusIn);
   syncHeaderHeight();
@@ -1128,7 +1128,6 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener("keydown", handleGlobalKeydown);
   window.removeEventListener("resize", handleViewportResize);
-  document.removeEventListener("pointerdown", handleDocumentPointerDown);
   document.removeEventListener(
     "pointerdown",
     recordStickyChromePointerDown,
@@ -1568,10 +1567,19 @@ onUnmounted(() => {
 .mobile-nav-drawer {
   display: none;
   width: 100%;
+  max-height: calc(100dvh - 24px);
   flex-direction: column;
   gap: 6px;
-  padding-top: 8px;
-  border-top: 1px solid var(--semantic-color-border);
+  padding: 8px;
+  background: var(--semantic-color-surface);
+  border: 1px solid var(--semantic-color-border-control);
+  border-radius: 8px;
+  box-shadow: var(--semantic-shadow-xl);
+  z-index: 55;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  box-sizing: border-box;
 }
 
 .mobile-nav-drawer.is-open {
@@ -1750,12 +1758,16 @@ onUnmounted(() => {
     top: calc(100% + 6px);
     min-width: 210px;
     max-width: min(280px, calc(100vw - 24px));
+    max-height: calc(100dvh - 24px);
     padding: 10px;
     background: var(--semantic-color-surface);
     border: 1px solid var(--semantic-color-border-control);
     border-radius: 8px;
     box-shadow: var(--semantic-shadow-xl);
     z-index: 60;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
     box-sizing: border-box;
   }
 

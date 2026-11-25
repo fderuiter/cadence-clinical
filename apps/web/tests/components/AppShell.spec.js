@@ -681,4 +681,136 @@ describe("AppShell.vue - Unified Study-Centric Application Shell", () => {
       vi.unstubAllEnvs();
     }
   });
+
+  it("enforces mutual exclusion, 12px short-viewport clamping, vector toggle icon, outside dismissal, and modal-aware Escape on header menus", async () => {
+    const authStore = useAuthStore();
+    authStore.isAuthenticated = true;
+    authStore.rawRoles = ["Sponsor Admin"];
+
+    const originalInnerWidth = window.innerWidth;
+    const originalInnerHeight = window.innerHeight;
+    const originalVisualViewport = window.visualViewport;
+    Object.defineProperty(window, "innerWidth", {
+      configurable: true,
+      writable: true,
+      value: 320,
+    });
+    Object.defineProperty(window, "innerHeight", {
+      configurable: true,
+      writable: true,
+      value: 256,
+    });
+    Object.defineProperty(window, "visualViewport", {
+      configurable: true,
+      writable: true,
+      value: {
+        width: 320,
+        height: 256,
+        offsetLeft: 0,
+        offsetTop: 0,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      },
+    });
+
+    const wrapper = mount(AppShell, {
+      attachTo: document.body,
+      global: { plugins: [router] },
+    });
+
+    try {
+      const mobileToggle = wrapper.find("#btn-mobile-menu-toggle");
+      const secondaryToggle = wrapper.find("#btn-header-actions-menu");
+      expect(mobileToggle.find("svg").exists()).toBe(true);
+      expect(mobileToggle.text()).not.toContain("☰");
+
+      vi.spyOn(
+        secondaryToggle.element,
+        "getBoundingClientRect"
+      ).mockReturnValue({
+        top: 8,
+        bottom: 44,
+        left: 220,
+        right: 268,
+        width: 48,
+        height: 36,
+      });
+
+      // Open mobile menu then secondary menu -> mobile menu closes automatically
+      await mobileToggle.trigger("click");
+      expect(wrapper.find("#mobile-nav-menu").classes()).toContain("is-open");
+
+      await secondaryToggle.trigger("click");
+      await wrapper.vm.$nextTick();
+      expect(wrapper.find("#header-secondary-menu").classes()).toContain(
+        "is-open"
+      );
+      expect(wrapper.find("#mobile-nav-menu").classes()).not.toContain(
+        "is-open"
+      );
+
+      const secondaryMenuEl = wrapper.find("#header-secondary-menu").element;
+      expect(secondaryMenuEl.style.position).toBe("fixed");
+      expect(secondaryMenuEl.style.left).toBe("12px");
+      expect(
+        Number.parseFloat(secondaryMenuEl.style.maxHeight)
+      ).toBeGreaterThanOrEqual(190);
+      expect(
+        Number.parseFloat(secondaryMenuEl.style.maxHeight)
+      ).toBeLessThanOrEqual(205);
+
+      // Defer Escape when a blocking modal dialog is present
+      const modalStub = document.createElement("div");
+      modalStub.setAttribute("role", "dialog");
+      modalStub.setAttribute("aria-modal", "true");
+      document.body.appendChild(modalStub);
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Escape", cancelable: true })
+      );
+      await wrapper.vm.$nextTick();
+      expect(wrapper.find("#header-secondary-menu").classes()).toContain(
+        "is-open"
+      );
+      document.body.removeChild(modalStub);
+
+      // Single Escape closes secondary menu and restores focus to #btn-header-actions-menu
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Escape", cancelable: true })
+      );
+      await wrapper.vm.$nextTick();
+      await wrapper.vm.$nextTick();
+      expect(wrapper.find("#header-secondary-menu").classes()).not.toContain(
+        "is-open"
+      );
+      expect(document.activeElement).toBe(secondaryToggle.element);
+
+      // Outside pointerdown dismisses open mobile menu
+      await mobileToggle.trigger("click");
+      expect(wrapper.find("#mobile-nav-menu").classes()).toContain("is-open");
+      document
+        .getElementById("main-content")
+        .dispatchEvent(new Event("pointerdown", { bubbles: true }));
+      await wrapper.vm.$nextTick();
+      expect(wrapper.find("#mobile-nav-menu").classes()).not.toContain(
+        "is-open"
+      );
+    } finally {
+      wrapper.unmount();
+      Object.defineProperty(window, "innerWidth", {
+        configurable: true,
+        writable: true,
+        value: originalInnerWidth,
+      });
+      Object.defineProperty(window, "innerHeight", {
+        configurable: true,
+        writable: true,
+        value: originalInnerHeight,
+      });
+      Object.defineProperty(window, "visualViewport", {
+        configurable: true,
+        writable: true,
+        value: originalVisualViewport,
+      });
+    }
+  });
 });

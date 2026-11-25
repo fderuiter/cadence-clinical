@@ -249,7 +249,7 @@ public static class ApiDocsGeneratorService
         var sb = new StringBuilder();
         sb.Append("# API Reference\n\n");
         sb.Append("Generated from `docs/openapi/*_openapi.json` by `pnpm cadence generate-api-docs`. Don't edit this file by hand.\n\n");
-        sb.Append("Each page lists the operations a .NET service serves. The specs come from the services themselves (`pnpm cadence sync-openapi-spec`), and the `openapi` quality gate fails when they drift. `docs/openapi/cdisc_openapi.json` aggregates them. The Python-era contract the web client is still typed against is in `docs/openapi/legacy/`.\n\n");
+        sb.Append("Each page lists the operations a .NET service serves. The specs come from the services themselves (`pnpm cadence sync-openapi-spec`), and the `openapi` quality gate fails when they drift. `docs/openapi/cdisc_openapi.json` aggregates them.\n\n");
         sb.Append("| Service | Operations |\n");
         sb.Append("| ------- | ---------- |\n");
         foreach (var svc in services)

@@ -38,6 +38,13 @@ public static class ContentHash
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
     };
 
+    private static readonly JsonWriterOptions StreamingWriterOptions = new()
+    {
+        Indented = false,
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+        SkipValidation = true,
+    };
+
     /// <summary>The canonical form of <paramref name="json"/>.</summary>
     /// <exception cref="JsonException">The text is not a single JSON value.</exception>
     public static string Canonicalize(string json)
@@ -50,6 +57,27 @@ public static class ContentHash
     /// <summary>The content hash of the canonical form of <paramref name="json"/>.</summary>
     /// <exception cref="JsonException">The text is not a single JSON value.</exception>
     public static string Compute(string json) => OfCanonical(Canonicalize(json));
+
+    /// <summary>
+    /// Streams canonical JSON (with object properties written in ordinal key order at every depth) directly into an
+    /// incremental SHA-256 hash without materializing a <see cref="JsonNode"/> tree or buffered document string.
+    /// </summary>
+    public static string ComputeStreaming(Action<Utf8JsonWriter> writeCanonicalJson)
+    {
+        ArgumentNullException.ThrowIfNull(writeCanonicalJson);
+        using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+        using var buffer = new IncrementalHashBufferWriter(hash);
+        using (var writer = new Utf8JsonWriter(buffer, StreamingWriterOptions))
+        {
+            writeCanonicalJson(writer);
+            writer.Flush();
+        }
+
+        buffer.Flush();
+        Span<byte> digest = stackalloc byte[SHA256.HashSizeInBytes];
+        hash.GetHashAndReset(digest);
+        return Prefix + Convert.ToHexStringLower(digest);
+    }
 
     /// <summary>The content hash of text that is already canonical.</summary>
     public static string OfCanonical(string canonical)
@@ -78,4 +106,62 @@ public static class ContentHash
         JsonArray array => new JsonArray(array.Select(Sort).ToArray()),
         _ => node?.DeepClone(),
     };
+
+    private sealed class IncrementalHashBufferWriter(IncrementalHash hash) : IBufferWriter<byte>, IDisposable
+    {
+        private const int DefaultBufferSize = 16384;
+        private byte[] _buffer = ArrayPool<byte>.Shared.Rent(DefaultBufferSize);
+        private int _written;
+
+        public void Advance(int count) => _written += count;
+
+        public Memory<byte> GetMemory(int sizeHint = 0)
+        {
+            EnsureCapacity(sizeHint);
+            return _buffer.AsMemory(_written);
+        }
+
+        public Span<byte> GetSpan(int sizeHint = 0)
+        {
+            EnsureCapacity(sizeHint);
+            return _buffer.AsSpan(_written);
+        }
+
+        public void Flush()
+        {
+            if (_written > 0)
+            {
+                hash.AppendData(_buffer.AsSpan(0, _written));
+                _written = 0;
+            }
+        }
+
+        public void Dispose()
+        {
+            var toReturn = _buffer;
+            _buffer = [];
+            if (toReturn.Length > 0)
+            {
+                ArrayPool<byte>.Shared.Return(toReturn);
+            }
+        }
+
+        private void EnsureCapacity(int sizeHint)
+        {
+            var required = sizeHint <= 0 ? 256 : sizeHint;
+            if (_buffer.Length - _written >= required)
+            {
+                return;
+            }
+
+            Flush();
+            if (_buffer.Length >= required)
+            {
+                return;
+            }
+
+            ArrayPool<byte>.Shared.Return(_buffer);
+            _buffer = ArrayPool<byte>.Shared.Rent(required);
+        }
+    }
 }
