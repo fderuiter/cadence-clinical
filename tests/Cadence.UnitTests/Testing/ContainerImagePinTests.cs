@@ -386,6 +386,8 @@ public sealed partial class ContainerImagePinTests
 
         catalog["@typescript-eslint/eslint-plugin"].Should().Be("^8.73.0");
         catalog["@typescript-eslint/parser"].Should().Be("^8.73.0");
+        catalog["typescript"].Should().StartWith("^6.",
+            "typescript-eslint 8.x, vue-tsc 3.x, and openapi-typescript 7.x require TypeScript 6.x (< 7.0)");
         catalog["typescript-eslint"].Should().Be("^8.73.0");
 
         var manifestPaths = DiscoverWorkspacePackageJsonPaths();
@@ -513,6 +515,8 @@ public sealed partial class ContainerImagePinTests
             "dependabot.yml must ignore semver-major, semver-minor, and semver-patch bumps on r-base in /docker/sce/r");
         NugetSonarAnalyzerIgnoreRule().IsMatch(dependabot).Should().BeTrue(
             "dependabot.yml must ignore SonarAnalyzer.CSharp >= 10.7.0 until solution-wide analyzer triage (#6030)");
+        NpmTypescriptMajorIgnoreRule().IsMatch(dependabot).Should().BeTrue(
+            "dependabot.yml must ignore version-update:semver-major for typescript until typescript-eslint, vue-tsc, and openapi-typescript support TypeScript 7.0");
     }
 
     [Fact]
@@ -1277,4 +1281,7 @@ public sealed partial class ContainerImagePinTests
 
     [GeneratedRegex(@"dependency-name:\s*""r-base""\s*\r?\n\s*update-types:\s*\[\s*""version-update:semver-major"",\s*""version-update:semver-minor"",\s*""version-update:semver-patch"",?\s*\]")]
     private static partial Regex SceRIgnoreRule();
+
+    [GeneratedRegex(@"dependency-name:\s*""typescript""\s*\r?\n\s*update-types:\s*\[""version-update:semver-major""\]")]
+    private static partial Regex NpmTypescriptMajorIgnoreRule();
 }
