@@ -34,7 +34,9 @@ public sealed record GateContext(
     string? BaseRef = null,
     string? PushBefore = null,
     string? EventName = null,
-    string? GitRef = null)
+    string? GitRef = null,
+    bool Offline = false,
+    string? CallerHead = null)
 {
     /// <summary>The target files (including an empty array when zero files are staged or a commit only deletes files), or <c>null</c> for the whole repository or Git revision scope.</summary>
     public string[]? Files => TargetFiles;
@@ -209,7 +211,7 @@ public static class QualityGates
             ctx => WorkflowSecurityValidatorService.ValidateWorkflowSecurity(ctx.Files, ctx.RepoRoot, ctx.PreCommit, ctx.IndexReader) == 0)
         { TakesFiles = true },
         new("rulesets", ["validate-rulesets"],
-            "Branch and signed `v*` tag rulesets in `.github/rulesets/*.json`, `pull_request`-only branch bypasses, release-admin-only tag bypasses, `merge_queue` policy, strict status checks, `CI Gate` upstream job coverage, `edited` / `merge_group` / `git merge-tree` conflict-check parity, and no `GITHUB_TOKEN` workflow merges",
+            "Branch and signed `v*` tag rulesets in `.github/rulesets/*.json`, zero branch `bypass_actors`, release-admin-only tag bypasses, `merge_queue` policy, strict status checks, `CI Gate` upstream job coverage and `edited` PR trigger parity, `edited` / `merge_group` / `git merge-tree` conflict-check parity, and no `GITHUB_TOKEN` workflow merges",
             ctx => RulesetService.Validate(ctx.RepoRoot, preCommit: ctx.PreCommit, indexReader: ctx.IndexReader) == 0)
         {
             PreCommit = PreCommitMode.Quick,
@@ -309,7 +311,7 @@ public static class QualityGates
             PreCommitNote = "checks staged files against `HEAD`; `CADENCE_BASELINE_GROWTH=\"<path> +<count> - <reason>\"` admits growth",
         },
         new("merge-readiness", ["check-merge-readiness"],
-            "Verifies `origin/main` (or `--base`) is present, shares history with `HEAD`, and merges cleanly via `git merge-tree --write-tree` without conflicts",
+            "Verifies fetched `origin/main` (or `--base`) is present, shares history with caller `HEAD`, and merges cleanly via `git merge-tree --write-tree` without conflicts",
             CheckMergeReadiness)
         {
             PreCommit = PreCommitMode.Skipped,
@@ -325,7 +327,7 @@ public static class QualityGates
             PostBuildSkipNote = "post-build gate; none of docs/.vitepress/dist, apps/web/dist, or apps/subject-portal/dist exist yet (build bundles or run 'pnpm cadence check public-bundle')",
         },
         new("branch-freshness", ["check-branch-freshness", "validate-branch-freshness"],
-            "Branch `HEAD` includes `origin/main` (or `--base <ref>`) so local and PR runs enforce strict branch-freshness policy",
+            "Pre-merge caller `HEAD` includes fetched `origin/main` (or `--base <ref>`) so local checks, `cadence ci`, and PR runs enforce strict branch-freshness policy",
             ctx => CheckBranchFreshness(ctx))
         {
             PreCommit = PreCommitMode.Skipped,
@@ -464,7 +466,13 @@ public static class QualityGates
 
                 if (!ctx.PreCommit && groups.Count >= 3 && File.Exists(Path.Combine(ctx.RepoRoot, "Cadence.sln")))
                 {
-                    var slnArgs = new List<string> { "format", subcommand, "Cadence.sln", "--verify-no-changes", "--no-restore", "--include" };
+                    var slnArgs = new List<string> { "format", subcommand, "Cadence.sln", "--verify-no-changes" };
+                    if (HasRestoredAssets(ctx.RepoRoot, "packages/cli/src/Cadence.Cli.csproj"))
+                    {
+                        slnArgs.Add("--no-restore");
+                    }
+
+                    slnArgs.Add("--include");
                     slnArgs.AddRange(csFiles);
                     return RunProcess(ctx.RepoRoot, "dotnet", [.. slnArgs]) == 0;
                 }
@@ -472,7 +480,13 @@ public static class QualityGates
                 foreach (var group in groups)
                 {
                     string workspace = group.Key ?? "Cadence.sln";
-                    var args = new List<string> { "format", subcommand, workspace, "--verify-no-changes", "--no-restore", "--include" };
+                    var args = new List<string> { "format", subcommand, workspace, "--verify-no-changes" };
+                    if (HasRestoredAssets(ctx.RepoRoot, group.Key ?? "packages/cli/src/Cadence.Cli.csproj"))
+                    {
+                        args.Add("--no-restore");
+                    }
+
+                    args.Add("--include");
                     args.AddRange(group);
                     if (RunProcess(ctx.RepoRoot, "dotnet", [.. args]) != 0)
                     {
@@ -499,7 +513,20 @@ public static class QualityGates
             return RunProcess(ctx.RepoRoot, "dotnet", [.. folderArgs]) == 0;
         }
 
-        return RunProcess(ctx.RepoRoot, "dotnet", "format", subcommand, "Cadence.sln", "--verify-no-changes", "--no-restore") == 0;
+        var fullFormatArgs = new List<string> { "format", subcommand, "Cadence.sln", "--verify-no-changes" };
+        if (HasRestoredAssets(ctx.RepoRoot, "packages/cli/src/Cadence.Cli.csproj"))
+        {
+            fullFormatArgs.Add("--no-restore");
+        }
+
+        return RunProcess(ctx.RepoRoot, "dotnet", [.. fullFormatArgs]) == 0;
+    }
+
+    private static bool HasRestoredAssets(string repoRoot, string relativeProjectPath)
+    {
+        string fullProjectPath = Path.Combine(repoRoot, relativeProjectPath);
+        string? projectDir = Path.GetDirectoryName(fullProjectPath);
+        return projectDir is not null && File.Exists(Path.Combine(projectDir, "obj", "project.assets.json"));
     }
 
     private static bool IsEditorConfigPath(string relativePath)
@@ -595,7 +622,8 @@ public static class QualityGates
             return true;
         }
 
-        var preview = GitRevisionScopeService.PreviewMergeTree(ctx.RepoRoot, effectiveBaseRef, "HEAD");
+        string headRevision = GitRevisionScopeService.ResolveCallerPreMergeHead(ctx.RepoRoot, ctx.CallerHead) ?? "HEAD";
+        var preview = GitRevisionScopeService.PreviewMergeTree(ctx.RepoRoot, effectiveBaseRef, headRevision);
         if (!preview.Succeeded)
         {
             Console.WriteLine($"[MERGE-READINESS] [ERROR] {preview.ErrorMessage}");
@@ -712,7 +740,14 @@ public static class QualityGates
             return false;
         }
 
-        if (RunQuietProcess(ctx.RepoRoot, "git", "merge-base", "--is-ancestor", baseRef, "HEAD") != 0)
+        string? callerHead = GitRevisionScopeService.ResolveCallerPreMergeHead(ctx.RepoRoot, ctx.CallerHead);
+        if (string.IsNullOrEmpty(callerHead))
+        {
+            Console.WriteLine("[BRANCH-FRESHNESS ERROR] Could not resolve caller pre-merge HEAD commit.");
+            return false;
+        }
+
+        if (RunQuietProcess(ctx.RepoRoot, "git", "merge-base", "--is-ancestor", baseRef, callerHead) != 0)
         {
             Console.WriteLine($"[BRANCH-FRESHNESS] Branch HEAD is behind '{baseRef}'. Rebase or merge '{baseRef}' before merging (enforces strict status check policy locally).");
             return false;

@@ -51,6 +51,15 @@ public static class CheckCommand
         {
             Description = "Git ref override such as refs/heads/release/1.0 or refs/tags/v1.0.0 (defaults to GITHUB_REF outside --pre-commit).",
         };
+        var offline = new Option<bool>("--offline")
+        {
+            Description = "Skip 'git fetch' of --base and evaluate gates against local Git refs only (air-gapped debugging).",
+        };
+        var callerHead = new Option<string?>("--caller-head")
+        {
+            Description = "Caller pre-merge HEAD commit SHA forwarded by merged-worktree runners.",
+            Hidden = true,
+        };
 
         // A free positional argument would otherwise swallow a mistyped option such as --pre-comit as a gate name.
         gate.Validators.Add(RejectOptionLikeTokens);
@@ -60,6 +69,7 @@ public static class CheckCommand
         pushBefore.Validators.Add(RejectOptionLikeTokens);
         eventName.Validators.Add(RejectOptionLikeTokens);
         gitRef.Validators.Add(RejectOptionLikeTokens);
+        callerHead.Validators.Add(RejectOptionLikeTokens);
 
         command.Arguments.Add(gate);
         command.Arguments.Add(files);
@@ -70,10 +80,14 @@ public static class CheckCommand
         command.Options.Add(pushBefore);
         command.Options.Add(eventName);
         command.Options.Add(gitRef);
+        command.Options.Add(offline);
+        command.Options.Add(callerHead);
         command.Validators.Add(commandResult =>
         {
             bool hasPreCommit = commandResult.GetResult(preCommit) is { Implicit: false } pc
                 && pc.Tokens.All(t => !string.Equals(t.Value, "false", StringComparison.OrdinalIgnoreCase));
+            bool hasOffline = commandResult.GetResult(offline) is { Implicit: false } off
+                && off.Tokens.All(t => !string.Equals(t.Value, "false", StringComparison.OrdinalIgnoreCase));
             bool hasBase = commandResult.GetResult(baseRef) is { Implicit: false, Tokens.Count: > 0 } b
                 && b.Tokens.Any(t => !string.IsNullOrWhiteSpace(t.Value));
             bool hasPushBefore = commandResult.GetResult(pushBefore) is { Implicit: false, Tokens.Count: > 0 } pb
@@ -82,14 +96,16 @@ public static class CheckCommand
                 && ev.Tokens.Any(t => !string.IsNullOrWhiteSpace(t.Value));
             bool hasGitRef = commandResult.GetResult(gitRef) is { Implicit: false, Tokens.Count: > 0 } gr
                 && gr.Tokens.Any(t => !string.IsNullOrWhiteSpace(t.Value));
+            bool hasCallerHead = commandResult.GetResult(callerHead) is { Implicit: false, Tokens.Count: > 0 } ch
+                && ch.Tokens.Any(t => !string.IsNullOrWhiteSpace(t.Value));
             if (hasBase && hasPushBefore)
             {
                 commandResult.AddError("Options '--base' and '--push-before' cannot be combined.");
             }
 
-            if (hasPreCommit && (hasBase || hasPushBefore || hasEventName || hasGitRef))
+            if (hasPreCommit && (hasBase || hasPushBefore || hasEventName || hasGitRef || hasOffline || hasCallerHead))
             {
-                commandResult.AddError("Option '--pre-commit' cannot be combined with '--base', '--push-before', '--event-name', or '--git-ref'.");
+                commandResult.AddError("Option '--pre-commit' cannot be combined with '--base', '--push-before', '--event-name', '--git-ref', or '--offline'.");
             }
         });
         command.SetAction(result =>
@@ -115,7 +131,9 @@ public static class CheckCommand
                 pushBefore: result.GetValue(pushBefore),
                 failFast: failFastOverride,
                 eventName: resolvedEventName,
-                gitRef: resolvedGitRef);
+                gitRef: resolvedGitRef,
+                offline: !isPreCommit && result.GetValue(offline),
+                callerHead: isPreCommit ? null : result.GetValue(callerHead));
         });
     }
 

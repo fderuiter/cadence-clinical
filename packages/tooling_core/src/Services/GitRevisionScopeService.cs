@@ -200,6 +200,12 @@ public static class GitRevisionScopeService
     /// <summary>40-zero Git object ID emitted by GitHub Actions as <c>github.event.before</c> on tag and newly created branch pushes.</summary>
     public const string AllZeroSha = "0000000000000000000000000000000000000000";
 
+    /// <summary>Commit subject used by <see cref="SynthesizeWorkingTreeSnapshot"/>.</summary>
+    public const string SyntheticSnapshotCommitSubject = "Synthesize uncommitted working-tree snapshot";
+
+    /// <summary>Commit subject prefix used by <see cref="SynthesizeMergedCommit"/>.</summary>
+    public const string SyntheticMergeCommitSubjectPrefix = "Synthesize merged CI tree (";
+
     /// <summary>Ref namespace used to pin synthesized snapshot and merge commits during an active <c>cadence ci</c> run.</summary>
     public const string TemporaryRefPrefix = "refs/cadence-ci/";
 
@@ -1053,7 +1059,7 @@ public static class GitRevisionScopeService
             var (commitExit, snapshotSha, commitErr) = CreateCommitObject(
                 repoRoot,
                 treeOid,
-                "Synthesize uncommitted working-tree snapshot",
+                SyntheticSnapshotCommitSubject,
                 headCommit);
             if (commitExit != 0 || string.IsNullOrWhiteSpace(snapshotSha))
             {
@@ -1105,7 +1111,7 @@ public static class GitRevisionScopeService
             var (exitCode, createdSha, errorDetail) = CreateCommitObject(
                 repoRoot,
                 preview.TreeOid,
-                $"Synthesize merged CI tree ({preview.EffectiveBaseRef} + {head})",
+                $"{SyntheticMergeCommitSubjectPrefix}{preview.EffectiveBaseRef} + {head})",
                 preview.BaseCommit,
                 preview.HeadCommit);
             if (exitCode != 0 || string.IsNullOrWhiteSpace(createdSha))
@@ -1122,6 +1128,52 @@ public static class GitRevisionScopeService
         }
 
         return new GitSynthesizedMergeResult(preview, commitSha);
+    }
+
+    /// <summary>
+    /// Resolves the caller's pre-merge <c>HEAD</c> commit SHA, honoring <paramref name="explicitCallerHead"/> when provided
+    /// and otherwise unwrapping ephemeral commits synthesized by <see cref="SynthesizeMergedCommit"/> and
+    /// <see cref="SynthesizeWorkingTreeSnapshot"/> so freshness checks still detect branches lagging behind <c>--base</c>.
+    /// </summary>
+    public static string? ResolveCallerPreMergeHead(string repoRoot, string? explicitCallerHead = null)
+    {
+        if (!HasGitRepository(repoRoot))
+        {
+            return null;
+        }
+
+        if (!string.IsNullOrWhiteSpace(explicitCallerHead))
+        {
+            return TryResolveCommitSha(repoRoot, explicitCallerHead.Trim());
+        }
+
+        string? currentSha = TryResolveCommitSha(repoRoot, "HEAD");
+        if (string.IsNullOrEmpty(currentSha))
+        {
+            return null;
+        }
+
+        string? subject = RunGitSingleLine(repoRoot, "log", "-1", "--format=%s", currentSha);
+        if (subject is not null && subject.StartsWith(SyntheticMergeCommitSubjectPrefix, StringComparison.Ordinal))
+        {
+            string? secondParent = TryResolveCommitSha(repoRoot, $"{currentSha}^2");
+            if (!string.IsNullOrEmpty(secondParent))
+            {
+                currentSha = secondParent;
+                subject = RunGitSingleLine(repoRoot, "log", "-1", "--format=%s", currentSha);
+            }
+        }
+
+        if (string.Equals(subject, SyntheticSnapshotCommitSubject, StringComparison.Ordinal))
+        {
+            string? snapshotParent = TryResolveCommitSha(repoRoot, $"{currentSha}^1");
+            if (!string.IsNullOrEmpty(snapshotParent))
+            {
+                currentSha = snapshotParent;
+            }
+        }
+
+        return currentSha;
     }
 
     /// <summary>
@@ -1280,9 +1332,9 @@ public static class GitRevisionScopeService
 
         if (includeUntracked)
         {
-            foreach (string path in RunGitNullTerminated(repoRoot, "ls-files", "--others", "--exclude-standard", "-z") ?? [])
+            foreach (string path in CollectUntrackedFiles(repoRoot))
             {
-                changed.Add(NormalizePath(path));
+                changed.Add(path);
             }
         }
 
@@ -1341,14 +1393,50 @@ public static class GitRevisionScopeService
 
         if (includeUntracked)
         {
-            foreach (string path in RunGitNullTerminated(repoRoot, "ls-files", "--others", "--exclude-standard", "-z") ?? [])
+            foreach (string path in CollectUntrackedFiles(repoRoot))
             {
-                changed.Add(NormalizePath(path));
+                changed.Add(path);
             }
         }
 
         changed.Remove(string.Empty);
         return [.. changed];
+    }
+
+    private static IEnumerable<string> CollectUntrackedFiles(string repoRoot)
+    {
+        foreach (string rawPath in RunGitNullTerminated(repoRoot, "ls-files", "--others", "--exclude-standard", "-z") ?? [])
+        {
+            string normalized = NormalizePath(rawPath);
+            if (normalized.Length > 0 && !IsLinkedToolchainSymlink(repoRoot, normalized))
+            {
+                yield return normalized;
+            }
+        }
+    }
+
+    private static bool IsLinkedToolchainSymlink(string repoRoot, string normalizedPath)
+    {
+        bool isToolchainName =
+            string.Equals(normalizedPath, ".cadence", StringComparison.Ordinal) ||
+            string.Equals(normalizedPath, ".venv", StringComparison.Ordinal) ||
+            string.Equals(normalizedPath, "node_modules", StringComparison.Ordinal) ||
+            normalizedPath.EndsWith("/node_modules", StringComparison.Ordinal);
+        if (!isToolchainName)
+        {
+            return false;
+        }
+
+        string fullPath = Path.Combine(repoRoot, normalizedPath.Replace('/', Path.DirectorySeparatorChar));
+        try
+        {
+            FileAttributes attributes = File.GetAttributes(fullPath);
+            return (attributes & FileAttributes.ReparsePoint) != 0;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return false;
+        }
     }
 
     /// <summary>Lists commits in <c>&lt;compareBase&gt;..&lt;head&gt;</c> in chronological order (<c>--reverse</c>).</summary>

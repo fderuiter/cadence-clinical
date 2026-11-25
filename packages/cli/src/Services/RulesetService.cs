@@ -42,7 +42,10 @@ public static partial class RulesetService
     /// <summary>Reconciliation profile used when hosted GitHub Actions runners are active.</summary>
     public const string ActiveActionsProfile = "active-actions";
 
-    /// <summary>The only allowed <c>bypass_mode</c> value on branch rulesets (<c>pull_request</c>, i.e. pull-request-only).</summary>
+    /// <summary>Commit status context published by <c>cadence ci --attest</c> and required under <see cref="PausedActionsProfile"/>.</summary>
+    public const string LocalCiStatusContext = "Cadence Local CI";
+
+    /// <summary>Legacy <c>bypass_mode</c> value (<c>pull_request</c>) retained for backward-compatible constant references.</summary>
     public const string PullRequestOnlyBypassMode = "pull_request";
 
     private const string Tag = "[RULESETS]";
@@ -344,7 +347,10 @@ public static partial class RulesetService
         return true;
     }
 
-    private static string? ResolveRepository(
+    internal static string? ResolveRepository(string repoRoot, string? repoOverride = null) =>
+        ResolveRepository(repoRoot, repoOverride, DefaultProcessRunner, Environment.GetEnvironmentVariable);
+
+    internal static string? ResolveRepository(
         string repoRoot,
         string? repoOverride,
         ProcessRunner runner,
@@ -372,7 +378,8 @@ public static partial class RulesetService
 
     /// <summary>
     /// Projects a canonical <c>.github/rulesets/*.json</c> document for <paramref name="profile"/> without reflection:
-    /// <c>paused-actions</c> strips <c>required_status_checks</c> and <c>merge_queue</c> rules while runners are paused,
+    /// <c>paused-actions</c> strips <c>merge_queue</c> rules and projects <c>required_status_checks</c> to require
+    /// <see cref="LocalCiStatusContext"/> with <c>strict_required_status_checks_policy: true</c> while runners are paused,
     /// whereas <c>active-actions</c> emits the full ruleset unchanged.
     /// </summary>
     public static string ProjectRulesetPayloadForProfile(string sourceJson, string profile)
@@ -396,8 +403,14 @@ public static partial class RulesetService
                     foreach (JsonElement rule in prop.Value.EnumerateArray())
                     {
                         string? ruleType = rule.ValueKind == JsonValueKind.Object ? GetStringProperty(rule, "type") : null;
-                        if (ruleType is "required_status_checks" or "merge_queue")
+                        if (ruleType == "merge_queue")
                         {
+                            continue;
+                        }
+
+                        if (ruleType == "required_status_checks")
+                        {
+                            WritePausedActionsStatusChecksRule(writer, rule);
                             continue;
                         }
 
@@ -417,9 +430,36 @@ public static partial class RulesetService
         return Encoding.UTF8.GetString(stream.ToArray()) + "\n";
     }
 
+    private static void WritePausedActionsStatusChecksRule(Utf8JsonWriter writer, JsonElement sourceRule)
+    {
+        bool doNotEnforceOnCreate = false;
+        if (sourceRule.TryGetProperty("parameters", out JsonElement sourceParams)
+            && sourceParams.ValueKind == JsonValueKind.Object
+            && sourceParams.TryGetProperty("do_not_enforce_on_create", out JsonElement dnec)
+            && dnec.ValueKind is JsonValueKind.True or JsonValueKind.False)
+        {
+            doNotEnforceOnCreate = dnec.GetBoolean();
+        }
+
+        writer.WriteStartObject();
+        writer.WriteString("type", "required_status_checks");
+        writer.WritePropertyName("parameters");
+        writer.WriteStartObject();
+        writer.WriteBoolean("do_not_enforce_on_create", doNotEnforceOnCreate);
+        writer.WriteBoolean("strict_required_status_checks_policy", true);
+        writer.WritePropertyName("required_status_checks");
+        writer.WriteStartArray();
+        writer.WriteStartObject();
+        writer.WriteString("context", LocalCiStatusContext);
+        writer.WriteEndObject();
+        writer.WriteEndArray();
+        writer.WriteEndObject();
+        writer.WriteEndObject();
+    }
+
     private static IReadOnlyList<string> GetProjectedRuleTypes(RulesetDefinition def, string profile) =>
         string.Equals(profile, PausedActionsProfile, StringComparison.Ordinal)
-            ? [.. def.RuleTypes.Where(t => t is not ("required_status_checks" or "merge_queue"))]
+            ? [.. def.RuleTypes.Where(t => t != "merge_queue")]
             : def.RuleTypes;
 
     private static void WriteDryRunPreview(
@@ -442,11 +482,11 @@ public static partial class RulesetService
             }
             else if (string.Equals(profile, PausedActionsProfile, StringComparison.Ordinal))
             {
-                checks = $"staged for {ActiveActionsProfile} ({string.Join(", ", def.RequiredStatusChecks.Select(c => c.Context))})";
+                checks = $"{LocalCiStatusContext} (strict_required_status_checks_policy: true)";
             }
             else
             {
-                checks = string.Join(", ", def.RequiredStatusChecks.Select(c => $"{c.Context} (integration_id={c.IntegrationId})"));
+                checks = string.Join(", ", def.RequiredStatusChecks.Select(c => $"{c.Context} (integration_id={c.IntegrationId}, strict_required_status_checks_policy: true)"));
             }
             output.WriteLine($"  - {def.Name} ({relPath}): target={def.Target}, enforcement={def.Enforcement}, refs=[{refs}], rules=[{rules}], checks=[{checks}]");
             output.WriteLine($"    gh api repos/{repo}/rulesets (PUT existing id or POST --input <{profile}:{relPath}>)");
@@ -1009,22 +1049,9 @@ public static partial class RulesetService
 
     private static void ValidateBranchRuleset(RulesetDefinition def, string prefix, List<string> errors)
     {
-        foreach (var actor in def.BypassActors)
+        if (def.HasBypassActors)
         {
-            if (string.IsNullOrWhiteSpace(actor.ActorType))
-            {
-                errors.Add($"{prefix}: branch ruleset 'bypass_actors' entry is missing 'actor_type'.");
-            }
-            else if (actor.ActorId != RepositoryAdminRoleId || actor.ActorType != "RepositoryRole")
-            {
-                errors.Add($"{prefix}: branch ruleset 'bypass_actors' may only grant repository admins (actor_type 'RepositoryRole', actor_id {RepositoryAdminRoleId}, bypass_mode '{PullRequestOnlyBypassMode}').");
-            }
-
-            if (actor.BypassMode != PullRequestOnlyBypassMode)
-            {
-                string actualMode = string.IsNullOrWhiteSpace(actor.BypassMode) ? "<missing>" : actor.BypassMode;
-                errors.Add($"{prefix}: branch ruleset 'bypass_actors' must restrict 'bypass_mode' to '{PullRequestOnlyBypassMode}' (found '{actualMode}').");
-            }
+            errors.Add($"{prefix}: branch ruleset must not configure 'bypass_actors' (found {def.BypassActors.Count}); repository admin bypasses are forbidden on protected branches.");
         }
         if (!def.RuleTypes.Contains("pull_request", StringComparer.Ordinal))
         {
@@ -1304,9 +1331,19 @@ public static partial class RulesetService
             errors.Add($".github/workflows/ci.yml: job '{CiGateJobKey}' must set 'if: always()' so failed or skipped upstream jobs fail the gate.");
         }
 
-        if (ciGate.PullRequestTrigger.HasExplicitTypes && !ciGate.PullRequestTrigger.Types.Contains("edited"))
+        if (!ciGate.OnPullRequest || !ciGate.PullRequestTrigger.HasExplicitTypes)
         {
-            errors.Add(".github/workflows/ci.yml: 'on.pull_request.types' must include 'edited' when explicit activity types are configured.");
+            errors.Add(".github/workflows/ci.yml: 'on.pull_request.types' must explicitly include 'opened', 'synchronize', 'reopened', and 'edited' so base-branch edits re-run 'CI Gate'.");
+        }
+        else
+        {
+            foreach (string requiredType in RequiredConflictCheckTypes)
+            {
+                if (!ciGate.PullRequestTrigger.Types.Contains(requiredType))
+                {
+                    errors.Add($".github/workflows/ci.yml: 'on.pull_request.types' is missing required activity type '{requiredType}'.");
+                }
+            }
         }
 
         var expectedValidationJobs = ciJobs
@@ -2100,7 +2137,7 @@ public static partial class RulesetService
         return trimmed;
     }
 
-    private static ProcessOutcome DefaultProcessRunner(string workingDirectory, string fileName, IReadOnlyList<string> arguments)
+    internal static ProcessOutcome DefaultProcessRunner(string workingDirectory, string fileName, IReadOnlyList<string> arguments)
     {
         var psi = new ProcessStartInfo(fileName)
         {

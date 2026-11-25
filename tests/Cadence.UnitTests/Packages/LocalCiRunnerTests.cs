@@ -920,6 +920,218 @@ public class LocalCiRunnerTests
     }
 
     [Fact]
+    public void PrepareMergedWorktree_RecordsCallerPreMergeHead_AndForwardsCallerHeadAndOfflineOnlyToCadenceCheckCommands()
+    {
+        string tempBase = Path.Combine(Path.GetTempPath(), $"cadence-ci-caller-head-{Guid.NewGuid():N}");
+        string remoteDir = Path.Combine(tempBase, "remote.git");
+        string repoDir = Path.Combine(tempBase, "repo");
+        string upstreamDir = Path.Combine(tempBase, "upstream");
+        Directory.CreateDirectory(remoteDir);
+        Directory.CreateDirectory(repoDir);
+        try
+        {
+            RunGit(remoteDir, "init", "--bare", "-q", "-b", "main");
+            RunGit(repoDir, "init", "-q", "-b", "main");
+            RunGit(repoDir, "remote", "add", "origin", remoteDir);
+            File.WriteAllText(Path.Combine(repoDir, "README.md"), "# base\n");
+            RunGit(repoDir, "add", "README.md");
+            RunGit(repoDir, "commit", "-q", "-m", "base");
+            RunGit(repoDir, "push", "-q", "-u", "origin", "main");
+
+            RunGit(repoDir, "checkout", "-q", "-b", "feature/stale");
+            File.WriteAllText(Path.Combine(repoDir, "feature.txt"), "feature\n");
+            RunGit(repoDir, "add", "feature.txt");
+            RunGit(repoDir, "commit", "-q", "-m", "feature");
+            string callerSha = CaptureGit(repoDir, "rev-parse", "HEAD").Trim();
+
+            RunGit(tempBase, "clone", "-q", remoteDir, upstreamDir);
+            File.WriteAllText(Path.Combine(upstreamDir, "upstream.txt"), "upstream\n");
+            RunGit(upstreamDir, "add", "upstream.txt");
+            RunGit(upstreamDir, "commit", "-q", "-m", "advance main");
+            RunGit(upstreamDir, "push", "-q", "origin", "main");
+
+            var prep = LocalCiEnvironment.PrepareMergedWorktree(repoDir, new LocalCiOptions(AllowSkip: false, BaseRef: "origin/main"));
+            using (prep.Lease)
+            {
+                prep.Succeeded.Should().BeTrue(prep.Message);
+                prep.CallerHeadSha.Should().Be(callerSha);
+                prep.Environment.Should().NotBeNull();
+
+                // Even inside the synthesized two-parent merged worktree, branch-freshness fails when caller HEAD lags behind origin/main!
+                int staleExit = QualityGateOrchestrator.RunQualityGates(
+                    gateName: "branch-freshness",
+                    baseRef: prep.EffectiveBaseRef,
+                    offline: true,
+                    callerHead: prep.CallerHeadSha,
+                    repoRoot: prep.Environment!.RepoRoot);
+                staleExit.Should().Be(1);
+            }
+
+            // Forwarding verification: check commands receive --caller-head (when ForwardsBaseRef) and --offline (when Offline); non-check commands do not.
+            var captured = new List<(string Display, IReadOnlyList<string> Extra)>();
+            var checkStep = new CiStep("check-forwarding", "Scoped check")
+            {
+                Commands = [new CiCommand("node", ["scripts/run-cli.js", "check", "deid"], ForwardsBaseRef: true)],
+            };
+            var unforwardedCheckStep = new CiStep("check-forwarding", "Unscoped check")
+            {
+                Commands = [new CiCommand("node", ["scripts/run-cli.js", "check", "eslint"])],
+            };
+            var nonCheckStep = new CiStep("check-forwarding", "Non-check")
+            {
+                Commands = [new CiCommand("custom-tool", ["scan"], ForwardsBaseRef: true)],
+            };
+            var job = Job("check-forwarding", checkStep, unforwardedCheckStep, nonCheckStep);
+            var env = new LocalCiEnvironment
+            {
+                RepoRoot = repoDir,
+                Run = (cmd, extra, _) =>
+                {
+                    captured.Add((cmd.Display, extra));
+                    return 0;
+                },
+                IsToolOnPath = _ => true,
+                ProbePostgres = () => new CiPostgresStatus(true, "ok"),
+                ProbeDocker = () => new CiDockerStatus(true, "ok"),
+                ShouldRunContainerSecurity = _ => new CiContainerScanScope(false, "skip"),
+                FindFiles = (_, _) => [],
+                DeleteDirectory = _ => { },
+            };
+
+            LocalCiRunner.Run(
+                [job],
+                new LocalCiOptions(AllowSkip: false, BaseRef: "refs/remotes/origin/main", Offline: true, CallerHead: callerSha),
+                env).Should().OnlyContain(r => r.Outcome == CiOutcome.Passed);
+
+            captured[0].Extra.Should().Equal("--base", "refs/remotes/origin/main", "--offline", "--caller-head", callerSha);
+            captured[1].Extra.Should().Equal("--offline");
+            captured[2].Extra.Should().Equal("--base", "refs/remotes/origin/main");
+        }
+        finally
+        {
+            DeleteTempTree(tempBase);
+        }
+    }
+
+    [Fact]
+    public void Execute_WithAttest_PublishesCadenceLocalCiStatusOnlyAfterFullCleanOnlineRun_AndRejectsDegradedOrFailedRuns()
+    {
+        string tempRepo = Path.Combine(Path.GetTempPath(), $"cadence-ci-attest-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempRepo);
+        try
+        {
+            WriteMinimalDatabaseRepoFixture(tempRepo, includeIntegrationTrx: true, includeDatabaseMetadata: true);
+            var published = new List<(string Repo, string Sha, string Context)>();
+            const string validHeadSha = "0123456789abcdef0123456789abcdef01234567"; // pragma: allowlist secret
+
+            LocalCiEnvironment MakeFullPassEnv(
+                IReadOnlyList<string>? dirtyPaths = null,
+                bool failFirstStep = false,
+                int publishExitCode = 0)
+            {
+                bool failedOnce = false;
+                LocalCiEnvironment innerWorktreeEnv = new()
+                {
+                    RepoRoot = tempRepo,
+                    Run = (_, _, _) =>
+                    {
+                        if (failFirstStep && !failedOnce)
+                        {
+                            failedOnce = true;
+                            return 1;
+                        }
+
+                        return 0;
+                    },
+                    IsToolOnPath = _ => true,
+                    ProbePostgres = () => new CiPostgresStatus(true, "ok"),
+                    ProbeDocker = () => new CiDockerStatus(true, "ok"),
+                    ShouldRunContainerSecurity = _ => new CiContainerScanScope(false, "no container changes"),
+                    FindSkippedDatabaseTests = (_, _) => [],
+                    HasRecordedDatabaseEnvironment = _ => true,
+                    FindFiles = (_, _) => ["dummy.trx"],
+                    DeleteDirectory = _ => { },
+                };
+
+                return new LocalCiEnvironment
+                {
+                    RepoRoot = tempRepo,
+                    PrepareWorkspace = _ => new CiWorkspacePreparation(
+                        true,
+                        innerWorktreeEnv,
+                        null,
+                        "merged cleanly",
+                        EffectiveBaseRef: "refs/remotes/origin/main",
+                        CallerHeadSha: validHeadSha),
+                    GetWorkingTreeChanges = () => dirtyPaths ?? [],
+                    ResolveAttestationHeadSha = () => validHeadSha,
+                    ResolveAttestationRepository = () => "fderuiter/cadence-clinical",
+                    PublishCommitStatus = (repo, sha, context, _) =>
+                    {
+                        published.Add((repo, sha, context));
+                        return new RulesetService.ProcessOutcome(
+                            publishExitCode,
+                            "{}",
+                            publishExitCode == 0 ? "" : "gh: HTTP 403 Forbidden");
+                    },
+                    Run = innerWorktreeEnv.Run,
+                    IsToolOnPath = _ => true,
+                    ProbePostgres = () => new CiPostgresStatus(true, "ok"),
+                    ProbeDocker = () => new CiDockerStatus(true, "ok"),
+                    ShouldRunContainerSecurity = _ => new CiContainerScanScope(false, "no container changes"),
+                    FindSkippedDatabaseTests = (_, _) => [],
+                    HasRecordedDatabaseEnvironment = _ => true,
+                    FindFiles = (_, _) => ["dummy.trx"],
+                    DeleteDirectory = _ => { },
+                };
+            }
+
+            // 1. Clean online full run publishes Cadence Local CI on caller HEAD.
+            int okExit = LocalCiCommand.Execute(
+                jobKeys: [],
+                allowMissingTools: false,
+                allowDbSkip: false,
+                baseRef: "origin/main",
+                list: false,
+                environment: MakeFullPassEnv(),
+                offline: false,
+                includeUncommitted: false,
+                attest: true);
+            okExit.Should().Be(0);
+            published.Should().Equal(("fderuiter/cadence-clinical", validHeadSha, RulesetService.LocalCiStatusContext));
+
+            // 2. Degraded flags, partial job selection, --list, dirty tree, failed step, and failed gh api all refuse or fail closed.
+            published.Clear();
+            LocalCiCommand.Execute([], allowMissingTools: false, allowDbSkip: false, baseRef: "origin/main", list: false, environment: MakeFullPassEnv(), offline: true, attest: true)
+                .Should().Be(1);
+            LocalCiCommand.Execute([], allowMissingTools: false, allowDbSkip: false, baseRef: "origin/main", list: false, environment: MakeFullPassEnv(), includeUncommitted: true, attest: true)
+                .Should().Be(1);
+            LocalCiCommand.Execute([], allowMissingTools: true, allowDbSkip: false, baseRef: "origin/main", list: false, environment: MakeFullPassEnv(), attest: true)
+                .Should().Be(1);
+            LocalCiCommand.Execute([], allowMissingTools: false, allowDbSkip: true, baseRef: "origin/main", list: false, environment: MakeFullPassEnv(), attest: true)
+                .Should().Be(1);
+            LocalCiCommand.Execute([], allowSkip: true, baseRef: "origin/main", list: false, environment: MakeFullPassEnv(), attest: true)
+                .Should().Be(1);
+            LocalCiCommand.Execute(["actionlint"], allowMissingTools: false, allowDbSkip: false, baseRef: "origin/main", list: false, environment: MakeFullPassEnv(), attest: true)
+                .Should().Be(1);
+            LocalCiCommand.Execute([], allowMissingTools: false, allowDbSkip: false, baseRef: "origin/main", list: true, environment: MakeFullPassEnv(), attest: true)
+                .Should().Be(1);
+            LocalCiCommand.Execute([], allowMissingTools: false, allowDbSkip: false, baseRef: "origin/main", list: false, environment: MakeFullPassEnv(dirtyPaths: [" M README.md"]), attest: true)
+                .Should().Be(1);
+            LocalCiCommand.Execute([], allowMissingTools: false, allowDbSkip: false, baseRef: "origin/main", list: false, environment: MakeFullPassEnv(failFirstStep: true), attest: true)
+                .Should().Be(1);
+            published.Should().BeEmpty("no commit status may be published when --attest is rejected or a CI step fails");
+
+            LocalCiCommand.Execute([], allowMissingTools: false, allowDbSkip: false, baseRef: "origin/main", list: false, environment: MakeFullPassEnv(publishExitCode: 1), attest: true)
+                .Should().Be(1, "gh api status publishing failures must fail closed");
+        }
+        finally
+        {
+            DeleteTempTree(tempRepo);
+        }
+    }
+
+    [Fact]
     public void DotnetTestsAndCompliance_FailOnUnitOnlyTrxOrMissingDatabaseMetadata_UnlessAllowDbSkipIsSet()
     {
         string tempRepo = Path.Combine(Path.GetTempPath(), $"cadence-ci-db-{Guid.NewGuid():N}");

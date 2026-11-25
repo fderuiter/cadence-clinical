@@ -490,6 +490,43 @@ public sealed class GitRevisionScopeServiceTests : IDisposable
         branchFreshness.Run(ContextFor("merge_group", "refs/heads/gh-readonly-queue/main/pr-42", baseRef: "origin/main")).Should().BeFalse();
     }
 
+    [Fact]
+    public void ResolveCallerPreMergeHead_UnwrapsSyntheticMergeAndSnapshotCommits_ToCallerBranchParent()
+    {
+        Git("init", "-q", "-b", "main");
+        Write("README.md", "# base\n");
+        Commit("base");
+        Git("update-ref", "refs/remotes/origin/main", "HEAD");
+
+        Git("checkout", "-q", "-b", "feature/stale");
+        Write("feature.txt", "feature\n");
+        Commit("feature");
+        string callerSha = Git("rev-parse", "HEAD").Trim();
+
+        // Advance origin/main so SynthesizeMergedCommit produces a two-parent synthetic merge commit.
+        Git("checkout", "-q", "main");
+        Write("upstream.txt", "upstream\n");
+        Commit("advance main");
+        Git("update-ref", "refs/remotes/origin/main", "HEAD");
+        Git("checkout", "-q", "feature/stale");
+
+        GitRevisionScopeService.ResolveCallerPreMergeHead(_dir).Should().Be(callerSha);
+
+        // Dirty snapshot + synthetic two-parent merge commit must unwrap both layers back to callerSha.
+        Write("dirty.txt", "uncommitted\n");
+        string pinnedRef = GitRevisionScopeService.CreateTemporaryRefName();
+        var snapshot = GitRevisionScopeService.SynthesizeWorkingTreeSnapshot(_dir, pinnedRef);
+        snapshot.Succeeded.Should().BeTrue();
+        var merged = GitRevisionScopeService.SynthesizeMergedCommit(_dir, "refs/remotes/origin/main", snapshot.SnapshotCommitSha!, pinnedRef);
+        merged.MergeTree.Succeeded.Should().BeTrue();
+        GitRevisionScopeService.TryCreateDetachedWorktree(_dir, merged.MergeCommitSha!, out var worktree, out _, pinnedRef)
+            .Should().BeTrue();
+        using (worktree)
+        {
+            GitRevisionScopeService.ResolveCallerPreMergeHead(worktree!.WorktreePath).Should().Be(callerSha);
+        }
+    }
+
     private static void DeleteDirectorySafe(string path)
     {
         if (!Directory.Exists(path))

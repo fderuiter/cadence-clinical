@@ -53,13 +53,7 @@ public sealed class RulesetServiceTests : IDisposable
         {
             using var doc = JsonDocument.Parse(File.ReadAllText(Path.Combine(repoRoot, ".github", "rulesets", branchFile)));
             var bypassActors = doc.RootElement.GetProperty("bypass_actors");
-            bypassActors.GetArrayLength().Should().BeGreaterThan(0);
-            foreach (var actor in bypassActors.EnumerateArray())
-            {
-                actor.GetProperty("actor_id").GetInt64().Should().Be(RulesetService.RepositoryAdminRoleId);
-                actor.GetProperty("actor_type").GetString().Should().Be("RepositoryRole");
-                actor.GetProperty("bypass_mode").GetString().Should().Be("pull_request");
-            }
+            bypassActors.GetArrayLength().Should().Be(0, $"branch ruleset '{branchFile}' must forbid admin bypasses");
         }
 
         using var tagDoc = JsonDocument.Parse(File.ReadAllText(Path.Combine(repoRoot, ".github", "rulesets", "version_tags.json")));
@@ -172,6 +166,7 @@ public sealed class RulesetServiceTests : IDisposable
                 branches: [main]
               pull_request:
                 branches: [main]
+                types: [opened, synchronize, reopened, edited]
             jobs:
               unit-tests:
                 name: Frontend Unit Tests
@@ -502,39 +497,29 @@ public sealed class RulesetServiceTests : IDisposable
     }
 
     [Fact]
-    public void Validate_AllowsPullRequestAdminBypassMode_AndRejectsInvalidBranchBypassActors()
+    public void Validate_RejectsAllBranchBypassActors_AndAcceptsEmptyBranchBypassActors()
     {
-        WriteMainRulesetWithBypassActors("""[{ "actor_id": 5, "actor_type": "RepositoryRole", "bypass_mode": "pull_request" }]""");
+        WriteMainRulesetWithBypassActors("[]");
         using (var okWriter = new StringWriter())
         {
             RulesetService.Validate(_root, okWriter).Should().Be(0, okWriter.ToString());
         }
 
-        foreach (string invalidModeActors in new[]
+        foreach (string branchActors in new[]
         {
+            """[{ "actor_id": 5, "actor_type": "RepositoryRole", "bypass_mode": "pull_request" }]""",
             """[{ "actor_id": 5, "actor_type": "RepositoryRole", "bypass_mode": "always" }]""",
             """[{ "actor_id": 5, "actor_type": "RepositoryRole", "bypass_mode": "exempt" }]""",
             """[{ "actor_id": 5, "actor_type": "RepositoryRole" }]""",
-        })
-        {
-            WriteMainRulesetWithBypassActors(invalidModeActors);
-            using var errWriter = new StringWriter();
-
-            RulesetService.Validate(_root, errWriter).Should().Be(1, $"branch bypass_actors '{invalidModeActors}' must fail closed");
-            errWriter.ToString().Should().Contain("bypass_mode").And.Contain("pull_request");
-        }
-
-        foreach (string nonAdminActors in new[]
-        {
             """[{ "actor_id": 2, "actor_type": "RepositoryRole", "bypass_mode": "pull_request" }]""",
             """[{ "actor_id": 5, "actor_type": "Team", "bypass_mode": "pull_request" }]""",
         })
         {
-            WriteMainRulesetWithBypassActors(nonAdminActors);
+            WriteMainRulesetWithBypassActors(branchActors);
             using var errWriter = new StringWriter();
 
-            RulesetService.Validate(_root, errWriter).Should().Be(1, $"non-admin branch bypass_actors '{nonAdminActors}' must fail closed");
-            errWriter.ToString().Should().Contain("repository admins");
+            RulesetService.Validate(_root, errWriter).Should().Be(1, $"branch bypass_actors '{branchActors}' must fail closed");
+            errWriter.ToString().Should().Contain("branch ruleset must not configure 'bypass_actors'");
         }
     }
 
@@ -560,7 +545,7 @@ public sealed class RulesetServiceTests : IDisposable
     [Fact]
     public void Validate_InPreCommitMode_ReadsStagedIndexBlobs_AndRejectsStagedDeletionsBypassViolationsAndCiGateDrift()
     {
-        WriteMainRulesetWithBypassActors("""[{ "actor_id": 5, "actor_type": "RepositoryRole", "bypass_mode": "pull_request" }]""");
+        WriteMainRulesetWithBypassActors("[]");
         InitGitRepositoryAndCommitAll();
 
         // 1. Stage single-file deletion (`git rm --cached`) while leaving valid working-tree file on disk.
@@ -591,16 +576,16 @@ public sealed class RulesetServiceTests : IDisposable
         QualityGateOrchestrator.RunQualityGates(gateName: "rulesets", preCommit: true, repoRoot: _root)
             .Should().Be(0);
 
-        // 3. Stage bypass_mode: "always" in the index, then overwrite working-tree file with valid "pull_request".
-        WriteMainRulesetWithBypassActors("""[{ "actor_id": 5, "actor_type": "RepositoryRole", "bypass_mode": "always" }]""");
-        RunGit("add", ".github/rulesets/main.json");
+        // 3. Stage non-empty bypass_actors in the index, then overwrite working-tree file with valid [].
         WriteMainRulesetWithBypassActors("""[{ "actor_id": 5, "actor_type": "RepositoryRole", "bypass_mode": "pull_request" }]""");
+        RunGit("add", ".github/rulesets/main.json");
+        WriteMainRulesetWithBypassActors("[]");
 
         using (var reader = GitIndexReader.TryOpen(_root))
         using (var writer = new StringWriter())
         {
             RulesetService.Validate(_root, writer, preCommit: true, indexReader: reader).Should().Be(1);
-            writer.ToString().Should().Contain("bypass_mode").And.Contain("always");
+            writer.ToString().Should().Contain("branch ruleset must not configure 'bypass_actors'");
         }
 
         // 4. Stage valid ruleset, then stage broken CI Gate workflow while keeping working-tree ci.yml valid.
@@ -681,17 +666,27 @@ public sealed class RulesetServiceTests : IDisposable
     }
 
     [Fact]
-    public void Validate_RejectsAlwaysBypassOnBranchRulesets_AndAcceptsPullRequestBypass()
+    public void Validate_FailsWhenCiWorkflowOmitsExplicitPullRequestTypesOrEditedTrigger()
     {
-        WriteMainRuleset(
-            strict: true,
-            integrationId: RulesetService.GitHubActionsIntegrationId,
-            firstCheck: "CI Gate",
-            bypassMode: "always");
-        using var writer = new StringWriter();
+        WriteCiWorkflow(
+            ciGateNeeds: "[unit-tests, container-security, compliance]",
+            ciGateIf: "always()",
+            checkComplianceResult: true,
+            pullRequestTypesLine: "    types: [opened, synchronize, reopened]");
+        using (var missingEditedWriter = new StringWriter())
+        {
+            RulesetService.Validate(_root, missingEditedWriter).Should().Be(1);
+            missingEditedWriter.ToString().Should().Contain("ci.yml").And.Contain("edited");
+        }
 
-        RulesetService.Validate(_root, writer).Should().Be(1);
-        writer.ToString().Should().Contain("restrict 'bypass_mode' to 'pull_request'");
+        WriteCiWorkflow(
+            ciGateNeeds: "[unit-tests, container-security, compliance]",
+            ciGateIf: "always()",
+            checkComplianceResult: true,
+            pullRequestTypesLine: "");
+        using var barePrWriter = new StringWriter();
+        RulesetService.Validate(_root, barePrWriter).Should().Be(1);
+        barePrWriter.ToString().Should().Contain("ci.yml").And.Contain("on.pull_request.types");
     }
 
     [Fact]
@@ -778,14 +773,55 @@ public sealed class RulesetServiceTests : IDisposable
         using (var mainPausedDoc = JsonDocument.Parse(pausedPayloads[0]))
         {
             var ruleTypes = new List<string>();
+            JsonElement? statusRule = null;
             foreach (var rule in mainPausedDoc.RootElement.GetProperty("rules").EnumerateArray())
             {
-                ruleTypes.Add(rule.GetProperty("type").GetString()!);
+                string type = rule.GetProperty("type").GetString()!;
+                ruleTypes.Add(type);
+                if (type == "required_status_checks")
+                {
+                    statusRule = rule;
+                }
             }
 
-            ruleTypes.Should().Equal("deletion", "non_fast_forward", "pull_request");
-            mainPausedDoc.RootElement.GetProperty("bypass_actors")[0].GetProperty("bypass_mode").GetString()
-                .Should().Be("pull_request");
+            ruleTypes.Should().Equal("deletion", "non_fast_forward", "pull_request", "required_status_checks");
+            mainPausedDoc.RootElement.GetProperty("bypass_actors").GetArrayLength().Should().Be(0);
+            statusRule.Should().NotBeNull();
+            var parameters = statusRule!.Value.GetProperty("parameters");
+            parameters.GetProperty("strict_required_status_checks_policy").GetBoolean().Should().BeTrue();
+            var checks = parameters.GetProperty("required_status_checks");
+            checks.GetArrayLength().Should().Be(1);
+            checks[0].GetProperty("context").GetString().Should().Be(RulesetService.LocalCiStatusContext);
+            checks[0].TryGetProperty("integration_id", out _).Should().BeFalse();
+        }
+
+        using (var releasePausedDoc = JsonDocument.Parse(pausedPayloads[1]))
+        {
+            releasePausedDoc.RootElement.GetProperty("bypass_actors").GetArrayLength().Should().Be(0);
+        }
+
+        using (var tagPausedDoc = JsonDocument.Parse(pausedPayloads[2]))
+        {
+            var tagRuleTypes = new List<string>();
+            foreach (var rule in tagPausedDoc.RootElement.GetProperty("rules").EnumerateArray())
+            {
+                tagRuleTypes.Add(rule.GetProperty("type").GetString()!);
+            }
+
+            tagRuleTypes.Should().Equal("creation", "required_signatures", "deletion", "non_fast_forward");
+            tagPausedDoc.RootElement.GetProperty("bypass_actors").GetArrayLength().Should().Be(1);
+        }
+
+        using (var pausedDryRunWriter = new StringWriter())
+        {
+            RulesetService.Sync(
+                repoRoot: _root,
+                dryRun: true,
+                repoOverride: "owner/repo",
+                profile: RulesetService.PausedActionsProfile,
+                output: pausedDryRunWriter).Should().Be(0, pausedDryRunWriter.ToString());
+            pausedDryRunWriter.ToString().Should().Contain(
+                $"checks=[{RulesetService.LocalCiStatusContext} (strict_required_status_checks_policy: true)]");
         }
 
         using var activeWriter = new StringWriter();
@@ -828,13 +864,7 @@ public sealed class RulesetServiceTests : IDisposable
               "name": "release-branches-protection",
               "target": "branch",
               "enforcement": "active",
-              "bypass_actors": [
-                {
-                  "actor_id": 5,
-                  "actor_type": "RepositoryRole",
-                  "bypass_mode": "pull_request"
-                }
-              ],
+              "bypass_actors": [],
               "conditions": { "ref_name": { "include": ["refs/heads/release/*"], "exclude": [] } },
               "rules": [
                 { "type": "deletion" },
@@ -900,7 +930,6 @@ public sealed class RulesetServiceTests : IDisposable
         bool strict,
         long integrationId,
         string firstCheck,
-        string bypassMode = "pull_request",
         bool includeMergeQueue = true)
     {
         string strictJson = strict ? "true" : "false";
@@ -926,13 +955,7 @@ public sealed class RulesetServiceTests : IDisposable
               "name": "main-branch-protection",
               "target": "branch",
               "enforcement": "active",
-              "bypass_actors": [
-                {
-                  "actor_id": 5,
-                  "actor_type": "RepositoryRole",
-                  "bypass_mode": "{{bypassMode}}"
-                }
-              ],
+              "bypass_actors": [],
               "conditions": { "ref_name": { "include": ["refs/heads/main"], "exclude": [] } },
               "rules": [
                 { "type": "deletion" },
@@ -953,18 +976,23 @@ public sealed class RulesetServiceTests : IDisposable
             """);
     }
 
-    private void WriteCiWorkflow(string ciGateNeeds, string ciGateIf, bool checkComplianceResult)
+    private void WriteCiWorkflow(
+        string ciGateNeeds,
+        string ciGateIf,
+        bool checkComplianceResult,
+        string pullRequestTypesLine = "    types: [opened, synchronize, reopened, edited]")
     {
         string complianceCheck = checkComplianceResult
             ? "if [ \"$COMPLIANCE_RESULT\" != \"success\" ]; then exit 1; fi"
             : "echo skipped-check";
+        string typesBlock = string.IsNullOrEmpty(pullRequestTypesLine) ? "" : $"\n{pullRequestTypesLine}";
         Write(".github/workflows/ci.yml", $$$"""
             name: CI
             on:
               push:
                 branches: [main, release/*]
               pull_request:
-                branches: [main, release/*]
+                branches: [main, release/*]{{{typesBlock}}}
               merge_group:
                 branches: [main, release/*]
             jobs:

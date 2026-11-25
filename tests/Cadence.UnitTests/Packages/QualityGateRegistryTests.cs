@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 
 using Cadence.Cli.Services;
+using Cadence.ToolingCore.Services;
 
 using FluentAssertions;
 
@@ -867,6 +868,193 @@ public sealed class QualityGateRegistryTests : IDisposable
             "namespace Cadence.Apps.Payments.Rbac;\npublic static class ShadowGrant\n{\n    public static void Init() => Grant(\"pi\", \"payments_shadow\", \"approve\");\n}\n");
         permissionGate.Run(Context()).Should().BeFalse("unbaselined static Grant(...) calls in service sources must fail permission-matrix");
     }
+
+    [Fact]
+    public void RunQualityGates_FetchesBaseMaterializesMergedWorktreeAndEnforcesBranchFreshness_WhileOfflineAndPreCommitSkipFetch()
+    {
+        string bareRemote = Path.Combine(Path.GetTempPath(), $"cadence-gate-remote-{Guid.NewGuid():N}.git");
+        string upstreamClone = Path.Combine(Path.GetTempPath(), $"cadence-gate-upstream-{Guid.NewGuid():N}");
+        try
+        {
+            Directory.CreateDirectory(bareRemote);
+            RunGitIn(bareRemote, "init", "--bare", "-q", "-b", "main");
+
+            Write("README.md", "# baseline\n");
+            Write(".gitignore", "node_modules/\n.venv/\n.cadence/bin/\n.cadence/venv/\n");
+            Write("docs/adr/index.md", "# Architecture Decision Records\n");
+            Write("packages/ui/README.md", "# UI\n");
+            Write(
+                "tests/Cadence.ArchitectureTests/ArchitectureBaselines/direct-state-writes.baseline.txt",
+                "# baseline\n");
+            Git("init", "-q", "-b", "main");
+            Git("config", "user.email", "fixture@example.invalid");
+            Git("config", "user.name", "Fixture");
+            Git("config", "commit.gpgsign", "false");
+            Git("remote", "add", "origin", bareRemote);
+            Git("add", "-A");
+            Git("commit", "-q", "-m", "initial main");
+            Git("push", "-q", "-u", "origin", "main");
+
+            // Create feature branch before upstream advances.
+            Git("checkout", "-q", "-b", "feature/behind");
+            Write("docs/note.md", "# clean note\n");
+            Git("add", "docs/note.md");
+            Git("commit", "-q", "-m", "feature commit");
+            Directory.CreateDirectory(Path.Combine(_root, "packages", "ui", "node_modules", "sample-pkg"));
+            File.WriteAllText(Path.Combine(_root, "packages", "ui", "node_modules", "sample-pkg", "index.js"), "export {};\n");
+
+            // Advance remote main from a separate clone without fetching in _root.
+            RunGitIn(Path.GetTempPath(), "clone", "-q", bareRemote, upstreamClone);
+            RunGitIn(upstreamClone, "config", "user.email", "upstream@example.invalid");
+            RunGitIn(upstreamClone, "config", "user.name", "Upstream");
+            RunGitIn(upstreamClone, "config", "commit.gpgsign", "false");
+            File.WriteAllText(Path.Combine(upstreamClone, "UPSTREAM.md"), "upstream advance   \n");
+            RunGitIn(upstreamClone, "add", "UPSTREAM.md");
+            RunGitIn(upstreamClone, "commit", "-q", "-m", "advance main with trailing whitespace");
+            RunGitIn(upstreamClone, "push", "-q", "origin", "main");
+
+            // Online merge-readiness fetches origin/main, materializes a temporary merged worktree, and passes cleanly.
+            string mergeOutput = CaptureConsoleOutput(() =>
+            {
+                int mergeExit = QualityGateOrchestrator.RunQualityGates(
+                    gateName: "merge-readiness",
+                    baseRef: "origin/main",
+                    repoRoot: _root);
+                mergeExit.Should().Be(0);
+            });
+            mergeOutput.Should().Contain("refs/remotes/origin/main")
+                .And.Contain("behind by 1 commit(s)");
+
+            // Linked read-only toolchain symlinks (such as packages/ui/node_modules) inside the temporary merged worktree
+            // must not be treated as untracked architectural changes by diff-scoped sentinels.
+            QualityGateOrchestrator.RunQualityGates(
+                gateName: "adrs",
+                baseRef: "origin/main",
+                repoRoot: _root)
+                .Should().Be(0, "linked toolchain symlinks such as packages/ui/node_modules must not be treated as untracked architectural changes");
+
+            // Online trailing-whitespace runs inside the materialized temporary merged worktree and detects UPSTREAM.md's trailing spaces!
+            QualityGateOrchestrator.RunQualityGates(
+                gateName: "trailing-whitespace",
+                baseRef: "origin/main",
+                repoRoot: _root)
+                .Should().Be(1, "gates must execute inside the temporary merged worktree containing newly fetched upstream commits");
+
+            // Verify temporary worktree was cleaned up after RunQualityGates disposed its lease.
+            RunGitLinesIn(_root, "worktree", "list", "--porcelain")
+                .Count(line => line.StartsWith("worktree ", StringComparison.Ordinal))
+                .Should().Be(1, "temporary merged check worktree must be cleaned up on disposal");
+
+            // Online branch-freshness fails closed even inside the synthesized two-parent merged worktree!
+            string freshnessOutput = CaptureConsoleOutput(() =>
+            {
+                int freshnessExit = QualityGateOrchestrator.RunQualityGates(
+                    gateName: "branch-freshness",
+                    baseRef: "origin/main",
+                    repoRoot: _root);
+                freshnessExit.Should().Be(1);
+            });
+            freshnessOutput.Should().Contain("Branch HEAD is behind 'refs/remotes/origin/main'");
+
+            // Directly verify CheckBranchFreshness fails inside a synthesized two-parent merge commit when caller HEAD lags behind base.
+            string pinnedRef = GitRevisionScopeService.CreateTemporaryRefName();
+            var synthesized = GitRevisionScopeService.SynthesizeMergedCommit(_root, "refs/remotes/origin/main", "HEAD", pinnedRef);
+            synthesized.MergeTree.Succeeded.Should().BeTrue();
+            GitRevisionScopeService.TryCreateDetachedWorktree(_root, synthesized.MergeCommitSha!, out var detached, out _, pinnedRef)
+                .Should().BeTrue();
+            using (detached)
+            {
+                var mergedCtx = new GateContext(detached!.WorktreePath, TargetFiles: null, PreCommit: false, BaseRef: "refs/remotes/origin/main");
+                QualityGates.Find("branch-freshness")!.Run(mergedCtx)
+                    .Should().BeFalse("CheckBranchFreshness must evaluate the caller pre-merge parent rather than letting a synthetic two-parent merge commit mask staleness");
+            }
+
+            // Advance remote main with a conflicting edit on docs/note.md -> online trailing-whitespace gate fails closed during merged-worktree synthesis.
+            Directory.CreateDirectory(Path.Combine(upstreamClone, "docs"));
+            File.WriteAllText(Path.Combine(upstreamClone, "docs", "note.md"), "# conflicting upstream note\n");
+            RunGitIn(upstreamClone, "add", "docs/note.md");
+            RunGitIn(upstreamClone, "commit", "-q", "-m", "conflicting main update");
+            RunGitIn(upstreamClone, "push", "-q", "origin", "main");
+
+            CaptureConsoleOutput(() =>
+            {
+                QualityGateOrchestrator.RunQualityGates(
+                    gateName: "trailing-whitespace",
+                    baseRef: "origin/main",
+                    repoRoot: _root)
+                    .Should().Be(1, "non-pre-commit check runs must fail closed when HEAD conflicts with newly fetched origin/main");
+            }).Should().Contain("docs/note.md");
+
+            // Reset local tracking ref back to initial commit and point origin at a non-existent path:
+            // --offline and --pre-commit must both skip git fetch; --pre-commit must also skip worktrees.
+            string initialSha = CaptureSingleLineGit(_root, "rev-parse", "HEAD~1");
+            Git("update-ref", "refs/remotes/origin/main", initialSha);
+            Git("remote", "set-url", "origin", Path.Combine(Path.GetTempPath(), $"missing-remote-{Guid.NewGuid():N}.git"));
+
+            QualityGateOrchestrator.RunQualityGates(
+                gateName: "merge-readiness",
+                baseRef: "origin/main",
+                offline: true,
+                repoRoot: _root).Should().Be(0, "--offline must skip git fetch and evaluate against local Git refs");
+
+            QualityGateOrchestrator.RunQualityGates(
+                gateName: "trailing-whitespace",
+                preCommit: true,
+                repoRoot: _root).Should().Be(0, "--pre-commit must stay offline without invoking git fetch or creating worktrees");
+
+            QualityGateOrchestrator.RunQualityGates(
+                gateName: "merge-readiness",
+                baseRef: "origin/main",
+                offline: false,
+                repoRoot: _root).Should().Be(1, "online check must fail closed when git fetch fails");
+        }
+        finally
+        {
+            if (Directory.Exists(upstreamClone))
+            {
+                Directory.Delete(upstreamClone, recursive: true);
+            }
+
+            if (Directory.Exists(bareRemote))
+            {
+                Directory.Delete(bareRemote, recursive: true);
+            }
+        }
+    }
+
+    private static void RunGitIn(string workingDir, params string[] args)
+    {
+        var psi = new ProcessStartInfo("git") { WorkingDirectory = workingDir, RedirectStandardOutput = true, RedirectStandardError = true };
+        foreach (string arg in args)
+        {
+            psi.ArgumentList.Add(arg);
+        }
+
+        using var process = Process.Start(psi)!;
+        string error = process.StandardError.ReadToEnd();
+        process.StandardOutput.ReadToEnd();
+        process.WaitForExit();
+        process.ExitCode.Should().Be(0, $"git {string.Join(' ', args)} failed: {error}");
+    }
+
+    private static List<string> RunGitLinesIn(string workingDir, params string[] args)
+    {
+        var psi = new ProcessStartInfo("git") { WorkingDirectory = workingDir, RedirectStandardOutput = true, RedirectStandardError = true };
+        foreach (string arg in args)
+        {
+            psi.ArgumentList.Add(arg);
+        }
+
+        using var process = Process.Start(psi)!;
+        string stdout = process.StandardOutput.ReadToEnd();
+        string error = process.StandardError.ReadToEnd();
+        process.WaitForExit();
+        process.ExitCode.Should().Be(0, $"git {string.Join(' ', args)} failed: {error}");
+        return stdout.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
+    }
+
+    private static string CaptureSingleLineGit(string workingDir, params string[] args) =>
+        RunGitLinesIn(workingDir, args).Single();
 
     private static string CaptureConsoleOutput(Action action)
     {

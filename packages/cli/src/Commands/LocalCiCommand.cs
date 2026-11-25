@@ -51,6 +51,10 @@ public static class LocalCiCommand
         {
             Description = "Synthesize an ephemeral snapshot commit from uncommitted working-tree and index changes without mutating your checkout",
         };
+        var attest = new Option<bool>("--attest")
+        {
+            Description = $"Publish a '{RulesetService.LocalCiStatusContext}' success commit status on caller HEAD via 'gh api' after all {CiPlan.Jobs.Count} online CI jobs pass on a clean checkout",
+        };
         var list = new Option<bool>("--list") { Description = "Print the steps and what each runs locally, without running them" };
 
         command.Options.Add(jobs);
@@ -60,7 +64,30 @@ public static class LocalCiCommand
         command.Options.Add(baseRef);
         command.Options.Add(offline);
         command.Options.Add(includeUncommitted);
+        command.Options.Add(attest);
         command.Options.Add(list);
+        command.Validators.Add(commandResult =>
+        {
+            bool hasAttest = IsFlagEnabled(commandResult, attest);
+            if (!hasAttest)
+            {
+                return;
+            }
+
+            bool hasJobFilter = commandResult.GetResult(jobs) is { Implicit: false, Tokens.Count: > 0 };
+            if (IsFlagEnabled(commandResult, offline)
+                || IsFlagEnabled(commandResult, includeUncommitted)
+                || IsFlagEnabled(commandResult, allowMissingTools)
+                || IsFlagEnabled(commandResult, allowDbSkip)
+                || IsFlagEnabled(commandResult, allowSkip)
+                || IsFlagEnabled(commandResult, list)
+                || hasJobFilter)
+            {
+                commandResult.AddError(
+                    "Option '--attest' requires a clean, full online CI run and cannot be combined with '--offline', "
+                    + "'--include-uncommitted', '--allow-missing-tools', '--allow-db-skip', '--allow-skip', '--job', or '--list'.");
+            }
+        });
         command.SetAction(result =>
         {
             bool skipAll = result.GetValue(allowSkip);
@@ -71,9 +98,14 @@ public static class LocalCiCommand
                 baseRef: result.GetValue(baseRef) ?? GitRevisionScopeService.DefaultBaseRef,
                 list: result.GetValue(list),
                 offline: result.GetValue(offline),
-                includeUncommitted: result.GetValue(includeUncommitted));
+                includeUncommitted: result.GetValue(includeUncommitted),
+                attest: result.GetValue(attest));
         });
     }
+
+    private static bool IsFlagEnabled(CommandResult commandResult, Option<bool> option) =>
+        commandResult.GetResult(option) is { Implicit: false } optResult
+        && optResult.Tokens.All(t => !string.Equals(t.Value, "false", StringComparison.OrdinalIgnoreCase));
 
     private static void RejectOptionLikeValue(OptionResult optionResult)
     {
@@ -94,7 +126,8 @@ public static class LocalCiCommand
         bool list,
         LocalCiEnvironment? environment = null,
         bool offline = false,
-        bool includeUncommitted = false) =>
+        bool includeUncommitted = false,
+        bool attest = false) =>
         Execute(
             jobKeys,
             allowMissingTools: allowSkip,
@@ -103,7 +136,8 @@ public static class LocalCiCommand
             list: list,
             environment: environment,
             offline: offline,
-            includeUncommitted: includeUncommitted);
+            includeUncommitted: includeUncommitted,
+            attest: attest);
 
     public static int Execute(
         string[] jobKeys,
@@ -113,8 +147,14 @@ public static class LocalCiCommand
         bool list,
         LocalCiEnvironment? environment = null,
         bool offline = false,
-        bool includeUncommitted = false)
+        bool includeUncommitted = false,
+        bool attest = false)
     {
+        if (attest && !ValidateAttestFlags(jobKeys, allowMissingTools, allowDbSkip, list, offline, includeUncommitted))
+        {
+            return 1;
+        }
+
         IReadOnlyList<CiJob> jobs;
         try
         {
@@ -142,6 +182,13 @@ public static class LocalCiCommand
             }
         });
 
+        string? preRunHeadSha = null;
+        string? preRunRepo = null;
+        if (attest && !VerifyCleanAttestationTarget(environment, out preRunHeadSha, out preRunRepo))
+        {
+            return 1;
+        }
+
         var results = LocalCiRunner.Run(
             jobs,
             new LocalCiOptions(
@@ -150,10 +197,125 @@ public static class LocalCiCommand
                 baseRef,
                 Offline: offline,
                 RequestedJobs: jobKeys,
-                IncludeUncommitted: includeUncommitted),
+                IncludeUncommitted: includeUncommitted,
+                Attest: attest),
             environment);
         PrintSummary(results, jobKeys.Length == 0);
-        return results.Any(r => r.Outcome == CiOutcome.Failed) ? 1 : 0;
+        if (results.Any(r => r.Outcome is CiOutcome.Failed or CiOutcome.NotRun))
+        {
+            return 1;
+        }
+
+        if (!attest)
+        {
+            return 0;
+        }
+
+        if (jobs.Count != CiPlan.Jobs.Count)
+        {
+            AnsiConsole.MarkupLine($"[red]Refusing '--attest': expected all {CiPlan.Jobs.Count} CI jobs to execute, but ran {jobs.Count}.[/]");
+            return 1;
+        }
+
+        return PublishAttestation(environment, preRunRepo, preRunHeadSha);
+    }
+
+    private static bool ValidateAttestFlags(
+        string[] jobKeys,
+        bool allowMissingTools,
+        bool allowDbSkip,
+        bool list,
+        bool offline,
+        bool includeUncommitted)
+    {
+        var disqualifiers = new List<string>();
+        if (offline) disqualifiers.Add("--offline");
+        if (includeUncommitted) disqualifiers.Add("--include-uncommitted");
+        if (allowMissingTools) disqualifiers.Add("--allow-missing-tools");
+        if (allowDbSkip) disqualifiers.Add("--allow-db-skip");
+        if (jobKeys.Length > 0) disqualifiers.Add("--job");
+        if (list) disqualifiers.Add("--list");
+
+        if (disqualifiers.Count == 0)
+        {
+            return true;
+        }
+
+        AnsiConsole.MarkupLine(
+            $"[red]Refusing '--attest': cannot combine with {Markup.Escape(string.Join(", ", disqualifiers))}. "
+            + $"Run all {CiPlan.Jobs.Count} CI jobs online on a clean checkout with no skips.[/]");
+        return false;
+    }
+
+    private static bool VerifyCleanAttestationTarget(
+        LocalCiEnvironment environment,
+        out string? headSha,
+        out string? repository)
+    {
+        headSha = null;
+        repository = null;
+
+        var dirtyPaths = environment.GetWorkingTreeChanges?.Invoke() ?? [];
+        if (dirtyPaths.Count > 0)
+        {
+            AnsiConsole.MarkupLine(
+                $"[red]Refusing '--attest': checkout has {dirtyPaths.Count} uncommitted file(s). Commit or stash changes before attesting.[/]");
+            return false;
+        }
+
+        headSha = environment.ResolveAttestationHeadSha?.Invoke();
+        if (string.IsNullOrWhiteSpace(headSha) || headSha.Length != 40 || !headSha.All(Uri.IsHexDigit))
+        {
+            AnsiConsole.MarkupLine("[red]Refusing '--attest': could not resolve a 40-character caller HEAD commit SHA.[/]");
+            return false;
+        }
+
+        repository = environment.ResolveAttestationRepository?.Invoke();
+        if (string.IsNullOrWhiteSpace(repository))
+        {
+            AnsiConsole.MarkupLine("[red]Refusing '--attest': could not resolve GitHub repository slug ('owner/repo') from GITHUB_REPOSITORY or git remote 'origin'.[/]");
+            return false;
+        }
+
+        return true;
+    }
+
+    private static int PublishAttestation(LocalCiEnvironment environment, string? preRunRepo, string? preRunHeadSha)
+    {
+        if (!VerifyCleanAttestationTarget(environment, out string? postRunHeadSha, out string? postRunRepo))
+        {
+            return 1;
+        }
+
+        if (!string.Equals(preRunHeadSha, postRunHeadSha, StringComparison.Ordinal))
+        {
+            AnsiConsole.MarkupLine("[red]Refusing '--attest': caller HEAD changed while local CI was running.[/]");
+            return 1;
+        }
+
+        string repo = postRunRepo ?? preRunRepo!;
+        string sha = postRunHeadSha!;
+        if (environment.PublishCommitStatus is null)
+        {
+            AnsiConsole.MarkupLine("[red]Refusing '--attest': no commit status publisher is configured on LocalCiEnvironment.[/]");
+            return 1;
+        }
+
+        string description = $"Verified all {CiPlan.Jobs.Count} local CI jobs in merged worktree";
+        var outcome = environment.PublishCommitStatus(repo, sha, RulesetService.LocalCiStatusContext, description);
+        if (outcome.ExitCode != 0)
+        {
+            string detail = !string.IsNullOrWhiteSpace(outcome.Stderr) ? outcome.Stderr.Trim() : outcome.Stdout.Trim();
+            AnsiConsole.MarkupLine(
+                $"[red]Failed to publish '{Markup.Escape(RulesetService.LocalCiStatusContext)}' commit status on {Markup.Escape(repo)}@{Markup.Escape(sha)} "
+                + $"(exit code {outcome.ExitCode}): {Markup.Escape(detail)}[/]");
+            return 1;
+        }
+
+        string shortSha = sha[..12];
+        AnsiConsole.MarkupLine(
+            $"[bold green]Attested '{Markup.Escape(RulesetService.LocalCiStatusContext)}' (state=success) on {Markup.Escape(repo)}@{Markup.Escape(shortSha)}.[/]");
+        return 0;
     }
 
     // Plain lines rather than a Spectre table: agent sessions and redirected output report a console a few characters

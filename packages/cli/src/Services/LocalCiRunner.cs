@@ -60,27 +60,35 @@ public sealed record CiContainerScanScope(bool ShouldRun, string Note);
 /// <param name="Offline">Skip <c>git fetch</c> before synthesizing the merged worktree (explicit air-gapped debugging only).</param>
 /// <param name="RequestedJobs">Job keys explicitly passed with <c>--job</c> (empty or null on a full default run).</param>
 /// <param name="IncludeUncommitted">Stage uncommitted working-tree and index edits in a temporary index copy and synthesize a snapshot commit on <c>HEAD</c>.</param>
+/// <param name="Attest">Publish a <see cref="RulesetService.LocalCiStatusContext"/> commit status via <c>gh api</c> on caller <c>HEAD</c> after a clean, full online run passes.</param>
+/// <param name="CallerHead">Caller pre-merge <c>HEAD</c> commit SHA forwarded to merged-worktree quality gates.</param>
 public sealed record LocalCiOptions(
     bool AllowMissingTools,
     bool AllowDbSkip,
     string BaseRef,
     bool Offline = false,
     IReadOnlyCollection<string>? RequestedJobs = null,
-    bool IncludeUncommitted = false)
+    bool IncludeUncommitted = false,
+    bool Attest = false,
+    string? CallerHead = null)
 {
     public LocalCiOptions(
         bool AllowSkip,
         string BaseRef,
         bool Offline = false,
         IReadOnlyCollection<string>? RequestedJobs = null,
-        bool IncludeUncommitted = false)
+        bool IncludeUncommitted = false,
+        bool Attest = false,
+        string? CallerHead = null)
         : this(
             AllowMissingTools: AllowSkip,
             AllowDbSkip: AllowSkip,
             BaseRef: BaseRef,
             Offline: Offline,
             RequestedJobs: RequestedJobs,
-            IncludeUncommitted: IncludeUncommitted)
+            IncludeUncommitted: IncludeUncommitted,
+            Attest: Attest,
+            CallerHead: CallerHead)
     {
     }
 }
@@ -91,12 +99,14 @@ public sealed record LocalCiOptions(
 /// <param name="Lease">Disposable lease that removes and prunes the temporary worktree after the run finishes.</param>
 /// <param name="Message">Diagnostic summary or failure details (including dirty or conflicted file paths).</param>
 /// <param name="EffectiveBaseRef">Resolved remote-tracking ref, tag ref, or commit SHA propagated into downstream <c>--base</c> scopes.</param>
+/// <param name="CallerHeadSha">Caller pre-merge <c>HEAD</c> commit SHA recorded before snapshot or merge synthesis.</param>
 public sealed record CiWorkspacePreparation(
     bool Succeeded,
     LocalCiEnvironment? Environment,
     IDisposable? Lease,
     string Message,
-    string? EffectiveBaseRef = null);
+    string? EffectiveBaseRef = null,
+    string? CallerHeadSha = null);
 
 /// <summary>The side effects of a local CI run, replaceable in tests.</summary>
 public sealed class LocalCiEnvironment
@@ -162,6 +172,18 @@ public sealed class LocalCiEnvironment
     /// </summary>
     public Func<LocalCiOptions, CiWorkspacePreparation>? PrepareWorkspace { get; init; }
 
+    /// <summary>Returns uncommitted working-tree or index paths on the caller checkout for <c>--attest</c> cleanliness verification.</summary>
+    public Func<IReadOnlyList<string>>? GetWorkingTreeChanges { get; init; }
+
+    /// <summary>Resolves the caller checkout's pre-merge <c>HEAD</c> 40-hex commit SHA for <c>--attest</c>.</summary>
+    public Func<string?>? ResolveAttestationHeadSha { get; init; }
+
+    /// <summary>Resolves the <c>owner/repo</c> GitHub repository slug for <c>--attest</c>.</summary>
+    public Func<string?>? ResolveAttestationRepository { get; init; }
+
+    /// <summary>Publishes a commit status (<c>repos/{repo}/statuses/{sha}</c>) via <c>gh api</c> for <c>--attest</c>.</summary>
+    public Func<string, string, string, string, RulesetService.ProcessOutcome>? PublishCommitStatus { get; init; }
+
     /// <summary>The real environment: child processes, <c>PATH</c>, PostgreSQL, Docker and git in a merged detached worktree for <paramref name="repoRoot"/>.</summary>
     public static LocalCiEnvironment Create(string repoRoot, Action<CiStep, IReadOnlyList<string>>? onStepStarting = null) => new()
     {
@@ -174,6 +196,25 @@ public sealed class LocalCiEnvironment
         FindFiles = (step, baseRef) => DiscoverFiles(repoRoot, step, baseRef),
         OnStepStarting = onStepStarting,
         PrepareWorkspace = options => PrepareMergedWorktree(repoRoot, options, onStepStarting),
+        GetWorkingTreeChanges = () => GitRevisionScopeService.GetWorkingTreeChanges(repoRoot),
+        ResolveAttestationHeadSha = () => GitRevisionScopeService.ResolveCallerPreMergeHead(repoRoot),
+        ResolveAttestationRepository = () => RulesetService.ResolveRepository(repoRoot),
+        PublishCommitStatus = (repo, sha, context, description) =>
+            RulesetService.DefaultProcessRunner(
+                repoRoot,
+                "gh",
+                [
+                    "api",
+                    $"repos/{repo}/statuses/{sha}",
+                    "--method",
+                    "POST",
+                    "-f",
+                    "state=success",
+                    "-f",
+                    $"context={context}",
+                    "-f",
+                    $"description={description}",
+                ]),
     };
 
     /// <summary>
@@ -227,6 +268,7 @@ public sealed class LocalCiEnvironment
             }
         }
 
+        string? callerHeadSha = GitRevisionScopeService.ResolveCallerPreMergeHead(toolchainRoot);
         string pinnedRef = GitRevisionScopeService.CreateTemporaryRefName();
         string headRevision = "HEAD";
         if (dirtyPaths.Count > 0)
@@ -289,7 +331,13 @@ public sealed class LocalCiEnvironment
         string message = synthesized.MergeTree.BehindCount > 0
             ? $"synthesized merged commit {shortSha} ({synthesized.MergeTree.BehindCount} commit(s) behind {effectiveBaseRef}) in {worktreeRoot}"
             : $"verified {headLabel} up to date with {effectiveBaseRef} in {worktreeRoot}";
-        return new CiWorkspacePreparation(true, scopedEnvironment, worktree, message, EffectiveBaseRef: effectiveBaseRef);
+        return new CiWorkspacePreparation(
+            true,
+            scopedEnvironment,
+            worktree,
+            message,
+            EffectiveBaseRef: effectiveBaseRef,
+            CallerHeadSha: callerHeadSha);
     }
 
     private static int RunProcess(
@@ -620,10 +668,11 @@ public static class LocalCiRunner
 
             workspaceLease = prepared.Lease;
             activeEnvironment = prepared.Environment;
-            if (!string.IsNullOrWhiteSpace(prepared.EffectiveBaseRef))
+            activeOptions = options with
             {
-                activeOptions = options with { BaseRef = prepared.EffectiveBaseRef };
-            }
+                BaseRef = !string.IsNullOrWhiteSpace(prepared.EffectiveBaseRef) ? prepared.EffectiveBaseRef : options.BaseRef,
+                CallerHead = !string.IsNullOrWhiteSpace(prepared.CallerHeadSha) ? prepared.CallerHeadSha : options.CallerHead,
+            };
         }
 
         using (workspaceLease)
@@ -913,11 +962,26 @@ public static class LocalCiRunner
         IReadOnlyList<string> files)
     {
         var command = step.Commands[commandIndex];
+        bool isCadenceCheck = IsCadenceCheckCommand(command);
         var extra = new List<string>();
         if (command.ForwardsBaseRef && !string.IsNullOrWhiteSpace(options.BaseRef))
         {
             extra.Add("--base");
             extra.Add(options.BaseRef);
+        }
+
+        if (isCadenceCheck)
+        {
+            if (options.Offline)
+            {
+                extra.Add("--offline");
+            }
+
+            if (command.ForwardsBaseRef && !string.IsNullOrWhiteSpace(options.CallerHead))
+            {
+                extra.Add("--caller-head");
+                extra.Add(options.CallerHead);
+            }
         }
 
         if (commandIndex == step.Commands.Count - 1 && files.Count > 0)
@@ -926,6 +990,30 @@ public static class LocalCiRunner
         }
 
         return extra;
+    }
+
+    private static bool IsCadenceCheckCommand(CiCommand command)
+    {
+        if (string.Equals(command.FileName, "node", StringComparison.Ordinal) &&
+            command.Arguments.Count >= 2 &&
+            command.Arguments[0].EndsWith("scripts/run-cli.js", StringComparison.Ordinal) &&
+            string.Equals(command.Arguments[1], "check", StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        if (string.Equals(command.FileName, "dotnet", StringComparison.Ordinal))
+        {
+            for (int i = 0; i < command.Arguments.Count - 1; i++)
+            {
+                if (string.Equals(command.Arguments[i], "--", StringComparison.Ordinal))
+                {
+                    return string.Equals(command.Arguments[i + 1], "check", StringComparison.Ordinal);
+                }
+            }
+        }
+
+        return false;
     }
 
     private static string Join(string first, string second) => first.Length == 0 ? second : $"{first} {second}";

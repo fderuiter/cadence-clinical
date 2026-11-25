@@ -84,23 +84,25 @@ pnpm cadence check <gate>                # one gate
 pnpm cadence check <gate> <files>        # one gate, limited to these files
 pnpm cadence check --exclude <gate>      # every gate except the named gate (repeatable)
 pnpm cadence check --fail-fast           # stop at the first failing gate
-pnpm cadence check --base <ref>          # scope branch diffs against <ref> (default: origin/main)
+pnpm cadence check --base <ref>          # fetch <ref> and scope/merge branch diffs against <ref> (default: origin/main)
+pnpm cadence check --offline             # air-gapped debugging: skip git fetch and evaluate against local Git refs
 pnpm cadence check --push-before <sha>   # scope push diffs across <sha>..HEAD (or new branch / v* tag scope)
 pnpm cadence check --event-name <event> --git-ref <ref> # override GITHUB_EVENT_NAME / GITHUB_REF event scope
 pnpm cadence check --pre-commit          # what the pre-commit hook runs
 ```
 
-| Argument               | Description                                                                                                                                                                                                                                         |
-| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `[gate]`               | One gate to run. Full or short name, for example `duplication` or `detect-code-duplication`. Underscores are treated as hyphens.                                                                                                                    |
-| `[files]`              | Files to check. Only the gates marked in the table below use them.                                                                                                                                                                                  |
-| `--exclude <gate>`     | Skip a gate by name or alias when running all gates (repeatable). Fails on an unknown gate name or when combined with `[gate]`.                                                                                                                     |
-| `--fail-fast`          | Stop at the first failing quality gate and exit `1`. Enabled by default with `--pre-commit` (pass `--fail-fast false` to run every remaining pre-commit gate).                                                                                      |
-| `--base <ref>`         | Base Git ref for revision-scoped gates (`deid`, `adrs`, `gxp-snapshot`, `baseline-ratchet`, `merge-readiness`, `branch-freshness`, and secret scanning; defaults to `origin/main`). Scans all tracked files when `HEAD` matches `<ref>`.            |
-| `--push-before <sha>`  | Pre-push SHA used in CI push runs (`<sha>..HEAD`). Evaluates `merge-base(origin/main, HEAD)..HEAD` on 40-zero `refs/heads/*` pushes, checks `HEAD` on `refs/tags/v*` pushes, and falls back to `git ls-files -z` for file scanners when non-linear. |
-| `--event-name <event>` | Override `GITHUB_EVENT_NAME` (`pull_request`, `merge_group`, `push`, `workflow_dispatch`) for revision-scoped gates (`cadence check` reads `GITHUB_EVENT_NAME` automatically outside `--pre-commit`). Mutually exclusive with `--pre-commit`.       |
-| `--git-ref <ref>`      | Override `GITHUB_REF` (`refs/heads/*`, `refs/tags/v*`) for revision-scoped gates (`cadence check` reads `GITHUB_REF` automatically outside `--pre-commit`). Mutually exclusive with `--pre-commit`.                                                 |
-| `--pre-commit`         | What the pre-commit hook runs: the staged files are the `[files]`, fail-fast is enabled by default, and each gate runs, runs a quicker variant or is skipped as the last column of the table below says.                                            |
+| Argument               | Description                                                                                                                                                                                                                                                                                                                                   |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `[gate]`               | One gate to run. Full or short name, for example `duplication` or `detect-code-duplication`. Underscores are treated as hyphens.                                                                                                                                                                                                              |
+| `[files]`              | Files to check. Only the gates marked in the table below use them.                                                                                                                                                                                                                                                                            |
+| `--exclude <gate>`     | Skip a gate by name or alias when running all gates (repeatable). Fails on an unknown gate name or when combined with `[gate]`.                                                                                                                                                                                                               |
+| `--fail-fast`          | Stop at the first failing quality gate and exit `1`. Enabled by default with `--pre-commit` (pass `--fail-fast false` to run every remaining pre-commit gate).                                                                                                                                                                                |
+| `--base <ref>`         | Base Git ref fetched into `refs/remotes/<remote>/<branch>` (unless `--offline` is set), merged into a temporary worktree when `HEAD` lags behind `<ref>`, and forwarded to revision-scoped gates (`deid`, `adrs`, `gxp-snapshot`, `baseline-ratchet`, `merge-readiness`, `branch-freshness`, and secret scanning; defaults to `origin/main`). |
+| `--offline`            | Skip `git fetch` and evaluate gates against local Git refs for air-gapped debugging. Mutually exclusive with `--pre-commit`.                                                                                                                                                                                                                  |
+| `--push-before <sha>`  | Pre-push SHA used in CI push runs (`<sha>..HEAD`). Evaluates `merge-base(origin/main, HEAD)..HEAD` on 40-zero `refs/heads/*` pushes, checks `HEAD` on `refs/tags/v*` pushes, and falls back to `git ls-files -z` for file scanners when non-linear.                                                                                           |
+| `--event-name <event>` | Override `GITHUB_EVENT_NAME` (`pull_request`, `merge_group`, `push`, `workflow_dispatch`) for revision-scoped gates (`cadence check` reads `GITHUB_EVENT_NAME` automatically outside `--pre-commit`). Mutually exclusive with `--pre-commit`.                                                                                                 |
+| `--git-ref <ref>`      | Override `GITHUB_REF` (`refs/heads/*`, `refs/tags/v*`) for revision-scoped gates (`cadence check` reads `GITHUB_REF` automatically outside `--pre-commit`). Mutually exclusive with `--pre-commit`.                                                                                                                                           |
+| `--pre-commit`         | What the pre-commit hook runs (stays offline without `git fetch` or temporary worktrees): the staged files are the `[files]`, fail-fast is enabled by default, and each gate runs, runs a quicker variant or is skipped as the last column of the table below says.                                                                           |
 
 With no gate, every gate runs in the order below. Unscoped `cadence check` runs every gate and exits `1` if any gate
 failed; `--fail-fast` (enabled by default with `--pre-commit`) stops at the first failing gate. An unknown gate name
@@ -185,12 +187,13 @@ baseline gate to carry a matching file-and-count-scoped `Baseline-Growth: <path>
 `origin/main` nor `refs/heads/main` (or an explicit `--base <ref>`) exists, or when `workflow_dispatch` targets an unprotected ref,
 it fails closed both locally and in CI.
 
-The `merge-readiness` gate (also `check-merge-readiness`) verifies that `--base <ref>` (`origin/main` by default) exists
-locally and merges cleanly into `HEAD` in-memory via `git merge-tree --write-tree` without modifying the working tree or
-index; on `--push-before` push runs, `refs/tags/v*` pushes, and protected-ref `workflow_dispatch` runs (`refs/heads/main`,
-`refs/heads/release/*`, `refs/tags/v*`) it skips cleanly (failing closed on unprotected `workflow_dispatch` refs), and
-`--pre-commit` skips it so local commits are not blocked while offline. When conflicts exist, it prints every conflicted file
-path and exits `1`.
+The `merge-readiness` gate (also `check-merge-readiness`) fetches `--base <ref>` (`origin/main` by default; skipped with
+`--offline`) and verifies that it merges cleanly with caller pre-merge `HEAD` in-memory via `git merge-tree --write-tree`
+without modifying the working tree or index (when `HEAD` lags behind `--base`, `cadence check` also materializes a temporary
+detached merged worktree so all non-post-build gates run against the merged state); on `--push-before` push runs, `refs/tags/v*`
+pushes, and protected-ref `workflow_dispatch` runs (`refs/heads/main`, `refs/heads/release/*`, `refs/tags/v*`) it skips cleanly
+(failing closed on unprotected `workflow_dispatch` refs), and `--pre-commit` skips it so local commits are not blocked while
+offline. When `git fetch` fails or conflicts exist, it prints every conflicted file path and exits `1`.
 
 The `deid` gate scans the given files, or the candidate files resolved from `--pre-commit`, `--push-before <sha>`, or
 `--base <ref>` (default `origin/main`, falling back to every file git tracks via `git ls-files -z` when `HEAD` equals
@@ -225,10 +228,11 @@ closed), and always fails closed on direct `cadence check public-bundle` calls i
 The `branch-freshness` and `unit-tests` gates are skipped by `--pre-commit` so local commits
 stay fast and offline, while `architecture-tests` runs in `--pre-commit` whenever staged files touch backend C#/MSBuild,
 architecture baselines, or test files (skipping docs-only and non-test frontend asset commits), and all three run in full
-during `pnpm cadence check`: `branch-freshness` fails when `origin/main` (or `--base <ref>`) is missing or not an ancestor of
-`HEAD` on local runs, `pull_request`, and `merge_group` (skipping post-push `--push-before` runs, `refs/tags/v*` pushes, and
-protected-ref `workflow_dispatch` runs while failing closed on unprotected `workflow_dispatch` refs), `architecture-tests`
-runs `tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`, and `unit-tests` runs
+during `pnpm cadence check`: `branch-freshness` evaluates caller pre-merge `HEAD` (even inside a two-parent merge commit
+synthesized by `cadence check` or `cadence ci`) and fails whenever fetched `origin/main` (or `--base <ref>`) is missing or not
+an ancestor of caller `HEAD` on local runs, `pull_request`, and `merge_group` (skipping post-push `--push-before` runs,
+`refs/tags/v*` pushes, and protected-ref `workflow_dispatch` runs while failing closed on unprotected `workflow_dispatch`
+refs), `architecture-tests` runs `tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`, and `unit-tests` runs
 `tests/Cadence.UnitTests/Cadence.UnitTests.csproj`. The `demo-manifest` gate runs in `--pre-commit` only when staged
 files touch `packages/demo-fixtures`, `DevelopmentDemoData.cs`, `ExecutionDbSeeder.cs` or `docker/cadence-realm.json`.
 
@@ -258,11 +262,12 @@ commit via `git merge-tree --write-tree` + `git commit-tree` (failing closed imm
 `git fetch` or `git merge-tree` fails), pins synthesized commits under `refs/cadence-ci/<runId>`, checks out the merged
 commit in a disposable detached worktree under `Path.GetTempPath()`, reuses read-only `.cadence/bin`, `.cadence/venv`,
 and `.venv` toolchains from your repository checkout, runs all selected jobs inside the temporary worktree in CI order
-(forwarding the resolved base ref to scoped steps), and removes the temporary ref and worktree afterward without
-mutating your checkout.
+(forwarding the resolved base ref and caller pre-merge `HEAD` SHA to scoped checks so `branch-freshness` still fails when
+caller `HEAD` lags behind `--base`), and removes the temporary ref and worktree afterward without mutating your checkout.
 
 ```bash
 pnpm cadence ci                          # fetch origin/main, synthesize merged worktree, and run all 11 PR jobs
+pnpm cadence ci --attest                 # publish 'Cadence Local CI' status on caller HEAD via gh api after all 11 jobs pass
 pnpm cadence ci --include-uncommitted    # synthesize an ephemeral snapshot commit of uncommitted edits without mutating checkout
 pnpm cadence ci --job container-security # validate Compose config, build and Trivy-scan all 18 .NET and 2 SCE images
 pnpm cadence ci --job dotnet-tests       # one job (repeat --job for more)
@@ -281,6 +286,7 @@ pnpm cadence ci --list                   # what each step runs locally, without 
 | `--base <ref>`          | The ref fetched into `refs/remotes/<remote>/<branch>` (or resolved locally without `git fetch` for commit SHAs, `HEAD~1`, and tags; skipped with `--offline`), merged for the temporary worktree, used to scope `container-security`, and forwarded to scoped checks. Default: `origin/main`. |
 | `--offline`             | Skips `git fetch` for explicit air-gapped debugging while still synthesizing a detached merged worktree against the local `--base <ref>`.                                                                                                                                                     |
 | `--include-uncommitted` | Copies `.git/index` to a temporary index, stages staged, unstaged, and untracked edits, and synthesizes an ephemeral snapshot commit for the merged worktree without mutating your checkout.                                                                                                  |
+| `--attest`              | Publishes a `success` commit status (`Cadence Local CI`) on caller `HEAD` via `gh api` after all 11 online jobs pass on a clean checkout. Refused with `--offline`, `--include-uncommitted`, `--allow-missing-tools`, `--allow-db-skip`, `--allow-skip`, `--job`, or `--list`.                |
 | `--list`                | Prints each step and what it runs locally, then exits `0`.                                                                                                                                                                                                                                    |
 
 It follows the workflow's rules: inside a job, a failed step stops the later steps unless CI gives them `if: always()`,
@@ -345,13 +351,13 @@ pnpm cadence rulesets --profile active-actions          # reconcile full ruleset
 pnpm cadence rulesets --repo fderuiter/cadence-clinical # target an explicit owner/repo
 ```
 
-| Option                                       | Description                                                                                                                                                                                                                   |
-| -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--dry-run`                                  | Validates `CI Gate` upstream job coverage in `.github/workflows/ci.yml` (and `.github/rulesets/*.json` plus planned `gh api` operations for the selected profile when `.github/rulesets` is present) without mutating GitHub. |
-| `--repo <owner/repo>`                        | Target GitHub repository (`owner/repo`). Defaults to `GITHUB_REPOSITORY`, then `git remote get-url origin`.                                                                                                                   |
-| `--profile <paused-actions\|active-actions>` | Reconciliation profile. `paused-actions` (default while Actions runners are paused) omits `required_status_checks` and `merge_queue` from synced payloads; `active-actions` applies the full declarative ruleset payload.     |
+| Option                                       | Description                                                                                                                                                                                                                                                      |
+| -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--dry-run`                                  | Validates `CI Gate` upstream job coverage in `.github/workflows/ci.yml` (and `.github/rulesets/*.json` plus planned `gh api` operations for the selected profile when `.github/rulesets` is present) without mutating GitHub.                                    |
+| `--repo <owner/repo>`                        | Target GitHub repository (`owner/repo`). Defaults to `GITHUB_REPOSITORY`, then `git remote get-url origin`.                                                                                                                                                      |
+| `--profile <paused-actions\|active-actions>` | Reconciliation profile. `paused-actions` (default while Actions runners are paused) retains `strict_required_status_checks_policy: true` with context `Cadence Local CI` and omits `merge_queue`; `active-actions` applies the full declarative ruleset payload. |
 
-Before making any API request, `cadence rulesets` runs the `rulesets` quality gate (`RulesetService.Validate`, which also validates staged index blobs under `cadence check --pre-commit`): `.github/rulesets/` must contain `main.json`, `release_branches.json`, and `version_tags.json`; every branch ruleset must restrict any `bypass_actors` entries to repository admins (`RepositoryRole` `5`) with `bypass_mode: "pull_request"` (`"always"` bypasses are rejected on branches), while `version_tags.json` requires `creation`, `required_signatures`, `deletion`, and `non_fast_forward` on `refs/tags/v*` with `bypass_actors` pinned to release admins (`RepositoryRole` `5`, `bypass_mode: "always"`); `main.json` must configure a `merge_queue` rule (`SQUASH`, `ALLGREEN`); every branch ruleset must set `strict_required_status_checks_policy: true`, pin required status checks to GitHub Actions (`integration_id: 15368`), require `CI Gate` and `Check for Merge Conflicts`, and match active `pull_request` and `merge_group` workflow jobs (`CI Gate` in `.github/workflows/ci.yml` must use `if: always()` and evaluate every pull-request validation job, `.github/workflows/conflict-check.yml` must run on `opened`, `synchronize`, `reopened`, and `edited` plus `merge_group` and fail closed via `git merge-tree --write-tree`, and no workflow may run `automerge` or `gh pr merge` with `GITHUB_TOKEN`). When `.github/rulesets` is absent, `cadence rulesets --dry-run` still validates `CI Gate` and conflict-check workflow coverage and exits `0` when valid (or `1` if workflow validation fails), whereas `cadence check rulesets` and non-dry-run reconciliation both fail closed (`1`) without `.github/rulesets/*.json`.
+Before making any API request, `cadence rulesets` runs the `rulesets` quality gate (`RulesetService.Validate`, which also validates staged index blobs under `cadence check --pre-commit`): `.github/rulesets/` must contain `main.json`, `release_branches.json`, and `version_tags.json`; every branch ruleset must forbid `bypass_actors` (`"bypass_actors": []`), while `version_tags.json` requires `creation`, `required_signatures`, `deletion`, and `non_fast_forward` on `refs/tags/v*` with `bypass_actors` pinned to release admins (`RepositoryRole` `5`, `bypass_mode: "always"`); `main.json` must configure a `merge_queue` rule (`SQUASH`, `ALLGREEN`); every branch ruleset must set `strict_required_status_checks_policy: true`, pin declarative required status checks to GitHub Actions (`integration_id: 15368`), require `CI Gate` and `Check for Merge Conflicts`, and match active `pull_request` and `merge_group` workflow jobs (`CI Gate` in `.github/workflows/ci.yml` must use `if: always()` and evaluate every pull-request validation job, both `.github/workflows/ci.yml` and `.github/workflows/conflict-check.yml` must declare explicit `opened`, `synchronize`, `reopened`, and `edited` `pull_request` activity types plus `merge_group`, `.github/workflows/conflict-check.yml` must fail closed via `git merge-tree --write-tree`, and no workflow may run `automerge` or `gh pr merge` with `GITHUB_TOKEN`). When `.github/rulesets` is absent, `cadence rulesets --dry-run` still validates `CI Gate` and conflict-check workflow coverage and exits `0` when valid (or `1` if workflow validation fails), whereas `cadence check rulesets` and non-dry-run reconciliation both fail closed (`1`) without `.github/rulesets/*.json`.
 
 Without `--dry-run`, it fetches `gh api --paginate repos/<owner>/<repo>/rulesets?per_page=100`, updates existing
 rulesets by `name` (`PUT repos/<owner>/<repo>/rulesets/<id> --input <file>`), and creates missing ones
