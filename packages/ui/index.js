@@ -86,6 +86,8 @@ export {
   isValidStepUpAction,
   isValidSemanticAction,
   buildStepUpVerificationPayload,
+  formatCgtBedsideBindingId,
+  formatCgtDestructionBindingId,
   STEP_UP_VERIFICATION_PATH,
   resolveDefaultSemanticAction,
   requestStepUpSignature,

@@ -60,7 +60,7 @@ internal static class ServiceHosts
             host.UseTestGatewaySecret()
                 .UseTestPostgresConnectionString()
                 .UseTestStorage()
-                .UseTestDemographicsKey().UseTestRandomizationKey()
+                .UseTestDemographicsKey().UseTestRandomizationKey().UseTestCgtBarcodeKey()
                 .UseTestFieldProtectionKeys()
                 .UseTestSceSigningKey()
                 .UseTestImagingDeidentificationKeys()

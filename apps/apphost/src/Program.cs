@@ -36,6 +36,7 @@ var auditLogSecretKey = builder.AddParameter("audit-log-secret-key", secret: tru
 // Execution refuses to start without a base64 AES key of 16, 24 or 32 bytes (`openssl rand -base64 32`).
 var demographicsEncryptionKey = builder.AddParameter("demographics-encryption-key", secret: true);
 var randomizationAllocationKey = builder.AddParameter("randomization-allocation-key", secret: true);
+var cgtBarcodeHmacKey = builder.AddParameter("cgt-barcode-hmac-key", secret: true);
 // Kernel (biometric liveness issuance) and eConsent (consent verification) share a 32-byte base64 HMAC key (ADR-2660).
 var biometricLivenessKey = builder.AddParameter("biometric-liveness-key", secret: true);
 
@@ -157,7 +158,8 @@ IResourceBuilder<ProjectResource> Service(IResourceBuilder<ProjectResource> proj
 
 var execution = Service(builder.AddProject<Projects.Cadence_Apps_Execution>("execution"))
     .WithEnvironment("DemographicsEncryption__KeyBase64", demographicsEncryptionKey)
-    .WithEnvironment("RANDOMIZATION_ALLOCATION_KEY", randomizationAllocationKey);
+    .WithEnvironment("RANDOMIZATION_ALLOCATION_KEY", randomizationAllocationKey)
+    .WithEnvironment("CGT_BARCODE_HMAC_KEY", cgtBarcodeHmacKey);
 string etmfStorageRoot = builder.Configuration["Storage:RootPath"]
     ?? System.IO.Path.Combine(System.IO.Path.GetTempPath(), "cadence-etmf-storage");
 Service(builder.AddProject<Projects.Cadence_Apps_Etmf>("etmf"))

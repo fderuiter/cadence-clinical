@@ -1417,6 +1417,28 @@ public sealed class TreatmentBlindingHostRegressionTests : IAsyncLifetime
         public Task<bool> TryRecordFirstUseAsync(string tokenId, DateTimeOffset retainUntil, CancellationToken cancellationToken) =>
             Task.FromResult(_usedSigTokens.TryAdd(tokenId, retainUntil));
 
+        public Task<bool> TryRecordFirstUseBatchAsync(
+            IReadOnlyList<(string TokenId, DateTimeOffset RetainUntil)> uses,
+            CancellationToken cancellationToken)
+        {
+            if (uses.Count == 0 || uses.Select(u => u.TokenId).Distinct(StringComparer.Ordinal).Count() != uses.Count)
+            {
+                return Task.FromResult(false);
+            }
+
+            if (uses.Any(u => _usedSigTokens.ContainsKey(u.TokenId)))
+            {
+                return Task.FromResult(false);
+            }
+
+            foreach (var (tokenId, retainUntil) in uses)
+            {
+                _usedSigTokens[tokenId] = retainUntil;
+            }
+
+            return Task.FromResult(true);
+        }
+
         public Task<TenantEntitlementSnapshot> GetEntitlementsAsync(
             TenantId tenantId,
             DateTimeOffset asOf,
