@@ -68,6 +68,20 @@ public static class LockScopes
     public static bool IsScope(NodeRef? scope) =>
         scope is { Version: null } && Kinds.Contains(scope.Kind) && scope.Id != Guid.Empty;
 
+    /// <summary>Zero-based precedence order of <paramref name="kind"/> from widest scope to narrowest, or <see cref="Kinds"/>.<c>Count</c> when unknown.</summary>
+    public static int OrderOf(string kind)
+    {
+        for (var i = 0; i < Kinds.Count; i++)
+        {
+            if (string.Equals(Kinds[i], kind, StringComparison.Ordinal))
+            {
+                return i;
+            }
+        }
+
+        return Kinds.Count;
+    }
+
     /// <summary>The scopes covering a study or study site, widest first.</summary>
     public static IReadOnlyList<NodeRef> Covering(StudyId study, StudySiteId? studySite = null) =>
         studySite is { } site ? [NodeRef.For(study), NodeRef.For(site)] : [NodeRef.For(study)];

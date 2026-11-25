@@ -9,11 +9,14 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Apps.Execution.Application.Abstractions;
+using Cadence.Apps.Execution.Infrastructure.Kernel;
 using Cadence.Kernel;
 using Cadence.Kernel.Activity;
 using Cadence.Kernel.Api;
 using Cadence.Kernel.Application.Activity;
 using Cadence.Kernel.Application.Authorization;
+using Cadence.Kernel.Application.Commands;
 using Cadence.Kernel.Application.Execution;
 using Cadence.Kernel.Application.Simulation;
 using Cadence.Kernel.Application.WorkQueues;
@@ -40,15 +43,18 @@ using Cadence.Security.Authentication;
 using Cadence.Testing;
 using Cadence.Testing.Hosting;
 using Cadence.Testing.Security;
+using Cadence.Testing.Time;
 using Cadence.TestSupport.Kernel.Protocol;
 
 using FluentAssertions;
 
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 
 using Xunit;
 
@@ -99,6 +105,7 @@ public sealed class KernelApiHostTests : IDisposable
         $"/api/v1/kernel/protocol-versions/{NodeRef.For(Amendment.Id)}/schedule-of-activities",
         $"/api/v1/kernel/studies/{Study}/proposals", $"/api/v1/kernel/proposals/{NodeRef.For(OpenProposal.Id)}",
         "/api/v1/kernel/enrollments/lookup?study_code=CAD-101&subject_code=017-0001",
+        "/api/v1/kernel/locks/in-force?study_code=CAD-101",
     ];
 
     /// <summary>The amendment's design: CARDIO-2 with its week 12 visit a week later.</summary>
@@ -164,6 +171,7 @@ public sealed class KernelApiHostTests : IDisposable
         _protocol.Tenants.Should().BeEmpty();
         _activity.Queries.Should().BeEmpty();
         _enrollments.Lookups.Should().BeEmpty();
+        _locks.Checks.Should().BeEmpty();
         (await client.GetAsync(new Uri("/api/v1/kernel/status", UriKind.Relative), ct)).StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
@@ -1282,6 +1290,405 @@ public sealed class KernelApiHostTests : IDisposable
         readinessByCode.RootElement.GetProperty("ready_for_lock").GetBoolean().Should().BeTrue();
     }
 
+    /// <summary>
+    /// Over a real Kestrel listener with <see cref="GrantNodeVisibility"/>, zero-grant and cross-site callers probing
+    /// <c>GET /api/v1/kernel/locks/in-force</c> receive non-confirming 404 problem responses on hidden studies and
+    /// explicit out-of-scope sites, and cross-site subject probes omitting <c>site_code</c> match absent subjects
+    /// (<c>locked == false</c>) without disclosing cross-site locks (ADR-2471).
+    /// </summary>
+    [Fact]
+    public async Task LocksInForce_OverKestrel_EnforcesNonConfirmingNodeVisibilityForZeroGrantAndCrossSiteCallers()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var fixture = SeedLockVisibilityScenario();
+        using var host = CreateKestrelHost(hostVisibility: true);
+        using var zeroGrantClient = host.CreateKestrelSignedClient(
+            TestSecurityContext.Identity("stranger@sponsor.test"));
+        using var site01Client = host.CreateKestrelSignedClient(
+            TestSecurityContext.Identity(fixture.Site01Coordinator.Id, "CRC"));
+
+        // 1. Zero-grant caller: confidential locked study and nonexistent study return identical non-confirming 404 problem details.
+        var confidentialRes = await zeroGrantClient.GetAsync(
+            new Uri("/api/v1/kernel/locks/in-force?study_code=STD-CONFIDENTIAL-MARKER", UriKind.Relative), ct);
+        var nonexistentRes = await zeroGrantClient.GetAsync(
+            new Uri("/api/v1/kernel/locks/in-force?study_code=STD-NONEXISTENT-MARKER", UriKind.Relative), ct);
+
+        confidentialRes.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        nonexistentRes.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        confidentialRes.Content.Headers.ContentType!.MediaType.Should().Be("application/problem+json");
+        nonexistentRes.Content.Headers.ContentType!.MediaType.Should().Be("application/problem+json");
+
+        var confidentialBody = await confidentialRes.Content.ReadAsStringAsync(ct);
+        var nonexistentBody = await nonexistentRes.Content.ReadAsStringAsync(ct);
+        confidentialBody.Should().NotContain(fixture.ConfidentialStudyId.Value.ToString("D"))
+            .And.NotContain(nameof(MaskReason.NotPermitted))
+            .And.NotContain("Locked");
+
+        using var confidentialDoc = JsonDocument.Parse(confidentialBody);
+        using var nonexistentDoc = JsonDocument.Parse(nonexistentBody);
+        var expectedTitle = nonexistentDoc.RootElement.GetProperty("title").GetString();
+        var expectedDetail = nonexistentDoc.RootElement.GetProperty("detail").GetString();
+        confidentialDoc.RootElement.GetProperty("title").GetString().Should().Be(expectedTitle);
+        confidentialDoc.RootElement.GetProperty("detail").GetString().Should().Be(expectedDetail);
+
+        // 2. Cross-site coordinator (granted only at SITE-01): explicit out-of-scope SITE-03 returns the same 404 as an absent site.
+        var hiddenSiteRes = await site01Client.GetAsync(
+            new Uri("/api/v1/kernel/locks/in-force?study_code=STD-VISIBLE-MARKER&site_code=SITE-03", UriKind.Relative), ct);
+        var absentSiteRes = await site01Client.GetAsync(
+            new Uri("/api/v1/kernel/locks/in-force?study_code=STD-VISIBLE-MARKER&site_code=SITE-NONEXISTENT", UriKind.Relative), ct);
+
+        hiddenSiteRes.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        absentSiteRes.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        var hiddenSiteBody = await hiddenSiteRes.Content.ReadAsStringAsync(ct);
+        hiddenSiteBody.Should().NotContain(fixture.Site03Id.Value.ToString("D"))
+            .And.NotContain(nameof(MaskReason.NotPermitted));
+        using var hiddenSiteDoc = JsonDocument.Parse(hiddenSiteBody);
+        using var absentSiteDoc = JsonDocument.Parse(await absentSiteRes.Content.ReadAsStringAsync(ct));
+        hiddenSiteDoc.RootElement.GetProperty("title").GetString().Should().Be(expectedTitle);
+        hiddenSiteDoc.RootElement.GetProperty("detail").GetString().Should().Be(expectedDetail);
+
+        // 3. Cross-site subject probe omitting site_code ignores masked Enrollment + inferred StudySite so it matches an absent subject.
+        using var crossSiteSubjectDoc = await ReadJsonAsync(
+            site01Client,
+            "/api/v1/kernel/locks/in-force?study_code=STD-VISIBLE-MARKER&subject_code=SUBJ-SITE02-MARKER",
+            ct);
+        using var absentSubjectDoc = await ReadJsonAsync(
+            site01Client,
+            "/api/v1/kernel/locks/in-force?study_code=STD-VISIBLE-MARKER&subject_code=SUBJ-ABSENT-MARKER",
+            ct);
+        crossSiteSubjectDoc.RootElement.GetProperty("study_exists").GetBoolean().Should().BeTrue();
+        crossSiteSubjectDoc.RootElement.GetProperty("locked").GetBoolean().Should().BeFalse();
+        crossSiteSubjectDoc.RootElement.GetProperty("lock_kind").ValueKind.Should().Be(JsonValueKind.Null);
+        crossSiteSubjectDoc.RootElement.GetProperty("scope_kind").ValueKind.Should().Be(JsonValueKind.Null);
+        crossSiteSubjectDoc.RootElement.GetRawText().Should().Be(absentSubjectDoc.RootElement.GetRawText());
+
+        // Probing by enrollment_id without site_code likewise ignores the masked cross-site enrollment.
+        using var crossSiteEnrollmentDoc = await ReadJsonAsync(
+            site01Client,
+            $"/api/v1/kernel/locks/in-force?study_code=STD-VISIBLE-MARKER&enrollment_id={fixture.SubjSite02Id.Value:D}",
+            ct);
+        crossSiteEnrollmentDoc.RootElement.GetProperty("locked").GetBoolean().Should().BeFalse();
+
+        // When the visible study itself is Frozen while SUBJ-SITE02-MARKER is Locked, only the visible study Freeze is reported.
+        _locks.ActiveLocks.Add((fixture.VisibleStudyId, new ScopeWriteLockCandidate(LockKind.Frozen, NodeRef.For(fixture.VisibleStudyId))));
+        using var studyFrozenCrossSiteDoc = await ReadJsonAsync(
+            site01Client,
+            "/api/v1/kernel/locks/in-force?study_code=STD-VISIBLE-MARKER&subject_code=SUBJ-SITE02-MARKER",
+            ct);
+        studyFrozenCrossSiteDoc.RootElement.GetProperty("locked").GetBoolean().Should().BeTrue();
+        studyFrozenCrossSiteDoc.RootElement.GetProperty("lock_kind").GetString().Should().Be("Frozen");
+        studyFrozenCrossSiteDoc.RootElement.GetProperty("scope_kind").GetString().Should().Be(NodeKinds.Study);
+    }
+
+    /// <summary>
+    /// Over Kestrel, an authorized site coordinator receives 200 OK when checking a new <c>subject_code</c> before
+    /// enrollment creation and sees locks covering their own site, automation agents enforce <see cref="INodeVisibility"/>,
+    /// and verified <c>svc:</c> <c>SYSTEM_SERVICE</c> background consumers (<c>svc:econsent-consumer</c>,
+    /// <c>svc:execution-db-seeder</c>) evaluate tenant-wide covering locks while spoofed or non-system callers cannot.
+    /// </summary>
+    [Fact]
+    public async Task LocksInForce_OverKestrel_PreservesAuthorizedCoordinatorPreEnrollmentChecks_EnforcesAgents_AndAllowsVerifiedSystemServices()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var fixture = SeedLockVisibilityScenario();
+        var scopedAgentHolder = new MutableCurrentActor();
+        using var host = CreateKestrelHost(hostVisibility: true, overrideActor: scopedAgentHolder);
+        using var site01Client = host.CreateKestrelSignedClient(
+            TestSecurityContext.Identity(fixture.Site01Coordinator.Id, "CRC"));
+
+        // 1. Authorized SITE-01 coordinator checking a brand-new subject_code before enrollment creation gets 200 OK (unlocked).
+        using (var preEnrollUnlocked = await ReadJsonAsync(
+            site01Client,
+            "/api/v1/kernel/locks/in-force?study_code=STD-VISIBLE-MARKER&site_code=SITE-01&subject_code=SUBJ-NEW-MARKER",
+            ct))
+        {
+            preEnrollUnlocked.RootElement.GetProperty("study_exists").GetBoolean().Should().BeTrue();
+            preEnrollUnlocked.RootElement.GetProperty("locked").GetBoolean().Should().BeFalse();
+        }
+
+        // Freeze SITE-01 -> pre-enrollment check and own-site subject check (without site_code) both report Frozen on study_site.
+        _locks.ActiveLocks.Add((fixture.VisibleStudyId, new ScopeWriteLockCandidate(LockKind.Frozen, NodeRef.For(fixture.Site01Id))));
+        using (var preEnrollFrozen = await ReadJsonAsync(
+            site01Client,
+            "/api/v1/kernel/locks/in-force?study_code=STD-VISIBLE-MARKER&site_code=SITE-01&subject_code=SUBJ-NEW-MARKER",
+            ct))
+        {
+            preEnrollFrozen.RootElement.GetProperty("locked").GetBoolean().Should().BeTrue();
+            preEnrollFrozen.RootElement.GetProperty("lock_kind").GetString().Should().Be("Frozen");
+            preEnrollFrozen.RootElement.GetProperty("scope_kind").GetString().Should().Be(NodeKinds.StudySite);
+        }
+
+        using (var ownSubjectFrozen = await ReadJsonAsync(
+            site01Client,
+            "/api/v1/kernel/locks/in-force?study_code=STD-VISIBLE-MARKER&subject_code=SUBJ-SITE01-MARKER",
+            ct))
+        {
+            ownSubjectFrozen.RootElement.GetProperty("locked").GetBoolean().Should().BeTrue();
+            ownSubjectFrozen.RootElement.GetProperty("lock_kind").GetString().Should().Be("Frozen");
+            ownSubjectFrozen.RootElement.GetProperty("scope_kind").GetString().Should().Be(NodeKinds.StudySite);
+        }
+
+        // 2. Automation agent callers: external agent: subject (even claiming SYSTEM_SERVICE) cannot bypass INodeVisibility,
+        // and an internal AutomationAgent acting for SITE-01 coordinator is constrained to SITE-01 visibility (K-AI-6).
+        using var externalAgentClient = host.CreateKestrelSignedClient(
+            TestSecurityContext.Identity("agent:triage-bot", "SYSTEM_SERVICE"));
+        (await externalAgentClient.GetAsync(
+            new Uri("/api/v1/kernel/locks/in-force?study_code=STD-CONFIDENTIAL-MARKER", UriKind.Relative), ct))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await externalAgentClient.GetAsync(
+            new Uri("/api/v1/kernel/locks/in-force?study_code=STD-VISIBLE-MARKER", UriKind.Relative), ct))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+
+        var agentIdentity = Actor.AutomationAgent("triage-bot");
+        var capability = KernelCommandCatalog.Kernel.Entries.First(e => e.InCatalogue).Capability.Token;
+        _authority.Grants.Add(Grant.Issue(
+            GrantId.New(), Tenant, agentIdentity, capability, null, AuthorityScope.StudySite(fixture.Site01Id),
+            GrantedFrom, null, withGrantOption: false, parentGrantId: null, Actor.Person("study-admin"), GrantedFrom).Value!);
+        scopedAgentHolder.Override = agentIdentity.ActingFor(fixture.Site01Coordinator);
+        try
+        {
+            (await externalAgentClient.GetAsync(
+                new Uri("/api/v1/kernel/locks/in-force?study_code=STD-CONFIDENTIAL-MARKER", UriKind.Relative), ct))
+                .StatusCode.Should().Be(HttpStatusCode.NotFound);
+            (await externalAgentClient.GetAsync(
+                new Uri("/api/v1/kernel/locks/in-force?study_code=STD-VISIBLE-MARKER&site_code=SITE-03", UriKind.Relative), ct))
+                .StatusCode.Should().Be(HttpStatusCode.NotFound);
+
+            using var agentCrossSiteSubject = await ReadJsonAsync(
+                externalAgentClient,
+                "/api/v1/kernel/locks/in-force?study_code=STD-VISIBLE-MARKER&subject_code=SUBJ-SITE02-MARKER",
+                ct);
+            agentCrossSiteSubject.RootElement.GetProperty("locked").GetBoolean().Should().BeFalse();
+
+            using var agentOwnSite = await ReadJsonAsync(
+                externalAgentClient,
+                "/api/v1/kernel/locks/in-force?study_code=STD-VISIBLE-MARKER&site_code=SITE-01",
+                ct);
+            agentOwnSite.RootElement.GetProperty("locked").GetBoolean().Should().BeTrue();
+        }
+        finally
+        {
+            scopedAgentHolder.Override = null;
+        }
+
+        // 3. Spoofing defense: svc: without SYSTEM_SERVICE role and a person claiming SYSTEM_SERVICE both receive 404.
+        using var unprivilegedSvcClient = host.CreateKestrelSignedClient(
+            TestSecurityContext.Identity("svc:etl", "Service"));
+        (await unprivilegedSvcClient.GetAsync(
+            new Uri("/api/v1/kernel/locks/in-force?study_code=STD-CONFIDENTIAL-MARKER", UriKind.Relative), ct))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+
+        using var spoofedPersonClient = host.CreateKestrelSignedClient(
+            TestSecurityContext.Identity("stranger@sponsor.test", "SYSTEM_SERVICE"));
+        (await spoofedPersonClient.GetAsync(
+            new Uri("/api/v1/kernel/locks/in-force?study_code=STD-CONFIDENTIAL-MARKER", UriKind.Relative), ct))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+
+        // 4. Verified svc:econsent-consumer and svc:execution-db-seeder in role SYSTEM_SERVICE evaluate tenant-wide locks via HttpKernelLockGuard.
+        using var rawKestrelClient = host.CreateUnsignedKestrelClient();
+        var guard = new HttpKernelLockGuard(
+            rawKestrelClient,
+            new HttpContextAccessor(),
+            new StaticGatewayOptionsMonitor(TestSecurityContext.GatewaySecret),
+            host.Services.GetRequiredService<Cadence.Kernel.Time.IClock>());
+
+        foreach (var serviceAccount in new[] { ServiceAccounts.EConsentConsumer, ServiceAccounts.DbSeeder })
+        {
+            var confidentialGuard = await guard.EnsureUnlockedForServiceAsync(
+                serviceAccount,
+                TestSecurityContext.TenantCode,
+                "STD-CONFIDENTIAL-MARKER",
+                cancellationToken: ct);
+            confidentialGuard.IsFailure.Should().BeTrue(serviceAccount.UserId);
+            confidentialGuard.Error!.Code.Should().Be(HttpKernelLockGuard.ObservationLockedCode);
+
+            var site03Guard = await guard.EnsureUnlockedForServiceAsync(
+                serviceAccount,
+                TestSecurityContext.TenantCode,
+                "STD-VISIBLE-MARKER",
+                siteCode: "SITE-03",
+                cancellationToken: ct);
+            site03Guard.IsFailure.Should().BeTrue(serviceAccount.UserId);
+            site03Guard.Error!.Code.Should().Be(HttpKernelLockGuard.ObservationLockedCode);
+
+            var subj02Guard = await guard.EnsureUnlockedForServiceAsync(
+                serviceAccount,
+                TestSecurityContext.TenantCode,
+                "STD-VISIBLE-MARKER",
+                subjectCode: "SUBJ-SITE02-MARKER",
+                cancellationToken: ct);
+            subj02Guard.IsFailure.Should().BeTrue(serviceAccount.UserId);
+            subj02Guard.Error!.Code.Should().Be(HttpKernelLockGuard.ObservationLockedCode);
+
+            var missingStudyGuard = await guard.EnsureUnlockedForServiceAsync(
+                serviceAccount,
+                TestSecurityContext.TenantCode,
+                "STD-NONEXISTENT-MARKER",
+                cancellationToken: ct);
+            missingStudyGuard.IsSuccess.Should().BeTrue(serviceAccount.UserId);
+        }
+    }
+
+    private LockVisibilityFixture SeedLockVisibilityScenario()
+    {
+        var confidentialStudyId = StudyId.New();
+        var visibleStudyId = StudyId.New();
+        var site01Id = StudySiteId.New();
+        var site02Id = StudySiteId.New();
+        var site03Id = StudySiteId.New();
+        var subjSite01Id = EnrollmentId.New();
+        var subjSite02Id = EnrollmentId.New();
+        var site01Coordinator = Actor.Person("crc.site01@site.test");
+
+        _locks.StudiesByCode["STD-CONFIDENTIAL-MARKER"] = confidentialStudyId;
+        _locks.StudiesByCode["STD-VISIBLE-MARKER"] = visibleStudyId;
+        _locks.SitesByCode[(visibleStudyId, "SITE-01")] = site01Id;
+        _locks.SitesByCode[(visibleStudyId, "SITE-02")] = site02Id;
+        _locks.SitesByCode[(visibleStudyId, "SITE-03")] = site03Id;
+        _locks.EnrollmentsBySubjectCode[(visibleStudyId, "SUBJ-SITE01-MARKER")] = (subjSite01Id, site01Id);
+        _locks.EnrollmentsBySubjectCode[(visibleStudyId, "SUBJ-SITE02-MARKER")] = (subjSite02Id, site02Id);
+        _locks.EnrollmentsById[(visibleStudyId, subjSite01Id.Value)] = (subjSite01Id, site01Id);
+        _locks.EnrollmentsById[(visibleStudyId, subjSite02Id.Value)] = (subjSite02Id, site02Id);
+
+        _locks.ActiveLocks.Add((confidentialStudyId, new ScopeWriteLockCandidate(LockKind.Locked, NodeRef.For(confidentialStudyId))));
+        _locks.ActiveLocks.Add((visibleStudyId, new ScopeWriteLockCandidate(LockKind.Locked, NodeRef.For(site02Id))));
+        _locks.ActiveLocks.Add((visibleStudyId, new ScopeWriteLockCandidate(LockKind.Locked, NodeRef.For(site03Id))));
+        _locks.ActiveLocks.Add((visibleStudyId, new ScopeWriteLockCandidate(LockKind.Locked, NodeRef.For(subjSite02Id))));
+
+        var sponsorOrgId = OrganizationId.New();
+        _authority.Paths[NodeRef.For(confidentialStudyId)] = new ScopePath(Organization: sponsorOrgId, Study: confidentialStudyId);
+        _authority.Paths[NodeRef.For(visibleStudyId)] = new ScopePath(Organization: sponsorOrgId, Study: visibleStudyId);
+        _authority.Paths[NodeRef.For(site01Id)] = new ScopePath(Organization: sponsorOrgId, Study: visibleStudyId, StudySite: site01Id);
+        _authority.Paths[NodeRef.For(site02Id)] = new ScopePath(Organization: sponsorOrgId, Study: visibleStudyId, StudySite: site02Id);
+        _authority.Paths[NodeRef.For(site03Id)] = new ScopePath(Organization: sponsorOrgId, Study: visibleStudyId, StudySite: site03Id);
+        _authority.Paths[NodeRef.For(subjSite01Id)] = new ScopePath(Organization: sponsorOrgId, Study: visibleStudyId, StudySite: site01Id);
+        _authority.Paths[NodeRef.For(subjSite02Id)] = new ScopePath(Organization: sponsorOrgId, Study: visibleStudyId, StudySite: site02Id);
+
+        var capability = KernelCommandCatalog.Kernel.Entries.First(e => e.InCatalogue).Capability.Token;
+        _authority.Grants.Add(Grant.Issue(
+            GrantId.New(), Tenant, site01Coordinator, capability, null, AuthorityScope.StudySite(site01Id),
+            GrantedFrom, null, withGrantOption: false, parentGrantId: null, Actor.Person("study-admin"), GrantedFrom).Value!);
+
+        return new LockVisibilityFixture(
+            confidentialStudyId,
+            visibleStudyId,
+            site01Id,
+            site02Id,
+            site03Id,
+            subjSite01Id,
+            subjSite02Id,
+            site01Coordinator);
+    }
+
+    private KestrelLockHostFactory CreateKestrelHost(bool hostVisibility, MutableCurrentActor? overrideActor = null)
+    {
+        _directory.Tenants[TestSecurityContext.TenantCode] = Tenant;
+        var factory = new KestrelLockHostFactory(this, hostVisibility, overrideActor);
+        _factories.Add(factory);
+        return factory;
+    }
+
+    private sealed record LockVisibilityFixture(
+        StudyId ConfidentialStudyId,
+        StudyId VisibleStudyId,
+        StudySiteId Site01Id,
+        StudySiteId Site02Id,
+        StudySiteId Site03Id,
+        EnrollmentId SubjSite01Id,
+        EnrollmentId SubjSite02Id,
+        Actor Site01Coordinator);
+
+    private sealed class MutableCurrentActor : ICurrentActor
+    {
+        public Actor? Override { get; set; }
+
+        public Actor? Actor => Override;
+    }
+
+    private sealed class DelegatingCurrentActor(ICurrentActor inner, MutableCurrentActor overrideHolder) : ICurrentActor
+    {
+        public Actor? Actor => overrideHolder.Actor ?? inner.Actor;
+    }
+
+    private sealed class StaticGatewayOptionsMonitor(string gatewaySecret) : IOptionsMonitor<GatewayAuthenticationOptions>
+    {
+        public GatewayAuthenticationOptions CurrentValue { get; } = new() { GatewaySecret = gatewaySecret };
+
+        public GatewayAuthenticationOptions Get(string? name) => CurrentValue;
+
+        public IDisposable? OnChange(Action<GatewayAuthenticationOptions, string?> listener) => null;
+    }
+
+    private sealed class KestrelLockHostFactory(
+        KernelApiHostTests owner,
+        bool hostVisibility,
+        MutableCurrentActor? overrideActor) : WebApplicationFactory<Cadence.Kernel.Host.Program>
+    {
+        private bool _started;
+
+        public HttpClient CreateKestrelSignedClient(GatewayIdentity identity)
+        {
+            EnsureStarted();
+            var handler = new TestSecurityContext.GatewaySigningHandler(identity)
+            {
+                InnerHandler = new SocketsHttpHandler(),
+            };
+            return new HttpClient(handler, disposeHandler: true)
+            {
+                BaseAddress = ClientOptions.BaseAddress,
+            };
+        }
+
+        public HttpClient CreateUnsignedKestrelClient()
+        {
+            EnsureStarted();
+            return new HttpClient(new SocketsHttpHandler(), disposeHandler: true)
+            {
+                BaseAddress = ClientOptions.BaseAddress,
+            };
+        }
+
+        protected override void ConfigureWebHost(IWebHostBuilder builder)
+        {
+            builder.UseTestGatewaySecret().UseTestBiometricLivenessKey().UseTestPostgresConnectionString();
+            builder.ConfigureServices(services =>
+            {
+                owner.ConfigureFakeServices(services, hostVisibility, dropClaim: null);
+                var persistenceJobs = services
+                    .Where(d => d.ServiceType == typeof(IHostedService)
+                        && d.ImplementationType?.Namespace?.StartsWith("Cadence.Kernel.Persistence", StringComparison.Ordinal) == true)
+                    .ToList();
+                foreach (var job in persistenceJobs)
+                {
+                    services.Remove(job);
+                }
+
+                if (overrideActor is not null)
+                {
+                    var innerDescriptor = services.Single(d => d.ServiceType == typeof(ICurrentActor));
+                    services.Remove(innerDescriptor);
+                    services.AddScoped<ICurrentActor>(sp =>
+                    {
+                        var inner = (ICurrentActor)ActivatorUtilities.CreateInstance(sp, innerDescriptor.ImplementationType!);
+                        return new DelegatingCurrentActor(inner, overrideActor);
+                    });
+                }
+            });
+        }
+
+        private void EnsureStarted()
+        {
+            if (_started)
+            {
+                return;
+            }
+
+            UseKestrel(0);
+            StartServer();
+            _started = true;
+        }
+    }
+
     private WebApplicationFactory<Cadence.Kernel.Host.Program> Factory(
         bool knownTenant = true, string? dropClaim = null, bool hostVisibility = false)
     {
@@ -1293,59 +1700,64 @@ public sealed class KernelApiHostTests : IDisposable
         var factory = new WebApplicationFactory<Cadence.Kernel.Host.Program>().WithWebHostBuilder(builder =>
         {
             builder.UseTestGatewaySecret().UseTestBiometricLivenessKey().UseTestPostgresConnectionString();
-            builder.ConfigureServices(services =>
-            {
-                services.RemoveAll<IKernelNavigator>();
-                services.AddSingleton<IKernelNavigator>(_navigator);
-                services.RemoveAll<IKernelSearch>();
-                services.AddSingleton<IKernelSearch>(_search);
-                services.RemoveAll<ITenantDirectory>();
-                services.AddSingleton<ITenantDirectory>(_directory);
-                services.RemoveAll<IProtocolVersionReader>();
-                services.AddSingleton<IProtocolVersionReader>(_protocol);
-                services.RemoveAll<IProposalReader>();
-                services.AddSingleton<IProposalReader>(_proposals);
-                services.RemoveAll<IAuthorityStore>();
-                services.AddSingleton<IAuthorityStore>(_authority);
-                services.RemoveAll<IKernelLineage>();
-                services.AddSingleton<IKernelLineage>(_lineage);
-                services.RemoveAll<IAmendmentImpact>();
-                services.AddSingleton<IAmendmentImpact>(_lineage);
-                services.RemoveAll<IActivityStore>();
-                services.AddSingleton<IActivityStore>(_activity);
-                services.RemoveAll<IEnrollmentDirectory>();
-                services.AddSingleton<IEnrollmentDirectory>(_enrollments);
-                services.RemoveAll<IStudyDirectory>();
-                services.AddSingleton<IStudyDirectory>(_studies);
-                services.RemoveAll<IValidationFindings>();
-                services.AddSingleton<IValidationFindings>(_findings);
-                services.RemoveAll<ISimulationInputs>();
-                services.AddSingleton<ISimulationInputs>(_simulationInputs);
-                services.RemoveAll<IWorkQueues>();
-                services.AddSingleton<IWorkQueues>(_workQueues);
-                services.RemoveAll<IWorkItemTargetResolver>();
-                services.AddSingleton<IWorkItemTargetResolver>(_workItemTargets);
-                services.RemoveAll<ILockRecords>();
-                services.AddSingleton<ILockRecords>(_locks);
-
-                // The activity projector reads the database the host is configured with, which these tests never open.
-                var projector = services.Single(d => d.ServiceType == typeof(IHostedService) && d.ImplementationType?.Name == "KernelActivityProjectionService");
-                services.Remove(projector);
-
-                if (!hostVisibility)
-                {
-                    services.RemoveAll<INodeVisibility>();
-                    services.AddSingleton<INodeVisibility>(_visibility);
-                }
-
-                if (dropClaim is not null)
-                {
-                    services.AddSingleton<Microsoft.AspNetCore.Authentication.IClaimsTransformation>(new DropClaim(dropClaim));
-                }
-            });
+            builder.ConfigureServices(services => ConfigureFakeServices(services, hostVisibility, dropClaim));
         });
         _factories.Add(factory);
         return factory;
+    }
+
+    private void ConfigureFakeServices(IServiceCollection services, bool hostVisibility, string? dropClaim)
+    {
+        services.RemoveAll<IKernelNavigator>();
+        services.AddSingleton<IKernelNavigator>(_navigator);
+        services.RemoveAll<IKernelSearch>();
+        services.AddSingleton<IKernelSearch>(_search);
+        services.RemoveAll<ITenantDirectory>();
+        services.AddSingleton<ITenantDirectory>(_directory);
+        services.RemoveAll<IProtocolVersionReader>();
+        services.AddSingleton<IProtocolVersionReader>(_protocol);
+        services.RemoveAll<IProposalReader>();
+        services.AddSingleton<IProposalReader>(_proposals);
+        services.RemoveAll<IAuthorityStore>();
+        services.AddSingleton<IAuthorityStore>(_authority);
+        services.RemoveAll<IKernelLineage>();
+        services.AddSingleton<IKernelLineage>(_lineage);
+        services.RemoveAll<IAmendmentImpact>();
+        services.AddSingleton<IAmendmentImpact>(_lineage);
+        services.RemoveAll<IActivityStore>();
+        services.AddSingleton<IActivityStore>(_activity);
+        services.RemoveAll<IEnrollmentDirectory>();
+        services.AddSingleton<IEnrollmentDirectory>(_enrollments);
+        services.RemoveAll<IStudyDirectory>();
+        services.AddSingleton<IStudyDirectory>(_studies);
+        services.RemoveAll<IValidationFindings>();
+        services.AddSingleton<IValidationFindings>(_findings);
+        services.RemoveAll<ISimulationInputs>();
+        services.AddSingleton<ISimulationInputs>(_simulationInputs);
+        services.RemoveAll<IWorkQueues>();
+        services.AddSingleton<IWorkQueues>(_workQueues);
+        services.RemoveAll<IWorkItemTargetResolver>();
+        services.AddSingleton<IWorkItemTargetResolver>(_workItemTargets);
+        services.RemoveAll<ILockRecords>();
+        services.AddSingleton<ILockRecords>(_locks);
+
+        // The activity projector reads the database the host is configured with, which these tests never open.
+        var projector = services.SingleOrDefault(d => d.ServiceType == typeof(IHostedService) && d.ImplementationType?.Name == "KernelActivityProjectionService");
+        if (projector is not null)
+        {
+            services.Remove(projector);
+        }
+
+        if (!hostVisibility)
+        {
+            services.RemoveAll<INodeVisibility>();
+            services.AddSingleton<INodeVisibility>(_visibility);
+        }
+
+        if (dropClaim is not null)
+        {
+            services.AddSingleton<Microsoft.AspNetCore.Authentication.IClaimsTransformation>(new DropClaim(dropClaim));
+        }
     }
 
     private static async Task<JsonDocument> ReadJsonAsync(HttpClient client, string path, CancellationToken ct)
@@ -1373,6 +1785,8 @@ public sealed class KernelApiHostTests : IDisposable
     {
         public List<Grant> Grants { get; } = [];
 
+        public Dictionary<NodeRef, ScopePath> Paths { get; } = [];
+
         public List<Actor> Readers { get; } = [];
 
         public Task<IReadOnlyList<Grant>> GrantsHeldAsync(TenantId tenant, Actor actor, CancellationToken cancellationToken)
@@ -1388,8 +1802,32 @@ public sealed class KernelApiHostTests : IDisposable
         public Task<IReadOnlyList<Role>> RolesAsync(TenantId tenant, IReadOnlyCollection<RoleId> roles, CancellationToken cancellationToken) =>
             Task.FromResult<IReadOnlyList<Role>>([]);
 
-        public Task<ScopePath> PathOfAsync(TenantId tenant, NodeRef resource, CancellationToken cancellationToken) =>
-            Task.FromResult(ScopePath.TenantWide);
+        public Task<ScopePath> PathOfAsync(TenantId tenant, NodeRef resource, CancellationToken cancellationToken)
+        {
+            var unversioned = resource.Unversioned();
+            if (Paths.TryGetValue(unversioned, out var explicitPath))
+            {
+                return Task.FromResult(explicitPath);
+            }
+
+            if (unversioned.Kind == NodeKinds.Grant
+                && Grants.SingleOrDefault(g => g.Id == GrantId.FromGuid(unversioned.Id)) is { Scope.TargetId: { } targetGuid } grant)
+            {
+                if (grant.Scope.Level == ScopeLevel.StudySite
+                    && Paths.TryGetValue(NodeRef.For(StudySiteId.FromGuid(targetGuid)), out var sitePath))
+                {
+                    return Task.FromResult(sitePath);
+                }
+
+                if (grant.Scope.Level is ScopeLevel.Study or ScopeLevel.StudyCountry
+                    && Paths.TryGetValue(NodeRef.For(StudyId.FromGuid(targetGuid)), out var studyPath))
+                {
+                    return Task.FromResult(studyPath);
+                }
+            }
+
+            return Task.FromResult(ScopePath.TenantWide);
+        }
 
         public Task<IReadOnlyList<ScopePath>> StudySitePathsAsync(TenantId tenant, NodeRef node, CancellationToken cancellationToken) =>
             Task.FromResult<IReadOnlyList<ScopePath>>([]);
@@ -1909,8 +2347,124 @@ public sealed class KernelApiHostTests : IDisposable
 
     private sealed class FakeLockRecords : ILockRecords
     {
+        public Dictionary<string, StudyId> StudiesByCode { get; } = new(StringComparer.OrdinalIgnoreCase)
+        {
+            ["CAD-101"] = StudyId.FromGuid(Study.Id),
+        };
+
+        public Dictionary<(StudyId Study, string SiteCode), StudySiteId> SitesByCode { get; } = [];
+
+        public Dictionary<(StudyId Study, string SubjectCode), (EnrollmentId EnrollmentId, StudySiteId StudySiteId)> EnrollmentsBySubjectCode { get; } = [];
+
+        public Dictionary<(StudyId Study, Guid EnrollmentGuid), (EnrollmentId EnrollmentId, StudySiteId StudySiteId)> EnrollmentsById { get; } = [];
+
+        public List<(StudyId Study, ScopeWriteLockCandidate Candidate)> ActiveLocks { get; } = [];
+
+        public List<(TenantId Tenant, string StudyCodeOrId, string? SiteCodeOrId, string? SubjectCode, Guid? EnrollmentId)> Checks { get; } = [];
+
         public Task<StudyLockEntry?> FindAsync(TenantId tenant, AssertionId lockId, CancellationToken cancellationToken) =>
             Task.FromResult<StudyLockEntry?>(null);
+
+        public Task<ScopeWriteLockCheck> CheckScopeWriteLockAsync(
+            TenantId tenant,
+            string studyCodeOrId,
+            string? siteCodeOrId = null,
+            string? subjectCode = null,
+            Guid? enrollmentId = null,
+            CancellationToken cancellationToken = default)
+        {
+            Checks.Add((tenant, studyCodeOrId, siteCodeOrId, subjectCode, enrollmentId));
+            if (string.IsNullOrWhiteSpace(studyCodeOrId))
+            {
+                return Task.FromResult(new ScopeWriteLockCheck(StudyExists: false, Locked: false, LockKind: null, ScopeKind: null));
+            }
+
+            var trimmedStudy = studyCodeOrId.Trim();
+            StudyId? resolvedStudy = null;
+            if (NodeRef.TryParse(trimmedStudy, out var studyNode) && studyNode.Kind == NodeKinds.Study)
+            {
+                var candidate = StudyId.FromGuid(studyNode.Id);
+                if (StudiesByCode.Values.Contains(candidate))
+                {
+                    resolvedStudy = candidate;
+                }
+            }
+            else if (StudiesByCode.TryGetValue(trimmedStudy, out var byCode))
+            {
+                resolvedStudy = byCode;
+            }
+
+            if (resolvedStudy is not { } foundStudy)
+            {
+                return Task.FromResult(new ScopeWriteLockCheck(StudyExists: false, Locked: false, LockKind: null, ScopeKind: null));
+            }
+
+            var hasExplicitSite = !string.IsNullOrWhiteSpace(siteCodeOrId);
+            StudySiteId? resolvedSiteId = null;
+            if (hasExplicitSite && SitesByCode.TryGetValue((foundStudy, siteCodeOrId!.Trim()), out var siteId))
+            {
+                resolvedSiteId = siteId;
+            }
+
+            EnrollmentId? resolvedEnrollmentId = null;
+            StudySiteId? enrollmentStudySiteId = null;
+            if (enrollmentId is { } givenGuid
+                && givenGuid != Guid.Empty
+                && EnrollmentsById.TryGetValue((foundStudy, givenGuid), out var byGuid))
+            {
+                resolvedEnrollmentId = byGuid.EnrollmentId;
+                enrollmentStudySiteId = byGuid.StudySiteId;
+                if (!hasExplicitSite)
+                {
+                    resolvedSiteId = byGuid.StudySiteId;
+                }
+            }
+            else if (!string.IsNullOrWhiteSpace(subjectCode)
+                && EnrollmentsBySubjectCode.TryGetValue((foundStudy, subjectCode.Trim()), out var bySubject))
+            {
+                resolvedEnrollmentId = bySubject.EnrollmentId;
+                enrollmentStudySiteId = bySubject.StudySiteId;
+                if (!hasExplicitSite)
+                {
+                    resolvedSiteId = bySubject.StudySiteId;
+                }
+            }
+
+            var coveringScopes = new HashSet<NodeRef> { NodeRef.For(foundStudy) };
+            if (resolvedSiteId is { } ssid)
+            {
+                coveringScopes.Add(NodeRef.For(ssid));
+            }
+
+            if (enrollmentStudySiteId is { } esid)
+            {
+                coveringScopes.Add(NodeRef.For(esid));
+            }
+
+            if (resolvedEnrollmentId is { } eid)
+            {
+                coveringScopes.Add(NodeRef.For(eid));
+            }
+
+            var activeCandidates = ActiveLocks
+                .Where(l => l.Study == foundStudy && coveringScopes.Contains(l.Candidate.Scope.Unversioned()))
+                .Select(l => l.Candidate)
+                .OrderByDescending(c => c.Kind == LockKind.Locked)
+                .ThenBy(c => LockScopes.OrderOf(c.Scope.Kind))
+                .ToList();
+            var top = activeCandidates.FirstOrDefault();
+
+            return Task.FromResult(new ScopeWriteLockCheck(
+                StudyExists: true,
+                Locked: top is not null,
+                LockKind: top?.Kind,
+                ScopeKind: top?.Scope.Kind,
+                StudyId: foundStudy,
+                StudySiteId: resolvedSiteId,
+                EnrollmentId: resolvedEnrollmentId,
+                CoveringLocks: activeCandidates,
+                EnrollmentStudySiteId: enrollmentStudySiteId));
+        }
 
         public Task<StudyLockList?> ListByStudyAsync(
             TenantId tenant,

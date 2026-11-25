@@ -77,12 +77,96 @@ public interface ILockRecords
         Task.FromResult(new ScopeWriteLockCheck(StudyExists: false, Locked: false, LockKind: null, ScopeKind: null));
 }
 
+/// <summary>An active write-denying lock assertion candidate covering a resolved scope.</summary>
+/// <param name="Kind">Whether the active assertion is <see cref="LockKind.Frozen"/> or <see cref="LockKind.Locked"/>.</param>
+/// <param name="Scope">The unversioned locked target node (<c>study</c>, <c>study_site</c>, or <c>enrollment</c>).</param>
+public sealed record ScopeWriteLockCandidate(
+    LockKind Kind,
+    NodeRef Scope);
+
 /// <summary>Result of checking whether any active write-denying lock covers a study, site, or enrollment scope.</summary>
+/// <param name="StudyExists">True when the requested study exists in the tenant.</param>
+/// <param name="Locked">True when at least one active write-denying assertion covers the evaluated scopes.</param>
+/// <param name="LockKind">The highest-precedence active lock kind (<see cref="LockKind.Locked"/> before <see cref="LockKind.Frozen"/>), or null when unlocked.</param>
+/// <param name="ScopeKind">The target scope kind of the highest-precedence active lock, or null when unlocked.</param>
+/// <param name="StudyId">The resolved study identifier when <paramref name="StudyExists"/> is true; otherwise null.</param>
+/// <param name="StudySiteId">The resolved study-site identifier (from explicit <c>site_code</c> when supplied, or inferred from the matched enrollment when <c>site_code</c> was omitted); otherwise null.</param>
+/// <param name="EnrollmentId">The resolved enrollment identifier when <c>enrollment_id</c> or <c>subject_code</c> matched an enrollment in the study; otherwise null.</param>
+/// <param name="CoveringLocks">All active covering lock candidates ordered by precedence (<see cref="LockKind.Locked"/> before <see cref="LockKind.Frozen"/>, then widest scope to narrowest).</param>
+/// <param name="EnrollmentStudySiteId">The governing study-site identifier of <paramref name="EnrollmentId"/> when an enrollment matched; otherwise null.</param>
 public sealed record ScopeWriteLockCheck(
     bool StudyExists,
     bool Locked,
     LockKind? LockKind,
-    string? ScopeKind);
+    string? ScopeKind,
+    StudyId? StudyId = null,
+    StudySiteId? StudySiteId = null,
+    EnrollmentId? EnrollmentId = null,
+    IReadOnlyList<ScopeWriteLockCandidate>? CoveringLocks = null,
+    StudySiteId? EnrollmentStudySiteId = null)
+{
+    /// <summary>
+    /// Computes a <see cref="ScopeWriteLockCheck"/> over the subset of <see cref="CoveringLocks"/> whose unversioned
+    /// target <see cref="NodeRef"/> belongs to <paramref name="allowedScopes"/>.
+    /// </summary>
+    public ScopeWriteLockCheck FilterScopes(IReadOnlySet<NodeRef> allowedScopes)
+    {
+        ArgumentNullException.ThrowIfNull(allowedScopes);
+        if (!StudyExists)
+        {
+            return new ScopeWriteLockCheck(StudyExists: false, Locked: false, LockKind: null, ScopeKind: null);
+        }
+
+        if (CoveringLocks is not null)
+        {
+            ScopeWriteLockCandidate? active = null;
+            foreach (var candidate in CoveringLocks)
+            {
+                if (!allowedScopes.Contains(candidate.Scope.Unversioned()))
+                {
+                    continue;
+                }
+
+                if (active is null || Precedes(candidate, active))
+                {
+                    active = candidate;
+                }
+            }
+
+            return active is not null
+                ? this with { Locked = true, LockKind = active.Kind, ScopeKind = active.Scope.Kind }
+                : this with { Locked = false, LockKind = null, ScopeKind = null };
+        }
+
+        if (!Locked || LockKind is null || ScopeKind is null)
+        {
+            return this with { Locked = false, LockKind = null, ScopeKind = null };
+        }
+
+        var fallbackTarget = ScopeKind switch
+        {
+            NodeKinds.Study when StudyId is { } sid => NodeRef.For(sid),
+            NodeKinds.StudySite when StudySiteId is { } siteId => NodeRef.For(siteId),
+            NodeKinds.Enrollment when EnrollmentId is { } enrollmentId => NodeRef.For(enrollmentId),
+            _ => null,
+        };
+        return fallbackTarget is not null && allowedScopes.Contains(fallbackTarget)
+            ? this
+            : this with { Locked = false, LockKind = null, ScopeKind = null };
+    }
+
+    private static bool Precedes(ScopeWriteLockCandidate candidate, ScopeWriteLockCandidate current)
+    {
+        var candidateHard = candidate.Kind == Evidence.LockKind.Locked;
+        var currentHard = current.Kind == Evidence.LockKind.Locked;
+        if (candidateHard != currentHard)
+        {
+            return candidateHard;
+        }
+
+        return LockScopes.OrderOf(candidate.Scope.Kind) < LockScopes.OrderOf(current.Scope.Kind);
+    }
+}
 
 /// <summary>What blocks a <see cref="LockKind.Locked"/> assertion at a target scope.</summary>
 public enum LockBlockerKind

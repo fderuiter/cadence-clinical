@@ -95,7 +95,7 @@ internal sealed class KernelLockRecords(KernelTenantDbContextFactory contexts, I
 
         var hydrated = await HydrateAsync(db, study, applied, releasesByLock, cancellationToken, validAt, knownAt).ConfigureAwait(false);
         var ordered = hydrated
-            .OrderBy(e => ScopeOrder(e.Scope.Kind))
+            .OrderBy(e => LockScopes.OrderOf(e.Scope.Kind))
             .ThenBy(e => e.LockedAt)
             .ThenBy(e => e.LockId)
             .ToList();
@@ -214,10 +214,11 @@ internal sealed class KernelLockRecords(KernelTenantDbContextFactory contexts, I
         }
 
         var study = foundStudy.Id;
+        var hasExplicitSite = !string.IsNullOrWhiteSpace(siteCodeOrId);
         StudySiteId? resolvedStudySiteId = null;
-        if (!string.IsNullOrWhiteSpace(siteCodeOrId))
+        if (hasExplicitSite)
         {
-            var trimmedSite = siteCodeOrId.Trim();
+            var trimmedSite = siteCodeOrId!.Trim();
             if (NodeRef.TryParse(trimmedSite, out var siteNode) && siteNode.Kind == NodeKinds.StudySite)
             {
                 var candidateId = StudySiteId.FromGuid(siteNode.Id);
@@ -253,6 +254,7 @@ internal sealed class KernelLockRecords(KernelTenantDbContextFactory contexts, I
         }
 
         EnrollmentId? resolvedEnrollmentId = null;
+        StudySiteId? enrollmentStudySiteId = null;
         if (enrollmentId is { } givenEnrollment && givenEnrollment != Guid.Empty)
         {
             var candidateEnrollmentId = EnrollmentId.FromGuid(givenEnrollment);
@@ -264,7 +266,11 @@ internal sealed class KernelLockRecords(KernelTenantDbContextFactory contexts, I
             if (matchedEnrollment is not null)
             {
                 resolvedEnrollmentId = matchedEnrollment.Id;
-                resolvedStudySiteId ??= matchedEnrollment.StudySiteId;
+                enrollmentStudySiteId = matchedEnrollment.StudySiteId;
+                if (!hasExplicitSite)
+                {
+                    resolvedStudySiteId = matchedEnrollment.StudySiteId;
+                }
             }
         }
         else if (!string.IsNullOrWhiteSpace(subjectCode) && SubjectCode.TryFrom(subjectCode.Trim(), out var parsedSubjectCode))
@@ -277,7 +283,11 @@ internal sealed class KernelLockRecords(KernelTenantDbContextFactory contexts, I
             if (matchedEnrollment is not null)
             {
                 resolvedEnrollmentId = matchedEnrollment.Id;
-                resolvedStudySiteId ??= matchedEnrollment.StudySiteId;
+                enrollmentStudySiteId = matchedEnrollment.StudySiteId;
+                if (!hasExplicitSite)
+                {
+                    resolvedStudySiteId = matchedEnrollment.StudySiteId;
+                }
             }
         }
 
@@ -285,6 +295,11 @@ internal sealed class KernelLockRecords(KernelTenantDbContextFactory contexts, I
         if (resolvedStudySiteId is { } ssid)
         {
             coveringScopes.Add(NodeRef.For(ssid));
+        }
+
+        if (enrollmentStudySiteId is { } esid && esid != resolvedStudySiteId)
+        {
+            coveringScopes.Add(NodeRef.For(esid));
         }
 
         if (resolvedEnrollmentId is { } eid)
@@ -303,7 +318,16 @@ internal sealed class KernelLockRecords(KernelTenantDbContextFactory contexts, I
         candidateLocks = [.. candidateLocks.Where(a => coveringScopes.Any(s => s.Kind == a.TargetKind && s.Id == a.TargetId))];
         if (candidateLocks.Count == 0)
         {
-            return new ScopeWriteLockCheck(StudyExists: true, Locked: false, LockKind: null, ScopeKind: null);
+            return new ScopeWriteLockCheck(
+                StudyExists: true,
+                Locked: false,
+                LockKind: null,
+                ScopeKind: null,
+                StudyId: study,
+                StudySiteId: resolvedStudySiteId,
+                EnrollmentId: resolvedEnrollmentId,
+                CoveringLocks: [],
+                EnrollmentStudySiteId: enrollmentStudySiteId);
         }
 
         var candidateIds = candidateLocks.Select(l => l.Id).ToList();
@@ -313,21 +337,37 @@ internal sealed class KernelLockRecords(KernelTenantDbContextFactory contexts, I
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
         var retractedSet = retracted.ToHashSet();
-        var active = candidateLocks
+        var activeCandidates = candidateLocks
             .Where(l => !retractedSet.Contains(l.Id))
             .OrderByDescending(l => l.Kind == AssertionKind.Locked)
-            .ThenBy(l => ScopeOrder(l.TargetKind))
-            .FirstOrDefault();
+            .ThenBy(l => LockScopes.OrderOf(l.TargetKind))
+            .Select(l => new ScopeWriteLockCandidate((LockKind)l.Kind, new NodeRef(l.TargetKind, l.TargetId)))
+            .ToList();
+        var active = activeCandidates.FirstOrDefault();
         if (active is null)
         {
-            return new ScopeWriteLockCheck(StudyExists: true, Locked: false, LockKind: null, ScopeKind: null);
+            return new ScopeWriteLockCheck(
+                StudyExists: true,
+                Locked: false,
+                LockKind: null,
+                ScopeKind: null,
+                StudyId: study,
+                StudySiteId: resolvedStudySiteId,
+                EnrollmentId: resolvedEnrollmentId,
+                CoveringLocks: [],
+                EnrollmentStudySiteId: enrollmentStudySiteId);
         }
 
         return new ScopeWriteLockCheck(
             StudyExists: true,
             Locked: true,
-            LockKind: (LockKind)active.Kind,
-            ScopeKind: active.TargetKind);
+            LockKind: active.Kind,
+            ScopeKind: active.Scope.Kind,
+            StudyId: study,
+            StudySiteId: resolvedStudySiteId,
+            EnrollmentId: resolvedEnrollmentId,
+            CoveringLocks: activeCandidates,
+            EnrollmentStudySiteId: enrollmentStudySiteId);
     }
 
     private static async Task<bool> ScopeExistsInStudyAsync(
@@ -1030,19 +1070,6 @@ internal sealed class KernelLockRecords(KernelTenantDbContextFactory contexts, I
         }
 
         return blinded;
-    }
-
-    private static int ScopeOrder(string kind)
-    {
-        for (var i = 0; i < LockScopes.Kinds.Count; i++)
-        {
-            if (string.Equals(LockScopes.Kinds[i], kind, StringComparison.Ordinal))
-            {
-                return i;
-            }
-        }
-
-        return LockScopes.Kinds.Count;
     }
 }
 
