@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 
 using Cadence.Cli.Services;
@@ -209,6 +210,151 @@ public sealed class RulesetServiceTests : IDisposable
 
         RulesetService.Validate(_root, writer).Should().Be(1);
         writer.ToString().Should().Contain("must fail when required job 'compliance' is skipped");
+    }
+
+    [Theory]
+    [InlineData(
+        "always() && !cancelled() && (github.event_name == 'push' || (github.event_name == 'merge_group' && needs.classify.outputs.container_scan == 'true') || (github.event_name == 'pull_request' && needs.classify.outputs.container_scan == 'true'))",
+        "github.event_name == 'pull_request'",
+        true,
+        "job 'classify' must run on both 'pull_request' and 'merge_group' events")]
+    [InlineData(
+        "always() && !cancelled() && (github.event_name == 'push' || github.event_name == 'merge_group' || (github.event_name == 'pull_request' && needs.classify.outputs.container_scan == 'true'))",
+        "github.event_name == 'pull_request' || github.event_name == 'merge_group'",
+        true,
+        "job 'container-security' must trigger on 'merge_group' only when 'needs.classify.outputs.*' is 'true'")]
+    [InlineData(
+        "always() && !cancelled() && (github.event_name == 'push' || (github.event_name == 'pull_request' && needs.classify.outputs.container_scan == 'true'))",
+        "github.event_name == 'pull_request' || github.event_name == 'merge_group'",
+        true,
+        "job 'container-security' must trigger on 'merge_group' only when 'needs.classify.outputs.*' is 'true'")]
+    [InlineData(
+        "always() && !cancelled() && ((github.event_name == 'merge_group' && needs.classify.outputs.container_scan == 'true') || (github.event_name == 'pull_request' && needs.classify.outputs.container_scan == 'true'))",
+        "github.event_name == 'pull_request' || github.event_name == 'merge_group'",
+        true,
+        "job 'container-security' must keep 'push' runs unconditional")]
+    [InlineData(
+        "always() && !cancelled() && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') || (github.event_name == 'merge_group' && needs.classify.outputs.container_scan == 'true') || (github.event_name == 'pull_request' && needs.classify.outputs.container_scan == 'true'))",
+        "github.event_name == 'pull_request' || github.event_name == 'merge_group'",
+        true,
+        "job 'container-security' must keep protected 'workflow_dispatch' refs")]
+    [InlineData(
+        "always() && !cancelled() && (github.event_name == 'push' || (github.event_name == 'merge_group' && needs.classify.outputs.container_scan == 'true') || (github.event_name == 'pull_request' && needs.classify.outputs.container_scan == 'true'))",
+        "github.event_name == 'pull_request' || github.event_name == 'merge_group'",
+        false,
+        "must allow 'skipped' for conditional job 'container-security' on both 'pull_request' and 'merge_group'")]
+    public void Validate_FailsWhenMergeGroupContainerSecurityOrCiGateParityDrifts(
+        string containerSecurityIf,
+        string classifyIf,
+        bool includeMergeGroupInCiGate,
+        string expectedError)
+    {
+        string containerGateBlock = includeMergeGroupInCiGate
+            ? DefaultContainerGateBlock
+            : """
+                        if [ "$EVENT_NAME" = "pull_request" ]; then
+                          if [ "$CONTAINER_RESULT" != "success" ] && [ "$CONTAINER_RESULT" != "skipped" ]; then exit 1; fi
+                        elif [ "$CONTAINER_RESULT" != "success" ]; then
+                          exit 1
+                        fi
+              """;
+        WriteCiWorkflow(
+            ciGateNeeds: "[unit-tests, container-security, compliance]",
+            ciGateIf: "always()",
+            checkComplianceResult: true,
+            containerSecurityIf: containerSecurityIf,
+            classifyIf: classifyIf,
+            containerGateBlock: containerGateBlock);
+        using var writer = new StringWriter();
+
+        RulesetService.Validate(_root, writer).Should().Be(1);
+        writer.ToString().Should().Contain(expectedError);
+    }
+
+    [Fact]
+    public void Validate_FailsWhenCiGateAllowsContainerSecuritySkipOnPushOrWorkflowDispatch()
+    {
+        const string unguardedSkipBlock = """
+                      if [ "$CONTAINER_RESULT" != "success" ] && [ "$CONTAINER_RESULT" != "skipped" ]; then exit 1; fi
+            """;
+        WriteCiWorkflow(
+            ciGateNeeds: "[unit-tests, container-security, compliance]",
+            ciGateIf: "always()",
+            checkComplianceResult: true,
+            containerGateBlock: unguardedSkipBlock);
+        using var writer = new StringWriter();
+
+        RulesetService.Validate(_root, writer).Should().Be(1);
+        writer.ToString().Should().Contain("while failing skipped 'push'/'workflow_dispatch' runs");
+    }
+
+    [Theory]
+    [InlineData("pull_request", "refs/pull/42/merge", "success", 0)]
+    [InlineData("pull_request", "refs/pull/42/merge", "skipped", 0)]
+    [InlineData("pull_request", "refs/pull/42/merge", "failure", 1)]
+    [InlineData("pull_request", "refs/pull/42/merge", "cancelled", 1)]
+    [InlineData("merge_group", "refs/gh-readonly-queue/main/pr-42", "success", 0)]
+    [InlineData("merge_group", "refs/gh-readonly-queue/main/pr-42", "skipped", 0)]
+    [InlineData("merge_group", "refs/gh-readonly-queue/main/pr-42", "failure", 1)]
+    [InlineData("merge_group", "refs/gh-readonly-queue/main/pr-42", "cancelled", 1)]
+    [InlineData("push", "refs/heads/main", "success", 0)]
+    [InlineData("push", "refs/heads/main", "skipped", 1)]
+    [InlineData("push", "refs/heads/main", "failure", 1)]
+    [InlineData("push", "refs/heads/main", "cancelled", 1)]
+    [InlineData("workflow_dispatch", "refs/heads/main", "success", 0)]
+    [InlineData("workflow_dispatch", "refs/heads/release/1.0", "success", 0)]
+    [InlineData("workflow_dispatch", "refs/tags/v1.0.0", "success", 0)]
+    [InlineData("workflow_dispatch", "refs/heads/main", "skipped", 1)]
+    [InlineData("workflow_dispatch", "refs/heads/main", "failure", 1)]
+    [InlineData("workflow_dispatch", "refs/heads/main", "cancelled", 1)]
+    [InlineData("workflow_dispatch", "refs/heads/feature/unprotected", "success", 1)]
+    public void CiWorkflowCiGate_EnforcesContainerSecurityParityAcrossEvents(
+        string eventName,
+        string refName,
+        string containerSecurityResult,
+        int expectedExitCode)
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        string ciPath = Path.Combine(FindRepositoryRoot(), ".github", "workflows", "ci.yml");
+        string[] lines = File.ReadAllLines(ciPath);
+        string raw = string.Join('\n', lines);
+
+        raw.Should().Contain("(github.event_name == 'merge_group' && needs.classify.outputs.container_scan == 'true')")
+            .And.Contain("github.event_name == 'push'")
+            .And.Contain("github.event_name == 'workflow_dispatch'");
+
+        string ciGateScript = ExtractCiGateScript(lines);
+        var psi = new ProcessStartInfo("bash")
+        {
+            WorkingDirectory = _root,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+        };
+        psi.Environment["EVENT_NAME"] = eventName;
+        psi.Environment["REF_NAME"] = refName;
+        psi.Environment["CONTAINER_SECURITY_RESULT"] = containerSecurityResult;
+        foreach (string requiredResultVar in RequiredCiGateEnvVars)
+        {
+            psi.Environment[requiredResultVar] = "success";
+        }
+
+        psi.ArgumentList.Add("-eo");
+        psi.ArgumentList.Add("pipefail");
+        psi.ArgumentList.Add("-c");
+        psi.ArgumentList.Add(ciGateScript);
+
+        using var proc = Process.Start(psi)!;
+        string stderr = proc.StandardError.ReadToEnd();
+        string stdout = proc.StandardOutput.ReadToEnd();
+        proc.WaitForExit();
+        proc.ExitCode.Should().Be(
+            expectedExitCode,
+            $"ci-gate outcome mismatch for event={eventName}, ref={refName}, container-security={containerSecurityResult}: {stdout}\n{stderr}");
     }
 
     [Fact]
@@ -1046,7 +1192,48 @@ public sealed class RulesetServiceTests : IDisposable
             """);
     }
 
-    private void WriteCiWorkflow(string ciGateNeeds, string ciGateIf, bool checkComplianceResult)
+    private const string DefaultContainerGateBlock = """
+                      if [ "$EVENT_NAME" = "pull_request" ] || [ "$EVENT_NAME" = "merge_group" ]; then
+                        if [ "$CONTAINER_RESULT" != "success" ] && [ "$CONTAINER_RESULT" != "skipped" ]; then exit 1; fi
+                      elif [ "$CONTAINER_RESULT" != "success" ]; then
+                        exit 1
+                      fi
+        """;
+
+    private static readonly string[] RequiredCiGateEnvVars =
+    [
+        "ACTIONLINT_RESULT",
+        "LINT_AND_STATIC_RESULT",
+        "DOTNET_QUALITY_RESULT",
+        "NATIVE_AOT_BUILD_RESULT",
+        "DOCS_BUILD_RESULT",
+        "SECURITY_RESULT",
+        "UNIT_TESTS_RESULT",
+        "DOTNET_TESTS_RESULT",
+        "ACCESSIBILITY_E2E_RESULT",
+        "COMPLIANCE_RESULT",
+    ];
+
+    private static string ExtractCiGateScript(string[] lines)
+    {
+        int jobIdx = Array.FindIndex(lines, l => l == "  ci-gate:");
+        int runStart = Array.FindIndex(lines, jobIdx, l => l == "        run: |");
+        jobIdx.Should().BeGreaterThan(0);
+        runStart.Should().BeGreaterThan(jobIdx);
+
+        var scriptLines = lines[(runStart + 1)..]
+            .TakeWhile(l => l.Length == 0 || l.StartsWith("          ", StringComparison.Ordinal))
+            .Select(l => l.Length >= 10 ? l[10..] : string.Empty);
+        return string.Join('\n', scriptLines);
+    }
+
+    private void WriteCiWorkflow(
+        string ciGateNeeds,
+        string ciGateIf,
+        bool checkComplianceResult,
+        string containerSecurityIf = "always() && !cancelled() && (github.event_name == 'push' || (github.event_name == 'merge_group' && needs.classify.outputs.container_scan == 'true') || (github.event_name == 'pull_request' && needs.classify.outputs.container_scan == 'true'))",
+        string classifyIf = "github.event_name == 'pull_request' || github.event_name == 'merge_group'",
+        string containerGateBlock = DefaultContainerGateBlock)
     {
         string complianceCheck = checkComplianceResult
             ? "if [ \"$COMPLIANCE_RESULT\" != \"success\" ]; then exit 1; fi"
@@ -1069,7 +1256,7 @@ public sealed class RulesetServiceTests : IDisposable
               container-security:
                 name: Container Build & Vulnerability Scan
                 needs: [classify]
-                if: always() && !cancelled() && (github.event_name == 'push' || needs.classify.outputs.container_scan == 'true')
+                if: {{{containerSecurityIf}}}
                 runs-on: ubuntu-latest
                 strategy:
                   matrix:
@@ -1103,15 +1290,11 @@ public sealed class RulesetServiceTests : IDisposable
                       COMPLIANCE_RESULT: ${{ needs.compliance.result }}
                     run: |
                       if [ "$UNIT_RESULT" != "success" ]; then exit 1; fi
-                      if [ "$EVENT_NAME" = "pull_request" ]; then
-                        if [ "$CONTAINER_RESULT" != "success" ] && [ "$CONTAINER_RESULT" != "skipped" ]; then exit 1; fi
-                      elif [ "$CONTAINER_RESULT" != "success" ]; then
-                        exit 1
-                      fi
+            {{{containerGateBlock}}}
                       {{{complianceCheck}}}
               classify:
                 name: Classify Change
-                if: github.event_name == 'pull_request'
+                if: {{{classifyIf}}}
                 runs-on: ubuntu-latest
                 steps:
                   - run: echo ok
