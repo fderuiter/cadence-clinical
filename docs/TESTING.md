@@ -38,7 +38,8 @@ Some checks record pre-existing debt in checked-in per-owner baseline shards or 
 (`tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-rule-coverage/<AREA>.baseline.txt`), the direct state-write IL sentinel
 (`tests/Cadence.ArchitectureTests/ArchitectureBaselines/direct-state-writes.baseline.txt`), the static RBAC role-permission grant inventory
 (`tests/Cadence.ArchitectureTests/ArchitectureBaselines/permission-matrix.baseline.txt`), the cross-service isolation sentinel
-(`tests/Cadence.ArchitectureTests/ArchitectureBaselines/cross-service-isolation.baseline.txt`), the `deid` gate
+(`tests/Cadence.ArchitectureTests/ArchitectureBaselines/cross-service-isolation.baseline.txt`), the canonical PRD requirement coverage sentinel
+(`tests/Cadence.ArchitectureTests/ArchitectureBaselines/prd-requirement-coverage.baseline.txt`), the `deid` gate
 (`baselines/deid/<unit>.baseline.txt`), and the detect-secrets allowlist (`baselines/secrets/config.json` plus
 `baselines/secrets/<unit>.secrets.baseline.json`). Any other `*.baseline.txt` or `*-baseline.txt` file is treated the same way.
 Empty shards are deleted automatically, and each baseline gate may only shrink:
@@ -280,9 +281,10 @@ Rules:
   raise the difference so the code or the requirement is fixed.
 - **Not every test needs a tag.** Helper, regression and architecture tests that verify no product
   requirement stay untagged. A tag exists to make an RTM claim, not to satisfy a checklist.
-- **No tags on a class.** A tag on a class, record or struct would read as a claim for every test in it, so it
-  is refused: the `rtm` gate fails on an `@req:` line in a type's doc comment, and `[GxPRequirement]` only compiles
-  on a method. Put the tag on the methods whose assertions prove the requirement.
+- **No tags on a class, file header, or `describe(...)` block.** A tag on a C# type, at the top of a JS/TS spec file, or on a
+  Vitest/Playwright `describe(...)` block would read as a claim for every test inside it, so `RequirementTagScanner` and
+  the `rtm` gate refuse it. Put `[GxPRequirement("PRD-…")]` on the C# test method, or `@req:PRD-…` in the title or
+  leading comment immediately above the individual `it(...)` / `test(...)` call whose assertions prove the requirement.
 - **PRD-SYS-001 is audit fields and audit entries.** Tag it only where the assertions check `CreatedBy`,
   `CreatedAt`, `ReasonForChange` or `VersionIndex`, or check the audit entry a change writes (its actor, reason or
   action). Hash chaining and chain verification are PRD-SYS-003. Notification, event, idempotency and validation

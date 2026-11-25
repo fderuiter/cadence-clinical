@@ -1,13 +1,10 @@
-/**
- * @req: PRD-SYS-182
- */
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { mount, flushPromises, type VueWrapper } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import ParticipantWalletView from "../../src/views/ParticipantWalletView.vue";
 import { useToastStore } from "../../src/stores/toasts.js";
 
-describe("ParticipantWalletView Mutation Error Handling (@req: PRD-SYS-182)", () => {
+describe("ParticipantWalletView Mutation Error Handling", () => {
   let pinia: ReturnType<typeof createPinia>;
   let toastStore: ReturnType<typeof useToastStore>;
   const originalFetch = global.fetch;
@@ -222,6 +219,7 @@ describe("ParticipantWalletView Mutation Error Handling (@req: PRD-SYS-182)", ()
       expect(wrapper.vm.isSubmitting).toBe(false);
     });
 
+    /** @req: PRD-SYS-182 */
     it("successfully issues card and reloads data", async () => {
       let issued = false;
       global.fetch = createMockFetch((url) => {
@@ -497,6 +495,7 @@ describe("ParticipantWalletView Mutation Error Handling (@req: PRD-SYS-182)", ()
       expect(wrapper.vm.isSubmitting).toBe(false);
     });
 
+    /** @req: PRD-SYS-182 */
     it("successfully verifies W9 form and refreshes state", async () => {
       let verified = false;
       global.fetch = createMockFetch((url) => {
@@ -591,6 +590,7 @@ describe("ParticipantWalletView Mutation Error Handling (@req: PRD-SYS-182)", ()
   });
 
   describe("masked payout credentials and server-backed receipt OCR", () => {
+    /** @req: PRD-SYS-182 */
     it("masks routing identifiers and never renders raw routing numbers", async () => {
       global.fetch = createMockFetch((url) => {
         if (url === "/api/v1/payments/participant/wallets") {
@@ -619,6 +619,7 @@ describe("ParticipantWalletView Mutation Error Handling (@req: PRD-SYS-182)", ()
       expect(wrapper.text()).toContain("ACH-***4321");
     });
 
+    /** @req: PRD-PAT-002 */
     it("uploads base64 receipt bytes to /api/v1/payments/participant/expenses/ocr-extract and populates extracted fields", async () => {
       let capturedOcrBody: any = null;
       let capturedSubmitBody: any = null;
@@ -741,6 +742,7 @@ describe("ParticipantWalletView Mutation Error Handling (@req: PRD-SYS-182)", ()
       );
     });
 
+    /** @req: PRD-SYS-182 */
     it("renders camelCase .NET wallet columns, balance inquiry, visit verification, claim review, payout, and ledger transactions without runtime errors", async () => {
       let visitVerifiedCalled = false;
       let claimReviewedDecision = "";

@@ -84,21 +84,28 @@ public enum RequirementState
 
 /// <summary>
 /// Generates the Requirements Traceability Matrix and the IQ/OQ/PQ execution report from the requirement
-/// documents, the requirement tags on test methods (<see cref="RequirementTagScanner"/>) and TRX results.
+/// documents, the requirement tags on C# and JS/TS tests (<see cref="RequirementTagScanner"/>), TRX results, and
+/// Vitest/Playwright JUnit XML results.
 /// A requirement is qualified only when every test that declares it ran and passed (#5324). An alias (an
 /// <c>SRS-*</c> or <c>Trace-*</c> entry with a parent PRD) is judged by its own tests: a parent's tests never qualify
 /// it, and its tests never qualify the parent.
 /// </summary>
 public static partial class RtmGeneratorService
 {
-    /// <summary>Directories scanned for test methods. Tests only live under <c>tests/</c>.</summary>
-    public static readonly string[] TestSearchDirs = ["tests"];
+    /// <summary>Directories scanned for C# and JS/TS test cases.</summary>
+    public static readonly string[] TestSearchDirs = ["tests", "apps/web/tests", "apps/subject-portal/tests", "packages"];
 
     /// <summary>
-    /// Where <c>gxp sync</c>, <c>gxp snapshot</c> and <c>cadence ci</c> write one TRX file per test project (gitignored).
-    /// <see cref="GenerateRtm"/> reads every <c>*.trx</c> file under it.
+    /// Where <c>gxp sync</c>, <c>gxp snapshot</c> and <c>cadence ci</c> write TRX and JUnit XML files (gitignored).
+    /// <see cref="GenerateRtm"/> reads every <c>*.trx</c> and JUnit <c>*.xml</c> file under it.
     /// </summary>
     public const string DefaultResultsDir = "TestResults/gxp";
+
+    /// <summary>
+    /// Maximum number of commits <c>refs/heads/main</c> may advance past the committed RTM's tested revision before
+    /// <c>check rtm</c> demands a fresh <c>pnpm cadence gxp snapshot</c> (feature branches stay exempt per ADR-2532).
+    /// </summary>
+    public const int DefaultMaxMainSnapshotCommitLag = 50;
 
     /// <summary>The banner a draft RTM or IQ/OQ/PQ report opens with. A committed document never carries it.</summary>
     public const string DraftBanner = "DRAFT ONLY — UNVERIFIED GxP COMPLIANCE DOCUMENT";
@@ -112,7 +119,10 @@ public static partial class RtmGeneratorService
         bool honorDraftEnvironment = true,
         RtmEvidenceContext? evidence = null,
         bool requireCurrentSnapshot = true,
-        bool requireRecordedEvidence = false)
+        bool requireRecordedEvidence = false,
+        string? eventName = null,
+        string? gitRef = null,
+        int maxMainSnapshotCommitLag = DefaultMaxMainSnapshotCommitLag)
     {
         repoRoot ??= FindRepoRoot();
         outputDir = Path.Combine(repoRoot, outputDir);
@@ -239,6 +249,16 @@ public static partial class RtmGeneratorService
                 Console.WriteLine($"[RTM ERROR] {Path.GetRelativePath(repoRoot, generatedDoc)} does not match its integrity stamp: it was edited by hand or predates the stamp. Take a new snapshot with `pnpm cadence gxp snapshot`.");
                 exitCode = 1;
             }
+        }
+
+        if (requireRecordedEvidence
+            && maxMainSnapshotCommitLag >= 0
+            && !GxpSnapshotPolicy.IsSnapshotMode()
+            && File.Exists(checkedInRtm)
+            && IsMainBranchValidationTarget(repoRoot, eventName, gitRef)
+            && !VerifyMainSnapshotCommitLag(repoRoot, checkedInRtm, maxMainSnapshotCommitLag))
+        {
+            exitCode = 1;
         }
 
         var failedReqs = allRequirements.Values
@@ -578,23 +598,32 @@ public static partial class RtmGeneratorService
     }
 
     /// <summary>
-    /// Reads TRX results keyed by <c>Namespace.Class.Method</c>. <paramref name="reportPath"/> may be a TRX
-    /// file or a directory of TRX files (one per test project). Theory cases and duplicate runs of the same
-    /// method are merged: any failure wins, then a case that did not execute, then a skipped case; the method passes
-    /// only when every case passed.
+    /// Reads TRX results keyed by <c>Namespace.Class.Method</c> and Vitest/Playwright JUnit XML results keyed by
+    /// <c>{repoRelativeFile}::{Suite &gt; … &gt; Title}</c>. <paramref name="reportPath"/> may be a TRX/JUnit XML file
+    /// or a directory of TRX and JUnit XML files. Parameterized cases and duplicate runs of the same test are merged:
+    /// any failure wins, then a case that did not execute, then a skipped case; the test passes only when every case passed.
     /// </summary>
     public static Dictionary<string, TestResultInfo> ParseTestResults(string repoRoot, string reportPath)
     {
         var results = new Dictionary<string, TestResultInfo>(StringComparer.Ordinal);
 
         var trxFiles = new List<string>();
+        var xmlFiles = new List<string>();
         if (File.Exists(reportPath))
         {
-            trxFiles.Add(reportPath);
+            if (reportPath.EndsWith(".xml", StringComparison.OrdinalIgnoreCase))
+            {
+                xmlFiles.Add(reportPath);
+            }
+            else
+            {
+                trxFiles.Add(reportPath);
+            }
         }
         else if (Directory.Exists(reportPath))
         {
             trxFiles.AddRange(Directory.GetFiles(reportPath, "*.trx", SearchOption.AllDirectories).OrderBy(f => f, StringComparer.Ordinal));
+            xmlFiles.AddRange(Directory.GetFiles(reportPath, "*.xml", SearchOption.AllDirectories).OrderBy(f => f, StringComparer.Ordinal));
         }
 
         XNamespace ns = "http://microsoft.com/schemas/VisualStudio/TeamTest/2010";
@@ -638,7 +667,369 @@ public static partial class RtmGeneratorService
             }
         }
 
+        if (xmlFiles.Count > 0)
+        {
+            ParseJUnitTestResults(repoRoot, xmlFiles, results);
+        }
+
         return results;
+    }
+
+    private static void ParseJUnitTestResults(
+        string repoRoot,
+        IReadOnlyList<string> xmlFiles,
+        Dictionary<string, TestResultInfo> results)
+    {
+        var jsDiscovered = RequirementTagScanner.ScanDirectories(repoRoot, TestSearchDirs)
+            .Where(t => RequirementTagScanner.IsJavaScriptOrTypeScriptTestFile(t.File))
+            .ToList();
+        var jsFiles = jsDiscovered
+            .Select(t => t.File)
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(f => f, StringComparer.Ordinal)
+            .ToList();
+        var knownFullNames = jsDiscovered
+            .Select(t => t.FullName)
+            .ToHashSet(StringComparer.Ordinal);
+
+        foreach (string xmlFile in xmlFiles)
+        {
+            XDocument doc;
+            try
+            {
+                doc = XDocument.Load(xmlFile);
+            }
+            catch (System.Xml.XmlException ex)
+            {
+                Console.WriteLine($"[RTM WARNING] Skipping unreadable XML file {xmlFile}: {ex.Message}");
+                continue;
+            }
+
+            string? rootName = doc.Root?.Name.LocalName;
+            if (rootName is not ("testsuites" or "testsuite"))
+            {
+                continue;
+            }
+
+            string xmlFileName = Path.GetFileName(xmlFile);
+            var fileResults = new Dictionary<string, TestResultInfo>(StringComparer.Ordinal);
+
+            foreach (XElement tc in doc.Descendants().Where(e => e.Name.LocalName == "testcase"))
+            {
+                string parentSuiteFile = tc.Parent?.Attribute("file")?.Value
+                    ?? tc.Parent?.Attribute("filepath")?.Value
+                    ?? tc.Parent?.Attribute("name")?.Value
+                    ?? "";
+                string rawClassName = tc.Attribute("classname")?.Value
+                    ?? tc.Attribute("file")?.Value
+                    ?? parentSuiteFile;
+                string rawName = tc.Attribute("name")?.Value ?? "";
+                if (string.IsNullOrWhiteSpace(rawClassName) && string.IsNullOrWhiteSpace(rawName))
+                {
+                    continue;
+                }
+
+                string normalizedName = NormalizeJUnitTestName(rawName);
+                string resolvedFile = ResolveJUnitTestFile(
+                    repoRoot,
+                    rawClassName,
+                    normalizedName,
+                    xmlFileName,
+                    jsFiles,
+                    knownFullNames,
+                    out string matchedTitlePath);
+
+                string fullName = string.IsNullOrEmpty(resolvedFile)
+                    ? matchedTitlePath
+                    : $"{resolvedFile}::{matchedTitlePath}";
+                string status = StatusFromJUnitTestCase(tc);
+                string duration = tc.Attribute("time")?.Value ?? "0.0";
+                fileResults[fullName] = Merge(fileResults.GetValueOrDefault(fullName), status, duration);
+            }
+
+            foreach (var (fullName, fileResult) in fileResults)
+            {
+                results[fullName] = MergeAcrossTrxFiles(results.GetValueOrDefault(fullName), fileResult, fullName);
+            }
+        }
+    }
+
+    private static string NormalizeJUnitTestName(string rawName) =>
+        rawName
+            .Replace("\r\n", " ", StringComparison.Ordinal)
+            .Replace('\n', ' ')
+            .Replace(" \u203A ", " > ", StringComparison.Ordinal)
+            .Trim();
+
+    [GeneratedRegex(@"^\[[^\]]+\]\s+")]
+    private static partial Regex JUnitProjectPrefixRegex();
+
+    [GeneratedRegex(@"- \*\*Tested revision:\*\* `(?<sha>[0-9a-fA-F]{7,40})`")]
+    private static partial Regex TestedRevisionShaRegex();
+
+    private static string ResolveJUnitTestFile(
+        string repoRoot,
+        string rawClassName,
+        string normalizedName,
+        string xmlFileName,
+        IReadOnlyList<string> jsFiles,
+        HashSet<string> knownFullNames,
+        out string matchedTitlePath)
+    {
+        matchedTitlePath = normalizedName;
+        string cls = rawClassName.Trim();
+        if (cls.Length == 0)
+        {
+            return string.Empty;
+        }
+
+        if (Path.IsPathRooted(cls))
+        {
+            cls = Path.GetRelativePath(repoRoot, cls);
+        }
+
+        cls = cls.Replace('\\', '/');
+        while (cls.StartsWith("./", StringComparison.Ordinal))
+        {
+            cls = cls[2..];
+        }
+
+        cls = cls.TrimStart('/');
+
+        string strippedProjectName = JUnitProjectPrefixRegex().Replace(normalizedName, "");
+
+        string? exact = jsFiles.FirstOrDefault(f => string.Equals(f, cls, StringComparison.Ordinal));
+        if (exact is not null)
+        {
+            matchedTitlePath = PickKnownTitlePath(exact, normalizedName, strippedProjectName, cls, knownFullNames);
+            return exact;
+        }
+
+        var suffixCandidates = jsFiles
+            .Where(f => f.EndsWith("/" + cls, StringComparison.Ordinal))
+            .ToList();
+        if (suffixCandidates.Count == 1)
+        {
+            string only = suffixCandidates[0];
+            matchedTitlePath = PickKnownTitlePath(only, normalizedName, strippedProjectName, cls, knownFullNames);
+            return only;
+        }
+
+        if (suffixCandidates.Count > 1)
+        {
+            foreach (string candidate in suffixCandidates)
+            {
+                string candidateTitle = PickKnownTitlePath(candidate, normalizedName, strippedProjectName, cls, knownFullNames);
+                if (knownFullNames.Contains($"{candidate}::{candidateTitle}"))
+                {
+                    matchedTitlePath = candidateTitle;
+                    return candidate;
+                }
+            }
+
+            string? hintedPrefix = null;
+            if (xmlFileName.Contains("subject-portal", StringComparison.OrdinalIgnoreCase))
+            {
+                hintedPrefix = "apps/subject-portal/";
+            }
+            else if (xmlFileName.Contains("web", StringComparison.OrdinalIgnoreCase))
+            {
+                hintedPrefix = "apps/web/";
+            }
+            else if (xmlFileName.Contains("usdm", StringComparison.OrdinalIgnoreCase))
+            {
+                hintedPrefix = "packages/usdm-schemas/";
+            }
+            else if (xmlFileName.Contains("docs", StringComparison.OrdinalIgnoreCase))
+            {
+                hintedPrefix = "docs/";
+            }
+            if (hintedPrefix is not null)
+            {
+                string? hinted = suffixCandidates.FirstOrDefault(f => f.StartsWith(hintedPrefix, StringComparison.Ordinal));
+                if (hinted is not null)
+                {
+                    matchedTitlePath = PickKnownTitlePath(hinted, normalizedName, strippedProjectName, cls, knownFullNames);
+                    return hinted;
+                }
+            }
+
+            matchedTitlePath = PickKnownTitlePath(suffixCandidates[0], normalizedName, strippedProjectName, cls, knownFullNames);
+            return suffixCandidates[0];
+        }
+
+        matchedTitlePath = strippedProjectName != normalizedName && strippedProjectName.Length > 0
+            ? strippedProjectName
+            : normalizedName;
+        return cls;
+    }
+
+    private static string PickKnownTitlePath(
+        string candidateFile,
+        string normalizedName,
+        string strippedProjectName,
+        string rawClass,
+        HashSet<string> knownFullNames)
+    {
+        if (knownFullNames.Contains($"{candidateFile}::{normalizedName}"))
+        {
+            return normalizedName;
+        }
+
+        if (strippedProjectName != normalizedName && knownFullNames.Contains($"{candidateFile}::{strippedProjectName}"))
+        {
+            return strippedProjectName;
+        }
+
+        string classPrefix = rawClass + " > ";
+        if (normalizedName.StartsWith(classPrefix, StringComparison.Ordinal))
+        {
+            string withoutClass = normalizedName[classPrefix.Length..];
+            if (knownFullNames.Contains($"{candidateFile}::{withoutClass}"))
+            {
+                return withoutClass;
+            }
+        }
+
+        return normalizedName;
+    }
+
+    private static string StatusFromJUnitTestCase(XElement testCase)
+    {
+        if (testCase.Elements().Any(e => e.Name.LocalName is "failure" or "error"))
+        {
+            return TestStatus.Failed;
+        }
+
+        if (testCase.Elements().Any(e => e.Name.LocalName == "skipped"))
+        {
+            return TestStatus.Skipped;
+        }
+
+        string? statusAttr = testCase.Attribute("status")?.Value;
+        if (statusAttr is not null &&
+            (statusAttr.Equals("skipped", StringComparison.OrdinalIgnoreCase)
+             || statusAttr.Equals("disabled", StringComparison.OrdinalIgnoreCase)
+             || statusAttr.Equals("pending", StringComparison.OrdinalIgnoreCase)
+             || statusAttr.Equals("todo", StringComparison.OrdinalIgnoreCase)))
+        {
+            return TestStatus.Skipped;
+        }
+
+        return TestStatus.Passed;
+    }
+
+    private static bool IsMainBranchValidationTarget(string repoRoot, string? eventName, string? gitRef)
+    {
+        if (!HasGitMetadata(repoRoot))
+        {
+            return false;
+        }
+
+        string effectiveEvent = (eventName ?? Environment.GetEnvironmentVariable("GITHUB_EVENT_NAME") ?? string.Empty).Trim();
+        if (effectiveEvent.Equals("pull_request", StringComparison.OrdinalIgnoreCase)
+            || effectiveEvent.Equals("pull_request_target", StringComparison.OrdinalIgnoreCase)
+            || effectiveEvent.Equals("merge_group", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        string effectiveRef = (gitRef ?? Environment.GetEnvironmentVariable("GITHUB_REF") ?? string.Empty).Trim();
+        if (string.IsNullOrEmpty(effectiveRef))
+        {
+            effectiveRef = RunGitCommand(repoRoot, "symbolic-ref", "-q", "HEAD")?.Trim() ?? string.Empty;
+        }
+
+        return string.Equals(effectiveRef, "refs/heads/main", StringComparison.Ordinal);
+    }
+
+    private static bool VerifyMainSnapshotCommitLag(string repoRoot, string checkedInRtm, int maxCommitLag)
+    {
+        string content = File.ReadAllText(checkedInRtm);
+        Match shaMatch = TestedRevisionShaRegex().Match(content);
+        if (!shaMatch.Success)
+        {
+            return true;
+        }
+
+        string testedSha = shaMatch.Groups["sha"].Value;
+        if (RunGitCommand(repoRoot, "rev-parse", "--verify", "--quiet", "HEAD") is null)
+        {
+            return true;
+        }
+
+        if (RunGitCommand(repoRoot, "cat-file", "-e", $"{testedSha}^{{commit}}") is null)
+        {
+            string isShallow = RunGitCommand(repoRoot, "rev-parse", "--is-shallow-repository")?.Trim() ?? "false";
+            if (string.Equals(isShallow, "true", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            Console.WriteLine(
+                $"[RTM ERROR] {Path.GetRelativePath(repoRoot, checkedInRtm)} records tested revision `{testedSha}`, " +
+                "which does not exist in this repository's history on main. Take a new snapshot with `pnpm cadence gxp snapshot`.");
+            return false;
+        }
+
+        if (RunGitCommand(repoRoot, "merge-base", "--is-ancestor", testedSha, "HEAD") is null)
+        {
+            Console.WriteLine(
+                $"[RTM ERROR] {Path.GetRelativePath(repoRoot, checkedInRtm)} records tested revision `{testedSha}`, " +
+                "which is not an ancestor of HEAD on main. Take a new snapshot with `pnpm cadence gxp snapshot`.");
+            return false;
+        }
+
+        string? countText = RunGitCommand(repoRoot, "rev-list", "--count", $"{testedSha}..HEAD")?.Trim();
+        if (int.TryParse(countText, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out int lag)
+            && lag > maxCommitLag)
+        {
+            Console.WriteLine(
+                $"[RTM ERROR] {Path.GetRelativePath(repoRoot, checkedInRtm)} is {lag} commits behind HEAD on main " +
+                $"(tested revision `{testedSha}`, maximum allowed lag {maxCommitLag}). Take a new snapshot with `pnpm cadence gxp snapshot`.");
+            return false;
+        }
+
+        return true;
+    }
+
+    private static bool HasGitMetadata(string repoRoot)
+    {
+        string dotGit = Path.Combine(repoRoot, ".git");
+        return Directory.Exists(dotGit) || File.Exists(dotGit);
+    }
+
+    private static string? RunGitCommand(string repoRoot, params string[] arguments)
+    {
+        try
+        {
+            var psi = new System.Diagnostics.ProcessStartInfo("git")
+            {
+                WorkingDirectory = repoRoot,
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+            };
+            foreach (string arg in arguments)
+            {
+                psi.ArgumentList.Add(arg);
+            }
+
+            using var proc = System.Diagnostics.Process.Start(psi);
+            if (proc is null)
+            {
+                return null;
+            }
+
+            string stdout = proc.StandardOutput.ReadToEnd();
+            _ = proc.StandardError.ReadToEnd();
+            proc.WaitForExit();
+            return proc.ExitCode == 0 ? stdout : null;
+        }
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException or IOException)
+        {
+            return null;
+        }
     }
 
     /// <summary>
@@ -868,7 +1259,9 @@ public static partial class RtmGeneratorService
         foreach (var test in tagged)
         {
             var res = results.GetValueOrDefault(test.FullName) ?? new TestResultInfo();
-            string className = test.FullName[..test.FullName.LastIndexOf('.')];
+            string className = test.FullName.Contains("::", StringComparison.Ordinal)
+                ? test.File
+                : test.FullName[..test.FullName.LastIndexOf('.')];
             sb.AppendLine($"| `{test.MethodName}` | `{className}` | {string.Join(", ", test.RequirementIds)} | {Emoji(res.Status)} {res.Status} |");
         }
 

@@ -113,6 +113,7 @@ import {
 import {
   kernelApi,
   type KernelProposal,
+  type KernelStudySdvAlert,
   type KernelValidationFinding,
 } from "../../api/kernelApi";
 import { isAgentProposal } from "../../ai/proposals";
@@ -156,7 +157,7 @@ function hasActiveCallerSession(): boolean {
 
 const proposals = ref<KernelProposal[]>([]);
 const findings = ref<KernelValidationFinding[]>([]);
-const sdvAlerts = ref<FormSdvAlertResponse[]>([]);
+const sdvAlerts = ref<(FormSdvAlertResponse | KernelStudySdvAlert)[]>([]);
 const loading = ref(false);
 const error = ref<string | null>(null);
 const noStudy = ref(false);
@@ -241,7 +242,11 @@ async function loadAttention(rawCode: string): Promise<void> {
       proposals.value = openProposals;
       seedProposalSummaries(openProposals);
       findings.value = dedupeCappedFindings(attention.findings ?? []);
-      await hydrateStudySdvAlerts(attention.study_ref, isCurrent);
+      if (Array.isArray(attention.sdv_alerts)) {
+        sdvAlerts.value = attention.sdv_alerts;
+      } else if (hasActiveCallerSession()) {
+        await hydrateStudySdvAlerts(attention.study_ref, isCurrent);
+      }
       return;
     }
 
@@ -356,7 +361,9 @@ function findingLocation(finding: KernelValidationFinding): RouteLocationRaw {
   });
 }
 
-function sdvAlertLocation(alert: FormSdvAlertResponse): RouteLocationRaw {
+function sdvAlertLocation(
+  alert: FormSdvAlertResponse | KernelStudySdvAlert
+): RouteLocationRaw {
   const obsRef = observationNodeRef(alert.observation_id);
   const formRef = alert.form_id ? collectionInstanceRef(alert.form_id) : null;
   return scopedStudyLocation({

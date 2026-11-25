@@ -329,27 +329,25 @@ public static class KernelProtocolGovernanceEndpoints
                 }
             }
 
+            Actor actor;
+            if (context.RequestServices.GetService<ICurrentActor>()?.Actor is { } resolvedActor
+                && !string.IsNullOrWhiteSpace(resolvedActor.Id))
+            {
+                actor = resolvedActor;
+            }
+            else if (!string.IsNullOrWhiteSpace(sigToken.Subject))
+            {
+                actor = Actor.Person(sigToken.Subject);
+            }
+            else
+            {
+                return KernelErrorEndpoints.Problem(KernelErrors.ActorUnresolved);
+            }
+
             if (existing.ParentVersionId is not null
                 && context.RequestServices.GetService<IKernelUnitOfWorkFactory>() is { } unitOfWorkFactory
                 && context.RequestServices.GetService<IAttestationVerifier>() is { } verifier)
             {
-                Actor actor;
-                if (context.RequestServices.GetService<ICurrentActor>()?.Actor is { } resolvedActor)
-                {
-                    actor = resolvedActor;
-                }
-                else if (!string.IsNullOrWhiteSpace(sigToken.Subject))
-                {
-                    actor = Actor.Person(sigToken.Subject);
-                }
-                else
-                {
-                    return TypedResults.Problem(
-                        title: "Electronic signature required",
-                        detail: "Supply a fresh, single-use X-Sig-Token step-up header bound to this protocol version approval.",
-                        statusCode: StatusCodes.Status401Unauthorized);
-                }
-
                 var clock = context.RequestServices.GetService<IClock>() ?? SystemClock.Instance;
                 var precheck = await ProtocolApprovalSimulationGate.CheckAsync(
                     tenant,

@@ -529,6 +529,11 @@ public static class CiPlan
             new("unit-tests", "Run frontend unit tests")
             {
                 Always = true,
+                CleanDirectories = ["TestResults/gxp-frontend"],
+                Environment = new Dictionary<string, string>
+                {
+                    ["CADENCE_TEST_EVIDENCE_DIR"] = "TestResults/gxp-frontend",
+                },
                 Commands =
                 [
                     Pnpm("-r", "test"),
@@ -596,12 +601,27 @@ public static class CiPlan
             },
             new(E2eJob, "Run Documentation Portal E2E Accessibility Tests")
             {
+                Environment = new Dictionary<string, string>
+                {
+                    ["CADENCE_TEST_EVIDENCE_DIR"] = RtmGeneratorService.DefaultResultsDir,
+                },
                 Commands = [Pnpm("--filter", "subject-portal", "test:e2e:docs-portal")],
             },
-            new(E2eJob, "Run Subject Portal E2E Accessibility Tests") { Commands = [Pnpm("--filter", "subject-portal", "test:e2e")] },
+            new(E2eJob, "Run Subject Portal E2E Accessibility Tests")
+            {
+                Environment = new Dictionary<string, string>
+                {
+                    ["CADENCE_TEST_EVIDENCE_DIR"] = RtmGeneratorService.DefaultResultsDir,
+                },
+                Commands = [Pnpm("--filter", "subject-portal", "test:e2e")],
+            },
             new(E2eJob, "Run Web Application E2E Accessibility Tests")
             {
-                Environment = new Dictionary<string, string> { ["CADENCE_TEST_BROWSER"] = "1" },
+                Environment = new Dictionary<string, string>
+                {
+                    ["CADENCE_TEST_BROWSER"] = "1",
+                    ["CADENCE_TEST_EVIDENCE_DIR"] = RtmGeneratorService.DefaultResultsDir,
+                },
                 Commands = [Pnpm("--filter", "web", "test:e2e")],
             },
             new(E2eJob, "Run Web Application E2E Workflow Tests")
@@ -609,6 +629,7 @@ public static class CiPlan
                 Environment = new Dictionary<string, string>
                 {
                     ["CADENCE_TEST_BROWSER"] = "1",
+                    ["CADENCE_TEST_EVIDENCE_DIR"] = RtmGeneratorService.DefaultResultsDir,
                     ["DEMO_MODE"] = "false",
                 },
                 Commands = [Pnpm("--filter", "web", "test:e2e:workflows")],
@@ -644,6 +665,17 @@ public static class CiPlan
                     bool snapshot = GxpSnapshotPolicy.IsSnapshotMode();
                     string outputDir = snapshot ? "docs/SDLC" : GxpSnapshotPolicy.PreviewDir;
                     string results = Path.Combine(repoRoot, RtmGeneratorService.DefaultResultsDir);
+                    string frontendResults = Path.Combine(repoRoot, "TestResults", "gxp-frontend");
+                    if (Directory.Exists(frontendResults))
+                    {
+                        string mergedFrontendDir = Path.Combine(results, "frontend");
+                        Directory.CreateDirectory(mergedFrontendDir);
+                        foreach (string xml in Directory.EnumerateFiles(frontendResults, "*.xml", SearchOption.AllDirectories))
+                        {
+                            File.Copy(xml, Path.Combine(mergedFrontendDir, Path.GetFileName(xml)), overwrite: true);
+                        }
+                    }
+
                     bool hasTrx = Directory.Exists(results) && Directory.EnumerateFiles(results, "*.trx", SearchOption.AllDirectories).Any();
                     bool draft = options.AllowDbSkip && !snapshot && !hasTrx;
                     int generated = RtmGeneratorService.GenerateRtm(

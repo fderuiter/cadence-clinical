@@ -19,7 +19,7 @@ test.describe("Suite 4: Clinical Data Manager Golden Path", () => {
   /**
    * Exercise Clinical Data Manager rules designer, medical coding, data lock, and lakehouse.
    *
-   * @req:PRD-SYS-105
+   * @req:PRD-SYS-050
    */
   test("04_data_manager_rules_coding_and_lakehouse", async ({ page }) => {
     // Authenticate as Clinical Data Manager

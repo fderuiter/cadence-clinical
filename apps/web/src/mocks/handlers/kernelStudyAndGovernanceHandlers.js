@@ -217,7 +217,11 @@ export function createKernelStudyAndGovernanceHandlers(store) {
         const url = new URL(request.url);
         const studyRef = decodeURIComponent(String(params.studyRef));
         const limit = url.searchParams.get("limit") || 20;
-        const result = store.getStudyAttention(studyRef, { limit });
+        const result = store.getStudyAttention(
+          studyRef,
+          { limit },
+          resolveDemoCaller(request)
+        );
         if (result.error) return problemResponse(result.error);
         return HttpResponse.json(result.data);
       }

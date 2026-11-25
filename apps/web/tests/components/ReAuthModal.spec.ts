@@ -10,10 +10,6 @@ import ReAuthModal from "../../src/components/shared/ReAuthModal.vue";
 
 describe("ReAuthModal.vue", () => {
   it("does not render in DOM when isOpen is false", () => {
-    /**
-     * @req: PRD-SYS-001
-     * @req: PRD-DOC-001
-     */
     const wrapper = mount(ReAuthModal, {
       props: {
         isOpen: false,
@@ -25,8 +21,7 @@ describe("ReAuthModal.vue", () => {
 
   it("renders credential input, signing reasons, and filename context when isOpen is true", () => {
     /**
-     * @req: PRD-SYS-001
-     * @req: PRD-DOC-001
+     * @req: PRD-DOC-003
      */
     const wrapper = mount(ReAuthModal, {
       props: {
@@ -44,8 +39,7 @@ describe("ReAuthModal.vue", () => {
 
   it("emits confirm with entered credential and signing reason and clears buffer", async () => {
     /**
-     * @req: PRD-SYS-001
-     * @req: PRD-DOC-001
+     * @req: PRD-DOC-003
      */
     const wrapper = mount(ReAuthModal, {
       props: {
@@ -80,10 +74,6 @@ describe("ReAuthModal.vue", () => {
   });
 
   it("emits cancel and close when Cancel button is clicked", async () => {
-    /**
-     * @req: PRD-SYS-001
-     * @req: PRD-DOC-001
-     */
     const wrapper = mount(ReAuthModal, {
       props: {
         isOpen: true,

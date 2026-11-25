@@ -212,6 +212,19 @@ export default defineConfig(({ mode }) => ({
     testTimeout: 15000,
     exclude: ["**/e2e/**", "**/docs-portal/**", "node_modules/**", "dist/**"],
     setupFiles: [path.resolve(__dirname, "./tests/setup.js")],
+    ...(process.env.CADENCE_TEST_EVIDENCE_DIR?.trim()
+      ? {
+          reporters: ["default", "junit"],
+          outputFile: {
+            junit: path.resolve(
+              __dirname,
+              "../..",
+              process.env.CADENCE_TEST_EVIDENCE_DIR.trim(),
+              "vitest-subject-portal.xml"
+            ),
+          },
+        }
+      : {}),
     coverage: {
       provider: "v8",
       reporter: ["text", "json", "html"],

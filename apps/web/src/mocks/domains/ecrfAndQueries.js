@@ -768,12 +768,38 @@ export function createEcrfAndQueriesDomain(ctx) {
     },
 
     listSdvAlerts(options = {}, caller = null) {
-      const studyFilter = options?.studyId
-        ? String(options.studyId).trim()
+      const rawStudyId = options?.studyId ? String(options.studyId).trim() : "";
+      const rawStudyCode = options?.studyCode
+        ? String(options.studyCode).trim()
         : "";
       const enrollmentFilter = options?.enrollmentId
         ? String(options.enrollmentId).trim()
         : "";
+      let resolvedStudyIdFromCode = "";
+      let normalizedStudyCode = "";
+      if (rawStudyCode) {
+        const resolved =
+          typeof ctx.resolveExistingStudy === "function"
+            ? ctx.resolveExistingStudy(rawStudyCode)
+            : null;
+        if (!resolved?.study) {
+          return [];
+        }
+        resolvedStudyIdFromCode = String(resolved.study.ref || "")
+          .split("@")[0]
+          .replace(/^study:/, "");
+        normalizedStudyCode = String(resolved.study.code || rawStudyCode)
+          .trim()
+          .toUpperCase();
+        if (
+          rawStudyId &&
+          resolvedStudyIdFromCode &&
+          rawStudyId !== resolvedStudyIdFromCode
+        ) {
+          return [];
+        }
+      }
+      const studyFilter = rawStudyId || resolvedStudyIdFromCode;
       const canonicalDemoStudyIds = new Set(
         [STUDY_UUID, DEMO_STUDY?.uuid].filter(Boolean)
       );
@@ -793,6 +819,18 @@ export function createEcrfAndQueriesDomain(ctx) {
           studyFilter &&
           form.study_id &&
           form.study_id !== studyFilter &&
+          !(
+            canonicalDemoStudyIds.has(studyFilter) &&
+            canonicalDemoStudyIds.has(form.study_id)
+          )
+        ) {
+          continue;
+        }
+        if (
+          normalizedStudyCode &&
+          form.study_code &&
+          String(form.study_code).trim().toUpperCase() !==
+            normalizedStudyCode &&
           !(
             canonicalDemoStudyIds.has(studyFilter) &&
             canonicalDemoStudyIds.has(form.study_id)
@@ -836,7 +874,7 @@ export function createEcrfAndQueriesDomain(ctx) {
             enrollment_id: form.enrollment_id,
             form_id: form.form_id,
             observation_id: item.observation_id,
-            study_code: form.study_code || null,
+            study_code: form.study_code || normalizedStudyCode || null,
             site_code: form.site_code || null,
             subject_code: form.subject_code || null,
             collection_spec_id: form.collection_spec_id || null,
@@ -1437,6 +1475,8 @@ export function createEcrfAndQueriesDomain(ctx) {
       });
     },
   };
+
+  ctx.listSdvAlerts = methods.listSdvAlerts;
 
   return { seed, methods };
 }

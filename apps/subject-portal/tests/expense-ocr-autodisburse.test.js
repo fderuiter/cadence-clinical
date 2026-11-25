@@ -1,5 +1,4 @@
 /**
- * @req: PRD-PAT-002 PRD-SYS-182 PRD-PAY-006
  * Mobile Receipt OCR Engine, Auto-Approval Policy, Live Wallet, and Direct ACH Reimbursement Tests
  */
 
@@ -105,6 +104,7 @@ describe("Mobile Receipt OCR & Direct ACH Reimbursement Engine", () => {
     vi.restoreAllMocks();
   });
 
+  /** @req: PRD-PAT-002 */
   it("extracts distinct transit, fuel, and meal receipt image contents without filename sniffing and writes Part 11 audit logs", async () => {
     const transitFile = buildReceiptSvgFile(
       ["METRO TRANSIT AUTHORITY", "Date: 2026-08-23", "Fare Paid: $28.50"],
@@ -168,6 +168,7 @@ describe("Mobile Receipt OCR & Direct ACH Reimbursement Engine", () => {
     expect(state.expenseOcr.warning).toBeTruthy();
   });
 
+  /** @req: PRD-PAT-002, PRD-SYS-182 */
   it("auto-approves low-risk claim (<=$100), dispatches direct ACH reimbursement, and records lifetime reimbursements", async () => {
     await extractReceiptOcr(
       buildReceiptSvgFile(
@@ -271,6 +272,7 @@ describe("Mobile Receipt OCR & Direct ACH Reimbursement Engine", () => {
     fetchSpy.mockRestore();
   });
 
+  /** @req: PRD-PAT-002, PRD-SYS-182 */
   it("renders live authenticated My Wallet view, extracts receipt OCR, and disburses available balance with duplicate-click guard", async () => {
     await loadParticipantWallet();
 

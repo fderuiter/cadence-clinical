@@ -1,6 +1,8 @@
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -166,6 +168,9 @@ public sealed class BlindedTreatmentClassifier : IBlindedTreatmentClassifier
         "study drug",
     ];
 
+    private static readonly SearchValues<string> TreatmentMarkerSearchValues =
+        SearchValues.Create(TreatmentMarkers, StringComparison.OrdinalIgnoreCase);
+
     /// <summary>Shared singleton instance.</summary>
     public static BlindedTreatmentClassifier Instance { get; } = new();
 
@@ -180,50 +185,23 @@ public sealed class BlindedTreatmentClassifier : IBlindedTreatmentClassifier
     {
         ArgumentNullException.ThrowIfNull(designs);
 
-        if (value is MissingValue { Reason: NullFlavor.Masked })
+        if (value is MissingValue { Reason: NullFlavor.Masked }
+            || MatchesMarkers(collectionSpecId)
+            || MatchesMarkers(itemId)
+            || MatchesConceptMarkers(concept))
         {
             return true;
         }
 
-        if (MatchesMarkers(collectionSpecId) || MatchesMarkers(itemId))
+        for (var d = 0; d < designs.Count; d++)
         {
-            return true;
-        }
-
-        foreach (var design in designs)
-        {
-            if (design.Interventions.Any(i => i.Product?.ConceptId == conceptId))
+            if (DesignMatchesObservation(designs[d], conceptId, collectionSpecId, itemId))
             {
                 return true;
             }
-
-            foreach (var spec in design.CollectionSpecs)
-            {
-                if (collectionSpecId is not null && !string.Equals(spec.Id, collectionSpecId, StringComparison.Ordinal))
-                {
-                    continue;
-                }
-
-                if (MatchesSpecMarkers(spec)
-                    && (collectionSpecId is not null || spec.Items.Any(i => i.Concept.ConceptId == conceptId)))
-                {
-                    return true;
-                }
-
-                foreach (var item in spec.Items)
-                {
-                    var sameItem = itemId is not null
-                        ? string.Equals(item.Id, itemId, StringComparison.Ordinal)
-                        : item.Concept.ConceptId == conceptId;
-                    if (sameItem && MatchesItemMarkers(item))
-                    {
-                        return true;
-                    }
-                }
-            }
         }
 
-        return MatchesConceptMarkers(concept);
+        return false;
     }
 
     /// <inheritdoc />
@@ -243,9 +221,20 @@ public sealed class BlindedTreatmentClassifier : IBlindedTreatmentClassifier
             return false;
         }
 
-        return designs.Any(design =>
-            design.CollectionSpecs.Any(spec =>
-                string.Equals(spec.Id, collectionSpecId, StringComparison.Ordinal) && MatchesSpecMarkers(spec)));
+        for (var d = 0; d < designs.Count; d++)
+        {
+            var specs = designs[d].CollectionSpecs;
+            for (var s = 0; s < specs.Count; s++)
+            {
+                var spec = specs[s];
+                if (string.Equals(spec.Id, collectionSpecId, StringComparison.Ordinal) && MatchesSpecMarkers(spec))
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     /// <inheritdoc />
@@ -312,33 +301,11 @@ public sealed class BlindedTreatmentClassifier : IBlindedTreatmentClassifier
             }
         }
 
-        foreach (var design in designs)
+        for (var d = 0; d < designs.Count; d++)
         {
-            foreach (var spec in design.CollectionSpecs)
+            if (DesignMatchesVariable(designs[d], targetSpec, targetItem, resolveConcept))
             {
-                if (!string.IsNullOrWhiteSpace(targetSpec)
-                    && !string.Equals(spec.Id, targetSpec, StringComparison.Ordinal))
-                {
-                    continue;
-                }
-
-                var matchedItem = spec.Items.FirstOrDefault(i => string.Equals(i.Id, targetItem, StringComparison.Ordinal));
-                if (matchedItem is null)
-                {
-                    continue;
-                }
-
-                if (MatchesSpecMarkers(spec)
-                    || MatchesItemMarkers(matchedItem)
-                    || design.Interventions.Any(i => i.Product?.ConceptId == matchedItem.Concept.ConceptId))
-                {
-                    return true;
-                }
-
-                if (resolveConcept is not null && MatchesConceptMarkers(resolveConcept(matchedItem.Concept.ConceptId)))
-                {
-                    return true;
-                }
+                return true;
             }
         }
 
@@ -366,7 +333,15 @@ public sealed class BlindedTreatmentClassifier : IBlindedTreatmentClassifier
             return true;
         }
 
-        return observedValues.Any(observed => IsBlindedVariable(target.Dataset, observed.Variable, designs, resolveConcept));
+        for (var i = 0; i < observedValues.Count; i++)
+        {
+            if (IsBlindedVariable(target.Dataset, observedValues[i].Variable, designs, resolveConcept))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>True when <paramref name="text"/> contains any configured treatment-blinding marker.</summary>
@@ -377,7 +352,195 @@ public sealed class BlindedTreatmentClassifier : IBlindedTreatmentClassifier
             return false;
         }
 
-        return Array.Exists(TreatmentMarkers, marker => text.Contains(marker, StringComparison.OrdinalIgnoreCase));
+        return text.AsSpan().ContainsAny(TreatmentMarkerSearchValues);
+    }
+
+    private static bool DesignMatchesObservation(
+        ProtocolDesign design,
+        ConceptId conceptId,
+        string? collectionSpecId,
+        string? itemId)
+    {
+        if (HasInterventionProduct(design.Interventions, conceptId))
+        {
+            return true;
+        }
+
+        if (TryAsSpan(design.CollectionSpecs, out var specSpan))
+        {
+            for (var s = 0; s < specSpan.Length; s++)
+            {
+                var spec = specSpan[s];
+                if (collectionSpecId is not null && !string.Equals(spec.Id, collectionSpecId, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                if (SpecMatchesObservation(spec, conceptId, collectionSpecId, itemId))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        var specs = design.CollectionSpecs;
+        for (var s = 0; s < specs.Count; s++)
+        {
+            var spec = specs[s];
+            if (collectionSpecId is not null && !string.Equals(spec.Id, collectionSpecId, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            if (SpecMatchesObservation(spec, conceptId, collectionSpecId, itemId))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool SpecMatchesObservation(
+        CollectionSpec spec,
+        ConceptId conceptId,
+        string? collectionSpecId,
+        string? itemId)
+    {
+        if (collectionSpecId is not null && MatchesSpecMarkers(spec))
+        {
+            return true;
+        }
+
+        var specHasConcept = false;
+        if (TryAsSpan(spec.Items, out var itemSpan))
+        {
+            for (var i = 0; i < itemSpan.Length; i++)
+            {
+                var item = itemSpan[i];
+                var matchesConcept = item.Concept.ConceptId == conceptId;
+                if (matchesConcept)
+                {
+                    specHasConcept = true;
+                }
+
+                var sameItem = itemId is not null
+                    ? string.Equals(item.Id, itemId, StringComparison.Ordinal)
+                    : matchesConcept;
+                if (sameItem && MatchesItemMarkers(item))
+                {
+                    return true;
+                }
+            }
+
+            return collectionSpecId is null && specHasConcept && MatchesSpecMarkers(spec);
+        }
+
+        var items = spec.Items;
+        for (var i = 0; i < items.Count; i++)
+        {
+            var item = items[i];
+            var matchesConcept = item.Concept.ConceptId == conceptId;
+            if (matchesConcept)
+            {
+                specHasConcept = true;
+            }
+
+            var sameItem = itemId is not null
+                ? string.Equals(item.Id, itemId, StringComparison.Ordinal)
+                : matchesConcept;
+            if (sameItem && MatchesItemMarkers(item))
+            {
+                return true;
+            }
+        }
+
+        return collectionSpecId is null && specHasConcept && MatchesSpecMarkers(spec);
+    }
+
+    private static bool TryAsSpan<T>(IReadOnlyList<T> source, out ReadOnlySpan<T> span)
+    {
+        if (source is T[] array)
+        {
+            span = array;
+            return true;
+        }
+
+        if (source is List<T> list)
+        {
+            span = CollectionsMarshal.AsSpan(list);
+            return true;
+        }
+
+        span = default;
+        return false;
+    }
+
+    private static bool DesignMatchesVariable(
+        ProtocolDesign design,
+        string? targetSpec,
+        string targetItem,
+        Func<ConceptId, BlindedConceptMetadata?>? resolveConcept)
+    {
+        var specs = design.CollectionSpecs;
+        for (var s = 0; s < specs.Count; s++)
+        {
+            var spec = specs[s];
+            if (!string.IsNullOrWhiteSpace(targetSpec)
+                && !string.Equals(spec.Id, targetSpec, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            var matchedItem = FindItemById(spec.Items, targetItem);
+            if (matchedItem is null)
+            {
+                continue;
+            }
+
+            if (MatchesSpecMarkers(spec)
+                || MatchesItemMarkers(matchedItem)
+                || HasInterventionProduct(design.Interventions, matchedItem.Concept.ConceptId))
+            {
+                return true;
+            }
+
+            if (resolveConcept is not null && MatchesConceptMarkers(resolveConcept(matchedItem.Concept.ConceptId)))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool HasInterventionProduct(IReadOnlyList<Intervention> interventions, ConceptId conceptId)
+    {
+        for (var i = 0; i < interventions.Count; i++)
+        {
+            if (interventions[i].Product?.ConceptId == conceptId)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static CollectionItem? FindItemById(IReadOnlyList<CollectionItem> items, string itemId)
+    {
+        for (var i = 0; i < items.Count; i++)
+        {
+            var item = items[i];
+            if (string.Equals(item.Id, itemId, StringComparison.Ordinal))
+            {
+                return item;
+            }
+        }
+
+        return null;
     }
 
     private static bool MatchesSpecMarkers(CollectionSpec spec) =>

@@ -2467,6 +2467,8 @@ export interface components {
       study_ref: string;
       proposals: components["schemas"]["Kernel_KernelProposalResponse"][];
       findings: components["schemas"]["Kernel_KernelValidationFindingResponse"][];
+      sdv_alerts?:
+        null | components["schemas"]["Kernel_KernelStudySdvAlertResponse"][];
     };
     Kernel_KernelStudyLocksResponse: {
       study_ref: string;
@@ -2483,6 +2485,38 @@ export interface components {
       profile_ref: null | string;
       pinned_rule_pack_refs: string[];
       rule_packs: components["schemas"]["Kernel_KernelRulePackResponse"][];
+    };
+    Kernel_KernelStudySdvAlertResponse: {
+      /** Format: uuid */
+      alert_id: string;
+      /** Format: uuid */
+      study_id: string;
+      /** Format: uuid */
+      study_site_id: null | string;
+      /** Format: uuid */
+      enrollment_id: string;
+      /** Format: uuid */
+      form_id: null | string;
+      /** Format: uuid */
+      observation_id: string;
+      study_code: null | string;
+      site_code: null | string;
+      subject_code: null | string;
+      collection_spec_id: null | string;
+      planned_activity_id: null | string;
+      item_id: null | string;
+      /** Format: int32 */
+      superseded_revision: number | string;
+      /** Format: int32 */
+      current_revision: number | string;
+      verified_by: string;
+      /** Format: date-time */
+      verified_at: string;
+      modified_by: string;
+      /** Format: date-time */
+      modified_at: string;
+      reason_for_change: string;
+      message: string;
     };
     Kernel_KernelStudySiteResponse: {
       study_site_ref: string;
