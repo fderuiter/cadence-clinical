@@ -1,10 +1,10 @@
 // Local audit ledger: hash-chained blocks rendered into the footer timeline.
-import { buildLedgerBlock, createSrOnlyActionButton } from "ui";
+import { createSrOnlyActionButton } from "ui/builders";
+import { buildLedgerBlock } from "ui/signing";
 
 import { state } from "../stores/state.js";
 import { demoNowIso } from "../utils/demoMode.js";
 import { humanizeExpenseReviewNotes } from "../utils/participantCopy.js";
-import { openLedgerPeek } from "./peek.js";
 import { getInstrumentDisplayName } from "./site-support.js";
 
 function escapeHtml(value) {
@@ -233,7 +233,9 @@ function createOrPatchLedgerItem(doc, existingEl, block, key) {
       const idx = Number(peekBtn.getAttribute("data-id"));
       const targetBlock = Number.isFinite(idx) ? state.ledgerBlocks[idx] : null;
       if (targetBlock) {
-        openLedgerPeek(targetBlock, idx, peekBtn);
+        void import("./peek.js").then(({ openLedgerPeek }) => {
+          openLedgerPeek(targetBlock, idx, peekBtn);
+        });
       }
     });
   }
@@ -244,7 +246,9 @@ function createOrPatchLedgerItem(doc, existingEl, block, key) {
     const targetBlock = Number.isFinite(idx) ? state.ledgerBlocks[idx] : null;
     const triggerEl = itemEl.querySelector(".btn-peek-ledger") || itemEl;
     if (targetBlock) {
-      openLedgerPeek(targetBlock, idx, triggerEl);
+      void import("./peek.js").then(({ openLedgerPeek }) => {
+        openLedgerPeek(targetBlock, idx, triggerEl);
+      });
     }
   });
 

@@ -5,46 +5,85 @@ import {
   DEMO_SPONSOR,
   DEMO_STUDY,
 } from "demo-fixtures";
+import { extractPrimarySiteId, extractPrimaryStudyId } from "ui/caller-scope";
+import {
+  flushRegisteredDraftSources,
+  hasRegisteredUnsavedDrafts,
+  useSignOutGuard,
+} from "ui/portal-shell";
 import {
   createOidcSessionCoordinator,
-  extractPrimarySiteId,
-  extractPrimaryStudyId,
   resolveOidcRedirectUri,
-} from "ui";
+} from "ui/session";
 import { watch } from "vue";
 
 import { state } from "../stores/state.js";
-import {
-  clearInMemoryKey,
-  clearSessionKeyFromDB,
-  closeDatabase,
-  getActiveUserId,
-  getAllSubmissions,
-  getDraftAssignmentIds,
-  getInMemorySessionKey,
-  getWrappedMasterKeyConfig,
-  hasTrackedLocalQueueActivity,
-  initSessionKey,
-  setActiveUserId,
-  setTrackedLocalQueueActivity,
-} from "../sync-queue.js";
 import { isDemoBuild, isDemoModeActive } from "../utils/demoMode.js";
-import { showToast } from "../widgets/toast.js";
-import { renderCompliance } from "./compliance.js";
-import { renderInbox } from "./inbox.js";
-import { checkPINWrapper, clearPendingResetMasterKey } from "./pin.js";
 import {
-  flushActiveQuestionnaireDraft,
-  hasUnsavedQuestionnaireDrafts,
-} from "./questionnaire.js";
+  hasTrackedLocalQueueActivity,
+  setTrackedLocalQueueActivity,
+} from "../utils/localQueueActivity.js";
+import { checkOnline } from "../utils/networkStatus.js";
+import { showToast } from "../widgets/toast.js";
 import { showView } from "./navigation.js";
-import { checkOnline, renderSyncQueueList } from "./sync-status.js";
-import { renderTasks } from "./tasks.js";
 
 let lastInspectedSignOutState = {
   draftCount: 0,
   unsyncedCount: 0,
 };
+let activeScopedUserId = null;
+let authTransitionSeq = 0;
+let syncQueueModule = null;
+let syncQueueModulePromise = null;
+let pinModule = null;
+let pinModulePromise = null;
+let syncStatusModule = null;
+let syncStatusModulePromise = null;
+
+function loadSyncQueueModule() {
+  if (syncQueueModule) {
+    return Promise.resolve(syncQueueModule);
+  }
+  return (syncQueueModulePromise ??= import("../sync-queue.js").then((mod) => {
+    syncQueueModule = mod;
+    return mod;
+  }));
+}
+
+function loadPinModule() {
+  if (pinModule) {
+    return Promise.resolve(pinModule);
+  }
+  return (pinModulePromise ??= import("./pin.js").then((mod) => {
+    pinModule = mod;
+    return mod;
+  }));
+}
+
+function loadSyncStatusModule() {
+  if (syncStatusModule) {
+    return Promise.resolve(syncStatusModule);
+  }
+  return (syncStatusModulePromise ??= import("./sync-status.js").then((mod) => {
+    syncStatusModule = mod;
+    return mod;
+  }));
+}
+
+function hasLocalDraftState() {
+  if (hasRegisteredUnsavedDrafts()) {
+    return true;
+  }
+  if (
+    state.activeQuestionnaire?.answers &&
+    Object.values(state.activeQuestionnaire.answers).some(
+      (val) => val !== "" && val !== null && val !== undefined
+    )
+  ) {
+    return true;
+  }
+  return Object.values(state.draftPresence || {}).some(Boolean);
+}
 
 export function isUnsyncedOrLockedSubmission(sub) {
   if (!sub || sub.unrecoverable) {
@@ -57,37 +96,44 @@ export function isUnsyncedOrLockedSubmission(sub) {
   );
 }
 
-export async function prepareSignOutGuardState() {
+export async function prepareSignOutGuardState(options = {}) {
   lastInspectedSignOutState = { draftCount: 0, unsyncedCount: 0 };
   try {
-    await flushActiveQuestionnaireDraft();
+    if (!options.skipRegisteredFlush) {
+      await flushRegisteredDraftSources();
+    }
+    if (
+      state.activeQuestionnaire &&
+      (isDemoBuild() || import.meta.env?.MODE === "test")
+    ) {
+      const { flushActiveQuestionnaireDraft } =
+        await import("./questionnaire.js");
+      await flushActiveQuestionnaireDraft();
+    }
   } catch (err) {
     console.warn("Could not flush active draft before sign-out check:", err);
   }
-  try {
-    const draftIds = await getDraftAssignmentIds(state.session.userId);
-    lastInspectedSignOutState.draftCount = Array.isArray(draftIds)
-      ? draftIds.length
-      : 0;
-  } catch {
-    lastInspectedSignOutState.draftCount = 0;
-  }
-  try {
-    const allSubs = await getAllSubmissions();
-    if (Array.isArray(allSubs)) {
-      state.submissions = allSubs;
-      lastInspectedSignOutState.unsyncedCount = allSubs.filter(
-        isUnsyncedOrLockedSubmission
-      ).length;
-    }
-  } catch {
+  const syncQueue = syncQueueModule || (await loadSyncQueueModule());
+  const [draftIds, allSubs] = await Promise.all([
+    syncQueue.getDraftAssignmentIds(state.session.userId).catch(() => []),
+    syncQueue.getAllSubmissions().catch(() => null),
+  ]);
+  lastInspectedSignOutState.draftCount = Array.isArray(draftIds)
+    ? draftIds.length
+    : 0;
+  if (Array.isArray(allSubs)) {
+    state.submissions = allSubs;
+    lastInspectedSignOutState.unsyncedCount = allSubs.filter(
+      isUnsyncedOrLockedSubmission
+    ).length;
+  } else {
     lastInspectedSignOutState.unsyncedCount = 0;
   }
   const hasPersistedPending =
     lastInspectedSignOutState.draftCount > 0 ||
     lastInspectedSignOutState.unsyncedCount > 0;
   setTrackedLocalQueueActivity(hasPersistedPending);
-  if (!hasUnsavedQuestionnaireDrafts() && Array.isArray(state.assignments)) {
+  if (!hasLocalDraftState() && Array.isArray(state.assignments)) {
     if (lastInspectedSignOutState.draftCount === 0) {
       state.assignments.forEach((a) => {
         if (a && a.has_draft) a.has_draft = false;
@@ -102,7 +148,7 @@ export async function prepareSignOutGuardState() {
 }
 
 export function hasUnsavedOrUnsyncedLocalData() {
-  if (hasUnsavedQuestionnaireDrafts()) {
+  if (hasLocalDraftState()) {
     return true;
   }
   if (hasTrackedLocalQueueActivity()) {
@@ -131,27 +177,53 @@ export function hasUnsavedOrUnsyncedLocalData() {
   return false;
 }
 
-function transitionParticipantScope(nextUserId) {
+export function usePortalSignOutGuard() {
+  return useSignOutGuard({
+    flushExternalDrafts: () =>
+      prepareSignOutGuardState({ skipRegisteredFlush: true }),
+    hasExternalDrafts: hasUnsavedOrUnsyncedLocalData,
+    onConfirmSignOut: () => logout({ confirmed: true }),
+  });
+}
+
+async function transitionParticipantScope(nextUserId) {
   const normalizedNext = nextUserId || null;
-  const prevUserId = getActiveUserId();
-  if (prevUserId !== normalizedNext) {
-    clearPendingResetMasterKey();
-    clearInMemoryKey();
+  if (
+    activeScopedUserId === null &&
+    normalizedNext === null &&
+    !hasTrackedLocalQueueActivity() &&
+    import.meta.env?.MODE !== "test"
+  ) {
     state.submissions = [];
+    return;
+  }
+
+  const syncQueue = await loadSyncQueueModule();
+  const prevUserId = syncQueue.getActiveUserId();
+  if (prevUserId !== normalizedNext) {
+    const { clearPendingResetMasterKey } = await loadPinModule();
+    clearPendingResetMasterKey();
+    syncQueue.clearInMemoryKey();
+    state.submissions = [];
+    const { renderSyncQueueList } = await loadSyncStatusModule();
     void renderSyncQueueList([]);
   }
-  setActiveUserId(normalizedNext);
+  syncQueue.setActiveUserId(normalizedNext);
+  activeScopedUserId = normalizedNext;
 }
 
 async function ensureEphemeralDemoSessionKey() {
-  if (!state.session.token && isDemoModeActive() && !getInMemorySessionKey()) {
-    const config = await getWrappedMasterKeyConfig();
-    if (!config.wrappedKey) {
-      const demoMaterial = state.session.userId || "demo-material";
-      try {
-        await initSessionKey(demoMaterial, state.session.userId);
-      } catch (err) {
-        console.warn("Failed to initialize ephemeral demo session key:", err);
+  if (!state.session.token && isDemoModeActive()) {
+    const syncQueue = await loadSyncQueueModule();
+    if (!syncQueue.getInMemorySessionKey()) {
+      const config = await syncQueue.getWrappedMasterKeyConfig();
+      if (!config.wrappedKey) {
+        const demoMaterial = state.session.userId || "demo-material";
+        try {
+          await syncQueue.initSessionKey(demoMaterial, state.session.userId);
+        } catch (err) {
+          console.warn("Failed to initialize ephemeral demo session key:", err);
+        }
       }
     }
   }
@@ -372,8 +444,15 @@ export async function restoreSession() {
     state.session.userId = cachedUserId;
   }
   hydrateSessionScopeFromClaims();
-  transitionParticipantScope(state.session.userId);
-  await clearSessionKeyFromDB(state.session.userId);
+  await transitionParticipantScope(state.session.userId);
+  if (
+    Boolean(state.session.userId) ||
+    hasTrackedLocalQueueActivity() ||
+    import.meta.env?.MODE === "test"
+  ) {
+    const { clearSessionKeyFromDB } = await loadSyncQueueModule();
+    await clearSessionKeyFromDB(state.session.userId);
+  }
 
   // Only explicit demo sessions with no PIN wrapper and no injected auth token initialize an ephemeral in-memory demo key.
   let hasInjectedAuth = false;
@@ -398,6 +477,7 @@ export async function restoreSession() {
 // Signs in through injected storage credentials or Keycloak (check-sso).
 // Outside explicit demo builds, never silently falls back to demo mode or a synthetic user ID.
 export async function signIn() {
+  authTransitionSeq += 1;
   state.authError = "";
 
   if (typeof window !== "undefined" && !window.__MOCK_TEST_ENV__) {
@@ -416,6 +496,7 @@ export async function signIn() {
 
     if (storageUser && storageToken) {
       if (state.session.userId !== storageUser) {
+        const { clearInMemoryKey } = await loadSyncQueueModule();
         clearInMemoryKey();
       }
       state.session.userId = storageUser;
@@ -425,7 +506,7 @@ export async function signIn() {
       state.session.sessionExpired = false;
       hydrateSessionScopeFromClaims(null, storageToken);
       portalSessionCoordinator.markAuthenticated(storageToken);
-      transitionParticipantScope(storageUser);
+      await transitionParticipantScope(storageUser);
       await ensureEphemeralDemoSessionKey();
       applyRestoredReturnUrl(portalSessionCoordinator.consumeReturnUrl());
       return;
@@ -443,7 +524,7 @@ export async function signIn() {
       state.session.isOfflineMode = true;
       state.session.isDemoMode = true;
       state.session.sessionExpired = false;
-      transitionParticipantScope(state.session.userId);
+      await transitionParticipantScope(state.session.userId);
       await ensureEphemeralDemoSessionKey();
       return;
     } else {
@@ -493,7 +574,7 @@ export async function signIn() {
               keycloak.token
             );
             portalSessionCoordinator.markAuthenticated(keycloak.token);
-            transitionParticipantScope(authenticatedUserId);
+            await transitionParticipantScope(authenticatedUserId);
 
             if (authenticatedUserId) {
               try {
@@ -519,7 +600,8 @@ export async function signIn() {
       state.session.isDemoMode = false;
       state.session.token = null;
       if (!checkOnline() && state.session.userId) {
-        transitionParticipantScope(state.session.userId);
+        await transitionParticipantScope(state.session.userId);
+        const { getWrappedMasterKeyConfig } = await loadSyncQueueModule();
         const config = await getWrappedMasterKeyConfig();
         if (config.wrappedKey) {
           state.session.isOfflineMode = true;
@@ -529,7 +611,7 @@ export async function signIn() {
 
       state.session.userId = null;
       state.session.isOfflineMode = false;
-      transitionParticipantScope(null);
+      await transitionParticipantScope(null);
     }
   } else {
     // Under Vitest (__MOCK_TEST_ENV__), preserve explicit test configuration without forcing demo mode.
@@ -552,12 +634,13 @@ export async function signIn() {
     } else if (state.session.token) {
       state.session.isOfflineMode = false;
     }
-    transitionParticipantScope(state.session.userId);
+    await transitionParticipantScope(state.session.userId);
   }
 }
 
 // Initiates interactive OIDC sign-in when an unauthenticated participant clicks Sign In.
 export async function login(options = {}) {
+  authTransitionSeq += 1;
   state.authError = "";
   const candidateReturnUrl =
     options?.returnUrl ||
@@ -595,7 +678,7 @@ export async function login(options = {}) {
       state.session.sessionExpired = false;
       hydrateSessionScopeFromClaims(null, storageToken);
       portalSessionCoordinator.markAuthenticated(storageToken);
-      transitionParticipantScope(resolvedUser);
+      await transitionParticipantScope(resolvedUser);
       await ensureEphemeralDemoSessionKey();
       applyRestoredReturnUrl(portalSessionCoordinator.consumeReturnUrl());
       return;
@@ -614,7 +697,7 @@ export async function login(options = {}) {
       state.session.isOfflineMode = true;
       state.session.isDemoMode = true;
       state.session.sessionExpired = false;
-      transitionParticipantScope(demoUserId);
+      await transitionParticipantScope(demoUserId);
       await ensureEphemeralDemoSessionKey();
       return;
     } else {
@@ -672,16 +755,26 @@ export function watchUserIdentity() {
     () => state.session.userId,
     async (newUid, oldUid) => {
       if (newUid !== oldUid) {
+        const [
+          syncQueue,
+          { checkPINWrapper, clearPendingResetMasterKey },
+          { renderSyncQueueList },
+        ] = await Promise.all([
+          loadSyncQueueModule(),
+          loadPinModule(),
+          loadSyncStatusModule(),
+        ]);
         clearPendingResetMasterKey();
-        clearInMemoryKey();
+        syncQueue.clearInMemoryKey();
         state.submissions = [];
         void renderSyncQueueList([]);
-        setActiveUserId(newUid);
+        syncQueue.setActiveUserId(newUid);
+        activeScopedUserId = newUid || null;
         if (isDemoModeActive()) {
-          const config = await getWrappedMasterKeyConfig();
+          const config = await syncQueue.getWrappedMasterKeyConfig();
           if (!config.wrappedKey && newUid) {
             try {
-              await initSessionKey(newUid, newUid);
+              await syncQueue.initSessionKey(newUid, newUid);
             } catch (err) {
               console.warn(
                 "Failed to derive ephemeral demo key on identity change:",
@@ -701,7 +794,7 @@ export function watchUserIdentity() {
 export async function logout(options = {}) {
   const confirmed = Boolean(options?.confirmed || options?.force);
   if (!confirmed && hasUnsavedOrUnsyncedLocalData()) {
-    if (!hasUnsavedQuestionnaireDrafts() && typeof indexedDB !== "undefined") {
+    if (!hasLocalDraftState() && typeof indexedDB !== "undefined") {
       await prepareSignOutGuardState();
     }
     if (hasUnsavedOrUnsyncedLocalData()) {
@@ -741,9 +834,8 @@ export async function logout(options = {}) {
     console.warn("Failed to clear session storage keys on logout:", err);
   }
 
+  const logoutSeq = ++authTransitionSeq;
   const prevUserId = state.session.userId;
-  clearPendingResetMasterKey();
-  clearInMemoryKey();
 
   state.pinSetup.isOpen = false;
   state.pinSetup.pin = "";
@@ -771,7 +863,7 @@ export async function logout(options = {}) {
     state.session.token = null;
     state.session.isOfflineMode = true;
     state.session.isDemoMode = true;
-    setActiveUserId(demoUserId);
+    activeScopedUserId = demoUserId;
   } else {
     state.session.userId = null;
     state.session.studyId = null;
@@ -784,11 +876,7 @@ export async function logout(options = {}) {
     state.notifications = [];
     state.compliance = null;
     state.submissions = [];
-    void renderSyncQueueList([]);
-    setActiveUserId(null);
-    renderTasks();
-    renderCompliance();
-    renderInbox();
+    activeScopedUserId = null;
     if (
       state.currentView === "view-wallet" ||
       state.currentView === "view-tasks"
@@ -798,12 +886,49 @@ export async function logout(options = {}) {
     }
   }
 
-  await clearSessionKeyFromDB(prevUserId);
-  if ((prevUserId || null) !== (state.session.userId || null)) {
-    closeDatabase(prevUserId);
+  const [syncQueue, { clearPendingResetMasterKey }, { renderSyncQueueList }] =
+    await Promise.all([
+      loadSyncQueueModule(),
+      loadPinModule(),
+      loadSyncStatusModule(),
+    ]);
+
+  if (logoutSeq === authTransitionSeq) {
+    clearPendingResetMasterKey();
+    syncQueue.clearInMemoryKey();
+    if (wasDemo) {
+      syncQueue.setActiveUserId(state.session.userId);
+    } else {
+      void renderSyncQueueList([]);
+      syncQueue.setActiveUserId(null);
+      if (isDemoBuild() || import.meta.env?.MODE === "test") {
+        const [{ renderTasks }, { renderCompliance }, { renderInbox }] =
+          await Promise.all([
+            import("./tasks.js"),
+            import("./compliance.js"),
+            import("./inbox.js"),
+          ]);
+        if (logoutSeq === authTransitionSeq) {
+          renderTasks();
+          renderCompliance();
+          renderInbox();
+        }
+      }
+    }
   }
 
   if (
+    logoutSeq === authTransitionSeq ||
+    (prevUserId || null) !== (state.session.userId || null)
+  ) {
+    await syncQueue.clearSessionKeyFromDB(prevUserId);
+    if ((prevUserId || null) !== (state.session.userId || null)) {
+      syncQueue.closeDatabase(prevUserId);
+    }
+  }
+
+  if (
+    logoutSeq === authTransitionSeq &&
     typeof window !== "undefined" &&
     window.keycloakInstance &&
     typeof window.keycloakInstance.logout === "function"

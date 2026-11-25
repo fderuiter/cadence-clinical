@@ -1,6 +1,6 @@
 // Local security PIN that wraps the offline database master key in memory (ADR-2360),
 // with 5-attempt consecutive lockout cap and identity-verified OIDC reset.
-import { decryptAESGCM, deriveKeyFromPIN, encryptAESGCM } from "ui";
+import { decryptAESGCM, deriveKeyFromPIN, encryptAESGCM } from "ui/signing";
 import { nextTick } from "vue";
 
 import { isAuthenticatedSession } from "../api/client.js";
@@ -14,11 +14,12 @@ import {
   setInMemorySessionKey,
 } from "../sync-queue.js";
 import { isDemoModeActive } from "../utils/demoMode.js";
+import { checkOnline } from "../utils/networkStatus.js";
 import { logAuditRecord } from "./audit.js";
 import { login } from "./auth.js";
 import { maskParticipantIdentifier } from "./site-support.js";
 import { syncOfflineQueue } from "./sync.js";
-import { checkOnline, refreshSyncViews } from "./sync-status.js";
+import { refreshSyncViews } from "./sync-status.js";
 
 export const MAX_PIN_UNLOCK_ATTEMPTS = 5;
 export const PENDING_OIDC_PIN_RESET_KEY = "oidc_pending_pin_reset";

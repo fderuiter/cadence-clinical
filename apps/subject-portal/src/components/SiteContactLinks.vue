@@ -34,7 +34,7 @@
 
 <script setup>
 import { computed } from "vue";
-import { ClinicalIcon } from "ui";
+import { ClinicalIcon } from "ui/portal-shell";
 
 import { getSiteSupportContact } from "../features/site-support.js";
 import { useUiStore } from "../stores/ui.js";

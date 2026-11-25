@@ -1,5 +1,5 @@
 // Gateway API dispatch and the typed fetch helpers built on it.
-import { isStepUpAuthFailure } from "ui";
+import { isStepUpAuthFailure } from "ui/session";
 import {
   ensurePortalSessionToken,
   expirePortalSession,

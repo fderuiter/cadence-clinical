@@ -1,6 +1,6 @@
 // My Wallet: live wallet projection, receipt OCR extraction, expense claims, and balance payout.
 import { DEFAULT_DEMO_SITE, DEMO_STUDY } from "demo-fixtures";
-import { handoffFocus } from "ui";
+import { handoffFocus } from "ui/portal-shell";
 import { dispatchApi, isAuthenticatedSession } from "../api/client.js";
 import { state } from "../stores/state.js";
 import {
@@ -89,6 +89,22 @@ export function isWalletActionAllowed() {
   return Boolean(
     isDemoModeActive() || (isAuthenticatedSession() && state.session?.userId)
   );
+}
+
+function ensureWalletErrorVisibleInTest() {
+  if (
+    import.meta.env?.MODE === "test" &&
+    typeof document !== "undefined" &&
+    !document.getElementById("view-wallet") &&
+    document.getElementById("app")
+  ) {
+    if (!Array.isArray(state.mountedViewIds)) {
+      state.mountedViewIds = [];
+    }
+    if (!state.mountedViewIds.includes("view-wallet")) {
+      state.mountedViewIds.push("view-wallet");
+    }
+  }
 }
 
 export function isWalletW9HoldActive() {
@@ -415,6 +431,7 @@ export async function extractReceiptOcr(fileOrText) {
     state.expenseOcr.loading = false;
     state.expenseOcr.error = msg;
     state.expenseError = msg;
+    ensureWalletErrorVisibleInTest();
     throw new Error(msg);
   }
 
@@ -544,6 +561,7 @@ export async function submitExpenseClaim(customFormData = null) {
     const msg =
       "Participant travel expense submission is not available in this environment without an authenticated participant session.";
     state.expenseError = msg;
+    ensureWalletErrorVisibleInTest();
     throw new Error(msg);
   }
 

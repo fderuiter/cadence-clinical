@@ -6,11 +6,17 @@ import {
   formatWalletCurrency,
   normalizeCurrencyCode,
 } from "../utils/currency.js";
-import { demoNowMs } from "../utils/demoMode.js";
+import { demoNowMs, isDemoBuild } from "../utils/demoMode.js";
 import {
   humanizeExpenseReviewNotes,
   resolveFriendlyStudyTitle,
 } from "../utils/participantCopy.js";
+import {
+  PEEK_QUERY_KEYS,
+  notifyPeekQueryChange,
+  registerPeekQuerySync,
+} from "../utils/peekQuery.js";
+import { showView } from "./navigation.js";
 import {
   formatAnswerPairs,
   getInstrumentDisplayName,
@@ -20,30 +26,10 @@ import {
   isQuarantinedSubmission,
 } from "./site-support.js";
 
-async function navigateToView(viewId) {
-  const { showView } = await import("./navigation.js");
+export { PEEK_QUERY_KEYS, registerPeekQuerySync };
+
+function navigateToView(viewId) {
   showView(viewId);
-}
-
-export const PEEK_QUERY_KEYS = Object.freeze([
-  "notifId",
-  "claimId",
-  "txId",
-  "ledgerIndex",
-  "complianceId",
-  "syncSeq",
-]);
-
-let syncPeekQueryHandler = null;
-
-export function registerPeekQuerySync(handler) {
-  syncPeekQueryHandler = typeof handler === "function" ? handler : null;
-}
-
-function notifyPeekQueryChange(record) {
-  if (typeof syncPeekQueryHandler === "function") {
-    syncPeekQueryHandler(record);
-  }
 }
 
 function formatReadableDateTime(isoValue) {
@@ -202,17 +188,21 @@ export function buildNotificationPeekRecord(notif) {
         : "Open full view: Reminders",
     fullViewAction: async () => {
       if (isReconsent) {
-        await navigateToView("view-consent");
-        const { openReconsentModal } = await import("./reconsent.js");
-        openReconsentModal();
+        navigateToView("view-consent");
+        if (isDemoBuild() || import.meta.env?.MODE === "test") {
+          const { openReconsentModal } = await import("./reconsent.js");
+          openReconsentModal();
+        }
         return;
       }
       if (canOpenSurvey) {
-        const { startQuestionnaire } = await import("./questionnaire.js");
-        await startQuestionnaire(linkedAssignment.id);
+        if (isDemoBuild() || import.meta.env?.MODE === "test") {
+          const { startQuestionnaire } = await import("./questionnaire.js");
+          await startQuestionnaire(linkedAssignment.id);
+        }
         return;
       }
-      await navigateToView("view-inbox");
+      navigateToView("view-inbox");
       nextTick(() => {
         document.getElementById(`notif-card-${notif.id}`)?.focus?.();
       });
@@ -305,11 +295,13 @@ export function buildCompliancePeekRecord(item, index = 0) {
         matchingAssignment.status !== "COMPLETED" &&
         matchingAssignment.status !== "PENDING_SYNC"
       ) {
-        const { startQuestionnaire } = await import("./questionnaire.js");
-        await startQuestionnaire(matchingAssignment.id);
+        if (isDemoBuild() || import.meta.env?.MODE === "test") {
+          const { startQuestionnaire } = await import("./questionnaire.js");
+          await startQuestionnaire(matchingAssignment.id);
+        }
         return;
       }
-      await navigateToView("view-tasks");
+      navigateToView("view-tasks");
     },
   };
 }

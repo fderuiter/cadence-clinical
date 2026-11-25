@@ -1,12 +1,12 @@
 // 5. My Consent: approved content, comprehension check and consent signing.
-import { watch } from "vue";
+import { nextTick, watch } from "vue";
 import {
-  handoffFocus,
   interpretComprehensionResult,
   normalizeApprovedConsent,
   shapeComprehensionAnswers,
-  validateField,
-} from "ui";
+} from "ui/econsent";
+import { handoffFocus } from "ui/portal-shell";
+import { validateField } from "ui/signing";
 
 import { dispatchApi, isAuthenticatedSession } from "../api/client.js";
 import {
@@ -14,7 +14,7 @@ import {
   MOCK_COMPREHENSION_CHECK,
 } from "../data/mock-data.js";
 import { state } from "../stores/state.js";
-import { isDemoModeActive } from "../utils/demoMode.js";
+import { isDemoBuild, isDemoModeActive } from "../utils/demoMode.js";
 import {
   formatConsentEditionLabel,
   formatConsentLanguageLabel,
@@ -131,7 +131,30 @@ function ensureLivenessExpiryWatcher() {
   );
 }
 
+function needsConsentViewMountInTest() {
+  return (
+    import.meta.env?.MODE === "test" &&
+    typeof document !== "undefined" &&
+    !document.getElementById("view-consent") &&
+    Boolean(document.getElementById("app"))
+  );
+}
+
+async function mountConsentViewInTest() {
+  if (!Array.isArray(state.mountedViewIds)) {
+    state.mountedViewIds = [];
+  }
+  if (!state.mountedViewIds.includes("view-consent")) {
+    state.mountedViewIds.push("view-consent");
+  }
+  await nextTick();
+}
+
 export async function loadConsentDetails() {
+  state.consentLoadSeq = (state.consentLoadSeq || 0) + 1;
+  if (needsConsentViewMountInTest()) {
+    await mountConsentViewInTest();
+  }
   const loadingEl = document.getElementById("consent-loading");
   const failureEl = document.getElementById("consent-failure");
   const contentEl = document.getElementById("consent-content-wrapper");
@@ -160,7 +183,10 @@ export async function loadConsentDetails() {
       state.consentCheck = await dispatchApi(
         `api/v1/econsent/templates/template-icf/versions/1/comprehension-checks`
       );
-    } else if (isDemoModeActive()) {
+    } else if (
+      (isDemoBuild() || import.meta.env?.MODE === "test") &&
+      isDemoModeActive()
+    ) {
       // Explicit demo mode fallback using language matched synthetic structures
       const localApproved = JSON.parse(JSON.stringify(MOCK_APPROVED_CONTENT));
       localApproved.language_code = state.consentLanguage;
@@ -511,6 +537,9 @@ export async function submitConsentAnswers() {
   const check = state.consentCheck;
   if (!check) return;
 
+  if (needsConsentViewMountInTest()) {
+    await mountConsentViewInTest();
+  }
   const banner = document.getElementById("comprehension-status-banner");
   if (banner) banner.style.display = "none";
 

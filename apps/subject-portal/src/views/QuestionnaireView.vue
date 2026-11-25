@@ -58,6 +58,8 @@
             id="btn-submit-questionnaire"
             type="submit"
             class="btn btn-primary"
+            data-vue-bound="true"
+            @click.prevent="requestQuestionnaireSignature"
           >
             Sign and Submit
           </button>
@@ -114,22 +116,26 @@
 
 <script setup>
 import { computed, nextTick, onMounted, ref, watch } from "vue";
-import { useFocusTrap } from "ui";
+import { useFocusTrap } from "ui/portal-overlays";
 
 import {
   confirmCancelQuestionnaire,
   dismissCancelQuestionnaire,
+  renderActiveQuestionnaireDom,
   requestCancelQuestionnaire,
+  requestQuestionnaireSignature,
   saveAndLeaveQuestionnaire,
 } from "../features/questionnaire.js";
 import { isScreenAvailable } from "../router/availability.js";
 import { useSessionStore } from "../stores/session.js";
+import { useTasksStore } from "../stores/tasks.js";
 import { useUiStore } from "../stores/ui.js";
 import { isDemoModeActive } from "../utils/demoMode.js";
 
 const cancelDialogRef = ref(null);
 const ui = useUiStore();
 const session = useSessionStore();
+const tasksStore = useTasksStore();
 const hasTasksTab = ref(false);
 
 function syncTasksTabPresence() {
@@ -140,7 +146,31 @@ function syncTasksTabPresence() {
     Boolean(document.getElementById("btn-tab-btn-tasks"));
 }
 
-onMounted(syncTasksTabPresence);
+onMounted(() => {
+  syncTasksTabPresence();
+  renderActiveQuestionnaireDom();
+});
+
+watch(
+  () => tasksStore.activeQuestionnaire,
+  (nextActive) => {
+    if (nextActive) {
+      nextTick(() => {
+        const container =
+          typeof document !== "undefined"
+            ? document.getElementById("questionnaire-form-container")
+            : null;
+        if (
+          container &&
+          container.getAttribute("data-assignment-id") !==
+            String(nextActive.assignment?.id || "")
+        ) {
+          renderActiveQuestionnaireDom();
+        }
+      });
+    }
+  }
+);
 
 watch(
   [
@@ -167,10 +197,7 @@ useFocusTrap(cancelDialogRef, {
 });
 
 function submitActiveQuestionnaire() {
-  const submitBtn = document.getElementById("btn-submit-questionnaire");
-  if (submitBtn) {
-    submitBtn.click();
-  }
+  requestQuestionnaireSignature();
 }
 
 function handleBackToTasks() {

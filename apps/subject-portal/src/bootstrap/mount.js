@@ -10,6 +10,11 @@ import { pinia } from "../stores/pinia.js";
 import { state } from "../stores/state.js";
 
 let mountedApp = null;
+let mountedContainer = null;
+
+export function getMountedPortalContainer() {
+  return mountedContainer;
+}
 
 // Mounts (or re-mounts) the portal into `el`.
 export function mountPortal(el) {
@@ -19,12 +24,14 @@ export function mountPortal(el) {
   mountedApp.use(pinia);
   mountedApp.use(portalRouter);
   mountedApp.mount(el);
+  mountedContainer = el || null;
   setPortalRouterMounted(true);
   return mountedApp;
 }
 
 export function unmountApp() {
   setPortalRouterMounted(false);
+  mountedContainer = null;
   if (mountedApp) {
     try {
       mountedApp.unmount();

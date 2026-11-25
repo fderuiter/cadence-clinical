@@ -145,7 +145,18 @@ describe("Portal Availability Guards and PIN Security", () => {
     expect(cardText).not.toContain("Daily Health & Vital Diary");
     expect(cardText).not.toContain("OVERDUE");
 
-    // Tasks view prompts user to sign in
+    // Unavailable view prompts unauthenticated user to sign in with zero hidden views mounted
+    expect(document.getElementById("view-unavailable")).not.toBeNull();
+    expect(document.getElementById("btn-unavailable-signin")).not.toBeNull();
+    expect(
+      document.querySelectorAll(".portal-view:not(#view-unavailable)")
+    ).toHaveLength(0);
+
+    // Mounting TasksView directly still prompts unauthenticated user to sign in
+    state.mountedViewIds.push("view-tasks");
+    await settle();
+    const { renderTasks } = await import("../src/features/tasks.js");
+    renderTasks();
     const signInPrompt = document.getElementById("tasks-signin-prompt");
     expect(signInPrompt).not.toBeNull();
     expect(signInPrompt.textContent).toContain(

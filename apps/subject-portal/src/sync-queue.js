@@ -1,5 +1,4 @@
-import { deriveSessionKey, encryptAESGCM, decryptAESGCM } from "ui";
-import { validateEproPayload } from "usdm-schemas/epro";
+import { deriveSessionKey, encryptAESGCM, decryptAESGCM } from "ui/signing";
 import {
   createDemoPrng,
   demoNowMs,
@@ -7,6 +6,10 @@ import {
   demoRandomToken,
   isDemoModeActive,
 } from "./utils/demoMode.js";
+import {
+  hasTrackedLocalQueueActivity,
+  setTrackedLocalQueueActivity,
+} from "./utils/localQueueActivity.js";
 import { showToast } from "./widgets/toast.js";
 
 function fillRandomBytes(buffer, demoStreamKey) {
@@ -604,6 +607,7 @@ export async function queueSubmission({
     );
   }
 
+  const { validateEproPayload } = await import("usdm-schemas/epro");
   const validation = validateEproPayload(answers || {});
   if (!validation.valid) {
     throw new Error(
@@ -648,7 +652,7 @@ export async function queueSubmission({
     const store = tx.objectStore("submissions");
     store.put(submission);
     tx.oncomplete = () => {
-      hasPotentialUnsyncedLocalRecords = true;
+      setTrackedLocalQueueActivity(true);
       if (inMemorySessionKey === sessionKeySnapshot && inMemorySessionKey) {
         const dbCache = getDbSubmissionCache(db.name, true);
         const normalizedAnswers =
@@ -969,15 +973,7 @@ export async function clearAllSubmissions() {
   });
 }
 
-let hasPotentialUnsyncedLocalRecords = false;
-
-export function hasTrackedLocalQueueActivity() {
-  return hasPotentialUnsyncedLocalRecords;
-}
-
-export function setTrackedLocalQueueActivity(active) {
-  hasPotentialUnsyncedLocalRecords = Boolean(active);
-}
+export { hasTrackedLocalQueueActivity, setTrackedLocalQueueActivity };
 
 export function getInMemorySessionKey() {
   return inMemorySessionKey;
@@ -1067,7 +1063,7 @@ export async function clearLockedOfflineData(userId) {
     configStore.delete("pbkdf2_salt");
     configStore.delete("session_key");
     tx.oncomplete = () => {
-      hasPotentialUnsyncedLocalRecords = false;
+      setTrackedLocalQueueActivity(false);
       clearDecryptedSubmissionCache(db.name);
       resolve();
     };
@@ -1123,7 +1119,7 @@ export async function flagLockedEntriesForPinReset(userId) {
     };
     /* v8 ignore stop */
     tx.oncomplete = () => {
-      hasPotentialUnsyncedLocalRecords = false;
+      setTrackedLocalQueueActivity(false);
       clearDecryptedSubmissionCache(db.name);
       resolve({ flaggedCount });
     };
@@ -1180,7 +1176,7 @@ export async function saveDraft(assignmentId, answers) {
         updated_at: new Date().toISOString(),
       });
       tx.oncomplete = () => {
-        hasPotentialUnsyncedLocalRecords = true;
+        setTrackedLocalQueueActivity(true);
         resolve(true);
       };
       /* v8 ignore start */

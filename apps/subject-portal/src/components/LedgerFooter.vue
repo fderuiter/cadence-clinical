@@ -12,3 +12,18 @@
     </div>
   </footer>
 </template>
+
+<script setup>
+import { onMounted } from "vue";
+import { useAuditStore } from "../stores/audit.js";
+
+const audit = useAuditStore();
+
+onMounted(() => {
+  if (audit.ledgerBlocks?.length > 0) {
+    void import("../features/audit.js").then(({ renderLedger }) =>
+      renderLedger()
+    );
+  }
+});
+</script>

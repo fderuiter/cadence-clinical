@@ -4,6 +4,7 @@ import { defineStore } from "pinia";
 export const useConsentStore = defineStore("consent", {
   state: () => ({
     consentLanguage: "en",
+    consentLoadSeq: 0,
     consentPassed: false,
     consentSigned: false,
     consentContent: null,

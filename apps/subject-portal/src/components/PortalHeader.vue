@@ -40,6 +40,15 @@
         </span>
         <span class="sync-btn-label tabular-nums">{{ headerSyncLabel }}</span>
       </button>
+      <div
+        v-if="!isTasksViewMounted"
+        id="sync-queue-status-text"
+        class="sr-only"
+        role="status"
+        aria-live="polite"
+      >
+        {{ sync.syncStatusText }}
+      </div>
     </div>
   </header>
 </template>
@@ -49,11 +58,23 @@ import { computed } from "vue";
 import { storeToRefs } from "pinia";
 
 import { useSyncStore } from "../stores/sync.js";
+import { useUiStore } from "../stores/ui.js";
+import { isDemoBuild } from "../utils/demoMode.js";
 
 const sync = useSyncStore();
+const ui = useUiStore();
 const { queuedSubmissionsCount, quarantinedSubmissionsCount, isSyncFailed } =
   storeToRefs(sync);
 const { toggleSyncDrawer } = sync;
+
+const isTasksViewMounted = computed(() => {
+  if (!isDemoBuild() && import.meta.env?.MODE !== "test") {
+    return false;
+  }
+  return (
+    ui.currentView === "view-tasks" || ui.mountedViewIds.includes("view-tasks")
+  );
+});
 
 const brandName = computed(() => import.meta.env.VITE_BRAND_NAME || "Cadence");
 

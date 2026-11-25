@@ -100,6 +100,8 @@ export default defineConfig(({ mode }) => ({
     (() => {
       let isE2eProd = false;
       let resolvedOutDir = path.resolve(__dirname, "dist");
+      const htmlEntry = path.resolve(__dirname, "index.html");
+      const mainEntry = path.resolve(__dirname, "src/main.js");
       const indexEntry = path.resolve(__dirname, "src/index.js");
       const syncQueueEntry = path.resolve(__dirname, "src/sync-queue.js");
       return {
@@ -115,37 +117,57 @@ export default defineConfig(({ mode }) => ({
             outDir === "node_modules/.e2e-prod" ||
             outDir === "node_modules/.e2e-demo";
         },
+        options(inputOptions) {
+          if (!isE2eProd) return null;
+          return {
+            ...inputOptions,
+            preserveEntrySignatures: "allow-extension",
+            input: {
+              index: htmlEntry,
+              "e2e-index": indexEntry,
+              "e2e-sync-queue": syncQueueEntry,
+            },
+          };
+        },
         transform(code, id) {
           if (!isE2eProd) return null;
           const cleanId = id.split("?")[0];
-          if (cleanId === indexEntry) {
+          if (cleanId === mainEntry) {
             return {
-              code: `${code}\nglobalThis.__CADENCE_E2E_INDEX__ = { state, refreshSubmissionsState, syncOfflineQueue, checkPINWrapper };\nconst __cadenceE2eBase = "/subject-portal/src";\nvoid import(/* @vite-ignore */ \`\${__cadenceE2eBase}/index.js\`).catch(() => {});\nvoid import(/* @vite-ignore */ \`\${__cadenceE2eBase}/sync-queue.js\`).catch(() => {});\n`,
-              map: null,
-            };
-          }
-          if (cleanId === syncQueueEntry) {
-            return {
-              code: `${code}\nglobalThis.__CADENCE_E2E_SYNC_QUEUE__ = { queueSubmission, clearSessionKey };\n`,
+              code: `${code}\nconst __cadenceE2eBase = "/subject-portal/src";\nvoid import(/* @vite-ignore */ \`\${__cadenceE2eBase}/index.js\`).catch(() => {});\nvoid import(/* @vite-ignore */ \`\${__cadenceE2eBase}/sync-queue.js\`).catch(() => {});\n`,
               map: null,
             };
           }
           return null;
         },
-        generateBundle() {
+        generateBundle(_outputOptions, bundle) {
           if (!isE2eProd) return;
-          this.emitFile({
-            type: "asset",
-            fileName: "src/index.js",
-            source:
-              "const m = globalThis.__CADENCE_E2E_INDEX__;\nexport const { state, refreshSubmissionsState, syncOfflineQueue, checkPINWrapper } = m;\n",
-          });
-          this.emitFile({
-            type: "asset",
-            fileName: "src/sync-queue.js",
-            source:
-              "const m = globalThis.__CADENCE_E2E_SYNC_QUEUE__;\nexport const { queueSubmission, clearSessionKey } = m;\n",
-          });
+          const chunks = Object.values(bundle).filter(
+            (item) => item && item.type === "chunk"
+          );
+          const e2eIndexChunk = chunks.find(
+            (chunk) =>
+              chunk.name === "e2e-index" || chunk.facadeModuleId === indexEntry
+          );
+          const e2eSyncQueueChunk = chunks.find(
+            (chunk) =>
+              chunk.name === "e2e-sync-queue" ||
+              chunk.facadeModuleId === syncQueueEntry
+          );
+          if (e2eIndexChunk) {
+            this.emitFile({
+              type: "asset",
+              fileName: "src/index.js",
+              source: `export * from "../${e2eIndexChunk.fileName}";\n`,
+            });
+          }
+          if (e2eSyncQueueChunk) {
+            this.emitFile({
+              type: "asset",
+              fileName: "src/sync-queue.js",
+              source: `export * from "../${e2eSyncQueueChunk.fileName}";\n`,
+            });
+          }
         },
         writeBundle(_options, bundle) {
           const swOutputPath = path.join(resolvedOutDir, "sw.js");
@@ -160,7 +182,8 @@ export default defineConfig(({ mode }) => ({
                 fileName !== "sw.js" &&
                 fileName !== "index.html" &&
                 fileName !== "manifest.json" &&
-                !fileName.endsWith("mockServiceWorker.js")
+                !fileName.endsWith("mockServiceWorker.js") &&
+                !/^assets\/keycloak/i.test(fileName)
             )
             .sort();
 
@@ -200,7 +223,20 @@ export default defineConfig(({ mode }) => ({
     host: "::",
   },
   resolve: {
-    alias: createUiWorkspaceAliases(__dirname),
+    alias: [
+      ...(mode === "test"
+        ? [
+            {
+              find: /^ui\/signing$/,
+              replacement: path.resolve(
+                __dirname,
+                "../../packages/ui/index.js"
+              ),
+            },
+          ]
+        : []),
+      ...createUiWorkspaceAliases(__dirname),
+    ],
   },
   build: {
     outDir: "dist",

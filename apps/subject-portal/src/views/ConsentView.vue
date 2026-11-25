@@ -41,6 +41,7 @@
         <select
           id="consent-lang-selector"
           :value="consent.consentLanguage"
+          data-vue-bound="true"
           style="
             min-height: var(--touch-target-min);
             padding: var(--spacing-xs) var(--spacing-sm);
@@ -51,6 +52,7 @@
             font-size: var(--font-size-md);
             cursor: pointer;
           "
+          @change="handleConsentLanguageChange"
         >
           <option value="en">English (en)</option>
           <option value="es">Español (es)</option>
@@ -86,7 +88,13 @@
       <p id="consent-error-msg" style="font-size: 14px; margin-bottom: 12px">
         Unknown error
       </p>
-      <button id="btn-retry-consent" type="button" class="btn btn-primary">
+      <button
+        id="btn-retry-consent"
+        type="button"
+        class="btn btn-primary"
+        data-vue-bound="true"
+        @click="loadConsentDetails"
+      >
         Retry
       </button>
     </div>
@@ -171,6 +179,8 @@
             id="btn-submit-consent-answers"
             type="button"
             class="btn btn-primary"
+            data-vue-bound="true"
+            @click="submitConsentAnswers"
           >
             Verify and Submit Answers
           </button>
@@ -246,6 +256,8 @@
             id="btn-verify-liveness"
             type="button"
             class="btn btn-primary"
+            data-vue-bound="true"
+            @click="verifyBiometricLiveness(false)"
           >
             Complete Camera Check
           </button>
@@ -254,10 +266,12 @@
             id="btn-liveness-fallback"
             type="button"
             class="btn btn-secondary"
+            data-vue-bound="true"
             style="
               border: 1px solid var(--semantic-color-border-control);
               background: var(--semantic-color-surface);
             "
+            @click="verifyBiometricLiveness(true)"
           >
             Verify with Study Coordinator Instead
           </button>
@@ -303,7 +317,9 @@
             type="button"
             class="btn btn-primary"
             aria-describedby="consent-sign-readiness-hint"
+            data-vue-bound="true"
             disabled
+            @click="handleTriggerConsentSign"
           >
             Sign Consent Form
           </button>
@@ -347,9 +363,22 @@
 </template>
 
 <script setup>
-import { computed } from "vue";
-import { ClinicalIcon } from "ui";
+import { computed, onBeforeUnmount, onMounted } from "vue";
+import { ClinicalIcon } from "ui/portal-shell";
 
+import {
+  ensureConsentLivenessFresh,
+  isConsentLivenessExpired,
+  loadConsentDetails,
+  renderConsentUI,
+  submitConsentAnswers,
+  verifyBiometricLiveness,
+} from "../features/consent.js";
+import {
+  registerViewEnterHandler,
+  unregisterViewEnterHandler,
+} from "../features/navigation.js";
+import { openSignatureModal } from "../features/signature.js";
 import { isScreenAvailable } from "../router/availability.js";
 import { useConsentStore } from "../stores/consent.js";
 import { useSessionStore } from "../stores/session.js";
@@ -366,5 +395,55 @@ const hasConsentTab = computed(() => {
   void session.session?.userId;
   void session.session?.isOfflineMode;
   return isDemoModeActive() || isScreenAvailable("consent");
+});
+
+function handleConsentLanguageChange(event) {
+  const selectedLang = event?.target?.value;
+  if (selectedLang) {
+    consent.consentLanguage = selectedLang;
+  }
+  void loadConsentDetails();
+}
+
+function handleTriggerConsentSign() {
+  if (isConsentLivenessExpired()) {
+    ensureConsentLivenessFresh();
+    return;
+  }
+  openSignatureModal("consent");
+}
+
+const mountSeq = consent.consentLoadSeq || 0;
+let loadedOnMountTurn = false;
+
+function handleEnterConsentView() {
+  if (loadedOnMountTurn) {
+    loadedOnMountTurn = false;
+    return;
+  }
+  if (hasConsentTab.value) {
+    void loadConsentDetails();
+  }
+}
+
+onMounted(() => {
+  registerViewEnterHandler("view-consent", handleEnterConsentView);
+  if (consent.consentContent) {
+    renderConsentUI();
+  } else if (
+    ui.currentView === "view-consent" &&
+    hasConsentTab.value &&
+    (consent.consentLoadSeq || 0) === mountSeq
+  ) {
+    loadedOnMountTurn = true;
+    queueMicrotask(() => {
+      loadedOnMountTurn = false;
+    });
+    void loadConsentDetails();
+  }
+});
+
+onBeforeUnmount(() => {
+  unregisterViewEnterHandler("view-consent", handleEnterConsentView);
 });
 </script>

@@ -94,13 +94,9 @@
 
 <script setup>
 import { ref } from "vue";
-import { SignOutConfirmModal, useFocusTrap, useSignOutGuard } from "ui";
+import { SignOutConfirmModal, useFocusTrap } from "ui/portal-overlays";
 
-import {
-  hasUnsavedOrUnsyncedLocalData,
-  logout,
-  prepareSignOutGuardState,
-} from "../features/auth.js";
+import { usePortalSignOutGuard } from "../features/auth.js";
 import { handlePINSetupSubmit } from "../features/pin.js";
 import { useSessionStore } from "../stores/session.js";
 import SiteContactLinks from "./SiteContactLinks.vue";
@@ -110,22 +106,14 @@ const sessionStore = useSessionStore();
 
 const {
   isConfirmOpen: isSignOutConfirmOpen,
-  requestSignOut,
+  requestSignOut: handleSignOut,
   confirmSignOut,
   cancelSignOut,
-} = useSignOutGuard({
-  flushExternalDrafts: prepareSignOutGuardState,
-  hasExternalDrafts: hasUnsavedOrUnsyncedLocalData,
-  onConfirmSignOut: () => logout({ confirmed: true }),
-});
+} = usePortalSignOutGuard();
 
 useFocusTrap(modalRef, {
   isOpen: () => sessionStore.pinSetup.isOpen && !isSignOutConfirmOpen.value,
   escapeDeactivates: false,
   initialFocus: "#setup-pin",
 });
-
-function handleSignOut() {
-  return requestSignOut();
-}
 </script>

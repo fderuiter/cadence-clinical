@@ -59,15 +59,8 @@ describe("Subject Portal Focus Traps, Closed Drawer Inertness, and 6-Tab Navigat
 
   it("hides closed SyncDrawer and scrim from keyboard tabbing and assistive technology, and traps/restores focus when opened", async () => {
     const trigger = document.getElementById("btn-global-sync-drawer");
-    const drawer = document.querySelector(".global-drawer");
-    const overlay = document.querySelector(".global-drawer-overlay");
-
-    expect(drawer.hasAttribute("inert")).toBe(true);
-    expect(drawer.getAttribute("aria-hidden")).toBe("true");
-    expect(drawer.getAttribute("aria-modal")).toBeNull();
-    expect(overlay.hasAttribute("inert")).toBe(true);
-    expect(overlay.getAttribute("aria-hidden")).toBe("true");
-    expect(getFocusableElements(drawer)).toEqual([]);
+    expect(document.querySelector(".global-drawer")).toBeNull();
+    expect(document.querySelector(".global-drawer-overlay")).toBeNull();
 
     trigger.focus();
     expect(document.activeElement).toBe(trigger);
@@ -75,6 +68,10 @@ describe("Subject Portal Focus Traps, Closed Drawer Inertness, and 6-Tab Navigat
     trigger.click();
     await settle();
 
+    const drawer = document.querySelector(".global-drawer");
+    const overlay = document.querySelector(".global-drawer-overlay");
+    expect(drawer).not.toBeNull();
+    expect(overlay).not.toBeNull();
     expect(state.isSyncDrawerOpen).toBe(true);
     expect(drawer.hasAttribute("inert")).toBe(false);
     expect(drawer.getAttribute("aria-hidden")).toBeNull();
@@ -119,6 +116,11 @@ describe("Subject Portal Focus Traps, Closed Drawer Inertness, and 6-Tab Navigat
 
     expect(state.isSyncDrawerOpen).toBe(false);
     expect(drawer.hasAttribute("inert")).toBe(true);
+    expect(drawer.getAttribute("aria-hidden")).toBe("true");
+    expect(drawer.getAttribute("aria-modal")).toBeNull();
+    expect(overlay.hasAttribute("inert")).toBe(true);
+    expect(overlay.getAttribute("aria-hidden")).toBe("true");
+    expect(getFocusableElements(drawer)).toEqual([]);
     expect(document.activeElement).toBe(trigger);
   });
 
@@ -358,7 +360,24 @@ describe("Subject Portal Focus Traps, Closed Drawer Inertness, and 6-Tab Navigat
     await settle();
     expect(document.querySelectorAll('.nav-tabs [role="tab"]')).toHaveLength(1);
 
-    // Gated views without rendered tabs must use role="region" + aria-label with zero dangling aria-labelledby
+    // Gated views stay unmounted outside demo mode; if mounted directly without tabs they fall back to role="region" + aria-label
+    for (const viewId of [
+      "view-tasks",
+      "view-compliance",
+      "view-inbox",
+      "view-consent",
+      "view-lay-summaries",
+    ]) {
+      expect(document.getElementById(viewId)).toBeNull();
+    }
+    state.mountedViewIds.push(
+      "view-tasks",
+      "view-compliance",
+      "view-inbox",
+      "view-consent",
+      "view-lay-summaries"
+    );
+    await settle();
     for (const [viewId, expectedLabel] of [
       ["view-tasks", "My Daily Questionnaires"],
       ["view-compliance", "My Compliance Overview"],
@@ -371,6 +390,8 @@ describe("Subject Portal Focus Traps, Closed Drawer Inertness, and 6-Tab Navigat
       expect(panel.getAttribute("aria-label")).toBe(expectedLabel);
       expect(panel.hasAttribute("aria-labelledby")).toBe(false);
     }
+    state.mountedViewIds = ["view-wallet"];
+    await settle();
 
     for (const labelledEl of document.querySelectorAll("[aria-labelledby]")) {
       const refIds = labelledEl

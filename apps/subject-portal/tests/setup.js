@@ -1,4 +1,4 @@
-import { vi, expect, afterEach, beforeAll, afterAll } from "vitest";
+import { vi, expect, beforeEach, afterEach, beforeAll, afterAll } from "vitest";
 import { toBeAccessible } from "ui/vitest";
 import { setupServer } from "msw/node";
 import { gatewayHandlers } from "../src/mocks/handlers.js";
@@ -6,6 +6,12 @@ import { gatewayHandlers } from "../src/mocks/handlers.js";
 export const server = setupServer(...gatewayHandlers);
 
 beforeAll(() => server.listen({ onUnhandledRequest: "bypass" }));
+beforeEach(async () => {
+  const pending = globalThis.__CADENCE_LAZY_OVERLAY_PROMISES__;
+  if (pending && pending.size > 0) {
+    await Promise.allSettled([...pending]);
+  }
+});
 afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 

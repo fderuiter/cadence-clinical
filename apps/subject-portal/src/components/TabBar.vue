@@ -23,11 +23,7 @@
         type="button"
         role="tab"
         :aria-selected="activeTab?.id === tab.id ? 'true' : 'false'"
-        :aria-controls="
-          tab.id === 'tasks' && ui.currentView === 'view-questionnaire'
-            ? 'view-questionnaire'
-            : tab.viewId
-        "
+        :aria-controls="resolveTabAriaControls(tab)"
         :tabindex="activeTab?.id === tab.id ? 0 : -1"
         @click="selectView(tab.viewId)"
       >
@@ -55,13 +51,12 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
 
 import { showView } from "../features/navigation.js";
-import { flushActiveQuestionnaireDraft } from "../features/questionnaire.js";
 import { isScreenAvailable } from "../router/availability.js";
 import { activeTabForView, tabs } from "../router/routes.js";
 import { useInboxStore } from "../stores/inbox.js";
 import { useSessionStore } from "../stores/session.js";
 import { useUiStore } from "../stores/ui.js";
-import { isDemoModeActive } from "../utils/demoMode.js";
+import { isDemoBuild, isDemoModeActive } from "../utils/demoMode.js";
 
 const ui = useUiStore();
 const inbox = useInboxStore();
@@ -137,12 +132,27 @@ function handleTabKeyDown(event) {
   }
 }
 
+function resolveTabAriaControls(tab) {
+  const targetId =
+    tab.id === "tasks" && ui.currentView === "view-questionnaire"
+      ? "view-questionnaire"
+      : tab.viewId;
+  if (ui.currentView === targetId || ui.mountedViewIds.includes(targetId)) {
+    return targetId;
+  }
+  return undefined;
+}
+
 function selectView(viewId) {
   if (
     ui.currentView === "view-questionnaire" &&
-    viewId !== "view-questionnaire"
+    viewId !== "view-questionnaire" &&
+    (isDemoBuild() || import.meta.env?.MODE === "test")
   ) {
-    void flushActiveQuestionnaireDraft({ clearActive: true });
+    void import("../features/questionnaire.js").then(
+      ({ flushActiveQuestionnaireDraft }) =>
+        flushActiveQuestionnaireDraft({ clearActive: true })
+    );
   }
   showView(viewId);
 }

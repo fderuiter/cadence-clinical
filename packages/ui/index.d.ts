@@ -1266,3 +1266,4 @@ export function openEntityPeek(
   nodeRef: string,
   context?: Record<string, any>
 ): boolean;
+export function defineLazyOverlay<T = any>(loader: () => Promise<T>): any;

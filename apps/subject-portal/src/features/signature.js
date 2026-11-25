@@ -1,16 +1,15 @@
 // 21 CFR Part 11 electronic signature modal for ePRO and eConsent.
 import { DEFAULT_DEMO_SITE, DEMO_STUDY } from "demo-fixtures";
+import { getFocusableElements, trapTabFocus } from "ui/portal-overlays";
+import { handoffFocus } from "ui/portal-shell";
 import {
   SEMANTIC_ACTIONS,
   decryptAESGCM,
   deriveKeyFromPIN,
-  getFocusableElements,
-  handoffFocus,
   requiresCustomSignatureReason,
   resolveSignatureReason,
   sha256,
-  trapTabFocus,
-} from "ui";
+} from "ui/signing";
 import { dispatchApi, isAuthenticatedSession } from "../api/client.js";
 import { requestStepUpSignature } from "../api/signatureVerification.js";
 import { state } from "../stores/state.js";
@@ -24,6 +23,7 @@ import {
   setInMemorySessionKey,
 } from "../sync-queue.js";
 import { demoNowIso, isDemoModeActive } from "../utils/demoMode.js";
+import { checkOnline } from "../utils/networkStatus.js";
 import { allowUnbackedAction } from "../utils/unbackedActions.js";
 import { showToast } from "../widgets/toast.js";
 import { logAuditRecord } from "./audit.js";
@@ -36,7 +36,6 @@ import {
 } from "./consent.js";
 import { showView } from "./navigation.js";
 import { syncOfflineQueue } from "./sync.js";
-import { checkOnline } from "./sync-status.js";
 import { renderTasks } from "./tasks.js";
 
 const RECONSENT_EPRO_GATE_MESSAGE =
@@ -81,6 +80,80 @@ function detachSignatureModalTrap() {
   signatureTrapBound = false;
 }
 
+export function hydrateSignatureModalDom() {
+  if (typeof document === "undefined") return false;
+  const normalizedAction =
+    state.pendingSignableAction === "consent" ? "consent" : "epro";
+
+  const usernameEl = document.getElementById("sign-username");
+  if (usernameEl) {
+    usernameEl.value = state.session.userId || "";
+  }
+  const passwordEl = document.getElementById("sign-password");
+  if (passwordEl) {
+    passwordEl.value = "";
+  }
+
+  const reasonSelect = document.getElementById("sign-reason");
+  const modalHeader = document.getElementById("portal-modal-title");
+  const errorBanner = document.getElementById("modal-error-banner");
+  if (errorBanner) {
+    errorBanner.style.display = "none";
+    errorBanner.setAttribute("role", "status");
+    errorBanner.setAttribute("aria-live", "polite");
+  }
+
+  if (normalizedAction === "consent") {
+    if (modalHeader) {
+      modalHeader.textContent = "eConsent Electronic Signature Required";
+    }
+    if (reasonSelect) {
+      reasonSelect.innerHTML = `
+      <option value="Enrollment Confirmation and Consent">Enrollment Confirmation and Consent</option>
+      <option value="Re-consent on amended protocol version">Re-consent on amended protocol version</option>
+      <option value="Other">Other (specify below)</option>
+    `;
+      reasonSelect.value = "Enrollment Confirmation and Consent";
+    }
+  } else {
+    if (modalHeader) modalHeader.textContent = "Electronic Signature Required";
+    if (reasonSelect) {
+      reasonSelect.innerHTML = `
+      <option value="Initial Questionnaire Completion">Initial Questionnaire Completion</option>
+      <option value="Correction of previous entry">Correction of previous entry</option>
+      <option value="Requested update by study coordinator">Requested update by study coordinator</option>
+      <option value="Acknowledge important reminder">Acknowledge important reminder</option>
+      <option value="Other">Other (specify below)</option>
+    `;
+      reasonSelect.value = "Initial Questionnaire Completion";
+    }
+  }
+
+  const modal = document.getElementById("portal-sign-modal");
+  if (modal) {
+    modal.style.display = "flex";
+    if (
+      typeof HTMLElement !== "undefined" &&
+      "inert" in HTMLElement.prototype
+    ) {
+      modal.inert = false;
+    }
+    modal.removeAttribute("inert");
+    modal.removeAttribute("aria-hidden");
+    modal.setAttribute("aria-modal", "true");
+  }
+  attachSignatureModalTrap();
+
+  // Ensure initial focus lands synchronously inside the modal even if rendered outside Vue mount
+  if (modal && !modal.contains(document.activeElement)) {
+    const focusableElements = getFocusableElements(modal);
+    if (focusableElements.length > 0) {
+      focusableElements[0].focus();
+    }
+  }
+  return Boolean(modal);
+}
+
 // Submit with 21 CFR PIN / Account Password signature validation
 export function openSignatureModal(actionType = "epro") {
   const normalizedAction = actionType === "consent" ? "consent" : "epro";
@@ -120,62 +193,8 @@ export function openSignatureModal(actionType = "epro") {
   if (typeof document !== "undefined") {
     state.previouslyFocusedElement = document.activeElement;
   }
-  document.getElementById("sign-username").value = state.session.userId || "";
-  document.getElementById("sign-password").value = "";
-
-  const reasonSelect = document.getElementById("sign-reason");
-  const modalHeader = document.getElementById("portal-modal-title");
-  const errorBanner = document.getElementById("modal-error-banner");
-  if (errorBanner) {
-    errorBanner.style.display = "none";
-    errorBanner.setAttribute("role", "status");
-    errorBanner.setAttribute("aria-live", "polite");
-  }
-
-  if (normalizedAction === "consent") {
-    if (modalHeader)
-      modalHeader.textContent = "eConsent Electronic Signature Required";
-    reasonSelect.innerHTML = `
-      <option value="Enrollment Confirmation and Consent">Enrollment Confirmation and Consent</option>
-      <option value="Re-consent on amended protocol version">Re-consent on amended protocol version</option>
-      <option value="Other">Other (specify below)</option>
-    `;
-    reasonSelect.value = "Enrollment Confirmation and Consent";
-  } else {
-    if (modalHeader) modalHeader.textContent = "Electronic Signature Required";
-    reasonSelect.innerHTML = `
-      <option value="Initial Questionnaire Completion">Initial Questionnaire Completion</option>
-      <option value="Correction of previous entry">Correction of previous entry</option>
-      <option value="Requested update by study coordinator">Requested update by study coordinator</option>
-      <option value="Acknowledge important reminder">Acknowledge important reminder</option>
-      <option value="Other">Other (specify below)</option>
-    `;
-    reasonSelect.value = "Initial Questionnaire Completion";
-  }
-
-  const modal = document.getElementById("portal-sign-modal");
-  if (modal) {
-    modal.style.display = "flex";
-    if (
-      typeof HTMLElement !== "undefined" &&
-      "inert" in HTMLElement.prototype
-    ) {
-      modal.inert = false;
-    }
-    modal.removeAttribute("inert");
-    modal.removeAttribute("aria-hidden");
-    modal.setAttribute("aria-modal", "true");
-  }
   state.signatureModalOpen = true;
-  attachSignatureModalTrap();
-
-  // Ensure initial focus lands synchronously inside the modal even if rendered outside Vue mount
-  if (modal && !modal.contains(document.activeElement)) {
-    const focusableElements = getFocusableElements(modal);
-    if (focusableElements.length > 0) {
-      focusableElements[0].focus();
-    }
-  }
+  hydrateSignatureModalDom();
 }
 
 function canSynchronouslyRestoreTarget(el) {

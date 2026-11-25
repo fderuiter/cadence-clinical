@@ -1176,7 +1176,7 @@ import {
   EntityLink,
   handoffFocus,
   useFocusTrap,
-} from "ui";
+} from "ui/portal-overlays";
 
 import SiteContactLinks from "../components/SiteContactLinks.vue";
 import { openExpenseClaimPeek, openTransactionPeek } from "../features/peek.js";

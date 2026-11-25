@@ -1,5 +1,6 @@
 // 3. My Compliance: rate, counts and survey history.
-import { createSrOnlyActionButton, handoffRetryFocus } from "ui";
+import { createSrOnlyActionButton } from "ui/builders";
+import { handoffRetryFocus } from "ui/portal-overlays";
 import { fetchCompliance, isAuthenticatedSession } from "../api/client.js";
 import { state } from "../stores/state.js";
 import { demoNowMs, isDemoModeActive } from "../utils/demoMode.js";

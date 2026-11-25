@@ -10,7 +10,7 @@
     <PortalHeader />
 
     <!-- Global Floating Sync Drawer -->
-    <SyncDrawer />
+    <SyncDrawer v-if="hasOpenedSyncDrawer" />
 
     <!-- Main Layout -->
     <div class="portal-container">
@@ -48,25 +48,26 @@
         <SyncSuspendedBanner />
 
         <!--
-          Every view stays mounted (the feature modules render into their
-          elements); the ui store's currentView, which the router follows,
-          picks the visible one.
+          Views mount on demand when visited so signed-out and production boots
+          skip hidden view subtrees while visited imperative containers stay
+          mounted during an active session.
         -->
-        <component
-          :is="route.component"
-          v-for="route in viewRoutes"
-          :key="route.name"
-        />
-        <UnavailableView />
+        <template v-for="viewRoute in viewRoutes" :key="viewRoute.name">
+          <component
+            :is="viewRoute.component"
+            v-if="shouldMountViewRoute(viewRoute)"
+          />
+        </template>
+        <UnavailableView v-if="shouldMountUnavailableView" />
       </main>
     </div>
 
-    <!-- Shared 90dvh peek bottom sheet & modals host -->
-    <PortalPeekSheet />
-    <SignatureModal />
-    <ReconsentModal />
-    <PinSetupModal />
-    <PinUnlockModal />
+    <!-- Shared 90dvh peek bottom sheet & modals host (mounted on demand) -->
+    <PortalPeekSheet v-if="shouldMountPeekSheet" />
+    <SignatureModal v-if="hasOpenedSignatureModal" />
+    <ReconsentModal v-if="Boolean(consentStore.reconsentModalOpen)" />
+    <PinSetupModal v-if="Boolean(sessionStore.pinSetup?.isOpen)" />
+    <PinUnlockModal v-if="Boolean(sessionStore.pinUnlock?.isOpen)" />
 
     <!-- Activity log at the bottom for patient transparency & 21 CFR compliance review -->
     <LedgerFooter />
@@ -82,44 +83,239 @@
   </div>
 </template>
 
+<script>
+import { defineComponent } from "vue";
+import { defineLazyOverlay } from "ui/portal-shell";
+
+import { isDemoBuild } from "./utils/demoMode.js";
+
+const EmptyOverlay = defineComponent({
+  name: "EmptyOverlay",
+  render: () => null,
+});
+
+const SyncDrawer = defineLazyOverlay(
+  () => import("./components/SyncDrawer.vue")
+);
+const PortalPeekSheet = defineLazyOverlay(
+  () => import("./components/PortalPeekSheet.vue")
+);
+const SignatureModal = defineLazyOverlay(
+  () => import("./components/SignatureModal.vue")
+);
+const ReconsentModal =
+  !isDemoBuild() && import.meta.env?.MODE !== "test"
+    ? EmptyOverlay
+    : defineLazyOverlay(() => import("./components/ReconsentModal.vue"));
+const PinSetupModal = defineLazyOverlay(
+  () => import("./components/PinSetupModal.vue")
+);
+const PinUnlockModal = defineLazyOverlay(
+  () => import("./components/PinUnlockModal.vue")
+);
+</script>
+
 <script setup>
-import { computed, onBeforeUnmount, ref } from "vue";
-import { ClinicalBreadcrumbs, ClinicalToastHost } from "ui";
+import {
+  computed,
+  getCurrentInstance,
+  inject,
+  onBeforeUnmount,
+  ref,
+  watch,
+} from "vue";
+import { routeLocationKey } from "vue-router";
+import { ClinicalBreadcrumbs, ClinicalToastHost } from "ui/portal-shell";
 
 import DemoBanner from "./components/DemoBanner.vue";
 import LedgerFooter from "./components/LedgerFooter.vue";
 import ParticipantCard from "./components/ParticipantCard.vue";
-import PinSetupModal from "./components/PinSetupModal.vue";
-import PinUnlockModal from "./components/PinUnlockModal.vue";
 import PortalHeader from "./components/PortalHeader.vue";
-import PortalPeekSheet from "./components/PortalPeekSheet.vue";
 import ReconsentBanner from "./components/ReconsentBanner.vue";
-import ReconsentModal from "./components/ReconsentModal.vue";
-import SignatureModal from "./components/SignatureModal.vue";
-import SyncDrawer from "./components/SyncDrawer.vue";
 import SyncSuspendedBanner from "./components/SyncSuspendedBanner.vue";
 import TabBar from "./components/TabBar.vue";
 import { showView } from "./features/navigation.js";
-import { closePeekRecord } from "./features/peek.js";
-import { flushActiveQuestionnaireDraft } from "./features/questionnaire.js";
 import { isScreenAvailable, screenTitle } from "./router/availability.js";
 import { routeForView, viewRoutes } from "./router/routes.js";
 import { useConsentStore } from "./stores/consent.js";
 import { useSessionStore } from "./stores/session.js";
+import { useSyncStore } from "./stores/sync.js";
 import { useTasksStore } from "./stores/tasks.js";
 import { useUiStore } from "./stores/ui.js";
 import {
   formatConsentEditionLabel,
   resolveFriendlyStudyTitle,
 } from "./utils/participantCopy.js";
+import { hasPeekQueryParam } from "./utils/peekQuery.js";
 import UnavailableView from "./views/UnavailableView.vue";
 import { clearToasts, dismissToast, portalToasts } from "./widgets/toast.js";
 
+const appInstance = getCurrentInstance();
+const currentRoute = inject(routeLocationKey, null);
 const ui = useUiStore();
 const sessionStore = useSessionStore();
+const syncStore = useSyncStore();
 const tasksStore = useTasksStore();
 const consentStore = useConsentStore();
 const isMobileSessionExpanded = ref(false);
+const hasOpenedSyncDrawer = ref(false);
+const hasOpenedSignatureModal = ref(false);
+
+const isSignedOutSession = computed(
+  () =>
+    !sessionStore.session?.userId &&
+    !sessionStore.session?.token &&
+    !sessionStore.session?.isDemoMode &&
+    !sessionStore.session?.isOfflineMode
+);
+
+watch(
+  () => Boolean(sessionStore.session?.isDemoMode),
+  (nextDemo, prevDemo) => {
+    if (prevDemo && !nextDemo && !isDemoBuild()) {
+      ui.mountedViewIds = ui.mountedViewIds.filter(
+        (id) => id === "view-wallet" || id === "view-unavailable"
+      );
+    }
+  },
+  { flush: "sync" }
+);
+
+watch(
+  () => [
+    Boolean(syncStore.isSyncDrawerOpen),
+    syncStore.submissions?.length ?? 0,
+  ],
+  ([drawerOpen, submissionCount]) => {
+    if (drawerOpen || submissionCount > 0) {
+      const wasMounted = hasOpenedSyncDrawer.value;
+      hasOpenedSyncDrawer.value = true;
+      if (
+        !wasMounted &&
+        import.meta.env?.MODE === "test" &&
+        typeof document !== "undefined" &&
+        !document.getElementById("global-sync-drawer")
+      ) {
+        appInstance?.update?.();
+      }
+    }
+  },
+  { immediate: true, flush: "sync" }
+);
+
+watch(
+  () => [
+    Boolean(ui.signatureModalOpen),
+    import.meta.env?.MODE === "test" && Boolean(ui.signatureModalPrimed),
+  ],
+  ([modalOpen, modalPrimed]) => {
+    if (modalOpen || modalPrimed) {
+      const wasMounted = hasOpenedSignatureModal.value;
+      hasOpenedSignatureModal.value = true;
+      if (
+        !wasMounted &&
+        import.meta.env?.MODE === "test" &&
+        typeof document !== "undefined" &&
+        !document.getElementById("portal-sign-modal")
+      ) {
+        appInstance?.update?.();
+      }
+    }
+  },
+  { immediate: true, flush: "sync" }
+);
+
+watch(
+  isSignedOutSession,
+  (nextSignedOut, prevSignedOut) => {
+    if (nextSignedOut && prevSignedOut === false) {
+      if (
+        !syncStore.isSyncDrawerOpen &&
+        (syncStore.submissions?.length ?? 0) === 0
+      ) {
+        hasOpenedSyncDrawer.value = false;
+      }
+      if (!ui.signatureModalOpen) {
+        hasOpenedSignatureModal.value = false;
+      }
+    }
+  },
+  { flush: "sync" }
+);
+
+if (import.meta.env?.MODE === "test") {
+  watch(
+    () => ui.mountedViewIds.length,
+    (nextLen, prevLen) => {
+      if (
+        nextLen > (prevLen ?? 0) &&
+        typeof document !== "undefined" &&
+        document.getElementById("app")
+      ) {
+        appInstance?.update?.();
+      }
+    },
+    { flush: "sync" }
+  );
+}
+
+watch(
+  () => [ui.currentView, isSignedOutSession.value],
+  ([activeViewId, signedOut]) => {
+    if (signedOut && activeViewId === "view-unavailable") {
+      if (ui.mountedViewIds.length > 0) {
+        ui.mountedViewIds = [];
+      }
+      if (ui.signatureModalPrimed) {
+        ui.signatureModalPrimed = false;
+      }
+      return;
+    }
+    if (!activeViewId) return;
+    const matched = routeForView(activeViewId);
+    const canMountRoute =
+      activeViewId === "view-unavailable" ||
+      (matched &&
+        (isDemoBuild() ||
+          import.meta.env?.MODE === "test" ||
+          matched.name === "wallet"));
+    if (canMountRoute && !ui.mountedViewIds.includes(activeViewId)) {
+      ui.mountedViewIds.push(activeViewId);
+    }
+  },
+  { immediate: true }
+);
+
+const shouldMountPeekSheet = computed(
+  () => Boolean(ui.peekRecord) || hasPeekQueryParam(currentRoute?.query)
+);
+
+const shouldMountUnavailableView = computed(
+  () =>
+    ui.currentView === "view-unavailable" ||
+    ui.mountedViewIds.includes("view-unavailable")
+);
+
+function shouldMountViewRoute(viewRoute) {
+  if (
+    !isDemoBuild() &&
+    import.meta.env?.MODE !== "test" &&
+    viewRoute.name !== "wallet"
+  ) {
+    return false;
+  }
+  if (isScreenAvailable(viewRoute.name)) {
+    return true;
+  }
+  const viewId = viewRoute.meta.viewId;
+  if (ui.currentView === viewId) {
+    if (viewId === "view-tasks" && !isScreenAvailable("tasks")) {
+      return ui.mountedViewIds.includes(viewId);
+    }
+    return true;
+  }
+  return ui.mountedViewIds.includes(viewId);
+}
 
 function resolveRootStudyRoute() {
   if (isScreenAvailable("tasks")) {
@@ -133,23 +329,37 @@ function resolveRootStudyRoute() {
 
 function navigateToRootStudy() {
   if (ui.peekRecord) {
-    closePeekRecord({ restoreFocus: false, syncUrl: true });
+    void import("./features/peek.js").then(({ closePeekRecord }) =>
+      closePeekRecord({ restoreFocus: false, syncUrl: true })
+    );
   }
-  if (ui.currentView === "view-questionnaire") {
-    void flushActiveQuestionnaireDraft({ clearActive: true });
+  if (
+    ui.currentView === "view-questionnaire" &&
+    (isDemoBuild() || import.meta.env?.MODE === "test")
+  ) {
+    void import("./features/questionnaire.js").then(
+      ({ flushActiveQuestionnaireDraft }) =>
+        flushActiveQuestionnaireDraft({ clearActive: true })
+    );
   }
   showView(resolveRootStudyRoute().viewId);
 }
 
 function navigateToSection(sectionViewId) {
   if (ui.peekRecord) {
-    closePeekRecord({ restoreFocus: false, syncUrl: true });
+    void import("./features/peek.js").then(({ closePeekRecord }) =>
+      closePeekRecord({ restoreFocus: false, syncUrl: true })
+    );
   }
   if (
     ui.currentView === "view-questionnaire" &&
-    sectionViewId !== "view-questionnaire"
+    sectionViewId !== "view-questionnaire" &&
+    (isDemoBuild() || import.meta.env?.MODE === "test")
   ) {
-    void flushActiveQuestionnaireDraft({ clearActive: true });
+    void import("./features/questionnaire.js").then(
+      ({ flushActiveQuestionnaireDraft }) =>
+        flushActiveQuestionnaireDraft({ clearActive: true })
+    );
   }
   showView(sectionViewId);
 }

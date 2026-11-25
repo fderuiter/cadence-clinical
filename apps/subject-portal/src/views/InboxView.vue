@@ -38,7 +38,13 @@
     >
       <p class="inbox-failure-title">Failed to load notifications.</p>
       <p id="inbox-error-msg" class="inbox-failure-msg">Unknown error</p>
-      <button id="btn-retry-inbox" type="button" class="btn btn-primary">
+      <button
+        id="btn-retry-inbox"
+        type="button"
+        class="btn btn-primary"
+        data-vue-bound="true"
+        @click="retryInbox"
+      >
         Retry
       </button>
     </div>
@@ -50,8 +56,9 @@
 </template>
 
 <script setup>
-import { computed } from "vue";
+import { computed, onMounted } from "vue";
 import SiteContactLinks from "../components/SiteContactLinks.vue";
+import { renderInbox, retryInbox } from "../features/inbox.js";
 import { isScreenAvailable } from "../router/availability.js";
 import { useSessionStore } from "../stores/session.js";
 import { useUiStore } from "../stores/ui.js";
@@ -66,5 +73,9 @@ const hasInboxTab = computed(() => {
   void session.session?.userId;
   void session.session?.isOfflineMode;
   return isDemoModeActive() || isScreenAvailable("inbox");
+});
+
+onMounted(() => {
+  renderInbox();
 });
 </script>

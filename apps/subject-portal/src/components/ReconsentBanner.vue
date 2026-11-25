@@ -69,7 +69,7 @@
           border: 1px solid var(--semantic-color-warning-action-border);
           color: var(--semantic-color-text-on-solid);
         "
-        @click="openReconsentModal"
+        @click="handleOpenReconsentModal"
       >
         Review &amp; Sign Now
       </button>
@@ -79,17 +79,25 @@
 
 <script setup>
 import { nextTick } from "vue";
-import { ClinicalIcon } from "ui";
+import { ClinicalIcon } from "ui/portal-shell";
 
-import { loadConsentDetails } from "../features/consent.js";
 import { showView } from "../features/navigation.js";
-import { openReconsentModal } from "../features/reconsent.js";
 import { useConsentStore } from "../stores/consent.js";
+import { isDemoBuild } from "../utils/demoMode.js";
 
 const consent = useConsentStore();
 
+async function handleOpenReconsentModal() {
+  if (!isDemoBuild() && import.meta.env?.MODE !== "test") return;
+  const { openReconsentModal } = await import("../features/reconsent.js");
+  openReconsentModal();
+}
+
 async function handleReviewUpdatedClauses() {
+  if (!isDemoBuild() && import.meta.env?.MODE !== "test") return;
   showView("view-consent");
+  await nextTick();
+  const { loadConsentDetails } = await import("../features/consent.js");
   await loadConsentDetails();
   await nextTick();
   const clausesEl = document.getElementById("consent-clauses-container");

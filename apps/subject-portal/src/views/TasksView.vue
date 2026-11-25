@@ -60,7 +60,13 @@
       <p id="tasks-error-msg" style="font-size: 14px; margin-bottom: 12px">
         Unknown error
       </p>
-      <button id="btn-retry-tasks" type="button" class="btn btn-primary">
+      <button
+        id="btn-retry-tasks"
+        type="button"
+        class="btn btn-primary"
+        data-vue-bound="true"
+        @click="retryTasks"
+      >
         Retry
       </button>
     </div>
@@ -97,6 +103,8 @@
           type="button"
           class="btn btn-secondary"
           style="padding: 6px 12px; font-size: 13px"
+          data-vue-bound="true"
+          @click="handleSyncNow"
         >
           Sync Now
         </button>
@@ -121,15 +129,21 @@
 </template>
 
 <script setup>
-import { computed } from "vue";
+import { computed, onMounted } from "vue";
+import { isAuthenticatedSession } from "../api/client.js";
+import { syncOfflineQueue } from "../features/sync.js";
+import { renderSyncQueueList } from "../features/sync-status.js";
+import { renderTasks, retryTasks } from "../features/tasks.js";
 import { isScreenAvailable } from "../router/availability.js";
 import { useSessionStore } from "../stores/session.js";
+import { useSyncStore } from "../stores/sync.js";
 import { useTasksStore } from "../stores/tasks.js";
 import { useUiStore } from "../stores/ui.js";
 import { isDemoModeActive } from "../utils/demoMode.js";
 
 const ui = useUiStore();
 const session = useSessionStore();
+const syncStore = useSyncStore();
 const tasksStore = useTasksStore();
 const isTasksTabAvailable = computed(() => {
   void session.session?.isDemoMode;
@@ -137,5 +151,18 @@ const isTasksTabAvailable = computed(() => {
   void session.session?.userId;
   void session.session?.isOfflineMode;
   return isDemoModeActive() || isScreenAvailable("tasks");
+});
+
+function handleSyncNow() {
+  void syncOfflineQueue(true, {
+    autoDisburse: isAuthenticatedSession() || isDemoModeActive(),
+  });
+}
+
+onMounted(() => {
+  renderTasks();
+  if (Array.isArray(syncStore.submissions)) {
+    void renderSyncQueueList(syncStore.submissions);
+  }
 });
 </script>

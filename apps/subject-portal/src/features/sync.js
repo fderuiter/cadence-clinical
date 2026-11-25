@@ -1,14 +1,11 @@
 // Offline queue reconciliation with the gateway (epro/sync + isolated epro/submit
 // fallback), automatic exponential retry, instrument refresh, and auto-disbursement.
-import { validateEproPayload } from "usdm-schemas/epro";
-
 import {
   dispatchApi,
   fetchAssignedInstruments,
   fetchInstrument,
   isAuthenticatedSession,
 } from "../api/client.js";
-import { MOCK_INSTRUMENTS } from "../data/mock-data.js";
 import { state } from "../stores/state.js";
 import {
   bulkUpdateSubmissionStatuses,
@@ -17,17 +14,11 @@ import {
   saveInstrumentsToDB,
   updateSubmissionStatus,
 } from "../sync-queue.js";
-import { isDemoModeActive } from "../utils/demoMode.js";
+import { isDemoBuild, isDemoModeActive } from "../utils/demoMode.js";
+import { checkOnline, resetSyncRetryInfo } from "../utils/networkStatus.js";
 import { logAuditRecord } from "./audit.js";
-import { renderCompliance } from "./compliance.js";
 import { humanizeValidationError } from "./site-support.js";
-import {
-  checkOnline,
-  emitSyncLifecycleEvent,
-  refreshSyncViews,
-  resetSyncRetryInfo,
-} from "./sync-status.js";
-import { renderTasks } from "./tasks.js";
+import { emitSyncLifecycleEvent, refreshSyncViews } from "./sync-status.js";
 
 const CONFIRMED_SYNC_STATUSES = new Set([
   "CREATED",
@@ -122,7 +113,12 @@ async function refreshActiveSurveyDefinitions(queued = []) {
     }
   }
 
-  if (!refreshed && isDemoModeActive()) {
+  if (
+    !refreshed &&
+    (isDemoBuild() || import.meta.env?.MODE === "test") &&
+    isDemoModeActive()
+  ) {
+    const { MOCK_INSTRUMENTS } = await import("../data/mock-data.js");
     if (!state.instruments) state.instruments = {};
     for (const [id, mockInst] of Object.entries(MOCK_INSTRUMENTS)) {
       if (!state.instruments[id]) {
@@ -143,7 +139,8 @@ async function refreshActiveSurveyDefinitions(queued = []) {
     }
   }
 
-  if (refreshed) {
+  if (refreshed && (isDemoBuild() || import.meta.env?.MODE === "test")) {
+    const { renderTasks } = await import("./tasks.js");
     renderTasks();
   }
 
@@ -342,6 +339,10 @@ export async function syncOfflineQueue(isManual = false, options = {}) {
   const validSubmissions = [];
   const quarantinedBySeq = new Map();
   let preCheckQuarantinedCount = 0;
+  const { validateEproPayload } =
+    decryptable.length > 0
+      ? await import("usdm-schemas/epro")
+      : { validateEproPayload: null };
   for (const item of decryptable) {
     const activeInstrument = state.instruments?.[item.diary_id];
     if (
@@ -596,8 +597,14 @@ export async function syncOfflineQueue(isManual = false, options = {}) {
           dbErr
         );
       }
-      renderTasks();
-      renderCompliance();
+      if (isDemoBuild() || import.meta.env?.MODE === "test") {
+        const [{ renderTasks }, { renderCompliance }] = await Promise.all([
+          import("./tasks.js"),
+          import("./compliance.js"),
+        ]);
+        renderTasks();
+        renderCompliance();
+      }
     }
 
     // Automatic Stipend Wallet Crediting upon confirmed ePRO sync (strictly server-rule driven; zero client amount)

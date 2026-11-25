@@ -58,18 +58,18 @@ describe("Global Floating Drawer and Vue-Reactive State Sync", () => {
     await nextTick();
 
     const syncBtn = document.getElementById("btn-global-sync-drawer");
-    const drawer = document.querySelector(".global-drawer");
-    const overlay = document.querySelector(".global-drawer-overlay");
 
-    // Initially closed
+    // Initially closed and unmounted until opened
     expect(state.isSyncDrawerOpen).toBe(false);
-    expect(drawer.classList.contains("active")).toBe(false);
-    expect(overlay.classList.contains("active")).toBe(false);
+    expect(document.querySelector(".global-drawer")).toBeNull();
+    expect(document.querySelector(".global-drawer-overlay")).toBeNull();
 
     // Toggle open
     syncBtn.click();
     await nextTick();
 
+    const drawer = document.querySelector(".global-drawer");
+    const overlay = document.querySelector(".global-drawer-overlay");
     expect(state.isSyncDrawerOpen).toBe(true);
     expect(drawer.classList.contains("active")).toBe(true);
     expect(overlay.classList.contains("active")).toBe(true);
@@ -137,6 +137,10 @@ describe("Global Floating Drawer and Vue-Reactive State Sync", () => {
   it("should trigger manual sync process within the floating drawer", async () => {
     activeApp = createApp(App);
     activeApp.mount("#app");
+    await nextTick();
+
+    const syncBtn = document.getElementById("btn-global-sync-drawer");
+    syncBtn.click();
     await nextTick();
 
     const syncTriggerBtn = document.getElementById("btn-drawer-sync-now");

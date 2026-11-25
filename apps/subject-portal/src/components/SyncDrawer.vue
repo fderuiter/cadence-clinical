@@ -158,14 +158,15 @@
 </template>
 
 <script setup>
-import { ref, watch } from "vue";
+import { onMounted, ref, watch } from "vue";
 import {
   ClinicalIcon,
   EntityLink,
   getFocusableElements,
   useFocusTrap,
-} from "ui";
+} from "ui/portal-overlays";
 
+import { isAuthenticatedSession } from "../api/client.js";
 import { openSyncSubmissionPeek } from "../features/peek.js";
 
 import {
@@ -196,21 +197,38 @@ useFocusTrap(drawerRef, {
   },
 });
 
+function focusDrawerIfOpen() {
+  if (
+    !sync.isSyncDrawerOpen ||
+    !drawerRef.value ||
+    typeof document === "undefined"
+  ) {
+    return;
+  }
+  if (!drawerRef.value.contains(document.activeElement)) {
+    const target = getFocusableElements(drawerRef.value)[0] || drawerRef.value;
+    target.focus();
+  }
+}
+
+onMounted(() => {
+  focusDrawerIfOpen();
+});
+
 watch(
   () => sync.isSyncDrawerOpen,
   (open) => {
-    if (!open || !drawerRef.value || typeof document === "undefined") return;
-    if (!drawerRef.value.contains(document.activeElement)) {
-      const target =
-        getFocusableElements(drawerRef.value)[0] || drawerRef.value;
-      target.focus();
+    if (open) {
+      focusDrawerIfOpen();
     }
   },
   { flush: "post" }
 );
 
 function triggerManualSync() {
-  syncOfflineQueue(true, { autoDisburse: isDemoModeActive() });
+  syncOfflineQueue(true, {
+    autoDisburse: isAuthenticatedSession() || isDemoModeActive(),
+  });
 }
 
 function recordedPairs(item) {

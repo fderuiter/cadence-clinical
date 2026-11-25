@@ -1,6 +1,6 @@
-// Subject portal entry point (loaded by index.html). The portal lives in
-// focused modules; this file starts it on DOMContentLoaded and re-exports its
-// public API, which the tests import from here.
+// Subject portal public helper barrel (imported by Vitest unit suites and
+// Playwright E2E helpers). Browser startup in `index.html` loads `./main.js`
+// so gated features and offline queues split out of the cold-boot bundle.
 //
 //   api/        gateway dispatch and fetch helpers
 //   bootstrap/  initializeApp, mounting, control bindings
@@ -157,18 +157,14 @@ import {
 } from "./utils/participantCopy.js";
 import { markFieldInvalid } from "./widgets/field-errors.js";
 
-// Auto-run on load in DOM environments
-if (typeof document !== "undefined") {
-  if (
-    import.meta.env?.MODE === "test" ||
+// Auto-run on DOMContentLoaded in Vitest / mock test environments that import src/index.js directly.
+if (
+  typeof document !== "undefined" &&
+  (import.meta.env?.MODE === "test" ||
     import.meta.env?.VITEST ||
-    window.__MOCK_TEST_ENV__ ||
-    document.readyState === "loading"
-  ) {
-    document.addEventListener("DOMContentLoaded", initializeApp);
-  } else {
-    void initializeApp();
-  }
+    (typeof window !== "undefined" && window.__MOCK_TEST_ENV__))
+) {
+  document.addEventListener("DOMContentLoaded", initializeApp);
 }
 
 export {

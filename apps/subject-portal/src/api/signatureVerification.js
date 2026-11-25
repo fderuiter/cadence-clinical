@@ -1,7 +1,7 @@
 import {
   requestStepUpSignature as requestSharedStepUpSignature,
   resolveDefaultSemanticAction,
-} from "ui";
+} from "ui/signing";
 import { dispatchApi } from "./client.js";
 
 export { resolveDefaultSemanticAction };

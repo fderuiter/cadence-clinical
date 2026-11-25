@@ -317,11 +317,11 @@
 
 <script setup>
 import { computed, ref } from "vue";
+import { useFocusTrap } from "ui/portal-overlays";
 import {
   SIGNATURE_PASSWORD_INPUT_ATTRS,
   requiresCustomSignatureReason,
-  useFocusTrap,
-} from "ui";
+} from "ui/signing";
 
 import {
   closeReconsentModal,
@@ -330,10 +330,12 @@ import {
   submitReconsentSignature,
 } from "../features/reconsent.js";
 import { useConsentStore } from "../stores/consent.js";
+import { useSessionStore } from "../stores/session.js";
 import { state } from "../stores/state.js";
 
 const modalRef = ref(null);
 const consent = useConsentStore();
+const sessionStore = useSessionStore();
 
 const clauseDiffs = computed(() =>
   resolveReconsentClauseDiffs(consent.pendingReconsent)
@@ -354,7 +356,10 @@ function formatChangeTypeLabel(changeType) {
 }
 
 useFocusTrap(modalRef, {
-  isOpen: () => consent.reconsentModalOpen,
+  isOpen: () =>
+    Boolean(consent.reconsentModalOpen) &&
+    !sessionStore.pinSetup?.isOpen &&
+    !sessionStore.pinUnlock?.isOpen,
   onEscape: closeReconsentModal,
   initialFocus: "#reconsent-sign-password",
   restoreFocus: () => {

@@ -41,7 +41,13 @@
       <p id="compliance-error-msg" style="font-size: 14px; margin-bottom: 12px">
         Unknown error
       </p>
-      <button id="btn-retry-compliance" type="button" class="btn btn-primary">
+      <button
+        id="btn-retry-compliance"
+        type="button"
+        class="btn btn-primary"
+        data-vue-bound="true"
+        @click="retryCompliance"
+      >
         Retry
       </button>
     </div>
@@ -134,8 +140,9 @@
 </template>
 
 <script setup>
-import { computed } from "vue";
-import { ClinicalDataTable } from "ui";
+import { computed, onMounted } from "vue";
+import { ClinicalDataTable } from "ui/data-table";
+import { renderCompliance, retryCompliance } from "../features/compliance.js";
 import { openCompliancePeek } from "../features/peek.js";
 import { isScreenAvailable } from "../router/availability.js";
 import { useComplianceStore } from "../stores/compliance.js";
@@ -182,6 +189,10 @@ const hasComplianceTab = computed(() => {
   void session.session?.userId;
   void session.session?.isOfflineMode;
   return isDemoModeActive() || isScreenAvailable("compliance");
+});
+
+onMounted(() => {
+  renderCompliance();
 });
 </script>
 

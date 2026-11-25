@@ -778,7 +778,7 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
     const syncTrigger = page.locator("#btn-global-sync-drawer");
     const syncDrawer = page.locator(".global-drawer");
     await expect(syncTrigger).toBeVisible();
-    await expect(syncDrawer).toHaveAttribute("aria-hidden", "true");
+    await expect(syncDrawer).toHaveCount(0);
 
     // Tab through page controls and verify focus never lands inside the closed SyncDrawer
     await syncTrigger.focus();
@@ -823,6 +823,7 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
 
     await page.keyboard.press("Escape");
     await expect(syncDrawer).not.toHaveClass(/active/);
+    await expect(syncDrawer).toHaveAttribute("aria-hidden", "true");
     await expect(syncTrigger).toBeFocused();
   });
 
@@ -931,7 +932,7 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
       }
     );
 
-    // Outside demo mode, only My Wallet is rendered in the tablist and gated views use region + aria-label with zero dangling aria-labelledby
+    // Outside demo mode, only My Wallet is rendered in the tablist and gated views stay unmounted with zero dangling aria-labelledby
     await page.goto(PROD_PORTAL_URL);
     await completeInitialPinSetupIfOpen(page);
     await expect(page.locator('.nav-tabs [role="tab"]')).toHaveCount(1);
@@ -955,19 +956,19 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
             .some((id) => !document.getElementById(id))
         )
         .map((el) => el.id || el.tagName);
-      const layView = document.getElementById("view-lay-summaries");
+      const gatedViewIds = [
+        "view-tasks",
+        "view-compliance",
+        "view-inbox",
+        "view-consent",
+        "view-lay-summaries",
+      ].filter((id) => Boolean(document.getElementById(id)));
       return {
-        layRole: layView?.getAttribute("role"),
-        layAriaLabel: layView?.getAttribute("aria-label"),
-        layHasLabelledBy: layView?.hasAttribute("aria-labelledby"),
+        gatedViewIds,
         danglingLabelledBy,
       };
     });
-    expect(nonDemoStates.layRole).toBe("region");
-    expect(nonDemoStates.layAriaLabel).toBe(
-      "Plain-Language Clinical Trial Results"
-    );
-    expect(nonDemoStates.layHasLabelledBy).toBe(false);
+    expect(nonDemoStates.gatedViewIds).toEqual([]);
     expect(nonDemoStates.danglingLabelledBy).toEqual([]);
 
     // In demo mode, all 6 portal tabs support roving ArrowRight navigation and pass Axe
@@ -1063,7 +1064,17 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
     await completeInitialPinSetupIfOpen(page);
 
     // Queue an offline submission so `.has-queued` and `.sync-badge` render
-    await page.context().setOffline(true);
+    // (serviceWorkers: "block" in this suite disables sw.js precache, so simulate
+    // offline API/navigator state while letting Vite serve lazy overlay chunks)
+    await page.route("**/api/**", (route) =>
+      route.abort("internetdisconnected")
+    );
+    await page.evaluate(() => {
+      Object.defineProperty(window.navigator, "onLine", {
+        configurable: true,
+        get: () => false,
+      });
+    });
     await page.locator("#task-card-assign_01 .btn-start-task").click();
     await page.fill("#vssbp", "118");
     await page.fill("#vsdpb", "76");
@@ -1073,7 +1084,10 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
     await page.fill("#sign-password", "246810");
     await page.click("#btn-modal-sign");
     await expect(page.locator("#portal-sign-modal")).toBeHidden();
-    await page.context().setOffline(false);
+    await page.unroute("**/api/**");
+    await page.evaluate(() => {
+      delete window.navigator.onLine;
+    });
 
     const syncBtn = page.locator("#btn-global-sync-drawer");
     const syncBadge = syncBtn.locator(".sync-badge");

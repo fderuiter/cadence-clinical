@@ -22,13 +22,16 @@
 </template>
 
 <script setup>
-import { syncOfflineQueue } from "../features/sync.js";
+import { isAuthenticatedSession } from "../api/client.js";
 import { useSyncStore } from "../stores/sync.js";
 import { isDemoModeActive } from "../utils/demoMode.js";
 
 const sync = useSyncStore();
 
-function triggerManualSync() {
-  syncOfflineQueue(true, { autoDisburse: isDemoModeActive() });
+async function triggerManualSync() {
+  const { syncOfflineQueue } = await import("../features/sync.js");
+  await syncOfflineQueue(true, {
+    autoDisburse: isAuthenticatedSession() || isDemoModeActive(),
+  });
 }
 </script>

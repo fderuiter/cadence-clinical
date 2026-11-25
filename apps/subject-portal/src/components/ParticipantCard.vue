@@ -78,6 +78,7 @@
       />
     </div>
     <SignOutConfirmModal
+      v-if="isSignOutConfirmOpen"
       id="portal-signout-confirm-modal"
       :open="isSignOutConfirmOpen"
       title="Log Out With Unsaved or Unsent Survey Entries?"
@@ -92,15 +93,14 @@
 
 <script setup>
 import { DEFAULT_DEMO_PARTICIPANT } from "demo-fixtures";
-import { SignOutConfirmModal, useSignOutGuard } from "ui";
+import { defineLazyOverlay } from "ui/portal-shell";
 import { computed } from "vue";
 
-import {
-  hasUnsavedOrUnsyncedLocalData,
-  login,
-  logout,
-  prepareSignOutGuardState,
-} from "../features/auth.js";
+const SignOutConfirmModal = defineLazyOverlay(() =>
+  import("ui/portal-overlays").then((m) => m.SignOutConfirmModal)
+);
+
+import { login, usePortalSignOutGuard } from "../features/auth.js";
 import { maskParticipantIdentifier } from "../features/site-support.js";
 import { useSessionStore } from "../stores/session.js";
 import { useWalletStore } from "../stores/wallet.js";
@@ -132,11 +132,7 @@ const {
   requestSignOut,
   confirmSignOut,
   cancelSignOut,
-} = useSignOutGuard({
-  flushExternalDrafts: prepareSignOutGuardState,
-  hasExternalDrafts: hasUnsavedOrUnsyncedLocalData,
-  onConfirmSignOut: () => logout({ confirmed: true }),
-});
+} = usePortalSignOutGuard();
 
 const isDemo = computed(() => {
   void sessionStore.session?.isDemoMode;

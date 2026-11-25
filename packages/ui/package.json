@@ -6,6 +6,14 @@
   "types": "./index.d.ts",
   "exports": {
     ".": "./index.js",
+    "./portal-shell": "./portal-shell.js",
+    "./portal-overlays": "./portal-overlays.js",
+    "./data-table": "./data-table.js",
+    "./session": "./session.js",
+    "./caller-scope": "./callerScope.js",
+    "./signing": "./signing.js",
+    "./econsent": "./econsent.js",
+    "./builders": "./src/builders.js",
     "./testing": "./mockGateway.js",
     "./vitest": {
       "types": "./accessibility-matcher.d.ts",

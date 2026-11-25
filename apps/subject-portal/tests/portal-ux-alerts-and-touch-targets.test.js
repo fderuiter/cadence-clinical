@@ -260,6 +260,7 @@ describe("Non-blocking UX notifications, task busy guard, and 48px touch targets
     );
     expect(radioHtml).not.toMatch(/#[0-9a-fA-F]{3,6}/);
 
+    state.mountedViewIds.push("view-consent");
     const langSelect = document.getElementById("consent-lang-selector");
     expect(langSelect?.style.minHeight).toBe("var(--touch-target-min)");
   });

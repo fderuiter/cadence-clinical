@@ -27,7 +27,7 @@ import { isDemoModeActive } from "../utils/demoMode.js";
 export function bindPortalControls() {
   // Attach "Sync Now" button listener
   const btnSyncNow = document.getElementById("btn-sync-now");
-  if (btnSyncNow) {
+  if (btnSyncNow && btnSyncNow.dataset.vueBound !== "true") {
     btnSyncNow.addEventListener("click", () => {
       syncOfflineQueue(true, {
         autoDisburse: isAuthenticatedSession() || isDemoModeActive(),
@@ -46,28 +46,31 @@ export function bindPortalControls() {
   }
 
   const btnSubmit = document.getElementById("btn-submit-questionnaire");
-  if (btnSubmit)
+  if (btnSubmit && btnSubmit.dataset.vueBound !== "true") {
     btnSubmit.addEventListener("click", requestQuestionnaireSignature);
+  }
 
   // Modal actions
   const btnModalCancel = document.getElementById("btn-modal-cancel");
-  if (btnModalCancel)
+  if (btnModalCancel && btnModalCancel.dataset.vueBound !== "true") {
     btnModalCancel.addEventListener("click", closeSignatureModal);
+  }
 
   const btnModalSign = document.getElementById("btn-modal-sign");
-  if (btnModalSign)
+  if (btnModalSign && btnModalSign.dataset.vueBound !== "true") {
     btnModalSign.addEventListener("click", verifyAndSubmitSignature);
+  }
 
   // eConsent visual element binding
   const langSelector = document.getElementById("consent-lang-selector");
-  if (langSelector) {
+  if (langSelector && langSelector.dataset.vueBound !== "true") {
     langSelector.addEventListener("change", () => {
       void loadConsentDetails();
     });
   }
 
   const btnRetryConsent = document.getElementById("btn-retry-consent");
-  if (btnRetryConsent) {
+  if (btnRetryConsent && btnRetryConsent.dataset.vueBound !== "true") {
     btnRetryConsent.addEventListener("click", () => {
       loadConsentDetails();
     });
@@ -76,28 +79,28 @@ export function bindPortalControls() {
   const btnSubmitAnswers = document.getElementById(
     "btn-submit-consent-answers"
   );
-  if (btnSubmitAnswers) {
+  if (btnSubmitAnswers && btnSubmitAnswers.dataset.vueBound !== "true") {
     btnSubmitAnswers.addEventListener("click", () => {
       submitConsentAnswers();
     });
   }
 
   const btnVerifyLiveness = document.getElementById("btn-verify-liveness");
-  if (btnVerifyLiveness) {
+  if (btnVerifyLiveness && btnVerifyLiveness.dataset.vueBound !== "true") {
     btnVerifyLiveness.addEventListener("click", () => {
       verifyBiometricLiveness(false);
     });
   }
 
   const btnLivenessFallback = document.getElementById("btn-liveness-fallback");
-  if (btnLivenessFallback) {
+  if (btnLivenessFallback && btnLivenessFallback.dataset.vueBound !== "true") {
     btnLivenessFallback.addEventListener("click", () => {
       verifyBiometricLiveness(true);
     });
   }
 
   const btnTriggerSign = document.getElementById("btn-trigger-consent-sign");
-  if (btnTriggerSign) {
+  if (btnTriggerSign && btnTriggerSign.dataset.vueBound !== "true") {
     btnTriggerSign.addEventListener("click", () => {
       if (isConsentLivenessExpired()) {
         ensureConsentLivenessFresh();
@@ -109,17 +112,17 @@ export function bindPortalControls() {
 
   // Retry Handlers
   const btnRetryTasks = document.getElementById("btn-retry-tasks");
-  if (btnRetryTasks) {
+  if (btnRetryTasks && btnRetryTasks.dataset.vueBound !== "true") {
     btnRetryTasks.addEventListener("click", retryTasks);
   }
 
   const btnRetryInbox = document.getElementById("btn-retry-inbox");
-  if (btnRetryInbox) {
+  if (btnRetryInbox && btnRetryInbox.dataset.vueBound !== "true") {
     btnRetryInbox.addEventListener("click", retryInbox);
   }
 
   const btnRetryCompliance = document.getElementById("btn-retry-compliance");
-  if (btnRetryCompliance) {
+  if (btnRetryCompliance && btnRetryCompliance.dataset.vueBound !== "true") {
     btnRetryCompliance.addEventListener("click", retryCompliance);
   }
 }

@@ -10,6 +10,7 @@ const VIRTUAL_DEMO_MOCKS_ID = "\0virtual:demo-fixtures-mocks-prod-stub";
 const VIRTUAL_DEMO_TLDTS_SHIM_ID = "\0virtual:demo-tldts-shim";
 const VIRTUAL_DEMO_VIEW_PREFIX = "\0virtual:demo-view-prod-stub:";
 const VIRTUAL_DEMO_STORE_PREFIX = "\0virtual:demo-store-prod-stub:";
+const VIRTUAL_DEMO_MOCK_DATA_ID = "\0virtual:demo-mock-data-prod-stub";
 
 const EMPTY_PROD_STUB_SOURCE = `
 const EMPTY_LIST = /* @__PURE__ */ Object.freeze([]);
@@ -225,6 +226,17 @@ export default defineComponent({
     return null;
   },
 });
+`;
+
+const EMPTY_DEMO_MOCK_DATA_STUB_SOURCE = `
+const EMPTY_LIST = /* @__PURE__ */ Object.freeze([]);
+const EMPTY_RECORD = /* @__PURE__ */ Object.freeze({});
+
+export const MOCK_ASSIGNMENTS = EMPTY_LIST;
+export const MOCK_INSTRUMENTS = EMPTY_RECORD;
+export const MOCK_NOTIFICATIONS = EMPTY_LIST;
+export const MOCK_APPROVED_CONTENT = null;
+export const MOCK_COMPREHENSION_CHECK = null;
 `;
 
 const EMPTY_DEMO_STORE_STUB_SOURCE = `
@@ -633,6 +645,9 @@ export function createDemoFixturesPlugin(appDir) {
   );
   const viewsDemoPrefix = `${toPosixPath(path.resolve(appDir, "src/views/demo"))}/`;
   const storesDemoPrefix = `${toPosixPath(path.resolve(appDir, "src/stores/demo"))}/`;
+  const mockDataFile = toPosixPath(
+    path.resolve(appDir, "src/data/mock-data.js")
+  );
 
   function resolveCandidateSource(source, importer) {
     if (!source || source.startsWith("\0")) return null;
@@ -696,6 +711,9 @@ export function createDemoFixturesPlugin(appDir) {
       if (resolvedPath.startsWith(storesDemoPrefix)) {
         return `${VIRTUAL_DEMO_STORE_PREFIX}${path.basename(resolvedPath)}`;
       }
+      if (resolvedPath === mockDataFile) {
+        return VIRTUAL_DEMO_MOCK_DATA_ID;
+      }
       return null;
     },
     load(id) {
@@ -721,6 +739,9 @@ export function createDemoFixturesPlugin(appDir) {
       }
       if (id.startsWith(VIRTUAL_DEMO_STORE_PREFIX)) {
         return EMPTY_DEMO_STORE_STUB_SOURCE;
+      }
+      if (id === VIRTUAL_DEMO_MOCK_DATA_ID) {
+        return EMPTY_DEMO_MOCK_DATA_STUB_SOURCE;
       }
       return null;
     },
@@ -760,7 +781,7 @@ export function createConstantFoldDemoModePlugin(appDir) {
 
       const literal = isDemo ? "(true)" : "(false)";
       const transformed = code.replace(
-        /(?<!function\s+)(?<![.\w$])isDemoBuild\(\s*\)/g,
+        /(?<!(?:function|get|set)\s+)(?<![.\w$])isDemoBuild\(\s*\)(?!\s*\{)/g,
         literal
       );
       if (transformed === code) {
@@ -796,6 +817,38 @@ export function createUiWorkspaceAliases(
     {
       find: /^ui\/vitest$/,
       replacement: path.resolve(uiRoot, "accessibility-matcher.js"),
+    },
+    {
+      find: /^ui\/portal-shell$/,
+      replacement: path.resolve(uiRoot, "portal-shell.js"),
+    },
+    {
+      find: /^ui\/portal-overlays$/,
+      replacement: path.resolve(uiRoot, "portal-overlays.js"),
+    },
+    {
+      find: /^ui\/data-table$/,
+      replacement: path.resolve(uiRoot, "data-table.js"),
+    },
+    {
+      find: /^ui\/session$/,
+      replacement: path.resolve(uiRoot, "session.js"),
+    },
+    {
+      find: /^ui\/caller-scope$/,
+      replacement: path.resolve(uiRoot, "callerScope.js"),
+    },
+    {
+      find: /^ui\/signing$/,
+      replacement: path.resolve(uiRoot, "signing.js"),
+    },
+    {
+      find: /^ui\/econsent$/,
+      replacement: path.resolve(uiRoot, "econsent.js"),
+    },
+    {
+      find: /^ui\/builders$/,
+      replacement: path.resolve(uiRoot, "src/builders.js"),
     },
     {
       find: /^ui$/,

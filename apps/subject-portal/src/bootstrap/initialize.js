@@ -1,58 +1,53 @@
 // Bootstrap: restores the session, signs in, hydrates participant tasks & drafts,
 // mounts the shell so initial route guards see authenticated state, renders views,
 // and starts offline sync.
-import { initHoverDetection } from "ui";
+import { initHoverDetection } from "ui/portal-shell";
 
 import { isAuthenticatedSession } from "../api/client.js";
-import {
-  MOCK_ASSIGNMENTS,
-  MOCK_INSTRUMENTS,
-  MOCK_NOTIFICATIONS,
-} from "../data/mock-data.js";
-import { logAuditRecord, renderLedger } from "../features/audit.js";
 import { restoreSession, signIn, watchUserIdentity } from "../features/auth.js";
-import { loadCompliance, renderCompliance } from "../features/compliance.js";
-import { loadNotifications, renderInbox } from "../features/inbox.js";
 import { showView } from "../features/navigation.js";
-import { checkPINWrapper } from "../features/pin.js";
-import {
-  checkPendingReconsent,
-  resolveReconsentStudyId,
-} from "../features/reconsent.js";
 import {
   hydrateSiteSupportContact,
   maskParticipantIdentifier,
 } from "../features/site-support.js";
-import { syncOfflineQueue } from "../features/sync.js";
-import { resetSyncRetryInfo } from "../features/sync-status.js";
-import {
-  hydrateDraftPresence,
-  loadAssignedInstruments,
-  loadAssignedTasks,
-  renderTasks,
-} from "../features/tasks.js";
-import {
-  hasAttemptedWalletHydration,
-  loadParticipantWallet,
-  resetWalletHydrationAttempt,
-} from "../features/wallet.js";
 import { isScreenAvailable } from "../router/availability.js";
 import {
   getPortalRouter,
   isPortalRouterMounted,
+  resetPortalRouterForTests,
   resolveDefaultPortalRoute,
   syncActiveRouteEntities,
+  waitForPortalRouterMount,
 } from "../router/index.js";
 import { state } from "../stores/state.js";
-import { getAssignmentsFromDB, getInstrumentsFromDB } from "../sync-queue.js";
-import { isDemoModeActive } from "../utils/demoMode.js";
-import { bindPortalControls } from "./controls.js";
-import { mountPortal } from "./mount.js";
+import { isDemoBuild, isDemoModeActive } from "../utils/demoMode.js";
+import { hasTrackedLocalQueueActivity } from "../utils/localQueueActivity.js";
+import { checkOnline, resetSyncRetryInfo } from "../utils/networkStatus.js";
+import { getMountedPortalContainer, mountPortal, unmountApp } from "./mount.js";
+
+let walletModuleLoaded = false;
 
 // Bootstrap Initialization
 export async function initializeApp() {
+  if (typeof document !== "undefined" && isPortalRouterMounted()) {
+    const previousContainer = getMountedPortalContainer();
+    const currentAppEl = document.getElementById("app");
+    if (
+      !previousContainer ||
+      previousContainer.isConnected === false ||
+      (currentAppEl && previousContainer !== currentAppEl)
+    ) {
+      unmountApp();
+      resetPortalRouterForTests();
+    }
+  }
   resetSyncRetryInfo();
-  resetWalletHydrationAttempt();
+  if (walletModuleLoaded || import.meta.env?.MODE === "test") {
+    const { resetWalletHydrationAttempt } =
+      await import("../features/wallet.js");
+    walletModuleLoaded = true;
+    resetWalletHydrationAttempt();
+  }
   hydrateSiteSupportContact();
   await restoreSession();
 
@@ -131,22 +126,38 @@ export async function initializeApp() {
   let initialWalletHydration = null;
   if (isAuthenticatedSession()) {
     const userId = state.session.userId;
-    if (isScreenAvailable("tasks")) {
+    if (
+      isScreenAvailable("tasks") &&
+      (isDemoBuild() || import.meta.env?.MODE === "test")
+    ) {
+      const { loadAssignedTasks } = await import("../features/tasks.js");
       await loadAssignedTasks(userId);
     } else {
       state.assignments = [];
     }
-    if (isScreenAvailable("tasks") || isScreenAvailable("questionnaire")) {
+    if (
+      (isScreenAvailable("tasks") || isScreenAvailable("questionnaire")) &&
+      (isDemoBuild() || import.meta.env?.MODE === "test")
+    ) {
+      const { loadAssignedInstruments } = await import("../features/tasks.js");
       await loadAssignedInstruments(userId);
     } else {
       state.instruments = {};
     }
-    if (isScreenAvailable("compliance")) {
+    if (
+      isScreenAvailable("compliance") &&
+      (isDemoBuild() || import.meta.env?.MODE === "test")
+    ) {
+      const { loadCompliance } = await import("../features/compliance.js");
       await loadCompliance(userId);
     } else {
       state.compliance = null;
     }
-    if (isScreenAvailable("inbox")) {
+    if (
+      isScreenAvailable("inbox") &&
+      (isDemoBuild() || import.meta.env?.MODE === "test")
+    ) {
+      const { loadNotifications } = await import("../features/inbox.js");
       await loadNotifications(userId);
     } else {
       state.notifications = [];
@@ -154,23 +165,33 @@ export async function initializeApp() {
     if (
       isScreenAvailable("wallet") &&
       !state.walletLoaded &&
-      !state.walletLoading &&
-      !hasAttemptedWalletHydration()
+      !state.walletLoading
     ) {
-      initialWalletHydration = loadParticipantWallet().catch((err) => {
-        console.warn(
-          "[Wallet] Initial wallet hydration warning:",
-          err?.message
-        );
-      });
+      const { hasAttemptedWalletHydration, loadParticipantWallet } =
+        await import("../features/wallet.js");
+      walletModuleLoaded = true;
+      if (!hasAttemptedWalletHydration()) {
+        initialWalletHydration = loadParticipantWallet().catch((err) => {
+          console.warn(
+            "[Wallet] Initial wallet hydration warning:",
+            err?.message
+          );
+        });
+      }
     }
-  } else if (isDemoModeActive()) {
-    // Explicit demo build: seed synthetic study data
+  } else if (
+    isDemoModeActive() &&
+    (isDemoBuild() || import.meta.env?.MODE === "test")
+  ) {
+    const { MOCK_ASSIGNMENTS, MOCK_INSTRUMENTS, MOCK_NOTIFICATIONS } =
+      await import("../data/mock-data.js");
     state.assignments = JSON.parse(JSON.stringify(MOCK_ASSIGNMENTS));
     state.notifications = JSON.parse(JSON.stringify(MOCK_NOTIFICATIONS));
     state.instruments = JSON.parse(JSON.stringify(MOCK_INSTRUMENTS));
   } else if (state.session.isOfflineMode && state.session.userId) {
     // Offline recovery for a previously authenticated participant: use cached IndexedDB records only
+    const { getAssignmentsFromDB, getInstrumentsFromDB } =
+      await import("../sync-queue.js");
     const cachedAssignments = await getAssignmentsFromDB();
     const cachedInstruments = await getInstrumentsFromDB();
     state.assignments = Array.isArray(cachedAssignments)
@@ -192,7 +213,17 @@ export async function initializeApp() {
     state.compliance = null;
   }
 
-  await hydrateDraftPresence(state.session.userId);
+  if (
+    (isDemoBuild() || import.meta.env?.MODE === "test") &&
+    (Boolean(state.session.userId) ||
+      isDemoModeActive() ||
+      import.meta.env?.MODE === "test")
+  ) {
+    const { hydrateDraftPresence } = await import("../features/tasks.js");
+    await hydrateDraftPresence(state.session.userId);
+  } else {
+    state.draftPresence = {};
+  }
 
   // Mount Vue application & router AFTER session and task state are ready
   let portalRouter = null;
@@ -202,6 +233,7 @@ export async function initializeApp() {
       mountPortal(appEl);
       portalRouter = getPortalRouter();
       await portalRouter.isReady().catch(() => {});
+      await waitForPortalRouterMount();
     }
 
     // Dynamic Hover Pointer Capability Detection
@@ -216,6 +248,7 @@ export async function initializeApp() {
   }
 
   // Initialize genesis compliance ledger
+  const { logAuditRecord, renderLedger } = await import("../features/audit.js");
   await logAuditRecord(
     "GENESIS",
     {
@@ -227,14 +260,25 @@ export async function initializeApp() {
     "Patient companion portal session securely booted."
   );
 
-  // Draw Initial Views now that DOM containers are mounted
-  renderTasks();
-  renderCompliance();
-  renderInbox();
+  // Draw Initial Views when demo/standalone containers are mounted
+  if (isDemoBuild() || import.meta.env?.MODE === "test") {
+    const [
+      { renderTasks },
+      { renderCompliance },
+      { renderInbox },
+      { bindPortalControls },
+    ] = await Promise.all([
+      import("../features/tasks.js"),
+      import("../features/compliance.js"),
+      import("../features/inbox.js"),
+      import("./controls.js"),
+    ]);
+    renderTasks();
+    renderCompliance();
+    renderInbox();
+    bindPortalControls();
+  }
   renderLedger();
-
-  // SyncNow, questionnaire, signature modal, eConsent and retry buttons
-  bindPortalControls();
 
   // Restore active route entities (e.g. cold reload on /questionnaire?assignmentId=... or peek query params)
   if (portalRouter) {
@@ -243,9 +287,12 @@ export async function initializeApp() {
 
   // Check for pending active re-consent only when the consent screen is available and signed in or in demo mode
   if (
+    (isDemoBuild() || import.meta.env?.MODE === "test") &&
     isScreenAvailable("consent") &&
     (isAuthenticatedSession() || isDemoModeActive())
   ) {
+    const { checkPendingReconsent, resolveReconsentStudyId } =
+      await import("../features/reconsent.js");
     if (!resolveReconsentStudyId() && initialWalletHydration) {
       await Promise.race([
         initialWalletHydration,
@@ -266,7 +313,7 @@ export async function initializeApp() {
       /\/?$/,
       "/"
     );
-    window.addEventListener("load", () => {
+    const registerPortalServiceWorker = () => {
       navigator.serviceWorker
         .register(`${swBase}sw.js`, { scope: swBase })
         .then((reg) => {
@@ -275,17 +322,39 @@ export async function initializeApp() {
         .catch((err) => {
           console.error("Service Worker registration failed:", err);
         });
-    });
+    };
+    if (typeof document !== "undefined" && document.readyState === "complete") {
+      registerPortalServiceWorker();
+    } else {
+      window.addEventListener("load", registerPortalServiceWorker, {
+        once: true,
+      });
+    }
   }
 
   // Switch database context and prompt PIN unlock/setup before running startup sync
   watchUserIdentity();
-  await checkPINWrapper();
 
-  // Initial sync & sync queue rendering (stipend evaluation runs for authenticated or demo sessions)
-  await syncOfflineQueue(false, {
-    autoDisburse: isAuthenticatedSession() || isDemoModeActive(),
-  });
+  const shouldHydratePinAndSync =
+    Boolean(state.session.userId) ||
+    isAuthenticatedSession() ||
+    isDemoModeActive() ||
+    hasTrackedLocalQueueActivity();
+
+  if (shouldHydratePinAndSync) {
+    const [{ checkPINWrapper }, { syncOfflineQueue }] = await Promise.all([
+      import("../features/pin.js"),
+      import("../features/sync.js"),
+    ]);
+    await checkPINWrapper();
+    await syncOfflineQueue(false, {
+      autoDisburse: isAuthenticatedSession() || isDemoModeActive(),
+    });
+  } else {
+    state.syncStatusText = checkOnline()
+      ? "Online. All submissions synchronized."
+      : "Offline. Submissions will be saved locally.";
+  }
 
   // Attach online/offline listener
   if (typeof window !== "undefined") {
@@ -294,9 +363,11 @@ export async function initializeApp() {
         return;
       }
       console.log("[App] Network online detected. Triggering sync...");
-      syncOfflineQueue(false, {
-        autoDisburse: isAuthenticatedSession() || isDemoModeActive(),
-      });
+      void import("../features/sync.js").then(({ syncOfflineQueue }) =>
+        syncOfflineQueue(false, {
+          autoDisburse: isAuthenticatedSession() || isDemoModeActive(),
+        })
+      );
     });
 
     window.addEventListener("offline", async () => {
@@ -304,7 +375,10 @@ export async function initializeApp() {
         "[App] Network offline detected. Enforcing PIN wrapper for offline operation..."
       );
       state.session.isOfflineMode = true;
-      await checkPINWrapper();
+      if (state.session.userId || isDemoModeActive()) {
+        const { checkPINWrapper } = await import("../features/pin.js");
+        await checkPINWrapper();
+      }
     });
   }
 }

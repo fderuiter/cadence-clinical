@@ -1,17 +1,18 @@
 // View switching. `state.currentView` (the ui store) is the source of truth the
 // shell renders from; the router follows it into the URL and back (see
 // src/router/index.js).
-import { handoffFocus } from "ui";
+import { handoffFocus } from "ui/portal-shell";
 import {
   defaultPortalViewId,
   isScreenAvailable,
 } from "../router/availability.js";
 import { activeTabForView, routeForView, tabs } from "../router/routes.js";
 import { state } from "../stores/state.js";
-import { loadConsentDetails } from "./consent.js";
-import { loadParticipantWallet } from "./wallet.js";
+import { isDemoBuild } from "../utils/demoMode.js";
 
 var viewLeaveHandlers;
+var viewEnterHandlers;
+let activeFocusRequestSeq = 0;
 
 function getLeaveHandlers() {
   if (!viewLeaveHandlers) {
@@ -20,9 +21,29 @@ function getLeaveHandlers() {
   return viewLeaveHandlers;
 }
 
+function getEnterHandlers() {
+  if (!viewEnterHandlers) {
+    viewEnterHandlers = new Map();
+  }
+  return viewEnterHandlers;
+}
+
 export function registerViewLeaveHandler(viewId, handler) {
   if (typeof handler === "function") {
     getLeaveHandlers().set(viewId, handler);
+  }
+}
+
+export function registerViewEnterHandler(viewId, handler) {
+  if (typeof handler === "function") {
+    getEnterHandlers().set(viewId, handler);
+  }
+}
+
+export function unregisterViewEnterHandler(viewId, handler) {
+  const handlers = getEnterHandlers();
+  if (!handler || handlers.get(viewId) === handler) {
+    handlers.delete(viewId);
   }
 }
 
@@ -43,6 +64,89 @@ function hasActiveModalOrDrawer() {
     state.session?.pinSetup?.isOpen ||
     state.session?.pinUnlock?.isOpen
   );
+}
+
+function isSignedOutSession() {
+  return (
+    !state.session?.userId &&
+    !state.session?.token &&
+    !state.session?.isDemoMode &&
+    !state.session?.isOfflineMode
+  );
+}
+
+function recordMountedView(targetViewId) {
+  if (!Array.isArray(state.mountedViewIds)) {
+    state.mountedViewIds = [];
+  }
+  if (targetViewId === "view-unavailable" && isSignedOutSession()) {
+    if (state.mountedViewIds.length > 0) {
+      state.mountedViewIds = [];
+    }
+    return;
+  }
+  const matchedTarget = routeForView(targetViewId);
+  const canMount =
+    targetViewId === "view-unavailable" ||
+    (matchedTarget &&
+      (isDemoBuild() ||
+        import.meta.env?.MODE === "test" ||
+        matchedTarget.name === "wallet"));
+  if (canMount && !state.mountedViewIds.includes(targetViewId)) {
+    state.mountedViewIds.push(targetViewId);
+  }
+}
+
+async function focusActiveViewWhenMounted(targetViewId, focusTarget) {
+  const seq = ++activeFocusRequestSeq;
+  const escapedId = escapeSelectorId(targetViewId);
+  const viewTargets = [
+    focusTarget || null,
+    () => document.querySelector(`#${escapedId} .view-header h2`),
+    () => document.querySelector(`#${escapedId} h2`),
+    `#${escapedId}`,
+  ];
+
+  const immediateEl = await handoffFocus(viewTargets, {
+    includeDefaultFallbacks: false,
+  });
+  if (
+    immediateEl ||
+    seq !== activeFocusRequestSeq ||
+    state.currentView !== targetViewId
+  ) {
+    return;
+  }
+
+  for (let attempt = 0; attempt < 25; attempt++) {
+    await new Promise((resolve) => setTimeout(resolve, 16));
+    if (
+      typeof document === "undefined" ||
+      seq !== activeFocusRequestSeq ||
+      state.currentView !== targetViewId ||
+      hasActiveModalOrDrawer()
+    ) {
+      return;
+    }
+    if (document.getElementById(targetViewId)) {
+      const mountedEl = await handoffFocus(viewTargets, {
+        awaitNextTick: false,
+        includeDefaultFallbacks: false,
+      });
+      if (mountedEl) {
+        return;
+      }
+    }
+  }
+
+  if (
+    typeof document !== "undefined" &&
+    seq === activeFocusRequestSeq &&
+    state.currentView === targetViewId &&
+    !hasActiveModalOrDrawer()
+  ) {
+    await handoffFocus(["#main-content"], { awaitNextTick: false });
+  }
 }
 
 // Activates a view: enforces screen availability outside demo builds, invokes
@@ -75,6 +179,7 @@ export function showView(viewId, options = {}) {
   }
 
   state.currentView = targetViewId;
+  recordMountedView(targetViewId);
 
   if (typeof document !== "undefined") {
     document.querySelectorAll(".portal-view").forEach((v) => {
@@ -113,6 +218,9 @@ export function showView(viewId, options = {}) {
     }
 
     const activeTab = activeTabForView(targetViewId);
+    const mountedList = Array.isArray(state.mountedViewIds)
+      ? state.mountedViewIds
+      : [];
     for (const tab of tabs) {
       const isSelected = activeTab?.id === tab.id;
       const item = document.getElementById(tab.itemId);
@@ -124,35 +232,34 @@ export function showView(viewId, options = {}) {
       if (btn) {
         btn.setAttribute("aria-selected", isSelected ? "true" : "false");
         btn.setAttribute("tabindex", isSelected ? "0" : "-1");
-        if (btn.hasAttribute("aria-controls")) {
-          btn.setAttribute(
-            "aria-controls",
-            tab.id === "tasks" && targetViewId === "view-questionnaire"
-              ? "view-questionnaire"
-              : tab.viewId
-          );
+        const desiredControlsId =
+          tab.id === "tasks" && targetViewId === "view-questionnaire"
+            ? "view-questionnaire"
+            : tab.viewId;
+        if (
+          targetViewId === desiredControlsId ||
+          mountedList.includes(desiredControlsId) ||
+          Boolean(document.getElementById(desiredControlsId))
+        ) {
+          btn.setAttribute("aria-controls", desiredControlsId);
+        } else {
+          btn.removeAttribute("aria-controls");
         }
       }
     }
 
     if (!options.preserveTabFocus && !hasActiveModalOrDrawer()) {
-      const escapedId = escapeSelectorId(targetViewId);
-      void handoffFocus([
-        options.focusTarget || null,
-        () => document.querySelector(`#${escapedId} .view-header h2`),
-        () => document.querySelector(`#${escapedId} h2`),
-        `#${escapedId}`,
-        "#main-content",
-      ]);
+      void focusActiveViewWhenMounted(targetViewId, options.focusTarget);
     }
   }
 
-  if (
-    targetViewId === "view-consent" &&
-    isScreenAvailable("consent") &&
-    typeof loadConsentDetails === "function"
-  ) {
-    loadConsentDetails();
+  const enterHandler = getEnterHandlers().get(targetViewId);
+  if (typeof enterHandler === "function") {
+    try {
+      enterHandler(previousView);
+    } catch (err) {
+      console.warn(`Error running enter handler for ${targetViewId}:`, err);
+    }
   }
 
   if (
@@ -163,6 +270,8 @@ export function showView(viewId, options = {}) {
     !state.walletLoaded &&
     !state.walletLoading
   ) {
-    loadParticipantWallet().catch(() => {});
+    void import("./wallet.js").then(({ loadParticipantWallet }) =>
+      loadParticipantWallet().catch(() => {})
+    );
   }
 }

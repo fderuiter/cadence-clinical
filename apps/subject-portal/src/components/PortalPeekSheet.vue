@@ -81,7 +81,7 @@
 <script setup>
 import { computed, inject, watch } from "vue";
 import { routeLocationKey } from "vue-router";
-import { ClinicalDrawer, ClinicalIcon } from "ui";
+import { ClinicalDrawer, ClinicalIcon } from "ui/portal-overlays";
 
 import {
   PEEK_QUERY_KEYS,

@@ -193,13 +193,9 @@
 
 <script setup>
 import { computed, ref } from "vue";
-import { SignOutConfirmModal, useFocusTrap, useSignOutGuard } from "ui";
+import { SignOutConfirmModal, useFocusTrap } from "ui/portal-overlays";
 
-import {
-  hasUnsavedOrUnsyncedLocalData,
-  logout,
-  prepareSignOutGuardState,
-} from "../features/auth.js";
+import { usePortalSignOutGuard } from "../features/auth.js";
 import {
   MAX_PIN_UNLOCK_ATTEMPTS,
   cancelPINReset,
@@ -217,14 +213,10 @@ const sessionStore = useSessionStore();
 
 const {
   isConfirmOpen: isSignOutConfirmOpen,
-  requestSignOut,
+  requestSignOut: handleSignOut,
   confirmSignOut,
   cancelSignOut,
-} = useSignOutGuard({
-  flushExternalDrafts: prepareSignOutGuardState,
-  hasExternalDrafts: hasUnsavedOrUnsyncedLocalData,
-  onConfirmSignOut: () => logout({ confirmed: true }),
-});
+} = usePortalSignOutGuard();
 
 useFocusTrap(modalRef, {
   isOpen: () => sessionStore.pinUnlock.isOpen && !isSignOutConfirmOpen.value,
@@ -259,8 +251,4 @@ const requiresIdentitySignIn = computed(() => {
     !hasVerifiedParticipantIdentity()
   );
 });
-
-function handleSignOut() {
-  return requestSignOut();
-}
 </script>

@@ -6,7 +6,9 @@ import { defineStore } from "pinia";
 export const useUiStore = defineStore("ui", {
   state: () => ({
     currentView: "view-tasks",
+    mountedViewIds: [],
     signatureModalOpen: false,
+    signatureModalPrimed: false,
     unavailableScreen: null,
     pendingSignableAction: null,
     modalError: "",

@@ -91,10 +91,22 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button id="btn-modal-cancel" type="button" class="btn btn-secondary">
+          <button
+            id="btn-modal-cancel"
+            type="button"
+            class="btn btn-secondary"
+            data-vue-bound="true"
+            @click="closeSignatureModal"
+          >
             Cancel
           </button>
-          <button id="btn-modal-sign" type="submit" class="btn btn-primary">
+          <button
+            id="btn-modal-sign"
+            type="submit"
+            class="btn btn-primary"
+            data-vue-bound="true"
+            @click="verifyAndSubmitSignature"
+          >
             Sign and Confirm
           </button>
         </div>
@@ -104,19 +116,23 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { useFocusTrap } from "ui/portal-overlays";
 import {
   SIGNATURE_PASSWORD_INPUT_ATTRS,
   requiresCustomSignatureReason,
-  useFocusTrap,
-} from "ui";
+} from "ui/signing";
 
 import { isAuthenticatedSession } from "../api/client.js";
-import { closeSignatureModal } from "../features/signature.js";
-import { checkOnline } from "../features/sync-status.js";
+import {
+  closeSignatureModal,
+  hydrateSignatureModalDom,
+  verifyAndSubmitSignature,
+} from "../features/signature.js";
 import { useSessionStore } from "../stores/session.js";
 import { state } from "../stores/state.js";
 import { useUiStore } from "../stores/ui.js";
+import { checkOnline } from "../utils/networkStatus.js";
 
 const OFFLINE_SECURITY_PIN_INPUT_ATTRS = Object.freeze({
   type: "password",
@@ -140,11 +156,31 @@ function refreshOnlineState() {
 
 onMounted(() => {
   refreshOnlineState();
+  if (ui.signatureModalOpen) {
+    hydrateSignatureModalDom();
+    selectedReason.value =
+      ui.pendingSignableAction === "consent"
+        ? "Enrollment Confirmation and Consent"
+        : "Initial Questionnaire Completion";
+  }
   if (typeof window !== "undefined") {
     window.addEventListener("online", refreshOnlineState);
     window.addEventListener("offline", refreshOnlineState);
   }
 });
+
+watch(
+  () => [ui.signatureModalOpen, ui.pendingSignableAction],
+  ([isOpen, action]) => {
+    if (isOpen) {
+      selectedReason.value =
+        action === "consent"
+          ? "Enrollment Confirmation and Consent"
+          : "Initial Questionnaire Completion";
+    }
+  },
+  { flush: "sync" }
+);
 
 onBeforeUnmount(() => {
   if (typeof window !== "undefined") {

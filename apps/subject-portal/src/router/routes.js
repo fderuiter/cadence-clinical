@@ -9,15 +9,41 @@ import {
   TrendingUp,
   Wallet,
 } from "lucide-vue-next";
-import { markRaw } from "vue";
+import { defineLazyOverlay } from "ui/portal-shell";
+import { defineComponent, markRaw } from "vue";
 
-import ComplianceView from "../views/ComplianceView.vue";
-import ConsentView from "../views/ConsentView.vue";
-import InboxView from "../views/InboxView.vue";
-import LaySummariesView from "../views/LaySummariesView.vue";
-import QuestionnaireView from "../views/QuestionnaireView.vue";
-import TasksView from "../views/TasksView.vue";
-import WalletView from "../views/WalletView.vue";
+import { isDemoBuild } from "../utils/demoMode.js";
+
+const EmptyGatedView = defineComponent({
+  name: "EmptyGatedView",
+  render: () => null,
+});
+
+const TasksView =
+  !isDemoBuild() && import.meta.env?.MODE !== "test"
+    ? EmptyGatedView
+    : defineLazyOverlay(() => import("../views/TasksView.vue"));
+const QuestionnaireView =
+  !isDemoBuild() && import.meta.env?.MODE !== "test"
+    ? EmptyGatedView
+    : defineLazyOverlay(() => import("../views/QuestionnaireView.vue"));
+const ComplianceView =
+  !isDemoBuild() && import.meta.env?.MODE !== "test"
+    ? EmptyGatedView
+    : defineLazyOverlay(() => import("../views/ComplianceView.vue"));
+const InboxView =
+  !isDemoBuild() && import.meta.env?.MODE !== "test"
+    ? EmptyGatedView
+    : defineLazyOverlay(() => import("../views/InboxView.vue"));
+const ConsentView =
+  !isDemoBuild() && import.meta.env?.MODE !== "test"
+    ? EmptyGatedView
+    : defineLazyOverlay(() => import("../views/ConsentView.vue"));
+const WalletView = defineLazyOverlay(() => import("../views/WalletView.vue"));
+const LaySummariesView =
+  !isDemoBuild() && import.meta.env?.MODE !== "test"
+    ? EmptyGatedView
+    : defineLazyOverlay(() => import("../views/LaySummariesView.vue"));
 
 export const viewRoutes = [
   {

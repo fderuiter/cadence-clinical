@@ -4,7 +4,7 @@ import {
   SEMANTIC_ACTIONS,
   requiresCustomSignatureReason,
   resolveSignatureReason,
-} from "ui";
+} from "ui/signing";
 import { nextTick } from "vue";
 
 import { dispatchApi, isAuthenticatedSession } from "../api/client.js";

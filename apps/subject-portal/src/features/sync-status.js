@@ -2,6 +2,11 @@
 import { state } from "../stores/state.js";
 import { getAllSubmissions } from "../sync-queue.js";
 import {
+  checkOnline,
+  resetSyncRetryInfo,
+  stopSyncCountdownTimer,
+} from "../utils/networkStatus.js";
+import {
   COORDINATOR_QUARANTINE_STEPS,
   formatAnswerPairs,
   getInstrumentDisplayName,
@@ -12,12 +17,7 @@ import {
   isQuarantinedSubmission,
 } from "./site-support.js";
 
-function stopSyncCountdownTimer() {
-  if (state.__syncCountdownTimer) {
-    clearInterval(state.__syncCountdownTimer);
-    state.__syncCountdownTimer = null;
-  }
-}
+export { checkOnline, resetSyncRetryInfo, stopSyncCountdownTimer };
 
 function updateDomSyncStatusText(statusMsg) {
   const statusTextEl =
@@ -96,23 +96,6 @@ function startSyncCountdownTimer() {
   state.__syncCountdownTimer = interval;
 }
 
-export function resetSyncRetryInfo() {
-  if (state.__syncRetryTimer) {
-    clearTimeout(state.__syncRetryTimer);
-    state.__syncRetryTimer = null;
-  }
-  stopSyncCountdownTimer();
-  state.syncRetryInfo = {
-    attempt: 0,
-    maxRetries: 5,
-    nextRetryDelay: 0,
-    nextRetryTimestamp: null,
-    remainingSeconds: 0,
-    sequenceNumber: null,
-    isRetrying: false,
-  };
-}
-
 export function emitSyncLifecycleEvent(eventType, detail = {}) {
   const payload = {
     attempt: detail.attempt ?? state.syncRetryInfo.attempt,
@@ -172,13 +155,6 @@ export function emitSyncLifecycleEvent(eventType, detail = {}) {
   }
 
   return payload;
-}
-
-export function checkOnline() {
-  if (typeof window !== "undefined" && window.__MOCK_TEST_ENV__) {
-    return !state.session.isOfflineMode;
-  }
-  return typeof navigator !== "undefined" && navigator.onLine;
 }
 
 function escapeQueueHtml(value) {

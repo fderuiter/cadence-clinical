@@ -1,5 +1,5 @@
 import { createApp, h, ref } from "vue";
-import { ClinicalToastHost } from "ui";
+import { ClinicalToastHost } from "ui/portal-shell";
 
 let nextToastId = 1;
 let standaloneApp = null;

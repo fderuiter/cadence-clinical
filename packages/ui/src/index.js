@@ -43,6 +43,7 @@ import {
   useInlineFocusHandoff,
   useRetryFocusHandoff,
 } from "./composables/useInlineFocusHandoff.js";
+import { defineLazyOverlay } from "./composables/useLazyOverlay.js";
 import {
   flushRegisteredDraftSources,
   flushRegisteredDraftSourcesSync,
@@ -83,6 +84,7 @@ export {
   ModalErrorAlert,
   PersonaSwitcher,
   SignOutConfirmModal,
+  defineLazyOverlay,
   flushRegisteredDraftSources,
   flushRegisteredDraftSourcesSync,
   getFocusableElements,

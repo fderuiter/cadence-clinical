@@ -10,17 +10,14 @@ import {
   createWebHistory,
 } from "vue-router";
 
-import { loadConsentDetails } from "../features/consent.js";
 import { showView } from "../features/navigation.js";
-import {
-  PEEK_QUERY_KEYS,
-  registerPeekQuerySync,
-  syncPeekFromQuery,
-} from "../features/peek.js";
-import { startQuestionnaire } from "../features/questionnaire.js";
-import { closeSignatureModal } from "../features/signature.js";
 import { state } from "../stores/state.js";
 import { isDemoBuild } from "../utils/demoMode.js";
+import {
+  PEEK_QUERY_KEYS,
+  hasPeekQueryParam,
+  registerPeekQuerySync,
+} from "../utils/peekQuery.js";
 import UnavailableView from "../views/UnavailableView.vue";
 import { isScreenAvailable } from "./availability.js";
 import { routeForView, viewRoutes } from "./routes.js";
@@ -205,9 +202,15 @@ function resolveInitialWindowRouteForTest() {
 }
 
 let router = null;
+let routerWatcherStops = [];
+let lastMountNavPromise = Promise.resolve();
 let syncingRouteQuery = false;
 let pushingFromViewState = false;
 let portalMounted = false;
+
+export function waitForPortalRouterMount() {
+  return lastMountNavPromise;
+}
 
 export function isPortalRouterMounted() {
   return portalMounted;
@@ -221,9 +224,11 @@ export function preparePortalRouterForMount() {
   const instance = getPortalRouter();
   if (!memoryHistory) {
     if (instance.currentRoute.value === START_LOCATION) {
-      void instance
+      lastMountNavPromise = instance
         .replace(instance.options.history.location || "/")
         .catch(() => {});
+    } else {
+      lastMountNavPromise = Promise.resolve();
     }
     return instance;
   }
@@ -231,7 +236,7 @@ export function preparePortalRouterForMount() {
   const initialTestTarget = resolveInitialWindowRouteForTest();
   if (initialTestTarget) {
     instance.options.history.replace(initialTestTarget);
-    void instance.replace(initialTestTarget).catch(() => {});
+    lastMountNavPromise = instance.replace(initialTestTarget).catch(() => {});
     return instance;
   }
 
@@ -261,11 +266,20 @@ export function preparePortalRouterForMount() {
 
   const targetPath = desiredRoute?.path || "/";
   instance.options.history.replace(targetPath);
-  void instance.replace(targetPath).catch(() => {});
+  lastMountNavPromise = instance.replace(targetPath).catch(() => {});
   return instance;
 }
 
 export function resetPortalRouterForTests() {
+  for (const stop of routerWatcherStops) {
+    try {
+      stop();
+    } catch {
+      // Ignore watcher teardown errors
+    }
+  }
+  routerWatcherStops = [];
+  lastMountNavPromise = Promise.resolve();
   router = null;
   syncingRouteQuery = false;
   pushingFromViewState = false;
@@ -279,13 +293,18 @@ export async function syncActiveRouteEntities(
   if (!route) return;
   hydrateSessionScopeFromRouteQuery(route.query);
 
-  if (route.name === "questionnaire") {
+  if (
+    route.name === "questionnaire" &&
+    (isDemoBuild() || import.meta.env?.MODE === "test")
+  ) {
     const assignmentId =
       normalizeQueryString(route.query?.assignmentId) ||
       normalizeQueryString(state.activeQuestionnaire?.assignment?.id);
     if (!isAssignmentEligibleForQuestionnaire(assignmentId)) {
       state.activeQuestionnaire = null;
       if (state.signatureModalOpen) {
+        const { closeSignatureModal } =
+          await import("../features/signature.js");
         closeSignatureModal();
       }
       if (router) {
@@ -304,11 +323,18 @@ export async function syncActiveRouteEntities(
         : null;
     const needsStart =
       state.activeQuestionnaire?.assignment?.id !== assignmentId ||
-      (container && container.children.length === 0);
-    if (needsStart && container) {
+      !container ||
+      container.children.length === 0;
+    if (needsStart) {
+      const { startQuestionnaire } =
+        await import("../features/questionnaire.js");
       await startQuestionnaire(assignmentId);
     }
-  } else if (route.name === "consent" && !fromStatePush) {
+  } else if (
+    route.name === "consent" &&
+    !fromStatePush &&
+    (isDemoBuild() || import.meta.env?.MODE === "test")
+  ) {
     const requestedLang = normalizeQueryString(route.query?.lang);
     if (requestedLang && requestedLang !== state.consentLanguage) {
       state.consentLanguage = requestedLang;
@@ -317,11 +343,16 @@ export async function syncActiveRouteEntities(
           ? document.getElementById("consent-lang-selector")
           : null;
       if (selector) selector.value = requestedLang;
+      const { loadConsentDetails } = await import("../features/consent.js");
       await loadConsentDetails();
     }
   }
 
-  if (!fromStatePush) {
+  if (
+    !fromStatePush &&
+    (hasPeekQueryParam(route.query) || Boolean(state.peekRecord))
+  ) {
+    const { syncPeekFromQuery } = await import("../features/peek.js");
     syncPeekFromQuery(route.query);
   }
 }
@@ -424,11 +455,22 @@ export function getPortalRouter() {
             String(candidateAssignmentId)
         );
         state.activeQuestionnaire = null;
-        if (state.signatureModalOpen) {
-          closeSignatureModal();
+        if (
+          state.signatureModalOpen &&
+          (isDemoBuild() || import.meta.env?.MODE === "test")
+        ) {
+          void import("../features/signature.js").then(
+            ({ closeSignatureModal }) => closeSignatureModal()
+          );
         }
-        if (blockedByReconsent) {
-          void startQuestionnaire(candidateAssignmentId);
+        if (
+          blockedByReconsent &&
+          (isDemoBuild() || import.meta.env?.MODE === "test")
+        ) {
+          void import("../features/questionnaire.js").then(
+            ({ startQuestionnaire }) =>
+              startQuestionnaire(candidateAssignmentId)
+          );
         }
         return {
           ...resolveDefaultPortalRoute(),
@@ -510,99 +552,103 @@ export function getPortalRouter() {
   });
 
   // Reflect active questionnaire assignmentId and consent version/lang into URL query.
-  watch(
-    () => [
-      state.activeQuestionnaire?.assignment?.id || null,
-      state.consentLanguage || null,
-      state.consentContent?.version_index ??
-        state.consentContent?.document_version ??
-        null,
-      state.session?.studyId || null,
-      state.session?.siteId || null,
-    ],
-    () => {
-      if (!router || !portalMounted || syncingRouteQuery) return;
-      const current = router.currentRoute.value;
-      if (!current || current === START_LOCATION || !current.name) return;
-      const desiredQuery = {
-        ...current.query,
-        ...buildScopedQuery(current.query),
-      };
-      if (current.name === "questionnaire") {
-        const activeId = normalizeQueryString(
-          state.activeQuestionnaire?.assignment?.id
-        );
-        if (activeId) {
-          desiredQuery.assignmentId = activeId;
+  routerWatcherStops.push(
+    watch(
+      () => [
+        state.activeQuestionnaire?.assignment?.id || null,
+        state.consentLanguage || null,
+        state.consentContent?.version_index ??
+          state.consentContent?.document_version ??
+          null,
+        state.session?.studyId || null,
+        state.session?.siteId || null,
+      ],
+      () => {
+        if (!router || !portalMounted || syncingRouteQuery) return;
+        const current = router.currentRoute.value;
+        if (!current || current === START_LOCATION || !current.name) return;
+        const desiredQuery = {
+          ...current.query,
+          ...buildScopedQuery(current.query),
+        };
+        if (current.name === "questionnaire") {
+          const activeId = normalizeQueryString(
+            state.activeQuestionnaire?.assignment?.id
+          );
+          if (activeId) {
+            desiredQuery.assignmentId = activeId;
+          }
+        } else {
+          delete desiredQuery.assignmentId;
         }
-      } else {
-        delete desiredQuery.assignmentId;
-      }
 
-      if (current.name === "consent") {
-        if (state.consentLanguage) {
-          desiredQuery.lang = String(state.consentLanguage);
+        if (current.name === "consent") {
+          if (state.consentLanguage) {
+            desiredQuery.lang = String(state.consentLanguage);
+          }
+          const docVersion =
+            state.consentContent?.version_index ??
+            state.consentContent?.document_version;
+          if (
+            docVersion !== undefined &&
+            docVersion !== null &&
+            docVersion !== ""
+          ) {
+            desiredQuery.version = String(docVersion);
+          }
         }
-        const docVersion =
-          state.consentContent?.version_index ??
-          state.consentContent?.document_version;
-        if (
-          docVersion !== undefined &&
-          docVersion !== null &&
-          docVersion !== ""
-        ) {
-          desiredQuery.version = String(docVersion);
-        }
-      }
 
-      if (!queriesMatch(current.query, desiredQuery)) {
-        syncingRouteQuery = true;
-        router
-          .replace({
-            name: current.name,
-            params: current.params,
-            query: desiredQuery,
-            hash: current.hash,
-          })
-          .catch(() => {})
-          .finally(() => {
-            syncingRouteQuery = false;
-          });
-      }
-    }
-  );
-
-  watch(
-    () => isScreenAvailable("wallet"),
-    (walletAvailable) => {
-      if (!router || !portalMounted) return;
-      const current = router.currentRoute.value;
-      if (walletAvailable && current.name === "unavailable") {
-        const requested = current.query?.screen
-          ? String(current.query.screen)
-          : "";
-        if (!requested || requested === "wallet") {
-          state.unavailableScreen = null;
+        if (!queriesMatch(current.query, desiredQuery)) {
+          syncingRouteQuery = true;
           router
             .replace({
-              name: "wallet",
-              query: buildScopedQuery(current.query),
+              name: current.name,
+              params: current.params,
+              query: desiredQuery,
+              hash: current.hash,
+            })
+            .catch(() => {})
+            .finally(() => {
+              syncingRouteQuery = false;
+            });
+        }
+      }
+    )
+  );
+
+  routerWatcherStops.push(
+    watch(
+      () => isScreenAvailable("wallet"),
+      (walletAvailable) => {
+        if (!router || !portalMounted) return;
+        const current = router.currentRoute.value;
+        if (walletAvailable && current.name === "unavailable") {
+          const requested = current.query?.screen
+            ? String(current.query.screen)
+            : "";
+          if (!requested || requested === "wallet") {
+            state.unavailableScreen = null;
+            router
+              .replace({
+                name: "wallet",
+                query: buildScopedQuery(current.query),
+              })
+              .catch(console.warn);
+          }
+        } else if (!walletAvailable && current.name === "wallet") {
+          state.unavailableScreen = "wallet";
+          router
+            .replace({
+              name: "unavailable",
+              query: {
+                ...buildScopedQuery(current.query),
+                screen: "wallet",
+              },
             })
             .catch(console.warn);
         }
-      } else if (!walletAvailable && current.name === "wallet") {
-        state.unavailableScreen = "wallet";
-        router
-          .replace({
-            name: "unavailable",
-            query: {
-              ...buildScopedQuery(current.query),
-              screen: "wallet",
-            },
-          })
-          .catch(console.warn);
       }
-    }
+    )
   );
 
   // Synchronous, so the push supersedes any navigation still in flight
@@ -627,61 +673,63 @@ export function getPortalRouter() {
       });
   }
 
-  watch(
-    () => state.currentView,
-    (viewId) => {
-      if (!router || !portalMounted) return;
-      const current = router.currentRoute.value;
-      if (!current || current === START_LOCATION) return;
+  routerWatcherStops.push(
+    watch(
+      () => state.currentView,
+      (viewId) => {
+        if (!router || !portalMounted) return;
+        const current = router.currentRoute.value;
+        if (!current || current === START_LOCATION) return;
 
-      const route = findRouteForView(viewId);
-      if (!route) return;
+        const route = findRouteForView(viewId);
+        if (!route) return;
 
-      if (route.name !== "unavailable" && !isScreenAvailable(route.name)) {
-        if (route.name === "tasks" && isScreenAvailable("wallet")) {
-          state.unavailableScreen = null;
-          state.currentView = "view-wallet";
+        if (route.name !== "unavailable" && !isScreenAvailable(route.name)) {
+          if (route.name === "tasks" && isScreenAvailable("wallet")) {
+            state.unavailableScreen = null;
+            state.currentView = "view-wallet";
+            return;
+          }
+          state.unavailableScreen =
+            route.name === "tasks" ? null : String(route.name);
+          state.currentView = "view-unavailable";
           return;
         }
-        state.unavailableScreen =
-          route.name === "tasks" ? null : String(route.name);
-        state.currentView = "view-unavailable";
-        return;
-      }
 
-      const effectiveCurrentName = pendingRouteName ?? current.name;
+        const effectiveCurrentName = pendingRouteName ?? current.name;
 
-      if (route.name === "unavailable") {
-        const currentQueryScreen = router.currentRoute.value.query?.screen
-          ? String(router.currentRoute.value.query.screen)
-          : null;
-        if (
-          effectiveCurrentName !== "unavailable" ||
-          (pendingRouteName === null &&
-            currentQueryScreen !== (state.unavailableScreen || null))
-        ) {
+        if (route.name === "unavailable") {
+          const currentQueryScreen = router.currentRoute.value.query?.screen
+            ? String(router.currentRoute.value.query.screen)
+            : null;
+          if (
+            effectiveCurrentName !== "unavailable" ||
+            (pendingRouteName === null &&
+              currentQueryScreen !== (state.unavailableScreen || null))
+          ) {
+            syncPushRoute(
+              {
+                name: "unavailable",
+                query: buildViewQuery("unavailable", current.query),
+              },
+              "unavailable"
+            );
+          }
+          return;
+        }
+
+        if (effectiveCurrentName !== route.name) {
           syncPushRoute(
             {
-              name: "unavailable",
-              query: buildViewQuery("unavailable", current.query),
+              name: route.name,
+              query: buildViewQuery(route.name, current.query),
             },
-            "unavailable"
+            route.name
           );
         }
-        return;
-      }
-
-      if (effectiveCurrentName !== route.name) {
-        syncPushRoute(
-          {
-            name: route.name,
-            query: buildViewQuery(route.name, current.query),
-          },
-          route.name
-        );
-      }
-    },
-    { flush: "sync" }
+      },
+      { flush: "sync" }
+    )
   );
 
   return router;
