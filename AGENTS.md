@@ -229,11 +229,12 @@ Inside each project, `Domain/` has no dependency on `Infrastructure/`, `Endpoint
 - Regenerate the schema reference after a model change: `pnpm cadence generate-schema-doc` rewrites
   [docs/schema](docs/schema/README.md), and the `schema-doc` gate fails while it is stale or any module has pending model changes.
 
-### 11. Porting Python reference sources
+### 11. Retired Python reference sources
 
-Some packages still contain Python files as a behavioural reference for C# ports that are missing or
-untested; [docs/PYTHON_REFERENCE_INVENTORY.md](docs/PYTHON_REFERENCE_INVENTORY.md) lists each one and what it
-needs before it can be deleted (#4789). Follow [docs/MIGRATION_WORKFLOW.md](docs/MIGRATION_WORKFLOW.md). Equivalents:
+All legacy Python reference files have been retired from `apps/` and `packages/` (#4789,
+[ADR-2509](docs/adr/2026-11-24-retire-remaining-python-references-and-scanner-residue.md)); historical dispositions
+are archived in [docs/PYTHON_REFERENCE_INVENTORY.md](docs/PYTHON_REFERENCE_INVENTORY.md) alongside
+[docs/MIGRATION_WORKFLOW.md](docs/MIGRATION_WORKFLOW.md). Equivalents used when inspecting git history:
 
 | Python                                       | .NET 10                                                                    |
 | -------------------------------------------- | -------------------------------------------------------------------------- |

@@ -82,7 +82,7 @@ public static class PathPatternValidatorService
                 }
             }
 
-            // Rule 2: Check Vue and Shell script boundaries across all repository paths
+            // Rule 2: Check Vue, Shell script, and retired Python boundaries across all repository paths
             foreach (string rel in relativeAllFiles)
             {
                 if (rel.EndsWith(".vue", StringComparison.OrdinalIgnoreCase) &&
@@ -98,6 +98,14 @@ public static class PathPatternValidatorService
                     !rel.StartsWith("scripts/", StringComparison.Ordinal))
                 {
                     Console.WriteLine($"[PATH VIOLATION] Shell script outside scripts/ boundary: {rel}");
+                    violations++;
+                }
+
+                if (rel.EndsWith(".py", StringComparison.OrdinalIgnoreCase) &&
+                    (rel.StartsWith("apps/", StringComparison.Ordinal) ||
+                     rel.StartsWith("packages/", StringComparison.Ordinal)))
+                {
+                    Console.WriteLine($"[PATH VIOLATION] Retired Python file under apps/ or packages/: {rel}");
                     violations++;
                 }
             }

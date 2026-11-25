@@ -12,7 +12,7 @@ Shared domain library (folder `engine_core`): aggregate root and state machine b
 - `Cadence.Core.Domain.Supply`: `CgtBarcodeEngine.VerifyCryptoBarcode`, `Isbt128Engine` and `TemperatureZoneClassifier.ClassifyZone` (`TemperatureZone`).
 - `Cadence.Core.Domain.Toxicity`: `LabToxicityGradingEngine` and CTCAE grading models.
 - Time (K-TIME-3, #4784): nothing here reads the wall clock, and the build fails on `DateTime.Now/UtcNow` (`CadenceBanWallClock`). The caller passes the instant: `EvaluateObservation(..., evaluatedAt)` and `EvaluateHysLaw(..., evaluatedAt)`. `AggregateRootBase.CreatedAt` has no default, because the save path stamps it. `AuditLogEntry.Timestamp` is `required`.
-- Python reference sources remain for behaviour the C# port lacks or does not test yet: `timeline/engine.py` and `timeline/models.py`. They are not the implementation; [docs/PYTHON_REFERENCE_INVENTORY.md](../../docs/PYTHON_REFERENCE_INVENTORY.md) says what each needs before it goes.
+- No Python reference sources remain (#4789, [ADR-2509](../../docs/adr/2026-11-24-retire-remaining-python-references-and-scanner-residue.md)); visit-window schedules and timing assessments live on the kernel's `ExpectedSchedule` ([ADR-2487](../../docs/adr/2026-09-30-expected-schedule-as-a-pure-function.md), [ADR-2507](../../docs/adr/2026-09-30-visit-timing-anchored-visits-and-cycles-on-the-expected-schedule.md)).
 
 ## Key dependencies
 

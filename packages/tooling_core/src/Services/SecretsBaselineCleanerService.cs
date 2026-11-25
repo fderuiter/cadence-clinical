@@ -171,6 +171,12 @@ public static partial class SecretsBaselineCleanerService
                     return 1;
                 }
 
+                if (!RepositoryFileExists(repoRoot, filename, reader))
+                {
+                    Console.WriteLine($"[ERROR] Secrets baseline shard '{relPath}' references missing file '{filename}'. Run 'pnpm cadence clean-secrets-baseline' or 'pnpm cadence fix'.");
+                    return 1;
+                }
+
                 string fileUnit = BaselineUnitPath.ResolveUnit(filename);
                 if (!string.Equals(fileUnit, expectedUnit, StringComparison.Ordinal))
                 {
@@ -230,7 +236,7 @@ public static partial class SecretsBaselineCleanerService
             }
 
             baseConfigSource = parsedConfig;
-            CollectResults(parsedConfig, mergedResults);
+            CollectResults(repoRoot, parsedConfig, mergedResults);
         }
 
         foreach (string shardFullPath in existingShardPaths.Order(StringComparer.Ordinal))
@@ -241,7 +247,7 @@ public static partial class SecretsBaselineCleanerService
                 return 1;
             }
 
-            CollectResults(parsedShard, mergedResults);
+            CollectResults(repoRoot, parsedShard, mergedResults);
         }
 
         if (hasLegacy)
@@ -253,7 +259,7 @@ public static partial class SecretsBaselineCleanerService
             }
 
             baseConfigSource ??= parsedLegacy;
-            CollectResults(parsedLegacy, mergedResults);
+            CollectResults(repoRoot, parsedLegacy, mergedResults);
         }
 
         baseConfigSource ??= new JsonObject
@@ -323,7 +329,7 @@ public static partial class SecretsBaselineCleanerService
         return clone;
     }
 
-    private static void CollectResults(JsonObject container, Dictionary<string, JsonArray> destination)
+    private static void CollectResults(string repoRoot, JsonObject container, Dictionary<string, JsonArray> destination)
     {
         if (container["results"] is not JsonObject resultsObj)
         {
@@ -333,7 +339,14 @@ public static partial class SecretsBaselineCleanerService
         foreach (var prop in resultsObj)
         {
             string filename = prop.Key.Replace('\\', '/');
-            if (IsExcludedFile(filename) || prop.Value is not JsonArray arr)
+            if (filename.StartsWith("./", StringComparison.Ordinal))
+            {
+                filename = filename[2..];
+            }
+
+            if (IsExcludedFile(filename) ||
+                !RepositoryFileExists(repoRoot, filename, reader: null) ||
+                prop.Value is not JsonArray arr)
             {
                 continue;
             }
@@ -344,6 +357,19 @@ public static partial class SecretsBaselineCleanerService
                 destination[filename] = cleaned;
             }
         }
+    }
+
+    private static bool RepositoryFileExists(string repoRoot, string relativePath, GitIndexReader? reader)
+    {
+        string? normalized = GitIndexReader.TryNormalizeRelativePath(repoRoot, relativePath);
+        if (string.IsNullOrEmpty(normalized))
+        {
+            return false;
+        }
+
+        return reader is { HasAuthoritativeIndex: true }
+            ? reader.FileExists(normalized)
+            : File.Exists(Path.Combine(repoRoot, normalized));
     }
 
     private static JsonArray CleanSecretItems(JsonArray arr)

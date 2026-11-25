@@ -84,7 +84,6 @@ public sealed class SecretScannerTests : IDisposable
               HOME: '/tmp',
               VITEPRESS_BASE: '/cadence-clinical/',
               ['AUDIT_LOG_' + 'SECRET_KEY']: 'ephemeral_test_value_1',
-              ['INBOUND_EMAIL_' + 'HMAC_SECRET']: 'ephemeral_test_value_2',
               ['GATEWAY_' + 'SECRET_KEY']: 'ephemeral_test_value_3',
               ['AWS_SECRET_' + 'ACCESS_KEY']: 'ephemeral_test_value_4',
               ['GITHUB_' + 'TOKEN']: '{{GitHubPat}}'
@@ -93,7 +92,7 @@ public sealed class SecretScannerTests : IDisposable
             const vpEnv = mod.buildVitePressEnv(dirtyEnv);
             console.log(JSON.stringify({
               hasProcessAudit: Boolean(process.env['AUDIT_LOG_' + 'SECRET_KEY']),
-              rtmHasEphemeralKeys: rtmEnv.AUDIT_LOG_SECRET_KEY?.length === 64 && rtmEnv.INBOUND_EMAIL_HMAC_SECRET?.length === 64 && rtmEnv.GATEWAY_SECRET_KEY?.length === 64,
+              rtmHasEphemeralKeys: rtmEnv.AUDIT_LOG_SECRET_KEY?.length === 64 && rtmEnv.GATEWAY_SECRET_KEY?.length === 64 && rtmEnv.INBOUND_EMAIL_HMAC_SECRET === undefined,
               vpKeys: Object.keys(vpEnv).sort()
             }));
             """;
@@ -117,7 +116,6 @@ public sealed class SecretScannerTests : IDisposable
         stdout.Should().Contain("\"hasProcessAudit\":false");
         stdout.Should().Contain("\"rtmHasEphemeralKeys\":true");
         stdout.Should().NotContain("AUDIT_LOG_SECRET_KEY");
-        stdout.Should().NotContain("INBOUND_EMAIL_HMAC_SECRET");
         stdout.Should().NotContain("GATEWAY_SECRET_KEY");
         stdout.Should().NotContain("AWS_SECRET_ACCESS_KEY");
         stdout.Should().NotContain("GITHUB_TOKEN");

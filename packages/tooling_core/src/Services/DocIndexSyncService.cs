@@ -353,7 +353,8 @@ public static partial class DocIndexSyncService
             return IsHistoricalAdr(relPath, fileContent) ? "Historical" : "Current";
         }
         if (relPath.StartsWith("migration/", StringComparison.OrdinalIgnoreCase) ||
-            relPath.StartsWith("architecture/repository-migration/", StringComparison.OrdinalIgnoreCase)) return "Historical";
+            relPath.StartsWith("architecture/repository-migration/", StringComparison.OrdinalIgnoreCase) ||
+            relPath.Equals("PYTHON_REFERENCE_INVENTORY.md", StringComparison.OrdinalIgnoreCase)) return "Historical";
         if (relPath.StartsWith("api/", StringComparison.OrdinalIgnoreCase) || relPath.StartsWith("schema/", StringComparison.OrdinalIgnoreCase)) return "Generated";
         if (relPath.StartsWith("SDLC/", StringComparison.OrdinalIgnoreCase))
         {
