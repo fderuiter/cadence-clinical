@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text.Json;
 
+using Cadence.Kernel.Execution;
 using Cadence.Kernel.Explanations;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Standards;
@@ -305,14 +307,41 @@ public sealed record KernelValidationFindingDetailResponse(
     Explanation Explanation);
 
 /// <summary>
+/// Active CRA source data verification modification alert returned inside
+/// <see cref="KernelStudyAttentionResponse"/> (<c>PRD-QRY-006</c>).
+/// </summary>
+public sealed record KernelStudySdvAlertResponse : StudySdvAlertPayload
+{
+    /// <summary>Initializes an empty response instance for JSON deserialization.</summary>
+    public KernelStudySdvAlertResponse()
+    {
+    }
+
+    [SetsRequiredMembers]
+    private KernelStudySdvAlertResponse(StudySdvAlertView view)
+        : base(view)
+    {
+    }
+
+    internal static KernelStudySdvAlertResponse From(StudySdvAlertView view) => new(view);
+}
+
+/// <summary>
 /// Unified Study Home attention read returned by <c>GET /api/v1/kernel/studies/{studyRef}/attention</c>
-/// (Clinical Canvas PX-10, ADR-2635). Combines open proposals (masked in place when restricted) and visible
-/// <c>Open</c> or <c>Investigating</c> validation findings capped by <c>limit</c>.
+/// (Clinical Canvas PX-10, ADR-2635). Combines open proposals (masked in place when restricted), visible
+/// <c>Open</c> or <c>Investigating</c> validation findings capped by <c>limit</c>, and active CRA SDV modification
+/// alerts (<c>PRD-QRY-006</c>).
 /// </summary>
 /// <param name="StudyRef">The resolved study <c>NodeRef</c> pinned to its current version.</param>
 /// <param name="Proposals">Open proposals for the study, masked in place when the caller may not see a proposal.</param>
 /// <param name="Findings">Visible <c>Open</c> or <c>Investigating</c> validation findings capped by <c>limit</c>.</param>
+/// <param name="SdvAlerts">Active CRA SDV modification alerts visible to the caller for the study.</param>
 public sealed record KernelStudyAttentionResponse(
     string StudyRef,
     IReadOnlyList<KernelProposalResponse> Proposals,
-    IReadOnlyList<KernelValidationFindingResponse> Findings);
+    IReadOnlyList<KernelValidationFindingResponse> Findings,
+    IReadOnlyList<KernelStudySdvAlertResponse>? SdvAlerts = null)
+{
+    /// <summary>Active CRA SDV modification alerts visible to the caller for the study.</summary>
+    public IReadOnlyList<KernelStudySdvAlertResponse> SdvAlerts { get; init; } = SdvAlerts ?? [];
+}

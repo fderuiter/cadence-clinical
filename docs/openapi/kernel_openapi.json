@@ -13858,6 +13858,15 @@
             "items": {
               "$ref": "#/components/schemas/Kernel_KernelValidationFindingResponse"
             }
+          },
+          "sdv_alerts": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/Kernel_KernelStudySdvAlertResponse"
+            }
           }
         }
       },
@@ -13926,6 +13935,135 @@
             "items": {
               "$ref": "#/components/schemas/Kernel_KernelRulePackResponse"
             }
+          }
+        }
+      },
+      "Kernel_KernelStudySdvAlertResponse": {
+        "required": [
+          "alert_id",
+          "study_id",
+          "study_site_id",
+          "enrollment_id",
+          "form_id",
+          "observation_id",
+          "study_code",
+          "site_code",
+          "subject_code",
+          "collection_spec_id",
+          "planned_activity_id",
+          "item_id",
+          "superseded_revision",
+          "current_revision",
+          "verified_by",
+          "verified_at",
+          "modified_by",
+          "modified_at",
+          "reason_for_change",
+          "message"
+        ],
+        "type": "object",
+        "properties": {
+          "alert_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "study_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "study_site_id": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "enrollment_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "form_id": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "observation_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "study_code": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "site_code": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "subject_code": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "collection_spec_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "planned_activity_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "item_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "superseded_revision": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "current_revision": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "verified_by": {
+            "type": "string"
+          },
+          "verified_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "modified_by": {
+            "type": "string"
+          },
+          "modified_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "reason_for_change": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
           }
         }
       },

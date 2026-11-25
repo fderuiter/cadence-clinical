@@ -88,7 +88,118 @@ public interface IObservationRecords
         ObservationId observation,
         CancellationToken cancellationToken) =>
         FindForReaderAsync(tenant, observation, unblinded: false, cancellationToken);
+
+    /// <summary>
+    /// Reads a narrow batched projection of candidate <paramref name="observations"/> whose latest revision does not yet
+    /// carry an active (un-retracted) <c>Verified</c> assertion, omitting blinded treatment observations when
+    /// <paramref name="canUnblindAsync"/> denies <c>enrollment.unblind</c> for their enrollment (<c>K-AUTH-4</c>).
+    /// </summary>
+    /// <param name="tenant">The caller's tenant.</param>
+    /// <param name="observations">Candidate observation identifiers to evaluate.</param>
+    /// <param name="canUnblindAsync">Callback evaluated at most once per distinct enrollment for blinded observations.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    async Task<IReadOnlyDictionary<ObservationId, ObservationSdvAlertTarget>> FindUnverifiedSdvTargetsAsync(
+        TenantId tenant,
+        IReadOnlyCollection<ObservationId> observations,
+        Func<EnrollmentId, CancellationToken, ValueTask<bool>> canUnblindAsync,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(observations);
+        ArgumentNullException.ThrowIfNull(canUnblindAsync);
+        if (observations.Count == 0)
+        {
+            return new Dictionary<ObservationId, ObservationSdvAlertTarget>();
+        }
+
+        var unblindCache = new Dictionary<EnrollmentId, bool>();
+        async ValueTask<bool> CanUnblindOnceAsync(EnrollmentId enrollment, CancellationToken ct)
+        {
+            if (unblindCache.TryGetValue(enrollment, out var cached))
+            {
+                return cached;
+            }
+
+            var permitted = await canUnblindAsync(enrollment, ct).ConfigureAwait(false);
+            unblindCache[enrollment] = permitted;
+            return permitted;
+        }
+
+        var result = new Dictionary<ObservationId, ObservationSdvAlertTarget>();
+        foreach (var observationId in observations)
+        {
+            if (observationId.IsEmpty || result.ContainsKey(observationId))
+            {
+                continue;
+            }
+
+            var obs = await FindForReaderAsync(tenant, observationId, CanUnblindOnceAsync, cancellationToken).ConfigureAwait(false);
+            if (obs is null || (obs.IsBlindedTreatment && obs.ObservationId.IsEmpty))
+            {
+                continue;
+            }
+
+            int currentRevision = obs.Revisions.Count > 0 ? obs.Revisions[^1].Number : (int)obs.Version;
+            bool latestVerified = false;
+            for (var i = 0; i < obs.Assertions.Count; i++)
+            {
+                var assertion = obs.Assertions[i];
+                if (assertion.Kind == AssertionKind.Verified
+                    && assertion.Revision == currentRevision
+                    && assertion.RetractedBy is null)
+                {
+                    latestVerified = true;
+                    break;
+                }
+            }
+
+            if (latestVerified)
+            {
+                continue;
+            }
+
+            var latestRev = obs.Revisions.Count > 0 ? obs.Revisions[^1] : null;
+            result[observationId] = new ObservationSdvAlertTarget(
+                obs.ObservationId,
+                obs.StudyId,
+                obs.EnrollmentId,
+                obs.CollectionInstanceId,
+                obs.ItemId,
+                currentRevision,
+                latestRev?.RecordedBy ?? string.Empty,
+                latestRev?.RecordedAt ?? obs.ObservedAt,
+                latestRev?.ReasonForChange ?? string.Empty,
+                obs.IsBlindedTreatment);
+        }
+
+        return result;
+    }
 }
+
+/// <summary>
+/// Narrow batched projection of an unverified observation used when evaluating active SDV modification alerts without
+/// hydrating full audit chains, codelists, or superseded revisions (<c>PRD-QRY-006</c>).
+/// </summary>
+/// <param name="ObservationId">The observation identifier.</param>
+/// <param name="StudyId">The owning study identifier.</param>
+/// <param name="EnrollmentId">The owning enrollment identifier.</param>
+/// <param name="CollectionInstanceId">Optional form (collection instance) containing the observation.</param>
+/// <param name="ItemId">Optional form item identifier.</param>
+/// <param name="CurrentRevision">Current (latest) revision number of the observation.</param>
+/// <param name="LatestRecordedBy">Actor who recorded <paramref name="CurrentRevision"/>.</param>
+/// <param name="LatestRecordedAt">UTC timestamp when <paramref name="CurrentRevision"/> was recorded.</param>
+/// <param name="LatestReasonForChange">Reason for change recorded on <paramref name="CurrentRevision"/>.</param>
+/// <param name="IsBlindedTreatment">True when classified as a blinded treatment observation (<c>K-AUTH-4</c>).</param>
+public sealed record ObservationSdvAlertTarget(
+    ObservationId ObservationId,
+    StudyId StudyId,
+    EnrollmentId EnrollmentId,
+    CollectionInstanceId? CollectionInstanceId,
+    string? ItemId,
+    int CurrentRevision,
+    string LatestRecordedBy,
+    DateTimeOffset LatestRecordedAt,
+    string LatestReasonForChange,
+    bool IsBlindedTreatment = false);
 
 /// <summary>
 /// An observation's current value, every revision, the locks that cover it, the assertions about it and its kernel

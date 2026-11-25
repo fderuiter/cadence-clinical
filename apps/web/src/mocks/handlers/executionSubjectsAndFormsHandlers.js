@@ -141,6 +141,7 @@ export function createExecutionSubjectsAndFormsHandlers(store) {
         store.listSdvAlerts(
           {
             studyId: url.searchParams.get("study_id"),
+            studyCode: url.searchParams.get("study_code"),
             enrollmentId: url.searchParams.get("enrollment_id"),
           },
           resolveDemoCaller(request)
