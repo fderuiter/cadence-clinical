@@ -1204,6 +1204,8 @@ public partial class LocalCiPlanTests
     [Fact]
     public void LintAndStaticAndSecuritySteps_UseUnifiedPrettierIgnoreAndNonMutatingSecretGates()
     {
+        const string expectedPrettierGlob = "**/*.{js,jsx,ts,tsx,mjs,cjs,mts,cts,vue,json,css,md,yaml,yml}";
+
         var lintJob = CiPlan.Jobs.Single(j => j.Key == "lint-and-static");
         var styleStep = lintJob.Steps.Single(s => s.Name == "Run frontend style and lint");
         styleStep.Commands[0].Arguments.Should().Equal(
@@ -1212,7 +1214,10 @@ public partial class LocalCiPlanTests
             "--check",
             "--ignore-path",
             ".prettierignore",
-            "**/*.{js,jsx,ts,tsx,mjs,cjs,vue,json,css,md,yaml,yml}");
+            expectedPrettierGlob);
+
+        RootPackageScripts["format"].Should().Be(
+            $"pnpm exec prettier --write --ignore-path .prettierignore \"{expectedPrettierGlob}\"");
 
         var securityJob = CiPlan.Jobs.Single(j => j.Key == "security");
         var secretStep = securityJob.Steps.Single(s => s.Name == "Run secret detection");

@@ -16,7 +16,7 @@ public static class DuplicationDetectorService
 
     private static readonly string[] BaselineHeader =
     [
-        "# Code duplication ratchet baseline (.cs, .js, .ts, .tsx, .vue, .css clones >15 normalized lines).",
+        "# Code duplication ratchet baseline (.cs, .js, .mjs, .cjs, .ts, .mts, .cts, .tsx, .vue, .css clones >15 normalized lines).",
         "# One pre-existing clone window per line: <fileA>|<fileB>|<sha256_16>. Sorted ordinally. May only shrink.",
         "# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check duplication [files...] (docs/cli.md).",
     ];
@@ -81,7 +81,14 @@ public static class DuplicationDetectorService
             }
             else
             {
-                var scanDirs = new[] { Path.Combine(repoRoot, "apps"), Path.Combine(repoRoot, "packages") };
+                var scanDirs = new[]
+                {
+                    Path.Combine(repoRoot, "apps"),
+                    Path.Combine(repoRoot, "packages"),
+                    Path.Combine(repoRoot, "scripts"),
+                    Path.Combine(repoRoot, "docs"),
+                    Path.Combine(repoRoot, ".claude"),
+                };
                 foreach (var dir in scanDirs)
                 {
                     if (!Directory.Exists(dir))
@@ -90,6 +97,18 @@ public static class DuplicationDetectorService
                     }
 
                     foreach (var file in Directory.EnumerateFiles(dir, "*.*", SearchOption.AllDirectories))
+                    {
+                        string rel = Path.GetRelativePath(repoRoot, file).Replace('\\', '/');
+                        if (IsScannableDuplicationPath(rel))
+                        {
+                            allRelativeFiles.Add(rel);
+                        }
+                    }
+                }
+
+                if (Directory.Exists(repoRoot))
+                {
+                    foreach (var file in Directory.EnumerateFiles(repoRoot, "*.*", SearchOption.TopDirectoryOnly))
                     {
                         string rel = Path.GetRelativePath(repoRoot, file).Replace('\\', '/');
                         if (IsScannableDuplicationPath(rel))
@@ -456,22 +475,48 @@ public static class DuplicationDetectorService
         return pruned;
     }
 
-    private static bool IsEnforcedDuplicationFile(string relativePath)
-    {
-        return !relativePath.EndsWith(".d.ts", StringComparison.OrdinalIgnoreCase) &&
-            (relativePath.EndsWith(".cs", StringComparison.OrdinalIgnoreCase) ||
-             relativePath.EndsWith(".js", StringComparison.OrdinalIgnoreCase) ||
-             relativePath.EndsWith(".ts", StringComparison.OrdinalIgnoreCase) ||
-             relativePath.EndsWith(".tsx", StringComparison.OrdinalIgnoreCase) ||
-             relativePath.EndsWith(".vue", StringComparison.OrdinalIgnoreCase) ||
-             relativePath.EndsWith(".css", StringComparison.OrdinalIgnoreCase));
-    }
+    private static bool IsAmbientTypeScriptDeclaration(string path) =>
+        path.EndsWith(".d.ts", StringComparison.OrdinalIgnoreCase) ||
+        path.EndsWith(".d.mts", StringComparison.OrdinalIgnoreCase) ||
+        path.EndsWith(".d.cts", StringComparison.OrdinalIgnoreCase);
+
+    private static bool HasSupportedDuplicationExtension(string path) =>
+        path.EndsWith(".cs", StringComparison.OrdinalIgnoreCase) ||
+        path.EndsWith(".js", StringComparison.OrdinalIgnoreCase) ||
+        path.EndsWith(".mjs", StringComparison.OrdinalIgnoreCase) ||
+        path.EndsWith(".cjs", StringComparison.OrdinalIgnoreCase) ||
+        path.EndsWith(".ts", StringComparison.OrdinalIgnoreCase) ||
+        path.EndsWith(".mts", StringComparison.OrdinalIgnoreCase) ||
+        path.EndsWith(".cts", StringComparison.OrdinalIgnoreCase) ||
+        path.EndsWith(".tsx", StringComparison.OrdinalIgnoreCase) ||
+        path.EndsWith(".vue", StringComparison.OrdinalIgnoreCase) ||
+        path.EndsWith(".css", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsEnforcedDuplicationFile(string relativePath) =>
+        !IsAmbientTypeScriptDeclaration(relativePath) && HasSupportedDuplicationExtension(relativePath);
 
     private static bool IsScannableDuplicationPath(string relativePath)
     {
         string norm = "/" + relativePath.Replace('\\', '/').TrimStart('/');
-        if (!norm.StartsWith("/apps/", StringComparison.OrdinalIgnoreCase) &&
-            !norm.StartsWith("/packages/", StringComparison.OrdinalIgnoreCase))
+        bool inScannedDirectory =
+            norm.StartsWith("/apps/", StringComparison.OrdinalIgnoreCase) ||
+            norm.StartsWith("/packages/", StringComparison.OrdinalIgnoreCase) ||
+            norm.StartsWith("/scripts/", StringComparison.OrdinalIgnoreCase) ||
+            norm.StartsWith("/docs/", StringComparison.OrdinalIgnoreCase) ||
+            norm.StartsWith("/.claude/", StringComparison.OrdinalIgnoreCase);
+        bool isRootModule =
+            !norm.AsSpan(1).Contains('/') &&
+            (norm.EndsWith(".mjs", StringComparison.OrdinalIgnoreCase) ||
+             norm.EndsWith(".cjs", StringComparison.OrdinalIgnoreCase));
+
+        if (!inScannedDirectory && !isRootModule)
+        {
+            return false;
+        }
+
+        if (norm.StartsWith("/.claude/worktrees/", StringComparison.OrdinalIgnoreCase) ||
+            norm.StartsWith("/docs/.vitepress/cache/", StringComparison.OrdinalIgnoreCase) ||
+            norm.StartsWith("/docs/.vitepress/.temp/", StringComparison.OrdinalIgnoreCase))
         {
             return false;
         }
@@ -482,7 +527,7 @@ public static class DuplicationDetectorService
         }
 
         if (norm.Contains("/generated/", StringComparison.OrdinalIgnoreCase) ||
-            norm.EndsWith(".d.ts", StringComparison.OrdinalIgnoreCase) ||
+            IsAmbientTypeScriptDeclaration(norm) ||
             norm.Equals("/apps/web/src/api/types.ts", StringComparison.OrdinalIgnoreCase) ||
             norm.Equals("/packages/ui/src/types/cdash.ts", StringComparison.OrdinalIgnoreCase))
         {
@@ -490,12 +535,7 @@ public static class DuplicationDetectorService
         }
 
         // Python files are porting references, not live code (#4789), so they are not scanned.
-        return norm.EndsWith(".cs", StringComparison.OrdinalIgnoreCase) ||
-               norm.EndsWith(".js", StringComparison.OrdinalIgnoreCase) ||
-               norm.EndsWith(".ts", StringComparison.OrdinalIgnoreCase) ||
-               norm.EndsWith(".tsx", StringComparison.OrdinalIgnoreCase) ||
-               norm.EndsWith(".vue", StringComparison.OrdinalIgnoreCase) ||
-               norm.EndsWith(".css", StringComparison.OrdinalIgnoreCase);
+        return HasSupportedDuplicationExtension(norm);
     }
 
     private static string NormalizeLine(string line)

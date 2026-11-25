@@ -1,5 +1,6 @@
 // ESLint configuration for Vue single-file components
 import fs from "node:fs";
+import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import js from "@eslint/js";
@@ -9,6 +10,7 @@ import vuejsAccessibility from "eslint-plugin-vuejs-accessibility";
 import vueParser from "vue-eslint-parser";
 import tseslint from "typescript-eslint";
 
+const require = createRequire(import.meta.url);
 const repoRoot = path.dirname(fileURLToPath(import.meta.url));
 const tokensCssPath = path.join(repoRoot, "packages/ui/tokens.css");
 const webStyleCssPath = path.join(repoRoot, "apps/web/src/style.css");
@@ -16,6 +18,22 @@ const portalStyleCssPath = path.join(
   repoRoot,
   "apps/subject-portal/src/style.css"
 );
+const vitepressCustomCssPath = path.join(
+  repoRoot,
+  "docs/.vitepress/theme/custom.css"
+);
+let vitepressVarsCssPath = path.join(
+  repoRoot,
+  "node_modules/vitepress/dist/client/theme-default/styles/vars.css"
+);
+try {
+  vitepressVarsCssPath = path.join(
+    path.dirname(require.resolve("vitepress/package.json")),
+    "dist/client/theme-default/styles/vars.css"
+  );
+} catch {
+  // Fall back to workspace node_modules path when vitepress is not resolvable.
+}
 
 const hexColorRegex = /#(?:[0-9a-fA-F]{3,4}){1,2}(?![0-9a-zA-Z_-])/g;
 const colorFunctionRegex = /\b(?:rgba?|hsla?)\s*\([^)]*\)/gi;
@@ -33,25 +51,46 @@ function isAllowedAiTokenFile(filename) {
   return false;
 }
 
+const definedVarsFileCache = new Map();
+
 function extractDefinedVarsFromFile(filePath) {
+  if (!fs.existsSync(filePath)) return new Set();
+  const { mtimeMs } = fs.statSync(filePath);
+  const cached = definedVarsFileCache.get(filePath);
+  if (cached && cached.mtimeMs === mtimeMs) {
+    return new Set(cached.vars);
+  }
   const vars = new Set();
-  if (!fs.existsSync(filePath)) return vars;
   const raw = fs
     .readFileSync(filePath, "utf8")
     .replace(/\/\*[\s\S]*?\*\//g, "");
   for (const m of raw.matchAll(cssVarDefRegex)) {
     vars.add(m[1]);
   }
-  return vars;
+  definedVarsFileCache.set(filePath, { mtimeMs, vars });
+  return new Set(vars);
 }
 
 function getBaseDefinedVars(filename) {
-  const normalized = filename.split(path.sep).join("/");
+  const normalized = filename.split(path.sep).join("/").replace(/\\/g, "/");
   const vars = extractDefinedVarsFromFile(tokensCssPath);
-  if (normalized.includes("/apps/web/")) {
+  if (normalized.includes("/apps/web/") || normalized.startsWith("apps/web/")) {
     for (const v of extractDefinedVarsFromFile(webStyleCssPath)) vars.add(v);
-  } else if (normalized.includes("/apps/subject-portal/")) {
+  } else if (
+    normalized.includes("/apps/subject-portal/") ||
+    normalized.startsWith("apps/subject-portal/")
+  ) {
     for (const v of extractDefinedVarsFromFile(portalStyleCssPath)) vars.add(v);
+  } else if (
+    normalized.includes("/docs/.vitepress/") ||
+    normalized.startsWith("docs/.vitepress/")
+  ) {
+    for (const v of extractDefinedVarsFromFile(vitepressVarsCssPath))
+      vars.add(v);
+    for (const v of extractDefinedVarsFromFile(vitepressCustomCssPath))
+      vars.add(v);
+    vars.add("--vp-layout-top-height");
+    vars.add("--vp-doc-top-height");
   }
   return vars;
 }
@@ -3800,7 +3839,7 @@ export default [
     },
   },
   {
-    files: ["packages/**/*.css", "apps/**/*.css"],
+    files: ["packages/**/*.css", "apps/**/*.css", "docs/.vitepress/**/*.css"],
     languageOptions: {
       parser: cssStubParser,
     },
@@ -4121,10 +4160,10 @@ export default [
   },
   {
     files: [
-      "**/tests/**/*.{js,jsx,ts,tsx,mjs,cjs,vue}",
-      "tests/**/*.{js,jsx,ts,tsx,mjs,cjs,vue}",
-      "**/*.test.{js,jsx,ts,tsx,mjs,cjs}",
-      "**/*.spec.{js,jsx,ts,tsx,mjs,cjs}",
+      "**/tests/**/*.{js,jsx,ts,tsx,mjs,cjs,mts,cts,vue}",
+      "tests/**/*.{js,jsx,ts,tsx,mjs,cjs,mts,cts,vue}",
+      "**/*.test.{js,jsx,ts,tsx,mjs,cjs,mts,cts}",
+      "**/*.spec.{js,jsx,ts,tsx,mjs,cjs,mts,cts}",
     ],
     languageOptions: {
       globals: {

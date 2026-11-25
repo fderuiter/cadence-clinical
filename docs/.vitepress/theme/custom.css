@@ -416,7 +416,7 @@
   width: auto;
   height: 22px;
   line-height: 22px;
-  font-family: var(--vp-font-family-base);
+  font-family: var(--semantic-font-family);
   font-size: 12px;
   font-weight: 500;
   color: var(--docsearch-muted-color);
@@ -512,7 +512,7 @@
   border: 1px solid var(--vp-c-divider);
   border-radius: 6px;
   padding: 4px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--vp-shadow-2);
   opacity: 0.6;
   transition: opacity 0.2s ease;
 }
@@ -540,7 +540,7 @@
     color 0.2s;
 }
 
-.mermaid-btn:hover {
+.mermaid-btn:hover:not(:disabled) {
   background-color: var(--vp-c-brand-1);
   color: var(--vp-c-bg);
   border-color: var(--vp-c-brand-1);
