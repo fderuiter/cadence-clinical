@@ -2691,6 +2691,11 @@ public static class PaymentEndpoints
             return NoSignedCaller();
         }
 
+        if (!ClinicalScopeGuard.HasValidSiteScopeIfRequired(ClinicalScopeGuard.ResolvePrincipal(httpContext)))
+        {
+            return OutsideScope();
+        }
+
         byte[] receiptBytes = DecodeReceiptImageBytes(request.ImageBase64);
         var extracted = ReceiptOcrEngine.Extract(
             rawText: receiptBytes.Length > 0 ? null : request.RawText,
@@ -2782,6 +2787,16 @@ public static class PaymentEndpoints
             && !string.Equals(requestedSubjectId.Trim(), caller.UserId, StringComparison.Ordinal))
         {
             return (null, CrossParticipantAccessDenied());
+        }
+
+        if (!ClinicalScopeGuard.HasValidSiteScopeIfRequired(caller))
+        {
+            return (null, OutsideScope());
+        }
+
+        if (!string.IsNullOrWhiteSpace(requestedSiteId) && !ClinicalScopeGuard.CanAccessSite(httpContext, requestedSiteId.Trim()))
+        {
+            return (null, OutsideScope());
         }
 
         if (!string.IsNullOrWhiteSpace(requestedWalletId))
@@ -2951,6 +2966,11 @@ public static class PaymentEndpoints
 
             string emptyStudy = fallbackStudy ?? "UNASSIGNED";
             string emptySite = caller.AssignedSites.Select(s => s.Trim()).FirstOrDefault(s => !string.IsNullOrWhiteSpace(s)) ?? "SITE-DEFAULT";
+            if (!Reaches(httpContext, emptyStudy, emptySite))
+            {
+                return OutsideScope();
+            }
+
             var emptyProjection = new WalletResponse(
                 Id: $"unprovisioned:{caller.UserId}",
                 SubjectId: caller.UserId,
