@@ -2,8 +2,9 @@
 
 /**
  * Cadence Clinical Platform - CLI Cross-Platform Runner Script
- * Executes compiled Native AOT binary (./bin/cadence) with automatic
- * compilation fallback when missing or stale.
+ * Executes the compiled CLI binary (./bin/cadence), building a fast
+ * framework-dependent Debug executable locally on demand (or a self-contained
+ * Release Native AOT binary when GITHUB_ACTIONS=true or CADENCE_CLI_AOT=true/1).
  */
 
 const fs = require("fs");
@@ -13,7 +14,10 @@ const { spawnSync } = require("child_process");
 const rootDir = path.resolve(__dirname, "..");
 const isWin = process.platform === "win32";
 const binaryName = isWin ? "cadence.exe" : "cadence";
-const binaryPath = path.join(rootDir, "bin", binaryName);
+const binDir = path.join(rootDir, "bin");
+const binaryPath = path.join(binDir, binaryName);
+const cliArtifactsRoot = path.join(rootDir, ".cadence", "cli-artifacts");
+const buildModeFile = path.join(cliArtifactsRoot, "build-mode.txt");
 const csprojPath = path.join(
   rootDir,
   "packages",
@@ -21,31 +25,34 @@ const csprojPath = path.join(
   "src",
   "Cadence.Cli.csproj"
 );
-const cliSourceDirs = [
-  path.join(rootDir, "packages", "cli", "src"),
-  path.join(rootDir, "packages", "engine_core", "src"),
-  path.join(rootDir, "packages", "database", "src"),
-  path.join(rootDir, "packages", "compliance", "src"),
-  path.join(rootDir, "packages", "security", "src"),
-  path.join(rootDir, "packages", "tooling_core", "src"),
-  path.join(
-    rootDir,
-    "packages",
-    "kernel",
-    "src",
-    "Cadence.Kernel.Abstractions"
-  ),
-  path.join(rootDir, "packages", "deid", "src"),
-  path.join(rootDir, "packages", "topology", "src"),
-];
-const buildConfigFiles = [
+const CLI_BUILD_CONFIG_FILES = [
+  "global.json",
   "Directory.Build.props",
   "Directory.Build.targets",
   "Directory.Packages.props",
   "NuGet.Config",
-  "global.json",
   "BannedSymbols.txt",
 ];
+const CLI_WATCHED_SOURCE_DIRS = [
+  "packages/cli/src",
+  "packages/compliance/src",
+  "packages/security/src",
+  "packages/tooling_core/src",
+  "packages/kernel/src/Cadence.Kernel.Abstractions",
+  "packages/deid/src",
+  "packages/topology/src",
+];
+const cliSourceDirs = CLI_WATCHED_SOURCE_DIRS.map((relDir) =>
+  path.join(rootDir, ...relDir.split("/"))
+);
+
+function buildWorkflowCacheHashFilesExpression() {
+  const patterns = [
+    ...CLI_BUILD_CONFIG_FILES,
+    ...CLI_WATCHED_SOURCE_DIRS.map((dir) => `${dir}/**`),
+  ];
+  return `hashFiles(${patterns.map((item) => `'${item}'`).join(", ")})`;
+}
 
 function readGlobalJsonSdkPolicy() {
   const defaultPolicy = {
@@ -240,8 +247,6 @@ function configureDotnetEnvironment() {
   }
 }
 
-configureDotnetEnvironment();
-
 /**
  * Gets the latest file modification time (mtimeMs) for source files in dir,
  * ignoring bin, obj, and hidden files/directories.
@@ -274,8 +279,50 @@ function getLatestSourceMtime(dir) {
   return maxMtime;
 }
 
+function isEnvFlagEnabled(value) {
+  if (typeof value !== "string") return false;
+  const normalized = value.trim().toLowerCase();
+  return normalized === "true" || normalized === "1";
+}
+
+function shouldPublishAot(env = process.env) {
+  return env.GITHUB_ACTIONS === "true" || isEnvFlagEnabled(env.CADENCE_CLI_AOT);
+}
+
+function resolveHostRuntimeIdentifier(
+  platform = process.platform,
+  arch = process.arch
+) {
+  const osPart =
+    platform === "win32" ? "win" : platform === "darwin" ? "osx" : "linux";
+  const archPart = arch === "arm64" ? "arm64" : "x64";
+  return `${osPart}-${archPart}`;
+}
+
+function readRecordedBuildMode() {
+  try {
+    return fs.readFileSync(buildModeFile, "utf8").trim();
+  } catch {
+    return null;
+  }
+}
+
+function hasManagedSidecars() {
+  return (
+    fs.existsSync(path.join(binDir, "cadence.dll")) ||
+    fs.existsSync(path.join(binDir, "cadence.runtimeconfig.json"))
+  );
+}
+
+function hasIncompleteManagedSidecars() {
+  return (
+    fs.existsSync(path.join(binDir, "cadence.dll")) !==
+    fs.existsSync(path.join(binDir, "cadence.runtimeconfig.json"))
+  );
+}
+
 /**
- * Checks whether the binary needs to be built (missing or stale).
+ * Checks whether the binary needs to be built (missing, mode-switched, or stale).
  */
 function needsBuild() {
   if (!fs.existsSync(binaryPath)) {
@@ -297,10 +344,23 @@ function needsBuild() {
     return false;
   }
 
+  const desiredMode = shouldPublishAot() ? "aot" : "debug";
+  const recordedMode = readRecordedBuildMode();
+  if (desiredMode === "aot") {
+    if (recordedMode !== "aot" || hasManagedSidecars()) {
+      return true;
+    }
+  } else if (
+    (recordedMode !== null && recordedMode !== "debug") ||
+    hasIncompleteManagedSidecars()
+  ) {
+    return true;
+  }
+
   const binaryMtime = fs.statSync(binaryPath).mtimeMs;
   const latestSourceMtime = Math.max(
     ...cliSourceDirs.map((dir) => getLatestSourceMtime(dir)),
-    ...buildConfigFiles.map(
+    ...CLI_BUILD_CONFIG_FILES.map(
       (file) =>
         fs.statSync(path.join(rootDir, file), { throwIfNoEntry: false })
           ?.mtimeMs ?? 0
@@ -339,31 +399,67 @@ function buildBinary() {
     process.exit(1);
   }
 
-  console.log("[run-cli] Compiling Cadence CLI binary...");
-  const cliArtifactsDir = path.join(rootDir, ".cadence", "cli-artifacts");
-  const publishResult = spawnSync(
-    dotnetCmd,
-    [
-      "publish",
-      csprojPath,
-      "-c",
-      "Release",
-      "--self-contained",
-      "-p:UseArtifactsOutput=true",
-      `-p:ArtifactsPath=${cliArtifactsDir}`,
-      "-o",
-      path.join(rootDir, "bin"),
-    ],
-    {
-      stdio: "inherit",
-      cwd: rootDir,
-      env: process.env,
-    }
+  const useAot = shouldPublishAot();
+  const buildMode = useAot ? "aot" : "debug";
+  const cliArtifactsDir = path.join(cliArtifactsRoot, buildMode);
+
+  console.log(
+    useAot
+      ? "[run-cli] Compiling Cadence CLI Native AOT binary..."
+      : "[run-cli] Compiling Cadence CLI binary (Debug)..."
   );
+
+  fs.rmSync(binDir, { recursive: true, force: true });
+
+  const publishArgs = useAot
+    ? [
+        "publish",
+        csprojPath,
+        "-c",
+        "Release",
+        "-r",
+        resolveHostRuntimeIdentifier(),
+        "--self-contained",
+        "-p:UseArtifactsOutput=true",
+        `-p:ArtifactsPath=${cliArtifactsDir}`,
+        "-o",
+        binDir,
+      ]
+    : [
+        "publish",
+        csprojPath,
+        "-c",
+        "Debug",
+        "-p:PublishAot=false",
+        "-p:UseArtifactsOutput=true",
+        `-p:ArtifactsPath=${cliArtifactsDir}`,
+        "-o",
+        binDir,
+      ];
+
+  const publishResult = spawnSync(dotnetCmd, publishArgs, {
+    stdio: "inherit",
+    cwd: rootDir,
+    env: process.env,
+  });
 
   if (publishResult.status !== 0) {
     console.error("::error:: Failed to compile Cadence CLI binary.");
     process.exit(publishResult.status ?? 1);
+  }
+
+  try {
+    const now = new Date();
+    fs.utimesSync(binaryPath, now, now);
+  } catch {
+    // Ignore utime update failures on read-only filesystems
+  }
+
+  try {
+    fs.mkdirSync(cliArtifactsRoot, { recursive: true });
+    fs.writeFileSync(buildModeFile, `${buildMode}\n`, "utf8");
+  } catch {
+    // Ignore mode marker write failures on read-only filesystems
   }
 }
 
@@ -398,4 +494,16 @@ function main() {
   process.exit(runResult.status ?? (runResult.signal ? 1 : 0));
 }
 
-main();
+if (require.main === module) {
+  configureDotnetEnvironment();
+  main();
+}
+
+module.exports = {
+  CLI_BUILD_CONFIG_FILES,
+  CLI_WATCHED_SOURCE_DIRS,
+  buildWorkflowCacheHashFilesExpression,
+  isEnvFlagEnabled,
+  resolveHostRuntimeIdentifier,
+  shouldPublishAot,
+};

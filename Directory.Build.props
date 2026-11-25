@@ -23,6 +23,7 @@
     <OpenTelemetryInstrumentationVersion>1.20.2</OpenTelemetryInstrumentationVersion>
     <MassTransitVersion>8.5.12</MassTransitVersion>
     <FluentValidationVersion>12.2.0</FluentValidationVersion>
+    <NpgsqlVersion>10.0.4</NpgsqlVersion>
 
     <!-- Product Metadata -->
     <Company>Cadence Clinical</Company>

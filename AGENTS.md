@@ -70,7 +70,7 @@ clinical truth (K-TRUTH-1).
 | Dependencies         | Central Package Management: `Directory.Packages.props`, `Directory.Build.props`                                      |
 | Tests                | xUnit v3, FluentAssertions, ArchUnitNET, Testcontainers                                                              |
 | Clinical standards   | CDISC USDM v3/v4, ODM, CDASH, SDTM/ADaM (Dataset-JSON)                                                               |
-| CLI                  | `packages/cli` (System.CommandLine + Spectre.Console, Native AOT), run with `pnpm cadence <command>`                 |
+| CLI                  | `packages/cli` (System.CommandLine + Spectre.Console, AOT-compatible), run via `pnpm cadence <command>`              |
 | Frontend             | Vue 3 + Vite + `vue-tsc` (`apps/web`, `apps/subject-portal`, `packages/ui`, `packages/usdm-schemas`)                 |
 
 Neo4j is retired (ADR-2245); do not add Neo4j code.
@@ -271,7 +271,9 @@ never from hand edits or a feature branch.
 
 ## Commands
 
-The CLI is not installed as a `dotnet` tool. Run it as `pnpm cadence <command>` or
+The CLI is not installed as a `dotnet` tool. `pnpm cadence <command>` invokes `scripts/run-cli.js`, which builds a local
+framework-dependent `Debug` binary at `./bin/cadence` on demand (set `CADENCE_CLI_AOT=true` or `1` for a local `Release`
+Native AOT build, as `GITHUB_ACTIONS=true` uses on cache misses), or run directly from source via
 `dotnet run --project packages/cli/src/Cadence.Cli.csproj -- <command>`.
 
 | Task                                                                          | Command                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
@@ -310,7 +312,13 @@ The CLI is not installed as a `dotnet` tool. Run it as `pnpm cadence <command>` 
 
 The generated reference for every command is [docs/cli.md](docs/cli.md).
 
-Lockstep dependency cohorts are governed by shared MSBuild properties in `Directory.Build.props` (`DotNetServicingVersion`, `AspireHostingVersion`, `IdentityModelVersion`, `DotNetAiVersion`, `OpenTelemetryVersion`, `OpenTelemetryInstrumentationVersion`, `MassTransitVersion`, `FluentValidationVersion`, consumed by `Directory.Packages.props`, `apps/apphost/src/Cadence.AppHost.csproj`, and `ValidateDependencyAlignment` in `Directory.Build.targets`), by `catalog:` in `pnpm-workspace.yaml` (consumed as `"catalog:"` across workspace `package.json` manifests; ADR-2527), and by `DependencyValidatorService` (`pnpm cadence check dependencies`, including staged index blobs during `--pre-commit`, enforcing `dotnet-ef` inside `dotnet-10-servicing`, trailing `patterns: ["*"]` catch-all groups after cohort rules across `nuget`, `npm`, `docker-compose`, and `github-actions`, and positive per-block `open-pull-requests-limit` values summing to `<= 20`; ADR-2528). Where MSBuild property indirection, `pnpm` catalogs, or multi-file digest pins limit automated Dependabot edits:
+Lockstep dependency cohorts are governed across three layers (ADR-2527, ADR-2528):
+
+- **Shared MSBuild cohort properties (`Directory.Build.props`):** `DotNetServicingVersion`, `AspireHostingVersion`, `IdentityModelVersion`, `DotNetAiVersion`, `OpenTelemetryVersion`, `OpenTelemetryInstrumentationVersion`, `MassTransitVersion`, `FluentValidationVersion`, and `NpgsqlVersion` (consumed by `Directory.Packages.props`, `apps/apphost/src/Cadence.AppHost.csproj`, and `ValidateDependencyAlignment` in `Directory.Build.targets`).
+- **Workspace `pnpm` catalog (`pnpm-workspace.yaml`):** `catalog:` pins consumed as `"catalog:"` across workspace `package.json` manifests.
+- **Fail-closed validator (`DependencyValidatorService`):** `pnpm cadence check dependencies` (including staged index blobs during `--pre-commit`, enforcing `dotnet-ef` inside `dotnet-10-servicing`, trailing `patterns: ["*"]` catch-all groups after cohort rules across `nuget`, `npm`, `docker-compose`, and `github-actions`, and positive per-block `open-pull-requests-limit` values summing to `<= 20`).
+
+Where MSBuild property indirection, `pnpm` catalogs, or multi-file digest pins limit automated Dependabot edits:
 
 - **NuGet / `.NET`, xUnit v3, analyzer, and `Anthropic*` cohort updates:** Bump the shared property in `Directory.Build.props` (and align `dotnet-ef` in `.config/dotnet-tools.json` and `docker/Dockerfile.dotnet` whenever `DotNetServicingVersion` changes), keep `<PackageVersion>` entries referencing `$(PropertyName)` in `Directory.Packages.props`, keep all test suites on `xunit.v3` and `TngTech.ArchUnitNET.xUnitV3` (never legacy `xunit` v2 or `TngTech.ArchUnitNET.xUnit`), review grouped `dotnet-testing`, `analyzers`, and `anthropic` updates in lockstep, and run `dotnet restore Cadence.sln && dotnet build Cadence.sln` (`ValidateDependencyAlignment` fails with `CADDEP001`–`CADDEP004` on `.NET 11+`, split `IdentityModel`/`Aspire`/`xunit.v3`/`TngTech.ArchUnitNET` closures, or legacy `xunit` v2 packages).
 - **PostgreSQL container image & `@sha256` digest updates:** Standalone `docker-compose` `postgres` bumps are ignored in `.github/dependabot.yml`; update the `postgres:<major>-alpine@sha256:<digest>` pin in lockstep across `packages/testing/src/Persistence/PostgresTestImage.cs`, `docker/docker-compose.yml`, `.github/workflows/ci.yml`, `.github/workflows/production-pipeline.yml`, and `apps/apphost/src/Program.cs` (`WithImageTag` + `WithImageSHA256`), then verify with `pnpm cadence check dependencies` and `dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter FullyQualifiedName~PostgresVersionPinTests` (ADR-2528, ADR-2533).
