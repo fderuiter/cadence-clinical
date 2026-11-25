@@ -686,10 +686,23 @@ public static class KernelValidationEndpoints
             }
         }
 
+        IReadOnlyList<KernelStudySdvAlertResponse> sdvAlertResponses = [];
+        if (context.RequestServices.GetService<IStudySdvAlertReader>() is { } sdvAlerts)
+        {
+            var rawAlerts = await sdvAlerts
+                .ListForStudyAsync(tenant, resolved.Study.StudyId, resolved.Study.StudyCode, cancellationToken)
+                .ConfigureAwait(false);
+            if (rawAlerts.Count > 0)
+            {
+                sdvAlertResponses = [.. rawAlerts.Select(KernelStudySdvAlertResponse.From)];
+            }
+        }
+
         return TypedResults.Ok(new KernelStudyAttentionResponse(
             resolved.Study.PinnedRef.ToString(),
             proposalResponses,
-            findingResponses));
+            findingResponses,
+            sdvAlertResponses));
     }
 
     internal static async Task<Results<Ok<KernelValidationFindingDetailResponse>, ProblemHttpResult>> GetFindingAsync(

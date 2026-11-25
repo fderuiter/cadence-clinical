@@ -20,6 +20,8 @@ export type KernelValidationFindingDetail =
   KernelSchemas["Kernel_KernelValidationFindingDetailResponse"];
 export type KernelStudyAttention =
   KernelSchemas["Kernel_KernelStudyAttentionResponse"];
+export type KernelStudySdvAlert =
+  KernelSchemas["Kernel_KernelStudySdvAlertResponse"];
 export type KernelFindingClassification =
   "DataIssue" | "MappingIssue" | "MetadataIssue" | "RuleIssue" | "NotAnIssue";
 
@@ -146,7 +148,7 @@ export const kernelValidationApi = {
     return executeListStudyValidationFindings(studyRef, query);
   },
 
-  /** Unified study attention summary: open proposals alongside Open and Investigating validation findings. */
+  /** Unified study attention summary: open proposals, Open and Investigating validation findings, and active CRA SDV modification alerts. */
   async getStudyAttention(
     studyRef: string,
     query: { limit?: number } = {}

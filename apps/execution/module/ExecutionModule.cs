@@ -1,6 +1,7 @@
 using System;
 
 using Cadence.Database.Signatures;
+using Cadence.Kernel.Execution;
 using Cadence.Kernel.Modules;
 using Cadence.Modules.Execution.Application;
 using Cadence.Modules.Execution.Endpoints;
@@ -74,6 +75,9 @@ public static class ExecutionModule
             .AddCommandHandler<RecordFormSdvAlert, FormSdvAlertState, RecordFormSdvAlertHandler>()
             .AddCommandValidator<RecordFormSdvAlert, RecordFormSdvAlertValidator>()
             .AddScoped<IFormQueryEscalationService, FormQueryEscalationService>()
+            .AddScoped<FormSdvAlertQueryService>()
+            .AddScoped<IFormSdvAlertQueryService>(sp => sp.GetRequiredService<FormSdvAlertQueryService>())
+            .AddScoped<IStudySdvAlertReader>(sp => sp.GetRequiredService<FormSdvAlertQueryService>())
             .AddKernelEventConsumer<MirrorFormQueryToKernel>(MirrorFormQueryToKernel.Name)
             .AddKernelEventConsumer<EvaluateEditChecksOnCollectionChanged>(EvaluateEditChecksOnCollectionChanged.Name)
             .AddKernelEventConsumer<SendFormQueryAgingDigestAlerts>(SendFormQueryAgingDigestAlerts.Name)
