@@ -1,5 +1,7 @@
 using System.Collections.Generic;
 
+using Cadence.Apps.Execution.Domain.Subjects;
+
 using FluentValidation;
 
 namespace Cadence.Apps.Execution.Application.Compliance;
@@ -31,5 +33,43 @@ public sealed class EtmfCompletenessWebhookPayloadValidator : AbstractValidator<
     {
         RuleFor(x => x.StudyId).NotEmpty();
         RuleFor(x => x.Milestone).NotEmpty();
+    }
+}
+
+/// <summary>
+/// Per-site completeness snapshot entry inside <see cref="EtmfCompletenessBatchWebhookPayload"/>.
+/// @req:PRD-SUB-001
+/// </summary>
+public sealed record EtmfSiteCompletenessItem(
+    SiteCode SiteId,
+    bool IsComplete,
+    IReadOnlyList<string>? MissingArtifacts);
+
+/// <summary>
+/// Study-wide batch eTMF-completeness webhook payload posted to
+/// <c>POST /api/v1/execution/webhooks/etmf/batch</c> when a central study startup document changes readiness
+/// across multiple sites.
+/// @req:PRD-SUB-001
+/// </summary>
+public sealed record EtmfCompletenessBatchWebhookPayload(
+    StudyCode StudyId,
+    string Milestone,
+    IReadOnlyList<EtmfSiteCompletenessItem> Sites);
+
+/// <summary>
+/// Validates <see cref="EtmfCompletenessBatchWebhookPayload"/> before scope and lock guards run.
+/// @req:PRD-SUB-001
+/// </summary>
+public sealed class EtmfCompletenessBatchWebhookPayloadValidator : AbstractValidator<EtmfCompletenessBatchWebhookPayload>
+{
+    public EtmfCompletenessBatchWebhookPayloadValidator()
+    {
+        RuleFor(x => x.StudyId.Value).NotEmpty().MaximumLength(255).WithName("study_id");
+        RuleFor(x => x.Milestone).NotEmpty().MaximumLength(255);
+        RuleFor(x => x.Sites).NotNull();
+        RuleForEach(x => x.Sites).ChildRules(site =>
+        {
+            site.RuleFor(s => s.SiteId.Value).NotEmpty().MaximumLength(255).WithName("site_id");
+        });
     }
 }

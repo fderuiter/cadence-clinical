@@ -2,16 +2,19 @@ using System;
 using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Core.Domain;
 using Cadence.Kernel;
 using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Knowledge;
+using Cadence.Kernel.Lineage;
 using Cadence.Kernel.Modules;
 using Cadence.Kernel.Protocol;
 using Cadence.Kernel.Protocol.Design;
@@ -583,6 +586,128 @@ public sealed class ExecutionFormModuleTests
         conceptRegistry.SingleGetCurrentCalls.Should().Be(0);
     }
 
+    /// <summary>
+    /// Scheduled forms expose <c>Early</c>, <c>InWindow</c>, and <c>Late</c> timing fields from
+    /// <see cref="ExpectedSchedule.Assess"/> across open and list endpoints, and out-of-window opens emit
+    /// <c>VISIT_WINDOW</c> deviation events without emitting deviations for in-window visits.
+    /// </summary>
+    [Fact(DisplayName = "FormEndpoints_And_OpenFormInstanceHandler_AssessVisitTiming_AndEmitVisitWindowDeviations")]
+    public async Task FormEndpointsAndOpenFormInstanceHandlerAssessVisitTimingAndEmitVisitWindowDeviations()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var tenant = TenantId.New();
+        var enrollment = EnrollmentId.New();
+        var participant = ParticipantId.New();
+        var study = StudyId.New();
+        var site = StudySiteId.New();
+        var versionId = ProtocolVersionId.New();
+        var enrolledAt = new DateTimeOffset(2026, 3, 1, 8, 30, 0, TimeSpan.FromHours(1));
+
+        var design = new ProtocolDesign
+        {
+            SchemaVersion = 1,
+            Title = "Timing Assessment Trial",
+            Epochs = [new Epoch("ep.treat", "Treatment", 1)],
+            PlannedActivities =
+            [
+                new PlannedActivity(
+                    "act.week4",
+                    "Week 4",
+                    "ep.treat",
+                    [ActivityLocation.Site],
+                    ["cs.vitals"],
+                    new ActivityTiming(Day: 28, WindowBefore: 2, WindowAfter: 2)),
+            ],
+            CollectionSpecs =
+            [
+                new CollectionSpec("cs.vitals", "Vital signs", [Item("sbp", required: true)]),
+            ],
+        };
+        var versionReader = new StubProtocolVersionReader(versionId, design);
+        var sink = new RecordingDeviationSink();
+        var earlyCollected = new DateTimeOffset(2026, 3, 20, 10, 0, 0, TimeSpan.FromHours(1));
+        var inWindowCollected = new DateTimeOffset(2026, 3, 28, 10, 0, 0, TimeSpan.FromHours(1));
+        var lateCollected = new DateTimeOffset(2026, 4, 5, 10, 0, 0, TimeSpan.FromHours(1));
+
+        var earlyId = CollectionInstanceId.New();
+        var inWindowId = CollectionInstanceId.New();
+        var lateId = CollectionInstanceId.New();
+
+        CollectionInstanceSummary MakeSummary(CollectionInstanceId id, DateTimeOffset collected) =>
+            new(id, enrollment, participant, study, site, versionId, "cs.vitals", "act.week4", collected,
+                "crc@example.test", collected, 1, true, 1, 1, "Vital signs", EnrollmentReferenceAt: enrolledAt);
+
+        CollectionInstanceRecord MakeRecord(CollectionInstanceId id, DateTimeOffset collected) =>
+            new(id, enrollment, participant, study, site, versionId, "cs.vitals", "act.week4", collected,
+                "crc@example.test", collected, 1, [Item("sbp", required: true)], [], [], [], [], null, "Vital signs",
+                EnrollmentReferenceAt: enrolledAt);
+
+        var records = new StubCollectionInstanceRecords(
+            [MakeSummary(earlyId, earlyCollected), MakeSummary(inWindowId, inWindowCollected), MakeSummary(lateId, lateCollected)],
+            [MakeRecord(lateId, lateCollected), MakeRecord(inWindowId, inWindowCollected), MakeRecord(earlyId, earlyCollected)]);
+
+        var services = new ServiceCollection()
+            .AddSingleton<IProtocolVersionReader>(versionReader)
+            .AddSingleton<ICollectionInstanceRecords>(records)
+            .AddSingleton<IVisitWindowDeviationSink>(sink)
+            .BuildServiceProvider();
+        var http = await ContextWithTenantAsync(tenant, services);
+        http.Request.Headers[FormEndpoints.IdempotencyKeyHeader] = "idem-open-late";
+
+        // 1. ListForEnrollment computes Early, InWindow, and Late + VISIT_WINDOW category from ExpectedSchedule.Assess.
+        var listResult = await FormEndpoints.ListForEnrollmentAsync(enrollment.Value, http, records, new StubReadAccess(true), ct);
+        var listed = listResult.Result.Should().BeOfType<Ok<IReadOnlyList<FormSummaryResponse>>>().Subject.Value!;
+        listed.Select(s => s.VisitTiming).Should().Equal("Early", "InWindow", "Late");
+        listed.Select(s => s.DeviationCategory).Should().Equal("VISIT_WINDOW", null, "VISIT_WINDOW");
+        listed[0].DaysOutsideWindow.Should().BeGreaterThan(0);
+        listed[1].DaysOutsideWindow.Should().Be(0);
+        listed[2].DaysOutsideWindow.Should().BeGreaterThan(0);
+        listed[1].TargetDate.Should().Be(new DateOnly(2026, 3, 28));
+        listed[1].WindowStart.Should().Be(new DateOnly(2026, 3, 26));
+        listed[1].WindowEnd.Should().Be(new DateOnly(2026, 3, 30));
+
+        // 2. OpenAsync returns VisitTiming on FormStateResponse and notifies IVisitWindowDeviationSink for out-of-window opens.
+        var openSender = new StubOpenCommandSender(
+            new CollectionInstanceState(lateId, enrollment, versionId, "cs.vitals", "act.week4", lateCollected, 1));
+        var openRes = await FormEndpoints.OpenAsync(
+            new OpenFormRequest(lateId.Value, enrollment.Value, "cs.vitals", "act.week4", lateCollected),
+            http,
+            openSender,
+            new FixedChangeReason("Open late Week 4 vitals"),
+            ct);
+        var created = openRes.Result.Should().BeOfType<Created<FormStateResponse>>().Subject.Value!;
+        created.VisitTiming.Should().Be("Late");
+        created.DeviationCategory.Should().Be("VISIT_WINDOW");
+        created.DaysOutsideWindow.Should().Be(6);
+        sink.Events.Should().ContainSingle().Which.Should().Match<VisitWindowDeviationDetected>(e =>
+            e.FormId == lateId
+            && e.Category == "VISIT_WINDOW"
+            && e.Timing == "Late"
+            && e.DaysOutsideWindow == 6);
+
+        // 3. OpenFormInstanceHandler raises VisitWindowDeviationDetected on out-of-window forms and not on in-window forms.
+        var handler = new Cadence.Modules.Execution.Application.OpenFormInstanceHandler(records, versionReader);
+        var inWindowWork = new RecordingModuleUnitOfWork();
+        var inWindowOutcome = await handler.HandleAsync(
+            new Cadence.Modules.Execution.Application.OpenFormInstance(tenant, inWindowId, enrollment, "idem-in", "Open in-window"),
+            new StubCommandContext(tenant, inWindowWork),
+            ct);
+        inWindowOutcome.IsSuccess.Should().BeTrue();
+        inWindowWork.RaisedEvents.Should().BeEmpty();
+
+        var earlyWork = new RecordingModuleUnitOfWork();
+        var earlyOutcome = await handler.HandleAsync(
+            new Cadence.Modules.Execution.Application.OpenFormInstance(tenant, earlyId, enrollment, "idem-early", "Open early"),
+            new StubCommandContext(tenant, earlyWork),
+            ct);
+        earlyOutcome.IsSuccess.Should().BeTrue();
+        earlyWork.RaisedEvents.OfType<VisitWindowDeviationDetected>().Should().ContainSingle().Which.Should().Match<VisitWindowDeviationDetected>(e =>
+            e.FormId == earlyId
+            && e.Category == "VISIT_WINDOW"
+            && e.Timing == "Early"
+            && e.DaysOutsideWindow == 6);
+    }
+
     private static async Task<HttpContext> ContextWithTenantAsync(TenantId tenant, IServiceProvider? services = null)
     {
         var http = new DefaultHttpContext();
@@ -918,6 +1043,104 @@ public sealed class ExecutionFormModuleTests
             }
 
             throw new NotSupportedException();
+        }
+    }
+
+    private sealed class StubOpenCommandSender(CollectionInstanceState state) : IKernelCommandSender
+    {
+        public Task<CommandResult<TResult>> SendAsync<TResult>(
+            ICommand<TResult> command,
+            CommandMetadata? metadata = null,
+            CancellationToken cancellationToken = default) =>
+            command is OpenCollectionInstance
+                ? Task.FromResult(CommandResult<TResult>.Success((TResult)(object)state))
+                : throw new NotSupportedException();
+    }
+
+    private sealed class StubProtocolVersionReader(ProtocolVersionId versionId, ProtocolDesign design) : IProtocolVersionReader
+    {
+        public Task<IReadOnlyList<ProtocolVersionSummary>> ListForStudyAsync(TenantId tenant, StudyId study, CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<ProtocolVersionSummary>>([]);
+
+        public Task<ProtocolVersionSummary?> GetAsync(TenantId tenant, ProtocolVersionId version, CancellationToken cancellationToken) =>
+            Task.FromResult<ProtocolVersionSummary?>(null);
+
+        public Task<SoaMatrix?> GetScheduleOfActivitiesAsync(TenantId tenant, ProtocolVersionId version, CancellationToken cancellationToken) =>
+            Task.FromResult<SoaMatrix?>(version == versionId ? ScheduleOfActivities.Compile(design) : null);
+
+        public Task<ProtocolDesign?> GetDesignAsync(TenantId tenant, ProtocolVersionId version, CancellationToken cancellationToken) =>
+            Task.FromResult(version == versionId ? design : null);
+    }
+
+    private sealed class RecordingDeviationSink : IVisitWindowDeviationSink
+    {
+        public List<VisitWindowDeviationDetected> Events { get; } = [];
+
+        public ValueTask NotifyAsync(VisitWindowDeviationDetected deviation, CancellationToken cancellationToken = default)
+        {
+            Events.Add(deviation);
+            return ValueTask.CompletedTask;
+        }
+    }
+
+    private sealed class StubCommandContext(TenantId tenantId, IKernelUnitOfWork work) : ICommandContext
+    {
+        public TenantId TenantId => tenantId;
+        public Actor Actor => Actor.Person("crc.user");
+        public DateTimeOffset RecordedAt => At;
+        public IKernelUnitOfWork Work => work;
+    }
+
+    private sealed class RecordingModuleUnitOfWork : IKernelUnitOfWork
+    {
+        public List<AggregateRootBase> Added { get; } = [];
+        public List<object> RaisedEvents { get; } = [];
+
+        public Task<TAggregate?> FindAsync<TAggregate>(object id, CancellationToken cancellationToken)
+            where TAggregate : AggregateRootBase =>
+            Task.FromResult<TAggregate?>(null);
+
+        public Task<bool> ExistsAsync<TAggregate>(object id, CancellationToken cancellationToken)
+            where TAggregate : AggregateRootBase =>
+            Task.FromResult(false);
+
+        public Task<TAggregate?> ReadAsync<TAggregate>(object id, CancellationToken cancellationToken)
+            where TAggregate : AggregateRootBase =>
+            Task.FromResult<TAggregate?>(null);
+
+        public Task<IReadOnlyList<TAggregate>> ReadAllAsync<TAggregate>(
+            Expression<Func<TAggregate, bool>> filter,
+            CancellationToken cancellationToken)
+            where TAggregate : AggregateRootBase =>
+            Task.FromResult<IReadOnlyList<TAggregate>>([]);
+
+        public Task LockAsync<TAggregate>(object id, CancellationToken cancellationToken)
+            where TAggregate : AggregateRootBase =>
+            Task.CompletedTask;
+
+        public Task LockCollectionAsync(CollectionInstanceId instance, CancellationToken cancellationToken) =>
+            Task.CompletedTask;
+
+        public Task ShareScopesAsync(IReadOnlyList<NodeRef> scopes, CancellationToken cancellationToken) =>
+            Task.CompletedTask;
+
+        public Task LockScopeAsync(NodeRef scope, CancellationToken cancellationToken) =>
+            Task.CompletedTask;
+
+        public void Add(AggregateRootBase aggregate) => Added.Add(aggregate);
+
+        public void Raise(object domainEvent, DateTimeOffset? occurredValid = null) => RaisedEvents.Add(domainEvent);
+
+        public void LinkInput(NodeRef input, LineageEdgeKind kind, DateTimeOffset? validFrom = null, NodeRef? target = null)
+        {
+        }
+
+        public void IncludePart(NodeRef part, bool newVersion)
+        {
+        }
+
+        public void LinkPart(NodeRef from, NodeRef to, LineageEdgeKind kind)
+        {
         }
     }
 }

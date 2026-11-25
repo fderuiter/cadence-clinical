@@ -15,8 +15,13 @@ public sealed record PersistenceModule(
     string AssemblyName,
     string ProjectRelativePath,
     string MigrationsRelativeDir,
-    IReadOnlyList<string>? Aliases = null)
+    IReadOnlyList<string>? Aliases = null,
+    bool SupportsCliSeed = false,
+    bool SupportsCompiledModel = true)
 {
+    /// <summary>Default namespace for pre-compiled EF Core models (<c>dotnet ef dbcontext optimize</c>).</summary>
+    public string CompiledModelNamespace => $"{AssemblyName}.CompiledModels";
+
     /// <summary>Full path to the module's <c>.csproj</c> file under <paramref name="repoRoot"/>.</summary>
     public string GetProjectPath(string repoRoot) =>
         Path.Combine(repoRoot, ProjectRelativePath.Replace('/', Path.DirectorySeparatorChar));
@@ -57,7 +62,7 @@ public static class PersistenceModuleCatalog
         new("econsent", "econsent", "EconsentDbContext", "Cadence.Apps.Econsent", "apps/econsent/src/Cadence.Apps.Econsent.csproj", "Infrastructure/Persistence/Migrations"),
         new("eisf", "eisf", "EisfDbContext", "Cadence.Apps.Eisf", "apps/eisf/src/Cadence.Apps.Eisf.csproj", "Infrastructure/Persistence/Migrations"),
         new("etmf", "etmf", "EtmfDbContext", "Cadence.Apps.Etmf", "apps/etmf/src/Cadence.Apps.Etmf.csproj", "Infrastructure/Persistence/Migrations"),
-        new("execution", "edc", "ExecutionDbContext", "Cadence.Apps.Execution", "apps/execution/src/Cadence.Apps.Execution.csproj", "Infrastructure/Persistence/Migrations"),
+        new("execution", "edc", "ExecutionDbContext", "Cadence.Apps.Execution", "apps/execution/src/Cadence.Apps.Execution.csproj", "Infrastructure/Persistence/Migrations", SupportsCliSeed: true, SupportsCompiledModel: false),
         new("executionmodule", "execution", "ExecutionModuleDbContext", "Cadence.Modules.Execution", "apps/execution/module/Cadence.Modules.Execution.csproj", "Infrastructure/Migrations", ["execution-module", "execution_module", "modules/execution"]),
         new("fileshare", "fileshare", "FileshareDbContext", "Cadence.Apps.Fileshare", "apps/fileshare/src/Cadence.Apps.Fileshare.csproj", "Infrastructure/Persistence/Migrations"),
         new("imaging", "imaging", "ImagingDbContext", "Cadence.Apps.Imaging", "apps/imaging/src/Cadence.Apps.Imaging.csproj", "Infrastructure/Persistence/Migrations"),

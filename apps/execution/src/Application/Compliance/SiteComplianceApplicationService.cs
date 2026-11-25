@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -20,7 +21,7 @@ namespace Cadence.Apps.Execution.Application.Compliance;
 /// <para>
 /// Three deliberately asymmetric behaviors, all load-bearing acceptance criteria — do not "fix" any of them:
 /// <list type="bullet">
-/// <item><see cref="ApplyEtmfWebhookAsync"/> writes an <c>ETMF_COMPLIANCE_UPDATE</c> audit entry whenever it
+/// <item><see cref="ApplyEtmfWebhookAsync(EtmfCompletenessWebhookPayload, CancellationToken)"/> writes an <c>ETMF_COMPLIANCE_UPDATE</c> audit entry whenever it
 /// changes a row, attributed to the calling eTMF integration (#4767; the legacy wrote none).</item>
 /// <item><see cref="ActivateSiteAsync"/>'s blocked path writes its <c>BLOCKED_ACTIVATION</c> audit entry (and
 /// commits it via <see cref="ISiteComplianceRepository.SaveChangesAsync"/>) <b>before</b> returning the
@@ -46,63 +47,158 @@ public sealed class SiteComplianceApplicationService(
     private const string SiteComplianceEntityName = nameof(SiteComplianceCache);
     private const string SiteActivationMilestone = "SITE_ACTIVATION";
 
-    public async Task<Result<bool>> ApplyEtmfWebhookAsync(EtmfCompletenessWebhookPayload payload, CancellationToken ct)
+    public Task<Result<bool>> ApplyEtmfWebhookAsync(EtmfCompletenessWebhookPayload payload, CancellationToken ct) =>
+        ApplyEtmfWebhookAsync(payload.StudyId, payload.Milestone, batchSites: null, singlePayload: payload, ct);
+
+    public Task<Result<bool>> ApplyEtmfWebhookBatchAsync(EtmfCompletenessBatchWebhookPayload payload, CancellationToken ct) =>
+        ApplyEtmfWebhookAsync(payload.StudyId.Value, payload.Milestone, batchSites: payload.Sites, singlePayload: null, ct);
+
+    private async Task<Result<bool>> ApplyEtmfWebhookAsync(
+        string studyId,
+        string milestone,
+        IReadOnlyList<EtmfSiteCompletenessItem>? batchSites,
+        EtmfCompletenessWebhookPayload? singlePayload,
+        CancellationToken ct)
     {
-        if (lockGuard is not null)
+        if (singlePayload is not null)
         {
-            var lockCheck = await lockGuard.EnsureUnlockedAsync(payload.StudyId, payload.SiteId, cancellationToken: ct)
-                .ConfigureAwait(false);
-            if (lockCheck.IsFailure)
+            if (lockGuard is not null)
             {
-                return Result<bool>.Failure(lockCheck.Error!);
+                var lockCheck = await lockGuard.EnsureUnlockedAsync(singlePayload.StudyId, singlePayload.SiteId, cancellationToken: ct)
+                    .ConfigureAwait(false);
+                if (lockCheck.IsFailure)
+                {
+                    return Result<bool>.Failure(lockCheck.Error!);
+                }
+            }
+
+            var studyCode = new StudyCode(singlePayload.StudyId);
+            SiteCode? siteCode = singlePayload.SiteId is null ? null : new SiteCode(singlePayload.SiteId);
+            IReadOnlyList<string> missingDocuments = singlePayload.MissingArtifacts ?? Array.Empty<string>();
+
+            var existing = await compliance.GetAsync(studyCode, siteCode, singlePayload.Milestone, ct).ConfigureAwait(false);
+            SiteComplianceCache? changed = null;
+            if (existing is not null)
+            {
+                existing.ApplyWebhookUpdate(singlePayload.IsComplete, missingDocuments);
+                changed = existing;
+            }
+            else if (siteCode is { } concreteSiteCode)
+            {
+                var created = SiteComplianceCache.Create(
+                    studyCode, concreteSiteCode, singlePayload.Milestone, singlePayload.IsComplete, missingDocuments);
+                await compliance.AddAsync(created, ct).ConfigureAwait(false);
+                changed = created;
+            }
+
+            if (changed is not null)
+            {
+                changed.ReasonForChange = auditContext.ChangeReason;
+                await compliance.RecordActivationPeriodAsync(changed, clock.UtcNow, auditContext.ChangeReason, ct).ConfigureAwait(false);
+                await auditLog.WriteAsync(SiteComplianceEntityName, changed.Id.ToString(), "ETMF_COMPLIANCE_UPDATE",
+                    auditContext.UserId, auditContext.ChangeReason, oldValues: null,
+                    newValues: new Dictionary<string, object?>
+                    {
+                        ["milestone"] = singlePayload.Milestone,
+                        ["is_complete"] = singlePayload.IsComplete,
+                        ["missing_documents"] = missingDocuments,
+                    }, ct).ConfigureAwait(false);
+            }
+        }
+        else
+        {
+            var items = batchSites ?? [];
+            var normalizedOrder = new List<SiteCode>(items.Count);
+            var latestBySite = new Dictionary<SiteCode, EtmfSiteCompletenessItem>(items.Count);
+            foreach (var item in items)
+            {
+                var siteCode = item.SiteId;
+                if (!latestBySite.ContainsKey(siteCode))
+                {
+                    normalizedOrder.Add(siteCode);
+                }
+
+                latestBySite[siteCode] = item;
+            }
+
+            if (lockGuard is not null)
+            {
+                var siteIdStrings = normalizedOrder.Select(s => s.Value).ToList();
+                var lockCheck = await lockGuard.EnsureUnlockedBatchAsync(studyId, siteIdStrings, ct)
+                    .ConfigureAwait(false);
+                if (lockCheck.IsFailure)
+                {
+                    return Result<bool>.Failure(lockCheck.Error!);
+                }
+            }
+
+            if (normalizedOrder.Count == 0)
+            {
+                return true;
+            }
+
+            var studyCode = new StudyCode(studyId);
+            var existingBySite = await compliance.GetBySitesAsync(studyCode, normalizedOrder, milestone, ct)
+                .ConfigureAwait(false);
+
+            var changedCaches = new List<(SiteComplianceCache Cache, bool IsComplete, IReadOnlyList<string> MissingDocuments)>(normalizedOrder.Count);
+            var existingModifiedIds = new HashSet<Guid>();
+
+            foreach (var siteCode in normalizedOrder)
+            {
+                var item = latestBySite[siteCode];
+                IReadOnlyList<string> missingDocuments = item.MissingArtifacts ?? Array.Empty<string>();
+
+                if (existingBySite.TryGetValue(siteCode, out var existing))
+                {
+                    if (existing.IsComplete == item.IsComplete
+                        && existing.MissingDocuments.SequenceEqual(missingDocuments, StringComparer.Ordinal))
+                    {
+                        continue;
+                    }
+
+                    existing.ApplyWebhookUpdate(item.IsComplete, missingDocuments);
+                    existing.ReasonForChange = auditContext.ChangeReason;
+                    existingModifiedIds.Add(existing.Id);
+                    changedCaches.Add((existing, item.IsComplete, missingDocuments));
+                }
+                else
+                {
+                    var created = SiteComplianceCache.Create(
+                        studyCode, siteCode, milestone, item.IsComplete, missingDocuments);
+                    created.ReasonForChange = auditContext.ChangeReason;
+                    await compliance.AddAsync(created, ct).ConfigureAwait(false);
+                    changedCaches.Add((created, item.IsComplete, missingDocuments));
+                }
+            }
+
+            if (changedCaches.Count == 0)
+            {
+                return true;
+            }
+
+            DateTimeOffset now = clock.UtcNow;
+            await compliance.RecordActivationPeriodsBatchAsync(
+                changedCaches.Select(x => x.Cache).ToList(),
+                existingModifiedIds,
+                now,
+                auditContext.ChangeReason,
+                ct).ConfigureAwait(false);
+
+            foreach (var (cache, isComplete, missingDocuments) in changedCaches)
+            {
+                await auditLog.WriteAsync(SiteComplianceEntityName, cache.Id.ToString(), "ETMF_COMPLIANCE_UPDATE",
+                    auditContext.UserId, auditContext.ChangeReason, oldValues: null,
+                    newValues: new Dictionary<string, object?>
+                    {
+                        ["milestone"] = milestone,
+                        ["is_complete"] = isComplete,
+                        ["missing_documents"] = missingDocuments,
+                    }, ct).ConfigureAwait(false);
             }
         }
 
-        var studyCode = new StudyCode(payload.StudyId);
-        SiteCode? siteCode = payload.SiteId is null ? null : new SiteCode(payload.SiteId);
-        IReadOnlyList<string> missingDocuments = payload.MissingArtifacts ?? Array.Empty<string>();
-
-        var existing = await compliance.GetAsync(studyCode, siteCode, payload.Milestone, ct);
-        SiteComplianceCache? changed = null;
-        if (existing is not null)
-        {
-            existing.ApplyWebhookUpdate(payload.IsComplete, missingDocuments);
-            changed = existing;
-        }
-        else if (siteCode is { } concreteSiteCode)
-        {
-            var created = SiteComplianceCache.Create(
-                studyCode, concreteSiteCode, payload.Milestone, payload.IsComplete, missingDocuments);
-            await compliance.AddAsync(created, ct);
-            changed = created;
-        }
-        // else: SiteId is null (a study-level milestone, legitimate per EtmfCompletenessWebhookPayload's own
-        // doc comment) and no existing row was found. SiteComplianceCache.SiteCode is non-nullable (MIG-SUBJ-006),
-        // so there is no way to construct a row for this combination today -- a pre-existing gap between
-        // already-merged tickets (see this ticket's own final report), not something MIG-SUBJ-020 can fix
-        // without touching the aggregate itself. Rather than throw or fabricate a placeholder site, this is a
-        // documented no-op: the call still "always upserts" in the sense of never failing or throwing.
-
-        if (changed is not null)
-        {
-            // The recorded action below labels this row's audit entry; the row carries the same reason in case an
-            // entry is ever written from the row itself (#4922).
-            changed.ReasonForChange = auditContext.ChangeReason;
-            await compliance.RecordActivationPeriodAsync(changed, clock.UtcNow, auditContext.ChangeReason, ct);
-
-            // The legacy wrote no audit entry here (01_spec.md §1.1); #4767 closes that gap so every
-            // compliance change is attributable to the integration that reported it.
-            await auditLog.WriteAsync(SiteComplianceEntityName, changed.Id.ToString(), "ETMF_COMPLIANCE_UPDATE",
-                auditContext.UserId, auditContext.ChangeReason, oldValues: null,
-                newValues: new Dictionary<string, object?>
-                {
-                    ["milestone"] = payload.Milestone,
-                    ["is_complete"] = payload.IsComplete,
-                    ["missing_documents"] = missingDocuments,
-                }, ct);
-        }
-
-        await compliance.SaveChangesAsync(ct);
+        await compliance.SaveChangesAsync(ct).ConfigureAwait(false);
         return true;
     }
 

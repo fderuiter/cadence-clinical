@@ -100,7 +100,7 @@ public sealed class ExecutionLockGuardRoutingTests : IDisposable
         using var dmClient = Client("dm-lock", ["DATA_MANAGER", "SPONSOR_DESIGNER", "Medical Coder", "Safety Officer"], [Site], allStudies: true);
         using var statClient = Client("stat-lock", [RoleNormalization.ROLE_UNBLINDED_STATISTICIAN], [Site]);
         using var chairClient = Client("chair-lock", [PermissionMatrix.CecChairRole], []);
-        using var etmfClient = Client("svc:etmf-lock", [PermissionMatrix.EtmfServiceRole], []);
+        using var etmfClient = Client("svc:etmf-lock", [PermissionMatrix.EtmfServiceRole], [Site]);
 
         var mutatingCalls = new List<(string Name, Func<Task<HttpResponseMessage>> Send)>
         {
@@ -213,10 +213,16 @@ public sealed class ExecutionLockGuardRoutingTests : IDisposable
                 return SendJsonAsync(crcClient, HttpMethod.Post, path, new RandomizeSubjectRequest(null), sig);
             }),
 
-            // 8. SiteComplianceEndpoints (2)
+            // 8. SiteComplianceEndpoints (3)
             ("POST /api/v1/execution/webhooks/etmf", () =>
                 SendJsonAsync(etmfClient, HttpMethod.Post, "/api/v1/execution/webhooks/etmf",
                     new EtmfCompletenessWebhookPayload(Study, Site, "SITE_ACTIVATION", true, null))),
+            ("POST /api/v1/execution/webhooks/etmf/batch", () =>
+                SendJsonAsync(etmfClient, HttpMethod.Post, "/api/v1/execution/webhooks/etmf/batch",
+                    new EtmfCompletenessBatchWebhookPayload(
+                        new StudyCode(Study),
+                        "SITE_ACTIVATION",
+                        [new EtmfSiteCompletenessItem(new SiteCode(Site), true, null)]))),
             ("POST /api/v1/execution/sites/{siteId}/activate", () =>
                 SendJsonAsync(dmClient, HttpMethod.Post, $"/api/v1/execution/sites/{Site}/activate",
                     new SiteActivationRequest(Study))),
@@ -250,7 +256,7 @@ public sealed class ExecutionLockGuardRoutingTests : IDisposable
                 SendEmptyWithReasonAsync(dmClient, HttpMethod.Delete, $"/api/v1/execution/coding/synonyms/{seeded.StudySynonymId}?reason_for_change=cleanup")),
         };
 
-        mutatingCalls.Should().HaveCount(34);
+        mutatingCalls.Should().HaveCount(35);
 
         foreach (var (name, send) in mutatingCalls)
         {

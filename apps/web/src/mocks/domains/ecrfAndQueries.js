@@ -108,6 +108,8 @@ function createInitialForm() {
     locks: [],
     assertions: [],
     signatures: [],
+    visit_timing: "InWindow",
+    days_outside_window: 0,
     content_hash: computeContentHash(items),
   };
 }
@@ -517,6 +519,12 @@ export function createEcrfAndQueriesDomain(ctx) {
           signature_count: signatureCount,
           collection_title:
             f.collection_title ?? resolveCollectionTitle(f.collection_spec_id),
+          visit_timing:
+            f.visit_timing ??
+            (f.planned_activity_id && f.collected_at ? "InWindow" : null),
+          days_outside_window:
+            f.days_outside_window ??
+            (f.planned_activity_id && f.collected_at ? 0 : null),
         };
       });
     },

@@ -164,29 +164,25 @@ public static class KnowledgeEndpoints
             .ConfigureAwait(false);
         var visibleCategoriesById = FilterCategoriesByPersona(categories, effectivePersona)
             .ToDictionary(c => c.Id, StringComparer.Ordinal);
+        if (visibleCategoriesById.Count == 0)
+        {
+            return TypedResults.Ok(new ContextualHelpResponseDto(
+                MatchedMapping: null,
+                PrimaryArticle: null,
+                PrimaryVersion: null,
+                SectionAnchor: null,
+                RelatedArticles: []));
+        }
 
+        var visibleCategoryIds = visibleCategoriesById.Keys.ToList();
         var publishedArticles = await db.KnowledgeArticles
             .AsNoTracking()
-            .Where(a => !a.IsDeleted && a.Status == "PUBLISHED")
+            .Where(a => !a.IsDeleted && a.Status == "PUBLISHED" && visibleCategoryIds.Contains(a.CategoryId))
             .ToListAsync(ct)
             .ConfigureAwait(false);
 
         var allowedArticlesById = publishedArticles
-            .Where(a => visibleCategoriesById.ContainsKey(a.CategoryId))
             .ToDictionary(a => a.Id, StringComparer.Ordinal);
-
-        var versionIds = allowedArticlesById.Values
-            .Select(a => a.CurrentPublishedVersionId)
-            .Where(id => !string.IsNullOrWhiteSpace(id))
-            .Cast<string>()
-            .Distinct(StringComparer.Ordinal)
-            .ToList();
-
-        var versionsById = await db.KnowledgeArticleVersions
-            .AsNoTracking()
-            .Where(v => versionIds.Contains(v.Id))
-            .ToDictionaryAsync(v => v.Id, StringComparer.Ordinal, ct)
-            .ConfigureAwait(false);
 
         var activeMappings = await db.ContextualHelpMappings
             .AsNoTracking()
@@ -198,8 +194,7 @@ public static class KnowledgeEndpoints
             route,
             effectivePersona,
             activeMappings,
-            allowedArticlesById,
-            versionsById);
+            allowedArticlesById);
 
         if (resolution.PrimaryArticle is null || resolution.MatchedMapping is null)
         {
@@ -211,15 +206,21 @@ public static class KnowledgeEndpoints
                 RelatedArticles: []));
         }
 
+        KnowledgeArticleVersion? primaryVersion = null;
+        if (!string.IsNullOrWhiteSpace(resolution.PrimaryArticle.CurrentPublishedVersionId))
+        {
+            string primaryVersionId = resolution.PrimaryArticle.CurrentPublishedVersionId;
+            primaryVersion = await db.KnowledgeArticleVersions
+                .AsNoTracking()
+                .FirstOrDefaultAsync(v => v.Id == primaryVersionId, ct)
+                .ConfigureAwait(false);
+        }
+
         var relatedDtos = resolution.RelatedArticles
             .Select(rel =>
             {
-                KnowledgeArticleVersion? relVer = !string.IsNullOrWhiteSpace(rel.CurrentPublishedVersionId)
-                    && versionsById.TryGetValue(rel.CurrentPublishedVersionId, out var found)
-                        ? found
-                        : null;
                 visibleCategoriesById.TryGetValue(rel.CategoryId, out var relCat);
-                return ToArticleDto(rel, relCat?.Name, relVer);
+                return ToArticleSummaryDto(rel, relCat?.Name, rel.VersionIndex, rel.VersionLabel, rel.CreatedAt);
             })
             .ToList();
 
@@ -233,8 +234,8 @@ public static class KnowledgeEndpoints
                 resolution.MatchedMapping.SectionAnchor,
                 resolution.MatchedMapping.Priority,
                 resolution.MatchedMapping.IsActive),
-            PrimaryArticle: ToArticleDto(resolution.PrimaryArticle, primaryCategory?.Name, resolution.PrimaryVersion),
-            PrimaryVersion: resolution.PrimaryVersion is null ? null : ToVersionDto(resolution.PrimaryVersion),
+            PrimaryArticle: ToArticleDto(resolution.PrimaryArticle, primaryCategory?.Name, primaryVersion),
+            PrimaryVersion: primaryVersion is null ? null : ToVersionDto(primaryVersion),
             SectionAnchor: resolution.SectionAnchor,
             RelatedArticles: relatedDtos));
     }
@@ -292,10 +293,15 @@ public static class KnowledgeEndpoints
             .ConfigureAwait(false);
         var visibleCategoriesById = FilterCategoriesByPersona(categories, effectivePersona)
             .ToDictionary(c => c.Id, StringComparer.Ordinal);
+        if (visibleCategoriesById.Count == 0)
+        {
+            return TypedResults.Ok<IReadOnlyList<KnowledgeArticleDto>>([]);
+        }
 
+        var visibleCategoryIds = visibleCategoriesById.Keys.ToList();
         IQueryable<KnowledgeArticle> articlesQuery = db.KnowledgeArticles
             .AsNoTracking()
-            .Where(a => !a.IsDeleted);
+            .Where(a => !a.IsDeleted && visibleCategoryIds.Contains(a.CategoryId));
 
         string normalizedStatus = string.IsNullOrWhiteSpace(statusFilter)
             ? "PUBLISHED"
@@ -312,40 +318,102 @@ public static class KnowledgeEndpoints
             articlesQuery = articlesQuery.Where(a => a.CategoryId == trimmedCat);
         }
 
-        var rawArticles = await articlesQuery
+        string trimmedSearch = (query ?? string.Empty).Trim();
+        string lowerSearch = trimmedSearch.ToLowerInvariant();
+
+        var joinedQuery =
+            from a in articlesQuery
+            join pv in db.KnowledgeArticleVersions.AsNoTracking()
+                on a.CurrentPublishedVersionId equals pv.Id into pvGroup
+            from pv in pvGroup.DefaultIfEmpty()
+            select new { a, pv };
+
+        if (lowerSearch.Length > 0)
+        {
+            joinedQuery = joinedQuery.Where(x =>
+                x.a.Title.ToLower().Contains(lowerSearch)
+                || x.a.Slug.ToLower().Contains(lowerSearch)
+                || (x.a.Tags != null && x.a.Tags.ToLower().Contains(lowerSearch))
+                || (x.a.CurrentPublishedVersionId != null
+                    ? x.pv != null && (
+                        (x.pv.BodyMarkdown != null && x.pv.BodyMarkdown.ToLower().Contains(lowerSearch))
+                        || (x.pv.BodyHtml != null && x.pv.BodyHtml.ToLower().Contains(lowerSearch)))
+                    : db.KnowledgeArticleVersions
+                        .AsNoTracking()
+                        .Where(dv => dv.ArticleId == x.a.Id)
+                        .OrderByDescending(dv => dv.VersionIndex)
+                        .Take(1)
+                        .Any(dv =>
+                            (dv.BodyMarkdown != null && dv.BodyMarkdown.ToLower().Contains(lowerSearch))
+                            || (dv.BodyHtml != null && dv.BodyHtml.ToLower().Contains(lowerSearch)))));
+        }
+
+        var rows = await joinedQuery
+            .Select(x => new
+            {
+                Article = x.a,
+                PublishedVersionIndex = (int?)x.pv.VersionIndex,
+                PublishedVersionLabel = x.pv.VersionLabel,
+                PublishedCreatedAt = (DateTimeOffset?)x.pv.CreatedAt,
+            })
             .ToListAsync(ct)
             .ConfigureAwait(false);
 
-        var articles = rawArticles
-            .Where(a => visibleCategoriesById.ContainsKey(a.CategoryId))
-            .OrderByDescending(a => a.CreatedAt)
-            .ThenBy(a => a.Title, StringComparer.Ordinal)
+        var unpublishedArticleIds = rows
+            .Where(r => r.PublishedVersionIndex is null)
+            .Select(r => r.Article.Id)
             .ToList();
 
-        var articleIds = articles.Select(a => a.Id).ToList();
-        var versions = await db.KnowledgeArticleVersions
-            .AsNoTracking()
-            .Where(v => articleIds.Contains(v.ArticleId))
-            .ToListAsync(ct)
-            .ConfigureAwait(false);
+        Dictionary<string, (int VersionIndex, string VersionLabel, DateTimeOffset CreatedAt)> draftHeadersByArticleId =
+            new(StringComparer.Ordinal);
 
-        var versionByArticleId = ResolveActiveVersions(articles, versions);
-
-        string trimmedSearch = (query ?? string.Empty).Trim();
-        var dtos = new List<KnowledgeArticleDto>();
-        foreach (var article in articles)
+        if (unpublishedArticleIds.Count > 0)
         {
-            versionByArticleId.TryGetValue(article.Id, out var version);
-            visibleCategoriesById.TryGetValue(article.CategoryId, out var cat);
-            var dto = ToArticleDto(article, cat?.Name, version);
+            var latestDraftHeaders = await db.KnowledgeArticleVersions
+                .AsNoTracking()
+                .Where(v =>
+                    unpublishedArticleIds.Contains(v.ArticleId)
+                    && v.VersionIndex == db.KnowledgeArticleVersions
+                        .AsNoTracking()
+                        .Where(v2 => v2.ArticleId == v.ArticleId)
+                        .Max(v2 => (int?)v2.VersionIndex))
+                .Select(v => new
+                {
+                    v.ArticleId,
+                    v.VersionIndex,
+                    v.VersionLabel,
+                    v.CreatedAt,
+                })
+                .ToListAsync(ct)
+                .ConfigureAwait(false);
 
-            if (trimmedSearch.Length > 0 && !MatchesKeyword(dto, trimmedSearch))
+            foreach (var draft in latestDraftHeaders)
             {
-                continue;
+                draftHeadersByArticleId[draft.ArticleId] = (draft.VersionIndex, draft.VersionLabel, draft.CreatedAt);
             }
-
-            dtos.Add(dto);
         }
+
+        var dtos = rows
+            .OrderByDescending(r => r.Article.CreatedAt)
+            .ThenBy(r => r.Article.Title, StringComparer.Ordinal)
+            .Select(r =>
+            {
+                int versionIndex = r.PublishedVersionIndex ?? r.Article.VersionIndex;
+                string versionLabel = r.PublishedVersionLabel ?? r.Article.VersionLabel;
+                DateTimeOffset updatedAt = r.PublishedCreatedAt ?? r.Article.CreatedAt;
+
+                if (r.PublishedVersionIndex is null
+                    && draftHeadersByArticleId.TryGetValue(r.Article.Id, out var draftMeta))
+                {
+                    versionIndex = draftMeta.VersionIndex;
+                    versionLabel = draftMeta.VersionLabel;
+                    updatedAt = draftMeta.CreatedAt;
+                }
+
+                visibleCategoriesById.TryGetValue(r.Article.CategoryId, out var cat);
+                return ToArticleSummaryDto(r.Article, cat?.Name, versionIndex, versionLabel, updatedAt);
+            })
+            .ToList();
 
         return TypedResults.Ok<IReadOnlyList<KnowledgeArticleDto>>(dtos);
     }
@@ -613,39 +681,31 @@ public static class KnowledgeEndpoints
         return result;
     }
 
-    private static Dictionary<string, KnowledgeArticleVersion> ResolveActiveVersions(
-        IReadOnlyList<KnowledgeArticle> articles,
-        IReadOnlyList<KnowledgeArticleVersion> versions)
+    private static KnowledgeArticleDto ToArticleSummaryDto(
+        KnowledgeArticle article,
+        string? categoryName,
+        int versionIndex,
+        string versionLabel,
+        DateTimeOffset updatedAt)
     {
-        var byVersionId = versions.ToDictionary(v => v.Id, StringComparer.Ordinal);
-        var byArticleId = versions
-            .GroupBy(v => v.ArticleId, StringComparer.Ordinal)
-            .ToDictionary(g => g.Key, g => g.OrderByDescending(v => v.VersionIndex).First(), StringComparer.Ordinal);
-
-        var resolved = new Dictionary<string, KnowledgeArticleVersion>(StringComparer.Ordinal);
-        foreach (var article in articles)
-        {
-            if (!string.IsNullOrWhiteSpace(article.CurrentPublishedVersionId)
-                && byVersionId.TryGetValue(article.CurrentPublishedVersionId, out var published))
-            {
-                resolved[article.Id] = published;
-            }
-            else if (byArticleId.TryGetValue(article.Id, out var latest))
-            {
-                resolved[article.Id] = latest;
-            }
-        }
-
-        return resolved;
-    }
-
-    private static bool MatchesKeyword(KnowledgeArticleDto article, string keyword)
-    {
-        return article.Title.Contains(keyword, StringComparison.OrdinalIgnoreCase)
-               || article.Slug.Contains(keyword, StringComparison.OrdinalIgnoreCase)
-               || (article.BodyMarkdown?.Contains(keyword, StringComparison.OrdinalIgnoreCase) ?? false)
-               || (article.BodyHtml?.Contains(keyword, StringComparison.OrdinalIgnoreCase) ?? false)
-               || article.Tags.Any(t => t.Contains(keyword, StringComparison.OrdinalIgnoreCase));
+        return new(
+            Id: article.Id,
+            Slug: article.Slug,
+            Title: article.Title,
+            CategoryId: article.CategoryId,
+            CategoryName: categoryName,
+            Status: article.Status,
+            VersionIndex: versionIndex,
+            VersionLabel: versionLabel,
+            CurrentPublishedVersionId: article.CurrentPublishedVersionId,
+            Tags: ParseJsonArray(article.Tags),
+            AuthorUserId: article.AuthorUserId,
+            LastEditedBy: article.LastEditedBy,
+            ApprovedBy: article.ApprovedBy,
+            BodyMarkdown: null,
+            BodyHtml: null,
+            CreatedAt: article.CreatedAt,
+            UpdatedAt: updatedAt);
     }
 
     private static KnowledgeArticleDto ToArticleDto(

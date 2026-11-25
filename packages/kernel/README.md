@@ -479,7 +479,7 @@ in `Commands/AssertionCommands.cs`:
   own exclusive lock, so two corrections of one value run one after another; a command that locks a scope exclusively
   shares none.
 - Events: `LockApplied` and `LockReleased` (Quality), `AssertionMade` and `AssertionRetracted` (Evidence).
-- The HTTP surface serves SDV (`POST /api/v1/kernel/observations/{ref}/verifications` and `POST /api/v1/kernel/assertions/{ref}/retraction`, #5465), Execution's queries (`/api/v1/execution/forms/…/queries`, #5461), signed scoped locks with `K-AUTH-4`-masked readiness checks (`GET /api/v1/kernel/studies/{studyRef}/locks/readiness`), synchronous covering write-lock queries for standalone services (`GET /api/v1/kernel/locks/in-force`, #5376, enforcing non-confirming `404` `INodeVisibility` checks for person and automation-agent callers while preserving tenant-wide lock evaluation for verified `svc:` `SYSTEM_SERVICE` consumers), and bitemporal exports (`KernelLockEndpoints`, `KernelExportEndpoints`, #5466, #5592), where study lock lists evaluate lock and release assertions up to `known_at`, omit hidden scopes behind a collapsed `hidden` indicator (ADR-2590), and mask `kind`, `scope_kind`, and `released` on blinded locks (ADR-2471).
+- The HTTP surface serves SDV (`POST /api/v1/kernel/observations/{ref}/verifications` and `POST /api/v1/kernel/assertions/{ref}/retraction`, #5465), Execution's queries (`/api/v1/execution/forms/…/queries`, #5461), signed scoped locks with `K-AUTH-4`-masked readiness checks (`GET /api/v1/kernel/studies/{studyRef}/locks/readiness`), synchronous covering write-lock queries for standalone services (`GET /api/v1/kernel/locks/in-force` and `POST /api/v1/kernel/locks/in-force/batch`, #5376, enforcing non-confirming `404` `INodeVisibility` checks for person and automation-agent callers while preserving tenant-wide lock evaluation for verified `svc:` `SYSTEM_SERVICE` consumers), and bitemporal exports (`KernelLockEndpoints`, `KernelExportEndpoints`, #5466, #5592), where study lock lists evaluate lock and release assertions up to `known_at`, omit hidden scopes behind a collapsed `hidden` indicator (ADR-2590), and mask `kind`, `scope_kind`, and `released` on blinded locks (ADR-2471).
 
 ## Form instances and page saves (ADR-2622)
 
@@ -909,6 +909,13 @@ clock and stores nothing.
 - `Assess(expectedVisit, actualDate)` measures a visit that happened: calendar days from the target, `Early`,
   `InWindow` or `Late`, and days outside the window (ADR-2507). It has no severity; the study's Quality rules decide
   how important an out-of-window visit is.
+- `GET /api/v1/kernel/enrollments/{enrollmentRef}/schedule` (`KernelReadEndpoints`) resolves the governing
+  `ProtocolVersion` in force at the participant's `StudySite` (returning `200` with `governance_status = "NoEffectiveVersion"`
+  and status-specific guidance when no version is effective yet, and non-confirming `404` when `INodeVisibility` masks
+  the enrollment, study, site, or governing version), compiles `ScheduleOfActivities` (exposing default-omitted
+  `Repeating` flags on `PlannedActivity`/`SoaColumn` and `CollectionSpec`/`SoaRow`), and projects `ExpectedSchedule.Compute`
+  over enrollment `StatusSince` in site local time. `OpenCollectionInstanceHandler` refuses duplicate scheduled cells
+  with `409 K.Collection.DuplicateSingletonInstance` when neither the `CollectionSpec` nor the `PlannedActivity` is repeating.
 
 ## Indicators and the study Pulse (ADR-2488)
 

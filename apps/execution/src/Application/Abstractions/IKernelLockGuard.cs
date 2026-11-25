@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -21,6 +22,55 @@ public interface IKernelLockGuard
         string? siteCode = null,
         string? subjectCode = null,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Verifies in one batch pass that no active write-denying lock (<c>Frozen</c> or <c>Locked</c>) covers
+    /// <paramref name="studyCode"/> or any of <paramref name="siteCodes"/> for the ambient HTTP caller's tenant.
+    /// </summary>
+    async Task<Result<bool>> EnsureUnlockedBatchAsync(
+        string? studyCode,
+        IReadOnlyCollection<string> siteCodes,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(studyCode))
+        {
+            return true;
+        }
+
+        if (siteCodes is null || siteCodes.Count == 0)
+        {
+            return await EnsureUnlockedAsync(studyCode, null, null, cancellationToken).ConfigureAwait(false);
+        }
+
+        var checkedStudyOnly = false;
+        foreach (string siteCode in siteCodes)
+        {
+            if (string.IsNullOrWhiteSpace(siteCode))
+            {
+                if (checkedStudyOnly)
+                {
+                    continue;
+                }
+
+                checkedStudyOnly = true;
+                var studyResult = await EnsureUnlockedAsync(studyCode, null, null, cancellationToken).ConfigureAwait(false);
+                if (studyResult.IsFailure)
+                {
+                    return studyResult;
+                }
+
+                continue;
+            }
+
+            var siteResult = await EnsureUnlockedAsync(studyCode, siteCode, null, cancellationToken).ConfigureAwait(false);
+            if (siteResult.IsFailure)
+            {
+                return siteResult;
+            }
+        }
+
+        return true;
+    }
 
     /// <summary>
     /// Verifies that no active write-denying lock (<c>Frozen</c> or <c>Locked</c>) covers <paramref name="studyCode"/>,

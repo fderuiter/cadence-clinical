@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -28,6 +29,23 @@ internal static class ExecutionLockGuard
 
         var check = await lockGuard
             .EnsureUnlockedAsync(studyCode, siteCode, subjectCode, cancellationToken)
+            .ConfigureAwait(false);
+        return check.IsFailure ? check.Error!.ToProblemResult() : null;
+    }
+
+    internal static async Task<IResult?> EnsureUnlockedBatchAsync(
+        IKernelLockGuard? lockGuard,
+        string? studyCode,
+        IReadOnlyCollection<string> siteCodes,
+        CancellationToken cancellationToken = default)
+    {
+        if (lockGuard is null || string.IsNullOrWhiteSpace(studyCode))
+        {
+            return null;
+        }
+
+        var check = await lockGuard
+            .EnsureUnlockedBatchAsync(studyCode, siteCodes, cancellationToken)
             .ConfigureAwait(false);
         return check.IsFailure ? check.Error!.ToProblemResult() : null;
     }

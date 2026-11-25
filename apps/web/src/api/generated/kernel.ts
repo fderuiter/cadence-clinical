@@ -198,6 +198,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/kernel/enrollments/{enrollmentRef}/schedule": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Computes the governing Schedule of Activities and expected calendar visit windows for an enrollment.
+     * @description Resolves the governing protocol version effective at the enrollment's study site (K-TIME-8) and evaluates ExpectedSchedule.Compute over StatusSince in site calendar time (ADR-2487, K-TIME-7). Returns non-confirming 404 when absent or masked.
+     */
+    get: operations["KernelGetEnrollmentSchedule"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/kernel/studies/{studyRef}/protocol-versions": {
     parameters: {
       query?: never;
@@ -836,6 +856,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/kernel/locks/in-force/batch": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Checks in one batch pass whether any active write-denying lock (Frozen or Locked) covers a study or any supplied study sites. */
+    post: operations["KernelGetBatchScopeWriteLocks"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/kernel/studies/{studyRef}/locks": {
     parameters: {
       query?: never;
@@ -1457,6 +1494,10 @@ export interface components {
         [key: string]: components["schemas"]["Kernel_KernelNodeResponse"];
       };
     };
+    Kernel_KernelBatchScopeWriteLockRequest: {
+      study_code: null | string;
+      site_codes?: null | string[];
+    };
     Kernel_KernelCandidateSummaryResponse: {
       kind: string;
       version: null | string;
@@ -1612,6 +1653,30 @@ export interface components {
       subject_code: string;
       status: string;
     };
+    Kernel_KernelEnrollmentScheduleResponse: {
+      enrollment_ref: string;
+      study_ref: string;
+      study_site_ref: string;
+      site_code: null | string;
+      country: null | string;
+      enrollment_status: string;
+      /** Format: date-time */
+      status_since: string;
+      /** Format: date */
+      reference_date: string;
+      /** Format: date */
+      as_of_date: string;
+      governance_status: string;
+      latest_study_version_status: null | string;
+      guidance: null | string;
+      governing_version:
+        null | components["schemas"]["Kernel_KernelEffectiveVersionResponse"];
+      effective_versions: components["schemas"]["Kernel_KernelEffectiveVersionResponse"][];
+      schedule:
+        | null
+        | components["schemas"]["Kernel_KernelScheduleOfActivitiesResponse"];
+      expected_visits: components["schemas"]["Kernel_KernelExpectedVisitResponse"][];
+    };
     Kernel_KernelEnrollmentStateResponse: {
       ref: string;
       /** Format: uuid */
@@ -1654,6 +1719,26 @@ export interface components {
       scoping?:
         | null
         | components["schemas"]["Kernel_KernelSubscriptionScopingResponse"];
+    };
+    Kernel_KernelExpectedVisitResponse: {
+      activity_id: string;
+      name: string;
+      epoch_id: string;
+      /** Format: int32 */
+      epoch_order: number | string;
+      /** Format: int32 */
+      study_day: number | string;
+      /** Format: int32 */
+      window_before: number | string;
+      /** Format: int32 */
+      window_after: number | string;
+      /** Format: date */
+      target_date: string;
+      /** Format: date */
+      window_start: string;
+      /** Format: date */
+      window_end: string;
+      window_status: string;
     };
     Kernel_KernelExplainFindingRequest: {
       explanation: string;
@@ -1710,6 +1795,9 @@ export interface components {
       template_ids?: null | string[];
       /** @default false */
       replace_forms: boolean;
+      template_assignments?:
+        | null
+        | components["schemas"]["Kernel_KernelTemplateActivityAssignmentRequest"][];
       amendment_classification?: null | string;
       transition_policy?: null | string;
     };
@@ -2089,6 +2177,8 @@ export interface components {
       /** Format: int32 */
       required_item_count: number | string;
       items: components["schemas"]["Kernel_KernelProtocolFormItemResponse"][];
+      /** @default false */
+      repeating: boolean;
     };
     Kernel_KernelProtocolImportNoteResponse: {
       source: string;
@@ -2102,6 +2192,8 @@ export interface components {
       file_name: string;
       /** Format: int32 */
       item_count: number | string;
+      /** @default false */
+      repeating: boolean;
     };
     Kernel_KernelProtocolVersionResponse: {
       ref: null | string;
@@ -2316,6 +2408,8 @@ export interface components {
       window_after: number | string;
       locations: string[];
       footnotes: (number | string)[];
+      /** @default false */
+      repeating: boolean;
     };
     Kernel_KernelSoaDirectiveResponse: {
       kind: string;
@@ -2356,6 +2450,8 @@ export interface components {
       /** Format: int32 */
       frequency: number | string;
       footnotes: (number | string)[];
+      /** @default false */
+      repeating: boolean;
     };
     Kernel_KernelSoaVisitResponse: {
       epoch_id: string;
@@ -2445,6 +2541,10 @@ export interface components {
       /** Format: int32 */
       active_study_count: number | string;
       billing_confirmation?: null | string;
+    };
+    Kernel_KernelTemplateActivityAssignmentRequest: {
+      template_id: string;
+      activity_ids: string[];
     };
     Kernel_KernelTrialOnboardingRequest: {
       organization_name: string;
@@ -3146,6 +3246,67 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Kernel_KernelEnrollmentLookupResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Service Unavailable */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
+  KernelGetEnrollmentSchedule: {
+    parameters: {
+      query?: {
+        as_of?: string;
+        time_zone?: string;
+      };
+      header?: never;
+      path: {
+        enrollmentRef: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_KernelEnrollmentScheduleResponse"];
         };
       };
       /** @description Bad Request */
@@ -5903,6 +6064,68 @@ export interface operations {
         };
       };
       /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
+  KernelGetBatchScopeWriteLocks: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: {
+      content: {
+        "application/json":
+          | null
+          | components["schemas"]["Kernel_KernelBatchScopeWriteLockRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_KernelScopeWriteLockResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized. Kernel errors: `K.Actor.Unresolved`. */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Not Found. Kernel errors: `K.Aggregate.NotFound`. */
       404: {
         headers: {
           [name: string]: unknown;

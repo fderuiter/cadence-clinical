@@ -95,10 +95,14 @@ public static class Program
         AddCommand(db, "migrate", "Applies pending EF Core migrations across all PostgreSQL schemas", DbCommands.Migrate);
 
         var migrations = AddBranch(root, "migrations", "Unified EF Core migration tooling across all 18 persistence modules");
-        AddCommand(migrations, "add", "Scaffolds a new EF Core migration for a persistence module", MigrationCommands.ConfigureAdd);
+        AddCommand(migrations, "add", "Scaffolds and formats a new EF Core migration for a persistence module", MigrationCommands.ConfigureAdd);
         AddCommand(migrations, "script", "Generates idempotent SQL review scripts in TestResults/migrations/", MigrationCommands.ConfigureScript);
         AddCommand(migrations, "list", "Lists migrations across one or all 18 persistence modules", MigrationCommands.ConfigureList);
         AddCommand(migrations, "verify", "Verifies snapshots, .Designer.cs companions, attributes and DDL uniqueness across modules", MigrationCommands.ConfigureVerify);
+        AddCommand(migrations, "apply", "Applies pending EF Core migrations for one or all 18 modules while preserving schema search paths", MigrationCommands.ConfigureApply);
+        AddCommand(migrations, "bundle", "Builds self-contained EF Core migration bundles in TestResults/migrations/", MigrationCommands.ConfigureBundle);
+        AddCommand(migrations, "optimize", "Generates pre-compiled EF Core models for one or all 18 modules", MigrationCommands.ConfigureOptimize);
+        AddCommand(migrations, "seed", "Runs declared CLI sample-data seeders for supported persistence modules", MigrationCommands.ConfigureSeed);
 
         var settings = AddBranch(root, "settings", "Manage microservice configuration settings models and template exports");
         AddCommand(settings, "export", "Checks that environment variables read in code are listed in .env.example and docs", ToolCommands.ConfigureExtractEnvVars);

@@ -75,6 +75,117 @@ public interface ILockRecords
         Guid? enrollmentId = null,
         CancellationToken cancellationToken = default) =>
         Task.FromResult(new ScopeWriteLockCheck(StudyExists: false, Locked: false, LockKind: null, ScopeKind: null));
+
+    /// <summary>
+    /// Checks in one pass whether any active write-denying lock (<see cref="LockKind.Frozen"/> or
+    /// <see cref="LockKind.Locked"/>) covers <paramref name="studyCodeOrId"/> or any of
+    /// <paramref name="siteCodesOrIds"/> within <paramref name="tenant"/>.
+    /// </summary>
+    async Task<BatchScopeWriteLockCheck> CheckBatchScopeWriteLocksAsync(
+        TenantId tenant,
+        string studyCodeOrId,
+        IReadOnlyList<string> siteCodesOrIds,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(siteCodesOrIds);
+        if (string.IsNullOrWhiteSpace(studyCodeOrId))
+        {
+            return new BatchScopeWriteLockCheck(StudyExists: false, Locked: false, LockKind: null, ScopeKind: null);
+        }
+
+        string trimmedStudy = studyCodeOrId.Trim();
+        var distinctSites = new List<string>();
+        var seenSites = new HashSet<string>(StringComparer.Ordinal);
+        foreach (string raw in siteCodesOrIds)
+        {
+            if (!string.IsNullOrWhiteSpace(raw))
+            {
+                string trimmed = raw.Trim();
+                if (seenSites.Add(trimmed))
+                {
+                    distinctSites.Add(trimmed);
+                }
+            }
+        }
+
+        if (distinctSites.Count == 0)
+        {
+            var studyCheck = await CheckScopeWriteLockAsync(tenant, trimmedStudy, null, null, null, cancellationToken).ConfigureAwait(false);
+            return new BatchScopeWriteLockCheck(
+                studyCheck.StudyExists,
+                studyCheck.Locked,
+                studyCheck.LockKind,
+                studyCheck.ScopeKind,
+                studyCheck.StudyId,
+                new Dictionary<string, StudySiteId>(StringComparer.Ordinal),
+                studyCheck.CoveringLocks);
+        }
+
+        StudyId? resolvedStudyId = null;
+        var resolvedSites = new Dictionary<string, StudySiteId>(StringComparer.Ordinal);
+        var coveringLocks = new List<ScopeWriteLockCandidate>();
+        var seenCandidates = new HashSet<(LockKind Kind, NodeRef Scope)>();
+        ScopeWriteLockCandidate? highest = null;
+
+        foreach (string site in distinctSites)
+        {
+            var siteCheck = await CheckScopeWriteLockAsync(tenant, trimmedStudy, site, null, null, cancellationToken).ConfigureAwait(false);
+            if (!siteCheck.StudyExists)
+            {
+                return new BatchScopeWriteLockCheck(StudyExists: false, Locked: false, LockKind: null, ScopeKind: null);
+            }
+
+            resolvedStudyId ??= siteCheck.StudyId;
+            if (siteCheck.StudySiteId is { } studySiteId)
+            {
+                resolvedSites[site] = studySiteId;
+            }
+
+            if (siteCheck.CoveringLocks is { Count: > 0 } candidates)
+            {
+                foreach (var candidate in candidates)
+                {
+                    var unversioned = candidate.Scope.Unversioned();
+                    if (seenCandidates.Add((candidate.Kind, unversioned)))
+                    {
+                        var normalized = new ScopeWriteLockCandidate(candidate.Kind, unversioned);
+                        coveringLocks.Add(normalized);
+                        if (highest is null || ScopeWriteLockCheck.PrecedesCandidate(normalized, highest))
+                        {
+                            highest = normalized;
+                        }
+                    }
+                }
+            }
+            else if (siteCheck is { Locked: true, LockKind: { } fallbackKind, ScopeKind: { } fallbackScopeKind })
+            {
+                NodeRef? fallbackNode = fallbackScopeKind switch
+                {
+                    NodeKinds.Study when siteCheck.StudyId is { } sid => NodeRef.For(sid),
+                    NodeKinds.StudySite when siteCheck.StudySiteId is { } ssid => NodeRef.For(ssid),
+                    _ => null,
+                };
+                if (fallbackNode is { } resolvedFallback && seenCandidates.Add((fallbackKind, resolvedFallback)))
+                {
+                    var normalized = new ScopeWriteLockCandidate(fallbackKind, resolvedFallback);
+                    coveringLocks.Add(normalized);
+                    if (highest is null || ScopeWriteLockCheck.PrecedesCandidate(normalized, highest))
+                    {
+                        highest = normalized;
+                    }
+                }
+            }
+        }
+
+        return new BatchScopeWriteLockCheck(
+            StudyExists: true,
+            Locked: highest is not null,
+            LockKind: highest?.Kind,
+            ScopeKind: highest?.Scope.Kind,
+            StudyId: resolvedStudyId,
+            ResolvedStudySites: resolvedSites,
+            CoveringLocks: coveringLocks);
+    }
 }
 
 /// <summary>An active write-denying lock assertion candidate covering a resolved scope.</summary>
@@ -83,6 +194,67 @@ public interface ILockRecords
 public sealed record ScopeWriteLockCandidate(
     LockKind Kind,
     NodeRef Scope);
+
+/// <summary>Result of checking whether any active write-denying lock covers a study or a batch of study sites.</summary>
+/// <param name="StudyExists">True when the requested study exists in the tenant.</param>
+/// <param name="Locked">True when at least one active write-denying assertion covers the study or any evaluated site.</param>
+/// <param name="LockKind">The highest-precedence active lock kind (<see cref="LockKind.Locked"/> before <see cref="LockKind.Frozen"/>), or null when unlocked.</param>
+/// <param name="ScopeKind">The target scope kind of the highest-precedence active lock, or null when unlocked.</param>
+/// <param name="StudyId">The resolved study identifier when <paramref name="StudyExists"/> is true; otherwise null.</param>
+/// <param name="ResolvedStudySites">Mapping from each requested site code or identifier that matched in the study to its <see cref="StudySiteId"/>.</param>
+/// <param name="CoveringLocks">All active covering lock candidates across the study and resolved sites.</param>
+public sealed record BatchScopeWriteLockCheck(
+    bool StudyExists,
+    bool Locked,
+    LockKind? LockKind,
+    string? ScopeKind,
+    StudyId? StudyId = null,
+    IReadOnlyDictionary<string, StudySiteId>? ResolvedStudySites = null,
+    IReadOnlyList<ScopeWriteLockCandidate>? CoveringLocks = null)
+{
+    /// <summary>
+    /// Computes a <see cref="BatchScopeWriteLockCheck"/> over the subset of <see cref="CoveringLocks"/> whose unversioned
+    /// target <see cref="NodeRef"/> belongs to <paramref name="allowedScopes"/>.
+    /// </summary>
+    public BatchScopeWriteLockCheck FilterScopes(IReadOnlySet<NodeRef> allowedScopes)
+    {
+        ArgumentNullException.ThrowIfNull(allowedScopes);
+        if (!StudyExists)
+        {
+            return new BatchScopeWriteLockCheck(StudyExists: false, Locked: false, LockKind: null, ScopeKind: null);
+        }
+
+        if (CoveringLocks is not null)
+        {
+            ScopeWriteLockCandidate? active = null;
+            foreach (var candidate in CoveringLocks)
+            {
+                if (!allowedScopes.Contains(candidate.Scope.Unversioned()))
+                {
+                    continue;
+                }
+
+                if (active is null || ScopeWriteLockCheck.PrecedesCandidate(candidate, active))
+                {
+                    active = candidate;
+                }
+            }
+
+            return active is not null
+                ? this with { Locked = true, LockKind = active.Kind, ScopeKind = active.Scope.Kind }
+                : this with { Locked = false, LockKind = null, ScopeKind = null };
+        }
+
+        if (!Locked || LockKind is null || ScopeKind is null)
+        {
+            return this with { Locked = false, LockKind = null, ScopeKind = null };
+        }
+
+        return ScopeKind == NodeKinds.Study && StudyId is { } sid && allowedScopes.Contains(NodeRef.For(sid))
+            ? this
+            : this with { Locked = false, LockKind = null, ScopeKind = null };
+    }
+}
 
 /// <summary>Result of checking whether any active write-denying lock covers a study, site, or enrollment scope.</summary>
 /// <param name="StudyExists">True when the requested study exists in the tenant.</param>
@@ -127,7 +299,7 @@ public sealed record ScopeWriteLockCheck(
                     continue;
                 }
 
-                if (active is null || Precedes(candidate, active))
+                if (active is null || PrecedesCandidate(candidate, active))
                 {
                     active = candidate;
                 }
@@ -155,7 +327,7 @@ public sealed record ScopeWriteLockCheck(
             : this with { Locked = false, LockKind = null, ScopeKind = null };
     }
 
-    private static bool Precedes(ScopeWriteLockCandidate candidate, ScopeWriteLockCandidate current)
+    internal static bool PrecedesCandidate(ScopeWriteLockCandidate candidate, ScopeWriteLockCandidate current)
     {
         var candidateHard = candidate.Kind == Evidence.LockKind.Locked;
         var currentHard = current.Kind == Evidence.LockKind.Locked;

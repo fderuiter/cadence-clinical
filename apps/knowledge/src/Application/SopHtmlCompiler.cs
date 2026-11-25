@@ -225,23 +225,29 @@ public static class SopHtmlCompiler
 
     private static bool IsHtmlIncompleteForMarkdown(string markdown, string html)
     {
-        bool markdownHasOrderedSteps = ContainsOrderedStepLine(markdown);
-        if (markdownHasOrderedSteps && !html.Contains("<ol>", StringComparison.OrdinalIgnoreCase))
+        if (ContainsHeadingWithoutId(html))
         {
             return true;
         }
 
-        bool markdownHasHeading = ContainsMarkdownHeading(markdown);
-        if (markdownHasHeading && !html.Contains("id=\"", StringComparison.OrdinalIgnoreCase))
+        if (!html.Contains("<ol>", StringComparison.OrdinalIgnoreCase)
+            && ContainsOrderedStepLine(markdown))
         {
             return true;
         }
 
-        return ContainsHeadingWithoutId(html);
+        if (!html.Contains("id=\"", StringComparison.OrdinalIgnoreCase)
+            && ContainsMarkdownHeading(markdown))
+        {
+            return true;
+        }
+
+        return false;
     }
 
     private static bool ContainsHeadingWithoutId(string html) =>
-        html.Contains("<h2>", StringComparison.OrdinalIgnoreCase)
+        html.Contains("<h1>", StringComparison.OrdinalIgnoreCase)
+        || html.Contains("<h2>", StringComparison.OrdinalIgnoreCase)
         || html.Contains("<h3>", StringComparison.OrdinalIgnoreCase)
         || html.Contains("<h4>", StringComparison.OrdinalIgnoreCase);
 
@@ -249,7 +255,7 @@ public static class SopHtmlCompiler
     {
         foreach (ReadOnlySpan<char> rawLine in markdown.AsSpan().EnumerateLines())
         {
-            if (TryParseOrderedListItem(rawLine.Trim().ToString(), out _))
+            if (IsOrderedListItemSpan(rawLine.Trim()))
             {
                 return true;
             }
@@ -262,13 +268,64 @@ public static class SopHtmlCompiler
     {
         foreach (ReadOnlySpan<char> rawLine in markdown.AsSpan().EnumerateLines())
         {
-            if (TryParseHeading(rawLine.Trim().ToString(), out _, out _, out _))
+            if (IsHeadingSpan(rawLine.Trim()))
             {
                 return true;
             }
         }
 
         return false;
+    }
+
+    private static bool IsOrderedListItemSpan(ReadOnlySpan<char> line)
+    {
+        int idx = 0;
+        while (idx < line.Length && char.IsAsciiDigit(line[idx]))
+        {
+            idx++;
+        }
+
+        if (idx == 0 || idx + 1 >= line.Length || line[idx] != '.' || !char.IsWhiteSpace(line[idx + 1]))
+        {
+            return false;
+        }
+
+        return !line[(idx + 2)..].Trim().IsEmpty;
+    }
+
+    private static bool IsHeadingSpan(ReadOnlySpan<char> line)
+    {
+        int hashes = 0;
+        while (hashes < line.Length && hashes < 6 && line[hashes] == '#')
+        {
+            hashes++;
+        }
+
+        if (hashes == 0 || hashes >= line.Length || !char.IsWhiteSpace(line[hashes]))
+        {
+            return false;
+        }
+
+        ReadOnlySpan<char> rest = line[(hashes + 1)..].Trim();
+        if (rest.IsEmpty)
+        {
+            return false;
+        }
+
+        if (rest[^1] == '}')
+        {
+            int braceOpen = rest.LastIndexOf("{#", StringComparison.Ordinal);
+            if (braceOpen > 0)
+            {
+                ReadOnlySpan<char> rawId = rest[(braceOpen + 2)..^1].Trim();
+                if (!rawId.IsEmpty)
+                {
+                    rest = rest[..braceOpen].TrimEnd();
+                }
+            }
+        }
+
+        return !rest.IsEmpty;
     }
 
     private static string ResolveHeadingId(

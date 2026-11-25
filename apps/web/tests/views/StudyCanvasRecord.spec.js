@@ -1453,7 +1453,7 @@ describe("Clinical Canvas: a participant's data", () => {
 
     // All three independent streams are already in-flight before enrollment lookup settles.
     expect(findKernelEnrollmentRef).toHaveBeenCalledTimes(1);
-    expect(findStudyScheduleOptions).toHaveBeenCalledWith("CAD-101");
+    expect(findStudyScheduleOptions).toHaveBeenCalledWith("CAD-101", "017");
     expect(kernelApi.listStudyLocks).toHaveBeenCalledWith(studyRef, {
       activeOnly: true,
     });

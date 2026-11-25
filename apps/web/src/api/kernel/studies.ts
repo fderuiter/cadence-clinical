@@ -54,8 +54,21 @@ export type KernelProtocolImportNote =
   KernelSchemas["Kernel_KernelProtocolImportNoteResponse"];
 export type KernelImportedRulePackSummary =
   KernelSchemas["Kernel_KernelImportedRulePackSummaryResponse"];
+export type KernelEffectiveVersion =
+  KernelSchemas["Kernel_KernelEffectiveVersionResponse"];
+export type KernelExpectedVisit =
+  KernelSchemas["Kernel_KernelExpectedVisitResponse"];
+export type KernelEnrollmentSchedule =
+  KernelSchemas["Kernel_KernelEnrollmentScheduleResponse"];
+export type KernelTemplateActivityAssignment =
+  KernelSchemas["Kernel_KernelTemplateActivityAssignmentRequest"];
 export type KernelProtocolAmendment =
   KernelSchemas["Kernel_KernelProtocolAmendmentResponse"];
+
+export interface KernelTemplateAssignmentInput {
+  templateId: string;
+  activityIds: string[];
+}
 
 export interface KernelCreateStudyRequest {
   code: string;
@@ -108,6 +121,7 @@ export interface KernelProtocolImportRequest {
   fileName?: string | null;
   format?: string | null;
   templateIds?: string[];
+  templateAssignments?: KernelTemplateAssignmentInput[];
   replaceForms?: boolean;
   amendmentClassification?: string | null;
   transitionPolicy?: string | null;
@@ -192,6 +206,27 @@ export const kernelStudiesApi = {
   ): Promise<KernelProtocolDraftSummary> {
     const { executeProtocolDraftImport } = await loadAuthoring();
     return executeProtocolDraftImport(request);
+  },
+
+  /**
+   * Resolves the governing protocol version at the enrollment's site and computes expected visit target dates and
+   * window statuses in site calendar time (GET /api/v1/kernel/enrollments/{enrollmentRef}/schedule).
+   */
+  getEnrollmentSchedule(
+    enrollmentRef: string,
+    options: { asOf?: string | null; timeZone?: string | null } = {}
+  ): Promise<KernelEnrollmentSchedule> {
+    return unwrapResponse(
+      kernelClient.GET("/api/v1/kernel/enrollments/{enrollmentRef}/schedule", {
+        params: {
+          path: { enrollmentRef },
+          query: {
+            as_of: options.asOf || undefined,
+            time_zone: options.timeZone || undefined,
+          },
+        },
+      })
+    );
   },
 
   /** A study's protocol versions, newest first, without content. */

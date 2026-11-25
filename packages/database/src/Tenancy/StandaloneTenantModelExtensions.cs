@@ -282,7 +282,7 @@ public static class StandaloneTenantModelExtensions
         entityBuilder.HasQueryFilter(Expression.Lambda(tenantPredicate, parameter));
     }
 
-    private static Guid ParseOrEmpty(string? value)
+    public static Guid ParseOrEmpty(string? value)
     {
         if (string.IsNullOrWhiteSpace(value))
         {

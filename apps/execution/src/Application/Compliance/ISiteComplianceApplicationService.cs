@@ -38,6 +38,13 @@ public interface ISiteComplianceApplicationService
     Task<Result<bool>> ApplyEtmfWebhookAsync(EtmfCompletenessWebhookPayload payload, CancellationToken ct);
 
     /// <summary>
+    /// Batch-upserts <c>SiteComplianceCache</c> rows for <paramref name="payload"/>, skipping existing rows whose
+    /// <c>IsComplete</c> and <c>MissingDocuments</c> are unchanged while recording bitemporal activation periods and
+    /// <c>ETMF_COMPLIANCE_UPDATE</c> audit entries for every newly created or changed row in a single save.
+    /// </summary>
+    Task<Result<bool>> ApplyEtmfWebhookBatchAsync(EtmfCompletenessBatchWebhookPayload payload, CancellationToken ct);
+
+    /// <summary>
     /// Re-reads the <c>SITE_ACTIVATION</c> compliance-cache row for <paramref name="siteId"/> /
     /// <paramref name="request"/>'s study. If missing or incomplete, writes a <c>BLOCKED_ACTIVATION</c>
     /// audit entry <b>before</b> returning <c>SubjectErrors.BlockedActivation</c>

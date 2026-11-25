@@ -12,6 +12,7 @@ import {
 import { kernelApi } from "../api/kernelApi";
 import {
   clearKernelStudyCache,
+  findEnrollmentScheduleOptions,
   findKernelEnrollmentRef,
   findStudyScheduleOptions,
   resetKernelStudySession,
@@ -173,7 +174,7 @@ const inFlightByCode = new Map<string, Promise<CanvasParticipant | null>>();
 const inFlightSchedules = new WeakMap<
   object,
   {
-    studyCode: string;
+    cacheKey: string;
     request: number;
     promise: Promise<StudyScheduleOptions | null>;
   }
@@ -289,8 +290,10 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
     pulse: null as { total: number; byState: PulseCount[] } | null,
     pulseLoading: false,
     pulseError: false,
-    /** Cached Schedule of Activities options per study code so form launchers avoid re-fetching. */
+    /** Cached Schedule of Activities options per study code (and optional `studyCode::SITE`) so form launchers avoid re-fetching. */
     scheduleOptionsByStudy: {} as Record<string, StudyScheduleOptions | null>,
+    /** Cached server-computed enrollment schedules keyed by enrollment UUID. */
+    enrollmentSchedulesById: {} as Record<string, StudyScheduleOptions | null>,
     scheduleOptions: null as StudyScheduleOptions | null,
     scheduleLoading: false,
     scheduleError: null as string | null,
@@ -361,6 +364,7 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
       scheduleRequest++;
       inFlightSchedules.delete(this);
       this.scheduleOptionsByStudy = {};
+      this.enrollmentSchedulesById = {};
       this.scheduleOptions = null;
       this.scheduleLoading = false;
       this.scheduleError = null;
@@ -370,10 +374,45 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
       clearNodeResolutionCache();
     },
 
-    /** Loads and caches structured Schedule of Activities options for `studyCode` (defaults to the active study). */
+    /** Resolves cached Schedule of Activities options for `(studyCode, siteCode)`. */
+    getScheduleFor(
+      studyCode?: string,
+      siteCode?: string | null
+    ): StudyScheduleOptions | null {
+      const target = (studyCode ?? this.studyCode).trim();
+      if (!target) return null;
+      const trimmedSite = siteCode?.trim() || "";
+      if (trimmedSite) {
+        const siteKey = `${target}::${trimmedSite.toUpperCase()}`;
+        if (
+          Object.prototype.hasOwnProperty.call(
+            this.scheduleOptionsByStudy,
+            siteKey
+          )
+        ) {
+          return this.scheduleOptionsByStudy[siteKey] ?? null;
+        }
+      }
+      if (
+        Object.prototype.hasOwnProperty.call(
+          this.scheduleOptionsByStudy,
+          target
+        )
+      ) {
+        return this.scheduleOptionsByStudy[target] ?? null;
+      }
+      return !this.studyCode || this.studyCode === target
+        ? this.scheduleOptions
+        : null;
+    },
+
+    /** Loads and caches structured Schedule of Activities options for `studyCode` (and optional `siteCode`). */
     async loadScheduleOptions(
       studyCode?: string,
-      { force = false } = {}
+      {
+        force = false,
+        siteCode = null,
+      }: { force?: boolean; siteCode?: string | null } = {}
     ): Promise<StudyScheduleOptions | null> {
       const target = (studyCode ?? this.studyCode).trim();
       if (!target) {
@@ -382,14 +421,21 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
         this.scheduleError = null;
         return null;
       }
+      const trimmedSite = siteCode?.trim() ? siteCode.trim() : null;
+      const cacheKey = trimmedSite
+        ? `${target}::${trimmedSite.toUpperCase()}`
+        : target;
+      if (force) {
+        clearKernelStudyCache();
+      }
       if (
         !force &&
         Object.prototype.hasOwnProperty.call(
           this.scheduleOptionsByStudy,
-          target
+          cacheKey
         )
       ) {
-        const cached = this.scheduleOptionsByStudy[target];
+        const cached = this.scheduleOptionsByStudy[cacheKey];
         if (!this.studyCode || this.studyCode === target) {
           this.scheduleOptions = cached;
           this.scheduleLoading = false;
@@ -398,7 +444,7 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
         return cached;
       }
       const existing = inFlightSchedules.get(this);
-      if (!force && existing && existing.studyCode === target) {
+      if (!force && existing && existing.cacheKey === cacheKey) {
         return existing.promise;
       }
       const request = ++scheduleRequest;
@@ -406,9 +452,11 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
       this.scheduleError = null;
       const promise = (async () => {
         try {
-          const loaded = await findStudyScheduleOptions(target);
+          const loaded = trimmedSite
+            ? await findStudyScheduleOptions(target, trimmedSite)
+            : await findStudyScheduleOptions(target);
           if (loaded) {
-            this.scheduleOptionsByStudy[target] = loaded;
+            this.scheduleOptionsByStudy[cacheKey] = loaded;
           }
           if (
             request !== scheduleRequest ||
@@ -437,17 +485,48 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
           }
         }
       })();
-      inFlightSchedules.set(this, { studyCode: target, request, promise });
+      inFlightSchedules.set(this, { cacheKey, request, promise });
       return promise;
     },
 
     /** Retries loading Schedule of Activities options after a failure. */
     async retryScheduleOptions(
-      studyCode?: string
+      studyCode?: string,
+      siteCode?: string | null
     ): Promise<StudyScheduleOptions | null> {
       return this.loadScheduleOptions(studyCode ?? this.studyCode, {
         force: true,
+        siteCode: siteCode ?? null,
       });
+    },
+
+    /** Loads and caches the server-computed schedule for a participant's `enrollmentId`. */
+    async loadEnrollmentSchedule(
+      enrollmentId: string,
+      {
+        force = false,
+        asOf = null,
+      }: { force?: boolean; asOf?: string | null } = {}
+    ): Promise<StudyScheduleOptions | null> {
+      const trimmed = enrollmentId.trim();
+      if (!trimmed) return null;
+      if (
+        !force &&
+        Object.prototype.hasOwnProperty.call(
+          this.enrollmentSchedulesById,
+          trimmed
+        )
+      ) {
+        return this.enrollmentSchedulesById[trimmed] ?? null;
+      }
+      const loaded = await findEnrollmentScheduleOptions(trimmed, {
+        force,
+        asOf,
+      });
+      if (loaded) {
+        this.enrollmentSchedulesById[trimmed] = loaded;
+      }
+      return loaded;
     },
 
     /** Records participants for the active study and keeps `paletteParticipants` ordered. */

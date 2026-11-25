@@ -9,6 +9,7 @@ using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Domain.Knowledge;
 using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Execution;
+using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.Persistence.Tenancy;
 using Cadence.Kernel.Protocol;
 using Cadence.Kernel.Protocol.Design;
@@ -129,17 +130,14 @@ internal sealed class KernelExportReader(KernelTenantDbContextFactory contexts) 
         var assertionStream = db.Assertions.AsNoTracking()
             .Where(a => a.StudyId == study && a.AssertedAt <= knownAt)
             .OrderBy(a => a.AssertedAt)
+            .ThenBy(a => a.Id)
             .AsAsyncEnumerable();
         await foreach (var assertion in assertionStream.WithCancellation(cancellationToken).ConfigureAwait(false))
         {
             assertionsRaw.Add(assertion);
         }
 
-        var appliedLocks = assertionsRaw.Where(a => a.IsLock && a.RetractsId is null).ToList();
-        var releasesByLock = assertionsRaw
-            .Where(a => a.IsLock && a.RetractsId is not null)
-            .GroupBy(a => a.RetractsId!.Value)
-            .ToDictionary(g => g.Key, g => g.OrderBy(r => r.AssertedAt).First());
+        var (appliedLocks, releasesByLock) = IndexLocksAndEarliestReleases(assertionsRaw);
 
         var referencedProtocolIds = collectionsRaw.Select(c => c.ProtocolVersionId).ToHashSet();
         var protocols = await ReadProtocolsAsync(db, study, validAt, knownAt, referencedProtocolIds, cancellationToken).ConfigureAwait(false);
@@ -255,30 +253,15 @@ internal sealed class KernelExportReader(KernelTenantDbContextFactory contexts) 
             }
         }
 
-        var studyUuid = foundStudy.Id.Value;
-        var siteUuid = foundEnrollment.StudySiteId.Value;
-        var enrollmentUuid = enrollment.Value;
-        var assertionsRaw = new List<Assertion>();
-        var assertionStream = db.Assertions.AsNoTracking()
-            .Where(a => a.StudyId == foundStudy.Id
-                && a.AssertedAt <= knownAt
-                && (a.EnrollmentId == enrollment
-                    || a.TargetId == studyUuid
-                    || a.TargetId == siteUuid
-                    || a.TargetId == enrollmentUuid
-                    || a.TargetKind == NodeKinds.Assertion))
-            .OrderBy(a => a.AssertedAt)
-            .AsAsyncEnumerable();
-        await foreach (var assertion in assertionStream.WithCancellation(cancellationToken).ConfigureAwait(false))
-        {
-            assertionsRaw.Add(assertion);
-        }
+        var assertionsRaw = await ReadEnrollmentAssertionsBoundedAsync(
+            db,
+            foundStudy.Id,
+            foundEnrollment.StudySiteId,
+            enrollment,
+            knownAt,
+            cancellationToken).ConfigureAwait(false);
 
-        var appliedLocks = assertionsRaw.Where(a => a.IsLock && a.RetractsId is null).ToList();
-        var releasesByLock = assertionsRaw
-            .Where(a => a.IsLock && a.RetractsId is not null)
-            .GroupBy(a => a.RetractsId!.Value)
-            .ToDictionary(g => g.Key, g => g.OrderBy(r => r.AssertedAt).First());
+        var (appliedLocks, releasesByLock) = IndexLocksAndEarliestReleases(assertionsRaw);
 
         var referencedProtocolIds = collectionsRaw.Select(c => c.ProtocolVersionId).ToHashSet();
         var protocols = await ReadProtocolsAsync(db, foundStudy.Id, validAt, knownAt, referencedProtocolIds, cancellationToken).ConfigureAwait(false);
@@ -304,6 +287,7 @@ internal sealed class KernelExportReader(KernelTenantDbContextFactory contexts) 
             .SelectMany(o => o.Assertions)
             .DistinctBy(a => a.AssertionId)
             .OrderBy(a => a.AssertedAt)
+            .ThenBy(a => a.AssertionId)
             .ToList();
 
         var targetIds = new HashSet<Guid> { enrollment.Value };
@@ -619,6 +603,101 @@ internal sealed class KernelExportReader(KernelTenantDbContextFactory contexts) 
         }
     }
 
+    private static async Task<IReadOnlyList<Assertion>> ReadEnrollmentAssertionsBoundedAsync(
+        KernelDbContext db,
+        StudyId study,
+        StudySiteId studySite,
+        EnrollmentId enrollment,
+        DateTimeOffset knownAt,
+        CancellationToken cancellationToken)
+    {
+        var enrollmentAssertions = await db.Assertions.AsNoTracking()
+            .Where(a => a.EnrollmentId == enrollment && a.AssertedAt <= knownAt)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        Guid[] coveringScopeIds = [study.Value, studySite.Value, enrollment.Value];
+        var coveringScopeLocks = await db.Assertions.AsNoTracking()
+            .Where(a => coveringScopeIds.Contains(a.TargetId)
+                && (a.Kind == AssertionKind.Locked || a.Kind == AssertionKind.Frozen)
+                && a.AssertedAt <= knownAt)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var queryIds = enrollmentAssertions
+            .Where(a => a.StudyId == study && a.Kind == AssertionKind.Queried && a.RetractsId == null)
+            .Select(a => a.Id.Value)
+            .ToList();
+
+        var queryAnswers = queryIds.Count == 0
+            ? []
+            : await db.Assertions.AsNoTracking()
+                .Where(a => queryIds.Contains(a.TargetId)
+                    && a.Kind == AssertionKind.QueryAnswered
+                    && a.TargetKind == NodeKinds.Assertion
+                    && a.AssertedAt <= knownAt)
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+
+        var byId = new Dictionary<AssertionId, Assertion>(enrollmentAssertions.Count + coveringScopeLocks.Count + queryAnswers.Count);
+        foreach (var assertion in enrollmentAssertions)
+        {
+            if (assertion.StudyId == study)
+            {
+                byId[assertion.Id] = assertion;
+            }
+        }
+
+        foreach (var assertion in coveringScopeLocks)
+        {
+            if (assertion.StudyId == study)
+            {
+                byId.TryAdd(assertion.Id, assertion);
+            }
+        }
+
+        foreach (var assertion in queryAnswers)
+        {
+            if (assertion.StudyId == study)
+            {
+                byId.TryAdd(assertion.Id, assertion);
+            }
+        }
+
+        var merged = byId.Values.ToList();
+        merged.Sort(AssertionOrderComparer.Instance);
+        return merged;
+    }
+
+    private static (List<Assertion> AppliedLocks, Dictionary<AssertionId, Assertion> ReleasesByLock) IndexLocksAndEarliestReleases(
+        IReadOnlyList<Assertion> assertions)
+    {
+        var appliedLocks = new List<Assertion>();
+        var releasesByLock = new Dictionary<AssertionId, Assertion>();
+        foreach (var assertion in assertions)
+        {
+            if (!assertion.IsLock)
+            {
+                continue;
+            }
+
+            if (assertion.RetractsId is { } retractedLockId)
+            {
+                if (!releasesByLock.TryGetValue(retractedLockId, out var existingRelease)
+                    || IsEarlierAssertion(assertion, existingRelease))
+                {
+                    releasesByLock[retractedLockId] = assertion;
+                }
+            }
+            else
+            {
+                appliedLocks.Add(assertion);
+            }
+        }
+
+        return (appliedLocks, releasesByLock);
+    }
+
     private static async Task<(IReadOnlyList<ExportCollectionSnapshot> Collections, IReadOnlyList<ExportObservationSnapshot> Observations)> BuildObservationsAndCollectionsAsync(
         KernelDbContext db,
         IReadOnlyList<ExportProtocolSnapshot> protocols,
@@ -631,10 +710,6 @@ internal sealed class KernelExportReader(KernelTenantDbContextFactory contexts) 
         DateTimeOffset knownAt,
         CancellationToken cancellationToken)
     {
-        var designByVersion = protocols
-            .Where(p => p.Design is not null)
-            .ToDictionary(p => p.ProtocolVersionId, p => p.Design!);
-
         var conceptIds = observationsRaw.Select(o => o.ConceptId).Distinct().ToList();
         var conceptsById = conceptIds.Count == 0
             ? new Dictionary<ConceptId, Concept>()
@@ -644,103 +719,187 @@ internal sealed class KernelExportReader(KernelTenantDbContextFactory contexts) 
                 .ToDictionaryAsync(c => c.Id, cancellationToken)
                 .ConfigureAwait(false);
 
-        var collectionByObservation = new Dictionary<ObservationId, (CollectionInstance Instance, string ItemId)>();
-        foreach (var instance in collectionsRaw)
+        return AssembleObservationsAndCollections(
+            protocols,
+            designs,
+            conceptsById,
+            studySiteByEnrollment,
+            collectionsRaw,
+            observationsRaw,
+            assertionsRaw,
+            lockEntries,
+            knownAt);
+    }
+
+    internal static (IReadOnlyList<ExportCollectionSnapshot> Collections, IReadOnlyList<ExportObservationSnapshot> Observations) AssembleObservationsAndCollections(
+        IReadOnlyList<ExportProtocolSnapshot> protocols,
+        IReadOnlyList<ProtocolDesign> designs,
+        IReadOnlyDictionary<ConceptId, Concept> conceptsById,
+        IReadOnlyDictionary<EnrollmentId, StudySiteId> studySiteByEnrollment,
+        IReadOnlyList<CollectionInstance> collectionsRaw,
+        IReadOnlyList<Observation> observationsRaw,
+        IReadOnlyList<Assertion> assertionsRaw,
+        IReadOnlyList<StudyLockEntry> lockEntries,
+        DateTimeOffset knownAt)
+    {
+        var specNamesByVersion = new Dictionary<VersionedElementKey, string>(VersionedElementKeyComparer.Instance);
+        var activityNamesByVersion = new Dictionary<VersionedElementKey, string>(VersionedElementKeyComparer.Instance);
+        foreach (var protocol in protocols)
         {
-            foreach (var member in instance.Members.Where(m => m.JoinedAt <= knownAt))
+            if (protocol.Design is not { } design)
             {
-                collectionByObservation[member.ObservationId] = (instance, member.ItemId);
+                continue;
+            }
+
+            foreach (var spec in design.CollectionSpecs)
+            {
+                specNamesByVersion.TryAdd(new VersionedElementKey(protocol.ProtocolVersionId, spec.Id), spec.Name);
+            }
+
+            foreach (var activity in design.PlannedActivities)
+            {
+                activityNamesByVersion.TryAdd(new VersionedElementKey(protocol.ProtocolVersionId, activity.Id), activity.Name);
             }
         }
 
-        var activeLocks = lockEntries.Where(l => !l.Released).ToList();
-        var nonLockStated = assertionsRaw.Where(a => !a.IsLock && a.RetractsId is null).ToList();
-        var nonLockRetractedBy = assertionsRaw
-            .Where(a => !a.IsLock && a.RetractsId is not null)
-            .GroupBy(a => a.RetractsId!.Value)
-            .ToDictionary(g => g.Key, g => g.OrderBy(r => r.AssertedAt).First());
+        var collectionByObservation = new Dictionary<ObservationId, (CollectionInstance Instance, string ItemId)>();
+        foreach (var instance in collectionsRaw)
+        {
+            foreach (var member in instance.Members)
+            {
+                if (member.JoinedAt <= knownAt)
+                {
+                    collectionByObservation[member.ObservationId] = (instance, member.ItemId);
+                }
+            }
+        }
 
-        var answersByQuery = nonLockStated
-            .Where(a => a.Kind == AssertionKind.QueryAnswered && a.TargetKind == NodeKinds.Assertion)
-            .GroupBy(a => AssertionId.FromGuid(a.TargetId))
-            .ToDictionary(g => g.Key, g => g.ToList());
+        var activeLockByScope = new Dictionary<ScopeKey, LockKind>(ScopeKeyComparer.Instance);
+        foreach (var lockEntry in lockEntries)
+        {
+            if (lockEntry.Released)
+            {
+                continue;
+            }
 
-        var currentAtCutByObservation = new Dictionary<ObservationId, (int Revision, ObservationValue Value)>();
-        var observationSnapshots = new List<ExportObservationSnapshot>();
+            var scopeKey = new ScopeKey(lockEntry.Scope.Kind, lockEntry.Scope.Id);
+            if (lockEntry.Kind == LockKind.Locked)
+            {
+                activeLockByScope[scopeKey] = LockKind.Locked;
+            }
+            else
+            {
+                activeLockByScope.TryAdd(scopeKey, LockKind.Frozen);
+            }
+        }
+
+        var directAssertionsByObservation = new Dictionary<Guid, List<Assertion>>();
+        var answersByQueryId = new Dictionary<Guid, List<Assertion>>();
+        var nonLockRetractedBy = new Dictionary<AssertionId, Assertion>();
+        foreach (var assertion in assertionsRaw)
+        {
+            if (assertion.IsLock)
+            {
+                continue;
+            }
+
+            if (assertion.RetractsId is { } retractedId)
+            {
+                if (!nonLockRetractedBy.TryGetValue(retractedId, out var existingRetraction)
+                    || IsEarlierAssertion(assertion, existingRetraction))
+                {
+                    nonLockRetractedBy[retractedId] = assertion;
+                }
+
+                continue;
+            }
+
+            if (string.Equals(assertion.TargetKind, NodeKinds.Observation, StringComparison.Ordinal))
+            {
+                if (!directAssertionsByObservation.TryGetValue(assertion.TargetId, out var obsList))
+                {
+                    obsList = [];
+                    directAssertionsByObservation[assertion.TargetId] = obsList;
+                }
+
+                obsList.Add(assertion);
+            }
+            else if (assertion.Kind == AssertionKind.QueryAnswered
+                && string.Equals(assertion.TargetKind, NodeKinds.Assertion, StringComparison.Ordinal))
+            {
+                if (!answersByQueryId.TryGetValue(assertion.TargetId, out var answerList))
+                {
+                    answerList = [];
+                    answersByQueryId[assertion.TargetId] = answerList;
+                }
+
+                answerList.Add(assertion);
+            }
+        }
+
+        var blindingLookup = BlindedObservationClassifier.CreateLookup(conceptsById, designs);
+        var conceptDisplayByRef = new Dictionary<ConceptRef, (string Code, string Label)>();
+        var currentAtCutByObservation = new Dictionary<ObservationId, (int Revision, ObservationValue Value)>(observationsRaw.Count);
+        var observationSnapshots = new List<ExportObservationSnapshot>(observationsRaw.Count);
 
         foreach (var obs in observationsRaw)
         {
-            var revsAtCut = obs.Revisions
-                .Where(r => r.RecordedAt <= knownAt)
-                .OrderBy(r => r.Number)
-                .ToList();
+            var revsAtCut = SelectRevisionsAtCut(obs.Revisions, knownAt);
             if (revsAtCut.Count == 0)
             {
                 continue;
             }
 
-            var views = revsAtCut
-                .Select((r, idx) => new ObservationRevisionView(
+            var views = new List<ObservationRevisionView>(revsAtCut.Count);
+            for (var idx = 0; idx < revsAtCut.Count; idx++)
+            {
+                var r = revsAtCut[idx];
+                views.Add(new ObservationRevisionView(
                     r.Number,
                     r.Value,
                     r.ReasonForChange,
                     r.RecordedBy,
                     r.RecordedAt,
-                    idx + 1 < revsAtCut.Count ? revsAtCut[idx + 1].RecordedAt : null))
-                .ToList();
+                    idx + 1 < revsAtCut.Count ? revsAtCut[idx + 1].RecordedAt : null));
+            }
+
             var currentRev = views[^1];
             currentAtCutByObservation[obs.Id] = (currentRev.Number, currentRev.Value);
 
             collectionByObservation.TryGetValue(obs.Id, out var membership);
             var studySiteId = studySiteByEnrollment[obs.EnrollmentId];
 
-            conceptsById.TryGetValue(obs.ConceptId, out var concept);
-            var revLabel = concept?.Revisions.FirstOrDefault(r => r.Version == obs.ConceptVersion)?.PreferredLabel
-                ?? concept?.PreferredLabel
-                ?? obs.ConceptId.ToString();
-            var conceptCode = concept?.ExternalCode ?? obs.ConceptId.ToString();
+            if (!conceptDisplayByRef.TryGetValue(obs.Concept, out var conceptDisplay))
+            {
+                conceptsById.TryGetValue(obs.ConceptId, out var concept);
+                var fallbackId = concept is null ? obs.ConceptId.ToString() : null;
+                var revLabel = concept?.Revisions.FirstOrDefault(r => r.Version == obs.ConceptVersion)?.PreferredLabel
+                    ?? concept?.PreferredLabel
+                    ?? fallbackId!;
+                var conceptCode = concept?.ExternalCode ?? fallbackId ?? obs.ConceptId.ToString();
+                conceptDisplay = (conceptCode, revLabel);
+                conceptDisplayByRef[obs.Concept] = conceptDisplay;
+            }
 
-            bool isBlinded = BlindedObservationClassifier.IsBlindedTreatment(
+            bool isBlinded = blindingLookup.IsBlindedTreatment(
                 obs.ConceptId,
                 currentRev.Value,
-                concept,
                 membership.Instance?.CollectionSpecId,
-                membership.ItemId,
-                designs);
+                membership.ItemId);
 
-            var coveringScopes = LockScopes.Covering(
-                obs.StudyId,
-                studySiteId,
-                obs.EnrollmentId,
-                obs.Id,
-                membership.Instance?.Id);
+            LockKind? effectiveLock = activeLockByScope.Count == 0
+                ? null
+                : ResolveEffectiveLock(
+                    activeLockByScope,
+                    obs.StudyId,
+                    studySiteId,
+                    obs.EnrollmentId,
+                    membership.Instance?.Id,
+                    obs.Id);
 
-            var matchingLocks = activeLocks
-                .Where(l => coveringScopes.Any(s => s.Kind == l.Scope.Kind && s.Id == l.Scope.Id))
-                .ToList();
-            LockKind? effectiveLock = matchingLocks.Count switch
-            {
-                0 => null,
-                _ when matchingLocks.Any(l => l.Kind == LockKind.Locked) => LockKind.Locked,
-                _ => LockKind.Frozen,
-            };
-
-            var directAssertions = nonLockStated
-                .Where(a => a.TargetKind == NodeKinds.Observation && a.TargetId == obs.Id.Value)
-                .ToList();
-            var queryAnswers = directAssertions
-                .Where(a => a.Kind == AssertionKind.Queried)
-                .SelectMany(q => answersByQuery.GetValueOrDefault(q.Id, []))
-                .ToList();
-
-            var aboutViews = directAssertions
-                .Concat(queryAnswers)
-                .OrderBy(a => a.AssertedAt)
-                .ThenBy(a => a.Id)
-                .Select(a => nonLockRetractedBy.TryGetValue(a.Id, out var ret)
-                    ? new AssertionView(a.Id, a.Kind, a.Target, a.TargetRevision, a.Text, a.AssertedBy, a.AssertedAt, a.ReasonForChange, ret.Id, ret.AssertedAt)
-                    : new AssertionView(a.Id, a.Kind, a.Target, a.TargetRevision, a.Text, a.AssertedBy, a.AssertedAt, a.ReasonForChange, null, null))
-                .ToList();
+            IReadOnlyList<AssertionView> aboutViews = directAssertionsByObservation.TryGetValue(obs.Id.Value, out var directAssertions)
+                ? BuildObservationAssertionViews(directAssertions, answersByQueryId, nonLockRetractedBy)
+                : [];
 
             observationSnapshots.Add(new ExportObservationSnapshot(
                 obs.Id,
@@ -752,8 +911,8 @@ internal sealed class KernelExportReader(KernelTenantDbContextFactory contexts) 
                 membership.Instance?.PlannedActivityId,
                 membership.ItemId,
                 obs.Concept,
-                conceptCode,
-                revLabel,
+                conceptDisplay.Code,
+                conceptDisplay.Label,
                 isBlinded,
                 obs.ObservedAt,
                 currentRev,
@@ -765,18 +924,20 @@ internal sealed class KernelExportReader(KernelTenantDbContextFactory contexts) 
         var collectionSnapshots = new List<ExportCollectionSnapshot>(collectionsRaw.Count);
         foreach (var instance in collectionsRaw)
         {
-            designByVersion.TryGetValue(instance.ProtocolVersionId, out var design);
-            var specName = design?.CollectionSpecs.FirstOrDefault(s => s.Id == instance.CollectionSpecId)?.Name
-                ?? instance.CollectionSpecId;
-            var activityName = instance.PlannedActivityId is null
-                ? null
-                : design?.PlannedActivities.FirstOrDefault(a => a.Id == instance.PlannedActivityId)?.Name ?? instance.PlannedActivityId;
+            var specName = specNamesByVersion.GetValueOrDefault(
+                new VersionedElementKey(instance.ProtocolVersionId, instance.CollectionSpecId),
+                instance.CollectionSpecId);
+            var activityName = instance.PlannedActivityId is { } plannedActivityId
+                ? activityNamesByVersion.GetValueOrDefault(
+                    new VersionedElementKey(instance.ProtocolVersionId, plannedActivityId),
+                    plannedActivityId)
+                : null;
 
             var itemsMap = new Dictionary<ObservationId, string>();
             var hashEntries = new List<CollectionContentEntry>();
-            foreach (var member in instance.Members.Where(m => m.JoinedAt <= knownAt))
+            foreach (var member in instance.Members)
             {
-                if (currentAtCutByObservation.TryGetValue(member.ObservationId, out var current))
+                if (member.JoinedAt <= knownAt && currentAtCutByObservation.TryGetValue(member.ObservationId, out var current))
                 {
                     itemsMap[member.ObservationId] = member.ItemId;
                     hashEntries.Add(new CollectionContentEntry(member.ObservationId, current.Revision, current.Value));
@@ -801,6 +962,119 @@ internal sealed class KernelExportReader(KernelTenantDbContextFactory contexts) 
         }
 
         return (collectionSnapshots, observationSnapshots);
+    }
+
+    private static List<ObservationRevision> SelectRevisionsAtCut(
+        IReadOnlyCollection<ObservationRevision> revisions,
+        DateTimeOffset knownAt)
+    {
+        var revsAtCut = new List<ObservationRevision>(revisions.Count);
+        var alreadySorted = true;
+        var previousNumber = int.MinValue;
+        foreach (var rev in revisions)
+        {
+            if (rev.RecordedAt <= knownAt)
+            {
+                if (rev.Number < previousNumber)
+                {
+                    alreadySorted = false;
+                }
+
+                previousNumber = rev.Number;
+                revsAtCut.Add(rev);
+            }
+        }
+
+        if (!alreadySorted)
+        {
+            revsAtCut.Sort(static (x, y) => x.Number.CompareTo(y.Number));
+        }
+
+        return revsAtCut;
+    }
+
+    private static LockKind? ResolveEffectiveLock(
+        Dictionary<ScopeKey, LockKind> activeLockByScope,
+        StudyId studyId,
+        StudySiteId studySiteId,
+        EnrollmentId enrollmentId,
+        CollectionInstanceId? collectionInstanceId,
+        ObservationId observationId)
+    {
+        var hasFrozen = false;
+        if (TryProbeLock(activeLockByScope, new ScopeKey(NodeKinds.Study, studyId.Value), ref hasFrozen)
+            || TryProbeLock(activeLockByScope, new ScopeKey(NodeKinds.StudySite, studySiteId.Value), ref hasFrozen)
+            || TryProbeLock(activeLockByScope, new ScopeKey(NodeKinds.Enrollment, enrollmentId.Value), ref hasFrozen))
+        {
+            return LockKind.Locked;
+        }
+
+        if (collectionInstanceId is { } cid
+            && TryProbeLock(activeLockByScope, new ScopeKey(NodeKinds.CollectionInstance, cid.Value), ref hasFrozen))
+        {
+            return LockKind.Locked;
+        }
+
+        if (TryProbeLock(activeLockByScope, new ScopeKey(NodeKinds.Observation, observationId.Value), ref hasFrozen))
+        {
+            return LockKind.Locked;
+        }
+
+        return hasFrozen ? LockKind.Frozen : null;
+    }
+
+    private static bool TryProbeLock(
+        Dictionary<ScopeKey, LockKind> activeLockByScope,
+        ScopeKey scope,
+        ref bool hasFrozen)
+    {
+        if (!activeLockByScope.TryGetValue(scope, out var kind))
+        {
+            return false;
+        }
+
+        if (kind == LockKind.Locked)
+        {
+            return true;
+        }
+
+        hasFrozen = true;
+        return false;
+    }
+
+    private static List<AssertionView> BuildObservationAssertionViews(
+        List<Assertion> directAssertions,
+        Dictionary<Guid, List<Assertion>> answersByQueryId,
+        Dictionary<AssertionId, Assertion> nonLockRetractedBy)
+    {
+        var combined = new List<Assertion>(directAssertions.Count);
+        combined.AddRange(directAssertions);
+        foreach (var assertion in directAssertions)
+        {
+            if (assertion.Kind == AssertionKind.Queried
+                && answersByQueryId.TryGetValue(assertion.Id.Value, out var answers))
+            {
+                combined.AddRange(answers);
+            }
+        }
+
+        combined.Sort(AssertionOrderComparer.Instance);
+
+        var views = new List<AssertionView>(combined.Count);
+        foreach (var a in combined)
+        {
+            views.Add(nonLockRetractedBy.TryGetValue(a.Id, out var ret)
+                ? new AssertionView(a.Id, a.Kind, a.Target, a.TargetRevision, a.Text, a.AssertedBy, a.AssertedAt, a.ReasonForChange, ret.Id, ret.AssertedAt)
+                : new AssertionView(a.Id, a.Kind, a.Target, a.TargetRevision, a.Text, a.AssertedBy, a.AssertedAt, a.ReasonForChange, null, null));
+        }
+
+        return views;
+    }
+
+    private static bool IsEarlierAssertion(Assertion candidate, Assertion existing)
+    {
+        var cmp = candidate.AssertedAt.CompareTo(existing.AssertedAt);
+        return cmp != 0 ? cmp < 0 : candidate.Id.CompareTo(existing.Id) < 0;
     }
 
     private static async Task<IReadOnlyList<ExportAttestationSnapshot>> ReadAttestationsAsync(
@@ -836,44 +1110,68 @@ internal sealed class KernelExportReader(KernelTenantDbContextFactory contexts) 
             .ToList();
     }
 
-    private static HashSet<string> BuildBlindedAuditKeys(
+    internal static HashSet<string> BuildBlindedAuditKeys(
         IReadOnlyList<ExportCollectionSnapshot> collections,
         IReadOnlyList<ExportObservationSnapshot> observations,
         IReadOnlyList<StudyLockEntry> locks,
         IReadOnlyList<ExportAttestationSnapshot> attestations,
         IReadOnlyList<ProtocolDesign> designs)
     {
-        var blindedObsIds = observations
-            .Where(o => o.IsBlindedTreatment)
-            .Select(o => o.ObservationId)
-            .ToHashSet();
-        var blindedObsGuids = blindedObsIds
-            .Select(id => id.Value)
-            .ToHashSet();
-
-        var blindedCollectionGuids = observations
-            .Where(o => o.IsBlindedTreatment && o.CollectionInstanceId is not null)
-            .Select(o => o.CollectionInstanceId!.Value.Value)
-            .ToHashSet();
-
-        foreach (var coll in collections)
+        var blindedObsIds = new HashSet<ObservationId>();
+        var blindedObsGuids = new HashSet<Guid>();
+        var blindedCollectionGuids = new HashSet<Guid>();
+        foreach (var obs in observations)
         {
-            if (BlindedTreatmentClassifier.Instance.IsBlindedCollectionSpec(coll.CollectionSpecId, coll.CollectionSpecName, designs: designs)
-                || coll.ItemIdsByObservation.Keys.Any(blindedObsIds.Contains))
+            if (!obs.IsBlindedTreatment)
             {
-                blindedCollectionGuids.Add(coll.CollectionInstanceId.Value);
                 continue;
             }
 
-            var spec = designs.SelectMany(d => d.CollectionSpecs)
-                .FirstOrDefault(s => string.Equals(s.Id, coll.CollectionSpecId, StringComparison.Ordinal));
-            if (spec is not null && spec.Items.Any(i => BlindedObservationClassifier.IsBlindedTreatment(
-                    i.Concept.ConceptId,
-                    new TextValue(string.Empty),
-                    concept: null,
-                    coll.CollectionSpecId,
-                    i.Id,
-                    designs)))
+            blindedObsIds.Add(obs.ObservationId);
+            blindedObsGuids.Add(obs.ObservationId.Value);
+            if (obs.CollectionInstanceId is { } cid)
+            {
+                blindedCollectionGuids.Add(cid.Value);
+            }
+        }
+
+        var firstSpecById = new Dictionary<string, CollectionSpec>(StringComparer.Ordinal);
+        foreach (var design in designs)
+        {
+            foreach (var spec in design.CollectionSpecs)
+            {
+                firstSpecById.TryAdd(spec.Id, spec);
+            }
+        }
+
+        var specBlindingCache = new Dictionary<CollectionSpecBlindingKey, bool>(CollectionSpecBlindingKeyComparer.Instance);
+        var emptyTextValue = new TextValue(string.Empty);
+        foreach (var coll in collections)
+        {
+            if (blindedCollectionGuids.Contains(coll.CollectionInstanceId.Value))
+            {
+                continue;
+            }
+
+            var specKey = new CollectionSpecBlindingKey(coll.CollectionSpecId, coll.CollectionSpecName);
+            if (!specBlindingCache.TryGetValue(specKey, out var isBlindedSpec))
+            {
+                isBlindedSpec = BlindedTreatmentClassifier.Instance.IsBlindedCollectionSpec(
+                        coll.CollectionSpecId,
+                        coll.CollectionSpecName,
+                        designs: designs)
+                    || (firstSpecById.TryGetValue(coll.CollectionSpecId, out var spec)
+                        && spec.Items.Any(i => BlindedObservationClassifier.IsBlindedTreatment(
+                            i.Concept.ConceptId,
+                            emptyTextValue,
+                            concept: null,
+                            coll.CollectionSpecId,
+                            i.Id,
+                            designs)));
+                specBlindingCache[specKey] = isBlindedSpec;
+            }
+
+            if (isBlindedSpec || (blindedObsIds.Count > 0 && coll.ItemIdsByObservation.Keys.Any(blindedObsIds.Contains)))
             {
                 blindedCollectionGuids.Add(coll.CollectionInstanceId.Value);
             }
@@ -973,5 +1271,74 @@ internal sealed class KernelExportReader(KernelTenantDbContextFactory contexts) 
             .ToDictionary(r => r.View.Sequence, r => r.AggregateId!);
 
         return ([.. rows.Select(r => r.View)], blindedSequences, aggregateIdsBySequence);
+    }
+
+    private sealed class AssertionOrderComparer : IComparer<Assertion>
+    {
+        public static readonly AssertionOrderComparer Instance = new();
+
+        public int Compare(Assertion? x, Assertion? y)
+        {
+            if (ReferenceEquals(x, y))
+            {
+                return 0;
+            }
+
+            if (x is null)
+            {
+                return -1;
+            }
+
+            if (y is null)
+            {
+                return 1;
+            }
+
+            var cmp = x.AssertedAt.CompareTo(y.AssertedAt);
+            return cmp != 0 ? cmp : x.Id.CompareTo(y.Id);
+        }
+    }
+
+    private readonly record struct ScopeKey(string Kind, Guid Id);
+
+    private sealed class ScopeKeyComparer : IEqualityComparer<ScopeKey>
+    {
+        public static readonly ScopeKeyComparer Instance = new();
+
+        public bool Equals(ScopeKey x, ScopeKey y) =>
+            x.Id == y.Id && string.Equals(x.Kind, y.Kind, StringComparison.Ordinal);
+
+        public int GetHashCode(ScopeKey obj) =>
+            HashCode.Combine(StringComparer.Ordinal.GetHashCode(obj.Kind), obj.Id);
+    }
+
+    private readonly record struct VersionedElementKey(ProtocolVersionId ProtocolVersionId, string ElementId);
+
+    private sealed class VersionedElementKeyComparer : IEqualityComparer<VersionedElementKey>
+    {
+        public static readonly VersionedElementKeyComparer Instance = new();
+
+        public bool Equals(VersionedElementKey x, VersionedElementKey y) =>
+            x.ProtocolVersionId == y.ProtocolVersionId
+            && string.Equals(x.ElementId, y.ElementId, StringComparison.Ordinal);
+
+        public int GetHashCode(VersionedElementKey obj) =>
+            HashCode.Combine(obj.ProtocolVersionId, StringComparer.Ordinal.GetHashCode(obj.ElementId));
+    }
+
+    private readonly record struct CollectionSpecBlindingKey(string SpecId, string SpecName);
+
+    private sealed class CollectionSpecBlindingKeyComparer : IEqualityComparer<CollectionSpecBlindingKey>
+    {
+        public static readonly CollectionSpecBlindingKeyComparer Instance = new();
+
+        public bool Equals(CollectionSpecBlindingKey x, CollectionSpecBlindingKey y) =>
+            string.Equals(x.SpecId, y.SpecId, StringComparison.Ordinal)
+            && string.Equals(x.SpecName, y.SpecName, StringComparison.Ordinal);
+
+        public int GetHashCode(CollectionSpecBlindingKey obj) =>
+            HashCode.Combine(
+                StringComparer.Ordinal.GetHashCode(obj.SpecId),
+                StringComparer.Ordinal.GetHashCode(obj.SpecName));
     }
 }

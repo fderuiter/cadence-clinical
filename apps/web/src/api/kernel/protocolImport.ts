@@ -271,12 +271,21 @@ export async function executeProtocolDraftImport({
   fileName,
   format,
   templateIds,
+  templateAssignments,
   replaceForms = false,
   amendmentClassification,
   transitionPolicy,
   reason,
   idempotencyKey,
 }: KernelProtocolImportRequest): Promise<KernelProtocolDraftSummary> {
+  const serializedAssignments =
+    templateAssignments && templateAssignments.length > 0
+      ? templateAssignments.map((assignment) => ({
+          template_id: assignment.templateId,
+          activity_ids: assignment.activityIds,
+        }))
+      : null;
+
   if (file) {
     const baseUrl = getBaseUrl().replace(/\/+$/, "");
     const url = `${baseUrl}/api/v1/kernel/studies/${encodeURIComponent(studyRef)}/protocol-imports`;
@@ -286,6 +295,12 @@ export async function executeProtocolDraftImport({
       for (const tplId of templateIds) {
         formData.append("template_ids", tplId);
       }
+    }
+    if (serializedAssignments) {
+      formData.append(
+        "template_assignments",
+        JSON.stringify(serializedAssignments)
+      );
     }
     if (replaceForms) {
       formData.append("replace_forms", "true");
@@ -346,6 +361,7 @@ export async function executeProtocolDraftImport({
         template_ids:
           templateIds && templateIds.length > 0 ? templateIds : null,
         replace_forms: replaceForms,
+        template_assignments: serializedAssignments,
         amendment_classification: amendmentClassification ?? null,
         transition_policy: transitionPolicy ?? null,
       },

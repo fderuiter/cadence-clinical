@@ -62,6 +62,12 @@ vi.mock("../src/api/knowledge.js", async (importOriginal) => {
       listArticles: vi.fn(() =>
         Promise.resolve([...actual.DEFAULT_MOCK_ARTICLES])
       ),
+      getArticle: vi.fn((articleId) => {
+        const found = actual.DEFAULT_MOCK_ARTICLES.find(
+          (a) => a.id === articleId || a.slug === articleId
+        );
+        return Promise.resolve(found ? { ...found } : null);
+      }),
       listCategories: vi.fn(() =>
         Promise.resolve([...actual.DEFAULT_CATEGORIES])
       ),
@@ -791,6 +797,125 @@ describe("Knowledge Hub Browser View (Issue #4331)", () => {
       expect(
         wrapper.find("#knowledge-reader-pane .hash-code").attributes("title")
       ).toBe("sha256:abcd1234ef5678");
+    });
+
+    it("hydrates summary-only directory cards via getArticle, caches hydrated bodies, and preserves counts during server search", async () => {
+      const summaryA = {
+        id: "art-sum-ops",
+        slug: "sop-ops-summary",
+        title: "SOP-OPS-100: Site Initiation Checklist",
+        status: "PUBLISHED",
+        version_index: 2,
+        version_label: "2.0",
+        category_id: "cat-clinical-ops",
+        category_name: "Clinical Operations",
+        tags: ["initiation", "ecrf"],
+        author_user_id: "ops.lead",
+        created_at: "2026-11-01T10:00:00Z",
+        updated_at: "2026-11-02T10:00:00Z",
+        body_markdown: null,
+        body_html: null,
+      };
+      const summaryB = {
+        id: "art-sum-reg",
+        slug: "sop-reg-summary",
+        title: "SOP-REG-200: Essential Document Retention",
+        status: "IN_REVIEW",
+        version_index: 1,
+        version_label: "0.9",
+        category_id: "cat-regulatory-compliance",
+        category_name: "Regulatory & Quality Compliance",
+        tags: ["tmf", "retention"],
+        author_user_id: "qa.lead",
+        created_at: "2026-10-20T10:00:00Z",
+        updated_at: "2026-10-21T10:00:00Z",
+        body_markdown: null,
+        body_html: null,
+      };
+
+      knowledgeService.listArticles.mockImplementation(async (params = {}) => {
+        if (params?.q) {
+          // Simulate server SQL match against summaryB's active body text ("archival-vault-token")
+          return params.q.toLowerCase().includes("archival-vault")
+            ? [summaryB]
+            : [];
+        }
+        return [summaryA, summaryB];
+      });
+
+      knowledgeService.getArticle.mockImplementation(async (articleId) => {
+        if (articleId === "art-sum-ops") {
+          return {
+            ...summaryA,
+            body_markdown: "## Site Initiation\n1. Confirm IRB approval.",
+            body_html:
+              '<h2 id="site-initiation">Site Initiation</h2><ol><li>Confirm IRB approval.</li></ol>',
+          };
+        }
+        return {
+          ...summaryB,
+          body_markdown:
+            "## Retention\n1. Store records in archival-vault-token.",
+          body_html:
+            '<h2 id="retention">Retention</h2><ol><li>Store records in archival-vault-token.</li></ol>',
+        };
+      });
+
+      const wrapper = mount(KnowledgeView, {
+        global: { plugins: [pinia, router] },
+      });
+      await flushPromises();
+
+      // Auto-selected summaryA was hydrated via getArticle
+      expect(knowledgeService.getArticle).toHaveBeenCalledTimes(1);
+      expect(knowledgeService.getArticle).toHaveBeenCalledWith("art-sum-ops");
+      expect(wrapper.find("#sop-prose-viewer").html()).toContain(
+        "Confirm IRB approval."
+      );
+
+      // Selecting summaryB hydrates via getArticle; re-selecting summaryA uses cache
+      const initialCards = wrapper.findAll(".article-card");
+      expect(initialCards).toHaveLength(2);
+      await initialCards[1].trigger("click");
+      await flushPromises();
+      expect(knowledgeService.getArticle).toHaveBeenCalledTimes(2);
+      expect(knowledgeService.getArticle).toHaveBeenCalledWith("art-sum-reg");
+      expect(wrapper.find("#sop-prose-viewer").html()).toContain(
+        "Store records in archival-vault-token."
+      );
+
+      await initialCards[0].trigger("click");
+      await flushPromises();
+      expect(knowledgeService.getArticle).toHaveBeenCalledTimes(2);
+
+      // Server-backed search matches body-only term while keeping KPI, category, and tag counts accurate
+      knowledgeService.listArticles.mockClear();
+      await wrapper
+        .find("#knowledge-search-input")
+        .setValue("archival-vault-token");
+      await flushPromises();
+
+      expect(knowledgeService.listArticles).toHaveBeenCalledTimes(1);
+      expect(knowledgeService.listArticles).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: "ALL",
+          q: "archival-vault-token",
+        })
+      );
+      const searchedCards = wrapper.findAll(".article-card");
+      expect(searchedCards).toHaveLength(1);
+      expect(searchedCards[0].text()).toContain("SOP-REG-200");
+
+      // Total/Published stat cards, category counts, and tag chips still reflect full persona directory
+      const statValues = wrapper
+        .findAll(".stat-value")
+        .map((el) => el.text().trim());
+      expect(statValues).toEqual(["2", "1"]);
+      expect(wrapper.find(".category-list").text()).toContain(
+        "All Categories2"
+      );
+      expect(wrapper.find(".tag-chips-scroll").text()).toContain("initiation");
+      expect(wrapper.find(".tag-chips-scroll").text()).toContain("retention");
     });
   });
 });

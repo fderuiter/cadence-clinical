@@ -229,6 +229,188 @@ public sealed class SchemaDocumentationTests : IDisposable
             "intelligence");
     }
 
+    [Fact]
+    public void MigrationToolingService_Apply_RoutesSingleModuleAllAndExplicitConnectionToDatabaseMigrator()
+    {
+        string repoRoot = SecretsBaselineCleanerService.FindRepoRoot();
+        var invocations = new List<(string WorkDir, string Executable, IReadOnlyList<string> Args)>();
+        int FakeRunner(string workDir, string exe, IReadOnlyList<string> args)
+        {
+            invocations.Add((workDir, exe, args));
+            return 0;
+        }
+
+        MigrationToolingService.Apply("ctms", "Host=localhost;Database=cadence", repoRoot, FakeRunner).Should().Be(0);
+        MigrationToolingService.Apply("all", null, repoRoot, FakeRunner).Should().Be(0);
+        MigrationToolingService.Apply("no-such-module", null, repoRoot, FakeRunner).Should().Be(1);
+
+        invocations.Should().HaveCount(2);
+        invocations[0].Args.Should().Equal(
+            "run",
+            "--project",
+            "packages/tooling_core/src/Cadence.DatabaseMigrator/Cadence.DatabaseMigrator.csproj",
+            "--",
+            "--module",
+            "ctms",
+            "--connection",
+            "Host=localhost;Database=cadence");
+
+        invocations[1].Args.Should().Equal(
+            "run",
+            "--project",
+            "packages/tooling_core/src/Cadence.DatabaseMigrator/Cadence.DatabaseMigrator.csproj");
+    }
+
+    [Fact]
+    public void MigrationToolingService_BundleAndOptimize_RespectOfflinePlaceholderConnection_AndExecutionCompiledModelPolicy()
+    {
+        string repoRoot = SecretsBaselineCleanerService.FindRepoRoot();
+        var invocations = new List<IReadOnlyList<string>>();
+        int FakeRunner(string workDir, string exe, IReadOnlyList<string> args)
+        {
+            invocations.Add(args);
+            return 0;
+        }
+
+        string bundleDir = Path.Combine(_root, "bundles");
+        Func<string, string?> unconfiguredEnv = _ => null;
+        Func<string, string?> primaryConfiguredEnv = key =>
+            key == "ConnectionStrings__cadence" ? "Host=db;Database=cadence;Username=u;Password=p" : null;
+
+        MigrationToolingService.Bundle("kernel", bundleDir, repoRoot, FakeRunner, unconfiguredEnv).Should().Be(0);
+        MigrationToolingService.Bundle("ctms", bundleDir, repoRoot, FakeRunner, primaryConfiguredEnv).Should().Be(0);
+        MigrationToolingService.Optimize("kernel", "CustomCompiled", repoRoot, FakeRunner, unconfiguredEnv).Should().Be(0);
+        MigrationToolingService.Optimize("execution", null, repoRoot, FakeRunner, unconfiguredEnv).Should().Be(1);
+        MigrationToolingService.Optimize("all", null, repoRoot, FakeRunner, primaryConfiguredEnv).Should().Be(0);
+
+        // Offline bundle supplies -- --connection placeholder
+        invocations[0].Should().ContainInOrder(
+            "ef",
+            "migrations",
+            "bundle",
+            "--context",
+            "KernelDbContext",
+            "--output",
+            Path.Combine(bundleDir, "kernel_migration_bundle"),
+            "--force",
+            "--",
+            "--connection",
+            MigrationToolingService.DesignTimePlaceholderConnection);
+
+        // Configured ConnectionStrings__cadence omits placeholder
+        invocations[1].Should().NotContain(MigrationToolingService.DesignTimePlaceholderConnection);
+
+        // Offline optimize passes CompiledModelNamespace + placeholder
+        invocations[2].Should().ContainInOrder(
+            "ef",
+            "dbcontext",
+            "optimize",
+            "--context",
+            "KernelDbContext",
+            "--output-dir",
+            "CustomCompiled",
+            "--namespace",
+            "Cadence.Kernel.Persistence.CompiledModels",
+            "--",
+            "--connection",
+            MigrationToolingService.DesignTimePlaceholderConnection);
+
+        // Optimize("all") runs the 17 modules with SupportsCompiledModel == true and skips execution
+        invocations.Skip(3).Should().HaveCount(17);
+        invocations.Skip(3).SelectMany(a => a).Should().NotContain("ExecutionDbContext");
+    }
+
+    [Fact]
+    public void MigrationToolingService_Seed_InvokesExecutionSeeder_SkipsNonSeedingOnAll_AndCitesDevelopmentTenantBootstrapOnKernel()
+    {
+        string repoRoot = SecretsBaselineCleanerService.FindRepoRoot();
+        var invocations = new List<IReadOnlyList<string>>();
+        int FakeRunner(string workDir, string exe, IReadOnlyList<string> args)
+        {
+            invocations.Add(args);
+            return 0;
+        }
+
+        using var execOut = new StringWriter();
+        using var execErr = new StringWriter();
+        MigrationToolingService.Seed("execution", repoRoot, FakeRunner, execOut, execErr).Should().Be(0);
+        invocations.Should().ContainSingle().Which.Should().Equal(
+            "run",
+            "--project",
+            Path.Combine(repoRoot, "apps", "execution", "src", "Cadence.Apps.Execution.csproj"),
+            "--",
+            "--seed");
+
+        invocations.Clear();
+        using var allOut = new StringWriter();
+        using var allErr = new StringWriter();
+        MigrationToolingService.Seed("all", repoRoot, FakeRunner, allOut, allErr).Should().Be(0);
+        invocations.Should().ContainSingle("only execution declares a CLI --seed entrypoint");
+        allOut.ToString().Should().Contain("Skipping 'ctms'");
+        allErr.ToString().Should().BeEmpty();
+
+        using var kernelOut = new StringWriter();
+        using var kernelErr = new StringWriter();
+        MigrationToolingService.Seed("kernel", repoRoot, FakeRunner, kernelOut, kernelErr).Should().Be(1);
+        kernelErr.ToString().Should().Contain("apps/kernel-api/src/DevelopmentTenantBootstrap.cs");
+
+        using var ctmsOut = new StringWriter();
+        using var ctmsErr = new StringWriter();
+        MigrationToolingService.Seed("ctms", repoRoot, FakeRunner, ctmsOut, ctmsErr).Should().Be(1);
+        ctmsErr.ToString().Should().Contain("apps/execution/src/Program.cs");
+    }
+
+    [Fact]
+    public void MigrationToolingService_Add_RunsScopedDotnetFormatWhitespaceAndStyleOnTouchedMigrationFiles()
+    {
+        string fakeRepo = Directory.CreateDirectory(Path.Combine(_root, "fake-repo")).FullName;
+        string projectDir = Directory.CreateDirectory(Path.Combine(fakeRepo, "apps", "ctms", "src")).FullName;
+        string projectPath = Path.Combine(projectDir, "Cadence.Apps.Ctms.csproj");
+        File.WriteAllText(projectPath, "<Project />");
+
+        string migrationsDir = Directory.CreateDirectory(
+            Path.Combine(projectDir, "Infrastructure", "Persistence", "Migrations")).FullName;
+        string untouchedMigration = Path.Combine(migrationsDir, "20260901000000_Initial.cs");
+        File.WriteAllText(untouchedMigration, "namespace Existing;\n");
+
+        var invocations = new List<IReadOnlyList<string>>();
+        int FakeRunner(string workDir, string exe, IReadOnlyList<string> args)
+        {
+            invocations.Add(args);
+            if (args.Count >= 3 && args[0] == "ef" && args[1] == "migrations" && args[2] == "add")
+            {
+                File.WriteAllText(Path.Combine(migrationsDir, "20261125000000_AddWindow.cs"), "namespace Scoped;\n");
+                File.WriteAllText(Path.Combine(migrationsDir, "20261125000000_AddWindow.Designer.cs"), "namespace Scoped;\n");
+                File.WriteAllText(Path.Combine(migrationsDir, "CtmsDbContextModelSnapshot.cs"), "namespace Scoped;\n");
+            }
+
+            return 0;
+        }
+
+        MigrationToolingService.Add("ctms", "AddWindow", fakeRepo, FakeRunner, _ => null).Should().Be(0);
+
+        invocations.Should().HaveCount(3);
+        invocations[1].Should().Equal(
+            "format",
+            "whitespace",
+            ".",
+            "--folder",
+            "--include",
+            "apps/ctms/src/Infrastructure/Persistence/Migrations/20261125000000_AddWindow.Designer.cs",
+            "apps/ctms/src/Infrastructure/Persistence/Migrations/20261125000000_AddWindow.cs",
+            "apps/ctms/src/Infrastructure/Persistence/Migrations/CtmsDbContextModelSnapshot.cs");
+
+        invocations[2].Should().Equal(
+            "format",
+            "style",
+            projectPath,
+            "--no-restore",
+            "--include",
+            "apps/ctms/src/Infrastructure/Persistence/Migrations/20261125000000_AddWindow.Designer.cs",
+            "apps/ctms/src/Infrastructure/Persistence/Migrations/20261125000000_AddWindow.cs",
+            "apps/ctms/src/Infrastructure/Persistence/Migrations/CtmsDbContextModelSnapshot.cs");
+    }
+
     private sealed class LibraryContext : DbContext
     {
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder) =>

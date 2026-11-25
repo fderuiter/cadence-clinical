@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -62,6 +64,17 @@ public static class SiteComplianceEndpoints
             .RequireChangeReasonHeader()
             .AddEndpointFilter<ValidationFilter<EtmfCompletenessWebhookPayload>>();
 
+        app.MapPost("/api/v1/execution/webhooks/etmf/batch", ApplyEtmfWebhookBatchAsync)
+            .WithTags("SiteCompliance")
+            .WithName("EtmfCompletenessBatchWebhook")
+            .Produces<OperationEnvelopeResponse>(StatusCodes.Status200OK)
+            .ProducesValidationProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            // Called service to service by eTMF for study-wide startup snapshots, signed as etmf_service.
+            .RequirePermission("site_compliance:etmf_sync").RequireCallerStudyScope()
+            .RequireChangeReasonHeader()
+            .AddEndpointFilter<ValidationFilter<EtmfCompletenessBatchWebhookPayload>>();
+
         app.MapPost("/api/v1/execution/sites/{siteId}/activate", ActivateSiteAsync)
             .WithTags("SiteCompliance")
             .WithName("ActivateSite")
@@ -111,6 +124,63 @@ public static class SiteComplianceEndpoints
         }
 
         var result = await svc.ApplyEtmfWebhookAsync(payload, ct).ConfigureAwait(false);
+        return result.Match(
+            onSuccess: _ => Results.Ok(new OperationEnvelopeResponse("success", "Compliance cache updated successfully.")),
+            onFailure: e => e.ToProblemResult());
+    }
+
+    /// <summary>
+    /// <c>POST /api/v1/execution/webhooks/etmf/batch</c>. Enforces verified workspace tenant, study, and per-site
+    /// caller scopes across all target sites, checks Clinical Kernel write locks for the study and target sites in a
+    /// single batch request, and commits only newly created or changed <c>SiteComplianceCache</c> rows in one save.
+    /// </summary>
+    public static async Task<IResult> ApplyEtmfWebhookBatchAsync(
+        EtmfCompletenessBatchWebhookPayload payload,
+        ISiteComplianceApplicationService svc,
+        CancellationToken ct,
+        HttpContext? http = null,
+        [FromServices] IKernelLockGuard? lockGuard = null)
+    {
+        ct.ThrowIfCancellationRequested();
+
+        IReadOnlyList<EtmfSiteCompletenessItem> sites = payload.Sites ?? [];
+        string studyCode = payload.StudyId.Value;
+        if (sites.Count == 0)
+        {
+            if (ClinicalScopeGuard.RequireStudyAndOptionalSite(
+                http,
+                studyCode,
+                siteId: null,
+                code: ClinicalScopeGuard.ForbiddenCode,
+                requireVerifiedTenant: true) is { } studyDenied)
+            {
+                return studyDenied;
+            }
+        }
+        else
+        {
+            foreach (var item in sites)
+            {
+                if (ClinicalScopeGuard.RequireStudyAndSite(
+                    http,
+                    studyCode,
+                    item.SiteId.Value,
+                    ClinicalScopeGuard.ForbiddenCode,
+                    requireVerifiedTenant: true) is { } siteDenied)
+                {
+                    return siteDenied;
+                }
+            }
+        }
+
+        List<string> siteIds = sites.Select(s => s.SiteId.Value).ToList();
+        if (await ExecutionLockGuard.EnsureUnlockedBatchAsync(lockGuard, studyCode, siteIds, cancellationToken: ct)
+            .ConfigureAwait(false) is { } locked)
+        {
+            return locked;
+        }
+
+        var result = await svc.ApplyEtmfWebhookBatchAsync(payload, ct).ConfigureAwait(false);
         return result.Match(
             onSuccess: _ => Results.Ok(new OperationEnvelopeResponse("success", "Compliance cache updated successfully.")),
             onFailure: e => e.ToProblemResult());

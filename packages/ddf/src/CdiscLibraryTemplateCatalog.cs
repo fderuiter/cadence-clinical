@@ -139,6 +139,7 @@ public sealed partial class CdiscLibraryTemplateCatalog
             var primaryForm = forms[0];
             var formOid = primaryForm.Attribute("OID")?.Value?.Trim() ?? Path.GetFileNameWithoutExtension(filePath);
             var formName = primaryForm.Attribute("Name")?.Value?.Trim() ?? formOid;
+            var repeating = forms.Any(f => string.Equals(f.Attribute("Repeating")?.Value?.Trim(), "Yes", StringComparison.OrdinalIgnoreCase));
             var relative = Path.GetRelativePath(root, filePath).Replace('\\', '/');
             var parentFolder = Path.GetDirectoryName(relative)?.Replace('\\', '/') ?? "General";
             var category = parentFolder.Replace('_', ' ');
@@ -151,7 +152,7 @@ public sealed partial class CdiscLibraryTemplateCatalog
                 suffix++;
             }
 
-            return new BundledProtocolTemplate(slug, category, formOid, formName, Path.GetFileName(filePath), itemCount);
+            return new BundledProtocolTemplate(slug, category, formOid, formName, Path.GetFileName(filePath), itemCount, repeating);
         }
         catch (Exception ex) when (ex is IOException or XmlException)
         {

@@ -189,6 +189,29 @@ public sealed class TicketPersistenceAndAuditPostgresTests(TicketsAndKnowledgePo
             Ct);
         studyParamResp.Should().NotBeNull();
         studyParamResp!.MatchedMapping!.RoutePattern.Should().Be("/studies/:studyCode");
+        studyParamResp.PrimaryArticle!.BodyMarkdown.Should().NotBeNullOrWhiteSpace();
+        studyParamResp.PrimaryArticle.BodyHtml.Should().NotBeNullOrWhiteSpace();
+        studyParamResp.RelatedArticles.Should().NotBeEmpty();
+        studyParamResp.RelatedArticles.Should().OnlyContain(rel => rel.BodyMarkdown == null && rel.BodyHtml == null);
+
+        var directoryArticles = await client.GetFromJsonAsync<List<KnowledgeArticleDto>>(
+            "/api/v1/knowledge/articles?status_filter=ALL",
+            Ct);
+        directoryArticles.Should().NotBeNull().And.NotBeEmpty();
+        directoryArticles!.Should().OnlyContain(a => a.BodyMarkdown == null && a.BodyHtml == null);
+
+        var searchedArticles = await client.GetFromJsonAsync<List<KnowledgeArticleDto>>(
+            "/api/v1/knowledge/articles?status_filter=PUBLISHED&q=GREENLIGHT",
+            Ct);
+        searchedArticles.Should().NotBeNull().And.NotBeEmpty();
+        searchedArticles!.Should().OnlyContain(a => a.BodyMarkdown == null && a.BodyHtml == null);
+
+        var hydratedDetail = await client.GetFromJsonAsync<KnowledgeArticleDto>(
+            $"/api/v1/knowledge/articles/{searchedArticles[0].Id}",
+            Ct);
+        hydratedDetail.Should().NotBeNull();
+        hydratedDetail!.BodyMarkdown.Should().NotBeNullOrWhiteSpace();
+        hydratedDetail.BodyHtml.Should().NotBeNullOrWhiteSpace();
 
         // Also verify a second tenant ("tenant-b") seeds and resolves its own isolated SOP catalog without unique-index collisions
         var tenantBIdentity = TestSecurityContext.Identity("usr-pg-cra-tenant-b", "CRA") with { TenantId = "tenant-b" };

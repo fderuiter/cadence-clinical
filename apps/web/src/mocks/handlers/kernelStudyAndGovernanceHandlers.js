@@ -389,6 +389,19 @@ export function createKernelStudyAndGovernanceHandlers(store) {
       }
     ),
     http.get(
+      "*/api/v1/kernel/enrollments/:enrollmentRef/schedule",
+      ({ params, request }) => {
+        const url = new URL(request.url);
+        const enrollmentRef = decodeURIComponent(String(params.enrollmentRef));
+        return HttpResponse.json(
+          store.getEnrollmentSchedule(enrollmentRef, {
+            asOf: url.searchParams.get("as_of"),
+            timeZone: url.searchParams.get("time_zone"),
+          })
+        );
+      }
+    ),
+    http.get(
       "*/api/v1/kernel/enrollments/:enrollmentRef/casebook",
       async ({ params, request }) => {
         const url = new URL(request.url);

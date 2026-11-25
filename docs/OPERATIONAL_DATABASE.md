@@ -69,18 +69,22 @@ docker run --rm \
 Readiness (`/healthz/ready`) fails while the database is unreachable, so orchestrators hold traffic until the
 database is back.
 
-## Idempotent scripts (DBA review, GxP qualification)
+## Idempotent scripts, bundles, compiled models, and CLI apply/seed
 
 ```bash
-pnpm cadence migrations script <module|all>   # writes TestResults/migrations/<module>.sql
-# Shell wrappers delegate to the same CLI command:
-scripts/manage_migrations.sh script <module|all>
-pwsh scripts/manage_migrations.ps1 script <module|all>
+pnpm cadence migrations script [module|all]     # writes TestResults/migrations/<module>.sql
+pnpm cadence migrations bundle [module|all]     # writes TestResults/migrations/<module>_migration_bundle
+pnpm cadence migrations optimize [module|all]   # writes CompiledModels/ per module (skips execution)
+pnpm cadence migrations apply [module|all]      # creates missing SearchPath schemas and migrates via Cadence.DatabaseMigrator
+pnpm cadence migrations seed [module|all]       # runs CLI seeders (execution; cites DevelopmentTenantBootstrap.cs for kernel)
+# Thin pass-through wrappers delegate all 8 actions directly to cadence migrations:
+scripts/manage_migrations.sh <add|script|list|verify|apply|bundle|optimize|seed> ...
+pwsh scripts/manage_migrations.ps1 <add|script|list|verify|apply|bundle|optimize|seed> ...
 ```
 
-Generated SQL review artifacts are written to `TestResults/migrations/<module>.sql` (gitignored) rather than checked
+Generated SQL review artifacts and migration bundles are written to `TestResults/migrations/` (gitignored) rather than checked
 into `Migrations/`. Standalone service scripts are unqualified; run them with `SET search_path TO <schema>, public;`
-after `CREATE SCHEMA IF NOT EXISTS <schema>;`.
+after `CREATE SCHEMA IF NOT EXISTS <schema>;`. `pnpm cadence migrations apply [module|all]` delegates to `Cadence.DatabaseMigrator` so any missing `SearchPath` schema is pre-created before EF Core applies migrations, keeping `public` empty.
 
 ## Adding and verifying migrations
 
@@ -89,6 +93,8 @@ pnpm cadence migrations add <module> <MigrationName>
 pnpm cadence migrations list [module|all]
 pnpm cadence migrations verify [module|all]
 ```
+
+`pnpm cadence migrations add` automatically runs scoped `dotnet format whitespace` and `dotnet format style` over newly generated or updated `.cs` files in the target `Migrations/` directory so file-scoped namespaces satisfy `.editorconfig` immediately.
 
 `pnpm cadence migrations verify` (and `pnpm cadence check schema-doc`) runs `Cadence.SchemaDocExporter` across all 18
 persistence modules without opening a database connection, failing closed when:
@@ -113,5 +119,5 @@ every table, column, key, index, and check constraint per module without volatil
 | `missing its '*.Designer.cs' companion`                         | Hand-authored migration committed without EF Core `.Designer.cs` metadata | Scaffold via `pnpm cadence migrations add` so `.Designer.cs` is generated |
 | `duplicates CreateTable` / `duplicates AddColumn`               | Parallel branches added migrations creating the same table or column      | Re-scaffold the later branch's migration on top of the merged snapshot    |
 | `relation ... already exists`                                   | A local database created before ADR-2447 has tables in `public`           | Drop and recreate the local database (`docker compose down -v`)           |
-| Service exits with `No PostgreSQL connection string configured` | Neither connection key set outside Development                            | Set `ConnectionStrings__cadence`                                          |
+| Service exits with `No PostgreSQL connection string configured` | Neither `ConnectionStrings__cadence` nor `POSTGRES_CONNECTION_STRING` set | Set `ConnectionStrings__cadence`                                          |
 | `/healthz/ready` returns 503                                    | Database unreachable or credentials wrong                                 | Check connectivity from the service's network                             |

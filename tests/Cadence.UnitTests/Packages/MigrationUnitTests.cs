@@ -179,4 +179,60 @@ public class MigrationUnitTests
         app.Services.GetServices<IHostedService>()
             .Should().ContainSingle(s => s is CadenceMigrationHostedService<TestDbContext>);
     }
+
+    [Theory]
+    [InlineData("Host=cli", "Host=primary", "Host=legacy", "Host=cli")]
+    [InlineData(null, "Host=primary", "Host=legacy", "Host=primary")]
+    [InlineData(null, null, "Host=legacy", "Host=legacy")]
+    public void KernelAndModuleDesignTimeFactories_HonorConnectionPrecedence(
+        string? cliConnection,
+        string? primaryEnv,
+        string? legacyEnv,
+        string expected)
+    {
+        string[] args = cliConnection is null
+            ? []
+            : [CadenceDatabaseExtensions.DesignTimeConnectionArgument, cliConnection];
+
+        string? LookupEnv(string key) => key switch
+        {
+            CadenceDatabaseExtensions.PrimaryConnectionStringEnvVar => primaryEnv,
+            CadenceDatabaseExtensions.LegacyConnectionStringKey => legacyEnv,
+            _ => null,
+        };
+
+        KernelDbContextDesignTimeFactory.ResolveConnectionString(args, LookupEnv).Should().Be(expected);
+        ExecutionModuleDbContextDesignTimeFactory.ResolveConnectionString(args, LookupEnv).Should().Be(expected);
+        IntelligenceDbContextDesignTimeFactory.ResolveConnectionString(args, LookupEnv).Should().Be(expected);
+    }
+
+    [Fact]
+    public void KernelAndModuleDesignTimeFactories_FailClosedWhenAllConnectionSourcesOmitted()
+    {
+        Func<string, string?> emptyEnv = _ => null;
+
+        Action kernelAct = () => KernelDbContextDesignTimeFactory.ResolveConnectionString([], emptyEnv);
+        Action execModAct = () => ExecutionModuleDbContextDesignTimeFactory.ResolveConnectionString([], emptyEnv);
+        Action intelAct = () => IntelligenceDbContextDesignTimeFactory.ResolveConnectionString([], emptyEnv);
+
+        kernelAct.Should().Throw<InvalidOperationException>()
+            .WithMessage("*ConnectionStrings__cadence*POSTGRES_CONNECTION_STRING*--connection*");
+        execModAct.Should().Throw<InvalidOperationException>()
+            .WithMessage("*ConnectionStrings__cadence*POSTGRES_CONNECTION_STRING*--connection*");
+        intelAct.Should().Throw<InvalidOperationException>()
+            .WithMessage("*ConnectionStrings__cadence*POSTGRES_CONNECTION_STRING*--connection*");
+
+        bool anyEnvConfigured =
+            !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable(CadenceDatabaseExtensions.PrimaryConnectionStringEnvVar)) ||
+            !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable(CadenceDatabaseExtensions.LegacyConnectionStringKey));
+        if (!anyEnvConfigured)
+        {
+            Action createIntel = () =>
+            {
+                using var _ = new IntelligenceDbContextDesignTimeFactory().CreateDbContext([]);
+            };
+            createIntel.Should().Throw<InvalidOperationException>(
+                "IntelligenceDbContextDesignTimeFactory must never fall back to a hardcoded cadence_design connection string");
+        }
+    }
 }

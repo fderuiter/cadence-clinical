@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Data.Common;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -28,6 +30,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -875,6 +878,360 @@ public sealed class ContextualHelpEndpointsTests : IAsyncDisposable
 
         var auditEntries = await verifyDb.AuditLogEntries.AsNoTracking().ToListAsync(Ct);
         VerifyMerkleChain(auditEntries);
+    }
+
+    [Fact]
+    [Trait("Category", "GxP_OQ")]
+    [GxPRequirement("PRD-KNB-001")]
+    public async Task Categories_RepeatedCallsForSeededTenant_SkipBaselineBodyScanQueries()
+    {
+        using var isolatedConn = new SqliteConnection("DataSource=:memory:");
+        await isolatedConn.OpenAsync(Ct);
+        var sqlRecorder = new SqlCommandRecordingInterceptor();
+
+        await using var factory = CreateSqlRecordingFactory(isolatedConn, sqlRecorder);
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<KnowledgeDbContext>();
+            await db.Database.EnsureCreatedAsync(Ct);
+        }
+
+        var identity = TestSecurityContext.Identity("usr-crc-perf", "CRC");
+        using var client = factory.CreateDefaultClient(new TestSecurityContext.GatewaySigningHandler(identity));
+
+        var firstResp = await client.GetFromJsonAsync<List<KnowledgeCategoryDto>>("/api/v1/knowledge/categories", Ct);
+        firstResp.Should().NotBeNull().And.NotBeEmpty();
+
+        sqlRecorder.Clear();
+
+        var secondResp = await client.GetFromJsonAsync<List<KnowledgeCategoryDto>>("/api/v1/knowledge/categories", Ct);
+        secondResp.Should().NotBeNull().And.HaveCount(firstResp!.Count);
+
+        var thirdResp = await client.GetFromJsonAsync<List<KnowledgeCategoryDto>>("/api/v1/knowledge/categories?persona=auditor", Ct);
+        thirdResp.Should().NotBeNull().And.NotBeEmpty();
+
+        var postSeedCommands = sqlRecorder.Commands;
+        postSeedCommands.Should().NotBeEmpty();
+        postSeedCommands.Should().NotContain(sql => sql.Contains("knowledge_article_versions", StringComparison.OrdinalIgnoreCase));
+        postSeedCommands.Should().NotContain(sql => sql.Contains("BodyHtml", StringComparison.OrdinalIgnoreCase) || sql.Contains("body_html", StringComparison.OrdinalIgnoreCase));
+        postSeedCommands.Should().NotContain(sql => sql.Contains("BodyMarkdown", StringComparison.OrdinalIgnoreCase) || sql.Contains("body_markdown", StringComparison.OrdinalIgnoreCase));
+        postSeedCommands.Should().NotContain(sql => sql.Contains("contextual_help_mappings", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    [Trait("Category", "GxP_OQ")]
+    [GxPRequirement("PRD-KNB-001")]
+    [GxPRequirement("PRD-KNB-002")]
+    public async Task ResolveContextualHelp_QueriesSingleWinningVersionAndOmitsRelatedBodies()
+    {
+        using var isolatedConn = new SqliteConnection("DataSource=:memory:");
+        await isolatedConn.OpenAsync(Ct);
+        var sqlRecorder = new SqlCommandRecordingInterceptor();
+
+        await using var factory = CreateSqlRecordingFactory(isolatedConn, sqlRecorder);
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<KnowledgeDbContext>();
+            await db.Database.EnsureCreatedAsync(Ct);
+        }
+
+        var identity = TestSecurityContext.Identity("usr-crc-ctx", "CRC");
+        using var client = factory.CreateDefaultClient(new TestSecurityContext.GatewaySigningHandler(identity));
+
+        await client.GetAsync("/api/v1/knowledge/categories", Ct);
+        sqlRecorder.Clear();
+
+        var payload = await client.GetFromJsonAsync<ContextualHelpResponseDto>(
+            "/api/v1/knowledge/contextual-help?route=/studies/DEMO-01&persona=site_crc",
+            Ct);
+
+        payload.Should().NotBeNull();
+        payload!.PrimaryArticle.Should().NotBeNull();
+        payload.PrimaryArticle!.BodyMarkdown.Should().NotBeNullOrWhiteSpace();
+        payload.PrimaryArticle.BodyHtml.Should().NotBeNullOrWhiteSpace();
+        payload.PrimaryVersion.Should().NotBeNull();
+        payload.PrimaryVersion!.BodyMarkdown.Should().NotBeNullOrWhiteSpace();
+        payload.PrimaryVersion.BodyHtml.Should().NotBeNullOrWhiteSpace();
+
+        payload.RelatedArticles.Should().NotBeEmpty();
+        payload.RelatedArticles.Should().OnlyContain(rel => rel.BodyMarkdown == null && rel.BodyHtml == null);
+        payload.RelatedArticles.Should().OnlyContain(rel => !string.IsNullOrWhiteSpace(rel.Title) && !string.IsNullOrWhiteSpace(rel.VersionLabel));
+
+        var versionQueries = sqlRecorder.Commands
+            .Where(sql => sql.Contains("knowledge_article_versions", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        versionQueries.Should().ContainSingle("contextual-help should load only the single winning published version row");
+        versionQueries[0].Should().NotContain(" IN (", "winning version lookup must target one ID rather than all published versions");
+    }
+
+    [Fact]
+    [Trait("Category", "GxP_OQ")]
+    [GxPRequirement("PRD-KNB-001")]
+    public async Task ListArticles_ProjectsSummariesWithoutReadingBodies_AndFiltersActiveVersionInSql()
+    {
+        using var isolatedConn = new SqliteConnection("DataSource=:memory:");
+        await isolatedConn.OpenAsync(Ct);
+        var sqlRecorder = new SqlCommandRecordingInterceptor();
+
+        await using var factory = CreateSqlRecordingFactory(isolatedConn, sqlRecorder);
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<KnowledgeDbContext>();
+            await db.Database.EnsureCreatedAsync(Ct);
+        }
+
+        var identity = TestSecurityContext.Identity("usr-admin-list", "Sponsor Admin");
+        using var client = factory.CreateDefaultClient(new TestSecurityContext.GatewaySigningHandler(identity));
+
+        await client.GetAsync("/api/v1/knowledge/categories", Ct);
+
+        var t0 = _clock.UtcNow;
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<KnowledgeDbContext>();
+
+            db.KnowledgeArticles.Add(new KnowledgeArticle
+            {
+                Id = "art-multi-pub",
+                Slug = "sop-multi-published-slug",
+                Title = "SOP-MULTI-701: Active Pointer Search Verification",
+                CategoryId = "cat-clinical-ops",
+                Status = "PUBLISHED",
+                VersionIndex = 2,
+                VersionLabel = "2.4",
+                CurrentPublishedVersionId = "ver-multi-pub-v2",
+                Tags = "[\"pointer-tag-alpha\",\"ecrf\"]",
+                AuthorUserId = "lead_clinical_ops",
+                CreatedAt = t0.AddMinutes(1),
+                CreatedBy = "lead_clinical_ops",
+                ReasonForChange = "Published v2.4",
+            });
+
+            db.KnowledgeArticleVersions.AddRange(
+                new KnowledgeArticleVersion
+                {
+                    Id = "ver-multi-pub-v1",
+                    ArticleId = "art-multi-pub",
+                    VersionIndex = 1,
+                    VersionLabel = "1.0",
+                    StatusAtSnapshot = "SUPERSEDED",
+                    BodyMarkdown = "## Legacy\n1. Contains LEGACY_SUPERSEDED_ONLY_TOKEN_991.",
+                    BodyHtml = "<h2 id=\"legacy\">Legacy</h2><ol><li>Contains LEGACY_SUPERSEDED_ONLY_TOKEN_991.</li></ol>",
+                    IsLocked = true,
+                    CreatedAt = t0,
+                    CreatedBy = "lead_clinical_ops",
+                    ReasonForChange = "Initial release",
+                },
+                new KnowledgeArticleVersion
+                {
+                    Id = "ver-multi-pub-v2",
+                    ArticleId = "art-multi-pub",
+                    VersionIndex = 2,
+                    VersionLabel = "2.4",
+                    StatusAtSnapshot = "PUBLISHED",
+                    BodyMarkdown = "## Current\n1. Contains ACTIVE_PUBLISHED_BODY_TOKEN_442.",
+                    BodyHtml = "<h2 id=\"current\">Current</h2><ol><li>Contains ACTIVE_PUBLISHED_BODY_TOKEN_442.</li></ol>",
+                    IsLocked = true,
+                    CreatedAt = t0.AddMinutes(2),
+                    CreatedBy = "lead_clinical_ops",
+                    ReasonForChange = "Published v2.4",
+                });
+
+            db.KnowledgeArticles.Add(new KnowledgeArticle
+            {
+                Id = "art-multi-draft",
+                Slug = "sop-multi-draft-slug",
+                Title = "SOP-DRAFT-702: Working Draft Metadata Resolution",
+                CategoryId = "cat-clinical-ops",
+                Status = "DRAFT",
+                VersionIndex = 1,
+                VersionLabel = "0.1",
+                CurrentPublishedVersionId = null,
+                Tags = "[\"draft-tag-beta\"]",
+                AuthorUserId = "lead_clinical_ops",
+                CreatedAt = t0.AddMinutes(3),
+                CreatedBy = "lead_clinical_ops",
+                ReasonForChange = "Created draft",
+            });
+
+            db.KnowledgeArticleVersions.AddRange(
+                new KnowledgeArticleVersion
+                {
+                    Id = "ver-multi-draft-v1",
+                    ArticleId = "art-multi-draft",
+                    VersionIndex = 1,
+                    VersionLabel = "0.1",
+                    StatusAtSnapshot = "DRAFT",
+                    BodyMarkdown = "## Draft v1\n1. Contains STALE_DRAFT_TOKEN_111.",
+                    BodyHtml = null,
+                    IsLocked = false,
+                    CreatedAt = t0.AddMinutes(3),
+                    CreatedBy = "lead_clinical_ops",
+                    ReasonForChange = "Draft v1",
+                },
+                new KnowledgeArticleVersion
+                {
+                    Id = "ver-multi-draft-v2",
+                    ArticleId = "art-multi-draft",
+                    VersionIndex = 2,
+                    VersionLabel = "0.2",
+                    StatusAtSnapshot = "DRAFT",
+                    BodyMarkdown = "## Draft v2\n1. Contains LATEST_DRAFT_BODY_TOKEN_888.",
+                    BodyHtml = null,
+                    IsLocked = false,
+                    CreatedAt = t0.AddMinutes(4),
+                    CreatedBy = "lead_clinical_ops",
+                    ReasonForChange = "Draft v2",
+                });
+
+            await db.SaveChangesAsync(Ct);
+        }
+
+        sqlRecorder.Clear();
+
+        var directory = await client.GetFromJsonAsync<List<KnowledgeArticleDto>>(
+            "/api/v1/knowledge/articles?status_filter=ALL",
+            Ct);
+        directory.Should().NotBeNull().And.NotBeEmpty();
+        directory!.Should().OnlyContain(a => a.BodyMarkdown == null && a.BodyHtml == null);
+
+        var pubSummary = directory.Single(a => a.Id == "art-multi-pub");
+        pubSummary.VersionIndex.Should().Be(2);
+        pubSummary.VersionLabel.Should().Be("2.4");
+
+        var draftSummary = directory.Single(a => a.Id == "art-multi-draft");
+        draftSummary.VersionIndex.Should().Be(2);
+        draftSummary.VersionLabel.Should().Be("0.2");
+
+        sqlRecorder.Commands.Should().NotContain(sql => sql.Contains("BodyMarkdown", StringComparison.OrdinalIgnoreCase) || sql.Contains("body_markdown", StringComparison.OrdinalIgnoreCase));
+        sqlRecorder.Commands.Should().NotContain(sql => sql.Contains("BodyHtml", StringComparison.OrdinalIgnoreCase) || sql.Contains("body_html", StringComparison.OrdinalIgnoreCase));
+
+        sqlRecorder.Clear();
+
+        var activeBodyHits = await client.GetFromJsonAsync<List<KnowledgeArticleDto>>(
+            "/api/v1/knowledge/articles?status_filter=ALL&q=active_published_body_token_442",
+            Ct);
+        activeBodyHits.Should().ContainSingle(a => a.Id == "art-multi-pub");
+        activeBodyHits![0].BodyMarkdown.Should().BeNull();
+        activeBodyHits[0].BodyHtml.Should().BeNull();
+        foreach (string searchSql in sqlRecorder.Commands)
+        {
+            int fromIdx = searchSql.IndexOf("FROM", StringComparison.OrdinalIgnoreCase);
+            if (fromIdx > 0)
+            {
+                string selectClause = searchSql[..fromIdx];
+                selectClause.Should().NotContainEquivalentOf("BodyMarkdown");
+                selectClause.Should().NotContainEquivalentOf("body_markdown");
+                selectClause.Should().NotContainEquivalentOf("BodyHtml");
+                selectClause.Should().NotContainEquivalentOf("body_html");
+            }
+        }
+
+        var hydratedPub = await client.GetFromJsonAsync<KnowledgeArticleDto>(
+            "/api/v1/knowledge/articles/art-multi-pub",
+            Ct);
+        hydratedPub!.BodyMarkdown.Should().Contain("ACTIVE_PUBLISHED_BODY_TOKEN_442");
+        hydratedPub.BodyHtml.Should().Contain("ACTIVE_PUBLISHED_BODY_TOKEN_442");
+
+        var supersededHits = await client.GetFromJsonAsync<List<KnowledgeArticleDto>>(
+            "/api/v1/knowledge/articles?status_filter=ALL&q=LEGACY_SUPERSEDED_ONLY_TOKEN_991",
+            Ct);
+        supersededHits.Should().BeEmpty();
+
+        var latestDraftHits = await client.GetFromJsonAsync<List<KnowledgeArticleDto>>(
+            "/api/v1/knowledge/articles?status_filter=ALL&q=latest_draft_body_token_888",
+            Ct);
+        latestDraftHits.Should().ContainSingle(a => a.Id == "art-multi-draft");
+
+        var staleDraftHits = await client.GetFromJsonAsync<List<KnowledgeArticleDto>>(
+            "/api/v1/knowledge/articles?status_filter=ALL&q=STALE_DRAFT_TOKEN_111",
+            Ct);
+        staleDraftHits.Should().BeEmpty();
+
+        var slugHits = await client.GetFromJsonAsync<List<KnowledgeArticleDto>>(
+            "/api/v1/knowledge/articles?status_filter=ALL&q=MULTI-PUBLISHED-SLUG",
+            Ct);
+        slugHits.Should().ContainSingle(a => a.Id == "art-multi-pub");
+
+        var tagHits = await client.GetFromJsonAsync<List<KnowledgeArticleDto>>(
+            "/api/v1/knowledge/articles?status_filter=ALL&q=POINTER-TAG-ALPHA",
+            Ct);
+        tagHits.Should().ContainSingle(a => a.Id == "art-multi-pub");
+    }
+
+    [Fact]
+    [Trait("Category", "GxP_OQ")]
+    [GxPRequirement("PRD-KNB-001")]
+    public void SopHtmlCompiler_ReturnsExistingCompleteHtmlInstance_AndRecompilesIncompleteHtml()
+    {
+        const string markdown = "## Verification Procedure\n1. Check eCRF entry.\n2. Confirm SDV lock.";
+        string completeHtml = SopHtmlCompiler.Compile(markdown);
+
+        string? result = SopHtmlCompiler.EnsureCompiledHtml(markdown, completeHtml);
+        ReferenceEquals(result, completeHtml).Should().BeTrue();
+        SopHtmlCompiler.HasCompleteHeadingIdsAndSteps(markdown, completeHtml).Should().BeTrue();
+
+        const string missingHeadingIdHtml = "<h2>Verification Procedure</h2><ol><li>Check eCRF entry.</li></ol>";
+        SopHtmlCompiler.HasCompleteHeadingIdsAndSteps(markdown, missingHeadingIdHtml).Should().BeFalse();
+        SopHtmlCompiler.EnsureCompiledHtml(markdown, missingHeadingIdHtml)
+            .Should()
+            .Contain("id=\"verification-procedure\"");
+    }
+
+    private WebApplicationFactory<Cadence.Apps.Knowledge.Program> CreateSqlRecordingFactory(
+        SqliteConnection connection,
+        SqlCommandRecordingInterceptor sqlRecorder)
+    {
+        return new WebApplicationFactory<Cadence.Apps.Knowledge.Program>().WithWebHostBuilder(host =>
+        {
+            host.UseTestGatewaySecret().UseTestPostgresConnectionString();
+            host.ConfigureTestServices(services =>
+            {
+                services.RemoveAll<IClock>();
+                services.AddSingleton<IClock>(_clock);
+                services.RemoveAll<DbContextOptions<KnowledgeDbContext>>();
+                services.RemoveAll<IDbContextOptionsConfiguration<KnowledgeDbContext>>();
+                services.AddDbContext<KnowledgeDbContext>((sp, options) =>
+                {
+                    options.UseSqlite(connection);
+                    options.AddInterceptors(
+                        sqlRecorder,
+                        new GxPAuditInterceptor(
+                            () => KnowledgeAuditActorScope.CurrentUserId
+                                  ?? sp.GetService<IHttpContextAccessor>()?.HttpContext?.User.FindFirst(CadenceClaimTypes.Subject)?.Value
+                                  ?? "svc:knowledge-sop-catalog",
+                            sp.GetRequiredService<IClock>()));
+                });
+            });
+        });
+    }
+
+    private sealed class SqlCommandRecordingInterceptor : DbCommandInterceptor
+    {
+        private readonly ConcurrentQueue<string> _commands = new();
+
+        public IReadOnlyList<string> Commands => _commands.ToArray();
+
+        public void Clear() => _commands.Clear();
+
+        public override InterceptionResult<DbDataReader> ReaderExecuting(
+            DbCommand command,
+            CommandEventData eventData,
+            InterceptionResult<DbDataReader> result)
+        {
+            _commands.Enqueue(command.CommandText);
+            return base.ReaderExecuting(command, eventData, result);
+        }
+
+        public override ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(
+            DbCommand command,
+            CommandEventData eventData,
+            InterceptionResult<DbDataReader> result,
+            CancellationToken cancellationToken = default)
+        {
+            _commands.Enqueue(command.CommandText);
+            return base.ReaderExecutingAsync(command, eventData, result, cancellationToken);
+        }
     }
 
     private static int CountOccurrences(string text, string token)
