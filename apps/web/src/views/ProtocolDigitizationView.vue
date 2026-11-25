@@ -3,7 +3,7 @@
     <!-- Header -->
     <div class="section-header">
       <div class="header-content">
-        <h2>⚡ AI-Native USDM Protocol Digitization &amp; eCRF Synthesis</h2>
+        <h2>AI-Native USDM Protocol Digitization &amp; eCRF Synthesis</h2>
         <p>
           Automated Digital Data Flow (DDF) pipeline: Ingest unstructured
           protocol documents (PDF/DOCX), compile CDISC USDM v4.0 study entities
@@ -78,7 +78,7 @@
           :class="{ active: step1Mode === 'upload' }"
           @click="step1Mode = 'upload'"
         >
-          📄 Document Upload (PDF / DOCX)
+          Document Upload (PDF / DOCX)
         </button>
         <button
           type="button"
@@ -86,7 +86,7 @@
           :class="{ active: step1Mode === 'wizard' }"
           @click="step1Mode = 'wizard'"
         >
-          🪄 Guided Therapeutic Area Wizard
+          Guided Therapeutic Area Wizard
         </button>
       </div>
 
@@ -110,7 +110,9 @@
             style="display: none"
             @change="handleFileSelect"
           />
-          <div class="dropzone-icon">📄</div>
+          <div class="dropzone-icon">
+            <ClinicalIcon name="file-text" :size="16" />
+          </div>
           <h4 class="dropzone-title">
             Drag &amp; Drop Protocol Document (PDF, DOCX)
           </h4>
@@ -154,7 +156,7 @@
             class="btn btn-secondary"
             @click="loadSampleProtocol"
           >
-            🧪 Load Sample Protocol (NSCLC Phase II)
+            Load Sample Protocol (NSCLC Phase II)
           </button>
           <button
             id="btn-stage-biomedical-concepts"
@@ -185,7 +187,7 @@
     <div v-if="currentStep === 2" class="wizard-pane">
       <div class="card extraction-progress-card">
         <div class="extraction-header">
-          <h3>🧠 Clinical LLM &amp; USDM v4.0 Graph Compiler</h3>
+          <h3>Clinical LLM &amp; USDM v4.0 Graph Compiler</h3>
           <p>
             Extracting structured study design, arms, epochs, SoA schedule, and
             criteria.
@@ -215,11 +217,12 @@
             }"
           >
             <div class="stage-status-icon">
-              <span v-if="currentStageIndex > idx">✅</span>
-              <span v-else-if="currentStageIndex === idx" class="spinner-inline"
-                >⏳</span
-              >
-              <span v-else>⚪</span>
+              <span v-if="currentStageIndex > idx"></span>
+              <span
+                v-else-if="currentStageIndex === idx"
+                class="spinner-inline"
+              ></span>
+              <span v-else><ClinicalIcon name="info" :size="16" /></span>
             </div>
             <div class="stage-info">
               <div class="stage-name">
@@ -238,7 +241,7 @@
           class="escalation-alert-card card card-alert"
         >
           <div class="escalation-header">
-            <h4>⚠️ Escalation Required: Automated Schema Recovery Exhausted</h4>
+            <h4>Escalation Required: Automated Schema Recovery Exhausted</h4>
             <span class="badge badge-escalation">PENDING_REVIEW</span>
           </div>
           <p class="escalation-description">
@@ -316,7 +319,7 @@
 
           <!-- Part 11 Electronic Signature Section -->
           <div class="esignature-section">
-            <h5>✍️ 21 CFR Part 11 Electronic Signature Verification</h5>
+            <h5>21 CFR Part 11 Electronic Signature Verification</h5>
             <div class="esignature-grid">
               <div class="form-group">
                 <label class="form-label" for="corr-signer-id"
@@ -359,7 +362,7 @@
                 <span v-if="isSubmittingCorrection"
                   >Verifying Signature &amp; Resuming...</span
                 >
-                <span v-else>🔐 Submit Correction &amp; Resume Pipeline ➜</span>
+                <span v-else> Submit Correction &amp; Resume Pipeline ➜</span>
               </button>
             </div>
           </div>
@@ -402,7 +405,7 @@
                 color: var(--semantic-color-warning-text);
               "
             >
-              📥 USDM Concept Staging Required
+              USDM Concept Staging Required
             </h4>
             <p
               style="
@@ -427,7 +430,7 @@
             "
             @click="isConceptStagingOpen = true"
           >
-            📥 Open Concept Staging Drawer
+            Open Concept Staging Drawer
           </button>
         </div>
 
@@ -482,7 +485,7 @@
           :class="reviewTab === 'soa' ? 'btn-primary' : 'btn-secondary'"
           @click="reviewTab = 'soa'"
         >
-          📋 Schedule of Activities (SoA) Matrix
+          Schedule of Activities (SoA) Matrix
         </button>
         <button
           type="button"
@@ -490,7 +493,7 @@
           :class="reviewTab === 'arms' ? 'btn-primary' : 'btn-secondary'"
           @click="reviewTab = 'arms'"
         >
-          🗺️ Arms &amp; Epoch Timeline Visualizer
+          Arms &amp; Epoch Timeline Visualizer
         </button>
         <button
           type="button"
@@ -498,7 +501,7 @@
           :class="reviewTab === 'criteria' ? 'btn-primary' : 'btn-secondary'"
           @click="reviewTab = 'criteria'"
         >
-          ⚖️ Inclusion / Exclusion Criteria
+          Inclusion / Exclusion Criteria
         </button>
         <button
           type="button"
@@ -554,7 +557,7 @@
     <div v-if="currentStep === 4" class="wizard-pane">
       <div class="card commit-wizard-card">
         <div class="synthesis-header">
-          <h3>🚀 Automated CDASH eCRF Synthesis &amp; EDC Activation</h3>
+          <h3>Automated CDASH eCRF Synthesis &amp; EDC Activation</h3>
           <p>
             The synthesized forms below have been generated from extracted
             Schedule of Activities procedures. Confirm and commit to create the
@@ -597,10 +600,10 @@
 
             <!-- Special Widget Indicators -->
             <div v-if="form.cdash_domain === 'QS'" class="widget-pill vas">
-              📏 VAS Pain Slider (0 - 100 mm)
+              VAS Pain Slider (0 - 100 mm)
             </div>
             <div v-if="form.cdash_domain === 'PE'" class="widget-pill bodymap">
-              🗺️ 74-Zone SNOMED CT Anatomical Map
+              74-Zone SNOMED CT Anatomical Map
             </div>
           </div>
         </div>
@@ -630,14 +633,18 @@
             :disabled="isCommitting || !changeReason.trim()"
             @click="commitAndActivateEDC"
           >
-            <span v-if="isCommitting" class="spinner-inline">⏳</span>
-            <span v-else>⚡ Commit USDM Graph &amp; Activate EDC</span>
+            <span v-if="isCommitting" class="spinner-inline"
+              ><ClinicalIcon name="clock" :size="16"
+            /></span>
+            <span v-else> Commit USDM Graph &amp; Activate EDC</span>
           </button>
         </div>
 
         <!-- Post-Commit Success Banner -->
         <div v-if="commitResult" class="commit-success-banner">
-          <div class="success-icon">🎉</div>
+          <div class="success-icon">
+            <ClinicalIcon name="file-text" :size="16" />
+          </div>
           <div class="success-body">
             <h4 class="success-title">
               Study Protocol Digitization &amp; eCRF Synthesis Complete!
@@ -651,10 +658,10 @@
             </p>
             <div class="success-actions">
               <router-link :to="ecrfWorkspacePath" class="btn btn-primary">
-                🩺 Open eCRF Data Capture Workspace
+                Open eCRF Data Capture Workspace
               </router-link>
               <router-link :to="mdrWorkspacePath" class="btn btn-secondary">
-                📋 Inspect in MDR Protocol Designer
+                Inspect in MDR Protocol Designer
               </router-link>
             </div>
           </div>
@@ -672,6 +679,7 @@
 </template>
 
 <script setup>
+import { ClinicalIcon } from "ui";
 import { computed, ref } from "vue";
 import { apiClient } from "../api/apiClient";
 import { allowUnbackedAction } from "../utils/unbackedActions.js";

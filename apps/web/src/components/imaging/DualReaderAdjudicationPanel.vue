@@ -17,7 +17,10 @@
           :class="{ active: activePersona === 'READER_1' }"
           @click="switchPersona('READER_1')"
         >
-          <span class="role-icon">👤</span> Reader 1 (Blinded)
+          <span class="role-icon"
+            ><ClinicalIcon name="users" :size="16"
+          /></span>
+          Reader 1 (Blinded)
         </button>
         <button
           type="button"
@@ -25,7 +28,10 @@
           :class="{ active: activePersona === 'READER_2' }"
           @click="switchPersona('READER_2')"
         >
-          <span class="role-icon">👤</span> Reader 2 (Blinded)
+          <span class="role-icon"
+            ><ClinicalIcon name="users" :size="16"
+          /></span>
+          Reader 2 (Blinded)
         </button>
         <button
           type="button"
@@ -33,13 +39,16 @@
           :class="{ active: activePersona === 'CHAIR' }"
           @click="switchPersona('CHAIR')"
         >
-          <span class="role-icon">⚖️</span> Adjudication Chair
+          <span class="role-icon"
+            ><ClinicalIcon name="file-text" :size="16"
+          /></span>
+          Adjudication Chair
         </button>
       </div>
     </div>
 
     <!-- ========================================================================= -->
-    <!-- VIEW A: Blinded Primary Reader Recording Form (Reader 1 / Reader 2)        -->
+    <!-- VIEW A: Blinded Primary Reader Recording Form (Reader 1 / Reader 2) -->
     <!-- ========================================================================= -->
     <div
       v-if="activePersona === 'READER_1' || activePersona === 'READER_2'"
@@ -47,7 +56,7 @@
     >
       <!-- Blinding Enclosure Notice -->
       <div class="blinding-alert-box">
-        <div class="alert-icon">🔒</div>
+        <div class="alert-icon"><ClinicalIcon name="lock" :size="16" /></div>
         <div class="alert-content">
           <div class="alert-title">
             Blinded Independent Review Protocol Active
@@ -219,7 +228,10 @@
             class="btn-submit-read"
             @click="submitReaderRead"
           >
-            <span class="btn-icon">📤</span> Submit Blinded
+            <span class="btn-icon"
+              ><ClinicalIcon name="upload" :size="16"
+            /></span>
+            Submit Blinded
             {{ activePersona === "READER_1" ? "Reader 1" : "Reader 2" }}
             Assessment
           </button>
@@ -229,14 +241,17 @@
             class="btn-retract-read"
             @click="retractReaderRead"
           >
-            <span class="btn-icon">✏️</span> Edit Assessment (Unlock)
+            <span class="btn-icon"
+              ><ClinicalIcon name="edit" :size="16"
+            /></span>
+            Edit Assessment (Unlock)
           </button>
         </div>
       </div>
     </div>
 
     <!-- ========================================================================= -->
-    <!-- VIEW B: Adjudication Committee Chair Tie-Breaker Console                   -->
+    <!-- VIEW B: Adjudication Committee Chair Tie-Breaker Console -->
     <!-- ========================================================================= -->
     <div v-else class="chair-adjudication-view">
       <!-- Discordance Evaluation Banner -->
@@ -252,7 +267,11 @@
       >
         <div class="banner-icon">
           {{
-            isDiscordant ? "⚠️" : workflowStatus === "ADJUDICATED" ? "✅" : "🤝"
+            isDiscordant
+              ? "Warning"
+              : workflowStatus === "ADJUDICATED"
+                ? "Verified"
+                : "Item"
           }}
         </div>
         <div class="banner-info">
@@ -434,8 +453,10 @@
             :disabled="!adjudicationRationale.trim()"
             @click="isSignoffModalOpen = true"
           >
-            <span class="btn-icon">✍️</span> Execute 21 CFR Part 11 Adjudication
-            Sign-Off
+            <span class="btn-icon"
+              ><ClinicalIcon name="file-signature" :size="16"
+            /></span>
+            Execute 21 CFR Part 11 Adjudication Sign-Off
           </button>
 
           <div v-else class="post-adjudication-actions">
@@ -444,14 +465,20 @@
               class="btn-export-edc"
               @click="isEdcModalOpen = true"
             >
-              <span class="btn-icon">📋</span> View EDC eCRF Binding
+              <span class="btn-icon"
+                ><ClinicalIcon name="clipboard-list" :size="16"
+              /></span>
+              View EDC eCRF Binding
             </button>
             <button
               type="button"
               class="btn-export-sdtm"
               @click="isSdtmModalOpen = true"
             >
-              <span class="btn-icon">📊</span> Export CDISC SDTM TU/TR/RS
+              <span class="btn-icon"
+                ><ClinicalIcon name="trending-up" :size="16"
+              /></span>
+              Export CDISC SDTM TU/TR/RS
             </button>
           </div>
         </div>
@@ -459,7 +486,7 @@
     </div>
 
     <!-- ========================================================================= -->
-    <!-- MODAL 1: 21 CFR Part 11 Step-Up Electronic Signature Dialog                -->
+    <!-- MODAL 1: 21 CFR Part 11 Step-Up Electronic Signature Dialog -->
     <!-- ========================================================================= -->
     <div
       v-if="isSignoffModalOpen"
@@ -546,7 +573,7 @@
     </div>
 
     <!-- ========================================================================= -->
-    <!-- MODAL 2: Direct EDC eCRF Binding Preview Modal                             -->
+    <!-- MODAL 2: Direct EDC eCRF Binding Preview Modal -->
     <!-- ========================================================================= -->
     <div
       v-if="isEdcModalOpen"
@@ -588,7 +615,7 @@
     </div>
 
     <!-- ========================================================================= -->
-    <!-- MODAL 3: CDISC SDTM TU/TR/RS Export Modal                                 -->
+    <!-- MODAL 3: CDISC SDTM TU/TR/RS Export Modal -->
     <!-- ========================================================================= -->
     <div
       v-if="isSdtmModalOpen"
@@ -631,7 +658,7 @@
 
 <script setup>
 import { ref, computed } from "vue";
-import { ClinicalIconButton, useFocusTrap } from "ui";
+import { ClinicalIconButton, useFocusTrap, ClinicalIcon } from "ui";
 
 const props = defineProps({
   subjectId: {

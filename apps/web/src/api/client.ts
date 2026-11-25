@@ -66,6 +66,26 @@ async function dispatchWithDynamicBase(
   return fetchWithSingleFlightRetry(input, init);
 }
 
+function ensureResponseText(response: Response): Response {
+  if (
+    response &&
+    typeof response.text !== "function" &&
+    typeof response.json === "function"
+  ) {
+    return Object.assign(
+      Object.create(Object.getPrototypeOf(response)),
+      response,
+      {
+        text: async () => {
+          const body = await response.json();
+          return body === undefined ? "" : JSON.stringify(body);
+        },
+      }
+    );
+  }
+  return response;
+}
+
 export function createOpenApiClient<T extends {} = Record<string, unknown>>(
   baseUrl?: string
 ) {
@@ -78,10 +98,12 @@ export function createOpenApiClient<T extends {} = Record<string, unknown>>(
       const initialClientBase = baseUrl ?? getBaseUrl();
       inner = createClient<T>({
         baseUrl: initialClientBase,
-        fetch: (input: RequestInfo | URL, init?: RequestInit) =>
-          hasExplicitBaseUrl
-            ? fetchWithSingleFlightRetry(input, init)
-            : dispatchWithDynamicBase(initialClientBase, input, init),
+        fetch: async (input: RequestInfo | URL, init?: RequestInit) =>
+          ensureResponseText(
+            await (hasExplicitBaseUrl
+              ? fetchWithSingleFlightRetry(input, init)
+              : dispatchWithDynamicBase(initialClientBase, input, init))
+          ),
       });
       inner.use(getAuthMiddleware());
       for (const mw of pendingMiddleware) {

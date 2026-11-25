@@ -12,7 +12,9 @@
   >
     <template #header>
       <div class="ticket-sign-header">
-        <div class="modal-header-icon" aria-hidden="true">✍️</div>
+        <div class="modal-header-icon" aria-hidden="true">
+          <ClinicalIcon name="file-signature" :size="20" />
+        </div>
         <div class="ticket-sign-header-text">
           <h2 id="sign-modal-title" class="modal-title">
             21 CFR Part 11 Electronic Signature
@@ -163,7 +165,7 @@
 
 <script setup>
 import { ref, computed } from "vue";
-import { ClinicalInput, ClinicalModal } from "ui";
+import { ClinicalInput, ClinicalModal, ClinicalIcon } from "ui";
 import { ticketsApi } from "../../api/ticketsApi";
 import { useAuthStore } from "../../stores/auth";
 import { describeApiError } from "../../utils/apiErrors.js";

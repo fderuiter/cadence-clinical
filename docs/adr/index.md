@@ -477,6 +477,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2675: Standardize Semantic Role Tokens, Dark-Theme Parity, and ESLint AST Color Gates](2026-11-23-standardize-semantic-role-tokens-and-eslint-color-gates.md) (2026-11-23)
 - [ADR-2676: Focus-Trap Detachment Recovery, Shared Retry Focus Primitives, and Inline Focus-Handoff AST Gates](2026-11-24-focus-trap-detachment-recovery-and-retry-focus-primitives.md) (2026-11-24)
 - [ADR-2677: Retire Unreferenced Shared UI and Web Exports and Enforce Live Consumer Reachability](2026-11-24-retire-dead-ui-exports-and-enforce-consumer-guard.md) (2026-11-24)
+- [ADR-2679: Centralize Curated Lucide Icons and Enforce CLI Emoji Gate](2026-11-25-centralize-lucide-icons-and-cli-emoji-gate.md) (2026-11-25)
 - [ADR-2689: Centralize Floating Primitives and Top-Right Toast Stack](2026-11-25-centralize-floating-primitives-and-top-right-toast-stack.md) (2026-11-25)
 
 ### 7. DevOps, Tooling & CI/CD

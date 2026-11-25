@@ -1,5 +1,6 @@
 <script setup>
 import { computed, ref, watch, onMounted } from "vue";
+import { AlertTriangle } from "lucide-vue-next";
 
 const props = defineProps({
   error: {
@@ -95,7 +96,15 @@ onMounted(() => {
     tabindex="-1"
   >
     <div class="alert-content">
-      <span class="error-icon" aria-hidden="true">⚠️</span>
+      <span class="error-icon" aria-hidden="true">
+        <AlertTriangle
+          :size="16"
+          :stroke-width="1.75"
+          aria-hidden="true"
+          focusable="false"
+          class="clinical-icon"
+        />
+      </span>
       <div class="error-text-container">
         <strong v-if="title" class="alert-title">{{ title }}</strong>
         <span class="alert-message">

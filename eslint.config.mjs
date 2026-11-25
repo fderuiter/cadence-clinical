@@ -3718,6 +3718,196 @@ const requireInlineFocusHandoffRule = {
   },
 };
 
+const emojiGlyphScanRegex =
+  /(?:(?![\u00A9\u00AE\u2122](?!\uFE0F))\p{Extended_Pictographic})|\p{Regional_Indicator}|[#*0-9]\uFE0F?\u20E3|\u20E3/gu;
+
+const plainTextEslintParser = {
+  meta: { name: "cadence-plain-text-parser", version: "1.0.0" },
+  parseForESLint(text) {
+    const lines = text.split(/\r?\n/);
+    const endLine = Math.max(1, lines.length);
+    const endCol = lines[endLine - 1]?.length ?? 0;
+    return {
+      ast: {
+        type: "Program",
+        body: [],
+        sourceType: "module",
+        tokens: [],
+        comments: [],
+        range: [0, text.length],
+        loc: {
+          start: { line: 1, column: 0 },
+          end: { line: endLine, column: endCol },
+        },
+      },
+    };
+  },
+};
+
+function hasAccessibleButtonLabelAttr(vElement) {
+  for (const attr of vElement.startTag.attributes || []) {
+    if (!attr.directive) {
+      const name = attr.key?.name;
+      if (
+        (name === "aria-label" || name === "aria-labelledby") &&
+        attr.value?.value &&
+        attr.value.value.trim().length > 0
+      ) {
+        return true;
+      }
+    } else if (
+      attr.key?.name?.name === "bind" &&
+      (attr.key?.argument?.name === "aria-label" ||
+        attr.key?.argument?.name === "aria-labelledby") &&
+      attr.value?.expression
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function subtreeHasReadableText(node) {
+  for (const child of node.children || []) {
+    if (child.type === "VText" && /[\p{L}\p{N}]/u.test(child.value || "")) {
+      return true;
+    }
+    if (child.type === "VExpressionContainer" && child.expression) {
+      return true;
+    }
+    if (child.type === "VElement") {
+      const raw = child.rawName || child.name || "";
+      const isIconComponent =
+        raw === "ClinicalIcon" ||
+        raw === "clinical-icon" ||
+        raw === "svg" ||
+        (raw.length > 0 &&
+          /^[A-Z]/.test(raw) &&
+          (child.children || []).length === 0);
+      if (!isIconComponent && subtreeHasReadableText(child)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+function subtreeHasIconComponent(node) {
+  for (const child of node.children || []) {
+    if (child.type === "VElement") {
+      const raw = child.rawName || child.name || "";
+      if (
+        raw === "ClinicalIcon" ||
+        raw === "clinical-icon" ||
+        (/^[A-Z]/.test(raw) &&
+          raw !== "RouterLink" &&
+          raw !== "Teleport" &&
+          raw !== "Transition")
+      ) {
+        return true;
+      }
+      if (subtreeHasIconComponent(child)) return true;
+    }
+  }
+  return false;
+}
+
+const enhancedNoUnlabeledGlyphButtonRule = {
+  ...noUnlabeledGlyphButtonRule,
+  create(context) {
+    const reportedStarts = new Set();
+    const wrappedContext = Object.create(context, {
+      report: {
+        value(descriptor) {
+          if (descriptor?.node?.range) {
+            reportedStarts.add(descriptor.node.range[0]);
+          }
+          return context.report(descriptor);
+        },
+      },
+    });
+    const baseListeners = noUnlabeledGlyphButtonRule.create(wrappedContext);
+    const parserServices =
+      context.sourceCode?.parserServices || context.parserServices;
+    if (!parserServices?.defineTemplateBodyVisitor) {
+      return baseListeners;
+    }
+    const defaultMsgId =
+      Object.keys(noUnlabeledGlyphButtonRule.meta?.messages || {})[0] ||
+      "unlabeledGlyphButton";
+    const extraVisitor = parserServices.defineTemplateBodyVisitor({
+      VElement(node) {
+        const rawTag = node.rawName || node.name;
+        if (rawTag !== "button") return;
+        if (reportedStarts.has(node.startTag.range[0])) return;
+        if (hasAccessibleButtonLabelAttr(node)) return;
+        if (subtreeHasReadableText(node)) return;
+        if (subtreeHasIconComponent(node)) {
+          context.report({
+            node: node.startTag,
+            messageId: defaultMsgId,
+            data: { glyph: "<ClinicalIcon>" },
+          });
+        }
+      },
+    });
+    const merged = { ...baseListeners };
+    for (const [k, fn] of Object.entries(extraVisitor)) {
+      const prev = merged[k];
+      merged[k] = prev
+        ? function (...args) {
+            prev.apply(this, args);
+            fn.apply(this, args);
+          }
+        : fn;
+    }
+    return merged;
+  },
+};
+
+const noEmojiGlyphsRule = {
+  meta: {
+    type: "problem",
+    docs: {
+      description:
+        "Disallow Unicode emoji, regional indicator flag, and keycap glyphs in clinical UI source and locale files.",
+    },
+    schema: [],
+    messages: {
+      noEmojiGlyph:
+        "Unicode emoji glyph '{{glyph}}' ({{codePoint}}) is forbidden in clinical UI files; use ClinicalIcon or 1.75px Lucide vector icons with accessible labels (ADR-2679).",
+    },
+  },
+  create(context) {
+    return {
+      Program() {
+        const text = context.sourceCode.getText();
+        emojiGlyphScanRegex.lastIndex = 0;
+        let match;
+        while ((match = emojiGlyphScanRegex.exec(text)) !== null) {
+          const glyph = match[0];
+          const loc = context.sourceCode.getLocFromIndex(match.index);
+          const endLoc = context.sourceCode.getLocFromIndex(
+            match.index + glyph.length
+          );
+          const codePoint = Array.from(glyph)
+            .map(
+              (ch) =>
+                "U+" +
+                ch.codePointAt(0).toString(16).toUpperCase().padStart(4, "0")
+            )
+            .join(" ");
+          context.report({
+            loc: { start: loc, end: endLoc },
+            messageId: "noEmojiGlyph",
+            data: { glyph, codePoint },
+          });
+        }
+      },
+    };
+  },
+};
+
 const customVuePlugin = {
   rules: {
     "no-inline-hex": noInlineHexRule,
@@ -3725,7 +3915,8 @@ const customVuePlugin = {
     "no-misused-ai-tokens": noMisusedAiTokensRule,
     "no-raw-overlays": noRawOverlaysRule,
     "no-suppressed-focus-outline": noSuppressedFocusOutlineRule,
-    "no-unlabeled-glyph-button": noUnlabeledGlyphButtonRule,
+    "no-unlabeled-glyph-button": enhancedNoUnlabeledGlyphButtonRule,
+    "no-emoji-glyphs": noEmojiGlyphsRule,
     "no-aria-label-mismatch": noAriaLabelMismatchRule,
     "require-tabular-nums": requireTabularNumsRule,
     "no-sub12px-font-size": noSub12pxFontSizeRule,
@@ -4173,6 +4364,39 @@ export default [
       "custom-vue/no-unscoped-navigation": "off",
       "no-unused-vars": "off",
       "@typescript-eslint/no-unused-vars": "off",
+    },
+  },
+  {
+    files: [
+      "packages/ui/**/*.{vue,js,ts,mjs,cjs}",
+      "apps/web/**/*.{vue,js,ts,mjs,cjs}",
+      "apps/subject-portal/**/*.{vue,js,ts,mjs,cjs}",
+      "packages/demo-fixtures/**/*.{js,ts,mjs,cjs}",
+      "docs/.vitepress/theme/**/*.{vue,js,ts,mjs,cjs}",
+    ],
+    plugins: {
+      "custom-vue": customVuePlugin,
+    },
+    rules: {
+      "custom-vue/no-emoji-glyphs": "error",
+    },
+  },
+  {
+    files: [
+      "packages/ui/**/*.css",
+      "apps/web/**/*.css",
+      "apps/subject-portal/**/*.css",
+      "docs/.vitepress/theme/**/*.css",
+      "apps/web/src/locales/*.json",
+    ],
+    languageOptions: {
+      parser: plainTextEslintParser,
+    },
+    plugins: {
+      "custom-vue": customVuePlugin,
+    },
+    rules: {
+      "custom-vue/no-emoji-glyphs": "error",
     },
   },
 ];

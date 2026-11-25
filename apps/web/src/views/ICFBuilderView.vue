@@ -22,13 +22,13 @@
           class="btn btn-secondary btn-sign"
           @click="openSignatureModal"
         >
-          ✍️ eConsent Sign-off
+          eConsent Sign-off
         </button>
         <button
           class="btn btn-primary btn-publish"
           @click="showPublishModal = true"
         >
-          🚀 Publish Version
+          Publish Version
         </button>
       </div>
     </header>
@@ -41,7 +41,9 @@
       role="status"
     >
       <div class="manifest-header">
-        <span class="manifest-icon">🔒</span>
+        <span class="manifest-icon"
+          ><ClinicalIcon name="lock" :size="16"
+        /></span>
         <strong style="color: var(--success); font-size: 0.95rem">
           21 CFR Part 11 Electronic Signature Manifest Verified
         </strong>
@@ -92,7 +94,9 @@
               ]"
               @click="selectSection(sec.id)"
             >
-              <span class="item-icon">📄</span>
+              <span class="item-icon"
+                ><ClinicalIcon name="file-text" :size="16"
+              /></span>
               <span class="item-title">{{ sec.title }}</span>
 
               <div class="clause-controls" @click.stop>
@@ -155,7 +159,9 @@
               :class="['outline-item', { active: showQuiz }]"
               @click="selectQuiz"
             >
-              <span class="item-icon">📝</span>
+              <span class="item-icon"
+                ><ClinicalIcon name="file-text" :size="16"
+              /></span>
               <span class="item-title">Comprehension Quiz</span>
             </li>
           </ul>
@@ -225,7 +231,7 @@
       title="21 CFR Part 11 Change Reason Capture"
     >
       <p class="warning-text">
-        ⚠️ Publishing this Informed Consent Form (ICF) increments the active
+        Publishing this Informed Consent Form (ICF) increments the active
         protocol design version. All future subject enrollments and re-consents
         will bind to the new version index.
       </p>
@@ -260,7 +266,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from "vue";
-import { ClinicalIconButton, ClinicalModal } from "ui";
+import { ClinicalIconButton, ClinicalModal, ClinicalIcon } from "ui";
 import {
   ECONSENT_CAPTURE_SEMANTIC_ACTION,
   econsentCaptureAction,

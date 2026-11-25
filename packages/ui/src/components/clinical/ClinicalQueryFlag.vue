@@ -9,12 +9,20 @@
     :aria-label="ariaLabel"
     @click="$emit('click')"
   >
-    <span aria-hidden="true">{{ icon }}</span>
+    <component
+      :is="iconComponent"
+      :size="16"
+      :stroke-width="1.75"
+      aria-hidden="true"
+      focusable="false"
+      class="clinical-icon"
+    />
   </button>
 </template>
 
 <script setup>
 import { computed } from "vue";
+import { AlertTriangle, MessageSquare } from "lucide-vue-next";
 
 const props = defineProps({
   id: {
@@ -61,11 +69,11 @@ const ariaLabel = computed(() => {
     : `Query status: ${status}`;
 });
 
-const icon = computed(() => {
+const iconComponent = computed(() => {
   const status =
     props.query && props.query.status
       ? props.query.status.toUpperCase()
       : "NONE";
-  return status === "NONE" ? "💬" : "⚠️";
+  return status === "NONE" ? MessageSquare : AlertTriangle;
 });
 </script>

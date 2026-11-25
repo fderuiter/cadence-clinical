@@ -56,7 +56,7 @@
       role="status"
       aria-live="polite"
     >
-      ⚠️ {{ validationError }}
+      {{ validationError }}
     </div>
 
     <template #footer>

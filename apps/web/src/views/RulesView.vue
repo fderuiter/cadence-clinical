@@ -23,7 +23,9 @@
         class="rules-gating-content"
         style="display: flex; gap: 16px; align-items: flex-start"
       >
-        <span class="rules-gating-icon" style="font-size: 2rem">🚫</span>
+        <span class="rules-gating-icon" style="font-size: 2rem"
+          ><ClinicalIcon name="x-circle" :size="16"
+        /></span>
         <div>
           <h3 class="rules-gating-title">
             21 CFR Part 11 Role Gating - Access Denied
@@ -61,7 +63,7 @@
           "
           @click="activeTab = 'rules'"
         >
-          📋 Rules Designer Workspace
+          Rules Designer Workspace
         </button>
         <button
           class="btn tab-btn-queries"
@@ -72,7 +74,7 @@
           "
           @click="activeTab = 'queries'"
         >
-          💬 Data Manager Query Dashboard
+          Data Manager Query Dashboard
         </button>
       </div>
 
@@ -264,7 +266,8 @@
               "
               @click="openRuleEditor(null)"
             >
-              <span>➕</span> Create New Rule
+              <span><ClinicalIcon name="plus" :size="16" /></span> Create New
+              Rule
             </button>
           </div>
         </div>
@@ -362,7 +365,7 @@
                   "
                 >
                   <div v-for="(f, i) in previewFailures" :key="i">
-                    ⚠️ {{ f }}
+                    {{ f }}
                   </div>
                 </div>
                 <div
@@ -373,7 +376,7 @@
                     margin-bottom: 8px;
                   "
                 >
-                  ✅ CDASH Field &amp; Pydantic Schema Aligned.
+                  CDASH Field &amp; Pydantic Schema Aligned.
                 </div>
 
                 <div
@@ -381,7 +384,7 @@
                   style="color: var(--error); font-weight: 600"
                 >
                   <div v-for="(c, i) in previewCircularCycles" :key="i">
-                    🚨 {{ c }}
+                    {{ c }}
                   </div>
                 </div>
               </div>
@@ -581,7 +584,7 @@
               style="font-size: 0.75rem; padding: 4px 10px"
               @click="queryFilterStatus = 'CANDIDATE'"
             >
-              ⚡ Staged Anomaly Candidates ({{ countCandidateQueries }})
+              Staged Anomaly Candidates ({{ countCandidateQueries }})
             </button>
             <button
               class="btn btn-sm"
@@ -627,7 +630,7 @@
             "
             @click="triggerAnomalyScan"
           >
-            <span>🔍 Run Cross-Domain Anomaly Scan</span>
+            <span> Run Cross-Domain Anomaly Scan</span>
           </button>
         </div>
 
@@ -660,24 +663,7 @@
                   style="margin-top: 4px"
                 >
                   <span class="clinical-badge clinical-badge--warning">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="12"
-                      height="12"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      aria-hidden="true"
-                    >
-                      <path
-                        d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"
-                      />
-                      <path d="M12 9v4" />
-                      <path d="M12 17h.01" />
-                    </svg>
+                    <ClinicalIcon name="alert-triangle" :size="16" />
                     CROSS-DOMAIN
                   </span>
                 </div>
@@ -819,6 +805,7 @@ import {
   deserializeConditionsTree,
   canonicalSerialize,
   sha256,
+  ClinicalIcon,
 } from "ui";
 
 const rulesReasonOptions = [

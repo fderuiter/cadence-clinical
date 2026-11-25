@@ -39,7 +39,7 @@
           title="Compute Patient-Years of Exposure across cohorts and demographics"
           @click="calculateExposure"
         >
-          <span class="icon">⏱️</span>
+          <span class="icon"><ClinicalIcon name="clock" :size="16" /></span>
           {{ isCalculatingExposure ? "Calculating..." : "Compute Exposure" }}
         </button>
         <button
@@ -48,7 +48,7 @@
           title="Compile complete DSUR/PSUR report with snapshot locking"
           @click="compileReport"
         >
-          <span class="icon">📑</span>
+          <span class="icon"><ClinicalIcon name="file-text" :size="16" /></span>
           {{
             isCompiling ? "Compiling Package..." : "Compile Regulatory Report"
           }}
@@ -59,7 +59,10 @@
           title="Executive Qualified Person for Pharmacovigilance 21 CFR Part 11 sign-off"
           @click="isQppvModalOpen = true"
         >
-          <span class="icon">✍️</span> QPPV Sign-Off
+          <span class="icon"
+            ><ClinicalIcon name="file-signature" :size="16"
+          /></span>
+          QPPV Sign-Off
         </button>
         <button
           class="btn btn-outline"
@@ -67,7 +70,8 @@
           title="Download ICH E2F / E2C(R2) structured XML package"
           @click="exportReport('xml')"
         >
-          <span class="icon">📦</span> Export XML
+          <span class="icon"><ClinicalIcon name="folder" :size="16" /></span>
+          Export XML
         </button>
         <button
           class="btn btn-outline"
@@ -75,7 +79,8 @@
           title="Open printable publication report"
           @click="exportReport('html')"
         >
-          <span class="icon">🖨️</span> Print / PDF
+          <span class="icon"><ClinicalIcon name="file-text" :size="16" /></span>
+          Print / PDF
         </button>
       </div>
     </header>
@@ -155,7 +160,9 @@
     <!-- Snapshot Notification Bar -->
     <div v-if="snapshotHash" class="snapshot-banner">
       <div class="snapshot-info">
-        <span class="snapshot-icon">🔒</span>
+        <span class="snapshot-icon"
+          ><ClinicalIcon name="lock" :size="16"
+        /></span>
         <span class="snapshot-title"
           ><strong>Immutable Point-in-Time Regulatory Snapshot:</strong></span
         >
@@ -182,7 +189,7 @@
         :class="['tab-btn', { active: activeTab === 'exposure' }]"
         @click="activeTab = 'exposure'"
       >
-        ⏱️ Patient-Years Exposure ({{ totalExposurePYE }} PYE)
+        Patient-Years Exposure ({{ totalExposurePYE }} PYE)
       </button>
       <button
         role="tab"
@@ -190,7 +197,7 @@
         :class="['tab-btn', { active: activeTab === 'tabulations' }]"
         @click="activeTab = 'tabulations'"
       >
-        📊 Summary Tabulations &amp; RSI ({{ summaryRows.length }})
+        Summary Tabulations &amp; RSI ({{ summaryRows.length }})
       </button>
       <button
         role="tab"
@@ -198,7 +205,7 @@
         :class="['tab-btn', { active: activeTab === 'line_listings' }]"
         @click="activeTab = 'line_listings'"
       >
-        📋 SAE Line Listings ({{ lineListings.length }})
+        SAE Line Listings ({{ lineListings.length }})
       </button>
       <button
         role="tab"
@@ -206,7 +213,7 @@
         :class="['tab-btn', { active: activeTab === 'signals' }]"
         @click="activeTab = 'signals'"
       >
-        📈 Signals &amp; Benefit-Risk ({{ signalFindings.length }})
+        Signals &amp; Benefit-Risk ({{ signalFindings.length }})
       </button>
       <button
         role="tab"
@@ -214,7 +221,7 @@
         :class="['tab-btn', { active: activeTab === 'clocks' }]"
         @click="activeTab = 'clocks'"
       >
-        ⏰ Expedited Clocks &amp; Triage ({{ activeExpeditedCases.length }})
+        Expedited Clocks &amp; Triage ({{ activeExpeditedCases.length }})
       </button>
       <button
         role="tab"
@@ -222,7 +229,7 @@
         :class="['tab-btn', { active: activeTab === 'qppv' }]"
         @click="activeTab = 'qppv'"
       >
-        ✍️ QPPV Governance &amp; Export
+        QPPV Governance &amp; Export
       </button>
     </nav>
 
@@ -458,7 +465,7 @@
                     v-if="row.rsi_threshold_breached"
                     class="status-pill breach"
                   >
-                    ⚠️ BREACH (RR: {{ row.rsi_rate_ratio || "N/A" }})
+                    BREACH (RR: {{ row.rsi_rate_ratio || "N/A" }})
                   </span>
                   <span v-else class="status-pill ok">OK</span>
                 </td>
@@ -654,7 +661,9 @@
         <!-- QPPV Electronic Signature Seal Display -->
         <div v-if="qppvManifest" class="qppv-manifest-card">
           <div class="manifest-header">
-            <span class="seal-icon">🛡️</span>
+            <span class="seal-icon"
+              ><ClinicalIcon name="shield-check" :size="16"
+            /></span>
             <div>
               <h4>
                 Executive Qualified Person for Pharmacovigilance (QPPV) Approval
@@ -702,7 +711,7 @@
             Person for Pharmacovigilance (QPPV) executive electronic signature.
           </p>
           <button class="btn btn-qppv btn-lg" @click="isQppvModalOpen = true">
-            ✍️ Open Executive QPPV Sign-Off Dialog
+            Open Executive QPPV Sign-Off Dialog
           </button>
         </div>
 
@@ -717,23 +726,30 @@
               :disabled="!activeReportId"
               @click="exportReport('xml')"
             >
-              <span class="icon">📁</span> Download ICH E2F / E2C(R2) XML
-              Package
+              <span class="icon"
+                ><ClinicalIcon name="folder" :size="16"
+              /></span>
+              Download ICH E2F / E2C(R2) XML Package
             </button>
             <button
               class="btn btn-secondary"
               :disabled="!activeReportId"
               @click="exportReport('html')"
             >
-              <span class="icon">📄</span> View Publication-Ready Report (HTML /
-              PDF)
+              <span class="icon"
+                ><ClinicalIcon name="file-text" :size="16"
+              /></span>
+              View Publication-Ready Report (HTML / PDF)
             </button>
             <button
               class="btn btn-outline"
               :disabled="!activeReportId"
               @click="exportReport('json')"
             >
-              <span class="icon">💾</span> Export Raw JSON Dataset
+              <span class="icon"
+                ><ClinicalIcon name="file-text" :size="16"
+              /></span>
+              Export Raw JSON Dataset
             </button>
           </div>
         </div>
@@ -789,7 +805,7 @@
               Multi-Country Regulatory Reporting Clocks (ICH E2A / 21 CFR 312.32
               / EU 536/2014)
             </h3>
-            <span class="live-pulse-badge">🔴 LIVE COUNTDOWNS</span>
+            <span class="live-pulse-badge"> LIVE COUNTDOWNS</span>
           </div>
           <div class="clocks-grid">
             <div
@@ -871,7 +887,7 @@
                   {{
                     clk.is_signed
                       ? "✓ Physician Signed"
-                      : "✍️ Physician Part 11 Sign"
+                      : "Physician Part 11 Sign"
                   }}
                 </button>
               </div>
@@ -1006,7 +1022,6 @@
                   :disabled="isSimulating"
                   @click="runTriageSimulation"
                 >
-                  ⚡
                   {{
                     isSimulating
                       ? "Evaluating Mandates..."
@@ -1347,7 +1362,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
-import { ClinicalIconButton, useFocusTrap } from "ui";
+import { ClinicalIconButton, useFocusTrap, ClinicalIcon } from "ui";
 
 import { useToastStore } from "../../stores/toasts.js";
 import { ensureOk } from "../../utils/apiErrors.js";

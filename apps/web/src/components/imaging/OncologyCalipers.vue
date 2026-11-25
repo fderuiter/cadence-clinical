@@ -15,7 +15,9 @@
           :class="{ active: currentTool === 'POINTER' }"
           @click="selectTool('POINTER')"
         >
-          <span class="tool-icon">🔍</span>
+          <span class="tool-icon"
+            ><ClinicalIcon name="search" :size="16"
+          /></span>
           <span class="tool-name">Navigate / Pan</span>
         </button>
 
@@ -25,7 +27,9 @@
           :class="{ active: currentTool === 'CALIPER_1D' }"
           @click="selectTool('CALIPER_1D')"
         >
-          <span class="tool-icon">📏</span>
+          <span class="tool-icon"
+            ><ClinicalIcon name="file-text" :size="16"
+          /></span>
           <span class="tool-name">1D RECIST Caliper</span>
         </button>
 
@@ -35,7 +39,7 @@
           :class="{ active: currentTool === 'CALIPER_2D' }"
           @click="selectTool('CALIPER_2D')"
         >
-          <span class="tool-icon">➕</span>
+          <span class="tool-icon"><ClinicalIcon name="plus" :size="16" /></span>
           <span class="tool-name">2D Lugano Cross</span>
         </button>
 
@@ -45,7 +49,9 @@
           :class="{ active: currentTool === 'CALIPER_3D' }"
           @click="selectTool('CALIPER_3D')"
         >
-          <span class="tool-icon">🧊</span>
+          <span class="tool-icon"
+            ><ClinicalIcon name="file-text" :size="16"
+          /></span>
           <span class="tool-name">3D Ellipsoid Vol</span>
         </button>
       </div>
@@ -198,16 +204,16 @@
                       : 'AI Auto-Segmented Contour'
                   "
                 >
-                  🤖 AI
+                  AI
                 </span>
                 <span
                   v-else-if="a.measurement_type === 'MANUAL_EDITED'"
                   class="ai-edited-badge"
                   title="AI-assisted, manually converted/edited"
                 >
-                  ✏️ AI-Edited
+                  AI-Edited
                 </span>
-                <span v-else class="manual-badge">✋ Manual</span>
+                <span v-else class="manual-badge"> Manual</span>
               </td>
               <td>
                 <input
@@ -229,7 +235,7 @@
                     title="Convert AI Contour to Editable Manual Caliper"
                     @click="convertToManual(a)"
                   >
-                    ✏️ Convert
+                    Convert
                   </button>
                   <ClinicalIconButton
                     class="btn-delete-annot"
@@ -320,8 +326,10 @@
         class="btn-primary-signoff"
         @click="openSignoffModal"
       >
-        <span class="btn-icon">✍️</span> 21 CFR Part 11 Step-Up Sign-Off &amp;
-        Lock
+        <span class="btn-icon"
+          ><ClinicalIcon name="file-signature" :size="16"
+        /></span>
+        21 CFR Part 11 Step-Up Sign-Off &amp; Lock
       </button>
     </div>
 
@@ -401,7 +409,7 @@
 
 <script setup>
 import { ref, computed } from "vue";
-import { ClinicalIconButton, useFocusTrap } from "ui";
+import { ClinicalIconButton, useFocusTrap, ClinicalIcon } from "ui";
 
 const props = defineProps({
   annotations: {

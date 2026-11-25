@@ -13,7 +13,13 @@
     <template #header>
       <header class="drawer-header">
         <div class="header-titles">
-          <GitCompare :size="18" aria-hidden="true" class="header-icon" />
+          <GitCompare
+            :size="20"
+            aria-hidden="true"
+            class="header-icon"
+            :stroke-width="1.75"
+            focusable="false"
+          />
           <h3 id="upversioning-impact-title">
             Dictionary Up-Versioning Impact Analysis
           </h3>
@@ -25,7 +31,12 @@
           :disabled="codingStore.impactAnalysis.isLoading"
           @click="close"
         >
-          <X :size="18" aria-hidden="true" />
+          <X
+            :size="20"
+            aria-hidden="true"
+            :stroke-width="1.75"
+            focusable="false"
+          />
         </button>
       </header>
     </template>
@@ -78,8 +89,10 @@
         >
           <Play
             v-if="!codingStore.impactAnalysis.isLoading"
-            :size="15"
+            :size="16"
             aria-hidden="true"
+            :stroke-width="1.75"
+            focusable="false"
           />
           {{
             codingStore.impactAnalysis.isLoading
@@ -227,7 +240,12 @@
     <!-- Initial Placeholder State -->
     <div v-else class="initial-placeholder-state">
       <div class="placeholder-icon" aria-hidden="true">
-        <BarChart3 :size="36" aria-hidden="true" />
+        <BarChart3
+          :size="20"
+          aria-hidden="true"
+          :stroke-width="1.75"
+          focusable="false"
+        />
       </div>
       <h4>Ready for Impact Analysis</h4>
       <p>

@@ -96,7 +96,7 @@
     "diastolicBpRule": "Diastolic BP: Numeric value between 30 and 150 mmHg.",
     "pulseRateRule": "Pulse Rate: Numeric value between 30 and 200 bpm.",
     "queryManagementTitle": "Query Management Actions:",
-    "queryManagementDesc": "Click the 💬 / ⚠️ flags next to input fields to raise, answer, close, or reopen discrepancy notes. All query transitions are audit-logged in real-time.",
+    "queryManagementDesc": "Click the query flags next to input fields to raise, answer, close, or reopen discrepancy notes. All query transitions are audit-logged in real-time.",
     "form": {
       "title": "Subject eCRF Data Entry Form",
       "schemaBadge": "Protocol Schema v{version}",
@@ -109,7 +109,7 @@
       "noSubjects": "No subjects listed",
       "trainingGatedTitle": "Mandatory Protocol Training Incomplete — Data Entry Gated",
       "trainingGatedDesc": "Under ICH GCP E6(R2) §4 & PRD-TRN-002, site staff must complete mandatory protocol amendment training before saving or signing eCRF entries.",
-      "completeTrainingNow": "Complete Training Now ➡️",
+      "completeTrainingNow": "Complete Training Now",
       "reconsentGatedTitle": "Protocol Amendment Active (v2.0.0) — Re-Consent Required",
       "reconsentGatedDesc": "This subject must complete re-consent for Protocol Version 2.0.0 before further visit data entry can be saved (PRD-SUB-007). All input fields are currently locked.",
       "openEconsent": "Open eConsent Form",

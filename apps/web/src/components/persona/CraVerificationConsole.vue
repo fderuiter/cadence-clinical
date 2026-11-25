@@ -332,7 +332,7 @@
                     style="padding: 2px 8px; font-size: 0.75rem"
                     @click="openRaiseQueryModal(field)"
                   >
-                    ⚠️ Raise Query
+                    Raise Query
                   </button>
 
                   <!-- Query in OPEN state: CRC can answer -->
@@ -354,7 +354,7 @@
                     "
                     @click="openAnswerQueryModal(field)"
                   >
-                    💬 Submit Answer
+                    Submit Answer
                   </button>
 
                   <!-- Query in ANSWERED state (or OPEN by CRA): CRA can Close / Resolve -->
@@ -376,7 +376,7 @@
                     "
                     @click="openCloseQueryModal(field)"
                   >
-                    ✅ Close Query
+                    Close Query
                   </button>
                 </div>
               </td>
@@ -391,7 +391,7 @@
       v-model="showRaiseModal"
       :teleport="false"
       dialog-class="modal"
-      title="⚠️ Raise Clinical Discrepancy Query"
+      title="Raise Clinical Discrepancy Query"
     >
       <p
         style="
@@ -426,7 +426,7 @@
         class="error-msg"
         style="color: var(--semantic-color-error-dark); font-size: 0.8rem"
       >
-        ⚠️ {{ modalError }}
+        {{ modalError }}
       </div>
       <template #footer>
         <button
@@ -455,7 +455,7 @@
       v-model="showAnswerModal"
       :teleport="false"
       dialog-class="modal"
-      title="💬 Site CRC Query Response"
+      title="Site CRC Query Response"
     >
       <p
         style="
@@ -491,7 +491,7 @@
         class="error-msg"
         style="color: var(--semantic-color-error-dark); font-size: 0.8rem"
       >
-        ⚠️ {{ modalError }}
+        {{ modalError }}
       </div>
       <template #footer>
         <button
@@ -520,7 +520,7 @@
       v-model="showCloseModal"
       :teleport="false"
       dialog-class="modal"
-      title="✅ CRA Monitor Close Query"
+      title="CRA Monitor Close Query"
     >
       <p
         style="
@@ -552,7 +552,7 @@
         class="error-msg"
         style="color: var(--semantic-color-error-dark); font-size: 0.8rem"
       >
-        ⚠️ {{ modalError }}
+        {{ modalError }}
       </div>
       <template #footer>
         <button

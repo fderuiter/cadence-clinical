@@ -12,7 +12,13 @@
     <template #header>
       <div class="drawer-header">
         <div class="header-info">
-          <Share2 :size="18" class="share-header-icon" aria-hidden="true" />
+          <Share2
+            :size="20"
+            class="share-header-icon"
+            aria-hidden="true"
+            :stroke-width="1.75"
+            focusable="false"
+          />
           <h3 class="drawer-title">
             {{
               isBulk ? `Bulk Share (${files.length} Files)` : "Share Document"
@@ -26,7 +32,12 @@
           :disabled="isSubmitting"
           @click="$emit('close')"
         >
-          <X :size="18" aria-hidden="true" />
+          <X
+            :size="20"
+            aria-hidden="true"
+            :stroke-width="1.75"
+            focusable="false"
+          />
         </button>
       </div>
     </template>
@@ -44,7 +55,12 @@
           :class="{ active: activeTab === 'internal' }"
           @click="activeTab = 'internal'"
         >
-          <Users :size="15" aria-hidden="true" />
+          <Users
+            :size="16"
+            aria-hidden="true"
+            :stroke-width="1.75"
+            focusable="false"
+          />
           <span>Internal Share</span>
         </button>
         <button
@@ -54,7 +70,12 @@
           :class="{ active: activeTab === 'guest' }"
           @click="activeTab = 'guest'"
         >
-          <Globe :size="15" aria-hidden="true" />
+          <Globe
+            :size="16"
+            aria-hidden="true"
+            :stroke-width="1.75"
+            focusable="false"
+          />
           <span>External Guest Link</span>
         </button>
         <button
@@ -64,7 +85,12 @@
           :class="{ active: activeTab === 'active_grants' }"
           @click="activeTab = 'active_grants'"
         >
-          <ShieldCheck :size="15" aria-hidden="true" />
+          <ShieldCheck
+            :size="16"
+            aria-hidden="true"
+            :stroke-width="1.75"
+            focusable="false"
+          />
           <span>Active Grants ({{ activeGrantsList.length }})</span>
         </button>
       </div>
@@ -192,7 +218,12 @@
           </div>
 
           <div v-if="submitSuccessMsg" class="success-alert">
-            <CheckCircle2 :size="15" aria-hidden="true" />
+            <CheckCircle2
+              :size="16"
+              aria-hidden="true"
+              :stroke-width="1.75"
+              focusable="false"
+            />
             <span>{{ submitSuccessMsg }}</span>
           </div>
 
@@ -214,7 +245,12 @@
             >
               <span v-if="isSubmitting">Delegating...</span>
               <template v-else>
-                <Lock :size="15" aria-hidden="true" />
+                <Lock
+                  :size="16"
+                  aria-hidden="true"
+                  :stroke-width="1.75"
+                  focusable="false"
+                />
                 <span>Grant Access</span>
               </template>
             </button>
@@ -225,7 +261,13 @@
       <!-- TAB 2: External Guest Link Generator -->
       <div v-else-if="activeTab === 'guest'" class="tab-content">
         <div class="guest-info-banner">
-          <Globe :size="16" class="banner-icon" aria-hidden="true" />
+          <Globe
+            :size="16"
+            class="banner-icon"
+            aria-hidden="true"
+            :stroke-width="1.75"
+            focusable="false"
+          />
           <div>
             <strong>Public Protected Guest Links:</strong>
             Generates a signed, time-limited URL for external reviewers (e.g.
@@ -281,7 +323,12 @@
             >
               <span v-if="isSubmitting">Generating...</span>
               <template v-else>
-                <Link2 :size="15" aria-hidden="true" />
+                <Link2
+                  :size="16"
+                  aria-hidden="true"
+                  :stroke-width="1.75"
+                  focusable="false"
+                />
                 <span>Generate Guest Link</span>
               </template>
             </button>
@@ -307,8 +354,20 @@
               class="btn btn-primary btn-copy-link"
               @click="copyGuestUrl"
             >
-              <Check v-if="isCopied" :size="15" aria-hidden="true" />
-              <Copy v-else :size="15" aria-hidden="true" />
+              <Check
+                v-if="isCopied"
+                :size="16"
+                aria-hidden="true"
+                :stroke-width="1.75"
+                focusable="false"
+              />
+              <Copy
+                v-else
+                :size="16"
+                aria-hidden="true"
+                :stroke-width="1.75"
+                focusable="false"
+              />
               <span>{{ isCopied ? "Copied!" : "Copy Link" }}</span>
             </button>
           </div>

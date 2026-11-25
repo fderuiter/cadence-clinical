@@ -18,7 +18,7 @@
       "
     >
       <div style="font-size: 4rem; color: var(--error); margin-bottom: 16px">
-        🛑
+        <ClinicalIcon name="x-circle" :size="16" />
       </div>
       <h2 style="color: var(--semantic-color-text-dark); margin-bottom: 8px">
         403 - Access Denied
@@ -91,6 +91,7 @@
 </template>
 
 <script setup>
+import { ClinicalIcon } from "ui";
 import { useAuthStore } from "../stores/auth";
 import { useRouter } from "vue-router";
 

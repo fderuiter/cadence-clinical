@@ -12,7 +12,7 @@
     >
       <div>
         <h3 style="font-weight: bold; margin: 0; color: var(--text-main)">
-          🗺️ Interactive Arm-Aware Gantt Pathway Visualizer
+          Interactive Arm-Aware Gantt Pathway Visualizer
         </h3>
         <p
           style="
@@ -347,7 +347,7 @@
                 font-weight="bold"
                 fill="var(--semantic-color-pink-text)"
               >
-                🔀 {{ truncate(cross.label || "Crossover", 18) }}
+                {{ truncate(cross.label || "Crossover", 18) }}
               </text>
             </g>
           </g>
@@ -362,7 +362,7 @@
       size="md"
       backdrop-class="gantt-modal-backdrop"
       dialog-class="gantt-modal-content card"
-      title="⚙️ Edit Encounter Timing Property"
+      title="Edit Encounter Timing Property"
       @close="closeModal"
     >
       <div
@@ -602,7 +602,7 @@
           "
           @click="saveTiming"
         >
-          💾 Save Changes
+          Save Changes
         </button>
       </template>
     </ClinicalModal>

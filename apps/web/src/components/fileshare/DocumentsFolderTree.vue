@@ -3,7 +3,9 @@
   <div class="documents-tree-container">
     <div class="tree-header">
       <div class="tree-title-row">
-        <span class="tree-title-icon">🗂️</span>
+        <span class="tree-title-icon"
+          ><ClinicalIcon name="folder" :size="16"
+        /></span>
         <h3 class="tree-title">Clinical Document Tree</h3>
       </div>
       <div class="tree-search-bar">
@@ -52,7 +54,9 @@
         @click="selectGlobalRoot"
       >
         <div class="node-header">
-          <span class="folder-icon">📂</span>
+          <span class="folder-icon"
+            ><ClinicalIcon name="folder" :size="16"
+          /></span>
           <span class="node-name font-bold">All Documents (Cross-Study)</span>
         </div>
       </div>
@@ -80,10 +84,14 @@
           tabindex="0"
           @click="clickStudy(study)"
         >
-          <span class="toggle-icon">{{
-            isExpanded(study.id) ? "▼" : "▶"
-          }}</span>
-          <span class="folder-icon">🏥</span>
+          <span class="toggle-icon"
+            ><ClinicalIcon
+              :name="isExpanded(study.id) ? 'chevron-down' : 'chevron-right'"
+              :size="16"
+          /></span>
+          <span class="folder-icon"
+            ><ClinicalIcon name="users" :size="16"
+          /></span>
           <span class="study-code">[{{ study.code }}]</span>
           <span class="node-name" :title="study.title">{{ study.id }}</span>
         </div>
@@ -112,10 +120,18 @@
               tabindex="0"
               @click="clickSite(study, site)"
             >
-              <span class="toggle-icon">{{
-                isExpanded(study.id + "-" + site.id) ? "▼" : "▶"
-              }}</span>
-              <span class="folder-icon">📍</span>
+              <span class="toggle-icon"
+                ><ClinicalIcon
+                  :name="
+                    isExpanded(study.id + '-' + site.id)
+                      ? 'chevron-down'
+                      : 'chevron-right'
+                  "
+                  :size="16"
+              /></span>
+              <span class="folder-icon"
+                ><ClinicalIcon name="info" :size="16"
+              /></span>
               <span class="node-name">{{ site.name }}</span>
             </div>
 
@@ -143,10 +159,16 @@
                   tabindex="0"
                   @click="clickZone(zone)"
                 >
-                  <span class="toggle-icon">{{
-                    isExpanded(zone.id) ? "▼" : "▶"
-                  }}</span>
-                  <span class="folder-icon">📁</span>
+                  <span class="toggle-icon"
+                    ><ClinicalIcon
+                      :name="
+                        isExpanded(zone.id) ? 'chevron-down' : 'chevron-right'
+                      "
+                      :size="16"
+                  /></span>
+                  <span class="folder-icon"
+                    ><ClinicalIcon name="folder" :size="16"
+                  /></span>
                   <span class="zone-label">Zone {{ zone.code }}:</span>
                   <span class="node-name">{{ zone.name }}</span>
                 </div>
@@ -175,10 +197,18 @@
                       tabindex="0"
                       @click="clickSection(sec)"
                     >
-                      <span class="toggle-icon">{{
-                        isExpanded(sec.id) ? "▼" : "▶"
-                      }}</span>
-                      <span class="folder-icon">📂</span>
+                      <span class="toggle-icon"
+                        ><ClinicalIcon
+                          :name="
+                            isExpanded(sec.id)
+                              ? 'chevron-down'
+                              : 'chevron-right'
+                          "
+                          :size="16"
+                      /></span>
+                      <span class="folder-icon"
+                        ><ClinicalIcon name="folder" :size="16"
+                      /></span>
                       <span class="section-label">S{{ sec.code }}:</span>
                       <span class="node-name">{{ sec.name }}</span>
                     </div>
@@ -203,7 +233,9 @@
                         @click="clickFolder(folder)"
                       >
                         <div class="node-header folder-header">
-                          <span class="folder-icon">📄</span>
+                          <span class="folder-icon"
+                            ><ClinicalIcon name="file-text" :size="16"
+                          /></span>
                           <span class="folder-code">[{{ folder.code }}]</span>
                           <span class="node-name">{{ folder.name }}</span>
                         </div>
@@ -221,6 +253,7 @@
 </template>
 
 <script setup>
+import { ClinicalIcon } from "ui";
 import { ref, computed, watch } from "vue";
 
 const props = defineProps({

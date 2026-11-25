@@ -237,7 +237,12 @@ defineExpose({
               :disabled="!dismissible"
               @click="closeDrawer"
             >
-              <X :size="18" aria-hidden="true" />
+              <X
+                :size="16"
+                :stroke-width="1.75"
+                aria-hidden="true"
+                focusable="false"
+              />
             </button>
           </header>
         </slot>

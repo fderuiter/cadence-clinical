@@ -27,7 +27,11 @@
         <!-- Blinded Partitioning Role Toggle -->
         <div class="blinding-toggle-box">
           <label class="toggle-label" for="unblinded-toggle">
-            <span class="toggle-icon">{{ isUnblindedRole ? "🔓" : "🔒" }}</span>
+            <span class="toggle-icon"
+              ><ClinicalIcon
+                :name="isUnblindedRole ? 'unlock' : 'lock'"
+                :size="16"
+            /></span>
             <span class="toggle-text">{{
               isUnblindedRole
                 ? "Unblinded View (IDMC / Stats)"
@@ -49,7 +53,8 @@
           :disabled="isLoading"
           @click="refreshData"
         >
-          <span class="icon">🔄</span> Refresh Lakehouse
+          <span class="icon"><ClinicalIcon name="refresh" :size="16" /></span>
+          Refresh Lakehouse
         </button>
 
         <button
@@ -57,7 +62,8 @@
           class="btn btn-primary"
           @click="openCreateSnapshotModal"
         >
-          <span class="icon">📸</span> Create Version-Pinned Snapshot
+          <span class="icon"><ClinicalIcon name="camera" :size="16" /></span>
+          Create Version-Pinned Snapshot
         </button>
       </div>
     </header>
@@ -91,7 +97,7 @@
         :class="['tab-button', { active: activeTab === 'snapshots' }]"
         @click="activeTab = 'snapshots'"
       >
-        🗄️ Version-Pinned Snapshots ({{ snapshots.length }})
+        Version-Pinned Snapshots ({{ snapshots.length }})
       </button>
       <button
         role="tab"
@@ -99,7 +105,7 @@
         :class="['tab-button', { active: activeTab === 'pool_data' }]"
         @click="activeTab = 'pool_data'"
       >
-        📊 Pooled Data Explorer
+        Pooled Data Explorer
       </button>
       <button
         role="tab"
@@ -107,7 +113,7 @@
         :class="['tab-button', { active: activeTab === 'audit_log' }]"
         @click="activeTab = 'audit_log'"
       >
-        📜 21 CFR Part 11 Audit Trail
+        21 CFR Part 11 Audit Trail
       </button>
       <button
         role="tab"
@@ -115,7 +121,7 @@
         :class="['tab-button', { active: activeTab === 'sce' }]"
         @click="activeTab = 'sce'"
       >
-        🧮 Statistical Computing (R / Python)
+        Statistical Computing (R / Python)
       </button>
       <button
         role="tab"
@@ -123,7 +129,7 @@
         :class="['tab-button', { active: activeTab === 'cdisc_pipeline' }]"
         @click="activeTab = 'cdisc_pipeline'"
       >
-        🧬 CDISC SDTM/ADaM &amp; Define-XML
+        CDISC SDTM/ADaM &amp; Define-XML
       </button>
     </nav>
 
@@ -178,8 +184,8 @@
                   </span>
                 </td>
                 <td>
-                  <span v-if="snap.lock_id" class="lock-ref"
-                    >🔒 {{ snap.lock_id }}</span
+                  <span v-if="snap.lock_id" class="lock-ref">
+                    {{ snap.lock_id }}</span
                   >
                   <span v-else class="text-muted">—</span>
                 </td>
@@ -199,7 +205,9 @@
                 </td>
                 <td class="cell-digest">
                   <div class="digest-pill" :title="snap.sha256_digest">
-                    <span class="digest-icon">🛡️</span>
+                    <span class="digest-icon"
+                      ><ClinicalIcon name="shield-check" :size="16"
+                    /></span>
                     <code
                       >{{ snap.sha256_digest.slice(0, 12) }}...{{
                         snap.sha256_digest.slice(-8)
@@ -217,7 +225,7 @@
                     title="Verify SHA-256 Bit-for-Bit Integrity"
                     @click="verifySnapshot(snap)"
                   >
-                    🛡️ Verify
+                    Verify
                   </button>
                   <button
                     type="button"
@@ -225,7 +233,7 @@
                     title="View Snapshot Pooled Records"
                     @click="viewSnapshotData(snap)"
                   >
-                    🔍 Explore
+                    Explore
                   </button>
                   <button
                     type="button"
@@ -233,7 +241,7 @@
                     title="View Snapshot Audit Trail"
                     @click="viewSnapshotAudit(snap)"
                   >
-                    📜 Audit
+                    Audit
                   </button>
                 </td>
               </tr>
@@ -257,7 +265,9 @@
         "
       >
         <div class="verify-icon-col">
-          <span>{{ lastVerificationResult.is_valid ? "✅" : "❌" }}</span>
+          <span>{{
+            lastVerificationResult.is_valid ? "Verified" : "Rejected"
+          }}</span>
         </div>
         <div class="verify-content">
           <h4>
@@ -297,12 +307,12 @@
             </h3>
             <p class="card-sub">
               Showing harmonized observations from all ingested data streams.
-              <span v-if="!isUnblindedRole" class="blind-notice"
-                >⚠️ Blinded Mode Active: Sensitive treatment records and
-                randomized allocations are masked per GxP blinding policy.</span
+              <span v-if="!isUnblindedRole" class="blind-notice">
+                Blinded Mode Active: Sensitive treatment records and randomized
+                allocations are masked per GxP blinding policy.</span
               >
-              <span v-else class="unblind-notice"
-                >🔓 Unblinded Access Verified: Viewing unmasked treatment
+              <span v-else class="unblind-notice">
+                Unblinded Access Verified: Viewing unmasked treatment
                 allocations.</span
               >
             </p>
@@ -428,7 +438,7 @@
                 </td>
                 <td>
                   <span v-if="rec.is_unblinded" class="badge-unblind-tag">
-                    {{ isUnblindedRole ? "🔓 UNBLINDED" : "🔒 MASKED" }}
+                    {{ isUnblindedRole ? "UNBLINDED" : "MASKED" }}
                   </span>
                   <span v-else class="badge-blinded-tag">BLINDED</span>
                 </td>
@@ -546,7 +556,7 @@
       :dismissible="!isCreating"
       backdrop-class="modal-overlay"
       dialog-class="modal-card"
-      title="📸 Create Version-Pinned Clinical Snapshot Pool"
+      title="Create Version-Pinned Clinical Snapshot Pool"
     >
       <div class="form-group">
         <label class="form-label" for="snap-study"
@@ -654,7 +664,7 @@
 </template>
 
 <script setup lang="ts">
-import { ClinicalIconButton, ClinicalModal } from "ui";
+import { ClinicalIconButton, ClinicalModal, ClinicalIcon } from "ui";
 import { computed, onMounted, ref } from "vue";
 import {
   demoNowIso,
@@ -772,49 +782,49 @@ const streamDefinitions = [
   {
     type: "EDC_ECRF",
     label: "EDC eCRFs",
-    icon: "📝",
+    icon: "Document",
     cdiscDomain: "VS, AE, DM, EX",
     bgCol: "var(--semantic-color-info-bg)",
   },
   {
     type: "EPRO_ECOA",
     label: "ePRO / eCOA",
-    icon: "📱",
+    icon: "Contact",
     cdiscDomain: "QS (PROMIS/SF-36)",
     bgCol: "var(--semantic-color-success-bg-soft)",
   },
   {
     type: "CENTRAL_LAB",
     label: "Central Labs (HL7)",
-    icon: "🧪",
+    icon: "Laboratory",
     cdiscDomain: "LB (LOINC Standard)",
     bgCol: "var(--semantic-color-purple-bg)",
   },
   {
     type: "LOCAL_LAB",
     label: "Local Labs",
-    icon: "🏥",
+    icon: "Participant",
     cdiscDomain: "LB (Site Diagnostics)",
     bgCol: "var(--semantic-color-orange-bg)",
   },
   {
     type: "IOT_WEARABLE",
     label: "IoT & Wearables",
-    icon: "⌚",
+    icon: "Item",
     cdiscDomain: "VS / Telemetry",
     bgCol: "var(--semantic-color-cyan-bg)",
   },
   {
     type: "EHR_FHIR",
     label: "EHR HL7 FHIR",
-    icon: "🩺",
+    icon: "Clinical",
     cdiscDomain: "PR, MH, EX, LB",
     bgCol: "var(--semantic-color-purple-bg)",
   },
   {
     type: "MEDICAL_IMAGING",
     label: "Medical Imaging",
-    icon: "🩻",
+    icon: "Item",
     cdiscDomain: "TR, TU, RS (RECIST 1.1)",
     bgCol: "var(--semantic-color-error-bg-soft)",
   },

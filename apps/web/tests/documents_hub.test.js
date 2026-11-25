@@ -233,7 +233,7 @@ describe("feat(fileshare): 10 — Documents Hub UI (#4317)", () => {
       expect(mediaModal.props("fileRecord").filename).toBeDefined();
     });
 
-    it("displays 🔒 badge and disables delete button when file is on retention hold", async () => {
+    it("displays lock badge and disables delete button when file is on retention hold", async () => {
       const store = useFileshareStore();
       store.files = [
         {
@@ -282,7 +282,8 @@ describe("feat(fileshare): 10 — Documents Hub UI (#4317)", () => {
       expect(heldRow).toBeDefined();
       const heldBadge = heldRow.find(".status-pill.status-hold");
       expect(heldBadge.exists()).toBe(true);
-      expect(heldBadge.text()).toContain("🔒");
+      expect(heldBadge.find("svg.clinical-icon").exists()).toBe(true);
+      expect(heldBadge.text()).toContain("ON HOLD");
       expect(heldBadge.attributes("title")).toBe(
         "Legal subpoena investigation"
       );

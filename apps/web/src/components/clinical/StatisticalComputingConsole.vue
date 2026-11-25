@@ -33,7 +33,9 @@
           class="blinding-status-pill"
           :class="{ 'unblinded-active': isUnblindedMode }"
         >
-          <span class="status-icon">{{ isUnblindedMode ? "🔓" : "🔒" }}</span>
+          <span class="status-icon">{{
+            isUnblindedMode ? "Unlocked" : "Locked"
+          }}</span>
           <div class="status-info">
             <span class="status-label">{{
               isUnblindedMode
@@ -54,7 +56,8 @@
           :disabled="isLoading"
           @click="loadData"
         >
-          <span class="icon">🔄</span> Refresh
+          <span class="icon"><ClinicalIcon name="refresh" :size="16" /></span>
+          Refresh
         </button>
 
         <button
@@ -62,7 +65,8 @@
           class="btn btn-primary"
           @click="openNewProgramModal"
         >
-          <span class="icon">➕</span> Author New Program
+          <span class="icon"><ClinicalIcon name="plus" :size="16" /></span>
+          Author New Program
         </button>
       </div>
     </header>
@@ -79,7 +83,7 @@
         :class="['tab-btn', { active: activeTab === 'editor' }]"
         @click="activeTab = 'editor'"
       >
-        💻 Statistical Workspace &amp; Runner
+        Statistical Workspace &amp; Runner
       </button>
       <button
         role="tab"
@@ -87,7 +91,7 @@
         :class="['tab-btn', { active: activeTab === 'runs' }]"
         @click="activeTab = 'runs'"
       >
-        📜 Execution Runs &amp; Signed Manifests ({{ runs.length }})
+        Execution Runs &amp; Signed Manifests ({{ runs.length }})
       </button>
       <button
         role="tab"
@@ -95,7 +99,7 @@
         :class="['tab-btn', { active: activeTab === 'lockfiles' }]"
         @click="activeTab = 'lockfiles'"
       >
-        📦 Package Lockfiles (uv.lock / renv.lock)
+        Package Lockfiles (uv.lock / renv.lock)
       </button>
       <button
         role="tab"
@@ -103,7 +107,7 @@
         :class="['tab-btn', { active: activeTab === 'tokens' }]"
         @click="activeTab = 'tokens'"
       >
-        🔑 Database Lock Authorization Tokens ({{ lockTokens.length }})
+        Database Lock Authorization Tokens ({{ lockTokens.length }})
       </button>
     </nav>
 
@@ -145,14 +149,14 @@
                 :class="['lang-btn', { active: currentLanguage === 'PYTHON' }]"
                 @click="switchLanguage('PYTHON')"
               >
-                🐍 Python 3.14
+                Python 3.14
               </button>
               <button
                 type="button"
                 :class="['lang-btn', { active: currentLanguage === 'R' }]"
                 @click="switchLanguage('R')"
               >
-                📊 R 4.4.2
+                R 4.4.2
               </button>
             </div>
 
@@ -219,8 +223,8 @@
 
           <div class="code-editor-wrapper">
             <div class="editor-toolbar">
-              <span class="editor-filename"
-                >📝 {{ scriptName || "untitled_analysis.py" }}</span
+              <span class="editor-filename">
+                {{ scriptName || "untitled_analysis.py" }}</span
               >
               <span v-if="computedCodeHash" class="code-digest-preview"
                 >SHA-256:
@@ -244,7 +248,7 @@
               :disabled="isSaving"
               @click="saveProgramDraft"
             >
-              💾 Save Program Definition
+              Save Program Definition
             </button>
             <span class="text-muted text-xs"
               >Immutable SHA-256 seal will be signed on execution dispatch</span
@@ -335,7 +339,7 @@
                   </option>
                 </select>
                 <p class="token-warning">
-                  ⚠️ 21 CFR Part 11 Rule: Unblinded analysis requires active
+                  21 CFR Part 11 Rule: Unblinded analysis requires active
                   database lock token authorization with cryptographic
                   signature.
                 </p>
@@ -375,10 +379,10 @@
                 :disabled="isExecuting || !canExecute"
                 @click="dispatchExecution"
               >
-                <span v-if="isExecuting" class="spinner"
-                  >⏳ Executing Sandbox Run...</span
+                <span v-if="isExecuting" class="spinner">
+                  Executing Sandbox Run...</span
                 >
-                <span v-else>🚀 Run Statistical Analysis in Sandbox</span>
+                <span v-else> Run Statistical Analysis in Sandbox</span>
               </button>
             </div>
 
@@ -480,8 +484,8 @@
                   }}</span>
                 </td>
                 <td>
-                  <span v-if="run.is_unblinded_run" class="badge-unblind-tag"
-                    >🔓 UNBLINDED</span
+                  <span v-if="run.is_unblinded_run" class="badge-unblind-tag">
+                    UNBLINDED</span
                   >
                   <span v-else class="badge-blinded-tag">BLINDED</span>
                 </td>
@@ -498,7 +502,7 @@
                 </td>
                 <td class="cell-digest">
                   <span class="digest-pill" :title="run.manifest_sha256_seal">
-                    🛡️ {{ run.manifest_sha256_seal.slice(0, 14) }}...
+                    {{ run.manifest_sha256_seal.slice(0, 14) }}...
                   </span>
                 </td>
                 <td class="cell-date">
@@ -590,9 +594,7 @@
 
           <!-- Electronic Signature Block -->
           <div class="sig-block-card">
-            <h4 class="sig-title">
-              ✍️ 21 CFR Part 11 Electronic Signature Block
-            </h4>
+            <h4 class="sig-title">21 CFR Part 11 Electronic Signature Block</h4>
             <div class="sig-grid">
               <div class="sig-item">
                 <span class="sig-lbl">Signer ID:</span>
@@ -630,7 +632,7 @@
           <!-- Generated Output Artifacts -->
           <div class="artifacts-section">
             <h4 class="section-title">
-              📊 Output Artifacts (Tables, Listings, Figures)
+              Output Artifacts (Tables, Listings, Figures)
             </h4>
             <div
               v-if="selectedRunDetail.output_artifacts.length > 0"
@@ -669,7 +671,7 @@
           <!-- Captured Stdout & Stderr -->
           <div class="logs-section">
             <h4 class="section-title">
-              🖥️ Execution Console Output (Stdout / Stderr)
+              Execution Console Output (Stdout / Stderr)
             </h4>
             <div class="console-box">
               <div class="console-header-bar">
@@ -742,7 +744,7 @@
                 :disabled="isValidatingLock"
                 @click="assertLockfileIntegrity"
               >
-                🛡️ Validate Lockfile Integrity
+                Validate Lockfile Integrity
               </button>
               <button
                 type="button"
@@ -797,7 +799,7 @@
                       class="pkg-qual"
                       :class="pkg.is_qualified ? 'qual-yes' : 'qual-no'"
                     >
-                      {{ pkg.is_qualified ? "✅ GxP Qualified" : "⚠️ Custom" }}
+                      {{ pkg.is_qualified ? "GxP Qualified" : "Custom" }}
                     </span>
                   </div>
                 </div>
@@ -824,7 +826,7 @@
             class="btn btn-primary"
             @click="openIssueTokenModal"
           >
-            🔑 Issue New Authorization Token
+            Issue New Authorization Token
           </button>
         </div>
 
@@ -850,7 +852,7 @@
                   <code>{{ tok.token_id }}</code>
                 </td>
                 <td>
-                  <span class="lock-ref">🔒 {{ tok.lock_id }}</span>
+                  <span class="lock-ref"> {{ tok.lock_id }}</span>
                 </td>
                 <td>
                   <span class="milestone-badge">{{ tok.milestone }}</span>
@@ -882,7 +884,7 @@
                 </td>
                 <td class="cell-digest">
                   <span class="digest-pill" :title="tok.signature_hash">
-                    🔑 {{ tok.signature_hash.slice(0, 14) }}...
+                    {{ tok.signature_hash.slice(0, 14) }}...
                   </span>
                 </td>
                 <td>
@@ -1003,7 +1005,7 @@
 </template>
 
 <script setup lang="ts">
-import { ClinicalIconButton, ClinicalModal } from "ui";
+import { ClinicalIconButton, ClinicalModal, ClinicalIcon } from "ui";
 import { ref, computed, onMounted } from "vue";
 import { statisticalComputingService } from "../../api/statisticalComputing";
 import { apiClient } from "../../api/apiClient";
@@ -1481,10 +1483,10 @@ function isTokenExpired(expiresAtStr: string) {
 }
 
 function getArtifactIcon(type: string) {
-  if (type === "TABLE") return "📊";
-  if (type === "FIGURE") return "📈";
-  if (type === "LISTING") return "📜";
-  return "📁";
+  if (type === "TABLE") return "Metrics";
+  if (type === "FIGURE") return "Metrics";
+  if (type === "LISTING") return "Document";
+  return "Folder";
 }
 
 function formatDate(isoStr: string) {

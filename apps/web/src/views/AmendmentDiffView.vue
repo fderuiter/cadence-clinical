@@ -9,7 +9,7 @@
       aria-live="polite"
     >
       <span class="banner-icon">
-        {{ notificationBanner.type === "success" ? "✅" : "⚠️" }}
+        {{ notificationBanner.type === "success" ? "Verified" : "Warning" }}
       </span>
       <span class="banner-message">{{ notificationBanner.message }}</span>
       <ClinicalIconButton
@@ -44,7 +44,9 @@
           class="btn btn-primary"
           @click="openWizard"
         >
-          <span class="btn-icon">🧙</span>
+          <span class="btn-icon"
+            ><ClinicalIcon name="file-text" :size="16"
+          /></span>
           <span>Launch Upversioning Wizard</span>
         </button>
       </div>
@@ -57,7 +59,9 @@
         :class="{ active: activeMode === 'manager' }"
         @click="activeMode = 'manager'"
       >
-        <span class="nav-icon">📐</span>
+        <span class="nav-icon"
+          ><ClinicalIcon name="file-text" :size="16"
+        /></span>
         <span>Study Manager: Guided Wizard &amp; Semantic Diff</span>
       </button>
       <button
@@ -65,7 +69,9 @@
         :class="{ active: activeMode === 'coordinator' }"
         @click="activeMode = 'coordinator'"
       >
-        <span class="nav-icon">📋</span>
+        <span class="nav-icon"
+          ><ClinicalIcon name="clipboard-list" :size="16"
+        /></span>
         <span>Site Coordinator: Bulk Re-Consent &amp; Migration Workspace</span>
         <span v-if="gatedSubjectCount > 0" class="nav-pill-badge tabular-nums"
           >{{ gatedSubjectCount }} Hold(s)</span
@@ -135,21 +141,21 @@
           :class="{ active: activeTab === 'dashboard' }"
           @click="activeTab = 'dashboard'"
         >
-          📊 Subject Impact Breakdown
+          Subject Impact Breakdown
         </button>
         <button
           class="tab-btn"
           :class="{ active: activeTab === 'graph' }"
           @click="activeTab = 'graph'"
         >
-          🔀 Graph Diff &amp; Target Rules
+          Graph Diff &amp; Target Rules
         </button>
         <button
           class="tab-btn"
           :class="{ active: activeTab === 'wizard' }"
           @click="openWizard"
         >
-          🧙 4-Step Upversioning Wizard
+          4-Step Upversioning Wizard
         </button>
       </div>
 
@@ -157,7 +163,7 @@
       <div v-if="activeTab === 'dashboard'" class="dashboard-section">
         <div class="section-header">
           <h3 class="section-title">
-            📊 In-Flight Subject Migration &amp; Re-Consent Analyzer
+            In-Flight Subject Migration &amp; Re-Consent Analyzer
           </h3>
           <div class="header-right-actions">
             <button
@@ -166,7 +172,7 @@
               @click="fetchSubjectImpact"
             >
               {{
-                isLoadingImpact ? "Refreshing API..." : "🔄 Refresh Impact Data"
+                isLoadingImpact ? "Refreshing API..." : "Refresh Impact Data"
               }}
             </button>
             <span class="subject-total-counter"
@@ -294,10 +300,10 @@
                 </td>
                 <td>
                   <span v-if="sub.isGated" class="gating-pill pill-locked">
-                    🔒 Gated (Re-Consent Required)
+                    Gated (Re-Consent Required)
                   </span>
                   <span v-else class="gating-pill pill-unlocked">
-                    ✅ Active &amp; Projected
+                    Active &amp; Projected
                   </span>
                 </td>
                 <td>
@@ -335,9 +341,7 @@
         <div v-else class="impact-summary-header-card">
           <div class="summary-top-row">
             <div class="summary-title-group">
-              <h3 class="section-title">
-                📊 Protocol Amendment Impact Summary
-              </h3>
+              <h3 class="section-title">Protocol Amendment Impact Summary</h3>
               <p class="summary-subtext">
                 Quantitative patient burden delta, affected schedule visits, and
                 USDM schema revisions comparing v{{ selectedBaseVersion }} to
@@ -355,8 +359,8 @@
               >
                 {{
                   amendmentImpact.requires_reconsent
-                    ? "🔒 MANDATORY RE-CONSENT GATED (PRD-SUB-007)"
-                    : "✅ ADMINISTRATIVE AMENDMENT"
+                    ? "MANDATORY RE-CONSENT GATED (PRD-SUB-007)"
+                    : "ADMINISTRATIVE AMENDMENT"
                 }}
               </span>
             </div>
@@ -404,14 +408,13 @@
               v-if="amendmentImpact.schema_revisions?.encounters?.added"
               class="breakdown-chip"
             >
-              ➕ {{ amendmentImpact.schema_revisions.encounters.added }} Added
+              {{ amendmentImpact.schema_revisions.encounters.added }} Added
               Visit(s)
             </span>
             <span
               v-if="amendmentImpact.schema_revisions?.encounters?.modified"
               class="breakdown-chip"
             >
-              🔄
               {{ amendmentImpact.schema_revisions.encounters.modified }}
               Modified Visit(s)
             </span>
@@ -419,7 +422,7 @@
               v-if="amendmentImpact.schema_revisions?.activities?.added"
               class="breakdown-chip"
             >
-              ➕ {{ amendmentImpact.schema_revisions.activities.added }} Added
+              {{ amendmentImpact.schema_revisions.activities.added }} Added
               Procedure(s)
             </span>
             <span
@@ -428,7 +431,6 @@
               "
               class="breakdown-chip"
             >
-              📋
               {{ amendmentImpact.schema_revisions.eligibility_criteria.added }}
               Added Criteria
             </span>
@@ -436,7 +438,7 @@
               v-if="amendmentImpact.schema_revisions?.forms?.added"
               class="breakdown-chip"
             >
-              📝 {{ amendmentImpact.schema_revisions.forms.added }} Added eCRF
+              {{ amendmentImpact.schema_revisions.forms.added }} Added eCRF
               Form(s)
             </span>
           </div>
@@ -449,21 +451,21 @@
             :class="{ active: activeDiffLayer === 'soa' }"
             @click="activeDiffLayer = 'soa'"
           >
-            🔀 USDM Graph &amp; SoA Matrix Diff
+            USDM Graph &amp; SoA Matrix Diff
           </button>
           <button
             class="layer-tab-btn"
             :class="{ active: activeDiffLayer === 'eligibility' }"
             @click="activeDiffLayer = 'eligibility'"
           >
-            📋 Eligibility Criteria Diff
+            Eligibility Criteria Diff
           </button>
           <button
             class="layer-tab-btn"
             :class="{ active: activeDiffLayer === 'ecrf' }"
             @click="activeDiffLayer = 'ecrf'"
           >
-            📝 eCRF Forms &amp; Data Capture Diff
+            eCRF Forms &amp; Data Capture Diff
           </button>
         </div>
 
@@ -555,7 +557,10 @@
                     <span class="node-schedule">{{ item.schedule }}</span>
                   </div>
                   <div v-if="item.deltaNote" class="delta-annotation">
-                    <span class="delta-icon">ℹ️</span> {{ item.deltaNote }}
+                    <span class="delta-icon"
+                      ><ClinicalIcon name="info" :size="16"
+                    /></span>
+                    {{ item.deltaNote }}
                   </div>
                 </div>
               </div>
@@ -661,7 +666,10 @@
                 {{ form.description }}
               </p>
               <div v-if="form.deltaNote" class="delta-annotation">
-                <span class="delta-icon">ℹ️</span> {{ form.deltaNote }}
+                <span class="delta-icon"
+                  ><ClinicalIcon name="info" :size="16"
+                /></span>
+                {{ form.deltaNote }}
               </div>
             </div>
           </div>
@@ -678,7 +686,7 @@
         <div class="workspace-card-header">
           <div>
             <h3 class="card-title">
-              📋 Site Coordinator Bulk Re-Consent Workspace
+              Site Coordinator Bulk Re-Consent Workspace
             </h3>
             <p class="card-subtitle">
               Manage patient protocol re-consent holds, verify eConsent or
@@ -745,8 +753,8 @@
               class="form-select form-select-sm"
             >
               <option value="ALL">All Gating States</option>
-              <option value="GATED">🔒 Gated (Pending Re-Consent)</option>
-              <option value="UNLOCKED">✅ Unlocked (Compliant)</option>
+              <option value="GATED">Gated (Pending Re-Consent)</option>
+              <option value="UNLOCKED">Unlocked (Compliant)</option>
             </select>
           </div>
 
@@ -826,10 +834,10 @@
                 </td>
                 <td>
                   <span v-if="sub.isGated" class="gating-pill pill-locked">
-                    🔒 Gated (Re-Consent Required)
+                    Gated (Re-Consent Required)
                   </span>
                   <span v-else class="gating-pill pill-unlocked">
-                    ✅ Active &amp; Projected
+                    Active &amp; Projected
                   </span>
                 </td>
                 <td>
@@ -863,8 +871,8 @@
     >
       <div class="batch-toolbar-content">
         <div class="batch-info">
-          <span class="batch-count-badge tabular-nums"
-            >⚡ {{ selectedSubjectIds.length }} Subject(s) Selected</span
+          <span class="batch-count-badge tabular-nums">
+            {{ selectedSubjectIds.length }} Subject(s) Selected</span
           >
           <span class="batch-site-scope"
             >Site Scope: <strong>{{ selectedSiteScope }}</strong></span
@@ -887,7 +895,7 @@
             class="btn btn-primary btn-batch-action"
             @click="openBulkReconsentModal"
           >
-            ✍️ Execute Bulk Re-Consent &amp; Sign (21 CFR Part 11)
+            Execute Bulk Re-Consent &amp; Sign (21 CFR Part 11)
           </button>
         </div>
       </div>
@@ -1132,7 +1140,7 @@
             </p>
 
             <div v-if="isLoadingImpact" class="loading-state">
-              <span>🔄 Calculating predictive subject impact analysis...</span>
+              <span> Calculating predictive subject impact analysis...</span>
             </div>
 
             <div
@@ -1172,7 +1180,9 @@
               </div>
 
               <div class="impact-notice">
-                <span class="notice-icon">⚡</span>
+                <span class="notice-icon"
+                  ><ClinicalIcon name="alert-triangle" :size="16"
+                /></span>
                 <span
                   >Active execution pipeline verified.
                   <strong>{{ impactStats.pending.length }} subject(s)</strong>
@@ -1194,7 +1204,7 @@
             <div class="schema-mapping-preview">
               <div class="schema-rule-box">
                 <h5>
-                  📋 Added &amp; Modified Visit Rules (v{{
+                  Added &amp; Modified Visit Rules (v{{
                     newAmendment.target_version
                   }})
                 </h5>
@@ -1247,7 +1257,7 @@
             {{
               isSubmitting
                 ? "Publishing Target Schema..."
-                : "🚀 Publish Protocol Amendment & Apply Target Rules"
+                : "Publish Protocol Amendment & Apply Target Rules"
             }}
           </button>
         </div>
@@ -1310,7 +1320,7 @@
                 bulkReconsentForm.signature_type = 'ECONSENT'
               "
             >
-              <h4>✍️ Electronic Consent (eConsent)</h4>
+              <h4>Electronic Consent (eConsent)</h4>
               <p>Cryptographic 21 CFR Part 11 electronic signature record.</p>
             </div>
             <div
@@ -1331,7 +1341,7 @@
                 bulkReconsentForm.signature_type = 'PAPER_UPLOAD'
               "
             >
-              <h4>📄 Verified Paper ICF Upload</h4>
+              <h4>Verified Paper ICF Upload</h4>
               <p>
                 Site PI verified paper ICF signed and filed in investigator
                 binder.
@@ -1450,7 +1460,7 @@
               @keydown.enter.prevent="reconsentMode = 'ECONSENT'"
               @keydown.space.prevent="reconsentMode = 'ECONSENT'"
             >
-              <h4>✍️ Execute eConsent</h4>
+              <h4>Execute eConsent</h4>
               <p>
                 Register electronic signature verified with 21 CFR Part 11
                 cryptographic seal.
@@ -1466,7 +1476,7 @@
               @keydown.enter.prevent="reconsentMode = 'PAPER'"
               @keydown.space.prevent="reconsentMode = 'PAPER'"
             >
-              <h4>📄 Upload Signed Paper ICF</h4>
+              <h4>Upload Signed Paper ICF</h4>
               <p>
                 Record site PI verified paper ICF signed and dated by the
                 patient.
@@ -1504,7 +1514,7 @@
 import ReconsentChannelPicker from "../components/econsent/ReconsentChannelPicker.vue";
 import { ref, computed, onMounted } from "vue";
 import { DEMO_SITES } from "demo-fixtures";
-import { ClinicalIconButton, useFocusTrap } from "ui";
+import { ClinicalIconButton, useFocusTrap, ClinicalIcon } from "ui";
 import { apiClient } from "../api/apiClient";
 import { designerService } from "../api/designer";
 import { useClinicalStore } from "../stores/clinical";

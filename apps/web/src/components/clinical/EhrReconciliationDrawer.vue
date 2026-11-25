@@ -12,7 +12,13 @@
     <template #header>
       <div class="drawer-header">
         <div class="header-title-wrap">
-          <Stethoscope :size="18" class="header-icon" aria-hidden="true" />
+          <Stethoscope
+            :size="20"
+            class="header-icon"
+            aria-hidden="true"
+            :stroke-width="1.75"
+            focusable="false"
+          />
           <h2 id="drawer-heading" class="drawer-title">
             eSource EHR Reconciliation Drawer
           </h2>
@@ -26,7 +32,12 @@
           :disabled="isSubmitting"
           @click="closeDrawer"
         >
-          <X :size="18" aria-hidden="true" />
+          <X
+            :size="20"
+            aria-hidden="true"
+            :stroke-width="1.75"
+            focusable="false"
+          />
         </button>
       </div>
     </template>
@@ -68,7 +79,12 @@
             :disabled="isLoading"
             @click="fetchCandidates"
           >
-            <RefreshCw :size="14" aria-hidden="true" />
+            <RefreshCw
+              :size="16"
+              aria-hidden="true"
+              :stroke-width="1.75"
+              focusable="false"
+            />
             <span>Refresh</span>
           </button>
         </div>
@@ -127,7 +143,12 @@
             title="Select all pending items with confidence score >= 90%"
             @click="selectHighConfidence"
           >
-            <Zap :size="14" aria-hidden="true" />
+            <Zap
+              :size="16"
+              aria-hidden="true"
+              :stroke-width="1.75"
+              focusable="false"
+            />
             <span>Select High Confidence (&ge;90%)</span>
           </button>
           <button
@@ -191,7 +212,12 @@
               class="btn btn-primary btn-sm btn-refresh-candidates"
               @click="fetchCandidates"
             >
-              <RefreshCw :size="14" aria-hidden="true" />
+              <RefreshCw
+                :size="16"
+                aria-hidden="true"
+                :stroke-width="1.75"
+                focusable="false"
+              />
               <span>Refresh EHR Ingestion</span>
             </button>
             <button
@@ -247,7 +273,14 @@
                   `pill-${(item.discrepancy_type || 'not_compared').toLowerCase()}`,
                 ]"
               >
-                {{ formatDiscrepancy(item.discrepancy_type) }}
+                <component
+                  :is="discrepancyIcon(item.discrepancy_type)"
+                  :size="16"
+                  :stroke-width="1.75"
+                  aria-hidden="true"
+                  focusable="false"
+                />
+                <span>{{ formatDiscrepancy(item.discrepancy_type) }}</span>
               </span>
               <span
                 :class="[
@@ -266,7 +299,12 @@
             <div class="split-pane ehr-pane">
               <div class="pane-header">
                 <span class="pane-title">
-                  <Hospital :size="14" aria-hidden="true" />
+                  <Hospital
+                    :size="16"
+                    aria-hidden="true"
+                    :stroke-width="1.75"
+                    focusable="false"
+                  />
                   <span>Candidate EHR Source Data</span>
                 </span>
                 <span class="source-badge">{{ item.ehr_system_id }}</span>
@@ -307,7 +345,12 @@
             <div class="split-pane ecrf-pane">
               <div class="pane-header">
                 <span class="pane-title">
-                  <FileEdit :size="14" aria-hidden="true" />
+                  <FileEdit
+                    :size="16"
+                    aria-hidden="true"
+                    :stroke-width="1.75"
+                    focusable="false"
+                  />
                   <span>Current eCRF Target Field</span>
                 </span>
                 <span class="form-badge">{{ item.target_domain }} Form</span>
@@ -368,11 +411,21 @@
               >
             </div>
             <div v-if="item.electronic_signature" class="esign-badge">
-              <FileSignature :size="13" aria-hidden="true" />
+              <FileSignature
+                :size="16"
+                aria-hidden="true"
+                :stroke-width="1.75"
+                focusable="false"
+              />
               <span>21 CFR Part 11 eSigned</span>
             </div>
             <div v-if="item.clinical_query_id" class="query-badge">
-              <HelpCircle :size="13" aria-hidden="true" />
+              <HelpCircle
+                :size="16"
+                aria-hidden="true"
+                :stroke-width="1.75"
+                focusable="false"
+              />
               <span
                 >Query #{{ item.clinical_query_id.substring(0, 8) }} Open</span
               >
@@ -388,7 +441,12 @@
                 :disabled="item.status !== 'PENDING_REVIEW' || isSubmitting"
                 @click="promptAccept(item)"
               >
-                <Check :size="14" aria-hidden="true" />
+                <Check
+                  :size="16"
+                  aria-hidden="true"
+                  :stroke-width="1.75"
+                  focusable="false"
+                />
                 <span>Accept &amp; Commit</span>
               </button>
 
@@ -398,7 +456,12 @@
                 :disabled="item.status !== 'PENDING_REVIEW' || isSubmitting"
                 @click="openRejectModal(item)"
               >
-                <X :size="14" aria-hidden="true" />
+                <X
+                  :size="16"
+                  aria-hidden="true"
+                  :stroke-width="1.75"
+                  focusable="false"
+                />
                 <span>Reject with Reason</span>
               </button>
 
@@ -408,7 +471,12 @@
                 :disabled="item.status !== 'PENDING_REVIEW' || isSubmitting"
                 @click="openQueryModal(item)"
               >
-                <HelpCircle :size="14" aria-hidden="true" />
+                <HelpCircle
+                  :size="16"
+                  aria-hidden="true"
+                  :stroke-width="1.75"
+                  focusable="false"
+                />
                 <span>Raise Query</span>
               </button>
             </div>
@@ -418,7 +486,12 @@
               class="btn btn-link-provenance"
               @click="openProvenanceModal(item)"
             >
-              <Search :size="14" aria-hidden="true" />
+              <Search
+                :size="16"
+                aria-hidden="true"
+                :stroke-width="1.75"
+                focusable="false"
+              />
               <span>Inspect Provenance</span>
             </button>
           </footer>
@@ -442,7 +515,12 @@
             :disabled="isSubmitting"
             @click="handleBatchAccept"
           >
-            <Check :size="14" aria-hidden="true" />
+            <Check
+              :size="16"
+              aria-hidden="true"
+              :stroke-width="1.75"
+              focusable="false"
+            />
             <span>Batch Accept ({{ selectedCandidateIds.length }})</span>
           </button>
           <button
@@ -451,7 +529,12 @@
             :disabled="isSubmitting"
             @click="openBatchRejectModal"
           >
-            <X :size="14" aria-hidden="true" />
+            <X
+              :size="16"
+              aria-hidden="true"
+              :stroke-width="1.75"
+              focusable="false"
+            />
             <span>Batch Reject ({{ selectedCandidateIds.length }})</span>
           </button>
           <button
@@ -488,7 +571,12 @@
           :disabled="isSubmitting"
           @click="closeRejectModal"
         >
-          <X :size="18" aria-hidden="true" />
+          <X
+            :size="20"
+            aria-hidden="true"
+            :stroke-width="1.75"
+            focusable="false"
+          />
         </button>
       </div>
     </template>
@@ -563,7 +651,12 @@
           :disabled="isSubmitting"
           @click="closeQueryModal"
         >
-          <X :size="18" aria-hidden="true" />
+          <X
+            :size="20"
+            aria-hidden="true"
+            :stroke-width="1.75"
+            focusable="false"
+          />
         </button>
       </div>
     </template>
@@ -638,7 +731,12 @@
           aria-label="Close provenance dialog"
           @click="closeProvenanceModal"
         >
-          <X :size="18" aria-hidden="true" />
+          <X
+            :size="20"
+            aria-hidden="true"
+            :stroke-width="1.75"
+            focusable="false"
+          />
         </button>
       </div>
     </template>
@@ -714,7 +812,12 @@
           :disabled="isSubmitting"
           @click="closeBatchRejectModal"
         >
-          <X :size="18" aria-hidden="true" />
+          <X
+            :size="20"
+            aria-hidden="true"
+            :stroke-width="1.75"
+            focusable="false"
+          />
         </button>
       </div>
     </template>
@@ -771,7 +874,10 @@
 import { computed, onMounted, ref, watch } from "vue";
 import { ClinicalDrawer, ClinicalModal, EmptyState } from "ui";
 import {
+  AlertTriangle,
+  Calendar,
   Check,
+  Sparkles,
   FileEdit,
   FileSignature,
   HelpCircle,
@@ -1155,18 +1261,35 @@ function formatDate(dt?: string | null): string {
   }
 }
 
+function discrepancyIcon(disc?: string | null) {
+  switch (disc) {
+    case "NEW_FIELD":
+      return Sparkles;
+    case "EXACT_MATCH":
+      return Check;
+    case "VALUE_MISMATCH":
+      return AlertTriangle;
+    case "UNIT_MISMATCH":
+      return RefreshCw;
+    case "DATE_MISMATCH":
+      return Calendar;
+    default:
+      return HelpCircle;
+  }
+}
+
 function formatDiscrepancy(disc?: string | null): string {
   switch (disc) {
     case "NEW_FIELD":
-      return "✨ New Field";
+      return "New Field";
     case "EXACT_MATCH":
-      return "✓ Matches eCRF";
+      return "Matches eCRF";
     case "VALUE_MISMATCH":
-      return "⚠️ Value Conflict";
+      return "Value Conflict";
     case "UNIT_MISMATCH":
-      return "🔄 Unit Mismatch";
+      return "Unit Mismatch";
     case "DATE_MISMATCH":
-      return "📅 Date Mismatch";
+      return "Date Mismatch";
     case "NOT_COMPARED":
       return "Not compared with eCRF";
     default:
