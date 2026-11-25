@@ -1,17 +1,20 @@
 import { DEMO_STUDY, getDemoPersonaForWorkspace } from "demo-fixtures";
 import { buildUsdmSoaSchedule } from "../../stores/demo/usdmSoaSchedule";
-import { demoNowIso } from "../../utils/demoMode.js";
+import { demoNowIso, demoNowMs } from "../../utils/demoMode.js";
 import {
   DEMO_PROTOCOL_TEMPLATES,
   buildImportedDraftDesign,
 } from "../demoStudyImport.js";
 import {
+  ENROLLMENT_1001_UUID,
   PROPOSAL_1_REF,
+  SITE_101_UUID,
   STUDY_REF,
   VERSION_V1_REF,
   VERSION_V2_REF,
   cloneJson,
   makeUuidFromIndex,
+  resolveEnrollmentByIdOrCode,
 } from "./shared.js";
 
 function createInitialSoaProjection() {
@@ -143,6 +146,7 @@ export function createProtocolDesignDomain(ctx) {
         form_name: tpl.form_name,
         file_name: tpl.file_name,
         item_count: tpl.item_count,
+        repeating: Boolean(tpl.repeating),
       }));
     },
 
@@ -359,6 +363,7 @@ export function createProtocolDesignDomain(ctx) {
             study_day: -14,
             window_before: 7,
             window_after: 0,
+            repeating: false,
             locations: ["CLINIC"],
             footnotes: [1],
           },
@@ -369,6 +374,7 @@ export function createProtocolDesignDomain(ctx) {
             study_day: 1,
             window_before: 0,
             window_after: 1,
+            repeating: false,
             locations: ["CLINIC"],
             footnotes: [],
           },
@@ -379,6 +385,7 @@ export function createProtocolDesignDomain(ctx) {
             study_day: 28,
             window_before: 2,
             window_after: 2,
+            repeating: false,
             locations: ["CLINIC"],
             footnotes: [],
           },
@@ -391,6 +398,7 @@ export function createProtocolDesignDomain(ctx) {
             concepts: ["SYSBP", "DIABP", "PULSE", "VSCOMM"],
             columns: [0, 1, 2],
             frequency: 3,
+            repeating: false,
             footnotes: [1],
           },
           {
@@ -400,6 +408,7 @@ export function createProtocolDesignDomain(ctx) {
             concepts: ["HBA1C", "EGFR"],
             columns: [0, 2],
             frequency: 2,
+            repeating: false,
             footnotes: [],
           },
           {
@@ -409,6 +418,7 @@ export function createProtocolDesignDomain(ctx) {
             concepts: ["AETERM", "AESEV"],
             columns: [],
             frequency: 0,
+            repeating: true,
             footnotes: [],
           },
         ],
@@ -417,6 +427,124 @@ export function createProtocolDesignDomain(ctx) {
             number: 1,
             kind: "procedure",
             text: "Measure seated blood pressure after 5 minutes of quiet rest.",
+          },
+        ],
+      };
+    },
+
+    getEnrollmentSchedule(enrollmentRef, { asOf = null } = {}) {
+      const normalized = String(enrollmentRef || "")
+        .trim()
+        .split("@")[0]
+        .replace(/^enrollment:/i, "");
+      const subject =
+        resolveEnrollmentByIdOrCode(state.subjects, enrollmentRef) ||
+        state.subjects.find(
+          (s) => String(s.id || "").toLowerCase() === normalized.toLowerCase()
+        ) ||
+        state.subjects[0];
+      const studyCode = subject?.study_id || "DEMO-01";
+      const siteCode = subject?.site_id || "SITE-101";
+      const studyEntry = ctx.getStudyByRefOrCode(studyCode);
+      const studyRef = studyEntry?.ref || `${STUDY_REF}@1`;
+      const siteResult = this.listStudySites(studyCode);
+      const siteEntries = Array.isArray(siteResult)
+        ? siteResult
+        : Array.isArray(siteResult?.data)
+          ? siteResult.data
+          : [];
+      const siteEntry =
+        siteEntries.find(
+          (s) => String(s.site_code).toUpperCase() === siteCode.toUpperCase()
+        ) || siteEntries[0];
+      const effectiveVersions = Array.isArray(siteEntry?.effective_versions)
+        ? siteEntry.effective_versions
+        : [];
+      const dayMs = 86_400_000;
+      const baseMs = demoNowMs();
+      const dateAtOffset = (offsetDays) =>
+        new Date(baseMs + offsetDays * dayMs).toISOString().slice(0, 10);
+      const statusSinceIso = demoNowIso();
+      const referenceDate = dateAtOffset(0);
+      const effectiveAsOf = asOf || referenceDate;
+
+      if (effectiveVersions.length === 0) {
+        return {
+          enrollment_ref: `enrollment:${normalized || ENROLLMENT_1001_UUID}@1`,
+          study_ref: studyRef,
+          study_site_ref: siteEntry?.ref || `study_site:${SITE_101_UUID}@1`,
+          site_code: siteCode,
+          country: siteEntry?.country || "US",
+          enrollment_status: subject?.status || "SCREENED",
+          status_since: statusSinceIso,
+          reference_date: referenceDate,
+          as_of: effectiveAsOf,
+          governance_status: "NoEffectiveVersion",
+          latest_study_version_status: "Draft",
+          guidance:
+            "No protocol version is effective at this study site yet. Submit and approve the protocol draft, then declare and activate site effectivity before capturing scheduled forms.",
+          governing_version: null,
+          effective_versions: [],
+          schedule: null,
+          expected_visits: [],
+        };
+      }
+
+      const governing = effectiveVersions[0];
+      return {
+        enrollment_ref: `enrollment:${normalized || ENROLLMENT_1001_UUID}@1`,
+        study_ref: studyRef,
+        study_site_ref: siteEntry?.ref || `study_site:${SITE_101_UUID}@1`,
+        site_code: siteCode,
+        country: siteEntry?.country || "US",
+        enrollment_status: subject?.status || "ENROLLED",
+        status_since: statusSinceIso,
+        reference_date: referenceDate,
+        as_of: effectiveAsOf,
+        governance_status: "Effective",
+        latest_study_version_status: "Approved",
+        guidance: null,
+        governing_version: governing,
+        effective_versions: effectiveVersions,
+        schedule: methods.getScheduleOfActivities(
+          governing.protocol_version_ref
+        ),
+        expected_visits: [
+          {
+            activity_id: "visit-screening",
+            name: "Screening",
+            epoch_id: "epoch-screening",
+            study_day: -14,
+            target_date: dateAtOffset(-14),
+            window_start: dateAtOffset(-21),
+            window_end: dateAtOffset(-14),
+            window_status: "Closed",
+            locations: ["CLINIC"],
+            collection_spec_ids: ["form-vital-signs", "form-chem-panel"],
+          },
+          {
+            activity_id: "visit-baseline",
+            name: "Baseline (Day 1)",
+            epoch_id: "epoch-treatment",
+            study_day: 1,
+            target_date: referenceDate,
+            window_start: referenceDate,
+            window_end: dateAtOffset(1),
+            window_status: "Open",
+            locations: ["CLINIC"],
+            collection_spec_ids: ["form-vital-signs"],
+          },
+          {
+            activity_id: "visit-week4",
+            name: "Week 4",
+            epoch_id: "epoch-treatment",
+            study_day: 28,
+            target_date: dateAtOffset(27),
+            window_start: dateAtOffset(25),
+            window_end: dateAtOffset(29),
+            window_status: "NotYetOpen",
+            locations: ["CLINIC"],
+            collection_spec_ids: ["form-vital-signs", "form-chem-panel"],
           },
         ],
       };

@@ -1184,7 +1184,8 @@ public static class KernelStudyImportEndpoints
                 TemplateIds: parsedPayload.TemplateIds,
                 BaseDesign: plan.BaseDesign,
                 FallbackTitle: study.Title,
-                ReplaceForms: parsedPayload.ReplaceForms),
+                ReplaceForms: parsedPayload.ReplaceForms,
+                TemplateAssignments: parsedPayload.TemplateAssignments),
             ResolveOrDefineConceptAsync,
             cancellationToken,
             ResolveOrRegisterTerminologyAsync).ConfigureAwait(false);
@@ -1816,7 +1817,14 @@ public static class KernelStudyImportEndpoints
                     "Supported format values are 'auto', 'odm_xml', and 'usdm_json'."));
             }
 
+            var jsonOptionsForForm = context.RequestServices.GetService<IOptions<JsonOptions>>()?.Value.SerializerOptions;
             var templateIds = ParseTemplateIds(form["template_ids"]);
+            var templateAssignments = ParseTemplateAssignments(form["template_assignments"], jsonOptionsForForm, out var assignmentError);
+            if (assignmentError is not null)
+            {
+                return ParsedImportInput.Fail(KernelProblems.BadRequest("Invalid template_assignments", assignmentError));
+            }
+
             var replaceForms = bool.TryParse(form["replace_forms"].ToString(), out var parsedReplace) && parsedReplace;
             if (!TryParseAmendmentClassification(form["amendment_classification"].ToString(), out var formClassification))
             {
@@ -1838,6 +1846,7 @@ public static class KernelStudyImportEndpoints
                 format,
                 templateIds,
                 replaceForms,
+                templateAssignments,
                 formClassification,
                 formPolicy,
                 null);
@@ -1906,12 +1915,18 @@ public static class KernelStudyImportEndpoints
             }
         }
 
+        var mappedAssignments = jsonRequest.TemplateAssignments?
+            .Where(a => !string.IsNullOrWhiteSpace(a.TemplateId))
+            .Select(a => new TemplateActivityAssignment(a.TemplateId.Trim(), a.ActivityIds ?? []))
+            .ToList();
+
         return new ParsedImportInput(
             contentBytes,
             jsonRequest.FileName,
             jsonFormat,
             jsonRequest.TemplateIds,
             jsonRequest.ReplaceForms,
+            mappedAssignments,
             jsonClassification,
             jsonPolicy,
             null);
@@ -2382,6 +2397,45 @@ public static class KernelStudyImportEndpoints
         return list.Count > 0 ? list : null;
     }
 
+    private static List<TemplateActivityAssignment>? ParseTemplateAssignments(
+        Microsoft.Extensions.Primitives.StringValues values,
+        JsonSerializerOptions? jsonOptions,
+        out string? error)
+    {
+        error = null;
+        if (values.Count == 0)
+        {
+            return null;
+        }
+
+        var list = new List<TemplateActivityAssignment>();
+        foreach (var entry in values)
+        {
+            if (string.IsNullOrWhiteSpace(entry))
+            {
+                continue;
+            }
+
+            try
+            {
+                var parsed = JsonSerializer.Deserialize<List<KernelTemplateActivityAssignmentRequest>>(entry.Trim(), jsonOptions);
+                if (parsed is not null)
+                {
+                    list.AddRange(parsed
+                        .Where(a => !string.IsNullOrWhiteSpace(a.TemplateId))
+                        .Select(a => new TemplateActivityAssignment(a.TemplateId.Trim(), a.ActivityIds ?? [])));
+                }
+            }
+            catch (JsonException ex)
+            {
+                error = ex.Message;
+                return null;
+            }
+        }
+
+        return list.Count > 0 ? list : null;
+    }
+
     private static string NormalizeOrganizationCode(string input, string fallback = "SPONSOR")
     {
         var sb = new StringBuilder(input.Length);
@@ -2648,12 +2702,20 @@ public static class KernelStudyImportEndpoints
         var normalizedTemplates = input.TemplateIds is { Count: > 0 }
             ? string.Join(",", input.TemplateIds.Select(t => t.Trim()))
             : string.Empty;
+        var normalizedAssignments = input.TemplateAssignments is { Count: > 0 }
+            ? string.Join(
+                ";",
+                input.TemplateAssignments
+                    .OrderBy(a => a.TemplateId, StringComparer.OrdinalIgnoreCase)
+                    .Select(a => $"{a.TemplateId.Trim()}={string.Join(",", a.ActivityIds.Select(id => id.Trim()))}"))
+            : string.Empty;
         var metadata = string.Join(
             "\n",
             studyId.ToString(),
             input.Format.ToString(),
             input.FileName ?? string.Empty,
             normalizedTemplates,
+            normalizedAssignments,
             input.ReplaceForms ? "replace:1" : "replace:0",
             input.AmendmentClassification?.ToString() ?? string.Empty,
             input.TransitionPolicy?.ToString() ?? string.Empty);
@@ -2711,12 +2773,13 @@ public static class KernelStudyImportEndpoints
         ProtocolImportFormat Format,
         IReadOnlyList<string>? TemplateIds,
         bool ReplaceForms,
+        IReadOnlyList<TemplateActivityAssignment>? TemplateAssignments,
         AmendmentClassification? AmendmentClassification,
         TransitionPolicy? TransitionPolicy,
         ProblemHttpResult? Problem)
     {
         public static ParsedImportInput Fail(ProblemHttpResult problem) =>
-            new(null, null, ProtocolImportFormat.Auto, null, false, null, null, problem);
+            new(null, null, ProtocolImportFormat.Auto, null, false, null, null, null, problem);
     }
 
     private sealed record StagedCodeSystem(

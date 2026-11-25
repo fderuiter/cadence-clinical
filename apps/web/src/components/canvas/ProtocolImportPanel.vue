@@ -129,7 +129,103 @@
             />
             <span class="template-domain">{{ tpl.category }}</span>
             <span class="template-title">{{ tpl.form_name }}</span>
+            <span
+              v-if="tpl.repeating"
+              class="template-repeating-badge"
+              :data-testid="`tpl-repeating-${tpl.id}`"
+            >
+              Repeating
+            </span>
           </label>
+        </div>
+
+        <div
+          v-if="selectedTemplates.length > 0"
+          :id="`${idPrefix}-template-assignments`"
+          data-testid="template-visit-assignments"
+          class="template-assignments-box"
+          role="group"
+          aria-label="Template visit schedule assignments"
+        >
+          <div class="template-assignments-header">
+            <span class="field-label">Template visit schedule assignments</span>
+            <span class="file-hint">
+              Non-repeating templates default to starter protocol visits;
+              repeating log templates stay unscheduled unless assigned to
+              specific visits.
+            </span>
+          </div>
+          <div
+            v-for="tpl in selectedTemplates"
+            :key="`assign-${tpl.id}`"
+            class="template-assignment-row"
+            :data-testid="`template-assignment-${tpl.id}`"
+          >
+            <div class="template-assignment-main">
+              <label
+                :for="`${idPrefix}-assign-mode-${tpl.id}`"
+                class="template-assignment-label"
+              >
+                <strong>{{ tpl.form_name }}</strong>
+                <span v-if="tpl.repeating" class="template-repeating-badge">
+                  Repeating
+                </span>
+              </label>
+              <select
+                :id="`${idPrefix}-assign-mode-${tpl.id}`"
+                :value="assignmentModeFor(tpl.id)"
+                class="text-input template-assignment-select"
+                :disabled="importing"
+                @change="
+                  setAssignmentMode(
+                    tpl.id,
+                    ($event.target as HTMLSelectElement).value as AssignmentMode
+                  )
+                "
+              >
+                <option value="default">
+                  {{
+                    tpl.repeating
+                      ? "Default (Unscheduled / Log only)"
+                      : "Default schedule (Screening, Baseline, Week 4, End of Study)"
+                  }}
+                </option>
+                <option value="unscheduled">Unscheduled / Log only</option>
+                <option value="custom">Assign to specific visits…</option>
+              </select>
+            </div>
+            <div
+              v-if="assignmentModeFor(tpl.id) === 'custom'"
+              class="template-visit-checkboxes"
+              role="group"
+              :aria-label="`Visits for ${tpl.form_name}`"
+            >
+              <label
+                v-for="visit in availableAssignmentVisits"
+                :key="`${tpl.id}-${visit.id}`"
+                :for="`${idPrefix}-assign-visit-${tpl.id}-${visit.id}`"
+                class="template-visit-chip"
+              >
+                <input
+                  :id="`${idPrefix}-assign-visit-${tpl.id}-${visit.id}`"
+                  type="checkbox"
+                  :checked="isVisitAssigned(tpl.id, visit.id)"
+                  :disabled="importing"
+                  @change="
+                    toggleVisitAssignment(
+                      tpl.id,
+                      visit.id,
+                      ($event.target as HTMLInputElement).checked
+                    )
+                  "
+                />
+                <span>{{ visit.name }}</span>
+                <span v-if="visit.studyDay !== null" class="visit-chip-day">
+                  Day {{ visit.studyDay }}
+                </span>
+              </label>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -359,6 +455,13 @@
               {{ form.name }}
             </h4>
             <span class="draft-form-meta">
+              <span
+                v-if="form.repeating"
+                class="template-repeating-badge"
+                :data-testid="`draft-form-repeating-${form.id}`"
+              >
+                Repeating
+              </span>
               <code>{{ form.id }}</code> · {{ form.item_count }}
               {{ form.item_count === 1 ? "item" : "items" }}
             </span>
@@ -398,6 +501,7 @@ import {
   kernelApi,
   type KernelProtocolDraftSummary,
   type KernelProtocolTemplate,
+  type KernelTemplateAssignmentInput,
 } from "../../api/kernelApi";
 import { formatClinicalStatus } from "../../utils/clinicalLabels";
 import { demoRandomToken, isDemoBuild } from "../../utils/demoMode";
@@ -427,11 +531,29 @@ const validationLocation = computed(() =>
   scopedStudyLocation({ stage: "data", section: "validation" })
 );
 
+type AssignmentMode = "default" | "unscheduled" | "custom";
+
+interface AssignmentVisitOption {
+  id: string;
+  name: string;
+  studyDay: number | null;
+}
+
+const STARTER_ASSIGNMENT_VISITS: AssignmentVisitOption[] = [
+  { id: "V.SCREENING", name: "Screening", studyDay: -7 },
+  { id: "V.BASELINE", name: "Baseline", studyDay: 1 },
+  { id: "V.WEEK4", name: "Week 4", studyDay: 28 },
+  { id: "V.EOS", name: "End of Study", studyDay: 84 },
+];
+
 const fileInputRef = ref<HTMLInputElement | null>(null);
 const selectedFile = ref<File | null>(null);
 const templates = ref<KernelProtocolTemplate[]>([]);
 const templateFilter = ref("");
 const selectedTemplateIds = ref<string[]>([]);
+const templateAssignmentModes = ref<Record<string, AssignmentMode>>({});
+const templateCustomVisits = ref<Record<string, string[]>>({});
+const draftScheduleVisits = ref<AssignmentVisitOption[]>([]);
 const changeReason = ref("");
 const replaceForms = ref(false);
 const amendmentClassification = ref("");
@@ -465,6 +587,85 @@ const filteredTemplates = computed(() => {
       .includes(needle)
   );
 });
+
+const selectedTemplates = computed(() => {
+  const byId = new Map(templates.value.map((t) => [t.id, t]));
+  return selectedTemplateIds.value
+    .map((id) => byId.get(id))
+    .filter((tpl): tpl is KernelProtocolTemplate => Boolean(tpl));
+});
+
+const availableAssignmentVisits = computed<AssignmentVisitOption[]>(() =>
+  draftScheduleVisits.value.length > 0 && !replaceForms.value
+    ? draftScheduleVisits.value
+    : STARTER_ASSIGNMENT_VISITS
+);
+
+function assignmentModeFor(templateId: string): AssignmentMode {
+  return templateAssignmentModes.value[templateId] ?? "default";
+}
+
+function setAssignmentMode(templateId: string, mode: AssignmentMode) {
+  templateAssignmentModes.value = {
+    ...templateAssignmentModes.value,
+    [templateId]: mode,
+  };
+  if (
+    mode === "custom" &&
+    !Object.prototype.hasOwnProperty.call(
+      templateCustomVisits.value,
+      templateId
+    )
+  ) {
+    const tpl = templates.value.find((t) => t.id === templateId);
+    const initial = tpl?.repeating
+      ? []
+      : availableAssignmentVisits.value.map((v) => v.id);
+    templateCustomVisits.value = {
+      ...templateCustomVisits.value,
+      [templateId]: initial,
+    };
+  }
+  pendingIdempotencyKey.value = "";
+}
+
+function isVisitAssigned(templateId: string, activityId: string): boolean {
+  return (templateCustomVisits.value[templateId] ?? []).includes(activityId);
+}
+
+function toggleVisitAssignment(
+  templateId: string,
+  activityId: string,
+  checked: boolean
+) {
+  const current = new Set(templateCustomVisits.value[templateId] ?? []);
+  if (checked) current.add(activityId);
+  else current.delete(activityId);
+  const ordered = availableAssignmentVisits.value
+    .map((v) => v.id)
+    .filter((id) => current.has(id));
+  templateCustomVisits.value = {
+    ...templateCustomVisits.value,
+    [templateId]: ordered,
+  };
+  pendingIdempotencyKey.value = "";
+}
+
+function buildTemplateAssignmentsPayload(): KernelTemplateAssignmentInput[] {
+  const out: KernelTemplateAssignmentInput[] = [];
+  for (const templateId of selectedTemplateIds.value) {
+    const mode = assignmentModeFor(templateId);
+    if (mode === "unscheduled") {
+      out.push({ templateId, activityIds: [] });
+    } else if (mode === "custom") {
+      out.push({
+        templateId,
+        activityIds: [...(templateCustomVisits.value[templateId] ?? [])],
+      });
+    }
+  }
+  return out;
+}
 
 const canSubmit = computed(
   () =>
@@ -556,6 +757,25 @@ async function loadSelectedSummary(versionRef: string) {
     if (req === summaryRequest) {
       draftSummary.value = loaded;
     }
+    if (typeof kernelApi.getScheduleOfActivities === "function") {
+      try {
+        const soa = await kernelApi.getScheduleOfActivities(versionRef);
+        if (req === summaryRequest && Array.isArray(soa.columns)) {
+          draftScheduleVisits.value = soa.columns.map((col) => ({
+            id: col.activity_id,
+            name: col.name,
+            studyDay:
+              col.study_day !== null && col.study_day !== undefined
+                ? Number(col.study_day)
+                : null,
+          }));
+        }
+      } catch {
+        if (req === summaryRequest) {
+          draftScheduleVisits.value = [];
+        }
+      }
+    }
   } catch {
     if (req === summaryRequest) {
       draftSummary.value = null;
@@ -602,10 +822,13 @@ async function submitImport() {
   successMessage.value = "";
 
   try {
+    const templateAssignments = buildTemplateAssignmentsPayload();
     const summary = await kernelApi.importProtocolDraft({
       studyRef: props.studyRef || props.studyCode,
       file: selectedFile.value,
       templateIds: selectedTemplateIds.value,
+      templateAssignments:
+        templateAssignments.length > 0 ? templateAssignments : undefined,
       replaceForms: replaceForms.value,
       amendmentClassification: amendmentClassification.value || null,
       transitionPolicy: transitionPolicy.value || null,
@@ -625,6 +848,8 @@ async function submitImport() {
 
     clearSelectedFile();
     selectedTemplateIds.value = [];
+    templateAssignmentModes.value = {};
+    templateCustomVisits.value = {};
     replaceForms.value = false;
     pendingIdempotencyKey.value = "";
     emit("imported", summary);
@@ -826,6 +1051,84 @@ defineExpose({
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.template-repeating-badge {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--semantic-color-info-light);
+  color: var(--semantic-color-info);
+  font-size: var(--font-size-2xs);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.template-assignments-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--semantic-color-surface);
+}
+
+.template-assignments-header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.template-assignment-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--semantic-color-border);
+}
+
+.template-assignment-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.template-assignment-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.84rem;
+}
+
+.template-assignment-select {
+  max-width: 26rem;
+}
+
+.template-visit-checkboxes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.template-visit-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border: 1px solid var(--semantic-color-border-control);
+  border-radius: 6px;
+  background: var(--semantic-color-surface-muted);
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.visit-chip-day {
+  font-size: 0.75rem;
+  color: var(--neutral-dark);
+  font-variant-numeric: tabular-nums;
 }
 
 .import-fields-row {

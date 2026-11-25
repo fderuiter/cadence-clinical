@@ -31,6 +31,7 @@ export const DEMO_PROTOCOL_TEMPLATES = [
     form_name: "Vital Signs",
     file_name: "vital-signs.xml",
     item_count: 6,
+    repeating: false,
     items: [
       {
         id: "VSPERF",
@@ -95,6 +96,7 @@ export const DEMO_PROTOCOL_TEMPLATES = [
     form_name: "Demographics",
     file_name: "demographics.xml",
     item_count: 4,
+    repeating: false,
     items: [
       {
         id: "BRTHDAT",
@@ -141,6 +143,7 @@ export const DEMO_PROTOCOL_TEMPLATES = [
     form_name: "Adverse Events",
     file_name: "adverse-events.xml",
     item_count: 4,
+    repeating: true,
     items: [
       {
         id: "AETERM",

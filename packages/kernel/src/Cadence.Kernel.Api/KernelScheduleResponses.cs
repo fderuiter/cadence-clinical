@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -38,9 +39,9 @@ public sealed record KernelScheduleOfActivitiesResponse(
             matrix.Title,
             [.. matrix.Epochs.Select(e => new KernelSoaEpochResponse(e.EpochId, e.Name, e.Order, e.FirstColumn, e.ColumnCount))],
             [.. matrix.Columns.Select(c => new KernelSoaColumnResponse(
-                c.ActivityId, c.Name, c.EpochId, c.StudyDay, c.WindowBefore, c.WindowAfter, [.. c.Locations.Select(l => l.ToString())], c.Footnotes))],
+                c.ActivityId, c.Name, c.EpochId, c.StudyDay, c.WindowBefore, c.WindowAfter, [.. c.Locations.Select(l => l.ToString())], c.Footnotes, c.Repeating))],
             [.. matrix.Rows.Select(r => new KernelSoaRowResponse(
-                r.CollectionSpecId, r.Name, r.ItemIds, KernelSoaConcepts.Of(r.Concepts), r.Columns, r.Frequency, r.Footnotes))],
+                r.CollectionSpecId, r.Name, r.ItemIds, KernelSoaConcepts.Of(r.Concepts), r.Columns, r.Frequency, r.Footnotes, r.Repeating))],
             [.. matrix.Footnotes.Select(f => new KernelSoaFootnoteResponse(f.Number, f.Kind.ToString(), f.Text))]);
 }
 
@@ -61,6 +62,7 @@ public sealed record KernelSoaEpochResponse(string EpochId, string Name, int Ord
 /// <param name="WindowAfter">Days allowed after the planned day.</param>
 /// <param name="Locations">Where it may take place: <c>Site</c>, <c>Home</c>, <c>Telehealth</c>, <c>LocalFacility</c>, <c>Remote</c>.</param>
 /// <param name="Footnotes">The numbers of its footnotes.</param>
+/// <param name="Repeating">Whether multiple instances of this planned activity may occur for one enrollment.</param>
 public sealed record KernelSoaColumnResponse(
     string ActivityId,
     string Name,
@@ -69,7 +71,8 @@ public sealed record KernelSoaColumnResponse(
     int WindowBefore,
     int WindowAfter,
     IReadOnlyList<string> Locations,
-    IReadOnlyList<int> Footnotes);
+    IReadOnlyList<int> Footnotes,
+    bool Repeating = false);
 
 /// <summary>A row: one collection specification and the columns that collect it.</summary>
 /// <param name="CollectionSpecId">The collection specification's element id.</param>
@@ -79,6 +82,7 @@ public sealed record KernelSoaColumnResponse(
 /// <param name="Columns">The indexes of the columns that collect it, ascending.</param>
 /// <param name="Frequency">How many planned activities collect it.</param>
 /// <param name="Footnotes">The numbers of its footnotes.</param>
+/// <param name="Repeating">Whether multiple instances of this collection specification may be opened per planned activity or as a repeating log.</param>
 public sealed record KernelSoaRowResponse(
     string CollectionSpecId,
     string Name,
@@ -86,7 +90,8 @@ public sealed record KernelSoaRowResponse(
     IReadOnlyList<string> Concepts,
     IReadOnlyList<int> Columns,
     int Frequency,
-    IReadOnlyList<int> Footnotes);
+    IReadOnlyList<int> Footnotes,
+    bool Repeating = false);
 
 /// <summary>A footnote generated from the design.</summary>
 /// <param name="Number">Its number, from 1.</param>
@@ -176,6 +181,84 @@ public sealed record KernelSoaVisitResponse(string EpochId, int? StudyDay, int W
             ? null
             : new(state.EpochId, state.StudyDay, state.WindowBefore, state.WindowAfter, [.. state.Locations.Select(l => l.ToString())]);
 }
+
+/// <summary>One timed planned activity placed on the participant's calendar by <see cref="ExpectedSchedule.Compute"/> (ADR-2487).</summary>
+/// <param name="ActivityId">The planned activity's element id.</param>
+/// <param name="Name">The activity's display name.</param>
+/// <param name="EpochId">The epoch it belongs to.</param>
+/// <param name="EpochOrder">The epoch's order in the design.</param>
+/// <param name="StudyDay">Normalized planned study day (day 1 is the reference start; no day 0).</param>
+/// <param name="WindowBefore">Days allowed before the planned day.</param>
+/// <param name="WindowAfter">Days allowed after the planned day.</param>
+/// <param name="TargetDate">Planned calendar date in site time.</param>
+/// <param name="WindowStart">First allowed calendar date in site time.</param>
+/// <param name="WindowEnd">Last allowed calendar date in site time.</param>
+/// <param name="WindowStatus">Window status at the evaluation date: <c>NotYetOpen</c>, <c>Open</c>, or <c>Closed</c>.</param>
+public sealed record KernelExpectedVisitResponse(
+    string ActivityId,
+    string Name,
+    string EpochId,
+    int EpochOrder,
+    int StudyDay,
+    int WindowBefore,
+    int WindowAfter,
+    DateOnly TargetDate,
+    DateOnly WindowStart,
+    DateOnly WindowEnd,
+    string WindowStatus)
+{
+    internal static KernelExpectedVisitResponse From(ExpectedVisit expected) =>
+        new(
+            expected.Visit.ActivityId,
+            expected.Visit.Name,
+            expected.Visit.EpochId,
+            expected.Visit.EpochOrder,
+            expected.Visit.StudyDay,
+            expected.Visit.WindowBefore,
+            expected.Visit.WindowAfter,
+            expected.Target,
+            expected.WindowStart,
+            expected.WindowEnd,
+            expected.Status.ToString());
+}
+
+/// <summary>
+/// Server-computed participant casebook schedule for an enrollment under its study site's governing protocol version
+/// (ADR-2475, ADR-2487, K-TIME-7, K-TIME-8). Pure projection: nothing is persisted on read.
+/// </summary>
+/// <param name="EnrollmentRef">Canonical NodeRef of the enrollment.</param>
+/// <param name="StudyRef">Canonical NodeRef of the study.</param>
+/// <param name="StudySiteRef">Canonical NodeRef of the enrollment's linked study site.</param>
+/// <param name="SiteCode">Human-facing site code, when resolved.</param>
+/// <param name="Country">ISO 3166-1 alpha-2 country code of the site, when resolved.</param>
+/// <param name="EnrollmentStatus">Current enrollment lifecycle status.</param>
+/// <param name="StatusSince">Valid-time instant when the enrollment status began.</param>
+/// <param name="ReferenceDate">Reference start date (study day 1) in site calendar time.</param>
+/// <param name="AsOfDate">Evaluation date in site calendar time used for window statuses.</param>
+/// <param name="GovernanceStatus"><c>Effective</c> when a protocol version governs the site, or <c>NoEffectiveVersion</c> when none is in force.</param>
+/// <param name="LatestStudyVersionStatus">Lifecycle status of the latest visible protocol version in the study (for example <c>Draft</c>), when known.</param>
+/// <param name="Guidance">Actionable governance guidance when no protocol version is effective at the site.</param>
+/// <param name="GoverningVersion">The highest-numbered protocol version effective at the enrollment's study site, or null when none is effective.</param>
+/// <param name="EffectiveVersions">All protocol versions currently effective at the enrollment's study site, highest number first.</param>
+/// <param name="Schedule">Compiled Schedule of Activities of the governing protocol version, or null when no version governs the site.</param>
+/// <param name="ExpectedVisits">Expected calendar dates and window statuses computed by <see cref="ExpectedSchedule.Compute"/>.</param>
+public sealed record KernelEnrollmentScheduleResponse(
+    string EnrollmentRef,
+    string StudyRef,
+    string StudySiteRef,
+    string? SiteCode,
+    string? Country,
+    string EnrollmentStatus,
+    DateTimeOffset StatusSince,
+    DateOnly ReferenceDate,
+    DateOnly AsOfDate,
+    string GovernanceStatus,
+    string? LatestStudyVersionStatus,
+    string? Guidance,
+    KernelEffectiveVersionResponse? GoverningVersion,
+    IReadOnlyList<KernelEffectiveVersionResponse> EffectiveVersions,
+    KernelScheduleOfActivitiesResponse? Schedule,
+    IReadOnlyList<KernelExpectedVisitResponse> ExpectedVisits);
 
 /// <summary>Concept versions as the pinned NodeRefs the Canvas navigates to.</summary>
 internal static class KernelSoaConcepts

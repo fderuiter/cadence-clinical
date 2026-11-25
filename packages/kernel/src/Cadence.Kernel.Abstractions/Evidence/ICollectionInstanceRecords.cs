@@ -463,8 +463,11 @@ public interface ICollectionInstanceRecords
 /// <param name="AnsweredQueryCount">Un-retracted clinical queries on the form that have been answered and await closure.</param>
 /// <param name="OpenErrorFindingCount">Active Open or Investigating Error validation findings targeting the form or its values.</param>
 /// <param name="ReadinessBlockers">Diagnostic blockers preventing completeness, signature, or scope lock when non-empty.</param>
+/// <param name="EnrollmentReferenceAt">Enrollment reference timestamp (enrolled period start when enrolled, otherwise current status start) in site offset time.</param>
 /// <param name="ActiveQueryAssertionIds">Un-retracted <see cref="AssertionKind.Queried"/> assertion ids on the form's values, when projected.</param>
 /// <param name="AnsweredQueryAssertionIds">Subset of <paramref name="ActiveQueryAssertionIds"/> carrying an un-retracted <see cref="AssertionKind.QueryAnswered"/> assertion, when projected.</param>
+/// <param name="VisitTimingAssessment">Pre-evaluated visit timing assessment against the governing protocol schedule, when evaluated during projection.</param>
+/// <param name="VisitTimingEvaluated">True when <paramref name="VisitTimingAssessment"/> was already evaluated against the governing protocol design.</param>
 public sealed record CollectionInstanceSummary(
     CollectionInstanceId CollectionInstanceId,
     EnrollmentId EnrollmentId,
@@ -495,8 +498,11 @@ public sealed record CollectionInstanceSummary(
     int AnsweredQueryCount = 0,
     int OpenErrorFindingCount = 0,
     IReadOnlyList<string>? ReadinessBlockers = null,
+    DateTimeOffset? EnrollmentReferenceAt = null,
     IReadOnlySet<AssertionId>? ActiveQueryAssertionIds = null,
-    IReadOnlySet<AssertionId>? AnsweredQueryAssertionIds = null);
+    IReadOnlySet<AssertionId>? AnsweredQueryAssertionIds = null,
+    VisitTimingAssessment? VisitTimingAssessment = null,
+    bool VisitTimingEvaluated = false);
 
 /// <summary>Header metadata of an opened form instance without member values, assertions, codelists, or signatures.</summary>
 /// <param name="CollectionInstanceId">The form instance's id.</param>
@@ -815,7 +821,10 @@ public sealed record CollectionInstanceRecord(
     IReadOnlyList<string>? ReadinessBlockers = null,
     IReadOnlySet<string>? BlindedItemIds = null,
     IReadOnlySet<ObservationId>? BlindedObservationIds = null,
-    IReadOnlyDictionary<string, IReadOnlyList<CodelistOptionView>>? ItemCodelists = null)
+    IReadOnlyDictionary<string, IReadOnlyList<CodelistOptionView>>? ItemCodelists = null,
+    DateTimeOffset? EnrollmentReferenceAt = null,
+    VisitTimingAssessment? VisitTimingAssessment = null,
+    bool VisitTimingEvaluated = false)
 {
     private const string MaskedLiteral = "masked";
 

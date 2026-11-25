@@ -645,6 +645,93 @@
         }
       }
     },
+    "/api/v1/kernel/enrollments/{enrollmentRef}/schedule": {
+      "get": {
+        "tags": [
+          "Kernel"
+        ],
+        "summary": "Computes the governing Schedule of Activities and expected calendar visit windows for an enrollment.",
+        "description": "Resolves the governing protocol version effective at the enrollment\u0027s study site (K-TIME-8) and evaluates ExpectedSchedule.Compute over StatusSince in site calendar time (ADR-2487, K-TIME-7). Returns non-confirming 404 when absent or masked.",
+        "operationId": "KernelGetEnrollmentSchedule",
+        "parameters": [
+          {
+            "name": "enrollmentRef",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "as_of",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "time_zone",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_KernelEnrollmentScheduleResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/kernel/studies/{studyRef}/protocol-versions": {
       "get": {
         "tags": [
@@ -9996,6 +10083,112 @@
           }
         }
       },
+      "Kernel_KernelEnrollmentScheduleResponse": {
+        "required": [
+          "enrollment_ref",
+          "study_ref",
+          "study_site_ref",
+          "site_code",
+          "country",
+          "enrollment_status",
+          "status_since",
+          "reference_date",
+          "as_of_date",
+          "governance_status",
+          "latest_study_version_status",
+          "guidance",
+          "governing_version",
+          "effective_versions",
+          "schedule",
+          "expected_visits"
+        ],
+        "type": "object",
+        "properties": {
+          "enrollment_ref": {
+            "type": "string"
+          },
+          "study_ref": {
+            "type": "string"
+          },
+          "study_site_ref": {
+            "type": "string"
+          },
+          "site_code": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "country": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "enrollment_status": {
+            "type": "string"
+          },
+          "status_since": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "reference_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "as_of_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "governance_status": {
+            "type": "string"
+          },
+          "latest_study_version_status": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "guidance": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "governing_version": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Kernel_KernelEffectiveVersionResponse"
+              }
+            ]
+          },
+          "effective_versions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_KernelEffectiveVersionResponse"
+            }
+          },
+          "schedule": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Kernel_KernelScheduleOfActivitiesResponse"
+              }
+            ]
+          },
+          "expected_visits": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kernel_KernelExpectedVisitResponse"
+            }
+          }
+        }
+      },
       "Kernel_KernelEnrollmentStateResponse": {
         "required": [
           "ref",
@@ -10158,6 +10351,80 @@
                 "$ref": "#/components/schemas/Kernel_KernelSubscriptionScopingResponse"
               }
             ]
+          }
+        }
+      },
+      "Kernel_KernelExpectedVisitResponse": {
+        "required": [
+          "activity_id",
+          "name",
+          "epoch_id",
+          "epoch_order",
+          "study_day",
+          "window_before",
+          "window_after",
+          "target_date",
+          "window_start",
+          "window_end",
+          "window_status"
+        ],
+        "type": "object",
+        "properties": {
+          "activity_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "epoch_id": {
+            "type": "string"
+          },
+          "epoch_order": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "study_day": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "window_before": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "window_after": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "target_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "window_start": {
+            "type": "string",
+            "format": "date"
+          },
+          "window_end": {
+            "type": "string",
+            "format": "date"
+          },
+          "window_status": {
+            "type": "string"
           }
         }
       },
@@ -10409,6 +10676,15 @@
           "replace_forms": {
             "type": "boolean",
             "default": false
+          },
+          "template_assignments": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/Kernel_KernelTemplateActivityAssignmentRequest"
+            }
           },
           "amendment_classification": {
             "type": [
@@ -12137,6 +12413,10 @@
             "items": {
               "$ref": "#/components/schemas/Kernel_KernelProtocolFormItemResponse"
             }
+          },
+          "repeating": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -12188,6 +12468,10 @@
               "string"
             ],
             "format": "int32"
+          },
+          "repeating": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -13162,6 +13446,10 @@
               ],
               "format": "int32"
             }
+          },
+          "repeating": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -13381,6 +13669,10 @@
               ],
               "format": "int32"
             }
+          },
+          "repeating": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -13767,6 +14059,24 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "Kernel_KernelTemplateActivityAssignmentRequest": {
+        "required": [
+          "template_id",
+          "activity_ids"
+        ],
+        "type": "object",
+        "properties": {
+          "template_id": {
+            "type": "string"
+          },
+          "activity_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         }
       },

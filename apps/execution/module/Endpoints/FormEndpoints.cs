@@ -114,9 +114,36 @@ internal static class FormEndpoints
         }
 
         var summaries = await forms.ListForEnrollmentAsync(tenant, enrollment, cancellationToken).ConfigureAwait(false);
-        if (summaries.Count == 0 || contexts is null)
+        if (summaries.Count == 0)
         {
-            return TypedResults.Ok<IReadOnlyList<FormSummaryResponse>>([.. summaries.Select(s => FormSummaryResponse.From(s))]);
+            return TypedResults.Ok<IReadOnlyList<FormSummaryResponse>>([]);
+        }
+
+        var unassessedVersionIds = summaries
+            .Where(s => !s.VisitTimingEvaluated && !string.IsNullOrWhiteSpace(s.PlannedActivityId) && s.EnrollmentReferenceAt is not null)
+            .Select(s => s.ProtocolVersionId)
+            .ToList();
+        var designsByVersion = unassessedVersionIds.Count == 0
+            ? new Dictionary<ProtocolVersionId, ProtocolDesign?>()
+            : await VisitTimingEvaluator.LoadDesignsAsync(
+                tenant,
+                unassessedVersionIds,
+                context.RequestServices?.GetService<IProtocolVersionReader>(),
+                cancellationToken).ConfigureAwait(false);
+
+        VisitTimingAssessment? AssessSummary(CollectionInstanceSummary s) =>
+            s.VisitTimingEvaluated
+                ? s.VisitTimingAssessment
+                : VisitTimingEvaluator.Assess(
+                    designsByVersion.GetValueOrDefault(s.ProtocolVersionId),
+                    s.PlannedActivityId,
+                    s.CollectedAt,
+                    s.EnrollmentReferenceAt);
+
+        if (contexts is null)
+        {
+            return TypedResults.Ok<IReadOnlyList<FormSummaryResponse>>(
+                [.. summaries.Select(s => FormSummaryResponse.From(s, assessment: AssessSummary(s)))]);
         }
 
         Dictionary<CollectionInstanceId, List<(Guid KernelQueryId, FormQueryStatus Status)>> queriesByForm;
@@ -135,16 +162,17 @@ internal static class FormEndpoints
         return TypedResults.Ok<IReadOnlyList<FormSummaryResponse>>([
             .. summaries.Select(s =>
             {
+                var assessment = AssessSummary(s);
                 var execQueries = queriesByForm.GetValueOrDefault(s.CollectionInstanceId) ?? [];
                 if (s.ActiveQueryAssertionIds is { } activeQueryAssertionIds)
                 {
                     var (openCount, answeredCount) = ExecutionQueryMerger.Merge(activeQueryAssertionIds, s.AnsweredQueryAssertionIds, execQueries);
-                    return FormSummaryResponse.From(s, openCount, answeredCount);
+                    return FormSummaryResponse.From(s, openCount, answeredCount, assessment);
                 }
 
                 var fallbackOpen = Math.Max(s.OpenQueryCount, execQueries.Count(q => q.Status == FormQueryStatus.Open));
                 var fallbackAnswered = Math.Max(s.AnsweredQueryCount, execQueries.Count(q => q.Status == FormQueryStatus.Answered));
-                return FormSummaryResponse.From(s, fallbackOpen, fallbackAnswered);
+                return FormSummaryResponse.From(s, fallbackOpen, fallbackAnswered, assessment);
             }),
         ]);
     }
@@ -161,21 +189,80 @@ internal static class FormEndpoints
             return BadRequest("Invalid form", "Name the enrollment and the CollectionSpec the form collects.");
         }
 
+        var tenant = KernelRequestTenant.Get(context);
         var form = request.FormId is { } given && given != Guid.Empty ? CollectionInstanceId.FromGuid(given) : CollectionInstanceId.New();
-        var result = await sender.SendAsync(
-            new OpenCollectionInstance(
-                KernelRequestTenant.Get(context),
-                form,
-                EnrollmentId.FromGuid(request.EnrollmentId),
-                request.CollectionSpecId,
-                request.PlannedActivityId,
-                request.CollectedAt,
-                IdempotencyKey(context),
-                changeReason.Read(context) ?? string.Empty),
-            cancellationToken: cancellationToken).ConfigureAwait(false);
-        return result.Value is { } state
-            ? TypedResults.Created($"{RoutePrefix}/{state.CollectionInstanceId.Value:D}", FormStateResponse.From(state))
-            : KernelErrorEndpoints.Problem(result.Error!);
+        ProtocolDesign? governingDesign = null;
+        CommandResult<CollectionInstanceState> result;
+        using (ProtocolDesignDocument.OnRead(design => governingDesign ??= design))
+        {
+            result = await sender.SendAsync(
+                new OpenCollectionInstance(
+                    tenant,
+                    form,
+                    EnrollmentId.FromGuid(request.EnrollmentId),
+                    request.CollectionSpecId,
+                    request.PlannedActivityId,
+                    request.CollectedAt,
+                    IdempotencyKey(context),
+                    changeReason.Read(context) ?? string.Empty),
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+        }
+
+        if (result.Value is not { } state)
+        {
+            return KernelErrorEndpoints.Problem(result.Error!);
+        }
+
+        var assessment = state.VisitTimingAssessment;
+        CollectionInstanceRecord? openedRecord = null;
+        if (state.PlannedActivityId is { Length: > 0 } activityId)
+        {
+            var formRecords = context.RequestServices?.GetService<ICollectionInstanceRecords>();
+            if (formRecords is not null)
+            {
+                openedRecord = await formRecords.FindAsync(tenant, state.CollectionInstanceId, governingDesign, cancellationToken).ConfigureAwait(false);
+            }
+
+            if (assessment is null && openedRecord is not null)
+            {
+                assessment = await ResolveVisitTimingAsync(
+                    tenant,
+                    openedRecord,
+                    state.ProtocolVersionId,
+                    activityId,
+                    state.CollectedAt,
+                    governingDesign,
+                    context.RequestServices,
+                    cancellationToken).ConfigureAwait(false);
+            }
+
+            if (assessment is { Timing: VisitTiming.Early or VisitTiming.Late }
+                && context.RequestServices?.GetService<IVisitWindowDeviationSink>() is { } deviationSink)
+            {
+                await deviationSink.NotifyAsync(
+                    new VisitWindowDeviationDetected(
+                        tenant,
+                        state.CollectionInstanceId,
+                        state.EnrollmentId,
+                        openedRecord?.StudyId ?? default,
+                        openedRecord?.StudySiteId ?? default,
+                        state.ProtocolVersionId,
+                        state.CollectionSpecId,
+                        activityId,
+                        VisitTimingEvaluator.VisitWindowCategory,
+                        assessment.Timing.ToString(),
+                        assessment.Expected.Target,
+                        assessment.Expected.WindowStart,
+                        assessment.Expected.WindowEnd,
+                        assessment.Actual,
+                        assessment.DaysFromTarget,
+                        assessment.DaysOutsideWindow,
+                        state.CollectedAt),
+                    cancellationToken).ConfigureAwait(false);
+            }
+        }
+
+        return TypedResults.Created($"{RoutePrefix}/{state.CollectionInstanceId.Value:D}", FormStateResponse.From(state, assessment));
     }
 
     internal static async Task<Results<Ok<FormResponse>, ProblemHttpResult>> GetAsync(
@@ -251,7 +338,26 @@ internal static class FormEndpoints
             context.RequestServices,
             cancellationToken).ConfigureAwait(false);
 
-        return TypedResults.Ok(FormResponse.From(record, layout, canSign, blindedItemIds, blindedObservationIds, openQueryCount, answeredQueryCount));
+        var assessment = record.VisitTimingEvaluated
+            ? record.VisitTimingAssessment
+            : await VisitTimingEvaluator.AssessAsync(
+                tenant,
+                record.ProtocolVersionId,
+                record.PlannedActivityId,
+                record.CollectedAt,
+                record.EnrollmentReferenceAt,
+                context.RequestServices?.GetService<IProtocolVersionReader>(),
+                cancellationToken).ConfigureAwait(false);
+
+        return TypedResults.Ok(FormResponse.From(
+            record,
+            layout,
+            canSign,
+            blindedItemIds,
+            blindedObservationIds,
+            openQueryCount,
+            answeredQueryCount,
+            assessment));
     }
 
     internal static async Task<Results<Ok<FormPreviewResponse>, ProblemHttpResult>> PreviewAsync(
@@ -465,10 +571,54 @@ internal static class FormEndpoints
                 blindedItemIds = new HashSet<string>(updated.BlindedItemIds, StringComparer.Ordinal);
             }
 
-            hydrated = FormResponse.From(updated, layout, canSign, blindedItemIds, blindedObservationIds, openQueryCount, answeredQueryCount);
+            var saveAssessment = await ResolveVisitTimingAsync(
+                tenant,
+                updated,
+                updated.ProtocolVersionId,
+                updated.PlannedActivityId,
+                updated.CollectedAt,
+                governingDesign,
+                context.RequestServices,
+                cancellationToken).ConfigureAwait(false);
+
+            hydrated = FormResponse.From(updated, layout, canSign, blindedItemIds, blindedObservationIds, openQueryCount, answeredQueryCount, saveAssessment);
         }
 
         return TypedResults.Ok(FormSavedResponse.From(state, hydrated, blindedItemIds, blindedObservationIds));
+    }
+
+    private static ValueTask<VisitTimingAssessment?> ResolveVisitTimingAsync(
+        TenantId tenant,
+        CollectionInstanceRecord record,
+        ProtocolVersionId protocolVersionId,
+        string? plannedActivityId,
+        DateTimeOffset collectedAt,
+        ProtocolDesign? governingDesign,
+        IServiceProvider? services,
+        CancellationToken cancellationToken)
+    {
+        if (record.VisitTimingEvaluated)
+        {
+            return ValueTask.FromResult(record.VisitTimingAssessment);
+        }
+
+        if (governingDesign is not null)
+        {
+            return ValueTask.FromResult(VisitTimingEvaluator.Assess(
+                governingDesign,
+                plannedActivityId,
+                collectedAt,
+                record.EnrollmentReferenceAt));
+        }
+
+        return new ValueTask<VisitTimingAssessment?>(VisitTimingEvaluator.AssessAsync(
+            tenant,
+            protocolVersionId,
+            plannedActivityId,
+            collectedAt,
+            record.EnrollmentReferenceAt,
+            services?.GetService<IProtocolVersionReader>(),
+            cancellationToken));
     }
 
     internal static string IdempotencyKey(HttpContext context) => context.Request.Headers[IdempotencyKeyHeader].ToString().Trim();
