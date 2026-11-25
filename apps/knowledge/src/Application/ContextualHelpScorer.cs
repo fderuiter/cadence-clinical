@@ -448,7 +448,7 @@ public static class ContextualHelpScorer
         string? persona,
         IEnumerable<ContextualHelpMapping> mappings,
         IReadOnlyDictionary<string, KnowledgeArticle> publishedArticlesById,
-        IReadOnlyDictionary<string, KnowledgeArticleVersion> versionsById)
+        IReadOnlyDictionary<string, KnowledgeArticleVersion>? versionsById = null)
     {
         string rawRoute = string.IsNullOrWhiteSpace(route) ? "/" : route.Trim();
         string normalizedPersona = NormalizePersona(persona);
@@ -500,7 +500,7 @@ public static class ContextualHelpScorer
         ScoredMapping winner = ordered[0];
         KnowledgeArticle primaryArticle = winner.Article;
         KnowledgeArticleVersion? primaryVersion = null;
-        if (!string.IsNullOrWhiteSpace(primaryArticle.CurrentPublishedVersionId))
+        if (versionsById is not null && !string.IsNullOrWhiteSpace(primaryArticle.CurrentPublishedVersionId))
         {
             versionsById.TryGetValue(primaryArticle.CurrentPublishedVersionId, out primaryVersion);
         }

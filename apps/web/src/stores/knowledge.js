@@ -395,6 +395,26 @@ function saveSessionEscalatedTickets(tickets) {
   }
 }
 
+function hasHydratedSopBody(article) {
+  return Boolean(
+    article && (article.body_html != null || article.body_markdown != null)
+  );
+}
+
+function getCachedHydratedArticle(cache, article) {
+  if (!article?.id || !cache) return null;
+  const cached = cache[article.id];
+  if (!hasHydratedSopBody(cached)) return null;
+  if (
+    article.version_index != null &&
+    cached.version_index != null &&
+    cached.version_index !== article.version_index
+  ) {
+    return null;
+  }
+  return cached;
+}
+
 export const useKnowledgeStore = defineStore("knowledge", {
   state: () => ({
     isOpen: false,
@@ -410,6 +430,7 @@ export const useKnowledgeStore = defineStore("knowledge", {
     sectionAnchor: null,
     relatedArticles: [],
     selectedArticle: null,
+    hydratedArticlesById: {},
     isArticleBodyExpanded: true,
     searchQuery: "",
     searchResults: [],
@@ -594,13 +615,98 @@ export const useKnowledgeStore = defineStore("knowledge", {
     },
 
     selectArticle(article) {
+      if (!article) {
+        this.selectedArticle = null;
+        this.isArticleBodyExpanded = true;
+        return;
+      }
+
+      const cached = getCachedHydratedArticle(
+        this.hydratedArticlesById,
+        article
+      );
+      if (cached) {
+        this.selectedArticle = { ...article, ...cached };
+        this.isArticleBodyExpanded = true;
+        return;
+      }
+
+      if (hasHydratedSopBody(article) && article.id) {
+        this.hydratedArticlesById[article.id] = article;
+      }
+
       this.selectedArticle = article;
       this.isArticleBodyExpanded = true;
+
+      if (!hasHydratedSopBody(article) && article.id) {
+        void this.hydrateArticleSelection(article);
+      }
+    },
+
+    async hydrateArticleSelection(article) {
+      if (!article?.id) return null;
+      const cached = getCachedHydratedArticle(
+        this.hydratedArticlesById,
+        article
+      );
+      if (cached) {
+        if (this.selectedArticle?.id === article.id) {
+          this.selectedArticle = { ...this.selectedArticle, ...cached };
+        }
+        return cached;
+      }
+
+      try {
+        const knowledgeService = await loadKnowledgeService();
+        if (typeof knowledgeService.getArticle !== "function") {
+          return null;
+        }
+        const hydrated = await knowledgeService.getArticle(article.id);
+        if (hydrated && hydrated.id) {
+          this.hydratedArticlesById[hydrated.id] = hydrated;
+          if (this.selectedArticle?.id === article.id) {
+            this.selectedArticle = { ...article, ...hydrated };
+            if (this.lastFailedAction?.type === "article") {
+              this.error = null;
+              this.lastFailedAction = null;
+            }
+          }
+          this.relatedArticles = this.relatedArticles.map((rel) =>
+            rel?.id === hydrated.id ? { ...rel, ...hydrated } : rel
+          );
+          this.searchResults = this.searchResults.map((res) =>
+            res?.id === hydrated.id ? { ...res, ...hydrated } : res
+          );
+        }
+        return hydrated;
+      } catch (err) {
+        if (
+          err instanceof TypeError &&
+          /Invalid URL|Failed to parse URL/i.test(String(err.message))
+        ) {
+          return null;
+        }
+        if (this.selectedArticle?.id === article.id && !isDemoBuild()) {
+          this.error =
+            describeApiError(err) ||
+            err?.message ||
+            "Failed to load SOP article content.";
+          this.lastFailedAction = {
+            type: "article",
+            article,
+          };
+        }
+        return null;
+      }
     },
 
     backToPrimary() {
       this.selectedArticle = null;
       this.isArticleBodyExpanded = true;
+      if (this.lastFailedAction?.type === "article") {
+        this.error = null;
+        this.lastFailedAction = null;
+      }
     },
 
     async fetchContextualHelp(route, persona) {
@@ -632,6 +738,13 @@ export const useKnowledgeStore = defineStore("knowledge", {
           this.matchedMapping = response.matched_mapping || null;
           this.primaryArticle =
             response.primary_article || response.article || null;
+          if (
+            this.primaryArticle?.id &&
+            hasHydratedSopBody(this.primaryArticle)
+          ) {
+            this.hydratedArticlesById[this.primaryArticle.id] =
+              this.primaryArticle;
+          }
           this.primaryVersion =
             response.primary_version || response.version || null;
           this.sectionAnchor = response.section_anchor || null;
@@ -687,24 +800,42 @@ export const useKnowledgeStore = defineStore("knowledge", {
           q,
           persona: this.activePersona,
         });
+        if (this.searchQuery !== q) {
+          return;
+        }
         if (Array.isArray(articles)) {
           const lowerQ = q.toLowerCase();
-          this.searchResults = articles.filter((art) => {
-            const matchTitle = art.title?.toLowerCase().includes(lowerQ);
-            const matchBody = (art.body_markdown || art.body_html || "")
-              .toLowerCase()
-              .includes(lowerQ);
-            const matchTags = Array.isArray(art.tags)
-              ? art.tags.some((t) => t.toLowerCase().includes(lowerQ))
-              : typeof art.tags === "string"
-                ? art.tags.toLowerCase().includes(lowerQ)
-                : false;
-            return matchTitle || matchBody || matchTags;
-          });
+          this.searchResults = articles
+            .filter((art) => {
+              if (!hasHydratedSopBody(art)) {
+                return true;
+              }
+              const matchTitle = art.title?.toLowerCase().includes(lowerQ);
+              const matchSlug = art.slug?.toLowerCase().includes(lowerQ);
+              const matchBody = (art.body_markdown || art.body_html || "")
+                .toLowerCase()
+                .includes(lowerQ);
+              const matchTags = Array.isArray(art.tags)
+                ? art.tags.some((t) => t.toLowerCase().includes(lowerQ))
+                : typeof art.tags === "string"
+                  ? art.tags.toLowerCase().includes(lowerQ)
+                  : false;
+              return matchTitle || matchSlug || matchBody || matchTags;
+            })
+            .map((art) => {
+              const cached = getCachedHydratedArticle(
+                this.hydratedArticlesById,
+                art
+              );
+              return cached ? { ...art, ...cached } : art;
+            });
         } else {
           this.searchResults = [];
         }
       } catch (err) {
+        if (this.searchQuery !== q) {
+          return;
+        }
         this.searchResults = [];
         this.error =
           describeApiError(err) ||
@@ -715,11 +846,18 @@ export const useKnowledgeStore = defineStore("knowledge", {
           query: q,
         };
       } finally {
-        this.loading = false;
+        if (this.searchQuery === q) {
+          this.loading = false;
+        }
       }
     },
 
     async retryLastAction() {
+      if (this.lastFailedAction?.type === "article") {
+        return await this.hydrateArticleSelection(
+          this.lastFailedAction.article
+        );
+      }
       if (this.lastFailedAction?.type === "search") {
         return await this.search(this.lastFailedAction.query);
       }

@@ -60,6 +60,7 @@ const helpReads = {
   resolveContextualHelp: () =>
     knowledgeService.resolveContextualHelp({ route: "/ecrf" }),
   listArticles: () => knowledgeService.listArticles(),
+  getArticle: () => knowledgeService.getArticle(ARTICLE_ID),
   listCategories: () => knowledgeService.listCategories(),
 };
 

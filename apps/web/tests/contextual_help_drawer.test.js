@@ -2039,5 +2039,170 @@ describe("Contextual Help Drawer & Support Ticket Escalation (Issue #4332)", () 
       clearActiveStudyScope();
       wrapper.unmount();
     });
+
+    it("hydrates and caches summary-only related SOP cards and server search results via getArticle", async () => {
+      vi.spyOn(knowledgeService, "resolveContextualHelp").mockResolvedValue({
+        matched_mapping: {
+          id: "map-ecrf-summary",
+          route_pattern: "/ecrf",
+          persona: "site_crc",
+          article_id: "art-primary-01",
+          section_anchor: "#subject-enrollment-and-visit-entry",
+          priority: 100,
+          is_active: true,
+        },
+        primary_article: {
+          id: "art-primary-01",
+          slug: "sop-ecrf-201",
+          title: "SOP-ECRF-201: Subject Enrollment",
+          category_id: "cat-clinical-ops",
+          category_name: "Clinical Operations",
+          status: "PUBLISHED",
+          version_index: 2,
+          version_label: "2.0",
+          tags: ["ecrf"],
+          body_markdown: "## Enrollment\n1. Verify consent.",
+          body_html:
+            '<h2 id="subject-enrollment-and-visit-entry">Enrollment</h2><ol><li>Verify consent.</li></ol>',
+        },
+        primary_version: {
+          id: "ver-primary-01",
+          article_id: "art-primary-01",
+          version_index: 2,
+          version_label: "2.0",
+          body_markdown: "## Enrollment\n1. Verify consent.",
+          body_html:
+            '<h2 id="subject-enrollment-and-visit-entry">Enrollment</h2><ol><li>Verify consent.</li></ol>',
+          status_at_snapshot: "PUBLISHED",
+          is_locked: true,
+        },
+        section_anchor: "#subject-enrollment-and-visit-entry",
+        related_articles: [
+          {
+            id: "art-rel-summary-01",
+            slug: "sop-ecrf-205",
+            title: "SOP-ECRF-205: Data Query Resolution",
+            category_id: "cat-clinical-ops",
+            category_name: "Clinical Operations",
+            status: "PUBLISHED",
+            version_index: 2,
+            version_label: "2.0",
+            tags: ["queries"],
+            body_markdown: null,
+            body_html: null,
+          },
+        ],
+      });
+
+      const getArticleSpy = vi
+        .spyOn(knowledgeService, "getArticle")
+        .mockImplementation(async (articleId) => {
+          if (articleId === "art-rel-summary-01") {
+            return {
+              id: "art-rel-summary-01",
+              slug: "sop-ecrf-205",
+              title: "SOP-ECRF-205: Data Query Resolution",
+              category_id: "cat-clinical-ops",
+              category_name: "Clinical Operations",
+              status: "PUBLISHED",
+              version_index: 2,
+              version_label: "2.0",
+              tags: ["queries"],
+              body_markdown: "## Query Resolution\n1. Resolve discrepancy.",
+              body_html:
+                '<h2 id="query-resolution">Query Resolution</h2><ol><li>Resolve discrepancy.</li></ol>',
+            };
+          }
+          return {
+            id: "art-search-summary-01",
+            slug: "sop-saf-310",
+            title: "SOP-SAF-310: Expedited Safety Reporting",
+            category_id: "cat-regulatory-compliance",
+            category_name: "Regulatory & Quality Compliance",
+            status: "PUBLISHED",
+            version_index: 1,
+            version_label: "1.0",
+            tags: ["sae"],
+            body_markdown: "## Safety Procedure\n1. Escalate SUSAR within 24h.",
+            body_html:
+              '<h2 id="safety-procedure">Safety Procedure</h2><ol><li>Escalate SUSAR within 24h.</li></ol>',
+          };
+        });
+
+      // Server search returns summary-only DTO matched via active body keyword ("susar")
+      vi.spyOn(knowledgeService, "listArticles").mockResolvedValue([
+        {
+          id: "art-search-summary-01",
+          slug: "sop-saf-310",
+          title: "SOP-SAF-310: Expedited Safety Reporting",
+          category_id: "cat-regulatory-compliance",
+          category_name: "Regulatory & Quality Compliance",
+          status: "PUBLISHED",
+          version_index: 1,
+          version_label: "1.0",
+          tags: ["sae"],
+          body_markdown: null,
+          body_html: null,
+        },
+      ]);
+
+      await router.push("/ecrf");
+      await flushPromises();
+      await knowledgeStore.fetchContextualHelp("/ecrf", "site_crc");
+      knowledgeStore.openDrawer();
+
+      const wrapper = mount(ContextualHelpDrawer, {
+        global: { plugins: [pinia, router] },
+      });
+      await router.isReady();
+      await flushPromises();
+
+      expect(getArticleSpy).not.toHaveBeenCalled();
+
+      // Selecting summary-only related card hydrates SOP body via getArticle
+      await wrapper.find(".related-card").trigger("click");
+      await flushPromises();
+
+      expect(getArticleSpy).toHaveBeenCalledTimes(1);
+      expect(getArticleSpy).toHaveBeenCalledWith("art-rel-summary-01");
+      expect(wrapper.find(".sop-body").html()).toContain(
+        "Resolve discrepancy."
+      );
+
+      // Returning and re-selecting uses cached body without refetching
+      await wrapper.find(".btn-back").trigger("click");
+      await flushPromises();
+      await wrapper.find(".related-card").trigger("click");
+      await flushPromises();
+      expect(getArticleSpy).toHaveBeenCalledTimes(1);
+
+      // Server-backed search preserves summary-only body match and hydrates on selection
+      await wrapper.find(".btn-back").trigger("click");
+      await wrapper.find(".btn-icon-toggle").trigger("click");
+      await wrapper.find("#help-search-input").setValue("susar");
+      await vi.waitFor(
+        () => expect(wrapper.text()).toContain("Search Results (1)"),
+        { timeout: 5000 }
+      );
+      expect(wrapper.text()).toContain(
+        "SOP-SAF-310: Expedited Safety Reporting"
+      );
+
+      await wrapper.find(".search-result-card").trigger("click");
+      await flushPromises();
+      expect(getArticleSpy).toHaveBeenCalledTimes(2);
+      expect(getArticleSpy).toHaveBeenCalledWith("art-search-summary-01");
+      expect(knowledgeStore.displayedArticle.body_html).toContain(
+        "Escalate SUSAR within 24h."
+      );
+
+      await wrapper.find(".btn-icon-toggle").trigger("click");
+      await flushPromises();
+      expect(wrapper.find(".sop-body").html()).toContain(
+        "Escalate SUSAR within 24h."
+      );
+
+      wrapper.unmount();
+    });
   });
 });
