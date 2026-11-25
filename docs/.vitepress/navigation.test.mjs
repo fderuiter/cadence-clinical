@@ -157,6 +157,16 @@ describe("VitePress navigation synthesis and link/anchor plugins", () => {
     expect(sidebarLinks.has("/adr/index")).toBe(false);
     expect(sidebarLinks.has("/migration/index")).toBe(false);
 
+    // All 23 route-scoped sidebar groups omit boolean collapsed flags to avoid nested button controls
+    const allSidebarGroups = Object.values(sidebar).flat();
+    expect(allSidebarGroups).toHaveLength(23);
+    for (const group of allSidebarGroups) {
+      expect(
+        "collapsed" in group,
+        `Expected sidebar group "${group.text}" to omit boolean collapsed flag`
+      ).toBe(false);
+    }
+
     // Verify each route prefix is compact rather than repeating all 600+ portal links
     const rootLinks = collectSidebarLinks(sidebar["/"]);
     expect(rootLinks.size).toBeLessThan(45);
@@ -228,7 +238,8 @@ describe("VitePress navigation synthesis and link/anchor plugins", () => {
     expect(blogSection).toBeDefined();
     const blogGroup = blogSection.find((g) => g.text === "Engineering Blog");
     expect(blogGroup).toBeDefined();
-    expect(blogGroup.collapsed).toBe(false);
+    expect(blogGroup.collapsed).toBeUndefined();
+    expect("collapsed" in blogGroup).toBe(false);
     expect(blogGroup.items).toEqual([
       { text: "All Engineering Posts", link: "/blog/" },
       {
@@ -358,6 +369,24 @@ describe("VitePress navigation synthesis and link/anchor plugins", () => {
     ).toBe(
       "https://github.com/fderuiter/cadence-clinical/blob/main/docs/SDLC/03_API_Integration_Specification.md"
     );
+    expect(
+      toSidebarLink("/blog/index", {
+        docsDir: tmpDocs,
+        repoRoot: tmpRepo,
+      })
+    ).toBe("/blog/");
+    expect(
+      toSidebarLink("/adr/index.md#decisions", {
+        docsDir: tmpDocs,
+        repoRoot: tmpRepo,
+      })
+    ).toBe("/adr/#decisions");
+    expect(
+      toSidebarLink("/index.md", {
+        docsDir: tmpDocs,
+        repoRoot: tmpRepo,
+      })
+    ).toBe("/");
 
     expect(
       toRepoUrl("../packages/kernel/README.md", tmpDocs, tmpDocs, tmpRepo)
@@ -566,9 +595,9 @@ describe("VitePress navigation synthesis and link/anchor plugins", () => {
       )
     ).toThrow(/missing anchors: \/api\/#unknown/);
 
-    // Verify configured top-level nav keeps <= 6 items and exposes Staff Demo, Participant Demo, and RSS in <= 2 clicks
+    // Verify configured top-level nav consolidates into 5 menus and exposes all 12 original targets in <= 2 clicks
     const configuredNav = portalConfig.themeConfig.nav;
-    expect(configuredNav.length).toBeLessThanOrEqual(6);
+    expect(configuredNav).toHaveLength(5);
 
     const clickDepthByTarget = new Map();
     const recordNavDepth = (items, depth) => {
@@ -586,8 +615,22 @@ describe("VitePress navigation synthesis and link/anchor plugins", () => {
     };
     recordNavDepth(configuredNav, 1);
 
+    expect(clickDepthByTarget.get("/")).toBe(1);
     expect(clickDepthByTarget.get("/demo/")).toBeLessThanOrEqual(2);
     expect(clickDepthByTarget.get("/subject-portal/")).toBeLessThanOrEqual(2);
+    expect(clickDepthByTarget.get("/blog/")).toBeLessThanOrEqual(2);
+    expect(clickDepthByTarget.get("/DOCUMENTATION_INDEX")).toBeLessThanOrEqual(
+      2
+    );
+    expect(
+      clickDepthByTarget.get("/kernel/CLINICAL_KERNEL_SPECIFICATION")
+    ).toBeLessThanOrEqual(2);
+    expect(clickDepthByTarget.get("/ARCHITECTURE")).toBeLessThanOrEqual(2);
+    expect(clickDepthByTarget.get("/CONTEXT")).toBeLessThanOrEqual(2);
+    expect(clickDepthByTarget.get("/api/")).toBeLessThanOrEqual(2);
+    expect(clickDepthByTarget.get("/schema/README")).toBeLessThanOrEqual(2);
+    expect(clickDepthByTarget.get("/components/")).toBeLessThanOrEqual(2);
+    expect(clickDepthByTarget.get("/adr/")).toBeLessThanOrEqual(2);
     expect(
       clickDepthByTarget.get("/cadence-clinical/feed.xml")
     ).toBeLessThanOrEqual(2);

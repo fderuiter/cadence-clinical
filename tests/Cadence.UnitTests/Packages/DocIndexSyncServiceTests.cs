@@ -414,4 +414,42 @@ public sealed class DocIndexSyncServiceTests : IDisposable
         afterRevertIndex.Should().NotContain("blog/2026-11-19-milestone.md");
         afterRevertIndex.Should().Contain("blog/index.md");
     }
+
+    [Fact]
+    public void SyncDocIndex_WriteMode_RemovesIntraTableBlankLinesAndPreservesSeparateTables()
+    {
+        string docsDir = Path.Combine(_tempDir, "docs");
+        Directory.CreateDirectory(docsDir);
+        File.WriteAllText(Path.Combine(docsDir, "doca.md"), "# Doc A\nFirst doc\n");
+        File.WriteAllText(Path.Combine(docsDir, "docb.md"), "# Doc B\nSecond doc\n");
+        File.WriteAllText(Path.Combine(docsDir, "docc.md"), "# Doc C\nThird doc\n");
+
+        string splitIndex = string.Join(
+            '\n',
+            "# Documentation Index",
+            "",
+            "## Developing and running",
+            "",
+            "| Document | Status | What it is |",
+            "| --- | --- | --- |",
+            "| [Doc A](doca.md) | Current | First doc |",
+            "",
+            "| [Doc B](docb.md) | Current | Split by intra-table blank line |",
+            "",
+            "| Document | Status | What it is |",
+            "| --- | --- | --- |",
+            "| [Doc C](docc.md) | Current | Separate valid table after blank line |",
+            "");
+
+        string indexPath = Path.Combine(docsDir, "DOCUMENTATION_INDEX.md");
+        File.WriteAllText(indexPath, splitIndex);
+
+        DocIndexSyncService.SyncDocIndex(check: true, repoRoot: _tempDir).Should().Be(1);
+        DocIndexSyncService.SyncDocIndex(check: false, repoRoot: _tempDir).Should().Be(0);
+        DocIndexSyncService.SyncDocIndex(check: true, repoRoot: _tempDir).Should().Be(0);
+
+        string repaired = File.ReadAllText(indexPath);
+        repaired.Should().Contain("| [Doc A](doca.md) | Current | First doc |\n| [Doc B](docb.md) | Current | Split by intra-table blank line |");
+        repaired.Should().Contain("| [Doc B](docb.md) | Current | Split by intra-table blank line |\n\n| Document | Status | What it is |");
+    }
 }

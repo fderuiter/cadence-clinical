@@ -65,10 +65,25 @@ const config = defineConfig({
   transformHtml(code) {
     return injectHashedPortalCsp(code);
   },
+  transformPageData(pageData) {
+    const relPath = (pageData.relativePath || "").replace(/\\/g, "/");
+    if (
+      relPath.startsWith("blog/") &&
+      relPath.toLowerCase() !== "blog/index.md"
+    ) {
+      pageData.frontmatter ??= {};
+      pageData.frontmatter.prev ??= false;
+      pageData.frontmatter.next ??= false;
+    }
+  },
   // Links VitePress cannot serve are pointed at GitHub by repoLinksPlugin; co-hosted demo subpaths are staged
   // into dist/demo and dist/subject-portal after VitePress compiles, while any other dead link or anchor fails the build.
   ignoreDeadLinks: [/^\/(demo|subject-portal)(\/|$)/],
   markdown: {
+    theme: {
+      light: "github-light-high-contrast",
+      dark: "github-dark-high-contrast",
+    },
     config(md) {
       md.use(mermaidFencePlugin);
       md.use(dualHeadingAnchorsPlugin);
@@ -116,6 +131,12 @@ const config = defineConfig({
     search: {
       provider: "local",
       options: {
+        translations: {
+          button: {
+            buttonText: "Search",
+            buttonAriaLabel: "Search",
+          },
+        },
         miniSearch: {
           searchOptions: {
             fuzzy: 0.2,
@@ -162,7 +183,6 @@ const config = defineConfig({
           },
         ],
       },
-      { text: "Blog", link: "/blog/", activeMatch: "^/blog/" },
       {
         text: "Guides",
         activeMatch: "^/(DOCUMENTATION_INDEX|kernel/|ARCHITECTURE|CONTEXT)",
@@ -186,7 +206,14 @@ const config = defineConfig({
           { text: "ADR Log", link: "/adr/" },
         ],
       },
-      { text: "RSS", link: rssFeedHref, target: "_blank" },
+      {
+        text: "Blog",
+        activeMatch: "^/blog/",
+        items: [
+          { text: "Engineering Blog", link: "/blog/" },
+          { text: "RSS Feed", link: rssFeedHref, target: "_blank" },
+        ],
+      },
     ],
     sidebar: synthesizeSidebarFromIndex(indexPath, {
       docsDir,

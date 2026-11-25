@@ -989,6 +989,103 @@ public static partial class DocIndexSyncService
         return false;
     }
 
+    public static List<string> CollapseIntraTableBlankLines(List<string> lines)
+    {
+        var result = new List<string>(lines.Count);
+        char fenceChar = '\0';
+        int fenceLen = 0;
+        bool inHtmlComment = false;
+        bool prevWasPipeRow = false;
+
+        int i = 0;
+        while (i < lines.Count)
+        {
+            string rawLine = lines[i].TrimEnd('\r');
+            string trimmed = rawLine.Trim();
+
+            if (TryMatchFenceLine(rawLine, out char markerChar, out int markerLen, out bool hasInfo))
+            {
+                if (fenceChar == '\0')
+                {
+                    fenceChar = markerChar;
+                    fenceLen = markerLen;
+                }
+                else if (markerChar == fenceChar && markerLen >= fenceLen && !hasInfo)
+                {
+                    fenceChar = '\0';
+                    fenceLen = 0;
+                }
+
+                prevWasPipeRow = false;
+                result.Add(lines[i]);
+                i++;
+                continue;
+            }
+
+            if (fenceChar != '\0')
+            {
+                result.Add(lines[i]);
+                i++;
+                continue;
+            }
+
+            if (inHtmlComment)
+            {
+                if (trimmed.Contains("-->", StringComparison.Ordinal))
+                {
+                    inHtmlComment = false;
+                }
+
+                prevWasPipeRow = false;
+                result.Add(lines[i]);
+                i++;
+                continue;
+            }
+
+            if (trimmed.StartsWith("<!--", StringComparison.Ordinal) && !trimmed.StartsWith('|'))
+            {
+                if (!trimmed.Contains("-->", StringComparison.Ordinal))
+                {
+                    inHtmlComment = true;
+                }
+
+                prevWasPipeRow = false;
+                result.Add(lines[i]);
+                i++;
+                continue;
+            }
+
+            if (prevWasPipeRow && string.IsNullOrWhiteSpace(trimmed))
+            {
+                int nextNonBlank = i + 1;
+                while (nextNonBlank < lines.Count && string.IsNullOrWhiteSpace(lines[nextNonBlank]))
+                {
+                    nextNonBlank++;
+                }
+
+                if (nextNonBlank < lines.Count)
+                {
+                    string nextTrimmed = lines[nextNonBlank].Trim();
+                    string afterNextTrimmed = (nextNonBlank + 1 < lines.Count)
+                        ? lines[nextNonBlank + 1].Trim()
+                        : string.Empty;
+
+                    if (IsPipeTableRowCandidate(nextTrimmed) && !IsGfmDelimiterRow(afterNextTrimmed))
+                    {
+                        i = nextNonBlank;
+                        continue;
+                    }
+                }
+            }
+
+            prevWasPipeRow = IsPipeTableRowCandidate(trimmed);
+            result.Add(lines[i]);
+            i++;
+        }
+
+        return result;
+    }
+
     private static string GenerateUpdatedIndex(
         string originalContent,
         List<MarkdownDocInfo> allDiskDocs,
@@ -1025,7 +1122,7 @@ public static partial class DocIndexSyncService
             list.Add(doc);
         }
 
-        var lines = originalContent.Split('\n').ToList();
+        var lines = CollapseIntraTableBlankLines([.. originalContent.Split('\n')]);
 
         // Identify sections starting with "## "
         var sectionIndices = new List<int>();
