@@ -252,6 +252,65 @@ public class SignatureTokenTests
         await ownStore.Should().NotThrowAsync("a process-local store knows nothing of another instance's uses");
     }
 
+    /// <summary>
+    /// Dual-signer verification validates both tokens and requires distinct <c>jti</c> values before consuming either,
+    /// so a rejected secondary token never burns a valid primary token.
+    /// @req:SRS-SYS-005
+    /// </summary>
+    [Fact]
+    [Trait("Category", "GxP_OQ")]
+    [GxPRequirement("SRS-SYS-005")]
+    public async Task VerifyDualTokens_ValidatesBothBeforeConsumingEither()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var clock = new FakeClock();
+        var shared = new ReplayCache(clock);
+        var verifier = new SigTokenVerifier(shared, clock);
+        var batchBinding = new SigTokenBinding(Action, SemanticAction, "STUDY-01:SUBJ-01:DIN-01:BATCH-01");
+
+        string primary = SigTokenIssuer.Issue(
+            new SigTokenGrant("nurse-01", "nurse-01", ["Site CRC"], Action, SemanticAction, batchBinding.BatchId),
+            clock.UtcNow,
+            Secret);
+        string wrongSignerSecondary = SigTokenIssuer.Issue(
+            new SigTokenGrant("other-user", "other-user", ["Site Investigator"], Action, SemanticAction, batchBinding.BatchId),
+            clock.UtcNow,
+            Secret);
+
+        // Same token passed twice must fail without burning it.
+        await verifier.Awaiting(v => v.VerifyAndConsumeAsync(primary, "nurse-01", primary, "nurse-01", batchBinding, Secret, ct))
+            .Should().ThrowAsync<UnauthorizedAccessException>().WithMessage(SigTokenVerifier.ReauthenticationRequired);
+
+        // Wrong secondary signer must fail without burning primary.
+        await verifier.Awaiting(v => v.VerifyAndConsumeAsync(primary, "nurse-01", wrongSignerSecondary, "pi-02", batchBinding, Secret, ct))
+            .Should().ThrowAsync<UnauthorizedAccessException>().WithMessage(SigTokenVerifier.ReauthenticationRequired);
+
+        // Valid secondary succeeds with the unburned primary token.
+        string validSecondary = SigTokenIssuer.Issue(
+            new SigTokenGrant("pi-02", "pi-02", ["Site Investigator"], Action, SemanticAction, batchBinding.BatchId),
+            clock.UtcNow,
+            Secret);
+        var (verifiedPrimary, verifiedSecondary) = await verifier.VerifyAndConsumeAsync(
+            primary, "nurse-01", validSecondary, "pi-02", batchBinding, Secret, ct);
+        verifiedPrimary.Subject.Should().Be("nurse-01");
+        verifiedSecondary.Subject.Should().Be("pi-02");
+
+        // Replaying secondary paired with a fresh primary must fail AND leave the fresh primary unburned.
+        string freshPrimary = SigTokenIssuer.Issue(
+            new SigTokenGrant("nurse-01", "nurse-01", ["Site CRC"], Action, SemanticAction, batchBinding.BatchId),
+            clock.UtcNow,
+            Secret);
+        await verifier.Awaiting(v => v.VerifyAndConsumeAsync(freshPrimary, "nurse-01", validSecondary, "pi-02", batchBinding, Secret, ct))
+            .Should().ThrowAsync<UnauthorizedAccessException>().WithMessage(SigTokenVerifier.ReauthenticationRequired);
+
+        string freshSecondary = SigTokenIssuer.Issue(
+            new SigTokenGrant("pi-02", "pi-02", ["Site Investigator"], Action, SemanticAction, batchBinding.BatchId),
+            clock.UtcNow,
+            Secret);
+        await verifier.Awaiting(v => v.VerifyAndConsumeAsync(freshPrimary, "nurse-01", freshSecondary, "pi-02", batchBinding, Secret, ct))
+            .Should().NotThrowAsync();
+    }
+
     private static string Issue(string subject, IReadOnlyList<string> roles, DateTimeOffset? issuedAt = null) =>
         SigTokenIssuer.Issue(new SigTokenGrant(subject, subject, roles, Action, SemanticAction), issuedAt ?? SystemClock.Instance.UtcNow, Secret);
 

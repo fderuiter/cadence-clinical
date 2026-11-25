@@ -32,6 +32,12 @@ public static class TestSecurityContext
     /// <summary>Test-only execution randomisation key (base64 of 32 bytes, #5607), distinct from the demographics key.</summary>
     public const string RandomizationKeyBase64 = "cmFuZG9taXphdGlvbi10ZXN0LWtleS0wMDAwMDAwMDA="; // pragma: allowlist secret
 
+    /// <summary>Test-only execution CGT barcode HMAC key (base64 of 32 ASCII bytes, ADR-2666), distinct from other keys.</summary>
+    public const string CgtBarcodeKeyBase64 = "Y2FkZW5jZS10ZXN0LWNndC1iYXJjb2RlLWtleS0wMDE="; // pragma: allowlist secret
+
+    /// <summary>Decoded 32-byte test CGT barcode HMAC key.</summary>
+    public static byte[] CgtBarcodeKeyBytes => Convert.FromBase64String(CgtBarcodeKeyBase64);
+
     /// <summary>Test-only SCE lock-token signing key (base64 of 32 ASCII bytes) for the interop host (#5382).</summary>
     public const string SceSigningKeyBase64 = "Y2FkZW5jZS10ZXN0LXNjZS1zaWduaW5nLWtleS0wMDE="; // pragma: allowlist secret
 
@@ -225,6 +231,10 @@ public static class SignedClientExtensions
     /// <summary>Supplies the test randomisation key (<c>RANDOMIZATION_ALLOCATION_KEY</c>) so the execution host's startup validation passes.</summary>
     public static IWebHostBuilder UseTestRandomizationKey(this IWebHostBuilder builder) =>
         builder.UseSetting("RANDOMIZATION_ALLOCATION_KEY", TestSecurityContext.RandomizationKeyBase64);
+
+    /// <summary>Supplies the test CGT barcode HMAC key (<c>CGT_BARCODE_HMAC_KEY</c>) so the execution host's startup validation passes.</summary>
+    public static IWebHostBuilder UseTestCgtBarcodeKey(this IWebHostBuilder builder) =>
+        builder.UseSetting("CGT_BARCODE_HMAC_KEY", TestSecurityContext.CgtBarcodeKeyBase64);
 
     /// <summary>Supplies the test SCE signing key (<c>CADENCE_SCE_SIGNING_KEY</c>) so the interop host's startup validation passes.</summary>
     public static IWebHostBuilder UseTestSceSigningKey(this IWebHostBuilder builder) =>

@@ -98,6 +98,16 @@ public sealed class SignatureTokenSingleUsePostgresTests(ThrowawayPostgresDataba
         (await freshStore.TryRecordFirstUseAsync(tokenId, retainUntil, ct)).Should().BeFalse("the use is recorded in PostgreSQL");
         (await firstStore.TryRecordFirstUseAsync(tokenId, retainUntil, ct)).Should().BeFalse();
         (await freshStore.TryRecordFirstUseAsync(Guid.NewGuid().ToString(), retainUntil, ct)).Should().BeTrue();
+
+        // Batch consumption must be all-or-nothing across instances: if one token in the batch was already consumed,
+        // the unconsumed sibling token must remain available for a subsequent valid batch.
+        string freshPrimary = Guid.NewGuid().ToString();
+        string freshSecondary = Guid.NewGuid().ToString();
+        (await freshStore.TryRecordFirstUseBatchAsync([(freshPrimary, retainUntil), (tokenId, retainUntil)], ct))
+            .Should().BeFalse("a batch containing an already-used token must fail atomically");
+        (await firstStore.TryRecordFirstUseBatchAsync([(freshPrimary, retainUntil), (freshSecondary, retainUntil)], ct))
+            .Should().BeTrue("the unconsumed token from the failed batch must remain usable");
+        (await freshStore.TryRecordFirstUseAsync(freshSecondary, retainUntil, ct)).Should().BeFalse();
     }
 
     private static ServiceProvider Instance<TContext>(Func<string, TContext> createContext, string connection)

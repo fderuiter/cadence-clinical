@@ -1,30 +1,30 @@
 <template>
-  <aside
-    ref="drawerRef"
-    class="readability-drawer"
-    :class="{ open: isOpen }"
-    role="dialog"
-    :aria-modal="isOpen ? 'true' : undefined"
-    :aria-hidden="!isOpen ? 'true' : undefined"
-    :inert="!isOpen || undefined"
+  <ClinicalDrawer
+    :model-value="isOpen"
+    :teleport="false"
+    keep-mounted
+    size="sm"
+    :panel-class="['readability-drawer', { open: isOpen }]"
     aria-label="Readability Harmonization Assistant"
-    tabindex="-1"
+    @close="$emit('close')"
   >
-    <div class="drawer-header">
-      <div class="drawer-title">
-        <span class="icon">📖</span>
-        <h3>eConsent Readability Harmonizer</h3>
+    <template #header>
+      <div class="drawer-header">
+        <div class="drawer-title">
+          <BookOpen :size="18" class="icon" aria-hidden="true" />
+          <h3>eConsent Readability Harmonizer</h3>
+        </div>
+        <button
+          type="button"
+          class="btn-close"
+          title="Close Assistant"
+          aria-label="Close Assistant"
+          @click="$emit('close')"
+        >
+          <X :size="18" aria-hidden="true" />
+        </button>
       </div>
-      <button
-        type="button"
-        class="btn-close"
-        title="Close Assistant"
-        aria-label="Close Assistant"
-        @click="$emit('close')"
-      >
-        ✕
-      </button>
-    </div>
+    </template>
 
     <div class="drawer-body">
       <!-- Readability Metrics Cards -->
@@ -80,7 +80,8 @@
           :disabled="loading"
           @click="analyzeText"
         >
-          🔍 Recalculate Scores
+          <Search :size="15" aria-hidden="true" />
+          <span>Recalculate Scores</span>
         </button>
         <button
           type="button"
@@ -88,8 +89,14 @@
           :disabled="loading"
           @click="harmonizeWithAI"
         >
-          <span v-if="loading">⏳ Harmonizing...</span>
-          <span v-else>✨ Harmonize with AI (Tier 2)</span>
+          <template v-if="loading">
+            <Loader2 :size="15" class="spin-icon" aria-hidden="true" />
+            <span>Harmonizing...</span>
+          </template>
+          <template v-else>
+            <Sparkles :size="15" aria-hidden="true" />
+            <span>Harmonize with AI (Tier 2)</span>
+          </template>
         </button>
       </div>
 
@@ -132,7 +139,7 @@
                 <span class="diff-tag del">Jargon</span>
                 <span class="diff-text del-text">{{ sub.original_term }}</span>
               </div>
-              <span class="arrow">➔</span>
+              <ArrowRight :size="15" class="arrow" aria-hidden="true" />
               <div class="diff-suggested">
                 <span class="diff-tag ins">Plain</span>
                 <span class="diff-text ins-text">{{ sub.suggested_term }}</span>
@@ -149,7 +156,8 @@
                 class="btn-apply-single"
                 @click="applySingleSubstitution(sub)"
               >
-                ✓ Apply Substitution
+                <Check :size="14" aria-hidden="true" />
+                <span>Apply Substitution</span>
               </button>
             </div>
           </div>
@@ -160,7 +168,8 @@
               class="btn btn-success btn-block"
               @click="applyAllSubstitutions"
             >
-              ✓ Apply All Harmonizations ({{ substitutions.length }})
+              <Check :size="15" aria-hidden="true" />
+              <span>Apply All Harmonizations ({{ substitutions.length }})</span>
             </button>
           </div>
         </div>
@@ -193,12 +202,21 @@
         </div>
       </section>
     </div>
-  </aside>
+  </ClinicalDrawer>
 </template>
 
 <script setup>
 import { ref, watch, onMounted } from "vue";
-import { useFocusTrap } from "ui";
+import { ClinicalDrawer } from "ui";
+import {
+  ArrowRight,
+  BookOpen,
+  Check,
+  Loader2,
+  Search,
+  Sparkles,
+  X,
+} from "lucide-vue-next";
 import { econsentService } from "../../api/econsent.js";
 
 const props = defineProps({
@@ -227,17 +245,7 @@ const emit = defineEmits([
   "update-metrics",
 ]);
 
-const drawerRef = ref(null);
 const loading = ref(false);
-
-useFocusTrap(drawerRef, {
-  isOpen: () => props.isOpen,
-  onEscape: () => {
-    if (props.isOpen) {
-      emit("close");
-    }
-  },
-});
 const metrics = ref(null);
 const substitutions = ref([]);
 const protocolVersion = ref("v2.0");
@@ -288,7 +296,6 @@ function applySingleSubstitution(sub) {
     protocolVersion: protocolVersion.value,
     changeReason: changeReason.value,
   });
-  // Remove from candidate list
   substitutions.value = substitutions.value.filter(
     (s) => s.original_term !== sub.original_term
   );
@@ -329,89 +336,83 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.readability-drawer {
-  position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
+:global(.readability-drawer) {
   width: var(
     --semantic-drawer-width-sm,
     var(--drawer-width-sm, min(100vw, 440px))
   );
   max-width: 100vw;
-  background-color: var(--semantic-color-surface);
-  border-left: 1px solid var(--border);
-  box-shadow: var(--shadow-drawer-left);
-  z-index: 1000;
-  display: flex;
-  flex-direction: column;
-  visibility: hidden;
-  transform: translateX(100%);
-  transition:
-    transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
-    visibility 0s linear 0.3s;
-}
-
-.readability-drawer:focus:not(:focus-visible) {
-  outline: none;
-}
-
-.readability-drawer.open {
-  visibility: visible;
-  transform: translateX(0);
-  transition:
-    transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
-    visibility 0s linear 0s;
 }
 
 .drawer-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px;
-  background-color: var(--semantic-color-surface-muted);
-  border-bottom: 1px solid var(--border);
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
 }
 
 .drawer-title {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.drawer-title .icon {
+  flex-shrink: 0;
+  color: var(--semantic-color-primary);
 }
 
 .drawer-title h3 {
   margin: 0;
-  font-size: 1.05rem;
+  font-size: 1rem;
   color: var(--semantic-color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .btn-close {
   background: transparent;
   border: none;
-  font-size: 1.2rem;
   cursor: pointer;
   color: var(--semantic-color-text-secondary);
-  border-radius: 4px;
-  padding: 4px 8px;
+  border-radius: 6px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
-.btn-close:hover {
+.btn-close:hover:not(:disabled) {
   background-color: var(--semantic-color-surface-header);
   color: var(--semantic-color-text);
 }
 
+@media (max-height: 540px) {
+  .btn-close {
+    min-width: 36px;
+    min-height: 36px;
+  }
+}
+
 .drawer-body {
-  padding: 20px;
-  overflow-y: auto;
-  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
+  min-width: 0;
+  font-variant-numeric: tabular-nums;
 }
 
 .metrics-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 }
 
@@ -423,6 +424,7 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  min-width: 0;
 }
 
 .metric-label {
@@ -436,6 +438,8 @@ onMounted(() => {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
 .metric-value {
@@ -478,12 +482,17 @@ onMounted(() => {
 
 .action-bar .btn {
   flex: 1;
+  min-height: 44px;
   padding: 8px 12px;
   font-size: 0.85rem;
   font-weight: 600;
   border-radius: 6px;
   cursor: pointer;
   border: 1px solid transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
 
 .btn-secondary {
@@ -492,7 +501,7 @@ onMounted(() => {
   color: var(--semantic-color-text);
 }
 
-.btn-secondary:hover {
+.btn-secondary:hover:not(:disabled) {
   background-color: var(--semantic-color-surface-header);
 }
 
@@ -501,8 +510,18 @@ onMounted(() => {
   color: var(--semantic-color-surface);
 }
 
-.btn-primary:hover {
+.btn-primary:hover:not(:disabled) {
   background-color: var(--semantic-color-primary-dark);
+}
+
+.spin-icon {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .suggestions-section {
@@ -515,6 +534,8 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .section-title-row h4 {
@@ -533,7 +554,7 @@ onMounted(() => {
 }
 
 .empty-state {
-  padding: 24px;
+  padding: 20px;
   text-align: center;
   background-color: var(--semantic-color-surface-muted);
   border: 1px dashed var(--border);
@@ -556,11 +577,14 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  min-width: 0;
 }
 
 .sub-header {
   display: flex;
   justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
   font-size: 0.75rem;
 }
 
@@ -590,6 +614,7 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 0;
 }
 
 .diff-tag {
@@ -610,17 +635,19 @@ onMounted(() => {
   font-size: 0.85rem;
   text-decoration: line-through;
   color: var(--error);
+  word-break: break-word;
 }
 
 .diff-text.ins-text {
   font-size: 0.85rem;
   font-weight: 600;
   color: var(--success);
+  word-break: break-word;
 }
 
 .arrow {
   color: var(--semantic-color-text-secondary);
-  font-size: 0.9rem;
+  flex-shrink: 0;
 }
 
 .rationale-text {
@@ -634,15 +661,19 @@ onMounted(() => {
   background-color: transparent;
   border: 1px solid var(--primary);
   color: var(--primary);
-  padding: 4px 10px;
-  border-radius: 4px;
+  min-height: 44px;
+  padding: 6px 12px;
+  border-radius: 6px;
   font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
   align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
-.btn-apply-single:hover {
+.btn-apply-single:hover:not(:disabled) {
   background-color: var(--primary);
   color: var(--semantic-color-surface);
 }
@@ -650,14 +681,19 @@ onMounted(() => {
 .btn-success {
   background-color: var(--success);
   color: var(--semantic-color-surface);
+  min-height: 44px;
   padding: 10px;
   font-weight: 600;
   border-radius: 6px;
   border: none;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
 
-.btn-success:hover {
+.btn-success:hover:not(:disabled) {
   background-color: var(--semantic-color-success);
 }
 
@@ -693,25 +729,21 @@ onMounted(() => {
 
 .form-control {
   border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 6px 10px;
-  font-size: 0.85rem;
+  border-radius: 6px;
+  min-height: 44px;
+  padding: 8px 10px;
+  font-size: 1rem;
   background-color: var(--semantic-color-surface);
   color: var(--semantic-color-text);
   max-width: 100%;
+  box-sizing: border-box;
 }
 
 /* Mobile Breakpoint Overrides (max-width: 640px) */
 @media (max-width: 640px) {
-  .readability-drawer {
+  :global(.readability-drawer) {
     width: 100vw;
     max-width: 100vw;
-  }
-
-  .drawer-header,
-  .drawer-body {
-    padding-left: 16px;
-    padding-right: 16px;
   }
 
   .metrics-grid {
@@ -736,7 +768,7 @@ onMounted(() => {
   }
 
   .arrow {
-    text-align: center;
+    align-self: center;
   }
 
   .btn-apply-single,

@@ -653,6 +653,14 @@ public sealed class ExpiredSubscriptionStandaloneServicesTests
             ConsumeCalls++;
             return _inner.TryRecordFirstUseAsync(tokenId, retainUntil, cancellationToken);
         }
+
+        public Task<bool> TryRecordFirstUseBatchAsync(
+            System.Collections.Generic.IReadOnlyList<(string TokenId, DateTimeOffset RetainUntil)> uses,
+            System.Threading.CancellationToken cancellationToken)
+        {
+            ConsumeCalls += uses.Count;
+            return _inner.TryRecordFirstUseBatchAsync(uses, cancellationToken);
+        }
     }
 
     private sealed class ExpiryProbeResultHandler : IAuthorizationMiddlewareResultHandler

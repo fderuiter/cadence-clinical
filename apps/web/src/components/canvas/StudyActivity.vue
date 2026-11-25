@@ -80,7 +80,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, getCurrentInstance, ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
 import type { RouteLocationRaw } from "vue-router";
 import {
   isMasked,
@@ -94,6 +94,7 @@ import {
   formatMaskedNode,
   seedResolvedNodes,
 } from "../../canvas/nodeResolver";
+import { useScopedNavigation } from "../../composables/useScopedNavigation";
 import NodeRefChip from "./NodeRefChip.vue";
 import SupportDetails from "./SupportDetails.vue";
 
@@ -103,14 +104,8 @@ import SupportDetails from "./SupportDetails.vue";
  */
 const props = defineProps<{ studyCode: string }>();
 
-const instance = getCurrentInstance();
-const currentRoute = computed(
-  () =>
-    (
-      instance?.appContext.config.globalProperties as {
-        $route?: { query?: Record<string, unknown> };
-      }
-    )?.$route ?? null
+const { route: currentRoute, scopedStudyLocation } = useScopedNavigation(
+  () => props.studyCode
 );
 
 const FAMILIES: KernelEventFamily[] = [
@@ -231,21 +226,18 @@ function subjectLink(entry: KernelActivityEntry): RouteLocationRaw | null {
   if (!entry.subject) return null;
   const node = parseNodeRef(entry.subject);
   if (node?.kind === "protocol_version") {
-    return {
-      name: "study",
-      params: { studyCode: props.studyCode },
-      query: {
-        stage: "design",
-        section: "protocol-versions",
-        node: entry.subject,
-      },
-    };
+    return scopedStudyLocation({
+      stage: "design",
+      section: "protocol-versions",
+      node: entry.subject,
+    });
   }
+  const baseLocation = scopedStudyLocation({ node: entry.subject });
   return {
-    name: "study",
-    params: { studyCode: props.studyCode },
+    ...baseLocation,
     query: {
       ...(currentRoute.value?.query ?? {}),
+      ...baseLocation.query,
       node: entry.subject,
     },
   };

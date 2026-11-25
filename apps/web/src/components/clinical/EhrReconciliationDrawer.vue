@@ -1,44 +1,49 @@
 <template>
-  <div
-    v-if="isOpen"
-    class="drawer-backdrop"
-    role="presentation"
-    @click.self="closeDrawer"
+  <ClinicalDrawer
+    :model-value="isOpen"
+    :teleport="false"
+    size="xl"
+    :dismissible="!isSubmitting"
+    overlay-class="drawer-backdrop"
+    panel-class="ehr-reconciliation-drawer"
+    aria-labelledby="drawer-heading"
+    @close="closeDrawer"
   >
-    <aside
-      ref="drawerRef"
-      class="ehr-reconciliation-drawer"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="drawer-heading"
-    >
-      <!-- Drawer Header -->
-      <header class="drawer-header">
-        <div class="header-titles">
-          <div class="badge-row">
-            <span class="badge badge-smart">SMART on FHIR</span>
-            <span class="badge badge-gxp">21 CFR Part 11</span>
-            <span class="badge badge-provenance">Immutable Provenance</span>
-          </div>
+    <template #header>
+      <div class="drawer-header">
+        <div class="header-title-wrap">
+          <Stethoscope :size="18" class="header-icon" aria-hidden="true" />
           <h2 id="drawer-heading" class="drawer-title">
             eSource EHR Reconciliation Drawer
           </h2>
-          <p class="drawer-subtitle">
-            Side-by-side reconciliation of candidate EHR records with current
-            eCRF fields. Non-destructive review gating eliminates silent
-            background data overwrites.
-          </p>
         </div>
 
         <button
+          id="btn-close-ehr-drawer"
           type="button"
           class="btn-close"
-          aria-label="Close Reconciliation Drawer"
+          aria-label="Close EHR Reconciliation Drawer"
+          :disabled="isSubmitting"
           @click="closeDrawer"
         >
-          ✕
+          <X :size="18" aria-hidden="true" />
         </button>
-      </header>
+      </div>
+    </template>
+
+    <div class="drawer-body">
+      <div class="intro-meta-block">
+        <div class="badge-row">
+          <span class="badge badge-smart">SMART on FHIR</span>
+          <span class="badge badge-gxp">21 CFR Part 11</span>
+          <span class="badge badge-provenance">Immutable Provenance</span>
+        </div>
+        <p class="drawer-subtitle">
+          Side-by-side reconciliation of candidate EHR records with current eCRF
+          fields. Non-destructive review gating eliminates silent background
+          data overwrites.
+        </p>
+      </div>
 
       <!-- Subject & Study Context Bar -->
       <div class="context-bar">
@@ -63,7 +68,8 @@
             :disabled="isLoading"
             @click="fetchCandidates"
           >
-            🔄 Refresh
+            <RefreshCw :size="14" aria-hidden="true" />
+            <span>Refresh</span>
           </button>
         </div>
       </div>
@@ -80,7 +86,7 @@
         </div>
         <div class="metric-card metric-accepted">
           <span class="metric-num">{{ acceptedCount }}</span>
-          <span class="metric-label">Accepted & Committed</span>
+          <span class="metric-label">Accepted &amp; Committed</span>
         </div>
         <div class="metric-card metric-rejected">
           <span class="metric-num">{{ rejectedCount }}</span>
@@ -103,6 +109,7 @@
           <button
             v-for="d in domainOptions"
             :key="d.value"
+            type="button"
             role="tab"
             :aria-selected="selectedDomain === d.value"
             :class="['domain-tab', { active: selectedDomain === d.value }]"
@@ -120,7 +127,8 @@
             title="Select all pending items with confidence score >= 90%"
             @click="selectHighConfidence"
           >
-            ⚡ Select High Confidence (≥90%)
+            <Zap :size="14" aria-hidden="true" />
+            <span>Select High Confidence (&ge;90%)</span>
           </button>
           <button
             type="button"
@@ -164,12 +172,267 @@
         </div>
       </div>
 
-      <!-- Floating Action Bar for Selected Items -->
-      <div v-if="selectedCandidateIds.length > 0" class="floating-batch-bar">
+      <!-- Main Split-Screen Reconciliation View -->
+      <div v-if="isLoading" class="state-container">
+        <SkeletonLoader type="card" :count="3" />
+      </div>
+
+      <div
+        v-else-if="filteredCandidates.length === 0"
+        class="state-container empty-state"
+      >
+        <EmptyState
+          title="No Candidate Records Found"
+          message="No EHR source data items match the current filters or need reconciliation."
+        >
+          <template #action>
+            <button
+              type="button"
+              class="btn btn-primary btn-sm btn-refresh-candidates"
+              @click="fetchCandidates"
+            >
+              <RefreshCw :size="14" aria-hidden="true" />
+              <span>Refresh EHR Ingestion</span>
+            </button>
+            <button
+              v-if="
+                selectedDomain !== 'ALL' ||
+                selectedStatus !== 'ALL' ||
+                searchQuery.trim()
+              "
+              type="button"
+              class="btn btn-secondary btn-sm btn-clear-filters"
+              @click="resetFilters"
+            >
+              Clear Filters
+            </button>
+          </template>
+        </EmptyState>
+      </div>
+
+      <div v-else class="candidate-list">
+        <article
+          v-for="item in filteredCandidates"
+          :key="item.id"
+          class="reconciliation-card"
+          :class="[
+            `status-${(item.status || 'pending_review').toLowerCase()}`,
+            `disc-${(item.discrepancy_type || 'not_compared').toLowerCase()}`,
+          ]"
+        >
+          <!-- Card Header: Variable & Provenance Tag -->
+          <div class="card-header">
+            <div class="card-selection-check">
+              <input
+                :id="`select-cand-${item.id}`"
+                v-model="selectedCandidateIds"
+                type="checkbox"
+                :value="item.id"
+                :disabled="item.status !== 'PENDING_REVIEW'"
+                class="candidate-checkbox"
+                :aria-label="`Select candidate ${item.target_variable}`"
+              />
+            </div>
+            <div class="card-meta-left">
+              <span class="domain-tag">{{ item.target_domain }}</span>
+              <span class="variable-tag mono">{{ item.target_variable }}</span>
+              <span class="test-name">{{
+                item.cdash_test || item.cdash_testcd
+              }}</span>
+            </div>
+            <div class="card-meta-right">
+              <span
+                :class="[
+                  'discrepancy-pill',
+                  `pill-${(item.discrepancy_type || 'not_compared').toLowerCase()}`,
+                ]"
+              >
+                {{ formatDiscrepancy(item.discrepancy_type) }}
+              </span>
+              <span
+                :class="[
+                  'status-pill',
+                  `status-${(item.status || 'pending_review').toLowerCase()}`,
+                ]"
+              >
+                {{ formatStatus(item.status) }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Split-Screen Grid: Left (Candidate EHR Data) vs Right (Current eCRF Field) -->
+          <div class="split-screen-grid">
+            <!-- LEFT PANE: Ingested EHR Source Data -->
+            <div class="split-pane ehr-pane">
+              <div class="pane-header">
+                <span class="pane-title">
+                  <Hospital :size="14" aria-hidden="true" />
+                  <span>Candidate EHR Source Data</span>
+                </span>
+                <span class="source-badge">{{ item.ehr_system_id }}</span>
+              </div>
+              <div class="data-row-primary">
+                <span class="val-num">{{
+                  formatValue(item.candidate_value)
+                }}</span>
+                <span v-if="item.candidate_unit" class="val-unit">{{
+                  item.candidate_unit
+                }}</span>
+              </div>
+              <div class="provenance-metadata">
+                <div class="meta-row">
+                  <span class="lbl">Resource:</span>
+                  <span class="val mono"
+                    >{{ item.fhir_resource_type }}/{{
+                      item.fhir_resource_id
+                    }}</span
+                  >
+                </div>
+                <div class="meta-row">
+                  <span class="lbl">Obs Timestamp:</span>
+                  <span class="val">{{
+                    formatDate(item.source_timestamp)
+                  }}</span>
+                </div>
+                <div class="meta-row">
+                  <span class="lbl">Confidence:</span>
+                  <span class="val"
+                    >{{ Math.round((item.confidence_score ?? 0) * 100) }}%</span
+                  >
+                </div>
+              </div>
+            </div>
+
+            <!-- RIGHT PANE: Current eCRF Field in EDC -->
+            <div class="split-pane ecrf-pane">
+              <div class="pane-header">
+                <span class="pane-title">
+                  <FileEdit :size="14" aria-hidden="true" />
+                  <span>Current eCRF Target Field</span>
+                </span>
+                <span class="form-badge">{{ item.target_domain }} Form</span>
+              </div>
+              <div class="data-row-primary">
+                <span
+                  v-if="
+                    item.current_ecrf_value !== null &&
+                    item.current_ecrf_value !== undefined
+                  "
+                  class="val-num"
+                >
+                  {{ formatValue(item.current_ecrf_value) }}
+                </span>
+                <span v-else class="val-empty italic">
+                  [Empty / Unentered Field]
+                </span>
+              </div>
+              <div class="provenance-metadata">
+                <div class="meta-row">
+                  <span class="lbl">Field Target:</span>
+                  <span class="val mono">{{ item.target_variable }}</span>
+                </div>
+                <div class="meta-row">
+                  <span class="lbl">Last Modified:</span>
+                  <span class="val">{{
+                    item.current_ecrf_updated_at
+                      ? formatDate(item.current_ecrf_updated_at)
+                      : "Not populated"
+                  }}</span>
+                </div>
+                <div class="meta-row">
+                  <span class="lbl">Mapping Rule:</span>
+                  <span class="val truncate" :title="item.mapping_provenance">{{
+                    item.mapping_provenance
+                  }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Resolution / Audit Trail Banner (If Resolved) -->
+          <div
+            v-if="item.status !== 'PENDING_REVIEW'"
+            class="resolution-banner"
+            :class="`banner-${(item.status || 'resolved').toLowerCase()}`"
+          >
+            <div class="resolution-info">
+              <strong
+                >{{ formatResolutionAction(item.resolution_action) }}:</strong
+              >
+              <span class="reason-text">{{
+                item.resolution_reason || "No comment provided"
+              }}</span>
+              <span class="resolved-by-tag"
+                >by {{ item.resolved_by || "CRC Coordinator" }} at
+                {{ formatDate(item.resolved_at) }}</span
+              >
+            </div>
+            <div v-if="item.electronic_signature" class="esign-badge">
+              <FileSignature :size="13" aria-hidden="true" />
+              <span>21 CFR Part 11 eSigned</span>
+            </div>
+            <div v-if="item.clinical_query_id" class="query-badge">
+              <HelpCircle :size="13" aria-hidden="true" />
+              <span
+                >Query #{{ item.clinical_query_id.substring(0, 8) }} Open</span
+              >
+            </div>
+          </div>
+
+          <!-- Card Footer: Non-Destructive 1-Click Action Buttons & Provenance Inspector -->
+          <footer class="card-footer">
+            <div class="action-btn-group">
+              <button
+                type="button"
+                class="btn btn-action btn-accept"
+                :disabled="item.status !== 'PENDING_REVIEW' || isSubmitting"
+                @click="promptAccept(item)"
+              >
+                <Check :size="14" aria-hidden="true" />
+                <span>Accept &amp; Commit</span>
+              </button>
+
+              <button
+                type="button"
+                class="btn btn-action btn-reject"
+                :disabled="item.status !== 'PENDING_REVIEW' || isSubmitting"
+                @click="openRejectModal(item)"
+              >
+                <X :size="14" aria-hidden="true" />
+                <span>Reject with Reason</span>
+              </button>
+
+              <button
+                type="button"
+                class="btn btn-action btn-query"
+                :disabled="item.status !== 'PENDING_REVIEW' || isSubmitting"
+                @click="openQueryModal(item)"
+              >
+                <HelpCircle :size="14" aria-hidden="true" />
+                <span>Raise Query</span>
+              </button>
+            </div>
+
+            <button
+              type="button"
+              class="btn btn-link-provenance"
+              @click="openProvenanceModal(item)"
+            >
+              <Search :size="14" aria-hidden="true" />
+              <span>Inspect Provenance</span>
+            </button>
+          </footer>
+        </article>
+      </div>
+    </div>
+
+    <!-- Optional Footer Action Bar for Selected Items -->
+    <template v-if="selectedCandidateIds.length > 0" #footer>
+      <div class="floating-batch-bar">
         <div class="batch-count-summary">
-          <span class="batch-count-badge tabular-nums">{{
+          <strong class="batch-count-badge tabular-nums">{{
             selectedCandidateIds.length
-          }}</span>
+          }}</strong>
           item(s) selected
         </div>
         <div class="batch-actions">
@@ -179,7 +442,8 @@
             :disabled="isSubmitting"
             @click="handleBatchAccept"
           >
-            ✓ Batch Accept ({{ selectedCandidateIds.length }})
+            <Check :size="14" aria-hidden="true" />
+            <span>Batch Accept ({{ selectedCandidateIds.length }})</span>
           </button>
           <button
             type="button"
@@ -187,7 +451,8 @@
             :disabled="isSubmitting"
             @click="openBatchRejectModal"
           >
-            ✕ Batch Reject ({{ selectedCandidateIds.length }})
+            <X :size="14" aria-hidden="true" />
+            <span>Batch Reject ({{ selectedCandidateIds.length }})</span>
           </button>
           <button
             type="button"
@@ -198,555 +463,325 @@
           </button>
         </div>
       </div>
+    </template>
+  </ClinicalDrawer>
 
-      <!-- Main Split-Screen Reconciliation View -->
-      <div class="drawer-body">
-        <div v-if="isLoading" class="state-container">
-          <SkeletonLoader type="card" :count="3" />
-        </div>
-
-        <div
-          v-else-if="filteredCandidates.length === 0"
-          class="state-container empty-state"
+  <!-- MODAL 1: Reject with Reason Dialog -->
+  <ClinicalModal
+    :model-value="showRejectModal"
+    :teleport="false"
+    size="md"
+    :dismissible="!isSubmitting"
+    :show-close="false"
+    backdrop-class="modal-backdrop"
+    dialog-class="modal-card"
+    aria-labelledby="reject-modal-title"
+    @close="closeRejectModal"
+  >
+    <template #header>
+      <div class="modal-header">
+        <h3 id="reject-modal-title">Reject EHR Candidate Data</h3>
+        <button
+          type="button"
+          class="btn-close"
+          aria-label="Close reject dialog"
+          :disabled="isSubmitting"
+          @click="closeRejectModal"
         >
-          <EmptyState
-            icon="📋"
-            title="No Candidate Records Found"
-            message="No EHR source data items match the current filters or need reconciliation."
+          <X :size="18" aria-hidden="true" />
+        </button>
+      </div>
+    </template>
+
+    <div class="modal-body">
+      <p class="modal-instruction">
+        Under GxP and FDA Electronic Source Data guidelines, a clinical
+        justification is mandatory when rejecting candidate EHR records.
+      </p>
+      <div class="field-summary">
+        <strong>Field:</strong> {{ activeItem?.target_variable }} ({{
+          activeItem?.cdash_test
+        }})<br />
+        <strong>Candidate Value:</strong>
+        {{ activeItem?.candidate_value }} {{ activeItem?.candidate_unit }}
+      </div>
+      <div class="form-group">
+        <label for="reject-reason" class="form-label"
+          >Rejection Reason: *</label
+        >
+        <textarea
+          id="reject-reason"
+          v-model="rejectReasonInput"
+          class="textarea-input"
+          rows="4"
+          placeholder="e.g., Outside protocol visit window, duplicate entry, clinical value verified inconsistent with chart notes..."
+        />
+      </div>
+    </div>
+
+    <template #footer>
+      <div class="modal-footer">
+        <button
+          type="button"
+          class="btn btn-secondary"
+          :disabled="isSubmitting"
+          @click="closeRejectModal"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="btn btn-danger"
+          :disabled="!rejectReasonInput.trim() || isSubmitting"
+          @click="submitReject"
+        >
+          Confirm Rejection
+        </button>
+      </div>
+    </template>
+  </ClinicalModal>
+
+  <!-- MODAL 2: Raise Clinical Query Dialog -->
+  <ClinicalModal
+    :model-value="showQueryModal"
+    :teleport="false"
+    size="md"
+    :dismissible="!isSubmitting"
+    :show-close="false"
+    backdrop-class="modal-backdrop"
+    dialog-class="modal-card"
+    aria-labelledby="query-modal-title"
+    @close="closeQueryModal"
+  >
+    <template #header>
+      <div class="modal-header">
+        <h3 id="query-modal-title">Raise GxP Discrepancy Query</h3>
+        <button
+          type="button"
+          class="btn-close"
+          aria-label="Close query dialog"
+          :disabled="isSubmitting"
+          @click="closeQueryModal"
+        >
+          <X :size="18" aria-hidden="true" />
+        </button>
+      </div>
+    </template>
+
+    <div class="modal-body">
+      <p class="modal-instruction">
+        Opens a formal clinical query in the study query ledger to flag a
+        discrepancy between the EHR source and the eCRF.
+      </p>
+      <div class="field-summary">
+        <strong>Target Field:</strong> {{ activeItem?.target_variable }}<br />
+        <strong>EHR Source Value:</strong>
+        {{ activeItem?.candidate_value }} {{ activeItem?.candidate_unit }}<br />
+        <strong>Current eCRF Value:</strong>
+        {{ activeItem?.current_ecrf_value || "[Empty]" }}
+      </div>
+      <div class="form-group">
+        <label for="query-explanation" class="form-label"
+          >Discrepancy Explanation: *</label
+        >
+        <textarea
+          id="query-explanation"
+          v-model="queryExplanationInput"
+          class="textarea-input"
+          rows="4"
+          placeholder="Describe the discrepancy and required resolution from the study investigator..."
+        />
+      </div>
+    </div>
+
+    <template #footer>
+      <div class="modal-footer">
+        <button
+          type="button"
+          class="btn btn-secondary"
+          :disabled="isSubmitting"
+          @click="closeQueryModal"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary"
+          :disabled="!queryExplanationInput.trim() || isSubmitting"
+          @click="submitQuery"
+        >
+          Raise Query
+        </button>
+      </div>
+    </template>
+  </ClinicalModal>
+
+  <!-- MODAL 3: Source Provenance & Part 11 Audit Trail Viewer -->
+  <ClinicalModal
+    :model-value="showProvenanceModal"
+    :teleport="false"
+    size="lg"
+    :show-close="false"
+    backdrop-class="modal-backdrop"
+    dialog-class="modal-card modal-lg"
+    aria-labelledby="prov-modal-title"
+    @close="closeProvenanceModal"
+  >
+    <template #header>
+      <div class="modal-header">
+        <h3 id="prov-modal-title">
+          FHIR Resource Provenance &amp; Audit Trail
+        </h3>
+        <button
+          type="button"
+          class="btn-close"
+          aria-label="Close provenance dialog"
+          @click="closeProvenanceModal"
+        >
+          <X :size="18" aria-hidden="true" />
+        </button>
+      </div>
+    </template>
+
+    <div class="modal-body">
+      <div class="provenance-summary-grid">
+        <div class="prov-stat">
+          <span class="lbl">EHR System:</span>
+          <span class="val">{{ activeItem?.ehr_system_id }}</span>
+        </div>
+        <div class="prov-stat">
+          <span class="lbl">FHIR Resource:</span>
+          <span class="val mono"
+            >{{ activeItem?.fhir_resource_type }}/{{
+              activeItem?.fhir_resource_id
+            }}</span
           >
-            <template #action>
-              <button
-                type="button"
-                class="btn btn-primary btn-sm btn-refresh-candidates"
-                @click="fetchCandidates"
-              >
-                🔄 Refresh EHR Ingestion
-              </button>
-              <button
-                v-if="
-                  selectedDomain !== 'ALL' ||
-                  selectedStatus !== 'ALL' ||
-                  searchQuery.trim()
-                "
-                type="button"
-                class="btn btn-secondary btn-sm btn-clear-filters"
-                @click="resetFilters"
-              >
-                Clear Filters
-              </button>
-            </template>
-          </EmptyState>
         </div>
-
-        <div v-else class="candidate-list">
-          <article
-            v-for="item in filteredCandidates"
-            :key="item.id"
-            class="reconciliation-card"
-            :class="[
-              `status-${(item.status || 'pending_review').toLowerCase()}`,
-              `disc-${(item.discrepancy_type || 'not_compared').toLowerCase()}`,
-            ]"
-          >
-            <!-- Card Header: Variable & Provenance Tag -->
-            <div class="card-header">
-              <div class="card-selection-check">
-                <input
-                  :id="`select-cand-${item.id}`"
-                  v-model="selectedCandidateIds"
-                  type="checkbox"
-                  :value="item.id"
-                  :disabled="item.status !== 'PENDING_REVIEW'"
-                  class="candidate-checkbox"
-                  :aria-label="`Select candidate ${item.target_variable}`"
-                />
-              </div>
-              <div class="card-meta-left">
-                <span class="domain-tag">{{ item.target_domain }}</span>
-                <span class="variable-tag mono">{{
-                  item.target_variable
-                }}</span>
-                <span class="test-name">{{
-                  item.cdash_test || item.cdash_testcd
-                }}</span>
-              </div>
-              <div class="card-meta-right">
-                <span
-                  :class="[
-                    'discrepancy-pill',
-                    `pill-${(item.discrepancy_type || 'not_compared').toLowerCase()}`,
-                  ]"
-                >
-                  {{ formatDiscrepancy(item.discrepancy_type) }}
-                </span>
-                <span
-                  :class="[
-                    'status-pill',
-                    `status-${(item.status || 'pending_review').toLowerCase()}`,
-                  ]"
-                >
-                  {{ formatStatus(item.status) }}
-                </span>
-              </div>
-            </div>
-
-            <!-- Split-Screen Grid: Left (Candidate EHR Data) vs Right (Current eCRF Field) -->
-            <div class="split-screen-grid">
-              <!-- LEFT PANE: Ingested EHR Source Data -->
-              <div class="split-pane ehr-pane">
-                <div class="pane-header">
-                  <span class="pane-title">🏥 Candidate EHR Source Data</span>
-                  <span class="source-badge">{{ item.ehr_system_id }}</span>
-                </div>
-                <div class="data-row-primary">
-                  <span class="val-num">{{
-                    formatValue(item.candidate_value)
-                  }}</span>
-                  <span v-if="item.candidate_unit" class="val-unit">{{
-                    item.candidate_unit
-                  }}</span>
-                </div>
-                <div class="provenance-metadata">
-                  <div class="meta-row">
-                    <span class="lbl">Resource:</span>
-                    <span class="val mono"
-                      >{{ item.fhir_resource_type }}/{{
-                        item.fhir_resource_id
-                      }}</span
-                    >
-                  </div>
-                  <div class="meta-row">
-                    <span class="lbl">Obs Timestamp:</span>
-                    <span class="val">{{
-                      formatDate(item.source_timestamp)
-                    }}</span>
-                  </div>
-                  <div class="meta-row">
-                    <span class="lbl">Confidence:</span>
-                    <span class="val"
-                      >{{
-                        Math.round((item.confidence_score ?? 0) * 100)
-                      }}%</span
-                    >
-                  </div>
-                </div>
-              </div>
-
-              <!-- RIGHT PANE: Current eCRF Field in EDC -->
-              <div class="split-pane ecrf-pane">
-                <div class="pane-header">
-                  <span class="pane-title">📝 Current eCRF Target Field</span>
-                  <span class="form-badge">{{ item.target_domain }} Form</span>
-                </div>
-                <div class="data-row-primary">
-                  <span
-                    v-if="
-                      item.current_ecrf_value !== null &&
-                      item.current_ecrf_value !== undefined
-                    "
-                    class="val-num"
-                  >
-                    {{ formatValue(item.current_ecrf_value) }}
-                  </span>
-                  <span v-else class="val-empty italic">
-                    [Empty / Unentered Field]
-                  </span>
-                </div>
-                <div class="provenance-metadata">
-                  <div class="meta-row">
-                    <span class="lbl">Field Target:</span>
-                    <span class="val mono">{{ item.target_variable }}</span>
-                  </div>
-                  <div class="meta-row">
-                    <span class="lbl">Last Modified:</span>
-                    <span class="val">{{
-                      item.current_ecrf_updated_at
-                        ? formatDate(item.current_ecrf_updated_at)
-                        : "Not populated"
-                    }}</span>
-                  </div>
-                  <div class="meta-row">
-                    <span class="lbl">Mapping Rule:</span>
-                    <span
-                      class="val truncate"
-                      :title="item.mapping_provenance"
-                      >{{ item.mapping_provenance }}</span
-                    >
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Resolution / Audit Trail Banner (If Resolved) -->
-            <div
-              v-if="item.status !== 'PENDING_REVIEW'"
-              class="resolution-banner"
-              :class="`banner-${(item.status || 'resolved').toLowerCase()}`"
-            >
-              <div class="resolution-info">
-                <strong
-                  >{{ formatResolutionAction(item.resolution_action) }}:</strong
-                >
-                <span class="reason-text">{{
-                  item.resolution_reason || "No comment provided"
-                }}</span>
-                <span class="resolved-by-tag"
-                  >by {{ item.resolved_by || "CRC Coordinator" }} at
-                  {{ formatDate(item.resolved_at) }}</span
-                >
-              </div>
-              <div v-if="item.electronic_signature" class="esign-badge">
-                ✍️ 21 CFR Part 11 eSigned
-              </div>
-              <div v-if="item.clinical_query_id" class="query-badge">
-                ❓ Query #{{ item.clinical_query_id.substring(0, 8) }} Open
-              </div>
-            </div>
-
-            <!-- Card Footer: Non-Destructive 1-Click Action Buttons & Provenance Inspector -->
-            <footer class="card-footer">
-              <div class="action-btn-group">
-                <!-- 1-Click Accept & Commit -->
-                <button
-                  type="button"
-                  class="btn btn-action btn-accept"
-                  :disabled="item.status !== 'PENDING_REVIEW' || isSubmitting"
-                  @click="promptAccept(item)"
-                >
-                  <span class="icon">✓</span> Accept & Commit
-                </button>
-
-                <!-- 1-Click Reject with Reason -->
-                <button
-                  type="button"
-                  class="btn btn-action btn-reject"
-                  :disabled="item.status !== 'PENDING_REVIEW' || isSubmitting"
-                  @click="openRejectModal(item)"
-                >
-                  <span class="icon">✕</span> Reject with Reason
-                </button>
-
-                <!-- 1-Click Raise Clinical Query -->
-                <button
-                  type="button"
-                  class="btn btn-action btn-query"
-                  :disabled="item.status !== 'PENDING_REVIEW' || isSubmitting"
-                  @click="openQueryModal(item)"
-                >
-                  <span class="icon">❓</span> Raise Query
-                </button>
-              </div>
-
-              <!-- Provenance Inspector Toggle -->
-              <button
-                type="button"
-                class="btn btn-link-provenance"
-                @click="openProvenanceModal(item)"
-              >
-                🔍 Inspect Provenance
-              </button>
-            </footer>
-          </article>
+        <div class="prov-stat">
+          <span class="lbl">Observation Date:</span>
+          <span class="val">{{
+            activeItem?.source_timestamp
+              ? formatDate(activeItem.source_timestamp)
+              : ""
+          }}</span>
+        </div>
+        <div class="prov-stat">
+          <span class="lbl">CDASH Target:</span>
+          <span class="val mono">{{ activeItem?.target_variable }}</span>
         </div>
       </div>
 
-      <!-- MODAL 1: Reject with Reason Dialog -->
-      <div
-        v-if="showRejectModal"
-        class="modal-backdrop"
-        role="presentation"
-        @click.self="closeRejectModal"
-      >
-        <div
-          ref="rejectModalRef"
-          class="modal-card"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="reject-modal-title"
-          tabindex="-1"
+      <div class="raw-fhir-container">
+        <h4 class="section-subheading">Raw FHIR JSON Payload:</h4>
+        <pre
+          class="json-code"
+        ><code>{{ JSON.stringify(activeItem?.raw_fhir_resource, null, 2) }}</code></pre>
+      </div>
+    </div>
+
+    <template #footer>
+      <div class="modal-footer">
+        <button
+          type="button"
+          class="btn btn-secondary"
+          @click="closeProvenanceModal"
         >
-          <div class="modal-header">
-            <h3 id="reject-modal-title">Reject EHR Candidate Data</h3>
-            <button
-              type="button"
-              class="btn-close"
-              aria-label="Close reject dialog"
-              @click="closeRejectModal"
-            >
-              ✕
-            </button>
-          </div>
-          <div class="modal-body">
-            <p class="modal-instruction">
-              Under GxP and FDA Electronic Source Data guidelines, a clinical
-              justification is mandatory when rejecting candidate EHR records.
-            </p>
-            <div class="field-summary">
-              <strong>Field:</strong> {{ activeItem?.target_variable }} ({{
-                activeItem?.cdash_test
-              }})<br />
-              <strong>Candidate Value:</strong>
-              {{ activeItem?.candidate_value }} {{ activeItem?.candidate_unit }}
-            </div>
-            <div class="form-group">
-              <label for="reject-reason" class="form-label"
-                >Rejection Reason: *</label
-              >
-              <textarea
-                id="reject-reason"
-                v-model="rejectReasonInput"
-                class="textarea-input"
-                rows="4"
-                placeholder="e.g., Outside protocol visit window, duplicate entry, clinical value verified inconsistent with chart notes..."
-              />
-            </div>
-          </div>
-          <div class="modal-footer">
-            <button
-              type="button"
-              class="btn btn-secondary"
-              @click="closeRejectModal"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              class="btn btn-danger"
-              :disabled="!rejectReasonInput.trim() || isSubmitting"
-              @click="submitReject"
-            >
-              Confirm Rejection
-            </button>
-          </div>
-        </div>
+          Close
+        </button>
       </div>
+    </template>
+  </ClinicalModal>
 
-      <!-- MODAL 2: Raise Clinical Query Dialog -->
-      <div
-        v-if="showQueryModal"
-        class="modal-backdrop"
-        role="presentation"
-        @click.self="closeQueryModal"
-      >
-        <div
-          ref="queryModalRef"
-          class="modal-card"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="query-modal-title"
-          tabindex="-1"
+  <!-- MODAL 4: Batch Reject Dialog -->
+  <ClinicalModal
+    :model-value="showBatchRejectModal"
+    :teleport="false"
+    size="md"
+    :dismissible="!isSubmitting"
+    :show-close="false"
+    backdrop-class="modal-backdrop"
+    dialog-class="modal-card"
+    aria-labelledby="batch-reject-modal-title"
+    @close="closeBatchRejectModal"
+  >
+    <template #header>
+      <div class="modal-header">
+        <h3 id="batch-reject-modal-title">Batch Reject EHR Candidate Data</h3>
+        <button
+          type="button"
+          class="btn-close"
+          aria-label="Close batch reject dialog"
+          :disabled="isSubmitting"
+          @click="closeBatchRejectModal"
         >
-          <div class="modal-header">
-            <h3 id="query-modal-title">Raise GxP Discrepancy Query</h3>
-            <button
-              type="button"
-              class="btn-close"
-              aria-label="Close query dialog"
-              @click="closeQueryModal"
-            >
-              ✕
-            </button>
-          </div>
-          <div class="modal-body">
-            <p class="modal-instruction">
-              Opens a formal clinical query in the study query ledger to flag a
-              discrepancy between the EHR source and the eCRF.
-            </p>
-            <div class="field-summary">
-              <strong>Target Field:</strong> {{ activeItem?.target_variable
-              }}<br />
-              <strong>EHR Source Value:</strong>
-              {{ activeItem?.candidate_value }} {{ activeItem?.candidate_unit
-              }}<br />
-              <strong>Current eCRF Value:</strong>
-              {{ activeItem?.current_ecrf_value || "[Empty]" }}
-            </div>
-            <div class="form-group">
-              <label for="query-explanation" class="form-label"
-                >Discrepancy Explanation: *</label
-              >
-              <textarea
-                id="query-explanation"
-                v-model="queryExplanationInput"
-                class="textarea-input"
-                rows="4"
-                placeholder="Describe the discrepancy and required resolution from the study investigator..."
-              />
-            </div>
-          </div>
-          <div class="modal-footer">
-            <button
-              type="button"
-              class="btn btn-secondary"
-              @click="closeQueryModal"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              class="btn btn-primary"
-              :disabled="!queryExplanationInput.trim() || isSubmitting"
-              @click="submitQuery"
-            >
-              Raise Query
-            </button>
-          </div>
-        </div>
+          <X :size="18" aria-hidden="true" />
+        </button>
       </div>
+    </template>
 
-      <!-- MODAL 3: Source Provenance & Part 11 Audit Trail Viewer -->
-      <div
-        v-if="showProvenanceModal"
-        class="modal-backdrop"
-        role="presentation"
-        @click.self="closeProvenanceModal"
-      >
-        <div
-          ref="provenanceModalRef"
-          class="modal-card modal-lg"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="prov-modal-title"
-          tabindex="-1"
+    <div class="modal-body">
+      <p class="modal-instruction">
+        Under GxP and FDA Electronic Source Data guidelines, a clinical
+        justification is mandatory when rejecting candidate EHR records. The
+        rationale below will be recorded in Part 11 audit trails across all
+        {{ selectedCandidateIds.length }} selected items.
+      </p>
+      <div class="field-summary">
+        <strong>Selected Records:</strong>
+        {{ selectedCandidateIds.length }} pending candidate record(s)
+      </div>
+      <div class="form-group">
+        <label for="batch-reject-reason" class="form-label"
+          >Clinical Rationale: *</label
         >
-          <div class="modal-header">
-            <h3 id="prov-modal-title">
-              FHIR Resource Provenance & Audit Trail
-            </h3>
-            <button
-              type="button"
-              class="btn-close"
-              aria-label="Close provenance dialog"
-              @click="closeProvenanceModal"
-            >
-              ✕
-            </button>
-          </div>
-          <div class="modal-body">
-            <div class="provenance-summary-grid">
-              <div class="prov-stat">
-                <span class="lbl">EHR System:</span>
-                <span class="val">{{ activeItem?.ehr_system_id }}</span>
-              </div>
-              <div class="prov-stat">
-                <span class="lbl">FHIR Resource:</span>
-                <span class="val mono"
-                  >{{ activeItem?.fhir_resource_type }}/{{
-                    activeItem?.fhir_resource_id
-                  }}</span
-                >
-              </div>
-              <div class="prov-stat">
-                <span class="lbl">Observation Date:</span>
-                <span class="val">{{
-                  activeItem?.source_timestamp
-                    ? formatDate(activeItem.source_timestamp)
-                    : ""
-                }}</span>
-              </div>
-              <div class="prov-stat">
-                <span class="lbl">CDASH Target:</span>
-                <span class="val mono">{{ activeItem?.target_variable }}</span>
-              </div>
-            </div>
-
-            <div class="raw-fhir-container">
-              <h4 class="section-subheading">Raw FHIR JSON Payload:</h4>
-              <pre
-                class="json-code"
-              ><code>{{ JSON.stringify(activeItem?.raw_fhir_resource, null, 2) }}</code></pre>
-            </div>
-          </div>
-          <div class="modal-footer">
-            <button
-              type="button"
-              class="btn btn-secondary"
-              @click="closeProvenanceModal"
-            >
-              Close
-            </button>
-          </div>
-        </div>
+        <textarea
+          id="batch-reject-reason"
+          v-model="batchRejectReasonInput"
+          class="textarea-input"
+          rows="4"
+          placeholder="e.g., Outside visit window, duplicate observations, inconsistent with chart notes..."
+        />
       </div>
+    </div>
 
-      <!-- MODAL 4: Batch Reject Dialog -->
-      <div
-        v-if="showBatchRejectModal"
-        class="modal-backdrop"
-        role="presentation"
-        @click.self="closeBatchRejectModal"
-      >
-        <div
-          ref="batchRejectModalRef"
-          class="modal-card"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="batch-reject-modal-title"
-          tabindex="-1"
+    <template #footer>
+      <div class="modal-footer">
+        <button
+          type="button"
+          class="btn btn-secondary"
+          :disabled="isSubmitting"
+          @click="closeBatchRejectModal"
         >
-          <div class="modal-header">
-            <h3 id="batch-reject-modal-title">
-              Batch Reject EHR Candidate Data
-            </h3>
-            <button
-              type="button"
-              class="btn-close"
-              aria-label="Close batch reject dialog"
-              @click="closeBatchRejectModal"
-            >
-              ✕
-            </button>
-          </div>
-          <div class="modal-body">
-            <p class="modal-instruction">
-              Under GxP and FDA Electronic Source Data guidelines, a clinical
-              justification is mandatory when rejecting candidate EHR records.
-              The rationale below will be recorded in Part 11 audit trails
-              across all {{ selectedCandidateIds.length }} selected items.
-            </p>
-            <div class="field-summary">
-              <strong>Selected Records:</strong>
-              {{ selectedCandidateIds.length }} pending candidate record(s)
-            </div>
-            <div class="form-group">
-              <label for="batch-reject-reason" class="form-label"
-                >Clinical Rationale: *</label
-              >
-              <textarea
-                id="batch-reject-reason"
-                v-model="batchRejectReasonInput"
-                class="textarea-input"
-                rows="4"
-                placeholder="e.g., Outside visit window, duplicate observations, inconsistent with chart notes..."
-              />
-            </div>
-          </div>
-          <div class="modal-footer">
-            <button
-              type="button"
-              class="btn btn-secondary"
-              @click="closeBatchRejectModal"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              class="btn btn-danger btn-submit-batch-reject"
-              :disabled="!batchRejectReasonInput.trim() || isSubmitting"
-              @click="submitBatchReject"
-            >
-              Confirm Batch Rejection ({{ selectedCandidateIds.length }})
-            </button>
-          </div>
-        </div>
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="btn btn-danger btn-submit-batch-reject"
+          :disabled="!batchRejectReasonInput.trim() || isSubmitting"
+          @click="submitBatchReject"
+        >
+          Confirm Batch Rejection ({{ selectedCandidateIds.length }})
+        </button>
       </div>
-    </aside>
-  </div>
+    </template>
+  </ClinicalModal>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
-import { EmptyState, useFocusTrap } from "ui";
+import { ClinicalDrawer, ClinicalModal, EmptyState } from "ui";
+import {
+  Check,
+  FileEdit,
+  FileSignature,
+  HelpCircle,
+  Hospital,
+  RefreshCw,
+  Search,
+  Stethoscope,
+  X,
+  Zap,
+} from "lucide-vue-next";
 import { interopService } from "../../api/interop";
 import SkeletonLoader from "../common/SkeletonLoader.vue";
 
@@ -787,11 +822,6 @@ function resetFilters() {
 }
 
 const activeItem = ref<EhrCandidate | null>(null);
-const drawerRef = ref<HTMLElement | null>(null);
-const rejectModalRef = ref<HTMLElement | null>(null);
-const batchRejectModalRef = ref<HTMLElement | null>(null);
-const queryModalRef = ref<HTMLElement | null>(null);
-const provenanceModalRef = ref<HTMLElement | null>(null);
 const showRejectModal = ref(false);
 const rejectReasonInput = ref("");
 const showBatchRejectModal = ref(false);
@@ -799,30 +829,6 @@ const batchRejectReasonInput = ref("");
 const showQueryModal = ref(false);
 const queryExplanationInput = ref("");
 const showProvenanceModal = ref(false);
-
-useFocusTrap(
-  drawerRef,
-  computed(() => props.isOpen),
-  {
-    onEscape: () => closeDrawer(),
-  }
-);
-
-useFocusTrap(rejectModalRef, showRejectModal, {
-  onEscape: () => closeRejectModal(),
-});
-
-useFocusTrap(queryModalRef, showQueryModal, {
-  onEscape: () => closeQueryModal(),
-});
-
-useFocusTrap(provenanceModalRef, showProvenanceModal, {
-  onEscape: () => closeProvenanceModal(),
-});
-
-useFocusTrap(batchRejectModalRef, showBatchRejectModal, {
-  onEscape: () => closeBatchRejectModal(),
-});
 
 const isAllPendingSelected = computed(() => {
   const pendingFiltered = filteredCandidates.value.filter(
@@ -960,21 +966,18 @@ const queriedCount = computed(
 
 const filteredCandidates = computed(() => {
   return candidates.value.filter((item) => {
-    // Domain filter
     if (
       selectedDomain.value !== "ALL" &&
       item.target_domain !== selectedDomain.value
     ) {
       return false;
     }
-    // Status filter
     if (
       selectedStatus.value !== "ALL" &&
       item.status !== selectedStatus.value
     ) {
       return false;
     }
-    // Search query
     if (searchQuery.value.trim()) {
       const q = searchQuery.value.toLowerCase().trim();
       const matchVar = item.target_variable.toLowerCase().includes(q);
@@ -1035,7 +1038,6 @@ async function promptAccept(item: EhrCandidate) {
     };
     const resp = await interopService.acceptEhrCandidate(payload);
     if (resp.success && resp.candidate) {
-      // Update local state
       const idx = candidates.value.findIndex((c) => c.id === item.id);
       if (idx !== -1) {
         candidates.value[idx] = resp.candidate;
@@ -1201,51 +1203,70 @@ function formatResolutionAction(act?: string | null): string {
 }
 </script>
 
+<style scoped src="../shared/drawerHeaderChrome.css"></style>
+
 <style scoped>
 /* 100% Vanilla CSS Tokens Architecture — Zero Tailwind Classes */
-.drawer-backdrop {
-  position: fixed;
-  inset: 0;
-  max-width: 100vw;
-  background-color: var(--semantic-color-backdrop);
-  backdrop-filter: blur(3px);
-  display: flex;
-  justify-content: flex-end;
-  z-index: 1050;
-  animation: fadeIn 0.2s ease-out;
+:deep(.drawer-backdrop) {
   overscroll-behavior: contain;
   touch-action: pan-y;
 }
 
-.ehr-reconciliation-drawer {
+:global(
+  .clinical-drawer-backdrop .clinical-drawer-panel.ehr-reconciliation-drawer
+) {
   width: var(
     --semantic-drawer-width-xl,
     var(--drawer-width-xl, min(100vw, 920px))
   );
   max-width: 100vw;
-  height: 100vh;
-  background-color: var(--semantic-color-surface);
-  box-shadow: var(--shadow-drawer-left);
-  display: flex;
-  flex-direction: column;
-  animation: slideInRight 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  overflow: hidden;
   overscroll-behavior: contain;
   touch-action: pan-y;
 }
 
-/* Header */
-.drawer-header {
-  padding: 20px 24px;
-  background-color: var(--semantic-color-surface-inverse);
+:global(
+  .clinical-drawer-backdrop .ehr-reconciliation-drawer > .clinical-drawer-footer
+) {
+  background: var(--semantic-color-surface-inverse);
   color: var(--semantic-color-text-inverse);
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  border-bottom: 2px solid var(--semantic-color-text-dark);
+  border-top-color: var(--semantic-color-border-inverse);
 }
 
-.header-titles {
+.drawer-header {
+  background-color: var(--semantic-color-surface-inverse);
+  color: var(--semantic-color-text-inverse);
+  border-bottom-color: var(--semantic-color-border-inverse);
+}
+
+.header-icon {
+  color: var(--semantic-color-accent-inverse);
+}
+
+.drawer-title {
+  font-weight: 800;
+  color: var(--semantic-color-text-inverse);
+}
+
+.btn-close {
+  color: var(--semantic-color-text-inverse-muted);
+}
+
+.btn-close:hover:not(:disabled) {
+  color: var(--semantic-color-text-inverse);
+  background-color: var(--semantic-color-surface-elevated);
+}
+
+.drawer-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  font-variant-numeric: tabular-nums;
+}
+
+.intro-meta-block {
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -1268,66 +1289,35 @@ function formatResolutionAction(act?: string | null): string {
 
 .badge-smart {
   background-color: var(--semantic-color-primary);
-  color: var(--semantic-color-surface);
+  color: var(--semantic-color-text-on-primary);
 }
 
 .badge-gxp {
-  background-color: var(--semantic-color-success);
-  color: var(--semantic-color-surface);
+  background-color: var(--semantic-color-success-interactive);
+  color: var(--semantic-color-text-on-solid);
 }
 
 .badge-provenance {
   background-color: var(--semantic-color-accent);
-  color: var(--semantic-color-surface);
-}
-
-.drawer-title {
-  font-size: 1.35rem;
-  font-weight: 800;
-  color: var(--semantic-color-surface);
-  margin: 0;
-  line-height: 1.2;
+  color: var(--semantic-color-text-on-accent);
 }
 
 .drawer-subtitle {
   font-size: 0.8rem;
   color: var(--semantic-color-text-secondary);
   margin: 0;
-  max-width: 750px;
   line-height: 1.4;
-}
-
-.btn-close {
-  background: transparent;
-  border: none;
-  color: var(--semantic-color-text-secondary);
-  font-size: 1.25rem;
-  cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 4px;
-  min-width: 44px;
-  min-height: 44px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition:
-    color 0.15s,
-    background-color 0.15s;
-}
-
-.btn-close:hover {
-  color: var(--semantic-color-text-inverse);
-  background-color: var(--semantic-color-surface-elevated);
 }
 
 /* Context Bar */
 .context-bar {
-  padding: 10px 24px;
+  padding: 10px 14px;
   background-color: var(--semantic-color-surface-muted);
-  border-bottom: 1px solid var(--semantic-color-border);
+  border: 1px solid var(--semantic-color-border);
+  border-radius: 8px;
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 12px 20px;
   font-size: 0.85rem;
   flex-wrap: wrap;
 }
@@ -1336,6 +1326,7 @@ function formatResolutionAction(act?: string | null): string {
   display: flex;
   align-items: center;
   gap: 6px;
+  flex-wrap: wrap;
 }
 
 .context-label {
@@ -1356,25 +1347,23 @@ function formatResolutionAction(act?: string | null): string {
   margin-left: auto;
 }
 
-/* Metrics Grid */
+/* Responsive Metrics Grid inside scroll body (Req 6) */
 .metrics-grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 12px;
-  padding: 16px 24px;
-  background-color: var(--semantic-color-surface);
-  border-bottom: 1px solid var(--semantic-color-border);
+  grid-template-columns: repeat(auto-fit, minmax(135px, 1fr));
+  gap: 10px;
 }
 
 .metric-card {
   background-color: var(--semantic-color-surface-muted);
   border: 1px solid var(--semantic-color-border);
   border-radius: 6px;
-  padding: 8px 12px;
+  padding: 8px 10px;
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
+  min-width: 0;
 }
 
 .metric-card.metric-pending {
@@ -1398,7 +1387,7 @@ function formatResolutionAction(act?: string | null): string {
 }
 
 .metric-num {
-  font-size: 1.25rem;
+  font-size: 1.2rem;
   font-weight: 800;
   color: var(--semantic-color-text);
 }
@@ -1412,9 +1401,10 @@ function formatResolutionAction(act?: string | null): string {
 
 /* Toolbar & Filter Tabs */
 .toolbar {
-  padding: 12px 24px;
+  padding: 12px;
   background-color: var(--semantic-color-surface);
-  border-bottom: 1px solid var(--semantic-color-border);
+  border: 1px solid var(--semantic-color-border);
+  border-radius: 8px;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -1422,46 +1412,49 @@ function formatResolutionAction(act?: string | null): string {
 
 .domain-tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
-  overflow-x: auto;
-  padding-bottom: 2px;
 }
 
 .domain-tab {
   background: var(--semantic-color-surface-header);
   border: 1px solid var(--semantic-color-border);
   color: var(--semantic-color-text-secondary);
+  min-height: 44px;
   padding: 6px 12px;
   border-radius: 6px;
   font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
-  white-space: nowrap;
   transition: all 0.15s ease;
-}
-
-.domain-tab:hover {
-  background-color: var(--semantic-color-surface-header);
-  color: var(--semantic-color-text);
 }
 
 .domain-tab.active {
   background-color: var(--semantic-color-primary);
   border-color: var(--semantic-color-primary);
-  color: var(--semantic-color-surface);
+  color: var(--semantic-color-text-on-primary);
+}
+
+.quick-select-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
 }
 
 .toolbar-controls {
   display: flex;
   justify-content: space-between;
-  gap: 16px;
+  gap: 12px;
   align-items: center;
+  flex-wrap: wrap;
 }
 
 .filter-control {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .filter-label {
@@ -1472,28 +1465,25 @@ function formatResolutionAction(act?: string | null): string {
 
 .select-input,
 .search-input {
+  min-height: 44px;
   padding: 6px 12px;
-  font-size: 0.82rem;
+  font-size: 1rem;
   border: 1px solid var(--semantic-color-border-control);
-  border-radius: 4px;
+  border-radius: 6px;
   background-color: var(--semantic-color-surface);
   color: var(--semantic-color-text);
   max-width: 100%;
+  box-sizing: border-box;
+}
+
+.search-control {
+  flex: 1 1 220px;
+  min-width: 0;
 }
 
 .search-input {
-  width: 280px;
+  width: 100%;
   max-width: 100%;
-}
-
-/* Body & Candidate List */
-.drawer-body {
-  flex: 1;
-  overflow-y: auto;
-  padding: 16px 24px;
-  background-color: var(--semantic-color-surface-muted);
-  overscroll-behavior: contain;
-  touch-action: pan-y;
 }
 
 .state-container {
@@ -1501,30 +1491,15 @@ function formatResolutionAction(act?: string | null): string {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 60px 20px;
+  padding: 36px 16px;
   color: var(--semantic-color-text-secondary);
   text-align: center;
-}
-
-.empty-icon {
-  font-size: 3rem;
-  margin-bottom: 12px;
-}
-
-.spinner {
-  width: 32px;
-  height: 32px;
-  border: 3px solid var(--semantic-color-border-control);
-  border-top-color: var(--semantic-color-primary);
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-  margin-bottom: 12px;
 }
 
 .candidate-list {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
 }
 
 /* Card Architecture */
@@ -1536,9 +1511,7 @@ function formatResolutionAction(act?: string | null): string {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  transition:
-    border-color 0.15s,
-    box-shadow 0.15s;
+  min-width: 0;
 }
 
 .reconciliation-card:hover {
@@ -1553,28 +1526,30 @@ function formatResolutionAction(act?: string | null): string {
   border-left: 4px solid var(--semantic-color-error);
 }
 
-.reconciliation-card.status-queried {
-  border-left: 4px solid var(--semantic-color-warning-border-strong);
-}
-
+.reconciliation-card.status-queried,
 .reconciliation-card.status-pending_review {
   border-left: 4px solid var(--semantic-color-warning-border-strong);
 }
 
 /* Card Header */
 .card-header {
-  padding: 12px 16px;
+  padding: 10px 14px;
   background-color: var(--semantic-color-surface-muted);
   border-bottom: 1px solid var(--semantic-color-border);
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
-.card-meta-left {
+.card-meta-left,
+.card-meta-right {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
+  min-width: 0;
 }
 
 .domain-tag {
@@ -1604,7 +1579,8 @@ function formatResolutionAction(act?: string | null): string {
   gap: 8px;
 }
 
-.discrepancy-pill {
+.discrepancy-pill,
+.status-pill {
   font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 3px 8px;
@@ -1636,13 +1612,6 @@ function formatResolutionAction(act?: string | null): string {
   color: var(--semantic-color-orange-text);
 }
 
-.status-pill {
-  font-size: var(--font-size-2xs);
-  font-weight: 700;
-  padding: 3px 8px;
-  border-radius: 12px;
-}
-
 .status-pending_review {
   background-color: var(--semantic-color-warning-bg-badge);
   color: var(--semantic-color-warning);
@@ -1667,15 +1636,15 @@ function formatResolutionAction(act?: string | null): string {
 /* Split Screen Grid */
 .split-screen-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  divide-x: 1px solid var(--semantic-color-border);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .split-pane {
-  padding: 14px 16px;
+  padding: 14px;
   display: flex;
   flex-direction: column;
   gap: 8px;
+  min-width: 0;
 }
 
 .ehr-pane {
@@ -1691,9 +1660,14 @@ function formatResolutionAction(act?: string | null): string {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .pane-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: 0.78rem;
   font-weight: 700;
   color: var(--semantic-color-text-secondary);
@@ -1715,21 +1689,18 @@ function formatResolutionAction(act?: string | null): string {
   display: flex;
   align-items: baseline;
   gap: 6px;
+  flex-wrap: wrap;
   min-height: 32px;
 }
 
 .val-num {
-  font-size: 1.25rem;
+  font-size: 1.2rem;
   font-weight: 800;
   color: var(--semantic-color-text);
+  word-break: break-word;
 }
 
-.val-unit {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--semantic-color-text-secondary);
-}
-
+.val-unit,
 .val-empty {
   font-size: 0.85rem;
   color: var(--semantic-color-text-secondary);
@@ -1748,6 +1719,7 @@ function formatResolutionAction(act?: string | null): string {
   display: flex;
   justify-content: space-between;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .meta-row .lbl {
@@ -1757,18 +1729,19 @@ function formatResolutionAction(act?: string | null): string {
 
 .meta-row .val {
   color: var(--semantic-color-text);
+  word-break: break-word;
 }
 
 .truncate {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 260px;
+  max-width: 100%;
 }
 
 /* Resolution Banner */
 .resolution-banner {
-  padding: 10px 16px;
+  padding: 10px 14px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1801,6 +1774,9 @@ function formatResolutionAction(act?: string | null): string {
 
 .esign-badge,
 .query-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 2px 6px;
@@ -1811,40 +1787,40 @@ function formatResolutionAction(act?: string | null): string {
 
 /* Card Footer & Action Buttons */
 .card-footer {
-  padding: 10px 16px;
+  padding: 10px 14px;
   background-color: var(--semantic-color-surface-muted);
   border-top: 1px solid var(--semantic-color-border);
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .action-btn-group {
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .btn {
+  min-height: 44px;
   padding: 6px 12px;
   font-size: 0.8rem;
   font-weight: 600;
-  border-radius: 4px;
+  border-radius: 6px;
   border: 1px solid transparent;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  justify-content: center;
+  gap: 6px;
   transition: all 0.15s ease;
 }
 
 .btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-}
-
-.btn-sm {
-  padding: 4px 8px;
-  font-size: 0.75rem;
 }
 
 .btn-primary {
@@ -1860,6 +1836,19 @@ function formatResolutionAction(act?: string | null): string {
 .btn-danger {
   background-color: var(--semantic-color-error-interactive);
   color: var(--semantic-color-text-on-solid);
+}
+
+.btn-danger:hover:not(:disabled) {
+  background-color: var(--semantic-color-error-interactive-hover);
+}
+
+.btn-success {
+  background-color: var(--semantic-color-success-interactive);
+  color: var(--semantic-color-text-on-solid);
+}
+
+.btn-success:hover:not(:disabled) {
+  background-color: var(--semantic-color-success-accent);
 }
 
 .btn-accept {
@@ -1889,6 +1878,29 @@ function formatResolutionAction(act?: string | null): string {
   background-color: var(--semantic-color-primary);
 }
 
+.btn-outline-primary {
+  background-color: transparent;
+  border: 1px solid var(--semantic-color-primary);
+  color: var(--semantic-color-primary);
+}
+
+.btn-outline-secondary {
+  background-color: transparent;
+  border: 1px solid var(--semantic-color-border-control);
+  color: var(--semantic-color-text-secondary);
+}
+
+.btn-ghost {
+  background: transparent;
+  border: 1px solid var(--semantic-color-border-inverse);
+  color: var(--semantic-color-text-inverse-muted);
+}
+
+.btn-ghost:hover:not(:disabled) {
+  background-color: var(--semantic-color-inverse-tint);
+  color: var(--semantic-color-text-inverse);
+}
+
 .btn-link-provenance {
   background: none;
   border: none;
@@ -1897,62 +1909,30 @@ function formatResolutionAction(act?: string | null): string {
   font-weight: 600;
   cursor: pointer;
   text-decoration: underline;
+  min-height: 44px;
 }
 
-.btn-link-provenance:hover {
-  color: var(--semantic-color-primary);
-}
-
-/* Modals */
-.modal-backdrop {
-  position: fixed;
-  inset: 0;
-  background-color: var(--semantic-color-backdrop);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1100;
-  animation: fadeIn 0.15s ease-out;
-}
-
-.modal-card {
-  background: var(--semantic-color-surface);
-  border-radius: 8px;
-  width: 520px;
-  max-width: 90vw;
-  box-shadow: var(--shadow-xl);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.modal-lg {
-  width: 720px;
-}
-
+/* Sibling ClinicalModal header/body/footer */
 .modal-header {
-  padding: 16px 20px;
-  background-color: var(--semantic-color-surface-inverse);
-  color: var(--semantic-color-text-inverse);
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
 }
 
 .modal-header h3 {
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 700;
   margin: 0;
 }
 
 .modal-body {
-  padding: 20px;
   display: flex;
   flex-direction: column;
   gap: 14px;
   font-size: 0.85rem;
-  max-height: 70vh;
-  overflow-y: auto;
 }
 
 .modal-instruction {
@@ -1983,27 +1963,27 @@ function formatResolutionAction(act?: string | null): string {
 
 .textarea-input {
   width: 100%;
+  min-height: 88px;
   padding: 10px 12px;
-  font-size: 0.85rem;
+  font-size: 1rem;
   border: 1px solid var(--semantic-color-border-control);
-  border-radius: 4px;
+  border-radius: 6px;
   font-family: inherit;
   resize: vertical;
+  box-sizing: border-box;
 }
 
 .modal-footer {
-  padding: 14px 20px;
-  background-color: var(--semantic-color-surface-muted);
-  border-top: 1px solid var(--semantic-color-border);
   display: flex;
   justify-content: flex-end;
   gap: 10px;
+  width: 100%;
+  flex-wrap: wrap;
 }
 
-/* Provenance Inspector specifics */
 .provenance-summary-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
   background-color: var(--semantic-color-surface-muted);
   padding: 12px 16px;
@@ -2027,18 +2007,14 @@ function formatResolutionAction(act?: string | null): string {
 .prov-stat .val {
   font-size: 0.85rem;
   color: var(--semantic-color-text);
+  word-break: break-word;
 }
 
 .section-subheading {
   font-size: 0.85rem;
   font-weight: 700;
   color: var(--semantic-color-text);
-  margin: 10px 0 6px 0;
-}
-
-.raw-fhir-container {
-  display: flex;
-  flex-direction: column;
+  margin: 6px 0;
 }
 
 .json-code {
@@ -2052,55 +2028,74 @@ function formatResolutionAction(act?: string | null): string {
   margin: 0;
 }
 
-/* Keyframes */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+/* Floating Batch Bar inside #footer */
+.floating-batch-bar {
+  box-shadow: var(--shadow-md);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  flex-wrap: wrap;
 }
 
-@keyframes slideInRight {
-  from {
-    transform: translateX(100%);
-  }
-  to {
-    transform: translateX(0);
-  }
+.batch-count-summary {
+  font-size: 0.875rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
+.batch-count-badge {
+  background-color: var(--semantic-color-primary);
+  color: var(--semantic-color-text-on-primary);
+  font-weight: 700;
+  border-radius: 12px;
+  padding: 2px 8px;
+  font-size: 0.8rem;
+}
+
+.batch-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.card-selection-check {
+  display: flex;
+  align-items: center;
+}
+
+.candidate-checkbox {
+  width: var(--semantic-control-target-min, 24px);
+  height: var(--semantic-control-target-min, 24px);
+  cursor: pointer;
+  accent-color: var(--semantic-color-primary);
+}
+
+.candidate-checkbox:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
 /* Mobile Breakpoint Overrides (max-width: 640px) */
 @media (max-width: 640px) {
-  .ehr-reconciliation-drawer {
+  :global(
+    .clinical-drawer-backdrop .clinical-drawer-panel.ehr-reconciliation-drawer
+  ) {
     width: 100vw;
     max-width: 100vw;
   }
 
-  .drawer-header,
-  .context-bar,
-  .toolbar,
-  .drawer-body {
-    padding-left: 16px;
-    padding-right: 16px;
-  }
-
   .metrics-grid {
     grid-template-columns: repeat(2, 1fr);
-    padding: 12px 16px;
   }
 
   .toolbar-controls {
     flex-direction: column;
     align-items: stretch;
-    gap: 10px;
   }
 
   .filter-control {
@@ -2112,7 +2107,6 @@ function formatResolutionAction(act?: string | null): string {
   .search-input {
     width: 100%;
     max-width: 100%;
-    box-sizing: border-box;
   }
 
   .search-control {
@@ -2131,7 +2125,7 @@ function formatResolutionAction(act?: string | null): string {
   .card-footer {
     flex-direction: column;
     align-items: stretch;
-    gap: 12px;
+    gap: 10px;
   }
 
   .action-btn-group {
@@ -2148,7 +2142,6 @@ function formatResolutionAction(act?: string | null): string {
   .btn-link-provenance {
     width: 100%;
     text-align: center;
-    padding: 8px 0;
     min-height: var(--semantic-touch-target-min, 48px);
     display: inline-flex;
     align-items: center;
@@ -2171,141 +2164,9 @@ function formatResolutionAction(act?: string | null): string {
   }
 }
 
-/* Quick Select Bar & Floating Batch Action Bar */
-.quick-select-bar {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  margin-top: 8px;
-}
-
-.btn-outline-primary {
-  background-color: transparent;
-  border: 1px solid var(--semantic-color-primary);
-  color: var(--semantic-color-primary);
-  border-radius: 4px;
-  padding: 4px 10px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.btn-outline-primary:hover {
-  background-color: var(--semantic-color-primary-light);
-}
-
-.btn-outline-secondary {
-  background-color: transparent;
-  border: 1px solid var(--semantic-color-border-control);
-  color: var(--semantic-color-text-secondary);
-  border-radius: 4px;
-  padding: 4px 10px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.btn-outline-secondary:hover {
-  background-color: var(--semantic-color-surface-header);
-}
-
-.floating-batch-bar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px 20px;
-  background-color: var(--semantic-color-surface-inverse);
-  color: var(--semantic-color-text-inverse);
-  border-bottom: 2px solid var(--semantic-color-text-dark);
-  box-shadow: var(--shadow-md);
-  animation: slideDown 0.2s ease-out;
-}
-
-.batch-count-summary {
-  font-size: 0.875rem;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.batch-count-badge {
-  background-color: var(--semantic-color-primary);
-  color: var(--semantic-color-text-on-primary);
-  font-weight: 700;
-  border-radius: 12px;
-  padding: 2px 8px;
-  font-size: 0.8rem;
-}
-
-.batch-actions {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-}
-
-.btn-success {
-  background-color: var(--semantic-color-success-interactive);
-  color: var(--semantic-color-text-on-solid);
-  border: none;
-  padding: 6px 14px;
-  border-radius: 6px;
-  font-weight: 600;
-  font-size: 0.85rem;
-  cursor: pointer;
-}
-
-.btn-success:hover:not(:disabled) {
-  background-color: var(--semantic-color-success-accent);
-}
-
-.btn-danger {
-  background-color: var(--semantic-color-error-interactive);
-  color: var(--semantic-color-text-on-solid);
-  border: none;
-  padding: 6px 14px;
-  border-radius: 6px;
-  font-weight: 600;
-  font-size: 0.85rem;
-  cursor: pointer;
-}
-
-.btn-danger:hover:not(:disabled) {
-  background-color: var(--semantic-color-error-interactive-hover);
-}
-
-.btn-ghost {
-  background: transparent;
-  border: 1px solid var(--semantic-color-border-inverse);
-  color: var(--semantic-color-text-inverse-muted);
-  padding: 6px 12px;
-  border-radius: 6px;
-  font-size: 0.8rem;
-  cursor: pointer;
-}
-
-.btn-ghost:hover {
-  background-color: var(--semantic-color-inverse-tint);
-  color: var(--semantic-color-text-inverse);
-}
-
-.card-selection-check {
-  display: flex;
-  align-items: center;
-  padding-right: 8px;
-}
-
-.candidate-checkbox {
-  width: var(--semantic-control-target-min, 24px);
-  height: var(--semantic-control-target-min, 24px);
-  cursor: pointer;
-  accent-color: var(--semantic-color-primary);
-}
-
-.candidate-checkbox:disabled {
-  cursor: not-allowed;
-  opacity: 0.5;
+@media (max-width: 340px) {
+  .metrics-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

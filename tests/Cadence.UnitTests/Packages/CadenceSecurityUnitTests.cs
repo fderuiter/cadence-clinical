@@ -133,6 +133,7 @@ public class CadenceSecurityUnitTests
             AssignedSites = Array.Empty<string>()
         };
         SiteAccessEvaluator.CanAccessSite(sponsorUser, "SITE-101").Should().BeTrue();
+        SiteAccessEvaluator.CanAccessSite(sponsorUser, null).Should().BeTrue();
 
         // Verified trial-* tenant: standalone trial_coordinator is unscoped when AssignedSites is empty
         ClinicalScopeGuard.IsVerifiedTrialTenant("trial-a1b2c3d4e5f6").Should().BeTrue();
@@ -185,6 +186,88 @@ public class CadenceSecurityUnitTests
         };
         ClinicalScopeGuard.IsSiteBound(enterpriseSponsorPlusTrialCoord).Should().BeFalse();
         SiteAccessEvaluator.CanAccessSite(enterpriseSponsorPlusTrialCoord, "SITE-101").Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData(RoleNormalization.ROLE_PHARMACIST)]
+    [InlineData(RoleNormalization.ROLE_SUBJECT)]
+    [InlineData("unblinded_pharmacist")]
+    [InlineData("patient")]
+    [InlineData("epro")]
+    [GxPRequirement("PRD-SYS-192")]
+    public void SiteAccessEvaluator_AndClinicalScopeGuard_FailClosedForPharmacistAndSubjectRoles(string rawRole)
+    {
+        SiteAccessEvaluator.SITE_SCOPED_ROLES.Should().Contain(RoleNormalization.ROLE_PHARMACIST);
+        SiteAccessEvaluator.SITE_SCOPED_ROLES.Should().Contain(RoleNormalization.ROLE_SUBJECT);
+
+        var normalizedRoles = RoleNormalization.GetNormalizedRoles([rawRole]);
+        var unassignedPrincipal = new Principal
+        {
+            UserId = $"unassigned-{rawRole}",
+            Roles = normalizedRoles,
+            RawRoles = [rawRole],
+            AssignedSites = Array.Empty<string>(),
+        };
+
+        SiteAccessEvaluator.CanAccessSite(unassignedPrincipal, "SITE-99").Should().BeFalse();
+        SiteAccessEvaluator.CanAccessSite(unassignedPrincipal, null).Should().BeFalse();
+        SiteAccessEvaluator.CanAccessSite(unassignedPrincipal, "   ").Should().BeFalse();
+        ClinicalScopeGuard.IsSiteBound(unassignedPrincipal).Should().BeTrue();
+        ClinicalScopeGuard.HasValidSiteScopeIfRequired(unassignedPrincipal).Should().BeFalse();
+
+        var assignedPrincipal = unassignedPrincipal with
+        {
+            UserId = $"assigned-{rawRole}",
+            AssignedSites = ["SITE-99"],
+        };
+
+        SiteAccessEvaluator.CanAccessSite(assignedPrincipal, "SITE-99").Should().BeTrue();
+        SiteAccessEvaluator.CanAccessSite(assignedPrincipal, "site-99").Should().BeTrue();
+        SiteAccessEvaluator.CanAccessSite(assignedPrincipal, "SITE-101").Should().BeFalse();
+        SiteAccessEvaluator.CanAccessSite(assignedPrincipal, null).Should().BeFalse();
+        SiteAccessEvaluator.CanAccessSite(assignedPrincipal, "   ").Should().BeFalse();
+        ClinicalScopeGuard.IsSiteBound(assignedPrincipal).Should().BeTrue();
+        ClinicalScopeGuard.HasValidSiteScopeIfRequired(assignedPrincipal).Should().BeTrue();
+    }
+
+    [Fact]
+    [GxPRequirement("PRD-SYS-192")]
+    public void SiteAccessEvaluator_DualSponsorAndPharmacistRoles_RestrictsToAssignedSites()
+    {
+        var unassignedDualRole = new Principal
+        {
+            UserId = "dual-unassigned",
+            Roles = [RoleNormalization.ROLE_SPONSOR_DM, RoleNormalization.ROLE_PHARMACIST],
+            AssignedSites = Array.Empty<string>(),
+        };
+
+        SiteAccessEvaluator.CanAccessSite(unassignedDualRole, "SITE-99").Should().BeFalse();
+        SiteAccessEvaluator.CanAccessSite(unassignedDualRole, null).Should().BeFalse();
+        SiteAccessEvaluator.CanAccessSite(unassignedDualRole, " ").Should().BeFalse();
+        ClinicalScopeGuard.IsSiteBound(unassignedDualRole).Should().BeTrue();
+        ClinicalScopeGuard.HasValidSiteScopeIfRequired(unassignedDualRole).Should().BeFalse();
+
+        var assignedDualRole = unassignedDualRole with
+        {
+            UserId = "dual-assigned",
+            AssignedSites = ["SITE-01"],
+        };
+
+        SiteAccessEvaluator.CanAccessSite(assignedDualRole, "SITE-01").Should().BeTrue();
+        SiteAccessEvaluator.CanAccessSite(assignedDualRole, "SITE-99").Should().BeFalse();
+        SiteAccessEvaluator.CanAccessSite(assignedDualRole, null).Should().BeFalse();
+
+        var trialDualPharmacist = new Principal
+        {
+            UserId = "trial-pharm-unassigned",
+            TenantId = "trial-a1b2c3d4e5f6",
+            Roles = [RoleNormalization.ROLE_TRIAL_COORDINATOR, RoleNormalization.ROLE_PHARMACIST],
+            AssignedSites = Array.Empty<string>(),
+        };
+
+        ClinicalScopeGuard.IsSiteBound(trialDualPharmacist).Should().BeTrue();
+        ClinicalScopeGuard.HasValidSiteScopeIfRequired(trialDualPharmacist).Should().BeFalse();
+        SiteAccessEvaluator.CanAccessSite(trialDualPharmacist, "SITE-99").Should().BeFalse();
     }
 
     [Fact]

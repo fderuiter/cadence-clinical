@@ -493,6 +493,7 @@ const handleRowKeydown = (event, row, idx) => {
                 <th
                   v-if="col.rowHeader"
                   scope="row"
+                  :data-label="col.label"
                   :class="[
                     'data-cell',
                     'row-header-cell',
@@ -511,6 +512,7 @@ const handleRowKeydown = (event, row, idx) => {
                 </th>
                 <td
                   v-else
+                  :data-label="col.label"
                   :class="[
                     'data-cell',
                     { numeric: col.align === 'right' },

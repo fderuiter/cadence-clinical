@@ -478,17 +478,28 @@
     >
       <form @submit.prevent="submitBedsideVerify">
         <div class="verification-instructions alert alert-info">
-          <strong>Mandatory GxP Safety Gate:</strong> Both the Bedside Nurse and
-          Principal Investigator must independently verify the patient wristband
-          scan against the cell bag cryptographic barcode.
+          <strong>Mandatory GxP Safety Gate:</strong> Both the Bedside Nurse
+          (authenticated caller) and Principal Investigator must independently
+          re-authenticate and verify the patient wristband scan against the cell
+          bag cryptographic barcode.
+        </div>
+
+        <div
+          v-if="bedsideError"
+          class="alert alert-danger modal-alert"
+          role="alert"
+          data-testid="bedside-verify-error"
+        >
+          {{ bedsideError }}
         </div>
 
         <div class="form-grid">
           <div class="form-group col-full">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label>Scanned Patient Wristband Subject Identifier</label>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <label for="bedside-wristband-id">
+              Scanned Patient Wristband Subject Identifier
+            </label>
             <input
+              id="bedside-wristband-id"
               v-model="bedsideForm.scanned_wristband_subject_id"
               type="text"
               required
@@ -496,10 +507,11 @@
             />
           </div>
           <div class="form-group col-full">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label>Scanned Cell Infusion Bag Cryptographic Barcode</label>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <label for="bedside-bag-barcode">
+              Scanned Cell Infusion Bag Cryptographic Barcode
+            </label>
             <textarea
+              id="bedside-bag-barcode"
               v-model="bedsideForm.scanned_bag_barcode"
               rows="2"
               required
@@ -507,74 +519,43 @@
             />
           </div>
 
-          <!-- Primary Verifier (Nurse) -->
-          <div class="verifier-panel col-half">
-            <h4 class="verifier-title">Primary Verifier (Bedside Nurse)</h4>
+          <div
+            v-for="panel in bedsideSignerPanels"
+            :key="panel.key"
+            class="verifier-panel col-half"
+          >
+            <h4 class="verifier-title">{{ panel.title }}</h4>
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>User ID</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <label :for="`${panel.prefix}-id`">User ID</label>
               <input
-                v-model="bedsideForm.primary_verifier_id"
+                :id="`${panel.prefix}-id`"
+                v-model="bedsideForm[panel.idField]"
                 type="text"
                 required
+                :placeholder="panel.idPlaceholder"
               />
             </div>
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Full Name</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <label :for="`${panel.prefix}-name`">Full Name</label>
               <input
-                v-model="bedsideForm.primary_verifier_name"
+                :id="`${panel.prefix}-name`"
+                v-model="bedsideForm[panel.nameField]"
                 type="text"
                 required
+                :placeholder="panel.namePlaceholder"
               />
             </div>
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>E-Signature Step-Up Token</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <label :for="`${panel.prefix}-password`">
+                Re-Authentication Password (21 CFR Part 11)
+              </label>
               <input
-                v-model="bedsideForm.primary_signature_token"
-                type="password"
-                required
-              />
-            </div>
-          </div>
-
-          <!-- Secondary Verifier (PI) -->
-          <div class="verifier-panel col-half">
-            <h4 class="verifier-title">
-              Secondary Verifier (Principal Investigator)
-            </h4>
-            <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>User ID</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-              <input
-                v-model="bedsideForm.secondary_verifier_id"
-                type="text"
-                required
-              />
-            </div>
-            <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Full Name</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-              <input
-                v-model="bedsideForm.secondary_verifier_name"
-                type="text"
-                required
-              />
-            </div>
-            <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>E-Signature Step-Up Token</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-              <input
-                v-model="bedsideForm.secondary_signature_token"
-                type="password"
-                required
+                :id="`${panel.prefix}-password`"
+                v-model="bedsideForm[panel.reauthField]"
+                v-bind="SIGNATURE_PASSWORD_INPUT_ATTRS"
+                :required="!bedsideForm[panel.tokenField]"
+                :data-testid="panel.reauthTestId"
+                placeholder="Enter step-up password"
               />
             </div>
           </div>
@@ -588,7 +569,11 @@
           >
             Cancel
           </button>
-          <button type="submit" class="btn btn-stepup">
+          <button
+            type="submit"
+            class="btn btn-stepup"
+            :disabled="isSubmittingBedside"
+          >
             Execute Dual Electronic Signature
           </button>
         </footer>
@@ -606,6 +591,14 @@
       title="Generate Formal Certificate of Destruction"
     >
       <form @submit.prevent="submitDestruction">
+        <div
+          v-if="destructionError"
+          class="alert alert-danger modal-alert"
+          role="alert"
+          data-testid="destruction-cert-error"
+        >
+          {{ destructionError }}
+        </div>
         <div class="form-grid">
           <div class="form-group">
             <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
@@ -689,74 +682,43 @@
             />
           </div>
 
-          <!-- Witness 1 -->
-          <div class="verifier-panel col-half">
-            <h4 class="verifier-title">Witness 1 (Site Pharmacist / CRC)</h4>
+          <div
+            v-for="witness in destructionWitnessPanels"
+            :key="witness.key"
+            class="verifier-panel col-half"
+          >
+            <h4 class="verifier-title">{{ witness.title }}</h4>
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>User ID</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <label :for="`${witness.prefix}-id`">User ID</label>
               <input
-                v-model="destructionForm.witness_1_id"
+                :id="`${witness.prefix}-id`"
+                v-model="destructionForm[witness.idField]"
                 type="text"
                 required
+                :placeholder="witness.idPlaceholder"
               />
             </div>
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Full Name</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <label :for="`${witness.prefix}-name`">Full Name</label>
               <input
-                v-model="destructionForm.witness_1_name"
+                :id="`${witness.prefix}-name`"
+                v-model="destructionForm[witness.nameField]"
                 type="text"
                 required
+                :placeholder="witness.namePlaceholder"
               />
             </div>
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>E-Signature Token</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <label :for="`${witness.prefix}-password`">
+                Re-Authentication Password (21 CFR Part 11)
+              </label>
               <input
-                v-model="destructionForm.witness_1_signature_token"
-                type="password"
-                required
-              />
-            </div>
-          </div>
-
-          <!-- Witness 2 -->
-          <div class="verifier-panel col-half">
-            <h4 class="verifier-title">
-              Witness 2 (Principal Investigator / QA)
-            </h4>
-            <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>User ID</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-              <input
-                v-model="destructionForm.witness_2_id"
-                type="text"
-                required
-              />
-            </div>
-            <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Full Name</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-              <input
-                v-model="destructionForm.witness_2_name"
-                type="text"
-                required
-              />
-            </div>
-            <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>E-Signature Token</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-              <input
-                v-model="destructionForm.witness_2_signature_token"
-                type="password"
-                required
+                :id="`${witness.prefix}-password`"
+                v-model="destructionForm[witness.reauthField]"
+                v-bind="SIGNATURE_PASSWORD_INPUT_ATTRS"
+                :required="!destructionForm[witness.tokenField]"
+                :data-testid="witness.reauthTestId"
+                placeholder="Enter step-up password"
               />
             </div>
           </div>
@@ -770,7 +732,11 @@
           >
             Cancel
           </button>
-          <button type="submit" class="btn btn-danger">
+          <button
+            type="submit"
+            class="btn btn-danger"
+            :disabled="isSubmittingDestruction"
+          >
             Issue Dual-Witness Certificate
           </button>
         </footer>
@@ -1265,34 +1231,42 @@
       title="Administer Cellular Infusion"
     >
       <form @submit.prevent="submitInfusion">
+        <div
+          v-if="infusionError"
+          class="alert alert-danger modal-alert"
+          role="alert"
+          data-testid="infusion-error"
+        >
+          {{ infusionError }}
+        </div>
         <div class="form-grid">
           <div class="form-group col-full">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label>Administrator ID</label>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <label for="infusion-primary-verifier-id">
+              Primary Verifier ID (Authenticated Caller)
+            </label>
             <input
-              v-model="infusionForm.administrator_id"
+              id="infusion-primary-verifier-id"
+              v-model="infusionForm.primary_verifier_id"
               type="text"
               required
             />
           </div>
           <div class="form-group col-full">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label>Administrator Name</label>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <label for="infusion-admin-name">Administrator Name</label>
             <input
+              id="infusion-admin-name"
               v-model="infusionForm.administrator_name"
               type="text"
               required
             />
           </div>
           <div class="form-group col-full">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label>E-Signature Step-Up Token</label>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <label for="infusion-unlock-token">Bedside Unlock Token</label>
             <input
-              v-model="infusionForm.signature_token"
+              id="infusion-unlock-token"
+              v-model="infusionForm.unlock_token"
               type="password"
+              autocomplete="off"
               required
             />
           </div>
@@ -1315,9 +1289,18 @@
 </template>
 
 <script setup lang="ts">
-import { ClinicalDropzone, ClinicalModal } from "ui";
+import {
+  ClinicalDropzone,
+  ClinicalModal,
+  formatCgtBedsideBindingId,
+  formatCgtDestructionBindingId,
+  SEMANTIC_ACTIONS,
+  SIGNATURE_PASSWORD_INPUT_ATTRS,
+} from "ui";
 import { ref, reactive, onMounted } from "vue";
+import { requestStepUpSignature } from "@/api/signatureVerification";
 import { useDomainFormatter } from "@/composables/useDomainFormatter";
+import { useAuthStore } from "@/stores/auth";
 import {
   parseCryoLoggerFile,
   type ParsedCryoLoggerResult,
@@ -1326,9 +1309,31 @@ import {
 const { formatLabel, formatDatabaseKey, formatFacilityCode } =
   useDomainFormatter();
 
+function resolveAuthenticatedSignerDefaults(): {
+  userId: string;
+  fullName: string;
+} {
+  try {
+    const authStore = useAuthStore();
+    const user = authStore?.user as Record<string, any> | null | undefined;
+    if (!user) {
+      return { userId: "", fullName: "" };
+    }
+    const userId = String(user.id || user.sub || user.username || "").trim();
+    const fullName = [user.firstName, user.lastName]
+      .map((part) => String(part || "").trim())
+      .filter(Boolean)
+      .join(" ");
+    return { userId, fullName };
+  } catch {
+    return { userId: "", fullName: "" };
+  }
+}
+
 interface CGTChainOfCustody {
   id: string;
   study_id: string;
+  site_id?: string | null;
   subject_id: string;
   din: string;
   batch_id: string | null;
@@ -1341,10 +1346,11 @@ interface CGTChainOfCustody {
   manufacturing_facility_id: string | null;
   cryo_temp_excursion_count: number;
   lowest_temp_celsius: number | null;
-  highest_temp_celsius: number | null;
+  highest_temp_celsius?: number | null;
   infusion_unlocked: boolean;
-  infused_at: string | null;
-  reconciled_at: string | null;
+  unlock_token?: string | null;
+  infused_at?: string | null;
+  reconciled_at?: string | null;
 }
 
 interface CGTMilestone {
@@ -1412,6 +1418,71 @@ const isParsing = ref(false);
 const parsingError = ref<string | null>(null);
 const parsedTelemetry = ref<ParsedCryoLoggerResult | null>(null);
 
+// Step-up & submission state
+const isSubmittingBedside = ref(false);
+const bedsideError = ref<string | null>(null);
+const isSubmittingDestruction = ref(false);
+const destructionError = ref<string | null>(null);
+const infusionError = ref<string | null>(null);
+
+const BEDSIDE_VERIFY_ACTION = "/api/v1/execution/rtsm/cgt/bedside-verify";
+const DESTRUCTION_CERT_ACTION =
+  "/api/v1/execution/rtsm/cgt/destruction-certificate";
+
+const bedsideSignerPanels = [
+  {
+    key: "primary",
+    prefix: "bedside-primary",
+    title: "Primary Verifier (Bedside Nurse)",
+    idField: "primary_verifier_id" as const,
+    nameField: "primary_verifier_name" as const,
+    reauthField: "primary_password" as const,
+    tokenField: "primary_signature_token" as const,
+    idPlaceholder: "Authenticated nurse user ID",
+    namePlaceholder: "e.g. Sarah Smith, RN",
+    reauthTestId: "primary-stepup-password",
+  },
+  {
+    key: "secondary",
+    prefix: "bedside-secondary",
+    title: "Secondary Verifier (Principal Investigator)",
+    idField: "secondary_verifier_id" as const,
+    nameField: "secondary_verifier_name" as const,
+    reauthField: "secondary_password" as const,
+    tokenField: "secondary_signature_token" as const,
+    idPlaceholder: "Independent witness user ID",
+    namePlaceholder: "e.g. Dr. Robert Johnson, MD",
+    reauthTestId: "secondary-stepup-password",
+  },
+];
+
+const destructionWitnessPanels = [
+  {
+    key: "witness1",
+    prefix: "destruction-w1",
+    title: "Witness 1 (Site Pharmacist / CRC)",
+    idField: "witness_1_id" as const,
+    nameField: "witness_1_name" as const,
+    reauthField: "witness_1_password" as const,
+    tokenField: "witness_1_signature_token" as const,
+    idPlaceholder: "Authenticated witness 1 user ID",
+    namePlaceholder: "e.g. David Lee, PharmD",
+    reauthTestId: "witness1-stepup-password",
+  },
+  {
+    key: "witness2",
+    prefix: "destruction-w2",
+    title: "Witness 2 (Principal Investigator / QA)",
+    idField: "witness_2_id" as const,
+    nameField: "witness_2_name" as const,
+    reauthField: "witness_2_password" as const,
+    tokenField: "witness_2_signature_token" as const,
+    idPlaceholder: "Independent witness 2 user ID",
+    namePlaceholder: "e.g. Dr. Robert Johnson, MD",
+    reauthTestId: "witness2-stepup-password",
+  },
+];
+
 // Forms
 const milestoneForm = reactive({
   study_id: "STUDY-CGT-801",
@@ -1447,9 +1518,9 @@ const infusionForm = reactive({
   chain_of_custody_id: "",
   site_id: "SITE-101",
   subject_id: "SUBJ-101-0042",
-  administrator_id: "dr_johnson_pi",
-  administrator_name: "Dr. Robert Johnson, MD",
-  signature_token: "pi-sig-token-999",
+  primary_verifier_id: "",
+  administrator_name: "",
+  unlock_token: "",
   notes: "Infusion administered without acute immediate reaction.",
 });
 const apheresisForm = reactive({
@@ -1468,14 +1539,16 @@ const apheresisForm = reactive({
 const bedsideForm = reactive({
   scanned_wristband_subject_id: "",
   scanned_bag_barcode: "",
-  primary_verifier_id: "nurse_smith",
-  primary_verifier_name: "Sarah Smith, RN",
+  primary_verifier_id: "",
+  primary_verifier_name: "",
   primary_verifier_role: "Bedside Nurse",
-  primary_signature_token: "valid-nurse-sig-token-12345",
-  secondary_verifier_id: "dr_johnson_pi",
-  secondary_verifier_name: "Dr. Robert Johnson, MD",
+  primary_password: "",
+  primary_signature_token: "",
+  secondary_verifier_id: "",
+  secondary_verifier_name: "",
   secondary_verifier_role: "Principal Investigator",
-  secondary_signature_token: "valid-pi-sig-token-67890",
+  secondary_password: "",
+  secondary_signature_token: "",
 });
 
 const destructionForm = reactive({
@@ -1487,14 +1560,16 @@ const destructionForm = reactive({
   destruction_reason: "Residual post-infusion cell disposal.",
   destruction_method: "HIGH_TEMPERATURE_INCINERATION",
   destruction_facility: "Bio-Hazard Incineration Facility 1",
-  witness_1_id: "pharmacist_lee",
-  witness_1_name: "David Lee, PharmD",
+  witness_1_id: "",
+  witness_1_name: "",
   witness_1_role: "Investigational Pharmacist",
-  witness_1_signature_token: "pharm-token-111",
-  witness_2_id: "dr_johnson_pi",
-  witness_2_name: "Dr. Robert Johnson, MD",
+  witness_1_password: "",
+  witness_1_signature_token: "",
+  witness_2_id: "",
+  witness_2_name: "",
   witness_2_role: "Principal Investigator",
-  witness_2_signature_token: "pi-token-222",
+  witness_2_password: "",
+  witness_2_signature_token: "",
 });
 
 function isStageComplete(stageKey: string): boolean {
@@ -1571,6 +1646,7 @@ async function submitApheresis() {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "X-Change-Reason": "Initial apheresis cellular harvest",
         "x-change-justification": "Initial apheresis harvest",
       },
       body: JSON.stringify(apheresisForm),
@@ -1584,42 +1660,249 @@ async function submitApheresis() {
   }
 }
 
+async function extractErrorMessage(
+  res: Response,
+  fallback: string
+): Promise<string> {
+  const errData = await res.json().catch(() => null);
+  return errData?.detail || errData?.title || fallback;
+}
+
+async function acquireStepUpToken(options: {
+  signerLabel: string;
+  username: string;
+  password: string;
+  existingToken?: string;
+  action: string;
+  semanticAction: string;
+  batchId: string;
+}): Promise<string> {
+  const preIssued = options.existingToken?.trim();
+  if (preIssued) {
+    return preIssued;
+  }
+
+  try {
+    const response = await requestStepUpSignature(
+      {
+        username: options.username,
+        password: options.password,
+        action: options.action,
+        semanticAction: options.semanticAction,
+        batchId: options.batchId,
+      },
+      {
+        missingTokenMessage:
+          "Step-up verification did not return a signature token.",
+      }
+    );
+    return response.sig_token.trim();
+  } catch (err: any) {
+    throw new Error(
+      `${options.signerLabel}: ${err?.message || "Step-up re-authentication credentials are required."}`,
+      { cause: err }
+    );
+  }
+}
+
+function applyCallerDefaults(target: {
+  idField: () => string;
+  setId: (value: string) => void;
+  nameField: () => string;
+  setName: (value: string) => void;
+}) {
+  const caller = resolveAuthenticatedSignerDefaults();
+  if (!target.idField() && caller.userId) {
+    target.setId(caller.userId);
+  }
+  if (!target.nameField() && caller.fullName) {
+    target.setName(caller.fullName);
+  }
+}
+
 function openBedsideModal() {
+  bedsideError.value = null;
+  bedsideForm.primary_password = "";
+  bedsideForm.secondary_password = "";
+  bedsideForm.primary_signature_token = "";
+  bedsideForm.secondary_signature_token = "";
+  applyCallerDefaults({
+    idField: () => bedsideForm.primary_verifier_id,
+    setId: (v) => {
+      bedsideForm.primary_verifier_id = v;
+    },
+    nameField: () => bedsideForm.primary_verifier_name,
+    setName: (v) => {
+      bedsideForm.primary_verifier_name = v;
+    },
+  });
+  if (cocData.value) {
+    bedsideForm.scanned_wristband_subject_id = cocData.value.subject_id;
+    bedsideForm.scanned_bag_barcode =
+      cocData.value.tamper_evident_barcode || "";
+  }
   showBedsideModal.value = true;
 }
 
 async function submitBedsideVerify() {
-  if (!cocData.value) return;
+  if (!cocData.value || isSubmittingBedside.value) return;
+  bedsideError.value = null;
+
+  const primaryPassword = bedsideForm.primary_password;
+  const secondaryPassword = bedsideForm.secondary_password;
+  bedsideForm.primary_password = "";
+  bedsideForm.secondary_password = "";
+
+  const resolvedSiteId =
+    cocData.value.site_id ||
+    cocData.value.collection_site_id ||
+    apheresisForm.site_id;
+  const targetBindingId = formatCgtBedsideBindingId({
+    studyId: cocData.value.study_id,
+    subjectId: cocData.value.subject_id,
+    din: cocData.value.din,
+    batchId: cocData.value.batch_id,
+  });
+
+  isSubmittingBedside.value = true;
   try {
-    const res = await fetch("/api/v1/execution/rtsm/cgt/bedside-verify", {
+    const primaryToken = await acquireStepUpToken({
+      signerLabel: "Primary Verifier",
+      username: bedsideForm.primary_verifier_id,
+      password: primaryPassword,
+      existingToken: bedsideForm.primary_signature_token,
+      action: BEDSIDE_VERIFY_ACTION,
+      semanticAction: SEMANTIC_ACTIONS.CGT_BEDSIDE_VERIFY,
+      batchId: targetBindingId,
+    });
+    const secondaryToken = await acquireStepUpToken({
+      signerLabel: "Secondary Verifier",
+      username: bedsideForm.secondary_verifier_id,
+      password: secondaryPassword,
+      existingToken: bedsideForm.secondary_signature_token,
+      action: BEDSIDE_VERIFY_ACTION,
+      semanticAction: SEMANTIC_ACTIONS.CGT_BEDSIDE_VERIFY,
+      batchId: targetBindingId,
+    });
+
+    const res = await fetch(BEDSIDE_VERIFY_ACTION, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "X-Change-Reason": "Bedside two-person electronic verification",
         "x-change-justification": "Bedside dual verification",
+        "X-Sig-Token": primaryToken,
       },
       body: JSON.stringify({
-        coc_id: cocData.value.id,
-        ...bedsideForm,
+        study_id: cocData.value.study_id,
+        site_id: resolvedSiteId,
+        subject_id: cocData.value.subject_id,
+        din: cocData.value.din,
+        batch_id: cocData.value.batch_id,
+        bag_barcode_payload: bedsideForm.scanned_bag_barcode,
+        patient_wristband_id: bedsideForm.scanned_wristband_subject_id,
+        primary_verifier_id: bedsideForm.primary_verifier_id,
+        primary_verifier_name: bedsideForm.primary_verifier_name,
+        primary_verifier_role: bedsideForm.primary_verifier_role,
+        primary_signature_token: primaryToken,
+        secondary_verifier_id: bedsideForm.secondary_verifier_id,
+        secondary_verifier_name: bedsideForm.secondary_verifier_name,
+        secondary_verifier_role: bedsideForm.secondary_verifier_role,
+        secondary_signature_token: secondaryToken,
       }),
     });
+
     if (res.ok) {
+      const result = await res.json().catch(() => null);
+      if (result?.unlock_token && cocData.value) {
+        cocData.value.unlock_token = result.unlock_token;
+        cocData.value.infusion_unlocked = true;
+        infusionForm.unlock_token = result.unlock_token;
+      }
+      infusionForm.primary_verifier_id = bedsideForm.primary_verifier_id;
       showBedsideModal.value = false;
       await fetchTraceability();
+    } else {
+      bedsideError.value = await extractErrorMessage(
+        res,
+        "Bedside dual verification failed."
+      );
     }
-  } catch (err) {
-    console.error("Bedside verification failed", err);
+  } catch (err: any) {
+    bedsideError.value = err?.message || "Bedside dual verification failed.";
+  } finally {
+    bedsideForm.primary_signature_token = "";
+    bedsideForm.secondary_signature_token = "";
+    isSubmittingBedside.value = false;
   }
 }
 
 function openDestructionModal() {
+  destructionError.value = null;
+  destructionForm.witness_1_password = "";
+  destructionForm.witness_2_password = "";
+  destructionForm.witness_1_signature_token = "";
+  destructionForm.witness_2_signature_token = "";
+  applyCallerDefaults({
+    idField: () => destructionForm.witness_1_id,
+    setId: (v) => {
+      destructionForm.witness_1_id = v;
+    },
+    nameField: () => destructionForm.witness_1_name,
+    setName: (v) => {
+      destructionForm.witness_1_name = v;
+    },
+  });
   if (cocData.value) {
     destructionForm.study_id = cocData.value.study_id;
+    if (cocData.value.site_id || cocData.value.collection_site_id) {
+      destructionForm.site_id =
+        cocData.value.site_id ||
+        cocData.value.collection_site_id ||
+        destructionForm.site_id;
+    }
   }
   showDestructionModal.value = true;
 }
 
 async function submitDestruction() {
+  if (isSubmittingDestruction.value) return;
+  destructionError.value = null;
+
+  const witness1Password = destructionForm.witness_1_password;
+  const witness2Password = destructionForm.witness_2_password;
+  destructionForm.witness_1_password = "";
+  destructionForm.witness_2_password = "";
+
+  const din = cocData.value?.din ?? null;
+  const targetBindingId = formatCgtDestructionBindingId({
+    studyId: destructionForm.study_id,
+    siteId: destructionForm.site_id,
+    lotNumber: destructionForm.lot_number,
+    din,
+  });
+
+  isSubmittingDestruction.value = true;
   try {
+    const witness1Token = await acquireStepUpToken({
+      signerLabel: "Witness 1",
+      username: destructionForm.witness_1_id,
+      password: witness1Password,
+      existingToken: destructionForm.witness_1_signature_token,
+      action: DESTRUCTION_CERT_ACTION,
+      semanticAction: SEMANTIC_ACTIONS.CGT_DESTRUCTION_CERTIFICATE,
+      batchId: targetBindingId,
+    });
+    const witness2Token = await acquireStepUpToken({
+      signerLabel: "Witness 2",
+      username: destructionForm.witness_2_id,
+      password: witness2Password,
+      existingToken: destructionForm.witness_2_signature_token,
+      action: DESTRUCTION_CERT_ACTION,
+      semanticAction: SEMANTIC_ACTIONS.CGT_DESTRUCTION_CERTIFICATE,
+      batchId: targetBindingId,
+    });
+
     const kit_numbers = destructionForm.kit_numbers_str
       .split(",")
       .map((s) => s.trim())
@@ -1628,41 +1911,52 @@ async function submitDestruction() {
       .split(",")
       .map((s) => s.trim())
       .filter(Boolean);
-    const res = await fetch(
-      "/api/v1/execution/rtsm/cgt/destruction-certificate",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-change-justification": "Product destruction",
-        },
-        body: JSON.stringify({
-          study_id: destructionForm.study_id,
-          site_id: destructionForm.site_id,
-          lot_number: destructionForm.lot_number,
-          kit_numbers,
-          vial_identifiers,
-          destruction_reason: destructionForm.destruction_reason,
-          destruction_method: destructionForm.destruction_method,
-          destruction_facility: destructionForm.destruction_facility,
-          witness_1_id: destructionForm.witness_1_id,
-          witness_1_name: destructionForm.witness_1_name,
-          witness_1_role: destructionForm.witness_1_role,
-          witness_1_signature_token: destructionForm.witness_1_signature_token,
-          witness_2_id: destructionForm.witness_2_id,
-          witness_2_name: destructionForm.witness_2_name,
-          witness_2_role: destructionForm.witness_2_role,
-          witness_2_signature_token: destructionForm.witness_2_signature_token,
-          coc_id: cocData.value?.id,
-        }),
-      }
-    );
+    const res = await fetch(DESTRUCTION_CERT_ACTION, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Change-Reason": "Investigational cell product destruction",
+        "x-change-justification": "Product destruction",
+        "X-Sig-Token": witness1Token,
+      },
+      body: JSON.stringify({
+        study_id: destructionForm.study_id,
+        site_id: destructionForm.site_id,
+        lot_number: destructionForm.lot_number,
+        kit_numbers,
+        vial_identifiers,
+        destruction_reason: destructionForm.destruction_reason,
+        destruction_method: destructionForm.destruction_method,
+        destruction_facility: destructionForm.destruction_facility,
+        witness_1_id: destructionForm.witness_1_id,
+        witness_1_name: destructionForm.witness_1_name,
+        witness_1_role: destructionForm.witness_1_role,
+        witness_1_signature_token: witness1Token,
+        witness_2_id: destructionForm.witness_2_id,
+        witness_2_name: destructionForm.witness_2_name,
+        witness_2_role: destructionForm.witness_2_role,
+        witness_2_signature_token: witness2Token,
+        subject_id: cocData.value?.subject_id ?? null,
+        din,
+        coc_id: cocData.value?.id,
+      }),
+    });
     if (res.ok) {
       showDestructionModal.value = false;
       await fetchTraceability();
+    } else {
+      destructionError.value = await extractErrorMessage(
+        res,
+        "Destruction certification failed."
+      );
     }
-  } catch (err) {
-    console.error("Destruction certification failed", err);
+  } catch (err: any) {
+    destructionError.value =
+      err?.message || "Destruction certification failed.";
+  } finally {
+    destructionForm.witness_1_signature_token = "";
+    destructionForm.witness_2_signature_token = "";
+    isSubmittingDestruction.value = false;
   }
 }
 
@@ -1711,10 +2005,15 @@ async function submitMilestone() {
   }
 
   try {
+    const milestoneReason =
+      milestoneForm.notes && milestoneForm.notes.trim().length >= 10
+        ? milestoneForm.notes.trim()
+        : "Log cryogenic transit milestone";
     const res = await fetch("/api/v1/execution/rtsm/cgt/milestone", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "X-Change-Reason": milestoneReason,
         "x-change-justification":
           milestoneForm.notes || "Log transit milestone",
       },
@@ -1769,6 +2068,7 @@ async function submitManufacturingBind() {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "X-Change-Reason": "Bind manufacturing batch to chain of custody",
         "x-change-justification": "Bind manufacturing batch",
       },
       body: JSON.stringify(manufacturingForm),
@@ -1783,30 +2083,64 @@ async function submitManufacturingBind() {
 }
 
 function openInfusionModal() {
+  infusionError.value = null;
+  applyCallerDefaults({
+    idField: () => infusionForm.primary_verifier_id,
+    setId: (v) => {
+      infusionForm.primary_verifier_id = v;
+    },
+    nameField: () => infusionForm.administrator_name,
+    setName: (v) => {
+      infusionForm.administrator_name = v;
+    },
+  });
   if (cocData.value) {
     infusionForm.study_id = cocData.value.study_id;
     infusionForm.chain_of_custody_id = cocData.value.id;
     infusionForm.subject_id = cocData.value.subject_id;
+    infusionForm.site_id =
+      cocData.value.site_id ||
+      cocData.value.collection_site_id ||
+      infusionForm.site_id;
+    if (cocData.value.unlock_token) {
+      infusionForm.unlock_token = cocData.value.unlock_token;
+    }
   }
   showInfusionModal.value = true;
 }
 
 async function submitInfusion() {
+  infusionError.value = null;
   try {
     const res = await fetch("/api/v1/execution/rtsm/cgt/infuse", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "X-Change-Reason": "Administer cellular infusion",
         "x-change-justification": "Administer infusion",
       },
-      body: JSON.stringify(infusionForm),
+      body: JSON.stringify({
+        study_id: infusionForm.study_id,
+        site_id: infusionForm.site_id,
+        subject_id: infusionForm.subject_id,
+        chain_of_custody_id: infusionForm.chain_of_custody_id,
+        unlock_token: infusionForm.unlock_token,
+        primary_verifier_id: infusionForm.primary_verifier_id,
+        notes: infusionForm.notes,
+      }),
     });
     if (res.ok) {
+      infusionForm.unlock_token = "";
       showInfusionModal.value = false;
       await fetchTraceability();
+    } else {
+      infusionError.value = await extractErrorMessage(
+        res,
+        "Infusion administration failed."
+      );
     }
-  } catch (err) {
-    console.error("Infusion administration failed", err);
+  } catch (err: any) {
+    infusionError.value = err?.message || "Infusion administration failed.";
   }
 }
 
@@ -2261,6 +2595,22 @@ onMounted(() => {
   justify-content: flex-end;
   gap: 0.5rem;
   margin-top: 1.5rem;
+}
+
+.modal-alert {
+  margin-bottom: 1rem;
+}
+
+@media (max-width: 768px) {
+  .col-half {
+    grid-column: span 2;
+  }
+
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    font-size: 1rem;
+  }
 }
 
 .code-font {

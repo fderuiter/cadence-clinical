@@ -64,6 +64,8 @@ describe("Shared UI Vue Components Behavior & SSR Rendering", () => {
       expect(html).toContain("3 total record(s)");
       expect(html).toContain("Page 1 of 2");
       expect(html).toContain("SUBJ-003");
+      expect(html).toContain('data-label="Subject ID"');
+      expect(html).toContain('data-label="Glucose (mg/dL)"');
 
       const emptyHtml = await renderToString(
         createSSRApp(ClinicalDataTable, {
@@ -675,6 +677,31 @@ describe("Shared UI Vue Components Behavior & SSR Rendering", () => {
       );
       state.closeDrawer();
       expect(emit).not.toHaveBeenCalled();
+
+      const closedKeepMountedHtml = await renderToString(
+        createSSRApp({
+          render: () =>
+            h(
+              ClinicalDrawer,
+              {
+                isOpen: false,
+                keepMounted: true,
+                teleport: false,
+                title: "Persistent Readability Drawer",
+              },
+              {
+                default: () => h("div", "Cached readability state"),
+                footer: () => h("button", { type: "button" }, "Apply"),
+              }
+            ),
+        })
+      );
+      expect(closedKeepMountedHtml).toContain("Cached readability state");
+      expect(closedKeepMountedHtml).toContain('aria-hidden="true"');
+      expect(closedKeepMountedHtml).not.toContain('aria-modal="true"');
+      expect(closedKeepMountedHtml).toContain("clinical-drawer-footer");
+      expect(closedKeepMountedHtml).toContain("<svg");
+      expect(closedKeepMountedHtml).not.toContain("clinical-drawer-subheader");
     });
   });
 

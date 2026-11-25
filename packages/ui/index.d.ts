@@ -3,7 +3,9 @@ import { DefineComponent, DefineSetupFnComponent, SlotsType } from "vue";
 type DefineSlotsComponent<
   Props extends Record<string, any>,
   Slots extends Record<string, any>,
-> = DefineSetupFnComponent<Props, Record<string, any>, SlotsType<Slots>>;
+  Exposed extends Record<string, any> = {},
+> = DefineSetupFnComponent<Props, Record<string, any>, SlotsType<Slots>> &
+  (new () => Exposed);
 
 // Export generated CDASH types
 export * from "./src/types/cdash.js";
@@ -388,6 +390,7 @@ export const ClinicalDrawer: DefineSlotsComponent<
     isOpen?: boolean;
     open?: boolean;
     docked?: boolean;
+    keepMounted?: boolean;
     title?: string;
     subtitle?: string;
     ariaLabel?: string;
@@ -425,9 +428,11 @@ export const ClinicalDrawer: DefineSlotsComponent<
   {
     default?: (props: Record<string, never>) => any;
     header?: (props: { titleId: string; close: () => void }) => any;
-    subheader?: (props: Record<string, never>) => any;
     footer?: (props: { close: () => void }) => any;
     "after-panel"?: (props: Record<string, never>) => any;
+  },
+  {
+    drawerRef: HTMLElement | null;
   }
 >;
 
@@ -934,6 +939,8 @@ export const SEMANTIC_ACTIONS: Readonly<{
   ECONSENT_CAPTURE: "econsent.consent.capture";
   ECONSENT_RECONSENT_SIGN: "econsent.reconsent.sign";
   CEC_CHAIR_ADJUDICATE: "execution.cec.chair_adjudicate";
+  CGT_BEDSIDE_VERIFY: "execution.cgt.bedside_verify";
+  CGT_DESTRUCTION_CERTIFICATE: "execution.cgt.destruction_certificate";
   ETMF_DOCUMENT_SIGN_OFF: "etmf.document.sign_off";
   COLLECTION_SIGN: "collection.sign";
   SOA_APPROVE: "designer.soa.approve";
@@ -963,6 +970,18 @@ export interface StepUpVerificationPayload {
 export function buildStepUpVerificationPayload(
   input: StepUpVerificationPayloadInput
 ): StepUpVerificationPayload;
+export function formatCgtBedsideBindingId(input?: {
+  studyId?: string | null;
+  subjectId?: string | null;
+  din?: string | null;
+  batchId?: string | null;
+}): string;
+export function formatCgtDestructionBindingId(input?: {
+  studyId?: string | null;
+  siteId?: string | null;
+  lotNumber?: string | null;
+  din?: string | null;
+}): string;
 export const STEP_UP_VERIFICATION_PATH: "/api/v1/auth/signature-verification";
 export function resolveDefaultSemanticAction(action?: string | null): string;
 export interface StepUpSignatureRequestInput {

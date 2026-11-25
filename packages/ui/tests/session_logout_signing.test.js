@@ -17,6 +17,8 @@ import {
   deriveSignerRoleFromClaims,
   flushRegisteredDraftSources,
   flushRegisteredDraftSourcesSync,
+  formatCgtBedsideBindingId,
+  formatCgtDestructionBindingId,
   hasRegisteredUnsavedDrafts,
   isStepUpAuthFailure,
   isValidSemanticAction,
@@ -368,6 +370,28 @@ describe("Shared Part 11 step-up verification & credential helpers (signing.js)"
     expect(
       SEMANTIC_ACTION_PATTERN.test(SEMANTIC_ACTIONS.CTMS_DOA_SIGN_OFF)
     ).toBe(true);
+    expect(
+      SEMANTIC_ACTION_PATTERN.test(SEMANTIC_ACTIONS.CGT_BEDSIDE_VERIFY)
+    ).toBe(true);
+    expect(
+      SEMANTIC_ACTION_PATTERN.test(SEMANTIC_ACTIONS.CGT_DESTRUCTION_CERTIFICATE)
+    ).toBe(true);
+    expect(
+      formatCgtBedsideBindingId({
+        studyId: " STUDY-CGT-001 ",
+        subjectId: " SUB-1001 ",
+        din: " =W12342698765400 ",
+        batchId: " BATCH-88 ",
+      })
+    ).toBe("STUDY-CGT-001:SUB-1001:=W12342698765400:BATCH-88");
+    expect(
+      formatCgtDestructionBindingId({
+        studyId: " STUDY-CGT-001 ",
+        siteId: " SITE-101 ",
+        lotNumber: " LOT-99 ",
+        din: null,
+      })
+    ).toBe("STUDY-CGT-001:SITE-101:LOT-99:");
 
     expect(isValidStepUpAction("/api/v1/ctms/doa/sign-off")).toBe(true);
     expect(isValidStepUpAction("/api/v2/ctms/doa/sign-off")).toBe(false);
@@ -515,6 +539,14 @@ describe("Shared Part 11 step-up verification & credential helpers (signing.js)"
         "/api/v1/execution/cec/dossiers/DOS-1/chair-adjudicate"
       )
     ).toBe(SEMANTIC_ACTIONS.CEC_CHAIR_ADJUDICATE);
+    expect(
+      resolveDefaultSemanticAction("/api/v1/execution/rtsm/cgt/bedside-verify")
+    ).toBe(SEMANTIC_ACTIONS.CGT_BEDSIDE_VERIFY);
+    expect(
+      resolveDefaultSemanticAction(
+        "/api/v1/execution/rtsm/cgt/destruction-certificate"
+      )
+    ).toBe(SEMANTIC_ACTIONS.CGT_DESTRUCTION_CERTIFICATE);
     expect(
       resolveDefaultSemanticAction("/api/v1/execution/forms/f-1/signatures")
     ).toBe(SEMANTIC_ACTIONS.COLLECTION_SIGN);

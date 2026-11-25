@@ -59,7 +59,7 @@ public sealed class SigTokenUseStoreWiringTests
     {
         using var host = new WebApplicationFactory<Cadence.Apps.Execution.Program>().WithWebHostBuilder(builder => builder
             .UseTestGatewaySecret()
-            .UseTestDemographicsKey().UseTestRandomizationKey()
+            .UseTestDemographicsKey().UseTestRandomizationKey().UseTestCgtBarcodeKey()
             .UseTestPostgresConnectionString());
 
         host.Services.GetRequiredService<ISigTokenUseStore>()
@@ -108,6 +108,11 @@ public sealed class SigTokenUseStoreWiringTests
     private sealed class DurableStore : IDurableSigTokenUseStore
     {
         public Task<bool> TryRecordFirstUseAsync(string tokenId, DateTimeOffset retainUntil, System.Threading.CancellationToken cancellationToken) =>
+            Task.FromResult(true);
+
+        public Task<bool> TryRecordFirstUseBatchAsync(
+            System.Collections.Generic.IReadOnlyList<(string TokenId, DateTimeOffset RetainUntil)> uses,
+            System.Threading.CancellationToken cancellationToken) =>
             Task.FromResult(true);
     }
 
