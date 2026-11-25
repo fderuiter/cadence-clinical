@@ -20,7 +20,10 @@ namespace Cadence.Kernel.Api;
 /// </summary>
 internal static class KernelStudyLookup
 {
-    internal readonly record struct ResolvedStudy(StudyId StudyId, NodeRef UnversionedRef, NodeRef PinnedRef);
+    internal readonly record struct ResolvedStudy(StudyId StudyId, NodeRef UnversionedRef, NodeRef PinnedRef)
+    {
+        internal string? StudyCode { get; init; }
+    }
 
     internal readonly record struct ResolvedScope(NodeRef ScopeRef, NodeRef PinnedRef);
 
@@ -42,6 +45,7 @@ internal static class KernelStudyLookup
 
         StudyId studyId;
         NodeRef pinnedRef;
+        string? resolvedStudyCode;
         if (trimmed.Contains(':', StringComparison.Ordinal))
         {
             if (!NodeRef.TryParse(trimmed, out var node))
@@ -63,6 +67,7 @@ internal static class KernelStudyLookup
             if (navSummary is not null)
             {
                 pinnedRef = navSummary.Ref;
+                resolvedStudyCode = navSummary.Code ?? navSummary.Title;
             }
             else
             {
@@ -76,6 +81,7 @@ internal static class KernelStudyLookup
                 }
 
                 pinnedRef = NodeRef.For(studyId, byId.VersionIndex);
+                resolvedStudyCode = byId.StudyCode;
             }
         }
         else
@@ -99,6 +105,7 @@ internal static class KernelStudyLookup
 
             studyId = byCode.StudyId;
             pinnedRef = NodeRef.For(studyId, byCode.VersionIndex);
+            resolvedStudyCode = byCode.StudyCode;
         }
 
         var unversionedRef = NodeRef.For(studyId);
@@ -113,7 +120,7 @@ internal static class KernelStudyLookup
             return (default, KernelProblems.NotVisible(hiddenDetail(unversionedRef, mask)));
         }
 
-        return (new ResolvedStudy(studyId, unversionedRef, pinnedRef), null);
+        return (new ResolvedStudy(studyId, unversionedRef, pinnedRef) { StudyCode = resolvedStudyCode }, null);
     }
 
     internal static ProblemHttpResult? ValidateScopeOrStudyCodeSyntax(string scopeOrStudyCode)

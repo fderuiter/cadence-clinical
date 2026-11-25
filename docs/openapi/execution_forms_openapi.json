@@ -2088,6 +2088,13 @@
             }
           },
           {
+            "name": "study_code",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "enrollment_id",
             "in": "query",
             "schema": {
@@ -3274,10 +3281,12 @@
         "properties": {
           "alert_id": {
             "type": "string",
+            "description": "Unique identifier of the recorded alert episode.",
             "format": "uuid"
           },
           "study_id": {
             "type": "string",
+            "description": "Kernel study UUID.",
             "format": "uuid"
           },
           "study_site_id": {
@@ -3285,10 +3294,12 @@
               "null",
               "string"
             ],
+            "description": "Optional kernel study-site UUID.",
             "format": "uuid"
           },
           "enrollment_id": {
             "type": "string",
+            "description": "Kernel enrollment UUID.",
             "format": "uuid"
           },
           "form_id": {
@@ -3296,47 +3307,55 @@
               "null",
               "string"
             ],
+            "description": "Optional kernel form (collection instance) UUID.",
             "format": "uuid"
           },
           "observation_id": {
             "type": "string",
+            "description": "Kernel observation UUID.",
             "format": "uuid"
           },
           "study_code": {
             "type": [
               "null",
               "string"
-            ]
+            ],
+            "description": "Resolved study code."
           },
           "site_code": {
             "type": [
               "null",
               "string"
-            ]
+            ],
+            "description": "Resolved site code."
           },
           "subject_code": {
             "type": [
               "null",
               "string"
-            ]
+            ],
+            "description": "Resolved participant/subject code."
           },
           "collection_spec_id": {
             "type": [
               "null",
               "string"
-            ]
+            ],
+            "description": "Protocol collection specification identifier."
           },
           "planned_activity_id": {
             "type": [
               "null",
               "string"
-            ]
+            ],
+            "description": "Protocol planned activity (visit) identifier."
           },
           "item_id": {
             "type": [
               "null",
               "string"
-            ]
+            ],
+            "description": "Protocol form item identifier."
           },
           "superseded_revision": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
@@ -3344,6 +3363,7 @@
               "integer",
               "string"
             ],
+            "description": "Revision number that previously carried an active \u0060Verified\u0060 assertion.",
             "format": "int32"
           },
           "current_revision": {
@@ -3352,27 +3372,34 @@
               "integer",
               "string"
             ],
+            "description": "Latest observation revision number awaiting re-verification.",
             "format": "int32"
           },
           "verified_by": {
-            "type": "string"
+            "type": "string",
+            "description": "Actor who verified int StudySdvAlertPayload.SupersededRevision."
           },
           "verified_at": {
             "type": "string",
+            "description": "UTC timestamp when int StudySdvAlertPayload.SupersededRevision was verified.",
             "format": "date-time"
           },
           "modified_by": {
-            "type": "string"
+            "type": "string",
+            "description": "Actor who recorded int StudySdvAlertPayload.CurrentRevision."
           },
           "modified_at": {
             "type": "string",
+            "description": "UTC timestamp when int StudySdvAlertPayload.CurrentRevision was recorded.",
             "format": "date-time"
           },
           "reason_for_change": {
-            "type": "string"
+            "type": "string",
+            "description": "Reason for change recorded on int StudySdvAlertPayload.CurrentRevision."
           },
           "message": {
-            "type": "string"
+            "type": "string",
+            "description": "Formatted monitor-facing alert summary."
           }
         }
       },

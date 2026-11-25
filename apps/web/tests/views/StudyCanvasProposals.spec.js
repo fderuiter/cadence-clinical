@@ -273,6 +273,68 @@ describe("Clinical Canvas AI proposals (ADR-2635, PX-10, PX-17, UX-8)", () => {
       expect(wrapper.find("#needs-attention-status").exists()).toBe(false);
       await expect(wrapper.find("#needs-attention").element).toBeAccessible();
     });
+
+    it("renders Wave-1 attention.sdv_alerts directly without calling listSdvAlerts, links to Conduct observation, and is accessible", async () => {
+      const formUuid = "0192f3c4-5e6a-7b8c-9d0e-00000000f202";
+      const obsUuid = "0192f3c4-5e6a-7b8c-9d0e-00000000b202";
+      kernelApi.getStudyAttention = vi.fn(async () => ({
+        study_ref: STUDY,
+        proposals: [],
+        findings: [],
+        sdv_alerts: [
+          {
+            alert_id: "0192f3c4-5e6a-7b8c-9d0e-00000000a902",
+            study_id: "0192f3c4-5e6a-7b8c-9d0e-0000000000a1",
+            study_site_id: "0192f3c4-5e6a-7b8c-9d0e-000000000201",
+            enrollment_id: "0192f3c4-5e6a-7b8c-9d0e-00000000e101",
+            form_id: formUuid,
+            observation_id: obsUuid,
+            study_code: "CAD-101",
+            site_code: "017",
+            subject_code: "017-0001",
+            collection_spec_id: "VS",
+            planned_activity_id: "WEEK4",
+            item_id: "DIABP",
+            superseded_revision: 2,
+            current_revision: 3,
+            verified_by: "cra@sponsor.test",
+            verified_at: "2026-10-20T08:00:00Z",
+            modified_by: "crc@site.test",
+            modified_at: "2026-10-20T10:15:00Z",
+            reason_for_change: "Source addendum",
+            message:
+              "Previously verified field modified on Subject 017-0001 - Visit WEEK4 (DIABP)",
+          },
+        ],
+      }));
+
+      try {
+        await open();
+
+        expect(kernelApi.getStudyAttention).toHaveBeenCalledWith("CAD-101", {
+          limit: 20,
+        });
+        expect(ecrfQueriesApi.listSdvAlerts).not.toHaveBeenCalled();
+        const alertItem = wrapper.find(
+          '[data-testid="needs-attention-sdv-alert"]'
+        );
+        expect(alertItem.exists()).toBe(true);
+        expect(alertItem.text()).toContain("SDV re-verification required");
+        expect(alertItem.text()).toContain(
+          "Rev 2 verified by cra@sponsor.test · edited to rev 3 by crc@site.test"
+        );
+        const link = wrapper.find("#needs-attention-sdv-alert-0");
+        expect(link.text()).toBe(
+          "Previously verified field modified on Subject 017-0001 - Visit WEEK4 (DIABP)"
+        );
+        expect(decodeURIComponent(link.attributes("href"))).toBe(
+          `/studies/CAD-101?stage=conduct&site=017&form=collection_instance:${formUuid}&item=DIABP&observation=observation:${obsUuid}`
+        );
+        await expect(wrapper.find("#needs-attention").element).toBeAccessible();
+      } finally {
+        delete kernelApi.getStudyAttention;
+      }
+    });
   });
 
   describe("Proposal review", () => {

@@ -34,91 +34,11 @@ internal sealed class KernelCollectionInstanceRecords(
 {
     private static readonly Capability EnrollmentUnblindCapability = new("enrollment.unblind", VerbClass.Read);
 
-    private const string BlindedMarkerRegexSql =
-        "(treatment[_ ]assignment|treatment[_ ]group|treatment[_ ]allocation|treatment[_ ]arm|rand_arm|randomi[sz]ation|randomized_to|assigned[_ ]intervention|investigational[_ ]product|kit[_ ]number|dispensation|unblind|blinded[_ ]treatment|study[_ ]drug)";
-
     private static readonly string ObservationProjectionSql = $"""
         SELECT DISTINCT ON (o.id)
             o.id AS "Id",
             o.revision AS "Revision",
-            (
-                (o.value ->> 'type' = 'missing' AND o.value ->> 'reason' = 'Masked')
-                OR COALESCE(ci.collection_spec_id, '') ~* '{BlindedMarkerRegexSql}'
-                OR COALESCE(cim.item_id, '') ~* '{BlindedMarkerRegexSql}'
-                OR (
-                    c.id IS NOT NULL
-                    AND (COALESCE(c.external_code, '') || ' ' || c.preferred_label || ' ' || c.definition) ~* '{BlindedMarkerRegexSql}'
-                )
-                OR EXISTS (
-                    SELECT 1
-                    FROM kernel.protocol_versions AS pv
-                    WHERE pv.tenant_id = o.tenant_id
-                      AND pv.study_id = o.study_id
-                      AND (pv.content ~* '{BlindedMarkerRegexSql}' OR pv.content LIKE '%"interventions"%')
-                      AND pg_input_is_valid(pv.content, 'jsonb')
-                      AND jsonb_typeof(pv.content::jsonb) = 'object'
-                      AND (
-                          EXISTS (
-                              SELECT 1
-                              FROM jsonb_array_elements(
-                                  CASE
-                                      WHEN jsonb_typeof(pv.content::jsonb -> 'interventions') = 'array'
-                                          THEN pv.content::jsonb -> 'interventions'
-                                      ELSE '[]'::jsonb
-                                  END
-                              ) AS iv
-                              WHERE LOWER(iv -> 'product' ->> 'conceptId') = o.concept_id::text
-                          )
-                          OR EXISTS (
-                              SELECT 1
-                              FROM jsonb_array_elements(
-                                  CASE
-                                      WHEN jsonb_typeof(pv.content::jsonb -> 'collectionSpecs') = 'array'
-                                          THEN pv.content::jsonb -> 'collectionSpecs'
-                                      ELSE '[]'::jsonb
-                                  END
-                              ) AS spec
-                              WHERE (ci.collection_spec_id IS NULL OR (spec ->> 'id') = ci.collection_spec_id)
-                                AND (
-                                    (
-                                        (COALESCE(spec ->> 'id', '') || ' ' || COALESCE(spec ->> 'name', '') || ' ' || COALESCE(spec -> 'purpose' ->> 'operationalNeed', '')) ~* '{BlindedMarkerRegexSql}'
-                                        AND (
-                                            ci.collection_spec_id IS NOT NULL
-                                            OR EXISTS (
-                                                SELECT 1
-                                                FROM jsonb_array_elements(
-                                                    CASE
-                                                        WHEN jsonb_typeof(spec -> 'items') = 'array'
-                                                            THEN spec -> 'items'
-                                                        ELSE '[]'::jsonb
-                                                    END
-                                                ) AS spec_it
-                                                WHERE LOWER(spec_it -> 'concept' ->> 'conceptId') = o.concept_id::text
-                                            )
-                                        )
-                                    )
-                                    OR EXISTS (
-                                        SELECT 1
-                                        FROM jsonb_array_elements(
-                                            CASE
-                                                WHEN jsonb_typeof(spec -> 'items') = 'array'
-                                                    THEN spec -> 'items'
-                                                ELSE '[]'::jsonb
-                                            END
-                                        ) AS it
-                                        WHERE (
-                                            CASE
-                                                WHEN cim.item_id IS NOT NULL THEN (it ->> 'id') = cim.item_id
-                                                ELSE LOWER(it -> 'concept' ->> 'conceptId') = o.concept_id::text
-                                            END
-                                        )
-                                        AND (COALESCE(it ->> 'id', '') || ' ' || COALESCE(it -> 'purpose' ->> 'operationalNeed', '') || ' ' || COALESCE(it ->> 'prompt', '')) ~* '{BlindedMarkerRegexSql}'
-                                    )
-                                )
-                          )
-                      )
-                )
-            ) AS "IsBlinded"
+            {BlindedObservationSql.Predicate(includeMaskedRevisions: false)} AS "IsBlinded"
         FROM kernel.observations AS o
         LEFT JOIN kernel.collection_instance_members AS cim
             ON cim.tenant_id = o.tenant_id AND cim.observation_id = o.id

@@ -431,7 +431,9 @@ Commands in `Commands/ObservationCommands.cs`, each authorized against the obser
   observation (see below).
 - `IObservationRecords` reads an observation with its revisions, the locks covering it, the assertions about it and
   its kernel audit entries under one tenant connection lease and the composite
-  `(tenant_id, aggregate_type, aggregate_id, sequence)` audit index.
+  `(tenant_id, aggregate_type, aggregate_id, sequence)` audit index, and provides `FindUnverifiedSdvTargetsAsync` for
+  batched SQL pre-filtering of unverified SDV alert targets (`IStudySdvAlertReader` folds active `sdv_alerts` into
+  `GET /api/v1/kernel/studies/{studyRef}/attention`).
 - Reactions (the eCRF projection, edit checks, queries, SDV) consume `ObservationCorrected` after commit.
 - The value is a typed `ObservationValue` (`Evidence/ObservationValue.cs`, ADR-2623): `quantity` (UCUM unit,
   optional comparator), `coded` (code-system version and code), `text`, `boolean`, `dateTime` (partial ISO 8601) or

@@ -227,7 +227,11 @@ async function loadAttention(rawCode: string): Promise<void> {
       proposals.value = openProposals;
       seedProposalSummaries(openProposals);
       findings.value = dedupeCappedFindings(attention.findings ?? []);
-      await hydrateStudySdvAlerts(attention.study_ref, isCurrent);
+      if (Array.isArray(attention.sdv_alerts)) {
+        sdvAlerts.value = attention.sdv_alerts;
+      } else {
+        await hydrateStudySdvAlerts(attention.study_ref, isCurrent);
+      }
       return;
     }
 

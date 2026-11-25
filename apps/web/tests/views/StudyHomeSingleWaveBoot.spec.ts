@@ -4,6 +4,7 @@ import { createPinia, setActivePinia } from "pinia";
 import { createMemoryHistory, createRouter, RouterView } from "vue-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { executionApi } from "../../src/api/executionApi";
+import { ecrfQueriesApi } from "../../src/api/ecrfQueriesApi";
 import { kernelApi } from "../../src/api/kernelApi";
 import { knowledgeService } from "../../src/api/knowledge.js";
 import {
@@ -23,6 +24,12 @@ vi.mock("../../src/api/executionApi", () => ({
     getSubjectCounts: vi.fn(),
     getSiteComplianceStatus: vi.fn(),
     activateSite: vi.fn(),
+  },
+}));
+
+vi.mock("../../src/api/ecrfQueriesApi", () => ({
+  ecrfQueriesApi: {
+    listSdvAlerts: vi.fn(async () => []),
   },
 }));
 
@@ -60,6 +67,8 @@ const ENROLLMENT_REF = "enrollment:0192f3c4-5e6a-7b8c-9d0e-000000000301@1";
 const PROTOCOL_REF = "protocol_version:0192f3c4-5e6a-7b8c-9d0e-000000000401@2";
 const PROPOSAL_REF = "proposal:0192f3c4-5e6a-7b8c-9d0e-000000000501@1";
 const FINDING_REF = "validation_finding:0192f3c4-5e6a-7b8c-9d0e-000000000601";
+const FORM_UUID = "0192f3c4-5e6a-7b8c-9d0e-000000000b01";
+const OBSERVATION_UUID = "0192f3c4-5e6a-7b8c-9d0e-000000000c01";
 
 describe("Single-wave Study Home boot & seeded stage transitions", () => {
   let wrapper: ReturnType<typeof mount> | null = null;
@@ -182,6 +191,31 @@ describe("Single-wave Study Home boot & seeded stage transitions", () => {
           last_detected_run_ref:
             "validation_run:0192f3c4-5e6a-7b8c-9d0e-000000000901",
           resolved_by_run_ref: null,
+        },
+      ],
+      sdv_alerts: [
+        {
+          alert_id: "0192f3c4-5e6a-7b8c-9d0e-000000000d01",
+          study_id: "0192f3c4-5e6a-7b8c-9d0e-000000000101",
+          study_site_id: "0192f3c4-5e6a-7b8c-9d0e-000000000201",
+          enrollment_id: "0192f3c4-5e6a-7b8c-9d0e-000000000301",
+          form_id: FORM_UUID,
+          observation_id: OBSERVATION_UUID,
+          study_code: STUDY_CODE,
+          site_code: "SITE-01",
+          subject_code: "001-0004",
+          collection_spec_id: "VS",
+          planned_activity_id: "VISIT2",
+          item_id: "SYSBP",
+          superseded_revision: 1,
+          current_revision: 2,
+          verified_by: "cra@sponsor.test",
+          verified_at: "2026-10-20T08:00:00Z",
+          modified_by: "crc@site.test",
+          modified_at: "2026-10-20T09:45:00Z",
+          reason_for_change: "Corrected source transcription",
+          message:
+            "Previously verified field modified on Subject 001-0004 - Visit VISIT2 (SYSBP)",
         },
       ],
     });
@@ -320,8 +354,25 @@ describe("Single-wave Study Home boot & seeded stage transitions", () => {
     });
     expect(kernelApi.getNodes).not.toHaveBeenCalled();
     expect(kernelApi.getNode).not.toHaveBeenCalled();
+    expect(ecrfQueriesApi.listSdvAlerts).not.toHaveBeenCalled();
 
-    // Seeded activity node summaries render immediately in Recent Activity
+    const countTrackedApiCalls = () =>
+      [
+        ...Object.values(executionApi),
+        ...Object.values(ecrfQueriesApi),
+        ...Object.values(kernelApi),
+        resolveHelpSpy,
+      ].reduce(
+        (sum, fn) =>
+          sum +
+          (typeof fn === "function" && "mock" in fn ? fn.mock.calls.length : 0),
+        0
+      );
+
+    const coldBootCalls = countTrackedApiCalls();
+    expect(coldBootCalls).toBeLessThanOrEqual(6);
+
+    // Seeded activity node summaries and Wave-1 attention SDV alerts render immediately
     expect(wrapper.find("#study-activity").text()).toContain(
       "001-0004 · Enrollment 001-0004"
     );
@@ -334,34 +385,59 @@ describe("Single-wave Study Home boot & seeded stage transitions", () => {
     expect(wrapper.find("#needs-attention").text()).toContain(
       "[VS_SYSBP_HIGH]"
     );
+    const sdvAlertItem = wrapper.find(
+      '[data-testid="needs-attention-sdv-alert"]'
+    );
+    expect(sdvAlertItem.exists()).toBe(true);
+    expect(sdvAlertItem.text()).toContain("SDV re-verification required");
+    expect(sdvAlertItem.text()).toContain(
+      "Rev 1 verified by cra@sponsor.test · edited to rev 2 by crc@site.test"
+    );
+    const sdvLink = wrapper.find("#needs-attention-sdv-alert-0");
+    expect(decodeURIComponent(sdvLink.attributes("href") ?? "")).toBe(
+      `/studies/${STUDY_CODE}?stage=conduct&site=SITE-01&form=collection_instance:${FORM_UUID}&item=SYSBP&observation=observation:${OBSERVATION_UUID}`
+    );
+    await expect(wrapper.find("#needs-attention").element).toBeAccessible();
 
-    // Navigating across lifecycle stages reuses the seeded study_ref without calling /kernel/search
+    // Navigating across lifecycle stages reuses the seeded study_ref without calling /kernel/search or /sdv-alerts
+    let priorCalls = countTrackedApiCalls();
     await router.push({
       name: "study",
       params: { studyCode: STUDY_CODE },
       query: { stage: "design", section: "protocol-versions" },
     });
     await flushPromises();
+    expect(countTrackedApiCalls() - priorCalls).toBeLessThanOrEqual(6);
+
+    priorCalls = countTrackedApiCalls();
     await router.push({
       name: "study",
       params: { studyCode: STUDY_CODE },
       query: { stage: "setup", section: "sites" },
     });
     await flushPromises();
+    expect(countTrackedApiCalls() - priorCalls).toBeLessThanOrEqual(6);
+
+    priorCalls = countTrackedApiCalls();
     await router.push({
       name: "study",
       params: { studyCode: STUDY_CODE },
       query: { stage: "conduct", section: "participants" },
     });
     await flushPromises();
+    expect(countTrackedApiCalls() - priorCalls).toBeLessThanOrEqual(6);
+
+    priorCalls = countTrackedApiCalls();
     await router.push({
       name: "study",
       params: { studyCode: STUDY_CODE },
       query: { stage: "closeout", section: "locks" },
     });
     await flushPromises();
+    expect(countTrackedApiCalls() - priorCalls).toBeLessThanOrEqual(6);
 
     expect(kernelApi.search).not.toHaveBeenCalled();
+    expect(ecrfQueriesApi.listSdvAlerts).not.toHaveBeenCalled();
     expect(resolveHelpSpy).not.toHaveBeenCalled();
   });
 

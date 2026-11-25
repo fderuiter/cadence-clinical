@@ -512,35 +512,75 @@ export interface components {
       changed: boolean;
     };
     ExecutionForms_FormSdvAlertResponse: {
-      /** Format: uuid */
+      /**
+       * Format: uuid
+       * @description Unique identifier of the recorded alert episode.
+       */
       alert_id: string;
-      /** Format: uuid */
+      /**
+       * Format: uuid
+       * @description Kernel study UUID.
+       */
       study_id: string;
-      /** Format: uuid */
+      /**
+       * Format: uuid
+       * @description Optional kernel study-site UUID.
+       */
       study_site_id: null | string;
-      /** Format: uuid */
+      /**
+       * Format: uuid
+       * @description Kernel enrollment UUID.
+       */
       enrollment_id: string;
-      /** Format: uuid */
+      /**
+       * Format: uuid
+       * @description Optional kernel form (collection instance) UUID.
+       */
       form_id: null | string;
-      /** Format: uuid */
+      /**
+       * Format: uuid
+       * @description Kernel observation UUID.
+       */
       observation_id: string;
+      /** @description Resolved study code. */
       study_code: null | string;
+      /** @description Resolved site code. */
       site_code: null | string;
+      /** @description Resolved participant/subject code. */
       subject_code: null | string;
+      /** @description Protocol collection specification identifier. */
       collection_spec_id: null | string;
+      /** @description Protocol planned activity (visit) identifier. */
       planned_activity_id: null | string;
+      /** @description Protocol form item identifier. */
       item_id: null | string;
-      /** Format: int32 */
+      /**
+       * Format: int32
+       * @description Revision number that previously carried an active `Verified` assertion.
+       */
       superseded_revision: number | string;
-      /** Format: int32 */
+      /**
+       * Format: int32
+       * @description Latest observation revision number awaiting re-verification.
+       */
       current_revision: number | string;
+      /** @description Actor who verified int StudySdvAlertPayload.SupersededRevision. */
       verified_by: string;
-      /** Format: date-time */
+      /**
+       * Format: date-time
+       * @description UTC timestamp when int StudySdvAlertPayload.SupersededRevision was verified.
+       */
       verified_at: string;
+      /** @description Actor who recorded int StudySdvAlertPayload.CurrentRevision. */
       modified_by: string;
-      /** Format: date-time */
+      /**
+       * Format: date-time
+       * @description UTC timestamp when int StudySdvAlertPayload.CurrentRevision was recorded.
+       */
       modified_at: string;
+      /** @description Reason for change recorded on int StudySdvAlertPayload.CurrentRevision. */
       reason_for_change: string;
+      /** @description Formatted monitor-facing alert summary. */
       message: string;
     };
     ExecutionForms_FormSignatureResponse: {
@@ -1903,6 +1943,7 @@ export interface operations {
     parameters: {
       query?: {
         study_id?: string;
+        study_code?: string;
         enrollment_id?: string;
       };
       header?: never;

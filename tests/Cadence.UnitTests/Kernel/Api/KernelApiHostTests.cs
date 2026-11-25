@@ -135,6 +135,7 @@ public sealed class KernelApiHostTests : IDisposable
     private readonly FakeWorkQueues _workQueues = new();
     private readonly FakeWorkItemTargetResolver _workItemTargets = new();
     private readonly FakeLockRecords _locks = new();
+    private readonly FakeStudySdvAlerts _sdvAlerts = new();
     private readonly List<WebApplicationFactory<Cadence.Kernel.Host.Program>> _factories = [];
 
     public void Dispose()
@@ -1262,6 +1263,11 @@ public sealed class KernelApiHostTests : IDisposable
         attention.RootElement.GetProperty("proposals").EnumerateArray().Should().HaveCount(2);
         attention.RootElement.GetProperty("findings").EnumerateArray().Should().ContainSingle()
             .Which.GetProperty("status").GetString().Should().Be("Open");
+        var attentionAlert = attention.RootElement.GetProperty("sdv_alerts").EnumerateArray().Should().ContainSingle().Subject;
+        attentionAlert.GetProperty("study_code").GetString().Should().Be("CAD-101");
+        attentionAlert.GetProperty("item_id").GetString().Should().Be("sbp");
+        attentionAlert.GetProperty("superseded_revision").GetInt32().Should().Be(1);
+        attentionAlert.GetProperty("current_revision").GetInt32().Should().Be(2);
 
         using var activityPage = await ReadJsonAsync(client, "/api/v1/kernel/activity?scope=CAD-101&include_nodes=true", ct);
         var entries = activityPage.RootElement.GetProperty("entries").EnumerateArray().ToList();
@@ -1740,6 +1746,8 @@ public sealed class KernelApiHostTests : IDisposable
         services.AddSingleton<IWorkItemTargetResolver>(_workItemTargets);
         services.RemoveAll<ILockRecords>();
         services.AddSingleton<ILockRecords>(_locks);
+        services.RemoveAll<IStudySdvAlertReader>();
+        services.AddSingleton<IStudySdvAlertReader>(_sdvAlerts);
 
         // The activity projector reads the database the host is configured with, which these tests never open.
         var projector = services.SingleOrDefault(d => d.ServiceType == typeof(IHostedService) && d.ImplementationType?.Name == "KernelActivityProjectionService");
@@ -2511,6 +2519,48 @@ public sealed class KernelApiHostTests : IDisposable
                 Blockers: [],
                 Explanation: explanation,
                 OpenErrorFindingCount: 0));
+        }
+    }
+
+    private sealed class FakeStudySdvAlerts : IStudySdvAlertReader
+    {
+        private static readonly Guid SampleAlertId = Guid.Parse("77777777-8888-4999-aaaa-bbbbbbbbbbbb");
+
+        public Task<IReadOnlyList<StudySdvAlertView>> ListForStudyAsync(
+            TenantId tenant,
+            StudyId study,
+            string? knownStudyCode = null,
+            CancellationToken cancellationToken = default)
+        {
+            if (study != StudyId.FromGuid(Study.Id))
+            {
+                return Task.FromResult<IReadOnlyList<StudySdvAlertView>>([]);
+            }
+
+            return Task.FromResult<IReadOnlyList<StudySdvAlertView>>(
+            [
+                new StudySdvAlertView(
+                    SampleAlertId,
+                    study,
+                    StudySiteId.FromGuid(StudySite.Id),
+                    EnrollmentId.FromGuid(Enrollment.Id),
+                    CollectionInstanceId.FromGuid(FormInstance.Id),
+                    ObservationId.FromGuid(RecordedObservation.Id),
+                    knownStudyCode ?? "CAD-101",
+                    "SITE-017",
+                    "017-010",
+                    "form.vitals",
+                    "visit.screening",
+                    "sbp",
+                    1,
+                    2,
+                    "cra@sponsor.test",
+                    GrantedFrom.AddDays(2),
+                    "crc@site017.test",
+                    GrantedFrom.AddDays(3),
+                    "Corrected transcription error against source flowsheet",
+                    "Previously verified field modified on Subject 017-010 - Visit visit.screening (sbp)"),
+            ]);
         }
     }
 }

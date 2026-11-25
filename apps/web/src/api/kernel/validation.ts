@@ -20,6 +20,8 @@ export type KernelValidationFindingDetail =
   KernelSchemas["Kernel_KernelValidationFindingDetailResponse"];
 export type KernelStudyAttention =
   KernelSchemas["Kernel_KernelStudyAttentionResponse"];
+export type KernelStudySdvAlert =
+  KernelSchemas["Kernel_KernelStudySdvAlertResponse"];
 export type KernelFindingClassification =
   "DataIssue" | "MappingIssue" | "MetadataIssue" | "RuleIssue" | "NotAnIssue";
 

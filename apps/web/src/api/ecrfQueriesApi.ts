@@ -67,6 +67,7 @@ export type FormSdvAlertRecord = FormSdvAlertResponse;
 
 export interface SdvAlertFilters {
   studyId?: string;
+  studyCode?: string;
   enrollmentId?: string;
 }
 
@@ -342,11 +343,13 @@ export const ecrfQueriesApi = {
     filters: SdvAlertFilters,
     options?: QueryReadOptions
   ): Promise<FormSdvAlertResponse[]> {
+    const trimmedStudyCode = filters.studyCode?.trim() || undefined;
     return unwrapResponse(
       client.GET("/api/v1/execution/forms/sdv-alerts", {
         params: {
           query: {
             ...(filters.studyId ? { study_id: filters.studyId } : {}),
+            ...(trimmedStudyCode ? { study_code: trimmedStudyCode } : {}),
             ...(filters.enrollmentId
               ? { enrollment_id: filters.enrollmentId }
               : {}),

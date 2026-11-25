@@ -535,7 +535,7 @@ export function createProtocolDesignDomain(ctx) {
       };
     },
 
-    getStudyAttention(studyRefOrCode = "", { limit = 20 } = {}) {
+    getStudyAttention(studyRefOrCode = "", { limit = 20 } = {}, caller = null) {
       const resolved = ctx.resolveExistingStudy(studyRefOrCode);
       if (resolved.error) return resolved;
       const cap = Math.min(Math.max(1, Number(limit) || 20), 200);
@@ -547,11 +547,26 @@ export function createProtocolDesignDomain(ctx) {
         statuses: ["Open", "Investigating"],
         limit: cap,
       });
+      const studyRef = String(resolved.study.ref).split("@")[0];
+      const studyId = studyRef.startsWith("study:")
+        ? studyRef.slice("study:".length)
+        : "";
+      const sdvAlerts =
+        typeof ctx.listSdvAlerts === "function"
+          ? ctx.listSdvAlerts(
+              {
+                studyId: studyId || undefined,
+                studyCode: resolved.study.code || undefined,
+              },
+              caller
+            )
+          : [];
       return {
         data: {
-          study_ref: String(resolved.study.ref).split("@")[0],
+          study_ref: studyRef,
           proposals: proposalsRes.data || [],
           findings: findingsRes.data?.findings || [],
+          sdv_alerts: Array.isArray(sdvAlerts) ? sdvAlerts : [],
         },
       };
     },

@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Kernel;
 using Cadence.Kernel.Evidence;
+using Cadence.Kernel.Execution;
 using Cadence.Kernel.Modules;
 using Cadence.Kernel.Navigation;
 using Cadence.Kernel.References;
@@ -28,6 +30,8 @@ namespace Cadence.Modules.Execution.Endpoints;
 /// </summary>
 internal static class FormSdvAlertEndpoints
 {
+    private const int MaxStudyCodeLength = 128;
+
     public static IEndpointRouteBuilder MapFormSdvAlertEndpoints(this IEndpointRouteBuilder endpoints)
     {
         var group = endpoints.MapGroup(FormEndpoints.RoutePrefix)
@@ -47,28 +51,70 @@ internal static class FormSdvAlertEndpoints
 
     internal static async Task<Results<Ok<IReadOnlyList<FormSdvAlertResponse>>, ProblemHttpResult>> ListSdvAlertsAsync(
         [FromQuery(Name = "study_id")] Guid? studyId,
+        [FromQuery(Name = "study_code")] string? studyCode,
         [FromQuery(Name = "enrollment_id")] Guid? enrollmentId,
         HttpContext context,
         IModuleTenantContextFactory<ExecutionModuleDbContext> contexts,
         IObservationRecords observations,
         ICollectionInstanceRecords forms,
+        IStudyDirectory studies,
         IKernelReadAccess access,
         IKernelNavigator navigator,
         CancellationToken cancellationToken)
     {
-        bool hasStudy = studyId is { } sGuid && sGuid != Guid.Empty;
+        bool hasStudyId = studyId is { } sGuid && sGuid != Guid.Empty;
         bool hasEnrollment = enrollmentId is { } eGuid && eGuid != Guid.Empty;
-        if ((studyId.HasValue && !hasStudy) || (enrollmentId.HasValue && !hasEnrollment) || (!hasStudy && !hasEnrollment))
+        string? normalizedStudyCode = studyCode?.Trim();
+        bool hasStudyCode = normalizedStudyCode is not null;
+
+        if ((studyId.HasValue && !hasStudyId)
+            || (enrollmentId.HasValue && !hasEnrollment)
+            || (hasStudyCode && (normalizedStudyCode!.Length == 0
+                || normalizedStudyCode.Length > MaxStudyCodeLength
+                || normalizedStudyCode.Any(char.IsControl))))
         {
             return TypedResults.Problem(
                 title: "Invalid query",
-                detail: "Specify study_id or enrollment_id.",
+                detail: "Specify study_id, study_code, or enrollment_id.",
+                statusCode: StatusCodes.Status400BadRequest);
+        }
+
+        if (!hasStudyId && !hasStudyCode && !hasEnrollment)
+        {
+            return TypedResults.Problem(
+                title: "Invalid query",
+                detail: "Specify study_id, study_code, or enrollment_id.",
                 statusCode: StatusCodes.Status400BadRequest);
         }
 
         var tenant = KernelRequestTenant.Get(context);
+        StudyId? targetStudy = hasStudyId ? StudyId.FromGuid(studyId!.Value) : null;
+        string? knownStudyCode = null;
+
+        if (hasStudyCode)
+        {
+            var resolvedByCode = await studies.FindStudyByCodeAsync(tenant, normalizedStudyCode!, cancellationToken).ConfigureAwait(false);
+            if (resolvedByCode is null)
+            {
+                return TypedResults.Problem(
+                    title: "Not found",
+                    detail: $"Study '{normalizedStudyCode}' does not exist.",
+                    statusCode: StatusCodes.Status404NotFound);
+            }
+
+            if (targetStudy is { } explicitStudy && explicitStudy != resolvedByCode.StudyId)
+            {
+                return TypedResults.Problem(
+                    title: "Invalid query",
+                    detail: "study_id and study_code refer to different studies.",
+                    statusCode: StatusCodes.Status400BadRequest);
+            }
+
+            targetStudy = resolvedByCode.StudyId;
+            knownStudyCode = resolvedByCode.StudyCode;
+        }
+
         Dictionary<EnrollmentId, EnrollmentContext>? studyEnrollmentHeaders = null;
-        StudyId? targetStudy = hasStudy ? StudyId.FromGuid(studyId!.Value) : null;
         EnrollmentId? targetEnrollment = hasEnrollment ? EnrollmentId.FromGuid(enrollmentId!.Value) : null;
 
         if (targetStudy is { } study)
@@ -112,7 +158,9 @@ internal static class FormSdvAlertEndpoints
 
         if (targetEnrollment is { } enrollment)
         {
-            if (!await access.CanSeeAsync(tenant, NodeRef.For(enrollment), cancellationToken).ConfigureAwait(false))
+            var enrollmentNode = NodeRef.For(enrollment);
+            var visibleEnrollmentNodes = await access.FilterVisibleAsync(tenant, [enrollmentNode], cancellationToken).ConfigureAwait(false);
+            if (!visibleEnrollmentNodes.Contains(enrollmentNode))
             {
                 return NotVisible($"enrollment {enrollment.Value:D}");
             }
@@ -123,86 +171,146 @@ internal static class FormSdvAlertEndpoints
             }
         }
 
-        List<FormSdvAlert> rawAlerts;
-        await using (var db = contexts.Create(tenant))
+        var views = await QueryActiveAlertsCoreAsync(
+            tenant,
+            targetStudy,
+            targetEnrollment,
+            knownStudyCode,
+            studyEnrollmentHeaders,
+            contexts,
+            observations,
+            forms,
+            access,
+            navigator,
+            cancellationToken).ConfigureAwait(false);
+
+        return TypedResults.Ok<IReadOnlyList<FormSdvAlertResponse>>([.. views.Select(FormSdvAlertResponse.From)]);
+    }
+
+    internal static async Task<IReadOnlyList<StudySdvAlertView>> ReadVisibleStudyAlertsAsync(
+        TenantId tenant,
+        StudyId study,
+        string? knownStudyCode,
+        IModuleTenantContextFactory<ExecutionModuleDbContext> contexts,
+        IObservationRecords observations,
+        ICollectionInstanceRecords forms,
+        IKernelReadAccess access,
+        IKernelNavigator navigator,
+        CancellationToken cancellationToken)
+    {
+        var studyEnrollments = await navigator.GetStudyEnrollmentsAsync(tenant, study, cancellationToken).ConfigureAwait(false);
+        if (studyEnrollments is null || studyEnrollments.Count == 0)
         {
-            IQueryable<FormSdvAlert> query = db.FormSdvAlerts.AsNoTracking();
-            if (targetStudy is { } s)
-            {
-                query = query.Where(a => a.StudyId == s);
-            }
-
-            if (targetEnrollment is { } e)
-            {
-                query = query.Where(a => a.EnrollmentId == e);
-            }
-            else if (studyEnrollmentHeaders is not null)
-            {
-                var allowedEnrollments = studyEnrollmentHeaders.Keys.ToList();
-                if (allowedEnrollments.Count == 0)
-                {
-                    return TypedResults.Ok<IReadOnlyList<FormSdvAlertResponse>>([]);
-                }
-
-                query = query.Where(a => allowedEnrollments.Contains(a.EnrollmentId));
-            }
-
-            rawAlerts = await query
-                .OrderByDescending(a => a.ModifiedAt)
-                .ThenByDescending(a => a.NewRevision)
-                .ToListAsync(cancellationToken)
-                .ConfigureAwait(false);
+            return [];
         }
 
-        if (rawAlerts.Count == 0)
+        var studyNode = NodeRef.For(study);
+        List<NodeRef> nodesToCheck = [studyNode, .. studyEnrollments.Select(e => NodeRef.For(e.EnrollmentId))];
+        var visibleNodes = await access.FilterVisibleAsync(tenant, nodesToCheck, cancellationToken).ConfigureAwait(false);
+        if (!visibleNodes.Contains(studyNode))
         {
-            return TypedResults.Ok<IReadOnlyList<FormSdvAlertResponse>>([]);
+            return [];
         }
 
-        // Collapse multiple historical modifications of the same observation to the latest recorded alert episode.
-        var latestByObservation = rawAlerts
-            .GroupBy(a => a.ObservationId)
-            .Select(g => g.OrderByDescending(a => a.NewRevision).ThenByDescending(a => a.ModifiedAt).First())
-            .ToList();
+        var studyEnrollmentHeaders = new Dictionary<EnrollmentId, EnrollmentContext>();
+        foreach (var member in studyEnrollments)
+        {
+            if (!visibleNodes.Contains(NodeRef.For(member.EnrollmentId)))
+            {
+                continue;
+            }
 
-        // Filter out observations masked by scope or blinding (K-AUTH-4).
-        var observationNodes = latestByObservation.Select(a => NodeRef.For(a.ObservationId)).ToList();
-        var visibleObservations = await access.FilterVisibleAsync(tenant, observationNodes, cancellationToken).ConfigureAwait(false);
+            studyEnrollmentHeaders[member.EnrollmentId] = new EnrollmentContext(
+                member.StudySiteId?.Value,
+                member.SiteCode,
+                member.SubjectCode);
+        }
 
-        var activeCandidates = new List<(FormSdvAlert Alert, ObservationRecord Observation, int CurrentRevision)>();
+        if (studyEnrollmentHeaders.Count == 0)
+        {
+            return [];
+        }
+
+        return await QueryActiveAlertsCoreAsync(
+            tenant,
+            study,
+            targetEnrollment: null,
+            knownStudyCode,
+            studyEnrollmentHeaders,
+            contexts,
+            observations,
+            forms,
+            access,
+            navigator,
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    private static async Task<IReadOnlyList<StudySdvAlertView>> QueryActiveAlertsCoreAsync(
+        TenantId tenant,
+        StudyId? targetStudy,
+        EnrollmentId? targetEnrollment,
+        string? knownStudyCode,
+        Dictionary<EnrollmentId, EnrollmentContext>? studyEnrollmentHeaders,
+        IModuleTenantContextFactory<ExecutionModuleDbContext> contexts,
+        IObservationRecords observations,
+        ICollectionInstanceRecords forms,
+        IKernelReadAccess access,
+        IKernelNavigator navigator,
+        CancellationToken cancellationToken)
+    {
+        if (targetEnrollment is null && studyEnrollmentHeaders is { Count: 0 })
+        {
+            return [];
+        }
+
+        var latestByObservation = await LoadLatestAlertsByObservationAsync(
+            tenant,
+            targetStudy,
+            targetEnrollment,
+            studyEnrollmentHeaders?.Keys,
+            contexts,
+            cancellationToken).ConfigureAwait(false);
+        if (latestByObservation.Count == 0)
+        {
+            return [];
+        }
+
+        var unblindCache = new Dictionary<EnrollmentId, bool>();
+        async ValueTask<bool> CanUnblindOncePerEnrollmentAsync(EnrollmentId enrollmentId, CancellationToken ct)
+        {
+            if (unblindCache.TryGetValue(enrollmentId, out var cached))
+            {
+                return cached;
+            }
+
+            var permitted = await access.CanUnblindAsync(tenant, enrollmentId, ct).ConfigureAwait(false);
+            unblindCache[enrollmentId] = permitted;
+            return permitted;
+        }
+
+        var candidateObservationIds = latestByObservation.Select(a => a.ObservationId).ToList();
+        var activeTargetsByObservation = await observations.FindUnverifiedSdvTargetsAsync(
+            tenant,
+            candidateObservationIds,
+            CanUnblindOncePerEnrollmentAsync,
+            cancellationToken).ConfigureAwait(false);
+        if (activeTargetsByObservation.Count == 0)
+        {
+            return [];
+        }
+
+        var activeCandidates = new List<(FormSdvAlert Alert, ObservationSdvAlertTarget Observation)>(activeTargetsByObservation.Count);
         foreach (var alert in latestByObservation)
         {
-            if (!visibleObservations.Contains(NodeRef.For(alert.ObservationId)))
+            if (activeTargetsByObservation.TryGetValue(alert.ObservationId, out var target))
             {
-                continue;
+                activeCandidates.Add((alert, target));
             }
-
-            var obs = await observations.FindForReaderAsync(
-                tenant,
-                alert.ObservationId,
-                (eId, ct) => access.CanUnblindAsync(tenant, eId, ct),
-                cancellationToken).ConfigureAwait(false);
-            if (obs is null || (obs.IsBlindedTreatment && obs.ObservationId.IsEmpty))
-            {
-                continue;
-            }
-
-            int currentRevision = obs.Revisions.Count > 0 ? obs.Revisions[^1].Number : (int)obs.Version;
-            bool latestVerified = obs.Assertions.Any(a =>
-                a.Kind == AssertionKind.Verified
-                && a.Revision == currentRevision
-                && a.RetractedBy is null);
-            if (latestVerified)
-            {
-                continue;
-            }
-
-            activeCandidates.Add((alert, obs, currentRevision));
         }
 
         if (activeCandidates.Count == 0)
         {
-            return TypedResults.Ok<IReadOnlyList<FormSdvAlertResponse>>([]);
+            return [];
         }
 
         var formIds = activeCandidates
@@ -216,9 +324,13 @@ internal static class FormSdvAlertEndpoints
             : new Dictionary<CollectionInstanceId, CollectionInstanceHeader>();
 
         var nodesToResolve = new List<NodeRef>();
-        foreach (var (alert, obs, _) in activeCandidates)
+        foreach (var (alert, obs) in activeCandidates)
         {
-            nodesToResolve.Add(NodeRef.For(alert.StudyId));
+            if (string.IsNullOrWhiteSpace(knownStudyCode) || targetStudy != alert.StudyId)
+            {
+                nodesToResolve.Add(NodeRef.For(alert.StudyId));
+            }
+
             if (studyEnrollmentHeaders is null || !studyEnrollmentHeaders.ContainsKey(alert.EnrollmentId))
             {
                 nodesToResolve.Add(NodeRef.For(alert.EnrollmentId));
@@ -237,16 +349,25 @@ internal static class FormSdvAlertEndpoints
             ? await navigator.ResolveManyAsync(tenant, nodesToResolve.Distinct().ToList(), cancellationToken).ConfigureAwait(false)
             : new Dictionary<NodeRef, NodeSummary>();
 
-        var responses = activeCandidates
+        var views = activeCandidates
             .Select(candidate =>
             {
-                var (alert, obs, currentRevision) = candidate;
+                var (alert, obs) = candidate;
+                var currentRevision = obs.CurrentRevision;
                 var resolvedFormId = alert.FormId ?? obs.CollectionInstanceId;
                 var formHeader = resolvedFormId is { IsEmpty: false } fId ? formsById.GetValueOrDefault(fId) : null;
                 var itemId = alert.ItemId ?? obs.ItemId;
 
-                var studySummary = summaries.GetValueOrDefault(NodeRef.For(alert.StudyId));
-                var studyCode = studySummary?.Code ?? studySummary?.Title;
+                string? studyCode;
+                if (!string.IsNullOrWhiteSpace(knownStudyCode) && targetStudy == alert.StudyId)
+                {
+                    studyCode = knownStudyCode;
+                }
+                else
+                {
+                    var studySummary = summaries.GetValueOrDefault(NodeRef.For(alert.StudyId));
+                    studyCode = studySummary?.Code ?? studySummary?.Title;
+                }
 
                 Guid? studySiteGuid = alert.StudySiteId?.Value
                     ?? (formHeader is { StudySiteId.IsEmpty: false } ? formHeader.StudySiteId.Value : null);
@@ -271,15 +392,14 @@ internal static class FormSdvAlertEndpoints
                     subjectCode = enrollmentSummary?.Code ?? enrollmentSummary?.Title;
                 }
 
-                var latestRev = obs.Revisions.Count > 0 ? obs.Revisions[^1] : null;
-                var modifiedBy = currentRevision > alert.NewRevision && !string.IsNullOrWhiteSpace(latestRev?.RecordedBy)
-                    ? latestRev.RecordedBy
+                var modifiedBy = currentRevision > alert.NewRevision && !string.IsNullOrWhiteSpace(obs.LatestRecordedBy)
+                    ? obs.LatestRecordedBy
                     : alert.ModifiedBy;
-                var modifiedAt = currentRevision > alert.NewRevision && latestRev is not null
-                    ? latestRev.RecordedAt
+                var modifiedAt = currentRevision > alert.NewRevision
+                    ? obs.LatestRecordedAt
                     : alert.ModifiedAt;
-                var reason = currentRevision > alert.NewRevision && !string.IsNullOrWhiteSpace(latestRev?.ReasonForChange)
-                    ? latestRev.ReasonForChange
+                var reason = currentRevision > alert.NewRevision && !string.IsNullOrWhiteSpace(obs.LatestReasonForChange)
+                    ? obs.LatestReasonForChange
                     : alert.ModifiedReason;
 
                 var message = FormatAlertMessage(
@@ -289,13 +409,13 @@ internal static class FormSdvAlertEndpoints
                     formHeader?.CollectionSpecId,
                     itemId);
 
-                return new FormSdvAlertResponse(
+                return new StudySdvAlertView(
                     alert.Id,
-                    alert.StudyId.Value,
-                    studySiteGuid,
-                    alert.EnrollmentId.Value,
-                    resolvedFormId?.Value,
-                    alert.ObservationId.Value,
+                    alert.StudyId,
+                    studySiteGuid is { } resolvedSiteGuid ? StudySiteId.FromGuid(resolvedSiteGuid) : null,
+                    alert.EnrollmentId,
+                    resolvedFormId is { IsEmpty: false } nonEmptyForm ? nonEmptyForm : null,
+                    alert.ObservationId,
                     studyCode,
                     siteCode,
                     subjectCode,
@@ -315,7 +435,116 @@ internal static class FormSdvAlertEndpoints
             .ThenBy(r => r.AlertId)
             .ToList();
 
-        return TypedResults.Ok<IReadOnlyList<FormSdvAlertResponse>>(responses);
+        return views;
+    }
+
+    private static async Task<List<FormSdvAlert>> LoadLatestAlertsByObservationAsync(
+        TenantId tenant,
+        StudyId? targetStudy,
+        EnrollmentId? targetEnrollment,
+        IReadOnlyCollection<EnrollmentId>? allowedEnrollments,
+        IModuleTenantContextFactory<ExecutionModuleDbContext> contexts,
+        CancellationToken cancellationToken)
+    {
+        await using var db = contexts.Create(tenant);
+        if (db.Database.IsRelational())
+        {
+            await db.Database.OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
+            try
+            {
+                if (targetStudy is { } study && targetEnrollment is { } enrollment)
+                {
+                    return await db.FormSdvAlerts
+                        .FromSqlInterpolated($"""
+                            SELECT DISTINCT ON (observation_id) *
+                            FROM execution.form_sdv_alerts
+                            WHERE tenant_id = {tenant.Value}
+                              AND study_id = {study.Value}
+                              AND enrollment_id = {enrollment.Value}
+                            ORDER BY observation_id, new_revision DESC, modified_at DESC
+                            """)
+                        .AsNoTracking()
+                        .ToListAsync(cancellationToken)
+                        .ConfigureAwait(false);
+                }
+
+                if (targetStudy is { } studyOnly)
+                {
+                    var enrollmentGuids = allowedEnrollments is not null
+                        ? allowedEnrollments.Select(e => e.Value).ToArray()
+                        : [];
+                    if (enrollmentGuids.Length == 0)
+                    {
+                        return [];
+                    }
+
+                    return await db.FormSdvAlerts
+                        .FromSqlInterpolated($"""
+                            SELECT DISTINCT ON (observation_id) *
+                            FROM execution.form_sdv_alerts
+                            WHERE tenant_id = {tenant.Value}
+                              AND study_id = {studyOnly.Value}
+                              AND enrollment_id = ANY({enrollmentGuids})
+                            ORDER BY observation_id, new_revision DESC, modified_at DESC
+                            """)
+                        .AsNoTracking()
+                        .ToListAsync(cancellationToken)
+                        .ConfigureAwait(false);
+                }
+
+                if (targetEnrollment is { } enrollmentOnly)
+                {
+                    return await db.FormSdvAlerts
+                        .FromSqlInterpolated($"""
+                            SELECT DISTINCT ON (observation_id) *
+                            FROM execution.form_sdv_alerts
+                            WHERE tenant_id = {tenant.Value}
+                              AND enrollment_id = {enrollmentOnly.Value}
+                            ORDER BY observation_id, new_revision DESC, modified_at DESC
+                            """)
+                        .AsNoTracking()
+                        .ToListAsync(cancellationToken)
+                        .ConfigureAwait(false);
+                }
+
+                return [];
+            }
+            finally
+            {
+                await db.Database.CloseConnectionAsync().ConfigureAwait(false);
+            }
+        }
+
+        IQueryable<FormSdvAlert> fallbackQuery = db.FormSdvAlerts.AsNoTracking();
+        if (targetStudy is { } s)
+        {
+            fallbackQuery = fallbackQuery.Where(a => a.StudyId == s);
+        }
+
+        if (targetEnrollment is { } e)
+        {
+            fallbackQuery = fallbackQuery.Where(a => a.EnrollmentId == e);
+        }
+        else if (allowedEnrollments is not null)
+        {
+            var allowedList = allowedEnrollments.ToList();
+            if (allowedList.Count == 0)
+            {
+                return [];
+            }
+
+            fallbackQuery = fallbackQuery.Where(a => allowedList.Contains(a.EnrollmentId));
+        }
+
+        var rawAlerts = await fallbackQuery
+            .OrderByDescending(a => a.ModifiedAt)
+            .ThenByDescending(a => a.NewRevision)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+        return rawAlerts
+            .GroupBy(a => a.ObservationId)
+            .Select(g => g.OrderByDescending(a => a.NewRevision).ThenByDescending(a => a.ModifiedAt).First())
+            .ToList();
     }
 
     internal static string FormatAlertMessage(
@@ -354,24 +583,18 @@ internal static class FormSdvAlertEndpoints
 /// <summary>
 /// HTTP response DTO for an active CRA source data verification modification alert (<c>PRD-QRY-006</c>, <c>K-XS-1</c>).
 /// </summary>
-public sealed record FormSdvAlertResponse(
-    Guid AlertId,
-    Guid StudyId,
-    Guid? StudySiteId,
-    Guid EnrollmentId,
-    Guid? FormId,
-    Guid ObservationId,
-    string? StudyCode,
-    string? SiteCode,
-    string? SubjectCode,
-    string? CollectionSpecId,
-    string? PlannedActivityId,
-    string? ItemId,
-    int SupersededRevision,
-    int CurrentRevision,
-    string VerifiedBy,
-    DateTimeOffset VerifiedAt,
-    string ModifiedBy,
-    DateTimeOffset ModifiedAt,
-    string ReasonForChange,
-    string Message);
+public sealed record FormSdvAlertResponse : StudySdvAlertPayload
+{
+    /// <summary>Initializes an empty response instance for JSON deserialization.</summary>
+    public FormSdvAlertResponse()
+    {
+    }
+
+    [SetsRequiredMembers]
+    private FormSdvAlertResponse(StudySdvAlertView view)
+        : base(view)
+    {
+    }
+
+    internal static FormSdvAlertResponse From(StudySdvAlertView view) => new(view);
+}
