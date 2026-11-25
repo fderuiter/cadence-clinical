@@ -1047,7 +1047,7 @@
                 id="amendment-channels-label"
                 class="form-label"
                 style="
-                  font-size: 0.85rem;
+                  font-size: var(--font-size-sm);
                   font-weight: 600;
                   color: var(--text-main);
                 "
@@ -2186,7 +2186,7 @@ onMounted(() => {
   border-radius: var(--radius-md, 8px);
   margin-bottom: 1.25rem;
   font-weight: 600;
-  font-size: 0.925rem;
+  font-size: var(--font-size-base);
 }
 
 .banner-success {
@@ -2208,14 +2208,14 @@ onMounted(() => {
   border-radius: 8px;
   background: var(--semantic-color-error-bg-soft);
   color: var(--semantic-color-error);
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
 }
 
 .banner-close {
   margin-left: auto;
   background: none;
   border: none;
-  font-size: 1.25rem;
+  font-size: var(--font-size-lg);
   cursor: pointer;
   color: inherit;
 }
@@ -2236,7 +2236,7 @@ onMounted(() => {
 }
 
 .view-title {
-  font-size: 1.5rem;
+  font-size: var(--font-size-2xl);
   font-weight: 700;
   margin: 0;
 }
@@ -2244,7 +2244,7 @@ onMounted(() => {
 .view-description {
   color: var(--semantic-color-text-secondary);
   margin-top: 0.25rem;
-  font-size: 0.925rem;
+  font-size: var(--font-size-base);
   max-width: 900px;
 }
 
@@ -2264,7 +2264,7 @@ onMounted(() => {
   background: var(--semantic-color-surface);
   border-radius: var(--radius-md, 8px);
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-secondary);
   cursor: pointer;
   transition: all 0.2s ease;
@@ -2280,7 +2280,7 @@ onMounted(() => {
 .nav-pill-badge {
   background: var(--semantic-color-error);
   color: var(--semantic-color-surface);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   padding: 0.15rem 0.5rem;
   border-radius: 12px;
   font-weight: 700;
@@ -2311,14 +2311,14 @@ onMounted(() => {
 }
 
 .selector-label {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   text-transform: uppercase;
   color: var(--semantic-color-text-secondary);
 }
 
 .diff-arrow {
-  font-size: 1.25rem;
+  font-size: var(--font-size-lg);
   color: var(--text-main);
   margin-top: 1rem;
 }
@@ -2329,13 +2329,13 @@ onMounted(() => {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm, 6px);
   background: var(--semantic-color-surface);
-  font-size: 0.9rem;
+  font-size: var(--font-size-md);
 }
 
 .form-select-sm,
 .form-control-sm {
   padding: 0.35rem 0.6rem;
-  font-size: 0.825rem;
+  font-size: var(--font-size-md);
 }
 
 .version-meta-tags {
@@ -2344,7 +2344,7 @@ onMounted(() => {
 }
 
 .meta-tag {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   padding: 0.4rem 0.75rem;
   background: var(--semantic-color-surface-header);
   border: 1px solid var(--border);
@@ -2378,7 +2378,7 @@ onMounted(() => {
   padding: 0.6rem 1.2rem;
   border: none;
   background: none;
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--semantic-color-text-secondary);
   cursor: pointer;
@@ -2414,14 +2414,14 @@ onMounted(() => {
 
 .section-title,
 .card-title {
-  font-size: 1.15rem;
+  font-size: var(--font-size-lg);
   font-weight: 600;
   margin: 0;
 }
 
 .card-subtitle {
   color: var(--semantic-color-text-secondary);
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   margin: 0.25rem 0 0 0;
 }
 
@@ -2432,7 +2432,7 @@ onMounted(() => {
 }
 
 .subject-total-counter {
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -2472,7 +2472,7 @@ onMounted(() => {
 }
 
 .card-badge {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 0.2rem 0.5rem;
   border-radius: 4px;
@@ -2492,12 +2492,12 @@ onMounted(() => {
 }
 
 .metric-count {
-  font-size: 1.5rem;
+  font-size: var(--font-size-2xl);
   font-weight: 700;
 }
 
 .metric-label {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-secondary);
   margin-bottom: 0.75rem;
 }
@@ -2543,7 +2543,7 @@ onMounted(() => {
 }
 
 .filter-label {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   color: var(--semantic-color-text-secondary);
 }
@@ -2561,7 +2561,7 @@ onMounted(() => {
 .data-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
 }
 
 .data-table th,
@@ -2583,7 +2583,7 @@ onMounted(() => {
 }
 
 .site-tag {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   font-weight: 700;
   padding: 0.2rem 0.5rem;
   background: var(--semantic-color-primary-light);
@@ -2592,7 +2592,7 @@ onMounted(() => {
 }
 
 .state-pill {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   padding: 0.2rem 0.5rem;
   background: var(--semantic-color-surface-header);
   border-radius: 4px;
@@ -2605,14 +2605,14 @@ onMounted(() => {
 }
 
 .consent-badge {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   padding: 0.2rem 0.5rem;
   border-radius: 4px;
 }
 
 .gating-pill {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   padding: 0.25rem 0.6rem;
   border-radius: 4px;
@@ -2668,7 +2668,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 1rem;
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
 }
 
 .batch-count-badge {
@@ -2677,7 +2677,7 @@ onMounted(() => {
   font-weight: 700;
   padding: 0.3rem 0.75rem;
   border-radius: 6px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 
 .batch-actions {
@@ -2718,7 +2718,7 @@ onMounted(() => {
 
 .column-header h4 {
   margin: 0;
-  font-size: 1rem;
+  font-size: var(--font-size-md);
   font-weight: 600;
 }
 
@@ -2783,7 +2783,7 @@ onMounted(() => {
 
 .node-name {
   font-weight: 600;
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
 }
 
 .diff-badge {
@@ -2810,7 +2810,7 @@ onMounted(() => {
 .node-details {
   display: flex;
   justify-content: space-between;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -2818,14 +2818,14 @@ onMounted(() => {
   margin-top: 0.5rem;
   padding-top: 0.5rem;
   border-top: 1px dashed var(--semantic-color-border-control);
-  font-size: 0.825rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-secondary);
 }
 
 .legend-box {
   display: flex;
   gap: 1rem;
-  font-size: 0.825rem;
+  font-size: var(--font-size-xs);
 }
 
 .legend-item {
@@ -2900,20 +2900,20 @@ onMounted(() => {
 
 .modal-title {
   margin: 0;
-  font-size: 1.15rem;
+  font-size: var(--font-size-lg);
   font-weight: 600;
 }
 
 .modal-subtitle {
   color: var(--semantic-color-text-secondary);
-  font-size: 0.825rem;
+  font-size: var(--font-size-xs);
   margin: 0.2rem 0 0 0;
 }
 
 .modal-close {
   background: none;
   border: none;
-  font-size: 1.5rem;
+  font-size: var(--font-size-2xl);
   cursor: pointer;
 }
 
@@ -2945,7 +2945,7 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 
 .step-item.active .step-number {
@@ -2961,7 +2961,7 @@ onMounted(() => {
 }
 
 .step-label {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--semantic-color-text-secondary);
 }
@@ -2983,13 +2983,13 @@ onMounted(() => {
 
 .wizard-step-content h4 {
   margin: 0 0 0.25rem 0;
-  font-size: 1.05rem;
+  font-size: var(--font-size-md);
   color: var(--semantic-color-text);
 }
 
 .step-desc {
   color: var(--semantic-color-text-secondary);
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   margin-bottom: 1.25rem;
 }
 
@@ -2999,7 +2999,7 @@ onMounted(() => {
 
 .form-label {
   display: block;
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   margin-bottom: 0.35rem;
 }
@@ -3019,7 +3019,7 @@ onMounted(() => {
   display: block;
   color: var(--semantic-color-text-secondary);
   margin-top: 0.25rem;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
 }
 
 .text-area {
@@ -3064,12 +3064,12 @@ onMounted(() => {
 
 .stat-val {
   display: block;
-  font-size: 1.4rem;
+  font-size: var(--font-size-xl);
   font-weight: 700;
 }
 
 .stat-lbl {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -3077,7 +3077,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-warning);
   background: var(--semantic-color-warning-bg);
   padding: 0.6rem 0.85rem;
@@ -3093,14 +3093,14 @@ onMounted(() => {
 
 .schema-rule-box h5 {
   margin: 0 0 0.5rem 0;
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
   color: var(--semantic-color-success-dark);
 }
 
 .schema-rule-box ul {
   margin: 0;
   padding-left: 1.25rem;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-success);
 }
 
@@ -3121,12 +3121,12 @@ onMounted(() => {
 
 .option-card h4 {
   margin: 0 0 0.5rem 0;
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
 }
 
 .option-card p {
   margin: 0;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -3156,7 +3156,7 @@ onMounted(() => {
 .btn {
   padding: 0.5rem 1rem;
   border-radius: var(--radius-sm, 6px);
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   cursor: pointer;
   border: 1px solid transparent;
@@ -3183,7 +3183,7 @@ onMounted(() => {
 
 .btn-sm {
   padding: 0.25rem 0.6rem;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
 }
 
 .btn-action {
@@ -3193,7 +3193,7 @@ onMounted(() => {
 }
 
 .badge {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   padding: 0.25rem 0.5rem;
   border-radius: 4px;
   font-weight: 700;
@@ -3206,7 +3206,7 @@ onMounted(() => {
 
 .text-muted {
   color: var(--semantic-color-text-secondary);
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 
 .text-center {
@@ -3232,13 +3232,13 @@ onMounted(() => {
 
 .summary-title-group h3 {
   margin: 0;
-  font-size: 1.2rem;
+  font-size: var(--font-size-lg);
   font-weight: 700;
 }
 
 .summary-subtext {
   margin: 0.25rem 0 0 0;
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -3278,14 +3278,14 @@ onMounted(() => {
 }
 
 .chip-label {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   text-transform: uppercase;
   color: var(--semantic-color-text-secondary);
 }
 
 .chip-val {
-  font-size: 1.05rem;
+  font-size: var(--font-size-md);
   color: var(--semantic-color-text);
 }
 
@@ -3310,7 +3310,7 @@ onMounted(() => {
 .breakdown-chip {
   background: var(--semantic-color-surface-header);
   color: var(--semantic-color-text-body);
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   padding: 0.25rem 0.6rem;
   border-radius: 4px;
@@ -3331,7 +3331,7 @@ onMounted(() => {
   background: var(--semantic-color-surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm, 6px);
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--semantic-color-text-secondary);
   cursor: pointer;
@@ -3357,7 +3357,7 @@ onMounted(() => {
 
 .layer-header h4 {
   margin: 0;
-  font-size: 1.05rem;
+  font-size: var(--font-size-md);
   font-weight: 700;
 }
 
@@ -3370,7 +3370,7 @@ onMounted(() => {
 }
 
 .type-pill {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   padding: 0.15rem 0.45rem;
   border-radius: 4px;
@@ -3434,7 +3434,7 @@ onMounted(() => {
 }
 
 .form-key-tag {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-family: var(--semantic-font-mono);
   font-weight: 700;
   color: var(--text-main);
@@ -3442,13 +3442,13 @@ onMounted(() => {
 
 .form-title {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
   font-weight: 700;
 }
 
 .form-desc {
   margin: 0;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-secondary);
 }
 

@@ -134,7 +134,7 @@ const heading = computed(() =>
   color: var(--semantic-color-warning-text);
   border-radius: 6px;
   padding: 8px 12px;
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   margin-bottom: 18px;
 }
 
@@ -165,7 +165,7 @@ const heading = computed(() =>
 
 .info-card-label {
   display: block;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -174,13 +174,13 @@ const heading = computed(() =>
 }
 
 .unavailable-info-card h3 {
-  font-size: 1.05rem;
+  font-size: var(--font-size-md);
   margin: 0 0 8px;
   color: var(--semantic-color-text);
 }
 
 .entitlement-status {
-  font-size: 0.88rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   margin: 0 0 8px;
 }
@@ -194,14 +194,14 @@ const heading = computed(() =>
 }
 
 .roadmap-stage {
-  font-size: 0.88rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--semantic-color-interactive-primary);
   margin: 0 0 8px;
 }
 
 .info-card-note {
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-secondary);
   margin: 0;
   line-height: 1.45;

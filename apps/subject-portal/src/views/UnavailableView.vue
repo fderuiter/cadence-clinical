@@ -23,7 +23,13 @@
       >
         {{ heading }}
       </h2>
-      <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 20px">
+      <p
+        style="
+          font-size: var(--font-size-sm);
+          color: var(--text-muted);
+          margin-bottom: 20px;
+        "
+      >
         {{ descriptionText }}
       </p>
       <a

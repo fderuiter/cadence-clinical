@@ -1164,7 +1164,7 @@ watch(
 
 .study-queries-header h2 {
   margin: 0;
-  font-size: 1.15rem;
+  font-size: var(--font-size-lg);
 }
 
 .study-queries-sla-trigger {
@@ -1182,7 +1182,7 @@ watch(
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--semantic-color-surface);
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 
 .study-queries-sla-form input {
@@ -1191,7 +1191,7 @@ watch(
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   background: var(--semantic-color-surface);
-  font-size: 0.85rem;
+  font-size: var(--font-size-md);
 }
 
 .study-queries-sla-actions {
@@ -1206,7 +1206,7 @@ watch(
   border-radius: 6px;
   background-color: var(--semantic-color-success-bg-soft);
   color: var(--semantic-color-success-dark);
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1220,7 +1220,7 @@ watch(
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 
 .study-queries-filters select,
@@ -1229,14 +1229,14 @@ watch(
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   background: var(--semantic-color-surface);
-  font-size: 0.85rem;
+  font-size: var(--font-size-md);
 }
 
 @media (pointer: coarse) {
   .study-queries-filters select,
   .study-queries-filters input,
   .study-queries-sla-form input {
-    font-size: 1rem;
+    font-size: var(--font-size-md);
     min-height: 2.75rem;
   }
 }
@@ -1262,7 +1262,7 @@ watch(
 
 .study-digests-header h3 {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
 }
 
 .study-digests-count {
@@ -1270,7 +1270,7 @@ watch(
   border-radius: 999px;
   background: var(--neutral-light);
   color: var(--semantic-color-text-dark);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
@@ -1278,7 +1278,7 @@ watch(
 .study-digests-error {
   margin: 0;
   color: var(--semantic-color-error-text-dark);
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 
 .study-digests-grid {
@@ -1297,7 +1297,7 @@ watch(
   padding: 10px;
   border: 1px solid var(--border);
   border-radius: 6px;
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
 }
 
 .study-digest-head {
@@ -1313,13 +1313,13 @@ watch(
   border-radius: 999px;
   background: var(--neutral-light);
   color: var(--semantic-color-text-dark);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
 }
 
 .study-digest-meta {
   color: var(--semantic-color-text-secondary);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1330,7 +1330,7 @@ watch(
 :deep(.study-digest-table) {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
 }
 
 :deep(.study-digest-table th),
@@ -1357,13 +1357,13 @@ watch(
   border: 1px solid var(--border);
   background: var(--neutral-light);
   color: var(--semantic-color-text-secondary);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
 }
 
 .study-digest-muted {
   color: var(--semantic-color-text-secondary);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
 }
 
 .study-digest-link {
@@ -1374,7 +1374,7 @@ watch(
 .status-line {
   margin: 0;
   color: var(--semantic-color-text-secondary);
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 
 .status-line:empty {

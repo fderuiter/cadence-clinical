@@ -23,7 +23,9 @@
         class="rules-gating-content"
         style="display: flex; gap: 16px; align-items: flex-start"
       >
-        <span class="rules-gating-icon" style="font-size: 2rem">🚫</span>
+        <span class="rules-gating-icon" style="font-size: var(--font-size-4xl)"
+          >🚫</span
+        >
         <div>
           <h3 class="rules-gating-title">
             21 CFR Part 11 Role Gating - Access Denied
@@ -96,7 +98,7 @@
             <span
               v-if="loadingRules"
               style="
-                font-size: 0.85rem;
+                font-size: var(--font-size-sm);
                 color: var(--semantic-color-text-secondary);
                 font-weight: normal;
               "
@@ -114,7 +116,7 @@
               padding: 10px;
               border-radius: 6px;
               margin-bottom: 12px;
-              font-size: 0.85rem;
+              font-size: var(--font-size-sm);
             "
           >
             <strong>API Mode Degraded:</strong> Running in Local Sandbox VM.
@@ -152,7 +154,7 @@
                   <strong
                     style="
                       color: var(--accent);
-                      font-size: 0.95rem;
+                      font-size: var(--font-size-base);
                       font-family: var(--semantic-font-mono);
                     "
                     >{{ rule.id }}</strong
@@ -162,7 +164,7 @@
                       class="btn"
                       style="
                         padding: 4px 10px;
-                        font-size: 0.75rem;
+                        font-size: var(--font-size-2xs);
                         cursor: pointer;
                         border: 1px solid var(--border);
                         border-radius: 4px;
@@ -177,7 +179,7 @@
                       class="btn"
                       style="
                         padding: 4px 10px;
-                        font-size: 0.75rem;
+                        font-size: var(--font-size-2xs);
                         background-color: var(
                           --semantic-color-error-interactive
                         );
@@ -194,7 +196,7 @@
                 </div>
                 <div
                   style="
-                    font-size: 0.85rem;
+                    font-size: var(--font-size-sm);
                     color: var(--neutral-dark);
                     margin-bottom: 8px;
                     line-height: 1.4;
@@ -236,7 +238,7 @@
                 <div
                   style="
                     font-family: var(--semantic-font-mono);
-                    font-size: 0.75rem;
+                    font-size: var(--font-size-2xs);
                     color: var(--text-main);
                     background-color: var(--semantic-color-info-bg);
                     padding: 6px 10px;
@@ -319,7 +321,7 @@
                   padding: 12px;
                   border-radius: 8px;
                   font-family: var(--semantic-font-mono);
-                  font-size: 0.8rem;
+                  font-size: var(--font-size-xs);
                   border: 1px solid var(--border);
                   line-height: 1.5;
                 "
@@ -432,14 +434,14 @@
           <div style="display: flex; gap: 8px">
             <button
               class="btn btn-secondary"
-              style="font-size: 0.85rem; padding: 6px 12px"
+              style="font-size: var(--font-size-sm); padding: 6px 12px"
               @click="exportQueries('JSON')"
             >
               Export JSON
             </button>
             <button
               class="btn btn-primary"
-              style="font-size: 0.85rem; padding: 6px 12px"
+              style="font-size: var(--font-size-sm); padding: 6px 12px"
               @click="exportQueries('CSV')"
             >
               Export CSV
@@ -448,7 +450,7 @@
         </div>
         <p
           style="
-            font-size: 0.85rem;
+            font-size: var(--font-size-sm);
             color: var(--semantic-color-text-secondary);
             margin-bottom: 16px;
           "
@@ -470,7 +472,7 @@
           <h3
             style="
               font-weight: bold;
-              font-size: 0.95rem;
+              font-size: var(--font-size-base);
               color: var(--text-main);
               margin-bottom: 8px;
             "
@@ -488,12 +490,12 @@
                 padding: 8px;
                 border: 1px solid var(--border);
                 border-radius: 4px;
-                font-size: 0.85rem;
+                font-size: var(--font-size-md);
               "
             />
             <button
               class="btn btn-primary"
-              style="font-size: 0.85rem"
+              style="font-size: var(--font-size-sm)"
               @click="searchDict"
             >
               Search Dictionary
@@ -502,7 +504,7 @@
           <div
             v-if="dictSearching || codingStore.isSearching"
             style="
-              font-size: 0.8rem;
+              font-size: var(--font-size-xs);
               color: var(--semantic-color-text-secondary);
             "
           >
@@ -517,7 +519,7 @@
               border-left: 4px solid var(--error);
               border-radius: 4px;
               color: var(--semantic-color-error);
-              font-size: 0.85rem;
+              font-size: var(--font-size-sm);
               margin-bottom: 8px;
             "
           >
@@ -540,7 +542,7 @@
               style="
                 padding: 4px 0;
                 border-bottom: 1px solid var(--semantic-color-surface-header);
-                font-size: 0.8rem;
+                font-size: var(--font-size-xs);
               "
             >
               <strong style="color: var(--accent)">{{ r.code }}</strong> -
@@ -566,7 +568,7 @@
               :class="
                 queryFilterStatus === 'ALL' ? 'btn-primary' : 'btn-secondary'
               "
-              style="font-size: 0.75rem; padding: 4px 10px"
+              style="font-size: var(--font-size-2xs); padding: 4px 10px"
               @click="queryFilterStatus = 'ALL'"
             >
               All Queries ({{ dashboardQueries.length }})
@@ -578,7 +580,7 @@
                   ? 'btn-primary'
                   : 'btn-secondary'
               "
-              style="font-size: 0.75rem; padding: 4px 10px"
+              style="font-size: var(--font-size-2xs); padding: 4px 10px"
               @click="queryFilterStatus = 'CANDIDATE'"
             >
               ⚡ Staged Anomaly Candidates ({{ countCandidateQueries }})
@@ -588,7 +590,7 @@
               :class="
                 queryFilterStatus === 'OPEN' ? 'btn-primary' : 'btn-secondary'
               "
-              style="font-size: 0.75rem; padding: 4px 10px"
+              style="font-size: var(--font-size-2xs); padding: 4px 10px"
               @click="queryFilterStatus = 'OPEN'"
             >
               Open ({{ countOpenQueries }})
@@ -600,7 +602,7 @@
                   ? 'btn-primary'
                   : 'btn-secondary'
               "
-              style="font-size: 0.75rem; padding: 4px 10px"
+              style="font-size: var(--font-size-2xs); padding: 4px 10px"
               @click="queryFilterStatus = 'ANSWERED'"
             >
               Answered ({{ countAnsweredQueries }})
@@ -610,7 +612,7 @@
               :class="
                 queryFilterStatus === 'CLOSED' ? 'btn-primary' : 'btn-secondary'
               "
-              style="font-size: 0.75rem; padding: 4px 10px"
+              style="font-size: var(--font-size-2xs); padding: 4px 10px"
               @click="queryFilterStatus = 'CLOSED'"
             >
               Closed ({{ countClosedQueries }})
@@ -620,7 +622,7 @@
           <button
             class="btn btn-sm btn-primary"
             style="
-              font-size: 0.8rem;
+              font-size: var(--font-size-xs);
               display: flex;
               align-items: center;
               gap: 6px;
@@ -694,7 +696,7 @@
                 <div
                   v-if="q.explanation && q.explanation !== q.message"
                   style="
-                    font-size: 0.8rem;
+                    font-size: var(--font-size-xs);
                     color: var(--semantic-color-text-secondary);
                     margin-top: 2px;
                   "
@@ -728,7 +730,7 @@
                 >
                   <button
                     class="btn btn-sm btn-primary"
-                    style="padding: 4px 8px; font-size: 0.75rem"
+                    style="padding: 4px 8px; font-size: var(--font-size-2xs)"
                     @click="promptAdjudicateCandidate"
                   >
                     Approve (Open)
@@ -737,7 +739,7 @@
                     class="btn btn-sm"
                     style="
                       padding: 4px 8px;
-                      font-size: 0.75rem;
+                      font-size: var(--font-size-2xs);
                       background-color: var(--error-bg);
                       color: var(--error);
                     "
@@ -752,14 +754,14 @@
                 >
                   <button
                     class="btn btn-sm btn-success"
-                    style="padding: 4px 8px; font-size: 0.75rem"
+                    style="padding: 4px 8px; font-size: var(--font-size-2xs)"
                     @click="promptUpdateQueryState(q, 'CLOSED')"
                   >
                     Close
                   </button>
                   <button
                     class="btn btn-sm"
-                    style="padding: 4px 8px; font-size: 0.75rem"
+                    style="padding: 4px 8px; font-size: var(--font-size-2xs)"
                     @click="promptUpdateQueryState(q, 'REOPENED')"
                   >
                     Reopen
@@ -771,7 +773,7 @@
                 >
                   <button
                     class="btn btn-sm btn-secondary"
-                    style="padding: 4px 8px; font-size: 0.75rem"
+                    style="padding: 4px 8px; font-size: var(--font-size-2xs)"
                     @click="promptUpdateQueryState(q, 'ANSWERED')"
                   >
                     Add Response
@@ -1585,7 +1587,7 @@ onMounted(async () => {
 }
 
 .rules-gating-icon {
-  font-size: 2rem;
+  font-size: var(--font-size-4xl);
 }
 
 .rules-gating-title {
@@ -1596,7 +1598,7 @@ onMounted(async () => {
 
 .rules-gating-text {
   color: var(--neutral-dark);
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
   line-height: 1.6;
 }
 

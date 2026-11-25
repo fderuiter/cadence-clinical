@@ -546,13 +546,13 @@ const hidePopover = () => {
 
 .editor-header h3 {
   margin: 0;
-  font-size: 1.15rem;
+  font-size: var(--font-size-lg);
   color: var(--neutral-dark);
 }
 
 .section-id-badge {
   font-family: var(--semantic-font-mono);
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   background-color: var(--neutral-light);
   padding: 4px 8px;
   border-radius: 4px;
@@ -572,7 +572,7 @@ const hidePopover = () => {
 
 .toolbar-btn {
   padding: 6px 12px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   background-color: var(--semantic-color-surface);
   color: var(--semantic-color-text);
   border: 1px solid var(--border);
@@ -609,7 +609,7 @@ const hidePopover = () => {
   outline: 2px solid transparent;
   font-family: var(--semantic-font-family);
   line-height: 1.6;
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
 }
 
 .editor-canvas:focus {
@@ -655,7 +655,7 @@ const hidePopover = () => {
   display: block;
   margin-bottom: 6px;
   font-weight: 600;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 
 .form-control {
@@ -663,7 +663,7 @@ const hidePopover = () => {
   padding: 8px 12px;
   border: 1px solid var(--border);
   border-radius: 6px;
-  font-size: 0.9rem;
+  font-size: var(--font-size-md);
 }
 
 .modal-actions {
@@ -679,7 +679,7 @@ const hidePopover = () => {
   color: var(--semantic-color-text-inverse);
   padding: 8px 12px;
   border-radius: 6px;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   max-width: 280px;
   box-shadow: var(--shadow-md);
   z-index: 1050;

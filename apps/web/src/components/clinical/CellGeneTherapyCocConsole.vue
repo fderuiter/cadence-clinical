@@ -2176,14 +2176,14 @@ onMounted(() => {
 }
 
 .title {
-  font-size: 1.5rem;
+  font-size: var(--font-size-2xl);
   font-weight: 700;
   margin: 0;
   color: var(--semantic-color-text);
 }
 
 .subtitle {
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   color: var(--color-text-muted);
   margin: 0.25rem 0 0 0;
 }
@@ -2214,7 +2214,7 @@ onMounted(() => {
 }
 
 .filter-group label {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   text-transform: uppercase;
   color: var(--color-text-muted);
@@ -2224,7 +2224,7 @@ onMounted(() => {
   padding: 0.5rem 0.75rem;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm, 4px);
-  font-size: 0.875rem;
+  font-size: var(--font-size-md);
 }
 
 .overview-grid {
@@ -2240,20 +2240,20 @@ onMounted(() => {
 }
 
 .metric-label {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   color: var(--color-text-muted);
   text-transform: uppercase;
 }
 
 .metric-value {
-  font-size: 1.25rem;
+  font-size: var(--font-size-lg);
   font-weight: 700;
   color: var(--semantic-color-text);
 }
 
 .metric-sub {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   color: var(--color-text-muted);
 }
 
@@ -2268,7 +2268,7 @@ onMounted(() => {
 }
 
 .section-title {
-  font-size: 1rem;
+  font-size: var(--font-size-md);
   font-weight: 600;
   margin: 0;
   color: var(--semantic-color-text);
@@ -2299,7 +2299,7 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   background: var(--color-border);
   color: var(--color-text-muted);
 }
@@ -2316,7 +2316,7 @@ onMounted(() => {
 }
 
 .node-label {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 500;
 }
 
@@ -2329,13 +2329,13 @@ onMounted(() => {
 }
 
 .toolbar-title {
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
   font-weight: 600;
   margin: 0;
 }
 
 .toolbar-hint {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   color: var(--color-text-muted);
   margin: 0;
 }
@@ -2353,7 +2353,7 @@ onMounted(() => {
 }
 
 .barcode-meta {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   color: var(--color-text-muted);
 }
 
@@ -2361,7 +2361,7 @@ onMounted(() => {
   display: flex;
   gap: 0.5rem;
   align-items: center;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
 }
 
 .hash-code {
@@ -2374,7 +2374,7 @@ onMounted(() => {
 .payload-textarea {
   width: 100%;
   font-family: var(--semantic-font-mono);
-  font-size: 0.75rem;
+  font-size: var(--font-size-md);
   background: var(--semantic-color-surface-muted);
   border: 1px solid var(--color-border);
   border-radius: 4px;
@@ -2386,7 +2386,7 @@ onMounted(() => {
   padding: 0.5rem;
   border: 1px solid var(--color-border);
   border-radius: 4px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-md);
   margin-bottom: 0.5rem;
 }
 
@@ -2394,7 +2394,7 @@ onMounted(() => {
   margin-top: 0.75rem;
   padding: 0.5rem;
   border-radius: 4px;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
 }
 
 .scan-valid {
@@ -2410,7 +2410,7 @@ onMounted(() => {
 .table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 
 .table th,
@@ -2421,7 +2421,7 @@ onMounted(() => {
 }
 
 .table th {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   text-transform: uppercase;
   color: var(--color-text-muted);
@@ -2465,7 +2465,7 @@ onMounted(() => {
 .btn {
   padding: 0.5rem 1rem;
   border-radius: var(--radius-sm, 4px);
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   cursor: pointer;
   border: 1px solid transparent;
@@ -2538,7 +2538,7 @@ onMounted(() => {
 .btn-close {
   background: transparent;
   border: none;
-  font-size: 1.5rem;
+  font-size: var(--font-size-2xl);
   cursor: pointer;
 }
 
@@ -2562,7 +2562,7 @@ onMounted(() => {
 }
 
 .form-group label {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   color: var(--color-text-muted);
 }
@@ -2573,7 +2573,7 @@ onMounted(() => {
   padding: 0.5rem;
   border: 1px solid var(--color-border);
   border-radius: 4px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-md);
 }
 
 .verifier-panel {
@@ -2584,7 +2584,7 @@ onMounted(() => {
 }
 
 .verifier-title {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   margin: 0 0 0.5rem 0;
   color: var(--semantic-color-text-secondary);
@@ -2609,7 +2609,7 @@ onMounted(() => {
   .form-group input,
   .form-group select,
   .form-group textarea {
-    font-size: 1rem;
+    font-size: var(--font-size-md);
   }
 }
 
@@ -2634,7 +2634,7 @@ onMounted(() => {
 }
 
 .modal-subtitle {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   color: var(--color-text-muted);
   margin: 0.2rem 0 0 0;
 }
@@ -2652,7 +2652,7 @@ onMounted(() => {
 }
 
 .section-label {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   color: var(--color-text-muted);
   text-transform: uppercase;
@@ -2685,13 +2685,13 @@ onMounted(() => {
 }
 
 .dropzone-prompt .dropzone-text {
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
   margin: 0 0 0.25rem 0;
   color: var(--semantic-color-text);
 }
 
 .dropzone-prompt .dropzone-sub {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   color: var(--color-text-muted);
   margin: 0;
 }
@@ -2713,7 +2713,7 @@ onMounted(() => {
 }
 
 .drawer-title {
-  font-size: 1rem;
+  font-size: var(--font-size-md);
   font-weight: 700;
   margin: 0;
 }
@@ -2747,12 +2747,12 @@ onMounted(() => {
 }
 
 .stat-value {
-  font-size: 1.1rem;
+  font-size: var(--font-size-lg);
   font-weight: 700;
 }
 
 .sub-title {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-weight: 700;
   margin: 0 0 0.5rem 0;
 }
@@ -2773,7 +2773,7 @@ onMounted(() => {
 .alert {
   padding: 0.75rem 1rem;
   border-radius: 6px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 
 .alert-danger {
@@ -2790,6 +2790,6 @@ onMounted(() => {
 
 .btn-xs {
   padding: 0.25rem 0.5rem;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
 }
 </style>

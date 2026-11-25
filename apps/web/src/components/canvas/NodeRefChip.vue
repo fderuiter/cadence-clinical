@@ -154,16 +154,22 @@ function onSelectClick(event?: MouseEvent) {
   max-width: 100%;
   box-sizing: border-box;
   color: var(--semantic-color-primary);
+  background-color: var(--semantic-color-surface);
+  border: 1px solid var(--semantic-color-border-control);
+  border-radius: var(--radius-xs, 4px);
+  padding: 2px 8px;
+  font-family: var(--semantic-font-mono);
+  font-variant-numeric: var(--font-variant-numeric-tabular);
+  font-size: var(--font-size-2xs);
   font-weight: 500;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-  background: none;
-  border: 0;
-  padding: 0;
-  font-family: inherit;
-  font-size: inherit;
+  line-height: 1.3;
+  text-decoration: none;
   cursor: pointer;
   text-align: left;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
 }
 
 .noderef-chip-label {
@@ -172,8 +178,12 @@ function onSelectClick(event?: MouseEvent) {
   overflow-wrap: anywhere;
 }
 
-.noderef-chip:hover {
+.noderef-chip:not(:disabled):hover {
+  background-color: var(--semantic-color-surface-muted);
+  border-color: var(--semantic-color-primary);
   color: var(--semantic-color-primary-dark);
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .noderef-chip:focus-visible {

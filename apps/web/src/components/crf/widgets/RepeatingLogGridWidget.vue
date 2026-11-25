@@ -143,7 +143,7 @@ const calculateSum = (columnId) => {
 }
 
 .widget-label {
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--semantic-color-text);
 }
@@ -154,7 +154,7 @@ const calculateSum = (columnId) => {
   color: var(--semantic-color-surface);
   border: none;
   border-radius: var(--radius-md, 6px);
-  font-size: 0.8125rem;
+  font-size: var(--font-size-xs);
   font-weight: 500;
   cursor: pointer;
 }
@@ -168,7 +168,7 @@ const calculateSum = (columnId) => {
 .log-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
 }
 
 .log-table th {
@@ -190,7 +190,7 @@ const calculateSum = (columnId) => {
   padding: 4px 8px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm, 4px);
-  font-size: 0.875rem;
+  font-size: var(--font-size-md);
   background-color: var(--semantic-color-surface);
 }
 
@@ -201,14 +201,14 @@ const calculateSum = (columnId) => {
 .row-num {
   text-align: center;
   color: var(--semantic-color-text-secondary);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
 }
 
 .btn-delete-row {
   background: none;
   border: none;
   color: var(--error);
-  font-size: 1.125rem;
+  font-size: var(--font-size-lg);
   font-weight: 700;
   cursor: pointer;
 }

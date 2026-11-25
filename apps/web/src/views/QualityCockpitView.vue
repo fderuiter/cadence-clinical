@@ -1796,7 +1796,7 @@ function downloadDossierJson() {
   background: none;
   border: none;
   padding: 10px 16px;
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--neutral-dark);
   cursor: pointer;
@@ -1829,7 +1829,7 @@ function downloadDossierJson() {
   border-radius: 6px;
   border: 1px solid var(--border);
   background-color: var(--semantic-color-surface);
-  font-size: 0.85rem;
+  font-size: var(--font-size-md);
   font-weight: 600;
   color: var(--text-main);
 }
@@ -1860,18 +1860,18 @@ function downloadDossierJson() {
 
 .kri-code {
   font-weight: 700;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-secondary);
 }
 
 .kri-name {
-  font-size: 1rem;
+  font-size: var(--font-size-md);
   font-weight: 600;
   color: var(--text-main);
 }
 
 .kri-desc {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -1906,7 +1906,7 @@ function downloadDossierJson() {
   padding-top: 8px;
   display: flex;
   justify-content: space-between;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -1923,12 +1923,12 @@ function downloadDossierJson() {
 }
 
 .score-val {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   font-weight: 700;
 }
 
 .rank-badge {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 4px;
@@ -1973,7 +1973,7 @@ function downloadDossierJson() {
 }
 
 .metric-item {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 .metric-label {
   color: var(--semantic-color-text-secondary);
@@ -2009,14 +2009,14 @@ function downloadDossierJson() {
   justify-content: space-between;
   align-items: center;
   font-weight: 700;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 
 .stage-count {
   background: var(--semantic-color-surface);
   padding: 2px 6px;
   border-radius: 10px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   border: 1px solid var(--semantic-color-border-control);
 }
 
@@ -2046,13 +2046,13 @@ function downloadDossierJson() {
 }
 
 .kanban-card-title {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--text-main);
 }
 
 .kanban-card-preventive {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -2109,7 +2109,7 @@ function downloadDossierJson() {
 
 .breach-title {
   margin-top: 4px;
-  font-size: 1.1rem;
+  font-size: var(--font-size-lg);
   font-weight: 700;
 }
 
@@ -2138,7 +2138,7 @@ function downloadDossierJson() {
 }
 
 .clock-hours {
-  font-size: 1.2rem;
+  font-size: var(--font-size-lg);
   font-weight: 800;
 }
 .clock-label {
@@ -2148,14 +2148,14 @@ function downloadDossierJson() {
 
 .breach-body {
   margin-top: 12px;
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
 }
 
 .breach-meta-row {
   display: flex;
   gap: 20px;
   margin-top: 8px;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -2194,7 +2194,7 @@ function downloadDossierJson() {
   background: var(--accent);
   color: var(--semantic-color-text-on-accent);
   font-weight: 700;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   padding: 6px 10px;
   border-radius: 4px;
   min-width: 65px;
@@ -2216,7 +2216,7 @@ function downloadDossierJson() {
 }
 
 .fishbone-branch h5 {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-weight: 700;
   margin-bottom: 6px;
 }
@@ -2232,12 +2232,12 @@ function downloadDossierJson() {
 }
 
 .seal-icon {
-  font-size: 2rem;
+  font-size: var(--font-size-4xl);
 }
 
 .merkle-hash {
   display: block;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   word-break: break-all;
   background: var(--semantic-color-surface);
   padding: 4px 8px;
@@ -2262,19 +2262,19 @@ function downloadDossierJson() {
 
 .dossier-stat-num {
   display: block;
-  font-size: 1.4rem;
+  font-size: var(--font-size-xl);
   font-weight: 800;
   color: var(--text-main);
 }
 
 .dossier-stat-label {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
 }
 
 .btn-xs {
   padding: 3px 8px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   border-radius: 4px;
 }
 

@@ -23,7 +23,11 @@
       <button
         class="btn tab-btn-soa"
         :class="activeTab === 'soa' ? 'btn-primary' : 'btn-secondary'"
-        style="font-size: 0.9rem; padding: 8px 16px; border-radius: 8px"
+        style="
+          font-size: var(--font-size-sm);
+          padding: 8px 16px;
+          border-radius: 8px;
+        "
         @click="activeTab = 'soa'"
       >
         📋 Schedule of Activities (SoA)
@@ -32,7 +36,11 @@
         id="btn-tab-canvas-top"
         class="btn tab-btn-canvas"
         :class="activeTab === 'canvas' ? 'btn-primary' : 'btn-secondary'"
-        style="font-size: 0.9rem; padding: 8px 16px; border-radius: 8px"
+        style="
+          font-size: var(--font-size-sm);
+          padding: 8px 16px;
+          border-radius: 8px;
+        "
         @click="activeTab = 'canvas'"
       >
         🎨 eCRF Visual Form Designer
@@ -40,7 +48,11 @@
       <button
         class="btn tab-btn-mdr"
         :class="activeTab === 'mdr' ? 'btn-primary' : 'btn-secondary'"
-        style="font-size: 0.9rem; padding: 8px 16px; border-radius: 8px"
+        style="
+          font-size: var(--font-size-sm);
+          padding: 8px 16px;
+          border-radius: 8px;
+        "
         @click="activeTab = 'mdr'"
       >
         🔍 NCI Concept Registry
@@ -48,7 +60,11 @@
       <button
         class="btn tab-btn-diff"
         :class="activeTab === 'diff' ? 'btn-primary' : 'btn-secondary'"
-        style="font-size: 0.9rem; padding: 8px 16px; border-radius: 8px"
+        style="
+          font-size: var(--font-size-sm);
+          padding: 8px 16px;
+          border-radius: 8px;
+        "
         @click="activeTab = 'diff'"
       >
         ⚖️ Protocol Revision Alignment
@@ -95,7 +111,7 @@
                 font-weight: 800;
                 margin: 0;
                 color: var(--text-main);
-                font-size: 1.15rem;
+                font-size: var(--font-size-lg);
                 display: flex;
                 align-items: center;
                 gap: 6px;
@@ -132,7 +148,7 @@
           </div>
           <button
             class="btn btn-secondary"
-            style="font-size: 0.78rem; padding: 4px 10px"
+            style="font-size: var(--font-size-2xs); padding: 4px 10px"
             @click="synthesisResult = null"
           >
             Dismiss Metrics
@@ -165,7 +181,7 @@
             >
               <span
                 style="
-                  font-size: 0.75rem;
+                  font-size: var(--font-size-2xs);
                   font-weight: 700;
                   color: var(--semantic-color-text-secondary);
                   text-transform: uppercase;
@@ -174,7 +190,7 @@
               >
               <strong
                 style="
-                  font-size: 0.95rem;
+                  font-size: var(--font-size-base);
                   color: var(--text-main);
                   font-family: var(--semantic-font-mono);
                 "
@@ -183,7 +199,7 @@
             </div>
             <div
               style="
-                font-size: 0.88rem;
+                font-size: var(--font-size-sm);
                 font-weight: 600;
                 color: var(--semantic-color-text-dark);
               "
@@ -205,7 +221,7 @@
                 background-color: var(--semantic-color-primary-light);
                 color: var(--semantic-color-primary);
                 font-weight: 600;
-                font-size: 0.8rem;
+                font-size: var(--font-size-xs);
                 padding: 4px 10px;
               "
             >
@@ -217,7 +233,7 @@
                 background-color: var(--semantic-color-purple-bg);
                 color: var(--semantic-color-purple-text);
                 font-weight: 600;
-                font-size: 0.8rem;
+                font-size: var(--font-size-xs);
                 padding: 4px 10px;
               "
             >
@@ -248,7 +264,7 @@
           >
             <div
               style="
-                font-size: 0.75rem;
+                font-size: var(--font-size-2xs);
                 font-weight: 700;
                 color: var(--semantic-color-text-secondary);
                 text-transform: uppercase;
@@ -259,7 +275,7 @@
             </div>
             <div
               style="
-                font-size: 1.4rem;
+                font-size: var(--font-size-xl);
                 font-weight: 800;
                 color: var(--text-main);
                 margin-bottom: 6px;
@@ -268,7 +284,7 @@
               {{ synthesisResult.graphEntitiesCount }}
               <span
                 style="
-                  font-size: 0.8rem;
+                  font-size: var(--font-size-xs);
                   font-weight: normal;
                   color: var(--semantic-color-text-secondary);
                 "
@@ -277,7 +293,7 @@
             </div>
             <div
               style="
-                font-size: 0.78rem;
+                font-size: var(--font-size-2xs);
                 color: var(--semantic-color-text-secondary);
                 display: flex;
                 flex-direction: column;
@@ -313,7 +329,7 @@
           >
             <div
               style="
-                font-size: 0.75rem;
+                font-size: var(--font-size-2xs);
                 font-weight: 700;
                 color: var(--semantic-color-text-secondary);
                 text-transform: uppercase;
@@ -324,7 +340,7 @@
             </div>
             <div
               style="
-                font-size: 1.4rem;
+                font-size: var(--font-size-xl);
                 font-weight: 800;
                 color: var(--text-main);
                 margin-bottom: 6px;
@@ -333,7 +349,7 @@
               {{ synthesisResult.formsCount }}
               <span
                 style="
-                  font-size: 0.8rem;
+                  font-size: var(--font-size-xs);
                   font-weight: normal;
                   color: var(--semantic-color-text-secondary);
                 "
@@ -342,7 +358,7 @@
             </div>
             <div
               style="
-                font-size: 0.78rem;
+                font-size: var(--font-size-2xs);
                 color: var(--semantic-color-text-secondary);
                 display: flex;
                 flex-direction: column;
@@ -375,7 +391,7 @@
           >
             <div
               style="
-                font-size: 0.75rem;
+                font-size: var(--font-size-2xs);
                 font-weight: 700;
                 color: var(--semantic-color-text-secondary);
                 text-transform: uppercase;
@@ -386,7 +402,7 @@
             </div>
             <div
               style="
-                font-size: 1.4rem;
+                font-size: var(--font-size-xl);
                 font-weight: 800;
                 color: var(--text-main);
                 margin-bottom: 6px;
@@ -395,7 +411,7 @@
               {{ synthesisResult.rulesCount }}
               <span
                 style="
-                  font-size: 0.8rem;
+                  font-size: var(--font-size-xs);
                   font-weight: normal;
                   color: var(--semantic-color-text-secondary);
                 "
@@ -404,7 +420,7 @@
             </div>
             <div
               style="
-                font-size: 0.78rem;
+                font-size: var(--font-size-2xs);
                 color: var(--semantic-color-text-secondary);
                 display: flex;
                 flex-direction: column;
@@ -436,7 +452,7 @@
           >
             <div
               style="
-                font-size: 0.75rem;
+                font-size: var(--font-size-2xs);
                 font-weight: 700;
                 color: var(--semantic-color-text-secondary);
                 text-transform: uppercase;
@@ -447,7 +463,7 @@
             </div>
             <div
               style="
-                font-size: 1.4rem;
+                font-size: var(--font-size-xl);
                 font-weight: 800;
                 color: var(--semantic-color-success);
                 margin-bottom: 6px;
@@ -456,7 +472,7 @@
               {{ synthesisResult.tmfEdlCount }}
               <span
                 style="
-                  font-size: 0.8rem;
+                  font-size: var(--font-size-xs);
                   font-weight: normal;
                   color: var(--semantic-color-text-secondary);
                 "
@@ -465,7 +481,7 @@
             </div>
             <div
               style="
-                font-size: 0.78rem;
+                font-size: var(--font-size-2xs);
                 color: var(--semantic-color-text-secondary);
                 display: flex;
                 flex-direction: column;
@@ -492,7 +508,7 @@
             color: var(--semantic-color-success-dark);
             padding: 10px 14px;
             border-radius: 6px;
-            font-size: 0.85rem;
+            font-size: var(--font-size-sm);
             font-weight: 600;
             margin-bottom: 16px;
             display: flex;
@@ -527,7 +543,7 @@
               id="btn-promote-to-edc"
               class="btn btn-primary"
               style="
-                font-size: 0.9rem;
+                font-size: var(--font-size-sm);
                 padding: 8px 18px;
                 display: inline-flex;
                 align-items: center;
@@ -542,7 +558,7 @@
               id="btn-inspect-crf"
               class="btn btn-secondary"
               style="
-                font-size: 0.85rem;
+                font-size: var(--font-size-sm);
                 padding: 8px 14px;
                 display: inline-flex;
                 align-items: center;
@@ -556,7 +572,7 @@
               id="btn-view-soa"
               class="btn btn-secondary"
               style="
-                font-size: 0.85rem;
+                font-size: var(--font-size-sm);
                 padding: 8px 14px;
                 display: inline-flex;
                 align-items: center;
@@ -569,7 +585,7 @@
           </div>
           <button
             class="btn btn-secondary"
-            style="font-size: 0.82rem; padding: 6px 12px"
+            style="font-size: var(--font-size-xs); padding: 6px 12px"
             @click="openUsdmModal"
           >
             🔄 Ingest Another USDM Protocol
@@ -623,7 +639,7 @@
               padding: 12px;
               border-radius: 6px;
               margin-bottom: 16px;
-              font-size: 0.9rem;
+              font-size: var(--font-size-sm);
             "
           >
             <strong>API Sync Failed (Reverting to Sandbox Local Mode):</strong>
@@ -1049,12 +1065,14 @@
           "
         >
           <div>
-            <span class="card-title" style="font-size: 1.1rem; font-weight: 700"
+            <span
+              class="card-title"
+              style="font-size: var(--font-size-lg); font-weight: 700"
               >Schedule of Activities (SoA) Matrix &amp; Protocol Timeline</span
             >
             <p
               style="
-                font-size: 0.78rem;
+                font-size: var(--font-size-2xs);
                 color: var(--semantic-color-text-secondary);
                 margin: 2px 0 0 0;
               "
@@ -1075,7 +1093,7 @@
               id="btn-open-usdm-modal"
               class="btn btn-primary"
               style="
-                font-size: 0.82rem;
+                font-size: var(--font-size-xs);
                 padding: 6px 14px;
                 display: inline-flex;
                 align-items: center;
@@ -1090,7 +1108,7 @@
               id="btn-export-usdm"
               class="btn btn-secondary"
               style="
-                font-size: 0.82rem;
+                font-size: var(--font-size-xs);
                 padding: 6px 12px;
                 display: inline-flex;
                 align-items: center;
@@ -1103,7 +1121,7 @@
             </button>
             <button
               class="btn btn-secondary"
-              style="font-size: 0.82rem; padding: 6px 12px"
+              style="font-size: var(--font-size-xs); padding: 6px 12px"
               @click="showUsdmJson = !showUsdmJson"
             >
               {{
@@ -1115,7 +1133,7 @@
             <span
               v-if="store.soaLoading"
               style="
-                font-size: 0.8rem;
+                font-size: var(--font-size-xs);
                 font-weight: normal;
                 color: var(--semantic-color-text-secondary);
               "
@@ -1171,7 +1189,7 @@
           style="
             min-height: 220px;
             font-family: var(--semantic-font-mono);
-            font-size: 0.85rem;
+            font-size: var(--font-size-md);
           "
         />
         <div
@@ -1184,7 +1202,7 @@
         >
           <p
             style="
-              font-size: 0.8rem;
+              font-size: var(--font-size-xs);
               color: var(--semantic-color-text-secondary);
               margin: 0;
             "
@@ -1229,7 +1247,7 @@
       </div>
       <p
         style="
-          font-size: 0.85rem;
+          font-size: var(--font-size-sm);
           color: var(--semantic-color-text-secondary);
           margin-bottom: 16px;
         "
@@ -1244,7 +1262,7 @@
           <h3
             style="
               font-weight: bold;
-              font-size: 1rem;
+              font-size: var(--font-size-md);
               margin-bottom: 12px;
               color: var(--text-main);
             "
@@ -1278,7 +1296,7 @@
           <div
             v-if="searchingConcepts"
             style="
-              font-size: 0.85rem;
+              font-size: var(--font-size-sm);
               color: var(--semantic-color-text-secondary);
             "
           >
@@ -1287,7 +1305,7 @@
           <div
             v-else-if="conceptResults.length === 0"
             style="
-              font-size: 0.85rem;
+              font-size: var(--font-size-sm);
               color: var(--semantic-color-text-secondary);
               font-style: italic;
             "
@@ -1323,7 +1341,7 @@
                     display: flex;
                     justify-content: space-between;
                     font-weight: bold;
-                    font-size: 0.85rem;
+                    font-size: var(--font-size-sm);
                     margin-bottom: 4px;
                   "
                 >
@@ -1332,7 +1350,7 @@
                 </div>
                 <div
                   style="
-                    font-size: 0.75rem;
+                    font-size: var(--font-size-2xs);
                     color: var(--semantic-color-text-secondary);
                   "
                 >
@@ -1348,7 +1366,7 @@
           <h3
             style="
               font-weight: bold;
-              font-size: 1rem;
+              font-size: var(--font-size-md);
               margin-bottom: 12px;
               color: var(--text-main);
             "
@@ -1441,7 +1459,7 @@
       </div>
       <p
         style="
-          font-size: 0.85rem;
+          font-size: var(--font-size-sm);
           color: var(--semantic-color-text-secondary);
           margin-bottom: 16px;
         "
@@ -1468,10 +1486,16 @@
           "
         >
           <span
-            style="font-weight: bold; font-size: 0.95rem; color: var(--primary)"
+            style="
+              font-weight: bold;
+              font-size: var(--font-size-base);
+              color: var(--primary);
+            "
             >Comparison Baseline: Last Approved Study Version (v1.0)</span
           >
-          <span class="badge lookup-valid" style="font-size: 0.75rem"
+          <span
+            class="badge lookup-valid"
+            style="font-size: var(--font-size-2xs)"
             >Aligned and Approved</span
           >
         </div>
@@ -1486,7 +1510,7 @@
           <div style="border-right: 1px solid var(--border)">
             <div
               style="
-                font-size: 0.8rem;
+                font-size: var(--font-size-xs);
                 color: var(--semantic-color-text-secondary);
               "
             >
@@ -1494,7 +1518,7 @@
             </div>
             <div
               style="
-                font-size: 1.5rem;
+                font-size: var(--font-size-2xl);
                 font-weight: bold;
                 color: var(--text-main);
               "
@@ -1505,7 +1529,7 @@
           <div style="border-right: 1px solid var(--border)">
             <div
               style="
-                font-size: 0.8rem;
+                font-size: var(--font-size-xs);
                 color: var(--semantic-color-text-secondary);
               "
             >
@@ -1513,7 +1537,7 @@
             </div>
             <div
               style="
-                font-size: 1.5rem;
+                font-size: var(--font-size-2xl);
                 font-weight: bold;
                 color: var(--text-main);
               "
@@ -1523,13 +1547,13 @@
           </div>
           <div style="border-right: 1px solid var(--border)">
             <div
-              style="font-size: 0.8rem; color: var(--semantic-color-text-secondary) font-weight: normal;"
+              style="font-size: var(--font-size-xs); color: var(--semantic-color-text-secondary) font-weight: normal;"
             >
               Baseline Visits
             </div>
             <div
               style="
-                font-size: 1.5rem;
+                font-size: var(--font-size-2xl);
                 font-weight: bold;
                 color: var(--text-main);
               "
@@ -1540,7 +1564,7 @@
           <div>
             <div
               style="
-                font-size: 0.8rem;
+                font-size: var(--font-size-xs);
                 color: var(--semantic-color-text-secondary);
               "
             >
@@ -1548,7 +1572,7 @@
             </div>
             <div
               style="
-                font-size: 1.5rem;
+                font-size: var(--font-size-2xl);
                 font-weight: bold;
                 color: var(--text-main);
               "
@@ -1562,7 +1586,7 @@
       <h3
         style="
           font-weight: bold;
-          font-size: 1.1rem;
+          font-size: var(--font-size-lg);
           margin-bottom: 12px;
           color: var(--text-main);
         "
@@ -1600,14 +1624,16 @@
             <span
               class="badge"
               :class="diff.type === 'added' ? 'lookup-valid' : 'lookup-invalid'"
-              style="margin-right: 12px; font-size: 0.75rem"
+              style="margin-right: 12px; font-size: var(--font-size-2xs)"
             >
               {{ diff.type.toUpperCase() }}
             </span>
-            <strong style="font-size: 0.9rem">{{ diff.element }}</strong>
+            <strong style="font-size: var(--font-size-sm)">{{
+              diff.element
+            }}</strong>
             <span
               style="
-                font-size: 0.85rem;
+                font-size: var(--font-size-sm);
                 color: var(--semantic-color-text-secondary);
                 margin-left: 8px;
               "
@@ -1616,7 +1642,7 @@
           </div>
           <span
             style="
-              font-size: 0.8rem;
+              font-size: var(--font-size-xs);
               font-family: var(--semantic-font-mono);
               color: var(--semantic-color-text-secondary);
             "
@@ -1655,7 +1681,7 @@
             class="btn btn-secondary"
             style="
               padding: 2px 8px;
-              font-size: 1.1rem;
+              font-size: var(--font-size-lg);
               border: none;
               background: transparent;
               cursor: pointer;
@@ -1669,7 +1695,7 @@
         <div class="modal-body">
           <p
             style="
-              font-size: 0.85rem;
+              font-size: var(--font-size-sm);
               color: var(--semantic-color-text-secondary);
               margin-top: 0;
               margin-bottom: 14px;
@@ -1712,16 +1738,22 @@
               style="display: none"
               @change="handleFileSelected"
             />
-            <div style="font-size: 1.8rem; margin-bottom: 6px">📁</div>
+            <div style="font-size: var(--font-size-3xl); margin-bottom: 6px">
+              📁
+            </div>
             <div
-              style="font-size: 0.9rem; font-weight: 600; color: var(--primary)"
+              style="
+                font-size: var(--font-size-sm);
+                font-weight: 600;
+                color: var(--primary);
+              "
             >
               Drag &amp; drop a CDISC USDM protocol (.json) file here, or click
               to browse
             </div>
             <div
               style="
-                font-size: 0.78rem;
+                font-size: var(--font-size-2xs);
                 color: var(--semantic-color-text-secondary);
                 margin-top: 4px;
               "
@@ -1744,7 +1776,7 @@
             <label
               for="usdm-payload-input"
               style="
-                font-size: 0.82rem;
+                font-size: var(--font-size-xs);
                 font-weight: 700;
                 color: var(--semantic-color-text-body);
               "
@@ -1755,7 +1787,7 @@
               id="btn-load-sample-usdm"
               class="btn btn-secondary"
               style="
-                font-size: 0.78rem;
+                font-size: var(--font-size-2xs);
                 padding: 4px 10px;
                 display: inline-flex;
                 align-items: center;
@@ -1777,7 +1809,7 @@
             style="
               min-height: 200px;
               font-family: var(--semantic-font-mono);
-              font-size: 0.82rem;
+              font-size: var(--font-size-md);
               width: 100%;
               box-sizing: border-box;
               border: 1px solid var(--border);
@@ -1818,7 +1850,7 @@
                 >
                 <span
                   style="
-                    font-size: 0.8rem;
+                    font-size: var(--font-size-xs);
                     color: var(--semantic-color-success-dark);
                     font-weight: 700;
                   "
@@ -1831,7 +1863,7 @@
                   display: flex;
                   gap: 8px;
                   flex-wrap: wrap;
-                  font-size: 0.78rem;
+                  font-size: var(--font-size-2xs);
                 "
               >
                 <span
@@ -1911,7 +1943,7 @@
                 >
                 <span
                   style="
-                    font-size: 0.82rem;
+                    font-size: var(--font-size-xs);
                     color: var(--semantic-color-error-text-dark);
                     font-weight: 600;
                   "
@@ -1924,7 +1956,7 @@
                 style="
                   margin: 6px 0 0 0;
                   padding-left: 20px;
-                  font-size: 0.78rem;
+                  font-size: var(--font-size-2xs);
                   color: var(--semantic-color-error-text-dark);
                 "
               >
@@ -3653,7 +3685,7 @@ function navigateToSoa() {
   color: var(--semantic-color-text-on-primary);
   padding: 16px 20px;
   font-weight: 700;
-  font-size: 1.1rem;
+  font-size: var(--font-size-lg);
 }
 
 .modal-body {

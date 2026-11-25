@@ -91,7 +91,7 @@ const shownStates = computed(
 .pulse-title {
   flex-basis: 100%;
   margin: 0;
-  font-size: 1rem;
+  font-size: var(--font-size-md);
 }
 
 .pulse-states {
@@ -129,7 +129,7 @@ const shownStates = computed(
 }
 
 .pulse-value {
-  font-size: 1.5rem;
+  font-size: var(--font-size-2xl);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
@@ -138,7 +138,7 @@ const shownStates = computed(
 .pulse-status,
 .pulse-footnote {
   color: var(--neutral-dark);
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 
 .pulse-status,

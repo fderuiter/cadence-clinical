@@ -592,7 +592,7 @@ onUnmounted(() => {
   gap: 12px;
   padding: 10px 14px;
   border-radius: var(--radius-md, 8px);
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   font-variant-numeric: var(--font-variant-numeric-tabular);
   color: var(--semantic-color-text);
 }

@@ -73,7 +73,7 @@ async function handleReset() {
 
 .demo-reset-login-btn {
   padding: 8px 16px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   cursor: pointer;
   border-radius: 4px;
@@ -81,7 +81,7 @@ async function handleReset() {
 
 .demo-reset-status {
   margin: 0;
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-success);
   font-weight: 600;
 }

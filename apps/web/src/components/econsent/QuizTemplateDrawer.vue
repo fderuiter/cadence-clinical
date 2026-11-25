@@ -358,7 +358,7 @@ defineExpose({
 
 .drawer-subtitle {
   margin: 0;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -384,7 +384,7 @@ defineExpose({
 }
 
 .control-label {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   color: var(--semantic-color-text);
 }
@@ -393,7 +393,7 @@ defineExpose({
 .input-template-search {
   width: 100%;
   min-height: 44px;
-  font-size: 1rem;
+  font-size: var(--font-size-md);
   box-sizing: border-box;
 }
 
@@ -435,7 +435,7 @@ defineExpose({
 .domain-pill {
   min-height: 44px;
   padding: 6px 12px;
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   border-radius: 999px;
   border: 1px solid var(--border);
@@ -461,7 +461,7 @@ defineExpose({
   background-color: var(--semantic-color-surface-muted);
   border-radius: 6px;
   border: 1px solid var(--border);
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 
 .select-all-label {
@@ -571,7 +571,7 @@ defineExpose({
 
 .template-question-text {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
   color: var(--semantic-color-text);
   line-height: 1.4;
 }
@@ -588,7 +588,7 @@ defineExpose({
   align-items: flex-start;
   gap: 8px;
   flex-wrap: wrap;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -604,7 +604,7 @@ defineExpose({
 }
 
 .correct-tag {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-success-dark);
   font-style: italic;
 }
@@ -615,7 +615,7 @@ defineExpose({
   background-color: var(--semantic-color-warning-bg-soft);
   border-left: 3px solid var(--semantic-color-warning-border-strong);
   border-radius: 4px;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-warning-text);
   display: flex;
   align-items: flex-start;

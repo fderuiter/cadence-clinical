@@ -685,7 +685,7 @@ function handleClose() {
 
 .drawer-subtitle {
   margin: 0;
-  font-size: 0.8125rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -722,14 +722,14 @@ function handleClose() {
 }
 
 :deep(.reason-label) {
-  font-size: 0.8125rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
 }
 
 :deep(.batch-reason-control) {
   width: 100%;
   min-height: 44px;
-  font-size: 1rem;
+  font-size: var(--font-size-md);
   box-sizing: border-box;
 }
 
@@ -745,7 +745,7 @@ function handleClose() {
   justify-content: space-between;
   gap: 8px;
   flex-wrap: wrap;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   margin-bottom: 6px;
 }
@@ -780,7 +780,7 @@ function handleClose() {
 
 .queue-title {
   margin: 0;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
 }
 
@@ -799,7 +799,7 @@ function handleClose() {
 :deep(.queue-table) {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
 }
 
 :deep(.queue-table th),
@@ -831,7 +831,7 @@ function handleClose() {
 .btn-inspect-item {
   min-height: 44px;
   padding: 6px 10px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -848,7 +848,7 @@ function handleClose() {
 .btn-footer-action {
   min-height: 44px;
   padding: 8px 16px;
-  font-size: 0.8125rem;
+  font-size: var(--font-size-xs);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -866,7 +866,7 @@ function handleClose() {
 
 .inspection-title {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -887,7 +887,7 @@ function handleClose() {
   background: var(--semantic-color-surface-muted);
   padding: 10px;
   border-radius: 6px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
 }
 
 .provenance-dl {

@@ -797,7 +797,7 @@ onUnmounted(() => {
 }
 
 .viewport-name-tag {
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   font-weight: 700;
   color: var(--semantic-color-accent-inverse);
 }
@@ -851,7 +851,7 @@ onUnmounted(() => {
 }
 
 .toolbar-label {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   color: var(--semantic-color-text-inverse-muted);
 }
@@ -864,7 +864,7 @@ onUnmounted(() => {
   border: 1px solid var(--semantic-color-border-inverse);
   border-radius: 4px;
   padding: 4px 8px;
-  font-size: 0.8rem;
+  font-size: var(--font-size-md);
   box-sizing: border-box;
 }
 
@@ -876,7 +876,7 @@ onUnmounted(() => {
   border: 1px solid var(--semantic-color-border-inverse);
   border-radius: 4px;
   padding: 4px 10px;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   cursor: pointer;
   display: inline-flex;
@@ -901,7 +901,7 @@ onUnmounted(() => {
 }
 
 .cine-speed-label {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-inverse-muted);
   font-weight: 600;
 }

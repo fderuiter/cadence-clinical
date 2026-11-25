@@ -2037,7 +2037,7 @@ onMounted(() => {
 }
 
 .console-title {
-  font-size: 1.6rem;
+  font-size: var(--font-size-2xl);
   font-weight: 800;
   color: var(--semantic-color-text);
   margin: 0;
@@ -2045,7 +2045,7 @@ onMounted(() => {
 }
 
 .console-subtitle {
-  font-size: 0.88rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-muted);
   margin: 0;
   max-width: 820px;
@@ -2066,7 +2066,7 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   color: var(--semantic-color-text-muted);
 }
@@ -2102,7 +2102,7 @@ onMounted(() => {
 }
 
 .metric-label {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   text-transform: uppercase;
   color: var(--semantic-color-text-muted);
@@ -2110,14 +2110,14 @@ onMounted(() => {
 }
 
 .metric-value {
-  font-size: 1.8rem;
+  font-size: var(--font-size-3xl);
   font-weight: 800;
   color: var(--semantic-color-text);
   line-height: 1.1;
 }
 
 .metric-sub {
-  font-size: 0.76rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-muted);
 }
 
@@ -2133,7 +2133,7 @@ onMounted(() => {
   background: none;
   border: none;
   padding: 10px 18px;
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--semantic-color-text-muted);
   cursor: pointer;
@@ -2183,14 +2183,14 @@ onMounted(() => {
 }
 
 .panel-title {
-  font-size: 1.1rem;
+  font-size: var(--font-size-lg);
   font-weight: 700;
   color: var(--semantic-color-text);
   margin: 0;
 }
 
 .panel-subtitle {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-muted);
   margin: 2px 0 0 0;
 }
@@ -2212,7 +2212,7 @@ onMounted(() => {
   border: 1px solid var(--semantic-color-border);
   padding: 4px 10px;
   border-radius: 16px;
-  font-size: 0.76rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   cursor: pointer;
 }
@@ -2300,7 +2300,7 @@ onMounted(() => {
 }
 
 .parsed-title {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-weight: 700;
   text-transform: uppercase;
   color: var(--semantic-color-text-muted);
@@ -2324,7 +2324,7 @@ onMounted(() => {
 }
 
 .p-val {
-  font-size: 0.84rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   color: var(--semantic-color-text);
 }
@@ -2349,7 +2349,7 @@ onMounted(() => {
 .data-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.84rem;
+  font-size: var(--font-size-xs);
   text-align: left;
 }
 
@@ -2439,7 +2439,7 @@ onMounted(() => {
 }
 
 .form-group label {
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   color: var(--semantic-color-text);
 }
@@ -2451,14 +2451,14 @@ onMounted(() => {
   border: 1px solid var(--semantic-color-border);
   border-radius: 6px;
   padding: 8px 12px;
-  font-size: 0.88rem;
+  font-size: var(--font-size-md);
   font-family: inherit;
   color: inherit;
 }
 
 .text-input-sm {
   padding: 4px 8px;
-  font-size: 0.82rem;
+  font-size: var(--font-size-md);
 }
 
 .text-input:focus-visible,
@@ -2471,7 +2471,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   cursor: pointer;
 }
 
@@ -2488,7 +2488,7 @@ onMounted(() => {
 }
 
 .triage-title {
-  font-size: 0.92rem;
+  font-size: var(--font-size-base);
   font-weight: 700;
   color: var(--semantic-color-orange-text);
   margin: 0;
@@ -2550,7 +2550,7 @@ onMounted(() => {
 }
 
 .case-number {
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
   font-weight: 700;
 }
 
@@ -2577,7 +2577,7 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
 }
 
 .sc-detail-row {
@@ -2630,7 +2630,7 @@ onMounted(() => {
 }
 
 .box-title {
-  font-size: 0.88rem;
+  font-size: var(--font-size-sm);
   font-weight: 700;
   margin: 0;
 }
@@ -2643,7 +2643,7 @@ onMounted(() => {
   border-radius: 6px;
   max-height: 240px;
   overflow-y: auto;
-  font-size: 0.76rem;
+  font-size: var(--font-size-2xs);
 }
 
 .dataset-preview pre,
@@ -2770,7 +2770,7 @@ onMounted(() => {
   gap: 6px;
   padding: 8px 16px;
   border-radius: 6px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   cursor: pointer;
   border: 1px solid transparent;
@@ -2785,7 +2785,7 @@ onMounted(() => {
 
 .btn-sm {
   padding: 4px 10px;
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
 }
 
 .btn-primary {
@@ -2855,13 +2855,13 @@ onMounted(() => {
 }
 
 .modal-title {
-  font-size: 1.2rem;
+  font-size: var(--font-size-lg);
   font-weight: 700;
   margin: 0;
 }
 
 .modal-subtitle {
-  font-size: 0.84rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-muted);
   margin: 0;
 }
@@ -2879,6 +2879,6 @@ onMounted(() => {
   color: var(--semantic-color-error-text-dark);
   padding: 10px 14px;
   border-radius: 6px;
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
 }
 </style>

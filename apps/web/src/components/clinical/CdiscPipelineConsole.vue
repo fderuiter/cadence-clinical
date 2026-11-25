@@ -731,14 +731,14 @@ function downloadDefineXml() {
 
 .pipeline-title {
   margin: 0;
-  font-size: 1.25rem;
+  font-size: var(--font-size-lg);
   font-weight: 700;
   color: var(--semantic-color-text);
 }
 
 .pipeline-subtitle {
   margin: 4px 0 0 0;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-secondary);
   max-width: 800px;
   line-height: 1.4;
@@ -752,7 +752,7 @@ function downloadDefineXml() {
 
 .version-select {
   padding: 8px 12px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-md);
   border: 1px solid var(--border);
   border-radius: 6px;
   background-color: var(--semantic-color-surface);
@@ -763,7 +763,7 @@ function downloadDefineXml() {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   padding: 8px 16px;
   border-radius: 6px;
@@ -790,7 +790,7 @@ function downloadDefineXml() {
 
 .btn-sm {
   padding: 4px 10px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
 }
 
 .execution-banner {
@@ -809,17 +809,17 @@ function downloadDefineXml() {
 }
 
 .banner-icon {
-  font-size: 1.4rem;
+  font-size: var(--font-size-xl);
 }
 
 .banner-title {
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
   font-weight: 700;
   color: var(--semantic-color-success-dark);
 }
 
 .banner-details {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-success);
   margin-top: 2px;
 }
@@ -847,7 +847,7 @@ function downloadDefineXml() {
   border: none;
   border-bottom: 2px solid transparent;
   padding: 8px 16px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--semantic-color-text-secondary);
   cursor: pointer;
@@ -868,13 +868,13 @@ function downloadDefineXml() {
 
 .section-title {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
   font-weight: 700;
   color: var(--semantic-color-text);
 }
 
 .section-badge {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   background-color: var(--semantic-color-surface-header);
   padding: 2px 8px;
   border-radius: 4px;
@@ -905,7 +905,7 @@ function downloadDefineXml() {
 }
 
 .domain-tag {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   font-weight: 800;
   background-color: var(--semantic-color-info-bg);
   color: var(--semantic-color-interactive-primary);
@@ -925,13 +925,13 @@ function downloadDefineXml() {
 }
 
 .domain-title {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-weight: 700;
   color: var(--semantic-color-text);
 }
 
 .domain-desc {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
   line-height: 1.3;
 }
@@ -964,14 +964,14 @@ function downloadDefineXml() {
 }
 
 .spec-label {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   font-weight: 700;
   color: var(--semantic-color-text);
 }
 
 .status-indicator {
   margin-left: 12px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
 }
 
@@ -990,7 +990,7 @@ function downloadDefineXml() {
   padding: 16px;
   border-radius: 6px;
   font-family: var(--semantic-font-mono);
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   line-height: 1.4;
   max-height: 480px;
   overflow: auto;
@@ -1006,7 +1006,7 @@ function downloadDefineXml() {
 
 .vlm-title {
   margin: 0 0 8px 0;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   font-weight: 700;
   color: var(--semantic-color-text);
 }
@@ -1018,7 +1018,7 @@ function downloadDefineXml() {
 }
 
 .vlm-item {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   display: flex;
   gap: 4px;
 }

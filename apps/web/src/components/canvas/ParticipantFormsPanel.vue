@@ -1304,7 +1304,7 @@ watch(
 
 .forms-head h3 {
   margin: 0;
-  font-size: 1rem;
+  font-size: var(--font-size-md);
 }
 
 .forms-head-actions {
@@ -1315,7 +1315,7 @@ watch(
 }
 
 .forms-open-btn {
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   padding: 4px 10px;
   text-decoration: none;
 }
@@ -1323,7 +1323,7 @@ watch(
 .status-line {
   margin: 0;
   color: var(--semantic-color-text-secondary);
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 
 .sr-only {
@@ -1347,7 +1347,7 @@ watch(
   border: 1px solid var(--semantic-color-border);
   border-radius: 8px;
   background: var(--semantic-color-surface);
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   min-width: 0;
   max-width: 100%;
   box-sizing: border-box;
@@ -1386,7 +1386,7 @@ watch(
 .casebook-matrix {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
 }
 
 .casebook-matrix th,
@@ -1418,7 +1418,7 @@ watch(
 .matrix-epoch-header {
   background: var(--semantic-color-surface-header);
   color: var(--semantic-color-text-dark);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -1474,11 +1474,11 @@ watch(
   border-radius: 8px;
   background: var(--semantic-color-warning-bg-soft);
   color: var(--semantic-color-warning-text-dark);
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 
 .casebook-governance-heading {
-  font-size: 0.88rem;
+  font-size: var(--font-size-sm);
 }
 
 .casebook-governance-body {
@@ -1535,7 +1535,7 @@ watch(
 
 .matrix-open-link,
 .matrix-repeat-link {
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   color: var(--semantic-color-interactive-primary);
   text-decoration: underline;
@@ -1593,7 +1593,7 @@ watch(
 
 .unscheduled-head h4 {
   margin: 0;
-  font-size: 0.92rem;
+  font-size: var(--font-size-base);
   color: var(--semantic-color-text-dark);
 }
 
@@ -1620,7 +1620,7 @@ watch(
   border: 1px solid var(--semantic-color-border);
   border-radius: 8px;
   background: var(--semantic-color-surface);
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   min-width: 0;
   max-width: 100%;
   box-sizing: border-box;
@@ -1643,6 +1643,6 @@ watch(
 
 .forms-meta {
   color: var(--semantic-color-text-secondary);
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
 }
 </style>

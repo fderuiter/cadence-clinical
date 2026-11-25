@@ -205,13 +205,13 @@ watch(
 .assist h3,
 .assist h4 {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
 }
 
 .assist-scope,
 .assist-note {
   margin: 0;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 
 .assist-form {
@@ -247,6 +247,6 @@ watch(
 }
 
 .assist-state {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
 }
 </style>

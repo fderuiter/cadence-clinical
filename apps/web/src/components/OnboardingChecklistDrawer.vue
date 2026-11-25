@@ -355,7 +355,7 @@ async function startGuidedTour() {
 
 .drawer-title {
   margin: 0;
-  font-size: 1rem;
+  font-size: var(--font-size-md);
   font-weight: 700;
   color: var(--semantic-color-text);
   overflow: hidden;
@@ -365,7 +365,7 @@ async function startGuidedTour() {
 
 .drawer-subtitle {
   margin: 0;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -378,7 +378,7 @@ async function startGuidedTour() {
   min-height: 44px;
   background: none;
   border: none;
-  font-size: 1.1rem;
+  font-size: var(--font-size-lg);
   color: var(--semantic-color-text-secondary);
   cursor: pointer;
   padding: 6px;
@@ -404,7 +404,7 @@ async function startGuidedTour() {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   margin-bottom: 8px;
 }
 
@@ -415,7 +415,7 @@ async function startGuidedTour() {
 
 .progress-counts {
   color: var(--semantic-color-text-secondary);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
 }
 
 .progress-bar-track {
@@ -438,7 +438,7 @@ async function startGuidedTour() {
   background-color: var(--semantic-color-success-bg-soft);
   border: 1px solid var(--semantic-color-success-border);
   color: var(--semantic-color-success-dark);
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   border-radius: 6px;
   display: flex;
@@ -505,7 +505,7 @@ async function startGuidedTour() {
 
 .task-title {
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text);
   cursor: pointer;
 }
@@ -535,7 +535,7 @@ async function startGuidedTour() {
 
 .task-desc {
   margin: 0 0 10px 0;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-secondary);
   line-height: 1.35;
   padding-left: 24px;
@@ -552,7 +552,7 @@ async function startGuidedTour() {
   align-items: center;
   gap: 4px;
   min-height: 44px;
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
   padding: 6px 12px;
   background-color: var(--semantic-color-surface-header);
   color: var(--semantic-color-text);

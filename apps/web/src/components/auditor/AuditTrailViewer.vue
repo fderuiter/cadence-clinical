@@ -2,7 +2,13 @@
   <div class="audit-trail-viewer">
     <!-- Filter Panel -->
     <div class="card" style="padding: 16px; margin-bottom: 20px">
-      <h3 style="margin-top: 0; margin-bottom: 12px; font-size: 15px">
+      <h3
+        style="
+          margin-top: 0;
+          margin-bottom: 12px;
+          font-size: var(--font-size-base);
+        "
+      >
         Search &amp; Filter Logs
       </h3>
       <div
@@ -143,18 +149,9 @@
 
     <!-- Events Table -->
     <div class="card" style="padding: 0; overflow-x: auto">
-      <table
-        class="clinical-table"
-        style="width: 100%; border-collapse: collapse; font-size: 13px"
-      >
+      <table class="clinical-table audit-trail-table">
         <thead>
-          <tr
-            style="
-              background: var(--semantic-color-surface-muted);
-              border-bottom: 1px solid var(--border);
-              text-align: left;
-            "
-          >
+          <tr class="audit-trail-head-row">
             <th style="padding: 12px 16px; font-weight: 600">Timestamp</th>
             <th style="padding: 12px 16px; font-weight: 600">User</th>
             <th style="padding: 12px 16px; font-weight: 600">Action</th>
@@ -188,7 +185,7 @@
               style="
                 padding: 12px 16px;
                 font-family: var(--semantic-font-mono);
-                font-size: 12px;
+                font-size: var(--font-size-2xs);
                 color: var(--semantic-color-text-secondary);
               "
             >
@@ -323,6 +320,16 @@ function getActionBadgeClass(action) {
 </script>
 
 <style scoped>
+.audit-trail-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-xs);
+}
+.audit-trail-head-row {
+  background: var(--semantic-color-surface-muted);
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+}
 .clinical-table tr:hover {
   background-color: var(--semantic-color-surface-muted);
 }

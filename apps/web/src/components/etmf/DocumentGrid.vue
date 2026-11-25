@@ -1158,14 +1158,14 @@ async function submitUpload() {
 }
 
 .header-titles h2 {
-  font-size: 1.4rem;
+  font-size: var(--font-size-xl);
   font-weight: 700;
   color: var(--semantic-color-text);
   margin: 0 0 6px 0;
 }
 
 .active-artifact-subtitle {
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-secondary);
   margin: 0;
 }
@@ -1176,7 +1176,7 @@ async function submitUpload() {
   gap: 8px;
   padding: 10px 16px;
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
   border-radius: 6px;
 }
 
@@ -1189,7 +1189,7 @@ async function submitUpload() {
   width: 100%;
   border-collapse: collapse;
   text-align: left;
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
 }
 
 .documents-table th {
@@ -1235,7 +1235,7 @@ async function submitUpload() {
 
 .taxonomy-pill {
   font-family: var(--semantic-font-mono);
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   background-color: var(--semantic-color-surface-header); /* deid-ignore */
   color: var(--semantic-color-text-secondary);
   padding: 3px 8px;
@@ -1254,7 +1254,7 @@ async function submitUpload() {
   display: inline-block;
   padding: 4px 10px;
   border-radius: 12px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   text-transform: uppercase;
 }
@@ -1290,7 +1290,7 @@ async function submitUpload() {
 
 .date-cell {
   color: var(--semantic-color-text-secondary);
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 
 /* Modals */
@@ -1328,7 +1328,7 @@ async function submitUpload() {
 
 .modal-header h3 {
   margin: 0;
-  font-size: 1.15rem;
+  font-size: var(--font-size-lg);
   font-weight: 700;
   color: var(--semantic-color-text);
 }
@@ -1336,7 +1336,7 @@ async function submitUpload() {
 .close-modal-btn {
   background: none;
   border: none;
-  font-size: 1.5rem;
+  font-size: var(--font-size-2xl);
   cursor: pointer;
   color: var(--semantic-color-text-secondary);
   padding: 0;
@@ -1357,7 +1357,7 @@ async function submitUpload() {
   border-left: 4px solid var(--semantic-color-warning-border-strong);
   padding: 12px 16px;
   border-radius: 6px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-warning-text);
   margin-bottom: 20px;
   line-height: 1.4;
@@ -1385,14 +1385,14 @@ async function submitUpload() {
 }
 
 .upload-cloud-icon {
-  font-size: 2.5rem;
+  font-size: var(--font-size-5xl);
   color: var(--semantic-color-text-secondary);
   display: block;
   margin-bottom: 8px;
 }
 
 .drop-text {
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-secondary);
   margin: 0;
 }
@@ -1410,7 +1410,7 @@ async function submitUpload() {
 }
 
 .file-size-meta {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-secondary);
   margin: 0;
 }
@@ -1437,7 +1437,7 @@ async function submitUpload() {
 }
 
 .form-group label {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--semantic-color-text-body);
 }
@@ -1451,7 +1451,7 @@ async function submitUpload() {
   padding: 8px 12px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
-  font-size: 0.9rem;
+  font-size: var(--font-size-md);
   outline: 2px solid transparent;
   transition: border-color 0.2s;
   background-color: var(--semantic-color-surface);
@@ -1473,7 +1473,7 @@ async function submitUpload() {
   color: var(--semantic-color-error-text-dark);
   padding: 10px 12px;
   border-radius: 6px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 
 .modal-footer-actions {
@@ -1490,7 +1490,7 @@ async function submitUpload() {
   align-items: center;
   justify-content: center;
   padding: 8px 16px;
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
   font-weight: 500;
   border-radius: 6px;
   cursor: pointer;
@@ -1535,7 +1535,7 @@ async function submitUpload() {
 
 .btn-sm {
   padding: 4px 10px;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
 }
 
 /* Pagination Styling */
@@ -1549,7 +1549,7 @@ async function submitUpload() {
 }
 
 .pagination-info {
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -1621,7 +1621,7 @@ async function submitUpload() {
 .inline-select {
   width: 100%;
   padding: 4px 8px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-md);
   height: auto;
   border-radius: 4px;
 }
@@ -1641,7 +1641,7 @@ async function submitUpload() {
   margin-bottom: 12px;
   padding: 8px 12px;
   border-radius: 6px;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   background: var(--semantic-color-warning-bg-soft);
   border: 1px solid var(--semantic-color-warning-bg-badge);
   color: var(--semantic-color-warning-text);
@@ -1658,17 +1658,17 @@ async function submitUpload() {
 
 .scope-forbidden-guidance h3 {
   margin: 8px 0 6px;
-  font-size: 1rem;
+  font-size: var(--font-size-md);
   font-weight: 700;
 }
 
 .scope-forbidden-guidance p {
   margin: 0;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   line-height: 1.45;
 }
 
 .scope-forbidden-icon {
-  font-size: 1.6rem;
+  font-size: var(--font-size-2xl);
 }
 </style>

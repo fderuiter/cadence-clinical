@@ -525,7 +525,7 @@ function formatDate(dateStr) {
 
 .meta-section h4 {
   margin: 0 0 12px 0;
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
   font-weight: 700;
   color: var(--semantic-color-text);
   text-transform: uppercase;
@@ -536,7 +536,7 @@ function formatDate(dateStr) {
   display: flex;
   justify-content: space-between;
   margin-bottom: 8px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 
 .meta-label {
@@ -567,13 +567,13 @@ function formatDate(dateStr) {
 .change-reason-block h5,
 .checksum-block h5 {
   margin: 0 0 6px;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   color: var(--semantic-color-text-secondary);
 }
 
 .reason-text {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-dark);
   background-color: var(--semantic-color-surface-muted);
   margin: 0;
@@ -587,7 +587,7 @@ function formatDate(dateStr) {
   display: block;
   padding: 6px;
   font-family: var(--semantic-font-mono);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   background-color: var(--semantic-color-surface-header);
   color: var(--semantic-color-text);
   border-radius: var(--radius-xs);
@@ -599,7 +599,7 @@ function formatDate(dateStr) {
 .manifest-card {
   padding: 12px;
   border-radius: var(--radius-md, 6px);
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
 }
 
 .manifest-card.signed {
@@ -674,7 +674,7 @@ function formatDate(dateStr) {
 /* CSS Watermarking overlay rotates diagonally across the stored document stream */
 .watermark-text {
   font-family: var(--semantic-font-family);
-  font-size: 1rem;
+  font-size: var(--font-size-md);
   font-weight: 900;
   color: var(--semantic-color-error);
   letter-spacing: 0.1em;
@@ -701,7 +701,7 @@ function formatDate(dateStr) {
   white-space: pre-wrap;
   word-break: break-word;
   font-family: var(--semantic-font-mono);
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   line-height: 1.5;
   color: var(--semantic-color-text-dark);
 }
@@ -724,20 +724,20 @@ function formatDate(dateStr) {
 
 .stream-status-title {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
   font-weight: 700;
 }
 
 .stream-status-meta {
   margin: 0;
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-secondary);
 }
 
 .btn-retry-stream {
   margin-top: 8px;
   padding: 6px 14px;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   border-radius: 6px;
   border: 1px solid var(--semantic-color-interactive-primary);
@@ -749,7 +749,7 @@ function formatDate(dateStr) {
 
 .checksum-unverified {
   display: block;
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
   font-style: italic;
 }
 .manifest-card.redacted {
@@ -766,11 +766,11 @@ function formatDate(dateStr) {
 }
 .redact-meta {
   margin: 0 0 4px 0;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
 }
 .redacted-items-list {
   margin-top: 8px;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
 }
 .meta-label-items {
   color: var(--semantic-color-info);
@@ -782,12 +782,12 @@ function formatDate(dateStr) {
 }
 .signature-block {
   margin-top: 8px;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
 }
 .signature-text-code {
   display: block;
   font-family: var(--semantic-font-mono);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   background-color: var(--semantic-color-info-light);
   color: var(--semantic-color-info);
   padding: 6px;

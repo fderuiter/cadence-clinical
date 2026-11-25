@@ -195,7 +195,7 @@ function onConfirm() {
 }
 
 p {
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-secondary);
   margin: 0 0 12px 0;
 }
@@ -212,7 +212,7 @@ p {
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   font-family: var(--font);
-  font-size: 0.9rem;
+  font-size: var(--font-size-md);
   background-color: var(--semantic-color-surface);
   color: var(--semantic-color-text);
 }

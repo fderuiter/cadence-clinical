@@ -546,7 +546,7 @@ function onKeydown(event: KeyboardEvent) {
   padding: 14px 16px;
   border: 0;
   border-bottom: 1px solid var(--border);
-  font-size: 1rem;
+  font-size: var(--font-size-md);
   background: transparent;
   color: inherit;
 }
@@ -575,7 +575,7 @@ function onKeydown(event: KeyboardEvent) {
 .palette-group {
   grid-row: span 2;
   color: var(--neutral-dark);
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -586,7 +586,7 @@ function onKeydown(event: KeyboardEvent) {
 
 .palette-detail {
   color: var(--neutral-dark);
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 
 .palette-empty,
@@ -594,7 +594,7 @@ function onKeydown(event: KeyboardEvent) {
   margin: 0;
   padding: 12px 16px;
   color: var(--neutral-dark);
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 
 .palette-footnote {

@@ -28,7 +28,11 @@
           <button
             type="button"
             class="btn btn-primary btn-batch-upload"
-            style="font-size: 13px; font-weight: 600; padding: 6px 14px"
+            style="
+              font-size: var(--font-size-xs);
+              font-weight: 600;
+              padding: 6px 14px;
+            "
             @click="isBatchDrawerOpen = true"
           >
             Batch Ingestion
@@ -36,7 +40,11 @@
           <button
             type="button"
             class="btn btn-outline-secondary btn-qc-queue"
-            style="font-size: 13px; font-weight: 600; padding: 6px 14px"
+            style="
+              font-size: var(--font-size-xs);
+              font-weight: 600;
+              padding: 6px 14px;
+            "
             @click="showQcQueue = !showQcQueue"
           >
             CRA QC Queue
@@ -790,14 +798,14 @@ async function handleDeleteFile(file) {
 
 .hub-page-title {
   margin: 0;
-  font-size: 1.3rem;
+  font-size: var(--font-size-xl);
   font-weight: 800;
   color: var(--text-main);
 }
 
 .hub-page-subtitle {
   margin: 2px 0 0 0;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   color: var(--neutral-dark);
 }
 
@@ -811,7 +819,7 @@ async function handleDeleteFile(file) {
   left: 12px;
   top: 50%;
   transform: translateY(-50%);
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -820,7 +828,7 @@ async function handleDeleteFile(file) {
   padding: 9px 34px 9px 34px;
   border: 1px solid var(--border);
   border-radius: 8px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-md);
   background-color: var(--semantic-color-surface-muted);
   transition: all 0.2s;
   box-sizing: border-box;
@@ -844,7 +852,7 @@ async function handleDeleteFile(file) {
   background: none;
   border: none;
   border-radius: 4px;
-  font-size: 1rem;
+  font-size: var(--font-size-md);
   color: var(--semantic-color-text-secondary);
   cursor: pointer;
 }
@@ -876,7 +884,7 @@ async function handleDeleteFile(file) {
   background-color: var(--semantic-color-primary-light);
   color: var(--semantic-color-primary);
   border-radius: 6px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
 }
 
 .remove-pill-btn {
@@ -886,7 +894,7 @@ async function handleDeleteFile(file) {
   font-weight: bold;
   cursor: pointer;
   padding: 0 2px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 
 .bulk-actions-toolbar {
@@ -896,7 +904,7 @@ async function handleDeleteFile(file) {
 }
 
 .selection-count-badge {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   font-weight: 700;
   color: var(--semantic-color-primary);
   background-color: var(--semantic-color-primary-light);
@@ -921,14 +929,14 @@ async function handleDeleteFile(file) {
   width: 100%;
   border-collapse: collapse;
   text-align: left;
-  font-size: 0.84rem;
+  font-size: var(--font-size-xs);
 }
 
 .documents-table th {
   background-color: var(--semantic-color-surface);
   color: var(--semantic-color-text-secondary);
   font-weight: 600;
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
   padding: 10px 14px;
   border-bottom: 2px solid var(--semantic-color-border);
   position: sticky;
@@ -988,7 +996,7 @@ async function handleDeleteFile(file) {
 }
 
 .mime-icon {
-  font-size: 1.1rem;
+  font-size: var(--font-size-lg);
 }
 
 .filename-text {
@@ -1016,14 +1024,14 @@ async function handleDeleteFile(file) {
 
 .study-badge {
   font-family: var(--semantic-font-mono);
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   color: var(--semantic-color-primary);
 }
 
 .site-badge {
   font-family: var(--semantic-font-mono);
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
   background-color: var(--semantic-color-surface-header);
   padding: 2px 6px;
   border-radius: 4px;
@@ -1031,12 +1039,12 @@ async function handleDeleteFile(file) {
 
 .uploader-name {
   font-family: var(--semantic-font-mono);
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
 }
 
 .date-cell {
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
   white-space: nowrap;
 }
@@ -1070,7 +1078,7 @@ async function handleDeleteFile(file) {
 }
 
 .shared-badge {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   padding: 3px 8px;
   border-radius: 6px;
@@ -1143,19 +1151,19 @@ async function handleDeleteFile(file) {
 }
 
 .empty-state-icon {
-  font-size: 3rem;
+  font-size: var(--font-size-5xl);
   opacity: 0.6;
 }
 
 .empty-state-box h4 {
   margin: 0;
-  font-size: 1rem;
+  font-size: var(--font-size-md);
   color: var(--semantic-color-text-body);
 }
 
 .empty-state-box p {
   margin: 0;
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -1167,7 +1175,7 @@ async function handleDeleteFile(file) {
   padding: 12px 24px;
   border-top: 1px solid var(--border);
   background-color: var(--semantic-color-surface);
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
 }
 
 .pagination-buttons {

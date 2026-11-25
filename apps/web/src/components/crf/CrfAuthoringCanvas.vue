@@ -169,7 +169,7 @@
                   display: flex;
                   justify-content: space-between;
                   font-weight: 700;
-                  font-size: 0.75rem;
+                  font-size: var(--font-size-2xs);
                   color: var(--semantic-color-warning-text);
                   margin-bottom: 2px;
                 "
@@ -222,7 +222,7 @@
           <div
             v-if="!selectedField"
             style="
-              font-size: 0.78rem;
+              font-size: var(--font-size-2xs);
               color: var(--semantic-color-text-secondary);
               font-style: italic;
               background-color: var(--semantic-color-surface-muted);
@@ -260,7 +260,7 @@
               <span
                 style="
                   font-weight: 700;
-                  font-size: 0.85rem;
+                  font-size: var(--font-size-sm);
                   color: var(--semantic-color-text-dark);
                 "
                 >{{ selectedField.label }}</span
@@ -347,7 +347,7 @@
               <label
                 for="inspect-field-required"
                 style="
-                  font-size: 0.8rem;
+                  font-size: var(--font-size-xs);
                   font-weight: 600;
                   color: var(--semantic-color-text-body);
                   cursor: pointer;
@@ -394,7 +394,7 @@
               <label
                 for="dismiss-warnings-checkbox"
                 style="
-                  font-size: 0.8rem;
+                  font-size: var(--font-size-xs);
                   font-weight: 600;
                   color: var(--semantic-color-text-body);
                   cursor: pointer;
@@ -427,7 +427,7 @@
                 placeholder="Provide a clinical justification for this layout deviation..."
                 style="
                   width: 100%;
-                  font-size: 0.8rem;
+                  font-size: var(--font-size-md);
                   padding: 8px;
                   border: 1px solid var(--semantic-color-border-muted);
                   border-radius: 6px;
@@ -451,7 +451,7 @@
                 border: 1px solid var(--semantic-color-error-border);
                 padding: 10px;
                 border-radius: 6px;
-                font-size: 0.78rem;
+                font-size: var(--font-size-2xs);
                 font-weight: 600;
               "
             >
@@ -467,7 +467,7 @@
                 border: 1px solid var(--semantic-color-success-border);
                 padding: 10px;
                 border-radius: 6px;
-                font-size: 0.78rem;
+                font-size: var(--font-size-2xs);
                 font-weight: 600;
               "
             >
@@ -981,14 +981,14 @@ function onResetSimulation() {
 }
 
 .canvas-header-info h2 {
-  font-size: 1.15rem;
+  font-size: var(--font-size-lg);
   font-weight: 700;
   color: var(--semantic-color-text);
   margin: 0;
 }
 
 .canvas-header-info p {
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
   margin: 2px 0 0 0;
 }
@@ -1011,7 +1011,7 @@ function onResetSimulation() {
 
 .btn-viewport {
   padding: 6px 12px;
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   border-radius: 6px;
   border: none;
@@ -1035,7 +1035,7 @@ function onResetSimulation() {
 }
 
 .form-schema-badge {
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
   background-color: var(--semantic-color-info-bg-soft);
   border: 1px solid var(--semantic-color-info-border-accent);
   color: var(--semantic-color-primary);
@@ -1111,7 +1111,7 @@ function onResetSimulation() {
 }
 
 .warnings-box-clean {
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-success-dark);
   background-color: var(--semantic-color-success-bg-soft);
   border: 1px solid var(--semantic-color-success-border-soft);
@@ -1130,7 +1130,7 @@ function onResetSimulation() {
 }
 
 .inspector-field-group label {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   color: var(--semantic-color-text-secondary);
 }
@@ -1141,7 +1141,7 @@ function onResetSimulation() {
   padding: 8px 10px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
-  font-size: 0.82rem;
+  font-size: var(--font-size-md);
   color: var(--semantic-color-text);
   background-color: var(--semantic-color-surface);
   transition: all 0.15s;
@@ -1158,7 +1158,7 @@ function onResetSimulation() {
   padding: 10px 16px;
   background-color: var(--semantic-color-primary);
   color: var(--semantic-color-text-on-primary);
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-weight: 700;
   border: none;
   border-radius: 8px;

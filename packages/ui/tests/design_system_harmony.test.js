@@ -1070,13 +1070,16 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
         expect(selectorPart).not.toMatch(/\btextarea\b/i);
       }
 
-      // Verify touch viewports preserve >= 16px (1rem) font-size to prevent iOS auto-zoom
+      // Verify touch viewports preserve >= 16px (1rem) font-size globally and on clinical/table controls to prevent mobile auto-zoom
       const coarsePointerMatch = tokensCss.match(
         /@media\s*\(\s*pointer:\s*coarse\s*\)\s*\{([\s\S]*?\})\s*\}/
       );
       expect(coarsePointerMatch).not.toBeNull();
       expect(coarsePointerMatch[1]).toContain(
-        "font-size: max(1rem, var(--font-size-md, 16px))"
+        ':where(input, select, textarea):not([type="checkbox"]):not([type="radio"])'
+      );
+      expect(coarsePointerMatch[1]).toContain(
+        "font-size: max(1rem, var(--font-size-md))"
       );
 
       const dataTableVue = fs.readFileSync(
@@ -1357,8 +1360,8 @@ const thresholdAmount = ref(600);
       );
 
       expect(rootVars["--semantic-font-mono"]).toBe("var(--font-mono)");
-      expect(rootVars["--font-size-2xs"]).toBe("12px");
-      expect(resolveVar("--semantic-font-size-2xs", rootVars)).toBe("12px");
+      expect(rootVars["--font-size-2xs"]).toBe("0.75rem");
+      expect(resolveVar("--semantic-font-size-2xs", rootVars)).toBe("0.75rem");
 
       const fontMonoProps = parseRuleProps(tokensCss, /\.font-mono\s*\{/);
       expect(fontMonoProps).not.toBeNull();
@@ -1460,7 +1463,11 @@ const thresholdAmount = ref(600);
         }
 
         const styleSources = file.endsWith(".css")
-          ? [clean]
+          ? [
+              file.endsWith("/packages/ui/tokens.css")
+                ? clean.replace(/@font-face\s*\{[\s\S]*?\}/gi, "")
+                : clean,
+            ]
           : Array.from(
               clean.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/gi),
               (m) => m[1]
@@ -1796,6 +1803,8 @@ const thresholdAmount = ref(600);
         [
           "custom-vue/no-sub12px-font-size",
           "custom-vue/no-custom-font-stack",
+          "custom-vue/no-untokenized-font-size",
+          "custom-vue/no-sub1rem-touch-control",
           "custom-vue/require-tabular-nums",
         ].includes(m.ruleId)
       );
@@ -2479,7 +2488,10 @@ const open = () => {};
     it("standardizes .clinical-badge at 0.75rem with tabular-nums and >= 4.5:1 light/dark contrast across all 8 GxP and readiness modifiers", () => {
       const baseBadge = parseRuleProps(tokensCss, /\.clinical-badge\s*\{/);
       expect(baseBadge).not.toBeNull();
-      expect(baseBadge["font-size"]).toBe("0.75rem");
+      expect(baseBadge["font-size"]).toBe("var(--font-size-2xs)");
+      expect(resolveCssColorExpr(baseBadge["font-size"], lightTheme)).toBe(
+        "0.75rem"
+      );
       expect(
         resolveCssColorExpr(baseBadge["font-variant-numeric"], lightTheme)
       ).toBe("tabular-nums");

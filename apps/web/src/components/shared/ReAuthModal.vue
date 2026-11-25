@@ -282,7 +282,7 @@ defineExpose({
 
 .modal-header h3 {
   margin: 0;
-  font-size: 1.1rem;
+  font-size: var(--font-size-lg);
   font-weight: 600;
   color: var(--semantic-color-text);
   display: flex;
@@ -293,7 +293,7 @@ defineExpose({
 .close-btn {
   background: transparent;
   border: none;
-  font-size: 1.5rem;
+  font-size: var(--font-size-2xl);
   line-height: 1;
   color: var(--semantic-color-text-secondary);
   cursor: pointer;
@@ -315,7 +315,7 @@ defineExpose({
 
 .modal-instructions {
   margin: 0;
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-secondary);
   line-height: 1.45;
 }
@@ -331,7 +331,7 @@ defineExpose({
 }
 
 .context-label {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--semantic-color-text-secondary);
@@ -339,7 +339,7 @@ defineExpose({
 }
 
 .context-value {
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text);
   word-break: break-all;
 }
@@ -351,7 +351,7 @@ defineExpose({
 }
 
 .form-group label {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-weight: 500;
   color: var(--semantic-color-text);
 }
@@ -362,7 +362,7 @@ defineExpose({
 
 .form-control {
   padding: 9px 12px;
-  font-size: 0.9rem;
+  font-size: var(--font-size-md);
   border: 1px solid var(--border);
   border-radius: var(--radius-md, 6px);
   background: var(--semantic-color-surface);
@@ -388,7 +388,7 @@ defineExpose({
   gap: 8px;
   padding: 10px 14px;
   border-radius: var(--radius-md, 6px);
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   line-height: 1.35;
 }
 
@@ -413,7 +413,7 @@ defineExpose({
   align-items: center;
   justify-content: center;
   padding: 8px 16px;
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   font-weight: 500;
   border-radius: var(--radius-md, 6px);
   cursor: pointer;

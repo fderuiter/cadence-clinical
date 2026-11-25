@@ -432,12 +432,12 @@ function handleTreeKeyDown(e) {
 }
 
 .tree-title-icon {
-  font-size: 1.2rem;
+  font-size: var(--font-size-lg);
 }
 
 .tree-title {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
   font-weight: 700;
   color: var(--text-main);
 }
@@ -447,7 +447,7 @@ function handleTreeKeyDown(e) {
   padding: 8px 10px;
   border: 1px solid var(--border);
   border-radius: 6px;
-  font-size: 0.82rem;
+  font-size: var(--font-size-md);
   box-sizing: border-box;
 }
 
@@ -460,7 +460,7 @@ function handleTreeKeyDown(e) {
   padding: 6px 8px;
   border: 1px solid var(--border);
   border-radius: 6px;
-  font-size: 0.8rem;
+  font-size: var(--font-size-md);
   background-color: var(--semantic-color-surface-muted);
   box-sizing: border-box;
 }
@@ -476,7 +476,7 @@ function handleTreeKeyDown(e) {
   text-align: center;
   color: var(--semantic-color-text-secondary);
   font-style: italic;
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
 }
 
 .tree-node {
@@ -490,7 +490,7 @@ function handleTreeKeyDown(e) {
   border-radius: 6px;
   cursor: pointer;
   user-select: none;
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   transition: background-color 0.15s;
 }
 
@@ -519,7 +519,7 @@ function handleTreeKeyDown(e) {
 
 .folder-icon {
   margin-right: 6px;
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
   flex-shrink: 0;
 }
 

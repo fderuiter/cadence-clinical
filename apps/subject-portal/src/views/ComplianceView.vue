@@ -24,23 +24,9 @@
     </div>
 
     <!-- Compliance Failure Container -->
-    <div
-      id="compliance-failure"
-      class="card error-state"
-      style="
-        display: none;
-        text-align: center;
-        padding: 32px;
-        border: 1px solid var(--danger);
-        margin-bottom: 16px;
-      "
-    >
-      <p style="color: var(--danger); font-weight: bold; font-size: 16px">
-        Failed to load compliance data.
-      </p>
-      <p id="compliance-error-msg" style="font-size: 14px; margin-bottom: 12px">
-        Unknown error
-      </p>
+    <div id="compliance-failure" class="card error-state" style="display: none">
+      <p class="error-state-title">Failed to load compliance data.</p>
+      <p id="compliance-error-msg" class="error-state-detail">Unknown error</p>
       <button id="btn-retry-compliance" type="button" class="btn btn-primary">
         Retry
       </button>

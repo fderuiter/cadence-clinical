@@ -1118,14 +1118,14 @@ async function handleExecuteBulkSignOff() {
 }
 
 .console-title {
-  font-size: 1.35rem;
+  font-size: var(--font-size-xl);
   font-weight: 700;
   color: var(--semantic-color-text);
   margin: 0 0 4px 0;
 }
 
 .console-subtitle {
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-secondary);
   margin: 0;
 }
@@ -1156,7 +1156,7 @@ async function handleExecuteBulkSignOff() {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm, 4px);
   background: var(--semantic-color-surface);
-  font-size: 0.9rem;
+  font-size: var(--font-size-md);
   width: 100%;
   max-width: 32rem;
   min-width: 0;
@@ -1180,12 +1180,12 @@ async function handleExecuteBulkSignOff() {
 }
 
 .chip-label {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
 }
 
 .chip-value {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-weight: 700;
 }
 
@@ -1232,7 +1232,7 @@ async function handleExecuteBulkSignOff() {
 }
 
 .sidebar-heading {
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
   text-transform: uppercase;
   color: var(--semantic-color-text-secondary);
   margin-top: 0;
@@ -1291,7 +1291,7 @@ async function handleExecuteBulkSignOff() {
 }
 
 .module-title {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
 }
 
@@ -1330,7 +1330,7 @@ async function handleExecuteBulkSignOff() {
 
 .reader-title {
   margin: 4px 0 0 0;
-  font-size: 1.15rem;
+  font-size: var(--font-size-lg);
   overflow-wrap: anywhere;
 }
 
@@ -1338,7 +1338,7 @@ async function handleExecuteBulkSignOff() {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   font-family: inherit;
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
   line-height: 1.6;
   background: var(--semantic-color-surface-muted);
   padding: 16px;
@@ -1389,12 +1389,12 @@ async function handleExecuteBulkSignOff() {
 }
 
 .score-number {
-  font-size: 1.8rem;
+  font-size: var(--font-size-3xl);
   font-weight: 800;
 }
 
 .score-label {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   font-weight: 700;
 }
 
@@ -1408,7 +1408,7 @@ async function handleExecuteBulkSignOff() {
 
 .question-title {
   font-weight: 600;
-  font-size: 1rem;
+  font-size: var(--font-size-md);
   margin-bottom: 12px;
 }
 
@@ -1449,7 +1449,7 @@ async function handleExecuteBulkSignOff() {
   background: var(--semantic-color-surface-muted);
   padding: 8px 12px;
   border-radius: 4px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -1481,26 +1481,26 @@ async function handleExecuteBulkSignOff() {
 }
 
 .cert-brand {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-weight: 700;
   letter-spacing: 1px;
   color: var(--semantic-color-text-secondary);
 }
 
 .cert-title {
-  font-size: 1.6rem;
+  font-size: var(--font-size-2xl);
   font-weight: 800;
   color: var(--semantic-color-text);
   margin: 6px 0;
 }
 
 .cert-subtitle {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-secondary);
 }
 
 .cert-lead {
-  font-size: 1rem;
+  font-size: var(--font-size-md);
   line-height: 1.5;
 }
 
@@ -1513,7 +1513,7 @@ async function handleExecuteBulkSignOff() {
 .cert-table td {
   padding: 8px 12px;
   border: 1px solid var(--semantic-color-border-control);
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
 }
 
 .cert-signature-manifest {
@@ -1527,14 +1527,14 @@ async function handleExecuteBulkSignOff() {
 .manifest-header {
   font-weight: 700;
   margin-bottom: 8px;
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
 }
 
 .manifest-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
   gap: 6px 16px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 
 .cert-routing-status {
@@ -1545,7 +1545,7 @@ async function handleExecuteBulkSignOff() {
 }
 
 .routing-badge {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   padding: 6px 12px;
   border-radius: 4px;
@@ -1586,12 +1586,12 @@ async function handleExecuteBulkSignOff() {
 .modal-close-btn {
   background: none;
   border: none;
-  font-size: 1.2rem;
+  font-size: var(--font-size-lg);
   cursor: pointer;
 }
 
 .modal-description {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-secondary);
   line-height: 1.4;
   margin-bottom: 16px;
@@ -1603,7 +1603,7 @@ async function handleExecuteBulkSignOff() {
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
   margin-top: 4px;
-  font-size: 0.9rem;
+  font-size: var(--font-size-md);
 }
 
 .statement-box {
@@ -1612,7 +1612,7 @@ async function handleExecuteBulkSignOff() {
   padding: 10px 12px;
   border-radius: 4px;
   font-style: italic;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-body);
   margin-top: 4px;
 }
@@ -1646,7 +1646,7 @@ async function handleExecuteBulkSignOff() {
 }
 
 .banner-icon {
-  font-size: 1.25rem;
+  font-size: var(--font-size-lg);
 }
 
 .banner-text {
@@ -1656,12 +1656,12 @@ async function handleExecuteBulkSignOff() {
 }
 
 .banner-title {
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
   font-weight: 700;
 }
 
 .banner-message {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-error-text-deep);
 }
 
@@ -1716,7 +1716,7 @@ async function handleExecuteBulkSignOff() {
 }
 
 .section-desc {
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-secondary);
   margin-top: 4px;
 }
@@ -1732,7 +1732,7 @@ async function handleExecuteBulkSignOff() {
 }
 
 .filter-title {
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
   font-weight: 700;
   color: var(--semantic-color-text-dark);
   margin-bottom: 8px;
@@ -1749,7 +1749,7 @@ async function handleExecuteBulkSignOff() {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-body);
   cursor: pointer;
 }
@@ -1771,7 +1771,7 @@ async function handleExecuteBulkSignOff() {
   flex-wrap: wrap;
   align-items: center;
   gap: 12px;
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-info);
   min-width: 0;
 }
@@ -1782,7 +1782,7 @@ async function handleExecuteBulkSignOff() {
   border: 1px solid var(--semantic-color-error-border);
   padding: 2px 8px;
   border-radius: 4px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
 }
 
@@ -1813,7 +1813,7 @@ async function handleExecuteBulkSignOff() {
   padding: 6px 12px;
   border-radius: 4px;
   font-weight: 700;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 
 .success-pill {
@@ -1869,13 +1869,13 @@ async function handleExecuteBulkSignOff() {
   padding: 2px 6px;
   border-radius: 4px;
   font-family: var(--semantic-font-mono);
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
 }
 
 .badge-role {
   background: var(--semantic-color-surface-header);
   color: var(--semantic-color-text-body);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
 }
 
 .data-table th,
@@ -1883,7 +1883,7 @@ async function handleExecuteBulkSignOff() {
   padding: 10px 12px;
   border-bottom: 1px solid var(--semantic-color-border);
   text-align: left;
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
 }
 
 .alert-banner {

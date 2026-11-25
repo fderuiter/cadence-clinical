@@ -614,7 +614,7 @@ function submitEmergencyUnblind() {
 .state-change h3,
 .state-change h4 {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
 }
 
 .state-change select,
@@ -660,6 +660,6 @@ function submitEmergencyUnblind() {
 .note {
   margin: 0;
   color: var(--neutral-dark);
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 </style>

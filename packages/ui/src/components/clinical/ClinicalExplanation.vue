@@ -213,7 +213,7 @@ const hasContent = computed(
   background: var(--color-surface);
   color: var(--color-text);
   font-family: var(--font-sans);
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
 }
 
 .clinical-explanation--compact {
@@ -242,7 +242,7 @@ const hasContent = computed(
 
 .clinical-explanation__badge {
   font-family: var(--font-mono);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   color: var(--text-muted);
   padding: 0.125rem 0.375rem;
   border: 1px solid var(--color-border);
@@ -258,7 +258,7 @@ const hasContent = computed(
 }
 
 .clinical-explanation__caption {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   color: var(--text-muted);
 }
@@ -317,7 +317,7 @@ const hasContent = computed(
   gap: 0.375rem;
   min-height: 2.75rem;
   cursor: pointer;
-  font-size: 0.8125rem;
+  font-size: var(--font-size-xs);
   color: var(--text-muted);
 }
 </style>

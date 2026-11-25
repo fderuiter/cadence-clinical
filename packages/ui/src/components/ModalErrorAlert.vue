@@ -136,7 +136,7 @@ onMounted(() => {
   border: 1px solid var(--semantic-color-error-border-soft);
   border-radius: var(--radius-sm);
   color: var(--semantic-color-error-text-dark);
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   line-height: 1.4;
   margin-top: 10px;
   margin-bottom: 10px;
@@ -154,7 +154,7 @@ onMounted(() => {
 }
 
 .error-icon {
-  font-size: 1.1rem;
+  font-size: var(--font-size-lg);
   flex-shrink: 0;
   line-height: 1.2;
 }
@@ -191,7 +191,7 @@ onMounted(() => {
   min-height: var(--semantic-control-target-min, 24px);
   min-width: var(--semantic-control-target-min, 24px);
   padding: 4px 10px;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   border-radius: var(--radius-xs);
   cursor: pointer;

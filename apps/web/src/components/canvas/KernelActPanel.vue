@@ -111,7 +111,7 @@ watch(() => props.nodeRef, load, { immediate: true });
 
 .act h3 {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
 }
 
 .act-list {
@@ -150,7 +150,7 @@ watch(() => props.nodeRef, load, { immediate: true });
 .act-reason,
 .act-note {
   margin: 0;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--neutral-dark);
 }
 

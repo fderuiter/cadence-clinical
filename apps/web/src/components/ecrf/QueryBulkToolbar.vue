@@ -187,7 +187,7 @@ const emit = defineEmits<{
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--semantic-color-surface-muted);
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 .form-query-bulk-controls {
   display: flex;

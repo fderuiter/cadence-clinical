@@ -563,19 +563,19 @@ watch(() => props.proposalRef, load, { immediate: true });
 }
 
 .back {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 
 .review-kind {
   color: var(--neutral-dark);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
 
 .review-header h2 {
   margin: 2px 0 6px;
-  font-size: 1.25rem;
+  font-size: var(--font-size-lg);
 }
 
 .review-tags {
@@ -589,7 +589,7 @@ watch(() => props.proposalRef, load, { immediate: true });
   padding: 1px 8px;
   border: 1px solid var(--border);
   border-radius: 999px;
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
 }
 
 .safety {
@@ -597,7 +597,7 @@ watch(() => props.proposalRef, load, { immediate: true });
   border: 1px solid var(--border);
   border-radius: 6px;
   background: var(--neutral-light);
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
 }
 
 .details {
@@ -618,7 +618,7 @@ watch(() => props.proposalRef, load, { immediate: true });
 
 .mono {
   font-family: var(--semantic-font-mono);
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   overflow-wrap: anywhere;
 }
 
@@ -628,7 +628,7 @@ watch(() => props.proposalRef, load, { immediate: true });
 
 .block h3 {
   margin-bottom: 6px;
-  font-size: 1rem;
+  font-size: var(--font-size-md);
 }
 
 .plain,
@@ -649,7 +649,7 @@ watch(() => props.proposalRef, load, { immediate: true });
 .source-role {
   min-width: 7rem;
   color: var(--neutral-dark);
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 
 .source-ref {
@@ -670,12 +670,12 @@ watch(() => props.proposalRef, load, { immediate: true });
 
 .note {
   color: var(--neutral-dark);
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 
 .btn-small {
   padding: 2px 10px;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
 }
 
 .decision {
@@ -691,7 +691,7 @@ watch(() => props.proposalRef, load, { immediate: true });
 .blockers {
   margin: 6px 0 0;
   padding-left: 1.2rem;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 
 .decision-reject {

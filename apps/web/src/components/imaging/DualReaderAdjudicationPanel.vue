@@ -954,7 +954,7 @@ function executeChairSignoff() {
 }
 
 .panel-title {
-  font-size: 1.05rem;
+  font-size: var(--font-size-md);
   font-weight: 800;
   color: var(--semantic-color-text-inverse);
 }
@@ -972,7 +972,7 @@ function executeChairSignoff() {
   background: none;
   border: none;
   color: var(--semantic-color-text-inverse-muted);
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 6px 12px;
   border-radius: 4px;
@@ -1005,18 +1005,18 @@ function executeChairSignoff() {
 }
 
 .alert-icon {
-  font-size: 1.2rem;
+  font-size: var(--font-size-lg);
 }
 
 .alert-title {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-weight: 700;
   color: var(--semantic-color-accent-inverse);
   margin-bottom: 2px;
 }
 
 .alert-text {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-inverse-muted);
   line-height: 1.4;
 }
@@ -1039,7 +1039,7 @@ function executeChairSignoff() {
 }
 
 .card-subtitle {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-weight: 700;
   color: var(--semantic-color-text-inverse);
   text-transform: uppercase;
@@ -1087,7 +1087,7 @@ function executeChairSignoff() {
 }
 
 .metric-card-val {
-  font-size: 1.1rem;
+  font-size: var(--font-size-lg);
   font-weight: 800;
   color: var(--semantic-color-text-inverse);
 }
@@ -1099,7 +1099,7 @@ function executeChairSignoff() {
 .reader-lesion-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
 }
 
 .reader-lesion-table th {
@@ -1141,7 +1141,7 @@ function executeChairSignoff() {
 }
 
 .form-label {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   color: var(--semantic-color-text-inverse-muted);
 }
@@ -1154,7 +1154,7 @@ function executeChairSignoff() {
   border: 1px solid var(--semantic-color-border-inverse);
   border-radius: 6px;
   padding: 8px 10px;
-  font-size: 0.8rem;
+  font-size: var(--font-size-md);
   font-family: inherit;
 }
 
@@ -1175,7 +1175,7 @@ function executeChairSignoff() {
   border: 1px solid var(--semantic-color-border-inverse);
   border-radius: 4px;
   padding: 6px 10px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   cursor: pointer;
 }
@@ -1208,7 +1208,7 @@ function executeChairSignoff() {
   border: none;
   border-radius: 6px;
   padding: 10px 18px;
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   font-weight: 700;
   cursor: pointer;
   display: flex;
@@ -1223,7 +1223,7 @@ function executeChairSignoff() {
   border: 1px solid var(--semantic-color-border-inverse);
   border-radius: 6px;
   padding: 8px 14px;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   cursor: pointer;
 }
@@ -1253,17 +1253,17 @@ function executeChairSignoff() {
 }
 
 .banner-icon {
-  font-size: 1.4rem;
+  font-size: var(--font-size-xl);
 }
 
 .banner-headline {
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
   font-weight: 800;
   color: var(--semantic-color-text-inverse);
 }
 
 .banner-subtext {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-inverse-muted);
 }
 
@@ -1302,7 +1302,7 @@ function executeChairSignoff() {
 }
 
 .reader-label {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-weight: 700;
   color: var(--semantic-color-text-inverse);
 }
@@ -1311,7 +1311,7 @@ function executeChairSignoff() {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
 }
 
 .compare-metric {
@@ -1359,7 +1359,7 @@ function executeChairSignoff() {
   border: none;
   border-radius: 6px;
   padding: 10px 20px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-weight: 800;
   cursor: pointer;
   display: flex;
@@ -1385,7 +1385,7 @@ function executeChairSignoff() {
   border: 1px solid var(--semantic-color-primary);
   border-radius: 6px;
   padding: 8px 14px;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   font-weight: 700;
   cursor: pointer;
   display: flex;
@@ -1431,7 +1431,7 @@ function executeChairSignoff() {
 }
 
 .modal-title {
-  font-size: 1rem;
+  font-size: var(--font-size-md);
   font-weight: 700;
   color: var(--semantic-color-text-inverse);
 }
@@ -1440,7 +1440,7 @@ function executeChairSignoff() {
   background: none;
   border: none;
   color: var(--semantic-color-text-inverse-muted);
-  font-size: 1.1rem;
+  font-size: var(--font-size-lg);
   cursor: pointer;
 }
 
@@ -1450,7 +1450,7 @@ function executeChairSignoff() {
   color: var(--semantic-badge-queried-text);
   padding: 10px;
   border-radius: 6px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   line-height: 1.4;
   margin-bottom: 12px;
 }
@@ -1497,7 +1497,7 @@ function executeChairSignoff() {
 
 .json-code {
   font-family: var(--semantic-font-mono);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-accent-inverse);
   white-space: pre-wrap;
 }

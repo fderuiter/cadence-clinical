@@ -329,12 +329,12 @@ function createOrPatchSyncQueueItem(doc, existingEl, item, key, contact) {
   itemEl.innerHTML = `
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <div style="display: flex; flex-direction: column;">
-              <span data-sync-inst-name style="font-weight: 700; font-size: 14px;">${escapeQueueHtml(instName)}</span>
-              <span data-sync-saved-time style="font-size: 0.75rem; font-variant-numeric: tabular-nums; color: var(--text-muted);">${escapeQueueHtml(savedLabel)}</span>
+              <span data-sync-inst-name style="font-weight: 700; font-size: var(--font-size-sm);">${escapeQueueHtml(instName)}</span>
+              <span data-sync-saved-time style="font-size: var(--font-size-2xs); font-variant-numeric: tabular-nums; color: var(--text-muted);">${escapeQueueHtml(savedLabel)}</span>
             </div>
             <span data-sync-status-pill class="${badgeClass}">${escapeQueueHtml(statusLabel)}</span>
           </div>
-          <div style="font-size: 12px; color: var(--text-muted); border-top: 1px dashed var(--semantic-color-border); padding-top: 6px; margin-top: 4px;">
+          <div style="font-size: var(--font-size-2xs); color: var(--text-muted); border-top: 1px dashed var(--semantic-color-border); padding-top: 6px; margin-top: 4px;">
             <p data-sync-status-desc style="margin: 0 0 4px 0;">${escapeQueueHtml(statusDesc)}</p>
             <div data-sync-recovery>${recovery.html}</div>
             <div data-sync-answers>${answersDetails}</div>

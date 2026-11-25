@@ -1897,7 +1897,7 @@ onMounted(() => {
   align-items: center;
   padding: 4px 8px;
   border-radius: 4px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   letter-spacing: 0.02em;
 }
@@ -1939,14 +1939,14 @@ onMounted(() => {
 }
 
 .view-title {
-  font-size: 1.5rem;
+  font-size: var(--font-size-2xl);
   font-weight: 700;
   color: var(--semantic-color-text);
   margin: 0 0 6px 0;
 }
 
 .view-subtitle {
-  font-size: 0.88rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-muted);
   margin: 0;
   max-width: 900px;
@@ -1961,7 +1961,7 @@ onMounted(() => {
 }
 
 .stat-label {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-muted);
   margin-top: 2px;
 }
@@ -1989,12 +1989,12 @@ onMounted(() => {
 }
 
 .tax-icon-badge {
-  font-size: 1.5rem;
+  font-size: var(--font-size-2xl);
 }
 
 .tax-subtext {
   display: block;
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-muted);
 }
 
@@ -2032,7 +2032,7 @@ onMounted(() => {
 .tax-legend {
   display: flex;
   justify-content: space-between;
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-muted);
   margin-bottom: var(--semantic-spacing-xs, 8px);
 }
@@ -2046,7 +2046,7 @@ onMounted(() => {
   color: var(--semantic-color-error);
   padding: 8px 12px;
   border-radius: 6px;
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   margin-top: 8px;
 }
 
@@ -2059,7 +2059,7 @@ onMounted(() => {
   color: var(--semantic-color-warning);
   padding: 8px 12px;
   border-radius: 6px;
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   margin-top: 8px;
 }
 
@@ -2075,7 +2075,7 @@ onMounted(() => {
   background: none;
   border: none;
   border-bottom: 2px solid transparent;
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--semantic-color-text-muted);
   cursor: pointer;
@@ -2112,14 +2112,14 @@ onMounted(() => {
 }
 
 .panel-title {
-  font-size: 1rem;
+  font-size: var(--font-size-md);
   font-weight: 600;
   color: var(--semantic-color-text);
   margin: 0;
 }
 
 .panel-tag {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-muted);
   font-weight: 500;
 }
@@ -2135,7 +2135,7 @@ onMounted(() => {
 .data-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.88rem;
+  font-size: var(--font-size-sm);
   text-align: left;
 }
 
@@ -2202,13 +2202,13 @@ onMounted(() => {
 
 .card-heading {
   margin: 0 0 4px 0;
-  font-size: 1.1rem;
+  font-size: var(--font-size-lg);
   font-weight: 700;
 }
 
 .card-subheading {
   margin: 0;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-muted);
 }
 
@@ -2235,7 +2235,7 @@ onMounted(() => {
 }
 
 .inquiry-val {
-  font-size: 1rem;
+  font-size: var(--font-size-md);
   font-weight: 600;
   color: var(--semantic-color-text);
 }
@@ -2267,7 +2267,7 @@ onMounted(() => {
 }
 
 .card-chip {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   letter-spacing: 0.05em;
   margin-bottom: 12px;
@@ -2276,25 +2276,25 @@ onMounted(() => {
 
 .card-number {
   font-family: var(--semantic-font-mono);
-  font-size: 1.1rem;
+  font-size: var(--font-size-lg);
   letter-spacing: 0.1em;
   margin-bottom: 8px;
 }
 
 .card-exp {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
   margin-bottom: 4px;
 }
 
 .card-holder {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   text-transform: uppercase;
 }
 
 .ach-row {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   margin-bottom: 6px;
   color: var(--semantic-color-text);
 }
@@ -2316,7 +2316,7 @@ onMounted(() => {
 }
 
 .disburse-input-group label {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   color: var(--semantic-color-text-muted);
 }
@@ -2327,7 +2327,7 @@ onMounted(() => {
   justify-content: center;
   padding: 8px 16px;
   border-radius: 6px;
-  font-size: 0.88rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   cursor: pointer;
   transition: background-color 0.15s ease;
@@ -2373,12 +2373,12 @@ onMounted(() => {
 
 .btn-sm {
   padding: 4px 8px;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
 }
 
 .btn-xs {
   padding: 2px 6px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
 }
 
 .btn-block {
@@ -2391,7 +2391,7 @@ onMounted(() => {
 
 .form-group label {
   display: block;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   color: var(--semantic-color-text-muted);
   margin-bottom: 4px;
@@ -2410,7 +2410,7 @@ onMounted(() => {
   padding: 8px 10px;
   border: 1px solid var(--semantic-color-border);
   border-radius: 6px;
-  font-size: 0.88rem;
+  font-size: var(--font-size-md);
   color: var(--semantic-color-text);
   background-color: var(--semantic-color-surface);
   box-sizing: border-box;
@@ -2451,7 +2451,7 @@ onMounted(() => {
 .dropzone-subtext {
   display: block;
   margin-top: 4px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-muted);
 }
 
@@ -2461,7 +2461,7 @@ onMounted(() => {
   color: var(--semantic-color-warning);
   padding: 8px 12px;
   border-radius: 6px;
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   margin-bottom: 12px;
 }
 
@@ -2471,18 +2471,18 @@ onMounted(() => {
 }
 
 .dropzone-icon {
-  font-size: 2rem;
+  font-size: var(--font-size-4xl);
   margin-bottom: 6px;
 }
 
 .dropzone-text strong {
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
   color: var(--semantic-color-text);
 }
 
 .dropzone-text p {
   margin: 4px 0 0 0;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-muted);
 }
 
@@ -2495,7 +2495,7 @@ onMounted(() => {
 }
 
 .preset-label {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   color: var(--semantic-color-text-muted);
 }
@@ -2516,7 +2516,7 @@ onMounted(() => {
 
 .ocr-header h4 {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
   font-weight: 700;
 }
 
@@ -2524,7 +2524,7 @@ onMounted(() => {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   margin-bottom: 10px;
 }
 
@@ -2534,7 +2534,7 @@ onMounted(() => {
   color: var(--semantic-color-warning);
   padding: 6px 10px;
   border-radius: 4px;
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
   margin-bottom: 8px;
 }
 
@@ -2547,7 +2547,7 @@ onMounted(() => {
 
 .ocr-raw pre {
   margin: 4px 0 0 0;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-muted);
   white-space: pre-wrap;
 }
@@ -2559,7 +2559,7 @@ onMounted(() => {
   border: 1px solid var(--semantic-color-success-border);
   color: var(--semantic-color-success);
   border-radius: 6px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 
 .action-btn-group {
@@ -2615,14 +2615,14 @@ onMounted(() => {
 
 .modal-header h3 {
   margin: 0;
-  font-size: 1.1rem;
+  font-size: var(--font-size-lg);
   font-weight: 700;
 }
 
 .modal-close-btn {
   background: none;
   border: none;
-  font-size: 1.4rem;
+  font-size: var(--font-size-xl);
   color: var(--semantic-color-text-muted);
   cursor: pointer;
 }
@@ -2632,7 +2632,7 @@ onMounted(() => {
 }
 
 .modal-desc {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-muted);
   margin-bottom: 16px;
   line-height: 1.4;

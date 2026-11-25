@@ -23,7 +23,11 @@
       >
         <div>
           <strong>{{ meaningLabel(signature.meaning) }}</strong> by
-          {{ signature.signed_by }} at {{ signature.signed_at }}:
+          <span class="ecrf-signature-actor">{{ signature.signed_by }}</span>
+          at
+          <span class="ecrf-signature-timestamp">{{
+            signature.signed_at
+          }}</span>:
           {{ signature.reason }}
           <span
             v-if="signature.superseded"
@@ -238,7 +242,7 @@ const {
 
 <style scoped>
 .ecrf-form-hint {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-secondary);
 }
 .ecrf-form-row {
@@ -247,6 +251,9 @@ const {
   align-items: center;
   gap: 8px;
   margin: 8px 0;
+}
+#ecrf-sign-meaning {
+  font-size: var(--font-size-md);
 }
 #ecrf-form-signatures-section {
   min-width: 0;
@@ -259,11 +266,13 @@ const {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-variant-numeric: tabular-nums;
   min-width: 0;
   max-width: 100%;
 }
+.ecrf-signature-actor,
+.ecrf-signature-timestamp,
 .ecrf-signed-values th[scope="row"],
 .ecrf-signed-values td {
   font-family: var(--semantic-font-mono);
@@ -287,7 +296,7 @@ const {
   border-radius: 999px;
   background-color: var(--semantic-color-success-bg-soft);
   color: var(--semantic-color-success-dark);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
 }
 .ecrf-signature-state--superseded {
@@ -313,7 +322,7 @@ const {
   width: 100%;
   min-width: 34rem;
   border-collapse: collapse;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
 }
 .ecrf-signed-values caption {
   text-align: left;

@@ -764,7 +764,7 @@ async function handleActivateSubscription() {
   color: var(--semantic-color-warning-text);
   border-radius: 8px;
   padding: 12px 16px;
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
   line-height: 1.45;
   margin-bottom: 24px;
 }
@@ -778,14 +778,14 @@ async function handleActivateSubscription() {
 .plans-eyebrow {
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   color: var(--semantic-color-interactive-primary);
   margin-bottom: 8px;
 }
 
 .plans-hero h1 {
-  font-size: 2rem;
+  font-size: var(--font-size-4xl);
   margin: 0 0 12px;
 }
 
@@ -806,7 +806,7 @@ async function handleActivateSubscription() {
   margin-top: 14px;
   padding: 10px 14px;
   border-radius: 6px;
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
 }
 
 .plans-alert-error {
@@ -833,7 +833,7 @@ async function handleActivateSubscription() {
 }
 
 .plans-status-banner h2 {
-  font-size: 1.15rem;
+  font-size: var(--font-size-lg);
   margin: 0 0 6px;
 }
 
@@ -841,7 +841,7 @@ async function handleActivateSubscription() {
   margin: 0;
   max-width: 780px;
   line-height: 1.5;
-  font-size: 0.92rem;
+  font-size: var(--font-size-base);
 }
 
 .plans-status-banner.is-trialing {
@@ -883,7 +883,7 @@ async function handleActivateSubscription() {
 }
 
 .scoping-field label {
-  font-size: 0.86rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--semantic-color-text);
 }
@@ -899,12 +899,12 @@ async function handleActivateSubscription() {
   border-radius: 6px;
   background: var(--semantic-color-surface);
   color: var(--semantic-color-text);
-  font-size: 0.92rem;
+  font-size: var(--font-size-md);
 }
 
 .field-error {
   margin: 0;
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   color: var(--semantic-color-error-dark);
 }
@@ -947,7 +947,7 @@ async function handleActivateSubscription() {
 .plan-pill {
   background: var(--semantic-color-info-bg);
   color: var(--semantic-color-info);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 3px 10px;
   border-radius: 999px;
@@ -956,7 +956,7 @@ async function handleActivateSubscription() {
 .plan-current-pill {
   background: var(--semantic-color-success-bg);
   color: var(--semantic-color-success-dark);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 3px 10px;
   border-radius: 999px;
@@ -969,7 +969,7 @@ async function handleActivateSubscription() {
 }
 
 .plan-scoping {
-  font-size: 0.86rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-secondary);
   margin-bottom: 16px;
 }
@@ -980,7 +980,7 @@ async function handleActivateSubscription() {
 
 .plan-block-label {
   display: block;
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   text-transform: uppercase;
   color: var(--semantic-color-text-secondary);
@@ -997,7 +997,7 @@ async function handleActivateSubscription() {
   background: var(--semantic-color-surface-header);
   border: 1px solid var(--semantic-color-border-muted);
   color: var(--semantic-color-text);
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   padding: 3px 9px;
   border-radius: 6px;
@@ -1007,7 +1007,7 @@ async function handleActivateSubscription() {
   padding-left: 18px;
   margin: 0 0 20px;
   color: var(--semantic-color-text-body);
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
   line-height: 1.5;
 }
 
@@ -1025,7 +1025,7 @@ async function handleActivateSubscription() {
 }
 
 .plans-section h2 {
-  font-size: 1.35rem;
+  font-size: var(--font-size-xl);
   margin-bottom: 8px;
 }
 
@@ -1056,7 +1056,7 @@ async function handleActivateSubscription() {
 .guarantee-card h3,
 .family-card h3,
 .benchmark-card h3 {
-  font-size: 1rem;
+  font-size: var(--font-size-md);
   margin: 0 0 8px;
 }
 
@@ -1083,13 +1083,13 @@ async function handleActivateSubscription() {
   border: 1px solid var(--semantic-color-border-muted);
   border-radius: 999px;
   padding: 2px 8px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   color: var(--semantic-color-text-body);
 }
 
 .family-responsibility {
-  font-size: 0.84rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   color: var(--semantic-color-interactive-primary);
   margin-bottom: 6px;
@@ -1097,13 +1097,13 @@ async function handleActivateSubscription() {
 
 .family-summary,
 .family-apps {
-  font-size: 0.86rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-secondary);
   margin-bottom: 8px;
 }
 
 .family-status {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   color: var(--semantic-color-success);
   margin: 0;

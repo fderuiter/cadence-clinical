@@ -274,20 +274,20 @@ function loadOlder() {
 
 .activity h2 {
   margin: 0;
-  font-size: 1rem;
+  font-size: var(--font-size-md);
 }
 
 .activity-filter {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 
 .activity-status,
 .activity-footnote {
   margin: 0;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--neutral-dark);
 }
 
@@ -298,7 +298,7 @@ function loadOlder() {
   margin: 0;
   padding: 0;
   list-style: none;
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
 }
 
 .activity-entry {

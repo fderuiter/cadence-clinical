@@ -233,17 +233,17 @@ export const ROLE_ALIASES = {
 export const PERSONA_PRESETS = [
   {
     key: "super_admin",
-    label: "👑 Super Admin (All Access)",
+    label: "Super Admin",
     requires: ["sponsor_admin"],
   },
   {
     key: "sponsor_designer",
-    label: "📋 Sponsor Protocol Designer",
+    label: "Sponsor Protocol Designer",
     requires: ["sponsor_designer"],
   },
   {
     key: "data_manager",
-    label: "⚙️ Clinical Data Manager",
+    label: "Clinical Data Manager",
     requires: ["data_manager"],
   },
   {
@@ -253,12 +253,12 @@ export const PERSONA_PRESETS = [
   },
   {
     key: "site_crc",
-    label: "🩺 Site Coordinator / CRC",
+    label: "Site Coordinator / CRC",
     requires: ["site_investigator", "crc"],
   },
   {
     key: "site_investigator",
-    label: "🏥 Principal Investigator",
+    label: "Principal Investigator",
     requires: ["principal_investigator"],
   },
   {
@@ -273,20 +273,26 @@ export const PERSONA_PRESETS = [
   },
   {
     key: "cra_monitor",
-    label: "📊 CRA Clinical Monitor",
+    label: "CRA Clinical Monitor",
     requires: ["cra", "monitor"],
   },
   {
     key: "safety_officer",
-    label: "🛡️ Pharmacovigilance & Safety",
+    label: "Pharmacovigilance & Safety",
     requires: ["safety_reviewer"],
   },
   {
     key: "auditor",
-    label: "🔒 GxP & Part 11 Auditor",
+    label: "GxP & Part 11 Auditor",
     requires: ["auditor", "tmf_auditor"],
   },
 ];
+
+export function formatPersonaLabel(personaKey, fallback = "Super Admin") {
+  const preset = PERSONA_PRESETS.find((item) => item.key === personaKey);
+  if (!preset || !preset.label) return fallback;
+  return preset.label.replace(/^[^\p{L}\p{N}]+\s*/u, "");
+}
 
 export function normalizeRole(role) {
   const normalized = (role || "")

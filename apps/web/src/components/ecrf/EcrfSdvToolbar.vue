@@ -292,7 +292,7 @@ const visitTimingBadgeText = computed(() => {
   display: grid;
   grid-template-columns: max-content minmax(0, 1fr);
   gap: 4px 12px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-variant-numeric: tabular-nums;
 }
 .ecrf-form-summary dt {
@@ -311,7 +311,7 @@ const visitTimingBadgeText = computed(() => {
   gap: 6px;
 }
 .ecrf-visit-window-range {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-secondary);
   font-variant-numeric: tabular-nums;
 }
@@ -340,10 +340,10 @@ const visitTimingBadgeText = computed(() => {
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 8px 12px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 .ecrf-form-hint {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-secondary);
 }
 .ecrf-form-row {
@@ -358,7 +358,7 @@ const visitTimingBadgeText = computed(() => {
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 8px 12px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 .ecrf-bulk-sdv-results {
   margin: 6px 0 0;

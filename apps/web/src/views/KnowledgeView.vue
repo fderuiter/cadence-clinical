@@ -1113,7 +1113,11 @@ import {
   replaceRouteQueryParams,
   resolveRouteAndRouter,
 } from "../composables/useRouteScopeSync";
-import { useAuthStore, PERSONA_PRESETS } from "../stores/auth.js";
+import {
+  useAuthStore,
+  PERSONA_PRESETS,
+  formatPersonaLabel,
+} from "../stores/auth.js";
 import { useClinicalScopeStore } from "../stores/clinicalScope";
 import { useToastStore } from "../stores/toasts.js";
 import { isDemoBuild } from "../utils/demoMode.js";
@@ -1217,12 +1221,9 @@ export default {
     const activePersonaKey = computed(
       () => authStore.currentPersona || "super_admin"
     );
-    const activePersonaLabel = computed(() => {
-      const p = PERSONA_PRESETS.find(
-        (preset) => preset.key === activePersonaKey.value
-      );
-      return p ? p.label : "Active Role";
-    });
+    const activePersonaLabel = computed(() =>
+      formatPersonaLabel(activePersonaKey.value, "Active Role")
+    );
 
     const isSuperAdmin = computed(() => {
       const current = authStore.currentPersona;
@@ -2183,7 +2184,7 @@ export default {
 }
 
 .view-title {
-  font-size: 1.6rem;
+  font-size: var(--font-size-2xl);
   font-weight: 800;
   letter-spacing: -0.02em;
   color: var(--text-main);
@@ -2192,7 +2193,7 @@ export default {
 }
 
 .view-subtitle {
-  font-size: 0.88rem;
+  font-size: var(--font-size-sm);
   color: var(--neutral-dark);
   max-width: 900px;
   line-height: 1.4;
@@ -2247,7 +2248,7 @@ export default {
 }
 
 .stat-icon {
-  font-size: 1.6rem;
+  font-size: var(--font-size-2xl);
   width: 44px;
   height: 44px;
   border-radius: 8px;
@@ -2265,7 +2266,7 @@ export default {
 }
 
 .stat-value {
-  font-size: 1.4rem;
+  font-size: var(--font-size-xl);
   font-weight: 800;
   color: var(--text-main);
   line-height: 1.1;
@@ -2273,7 +2274,7 @@ export default {
 }
 
 .stat-label {
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
   color: var(--neutral-dark);
   font-weight: 600;
   text-transform: uppercase;
@@ -2327,7 +2328,7 @@ export default {
 }
 
 .sidebar-heading {
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
   font-weight: 700;
   color: var(--text-main);
   margin: 0;
@@ -2381,7 +2382,7 @@ export default {
 }
 
 .category-icon {
-  font-size: 1.1rem;
+  font-size: var(--font-size-lg);
   line-height: 1.2;
 }
 
@@ -2392,7 +2393,7 @@ export default {
 }
 
 .category-title {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
 }
 
@@ -2431,7 +2432,7 @@ export default {
 }
 
 .filter-label {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   color: var(--neutral-dark);
   text-transform: uppercase;
@@ -2478,7 +2479,7 @@ export default {
 .search-symbol {
   position: absolute;
   left: 10px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--neutral-dark);
 }
 
@@ -2489,7 +2490,7 @@ export default {
   padding: 8px 32px 8px 32px;
   border: 1px solid var(--border);
   border-radius: 6px;
-  font-size: 0.82rem;
+  font-size: var(--font-size-md);
   transition: border-color 0.15s;
   box-sizing: border-box;
 }
@@ -2511,7 +2512,7 @@ export default {
   border-radius: 4px;
   cursor: pointer;
   color: var(--neutral-dark);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   padding: 2px 4px;
   box-sizing: border-box;
 }
@@ -2609,7 +2610,7 @@ export default {
 
 .article-card-title {
   display: block;
-  font-size: 0.88rem;
+  font-size: var(--font-size-sm);
   font-weight: 700;
   color: var(--text-main);
   line-height: 1.3;
@@ -2655,7 +2656,7 @@ export default {
 }
 
 .empty-icon {
-  font-size: 2.2rem;
+  font-size: var(--font-size-4xl);
   margin-bottom: 4px;
 }
 
@@ -2699,7 +2700,7 @@ export default {
 }
 
 .breadcrumbs {
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
   color: var(--neutral-dark);
   display: flex;
   flex-wrap: wrap;
@@ -2734,7 +2735,7 @@ export default {
 }
 
 .reader-article-title {
-  font-size: 1.35rem;
+  font-size: var(--font-size-xl);
   font-weight: 800;
   color: var(--text-main);
   margin: 0;
@@ -2746,7 +2747,7 @@ export default {
   display: flex;
   flex-wrap: wrap;
   gap: 18px;
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
   color: var(--neutral-dark);
   border-top: 1px solid var(--semantic-color-surface-header);
   padding-top: 8px;
@@ -2797,7 +2798,7 @@ export default {
 }
 
 .toolbar-label {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   color: var(--semantic-color-text-secondary);
 }
@@ -2814,21 +2815,21 @@ export default {
 }
 
 .tab-section-header h4 {
-  font-size: 1.05rem;
+  font-size: var(--font-size-md);
   font-weight: 700;
   color: var(--text-main);
   margin: 0 0 4px 0;
 }
 
 .section-desc {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   color: var(--neutral-dark);
   margin: 0;
 }
 
 /* Prose Typography */
 .prose-content {
-  font-size: 0.92rem;
+  font-size: var(--font-size-base);
   line-height: 1.7;
   color: var(--semantic-color-text-dark);
   max-width: 860px;
@@ -2845,19 +2846,19 @@ export default {
 }
 
 .prose-content h1 {
-  font-size: 1.4rem;
+  font-size: var(--font-size-xl);
   border-bottom: 1px solid var(--semantic-color-border);
   padding-bottom: 6px;
 }
 
 .prose-content h2 {
-  font-size: 1.2rem;
+  font-size: var(--font-size-lg);
   border-bottom: 1px solid var(--semantic-color-surface-header);
   padding-bottom: 4px;
 }
 
 .prose-content h3 {
-  font-size: 1.05rem;
+  font-size: var(--font-size-md);
 }
 
 .prose-content p {
@@ -2879,7 +2880,7 @@ export default {
   color: var(--semantic-color-text);
   padding: 2px 6px;
   border-radius: 4px;
-  font-size: 0.85em;
+  font-size: var(--font-size-sm);
   font-family: var(--semantic-font-mono);
 }
 
@@ -2889,7 +2890,7 @@ export default {
   padding: 14px;
   border-radius: 6px;
   overflow-x: auto;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   margin-bottom: 1em;
 }
 
@@ -2915,7 +2916,7 @@ export default {
 }
 
 .status-pill-lg {
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
   padding: 4px 10px;
 }
 
@@ -2974,7 +2975,7 @@ export default {
 }
 
 .badge-version-lg {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   padding: 3px 8px;
 }
 
@@ -2987,7 +2988,7 @@ export default {
 .data-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   text-align: left;
 }
 
@@ -3011,7 +3012,7 @@ export default {
 
 .hash-code {
   font-family: var(--semantic-font-mono);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   background-color: var(--semantic-color-surface-header);
   padding: 2px 5px;
   border-radius: 4px;
@@ -3058,7 +3059,7 @@ export default {
 }
 
 .modal-header h3 {
-  font-size: 1.1rem;
+  font-size: var(--font-size-lg);
   font-weight: 700;
   color: var(--text-main);
   margin: 0;
@@ -3067,7 +3068,7 @@ export default {
 .modal-close-btn {
   background: none;
   border: none;
-  font-size: 1.1rem;
+  font-size: var(--font-size-lg);
   color: var(--neutral-dark);
   cursor: pointer;
 }
@@ -3096,7 +3097,7 @@ export default {
 }
 
 .form-group label {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   color: var(--text-main);
 }
@@ -3116,7 +3117,7 @@ export default {
   padding: 8px 12px;
   border: 1px solid var(--border);
   border-radius: 6px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-md);
   box-sizing: border-box;
 }
 
@@ -3126,7 +3127,7 @@ export default {
 
 .code-textarea {
   font-family: var(--semantic-font-mono);
-  font-size: 0.85rem;
+  font-size: var(--font-size-md);
   line-height: 1.4;
 }
 
@@ -3147,7 +3148,7 @@ export default {
   background: none;
   border: none;
   color: var(--accent);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   cursor: pointer;
   box-sizing: border-box;
@@ -3174,12 +3175,12 @@ export default {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   cursor: pointer;
 }
 
 .reason-modal-intro {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--neutral-dark);
   margin-bottom: 6px;
 }
@@ -3191,7 +3192,7 @@ export default {
   gap: 6px;
   padding: 8px 14px;
   border-radius: 6px;
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   cursor: pointer;
   border: 1px solid transparent;
@@ -3202,7 +3203,7 @@ export default {
   min-height: var(--semantic-control-target-min, 24px);
   min-width: var(--semantic-control-target-min, 24px);
   padding: 5px 10px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
 }
 
 .btn-primary {

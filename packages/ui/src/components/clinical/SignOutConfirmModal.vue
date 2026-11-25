@@ -110,7 +110,7 @@ function handleConfirm() {
 .signout-confirm-desc {
   margin: 0;
   color: var(--semantic-color-text-dark);
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
   line-height: 1.55;
 }
 
@@ -119,7 +119,7 @@ function handleConfirm() {
   min-height: 44px;
   padding: 10px 16px;
   border-radius: 6px;
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   cursor: pointer;
 }

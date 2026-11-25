@@ -1,7 +1,11 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createPinia, setActivePinia } from "pinia";
 import { setKeycloakClient } from "../src/auth/keycloak.js";
-import { useAuthStore, PERSONA_PRESETS } from "../src/stores/auth";
+import {
+  useAuthStore,
+  PERSONA_PRESETS,
+  formatPersonaLabel,
+} from "../src/stores/auth";
 import { useNotificationsStore } from "../src/stores/notifications";
 import { useEtmfStore } from "../src/stores/etmf";
 import { apiClient } from "../src/api/apiClient";
@@ -605,6 +609,25 @@ describe("useAuthStore - Keycloak & OIDC Authentication Store", () => {
 
       await authStore.logout();
       expect(authStore.isAuthenticated).toBe(false);
+    });
+  });
+
+  describe("Persona Presets & formatPersonaLabel", () => {
+    it("exposes zero-emoji PERSONA_PRESETS and preserves full multi-word labels without dropping leading words", () => {
+      expect(PERSONA_PRESETS.length).toBeGreaterThanOrEqual(8);
+      for (const preset of PERSONA_PRESETS) {
+        expect(preset.label).not.toMatch(/\p{Extended_Pictographic}/u);
+        expect(formatPersonaLabel(preset.key)).toBe(preset.label);
+      }
+      expect(formatPersonaLabel("super_admin")).toBe("Super Admin");
+      expect(formatPersonaLabel("sponsor_designer")).toBe(
+        "Sponsor Protocol Designer"
+      );
+      expect(formatPersonaLabel("site_crc")).toBe("Site Coordinator / CRC");
+      expect(formatPersonaLabel("unknown_role", "Active Role")).toBe(
+        "Active Role"
+      );
+      expect(formatPersonaLabel(null)).toBe("Super Admin");
     });
   });
 });

@@ -1058,7 +1058,7 @@ onMounted(() => {
 
 .drawer-subtitle {
   margin: 0;
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-inverse-muted);
 }
 
@@ -1070,7 +1070,7 @@ onMounted(() => {
   background: var(--semantic-color-surface-elevated);
   border: 1px solid var(--semantic-color-border-inverse);
   border-radius: 8px;
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   flex-wrap: wrap;
 }
 
@@ -1121,7 +1121,7 @@ onMounted(() => {
 
 .scanner-label {
   font-weight: 700;
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-inverse);
   display: flex;
   align-items: center;
@@ -1147,7 +1147,7 @@ onMounted(() => {
   border-radius: 6px;
   padding: 8px 12px;
   color: var(--semantic-color-text-inverse);
-  font-size: 1rem;
+  font-size: var(--font-size-md);
   font-family: var(--semantic-font-mono);
   box-sizing: border-box;
 }
@@ -1158,7 +1158,7 @@ onMounted(() => {
 
 .scanner-help {
   margin: 8px 0 0 0;
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-inverse-muted);
 }
 
@@ -1175,7 +1175,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 
 .alert-warning {
@@ -1219,7 +1219,7 @@ onMounted(() => {
 }
 
 .metric-num {
-  font-size: 1.35rem;
+  font-size: var(--font-size-xl);
   font-weight: 800;
   color: var(--semantic-color-text-inverse);
 }
@@ -1265,7 +1265,7 @@ onMounted(() => {
 }
 
 .toolbar-label {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-inverse-muted);
   font-weight: 600;
 }
@@ -1292,7 +1292,7 @@ onMounted(() => {
   margin: 0 auto;
   color: var(--semantic-color-text-inverse-muted);
   max-width: 500px;
-  font-size: 0.88rem;
+  font-size: var(--font-size-sm);
 }
 
 :deep(.table-container) {
@@ -1303,7 +1303,7 @@ onMounted(() => {
 :deep(.batch-table) {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   background: var(--semantic-color-surface-elevated);
   border-radius: 8px;
   overflow: hidden;
@@ -1316,7 +1316,7 @@ onMounted(() => {
   padding: 10px 12px;
   font-weight: 700;
   border-bottom: 2px solid var(--semantic-color-border-inverse);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   text-transform: uppercase;
 }
 
@@ -1351,7 +1351,7 @@ onMounted(() => {
   border-radius: 6px;
   padding: 6px 8px;
   color: var(--semantic-color-text-inverse);
-  font-size: 1rem;
+  font-size: var(--font-size-md);
   box-sizing: border-box;
 }
 
@@ -1362,7 +1362,7 @@ onMounted(() => {
   border-radius: 6px;
   padding: 6px 8px;
   color: var(--semantic-color-text-inverse);
-  font-size: 1rem;
+  font-size: var(--font-size-md);
   max-width: 100%;
   box-sizing: border-box;
 }
@@ -1384,7 +1384,7 @@ onMounted(() => {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 0.76rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 3px 6px;
   border-radius: 4px;
@@ -1435,7 +1435,7 @@ onMounted(() => {
 
 .esign-title {
   margin: 0 0 12px 0;
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
   color: var(--semantic-color-text-inverse);
   font-weight: 700;
   display: flex;
@@ -1461,7 +1461,7 @@ onMounted(() => {
 }
 
 :deep(.form-label) {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   color: var(--semantic-color-text-inverse-muted);
 }
@@ -1475,7 +1475,7 @@ onMounted(() => {
   border-radius: 6px;
   padding: 8px 12px;
   color: var(--semantic-color-text-inverse);
-  font-size: 1rem;
+  font-size: var(--font-size-md);
   box-sizing: border-box;
 }
 
@@ -1494,7 +1494,7 @@ onMounted(() => {
 }
 
 .summary-text {
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-inverse-muted);
 }
 .summary-text strong {
@@ -1512,7 +1512,7 @@ onMounted(() => {
   padding: 8px 14px;
   border-radius: 6px;
   font-weight: 600;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   cursor: pointer;
   border: 1px solid transparent;
   display: inline-flex;
@@ -1610,7 +1610,7 @@ onMounted(() => {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   color: var(--semantic-color-success);
   margin-bottom: 2px;
@@ -1618,7 +1618,7 @@ onMounted(() => {
 
 .cert-modal-title {
   margin: 0;
-  font-size: 1.05rem;
+  font-size: var(--font-size-md);
   color: var(--semantic-color-text-inverse);
 }
 
@@ -1630,7 +1630,7 @@ onMounted(() => {
   padding: 14px;
   border-radius: 8px;
   margin-bottom: 16px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 
 .cert-meta-item {
@@ -1640,7 +1640,7 @@ onMounted(() => {
 }
 .cert-meta-item .lbl {
   color: var(--semantic-color-text-inverse-muted);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
 }
 .cert-meta-item .val {
@@ -1653,7 +1653,7 @@ onMounted(() => {
 .cert-section h4 {
   margin: 0 0 8px 0;
   color: var(--semantic-color-text-inverse-muted);
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   text-transform: uppercase;
 }
 
@@ -1671,7 +1671,7 @@ onMounted(() => {
   border: 1px solid var(--semantic-color-border-inverse);
   padding: 4px 8px;
   border-radius: 4px;
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
 }
 
 .cert-signature-box {
@@ -1685,14 +1685,14 @@ onMounted(() => {
 }
 
 .sig-label {
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   color: var(--semantic-color-success);
   text-transform: uppercase;
 }
 .sig-hash {
   font-family: var(--semantic-font-mono);
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
   word-break: break-all;
 }
 

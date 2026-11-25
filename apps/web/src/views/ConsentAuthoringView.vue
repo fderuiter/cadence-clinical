@@ -19,7 +19,7 @@
       "
     >
       <div style="display: flex; gap: 16px; align-items: flex-start">
-        <span style="font-size: 2rem">🚫</span>
+        <span style="font-size: var(--font-size-4xl)">🚫</span>
         <div>
           <h3
             style="color: var(--error); font-weight: bold; margin-bottom: 8px"
@@ -29,7 +29,7 @@
           <p
             style="
               color: var(--neutral-dark);
-              font-size: 0.95rem;
+              font-size: var(--font-size-base);
               line-height: 1.6;
             "
           >
@@ -59,7 +59,7 @@
           <span
             v-if="loading"
             style="
-              font-size: 0.85rem;
+              font-size: var(--font-size-sm);
               color: var(--semantic-color-text-secondary);
             "
             role="status"
@@ -78,7 +78,7 @@
             padding: 10px;
             border-radius: 6px;
             margin-bottom: 12px;
-            font-size: 0.85rem;
+            font-size: var(--font-size-sm);
           "
         >
           {{ $t("econsent.authoring.degradedMsg") }}
@@ -128,15 +128,16 @@
                   margin-bottom: 8px;
                 "
               >
-                <strong style="color: var(--accent); font-size: 0.95rem">{{
-                  tpl.template_name
-                }}</strong>
+                <strong
+                  style="color: var(--accent); font-size: var(--font-size-base)"
+                  >{{ tpl.template_name }}</strong
+                >
                 <div style="display: flex; gap: 6px">
                   <button
                     class="btn btn-edit"
                     style="
                       padding: 4px 10px;
-                      font-size: 0.75rem;
+                      font-size: var(--font-size-2xs);
                       cursor: pointer;
                       border: 1px solid var(--border);
                       border-radius: 4px;
@@ -151,7 +152,7 @@
                     class="btn btn-publish"
                     style="
                       padding: 4px 10px;
-                      font-size: 0.75rem;
+                      font-size: var(--font-size-2xs);
                       background-color: var(
                         --semantic-color-success-interactive
                       );
@@ -181,7 +182,12 @@
                   </span>
                 </div>
               </div>
-              <div style="font-size: 0.85rem; color: var(--neutral-dark)">
+              <div
+                style="
+                  font-size: var(--font-size-sm);
+                  color: var(--neutral-dark);
+                "
+              >
                 <div>
                   <strong>{{ $t("econsent.authoring.templateId") }}</strong>
                   <code>{{ tpl.template_id }}</code>
@@ -255,7 +261,7 @@
             padding: 12px;
             border-radius: 6px;
             margin-bottom: 16px;
-            font-size: 0.85rem;
+            font-size: var(--font-size-sm);
             font-weight: 600;
           "
           role="status"
@@ -295,7 +301,7 @@
                     display: block;
                     margin-bottom: 4px;
                     font-weight: 600;
-                    font-size: 0.85rem;
+                    font-size: var(--font-size-sm);
                   "
                   >{{ $t("econsent.authoring.studyIdLabel") }}</label
                 >
@@ -321,7 +327,7 @@
                     display: block;
                     margin-bottom: 4px;
                     font-weight: 600;
-                    font-size: 0.85rem;
+                    font-size: var(--font-size-sm);
                   "
                   >{{ $t("econsent.authoring.templateNameLabel") }}</label
                 >
@@ -347,7 +353,7 @@
                     display: block;
                     margin-bottom: 4px;
                     font-weight: 600;
-                    font-size: 0.85rem;
+                    font-size: var(--font-size-sm);
                   "
                   >{{ $t("econsent.authoring.protocolVersionLabel") }}</label
                 >
@@ -378,7 +384,11 @@
                 />
                 <label
                   for="checkbox-reconsent"
-                  style="font-weight: 600; font-size: 0.85rem; cursor: pointer"
+                  style="
+                    font-weight: 600;
+                    font-size: var(--font-size-sm);
+                    cursor: pointer;
+                  "
                   >{{ $t("econsent.authoring.requiresReconsentLabel") }}</label
                 >
               </div>
@@ -396,7 +406,7 @@
               >
                 <div
                   style="
-                    font-size: 0.8rem;
+                    font-size: var(--font-size-xs);
                     font-weight: 600;
                     margin-bottom: 8px;
                     color: var(--text-main);
@@ -426,7 +436,7 @@
             </legend>
             <p
               style="
-                font-size: 0.8rem;
+                font-size: var(--font-size-xs);
                 color: var(--semantic-color-text-secondary);
                 margin-bottom: 12px;
               "
@@ -452,7 +462,7 @@
                 <span
                   style="
                     font-family: var(--semantic-font-mono);
-                    font-size: 0.85rem;
+                    font-size: var(--font-size-sm);
                     width: 24px;
                     text-align: center;
                   "
@@ -473,7 +483,7 @@
                 />
                 <ClinicalIconButton
                   class="btn btn-move-up touch-target-interactive"
-                  style="font-size: 0.75rem"
+                  style="font-size: var(--font-size-2xs)"
                   :disabled="index === 0"
                   :label="`Move clause ${editorForm.clauses[index] || index + 1} up`"
                   @click="moveClause(index, -1)"
@@ -482,7 +492,7 @@
                 </ClinicalIconButton>
                 <ClinicalIconButton
                   class="btn btn-move-down touch-target-interactive"
-                  style="font-size: 0.75rem"
+                  style="font-size: var(--font-size-2xs)"
                   :disabled="index === editorForm.clauses.length - 1"
                   :label="`Move clause ${editorForm.clauses[index] || index + 1} down`"
                   @click="moveClause(index, 1)"
@@ -492,7 +502,7 @@
                 <ClinicalIconButton
                   class="btn btn-remove-clause touch-target-interactive"
                   style="
-                    font-size: 0.75rem;
+                    font-size: var(--font-size-2xs);
                     background-color: var(--semantic-color-error-interactive);
                     color: var(--semantic-color-text-on-solid);
                     border: none;
@@ -509,7 +519,11 @@
             <button
               type="button"
               class="btn btn-secondary btn-add-clause"
-              style="margin-top: 12px; padding: 6px 12px; font-size: 0.8rem"
+              style="
+                margin-top: 12px;
+                padding: 6px 12px;
+                font-size: var(--font-size-xs);
+              "
               @click="addClauseRow"
             >
               ➕ {{ $t("econsent.authoring.addClause") }}
@@ -531,7 +545,7 @@
             </legend>
             <p
               style="
-                font-size: 0.8rem;
+                font-size: var(--font-size-xs);
                 color: var(--semantic-color-text-secondary);
                 margin-bottom: 12px;
               "
@@ -588,7 +602,7 @@
                 <div v-if="step.type === 'comprehension_check'">
                   <label
                     :for="'step-question-' + index"
-                    style="font-size: 0.75rem"
+                    style="font-size: var(--font-size-2xs)"
                     >{{ $t("econsent.authoring.verificationPrompt") }}</label
                   >
                   <input
@@ -596,13 +610,17 @@
                     v-model="step.question"
                     type="text"
                     placeholder="Understood and agree to risk factors?"
-                    style="width: 100%; padding: 4px 8px; font-size: 0.8rem"
+                    style="
+                      width: 100%;
+                      padding: 4px 8px;
+                      font-size: var(--font-size-md);
+                    "
                   />
                 </div>
                 <div v-else-if="step.type === 'signature_placeholder'">
                   <label
                     :for="'step-role-' + index"
-                    style="font-size: 0.75rem"
+                    style="font-size: var(--font-size-2xs)"
                     >{{ $t("econsent.authoring.requiredRole") }}</label
                   >
                   <input
@@ -610,7 +628,11 @@
                     v-model="step.role"
                     type="text"
                     placeholder="subject"
-                    style="width: 100%; padding: 4px 8px; font-size: 0.8rem"
+                    style="
+                      width: 100%;
+                      padding: 4px 8px;
+                      font-size: var(--font-size-md);
+                    "
                   />
                 </div>
               </div>
@@ -620,7 +642,7 @@
               <button
                 type="button"
                 class="btn btn-secondary btn-add-step-comp"
-                style="padding: 6px 12px; font-size: 0.8rem"
+                style="padding: 6px 12px; font-size: var(--font-size-xs)"
                 @click="addWorkflowStep('comprehension_check')"
               >
                 ➕ {{ $t("econsent.authoring.addComprehensionStep") }}
@@ -628,7 +650,7 @@
               <button
                 type="button"
                 class="btn btn-secondary btn-add-step-sig"
-                style="padding: 6px 12px; font-size: 0.8rem"
+                style="padding: 6px 12px; font-size: var(--font-size-xs)"
                 @click="addWorkflowStep('signature_placeholder')"
               >
                 ➕ {{ $t("econsent.authoring.addSignatureStep") }}
@@ -667,13 +689,17 @@
                   margin-bottom: 8px;
                 "
               >
-                <strong style="color: var(--text-main); font-size: 0.85rem">{{
-                  $t("econsent.authoring.previewSubheader")
-                }}</strong>
+                <strong
+                  style="
+                    color: var(--text-main);
+                    font-size: var(--font-size-sm);
+                  "
+                  >{{ $t("econsent.authoring.previewSubheader") }}</strong
+                >
                 <button
                   type="button"
                   class="btn btn-preview"
-                  style="padding: 4px 10px; font-size: 0.75rem"
+                  style="padding: 4px 10px; font-size: var(--font-size-2xs)"
                   @click="triggerComposePreview"
                 >
                   {{ $t("econsent.authoring.refreshPreview") }}
@@ -681,14 +707,14 @@
               </div>
               <div
                 v-if="previewLoading"
-                style="font-size: 0.8rem; font-style: italic"
+                style="font-size: var(--font-size-xs); font-style: italic"
               >
                 {{ $t("econsent.authoring.previewLoading") }}
               </div>
               <div
                 v-else-if="previewClauses.length === 0"
                 style="
-                  font-size: 0.8rem;
+                  font-size: var(--font-size-xs);
                   color: var(--semantic-color-text-secondary);
                   font-style: italic;
                 "
@@ -710,7 +736,7 @@
                   <h4
                     style="
                       margin: 0 0 4px 0;
-                      font-size: 0.85rem;
+                      font-size: var(--font-size-sm);
                       color: var(--accent);
                     "
                   >
@@ -719,7 +745,7 @@
                   <p
                     style="
                       margin: 0;
-                      font-size: 0.8rem;
+                      font-size: var(--font-size-xs);
                       line-height: 1.4;
                       color: var(--neutral-dark);
                     "

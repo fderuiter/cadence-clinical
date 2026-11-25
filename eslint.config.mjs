@@ -9,6 +9,11 @@ import vuejsAccessibility from "eslint-plugin-vuejs-accessibility";
 import vueParser from "vue-eslint-parser";
 import tseslint from "typescript-eslint";
 import { isDisallowedRawDrawerOverlay } from "./scripts/eslint-drawer-overlay-guard.mjs";
+import {
+  createNoSub1RemTouchControlRule,
+  createNoUntokenizedFontSizeRule,
+  stripAllowedTokensFontFaces,
+} from "./scripts/eslint-typography-guards.mjs";
 
 const repoRoot = path.dirname(fileURLToPath(import.meta.url));
 const tokensCssPath = path.join(repoRoot, "packages/ui/tokens.css");
@@ -2729,6 +2734,7 @@ const noCustomFontStackRule = {
 
     return createTypographyScanVisitors(context, {
       onCssBlock(cleanCss, baseOffset, sourceText, filename) {
+        let cssToScan = cleanCss;
         if (filename.endsWith("/packages/ui/tokens.css")) {
           for (const monoMatch of cleanCss.matchAll(
             /--font-mono\s*:\s*([^;}]+)/gi
@@ -2751,8 +2757,9 @@ const noCustomFontStackRule = {
               });
             }
           }
+          cssToScan = stripAllowedTokensFontFaces(cleanCss);
         }
-        for (const match of cleanCss.matchAll(cssFontFamilyRe)) {
+        for (const match of cssToScan.matchAll(cssFontFamilyRe)) {
           const bad = findDisallowedStack(match[1]);
           if (bad) {
             context.report({
@@ -2805,6 +2812,18 @@ const noCustomFontStackRule = {
     });
   },
 };
+
+const noUntokenizedFontSizeRule = createNoUntokenizedFontSizeRule({
+  createTypographyScanVisitors,
+  offsetToLoc,
+});
+
+const noSub1RemTouchControlRule = createNoSub1RemTouchControlRule({
+  stripCssCommentsPreservingNewlines,
+  stripUrlFragmentsPreservingLength,
+  offsetToLoc,
+  isStyleOrColorVAttribute,
+});
 
 const noVuejsA11ySuppressionRule = {
   meta: {
@@ -3703,6 +3722,8 @@ const customVuePlugin = {
     "require-tabular-nums": requireTabularNumsRule,
     "no-sub12px-font-size": noSub12pxFontSizeRule,
     "no-custom-font-stack": noCustomFontStackRule,
+    "no-untokenized-font-size": noUntokenizedFontSizeRule,
+    "no-sub1rem-touch-control": noSub1RemTouchControlRule,
     "no-vuejs-a11y-suppression": noVuejsA11ySuppressionRule,
     "no-unscoped-clinical-tabs-css": noUnscopedClinicalTabsCssRule,
     "no-raw-clinical-table": noRawClinicalTableRule,
@@ -3765,6 +3786,8 @@ export default [
       "custom-vue/require-tabular-nums": "error",
       "custom-vue/no-sub12px-font-size": "error",
       "custom-vue/no-custom-font-stack": "error",
+      "custom-vue/no-untokenized-font-size": "error",
+      "custom-vue/no-sub1rem-touch-control": "error",
       "custom-vue/no-unscoped-clinical-tabs-css": "error",
       "custom-vue/no-raw-clinical-table": "error",
       "custom-vue/no-unguarded-button-state": "error",
@@ -3810,6 +3833,24 @@ export default [
       "custom-vue/require-tabular-nums": "error",
       "custom-vue/no-sub12px-font-size": "error",
       "custom-vue/no-custom-font-stack": "error",
+      "custom-vue/no-untokenized-font-size": "error",
+      "custom-vue/no-sub1rem-touch-control": "error",
+    },
+  },
+  {
+    files: ["docs/.vitepress/**/*.css"],
+    languageOptions: {
+      parser: cssStubParser,
+    },
+    plugins: {
+      "custom-vue": customVuePlugin,
+    },
+    rules: {
+      ...disabledCoreRulesForCss,
+      "custom-vue/no-sub12px-font-size": "error",
+      "custom-vue/no-custom-font-stack": "error",
+      "custom-vue/no-untokenized-font-size": "error",
+      "custom-vue/no-sub1rem-touch-control": "error",
     },
   },
   {
@@ -3833,6 +3874,8 @@ export default [
       "custom-vue/require-tabular-nums": "error",
       "custom-vue/no-sub12px-font-size": "error",
       "custom-vue/no-custom-font-stack": "error",
+      "custom-vue/no-untokenized-font-size": "error",
+      "custom-vue/no-sub1rem-touch-control": "error",
       "custom-vue/require-inline-focus-handoff": "error",
       "custom-vue/no-unscoped-navigation": "error",
     },
@@ -4137,6 +4180,8 @@ export default [
       "custom-vue/no-misused-ai-tokens": "off",
       "custom-vue/no-sub12px-font-size": "off",
       "custom-vue/no-custom-font-stack": "off",
+      "custom-vue/no-untokenized-font-size": "off",
+      "custom-vue/no-sub1rem-touch-control": "off",
       "custom-vue/no-unscoped-navigation": "off",
       "no-unused-vars": "off",
       "@typescript-eslint/no-unused-vars": "off",

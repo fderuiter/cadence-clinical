@@ -826,7 +826,7 @@ function formatUnsavedEntry(entry: EcrfUnsavedItem): string {
   width: 100%;
   min-width: 52rem;
   border-collapse: collapse;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 .ecrf-form-items th,
 .ecrf-form-items td {
@@ -882,7 +882,7 @@ function formatUnsavedEntry(entry: EcrfUnsavedItem): string {
 .ecrf-item-concept,
 .ecrf-item-revision {
   color: var(--semantic-color-text-secondary);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
 }
 .ecrf-item-unit {
   margin-left: 4px;
@@ -896,7 +896,7 @@ function formatUnsavedEntry(entry: EcrfUnsavedItem): string {
 }
 .ecrf-query-changed {
   color: var(--semantic-color-interactive-primary);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
 }
 .ecrf-item-edited,
@@ -920,7 +920,7 @@ function formatUnsavedEntry(entry: EcrfUnsavedItem): string {
   gap: 8px;
 }
 .ecrf-committed-baseline {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-variant-numeric: var(--font-variant-numeric-tabular);
   color: var(--semantic-color-text-secondary);
   display: flex;
@@ -933,7 +933,7 @@ function formatUnsavedEntry(entry: EcrfUnsavedItem): string {
 }
 .ecrf-revert-btn {
   padding: 2px 8px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
 }
 .ecrf-item-highlighted {
   background-color: var(--semantic-color-info-bg);
@@ -953,7 +953,7 @@ function formatUnsavedEntry(entry: EcrfUnsavedItem): string {
 }
 .ecrf-sdv-draft-note {
   color: var(--semantic-color-text-secondary);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-variant-numeric: var(--font-variant-numeric-tabular);
 }
 .ecrf-sdv-actions {
@@ -963,7 +963,7 @@ function formatUnsavedEntry(entry: EcrfUnsavedItem): string {
 }
 .ecrf-sdv-none {
   color: var(--semantic-color-text-secondary);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
 }
 .ecrf-locked-unsaved {
   flex-basis: 100%;
@@ -976,7 +976,7 @@ function formatUnsavedEntry(entry: EcrfUnsavedItem): string {
 .ecrf-preview-warnings {
   margin: 4px 0 0;
   padding-left: 16px;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   color: var(--warning);
 }
 .ecrf-preview-banner {
@@ -986,7 +986,7 @@ function formatUnsavedEntry(entry: EcrfUnsavedItem): string {
   border: 1px solid var(--warning);
   background: var(--warning-bg);
   color: var(--warning);
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 </style>
 

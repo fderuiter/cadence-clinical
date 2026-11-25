@@ -16,7 +16,7 @@
         </h3>
         <p
           style="
-            font-size: 0.85rem;
+            font-size: var(--font-size-sm);
             color: var(--semantic-color-text-secondary);
             margin: 4px 0 0 0;
           "
@@ -27,7 +27,7 @@
       </div>
       <div
         style="
-          font-size: 0.8rem;
+          font-size: var(--font-size-xs);
           color: var(--semantic-color-text-secondary);
           font-style: italic;
         "
@@ -377,7 +377,7 @@
         <div
           style="
             font-weight: bold;
-            font-size: 0.9rem;
+            font-size: var(--font-size-sm);
             color: var(--semantic-color-text-dark);
           "
         >
@@ -385,7 +385,7 @@
         </div>
         <div
           style="
-            font-size: 0.75rem;
+            font-size: var(--font-size-2xs);
             color: var(--semantic-color-text-secondary);
             font-family: var(--semantic-font-mono);
             margin-top: 2px;
@@ -406,7 +406,7 @@
               font-weight: 600;
               display: block;
               margin-bottom: 4px;
-              font-size: 0.85rem;
+              font-size: var(--font-size-sm);
               color: var(--semantic-color-text-body);
             "
           >
@@ -422,7 +422,7 @@
               padding: 8px;
               border: 1px solid var(--border);
               border-radius: 6px;
-              font-size: 0.9rem;
+              font-size: var(--font-size-md);
             "
             placeholder="e.g. 14"
           />
@@ -437,7 +437,7 @@
                 font-weight: 600;
                 display: block;
                 margin-bottom: 4px;
-                font-size: 0.85rem;
+                font-size: var(--font-size-sm);
                 color: var(--semantic-color-text-body);
               "
             >
@@ -453,7 +453,7 @@
                 padding: 8px;
                 border: 1px solid var(--border);
                 border-radius: 6px;
-                font-size: 0.9rem;
+                font-size: var(--font-size-md);
               "
               placeholder="e.g. 1"
             />
@@ -465,7 +465,7 @@
                 font-weight: 600;
                 display: block;
                 margin-bottom: 4px;
-                font-size: 0.85rem;
+                font-size: var(--font-size-sm);
                 color: var(--semantic-color-text-body);
               "
             >
@@ -481,7 +481,7 @@
                 padding: 8px;
                 border: 1px solid var(--border);
                 border-radius: 6px;
-                font-size: 0.9rem;
+                font-size: var(--font-size-md);
               "
               placeholder="e.g. 3"
             />
@@ -496,7 +496,7 @@
               font-weight: 600;
               display: block;
               margin-bottom: 4px;
-              font-size: 0.85rem;
+              font-size: var(--font-size-sm);
               color: var(--semantic-color-text-body);
             "
           >
@@ -511,7 +511,7 @@
               padding: 8px;
               border: 1px solid var(--border);
               border-radius: 6px;
-              font-size: 0.9rem;
+              font-size: var(--font-size-md);
             "
             placeholder="e.g. Screening, Day 1, baseline_visit"
           />
@@ -532,7 +532,7 @@
               font-weight: bold;
               display: block;
               margin-bottom: 4px;
-              font-size: 0.85rem;
+              font-size: var(--font-size-sm);
               color: var(--error);
             "
           >
@@ -547,13 +547,13 @@
               padding: 8px;
               border: 1px solid var(--border);
               border-radius: 6px;
-              font-size: 0.85rem;
+              font-size: var(--font-size-md);
             "
             placeholder="Specify the scientific, regulatory, or operational reason for this schedule alteration..."
           />
           <span
             style="
-              font-size: 0.75rem;
+              font-size: var(--font-size-2xs);
               color: var(--semantic-color-text-secondary);
               margin-top: 2px;
               display: block;
@@ -573,7 +573,7 @@
             color: var(--semantic-color-error);
             padding: 10px;
             border-radius: 6px;
-            font-size: 0.8rem;
+            font-size: var(--font-size-xs);
           "
         >
           <strong>Validation Error:</strong> {{ validationError }}
@@ -584,7 +584,7 @@
         <button
           type="button"
           class="btn btn-secondary"
-          style="padding: 8px 14px; font-size: 0.85rem"
+          style="padding: 8px 14px; font-size: var(--font-size-sm)"
           @click="closeModal"
         >
           Cancel
@@ -595,7 +595,7 @@
           :disabled="!isFormValid"
           style="
             padding: 8px 16px;
-            font-size: 0.85rem;
+            font-size: var(--font-size-sm);
             display: flex;
             align-items: center;
             gap: 6px;

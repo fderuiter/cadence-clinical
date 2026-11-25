@@ -130,7 +130,7 @@
               display: flex;
               align-items: center;
               gap: 6px;
-              font-size: 0.8rem;
+              font-size: var(--font-size-xs);
               color: var(--semantic-color-text-muted);
               cursor: pointer;
             "
@@ -159,7 +159,7 @@
             border: 1px solid var(--semantic-color-border);
             border-radius: 6px;
             overflow: hidden;
-            font-size: 0.75rem;
+            font-size: var(--font-size-2xs);
           "
         >
           <table
@@ -223,7 +223,7 @@
             padding: 12px;
             text-align: center;
             background: var(--semantic-color-surface-muted);
-            font-size: 0.75rem;
+            font-size: var(--font-size-2xs);
             color: var(--semantic-color-text-secondary);
           "
         >
@@ -234,7 +234,7 @@
       <template v-else>
         <div
           style="
-            font-size: 0.75rem;
+            font-size: var(--font-size-2xs);
             color: var(--semantic-color-text-subtle);
             font-style: italic;
           "
@@ -440,13 +440,13 @@ function selectField() {
 .field-drag-handle {
   cursor: grab;
   color: var(--semantic-color-text-secondary);
-  font-size: 1.1rem;
+  font-size: var(--font-size-lg);
   touch-action: none;
   user-select: none;
 }
 
 .field-label-text {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--semantic-color-text-dark);
 }
@@ -483,7 +483,7 @@ function selectField() {
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   padding: 8px 10px;
-  font-size: 0.82rem;
+  font-size: var(--font-size-md);
   background-color: var(--semantic-color-surface-muted);
   color: var(--semantic-color-text-secondary);
   cursor: pointer;

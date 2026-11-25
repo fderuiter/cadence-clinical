@@ -200,7 +200,7 @@
   min-height: var(--semantic-control-target-min, 24px) !important;
   min-width: var(--semantic-control-target-min, 24px) !important;
   padding: var(--spacing-2xs, 4px) var(--spacing-xs, 8px) !important;
-  font-size: 0.8rem !important;
+  font-size: var(--font-size-xs) !important;
   border-radius: 4px !important;
   box-sizing: border-box;
 }

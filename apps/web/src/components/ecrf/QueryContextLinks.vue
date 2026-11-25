@@ -113,7 +113,7 @@ const formDisplayLabel = computed<string>(() => {
   text-decoration: underline;
 }
 .form-query-changed {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   color: var(--semantic-color-interactive-primary);
 }

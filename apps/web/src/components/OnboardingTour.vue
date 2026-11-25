@@ -991,18 +991,18 @@ onUnmounted(() => {
   font-weight: 700;
   color: var(--semantic-color-interactive-primary);
   margin: 0;
-  font-size: 1.05rem;
+  font-size: var(--font-size-md);
 }
 
 .onboarding-step-counter {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 
 .onboarding-popover-body {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   line-height: 1.4;
   color: var(--semantic-color-text-body);
   margin-bottom: 16px;
@@ -1051,7 +1051,7 @@ onUnmounted(() => {
   box-sizing: border-box;
   min-height: 44px;
   min-width: 44px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   line-height: 1.2;
 }
 

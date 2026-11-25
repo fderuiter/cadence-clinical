@@ -498,7 +498,7 @@ const confirmAndApply = () => {
 
 .drawer-subtitle {
   margin: 0;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-secondary);
   line-height: 1.4;
 }
@@ -516,7 +516,7 @@ const confirmAndApply = () => {
   justify-content: space-between;
   gap: 8px;
   flex-wrap: wrap;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-body);
   margin-bottom: 8px;
 }
@@ -546,7 +546,7 @@ const confirmAndApply = () => {
   gap: 8px;
   padding: 8px 12px;
   border-radius: 6px;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   line-height: 1.4;
 }
 
@@ -586,7 +586,7 @@ const confirmAndApply = () => {
   padding: 8px 12px 8px 36px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
-  font-size: 1rem;
+  font-size: var(--font-size-md);
   box-sizing: border-box;
 }
 
@@ -630,20 +630,20 @@ const confirmAndApply = () => {
 .badge-node {
   background-color: var(--semantic-color-surface-header);
   color: var(--semantic-color-text-body);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   padding: 2px 6px;
   border-radius: 4px;
 }
 
 .token-code {
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
   color: var(--text-main);
   font-family: var(--semantic-font-mono);
   word-break: break-word;
 }
 
 .token-name {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-secondary);
   word-break: break-word;
 }
@@ -651,7 +651,7 @@ const confirmAndApply = () => {
 .badge-danger {
   background-color: var(--semantic-color-error-bg);
   color: var(--semantic-color-error-text-dark);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   padding: 2px 8px;
   border-radius: 4px;
   font-weight: 700;
@@ -660,7 +660,7 @@ const confirmAndApply = () => {
 .badge-success {
   background-color: var(--semantic-color-success-bg);
   color: var(--semantic-color-success-dark);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   padding: 2px 8px;
   border-radius: 4px;
   font-weight: 700;
@@ -677,7 +677,7 @@ const confirmAndApply = () => {
   flex: 1 1 150px;
   min-height: 44px;
   padding: 8px 10px;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   border: 1px solid var(--semantic-color-border-control);
   background-color: var(--semantic-color-surface-muted);
@@ -706,7 +706,7 @@ const confirmAndApply = () => {
 
 .form-label {
   display: block;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   color: var(--semantic-color-text-body);
   margin-bottom: 6px;
@@ -729,7 +729,7 @@ const confirmAndApply = () => {
   padding: 8px 10px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
-  font-size: 1rem;
+  font-size: var(--font-size-md);
   background-color: var(--semantic-color-surface);
   color: var(--semantic-color-text);
   box-sizing: border-box;
@@ -778,7 +778,7 @@ const confirmAndApply = () => {
 
 .audit-title {
   margin: 0 0 12px 0;
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
   font-weight: 700;
   color: var(--semantic-color-text-dark);
   display: flex;
@@ -799,7 +799,7 @@ const confirmAndApply = () => {
   background-color: var(--semantic-color-success);
   border-color: var(--semantic-color-success);
   color: var(--semantic-color-surface);
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   border-radius: 6px;
   text-align: center;

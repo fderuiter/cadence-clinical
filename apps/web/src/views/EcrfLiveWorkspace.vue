@@ -43,7 +43,7 @@
           >
             <label
               for="ecrf-subject-selector"
-              style="font-size: 0.85rem; font-weight: 600"
+              style="font-size: var(--font-size-sm); font-weight: 600"
             >
               Participant
             </label>
@@ -80,7 +80,7 @@
               id="ecrf-manage-participants-link"
               :to="manageParticipantsLocation"
               style="
-                font-size: 0.85rem;
+                font-size: var(--font-size-sm);
                 font-weight: 600;
                 color: var(--semantic-color-interactive-primary);
                 text-decoration: underline;
@@ -93,7 +93,7 @@
               id="ecrf-manage-participants-link"
               :href="manageParticipantsHref"
               style="
-                font-size: 0.85rem;
+                font-size: var(--font-size-sm);
                 font-weight: 600;
                 color: var(--semantic-color-interactive-primary);
                 text-decoration: underline;
@@ -108,7 +108,11 @@
             id="ecrf-enrollment-status"
             role="status"
             aria-live="polite"
-            style="margin: 0; font-size: 0.85rem; color: var(--neutral-dark)"
+            style="
+              margin: 0;
+              font-size: var(--font-size-sm);
+              color: var(--neutral-dark);
+            "
           >
             {{ enrollmentStatusMessage }}
           </p>

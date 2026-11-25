@@ -1371,12 +1371,12 @@ function openReleaseModal(lockRef: string, lockKind: string) {
 
 .study-locks-header h2 {
   margin: 0;
-  font-size: 1.2rem;
+  font-size: var(--font-size-lg);
 }
 
 .study-locks-subtitle {
   margin: 4px 0 0;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-body);
 }
 
@@ -1385,7 +1385,7 @@ function openReleaseModal(lockRef: string, lockKind: string) {
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 
 .checkbox-label {
@@ -1417,7 +1417,7 @@ function openReleaseModal(lockRef: string, lockKind: string) {
 
 .apply-card h3 {
   margin: 0 0 10px;
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
 }
 
 .apply-grid {
@@ -1441,7 +1441,7 @@ function openReleaseModal(lockRef: string, lockKind: string) {
 }
 
 .picker-label {
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   color: var(--semantic-color-text-dark);
 }
@@ -1503,7 +1503,7 @@ function openReleaseModal(lockRef: string, lockKind: string) {
   border-radius: 6px;
   border: 1px solid var(--semantic-color-border);
   background: var(--semantic-color-surface);
-  font-size: 0.83rem;
+  font-size: var(--font-size-xs);
 }
 
 .readiness-panel--ready {
@@ -1543,7 +1543,7 @@ function openReleaseModal(lockRef: string, lockKind: string) {
   border: 1px solid var(--semantic-color-border);
   background: var(--semantic-color-surface-header);
   color: var(--semantic-color-text-dark);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
 }
 
@@ -1553,7 +1553,7 @@ function openReleaseModal(lockRef: string, lockKind: string) {
   .release-reason-bar input,
   .study-locks-filters input[type="text"],
   .quick-dialog-textarea {
-    font-size: 1rem;
+    font-size: var(--font-size-md);
   }
 }
 
@@ -1596,7 +1596,7 @@ function openReleaseModal(lockRef: string, lockKind: string) {
 
 .quick-dialog-target {
   margin: 0;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-body);
 }
 
@@ -1606,7 +1606,7 @@ function openReleaseModal(lockRef: string, lockKind: string) {
   padding: 8px 10px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-md);
   font-family: inherit;
   color: var(--semantic-color-text);
   background: var(--semantic-color-surface);
@@ -1636,7 +1636,7 @@ function openReleaseModal(lockRef: string, lockKind: string) {
   width: 100%;
   min-width: 48rem;
   border-collapse: collapse;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 
 .masked-pill {
@@ -1645,7 +1645,7 @@ function openReleaseModal(lockRef: string, lockKind: string) {
   border-radius: 4px;
   background: var(--semantic-color-surface-header);
   color: var(--semantic-color-text-body);
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
 }
 
 #study-locks-as-of,
@@ -1657,7 +1657,7 @@ function openReleaseModal(lockRef: string, lockKind: string) {
 
 .meaning-note {
   color: var(--semantic-color-text-muted);
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1668,7 +1668,7 @@ function openReleaseModal(lockRef: string, lockKind: string) {
   border: 1px solid var(--semantic-color-border-muted);
   background: var(--semantic-color-surface-muted);
   color: var(--semantic-color-text-body);
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
 }
 </style>
 

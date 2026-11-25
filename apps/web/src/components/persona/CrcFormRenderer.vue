@@ -39,7 +39,7 @@
               padding: '4px 8px',
               borderRadius: '4px',
               fontWeight: 600,
-              fontSize: '0.75rem',
+              fontSize: 'var(--font-size-2xs)',
             }"
           >
             {{ $t("ecrf.form.schemaBadge", { version: activeSubjectVersion }) }}
@@ -54,7 +54,7 @@
               align-items: center;
               gap: 4px;
               padding: 6px 12px;
-              font-size: 0.85rem;
+              font-size: var(--font-size-sm);
               font-weight: 600;
               border: 1px solid var(--border);
               border-radius: 4px;
@@ -160,7 +160,7 @@
         <div>
           <div
             style="
-              font-size: 1.05rem;
+              font-size: var(--font-size-md);
               font-weight: 700;
               color: var(--semantic-color-warning-text);
               display: flex;
@@ -174,7 +174,7 @@
           <p
             style="
               margin: 4px 0 0 0;
-              font-size: 0.875rem;
+              font-size: var(--font-size-sm);
               color: var(--semantic-color-warning-text);
             "
           >
@@ -197,7 +197,7 @@
                 color: var(--semantic-color-text-on-solid);
                 font-weight: bold;
                 padding: 8px 14px;
-                font-size: 0.85rem;
+                font-size: var(--font-size-sm);
                 border: none;
                 border-radius: 4px;
                 cursor: pointer;
@@ -231,7 +231,7 @@
         <div>
           <div
             style="
-              font-size: 1.05rem;
+              font-size: var(--font-size-md);
               font-weight: 700;
               color: var(--semantic-color-error-text-dark);
               display: flex;
@@ -245,7 +245,7 @@
           <p
             style="
               margin: 4px 0 0 0;
-              font-size: 0.875rem;
+              font-size: var(--font-size-sm);
               color: var(--semantic-color-error-text-deep);
             "
           >
@@ -262,7 +262,7 @@
               color: var(--semantic-color-text-on-solid);
               font-weight: bold;
               padding: 8px 14px;
-              font-size: 0.85rem;
+              font-size: var(--font-size-sm);
               border-radius: 6px;
               border: none;
               cursor: pointer;
@@ -281,7 +281,7 @@
               border: 1px solid var(--semantic-color-error);
               font-weight: bold;
               padding: 8px 14px;
-              font-size: 0.85rem;
+              font-size: var(--font-size-sm);
               border-radius: 6px;
               cursor: pointer;
             "
@@ -315,7 +315,7 @@
             display: flex;
             align-items: center;
             gap: 8px;
-            font-size: 0.875rem;
+            font-size: var(--font-size-sm);
             color: var(--semantic-color-warning-text);
             font-weight: 600;
           "
@@ -329,7 +329,7 @@
               color: var(--semantic-color-text-on-solid);
               padding: 2px 6px;
               border-radius: 4px;
-              font-size: 0.75rem;
+              font-size: var(--font-size-2xs);
             "
           >
             {{
@@ -346,13 +346,18 @@
               color: var(--semantic-color-text-on-solid);
               padding: 2px 6px;
               border-radius: 4px;
-              font-size: 0.75rem;
+              font-size: var(--font-size-2xs);
             "
           >
             {{ $t("ecrf.form.warningCount", { count: warningAlertsCount }) }}
           </span>
         </div>
-        <div style="font-size: 0.8rem; color: var(--semantic-color-warning)">
+        <div
+          style="
+            font-size: var(--font-size-xs);
+            color: var(--semantic-color-warning);
+          "
+        >
           {{ $t("ecrf.form.realtimeEvaluationActive") }}
         </div>
       </div>
@@ -381,7 +386,7 @@
             display: flex;
             align-items: center;
             gap: 8px;
-            font-size: 0.875rem;
+            font-size: var(--font-size-sm);
             color: var(--semantic-color-info);
             font-weight: 600;
           "
@@ -401,13 +406,18 @@
               color: var(--semantic-color-text-on-primary);
               padding: 2px 6px;
               border-radius: 4px;
-              font-size: 0.75rem;
+              font-size: var(--font-size-2xs);
             "
           >
             Draft
           </span>
         </div>
-        <div style="font-size: 0.8rem; color: var(--semantic-color-info)">
+        <div
+          style="
+            font-size: var(--font-size-xs);
+            color: var(--semantic-color-info);
+          "
+        >
           {{
             isDirty
               ? $t("ecrf.form.draftAutoSaving")
@@ -513,7 +523,7 @@
                     gap: '8px',
                     padding: '6px 10px',
                     borderRadius: '4px',
-                    fontSize: '0.8rem',
+                    fontSize: 'var(--font-size-xs)',
                     backgroundColor:
                       alert.severity === 'DISCREPANCY'
                         ? 'var(--semantic-color-error-bg-soft)'
@@ -557,7 +567,7 @@
                       border: 1px solid currentColor;
                       border-radius: 4px;
                       padding: 2px 6px;
-                      font-size: 0.75rem;
+                      font-size: var(--font-size-2xs);
                       font-weight: 600;
                       cursor: pointer;
                       color: inherit;
@@ -595,7 +605,7 @@
                 <label
                   :for="`sdv-${field.id}`"
                   style="
-                    font-size: 0.8rem;
+                    font-size: var(--font-size-xs);
                     color: var(--semantic-color-success-dark);
                     font-weight: 600;
                     margin: 0;
@@ -648,13 +658,18 @@
       dialog-class="modal"
       :title="`➕ ${$t('ecrf.enrollModal.header')}`"
     >
-      <p style="font-size: 0.9rem; color: var(--semantic-color-text-secondary)">
+      <p
+        style="
+          font-size: var(--font-size-sm);
+          color: var(--semantic-color-text-secondary);
+        "
+      >
         {{ $t("ecrf.enrollModal.desc") }}
       </p>
       <div class="form-group" style="margin-bottom: 12px">
         <label
           for="enroll-subject-id"
-          style="font-size: 0.85rem; font-weight: 600"
+          style="font-size: var(--font-size-sm); font-weight: 600"
           >{{ $t("ecrf.enrollModal.subjectId") }}</label
         >
         <input
@@ -675,7 +690,7 @@
       <div class="form-group" style="margin-bottom: 12px">
         <label
           for="enroll-site-id"
-          style="font-size: 0.85rem; font-weight: 600"
+          style="font-size: var(--font-size-sm); font-weight: 600"
           >{{ $t("ecrf.enrollModal.siteId") }}</label
         >
         <select
@@ -700,7 +715,7 @@
       <div class="form-group" style="margin-bottom: 12px">
         <label
           for="enroll-consent-date"
-          style="font-size: 0.85rem; font-weight: 600"
+          style="font-size: var(--font-size-sm); font-weight: 600"
           >{{ $t("ecrf.enrollModal.consentDate") }}</label
         >
         <input
@@ -720,7 +735,7 @@
       <div class="form-group" style="margin-bottom: 12px">
         <label
           for="enroll-arm-id"
-          style="font-size: 0.85rem; font-weight: 600"
+          style="font-size: var(--font-size-sm); font-weight: 600"
           >{{ $t("ecrf.enrollModal.assignedArm") }}</label
         >
         <select
@@ -742,7 +757,7 @@
       <div class="form-group" style="margin-bottom: 12px">
         <label
           for="enroll-change-reason"
-          style="font-size: 0.85rem; font-weight: 600"
+          style="font-size: var(--font-size-sm); font-weight: 600"
           >{{ $t("ecrf.enrollModal.changeReason") }}</label
         >
         <input
@@ -795,7 +810,7 @@
     >
       <p
         style="
-          font-size: 0.95rem;
+          font-size: var(--font-size-base);
           color: var(--semantic-color-error-text-deep);
           font-weight: 600;
         "
@@ -803,7 +818,10 @@
         {{ $t("ecrf.gateModal.subjectGated", { id: selectedSubjectId }) }}
       </p>
       <p
-        style="font-size: 0.875rem; color: var(--semantic-color-text-secondary)"
+        style="
+          font-size: var(--font-size-sm);
+          color: var(--semantic-color-text-secondary);
+        "
       >
         {{ $t("ecrf.gateModal.desc") }}
       </p>
@@ -882,7 +900,7 @@
       </p>
       <div class="form-group" style="margin-bottom: 12px">
         <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-        <label style="font-size: 0.85rem; font-weight: 600"
+        <label style="font-size: var(--font-size-sm); font-weight: 600"
           >Date ICF Signed by Subject:</label
         >
         <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
@@ -902,7 +920,7 @@
       </div>
       <div class="form-group" style="margin-bottom: 12px">
         <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-        <label style="font-size: 0.85rem; font-weight: 600"
+        <label style="font-size: var(--font-size-sm); font-weight: 600"
           >Investigator Verification Note:</label
         >
         <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->

@@ -219,7 +219,7 @@ async function submitOnboarding() {
   color: var(--semantic-color-warning-text);
   border-radius: 8px;
   padding: 12px 16px;
-  font-size: 0.88rem;
+  font-size: var(--font-size-sm);
   line-height: 1.45;
   margin-bottom: 20px;
 }
@@ -235,20 +235,20 @@ async function submitOnboarding() {
 .setup-eyebrow {
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  font-size: 0.76rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   color: var(--semantic-color-interactive-primary);
   margin: 0 0 6px;
 }
 
 .setup-header h1 {
-  font-size: 1.6rem;
+  font-size: var(--font-size-2xl);
   margin: 0 0 8px;
 }
 
 .setup-subtitle {
   color: var(--semantic-color-text-secondary);
-  font-size: 0.94rem;
+  font-size: var(--font-size-base);
   line-height: 1.5;
   margin-bottom: 24px;
 }
@@ -262,7 +262,7 @@ async function submitOnboarding() {
 
 .form-field label {
   font-weight: 600;
-  font-size: 0.92rem;
+  font-size: var(--font-size-base);
 }
 
 .form-field input,
@@ -272,11 +272,11 @@ async function submitOnboarding() {
   background: var(--semantic-color-surface);
   color: var(--semantic-color-text);
   border-radius: 6px;
-  font-size: 0.95rem;
+  font-size: var(--font-size-md);
 }
 
 .field-hint {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-secondary);
   line-height: 1.4;
 }
@@ -287,7 +287,7 @@ async function submitOnboarding() {
   color: var(--semantic-color-error-dark);
   padding: 10px 12px;
   border-radius: 6px;
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
   margin-bottom: 16px;
 }
 

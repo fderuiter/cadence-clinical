@@ -368,7 +368,7 @@ onMounted(() => {
 
 .drawer-title h3 {
   margin: 0;
-  font-size: 1rem;
+  font-size: var(--font-size-md);
   color: var(--semantic-color-text);
   white-space: nowrap;
   overflow: hidden;
@@ -428,7 +428,7 @@ onMounted(() => {
 }
 
 .metric-label {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   text-transform: uppercase;
   font-weight: 600;
   color: var(--semantic-color-text-secondary);
@@ -443,13 +443,13 @@ onMounted(() => {
 }
 
 .metric-value {
-  font-size: 1.4rem;
+  font-size: var(--font-size-xl);
   font-weight: 700;
   color: var(--semantic-color-text);
 }
 
 .metric-sub {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -484,7 +484,7 @@ onMounted(() => {
   flex: 1;
   min-height: 44px;
   padding: 8px 12px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   border-radius: 6px;
   cursor: pointer;
@@ -540,14 +540,14 @@ onMounted(() => {
 
 .section-title-row h4 {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text);
 }
 
 .count-badge {
   background-color: var(--semantic-color-info-bg);
   color: var(--primary);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   padding: 2px 8px;
   border-radius: 10px;
   font-weight: 600;
@@ -559,7 +559,7 @@ onMounted(() => {
   background-color: var(--semantic-color-surface-muted);
   border: 1px dashed var(--border);
   border-radius: 8px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -585,7 +585,7 @@ onMounted(() => {
   justify-content: space-between;
   gap: 8px;
   flex-wrap: wrap;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
 }
 
 .category-tag {
@@ -632,14 +632,14 @@ onMounted(() => {
 }
 
 .diff-text.del-text {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   text-decoration: line-through;
   color: var(--error);
   word-break: break-word;
 }
 
 .diff-text.ins-text {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--success);
   word-break: break-word;
@@ -651,7 +651,7 @@ onMounted(() => {
 }
 
 .rationale-text {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-secondary);
   margin: 0;
   line-height: 1.4;
@@ -664,7 +664,7 @@ onMounted(() => {
   min-height: 44px;
   padding: 6px 12px;
   border-radius: 6px;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   cursor: pointer;
   align-self: flex-start;
@@ -711,7 +711,7 @@ onMounted(() => {
 
 .audit-link-section h4 {
   margin: 0;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text);
 }
 
@@ -722,7 +722,7 @@ onMounted(() => {
 }
 
 .form-group label {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
   font-weight: 500;
 }
@@ -732,7 +732,7 @@ onMounted(() => {
   border-radius: 6px;
   min-height: 44px;
   padding: 8px 10px;
-  font-size: 1rem;
+  font-size: var(--font-size-md);
   background-color: var(--semantic-color-surface);
   color: var(--semantic-color-text);
   max-width: 100%;

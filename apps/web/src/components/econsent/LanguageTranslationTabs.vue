@@ -122,7 +122,7 @@ const selectLanguage = (langCode) => {
 
 .tabs-label {
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
   color: var(--neutral-dark);
 }
 
@@ -136,7 +136,7 @@ const selectLanguage = (langCode) => {
   align-items: center;
   gap: 6px;
   padding: 6px 12px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   background-color: var(--neutral-light);
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -163,7 +163,7 @@ const selectLanguage = (langCode) => {
 }
 
 .flag-icon {
-  font-size: 1.1rem;
+  font-size: var(--font-size-lg);
 }
 
 .lang-code-badge {
@@ -188,7 +188,7 @@ const selectLanguage = (langCode) => {
 
 .active-lang-banner p {
   margin: 0;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-secondary);
   line-height: 1.4;
   flex: 1;
@@ -199,7 +199,7 @@ const selectLanguage = (langCode) => {
 }
 
 .metric-badge {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   background-color: var(--semantic-color-success-bg-soft);
   color: var(--semantic-color-success-dark);
   border: 1px solid var(--semantic-color-success-border-soft);

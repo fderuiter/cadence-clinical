@@ -629,13 +629,13 @@ async function submitRegisterSite() {
 
 .study-sites-title {
   margin: 0;
-  font-size: 1rem;
+  font-size: var(--font-size-md);
 }
 
 .study-sites-status {
   margin: 2px 0 0;
   color: var(--neutral-dark);
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-variant-numeric: tabular-nums;
 }
 
@@ -687,18 +687,18 @@ async function submitRegisterSite() {
   padding: 1px 6px;
   border-radius: 999px;
   background: var(--accent-bg);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
 }
 
 .linked-site-name {
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
   overflow-wrap: anywhere;
 }
 
 .linked-site-inst {
   color: var(--neutral-dark);
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   overflow-wrap: anywhere;
 }
 
@@ -714,7 +714,7 @@ async function submitRegisterSite() {
 
 .site-form-title {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
 }
 
 .site-form-grid {
@@ -749,7 +749,7 @@ async function submitRegisterSite() {
 .sites-banner {
   padding: 8px 10px;
   border-radius: 6px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 
 .sites-banner-success {

@@ -40,7 +40,7 @@ h4 {
 }
 
 .header-branding h1 {
-  font-size: 24px;
+  font-size: var(--font-size-2xl);
   color: var(--text-main);
   font-weight: 800;
 }
@@ -50,7 +50,7 @@ h4 {
 }
 
 .header-branding p.role-badge {
-  font-size: 13px;
+  font-size: var(--font-size-xs);
   color: var(--text-muted);
   font-weight: 500;
 }
@@ -66,7 +66,7 @@ h4 {
   display: inline-block;
   padding: 4px 10px;
   border-radius: 9999px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   text-transform: uppercase;
 }
@@ -126,7 +126,7 @@ h4 {
   border: none;
   padding: 14px 18px;
   text-align: left;
-  font-size: 15px;
+  font-size: var(--font-size-base);
   font-weight: 600;
   color: var(--text-muted);
   cursor: pointer;
@@ -157,7 +157,7 @@ h4 {
 .badge-unread {
   background-color: var(--semantic-color-error-interactive);
   color: var(--semantic-color-text-on-solid);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-variant-numeric: tabular-nums;
   font-weight: 700;
   padding: 2px 6px;
@@ -175,7 +175,7 @@ h4 {
 }
 
 .participant-info-card .info-title {
-  font-size: 13px;
+  font-size: var(--font-size-xs);
   font-weight: 700;
   text-transform: uppercase;
   color: var(--text-muted);
@@ -188,7 +188,7 @@ h4 {
   display: flex;
   justify-content: space-between;
   margin-bottom: 6px;
-  font-size: 14px;
+  font-size: var(--font-size-sm);
 }
 
 .participant-info-card .info-lbl {
@@ -236,7 +236,7 @@ h4 {
 }
 
 .view-header h2 {
-  font-size: 22px;
+  font-size: var(--font-size-xl);
   color: var(--text-main);
   font-weight: 700;
   margin-bottom: 4px;
@@ -244,7 +244,7 @@ h4 {
 
 .view-header p {
   color: var(--text-muted);
-  font-size: 14px;
+  font-size: var(--font-size-sm);
 }
 
 /* Card Styles */
@@ -255,6 +255,24 @@ h4 {
   padding: 24px;
   box-shadow: var(--shadow-sm);
   margin-bottom: 20px;
+}
+
+.card.error-state {
+  text-align: center;
+  padding: 32px;
+  border: 1px solid var(--danger);
+  margin-bottom: 16px;
+}
+
+.error-state-title {
+  color: var(--danger);
+  font-weight: 700;
+  font-size: var(--font-size-md);
+}
+
+.error-state-detail {
+  font-size: var(--font-size-sm);
+  margin-bottom: 12px;
 }
 
 /* Tasks & List Views */
@@ -310,13 +328,13 @@ h4 {
 .task-name,
 .inbox-name {
   font-weight: 700;
-  font-size: 16px;
+  font-size: var(--font-size-md);
   color: var(--text-main);
 }
 
 .task-due,
 .inbox-due {
-  font-size: 13px;
+  font-size: var(--font-size-xs);
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
 }
@@ -325,7 +343,7 @@ h4 {
   display: inline-block;
   padding: 3px 8px;
   border-radius: 6px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   text-transform: uppercase;
 }
@@ -351,7 +369,7 @@ h4 {
   justify-content: center;
   padding: 10px 18px;
   border-radius: 8px;
-  font-size: 14px;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   cursor: pointer;
   border: none;
@@ -386,7 +404,7 @@ h4 {
   border: none;
   color: var(--primary);
   font-weight: 600;
-  font-size: 14px;
+  font-size: var(--font-size-sm);
   cursor: pointer;
   margin-bottom: 12px;
   display: inline-block;
@@ -415,7 +433,7 @@ h4 {
   }
 
   .header-branding h1 {
-    font-size: 20px;
+    font-size: var(--font-size-lg);
   }
 
   .portal-container {
@@ -464,7 +482,7 @@ h4 {
     text-align: center;
     padding: 6px 8px;
     gap: 2px;
-    font-size: 0.75rem;
+    font-size: var(--font-size-2xs);
     line-height: 1.2;
     white-space: nowrap;
     min-height: var(--touch-target-min, 48px);
@@ -492,7 +510,7 @@ h4 {
     width: 100%;
     justify-content: space-between;
     padding: 8px 12px;
-    font-size: 13px;
+    font-size: var(--font-size-xs);
   }
 
   .participant-info-card {
@@ -529,7 +547,7 @@ h4 {
 
 .form-title {
   grid-column: span 12;
-  font-size: 18px;
+  font-size: var(--font-size-lg);
   font-weight: 700;
   margin-bottom: 10px;
   color: var(--text-main);
@@ -576,14 +594,14 @@ h4 {
 }
 
 .score-value {
-  font-size: 28px;
+  font-size: var(--font-size-3xl);
   font-weight: 800;
   color: var(--text-main);
   font-variant-numeric: var(--font-variant-numeric-tabular);
 }
 
 .score-lbl {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   color: var(--text-muted);
   text-transform: uppercase;
@@ -601,7 +619,7 @@ h4 {
 .breakdown-item {
   display: flex;
   justify-content: space-between;
-  font-size: 14px;
+  font-size: var(--font-size-sm);
 }
 
 .breakdown-item .lbl {
@@ -622,7 +640,7 @@ h4 {
   width: 100%;
   border-collapse: collapse;
   text-align: left;
-  font-size: 14px;
+  font-size: var(--font-size-sm);
 }
 
 .compliance-history-table th {
@@ -722,7 +740,7 @@ h4 {
   background-color: var(--semantic-color-surface-muted);
   border-bottom: 1px solid var(--border);
   font-weight: 700;
-  font-size: 18px;
+  font-size: var(--font-size-lg);
   color: var(--text-main);
   flex-shrink: 0;
 }
@@ -736,7 +754,7 @@ h4 {
 }
 
 .modal-body p {
-  font-size: 14px;
+  font-size: var(--font-size-sm);
   color: var(--text-muted);
   margin-bottom: 16px;
   line-height: 1.6;
@@ -809,7 +827,7 @@ h4 {
 .form-group label {
   display: block;
   font-weight: 600;
-  font-size: 13px;
+  font-size: var(--font-size-xs);
   margin-bottom: 6px;
   color: var(--text-main);
 }
@@ -821,7 +839,7 @@ h4 {
   padding: 10px 12px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
-  font-size: 16px;
+  font-size: var(--font-size-md);
   background-color: var(--semantic-color-surface);
   color: var(--text-main);
   transition: border-color 0.2s;
@@ -830,7 +848,7 @@ h4 {
 input,
 select,
 textarea {
-  font-size: 16px;
+  font-size: var(--font-size-md);
 }
 
 .tabular-nums {
@@ -885,7 +903,7 @@ textarea {
   border-radius: 6px;
   background-color: var(--semantic-color-surface);
   color: var(--text-main);
-  font-size: 16px;
+  font-size: var(--font-size-md);
   cursor: pointer;
   transition:
     background-color 0.2s,
@@ -918,7 +936,7 @@ textarea {
 }
 
 .query-panel-title {
-  font-size: 13px;
+  font-size: var(--font-size-xs);
   font-weight: 700;
   color: var(--text-main);
 }
@@ -934,7 +952,7 @@ textarea {
   border-radius: 6px;
   background-color: var(--semantic-color-surface);
   color: var(--text-main);
-  font-size: 18px;
+  font-size: var(--font-size-lg);
   font-weight: 700;
   line-height: 1;
   cursor: pointer;
@@ -950,7 +968,7 @@ textarea {
 
 .query-panel-instruction {
   margin: 0 0 8px 0;
-  font-size: 13px;
+  font-size: var(--font-size-xs);
   color: var(--text-main);
 }
 
@@ -963,7 +981,7 @@ textarea {
   border-radius: 6px;
   background-color: var(--semantic-color-surface);
   color: var(--text-main);
-  font-size: 1rem;
+  font-size: var(--font-size-md);
 }
 
 .btn-submit-query,
@@ -980,7 +998,7 @@ textarea {
   border: 1px solid transparent;
   background-color: var(--primary);
   color: var(--semantic-color-text-on-primary);
-  font-size: 13px;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   cursor: pointer;
 }
@@ -994,7 +1012,7 @@ textarea {
 }
 
 .footer-title {
-  font-size: 13px;
+  font-size: var(--font-size-xs);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -1009,7 +1027,7 @@ textarea {
   max-height: 250px;
   overflow-y: auto;
   font-family: var(--semantic-font-mono);
-  font-size: 12px;
+  font-size: var(--font-size-2xs);
 }
 
 .ledger-item {
@@ -1034,7 +1052,7 @@ textarea {
 
 .ledger-verification-details {
   margin-top: 2px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-inverse-muted);
 }
 
@@ -1051,7 +1069,7 @@ textarea {
 
 .ledger-hash {
   color: var(--semantic-color-accent-inverse);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   margin-top: 4px;
   word-break: break-all;
 }
@@ -1075,7 +1093,7 @@ textarea {
   padding: 12px 20px;
   z-index: 10000;
   font-weight: 700;
-  font-size: 14px;
+  font-size: var(--font-size-sm);
   text-decoration: none;
   border-radius: 0 0 8px 0;
   box-shadow: var(--shadow-md);
@@ -1139,7 +1157,7 @@ textarea {
   border: 1px solid var(--semantic-color-border-control);
   padding: 8px 16px;
   border-radius: 8px;
-  font-size: 13px;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -1179,7 +1197,7 @@ textarea {
 .sync-badge {
   background-color: var(--semantic-color-warning-action);
   color: var(--semantic-color-text-on-solid);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-variant-numeric: tabular-nums;
   font-weight: 700;
   padding: 2px 6px;
@@ -1257,7 +1275,7 @@ textarea {
 
 .drawer-header h3 {
   margin: 0;
-  font-size: 18px;
+  font-size: var(--font-size-lg);
   font-weight: 700;
   color: var(--text-main);
 }
@@ -1265,7 +1283,7 @@ textarea {
 .btn-close-drawer {
   background: none;
   border: none;
-  font-size: 28px;
+  font-size: var(--font-size-3xl);
   line-height: 1;
   color: var(--text-muted);
   cursor: pointer;
@@ -1296,7 +1314,7 @@ textarea {
 }
 
 .sync-status-section .status-text {
-  font-size: 14px;
+  font-size: var(--font-size-sm);
   font-weight: 500;
   color: var(--text-main);
   margin-bottom: 10px;
@@ -1309,7 +1327,7 @@ textarea {
 }
 
 .submissions-heading {
-  font-size: 15px;
+  font-size: var(--font-size-base);
   font-weight: 700;
   color: var(--text-main);
   margin-bottom: 4px;
@@ -1320,7 +1338,7 @@ textarea {
   padding: 32px 16px;
   color: var(--text-muted);
   font-style: italic;
-  font-size: 14px;
+  font-size: var(--font-size-sm);
   border: 1px dashed var(--semantic-color-border-control);
   border-radius: 8px;
 }
@@ -1364,12 +1382,12 @@ textarea {
 
 .item-name {
   font-weight: 700;
-  font-size: 14px;
+  font-size: var(--font-size-sm);
   color: var(--text-main);
 }
 
 .item-time {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-variant-numeric: tabular-nums;
   color: var(--text-muted);
 }
@@ -1378,7 +1396,7 @@ textarea {
   border-top: 1px dashed var(--border);
   padding-top: 8px;
   margin-top: 4px;
-  font-size: 12px;
+  font-size: var(--font-size-2xs);
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -1396,7 +1414,7 @@ textarea {
 .answer-summary-list {
   margin: 4px 0 0 0;
   padding-left: 18px;
-  font-size: 12px;
+  font-size: var(--font-size-2xs);
   line-height: 1.5;
   color: var(--text-main);
 }
@@ -1416,7 +1434,7 @@ textarea {
   padding: 4px 8px;
   border-radius: 4px;
   font-family: var(--semantic-font-mono);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   margin-top: 4px;
   overflow-x: auto;
 }
@@ -1433,7 +1451,7 @@ textarea {
   box-shadow: var(--semantic-shadow-xl);
   z-index: 9999;
   font-weight: 600;
-  font-size: 14px;
+  font-size: var(--font-size-sm);
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
@@ -1491,13 +1509,13 @@ textarea {
 
 .sync-suspended-title {
   font-weight: 700;
-  font-size: 16px;
+  font-size: var(--font-size-md);
   margin: 0 0 8px 0;
   color: var(--semantic-color-error-text-dark);
 }
 
 .sync-suspended-desc {
-  font-size: 14px;
+  font-size: var(--font-size-sm);
   margin: 0 0 12px 0;
   color: var(--semantic-color-error-text-deep);
 }
@@ -1525,7 +1543,7 @@ textarea {
   background-color: var(--warning-bg);
   border: 1px solid var(--semantic-color-warning-border-strong);
   color: var(--semantic-color-warning-text);
-  font-size: 12px;
+  font-size: var(--font-size-2xs);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1546,7 +1564,7 @@ textarea {
 
 .quarantine-next-steps {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--font-size-2xs);
   line-height: 1.45;
   color: var(--semantic-color-error-text-deep);
 }
@@ -1568,7 +1586,7 @@ textarea {
   background-color: var(--bg-card);
   color: var(--primary-dark);
   font-weight: 600;
-  font-size: 12px;
+  font-size: var(--font-size-2xs);
   text-decoration: underline;
 }
 
@@ -1597,7 +1615,7 @@ textarea {
 }
 
 .site-contact-title {
-  font-size: 12px;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.03em;
@@ -1605,7 +1623,7 @@ textarea {
 }
 
 .site-contact-subtitle {
-  font-size: 12px;
+  font-size: var(--font-size-2xs);
   color: var(--text-muted);
 }
 
@@ -1627,7 +1645,7 @@ textarea {
   border: 1px solid var(--semantic-color-border-control);
   background-color: var(--bg-card);
   color: var(--primary-dark);
-  font-size: 12px;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   text-decoration: none;
   transition:
@@ -1654,17 +1672,17 @@ textarea {
 .inbox-failure-title {
   color: var(--danger);
   font-weight: 700;
-  font-size: 16px;
+  font-size: var(--font-size-md);
 }
 
 .inbox-failure-msg {
-  font-size: 14px;
+  font-size: var(--font-size-sm);
   margin-bottom: 12px;
 }
 
 .participant-auth-error {
   margin-top: 8px;
-  font-size: 12px;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-error-text-dark);
   font-weight: 600;
 }
@@ -1676,7 +1694,7 @@ textarea {
 .participant-action-btn {
   width: 100%;
   padding: 6px 8px;
-  font-size: 12px;
+  font-size: var(--font-size-2xs);
 }
 
 .status-pill.in-progress {
@@ -1692,12 +1710,12 @@ textarea {
   border: 1px solid var(--danger);
   background-color: var(--danger-bg);
   color: var(--semantic-color-error-text-dark);
-  font-size: 14px;
+  font-size: var(--font-size-sm);
   line-height: 1.5;
 }
 
 .pin-reset-prompt {
-  font-size: 14px;
+  font-size: var(--font-size-sm);
   margin: 0 0 8px 0;
   color: var(--text-main);
 }
@@ -1705,12 +1723,12 @@ textarea {
 .pin-error-msg {
   color: var(--semantic-color-error-dark);
   font-weight: 700;
-  font-size: 14px;
+  font-size: var(--font-size-sm);
   margin-bottom: 12px;
 }
 
 .pin-attempts-note {
-  font-size: 13px;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-warning-text);
   margin-bottom: 12px;
 }

@@ -854,7 +854,7 @@ function submitOpenNew() {
   overflow-wrap: anywhere;
 }
 .ecrf-form-hint {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-secondary);
 }
 .ecrf-form-row {
@@ -913,12 +913,12 @@ function submitOpenNew() {
   gap: 4px;
 }
 .ecrf-governance-title {
-  font-size: 0.86rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text);
 }
 .ecrf-governance-detail {
   margin: 0;
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-secondary);
 }
 .ecrf-visit-window-hint {
@@ -926,7 +926,7 @@ function submitOpenNew() {
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-secondary);
   font-variant-numeric: tabular-nums;
 }
@@ -943,14 +943,14 @@ function submitOpenNew() {
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   padding: 8px 10px;
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   background-color: var(--semantic-color-surface-muted);
 }
 .ecrf-singleton-notice button {
   grid-column: auto;
 }
 .ecrf-direct-id-disclosure {
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-secondary);
 }
 .ecrf-direct-id-summary {

@@ -42,7 +42,7 @@
     >
       <div class="manifest-header">
         <span class="manifest-icon">🔒</span>
-        <strong style="color: var(--success); font-size: 0.95rem">
+        <strong style="color: var(--success); font-size: var(--font-size-base)">
           21 CFR Part 11 Electronic Signature Manifest Verified
         </strong>
       </div>
@@ -419,7 +419,7 @@ const formatTime = (isoString) => {
 
 .header-left h2 {
   margin: 0;
-  font-size: 1.4rem;
+  font-size: var(--font-size-xl);
   color: var(--neutral-dark);
 }
 
@@ -429,7 +429,7 @@ const formatTime = (isoString) => {
   border: 1px solid var(--border);
   padding: 3px 8px;
   border-radius: 4px;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
 }
 
@@ -439,7 +439,7 @@ const formatTime = (isoString) => {
   border: 1px solid var(--semantic-color-info-border);
   padding: 3px 8px;
   border-radius: 4px;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
 }
 
@@ -448,7 +448,7 @@ const formatTime = (isoString) => {
   color: var(--accent);
   padding: 4px 10px;
   border-radius: 9999px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-weight: bold;
 }
 
@@ -475,7 +475,7 @@ const formatTime = (isoString) => {
 }
 
 .manifest-details {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-dark);
   display: flex;
   flex-direction: column;
@@ -512,7 +512,7 @@ const formatTime = (isoString) => {
 
 .outline-group h4 {
   margin: 0 0 10px 0;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -534,7 +534,7 @@ const formatTime = (isoString) => {
   padding: 8px 10px;
   border-radius: 6px;
   cursor: pointer;
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
   transition: all 0.2s;
   color: var(--neutral-dark);
 }
@@ -550,7 +550,7 @@ const formatTime = (isoString) => {
 }
 
 .item-icon {
-  font-size: 1rem;
+  font-size: var(--font-size-md);
 }
 
 .item-title {
@@ -596,7 +596,7 @@ const formatTime = (isoString) => {
 }
 
 .inline-input {
-  font-size: 0.85rem;
+  font-size: var(--font-size-md);
   padding: 6px 10px;
 }
 
@@ -630,7 +630,7 @@ const formatTime = (isoString) => {
 .history-item {
   border-left: 2px solid var(--border);
   padding-left: 8px;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
 }
 
 .history-ver {
@@ -641,7 +641,7 @@ const formatTime = (isoString) => {
 
 .history-time {
   color: var(--semantic-color-text-secondary);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
 }
 
 .history-reason {
@@ -684,14 +684,14 @@ const formatTime = (isoString) => {
 
 .modal-header h3 {
   margin: 0;
-  font-size: 1.15rem;
+  font-size: var(--font-size-lg);
   color: var(--neutral-dark);
 }
 
 .close-btn {
   background: transparent;
   border: none;
-  font-size: 1.2rem;
+  font-size: var(--font-size-lg);
   cursor: pointer;
   color: var(--semantic-color-text-secondary);
 }
@@ -709,7 +709,7 @@ const formatTime = (isoString) => {
   color: var(--semantic-color-warning);
   padding: 12px;
   border-radius: 6px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   line-height: 1.5;
   margin: 0;
 }
@@ -722,7 +722,7 @@ const formatTime = (isoString) => {
 
 .form-group label {
   font-weight: 600;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--neutral-dark);
 }
 
@@ -730,12 +730,12 @@ const formatTime = (isoString) => {
   padding: 8px 12px;
   border: 1px solid var(--border);
   border-radius: 6px;
-  font-size: 0.9rem;
+  font-size: var(--font-size-md);
 }
 
 .error-text {
   color: var(--error);
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
 }
 

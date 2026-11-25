@@ -763,7 +763,7 @@ onUnmounted(() => {
   border: 1px solid var(--semantic-color-border-control);
   padding: 4px 10px;
   border-radius: 6px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-body);
 }
 
@@ -799,7 +799,7 @@ onUnmounted(() => {
 }
 
 .range-banner-title {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-weight: 700;
   color: var(--semantic-color-info);
 }
@@ -833,7 +833,7 @@ onUnmounted(() => {
 }
 
 .inline-form-group label {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   color: var(--semantic-color-text-secondary);
 }
@@ -843,7 +843,7 @@ onUnmounted(() => {
   padding: 6px 10px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-md);
 }
 
 .matrix-table-container {
@@ -856,7 +856,7 @@ onUnmounted(() => {
 .soa-interactive-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   text-align: left;
   touch-action: none;
 }
@@ -912,7 +912,7 @@ onUnmounted(() => {
 }
 
 .visit-header-meta {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
   margin-top: 2px;
 }
@@ -947,7 +947,7 @@ onUnmounted(() => {
   display: inline-block;
   padding: 2px 8px;
   border-radius: 4px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   background-color: var(--semantic-color-surface-header);
   color: var(--semantic-color-text-body);

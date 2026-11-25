@@ -417,7 +417,7 @@ defineExpose({
 
 .clinical-drawer-title {
   margin: 0;
-  font-size: var(--font-size-md, 16px);
+  font-size: var(--font-size-md);
   font-weight: 600;
   color: var(--color-text);
   line-height: 1.25;
@@ -428,7 +428,7 @@ defineExpose({
 
 .clinical-drawer-subtitle {
   margin: 2px 0 0 0;
-  font-size: var(--font-size-xs, 12px);
+  font-size: var(--font-size-xs);
   color: var(--color-text-muted);
   line-height: 1.25;
   overflow: hidden;
@@ -445,7 +445,7 @@ defineExpose({
   min-height: 44px;
   background: transparent;
   border: none;
-  font-size: 16px;
+  font-size: var(--font-size-md);
   color: var(--color-text-muted);
   cursor: pointer;
   padding: 6px;
@@ -504,7 +504,7 @@ defineExpose({
     ),
   .clinical-drawer-panel.clinical-drawer-panel :deep(select),
   .clinical-drawer-panel.clinical-drawer-panel :deep(textarea) {
-    font-size: max(1rem, 16px);
+    font-size: max(1rem, var(--font-size-md));
   }
 }
 

@@ -37,7 +37,7 @@
             background: var(--semantic-color-error-bg);
             border: 1px solid var(--semantic-color-error);
             color: var(--semantic-color-error);
-            font-size: 14px;
+            font-size: var(--font-size-sm);
             font-weight: 600;
           "
         />

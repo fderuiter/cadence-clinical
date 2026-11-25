@@ -699,7 +699,7 @@ onMounted(() => {
 
 .drawer-subtitle {
   margin: 0;
-  font-size: 0.8125rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-secondary);
   line-height: 1.4;
 }
@@ -720,7 +720,7 @@ onMounted(() => {
   border-radius: 6px;
   background-color: var(--semantic-color-surface-muted);
   color: var(--semantic-color-text-secondary);
-  font-size: 0.8125rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   cursor: pointer;
   display: inline-flex;
@@ -740,7 +740,7 @@ onMounted(() => {
 .import-error-alert {
   border-radius: 8px;
   padding: 12px 14px;
-  font-size: 0.8125rem;
+  font-size: var(--font-size-xs);
 }
 
 .access-restricted-banner {
@@ -788,7 +788,7 @@ onMounted(() => {
 
 .section-heading {
   margin: 0;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -809,7 +809,7 @@ onMounted(() => {
 }
 
 .field-label {
-  font-size: 0.8125rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   color: var(--semantic-color-text-body);
 }
@@ -826,7 +826,7 @@ onMounted(() => {
   border-radius: 6px;
   background-color: var(--semantic-color-surface);
   color: var(--semantic-color-text);
-  font-size: 1rem;
+  font-size: var(--font-size-md);
   box-sizing: border-box;
 }
 
@@ -843,12 +843,12 @@ onMounted(() => {
   flex-direction: column;
   align-items: center;
   gap: 6px;
-  font-size: 0.8125rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-body);
 }
 
 .dropzone-hint {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
   word-break: break-word;
 }
@@ -861,14 +861,14 @@ onMounted(() => {
 }
 
 .selected-file-name {
-  font-size: 0.8125rem;
+  font-size: var(--font-size-xs);
   font-weight: 700;
   color: var(--semantic-color-text);
   word-break: break-all;
 }
 
 .selected-file-size {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -881,7 +881,7 @@ onMounted(() => {
   min-height: 44px;
   padding: 8px 14px;
   border-radius: 6px;
-  font-size: 0.8125rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   cursor: pointer;
   display: inline-flex;
@@ -927,7 +927,7 @@ onMounted(() => {
   gap: 4px;
   border-radius: 999px;
   padding: 4px 10px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
 }
 
@@ -971,7 +971,7 @@ onMounted(() => {
 }
 
 .report-metric-value {
-  font-size: 1.15rem;
+  font-size: var(--font-size-lg);
   font-weight: 700;
   color: var(--semantic-color-text);
 }
@@ -990,7 +990,7 @@ onMounted(() => {
 }
 
 .invalid-breakdown-title {
-  font-size: 0.8125rem;
+  font-size: var(--font-size-xs);
   font-weight: 700;
   color: var(--semantic-color-error-text-dark);
 }
@@ -1005,7 +1005,7 @@ onMounted(() => {
 .synonym-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
   text-align: left;
 }
 
@@ -1065,7 +1065,7 @@ onMounted(() => {
 }
 
 .job-metrics-inline {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
 }
 
 .text-valid {
@@ -1108,7 +1108,7 @@ onMounted(() => {
   border-radius: 6px;
   border: 1px solid var(--semantic-color-border-control);
   background-color: var(--semantic-color-surface);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   cursor: pointer;
   display: inline-flex;
@@ -1135,7 +1135,7 @@ onMounted(() => {
   border-radius: 8px;
   padding: 24px 16px;
   text-align: center;
-  font-size: 0.8125rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-secondary);
 }
 

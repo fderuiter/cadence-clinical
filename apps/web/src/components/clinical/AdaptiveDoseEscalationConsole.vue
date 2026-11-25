@@ -588,7 +588,7 @@ function submitCohortTransition(): void {
   border: 1px solid var(--semantic-color-warning-border-strong);
   background: var(--semantic-color-warning-bg-soft);
   color: var(--semantic-color-warning-text);
-  font-size: 0.88rem;
+  font-size: var(--font-size-sm);
 }
 
 .console-header {
@@ -608,7 +608,7 @@ function submitCohortTransition(): void {
 }
 
 .badge-design {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 3px 8px;
   border-radius: 4px;
@@ -636,14 +636,14 @@ function submitCohortTransition(): void {
 
 .title {
   margin: 0 0 4px 0;
-  font-size: 1.25rem;
+  font-size: var(--font-size-lg);
   font-weight: 700;
   color: var(--semantic-color-text);
 }
 
 .subtitle {
   margin: 0;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -670,7 +670,7 @@ function submitCohortTransition(): void {
 }
 
 .metric-val {
-  font-size: 1rem;
+  font-size: var(--font-size-md);
   font-weight: 700;
   color: var(--semantic-color-text);
 }
@@ -723,7 +723,7 @@ function submitCohortTransition(): void {
 }
 
 .banner-icon-col {
-  font-size: 1.75rem;
+  font-size: var(--font-size-3xl);
   line-height: 1;
 }
 
@@ -740,18 +740,18 @@ function submitCohortTransition(): void {
 }
 
 .action-tag {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   letter-spacing: 0.5px;
 }
 
 .action-name {
-  font-size: 1.1rem;
+  font-size: var(--font-size-lg);
   font-weight: 800;
 }
 
 .rec-dose-pill {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   background-color: var(--semantic-color-surface-header);
   padding: 2px 8px;
@@ -760,12 +760,12 @@ function submitCohortTransition(): void {
 
 .banner-rationale {
   margin: 0;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   opacity: 0.9;
 }
 
 .btn-primary-action {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-weight: 700;
   padding: 8px 16px;
   border-radius: 6px;
@@ -786,7 +786,7 @@ function submitCohortTransition(): void {
 }
 
 .section-title {
-  font-size: 1rem;
+  font-size: var(--font-size-md);
   font-weight: 700;
   margin: 0 0 12px 0;
   color: var(--semantic-color-text);
@@ -801,7 +801,7 @@ function submitCohortTransition(): void {
 .dose-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   text-align: left;
 }
 
@@ -836,7 +836,7 @@ function submitCohortTransition(): void {
   border-radius: 50%;
   background-color: var(--semantic-color-surface-header);
   font-weight: 700;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
 }
 
 .cell-bold {
@@ -874,7 +874,7 @@ function submitCohortTransition(): void {
 }
 
 .rate-text {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   width: 40px;
 }
@@ -960,7 +960,7 @@ function submitCohortTransition(): void {
 
 .arm-name {
   font-weight: 700;
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
 }
 
 .control-badge {
@@ -1003,7 +1003,7 @@ function submitCohortTransition(): void {
 }
 
 .metric-num {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-weight: 700;
 }
 
@@ -1014,7 +1014,7 @@ function submitCohortTransition(): void {
 .prob-label-row {
   display: flex;
   justify-content: space-between;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   margin-bottom: 4px;
 }
 
@@ -1072,14 +1072,14 @@ function submitCohortTransition(): void {
 
 .modal-title {
   margin: 0;
-  font-size: 1.1rem;
+  font-size: var(--font-size-lg);
   font-weight: 700;
 }
 
 .btn-close {
   background: none;
   border: none;
-  font-size: 1.5rem;
+  font-size: var(--font-size-2xl);
   line-height: 1;
   cursor: pointer;
   color: var(--semantic-color-text-secondary);
@@ -1096,7 +1096,7 @@ function submitCohortTransition(): void {
 .decision-row {
   display: flex;
   justify-content: space-between;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   margin-bottom: 4px;
 }
 
@@ -1110,7 +1110,7 @@ function submitCohortTransition(): void {
 
 .form-label {
   display: block;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   margin-bottom: 4px;
 }
@@ -1127,7 +1127,7 @@ function submitCohortTransition(): void {
   padding: 8px 10px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-md);
   box-sizing: border-box;
 }
 
@@ -1156,7 +1156,7 @@ function submitCohortTransition(): void {
   border: 1px solid var(--semantic-color-border-control);
   background-color: var(--semantic-color-surface);
   border-radius: 6px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   cursor: pointer;
 }
@@ -1167,7 +1167,7 @@ function submitCohortTransition(): void {
   background-color: var(--semantic-color-interactive-primary);
   color: var(--semantic-color-surface);
   border-radius: 6px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-weight: 700;
   cursor: pointer;
 }

@@ -205,7 +205,7 @@ const handleCancel = () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 24px;
+  font-size: var(--font-size-2xl);
   line-height: 1;
   padding: var(--semantic-spacing-xs, 8px);
   border-radius: 50%;
@@ -228,7 +228,7 @@ const handleCancel = () => {
 
 .confirmation-message {
   margin: 0;
-  font-size: var(--semantic-font-size-base, 15px);
+  font-size: var(--semantic-font-size-base);
   color: var(--semantic-color-text);
   line-height: 1.5;
 }
@@ -240,7 +240,7 @@ const handleCancel = () => {
 }
 
 .confirmation-prompt-label {
-  font-size: 14px;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--semantic-color-text);
 }
@@ -249,7 +249,7 @@ const handleCancel = () => {
   width: 100%;
   box-sizing: border-box;
   padding: 8px 12px;
-  font-size: 1rem;
+  font-size: var(--font-size-md);
   font-family: var(--semantic-font-family);
   color: var(--semantic-color-text);
   background-color: var(--semantic-color-surface);
@@ -269,14 +269,14 @@ const handleCancel = () => {
 
 .confirmation-prompt-error {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--font-size-xs);
   font-weight: 500;
   color: var(--semantic-color-error);
 }
 
 .btn {
   padding: 8px 16px;
-  font-size: 14px;
+  font-size: var(--font-size-sm);
   font-weight: 500;
   border-radius: 6px;
   cursor: pointer;

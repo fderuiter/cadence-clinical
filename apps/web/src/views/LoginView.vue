@@ -19,7 +19,7 @@
         color: var(--semantic-color-warning-text);
         border-radius: 8px;
         padding: 10px 14px;
-        font-size: 0.86rem;
+        font-size: var(--font-size-sm);
         line-height: 1.45;
         margin-bottom: 20px;
       "
@@ -50,7 +50,7 @@
         class="card-title"
         style="
           justify-content: center;
-          font-size: 1.25rem;
+          font-size: var(--font-size-lg);
           padding: 16px;
           border-bottom: 1px solid var(--semantic-color-border);
           background-color: var(--semantic-color-surface-muted);
@@ -66,7 +66,7 @@
         <div v-if="authStore.isAuthenticated" class="auth-success-alert">
           <p
             style="
-              font-size: 1.1rem;
+              font-size: var(--font-size-lg);
               margin-bottom: 8px;
               color: var(--semantic-color-success);
               font-weight: 600;
@@ -78,7 +78,7 @@
           </p>
           <p
             style="
-              font-size: 0.9rem;
+              font-size: var(--font-size-sm);
               color: var(--semantic-color-text-secondary);
               margin-bottom: 20px;
               overflow-wrap: anywhere;
@@ -214,7 +214,7 @@
               margin-top: 18px;
               padding-top: 16px;
               border-top: 1px solid var(--semantic-color-border);
-              font-size: 0.9rem;
+              font-size: var(--font-size-sm);
             "
           >
             <router-link

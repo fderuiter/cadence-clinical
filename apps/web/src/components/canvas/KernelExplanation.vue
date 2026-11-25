@@ -92,7 +92,7 @@ watch(
   display: flex;
   flex-direction: column;
   gap: 6px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 
 .explanation-claim {
@@ -102,7 +102,7 @@ watch(
 
 .explanation-heading {
   margin: 4px 0 0;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   color: var(--neutral-dark);
 }
 
@@ -130,7 +130,7 @@ watch(
 }
 
 .explanation-evidence code {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   overflow-wrap: anywhere;
 }
 </style>

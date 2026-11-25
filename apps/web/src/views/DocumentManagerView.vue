@@ -145,9 +145,14 @@
       <template #header="{ titleId, close }">
         <div v-if="inspectedDoc" class="drawer-header">
           <div style="display: flex; align-items: center; gap: 8px">
-            <span style="font-size: 20px" aria-hidden="true">📋</span>
+            <span style="font-size: var(--font-size-lg)" aria-hidden="true"
+              >📋</span
+            >
             <div>
-              <h3 :id="titleId" style="margin: 0; font-size: 16px">
+              <h3
+                :id="titleId"
+                style="margin: 0; font-size: var(--font-size-md)"
+              >
                 Document Metadata &amp; 21 CFR Part 11 Manifest
               </h3>
               <p
@@ -164,7 +169,11 @@
           <button
             type="button"
             class="btn btn-secondary btn-close-drawer"
-            style="padding: 4px 8px; font-size: 12px; cursor: pointer"
+            style="
+              padding: 4px 8px;
+              font-size: var(--font-size-2xs);
+              cursor: pointer;
+            "
             aria-label="Close inspection drawer"
             :disabled="reviewingQc || submittingDraftQc"
             @click="close"
@@ -215,7 +224,7 @@
             <p
               style="
                 margin: 4px 0 0 0;
-                font-size: 12px;
+                font-size: var(--font-size-2xs);
                 color: var(--semantic-color-text);
               "
             >
@@ -309,7 +318,7 @@
                 margin-bottom: 8px;
               "
             >
-              <span style="font-size: 12px; font-weight: 600"
+              <span style="font-size: var(--font-size-2xs); font-weight: 600"
                 >DIA Classifier Confidence</span
               >
               <span
@@ -471,7 +480,11 @@
           v-if="inspectedDoc"
           type="button"
           class="btn btn-primary btn-preview-from-drawer"
-          style="padding: 8px 16px; font-size: 12px; cursor: pointer"
+          style="
+            padding: 8px 16px;
+            font-size: var(--font-size-2xs);
+            cursor: pointer;
+          "
           :disabled="reviewingQc || submittingDraftQc"
           @click="handlePreviewFromDrawer(inspectedDoc)"
         >
@@ -1052,12 +1065,12 @@ defineExpose({
 
 .etmf-role-restricted-card h3 {
   margin: 0 0 8px 0;
-  font-size: 1rem;
+  font-size: var(--font-size-md);
 }
 
 .etmf-role-restricted-card p {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -1107,14 +1120,14 @@ defineExpose({
 }
 
 .etmf-scope-label {
-  font-size: 12px;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   color: var(--semantic-color-text-secondary);
 }
 
 .etmf-scope-input {
   padding: 5px 10px;
-  font-size: 12px;
+  font-size: var(--font-size-md);
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   background: var(--semantic-color-surface);
@@ -1130,7 +1143,7 @@ defineExpose({
 
 .etmf-scope-apply-btn {
   padding: 5px 10px;
-  font-size: 12px;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   cursor: pointer;
   max-width: 100%;
@@ -1147,7 +1160,7 @@ defineExpose({
   border: 1px solid var(--semantic-color-warning-border);
   border-left: 4px solid var(--semantic-color-warning-border-strong);
   border-radius: 6px;
-  font-size: 13px;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-warning-text);
 }
 
@@ -1204,7 +1217,7 @@ defineExpose({
 }
 
 .etmf-study-chip {
-  font-size: 12px;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -1219,7 +1232,7 @@ defineExpose({
   width: 100%;
   box-sizing: border-box;
   padding: 6px 8px;
-  font-size: 12px;
+  font-size: var(--font-size-md);
   border: 1px solid var(--semantic-color-border-control);
   background: var(--semantic-color-surface);
   color: var(--semantic-color-text);
@@ -1337,7 +1350,7 @@ defineExpose({
 }
 
 .meta-val {
-  font-size: 13px;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   color: var(--semantic-color-text);
 }
@@ -1352,7 +1365,7 @@ defineExpose({
   border-left: 3px solid var(--semantic-color-primary);
   padding: 10px 12px;
   border-radius: 6px;
-  font-size: 12px;
+  font-size: var(--font-size-2xs);
 }
 
 .crypto-seal-card {

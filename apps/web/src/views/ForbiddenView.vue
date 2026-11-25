@@ -17,7 +17,13 @@
         padding: clamp(16px, 5vw, 30px);
       "
     >
-      <div style="font-size: 4rem; color: var(--error); margin-bottom: 16px">
+      <div
+        style="
+          font-size: var(--font-size-5xl);
+          color: var(--error);
+          margin-bottom: 16px;
+        "
+      >
         🛑
       </div>
       <h2 style="color: var(--semantic-color-text-dark); margin-bottom: 8px">
@@ -26,7 +32,7 @@
       <p
         style="
           color: var(--semantic-color-text-secondary);
-          font-size: 1.1rem;
+          font-size: var(--font-size-lg);
           margin-bottom: 24px;
         "
       >
@@ -42,7 +48,7 @@
           border-radius: 8px;
           margin-bottom: 24px;
           text-align: left;
-          font-size: 0.9rem;
+          font-size: var(--font-size-sm);
           color: var(--semantic-color-text-secondary);
           overflow-wrap: anywhere;
         "

@@ -312,19 +312,19 @@ const handleSign = async () => {
 }
 
 .modal-header-icon {
-  font-size: 1.5rem;
+  font-size: var(--font-size-2xl);
   flex-shrink: 0;
 }
 
 .modal-title {
-  font-size: 1.15rem;
+  font-size: var(--font-size-lg);
   font-weight: 700;
   color: var(--semantic-color-text);
   margin: 0;
 }
 
 .modal-subtitle {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-secondary);
   margin: 4px 0 0 0;
 }
@@ -336,7 +336,7 @@ const handleSign = async () => {
   padding: 12px 14px;
   margin-bottom: 12px;
   border-radius: 6px;
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-info);
   line-height: 1.45;
 }

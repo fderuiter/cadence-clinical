@@ -33,14 +33,17 @@
         <h3
           style="
             margin: 0 0 4px 0;
-            font-size: 16px;
+            font-size: var(--font-size-md);
             font-weight: 700;
             color: var(--semantic-color-warning-text-dark);
           "
         >
           Action Needed: Updated Study Consent
         </h3>
-        <p id="reconsent-banner-desc" style="margin: 0; font-size: 14px">
+        <p
+          id="reconsent-banner-desc"
+          style="margin: 0; font-size: var(--font-size-sm)"
+        >
           Your study consent form has been updated. Please review the updated
           clauses and sign the changes before submitting your next survey.
         </p>

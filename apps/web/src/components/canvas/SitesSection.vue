@@ -730,13 +730,13 @@ onMounted(() => {
 
 .sites-header h2 {
   margin: 0 0 4px;
-  font-size: 1.25rem;
+  font-size: var(--font-size-lg);
 }
 
 .sites-status {
   margin: 0;
   color: var(--semantic-color-text-secondary);
-  font-size: 0.92rem;
+  font-size: var(--font-size-base);
   font-variant-numeric: tabular-nums;
 }
 
@@ -758,7 +758,7 @@ onMounted(() => {
 
 .muted-code {
   color: var(--semantic-color-text-secondary);
-  font-size: 0.84rem;
+  font-size: var(--font-size-xs);
   font-family: var(--semantic-font-mono);
 }
 
@@ -773,7 +773,7 @@ onMounted(() => {
   display: inline-block;
   padding: 2px 8px;
   border-radius: 999px;
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   background: var(--semantic-color-surface-muted);
   border: 1px solid var(--border);
@@ -787,7 +787,7 @@ onMounted(() => {
 
 .btn-compact {
   padding: 4px 8px;
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
 }
 
 .panel-card {
@@ -802,12 +802,12 @@ onMounted(() => {
 
 .panel-card h3 {
   margin: 0;
-  font-size: 1.05rem;
+  font-size: var(--font-size-md);
 }
 
 .panel-hint {
   margin: 0;
-  font-size: 0.88rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -851,7 +851,7 @@ onMounted(() => {
 .inline-banner {
   padding: 10px 12px;
   border-radius: 6px;
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
 }
 
 .inline-banner-error {

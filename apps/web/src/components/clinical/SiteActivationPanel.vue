@@ -1216,7 +1216,7 @@ defineExpose({ checkStatus, loadStudySites });
   flex-wrap: wrap;
   gap: 12px;
   align-items: center;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 
 .scope-pill-group {
@@ -1237,7 +1237,7 @@ defineExpose({ checkStatus, loadStudySites });
   border: 1px solid var(--semantic-color-border-control);
   background: var(--semantic-color-surface-muted);
   color: var(--semantic-color-text);
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   cursor: pointer;
 }
 
@@ -1331,7 +1331,7 @@ defineExpose({ checkStatus, loadStudySites });
   border: 1px solid var(--semantic-color-success-border);
   background: var(--semantic-color-success-bg-soft);
   color: var(--semantic-color-success-dark);
-  font-size: 0.92rem;
+  font-size: var(--font-size-base);
 }
 
 .activated-badge {
@@ -1340,7 +1340,7 @@ defineExpose({ checkStatus, loadStudySites });
   border-radius: 999px;
   background: var(--semantic-color-success-interactive);
   color: var(--semantic-color-text-on-solid);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   text-transform: uppercase;
 }
@@ -1352,12 +1352,12 @@ defineExpose({ checkStatus, loadStudySites });
   background: var(--semantic-color-surface-muted);
   border: 1px solid var(--semantic-color-border);
   color: var(--semantic-color-text-secondary);
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
 }
 
 .unavailable-note {
   margin: 0;
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   color: var(--semantic-color-warning-text);
   background: var(--semantic-color-warning-bg-soft);
   border: 1px solid var(--semantic-color-warning-border);
@@ -1393,7 +1393,7 @@ defineExpose({ checkStatus, loadStudySites });
 
 .quick-field label {
   font-weight: 600;
-  font-size: 0.84rem;
+  font-size: var(--font-size-xs);
 }
 
 .quick-field input {
@@ -1418,7 +1418,7 @@ defineExpose({ checkStatus, loadStudySites });
 
 .kernel-governance-title {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
 }
 
 .kernel-link-controls {
@@ -1439,7 +1439,7 @@ defineExpose({ checkStatus, loadStudySites });
   display: flex;
   flex-direction: column;
   gap: 4px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 
 .kernel-field label {
@@ -1456,7 +1456,7 @@ defineExpose({ checkStatus, loadStudySites });
 .kernel-banner {
   padding: 8px 10px;
   border-radius: 6px;
-  font-size: 0.88rem;
+  font-size: var(--font-size-sm);
 }
 
 .kernel-banner-success {

@@ -742,7 +742,7 @@ onUnmounted(() => {
 
 .drawer-title {
   margin: 0;
-  font-size: 1rem;
+  font-size: var(--font-size-md);
   font-weight: 700;
   color: var(--text-main);
   white-space: nowrap;
@@ -752,7 +752,7 @@ onUnmounted(() => {
 
 .drawer-subtitle {
   margin: 0;
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
   color: var(--neutral-dark);
   max-width: 100%;
   overflow: hidden;
@@ -809,7 +809,7 @@ onUnmounted(() => {
   padding: 8px 10px;
   border: none;
   background: none;
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   color: var(--semantic-color-text-secondary);
   cursor: pointer;
@@ -848,7 +848,7 @@ onUnmounted(() => {
 }
 
 .form-label {
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   color: var(--semantic-color-text-body);
 }
@@ -865,7 +865,7 @@ onUnmounted(() => {
   padding: 8px 12px;
   border: 1px solid var(--border);
   border-radius: 6px;
-  font-size: 1rem;
+  font-size: var(--font-size-md);
   font-family: inherit;
   box-sizing: border-box;
 }
@@ -901,7 +901,7 @@ onUnmounted(() => {
   align-items: center;
   gap: 8px;
   cursor: pointer;
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   border-bottom: 1px solid var(--semantic-color-surface-header);
 }
 
@@ -927,7 +927,7 @@ onUnmounted(() => {
   align-items: center;
   gap: 8px;
   min-height: 44px;
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-body);
   cursor: pointer;
 }
@@ -968,7 +968,7 @@ onUnmounted(() => {
   background-color: var(--semantic-color-success-bg-soft);
   border: 1px solid var(--semantic-color-success-border-soft);
   color: var(--semantic-color-success-dark);
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   border-radius: 6px;
 }
 
@@ -980,7 +980,7 @@ onUnmounted(() => {
   background-color: var(--semantic-color-info-bg);
   border-left: 3px solid var(--accent);
   color: var(--semantic-color-info);
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   line-height: 1.4;
   border-radius: 4px;
 }
@@ -1009,7 +1009,7 @@ onUnmounted(() => {
 }
 
 .expires-text {
-  font-size: 0.78rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -1020,7 +1020,7 @@ onUnmounted(() => {
 
 .url-input {
   font-family: var(--semantic-font-mono);
-  font-size: 1rem;
+  font-size: var(--font-size-md);
   background-color: var(--semantic-color-surface);
   min-width: 0;
 }
@@ -1036,7 +1036,7 @@ onUnmounted(() => {
   padding: 24px;
   text-align: center;
   color: var(--semantic-color-text-secondary);
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-style: italic;
 }
 
@@ -1061,7 +1061,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   min-width: 0;
 }
 
@@ -1080,7 +1080,7 @@ onUnmounted(() => {
 
 .grant-meta-line {
   color: var(--semantic-color-text-secondary);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
@@ -1088,7 +1088,7 @@ onUnmounted(() => {
 
 .grant-reason-line {
   color: var(--semantic-color-text-secondary);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   word-break: break-word;
 }
 
@@ -1103,12 +1103,12 @@ onUnmounted(() => {
 .revoke-confirm-card h4 {
   margin: 0 0 6px 0;
   color: var(--semantic-color-error);
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
 }
 
 .revoke-confirm-card p {
   margin: 0 0 10px 0;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-error-text-dark);
 }
 

@@ -16,7 +16,11 @@
         <div class="form-group" style="flex: 1; min-width: 150px">
           <label
             for="filter-category"
-            style="margin-bottom: 6px; font-weight: 600; font-size: 0.85rem"
+            style="
+              margin-bottom: 6px;
+              font-weight: 600;
+              font-size: var(--font-size-sm);
+            "
             >Category</label
           >
           <select
@@ -39,7 +43,11 @@
         <div class="form-group" style="flex: 1; min-width: 150px">
           <label
             for="filter-priority"
-            style="margin-bottom: 6px; font-weight: 600; font-size: 0.85rem"
+            style="
+              margin-bottom: 6px;
+              font-weight: 600;
+              font-size: var(--font-size-sm);
+            "
             >Priority</label
           >
           <select
@@ -63,7 +71,11 @@
         <div class="form-group" style="flex: 1; min-width: 150px">
           <label
             for="filter-status"
-            style="margin-bottom: 6px; font-weight: 600; font-size: 0.85rem"
+            style="
+              margin-bottom: 6px;
+              font-weight: 600;
+              font-size: var(--font-size-sm);
+            "
             >Status</label
           >
           <select
@@ -102,7 +114,10 @@
       style="text-align: center; padding: 48px"
     >
       <span
-        style="font-size: 1.2rem; color: var(--semantic-color-text-secondary)"
+        style="
+          font-size: var(--font-size-lg);
+          color: var(--semantic-color-text-secondary);
+        "
         >Loading notifications...</span
       >
     </div>
@@ -119,14 +134,16 @@
       "
     >
       <div style="display: flex; gap: 16px; align-items: flex-start">
-        <span style="font-size: 2rem">🚫</span>
+        <span style="font-size: var(--font-size-4xl)">🚫</span>
         <div>
           <h3
             style="color: var(--error); font-weight: bold; margin-bottom: 8px"
           >
             Access Denied (403 Forbidden)
           </h3>
-          <p style="color: var(--neutral-dark); font-size: 0.95rem">
+          <p
+            style="color: var(--neutral-dark); font-size: var(--font-size-base)"
+          >
             You do not have the required permissions or context to access these
             notification resources.
           </p>
@@ -146,14 +163,16 @@
       "
     >
       <div style="display: flex; gap: 16px; align-items: flex-start">
-        <span style="font-size: 2rem">⚠️</span>
+        <span style="font-size: var(--font-size-4xl)">⚠️</span>
         <div>
           <h3
             style="color: var(--warning); font-weight: bold; margin-bottom: 8px"
           >
             Failed to Load Notifications
           </h3>
-          <p style="color: var(--neutral-dark); font-size: 0.95rem">
+          <p
+            style="color: var(--neutral-dark); font-size: var(--font-size-base)"
+          >
             {{ store.error }}
           </p>
         </div>
@@ -234,7 +253,7 @@
           <span
             class="timestamp"
             style="
-              font-size: 0.8rem;
+              font-size: var(--font-size-xs);
               color: var(--semantic-color-text-secondary);
             "
             >{{ formatTimestamp(notif.created_at) }}</span
@@ -244,7 +263,7 @@
         <div
           class="message-content"
           style="
-            font-size: 1.05rem;
+            font-size: var(--font-size-md);
             font-weight: 500;
             color: var(--text-main);
             word-break: break-word;
@@ -255,7 +274,7 @@
 
         <div
           style="
-            font-size: 0.85rem;
+            font-size: var(--font-size-sm);
             color: var(--semantic-color-text-secondary);
             display: flex;
             flex-direction: column;
@@ -307,7 +326,7 @@
             class="btn btn-goto"
             style="
               padding: 6px 12px;
-              font-size: 0.8rem;
+              font-size: var(--font-size-xs);
               background-color: var(--semantic-color-surface-header);
               border: 1px solid var(--semantic-color-text-secondary);
               color: var(--primary);
@@ -319,7 +338,7 @@
           <button
             v-if="notif.status === 'OPEN'"
             class="btn btn-acknowledge"
-            style="padding: 6px 12px; font-size: 0.8rem"
+            style="padding: 6px 12px; font-size: var(--font-size-xs)"
             @click="openActionModal(notif, 'acknowledge')"
           >
             Acknowledge
@@ -327,7 +346,7 @@
           <button
             v-if="notif.status === 'OPEN' || notif.status === 'ACKNOWLEDGED'"
             class="btn btn-primary btn-resolve"
-            style="padding: 6px 12px; font-size: 0.8rem"
+            style="padding: 6px 12px; font-size: var(--font-size-xs)"
             @click="openActionModal(notif, 'resolve')"
           >
             Resolve
@@ -347,7 +366,7 @@
     >
       <p
         style="
-          font-size: 0.9rem;
+          font-size: var(--font-size-sm);
           color: var(--semantic-color-text-secondary);
           margin-bottom: 12px;
         "
@@ -367,7 +386,7 @@
           padding: 8px;
           border-radius: 4px;
           margin-bottom: 12px;
-          font-size: 0.85rem;
+          font-size: var(--font-size-sm);
         "
       >
         {{ modalError }}

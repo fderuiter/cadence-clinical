@@ -105,7 +105,7 @@ function onItemClick(item, index, event) {
   flex-wrap: wrap;
   align-items: center;
   gap: var(--spacing-2xs, 4px);
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   line-height: 1.4;
 }
 

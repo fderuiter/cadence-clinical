@@ -64,7 +64,7 @@
         </option>
       </ClinicalInput>
       <span v-if="siteId" id="participants-site-filter" class="filter-chip">
-        Site {{ siteId }}
+        Site <span class="filter-chip-code">{{ siteId }}</span>
         <button
           id="btn-clear-site-filter"
           type="button"
@@ -460,7 +460,7 @@ function onSiteSelect(value: string | number) {
 
 .participants-header h2 {
   margin: 0 auto 0 0;
-  font-size: 1rem;
+  font-size: var(--font-size-md);
 }
 
 .participants-header :deep(.participants-inline-field) {
@@ -482,7 +482,7 @@ function onSiteSelect(value: string | number) {
 
 #participants-search,
 #participants-site,
-#participants-site-filter,
+.filter-chip-code,
 .participant-site-code {
   font-family: var(--semantic-font-mono);
 }
@@ -494,7 +494,7 @@ function onSiteSelect(value: string | number) {
   padding: 2px 4px 2px 8px;
   border-radius: 999px;
   background: var(--accent-bg);
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 
 .filter-chip button {
@@ -515,7 +515,7 @@ function onSiteSelect(value: string | number) {
 .status-line {
   margin: 0;
   color: var(--neutral-dark);
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   font-variant-numeric: tabular-nums;
 }
 
@@ -529,7 +529,7 @@ function onSiteSelect(value: string | number) {
   border: 1px solid var(--border);
   border-radius: 6px;
   background: var(--semantic-color-surface);
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 
 .participants-table :deep(tr.selected) {

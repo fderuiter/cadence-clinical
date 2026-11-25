@@ -672,7 +672,7 @@ function formatRelativeTime(isoString) {
 }
 
 .activity-header-icon {
-  font-size: 1.75rem;
+  font-size: var(--font-size-3xl);
   background: var(--semantic-color-surface-header);
   width: 44px;
   height: 44px;
@@ -686,14 +686,14 @@ function formatRelativeTime(isoString) {
 
 .drawer-title {
   margin: 0;
-  font-size: 1.15rem;
+  font-size: var(--font-size-lg);
   font-weight: 700;
   color: var(--semantic-color-text);
 }
 
 .drawer-subtitle {
   margin: 0.2rem 0 0 0;
-  font-size: 0.825rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-secondary);
   white-space: nowrap;
   overflow: hidden;
@@ -718,7 +718,7 @@ function formatRelativeTime(isoString) {
   background: transparent;
   border: 1px solid transparent;
   color: var(--semantic-color-text-secondary);
-  font-size: 1.1rem;
+  font-size: var(--font-size-lg);
   cursor: pointer;
   padding: 0.4rem 0.6rem;
   border-radius: var(--radius-sm, 6px);
@@ -748,7 +748,7 @@ function formatRelativeTime(isoString) {
 }
 
 .filter-label {
-  font-size: 0.775rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   color: var(--semantic-color-text-secondary);
 }
@@ -756,7 +756,7 @@ function formatRelativeTime(isoString) {
 .filter-select,
 .filter-date {
   padding: 0.35rem 0.6rem;
-  font-size: 0.8rem;
+  font-size: var(--font-size-md);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm, 6px);
   background: var(--semantic-color-surface);
@@ -770,7 +770,7 @@ function formatRelativeTime(isoString) {
 
 .reset-filters-btn {
   padding: 0.35rem 0.65rem;
-  font-size: 0.775rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   background: var(--semantic-color-surface-header);
   border: 1px solid var(--border);
@@ -796,11 +796,11 @@ function formatRelativeTime(isoString) {
 }
 
 .gxp-icon {
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
 }
 
 .gxp-text {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   color: var(--semantic-color-success-dark);
 }
@@ -844,7 +844,7 @@ function formatRelativeTime(isoString) {
 
 .error-icon,
 .empty-icon {
-  font-size: 2.5rem;
+  font-size: var(--font-size-5xl);
   margin-bottom: 0.75rem;
 }
 
@@ -888,7 +888,7 @@ function formatRelativeTime(isoString) {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1rem;
+  font-size: var(--font-size-md);
   box-shadow: var(--shadow-sm);
   z-index: 2;
 }
@@ -924,7 +924,7 @@ function formatRelativeTime(isoString) {
 }
 
 .event-badge {
-  font-size: 0.775rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 0.15rem 0.5rem;
   border-radius: 4px;
@@ -958,7 +958,7 @@ function formatRelativeTime(isoString) {
 }
 
 .event-actor {
-  font-size: 0.825rem;
+  font-size: var(--font-size-xs);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -967,7 +967,7 @@ function formatRelativeTime(isoString) {
 }
 
 .event-time {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
   white-space: nowrap;
 }
@@ -982,7 +982,7 @@ function formatRelativeTime(isoString) {
 .detail-toggle-btn {
   background: transparent;
   border: none;
-  font-size: 0.775rem;
+  font-size: var(--font-size-2xs);
   color: var(--primary);
   cursor: pointer;
   padding: 0;
@@ -999,7 +999,7 @@ function formatRelativeTime(isoString) {
   background: var(--semantic-color-surface-muted);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm, 6px);
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
 }
 
 .detail-row {
@@ -1030,7 +1030,7 @@ function formatRelativeTime(isoString) {
 }
 
 .sig-details {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-success-dark);
   display: flex;
   flex-direction: column;
@@ -1057,7 +1057,7 @@ function formatRelativeTime(isoString) {
 
 .load-more-btn {
   padding: 0.5rem 1.25rem;
-  font-size: 0.825rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   background: var(--semantic-color-surface);
   border: 1px solid var(--border);

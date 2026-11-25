@@ -1290,7 +1290,7 @@ async function onDraftImported(summary: KernelProtocolDraftSummary) {
 
 .versions h2 {
   margin: 0;
-  font-size: 1rem;
+  font-size: var(--font-size-md);
 }
 
 .status-line {
@@ -1320,7 +1320,7 @@ async function onDraftImported(summary: KernelProtocolDraftSummary) {
 .gov-banner {
   padding: 10px 12px;
   border-radius: 6px;
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm);
 }
 
 .gov-banner-success {
@@ -1350,12 +1350,12 @@ async function onDraftImported(summary: KernelProtocolDraftSummary) {
 
 .gov-card-header h3 {
   margin: 0 0 4px;
-  font-size: 0.95rem;
+  font-size: var(--font-size-base);
 }
 
 .gov-subtitle {
   margin: 0;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--neutral-dark);
   overflow-wrap: anywhere;
 }
@@ -1386,12 +1386,12 @@ async function onDraftImported(summary: KernelProtocolDraftSummary) {
 }
 
 .gov-label {
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
 }
 
 .gov-file-input {
-  font-size: 0.84rem;
+  font-size: var(--font-size-md);
   min-width: 0;
   max-width: 100%;
   width: 100%;
@@ -1422,7 +1422,7 @@ async function onDraftImported(summary: KernelProtocolDraftSummary) {
   border: 1px solid var(--border);
   border-radius: 6px;
   background: var(--semantic-color-surface-muted);
-  font-size: 0.88rem;
+  font-size: var(--font-size-sm);
   min-width: 0;
   max-width: 100%;
   overflow-wrap: anywhere;
@@ -1458,7 +1458,7 @@ async function onDraftImported(summary: KernelProtocolDraftSummary) {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
 }
 
 .gov-pill {
@@ -1466,7 +1466,7 @@ async function onDraftImported(summary: KernelProtocolDraftSummary) {
   margin-left: 6px;
   padding: 2px 8px;
   border-radius: 999px;
-  font-size: 0.76rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   background: var(--semantic-color-surface-header);
 }
@@ -1480,7 +1480,7 @@ async function onDraftImported(summary: KernelProtocolDraftSummary) {
 .gov-ref,
 .gov-empty {
   margin: 0;
-  font-size: 0.82rem;
+  font-size: var(--font-size-xs);
   color: var(--neutral-dark);
 }
 </style>
