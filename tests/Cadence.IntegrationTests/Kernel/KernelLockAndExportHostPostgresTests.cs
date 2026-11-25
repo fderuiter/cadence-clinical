@@ -1731,14 +1731,17 @@ public sealed class KernelLockAndExportHostPostgresTests(ExecutionFormModulePost
             new IssueGrant(tenant, GrantId.New(), Actor.Person(userId), capability, null, scope, Tick(), null, false, KernelProtocolScenario.Key(), "Test grant"),
             ct);
 
-    private HttpClient Client(string tenantCode, string userId, bool tenantReadOnly = false)
+    private HttpClient Client(string tenantCode, string userId, bool tenantReadOnly = false) =>
+        ClientWithRoles(tenantCode, userId, [], tenantReadOnly);
+
+    private HttpClient ClientWithRoles(string tenantCode, string userId, System.Collections.Generic.IReadOnlyList<string> roles, bool tenantReadOnly = false)
     {
         _host ??= new WebApplicationFactory<Cadence.Kernel.Host.Program>().WithWebHostBuilder(builder => builder
             .UseTestGatewaySecret()
             .UseTestBiometricLivenessKey()
             .UseSetting("ConnectionStrings:cadence", fixture.ConnectionString)
             .ConfigureTestServices(services => services.AddDeclaredKernelErrorsCheck()));
-        return _host.CreateSignedClient(new GatewayIdentity(userId, [], [], TenantId: tenantCode, TenantReadOnly: tenantReadOnly));
+        return _host.CreateSignedClient(new GatewayIdentity(userId, roles, [], TenantId: tenantCode, TenantReadOnly: tenantReadOnly));
     }
 
     /// <summary>
@@ -2518,6 +2521,127 @@ public sealed class KernelLockAndExportHostPostgresTests(ExecutionFormModulePost
             }),
             HttpStatusCode.Created,
             ct);
+    }
+
+    /// <summary>
+    /// On PostgreSQL, <c>GET /api/v1/kernel/locks/in-force</c> returns uniform non-confirming 404 problem responses
+    /// for zero-grant callers and out-of-scope explicit <c>site_code</c> probes, ignores masked cross-site enrollments
+    /// when <c>site_code</c> is omitted, preserves 200 OK for authorized pre-enrollment checks, and allows verified
+    /// <c>svc:</c> <c>SYSTEM_SERVICE</c> background accounts to evaluate tenant-wide covering locks.
+    /// </summary>
+    [Fact(DisplayName = "HostLocksInForce_EnforcesNonConfirmingVisibilityAndSystemServiceBypassOnPostgres")]
+    [KernelRule("K-AUTH-4")]
+    public async Task HostLocksInForceEnforcesNonConfirmingVisibilityAndSystemServiceBypassOnPostgres()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var (tenant, code, study, studyCode, siteA, siteB, _, enrollmentB, _, _) = await SeedStudyAsync(ct);
+
+        string siteACode;
+        string siteBCode;
+        await using (var db = fixture.CreateContext(tenant))
+        {
+            siteACode = await (from ss in db.StudySites.AsNoTracking()
+                               join s in db.Sites.AsNoTracking() on ss.SiteId equals s.Id
+                               where ss.Id == siteA
+                               select s.SiteCode).SingleAsync(ct);
+            siteBCode = await (from ss in db.StudySites.AsNoTracking()
+                               join s in db.Sites.AsNoTracking() on ss.SiteId equals s.Id
+                               where ss.Id == siteB
+                               select s.SiteCode).SingleAsync(ct);
+        }
+
+        using var dm = Client(code, DataManager);
+        using var siteACrc = Client(code, SiteACoordinator);
+        using var stranger = Client(code, Stranger);
+        using var econsentSvc = ClientWithRoles(code, "svc:econsent-consumer", ["SYSTEM_SERVICE"]);
+        using var seederSvc = ClientWithRoles(code, "svc:execution-db-seeder", ["SYSTEM_SERVICE"]);
+        using var unprivilegedSvc = ClientWithRoles(code, "svc:econsent-consumer", ["Service"]);
+
+        var studyRef = NodeRef.For(study).ToString();
+
+        // Freeze Site B and SUBJ-B so cross-site locks exist in PostgreSQL.
+        await SendAsync<KernelLockResponse>(
+            dm,
+            BuildRequest(HttpMethod.Post, "locks", "Freeze Site B", ApplyToken(DataManager), KernelProtocolScenario.Key(), new
+            {
+                study_ref = studyRef,
+                scope_ref = NodeRef.For(siteB).ToString(),
+                kind = "Frozen",
+                meaning = "Approved",
+            }),
+            HttpStatusCode.Created,
+            ct);
+        await SendAsync<KernelLockResponse>(
+            dm,
+            BuildRequest(HttpMethod.Post, "locks", "Freeze SUBJ-B", ApplyToken(DataManager), KernelProtocolScenario.Key(), new
+            {
+                study_ref = studyRef,
+                scope_ref = NodeRef.For(enrollmentB).ToString(),
+                kind = "Frozen",
+                meaning = "Approved",
+            }),
+            HttpStatusCode.Created,
+            ct);
+
+        // Zero-grant caller gets identical 404 on existing and nonexistent study codes.
+        using var strangerHidden = await stranger.GetAsync(
+            new Uri($"/api/v1/kernel/locks/in-force?study_code={Uri.EscapeDataString(studyCode)}", UriKind.Relative), ct);
+        using var strangerMissing = await stranger.GetAsync(
+            new Uri("/api/v1/kernel/locks/in-force?study_code=STD-NONEXISTENT-PG", UriKind.Relative), ct);
+        strangerHidden.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        strangerMissing.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        using var strangerHiddenDoc = JsonDocument.Parse(await strangerHidden.Content.ReadAsStringAsync(ct));
+        using var strangerMissingDoc = JsonDocument.Parse(await strangerMissing.Content.ReadAsStringAsync(ct));
+        strangerHiddenDoc.RootElement.GetProperty("title").GetString()
+            .Should().Be(strangerMissingDoc.RootElement.GetProperty("title").GetString());
+        strangerHiddenDoc.RootElement.GetProperty("detail").GetString()
+            .Should().Be(strangerMissingDoc.RootElement.GetProperty("detail").GetString());
+
+        // Site A coordinator gets 404 on explicit out-of-scope siteBCode, 200 OK (locked == false) on cross-site SUBJ-B without site_code,
+        // and 200 OK (locked == false) on Site A with a new pre-enrollment subject_code.
+        using var crcCrossSite = await siteACrc.GetAsync(
+            new Uri($"/api/v1/kernel/locks/in-force?study_code={Uri.EscapeDataString(studyCode)}&site_code={Uri.EscapeDataString(siteBCode)}", UriKind.Relative), ct);
+        crcCrossSite.StatusCode.Should().Be(HttpStatusCode.NotFound);
+
+        var crcCrossSubject = await SendAsync<KernelScopeWriteLockResponse>(
+            siteACrc,
+            BuildRequest(HttpMethod.Get, $"locks/in-force?study_code={Uri.EscapeDataString(studyCode)}&subject_code=SUBJ-B", null, null, null, null),
+            HttpStatusCode.OK,
+            ct);
+        crcCrossSubject.StudyExists.Should().BeTrue();
+        crcCrossSubject.Locked.Should().BeFalse();
+
+        var crcPreEnrollment = await SendAsync<KernelScopeWriteLockResponse>(
+            siteACrc,
+            BuildRequest(HttpMethod.Get, $"locks/in-force?study_code={Uri.EscapeDataString(studyCode)}&site_code={Uri.EscapeDataString(siteACode)}&subject_code=SUBJ-PRE-ENROLL", null, null, null, null),
+            HttpStatusCode.OK,
+            ct);
+        crcPreEnrollment.StudyExists.Should().BeTrue();
+        crcPreEnrollment.Locked.Should().BeFalse();
+
+        // Verified svc: SYSTEM_SERVICE accounts see tenant-wide locks, whereas svc: without SYSTEM_SERVICE receives 404.
+        foreach (var svcClient in new[] { econsentSvc, seederSvc })
+        {
+            var svcSiteB = await SendAsync<KernelScopeWriteLockResponse>(
+                svcClient,
+                BuildRequest(HttpMethod.Get, $"locks/in-force?study_code={Uri.EscapeDataString(studyCode)}&site_code={Uri.EscapeDataString(siteBCode)}", null, null, null, null),
+                HttpStatusCode.OK,
+                ct);
+            svcSiteB.Locked.Should().BeTrue();
+            svcSiteB.LockKind.Should().Be("Frozen");
+
+            var svcSubjB = await SendAsync<KernelScopeWriteLockResponse>(
+                svcClient,
+                BuildRequest(HttpMethod.Get, $"locks/in-force?study_code={Uri.EscapeDataString(studyCode)}&subject_code=SUBJ-B", null, null, null, null),
+                HttpStatusCode.OK,
+                ct);
+            svcSubjB.Locked.Should().BeTrue();
+        }
+
+        using var unprivRes = await unprivilegedSvc.GetAsync(
+            new Uri($"/api/v1/kernel/locks/in-force?study_code={Uri.EscapeDataString(studyCode)}", UriKind.Relative), ct);
+        unprivRes.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     private static HttpRequestMessage BuildRequest(

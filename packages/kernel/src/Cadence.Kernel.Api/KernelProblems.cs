@@ -30,4 +30,10 @@ internal static class KernelProblems
             title: "Not found",
             detail: "No visible enrollment matches the requested codes in your tenant.",
             statusCode: StatusCodes.Status404NotFound);
+
+    internal static ProblemHttpResult ScopeWriteLockNotFound() =>
+        TypedResults.Problem(
+            title: "Not found",
+            detail: "No visible study or site scope matches the requested codes in your tenant.",
+            statusCode: StatusCodes.Status404NotFound);
 }

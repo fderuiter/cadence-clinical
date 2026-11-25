@@ -88,7 +88,9 @@ public static class KernelLockEndpoints
             .AllowBaselineProductFamily()
             .WithName("KernelGetScopeWriteLock")
             .WithSummary("Checks whether any active write-denying lock (Frozen or Locked) covers a study, study site, or enrollment scope.")
-            .ProducesProblem(StatusCodes.Status400BadRequest);
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         var studies = kernel.MapGroup("/studies").AddEndpointFilter<KernelTenantFilter>().WithTags("Kernel locks");
         studies.MapGet("/{studyRef}/locks", ListByStudyAsync)
@@ -615,6 +617,8 @@ public static class KernelLockEndpoints
         [FromQuery(Name = "enrollment_id")] Guid? enrollmentId,
         HttpContext context,
         ILockRecords locks,
+        INodeVisibility visibility,
+        ICurrentActor actor,
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(studyCode))
@@ -622,20 +626,107 @@ public static class KernelLockEndpoints
             return KernelProblems.BadRequest("Study code required", "Supply a study_code query parameter.");
         }
 
+        var trimmedSiteCode = string.IsNullOrWhiteSpace(siteCode) ? null : siteCode.Trim();
+        var trimmedSubjectCode = string.IsNullOrWhiteSpace(subjectCode) ? null : subjectCode.Trim();
         var tenant = KernelRequestTenant.Get(context);
         var check = await locks.CheckScopeWriteLockAsync(
             tenant,
             studyCode.Trim(),
-            siteCode?.Trim(),
-            subjectCode?.Trim(),
+            trimmedSiteCode,
+            trimmedSubjectCode,
             enrollmentId,
             cancellationToken).ConfigureAwait(false);
+
+        if (IsVerifiedSystemService(context))
+        {
+            return TypedResults.Ok(new KernelScopeWriteLockResponse(
+                check.StudyExists,
+                check.Locked,
+                check.LockKind?.ToString(),
+                check.ScopeKind));
+        }
+
+        if (!check.StudyExists
+            || check.StudyId is not { } studyId
+            || (trimmedSiteCode is not null && check.StudySiteId is null))
+        {
+            return KernelProblems.ScopeWriteLockNotFound();
+        }
+
+        var studyNode = NodeRef.For(studyId);
+        var nodesToCheck = new List<NodeRef> { studyNode };
+        if (check.StudySiteId is { } resolvedSiteId)
+        {
+            nodesToCheck.Add(NodeRef.For(resolvedSiteId));
+        }
+
+        if (check.EnrollmentStudySiteId is { } enrollmentSiteId && enrollmentSiteId != check.StudySiteId)
+        {
+            nodesToCheck.Add(NodeRef.For(enrollmentSiteId));
+        }
+
+        if (check.EnrollmentId is { } resolvedEnrollmentId)
+        {
+            nodesToCheck.Add(NodeRef.For(resolvedEnrollmentId));
+        }
+
+        var masks = await KernelReadMasking.MaskAsync(
+            visibility,
+            actor,
+            tenant,
+            nodesToCheck,
+            cancellationToken).ConfigureAwait(false);
+
+        // Code-based lock checks match caller-supplied study and site codes, so hidden studies or explicit sites must
+        // return the same non-confirming 404 as absent scopes (ADR-2471).
+        if (masks.For(studyNode) is not null)
+        {
+            return KernelProblems.ScopeWriteLockNotFound();
+        }
+
+        var allowedScopes = new HashSet<NodeRef> { studyNode };
+        if (trimmedSiteCode is not null)
+        {
+            var explicitSiteNode = NodeRef.For(check.StudySiteId!.Value);
+            if (masks.For(explicitSiteNode) is not null)
+            {
+                return KernelProblems.ScopeWriteLockNotFound();
+            }
+
+            allowedScopes.Add(explicitSiteNode);
+        }
+
+        // When site_code is omitted, ignore masked Enrollment matches (and their inferred study sites) so cross-site
+        // subject probes match absent subjects.
+        if (check.EnrollmentId is { } matchedEnrollmentId)
+        {
+            var enrollmentNode = NodeRef.For(matchedEnrollmentId);
+            var governingSiteId = check.EnrollmentStudySiteId ?? (trimmedSiteCode is null ? check.StudySiteId : null);
+            var governingSiteNode = governingSiteId is { } gsid ? NodeRef.For(gsid) : null;
+            if (masks.For(enrollmentNode) is null && (governingSiteNode is null || masks.For(governingSiteNode) is null))
+            {
+                allowedScopes.Add(enrollmentNode);
+                if (governingSiteNode is not null)
+                {
+                    allowedScopes.Add(governingSiteNode);
+                }
+            }
+        }
+
+        var filtered = check.FilterScopes(allowedScopes);
         return TypedResults.Ok(new KernelScopeWriteLockResponse(
-            check.StudyExists,
-            check.Locked,
-            check.LockKind?.ToString(),
-            check.ScopeKind));
+            filtered.StudyExists,
+            filtered.Locked,
+            filtered.LockKind?.ToString(),
+            filtered.ScopeKind));
     }
+
+    private static bool IsVerifiedSystemService(HttpContext context) =>
+        context.User.Identity is { IsAuthenticated: true }
+        && context.User.FindFirst(CadenceClaimTypes.Subject)?.Value is { } subject
+        && subject.StartsWith(Actor.ServiceAccountPrefix, StringComparison.Ordinal)
+        && subject.AsSpan(Actor.ServiceAccountPrefix.Length).Trim().Length > 0
+        && (context.User.IsInRole("system_service") || context.User.IsInRole("SYSTEM_SERVICE"));
 
     private static async Task<KernelError> MaskScopeNotReadyErrorAsync(
         HttpContext context,
