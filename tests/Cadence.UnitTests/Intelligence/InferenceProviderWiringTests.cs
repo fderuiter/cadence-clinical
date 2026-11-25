@@ -93,6 +93,53 @@ public sealed class InferenceProviderWiringTests
         build.Should().Throw<InvalidOperationException>().WithMessage("*global endpoint*");
     }
 
+    /// <summary>Blank environment-template keys for optional providers do not trigger partial-config failure.</summary>
+    [Fact]
+    public async Task BlankProviderEnvironmentKeys_AreSkippedWithoutThrowing()
+    {
+        var services = Services(new()
+        {
+            ["Intelligence:Inference:Providers:Bedrock:Region"] = "",
+            ["Intelligence:Inference:Providers:Bedrock:Residency:0"] = "   ",
+            ["Intelligence:Inference:Providers:Vertex:ProjectId"] = "",
+            ["Intelligence:Inference:Providers:Vertex:Region"] = "   ",
+            ["Intelligence:Inference:Providers:Foundry:Resource"] = "",
+            ["Intelligence:Inference:Providers:AnthropicAws:Region"] = "",
+            ["Intelligence:Inference:Providers:AnthropicAws:WorkspaceId"] = "",
+            ["Intelligence:Inference:Providers:OpenAiCompatible:Endpoint"] = "",
+            ["Intelligence:Inference:Providers:OpenAiCompatible:Residency:0"] = "",
+            ["Intelligence:Inference:Providers:OpenAiCompatible:Models:claude-opus-5-5"] = "",
+        });
+
+        foreach (var hosted in services.GetServices<IHostedService>())
+        {
+            await hosted.StartAsync(TestContext.Current.CancellationToken);
+        }
+
+        services.GetServices<IInferenceProvider>().Should().BeEmpty();
+    }
+
+    /// <summary>Partially configured optional provider subsections still fail closed at startup.</summary>
+    [Fact]
+    public async Task PartiallyConfiguredProviderSubsection_StillFailsClosedAtStartup()
+    {
+        var services = Services(new()
+        {
+            ["Intelligence:Inference:Providers:AnthropicAws:Region"] = "eu-west-1",
+            ["Intelligence:Inference:Providers:AnthropicAws:WorkspaceId"] = "",
+        });
+
+        var start = async () =>
+        {
+            foreach (var hosted in services.GetServices<IHostedService>())
+            {
+                await hosted.StartAsync(TestContext.Current.CancellationToken);
+            }
+        };
+
+        await start.Should().ThrowAsync<InvalidOperationException>().WithMessage("*WorkspaceId*");
+    }
+
     /// <summary>Each cloud provider pins the host its SDK calls, so it cannot be pointed elsewhere at run time.</summary>
     [Fact]
     public async Task ProviderClients_ReachOnlyTheirEndpointHosts()

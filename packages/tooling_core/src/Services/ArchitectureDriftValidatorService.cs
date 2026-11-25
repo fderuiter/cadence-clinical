@@ -19,6 +19,12 @@ public static partial class ArchitectureDriftValidatorService
     [GeneratedRegex(@"\b(?:5173|7687|8017|8019)\b")]
     private static partial Regex RetiredPortRegex();
 
+    [GeneratedRegex(@"(?<!\d)(?<count>\d+)\s+(?:ASP\.NET Core 10\s+)?product services\b", RegexOptions.IgnoreCase)]
+    private static partial Regex ProductServiceCountProseRegex();
+
+    [GeneratedRegex(@"(?<!\d)(?<count>\d+)\s+\.NET\s+hosts\b", RegexOptions.IgnoreCase)]
+    private static partial Regex DotNetHostCountProseRegex();
+
     public static int ValidateArchitectureDrift(string? repoRoot = null)
     {
         repoRoot ??= FindRepoRoot();
@@ -26,7 +32,10 @@ public static partial class ArchitectureDriftValidatorService
 
         string composePath = Path.Combine(repoRoot, "docker", "docker-compose.yml");
         string archPath = Path.Combine(repoRoot, "ARCHITECTURE.md");
+        string rootReadmePath = Path.Combine(repoRoot, "README.md");
+        string agentsPath = Path.Combine(repoRoot, "AGENTS.md");
         string opDbPath = Path.Combine(repoRoot, "docs", "OPERATIONAL_DATABASE.md");
+        string clinicalCanvasPath = Path.Combine(repoRoot, "docs", "ux", "CLINICAL_CANVAS.md");
         string sigContractPath = Path.Combine(repoRoot, "docs", "SDLC", "Signature_Token_Cryptographic_Contract.md");
         bool hasTopology = File.Exists(Path.Combine(repoRoot, "packages", "topology", "src", "ServiceTopology.cs"));
 
@@ -73,9 +82,39 @@ public static partial class ArchitectureDriftValidatorService
             }
         }
 
+        if (hasTopology && File.Exists(rootReadmePath))
+        {
+            hasError |= !ValidateRootReadmeDoc(repoRoot, rootReadmePath);
+        }
+
+        if (File.Exists(agentsPath))
+        {
+            hasError |= !PostgresFallbackDocGuard.ValidateNoStalePostgresFallback(File.ReadAllText(agentsPath), "AGENTS.md");
+        }
+
+        if (hasTopology)
+        {
+            var topology = CodeMetadataCatalog.GetTopology(repoRoot);
+            foreach (var svc in topology.Services)
+            {
+                string svcReadme = Path.Combine(repoRoot, "apps", svc.Directory, "README.md");
+                if (File.Exists(svcReadme))
+                {
+                    hasError |= !PostgresFallbackDocGuard.ValidateNoStalePostgresFallback(
+                        File.ReadAllText(svcReadme),
+                        $"apps/{svc.Directory}/README.md");
+                }
+            }
+        }
+
         if (hasTopology || File.Exists(opDbPath))
         {
             hasError |= !ValidateOperationalDatabaseDoc(repoRoot, opDbPath);
+        }
+
+        if (hasTopology && File.Exists(clinicalCanvasPath))
+        {
+            hasError |= !ValidateClinicalCanvasDoc(repoRoot, clinicalCanvasPath);
         }
 
         if (hasTopology || File.Exists(sigContractPath))
@@ -100,6 +139,7 @@ public static partial class ArchitectureDriftValidatorService
         var signedEndpoints = CodeMetadataCatalog.GetSignedEndpoints(repoRoot);
         var durableStores = CodeMetadataCatalog.GetDurableSigTokenStores(repoRoot);
         var auditHosts = CodeMetadataCatalog.GetAuditInterceptorHosts(repoRoot);
+        var outboxHosts = CodeMetadataCatalog.GetOutboxHosts(repoRoot);
 
         var retiredMatch = RetiredPortRegex().Match(archText);
         if (retiredMatch.Success)
@@ -108,10 +148,30 @@ public static partial class ArchitectureDriftValidatorService
             ok = false;
         }
 
-        if (archText.Contains("falls back to the local database in Development", StringComparison.OrdinalIgnoreCase))
+        ok &= PostgresFallbackDocGuard.ValidateNoStalePostgresFallback(archText, "ARCHITECTURE.md");
+
+        int expectedProductServiceCount = topology.Services.Count - 1;
+        foreach (Match countMatch in ProductServiceCountProseRegex().Matches(archText))
         {
-            Console.WriteLine("[ERROR] ARCHITECTURE.md falsely states that database resolution falls back to a local database in Development.");
-            ok = false;
+            if (int.TryParse(countMatch.Groups["count"].Value, CultureInfo.InvariantCulture, out int actualCount)
+                && actualCount != expectedProductServiceCount)
+            {
+                Console.WriteLine(
+                    $"[ERROR] ARCHITECTURE.md states '{countMatch.Value}', expected {expectedProductServiceCount} product services.");
+                ok = false;
+            }
+        }
+
+        int expectedDotNetHostCount = topology.Services.Count + 1;
+        foreach (Match hostMatch in DotNetHostCountProseRegex().Matches(archText))
+        {
+            if (int.TryParse(hostMatch.Groups["count"].Value, CultureInfo.InvariantCulture, out int actualHosts)
+                && actualHosts != expectedDotNetHostCount)
+            {
+                Console.WriteLine(
+                    $"[ERROR] ARCHITECTURE.md states '{hostMatch.Value}', expected {expectedDotNetHostCount} .NET hosts.");
+                ok = false;
+            }
         }
 
         string[] lines = archText.Split('\n');
@@ -120,6 +180,18 @@ public static partial class ArchitectureDriftValidatorService
         foreach (var svc in topology.Services)
         {
             CheckArchitectureServiceRow(lines, svc.Directory, $"apps/{svc.Directory}/README.md", svc.Port, svc.RoutePrefixes, ref ok);
+        }
+
+        string? ticketsRow = lines.FirstOrDefault(
+            l => l.TrimStart().StartsWith('|') && l.Contains("(apps/tickets/README.md)", StringComparison.Ordinal));
+        if (ticketsRow is not null)
+        {
+            string[] ticketsCells = ticketsRow.Split('|');
+            if (ticketsCells.Length >= 7 && ticketsCells[6].Trim().Equals("Scaffold", StringComparison.OrdinalIgnoreCase))
+            {
+                Console.WriteLine("[ERROR] ARCHITECTURE.md §3 service table still marks 'tickets' as 'Scaffold'.");
+                ok = false;
+            }
         }
 
         if (!HasTableRowContaining(lines, "`apps/web`", $"port {topology.WebPort.ToString(CultureInfo.InvariantCulture)}"))
@@ -163,7 +235,52 @@ public static partial class ArchitectureDriftValidatorService
             }
         }
 
+        if (!archText.Contains($"{signedEndpoints.Count} `RequireElectronicSignature` endpoints", StringComparison.Ordinal)
+            || !archText.Contains($"({durableStores.Count} registrations across", StringComparison.Ordinal))
+        {
+            Console.WriteLine(
+                $"[ERROR] ARCHITECTURE.md signature summary must document {signedEndpoints.Count} RequireElectronicSignature endpoints and {durableStores.Count} durable signature token store registrations.");
+            ok = false;
+        }
+
         ok &= ValidateAuditHostRows("ARCHITECTURE.md", lines, auditHosts);
+
+        if (!archText.Contains($"All {auditHosts.Count} standalone database-backed service hosts register it", StringComparison.Ordinal))
+        {
+            Console.WriteLine(
+                $"[ERROR] ARCHITECTURE.md audit summary must document all {auditHosts.Count} standalone database-backed service hosts registering GxPAuditInterceptor.");
+            ok = false;
+        }
+
+        int messagingIdx = archText.IndexOf("- **Messaging:**", StringComparison.Ordinal);
+        int outboxPhraseIdx = messagingIdx >= 0
+            ? archText.IndexOf("publish integration events through the MassTransit EF Core", messagingIdx, StringComparison.Ordinal)
+            : -1;
+        if (messagingIdx < 0 || outboxPhraseIdx < 0)
+        {
+            Console.WriteLine("[ERROR] ARCHITECTURE.md is missing the '- **Messaging:**' MassTransit EF Core transactional outbox summary.");
+            ok = false;
+        }
+        else
+        {
+            string outboxSummary = archText[messagingIdx..outboxPhraseIdx];
+            if (!outboxSummary.Contains($"{outboxHosts.Count} standalone service hosts", StringComparison.Ordinal))
+            {
+                Console.WriteLine($"[ERROR] ARCHITECTURE.md MassTransit outbox summary must state '{outboxHosts.Count} standalone service hosts'.");
+                ok = false;
+            }
+
+            foreach (var outbox in outboxHosts)
+            {
+                string token = $"`{outbox.Host}` (`{outbox.DbContext}`)";
+                if (!outboxSummary.Contains(token, StringComparison.Ordinal))
+                {
+                    Console.WriteLine($"[ERROR] ARCHITECTURE.md MassTransit outbox summary omits '{token}'.");
+                    ok = false;
+                }
+            }
+        }
+
         return ok;
     }
 
@@ -226,7 +343,8 @@ public static partial class ArchitectureDriftValidatorService
             return false;
         }
 
-        string[] lines = File.ReadAllLines(opDbPath);
+        string opDbContent = File.ReadAllText(opDbPath);
+        string[] lines = opDbContent.Split('\n');
         var docRows = new Dictionary<string, (string Host, string Schema, string DbContext, string ProjectRelativePath)>(StringComparer.Ordinal);
         foreach (string rawLine in lines)
         {
@@ -258,7 +376,7 @@ public static partial class ArchitectureDriftValidatorService
             docRows[moduleName] = (hostCell, schemaCell, dbContextCell, projectCell);
         }
 
-        bool ok = true;
+        bool ok = PostgresFallbackDocGuard.ValidateNoStalePostgresFallback(opDbContent, "docs/OPERATIONAL_DATABASE.md");
         foreach (var expected in expectedModules)
         {
             string expectedHost = string.Equals(expected.Host, "kernel", StringComparison.Ordinal)
@@ -288,6 +406,95 @@ public static partial class ArchitectureDriftValidatorService
         {
             Console.WriteLine($"[ERROR] docs/OPERATIONAL_DATABASE.md lists unknown database module '{extra}' not present in docs/schema/README.md.");
             ok = false;
+        }
+
+        return ok;
+    }
+
+    private static bool ValidateRootReadmeDoc(string repoRoot, string rootReadmePath)
+    {
+        string text = File.ReadAllText(rootReadmePath);
+        var topology = CodeMetadataCatalog.GetTopology(repoRoot);
+        bool ok = PostgresFallbackDocGuard.ValidateNoStalePostgresFallback(text, "README.md");
+
+        int expectedProductServices = topology.Services.Count - 1;
+        bool sawProductServiceCount = false;
+        foreach (Match match in ProductServiceCountProseRegex().Matches(text))
+        {
+            sawProductServiceCount = true;
+            if (int.TryParse(match.Groups["count"].Value, CultureInfo.InvariantCulture, out int count)
+                && count != expectedProductServices)
+            {
+                Console.WriteLine(
+                    $"[ERROR] README.md states '{match.Value}', expected {expectedProductServices} product services.");
+                ok = false;
+            }
+        }
+
+        if (!sawProductServiceCount)
+        {
+            Console.WriteLine("[ERROR] README.md is missing the ASP.NET Core 10 product services count in the Today/Target table.");
+            ok = false;
+        }
+
+        int expectedDotNetHosts = topology.Services.Count + 1;
+        foreach (Match hostMatch in DotNetHostCountProseRegex().Matches(text))
+        {
+            if (int.TryParse(hostMatch.Groups["count"].Value, CultureInfo.InvariantCulture, out int hostCount)
+                && hostCount != expectedDotNetHosts)
+            {
+                Console.WriteLine(
+                    $"[ERROR] README.md states '{hostMatch.Value}', expected {expectedDotNetHosts} .NET hosts.");
+                ok = false;
+            }
+        }
+
+        return ok;
+    }
+
+    private static bool ValidateClinicalCanvasDoc(string repoRoot, string clinicalCanvasPath)
+    {
+        string text = File.ReadAllText(clinicalCanvasPath);
+        var topology = CodeMetadataCatalog.GetTopology(repoRoot);
+        var signedEndpoints = CodeMetadataCatalog.GetSignedEndpoints(repoRoot);
+        bool ok = PostgresFallbackDocGuard.ValidateNoStalePostgresFallback(text, "docs/ux/CLINICAL_CANVAS.md");
+
+        int expectedHosts = topology.Services.Count + 1;
+        int expectedProductServices = topology.Services.Count - 1;
+        string expectedHostFragment =
+            $"`{expectedHosts}` .NET hosts — `{expectedProductServices}` product services and `apps/kernel-api` behind `apps/gateway` on port `{topology.GatewayPort}`";
+        if (!text.Contains(expectedHostFragment, StringComparison.Ordinal))
+        {
+            Console.WriteLine(
+                $"[ERROR] docs/ux/CLINICAL_CANVAS.md must document '{expectedHostFragment}'.");
+            ok = false;
+        }
+
+        string[] distinctSignedHosts = signedEndpoints
+            .Select(e => e.Host)
+            .Distinct(StringComparer.Ordinal)
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+        string expectedRoutesFragment = $"`{signedEndpoints.Count}` routes across `{distinctSignedHosts.Length}` hosts";
+        if (!text.Contains(expectedRoutesFragment, StringComparison.Ordinal))
+        {
+            Console.WriteLine(
+                $"[ERROR] docs/ux/CLINICAL_CANVAS.md must document `{expectedRoutesFragment}`.");
+            ok = false;
+        }
+
+        int sigIdx = text.IndexOf(expectedRoutesFragment, StringComparison.Ordinal);
+        string sigWindow = sigIdx >= 0
+            ? text[sigIdx..Math.Min(text.Length, sigIdx + 600)]
+            : string.Empty;
+        foreach (string host in distinctSignedHosts)
+        {
+            if (!sigWindow.Contains($"`{host}`", StringComparison.Ordinal))
+            {
+                Console.WriteLine(
+                    $"[ERROR] docs/ux/CLINICAL_CANVAS.md electronic-signature summary omits host '{host}'.");
+                ok = false;
+            }
         }
 
         return ok;

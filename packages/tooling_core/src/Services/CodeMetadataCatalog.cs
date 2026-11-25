@@ -57,6 +57,12 @@ public static partial class CodeMetadataCatalog
         string Schema,
         string RelativeFilePath);
 
+    public sealed record OutboxHostMetadata(
+        string Host,
+        string DbContext,
+        string Schema,
+        string RelativeFilePath);
+
     [GeneratedRegex(@"public\s+const\s+int\s+GatewayPort\s*=\s*(\d+)\s*;")]
     private static partial Regex GatewayPortConstRegex();
 
@@ -101,6 +107,9 @@ public static partial class CodeMetadataCatalog
 
     [GeneratedRegex(@"AddCadencePostgresDbContext<\s*([A-Za-z0-9_]+)\s*>")]
     private static partial Regex AddPostgresDbContextRegex();
+
+    [GeneratedRegex(@"\.AddEntityFrameworkOutbox<\s*([A-Za-z0-9_]+)\s*>\s*\(")]
+    private static partial Regex AddEntityFrameworkOutboxRegex();
 
     [GeneratedRegex(@"(?:public|private|internal)\s+const\s+string\s+([A-Za-z0-9_]+)\s*=\s*(\$?""[^""]+"")\s*;")]
     private static partial Regex ConstStringRegex();
@@ -317,6 +326,35 @@ public static partial class CodeMetadataCatalog
         }
 
         return results.OrderBy(h => h.Host, StringComparer.Ordinal).ToList();
+    }
+
+    public static IReadOnlyList<OutboxHostMetadata> GetOutboxHosts(string repoRoot)
+    {
+        var dbModules = GetDatabaseModules(repoRoot);
+        var results = new List<OutboxHostMetadata>();
+
+        foreach (string file in EnumerateProductionCSharpFiles(repoRoot))
+        {
+            string rel = Path.GetRelativePath(repoRoot, file).Replace('\\', '/');
+            if (!rel.StartsWith("apps/", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            string source = File.ReadAllText(file);
+            foreach (Match match in AddEntityFrameworkOutboxRegex().Matches(source))
+            {
+                string dbContext = match.Groups[1].Value;
+                string host = ResolveHostFromRelativePath(rel);
+                string schema = ResolveSchemaForDbContext(repoRoot, dbContext, host, dbModules);
+                results.Add(new OutboxHostMetadata(host, dbContext, schema, rel));
+            }
+        }
+
+        return results
+            .OrderBy(h => h.Host, StringComparer.Ordinal)
+            .ThenBy(h => h.DbContext, StringComparer.Ordinal)
+            .ToList();
     }
 
     public static IReadOnlyList<SignedEndpointMetadata> GetSignedEndpoints(string repoRoot)

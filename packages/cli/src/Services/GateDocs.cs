@@ -47,8 +47,20 @@ public static class GateDocs
     public const string ArchitectureSignaturesBeginMarker = "<!-- architecture-signatures:begin (generated from RequireElectronicSignature and AddCadenceDurableSigTokenStore call sites by `pnpm cadence generate-cli-docs`; do not edit) -->";
     public const string ArchitectureSignaturesEndMarker = "<!-- architecture-signatures:end -->";
 
+    public const string ArchitectureSignatureSummaryBeginMarker = "<!-- architecture-signature-summary:begin (generated from RequireElectronicSignature and AddCadenceDurableSigTokenStore call sites by `pnpm cadence generate-cli-docs`; do not edit) -->";
+    public const string ArchitectureSignatureSummaryEndMarker = "<!-- architecture-signature-summary:end -->";
+
+    public const string ArchitectureAuditSummaryBeginMarker = "<!-- architecture-audit-summary:begin (generated from GxPAuditInterceptor registrations by `pnpm cadence generate-cli-docs`; do not edit) -->";
+    public const string ArchitectureAuditSummaryEndMarker = "<!-- architecture-audit-summary:end -->";
+
     public const string ArchitectureAuditHostsBeginMarker = "<!-- architecture-audit-hosts:begin (generated from GxPAuditInterceptor registrations by `pnpm cadence generate-cli-docs`; do not edit) -->";
     public const string ArchitectureAuditHostsEndMarker = "<!-- architecture-audit-hosts:end -->";
+
+    public const string ArchitectureOutboxBeginMarker = "<!-- architecture-outbox:begin (generated from AddEntityFrameworkOutbox registrations by `pnpm cadence generate-cli-docs`; do not edit) -->";
+    public const string ArchitectureOutboxEndMarker = "<!-- architecture-outbox:end -->";
+
+    public const string ClinicalCanvasSignaturesBeginMarker = "<!-- clinical-canvas-signatures:begin (generated from ServiceTopology, PersistenceModuleCatalog, and RequireElectronicSignature call sites by `pnpm cadence generate-cli-docs`; do not edit) -->";
+    public const string ClinicalCanvasSignaturesEndMarker = "<!-- clinical-canvas-signatures:end -->";
 
     public const string DatabaseModulesBeginMarker = "<!-- database-module-schemas:begin (generated from docs/schema/README.md and PersistenceModuleCatalog.cs by `pnpm cadence generate-cli-docs`; do not edit) -->";
     public const string DatabaseModulesEndMarker = "<!-- database-module-schemas:end -->";
@@ -78,7 +90,7 @@ public static class GateDocs
         new("econsent", "Cadence.Apps.Econsent", "`EconsentDbContext`", "Features on its own schema", "Module (#5378)"),
         new("knowledge", "Cadence.Apps.Knowledge", "`KnowledgeDbContext`", "Features on its own schema", "Module (#5378)"),
         new("designer", "Cadence.Apps.Designer", "none yet", "Scaffold", "Module (#5378)"),
-        new("tickets", "Cadence.Apps.Tickets", "`TicketsDbContext`", "Scaffold", "Module, built out in the host (#5377)"),
+        new("tickets", "Cadence.Apps.Tickets", "`TicketsDbContext`", "Features on its own schema", "Module, built out in the host (#5377)"),
         new("quality", "Cadence.Apps.Quality", "`QualityDbContext`", "Scaffold", "Module, built out in the host (#5376)"),
         new("org", "Cadence.Apps.Org", "`OrgDbContext`", "Scaffold", "Module over kernel Grants and Qualifications (#5375)"),
         new("eisf", "Cadence.Apps.Eisf", "`EisfDbContext`", "Scaffold", "Merges into etmf (#5371)"),
@@ -108,8 +120,12 @@ public static class GateDocs
         new("docs/LOCAL_DEV_ENVIRONMENT.md", "dev-service-ports", DevServicePortsBeginMarker, DevServicePortsEndMarker, RenderLocalDevPortsTable),
         new("ARCHITECTURE.md", "running-services", RunningServicesBeginMarker, RunningServicesEndMarker, RenderArchitectureServicesTable),
         new("ARCHITECTURE.md", "runtime-components", RuntimeComponentsBeginMarker, RuntimeComponentsEndMarker, RenderArchitectureRuntimeComponentsTable),
+        new("ARCHITECTURE.md", "architecture-signature-summary", ArchitectureSignatureSummaryBeginMarker, ArchitectureSignatureSummaryEndMarker, RenderArchitectureSignatureSummaryRegion),
         new("ARCHITECTURE.md", "architecture-signatures", ArchitectureSignaturesBeginMarker, ArchitectureSignaturesEndMarker, RenderArchitectureSignaturesRegion),
+        new("ARCHITECTURE.md", "architecture-audit-summary", ArchitectureAuditSummaryBeginMarker, ArchitectureAuditSummaryEndMarker, RenderArchitectureAuditSummaryRegion),
         new("ARCHITECTURE.md", "architecture-audit-hosts", ArchitectureAuditHostsBeginMarker, ArchitectureAuditHostsEndMarker, RenderArchitectureAuditHostsRegion),
+        new("ARCHITECTURE.md", "architecture-outbox", ArchitectureOutboxBeginMarker, ArchitectureOutboxEndMarker, RenderArchitectureOutboxRegion),
+        new("docs/ux/CLINICAL_CANVAS.md", "clinical-canvas-signatures", ClinicalCanvasSignaturesBeginMarker, ClinicalCanvasSignaturesEndMarker, RenderClinicalCanvasSignaturesRegion),
         new("docs/OPERATIONAL_DATABASE.md", "database-module-schemas", DatabaseModulesBeginMarker, DatabaseModulesEndMarker, RenderOperationalDatabaseModulesTable),
         new("docs/SDLC/Signature_Token_Cryptographic_Contract.md", "signed-endpoints", SignedEndpointsBeginMarker, SignedEndpointsEndMarker, RenderSignatureContractEndpointsTable),
         new("docs/SDLC/Signature_Token_Cryptographic_Contract.md", "durable-sig-token-stores", DurableSigStoresBeginMarker, DurableSigStoresEndMarker, RenderSignatureContractStoresTable),
@@ -282,6 +298,19 @@ public static class GateDocs
         return RenderTable(["Component", "Path", "Notes"], rows);
     }
 
+    /// <summary>The <c>ARCHITECTURE.md</c> §4 prose summary of step-up electronic-signature endpoints and durable token stores.</summary>
+    public static string RenderArchitectureSignatureSummaryRegion(string repoRoot)
+    {
+        var endpoints = CodeMetadataCatalog.GetSignedEndpoints(repoRoot);
+        var stores = CodeMetadataCatalog.GetDurableSigTokenStores(repoRoot);
+        string storeHosts = FormatOxfordList(stores.Select(s =>
+            string.Equals(s.Host, "kernel", StringComparison.Ordinal)
+                ? $"`{s.Host}` via `{s.DbContext}`"
+                : $"`{s.Host}`").ToList());
+
+        return $"- Signing a regulated action needs a fresh re-authentication: the gateway re-checks the signer's password with Keycloak and issues a 60-second `X-Sig-Token` bound to the user, resource and meaning ([ADR-2259](docs/adr/2026-09-29-electronic-signature-step-up-re-authentication.md)). Multi-target actions such as delegation-log bulk sign-off also bind the token to the exact targets (`batch_id`). Each token signs once: every host that maps any of the {endpoints.Count.ToString(CultureInfo.InvariantCulture)} `RequireElectronicSignature` endpoints registers `AddCadenceDurableSigTokenStore<TContext>()` ({stores.Count.ToString(CultureInfo.InvariantCulture)} registrations across {storeHosts}, writing `consumed_signature_tokens` in its own schema) so single use holds across instances and restarts, and a host that maps a signed route without a durable store refuses to start outside Development (#5434) ([ADR-2515](docs/adr/2026-10-15-step-up-tokens-are-single-use-across-instances-and-restarts.md))."; // deid-ignore
+    }
+
     /// <summary>The <c>ARCHITECTURE.md</c> §4 electronic-signature routes and durable token-store summary.</summary>
     public static string RenderArchitectureSignaturesRegion(string repoRoot)
     {
@@ -301,6 +330,15 @@ public static class GateDocs
             endpointTable;
     }
 
+    /// <summary>The <c>ARCHITECTURE.md</c> §5 prose summary of <c>GxPAuditInterceptor</c> host registrations.</summary>
+    public static string RenderArchitectureAuditSummaryRegion(string repoRoot)
+    {
+        var hosts = CodeMetadataCatalog.GetAuditInterceptorHosts(repoRoot);
+        string hostList = FormatOxfordList(hosts.Select(h => $"`{h.Host}`").ToList());
+
+        return $"- **Audit:** the EF Core `GxPAuditInterceptor` (`packages/database`) populates `CreatedAt`, `CreatedBy`, `ReasonForChange` and `VersionIndex` (21 CFR Part 11) and attributes every write to a real user or a named service account ([ADR-2257](docs/adr/2026-09-29-attributable-audit-actors-and-named-service-accounts.md)). All {hosts.Count.ToString(CultureInfo.InvariantCulture)} standalone database-backed service hosts register it ({hostList}) via `AddCadencePostgresDbContext` or `ExecutionDbContext` (#5312), while the kernel host writes its own command-pipeline audit chain (`kernel`)."; // deid-ignore
+    }
+
     /// <summary>The <c>ARCHITECTURE.md</c> §5 <c>GxPAuditInterceptor</c> host registrations table.</summary>
     public static string RenderArchitectureAuditHostsRegion(string repoRoot)
     {
@@ -314,6 +352,54 @@ public static class GateDocs
                 $"`{h.Schema}`",
                 $"`{h.RelativeFilePath}`",
             }));
+    }
+
+    /// <summary>The <c>ARCHITECTURE.md</c> §5 MassTransit EF Core outbox host summary.</summary>
+    public static string RenderArchitectureOutboxRegion(string repoRoot)
+    {
+        var outboxHosts = CodeMetadataCatalog.GetOutboxHosts(repoRoot);
+        string hostList = FormatOxfordList(outboxHosts.Select(h => $"`{h.Host}` (`{h.DbContext}`)").ToList());
+
+        return $"- **Messaging:** {outboxHosts.Count.ToString(CultureInfo.InvariantCulture)} standalone service hosts ({hostList}) publish integration events through the MassTransit EF Core transactional outbox (`AddEntityFrameworkOutbox<TContext>()`, [ADR-2814](docs/adr/2026-10-07-standardize-masstransit-ef-core-transactional-outbox-across-core-services.md)). Kernel events use the kernel outbox (ADR-2449). MassTransit stays on the Apache 2.0 8.x line; 9.x is a commercial product that needs a licence key, so Dependabot does not offer it ([ADR-2524](docs/adr/2026-10-19-messaging-stays-on-the-apache-licensed-masstransit-8-line.md))."; // deid-ignore
+    }
+
+    /// <summary>The <c>docs/ux/CLINICAL_CANVAS.md</c> §8 backend topology, module schema, and signed-endpoint summary.</summary>
+    public static string RenderClinicalCanvasSignaturesRegion(string repoRoot)
+    {
+        var topology = CodeMetadataCatalog.GetTopology(repoRoot);
+        var dbModules = CodeMetadataCatalog.GetDatabaseModules(repoRoot);
+        var endpoints = CodeMetadataCatalog.GetSignedEndpoints(repoRoot);
+        var stores = CodeMetadataCatalog.GetDurableSigTokenStores(repoRoot);
+
+        int totalDotnetHosts = topology.Services.Count + 1;
+        int productServiceCount = topology.Services.Count(s => !string.Equals(s.Directory, "kernel-api", StringComparison.Ordinal));
+        string[] kernelSchemas = dbModules
+            .Where(m => string.Equals(m.Host, "kernel", StringComparison.Ordinal))
+            .Select(m => m.Schema)
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(s => s switch
+            {
+                "kernel" => 0,
+                "intelligence" => 1,
+                "execution" => 2,
+                _ => 3,
+            })
+            .ThenBy(s => s, StringComparer.Ordinal)
+            .Select(s => $"`{s}`")
+            .ToArray();
+        if (kernelSchemas.Length == 0)
+        {
+            kernelSchemas = ["`kernel`", "`intelligence`", "`execution`"];
+        }
+
+        string kernelSchemaList = FormatOxfordList(kernelSchemas);
+        string[] signedHosts = endpoints
+            .Select(e => $"`{e.Host}`")
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+        string signedHostList = FormatOxfordList(signedHosts);
+
+        return $"`apps/web` is a Vue 3 client backed by the `.NET 10` service topology (`{totalDotnetHosts.ToString(CultureInfo.InvariantCulture)}` .NET hosts — `{productServiceCount.ToString(CultureInfo.InvariantCulture)}` product services and `apps/kernel-api` behind `apps/gateway` on port `{topology.GatewayPort.ToString(CultureInfo.InvariantCulture)}`; epic #4833). Its API layer in `apps/web/src/api/` compiles against OpenAPI-generated TypeScript definitions (`apps/web/scripts/generate-api-types.js` -> `apps/web/src/api/generated/<contract>.ts`, enforced by `cadence check api-clients`) discovered automatically from every `docs/openapi/*_openapi.json` service and module contract (excluding the aggregated `cdisc_openapi.json` snapshot; [docs/web/API_MIGRATION.md](../web/API_MIGRATION.md)). On the backend, `apps/kernel-api` composes `{kernelSchemas.Length.ToString(CultureInfo.InvariantCulture)}` EF Core module schemas ({kernelSchemaList}), and `{endpoints.Count.ToString(CultureInfo.InvariantCulture)}` routes across `{signedHosts.Length.ToString(CultureInfo.InvariantCulture)}` hosts ({signedHostList}, backed by `{stores.Count.ToString(CultureInfo.InvariantCulture)}` durable `AddCadenceDurableSigTokenStore<TContext>()` stores) enforce 21 CFR Part 11 electronic signatures via `.RequireElectronicSignature(...)` ([Signature Token Cryptographic Contract](../SDLC/Signature_Token_Cryptographic_Contract.md)).";
     }
 
     /// <summary>The <c>docs/OPERATIONAL_DATABASE.md</c> table synchronized with all 18 modules in <c>docs/schema/README.md</c> and <c>PersistenceModuleCatalog</c>.</summary>
@@ -555,4 +641,13 @@ public static class GateDocs
     }
 
     private static string Escape(string cell) => cell.Replace("|", "\\|", StringComparison.Ordinal);
+
+    private static string FormatOxfordList(IReadOnlyList<string> items) =>
+        items.Count switch
+        {
+            0 => string.Empty,
+            1 => items[0],
+            2 => $"{items[0]} and {items[1]}",
+            _ => $"{string.Join(", ", items.Take(items.Count - 1))}, and {items[^1]}",
+        };
 }

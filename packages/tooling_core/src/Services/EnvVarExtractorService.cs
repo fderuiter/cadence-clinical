@@ -148,7 +148,8 @@ public static partial class EnvVarExtractorService
 
         if (checkOnly)
         {
-            var exampleVars = ExtractVarsFromEnvFile(envExamplePath);
+            var exampleValues = EnvExampleStartupValidator.ExtractKeyValuesFromEnvFile(envExamplePath, out var duplicateKeys);
+            var exampleVars = new HashSet<string>(exampleValues.Keys, StringComparer.Ordinal);
             var exampleVarsCaseInsensitive = new HashSet<string>(exampleVars, StringComparer.OrdinalIgnoreCase);
             var missingInExample = envVars
                 .Where(v => !exampleVarsCaseInsensitive.Contains(v))
@@ -164,6 +165,8 @@ public static partial class EnvVarExtractorService
                 }
                 hasError = true;
             }
+
+            hasError |= !EnvExampleStartupValidator.ValidateEnvExampleStartupValues(repoRoot, envExamplePath, exampleValues, duplicateKeys);
 
             if (File.Exists(envDocPath))
             {
@@ -282,22 +285,8 @@ public static partial class EnvVarExtractorService
 
     public static HashSet<string> ExtractVarsFromEnvFile(string filePath)
     {
-        var vars = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var line in File.ReadLines(filePath))
-        {
-            string trimmed = line.Trim();
-            if (string.IsNullOrEmpty(trimmed) || trimmed.StartsWith('#')) continue;
-
-            if (trimmed.Contains('=', StringComparison.Ordinal))
-            {
-                string key = trimmed.Split('=', 2)[0].Trim();
-                if (!string.IsNullOrEmpty(key))
-                {
-                    vars.Add(key);
-                }
-            }
-        }
-        return vars;
+        var values = EnvExampleStartupValidator.ExtractKeyValuesFromEnvFile(filePath);
+        return new HashSet<string>(values.Keys, StringComparer.Ordinal);
     }
 
     public static HashSet<string> ExtractConcreteDocKeys(string docText)

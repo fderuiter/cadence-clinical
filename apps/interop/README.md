@@ -109,7 +109,10 @@ device is re-registered); run `VACUUM FULL` on those four tables afterwards. See
 
 ```bash
 export GATEWAY_SECRET="<at least 32 characters>"
+export AUDIT_LOG_SECRET_KEY=$(openssl rand -hex 32)
 export ConnectionStrings__cadence="Host=localhost;Port=5432;Database=cadence;Username=cadence;Password=<password>"
+export FIELD_LOOKUP_HASH_KEY="$(openssl rand -base64 32)"
+export CADENCE_SCE_SIGNING_KEY="$(openssl rand -base64 32)"
 dotnet run --project apps/interop/src/Cadence.Apps.Interop.csproj
 ```
 

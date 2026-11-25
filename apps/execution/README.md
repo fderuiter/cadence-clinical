@@ -85,7 +85,11 @@ creates new reviews today.
 
 ```bash
 export GATEWAY_SECRET="<at least 32 characters>"
+export AUDIT_LOG_SECRET_KEY=$(openssl rand -hex 32)
 export ConnectionStrings__cadence="Host=localhost;Port=5432;Database=cadence;Username=cadence;Password=<password>"
+export DemographicsEncryption__KeyBase64="$(openssl rand -base64 32)"
+export RANDOMIZATION_ALLOCATION_KEY="$(openssl rand -base64 32)"
+export CGT_BARCODE_HMAC_KEY="$(openssl rand -base64 32)"
 dotnet run --project apps/execution/src/Cadence.Apps.Execution.csproj
 ```
 

@@ -121,8 +121,8 @@ public static partial class DocIndexSyncService
             .Select(file => file.RelativePath)
             .ToList();
 
-        // 4. Reconcile status drift on existing ADR entries in DOCUMENTATION_INDEX.md
-        string reconciledContent = ReconcileAdrRowStatuses(originalContent, docsDir, out var staleAdrStatuses);
+        // 4. Reconcile status drift on existing ADR and explicit-header entries in DOCUMENTATION_INDEX.md
+        string reconciledContent = ReconcileDocumentRowStatuses(originalContent, docsDir, out var staleStatuses);
 
         // 5. Compute canonical updated index (adds unindexed files AND refreshes/prunes ## Engineering blog rows)
         string blogOnlyUpdatedContent = GenerateUpdatedIndex(reconciledContent, diskFiles, [], docsDir);
@@ -146,7 +146,7 @@ public static partial class DocIndexSyncService
                 return 1;
             }
 
-            if (unindexedFiles.Count > 0 || staleAdrStatuses.Count > 0 || hasBlogSectionDrift)
+            if (unindexedFiles.Count > 0 || staleStatuses.Count > 0 || hasBlogSectionDrift)
             {
                 if (unindexedFiles.Count > 0)
                 {
@@ -161,16 +161,16 @@ public static partial class DocIndexSyncService
                     }
                 }
 
-                if (staleAdrStatuses.Count > 0)
+                if (staleStatuses.Count > 0)
                 {
-                    Console.WriteLine($"[ERROR] Documentation index 'docs/DOCUMENTATION_INDEX.md' has stale status values for {staleAdrStatuses.Count} ADR file(s):");
-                    foreach (var stale in staleAdrStatuses.Take(20))
+                    Console.WriteLine($"[ERROR] Documentation index 'docs/DOCUMENTATION_INDEX.md' has stale status values for {staleStatuses.Count} document(s):");
+                    foreach (var stale in staleStatuses.Take(20))
                     {
                         Console.WriteLine($"  - docs/{stale}");
                     }
-                    if (staleAdrStatuses.Count > 20)
+                    if (staleStatuses.Count > 20)
                     {
-                        Console.WriteLine($"  ... and {staleAdrStatuses.Count - 20} more file(s).");
+                        Console.WriteLine($"  ... and {staleStatuses.Count - 20} more file(s).");
                     }
                 }
 
@@ -187,7 +187,7 @@ public static partial class DocIndexSyncService
             return 0;
         }
 
-        if (unindexedFiles.Count == 0 && staleAdrStatuses.Count == 0 && !hasBlogSectionDrift)
+        if (unindexedFiles.Count == 0 && staleStatuses.Count == 0 && !hasBlogSectionDrift)
         {
             Console.WriteLine("✔ Documentation index is already up to date.");
             return 0;
@@ -198,7 +198,7 @@ public static partial class DocIndexSyncService
             : blogOnlyUpdatedContent;
 
         File.WriteAllText(indexPath, updatedContent);
-        Console.WriteLine($"✔ Successfully synchronized documentation index in 'docs/DOCUMENTATION_INDEX.md' ({unindexedFiles.Count} new documents indexed, {staleAdrStatuses.Count} ADR statuses updated).");
+        Console.WriteLine($"✔ Successfully synchronized documentation index in 'docs/DOCUMENTATION_INDEX.md' ({unindexedFiles.Count} new documents indexed, {staleStatuses.Count} statuses updated).");
         return 0;
     }
 
@@ -360,6 +360,10 @@ public static partial class DocIndexSyncService
             if (fileContent.Contains("Baseline", StringComparison.OrdinalIgnoreCase) || fileContent.Contains("Superseded", StringComparison.OrdinalIgnoreCase)) return "Baseline";
             return "Current";
         }
+        if (DocIndexStatusHeaderParser.TryExtractExplicitHeaderStatus(fileContent, out string explicitStatus, out _))
+        {
+            return explicitStatus;
+        }
         return "Current";
     }
 
@@ -426,11 +430,11 @@ public static partial class DocIndexSyncService
         return PreKernelPythonOrNeo4jRegex().IsMatch(fileContent);
     }
 
-    private static string ReconcileAdrRowStatuses(string indexContent, string docsDir, out List<string> updatedPaths)
+    private static string ReconcileDocumentRowStatuses(string indexContent, string docsDir, out List<string> updatedPaths)
     {
         updatedPaths = [];
         string[] lines = indexContent.Split('\n');
-        bool inAdrSection = false;
+        bool inBlogSection = false;
 
         for (int i = 0; i < lines.Length; i++)
         {
@@ -440,11 +444,11 @@ public static partial class DocIndexSyncService
 
             if (trimmed.StartsWith("## ", StringComparison.Ordinal))
             {
-                inAdrSection = trimmed.Equals("## Architecture decision records", StringComparison.OrdinalIgnoreCase);
+                inBlogSection = trimmed.Equals("## Engineering blog", StringComparison.OrdinalIgnoreCase);
                 continue;
             }
 
-            if (!inAdrSection || !trimmed.StartsWith('|'))
+            if (inBlogSection || !trimmed.StartsWith('|'))
             {
                 continue;
             }
@@ -477,18 +481,35 @@ public static partial class DocIndexSyncService
             }
 
             string normTarget = NormalizePath(rawTarget);
-            if (!normTarget.StartsWith("adr/", StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-
             string fullPath = Path.Combine(docsDir, normTarget.Replace('/', Path.DirectorySeparatorChar));
             if (!File.Exists(fullPath))
             {
                 continue;
             }
 
-            string expectedStatus = DetermineStatus(normTarget, File.ReadAllText(fullPath));
+            string fileContent = File.ReadAllText(fullPath);
+            string expectedStatus;
+            if (normTarget.StartsWith("adr/", StringComparison.OrdinalIgnoreCase))
+            {
+                expectedStatus = DetermineStatus(normTarget, fileContent);
+            }
+            else if (DocIndexStatusHeaderParser.TryExtractExplicitHeaderStatus(
+                         fileContent,
+                         out string explicitStatus,
+                         out bool normativelyQualified))
+            {
+                if (normativelyQualified && string.Equals(statusCell, "Normative", StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                expectedStatus = explicitStatus;
+            }
+            else
+            {
+                continue;
+            }
+
             if (!string.Equals(statusCell, expectedStatus, StringComparison.Ordinal))
             {
                 Group statusGroup = rowMatch.Groups[2];

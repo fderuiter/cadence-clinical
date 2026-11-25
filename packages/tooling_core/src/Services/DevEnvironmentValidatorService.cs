@@ -29,6 +29,31 @@ public static partial class DevEnvironmentValidatorService
         "CGT_BARCODE_HMAC_KEY",
     ];
 
+    private static readonly Dictionary<string, string[]> RequiredServiceRunLocallyExtraKeys = new(StringComparer.Ordinal)
+    {
+        ["execution"] =
+        [
+            "AUDIT_LOG_SECRET_KEY",
+            "DemographicsEncryption__KeyBase64",
+            "RANDOMIZATION_ALLOCATION_KEY",
+            "CGT_BARCODE_HMAC_KEY",
+        ],
+        ["interop"] =
+        [
+            "AUDIT_LOG_SECRET_KEY",
+            "FIELD_LOOKUP_HASH_KEY",
+            "CADENCE_SCE_SIGNING_KEY",
+        ],
+        ["payments"] =
+        [
+            "AUDIT_LOG_SECRET_KEY",
+            "FIELD_ENCRYPTION_KEY",
+        ],
+    };
+
+    [GeneratedRegex(@"(?ms)^## Run locally\s*\r?\n(?<body>.*?)(?=^## |\z)")]
+    private static partial Regex RunLocallySectionRegex();
+
     [GeneratedRegex(@"GetServiceUrl\s*\(\s*""([^""]+)""\s*,\s*(\d+)\s*\)")]
     private static partial Regex GatewayServiceUrlRegex();
 
@@ -217,6 +242,8 @@ public static partial class DevEnvironmentValidatorService
             ok = false;
         }
 
+        ok &= PostgresFallbackDocGuard.ValidateNoStalePostgresFallback(docContent, relativeDocPath);
+
         CheckExpectedPortAndSchema(docMappings, "gateway", topology.GatewayPort, "none", relativeDocPath, ref ok);
         CheckExpectedPortAndSchema(docMappings, "postgresql", topology.PostgresPort, "`cadence` (database)", relativeDocPath, ref ok);
         CheckExpectedPortAndSchema(docMappings, "keycloak", topology.KeycloakPort, "(own store)", relativeDocPath, ref ok);
@@ -246,6 +273,48 @@ public static partial class DevEnvironmentValidatorService
             {
                 Console.WriteLine($"[ERROR] {relativeDocPath} Option C standalone startup instructions omit required key '{requiredKey}'.");
                 ok = false;
+            }
+        }
+
+        ok &= ValidateServiceReadmes(repoRoot, topology);
+
+        return ok;
+    }
+
+    private static bool ValidateServiceReadmes(string repoRoot, CodeMetadataCatalog.TopologySnapshot topology)
+    {
+        bool ok = true;
+        foreach (var svc in topology.Services)
+        {
+            string relReadme = $"apps/{svc.Directory}/README.md";
+            string fullReadme = Path.Combine(repoRoot, "apps", svc.Directory, "README.md");
+            if (!File.Exists(fullReadme))
+            {
+                continue;
+            }
+
+            string readmeContent = File.ReadAllText(fullReadme);
+            ok &= PostgresFallbackDocGuard.ValidateNoStalePostgresFallback(readmeContent, relReadme);
+
+            if (RequiredServiceRunLocallyExtraKeys.TryGetValue(svc.Directory, out string[]? extraKeys))
+            {
+                Match runLocally = RunLocallySectionRegex().Match(readmeContent);
+                if (!runLocally.Success)
+                {
+                    Console.WriteLine($"[ERROR] {relReadme} is missing a '## Run locally' section.");
+                    ok = false;
+                    continue;
+                }
+
+                string runLocallyBody = runLocally.Groups["body"].Value;
+                foreach (string key in extraKeys)
+                {
+                    if (!runLocallyBody.Contains(key, StringComparison.Ordinal))
+                    {
+                        Console.WriteLine($"[ERROR] {relReadme} '## Run locally' section omits required startup key '{key}'.");
+                        ok = false;
+                    }
+                }
             }
         }
 

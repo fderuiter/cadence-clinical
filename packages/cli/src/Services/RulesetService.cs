@@ -42,10 +42,13 @@ public static partial class RulesetService
     /// <summary>Reconciliation profile used when hosted GitHub Actions runners are active.</summary>
     public const string ActiveActionsProfile = "active-actions";
 
+    /// <summary>Default reconciliation profile (<see cref="ActiveActionsProfile"/>).</summary>
+    public const string DefaultProfile = ActiveActionsProfile;
+
     /// <summary>The only allowed <c>bypass_mode</c> value on branch rulesets (<c>pull_request</c>, i.e. pull-request-only).</summary>
     public const string PullRequestOnlyBypassMode = "pull_request";
 
-    private const string Tag = "[RULESETS]";
+    internal const string Tag = "[RULESETS]";
 
     private static readonly string[] RequiredRulesetFiles =
     [
@@ -138,12 +141,12 @@ public static partial class RulesetService
         public bool OnPullRequest => PullRequestTrigger.OnPullRequest;
     }
 
-    /// <summary>Normalizes a ruleset sync profile (<c>paused-actions</c> or <c>active-actions</c>).</summary>
+    /// <summary>Normalizes a ruleset sync profile (<c>active-actions</c> by default, or <c>paused-actions</c>).</summary>
     public static bool TryNormalizeProfile(string? rawProfile, out string normalizedProfile)
     {
         if (string.IsNullOrWhiteSpace(rawProfile))
         {
-            normalizedProfile = PausedActionsProfile;
+            normalizedProfile = DefaultProfile;
             return true;
         }
 
@@ -196,9 +199,10 @@ public static partial class RulesetService
 
     /// <summary>
     /// Validates declarative rulesets (or <c>CI Gate</c> workflow coverage when <c>.github/rulesets</c> is absent in
-    /// <paramref name="dryRun"/> mode) and either previews (<paramref name="dryRun"/>) or reconciles them to GitHub
-    /// Repository Rulesets using <c>gh api</c> under <paramref name="profile"/> (<c>paused-actions</c> by default, or
-    /// <c>active-actions</c>). Fails with exit code <c>1</c> on validation or API errors.
+    /// <paramref name="dryRun"/> mode) and previews (<paramref name="dryRun"/>), verifies live read-only GitHub
+    /// Repository Ruleset parity (<paramref name="verifyLive"/>), or reconciles them to GitHub Repository Rulesets
+    /// using <c>gh api</c> under <paramref name="profile"/> (<c>active-actions</c> by default, or
+    /// <c>paused-actions</c>). Fails with exit code <c>1</c> on validation, drift, or API errors.
     /// </summary>
     public static int Sync(
         string? repoRoot = null,
@@ -207,12 +211,19 @@ public static partial class RulesetService
         ProcessRunner? runner = null,
         Func<string, string?>? environment = null,
         TextWriter? output = null,
-        string? profile = null)
+        string? profile = null,
+        bool verifyLive = false)
     {
         repoRoot ??= QualityGateOrchestrator.FindRepoRoot();
         runner ??= DefaultProcessRunner;
         environment ??= Environment.GetEnvironmentVariable;
         output ??= Console.Out;
+
+        if (dryRun && verifyLive)
+        {
+            output.WriteLine($"{Tag} [ERROR] '--dry-run' and '--verify-live' cannot be used together.");
+            return 1;
+        }
 
         if (!TryNormalizeProfile(profile, out string normalizedProfile))
         {
@@ -255,6 +266,11 @@ public static partial class RulesetService
             return 0;
         }
 
+        if (verifyLive)
+        {
+            return RulesetLiveVerifier.VerifyLiveRulesetsViaGhApi(repoRoot, repo, normalizedProfile, definitions, runner, output);
+        }
+
         return ApplyRulesetsViaGhApi(repoRoot, repo, normalizedProfile, definitions, runner, output);
     }
 
@@ -292,7 +308,7 @@ public static partial class RulesetService
         return definitions;
     }
 
-    private static void WriteErrors(IReadOnlyList<string> errors, TextWriter output)
+    internal static void WriteErrors(IReadOnlyList<string> errors, TextWriter output)
     {
         foreach (string error in errors)
         {
@@ -513,7 +529,7 @@ public static partial class RulesetService
         return 0;
     }
 
-    private static void WriteProcessDetails(ProcessOutcome outcome, TextWriter output)
+    internal static void WriteProcessDetails(ProcessOutcome outcome, TextWriter output)
     {
         if (!string.IsNullOrWhiteSpace(outcome.Stderr))
         {
@@ -532,6 +548,25 @@ public static partial class RulesetService
         out string? error)
     {
         rulesetsByName = new Dictionary<string, long>(StringComparer.Ordinal);
+        if (!TryParseExistingRulesetEntries(json, out var entries, out error))
+        {
+            return false;
+        }
+
+        foreach (var (name, id) in entries)
+        {
+            rulesetsByName[name] = id;
+        }
+
+        return true;
+    }
+
+    internal static bool TryParseExistingRulesetEntries(
+        string json,
+        out List<(string Name, long Id)> entries,
+        out string? error)
+    {
+        entries = [];
         error = null;
 
         if (string.IsNullOrWhiteSpace(json))
@@ -556,7 +591,7 @@ public static partial class RulesetService
                 }
 
                 parsedAnyArray = true;
-                CollectRulesetIds(doc.RootElement, rulesetsByName);
+                CollectRulesetEntries(doc.RootElement, entries);
             }
 
             if (!parsedAnyArray)
@@ -574,13 +609,13 @@ public static partial class RulesetService
         }
     }
 
-    private static void CollectRulesetIds(JsonElement arrayElement, Dictionary<string, long> rulesetsByName)
+    private static void CollectRulesetEntries(JsonElement arrayElement, List<(string Name, long Id)> entries)
     {
         foreach (JsonElement item in arrayElement.EnumerateArray())
         {
             if (item.ValueKind == JsonValueKind.Array)
             {
-                CollectRulesetIds(item, rulesetsByName);
+                CollectRulesetEntries(item, entries);
                 continue;
             }
 
@@ -591,7 +626,7 @@ public static partial class RulesetService
                 && idEl.TryGetInt64(out long id)
                 && nameEl.GetString() is { Length: > 0 } name)
             {
-                rulesetsByName[name] = id;
+                entries.Add((name, id));
             }
         }
     }
@@ -804,7 +839,7 @@ public static partial class RulesetService
         }
     }
 
-    private static List<BypassActorEntry> ReadBypassActors(
+    internal static List<BypassActorEntry> ReadBypassActors(
         JsonElement root,
         string prefix,
         List<string> errors)
@@ -2072,7 +2107,7 @@ public static partial class RulesetService
         return refs;
     }
 
-    private static string? GetStringProperty(JsonElement obj, string propertyName) =>
+    internal static string? GetStringProperty(JsonElement obj, string propertyName) =>
         obj.TryGetProperty(propertyName, out JsonElement prop) && prop.ValueKind == JsonValueKind.String
             ? prop.GetString()
             : null;
