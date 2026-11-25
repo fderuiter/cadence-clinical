@@ -165,6 +165,65 @@ public sealed class HttpKernelLockGuardTests
             .Should().ContainSingle().Which.Should().Be("SYSTEM_SERVICE");
     }
 
+    [Fact]
+    public async Task EnsureUnlockedBatchAsync_SendsSingleBatchKernelLockQuery_MemoizesPerRequest_AndElevatesVerifiedEtmfServiceCaller()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        string? capturedBody = null;
+        var handler = new RecordingHttpMessageHandler(req =>
+        {
+            capturedBody = req.Content?.ReadAsStringAsync(ct).GetAwaiter().GetResult();
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    $$"""{"study_code":"{{StudyCode}}","locked":true,"lock_kind":"Frozen","scope_kind":"study_site"}""",
+                    Encoding.UTF8,
+                    "application/json"),
+            };
+        });
+
+        var context = new DefaultHttpContext();
+        context.User = new ClaimsPrincipal(new ClaimsIdentity(
+        [
+            new Claim(CadenceClaimTypes.Subject, "svc:etmf"),
+            new Claim(CadenceClaimTypes.TenantId, TenantCode),
+        ], GatewayAuthenticationHandler.SchemeName));
+        context.Items[GatewayAuthenticationHandler.PrincipalItemKey] = new Principal
+        {
+            UserId = "svc:etmf",
+            RawRoles = [PermissionMatrix.EtmfServiceRole],
+            AssignedSites = ["SITE-101", "SITE-102", "SITE-103"],
+            AssignedStudies = [StudyCode],
+            TenantId = TenantCode,
+            ProductFamilies = [nameof(Cadence.Kernel.Tenancy.ProductFamily.Orbit)],
+        };
+
+        using var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://kernel.internal") };
+        var guard = new HttpKernelLockGuard(
+            httpClient,
+            new HttpContextAccessor { HttpContext = context },
+            new StaticOptionsMonitor(GatewaySecret),
+            new FakeClock());
+
+        var first = await guard.EnsureUnlockedBatchAsync(StudyCode, ["SITE-102", "SITE-101", "SITE-103"], ct);
+        var second = await guard.EnsureUnlockedBatchAsync(StudyCode, ["SITE-103", "SITE-101", "SITE-102"], ct);
+
+        first.IsFailure.Should().BeTrue();
+        first.Error!.Code.Should().Be(HttpKernelLockGuard.ObservationLockedCode);
+        first.Error.Description.Should().Contain("Frozen").And.Contain("study_site");
+        second.IsFailure.Should().BeTrue();
+
+        handler.Requests.Should().ContainSingle("all sites in a batch webhook must be checked in one HTTP call and memoized across site orderings");
+        var sent = handler.Requests[0];
+        sent.Method.Should().Be(HttpMethod.Post);
+        sent.RequestUri!.PathAndQuery.Should().Be("/api/v1/kernel/locks/in-force/batch");
+        sent.Headers.GetValues(GatewayHeaders.UserId).Should().ContainSingle().Which.Should().Be("svc:etmf");
+        sent.Headers.GetValues(GatewayHeaders.Roles).Should().ContainSingle().Which.Should().Contain("SYSTEM_SERVICE");
+        capturedBody.Should().NotBeNull();
+        capturedBody.Should().Contain($"\"study_code\":\"{StudyCode}\"");
+        capturedBody.Should().Contain("\"SITE-101\"").And.Contain("\"SITE-102\"").And.Contain("\"SITE-103\"");
+    }
+
     private static HttpContextAccessor CreateHttpContextAccessor()
     {
         var context = new DefaultHttpContext();

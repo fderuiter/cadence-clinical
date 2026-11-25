@@ -27,6 +27,10 @@ public sealed class InMemorySiteComplianceRepository : ISiteComplianceRepository
     private readonly ConcurrentDictionary<Guid, SiteComplianceCache> _store = new();
     private readonly List<SiteActivationPeriod> _periods = [];
 
+    public IReadOnlyList<SiteActivationPeriod> Periods => _periods;
+
+    public int SaveChangesCallCount { get; private set; }
+
     public void Seed(SiteComplianceCache cache) => _store[cache.Id] = cache;
 
     public Task<SiteComplianceCache?> GetAsync(StudyCode studyCode, SiteCode? siteCode, string milestone, CancellationToken cancellationToken)
@@ -38,6 +42,25 @@ public sealed class InMemorySiteComplianceRepository : ISiteComplianceRepository
 
         var match = _store.Values.FirstOrDefault(c => c.StudyCode == studyCode && c.SiteCode == site && c.Milestone == milestone);
         return Task.FromResult(match);
+    }
+
+    public Task<IReadOnlyDictionary<SiteCode, SiteComplianceCache>> GetBySitesAsync(
+        StudyCode studyCode,
+        IReadOnlyCollection<SiteCode> siteCodes,
+        string milestone,
+        CancellationToken cancellationToken)
+    {
+        var requested = siteCodes.ToHashSet();
+        var dict = new Dictionary<SiteCode, SiteComplianceCache>();
+        foreach (var cache in _store.Values)
+        {
+            if (cache.StudyCode == studyCode && cache.Milestone == milestone && requested.Contains(cache.SiteCode))
+            {
+                dict.TryAdd(cache.SiteCode, cache);
+            }
+        }
+
+        return Task.FromResult<IReadOnlyDictionary<SiteCode, SiteComplianceCache>>(dict);
     }
 
     public Task AddAsync(SiteComplianceCache cache, CancellationToken cancellationToken)
@@ -123,5 +146,9 @@ public sealed class InMemorySiteComplianceRepository : ISiteComplianceRepository
         return Task.FromResult(match);
     }
 
-    public Task SaveChangesAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+    public Task SaveChangesAsync(CancellationToken cancellationToken)
+    {
+        SaveChangesCallCount++;
+        return Task.CompletedTask;
+    }
 }

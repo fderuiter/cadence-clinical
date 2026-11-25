@@ -370,6 +370,208 @@ internal sealed class KernelLockRecords(KernelTenantDbContextFactory contexts, I
             EnrollmentStudySiteId: enrollmentStudySiteId);
     }
 
+    public async Task<BatchScopeWriteLockCheck> CheckBatchScopeWriteLocksAsync(
+        TenantId tenant,
+        string studyCodeOrId,
+        IReadOnlyList<string> siteCodesOrIds,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(siteCodesOrIds);
+        if (string.IsNullOrWhiteSpace(studyCodeOrId))
+        {
+            return new BatchScopeWriteLockCheck(StudyExists: false, Locked: false, LockKind: null, ScopeKind: null);
+        }
+
+        var trimmedStudy = studyCodeOrId.Trim();
+        await using var db = contexts.Create(tenant);
+
+        Study? foundStudy;
+        if (NodeRef.TryParse(trimmedStudy, out var studyNode) && studyNode.Kind == NodeKinds.Study)
+        {
+            var parsedStudyId = StudyId.FromGuid(studyNode.Id);
+            foundStudy = await db.Studies.AsNoTracking()
+                .SingleOrDefaultAsync(s => s.Id == parsedStudyId, cancellationToken)
+                .ConfigureAwait(false);
+        }
+        else if (Guid.TryParse(trimmedStudy, out var rawStudyGuid))
+        {
+            var parsedStudyId = StudyId.FromGuid(rawStudyGuid);
+            foundStudy = await db.Studies.AsNoTracking()
+                .FirstOrDefaultAsync(s => s.Id == parsedStudyId || s.StudyCode == trimmedStudy, cancellationToken)
+                .ConfigureAwait(false);
+        }
+        else
+        {
+            foundStudy = await db.Studies.AsNoTracking()
+                .SingleOrDefaultAsync(s => s.StudyCode == trimmedStudy, cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        if (foundStudy is null)
+        {
+            return new BatchScopeWriteLockCheck(StudyExists: false, Locked: false, LockKind: null, ScopeKind: null);
+        }
+
+        var study = foundStudy.Id;
+        var distinctTokens = new List<string>();
+        var seenTokens = new HashSet<string>(StringComparer.Ordinal);
+        var candidateStudySiteIds = new List<StudySiteId>();
+        var candidateRawSiteIds = new List<SiteId>();
+        var candidatePlainCodes = new List<string>();
+
+        foreach (string rawToken in siteCodesOrIds)
+        {
+            if (string.IsNullOrWhiteSpace(rawToken))
+            {
+                continue;
+            }
+
+            string trimmedSite = rawToken.Trim();
+            if (!seenTokens.Add(trimmedSite))
+            {
+                continue;
+            }
+
+            distinctTokens.Add(trimmedSite);
+            if (NodeRef.TryParse(trimmedSite, out var siteNode) && siteNode.Kind == NodeKinds.StudySite)
+            {
+                candidateStudySiteIds.Add(StudySiteId.FromGuid(siteNode.Id));
+            }
+            else if (Guid.TryParse(trimmedSite, out var rawSiteGuid))
+            {
+                candidateStudySiteIds.Add(StudySiteId.FromGuid(rawSiteGuid));
+                candidateRawSiteIds.Add(SiteId.FromGuid(rawSiteGuid));
+            }
+
+            candidatePlainCodes.Add(trimmedSite);
+        }
+
+        var resolvedStudySites = new Dictionary<string, StudySiteId>(StringComparer.Ordinal);
+        if (distinctTokens.Count > 0)
+        {
+            var matchedStudySites = await (
+                    from ss in db.StudySites.AsNoTracking()
+                    join s in db.Sites.AsNoTracking() on ss.SiteId equals s.Id
+                    where ss.StudyId == study
+                        && (candidateStudySiteIds.Contains(ss.Id)
+                            || candidateRawSiteIds.Contains(ss.SiteId)
+                            || candidatePlainCodes.Contains(s.SiteCode))
+                    select new { ss.Id, ss.SiteId, s.SiteCode })
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+
+            var byStudySiteId = new Dictionary<StudySiteId, StudySiteId>();
+            var bySiteId = new Dictionary<SiteId, StudySiteId>();
+            var bySiteCode = new Dictionary<string, StudySiteId>(StringComparer.Ordinal);
+            foreach (var row in matchedStudySites)
+            {
+                byStudySiteId.TryAdd(row.Id, row.Id);
+                bySiteId.TryAdd(row.SiteId, row.Id);
+                bySiteCode.TryAdd(row.SiteCode, row.Id);
+            }
+
+            foreach (string token in distinctTokens)
+            {
+                StudySiteId? resolved = null;
+                if (NodeRef.TryParse(token, out var siteNode) && siteNode.Kind == NodeKinds.StudySite)
+                {
+                    var candidateId = StudySiteId.FromGuid(siteNode.Id);
+                    if (byStudySiteId.TryGetValue(candidateId, out var matchedByNode))
+                    {
+                        resolved = matchedByNode;
+                    }
+                }
+                else if (Guid.TryParse(token, out var rawSiteGuid))
+                {
+                    if (byStudySiteId.TryGetValue(StudySiteId.FromGuid(rawSiteGuid), out var matchedAsStudySite))
+                    {
+                        resolved = matchedAsStudySite;
+                    }
+                    else if (bySiteId.TryGetValue(SiteId.FromGuid(rawSiteGuid), out var matchedAsSite))
+                    {
+                        resolved = matchedAsSite;
+                    }
+                }
+
+                if (resolved is null && bySiteCode.TryGetValue(token, out var matchedByCode))
+                {
+                    resolved = matchedByCode;
+                }
+
+                if (resolved is { } studySiteId)
+                {
+                    resolvedStudySites[token] = studySiteId;
+                }
+            }
+        }
+
+        var coveringScopes = new List<NodeRef>(1 + resolvedStudySites.Count) { NodeRef.For(study) };
+        var seenSiteIds = new HashSet<StudySiteId>();
+        foreach (var resolvedSiteId in resolvedStudySites.Values)
+        {
+            if (seenSiteIds.Add(resolvedSiteId))
+            {
+                coveringScopes.Add(NodeRef.For(resolvedSiteId));
+            }
+        }
+
+        var targetGuids = coveringScopes.Select(s => s.Id).ToList();
+        var candidateLocks = await db.Assertions.AsNoTracking()
+            .Where(a => a.StudyId == study
+                && (a.Kind == AssertionKind.Frozen || a.Kind == AssertionKind.Locked)
+                && a.RetractsId == null
+                && targetGuids.Contains(a.TargetId))
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+        candidateLocks = [.. candidateLocks.Where(a => coveringScopes.Any(s => s.Kind == a.TargetKind && s.Id == a.TargetId))];
+        if (candidateLocks.Count == 0)
+        {
+            return new BatchScopeWriteLockCheck(
+                StudyExists: true,
+                Locked: false,
+                LockKind: null,
+                ScopeKind: null,
+                StudyId: study,
+                ResolvedStudySites: resolvedStudySites,
+                CoveringLocks: []);
+        }
+
+        var candidateIds = candidateLocks.Select(l => l.Id).ToList();
+        var retracted = await db.Assertions.AsNoTracking()
+            .Where(r => r.RetractsId != null && candidateIds.Contains(r.RetractsId.Value))
+            .Select(r => r.RetractsId!.Value)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+        var retractedSet = retracted.ToHashSet();
+        var activeCandidates = candidateLocks
+            .Where(l => !retractedSet.Contains(l.Id))
+            .OrderByDescending(l => l.Kind == AssertionKind.Locked)
+            .ThenBy(l => LockScopes.OrderOf(l.TargetKind))
+            .Select(l => new ScopeWriteLockCandidate((LockKind)l.Kind, new NodeRef(l.TargetKind, l.TargetId)))
+            .ToList();
+        var active = activeCandidates.FirstOrDefault();
+        if (active is null)
+        {
+            return new BatchScopeWriteLockCheck(
+                StudyExists: true,
+                Locked: false,
+                LockKind: null,
+                ScopeKind: null,
+                StudyId: study,
+                ResolvedStudySites: resolvedStudySites,
+                CoveringLocks: []);
+        }
+
+        return new BatchScopeWriteLockCheck(
+            StudyExists: true,
+            Locked: true,
+            LockKind: active.Kind,
+            ScopeKind: active.Scope.Kind,
+            StudyId: study,
+            ResolvedStudySites: resolvedStudySites,
+            CoveringLocks: activeCandidates);
+    }
+
     private static async Task<bool> ScopeExistsInStudyAsync(
         KernelDbContext db,
         StudyId study,

@@ -92,6 +92,17 @@ public static class KernelLockEndpoints
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
+        locks.MapPost("/in-force/batch", GetBatchInForceAsync)
+            .AllowExpiredTenantWrite()
+            .AllowBaselineProductFamily()
+            .WithName("KernelGetBatchScopeWriteLocks")
+            .WithSummary("Checks in one batch pass whether any active write-denying lock (Frozen or Locked) covers a study or any supplied study sites.")
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesKernelErrors(
+                KernelErrors.ActorUnresolved,
+                KernelErrors.AuthorizationDenied,
+                KernelErrors.NotFound);
+
         var studies = kernel.MapGroup("/studies").AddEndpointFilter<KernelTenantFilter>().WithTags("Kernel locks");
         studies.MapGet("/{studyRef}/locks", ListByStudyAsync)
             .WithName("KernelListStudyLocks")
@@ -721,6 +732,99 @@ public static class KernelLockEndpoints
             filtered.ScopeKind));
     }
 
+    internal static async Task<Results<Ok<KernelScopeWriteLockResponse>, ProblemHttpResult>> GetBatchInForceAsync(
+        KernelBatchScopeWriteLockRequest? request,
+        HttpContext context,
+        ILockRecords locks,
+        INodeVisibility visibility,
+        ICurrentActor actor,
+        CancellationToken cancellationToken)
+    {
+        if (request is null || string.IsNullOrWhiteSpace(request.StudyCode))
+        {
+            return KernelProblems.BadRequest("Study code required", "Supply a study_code field in the batch lock request.");
+        }
+
+        var distinctSiteCodes = new List<string>();
+        var seenSites = new HashSet<string>(StringComparer.Ordinal);
+        if (request.SiteCodes is not null)
+        {
+            foreach (string? rawSite in request.SiteCodes)
+            {
+                if (!string.IsNullOrWhiteSpace(rawSite))
+                {
+                    string trimmedSite = rawSite.Trim();
+                    if (seenSites.Add(trimmedSite))
+                    {
+                        distinctSiteCodes.Add(trimmedSite);
+                    }
+                }
+            }
+        }
+
+        var tenant = KernelRequestTenant.Get(context);
+        var check = await locks.CheckBatchScopeWriteLocksAsync(
+            tenant,
+            request.StudyCode.Trim(),
+            distinctSiteCodes,
+            cancellationToken).ConfigureAwait(false);
+
+        if (IsVerifiedSystemService(context))
+        {
+            return TypedResults.Ok(new KernelScopeWriteLockResponse(
+                check.StudyExists,
+                check.Locked,
+                check.LockKind?.ToString(),
+                check.ScopeKind));
+        }
+
+        if (!check.StudyExists || check.StudyId is not { } studyId)
+        {
+            return KernelProblems.ScopeWriteLockNotFound();
+        }
+
+        var resolvedMap = check.ResolvedStudySites;
+        if (distinctSiteCodes.Count > 0 && (resolvedMap is null || distinctSiteCodes.Any(code => !resolvedMap.ContainsKey(code))))
+        {
+            return KernelProblems.ScopeWriteLockNotFound();
+        }
+
+        var studyNode = NodeRef.For(studyId);
+        var nodesToCheck = new List<NodeRef>(1 + distinctSiteCodes.Count) { studyNode };
+        var seenSiteNodes = new HashSet<NodeRef>();
+        if (resolvedMap is not null)
+        {
+            foreach (string siteCode in distinctSiteCodes)
+            {
+                var siteNode = NodeRef.For(resolvedMap[siteCode]);
+                if (seenSiteNodes.Add(siteNode))
+                {
+                    nodesToCheck.Add(siteNode);
+                }
+            }
+        }
+
+        var masks = await KernelReadMasking.MaskAsync(
+            visibility,
+            actor,
+            tenant,
+            nodesToCheck,
+            cancellationToken).ConfigureAwait(false);
+
+        if (nodesToCheck.Any(node => masks.For(node) is not null))
+        {
+            return KernelProblems.ScopeWriteLockNotFound();
+        }
+
+        var allowedScopes = nodesToCheck.ToHashSet();
+        var filtered = check.FilterScopes(allowedScopes);
+        return TypedResults.Ok(new KernelScopeWriteLockResponse(
+            filtered.StudyExists,
+            filtered.Locked,
+            filtered.LockKind?.ToString(),
+            filtered.ScopeKind));
+    }
+
     private static bool IsVerifiedSystemService(HttpContext context) =>
         context.User.Identity is { IsAuthenticated: true }
         && context.User.FindFirst(CadenceClaimTypes.Subject)?.Value is { } subject
@@ -943,6 +1047,13 @@ public sealed record KernelReleaseLockRequest(
     string? Meaning = null,
     Guid? AssertionId = null,
     Guid? AttestationId = null);
+
+/// <summary>Body of <c>POST /api/v1/kernel/locks/in-force/batch</c>.</summary>
+/// <param name="StudyCode">The study short code, UUID, or <c>study:&lt;uuid&gt;</c> NodeRef to evaluate.</param>
+/// <param name="SiteCodes">Optional study site codes, UUIDs, or <c>study_site:&lt;uuid&gt;</c> NodeRefs to evaluate in batch.</param>
+public sealed record KernelBatchScopeWriteLockRequest(
+    string? StudyCode,
+    IReadOnlyList<string>? SiteCodes = null);
 
 /// <summary>Collapsed ADR-2590 indicator reporting whether records outside the caller's scope were omitted.</summary>
 /// <param name="MoreExist">True when at least one matching item was omitted because of caller scope visibility.</param>

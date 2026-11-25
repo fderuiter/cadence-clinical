@@ -428,6 +428,146 @@ public class SiteComplianceApplicationServiceTests
         auditLog.Calls.Should().BeEmpty("locked compliance mutations must short-circuit before writing BLOCKED_ACTIVATION or ETMF_COMPLIANCE_UPDATE audit rows");
     }
 
+    // ---- ApplyEtmfWebhookBatchAsync: batch upsert, unchanged-row skip & lock check ------------------
+
+    [Fact]
+    [GxPRequirement("PRD-SYS-001")]
+    public async Task ApplyEtmfWebhookBatchAsync_SkipsUnchangedExistingSites_PreservingVersionPeriodsAndAuditChain_WhileCommittingChangedAndNewSitesOnce()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        string databaseName = Guid.NewGuid().ToString();
+        var clock = new FakeClock(FixedActivatedAt);
+
+        // Seed SITE-A (already complete, Version=1) and SITE-B (incomplete with ["1572"], Version=1), with initial periods & audits.
+        await using (var seedCtx = CreateContext(databaseName))
+        {
+            var seedService = new SiteComplianceApplicationService(
+                new SiteComplianceRepository(seedCtx),
+                new EfAuditLogWriter(seedCtx),
+                new FakeCurrentAuditContextAccessor("svc:etmf", "Initial startup baseline"),
+                clock);
+
+            (await seedService.ApplyEtmfWebhookBatchAsync(
+                new EtmfCompletenessBatchWebhookPayload(
+                    Study,
+                    Milestone,
+                    [
+                        new EtmfSiteCompletenessItem(new SiteCode("SITE-A"), IsComplete: true, MissingArtifacts: []),
+                        new EtmfSiteCompletenessItem(new SiteCode("SITE-B"), IsComplete: false, MissingArtifacts: ["FDA Form 1572"]),
+                    ]),
+                ct)).IsSuccess.Should().BeTrue();
+        }
+
+        // Advance clock and send a batch where SITE-A is unchanged, SITE-B flips to complete, and SITE-C is newly created.
+        clock.Advance(TimeSpan.FromMinutes(15));
+        await using (var batchCtx = new ExecutionDbContext(new DbContextOptionsBuilder<ExecutionDbContext>()
+            .UseInMemoryDatabase(databaseName)
+            .AddInterceptors(new GxPAuditInterceptor(() => "svc:etmf", clock))
+            .Options))
+        {
+            var batchService = new SiteComplianceApplicationService(
+                new SiteComplianceRepository(batchCtx),
+                new EfAuditLogWriter(batchCtx),
+                new FakeCurrentAuditContextAccessor("svc:etmf", "Central protocol approved"),
+                clock);
+
+            var batchResult = await batchService.ApplyEtmfWebhookBatchAsync(
+                new EtmfCompletenessBatchWebhookPayload(
+                    Study,
+                    Milestone,
+                    [
+                        new EtmfSiteCompletenessItem(new SiteCode("SITE-A"), IsComplete: true, MissingArtifacts: []),
+                        new EtmfSiteCompletenessItem(new SiteCode("SITE-B"), IsComplete: true, MissingArtifacts: []),
+                        new EtmfSiteCompletenessItem(new SiteCode("SITE-C"), IsComplete: false, MissingArtifacts: ["IRB Approval"]),
+                    ]),
+                ct);
+            batchResult.IsSuccess.Should().BeTrue();
+        }
+
+        await using var readCtx = CreateContext(databaseName);
+        var caches = await readCtx.SiteComplianceCaches.AsNoTracking().ToListAsync(ct);
+        caches.Should().HaveCount(3);
+
+        var siteA = caches.Single(c => c.SiteCode == new SiteCode("SITE-A"));
+        var siteB = caches.Single(c => c.SiteCode == new SiteCode("SITE-B"));
+        var siteC = caches.Single(c => c.SiteCode == new SiteCode("SITE-C"));
+
+        siteA.Version.Should().Be(1, "unchanged existing site row must be skipped without incrementing Version");
+        siteB.Version.Should().Be(2, "changed existing site row must increment Version");
+        siteB.IsComplete.Should().BeTrue();
+        siteC.Version.Should().Be(1, "newly created site row starts at Version 1");
+        siteC.MissingDocuments.Should().Equal("IRB Approval");
+
+        var periods = await readCtx.SiteActivationPeriods.AsNoTracking().ToListAsync(ct);
+        periods.Count(p => p.SiteComplianceCacheId == siteA.Id).Should().Be(1, "unchanged site must not append duplicate SiteActivationPeriod rows");
+        periods.Count(p => p.SiteComplianceCacheId == siteB.Id).Should().Be(3, "changed site closes recorded period, writes closed-valid prior period, and opens new active bitemporal period");
+        periods.Count(p => p.SiteComplianceCacheId == siteB.Id && p.ValidPeriod.UpperBoundInfinite && p.RecordedPeriod.UpperBoundInfinite).Should().Be(1);
+        periods.Count(p => p.SiteComplianceCacheId == siteC.Id).Should().Be(1);
+
+        var audits = await readCtx.AuditLogEntries.AsNoTracking()
+            .Where(a => a.Action == "ETMF_COMPLIANCE_UPDATE")
+            .ToListAsync(ct);
+        audits.Count(a => a.EntityId == siteA.Id.ToString()).Should().Be(1, "unchanged site must not append duplicate ETMF_COMPLIANCE_UPDATE audit rows");
+        audits.Count(a => a.EntityId == siteB.Id.ToString()).Should().Be(2);
+        audits.Count(a => a.EntityId == siteC.Id.ToString()).Should().Be(1);
+    }
+
+    [Fact]
+    public async Task ApplyEtmfWebhookBatchAsync_WhenAllSitesUnchanged_SkipsSaveChangesCompletely()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var repo = new Cadence.TestSupport.Execution.Fakes.InMemorySiteComplianceRepository();
+        await repo.AddAsync(
+            SiteComplianceCache.Create(Study, new SiteCode("SITE-A"), Milestone, isComplete: false, ["1572", "CV"]),
+            ct);
+
+        var auditLog = new RecordingAuditLogWriter();
+        var service = new SiteComplianceApplicationService(
+            repo,
+            auditLog,
+            new FakeCurrentAuditContextAccessor("svc:etmf", "No-op sync"),
+            new FakeClock(FixedActivatedAt));
+
+        var result = await service.ApplyEtmfWebhookBatchAsync(
+            new EtmfCompletenessBatchWebhookPayload(
+                Study,
+                Milestone,
+                [new EtmfSiteCompletenessItem(new SiteCode("SITE-A"), IsComplete: false, MissingArtifacts: ["1572", "CV"])]),
+            ct);
+
+        result.IsSuccess.Should().BeTrue();
+        repo.SaveChangesCallCount.Should().Be(0, "when zero site compliance rows change, SaveChangesAsync must not be invoked");
+        repo.Periods.Should().BeEmpty();
+        auditLog.Calls.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task ApplyEtmfWebhookBatchAsync_WhenKernelLockGuardReportsLocked_ReturnsObservationLockedWithoutWrites()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        string databaseName = Guid.NewGuid().ToString();
+        var auditLog = new RecordingAuditLogWriter();
+        var lockGuard = new AlwaysLockedGuard();
+
+        await using var context = CreateContext(databaseName);
+        var service = CreateService(context, auditLog, lockGuard: lockGuard);
+
+        var result = await service.ApplyEtmfWebhookBatchAsync(
+            new EtmfCompletenessBatchWebhookPayload(
+                Study,
+                Milestone,
+                [
+                    new EtmfSiteCompletenessItem(new SiteCode("SITE-1"), IsComplete: true, MissingArtifacts: []),
+                    new EtmfSiteCompletenessItem(new SiteCode("SITE-2"), IsComplete: true, MissingArtifacts: []),
+                ]),
+            ct);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error!.Code.Should().Be("K.Observation.Locked");
+        (await context.SiteComplianceCaches.CountAsync(ct)).Should().Be(0);
+        auditLog.Calls.Should().BeEmpty();
+    }
+
     private sealed class AlwaysLockedGuard : IKernelLockGuard
     {
         public Task<Cadence.Core.Domain.Result<bool>> EnsureUnlockedAsync(

@@ -5752,6 +5752,97 @@
         }
       }
     },
+    "/api/v1/kernel/locks/in-force/batch": {
+      "post": {
+        "tags": [
+          "Kernel locks"
+        ],
+        "summary": "Checks in one batch pass whether any active write-denying lock (Frozen or Locked) covers a study or any supplied study sites.",
+        "operationId": "KernelGetBatchScopeWriteLocks",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Kernel_KernelBatchScopeWriteLockRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_KernelScopeWriteLockResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized. Kernel errors: \u0060K.Actor.Unresolved\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found. Kernel errors: \u0060K.Aggregate.NotFound\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "x-kernel-errors": [
+          {
+            "code": "K.Actor.Unresolved",
+            "status": 401
+          },
+          {
+            "code": "K.Authorization.Denied",
+            "status": 403
+          },
+          {
+            "code": "K.Aggregate.NotFound",
+            "status": 404
+          }
+        ]
+      }
+    },
     "/api/v1/kernel/studies/{studyRef}/locks": {
       "get": {
         "tags": [
@@ -9389,6 +9480,29 @@
             "type": "object",
             "additionalProperties": {
               "$ref": "#/components/schemas/Kernel_KernelNodeResponse"
+            }
+          }
+        }
+      },
+      "Kernel_KernelBatchScopeWriteLockRequest": {
+        "required": [
+          "study_code"
+        ],
+        "type": "object",
+        "properties": {
+          "study_code": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "site_codes": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
             }
           }
         }

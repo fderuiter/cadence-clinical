@@ -12,7 +12,7 @@ Each page lists the operations a .NET service serves. The specs come from the se
 | [eisf](eisf.md) | 2 |
 | [etmf](etmf.md) | 17 |
 | [execution_forms](execution_forms.md) | 17 |
-| [execution](execution.md) | 65 |
+| [execution](execution.md) | 66 |
 | [fileshare](fileshare.md) | 2 |
 | [imaging](imaging.md) | 11 |
 | [intelligence](intelligence.md) | 12 |

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -44,6 +45,34 @@ public interface ISiteComplianceRepository
     /// </summary>
     Task<SiteComplianceCache?> GetAsync(StudyCode studyCode, SiteCode? siteCode, string milestone, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Batch-loads tracked <see cref="SiteComplianceCache"/> rows for <paramref name="studyCode"/>,
+    /// <paramref name="milestone"/>, and <paramref name="siteCodes"/> keyed by <see cref="SiteCode"/>.
+    /// </summary>
+    async Task<IReadOnlyDictionary<SiteCode, SiteComplianceCache>> GetBySitesAsync(
+        StudyCode studyCode,
+        IReadOnlyCollection<SiteCode> siteCodes,
+        string milestone,
+        CancellationToken cancellationToken)
+    {
+        var result = new Dictionary<SiteCode, SiteComplianceCache>();
+        foreach (var siteCode in siteCodes)
+        {
+            if (result.ContainsKey(siteCode))
+            {
+                continue;
+            }
+
+            var existing = await GetAsync(studyCode, siteCode, milestone, cancellationToken).ConfigureAwait(false);
+            if (existing is not null)
+            {
+                result[siteCode] = existing;
+            }
+        }
+
+        return result;
+    }
+
     /// <summary>Stages a new <see cref="SiteComplianceCache"/> for insertion; takes effect on the next
     /// <see cref="SaveChangesAsync"/>. Added by MIG-SUBJ-020 for the eTMF-webhook "no existing row" branch —
     /// mirrors <see cref="IConsentRepository.AddAsync"/>/<see cref="ISubjectRepository.AddAsync"/>.</summary>
@@ -58,6 +87,23 @@ public interface ISiteComplianceRepository
         DateTimeOffset recordedAt,
         string? reasonForChange,
         CancellationToken cancellationToken) => Task.CompletedTask;
+
+    /// <summary>
+    /// Appends bitemporal <see cref="SiteActivationPeriod"/> rows for a batch of created or modified
+    /// <see cref="SiteComplianceCache"/> rows and closes open periods for <paramref name="existingCacheIds"/> in one pass.
+    /// </summary>
+    async Task RecordActivationPeriodsBatchAsync(
+        IReadOnlyList<SiteComplianceCache> caches,
+        IReadOnlySet<Guid> existingCacheIds,
+        DateTimeOffset recordedAt,
+        string? reasonForChange,
+        CancellationToken cancellationToken)
+    {
+        foreach (var cache in caches)
+        {
+            await RecordActivationPeriodAsync(cache, recordedAt, reasonForChange, cancellationToken).ConfigureAwait(false);
+        }
+    }
 
     /// <summary>
     /// Reconstructs the bitemporal <see cref="SiteActivationPeriod"/> row active at <paramref name="validAt"/>

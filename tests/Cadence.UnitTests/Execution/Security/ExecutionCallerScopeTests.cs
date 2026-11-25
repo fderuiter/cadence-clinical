@@ -383,7 +383,7 @@ public sealed class ExecutionCallerScopeTests : IDisposable
                 .StatusCode.Should().Be(HttpStatusCode.OK);
         }
 
-        // 5. eTMF webhook scoped to STUDY-ALPHA cannot write STUDY-BETA compliance
+        // 5. eTMF webhook scoped to STUDY-ALPHA cannot write STUDY-BETA compliance (single or batch)
         var etmfAlpha = new GatewayIdentity(
             UserId: "svc:etmf-alpha",
             Roles: [PermissionMatrix.EtmfServiceRole],
@@ -396,6 +396,38 @@ public sealed class ExecutionCallerScopeTests : IDisposable
             (await etmfClient.PostAsJsonAsync(
                 "/api/v1/execution/webhooks/etmf",
                 new EtmfCompletenessWebhookPayload(StudyBeta, Site02, "SITE_ACTIVATION", true, null),
+                ExecutionApiFactory.JsonOptions,
+                Ct)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+            (await etmfClient.PostAsJsonAsync(
+                "/api/v1/execution/webhooks/etmf/batch",
+                new EtmfCompletenessBatchWebhookPayload(
+                    new StudyCode(StudyBeta),
+                    "SITE_ACTIVATION",
+                    [new EtmfSiteCompletenessItem(new SiteCode(Site02), true, null)]),
+                ExecutionApiFactory.JsonOptions,
+                Ct)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        }
+
+        // Site-scoped batch eTMF caller missing one of the batch's target sites fails closed with 403
+        var etmfPartialSite = new GatewayIdentity(
+            UserId: "svc:etmf-beta-s1",
+            Roles: [PermissionMatrix.EtmfServiceRole],
+            SiteIds: [Site01],
+            TenantId: "tenant-beta",
+            StudyIds: [StudyBeta],
+            ChangeReason: "Automated eTMF completeness sync");
+        using (var etmfPartialClient = _factory.CreateSignedClient(etmfPartialSite))
+        {
+            (await etmfPartialClient.PostAsJsonAsync(
+                "/api/v1/execution/webhooks/etmf/batch",
+                new EtmfCompletenessBatchWebhookPayload(
+                    new StudyCode(StudyBeta),
+                    "SITE_ACTIVATION",
+                    [
+                        new EtmfSiteCompletenessItem(new SiteCode(Site01), true, null),
+                        new EtmfSiteCompletenessItem(new SiteCode(Site02), false, ["Form 1572"]),
+                    ]),
                 ExecutionApiFactory.JsonOptions,
                 Ct)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
         }
