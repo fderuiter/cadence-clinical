@@ -1,5 +1,6 @@
 // ESLint configuration for Vue single-file components
 import fs from "node:fs";
+import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import js from "@eslint/js";
@@ -17,6 +18,22 @@ const portalStyleCssPath = path.join(
   repoRoot,
   "apps/subject-portal/src/style.css"
 );
+
+function resolveVitePressVarsCssPath() {
+  const directPath = path.join(
+    repoRoot,
+    "node_modules/vitepress/dist/client/theme-default/styles/vars.css"
+  );
+  if (fs.existsSync(directPath)) return directPath;
+  try {
+    const require = createRequire(import.meta.url);
+    return require.resolve("vitepress/dist/client/theme-default/styles/vars.css");
+  } catch {
+    return directPath;
+  }
+}
+
+const vitepressVarsCssPath = resolveVitePressVarsCssPath();
 
 const hexColorRegex = /#(?:[0-9a-fA-F]{3,4}){1,2}(?![0-9a-zA-Z_-])/g;
 const colorFunctionRegex = /\b(?:rgba?|hsla?)\s*\([^)]*\)/gi;
@@ -47,10 +64,20 @@ function extractDefinedVarsFromFile(filePath) {
 function getBaseDefinedVars(filename) {
   const normalized = filename.split(path.sep).join("/");
   const vars = extractDefinedVarsFromFile(tokensCssPath);
-  if (normalized.includes("/apps/web/")) {
+  if (normalized.includes("/apps/web/") || normalized.startsWith("apps/web/")) {
     for (const v of extractDefinedVarsFromFile(webStyleCssPath)) vars.add(v);
-  } else if (normalized.includes("/apps/subject-portal/")) {
+  } else if (
+    normalized.includes("/apps/subject-portal/") ||
+    normalized.startsWith("apps/subject-portal/")
+  ) {
     for (const v of extractDefinedVarsFromFile(portalStyleCssPath)) vars.add(v);
+  } else if (
+    normalized.includes("/docs/.vitepress/") ||
+    normalized.startsWith("docs/.vitepress/")
+  ) {
+    for (const v of extractDefinedVarsFromFile(vitepressVarsCssPath)) {
+      vars.add(v);
+    }
   }
   return vars;
 }
@@ -3793,7 +3820,7 @@ export default [
     },
   },
   {
-    files: ["packages/**/*.css", "apps/**/*.css"],
+    files: ["packages/**/*.css", "apps/**/*.css", "docs/.vitepress/**/*.css"],
     languageOptions: {
       parser: cssStubParser,
     },
@@ -3852,12 +3879,15 @@ export default [
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: "module",
+      globals: {
+        ...globals.browser,
+      },
     },
     plugins: {
       "custom-vue": customVuePlugin,
     },
     rules: {
-      "no-undef": "off",
+      "no-undef": "error",
       "no-unused-vars": [
         "error",
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
@@ -4018,6 +4048,7 @@ export default [
       "packages/**/*.js",
       "apps/**/*.vue",
       "packages/**/*.vue",
+      "docs/.vitepress/theme/**/*.vue",
     ],
   },
   {
@@ -4070,6 +4101,7 @@ export default [
       "packages/ui/index.js",
       "packages/ui/src/**/*.{js,ts,vue}",
       "apps/subject-portal/src/**/*.{js,ts,vue}",
+      "docs/.vitepress/theme/**/*.{js,vue}",
       "apps/web/src/App.vue",
       "apps/web/src/composables/**/*.{js,ts}",
       "apps/web/src/components/*.vue",
@@ -4114,10 +4146,10 @@ export default [
   },
   {
     files: [
-      "**/tests/**/*.{js,jsx,ts,tsx,mjs,cjs,vue}",
-      "tests/**/*.{js,jsx,ts,tsx,mjs,cjs,vue}",
-      "**/*.test.{js,jsx,ts,tsx,mjs,cjs}",
-      "**/*.spec.{js,jsx,ts,tsx,mjs,cjs}",
+      "**/tests/**/*.{js,jsx,ts,tsx,mjs,cjs,mts,cts,vue}",
+      "tests/**/*.{js,jsx,ts,tsx,mjs,cjs,mts,cts,vue}",
+      "**/*.test.{js,jsx,ts,tsx,mjs,cjs,mts,cts}",
+      "**/*.spec.{js,jsx,ts,tsx,mjs,cjs,mts,cts}",
     ],
     languageOptions: {
       globals: {

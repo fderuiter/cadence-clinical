@@ -102,7 +102,7 @@ jobs:
 
       - name: Run frontend style and lint
         run: |
-          pnpm exec prettier --check --ignore-path .prettierignore "**/*.{js,jsx,ts,tsx,mjs,cjs,vue,json,css,md,yaml,yml}"
+          pnpm exec prettier --check --ignore-path .prettierignore "**/*.{js,jsx,ts,tsx,mjs,cjs,mts,cts,vue,json,css,md,yaml,yml}"
           node scripts/run-cli.js check eslint
           pnpm -r typecheck
 

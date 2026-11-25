@@ -2,6 +2,7 @@
 
 /* WCAG 2.2 AA contrast recalibration aligned with packages/ui/tokens.css (ADR-2820) */
 :root {
+  --vp-layout-top-height: 0px;
   --vp-c-text-1: var(--color-text);
   --vp-c-text-2: var(--color-text-muted);
   --vp-c-text-3: var(--color-text-muted);
@@ -420,7 +421,7 @@
   width: auto;
   height: 22px;
   line-height: 22px;
-  font-family: var(--vp-font-family-base);
+  font-family: var(--semantic-font-family);
   font-size: 12px;
   font-weight: 500;
   color: var(--docsearch-muted-color);
@@ -544,7 +545,7 @@
     color 0.2s;
 }
 
-.mermaid-btn:hover {
+.mermaid-btn:hover:not(:disabled) {
   background-color: var(--vp-c-brand-1);
   color: var(--vp-c-bg);
   border-color: var(--vp-c-brand-1);
