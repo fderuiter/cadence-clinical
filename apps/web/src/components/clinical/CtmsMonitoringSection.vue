@@ -99,6 +99,7 @@
           <div class="action-cell">
             <button
               :id="`btn-visit-letters-${visit.id}`"
+              :data-testid="`btn-view-letters-${visit.id}`"
               type="button"
               class="btn btn-secondary btn-sm"
               @click="viewLetters(visit)"
@@ -205,8 +206,37 @@
         </p>
         <ul v-else class="letter-list">
           <li v-for="letter in letters" :key="letter.id" class="letter-item">
-            <strong>{{ formatClinicalEnum(letter.letter_type) }}</strong> ·
-            {{ formatIsoDateShort(letter.created_at) }}
+            <div class="card-subheader">
+              <div>
+                <strong>{{ formatClinicalEnum(letter.letter_type) }}</strong> ·
+                <span>{{
+                  formatClinicalStatus(
+                    letter.status || (letter.is_signed ? "FINALIZED" : "DRAFT")
+                  )
+                }}</span>
+                <span v-if="letter.created_at">
+                  · {{ formatIsoDateShort(letter.created_at) }}</span
+                >
+                <span v-if="letter.etmf_document_id">
+                  · Filed in eTMF ({{ letter.etmf_document_id }})</span
+                >
+                <SupportDetails
+                  v-if="letter.pdf_sha256_hash || letter.etmf_document_id"
+                  summary-label="Filing &amp; seal details"
+                  :detail="`Letter ID: ${letter.id}${letter.etmf_document_id ? ` · eTMF Document: ${letter.etmf_document_id}` : ''}`"
+                  :reference="letter.pdf_sha256_hash || letter.id"
+                />
+              </div>
+              <button
+                v-if="letter.pdf_access_url || letter.is_signed"
+                :data-testid="`btn-download-generated-letter-${letter.id}`"
+                type="button"
+                class="btn btn-secondary btn-sm"
+                @click="downloadGeneratedLetter(letter)"
+              >
+                Download PDF
+              </button>
+            </div>
             <pre class="letter-body">{{ letter.rendered_content }}</pre>
           </li>
         </ul>
@@ -418,11 +448,20 @@
             density="compact"
             :show-query-flag="false"
           />
+          <label for="signoff-visit-password">Password (Part 11)</label>
+          <input
+            id="signoff-visit-password"
+            v-model="signOffPassword"
+            v-bind="SIGNATURE_PASSWORD_INPUT_ATTRS"
+            placeholder="Re-enter password to sign"
+          />
           <button
             id="btn-confirm-signoff-visit"
             type="button"
             class="btn btn-primary"
-            :disabled="!signOffReason.trim() || saving"
+            :disabled="
+              !signOffReason.trim() || !signOffPassword.trim() || saving
+            "
             @click="confirmSignOff"
           >
             {{ saving ? "Signing..." : "Confirm sign-off" }}
@@ -631,6 +670,7 @@ const compiledLetters = ref<VisitLetterCompilationResult[]>([]);
 
 const activeSignOffVisit = ref<MonitoringVisitRow | null>(null);
 const signOffReason = ref("");
+const signOffPassword = ref("");
 
 const selectedLettersVisit = ref<MonitoringVisitRow | null>(null);
 const letters = ref<GeneratedVisitLetter[]>([]);
@@ -860,19 +900,21 @@ async function confirmCompileLetter() {
   const reason = compileReason.value.trim();
   const password = compilePassword.value;
   compilePassword.value = "";
-  if (!visit || !reason || !canSchedule.value) return;
-  if (compileFinalize.value && !password) return;
+  if (
+    !visit ||
+    !reason ||
+    (compileFinalize.value && !password) ||
+    !canSchedule.value
+  )
+    return;
 
   saving.value = true;
   try {
-    let sigToken: string | undefined;
     const signerUsername =
-      authStore.identity?.username ||
-      authStore.user?.username ||
-      authStore.userId ||
-      visit.cra_id;
+      authStore.user?.username || authStore.userId || visit.cra_id;
 
-    if (compileFinalize.value) {
+    let sigToken: string | undefined;
+    if (compileFinalize.value || password) {
       const verifyRes = await requestStepUpSignature({
         username: signerUsername,
         password,
@@ -955,6 +997,22 @@ async function downloadCompiledLetter(letter: VisitLetterCompilationResult) {
   }
 }
 
+async function downloadGeneratedLetter(letter: GeneratedVisitLetter) {
+  try {
+    const blob = await ctmsApi.downloadVisitLetterPdf(letter.id);
+    const blobUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = blobUrl;
+    link.download = `${letter.letter_type}_${letter.id}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(blobUrl);
+  } catch (err) {
+    toasts.apiError("Visit letter PDF could not be downloaded", err);
+  }
+}
+
 function prepareSignOff(visit: MonitoringVisit) {
   signOffHandoff.rememberTrigger(
     `[data-testid="btn-signoff-visit-${visit.id}"]`
@@ -963,6 +1021,7 @@ function prepareSignOff(visit: MonitoringVisit) {
   activeCompileVisit.value = null;
   activeSignOffVisit.value = visit;
   signOffReason.value = "";
+  signOffPassword.value = "";
   void signOffHandoff.handoff("#signoff-visit-reason", {
     scrollIfOffscreen: true,
   });
@@ -970,6 +1029,7 @@ function prepareSignOff(visit: MonitoringVisit) {
 
 function cancelSignOff() {
   const visitId = activeSignOffVisit.value?.id;
+  signOffPassword.value = "";
   activeSignOffVisit.value = null;
   signOffReason.value = "";
   void signOffHandoff.restoreTrigger([
@@ -981,11 +1041,22 @@ function cancelSignOff() {
 async function confirmSignOff() {
   const visit = activeSignOffVisit.value;
   const reason = signOffReason.value.trim();
-  if (!visit || !reason || !canSignOff.value) return;
+  const password = signOffPassword.value;
+  signOffPassword.value = "";
+  if (!visit || !reason || !password.trim() || !canSignOff.value) return;
 
   saving.value = true;
   try {
-    await ctmsApi.signOffMonitoringVisit(visit.id, reason);
+    const signerUsername = authStore.user?.username || authStore.userId || "";
+    const verifyRes = await requestStepUpSignature({
+      username: signerUsername,
+      password,
+      totp: null,
+      action: `/api/v1/ctms/monitoring-visits/${encodeURIComponent(visit.id)}/sign-off`,
+      semanticAction: "ctms.monitoring_visit.sign_off",
+    });
+
+    await ctmsApi.signOffMonitoringVisit(visit.id, reason, verifyRes.sig_token);
     activeSignOffVisit.value = null;
     signOffReason.value = "";
     toasts.push({

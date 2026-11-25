@@ -114,6 +114,7 @@ updates:
         patterns:
           - "@typescript-eslint/*"
           - "typescript-eslint"
+          - "typescript"
           - "eslint*"
           - "@eslint/*"
       vitest:
@@ -142,6 +143,9 @@ updates:
       # Node runtime baseline is pinned via package.json engines (ADR-2508).
       - dependency-name: "@types/node"
         update-types: ["version-update:semver-major"]
+      # TypeScript 7.0 removes ./lib/tsc package exports required by vue-tsc 3.x and is unsupported by typescript-eslint 8.x (#6248).
+      - dependency-name: "typescript"
+        versions: [">= 7.0.0"]
 
   # Container base images, pinned by version and digest (docker/Dockerfile.dotnet)
   - package-ecosystem: "docker"

@@ -7,6 +7,7 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -578,6 +579,165 @@ public sealed class EtmfCompletenessWebhookTests : IDisposable
             sql.Should().NotContainEquivalentOf("signature_manifestation", "projected completeness queries must not load signature blobs");
             sql.Should().NotContainEquivalentOf("redaction_manifest_json", "projected completeness queries must not load redaction blobs");
         }
+    }
+
+    [Fact]
+    public async Task AutoApproveSignedIngest_EnforcesApproveFilingPermission_AndPublishesSiteAndCentralCompletenessWebhooks()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        const string studyCode = "CADENCE-DOA-401";
+        const string siteCode = "SITE-401";
+
+        using (var etmfScope = _etmfFactory.Services.CreateScope())
+        {
+            var etmfDb = etmfScope.ServiceProvider.GetRequiredService<EtmfDbContext>();
+            etmfDb.TmfExpectedDocuments.AddRange(
+                new TmfExpectedDocument
+                {
+                    StudyId = studyCode,
+                    SiteId = null,
+                    Milestone = "SITE_ACTIVATION",
+                    Zone = 1,
+                    Section = "01.01",
+                    ArtifactType = "Clinical Trial Protocol",
+                },
+                new TmfExpectedDocument
+                {
+                    StudyId = studyCode,
+                    SiteId = siteCode,
+                    Milestone = "SITE_ACTIVATION",
+                    Zone = 5,
+                    Section = "05.02",
+                    ArtifactType = "Delegation of Authority Log",
+                });
+            await etmfDb.SaveChangesAsync(ct);
+        }
+
+        // 1. Non-service CRA caller without etmf_document:approve_filing is rejected with 403 Forbidden when AutoApproveSigned = true.
+        var craIdentity = new GatewayIdentity(
+            UserId: "cra-401",
+            Roles: ["CRA"],
+            SiteIds: [siteCode],
+            TenantId: TestSecurityContext.TenantCode,
+            ChangeReason: Reason,
+            StudyIds: [studyCode]);
+        using var etmfCraClient = _etmfFactory.CreateSignedClient(craIdentity);
+
+        var forbiddenResp = await etmfCraClient.PostAsJsonAsync(
+            "/api/v1/etmf/ingest",
+            new IngestDocumentRequest(
+                Filename: "DoA_Log_SITE_401.pdf",
+                Content: "Signed Delegation of Authority log",
+                StudyId: studyCode,
+                SiteId: siteCode,
+                MimeType: "application/pdf",
+                Zone: 5,
+                Section: "05.02",
+                ArtifactCode: "05.02.04",
+                ArtifactType: "Delegation of Authority Log",
+                TaxonomyVersion: "v3.2.0-complete",
+                ReasonForChange: Reason,
+                AutoApproveSigned: true,
+                Signer: "Dr. Sarah Jenkins",
+                SignatureManifestation: "21 CFR Part 11 PI Approval",
+                SourceSystem: "CTMS"),
+            ct);
+        forbiddenResp.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        // 2. Service caller (svc:ctms) files signed site-scoped Zone 5 DoA log -> approved immediately and posts site webhook.
+        var ctmsServiceIdentity = new GatewayIdentity(
+            UserId: "svc:ctms",
+            Roles: [PermissionMatrix.CtmsServiceRole],
+            SiteIds: [siteCode],
+            TenantId: TestSecurityContext.TenantCode,
+            ChangeReason: Reason,
+            StudyIds: [studyCode]);
+        using var etmfServiceClient = _etmfFactory.CreateSignedClient(ctmsServiceIdentity);
+        using var execSponsorClient = _executionFactory.CreateSignedClient(new GatewayIdentity(
+            UserId: "sponsor-dm-401",
+            Roles: ["Data Manager"],
+            SiteIds: [siteCode],
+            TenantId: TestSecurityContext.TenantCode,
+            ChangeReason: Reason,
+            StudyIds: [studyCode]));
+
+        _observedWebhookRequests.Clear();
+
+        var siteIngestResp = await etmfServiceClient.PostAsJsonAsync(
+            "/api/v1/etmf/ingest",
+            new IngestDocumentRequest(
+                Filename: "DoA_Log_SITE_401.pdf",
+                Content: "Signed Delegation of Authority log",
+                StudyId: studyCode,
+                SiteId: siteCode,
+                MimeType: "application/pdf",
+                Zone: 5,
+                Section: "05.02",
+                ArtifactCode: "05.02.04",
+                ArtifactType: "Delegation of Authority Log",
+                TaxonomyVersion: "v3.2.0-complete",
+                ReasonForChange: Reason,
+                AutoApproveSigned: true,
+                Signer: "Dr. Sarah Jenkins",
+                SignatureManifestation: "21 CFR Part 11 PI Approval",
+                SourceSystem: "CTMS",
+                CorrelationKey: "ctms:doa:SITE-401:v1"),
+            ct);
+        siteIngestResp.StatusCode.Should().Be(HttpStatusCode.Created);
+        using var filedDoaJson = JsonDocument.Parse(await siteIngestResp.Content.ReadAsStringAsync(ct));
+        filedDoaJson.RootElement.GetProperty("status").GetString().Should().Be(TmfDocumentLifecycleState.Approved);
+        filedDoaJson.RootElement.GetProperty("syncStatus").GetString().Should().Be("FILED_SIGNED");
+
+        _observedWebhookRequests.Should().ContainSingle()
+            .Which.Should().Be((HttpMethod.Post, "/api/v1/execution/webhooks/etmf"));
+
+        var partialStatus = await (await execSponsorClient.GetAsync(
+                $"/api/v1/execution/sites/{siteCode}/compliance-status?study_id={studyCode}", ct))
+            .Content.ReadFromJsonAsync<ComplianceStatusResponse>(ExecutionApiFactory.JsonOptions, ct);
+        partialStatus!.IsComplete.Should().BeFalse();
+        partialStatus.MissingDocuments.Should().Equal("Clinical Trial Protocol");
+
+        // 3. Central AutoApproveSigned artifact matching expected startup taxonomy triggers #6269 batch sync and flips SITE-401 complete.
+        var studyServiceIdentity = new GatewayIdentity(
+            UserId: "svc:ctms",
+            Roles: [PermissionMatrix.CtmsServiceRole],
+            SiteIds: [],
+            TenantId: TestSecurityContext.TenantCode,
+            ChangeReason: Reason,
+            StudyIds: [studyCode]);
+        using var etmfCentralServiceClient = _etmfFactory.CreateSignedClient(studyServiceIdentity);
+
+        _observedWebhookRequests.Clear();
+
+        var centralIngestResp = await etmfCentralServiceClient.PostAsJsonAsync(
+            "/api/v1/etmf/ingest",
+            new IngestDocumentRequest(
+                Filename: "Master_Protocol_401.pdf",
+                Content: "Signed master clinical trial protocol",
+                StudyId: studyCode,
+                SiteId: null,
+                MimeType: "application/pdf",
+                Zone: 1,
+                Section: "01.01",
+                ArtifactCode: "01.01.01",
+                ArtifactType: "Clinical Trial Protocol",
+                TaxonomyVersion: "v3.2.0-complete",
+                ReasonForChange: Reason,
+                AutoApproveSigned: true,
+                Signer: "Medical Monitor",
+                SignatureManifestation: "21 CFR Part 11 Protocol Approval",
+                SourceSystem: "CTMS"),
+            ct);
+        centralIngestResp.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        _observedWebhookRequests.Should().ContainSingle()
+            .Which.Should().Be((HttpMethod.Post, "/api/v1/execution/webhooks/etmf/batch"));
+
+        var completeStatus = await (await execSponsorClient.GetAsync(
+                $"/api/v1/execution/sites/{siteCode}/compliance-status?study_id={studyCode}", ct))
+            .Content.ReadFromJsonAsync<ComplianceStatusResponse>(ExecutionApiFactory.JsonOptions, ct);
+        completeStatus!.IsComplete.Should().BeTrue();
+        completeStatus.MissingDocuments.Should().BeEmpty();
     }
 
     private static async Task<(int EtmfSelectCount, int EtmfConnectionOpenCount, int ExecutionWebhookRequests, int KernelLockBatchRequests, IReadOnlyList<string> ExecutedSql)>

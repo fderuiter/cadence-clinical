@@ -18,5 +18,9 @@ public static partial class PermissionMatrix
         {
             Grant(role, "etmf_document", "export");
         }
+        // Signed service-to-service filing of finalized GxP artifacts (05.02.04 DoA Log, 05.02.06 Visit Letters) from CTMS.
+        Grant(CtmsServiceRole, "etmf_document", "read", "create", "approve_filing");
+        Grant(CtmsServiceRole, "etmf_edl", "read");
+        Grant(CtmsServiceRole, "etmf_taxonomy", "read");
     }
 }

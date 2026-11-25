@@ -150,7 +150,7 @@ public static class CtmsScopeGuard
             return new DoaSiteScopeResult(studyDenied, []);
         }
 
-        if (string.IsNullOrWhiteSpace(siteId) || !await DoaEndpoints.SiteExistsAsync(db, siteId.Trim(), ct))
+        if (string.IsNullOrWhiteSpace(siteId))
         {
             var notFound = TypedResults.Problem(
                 title: "Site not found",
@@ -161,6 +161,35 @@ public static class CtmsScopeGuard
 
         string trimmedSite = siteId.Trim();
         var knownStudies = await GetKnownStudiesForSiteAsync(db, trimmedSite, ct);
+        bool siteHasSeededRecords = knownStudies.Count > 0 || await DoaEndpoints.SiteExistsAsync(db, trimmedSite, ct);
+
+        if (!siteHasSeededRecords)
+        {
+            var principal = ResolvePrincipal(httpContext);
+            bool callerExplicitlyScopedToSite = principal is { AssignedSites.Count: > 0 }
+                && principal.AssignedSites.Any(s => !string.IsNullOrWhiteSpace(s) && s.Trim() != "*")
+                && SiteAccessEvaluator.CanAccessSite(principal, trimmedSite);
+
+            if (!string.IsNullOrWhiteSpace(studyId))
+            {
+                return new DoaSiteScopeResult(null, new HashSet<string>([studyId.Trim()], StringComparer.Ordinal));
+            }
+
+            if (callerExplicitlyScopedToSite && principal is not null)
+            {
+                var concreteAssignedStudies = principal.AssignedStudies
+                    .Where(s => !string.IsNullOrWhiteSpace(s) && s.Trim() != "*")
+                    .Select(s => s.Trim())
+                    .ToHashSet(StringComparer.Ordinal);
+                return new DoaSiteScopeResult(null, concreteAssignedStudies);
+            }
+
+            var notFound = TypedResults.Problem(
+                title: "Site not found",
+                detail: $"Site '{siteId}' does not exist.",
+                statusCode: StatusCodes.Status404NotFound);
+            return new DoaSiteScopeResult(notFound, []);
+        }
 
         var authorizedStudies = knownStudies
             .Where(study => CanAccessStudy(httpContext, study))
@@ -169,7 +198,14 @@ public static class CtmsScopeGuard
         if (!string.IsNullOrWhiteSpace(studyId))
         {
             string trimmedStudy = studyId.Trim();
-            authorizedStudies.RemoveWhere(study => !string.Equals(study, trimmedStudy, StringComparison.Ordinal));
+            if (knownStudies.Count == 0 || knownStudies.Contains(trimmedStudy))
+            {
+                authorizedStudies = new HashSet<string>([trimmedStudy], StringComparer.Ordinal);
+            }
+            else
+            {
+                authorizedStudies.RemoveWhere(study => !string.Equals(study, trimmedStudy, StringComparison.Ordinal));
+            }
         }
 
         if (authorizedStudies.Count == 0)

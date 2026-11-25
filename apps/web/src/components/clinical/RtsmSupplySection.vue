@@ -468,6 +468,7 @@
       :is-open="reconciliationDrawerOpen"
       :study-id="studyInput.trim()"
       :site-id="siteInput.trim()"
+      :pharmacist-name="pharmacistDisplayName"
       @close="reconciliationDrawerOpen = false"
       @reconciled="loadSupplyOverview"
     />
@@ -549,6 +550,11 @@ import "./ctmsWorkspaceSection.css";
 const props = defineProps(scopedWorkspaceSectionProps);
 const workspace = useScopedWorkspaceSection(props, {
   onStudyPropChange: () => void loadSupplyOverview(),
+  onSitePropChange: () => {
+    if (studyInput.value.trim()) {
+      void loadSupplyOverview();
+    }
+  },
   fallbackErrorTitle: "Supply status could not be loaded",
   fallbackErrorMessage: "Investigational supply status could not be loaded.",
 });
@@ -563,6 +569,14 @@ const {
   loadError,
   scopeGuidance,
 } = workspace;
+
+const pharmacistDisplayName = computed(() => {
+  const fullName = [authStore.user?.firstName, authStore.user?.lastName]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+  return fullName || authStore.user?.username || "Site Pharmacist";
+});
 
 const signerFullName = computed(() => {
   const identity = authStore.user;
@@ -766,8 +780,8 @@ async function loadCgtSubpanel(study: string, site: string, subject: string) {
 
   try {
     const [certs, recs] = await Promise.all([
-      executionApi.listCgtCertificates(study),
-      executionApi.listCgtReconciliations(study),
+      executionApi.listCgtCertificates(study).catch(() => []),
+      executionApi.listCgtReconciliations(study).catch(() => []),
     ]);
     cgtCertificates.value = certs || [];
     cgtReconciliations.value = recs || [];

@@ -174,22 +174,32 @@ public sealed class CtmsRoutingTests : IAsyncDisposable
         var compDoc = await compRes.Content.ReadFromJsonAsync<JsonElement>(TestContext.Current.CancellationToken);
         compDoc.GetProperty("status").GetString().Should().Be("COMPLETED");
 
-        // 3. Sign-off
-        string signOffPath = $"/api/v1/ctms/monitoring-visits/{visitId}/sign-off";
+        // 3. Sign-off without X-Sig-Token fails closed with 401 REAUTHENTICATION_REQUIRED
         using var monitorClient = CreateClient("monitor", "manager-1");
-        using var signReq = new HttpRequestMessage(HttpMethod.Post, signOffPath)
+        using var unsignedSignReq = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/ctms/monitoring-visits/{visitId}/sign-off")
+        {
+            Content = JsonContent.Create(new { })
+        };
+        unsignedSignReq.Headers.Add("X-Change-Reason", "Trip report endorsed");
+        var unsignedSignRes = await monitorClient.SendAsync(unsignedSignReq, TestContext.Current.CancellationToken);
+        unsignedSignRes.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+
+        // 4. Sign-off with single-use X-Sig-Token transitions status to SIGNED_OFF
+        var issuedAt = _host.Services.GetRequiredService<IClock>().UtcNow;
+        string signPath = MonitoringVisitEndpoints.SignOffAction(visitId);
+        using var signReq = new HttpRequestMessage(HttpMethod.Post, signPath)
         {
             Content = JsonContent.Create(new { })
         };
         signReq.Headers.Add("X-Change-Reason", "Trip report endorsed");
         signReq.Headers.Add(
-            Cadence.Security.Authentication.GatewayHeaders.SigToken,
-            Cadence.Testing.Security.TestSecurityContext.CreateSigToken(
+            GatewayHeaders.SigToken,
+            TestSecurityContext.CreateSigToken(
                 "manager-1",
-                signOffPath,
-                "ctms.monitoring_visit.sign_off",
+                signPath,
+                MonitoringVisitEndpoints.SignOffSemanticAction,
                 ["monitor"],
-                issuedAt: new DateTimeOffset(2026, 11, 1, 10, 0, 0, TimeSpan.Zero)));
+                issuedAt: issuedAt));
         var signRes = await monitorClient.SendAsync(signReq, TestContext.Current.CancellationToken);
         signRes.StatusCode.Should().Be(HttpStatusCode.OK);
         var signDoc = await signRes.Content.ReadFromJsonAsync<JsonElement>(TestContext.Current.CancellationToken);

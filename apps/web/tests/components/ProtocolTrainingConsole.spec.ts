@@ -80,4 +80,134 @@ describe("ProtocolTrainingConsole.vue", () => {
     expect("signOffTraining" in trainingApi).toBe(false);
     expect("getCertificate" in trainingApi).toBe(false);
   });
+
+  it("allows Data Manager to author a protocol curriculum with procedural modules and emits curriculum-created", async () => {
+    signInAs(useAuthStore(), ["Data Manager"], { username: "sponsor_dm" });
+    const createdCurriculum = {
+      id: "curr-new-3",
+      study_id: "STUDY-2026",
+      protocol_version: "3.0",
+      title: "Amendment 3.0 Delta",
+      description: "Dosing window update",
+      is_active: true,
+      created_at: "2026-10-15T00:00:00Z",
+      modules: [
+        {
+          id: "mod-1",
+          title: "Visit Window Tolerance",
+          content_type: "PROCEDURE_DELTA",
+          duration_minutes: 15,
+          body_markdown: "Verify +/- 2 day window.",
+          sort_order: 1,
+        },
+      ],
+    };
+    vi.spyOn(trainingApi, "createCurriculum").mockResolvedValue(
+      createdCurriculum
+    );
+
+    const wrapper = mount(ProtocolTrainingConsole, {
+      props: { studyId: "STUDY-2026" },
+    });
+    await flushPromises();
+
+    const openBtn = wrapper.find("#btn-open-create-curriculum");
+    expect(openBtn.exists()).toBe(true);
+    await openBtn.trigger("click");
+    await flushPromises();
+
+    await wrapper.find("#create-curr-title").setValue("Amendment 3.0 Delta");
+    await wrapper.find("#create-curr-version").setValue("3.0");
+    await wrapper.find("#create-curr-desc").setValue("Dosing window update");
+    await wrapper
+      .find("#create-mod-title-0")
+      .setValue("Visit Window Tolerance");
+    await wrapper
+      .find("#create-mod-body-0")
+      .setValue("Verify +/- 2 day window.");
+    await wrapper
+      .find("#create-curr-reason")
+      .setValue("Publish Amendment 3.0 curriculum");
+    await wrapper.find("#btn-submit-create-curriculum").trigger("click");
+    await flushPromises();
+
+    expect(trainingApi.createCurriculum).toHaveBeenCalledWith(
+      expect.objectContaining({
+        study_id: "STUDY-2026",
+        protocol_version: "3.0",
+        title: "Amendment 3.0 Delta",
+        modules: [
+          expect.objectContaining({
+            title: "Visit Window Tolerance",
+            content_type: "PROCEDURE_DELTA",
+            duration_minutes: 15,
+            body_markdown: "Verify +/- 2 day window.",
+            sort_order: 1,
+          }),
+        ],
+      })
+    );
+    expect(wrapper.emitted("curriculum-created")).toBeTruthy();
+  });
+
+  it("allows assigned trainee to complete pending qualification assignment and emits assignment-completed", async () => {
+    const pendingAssignment = {
+      id: "asn-101",
+      curriculum_id: "curr-1",
+      user_id: "site_investigator_01",
+      user_name: "Dr. Investigator",
+      user_role: "principal_investigator",
+      study_id: "STUDY-2026",
+      site_id: "SITE-101",
+      status: "PENDING",
+      batch_transaction_id: null,
+      quiz_score: null,
+      time_spent_seconds: 0,
+      completed_at: null,
+      created_at: "2026-10-14T00:00:00Z",
+      curriculum: {
+        ...mockCurriculum,
+        modules: [
+          {
+            id: "mod-1",
+            title: "Informed Consent Updates",
+            content_type: "PROCEDURE_DELTA",
+            duration_minutes: 10,
+            body_markdown: "Review updated ICF signature block.",
+            sort_order: 1,
+          },
+        ],
+      },
+    };
+    vi.spyOn(trainingApi, "listAssignments").mockResolvedValue([
+      pendingAssignment,
+    ]);
+    vi.spyOn(trainingApi, "getAssignmentDetail").mockResolvedValue(
+      pendingAssignment
+    );
+    vi.spyOn(trainingApi, "completeAssignment").mockResolvedValue({
+      ...pendingAssignment,
+      status: "COMPLETED",
+      completed_at: "2026-10-15T12:00:00Z",
+    });
+
+    const wrapper = mount(ProtocolTrainingConsole, {
+      props: { studyId: "STUDY-2026", siteId: "SITE-101" },
+    });
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("Review updated ICF signature block.");
+    const completeBtn = wrapper.find("#btn-complete-training-assignment");
+    expect(completeBtn.exists()).toBe(true);
+    await completeBtn.trigger("click");
+    await flushPromises();
+
+    expect(trainingApi.completeAssignment).toHaveBeenCalledWith(
+      "asn-101",
+      expect.objectContaining({
+        reason_for_change: expect.any(String),
+      })
+    );
+    expect(wrapper.emitted("assignment-completed")).toBeTruthy();
+  });
 });

@@ -61,7 +61,9 @@
     <!-- Metric KPI Summary Cards -->
     <div class="stats-grid">
       <div class="stat-card">
-        <div class="stat-icon alert-icon">📚</div>
+        <div class="stat-icon alert-icon">
+          <BookOpen :size="20" aria-hidden="true" />
+        </div>
         <div class="stat-details">
           <div id="kpi-active-curricula" class="stat-value tabular-nums">
             {{ activeCurriculaCount }}
@@ -71,7 +73,9 @@
       </div>
 
       <div class="stat-card">
-        <div class="stat-icon capa-icon">✅</div>
+        <div class="stat-icon capa-icon">
+          <CheckCircle2 :size="20" aria-hidden="true" />
+        </div>
         <div class="stat-details">
           <div
             id="kpi-completed-qualifications"
@@ -84,7 +88,9 @@
       </div>
 
       <div class="stat-card">
-        <div class="stat-icon rbqm-icon">🔒</div>
+        <div class="stat-icon rbqm-icon">
+          <Clock :size="20" aria-hidden="true" />
+        </div>
         <div class="stat-details">
           <div
             id="kpi-pending-assignments"
@@ -103,12 +109,19 @@
         :study-id="effectiveStudyId"
         :site-id="effectiveSiteId"
         :protocol-version="effectiveProtocolVersion"
+        @curriculum-created="loadMetrics"
+        @assignment-completed="loadMetrics"
       />
     </div>
   </div>
 </template>
 
 <script setup>
+import {
+  BookOpen,
+  CheckCircle2,
+  Clock,
+} from "../components/clinical/ClinicalLucideIcons";
 import { computed, onMounted, ref, watch } from "vue";
 import ProtocolTrainingConsole from "../components/clinical/ProtocolTrainingConsole.vue";
 import { trainingApi } from "../api/training";

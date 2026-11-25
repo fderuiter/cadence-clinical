@@ -36,6 +36,9 @@ public static class MonitoringVisitEndpoints
     public const string SignOffPermission = "ctms_monitoring_visit:sign_off";
     public const string ReadLetterPermission = "ctms_monitoring_letter:read";
     public const string ReadLetterTypePermission = "ctms_monitoring_letter:read_type";
+    public const string SignOffSemanticAction = "ctms.monitoring_visit.sign_off";
+
+    public static string SignOffAction(string visit_id) => $"/api/v1/ctms/monitoring-visits/{visit_id}/sign-off";
 
     public static RouteGroupBuilder MapMonitoringVisitEndpoints(this RouteGroupBuilder group)
     {
@@ -68,10 +71,11 @@ public static class MonitoringVisitEndpoints
             .WithSummary("Perform supervisory Part 11 sign-off on a completed monitoring visit.")
             .Produces<MonitoringVisitResponseDto>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .RequirePermission(SignOffPermission).RequireCallerStudyAndSiteScope()
-            .RequireElectronicSignature("ctms.monitoring_visit.sign_off", http => http.Request.Path.Value ?? string.Empty);
+            .RequireElectronicSignature(SignOffSemanticAction, http => http.Request.Path.Value ?? string.Empty);
 
         group.MapGet("/monitoring-visits/{visit_id}/letters", GetMonitoringVisitLettersAsync)
             .WithName("GetMonitoringVisitLetters")
@@ -133,7 +137,19 @@ public static class MonitoringVisitEndpoints
             .ToListAsync(ct);
 
         var scopedVisits = CtmsScopeGuard.ApplyFilters(visits, studyFilter, v => v.StudyId, siteFilter, v => v.SiteId);
-        var dtos = scopedVisits.Select(ToResponseDto).ToList();
+        var visitIds = scopedVisits.Select(v => v.Id).ToList();
+        var findingsByVisit = visitIds.Count == 0
+            ? new Dictionary<string, List<MonitoringVisitFindingDto>>(StringComparer.Ordinal)
+            : (await db.CtmsMonitoringVisitFindings.AsNoTracking()
+                .Where(f => visitIds.Contains(f.VisitId))
+                .OrderBy(f => f.CreatedAt)
+                .ToListAsync(ct))
+                .GroupBy(f => f.VisitId, StringComparer.Ordinal)
+                .ToDictionary(g => g.Key, g => g.Select(ToFindingDto).ToList(), StringComparer.Ordinal);
+
+        var dtos = scopedVisits
+            .Select(v => ToResponseDto(v, findingsByVisit.GetValueOrDefault(v.Id)))
+            .ToList();
         return TypedResults.Ok(dtos);
     }
 
@@ -272,24 +288,27 @@ public static class MonitoringVisitEndpoints
                 statusCode: StatusCodes.Status400BadRequest);
         }
 
+        var createdFindings = new List<CtmsMonitoringVisitFinding>();
         int findingsCount = 0;
         if (request.Findings is { Count: > 0 })
         {
             findingsCount = request.Findings.Count;
-            foreach (var finding in request.Findings)
+            for (int findingIndex = 0; findingIndex < request.Findings.Count; findingIndex++)
             {
+                var finding = request.Findings[findingIndex];
                 var findingEntity = new CtmsMonitoringVisitFinding
                 {
                     VisitId = visit.Id,
                     Text = finding.Text ?? string.Empty,
                     Severity = finding.Severity ?? "MINOR",
                     ResolutionStatus = string.IsNullOrWhiteSpace(finding.ResolutionStatus) ? "OPEN" : finding.ResolutionStatus,
-                    CreatedAt = now.UtcDateTime,
+                    CreatedAt = now.UtcDateTime.AddTicks(findingIndex),
                     CreatedBy = user,
                     ReasonForChange = reason,
                     VersionIndex = 1
                 };
                 db.CtmsMonitoringVisitFindings.Add(findingEntity);
+                createdFindings.Add(findingEntity);
             }
         }
 
@@ -311,7 +330,15 @@ public static class MonitoringVisitEndpoints
 
         await db.SaveChangesAsync(ct);
 
-        return TypedResults.Ok(ToResponseDto(visit));
+        var persistedFindings = await db.CtmsMonitoringVisitFindings.AsNoTracking()
+            .Where(f => f.VisitId == visit.Id)
+            .OrderBy(f => f.CreatedAt)
+            .ToListAsync(ct);
+        var findingDtos = (persistedFindings.Count > 0 ? persistedFindings : createdFindings)
+            .Select(ToFindingDto)
+            .ToList();
+
+        return TypedResults.Ok(ToResponseDto(visit, findingDtos));
     }
 
     public static async Task<IResult> SignOffMonitoringVisitAsync(
@@ -408,7 +435,13 @@ public static class MonitoringVisitEndpoints
             }
         }
 
-        return TypedResults.Ok(ToResponseDto(visit));
+        var visitFindings = await db.CtmsMonitoringVisitFindings.AsNoTracking()
+            .Where(f => f.VisitId == visit.Id)
+            .OrderBy(f => f.CreatedAt)
+            .Select(f => ToFindingDto(f))
+            .ToListAsync(ct);
+
+        return TypedResults.Ok(ToResponseDto(visit, visitFindings));
     }
 
     public static async Task<IResult> GetMonitoringVisitLettersAsync(
@@ -528,7 +561,17 @@ public static class MonitoringVisitEndpoints
         return false;
     }
 
-    public static MonitoringVisitResponseDto ToResponseDto(CtmsMonitoringVisit visit) =>
+    public static MonitoringVisitFindingDto ToFindingDto(CtmsMonitoringVisitFinding f) =>
+        new(
+            Id: f.Id,
+            Text: f.Text,
+            Severity: f.Severity,
+            ResolutionStatus: f.ResolutionStatus,
+            CreatedAt: f.CreatedAt.ToString("o"));
+
+    public static MonitoringVisitResponseDto ToResponseDto(
+        CtmsMonitoringVisit visit,
+        List<MonitoringVisitFindingDto>? findings = null) =>
         new(
             Id: visit.Id,
             Study: visit.StudyId,
@@ -544,7 +587,8 @@ public static class MonitoringVisitEndpoints
             VersionIndex: visit.VersionIndex,
             SignatureManifestation: visit.SignatureManifestation,
             Signer: visit.Signer,
-            SigningTimestamp: visit.SigningTimestamp?.ToString("o")
+            SigningTimestamp: visit.SigningTimestamp?.ToString("o"),
+            Findings: findings ?? []
         );
 
     public static GeneratedLetterResponseDto ToLetterResponseDto(CtmsGeneratedLetter letter) =>
@@ -556,9 +600,22 @@ public static class MonitoringVisitEndpoints
             CreatedAt: letter.CreatedAt.ToString("o"),
             CreatedBy: letter.CreatedBy,
             ReasonForChange: letter.ReasonForChange,
-            VersionIndex: letter.VersionIndex
+            VersionIndex: letter.VersionIndex,
+            Status: letter.Status.ToString().ToUpperInvariant(),
+            IsSigned: letter.IsSigned,
+            PdfSha256Hash: letter.PdfSha256Hash,
+            EtmfArtifactId: letter.EtmfDocumentId,
+            PdfAccessUrl: $"/api/v1/ctms/letters/{letter.Id}/pdf"
         );
 }
+
+public record MonitoringVisitFindingDto(
+    [property: JsonPropertyName("id")] string Id,
+    [property: JsonPropertyName("text")] string Text,
+    [property: JsonPropertyName("severity")] string Severity,
+    [property: JsonPropertyName("resolution_status")] string ResolutionStatus,
+    [property: JsonPropertyName("created_at")] string CreatedAt
+);
 
 public record MonitoringVisitResponseDto(
     [property: JsonPropertyName("id")] string Id,
@@ -575,7 +632,8 @@ public record MonitoringVisitResponseDto(
     [property: JsonPropertyName("version_index")] long VersionIndex,
     [property: JsonPropertyName("signature_manifestation")] string? SignatureManifestation = null,
     [property: JsonPropertyName("signer")] string? Signer = null,
-    [property: JsonPropertyName("signing_timestamp")] string? SigningTimestamp = null
+    [property: JsonPropertyName("signing_timestamp")] string? SigningTimestamp = null,
+    [property: JsonPropertyName("findings")] List<MonitoringVisitFindingDto>? Findings = null
 );
 
 public record MonitoringVisitCreateDto(
@@ -607,5 +665,10 @@ public record GeneratedLetterResponseDto(
     [property: JsonPropertyName("created_at")] string CreatedAt,
     [property: JsonPropertyName("created_by")] string CreatedBy,
     [property: JsonPropertyName("reason_for_change")] string ReasonForChange,
-    [property: JsonPropertyName("version_index")] long VersionIndex
+    [property: JsonPropertyName("version_index")] long VersionIndex,
+    [property: JsonPropertyName("status")] string? Status = null,
+    [property: JsonPropertyName("is_signed")] bool IsSigned = false,
+    [property: JsonPropertyName("pdf_sha256_hash")] string? PdfSha256Hash = null,
+    [property: JsonPropertyName("etmf_document_id")] string? EtmfArtifactId = null,
+    [property: JsonPropertyName("pdf_access_url")] string? PdfAccessUrl = null
 );

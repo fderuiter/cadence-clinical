@@ -36,6 +36,7 @@ Reservation rule: since the kernel work of September 2026, a new ADR takes the n
 | 2650–2659 | Web and design system (continued)                                                 |
 | 2660–2669 | Security and GxP compliance (continued)                                           |
 | 2670–2679 | Web and design system (continued)                                                 |
+| 2680–2689 | Clinical operations compliance (continued)                                        |
 | 2800–2899 | Google Stitch pull requests (closed; no new numbers)                              |
 
 An area with no block takes the next unused block of ten below 2800 and adds a row here in the same pull request.
@@ -627,6 +628,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2663: Inline Explanation Primitives and RBAC Problem Details](2026-11-22-inline-explanation-primitives-and-rbac-problem-details.md) (2026-11-22)
 - [ADR-2666: Atomic Dual-Signer Step-Up Verification and Startup-Validated CGT Barcode Key](2026-11-24-atomic-dual-signer-step-up-verification-and-startup-validated-cgt-barcode-key.md) (2026-11-24)
 - [ADR-2667: Fail-Closed Site Scope for Pharmacist and Subject Roles](2026-11-23-fail-closed-site-scope-for-pharmacist-and-subject-roles.md) (2026-11-23)
+- [ADR-2680: Consolidate CTMS Delegation of Authority Ownership and Signed Cross-Service GxP Contracts](2026-11-23-consolidate-ctms-doa-and-signed-service-contracts.md) (2026-11-23)
 - [ADR-2520: The Supply Unblinding Engine and Facade Are Not Carried Forward](2026-09-30-supply-unblinding-and-facade-not-carried-forward.md) (2026-09-30)
 - [ADR-2521: The Grant Payables Ledger Is Ported to Payments in Decimal with Kernel IDs](2026-09-30-grant-payables-ledger-in-decimal-with-kernel-ids.md) (2026-09-30)
 - [ADR-2522: Derived Variables Are Ported as Fixed Standard Formulas, and Custom Formulas Use the One Rule Language](2026-09-30-derived-variables-ported-as-fixed-standard-formulas.md) (2026-09-30)

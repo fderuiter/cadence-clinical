@@ -2,11 +2,11 @@
 # One compiled IL call site per line: Assembly|OuterType.LogicalMethod->TargetMethod[#N]. Sorted ordinally. The list may only shrink.
 # Regenerate with CADENCE_UPDATE_BASELINE=1 (see tests/Cadence.ArchitectureTests/Architecture/DirectStateWriteSentinelTests.cs).
 Cadence.Apps.Ctms|Cadence.Apps.Ctms.Endpoints.DoaEndpoints.DelegateTasksAsync->DbContext.SaveChangesAsync
+Cadence.Apps.Ctms|Cadence.Apps.Ctms.Endpoints.DoaEndpoints.EndorseSignedBatchAsync->DbContext.SaveChangesAsync
 Cadence.Apps.Ctms|Cadence.Apps.Ctms.Endpoints.DoaEndpoints.ExportSiteDoaPdfAsync->DbContext.SaveChangesAsync
 Cadence.Apps.Ctms|Cadence.Apps.Ctms.Endpoints.DoaEndpoints.RevokeDelegationAsync->DbContext.SaveChangesAsync
 Cadence.Apps.Ctms|Cadence.Apps.Ctms.Endpoints.DoaEndpoints.SignOffDelegationAsync->DbContext.SaveChangesAsync
 Cadence.Apps.Ctms|Cadence.Apps.Ctms.Endpoints.EmailDispatchHelper.DispatchEmailNotificationAsync->Reflection.SaveChangesAsync
-Cadence.Apps.Ctms|Cadence.Apps.Ctms.Endpoints.EtmfFilingHelper.FileToEtmfAsync->Reflection.SaveChangesAsync
 Cadence.Apps.Ctms|Cadence.Apps.Ctms.Endpoints.LetterTemplateEndpoints.CompileAndDispatchLetterAsync->DbContext.SaveChangesAsync
 Cadence.Apps.Ctms|Cadence.Apps.Ctms.Endpoints.MonitoringVisitEndpoints.CompleteMonitoringVisitAsync->DbContext.SaveChangesAsync
 Cadence.Apps.Ctms|Cadence.Apps.Ctms.Endpoints.MonitoringVisitEndpoints.ScheduleMonitoringVisitAsync->DbContext.SaveChangesAsync
@@ -15,6 +15,7 @@ Cadence.Apps.Ctms|Cadence.Apps.Ctms.Endpoints.SiteMilestoneEndpoints.CreateSiteM
 Cadence.Apps.Ctms|Cadence.Apps.Ctms.Endpoints.SiteMilestoneEndpoints.UpdateSiteMilestoneAsync->DbContext.SaveChangesAsync
 Cadence.Apps.Ctms|Cadence.Apps.Ctms.Endpoints.StartupGreenlightEndpoints.BatchCertifyCountrySitesAsync->DbContext.SaveChangesAsync
 Cadence.Apps.Ctms|Cadence.Apps.Ctms.Endpoints.StartupGreenlightEndpoints.CertifySiteGreenlightAsync->DbContext.SaveChangesAsync
+Cadence.Apps.Ctms|Cadence.Apps.Ctms.Endpoints.StartupGreenlightEndpoints.GetSiteGreenlightAsync->DbContext.SaveChangesAsync
 Cadence.Apps.Econsent|Cadence.Apps.Econsent.Endpoints.EconsentEndpoints.ProcessCaptureConsentAsync->DbContext.SaveChangesAsync
 Cadence.Apps.Econsent|Cadence.Apps.Econsent.Endpoints.EconsentEndpoints.ProcessPublishTemplateAsync->DbContext.SaveChangesAsync
 Cadence.Apps.Etmf|Cadence.Apps.Etmf.Endpoints.EtmfIntelligenceEndpoints.ExportDocuments->DbContext.SaveChangesAsync
@@ -92,6 +93,8 @@ Cadence.Apps.Interop|Cadence.Apps.Interop.Endpoints.SceEndpoints.MapSceEndpoints
 Cadence.Apps.Knowledge|Cadence.Apps.Knowledge.Application.KnowledgeCatalogSeeder.EnsureSeededAsync->DbContext.SaveChangesAsync
 Cadence.Apps.Knowledge|Cadence.Apps.Knowledge.Endpoints.TrainingEndpoints.BatchAssignCurriculumAsync->DbContext.SaveChangesAsync
 Cadence.Apps.Knowledge|Cadence.Apps.Knowledge.Endpoints.TrainingEndpoints.BulkSignOffDelegationsAsync->DbContext.SaveChangesAsync
+Cadence.Apps.Knowledge|Cadence.Apps.Knowledge.Endpoints.TrainingEndpoints.CompleteAssignmentAsync->DbContext.SaveChangesAsync
+Cadence.Apps.Knowledge|Cadence.Apps.Knowledge.Endpoints.TrainingEndpoints.CreateCurriculumAsync->DbContext.SaveChangesAsync
 Cadence.Apps.Notifications|Cadence.Apps.Notifications.Infrastructure.Consumers.EconsentReconsentConsumer.Consume->DbContext.SaveChangesAsync
 Cadence.Apps.Payments|Cadence.Apps.Payments.Endpoints.PaymentEndpoints.ApproveInvoice->DbContext.SaveChangesAsync
 Cadence.Apps.Payments|Cadence.Apps.Payments.Endpoints.PaymentEndpoints.BatchCompileBillingCycles->DbContext.SaveChangesAsync

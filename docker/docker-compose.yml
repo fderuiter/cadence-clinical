@@ -362,7 +362,11 @@ services:
     container_name: cadence-ctms
     ports:
       - "8007:8080"
-    environment: *db-env
+    environment:
+      <<: *db-env
+      ETMF_SERVICE_URL: http://etmf:8080
+      KNOWLEDGE_SERVICE_URL: http://knowledge:8080
+      EXECUTION_SERVICE_URL: http://execution:8080
     depends_on: *db-depends
 
   safety:
@@ -476,7 +480,9 @@ services:
     container_name: cadence-knowledge
     ports:
       - "8015:8080"
-    environment: *db-env
+    environment:
+      <<: *db-env
+      CTMS_SERVICE_URL: http://ctms:8080
     depends_on: *db-depends
 
   payments:

@@ -17,6 +17,7 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 using Xunit;
 
@@ -238,13 +239,147 @@ public class TrainingEndpointsTests
     {
         using var db = CreateDbContext(nameof(BatchAssign_OverTheSynchronousLimit_IsRefusedAndAssignsNobody));
         await SeedCurriculumAsync(db);
-        await SeedStaffAsync(db, Enumerable.Range(1, 205)
-            .Select(i => ($"user_{i}", "SITE-101", "Clinical Research Coordinator")).ToArray());
+        await SeedStaffAsync(db, [.. Enumerable.Range(1, 205).Select(i => ($"user_{i}", "SITE-101", "Clinical Research Coordinator"))]);
 
         var result = await BatchAssign(db, Request(sites: ["SITE-101"]), Caller());
 
         await ShouldRefuseAsync(db, result, StatusCodes.Status400BadRequest);
         ((ProblemHttpResult)result).ProblemDetails.Detail.Should().Contain("limit of 200 target personnel");
+    }
+
+    [Fact]
+    public async Task CreateCurriculum_BatchAssignViaCtmsDelegationClient_AndCompleteAssignment_SucceedEndToEnd()
+    {
+        using var db = CreateDbContext(nameof(CreateCurriculum_BatchAssignViaCtmsDelegationClient_AndCompleteAssignment_SucceedEndToEnd));
+
+        var services = new Microsoft.Extensions.DependencyInjection.ServiceCollection();
+        services.AddSingleton<Cadence.Apps.Knowledge.Application.ICtmsDelegationClient>(new StubCtmsDelegationClient(
+        [
+            new Cadence.Apps.Knowledge.Application.CtmsDelegationItemDto(
+                RecordId: "ctms-del-1",
+                StudyCode: Study,
+                SiteCode: "SITE-101",
+                StaffUserId: "crc.site101",
+                StaffName: "Casey Coordinator",
+                Role: "Clinical Research Coordinator",
+                TaskCodes: ["INFORMED_CONSENT"],
+                Duties: "Informed consent administration",
+                Status: "ACTIVE",
+                IsActive: true,
+                SignedOff: true,
+                PiSignatureHash: "SIG-PI-0001",
+                PiApprovedAt: _clock.UtcNow,
+                BatchTransactionId: null,
+                EtmfDocumentId: "DOC-050204"),
+        ]));
+        var provider = services.BuildServiceProvider();
+
+        var sponsorCaller = Caller(Study);
+        sponsorCaller.RequestServices = provider;
+
+        // 1. Create curriculum with structured modules
+        var createRes = await Invoke(
+            "CreateCurriculumAsync",
+            new CreateTrainingCurriculumRequest(
+                Study: Study,
+                ProtocolVersion: "4.0",
+                Title: "Protocol v4.0 Safety Amendment",
+                Description: "Updated SAE reporting window",
+                Modules:
+                [
+                    new TrainingCurriculumModuleDto("mod-sae-1", "SAE 24h Escalation", "PROTOCOL_SECTION", 20, "## SAE Window\nReport within 24 hours."),
+                ],
+                ReasonForChange: "Amendment 4 rollout"),
+            db,
+            sponsorCaller,
+            _clock,
+            Ct);
+        var createdCurriculum = createRes.Should().BeOfType<Created<TrainingCurriculumDto>>().Which.Value!;
+        createdCurriculum.Modules.Should().ContainSingle(m => m.Title == "SAE 24h Escalation" && m.DurationMinutes == 20);
+
+        // 2. Batch-assign using live CTMS delegation client (with zero local DelegationRecords rows!)
+        (await db.DelegationRecords.CountAsync(Ct)).Should().Be(0);
+        var assignRes = await BatchAssign(
+            db,
+            new BatchAssignCurriculumRequest(createdCurriculum.Id, Study, ["SITE-101"], ["Clinical Research Coordinator"], null, "Assign v4"),
+            sponsorCaller);
+        var assignedBatch = assignRes.Should().BeOfType<Created<BatchAssignmentResponse>>().Which.Value!;
+        assignedBatch.TotalAssigned.Should().Be(1);
+        var assignment = assignedBatch.Assignments.Should().ContainSingle().Subject;
+        assignment.UserId.Should().Be("crc.site101");
+        assignment.Curriculum.Should().NotBeNull();
+        assignment.Curriculum!.Modules.Should().ContainSingle(m => m.Title == "SAE 24h Escalation");
+
+        // 3. Unrelated site staff cannot complete someone else's assignment (403)
+        var otherStaffCaller = WithPrincipal(new Principal
+        {
+            UserId = "other.crc",
+            Roles = [RoleNormalization.ROLE_CRC],
+            AssignedStudies = [Study],
+            AssignedSites = ["SITE-101"],
+        });
+        var forbiddenComplete = await Invoke(
+            "CompleteAssignmentAsync",
+            assignment.Id,
+            new CompleteTrainingAssignmentRequest(95.0, 420, "Attempt unauthorized completion"),
+            db,
+            otherStaffCaller,
+            _clock,
+            Ct);
+        forbiddenComplete.Should().BeOfType<ProblemHttpResult>().Which.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
+
+        // 4. Assigned trainee completes assignment -> status COMPLETED + certificate + audit log
+        var traineeCaller = WithPrincipal(new Principal
+        {
+            UserId = "crc.site101",
+            Roles = [RoleNormalization.ROLE_CRC],
+            AssignedStudies = [Study],
+            AssignedSites = ["SITE-101"],
+        });
+        var completeRes = await Invoke(
+            "CompleteAssignmentAsync",
+            assignment.Id,
+            new CompleteTrainingAssignmentRequest(98.0, 600, "Completed v4 safety module"),
+            db,
+            traineeCaller,
+            _clock,
+            Ct);
+        var completedDto = completeRes.Should().BeOfType<Ok<TrainingAssignmentDto>>().Which.Value!;
+        completedDto.Status.Should().Be("COMPLETED");
+        completedDto.QuizScore.Should().Be(98.0);
+        completedDto.CompletedAt.Should().Be(_clock.UtcNow);
+        (await db.TrainingCertificates.CountAsync(c => c.AssignmentId == assignment.Id, Ct)).Should().Be(1);
+    }
+
+    private sealed class StubCtmsDelegationClient(IReadOnlyList<Cadence.Apps.Knowledge.Application.CtmsDelegationItemDto> items)
+        : Cadence.Apps.Knowledge.Application.ICtmsDelegationClient
+    {
+        public bool IsConfigured => true;
+
+        public Task<IReadOnlyList<Cadence.Apps.Knowledge.Application.CtmsDelegationItemDto>> ListDelegationsAsync(
+            HttpContext callerContext,
+            string? studyCode,
+            string? siteCode,
+            string? status,
+            DateTimeOffset? validAt,
+            DateTimeOffset? knownAt,
+            CancellationToken ct) =>
+            Task.FromResult(items);
+
+        public Task<Cadence.Apps.Knowledge.Application.CtmsEndorseOutcome> EndorseSignedBatchAsync(
+            HttpContext callerContext,
+            Cadence.Apps.Knowledge.Application.CtmsEndorseBatchRequestDto request,
+            CancellationToken ct) =>
+            Task.FromResult(new Cadence.Apps.Knowledge.Application.CtmsEndorseOutcome(
+                true,
+                StatusCodes.Status200OK,
+                null,
+                new Cadence.Apps.Knowledge.Application.CtmsEndorseBatchResponseDto(
+                    request.BatchTransactionId,
+                    request.SignatureHash,
+                    request.ApprovedAt,
+                    request.RecordIds.Count,
+                    [.. items])));
     }
 
     private static async Task<IResult> Invoke(string handler, params object?[] arguments)

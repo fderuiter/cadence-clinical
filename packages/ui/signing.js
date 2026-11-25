@@ -528,6 +528,13 @@ export const STEP_UP_ACTION_MAX_LENGTH = 512;
  */
 export const SEMANTIC_ACTIONS = Object.freeze({
   CTMS_DOA_SIGN_OFF: "ctms.doa.sign_off",
+  CTMS_DOA_BULK_SIGN_OFF: "ctms.doa.bulk_sign_off",
+  CTMS_DOA_EXPORT_PDF: "ctms.doa.export_pdf",
+  CTMS_GREENLIGHT_CERTIFY: "ctms.greenlight.certify",
+  CTMS_GREENLIGHT_BATCH_CERTIFY: "ctms.greenlight.batch_certify",
+  CTMS_MONITORING_VISIT_SIGN_OFF: "ctms.monitoring_visit.sign_off",
+  CTMS_LETTER_COMPILE: "ctms.letter.compile",
+  RTSM_KIT_RECONCILE_BATCH: "execution.rtsm.reconcile_batch",
   ECONSENT_CAPTURE: "econsent.consent.capture",
   ECONSENT_RECONSENT_SIGN: "econsent.reconsent.sign",
   CEC_CHAIR_ADJUDICATE: "execution.cec.chair_adjudicate",
@@ -699,6 +706,27 @@ export function resolveDefaultSemanticAction(action = "") {
   }
   if (normalized.includes("doa/sign-off")) {
     return SEMANTIC_ACTIONS.CTMS_DOA_SIGN_OFF;
+  }
+  if (normalized.includes("doa/sites/") && normalized.includes("/export-pdf")) {
+    return SEMANTIC_ACTIONS.CTMS_DOA_EXPORT_PDF;
+  }
+  if (
+    normalized.includes("monitoring-visits/") &&
+    normalized.includes("/sign-off")
+  ) {
+    return SEMANTIC_ACTIONS.CTMS_MONITORING_VISIT_SIGN_OFF;
+  }
+  if (normalized.includes("greenlight/certify")) {
+    return SEMANTIC_ACTIONS.CTMS_GREENLIGHT_CERTIFY;
+  }
+  if (normalized.includes("matrix/batch-certify")) {
+    return SEMANTIC_ACTIONS.CTMS_GREENLIGHT_BATCH_CERTIFY;
+  }
+  if (normalized.includes("letters/compile")) {
+    return SEMANTIC_ACTIONS.CTMS_LETTER_COMPILE;
+  }
+  if (normalized.includes("kits/reconcile-batch")) {
+    return SEMANTIC_ACTIONS.RTSM_KIT_RECONCILE_BATCH;
   }
   if (normalized.includes("sign-off")) {
     return SEMANTIC_ACTIONS.ETMF_DOCUMENT_SIGN_OFF;

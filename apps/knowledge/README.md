@@ -11,14 +11,14 @@ Knowledge base and training service. It serves controlled SOP resolution (`GET /
 - `Domain/`: EF Core entity classes (knowledge categories, articles and versions, contextual help mappings, protocol knowledge chunks, audit log).
   Every timestamp is a `DateTimeOffset`; the ones a writer must supply are `required` with no default, and the project bans `DateTime.Now/UtcNow` (K-TIME-3, #4784), so time comes from `Cadence.Kernel.Time.IClock`.
 - `Infrastructure/Persistence/`: `KnowledgeDbContext`, a design-time `KnowledgeDbContextFactory`, and `Configurations/` (Fluent API mappings).
-- `Infrastructure/Persistence/Migrations/`: `20260924145203_InitialCreate`.
+- `Infrastructure/Persistence/Migrations/`: `20260924145203_InitialCreate`..`20261123202459_AddTrainingCurriculumModules` (including `TrainingCurriculum.ModulesJson` and `consumed_signature_tokens`).
 
 ## HTTP surface
 
 - `GET /healthz`, `GET /healthz/live`, `GET /healthz/ready` (anonymous; mapped by `MapCadenceHealthAndStatusEndpoints` and `UseCadenceWebDefaults` in [packages/telemetry](../../packages/telemetry/README.md)). `/healthz/ready` checks `KnowledgeDbContext`.
 - `GET /api/v1/knowledge/status` (anonymous status payload).
 - `GET /api/v1/knowledge/contextual-help?route=&persona=`, `GET /api/v1/knowledge/categories`, `GET /api/v1/knowledge/articles`, and `GET /api/v1/knowledge/articles/{article_id}` (`knowledge:read`, staff roles; see [ADR-2641](../../docs/adr/2026-11-20-contextual-sop-resolution-and-audited-ticket-escalation.md)). `ContextualHelpScorer` preserves canonical Clinical Canvas `stage` and `section` query parameters (`?stage=&section=`) while stripping non-routing query keys, scoring section- and stage-specific mappings above bare `/studies/:studyCode` and `/studies` patterns across all seeded live, Canvas, `/forbidden`, and `/unavailable` SOPs (`KnowledgeCatalogSeeder`). Contextual help hydrates only the winning published `KnowledgeArticleVersion` and omits bodies on `related_articles`, while `GET /api/v1/knowledge/articles` filters `q` case-insensitively in SQL and projects summary metadata (`body_markdown: null`, `body_html: null`) for on-demand hydration via `GET /api/v1/knowledge/articles/{article_id}`.
-- Study training curricula, batch assignments, certificates, and delegation log sign-off under `/api/v1/training/**`.
+- Study training curricula (`GET/POST /api/v1/training/curricula` with module manifests), batch assignments, authenticated trainee completion (`POST /api/v1/training/assignments/{assignment_id}/complete`), certificates, and `GatewayIdentity`-signed CTMS delegation lookups and bulk PI sign-off (`CtmsDelegationClient`, `CTMS_SERVICE_URL`) under `/api/v1/training/**` ([ADR-2680](../../docs/adr/2026-11-23-consolidate-ctms-doa-and-signed-service-contracts.md)).
 - OpenAPI and the Scalar reference UI are mapped in the Development environment only.
 - The gateway forwards `/api/v1/knowledge/**` and `/api/v1/training/**` to this service. Compose publishes host port 8015 (container port 8080); the gateway's default upstream is `http://localhost:8015` (`KNOWLEDGE_SERVICE_URL`).
 

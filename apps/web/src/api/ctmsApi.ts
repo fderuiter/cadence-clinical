@@ -12,6 +12,7 @@ import {
   unwrapResponse,
 } from "./client";
 import type { components, paths } from "./generated/ctms";
+import { getSyncedStudyScope } from "../stores/studyScopeBridge";
 import { isDemoBuild } from "../utils/demoMode";
 
 /**
@@ -375,10 +376,14 @@ export const ctmsApi = {
   },
 
   /** Fetches the active and historical Delegation of Authority (DoA) log for a site. */
-  getSiteDoaLog(siteId: string): Promise<DoaLog> {
+  getSiteDoaLog(siteId: string, studyId?: string): Promise<DoaLog> {
+    const effectiveStudyId = (studyId ?? getSyncedStudyScope()) || undefined;
     return unwrapResponse(
       client.GET("/api/v1/ctms/doa/sites/{site_id}/log", {
-        params: { path: { site_id: siteId } },
+        params: {
+          path: { site_id: siteId },
+          query: effectiveStudyId ? { study_id: effectiveStudyId } : undefined,
+        },
       })
     );
   },
@@ -389,10 +394,16 @@ export const ctmsApi = {
     changeReason?: string
   ): Promise<DelegationRecord> {
     const reason = changeReason ?? payload.reason_for_change ?? undefined;
+    const effectiveStudyId =
+      (payload.study_id ?? getSyncedStudyScope()) || undefined;
     return unwrapResponse(
       client.POST("/api/v1/ctms/doa/delegate", {
+        params: effectiveStudyId
+          ? { query: { study_id: effectiveStudyId } }
+          : undefined,
         body: {
           ...payload,
+          study_id: payload.study_id ?? effectiveStudyId ?? null,
           reason_for_change: payload.reason_for_change ?? reason ?? null,
         },
         headers: buildAuditHeaders({ changeReason: reason }),
@@ -406,10 +417,16 @@ export const ctmsApi = {
     changeReason?: string
   ): Promise<DelegationRecord> {
     const reason = changeReason ?? payload.reason_for_change ?? undefined;
+    const effectiveStudyId =
+      (payload.study_id ?? getSyncedStudyScope()) || undefined;
     return unwrapResponse(
       client.POST("/api/v1/ctms/doa/revoke", {
+        params: effectiveStudyId
+          ? { query: { study_id: effectiveStudyId } }
+          : undefined,
         body: {
           ...payload,
+          study_id: payload.study_id ?? effectiveStudyId ?? null,
           reason_for_change: payload.reason_for_change ?? reason ?? null,
         },
         headers: buildAuditHeaders({ changeReason: reason }),
@@ -424,10 +441,16 @@ export const ctmsApi = {
     signatureToken?: string
   ): Promise<DelegationRecord> {
     const reason = changeReason ?? payload.reason_for_change ?? undefined;
+    const effectiveStudyId =
+      (payload.study_id ?? getSyncedStudyScope()) || undefined;
     return unwrapResponse(
       client.POST("/api/v1/ctms/doa/sign-off", {
+        params: effectiveStudyId
+          ? { query: { study_id: effectiveStudyId } }
+          : undefined,
         body: {
           ...payload,
+          study_id: payload.study_id ?? effectiveStudyId ?? null,
           reason_for_change: payload.reason_for_change ?? reason ?? null,
         },
         headers: buildAuditHeaders({
@@ -439,9 +462,17 @@ export const ctmsApi = {
   },
 
   /** Exports the 21 CFR Part 11 signed Delegation of Authority PDF log for a site. */
-  exportSiteDoaPdf(siteId: string, sigToken?: string): Promise<Blob> {
+  exportSiteDoaPdf(
+    siteId: string,
+    sigToken?: string,
+    studyId?: string
+  ): Promise<Blob> {
+    const effectiveStudyId = (studyId ?? getSyncedStudyScope()) || "";
+    const querySuffix = effectiveStudyId
+      ? `?study_id=${encodeURIComponent(effectiveStudyId)}`
+      : "";
     return fetchAuthenticatedPdf(
-      `/api/v1/ctms/doa/sites/${encodeURIComponent(siteId)}/export-pdf`,
+      `/api/v1/ctms/doa/sites/${encodeURIComponent(siteId)}/export-pdf${querySuffix}`,
       buildAuditHeaders({ sigToken })
     );
   },

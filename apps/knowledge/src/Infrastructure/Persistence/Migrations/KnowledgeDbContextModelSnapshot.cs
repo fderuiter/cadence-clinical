@@ -839,6 +839,9 @@ namespace Cadence.Apps.Knowledge.Infrastructure.Persistence.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("ModulesJson")
+                        .HasColumnType("text");
+
                     b.Property<string>("ProtocolVersion")
                         .IsRequired()
                         .HasColumnType("text");

@@ -653,6 +653,47 @@
               "null",
               "string"
             ]
+          },
+          "autoApproveSigned": {
+            "type": "boolean",
+            "default": false
+          },
+          "signer": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "signingTimestamp": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "signatureManifestation": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sourceSystem": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "correlationKey": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "metadataJson": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },

@@ -809,6 +809,13 @@ export const SEMANTIC_ACTION_PATTERN: RegExp;
 export const STEP_UP_ACTION_MAX_LENGTH: number;
 export const SEMANTIC_ACTIONS: Readonly<{
   CTMS_DOA_SIGN_OFF: "ctms.doa.sign_off";
+  CTMS_DOA_BULK_SIGN_OFF: "ctms.doa.bulk_sign_off";
+  CTMS_DOA_EXPORT_PDF: "ctms.doa.export_pdf";
+  CTMS_GREENLIGHT_CERTIFY: "ctms.greenlight.certify";
+  CTMS_GREENLIGHT_BATCH_CERTIFY: "ctms.greenlight.batch_certify";
+  CTMS_MONITORING_VISIT_SIGN_OFF: "ctms.monitoring_visit.sign_off";
+  CTMS_LETTER_COMPILE: "ctms.letter.compile";
+  RTSM_KIT_RECONCILE_BATCH: "execution.rtsm.reconcile_batch";
   ECONSENT_CAPTURE: "econsent.consent.capture";
   ECONSENT_RECONSENT_SIGN: "econsent.reconsent.sign";
   CEC_CHAIR_ADJUDICATE: "execution.cec.chair_adjudicate";

@@ -79,6 +79,7 @@ function buildAllDemoRoles() {
           "Unblinded Statistician",
           "Site Pharmacist",
           "Principal Investigator",
+          "Pharmacist",
           "Safety Reviewer",
           "TMF Auditor",
         ])

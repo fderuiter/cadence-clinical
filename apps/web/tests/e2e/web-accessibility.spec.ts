@@ -525,9 +525,9 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
         }
       }
       await page.locator("#btn-onboarding-checklist-trigger").click();
+      await expect(page.locator("#onboarding-checklist-drawer")).toBeVisible();
     };
     await openOnboardingChecklistDrawer(true);
-    await expect(page.locator("#onboarding-checklist-drawer")).toBeVisible();
     await expect(
       page.locator("#onboarding-checklist-drawer .status-pending").first()
     ).toBeVisible();
@@ -601,7 +601,6 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
 
     await gotoHashRoute(page, "/overview");
     await openOnboardingChecklistDrawer();
-    await expect(page.locator("#onboarding-checklist-drawer")).toBeVisible();
     await page.locator("#btn-drawer-start-tour").click();
     await expect(tourPopover).toBeVisible();
 

@@ -162,12 +162,16 @@ var execution = Service(builder.AddProject<Projects.Cadence_Apps_Execution>("exe
     .WithEnvironment("CGT_BARCODE_HMAC_KEY", cgtBarcodeHmacKey);
 string etmfStorageRoot = builder.Configuration["Storage:RootPath"]
     ?? System.IO.Path.Combine(System.IO.Path.GetTempPath(), "cadence-etmf-storage");
-Service(builder.AddProject<Projects.Cadence_Apps_Etmf>("etmf"))
+var etmf = Service(builder.AddProject<Projects.Cadence_Apps_Etmf>("etmf"))
     .WithEnvironment("EXECUTION_SERVICE_URL", execution.GetEndpoint("http"))
     .WithEnvironment("Storage__Provider", "filesystem")
     .WithEnvironment("Storage__RootPath", etmfStorageRoot);
-Service(builder.AddProject<Projects.Cadence_Apps_Ctms>("ctms"));
-Service(builder.AddProject<Projects.Cadence_Apps_Knowledge>("knowledge"));
+var ctms = Service(builder.AddProject<Projects.Cadence_Apps_Ctms>("ctms"));
+var knowledge = Service(builder.AddProject<Projects.Cadence_Apps_Knowledge>("knowledge"));
+ctms.WithEnvironment("ETMF_SERVICE_URL", etmf.GetEndpoint("http"))
+    .WithEnvironment("KNOWLEDGE_SERVICE_URL", knowledge.GetEndpoint("http"))
+    .WithEnvironment("EXECUTION_SERVICE_URL", execution.GetEndpoint("http"));
+knowledge.WithEnvironment("CTMS_SERVICE_URL", ctms.GetEndpoint("http"));
 // The local realm's users sign in with tenant code cadence-local (ADR-2514); the kernel host provisions that tenant on
 // start, in Development only (ADR-2542), with the demo study and the realm users' grants (ADR-2543). A project resource
 // does not inherit the AppHost's environment, so the kernel is given it, and the tenant settings only when that

@@ -898,6 +898,15 @@ public static class EtmfIntelligenceEndpoints
         var now = clock.UtcNow;
         var user = CallerScope.RequiredUserId(httpContext, "An admitted eTMF request has no signed caller.");
         var roles = CallerScope.Roles(httpContext);
+        if (request.AutoApproveSigned)
+        {
+            var principal = CallerScope.Principal(httpContext);
+            if (!PermissionMatrix.HasPermission(principal, "etmf_document:approve_filing"))
+            {
+                return TypedResults.Forbid();
+            }
+        }
+
         var docId = "DOC-" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
         var mimeType = request.MimeType ?? "application/pdf";
         var (objectKey, contentChecksum) = await PersistBinaryPayloadAsync(
@@ -927,6 +936,22 @@ public static class EtmfIntelligenceEndpoints
             objectKey: objectKey,
             contentChecksum: contentChecksum
         );
+        doc.MetadataJson = request.MetadataJson;
+        doc.SourceSystem = request.SourceSystem;
+        doc.CorrelationKey = request.CorrelationKey;
+
+        if (request.AutoApproveSigned)
+        {
+            string effectiveActorRole = string.IsNullOrWhiteSpace(roles) ? PermissionMatrix.CtmsServiceRole : roles;
+            doc.Signer = string.IsNullOrWhiteSpace(request.Signer) ? user : request.Signer.Trim();
+            doc.SigningTimestamp = request.SigningTimestamp ?? now;
+            doc.SignatureManifestation = request.SignatureManifestation;
+            doc.SyncStatus = "FILED_SIGNED";
+
+            var qcTransition = doc.StageForQc(user, effectiveActorRole, effectiveReason, now, sequenceNumber: 1);
+            var approveTransition = doc.Approve(user, effectiveActorRole, effectiveReason, now, sequenceNumber: 2);
+            dbContext.TmfDocumentQcTransitions.AddRange(qcTransition, approveTransition);
+        }
 
         dbContext.TmfDocuments.Add(doc);
         dbContext.TmfDocumentRevisions.Add(TmfDocumentRevision.FromDocument(doc, now, user));
@@ -935,21 +960,27 @@ public static class EtmfIntelligenceEndpoints
             Timestamp = now,
             UserId = user,
             UserRole = roles,
-            Action = "INGEST_DRAFT",
+            Action = request.AutoApproveSigned ? "INGEST_APPROVED_GXP_ARTIFACT" : "INGEST_DRAFT",
             DocumentId = docId,
-            Details = $"Ingested draft document {request.Filename} in study {request.StudyId} (SHA-256: {contentChecksum}).",
+            Details = request.AutoApproveSigned
+                ? $"Filed signed GxP artifact {doc.ArtifactCode} ({request.Filename}) in study {request.StudyId} (SHA-256: {contentChecksum})."
+                : $"Ingested draft document {request.Filename} in study {request.StudyId} (SHA-256: {contentChecksum}).",
             ReasonForChange = effectiveReason
         });
         await dbContext.SaveChangesAsync(ct);
 
-        if (completenessPublisher is not null && !string.IsNullOrWhiteSpace(request.SiteId))
+        if (completenessPublisher is not null && (request.AutoApproveSigned || !string.IsNullOrWhiteSpace(request.SiteId)))
         {
+            var reviewContext = new EtmfDocumentReviewContext(
+                Current: new EtmfArtifactTaxonomy(doc.ArtifactType, doc.ArtifactCode));
+
             await completenessPublisher.PublishSiteActivationCompletenessAsync(
                 dbContext: dbContext,
                 studyId: request.StudyId,
                 siteId: request.SiteId,
                 tenantId: CallerScope.TenantId(httpContext),
                 reasonForChange: effectiveReason,
+                reviewContext: reviewContext,
                 ct: ct);
         }
 
@@ -1071,6 +1102,7 @@ public static class EtmfIntelligenceEndpoints
             "05.02.03" => new TaxonomyMatchCandidate(5, "05.02", "05.02.03", "Investigator CV", 1.0),
             "05.02.04" => new TaxonomyMatchCandidate(5, "05.02", "05.02.04", "Delegation of Authority Log", 1.0),
             "05.02.05" => new TaxonomyMatchCandidate(5, "05.02", "05.02.05", "Informed Consent Form", 1.0),
+            "05.02.06" => new TaxonomyMatchCandidate(5, "05.02", "05.02.06", "Monitoring Visit Follow-up Letter", 1.0),
             "07.01.01" => new TaxonomyMatchCandidate(7, "07.01", "07.01.01", "Serious Adverse Event Report", 1.0),
             "08.01.01" => new TaxonomyMatchCandidate(8, "08.01", "08.01.01", "Central Laboratory Certificate", 1.0),
             "11.01.01" => new TaxonomyMatchCandidate(11, "11.01", "11.01.01", "Statistical Analysis Plan", 1.0),
@@ -1099,6 +1131,7 @@ public static class EtmfIntelligenceEndpoints
             new { zone = 5, zone_name = "Site Management", section = "05.02", section_name = "Investigator Qualification", artifact_code = "05.02.03", artifact_name = "Investigator CV" },
             new { zone = 5, zone_name = "Site Management", section = "05.02", section_name = "Investigator Qualification", artifact_code = "05.02.04", artifact_name = "Delegation of Authority Log" },
             new { zone = 5, zone_name = "Site Management", section = "05.02", section_name = "Investigator Qualification", artifact_code = "05.02.05", artifact_name = "Informed Consent Form" },
+            new { zone = 5, zone_name = "Site Management", section = "05.02", section_name = "Site Monitoring", artifact_code = "05.02.06", artifact_name = "Monitoring Visit Follow-up Letter" },
             new { zone = 7, zone_name = "Safety Reporting", section = "07.01", section_name = "Safety Notifications", artifact_code = "07.01.01", artifact_name = "Serious Adverse Event Report" },
             new { zone = 8, zone_name = "Centralized & Local Testing", section = "08.01", section_name = "Lab Documentation", artifact_code = "08.01.01", artifact_name = "Central Laboratory Certificate" },
             new { zone = 11, zone_name = "Statistics", section = "11.01", section_name = "Statistical Analysis", artifact_code = "11.01.01", artifact_name = "Statistical Analysis Plan" }
@@ -1435,7 +1468,14 @@ public record IngestDocumentRequest(
     string? ArtifactType,
     string? TaxonomyVersion,
     string? ReasonForChange,
-    string? ContentBase64 = null
+    string? ContentBase64 = null,
+    bool AutoApproveSigned = false,
+    string? Signer = null,
+    DateTimeOffset? SigningTimestamp = null,
+    string? SignatureManifestation = null,
+    string? SourceSystem = null,
+    string? CorrelationKey = null,
+    string? MetadataJson = null
 );
 
 public record DocumentIntelligenceReport(

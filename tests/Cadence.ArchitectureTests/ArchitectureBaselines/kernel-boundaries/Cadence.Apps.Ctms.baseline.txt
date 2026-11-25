@@ -75,6 +75,7 @@ K-XS-1|Cadence.Apps.Ctms|Cadence.Apps.Ctms.Endpoints.BatchCertifyRequestDto.Stud
 K-XS-1|Cadence.Apps.Ctms|Cadence.Apps.Ctms.Endpoints.BatchCertifyResponseDto.StudyId
 K-XS-1|Cadence.Apps.Ctms|Cadence.Apps.Ctms.Endpoints.CertifiedSiteItemDto.SiteId
 K-XS-1|Cadence.Apps.Ctms|Cadence.Apps.Ctms.Endpoints.DelegationResponseDto.Site
+K-XS-1|Cadence.Apps.Ctms|Cadence.Apps.Ctms.Endpoints.DelegationResponseDto.Study
 K-XS-1|Cadence.Apps.Ctms|Cadence.Apps.Ctms.Endpoints.DelegationTaskRequest.Site
 K-XS-1|Cadence.Apps.Ctms|Cadence.Apps.Ctms.Endpoints.DelegationTaskRequest.Study
 K-XS-1|Cadence.Apps.Ctms|Cadence.Apps.Ctms.Endpoints.DoaLogResponseDto.Site

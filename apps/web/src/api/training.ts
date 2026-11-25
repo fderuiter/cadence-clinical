@@ -5,12 +5,29 @@ import type { components, paths } from "./generated/knowledge";
 type Schemas = components["schemas"];
 
 export type TrainingCurriculum = Schemas["Knowledge_TrainingCurriculumDto"];
+export type TrainingCurriculumModule =
+  Schemas["Knowledge_TrainingCurriculumModuleDto"];
 export type TrainingAssignment = Schemas["Knowledge_TrainingAssignmentDto"];
 export type DelegationSummary = Schemas["Knowledge_DelegationSummaryDto"];
 
 export interface CurriculumQueryParams {
   study_id?: string;
   protocol_version?: string;
+}
+
+export interface CreateTrainingCurriculumPayload {
+  study_id: string;
+  protocol_version?: string | null;
+  title: string;
+  description?: string | null;
+  modules?: TrainingCurriculumModule[] | null;
+  reason_for_change?: string | null;
+}
+
+export interface CompleteTrainingAssignmentPayload {
+  quiz_score?: number | null;
+  time_spent_seconds?: number | null;
+  reason_for_change?: string | null;
 }
 
 export interface AssignmentQueryParams {
@@ -66,6 +83,32 @@ export const trainingApi = {
             study_id: params.study_id,
             protocol_version: params.protocol_version,
           },
+        },
+      })
+    );
+  },
+
+  /**
+   * Author a new protocol training curriculum with procedural modules (POST /api/v1/training/curricula).
+   */
+  createCurriculum(
+    payload: CreateTrainingCurriculumPayload
+  ): Promise<TrainingCurriculum> {
+    const reason =
+      payload.reason_for_change ||
+      "Create protocol training curriculum and module manifest";
+    return unwrapResponse(
+      client.POST("/api/v1/training/curricula", {
+        body: {
+          study_id: payload.study_id,
+          protocol_version: payload.protocol_version ?? "v1.0",
+          title: payload.title,
+          description: payload.description ?? null,
+          modules: payload.modules ?? null,
+          reason_for_change: reason,
+        },
+        headers: {
+          "X-Change-Reason": encodeChangeReason(reason),
         },
       })
     );
@@ -142,6 +185,31 @@ export const trainingApi = {
   },
 
   /**
+   * Record authenticated completion of an assigned protocol training curriculum (POST /api/v1/training/assignments/{assignment_id}/complete).
+   */
+  completeAssignment(
+    assignmentId: string,
+    payload: CompleteTrainingAssignmentPayload = {}
+  ): Promise<TrainingAssignment> {
+    const reason =
+      payload.reason_for_change ||
+      "Completed assigned protocol training curriculum modules";
+    return unwrapResponse(
+      client.POST("/api/v1/training/assignments/{assignment_id}/complete", {
+        params: { path: { assignment_id: assignmentId } },
+        body: {
+          quiz_score: payload.quiz_score ?? null,
+          time_spent_seconds: payload.time_spent_seconds ?? null,
+          reason_for_change: reason,
+        },
+        headers: {
+          "X-Change-Reason": encodeChangeReason(reason),
+        },
+      })
+    );
+  },
+
+  /**
    * List site delegation records (GET /api/v1/training/delegations).
    */
   listDelegations(
@@ -193,3 +261,6 @@ export const trainingApi = {
     );
   },
 };
+
+export const createCurriculum = trainingApi.createCurriculum;
+export const completeAssignment = trainingApi.completeAssignment;

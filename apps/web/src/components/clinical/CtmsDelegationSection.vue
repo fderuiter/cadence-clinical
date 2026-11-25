@@ -20,10 +20,39 @@
         type="button"
         class="btn btn-secondary"
         :disabled="!siteInput.trim() || exporting"
-        @click="exportPdf"
+        @click="prepareExportPdf"
       >
         {{ exporting ? "Exporting..." : "Export PDF" }}
       </button>
+    </div>
+
+    <div v-if="showExportPrompt" class="mutation-card">
+      <h4>Export signed Delegation of Authority PDF</h4>
+      <div class="form-row">
+        <label for="doa-export-password">Password (Part 11)</label>
+        <input
+          id="doa-export-password"
+          v-model="exportPassword"
+          v-bind="SIGNATURE_PASSWORD_INPUT_ATTRS"
+          placeholder="Re-enter password to sign PDF export"
+        />
+        <button
+          id="btn-confirm-export-doa-pdf"
+          type="button"
+          class="btn btn-primary"
+          :disabled="!exportPassword.trim() || exporting"
+          @click="exportPdf"
+        >
+          {{ exporting ? "Exporting..." : "Sign & download PDF" }}
+        </button>
+        <button
+          type="button"
+          class="btn btn-secondary"
+          @click="cancelExportPdf"
+        >
+          Cancel
+        </button>
+      </div>
     </div>
 
     <CtmsSectionScopeBar
@@ -67,14 +96,22 @@
         row-key="record_id"
       >
         <template #cell-staff_user_id="{ row: rec }">
-          <strong>{{ rec.staff_user_id }}</strong>
+          <strong>{{ rec.staff_name || rec.staff_user_id }}</strong>
+          <span v-if="rec.role" class="role-hint">
+            · {{ formatRoleLabel(rec.role) }}</span
+          >
         </template>
         <template #cell-task_codes="{ row: rec }">
-          {{
-            rec.task_codes
-              .map((code: string) => formatClinicalEnum(code))
-              .join(", ")
-          }}
+          <div>
+            {{
+              rec.task_codes
+                .map((code: string) => formatClinicalEnum(code))
+                .join(", ")
+            }}
+          </div>
+          <div v-if="rec.duties" class="role-hint">
+            {{ rec.duties }}
+          </div>
         </template>
         <template #cell-start_date="{ row: rec }">
           {{ rec.start_date }}
@@ -86,6 +123,17 @@
           >
             {{ formatClinicalStatus(delegationStatus(rec)) }}
           </span>
+          <div v-if="rec.etmf_document_id" class="role-hint">
+            Filed in eTMF ({{ rec.etmf_document_id }})
+          </div>
+          <SupportDetails
+            v-if="rec.pi_signature_hash || rec.etmf_document_id"
+            summary-label="Seal &amp; filing details"
+            :detail="formatDoaRecordDetail(rec)"
+            :reference="
+              rec.pi_signature_hash || rec.etmf_document_id || rec.record_id
+            "
+          />
         </template>
         <template #cell-actions="{ row: rec }">
           <div class="action-cell">
@@ -94,6 +142,7 @@
                 canSignOff && delegationStatus(rec) === 'PENDING_PI_SIGNATURE'
               "
               :id="`btn-doa-signoff-${rec.record_id}`"
+              :data-testid="`btn-doa-signoff-${rec.record_id}`"
               type="button"
               class="btn btn-primary btn-sm"
               @click="prepareSignOff(rec)"
@@ -147,11 +196,20 @@
             density="compact"
             :show-query-flag="false"
           />
+          <label for="doa-signoff-password">Password (Part 11)</label>
+          <input
+            id="doa-signoff-password"
+            v-model="signOffPassword"
+            v-bind="SIGNATURE_PASSWORD_INPUT_ATTRS"
+            placeholder="Re-enter password to sign"
+          />
           <button
             id="btn-confirm-doa-signoff"
             type="button"
             class="btn btn-primary"
-            :disabled="!signOffReason.trim() || saving"
+            :disabled="
+              !signOffReason.trim() || !signOffPassword.trim() || saving
+            "
             @click="confirmSignOff"
           >
             {{ saving ? "Signing..." : "Sign delegation" }}
@@ -214,6 +272,28 @@
             :show-query-flag="false"
           />
           <ClinicalInput
+            id="del-staff-name"
+            v-model="newStaffName"
+            label="Staff name"
+            type="text"
+            placeholder="Jordan Patel, RN"
+            density="compact"
+            :show-query-flag="false"
+          />
+          <ClinicalInput
+            id="del-staff-role"
+            v-model="newStaffRole"
+            as="select"
+            label="Staff role"
+            density="compact"
+            :show-query-flag="false"
+          >
+            <option value="">Select role (optional)</option>
+            <option value="crc">Clinical Research Coordinator</option>
+            <option value="site_investigator">Sub-Investigator</option>
+            <option value="pharmacist">Site Pharmacist</option>
+          </ClinicalInput>
+          <ClinicalInput
             id="del-task-select"
             v-model="newTaskCode"
             as="select"
@@ -229,6 +309,15 @@
             <option value="SAE_REPORTING">Safety Event Reporting</option>
             <option value="IP_DISPENSING">Investigational Supply</option>
           </ClinicalInput>
+          <ClinicalInput
+            id="del-duties"
+            v-model="newDuties"
+            label="Duties summary"
+            type="text"
+            placeholder="Protocol-delegated clinical responsibilities"
+            density="compact"
+            :show-query-flag="false"
+          />
           <ClinicalInput
             id="del-start-date"
             v-model="newStartDate"
@@ -268,8 +357,14 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
-import { ClinicalDataTable, ClinicalInput, useInlineFocusHandoff } from "ui";
+import {
+  ClinicalDataTable,
+  ClinicalInput,
+  SIGNATURE_PASSWORD_INPUT_ATTRS,
+  useInlineFocusHandoff,
+} from "ui";
 import { ctmsApi, type DelegationRecord, type DoaLog } from "../../api/ctmsApi";
+import { requestStepUpSignature } from "../../api/signatureVerification";
 import { canManageDoa, canSignOffDoa } from "../../canvas/authority";
 import {
   scopedWorkspaceSectionProps,
@@ -278,9 +373,19 @@ import {
 import {
   formatClinicalEnum,
   formatClinicalStatus,
+  formatRoleLabel,
 } from "../../utils/clinicalLabels";
+import SupportDetails from "../canvas/SupportDetails.vue";
 import CtmsSectionScopeBar from "./CtmsSectionScopeBar.vue";
 import "./ctmsWorkspaceSection.css";
+
+function formatDoaRecordDetail(rec: DelegationRecord): string {
+  const parts = [`Record ID: ${rec.record_id}`];
+  if (rec.etmf_document_id) {
+    parts.push(`eTMF Zone 5: ${rec.etmf_document_id}`);
+  }
+  return parts.join(" · ");
+}
 
 const props = defineProps(scopedWorkspaceSectionProps);
 
@@ -298,6 +403,9 @@ const {
   syncActiveScope,
   recordLoadFailure,
 } = useScopedWorkspaceSection(props, {
+  onStudyPropChange: () => {
+    if (siteInput.value.trim()) void loadDoaLog();
+  },
   onSitePropChange: (val) => {
     if (val) void loadDoaLog();
   },
@@ -315,15 +423,21 @@ const doaColumns = [
   { key: "actions", label: "Actions" },
 ];
 const exporting = ref(false);
+const showExportPrompt = ref(false);
+const exportPassword = ref("");
 const doaLog = ref<DoaLog | null>(null);
 
 const newStaffUserId = ref("");
+const newStaffName = ref("");
+const newStaffRole = ref("");
 const newTaskCode = ref("CRF_DATA_ENTRY");
+const newDuties = ref("");
 const newStartDate = ref("");
 const newReason = ref("");
 
 const activeSignOffRecord = ref<DelegationRecord | null>(null);
 const signOffReason = ref("");
+const signOffPassword = ref("");
 const signOffHandoff = useInlineFocusHandoff({
   openTarget: "#doa-signoff-reason",
   closeFallback: "#ctms-delegation-title",
@@ -338,9 +452,20 @@ const revokeHandoff = useInlineFocusHandoff({
   scrollIfOffscreen: true,
 });
 
+const effectiveStudyCode = computed(
+  () => (props.studyCode || clinicalStore.activeStudyId || "").trim() || null
+);
+
 function delegationStatus(
   rec: DelegationRecord
 ): "ACTIVE" | "PENDING_PI_SIGNATURE" | "REVOKED" {
+  if (
+    rec.status === "ACTIVE" ||
+    rec.status === "PENDING_PI_SIGNATURE" ||
+    rec.status === "REVOKED"
+  ) {
+    return rec.status;
+  }
   if (!rec.is_active || rec.end_date) {
     return "REVOKED";
   }
@@ -354,7 +479,7 @@ async function loadDoaLog() {
   const site = siteInput.value.trim();
   if (!site) return;
 
-  syncActiveScope(undefined, site);
+  syncActiveScope(effectiveStudyCode.value || undefined, site);
   loading.value = true;
   loadError.value = "";
   scopeGuidance.value = "";
@@ -385,8 +510,12 @@ async function submitDelegation() {
   try {
     await ctmsApi.delegateSiteTasks(
       {
+        study_id: effectiveStudyCode.value,
         site_id: site,
         staff_user_id: staff,
+        staff_name: newStaffName.value.trim() || null,
+        role: newStaffRole.value.trim() || null,
+        duties: newDuties.value.trim() || null,
         task_codes: [newTaskCode.value],
         start_date: newStartDate.value,
         reason_for_change: reason,
@@ -394,6 +523,9 @@ async function submitDelegation() {
       reason
     );
     newStaffUserId.value = "";
+    newStaffName.value = "";
+    newStaffRole.value = "";
+    newDuties.value = "";
     newReason.value = "";
     toasts.push({
       tone: "success",
@@ -413,6 +545,7 @@ function prepareSignOff(rec: DelegationRecord) {
   activeRevokeRecord.value = null;
   activeSignOffRecord.value = rec;
   signOffReason.value = "";
+  signOffPassword.value = "";
   void signOffHandoff.handoff("#doa-signoff-reason", {
     scrollIfOffscreen: true,
   });
@@ -420,6 +553,7 @@ function prepareSignOff(rec: DelegationRecord) {
 
 function cancelSignOff() {
   const recordId = activeSignOffRecord.value?.record_id;
+  signOffPassword.value = "";
   activeSignOffRecord.value = null;
   signOffReason.value = "";
   void signOffHandoff.restoreTrigger([
@@ -431,16 +565,29 @@ function cancelSignOff() {
 async function confirmSignOff() {
   const rec = activeSignOffRecord.value;
   const reason = signOffReason.value.trim();
-  if (!rec || !reason || !canSignOff.value) return;
+  const password = signOffPassword.value;
+  signOffPassword.value = "";
+  if (!rec || !reason || !password.trim() || !canSignOff.value) return;
 
   saving.value = true;
   try {
+    const signerUsername = authStore.user?.username || authStore.userId || "";
+    const verifyRes = await requestStepUpSignature({
+      username: signerUsername,
+      password,
+      totp: null,
+      action: "/api/v1/ctms/doa/sign-off",
+      semanticAction: "ctms.doa.sign_off",
+    });
+
     await ctmsApi.signOffDelegation(
       {
         record_id: rec.record_id,
+        study_id: rec.study_id ?? effectiveStudyCode.value,
         reason_for_change: reason,
       },
-      reason
+      reason,
+      verifyRes.sig_token
     );
     activeSignOffRecord.value = null;
     signOffReason.value = "";
@@ -496,6 +643,7 @@ async function confirmRevoke() {
     await ctmsApi.revokeSiteTasks(
       {
         record_id: rec.record_id,
+        study_id: rec.study_id ?? effectiveStudyCode.value,
         reason_for_change: reason,
       },
       reason
@@ -523,12 +671,38 @@ async function confirmRevoke() {
   }
 }
 
+function prepareExportPdf() {
+  showExportPrompt.value = true;
+  exportPassword.value = "";
+}
+
+function cancelExportPdf() {
+  showExportPrompt.value = false;
+  exportPassword.value = "";
+}
+
 async function exportPdf() {
   const site = siteInput.value.trim();
-  if (!site) return;
+  const password = exportPassword.value;
+  exportPassword.value = "";
+  if (!site || !password.trim()) return;
+  syncActiveScope(effectiveStudyCode.value || undefined, site);
   exporting.value = true;
   try {
-    const blob = await ctmsApi.exportSiteDoaPdf(site);
+    const signerUsername = authStore.user?.username || authStore.userId || "";
+    const verifyRes = await requestStepUpSignature({
+      username: signerUsername,
+      password,
+      totp: null,
+      action: `/api/v1/ctms/doa/sites/${encodeURIComponent(site)}/export-pdf`,
+      semanticAction: "ctms.doa.export_pdf",
+    });
+    const blob = await ctmsApi.exportSiteDoaPdf(
+      site,
+      verifyRes.sig_token,
+      effectiveStudyCode.value || undefined
+    );
+    showExportPrompt.value = false;
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;

@@ -283,18 +283,33 @@ function openOrientationHub() {
   }
 }
 
+const NON_TOUR_ROUTES = new Set([
+  "forbidden",
+  "unavailable",
+  "plans",
+  "trial-onboarding",
+]);
+const NON_TOUR_PATHS = new Set([
+  "/forbidden",
+  "/unavailable",
+  "/plans",
+  "/onboarding/trial",
+]);
+
 async function startGuidedTour() {
   onboardingStore.startTour();
   onboardingStore.closeDrawer();
   const initialRouteName = onboardingStore.currentStepConfig?.routeName;
+  const isNonTourActiveRoute = Boolean(
+    activeRoute &&
+    (NON_TOUR_ROUTES.has(String(activeRoute.name || "")) ||
+      NON_TOUR_PATHS.has(String(activeRoute.path || "")))
+  );
   if (
     initialRouteName &&
     router &&
     activeRoute?.name !== initialRouteName &&
-    (activeRoute?.name === "forbidden" ||
-      activeRoute?.path === "/forbidden" ||
-      activeRoute?.name === "unavailable" ||
-      activeRoute?.path === "/unavailable")
+    isNonTourActiveRoute
   ) {
     const resolved =
       typeof router.resolve === "function"
@@ -310,6 +325,15 @@ async function startGuidedTour() {
       : null;
     if (targetPath && canPushResolvedPath(targetPath)) {
       await router.push(targetPath);
+    } else if (isScreenAvailable("overview")) {
+      const overviewPath = buildScopedWorkflowPath("/overview", {
+        studyCode: workspaceScope.value.studyCode,
+        siteId: workspaceScope.value.siteId,
+        subjectCode: workspaceScope.value.subjectCode,
+      });
+      if (canPushResolvedPath(overviewPath)) {
+        await router.push(overviewPath);
+      }
     }
   }
 }

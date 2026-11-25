@@ -13,7 +13,9 @@ Generated from `docs/openapi/knowledge_openapi.json` by `pnpm cadence generate-a
 | `GET` | `/api/v1/knowledge/status` | KnowledgeStatus | Returns Knowledge base operational status. |
 | `GET` | `/api/v1/training/assignments` | ListAssignments |  |
 | `GET` | `/api/v1/training/assignments/{assignment_id}` | GetAssignmentDetail |  |
+| `POST` | `/api/v1/training/assignments/{assignment_id}/complete` | CompleteTrainingAssignment |  |
 | `GET` | `/api/v1/training/curricula` | ListCurricula |  |
+| `POST` | `/api/v1/training/curricula` | CreateCurriculum |  |
 | `POST` | `/api/v1/training/curricula/batch-assign` | BatchAssignCurriculum |  |
 | `GET` | `/api/v1/training/curricula/{curriculum_id}` | GetCurriculum |  |
 | `GET` | `/api/v1/training/delegations` | ListDelegations |  |

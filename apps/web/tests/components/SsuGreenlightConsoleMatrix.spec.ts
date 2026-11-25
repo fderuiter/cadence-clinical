@@ -32,6 +32,7 @@ const SAMPLE_MATRIX: SiteGreenlightGateResponse[] = [
     greenlight_certified_at: null,
     is_overridden: false,
     unfulfilled_reasons: [],
+    is_ready_for_certification: true,
   },
   {
     id: "gate-site-102",
@@ -53,6 +54,7 @@ const SAMPLE_MATRIX: SiteGreenlightGateResponse[] = [
     greenlight_certified_at: null,
     is_overridden: false,
     unfulfilled_reasons: ["IRB approval pending", "RTSM depot not ready"],
+    is_ready_for_certification: false,
   },
 ];
 
@@ -71,6 +73,7 @@ describe("SsuGreenlightConsole Country-Level Multi-Site Activation Matrix", () =
       study_id: "PROTOCOL-2026-01",
       country_code: "US",
       certified_count: 1,
+      total_certified: 1,
       message: "Batch certification completed.",
       certified_sites: [
         {

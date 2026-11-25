@@ -3,10 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Apps.Knowledge.Application;
 using Cadence.Apps.Knowledge.Domain;
 using Cadence.Apps.Knowledge.Infrastructure.Persistence;
 using Cadence.Database.Temporal;
@@ -19,9 +21,30 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
 namespace Cadence.Apps.Knowledge.Endpoints;
+
+public sealed record TrainingCurriculumModuleDto(
+    [property: JsonPropertyName("id")] string Id,
+    [property: JsonPropertyName("title")] string Title,
+    [property: JsonPropertyName("content_type")] string ContentType,
+    [property: JsonPropertyName("duration_minutes")] int DurationMinutes,
+    [property: JsonPropertyName("body_markdown")] string BodyMarkdown);
+
+public sealed record CreateTrainingCurriculumRequest(
+    [property: JsonPropertyName("study_id")] string Study,
+    [property: JsonPropertyName("protocol_version")] string? ProtocolVersion,
+    [property: JsonPropertyName("title")] string Title,
+    [property: JsonPropertyName("description")] string? Description,
+    [property: JsonPropertyName("modules")] List<TrainingCurriculumModuleDto>? Modules = null,
+    [property: JsonPropertyName("reason_for_change")] string? ReasonForChange = null);
+
+public sealed record CompleteTrainingAssignmentRequest(
+    [property: JsonPropertyName("quiz_score")] double? QuizScore = null,
+    [property: JsonPropertyName("time_spent_seconds")] int? TimeSpentSeconds = null,
+    [property: JsonPropertyName("reason_for_change")] string? ReasonForChange = null);
 
 public sealed record BatchAssignCurriculumRequest(
     [property: JsonPropertyName("curriculum_id")] string CurriculumId,
@@ -44,7 +67,8 @@ public sealed record TrainingAssignmentDto(
     [property: JsonPropertyName("quiz_score")] double? QuizScore,
     [property: JsonPropertyName("time_spent_seconds")] int TimeSpentSeconds,
     [property: JsonPropertyName("completed_at")] DateTimeOffset? CompletedAt,
-    [property: JsonPropertyName("created_at")] DateTimeOffset CreatedAt);
+    [property: JsonPropertyName("created_at")] DateTimeOffset CreatedAt,
+    [property: JsonPropertyName("curriculum")] TrainingCurriculumDto? Curriculum = null);
 
 public sealed record SkippedAssignmentItemDto(
     [property: JsonPropertyName("user_id")] string UserId,
@@ -122,10 +146,11 @@ public sealed record TrainingCurriculumDto(
     [property: JsonPropertyName("title")] string Title,
     [property: JsonPropertyName("description")] string? Description,
     [property: JsonPropertyName("is_active")] bool IsActive,
-    [property: JsonPropertyName("created_at")] DateTimeOffset CreatedAt);
+    [property: JsonPropertyName("created_at")] DateTimeOffset CreatedAt,
+    [property: JsonPropertyName("modules")] List<TrainingCurriculumModuleDto>? Modules = null);
 
 /// <summary>
-/// Minimal API endpoints for Batch Curriculum Assignment and Bulk Delegation Sign-Off.
+/// Minimal API endpoints for Study Curriculum Creation, Batch Curriculum Assignment, Assignment Completion, and Bulk Delegation Sign-Off.
 /// @req:PRD-TRN-001, PRD-TRN-002, PRD-TRN-003, PRD-TRN-004
 /// </summary>
 public static class TrainingEndpoints
@@ -148,6 +173,13 @@ public static class TrainingEndpoints
             .RequirePermission("training_log:read").RequireCallerStudyScope()
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<List<TrainingCurriculumDto>>(StatusCodes.Status200OK);
+
+        group.MapPost("/curricula", CreateCurriculumAsync)
+            .WithName("CreateCurriculum")
+            .RequirePermission("training_curriculum:create").RequireCallerStudyScope()
+            .Produces<TrainingCurriculumDto>(StatusCodes.Status201Created)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden);
 
         group.MapGet("/curricula/{curriculum_id}", GetCurriculumAsync)
             .WithName("GetCurriculum")
@@ -179,6 +211,14 @@ public static class TrainingEndpoints
             .Produces<TrainingAssignmentDto>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
+        group.MapPost("/assignments/{assignment_id}/complete", CompleteAssignmentAsync)
+            .WithName("CompleteTrainingAssignment")
+            .RequirePermission("training_log:create").RequireCallerStudyAndSiteScope()
+            .Produces<TrainingAssignmentDto>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
         group.MapGet("/delegations", ListDelegationsAsync)
             .WithName("ListDelegations")
             .RequirePermission("delegation_log:read").RequireCallerStudyAndSiteScope()
@@ -197,6 +237,67 @@ public static class TrainingEndpoints
 
         return app;
     }
+
+    private static List<TrainingCurriculumModuleDto> ResolveCurriculumModules(TrainingCurriculum curriculum)
+    {
+        if (!string.IsNullOrWhiteSpace(curriculum.ModulesJson))
+        {
+            try
+            {
+                var parsed = JsonSerializer.Deserialize<List<TrainingCurriculumModuleDto>>(curriculum.ModulesJson);
+                if (parsed is { Count: > 0 })
+                {
+                    return parsed;
+                }
+            }
+            catch (JsonException)
+            {
+                // Fall back to deterministic protocol module from the persisted curriculum row.
+            }
+        }
+
+        string overviewMarkdown = !string.IsNullOrWhiteSpace(curriculum.Description)
+            ? curriculum.Description
+            : $"Protocol version {curriculum.ProtocolVersion} training curriculum for {curriculum.Title}.";
+
+        return
+        [
+            new TrainingCurriculumModuleDto(
+                $"{curriculum.Id}-mod-1",
+                curriculum.Title,
+                "PROTOCOL_SECTION",
+                15,
+                overviewMarkdown)
+        ];
+    }
+
+    private static TrainingCurriculumDto ToCurriculumDto(TrainingCurriculum c) =>
+        new(
+            c.Id,
+            c.StudyId,
+            c.ProtocolVersion,
+            c.Title,
+            c.Description,
+            c.IsActive,
+            c.CreatedAt,
+            ResolveCurriculumModules(c));
+
+    private static TrainingAssignmentDto ToAssignmentDto(TrainingAssignment a, TrainingCurriculum? curriculum = null) =>
+        new(
+            a.Id,
+            a.CurriculumId,
+            a.StudyId,
+            a.SiteId,
+            a.UserId,
+            a.UserName,
+            a.UserRole,
+            a.Status,
+            a.BatchTransactionId,
+            a.QuizScore,
+            a.TimeSpentSeconds,
+            a.CompletedAt,
+            a.CreatedAt,
+            curriculum is null ? null : ToCurriculumDto(curriculum));
 
     private static async Task<IResult> ListCurriculaAsync(
         string? study_id,
@@ -221,11 +322,96 @@ public static class TrainingEndpoints
         }
 
         // An empty result is an empty list: nothing is invented when no curriculum exists (#5400).
-        var list = await query.ToListAsync(cancellationToken);
-        var dtos = list.Select(c => new TrainingCurriculumDto(
-            c.Id, c.StudyId, c.ProtocolVersion, c.Title, c.Description, c.IsActive, c.CreatedAt)).ToList();
+        var list = await query.OrderByDescending(c => c.CreatedAt).ToListAsync(cancellationToken);
+        var dtos = list.Select(ToCurriculumDto).ToList();
 
         return TypedResults.Ok(dtos);
+    }
+
+    private static async Task<IResult> CreateCurriculumAsync(
+        CreateTrainingCurriculumRequest request,
+        KnowledgeDbContext dbContext,
+        HttpContext httpContext,
+        IClock clock,
+        CancellationToken cancellationToken)
+    {
+        if (request is null || string.IsNullOrWhiteSpace(request.Study) || string.IsNullOrWhiteSpace(request.Title))
+        {
+            return TypedResults.Problem(
+                "study_id and title are required to create a training curriculum.",
+                statusCode: StatusCodes.Status400BadRequest);
+        }
+
+        string trimmedStudy = request.Study.Trim();
+        if (!CallerScope.CanAccessStudy(httpContext, trimmedStudy))
+        {
+            return ClinicalScopeGuard.OutsideStudy();
+        }
+
+        string actorId = CallerScope.UserId(httpContext)
+            ?? throw new InvalidOperationException("An admitted training request has no signed caller.");
+        string actorRole = CallerScope.Roles(httpContext);
+        string protocolVersion = string.IsNullOrWhiteSpace(request.ProtocolVersion) ? "1.0" : request.ProtocolVersion.Trim();
+        string title = request.Title.Trim();
+        string? description = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim();
+        string reason = string.IsNullOrWhiteSpace(request.ReasonForChange)
+            ? $"Create study training curriculum '{title}' ({protocolVersion})"
+            : request.ReasonForChange.Trim();
+
+        string curriculumId = Guid.NewGuid().ToString();
+        var normalizedModules = request.Modules is { Count: > 0 }
+            ? request.Modules
+                .Where(m => !string.IsNullOrWhiteSpace(m.Title))
+                .Select((m, idx) => new TrainingCurriculumModuleDto(
+                    string.IsNullOrWhiteSpace(m.Id) ? $"{curriculumId}-mod-{idx + 1}" : m.Id.Trim(),
+                    m.Title.Trim(),
+                    string.IsNullOrWhiteSpace(m.ContentType) ? "PROTOCOL_SECTION" : m.ContentType.Trim(),
+                    m.DurationMinutes > 0 ? m.DurationMinutes : 15,
+                    string.IsNullOrWhiteSpace(m.BodyMarkdown) ? (description ?? m.Title.Trim()) : m.BodyMarkdown.Trim()))
+                .ToList()
+            : [];
+
+        if (normalizedModules.Count == 0)
+        {
+            normalizedModules.Add(new TrainingCurriculumModuleDto(
+                $"{curriculumId}-mod-1",
+                title,
+                "PROTOCOL_SECTION",
+                15,
+                description ?? $"Protocol v{protocolVersion} required training curriculum: {title}."));
+        }
+
+        var now = clock.UtcNow;
+        var entity = new TrainingCurriculum
+        {
+            Id = curriculumId,
+            StudyId = trimmedStudy,
+            ProtocolVersion = protocolVersion,
+            Title = title,
+            Description = description,
+            ModulesJson = JsonSerializer.Serialize(normalizedModules),
+            IsActive = true,
+            CreatedAt = now,
+            CreatedBy = actorId,
+            ReasonForChange = reason
+        };
+
+        dbContext.TrainingCurricula.Add(entity);
+        dbContext.OrgAuditLogs.Add(new OrgAuditLog
+        {
+            Id = Guid.NewGuid().ToString(),
+            Timestamp = now,
+            ActorId = actorId,
+            ActorRole = actorRole,
+            Action = "training.curriculum.create",
+            RecordId = entity.Id,
+            Details = $"Created study training curriculum '{entity.Title}' (protocol v{entity.ProtocolVersion}) in study '{entity.StudyId}' with {normalizedModules.Count} module(s).",
+            ReasonForChange = reason
+        });
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        return TypedResults.Created($"/api/v1/training/curricula/{entity.Id}", ToCurriculumDto(entity));
     }
 
     private static async Task<IResult> GetCurriculumAsync(
@@ -241,8 +427,7 @@ public static class TrainingEndpoints
             return TypedResults.Problem($"Curriculum '{curriculum_id}' not found.", statusCode: StatusCodes.Status404NotFound);
         }
 
-        return TypedResults.Ok(new TrainingCurriculumDto(
-            c.Id, c.StudyId, c.ProtocolVersion, c.Title, c.Description, c.IsActive, c.CreatedAt));
+        return TypedResults.Ok(ToCurriculumDto(c));
     }
 
     private static async Task<IResult> BatchAssignCurriculumAsync(
@@ -294,12 +479,37 @@ public static class TrainingEndpoints
             return ClinicalScopeGuard.OutsideStudy();
         }
 
-        // The audience is the study's site staff on the delegation log: the module's record of who works on the study,
-        // at which site and in which role. Nobody is synthesized (#5400).
-        var staff = await dbContext.DelegationRecords.AsNoTracking()
-            .Where(d => d.StudyId == request.StudyId)
-            .ToListAsync(cancellationToken);
-        var studySites = staff.Select(d => d.SiteId).ToHashSet(StringComparer.Ordinal);
+        // The audience is the study's site staff on the canonical CTMS delegation log (with fallback to local
+        // DelegationRecords in isolated unit tests where CTMS_SERVICE_URL is unconfigured). Nobody is synthesized (#5400).
+        var ctmsClient = httpContext.RequestServices?.GetService<ICtmsDelegationClient>();
+        List<(string Id, string StaffUserId, string StaffName, string SiteCode, string Role)> staff;
+        if (ctmsClient is { IsConfigured: true })
+        {
+            var ctmsDelegations = await ctmsClient.ListDelegationsAsync(
+                httpContext,
+                request.StudyId,
+                null,
+                null,
+                null,
+                null,
+                cancellationToken);
+            staff = [.. ctmsDelegations
+                .Where(d => d.IsActive)
+                .Select(d => (
+                    Id: d.RecordId, d.StaffUserId,
+                    StaffName: string.IsNullOrWhiteSpace(d.StaffName) ? d.StaffUserId : d.StaffName,
+                    SiteCode: d.SiteCode,
+                    Role: string.IsNullOrWhiteSpace(d.Role) ? "Site Staff" : d.Role))];
+        }
+        else
+        {
+            var localRecords = await dbContext.DelegationRecords.AsNoTracking()
+                .Where(d => d.StudyId == request.StudyId)
+                .ToListAsync(cancellationToken);
+            staff = [.. localRecords.Select(d => (d.Id, d.StaffUserId, d.StaffName, SiteCode: d.SiteId, d.Role))];
+        }
+
+        var studySites = staff.Select(d => d.SiteCode).ToHashSet(StringComparer.Ordinal);
 
         var unknownSites = namesSites ? request.SiteIds!.Where(site => !studySites.Contains(site)).ToList() : [];
         if (unknownSites.Count > 0)
@@ -321,14 +531,14 @@ public static class TrainingEndpoints
 
         // One candidate per person and site, in a site the caller reaches, matching every filter the request names.
         var candidateList = staff
-            .Where(d => !namesSites || request.SiteIds!.Contains(d.SiteId))
+            .Where(d => !namesSites || request.SiteIds!.Contains(d.SiteCode))
             .Where(d => !namesRoles || request.Roles!.Contains(d.Role, StringComparer.OrdinalIgnoreCase))
             .Where(d => !namesPeople || request.TargetPersonnelIds!.Contains(d.StaffUserId))
-            .Where(d => SiteAccessEvaluator.CanAccessSite(principal, d.SiteId))
-            .GroupBy(d => (d.StaffUserId, d.SiteId))
+            .Where(d => SiteAccessEvaluator.CanAccessSite(principal, d.SiteCode))
+            .GroupBy(d => (d.StaffUserId, d.SiteCode))
             .Select(g => g.OrderBy(d => d.Id, StringComparer.Ordinal).First())
-            .OrderBy(d => d.SiteId, StringComparer.Ordinal).ThenBy(d => d.StaffUserId, StringComparer.Ordinal)
-            .Select(d => (UserId: d.StaffUserId, UserName: d.StaffName, SiteId: d.SiteId, Role: d.Role))
+            .OrderBy(d => d.SiteCode, StringComparer.Ordinal).ThenBy(d => d.StaffUserId, StringComparer.Ordinal)
+            .Select(d => (UserId: d.StaffUserId, UserName: d.StaffName, SiteId: d.SiteCode, d.Role))
             .ToList();
 
         if (candidateList.Count == 0)
@@ -358,18 +568,18 @@ public static class TrainingEndpoints
             .Where(a => a.CurriculumId == request.CurriculumId && a.Status != "COMPLETED")
             .ToListAsync(cancellationToken);
 
-        foreach (var candidate in candidateList)
+        foreach (var (UserId, UserName, SiteId, Role) in candidateList)
         {
             bool hasActive = existing.Any(a =>
-                a.UserId == candidate.UserId &&
-                a.SiteId == candidate.SiteId);
+                a.UserId == UserId &&
+                a.SiteId == SiteId);
 
             if (hasActive)
             {
                 skippedItems.Add(new SkippedAssignmentItemDto(
-                    candidate.UserId,
-                    candidate.SiteId,
-                    candidate.Role,
+                    UserId,
+                    SiteId,
+                    Role,
                     "Duplicate active training assignment already exists for this curriculum"));
                 continue;
             }
@@ -379,10 +589,10 @@ public static class TrainingEndpoints
                 Id = Guid.NewGuid().ToString(),
                 CurriculumId = request.CurriculumId,
                 StudyId = request.StudyId,
-                SiteId = candidate.SiteId,
-                UserId = candidate.UserId,
-                UserName = candidate.UserName,
-                UserRole = candidate.Role,
+                SiteId = SiteId,
+                UserId = UserId,
+                UserName = UserName,
+                UserRole = Role,
                 Status = "PENDING",
                 BatchTransactionId = batchTxId,
                 TimeSpentSeconds = 0,
@@ -411,9 +621,7 @@ public static class TrainingEndpoints
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        var assignmentDtos = createdAssignments.Select(a => new TrainingAssignmentDto(
-            a.Id, a.CurriculumId, a.StudyId, a.SiteId, a.UserId, a.UserName, a.UserRole,
-            a.Status, a.BatchTransactionId, a.QuizScore, a.TimeSpentSeconds, a.CompletedAt, a.CreatedAt)).ToList();
+        var assignmentDtos = createdAssignments.Select(a => ToAssignmentDto(a, curriculum)).ToList();
 
         var response = new BatchAssignmentResponse(
             batchTxId,
@@ -453,9 +661,15 @@ public static class TrainingEndpoints
         var list = (await query.ToListAsync(cancellationToken))
             .Where(a => ClinicalScopeGuard.CanAccessSite(httpContext, a.SiteId))
             .ToList();
-        var dtos = list.Select(a => new TrainingAssignmentDto(
-            a.Id, a.CurriculumId, a.StudyId, a.SiteId, a.UserId, a.UserName, a.UserRole,
-            a.Status, a.BatchTransactionId, a.QuizScore, a.TimeSpentSeconds, a.CompletedAt, a.CreatedAt)).ToList();
+
+        var curriculumIds = list.Select(a => a.CurriculumId).Distinct(StringComparer.Ordinal).ToList();
+        var curriculaById = curriculumIds.Count == 0
+            ? new Dictionary<string, TrainingCurriculum>(StringComparer.Ordinal)
+            : await dbContext.TrainingCurricula.AsNoTracking()
+                .Where(c => curriculumIds.Contains(c.Id))
+                .ToDictionaryAsync(c => c.Id, StringComparer.Ordinal, cancellationToken);
+
+        var dtos = list.Select(a => ToAssignmentDto(a, curriculaById.GetValueOrDefault(a.CurriculumId))).ToList();
 
         return TypedResults.Ok(dtos);
     }
@@ -472,9 +686,130 @@ public static class TrainingEndpoints
             return TypedResults.Problem($"Assignment '{assignment_id}' not found.", statusCode: StatusCodes.Status404NotFound);
         }
 
-        return TypedResults.Ok(new TrainingAssignmentDto(
-            asn.Id, asn.CurriculumId, asn.StudyId, asn.SiteId, asn.UserId, asn.UserName, asn.UserRole,
-            asn.Status, asn.BatchTransactionId, asn.QuizScore, asn.TimeSpentSeconds, asn.CompletedAt, asn.CreatedAt));
+        var curriculum = await dbContext.TrainingCurricula.AsNoTracking()
+            .FirstOrDefaultAsync(c => c.Id == asn.CurriculumId, cancellationToken);
+
+        return TypedResults.Ok(ToAssignmentDto(asn, curriculum));
+    }
+
+    private static async Task<IResult> CompleteAssignmentAsync(
+        string assignment_id,
+        CompleteTrainingAssignmentRequest? request,
+        KnowledgeDbContext dbContext,
+        HttpContext httpContext,
+        IClock clock,
+        CancellationToken cancellationToken)
+    {
+        var asn = await dbContext.TrainingAssignments.FirstOrDefaultAsync(a => a.Id == assignment_id, cancellationToken);
+        if (asn == null || !CallerScope.CanAccessStudy(httpContext, asn.StudyId) || !ClinicalScopeGuard.CanAccessSite(httpContext, asn.SiteId))
+        {
+            return TypedResults.Problem($"Assignment '{assignment_id}' not found.", statusCode: StatusCodes.Status404NotFound);
+        }
+
+        string actorId = CallerScope.UserId(httpContext)
+            ?? throw new InvalidOperationException("An admitted training request has no signed caller.");
+        var principal = CallerScope.Principal(httpContext);
+        bool isAssignedTrainee = string.Equals(asn.UserId, actorId, StringComparison.OrdinalIgnoreCase);
+        bool isTrainingManager = PermissionMatrix.HasPermission(principal, "training_curriculum:assign");
+        if (!isAssignedTrainee && !isTrainingManager)
+        {
+            return TypedResults.Problem(
+                title: "Forbidden",
+                detail: "Only the assigned trainee or an authorized training administrator may complete this assignment.",
+                statusCode: StatusCodes.Status403Forbidden);
+        }
+
+        if (request?.QuizScore is < 0 or > 100)
+        {
+            return TypedResults.Problem(
+                "quiz_score must be between 0 and 100.",
+                statusCode: StatusCodes.Status400BadRequest);
+        }
+
+        var now = clock.UtcNow;
+        string actorRole = CallerScope.Roles(httpContext);
+        string reason = string.IsNullOrWhiteSpace(request?.ReasonForChange)
+            ? "Completed assigned protocol training curriculum"
+            : request.ReasonForChange.Trim();
+
+        asn.Status = "COMPLETED";
+        asn.CompletedAt = now;
+        asn.QuizScore = request?.QuizScore ?? asn.QuizScore ?? 100.0;
+        asn.TimeSpentSeconds = request?.TimeSpentSeconds is > 0
+            ? request.TimeSpentSeconds.Value
+            : Math.Max(asn.TimeSpentSeconds, 60);
+        asn.ReasonForChange = reason;
+
+        string seal = Convert.ToHexStringLower(SHA256.HashData(
+            Encoding.UTF8.GetBytes($"training.complete|{asn.Id}|{asn.CurriculumId}|{actorId}|{asn.QuizScore}|{now:O}")));
+
+        dbContext.OrgAuditLogs.Add(new OrgAuditLog
+        {
+            Id = Guid.NewGuid().ToString(),
+            Timestamp = now,
+            ActorId = actorId,
+            ActorRole = actorRole,
+            Action = "training.assignment.complete",
+            RecordId = asn.Id,
+            Details = $"Completed training assignment '{asn.Id}' for curriculum '{asn.CurriculumId}' at site '{asn.SiteId}' (score: {asn.QuizScore:F1}%, time: {asn.TimeSpentSeconds}s).",
+            ReasonForChange = reason
+        });
+
+        dbContext.TrainingCertificates.Add(new TrainingCertificate
+        {
+            Id = Guid.NewGuid().ToString(),
+            AssignmentId = asn.Id,
+            SignerName = actorId,
+            SignerRole = actorRole,
+            Meaning = "Completed assigned protocol training curriculum",
+            Sha256Seal = seal,
+            EtmfArtifactId = "05.03.01",
+            CreatedAt = now
+        });
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        var curriculum = await dbContext.TrainingCurricula.AsNoTracking()
+            .FirstOrDefaultAsync(c => c.Id == asn.CurriculumId, cancellationToken);
+
+        return TypedResults.Ok(ToAssignmentDto(asn, curriculum));
+    }
+
+    private static DelegationSummaryDto MapCtmsDelegationToSummary(CtmsDelegationItemDto d, string? fallbackStudy)
+    {
+        string resolvedStatus;
+        if (!string.IsNullOrWhiteSpace(d.Status))
+        {
+            resolvedStatus = d.Status;
+        }
+        else if (!d.IsActive)
+        {
+            resolvedStatus = "REVOKED";
+        }
+        else
+        {
+            resolvedStatus = d.SignedOff ? "ACTIVE" : "PENDING_PI_SIGNATURE";
+        }
+
+        string taskCode = d.TaskCodes is { Count: > 0 } ? d.TaskCodes[0] : "GENERAL";
+        string duties = !string.IsNullOrWhiteSpace(d.Duties)
+            ? d.Duties
+            : string.Join(", ", d.TaskCodes ?? []);
+
+        return new DelegationSummaryDto(
+            d.RecordId,
+            d.StudyCode ?? fallbackStudy ?? string.Empty,
+            d.SiteCode,
+            d.StaffUserId,
+            string.IsNullOrWhiteSpace(d.StaffName) ? d.StaffUserId : d.StaffName,
+            string.IsNullOrWhiteSpace(d.Role) ? "Site Staff" : d.Role,
+            taskCode,
+            duties,
+            resolvedStatus,
+            d.SignedOff,
+            d.PiSignatureHash,
+            d.PiApprovedAt,
+            d.BatchTransactionId);
     }
 
     private static async Task<IResult> ListDelegationsAsync(
@@ -490,6 +825,27 @@ public static class TrainingEndpoints
         if (!ClinicalScopeGuard.ResolveStudyAndSiteFilters(httpContext, study_id, site_id, out var studies, out _, out var denied))
         {
             return denied!;
+        }
+
+        var ctmsClient = httpContext.RequestServices?.GetService<ICtmsDelegationClient>();
+        if (ctmsClient is { IsConfigured: true })
+        {
+            var ctmsRows = await ctmsClient.ListDelegationsAsync(
+                httpContext,
+                study_id,
+                site_id,
+                status,
+                valid_at,
+                known_at,
+                cancellationToken);
+
+            var ctmsDtos = ctmsRows
+                .Where(d => studies == null || (d.StudyCode != null && studies.Contains(d.StudyCode)))
+                .Where(d => ClinicalScopeGuard.CanAccessSite(httpContext, d.SiteCode))
+                .Select(d => MapCtmsDelegationToSummary(d, study_id))
+                .ToList();
+
+            return TypedResults.Ok(ctmsDtos);
         }
 
         if (valid_at.HasValue || known_at.HasValue)
@@ -575,64 +931,167 @@ public static class TrainingEndpoints
             : throw new InvalidOperationException("GATEWAY_SECRET is not configured; delegation sign-offs cannot be sealed.");
 
         var ids = request.DelegationIds.Select(id => id.Trim()).Distinct(StringComparer.Ordinal).ToList();
-        var records = await dbContext.DelegationRecords
-            .Where(d => ids.Contains(d.Id))
-            .ToListAsync(cancellationToken);
-        var missing = ids.Except(records.Select(r => r.Id), StringComparer.Ordinal).ToList();
-        if (missing.Count > 0)
-        {
-            return TypedResults.Problem(
-                $"No delegation record exists for: {string.Join(", ", missing)}. Nothing was signed.",
-                statusCode: StatusCodes.Status404NotFound);
-        }
-
-        if (records.Exists(r => !StudyAccessEvaluator.CanAccessStudy(signer, r.StudyId) || !SiteAccessEvaluator.CanAccessSite(signer, r.SiteId)))
-        {
-            return ClinicalScopeGuard.OutsideStudy();
-        }
-
         var now = clock.UtcNow;
         string batchTxId = Guid.NewGuid().ToString();
         string signerRole = string.Join(",", signer.Roles);
-
         string sealInput = $"{batchTxId}|{string.Join(",", ids.Order(StringComparer.Ordinal))}|{signer.UserId}|{signerRole}|{request.SignaturePayload?.Meaning}|{now:O}";
         string seal = HmacSigner.ComputeSignature(sealInput, secret);
         string reasonForChange = request.SignaturePayload?.ReasonForChange ?? "21 CFR Part 11 Principal Investigator bulk delegation sign-off";
 
-        var existingPeriods = await dbContext.DelegationRecordPeriods
-            .Where(p => ids.Contains(p.DelegationRecordId))
-            .ToListAsync(cancellationToken);
-
         var signedList = new List<DelegationSummaryDto>();
-        foreach (var record in records.OrderBy(r => r.Id, StringComparer.Ordinal))
+        string etmfArtifactId = "05.02.04";
+
+        var ctmsClient = httpContext.RequestServices?.GetService<ICtmsDelegationClient>();
+        if (ctmsClient is { IsConfigured: true })
         {
-            string priorStatus = record.Status;
-            bool priorSignedOff = record.SignedOff;
-            string? priorHash = record.PiSignatureHash;
-            DateTimeOffset? priorApprovedAt = record.PiApprovedAt;
-            string? priorBatchTxId = record.BatchTransactionId;
+            var endorseOutcome = await ctmsClient.EndorseSignedBatchAsync(
+                httpContext,
+                new CtmsEndorseBatchRequestDto(
+                    request.StudyId,
+                    ids,
+                    signer.UserId,
+                    reasonForChange,
+                    batchTxId,
+                    seal,
+                    now),
+                cancellationToken);
 
-            var recordPeriods = existingPeriods
-                .Where(p => p.DelegationRecordId == record.Id)
-                .ToList();
-            var activeOpen = recordPeriods
-                .Where(p => p.RecordedPeriod.UpperBoundInfinite && p.ValidPeriod.UpperBoundInfinite)
-                .ToList();
-
-            DateTimeOffset recordedCutover = now;
-            foreach (var open in activeOpen)
+            if (!endorseOutcome.Succeeded || endorseOutcome.Payload is null)
             {
-                var closed = StandaloneBitemporalModelExtensions.CloseRecordedAt(open.RecordedPeriod, now);
-                open.RecordedPeriod = closed;
-                if (closed.UpperBound > recordedCutover)
-                {
-                    recordedCutover = closed.UpperBound;
-                }
+                return TypedResults.Problem(
+                    endorseOutcome.ProblemDetail ?? "Failed to endorse delegation records in CTMS.",
+                    statusCode: endorseOutcome.StatusCode is >= 400 and < 600
+                        ? endorseOutcome.StatusCode
+                        : StatusCodes.Status502BadGateway);
             }
 
-            var openRecorded = StandaloneBitemporalModelExtensions.CreateOpenPeriod(recordedCutover);
-            if (activeOpen.Count == 0 && record.CreatedAt < recordedCutover)
+            signedList = endorseOutcome.Payload.Records
+                .OrderBy(r => r.RecordId, StringComparer.Ordinal)
+                .Select(r => MapCtmsDelegationToSummary(r, request.StudyId))
+                .ToList();
+
+            etmfArtifactId = endorseOutcome.Payload.Records
+                .Select(r => r.EtmfDocumentId)
+                .FirstOrDefault(docId => !string.IsNullOrWhiteSpace(docId))
+                ?? "05.02.04";
+
+            dbContext.OrgAuditLogs.Add(new OrgAuditLog
             {
+                Id = Guid.NewGuid().ToString(),
+                Timestamp = now,
+                ActorId = signer.UserId,
+                ActorRole = signerRole,
+                Action = "training.delegation.bulk_signoff",
+                BatchTransactionId = batchTxId,
+                Details = $"Executed Part 11 bulk delegation sign-off for {signedList.Count} canonical CTMS delegation log records. Routed to eTMF Zone 5 ({etmfArtifactId}). Seal HMAC-SHA256: {seal}",
+                ReasonForChange = reasonForChange
+            });
+        }
+        else
+        {
+            var records = await dbContext.DelegationRecords
+                .Where(d => ids.Contains(d.Id))
+                .ToListAsync(cancellationToken);
+            var missing = ids.Except(records.Select(r => r.Id), StringComparer.Ordinal).ToList();
+            if (missing.Count > 0)
+            {
+                return TypedResults.Problem(
+                    $"No delegation record exists for: {string.Join(", ", missing)}. Nothing was signed.",
+                    statusCode: StatusCodes.Status404NotFound);
+            }
+
+            if (records.Exists(r => !StudyAccessEvaluator.CanAccessStudy(signer, r.StudyId) || !SiteAccessEvaluator.CanAccessSite(signer, r.SiteId)))
+            {
+                return ClinicalScopeGuard.OutsideStudy();
+            }
+
+            var existingPeriods = await dbContext.DelegationRecordPeriods
+                .Where(p => ids.Contains(p.DelegationRecordId))
+                .ToListAsync(cancellationToken);
+
+            foreach (var record in records.OrderBy(r => r.Id, StringComparer.Ordinal))
+            {
+                string priorStatus = record.Status;
+                bool priorSignedOff = record.SignedOff;
+                string? priorHash = record.PiSignatureHash;
+                DateTimeOffset? priorApprovedAt = record.PiApprovedAt;
+                string? priorBatchTxId = record.BatchTransactionId;
+
+                var recordPeriods = existingPeriods
+                    .Where(p => p.DelegationRecordId == record.Id)
+                    .ToList();
+                var activeOpen = recordPeriods
+                    .Where(p => p.RecordedPeriod.UpperBoundInfinite && p.ValidPeriod.UpperBoundInfinite)
+                    .ToList();
+
+                DateTimeOffset recordedCutover = now;
+                foreach (var open in activeOpen)
+                {
+                    var closed = StandaloneBitemporalModelExtensions.CloseRecordedAt(open.RecordedPeriod, now);
+                    open.RecordedPeriod = closed;
+                    if (closed.UpperBound > recordedCutover)
+                    {
+                        recordedCutover = closed.UpperBound;
+                    }
+                }
+
+                var openRecorded = StandaloneBitemporalModelExtensions.CreateOpenPeriod(recordedCutover);
+                if (activeOpen.Count == 0 && record.CreatedAt < recordedCutover)
+                {
+                    dbContext.DelegationRecordPeriods.Add(new DelegationRecordPeriod
+                    {
+                        DelegationRecordId = record.Id,
+                        StudyCode = record.StudyId,
+                        SiteCode = record.SiteId,
+                        StaffUserId = record.StaffUserId,
+                        StaffName = record.StaffName,
+                        Role = record.Role,
+                        TaskCode = record.TaskCode,
+                        Duties = record.Duties,
+                        Status = priorStatus,
+                        SignedOff = priorSignedOff,
+                        PiSignatureHash = priorHash,
+                        PiApprovedAt = priorApprovedAt,
+                        BatchTransactionId = priorBatchTxId,
+                        CreatedBy = string.IsNullOrWhiteSpace(record.CreatedBy) ? signer.UserId : record.CreatedBy,
+                        ReasonForChange = "Initial delegation period",
+                        ValidPeriod = StandaloneBitemporalModelExtensions.CreateClosedPeriod(record.CreatedAt, recordedCutover),
+                        RecordedPeriod = openRecorded,
+                    });
+                }
+                else
+                {
+                    foreach (var prior in activeOpen.Where(p => p.ValidPeriod.LowerBound < recordedCutover))
+                    {
+                        dbContext.DelegationRecordPeriods.Add(new DelegationRecordPeriod
+                        {
+                            DelegationRecordId = prior.DelegationRecordId,
+                            StudyCode = prior.StudyCode,
+                            SiteCode = prior.SiteCode,
+                            StaffUserId = prior.StaffUserId,
+                            StaffName = prior.StaffName,
+                            Role = prior.Role,
+                            TaskCode = prior.TaskCode,
+                            Duties = prior.Duties,
+                            Status = prior.Status,
+                            SignedOff = prior.SignedOff,
+                            PiSignatureHash = prior.PiSignatureHash,
+                            PiApprovedAt = prior.PiApprovedAt,
+                            BatchTransactionId = prior.BatchTransactionId,
+                            CreatedBy = prior.CreatedBy,
+                            ReasonForChange = prior.ReasonForChange,
+                            ValidPeriod = StandaloneBitemporalModelExtensions.CreateClosedPeriod(prior.ValidPeriod.LowerBound, recordedCutover),
+                            RecordedPeriod = openRecorded,
+                        });
+                    }
+                }
+
+                record.Status = "COMPLETED";
+                record.SignedOff = true;
+                record.PiSignatureHash = seal;
+                record.PiApprovedAt = now;
+                record.BatchTransactionId = batchTxId;
+
                 dbContext.DelegationRecordPeriods.Add(new DelegationRecordPeriod
                 {
                     DelegationRecordId = record.Id,
@@ -643,101 +1102,51 @@ public static class TrainingEndpoints
                     Role = record.Role,
                     TaskCode = record.TaskCode,
                     Duties = record.Duties,
-                    Status = priorStatus,
-                    SignedOff = priorSignedOff,
-                    PiSignatureHash = priorHash,
-                    PiApprovedAt = priorApprovedAt,
-                    BatchTransactionId = priorBatchTxId,
-                    CreatedBy = string.IsNullOrWhiteSpace(record.CreatedBy) ? signer.UserId : record.CreatedBy,
-                    ReasonForChange = "Initial delegation period",
-                    ValidPeriod = StandaloneBitemporalModelExtensions.CreateClosedPeriod(record.CreatedAt, recordedCutover),
+                    Status = record.Status,
+                    SignedOff = record.SignedOff,
+                    PiSignatureHash = record.PiSignatureHash,
+                    PiApprovedAt = record.PiApprovedAt,
+                    BatchTransactionId = record.BatchTransactionId,
+                    CreatedBy = signer.UserId,
+                    ReasonForChange = reasonForChange,
+                    ValidPeriod = StandaloneBitemporalModelExtensions.CreateOpenPeriod(recordedCutover),
                     RecordedPeriod = openRecorded,
                 });
-            }
-            else
-            {
-                foreach (var prior in activeOpen.Where(p => p.ValidPeriod.LowerBound < recordedCutover))
-                {
-                    dbContext.DelegationRecordPeriods.Add(new DelegationRecordPeriod
-                    {
-                        DelegationRecordId = prior.DelegationRecordId,
-                        StudyCode = prior.StudyCode,
-                        SiteCode = prior.SiteCode,
-                        StaffUserId = prior.StaffUserId,
-                        StaffName = prior.StaffName,
-                        Role = prior.Role,
-                        TaskCode = prior.TaskCode,
-                        Duties = prior.Duties,
-                        Status = prior.Status,
-                        SignedOff = prior.SignedOff,
-                        PiSignatureHash = prior.PiSignatureHash,
-                        PiApprovedAt = prior.PiApprovedAt,
-                        BatchTransactionId = prior.BatchTransactionId,
-                        CreatedBy = prior.CreatedBy,
-                        ReasonForChange = prior.ReasonForChange,
-                        ValidPeriod = StandaloneBitemporalModelExtensions.CreateClosedPeriod(prior.ValidPeriod.LowerBound, recordedCutover),
-                        RecordedPeriod = openRecorded,
-                    });
-                }
+
+                signedList.Add(new DelegationSummaryDto(
+                    record.Id, record.StudyId, record.SiteId, record.StaffUserId, record.StaffName,
+                    record.Role, record.TaskCode, record.Duties, record.Status, record.SignedOff,
+                    record.PiSignatureHash, record.PiApprovedAt, record.BatchTransactionId));
             }
 
-            record.Status = "COMPLETED";
-            record.SignedOff = true;
-            record.PiSignatureHash = seal;
-            record.PiApprovedAt = now;
-            record.BatchTransactionId = batchTxId;
-
-            dbContext.DelegationRecordPeriods.Add(new DelegationRecordPeriod
+            dbContext.OrgAuditLogs.Add(new OrgAuditLog
             {
-                DelegationRecordId = record.Id,
-                StudyCode = record.StudyId,
-                SiteCode = record.SiteId,
-                StaffUserId = record.StaffUserId,
-                StaffName = record.StaffName,
-                Role = record.Role,
-                TaskCode = record.TaskCode,
-                Duties = record.Duties,
-                Status = record.Status,
-                SignedOff = record.SignedOff,
-                PiSignatureHash = record.PiSignatureHash,
-                PiApprovedAt = record.PiApprovedAt,
-                BatchTransactionId = record.BatchTransactionId,
-                CreatedBy = signer.UserId,
-                ReasonForChange = reasonForChange,
-                ValidPeriod = StandaloneBitemporalModelExtensions.CreateOpenPeriod(recordedCutover),
-                RecordedPeriod = openRecorded,
+                Id = Guid.NewGuid().ToString(),
+                Timestamp = now,
+                ActorId = signer.UserId,
+                ActorRole = signerRole,
+                Action = "training.delegation.bulk_signoff",
+                BatchTransactionId = batchTxId,
+                Details = $"Executed Part 11 bulk delegation sign-off for {signedList.Count} delegation log records. Routed to eTMF Zone 5 (Artifact 05.02.04). Seal HMAC-SHA256: {seal}",
+                ReasonForChange = reasonForChange
             });
-
-            signedList.Add(new DelegationSummaryDto(
-                record.Id, record.StudyId, record.SiteId, record.StaffUserId, record.StaffName,
-                record.Role, record.TaskCode, record.Duties, record.Status, record.SignedOff,
-                record.PiSignatureHash, record.PiApprovedAt, record.BatchTransactionId));
         }
 
-        dbContext.OrgAuditLogs.Add(new OrgAuditLog
+        if (signedList.Count > 0)
         {
-            Id = Guid.NewGuid().ToString(),
-            Timestamp = now,
-            ActorId = signer.UserId,
-            ActorRole = signerRole,
-            Action = "training.delegation.bulk_signoff",
-            BatchTransactionId = batchTxId,
-            Details = $"Executed Part 11 bulk delegation sign-off for {signedList.Count} delegation log records. Routed to eTMF Zone 5 (Artifact 05.02.04). Seal HMAC-SHA256: {seal}",
-            ReasonForChange = request.SignaturePayload?.ReasonForChange ?? "21 CFR Part 11 Principal Investigator bulk delegation sign-off"
-        });
-
-        dbContext.TrainingCertificates.Add(new TrainingCertificate
-        {
-            Id = Guid.NewGuid().ToString(),
-            AssignmentId = signedList[0].Id,
-            BatchTransactionId = batchTxId,
-            SignerName = signer.UserId,
-            SignerRole = signerRole,
-            Meaning = request.SignaturePayload?.Meaning ?? string.Empty,
-            Sha256Seal = seal,
-            EtmfArtifactId = "05.02.04",
-            CreatedAt = now
-        });
+            dbContext.TrainingCertificates.Add(new TrainingCertificate
+            {
+                Id = Guid.NewGuid().ToString(),
+                AssignmentId = signedList[0].Id,
+                BatchTransactionId = batchTxId,
+                SignerName = signer.UserId,
+                SignerRole = signerRole,
+                Meaning = request.SignaturePayload?.Meaning ?? string.Empty,
+                Sha256Seal = seal,
+                EtmfArtifactId = etmfArtifactId,
+                CreatedAt = now
+            });
+        }
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
@@ -749,7 +1158,7 @@ public static class TrainingEndpoints
             signedList,
             [],
             seal,
-            "05.02.04",
+            etmfArtifactId,
             now));
     }
 }

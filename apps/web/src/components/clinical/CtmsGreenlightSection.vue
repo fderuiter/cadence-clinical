@@ -95,15 +95,23 @@
         </li>
       </ul>
 
-      <p v-if="singleGate.greenlight_certified_at" class="certified-meta">
-        Certified by {{ singleGate.greenlight_certified_by }} on
-        {{ formatUtcDate(singleGate.greenlight_certified_at) }}
+      <p
+        v-if="singleGate.certified_at || singleGate.greenlight_certified_at"
+        class="certified-meta"
+      >
+        Certified by
+        {{ singleGate.certified_by || singleGate.greenlight_certified_by }} on
+        {{
+          formatUtcDate(
+            singleGate.certified_at || singleGate.greenlight_certified_at
+          )
+        }}
       </p>
 
       <div
         v-if="
-          singleGate.is_compliant &&
-          singleGate.overall_status !== 'CERTIFIED' &&
+          isGateReady(singleGate) &&
+          !isGateCertified(singleGate.overall_status) &&
           canCertify
         "
         class="certify-box"
@@ -118,11 +126,20 @@
           :show-query-flag="false"
           extra-class="certify-input-field"
         />
+        <label for="greenlight-certify-password">Password (Part 11)</label>
+        <input
+          id="greenlight-certify-password"
+          v-model="certifyPassword"
+          v-bind="SIGNATURE_PASSWORD_INPUT_ATTRS"
+          placeholder="Re-enter password to sign"
+        />
         <button
           id="btn-certify-site-greenlight"
           type="button"
           class="btn btn-primary"
-          :disabled="!certifyReason.trim() || certifying"
+          :disabled="
+            !certifyReason.trim() || !certifyPassword.trim() || certifying
+          "
           @click="certifySingleSite"
         >
           {{ certifying ? "Certifying..." : `Certify ${singleGate.site_id}` }}
@@ -130,8 +147,8 @@
       </div>
       <p
         v-else-if="
-          singleGate.is_compliant &&
-          singleGate.overall_status !== 'CERTIFIED' &&
+          isGateReady(singleGate) &&
+          !isGateCertified(singleGate.overall_status) &&
           !canCertify
         "
         id="greenlight-readonly-note"
@@ -169,7 +186,7 @@
               type="checkbox"
               :value="row.site_id"
               :disabled="
-                !row.is_compliant || row.overall_status === 'CERTIFIED'
+                !isGateReady(row) || isGateCertified(row.overall_status)
               "
               :aria-label="`Select ${row.site_id} for batch certification`"
             />
@@ -190,14 +207,14 @@
             {{ getGateFacets(row).length }}
           </template>
           <template #cell-reasons="{ row }">
-            <span v-if="(row.unfulfilled_reasons ?? []).length">
-              {{ (row.unfulfilled_reasons ?? []).join("; ") }}
+            <span v-if="getBlockingReasons(row).length">
+              {{ getBlockingReasons(row).join("; ") }}
             </span>
             <span v-else class="text-ok">None</span>
           </template>
           <template #cell-certified="{ row }">
-            <span v-if="row.greenlight_certified_by">
-              {{ row.greenlight_certified_by }}
+            <span v-if="row.certified_by || row.greenlight_certified_by">
+              {{ row.certified_by || row.greenlight_certified_by }}
             </span>
             <span v-else class="muted-inline">—</span>
           </template>
@@ -217,11 +234,20 @@
             :show-query-flag="false"
             extra-class="certify-input-field"
           />
+          <label for="batch-certify-password">Password (Part 11)</label>
+          <input
+            id="batch-certify-password"
+            v-model="batchPassword"
+            v-bind="SIGNATURE_PASSWORD_INPUT_ATTRS"
+            placeholder="Re-enter password to sign"
+          />
           <button
             id="btn-batch-certify-greenlight"
             type="button"
             class="btn btn-primary"
-            :disabled="!batchReason.trim() || certifying"
+            :disabled="
+              !batchReason.trim() || !batchPassword.trim() || certifying
+            "
             @click="certifyBatch"
           >
             {{
@@ -238,8 +264,14 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
-import { ClinicalDataTable, ClinicalInput, handoffFocus } from "ui";
+import {
+  ClinicalDataTable,
+  ClinicalInput,
+  handoffFocus,
+  SIGNATURE_PASSWORD_INPUT_ATTRS,
+} from "ui";
 import { ctmsApi, type SiteGreenlightGate } from "../../api/ctmsApi";
+import { requestStepUpSignature } from "../../api/signatureVerification";
 import { canCertifyGreenlight } from "../../canvas/authority";
 import {
   scopedWorkspaceSectionProps,
@@ -252,6 +284,11 @@ import "./ctmsWorkspaceSection.css";
 const props = defineProps(scopedWorkspaceSectionProps);
 const workspace = useScopedWorkspaceSection(props, {
   onStudyPropChange: () => void loadReadiness(),
+  onSitePropChange: () => {
+    if (studyInput.value.trim()) {
+      void loadReadiness();
+    }
+  },
   fallbackErrorTitle: "Startup readiness could not be loaded",
   fallbackErrorMessage: "Startup readiness could not be loaded.",
 });
@@ -286,7 +323,9 @@ const singleGate = ref<SiteGreenlightGate | null>(null);
 const countryMatrix = ref<SiteGreenlightGate[]>([]);
 const selectedMatrixSites = ref<string[]>([]);
 const certifyReason = ref("");
+const certifyPassword = ref("");
 const batchReason = ref("");
+const batchPassword = ref("");
 const certifying = ref(false);
 
 interface GateFacetSummary {
@@ -296,7 +335,34 @@ interface GateFacetSummary {
   is_satisfied: boolean;
 }
 
+function isGateCertified(status?: string | null): boolean {
+  const normalized = String(status || "").toUpperCase();
+  return (
+    normalized === "CERTIFIED" ||
+    normalized === "APPROVED" ||
+    normalized === "OVERRIDDEN"
+  );
+}
+
+function isGateReady(gate: SiteGreenlightGate): boolean {
+  return Boolean(gate.is_ready_for_certification ?? gate.is_compliant);
+}
+
+function getBlockingReasons(gate: SiteGreenlightGate): string[] {
+  if (gate.blocking_reasons?.length) {
+    return gate.blocking_reasons;
+  }
+  return gate.unfulfilled_reasons ?? [];
+}
+
+function resolveSignerUsername(): string {
+  return authStore.user?.username || authStore.userId || "";
+}
+
 function getGateFacets(gate: SiteGreenlightGate): GateFacetSummary[] {
+  if (gate.facets?.length) {
+    return gate.facets;
+  }
   return [
     {
       facet_code: "REGULATORY_IRB",
@@ -389,16 +455,33 @@ async function loadReadiness() {
 }
 
 async function certifySingleSite() {
-  if (!singleGate.value || !certifyReason.value.trim() || !canCertify.value) {
+  const password = certifyPassword.value;
+  certifyPassword.value = "";
+  if (
+    !singleGate.value ||
+    !certifyReason.value.trim() ||
+    !password.trim() ||
+    !canCertify.value
+  ) {
     return;
   }
   certifying.value = true;
   try {
+    const siteId = singleGate.value.site_id;
+    const verifyRes = await requestStepUpSignature({
+      username: resolveSignerUsername(),
+      password,
+      totp: null,
+      action: `/api/v1/ctms/startup/sites/${encodeURIComponent(siteId)}/greenlight/certify`,
+      semanticAction: "ctms.greenlight.certify",
+    });
+
     const updated = await ctmsApi.certifySiteGreenlight(
-      singleGate.value.site_id,
+      siteId,
       singleGate.value.study_id,
       certifyReason.value.trim(),
-      singleGate.value.country_code
+      singleGate.value.country_code,
+      verifyRes.sig_token
     );
     singleGate.value = updated;
     certifyReason.value = "";
@@ -418,16 +501,27 @@ async function certifySingleSite() {
 
 async function certifyBatch() {
   const study = studyInput.value.trim();
+  const password = batchPassword.value;
+  batchPassword.value = "";
   if (
     !study ||
     !selectedMatrixSites.value.length ||
     !batchReason.value.trim() ||
+    !password.trim() ||
     !canCertify.value
   ) {
     return;
   }
   certifying.value = true;
   try {
+    const verifyRes = await requestStepUpSignature({
+      username: resolveSignerUsername(),
+      password,
+      totp: null,
+      action: "/api/v1/ctms/startup/matrix/batch-certify",
+      semanticAction: "ctms.greenlight.batch_certify",
+    });
+
     const res = await ctmsApi.batchCertifyCountrySites(
       {
         study_id: study,
@@ -435,13 +529,15 @@ async function certifyBatch() {
         site_ids: selectedMatrixSites.value,
         meaning: batchReason.value.trim(),
       },
-      batchReason.value.trim()
+      batchReason.value.trim(),
+      verifyRes.sig_token
     );
     batchReason.value = "";
     selectedMatrixSites.value = [];
+    const count = res.total_certified ?? res.certified_count;
     toasts.push({
       tone: "success",
-      title: `Certified ${res.certified_count} site(s)`,
+      title: `Certified ${count} site(s)`,
       message: `Country ${res.country_code} startup greenlight updated.`,
     });
     await loadReadiness();
@@ -492,6 +588,8 @@ onMounted(() => {
 }
 
 .gate-certified,
+.gate-approved,
+.gate-overridden,
 .gate-ready {
   background: var(--semantic-color-success-bg);
   color: var(--semantic-color-success-dark);

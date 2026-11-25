@@ -60,6 +60,7 @@ public sealed class VisitLetterPdfPipelineTests
         _clock = new FakeClock(new DateTimeOffset(2026, 10, 1, 12, 0, 0, TimeSpan.Zero));
 
         var services = new ServiceCollection();
+        services.AddSingleton<Cadence.Apps.Ctms.Services.ICtmsEtmfFilingClient>(new FakeCtmsEtmfFilingClient(_etmfDb, _clock));
         services.AddSingleton<CtmsDbContext>(_ctmsDb);
         services.AddSingleton<EtmfDbContext>(_etmfDb);
         services.AddSingleton<NotificationsDbContext>(_notifDb);
@@ -105,11 +106,11 @@ public sealed class VisitLetterPdfPipelineTests
             StudyId: "STUDY-101",
             SiteId: "SITE-017",
             ActualDate: "2026-09-30",
-            Findings: new List<SiteVisitFindingModel>
-            {
+            Findings:
+            [
                 new("Informed consent missing date stamp", "MAJOR", "OPEN"),
                 new("Temperature log missing for Oct 01", "MINOR", "RESOLVED")
-            });
+            ]);
 
         var result = await GxpPdfCompiler.CompileLetterPdfAsync(
             "follow_up_letter",
@@ -236,10 +237,12 @@ public sealed class VisitLetterPdfPipelineTests
             InvestigatorEmail: "investigator@site017.org",
             ReasonForChange: "Final visit letter approval and automated dispatch");
 
-        var httpContext = new DefaultHttpContext();
-        httpContext.User = new System.Security.Claims.ClaimsPrincipal(
-            new System.Security.Claims.ClaimsIdentity(
-                [new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.Name, "jane.cra")]));
+        var httpContext = new DefaultHttpContext
+        {
+            User = new System.Security.Claims.ClaimsPrincipal(
+                new System.Security.Claims.ClaimsIdentity(
+                    [new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.Name, "jane.cra")]))
+        };
 
         var ct = TestContext.Current.CancellationToken;
 
@@ -289,4 +292,129 @@ public sealed class VisitLetterPdfPipelineTests
         notif.Category.Should().Be("VISIT_LETTER_DISPATCH");
         notif.MessageContent.Should().Contain(dto.PdfAccessUrl);
     }
+
+    [Fact]
+    [GxPRequirement("PRD-CTMS-002")]
+    public async Task FinalizedLetterThroughHttp_RequiresSigToken_AndServesExactSha256BytesToMonitorInvestigatorAndAuditor()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        await using var factory = new CtmsStudySiteScopeIsolationTests.CtmsInMemoryWebFactory();
+        var clock = factory.Services.GetRequiredService<IClock>();
+
+        await using (var scope = factory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<CtmsDbContext>();
+            db.CtmsMonitoringVisits.Add(new CtmsMonitoringVisit("VISIT-SHA-001", CtmsMonitoringVisitStatus.Completed)
+            {
+                StudyId = "STUDY-SHA",
+                SiteId = "SITE-101",
+                CraId = "cra-sha",
+                VisitType = "IMV",
+                ScheduledDate = clock.UtcNow.AddDays(-1),
+                ActualDate = clock.UtcNow,
+                CreatedAt = clock.UtcNow.UtcDateTime,
+                CreatedBy = "cra-sha",
+                ReasonForChange = "Completed IMV",
+            });
+            await db.SaveChangesAsync(ct);
+        }
+
+        using var craClient = factory.CreateSignedClient("CRA", "cra-sha", ["STUDY-SHA"], ["SITE-101"]);
+        var payload = new
+        {
+            craId = "cra-sha",
+            createdAt = "2026-11-23",
+            studyId = "STUDY-SHA",
+            siteId = "SITE-101",
+            visitId = "VISIT-SHA-001",
+            visitType = "IMV",
+            finalize = true,
+            signerName = "cra-sha",
+            signingPurpose = "Finalize follow-up letter",
+            reasonForChange = "21 CFR Part 11 finalized letter compilation",
+        };
+
+        // 1. Finalize without X-Sig-Token fails closed with 401
+        var unsignedRes = await craClient.PostAsJsonAsync(
+            "/api/v1/ctms/letters/compile?templateName=follow_up_letter",
+            payload,
+            ct);
+        unsignedRes.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+
+        // 2. Finalize with X-Sig-Token succeeds and stores immutable PdfBytes
+        using var signedCompileReq = new System.Net.Http.HttpRequestMessage(
+            System.Net.Http.HttpMethod.Post,
+            "/api/v1/ctms/letters/compile?templateName=follow_up_letter")
+        {
+            Content = JsonContent.Create(payload),
+        };
+        signedCompileReq.Headers.Add(
+            Cadence.Security.Authentication.GatewayHeaders.SigToken,
+            TestSecurityContext.CreateSigToken(
+                "cra-sha",
+                LetterTemplateEndpoints.CompileLetterAction,
+                LetterTemplateEndpoints.CompileLetterSemanticAction,
+                ["CRA"],
+                issuedAt: clock.UtcNow));
+        var signedRes = await craClient.SendAsync(signedCompileReq, ct);
+        signedRes.StatusCode.Should().Be(HttpStatusCode.OK);
+        var compiled = await signedRes.Content.ReadFromJsonAsync<VisitLetterCompilationResultDto>(ct);
+        compiled.Should().NotBeNull();
+        compiled!.PdfSha256Hash.Should().HaveLength(64);
+
+        // 3. Monitor, Principal Investigator, Investigator, and Auditor all download exact bytes matching PdfSha256Hash
+        foreach (var (role, sites) in new (string Role, string[] Sites)[]
+        {
+            ("monitor", ["SITE-101"]),
+            ("Principal Investigator", ["SITE-101"]),
+            ("Site Investigator", ["SITE-101"]),
+            ("Auditor", []),
+        })
+        {
+            using var readerClient = factory.CreateSignedClient(role, $"reader-{role}", ["STUDY-SHA"], sites);
+            var pdfRes = await readerClient.GetAsync($"/api/v1/ctms/letters/{compiled.LetterId}/pdf", ct);
+            pdfRes.StatusCode.Should().Be(HttpStatusCode.OK, $"role '{role}' must have read access to compiled letter PDFs");
+            byte[] pdfBytes = await pdfRes.Content.ReadAsByteArrayAsync(ct);
+            string actualHash = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(pdfBytes));
+            actualHash.Should().Be(compiled.PdfSha256Hash);
+        }
+    }
+
+    private sealed class FakeCtmsEtmfFilingClient(EtmfDbContext etmfDb, IClock clock) : Cadence.Apps.Ctms.Services.ICtmsEtmfFilingClient
+    {
+        public async Task<string?> FileSignedArtifactAsync(
+            Cadence.Apps.Ctms.Services.CtmsEtmfFilingRequest filing,
+            CancellationToken ct)
+        {
+            var now = clock.UtcNow;
+            string docId = "DOC-" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
+            string reason = string.IsNullOrWhiteSpace(filing.ReasonForChange)
+                ? "Automated eTMF filing for finalized monitoring visit letter."
+                : filing.ReasonForChange;
+            var doc = Cadence.Apps.Etmf.Domain.TmfDocument.CreateDraft(
+                id: docId,
+                studyId: filing.StudyCode,
+                filename: filing.Filename,
+                createdBy: filing.Signer,
+                createdAt: now.UtcDateTime,
+                reasonForChange: reason,
+                siteId: filing.SiteCode,
+                zone: 5,
+                section: "05.02",
+                artifactCode: filing.ArtifactCode,
+                artifactType: filing.ArtifactCode == "05.02.04" ? "Delegation of Authority Log" : "Monitoring Visit Follow-up Letter",
+                content: "Signed GxP PDF",
+                mimeType: "application/pdf",
+                taxonomyVersion: "v3.2.0-complete");
+            doc.Signer = filing.Signer;
+            doc.SigningTimestamp = filing.SigningTimestamp;
+            doc.SignatureManifestation = filing.SignatureManifestation;
+            doc.StageForQc(filing.Signer, "ctms_service", reason, now, sequenceNumber: 1);
+            doc.Approve(filing.Signer, "ctms_service", reason, now, sequenceNumber: 2);
+            etmfDb.TmfDocuments.Add(doc);
+            await etmfDb.SaveChangesAsync(ct);
+            return docId;
+        }
+    }
+
 }

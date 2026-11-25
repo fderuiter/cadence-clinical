@@ -22,6 +22,8 @@ namespace Cadence.Apps.Execution.Endpoints;
 public static class IpKitEndpoints
 {
     public const string ReconcileBatchSemanticAction = "execution.rtsm.reconcile_batch";
+    public const string ReconcileBatchAction = "/api/v1/execution/rtsm/kits/reconcile-batch";
+
     public static IEndpointRouteBuilder MapIpKitEndpoints(this IEndpointRouteBuilder routes)
     {
         // Route permissions (ADR-2516): kit scans, reconciliation and inventory are blinded supply data, so only the
@@ -64,9 +66,13 @@ public static class IpKitEndpoints
                 return locked;
             }
 
+            string verifiedSigner = CallerScope.UserId(httpContext)
+                ?? throw new InvalidOperationException("Signed IP kit reconciliation requires a verified caller.");
+            var verifiedRequest = request with { ProcessedBy = verifiedSigner };
+
             try
             {
-                var result = await service.ProcessBatchReconciliationAsync(request, ct);
+                var result = await service.ProcessBatchReconciliationAsync(verifiedRequest, ct);
                 return Results.Ok(result);
             }
             catch (ArgumentException ex)

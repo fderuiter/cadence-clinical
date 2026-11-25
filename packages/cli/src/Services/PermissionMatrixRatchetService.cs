@@ -37,6 +37,7 @@ public static partial class PermissionMatrixRatchetService
         ["ROLE_SPONSOR_STATISTICIAN"] = RoleNormalization.ROLE_SPONSOR_STATISTICIAN,
         ["ROLE_INVESTIGATOR"] = RoleNormalization.ROLE_INVESTIGATOR,
         ["ROLE_CRC"] = RoleNormalization.ROLE_CRC,
+        ["ROLE_TRIAL_COORDINATOR"] = RoleNormalization.ROLE_TRIAL_COORDINATOR,
         ["ROLE_CRA_CANONICAL"] = RoleNormalization.ROLE_CRA_CANONICAL,
         ["ROLE_SUBJECT"] = RoleNormalization.ROLE_SUBJECT,
         ["ROLE_AUDITOR_CANONICAL"] = RoleNormalization.ROLE_AUDITOR_CANONICAL,
@@ -51,6 +52,8 @@ public static partial class PermissionMatrixRatchetService
         ["ROLE_AUTHORIZED_ER_PHYSICIAN"] = RoleNormalization.ROLE_AUTHORIZED_ER_PHYSICIAN,
         ["ROLE_LEAD_INVESTIGATOR"] = RoleNormalization.ROLE_LEAD_INVESTIGATOR,
         ["EtmfServiceRole"] = PermissionMatrix.EtmfServiceRole,
+        ["CtmsServiceRole"] = PermissionMatrix.CtmsServiceRole,
+        ["KnowledgeServiceRole"] = PermissionMatrix.KnowledgeServiceRole,
         ["CecChairRole"] = PermissionMatrix.CecChairRole,
     };
 

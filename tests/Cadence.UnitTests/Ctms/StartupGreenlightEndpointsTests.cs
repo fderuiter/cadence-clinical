@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
+using System.Net.Http.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -19,6 +21,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 
 using Xunit;
 
@@ -91,20 +94,30 @@ public sealed class StartupGreenlightEndpointsTests
     }
 
     /// <summary>
-    /// Reading or certifying a site with no recorded gate answers 404 and invents no gate or token (#5433).
+    /// Reading an authorized unseeded site initializes its 6-facet gate from live checks without 404,
+    /// whereas certifying an unseeded site with no recorded gate fails closed with 404 and issues no token.
     /// </summary>
     [Fact]
-    public async Task SiteGreenlight_WithNoRecordedGate_IsNotFoundAndWritesNothing()
+    public async Task SiteGreenlight_WithNoRecordedGate_InitializesOnReadAndRefusesUncertifiedDirectCertify()
     {
-        var read = await StartupGreenlightEndpoints.GetSiteGreenlightAsync(
-            "SITE-NEW", Study, "US", _db, Caller(), TestContext.Current.CancellationToken);
-        var certify = await StartupGreenlightEndpoints.CertifySiteGreenlightAsync(
+        var certifyBeforeRead = await StartupGreenlightEndpoints.CertifySiteGreenlightAsync(
             "SITE-NEW", Study, "US", "Certify", _db, Caller(), _clock, _config, TestContext.Current.CancellationToken);
-
-        read.Result.Should().BeOfType<ProblemHttpResult>().Which.StatusCode.Should().Be(StatusCodes.Status404NotFound);
-        certify.Result.Should().BeOfType<ProblemHttpResult>().Which.StatusCode.Should().Be(StatusCodes.Status404NotFound);
-        (await _db.CtmsSiteGreenlightGates.CountAsync(TestContext.Current.CancellationToken)).Should().Be(0);
+        certifyBeforeRead.Result.Should().BeOfType<ProblemHttpResult>().Which.StatusCode.Should().Be(StatusCodes.Status404NotFound);
         (await _db.CtmsAuditLogs.CountAsync(TestContext.Current.CancellationToken)).Should().Be(0);
+
+        var read = await StartupGreenlightEndpoints.GetSiteGreenlightAsync(
+            "SITE-NEW", Study, "US", _db, Caller(), TestContext.Current.CancellationToken, clock: _clock);
+
+        var dto = read.Result.Should().BeOfType<Ok<SiteGreenlightGateResponseDto>>().Subject.Value!;
+        dto.SiteId.Should().Be("SITE-NEW");
+        dto.StudyId.Should().Be(Study);
+        dto.CountryCode.Should().Be("US");
+        dto.OverallStatus.Should().Be("PENDING");
+        dto.IsCompliant.Should().BeFalse();
+        dto.IsReadyForCertification.Should().BeFalse();
+        dto.Facets.Should().HaveCount(6);
+        dto.BlockingReasons.Should().NotBeEmpty();
+        (await _db.CtmsSiteGreenlightGates.CountAsync(TestContext.Current.CancellationToken)).Should().Be(1);
     }
 
     /// <summary>
@@ -182,7 +195,7 @@ public sealed class StartupGreenlightEndpointsTests
         var request = new BatchCertifyRequestDto(
             StudyId: "PROTOCOL-2026-01",
             CountryCode: "US",
-            SiteIds: new List<string> { nonCompliantSite.SiteId },
+            SiteIds: [nonCompliantSite.SiteId],
             Meaning: "Batch certifying greenlight activation"
         );
 
@@ -324,7 +337,7 @@ public sealed class StartupGreenlightEndpointsTests
         var request = new BatchCertifyRequestDto(
             StudyId: "PROTOCOL-2026-01",
             CountryCode: "US",
-            SiteIds: new List<string> { siteId },
+            SiteIds: [siteId],
             Meaning: "Batch certification with explicit GxP override"
         );
 
@@ -383,6 +396,107 @@ public sealed class StartupGreenlightEndpointsTests
         var crossSiteRead = await StartupGreenlightEndpoints.GetSiteGreenlightAsync(
             "SITE-DE-2", Study, "DE", _db, Caller(["cra"], [Study], ["SITE-DE-1"]), TestContext.Current.CancellationToken);
         crossSiteRead.Result.Should().BeOfType<ProblemHttpResult>().Which.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
+    }
+
+    [Fact]
+    public async Task CertifyAndBatchCertify_ThroughProgramWebFactory_EnforceSingleUseSigTokenAndAlignedDtoFields()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        await using var factory = new CtmsStudySiteScopeIsolationTests.CtmsInMemoryWebFactory();
+        var clock = factory.Services.GetRequiredService<Cadence.Kernel.Time.IClock>();
+
+        await using (var scope = factory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<CtmsDbContext>();
+            foreach (string siteId in new[] { "SITE-GL-1", "SITE-GL-2" })
+            {
+                db.CtmsSiteGreenlightGates.Add(new CtmsSiteGreenlightGate
+                {
+                    StudyId = Study,
+                    SiteId = siteId,
+                    SiteName = $"Site {siteId}",
+                    CountryCode = "US",
+                    ReadinessPercentage = 100,
+                    FacetRegulatoryIrb = true,
+                    FacetCtaBudget = true,
+                    FacetEisfBaseline = true,
+                    FacetDoaLog = true,
+                    FacetStaffTraining = true,
+                    FacetIpRelease = true,
+                    CreatedAt = clock.UtcNow.UtcDateTime,
+                    CreatedBy = "seed",
+                    ReasonForChange = "Compliant gate",
+                });
+            }
+
+            await db.SaveChangesAsync(ct);
+        }
+
+        using var dmClient = factory.CreateSignedClient("Data Manager", "dm-gl-1", [Study], []);
+
+        // 1. Pre-certification GET exposes 6 facets and IsReadyForCertification = true; POST without X-Sig-Token -> 401
+        var preCertRes = await dmClient.GetAsync($"/api/v1/ctms/startup/sites/SITE-GL-1/greenlight?study_id={Study}&country_code=US", ct);
+        preCertRes.StatusCode.Should().Be(System.Net.HttpStatusCode.OK);
+        var preCertDto = await preCertRes.Content.ReadFromJsonAsync<SiteGreenlightGateResponseDto>(ct);
+        preCertDto!.Facets.Should().HaveCount(6);
+        preCertDto.IsReadyForCertification.Should().BeTrue();
+
+        string singleAction = StartupGreenlightEndpoints.CertifySiteAction("SITE-GL-1");
+        string singleUrl = $"{singleAction}?study_id={Study}&country_code=US";
+        using (var unsignedReq = new HttpRequestMessage(HttpMethod.Post, singleUrl))
+        {
+            unsignedReq.Headers.Add("X-Change-Reason", "Certify single site");
+            var unsignedRes = await dmClient.SendAsync(unsignedReq, ct);
+            unsignedRes.StatusCode.Should().Be(System.Net.HttpStatusCode.Unauthorized);
+        }
+
+        // 2. Single-site certify with X-Sig-Token -> 200 OK, replay -> 401
+        string singleSig = Cadence.Testing.Security.TestSecurityContext.CreateSigToken(
+            "dm-gl-1",
+            singleAction,
+            StartupGreenlightEndpoints.CertifySiteSemanticAction,
+            ["Data Manager"],
+            issuedAt: clock.UtcNow);
+        using (var signedReq = new HttpRequestMessage(HttpMethod.Post, singleUrl))
+        {
+            signedReq.Headers.Add("X-Change-Reason", "Certify single site");
+            signedReq.Headers.Add(GatewayHeaders.SigToken, singleSig);
+            var signedRes = await dmClient.SendAsync(signedReq, ct);
+            signedRes.StatusCode.Should().Be(System.Net.HttpStatusCode.OK);
+            var gateDto = await signedRes.Content.ReadFromJsonAsync<SiteGreenlightGateResponseDto>(ct);
+            gateDto!.Facets.Should().HaveCount(6);
+            gateDto.IsReadyForCertification.Should().BeFalse();
+            gateDto.CertifiedBy.Should().Be("dm-gl-1");
+            gateDto.CertifiedAt.Should().NotBeNullOrWhiteSpace();
+            gateDto.GreenlightToken.Should().Contain(".");
+        }
+
+        using (var replayReq = new HttpRequestMessage(HttpMethod.Post, singleUrl))
+        {
+            replayReq.Headers.Add("X-Change-Reason", "Replay certify");
+            replayReq.Headers.Add(GatewayHeaders.SigToken, singleSig);
+            var replayRes = await dmClient.SendAsync(replayReq, ct);
+            replayRes.StatusCode.Should().Be(System.Net.HttpStatusCode.Unauthorized);
+        }
+
+        // 3. Batch certify with X-Sig-Token -> 200 OK with total_certified and certified_site_ids
+        string batchSig = Cadence.Testing.Security.TestSecurityContext.CreateSigToken(
+            "dm-gl-1",
+            StartupGreenlightEndpoints.BatchCertifyAction,
+            StartupGreenlightEndpoints.BatchCertifySemanticAction,
+            ["Data Manager"],
+            issuedAt: clock.UtcNow);
+        using var batchReq = new HttpRequestMessage(HttpMethod.Post, StartupGreenlightEndpoints.BatchCertifyAction)
+        {
+            Content = System.Net.Http.Json.JsonContent.Create(new BatchCertifyRequestDto(Study, "US", ["SITE-GL-2"], "Batch certify")),
+        };
+        batchReq.Headers.Add("X-Change-Reason", "Batch certify");
+        batchReq.Headers.Add(GatewayHeaders.SigToken, batchSig);
+        var batchRes = await dmClient.SendAsync(batchReq, ct);
+        batchRes.StatusCode.Should().Be(System.Net.HttpStatusCode.OK);
+        var batchDto = await batchRes.Content.ReadFromJsonAsync<BatchCertifyResponseDto>(ct);
+        batchDto!.TotalCertified.Should().Be(1);
+        batchDto.CertifiedSites.Select(s => s.SiteId).Should().Equal("SITE-GL-2");
     }
 
     private async Task AddGatesAsync(params (string SiteId, string Country, bool Compliant)[] sites)

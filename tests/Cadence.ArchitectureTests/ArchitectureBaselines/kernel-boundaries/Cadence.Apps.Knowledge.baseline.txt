@@ -33,6 +33,7 @@ K-XS-1|Cadence.Apps.Knowledge|Cadence.Apps.Knowledge.Endpoints.BatchAssignCurric
 K-XS-1|Cadence.Apps.Knowledge|Cadence.Apps.Knowledge.Endpoints.BatchAssignmentResponse.StudyId
 K-XS-1|Cadence.Apps.Knowledge|Cadence.Apps.Knowledge.Endpoints.BulkDelegationSignOffRequest.SiteId
 K-XS-1|Cadence.Apps.Knowledge|Cadence.Apps.Knowledge.Endpoints.BulkDelegationSignOffRequest.StudyId
+K-XS-1|Cadence.Apps.Knowledge|Cadence.Apps.Knowledge.Endpoints.CreateTrainingCurriculumRequest.Study
 K-XS-1|Cadence.Apps.Knowledge|Cadence.Apps.Knowledge.Endpoints.DelegationSummaryDto.SiteId
 K-XS-1|Cadence.Apps.Knowledge|Cadence.Apps.Knowledge.Endpoints.DelegationSummaryDto.StudyId
 K-XS-1|Cadence.Apps.Knowledge|Cadence.Apps.Knowledge.Endpoints.SkippedAssignmentItemDto.SiteId

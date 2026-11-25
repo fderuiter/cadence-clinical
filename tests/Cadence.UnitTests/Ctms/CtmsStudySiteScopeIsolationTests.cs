@@ -207,8 +207,9 @@ public sealed class CtmsStudySiteScopeIsolationTests : IAsyncLifetime
         var created = await delegateRes.Content.ReadFromJsonAsync<DelegationResponseDto>(Ct);
         created.Should().NotBeNull();
 
+        var issuedAt = _factory.Services.GetRequiredService<IClock>().UtcNow;
         using var signReq = JsonPost(
-            "/api/v1/ctms/doa/sign-off",
+            DoaEndpoints.SignOffAction,
             new
             {
                 record_id = created!.RecordId,
@@ -216,7 +217,12 @@ public sealed class CtmsStudySiteScopeIsolationTests : IAsyncLifetime
             });
         signReq.Headers.Add(
             GatewayHeaders.SigToken,
-            TestSecurityContext.CreateSigToken("pi-alpha-shared", "/api/v1/ctms/doa/sign-off", "ctms.doa.sign_off", ["principal_investigator"]));
+            TestSecurityContext.CreateSigToken(
+                "pi-alpha-shared",
+                DoaEndpoints.SignOffAction,
+                DoaEndpoints.SignOffSemanticAction,
+                ["principal_investigator"],
+                issuedAt: issuedAt));
         var signRes = await alphaPiShared.SendAsync(signReq, Ct);
         signRes.StatusCode.Should().Be(HttpStatusCode.OK);
 
@@ -567,6 +573,10 @@ public sealed class CtmsStudySiteScopeIsolationTests : IAsyncLifetime
                     accessor.UseNonHttpSeedingFallbackTenant(TestSecurityContext.TenantCode);
                     return accessor;
                 });
+
+                // The durable token-use store needs PostgreSQL; this in-memory host keeps uses in process memory.
+                services.RemoveAll<ISigTokenUseStore>();
+                services.AddSingleton<ISigTokenUseStore>(sp => new ReplayCache(sp.GetRequiredService<IClock>()));
 
                 services.AddDbContext<CtmsDbContext>((sp, options) =>
                 {

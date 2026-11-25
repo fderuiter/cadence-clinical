@@ -418,6 +418,12 @@ public static partial class PermissionMatrix
 
         _rolePermissions[RoleNormalization.ROLE_PHARMACIST] = new(StringComparer.OrdinalIgnoreCase)
         {
+            ["visit_windowing"] = ["read"],
+            ["soa"] = ["read"],
+            ["study_design"] = ["read"],
+            ["training_log"] = ["create", "read", "sign"],
+            ["ctms_study"] = ["read"],
+            ["eisf_document"] = ["read"],
             ["rtsm_supply"] = ["read", "write"]
         };
 
@@ -605,6 +611,16 @@ public static partial class PermissionMatrix
         [RoleNormalization.ROLE_SUBJECT] = "Study Participant",
         [RoleNormalization.ROLE_SYSADMIN] = "System Administrator",
         ["admin"] = "Sponsor Data Manager",
+        [EtmfServiceRole] = "Trial Master File Service Account",
+        [CtmsServiceRole] = "CTMS Service Account",
+        [KnowledgeServiceRole] = "Knowledge Hub Service Account",
+    };
+
+    private static readonly HashSet<string> InternalServiceRoles = new(StringComparer.OrdinalIgnoreCase)
+    {
+        EtmfServiceRole,
+        CtmsServiceRole,
+        KnowledgeServiceRole,
     };
 
     private static readonly string[] PreferredRoleOrder =
@@ -642,6 +658,10 @@ public static partial class PermissionMatrix
         ["delegation_log:sign"] = "co-sign the site delegation of authority log",
         ["delegation_log:read"] = "view the site delegation of authority log",
         ["delegation_log:write"] = "manage site delegation of authority assignments",
+        ["ctms_doa:service_endorse"] = "record verified Principal Investigator delegation endorsements from the Knowledge service",
+        ["ctms_greenlight:certify"] = "certify clinical sites ready for enrollment",
+        ["ctms_greenlight:read"] = "view clinical site greenlight readiness",
+        ["training_curriculum:create"] = "create protocol training curricula",
         ["training_curriculum:assign"] = "assign protocol training curricula",
         ["training_curriculum:write"] = "configure protocol training curricula",
         ["training_curriculum:read"] = "view protocol training curricula",
@@ -658,6 +678,7 @@ public static partial class PermissionMatrix
         ["etmf_document:transition_signed"] = "record signed status on Trial Master File documents",
         ["etmf_document:manage_expiration"] = "update Trial Master File document expiration dates",
         ["etmf_document:export"] = "export certified Trial Master File archives",
+        ["etmf_document:approve_filing"] = "file verified GxP records into the electronic Trial Master File",
     };
 
     private static readonly Dictionary<string, string> ResourceNouns = new(StringComparer.OrdinalIgnoreCase)
@@ -754,6 +775,11 @@ public static partial class PermissionMatrix
                 && actions.Contains(action))
             .Select(kvp => kvp.Key)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        if (holders.Any(r => !InternalServiceRoles.Contains(r)))
+        {
+            holders.ExceptWith(InternalServiceRoles);
+        }
 
         var ordered = PreferredRoleOrder.Where(holders.Remove).ToList();
         ordered.AddRange(holders.OrderBy(r => r, StringComparer.OrdinalIgnoreCase));

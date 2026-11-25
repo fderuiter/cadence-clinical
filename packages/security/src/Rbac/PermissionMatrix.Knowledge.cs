@@ -9,15 +9,19 @@ public static partial class PermissionMatrix
         // training through training_log.
         foreach (string role in new[] { RoleNormalization.ROLE_SYSADMIN, RoleNormalization.ROLE_SPONSOR_DM })
         {
-            Grant(role, "training_curriculum", "assign");
+            Grant(role, "training_curriculum", "create", "assign");
         }
+
+        // CTMS startup greenlight evaluator inspects site staff training completion over signed HTTP.
+        Grant(CtmsServiceRole, "training_log", "read");
 
         // The delegation-of-authority log is read by the site team and by the people who monitor or inspect it; only
         // principal investigators sign it (PermissionMatrix.cs).
         foreach (string role in new[]
         {
-            RoleNormalization.ROLE_INVESTIGATOR, RoleNormalization.ROLE_CRC, RoleNormalization.ROLE_CRA_CANONICAL, "monitor",
-            RoleNormalization.ROLE_SPONSOR_DM, RoleNormalization.ROLE_AUDITOR_CANONICAL,
+            RoleNormalization.ROLE_SYSADMIN, RoleNormalization.ROLE_INVESTIGATOR, RoleNormalization.ROLE_CRC,
+            RoleNormalization.ROLE_CRA_CANONICAL, "monitor", RoleNormalization.ROLE_EXTERNAL_MONITOR,
+            RoleNormalization.ROLE_PHARMACIST, RoleNormalization.ROLE_SPONSOR_DM, RoleNormalization.ROLE_AUDITOR_CANONICAL,
         })
         {
             Grant(role, "delegation_log", "read");

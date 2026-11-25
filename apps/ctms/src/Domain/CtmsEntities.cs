@@ -186,11 +186,18 @@ public sealed class CtmsDelegation : AggregateRoot<string>
     public string StudyId { get; set; } = string.Empty;
     public string SiteId { get; set; } = string.Empty;
     public string StaffUserId { get; set; } = string.Empty;
+    public string? StaffName { get; set; }
+    public string? StaffRole { get; set; }
+    public string? Duties { get; set; }
     public string TaskCodes { get; set; } = "[]";
     public string StartDate { get; set; } = string.Empty;
     public string? EndDate { get; set; }
     public bool IsActive { get; set; } = true;
     public bool SignedOff { get; set; }
+    public string? PiSignatureHash { get; set; }
+    public DateTimeOffset? PiApprovedAt { get; set; }
+    public string? BatchTransactionId { get; set; }
+    public string? EtmfArtifactDocId { get; set; }
 
     public CtmsDelegation() : base(Guid.NewGuid().ToString()) { }
     public CtmsDelegation(string id) : base(id) { }
@@ -203,11 +210,18 @@ public sealed class CtmsDelegationPeriod : IBitemporalPeriodEntity
     public string StudyCode { get; set; } = string.Empty;
     public string SiteCode { get; set; } = string.Empty;
     public string StaffUserId { get; set; } = string.Empty;
+    public string? StaffName { get; set; }
+    public string? StaffRole { get; set; }
+    public string? Duties { get; set; }
     public string TaskCodes { get; set; } = "[]";
     public string StartDate { get; set; } = string.Empty;
     public string? EndDate { get; set; }
     public bool IsActive { get; set; } = true;
     public bool SignedOff { get; set; }
+    public string? PiSignatureHash { get; set; }
+    public DateTimeOffset? PiApprovedAt { get; set; }
+    public string? BatchTransactionId { get; set; }
+    public string? EtmfArtifactDocId { get; set; }
     public string CreatedBy { get; set; } = string.Empty;
     public string ReasonForChange { get; set; } = string.Empty;
     public NpgsqlRange<DateTimeOffset> ValidPeriod { get; set; }
@@ -221,6 +235,7 @@ public sealed class CtmsGeneratedLetter : AggregateRoot<string>
     public string VisitId { get; set; } = string.Empty;
     public string LetterType { get; set; } = string.Empty;
     public string RenderedContent { get; set; } = string.Empty;
+    public byte[]? PdfBytes { get; set; }
     public string? PdfObjectKey { get; set; }
     public string? PdfSha256Hash { get; set; }
     public CtmsGeneratedLetterStatus Status { get; private set; } = CtmsGeneratedLetterStatus.Draft;
@@ -525,6 +540,26 @@ public sealed class CtmsSiteGreenlightGate : AggregateRoot<string>
         GreenlightCertifiedBy = certifiedBy;
         GreenlightCertifiedAt = certifiedAt;
         GreenlightToken = greenlightToken;
+    }
+
+    public void UpdateLiveFacets(
+        bool regulatoryIrb,
+        bool ctaBudget,
+        bool eisfBaseline,
+        bool doaLog,
+        bool staffTraining,
+        bool ipRelease,
+        int readinessPercentage,
+        string? unfulfilledReasons)
+    {
+        FacetRegulatoryIrb = regulatoryIrb;
+        FacetCtaBudget = ctaBudget;
+        FacetEisfBaseline = eisfBaseline;
+        FacetDoaLog = doaLog;
+        FacetStaffTraining = staffTraining;
+        FacetIpRelease = ipRelease;
+        ReadinessPercentage = readinessPercentage;
+        UnfulfilledReasons = unfulfilledReasons;
     }
 
     public void Override(string sponsorUserId, string medicalUserId, string justification, DateTimeOffset authorizedAt, string greenlightToken)

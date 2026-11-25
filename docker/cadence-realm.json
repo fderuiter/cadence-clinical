@@ -100,6 +100,10 @@
       {
         "name": "pharmacist",
         "description": "Unblinded Site Pharmacist responsible for investigational product kit verification and reconciliation."
+      },
+      {
+        "name": "Pharmacist",
+        "description": "Site Pharmacist role alias for investigational product kit accountability and return reconciliation."
       }
     ]
   },
@@ -416,7 +420,7 @@
           "temporary": false
         }
       ],
-      "realmRoles": ["pharmacist"],
+      "realmRoles": ["pharmacist", "Pharmacist"],
       "attributes": {
         "tenant_id": ["cadence-local"],
         "study_ids": ["*"],

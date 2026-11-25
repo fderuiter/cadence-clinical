@@ -130,4 +130,53 @@ describe("StudyTrainingView.vue", () => {
     );
     wrapper.unmount();
   });
+
+  it("refreshes KPI metrics when an assignment is completed inside ProtocolTrainingConsole", async () => {
+    const pendingList = [
+      {
+        id: "asn-kpi-1",
+        curriculum_id: "curr-2026-v2",
+        user_id: "sponsor_dm",
+        user_name: "Sponsor DM",
+        user_role: "data_manager",
+        study_id: "CAD-101",
+        site_id: "SITE-101",
+        status: "PENDING",
+        batch_transaction_id: null,
+        quiz_score: null,
+        time_spent_seconds: 0,
+        completed_at: null,
+        created_at: "2026-10-14T00:00:00Z",
+      },
+    ];
+    const completedList = [{ ...pendingList[0], status: "COMPLETED" }];
+    let completed = false;
+
+    vi.spyOn(trainingApi, "listAssignments").mockImplementation(async () =>
+      completed ? completedList : pendingList
+    );
+    vi.spyOn(trainingApi, "getAssignmentDetail").mockResolvedValue({
+      ...pendingList[0],
+      curriculum: mockCurriculum,
+    });
+    vi.spyOn(trainingApi, "completeAssignment").mockImplementation(async () => {
+      completed = true;
+      return completedList[0];
+    });
+
+    const wrapper = mount(StudyTrainingView, {
+      props: { studyId: "CAD-101", siteId: "SITE-101" },
+    });
+    await flushPromises();
+
+    expect(wrapper.find("#kpi-completed-qualifications").text()).toBe("0");
+    expect(wrapper.find("#kpi-pending-assignments").text()).toBe("1");
+
+    await wrapper.find("#btn-complete-training-assignment").trigger("click");
+    await flushPromises();
+
+    expect(wrapper.find("#kpi-completed-qualifications").text()).toBe("1");
+    expect(wrapper.find("#kpi-pending-assignments").text()).toBe("0");
+    wrapper.unmount();
+  });
 });

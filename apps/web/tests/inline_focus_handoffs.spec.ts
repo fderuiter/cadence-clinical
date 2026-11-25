@@ -42,6 +42,17 @@ vi.mock("../src/auth/keycloak.js", () => ({
   getKeycloakClient: () => null,
 }));
 
+vi.mock("../src/api/signatureVerification", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("../src/api/signatureVerification")>();
+  return {
+    ...actual,
+    requestStepUpSignature: vi.fn(async () => ({
+      sig_token: "sig-tok-focus-test",
+    })),
+  };
+});
+
 vi.mock("../src/api/ticketsApi", () => ({
   ticketsApi: {
     listTickets: vi.fn(async () => {
@@ -1095,6 +1106,7 @@ describe("Web Inline Focus Handoffs & Keyboard Scrollable Cards (ADR-2593)", () 
   it("CtmsDelegationSection coordinates focus across PI sign-off and revocation disclosures", async () => {
     const auth = useAuthStore();
     auth.isAuthenticated = true;
+    auth.user = { id: "u-pi-1", username: "pi.site101" } as never;
     auth.rawRoles = ["Principal Investigator", "Sponsor Admin"];
 
     let staffStatus = "PENDING_PI_SIGNATURE";
@@ -1161,6 +1173,9 @@ describe("Web Inline Focus Handoffs & Keyboard Scrollable Cards (ADR-2593)", () 
     await wrapper
       .find("#doa-signoff-reason")
       .setValue("Verified training and CV qualifications");
+    await wrapper
+      .find("#doa-signoff-password")
+      .setValue("CorrectHorseBatteryStaple!");
     await wrapper.find("#btn-confirm-doa-signoff").trigger("click");
     await settleFocus();
     expect(document.activeElement?.id).toBe("btn-doa-revoke-rec-1");
@@ -1191,6 +1206,7 @@ describe("Web Inline Focus Handoffs & Keyboard Scrollable Cards (ADR-2593)", () 
   it("CtmsMonitoringSection coordinates focus across letters panel, structured findings removal, visit completion, letter compile, and supervisory sign-off", async () => {
     const auth = useAuthStore();
     auth.isAuthenticated = true;
+    auth.user = { id: "u-dm-1", username: "dm.lead" } as never;
     auth.rawRoles = ["Sponsor Admin", "CRA", "Data Manager"];
 
     let visitStatus = "SCHEDULED";
@@ -1318,6 +1334,9 @@ describe("Web Inline Focus Handoffs & Keyboard Scrollable Cards (ADR-2593)", () 
     await wrapper
       .find("#signoff-visit-reason")
       .setValue("Supervisory review complete");
+    await wrapper
+      .find("#signoff-visit-password")
+      .setValue("CorrectHorseBatteryStaple!");
     await wrapper.find("#btn-confirm-signoff-visit").trigger("click");
     await settleFocus();
     expect(document.activeElement).not.toBe(document.body);
@@ -1326,6 +1345,7 @@ describe("Web Inline Focus Handoffs & Keyboard Scrollable Cards (ADR-2593)", () 
   it("CtmsGreenlightSection hands off focus to #ctms-greenlight-title after single-site and batch certification", async () => {
     const auth = useAuthStore();
     auth.isAuthenticated = true;
+    auth.user = { id: "u-dm-1", username: "dm.lead" } as never;
     auth.rawRoles = ["Sponsor Admin", "Data Manager"];
 
     let gateCertified = false;
@@ -1385,6 +1405,9 @@ describe("Web Inline Focus Handoffs & Keyboard Scrollable Cards (ADR-2593)", () 
     await wrapper
       .find("#greenlight-certify-reason")
       .setValue("All startup facets verified");
+    await wrapper
+      .find("#greenlight-certify-password")
+      .setValue("CorrectHorseBatteryStaple!");
     const certifySingleBtn = wrapper.find("#btn-certify-site-greenlight");
     (certifySingleBtn.element as HTMLElement).focus();
     await certifySingleBtn.trigger("click");
@@ -1402,6 +1425,9 @@ describe("Web Inline Focus Handoffs & Keyboard Scrollable Cards (ADR-2593)", () 
     await wrapper
       .find("#batch-certify-reason")
       .setValue("Batch country certification approved");
+    await wrapper
+      .find("#batch-certify-password")
+      .setValue("CorrectHorseBatteryStaple!");
     const batchBtn = wrapper.find("#btn-batch-certify-greenlight");
     (batchBtn.element as HTMLElement).focus();
     await batchBtn.trigger("click");

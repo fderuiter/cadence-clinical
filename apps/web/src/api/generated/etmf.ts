@@ -633,6 +633,15 @@ export interface components {
       taxonomyVersion: null | string;
       reasonForChange: null | string;
       contentBase64?: null | string;
+      /** @default false */
+      autoApproveSigned: boolean;
+      signer?: null | string;
+      /** Format: date-time */
+      signingTimestamp?: null | string;
+      signatureManifestation?: null | string;
+      sourceSystem?: null | string;
+      correlationKey?: null | string;
+      metadataJson?: null | string;
     };
     Etmf_StageDocumentQCRequest: {
       content: null | string;

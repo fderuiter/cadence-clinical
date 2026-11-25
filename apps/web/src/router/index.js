@@ -44,12 +44,14 @@ export function isRouteAuthorizedForRoles(routeOrTarget, userRoles) {
 function landingRouteFor(roles) {
   if (roles.includes("sponsor_designer")) return "mdr";
   if (
+    roles.includes("principal_investigator") ||
     roles.includes("site_investigator") ||
     roles.includes("crc") ||
     roles.includes("trial_coordinator")
   ) {
     return isDemoBuild() ? "ecrf" : "study";
   }
+  if (roles.includes("pharmacist")) return "study";
   if (roles.includes("cra") || roles.includes("monitor")) return "ctms";
   if (roles.includes("data_manager")) return "rules";
   if (
@@ -396,6 +398,7 @@ const routes = [
         "monitor",
         "data_manager",
         "sponsor_admin",
+        "principal_investigator",
         "unblinded_statistician",
         "pharmacist",
         "trial_coordinator",
@@ -413,11 +416,12 @@ const routes = [
         "monitor",
         "data_manager",
         "sponsor_admin",
+        "principal_investigator",
+        "pharmacist",
         "site_investigator",
         "crc",
         "trial_coordinator",
         "unblinded_statistician",
-        "pharmacist",
       ],
     },
   },
