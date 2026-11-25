@@ -670,6 +670,10 @@ public static class LocalCiRunner
                 {
                     result = new(step, CiOutcome.NotRun, TimeSpan.Zero, "an earlier step of this job failed");
                 }
+                else if (step.RequiresStep is not null && byKey.TryGetValue(step.RequiresStep, out var prereq) && prereq.Outcome != CiOutcome.Passed)
+                {
+                    result = new(step, CiOutcome.Skipped, TimeSpan.Zero, $"skipped because '{prereq.Step.Name}' did not run");
+                }
                 else if (step.CoveredBy is not null && byKey.TryGetValue(step.CoveredBy, out var cover) && cover.Outcome == CiOutcome.Passed)
                 {
                     result = new(step, CiOutcome.Covered, TimeSpan.Zero, $"passed in '{cover.Step.Name}' ({cover.Step.Job})");

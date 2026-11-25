@@ -179,6 +179,20 @@ updates:
         update-types:
           ["version-update:semver-major", "version-update:semver-minor"]
 
+  # Statistical computing execution (SCE) Python lockfile packages (docker/sce/python/requirements.txt)
+  - package-ecosystem: "pip"
+    directory: "/docker/sce/python"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 1
+    labels:
+      - "dependencies"
+    groups:
+      sce-python-pip:
+        patterns:
+          - "*"
+
   - package-ecosystem: "docker"
     directory: "/docker/sce/r"
     schedule:

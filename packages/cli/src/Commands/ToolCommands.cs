@@ -117,4 +117,23 @@ public static class ToolCommands
         command.Options.Add(sanitize);
         command.SetAction(result => ComplianceUtilityService.ExecuteComplianceUtility(sanitize: result.GetValue(sanitize)));
     }
+
+    public static void ConfigureReconcileTrivy(Command command)
+    {
+        var reports = new Argument<string[]>("reports")
+        {
+            Arity = ArgumentArity.OneOrMore,
+            Description = "One or more Trivy JSON report paths to reconcile against the vulnerability exclusions ledger",
+        };
+        var ledger = new Option<string?>("--ledger")
+        {
+            Description = "Optional override path to vulnerability_exclusions_ledger.json",
+        };
+        command.Arguments.Add(reports);
+        command.Options.Add(ledger);
+        command.SetAction(result => VulnerabilityAuditorService.ReconcileTrivyReports(
+            reportPaths: result.GetValue(reports) ?? [],
+            repoRoot: QualityGateOrchestrator.FindRepoRoot(),
+            ledgerPath: result.GetValue(ledger)));
+    }
 }

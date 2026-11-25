@@ -103,6 +103,37 @@ public sealed partial class ContainerImagePinTests
     }
 
     [Fact]
+    public void ScePythonRequirementsAndDockerfile_EnforceHashPinnedLockfileAndPipRemoval()
+    {
+        string dockerfile = File.ReadAllText(Path.Combine(Root, "docker", "sce", "python", "Dockerfile"));
+        dockerfile.Should().Contain(
+            "FROM python:3.14-slim@sha256:9aaa474097d094040649f2162a627c0049b408f52138d980916788d80f04802f",
+            "ADR-2327 locks the SCE Python 3.14-slim base image digest");
+
+        int installIndex = dockerfile.IndexOf(
+            "pip install --no-cache-dir --require-hashes --no-deps -r /tmp/requirements.txt",
+            StringComparison.Ordinal);
+        int uninstallIndex = dockerfile.IndexOf("pip uninstall -y pip", StringComparison.Ordinal);
+        installIndex.Should().BeGreaterThanOrEqualTo(0,
+            "docker/sce/python/Dockerfile must install requirements.txt with --require-hashes and --no-deps");
+        uninstallIndex.Should().BeGreaterThan(installIndex,
+            "docker/sce/python/Dockerfile must uninstall pip after installing hash-verified packages");
+
+        bool parseSucceeded = VulnerabilityAuditorService.TryParseHashedPythonRequirements(
+            File.ReadAllText(Path.Combine(Root, "docker", "sce", "python", "requirements.txt")),
+            out var packages,
+            out string errorMessage);
+        parseSucceeded.Should().BeTrue(errorMessage);
+        packages.Should().HaveCount(30,
+            "docker/sce/python/requirements.txt must pin all 30 resolved direct and transitive SCE Python wheels with --hash=sha256:");
+        packages.Should().Contain(p => p.Name == "numpy" && p.Version == "2.5.5");
+        packages.Should().Contain(p => p.Name == "scipy" && p.Version == "1.18.1");
+        packages.Should().Contain(p => p.Name == "pandas" && p.Version == "3.1.1");
+        packages.Should().Contain(p => p.Name == "statsmodels" && p.Version == "0.15.0");
+        packages.Should().Contain(p => p.Name == "matplotlib" && p.Version == "3.11.2");
+    }
+
+    [Fact]
     public void EveryDockerfileAndComposeImage_IsPinnedBySha256Digest()
     {
         var dockerfiles = LocalCiEnvironment.DiscoverFiles(
@@ -469,6 +500,8 @@ public sealed partial class ContainerImagePinTests
             .And.Contain("vue-vite:")
             .And.Contain("npm-other:")
             .And.Contain("package-ecosystem: \"docker\"")
+            .And.Contain("package-ecosystem: \"pip\"")
+            .And.Contain("sce-python-pip:")
             .And.Contain("dotnet-containers:")
             .And.Contain("directory: \"/docker\"")
             .And.Contain("directory: \"/docker/sce/python\"")
@@ -482,8 +515,8 @@ public sealed partial class ContainerImagePinTests
             "dotnet-10-servicing must group dotnet-ef with $(DotNetServicingVersion)");
         OpenPullRequestsLimitLine().Matches(dependabot)
             .Select(m => int.Parse(m.Groups["limit"].Value, System.Globalization.CultureInfo.InvariantCulture))
-            .Should().Equal([5, 5, 1, 1, 1, 1, 2],
-                "dependabot.yml open-pull-requests-limit values must sum to 16 across nuget, npm, container, and github-actions blocks");
+            .Should().Equal([5, 5, 1, 1, 1, 1, 1, 2],
+                "dependabot.yml open-pull-requests-limit values must sum to 17 across nuget, npm, container, pip, and github-actions blocks");
 
         DotnetMajorIgnoreRule().IsMatch(dependabot).Should().BeTrue(
             "dependabot.yml must ignore version-update:semver-major for mcr.microsoft.com/dotnet/*");
@@ -836,6 +869,13 @@ public sealed partial class ContainerImagePinTests
         AssertMalformedManifestFails(
             ".github/dependabot.yml",
             dependabotContent.Replace(
+                "    groups:\n      sce-python-pip:\n        patterns:\n          - \"*\"\n",
+                string.Empty,
+                StringComparison.Ordinal));
+
+        AssertMalformedManifestFails(
+            ".github/dependabot.yml",
+            dependabotContent.Replace(
                 "    groups:\n      compose-images:\n        patterns:\n          - \"*\"\n",
                 string.Empty,
                 StringComparison.Ordinal));
@@ -882,6 +922,19 @@ public sealed partial class ContainerImagePinTests
             ".github/dependabot.yml",
             dependabotContent.Replace("    open-pull-requests-limit: 2", "    open-pull-requests-limit: 7", StringComparison.Ordinal));
 
+        AssertMalformedManifestFails(
+            ".github/dependabot.yml",
+            dependabotContent.Replace(
+                "package-ecosystem: \"pip\"",
+                "package-ecosystem: \"cargo\"",
+                StringComparison.Ordinal));
+
+        AssertMalformedManifestFails(
+            ".github/dependabot.yml",
+            dependabotContent.Replace(
+                "  - package-ecosystem: \"pip\"\n    directory: \"/docker/sce/python\"\n    schedule:\n      interval: \"weekly\"",
+                "  - package-ecosystem: \"pip\"\n    directory: \"/docker/sce/python\"\n    schedule:\n      interval: \"daily\"",
+                StringComparison.Ordinal));
         VerifyPreCommitIndexValidation(buildPropsContent, packagesPropsContent, dependabotContent);
     }
 

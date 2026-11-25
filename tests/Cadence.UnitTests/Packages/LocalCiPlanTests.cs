@@ -814,7 +814,7 @@ public partial class LocalCiPlanTests
         string raw = string.Join('\n', lines);
 
         var containerJob = CiPlan.Jobs.Single(j => j.Key == CiPlan.ContainerSecurityJobKey);
-        containerJob.Needs.Should().Equal("classify");
+        containerJob.Needs.Should().Equal("classify", "native-aot-build");
         CiPlan.ContainerScanTargets.Should().HaveCount(20);
 
         var composeStep = containerJob.Steps.Single(s => s.Name == "Validate Docker Compose configuration");
@@ -835,7 +835,20 @@ public partial class LocalCiPlanTests
         scanStep.NeedsDocker.Should().BeTrue();
         scanStep.Commands.Select(c => c.Display).Should().Equal(
             CiPlan.ContainerScanTargets.Select(t =>
-                $"trivy image --exit-code 1 --ignore-unfixed --pkg-types os,library --severity CRITICAL,HIGH {t.ImageTag}"));
+                $"trivy image --format json --output trivy-results-{t.Target}.json --exit-code 0 --pkg-types os,library --severity CRITICAL,HIGH,MEDIUM {t.ImageTag}"));
+
+        var sarifReportStep = containerJob.Steps.Single(s => s.Name == "Generate Trivy SARIF report");
+        sarifReportStep.RequiresStep.Should().Be("container-security/Run container vulnerability scan");
+        sarifReportStep.NeedsDocker.Should().BeTrue();
+        sarifReportStep.Commands.Select(c => c.Display).Should().Equal(
+            CiPlan.ContainerScanTargets.Select(t =>
+                $"trivy image --format sarif --output trivy-results-{t.Target}.sarif --exit-code 0 --pkg-types os,library --severity CRITICAL,HIGH,MEDIUM {t.ImageTag}"));
+
+        var reconcileStep = containerJob.Steps.Single(s => s.Name == "Reconcile Trivy scan results against ledger");
+        reconcileStep.RequiresStep.Should().Be("container-security/Run container vulnerability scan");
+        reconcileStep.NeedsDocker.Should().BeTrue();
+        reconcileStep.Commands.Select(c => c.Display).Should().Equal(
+            "node scripts/run-cli.js reconcile-trivy " + string.Join(' ', CiPlan.ContainerScanTargets.Select(t => $"trivy-results-{t.Target}.json")));
 
         var sarifStep = containerJob.Steps.Single(s => s.Name == "Upload Trivy scan results to GitHub Security tab");
         sarifStep.NotRunLocally.Should().NotBeNullOrWhiteSpace();
@@ -852,10 +865,13 @@ public partial class LocalCiPlanTests
             .And.Contain("docker/build-push-action@")
             .And.Contain("cache-from: type=gha")
             .And.Contain("cache-to: type=gha,mode=max")
-            .And.Contain("exit-code: \"1\"")
-            .And.Contain("ignore-unfixed: true")
+            .And.Contain("exit-code: \"0\"")
+            .And.Contain("ignore-unfixed: false")
             .And.Contain("vuln-type: \"os,library\"")
-            .And.Contain("severity: \"CRITICAL,HIGH\"");
+            .And.Contain("severity: \"CRITICAL,HIGH,MEDIUM\"")
+            .And.Contain("TRIVY_REPORT: trivy-results-${{ matrix.target }}.json")
+            .And.Contain("node scripts/run-cli.js reconcile-trivy \"$TRIVY_REPORT\"")
+            .And.NotContain("validate_vulnerabilities");
 
         var triggerLine = lines
             .Select(l => l.Trim())
@@ -868,16 +884,21 @@ public partial class LocalCiPlanTests
         CiPlan.IsContainerScanTrigger("Cadence.sln").Should().BeTrue();
         CiPlan.IsContainerScanTrigger(".editorconfig").Should().BeTrue();
         CiPlan.IsContainerScanTrigger("BannedSymbols.txt").Should().BeTrue();
-        CiPlan.IsContainerScanTrigger("package.json").Should().BeFalse();
-        CiPlan.IsContainerScanTrigger("apps/web/package.json").Should().BeFalse();
-        CiPlan.IsContainerScanTrigger("pnpm-lock.yaml").Should().BeFalse();
+        CiPlan.IsContainerScanTrigger(".config/dotnet-tools.json").Should().BeTrue();
+        CiPlan.IsContainerScanTrigger("docs/SDLC/vulnerability_exclusions_ledger.json").Should().BeTrue();
+        CiPlan.IsContainerScanTrigger("package.json").Should().BeTrue();
+        CiPlan.IsContainerScanTrigger("apps/web/package.json").Should().BeTrue();
+        CiPlan.IsContainerScanTrigger("pnpm-lock.yaml").Should().BeTrue();
+        CiPlan.IsContainerScanTrigger("pnpm-workspace.yaml").Should().BeTrue();
+        CiPlan.IsContainerScanTrigger(".npmrc").Should().BeTrue();
         CiPlan.IsContainerScanTrigger("tests/Cadence.UnitTests/SampleTests.cs").Should().BeFalse();
+        CiPlan.IsContainerScanTrigger("docs/CI.md").Should().BeFalse();
     }
 
     [Fact]
     public void Select_AddsTheJobsANamedJobNeeds_InPlanOrder()
     {
-        CiPlan.Select(["container-security"]).Select(j => j.Key).Should().Equal("container-security");
+        CiPlan.Select(["container-security"]).Select(j => j.Key).Should().Equal("native-aot-build", "container-security");
         CiPlan.Select(["compliance"]).Select(j => j.Key).Should().Equal("native-aot-build", "unit-tests", "dotnet-tests", "accessibility-e2e", "compliance");
         CiPlan.Select(["lint-and-static"]).Select(j => j.Key).Should().Equal("native-aot-build", "lint-and-static");
         CiPlan.Select(["docs-build"]).Select(j => j.Key).Should().Equal("native-aot-build", "docs-build");
@@ -1012,6 +1033,29 @@ public partial class LocalCiPlanTests
         containerPublishJob.Needs.Should().Equal("release-and-archive");
         containerPublishJob.If.Should().Be("startsWith(github.ref, 'refs/tags/v')");
 
+        var buildReleaseStep = containerPublishJob.Steps.Single(s => s.Name == "Build Release Container Image");
+        var scanReleaseStep = containerPublishJob.Steps.Single(s => s.Name == "Scan Release Container Image with Trivy");
+        var reconcileReleaseStep = containerPublishJob.Steps.Single(s => s.Name == "Reconcile Release Container Vulnerability Scan");
+        var loginRegistryStep = containerPublishJob.Steps.Single(s => s.Name == "Log in to GitHub Container Registry");
+        var pushReleaseStep = containerPublishJob.Steps.Single(s => s.Name == "Push and Record Digest-Pinned Container Image");
+
+        scanReleaseStep.Uses.Should().Be("aquasecurity/trivy-action");
+        reconcileReleaseStep.Run.Should().Contain("node scripts/run-cli.js reconcile-trivy");
+        raw.Should().Contain("ignore-unfixed: false")
+            .And.Contain("severity: \"CRITICAL,HIGH,MEDIUM\"");
+
+        int buildIdx = containerPublishJob.Steps.IndexOf(buildReleaseStep);
+        int scanIdx = containerPublishJob.Steps.IndexOf(scanReleaseStep);
+        int reconcileIdx = containerPublishJob.Steps.IndexOf(reconcileReleaseStep);
+        int loginIdx = containerPublishJob.Steps.IndexOf(loginRegistryStep);
+        int pushIdx = containerPublishJob.Steps.IndexOf(pushReleaseStep);
+        buildIdx.Should().BeLessThan(scanIdx);
+        scanIdx.Should().BeLessThan(reconcileIdx);
+        reconcileIdx.Should().BeLessThan(loginIdx,
+            "release container images must be scanned and ledger-reconciled before authenticating to GHCR");
+        loginIdx.Should().BeLessThan(pushIdx,
+            "release container images must be ledger-reconciled before docker push");
+
         var githubReleaseJob = parsedJobs.Single(j => j.Key == "publish-github-release");
         githubReleaseJob.Needs.Should().Equal("release-and-archive", "publish-container-images");
         githubReleaseJob.If.Should().Be("startsWith(github.ref, 'refs/tags/v')");
@@ -1083,7 +1127,7 @@ public partial class LocalCiPlanTests
     public void NativeAotBuild_CachesPublishesAndSharesSingleCliArtifactAcrossDownstreamCliJobs()
     {
         string[] lines = File.ReadAllLines(Path.Combine(RepoRoot(), ".github", "workflows", "ci.yml"));
-        string[] expectedDownstreamJobs = ["lint-and-static", "docs-build", "security", "compliance"];
+        string[] expectedDownstreamJobs = ["lint-and-static", "docs-build", "security", "container-security", "compliance"];
 
         var jobsCachingCli = Workflow
             .Where(j => ExtractJobStepBlocks(lines, j.Key).Any(b => b.Contains("path: ./bin/cadence", StringComparison.Ordinal) && b.Contains("actions/cache@", StringComparison.Ordinal)))
@@ -1115,6 +1159,7 @@ public partial class LocalCiPlanTests
             string.Join('\n', stepBlocks).Should().NotContain("steps.cadence-cli-cache");
         }
 
+        Workflow.Single(j => j.Key == "container-security").If.Should().Contain("needs.native-aot-build.result == 'success'");
         Workflow.Single(j => j.Key == "compliance").If.Should().Contain("needs.native-aot-build.result == 'success'");
 
         var localAotPublish = CiPlan.Jobs.Single(j => j.Key == "native-aot-build")
@@ -1134,13 +1179,13 @@ public partial class LocalCiPlanTests
             "native-aot-build/Publish the CLI as Native AOT",
             "CADENCE_CLI_CACHE_HIT",
             "true");
-        string[] nodeCliDownstreamJobs = ["lint-and-static", "docs-build", "security"];
+        string[] nodeCliDownstreamJobs = ["lint-and-static", "docs-build", "security", "container-security"];
         var nodeCliSteps = CiPlan.Jobs
             .Where(j => nodeCliDownstreamJobs.Contains(j.Key, StringComparer.Ordinal))
             .SelectMany(j => j.Steps)
             .Where(s => s.Commands.Any(c => c.FileName == "node" && c.Arguments.FirstOrDefault() == "scripts/run-cli.js"))
             .ToList();
-        nodeCliSteps.Should().HaveCount(9);
+        nodeCliSteps.Should().HaveCount(10);
         foreach (var step in nodeCliSteps)
         {
             step.EnvironmentIfPassed.Should().Contain(expectedCacheHit, $"{step.Job}/{step.Name} must reuse <worktreeRoot>/bin/cadence");

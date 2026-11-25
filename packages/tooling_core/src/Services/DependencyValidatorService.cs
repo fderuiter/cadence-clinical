@@ -226,6 +226,8 @@ public static partial class DependencyValidatorService
 
         public int? OpenPullRequestsLimit { get; set; }
 
+        public string? ScheduleInterval { get; set; }
+
         public List<DependabotGroup> OrderedGroups { get; } = [];
 
         public Dictionary<string, DependabotGroup> Groups { get; } = new(StringComparer.Ordinal);
@@ -1187,6 +1189,7 @@ public static partial class DependencyValidatorService
         errors += ValidateNpmDependabotBlock(dependabotPath, FindDependabotBlock(parsed.Updates, "npm", "/"));
         errors += ValidateDockerDotnetDependabotBlock(dependabotPath, FindDependabotBlock(parsed.Updates, "docker", "/docker"));
         errors += ValidateDockerSceDependabotBlock(dependabotPath, FindDependabotBlock(parsed.Updates, "docker", "/docker/sce/python"), "/docker/sce/python", "python", ScePythonIgnoredUpdateTypes);
+        errors += ValidatePipSceDependabotBlock(dependabotPath, FindDependabotBlock(parsed.Updates, "pip", "/docker/sce/python"));
         errors += ValidateDockerSceDependabotBlock(dependabotPath, FindDependabotBlock(parsed.Updates, "docker", "/docker/sce/r"), "/docker/sce/r", "r-base", SceRIgnoredUpdateTypes);
         errors += ValidateDockerComposeDependabotBlock(dependabotPath, FindDependabotBlock(parsed.Updates, "docker-compose", "/docker"));
         errors += ValidateGitHubActionsDependabotBlock(dependabotPath, FindDependabotBlock(parsed.Updates, "github-actions", "/"));
@@ -1516,6 +1519,25 @@ public static partial class DependencyValidatorService
         return errors;
     }
 
+    private static int ValidatePipSceDependabotBlock(string relativePath, DependabotUpdateEntry? block)
+    {
+        if (block is null)
+        {
+            Console.WriteLine($"[DEPENDENCY VIOLATION] {relativePath} is missing the 'pip' update block for directory '/docker/sce/python'.");
+            return 1;
+        }
+
+        int errors = 0;
+        if (!string.Equals(block.ScheduleInterval, "weekly", StringComparison.Ordinal))
+        {
+            Console.WriteLine($"[DEPENDENCY VIOLATION] {relativePath} (pip '/docker/sce/python') must specify 'schedule.interval: \"weekly\"'.");
+            errors++;
+        }
+
+        errors += ValidateTrailingCatchAllGroup(relativePath, "pip '/docker/sce/python'", block);
+        return errors;
+    }
+
     private static int ValidateDockerComposeDependabotBlock(string relativePath, DependabotUpdateEntry? block)
     {
         if (block is null)
@@ -1678,6 +1700,9 @@ public static partial class DependencyValidatorService
         int ignoreItemIndent = -1;
         DependabotIgnoreEntry? currentIgnore = null;
 
+        bool inSchedule = false;
+        int scheduleKeyIndent = -1;
+
         int lineIdx = 0;
         while (lineIdx < lines.Length)
         {
@@ -1701,6 +1726,7 @@ public static partial class DependencyValidatorService
                 inUpdates = false;
                 inGroups = false;
                 inIgnore = false;
+                inSchedule = false;
                 currentUpdate = null;
                 currentGroup = null;
                 currentIgnore = null;
@@ -1743,6 +1769,8 @@ public static partial class DependencyValidatorService
                 ignoreKeyIndent = -1;
                 ignoreItemIndent = -1;
                 currentIgnore = null;
+                inSchedule = false;
+                scheduleKeyIndent = -1;
 
                 if (afterUpdateDash.Length > 0)
                 {
@@ -1760,6 +1788,8 @@ public static partial class DependencyValidatorService
                         ref inIgnore,
                         ref ignoreKeyIndent,
                         ref ignoreItemIndent,
+                        ref inSchedule,
+                        ref scheduleKeyIndent,
                         parseErrors);
                 }
 
@@ -1828,6 +1858,23 @@ public static partial class DependencyValidatorService
                 currentIgnore = null;
             }
 
+            if (inSchedule && indent > scheduleKeyIndent)
+            {
+                if (TrySplitMapping(trimmed, out string schedKey, out string schedVal) &&
+                    string.Equals(schedKey, "interval", StringComparison.Ordinal))
+                {
+                    currentUpdate.ScheduleInterval = ReadScalarValue(lines, ref lineIdx, indent, schedVal);
+                }
+
+                lineIdx++;
+                continue;
+            }
+
+            if (inSchedule && indent <= scheduleKeyIndent)
+            {
+                inSchedule = false;
+            }
+
             if (indent > updateItemIndent)
             {
                 ApplyUpdatePropertyLine(
@@ -1843,6 +1890,8 @@ public static partial class DependencyValidatorService
                     ref inIgnore,
                     ref ignoreKeyIndent,
                     ref ignoreItemIndent,
+                    ref inSchedule,
+                    ref scheduleKeyIndent,
                     parseErrors);
             }
 
@@ -1917,6 +1966,8 @@ public static partial class DependencyValidatorService
         ref bool inIgnore,
         ref int ignoreKeyIndent,
         ref int ignoreItemIndent,
+        ref bool inSchedule,
+        ref int scheduleKeyIndent,
         List<string> parseErrors)
     {
         if (!TrySplitMapping(trimmedLine, out string key, out string val))
@@ -1945,12 +1996,20 @@ public static partial class DependencyValidatorService
                     ? parsedLimit
                     : null;
                 break;
+            case "schedule":
+                inSchedule = true;
+                scheduleKeyIndent = propIndent;
+                inGroups = false;
+                currentGroup = null;
+                inIgnore = false;
+                break;
             case "groups":
                 inGroups = true;
                 groupsKeyIndent = propIndent;
                 groupItemIndent = -1;
                 currentGroup = null;
                 inIgnore = false;
+                inSchedule = false;
                 break;
             case "ignore":
                 inIgnore = true;
@@ -1958,6 +2017,7 @@ public static partial class DependencyValidatorService
                 ignoreItemIndent = -1;
                 inGroups = false;
                 currentGroup = null;
+                inSchedule = false;
                 break;
         }
     }

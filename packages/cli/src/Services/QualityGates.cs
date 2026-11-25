@@ -267,12 +267,12 @@ public static class QualityGates
             ctx => QueryLinterService.LintQueries(ctx.Files, ctx.RepoRoot, ctx.PreCommit, ctx.IndexReader) == 0)
         { TakesFiles = true },
         new("vulnerabilities", ["validate-vulnerabilities"],
-            "NuGet and pnpm dependency vulnerabilities not exempted by a valid `docs/SDLC/vulnerability_exclusions_ledger.json` entry (fails closed on missing or broken scanners)",
+            "NuGet, .NET CLI/Native AOT (OSV), pnpm, and SCE Python (OSV) dependency vulnerabilities not exempted by a bounded, unexpired `docs/SDLC/vulnerability_exclusions_ledger.json` entry, plus ADR-2285 bypass-vector checks (fails closed on missing ledger, stale active exemptions, or broken scanners)",
             ctx => VulnerabilityAuditorService.AuditVulnerabilities(ctx.RepoRoot, targetFiles: ctx.TargetFiles, preCommit: ctx.PreCommit, indexReader: ctx.IndexReader) == 0)
         {
             TakesFiles = true,
             PreCommit = PreCommitMode.Quick,
-            PreCommitNote = "validates `docs/SDLC/vulnerability_exclusions_ledger.json` offline and scans only ecosystems with staged manifests, lockfiles or ledger edits",
+            PreCommitNote = "validates `docs/SDLC/vulnerability_exclusions_ledger.json` and ADR-2285 bypass rules offline and scans only ecosystems with staged manifests, lockfiles, SCE Python files or ledger edits",
         },
         new("dependencies", ["validate-dependencies"],
             "Valid JSON/XML/YAML across workspace `package.json`, `pnpm-workspace.yaml`, `.config/dotnet-tools.json`, `Directory.Build.props`, and `Directory.Packages.props` manifests, lockstep NuGet/pnpm/CLI cohorts, unique `.github/dependabot.yml` update targets and group/ignore rules, synchronized `PostgresTestImage` `@sha256` digests across Compose, CI, and AppHost, and no forbidden client-side crypto (`node-forge`, `elliptic`, `jose`) or runtime test-harness (`axe-core`, `@axe-core/playwright`, `vitest`, `@vue/test-utils`, `jsdom`, `fake-indexeddb`, `msw`) packages",

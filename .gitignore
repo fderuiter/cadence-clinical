@@ -65,6 +65,10 @@ coverage/
 .cadence/venv/
 .cadence/bin/
 .cadence/cli-artifacts/
+.cadence/trivy/
+trivy-results-*.json
+trivy-results-*.sarif
+trivy-release-*.json
 .cadence/test_graph.json
 .cadence/gxp_cache.json
 nosetests.xml

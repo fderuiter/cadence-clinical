@@ -163,15 +163,19 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Log in to GitHub Container Registry
-        env:
-          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REGISTRY_ACTOR: ${{ github.actor }}
-        run: |
-          printf '%s\n' "$GHCR_TOKEN" | docker login ghcr.io -u "$REGISTRY_ACTOR" --password-stdin
+      - name: Download Native AOT Cadence CLI Binary
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: cadence-cli-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ./bin
 
-      - name: Build, Push, and Record Digest-Pinned Container Image
-        id: push_image
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: "22"
+
+      - name: Build Release Container Image
+        id: build_image
         env:
           TARGET: ${{ matrix.target }}
           CONTEXT: ${{ matrix.context }}
@@ -199,6 +203,43 @@ jobs:
             -f "$DOCKERFILE" \
             "${BUILD_ARGS[@]}" \
             "$CONTEXT"
+          {
+            echo "image_repo=$IMAGE_REPO"
+            echo "image_ref=${IMAGE_REPO}:${TAG_NAME}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Scan Release Container Image with Trivy
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ${{ steps.build_image.outputs.image_ref }}
+          format: "json"
+          output: "trivy-release-${{ matrix.target }}.json"
+          exit-code: "0"
+          ignore-unfixed: false
+          vuln-type: "os,library"
+          severity: "CRITICAL,HIGH,MEDIUM"
+
+      - name: Reconcile Release Container Vulnerability Scan
+        env:
+          TRIVY_REPORT: trivy-release-${{ matrix.target }}.json
+        run: node scripts/run-cli.js reconcile-trivy "$TRIVY_REPORT"
+
+      - name: Log in to GitHub Container Registry
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REGISTRY_ACTOR: ${{ github.actor }}
+        run: |
+          printf '%s\n' "$GHCR_TOKEN" | docker login ghcr.io -u "$REGISTRY_ACTOR" --password-stdin
+
+      - name: Push and Record Digest-Pinned Container Image
+        id: push_image
+        env:
+          TARGET: ${{ matrix.target }}
+          IMAGE_REPO: ${{ steps.build_image.outputs.image_repo }}
+          TAG_NAME: ${{ github.ref_name }}
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
           docker push "${IMAGE_REPO}:${TAG_NAME}"
           docker push "${IMAGE_REPO}:sha-${COMMIT_SHA}"
 

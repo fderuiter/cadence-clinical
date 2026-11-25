@@ -510,9 +510,9 @@ jobs:
 
   container-security:
     name: Container Build & Vulnerability Scan
-    needs: [classify]
+    needs: [classify, native-aot-build]
     if: >-
-      always() && !cancelled() && (
+      always() && !cancelled() && needs.native-aot-build.result == 'success' && (
         github.event_name == 'push' ||
         github.event_name == 'merge_group' ||
         (github.event_name == 'workflow_dispatch' && (
@@ -640,6 +640,17 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Download Cadence CLI Artifact
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: cadence-cli-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ./bin
+
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: "22"
+
       - name: Validate Docker Compose configuration
         run: docker compose -f docker/docker-compose.yml config -q
 
@@ -666,12 +677,28 @@ jobs:
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: "cadence-${{ matrix.target }}:latest"
+          format: "json"
+          output: "trivy-results-${{ matrix.target }}.json"
+          exit-code: "0"
+          ignore-unfixed: false
+          vuln-type: "os,library"
+          severity: "CRITICAL,HIGH,MEDIUM"
+
+      - name: Generate Trivy SARIF report
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: "cadence-${{ matrix.target }}:latest"
           format: "sarif"
           output: "trivy-results-${{ matrix.target }}.sarif"
-          exit-code: "1"
-          ignore-unfixed: true
+          exit-code: "0"
+          ignore-unfixed: false
           vuln-type: "os,library"
-          severity: "CRITICAL,HIGH"
+          severity: "CRITICAL,HIGH,MEDIUM"
+
+      - name: Reconcile Trivy scan results against ledger
+        env:
+          TRIVY_REPORT: trivy-results-${{ matrix.target }}.json
+        run: node scripts/run-cli.js reconcile-trivy "$TRIVY_REPORT"
 
       - name: Upload Trivy scan results to GitHub Security tab
         if: (success() || failure()) && (github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository))
@@ -1213,8 +1240,7 @@ jobs:
                [[ "$file" == .agents/* ]] || \
                [[ "$file" == .github/* ]] || \
                [[ "$file" == *.sh ]] || \
-               [[ "$file" == *"vulnerability_exclusions_ledger.json" ]] || \
-               [[ "$file" == *"validate_vulnerabilities"* ]]; then
+               [[ "$file" == *"vulnerability_exclusions_ledger.json" ]]; then
               echo "Unsafe file: $file"
               SAFE=false
             elif [[ "$file" =~ ^(README|ARCHITECTURE|CONTEXT|CONTRIBUTING|SUPPORT)\.md$ ]] || \
@@ -1228,7 +1254,7 @@ jobs:
             fi
 
             case "$file" in
-              docker/*|Dockerfile*|*/Dockerfile*|.dockerignore|.github/dependabot.yml|.github/workflows/ci.yml|Cadence.sln|global.json|.editorconfig|BannedSymbols.txt|Directory.Build.props|Directory.Build.targets|Directory.Packages.props|NuGet.Config|*.csproj|apps/**/*.cs|packages/**/*.cs)
+              docker/*|Dockerfile*|*/Dockerfile*|.dockerignore|.github/dependabot.yml|.github/workflows/ci.yml|docs/SDLC/vulnerability_exclusions_ledger.json|.config/dotnet-tools.json|package.json|*/package.json|pnpm-lock.yaml|pnpm-workspace.yaml|.npmrc|Cadence.sln|global.json|.editorconfig|BannedSymbols.txt|Directory.Build.props|Directory.Build.targets|Directory.Packages.props|NuGet.Config|*.csproj|apps/**/*.cs|packages/**/*.cs)
                 echo "Container/dependency trigger file: $file"
                 CONTAINER_SCAN=true
                 ;;

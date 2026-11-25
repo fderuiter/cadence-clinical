@@ -816,19 +816,44 @@ public class LocalCiRunnerTests
         var env = Environment(docker: false);
 
         var strictResults = LocalCiRunner.Run(jobs, Defaults with { RequestedJobs = ["container-security"] }, env);
-        strictResults.Select(r => r.Outcome).Should().Equal(CiOutcome.Failed, CiOutcome.NotRun, CiOutcome.NotRun, CiOutcome.Skipped);
-        strictResults[0].Note.Should().Contain("Docker daemon is not reachable").And.Contain("--allow-missing-tools");
-        _ran.Should().BeEmpty();
+        strictResults.Select(r => r.Outcome).Should().Equal(
+            CiOutcome.Passed,
+            CiOutcome.Failed,
+            CiOutcome.NotRun,
+            CiOutcome.NotRun,
+            CiOutcome.NotRun,
+            CiOutcome.NotRun,
+            CiOutcome.Skipped);
+        strictResults[1].Note.Should().Contain("Docker daemon is not reachable").And.Contain("--allow-missing-tools");
+        _ran.Should().Equal("publish");
 
+        _ran.Clear();
         var dbSkipOnlyResults = LocalCiRunner.Run(jobs, Defaults with { AllowDbSkip = true, RequestedJobs = ["container-security"] }, env);
-        dbSkipOnlyResults.Select(r => r.Outcome).Should().Equal(CiOutcome.Failed, CiOutcome.NotRun, CiOutcome.NotRun, CiOutcome.Skipped);
+        dbSkipOnlyResults.Select(r => r.Outcome).Should().Equal(
+            CiOutcome.Passed,
+            CiOutcome.Failed,
+            CiOutcome.NotRun,
+            CiOutcome.NotRun,
+            CiOutcome.NotRun,
+            CiOutcome.NotRun,
+            CiOutcome.Skipped);
 
+        _ran.Clear();
         var skipResults = LocalCiRunner.Run(jobs, Defaults with { AllowMissingTools = true, RequestedJobs = ["container-security"] }, env);
-        skipResults.Select(r => r.Outcome).Should().Equal(CiOutcome.Skipped, CiOutcome.Skipped, CiOutcome.Skipped, CiOutcome.Skipped);
-        skipResults[0].Note.Should().Contain("Docker daemon unavailable (--allow-missing-tools)");
+        skipResults.Select(r => r.Outcome).Should().Equal(
+            CiOutcome.Passed,
+            CiOutcome.Skipped,
+            CiOutcome.Skipped,
+            CiOutcome.Skipped,
+            CiOutcome.Skipped,
+            CiOutcome.Skipped,
+            CiOutcome.Skipped);
         skipResults[1].Note.Should().Contain("Docker daemon unavailable (--allow-missing-tools)");
         skipResults[2].Note.Should().Contain("Docker daemon unavailable (--allow-missing-tools)");
-        _ran.Should().BeEmpty();
+        skipResults[3].Note.Should().Contain("Docker daemon unavailable (--allow-missing-tools)");
+        skipResults[4].Note.Should().Contain("skipped because 'Run container vulnerability scan' did not run");
+        skipResults[5].Note.Should().Contain("skipped because 'Run container vulnerability scan' did not run");
+        _ran.Should().Equal("publish");
     }
 
     [Fact]
@@ -842,8 +867,15 @@ public class LocalCiRunnerTests
             containerSecurityScope: skippedScope);
 
         var defaultRunResults = LocalCiRunner.Run(jobs, Defaults, envWhenNoDiffAndMissingTools);
-        defaultRunResults.Select(r => r.Outcome).Should().Equal(CiOutcome.Skipped, CiOutcome.Skipped, CiOutcome.Skipped, CiOutcome.Skipped);
-        defaultRunResults[0].Note.Should().Contain("no container or dependency changes");
+        defaultRunResults.Select(r => r.Outcome).Should().Equal(
+            CiOutcome.Passed,
+            CiOutcome.Skipped,
+            CiOutcome.Skipped,
+            CiOutcome.Skipped,
+            CiOutcome.Skipped,
+            CiOutcome.Skipped,
+            CiOutcome.Skipped);
+        defaultRunResults[1].Note.Should().Contain("no container or dependency changes");
 
         var capturedCommands = new List<string>();
         var readyEnv = new LocalCiEnvironment
@@ -866,11 +898,21 @@ public class LocalCiRunnerTests
             jobs,
             Defaults with { RequestedJobs = ["container-security"] },
             readyEnv);
-        forcedResults.Select(r => r.Outcome).Should().Equal(CiOutcome.Passed, CiOutcome.Passed, CiOutcome.Passed, CiOutcome.Skipped);
-        capturedCommands.Should().HaveCount(41);
-        capturedCommands[0].Should().Be("docker compose -f docker/docker-compose.yml config -q");
-        capturedCommands.Skip(1).Take(20).Should().OnlyContain(c => c.StartsWith("docker build ", StringComparison.Ordinal));
-        capturedCommands.Skip(21).Should().OnlyContain(c => c.StartsWith("trivy image ", StringComparison.Ordinal));
+        forcedResults.Select(r => r.Outcome).Should().Equal(
+            CiOutcome.Passed,
+            CiOutcome.Passed,
+            CiOutcome.Passed,
+            CiOutcome.Passed,
+            CiOutcome.Passed,
+            CiOutcome.Passed,
+            CiOutcome.Skipped);
+        capturedCommands.Should().HaveCount(63);
+        capturedCommands[0].Should().StartWith("dotnet publish packages/cli/src/Cadence.Cli.csproj");
+        capturedCommands[1].Should().Be("docker compose -f docker/docker-compose.yml config -q");
+        capturedCommands.Skip(2).Take(20).Should().OnlyContain(c => c.StartsWith("docker build ", StringComparison.Ordinal));
+        capturedCommands.Skip(22).Take(20).Should().OnlyContain(c => c.StartsWith("trivy image --format json ", StringComparison.Ordinal));
+        capturedCommands.Skip(42).Take(20).Should().OnlyContain(c => c.StartsWith("trivy image --format sarif ", StringComparison.Ordinal));
+        capturedCommands[62].Should().StartWith("node scripts/run-cli.js reconcile-trivy ");
     }
 
     [Fact]
@@ -892,18 +934,40 @@ public class LocalCiRunnerTests
             // HEAD == origin/main triggers tracked-files fallback -> runs unconditionally.
             LocalCiEnvironment.ResolveContainerSecurityScope(tempRepo, "origin/main").ShouldRun.Should().BeTrue();
 
-            // Docs and frontend manifest commits -> skipped on default run.
+            // Pure docs and frontend source commits -> skipped on default run.
             RunGit(tempRepo, "checkout", "-q", "-b", "feature/docs-and-frontend");
             File.WriteAllText(Path.Combine(tempRepo, "README.md"), "# updated docs\n");
-            File.WriteAllText(Path.Combine(tempRepo, "package.json"), "{}\n");
-            File.WriteAllText(Path.Combine(tempRepo, "pnpm-lock.yaml"), "lockfileVersion: '9.0'\n");
-            RunGit(tempRepo, "add", "README.md", "package.json", "pnpm-lock.yaml");
-            RunGit(tempRepo, "commit", "-q", "-m", "docs and frontend update");
+            Directory.CreateDirectory(Path.Combine(tempRepo, "apps", "web", "src"));
+            File.WriteAllText(Path.Combine(tempRepo, "apps", "web", "src", "App.tsx"), "export const App = () => null;\n");
+            RunGit(tempRepo, "add", "README.md", "apps/web/src/App.tsx");
+            RunGit(tempRepo, "commit", "-q", "-m", "docs and frontend source update");
             var nonContainerScope = LocalCiEnvironment.ResolveContainerSecurityScope(tempRepo, "origin/main");
             nonContainerScope.ShouldRun.Should().BeFalse();
             nonContainerScope.Note.Should().Contain("no container or dependency changes");
 
+            // pnpm, .NET CLI tools, or vulnerability ledger edits -> runs container-security.
+            RunGit(tempRepo, "checkout", "-q", "-b", "feature/pnpm-lock", "main");
+            File.WriteAllText(Path.Combine(tempRepo, "pnpm-lock.yaml"), "lockfileVersion: '9.0'\n");
+            RunGit(tempRepo, "add", "pnpm-lock.yaml");
+            RunGit(tempRepo, "commit", "-q", "-m", "touch pnpm-lock");
+            LocalCiEnvironment.ResolveContainerSecurityScope(tempRepo, "origin/main").ShouldRun.Should().BeTrue();
+
+            RunGit(tempRepo, "checkout", "-q", "-b", "feature/dotnet-tools", "main");
+            Directory.CreateDirectory(Path.Combine(tempRepo, ".config"));
+            File.WriteAllText(Path.Combine(tempRepo, ".config", "dotnet-tools.json"), "{}\n");
+            RunGit(tempRepo, "add", ".config/dotnet-tools.json");
+            RunGit(tempRepo, "commit", "-q", "-m", "touch dotnet-tools");
+            LocalCiEnvironment.ResolveContainerSecurityScope(tempRepo, "origin/main").ShouldRun.Should().BeTrue();
+
+            RunGit(tempRepo, "checkout", "-q", "-b", "feature/ledger", "main");
+            Directory.CreateDirectory(Path.Combine(tempRepo, "docs", "SDLC"));
+            File.WriteAllText(Path.Combine(tempRepo, "docs", "SDLC", "vulnerability_exclusions_ledger.json"), "[]\n");
+            RunGit(tempRepo, "add", "docs/SDLC/vulnerability_exclusions_ledger.json");
+            RunGit(tempRepo, "commit", "-q", "-m", "touch ledger");
+            LocalCiEnvironment.ResolveContainerSecurityScope(tempRepo, "origin/main").ShouldRun.Should().BeTrue();
+
             // Touching a backend C# file under apps/ or packages/ -> runs container-security.
+            RunGit(tempRepo, "checkout", "-q", "feature/docs-and-frontend");
             Directory.CreateDirectory(Path.Combine(tempRepo, "apps", "gateway", "src"));
             File.WriteAllText(Path.Combine(tempRepo, "apps", "gateway", "src", "Endpoint.cs"), "namespace Sample;\n");
             RunGit(tempRepo, "add", "apps/gateway/src/Endpoint.cs");

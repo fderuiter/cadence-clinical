@@ -95,6 +95,12 @@ public sealed record CiStep(string Job, string Name)
     public string? CoveredBy { get; init; }
 
     /// <summary>
+    /// Earlier step (<c>job/name</c>) whose passing output this step consumes. When that step was skipped (for example
+    /// under <c>--allow-missing-tools</c>), this step is skipped too instead of running against missing artifacts.
+    /// </summary>
+    public string? RequiresStep { get; init; }
+
+    /// <summary>
     /// A program the step needs on <c>PATH</c>. Without it the step fails unless <c>--allow-missing-tools</c> skips it with
     /// <see cref="ToolHint"/>.
     /// </summary>
@@ -252,6 +258,13 @@ public static class CiPlan
         ".dockerignore",
         ".github/dependabot.yml",
         ".github/workflows/ci.yml",
+        "docs/SDLC/vulnerability_exclusions_ledger.json",
+        ".config/dotnet-tools.json",
+        "package.json",
+        "*/package.json",
+        "pnpm-lock.yaml",
+        "pnpm-workspace.yaml",
+        ".npmrc",
         "Cadence.sln",
         "global.json",
         ".editorconfig",
@@ -288,6 +301,7 @@ public static class CiPlan
         return normalized.StartsWith("docker/", StringComparison.Ordinal)
             || normalized.StartsWith("Dockerfile", StringComparison.Ordinal)
             || normalized.Contains("/Dockerfile", StringComparison.Ordinal)
+            || normalized.EndsWith("/package.json", StringComparison.Ordinal)
             || normalized.EndsWith(".csproj", StringComparison.Ordinal)
             || (normalized.StartsWith("apps/", StringComparison.Ordinal)
                 && normalized["apps/".Length..].Contains('/', StringComparison.Ordinal)
@@ -298,6 +312,12 @@ public static class CiPlan
             || normalized is ".dockerignore"
                 or ".github/dependabot.yml"
                 or ".github/workflows/ci.yml"
+                or "docs/SDLC/vulnerability_exclusions_ledger.json"
+                or ".config/dotnet-tools.json"
+                or "package.json"
+                or "pnpm-lock.yaml"
+                or "pnpm-workspace.yaml"
+                or ".npmrc"
                 or "Cadence.sln"
                 or "global.json"
                 or ".editorconfig"
@@ -509,8 +529,31 @@ public static class CiPlan
                 [
                     .. ContainerScanTargets.Select(t => new CiCommand(
                         "trivy",
-                        ["image", "--exit-code", "1", "--ignore-unfixed", "--pkg-types", "os,library", "--severity", "CRITICAL,HIGH", t.ImageTag],
+                        ["image", "--format", "json", "--output", $"trivy-results-{t.Target}.json", "--exit-code", "0", "--pkg-types", "os,library", "--severity", "CRITICAL,HIGH,MEDIUM", t.ImageTag],
                         CiText: "trivy image")),
+                ],
+            },
+            new(ContainerSecurityJobKey, "Generate Trivy SARIF report")
+            {
+                RequiresStep = $"{ContainerSecurityJobKey}/Run container vulnerability scan",
+                NeedsDocker = true,
+                Commands =
+                [
+                    .. ContainerScanTargets.Select(t => new CiCommand(
+                        "trivy",
+                        ["image", "--format", "sarif", "--output", $"trivy-results-{t.Target}.sarif", "--exit-code", "0", "--pkg-types", "os,library", "--severity", "CRITICAL,HIGH,MEDIUM", t.ImageTag],
+                        CiText: "trivy image")),
+                ],
+            },
+            new(ContainerSecurityJobKey, "Reconcile Trivy scan results against ledger")
+            {
+                RequiresStep = $"{ContainerSecurityJobKey}/Run container vulnerability scan",
+                NeedsDocker = true,
+                EnvironmentIfPassed = NativeAotCacheHit,
+                Commands =
+                [
+                    NodeCli(["reconcile-trivy", .. ContainerScanTargets.Select(t => $"trivy-results-{t.Target}.json")])
+                        with { CiText = "node scripts/run-cli.js reconcile-trivy \"$TRIVY_REPORT\"" },
                 ],
             },
             new(ContainerSecurityJobKey, "Upload Trivy scan results to GitHub Security tab")
@@ -519,7 +562,7 @@ public static class CiPlan
             },
         ])
         {
-            Needs = ["classify"],
+            Needs = ["classify", "native-aot-build"],
         };
 
         var frontend = new CiJob("unit-tests", "Frontend Unit Tests",
