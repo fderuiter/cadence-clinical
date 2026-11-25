@@ -36,6 +36,11 @@
   --shadow-drawer-right: 8px 0 24px -4px rgba(0, 0, 0, 0.12);
   --shadow-drawer-bottom: 0 -8px 24px -4px rgba(0, 0, 0, 0.16);
   --shadow-focus-ring: 0 0 0 2px var(--semantic-color-divider-accent);
+  --shadow-focus-accent: 0 0 0 2px rgba(2, 101, 151, 0.25);
+  --shadow-drop-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-pulse-warning-start: 0 0 0 0 rgba(217, 119, 6, 0.4);
+  --shadow-pulse-warning-expand: 0 0 0 8px rgba(217, 119, 6, 0);
+  --shadow-pulse-warning-end: 0 0 0 0 rgba(217, 119, 6, 0);
 
   /* Spacing Scale */
   --spacing-2xs: 4px;
@@ -271,7 +276,18 @@
   --semantic-border-radius-md: var(--radius-md);
   --semantic-border-radius-lg: var(--radius-lg);
   --semantic-shadow-sm: var(--shadow-sm);
+  --semantic-shadow-md: var(--shadow-md);
+  --semantic-shadow-lg: var(--shadow-lg);
   --semantic-shadow-xl: var(--shadow-xl);
+  --semantic-shadow-drawer-left: var(--shadow-drawer-left);
+  --semantic-shadow-drawer-right: var(--shadow-drawer-right);
+  --semantic-shadow-drawer-bottom: var(--shadow-drawer-bottom);
+  --semantic-shadow-focus-ring: var(--shadow-focus-ring);
+  --semantic-shadow-focus-accent: var(--shadow-focus-accent);
+  --semantic-shadow-drop-sm: var(--shadow-drop-sm);
+  --semantic-shadow-pulse-warning-start: var(--shadow-pulse-warning-start);
+  --semantic-shadow-pulse-warning-expand: var(--shadow-pulse-warning-expand);
+  --semantic-shadow-pulse-warning-end: var(--shadow-pulse-warning-end);
 
   /* Semantic Typography */
   --semantic-font-family: var(--font-sans);
@@ -519,6 +535,11 @@
   --shadow-drawer-right: 8px 0 24px -4px rgba(0, 0, 0, 0.45);
   --shadow-drawer-bottom: 0 -8px 24px -4px rgba(0, 0, 0, 0.45);
   --shadow-focus-ring: 0 0 0 2px var(--semantic-color-divider-accent);
+  --shadow-focus-accent: 0 0 0 2px rgba(56, 189, 248, 0.35);
+  --shadow-drop-sm: 0 1px 2px rgba(0, 0, 0, 0.55);
+  --shadow-pulse-warning-start: 0 0 0 0 rgba(250, 204, 21, 0.45);
+  --shadow-pulse-warning-expand: 0 0 0 8px rgba(250, 204, 21, 0);
+  --shadow-pulse-warning-end: 0 0 0 0 rgba(250, 204, 21, 0);
 
   /* Paired Dark Theme Application Semantic Color Aliases */
   --primary: var(--semantic-color-primary);
@@ -710,6 +731,11 @@
     --shadow-drawer-right: 8px 0 24px -4px rgba(0, 0, 0, 0.45);
     --shadow-drawer-bottom: 0 -8px 24px -4px rgba(0, 0, 0, 0.45);
     --shadow-focus-ring: 0 0 0 2px var(--semantic-color-divider-accent);
+    --shadow-focus-accent: 0 0 0 2px rgba(56, 189, 248, 0.35);
+    --shadow-drop-sm: 0 1px 2px rgba(0, 0, 0, 0.55);
+    --shadow-pulse-warning-start: 0 0 0 0 rgba(250, 204, 21, 0.45);
+    --shadow-pulse-warning-expand: 0 0 0 8px rgba(250, 204, 21, 0);
+    --shadow-pulse-warning-end: 0 0 0 0 rgba(250, 204, 21, 0);
     --primary: var(--semantic-color-primary);
     --primary-dark: var(--semantic-color-primary-dark);
     --primary-light: var(--semantic-color-primary-light);
@@ -834,6 +860,20 @@ summary:focus-visible,
   background-color: var(--primary-dark);
   border-color: var(--primary-dark);
   color: var(--semantic-color-text-on-primary);
+}
+
+.btn-secondary,
+.btn.btn-secondary {
+  background-color: var(--semantic-color-surface);
+  color: var(--semantic-color-text);
+  border: 1px solid var(--semantic-color-border-control);
+}
+
+.can-hover .btn-secondary:not(:disabled):not([aria-disabled="true"]):hover,
+.can-hover .btn.btn-secondary:not(:disabled):not([aria-disabled="true"]):hover {
+  background-color: var(--semantic-color-surface-header);
+  border-color: var(--semantic-color-border-control);
+  color: var(--semantic-color-text);
 }
 
 .btn:disabled,

@@ -234,9 +234,7 @@
                     stroke-width="2.5"
                     style="
                       cursor: pointer;
-                      filter: drop-shadow(
-                        0 1px 2px var(--semantic-color-backdrop-soft)
-                      );
+                      filter: drop-shadow(var(--semantic-shadow-drop-sm));
                     "
                     @click="openEditModal(visit)"
                   />

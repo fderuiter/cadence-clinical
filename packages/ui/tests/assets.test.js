@@ -468,8 +468,7 @@ describe("CSS Assets and Package Exports", () => {
         "--semantic-touch-target-",
         "--semantic-control-target-",
         "--semantic-drawer-width-",
-        "--semantic-shadow-sm",
-        "--semantic-shadow-xl",
+        "--semantic-shadow-",
         "--transition-",
       ];
 
@@ -687,6 +686,64 @@ describe("CSS Assets and Package Exports", () => {
         ).toBeGreaterThanOrEqual(4.5);
       }
     });
+
+    it("resolves the complete --semantic-shadow-* alias family across light, dark, and auto-dark themes and defines shared .btn-secondary rules (ADR-2677)", () => {
+      const tokensContent = fs.readFileSync(tokensPath, "utf-8");
+      const darkTokens = parseThemeOverlayTokens(
+        tokensContent,
+        /:root\[data-theme="dark"\][\s\S]*?\{([\s\S]*?)\}/,
+        tokens
+      );
+      const autoDarkTokens = parseThemeOverlayTokens(
+        tokensContent,
+        /:root\[data-theme="auto"\]\s*\{([\s\S]*?)\}/,
+        tokens
+      );
+
+      const expectedShadowPairs = [
+        ["--semantic-shadow-sm", "--shadow-sm"],
+        ["--semantic-shadow-md", "--shadow-md"],
+        ["--semantic-shadow-lg", "--shadow-lg"],
+        ["--semantic-shadow-xl", "--shadow-xl"],
+        ["--semantic-shadow-drawer-left", "--shadow-drawer-left"],
+        ["--semantic-shadow-drawer-right", "--shadow-drawer-right"],
+        ["--semantic-shadow-drawer-bottom", "--shadow-drawer-bottom"],
+        ["--semantic-shadow-focus-ring", "--shadow-focus-ring"],
+        ["--semantic-shadow-focus-accent", "--shadow-focus-accent"],
+        ["--semantic-shadow-drop-sm", "--shadow-drop-sm"],
+        [
+          "--semantic-shadow-pulse-warning-start",
+          "--shadow-pulse-warning-start",
+        ],
+        [
+          "--semantic-shadow-pulse-warning-expand",
+          "--shadow-pulse-warning-expand",
+        ],
+        ["--semantic-shadow-pulse-warning-end", "--shadow-pulse-warning-end"],
+      ];
+
+      for (const [aliasName, primitiveName] of expectedShadowPairs) {
+        expect(tokensContent).toContain(`${aliasName}: var(${primitiveName});`);
+        const lightVal = tokens.get(primitiveName);
+        const darkVal = darkTokens.get(primitiveName);
+        const autoVal = autoDarkTokens.get(primitiveName);
+        expect(tokens.get(aliasName)).toBe(lightVal);
+        expect(lightVal, `Light ${primitiveName} defined`).toBeDefined();
+        expect(darkVal, `Dark ${primitiveName} defined`).toBeDefined();
+        expect(autoVal, `Auto-dark ${primitiveName} defined`).toBe(darkVal);
+        if (primitiveName !== "--shadow-focus-ring") {
+          expect(lightVal, `${primitiveName} differs in dark mode`).not.toBe(
+            darkVal
+          );
+        }
+      }
+
+      expect(tokensContent).toContain(".btn-secondary,");
+      expect(tokensContent).toContain(".btn.btn-secondary");
+      expect(tokensContent).toContain(
+        '.can-hover .btn-secondary:not(:disabled):not([aria-disabled="true"]):hover'
+      );
+    });
   });
 
   describe("ESLint Static Token Enforcement Gates", () => {
@@ -772,6 +829,102 @@ describe("CSS Assets and Package Exports", () => {
           (m) => m.ruleId === "custom-vue/no-inline-hex"
         )
       ).toHaveLength(2);
+    });
+
+    it("enforces CSS Level 4 named colors, oklch()/hwb(), box-shadow/drop-shadow tokens, and VitePress --vp-* scoping while allowing clinical prose and WCAG C40 halos (ADR-2677)", async () => {
+      const eslint = new ESLint({
+        cwd: repoRoot,
+        overrideConfigFile: path.join(repoRoot, "eslint.config.mjs"),
+      });
+
+      const [vueAstResult] = await eslint.lintText(
+        `<template>
+  <div>
+    <svg viewBox="0 0 10 10">
+      <circle cx="5" cy="5" r="4" fill="crimson" stroke="none" />
+    </svg>
+    <span :style="{ color: 'white', boxShadow: '0 2px 8px var(--semantic-color-backdrop)' }">{{ race }}</span>
+  </div>
+</template>
+<script setup lang="ts">
+const race = "White";
+function paint(ctx: CanvasRenderingContext2D, el: HTMLElement, grad: CanvasGradient) {
+  ctx.fillStyle = "red";
+  el.style.backgroundColor = "blue";
+  grad.addColorStop(0, "whitesmoke");
+}
+void paint;
+</script>
+<style scoped>
+.bad-card {
+  color: oklch(0.7 0.1 240);
+  background: hwb(190 20% 10%);
+  box-shadow: 0 2px 8px var(--semantic-color-backdrop);
+  filter: drop-shadow(0 2px 4px var(--semantic-color-backdrop));
+}
+.good-card {
+  color: currentColor;
+  background-color: transparent;
+  outline-color: Highlight;
+  box-shadow: var(--semantic-shadow-focus-accent);
+  filter: drop-shadow(var(--semantic-shadow-drop-sm));
+}
+.good-halo:focus-visible {
+  box-shadow:
+    0 0 0 2px var(--semantic-color-text-on-solid),
+    0 0 0 4px var(--semantic-color-focus-ring);
+}
+</style>
+`,
+        {
+          filePath: path.join(
+            repoRoot,
+            "apps/web/src/components/Adr2677GateProbe.vue"
+          ),
+        }
+      );
+
+      const vueViolations = vueAstResult.messages.filter(
+        (m) => m.ruleId === "custom-vue/no-inline-hex"
+      );
+      expect(vueViolations).toHaveLength(10);
+
+      const [vitepressCleanCss] = await eslint.lintText(
+        `.vp-toolbar {\n  background: var(--vp-c-bg-soft);\n  color: var(--vp-c-brand-1);\n  font-family: var(--vp-font-family-base);\n  box-shadow: var(--vp-shadow-2);\n  --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath fill='none' stroke='currentColor' d='M1 1a2 2 0 0 1 2 2'/%3E%3C/svg%3E");\n}\n`,
+        {
+          filePath: path.join(repoRoot, "docs/.vitepress/theme/custom.css"),
+        }
+      );
+      expect(vitepressCleanCss.messages).toHaveLength(0);
+
+      const [vitepressBadCss] = await eslint.lintText(
+        `.vp-toolbar {\n  color: crimson;\n  box-shadow: 0 2px 8px var(--vp-c-bg);\n}\n`,
+        {
+          filePath: path.join(repoRoot, "docs/.vitepress/theme/custom.css"),
+        }
+      );
+      expect(
+        vitepressBadCss.messages.filter(
+          (m) => m.ruleId === "custom-vue/no-inline-hex"
+        )
+      ).toHaveLength(2);
+
+      const [webLeakedVpVar] = await eslint.lintText(
+        `.leaked {\n  color: var(--vp-c-brand-1);\n  font-family: var(--vp-font-family-base);\n}\n`,
+        {
+          filePath: path.join(repoRoot, "apps/web/src/leaked-vp.css"),
+        }
+      );
+      expect(
+        webLeakedVpVar.messages.filter(
+          (m) => m.ruleId === "custom-vue/no-undefined-css-vars"
+        )
+      ).toHaveLength(2);
+      expect(
+        webLeakedVpVar.messages.filter(
+          (m) => m.ruleId === "custom-vue/no-custom-font-stack"
+        )
+      ).toHaveLength(1);
     });
 
     it("rejects synthetic Vue and CSS fixtures with bare outline: none / outline: 0 without :focus-visible while permitting :focus:not(:focus-visible)", async () => {

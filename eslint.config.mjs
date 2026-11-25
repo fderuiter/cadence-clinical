@@ -18,12 +18,247 @@ const portalStyleCssPath = path.join(
 );
 
 const hexColorRegex = /#(?:[0-9a-fA-F]{3,4}){1,2}(?![0-9a-zA-Z_-])/g;
-const colorFunctionRegex = /\b(?:rgba?|hsla?)\s*\([^)]*\)/gi;
-const namedColorDeclRegex =
-  /(?:^|[;{\s"'`])(?:background(?:-color)?|color|border(?:-(?:top|right|bottom|left))?(?:-color)?|fill|stroke|outline(?:-color)?)\s*:\s*(white|black)\b/gi;
+const colorFunctionRegex =
+  /(?<![a-zA-Z0-9_-])(?:rgba?|hsla?|hwb|oklab|oklch|lab|lch)\s*\((?:[^()]|\([^()]*\))*\)/gi;
+const dropShadowFunctionRegex =
+  /(?<![a-zA-Z0-9_-])drop-shadow\s*\((?:[^()]|\([^()]*\))*\)/gi;
+const boxShadowLayerPattern =
+  "(?:var\\(\\s*--[a-zA-Z0-9_-]*shadow[a-zA-Z0-9_-]*\\s*\\)|(?:inset\\s+)?0(?:px)?\\s+0(?:px)?\\s+0(?:px)?\\s+[0-9.]+(?:px|rem)\\s+var\\(\\s*--(?:semantic-)?color-[a-zA-Z0-9_-]+\\s*\\))";
+const allowedBoxShadowValueRegex = new RegExp(
+  `^(?:none|inherit|initial|unset|revert|revert-layer|${boxShadowLayerPattern}(?:\\s*,\\s*${boxShadowLayerPattern})*)$`,
+  "i"
+);
 const cssVarDefRegex = /(--[a-zA-Z0-9_-]+)\s*:/g;
 const cssVarUseRegex = /var\(\s*(--[a-zA-Z0-9_-]+)/g;
 const aiTokenRegex = /--(?:semantic-)?color-ai(?:-[a-zA-Z0-9_-]+)?\b/g;
+
+const cssNamedColors = new Set([
+  "aliceblue",
+  "antiquewhite",
+  "aqua",
+  "aquamarine",
+  "azure",
+  "beige",
+  "bisque",
+  "black",
+  "blanchedalmond",
+  "blue",
+  "blueviolet",
+  "brown",
+  "burlywood",
+  "cadetblue",
+  "chartreuse",
+  "chocolate",
+  "coral",
+  "cornflowerblue",
+  "cornsilk",
+  "crimson",
+  "cyan",
+  "darkblue",
+  "darkcyan",
+  "darkgoldenrod",
+  "darkgray",
+  "darkgreen",
+  "darkgrey",
+  "darkkhaki",
+  "darkmagenta",
+  "darkolivegreen",
+  "darkorange",
+  "darkorchid",
+  "darkred",
+  "darksalmon",
+  "darkseagreen",
+  "darkslateblue",
+  "darkslategray",
+  "darkslategrey",
+  "darkturquoise",
+  "darkviolet",
+  "deeppink",
+  "deepskyblue",
+  "dimgray",
+  "dimgrey",
+  "dodgerblue",
+  "firebrick",
+  "floralwhite",
+  "forestgreen",
+  "fuchsia",
+  "gainsboro",
+  "ghostwhite",
+  "gold",
+  "goldenrod",
+  "gray",
+  "green",
+  "greenyellow",
+  "grey",
+  "honeydew",
+  "hotpink",
+  "indianred",
+  "indigo",
+  "ivory",
+  "khaki",
+  "lavender",
+  "lavenderblush",
+  "lawngreen",
+  "lemonchiffon",
+  "lightblue",
+  "lightcoral",
+  "lightcyan",
+  "lightgoldenrodyellow",
+  "lightgray",
+  "lightgreen",
+  "lightgrey",
+  "lightpink",
+  "lightsalmon",
+  "lightseagreen",
+  "lightskyblue",
+  "lightslategray",
+  "lightslategrey",
+  "lightsteelblue",
+  "lightyellow",
+  "lime",
+  "limegreen",
+  "linen",
+  "magenta",
+  "maroon",
+  "mediumaquamarine",
+  "mediumblue",
+  "mediumorchid",
+  "mediumpurple",
+  "mediumseagreen",
+  "mediumslateblue",
+  "mediumspringgreen",
+  "mediumturquoise",
+  "mediumvioletred",
+  "midnightblue",
+  "mintcream",
+  "mistyrose",
+  "moccasin",
+  "navajowhite",
+  "navy",
+  "oldlace",
+  "olive",
+  "olivedrab",
+  "orange",
+  "orangered",
+  "orchid",
+  "palegoldenrod",
+  "palegreen",
+  "paleturquoise",
+  "palevioletred",
+  "papayawhip",
+  "peachpuff",
+  "peru",
+  "pink",
+  "plum",
+  "powderblue",
+  "purple",
+  "rebeccapurple",
+  "red",
+  "rosybrown",
+  "royalblue",
+  "saddlebrown",
+  "salmon",
+  "sandybrown",
+  "seagreen",
+  "seashell",
+  "sienna",
+  "silver",
+  "skyblue",
+  "slateblue",
+  "slategray",
+  "slategrey",
+  "snow",
+  "springgreen",
+  "steelblue",
+  "tan",
+  "teal",
+  "thistle",
+  "tomato",
+  "turquoise",
+  "violet",
+  "wheat",
+  "white",
+  "whitesmoke",
+  "yellow",
+  "yellowgreen",
+]);
+
+const nonColorCssProperties = new Set([
+  "animation",
+  "animation-name",
+  "content",
+  "counter-increment",
+  "counter-reset",
+  "cursor",
+  "font-display",
+  "font-family",
+  "grid-area",
+  "grid-template",
+  "grid-template-areas",
+  "list-style",
+  "list-style-type",
+  "transition",
+  "transition-property",
+  "white-space",
+  "will-change",
+]);
+
+const colorCssProperties = new Set([
+  "accent-color",
+  "background",
+  "background-color",
+  "border",
+  "border-bottom",
+  "border-bottom-color",
+  "border-color",
+  "border-left",
+  "border-left-color",
+  "border-right",
+  "border-right-color",
+  "border-top",
+  "border-top-color",
+  "caret-color",
+  "color",
+  "column-rule",
+  "column-rule-color",
+  "fill",
+  "flood-color",
+  "lighting-color",
+  "outline",
+  "outline-color",
+  "stop-color",
+  "stroke",
+  "text-decoration",
+  "text-decoration-color",
+]);
+
+const jsStyleColorProperties = new Set([
+  "accentColor",
+  "background",
+  "backgroundColor",
+  "border",
+  "borderBottom",
+  "borderBottomColor",
+  "borderColor",
+  "borderLeft",
+  "borderLeftColor",
+  "borderRight",
+  "borderRightColor",
+  "borderTop",
+  "borderTopColor",
+  "caretColor",
+  "color",
+  "columnRuleColor",
+  "fill",
+  "fillStyle",
+  "outline",
+  "outlineColor",
+  "shadowColor",
+  "stopColor",
+  "stroke",
+  "strokeStyle",
+  "textDecorationColor",
+]);
 
 function isAllowedAiTokenFile(filename) {
   if (filename.endsWith("/packages/ui/tokens.css")) return true;
@@ -113,34 +348,138 @@ const cssStubParser = {
   },
 };
 
-function findColorViolationsInCssText(text) {
-  const violations = [];
-  for (const match of text.matchAll(hexColorRegex)) {
-    violations.push({ index: match.index, literal: match[0] });
-  }
-  for (const match of text.matchAll(colorFunctionRegex)) {
-    violations.push({ index: match.index, literal: match[0] });
-  }
-  for (const match of text.matchAll(namedColorDeclRegex)) {
-    const colorWord = match[1];
-    const wordOffset = match[0]
-      .toLowerCase()
-      .lastIndexOf(colorWord.toLowerCase());
-    violations.push({
-      index: match.index + Math.max(0, wordOffset),
-      literal: colorWord,
-    });
-  }
-  return violations;
+function stripNonColorVarsAndStringsPreservingLength(valueText) {
+  return valueText
+    .replace(/url\(\s*(?:"[^"]*"|'[^']*'|[^)"'])*\)/gi, (m) =>
+      m.replace(/[^\r\n]/g, " ")
+    )
+    .replace(/(?:"[^"]*"|'[^']*')/g, (m) => m.replace(/[^\r\n]/g, " "))
+    .replace(/var\(\s*--[a-zA-Z0-9_-]+\s*\)/g, (m) => " ".repeat(m.length))
+    .replace(/var\(\s*--[a-zA-Z0-9_-]+\s*,/g, (prefix) =>
+      " ".repeat(prefix.length)
+    );
 }
 
-function collectColorLiteralsFromScriptString(rawText) {
-  const cleaned = stripUrlFragmentsPreservingLength(rawText);
-  const found = new Set();
-  for (const m of cleaned.matchAll(hexColorRegex)) found.add(m[0]);
-  for (const m of cleaned.matchAll(colorFunctionRegex)) found.add(m[0]);
-  for (const m of cleaned.matchAll(namedColorDeclRegex)) found.add(m[1]);
-  return [...found];
+function isAllowedBoxShadowValue(rawVal) {
+  const withoutImportant = rawVal.replace(/\s*!important\s*$/i, "").trim();
+  if (!withoutImportant) return true;
+  return allowedBoxShadowValueRegex.test(withoutImportant);
+}
+
+function findNamedColorsInCssValue(valueText) {
+  const scrubbed = stripNonColorVarsAndStringsPreservingLength(valueText);
+  const results = [];
+  for (const m of scrubbed.matchAll(
+    /(?<![a-zA-Z0-9_-])([a-zA-Z]+)(?![a-zA-Z0-9_(-])/g
+  )) {
+    const word = m[1];
+    if (cssNamedColors.has(word.toLowerCase())) {
+      results.push({ color: word, index: m.index });
+    }
+  }
+  return results;
+}
+
+function checkCssDeclarationsInText(
+  maskedText,
+  reportAtOffset,
+  onlyKnownColorProps = false
+) {
+  const declRegex = /(?:^|[{;\s"'])([a-zA-Z-]+)\s*:\s*([^;{}<>`"]+)/g;
+  for (const declMatch of maskedText.matchAll(declRegex)) {
+    const propName = declMatch[1].toLowerCase();
+    const rawValue = declMatch[2];
+    const valueOffset = declMatch.index + declMatch[0].length - rawValue.length;
+
+    if (propName === "box-shadow") {
+      if (!isAllowedBoxShadowValue(rawValue)) {
+        reportAtOffset(valueOffset, "noUntokenizedBoxShadow", {
+          value: rawValue.trim(),
+        });
+      }
+      continue;
+    }
+
+    if (nonColorCssProperties.has(propName)) {
+      continue;
+    }
+    if (
+      onlyKnownColorProps &&
+      !colorCssProperties.has(propName) &&
+      !propName.startsWith("--")
+    ) {
+      continue;
+    }
+
+    for (const hit of findNamedColorsInCssValue(rawValue)) {
+      reportAtOffset(valueOffset + hit.index, "noNamedColorInStyle", {
+        color: hit.color,
+      });
+    }
+  }
+}
+
+function scanCssBlockForUntokenizedStyles(
+  rawCss,
+  baseOffset,
+  sourceText,
+  context,
+  isTokensCss = false
+) {
+  let masked = stripUrlFragmentsPreservingLength(
+    stripCssCommentsPreservingNewlines(rawCss)
+  );
+  if (isTokensCss) {
+    masked = masked.replace(
+      /(?::root(?:\[[^\]]+\])?|\[data-theme="[^"]+"\]|\.dark)[^{]*\{[^}]*\}/g,
+      (rootBlock) => rootBlock.replace(/[^\r\n]/g, " ")
+    );
+  }
+
+  for (const match of masked.matchAll(hexColorRegex)) {
+    context.report({
+      loc: offsetToLoc(sourceText, baseOffset + match.index),
+      messageId: "noHexInStyle",
+      data: { hex: match[0] },
+    });
+  }
+
+  for (const match of masked.matchAll(colorFunctionRegex)) {
+    context.report({
+      loc: offsetToLoc(sourceText, baseOffset + match.index),
+      messageId: "noColorFunctionInStyle",
+      data: { fn: match[0].trim() },
+    });
+  }
+
+  for (const match of masked.matchAll(dropShadowFunctionRegex)) {
+    const inner = match[0]
+      .replace(/^drop-shadow\s*\(/i, "")
+      .replace(/\)$/, "")
+      .trim();
+    if (!isAllowedBoxShadowValue(inner)) {
+      context.report({
+        loc: offsetToLoc(sourceText, baseOffset + match.index),
+        messageId: "noUntokenizedBoxShadow",
+        data: { value: match[0].trim() },
+      });
+    }
+  }
+
+  const declOnlyCss = masked.replace(/[^{};]*\{/g, (header) =>
+    header.replace(/[^\r\n]/g, " ")
+  );
+  checkCssDeclarationsInText(
+    declOnlyCss,
+    (relOffset, messageId, data) => {
+      context.report({
+        loc: offsetToLoc(sourceText, baseOffset + relOffset),
+        messageId,
+        data,
+      });
+    },
+    false
+  );
 }
 
 function isModuleSpecifierNode(node) {
@@ -155,17 +494,290 @@ function isModuleSpecifierNode(node) {
   );
 }
 
+function isStaticOrDynamicPropertyName(propNode) {
+  if (!propNode) return null;
+  if (propNode.type === "Identifier") return propNode.name;
+  if (propNode.type === "Literal" && typeof propNode.value === "string") {
+    return propNode.value;
+  }
+  return null;
+}
+
+function isDomSelectorArgument(node) {
+  const parent = node.parent;
+  if (!parent || parent.type !== "CallExpression") return false;
+  const callee = parent.callee;
+  const methodName =
+    callee?.type === "MemberExpression"
+      ? isStaticOrDynamicPropertyName(callee.property)
+      : callee?.type === "Identifier"
+        ? callee.name
+        : null;
+  return (
+    methodName === "querySelector" ||
+    methodName === "querySelectorAll" ||
+    methodName === "closest" ||
+    methodName === "matches" ||
+    methodName === "getElementById"
+  );
+}
+
+function inspectScriptStringValue(
+  rawStr,
+  reportNode,
+  context,
+  skipHexSelector
+) {
+  if (!rawStr) return;
+  const masked = stripUrlFragmentsPreservingLength(rawStr).replace(
+    /[a-zA-Z0-9/_?&=-]+#[0-9a-fA-F]{3,8}\b/g,
+    (m) => " ".repeat(m.length)
+  );
+
+  if (!skipHexSelector) {
+    const hexMatches = masked.match(hexColorRegex);
+    if (hexMatches) {
+      for (const hex of new Set(hexMatches)) {
+        context.report({
+          node: reportNode,
+          messageId: "noHexInStyle",
+          data: { hex },
+        });
+      }
+    }
+  }
+
+  const fnMatches = masked.match(colorFunctionRegex);
+  if (fnMatches) {
+    for (const fn of new Set(fnMatches.map((s) => s.trim()))) {
+      context.report({
+        node: reportNode,
+        messageId: "noColorFunctionInStyle",
+        data: { fn },
+      });
+    }
+  }
+
+  const dropMatches = masked.match(dropShadowFunctionRegex);
+  if (dropMatches) {
+    for (const ds of new Set(dropMatches.map((s) => s.trim()))) {
+      const inner = ds
+        .replace(/^drop-shadow\s*\(/i, "")
+        .replace(/\)$/, "")
+        .trim();
+      if (!isAllowedBoxShadowValue(inner)) {
+        context.report({
+          node: reportNode,
+          messageId: "noUntokenizedBoxShadow",
+          data: { value: ds },
+        });
+      }
+    }
+  }
+
+  checkCssDeclarationsInText(
+    masked,
+    (_offset, messageId, data) => {
+      context.report({
+        node: reportNode,
+        messageId,
+        data,
+      });
+    },
+    true
+  );
+}
+
+function getStaticStringFromAstNode(node) {
+  if (!node) return null;
+  if (node.type === "Literal" && typeof node.value === "string") {
+    return node.value;
+  }
+  if (node.type === "TemplateLiteral" && node.expressions.length === 0) {
+    return node.quasis[0]?.value?.cooked ?? node.quasis[0]?.value?.raw ?? null;
+  }
+  return null;
+}
+
+function findEnclosingStyleOrColorVAttribute(node) {
+  let cur = node.parent;
+  while (cur) {
+    if (cur.type === "VAttribute") {
+      return isStyleOrColorVAttribute(cur) ? cur : null;
+    }
+    cur = cur.parent;
+  }
+  return null;
+}
+
+function createScriptAstColorVisitor(context, isTemplateScope = false) {
+  return {
+    Literal(node) {
+      if (typeof node.value !== "string" || isModuleSpecifierNode(node)) {
+        return;
+      }
+      if (isTemplateScope) {
+        const attr = findEnclosingStyleOrColorVAttribute(node);
+        if (!attr) return;
+        const attrName = !attr.directive
+          ? attr.key?.name
+          : attr.key?.argument?.name;
+        if (
+          (attrName === "fill" ||
+            attrName === "stroke" ||
+            attrName === "color") &&
+          node.parent?.type !== "Property"
+        ) {
+          for (const hit of findNamedColorsInCssValue(node.value)) {
+            context.report({
+              node,
+              messageId: "noNamedColorInStyle",
+              data: { color: hit.color },
+            });
+          }
+        }
+      }
+      inspectScriptStringValue(
+        node.value,
+        node,
+        context,
+        isDomSelectorArgument(node)
+      );
+    },
+    TemplateElement(node) {
+      if (isTemplateScope && !findEnclosingStyleOrColorVAttribute(node)) {
+        return;
+      }
+      const val = node.value?.cooked ?? node.value?.raw ?? "";
+      inspectScriptStringValue(
+        val,
+        node,
+        context,
+        node.parent ? isDomSelectorArgument(node.parent) : false
+      );
+    },
+    Property(node) {
+      if (isTemplateScope && !findEnclosingStyleOrColorVAttribute(node)) {
+        return;
+      }
+      const keyName = isStaticOrDynamicPropertyName(node.key);
+      if (!keyName) return;
+      const strVal = getStaticStringFromAstNode(node.value);
+      if (strVal === null) return;
+      if (keyName === "boxShadow" || keyName === "box-shadow") {
+        if (!isAllowedBoxShadowValue(strVal)) {
+          context.report({
+            node: node.value,
+            messageId: "noUntokenizedBoxShadow",
+            data: { value: strVal.trim() },
+          });
+        }
+      } else if (
+        isTemplateScope &&
+        (jsStyleColorProperties.has(keyName) ||
+          colorCssProperties.has(keyName.toLowerCase()))
+      ) {
+        for (const hit of findNamedColorsInCssValue(strVal)) {
+          context.report({
+            node: node.value,
+            messageId: "noNamedColorInStyle",
+            data: { color: hit.color },
+          });
+        }
+      } else if (
+        !isTemplateScope &&
+        (keyName === "backgroundColor" ||
+          keyName === "borderColor" ||
+          keyName === "borderTopColor" ||
+          keyName === "borderRightColor" ||
+          keyName === "borderBottomColor" ||
+          keyName === "borderLeftColor" ||
+          keyName === "outlineColor" ||
+          keyName === "fillStyle" ||
+          keyName === "strokeStyle" ||
+          keyName === "shadowColor" ||
+          keyName === "stopColor" ||
+          keyName === "textDecorationColor" ||
+          keyName === "caretColor" ||
+          keyName === "accentColor")
+      ) {
+        for (const hit of findNamedColorsInCssValue(strVal)) {
+          context.report({
+            node: node.value,
+            messageId: "noNamedColorInStyle",
+            data: { color: hit.color },
+          });
+        }
+      }
+    },
+    AssignmentExpression(node) {
+      if (node.left?.type !== "MemberExpression") return;
+      const propName = isStaticOrDynamicPropertyName(node.left.property);
+      if (!propName) return;
+      const strVal = getStaticStringFromAstNode(node.right);
+      if (strVal === null) return;
+      if (propName === "boxShadow" || propName === "box-shadow") {
+        if (!isAllowedBoxShadowValue(strVal)) {
+          context.report({
+            node: node.right,
+            messageId: "noUntokenizedBoxShadow",
+            data: { value: strVal.trim() },
+          });
+        }
+      } else if (
+        propName === "fillStyle" ||
+        propName === "strokeStyle" ||
+        propName === "shadowColor" ||
+        (node.left.object?.type === "MemberExpression" &&
+          isStaticOrDynamicPropertyName(node.left.object.property) ===
+            "style" &&
+          jsStyleColorProperties.has(propName))
+      ) {
+        for (const hit of findNamedColorsInCssValue(strVal)) {
+          context.report({
+            node: node.right,
+            messageId: "noNamedColorInStyle",
+            data: { color: hit.color },
+          });
+        }
+      }
+    },
+    CallExpression(node) {
+      if (node.callee?.type !== "MemberExpression") return;
+      const propName = isStaticOrDynamicPropertyName(node.callee.property);
+      if (propName === "addColorStop" && node.arguments.length >= 2) {
+        const strVal = getStaticStringFromAstNode(node.arguments[1]);
+        if (strVal !== null) {
+          for (const hit of findNamedColorsInCssValue(strVal)) {
+            context.report({
+              node: node.arguments[1],
+              messageId: "noNamedColorInStyle",
+              data: { color: hit.color },
+            });
+          }
+        }
+      }
+    },
+  };
+}
+
 const noInlineHexRule = {
   meta: {
     type: "problem",
     docs: {
       description:
-        "Disallow hardcoded color literals (#hex, rgb/rgba/hsl/hsla, named white/black declarations) in Vue templates, <script> blocks, <style> blocks, JS/TS modules, and CSS stylesheets outside packages/ui/tokens.css theme blocks.",
+        "Disallow hardcoded color literals (#hex, rgb/rgba/hsl/hsla/hwb/oklch/oklab/lab/lch, CSS Level 4 named colors) and untokenized box-shadow / drop-shadow() declarations across Vue templates, <script> blocks, <style> blocks, JS/TS modules, and CSS stylesheets outside packages/ui/tokens.css theme blocks.",
       category: "Best Practices",
     },
     messages: {
       noHexInStyle:
         'Hardcoded color literal "{{hex}}" is prohibited. Use design system tokens defined in packages/ui/tokens.css (e.g. var(--semantic-color-...)).',
+      noColorFunctionInStyle:
+        'Hardcoded color function "{{fn}}" is prohibited. Use design system tokens defined in packages/ui/tokens.css (e.g. var(--semantic-color-...)).',
+      noNamedColorInStyle:
+        'Hardcoded named CSS color "{{color}}" is prohibited. Use design system tokens defined in packages/ui/tokens.css (e.g. var(--semantic-color-surface) or var(--semantic-color-text-on-solid)).',
+      noUntokenizedBoxShadow:
+        'Untokenized shadow "{{value}}" is prohibited. Use crisp 1px borders, box-shadow: none, or centralized shadow tokens (var(--shadow-*) / var(--semantic-shadow-*)) from packages/ui/tokens.css.',
     },
   },
   create(context) {
@@ -178,88 +790,39 @@ const noInlineHexRule = {
     if (filename.endsWith(".css")) {
       return {
         Program() {
-          let masked = stripUrlFragmentsPreservingLength(
-            stripCssCommentsPreservingNewlines(sourceText)
+          scanCssBlockForUntokenizedStyles(
+            sourceText,
+            0,
+            sourceText,
+            context,
+            filename.endsWith("/packages/ui/tokens.css")
           );
-          if (filename.endsWith("/packages/ui/tokens.css")) {
-            masked = masked.replace(
-              /(?::root(?:\[[^\]]+\])?|\[data-theme="[^"]+"\]|\.dark)[^{]*\{[^}]*\}/g,
-              (rootBlock) => rootBlock.replace(/[^\r\n]/g, " ")
-            );
-          }
-          for (const v of findColorViolationsInCssText(masked)) {
-            const loc = offsetToLoc(sourceText, v.index);
-            context.report({
-              loc,
-              messageId: "noHexInStyle",
-              data: { hex: v.literal },
-            });
-          }
         },
       };
     }
 
-    const scriptColorVisitors = {
-      Literal(node) {
-        if (typeof node.value !== "string" || isModuleSpecifierNode(node)) {
-          return;
-        }
-        const trimmed = node.value.trim().toLowerCase();
-        const isCanvasNamedColor =
-          (trimmed === "white" || trimmed === "black") &&
-          node.parent?.type === "AssignmentExpression" &&
-          node.parent.right === node &&
-          node.parent.left?.type === "MemberExpression" &&
-          (node.parent.left.property?.name === "fillStyle" ||
-            node.parent.left.property?.name === "strokeStyle");
-        const literals = collectColorLiteralsFromScriptString(node.value);
-        if (isCanvasNamedColor) literals.push(node.value.trim());
-        for (const hex of new Set(literals)) {
-          context.report({
-            node,
-            messageId: "noHexInStyle",
-            data: { hex },
-          });
-        }
-      },
-      TemplateElement(node) {
-        const raw = node.value?.raw || "";
-        if (!raw) return;
-        for (const hex of collectColorLiteralsFromScriptString(raw)) {
-          context.report({
-            node,
-            messageId: "noHexInStyle",
-            data: { hex },
-          });
-        }
-      },
-    };
+    // 2. Plain .js / .ts / .mjs / .cjs modules
+    if (!filename.endsWith(".vue")) {
+      return createScriptAstColorVisitor(context, false);
+    }
 
-    // 2. Vue SFCs & JS/TS modules: check <template> style/presentation attributes, <script> AST literals, and <style> blocks
+    // 3. Vue SFCs: check <template> style/presentation attributes, <script> AST, and <style> blocks
     const scriptAndStyleCheck = {
-      ...scriptColorVisitors,
-      ...(filename.endsWith(".vue")
-        ? {
-            "Program:exit"() {
-              for (const styleMatch of sourceText.matchAll(
-                /(<style\b[^>]*>)([\s\S]*?)<\/style>/gi
-              )) {
-                const contentStart = styleMatch.index + styleMatch[1].length;
-                const masked = stripUrlFragmentsPreservingLength(
-                  stripCssCommentsPreservingNewlines(styleMatch[2])
-                );
-                for (const v of findColorViolationsInCssText(masked)) {
-                  const loc = offsetToLoc(sourceText, contentStart + v.index);
-                  context.report({
-                    loc,
-                    messageId: "noHexInStyle",
-                    data: { hex: v.literal },
-                  });
-                }
-              }
-            },
-          }
-        : {}),
+      ...createScriptAstColorVisitor(context, false),
+      "Program:exit"() {
+        for (const styleMatch of sourceText.matchAll(
+          /(<style\b[^>]*>)([\s\S]*?)<\/style>/gi
+        )) {
+          const contentStart = styleMatch.index + styleMatch[1].length;
+          scanCssBlockForUntokenizedStyles(
+            styleMatch[2],
+            contentStart,
+            sourceText,
+            context,
+            false
+          );
+        }
+      },
     };
 
     const parserServices =
@@ -268,30 +831,29 @@ const noInlineHexRule = {
       return scriptAndStyleCheck;
     }
 
+    const templateAstVisitors = createScriptAstColorVisitor(context, true);
+
     return parserServices.defineTemplateBodyVisitor(
       {
+        ...templateAstVisitors,
         VAttribute(node) {
-          if (isStyleOrColorVAttribute(node) && node.value) {
-            const rawAttr = context.sourceCode.getText(node.value);
-            const literals = collectColorLiteralsFromScriptString(rawAttr);
-            const attrName = !node.directive
-              ? node.key?.name
-              : node.key?.argument?.name;
+          if (!node.directive && isStyleOrColorVAttribute(node) && node.value) {
+            const rawVal = node.value.value ?? "";
+            const attrName = node.key?.name;
             if (
-              (attrName === "fill" ||
-                attrName === "stroke" ||
-                attrName === "color") &&
-              /^['"]?(?:white|black)['"]?$/i.test(rawAttr.trim())
+              attrName === "fill" ||
+              attrName === "stroke" ||
+              attrName === "color"
             ) {
-              literals.push(rawAttr.replace(/['"]/g, "").trim());
+              for (const hit of findNamedColorsInCssValue(rawVal)) {
+                context.report({
+                  node: node.value,
+                  messageId: "noNamedColorInStyle",
+                  data: { color: hit.color },
+                });
+              }
             }
-            for (const hex of new Set(literals)) {
-              context.report({
-                node: node.value,
-                messageId: "noHexInStyle",
-                data: { hex },
-              });
-            }
+            inspectScriptStringValue(rawVal, node.value, context, false);
           }
         },
       },
@@ -703,6 +1265,10 @@ const noUndefinedCssVarsRule = {
       .join("/");
     const sourceText = context.sourceCode.getText();
     const allowedVars = getBaseDefinedVars(filename);
+    const isVitePressFile = filename.includes("/docs/.vitepress/");
+    const isAllowedVar = (varName) =>
+      allowedVars.has(varName) ||
+      (isVitePressFile && varName.startsWith("--vp-"));
 
     // Collect locally declared custom properties in the current file
     if (filename.endsWith(".css")) {
@@ -713,7 +1279,7 @@ const noUndefinedCssVarsRule = {
       return {
         Program() {
           for (const match of clean.matchAll(cssVarUseRegex)) {
-            if (!allowedVars.has(match[1])) {
+            if (!isAllowedVar(match[1])) {
               context.report({
                 loc: offsetToLoc(sourceText, match.index),
                 messageId: "undefinedCssVar",
@@ -743,7 +1309,7 @@ const noUndefinedCssVarsRule = {
             const contentStart = sm.index + sm[1].length;
             const clean = stripCssCommentsPreservingNewlines(sm[2]);
             for (const match of clean.matchAll(cssVarUseRegex)) {
-              if (!allowedVars.has(match[1])) {
+              if (!isAllowedVar(match[1])) {
                 context.report({
                   loc: offsetToLoc(sourceText, contentStart + match.index),
                   messageId: "undefinedCssVar",
@@ -761,7 +1327,7 @@ const noUndefinedCssVarsRule = {
               (c) => " ".repeat(c.length)
             );
             for (const match of clean.matchAll(cssVarUseRegex)) {
-              if (!allowedVars.has(match[1])) {
+              if (!isAllowedVar(match[1])) {
                 context.report({
                   loc: offsetToLoc(sourceText, contentStart + match.index),
                   messageId: "undefinedCssVar",
@@ -788,7 +1354,7 @@ const noUndefinedCssVarsRule = {
                 allowedVars.add(m[1]);
               }
               for (const match of text.matchAll(cssVarUseRegex)) {
-                if (!allowedVars.has(match[1])) {
+                if (!isAllowedVar(match[1])) {
                   context.report({
                     node: node.value,
                     messageId: "undefinedCssVar",
@@ -814,7 +1380,7 @@ const noUndefinedCssVarsRule = {
           allowedVars.add(m[1]);
         }
         for (const match of clean.matchAll(cssVarUseRegex)) {
-          if (!allowedVars.has(match[1])) {
+          if (!isAllowedVar(match[1])) {
             context.report({
               loc: offsetToLoc(sourceText, match.index),
               messageId: "undefinedCssVar",
@@ -2713,6 +3279,10 @@ const noCustomFontStackRule = {
     },
   },
   create(context) {
+    const isVitePressFile = (context.filename || context.getFilename() || "")
+      .split(path.sep)
+      .join("/")
+      .includes("/docs/.vitepress/");
     const cssFontFamilyRe = /font-family\s*:\s*([^;}]+)/gi;
     const inlineFontFamilyRe = /font-family\s*:\s*([^;}"'`]+)/gi;
     const jsFontFamilyRe = /fontFamily\s*:\s*(['"`])([^'"`]+)\1/g;
@@ -2722,7 +3292,12 @@ const noCustomFontStackRule = {
         .replace(/\s*!important\s*$/i, "")
         .replace(/\s+/g, " ")
         .trim();
-      if (!normalized || ALLOWED_TOKENIZED_FONT_FAMILIES.has(normalized)) {
+      if (
+        !normalized ||
+        ALLOWED_TOKENIZED_FONT_FAMILIES.has(normalized) ||
+        (isVitePressFile &&
+          /^var\(\s*--vp-font-family-[a-zA-Z0-9_-]+\s*\)$/.test(normalized))
+      ) {
         return null;
       }
       return normalized;
@@ -3800,7 +4375,11 @@ export default [
     },
   },
   {
-    files: ["packages/**/*.css", "apps/**/*.css"],
+    files: [
+      "packages/**/*.css",
+      "apps/**/*.css",
+      "docs/.vitepress/theme/**/*.css",
+    ],
     languageOptions: {
       parser: cssStubParser,
     },
@@ -3869,6 +4448,8 @@ export default [
         "error",
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
       ],
+      "custom-vue/no-inline-hex": "error",
+      "custom-vue/no-undefined-css-vars": "error",
       "custom-vue/no-unlabeled-glyph-button": "error",
     },
   },

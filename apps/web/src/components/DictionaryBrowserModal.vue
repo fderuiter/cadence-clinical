@@ -658,7 +658,7 @@ useFocusTrap(modalRef, {
 .active-result {
   border-color: var(--accent) !important;
   background-color: var(--semantic-color-info-bg) !important;
-  box-shadow: 0 0 0 2px var(--accent-bg);
+  box-shadow: var(--semantic-shadow-focus-accent);
 }
 
 .result-card-header {

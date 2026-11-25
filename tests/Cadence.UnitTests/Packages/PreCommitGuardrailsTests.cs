@@ -2052,6 +2052,9 @@ public sealed class PreCommitGuardrailsTests : IDisposable
     public void FrontendEslintGate_IncludesCssExtension_AndRoutesStagedCssThroughPreCommitStdinLinting()
     {
         FrontendQualityGateService.SupportedEslintExtensions.Should().Contain(".css");
+        QualityGates.Find("eslint")!.PreCommitNote.Should().Contain(
+            "JS, TS, Vue and CSS blobs over stdin",
+            "CLI pre-commit documentation must reflect staged CSS token/shadow linting");
 
         if (OperatingSystem.IsWindows())
         {
@@ -2060,7 +2063,7 @@ public sealed class PreCommitGuardrailsTests : IDisposable
 
         InitGitRepo();
         Directory.CreateDirectory(Path.Combine(_tempDir, "node_modules"));
-        string cleanCss = Write("apps/web/src/style.css", ".app-shell { color: var(--text-main); }\n");
+        string cleanCss = Write("apps/web/src/style.css", ".app-shell { color: var(--text-main); box-shadow: var(--semantic-shadow-sm); }\n");
         _ = cleanCss;
         RunGit("add", "apps/web/src/style.css");
 
@@ -2081,6 +2084,10 @@ public sealed class PreCommitGuardrailsTests : IDisposable
             "case \"$stdin_body\" in\n" +
             "    *\"#ff0000\"*)\n" +
             "        echo \"error Hardcoded color literal '#ff0000' is prohibited\" >&2\n" +
+            "        exit 1\n" +
+            "        ;;\n" +
+            "    *\"box-shadow: 0 2px 8px\"*)\n" +
+            "        echo \"error Untokenized box-shadow value is prohibited\" >&2\n" +
             "        exit 1\n" +
             "        ;;\n" +
             "esac\n" +
@@ -2104,6 +2111,12 @@ public sealed class PreCommitGuardrailsTests : IDisposable
 
             FrontendQualityGateService.CheckEslint(_tempDir, targetFiles: null, preCommit: true)
                 .Should().Be(1, "staged .css files with hardcoded color literals must fail closed in pre-commit mode");
+
+            Write("apps/web/src/style.css", ".app-shell { box-shadow: 0 2px 8px var(--semantic-color-backdrop); }\n");
+            RunGit("add", "apps/web/src/style.css");
+
+            FrontendQualityGateService.CheckEslint(_tempDir, targetFiles: null, preCommit: true)
+                .Should().Be(1, "staged .css files with untokenized box-shadow declarations must fail closed in pre-commit mode");
         }
         finally
         {

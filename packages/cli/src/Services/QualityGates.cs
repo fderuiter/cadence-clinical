@@ -105,7 +105,7 @@ public static class QualityGates
         {
             TakesFiles = true,
             PreCommit = PreCommitMode.Quick,
-            PreCommitNote = "lints staged JS, TS and Vue blobs over stdin; fails closed when `pnpm` or `node_modules` is missing",
+            PreCommitNote = "lints staged JS, TS, Vue and CSS blobs over stdin; fails closed when `pnpm` or `node_modules` is missing",
         },
         new("typecheck", ["validate-typecheck"],
             "Workspace TypeScript and Vue SFC typecheck (`pnpm -r typecheck` via `vue-tsc` and `tsc`)",

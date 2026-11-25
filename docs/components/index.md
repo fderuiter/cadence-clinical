@@ -79,6 +79,10 @@ Tokens are imported from [tokens.css](../../packages/ui/tokens.css):
 - **Touch Viewport & Prose Safeguards**: Coarse-pointer devices (`@media (pointer: coarse)`) enforce `font-size: max(1rem, var(--font-size-md, 16px))` on form controls to prevent iOS Safari auto-zoom. Narrative `<textarea>` fields and multi-sentence prose paragraphs remain in proportional Inter digits, and `--font-mono` (`JetBrains Mono`) is reserved strictly for clinical identifiers, protocol versions, `NodeRef`s, CDISC variable names, and Part 11 signature hashes.
 - **AST Lint Enforcement**: `custom-vue/require-tabular-nums` in `eslint.config.mjs` flags unaligned numeric `<input>` / `<select>` / `<ClinicalInput>` controls, live countdowns, count badges, KPI/currency readouts, and `font-variant-numeric: normal` overrides.
 
+### Elevation, Focus, & Shadow Tokens
+
+`packages/ui/tokens.css` defines paired light, dark (`[data-theme="dark"]`, `.dark`), and system-auto (`[data-theme="auto"]`) shadow primitives and semantic aliases (`--semantic-shadow-sm`, `--semantic-shadow-md`, `--semantic-shadow-lg`, `--semantic-shadow-xl`, `--semantic-shadow-drawer-{left,right,bottom}`, `--semantic-shadow-focus-ring`, `--semantic-shadow-focus-accent`, `--semantic-shadow-drop-sm`, and `--semantic-shadow-pulse-warning-{start,expand,end}`) alongside shared `.btn-primary` and `.btn-secondary` button contracts (ADR-2675, ADR-2677). `custom-vue/no-inline-hex` and `custom-vue/no-undefined-css-vars` enforce zero hardcoded hex colors, color functions (`rgb`, `rgba`, `hsl`, `hsla`, `hwb`, `oklab`, `oklch`, `lab`, `lch`), CSS Level 4 named colors, untokenized `box-shadow` / `drop-shadow()` declarations, and undefined CSS custom properties across `.vue`, `.js`, `.ts`, and `.css` stylesheets (including `docs/.vitepress/theme/`).
+
 ### Side-Over Drawer Width Tokens
 
 Viewport-relative design tokens defined in `packages/ui/tokens.css` specify standard widths for side-over panel drawers:

@@ -534,9 +534,9 @@
                       :style="{
                         backgroundColor:
                           alert.severity === 'DISCREPANCY'
-                            ? 'var(--semantic-color-error)'
+                            ? 'var(--semantic-color-error-interactive)'
                             : 'var(--semantic-color-warning-action)',
-                        color: 'white',
+                        color: 'var(--semantic-color-text-on-solid)',
                         padding: '2px 6px',
                         borderRadius: '4px',
                         fontSize: 'var(--font-size-2xs)',

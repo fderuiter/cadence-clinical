@@ -475,6 +475,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2673: Centralize CSS Button, Disclosure, and Programmatic Focus States and Migrate Live Clinical Hubs onto Shared UI Primitives](2026-11-24-centralize-css-states-and-migrate-live-clinical-hubs.md) (2026-11-24)
 - [ADR-2675: Standardize Semantic Role Tokens, Dark-Theme Parity, and ESLint AST Color Gates](2026-11-23-standardize-semantic-role-tokens-and-eslint-color-gates.md) (2026-11-23)
 - [ADR-2676: Focus-Trap Detachment Recovery, Shared Retry Focus Primitives, and Inline Focus-Handoff AST Gates](2026-11-24-focus-trap-detachment-recovery-and-retry-focus-primitives.md) (2026-11-24)
+- [ADR-2677: Enforce Shadow, CSS Named-Color, Modern Color-Function, and VitePress Token Gates](2026-11-24-enforce-shadow-named-color-and-vitepress-token-gates.md) (2026-11-24)
 
 ### 7. DevOps, Tooling & CI/CD
 
