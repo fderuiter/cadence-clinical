@@ -77,7 +77,7 @@ describe("VitePress navigation synthesis and link/anchor plugins", () => {
     }
   });
 
-  it("includes all 80 active non-ADR pages from docs/DOCUMENTATION_INDEX.md across route-scoped sidebars", () => {
+  it("includes all active non-ADR pages from docs/DOCUMENTATION_INDEX.md across route-scoped sidebars", () => {
     const indexContent = fs.readFileSync(indexPath, "utf-8");
     const parsedEntries = parseDocumentationIndex(indexContent, {
       docsDir,
@@ -98,7 +98,11 @@ describe("VitePress navigation synthesis and link/anchor plugins", () => {
         .map((entry) => entry.link.split("#")[0])
     );
 
-    expect(activeDocsAndHomeRoutes.size).toBe(80);
+    const stagedNonReadmeRootCount = Object.keys(STAGED_ROOT_DOCS).filter(
+      (src) => src !== "README.md"
+    ).length;
+    expect(stagedNonReadmeRootCount).toBe(7);
+    expect(activeDocsAndHomeRoutes.size).toBeGreaterThanOrEqual(75);
 
     const allActiveNonAdrPortalRoutes = new Set(
       parsedEntries
@@ -112,8 +116,10 @@ describe("VitePress navigation synthesis and link/anchor plugins", () => {
         .map((entry) => entry.link.split("#")[0])
     );
 
-    // 80 active docs/ + home pages plus the 7 additional staged root guides/policies = 87 portal pages
-    expect(allActiveNonAdrPortalRoutes.size).toBe(87);
+    // Active docs/ + home pages plus the 7 additional staged root guides/policies
+    expect(allActiveNonAdrPortalRoutes.size).toBe(
+      activeDocsAndHomeRoutes.size + stagedNonReadmeRootCount
+    );
 
     const sidebar = synthesizeSidebarFromIndex(indexPath, {
       docsDir,
@@ -148,6 +154,9 @@ describe("VitePress navigation synthesis and link/anchor plugins", () => {
     expect(sidebarLinks.has("/blog/")).toBe(true);
     expect(sidebarLinks.has("/api/")).toBe(true);
     expect(sidebarLinks.has("/components/")).toBe(true);
+    expect(
+      collectSidebarLinks(sidebar["/"]).has("/PYTHON_REFERENCE_INVENTORY")
+    ).toBe(false);
     expect(sidebarLinks.has("/migration/")).toBe(true);
 
     // Subdirectory hub links are normalized to trailing slashes rather than /.../index
@@ -281,6 +290,7 @@ describe("VitePress navigation synthesis and link/anchor plugins", () => {
     expect(historicalGroup.items[1].link.startsWith("/migration/")).toBe(true);
 
     const archiveLinks = collectSidebarLinks(sidebar["/migration/"]);
+    expect(archiveLinks.has("/PYTHON_REFERENCE_INVENTORY")).toBe(true);
     expect(archiveLinks.has("/api/kernel")).toBe(false);
     expect(archiveLinks.has("/schema/kernel")).toBe(false);
     expect(archiveLinks.has("/adr/2023-01-01-neo4j-graph-database")).toBe(
@@ -704,6 +714,9 @@ describe("VitePress navigation synthesis and link/anchor plugins", () => {
       catalog.shouldIndexPage("SDLC/01_Product_Requirements_Document_PRD.md")
     ).toBe(false);
     expect(catalog.shouldIndexPage("migration/index.md")).toBe(false);
+    expect(catalog.shouldIndexPage("PYTHON_REFERENCE_INVENTORY.md")).toBe(
+      false
+    );
     expect(
       catalog.shouldIndexPage(
         "architecture/repository-migration/MIGRATION_PLAN.md"

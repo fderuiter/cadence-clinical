@@ -74,9 +74,6 @@ function buildRtmEnv(baseEnv = process.env) {
     NODE_OPTIONS: ensureHeapNodeOptions(baseEnv.NODE_OPTIONS),
     AUDIT_LOG_SECRET_KEY:
       baseEnv.AUDIT_LOG_SECRET_KEY || crypto.randomBytes(32).toString("hex"),
-    INBOUND_EMAIL_HMAC_SECRET:
-      baseEnv.INBOUND_EMAIL_HMAC_SECRET ||
-      crypto.randomBytes(32).toString("hex"),
     GATEWAY_SECRET_KEY:
       baseEnv.GATEWAY_SECRET_KEY || crypto.randomBytes(32).toString("hex"),
   };
