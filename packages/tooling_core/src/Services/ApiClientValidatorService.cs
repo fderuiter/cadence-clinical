@@ -84,8 +84,7 @@ public static class ApiClientValidatorService
             return false;
         }
 
-        if (rel.StartsWith("docs/openapi/", StringComparison.OrdinalIgnoreCase) &&
-            !rel.StartsWith("docs/openapi/legacy/", StringComparison.OrdinalIgnoreCase))
+        if (rel.StartsWith("docs/openapi/", StringComparison.OrdinalIgnoreCase))
         {
             return true;
         }

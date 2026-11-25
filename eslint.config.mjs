@@ -3736,6 +3736,7 @@ export default [
       "docs/.vitepress/cache/**",
       "docs/.vitepress/dist/**",
       "**/mockServiceWorker.js",
+      "apps/web/src/api/types.ts",
     ],
   },
   js.configs.recommended,
