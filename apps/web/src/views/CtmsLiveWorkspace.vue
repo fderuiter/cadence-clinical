@@ -65,17 +65,34 @@
   </div>
 </template>
 
+<script>
+import { defineLazyOverlay } from "../utils/lazyOverlay.js";
+
+const SiteActivationPanel = defineLazyOverlay(
+  () => import("../components/clinical/SiteActivationPanel.vue")
+);
+const CtmsGreenlightSection = defineLazyOverlay(
+  () => import("../components/clinical/CtmsGreenlightSection.vue")
+);
+const CtmsMilestonesSection = defineLazyOverlay(
+  () => import("../components/clinical/CtmsMilestonesSection.vue")
+);
+const CtmsMonitoringSection = defineLazyOverlay(
+  () => import("../components/clinical/CtmsMonitoringSection.vue")
+);
+const CtmsDelegationSection = defineLazyOverlay(
+  () => import("../components/clinical/CtmsDelegationSection.vue")
+);
+const RtsmSupplySection = defineLazyOverlay(
+  () => import("../components/clinical/RtsmSupplySection.vue")
+);
+</script>
+
 <script setup>
 import { computed, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import { ClinicalTabs } from "ui";
-import SiteActivationPanel from "../components/clinical/SiteActivationPanel.vue";
 import PlansRoadmapLink from "../components/clinical/PlansRoadmapLink.vue";
-import CtmsGreenlightSection from "../components/clinical/CtmsGreenlightSection.vue";
-import CtmsMilestonesSection from "../components/clinical/CtmsMilestonesSection.vue";
-import CtmsMonitoringSection from "../components/clinical/CtmsMonitoringSection.vue";
-import CtmsDelegationSection from "../components/clinical/CtmsDelegationSection.vue";
-import RtsmSupplySection from "../components/clinical/RtsmSupplySection.vue";
 import { useClinicalScopeStore } from "../stores/clinicalScope";
 
 const props = defineProps({

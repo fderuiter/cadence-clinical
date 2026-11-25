@@ -464,7 +464,7 @@
     </p>
 
     <BulkIpKitReconciliationDrawer
-      v-if="canReconcile"
+      v-if="canReconcile && reconciliationDrawerOpen"
       :is-open="reconciliationDrawerOpen"
       :study-id="studyInput.trim()"
       :site-id="siteInput.trim()"
@@ -473,7 +473,7 @@
     />
 
     <SignatureCaptureModal
-      v-if="canManageSchemes"
+      v-if="canManageSchemes && Boolean(approvingScheme)"
       :is-open="Boolean(approvingScheme)"
       fallback-focus="#btn-toggle-draft-scheme"
       :username="authStore.user?.username || ''"
@@ -491,6 +491,17 @@
     />
   </section>
 </template>
+
+<script lang="ts">
+import { defineLazyOverlay } from "../../utils/lazyOverlay";
+
+const SignatureCaptureModal = defineLazyOverlay(
+  () => import("../SignatureCaptureModal.vue")
+);
+const BulkIpKitReconciliationDrawer = defineLazyOverlay(
+  () => import("./BulkIpKitReconciliationDrawer.vue")
+);
+</script>
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
@@ -531,8 +542,6 @@ import {
   formatClinicalEnum,
   formatClinicalStatus,
 } from "../../utils/clinicalLabels";
-import SignatureCaptureModal from "../SignatureCaptureModal.vue";
-import BulkIpKitReconciliationDrawer from "./BulkIpKitReconciliationDrawer.vue";
 import CtmsSectionScopeBar from "./CtmsSectionScopeBar.vue";
 import PlansRoadmapLink from "./PlansRoadmapLink.vue";
 import "./ctmsWorkspaceSection.css";

@@ -1,4 +1,10 @@
-import { defineAsyncComponent, defineComponent, h, shallowRef } from "vue";
+import {
+  defineAsyncComponent,
+  defineComponent,
+  getCurrentInstance,
+  h,
+  shallowRef,
+} from "vue";
 
 /**
  * Wraps a dynamically imported overlay component so production and demo builds
@@ -6,8 +12,9 @@ import { defineAsyncComponent, defineComponent, h, shallowRef } from "vue";
  * resolve cached overlay components within a single `nextTick()` once their
  * outer `v-if` activation gate flips to `true`.
  *
- * @template T
- * @param {() => Promise<T>} loader
+ * @template {import("vue").Component} T
+ * @param {() => Promise<{ default: T } | T>} loader
+ * @returns {T}
  */
 export function defineLazyOverlay(loader) {
   if (import.meta.env?.MODE === "test") {
@@ -24,18 +31,25 @@ export function defineLazyOverlay(loader) {
     preloadPromise.finally(() => {
       pending.delete(preloadPromise);
     });
-    return defineComponent({
-      name: "LazyOverlayHost",
-      inheritAttrs: false,
-      setup(_, { attrs, slots }) {
-        return () =>
-          resolvedComponent.value
-            ? h(resolvedComponent.value, attrs, slots)
-            : null;
-      },
-    });
+    return /** @type {any} */ (
+      defineComponent({
+        name: "LazyOverlayHost",
+        inheritAttrs: false,
+        setup(_, { attrs, slots }) {
+          const instance = getCurrentInstance();
+          return () => {
+            if (!resolvedComponent.value) return null;
+            const vnode = h(resolvedComponent.value, attrs, slots);
+            if (instance && instance.vnode.ref) {
+              vnode.ref = instance.vnode.ref;
+            }
+            return vnode;
+          };
+        },
+      })
+    );
   }
-  return defineAsyncComponent(loader);
+  return /** @type {any} */ (defineAsyncComponent(loader));
 }
 
 /**

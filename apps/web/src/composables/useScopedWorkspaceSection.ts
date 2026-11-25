@@ -1,7 +1,7 @@
 import { computed, ref, watch } from "vue";
 import * as VueRouter from "vue-router";
 import { useAuthStore } from "../stores/auth";
-import { useClinicalStore } from "../stores/clinical";
+import { useClinicalScopeStore } from "../stores/clinicalScope";
 import { useStudyCanvasStore } from "../stores/studyCanvas";
 import { syncActiveStudyScope } from "../stores/studyScopeBridge";
 import { useToastStore } from "../stores/toasts.js";
@@ -42,7 +42,7 @@ export function useScopedWorkspaceSection(
   }
 ) {
   const authStore = useAuthStore();
-  const clinicalStore = useClinicalStore();
+  const clinicalStore = useClinicalScopeStore();
   const canvasStore = useStudyCanvasStore();
   const toasts = useToastStore();
   const route =
