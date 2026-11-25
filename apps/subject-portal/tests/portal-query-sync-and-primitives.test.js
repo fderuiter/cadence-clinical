@@ -377,7 +377,30 @@ describe("Shared UI primitives, bootstrap ordering, and query-synced portal rout
     expect(router.currentRoute.value.query.notifId).toBeTruthy();
     const peekDialog = document.getElementById("portal-peek-drawer");
     expect(peekDialog).not.toBeNull();
+    // Default jsdom viewport is 1024px (>= 768px): renders right slide-over size-md
+    expect(peekDialog.classList.contains("position-right")).toBe(true);
+    expect(peekDialog.classList.contains("size-md")).toBe(true);
+    expect(peekDialog.classList.contains("drawer-bottom-sheet")).toBe(false);
+
+    // Below 768px: switches dynamically to position-bottom (drawer-bottom-sheet)
+    const prevInnerWidth = window.innerWidth;
+    Object.defineProperty(window, "innerWidth", {
+      configurable: true,
+      writable: true,
+      value: 390,
+    });
+    window.dispatchEvent(new Event("resize"));
+    await flushUi();
+    expect(peekDialog.classList.contains("position-bottom")).toBe(true);
     expect(peekDialog.classList.contains("drawer-bottom-sheet")).toBe(true);
+
+    Object.defineProperty(window, "innerWidth", {
+      configurable: true,
+      writable: true,
+      value: prevInnerWidth,
+    });
+    window.dispatchEvent(new Event("resize"));
+    await flushUi();
 
     document.getElementById("btn-peek-close").click();
     await flushUi();
@@ -567,6 +590,23 @@ describe("Shared UI primitives, bootstrap ordering, and query-synced portal rout
     reviewLink.click();
     await flushUi();
     expect(state.currentView).toBe("view-consent");
+
+    // 5. Opening ReconsentModal focuses top #reconsent-change-summary at scrollTop 0 (not #reconsent-sign-password)
+    const { openReconsentModal, closeReconsentModal } =
+      await import("../src/features/reconsent.js");
+    openModalBtn.focus();
+    openReconsentModal();
+    await flushUi();
+
+    const changeSummary = document.getElementById("reconsent-change-summary");
+    const modalBody = document.querySelector(
+      "#portal-reconsent-modal .modal-body"
+    );
+    expect(changeSummary).not.toBeNull();
+    expect(document.activeElement).toBe(changeSummary);
+    expect(modalBody?.scrollTop).toBe(0);
+    closeReconsentModal();
+    await flushUi();
   });
 
   it("defers peek bottom sheet focus trap while PIN setup modal is open on cold /wallet?claimId=... hydration and opens after PIN setup", async () => {
@@ -660,5 +700,117 @@ describe("Shared UI primitives, bootstrap ordering, and query-synced portal rout
     expect(getPortalRouter().currentRoute.value.query.claimId).toBe(
       "claim_cold_01"
     );
+  });
+
+  it("coordinates modular tablet icon rail overlay, session sheet auto-close at >=1280px, deduplicated inline session alerts, and <640px conditional breadcrumbs", async () => {
+    const prevWidth = window.innerWidth;
+    const prevHeight = window.innerHeight;
+    const setViewport = async (width, height = 768) => {
+      Object.defineProperty(window, "innerWidth", {
+        configurable: true,
+        writable: true,
+        value: width,
+      });
+      Object.defineProperty(window, "innerHeight", {
+        configurable: true,
+        writable: true,
+        value: height,
+      });
+      window.dispatchEvent(new Event("resize"));
+      await flushUi();
+    };
+
+    try {
+      await setViewport(768, 1024);
+      await initializeApp();
+      await flushUi();
+
+      const { PORTAL_BREAKPOINTS } =
+        await import("../src/composables/usePortalViewport.js");
+      expect(PORTAL_BREAKPOINTS).toEqual({
+        narrowBreadcrumb: 640,
+        tablet: 768,
+        compactBanner: 1024,
+        wideDesktop: 1280,
+        shortLandscapeHeight: 480,
+      });
+
+      // 1. Tablet 768x1024: icon rail collapsed by default, overlay expands and collapses on Escape or resize to >=1280px
+      const nav = document.querySelector("nav.portal-navigation");
+      const railToggle = document.getElementById("btn-portal-rail-toggle");
+      expect(nav?.classList.contains("is-tablet-rail")).toBe(true);
+      expect(railToggle).not.toBeNull();
+      expect(
+        document
+          .querySelector("#btn-tab-btn-tasks .nav-label")
+          ?.classList.contains("sr-only")
+      ).toBe(true);
+
+      railToggle.click();
+      await flushUi();
+      expect(nav?.classList.contains("is-rail-expanded")).toBe(true);
+      expect(
+        document
+          .querySelector("#btn-tab-btn-tasks .nav-label")
+          ?.classList.contains("sr-only")
+      ).toBe(false);
+
+      document.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Escape", bubbles: true })
+      );
+      await flushUi();
+      expect(nav?.classList.contains("is-rail-expanded")).toBe(false);
+
+      // Expand again, then resize to 1280px wide desktop -> auto-collapses rail overlay & closes session drawer
+      railToggle.click();
+      document.getElementById("btn-mobile-session-toggle")?.click();
+      await flushUi();
+      expect(state.railOverlayExpanded).toBe(true);
+      expect(state.sessionDrawerOpen).toBe(true);
+
+      await setViewport(1280, 800);
+      expect(state.railOverlayExpanded).toBe(false);
+      expect(state.sessionDrawerOpen).toBe(false);
+      expect(document.getElementById("btn-portal-rail-toggle")).toBeNull();
+
+      // 2. Narrow <640px breadcrumbs: hidden on top-level My Tasks, shown with compactMobile when survey sub-record is active
+      await setViewport(375, 667);
+      expect(document.getElementById("portal-breadcrumbs")).toBeNull();
+      await startQuestionnaire("assign_01");
+      await flushUi();
+      const mobileCrumbs = document.getElementById("portal-breadcrumbs");
+      expect(mobileCrumbs).not.toBeNull();
+      expect(mobileCrumbs?.classList.contains("is-compact-mobile")).toBe(true);
+      showView("view-tasks");
+      await flushUi();
+
+      // 3. Inline expired-session / auth-error alert deduplication below 1280px
+      state.authError = "Session refresh rejected — please sign in again.";
+      await flushUi();
+
+      const visibleAuthErrors = [
+        ...document.querySelectorAll("#session-auth-error"),
+      ];
+      expect(visibleAuthErrors).toHaveLength(1);
+      expect(
+        visibleAuthErrors[0].closest(".inline-session-alert-banner")
+      ).not.toBeNull();
+      expect(
+        document
+          .getElementById("btn-mobile-session-toggle")
+          ?.classList.contains("has-session-alert")
+      ).toBe(true);
+
+      // Opening session drawer moves single #session-auth-error inside open drawer and hides inline banner
+      document.getElementById("btn-mobile-session-toggle")?.click();
+      await flushUi();
+      expect(document.querySelector(".inline-session-alert-banner")).toBeNull();
+      expect(document.querySelectorAll("#session-auth-error")).toHaveLength(1);
+      state.sessionDrawerOpen = false;
+      state.authError = "";
+      await flushUi();
+    } finally {
+      await setViewport(prevWidth, prevHeight);
+    }
   });
 });

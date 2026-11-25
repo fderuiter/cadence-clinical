@@ -1658,7 +1658,11 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
       expect(tBox.height).toBeGreaterThanOrEqual(48);
     }
 
-    // Secondary session details are collapsed by default below 768px
+    // Compact PortalHeader single row (<= 52px) + session sheet collapsed by default below 1280px
+    const headerBox = await page.locator(".portal-header").boundingBox();
+    expect(headerBox).not.toBeNull();
+    expect(headerBox.height).toBeLessThanOrEqual(52);
+
     const mobileToggle = page.locator("#btn-mobile-session-toggle");
     const secondaryDetails = page.locator("#participant-secondary-details");
     await expect(mobileToggle).toBeVisible();
@@ -1677,16 +1681,19 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
     expect(mainBox).not.toBeNull();
     expect(firstTaskBox).not.toBeNull();
     expect(mainBox.y).toBeGreaterThanOrEqual(0);
-    expect(mainBox.y - (demoBannerBox?.height ?? 0)).toBeLessThan(350);
+    expect(mainBox.y - (demoBannerBox?.height ?? 0)).toBeLessThan(120);
     expect(firstTaskBox.y).toBeGreaterThanOrEqual(0);
     expect(firstTaskBox.y + firstTaskBox.height).toBeLessThanOrEqual(
       navBox.y + 0.5
     );
     expect(firstTaskBox.y + firstTaskBox.height).toBeLessThanOrEqual(812);
 
-    // Expanding mobile toggle reveals secondary session details and site contacts
+    // Opening #btn-mobile-session-toggle opens bottom-sheet ClinicalDrawer with session details and site contacts
     await mobileToggle.click();
     await expect(mobileToggle).toHaveAttribute("aria-expanded", "true");
+    await expect(page.locator("#participant-session-drawer")).toHaveClass(
+      /position-bottom/
+    );
     await expect(secondaryDetails).toBeVisible();
     await expect(page.locator("#btn-logout")).toBeVisible();
     await expect(page.locator("#participant-site-contacts")).toBeVisible();
@@ -1696,7 +1703,9 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
       .analyze();
     expect(mobileAudit.violations).toEqual([]);
 
-    await mobileToggle.click();
+    await page
+      .locator("#participant-session-drawer .clinical-drawer-close-btn")
+      .click();
     await expect(mobileToggle).toHaveAttribute("aria-expanded", "false");
     await expect(secondaryDetails).toBeHidden();
   });
@@ -1844,28 +1853,94 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
       await page.evaluate(() => document.documentElement.scrollWidth)
     ).toBeLessThanOrEqual(1024);
 
-    // 3. Portrait tablet 768x1024: hidden mobile session toggle + above-the-fold main content
-    await page.click("#btn-tab-btn-tasks");
-    await expect(page.locator("#view-tasks")).toBeVisible();
-    await page.setViewportSize({ width: 768, height: 1024 });
+    // 3. Portrait & landscape tablet (768x1024 & 1024x768): 60px icon rail, >= 636px main content across all 7 routes, overlay rail toggle, & right session drawer
+    for (const tabletVp of [
+      { width: 768, height: 1024 },
+      { width: 1024, height: 768 },
+    ]) {
+      await page.setViewportSize(tabletVp);
+      await page.click("#btn-tab-btn-tasks");
+      await expect(page.locator("#view-tasks")).toBeVisible();
 
-    await expect(page.locator("#btn-mobile-session-toggle")).toBeHidden();
-    const tabletNavBox = await page.locator(".portal-navigation").boundingBox();
-    const tabletMainBox = await page.locator("main#main-content").boundingBox();
-    const tabletTaskBox = await page
-      .locator("#task-card-assign_01")
-      .boundingBox();
-    expect(tabletNavBox).not.toBeNull();
-    expect(tabletMainBox).not.toBeNull();
-    expect(tabletTaskBox).not.toBeNull();
-    expect(tabletMainBox.x).toBeGreaterThan(tabletNavBox.x + 200);
-    expect(tabletMainBox.y).toBeLessThan(260);
-    expect(tabletTaskBox.y + tabletTaskBox.height).toBeLessThan(600);
+      const tabletHeaderBox = await page
+        .locator(".portal-header")
+        .boundingBox();
+      const tabletNavBox = await page
+        .locator(".portal-navigation")
+        .boundingBox();
+      const tabletMainBox = await page
+        .locator("main#main-content")
+        .boundingBox();
+      const tabletTaskBox = await page
+        .locator("#task-card-assign_01")
+        .boundingBox();
 
-    const tabletAudit = await new AxeBuilder({ page })
-      .withTags(WCAG_AA_TAGS)
-      .analyze();
-    expect(tabletAudit.violations).toEqual([]);
+      expect(tabletHeaderBox).not.toBeNull();
+      expect(tabletHeaderBox.height).toBeLessThanOrEqual(52);
+      expect(tabletNavBox).not.toBeNull();
+      expect(Math.round(tabletNavBox.width)).toBe(60);
+      expect(tabletMainBox).not.toBeNull();
+      expect(tabletMainBox.width).toBeGreaterThanOrEqual(636);
+      expect(tabletMainBox.x).toBeGreaterThan(tabletNavBox.x + 58);
+      expect(tabletMainBox.y).toBeLessThan(160);
+      expect(tabletTaskBox).not.toBeNull();
+      expect(tabletTaskBox.y + tabletTaskBox.height).toBeLessThan(600);
+
+      // Verify overlay rail expand toggle does not narrow main#main-content
+      const railToggle = page.locator("#btn-portal-rail-toggle");
+      await expect(railToggle).toBeVisible();
+      await railToggle.click();
+      await expect(railToggle).toHaveAttribute("aria-expanded", "true");
+      const expandedMainBox = await page
+        .locator("main#main-content")
+        .boundingBox();
+      expect(
+        Math.abs(expandedMainBox.width - tabletMainBox.width)
+      ).toBeLessThan(1);
+      await page.keyboard.press("Escape");
+      await expect(railToggle).toHaveAttribute("aria-expanded", "false");
+
+      // Verify #btn-mobile-session-toggle opens right-side session drawer on tablet
+      const sessionToggle = page.locator("#btn-mobile-session-toggle");
+      await expect(sessionToggle).toBeVisible();
+      await sessionToggle.click();
+      await expect(page.locator("#participant-session-drawer")).toHaveClass(
+        /position-right/
+      );
+      await expect(
+        page.locator("#participant-secondary-details")
+      ).toBeVisible();
+      await page.keyboard.press("Escape");
+      await expect(page.locator("#participant-secondary-details")).toBeHidden();
+
+      // Check all 7 routes keep #main-content.portal-main >= 636px (>= 480px requirement)
+      await page.click("#task-card-assign_01 .btn-start-task");
+      await expect(page.locator("#view-questionnaire")).toBeVisible();
+      expect(
+        (await page.locator("main#main-content").boundingBox()).width
+      ).toBeGreaterThanOrEqual(636);
+
+      for (const tabId of [
+        "compliance",
+        "inbox",
+        "consent",
+        "wallet",
+        "lay-summaries",
+        "tasks",
+      ]) {
+        await page.click(`#btn-tab-btn-${tabId}`);
+        await expect(page.locator(`#view-${tabId}`)).toBeVisible();
+        const routeMainBox = await page
+          .locator("main#main-content")
+          .boundingBox();
+        expect(routeMainBox.width).toBeGreaterThanOrEqual(636);
+      }
+
+      const tabletAudit = await new AxeBuilder({ page })
+        .withTags(WCAG_AA_TAGS)
+        .analyze();
+      expect(tabletAudit.violations).toEqual([]);
+    }
 
     // 4. SyncDrawer pure overlay at 1024x768 (zero #app padding-right shift or .portal-main squeeze)
     await page.setViewportSize({ width: 1024, height: 768 });
@@ -2476,5 +2551,259 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
         path: "/tmp/portal-compliance-retry-focus-handoff.png",
       });
     }
+  });
+
+  test("should keep compact single-row header and first interactive card above bottom tab bar (< 591px) across all 7 routes on 320x640 and 390x844, and switch #portal-peek-drawer between bottom sheet and right slide-over", async ({
+    page,
+  }) => {
+    for (const vp of [
+      { width: 320, height: 640 },
+      { width: 390, height: 844 },
+    ]) {
+      await page.setViewportSize(vp);
+      await page.goto(DEMO_PORTAL_URL);
+      await completeInitialPinSetupIfOpen(page);
+
+      const headerBox = await page.locator(".portal-header").boundingBox();
+      const navBox = await page.locator(".nav-tabs").boundingBox();
+      expect(headerBox).not.toBeNull();
+      expect(navBox).not.toBeNull();
+      expect(headerBox.height).toBeLessThanOrEqual(52);
+
+      // Conditional breadcrumbs: hidden on < 640px without sub-record
+      await expect(page.locator("#portal-breadcrumbs")).toBeHidden();
+
+      const maxCardStartY = vp.width === 320 ? 591 : navBox.y;
+
+      // 1. Tasks
+      const taskCardBox = await page
+        .locator("#task-card-assign_01")
+        .boundingBox();
+      expect(taskCardBox).not.toBeNull();
+      expect(taskCardBox.y).toBeLessThan(maxCardStartY);
+
+      // 2. Questionnaire (sub-record active -> compact single-row breadcrumbs visible)
+      await page.click("#task-card-assign_01 .btn-start-task");
+      await expect(page.locator("#view-questionnaire")).toBeVisible();
+      await expect(page.locator("#portal-breadcrumbs")).toBeVisible();
+      const qCardBox = await page
+        .locator("#view-questionnaire .questionnaire-card")
+        .boundingBox();
+      expect(qCardBox).not.toBeNull();
+      expect(qCardBox.y).toBeLessThan(maxCardStartY);
+
+      // 3. Compliance
+      await page.locator("#btn-tab-btn-compliance").scrollIntoViewIfNeeded();
+      await page.click("#btn-tab-btn-compliance");
+      await expect(page.locator("#view-compliance")).toBeVisible();
+      const compCardBox = await page
+        .locator("#view-compliance .compliance-score-card")
+        .boundingBox();
+      expect(compCardBox).not.toBeNull();
+      expect(compCardBox.y).toBeLessThan(maxCardStartY);
+
+      // 4. Inbox + verify #portal-peek-drawer renders position-bottom below 768px
+      await page.locator("#btn-tab-btn-inbox").scrollIntoViewIfNeeded();
+      await page.click("#btn-tab-btn-inbox");
+      await expect(page.locator("#view-inbox")).toBeVisible();
+      const inboxCardBox = await page
+        .locator("#inbox-container .inbox-item")
+        .first()
+        .boundingBox();
+      expect(inboxCardBox).not.toBeNull();
+      expect(inboxCardBox.y).toBeLessThan(maxCardStartY);
+
+      const firstPeekBtn = page.locator('[id^="btn-peek-notif-"]').first();
+      await firstPeekBtn.click();
+      await expect(page.locator("#portal-peek-drawer")).toBeVisible();
+      await expect(page.locator("#portal-peek-drawer")).toHaveClass(
+        /position-bottom/
+      );
+      await expect(page.locator("#portal-peek-drawer")).toHaveClass(
+        /drawer-bottom-sheet/
+      );
+      await page.click("#btn-peek-close");
+      await expect(page.locator("#portal-peek-drawer")).toBeHidden();
+
+      // 5. Consent
+      await page.locator("#btn-tab-btn-consent").scrollIntoViewIfNeeded();
+      await page.click("#btn-tab-btn-consent");
+      await expect(page.locator("#view-consent")).toBeVisible();
+      const consentCardBox = await page
+        .locator("#view-consent .card")
+        .first()
+        .boundingBox();
+      expect(consentCardBox).not.toBeNull();
+      expect(consentCardBox.y).toBeLessThan(maxCardStartY);
+
+      // 6. Wallet
+      await page.locator("#btn-tab-btn-wallet").scrollIntoViewIfNeeded();
+      await page.click("#btn-tab-btn-wallet");
+      await expect(page.locator("#view-wallet")).toBeVisible();
+      const walletCardBox = await page
+        .locator("#view-wallet .card")
+        .first()
+        .boundingBox();
+      expect(walletCardBox).not.toBeNull();
+      expect(walletCardBox.y).toBeLessThan(maxCardStartY);
+
+      // 7. Lay Summaries
+      await page.locator("#btn-tab-btn-lay-summaries").scrollIntoViewIfNeeded();
+      await page.click("#btn-tab-btn-lay-summaries");
+      await expect(page.locator("#view-lay-summaries")).toBeVisible();
+      const layCardBox = await page
+        .locator("#view-lay-summaries .card")
+        .first()
+        .boundingBox();
+      expect(layCardBox).not.toBeNull();
+      expect(layCardBox.y).toBeLessThan(maxCardStartY);
+    }
+
+    // Switch to 768x1024 and verify #portal-peek-drawer switches to position-right size-md
+    await page.setViewportSize({ width: 768, height: 1024 });
+    await page.click("#btn-tab-btn-inbox");
+    await expect(page.locator("#view-inbox")).toBeVisible();
+    await page.locator('[id^="btn-peek-notif-"]').first().click();
+    await expect(page.locator("#portal-peek-drawer")).toBeVisible();
+    await expect(page.locator("#portal-peek-drawer")).toHaveClass(
+      /position-right/
+    );
+    await expect(page.locator("#portal-peek-drawer")).toHaveClass(/size-md/);
+    await page.click("#btn-peek-close");
+  });
+
+  test("should keep PortalHeader <= 52px and pin .modal-footer inside 1024x416 short landscape across all 5 modals while opening ReconsentModal at scrollTop 0 with redlines visible", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1024, height: 416 });
+    await page.goto(DEMO_PORTAL_URL);
+
+    // 1. PinSetupModal opens on cold load at 1024x416
+    const pinSetupModal = page.locator("#portal-pin-setup-modal");
+    await expect(pinSetupModal).toBeVisible();
+    const setupFooterBox = await pinSetupModal
+      .locator(".modal-footer")
+      .boundingBox();
+    expect(setupFooterBox).not.toBeNull();
+    expect(setupFooterBox.y).toBeGreaterThanOrEqual(0);
+    expect(setupFooterBox.y + setupFooterBox.height).toBeLessThanOrEqual(416);
+    await completeInitialPinSetupIfOpen(page);
+
+    const headerBox = await page.locator(".portal-header").boundingBox();
+    expect(headerBox).not.toBeNull();
+    expect(headerBox.height).toBeLessThanOrEqual(52);
+
+    // 2. SignatureModal via completing task questionnaire fields
+    await page.click("#task-card-assign_01 .btn-start-task");
+    await expect(page.locator("#view-questionnaire")).toBeVisible();
+    await page.fill("#vssbp", "120");
+    await page.fill("#vsdpb", "80");
+    await page.fill("#vshr", "72");
+    await page.click("#btn-submit-questionnaire");
+    await expect(page.locator("#portal-sign-modal")).toBeVisible();
+    const signFooterBox = await page
+      .locator("#portal-sign-modal .modal-footer")
+      .boundingBox();
+    expect(signFooterBox).not.toBeNull();
+    expect(signFooterBox.y).toBeGreaterThanOrEqual(0);
+    expect(signFooterBox.y + signFooterBox.height).toBeLessThanOrEqual(416);
+    await page.click("#btn-modal-cancel");
+    await expect(page.locator("#portal-sign-modal")).toBeHidden();
+
+    // 3. #wallet-disburse-modal via Wallet -> #btn-disburse-balance
+    await page.click("#btn-tab-btn-wallet");
+    await expect(page.locator("#view-wallet")).toBeVisible();
+    await page.click("#btn-disburse-balance");
+    await expect(page.locator("#wallet-disburse-modal")).toBeVisible();
+    const disburseFooterBox = await page
+      .locator("#wallet-disburse-modal .modal-footer")
+      .boundingBox();
+    expect(disburseFooterBox).not.toBeNull();
+    expect(disburseFooterBox.y).toBeGreaterThanOrEqual(0);
+    expect(disburseFooterBox.y + disburseFooterBox.height).toBeLessThanOrEqual(
+      416
+    );
+    await page.keyboard.press("Escape");
+    await expect(page.locator("#wallet-disburse-modal")).toBeHidden();
+
+    // 4. Reload with pending re-consent mock -> PinUnlockModal opens first (since PIN is stored in IndexedDB)
+    await page.route("**/econsent/reconsent/pending/**", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify([
+          {
+            id: "req_short_416",
+            study_id: "STUDY-01",
+            protocol_version: "2.1",
+            change_summary:
+              "Updated cardiology safety visit window and reimbursement terms.",
+          },
+        ]),
+      });
+    });
+
+    await page.reload();
+
+    const pinUnlockModal = page.locator("#portal-pin-unlock-modal");
+    await expect(pinUnlockModal).toBeVisible();
+    const pinUnlockFooterBox = await pinUnlockModal
+      .locator(".modal-footer")
+      .boundingBox();
+    expect(pinUnlockFooterBox).not.toBeNull();
+    expect(pinUnlockFooterBox.y).toBeGreaterThanOrEqual(0);
+    expect(
+      pinUnlockFooterBox.y + pinUnlockFooterBox.height
+    ).toBeLessThanOrEqual(416);
+    await completeInitialPinSetupIfOpen(page);
+
+    // 5. ReconsentModal opens after unlock (or via #btn-open-reconsent-modal): verify scrollTop === 0, focus on #reconsent-change-summary, visible #reconsent-clause-redlines, and pinned .modal-footer
+    const reconsentModal = page.locator("#portal-reconsent-modal");
+    if (!(await reconsentModal.isVisible().catch(() => false))) {
+      await page.click("#btn-open-reconsent-modal");
+    }
+    await expect(reconsentModal).toBeVisible();
+
+    await expect
+      .poll(async () => page.evaluate(() => document.activeElement?.id ?? ""))
+      .toBe("reconsent-change-summary");
+
+    const reconsentMetrics = await page.evaluate(() => {
+      const modalBody = document.querySelector(
+        "#portal-reconsent-modal .modal-body"
+      );
+      const redlines = document.getElementById("reconsent-clause-redlines");
+      const footer = document.querySelector(
+        "#portal-reconsent-modal .modal-footer"
+      );
+      const bodyRect = modalBody?.getBoundingClientRect();
+      const redlinesRect = redlines?.getBoundingClientRect();
+      const footerRect = footer?.getBoundingClientRect();
+      return {
+        scrollTop: modalBody?.scrollTop ?? -1,
+        activeId: document.activeElement?.id ?? "",
+        redlinesTop: redlinesRect?.top ?? -1,
+        bodyBottom: bodyRect?.bottom ?? -1,
+        footerTop: footerRect?.top ?? -1,
+        footerBottom: footerRect?.bottom ?? 999,
+      };
+    });
+    expect(reconsentMetrics.scrollTop).toBe(0);
+    expect(reconsentMetrics.activeId).toBe("reconsent-change-summary");
+    expect(reconsentMetrics.redlinesTop).toBeGreaterThanOrEqual(0);
+    expect(reconsentMetrics.redlinesTop).toBeLessThan(
+      reconsentMetrics.bodyBottom - 20
+    );
+    expect(reconsentMetrics.footerTop).toBeGreaterThanOrEqual(0);
+    expect(reconsentMetrics.footerBottom).toBeLessThanOrEqual(416);
+
+    const shortReconsentAudit = await new AxeBuilder({ page })
+      .include("#portal-reconsent-modal")
+      .withTags(WCAG_AA_TAGS)
+      .analyze();
+    expect(shortReconsentAudit.violations).toEqual([]);
+
+    await page.click("#btn-reconsent-cancel");
+    await expect(reconsentModal).toBeHidden();
   });
 });

@@ -3,7 +3,8 @@
     id="portal-peek-drawer"
     overlay-id="portal-peek-overlay"
     :model-value="isPeekDrawerOpen"
-    position="bottom"
+    :position="isMobileViewport ? 'bottom' : 'right'"
+    size="md"
     mobile-bottom-sheet
     :restore-focus="false"
     :title="ui.peekRecord?.title || 'Item Details'"
@@ -83,6 +84,7 @@ import { computed, inject, watch } from "vue";
 import { routeLocationKey } from "vue-router";
 import { ClinicalDrawer, ClinicalIcon } from "ui";
 
+import { usePortalViewport } from "../composables/usePortalViewport.js";
 import {
   PEEK_QUERY_KEYS,
   closePeekRecord,
@@ -99,6 +101,7 @@ import { useUiStore } from "../stores/ui.js";
 import { useWalletStore } from "../stores/wallet.js";
 import SiteContactLinks from "./SiteContactLinks.vue";
 
+const { isMobileViewport } = usePortalViewport();
 const route = inject(routeLocationKey, null);
 const ui = useUiStore();
 const sessionStore = useSessionStore();

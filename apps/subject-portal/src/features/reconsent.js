@@ -5,7 +5,6 @@ import {
   requiresCustomSignatureReason,
   resolveSignatureReason,
 } from "ui";
-import { nextTick } from "vue";
 
 import { dispatchApi, isAuthenticatedSession } from "../api/client.js";
 import { requestStepUpSignature } from "../api/signatureVerification.js";
@@ -195,11 +194,6 @@ export function openReconsentModal() {
   state.reconsentComprehensionAnswers = {};
   state.reconsentModalOpen = true;
   renderTasks();
-
-  nextTick(() => {
-    const pwdInput = document.getElementById("reconsent-sign-password");
-    if (pwdInput) pwdInput.focus();
-  });
 }
 
 export function closeReconsentModal() {

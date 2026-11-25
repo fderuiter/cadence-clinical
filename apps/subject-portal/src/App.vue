@@ -6,7 +6,7 @@
     <!-- Persistent Demo Mode Synthetic Data Banner -->
     <DemoBanner />
 
-    <!-- Portal Header with the persistent sync status button -->
+    <!-- Portal Header with session trigger (< 1280px) & sync status button -->
     <PortalHeader />
 
     <!-- Global Floating Sync Drawer -->
@@ -14,32 +14,21 @@
 
     <!-- Main Layout -->
     <div class="portal-container">
-      <!-- Patient Navigation Tabs -->
-      <nav class="portal-navigation" aria-label="Participant navigation">
-        <TabBar />
-
-        <button
-          id="btn-mobile-session-toggle"
-          type="button"
-          class="btn btn-secondary mobile-session-toggle"
-          :aria-expanded="isMobileSessionExpanded ? 'true' : 'false'"
-          aria-controls="participant-secondary-details"
-          @click="isMobileSessionExpanded = !isMobileSessionExpanded"
-        >
-          <span>Participant Session</span>
-          <span aria-hidden="true">{{
-            isMobileSessionExpanded ? "Hide ▴" : "Details ▾"
-          }}</span>
-        </button>
-
-        <!-- Active Participant Card -->
-        <ParticipantCard :mobile-expanded="isMobileSessionExpanded" />
-      </nav>
+      <!-- Patient Navigation Tabs / 60px Tablet Icon Rail -->
+      <PortalNavigationRail />
 
       <!-- Main Viewport -->
       <main id="main-content" class="portal-main" tabindex="-1">
+        <!-- Inline expired-session / auth-error alert when session sheet is closed below 1280px -->
+        <PortalSessionAlertBanner />
+
         <!-- Accessible study -> section -> record breadcrumb trail -->
-        <ClinicalBreadcrumbs id="portal-breadcrumbs" :items="breadcrumbItems" />
+        <ClinicalBreadcrumbs
+          v-if="shouldShowBreadcrumbs"
+          id="portal-breadcrumbs"
+          :items="breadcrumbItems"
+          compact-mobile
+        />
 
         <!-- Urgent Re-Consent Notification Banner -->
         <ReconsentBanner />
@@ -61,7 +50,10 @@
       </main>
     </div>
 
-    <!-- Shared 90dvh peek bottom sheet & modals host -->
+    <!-- Session Drawer below 1280px (right slide-over on 768-1279px, bottom sheet < 768px) -->
+    <PortalSessionSheet />
+
+    <!-- Shared peek drawer & modals host -->
     <PortalPeekSheet />
     <SignatureModal />
     <ReconsentModal />
@@ -83,22 +75,24 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, ref } from "vue";
 import { ClinicalBreadcrumbs, ClinicalToastHost } from "ui";
+import { computed, onBeforeUnmount } from "vue";
 
 import DemoBanner from "./components/DemoBanner.vue";
 import LedgerFooter from "./components/LedgerFooter.vue";
-import ParticipantCard from "./components/ParticipantCard.vue";
 import PinSetupModal from "./components/PinSetupModal.vue";
 import PinUnlockModal from "./components/PinUnlockModal.vue";
 import PortalHeader from "./components/PortalHeader.vue";
+import PortalNavigationRail from "./components/PortalNavigationRail.vue";
 import PortalPeekSheet from "./components/PortalPeekSheet.vue";
+import PortalSessionAlertBanner from "./components/PortalSessionAlertBanner.vue";
+import PortalSessionSheet from "./components/PortalSessionSheet.vue";
 import ReconsentBanner from "./components/ReconsentBanner.vue";
 import ReconsentModal from "./components/ReconsentModal.vue";
 import SignatureModal from "./components/SignatureModal.vue";
 import SyncDrawer from "./components/SyncDrawer.vue";
 import SyncSuspendedBanner from "./components/SyncSuspendedBanner.vue";
-import TabBar from "./components/TabBar.vue";
+import { usePortalViewport } from "./composables/usePortalViewport.js";
 import { showView } from "./features/navigation.js";
 import { closePeekRecord } from "./features/peek.js";
 import { flushActiveQuestionnaireDraft } from "./features/questionnaire.js";
@@ -119,7 +113,7 @@ const ui = useUiStore();
 const sessionStore = useSessionStore();
 const tasksStore = useTasksStore();
 const consentStore = useConsentStore();
-const isMobileSessionExpanded = ref(false);
+const { isNarrowBreadcrumbViewport } = usePortalViewport();
 
 function resolveRootStudyRoute() {
   if (isScreenAvailable("tasks")) {
@@ -154,6 +148,30 @@ function navigateToSection(sectionViewId) {
   showView(sectionViewId);
 }
 
+const activeRecordLabel = computed(() => {
+  if (ui.peekRecord?.title) {
+    return ui.peekRecord.title;
+  }
+  if (ui.currentView === "view-questionnaire") {
+    return (
+      tasksStore.activeQuestionnaire?.instrument?.name ||
+      tasksStore.activeQuestionnaire?.assignment?.instrument_name ||
+      "Active Survey"
+    );
+  }
+  if (
+    ui.currentView === "view-consent" &&
+    consentStore.consentContent?.version_index
+  ) {
+    return formatConsentEditionLabel(consentStore.consentContent.version_index);
+  }
+  return "";
+});
+
+const shouldShowBreadcrumbs = computed(
+  () => !isNarrowBreadcrumbViewport.value || Boolean(activeRecordLabel.value)
+);
+
 const breadcrumbItems = computed(() => {
   const studyLabel = resolveFriendlyStudyTitle(sessionStore.session?.studyId);
   const rootTarget = resolveRootStudyRoute();
@@ -184,22 +202,7 @@ const breadcrumbItems = computed(() => {
     }
   }
 
-  let activeRecordLabel = "";
-  if (ui.peekRecord?.title) {
-    activeRecordLabel = ui.peekRecord.title;
-  } else if (currentView === "view-questionnaire") {
-    activeRecordLabel =
-      tasksStore.activeQuestionnaire?.instrument?.name ||
-      tasksStore.activeQuestionnaire?.assignment?.instrument_name ||
-      "Active Survey";
-  } else if (
-    currentView === "view-consent" &&
-    consentStore.consentContent?.version_index
-  ) {
-    activeRecordLabel = formatConsentEditionLabel(
-      consentStore.consentContent.version_index
-    );
-  }
+  const recordLabel = activeRecordLabel.value;
 
   const items = [
     {
@@ -212,18 +215,18 @@ const breadcrumbItems = computed(() => {
     {
       id: `section-${sectionViewId}`,
       label: sectionLabel,
-      href: activeRecordLabel ? sectionHref : undefined,
-      current: !activeRecordLabel,
-      onSelect: activeRecordLabel
+      href: recordLabel ? sectionHref : undefined,
+      current: !recordLabel,
+      onSelect: recordLabel
         ? () => navigateToSection(sectionViewId)
         : undefined,
     },
   ];
 
-  if (activeRecordLabel) {
+  if (recordLabel) {
     items.push({
       id: "record",
-      label: activeRecordLabel,
+      label: recordLabel,
       current: true,
     });
   }

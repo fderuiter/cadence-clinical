@@ -396,9 +396,11 @@ h4 {
   text-decoration: underline;
 }
 
-.mobile-session-toggle,
-.btn.mobile-session-toggle {
-  display: none;
+@media (min-width: 768px) and (max-width: 1279px) {
+  .portal-container {
+    padding: 16px 20px;
+    gap: 20px;
+  }
 }
 
 @media (max-width: 767px) {
@@ -409,24 +411,16 @@ h4 {
     );
   }
 
-  .portal-header {
-    padding: 8px 16px;
-    gap: 8px;
-  }
-
-  .header-branding h1 {
-    font-size: 20px;
-  }
-
   .portal-container {
     flex-direction: column;
-    padding: 8px 16px;
-    gap: 8px;
+    padding: 8px 12px;
+    gap: 0;
   }
 
   .portal-navigation {
     width: 100%;
-    gap: 6px;
+    height: 0;
+    gap: 0;
   }
 
   .nav-tabs {
@@ -486,16 +480,7 @@ h4 {
     margin-left: 0;
   }
 
-  .mobile-session-toggle,
-  .btn.mobile-session-toggle {
-    display: inline-flex;
-    width: 100%;
-    justify-content: space-between;
-    padding: 8px 12px;
-    font-size: 13px;
-  }
-
-  .participant-info-card {
+  .participant-info-card:not(.is-in-drawer) {
     padding: 10px 12px;
   }
 
@@ -521,7 +506,27 @@ h4 {
   }
 
   .view-header {
-    margin-bottom: 16px;
+    margin-bottom: 10px;
+  }
+
+  .view-header h2 {
+    font-size: 18px;
+    margin-bottom: 2px;
+  }
+
+  .view-header p {
+    font-size: 13px;
+    line-height: 1.35;
+  }
+
+  .compliance-score-card {
+    padding: 16px;
+  }
+
+  .score-radial {
+    width: 104px;
+    height: 104px;
+    margin-bottom: 12px;
   }
 }
 
@@ -781,23 +786,62 @@ h4 {
 
 @media (max-height: 480px) {
   .modal-overlay {
+    align-items: center;
     padding: var(--spacing-xs, 8px);
+    overflow: hidden;
   }
 
   .modal {
+    display: flex;
+    flex-direction: column;
     max-height: calc(100vh - 16px);
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-    display: block;
+    max-height: calc(100dvh - 16px);
+    overflow: hidden;
   }
 
   .modal > form,
   .modal > #pin-reset-confirmation {
-    display: block;
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: 100%;
+    overflow: hidden;
+  }
+
+  .modal-header {
+    padding: 8px 16px;
+    font-size: 15px;
+    line-height: 1.25;
   }
 
   .modal-body {
-    overflow-y: visible;
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 10px 16px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .modal-body p {
+    margin-bottom: 8px;
+    line-height: 1.4;
+  }
+
+  .modal-footer {
+    padding: 8px 16px;
+    gap: 8px;
+  }
+
+  .modal-support-strip {
+    padding: 0 16px 8px 16px;
+    flex-shrink: 0;
+  }
+
+  .modal-support-strip .site-contact-links.site-contact-compact {
+    margin-top: 0;
+    padding: 6px 10px;
+    gap: 4px;
   }
 }
 

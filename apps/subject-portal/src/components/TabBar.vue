@@ -28,6 +28,7 @@
             ? 'view-questionnaire'
             : tab.viewId
         "
+        :title="railCollapsed ? tab.label : undefined"
         :tabindex="activeTab?.id === tab.id ? 0 : -1"
         @click="selectView(tab.viewId)"
       >
@@ -38,7 +39,9 @@
           :stroke-width="1.75"
           aria-hidden="true"
         />
-        <span class="nav-label">{{ tab.label }}</span>
+        <span class="nav-label" :class="{ 'sr-only': railCollapsed }">{{
+          tab.label
+        }}</span>
         <span
           v-if="tab.id === 'inbox' && inbox.unreadCount > 0"
           id="unread-count"
@@ -62,6 +65,15 @@ import { useInboxStore } from "../stores/inbox.js";
 import { useSessionStore } from "../stores/session.js";
 import { useUiStore } from "../stores/ui.js";
 import { isDemoModeActive } from "../utils/demoMode.js";
+
+defineProps({
+  railCollapsed: {
+    type: Boolean,
+    default: false,
+  },
+});
+
+const emit = defineEmits(["select-tab"]);
 
 const ui = useUiStore();
 const inbox = useInboxStore();
@@ -145,5 +157,6 @@ function selectView(viewId) {
     void flushActiveQuestionnaireDraft({ clearActive: true });
   }
   showView(viewId);
+  emit("select-tab", viewId);
 }
 </script>

@@ -1,10 +1,13 @@
 // @vitest-environment jsdom
+import fs from "node:fs";
+import path from "node:path";
 import { describe, it, expect, vi } from "vitest";
 import { createApp, defineComponent, h, nextTick, ref } from "vue";
 import {
   ClinicalBreadcrumbs,
   ClinicalDrawer,
   ClinicalIcon,
+  ClinicalModal,
   EntityLink,
   decodeJwtPayloadClaims,
   extractAssignedSites,
@@ -81,7 +84,7 @@ describe("packages/ui shared portal & callerScope primitives", () => {
     );
   });
 
-  it("renders ClinicalBreadcrumbs with aria-label=Breadcrumb, aria-current=page, and navigation handler", async () => {
+  it("renders ClinicalBreadcrumbs with aria-label=Breadcrumb, aria-current=page, compactMobile option, and navigation handler", async () => {
     const onSelect = vi.fn();
     const container = document.createElement("div");
     document.body.appendChild(container);
@@ -91,6 +94,7 @@ describe("packages/ui shared portal & callerScope primitives", () => {
         setup() {
           return () =>
             h(ClinicalBreadcrumbs, {
+              compactMobile: true,
               items: [
                 {
                   id: "study",
@@ -117,6 +121,7 @@ describe("packages/ui shared portal & callerScope primitives", () => {
 
     const nav = container.querySelector('nav[aria-label="Breadcrumb"]');
     expect(nav).not.toBeNull();
+    expect(nav.classList.contains("is-compact-mobile")).toBe(true);
     const current = nav.querySelector('[aria-current="page"]');
     expect(current?.textContent?.trim()).toBe("Daily Health & Vital Diary");
 
@@ -152,6 +157,9 @@ describe("packages/ui shared portal & callerScope primitives", () => {
               h(ClinicalIcon, { name: "clipboard-list" }),
               h(ClinicalIcon, { name: "globe" }),
               h(ClinicalIcon, { name: "check" }),
+              h(ClinicalIcon, { name: "user" }),
+              h(ClinicalIcon, { name: "refresh" }),
+              h(ClinicalIcon, { name: "alert-circle" }),
             ]);
         },
       })
@@ -174,7 +182,7 @@ describe("packages/ui shared portal & callerScope primitives", () => {
     expect(onPeek.mock.calls[0][0].triggerEl).toBe(btn);
 
     const icons = container.querySelectorAll("svg.clinical-icon");
-    expect(icons.length).toBe(4);
+    expect(icons.length).toBe(7);
     expect(icons[0].getAttribute("aria-hidden")).toBe("true");
 
     app.unmount();
@@ -251,6 +259,63 @@ describe("packages/ui shared portal & callerScope primitives", () => {
     expect(container.querySelector(".clinical-drawer-panel")).toBeNull();
     expect(document.activeElement).toBe(trigger);
 
+    app.unmount();
+    container.remove();
+  });
+
+  it("enforces bounded short-landscape flex-column scrolling on ClinicalModal and <=767px bottom-sheet breakpoint on ClinicalDrawer", async () => {
+    const modalSource = fs.readFileSync(
+      path.resolve(
+        import.meta.dirname,
+        "../src/components/clinical/ClinicalModal.vue"
+      ),
+      "utf8"
+    );
+    expect(modalSource).toMatch(
+      /@media\s*\(max-height:\s*480px\)[\s\S]*?\.clinical-modal-dialog\s*\{[\s\S]*?display:\s*flex;[\s\S]*?flex-direction:\s*column;[\s\S]*?max-height:\s*calc\(100dvh\s*-\s*16px\);[\s\S]*?overflow:\s*hidden;/
+    );
+    expect(modalSource).not.toMatch(
+      /@media\s*\(max-height:\s*480px\)[\s\S]*?overflow-y:\s*visible;/
+    );
+
+    const drawerSource = fs.readFileSync(
+      path.resolve(
+        import.meta.dirname,
+        "../src/components/clinical/ClinicalDrawer.vue"
+      ),
+      "utf8"
+    );
+    expect(drawerSource).toContain("@media (max-width: 767px)");
+    expect(drawerSource).toContain(
+      ".clinical-drawer-panel:not(.position-bottom) .clinical-drawer-sheet-handle"
+    );
+
+    const open = ref(true);
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const app = createApp(
+      defineComponent({
+        setup() {
+          return () =>
+            h(
+              ClinicalModal,
+              {
+                modelValue: open.value,
+                title: "Short Viewport Verification",
+                teleport: false,
+              },
+              {
+                default: () => h("p", "Scrollable modal body content."),
+              }
+            );
+        },
+      })
+    );
+    app.mount(container);
+    await nextTick();
+    expect(container.querySelector(".clinical-modal-dialog")).not.toBeNull();
+    expect(container.querySelector(".modal-body")).not.toBeNull();
+    expect(container.querySelector(".modal-footer")).not.toBeNull();
     app.unmount();
     container.remove();
   });

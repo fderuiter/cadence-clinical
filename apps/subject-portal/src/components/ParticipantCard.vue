@@ -1,6 +1,6 @@
 <template>
-  <div class="participant-info-card">
-    <div class="info-title">Participant Session</div>
+  <div class="participant-info-card" :class="{ 'is-in-drawer': inDrawer }">
+    <div v-if="!inDrawer" class="info-title">Participant Session</div>
     <div class="info-row">
       <span class="info-lbl">ID:</span>
       <span id="session-subject-id" class="info-val">{{
@@ -8,7 +8,7 @@
       }}</span>
     </div>
     <div
-      v-if="sessionStore.authError"
+      v-if="sessionStore.authError && !suppressInlineAlerts"
       id="session-auth-error"
       class="participant-auth-error"
       role="alert"
@@ -16,7 +16,7 @@
       {{ sessionStore.authError }}
     </div>
     <div
-      v-else-if="isSessionExpired"
+      v-else-if="isSessionExpired && !suppressInlineAlerts"
       id="session-expired-banner"
       class="participant-auth-error"
       role="alert"
@@ -113,6 +113,14 @@ const wallet = useWalletStore();
 
 defineProps({
   mobileExpanded: {
+    type: Boolean,
+    default: false,
+  },
+  inDrawer: {
+    type: Boolean,
+    default: false,
+  },
+  suppressInlineAlerts: {
     type: Boolean,
     default: false,
   },
@@ -215,5 +223,13 @@ function handleLogout() {
 .participant-status-expired {
   color: var(--semantic-color-error-text-dark);
   font-weight: 700;
+}
+
+.participant-info-card.is-in-drawer {
+  background-color: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  box-shadow: none;
 }
 </style>

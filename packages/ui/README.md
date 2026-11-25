@@ -12,10 +12,10 @@ Shared frontend package (JavaScript, TypeScript types and Vue 3 components) used
 - `econsent.js`: consent normalisation and comprehension-check helpers.
 - `accessibility-matcher.js`, exported only as `ui/vitest` (typed via `accessibility-matcher.d.ts`): `toBeAccessible` Vitest matcher built on `axe-core` ([ADR-2537](../../docs/adr/2026-11-22-split-ui-vitest-matcher-and-enforce-demo-bundle-budgets.md)). It is excluded from the root `ui` runtime bundle so `axe-core` never ships in production or demo builds.
 - `src/components/`: 24 shared Vue components re-exported from the root `ui` entry:
-  - `ClinicalBreadcrumbs`
+  - `ClinicalBreadcrumbs` (including `compactMobile` single-row `< 640px` mode per [ADR-2686](../../docs/adr/2026-11-24-tablet-icon-rail-and-compact-portal-chrome.md))
   - `ClinicalContextBar`
   - `ClinicalDataTable` (client/external/none pagination, controlled sort, focusable or masked rows, and header/cell/pagination slots per [ADR-2656](../../docs/adr/2026-11-23-clinical-data-table-keyboard-and-aria-compliance.md) and [ADR-2673](../../docs/adr/2026-11-24-centralize-css-states-and-migrate-live-clinical-hubs.md))
-  - `ClinicalDrawer` (side drawer, desktop docked inspector, plus `position="bottom"` / `mobileBottomSheet` `90dvh` safe-area bottom sheet)
+  - `ClinicalDrawer` (side drawer, desktop docked inspector, plus `position="bottom"` / `mobileBottomSheet` `<= 767px` `90dvh` safe-area bottom sheet per [ADR-2686](../../docs/adr/2026-11-24-tablet-icon-rail-and-compact-portal-chrome.md))
   - `ClinicalDropzone`
   - `ClinicalExplanation`
   - `ClinicalFieldLayout` (`touch` and `compact` densities, required markers, hints, and status alerts)
@@ -25,7 +25,7 @@ Shared frontend package (JavaScript, TypeScript types and Vue 3 components) used
   - `ClinicalIconButton`
   - `ClinicalInput` (`48px` touch or `compact` `36px` staff `<input>`, `<select>`, and `<textarea>` controls with `16px` coarse/mobile font sizing plus `type`, `inputmode`, and `tabularNums` / `data-tabular-nums` alignment)
   - `ClinicalLookupInput`
-  - `ClinicalModal`
+  - `ClinicalModal` (with `@media (max-height: 480px)` `calc(100dvh - 16px)` flex-column scrolling `.modal-body` and pinned `.modal-header` / `.modal-footer` per [ADR-2686](../../docs/adr/2026-11-24-tablet-icon-rail-and-compact-portal-chrome.md))
   - `ClinicalQueryFlag`
   - `ClinicalQueryPanel`
   - `ClinicalRadioGroup`
@@ -72,5 +72,5 @@ in `vite.config.js` are a ratchet floor: raise them when coverage rises, never l
 
 ### Bounded Drawer & Mobile Record-Card Primitives
 
-- `ClinicalDrawer`: Bounded-chrome `100dvh` side drawer (`#header` + scrollable `.clinical-drawer-body` + optional `#footer`), `keepMounted` state retention, `@media (max-height: 540px)` compact short-viewport scrolling, and `@media (max-width: 480px)` `90dvh` safe-area bottom sheet ([ADR-2674](../../docs/adr/2026-11-24-migrate-web-drawers-to-bounded-clinical-drawer.md)).
+- `ClinicalDrawer`: Bounded-chrome `100dvh` side drawer (`#header` + scrollable `.clinical-drawer-body` + optional `#footer`), `keepMounted` state retention, `@media (max-height: 540px)` compact short-viewport scrolling, `mobileBottomSheet` `<= 767px` bottom sheet, and `@media (max-width: 480px)` `90dvh` safe-area bottom sheet ([ADR-2674](../../docs/adr/2026-11-24-migrate-web-drawers-to-bounded-clinical-drawer.md), [ADR-2686](../../docs/adr/2026-11-24-tablet-icon-rail-and-compact-portal-chrome.md)).
 - `ClinicalDataTable`: Emits `:data-label="col.label"` on body cells so narrow mobile drawers (`<= 480px` / `<= 640px`) can style `attr(data-label)` stacked record cards without raw `<table>` markup.

@@ -465,7 +465,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2654: Prune Global Web CSS Overrides, Standardize GxP Status Badges, and Gate AI Token Exclusivity](2026-11-23-prune-global-web-css-and-standardize-gxp-status-badges.md) (2026-11-23)
 - [ADR-2655: Unify Modal Focus Coordination, Safe Confirmation Dialogs, and Persistent Accessible Toasts](2026-11-23-unify-focus-coordination-safe-confirmations-and-persistent-toasts.md) (2026-11-23)
 - [ADR-2656: Keyboard Operability and WAI-ARIA Semantics in `ClinicalDataTable`](2026-11-23-clinical-data-table-keyboard-and-aria-compliance.md) (2026-11-23)
-- [ADR-2657: Share UI Primitives and Synchronize Participant Portal Route Queries](2026-11-23-share-ui-primitives-and-query-synced-portal-routes.md) (2026-11-23)
+- [ADR-2657: Share UI Primitives and Synchronize Participant Portal Route Queries](2026-11-23-share-ui-primitives-and-query-synced-portal-routes.md) (2026-11-23) _(Amended by [ADR-2686](2026-11-24-tablet-icon-rail-and-compact-portal-chrome.md))_
 - [ADR-2658: Resolve Shared UI from Workspace Source and Align Verification Scripts](2026-11-23-resolve-shared-ui-from-source-and-align-verification-scripts.md) (2026-11-23)
 - [ADR-2659: Centralize `ClinicalTabs` Visual Variants, Overflow Containment, Focus Scroll Alignment, and Scoped CSS AST Gates](2026-11-23-centralize-clinical-tabs-variants-overflow-and-scoped-css-gates.md) (2026-11-23)
 - [ADR-2665: Sync Sticky Chrome Offsets, Short-Viewport Sticky Release, and Responsive Grid Primitives](2026-11-23-sync-sticky-chrome-offsets-and-responsive-grid-primitives.md) (2026-11-23)
@@ -477,6 +477,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2675: Standardize Semantic Role Tokens, Dark-Theme Parity, and ESLint AST Color Gates](2026-11-23-standardize-semantic-role-tokens-and-eslint-color-gates.md) (2026-11-23)
 - [ADR-2676: Focus-Trap Detachment Recovery, Shared Retry Focus Primitives, and Inline Focus-Handoff AST Gates](2026-11-24-focus-trap-detachment-recovery-and-retry-focus-primitives.md) (2026-11-24)
 - [ADR-2677: Retire Unreferenced Shared UI and Web Exports and Enforce Live Consumer Reachability](2026-11-24-retire-dead-ui-exports-and-enforce-consumer-guard.md) (2026-11-24)
+- [ADR-2686: Add Tablet Icon Rail and Compact Participant Portal Chrome](2026-11-24-tablet-icon-rail-and-compact-portal-chrome.md) (2026-11-24)
 
 ### 7. DevOps, Tooling & CI/CD
 

@@ -1041,6 +1041,7 @@ export const ClinicalBreadcrumbs: DefineComponent<
   {
     items?: ClinicalBreadcrumbItem[];
     ariaLabel?: string;
+    compactMobile?: boolean;
   },
   {},
   any

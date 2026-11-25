@@ -17,5 +17,7 @@ export const useUiStore = defineStore("ui", {
     siteSupportContact: null,
     peekRecord: null,
     peekTriggerElement: null,
+    sessionDrawerOpen: false,
+    railOverlayExpanded: false,
   }),
 });

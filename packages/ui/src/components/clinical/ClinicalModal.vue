@@ -422,21 +422,34 @@ useFocusTrap(dialogRef, {
 
 @media (max-height: 480px) {
   .clinical-modal-backdrop {
-    align-items: flex-start;
+    align-items: center;
     padding: 8px;
   }
 
   .clinical-modal-dialog {
-    display: block;
+    display: flex;
+    flex-direction: column;
     max-height: calc(100vh - 16px);
+    max-height: calc(100dvh - 16px);
     margin: auto 0;
-    overflow-x: hidden;
+    overflow: hidden;
+  }
+
+  .modal-header {
+    padding: 8px 16px;
+  }
+
+  .modal-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 10px 16px;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
   }
 
-  .modal-body {
-    overflow-y: visible;
+  .modal-footer {
+    gap: 8px;
+    padding: 8px 16px;
   }
 }
 
