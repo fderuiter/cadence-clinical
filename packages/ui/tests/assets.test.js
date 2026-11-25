@@ -122,6 +122,10 @@ describe("CSS Assets and Package Exports", () => {
 
     expect(pkg.exports).toBeDefined();
     expect(pkg.exports["."]).toBe("./index.js");
+    expect(pkg.exports["./theme"]).toEqual({
+      types: "./theme.d.ts",
+      default: "./src/utils/themeController.js",
+    });
     expect(pkg.exports["./tokens.css"]).toBe("./tokens.css");
     expect(pkg.exports["./responsive.css"]).toBe("./responsive.css");
     expect(pkg.exports["./package.json"]).toBe("./package.json");
@@ -412,7 +416,7 @@ describe("CSS Assets and Package Exports", () => {
       }
     });
 
-    it("maintains 1:1 parity across :root, :root[data-theme='dark'], and :root[data-theme='auto'] for all non-inverse color, badge, backdrop, watermark, and shadow tokens (ADR-2675)", () => {
+    it("maintains 100% 1:1 parity across :root, :root[data-theme='dark'], and @media (prefers-color-scheme: dark) (:root:not([data-theme='light']), :root[data-theme='auto']) for every color and shadow token (ADR-2675 / ADR-2690)", () => {
       const tokensContent = fs.readFileSync(tokensPath, "utf-8");
       function extractRawBlockMap(headerRegex) {
         const headerMatch = tokensContent.match(headerRegex);
@@ -442,9 +446,24 @@ describe("CSS Assets and Package Exports", () => {
         return map;
       }
 
+      expect(tokensContent).toMatch(
+        /:root:not\(\[data-theme="light"\]\),\s*:root\[data-theme="auto"\]\s*\{/
+      );
+      expect(tokensContent).toMatch(
+        /html\[data-theme="dark"\],\s*html\.dark\s*\{\s*color-scheme:\s*dark;/
+      );
+      expect(tokensContent).toMatch(
+        /html:not\(\[data-theme="light"\]\),\s*html\[data-theme="auto"\]\s*\{\s*color-scheme:\s*dark;/
+      );
+      expect(tokensContent).toMatch(
+        /\.clinical-input\s+\.clinical-input-control\s*\{[\s\S]*?transition:[^;]*\bcolor\s+0\.2s\b/
+      );
+
       const rootRaw = extractRawBlockMap(/:root\s*\{/);
       const darkRaw = extractRawBlockMap(/:root\[data-theme="dark"\][^{]*\{/);
-      const autoRaw = extractRawBlockMap(/:root\[data-theme="auto"\]\s*\{/);
+      const autoRaw = extractRawBlockMap(
+        /:root:not\(\[data-theme="light"\]\),\s*:root\[data-theme="auto"\]\s*\{/
+      );
 
       // Exact 1:1 key & value parity between explicit dark and system-auto dark blocks
       expect([...darkRaw.keys()].sort()).toEqual([...autoRaw.keys()].sort());
@@ -452,7 +471,7 @@ describe("CSS Assets and Package Exports", () => {
         expect(autoRaw.get(key), `Auto mismatch for ${key}`).toBe(darkVal);
       }
 
-      // Every non-inverse color, badge, watermark, shadow, and color-alias token in :root must have dark & auto overrides
+      // Every color, badge, inverse chrome, watermark, shadow, and color-alias token in :root must have dark & auto overrides
       const invariantPrefixes = [
         "--radius-",
         "--spacing-",
@@ -468,8 +487,6 @@ describe("CSS Assets and Package Exports", () => {
         "--semantic-touch-target-",
         "--semantic-control-target-",
         "--semantic-drawer-width-",
-        "--semantic-shadow-sm",
-        "--semantic-shadow-xl",
         "--transition-",
       ];
 
@@ -477,9 +494,6 @@ describe("CSS Assets and Package Exports", () => {
       for (const key of rootRaw.keys()) {
         if (key === "--font") continue;
         if (invariantPrefixes.some((p) => key.startsWith(p))) continue;
-        if (key.includes("-inverse") && !key.includes("-inverse-tint")) {
-          continue;
-        }
         if (!darkRaw.has(key) || !autoRaw.has(key)) {
           unmappedDarkTokens.push(key);
         }
@@ -574,6 +588,12 @@ describe("CSS Assets and Package Exports", () => {
           "--semantic-color-success-interactive",
         ],
         ["--semantic-color-text-on-solid", "--semantic-color-warning-action"],
+        ["--semantic-color-text-on-solid", "--semantic-color-wallet-start"],
+        ["--semantic-color-text-on-solid", "--semantic-color-wallet-end"],
+        ["--semantic-color-text-on-ai", "--semantic-color-ai"],
+        ["--semantic-color-text-on-status", "--semantic-color-success"],
+        ["--semantic-color-text-on-status", "--semantic-color-warning"],
+        ["--semantic-color-text-on-status", "--semantic-color-error"],
       ];
 
       for (const [fgToken, bgToken] of darkBadgeAndFillPairs) {
@@ -685,6 +705,98 @@ describe("CSS Assets and Package Exports", () => {
           unsavedTextRatio,
           `${themeName} --semantic-badge-unsaved-text (${unsavedText}) on --semantic-badge-unsaved-bg (${unsavedBg}) achieved ${unsavedTextRatio.toFixed(2)}:1 (< 4.5:1)`
         ).toBeGreaterThanOrEqual(4.5);
+      }
+    });
+
+    it("delivers >= 3:1 non-text contrast for AI, info, warning, success, and error border tokens across light and dark modes while preserving subtle passive --semantic-color-border (SC 1.4.11 / ADR-2690)", () => {
+      const tokensContent = fs.readFileSync(tokensPath, "utf-8");
+      const darkTokens = parseThemeOverlayTokens(
+        tokensContent,
+        /:root\[data-theme="dark"\][\s\S]*?\{([\s\S]*?)\}/,
+        tokens
+      );
+
+      expect(tokens.get("--semantic-color-border")).toBe("#e2e8f0");
+      expect(darkTokens.get("--semantic-color-border")).toBe("#334155");
+
+      const semanticBorderPairs = [
+        [
+          "--semantic-color-ai-border",
+          ["--semantic-color-ai-bg", "--semantic-color-surface"],
+        ],
+        [
+          "--semantic-color-info-border",
+          [
+            "--semantic-color-info-bg",
+            "--semantic-color-info-bg-soft",
+            "--semantic-color-surface",
+          ],
+        ],
+        [
+          "--semantic-color-info-border-accent",
+          ["--semantic-color-info-bg", "--semantic-color-surface"],
+        ],
+        [
+          "--semantic-color-divider-accent",
+          ["--semantic-color-surface", "--semantic-color-surface-subtle"],
+        ],
+        [
+          "--semantic-color-warning-border",
+          [
+            "--semantic-color-warning-bg",
+            "--semantic-color-warning-bg-soft",
+            "--semantic-color-surface",
+          ],
+        ],
+        [
+          "--semantic-color-warning-border-strong",
+          ["--semantic-color-warning-bg", "--semantic-color-surface"],
+        ],
+        [
+          "--semantic-color-success-border",
+          [
+            "--semantic-color-success-bg",
+            "--semantic-color-success-bg-soft",
+            "--semantic-color-surface",
+          ],
+        ],
+        [
+          "--semantic-color-success-border-soft",
+          ["--semantic-color-success-bg-soft", "--semantic-color-surface"],
+        ],
+        [
+          "--semantic-color-error-border",
+          [
+            "--semantic-color-error-bg",
+            "--semantic-color-error-bg-soft",
+            "--semantic-color-surface",
+          ],
+        ],
+        [
+          "--semantic-color-error-border-soft",
+          ["--semantic-color-error-bg-soft", "--semantic-color-surface"],
+        ],
+      ];
+
+      for (const [modeName, themeMap] of [
+        ["light", tokens],
+        ["dark", darkTokens],
+      ]) {
+        for (const [borderToken, bgTokens] of semanticBorderPairs) {
+          const borderHex = themeMap.get(borderToken);
+          expect(
+            borderHex,
+            `${modeName} ${borderToken} must be defined`
+          ).toBeDefined();
+          for (const bgToken of bgTokens) {
+            const bgHex = themeMap.get(bgToken);
+            const ratio = contrastRatio(borderHex, bgHex);
+            expect(
+              ratio,
+              `${modeName} ${borderToken} (${borderHex}) on ${bgToken} (${bgHex}) achieved ${ratio.toFixed(2)}:1 (< 3.0:1)`
+            ).toBeGreaterThanOrEqual(3);
+          }
+        }
       }
     });
   });

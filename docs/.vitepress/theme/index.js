@@ -3,6 +3,11 @@ import { nextTick, onMounted, onUnmounted, watch } from "vue";
 import { useRoute } from "vitepress";
 import BlogLayout from "./BlogLayout.vue";
 import BlogIndex from "./components/BlogIndex.vue";
+import {
+  bootstrapTheme,
+  readStoredThemePreference,
+  subscribeThemeSync,
+} from "../../../packages/ui/src/utils/themeController.js";
 import "./custom.css";
 
 let mermaidPromise = null;
@@ -84,6 +89,7 @@ export default {
     const activeCleanups = new Set();
     const activeObservers = new Set();
     let themeObserver = null;
+    let stopThemeSync = null;
     let activeRenderToken = 0;
 
     const clearAllActiveDrags = () => {
@@ -128,6 +134,10 @@ export default {
     onUnmounted(() => {
       clearAllActiveDrags();
       disconnectAllObservers();
+      if (stopThemeSync) {
+        stopThemeSync();
+        stopThemeSync = null;
+      }
     });
 
     const enhanceDiagramContainer = (container) => {
@@ -488,6 +498,29 @@ export default {
     };
 
     onMounted(() => {
+      bootstrapTheme();
+      stopThemeSync = subscribeThemeSync();
+      if (!themeObserver && typeof MutationObserver !== "undefined") {
+        let lastObservedDark =
+          document.documentElement.classList.contains("dark");
+        themeObserver = new MutationObserver(() => {
+          const root = document.documentElement;
+          const nowDark = root.classList.contains("dark");
+          const storedPref = readStoredThemePreference();
+          if (root.getAttribute("data-theme") !== storedPref) {
+            root.setAttribute("data-theme", storedPref);
+          }
+          root.style.colorScheme = nowDark ? "dark" : "light";
+          if (nowDark !== lastObservedDark) {
+            lastObservedDark = nowDark;
+            void renderPageDiagrams({ forceThemeRefresh: true });
+          }
+        });
+        themeObserver.observe(document.documentElement, {
+          attributes: true,
+          attributeFilter: ["class"],
+        });
+      }
       scheduleDiagramCheck();
     });
 

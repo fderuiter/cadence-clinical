@@ -665,7 +665,7 @@ function getDocumentCount(node) {
   gap: 8px;
   padding: 10px 12px;
   background-color: var(--semantic-color-interactive-primary);
-  color: var(--semantic-color-surface);
+  color: var(--semantic-color-text-on-primary);
   font-weight: 600;
   font-size: 0.85rem;
   border: 1px solid var(--semantic-color-interactive-primary);
@@ -675,7 +675,7 @@ function getDocumentCount(node) {
 }
 
 .btn-export-full-binder:hover:not(:disabled) {
-  background-color: var(--semantic-color-interactive-primary);
+  background-color: var(--semantic-color-interactive-primary-hover);
 }
 
 .binder-scoped-exports {
@@ -722,7 +722,12 @@ function getDocumentCount(node) {
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   font-size: 0.9rem;
-  transition: border-color 0.2s;
+  background-color: var(--semantic-color-surface);
+  color: var(--semantic-color-text);
+  transition:
+    border-color 0.2s,
+    background-color 0.2s,
+    color 0.2s;
   box-sizing: border-box;
 }
 
@@ -738,6 +743,7 @@ function getDocumentCount(node) {
   border-radius: 6px;
   font-size: 0.85rem;
   background-color: var(--semantic-color-surface-muted);
+  color: var(--semantic-color-text);
   box-sizing: border-box;
 }
 

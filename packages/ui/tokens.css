@@ -116,15 +116,15 @@
      alongside the "AI" label. */
   --semantic-color-ai: #6d28d9;
   --semantic-color-ai-bg: #f5f3ff;
-  --semantic-color-ai-border: #c4b5fd;
+  --semantic-color-ai-border: #7c3aed;
   --semantic-color-ai-dark: #5b21b6;
 
   /* Info & Notice Banners / Badges */
   --semantic-color-info: #1e40af;
   --semantic-color-info-bg: #eff6ff;
   --semantic-color-info-bg-soft: #f0f9ff;
-  --semantic-color-info-border: #bfdbfe;
-  --semantic-color-info-border-accent: #bae6fd;
+  --semantic-color-info-border: #2563eb;
+  --semantic-color-info-border-accent: #0284c7;
   --semantic-color-info-light: #dbeafe;
 
   /* Extended Warning Banners & Badges */
@@ -133,7 +133,7 @@
   --semantic-color-warning-bg-light: #fefce8;
   --semantic-color-warning-bg-soft: #fffbeb;
   --semantic-color-warning-bg-badge: #fef3c7;
-  --semantic-color-warning-border: #fef08a;
+  --semantic-color-warning-border: #b45309;
   --semantic-color-warning-border-strong: #b45309;
   --semantic-color-warning-dark: #92400e;
   --semantic-color-warning-action: #854d0e;
@@ -142,16 +142,16 @@
   /* Extended Success & Validation States */
   --semantic-color-success-dark: #166534;
   --semantic-color-success-bg-soft: #f0fdf4;
-  --semantic-color-success-border: #86efac;
-  --semantic-color-success-border-soft: #bbf7d0;
+  --semantic-color-success-border: #15803d;
+  --semantic-color-success-border-soft: #15803d;
   --semantic-color-success-interactive: #15803d;
   --semantic-color-success-accent: #15803d;
 
   /* Extended Error & Validation States */
   --semantic-color-error-bg-soft: #fef2f2;
   --semantic-color-error-bg-row: #fff1f2;
-  --semantic-color-error-border: #fca5a5;
-  --semantic-color-error-border-soft: #fecaca;
+  --semantic-color-error-border: #dc2626;
+  --semantic-color-error-border-soft: #dc2626;
   --semantic-color-error-dark: #b91c1c;
   --semantic-color-error-text-dark: #991b1b;
   --semantic-color-error-text-deep: #7f1d1d;
@@ -210,9 +210,11 @@
   --semantic-color-text-on-solid: #ffffff;
   --semantic-color-text-on-primary: #ffffff;
   --semantic-color-text-on-accent: #ffffff;
+  --semantic-color-text-on-ai: #ffffff;
+  --semantic-color-text-on-status: #ffffff;
   --semantic-color-surface-header: #f1f5f9;
   --semantic-color-surface-subtle: #f8fafc;
-  --semantic-color-divider-accent: #93c5fd;
+  --semantic-color-divider-accent: #0284c7;
 
   /* Inverse / Dark Chrome & Specialized Surfaces (non-theme chrome: header, code, imaging) */
   --semantic-color-surface-inverse: #0f172a;
@@ -382,14 +384,14 @@
   /* AI output reserved exclusively for agent-generated content (UX-8, ADR-2635) */
   --semantic-color-ai: #c4b5fd;
   --semantic-color-ai-bg: #2e1065;
-  --semantic-color-ai-border: #7c3aed;
+  --semantic-color-ai-border: #a78bfa;
   --semantic-color-ai-dark: #ddd6fe;
 
   --semantic-color-info: #93c5fd;
   --semantic-color-info-bg: #172554;
   --semantic-color-info-bg-soft: #082f49;
-  --semantic-color-info-border: #1d4ed8;
-  --semantic-color-info-border-accent: #0284c7;
+  --semantic-color-info-border: #60a5fa;
+  --semantic-color-info-border-accent: #38bdf8;
   --semantic-color-info-light: #172554;
 
   --semantic-color-warning-text: #fde047;
@@ -397,23 +399,23 @@
   --semantic-color-warning-bg-light: #3b1d06;
   --semantic-color-warning-bg-soft: #3b1d06;
   --semantic-color-warning-bg-badge: #451a03;
-  --semantic-color-warning-border: #854d0e;
-  --semantic-color-warning-border-strong: #ca8a04;
+  --semantic-color-warning-border: #eab308;
+  --semantic-color-warning-border-strong: #f59e0b;
   --semantic-color-warning-dark: #92400e;
   --semantic-color-warning-action: #854d0e;
   --semantic-color-warning-action-border: #facc15;
 
   --semantic-color-success-dark: #86efac;
   --semantic-color-success-bg-soft: #052e16;
-  --semantic-color-success-border: #15803d;
-  --semantic-color-success-border-soft: #14532d;
+  --semantic-color-success-border: #22c55e;
+  --semantic-color-success-border-soft: #22c55e;
   --semantic-color-success-interactive: #15803d;
   --semantic-color-success-accent: #047857;
 
   --semantic-color-error-bg-soft: #450a0a;
   --semantic-color-error-bg-row: #450a0a;
-  --semantic-color-error-border: #b91c1c;
-  --semantic-color-error-border-soft: #7f1d1d;
+  --semantic-color-error-border: #f87171;
+  --semantic-color-error-border-soft: #f87171;
   --semantic-color-error-dark: #fca5a5;
   --semantic-color-error-text-dark: #fca5a5;
   --semantic-color-error-text-deep: #fecaca;
@@ -500,14 +502,25 @@
   --semantic-color-text-on-solid: #ffffff;
   --semantic-color-text-on-primary: #0f172a;
   --semantic-color-text-on-accent: #0f172a;
+  --semantic-color-text-on-ai: #0f172a;
+  --semantic-color-text-on-status: #0f172a;
   --semantic-color-surface-header: #172033;
+  --semantic-color-surface-inverse: #0f172a;
   --semantic-color-surface-elevated: #1e293b;
   --semantic-color-surface-subtle: #172033;
   --semantic-color-surface-sunken: #0b1120;
+  --semantic-color-border-inverse: #334155;
+  --semantic-color-text-inverse: #ffffff;
+  --semantic-color-text-inverse-muted: #cbd5e1;
+  --semantic-color-accent-inverse: #38bdf8;
+  --semantic-color-emerald-inverse-bg: #064e3b;
+  --semantic-color-emerald-inverse-border: #059669;
+  --semantic-color-emerald-inverse-text: #a7f3d0;
+  --semantic-color-purple-inverse-text: #e9d5ff;
   --semantic-color-divider-accent: #38bdf8;
 
-  --semantic-color-wallet-start: #0369a1;
-  --semantic-color-wallet-end: #075985;
+  --semantic-color-wallet-start: #075985;
+  --semantic-color-wallet-end: #0c4a6e;
 
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.35);
   --shadow-md:
@@ -519,6 +532,8 @@
   --shadow-drawer-right: 8px 0 24px -4px rgba(0, 0, 0, 0.45);
   --shadow-drawer-bottom: 0 -8px 24px -4px rgba(0, 0, 0, 0.45);
   --shadow-focus-ring: 0 0 0 2px var(--semantic-color-divider-accent);
+  --semantic-shadow-sm: var(--shadow-sm);
+  --semantic-shadow-xl: var(--shadow-xl);
 
   /* Paired Dark Theme Application Semantic Color Aliases */
   --primary: var(--semantic-color-primary);
@@ -546,6 +561,7 @@
 }
 
 @media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]),
   :root[data-theme="auto"] {
     --color-primary: #38bdf8;
     --color-primary-dark: #7dd3fc;
@@ -583,34 +599,34 @@
     --semantic-color-error-bg: var(--color-error-bg);
     --semantic-color-ai: #c4b5fd;
     --semantic-color-ai-bg: #2e1065;
-    --semantic-color-ai-border: #7c3aed;
+    --semantic-color-ai-border: #a78bfa;
     --semantic-color-ai-dark: #ddd6fe;
     --semantic-color-info: #93c5fd;
     --semantic-color-info-bg: #172554;
     --semantic-color-info-bg-soft: #082f49;
-    --semantic-color-info-border: #1d4ed8;
-    --semantic-color-info-border-accent: #0284c7;
+    --semantic-color-info-border: #60a5fa;
+    --semantic-color-info-border-accent: #38bdf8;
     --semantic-color-info-light: #172554;
     --semantic-color-warning-text: #fde047;
     --semantic-color-warning-text-dark: #fef08a;
     --semantic-color-warning-bg-light: #3b1d06;
     --semantic-color-warning-bg-soft: #3b1d06;
     --semantic-color-warning-bg-badge: #451a03;
-    --semantic-color-warning-border: #854d0e;
-    --semantic-color-warning-border-strong: #ca8a04;
+    --semantic-color-warning-border: #eab308;
+    --semantic-color-warning-border-strong: #f59e0b;
     --semantic-color-warning-dark: #92400e;
     --semantic-color-warning-action: #854d0e;
     --semantic-color-warning-action-border: #facc15;
     --semantic-color-success-dark: #86efac;
     --semantic-color-success-bg-soft: #052e16;
-    --semantic-color-success-border: #15803d;
-    --semantic-color-success-border-soft: #14532d;
+    --semantic-color-success-border: #22c55e;
+    --semantic-color-success-border-soft: #22c55e;
     --semantic-color-success-interactive: #15803d;
     --semantic-color-success-accent: #047857;
     --semantic-color-error-bg-soft: #450a0a;
     --semantic-color-error-bg-row: #450a0a;
-    --semantic-color-error-border: #b91c1c;
-    --semantic-color-error-border-soft: #7f1d1d;
+    --semantic-color-error-border: #f87171;
+    --semantic-color-error-border-soft: #f87171;
     --semantic-color-error-dark: #fca5a5;
     --semantic-color-error-text-dark: #fca5a5;
     --semantic-color-error-text-deep: #fecaca;
@@ -693,13 +709,24 @@
     --semantic-color-text-on-solid: #ffffff;
     --semantic-color-text-on-primary: #0f172a;
     --semantic-color-text-on-accent: #0f172a;
+    --semantic-color-text-on-ai: #0f172a;
+    --semantic-color-text-on-status: #0f172a;
     --semantic-color-surface-header: #172033;
+    --semantic-color-surface-inverse: #0f172a;
     --semantic-color-surface-elevated: #1e293b;
     --semantic-color-surface-subtle: #172033;
     --semantic-color-surface-sunken: #0b1120;
+    --semantic-color-border-inverse: #334155;
+    --semantic-color-text-inverse: #ffffff;
+    --semantic-color-text-inverse-muted: #cbd5e1;
+    --semantic-color-accent-inverse: #38bdf8;
+    --semantic-color-emerald-inverse-bg: #064e3b;
+    --semantic-color-emerald-inverse-border: #059669;
+    --semantic-color-emerald-inverse-text: #a7f3d0;
+    --semantic-color-purple-inverse-text: #e9d5ff;
     --semantic-color-divider-accent: #38bdf8;
-    --semantic-color-wallet-start: #0369a1;
-    --semantic-color-wallet-end: #075985;
+    --semantic-color-wallet-start: #075985;
+    --semantic-color-wallet-end: #0c4a6e;
     --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.35);
     --shadow-md:
       0 4px 6px -1px rgba(0, 0, 0, 0.35), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
@@ -710,6 +737,8 @@
     --shadow-drawer-right: 8px 0 24px -4px rgba(0, 0, 0, 0.45);
     --shadow-drawer-bottom: 0 -8px 24px -4px rgba(0, 0, 0, 0.45);
     --shadow-focus-ring: 0 0 0 2px var(--semantic-color-divider-accent);
+    --semantic-shadow-sm: var(--shadow-sm);
+    --semantic-shadow-xl: var(--shadow-xl);
     --primary: var(--semantic-color-primary);
     --primary-dark: var(--semantic-color-primary-dark);
     --primary-light: var(--semantic-color-primary-light);
@@ -740,11 +769,13 @@ html {
   color-scheme: light;
 }
 
-html[data-theme="dark"] {
+html[data-theme="dark"],
+html.dark {
   color-scheme: dark;
 }
 
 @media (prefers-color-scheme: dark) {
+  html:not([data-theme="light"]),
   html[data-theme="auto"] {
     color-scheme: dark;
   }
@@ -1015,7 +1046,8 @@ td select,
   color: var(--semantic-color-text);
   transition:
     border-color 0.2s,
-    background-color 0.2s;
+    background-color 0.2s,
+    color 0.2s;
   box-sizing: border-box;
 }
 

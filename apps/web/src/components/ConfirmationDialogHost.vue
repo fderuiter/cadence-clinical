@@ -303,7 +303,7 @@ const handleCancel = () => {
 
 .btn-danger {
   background: var(--semantic-color-error);
-  color: var(--semantic-color-surface);
+  color: var(--semantic-color-text-on-status);
 }
 
 .btn-danger:hover:not(:disabled) {
@@ -311,8 +311,8 @@ const handleCancel = () => {
 }
 
 .btn-warning {
-  background: var(--semantic-color-warning);
-  color: var(--semantic-color-surface);
+  background: var(--semantic-color-warning-action);
+  color: var(--semantic-color-text-on-solid);
 }
 
 .btn-warning:hover:not(:disabled) {
@@ -321,7 +321,7 @@ const handleCancel = () => {
 
 .btn-info {
   background: var(--semantic-color-primary);
-  color: var(--semantic-color-surface);
+  color: var(--semantic-color-text-on-primary);
 }
 
 .btn-info:hover:not(:disabled) {

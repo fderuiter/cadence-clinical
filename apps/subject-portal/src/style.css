@@ -74,12 +74,13 @@ h4 {
 .badge-epro {
   background-color: var(--primary-light);
   color: var(--primary-dark);
+  border: 1px solid var(--semantic-color-info-border-accent);
 }
 
 .badge-gxp {
   background-color: var(--semantic-color-surface-header);
   color: var(--semantic-color-text-body);
-  border: 1px solid var(--border);
+  border: 1px solid var(--semantic-color-border-control);
 }
 
 .badge-gamp {
@@ -650,8 +651,17 @@ h4 {
 
 /* Inbox & notifications styling */
 .inbox-item.unread {
-  border-left: 4px solid var(--accent);
-  background-color: var(--semantic-color-purple-bg);
+  border-left: 4px solid var(--semantic-color-accent);
+  background-color: var(--semantic-color-accent-bg);
+  color: var(--semantic-color-text);
+}
+
+.inbox-item.unread .inbox-name {
+  color: var(--semantic-color-text);
+}
+
+.inbox-item.unread .inbox-due {
+  color: var(--semantic-color-text-muted);
 }
 
 .inbox-actions {
@@ -1107,27 +1117,6 @@ textarea {
   outline-offset: 2px !important;
 }
 
-/* 2. Color Contrast Adjustments */
-.portal-footer {
-  color: var(--semantic-color-text-inverse-muted) !important;
-}
-
-.ledger-item-details {
-  color: var(--semantic-color-text-inverse) !important;
-}
-
-.badge-gxp {
-  background-color: var(--semantic-color-surface-muted) !important;
-  color: var(--semantic-color-text) !important;
-  border-color: var(--semantic-color-border) !important;
-}
-
-.badge-gamp {
-  background-color: var(--semantic-color-primary-light) !important;
-  color: var(--semantic-color-accent) !important;
-  border-color: var(--semantic-color-border) !important;
-}
-
 /* Global Sync Drawer & Status Button Styling */
 
 .btn-sync-status {
@@ -1481,8 +1470,8 @@ textarea {
 /* Recovery UX: Suspended Banner, Quarantine Cards, Retry Countdown, Drafts, PIN Lockout, & Site Contacts */
 
 .sync-suspended-card {
-  border: 1px solid var(--danger);
-  background-color: var(--danger-bg);
+  border: 1px solid var(--semantic-color-error-border);
+  background-color: var(--semantic-color-error-bg-soft);
   color: var(--semantic-color-error-text-dark);
   padding: 16px;
   margin-bottom: 24px;
@@ -1522,9 +1511,9 @@ textarea {
   margin: 8px 0;
   padding: 8px 10px;
   border-radius: 6px;
-  background-color: var(--warning-bg);
+  background-color: var(--semantic-color-warning-bg-soft);
   border: 1px solid var(--semantic-color-warning-border-strong);
-  color: var(--semantic-color-warning-text);
+  color: var(--semantic-color-warning-text-dark);
   font-size: 12px;
   font-variant-numeric: tabular-nums;
 }

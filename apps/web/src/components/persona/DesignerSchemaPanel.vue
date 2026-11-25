@@ -625,7 +625,7 @@
                   style="
                     padding: 2px 8px;
                     font-size: 0.75rem;
-                    background-color: var(--semantic-color-error-border-soft);
+                    background-color: var(--semantic-color-error-bg);
                     color: var(--semantic-color-error-text-dark);
                   "
                   @click="$emit('start-reject-item', item.id)"

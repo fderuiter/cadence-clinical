@@ -1123,7 +1123,7 @@ function handleBatchIngested(result) {
 
 .resp-cr,
 .resp-cmr {
-  background-color: var(--semantic-color-success-border-soft);
+  background-color: var(--semantic-color-success-bg);
   color: var(--semantic-color-success-dark);
 }
 

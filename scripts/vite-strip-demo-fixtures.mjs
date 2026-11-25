@@ -790,6 +790,10 @@ export function createUiWorkspaceAliases(
   const uiRoot = path.resolve(appDir, "../../packages/ui");
   return [
     {
+      find: /^ui\/theme$/,
+      replacement: path.resolve(uiRoot, "src/utils/themeController.js"),
+    },
+    {
       find: /^ui\/testing$/,
       replacement: path.resolve(uiRoot, "mockGateway.js"),
     },

@@ -1399,6 +1399,60 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
           if (method === "GET" && url.includes("/api/v1/kernel/proposals")) {
             return json([]);
           }
+          if (method === "GET" && url.includes("/api/v1/kernel/nodes?")) {
+            const parsedUrl = new URL(url, window.location.origin);
+            const refs = parsedUrl.searchParams.getAll("ref");
+            const nodes: Record<string, unknown> = {};
+            for (const requestedRef of refs) {
+              if (requestedRef.includes("proposal")) {
+                nodes[requestedRef] = {
+                  ref: proposalRef,
+                  kind: "proposal",
+                  title: "Query the out-of-range systolic pressure at visit 3",
+                  code: null,
+                  status: "Open",
+                  mask: null,
+                };
+              } else if (requestedRef.includes("study_site")) {
+                nodes[requestedRef] = {
+                  ref: siteRef,
+                  kind: "study_site",
+                  title: "Mayo Clinic Oncology",
+                  code: "SITE-101",
+                  status: "PENDING",
+                  mask: null,
+                };
+              } else if (requestedRef.includes("study:")) {
+                nodes[requestedRef] = {
+                  ref: studyRef,
+                  kind: "study",
+                  title: "Phase III Melanoma",
+                  code: "CADENCE-101",
+                  status: "ACTIVE",
+                  mask: null,
+                };
+              } else if (requestedRef.includes("artifact_version")) {
+                nodes[requestedRef] = {
+                  ref: requestedRef,
+                  kind: "artifact_version",
+                  title: "Data review plan",
+                  code: "v1",
+                  status: "PUBLISHED",
+                  mask: null,
+                };
+              } else {
+                nodes[requestedRef] = {
+                  ref: `${participantRef}@4`,
+                  kind: "participant",
+                  title: "017-0001",
+                  code: "017-0001",
+                  status: "ACTIVE",
+                  mask: null,
+                };
+              }
+            }
+            return json({ nodes });
+          }
           if (method === "GET" && url.includes("/api/v1/kernel/nodes/")) {
             if (url.includes("proposal")) {
               return json({
@@ -4521,5 +4575,129 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
         path: "/tmp/study-locks-retry-focus-handoff.png",
       });
     }
+  });
+
+  test("switches light, dark, and auto themes without FOUC, persists vitepress-theme-appearance across reloads, syncs cross-tab storage and OS prefers-color-scheme, and passes WCAG 2.2 AA in light and dark modes (ADR-2690)", async ({
+    page,
+  }) => {
+    await page.emulateMedia({ colorScheme: "light" });
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await gotoHashRoute(page, "/studies");
+
+    const themeBtn = page.locator("#btn-theme-toggle");
+    await expect(themeBtn).toBeVisible();
+    const themeBtnBox = await themeBtn.boundingBox();
+    expect(themeBtnBox?.width ?? 0).toBeGreaterThanOrEqual(44);
+    expect(themeBtnBox?.height ?? 0).toBeGreaterThanOrEqual(44);
+
+    // Verify single-row header height budget (<= 52px) is preserved with ClinicalThemeToggle mounted
+    const headerHeight = await page
+      .locator(".app-header")
+      .evaluate((el) => el.getBoundingClientRect().height);
+    expect(headerHeight).toBeLessThanOrEqual(52);
+
+    // Cycle from default auto -> light -> dark
+    await themeBtn.click();
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+    expect(
+      await page.evaluate(() =>
+        window.localStorage.getItem("vitepress-theme-appearance")
+      )
+    ).toBe("light");
+
+    const lightAudit = await new AxeBuilder({ page })
+      .withTags(WCAG_AA_TAGS)
+      .analyze();
+    expect(lightAudit.violations).toEqual([]);
+
+    await themeBtn.click();
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+    await expect(page.locator("html")).toHaveClass(/\bdark\b/);
+    expect(
+      await page.evaluate(() =>
+        window.localStorage.getItem("vitepress-theme-appearance")
+      )
+    ).toBe("dark");
+
+    const darkAudit = await new AxeBuilder({ page })
+      .withTags(WCAG_AA_TAGS)
+      .analyze();
+    expect(darkAudit.violations).toEqual([]);
+
+    // Capture pre-mount DOM state on reload to prove synchronous <head> theme-bootstrap.js prevents FOUC
+    await page.addInitScript(() => {
+      document.addEventListener(
+        "DOMContentLoaded",
+        () => {
+          (
+            window as unknown as {
+              __preMountThemeSnapshot?: {
+                dataTheme: string | null;
+                hasDarkClass: boolean;
+                colorScheme: string;
+              };
+            }
+          ).__preMountThemeSnapshot = {
+            dataTheme: document.documentElement.getAttribute("data-theme"),
+            hasDarkClass: document.documentElement.classList.contains("dark"),
+            colorScheme: document.documentElement.style.colorScheme,
+          };
+        },
+        { once: true }
+      );
+    });
+
+    await page.reload();
+    await expect(page.locator("#btn-theme-toggle")).toBeVisible();
+    const preMountSnapshot = await page.evaluate(
+      () =>
+        (
+          window as unknown as {
+            __preMountThemeSnapshot?: {
+              dataTheme: string | null;
+              hasDarkClass: boolean;
+              colorScheme: string;
+            };
+          }
+        ).__preMountThemeSnapshot
+    );
+    expect(preMountSnapshot).toEqual({
+      dataTheme: "dark",
+      hasDarkClass: true,
+      colorScheme: "dark",
+    });
+
+    // Cycle dark -> auto and verify live OS prefers-color-scheme media reactivity
+    await page.locator("#btn-theme-toggle").click();
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "auto");
+    expect(
+      await page.evaluate(() =>
+        document.documentElement.classList.contains("dark")
+      )
+    ).toBe(false);
+
+    await page.emulateMedia({ colorScheme: "dark" });
+    await expect
+      .poll(() =>
+        page.evaluate(() => document.documentElement.classList.contains("dark"))
+      )
+      .toBe(true);
+
+    // Cross-tab storage event updates active tab immediately
+    await page.evaluate(() => {
+      window.localStorage.setItem("vitepress-theme-appearance", "light");
+      window.dispatchEvent(
+        new StorageEvent("storage", {
+          key: "vitepress-theme-appearance",
+          newValue: "light",
+        })
+      );
+    });
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+    expect(
+      await page.evaluate(() =>
+        document.documentElement.classList.contains("dark")
+      )
+    ).toBe(false);
   });
 });

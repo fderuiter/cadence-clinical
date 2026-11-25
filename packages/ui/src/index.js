@@ -17,6 +17,7 @@ import ClinicalQueryFlag from "./components/clinical/ClinicalQueryFlag.vue";
 import ClinicalQueryPanel from "./components/clinical/ClinicalQueryPanel.vue";
 import ClinicalRadioGroup from "./components/clinical/ClinicalRadioGroup.vue";
 import ClinicalTabs from "./components/clinical/ClinicalTabs.vue";
+import ClinicalThemeToggle from "./components/clinical/ClinicalThemeToggle.vue";
 import ClinicalToastHost from "./components/clinical/ClinicalToastHost.vue";
 import EntityLink from "./components/clinical/EntityLink.vue";
 import SignOutConfirmModal from "./components/clinical/SignOutConfirmModal.vue";
@@ -25,12 +26,14 @@ import MediaPlayer from "./components/MediaPlayer.vue";
 import ModalErrorAlert from "./components/ModalErrorAlert.vue";
 import { useEscapeClose } from "./composables/useEscapeClose.js";
 import {
-  computeFloatingPosition,
-  getVisualViewportBounds,
-  observeVisualViewport,
   useFloatingPosition,
   useViewportMaxHeight,
 } from "./composables/useFloatingPosition.js";
+import {
+  computeFloatingPosition,
+  getVisualViewportBounds,
+  observeVisualViewport,
+} from "./utils/floatingGeometry.js";
 import {
   getFocusableElements,
   getTopActiveModalContainer,
@@ -52,6 +55,22 @@ import {
   resetDraftSourcesForTests,
   useSignOutGuard,
 } from "./composables/useSignOutGuard.js";
+import {
+  PREFERS_DARK_MEDIA_QUERY,
+  THEME_CHANGE_EVENT,
+  THEME_MODES,
+  THEME_STORAGE_KEY,
+  applyThemeToDocument,
+  bootstrapTheme,
+  cycleThemePreference,
+  detectSystemDarkPreference,
+  normalizeThemePreference,
+  readStoredThemePreference,
+  resolveEffectiveTheme,
+  subscribeThemeSync,
+  useTheme,
+  writeStoredThemePreference,
+} from "./composables/useTheme.js";
 
 export {
   ClinicalBreadcrumbs,
@@ -73,13 +92,22 @@ export {
   ClinicalQueryPanel,
   ClinicalRadioGroup,
   ClinicalTabs,
+  ClinicalThemeToggle,
   ClinicalToastHost,
   EmptyState,
   EntityLink,
   MediaPlayer,
   ModalErrorAlert,
+  PREFERS_DARK_MEDIA_QUERY,
   SignOutConfirmModal,
+  THEME_CHANGE_EVENT,
+  THEME_MODES,
+  THEME_STORAGE_KEY,
+  applyThemeToDocument,
+  bootstrapTheme,
   computeFloatingPosition,
+  cycleThemePreference,
+  detectSystemDarkPreference,
   flushRegisteredDraftSources,
   flushRegisteredDraftSourcesSync,
   getFocusableElements,
@@ -89,9 +117,13 @@ export {
   handoffRetryFocus,
   hasActiveModalFocusTrap,
   hasRegisteredUnsavedDrafts,
+  normalizeThemePreference,
   observeVisualViewport,
+  readStoredThemePreference,
   registerDraftSource,
   resetDraftSourcesForTests,
+  resolveEffectiveTheme,
+  subscribeThemeSync,
   trapTabFocus,
   useEscapeClose,
   useFloatingPosition,
@@ -99,7 +131,9 @@ export {
   useInlineFocusHandoff,
   useRetryFocusHandoff,
   useSignOutGuard,
+  useTheme,
   useViewportMaxHeight,
+  writeStoredThemePreference,
 };
 
 export { registerEntityPeekHandler } from "./utils/entityPeekHandler.js";

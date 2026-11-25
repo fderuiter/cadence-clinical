@@ -1301,13 +1301,6 @@ const commitAndActivateEDC = async () => {
   align-items: center;
   gap: 10px;
   cursor: pointer;
-  opacity: 0.6;
-  transition: opacity 0.2s ease;
-}
-
-.step-item.active,
-.step-item.completed {
-  opacity: 1;
 }
 
 .step-circle {
@@ -1333,13 +1326,18 @@ const commitAndActivateEDC = async () => {
 .step-item.completed .step-circle {
   background-color: var(--semantic-color-success);
   border-color: var(--semantic-color-success);
-  color: var(--semantic-color-surface);
+  color: var(--semantic-color-text-on-status);
 }
 
 .step-label {
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--semantic-color-text-body);
+  color: var(--semantic-color-text-secondary);
+}
+
+.step-item.active .step-label,
+.step-item.completed .step-label {
+  color: var(--semantic-color-text);
 }
 
 .step-divider {
@@ -1547,7 +1545,7 @@ const commitAndActivateEDC = async () => {
 .confidence-meter {
   flex: 1;
   height: 8px;
-  background-color: var(--semantic-color-success-border-soft);
+  background-color: var(--semantic-color-success-bg);
   border-radius: 4px;
   overflow: hidden;
 }

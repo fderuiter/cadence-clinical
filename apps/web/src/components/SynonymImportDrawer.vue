@@ -733,7 +733,7 @@ onMounted(() => {
 .synonym-tab-btn.active {
   background-color: var(--semantic-color-primary);
   border-color: var(--semantic-color-primary);
-  color: var(--semantic-color-text-inverse);
+  color: var(--semantic-color-text-on-primary);
 }
 
 .access-restricted-banner,
@@ -746,7 +746,7 @@ onMounted(() => {
 .access-restricted-banner {
   background-color: var(--semantic-color-warning-bg-soft);
   border: 1px solid var(--semantic-color-warning-border);
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text-dark);
 }
 
 .import-error-alert {
@@ -898,7 +898,7 @@ onMounted(() => {
 
 .btn-primary {
   background-color: var(--semantic-color-primary);
-  color: var(--semantic-color-text-inverse);
+  color: var(--semantic-color-text-on-primary);
 }
 
 .btn-secondary {
@@ -909,7 +909,7 @@ onMounted(() => {
 
 .btn-success {
   background-color: var(--semantic-color-success);
-  color: var(--semantic-color-surface);
+  color: var(--semantic-color-text-on-status);
 }
 
 .report-header-row,
@@ -1074,7 +1074,7 @@ onMounted(() => {
 }
 
 .text-dup {
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text-dark);
 }
 
 .text-invalid {

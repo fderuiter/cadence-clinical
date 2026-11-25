@@ -6,6 +6,10 @@
   "types": "./index.d.ts",
   "exports": {
     ".": "./index.js",
+    "./theme": {
+      "types": "./theme.d.ts",
+      "default": "./src/utils/themeController.js"
+    },
     "./testing": "./mockGateway.js",
     "./vitest": {
       "types": "./accessibility-matcher.d.ts",

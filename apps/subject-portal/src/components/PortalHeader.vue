@@ -11,6 +11,8 @@
       <span class="badge badge-gxp">Private &amp; Encrypted</span>
       <span class="badge badge-gamp">Offline Ready</span>
 
+      <ClinicalThemeToggle id="btn-portal-theme-toggle" density="touch" />
+
       <!-- Persistent dynamic sync status button -->
       <button
         id="btn-global-sync-drawer"
@@ -47,6 +49,7 @@
 <script setup>
 import { computed } from "vue";
 import { storeToRefs } from "pinia";
+import { ClinicalThemeToggle } from "ui";
 
 import { useSyncStore } from "../stores/sync.js";
 

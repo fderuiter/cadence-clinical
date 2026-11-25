@@ -29,6 +29,7 @@ const EXPECTED_SHARED_COMPONENTS = [
   "ClinicalQueryPanel",
   "ClinicalRadioGroup",
   "ClinicalTabs",
+  "ClinicalThemeToggle",
   "ClinicalToastHost",
   "EmptyState",
   "EntityLink",
@@ -51,6 +52,26 @@ const EXPECTED_FLOATING_HELPERS = [
   "observeVisualViewport",
   "useFloatingPosition",
   "useViewportMaxHeight",
+];
+
+const EXPECTED_THEME_FUNCTIONS = [
+  "applyThemeToDocument",
+  "bootstrapTheme",
+  "cycleThemePreference",
+  "detectSystemDarkPreference",
+  "normalizeThemePreference",
+  "readStoredThemePreference",
+  "resolveEffectiveTheme",
+  "subscribeThemeSync",
+  "useTheme",
+  "writeStoredThemePreference",
+];
+
+const EXPECTED_THEME_CONSTANTS = [
+  "PREFERS_DARK_MEDIA_QUERY",
+  "THEME_CHANGE_EVENT",
+  "THEME_MODES",
+  "THEME_STORAGE_KEY",
 ];
 
 function walkFiles(dir, extensions, ignoreDirs = new Set()) {
@@ -214,24 +235,33 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       expect(discoveredVueNames).toEqual(
         [...EXPECTED_SHARED_COMPONENTS].sort()
       );
-      expect(EXPECTED_SHARED_COMPONENTS).toHaveLength(25);
+      expect(EXPECTED_SHARED_COMPONENTS).toHaveLength(26);
       for (const name of EXPECTED_SHARED_COMPONENTS) {
         expect(rootUi[name], `root index.js missing ${name}`).toBeDefined();
       }
     });
 
-    it("exposes all 5 keyboard interaction helpers, floating position helpers, and createSrOnlyActionButton from root index.js", () => {
+    it("exposes all 5 keyboard interaction helpers, floating position helpers, theme controller helpers, and createSrOnlyActionButton from root index.js", () => {
       expect(EXPECTED_KEYBOARD_HELPERS).toHaveLength(5);
       expect(EXPECTED_FLOATING_HELPERS).toHaveLength(5);
+      expect(EXPECTED_THEME_FUNCTIONS).toHaveLength(10);
+      expect(EXPECTED_THEME_CONSTANTS).toHaveLength(4);
       for (const helperName of [
         ...EXPECTED_KEYBOARD_HELPERS,
         ...EXPECTED_FLOATING_HELPERS,
+        ...EXPECTED_THEME_FUNCTIONS,
         "createSrOnlyActionButton",
       ]) {
         expect(
           rootUi[helperName],
           `root index.js missing ${helperName}`
         ).toBeTypeOf("function");
+      }
+      for (const constName of EXPECTED_THEME_CONSTANTS) {
+        expect(
+          rootUi[constName],
+          `root index.js missing ${constName}`
+        ).toBeDefined();
       }
     });
 
@@ -245,6 +275,8 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       for (const helperName of [
         ...EXPECTED_KEYBOARD_HELPERS,
         ...EXPECTED_FLOATING_HELPERS,
+        ...EXPECTED_THEME_FUNCTIONS,
+        ...EXPECTED_THEME_CONSTANTS,
         "createSrOnlyActionButton",
       ]) {
         expect(dts).toMatch(
@@ -3149,6 +3181,227 @@ const save = () => {};
           )
         ).toEqual([]);
       }
+    });
+  });
+
+  describe("Requirement 13: Unified CSS Cascade, >= 69 Canonical Semantic Text Pairs & Same-Origin Pre-Paint Theme Bootstrap (ADR-2690)", () => {
+    const tokensCss = fs.readFileSync(path.join(uiDir, "tokens.css"), "utf-8");
+    const lightTheme = parseCssBlockVars(tokensCss, /:root\s*\{/);
+    const darkTheme = {
+      ...lightTheme,
+      ...parseCssBlockVars(tokensCss, /:root\[data-theme="dark"\][^{]*\{/),
+    };
+    const autoDarkTheme = {
+      ...lightTheme,
+      ...parseCssBlockVars(
+        tokensCss,
+        /:root:not\(\[data-theme="light"\]\),\s*:root\[data-theme="auto"\]\s*\{/
+      ),
+    };
+
+    it("delivers >= 4.5:1 WCAG 2.2 AA contrast across >= 69 canonical semantic text/background pairs in light, dark, and auto-dark modes", () => {
+      const surfaceTokens = [
+        "--semantic-color-surface",
+        "--semantic-color-surface-subtle",
+        "--semantic-color-surface-muted",
+      ];
+      const textOnSurfaceTokens = [
+        "--semantic-color-text",
+        "--semantic-color-text-dark",
+        "--semantic-color-text-body",
+        "--semantic-color-text-muted",
+        "--semantic-color-text-secondary",
+        "--semantic-color-text-subtle",
+        "--semantic-color-primary",
+        "--semantic-color-primary-dark",
+        "--semantic-color-accent",
+        "--semantic-color-interactive-primary",
+        "--semantic-color-interactive-primary-hover",
+        "--semantic-color-interactive-brand",
+        "--semantic-color-info",
+        "--semantic-color-success",
+        "--semantic-color-success-dark",
+        "--semantic-color-warning",
+        "--semantic-color-warning-text",
+        "--semantic-color-warning-text-dark",
+        "--semantic-color-error",
+        "--semantic-color-error-dark",
+        "--semantic-color-error-text-dark",
+        "--semantic-color-error-text-deep",
+        "--semantic-color-ai",
+        "--semantic-color-ai-dark",
+        "--semantic-color-teal-text",
+        "--semantic-color-indigo-text",
+        "--semantic-color-purple-text",
+        "--semantic-color-orange-text",
+        "--semantic-color-rose-text",
+        "--semantic-color-pink-text",
+      ];
+
+      const canonicalPairs = [];
+      for (const fg of textOnSurfaceTokens) {
+        for (const bg of surfaceTokens) {
+          canonicalPairs.push([fg, bg]);
+        }
+      }
+
+      const pairedSurfaceAndSolidTokens = [
+        ["--semantic-color-text-on-primary", "--semantic-color-primary"],
+        ["--semantic-color-text-on-accent", "--semantic-color-accent"],
+        ["--semantic-color-text-on-ai", "--semantic-color-ai"],
+        ["--semantic-color-text-on-status", "--semantic-color-success"],
+        ["--semantic-color-text-on-status", "--semantic-color-warning"],
+        ["--semantic-color-text-on-status", "--semantic-color-error"],
+        [
+          "--semantic-color-text-on-solid",
+          "--semantic-color-error-interactive",
+        ],
+        [
+          "--semantic-color-text-on-solid",
+          "--semantic-color-error-interactive-hover",
+        ],
+        [
+          "--semantic-color-text-on-solid",
+          "--semantic-color-success-interactive",
+        ],
+        ["--semantic-color-text-on-solid", "--semantic-color-warning-action"],
+        ["--semantic-color-text-on-solid", "--semantic-color-wallet-start"],
+        ["--semantic-color-text-on-solid", "--semantic-color-wallet-end"],
+        ["--semantic-color-info", "--semantic-color-info-bg"],
+        ["--semantic-color-info", "--semantic-color-info-bg-soft"],
+        ["--semantic-color-info", "--semantic-color-info-light"],
+        ["--semantic-color-success", "--semantic-color-success-bg"],
+        ["--semantic-color-success", "--semantic-color-success-bg-soft"],
+        ["--semantic-color-warning", "--semantic-color-warning-bg"],
+        ["--semantic-color-warning", "--semantic-color-warning-bg-soft"],
+        ["--semantic-color-warning", "--semantic-color-warning-bg-light"],
+        ["--semantic-color-error", "--semantic-color-error-bg"],
+        ["--semantic-color-error", "--semantic-color-error-bg-soft"],
+        ["--semantic-color-error", "--semantic-color-error-bg-row"],
+        ["--semantic-color-ai", "--semantic-color-ai-bg"],
+        ["--semantic-color-ai-dark", "--semantic-color-ai-bg"],
+        ["--semantic-badge-draft-text", "--semantic-badge-draft-bg"],
+        ["--semantic-badge-verified-text", "--semantic-badge-verified-bg"],
+        ["--semantic-badge-queried-text", "--semantic-badge-queried-bg"],
+        ["--semantic-badge-frozen-text", "--semantic-badge-frozen-bg"],
+        ["--semantic-badge-signed-text", "--semantic-badge-signed-bg"],
+        ["--semantic-badge-locked-text", "--semantic-badge-locked-bg"],
+        ["--semantic-badge-warning-text", "--semantic-badge-warning-bg"],
+        ["--semantic-badge-error-text", "--semantic-badge-error-bg"],
+        ["--semantic-badge-unsaved-text", "--semantic-badge-unsaved-bg"],
+        ["--semantic-badge-candidate-text", "--semantic-badge-candidate-bg"],
+        [
+          "--semantic-badge-in-progress-text",
+          "--semantic-badge-in-progress-bg",
+        ],
+        ["--semantic-badge-regulatory-text", "--semantic-badge-regulatory-bg"],
+        ["--semantic-color-teal-text", "--semantic-color-teal-bg"],
+        ["--semantic-color-indigo-text", "--semantic-color-indigo-bg"],
+        ["--semantic-color-purple-text", "--semantic-color-purple-bg"],
+        ["--semantic-color-orange-text", "--semantic-color-orange-bg"],
+        ["--semantic-color-rose-text", "--semantic-color-rose-bg"],
+        ["--semantic-color-pink-text", "--semantic-color-pink-bg"],
+        ["--semantic-color-text-inverse", "--semantic-color-surface-inverse"],
+        [
+          "--semantic-color-text-inverse-muted",
+          "--semantic-color-surface-inverse",
+        ],
+        ["--semantic-color-accent-inverse", "--semantic-color-surface-inverse"],
+        [
+          "--semantic-color-emerald-inverse-text",
+          "--semantic-color-surface-inverse",
+        ],
+      ];
+
+      canonicalPairs.push(...pairedSurfaceAndSolidTokens);
+      expect(canonicalPairs.length).toBeGreaterThanOrEqual(69);
+
+      for (const [modeName, themeMap] of [
+        ["light", lightTheme],
+        ["dark", darkTheme],
+        ["auto-dark", autoDarkTheme],
+      ]) {
+        for (const [fgToken, bgToken] of canonicalPairs) {
+          const fgHex = resolveVar(fgToken, themeMap);
+          const bgHex = resolveVar(bgToken, themeMap);
+          expect(fgHex, `${modeName} ${fgToken} must resolve`).toBeTruthy();
+          expect(bgHex, `${modeName} ${bgToken} must resolve`).toBeTruthy();
+          const ratio = contrastRatio(fgHex, bgHex);
+          expect(
+            ratio,
+            `${modeName} ${fgToken} (${fgHex}) on ${bgToken} (${bgHex}) = ${ratio.toFixed(2)}:1 (< 4.5:1)`
+          ).toBeGreaterThanOrEqual(4.5);
+        }
+      }
+    });
+
+    it("eliminates surface-as-text rules and wires pre-paint same-origin theme-bootstrap.js + ClinicalThemeToggle across web, subject-portal, and VitePress", () => {
+      const surfaceAsTextPattern =
+        /(?<![-\w])color\s*:\s*var\(--semantic-color-surface\)/;
+
+      const aiLabelCss = fs.readFileSync(
+        path.join(webSrcDir, "components/ai/AiLabel.vue"),
+        "utf-8"
+      );
+      expect(aiLabelCss).toContain("var(--semantic-color-text-on-ai)");
+      expect(aiLabelCss).not.toMatch(surfaceAsTextPattern);
+
+      const digitizationVue = fs.readFileSync(
+        path.join(webSrcDir, "views/ProtocolDigitizationView.vue"),
+        "utf-8"
+      );
+      expect(digitizationVue).toContain("var(--semantic-color-text-on-status)");
+      expect(digitizationVue).not.toMatch(surfaceAsTextPattern);
+
+      const binderVue = fs.readFileSync(
+        path.join(webSrcDir, "components/etmf/TmfBinderTree.vue"),
+        "utf-8"
+      );
+      expect(binderVue).toContain("var(--semantic-color-text-on-primary)");
+      expect(binderVue).not.toMatch(surfaceAsTextPattern);
+
+      const portalCss = fs.readFileSync(
+        path.join(portalSrcDir, "style.css"),
+        "utf-8"
+      );
+      expect(portalCss).toContain("var(--semantic-color-text-on-solid)");
+      expect(portalCss).toContain("var(--semantic-color-text-on-primary)");
+      expect(portalCss).not.toMatch(surfaceAsTextPattern);
+
+      for (const htmlPath of [
+        path.join(repoRoot, "apps/web/index.html"),
+        path.join(repoRoot, "apps/subject-portal/index.html"),
+      ]) {
+        const html = fs.readFileSync(htmlPath, "utf-8");
+        expect(html).toMatch(
+          /<head>[\s\S]*<script src="%BASE_URL%theme-bootstrap\.js"><\/script>[\s\S]*<\/head>/
+        );
+        // Zero inline <script> bodies (strict script-src 'self')
+        const inlineScripts = [
+          ...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi),
+        ].filter(([, attrs, body]) => !/\bsrc=/.test(attrs) || body.trim());
+        expect(inlineScripts).toEqual([]);
+      }
+
+      const appShell = fs.readFileSync(
+        path.join(webSrcDir, "components/AppShell.vue"),
+        "utf-8"
+      );
+      expect(appShell).toContain("ClinicalThemeToggle");
+
+      const portalHeader = fs.readFileSync(
+        path.join(portalSrcDir, "components/PortalHeader.vue"),
+        "utf-8"
+      );
+      expect(portalHeader).toContain("ClinicalThemeToggle");
+
+      const vitepressTheme = fs.readFileSync(
+        path.join(repoRoot, "docs/.vitepress/theme/index.js"),
+        "utf-8"
+      );
+      expect(vitepressTheme).toContain("bootstrapTheme");
+      expect(vitepressTheme).toContain("subscribeThemeSync");
+      expect(vitepressTheme).toContain("readStoredThemePreference");
     });
   });
 });

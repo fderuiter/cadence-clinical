@@ -507,7 +507,7 @@ onMounted(() => {
 
 .btn-primary {
   background-color: var(--primary);
-  color: var(--semantic-color-surface);
+  color: var(--semantic-color-text-on-solid);
 }
 
 .btn-primary:hover:not(:disabled) {
@@ -675,12 +675,12 @@ onMounted(() => {
 
 .btn-apply-single:hover:not(:disabled) {
   background-color: var(--primary);
-  color: var(--semantic-color-surface);
+  color: var(--semantic-color-text-on-solid);
 }
 
 .btn-success {
   background-color: var(--success);
-  color: var(--semantic-color-surface);
+  color: var(--semantic-color-text-on-status);
   min-height: 44px;
   padding: 10px;
   font-weight: 600;

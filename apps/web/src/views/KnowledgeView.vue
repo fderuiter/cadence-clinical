@@ -2920,7 +2920,7 @@ export default {
 }
 
 .status-published {
-  background-color: var(--semantic-color-success-border-soft);
+  background-color: var(--semantic-color-success-bg);
   color: var(--semantic-color-success-dark);
   border: 1px solid var(--semantic-color-success-border);
 }
@@ -3207,7 +3207,7 @@ export default {
 
 .btn-primary {
   background-color: var(--semantic-color-primary);
-  color: var(--semantic-color-surface);
+  color: var(--semantic-color-text-on-primary);
 }
 
 .btn-primary:hover {
@@ -3226,7 +3226,7 @@ export default {
 
 .btn-success {
   background-color: var(--semantic-color-success);
-  color: var(--semantic-color-surface);
+  color: var(--semantic-color-text-on-status);
 }
 
 .btn-success:hover {
@@ -3235,7 +3235,7 @@ export default {
 
 .btn-danger {
   background-color: var(--semantic-color-error);
-  color: var(--semantic-color-surface);
+  color: var(--semantic-color-text-on-status);
 }
 
 .btn-danger:hover {

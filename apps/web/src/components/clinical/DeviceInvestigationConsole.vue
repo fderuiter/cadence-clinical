@@ -2377,7 +2377,7 @@ onMounted(() => {
 }
 
 .row-quarantined:hover {
-  background-color: var(--semantic-color-rose-border);
+  background-color: var(--semantic-color-rose-bg);
 }
 
 .brand-cell {

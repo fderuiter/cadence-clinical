@@ -284,6 +284,12 @@
           </button>
         </template>
 
+        <ClinicalThemeToggle
+          id="btn-theme-toggle"
+          density="compact"
+          :show-label="false"
+        />
+
         <button
           v-if="authStore.isAuthenticated"
           id="btn-mobile-menu-toggle"
@@ -514,6 +520,9 @@ import {
   updateShellStickyHeaderHeight,
 } from "../utils/stickyChromeOffset";
 
+const ClinicalThemeToggle = defineAsyncComponent(
+  () => import("./ShellThemeToggle.vue")
+);
 const DemoResetBtn = isDemoBuild()
   ? defineAsyncComponent(() => import("../views/demo/DemoResetButton.vue"))
   : null;
@@ -1674,6 +1683,7 @@ onUnmounted(() => {
     padding: 4px 7px;
     font-size: 0.76rem;
     line-height: 1.2;
+    flex-wrap: nowrap;
     white-space: nowrap;
   }
 
@@ -1704,37 +1714,48 @@ onUnmounted(() => {
   }
 }
 
-@media (min-width: 768px) and (max-width: 860px) {
+@media (min-width: 768px) and (max-width: 940px) {
   .app-header {
     padding: 3px 12px;
     gap: 6px;
+    flex-wrap: nowrap;
+  }
+
+  .header-left,
+  .header-controls {
+    flex-wrap: nowrap;
   }
 }
 
-@media (min-width: 861px) {
+@media (min-width: 941px) {
   .app-header {
-    padding: 5px 14px;
+    padding: 3px 14px;
     gap: 6px;
+    flex-wrap: nowrap;
+  }
+
+  .header-left,
+  .header-controls {
     flex-wrap: nowrap;
   }
 }
 
 @media (min-width: 1281px) and (max-width: 1520px) {
   .app-header {
-    padding: 5px 12px;
-    gap: 6px;
+    padding: 3px 12px;
+    gap: 5px;
   }
 
   .plan-status-badge {
-    max-width: 108px;
-  }
-
-  .persona-select {
     max-width: 96px;
   }
 
+  .persona-select {
+    max-width: 88px;
+  }
+
   .user-badge {
-    max-width: 72px;
+    max-width: 68px;
     font-size: 0.78rem;
   }
 }
@@ -1812,14 +1833,14 @@ onUnmounted(() => {
   }
 }
 
-@media (min-width: 861px) and (max-width: 1024px) {
+@media (min-width: 941px) and (max-width: 1024px) {
   .app-header {
-    padding: 5px 10px;
-    gap: 5px;
+    padding: 3px 10px;
+    gap: 4px;
   }
 
   .header-title-area h1 {
-    font-size: 0.86rem;
+    font-size: 0.84rem;
   }
 
   .primary-nav-link {
@@ -1828,15 +1849,15 @@ onUnmounted(() => {
   }
 
   .plan-status-badge {
-    max-width: 92px;
+    max-width: 82px;
   }
 
   .persona-select {
-    max-width: 90px;
+    max-width: 80px;
   }
 }
 
-@media (max-width: 860px) {
+@media (max-width: 940px) {
   .primary-nav {
     display: none;
   }
