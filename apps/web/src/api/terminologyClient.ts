@@ -1,5 +1,6 @@
 import { encodeChangeReason } from "./changeReason";
-import { openApiClient, unwrapResponse } from "./client";
+import { unwrapResponse } from "./client";
+import { openApiClient } from "./legacyClient";
 
 export class TerminologyNetworkError extends Error {
   status: number | null;

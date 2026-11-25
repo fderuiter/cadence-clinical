@@ -12,6 +12,7 @@ import ClinicalIconButton from "./components/clinical/ClinicalIconButton.vue";
 import ClinicalInput from "./components/clinical/ClinicalInput.vue";
 import ClinicalLookupInput from "./components/clinical/ClinicalLookupInput.vue";
 import ClinicalModal from "./components/clinical/ClinicalModal.vue";
+import ClinicalPopover from "./components/clinical/ClinicalPopover.vue";
 import ClinicalQueryFlag from "./components/clinical/ClinicalQueryFlag.vue";
 import ClinicalQueryPanel from "./components/clinical/ClinicalQueryPanel.vue";
 import ClinicalRadioGroup from "./components/clinical/ClinicalRadioGroup.vue";
@@ -23,6 +24,13 @@ import EmptyState from "./components/common/EmptyState.vue";
 import MediaPlayer from "./components/MediaPlayer.vue";
 import ModalErrorAlert from "./components/ModalErrorAlert.vue";
 import { useEscapeClose } from "./composables/useEscapeClose.js";
+import {
+  computeFloatingPosition,
+  getVisualViewportBounds,
+  observeVisualViewport,
+  useFloatingPosition,
+  useViewportMaxHeight,
+} from "./composables/useFloatingPosition.js";
 import {
   getFocusableElements,
   getTopActiveModalContainer,
@@ -60,6 +68,7 @@ export {
   ClinicalInput,
   ClinicalLookupInput,
   ClinicalModal,
+  ClinicalPopover,
   ClinicalQueryFlag,
   ClinicalQueryPanel,
   ClinicalRadioGroup,
@@ -70,22 +79,27 @@ export {
   MediaPlayer,
   ModalErrorAlert,
   SignOutConfirmModal,
+  computeFloatingPosition,
   flushRegisteredDraftSources,
   flushRegisteredDraftSourcesSync,
   getFocusableElements,
   getTopActiveModalContainer,
+  getVisualViewportBounds,
   handoffFocus,
   handoffRetryFocus,
   hasActiveModalFocusTrap,
   hasRegisteredUnsavedDrafts,
+  observeVisualViewport,
   registerDraftSource,
   resetDraftSourcesForTests,
   trapTabFocus,
   useEscapeClose,
+  useFloatingPosition,
   useFocusTrap,
   useInlineFocusHandoff,
   useRetryFocusHandoff,
   useSignOutGuard,
+  useViewportMaxHeight,
 };
 
 export { registerEntityPeekHandler } from "./utils/entityPeekHandler.js";

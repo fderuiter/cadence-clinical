@@ -543,6 +543,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2531: Every Mapped Test Is Mandatory Evidence, and Reports Name What They Tested](adr/2026-10-15-every-mapped-test-is-mandatory-evidence.md) | Current | - Status: Accepted |
 | [ADR-2532: Feature Branches Never Commit the GxP Snapshot](adr/2026-10-16-feature-branches-never-commit-the-gxp-snapshot.md) | Current | Accepted |
 | [ADR-2508: Pin pnpm and Node with packageManager and engines](adr/2026-10-16-pin-pnpm-and-node-with-packagemanager-and-engines.md) | Current | - Status: Accepted |
+| [ADR-2509: Retire Remaining Python Reference Sources, Phantom Baselines, and Scanner Residue](adr/2026-11-24-retire-remaining-python-references-and-scanner-residue.md) | Current | - Status: Accepted |
 | [ADR-2523: Explicit Transactions Run Inside the Execution Strategy](adr/2026-10-19-explicit-transactions-run-inside-the-execution-strategy.md) | Current | - Status: Accepted |
 | [ADR-2542: The Kernel Host Provisions the Development Tenant](adr/2026-10-19-the-kernel-host-provisions-the-development-tenant.md) | Current | - Status: Accepted |
 | [ADR-2600: Modules Write Through the Kernel Command Path](adr/2026-10-19-modules-write-through-the-kernel-command-path.md) | Current | - Status: Accepted |
@@ -641,11 +642,13 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2675: Standardize Semantic Role Tokens, Dark-Theme Parity, and ESLint AST Color Gates](adr/2026-11-23-standardize-semantic-role-tokens-and-eslint-color-gates.md) | Current | - Status: Accepted |
 | [ADR-2674: Migrate Web Drawers to Bounded `ClinicalDrawer` and Enforce Viewport Reflow](adr/2026-11-24-migrate-web-drawers-to-bounded-clinical-drawer.md) | Current | - Status: Accepted |
 | [ADR-2676: Focus-Trap Detachment Recovery, Shared Retry Focus Primitives, and Inline Focus-Handoff AST Gates](adr/2026-11-24-focus-trap-detachment-recovery-and-retry-focus-primitives.md) | Current | - Status: Accepted |
+| [ADR-2678: Retire Legacy OpenAPI Snapshot, Isolate Legacy Web Client, and Prune Uncalled Web Types](adr/2026-11-24-retire-legacy-openapi-snapshot-and-isolate-legacy-web-client.md) | Current | - Status: Accepted |
 | [ADR-2824: Standardize Clinical Typography Utilities, 12px Floor, and AST Lints](adr/2026-11-24-standardize-clinical-typography-utilities-12px-floor-and-ast-lints.md) | Current | - Status: Accepted |
 | [ADR-2666: Atomic Dual-Signer Step-Up Verification and Startup-Validated CGT Barcode Key](adr/2026-11-24-atomic-dual-signer-step-up-verification-and-startup-validated-cgt-barcode-key.md) | Current | - Status: Accepted |
 | [ADR-2667: Fail-Closed Site Scope for Pharmacist and Subject Roles](adr/2026-11-23-fail-closed-site-scope-for-pharmacist-and-subject-roles.md) | Current | - Status: Accepted |
 | [ADR-2677: Retire Dead UI and Web Exports and Enforce UI Consumer Reachability](adr/2026-11-24-retire-dead-ui-exports-and-enforce-consumer-guard.md) | Current | - Status: Accepted |
 | [ADR-2680: Consolidate CTMS Delegation of Authority Ownership and Signed Cross-Service GxP Contracts](adr/2026-11-23-consolidate-ctms-doa-and-signed-service-contracts.md) | Current | - Status: Accepted |
+| [ADR-2689: Centralize Floating Primitives and Top-Right Toast Stack](adr/2026-11-25-centralize-floating-primitives-and-top-right-toast-stack.md) | Current | - Status: Accepted |
 
 ## Developing and running
 
@@ -659,11 +662,11 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [CLI reference](cli.md) | Generated | Every `pnpm cadence` command (`pnpm cadence generate-cli-docs`) |
 | [Service and package READMEs](../ARCHITECTURE.md#3-running-services-today) | Current | One README per `apps/*` and `packages/*` directory |
 | [REST API reference](api/index.md) | Generated | Per-service endpoint reference from `docs/openapi/*.json` (`pnpm cadence generate-api-docs`) |
-| [OpenAPI specifications](openapi/README.md) | Generated | Exported OpenAPI documents (`pnpm cadence sync-openapi-spec`); legacy aggregate snapshot in `openapi/legacy/cdisc_openapi.json` |
+| [OpenAPI specifications](openapi/README.md) | Generated | Exported `.NET` OpenAPI documents (`pnpm cadence sync-openapi-spec`) and remaining web client migration boundary |
 | [UI components](components/index.md) | Current | Shared Vue component catalog (`packages/ui`) |
 | [Moving the web app onto the .NET API](web/API_MIGRATION.md) | Current | Which web screens have a .NET backend, which are hidden, and how a screen moves over (epic #4833) |
 | [Migration workflow playbook](MIGRATION_WORKFLOW.md) | Current | How to port the remaining Python reference sources to C# |
-| [Python reference inventory](PYTHON_REFERENCE_INVENTORY.md) | Current | Each remaining Python file, its C# status and what it needs before deletion (#4789) |
+| [Python reference inventory](PYTHON_REFERENCE_INVENTORY.md) | Historical | Archived record of retired Python reference files and their C# dispositions (#4789, ADR-2509) |
 | [Operations and deployment guide](SDLC/07_Operations_Deployment_Guide.md) | Baseline | Deployment topology and runbooks; being revised with the production-readiness work |
 | [Lab reference ranges](OPERATIONAL_LAB_RANGES.md) | Baseline | Range selection, scoring and tie-breaking rules |
 | [eTMF inbound email](OPERATIONAL_INBOUND_EMAIL.md) | Baseline | Inbound-email webhook security and processing |

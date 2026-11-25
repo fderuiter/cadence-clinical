@@ -162,4 +162,25 @@ public sealed class ScaffoldPostAndBlogGatesTests : IDisposable
         PathPatternValidatorService.ValidatePathPatterns(files: null, repoRoot: _tempDir)
             .Should().Be(1, "unscoped path-patterns scan must reject nested .vue files outside apps/, packages/, and docs/.vitepress/");
     }
+
+    [Fact]
+    public void PathPatternValidator_RejectsPythonFilesUnderAppsAndPackages()
+    {
+        string strayPackagePy = Path.Combine(_tempDir, "packages", "security", "legacy.py");
+        Directory.CreateDirectory(Path.GetDirectoryName(strayPackagePy)!);
+        File.WriteAllText(strayPackagePy, "x = 1\n");
+
+        PathPatternValidatorService.ValidatePathPatterns(
+            files: ["packages/security/legacy.py"],
+            repoRoot: _tempDir).Should().Be(1);
+
+        File.Delete(strayPackagePy);
+
+        string strayAppPy = Path.Combine(_tempDir, "apps", "ctms", "helper.py");
+        Directory.CreateDirectory(Path.GetDirectoryName(strayAppPy)!);
+        File.WriteAllText(strayAppPy, "x = 1\n");
+
+        PathPatternValidatorService.ValidatePathPatterns(files: null, repoRoot: _tempDir)
+            .Should().Be(1, "unscoped path-patterns scan must reject .py files under apps/ and packages/");
+    }
 }

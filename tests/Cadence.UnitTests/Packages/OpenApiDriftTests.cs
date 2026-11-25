@@ -41,14 +41,12 @@ public sealed class OpenApiDriftTests : IDisposable
     }
 
     [Fact]
-    public void FindDrift_ReportsMissingChangedAndStaleSpecs_AndIgnoresLegacy()
+    public void FindDrift_ReportsMissingChangedAndStaleSpecs()
     {
         File.WriteAllText(Path.Combine(_exported, "ctms_openapi.json"), Spec);
         File.WriteAllText(Path.Combine(_exported, "org_openapi.json"), Spec);
         File.WriteAllText(Path.Combine(_committed, "ctms_openapi.json"), Spec.Replace("CtmsStatus", "Renamed"));
         File.WriteAllText(Path.Combine(_committed, "gateway_openapi.json"), Spec);
-        Directory.CreateDirectory(Path.Combine(_committed, "legacy"));
-        File.WriteAllText(Path.Combine(_committed, "legacy", "payments_openapi.json"), Spec);
 
         OpenApiSyncService.FindDrift(_exported, _committed).Should().Equal(
             "ctms_openapi.json (out of date)",

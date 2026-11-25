@@ -1,11 +1,7 @@
 import { encodeChangeReason } from "./changeReason";
-import {
-  ApiError,
-  createOpenApiClient,
-  openApiClient,
-  unwrapResponse,
-} from "./client";
+import { ApiError, createOpenApiClient, unwrapResponse } from "./client";
 import type { components, paths as EtmfPaths } from "./generated/etmf";
+import { openApiClient } from "./legacyClient";
 import { requestStepUpSignature } from "./signatureVerification";
 
 type EtmfSchemas = components["schemas"];

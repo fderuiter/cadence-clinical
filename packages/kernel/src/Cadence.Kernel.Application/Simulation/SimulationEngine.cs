@@ -808,7 +808,7 @@ public sealed class SimulationEngine(
         IReadOnlyList<ProjectionDatasetChange>? projectionChanges,
         ValidationDeltaSummary? validationDelta)
     {
-        var inputHash = ContentHash.Compute(InputDocument(scope, asOf, summary, engines, masked, visibleStateDigest).ToJsonString());
+        var inputHash = ComputeInputHash(scope, asOf, summary, engines, masked, visibleStateDigest);
         var preliminary = new SimulationResult(
             scope,
             asOf,
@@ -1321,29 +1321,66 @@ public sealed class SimulationEngine(
         return error.WithMessage($"{error.Message} {string.Join(" ", problems.Take(MaxReportedProblems))}{more}");
     }
 
-    private static JsonObject InputDocument(
+    private static string ComputeInputHash(
         NodeRef scope,
         SimulationAsOf asOf,
         CandidateSummary candidate,
         IReadOnlyList<EngineVersion> engines,
         IReadOnlyList<MaskedPart> masked,
-        string? visibleStateDigest)
-    {
-        var doc = new JsonObject
+        string? visibleStateDigest) =>
+        ContentHash.ComputeStreaming(writer =>
         {
-            ["scope"] = scope.ToString(),
-            ["as_of"] = AsOfNode(asOf),
-            ["candidate"] = CandidateNode(candidate),
-            ["engines"] = new JsonArray([.. engines.Select(e => (JsonNode?)new JsonObject { ["name"] = e.Name, ["version"] = e.Version })]),
-            ["masked"] = MaskedNode(masked),
-        };
-        if (visibleStateDigest is not null)
-        {
-            doc["visible_state_digest"] = visibleStateDigest;
-        }
+            writer.WriteStartObject();
 
-        return doc;
-    }
+            writer.WritePropertyName("as_of"u8);
+            writer.WriteStartObject();
+            writer.WriteString("known_at"u8, asOf.KnownAt.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture));
+            writer.WriteString("valid_at"u8, asOf.ValidAt.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture));
+            writer.WriteEndObject();
+
+            writer.WritePropertyName("candidate"u8);
+            writer.WriteStartObject();
+            writer.WriteString("base_content_hash"u8, candidate.BaseContentHash);
+            writer.WriteString("base_version"u8, candidate.BaseVersion?.ToString());
+            writer.WriteString("content_hash"u8, candidate.ContentHash);
+            writer.WriteString("kind"u8, candidate.Kind.ToString());
+            writer.WriteString("version"u8, candidate.Version?.ToString());
+            writer.WriteEndObject();
+
+            writer.WritePropertyName("engines"u8);
+            writer.WriteStartArray();
+            for (var i = 0; i < engines.Count; i++)
+            {
+                var engine = engines[i];
+                writer.WriteStartObject();
+                writer.WriteString("name"u8, engine.Name);
+                writer.WriteString("version"u8, engine.Version);
+                writer.WriteEndObject();
+            }
+
+            writer.WriteEndArray();
+
+            writer.WritePropertyName("masked"u8);
+            writer.WriteStartArray();
+            for (var i = 0; i < masked.Count; i++)
+            {
+                var part = masked[i];
+                writer.WriteStartObject();
+                writer.WriteString("part"u8, part.Part);
+                writer.WriteString("reason"u8, part.Reason.ToString());
+                writer.WriteEndObject();
+            }
+
+            writer.WriteEndArray();
+
+            writer.WriteString("scope"u8, scope.ToString());
+            if (visibleStateDigest is not null)
+            {
+                writer.WriteString("visible_state_digest"u8, visibleStateDigest);
+            }
+
+            writer.WriteEndObject();
+        });
 
     private static IReadOnlyList<MatrixGapFinding> EvaluateMatrixGaps(string content)
     {
@@ -1351,26 +1388,8 @@ public sealed class SimulationEngine(
         return read.Design is { } design ? MatrixGapAnalyzer.Analyze(design) : [];
     }
 
-    private static JsonObject AsOfNode(SimulationAsOf asOf) => new()
-    {
-        ["valid_at"] = asOf.ValidAt.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture),
-        ["known_at"] = asOf.KnownAt.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture),
-    };
-
-    private static JsonObject CandidateNode(CandidateSummary candidate) => new()
-    {
-        ["kind"] = candidate.Kind.ToString(),
-        ["version"] = candidate.Version?.ToString(),
-        ["base_version"] = candidate.BaseVersion?.ToString(),
-        ["content_hash"] = candidate.ContentHash,
-        ["base_content_hash"] = candidate.BaseContentHash,
-    };
-
     private static NodeRef NodeRefForItem(LibraryItemView item) =>
         item.VersionIndex >= 1 ? NodeRef.For(item.Id, item.VersionIndex) : NodeRef.For(item.Id);
-
-    private static JsonArray MaskedNode(IReadOnlyList<MaskedPart> masked) =>
-        new([.. masked.Select(m => (JsonNode?)new JsonObject { ["part"] = m.Part, ["reason"] = m.Reason.ToString() })]);
 
     private sealed record ProtocolCandidate(
         ProtocolVersionId? Id,

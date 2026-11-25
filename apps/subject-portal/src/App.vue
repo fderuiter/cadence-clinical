@@ -74,10 +74,12 @@
     <!-- Shared accessible participant toast host -->
     <ClinicalToastHost
       data-portal-toast-host="true"
+      position="bottom-right"
       :toasts="portalToasts"
       latest-toast-id="toast-container"
       aria-label="Participant notifications"
       @dismiss="dismissToast"
+      @clear="portalToasts = []"
     />
   </div>
 </template>
