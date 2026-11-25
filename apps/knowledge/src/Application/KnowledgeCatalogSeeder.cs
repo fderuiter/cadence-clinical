@@ -1,6 +1,9 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Data.Common;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -48,6 +51,10 @@ public static class KnowledgeCatalogSeeder
 
     private static readonly SemaphoreSlim SeedLock = new(1, 1);
 
+    private static readonly ConditionalWeakTable<DbConnection, ConcurrentDictionary<string, byte>> SeededTenantsByConnection = new();
+
+    private static readonly ConcurrentDictionary<string, byte> SeededTenantsByConnectionKey = new(StringComparer.Ordinal);
+
     private static readonly string AllStaffVisibilityJson = JsonSerializer.Serialize(new[]
     {
         "super_admin",
@@ -80,19 +87,27 @@ public static class KnowledgeCatalogSeeder
     public static async Task EnsureSeededAsync(KnowledgeDbContext db, IClock clock, CancellationToken ct = default)
     {
         string tenantSuffix = await ResolveSeedTenantSuffixAsync(db, ct).ConfigureAwait(false);
+        if (IsTenantSeeded(db, tenantSuffix))
+        {
+            return;
+        }
+
         string latestMappingSentinelId = $"m-stc-q-observation{tenantSuffix}";
 
         // Fast path: once complete HTML snapshots, Canvas section SOPs, and zoom mappings exist for this tenant, skip locking and writes.
         if (await HasCompleteCatalogBaselineAsync(db, latestMappingSentinelId, ct).ConfigureAwait(false))
         {
+            MarkTenantSeeded(db, tenantSuffix);
             return;
         }
 
         await SeedLock.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            if (await HasCompleteCatalogBaselineAsync(db, latestMappingSentinelId, ct).ConfigureAwait(false))
+            if (IsTenantSeeded(db, tenantSuffix)
+                || await HasCompleteCatalogBaselineAsync(db, latestMappingSentinelId, ct).ConfigureAwait(false))
             {
+                MarkTenantSeeded(db, tenantSuffix);
                 return;
             }
 
@@ -238,11 +253,79 @@ public static class KnowledgeCatalogSeeder
             }
 
             await db.SaveChangesAsync(ct).ConfigureAwait(false);
+            MarkTenantSeeded(db, tenantSuffix);
         }
         finally
         {
             SeedLock.Release();
         }
+    }
+
+    private static bool IsTenantSeeded(KnowledgeDbContext db, string tenantSuffix)
+    {
+        var (connectionInstance, connectionKey) = ResolveConnectionMemoKey(db, tenantSuffix);
+        if (connectionInstance is not null)
+        {
+            return SeededTenantsByConnection.TryGetValue(connectionInstance, out var tenants)
+                   && tenants.ContainsKey(tenantSuffix);
+        }
+
+        return connectionKey is not null && SeededTenantsByConnectionKey.ContainsKey(connectionKey);
+    }
+
+    private static void MarkTenantSeeded(KnowledgeDbContext db, string tenantSuffix)
+    {
+        var (connectionInstance, connectionKey) = ResolveConnectionMemoKey(db, tenantSuffix);
+        if (connectionInstance is not null)
+        {
+            var tenants = SeededTenantsByConnection.GetOrCreateValue(connectionInstance);
+            tenants.TryAdd(tenantSuffix, 0);
+            return;
+        }
+
+        if (connectionKey is not null)
+        {
+            SeededTenantsByConnectionKey.TryAdd(connectionKey, 0);
+        }
+    }
+
+    private static (DbConnection? ConnectionInstance, string? ConnectionKey) ResolveConnectionMemoKey(
+        KnowledgeDbContext db,
+        string tenantSuffix)
+    {
+        var relationalExt = db.GetService<IDbContextOptions>()?
+            .Extensions
+            .OfType<RelationalOptionsExtension>()
+            .FirstOrDefault();
+
+        if (relationalExt?.Connection is not null)
+        {
+            return (relationalExt.Connection, null);
+        }
+
+        string? configuredConnectionString = relationalExt?.ConnectionString;
+        if (!string.IsNullOrWhiteSpace(configuredConnectionString))
+        {
+            bool isPrivateInMemory =
+                (configuredConnectionString.Contains(":memory:", StringComparison.OrdinalIgnoreCase)
+                 || configuredConnectionString.Contains("Mode=Memory", StringComparison.OrdinalIgnoreCase))
+                && !configuredConnectionString.Contains("Cache=Shared", StringComparison.OrdinalIgnoreCase);
+
+            if (isPrivateInMemory)
+            {
+                return (db.Database.GetDbConnection(), null);
+            }
+
+            string providerName = relationalExt!.GetType().FullName ?? "relational";
+            return (null, $"{providerName}|{configuredConnectionString}|{tenantSuffix}");
+        }
+
+        if (db.Database.IsRelational())
+        {
+            return (db.Database.GetDbConnection(), null);
+        }
+
+        return (null, null);
     }
 
     private static string BuildNextSeedVersionId(

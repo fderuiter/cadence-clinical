@@ -2359,16 +2359,43 @@ function getFallbackArticles(
       const matchTitle = String(art.title || "")
         .toLowerCase()
         .includes(q);
+      const matchSlug = String(art.slug || "")
+        .toLowerCase()
+        .includes(q);
       const matchBody = String(art.body_markdown || art.body_html || "")
         .toLowerCase()
         .includes(q);
       const matchTags = Array.isArray(art.tags)
         ? art.tags.some((t) => String(t).toLowerCase().includes(q))
         : false;
-      return matchTitle || matchBody || matchTags;
+      return matchTitle || matchSlug || matchBody || matchTags;
     });
   }
   return clone(filtered);
+}
+
+/** Bundled, read-only offline help article lookup by ID or slug (demo builds only). */
+function getFallbackArticleById(articleId: string, fallbackErr?: unknown) {
+  const key = (articleId || "").trim();
+  const match = DEFAULT_MOCK_ARTICLES.find(
+    (a) => a.id === key || a.slug === key
+  );
+  if (match) {
+    return clone(match);
+  }
+  for (const contextual of Object.values(DEFAULT_CONTEXTUAL_SOPS)) {
+    const primary = contextual.primary_article as
+      Record<string, unknown> | undefined;
+    if (primary && (primary.id === key || primary.slug === key)) {
+      return clone(primary);
+    }
+  }
+  if (fallbackErr) {
+    throw fallbackErr;
+  }
+  const notFound = new Error(`Knowledge article '${key}' not found.`);
+  (notFound as Error & { status?: number }).status = 404;
+  throw notFound;
 }
 
 const FAMILY_CATEGORY_META: Record<
@@ -2627,6 +2654,23 @@ export const knowledgeService = {
       return Array.isArray(resp) ? resp : [];
     } catch (err) {
       if (isDemoBuild()) return getFallbackArticles(params);
+      throw err;
+    }
+  },
+
+  async getArticle(articleId: string) {
+    try {
+      return await unwrapResponse(
+        knowledgeClient.GET("/api/v1/knowledge/articles/{article_id}", {
+          params: {
+            path: {
+              article_id: articleId,
+            },
+          },
+        })
+      );
+    } catch (err) {
+      if (isDemoBuild()) return getFallbackArticleById(articleId, err);
       throw err;
     }
   },

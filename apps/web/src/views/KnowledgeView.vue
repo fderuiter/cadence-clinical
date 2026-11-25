@@ -1166,6 +1166,10 @@ export default {
     const versionsLoading = ref(false);
     const auditLogList = ref([]);
     const auditLoading = ref(false);
+    const hydratedArticlesById = new Map();
+    const serverSearchState = ref({ query: "", items: null });
+    let searchRequestSeq = 0;
+    let inFlightSearchKey = "";
 
     // Modals
     const isCreateArticleModalOpen = ref(false);
@@ -1259,9 +1263,66 @@ export default {
       return articles.value.filter((a) => allowedCatIds.has(a.category_id));
     });
 
+    function hasHydratedSopBody(article) {
+      return Boolean(
+        article && (article.body_html != null || article.body_markdown != null)
+      );
+    }
+
+    function matchesArticleKeyword(article, q) {
+      const matchTitle = article.title?.toLowerCase().includes(q);
+      const matchSlug = article.slug?.toLowerCase().includes(q);
+      const matchBody = (article.body_markdown || article.body_html || "")
+        .toLowerCase()
+        .includes(q);
+      const tags = getTagList(article.tags);
+      const matchTags = tags.some((t) => t.toLowerCase().includes(q));
+      return Boolean(matchTitle || matchSlug || matchBody || matchTags);
+    }
+
     // Filtered Articles by Category, Status, Tag, and Search
     const displayArticles = computed(() => {
-      let list = [...filteredByPersonaArticles.value];
+      const q = searchQuery.value.trim().toLowerCase();
+      let list;
+
+      if (q) {
+        if (
+          serverSearchState.value.query === q &&
+          Array.isArray(serverSearchState.value.items)
+        ) {
+          const allowedCatIds = isSuperAdmin.value
+            ? null
+            : new Set(visibleCategories.value.map((c) => c.id));
+          const mergedById = new Map();
+
+          for (const item of serverSearchState.value.items) {
+            if (!item?.id) continue;
+            if (allowedCatIds && !allowedCatIds.has(item.category_id)) continue;
+            if (hasHydratedSopBody(item) && !matchesArticleKeyword(item, q)) {
+              continue;
+            }
+            mergedById.set(item.id, item);
+          }
+
+          for (const localItem of filteredByPersonaArticles.value) {
+            if (!localItem?.id || mergedById.has(localItem.id)) continue;
+            if (
+              hasHydratedSopBody(localItem) &&
+              matchesArticleKeyword(localItem, q)
+            ) {
+              mergedById.set(localItem.id, localItem);
+            }
+          }
+
+          list = Array.from(mergedById.values());
+        } else {
+          list = filteredByPersonaArticles.value.filter((a) =>
+            matchesArticleKeyword(a, q)
+          );
+        }
+      } else {
+        list = [...filteredByPersonaArticles.value];
+      }
 
       // Category filter
       if (selectedCategoryId.value) {
@@ -1278,21 +1339,6 @@ export default {
         list = list.filter((a) => {
           const tags = getTagList(a.tags);
           return tags.includes(selectedTag.value);
-        });
-      }
-
-      // Search Query
-      const q = searchQuery.value.trim().toLowerCase();
-      if (q) {
-        list = list.filter((a) => {
-          const matchTitle = a.title?.toLowerCase().includes(q);
-          const matchSlug = a.slug?.toLowerCase().includes(q);
-          const matchBody = (a.body_markdown || a.body_html || "")
-            .toLowerCase()
-            .includes(q);
-          const tags = getTagList(a.tags);
-          const matchTags = tags.some((t) => t.toLowerCase().includes(q));
-          return matchTitle || matchSlug || matchBody || matchTags;
         });
       }
 
@@ -1422,6 +1468,108 @@ export default {
       return "";
     });
 
+    async function hydrateSelectedArticleBody(article) {
+      if (!article?.id || typeof knowledgeService.getArticle !== "function") {
+        return;
+      }
+      try {
+        const hydrated = await knowledgeService.getArticle(article.id);
+        if (hydrated && hydrated.id) {
+          hydratedArticlesById.set(hydrated.id, hydrated);
+          if (selectedArticle.value?.id === article.id) {
+            selectedArticle.value = { ...article, ...hydrated };
+          }
+        }
+      } catch (err) {
+        if (
+          err instanceof TypeError &&
+          /Invalid URL|Failed to parse URL/i.test(String(err.message))
+        ) {
+          return;
+        }
+        if (selectedArticle.value?.id === article.id) {
+          toastStore.apiError("Could not load SOP content", err);
+        }
+      }
+    }
+
+    function applySelectedArticle(article) {
+      if (!article) {
+        selectedArticle.value = null;
+        return;
+      }
+      const cached = article.id ? hydratedArticlesById.get(article.id) : null;
+      if (
+        cached &&
+        hasHydratedSopBody(cached) &&
+        (article.version_index == null ||
+          cached.version_index == null ||
+          cached.version_index === article.version_index)
+      ) {
+        selectedArticle.value = { ...article, ...cached };
+        return;
+      }
+      if (hasHydratedSopBody(article) && article.id) {
+        hydratedArticlesById.set(article.id, article);
+        selectedArticle.value = article;
+        return;
+      }
+      selectedArticle.value = article;
+      void hydrateSelectedArticleBody(article);
+    }
+
+    async function runServerSearch(rawQuery) {
+      const trimmed = (rawQuery ?? searchQuery.value ?? "").trim();
+      if (!trimmed) {
+        searchRequestSeq++;
+        inFlightSearchKey = "";
+        serverSearchState.value = { query: "", items: null };
+        return;
+      }
+
+      const normalizedQ = trimmed.toLowerCase();
+      const requestKey = `${activePersonaKey.value}|${normalizedQ}`;
+      if (
+        inFlightSearchKey === requestKey ||
+        (serverSearchState.value.query === normalizedQ &&
+          Array.isArray(serverSearchState.value.items))
+      ) {
+        return;
+      }
+
+      const seq = ++searchRequestSeq;
+      inFlightSearchKey = requestKey;
+      try {
+        const results = await knowledgeService.listArticles({
+          status: "ALL",
+          q: trimmed,
+          persona: activePersonaKey.value,
+        });
+        if (seq !== searchRequestSeq) return;
+        serverSearchState.value = {
+          query: normalizedQ,
+          items: Array.isArray(results) ? results : [],
+        };
+      } catch (err) {
+        if (seq !== searchRequestSeq) return;
+        if (
+          err instanceof TypeError &&
+          /Invalid URL|Failed to parse URL/i.test(String(err.message))
+        ) {
+          return;
+        }
+        serverSearchState.value = {
+          query: normalizedQ,
+          items: [],
+        };
+        toastStore.apiError("Could not search knowledge articles", err);
+      } finally {
+        if (seq === searchRequestSeq) {
+          inFlightSearchKey = "";
+        }
+      }
+    }
+
     // Actions & Selection
     function selectCategory(catId) {
       selectedCategoryId.value = catId;
@@ -1431,12 +1579,12 @@ export default {
         selectedArticle.value.category_id !== catId
       ) {
         const firstMatch = displayArticles.value[0] || null;
-        selectedArticle.value = firstMatch;
+        applySelectedArticle(firstMatch);
       }
     }
 
     function selectArticle(article) {
-      selectedArticle.value = article;
+      applySelectedArticle(article);
       activeReaderTab.value = "content";
       versionsList.value = [];
       auditLogList.value = [];
@@ -1455,15 +1603,21 @@ export default {
     }
 
     function onSearchInput() {
-      // Live search is reactive via displayArticles computed
+      void runServerSearch(searchQuery.value);
     }
 
     function clearSearch() {
       searchQuery.value = "";
+      searchRequestSeq++;
+      inFlightSearchKey = "";
+      serverSearchState.value = { query: "", items: null };
     }
 
     function resetFilters() {
       searchQuery.value = "";
+      searchRequestSeq++;
+      inFlightSearchKey = "";
+      serverSearchState.value = { query: "", items: null };
       selectedTag.value = null;
       activeStatusFilter.value = "ALL";
       selectedCategoryId.value = null;
@@ -1595,7 +1749,7 @@ export default {
         };
         const created = await knowledgeService.createArticle(payload);
         articles.value.unshift(created);
-        selectedArticle.value = created;
+        applySelectedArticle(created);
         isCreateArticleModalOpen.value = false;
       } catch (err) {
         toastStore.apiError("Could not create article", err);
@@ -1642,7 +1796,10 @@ export default {
         if (idx !== -1) {
           articles.value[idx] = updated;
         }
-        selectedArticle.value = updated;
+        if (updated?.id) {
+          hydratedArticlesById.delete(updated.id);
+        }
+        applySelectedArticle(updated);
         isEditDraftModalOpen.value = false;
       } catch (err) {
         toastStore.apiError("Could not save draft", err);
@@ -1746,7 +1903,10 @@ export default {
           if (idx !== -1) {
             articles.value[idx] = updated;
           }
-          selectedArticle.value = updated;
+          if (updated.id) {
+            hydratedArticlesById.delete(updated.id);
+          }
+          applySelectedArticle(updated);
         }
 
         isReasonModalOpen.value = false;
@@ -1804,10 +1964,11 @@ export default {
           const updatedSelected = displayArticles.value.find(
             (a) => a.id === selectedArticle.value.id
           );
-          selectedArticle.value =
-            updatedSelected || displayArticles.value[0] || null;
+          applySelectedArticle(
+            updatedSelected || displayArticles.value[0] || null
+          );
         } else if (displayArticles.value.length > 0) {
-          selectedArticle.value = displayArticles.value[0];
+          applySelectedArticle(displayArticles.value[0]);
         }
       } catch (err) {
         toastStore.apiError("Could not load the knowledge base", err);
@@ -1855,10 +2016,23 @@ export default {
     );
 
     watch(
+      () => searchQuery.value,
+      (nextQuery) => {
+        void runServerSearch(nextQuery);
+      }
+    );
+
+    watch(
       () => activePersonaKey.value,
       async () => {
+        searchRequestSeq++;
+        inFlightSearchKey = "";
+        serverSearchState.value = { query: "", items: null };
         if (!demoBuild) {
           await loadInitialData();
+          if (searchQuery.value.trim()) {
+            await runServerSearch(searchQuery.value);
+          }
           return;
         }
         if (selectedArticle.value) {
@@ -1866,7 +2040,7 @@ export default {
             (a) => a.id === selectedArticle.value.id
           );
           if (!isStillVisible) {
-            selectedArticle.value = displayArticles.value[0] || null;
+            applySelectedArticle(displayArticles.value[0] || null);
           }
         }
       }
