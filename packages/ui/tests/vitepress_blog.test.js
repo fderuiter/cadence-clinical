@@ -530,4 +530,51 @@ describe("VitePress Engineering Blog Engine", () => {
     ).toBe("noopener");
     expect(resolveBlogLinkRel("/demo/")).toBeUndefined();
   });
+
+  it("enforces custom CSS ESLint rules and resolves VitePress --vp-* variables via scripts/eslint-css-vars.mjs", async () => {
+    const repoRoot = path.resolve(__dirname, "../../..");
+    const customCssPath = path.join(
+      repoRoot,
+      "docs/.vitepress/theme/custom.css"
+    );
+    const { createBaseDefinedVarsResolver, extractDefinedVarsFromFile } =
+      await import("../../../scripts/eslint-css-vars.mjs");
+
+    expect(
+      extractDefinedVarsFromFile(path.join(repoRoot, "__missing__.css")).size
+    ).toBe(0);
+
+    const resolveVars = createBaseDefinedVarsResolver(repoRoot);
+    const vitepressVars = resolveVars("docs/.vitepress/theme/custom.css");
+    expect(vitepressVars.has("--vp-c-text-1")).toBe(true);
+    expect(vitepressVars.has("--vp-shadow-2")).toBe(true);
+    expect(vitepressVars.has("--vp-layout-top-height")).toBe(true);
+    expect(vitepressVars.has("--vp-doc-top-height")).toBe(true);
+    expect(vitepressVars.has("--semantic-font-family")).toBe(true);
+
+    const { ESLint } = await import("eslint");
+    const eslint = new ESLint({
+      cwd: repoRoot,
+      overrideConfigFile: path.join(repoRoot, "eslint.config.mjs"),
+    });
+
+    const [cleanResult] = await eslint.lintFiles([customCssPath]);
+    expect(cleanResult.messages).toEqual([]);
+
+    const [validVpResult] = await eslint.lintText(
+      ".mermaid-btn:hover:not(:disabled) {\n  color: var(--vp-c-text-1);\n  box-shadow: var(--vp-shadow-2);\n  font-family: var(--semantic-font-family);\n}\n",
+      { filePath: path.join(repoRoot, "docs/.vitepress/theme/__probe.css") }
+    );
+    expect(validVpResult.messages).toEqual([]);
+
+    const [invalidVpResult] = await eslint.lintText(
+      ".mermaid-btn:hover {\n  color: #ff00aa;\n  background: var(--unknown-vp-var);\n  outline: none;\n}\n",
+      { filePath: path.join(repoRoot, "docs/.vitepress/theme/__probe.css") }
+    );
+    const ruleIds = invalidVpResult.messages.map((m) => m.ruleId);
+    expect(ruleIds).toContain("custom-vue/no-unguarded-button-state");
+    expect(ruleIds).toContain("custom-vue/no-inline-hex");
+    expect(ruleIds).toContain("custom-vue/no-undefined-css-vars");
+    expect(ruleIds).toContain("custom-vue/no-suppressed-focus-outline");
+  });
 });

@@ -1414,6 +1414,11 @@ public sealed class PreCommitGuardrailsTests : IDisposable
         Directory.CreateDirectory(Path.Combine(_tempDir, "node_modules"));
         Write("eslint.config.mjs", "export default [];\n");
         Write(".claude/skills/run-cadence/driver.mjs", "export const ok = true;\n");
+        Write("docs/.vitepress/rootDocs.cjs", "module.exports = {};\n");
+        Write("docs/.vitepress/theme/custom.css", ".mermaid-btn:hover:not(:disabled) {}\n");
+        Write("apps/web/src/style.css", "body { color: var(--semantic-color-text-primary); }\n");
+        Write("scripts/playwright-chromium-launcher.d.mts", "export declare function resolveChromiumExecutable(): string;\n");
+        Write("scripts/legacy-helper.cts", "export const ctsOk = true;\n");
         Write("packages/usdm-schemas/src/index.ts", "export const version = 4;\n");
         Write("apps/web/src/stores/demo/clinicalEcrf.ts", "export const store = 1;\n");
         string dupLog = Path.Combine(_tempDir, "dup-check.log");
@@ -1454,6 +1459,11 @@ public sealed class PreCommitGuardrailsTests : IDisposable
         captured.Should().StartWith("exec eslint --no-warn-ignored --max-warnings 0 -- ");
         captured.Should().NotContain("-r lint");
         captured.Should().Contain(".claude/skills/run-cadence/driver.mjs");
+        captured.Should().Contain("docs/.vitepress/rootDocs.cjs");
+        captured.Should().Contain("docs/.vitepress/theme/custom.css");
+        captured.Should().Contain("apps/web/src/style.css");
+        captured.Should().Contain("scripts/playwright-chromium-launcher.d.mts");
+        captured.Should().Contain("scripts/legacy-helper.cts");
         captured.Should().Contain("eslint.config.mjs");
         captured.Should().Contain("packages/usdm-schemas/src/index.ts");
         captured.Should().Contain("apps/web/src/stores/demo/clinicalEcrf.ts");
@@ -1463,6 +1473,78 @@ public sealed class PreCommitGuardrailsTests : IDisposable
         Write(".claude/skills/run-cadence/driver.mjs", "BROKEN_ESLINT_MARKER\n");
         FrontendQualityGateService.CheckEslint(_tempDir, getEnvironmentVariable: k => stubEnv.GetValueOrDefault(k))
             .Should().Be(1, "unscoped CheckEslint must fail when a tracked root/skill .mjs file has an ESLint error");
+    }
+
+    [Fact]
+    public void FrontendQualityGates_PreCommit_EnforceCssMtsCtsMjsAndCjsExtensions()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        FrontendQualityGateService.SupportedEslintExtensions.Should().Contain([".css", ".mts", ".cts", ".mjs", ".cjs"]);
+        FrontendQualityGateService.SupportedPrettierExtensions.Should().Contain([".css", ".mts", ".cts", ".mjs", ".cjs"]);
+        FrontendQualityGateService.SupportedTypecheckExtensions.Should().Contain([".mts", ".cts", ".mjs", ".cjs"]);
+
+        InitGitRepo();
+        Directory.CreateDirectory(Path.Combine(_tempDir, "node_modules"));
+        Write("scripts/playwright-chromium-launcher.d.mts", "export declare function resolveChromiumExecutable(): string;\n");
+        Write("scripts/legacy-helper.cts", "export const ctsOk = true;\n");
+        Write("apps/web/src/style.css", "body { color: var(--semantic-color-text-primary); }\n");
+        RunGit("add", ".");
+        RunGit("commit", "-q", "-m", "seed initial files");
+
+        string binDir = Path.Combine(_tempDir, "pnpm-precommit-stub-bin");
+        Directory.CreateDirectory(binDir);
+        string logPath = Path.Combine(_tempDir, "pnpm-precommit.log");
+        string pnpmStub = Path.Combine(binDir, "pnpm");
+        File.WriteAllText(
+            pnpmStub,
+            "#!/bin/sh\n" +
+            "if [ \"${1:-}\" = \"--version\" ]; then echo '10.34.6'; exit 0; fi\n" +
+            $"printf '%s\\n' \"$*\" >> '{logPath}'\n" +
+            "case \" $* \" in\n" +
+            "  *\" --stdin \"*|*\" --stdin-filepath \"*)\n" +
+            "    if grep -q 'FAIL_GATE_MARKER'; then exit 1; fi\n" +
+            "    ;;\n" +
+            "esac\n" +
+            "exit 0\n");
+        File.SetUnixFileMode(pnpmStub, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+
+        string? originalPath = Environment.GetEnvironmentVariable("PATH");
+        try
+        {
+            Environment.SetEnvironmentVariable("PATH", $"{binDir}{Path.PathSeparator}{originalPath}");
+
+            // Staging an edit to scripts/playwright-chromium-launcher.d.mts triggers Prettier, ESLint, and Typecheck.
+            Write("scripts/playwright-chromium-launcher.d.mts", "export declare function resolveChromiumExecutable( strict?: boolean ): string;\n");
+            RunGit("add", "scripts/playwright-chromium-launcher.d.mts");
+
+            FrontendQualityGateService.CheckPrettier(_tempDir, preCommit: true).Should().Be(0);
+            FrontendQualityGateService.CheckEslint(_tempDir, preCommit: true).Should().Be(0);
+            FrontendQualityGateService.CheckTypecheck(_tempDir, preCommit: true).Should().Be(0);
+
+            string dmtsLog = File.ReadAllText(logPath);
+            dmtsLog.Should().Contain("exec prettier --check --stdin-filepath scripts/playwright-chromium-launcher.d.mts");
+            dmtsLog.Should().Contain("exec eslint --no-warn-ignored --max-warnings 0 --stdin --stdin-filename scripts/playwright-chromium-launcher.d.mts");
+            dmtsLog.Should().Contain("-r typecheck");
+
+            // Staged .cts and .css violations fail closed over stdin.
+            Write("scripts/legacy-helper.cts", "FAIL_GATE_MARKER\n");
+            RunGit("add", "scripts/legacy-helper.cts");
+            FrontendQualityGateService.CheckPrettier(_tempDir, targetFiles: ["scripts/legacy-helper.cts"], preCommit: true).Should().Be(1);
+            FrontendQualityGateService.CheckEslint(_tempDir, targetFiles: ["scripts/legacy-helper.cts"], preCommit: true).Should().Be(1);
+            FrontendQualityGateService.CheckTypecheck(_tempDir, targetFiles: ["scripts/legacy-helper.cts"], preCommit: true).Should().Be(0);
+
+            Write("apps/web/src/style.css", "button { outline: none; /* FAIL_GATE_MARKER */ }\n");
+            RunGit("add", "apps/web/src/style.css");
+            FrontendQualityGateService.CheckEslint(_tempDir, targetFiles: ["apps/web/src/style.css"], preCommit: true).Should().Be(1);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("PATH", originalPath);
+        }
     }
 
     [Fact]

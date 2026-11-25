@@ -105,7 +105,7 @@ public static class QualityGates
         {
             TakesFiles = true,
             PreCommit = PreCommitMode.Quick,
-            PreCommitNote = "lints staged JS, TS and Vue blobs over stdin; fails closed when `pnpm` or `node_modules` is missing",
+            PreCommitNote = "lints staged JS, TS, Vue and CSS blobs over stdin; fails closed when `pnpm` or `node_modules` is missing",
         },
         new("typecheck", ["validate-typecheck"],
             "Workspace TypeScript and Vue SFC typecheck (`pnpm -r typecheck` via `vue-tsc` and `tsc`)",
@@ -167,7 +167,7 @@ public static class QualityGates
             PreCommitNote = "scans materialized staged blobs instead of the working tree",
         },
         new("duplication", ["detect-code-duplication"],
-            "Duplicated code blocks over 15 normalized lines across `.cs`, `.js`, `.ts`, `.tsx`, `.vue` and `.css` files, ratcheted by `.duplication-baseline.txt`",
+            "Duplicated code blocks over 15 normalized lines across `.cs`, `.js`, `.mjs`, `.cjs`, `.ts`, `.mts`, `.cts`, `.tsx`, `.vue` and `.css` files, ratcheted by `.duplication-baseline.txt`",
             ctx => DuplicationDetectorService.DetectDuplication(ctx.Files, ctx.RepoRoot, ctx.PreCommit, ctx.IndexReader) == 0)
         { TakesFiles = true },
         new("cli-docs", ["validate-cli-docs"],

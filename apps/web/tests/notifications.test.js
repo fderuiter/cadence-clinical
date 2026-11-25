@@ -652,6 +652,7 @@ describe("Notifications System End-to-End Visual Integration", () => {
         status: 200,
         headers: new Headers({ "content-type": "application/json" }),
         json: async () => [{ id: "notif-01" }],
+        text: async () => JSON.stringify([{ id: "notif-01" }]),
       });
 
       // Import actual notificationsService
@@ -689,6 +690,8 @@ describe("Notifications System End-to-End Visual Integration", () => {
         status: 200,
         headers: new Headers({ "content-type": "application/json" }),
         json: async () => ({ id: "notif-01", status: "ACKNOWLEDGED" }),
+        text: async () =>
+          JSON.stringify({ id: "notif-01", status: "ACKNOWLEDGED" }),
       });
 
       const { notificationsService: realService } = await vi.importActual(

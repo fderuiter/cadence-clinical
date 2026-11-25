@@ -360,6 +360,36 @@ public class DomainEngineUnitTests
             File.WriteAllText(csA, csDup + "\n");
             File.WriteAllText(csB, csDup + "\n");
             DuplicationDetectorService.DetectDuplication([csA, csB], tempRoot, preCommit: true).Should().Be(1);
+
+            // 5. ESM/CJS/MTS/CTS across scripts/, docs/, .claude/, and root .mjs/.cjs
+            DuplicationDetectorService.SupportedDuplicationExtensions.Should().BeEquivalentTo(
+                ".cs", ".js", ".mjs", ".cjs", ".ts", ".mts", ".cts", ".tsx", ".vue", ".css");
+
+            string scriptMjs = Path.Combine(tempRoot, "scripts", "helperA.mjs");
+            string docsCjs = Path.Combine(tempRoot, "docs", ".vitepress", "helperB.cjs");
+            string claudeMts = Path.Combine(tempRoot, ".claude", "skills", "run-cadence", "driverHelper.mts");
+            string pkgCts = Path.Combine(tempRoot, "packages", "ui", "src", "legacyHelper.cts");
+            string rootMjs = Path.Combine(tempRoot, "eslint.config.mjs");
+            string rootCjs = Path.Combine(tempRoot, "rootHelper.cjs");
+            foreach (string file in new[] { scriptMjs, docsCjs, claudeMts, pkgCts, rootMjs, rootCjs })
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(file)!);
+            }
+
+            string moduleDup = string.Join("\n", Enumerable.Range(1, 16).Select(i => $"  const resolvedToken{i} = computeToken(seed, {i});"));
+            File.WriteAllText(scriptMjs, $"function runScript(seed) {{\n{moduleDup}\n  return resolvedToken16;\n}}\n");
+            File.WriteAllText(docsCjs, $"function runDocs(seed) {{\n{moduleDup}\n  return resolvedToken16;\n}}\n");
+            DuplicationDetectorService.DetectDuplication([scriptMjs, docsCjs], tempRoot, preCommit: true).Should().Be(1);
+
+            string mtsDup = string.Join("\n", Enumerable.Range(1, 16).Select(i => $"  const typedStep{i}: number = stepOffset + {i};"));
+            File.WriteAllText(claudeMts, $"function runSkill(stepOffset: number): number {{\n{mtsDup}\n  return typedStep16;\n}}\n");
+            File.WriteAllText(pkgCts, $"function runCts(stepOffset: number): number {{\n{mtsDup}\n  return typedStep16;\n}}\n");
+            DuplicationDetectorService.DetectDuplication([claudeMts, pkgCts], tempRoot, preCommit: true).Should().Be(1);
+
+            string rootDup = string.Join("\n", Enumerable.Range(1, 16).Select(i => $"  const rootRule{i} = buildConfigRule({i});"));
+            File.WriteAllText(rootMjs, $"function loadMjsConfig() {{\n{rootDup}\n  return rootRule16;\n}}\n");
+            File.WriteAllText(rootCjs, $"function loadCjsConfig() {{\n{rootDup}\n  return rootRule16;\n}}\n");
+            DuplicationDetectorService.DetectDuplication([rootMjs, rootCjs], tempRoot, preCommit: true).Should().Be(1);
         }
         finally
         {
@@ -380,11 +410,22 @@ public class DomainEngineUnitTests
             string generatedB = Path.Combine(tempRoot, "packages", "ui", "src", "generated", "clientB.ts");
             string dtsA = Path.Combine(tempRoot, "apps", "web", "src", "env.d.ts");
             string dtsB = Path.Combine(tempRoot, "packages", "ui", "src", "index.d.ts");
+            string dmtsA = Path.Combine(tempRoot, "scripts", "playwright-chromium-launcher.d.mts");
+            string dctsA = Path.Combine(tempRoot, "docs", ".vitepress", "rootDocs.d.cts");
+            string claudeWorktreeFile = Path.Combine(tempRoot, ".claude", "worktrees", "scratch", "dupWorktree.mjs");
+            string vitepressCacheFile = Path.Combine(tempRoot, "docs", ".vitepress", "cache", "dupCache.mjs");
+            string vitepressTempFile = Path.Combine(tempRoot, "docs", ".vitepress", ".temp", "dupTemp.mjs");
             string webApiTypes = Path.Combine(tempRoot, "apps", "web", "src", "api", "types.ts");
             string uiCdashTypes = Path.Combine(tempRoot, "packages", "ui", "src", "types", "cdash.ts");
             string liveTs = Path.Combine(tempRoot, "apps", "web", "src", "composables", "liveConsumer.ts");
 
-            foreach (string file in new[] { generatedA, generatedB, dtsA, dtsB, webApiTypes, uiCdashTypes, liveTs })
+            string[] allFiles =
+            [
+                generatedA, generatedB, dtsA, dtsB, dmtsA, dctsA,
+                claudeWorktreeFile, vitepressCacheFile, vitepressTempFile,
+                webApiTypes, uiCdashTypes, liveTs,
+            ];
+            foreach (string file in allFiles)
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(file)!);
             }
@@ -394,7 +435,7 @@ public class DomainEngineUnitTests
                 Enumerable.Range(1, 20).Select(i => $"  readonly field_{i}: string;"));
             string payload = $"export interface GeneratedContract {{\n{sharedTypeBlock}\n}}\n";
 
-            foreach (string file in new[] { generatedA, generatedB, dtsA, dtsB, webApiTypes, uiCdashTypes, liveTs })
+            foreach (string file in allFiles)
             {
                 File.WriteAllText(file, payload);
             }
@@ -402,7 +443,7 @@ public class DomainEngineUnitTests
             // Even with a single live .ts file sharing the exact 20-line block with all excluded files, 0 duplicates are reported.
             DuplicationDetectorService.DetectDuplication(repoRoot: tempRoot, preCommit: true).Should().Be(0);
             DuplicationDetectorService.DetectDuplication(
-                [generatedA, generatedB, dtsA, dtsB, webApiTypes, uiCdashTypes],
+                [generatedA, generatedB, dtsA, dtsB, dmtsA, dctsA, claudeWorktreeFile, vitepressCacheFile, vitepressTempFile, webApiTypes, uiCdashTypes],
                 tempRoot,
                 preCommit: true).Should().Be(0);
         }

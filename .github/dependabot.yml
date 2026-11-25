@@ -112,6 +112,7 @@ updates:
     groups:
       typescript-eslint:
         patterns:
+          - "typescript"
           - "@typescript-eslint/*"
           - "typescript-eslint"
           - "eslint*"
@@ -141,6 +142,9 @@ updates:
     ignore:
       # Node runtime baseline is pinned via package.json engines (ADR-2508).
       - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+      # TypeScript 7.0 removes ./lib/tsc and the JS compiler API required by vue-tsc 3.x and typescript-eslint 8.x (#6248).
+      - dependency-name: "typescript"
         update-types: ["version-update:semver-major"]
 
   # Container base images, pinned by version and digest (docker/Dockerfile.dotnet)

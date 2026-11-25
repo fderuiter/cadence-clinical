@@ -8,6 +8,10 @@ import vuePlugin from "eslint-plugin-vue";
 import vuejsAccessibility from "eslint-plugin-vuejs-accessibility";
 import vueParser from "vue-eslint-parser";
 import tseslint from "typescript-eslint";
+import {
+  CSS_VAR_DEF_REGEX,
+  createBaseDefinedVarsResolver,
+} from "./scripts/eslint-css-vars.mjs";
 import { isDisallowedRawDrawerOverlay } from "./scripts/eslint-drawer-overlay-guard.mjs";
 
 const repoRoot = path.dirname(fileURLToPath(import.meta.url));
@@ -22,9 +26,10 @@ const hexColorRegex = /#(?:[0-9a-fA-F]{3,4}){1,2}(?![0-9a-zA-Z_-])/g;
 const colorFunctionRegex = /\b(?:rgba?|hsla?)\s*\([^)]*\)/gi;
 const namedColorDeclRegex =
   /(?:^|[;{\s"'`])(?:background(?:-color)?|color|border(?:-(?:top|right|bottom|left))?(?:-color)?|fill|stroke|outline(?:-color)?)\s*:\s*(white|black)\b/gi;
-const cssVarDefRegex = /(--[a-zA-Z0-9_-]+)\s*:/g;
+const cssVarDefRegex = CSS_VAR_DEF_REGEX;
 const cssVarUseRegex = /var\(\s*(--[a-zA-Z0-9_-]+)/g;
 const aiTokenRegex = /--(?:semantic-)?color-ai(?:-[a-zA-Z0-9_-]+)?\b/g;
+const getBaseDefinedVars = createBaseDefinedVarsResolver(repoRoot);
 
 function isAllowedAiTokenFile(filename) {
   if (filename.endsWith("/packages/ui/tokens.css")) return true;
@@ -32,29 +37,6 @@ function isAllowedAiTokenFile(filename) {
   if (/\/packages\/ui\/src\/components\/clinical\/Ai[^/]*\.vue$/.test(filename))
     return true;
   return false;
-}
-
-function extractDefinedVarsFromFile(filePath) {
-  const vars = new Set();
-  if (!fs.existsSync(filePath)) return vars;
-  const raw = fs
-    .readFileSync(filePath, "utf8")
-    .replace(/\/\*[\s\S]*?\*\//g, "");
-  for (const m of raw.matchAll(cssVarDefRegex)) {
-    vars.add(m[1]);
-  }
-  return vars;
-}
-
-function getBaseDefinedVars(filename) {
-  const normalized = filename.split(path.sep).join("/");
-  const vars = extractDefinedVarsFromFile(tokensCssPath);
-  if (normalized.includes("/apps/web/")) {
-    for (const v of extractDefinedVarsFromFile(webStyleCssPath)) vars.add(v);
-  } else if (normalized.includes("/apps/subject-portal/")) {
-    for (const v of extractDefinedVarsFromFile(portalStyleCssPath)) vars.add(v);
-  }
-  return vars;
 }
 
 function stripCssCommentsPreservingNewlines(text) {
@@ -3795,7 +3777,7 @@ export default [
     },
   },
   {
-    files: ["packages/**/*.css", "apps/**/*.css"],
+    files: ["packages/**/*.css", "apps/**/*.css", "docs/.vitepress/**/*.css"],
     languageOptions: {
       parser: cssStubParser,
     },
@@ -4116,10 +4098,10 @@ export default [
   },
   {
     files: [
-      "**/tests/**/*.{js,jsx,ts,tsx,mjs,cjs,vue}",
-      "tests/**/*.{js,jsx,ts,tsx,mjs,cjs,vue}",
-      "**/*.test.{js,jsx,ts,tsx,mjs,cjs}",
-      "**/*.spec.{js,jsx,ts,tsx,mjs,cjs}",
+      "**/tests/**/*.{js,jsx,ts,tsx,mjs,cjs,mts,cts,vue}",
+      "tests/**/*.{js,jsx,ts,tsx,mjs,cjs,mts,cts,vue}",
+      "**/*.test.{js,jsx,ts,tsx,mjs,cjs,mts,cts}",
+      "**/*.spec.{js,jsx,ts,tsx,mjs,cjs,mts,cts}",
     ],
     languageOptions: {
       globals: {

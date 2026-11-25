@@ -14,22 +14,28 @@ public static class FrontendQualityGateService
 {
     private const int MaxFilesPerBatch = 400;
 
+    public const string PrettierWorkspaceGlob = "**/*.{js,jsx,ts,tsx,mjs,cjs,mts,cts,vue,json,css,md,yaml,yml}";
+
     private static readonly HashSet<string> PrettierExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
-        ".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ".vue", ".json", ".css", ".md", ".yaml", ".yml",
+        ".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ".mts", ".cts", ".vue", ".json", ".css", ".md", ".yaml", ".yml",
     };
+
+    public static IReadOnlyCollection<string> SupportedPrettierExtensions => PrettierExtensions;
 
     private static readonly HashSet<string> EslintExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
-        ".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ".vue", ".css",
+        ".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ".mts", ".cts", ".vue", ".css",
     };
 
     public static IReadOnlyCollection<string> SupportedEslintExtensions => EslintExtensions;
 
     private static readonly HashSet<string> TypecheckExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
-        ".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ".vue", ".json", ".yaml", ".yml",
+        ".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ".mts", ".cts", ".vue", ".json", ".yaml", ".yml",
     };
+
+    public static IReadOnlyCollection<string> SupportedTypecheckExtensions => TypecheckExtensions;
 
     public static int CheckPrettier(
         string? repoRoot = null,
