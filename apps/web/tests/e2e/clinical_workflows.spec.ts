@@ -186,6 +186,18 @@ test.describe("Clinical Workflows and ePRO Portal Tests", () => {
         }
       );
 
+      // Intercept 21 CFR Part 11 step-up signature verification endpoint
+      await page.route(
+        "**/api/v1/auth/signature-verification",
+        async (route) => {
+          await route.fulfill({
+            status: 200,
+            contentType: "application/json",
+            body: JSON.stringify({ sig_token: "mock_epro_sig_token_123" }),
+          });
+        }
+      );
+
       // Intercept ePRO sync endpoint
       await page.route("**/epro/sync", async (route) => {
         await route.fulfill({
@@ -206,6 +218,22 @@ test.describe("Clinical Workflows and ePRO Portal Tests", () => {
           }),
         });
       });
+
+      // Intercept diary stipend evaluation endpoint triggered after confirmed sync
+      await page.route(
+        "**/api/v1/payments/participant/me/diary-stipend",
+        async (route) => {
+          await route.fulfill({
+            status: 200,
+            contentType: "application/json",
+            body: JSON.stringify({
+              creditedAmount: 15.0,
+              currentBalance: 90.0,
+              lifetimeStipends: 90.0,
+            }),
+          });
+        }
+      );
 
       // Inject mock session credentials before page load to authenticate without live Keycloak
       await page.addInitScript(() => {

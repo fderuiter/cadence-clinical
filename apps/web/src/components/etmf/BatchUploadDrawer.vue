@@ -964,4 +964,11 @@ function handleClose() {
     color: var(--semantic-color-text-secondary);
   }
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .dropzone,
+  .progress-bar-fill {
+    transition: none;
+  }
+}
 </style>

@@ -1399,35 +1399,63 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
           if (method === "GET" && url.includes("/api/v1/kernel/proposals")) {
             return json([]);
           }
-          if (method === "GET" && url.includes("/api/v1/kernel/nodes/")) {
-            if (url.includes("proposal")) {
-              return json({
+          const buildMockNode = (refText: string) => {
+            if (refText.includes("proposal")) {
+              return {
                 ref: proposalRef,
                 kind: "proposal",
                 title: "Query the out-of-range systolic pressure at visit 3",
                 code: null,
                 status: "Open",
                 mask: null,
-              });
+              };
             }
-            if (url.includes("study_site")) {
-              return json({
+            if (refText.includes("study_site")) {
+              return {
                 ref: siteRef,
                 kind: "study_site",
                 title: "Mayo Clinic Oncology",
                 code: "SITE-101",
                 status: "PENDING",
                 mask: null,
-              });
+              };
             }
-            return json({
+            if (refText.startsWith("study:")) {
+              return {
+                ref: studyRef,
+                kind: "study",
+                title: "Phase III Melanoma",
+                code: "CADENCE-101",
+                status: "ACTIVE",
+                mask: null,
+              };
+            }
+            return {
               ref: `${participantRef}@4`,
               kind: "participant",
               title: "017-0001",
               code: "017-0001",
               status: "ACTIVE",
               mask: null,
-            });
+            };
+          };
+          const parsedUrl = new URL(url, window.location.origin);
+          if (
+            method === "GET" &&
+            parsedUrl.pathname === "/api/v1/kernel/nodes"
+          ) {
+            const requestedRefs = [
+              ...parsedUrl.searchParams.getAll("ref"),
+              ...parsedUrl.searchParams.getAll("ref[]"),
+            ];
+            const nodes: Record<string, unknown> = {};
+            for (const reqRef of requestedRefs) {
+              nodes[reqRef] = buildMockNode(reqRef);
+            }
+            return json({ nodes });
+          }
+          if (method === "GET" && url.includes("/api/v1/kernel/nodes/")) {
+            return json(buildMockNode(decodeURIComponent(parsedUrl.pathname)));
           }
           if (
             method === "GET" &&
