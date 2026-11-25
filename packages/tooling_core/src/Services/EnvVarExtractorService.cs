@@ -23,9 +23,6 @@ public static partial class EnvVarExtractorService
     [GeneratedRegex(@"(?:(?:Configuration|configuration|GetService<IConfiguration>\(\)\??|GetRequiredService<IConfiguration>\(\))\s*\[\s*([A-Za-z_][A-Za-z0-9_.]*)\s*\]|\.(?:GetValue(?:<[^>]+>)?|GetSection)\s*\(\s*([A-Za-z_][A-Za-z0-9_.]*)|(?:Environment\.)?GetEnvironmentVariable\s*\(\s*([A-Za-z_][A-Za-z0-9_.]*)\s*\))")]
     private static partial Regex DotnetConfigIdentifierRefRegex();
 
-    [GeneratedRegex(@"os\.environ\.get\s*\(\s*""([^""]+)""|os\.environ\[""([^""]+)""\]")]
-    private static partial Regex PythonEnvRegex();
-
     [GeneratedRegex(@"import\.meta\.env\.(VITE_[A-Z0-9_]+)")]
     private static partial Regex ViteImportMetaEnvRegex();
 
@@ -94,16 +91,6 @@ public static partial class EnvVarExtractorService
                 if (ext == ".cs")
                 {
                     ExtractDotnetEnvVarsFromContent(content, envVars, screamingConstantsByIdent, referencedConfigIdents);
-                }
-                else if (ext == ".py")
-                {
-                    var pyMatches = PythonEnvRegex().Matches(content);
-                    for (int i = 0; i < pyMatches.Count; i++)
-                    {
-                        var m = pyMatches[i];
-                        if (m.Groups[1].Success) envVars.Add(m.Groups[1].Value);
-                        if (m.Groups[2].Success) envVars.Add(m.Groups[2].Value);
-                    }
                 }
                 else if (ext is ".js" or ".mjs" or ".cjs" or ".ts" or ".vue")
                 {

@@ -1,6 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
+using System.Text;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -757,6 +761,779 @@ public sealed class SimulationTests
         ichOnlyRun.ResultHash.Should().NotBe(cleanRun.ResultHash);
     }
 
+    [Fact]
+    [KernelRule("K-SIM-3")]
+    [KernelRule("K-SIM-5")]
+    public async Task SimulationResultHashing_StreamingHashMatchesCanonicalJsonAndPreservesArtifactBinding()
+    {
+        var sbp = new ConceptRef(ConceptId.New(), 1);
+        var stdId = StandardVersionId.New();
+        var mapSpec = SampleMappingSpecifications.Specification(SampleMappingSpecifications.SystolicBloodPressure(sbp));
+        var mapItem = ReleasedLibraryItem(
+            LibraryItemKind.MappingSpecification,
+            "sdtm-vs",
+            mapSpec.Title,
+            MappingSpecificationJson.ToJson(mapSpec).GetRawText(),
+            [stdId],
+            1);
+        var rulePack = BuildRulePack(("R-VS-HIGH", 1, 130m, ">"));
+        var ruleItem = ReleasedLibraryItem(
+            LibraryItemKind.RulePack,
+            "rules-vs",
+            rulePack.Title,
+            RulePackJson.ToJson(rulePack).GetRawText(),
+            [],
+            1);
+
+        var baseDesign = ProtocolDesignSamples.MinimalDesign() with
+        {
+            Epochs = [new Epoch("ep.treatment", "Treatment", 1)],
+            PlannedActivities = [new PlannedActivity("act.day1", "Day 1", "ep.treatment", [ActivityLocation.Site], ["cs.vitals"], new ActivityTiming(1, 1, 1))],
+            CollectionSpecs = [new CollectionSpec("cs.vitals", "Vitals", [new CollectionItem("sbp", sbp, Unit: "mm[Hg]", Required: true)])],
+        };
+        var candDesign = baseDesign with
+        {
+            PlannedActivities = [new PlannedActivity("act.day1", "Day 1", "ep.treatment", [ActivityLocation.Site], ["cs.vitals"], new ActivityTiming(2, 1, 2))],
+        };
+
+        var inputs = new Inputs();
+        var parent = inputs.Add(Approved(ProtocolDesignDocument.Write(baseDesign)));
+        var amendment = new ProtocolAmendment(
+            "Shift Day 1",
+            "Shift visit window",
+            AmendmentClassification.Substantial,
+            "Move target day",
+            ["act.day1"],
+            TransitionPolicy.RequiresReconsent);
+        var draftContent = ProtocolDesignDocument.Write(candDesign);
+        var draftHash = ContentHash.Compute(draftContent);
+        var draft = inputs.Add(Draft(parent, draftContent, amendment) with { ContentHash = draftHash });
+
+        var site = new SimulationSiteSnapshot(StudySiteId.New(), SiteId.New(), "US", "Active", IsActive: true, Now.AddDays(-30));
+        var hiddenSite = new SimulationSiteSnapshot(StudySiteId.New(), SiteId.New(), "DE", "Active", IsActive: true, Now.AddDays(-30));
+        var enrollment = new SimulationEnrollmentSnapshot(EnrollmentId.New(), site.Id, "SUBJ-01", EnrollmentStatus.Enrolled, new DateOnly(2026, 9, 1));
+        var collectionId = CollectionInstanceId.New();
+        var obsId = ObservationId.New();
+        var obsVal = new QuantityValue(145m, "mm[Hg]");
+
+        inputs.Snapshot = new SimulationStudySnapshot(
+            Loaded: true,
+            Sites: [site, hiddenSite],
+            Effectivities: [new SimulationEffectivitySnapshot(EffectivityId.New(), parent.Id, EffectivityScope.Study(), EffectivityStatus.Effective)],
+            Enrollments: [enrollment],
+            Observations: [new SimulationObservationSnapshot(obsId, enrollment.Id, site.Id, sbp, obsVal, collectionId, parent.Id, "cs.vitals", "act.day1", "sbp")],
+            Collections:
+            [
+                new SimulationCollectionSnapshot(
+                    collectionId,
+                    enrollment.Id,
+                    site.Id,
+                    parent.Id,
+                    "cs.vitals",
+                    "act.day1",
+                    Now.AddDays(-5),
+                    Now.AddDays(-5),
+                    new Dictionary<string, SimulationCollectedItemSnapshot>(StringComparer.Ordinal)
+                    {
+                        ["sbp"] = new(obsId, sbp, obsVal),
+                    }),
+            ],
+            ProtocolDesigns: new Dictionary<ProtocolVersionId, ProtocolDesign> { [parent.Id] = baseDesign },
+            Concepts: new Dictionary<ConceptId, BlindedConceptMetadata> { [sbp.ConceptId] = new("SBP", "Systolic BP", null) },
+            PinnedLibraryItems: [mapItem],
+            PinnedRulePacks: [ruleItem],
+            DeclaredStandardVersions: [stdId],
+            CodelistDecodes: new Dictionary<(string Codelist, string Code), string>(),
+            DeclaredStandards: [("SDTMIG", "3.4")]);
+
+        var engine = Engine(inputs, visibility: new Hide(NodeRef.For(hiddenSite.Id), MaskReason.NotPermitted));
+        var result = await SimulateAsync(engine, SimulationCandidate.StoredProtocolVersion(draft.Id));
+
+        var canonicalJson = SimulationResultHashing.ToCanonicalJson(result);
+        result.ResultHash.Should().Be(ContentHash.Compute(canonicalJson));
+        SimulationResultHashing.ComputeResultHash(result).Should().Be(result.ResultHash);
+
+        var artifactContent = SimulationArtifactBinding.ToArtifactContent(result);
+        artifactContent.Should().NotBeNull();
+        artifactContent!.ContentHash.Should().Be(result.ResultHash);
+        artifactContent.SizeBytes.Should().Be(Encoding.UTF8.GetByteCount(canonicalJson));
+        SimulationArtifactBinding.TryParseStorageRef(artifactContent.StorageRef, out var binding).Should().BeTrue();
+        binding!.MatchesProtocolAmendment(parent.Id, parent.ContentHash!, draft.Id, draftHash).Should().BeTrue();
+    }
+
+    [Fact]
+    [KernelRule("K-SIM-3")]
+    [KernelRule("K-SIM-4")]
+    public async Task MaskAsync_SkipsDigestWhenOmittedAndMatchesCanonicalDigestAcrossValueKinds()
+    {
+        var siteA = new SimulationSiteSnapshot(
+            new StudySiteId(Guid.Parse("00000000-0000-0000-0000-000000000020")),
+            new SiteId(Guid.Parse("00000000-0000-0000-0000-000000000120")),
+            "DE <&>",
+            "Active",
+            IsActive: true,
+            Now.AddDays(-20));
+        var siteB = new SimulationSiteSnapshot(
+            new StudySiteId(Guid.Parse("00000000-0000-0000-0000-000000000010")),
+            new SiteId(Guid.Parse("00000000-0000-0000-0000-000000000110")),
+            "US",
+            "Closed",
+            IsActive: false,
+            Now.AddDays(-15));
+        var hiddenSite = new SimulationSiteSnapshot(StudySiteId.New(), SiteId.New(), "JP", "Active", IsActive: true, Now.AddDays(-10));
+
+        var protoId = new ProtocolVersionId(Guid.Parse("00000000-0000-0000-0000-000000000300"));
+        var effNull = new SimulationEffectivitySnapshot(
+            new EffectivityId(Guid.Parse("00000000-0000-0000-0000-000000000050")),
+            protoId,
+            EffectivityScope.Study(),
+            StatusAsOf: null);
+        var effActive = new SimulationEffectivitySnapshot(
+            new EffectivityId(Guid.Parse("00000000-0000-0000-0000-000000000040")),
+            protoId,
+            EffectivityScope.Study(),
+            EffectivityStatus.Effective);
+
+        var enr = new SimulationEnrollmentSnapshot(
+            new EnrollmentId(Guid.Parse("00000000-0000-0000-0000-000000000060")),
+            siteA.Id,
+            "SUBJ-\"01\" <&>",
+            EnrollmentStatus.Enrolled,
+            new DateOnly(2026, 8, 15));
+
+        var concept1 = new ConceptRef(new ConceptId(Guid.Parse("00000000-0000-0000-0000-000000000701")), 2);
+        var concept2 = new ConceptRef(new ConceptId(Guid.Parse("00000000-0000-0000-0000-000000000702")), 1);
+        var codeSys = new CodeSystemVersionId(Guid.Parse("00000000-0000-0000-0000-000000000801"));
+        var colId = new CollectionInstanceId(Guid.Parse("00000000-0000-0000-0000-000000000901"));
+
+        var obsValues = new (Guid Id, string ItemKey, ConceptRef Concept, ObservationValue Value, string? ActivityId)[]
+        {
+            (Guid.Parse("00000000-0000-0000-0000-000000000a05"), "z_qty", concept1, new QuantityValue(12.50m, "mg/dL <&>", QuantityComparator.GreaterOrEqual), "act.1"),
+            (Guid.Parse("00000000-0000-0000-0000-000000000a04"), "m_bool", concept2, new BooleanValue(true), null),
+            (Guid.Parse("00000000-0000-0000-0000-000000000a03"), "c_coded", concept1, new CodedValue(codeSys, "POS <&>"), "act.1"),
+            (Guid.Parse("00000000-0000-0000-0000-000000000a02"), "b_dt", concept2, new DateTimeValue("2026-09-01T14:30:00+02:00"), "act.1"),
+            (Guid.Parse("00000000-0000-0000-0000-000000000a01"), "a_miss_detail", concept1, new MissingValue(NullFlavor.NotDone, "equip <&>"), "act.1"),
+            (Guid.Parse("00000000-0000-0000-0000-000000000a00"), "0_miss_plain", concept2, new MissingValue(NullFlavor.Unknown), null),
+        };
+
+        var observations = obsValues
+            .Select(o => new SimulationObservationSnapshot(
+                new ObservationId(o.Id),
+                enr.Id,
+                siteA.Id,
+                o.Concept,
+                o.Value,
+                colId,
+                protoId,
+                "cs.lab",
+                o.ActivityId,
+                o.ItemKey))
+            .ToList();
+
+        var itemMap = obsValues.ToDictionary(
+            o => o.ItemKey,
+            o => new SimulationCollectedItemSnapshot(new ObservationId(o.Id), o.Concept, o.Value),
+            StringComparer.Ordinal);
+        var collection = new SimulationCollectionSnapshot(colId, enr.Id, siteA.Id, protoId, "cs.lab", null, Now, Now, itemMap);
+
+        var snapshot = new SimulationStudySnapshot(
+            Loaded: true,
+            Sites: [siteA, siteB, hiddenSite],
+            Effectivities: [effNull, effActive],
+            Enrollments: [enr],
+            Observations: observations,
+            Collections: [collection],
+            ProtocolDesigns: new Dictionary<ProtocolVersionId, ProtocolDesign>(),
+            Concepts: new Dictionary<ConceptId, BlindedConceptMetadata>(),
+            PinnedLibraryItems: [],
+            PinnedRulePacks: [],
+            DeclaredStandardVersions: [],
+            CodelistDecodes: new Dictionary<(string Codelist, string Code), string>(),
+            DeclaredStandards: []);
+
+        var visibility = new Hide(NodeRef.For(hiddenSite.Id), MaskReason.NotPermitted);
+        var probe = new Probe(permitted: true);
+        var actor = Actor.Person("reviewer@cadence.test");
+
+        var withDigest = await SimulationSnapshotMasking.MaskAsync(
+            Tenant,
+            Study,
+            actor,
+            snapshot,
+            extraDesigns: [],
+            visibility,
+            BlindedTreatmentClassifier.Instance,
+            probe,
+            TestContext.Current.CancellationToken,
+            includeVisibleDigest: true);
+
+        var withoutDigest = await SimulationSnapshotMasking.MaskAsync(
+            Tenant,
+            Study,
+            actor,
+            snapshot,
+            extraDesigns: [],
+            visibility,
+            BlindedTreatmentClassifier.Instance,
+            probe,
+            TestContext.Current.CancellationToken,
+            includeVisibleDigest: false);
+
+        withoutDigest.VisibleStateDigest.Should().BeEmpty();
+        withoutDigest.VisibleSites.Should().Equal(withDigest.VisibleSites);
+        withoutDigest.VisibleObservations.Should().Equal(withDigest.VisibleObservations);
+        withoutDigest.Hidden.Should().BeEquivalentTo(withDigest.Hidden);
+
+        var expectedReferenceDigest = ComputeReferenceJsonNodeDigest(
+            withDigest.VisibleSites,
+            withDigest.VisibleEffectivities,
+            withDigest.VisibleEnrollments,
+            withDigest.VisibleObservations,
+            withDigest.VisibleCollections);
+        withDigest.VisibleStateDigest.Should().Be(expectedReferenceDigest);
+    }
+
+    [Fact]
+    [KernelRule("K-SIM-2")]
+    [KernelRule("K-SIM-3")]
+    public async Task Simulate_SinglePassProjection_RunsOnceWhenMappingsAndConceptBindingsMatchAndTwiceWhenChanged()
+    {
+        var sbp = new ConceptRef(ConceptId.New(), 1);
+        var hr = new ConceptRef(ConceptId.New(), 1);
+        var stdId = StandardVersionId.New();
+
+        var baseMapSpec = SampleMappingSpecifications.Specification(SampleMappingSpecifications.SystolicBloodPressure(sbp));
+        var candMapSpec = SampleMappingSpecifications.Specification(
+            SampleMappingSpecifications.SystolicBloodPressure(sbp) with { Decimals = 2 });
+        var baseMapJson = MappingSpecificationJson.ToJson(baseMapSpec).GetRawText();
+        var candMapJson = MappingSpecificationJson.ToJson(candMapSpec).GetRawText();
+
+        var mapItem = ReleasedLibraryItem(LibraryItemKind.MappingSpecification, "sdtm-vs", baseMapSpec.Title, baseMapJson, [stdId], 1);
+        var baseRulePack = BuildRulePack(("R-VS-1", 1, 140m, ">"));
+        var candRulePack = BuildRulePack(("R-VS-1", 2, 130m, ">"));
+        var ruleItem = ReleasedLibraryItem(
+            LibraryItemKind.RulePack,
+            "rules-vs",
+            baseRulePack.Title,
+            RulePackJson.ToJson(baseRulePack).GetRawText(),
+            [],
+            1);
+
+        var baseDesign = ProtocolDesignSamples.MinimalDesign() with
+        {
+            Epochs = [new Epoch("ep.treatment", "Treatment", 1)],
+            PlannedActivities = [new PlannedActivity("act.v1", "Visit 1", "ep.treatment", [ActivityLocation.Site], ["cs.vitals"], new ActivityTiming(1, 1, 1))],
+            CollectionSpecs = [new CollectionSpec("cs.vitals", "Vitals", [new CollectionItem("sbp", sbp, Unit: "mm[Hg]", Required: true)])],
+        };
+        var scheduleOnlyDesign = baseDesign with
+        {
+            PlannedActivities = [new PlannedActivity("act.v1", "Visit 1", "ep.treatment", [ActivityLocation.Site], ["cs.vitals"], new ActivityTiming(3, 1, 2))],
+        };
+        var reboundConceptDesign = baseDesign with
+        {
+            CollectionSpecs = [new CollectionSpec("cs.vitals", "Vitals", [new CollectionItem("sbp", hr, Unit: "mm[Hg]", Required: true)])],
+        };
+
+        var inputs = new Inputs();
+        var parent = inputs.Add(Approved(ProtocolDesignDocument.Write(baseDesign)));
+        var scheduleDraft = inputs.Add(Draft(parent, ProtocolDesignDocument.Write(scheduleOnlyDesign)));
+        var reboundDraft = inputs.Add(Draft(parent, ProtocolDesignDocument.Write(reboundConceptDesign)));
+        inputs.AddLibraryItem(mapItem);
+        inputs.AddLibraryItem(ruleItem);
+
+        var site = new SimulationSiteSnapshot(StudySiteId.New(), SiteId.New(), "US", "Active", IsActive: true, Now.AddDays(-20));
+        var enrollment = new SimulationEnrollmentSnapshot(EnrollmentId.New(), site.Id, "SUBJ-01", EnrollmentStatus.Enrolled, new DateOnly(2026, 9, 1));
+        var observations = Enumerable.Range(0, 5)
+            .Select(i => new SimulationObservationSnapshot(
+                ObservationId.New(),
+                enrollment.Id,
+                site.Id,
+                sbp,
+                new QuantityValue(125m + (i * 5m), "mm[Hg]"),
+                CollectionInstanceId.New(),
+                parent.Id,
+                "cs.vitals",
+                "act.v1",
+                "sbp"))
+            .ToList();
+
+        inputs.Snapshot = new SimulationStudySnapshot(
+            Loaded: true,
+            Sites: [site],
+            Effectivities: [new SimulationEffectivitySnapshot(EffectivityId.New(), parent.Id, EffectivityScope.Study(), EffectivityStatus.Effective)],
+            Enrollments: [enrollment],
+            Observations: observations,
+            Collections: [],
+            ProtocolDesigns: new Dictionary<ProtocolVersionId, ProtocolDesign> { [parent.Id] = baseDesign },
+            Concepts: new Dictionary<ConceptId, BlindedConceptMetadata>(),
+            PinnedLibraryItems: [mapItem],
+            PinnedRulePacks: [ruleItem],
+            DeclaredStandardVersions: [stdId],
+            CodelistDecodes: new Dictionary<(string Codelist, string Code), string>(),
+            DeclaredStandards: [("SDTMIG", "3.4")]);
+
+        var countingMapper = new CountingMappingEngine(new MappingEngine());
+        var engine = new SimulationEngine(
+            inputs,
+            new Probe(permitted: true),
+            new Hide(null, MaskReason.NotPermitted),
+            new FixedActor(Actor.Person("designer@cadence.test")),
+            new FakeClock(Now),
+            mappingEngine: countingMapper);
+
+        countingMapper.MapCalls = 0;
+        var ruleSim = await SimulateAsync(
+            engine,
+            SimulationCandidate.UnsavedRulePack(Study, RulePackJson.ToJson(candRulePack).GetRawText(), ruleItem.Id));
+        countingMapper.MapCalls.Should().Be(observations.Count, "unchanged mappings and concept bindings project once");
+        ruleSim.ValidationDelta!.Opening.Should().NotBeEmpty();
+
+        countingMapper.MapCalls = 0;
+        _ = await SimulateAsync(engine, SimulationCandidate.StoredProtocolVersion(scheduleDraft.Id));
+        countingMapper.MapCalls.Should().Be(observations.Count, "schedule-only protocol changes keep identical concept bindings");
+
+        countingMapper.MapCalls = 0;
+        _ = await SimulateAsync(
+            engine,
+            SimulationCandidate.UnsavedMappingSpecification(Study, candMapJson, mapItem.Id, stdId));
+        countingMapper.MapCalls.Should().Be(observations.Count * 2, "changed mapping specifications project baseline and candidate separately");
+
+        countingMapper.MapCalls = 0;
+        _ = await SimulateAsync(engine, SimulationCandidate.StoredProtocolVersion(reboundDraft.Id));
+        countingMapper.MapCalls.Should().Be(observations.Count, "rebound concept has no mapping spec on candidate so baseline maps 5 and candidate skips unmapped");
+    }
+
+    [Fact]
+    [KernelRule("K-SIM-2")]
+    [KernelRule("K-SIM-3")]
+    public async Task Simulate_SiblingFormIndexAndResettableCursor_MatchesCrossFormPrecedenceAndReusesUnchangedStage()
+    {
+        var conceptA = new ConceptRef(ConceptId.New(), 1);
+        var conceptB = new ConceptRef(ConceptId.New(), 1);
+
+        var baseDesign = ProtocolDesignSamples.MinimalDesign() with
+        {
+            Epochs = [new Epoch("ep.treatment", "Treatment", 1)],
+            PlannedActivities =
+            [
+                new PlannedActivity("act.base", "Baseline", "ep.treatment", [ActivityLocation.Site], ["cs.baseline"], new ActivityTiming(1, 1, 1)),
+                new PlannedActivity("act.fu", "Follow-up", "ep.treatment", [ActivityLocation.Site], ["cs.followup"], new ActivityTiming(8, 1, 1)),
+            ],
+            CollectionSpecs =
+            [
+                new CollectionSpec(
+                    "cs.baseline",
+                    "Baseline Form",
+                    [
+                        new CollectionItem("base_only", conceptA, Unit: "mg", Required: true),
+                    ]),
+                new CollectionSpec(
+                    "cs.followup",
+                    "Follow-up Form",
+                    [
+                        new CollectionItem("fu_val", conceptA, Unit: "mg", Required: true),
+                        new CollectionItem("shared_item", conceptB, Unit: "mg", Required: false),
+                    ]),
+            ],
+        };
+        var scheduleAmendedDesign = baseDesign with
+        {
+            PlannedActivities =
+            [
+                baseDesign.PlannedActivities[0],
+                baseDesign.PlannedActivities[1] with { Timing = new ActivityTiming(10, 2, 2) },
+            ],
+        };
+
+        var guidanceUri = new UriBuilder(Uri.UriSchemeHttps, "example.org") { Path = "collection-rules" }.Uri.AbsoluteUri;
+        var citation = new SourceCitation("Collection Spec", "1.0", guidanceUri);
+        using var shadowExpr = JsonDocument.Parse("""{"op":"==","args":[{"var":"shared_item"},999]}""");
+        using var qualifiedSiblingExpr = JsonDocument.Parse("""{"op":">","args":[{"var":"fu_val"},{"var":"cs.baseline.shared_item"}]}""");
+        using var unqualifiedSiblingExpr = JsonDocument.Parse("""{"op":">","args":[{"var":"fu_val"},{"var":"base_only"}]}""");
+        using var candidateTightExpr = JsonDocument.Parse("""{"op":">","args":[{"var":"fu_val"},100]}""");
+
+        var packOne = new RulePack(
+            RuleAuthority.Sponsor,
+            "Collection Pack 1",
+            [
+                new Rule(
+                    "R-SHADOW-NULL",
+                    1,
+                    RuleAuthority.Sponsor,
+                    citation,
+                    new RuleApplicability(ValidationStage.Collection, null, null, null, "cs.followup"),
+                    ValidationSeverity.Error,
+                    RuleExpressionJson.Parse(shadowExpr.RootElement),
+                    "Unrecorded target item must be Null rather than falling through to sibling.",
+                    "Check shadowing.",
+                    EffectivePeriod.Always),
+                new Rule(
+                    "R-QUAL-SIBLING",
+                    1,
+                    RuleAuthority.Sponsor,
+                    citation,
+                    new RuleApplicability(ValidationStage.Collection, null, null, null, "cs.followup"),
+                    ValidationSeverity.Warning,
+                    RuleExpressionJson.Parse(qualifiedSiblingExpr.RootElement),
+                    "Follow-up exceeds latest baseline shared_item.",
+                    "Check baseline.",
+                    EffectivePeriod.Always),
+            ]);
+        var packTwo = new RulePack(
+            RuleAuthority.Sponsor,
+            "Collection Pack 2",
+            [
+                new Rule(
+                    "R-UNQUAL-SIBLING",
+                    1,
+                    RuleAuthority.Sponsor,
+                    citation,
+                    new RuleApplicability(ValidationStage.Collection, null, null, null, "cs.followup"),
+                    ValidationSeverity.Warning,
+                    RuleExpressionJson.Parse(unqualifiedSiblingExpr.RootElement),
+                    "Follow-up exceeds latest baseline base_only.",
+                    "Check base_only.",
+                    EffectivePeriod.Always),
+            ]);
+        var packTwoCandidate = new RulePack(
+            RuleAuthority.Sponsor,
+            "Collection Pack 2",
+            [
+                packTwo.Rules[0],
+                new Rule(
+                    "R-FU-TIGHT",
+                    1,
+                    RuleAuthority.Sponsor,
+                    citation,
+                    new RuleApplicability(ValidationStage.Collection, null, null, null, "cs.followup"),
+                    ValidationSeverity.Warning,
+                    RuleExpressionJson.Parse(candidateTightExpr.RootElement),
+                    "Follow-up exceeds 100.",
+                    "Verify follow-up.",
+                    EffectivePeriod.Always),
+            ]);
+
+        var packItem1 = ReleasedLibraryItem(LibraryItemKind.RulePack, "col-pack-1", packOne.Title, RulePackJson.ToJson(packOne).GetRawText(), [], 1);
+        var packItem2 = ReleasedLibraryItem(LibraryItemKind.RulePack, "col-pack-2", packTwo.Title, RulePackJson.ToJson(packTwo).GetRawText(), [], 1);
+
+        var inputs = new Inputs();
+        var parent = inputs.Add(Approved(ProtocolDesignDocument.Write(baseDesign)));
+        var draft = inputs.Add(Draft(parent, ProtocolDesignDocument.Write(scheduleAmendedDesign)));
+        inputs.AddLibraryItem(packItem1);
+        inputs.AddLibraryItem(packItem2);
+
+        var site = new SimulationSiteSnapshot(StudySiteId.New(), SiteId.New(), "US", "Active", IsActive: true, Now.AddDays(-30));
+        var enrollment = new SimulationEnrollmentSnapshot(EnrollmentId.New(), site.Id, "SUBJ-01", EnrollmentStatus.Enrolled, new DateOnly(2026, 9, 1));
+
+        // Older baseline form has shared_item = 999 and base_only = 500; newer baseline form has shared_item = 120 and base_only = 110.
+        var olderBaselineId = new CollectionInstanceId(Guid.Parse("00000000-0000-0000-0000-000000000010"));
+        var newerTieLoserId = new CollectionInstanceId(Guid.Parse("00000000-0000-0000-0000-000000000020"));
+        var newerTieWinnerId = new CollectionInstanceId(Guid.Parse("00000000-0000-0000-0000-000000000030"));
+        var followupId = new CollectionInstanceId(Guid.Parse("00000000-0000-0000-0000-000000000040"));
+
+        var collections = new List<SimulationCollectionSnapshot>
+        {
+            new(
+                olderBaselineId,
+                enrollment.Id,
+                site.Id,
+                parent.Id,
+                "cs.baseline",
+                "act.base",
+                Now.AddDays(-10),
+                Now.AddDays(-10),
+                new Dictionary<string, SimulationCollectedItemSnapshot>(StringComparer.Ordinal)
+                {
+                    ["base_only"] = new(ObservationId.New(), conceptA, new QuantityValue(500m, "mg")),
+                    ["shared_item"] = new(ObservationId.New(), conceptB, new QuantityValue(999m, "mg")),
+                }),
+            new(
+                newerTieWinnerId,
+                enrollment.Id,
+                site.Id,
+                parent.Id,
+                "cs.baseline",
+                "act.base",
+                Now.AddDays(-5),
+                Now.AddDays(-5),
+                new Dictionary<string, SimulationCollectedItemSnapshot>(StringComparer.Ordinal)
+                {
+                    ["base_only"] = new(ObservationId.New(), conceptA, new QuantityValue(110m, "mg")),
+                    ["shared_item"] = new(ObservationId.New(), conceptB, new QuantityValue(120m, "mg")),
+                }),
+            new(
+                newerTieLoserId,
+                enrollment.Id,
+                site.Id,
+                parent.Id,
+                "cs.baseline",
+                "act.base",
+                Now.AddDays(-5),
+                Now.AddDays(-5),
+                new Dictionary<string, SimulationCollectedItemSnapshot>(StringComparer.Ordinal)
+                {
+                    ["base_only"] = new(ObservationId.New(), conceptA, new QuantityValue(800m, "mg")),
+                    ["shared_item"] = new(ObservationId.New(), conceptB, new QuantityValue(999m, "mg")),
+                }),
+            new(
+                followupId,
+                enrollment.Id,
+                site.Id,
+                parent.Id,
+                "cs.followup",
+                "act.fu",
+                Now.AddDays(-1),
+                Now.AddDays(-1),
+                new Dictionary<string, SimulationCollectedItemSnapshot>(StringComparer.Ordinal)
+                {
+                    // Note: shared_item is intentionally omitted here; design declares it on cs.followup so it must bind to RuleValue.Null!
+                    ["fu_val"] = new(ObservationId.New(), conceptA, new QuantityValue(150m, "mg")),
+                }),
+        };
+
+        inputs.Snapshot = new SimulationStudySnapshot(
+            Loaded: true,
+            Sites: [site],
+            Effectivities: [new SimulationEffectivitySnapshot(EffectivityId.New(), parent.Id, EffectivityScope.Study(), EffectivityStatus.Effective)],
+            Enrollments: [enrollment],
+            Observations: [],
+            Collections: collections,
+            ProtocolDesigns: new Dictionary<ProtocolVersionId, ProtocolDesign> { [parent.Id] = baseDesign },
+            Concepts: new Dictionary<ConceptId, BlindedConceptMetadata>(),
+            PinnedLibraryItems: [],
+            PinnedRulePacks: [packItem1, packItem2],
+            DeclaredStandardVersions: [],
+            CodelistDecodes: new Dictionary<(string Codelist, string Code), string>(),
+            DeclaredStandards: [("SDTMIG", "3.4"), ("CDASHIG", "2.2")]);
+
+        var countingEvaluator = new CountingRuleEvaluator(new DotNetRuleEvaluator());
+        var engine = new SimulationEngine(
+            inputs,
+            new Probe(permitted: true),
+            new Hide(null, MaskReason.NotPermitted),
+            new FixedActor(Actor.Person("designer@cadence.test")),
+            new FakeClock(Now),
+            ruleEvaluator: countingEvaluator);
+
+        // 1. Schedule-only protocol candidate has matching CollectionSpecs and RulePacks: collection stage runs once (2 standards * 2 packs = 4 calls, not 8).
+        countingEvaluator.StageCalls.Clear();
+        var protoResult = await SimulateAsync(engine, SimulationCandidate.StoredProtocolVersion(draft.Id));
+        countingEvaluator.StageCalls.GetValueOrDefault(ValidationStage.Collection).Should().Be(4);
+        protoResult.ValidationDelta!.Opening.Should().BeEmpty();
+        protoResult.ValidationDelta.Resolving.Should().BeEmpty();
+        protoResult.ValidationDelta.UnchangedCount.Should().Be(
+            2,
+            "R-QUAL-SIBLING and R-UNQUAL-SIBLING fire against the tie-winner baseline while R-SHADOW-NULL stays false because unrecorded shared_item on cs.followup shadows sibling");
+
+        // 2. RulePack candidate evaluates baseline and candidate collection cursors across both declared standards (8 collection calls) and opens R-FU-TIGHT.
+        countingEvaluator.StageCalls.Clear();
+        var ruleResult = await SimulateAsync(
+            engine,
+            SimulationCandidate.UnsavedRulePack(Study, RulePackJson.ToJson(packTwoCandidate).GetRawText(), packItem2.Id));
+        countingEvaluator.StageCalls.GetValueOrDefault(ValidationStage.Collection).Should().Be(8);
+        ruleResult.ValidationDelta!.Opening.Should().ContainSingle(f => f.RuleId == "R-FU-TIGHT" && f.Subject == followupId.Value.ToString());
+        ruleResult.ValidationDelta.UnchangedCount.Should().Be(2);
+    }
+
+    [Fact]
+    [KernelRule("K-SIM-4")]
+    [KernelRule("K-AUTH-4")]
+    public async Task Simulate_CustomBlindedTreatmentClassifier_DelegatesObservationSpecItemAndFindingChecks()
+    {
+        var conceptOpen = new ConceptRef(ConceptId.New(), 1);
+        var conceptCustomSecret = new ConceptRef(ConceptId.New(), 1);
+
+        var design = ProtocolDesignSamples.MinimalDesign() with
+        {
+            Epochs = [new Epoch("ep.treatment", "Treatment", 1)],
+            PlannedActivities = [new PlannedActivity("act.v1", "Visit 1", "ep.treatment", [ActivityLocation.Site], ["cs.open", "cs.custom_secret"], new ActivityTiming(1, 1, 1))],
+            CollectionSpecs =
+            [
+                new CollectionSpec(
+                    "cs.open",
+                    "Open Form",
+                    [
+                        new CollectionItem("open_val", conceptOpen, Unit: "mg", Required: true),
+                        new CollectionItem("secret_item", conceptCustomSecret, Unit: "mg", Required: false),
+                    ]),
+                new CollectionSpec(
+                    "cs.custom_secret",
+                    "Custom Secret Form",
+                    [new CollectionItem("dose_val", conceptCustomSecret, Unit: "mg", Required: true)]),
+            ],
+        };
+
+        var guidanceUri = new UriBuilder(Uri.UriSchemeHttps, "example.org") { Path = "blinded-rules" }.Uri.AbsoluteUri;
+        var citation = new SourceCitation("Blinding Spec", "1.0", guidanceUri);
+        using var benignExpr = JsonDocument.Parse("""{"op":">","args":[{"var":"open_val"},1000]}""");
+        using var openExpr = JsonDocument.Parse("""{"op":">","args":[{"var":"open_val"},10]}""");
+        var basePack = new RulePack(
+            RuleAuthority.Sponsor,
+            "Open Check",
+            [
+                new Rule(
+                    "R-BENIGN",
+                    1,
+                    RuleAuthority.Sponsor,
+                    citation,
+                    new RuleApplicability(ValidationStage.Collection, null, null, null, "cs.open"),
+                    ValidationSeverity.Warning,
+                    RuleExpressionJson.Parse(benignExpr.RootElement),
+                    "Benign baseline check.",
+                    "No action.",
+                    EffectivePeriod.Always),
+            ]);
+        var candPack = new RulePack(
+            RuleAuthority.Sponsor,
+            "Open Check",
+            [
+                new Rule(
+                    "R-CUSTOM-BLINDED-FINDING",
+                    1,
+                    RuleAuthority.Sponsor,
+                    citation,
+                    new RuleApplicability(ValidationStage.Collection, null, null, null, "cs.open"),
+                    ValidationSeverity.Warning,
+                    RuleExpressionJson.Parse(openExpr.RootElement),
+                    "Custom classifier marks this finding blinded.",
+                    "Mask for blinded reader.",
+                    EffectivePeriod.Always),
+            ]);
+        var packItem = ReleasedLibraryItem(LibraryItemKind.RulePack, "rules-blind", basePack.Title, RulePackJson.ToJson(basePack).GetRawText(), [], 1);
+
+        var inputs = new Inputs();
+        var parent = inputs.Add(Approved(ProtocolDesignDocument.Write(design)));
+        inputs.AddLibraryItem(packItem);
+
+        var site = new SimulationSiteSnapshot(StudySiteId.New(), SiteId.New(), "US", "Active", IsActive: true, Now.AddDays(-10));
+        var enrollment = new SimulationEnrollmentSnapshot(EnrollmentId.New(), site.Id, "SUBJ-01", EnrollmentStatus.Enrolled, new DateOnly(2026, 9, 1));
+        var openColId = CollectionInstanceId.New();
+        var secretColId = CollectionInstanceId.New();
+        var openObsId = ObservationId.New();
+        var secretObsId = ObservationId.New();
+
+        inputs.Snapshot = new SimulationStudySnapshot(
+            Loaded: true,
+            Sites: [site],
+            Effectivities: [new SimulationEffectivitySnapshot(EffectivityId.New(), parent.Id, EffectivityScope.Study(), EffectivityStatus.Effective)],
+            Enrollments: [enrollment],
+            Observations:
+            [
+                new SimulationObservationSnapshot(openObsId, enrollment.Id, site.Id, conceptOpen, new QuantityValue(50m, "mg"), openColId, parent.Id, "cs.open", "act.v1", "open_val"),
+                new SimulationObservationSnapshot(secretObsId, enrollment.Id, site.Id, conceptCustomSecret, new QuantityValue(25m, "mg"), openColId, parent.Id, "cs.open", "act.v1", "secret_item"),
+            ],
+            Collections:
+            [
+                new SimulationCollectionSnapshot(
+                    openColId,
+                    enrollment.Id,
+                    site.Id,
+                    parent.Id,
+                    "cs.open",
+                    "act.v1",
+                    Now.AddDays(-2),
+                    Now.AddDays(-2),
+                    new Dictionary<string, SimulationCollectedItemSnapshot>(StringComparer.Ordinal)
+                    {
+                        ["open_val"] = new(openObsId, conceptOpen, new QuantityValue(50m, "mg")),
+                        ["secret_item"] = new(secretObsId, conceptCustomSecret, new QuantityValue(25m, "mg")),
+                    }),
+                new SimulationCollectionSnapshot(
+                    secretColId,
+                    enrollment.Id,
+                    site.Id,
+                    parent.Id,
+                    "cs.custom_secret",
+                    "act.v1",
+                    Now.AddDays(-2),
+                    Now.AddDays(-2),
+                    new Dictionary<string, SimulationCollectedItemSnapshot>(StringComparer.Ordinal)
+                    {
+                        ["dose_val"] = new(ObservationId.New(), conceptCustomSecret, new QuantityValue(25m, "mg")),
+                    }),
+            ],
+            ProtocolDesigns: new Dictionary<ProtocolVersionId, ProtocolDesign> { [parent.Id] = design },
+            Concepts: new Dictionary<ConceptId, BlindedConceptMetadata>(),
+            PinnedLibraryItems: [],
+            PinnedRulePacks: [packItem],
+            DeclaredStandardVersions: [],
+            CodelistDecodes: new Dictionary<(string Codelist, string Code), string>(),
+            DeclaredStandards: []);
+
+        var customClassifier = new CustomBlindingClassifierSpy(conceptCustomSecret.ConceptId);
+        var engine = new SimulationEngine(
+            inputs,
+            new BlindedProbe(),
+            new Hide(null, MaskReason.NotPermitted),
+            new FixedActor(Actor.Person("blinded-monitor@cadence.test")),
+            new FakeClock(Now),
+            blindingClassifier: customClassifier);
+
+        var result = await SimulateAsync(
+            engine,
+            SimulationCandidate.UnsavedRulePack(Study, RulePackJson.ToJson(candPack).GetRawText(), packItem.Id));
+
+        customClassifier.ObservationCalls.Should().BeGreaterThan(0);
+        customClassifier.SpecCalls.Should().BeGreaterThan(0);
+        customClassifier.ItemCalls.Should().BeGreaterThan(0);
+        customClassifier.FindingCalls.Should().BeGreaterThan(0);
+        result.ValidationDelta!.Opening.Should().BeEmpty("the custom classifier flagged the finding as blinded");
+        result.Masked.Should().Contain(new MaskedPart(SimulationSnapshotMasking.BlindedTreatmentPart, MaskReason.Blinded));
+    }
+
+    private static string ComputeReferenceJsonNodeDigest(
+        IReadOnlyList<SimulationSiteSnapshot> sites,
+        IReadOnlyList<SimulationEffectivitySnapshot> effectivities,
+        IReadOnlyList<SimulationEnrollmentSnapshot> enrollments,
+        IReadOnlyList<SimulationObservationSnapshot> observations,
+        IReadOnlyList<SimulationCollectionSnapshot> collections)
+    {
+        var doc = new JsonObject
+        {
+            ["sites"] = new JsonArray(sites.OrderBy(s => s.Id.Value).Select(s => (JsonNode)new JsonObject
+            {
+                ["id"] = s.Id.Value.ToString(),
+                ["country"] = s.Country,
+                ["status"] = s.Status,
+                ["active"] = s.IsActive,
+            }).ToArray()),
+            ["effectivities"] = new JsonArray(effectivities.OrderBy(e => e.Id.Value).Select(e => (JsonNode)new JsonObject
+            {
+                ["id"] = e.Id.Value.ToString(),
+                ["protocolVersion"] = e.ProtocolVersionId.Value.ToString(),
+                ["status"] = e.StatusAsOf?.ToString(),
+            }).ToArray()),
+            ["enrollments"] = new JsonArray(enrollments.OrderBy(e => e.Id.Value).Select(e => (JsonNode)new JsonObject
+            {
+                ["id"] = e.Id.Value.ToString(),
+                ["subjectCode"] = e.SubjectCode,
+                ["status"] = e.StatusAsOf.ToString(),
+                ["referenceStart"] = e.ReferenceStartDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+            }).ToArray()),
+            ["observations"] = new JsonArray(observations.OrderBy(o => o.Id.Value).Select(o => (JsonNode)new JsonObject
+            {
+                ["id"] = o.Id.Value.ToString(),
+                ["concept"] = o.Concept.ToString(),
+                ["value"] = o.Value.ToDisplayString(),
+            }).ToArray()),
+            ["collections"] = new JsonArray(collections.OrderBy(c => c.Id.Value).Select(c => (JsonNode)new JsonObject
+            {
+                ["id"] = c.Id.Value.ToString(),
+                ["spec"] = c.CollectionSpecId,
+                ["activity"] = c.PlannedActivityId,
+                ["items"] = new JsonArray(c.ValuesByItemId
+                    .OrderBy(kv => kv.Key, StringComparer.Ordinal)
+                    .Select(kv => (JsonNode)new JsonObject
+                    {
+                        ["item"] = kv.Key,
+                        ["value"] = kv.Value.Value.ToDisplayString(),
+                    })
+                    .ToArray()),
+            }).ToArray()),
+        };
+        return ContentHash.Compute(doc.ToJsonString());
+    }
+
     private static SimulationEngine Engine(Inputs inputs, INodeVisibility? visibility = null, IAuthorizationProbe? probe = null) =>
         new(
             inputs,
@@ -952,4 +1729,252 @@ public sealed class SimulationTests
     {
         public Actor? Actor { get; } = actor;
     }
+
+    private sealed class CountingMappingEngine(IMappingEngine inner) : IMappingEngine
+    {
+        public int MapCalls { get; set; }
+
+        public MappingResult Map(MappingSpecification specification, MappingInput input, ICodelistDecoder? decoder = null)
+        {
+            MapCalls++;
+            return inner.Map(specification, input, decoder);
+        }
+    }
+
+    private sealed class CountingRuleEvaluator(IRuleEvaluator inner) : IRuleEvaluator
+    {
+        public Dictionary<ValidationStage, int> StageCalls { get; } = [];
+
+        public IReadOnlyList<RuleViolation> Evaluate(RulePack pack, RuleEvaluationContext context, IEnumerable<RuleRecord> records)
+        {
+            StageCalls[context.Stage] = StageCalls.GetValueOrDefault(context.Stage) + 1;
+            return inner.Evaluate(pack, context, records);
+        }
+
+        public void Evaluate(RulePack pack, RuleEvaluationContext context, IRuleRecordCursor records, IRuleViolationSink sink)
+        {
+            StageCalls[context.Stage] = StageCalls.GetValueOrDefault(context.Stage) + 1;
+            inner.Evaluate(pack, context, records, sink);
+        }
+    }
+
+    private sealed class CustomBlindingClassifierSpy(ConceptId secretConceptId) : IBlindedTreatmentClassifier
+    {
+        public int ObservationCalls { get; private set; }
+
+        public int SpecCalls { get; private set; }
+
+        public int ItemCalls { get; private set; }
+
+        public int FindingCalls { get; private set; }
+
+        public bool IsBlindedObservation(
+            ConceptId conceptId,
+            ObservationValue? value,
+            BlindedConceptMetadata? concept,
+            string? collectionSpecId,
+            string? itemId,
+            IReadOnlyList<ProtocolDesign> designs)
+        {
+            ObservationCalls++;
+            return conceptId == secretConceptId;
+        }
+
+        public bool IsBlindedCollectionSpec(
+            string? collectionSpecId,
+            string? collectionSpecName = null,
+            string? operationalNeed = null,
+            IReadOnlyList<ProtocolDesign>? designs = null)
+        {
+            SpecCalls++;
+            return string.Equals(collectionSpecId, "cs.custom_secret", StringComparison.Ordinal);
+        }
+
+        public bool IsBlindedCollectionItem(
+            string? collectionSpecId,
+            string? collectionTitle,
+            CollectionItem? item,
+            ObservationValue? value = null,
+            BlindedConceptMetadata? concept = null,
+            IReadOnlyList<ProtocolDesign>? designs = null)
+        {
+            ItemCalls++;
+            return item?.Concept.ConceptId == secretConceptId;
+        }
+
+        public bool IsBlindedVariable(
+            string? defaultDataset,
+            string? variable,
+            IReadOnlyList<ProtocolDesign> designs,
+            Func<ConceptId, BlindedConceptMetadata?>? resolveConcept = null) =>
+            false;
+
+        public bool IsBlindedFinding(
+            FindingTarget target,
+            IReadOnlyList<ObservedVariable> observedValues,
+            IReadOnlyList<ProtocolDesign> designs,
+            Func<ConceptId, BlindedConceptMetadata?>? resolveConcept = null)
+        {
+            FindingCalls++;
+            return string.Equals(target.Dataset, "cs.open", StringComparison.Ordinal);
+        }
+    }
+}
+
+[CollectionDefinition(Name, DisableParallelization = true)]
+public sealed class SimulationMemoryQuotaCollection
+{
+    public const string Name = "SimulationMemoryQuota";
+
+    private SimulationMemoryQuotaCollection()
+    {
+    }
+}
+
+/// <summary>
+/// Isolated memory-quota verification for <see cref="SimulationSnapshotMasking.ComputeVisibleDigest"/> across
+/// 300 enrollments, 9,000 forms, and 135,000 observations so parallel xUnit tests cannot allocate on the process-wide
+/// Large Object Heap during measurement.
+/// </summary>
+[Trait("Category", "Unit")]
+[Collection(SimulationMemoryQuotaCollection.Name)]
+public sealed class SimulationLohQuotaTests
+{
+    [Fact(DisplayName = "ComputeVisibleDigest_AllocatesZeroBytesOnLargeObjectHeapAcross300Enrollments9000FormsAnd135000Observations")]
+    [KernelRule("K-SIM-3")]
+    [KernelRule("K-SIM-4")]
+    public void ComputeVisibleDigestAllocatesZeroBytesOnLargeObjectHeapAcross300Enrollments9000FormsAnd135000Observations()
+    {
+        const int enrollmentsCount = 300;
+        const int formsPerEnrollment = 30;
+        const int itemsPerForm = 15;
+
+        var now = new DateTimeOffset(2026, 9, 30, 8, 0, 0, TimeSpan.Zero);
+        var protoId = new ProtocolVersionId(DeterministicGuid(1, 0, 1));
+        var site = new SimulationSiteSnapshot(
+            new StudySiteId(DeterministicGuid(2, 0, 1)),
+            new SiteId(DeterministicGuid(2, 1, 1)),
+            "US",
+            "Active",
+            IsActive: true,
+            now.AddDays(-60));
+        var effectivity = new SimulationEffectivitySnapshot(
+            new EffectivityId(DeterministicGuid(3, 0, 1)),
+            protoId,
+            EffectivityScope.Study(),
+            EffectivityStatus.Effective);
+
+        var concepts = new ConceptRef[itemsPerForm];
+        for (var i = 0; i < itemsPerForm; i++)
+        {
+            concepts[i] = new ConceptRef(new ConceptId(DeterministicGuid(4, 0, i + 1)), 1);
+        }
+
+        var enrollments = new List<SimulationEnrollmentSnapshot>(enrollmentsCount);
+        var collections = new List<SimulationCollectionSnapshot>(enrollmentsCount * formsPerEnrollment);
+        var observations = new List<SimulationObservationSnapshot>(enrollmentsCount * formsPerEnrollment * itemsPerForm);
+
+        var colCounter = 1;
+        var obsCounter = 1;
+        for (var e = 0; e < enrollmentsCount; e++)
+        {
+            var enrId = new EnrollmentId(DeterministicGuid(5, 0, enrollmentsCount - e));
+            enrollments.Add(new SimulationEnrollmentSnapshot(
+                enrId,
+                site.Id,
+                $"SUBJ-{e + 1:D4}",
+                EnrollmentStatus.Enrolled,
+                new DateOnly(2026, 8, 1).AddDays(e % 25)));
+
+            for (var f = 0; f < formsPerEnrollment; f++)
+            {
+                var colId = new CollectionInstanceId(DeterministicGuid(6, 0, (enrollmentsCount * formsPerEnrollment) - colCounter + 1));
+                colCounter++;
+                var specId = $"cs.visit_{f:D2}";
+                var actId = $"act.visit_{f:D2}";
+                var itemMap = new Dictionary<string, SimulationCollectedItemSnapshot>(itemsPerForm, StringComparer.Ordinal);
+
+                for (var i = 0; i < itemsPerForm; i++)
+                {
+                    var obsId = new ObservationId(DeterministicGuid(7, 0, (enrollmentsCount * formsPerEnrollment * itemsPerForm) - obsCounter + 1));
+                    obsCounter++;
+                    var val = new QuantityValue(100m + ((e + f + i) % 50), "mg");
+                    var itemKey = $"f{f:D2}_itm_{i:D2}";
+                    observations.Add(new SimulationObservationSnapshot(
+                        obsId,
+                        enrId,
+                        site.Id,
+                        concepts[i],
+                        val,
+                        colId,
+                        protoId,
+                        specId,
+                        actId,
+                        itemKey));
+                    itemMap[itemKey] = new SimulationCollectedItemSnapshot(obsId, concepts[i], val);
+                }
+
+                collections.Add(new SimulationCollectionSnapshot(
+                    colId,
+                    enrId,
+                    site.Id,
+                    protoId,
+                    specId,
+                    actId,
+                    now.AddDays(-30 + f),
+                    now.AddDays(-30 + f),
+                    itemMap));
+            }
+        }
+
+        IReadOnlyList<SimulationSiteSnapshot> sites = [site];
+        IReadOnlyList<SimulationEffectivitySnapshot> effectivities = [effectivity];
+
+        // Warm up JIT and shared ArrayPool buckets on a tiny slice before measuring LOH delta.
+        _ = SimulationSnapshotMasking.ComputeVisibleDigest(
+            sites,
+            effectivities,
+            [enrollments[0]],
+            [observations[0]],
+            [collections[0]]);
+
+#pragma warning disable S1215 // Explicit GC collection is required to measure deterministic Large Object Heap allocation delta.
+        GC.Collect(2, GCCollectionMode.Forced, blocking: true, compacting: true);
+        GC.WaitForPendingFinalizers();
+        GC.Collect(2, GCCollectionMode.Forced, blocking: true, compacting: true);
+
+        var lohBefore = GC.GetGCMemoryInfo().GenerationInfo[3].SizeAfterBytes;
+        var threadBefore = GC.GetAllocatedBytesForCurrentThread();
+
+        var digest = SimulationSnapshotMasking.ComputeVisibleDigest(
+            sites,
+            effectivities,
+            enrollments,
+            observations,
+            collections);
+
+        var threadAllocated = GC.GetAllocatedBytesForCurrentThread() - threadBefore;
+        GC.Collect(0, GCCollectionMode.Forced, blocking: true, compacting: false);
+#pragma warning restore S1215
+        var lohAfter = GC.GetGCMemoryInfo().GenerationInfo[3].SizeBeforeBytes;
+        var lohDelta = Math.Max(0L, lohAfter - lohBefore);
+
+        ContentHash.IsWellFormed(digest).Should().BeTrue();
+        lohDelta.Should().Be(0L, "ComputeVisibleDigest must allocate zero objects on the Large Object Heap across 300 enrollments, 9,000 forms, and 135,000 observations");
+        threadAllocated.Should().BeLessThan(16L * 1024 * 1024);
+    }
+
+    private static Guid DeterministicGuid(int a, int b, int c) =>
+        new(
+            a,
+            (short)(b >> 16),
+            (short)(b & 0xFFFF),
+            0x10,
+            0x20,
+            0x30,
+            0x40,
+            (byte)((c >> 24) & 0xFF),
+            (byte)((c >> 16) & 0xFF),
+            (byte)((c >> 8) & 0xFF),
+            (byte)(c & 0xFF));
 }

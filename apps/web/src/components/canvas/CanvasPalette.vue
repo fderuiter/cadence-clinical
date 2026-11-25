@@ -10,90 +10,109 @@
         id="canvas-palette"
         ref="dialogRef"
         class="palette"
+        :style="paletteMaxHeightStyle"
         role="dialog"
         aria-modal="true"
         :aria-busy="isSearching ? 'true' : 'false'"
         aria-label="Go to or open anything in this study"
       >
-        <input
-          id="canvas-palette-input"
-          v-model="query"
-          type="text"
-          role="combobox"
-          aria-autocomplete="list"
-          aria-controls="canvas-palette-list"
-          :aria-expanded="results.length > 0"
-          :aria-busy="isSearching ? 'true' : 'false'"
-          :aria-activedescendant="
-            results.length ? `canvas-palette-item-${active}` : undefined
-          "
-          autocomplete="off"
-          :placeholder="
-            studyCode
-              ? 'Stage, section, participant, workflow or study code'
-              : 'Study code or workflow, e.g. CADENCE-101'
-          "
-          aria-label="Search"
-          @keydown="onKeydown"
-        />
-        <ul
-          v-if="results.length"
-          id="canvas-palette-list"
-          class="palette-list"
-          role="listbox"
-          :aria-busy="isSearching ? 'true' : 'false'"
-          aria-label="Results"
-        >
-          <li
-            v-for="(item, index) in results"
-            :id="`canvas-palette-item-${index}`"
-            :key="item.key"
-            class="palette-item"
-            :class="{ active: index === active }"
-            role="option"
-            tabindex="-1"
-            :aria-selected="index === active"
-            @click="choose(item)"
-            @keydown.enter.prevent="choose(item)"
-            @keydown.space.prevent="choose(item)"
-            @mouseenter="active = index"
-            @focus="active = index"
+        <div class="palette-header">
+          <input
+            id="canvas-palette-input"
+            v-model="query"
+            type="text"
+            role="combobox"
+            aria-autocomplete="list"
+            aria-controls="canvas-palette-list"
+            :aria-expanded="results.length > 0"
+            :aria-busy="isSearching ? 'true' : 'false'"
+            :aria-activedescendant="
+              results.length ? `canvas-palette-item-${active}` : undefined
+            "
+            autocomplete="off"
+            :placeholder="
+              studyCode
+                ? 'Stage, section, participant, workflow or study code'
+                : 'Study code or workflow, e.g. CADENCE-101'
+            "
+            aria-label="Search"
+            @keydown="onKeydown"
+          />
+          <button
+            id="canvas-palette-close"
+            type="button"
+            class="palette-close-btn"
+            aria-label="Close command palette"
+            @click="emit('close')"
           >
-            <span class="palette-group">{{ item.group }}</span>
-            <span class="palette-label">{{ item.label }}</span>
-            <span v-if="item.detail" class="palette-detail">{{
-              item.detail
-            }}</span>
-          </li>
-        </ul>
-        <p v-else id="canvas-palette-empty" class="palette-empty" role="status">
-          {{
-            query.trim()
-              ? "Nothing matches across studies, lifecycle stages, or authorized workflows."
-              : "Type a study code or choose a workflow destination."
-          }}
-        </p>
-        <p
-          v-if="kernelNote"
-          id="canvas-palette-kernel-note"
-          class="palette-footnote"
-          role="status"
-        >
-          {{ kernelNote }}
-        </p>
-        <p
-          v-if="displaySubjectNote"
-          id="canvas-palette-subject-note"
-          class="palette-footnote"
-          role="status"
-        >
-          {{ displaySubjectNote }}
-        </p>
-        <p class="palette-footnote">
-          Studies are found by code or title among those visible to your
-          account. Available actions for a selected participant are under Act in
-          the inspector.
-        </p>
+            <ClinicalIcon name="x" :size="18" />
+          </button>
+        </div>
+        <div class="palette-body">
+          <ul
+            v-if="results.length"
+            id="canvas-palette-list"
+            class="palette-list"
+            role="listbox"
+            :aria-busy="isSearching ? 'true' : 'false'"
+            aria-label="Results"
+          >
+            <li
+              v-for="(item, index) in results"
+              :id="`canvas-palette-item-${index}`"
+              :key="item.key"
+              class="palette-item"
+              :class="{ active: index === active }"
+              role="option"
+              tabindex="-1"
+              :aria-selected="index === active"
+              @click="choose(item)"
+              @keydown.enter.prevent="choose(item)"
+              @keydown.space.prevent="choose(item)"
+              @mouseenter="active = index"
+              @focus="active = index"
+            >
+              <span class="palette-group">{{ item.group }}</span>
+              <span class="palette-label">{{ item.label }}</span>
+              <span v-if="item.detail" class="palette-detail">{{
+                item.detail
+              }}</span>
+            </li>
+          </ul>
+          <p
+            v-else
+            id="canvas-palette-empty"
+            class="palette-empty"
+            role="status"
+          >
+            {{
+              query.trim()
+                ? "Nothing matches across studies, lifecycle stages, or authorized workflows."
+                : "Type a study code or choose a workflow destination."
+            }}
+          </p>
+          <p
+            v-if="kernelNote"
+            id="canvas-palette-kernel-note"
+            class="palette-footnote"
+            role="status"
+          >
+            {{ kernelNote }}
+          </p>
+          <p
+            v-if="displaySubjectNote"
+            id="canvas-palette-subject-note"
+            class="palette-footnote"
+            role="status"
+          >
+            {{ displaySubjectNote }}
+          </p>
+          <p class="palette-footnote">
+            Studies are found by code or title among those visible to your
+            account. Available actions for a selected participant are under Act
+            in the inspector.
+          </p>
+        </div>
       </div>
     </div>
   </Teleport>
@@ -102,7 +121,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, watch } from "vue";
 import { getActivePinia } from "pinia";
-import { useFocusTrap } from "ui";
+import { ClinicalIcon, useFocusTrap, useViewportMaxHeight } from "ui";
 import { kernelApi, type KernelSearchHit } from "../../api/kernelApi";
 import { STAGES, participantStateLabel } from "../../canvas/lifecycle";
 import { executionApi, type SubjectSummary } from "../../api/executionApi";
@@ -152,6 +171,11 @@ const emit = defineEmits<{
 }>();
 
 const dialogRef = ref<HTMLElement | null>(null);
+const { maxHeightStyle: paletteMaxHeightStyle } = useViewportMaxHeight({
+  shortTopOffset: 12,
+  bottomMargin: 12,
+  minHeight: 160,
+});
 useFocusTrap(dialogRef, {
   onEscape: () => emit("close"),
   initialFocus: "#canvas-palette-input",
@@ -528,11 +552,16 @@ function onKeydown(event: KeyboardEvent) {
   justify-content: center;
   align-items: flex-start;
   padding: 12vh 16px 16px;
+  box-sizing: border-box;
   background: var(--semantic-color-backdrop);
 }
 
 .palette {
+  display: flex;
+  flex-direction: column;
   width: min(640px, 100%);
+  max-height: calc(100dvh - 24px);
+  box-sizing: border-box;
   background: var(--semantic-color-surface);
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -540,22 +569,66 @@ function onKeydown(event: KeyboardEvent) {
   overflow: hidden;
 }
 
-.palette input {
+.palette-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-right: 6px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.palette-header input {
+  flex: 1 1 auto;
+  min-width: 0;
   width: 100%;
   box-sizing: border-box;
   padding: 14px 16px;
   border: 0;
-  border-bottom: 1px solid var(--border);
-  font-size: 1rem;
+  font-size: max(1rem, 16px);
   background: transparent;
   color: inherit;
+}
+
+.palette-close-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  min-width: 44px;
+  min-height: 44px;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--neutral-dark);
+  cursor: pointer;
+}
+
+.palette-close-btn:not(:disabled):hover {
+  background: var(--semantic-color-surface-header);
+  border-color: var(--semantic-color-border-control);
+  color: var(--semantic-color-text);
+}
+
+.palette-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .palette-list {
   list-style: none;
   margin: 0;
   padding: 6px;
-  max-height: 50vh;
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
 }
 
@@ -582,11 +655,13 @@ function onKeydown(event: KeyboardEvent) {
 
 .palette-label {
   font-weight: 600;
+  overflow-wrap: anywhere;
 }
 
 .palette-detail {
   color: var(--neutral-dark);
   font-size: 0.85rem;
+  overflow-wrap: anywhere;
 }
 
 .palette-empty,
@@ -599,5 +674,26 @@ function onKeydown(event: KeyboardEvent) {
 
 .palette-footnote {
   border-top: 1px solid var(--border);
+}
+
+@media (max-width: 639px) {
+  .palette-backdrop {
+    padding: 12px;
+  }
+
+  .palette-item {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+  }
+
+  .palette-group {
+    grid-row: auto;
+  }
+}
+
+@media (max-height: 520px) {
+  .palette-backdrop {
+    padding: 12px;
+  }
 }
 </style>

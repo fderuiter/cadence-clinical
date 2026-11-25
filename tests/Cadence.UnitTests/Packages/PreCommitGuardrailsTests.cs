@@ -157,6 +157,7 @@ public sealed class PreCommitGuardrailsTests : IDisposable
               ],
               "results": {
                 "pnpm-lock.yaml": [{ "type": "Hex High Entropy String", "hashed_secret": "abc", "line_number": 10 }],
+                "apps/econsent/tests/test_legacy.py": [{ "type": "Secret Keyword", "hashed_secret": "phantom", "line_number": 15 }],
                 "apps/web/src/Sample.ts": [{ "type": "Hex High Entropy String", "hashed_secret": "def", "line_number": 42 }],
                 "src/RootSample.cs": [{ "type": "Hex High Entropy String", "hashed_secret": "ghi", "line_number": 7 }]
               },
@@ -166,9 +167,13 @@ public sealed class PreCommitGuardrailsTests : IDisposable
               }
             }
             """);
+        Write("apps/web/src/Sample.ts", "export const token = 'def';\n");
+        Write("src/RootSample.cs", "internal static class RootSample {}\n");
 
         SecretsBaselineCleanerService.CleanSecretsBaseline(baselinePath, _tempDir).Should().Be(0);
         File.Exists(baselinePath).Should().BeFalse("legacy .secrets.baseline must be deleted after splitting into shards");
+        File.Exists(Path.Combine(_tempDir, "baselines/secrets/apps/econsent.secrets.baseline.json"))
+            .Should().BeFalse("missing repository files must be pruned rather than written to shards");
 
         string configPath = Path.Combine(_tempDir, SecretsBaselineCleanerService.ConfigFile);
         var parsedConfig = JsonNode.Parse(File.ReadAllText(configPath))!.AsObject();
@@ -182,13 +187,22 @@ public sealed class PreCommitGuardrailsTests : IDisposable
         filter["pattern"]!.AsArray().Select(p => p!.GetValue<string>())
             .Should().Equal(SecretsBaselineCleanerService.CanonicalExcludePattern);
 
-        var webShard = JsonNode.Parse(File.ReadAllText(Path.Combine(_tempDir, "baselines/secrets/apps/web.secrets.baseline.json")))!.AsObject();
+        string webShardPath = Path.Combine(_tempDir, "baselines/secrets/apps/web.secrets.baseline.json");
+        var webShard = JsonNode.Parse(File.ReadAllText(webShardPath))!.AsObject();
         webShard["results"]!.AsObject()["apps/web/src/Sample.ts"]!.AsArray()[0]!.AsObject().ContainsKey("line_number").Should().BeFalse();
 
         var rootShard = JsonNode.Parse(File.ReadAllText(Path.Combine(_tempDir, "baselines/secrets/root.secrets.baseline.json")))!.AsObject();
         rootShard["results"]!.AsObject().ContainsKey("pnpm-lock.yaml").Should().BeFalse();
         rootShard["results"]!.AsObject().ContainsKey("src/RootSample.cs").Should().BeTrue();
 
+        SecretsBaselineCleanerService.CleanSecretsBaseline(repoRoot: _tempDir, check: true).Should().Be(0);
+
+        File.Delete(Path.Combine(_tempDir, "apps/web/src/Sample.ts"));
+        SecretsBaselineCleanerService.CleanSecretsBaseline(repoRoot: _tempDir, check: true)
+            .Should().Be(1, "--check mode must reject baseline shards referencing deleted files");
+
+        SecretsBaselineCleanerService.CleanSecretsBaseline(repoRoot: _tempDir, check: false).Should().Be(0);
+        File.Exists(webShardPath).Should().BeFalse("emptied shard must be deleted once its last missing file is pruned");
         SecretsBaselineCleanerService.CleanSecretsBaseline(repoRoot: _tempDir, check: true).Should().Be(0);
     }
 
@@ -1363,6 +1377,7 @@ public sealed class PreCommitGuardrailsTests : IDisposable
               }
             }
             """;
+        Write("src/Sample.cs", "internal static class Sample {}\n");
         string baselinePath = Write(".secrets.baseline", unnormalized);
 
         SecretsBaselineCleanerService.CleanSecretsBaseline(baselinePath, _tempDir, check: true).Should().Be(1);
@@ -2391,8 +2406,8 @@ public sealed class PreCommitGuardrailsTests : IDisposable
             "pnpm-lock.yaml",
             "docs/openapi/execution_openapi.json",
             "docs/openapi/cdisc_openapi.json",
-            "docs/openapi/legacy/cdisc_openapi.json",
             "apps/web/src/api/generated/execution.ts",
+            "apps/web/src/api/types.ts",
             "docs/api/index.md",
             "docs/api/execution.md",
             "docs/schema/README.md",

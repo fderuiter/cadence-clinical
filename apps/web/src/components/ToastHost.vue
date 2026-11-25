@@ -1,9 +1,11 @@
 <template>
   <ClinicalToastHost
+    position="top-right"
     :toasts="toastStore.toasts"
     aria-label="Notifications"
     :manage-timers="false"
     @action="handleAction"
+    @clear="toastStore.clear"
     @dismiss="toastStore.dismiss"
     @pause="toastStore.pause"
     @resume="toastStore.resume"

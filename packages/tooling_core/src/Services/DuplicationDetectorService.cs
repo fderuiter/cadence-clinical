@@ -536,7 +536,6 @@ public static class DuplicationDetectorService
             return false;
         }
 
-        // Python files are porting references, not live code (#4789), so they are not scanned.
         return SupportedDuplicationExtensions.Contains(Path.GetExtension(norm));
     }
 

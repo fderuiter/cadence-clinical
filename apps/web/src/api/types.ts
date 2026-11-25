@@ -65,82 +65,50 @@ export interface paths {
     post: operations["promote_ingestion_candidate_api_v1_designer_ingestion_candidates__candidate_id__promote_post"];
   };
   "/api/v1/studies/{study_id}/versions/{version_id}/arms/{arm_id}": {
-    /** Get Arm Endpoint */
-    get: operations["get_arm_endpoint_api_v1_studies__study_id__versions__version_id__arms__arm_id__get"];
     /** Update Arm Endpoint */
     put: operations["update_arm_endpoint_api_v1_studies__study_id__versions__version_id__arms__arm_id__put"];
-    /** Retire Arm Endpoint */
-    delete: operations["retire_arm_endpoint_api_v1_studies__study_id__versions__version_id__arms__arm_id__delete"];
   };
   "/api/v1/studies/{study_id}/versions/{version_id}/epochs/{epoch_id}": {
-    /** Get Epoch Endpoint */
-    get: operations["get_epoch_endpoint_api_v1_studies__study_id__versions__version_id__epochs__epoch_id__get"];
     /** Update Epoch Endpoint */
     put: operations["update_epoch_endpoint_api_v1_studies__study_id__versions__version_id__epochs__epoch_id__put"];
-    /** Retire Epoch Endpoint */
-    delete: operations["retire_epoch_endpoint_api_v1_studies__study_id__versions__version_id__epochs__epoch_id__delete"];
   };
   "/api/v1/studies/{study_id}/versions/{version_id}/visits/{visit_id}": {
-    /** Get Visit Endpoint */
-    get: operations["get_visit_endpoint_api_v1_studies__study_id__versions__version_id__visits__visit_id__get"];
     /** Update Visit Endpoint */
     put: operations["update_visit_endpoint_api_v1_studies__study_id__versions__version_id__visits__visit_id__put"];
-    /** Retire Visit Endpoint */
-    delete: operations["retire_visit_endpoint_api_v1_studies__study_id__versions__version_id__visits__visit_id__delete"];
   };
   "/api/v1/studies/{study_id}/versions/{version_id}/procedures/{procedure_id}": {
-    /** Get Procedure Endpoint */
-    get: operations["get_procedure_endpoint_api_v1_studies__study_id__versions__version_id__procedures__procedure_id__get"];
     /** Update Procedure Endpoint */
     put: operations["update_procedure_endpoint_api_v1_studies__study_id__versions__version_id__procedures__procedure_id__put"];
-    /** Retire Procedure Endpoint */
-    delete: operations["retire_procedure_endpoint_api_v1_studies__study_id__versions__version_id__procedures__procedure_id__delete"];
   };
   "/api/v1/studies/{study_id}/versions/{version_id}/links/epoch-visit": {
     /** Link Epoch Visit Endpoint */
     post: operations["link_epoch_visit_endpoint_api_v1_studies__study_id__versions__version_id__links_epoch_visit_post"];
-    /** Retire Epoch Visit Endpoint */
-    delete: operations["retire_epoch_visit_endpoint_api_v1_studies__study_id__versions__version_id__links_epoch_visit_delete"];
   };
   "/api/v1/studies/{study_id}/versions/{version_id}/links/visit-procedure": {
     /** Link Visit Procedure Endpoint */
     post: operations["link_visit_procedure_endpoint_api_v1_studies__study_id__versions__version_id__links_visit_procedure_post"];
-    /** Retire Visit Procedure Endpoint */
-    delete: operations["retire_visit_procedure_endpoint_api_v1_studies__study_id__versions__version_id__links_visit_procedure_delete"];
   };
   "/api/v1/studies/{study_id}/versions/{version_id}/links/timing": {
     /** Link Timing Endpoint */
     post: operations["link_timing_endpoint_api_v1_studies__study_id__versions__version_id__links_timing_post"];
-    /** Retire Timing Endpoint */
-    delete: operations["retire_timing_endpoint_api_v1_studies__study_id__versions__version_id__links_timing_delete"];
   };
   "/api/v1/studies/{study_id}/versions/{version_id}/links/arm-applicability": {
     /** Link Arm Applicability Endpoint */
     post: operations["link_arm_applicability_endpoint_api_v1_studies__study_id__versions__version_id__links_arm_applicability_post"];
-    /** Retire Arm Applicability Endpoint */
-    delete: operations["retire_arm_applicability_endpoint_api_v1_studies__study_id__versions__version_id__links_arm_applicability_delete"];
   };
   "/api/v1/studies/{study_id}/versions/{version_id}/arms": {
-    /** List Arms Endpoint */
-    get: operations["list_arms_endpoint_api_v1_studies__study_id__versions__version_id__arms_get"];
     /** Create Arm Endpoint */
     post: operations["create_arm_endpoint_api_v1_studies__study_id__versions__version_id__arms_post"];
   };
   "/api/v1/studies/{study_id}/versions/{version_id}/epochs": {
-    /** List Epochs Endpoint */
-    get: operations["list_epochs_endpoint_api_v1_studies__study_id__versions__version_id__epochs_get"];
     /** Create Epoch Endpoint */
     post: operations["create_epoch_endpoint_api_v1_studies__study_id__versions__version_id__epochs_post"];
   };
   "/api/v1/studies/{study_id}/versions/{version_id}/visits": {
-    /** List Visits Endpoint */
-    get: operations["list_visits_endpoint_api_v1_studies__study_id__versions__version_id__visits_get"];
     /** Create Visit Endpoint */
     post: operations["create_visit_endpoint_api_v1_studies__study_id__versions__version_id__visits_post"];
   };
   "/api/v1/studies/{study_id}/versions/{version_id}/procedures": {
-    /** List Procedures Endpoint */
-    get: operations["list_procedures_endpoint_api_v1_studies__study_id__versions__version_id__procedures_get"];
     /** Create Procedure Endpoint */
     post: operations["create_procedure_endpoint_api_v1_studies__study_id__versions__version_id__procedures_post"];
   };
@@ -155,14 +123,10 @@ export interface paths {
     post: operations["create_consent_template_api_v1_econsent_templates_post"];
   };
   "/api/v1/econsent/translations/{translation_id}": {
-    /** Get Consent Translation */
-    get: operations["get_consent_translation_api_v1_econsent_translations__translation_id__get"];
     /** Update Consent Translation */
     put: operations["update_consent_translation_api_v1_econsent_translations__translation_id__put"];
   };
   "/api/v1/econsent/templates/{template_id}": {
-    /** Get Consent Template */
-    get: operations["get_consent_template_api_v1_econsent_templates__template_id__get"];
     /** Update Consent Template */
     put: operations["update_consent_template_api_v1_econsent_templates__template_id__put"];
   };
@@ -234,13 +198,6 @@ export interface paths {
   };
   "/api/v1/fileshare/files/{file_id}": {
     /**
-     * Get File Record
-     * @description Retrieve file record metadata.
-     *
-     * Requirements: PRD-SYS-001, PRD-DOC-001
-     */
-    get: operations["get_file_record_api_v1_fileshare_files__file_id__get"];
-    /**
      * Delete File Record
      * @description Soft delete a file record.
      *
@@ -311,13 +268,6 @@ export interface paths {
     post: operations["create_share_grant_api_v1_fileshare_files__file_id__grants_post"];
   };
   "/api/v1/fileshare/files/{file_id}/guest-links": {
-    /**
-     * List Guest Links
-     * @description Retrieve active guest links for a file record.
-     *
-     * Requirements: PRD-SYS-001, PRD-DOC-001
-     */
-    get: operations["list_guest_links_api_v1_fileshare_files__file_id__guest_links_get"];
     /**
      * Create Guest Link
      * @description Generate a time-bounded external guest link.
@@ -457,14 +407,6 @@ export interface paths {
      * @req:ADR-2199
      */
     get: operations["list_pediatric_assents_api_v1_interop_dct_econsent_pediatric_assent_get"];
-    /**
-     * Submit tiered pediatric assent & LAR dual-signature manifest
-     * @description Submit age-appropriate pediatric assent and parent/LAR electronic signature bundle.
-     *
-     * @req:PRD-DCT-006
-     * @req:ADR-2199
-     */
-    post: operations["submit_pediatric_assent_api_v1_interop_dct_econsent_pediatric_assent_post"];
   };
   "/api/v1/interop/dct/dtp/shipments": {
     /**
@@ -493,14 +435,6 @@ export interface paths {
      * @req:ADR-2199
      */
     get: operations["list_in_home_visits_api_v1_interop_dct_home_health_visits_get"];
-    /**
-     * Schedule decentralized in-home nursing visit
-     * @description Schedule visiting healthcare nurse appointment with protocol procedure tasks.
-     *
-     * @req:PRD-DCT-004
-     * @req:ADR-2199
-     */
-    post: operations["schedule_in_home_visit_api_v1_interop_dct_home_health_visits_post"];
   };
   "/api/v1/interop/dct/metrics/{study_id}": {
     /**
@@ -515,54 +449,7 @@ export interface paths {
      */
     get: operations["get_dct_metrics_api_v1_interop_dct_metrics__study_id__get"];
   };
-  "/api/v1/interop/esource/candidates": {
-    /**
-     * List Candidates
-     * @description Retrieve candidate reconciliation items with filtering for the split-screen drawer.
-     */
-    get: operations["list_candidates_api_v1_interop_esource_candidates_get"];
-  };
-  "/api/v1/interop/esource/reconcile/accept": {
-    /**
-     * Accept Candidate
-     * @description 1-Click 'Accept & Commit' candidate EHR data into eCRF with Part 11 audit attribution.
-     */
-    post: operations["accept_candidate_api_v1_interop_esource_reconcile_accept_post"];
-  };
-  "/api/v1/interop/esource/reconcile/batch-accept": {
-    /**
-     * Batch Accept Candidates
-     * @description Multi-item batch 'Accept & Commit' candidate EHR data into eCRF with Part 11 audit attribution.
-     */
-    post: operations["batch_accept_candidates_api_v1_interop_esource_reconcile_batch_accept_post"];
-  };
-  "/api/v1/interop/esource/reconcile/reject": {
-    /**
-     * Reject Candidate
-     * @description 1-Click 'Reject with Reason' to discard candidate EHR data with mandatory justification.
-     */
-    post: operations["reject_candidate_api_v1_interop_esource_reconcile_reject_post"];
-  };
-  "/api/v1/interop/esource/reconcile/batch-reject": {
-    /**
-     * Batch Reject Candidates
-     * @description Multi-item batch 'Reject with Reason' candidate EHR data with mandatory justification.
-     */
-    post: operations["batch_reject_candidates_api_v1_interop_esource_reconcile_batch_reject_post"];
-  };
-  "/api/v1/interop/esource/reconcile/query": {
-    /**
-     * Raise Clinical Query
-     * @description 1-Click 'Raise Clinical Query' to open a formal GxP discrepancy query for an EHR-to-eCRF mismatch.
-     */
-    post: operations["raise_clinical_query_api_v1_interop_esource_reconcile_query_post"];
-  };
   "/api/v1/knowledge/categories": {
-    /**
-     * List Categories
-     * @description Lists active knowledge categories, filtered by caller's persona visibility.
-     */
-    get: operations["list_categories_api_v1_knowledge_categories_get"];
     /**
      * Create Category
      * @description Creates a new knowledge article category. Requires super_admin role.
@@ -571,11 +458,6 @@ export interface paths {
   };
   "/api/v1/knowledge/articles": {
     /**
-     * List Articles
-     * @description Lists knowledge articles, optionally filtered by status and/or category.
-     */
-    get: operations["list_articles_api_v1_knowledge_articles_get"];
-    /**
      * Create Article
      * @description Creates a new KnowledgeArticle in DRAFT status with an initial working draft version.
      * Requires super_admin role.
@@ -583,12 +465,6 @@ export interface paths {
     post: operations["create_article_api_v1_knowledge_articles_post"];
   };
   "/api/v1/knowledge/articles/{article_id}": {
-    /**
-     * Get Article
-     * @description Retrieves a single KnowledgeArticle by ID or unique slug along with its active body content.
-     * If the requesting user has an auditor role, records a READ_BY_AUDITOR audit event.
-     */
-    get: operations["get_article_api_v1_knowledge_articles__article_id__get"];
     /**
      * Update Article Draft
      * @description Updates the working draft of an article (Issue #4325).
@@ -646,11 +522,6 @@ export interface paths {
      * @description Retrieve notification records targeted to the current user's user ID or roles.
      */
     get: operations["list_notifications_api_v1_notifications_get"];
-    /**
-     * Create Notification
-     * @description Create a new notification targeting a specific user ID or role.
-     */
-    post: operations["create_notification_api_v1_notifications_post"];
   };
   "/api/v1/notifications/{id}/acknowledge": {
     /**
@@ -1256,31 +1127,6 @@ export interface components {
       status?: string;
       /** Id */
       id: string;
-    };
-    /**
-     * SoAEntityDetail
-     * @description Standard details of a versioned SoA entity.
-     */
-    Designer_SoAEntityDetail: {
-      /** Id */
-      id: string;
-      /** Version Index */
-      version_index: number;
-      /** Created By */
-      created_by: string;
-      /** Created At */
-      created_at: string;
-      /**
-       * Is Retired
-       * @default false
-       */
-      is_retired?: boolean;
-      /**
-       * Is Deleted
-       * @default false
-       */
-      is_deleted?: boolean;
-      [key: string]: unknown;
     };
     /**
      * SoAHeaderArm
@@ -2907,18 +2753,6 @@ export interface components {
     Interop_CalibrationState:
       "CALIBRATED" | "PENDING_CALIBRATION" | "EXPIRED" | "FACTORY_CALIBRATED";
     /**
-     * ComprehensionAnswerDTO
-     * @description Comprehension question response item.
-     */
-    Interop_ComprehensionAnswerDTO: {
-      /** Question Id */
-      question_id: string;
-      /** Selected Option */
-      selected_option: string;
-      /** Correct Option */
-      correct_option: string;
-    };
-    /**
      * DCTMetricsResponse
      * @description Comprehensive DCT dashboard overview metrics.
      */
@@ -3365,207 +3199,6 @@ export interface components {
       message?: string;
     };
     /**
-     * EhrCandidateItemDTO
-     * @description Response DTO for an individual candidate eSource reconciliation record.
-     */
-    Interop_EhrCandidateItemDTO: {
-      /** Id */
-      id: string;
-      /** Study Id */
-      study_id: string;
-      /** Site Id */
-      site_id: string;
-      /** Subject Id */
-      subject_id: string;
-      /** Subject Pseudonym */
-      subject_pseudonym: string;
-      /** Ehr System Id */
-      ehr_system_id: string;
-      /** Fhir Resource Type */
-      fhir_resource_type: string;
-      /** Fhir Resource Id */
-      fhir_resource_id: string;
-      /** Source Timestamp */
-      source_timestamp: string;
-      /** Target Domain */
-      target_domain: string;
-      /** Target Variable */
-      target_variable: string;
-      /** Cdash Testcd */
-      cdash_testcd?: string | null;
-      /** Cdash Test */
-      cdash_test?: string | null;
-      /** Candidate Value */
-      candidate_value: unknown;
-      /** Candidate Unit */
-      candidate_unit?: string | null;
-      /** Current Ecrf Value */
-      current_ecrf_value?: unknown;
-      /** Current Ecrf Updated At */
-      current_ecrf_updated_at?: string | null;
-      /**
-       * Discrepancy Type
-       * @default NEW_FIELD
-       */
-      discrepancy_type?: string;
-      /**
-       * Confidence Score
-       * @default 1
-       */
-      confidence_score?: number;
-      /** Mapping Provenance */
-      mapping_provenance: string;
-      /** Raw Fhir Resource */
-      raw_fhir_resource?: {
-        [key: string]: unknown;
-      };
-      /**
-       * Status
-       * @default PENDING_REVIEW
-       */
-      status?: string;
-      /** Resolution Action */
-      resolution_action?: string | null;
-      /** Resolution Reason */
-      resolution_reason?: string | null;
-      /** Resolved By */
-      resolved_by?: string | null;
-      /** Resolved At */
-      resolved_at?: string | null;
-      /** Electronic Signature */
-      electronic_signature?: {
-        [key: string]: unknown;
-      } | null;
-      /** Clinical Query Id */
-      clinical_query_id?: string | null;
-      /** Created At */
-      created_at?: string | null;
-      /**
-       * Version Index
-       * @default 1
-       */
-      version_index?: number;
-    };
-    /**
-     * EhrCandidateListResponse
-     * @description Paginated list response of candidate eSource reconciliation items.
-     */
-    Interop_EhrCandidateListResponse: {
-      /** Total Count */
-      total_count: number;
-      /** Candidates */
-      candidates: components["schemas"]["Interop_EhrCandidateItemDTO"][];
-    };
-    /**
-     * EhrReconcileAcceptRequest
-     * @description Request payload for 1-click Accept & Commit action.
-     */
-    Interop_EhrReconcileAcceptRequest: {
-      /**
-       * Candidate Id
-       * @description UUID of candidate record to accept
-       */
-      candidate_id: string;
-      /**
-       * Signature Token
-       * @description Optional Part 11 electronic signature token
-       */
-      signature_token?: string | null;
-      /**
-       * Commit Reason
-       * @description Optional commit justification
-       */
-      commit_reason?: string | null;
-      /**
-       * Change Reason
-       * @description Part 11 audit change reason
-       * @default CRC eSource Reconciliation Accept & Commit
-       */
-      change_reason?: string;
-    };
-    Interop_EhrReconcileBatchAcceptRequest: {
-      candidate_ids: string[];
-      commit_reason?: string | null;
-      change_reason?: string | null;
-    };
-    Interop_EhrReconcileBatchRejectRequest: {
-      candidate_ids: string[];
-      rejection_reason: string;
-      change_reason?: string | null;
-    };
-    Interop_EhrReconcileBatchActionResponse: {
-      success: boolean;
-      action_count: number;
-      candidates: components["schemas"]["Interop_EhrCandidateItemDTO"][];
-      message: string;
-    };
-    /**
-     * EhrReconcileActionResponse
-     * @description Response after executing a reconciliation review action.
-     */
-    Interop_EhrReconcileActionResponse: {
-      /**
-       * Success
-       * @default true
-       */
-      success?: boolean;
-      candidate: components["schemas"]["Interop_EhrCandidateItemDTO"];
-      /** Clinical Query Id */
-      clinical_query_id?: string | null;
-      /** Message */
-      message: string;
-    };
-    /**
-     * EhrReconcileQueryRequest
-     * @description Request payload for 1-click Raise Clinical Query action.
-     */
-    Interop_EhrReconcileQueryRequest: {
-      /**
-       * Candidate Id
-       * @description UUID of candidate record with discrepancy
-       */
-      candidate_id: string;
-      /**
-       * Query Explanation
-       * @description Clinical query discrepancy explanation
-       */
-      query_explanation: string;
-      /**
-       * Discrepancy Type
-       * @description Type of discrepancy
-       * @default VALUE_MISMATCH
-       */
-      discrepancy_type?: string;
-      /**
-       * Change Reason
-       * @description Part 11 audit change reason
-       * @default CRC Raised eSource Discrepancy Query
-       */
-      change_reason?: string;
-    };
-    /**
-     * EhrReconcileRejectRequest
-     * @description Request payload for 1-click Reject with Reason action.
-     */
-    Interop_EhrReconcileRejectRequest: {
-      /**
-       * Candidate Id
-       * @description UUID of candidate record to reject
-       */
-      candidate_id: string;
-      /**
-       * Rejection Reason
-       * @description Mandatory clinical rationale for rejection
-       */
-      rejection_reason: string;
-      /**
-       * Change Reason
-       * @description Part 11 audit change reason
-       * @default CRC eSource Reconciliation Reject
-       */
-      change_reason?: string;
-    };
-    /**
      * ExcursionSeverity
      * @description Temperature excursion severity classifications.
      * @enum {string}
@@ -3576,35 +3209,6 @@ export interface components {
     Interop_HTTPValidationError: {
       /** Detail */
       detail?: components["schemas"]["Interop_ValidationError"][];
-    };
-    /**
-     * InHomeVisitCreateRequest
-     * @description Request to schedule an in-home visiting clinician appointment.
-     */
-    Interop_InHomeVisitCreateRequest: {
-      /** Study Id */
-      study_id: string;
-      /** Site Id */
-      site_id: string;
-      /** Subject Id */
-      subject_id: string;
-      /** Visit Number */
-      visit_number: string;
-      /** Visit Name */
-      visit_name: string;
-      /** Nurse Id */
-      nurse_id: string;
-      /** Nurse Name */
-      nurse_name: string;
-      /** Nurse License Number */
-      nurse_license_number: string;
-      /**
-       * Scheduled Start Utc
-       * Format: date-time
-       */
-      scheduled_start_utc: string;
-      /** Procedures */
-      procedures?: components["schemas"]["Interop_ProtocolProcedureDTO"][];
     };
     /**
      * InHomeVisitDTO
@@ -3666,20 +3270,6 @@ export interface components {
       total: number;
     };
     /**
-     * InHomeVisitResponse
-     * @description Response wrapper for in-home visit.
-     */
-    Interop_InHomeVisitResponse: {
-      /** Success */
-      success: boolean;
-      visit: components["schemas"]["Interop_InHomeVisitDTO"];
-      /**
-       * Message
-       * @default In-home visit processed successfully
-       */
-      message?: string;
-    };
-    /**
      * InHomeVisitStatus
      * @description Lifecycle states for decentralized in-home nursing visits.
      * @enum {string}
@@ -3693,17 +3283,6 @@ export interface components {
       | "VISIT_COMPLETED"
       | "CANCELLED"
       | "RESCHEDULED";
-    /**
-     * LARRelationship
-     * @description Legal relationship of Legally Authorized Representative to minor/subject.
-     * @enum {string}
-     */
-    Interop_LARRelationship:
-      | "PARENT"
-      | "LEGAL_GUARDIAN"
-      | "POWER_OF_ATTORNEY"
-      | "COURT_APPOINTED"
-      | "NEXT_OF_KIN";
     /**
      * PediatricAssentDTO
      * @description Persisted pediatric assent manifest.
@@ -3757,73 +3336,6 @@ export interface components {
       total: number;
     };
     /**
-     * PediatricAssentResponse
-     * @description Response wrapper for pediatric assent.
-     */
-    Interop_PediatricAssentResponse: {
-      /** Success */
-      success: boolean;
-      assent: components["schemas"]["Interop_PediatricAssentDTO"];
-      /**
-       * Message
-       * @default Pediatric assent processed successfully
-       */
-      message?: string;
-    };
-    /**
-     * PediatricAssentSubmitRequest
-     * @description Submission payload for tiered pediatric assent and LAR consent.
-     */
-    Interop_PediatricAssentSubmitRequest: {
-      /** Study Id */
-      study_id: string;
-      /** Subject Id */
-      subject_id: string;
-      /**
-       * Minor Age
-       * @description Age of minor at consent execution
-       */
-      minor_age: number;
-      /**
-       * Answers
-       * @description Quiz answers
-       */
-      answers?: components["schemas"]["Interop_ComprehensionAnswerDTO"][];
-      /**
-       * Assent Signature
-       * @description Minor assent signature string or drawing token
-       */
-      assent_signature?: string | null;
-      /**
-       * Lar Name
-       * @description Name of Parent or Legally Authorized Representative
-       */
-      lar_name?: string | null;
-      /** @description Legal relationship to minor */
-      lar_relationship?:
-        components["schemas"]["Interop_LARRelationship"] | null;
-      /**
-       * Lar Legal Basis
-       * @description Legal authority basis (e.g. Birth Certificate, Court Order)
-       */
-      lar_legal_basis?: string | null;
-      /**
-       * Lar Signature
-       * @description Electronic signature of LAR
-       */
-      lar_signature?: string | null;
-      /**
-       * Investigator Name
-       * @description Investigator counter-signatory name
-       */
-      investigator_name?: string | null;
-      /**
-       * Investigator Signature
-       * @description Investigator electronic signature
-       */
-      investigator_signature?: string | null;
-    };
-    /**
      * PediatricAssentTier
      * @description Multi-tiered age-appropriate informed consent / assent categories.
      * @enum {string}
@@ -3833,48 +3345,6 @@ export interface components {
       | "ADOLESCENT_12_17"
       | "LAR_PARENT_GUARDIAN"
       | "ADULT_18_PLUS";
-    /**
-     * ProcedureType
-     * @description Standard decentralized in-home nursing clinical procedures.
-     * @enum {string}
-     */
-    Interop_ProcedureType:
-      | "VITAL_SIGNS"
-      | "PK_BLOOD_DRAW"
-      | "IP_ADMINISTRATION"
-      | "12_LEAD_ECG"
-      | "SAFETY_LABS"
-      | "PHYSICAL_EXAM"
-      | "BIOMARKER_SAMPLING"
-      | "PATIENT_DIARY_REVIEW";
-    /**
-     * ProtocolProcedureDTO
-     * @description Protocol procedure task record.
-     */
-    Interop_ProtocolProcedureDTO: {
-      procedure_type: components["schemas"]["Interop_ProcedureType"];
-      /** Description */
-      description: string;
-      /**
-       * Completed
-       * @default false
-       */
-      completed?: boolean;
-      /** Timestamp Utc */
-      timestamp_utc?: string | null;
-      /** Sample Barcodes */
-      sample_barcodes?: string[];
-      /**
-       * Performed By
-       * @default
-       */
-      performed_by?: string;
-      /**
-       * Notes
-       * @default
-       */
-      notes?: string;
-    };
     /**
      * RawSensorReading
      * @description Single high-frequency biometric measurement data point.
@@ -4739,44 +4209,6 @@ export interface components {
      * @enum {string}
      */
     Notifications_NotificationCategory: "ALERTS" | "SYSTEM" | "ACTION_ITEMS";
-    /** NotificationCreate */
-    Notifications_NotificationCreate: {
-      /**
-       * Recipient User Id
-       * @description Optional target user ID
-       */
-      recipient_user_id?: string | null;
-      /**
-       * Recipient Role
-       * @description Optional target role
-       */
-      recipient_role?: string | null;
-      /** @description Category: ALERTS, SYSTEM, ACTION_ITEMS */
-      category: components["schemas"]["Notifications_NotificationCategory"];
-      /** @description Priority: LOW, MEDIUM, HIGH, CRITICAL */
-      priority: components["schemas"]["Notifications_NotificationPriority"];
-      /**
-       * Channels
-       * @description Comma-separated delivery channels (e.g. 'IN_APP,EMAIL')
-       * @default IN_APP
-       */
-      channels?: string;
-      /**
-       * Message Content
-       * @description Message content
-       */
-      message_content: string;
-      /**
-       * Related Entity Id
-       * @description Optional related entity ID
-       */
-      related_entity_id?: string | null;
-      /**
-       * Related Entity Type
-       * @description Optional related entity type
-       */
-      related_entity_type?: string | null;
-    };
     /**
      * NotificationPriority
      * @enum {string}
@@ -5044,30 +4476,6 @@ export interface operations {
       };
     };
   };
-  /** Get Arm Endpoint */
-  get_arm_endpoint_api_v1_studies__study_id__versions__version_id__arms__arm_id__get: {
-    parameters: {
-      path: {
-        study_id: string;
-        version_id: string;
-        arm_id: string;
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": components["schemas"]["Designer_SoAEntityDetail"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["Designer_HTTPValidationError"];
-        };
-      };
-    };
-  };
   /** Update Arm Endpoint */
   update_arm_endpoint_api_v1_studies__study_id__versions__version_id__arms__arm_id__put: {
     parameters: {
@@ -5087,54 +4495,6 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["Designer_SoAEntityCreatedResponse"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["Designer_HTTPValidationError"];
-        };
-      };
-    };
-  };
-  /** Retire Arm Endpoint */
-  retire_arm_endpoint_api_v1_studies__study_id__versions__version_id__arms__arm_id__delete: {
-    parameters: {
-      path: {
-        study_id: string;
-        version_id: string;
-        arm_id: string;
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": components["schemas"]["Designer_SoAEntityCreatedResponse"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["Designer_HTTPValidationError"];
-        };
-      };
-    };
-  };
-  /** Get Epoch Endpoint */
-  get_epoch_endpoint_api_v1_studies__study_id__versions__version_id__epochs__epoch_id__get: {
-    parameters: {
-      path: {
-        study_id: string;
-        version_id: string;
-        epoch_id: string;
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": components["schemas"]["Designer_SoAEntityDetail"];
         };
       };
       /** @description Validation Error */
@@ -5174,54 +4534,6 @@ export interface operations {
       };
     };
   };
-  /** Retire Epoch Endpoint */
-  retire_epoch_endpoint_api_v1_studies__study_id__versions__version_id__epochs__epoch_id__delete: {
-    parameters: {
-      path: {
-        study_id: string;
-        version_id: string;
-        epoch_id: string;
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": components["schemas"]["Designer_SoAEntityCreatedResponse"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["Designer_HTTPValidationError"];
-        };
-      };
-    };
-  };
-  /** Get Visit Endpoint */
-  get_visit_endpoint_api_v1_studies__study_id__versions__version_id__visits__visit_id__get: {
-    parameters: {
-      path: {
-        study_id: string;
-        version_id: string;
-        visit_id: string;
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": components["schemas"]["Designer_SoAEntityDetail"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["Designer_HTTPValidationError"];
-        };
-      };
-    };
-  };
   /** Update Visit Endpoint */
   update_visit_endpoint_api_v1_studies__study_id__versions__version_id__visits__visit_id__put: {
     parameters: {
@@ -5241,54 +4553,6 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["Designer_SoAEntityCreatedResponse"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["Designer_HTTPValidationError"];
-        };
-      };
-    };
-  };
-  /** Retire Visit Endpoint */
-  retire_visit_endpoint_api_v1_studies__study_id__versions__version_id__visits__visit_id__delete: {
-    parameters: {
-      path: {
-        study_id: string;
-        version_id: string;
-        visit_id: string;
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": components["schemas"]["Designer_SoAEntityCreatedResponse"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["Designer_HTTPValidationError"];
-        };
-      };
-    };
-  };
-  /** Get Procedure Endpoint */
-  get_procedure_endpoint_api_v1_studies__study_id__versions__version_id__procedures__procedure_id__get: {
-    parameters: {
-      path: {
-        study_id: string;
-        version_id: string;
-        procedure_id: string;
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": components["schemas"]["Designer_SoAEntityDetail"];
         };
       };
       /** @description Validation Error */
@@ -5328,60 +4592,8 @@ export interface operations {
       };
     };
   };
-  /** Retire Procedure Endpoint */
-  retire_procedure_endpoint_api_v1_studies__study_id__versions__version_id__procedures__procedure_id__delete: {
-    parameters: {
-      path: {
-        study_id: string;
-        version_id: string;
-        procedure_id: string;
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": components["schemas"]["Designer_SoAEntityCreatedResponse"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["Designer_HTTPValidationError"];
-        };
-      };
-    };
-  };
   /** Link Epoch Visit Endpoint */
   link_epoch_visit_endpoint_api_v1_studies__study_id__versions__version_id__links_epoch_visit_post: {
-    parameters: {
-      path: {
-        study_id: string;
-        version_id: string;
-      };
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["Designer_LinkEpochVisitRequest"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": components["schemas"]["Designer_SoALinkResponse"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["Designer_HTTPValidationError"];
-        };
-      };
-    };
-  };
-  /** Retire Epoch Visit Endpoint */
-  retire_epoch_visit_endpoint_api_v1_studies__study_id__versions__version_id__links_epoch_visit_delete: {
     parameters: {
       path: {
         study_id: string;
@@ -5436,64 +4648,8 @@ export interface operations {
       };
     };
   };
-  /** Retire Visit Procedure Endpoint */
-  retire_visit_procedure_endpoint_api_v1_studies__study_id__versions__version_id__links_visit_procedure_delete: {
-    parameters: {
-      path: {
-        study_id: string;
-        version_id: string;
-      };
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["Designer_LinkVisitProcedureRequest"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": components["schemas"]["Designer_SoALinkResponse"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["Designer_HTTPValidationError"];
-        };
-      };
-    };
-  };
   /** Link Timing Endpoint */
   link_timing_endpoint_api_v1_studies__study_id__versions__version_id__links_timing_post: {
-    parameters: {
-      path: {
-        study_id: string;
-        version_id: string;
-      };
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["Designer_LinkTimingRequest"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": components["schemas"]["Designer_SoALinkResponse"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["Designer_HTTPValidationError"];
-        };
-      };
-    };
-  };
-  /** Retire Timing Endpoint */
-  retire_timing_endpoint_api_v1_studies__study_id__versions__version_id__links_timing_delete: {
     parameters: {
       path: {
         study_id: string;
@@ -5548,57 +4704,6 @@ export interface operations {
       };
     };
   };
-  /** Retire Arm Applicability Endpoint */
-  retire_arm_applicability_endpoint_api_v1_studies__study_id__versions__version_id__links_arm_applicability_delete: {
-    parameters: {
-      path: {
-        study_id: string;
-        version_id: string;
-      };
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["Designer_LinkArmApplicabilityRequest"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": components["schemas"]["Designer_SoALinkResponse"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["Designer_HTTPValidationError"];
-        };
-      };
-    };
-  };
-  /** List Arms Endpoint */
-  list_arms_endpoint_api_v1_studies__study_id__versions__version_id__arms_get: {
-    parameters: {
-      path: {
-        study_id: string;
-        version_id: string;
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": components["schemas"]["Designer_SoAEntityDetail"][];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["Designer_HTTPValidationError"];
-        };
-      };
-    };
-  };
   /** Create Arm Endpoint */
   create_arm_endpoint_api_v1_studies__study_id__versions__version_id__arms_post: {
     parameters: {
@@ -5617,29 +4722,6 @@ export interface operations {
       201: {
         content: {
           "application/json": components["schemas"]["Designer_SoAEntityCreatedResponse"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["Designer_HTTPValidationError"];
-        };
-      };
-    };
-  };
-  /** List Epochs Endpoint */
-  list_epochs_endpoint_api_v1_studies__study_id__versions__version_id__epochs_get: {
-    parameters: {
-      path: {
-        study_id: string;
-        version_id: string;
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": components["schemas"]["Designer_SoAEntityDetail"][];
         };
       };
       /** @description Validation Error */
@@ -5678,29 +4760,6 @@ export interface operations {
       };
     };
   };
-  /** List Visits Endpoint */
-  list_visits_endpoint_api_v1_studies__study_id__versions__version_id__visits_get: {
-    parameters: {
-      path: {
-        study_id: string;
-        version_id: string;
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": components["schemas"]["Designer_SoAEntityDetail"][];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["Designer_HTTPValidationError"];
-        };
-      };
-    };
-  };
   /** Create Visit Endpoint */
   create_visit_endpoint_api_v1_studies__study_id__versions__version_id__visits_post: {
     parameters: {
@@ -5719,29 +4778,6 @@ export interface operations {
       201: {
         content: {
           "application/json": components["schemas"]["Designer_SoAEntityCreatedResponse"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["Designer_HTTPValidationError"];
-        };
-      };
-    };
-  };
-  /** List Procedures Endpoint */
-  list_procedures_endpoint_api_v1_studies__study_id__versions__version_id__procedures_get: {
-    parameters: {
-      path: {
-        study_id: string;
-        version_id: string;
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": components["schemas"]["Designer_SoAEntityDetail"][];
         };
       };
       /** @description Validation Error */
@@ -5849,31 +4885,6 @@ export interface operations {
       };
     };
   };
-  /** Get Consent Translation */
-  get_consent_translation_api_v1_econsent_translations__translation_id__get: {
-    parameters: {
-      query?: {
-        version_index?: number | null;
-      };
-      path: {
-        translation_id: string;
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": components["schemas"]["Econsent_ConsentTranslationResponse"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["Econsent_HTTPValidationError"];
-        };
-      };
-    };
-  };
   /** Update Consent Translation */
   update_consent_translation_api_v1_econsent_translations__translation_id__put: {
     parameters: {
@@ -5891,31 +4902,6 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["Econsent_ConsentTranslationResponse"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["Econsent_HTTPValidationError"];
-        };
-      };
-    };
-  };
-  /** Get Consent Template */
-  get_consent_template_api_v1_econsent_templates__template_id__get: {
-    parameters: {
-      query?: {
-        version_index?: number | null;
-      };
-      path: {
-        template_id: string;
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": components["schemas"]["Econsent_ConsentTemplateResponse"];
         };
       };
       /** @description Validation Error */
@@ -6187,33 +5173,6 @@ export interface operations {
     };
   };
   /**
-   * Get File Record
-   * @description Retrieve file record metadata.
-   *
-   * Requirements: PRD-SYS-001, PRD-DOC-001
-   */
-  get_file_record_api_v1_fileshare_files__file_id__get: {
-    parameters: {
-      path: {
-        file_id: string;
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": components["schemas"]["Fileshare_FileRecordResponse"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["Fileshare_HTTPValidationError"];
-        };
-      };
-    };
-  };
-  /**
    * Delete File Record
    * @description Soft delete a file record.
    *
@@ -6460,33 +5419,6 @@ export interface operations {
       201: {
         content: {
           "application/json": components["schemas"]["Fileshare_ShareGrantResponse"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["Fileshare_HTTPValidationError"];
-        };
-      };
-    };
-  };
-  /**
-   * List Guest Links
-   * @description Retrieve active guest links for a file record.
-   *
-   * Requirements: PRD-SYS-001, PRD-DOC-001
-   */
-  list_guest_links_api_v1_fileshare_files__file_id__guest_links_get: {
-    parameters: {
-      path: {
-        file_id: string;
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": components["schemas"]["Fileshare_GuestLinkResponse"][];
         };
       };
       /** @description Validation Error */
@@ -6940,34 +5872,6 @@ export interface operations {
     };
   };
   /**
-   * Submit tiered pediatric assent & LAR dual-signature manifest
-   * @description Submit age-appropriate pediatric assent and parent/LAR electronic signature bundle.
-   *
-   * @req:PRD-DCT-006
-   * @req:ADR-2199
-   */
-  submit_pediatric_assent_api_v1_interop_dct_econsent_pediatric_assent_post: {
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["Interop_PediatricAssentSubmitRequest"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      201: {
-        content: {
-          "application/json": components["schemas"]["Interop_PediatricAssentResponse"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["Interop_HTTPValidationError"];
-        };
-      };
-    };
-  };
-  /**
    * List Direct-to-Patient drug shipments
    * @description Query DTP shipments with cold-chain indicators and tracking states.
    *
@@ -7057,34 +5961,6 @@ export interface operations {
     };
   };
   /**
-   * Schedule decentralized in-home nursing visit
-   * @description Schedule visiting healthcare nurse appointment with protocol procedure tasks.
-   *
-   * @req:PRD-DCT-004
-   * @req:ADR-2199
-   */
-  schedule_in_home_visit_api_v1_interop_dct_home_health_visits_post: {
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["Interop_InHomeVisitCreateRequest"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      201: {
-        content: {
-          "application/json": components["schemas"]["Interop_InHomeVisitResponse"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["Interop_HTTPValidationError"];
-        };
-      };
-    };
-  };
-  /**
    * Retrieve aggregated DCT operational metrics
    * @description Retrieve real-time DCT dashboard KPI metrics for study.
    *
@@ -7116,168 +5992,6 @@ export interface operations {
     };
   };
   /**
-   * List Candidates
-   * @description Retrieve candidate reconciliation items with filtering for the split-screen drawer.
-   */
-  list_candidates_api_v1_interop_esource_candidates_get: {
-    parameters: {
-      query?: {
-        study_id?: string | null;
-        subject_id?: string | null;
-        site_id?: string | null;
-        domain?: string | null;
-        status?: string | null;
-        skip?: number;
-        limit?: number;
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": components["schemas"]["Interop_EhrCandidateListResponse"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["Interop_HTTPValidationError"];
-        };
-      };
-    };
-  };
-  /**
-   * Accept Candidate
-   * @description 1-Click 'Accept & Commit' candidate EHR data into eCRF with Part 11 audit attribution.
-   */
-  accept_candidate_api_v1_interop_esource_reconcile_accept_post: {
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["Interop_EhrReconcileAcceptRequest"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": components["schemas"]["Interop_EhrReconcileActionResponse"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["Interop_HTTPValidationError"];
-        };
-      };
-    };
-  };
-  batch_accept_candidates_api_v1_interop_esource_reconcile_batch_accept_post: {
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["Interop_EhrReconcileBatchAcceptRequest"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": components["schemas"]["Interop_EhrReconcileBatchActionResponse"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["Interop_HTTPValidationError"];
-        };
-      };
-    };
-  };
-  /**
-   * Reject Candidate
-   * @description 1-Click 'Reject with Reason' to discard candidate EHR data with mandatory justification.
-   */
-  reject_candidate_api_v1_interop_esource_reconcile_reject_post: {
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["Interop_EhrReconcileRejectRequest"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": components["schemas"]["Interop_EhrReconcileActionResponse"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["Interop_HTTPValidationError"];
-        };
-      };
-    };
-  };
-  batch_reject_candidates_api_v1_interop_esource_reconcile_batch_reject_post: {
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["Interop_EhrReconcileBatchRejectRequest"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": components["schemas"]["Interop_EhrReconcileBatchActionResponse"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["Interop_HTTPValidationError"];
-        };
-      };
-    };
-  };
-  /**
-   * Raise Clinical Query
-   * @description 1-Click 'Raise Clinical Query' to open a formal GxP discrepancy query for an EHR-to-eCRF mismatch.
-   */
-  raise_clinical_query_api_v1_interop_esource_reconcile_query_post: {
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["Interop_EhrReconcileQueryRequest"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": components["schemas"]["Interop_EhrReconcileActionResponse"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["Interop_HTTPValidationError"];
-        };
-      };
-    };
-  };
-  /**
-   * List Categories
-   * @description Lists active knowledge categories, filtered by caller's persona visibility.
-   */
-  list_categories_api_v1_knowledge_categories_get: {
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": components["schemas"]["Knowledge_CategoryResponse"][];
-        };
-      };
-    };
-  };
-  /**
    * Create Category
    * @description Creates a new knowledge article category. Requires super_admin role.
    */
@@ -7303,32 +6017,6 @@ export interface operations {
     };
   };
   /**
-   * List Articles
-   * @description Lists knowledge articles, optionally filtered by status and/or category.
-   */
-  list_articles_api_v1_knowledge_articles_get: {
-    parameters: {
-      query?: {
-        status_filter?: components["schemas"]["Knowledge_ArticleStatus"] | null;
-        category_id?: string | null;
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
-        content: {
-          "application/json": components["schemas"]["Knowledge_ArticleResponse"][];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["Knowledge_HTTPValidationError"];
-        };
-      };
-    };
-  };
-  /**
    * Create Article
    * @description Creates a new KnowledgeArticle in DRAFT status with an initial working draft version.
    * Requires super_admin role.
@@ -7342,32 +6030,6 @@ export interface operations {
     responses: {
       /** @description Successful Response */
       201: {
-        content: {
-          "application/json": components["schemas"]["Knowledge_ArticleResponse"];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["Knowledge_HTTPValidationError"];
-        };
-      };
-    };
-  };
-  /**
-   * Get Article
-   * @description Retrieves a single KnowledgeArticle by ID or unique slug along with its active body content.
-   * If the requesting user has an auditor role, records a READ_BY_AUDITOR audit event.
-   */
-  get_article_api_v1_knowledge_articles__article_id__get: {
-    parameters: {
-      path: {
-        article_id: string;
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      200: {
         content: {
           "application/json": components["schemas"]["Knowledge_ArticleResponse"];
         };
@@ -7593,31 +6255,6 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["Notifications_NotificationResponse"][];
-        };
-      };
-      /** @description Validation Error */
-      422: {
-        content: {
-          "application/json": components["schemas"]["Notifications_HTTPValidationError"];
-        };
-      };
-    };
-  };
-  /**
-   * Create Notification
-   * @description Create a new notification targeting a specific user ID or role.
-   */
-  create_notification_api_v1_notifications_post: {
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["Notifications_NotificationCreate"];
-      };
-    };
-    responses: {
-      /** @description Successful Response */
-      201: {
-        content: {
-          "application/json": components["schemas"]["Notifications_NotificationResponse"];
         };
       };
       /** @description Validation Error */

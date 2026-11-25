@@ -177,7 +177,68 @@ public sealed class AmendmentRegressionEngine(IRuleEvaluator evaluator, IClock c
         ArgumentNullException.ThrowIfNull(targetPacks);
         ArgumentNullException.ThrowIfNull(targetRecords);
 
-        IReadOnlyList<RuleEvaluationContext> contexts = declaredStandards is { Count: > 0 }
+        return EvaluateStageDelta(
+            evaluator,
+            stage,
+            asOf,
+            baselinePacks,
+            new RuleRecordListCursor(baselineRecords),
+            targetPacks,
+            new RuleRecordListCursor(targetRecords),
+            declaredStandards);
+    }
+
+    /// <summary>
+    /// Pure multi-pack stage evaluation over resettable record cursors (<c>K-SIM-2</c>, <c>K-RULE-4</c>), rewinding
+    /// each cursor per rule pack and standard context without materializing <see cref="RuleRecord"/> lists.
+    /// </summary>
+    public static (IReadOnlyList<RuleViolation> BaselineViolations, IReadOnlyList<RuleViolation> TargetViolations) EvaluateStageDelta(
+        IRuleEvaluator evaluator,
+        ValidationStage stage,
+        DateOnly asOf,
+        IReadOnlyList<RulePack> baselinePacks,
+        IResettableRuleRecordCursor baselineRecords,
+        IReadOnlyList<RulePack> targetPacks,
+        IResettableRuleRecordCursor targetRecords,
+        IReadOnlyList<(string Standard, string Version)>? declaredStandards = null)
+    {
+        ArgumentNullException.ThrowIfNull(evaluator);
+        ArgumentNullException.ThrowIfNull(baselinePacks);
+        ArgumentNullException.ThrowIfNull(baselineRecords);
+        ArgumentNullException.ThrowIfNull(targetPacks);
+        ArgumentNullException.ThrowIfNull(targetRecords);
+
+        var contexts = BuildEvaluationContexts(stage, asOf, declaredStandards);
+        return (
+            EvaluatePacksAcrossContexts(evaluator, contexts, baselinePacks, baselineRecords),
+            EvaluatePacksAcrossContexts(evaluator, contexts, targetPacks, targetRecords));
+    }
+
+    /// <summary>
+    /// Evaluates one side of a validation stage over a resettable cursor (<c>K-SIM-2</c>, <c>K-RULE-4</c>) so callers
+    /// can reuse findings when baseline and candidate inputs are identical.
+    /// </summary>
+    public static IReadOnlyList<RuleViolation> EvaluateStage(
+        IRuleEvaluator evaluator,
+        ValidationStage stage,
+        DateOnly asOf,
+        IReadOnlyList<RulePack> packs,
+        IResettableRuleRecordCursor records,
+        IReadOnlyList<(string Standard, string Version)>? declaredStandards = null)
+    {
+        ArgumentNullException.ThrowIfNull(evaluator);
+        ArgumentNullException.ThrowIfNull(packs);
+        ArgumentNullException.ThrowIfNull(records);
+
+        var contexts = BuildEvaluationContexts(stage, asOf, declaredStandards);
+        return EvaluatePacksAcrossContexts(evaluator, contexts, packs, records);
+    }
+
+    private static IReadOnlyList<RuleEvaluationContext> BuildEvaluationContexts(
+        ValidationStage stage,
+        DateOnly asOf,
+        IReadOnlyList<(string Standard, string Version)>? declaredStandards) =>
+        declaredStandards is { Count: > 0 }
             ? [.. declaredStandards.Select(s => new RuleEvaluationContext(stage, asOf)
             {
                 Standard = s.Standard,
@@ -185,18 +246,13 @@ public sealed class AmendmentRegressionEngine(IRuleEvaluator evaluator, IClock c
             })]
             : [new RuleEvaluationContext(stage, asOf)];
 
-        return (
-            EvaluatePacksAcrossContexts(evaluator, contexts, baselinePacks, baselineRecords),
-            EvaluatePacksAcrossContexts(evaluator, contexts, targetPacks, targetRecords));
-    }
-
     private static IReadOnlyList<RuleViolation> EvaluatePacksAcrossContexts(
         IRuleEvaluator evaluator,
         IReadOnlyList<RuleEvaluationContext> contexts,
         IReadOnlyList<RulePack> packs,
-        IReadOnlyList<RuleRecord> records)
+        IResettableRuleRecordCursor records)
     {
-        if (packs.Count == 0 || records.Count == 0)
+        if (packs.Count == 0 || records.IsEmpty)
         {
             return [];
         }
@@ -206,7 +262,8 @@ public sealed class AmendmentRegressionEngine(IRuleEvaluator evaluator, IClock c
         {
             foreach (var pack in packs)
             {
-                evaluator.Evaluate(pack, context, new RuleRecordListCursor(records), sink);
+                records.Reset();
+                evaluator.Evaluate(pack, context, records, sink);
             }
         }
 

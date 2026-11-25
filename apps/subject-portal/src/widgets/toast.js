@@ -59,10 +59,14 @@ function ensurePortalToastHostMounted() {
       return () =>
         h(ClinicalToastHost, {
           "data-portal-toast-host": "true",
+          position: "bottom-right",
           toasts: portalToasts.value,
           latestToastId: "toast-container",
           ariaLabel: "Participant notifications",
           onDismiss: dismissToast,
+          onClear: () => {
+            portalToasts.value = [];
+          },
         });
     },
   });

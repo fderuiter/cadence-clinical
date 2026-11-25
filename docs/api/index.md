@@ -2,7 +2,7 @@
 
 Generated from `docs/openapi/*_openapi.json` by `pnpm cadence generate-api-docs`. Don't edit this file by hand.
 
-Each page lists the operations a .NET service serves. The specs come from the services themselves (`pnpm cadence sync-openapi-spec`), and the `openapi` quality gate fails when they drift. `docs/openapi/cdisc_openapi.json` aggregates them. The Python-era contract the web client is still typed against is in `docs/openapi/legacy/`.
+Each page lists the operations a .NET service serves. The specs come from the services themselves (`pnpm cadence sync-openapi-spec`), and the `openapi` quality gate fails when they drift. `docs/openapi/cdisc_openapi.json` aggregates them.
 
 | Service | Operations |
 | ------- | ---------- |

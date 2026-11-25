@@ -135,7 +135,8 @@ internal sealed class KernelAmendmentImpact(
                 probe: null,
                 cancellationToken,
                 evaluator,
-                asOf).ConfigureAwait(false);
+                asOf,
+                includeVisibleDigest: false).ConfigureAwait(false);
         }
         else
         {
@@ -150,7 +151,8 @@ internal sealed class KernelAmendmentImpact(
                 lineage.Visibility,
                 _blinding,
                 probe: null,
-                cancellationToken).ConfigureAwait(false);
+                cancellationToken,
+                includeVisibleDigest: false).ConfigureAwait(false);
         }
 
         var pinnedSpecs = maskedSnapshot.PinnedLibraryItems

@@ -9,6 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="Cadence.Kernel.Application" />
     <InternalsVisibleTo Include="Cadence.UnitTests" />
   </ItemGroup>
 
