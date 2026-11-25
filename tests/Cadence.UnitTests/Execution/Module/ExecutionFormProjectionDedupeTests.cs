@@ -703,7 +703,217 @@ public sealed class ExecutionFormProjectionDedupeTests
         pass.Value!.Digests.Should().NotBeEmpty();
         escalationForms.FindHeadersCalls.Should().Be(1);
         escalationForms.FindCalls.Should().Be(0);
+        unassignedNavigator.GetStudyEnrollmentsCalls.Should().Be(1);
+        unassignedNavigator.GetChildrenCalls.Should().Be(0);
         unassignedNavigator.ResolveManyCalls.Should().Be(1);
+
+        // 4. Multi-site escalation pass maps all study enrollments in one GetStudyEnrollmentsAsync call without per-site GetChildrenAsync.
+        var multiSiteEnrollments = Enumerable.Range(1, 5)
+            .Select(i => new StudyEnrollmentNode(
+                EnrollmentId.New(),
+                $"0{i}-0001",
+                StudySiteId.New(),
+                $"0{i}"))
+            .ToList();
+        await using (var db = sqlite.Create(tenant))
+        {
+            foreach (var node in multiSiteEnrollments)
+            {
+                var (q, _) = FormQuery.Raise(
+                    FormQueryId.New(), tenant, CollectionInstanceId.New(), node.EnrollmentId, "sbp", ObservationId.New(), 1,
+                    "Site overdue query", AssertionId.New(), "cra", overdueOpenAt, "SDV");
+                q.Escalate("cra", overdueOpenAt.AddDays(14), "14-day SLA");
+                db.FormQueries.Add(q);
+            }
+
+            using (db.PermitCommandWrites())
+            {
+                await db.SaveChangesAsync(ct);
+            }
+        }
+
+        var multiSiteForms = new CountingCollectionInstanceRecords(throwOnFind: true);
+        var multiSiteNavigator = new CountingNavigator(
+            studyId,
+            siteId,
+            enrollmentId,
+            siteCode: "017",
+            subjectCode: "017-0001",
+            extraEnrollments: multiSiteEnrollments);
+        var multiSiteEscalation = new FormQueryEscalationService(
+            new FakeClock(At),
+            multiSiteForms,
+            multiSiteNavigator,
+            sqlite,
+            new DigestCommandSender());
+        var multiSitePass = await multiSiteEscalation.RunStudyPassAsync(tenant, studyId, "Multi-site SLA pass", ct);
+        multiSitePass.IsSuccess.Should().BeTrue();
+        multiSitePass.Value!.Digests.Should().HaveCount(7, "1 study-wide digest + 6 site digests (017 + 01..05)");
+        multiSiteNavigator.GetStudyEnrollmentsCalls.Should().Be(1);
+        multiSiteNavigator.GetChildrenCalls.Should().Be(0);
+        multiSiteForms.FindHeadersCalls.Should().Be(0, "all enrollments already carry site metadata from GetStudyEnrollmentsAsync");
+        multiSiteForms.FindCalls.Should().Be(0);
+
+        // 5. EvaluateEditChecksOnCollectionChanged pre-hydrates multi-form findings via a single FindManyAsync call.
+        var secondFormId = CollectionInstanceId.New();
+        var secondObsId = ObservationId.New();
+        var record1 = new CollectionInstanceRecord(
+            formId,
+            enrollmentId,
+            ParticipantId.New(),
+            studyId,
+            siteId,
+            ruleInput.ProtocolVersionId,
+            "cs.vitals",
+            "act.week12",
+            At,
+            "crc",
+            At,
+            1,
+            [item],
+            [new CollectedValueView("sbp", obsId, item.Concept, new QuantityValue(195m, "mm[Hg]"), At, 1, "crc", At)],
+            [],
+            [],
+            [],
+            null,
+            "Vital signs");
+        var record2 = new CollectionInstanceRecord(
+            secondFormId,
+            enrollmentId,
+            ParticipantId.New(),
+            studyId,
+            siteId,
+            ruleInput.ProtocolVersionId,
+            "cs.vitals",
+            "act.week16",
+            At,
+            "crc",
+            At,
+            1,
+            [item],
+            [new CollectedValueView("sbp", secondObsId, item.Concept, new QuantityValue(198m, "mm[Hg]"), At, 1, "crc", At)],
+            [],
+            [],
+            [],
+            null,
+            "Vital signs");
+        var multiFormRecords = new CountingCollectionInstanceRecords(
+            recordsById: new Dictionary<CollectionInstanceId, CollectionInstanceRecord>
+            {
+                [formId] = record1,
+                [secondFormId] = record2,
+            },
+            throwOnFind: true);
+        var multiFindingValidation = Substitute.For<ICollectionValidationService>();
+        var runId = ValidationRunId.New();
+        multiFindingValidation
+            .ValidateStudyCollectionsAsync(
+                tenant,
+                studyId,
+                Arg.Any<DateOnly>(),
+                Arg.Any<DateTimeOffset>(),
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<CommandMetadata?>(),
+                Arg.Any<CancellationToken>())
+            .Returns(CommandResult<CollectionValidationResult>.Success(
+                new CollectionValidationResult(
+                    null,
+                    [
+                        new ValidationFindingView(
+                            ValidationFindingId.New(),
+                            studyId,
+                            ValidationStage.Collection,
+                            "pack.vitals",
+                            packId,
+                            "R-SBP-1",
+                            1,
+                            ValidationSeverity.Warning,
+                            new FindingTarget(FindingTargetKind.DatasetRecord, "cs.vitals", formId.Value.ToString("D"), "sbp"),
+                            "SBP high on form 1",
+                            "<= 180",
+                            [],
+                            null,
+                            null,
+                            null,
+                            FindingStatus.Open,
+                            runId,
+                            runId,
+                            null,
+                            null,
+                            null,
+                            Enrollment: enrollmentId),
+                        new ValidationFindingView(
+                            ValidationFindingId.New(),
+                            studyId,
+                            ValidationStage.Collection,
+                            "pack.vitals",
+                            packId,
+                            "R-SBP-2",
+                            1,
+                            ValidationSeverity.Warning,
+                            new FindingTarget(FindingTargetKind.DatasetRecord, "cs.vitals", secondFormId.Value.ToString("D"), "sbp"),
+                            "SBP high on form 2",
+                            "<= 180",
+                            [],
+                            null,
+                            null,
+                            null,
+                            FindingStatus.Open,
+                            runId,
+                            runId,
+                            null,
+                            null,
+                            null,
+                            Enrollment: enrollmentId),
+                    ])));
+        var raisedAutoQueries = new List<RaiseFormQuery>();
+        var multiFormSender = Substitute.For<IKernelCommandSender>();
+        multiFormSender
+            .SendAsync(Arg.Do<RaiseFormQuery>(raisedAutoQueries.Add), Arg.Any<CommandMetadata?>(), Arg.Any<CancellationToken>())
+            .Returns(ci =>
+            {
+                var cmd = ci.ArgAt<RaiseFormQuery>(0);
+                var (q, _) = FormQuery.Raise(
+                    cmd.QueryId, cmd.TenantId, cmd.FormId, cmd.EnrollmentId, "sbp", cmd.ObservationId, cmd.Revision,
+                    cmd.Text, AssertionId.New(), "svc:execution-edit-checks", At, cmd.ReasonForChange, cmd.Origin, cmd.OwnerRole, cmd.Priority);
+                return CommandResult<FormQueryState>.Success(FormQueryState.Of(q, 1));
+            });
+        var multiFormConsumer = new EvaluateEditChecksOnCollectionChanged(
+            multiFindingValidation,
+            multiFormRecords,
+            obsReader,
+            Substitute.For<IValidationFindings>(),
+            sqlite,
+            multiFormSender);
+        var savedAttr = typeof(CollectedValuesSaved).GetCustomAttribute<KernelEventAttribute>()!;
+        var savedPayload = JsonSerializer.SerializeToElement(
+            new CollectedValuesSaved(
+                tenant,
+                formId,
+                enrollmentId,
+                studyId,
+                ruleInput.ProtocolVersionId,
+                "cs.vitals",
+                1,
+                [new CollectedValueChange("sbp", obsId, 1, null)]),
+            new JsonSerializerOptions(JsonSerializerDefaults.Web));
+        var savedEnvelope = new EventEnvelope(
+            Guid.CreateVersion7(),
+            savedAttr.Type,
+            savedAttr.SchemaVersion,
+            tenant,
+            null,
+            At,
+            "crc@example.test",
+            Guid.CreateVersion7(),
+            Guid.CreateVersion7(),
+            null,
+            savedPayload);
+        await multiFormConsumer.ConsumeAsync(new KernelEventDelivery("multi-form-edit-check", savedEnvelope), ct);
+        raisedAutoQueries.Should().HaveCount(2);
+        multiFormRecords.FindManyCalls.Should().Be(1);
+        multiFormRecords.FindCalls.Should().Be(0);
     }
 
     private static async Task<HttpContext> ContextWithTenantAsync(TenantId tenant, IServiceProvider? services = null)
@@ -750,6 +960,7 @@ public sealed class ExecutionFormProjectionDedupeTests
     private sealed class CountingCollectionInstanceRecords(
         IReadOnlyList<CollectionInstanceSummary>? summaries = null,
         IReadOnlyList<CollectionInstanceRecord>? findQueue = null,
+        IReadOnlyDictionary<CollectionInstanceId, CollectionInstanceRecord>? recordsById = null,
         IReadOnlyDictionary<CollectionInstanceId, CollectionInstanceHeader>? headers = null,
         IReadOnlyDictionary<CollectionInstanceId, CollectionInstanceScopeState>? scopeStates = null,
         IReadOnlyDictionary<CollectionInstanceId, CollectionInstanceQueryTarget>? queryTargets = null,
@@ -760,6 +971,7 @@ public sealed class ExecutionFormProjectionDedupeTests
     {
         private readonly Queue<CollectionInstanceRecord> _findQueue = new(findQueue ?? []);
         public int FindCalls { get; private set; }
+        public int FindManyCalls { get; private set; }
         public int FindHeaderCalls { get; private set; }
         public int FindHeadersCalls { get; private set; }
         public int FindScopeStateCalls { get; private set; }
@@ -777,7 +989,28 @@ public sealed class ExecutionFormProjectionDedupeTests
                 throw new InvalidOperationException("Full FindAsync must not be called on narrow read paths.");
             }
 
+            if (recordsById is not null && recordsById.TryGetValue(instance, out var mapped))
+            {
+                return Task.FromResult<CollectionInstanceRecord?>(mapped);
+            }
+
             return Task.FromResult(_findQueue.Count > 0 ? _findQueue.Dequeue() : null);
+        }
+
+        public Task<IReadOnlyDictionary<CollectionInstanceId, CollectionInstanceRecord>> FindManyAsync(
+            TenantId tenant,
+            IReadOnlyCollection<CollectionInstanceId> instances,
+            CancellationToken cancellationToken)
+        {
+            FindManyCalls++;
+            if (recordsById is null)
+            {
+                return Task.FromResult<IReadOnlyDictionary<CollectionInstanceId, CollectionInstanceRecord>>(
+                    new Dictionary<CollectionInstanceId, CollectionInstanceRecord>());
+            }
+
+            return Task.FromResult<IReadOnlyDictionary<CollectionInstanceId, CollectionInstanceRecord>>(
+                instances.Where(recordsById.ContainsKey).ToDictionary(id => id, id => recordsById[id]));
         }
 
         public Task<IReadOnlyDictionary<ObservationId, int>> FindObservationRevisionsAsync(
@@ -961,6 +1194,8 @@ public sealed class ExecutionFormProjectionDedupeTests
 
         public int ResolveCalls { get; private set; }
         public int ResolveManyCalls { get; private set; }
+        public int GetChildrenCalls { get; private set; }
+        public int GetStudyEnrollmentsCalls { get; private set; }
 
         public Task<NodeSummary?> ResolveAsync(TenantId tenant, NodeRef node, CancellationToken cancellationToken = default)
         {
@@ -981,6 +1216,7 @@ public sealed class ExecutionFormProjectionDedupeTests
 
         public Task<IReadOnlyList<ScopeChild>?> GetChildrenAsync(TenantId tenant, NodeRef node, CancellationToken cancellationToken = default)
         {
+            GetChildrenCalls++;
             if (node.Unversioned() == NodeRef.For(studyId))
             {
                 if (directEnrollmentUnderStudy)
@@ -1005,12 +1241,20 @@ public sealed class ExecutionFormProjectionDedupeTests
         public Task<IReadOnlyList<StudyEnrollmentNode>?> GetStudyEnrollmentsAsync(
             TenantId tenant, StudyId study, CancellationToken cancellationToken = default)
         {
+            GetStudyEnrollmentsCalls++;
             if (study != studyId)
             {
                 return Task.FromResult<IReadOnlyList<StudyEnrollmentNode>?>(null);
             }
 
-            var list = new List<StudyEnrollmentNode> { new(enrollmentId, subjectCode, siteId, siteCode) };
+            var list = new List<StudyEnrollmentNode>
+            {
+                new(
+                    enrollmentId,
+                    subjectCode,
+                    directEnrollmentUnderStudy ? null : siteId,
+                    directEnrollmentUnderStudy ? null : siteCode),
+            };
             if (extraEnrollments is not null)
             {
                 list.AddRange(extraEnrollments);
