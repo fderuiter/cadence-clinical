@@ -644,7 +644,7 @@ public sealed class ReadinessGatesAndWorkQueuesHostPostgresTests(ExecutionFormMo
         foreach (var cap in new[] { "collection.sign", "attestation.sign" })
         {
             await _scenario.Protocol.OkAsync(
-                new IssueGrant(seed.Tenant, GrantId.New(), Actor.Person(siteBPi), cap, null, AuthorityScope.StudySite(seed.SiteB), _scenario.Tick(), null, false, KernelProtocolScenario.Key(), "Site B PI grant"),
+                new IssueGrant(seed.Tenant, GrantId.New(), Actor.Person(siteBPi), cap, null, AuthorityScope.StudySite(seed.SiteB), fixture.Clock.UtcNow.AddMinutes(-5), null, false, KernelProtocolScenario.Key(), "Site B PI grant"),
                 ct);
         }
 
@@ -1246,6 +1246,131 @@ public sealed class ReadinessGatesAndWorkQueuesHostPostgresTests(ExecutionFormMo
 
         using var forgedRes = await rawClient.SendAsync(forgedReason, ct);
         forgedRes.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact(DisplayName = "HostValidationFindings_MultiStatusQuery_AndOperatorRebuildEndpoint_WorkEndToEnd")]
+    [KernelRule("K-FIND-1")]
+    public async Task HostValidationFindingsMultiStatusQueryAndOperatorRebuildEndpointWorkEndToEnd()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var seed = await SeedWorkspaceAsync(ct);
+        await RelayOutboxAsync(ct);
+
+        await _scenario.Protocol.OkAsync(
+            new IssueGrant(
+                seed.Tenant,
+                GrantId.New(),
+                Actor.Person(DataManager),
+                "validation_finding.rebuild_projection",
+                null,
+                AuthorityScope.Study(seed.Study),
+                fixture.Clock.UtcNow.AddMinutes(-5),
+                null,
+                false,
+                KernelProtocolScenario.Key(),
+                "Operator rebuild grant"),
+            ct);
+
+        using var monitor = CreateClient(seed.TenantCode, BlindedMonitor);
+        using var dm = CreateClient(seed.TenantCode, DataManager);
+
+        foreach (var formId in new[] { seed.FormA, seed.FormB })
+        {
+            await SendJsonAsync<FormSavedResponse>(
+                dm,
+                HttpMethod.Put,
+                $"{FormEndpoints.RoutePrefix}/{formId:D}/values",
+                "Enter critical systolic value",
+                token: null,
+                new
+                {
+                    values = new object[]
+                    {
+                        new { item_id = Systolic, value = new { type = "quantity", value = 240m, unit = "mm[Hg]" }, expected_revision = 0 },
+                        new { item_id = Diastolic, value = new { type = "quantity", value = 82m, unit = "mm[Hg]" }, expected_revision = 0 },
+                    },
+                },
+                HttpStatusCode.OK,
+                ct);
+            await RelayOutboxAsync(ct);
+        }
+
+        var studyRef = NodeRef.For(seed.Study).ToString();
+        var openPage = await GetJsonAsync<KernelValidationFindingPageResponse>(
+            monitor,
+            $"/api/v1/kernel/studies/{studyRef}/validation/findings?status=Open&limit=20",
+            ct);
+        openPage.Findings.Should().HaveCount(2);
+
+        // Transition one finding to Investigating so the study has 1 Open + 1 Investigating:
+        var investigatingRef = openPage.Findings[0].Ref;
+        await SendJsonAsync<KernelValidationFindingResponse>(
+            monitor,
+            HttpMethod.Post,
+            $"/api/v1/kernel/validation/findings/{investigatingRef}/investigate",
+            "Begin discrepancy review",
+            token: null,
+            body: null,
+            HttpStatusCode.OK,
+            ct);
+
+        // Both repeated ?status=Open&status=Investigating and comma-separated ?status=Open,Investigating return both active findings:
+        var repeatedStatusPage = await GetJsonAsync<KernelValidationFindingPageResponse>(
+            monitor,
+            $"/api/v1/kernel/studies/{studyRef}/validation/findings?status=Open&status=Investigating&limit=20",
+            ct);
+        repeatedStatusPage.Total.Should().Be(2);
+        repeatedStatusPage.Findings.Select(f => f.Status).Should().BeEquivalentTo("Open", "Investigating");
+
+        var csvStatusPage = await GetJsonAsync<KernelValidationFindingPageResponse>(
+            monitor,
+            $"/api/v1/kernel/studies/{studyRef}/validation/findings?status=Open,Investigating&limit=20",
+            ct);
+        csvStatusPage.Total.Should().Be(2);
+        csvStatusPage.Findings.Select(f => f.Status).Should().BeEquivalentTo("Open", "Investigating");
+
+        // Unauthorized caller without validation_finding.rebuild_projection is denied with 403 Forbidden:
+        using (var forbiddenResp = await monitor.SendAsync(
+            BuildRequest(HttpMethod.Post, $"/api/v1/kernel/studies/{studyRef}/validation/findings/rebuild", "Attempt rebuild", token: null, body: null),
+            ct))
+        {
+            forbiddenResp.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        }
+
+        // Wipe projections in DB, verify empty read, then rebuild deterministically via POST /rebuild as DataManager:
+        await using (var adminConn = new Npgsql.NpgsqlConnection(fixture.AdminConnectionString))
+        {
+            await adminConn.OpenAsync(ct);
+            await using var delCmd = new Npgsql.NpgsqlCommand(
+                $"DELETE FROM kernel.validation_finding_projections WHERE study_id = '{seed.Study}'",
+                adminConn);
+            await delCmd.ExecuteNonQueryAsync(ct);
+        }
+
+        var emptyAfterWipe = await GetJsonAsync<KernelValidationFindingPageResponse>(
+            monitor,
+            $"/api/v1/kernel/studies/{studyRef}/validation/findings?status=Open&status=Investigating&limit=20",
+            ct);
+        emptyAfterWipe.Total.Should().Be(0);
+
+        var rebuilt = await SendJsonAsync<KernelRebuildStudyValidationFindingsResponse>(
+            dm,
+            HttpMethod.Post,
+            $"/api/v1/kernel/studies/{studyRef}/validation/findings/rebuild",
+            "Operator projection rebuild",
+            token: null,
+            body: null,
+            HttpStatusCode.OK,
+            ct);
+        rebuilt.ProjectedFindings.Should().Be(2);
+
+        var restoredPage = await GetJsonAsync<KernelValidationFindingPageResponse>(
+            monitor,
+            $"/api/v1/kernel/studies/{studyRef}/validation/findings?status=Open&status=Investigating&limit=20",
+            ct);
+        restoredPage.Total.Should().Be(2);
+        restoredPage.Findings.Select(f => f.Status).Should().BeEquivalentTo("Open", "Investigating");
     }
 
     private sealed record WorkspaceSeed(

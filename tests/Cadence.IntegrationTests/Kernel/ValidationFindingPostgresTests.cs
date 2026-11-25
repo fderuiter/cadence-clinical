@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Data.Common;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -7,18 +9,32 @@ using System.Threading.Tasks;
 using Cadence.Kernel;
 using Cadence.Kernel.Application.Authorization;
 using Cadence.Kernel.Application.Commands;
+using Cadence.Kernel.Application.Evidence;
 using Cadence.Kernel.Application.Navigation;
+using Cadence.Kernel.Application.Standards;
+using Cadence.Kernel.Application.Validation;
+using Cadence.Kernel.Application.WorkQueues;
 using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
+using Cadence.Kernel.Domain.Validation;
+using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Lineage;
+using Cadence.Kernel.Persistence;
+using Cadence.Kernel.Persistence.Evidence;
 using Cadence.Kernel.Persistence.Lineage;
+using Cadence.Kernel.Persistence.Migrations;
 using Cadence.Kernel.Persistence.Navigation;
 using Cadence.Kernel.Persistence.Standards;
+using Cadence.Kernel.Persistence.Tenancy;
+using Cadence.Kernel.Persistence.Validation;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Standards;
+using Cadence.Kernel.Time;
 using Cadence.Kernel.Trust;
 using Cadence.Kernel.Validation;
+using Cadence.Kernel.WorkQueues;
+using Cadence.Rules;
 using Cadence.Rules.Evaluation;
 using Cadence.Rules.Expressions;
 using Cadence.Rules.Packs;
@@ -29,6 +45,10 @@ using Cadence.TestSupport.Kernel.Rules;
 using FluentAssertions;
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 using Npgsql;
 
@@ -460,6 +480,378 @@ public sealed class ValidationFindingPostgresTests(KernelPostgresFixture fixture
         coordinatorMasks.Keys.Should().Equal(NodeRef.For(chicagoOpenFinding));
     }
 
+    /// <summary>
+    /// Validates ADR-2462 §5, K-TX-1, and K-ID-2 on PostgreSQL: projection rows update atomically with runs and decisions,
+    /// emit zero extra audit entries per command, and enforce forced Row-Level Security across tenants and unbound connections.
+    /// </summary>
+    [Fact(DisplayName = "Projection_CommitsTransactionally_PreservesSingleAggregateAudit_AndEnforcesForcedRls")]
+    [KernelRule("K-FIND-1")]
+    [KernelRule("K-ID-2")]
+    public async Task ProjectionCommitsTransactionallyPreservesSingleAggregateAuditAndEnforcesForcedRls()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var (tenant, study, _, _) = await StudyWithPackAsync(ct);
+        var (otherTenant, _, _, _) = await StudyWithPackAsync(ct);
+
+        await using var auditProbe = fixture.CreateContext(tenant);
+        var baselineAudits = await auditProbe.AuditEntries.AsNoTracking().CountAsync(ct);
+
+        var r1 = await RunAsync(tenant, study, [Vitals("row-1", 90m, 100m)], ct);
+        await using (var db = fixture.CreateContext(tenant))
+        {
+            var projectedAfterR1 = await db.Set<ValidationFindingProjectionRecord>().AsNoTracking()
+                .Where(p => p.StudyId == study)
+                .OrderBy(p => p.RuleId)
+                .ToListAsync(ct);
+            projectedAfterR1.Should().HaveCount(2);
+            projectedAfterR1.Select(p => (p.RuleId, p.Status, p.Blocks, p.ProjectionVersion))
+                .Should().Equal(
+                    ("R1", FindingStatus.Open, true, 1L),
+                    ("R2", FindingStatus.Open, false, 1L));
+
+            var auditsAfterR1 = await db.AuditEntries.AsNoTracking().ToListAsync(ct);
+            (auditsAfterR1.Count - baselineAudits).Should().Be(1, "K-TX-1 records exactly one aggregate audit entry for RecordValidationRun");
+            auditsAfterR1.Should().NotContain(a => a.AggregateType != null && a.AggregateType.Contains("Projection", StringComparison.OrdinalIgnoreCase));
+        }
+
+        // Forced RLS: another tenant sees 0 rows, and an app-role connection with no tenant GUC sees 0 rows.
+        await using (var otherDb = fixture.CreateContext(otherTenant))
+        {
+            (await otherDb.Set<ValidationFindingProjectionRecord>().AsNoTracking().CountAsync(ct)).Should().Be(0);
+        }
+
+        await using (var unboundConn = new NpgsqlConnection(fixture.ConnectionString))
+        {
+            await unboundConn.OpenAsync(ct);
+            await using var cmd = new NpgsqlCommand("SELECT count(*) FROM kernel.validation_finding_projections", unboundConn);
+            Convert.ToInt64(await cmd.ExecuteScalarAsync(ct)).Should().Be(0, "forced RLS hides projection rows when cadence.tenant_id is unset");
+        }
+
+        var errorFinding = (await fixture.Findings.ListAsync(tenant, new FindingQuery(study) { Severity = ValidationSeverity.Error }, ct))
+            .Findings.Single();
+        (await SendAsync(new InvestigateFinding(tenant, errorFinding.Id, Key(), Reason), ct)).Error.Should().BeNull();
+        (await SendAsync(new ClassifyFinding(tenant, errorFinding.Id, FindingClassification.DataIssue, Key(), Reason), ct)).Error.Should().BeNull();
+        const string ExplainText = "Confirmed cuff transposition with clinic.";
+        var explainSig = await SignAsync(tenant, errorFinding.Id, r1.RunId, FindingStatus.Explained, ExplainText, AttestationMeaning.Approved, ct);
+        (await SendAsync(new ExplainFinding(tenant, errorFinding.Id, ExplainText, explainSig, Key(), Reason), ct)).Error.Should().BeNull();
+
+        await using (var db = fixture.CreateContext(tenant))
+        {
+            var row = await db.Set<ValidationFindingProjectionRecord>().AsNoTracking()
+                .SingleAsync(p => p.FindingId == errorFinding.Id, ct);
+            row.Status.Should().Be(FindingStatus.Explained);
+            row.Blocks.Should().BeFalse();
+            row.Classification.Should().Be(FindingClassification.DataIssue);
+            row.DecisionInForce.Should().BeTrue();
+            row.ProjectionVersion.Should().Be(4L);
+
+            var allAudits = await db.AuditEntries.AsNoTracking().ToListAsync(ct);
+            allAudits.Should().NotContain(a => a.AggregateType != null && a.AggregateType.Contains("Projection", StringComparison.OrdinalIgnoreCase));
+        }
+    }
+
+    /// <summary>
+    /// Validates deterministic projection rebuild (<see cref="RebuildValidationFindingProjections"/>,
+    /// <see cref="IValidationFindingProjector"/>, and <see cref="ValidationFindingProjections.BackfillSql"/>) against
+    /// <see cref="FindingLedger.Derive"/> after projection rows are wiped or corrupted.
+    /// </summary>
+    [Fact(DisplayName = "Projection_RebuildCommandProjectorAndBackfillSql_RestoreExactDeriveParity")]
+    [KernelRule("K-FIND-1")]
+    public async Task ProjectionRebuildCommandProjectorAndBackfillSqlRestoreExactDeriveParity()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var (tenant, study, _, _) = await StudyWithPackAsync(ct);
+
+        var r1 = await RunAsync(tenant, study, [Vitals("row-a", 90m, 100m), Vitals("row-b", 92m, 99m), Vitals("row-c", 95m, 80m)], ct);
+        var initial = (await fixture.Findings.ListAsync(tenant, new FindingQuery(study), ct)).Findings;
+        var rowAError = initial.Single(f => f.RuleId == "R1" && f.Target.Key == "row-a");
+        var rowBError = initial.Single(f => f.RuleId == "R1" && f.Target.Key == "row-b");
+        var rowCWarning = initial.Single(f => f.RuleId == "R2" && f.Target.Key == "row-c");
+
+        // Explain row-a, accept row-b (which will resolve then recur -> must reopen!), investigate row-c.
+        var sigA = await SignAsync(tenant, rowAError.Id, r1.RunId, FindingStatus.Explained, "Explained A.", AttestationMeaning.Approved, ct);
+        (await SendAsync(new ExplainFinding(tenant, rowAError.Id, "Explained A.", sigA, Key(), Reason), ct)).Error.Should().BeNull();
+        var sigB = await SignAsync(tenant, rowBError.Id, r1.RunId, FindingStatus.Accepted, "Accepted B.", AttestationMeaning.Responsibility, ct);
+        (await SendAsync(new AcceptFinding(tenant, rowBError.Id, "Accepted B.", sigB, Key(), Reason), ct)).Error.Should().BeNull();
+        (await SendAsync(new InvestigateFinding(tenant, rowCWarning.Id, Key(), Reason), ct)).Error.Should().BeNull();
+        (await SendAsync(new ClassifyFinding(tenant, rowCWarning.Id, FindingClassification.MappingIssue, Key(), Reason), ct)).Error.Should().BeNull();
+
+        // r2 resolves row-b (110/80) while keeping row-a (90/100) and row-c (95/80).
+        await RunAsync(tenant, study, [Vitals("row-a", 90m, 100m), Vitals("row-b", 110m, 80m), Vitals("row-c", 95m, 80m)], ct);
+        // r3 resolves row-a (110/80), while row-b recurs (92/99 -> voids acceptance -> Open!).
+        await RunAsync(tenant, study, [Vitals("row-a", 110m, 80m), Vitals("row-b", 92m, 99m), Vitals("row-c", 95m, 80m)], ct);
+
+        var expectedDerive = await DeriveTruthFromDbAsync(tenant, study, ct);
+
+        await using (var db = fixture.CreateContext(tenant))
+        {
+            var liveStates = (await db.Set<ValidationFindingProjectionRecord>().AsNoTracking()
+                .Where(p => p.StudyId == study)
+                .OrderBy(p => p.FindingId)
+                .ToListAsync(ct))
+                .Select(p => p.ToFindingState())
+                .ToList();
+            liveStates.Should().Equal(expectedDerive);
+        }
+
+        // 1. Delete all projection rows as superuser, then rebuild via RebuildValidationFindingProjections command:
+        await ExecuteAdminSqlAsync($"DELETE FROM kernel.validation_finding_projections WHERE study_id = '{study}'", ct);
+        (await fixture.Findings.ListAsync(tenant, new FindingQuery(study), ct)).Total.Should().Be(0);
+
+        var commandRebuilt = await SendAsync(new RebuildValidationFindingProjections(tenant, study, Key(), Reason), ct);
+        commandRebuilt.Error.Should().BeNull();
+        commandRebuilt.Value.Should().Be(expectedDerive.Count);
+
+        await using (var db = fixture.CreateContext(tenant))
+        {
+            var rebuiltStates = (await db.Set<ValidationFindingProjectionRecord>().AsNoTracking()
+                .Where(p => p.StudyId == study)
+                .OrderBy(p => p.FindingId)
+                .ToListAsync(ct))
+                .Select(p => p.ToFindingState())
+                .ToList();
+            rebuiltStates.Should().Equal(expectedDerive);
+        }
+
+        // 2. Corrupt projection statuses, then rebuild via migration BackfillSql:
+        await ExecuteAdminSqlAsync(
+            $"UPDATE kernel.validation_finding_projections SET status = 'Resolved', blocks = FALSE WHERE study_id = '{study}'",
+            ct);
+        await ExecuteAdminSqlAsync(ValidationFindingProjections.BackfillSql, ct);
+
+        await using (var db = fixture.CreateContext(tenant))
+        {
+            var backfilledStates = (await db.Set<ValidationFindingProjectionRecord>().AsNoTracking()
+                .Where(p => p.StudyId == study)
+                .OrderBy(p => p.FindingId)
+                .ToListAsync(ct))
+                .Select(p => p.ToFindingState())
+                .ToList();
+            backfilledStates.Should().Equal(expectedDerive);
+        }
+    }
+
+    /// <summary>
+    /// Validates the core performance contract: after 15 historical runs where resolved detections outnumber active
+    /// findings, <see cref="IValidationFindings"/>, <see cref="IWorkQueues"/>, <see cref="EvidenceReadiness"/>,
+    /// <see cref="ICollectionInstanceRecords"/>, and <see cref="ILockRecords"/> never scan
+    /// <c>kernel.validation_runs</c> for ledger replay and materialize zero historical detection rows beyond returned findings.
+    /// </summary>
+    [Fact(DisplayName = "Projection_ReadsAndReadinessGates_MaterializeZeroHistoricalDetectionsBeyondReturnedFindings")]
+    [KernelRule("K-FIND-1")]
+    public async Task ProjectionReadsAndReadinessGatesMaterializeZeroHistoricalDetectionsBeyondReturnedFindings()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var forms = new KernelCollectionScenario(fixture);
+        var form = await forms.NewFormAsync(ct);
+        var tenant = form.Subject.Tenant;
+        var study = form.Subject.Study;
+
+        var sdtmig = (await SendAsync(new RegisterStandardVersion(
+            tenant, StandardVersionId.New(), StandardSeeds.LoadAll().Single(s => s.Package.StandardCode == "SDTMIG").Package, null, Key(), Reason), ct)).Value;
+        var sdtmigHash = (await fixture.Standards.FindStandardVersionAsync(tenant, sdtmig, ct))!.ContentHash;
+        var standardApproval = await SignAsync(tenant, new AttestationTarget(NodeKinds.StandardVersion, sdtmig.Value, sdtmigHash), AttestationMeaning.Approved, ct);
+        (await SendAsync(new ApproveStandardVersion(tenant, sdtmig, standardApproval, Key(), Reason), ct)).Error.Should().BeNull();
+
+        var pack = await DraftAsync(tenant, ct);
+        var packApproval = await SignAsync(tenant, new AttestationTarget(NodeKinds.LibraryItem, pack.Id.Value, pack.ContentHash), AttestationMeaning.Approved, ct);
+        (await SendAsync(new ApproveLibraryItem(tenant, pack.Id, packApproval, Key(), Reason), ct)).Error.Should().BeNull();
+        (await SendAsync(new DeclareStudyStandards(tenant, study, StudyStandardsProfileId.New(), [sdtmig], [], [pack.Id], Key(), Reason), ct)).Error.Should().BeNull();
+
+        // Append 14 historical runs with 10 violating records (20 detections per run = 280 historical detections),
+        // then a 15th run where 9 records are clean and only row-0 remains active (1 Error + 1 Warning).
+        for (var r = 0; r < 14; r++)
+        {
+            var records = Enumerable.Range(0, 10).Select(i => Vitals($"row-{i}", 90m, 100m)).ToList();
+            await RunAsync(tenant, study, records, ct);
+        }
+
+        var finalRecords = Enumerable.Range(0, 10)
+            .Select(i => i == 0 ? Vitals($"row-{i}", 90m, 100m) : Vitals($"row-{i}", 115m, 78m))
+            .ToList();
+        await RunAsync(tenant, study, finalRecords, ct);
+
+        var activePage = await fixture.Findings.ListAsync(
+            tenant,
+            new FindingQuery(study) { Statuses = [FindingStatus.Open, FindingStatus.Investigating], Take = 20 },
+            ct);
+        activePage.Total.Should().Be(2);
+        var warningId = activePage.Findings.Single(f => f.Severity == ValidationSeverity.Warning).Id;
+        (await SendAsync(new InvestigateFinding(tenant, warningId, Key(), Reason), ct)).Error.Should().BeNull();
+
+        // Also record one Collection-stage active error on the eCRF form so EvidenceReadiness / CollectionInstance / Lock readiness exercise active findings.
+        var formRunAt = forms.Tick();
+        (await SendAsync(
+            new RecordValidationRun(
+                tenant,
+                ValidationRunId.New(),
+                study,
+                ValidationStage.Collection,
+                [pack.Id],
+                new DateOnly(2026, 9, 30),
+                null,
+                null,
+                null,
+                [],
+                ["VITALS"],
+                formRunAt.AddSeconds(-1),
+                formRunAt,
+                [
+                    new ValidationDetection(
+                        PackKey,
+                        "R1",
+                        1,
+                        ValidationSeverity.Error,
+                        new FindingTarget(FindingTargetKind.DatasetRecord, "VITALS", form.Instance.Value.ToString("D"), KernelCollectionScenario.Systolic),
+                        "Form systolic < diastolic.",
+                        null,
+                        [new ObservedVariable("SYS", "88")]),
+                ],
+                Key(),
+                Reason),
+            ct)).Error.Should().BeNull();
+
+        var interceptor = new SqlCaptureInterceptor();
+        var probeServices = new ServiceCollection()
+            .AddSingleton<IClock>(fixture.Clock)
+            .AddSingleton<ICurrentActor>(fixture.CurrentActor)
+            .AddSingleton<IAuthorizer>(fixture.Authorizer)
+            .AddSingleton<IAuthorizationProbe>(fixture.AuthorizationProbe)
+            .AddSingleton<INodeVisibility>(fixture.Visibility)
+            .AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance)
+            .AddSingleton(typeof(ILogger<>), typeof(NullLogger<>))
+            .AddKernelPersistence(fixture.ConnectionString!)
+            .AddKernelScopeGraph()
+            .AddKernelNavigation()
+            .AddKernelStandardsPersistence()
+            .AddKernelStandards()
+            .AddKernelValidationPersistence()
+            .AddKernelValidation()
+            .AddCadenceRules()
+            .AddCadenceStandards()
+            .AddKernelWorkQueues();
+        var optionsBuilder = new DbContextOptionsBuilder<KernelDbContext>();
+        KernelDatabase.UseKernelNpgsql(optionsBuilder, fixture.ConnectionString!);
+        optionsBuilder.AddInterceptors(new KernelTenantConnectionInterceptor(), interceptor);
+        probeServices.AddSingleton<IDbContextFactory<KernelDbContext>>(new InterceptedDbContextFactory(optionsBuilder.Options));
+
+        await using var provider = probeServices.BuildServiceProvider();
+        using var scope = provider.CreateScope();
+        var tenantContexts = scope.ServiceProvider.GetRequiredService<KernelTenantDbContextFactory>();
+        var store = scope.ServiceProvider.GetRequiredService<IValidationFindings>();
+        var workQueues = scope.ServiceProvider.GetRequiredService<IWorkQueues>();
+        var collectionRecords = scope.ServiceProvider.GetRequiredService<ICollectionInstanceRecords>();
+        var lockRecords = scope.ServiceProvider.GetRequiredService<ILockRecords>();
+
+        // 1. ListAsync(Open + Investigating, Take = 20): returns 3 active findings, reads <= 3 detection rows (not 283!).
+        interceptor.Reset();
+        var listed = await store.ListAsync(
+            tenant,
+            new FindingQuery(study) { Statuses = [FindingStatus.Open, FindingStatus.Investigating], Take = 20 },
+            ct);
+        listed.Total.Should().Be(3);
+        listed.Findings.Should().HaveCount(3);
+        interceptor.Commands.Should().NotContain(sql => sql.Contains("validation_run_datasets", StringComparison.OrdinalIgnoreCase));
+        interceptor.DetectionRowsRead.Should().Be(3);
+
+        // 2. LoadActiveErrorFindingTargetsAsync + CollectionInstanceRecords.ListForStudyAsync: zero validation_detections or validation_runs queries!
+        interceptor.Reset();
+        await using (var db = tenantContexts.Create(tenant))
+        {
+            var targets = await KernelValidationStore.LoadActiveErrorFindingTargetsAsync(db, study, ct);
+            targets.Should().HaveCount(2);
+        }
+
+        interceptor.Commands.Should().NotContain(sql => sql.Contains("validation_detections", StringComparison.OrdinalIgnoreCase));
+        interceptor.Commands.Should().NotContain(sql => sql.Contains("validation_runs", StringComparison.OrdinalIgnoreCase));
+
+        interceptor.Reset();
+        var studyForms = await collectionRecords.ListForStudyAsync(tenant, study, ct);
+        studyForms.Should().ContainSingle();
+        interceptor.Commands.Should().NotContain(sql => sql.Contains("validation_detections", StringComparison.OrdinalIgnoreCase));
+        interceptor.Commands.Should().NotContain(sql => sql.Contains("validation_runs", StringComparison.OrdinalIgnoreCase));
+
+        // 3. EvidenceReadiness (form signing check) + LockRecords.ReadReadinessAsync + WorkQueues: read only active error findings!
+        interceptor.Reset();
+        var formFindings = await store.ListAsync(
+            tenant,
+            new FindingQuery(study)
+            {
+                Severity = ValidationSeverity.Error,
+                Statuses = [FindingStatus.Open, FindingStatus.Investigating],
+                TargetKeys = [form.Instance.Value.ToString("D")],
+            },
+            ct);
+        formFindings.Findings.Should().ContainSingle();
+        interceptor.Commands.Should().NotContain(sql => sql.Contains("validation_run_datasets", StringComparison.OrdinalIgnoreCase));
+        interceptor.DetectionRowsRead.Should().Be(1);
+
+        interceptor.Reset();
+        var lockReadiness = await lockRecords.ReadReadinessAsync(tenant, study, NodeRef.For(study), ct);
+        lockReadiness!.ReadyForLock.Should().BeFalse();
+        lockReadiness.OpenErrorFindingCount.Should().Be(2);
+        interceptor.Commands.Should().NotContain(sql => sql.Contains("validation_run_datasets", StringComparison.OrdinalIgnoreCase));
+        interceptor.DetectionRowsRead.Should().Be(2);
+
+        interceptor.Reset();
+        var queues = await workQueues.ReadAsync(tenant, new WorkQueueQuery(NodeRef.For(study)), ct);
+        queues.IsSuccess.Should().BeTrue();
+        interceptor.Commands.Should().NotContain(sql => sql.Contains("validation_run_datasets", StringComparison.OrdinalIgnoreCase));
+        interceptor.DetectionRowsRead.Should().BeLessThanOrEqualTo(3);
+    }
+
+    private async Task<IReadOnlyList<FindingState>> DeriveTruthFromDbAsync(TenantId tenant, StudyId study, CancellationToken ct)
+    {
+        await using var db = fixture.CreateContext(tenant);
+        var runs = await db.Set<ValidationRun>().AsNoTracking()
+            .Where(r => r.StudyId == study)
+            .ToListAsync(ct);
+        var runIds = runs.Select(r => r.Id).ToList();
+        var packs = await db.Set<ValidationRunPack>().AsNoTracking()
+            .Where(p => runIds.Contains(p.RunId))
+            .ToListAsync(ct);
+        var datasets = await db.Set<ValidationRunDataset>().AsNoTracking()
+            .Where(d => runIds.Contains(d.RunId))
+            .ToListAsync(ct);
+        var detections = await db.Set<ValidationDetectionRecord>().AsNoTracking()
+            .Where(d => runIds.Contains(d.RunId))
+            .ToListAsync(ct);
+        var decisions = await db.Set<ValidationFinding>().AsNoTracking()
+            .Where(f => f.StudyId == study)
+            .ToListAsync(ct);
+
+        var packsByRun = packs.ToLookup(p => p.RunId, p => p.PackKey);
+        var datasetsByRun = datasets.ToLookup(d => d.RunId, d => d.Dataset);
+        var runById = runs.ToDictionary(r => r.Id);
+
+        return FindingLedger.Derive(
+            runs.Select(r => new LedgerRun(
+                r.Id,
+                r.Stage,
+                new DateTimeOffset(DateTime.SpecifyKind(r.CreatedAt, DateTimeKind.Utc)),
+                packsByRun[r.Id].ToHashSet(StringComparer.Ordinal),
+                datasetsByRun[r.Id].ToHashSet(StringComparer.Ordinal))),
+            detections.Select(d => new LedgerDetection(
+                d.RunId,
+                d.FindingId,
+                runById[d.RunId].Stage,
+                d.PackKey,
+                d.Dataset,
+                d.Severity)),
+            decisions.Select(d => new LedgerDecision(d.Id, d.Decision, d.DecidedAt, d.Classification)));
+    }
+
+    private async Task ExecuteAdminSqlAsync(string sql, CancellationToken ct)
+    {
+        await using var connection = new NpgsqlConnection(fixture.AdminConnectionString);
+        await connection.OpenAsync(ct);
+        await using var command = new NpgsqlCommand(sql, connection);
+        await command.ExecuteNonQueryAsync(ct);
+    }
+
     /// <summary>Records one validation run with a detection and an input, for tests of the validation tables.</summary>
     internal static async Task SeedRunAsync(KernelPostgresFixture fixture, CancellationToken ct)
     {
@@ -541,4 +933,160 @@ public sealed class ValidationFindingPostgresTests(KernelPostgresFixture fixture
         fixture.Sender.SendAsync(command, cancellationToken: ct);
 
     private static string Key() => $"key-{Guid.NewGuid():N}";
+
+    private sealed class InterceptedDbContextFactory(DbContextOptions<KernelDbContext> options) : IDbContextFactory<KernelDbContext>
+    {
+        public KernelDbContext CreateDbContext() => new(options);
+    }
+
+    private sealed class SqlCaptureInterceptor : DbCommandInterceptor
+    {
+        private readonly ConcurrentQueue<string> _commands = new();
+        private int _detectionRowsRead;
+
+        public IReadOnlyList<string> Commands => [.. _commands];
+
+        public int DetectionRowsRead => _detectionRowsRead;
+
+        public void Reset()
+        {
+            _commands.Clear();
+            Interlocked.Exchange(ref _detectionRowsRead, 0);
+        }
+
+        public override async ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(
+            DbCommand command,
+            CommandEventData eventData,
+            InterceptionResult<DbDataReader> result,
+            CancellationToken cancellationToken = default)
+        {
+            var sql = command.CommandText ?? string.Empty;
+            if (!sql.Contains("set_config('cadence.tenant_id'", StringComparison.OrdinalIgnoreCase))
+            {
+                _commands.Enqueue(sql);
+            }
+
+            return await base.ReaderExecutingAsync(command, eventData, result, cancellationToken).ConfigureAwait(false);
+        }
+
+        public override ValueTask<DbDataReader> ReaderExecutedAsync(
+            DbCommand command,
+            CommandExecutedEventData eventData,
+            DbDataReader result,
+            CancellationToken cancellationToken = default)
+        {
+            var sql = command.CommandText ?? string.Empty;
+            var trimmed = sql.AsSpan().TrimStart();
+            if ((trimmed.StartsWith("SELECT", StringComparison.OrdinalIgnoreCase)
+                    || trimmed.StartsWith("WITH", StringComparison.OrdinalIgnoreCase))
+                && sql.Contains("validation_detections", StringComparison.OrdinalIgnoreCase))
+            {
+                return new ValueTask<DbDataReader>(new CountingDataReader(result, count => Interlocked.Add(ref _detectionRowsRead, count)));
+            }
+
+            return base.ReaderExecutedAsync(command, eventData, result, cancellationToken);
+        }
+    }
+
+    private sealed class CountingDataReader(DbDataReader inner, Action<int> onClose) : DbDataReader
+    {
+        private int _rows;
+        private int _reported;
+
+        public override object this[int ordinal] => inner[ordinal];
+        public override object this[string name] => inner[name];
+        public override int Depth => inner.Depth;
+        public override int FieldCount => inner.FieldCount;
+        public override bool HasRows => inner.HasRows;
+        public override bool IsClosed => inner.IsClosed;
+        public override int RecordsAffected => inner.RecordsAffected;
+
+        public override bool GetBoolean(int ordinal) => inner.GetBoolean(ordinal);
+        public override byte GetByte(int ordinal) => inner.GetByte(ordinal);
+        public override long GetBytes(int ordinal, long dataOffset, byte[]? buffer, int bufferOffset, int length) => inner.GetBytes(ordinal, dataOffset, buffer, bufferOffset, length);
+        public override char GetChar(int ordinal) => inner.GetChar(ordinal);
+        public override long GetChars(int ordinal, long dataOffset, char[]? buffer, int bufferOffset, int length) => inner.GetChars(ordinal, dataOffset, buffer, bufferOffset, length);
+        public override string GetDataTypeName(int ordinal) => inner.GetDataTypeName(ordinal);
+        public override DateTime GetDateTime(int ordinal) => inner.GetDateTime(ordinal);
+        public override decimal GetDecimal(int ordinal) => inner.GetDecimal(ordinal);
+        public override double GetDouble(int ordinal) => inner.GetDouble(ordinal);
+        public override System.Collections.IEnumerator GetEnumerator() => inner.GetEnumerator();
+        public override Type GetFieldType(int ordinal) => inner.GetFieldType(ordinal);
+        public override float GetFloat(int ordinal) => inner.GetFloat(ordinal);
+        public override Guid GetGuid(int ordinal) => inner.GetGuid(ordinal);
+        public override short GetInt16(int ordinal) => inner.GetInt16(ordinal);
+        public override int GetInt32(int ordinal) => inner.GetInt32(ordinal);
+        public override long GetInt64(int ordinal) => inner.GetInt64(ordinal);
+        public override string GetName(int ordinal) => inner.GetName(ordinal);
+        public override int GetOrdinal(string name) => inner.GetOrdinal(name);
+        public override string GetString(int ordinal) => inner.GetString(ordinal);
+        public override object GetValue(int ordinal) => inner.GetValue(ordinal);
+        public override int GetValues(object[] values) => inner.GetValues(values);
+        public override bool IsDBNull(int ordinal) => inner.IsDBNull(ordinal);
+        public override T GetFieldValue<T>(int ordinal) => inner.GetFieldValue<T>(ordinal);
+        public override Task<T> GetFieldValueAsync<T>(int ordinal, CancellationToken cancellationToken) => inner.GetFieldValueAsync<T>(ordinal, cancellationToken);
+        public override Task<bool> IsDBNullAsync(int ordinal, CancellationToken cancellationToken) => inner.IsDBNullAsync(ordinal, cancellationToken);
+        public override bool NextResult() => inner.NextResult();
+        public override Task<bool> NextResultAsync(CancellationToken cancellationToken) => inner.NextResultAsync(cancellationToken);
+
+        public override bool Read()
+        {
+            var ok = inner.Read();
+            if (ok)
+            {
+                _rows++;
+            }
+
+            return ok;
+        }
+
+        public override async Task<bool> ReadAsync(CancellationToken cancellationToken)
+        {
+            var ok = await inner.ReadAsync(cancellationToken).ConfigureAwait(false);
+            if (ok)
+            {
+                _rows++;
+            }
+
+            return ok;
+        }
+
+        public override void Close()
+        {
+            ReportOnce();
+            inner.Close();
+        }
+
+        public override async Task CloseAsync()
+        {
+            ReportOnce();
+            await inner.CloseAsync().ConfigureAwait(false);
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                ReportOnce();
+                inner.Dispose();
+            }
+
+            base.Dispose(disposing);
+        }
+
+        public override async ValueTask DisposeAsync()
+        {
+            ReportOnce();
+            await inner.DisposeAsync().ConfigureAwait(false);
+            await base.DisposeAsync().ConfigureAwait(false);
+        }
+
+        private void ReportOnce()
+        {
+            if (Interlocked.Exchange(ref _reported, 1) == 0)
+            {
+                onClose(_rows);
+            }
+        }
+    }
 }

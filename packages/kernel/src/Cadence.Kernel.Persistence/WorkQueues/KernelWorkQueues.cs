@@ -391,9 +391,9 @@ internal sealed class ValidationFindingsOpenSource(KernelTenantDbContextFactory 
             case { Kind: NodeKinds.ValidationFinding }:
                 {
                     var fid = ValidationFindingId.FromGuid(within.Id);
-                    var studyId = await db.Set<ValidationDetectionRecord>().AsNoTracking()
-                        .Where(d => d.FindingId == fid)
-                        .Select(d => (StudyId?)d.StudyId)
+                    var studyId = await db.ValidationFindingProjections.AsNoTracking()
+                        .Where(p => p.FindingId == fid)
+                        .Select(p => (StudyId?)p.StudyId)
                         .FirstOrDefaultAsync(cancellationToken)
                         .ConfigureAwait(false);
                     if (studyId is null)
@@ -414,74 +414,116 @@ internal sealed class ValidationFindingsOpenSource(KernelTenantDbContextFactory 
             return [];
         }
 
-        var candidates = new List<WorkItemCandidate>();
-        foreach (var studyId in studyIds)
+        var projQuery = db.ValidationFindingProjections.AsNoTracking()
+            .Where(p => studyIds.Contains(p.StudyId)
+                && (p.Status == FindingStatus.Open || p.Status == FindingStatus.Investigating));
+        if (onlyFindingId is { } fidFilter)
         {
-            var ledger = await KernelValidationStore.LoadStudyAsync(db, studyId, stage: null, cancellationToken).ConfigureAwait(false);
-            var active = ledger.Derive()
-                .Where(f => f.Status is FindingStatus.Open or FindingStatus.Investigating)
-                .Where(f => onlyFindingId is null || f.Finding == onlyFindingId.Value)
-                .ToList();
-            if (active.Count == 0)
+            projQuery = projQuery.Where(p => p.FindingId == fidFilter);
+        }
+
+        if (allowedFormGuids is not null || allowedObsGuids is not null)
+        {
+            var scopedTargetKeys = new List<string>(
+                (allowedFormGuids?.Count ?? 0) + (allowedObsGuids?.Count ?? 0));
+            if (allowedFormGuids is not null)
+            {
+                foreach (var fg in allowedFormGuids)
+                {
+                    scopedTargetKeys.Add(fg.ToString("D"));
+                }
+            }
+
+            if (allowedObsGuids is not null)
+            {
+                foreach (var og in allowedObsGuids)
+                {
+                    scopedTargetKeys.Add(NodeRef.For(ObservationId.FromGuid(og)).ToString());
+                }
+            }
+
+            if (scopedTargetKeys.Count == 0)
+            {
+                return [];
+            }
+
+            projQuery = projQuery.Where(p => scopedTargetKeys.Contains(p.TargetKey));
+        }
+
+        var activeRows = await projQuery
+            .OrderBy(p => p.FirstDetectedAt)
+            .ThenBy(p => p.FindingId)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+        if (activeRows.Count == 0)
+        {
+            return [];
+        }
+
+        var matchedRows = new List<Cadence.Kernel.Persistence.Validation.ValidationFindingProjectionRecord>(Math.Min(activeRows.Count, take));
+        foreach (var row in activeRows)
+        {
+            if (allowedFormGuids is not null || allowedObsGuids is not null)
+            {
+                var matchesForm = row.Stage == ValidationStage.Collection
+                    && row.TargetKind == FindingTargetKind.DatasetRecord
+                    && Guid.TryParse(row.TargetKey, out var fg)
+                    && allowedFormGuids is not null
+                    && allowedFormGuids.Contains(fg);
+                var matchesObs = row.TargetKind == FindingTargetKind.Observation
+                    && NodeRef.TryParse(row.TargetKey, out var on)
+                    && on.Kind == NodeKinds.Observation
+                    && allowedObsGuids is not null
+                    && allowedObsGuids.Contains(on.Id);
+                if (!matchesForm && !matchesObs)
+                {
+                    continue;
+                }
+            }
+
+            matchedRows.Add(row);
+            if (matchedRows.Count >= take)
+            {
+                break;
+            }
+        }
+
+        if (matchedRows.Count == 0)
+        {
+            return [];
+        }
+
+        var findingIds = matchedRows.Select(r => r.FindingId).ToList();
+        var messages = await (
+                from p in db.ValidationFindingProjections.AsNoTracking()
+                join d in db.Set<ValidationDetectionRecord>().AsNoTracking()
+                    on new { p.TenantId, RunId = p.LastDetectedRunId, p.FindingId }
+                    equals new { d.TenantId, d.RunId, d.FindingId }
+                where findingIds.Contains(p.FindingId)
+                select new { p.FindingId, d.Message })
+            .ToDictionaryAsync(x => x.FindingId, x => x.Message, cancellationToken)
+            .ConfigureAwait(false);
+        var decisionVersions = await db.Set<ValidationFinding>().AsNoTracking()
+            .Where(f => findingIds.Contains(f.Id))
+            .ToDictionaryAsync(f => f.Id, f => f.VersionIndex, cancellationToken)
+            .ConfigureAwait(false);
+
+        var candidates = new List<WorkItemCandidate>(matchedRows.Count);
+        foreach (var row in matchedRows)
+        {
+            if (!messages.TryGetValue(row.FindingId, out var message))
             {
                 continue;
             }
 
-            var runDates = ledger.Runs.ToDictionary(r => r.Id, r => r.RecordedAt);
-            var findingIds = active.Select(a => a.Finding).ToList();
-            var lastRunIds = active.Select(a => a.LastDetectedRun).Distinct().ToList();
-            var detections = (await db.Set<ValidationDetectionRecord>().AsNoTracking()
-                    .Where(d => findingIds.Contains(d.FindingId) && lastRunIds.Contains(d.RunId))
-                    .Select(d => new { d.RunId, d.FindingId, d.RuleId, d.Message, d.Stage, d.TargetKind, d.TargetKey })
-                    .ToListAsync(cancellationToken)
-                    .ConfigureAwait(false))
-                .ToDictionary(d => (d.RunId, d.FindingId));
-            var decisionVersions = await db.Set<ValidationFinding>().AsNoTracking()
-                .Where(f => findingIds.Contains(f.Id))
-                .ToDictionaryAsync(f => f.Id, f => f.VersionIndex, cancellationToken)
-                .ConfigureAwait(false);
-
-            foreach (var state in active)
-            {
-                if (!detections.TryGetValue((state.LastDetectedRun, state.Finding), out var det))
-                {
-                    continue;
-                }
-
-                if (allowedFormGuids is not null || allowedObsGuids is not null)
-                {
-                    var matchesForm = det.Stage == ValidationStage.Collection
-                        && det.TargetKind == FindingTargetKind.DatasetRecord
-                        && Guid.TryParse(det.TargetKey, out var fg)
-                        && allowedFormGuids is not null
-                        && allowedFormGuids.Contains(fg);
-                    var matchesObs = det.TargetKind == FindingTargetKind.Observation
-                        && NodeRef.TryParse(det.TargetKey, out var on)
-                        && on.Kind == NodeKinds.Observation
-                        && allowedObsGuids is not null
-                        && allowedObsGuids.Contains(on.Id);
-                    if (!matchesForm && !matchesObs)
-                    {
-                        continue;
-                    }
-                }
-
-                var subject = decisionVersions.TryGetValue(state.Finding, out var ver)
-                    ? NodeRef.For(state.Finding, ver)
-                    : NodeRef.For(state.Finding);
-                var since = runDates.GetValueOrDefault(state.FirstDetectedRun, DateTimeOffset.UnixEpoch);
-                var title = string.Create(CultureInfo.InvariantCulture, $"[{state.Severity}] {det.RuleId}: {WorkItemFormatting.Snippet(det.Message, 80)}");
-                candidates.Add(new WorkItemCandidate(subject, title, since));
-            }
+            var subject = decisionVersions.TryGetValue(row.FindingId, out var ver)
+                ? NodeRef.For(row.FindingId, ver)
+                : NodeRef.For(row.FindingId);
+            var title = string.Create(CultureInfo.InvariantCulture, $"[{row.Severity}] {row.RuleId}: {WorkItemFormatting.Snippet(message, 80)}");
+            candidates.Add(new WorkItemCandidate(subject, title, row.FirstDetectedAt));
         }
 
-        return
-        [
-            .. candidates
-                .OrderBy(c => c.Since)
-                .ThenBy(c => c.Subject.Id)
-                .Take(take),
-        ];
+        return candidates;
     }
 }
 
@@ -871,13 +913,13 @@ internal sealed class KernelWorkItemBlindingMask(KernelTenantDbContextFactory co
         if (findingNodes.Count > 0)
         {
             var findingIds = findingNodes.Select(n => ValidationFindingId.FromGuid(n.Id)).Distinct().ToList();
-            var dets = await db.Set<ValidationDetectionRecord>().AsNoTracking()
-                .Where(d => findingIds.Contains(d.FindingId))
-                .Select(d => new { d.FindingId, d.Stage, d.TargetKind, d.TargetKey })
+            var dets = await db.ValidationFindingProjections.AsNoTracking()
+                .Where(p => findingIds.Contains(p.FindingId))
+                .Select(p => new { p.FindingId, p.Stage, p.TargetKind, p.TargetKey })
                 .ToListAsync(cancellationToken)
                 .ConfigureAwait(false);
             var targetForms = new Dictionary<Guid, CollectionInstanceId>();
-            foreach (var det in dets.GroupBy(d => d.FindingId).Select(g => g.First()))
+            foreach (var det in dets)
             {
                 if (det.TargetKind == FindingTargetKind.Observation
                     && NodeRef.TryParse(det.TargetKey, out var obsNode)
@@ -1092,12 +1134,12 @@ internal sealed class KernelWorkItemTargetResolver(KernelTenantDbContextFactory 
         if (findingNodes.Count > 0)
         {
             var fIds = findingNodes.Select(s => ValidationFindingId.FromGuid(s.Id)).Distinct().ToList();
-            var dets = await db.Set<ValidationDetectionRecord>().AsNoTracking()
-                .Where(d => fIds.Contains(d.FindingId))
-                .Select(d => new { d.FindingId, d.StudyId, d.Stage, d.TargetKind, d.TargetKey })
+            var dets = await db.ValidationFindingProjections.AsNoTracking()
+                .Where(p => fIds.Contains(p.FindingId))
+                .Select(p => new { p.FindingId, p.StudyId, p.Stage, p.TargetKind, p.TargetKey })
                 .ToListAsync(cancellationToken)
                 .ConfigureAwait(false);
-            foreach (var det in dets.GroupBy(d => d.FindingId).Select(g => g.First()))
+            foreach (var det in dets)
             {
                 CollectionInstanceId? fId = det.Stage == ValidationStage.Collection
                     && det.TargetKind == FindingTargetKind.DatasetRecord

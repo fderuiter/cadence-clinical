@@ -1542,18 +1542,14 @@ internal sealed class KernelScopeGraph(KernelTenantDbContextFactory contexts) : 
         IReadOnlyCollection<ValidationFindingId> findingIds,
         CancellationToken cancellationToken)
     {
-        var detections = await (
-                from d in db.Set<ValidationDetectionRecord>().AsNoTracking()
-                join r in db.Set<ValidationRun>().AsNoTracking()
-                    on new { d.TenantId, Id = d.RunId } equals new { r.TenantId, r.Id }
-                where d.TenantId == tenant && findingIds.Contains(d.FindingId)
-                orderby r.VersionIndex descending, r.Id descending
-                select new { d.FindingId, d.StudyId, d.RuleId, d.TargetKind, d.Dataset, d.TargetKey })
+        var projections = await db.ValidationFindingProjections.AsNoTracking()
+            .Where(p => p.TenantId == tenant && findingIds.Contains(p.FindingId))
+            .Select(p => new { p.FindingId, p.StudyId, p.RuleId, p.TargetKind, p.Dataset, p.TargetKey })
             .ToListAsync(cancellationToken).ConfigureAwait(false);
-        var detectionsByFinding = new Dictionary<ValidationFindingId, DetectionRow>();
-        foreach (var d in detections)
+        var detectionsByFinding = new Dictionary<ValidationFindingId, DetectionRow>(projections.Count);
+        foreach (var p in projections)
         {
-            detectionsByFinding.TryAdd(d.FindingId, new DetectionRow(d.StudyId, d.RuleId, d.TargetKind, d.Dataset, d.TargetKey));
+            detectionsByFinding[p.FindingId] = new DetectionRow(p.StudyId, p.RuleId, p.TargetKind, p.Dataset, p.TargetKey);
         }
 
         var decisions = await db.Set<ValidationFinding>().AsNoTracking()

@@ -252,28 +252,19 @@ async function loadAttention(rawCode: string): Promise<void> {
 
     const canReadFindings =
       typeof kernelApi.listStudyValidationFindings === "function";
-    const [openProposals, openFindingsPage, investigatingFindingsPage] =
-      await Promise.all([
-        typeof kernelApi.listProposals === "function"
-          ? kernelApi.listProposals(code, { status: "Open", limit: LIMIT })
-          : Promise.resolve([] as KernelProposal[]),
-        canReadFindings
-          ? kernelApi
-              .listStudyValidationFindings(code, {
-                status: "Open",
-                limit: LIMIT,
-              })
-              .catch(() => ({ findings: [] as KernelValidationFinding[] }))
-          : Promise.resolve({ findings: [] as KernelValidationFinding[] }),
-        canReadFindings
-          ? kernelApi
-              .listStudyValidationFindings(code, {
-                status: "Investigating",
-                limit: LIMIT,
-              })
-              .catch(() => ({ findings: [] as KernelValidationFinding[] }))
-          : Promise.resolve({ findings: [] as KernelValidationFinding[] }),
-      ]);
+    const [openProposals, activeFindingsPage] = await Promise.all([
+      typeof kernelApi.listProposals === "function"
+        ? kernelApi.listProposals(code, { status: "Open", limit: LIMIT })
+        : Promise.resolve([] as KernelProposal[]),
+      canReadFindings
+        ? kernelApi
+            .listStudyValidationFindings(code, {
+              status: ["Open", "Investigating"],
+              limit: LIMIT,
+            })
+            .catch(() => ({ findings: [] as KernelValidationFinding[] }))
+        : Promise.resolve({ findings: [] as KernelValidationFinding[] }),
+    ]);
     if (!isCurrent()) return;
     const safeProposals = Array.isArray(openProposals) ? openProposals : [];
     proposals.value = safeProposals;
@@ -282,8 +273,7 @@ async function loadAttention(rawCode: string): Promise<void> {
       hasActiveCallerSession();
     const hintedStudyRef =
       safeProposals.find((p) => p.study)?.study ??
-      openFindingsPage?.findings?.[0]?.study_ref ??
-      investigatingFindingsPage?.findings?.[0]?.study_ref ??
+      activeFindingsPage?.findings?.[0]?.study_ref ??
       peekKernelStudyRef(code) ??
       (canQuerySdvAlerts && typeof kernelApi.search === "function"
         ? await findKernelStudyRef(code).catch(() => null)
@@ -293,10 +283,7 @@ async function loadAttention(rawCode: string): Promise<void> {
       seedKernelStudyRef(code, hintedStudyRef);
     }
     seedProposalSummaries(safeProposals);
-    findings.value = dedupeCappedFindings([
-      ...(openFindingsPage?.findings ?? []),
-      ...(investigatingFindingsPage?.findings ?? []),
-    ]);
+    findings.value = dedupeCappedFindings(activeFindingsPage?.findings ?? []);
     if (canQuerySdvAlerts) {
       await hydrateStudySdvAlerts(hintedStudyRef, isCurrent);
     }

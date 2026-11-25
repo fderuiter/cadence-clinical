@@ -51,7 +51,21 @@ internal static class EvidenceReadiness
             q => q.TargetKind == NodeKinds.Observation && memberTargetIds.Contains(q.TargetId),
             cancellationToken).ConfigureAwait(false);
 
-        var activeErrorFindings = await LoadActiveErrorFindingsAsync(tenant, instance.StudyId, findings, cancellationToken)
+        var targetKeys = new List<string>(memberTargetIds.Count + 1)
+        {
+            instance.Id.Value.ToString("D"),
+        };
+        foreach (var obsGuid in memberTargetIds)
+        {
+            targetKeys.Add(NodeRef.For(ObservationId.FromGuid(obsGuid)).ToString());
+        }
+
+        var activeErrorFindings = await LoadActiveErrorFindingsAsync(
+                tenant,
+                instance.StudyId,
+                targetKeys,
+                findings,
+                cancellationToken)
             .ConfigureAwait(false);
         var formErrorFindings = activeErrorFindings
             .Where(f => TargetsCollectionOrMembers(f.Target, instance.Id.Value, memberTargetIds))
@@ -141,10 +155,11 @@ internal static class EvidenceReadiness
     private static async Task<IReadOnlyList<ValidationFindingView>> LoadActiveErrorFindingsAsync(
         TenantId tenant,
         StudyId studyId,
+        IReadOnlyCollection<string> targetKeys,
         IValidationFindings? findings,
         CancellationToken cancellationToken)
     {
-        if (findings is null)
+        if (findings is null || targetKeys.Count == 0)
         {
             return [];
         }
@@ -155,6 +170,7 @@ internal static class EvidenceReadiness
             {
                 Severity = ValidationSeverity.Error,
                 Statuses = [FindingStatus.Open, FindingStatus.Investigating],
+                TargetKeys = targetKeys,
                 Take = FindingQuery.MaxTake,
             },
             cancellationToken).ConfigureAwait(false);

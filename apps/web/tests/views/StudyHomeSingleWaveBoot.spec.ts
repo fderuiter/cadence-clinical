@@ -14,6 +14,7 @@ import {
 import { clearNodeResolutionCache } from "../../src/canvas/nodeResolver";
 import { useAuthStore } from "../../src/stores/auth";
 import ContextualHelpDrawer from "../../src/components/ContextualHelpDrawer.vue";
+import NeedsAttention from "../../src/components/ai/NeedsAttention.vue";
 import KernelLineagePanel from "../../src/components/canvas/KernelLineagePanel.vue";
 import LocksSection from "../../src/components/canvas/LocksSection.vue";
 import StudyCanvasView from "../../src/views/StudyCanvasView.vue";
@@ -797,5 +798,124 @@ describe("Single-wave Study Home boot & seeded stage transitions", () => {
     expect(kernelApi.getNodes).toHaveBeenCalledTimes(1);
     expect(vi.mocked(kernelApi.getNodes).mock.calls[0]?.[0]).toHaveLength(20);
     expect(wrapper.text()).toContain("EL-20 · Protocol Element 20");
+  });
+
+  it("coalesces Open and Investigating findings into 1 listStudyValidationFindings request in NeedsAttention fallback", async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    const authStore = useAuthStore();
+    authStore.isAuthenticated = true;
+    authStore.currentPersona = "data_manager";
+    authStore.user = {
+      id: "dm-1",
+      username: "dm@sponsor.test",
+      tenantId: "tenant-cadence",
+    } as never;
+
+    const originalGetStudyAttention = kernelApi.getStudyAttention;
+    (
+      kernelApi as { getStudyAttention?: typeof kernelApi.getStudyAttention }
+    ).getStudyAttention = undefined;
+    try {
+      vi.mocked(kernelApi.listProposals).mockResolvedValue([]);
+      vi.mocked(kernelApi.listStudyValidationFindings).mockResolvedValue({
+        total: 2,
+        findings: [
+          {
+            ref: FINDING_REF,
+            study_ref: STUDY_REF,
+            stage: "Collection",
+            pack_key: "cadence-edit-checks",
+            rule_pack_ref:
+              "library_item:0192f3c4-5e6a-7b8c-9d0e-000000000701@1",
+            rule_id: "VS_SYSBP_HIGH",
+            rule_version: 1,
+            severity: "Error",
+            status: "Open",
+            blocks: false,
+            classification: null,
+            decision: null,
+            target_kind: "DatasetRecord",
+            dataset: "VS",
+            record_key: FORM_UUID,
+            variable: "SYSBP",
+            message: "Systolic BP 232 exceeds upper range.",
+            expected: "<= 220",
+            observed: [{ variable: "SYSBP", value: "232" }],
+            first_detected_run_ref:
+              "validation_run:0192f3c4-5e6a-7b8c-9d0e-000000000901",
+            last_detected_run_ref:
+              "validation_run:0192f3c4-5e6a-7b8c-9d0e-000000000901",
+            resolved_by_run_ref: null,
+          },
+          {
+            ref: "validation_finding:0192f3c4-5e6a-7b8c-9d0e-000000000602",
+            study_ref: STUDY_REF,
+            stage: "Standardization",
+            pack_key: "sdtm-core",
+            rule_pack_ref:
+              "library_item:0192f3c4-5e6a-7b8c-9d0e-000000000702@1",
+            rule_id: "SD1002",
+            rule_version: 1,
+            severity: "Warning",
+            status: "Investigating",
+            blocks: false,
+            classification: "MappingIssue",
+            decision: {
+              status: "Investigating",
+              decided_at: "2026-10-20T09:15:00Z",
+              decided_by: "dm@sponsor.test",
+              text: null,
+              decided_on_run_ref: null,
+              attestation_ref: null,
+            },
+            target_kind: "DatasetRecord",
+            dataset: "DM",
+            record_key: "row-4",
+            variable: "AGE",
+            message: "Derived AGE requires mapping review.",
+            expected: ">= 18",
+            observed: [{ variable: "AGE", value: "17" }],
+            first_detected_run_ref:
+              "validation_run:0192f3c4-5e6a-7b8c-9d0e-000000000901",
+            last_detected_run_ref:
+              "validation_run:0192f3c4-5e6a-7b8c-9d0e-000000000901",
+            resolved_by_run_ref: null,
+          },
+        ],
+      });
+
+      const router = createRouter({
+        history: createMemoryHistory(),
+        routes: [
+          {
+            path: "/studies/:studyCode?",
+            name: "study",
+            component: { template: "<div />" },
+          },
+        ],
+      });
+      await router.push(`/studies/${STUDY_CODE}`);
+      await router.isReady();
+
+      wrapper = mount(NeedsAttention, {
+        props: { studyCode: STUDY_CODE },
+        global: { plugins: [pinia, router] },
+      });
+      await flushPromises();
+
+      expect(kernelApi.listStudyValidationFindings).toHaveBeenCalledTimes(1);
+      expect(kernelApi.listStudyValidationFindings).toHaveBeenCalledWith(
+        STUDY_CODE,
+        {
+          status: ["Open", "Investigating"],
+          limit: 20,
+        }
+      );
+      expect(wrapper.text()).toContain("Systolic BP 232 exceeds upper range.");
+      expect(wrapper.text()).toContain("Derived AGE requires mapping review.");
+    } finally {
+      kernelApi.getStudyAttention = originalGetStudyAttention;
+    }
   });
 });

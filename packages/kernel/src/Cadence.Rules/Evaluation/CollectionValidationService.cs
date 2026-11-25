@@ -251,23 +251,21 @@ public sealed class CollectionValidationService(
         }
 
         var instances = await collections.ListForStudyAsync(tenant, studyId, cancellationToken).ConfigureAwait(false);
-        var priorFindings = await findings.ListAsync(
-            tenant,
-            new FindingQuery(studyId) { Stage = ValidationStage.Collection, Take = FindingQuery.MaxTake },
-            cancellationToken).ConfigureAwait(false);
+        var priorDatasets = await findings.ListDatasetsAsync(tenant, studyId, ValidationStage.Collection, cancellationToken)
+            .ConfigureAwait(false);
 
         var datasets = instances.Select(i => i.CollectionSpecId)
             .Concat(packs.SelectMany(p => p.Pack.Rules)
                 .Where(r => r.Applicability.Stage == ValidationStage.Collection && !string.IsNullOrWhiteSpace(r.Applicability.Dataset))
                 .Select(r => r.Applicability.Dataset!))
-            .Concat(priorFindings.Findings.Select(f => f.Target.Dataset))
+            .Concat(priorDatasets)
             .Distinct(StringComparer.Ordinal)
             .Order(StringComparer.Ordinal)
             .ToList();
 
         if (datasets.Count == 0)
         {
-            return CommandResult<CollectionValidationResult>.Success(new CollectionValidationResult(null, priorFindings.Findings));
+            return CommandResult<CollectionValidationResult>.Success(new CollectionValidationResult(null, []));
         }
 
         var indexedForms = IndexStudyForms(

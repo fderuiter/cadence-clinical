@@ -47,6 +47,19 @@ export function getAuthMiddleware(): Middleware {
   };
 }
 
+function ensureResponseText(response: Response): Response {
+  if (
+    response &&
+    typeof response.text !== "function" &&
+    typeof response.json === "function"
+  ) {
+    return Object.assign(response, {
+      text: async () => JSON.stringify(await response.json()),
+    });
+  }
+  return response;
+}
+
 async function dispatchWithDynamicBase(
   initialBaseUrl: string,
   input: RequestInfo | URL,
@@ -61,9 +74,11 @@ async function dispatchWithDynamicBase(
   ) {
     const rewrittenUrl = `${currentBase}${input.url.slice(initialBase.length)}`;
     const rewrittenRequest = await rebuildRequest(input.clone(), rewrittenUrl);
-    return fetchWithSingleFlightRetry(rewrittenRequest, init);
+    return ensureResponseText(
+      await fetchWithSingleFlightRetry(rewrittenRequest, init)
+    );
   }
-  return fetchWithSingleFlightRetry(input, init);
+  return ensureResponseText(await fetchWithSingleFlightRetry(input, init));
 }
 
 export function createOpenApiClient<T extends {} = Record<string, unknown>>(
@@ -78,9 +93,9 @@ export function createOpenApiClient<T extends {} = Record<string, unknown>>(
       const initialClientBase = baseUrl ?? getBaseUrl();
       inner = createClient<T>({
         baseUrl: initialClientBase,
-        fetch: (input: RequestInfo | URL, init?: RequestInit) =>
+        fetch: async (input: RequestInfo | URL, init?: RequestInit) =>
           hasExplicitBaseUrl
-            ? fetchWithSingleFlightRetry(input, init)
+            ? ensureResponseText(await fetchWithSingleFlightRetry(input, init))
             : dispatchWithDynamicBase(initialClientBase, input, init),
       });
       inner.use(getAuthMiddleware());

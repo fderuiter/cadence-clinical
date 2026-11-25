@@ -208,6 +208,9 @@ internal sealed class FakeKernel : IKernelNavigator, IKernelSearch, IKernelLinea
 
     public Task<FindingPage> ListAsync(TenantId tenant, FindingQuery query, CancellationToken cancellationToken) => throw new NotSupportedException();
 
+    public Task<IReadOnlyList<string>> ListDatasetsAsync(TenantId tenant, StudyId study, ValidationStage? stage = null, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException();
+
     public Task<ValidationRunSummary?> FindRunAsync(TenantId tenant, ValidationRunId run, CancellationToken cancellationToken) => throw new NotSupportedException();
 
     public Task<TenantId?> FindActiveByCodeAsync(string code, CancellationToken cancellationToken) =>

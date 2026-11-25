@@ -476,6 +476,10 @@ public sealed class CollectionValidationServiceTests
 
         public Task<ValidationRunSummary?> FindRunAsync(TenantId tenant, ValidationRunId run, CancellationToken cancellationToken) =>
             Task.FromResult<ValidationRunSummary?>(null);
+
+        public Task<IReadOnlyList<string>> ListDatasetsAsync(
+            TenantId tenant, StudyId study, ValidationStage? stage = null, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<string>>([]);
     }
 
     private sealed class CapturingCommandSender : IKernelCommandSender

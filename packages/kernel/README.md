@@ -598,7 +598,7 @@ or `library_item` target, which the kernel's `IAttestationVerifier` checks.
 Load public content with `StandardSeeds.LoadAll()` or `CdiscLibraryProductReader.Read(...)` and send each package in
 a `RegisterStandardVersion` command.
 
-## Validation runs and findings (ADR-2462)
+## Validation runs and findings (ADR-2462, ADR-2465)
 
 A validation run records what a study's pinned rule packs detected at one stage (spec §10.3). Send
 `RecordValidationRun`, or let `ValidationRunner` (`Cadence.Rules`) evaluate and send it:
@@ -606,14 +606,22 @@ A validation run records what a study's pinned rule packs detected at one stage 
 | Command                                                  | What it does                                                                                                                      |
 | -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
 | `RecordValidationRun`                                    | Records a run: released pack versions, stage, as-of date, standard, agency, versioned inputs, datasets covered and detections     |
-| `InvestigateFinding`, `ClassifyFinding`, `ReopenFinding` | Decisions on a finding's workflow; each reads the finding's derived status first                                                  |
+| `InvestigateFinding`, `ClassifyFinding`, `ReopenFinding` | Decisions on a finding's workflow; each reads the finding's projected status first                                                |
 | `AcceptFinding`, `ExplainFinding`                        | Need a `Responsibility` or `Approved` attestation over `FindingDecisionContent.Hash(finding, last detecting run, decision, text)` |
+| `RebuildValidationFindingProjections`                    | Deterministically rebuilds `kernel.validation_finding_projections` for a study from its immutable runs, detections and decisions  |
 
 - A finding's ID is `ValidationFindingId.For(tenant, identity)`: study, stage, pack key, rule ID and target, not the
   rule version. Targets that are kernel objects use a NodeRef without `@version`.
-- Status is derived on read by `FindingLedger`: a run covering the finding's stage, pack and dataset that no longer
-  detects it resolves it, and a decision made before a resolution is void if the finding recurs.
-- `IValidationFindings` finds, lists (filters and `BlockingOnly`) and explains findings, and reads runs.
+- `FindingLedger` defines both full derivation (`Derive` / `Project`) and incremental transitions (`ApplyCoveringRun`,
+  `ApplyDecision`): a run covering the finding's stage, pack and dataset that no longer detects it resolves it, and a
+  decision made before a resolution is void if the finding recurs.
+- `kernel.validation_finding_projections` materialises current finding state (`K-MOD-2`) inside the same transaction as
+  `RecordValidationRun` and finding decision commands via `IValidationProjectionStaging`, without adding per-finding
+  audit entries (`K-TX-1`). Operators can rebuild projections via `RebuildValidationFindingProjections`
+  (`POST /api/v1/kernel/studies/{studyRef}/validation/findings/rebuild`) or `IValidationFindingProjector`.
+- `IValidationFindings` finds, lists (`FindingQuery` filters including multi-status, `TargetKeys`, and `BlockingOnly`),
+  lists covered datasets (`ListDatasetsAsync`), and explains findings from `validation_finding_projections`, joining
+  `validation_detections` only for the returned page, and reads runs.
 - Run tables are insert-only (`KA001`); a decisions record keeps its finding, study and author (`KS001`).
 - A run is `[DerivedObject]`, linked `DefinedBy` its pack versions and `ValidatedBy` its inputs; decisions link
   `DerivedFrom` their run.

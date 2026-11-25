@@ -25,6 +25,23 @@ public interface IValidationFindings
 
     /// <summary>One run, or null when it does not exist.</summary>
     Task<ValidationRunSummary?> FindRunAsync(TenantId tenant, ValidationRunId run, CancellationToken cancellationToken);
+
+    /// <summary>Distinct datasets of findings recorded in <paramref name="study"/>, optionally narrowed to <paramref name="stage"/>.</summary>
+    Task<IReadOnlyList<string>> ListDatasetsAsync(
+        TenantId tenant, StudyId study, ValidationStage? stage = null, CancellationToken cancellationToken = default);
+}
+
+/// <summary>
+/// Rebuilds the disposable <c>kernel.validation_finding_projections</c> read model deterministically from immutable
+/// validation runs, detections, and finding decisions (ADR-2462 §5).
+/// </summary>
+public interface IValidationFindingProjector
+{
+    /// <summary>Rebuilds projected finding states for <paramref name="study"/> in <paramref name="tenant"/>, returning the projected row count.</summary>
+    Task<int> RebuildStudyAsync(TenantId tenant, StudyId study, CancellationToken cancellationToken = default);
+
+    /// <summary>Rebuilds projected finding states for every study in <paramref name="tenant"/>, returning the projected row count.</summary>
+    Task<int> RebuildTenantAsync(TenantId tenant, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -53,6 +70,9 @@ public sealed record FindingQuery(StudyId Study)
 
     /// <summary>Only findings on this dataset.</summary>
     public string? Dataset { get; init; }
+
+    /// <summary>Only findings whose target key is in this set.</summary>
+    public IReadOnlyCollection<string>? TargetKeys { get; init; }
 
     /// <summary>Only findings that block their stage (<see cref="FindingBlocking.Blocks"/>).</summary>
     public bool BlockingOnly { get; init; }

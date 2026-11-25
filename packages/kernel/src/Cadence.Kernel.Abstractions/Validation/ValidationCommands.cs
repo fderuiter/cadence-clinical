@@ -146,6 +146,23 @@ public sealed record ReopenFinding(
     string IdempotencyKey,
     string ReasonForChange) : ICommand<ValidationFindingId>;
 
+/// <summary>
+/// Deterministically rebuilds a study's materialized <c>validation_finding_projections</c> rows from its immutable
+/// validation runs, detections, and finding decisions (ADR-2462 §5).
+/// </summary>
+/// <param name="TenantId">The tenant.</param>
+/// <param name="StudyId">The study whose validation finding projection rows are rebuilt.</param>
+/// <param name="IdempotencyKey">The command's idempotency key.</param>
+/// <param name="ReasonForChange">Why the projection rebuild is requested.</param>
+[KernelCapability("validation_finding.rebuild_projection", VerbClass.Execute, Resource = nameof(StudyId), InCatalogue = false)]
+[RaisesKernelErrors(typeof(ValidationErrors), nameof(ValidationErrors.StudyUnknown))]
+[NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
+public sealed record RebuildValidationFindingProjections(
+    TenantId TenantId,
+    StudyId StudyId,
+    string IdempotencyKey,
+    string ReasonForChange) : ICommand<int>;
+
 /// <summary>Errors raised by validation runs and findings (K-ERR-1).</summary>
 public static class ValidationErrors
 {

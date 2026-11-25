@@ -46,13 +46,15 @@ internal sealed class KernelValidationStore(KernelTenantDbContextFactory context
     public async Task<ValidationFindingView?> FindAsync(TenantId tenant, ValidationFindingId finding, CancellationToken cancellationToken)
     {
         await using var db = contexts.Create(tenant);
-        var data = await LoadFindingAsync(db, finding, cancellationToken).ConfigureAwait(false);
-        if (data?.Derive().SingleOrDefault(f => f.Finding == finding) is not { } state)
+        var projected = await db.ValidationFindingProjections.AsNoTracking()
+            .SingleOrDefaultAsync(p => p.FindingId == finding, cancellationToken)
+            .ConfigureAwait(false);
+        if (projected is null)
         {
             return null;
         }
 
-        var views = await DetailAsync(db, [state], cancellationToken).ConfigureAwait(false);
+        var views = await DetailAsync(db, [projected.ToFindingState()], cancellationToken).ConfigureAwait(false);
         return views[0];
     }
 
@@ -63,22 +65,45 @@ internal sealed class KernelValidationStore(KernelTenantDbContextFactory context
         ArgumentOutOfRangeException.ThrowIfLessThan(query.Take, 1);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(query.Take, FindingQuery.MaxTake);
 
-        await using var db = contexts.Create(tenant);
-        var data = await LoadStudyAsync(db, query.Study, query.Stage, cancellationToken).ConfigureAwait(false);
-        var matching = data.Derive()
-            .Where(f => query.Severity is null || f.Severity == query.Severity)
-            .Where(f => query.Statuses is null || query.Statuses.Contains(f.Status))
-            .Where(f => query.Classification is null || f.Classification == query.Classification)
-            .Where(f => query.PackKey is null || string.Equals(f.PackKey, query.PackKey, StringComparison.Ordinal))
-            .Where(f => query.Dataset is null || string.Equals(f.Dataset, query.Dataset, StringComparison.Ordinal))
-            .Where(f => !query.BlockingOnly || f.Blocks)
-            .OrderBy(f => f.Severity).ThenBy(f => f.Stage)
-            .ThenBy(f => f.PackKey, StringComparer.Ordinal).ThenBy(f => f.Dataset, StringComparer.Ordinal).ThenBy(f => f.Finding)
-            .ToList();
+        if (query.Statuses is { Count: 0 } || query.TargetKeys is { Count: 0 })
+        {
+            return new FindingPage([], 0);
+        }
 
-        var page = matching.Skip(query.Skip).Take(query.Take).ToList();
-        var views = page.Count == 0 ? [] : await DetailAsync(db, page, cancellationToken).ConfigureAwait(false);
-        return new FindingPage(views, matching.Count);
+        await using var db = contexts.Create(tenant);
+        var filtered = FilterProjections(db, query);
+        var total = await filtered.CountAsync(cancellationToken).ConfigureAwait(false);
+        if (total == 0 || query.Skip >= total)
+        {
+            return new FindingPage([], total);
+        }
+
+        var pageRows = await OrderProjections(filtered)
+            .Skip(query.Skip)
+            .Take(query.Take)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+        var states = pageRows.Select(p => p.ToFindingState()).ToList();
+        var views = states.Count == 0 ? [] : await DetailAsync(db, states, cancellationToken).ConfigureAwait(false);
+        return new FindingPage(views, total);
+    }
+
+    public async Task<IReadOnlyList<string>> ListDatasetsAsync(
+        TenantId tenant, StudyId study, ValidationStage? stage = null, CancellationToken cancellationToken = default)
+    {
+        await using var db = contexts.Create(tenant);
+        var query = db.ValidationFindingProjections.AsNoTracking().Where(p => p.StudyId == study);
+        if (stage is not null)
+        {
+            query = query.Where(p => p.Stage == stage.Value);
+        }
+
+        var datasets = await query.Select(p => p.Dataset)
+            .Distinct()
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+        datasets.Sort(StringComparer.Ordinal);
+        return datasets;
     }
 
     public async Task<ValidationRunSummary?> FindRunAsync(TenantId tenant, ValidationRunId run, CancellationToken cancellationToken)
@@ -112,44 +137,107 @@ internal sealed class KernelValidationStore(KernelTenantDbContextFactory context
     internal static async Task<IReadOnlyList<(ValidationFindingId Id, FindingTarget Target)>> LoadActiveErrorFindingTargetsAsync(
         KernelDbContext db, StudyId study, CancellationToken cancellationToken)
     {
-        var data = await LoadStudyAsync(db, study, stage: null, cancellationToken).ConfigureAwait(false);
-        var activeErrors = data.Derive()
-            .Where(f => f.Severity == ValidationSeverity.Error && f.Status is FindingStatus.Open or FindingStatus.Investigating)
-            .ToList();
-        if (activeErrors.Count == 0)
-        {
-            return [];
-        }
-
-        var ids = activeErrors.Select(s => s.Finding).ToList();
-        var lastRuns = activeErrors.Select(s => s.LastDetectedRun).Distinct().ToList();
-        var detections = (await db.Set<ValidationDetectionRecord>().AsNoTracking()
-                .Where(d => ids.Contains(d.FindingId) && lastRuns.Contains(d.RunId))
-                .Select(d => new { d.RunId, d.FindingId, d.TargetKind, d.Dataset, d.TargetKey, d.Variable })
-                .ToListAsync(cancellationToken)
-                .ConfigureAwait(false))
-            .ToDictionary(d => (d.RunId, d.FindingId), d => new FindingTarget(d.TargetKind, d.Dataset, d.TargetKey, d.Variable));
-        return [.. activeErrors
-            .Where(s => detections.ContainsKey((s.LastDetectedRun, s.Finding)))
-            .Select(s => (s.Finding, detections[(s.LastDetectedRun, s.Finding)]))];
+        var activeRows = await db.ValidationFindingProjections.AsNoTracking()
+            .Where(p => p.StudyId == study
+                && p.Severity == ValidationSeverity.Error
+                && (p.Status == FindingStatus.Open || p.Status == FindingStatus.Investigating))
+            .Select(p => new { p.FindingId, p.TargetKind, p.Dataset, p.TargetKey, p.Variable })
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+        return [.. activeRows.Select(r => (r.FindingId, new FindingTarget(r.TargetKind, r.Dataset, r.TargetKey, r.Variable)))];
     }
 
     /// <summary>Loads full views of active (<see cref="FindingStatus.Open"/> or <see cref="FindingStatus.Investigating"/>) <see cref="ValidationSeverity.Error"/> findings in <paramref name="study"/>.</summary>
     internal static async Task<IReadOnlyList<ValidationFindingView>> LoadActiveErrorFindingsAsync(
         KernelDbContext db, StudyId study, CancellationToken cancellationToken)
     {
-        var data = await LoadStudyAsync(db, study, stage: null, cancellationToken).ConfigureAwait(false);
-        var activeErrors = data.Derive()
-            .Where(f => f.Severity == ValidationSeverity.Error && f.Status is FindingStatus.Open or FindingStatus.Investigating)
-            .OrderBy(f => f.Stage)
-            .ThenBy(f => f.PackKey, StringComparer.Ordinal)
-            .ThenBy(f => f.Dataset, StringComparer.Ordinal)
-            .ThenBy(f => f.Finding)
-            .ToList();
-        return activeErrors.Count == 0
-            ? []
-            : await DetailAsync(db, activeErrors, cancellationToken).ConfigureAwait(false);
+        var activeRows = await OrderActiveErrorProjections(
+                db.ValidationFindingProjections.AsNoTracking()
+                    .Where(p => p.StudyId == study
+                        && p.Severity == ValidationSeverity.Error
+                        && (p.Status == FindingStatus.Open || p.Status == FindingStatus.Investigating)))
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+        if (activeRows.Count == 0)
+        {
+            return [];
+        }
+
+        var states = activeRows.Select(p => p.ToFindingState()).ToList();
+        return await DetailAsync(db, states, cancellationToken).ConfigureAwait(false);
     }
+
+    private static IQueryable<ValidationFindingProjectionRecord> FilterProjections(KernelDbContext db, FindingQuery query)
+    {
+        var q = db.ValidationFindingProjections.AsNoTracking().Where(p => p.StudyId == query.Study);
+        if (query.Stage is { } stage)
+        {
+            q = q.Where(p => p.Stage == stage);
+        }
+
+        if (query.Severity is { } severity)
+        {
+            q = q.Where(p => p.Severity == severity);
+        }
+
+        if (query.Statuses is { } statuses)
+        {
+            var statusList = statuses.Distinct().ToList();
+            q = q.Where(p => statusList.Contains(p.Status));
+        }
+
+        if (query.Classification is { } classification)
+        {
+            q = q.Where(p => p.Classification == classification);
+        }
+
+        if (query.PackKey is { } packKey)
+        {
+            q = q.Where(p => p.PackKey == packKey);
+        }
+
+        if (query.Dataset is { } dataset)
+        {
+            q = q.Where(p => p.Dataset == dataset);
+        }
+
+        if (query.TargetKeys is { } targetKeys)
+        {
+            var keyList = targetKeys.Distinct(StringComparer.Ordinal).ToList();
+            q = q.Where(p => keyList.Contains(p.TargetKey));
+        }
+
+        if (query.BlockingOnly)
+        {
+            q = q.Where(p => p.Blocks);
+        }
+
+        return q;
+    }
+
+    private static IOrderedQueryable<ValidationFindingProjectionRecord> OrderProjections(
+        IQueryable<ValidationFindingProjectionRecord> query) =>
+        query
+            .OrderBy(p => p.Severity != ValidationSeverity.Error)
+            .ThenBy(p => p.Severity != ValidationSeverity.Warning)
+            .ThenBy(p => p.Stage != ValidationStage.Design)
+            .ThenBy(p => p.Stage != ValidationStage.Collection)
+            .ThenBy(p => p.Stage != ValidationStage.Standardization)
+            .ThenBy(p => p.Stage != ValidationStage.Analysis)
+            .ThenBy(p => EF.Functions.Collate(p.PackKey, "C"))
+            .ThenBy(p => EF.Functions.Collate(p.Dataset, "C"))
+            .ThenBy(p => p.FindingId);
+
+    private static IOrderedQueryable<ValidationFindingProjectionRecord> OrderActiveErrorProjections(
+        IQueryable<ValidationFindingProjectionRecord> query) =>
+        query
+            .OrderBy(p => p.Stage != ValidationStage.Design)
+            .ThenBy(p => p.Stage != ValidationStage.Collection)
+            .ThenBy(p => p.Stage != ValidationStage.Standardization)
+            .ThenBy(p => p.Stage != ValidationStage.Analysis)
+            .ThenBy(p => EF.Functions.Collate(p.PackKey, "C"))
+            .ThenBy(p => EF.Functions.Collate(p.Dataset, "C"))
+            .ThenBy(p => p.FindingId);
 
     /// <summary>The runs, detections and decisions of a study, at one stage or at every stage.</summary>
     internal static async Task<ValidationLedgerData> LoadStudyAsync(
@@ -203,7 +291,7 @@ internal sealed class KernelValidationStore(KernelTenantDbContextFactory context
         return new ValidationLedgerData(study, runs, [.. detections.Select(d => d.Ledger)], decisions);
     }
 
-    private static async Task<List<LedgerRun>> LoadRunsAsync(KernelDbContext db, IQueryable<ValidationRun> runs, CancellationToken cancellationToken)
+    internal static async Task<List<LedgerRun>> LoadRunsAsync(KernelDbContext db, IQueryable<ValidationRun> runs, CancellationToken cancellationToken)
     {
         var heads = await runs.Select(r => new { r.Id, r.Stage, r.CreatedAt })
             .ToListAsync(cancellationToken).ConfigureAwait(false);
@@ -237,17 +325,25 @@ internal sealed class KernelValidationStore(KernelTenantDbContextFactory context
 
         var ids = states.Select(s => s.Finding).ToList();
         var lastRuns = states.Select(s => s.LastDetectedRun).Distinct().ToList();
-        var detections = (await db.Set<ValidationDetectionRecord>().AsNoTracking()
-                .Where(d => ids.Contains(d.FindingId) && lastRuns.Contains(d.RunId))
+        var detections = (await (
+                    from p in db.ValidationFindingProjections.AsNoTracking()
+                    join d in db.Set<ValidationDetectionRecord>().AsNoTracking()
+                        on new { p.TenantId, RunId = p.LastDetectedRunId, p.FindingId }
+                        equals new { d.TenantId, d.RunId, d.FindingId }
+                    where ids.Contains(p.FindingId)
+                    select d)
                 .ToListAsync(cancellationToken).ConfigureAwait(false))
             .ToDictionary(d => (d.RunId, d.FindingId));
         var runs = await db.Set<ValidationRun>().AsNoTracking()
             .Where(r => lastRuns.Contains(r.Id))
             .Select(r => new { r.Id, r.Standard, r.StandardVersion, r.Agency })
             .ToDictionaryAsync(r => r.Id, cancellationToken).ConfigureAwait(false);
-        var decisions = await db.Set<ValidationFinding>().AsNoTracking()
-            .Where(f => ids.Contains(f.Id))
-            .ToDictionaryAsync(f => f.Id, cancellationToken).ConfigureAwait(false);
+        var inForceIds = states.Where(s => s.DecisionInForce).Select(s => s.Finding).ToList();
+        var decisions = inForceIds.Count == 0
+            ? []
+            : await db.Set<ValidationFinding>().AsNoTracking()
+                .Where(f => inForceIds.Contains(f.Id))
+                .ToDictionaryAsync(f => f.Id, cancellationToken).ConfigureAwait(false);
 
         var (enrollmentByFinding, blindedVarsByFinding, blindedObsByFinding) = await ResolveBlindingContextAsync(
             db,
@@ -556,6 +652,7 @@ public static class KernelValidationPersistenceServiceCollectionExtensions
         services.TryAddSingleton<KernelValidationStore>();
         services.TryAddSingleton<IValidationLedgerSource>(sp => sp.GetRequiredService<KernelValidationStore>());
         services.TryAddSingleton<IValidationFindings>(sp => sp.GetRequiredService<KernelValidationStore>());
+        services.TryAddSingleton<IValidationFindingProjector, ValidationFindingProjector>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IIndicatorPopulationSource, ValidationFindingPopulationSource>());
         return services;
     }

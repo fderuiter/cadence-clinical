@@ -1671,6 +1671,55 @@ Indexes:
 - `IX_validation_detections_tenant_id_run_id_pack_key`: (`tenant_id`, `run_id`, `pack_key`)
 - `IX_validation_detections_tenant_id_study_id_stage`: (`tenant_id`, `study_id`, `stage`)
 
+## kernel.validation_finding_projections
+
+Entity: `ValidationFindingProjectionRecord`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `finding_id` | `uuid` | no |  | PK |
+| `tenant_id` | `uuid` | no |  | PK |
+| `blocks` | `boolean` | no |  |  |
+| `classification` | `character varying(32)` | yes |  |  |
+| `dataset` | `character varying(64)` | no |  |  |
+| `decided_at` | `timestamp with time zone` | yes |  |  |
+| `decision` | `character varying(32)` | yes |  |  |
+| `decision_in_force` | `boolean` | no |  |  |
+| `first_detected_at` | `timestamp with time zone` | no |  |  |
+| `first_detected_run_id` | `uuid` | no |  |  |
+| `last_detected_at` | `timestamp with time zone` | no |  |  |
+| `last_detected_run_id` | `uuid` | no |  |  |
+| `latest_clean_run_at` | `timestamp with time zone` | yes |  |  |
+| `pack_key` | `character varying(128)` | no |  |  |
+| `projection_version` | `bigint` | no |  |  |
+| `resolved_by_run_id` | `uuid` | yes |  |  |
+| `rule_id` | `character varying(64)` | no |  |  |
+| `severity` | `character varying(16)` | no |  |  |
+| `stage` | `character varying(32)` | no |  |  |
+| `status` | `character varying(32)` | no |  |  |
+| `study_id` | `uuid` | no |  |  |
+| `target_key` | `character varying(200)` | no |  |  |
+| `target_kind` | `character varying(32)` | no |  |  |
+| `variable` | `character varying(64)` | yes |  |  |
+
+Foreign keys:
+
+- `FK_validation_finding_projections_studies_tenant_id_study_id`: (`tenant_id`, `study_id`) references `kernel.studies` (`tenant_id`, `id`), on delete restrict
+- `FK_validation_finding_projections_tenants_tenant_id`: (`tenant_id`) references `kernel.tenants` (`id`), on delete restrict
+- `FK_validation_finding_projections_validation_detections_tenant~`: (`tenant_id`, `first_detected_run_id`, `finding_id`) references `kernel.validation_detections` (`tenant_id`, `run_id`, `finding_id`), on delete restrict
+- `FK_validation_finding_projections_validation_detections_tenan~1`: (`tenant_id`, `last_detected_run_id`, `finding_id`) references `kernel.validation_detections` (`tenant_id`, `run_id`, `finding_id`), on delete restrict
+- `FK_validation_finding_projections_validation_runs_tenant_id_re~`: (`tenant_id`, `resolved_by_run_id`) references `kernel.validation_runs` (`tenant_id`, `id`), on delete restrict
+
+Indexes:
+
+- `IX_validation_finding_projections_tenant_id_first_detected_run~`: (`tenant_id`, `first_detected_run_id`, `finding_id`)
+- `IX_validation_finding_projections_tenant_id_last_detected_run_~`: (`tenant_id`, `last_detected_run_id`, `finding_id`)
+- `IX_validation_finding_projections_tenant_id_resolved_by_run_id`: (`tenant_id`, `resolved_by_run_id`)
+- `IX_validation_finding_projections_tenant_id_study_id_blocks`: (`tenant_id`, `study_id`, `blocks`)
+- `IX_validation_finding_projections_tenant_id_study_id_stage_pac~`: (`tenant_id`, `study_id`, `stage`, `pack_key`, `dataset`)
+- `IX_validation_finding_projections_tenant_id_study_id_status_se~`: (`tenant_id`, `study_id`, `status`, `severity`)
+- `IX_validation_finding_projections_tenant_id_study_id_target_key`: (`tenant_id`, `study_id`, `target_key`)
+
 ## kernel.validation_findings
 
 Entity: `ValidationFinding`

@@ -316,7 +316,11 @@ export function createKernelStudyAndGovernanceHandlers(store) {
         if (typeof store.listStudyValidationFindings === "function") {
           const result = store.listStudyValidationFindings(studyRef, {
             stage: url.searchParams.get("stage") || undefined,
-            statuses: url.searchParams.getAll("status"),
+            statuses: url.searchParams
+              .getAll("status")
+              .flatMap((s) => String(s).split(","))
+              .map((s) => s.trim())
+              .filter(Boolean),
             severity: url.searchParams.get("severity") || undefined,
             dataset: url.searchParams.get("dataset") || undefined,
             packKey: url.searchParams.get("pack_key") || undefined,

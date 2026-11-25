@@ -42,6 +42,31 @@ public interface IValidationLedgerSource
     Task<ValidationLedgerData?> LoadFindingAsync(TenantId tenant, ValidationFindingId finding, CancellationToken cancellationToken);
 }
 
+/// <summary>
+/// Transactional read-and-stage port for <c>kernel.validation_finding_projections</c> on the kernel command unit of
+/// work (K-TX-1, K-TX-2). Implemented by kernel persistence on <c>KernelCommandTransaction</c>.
+/// </summary>
+public interface IValidationProjectionStaging
+{
+    /// <summary>
+    /// Applies <paramref name="run"/> to the study's covered finding projections on this command's transaction and
+    /// returns the run's <see cref="ValidationRunOutcome"/>.
+    /// </summary>
+    Task<ValidationRunOutcome> StageValidationRunAsync(
+        ValidationRun run, DateTimeOffset recordedAt, CancellationToken cancellationToken);
+
+    /// <summary>Loads one finding's current projected state and study on this command's transaction, or null when unknown.</summary>
+    Task<(StudyId Study, FindingProjectionState State)?> FindProjectedFindingAsync(
+        ValidationFindingId finding, CancellationToken cancellationToken);
+
+    /// <summary>Stages an updated <see cref="LedgerDecision"/> onto <paramref name="finding"/>'s projection row in this command's transaction.</summary>
+    Task StageFindingDecisionAsync(
+        ValidationFindingId finding, LedgerDecision decision, CancellationToken cancellationToken);
+
+    /// <summary>Rebuilds <paramref name="study"/>'s projected findings from its immutable ledger rows on this command's transaction.</summary>
+    Task<int> StageRebuildStudyAsync(StudyId study, CancellationToken cancellationToken);
+}
+
 /// <summary>Handles <see cref="RecordValidationRun"/>.</summary>
 internal sealed class RecordValidationRunHandler(IStandardsRegistry registry, IValidationLedgerSource ledger)
     : ICommandHandler<RecordValidationRun, ValidationRunOutcome>
@@ -81,8 +106,16 @@ internal sealed class RecordValidationRunHandler(IStandardsRegistry registry, IV
             return KernelErrors.AlreadyExists;
         }
 
-        var before = await ledger.LoadStudyAsync(command.TenantId, command.StudyId, command.Stage, cancellationToken).ConfigureAwait(false);
-        var outcome = Outcome(before, run!, context.RecordedAt);
+        ValidationRunOutcome outcome;
+        if (context.Work is IValidationProjectionStaging projection)
+        {
+            outcome = await projection.StageValidationRunAsync(run!, context.RecordedAt, cancellationToken).ConfigureAwait(false);
+        }
+        else
+        {
+            var before = await ledger.LoadStudyAsync(command.TenantId, command.StudyId, command.Stage, cancellationToken).ConfigureAwait(false);
+            outcome = Outcome(before, run!, context.RecordedAt);
+        }
 
         context.Work.Add(run!);
         foreach (var pack in packs)
@@ -187,15 +220,34 @@ internal sealed class FindingDecisionHandler(IValidationLedgerSource ledger, IAt
     private async Task<CommandResult<ValidationFindingId>> DecideAsync(
         ValidationFindingId id, ICommandContext context, CancellationToken cancellationToken, Func<ValidationFinding, FindingState, Task<KernelError?>> decide)
     {
-        var data = await ledger.LoadFindingAsync(context.TenantId, id, cancellationToken).ConfigureAwait(false);
-        if (data?.Derive().SingleOrDefault(f => f.Finding == id) is not { } state)
+        StudyId study;
+        FindingState state;
+        var projection = context.Work as IValidationProjectionStaging;
+        if (projection is not null)
         {
-            return ValidationErrors.FindingUnknown;
+            if (await projection.FindProjectedFindingAsync(id, cancellationToken).ConfigureAwait(false) is not var (projectedStudy, projectedState))
+            {
+                return ValidationErrors.FindingUnknown;
+            }
+
+            study = projectedStudy;
+            state = projectedState.ToFindingState();
+        }
+        else
+        {
+            var data = await ledger.LoadFindingAsync(context.TenantId, id, cancellationToken).ConfigureAwait(false);
+            if (data?.Derive().SingleOrDefault(f => f.Finding == id) is not { } derivedState)
+            {
+                return ValidationErrors.FindingUnknown;
+            }
+
+            study = data.Study;
+            state = derivedState;
         }
 
         var finding = await context.Work.FindAsync<ValidationFinding>(id, cancellationToken).ConfigureAwait(false);
         var isNew = finding is null;
-        finding ??= ValidationFinding.Start(id, context.TenantId, data.Study);
+        finding ??= ValidationFinding.Start(id, context.TenantId, study);
         if (await decide(finding, state).ConfigureAwait(false) is { } error)
         {
             return error;
@@ -204,6 +256,14 @@ internal sealed class FindingDecisionHandler(IValidationLedgerSource ledger, IAt
         if (isNew)
         {
             context.Work.Add(finding);
+        }
+
+        if (projection is not null)
+        {
+            await projection.StageFindingDecisionAsync(
+                id,
+                new LedgerDecision(id, finding.Decision, finding.DecidedAt, finding.Classification),
+                cancellationToken).ConfigureAwait(false);
         }
 
         // K-FIND-3: each version of the decisions record derives from the run it was made on, and through that run's
@@ -233,8 +293,18 @@ internal sealed class FindingDecisionAttestationCheck(IValidationLedgerSource le
     public async Task<KernelError?> CheckAsync(AttestationTarget target, ICommandContext context, CancellationToken cancellationToken)
     {
         var id = ValidationFindingId.FromGuid(target.Id);
-        var data = await ledger.LoadFindingAsync(context.TenantId, id, cancellationToken).ConfigureAwait(false);
-        if (data?.Derive().SingleOrDefault(f => f.Finding == id) is not { } state)
+        FindingState? state;
+        if (context.Work is IValidationProjectionStaging projection)
+        {
+            state = (await projection.FindProjectedFindingAsync(id, cancellationToken).ConfigureAwait(false))?.State.ToFindingState();
+        }
+        else
+        {
+            var data = await ledger.LoadFindingAsync(context.TenantId, id, cancellationToken).ConfigureAwait(false);
+            state = data?.Derive().SingleOrDefault(f => f.Finding == id);
+        }
+
+        if (state is null)
         {
             return TrustErrors.TargetUnknown;
         }
@@ -242,6 +312,47 @@ internal sealed class FindingDecisionAttestationCheck(IValidationLedgerSource le
         return state.Status is FindingStatus.Open or FindingStatus.Investigating
             ? null
             : TrustErrors.TargetNotSignable.WithMessage($"Only an open or investigating finding can be accepted or explained; this one is {state.Status}.");
+    }
+}
+
+/// <summary>Handles <see cref="RebuildValidationFindingProjections"/>.</summary>
+internal sealed class RebuildValidationFindingProjectionsHandler(IValidationLedgerSource ledger)
+    : ICommandHandler<RebuildValidationFindingProjections, int>
+{
+    private static readonly ValidationStage[] AllStages = Enum.GetValues<ValidationStage>();
+
+    public async Task<CommandResult<int>> HandleAsync(
+        RebuildValidationFindingProjections command,
+        ICommandContext context,
+        CancellationToken cancellationToken)
+    {
+        if (await context.Work.ReadAsync<Study>(command.StudyId, cancellationToken).ConfigureAwait(false) is null)
+        {
+            return ValidationErrors.StudyUnknown;
+        }
+
+        if (context.Work is IValidationProjectionStaging projection)
+        {
+            var rebuilt = await projection.StageRebuildStudyAsync(command.StudyId, cancellationToken).ConfigureAwait(false);
+            return CommandResult<int>.Success(rebuilt);
+        }
+
+        var runs = new List<LedgerRun>();
+        var detections = new List<LedgerDetection>();
+        var decisionsById = new Dictionary<ValidationFindingId, LedgerDecision>();
+        foreach (var stage in AllStages)
+        {
+            var stageData = await ledger.LoadStudyAsync(command.TenantId, command.StudyId, stage, cancellationToken).ConfigureAwait(false);
+            runs.AddRange(stageData.Runs);
+            detections.AddRange(stageData.Detections);
+            foreach (var decision in stageData.Decisions)
+            {
+                decisionsById[decision.Finding] = decision;
+            }
+        }
+
+        var derived = FindingLedger.Derive(runs, detections, [.. decisionsById.Values]);
+        return CommandResult<int>.Success(derived.Count);
     }
 }
 
@@ -262,6 +373,7 @@ public static class KernelValidationServiceCollectionExtensions
         services.AddTransient<ICommandHandler<AcceptFinding, ValidationFindingId>, FindingDecisionHandler>();
         services.AddTransient<ICommandHandler<ExplainFinding, ValidationFindingId>, FindingDecisionHandler>();
         services.AddTransient<ICommandHandler<ReopenFinding, ValidationFindingId>, FindingDecisionHandler>();
+        services.AddTransient<ICommandHandler<RebuildValidationFindingProjections, int>, RebuildValidationFindingProjectionsHandler>();
         services.TryAddEnumerable(ServiceDescriptor.Transient<IAttestationTargetCheck, FindingDecisionAttestationCheck>());
         return services;
     }

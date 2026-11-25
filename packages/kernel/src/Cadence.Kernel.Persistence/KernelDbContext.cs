@@ -8,6 +8,7 @@ using Cadence.Kernel.Domain.Knowledge;
 using Cadence.Kernel.Persistence.Bitemporal;
 using Cadence.Kernel.Persistence.Commands;
 using Cadence.Kernel.Persistence.Lineage;
+using Cadence.Kernel.Persistence.Validation;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -120,6 +121,8 @@ internal sealed class KernelDbContext(DbContextOptions<KernelDbContext> options)
     public DbSet<LineageNodeRecord> LineageNodes => Set<LineageNodeRecord>();
 
     public DbSet<LineageEdgeRecord> LineageEdges => Set<LineageEdgeRecord>();
+
+    public DbSet<ValidationFindingProjectionRecord> ValidationFindingProjections => Set<ValidationFindingProjectionRecord>();
 
     private int _permittedWriters;
 

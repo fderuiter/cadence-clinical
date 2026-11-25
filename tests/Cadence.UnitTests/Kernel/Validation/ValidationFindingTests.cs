@@ -184,6 +184,168 @@ public class ValidationFindingTests
         }
     }
 
+    /// <summary>
+    /// Validates ADR-2462 §5 over 250 generated multi-stage, multi-pack, partial-coverage histories with severity updates,
+    /// same-timestamp tie-breaking, interleaved decisions, resolutions, and recurrences: incremental projection
+    /// (<see cref="FindingLedger.ApplyCoveringRun"/> + <see cref="FindingLedger.ApplyDecision"/>) and batch rebuild
+    /// (<see cref="FindingLedger.Project"/>) produce 100% identical <see cref="FindingState"/> outputs to
+    /// <see cref="FindingLedger.Derive"/>.
+    /// @req:PRD-CRF-004
+    /// </summary>
+    [Fact(DisplayName = "Ledger_GeneratedHistories_ProjectionAndIncrementalTransitionsMatchDeriveParity")]
+    [Trait("Category", "Unit")]
+    [GxPRequirement("PRD-CRF-004")]
+    [KernelRule("K-FIND-1")]
+    public void LedgerGeneratedHistoriesProjectionAndIncrementalTransitionsMatchDeriveParity()
+    {
+        ValidationStage[] stages =
+        [
+            ValidationStage.Design,
+            ValidationStage.Collection,
+            ValidationStage.Standardization,
+            ValidationStage.Analysis,
+            ValidationStage.Submission,
+        ];
+        string[] packs = ["sdtm-core", "sdtm-fda", "cadence-edit-checks"];
+        string[] datasets = ["VS", "DM", "LB"];
+        ValidationSeverity[] severities = [ValidationSeverity.Error, ValidationSeverity.Warning, ValidationSeverity.Notice];
+        FindingClassification?[] classifications =
+        [
+            null,
+            FindingClassification.DataIssue,
+            FindingClassification.MappingIssue,
+            FindingClassification.MetadataIssue,
+            FindingClassification.RuleIssue,
+            FindingClassification.NotAnIssue,
+        ];
+        FindingStatus?[] decisionKinds =
+        [
+            null,
+            FindingStatus.Open,
+            FindingStatus.Investigating,
+            FindingStatus.Accepted,
+            FindingStatus.Explained,
+        ];
+
+        var catalog = (
+            from stage in stages.Take(3)
+            from pack in packs.Take(2)
+            from dataset in datasets.Take(2)
+            from index in Enumerable.Range(0, 2)
+            let ruleId = $"R-{pack[..4].ToUpperInvariant()}-{index}"
+            let target = new FindingTarget(FindingTargetKind.DatasetRecord, dataset, $"row-{index}", index == 0 ? "VAL" : null)
+            let identity = new FindingIdentity(Study, stage, pack, ruleId, target)
+            select (Finding: ValidationFindingId.For(Tenant, identity), Stage: stage, Pack: pack, Dataset: dataset, RuleId: ruleId, Target: target))
+            .ToArray();
+
+        for (var seed = 0; seed < 250; seed++)
+        {
+            var random = new Random(10_000 + seed);
+            var stepCount = random.Next(4, 18);
+            var runs = new List<LedgerRun>();
+            var deriveDetections = new List<LedgerDetection>();
+            var projectDetections = new List<LedgerProjectedDetection>();
+            var decisions = new Dictionary<ValidationFindingId, LedgerDecision>();
+            var incremental = new Dictionary<ValidationFindingId, FindingProjectionState>();
+
+            var cursor = T0;
+            for (var step = 0; step < stepCount; step++)
+            {
+                // Exercise both strictly advancing timestamps and occasional same-timestamp runs (UUID tie-breaking).
+                var sameTimestamp = runs.Count > 0 && random.Next(6) == 0;
+                if (!sameTimestamp)
+                {
+                    cursor = cursor.AddMinutes(random.Next(1, 30));
+                }
+
+                if (incremental.Count > 0 && !sameTimestamp && random.Next(3) == 0)
+                {
+                    var activeCandidates = incremental.Values.Where(s => s.Status != FindingStatus.Resolved).ToList();
+                    if (activeCandidates.Count > 0)
+                    {
+                        var chosen = activeCandidates[random.Next(activeCandidates.Count)];
+                        var nextClassification = classifications[random.Next(classifications.Length)] ?? chosen.Classification;
+                        var nextDecisionKind = decisionKinds[random.Next(decisionKinds.Length)];
+                        DateTimeOffset? decidedAt = nextDecisionKind is null ? chosen.DecidedAt : cursor;
+                        var effectiveKind = nextDecisionKind ?? chosen.Decision;
+                        var ledgerDecision = new LedgerDecision(chosen.Finding, effectiveKind, decidedAt, nextClassification);
+                        decisions[chosen.Finding] = ledgerDecision;
+                        incremental[chosen.Finding] = FindingLedger.ApplyDecision(chosen, ledgerDecision);
+                        continue;
+                    }
+                }
+
+                var stage = stages[random.Next(3)];
+                var runPacks = packs.Take(2).Where(_ => random.Next(2) == 0).ToHashSet(StringComparer.Ordinal);
+                if (runPacks.Count == 0)
+                {
+                    runPacks.Add(packs[random.Next(2)]);
+                }
+
+                var runDatasets = datasets.Take(2).Where(_ => random.Next(2) == 0).ToHashSet(StringComparer.Ordinal);
+                if (runDatasets.Count == 0)
+                {
+                    runDatasets.Add(datasets[random.Next(2)]);
+                }
+
+                // Ensure monotonic UUID ordering when RecordedAt ties so incremental arrival matches chronological order.
+                var runId = ValidationRunId.New(cursor);
+                while (runs.Any(r => r.RecordedAt == cursor && r.Id.CompareTo(runId) >= 0))
+                {
+                    runId = ValidationRunId.New(cursor);
+                }
+
+                var run = new LedgerRun(runId, stage, cursor, runPacks, runDatasets);
+                runs.Add(run);
+
+                var coveredCatalog = catalog
+                    .Where(c => c.Stage == stage && runPacks.Contains(c.Pack) && runDatasets.Contains(c.Dataset))
+                    .ToList();
+                var runDetectedByFinding = new Dictionary<ValidationFindingId, LedgerProjectedDetection>();
+                foreach (var candidate in coveredCatalog)
+                {
+                    if (random.Next(2) == 0)
+                    {
+                        var severity = severities[random.Next(severities.Length)];
+                        deriveDetections.Add(new LedgerDetection(run.Id, candidate.Finding, candidate.Stage, candidate.Pack, candidate.Dataset, severity));
+                        var projected = new LedgerProjectedDetection(run.Id, candidate.Finding, candidate.Stage, candidate.Pack, candidate.RuleId, candidate.Target, severity);
+                        projectDetections.Add(projected);
+                        runDetectedByFinding[candidate.Finding] = projected;
+                    }
+                }
+
+                foreach (var existing in incremental.Values
+                    .Where(s => s.Stage == stage && runPacks.Contains(s.PackKey) && runDatasets.Contains(s.Dataset))
+                    .ToList())
+                {
+                    runDetectedByFinding.TryGetValue(existing.Finding, out var det);
+                    incremental[existing.Finding] = FindingLedger.ApplyCoveringRun(existing, run, det);
+                }
+
+                foreach (var (findingId, det) in runDetectedByFinding)
+                {
+                    if (!incremental.ContainsKey(findingId))
+                    {
+                        decisions.TryGetValue(findingId, out var priorDecision);
+                        incremental[findingId] = FindingLedger.ApplyCoveringRun(null, run, det, priorDecision);
+                    }
+                }
+            }
+
+            var shuffledRuns = runs.OrderBy(_ => random.Next()).ToList();
+            var shuffledDeriveDetections = deriveDetections.OrderBy(_ => random.Next()).ToList();
+            var shuffledProjectDetections = projectDetections.OrderBy(_ => random.Next()).ToList();
+
+            var derivedStates = FindingLedger.Derive(shuffledRuns, shuffledDeriveDetections, decisions.Values);
+            var batchProjected = FindingLedger.Project(shuffledRuns, shuffledProjectDetections, decisions.Values);
+            var incrementalProjected = incremental.Values.OrderBy(p => p.Finding).ToList();
+
+            batchProjected.Select(p => p.ToFindingState()).Should().Equal(derivedStates, $"batch Project parity failed on seed {seed}");
+            incrementalProjected.Select(p => p.ToFindingState()).Should().Equal(derivedStates, $"incremental Apply parity failed on seed {seed}");
+            incrementalProjected.Should().Equal(batchProjected, $"full FindingProjectionState parity failed on seed {seed}");
+        }
+    }
+
     [Fact(DisplayName = "Ledger_DetectionOfUnknownRun_Throws")]
     [Trait("Category", "Unit")]
     public void LedgerDetectionOfUnknownRunThrows()

@@ -2350,12 +2350,20 @@ public sealed class KernelApiHostTests : IDisposable
 
             var matching = AllFindings
                 .Where(f => query.Statuses is null || query.Statuses.Contains(f.Status))
+                .Where(f => query.TargetKeys is null || query.TargetKeys.Contains(f.Target.Key))
                 .ToList();
             return Task.FromResult(new FindingPage([.. matching.Take(query.Take)], matching.Count));
         }
 
         public Task<ValidationRunSummary?> FindRunAsync(TenantId tenant, ValidationRunId run, CancellationToken cancellationToken) =>
             Task.FromResult<ValidationRunSummary?>(null);
+
+        public Task<IReadOnlyList<string>> ListDatasetsAsync(
+            TenantId tenant, StudyId study, ValidationStage? stage = null, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<string>>(
+                study == StudyId.FromGuid(Study.Id)
+                    ? [.. AllFindings.Where(f => stage is null || f.Stage == stage).Select(f => f.Target.Dataset).Distinct(StringComparer.Ordinal)]
+                    : []);
 
         private static ValidationFindingView MakeFinding(ValidationSeverity severity, FindingStatus status, string ruleId) =>
             new(

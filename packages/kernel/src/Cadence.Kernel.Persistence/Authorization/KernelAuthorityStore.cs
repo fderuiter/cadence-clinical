@@ -422,22 +422,39 @@ internal sealed class KernelAuthorityStore(
 
     private static readonly string ValidationFindingPathsSql = $"""
         WITH detected AS (
-            SELECT DISTINCT ON (d.finding_id)
+            SELECT
                 d.tenant_id,
                 d.finding_id,
                 d.study_id,
+                d.last_detected_run_id,
+                d.dataset,
+                d.variable,
         {FindingTargetParseColumnsSql}
-            FROM kernel.validation_detections AS d
+            FROM kernel.validation_finding_projections AS d
             WHERE d.tenant_id = @tenant AND d.finding_id = ANY(@ids)
-            ORDER BY d.finding_id, d.run_id DESC
         ),
         finding_base AS (
-            SELECT * FROM detected
+            SELECT
+                d.tenant_id,
+                d.finding_id,
+                d.study_id,
+                d.last_detected_run_id,
+                d.dataset,
+                d.variable,
+                d.collection_instance_id,
+                d.observation_id,
+                d.enrollment_id,
+                d.direct_study_site_id,
+                d.subject_code_candidate
+            FROM detected AS d
             UNION ALL
             SELECT
                 vf.tenant_id,
                 vf.id AS finding_id,
                 vf.study_id,
+                NULL::uuid AS last_detected_run_id,
+                NULL::character varying(64) AS dataset,
+                NULL::character varying(64) AS variable,
                 NULL::uuid AS collection_instance_id,
                 NULL::uuid AS observation_id,
                 NULL::uuid AS enrollment_id,
@@ -456,16 +473,18 @@ internal sealed class KernelAuthorityStore(
             ss.id AS "StudySiteId",
             (
                 {StudyMayHaveBlindedEvidenceSql("s.id")}
-                OR EXISTS (
-                    SELECT 1
-                    FROM kernel.validation_detections AS vd_blind
-                    WHERE vd_blind.tenant_id = @tenant
-                      AND vd_blind.finding_id = d.finding_id
-                      AND (
-                          vd_blind.dataset ~* '{BlindedMarkerRegexSql}'
-                          OR COALESCE(vd_blind.variable, '') ~* '{BlindedMarkerRegexSql}'
-                          OR vd_blind.observed::text ~* '{BlindedMarkerRegexSql}'
-                      )
+                OR COALESCE(d.dataset, '') ~* '{BlindedMarkerRegexSql}'
+                OR COALESCE(d.variable, '') ~* '{BlindedMarkerRegexSql}'
+                OR (
+                    d.last_detected_run_id IS NOT NULL
+                    AND EXISTS (
+                        SELECT 1
+                        FROM kernel.validation_detections AS vd_blind
+                        WHERE vd_blind.tenant_id = d.tenant_id
+                          AND vd_blind.run_id = d.last_detected_run_id
+                          AND vd_blind.finding_id = d.finding_id
+                          AND vd_blind.observed::text ~* '{BlindedMarkerRegexSql}'
+                    )
                 )
             ) AS "MayBeBlinded"
         FROM finding_base AS d
@@ -482,7 +501,7 @@ internal sealed class KernelAuthorityStore(
 
     private const string ValidationFindingClassificationSql = $"""
         WITH detected AS (
-            SELECT DISTINCT ON (d.finding_id)
+            SELECT
                 d.tenant_id,
                 d.finding_id,
                 d.study_id,
@@ -490,13 +509,12 @@ internal sealed class KernelAuthorityStore(
                 d.dataset,
                 d.target_key,
                 d.variable,
-                d.observed::text AS observed_json,
+                vd.observed::text AS observed_json,
         {FindingTargetParseColumnsSql}
-            FROM kernel.validation_detections AS d
-            JOIN kernel.validation_runs AS r
-                ON r.tenant_id = d.tenant_id AND r.id = d.run_id
+            FROM kernel.validation_finding_projections AS d
+            JOIN kernel.validation_detections AS vd
+                ON vd.tenant_id = d.tenant_id AND vd.run_id = d.last_detected_run_id AND vd.finding_id = d.finding_id
             WHERE d.tenant_id = @tenant AND d.finding_id = ANY(@ids)
-            ORDER BY d.finding_id, r.completed_at DESC, r.created_at DESC, r.id DESC
         )
         SELECT
             d.finding_id AS "Id",
@@ -572,16 +590,15 @@ internal sealed class KernelAuthorityStore(
             WHERE att.tenant_id = @tenant AND att.id = ANY(@ids)
         ),
         vf_detected AS (
-            SELECT DISTINCT ON (d.finding_id)
+            SELECT
                 d.tenant_id,
                 d.finding_id,
                 d.study_id,
         {FindingTargetParseColumnsSql}
             FROM requested AS req
-            JOIN kernel.validation_detections AS d
+            JOIN kernel.validation_finding_projections AS d
                 ON req.target_kind = 'validation_finding'
                AND d.tenant_id = req.tenant_id AND d.finding_id = req.target_id
-            ORDER BY d.finding_id, d.run_id DESC
         ),
         vf_scoped AS (
             SELECT

@@ -155,6 +155,54 @@ internal sealed class ValidationFindingConfiguration : IEntityTypeConfiguration<
     }
 }
 
+/// <summary>
+/// EF Core mapping for <c>kernel.validation_finding_projections</c>: disposable, tenant-isolated materialized state of
+/// each finding (ADR-2462 §5), updated transactionally when runs or decisions commit.
+/// </summary>
+internal sealed class ValidationFindingProjectionRecordConfiguration : IEntityTypeConfiguration<ValidationFindingProjectionRecord>
+{
+    public void Configure(EntityTypeBuilder<ValidationFindingProjectionRecord> builder)
+    {
+        builder.ToTable("validation_finding_projections");
+        builder.HasKey(x => new { x.TenantId, x.FindingId });
+        builder.Property(x => x.Stage).HasConversion<string>().HasMaxLength(32).IsRequired();
+        builder.Property(x => x.PackKey).HasMaxLength(LibraryItem.MaxKeyLength).IsRequired();
+        builder.Property(x => x.Dataset).HasMaxLength(FindingTarget.MaxNameLength).IsRequired();
+        builder.Property(x => x.RuleId).HasMaxLength(ValidationDetection.MaxRuleIdLength).IsRequired();
+        builder.Property(x => x.TargetKind).HasConversion<string>().HasMaxLength(32).IsRequired();
+        builder.Property(x => x.TargetKey).HasMaxLength(FindingTarget.MaxKeyLength).IsRequired();
+        builder.Property(x => x.Variable).HasMaxLength(FindingTarget.MaxNameLength);
+        builder.Property(x => x.Severity).HasConversion<string>().HasMaxLength(16).IsRequired();
+        builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(32).IsRequired();
+        builder.Property(x => x.Classification).HasConversion<string>().HasMaxLength(32);
+        builder.Property(x => x.Decision).HasConversion<string>().HasMaxLength(32);
+        builder.Property(x => x.ProjectionVersion).IsConcurrencyToken();
+        builder.Ignore(x => x.Target);
+
+        builder.HasIndex(x => new { x.TenantId, x.StudyId, x.Status, x.Severity });
+        builder.HasIndex(x => new { x.TenantId, x.StudyId, x.Stage, x.PackKey, x.Dataset });
+        builder.HasIndex(x => new { x.TenantId, x.StudyId, x.Blocks });
+        builder.HasIndex(x => new { x.TenantId, x.StudyId, x.TargetKey });
+
+        builder.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Study>().WithMany()
+            .HasForeignKey(x => new { x.TenantId, x.StudyId }).HasPrincipalKey(s => new { s.TenantId, s.Id })
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<ValidationDetectionRecord>().WithMany()
+            .HasForeignKey(x => new { x.TenantId, x.FirstDetectedRunId, x.FindingId })
+            .HasPrincipalKey(d => new { d.TenantId, d.RunId, d.FindingId })
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<ValidationDetectionRecord>().WithMany()
+            .HasForeignKey(x => new { x.TenantId, x.LastDetectedRunId, x.FindingId })
+            .HasPrincipalKey(d => new { d.TenantId, d.RunId, d.FindingId })
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<ValidationRun>().WithMany()
+            .HasForeignKey(x => new { x.TenantId, x.ResolvedByRunId })
+            .HasPrincipalKey(r => new { r.TenantId, r.Id })
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
 /// <summary>Shared column settings for the validation tables.</summary>
 internal static class ValidationColumns
 {

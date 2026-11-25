@@ -4270,6 +4270,143 @@ namespace Cadence.Kernel.Persistence.Migrations
                     b.ToTable("lineage_nodes", "kernel");
                 });
 
+            modelBuilder.Entity("Cadence.Kernel.Persistence.Validation.ValidationFindingProjectionRecord", b =>
+                {
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<Guid>("FindingId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("finding_id");
+
+                    b.Property<bool>("Blocks")
+                        .HasColumnType("boolean")
+                        .HasColumnName("blocks");
+
+                    b.Property<string>("Classification")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("classification");
+
+                    b.Property<string>("Dataset")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("dataset");
+
+                    b.Property<DateTimeOffset?>("DecidedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("decided_at");
+
+                    b.Property<string>("Decision")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("decision");
+
+                    b.Property<bool>("DecisionInForce")
+                        .HasColumnType("boolean")
+                        .HasColumnName("decision_in_force");
+
+                    b.Property<DateTimeOffset>("FirstDetectedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("first_detected_at");
+
+                    b.Property<Guid>("FirstDetectedRunId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("first_detected_run_id");
+
+                    b.Property<DateTimeOffset>("LastDetectedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_detected_at");
+
+                    b.Property<Guid>("LastDetectedRunId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("last_detected_run_id");
+
+                    b.Property<DateTimeOffset?>("LatestCleanRunAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("latest_clean_run_at");
+
+                    b.Property<string>("PackKey")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("pack_key");
+
+                    b.Property<long>("ProjectionVersion")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint")
+                        .HasColumnName("projection_version");
+
+                    b.Property<Guid?>("ResolvedByRunId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("resolved_by_run_id");
+
+                    b.Property<string>("RuleId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("rule_id");
+
+                    b.Property<string>("Severity")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("severity");
+
+                    b.Property<string>("Stage")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("stage");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("StudyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("study_id");
+
+                    b.Property<string>("TargetKey")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("target_key");
+
+                    b.Property<string>("TargetKind")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("target_kind");
+
+                    b.Property<string>("Variable")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("variable");
+
+                    b.HasKey("TenantId", "FindingId");
+
+                    b.HasIndex("TenantId", "ResolvedByRunId");
+
+                    b.HasIndex("TenantId", "FirstDetectedRunId", "FindingId");
+
+                    b.HasIndex("TenantId", "LastDetectedRunId", "FindingId");
+
+                    b.HasIndex("TenantId", "StudyId", "Blocks");
+
+                    b.HasIndex("TenantId", "StudyId", "TargetKey");
+
+                    b.HasIndex("TenantId", "StudyId", "Status", "Severity");
+
+                    b.HasIndex("TenantId", "StudyId", "Stage", "PackKey", "Dataset");
+
+                    b.ToTable("validation_finding_projections", "kernel");
+                });
+
             modelBuilder.Entity("Cadence.Kernel.Domain.Entities.Artifact", b =>
                 {
                     b.HasOne("Cadence.Kernel.Domain.Entities.Tenant", null)
@@ -5113,6 +5250,41 @@ namespace Cadence.Kernel.Persistence.Migrations
                         .HasForeignKey("TenantId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("Cadence.Kernel.Persistence.Validation.ValidationFindingProjectionRecord", b =>
+                {
+                    b.HasOne("Cadence.Kernel.Domain.Entities.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Cadence.Kernel.Domain.Validation.ValidationRun", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "ResolvedByRunId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Cadence.Kernel.Domain.Entities.Study", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "StudyId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Cadence.Kernel.Domain.Validation.ValidationDetectionRecord", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "FirstDetectedRunId", "FindingId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Cadence.Kernel.Domain.Validation.ValidationDetectionRecord", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "LastDetectedRunId", "FindingId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_validation_finding_projections_validation_detections_tenan~1");
                 });
 
             modelBuilder.Entity("Cadence.Kernel.Domain.Entities.Artifact", b =>

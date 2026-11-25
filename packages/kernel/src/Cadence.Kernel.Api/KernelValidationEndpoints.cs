@@ -131,6 +131,13 @@ public static class KernelValidationEndpoints
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
+        group.MapPost("/studies/{studyRef}/validation/findings/rebuild", RebuildStudyFindingsAsync)
+            .WithName("KernelRebuildStudyValidationFindings")
+            .WithSummary("Deterministically rebuilds a study's materialized validation finding projection from immutable runs, detections, and decisions (validation_finding.rebuild_projection).")
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesKernelCommand<RebuildValidationFindingProjections>();
+
         group.MapGet("/studies/{studyRef}/attention", GetStudyAttentionAsync)
             .WithName("KernelGetStudyAttention")
             .WithSummary("Lists a study's open proposals and active (Open or Investigating) validation findings in one attention read.")
@@ -537,20 +544,23 @@ public static class KernelValidationEndpoints
         HashSet<FindingStatus>? parsedStatuses = null;
         if (status is { Length: > 0 })
         {
-            foreach (var rawStatus in status)
+            foreach (var rawEntry in status)
             {
-                if (string.IsNullOrWhiteSpace(rawStatus))
+                if (string.IsNullOrWhiteSpace(rawEntry))
                 {
                     continue;
                 }
 
-                if (!Enum.TryParse<FindingStatus>(rawStatus, ignoreCase: true, out var st) || !Enum.IsDefined(st) || int.TryParse(rawStatus, out _))
+                foreach (var rawStatus in rawEntry.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
                 {
-                    return KernelProblems.BadRequest("Invalid status", $"'{rawStatus}' is not a valid finding status.");
-                }
+                    if (!Enum.TryParse<FindingStatus>(rawStatus, ignoreCase: true, out var st) || !Enum.IsDefined(st) || int.TryParse(rawStatus, out _))
+                    {
+                        return KernelProblems.BadRequest("Invalid status", $"'{rawStatus}' is not a valid finding status.");
+                    }
 
-                parsedStatuses ??= [];
-                parsedStatuses.Add(st);
+                    parsedStatuses ??= [];
+                    parsedStatuses.Add(st);
+                }
             }
         }
 
@@ -614,6 +624,49 @@ public static class KernelValidationEndpoints
         return TypedResults.Ok(new KernelValidationFindingPageResponse(
             visibleFindings.Count,
             [.. visibleFindings.Take(take).Select(KernelValidationFindingResponse.From)]));
+    }
+
+    internal static async Task<Results<Ok<KernelRebuildStudyValidationFindingsResponse>, ProblemHttpResult>> RebuildStudyFindingsAsync(
+        string studyRef,
+        HttpContext context,
+        IKernelCommandSender sender,
+        IKernelChangeReason changeReason,
+        INodeVisibility visibility,
+        ICurrentActor actor,
+        CancellationToken cancellationToken)
+    {
+        var (idempotencyKey, reason, headerProblem) = ReadCommandHeaders(context, changeReason);
+        if (headerProblem is not null)
+        {
+            return headerProblem;
+        }
+
+        var tenant = KernelRequestTenant.Get(context);
+        if (await CheckValidationDecisionEntitlementsAsync(context, tenant, cancellationToken).ConfigureAwait(false) is { } entitlementProblem)
+        {
+            return entitlementProblem;
+        }
+
+        var resolved = await KernelStudyLookup.ResolveVisibleStudyAsync(
+            tenant,
+            studyRef,
+            context,
+            visibility,
+            actor,
+            static (studyNode, mask) => $"You may not access study {studyNode} ({mask}).",
+            allowVersionedStudyRef: true,
+            cancellationToken).ConfigureAwait(false);
+        if (resolved.Problem is { } problem)
+        {
+            return problem;
+        }
+
+        var result = await sender.SendAsync(
+            new RebuildValidationFindingProjections(tenant, resolved.Study.StudyId, idempotencyKey, reason),
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+        return result.IsSuccess
+            ? TypedResults.Ok(new KernelRebuildStudyValidationFindingsResponse(resolved.Study.PinnedRef.ToString(), result.Value))
+            : KernelErrorEndpoints.Problem(result.Error!);
     }
 
     internal static async Task<Results<Ok<KernelStudyAttentionResponse>, ProblemHttpResult>> GetStudyAttentionAsync(

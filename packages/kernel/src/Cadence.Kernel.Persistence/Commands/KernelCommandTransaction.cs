@@ -13,17 +13,21 @@ using System.Threading.Tasks;
 using Cadence.Core.Domain;
 using Cadence.Kernel.Application.Commands;
 using Cadence.Kernel.Application.Identity;
+using Cadence.Kernel.Application.Validation;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Domain.Knowledge;
+using Cadence.Kernel.Domain.Validation;
 using Cadence.Kernel.Lineage;
 using Cadence.Kernel.Modules;
 using Cadence.Kernel.Persistence.IdentityVault;
 using Cadence.Kernel.Persistence.Lineage;
 using Cadence.Kernel.Persistence.Tenancy;
+using Cadence.Kernel.Persistence.Validation;
 using Cadence.Kernel.Protocol;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Trust;
+using Cadence.Kernel.Validation;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
@@ -76,7 +80,8 @@ internal sealed class KernelCommandTransaction(
     KernelDbContext db,
     CommandExecution execution,
     Action<CommitStage>? faultInjector,
-    IReadOnlyList<IModuleCommandStore>? moduleStores = null) : IKernelCommandTransaction, IKernelUnitOfWork, IIdentityVaultStaging
+    IReadOnlyList<IModuleCommandStore>? moduleStores = null)
+    : IKernelCommandTransaction, IKernelUnitOfWork, IIdentityVaultStaging, IValidationProjectionStaging
 {
     private const string DecisionDeniedEvent = "DecisionDenied";
 
@@ -298,6 +303,21 @@ internal sealed class KernelCommandTransaction(
         _vaultWrites.Add(write);
     }
 
+    public Task<ValidationRunOutcome> StageValidationRunAsync(
+        ValidationRun run, DateTimeOffset recordedAt, CancellationToken cancellationToken) =>
+        ValidationProjectionStagingHelper.StageValidationRunAsync(db, Command.TenantId, run, recordedAt, cancellationToken);
+
+    public Task<(StudyId Study, FindingProjectionState State)?> FindProjectedFindingAsync(
+        ValidationFindingId finding, CancellationToken cancellationToken) =>
+        ValidationProjectionStagingHelper.FindProjectedFindingAsync(db, finding, cancellationToken);
+
+    public Task StageFindingDecisionAsync(
+        ValidationFindingId finding, LedgerDecision decision, CancellationToken cancellationToken) =>
+        ValidationProjectionStagingHelper.StageFindingDecisionAsync(db, finding, decision, cancellationToken);
+
+    public Task<int> StageRebuildStudyAsync(StudyId study, CancellationToken cancellationToken) =>
+        ValidationProjectionStagingHelper.StageRebuildStudyAsync(db, Command.TenantId, study, cancellationToken);
+
     public void RecordPermit(AuthorizationDecision permit)
     {
         ArgumentNullException.ThrowIfNull(permit);
@@ -457,11 +477,16 @@ internal sealed class KernelCommandTransaction(
     /// node, and PostgreSQL may report that duplicate before the row-version check, so on an update a lineage duplicate
     /// is the same concurrency conflict.
     /// </summary>
-    private static CommitOutcome UniqueViolationOutcome(string? table, ChangedAggregate? aggregate)
+    private CommitOutcome UniqueViolationOutcome(string? table, ChangedAggregate? aggregate)
     {
         if (string.Equals(table, "idempotency_records", StringComparison.Ordinal))
         {
             return CommitOutcome.IdempotencyRace;
+        }
+
+        if (Command is RecordValidationRun && string.Equals(table, "validation_finding_projections", StringComparison.Ordinal))
+        {
+            return CommitOutcome.ConcurrencyConflict;
         }
 
         return aggregate?.Action == "Updated" && table is "lineage_nodes" or "lineage_edges"

@@ -2167,6 +2167,13 @@ public sealed class TreatmentBlindingHostRegressionTests : IAsyncLifetime
             return Task.FromResult(new FindingPage(all, all.Length));
         }
 
+        public Task<IReadOnlyList<string>> ListDatasetsAsync(
+            TenantId tenant, StudyId study, ValidationStage? stage = null, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<string>>(
+                tenant == Tenant && study == StudyId && stage is null or ValidationStage.Collection
+                    ? ["cs.day1"]
+                    : []);
+
         public Task<ValidationRunSummary?> FindRunAsync(TenantId tenant, ValidationRunId run, CancellationToken cancellationToken) =>
             Task.FromResult(tenant == Tenant && run == RunId
                 ? new ValidationRunSummary(

@@ -345,3 +345,8 @@ public sealed record KernelStudyAttentionResponse(
     /// <summary>Active CRA SDV modification alerts visible to the caller for the study.</summary>
     public IReadOnlyList<KernelStudySdvAlertResponse> SdvAlerts { get; init; } = SdvAlerts ?? [];
 }
+
+/// <summary>Response for <c>POST /api/v1/kernel/studies/{studyRef}/validation/findings/rebuild</c>.</summary>
+/// <param name="StudyRef">Study <c>NodeRef</c> whose validation finding projection rows were rebuilt.</param>
+/// <param name="ProjectedFindings">Total distinct finding projection rows materialized for the study.</param>
+public sealed record KernelRebuildStudyValidationFindingsResponse(string StudyRef, int ProjectedFindings);
