@@ -514,12 +514,12 @@ jobs:
     if: >-
       always() && !cancelled() && (
         github.event_name == 'push' ||
-        github.event_name == 'merge_group' ||
         (github.event_name == 'workflow_dispatch' && (
           github.ref == 'refs/heads/main' ||
           startsWith(github.ref, 'refs/heads/release/') ||
           startsWith(github.ref, 'refs/tags/v')
         )) ||
+        (github.event_name == 'merge_group' && needs.classify.outputs.container_scan == 'true') ||
         (github.event_name == 'pull_request' && (
           needs.classify.outputs.container_scan == 'true' ||
           github.actor == 'dependabot[bot]' ||
@@ -1176,7 +1176,7 @@ jobs:
           check_required "compliance" "$COMPLIANCE_RESULT"
 
           echo "container-security: $CONTAINER_SECURITY_RESULT"
-          if [ "$EVENT_NAME" = "pull_request" ]; then
+          if [ "$EVENT_NAME" = "pull_request" ] || [ "$EVENT_NAME" = "merge_group" ]; then
             if [ "$CONTAINER_SECURITY_RESULT" != "success" ] && [ "$CONTAINER_SECURITY_RESULT" != "skipped" ]; then
               echo "::error::Conditional validation job 'container-security' failed or cancelled (result: $CONTAINER_SECURITY_RESULT)."
               FAILED=1
@@ -1192,7 +1192,7 @@ jobs:
 
   classify:
     name: Classify Change
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
     runs-on: ubuntu-latest
     outputs:
       is_safe: ${{ steps.classify.outputs.is_safe }}
@@ -1201,12 +1201,29 @@ jobs:
       contents: read
       pull-requests: write
     steps:
+      - name: Check out repository for merge group diff
+        if: github.event_name == 'merge_group'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
       - name: Fetch list of changed files
         id: classify
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EVENT_NAME: ${{ github.event_name }}
+          REPO_FULL_NAME: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request && github.event.pull_request.number || '0' }}
+          BASE_REF: ${{ github.base_ref || github.event.merge_group.base_ref || 'main' }}
         run: |
-          gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request && github.event.pull_request.number || '0' }}/files --paginate --jq '.[] | .filename, (select(has("previous_filename")) | .previous_filename)' > changed_files.tmp
+          if [ "$EVENT_NAME" = "merge_group" ]; then
+            BASE_BRANCH="${BASE_REF#refs/heads/}"
+            git fetch --no-tags origin "$BASE_BRANCH"
+            git diff --name-only "origin/${BASE_BRANCH}...HEAD" > changed_files.tmp
+          else
+            gh api "repos/${REPO_FULL_NAME}/pulls/${PR_NUMBER}/files" --paginate --jq '.[] | .filename, (select(has("previous_filename")) | .previous_filename)' > changed_files.tmp
+          fi
           sort -u changed_files.tmp > changed_files.txt
           cat changed_files.txt
 
@@ -1258,10 +1275,10 @@ jobs:
           echo "container_scan=$CONTAINER_SCAN" >> "$GITHUB_OUTPUT"
 
       - name: Apply label
-        if: steps.classify.outputs.is_safe == 'true' && github.event.pull_request.head.repo.full_name == github.repository
+        if: github.event_name == 'pull_request' && steps.classify.outputs.is_safe == 'true' && github.event.pull_request.head.repo.full_name == github.repository
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_NUMBER: ${{ github.event.pull_request && github.event.pull_request.number || '0' }}
         run: |
           gh pr edit "$PR_NUMBER" --repo "${{ github.repository }}" --add-label "safe-change"
 
