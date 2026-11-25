@@ -13,7 +13,7 @@ The Cadence Clinical platform provides a shared, vanilla CSS-based enterprise de
 
 ## Component & Composable Catalog
 
-All 30 Vue components and interaction helpers are exported directly from the root `ui` package:
+All 31 Vue components and interaction helpers are exported directly from the root `ui` package:
 
 | Export                                     | Description                                                                                                                                                                                                          | ARIA Landmark / Role                        |
 | :----------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------ |
@@ -21,7 +21,8 @@ All 30 Vue components and interaction helpers are exported directly from the roo
 | `ClinicalBreadcrumbs`                      | Accessible `<nav aria-label="Breadcrumb">` trail marking the active item with `aria-current="page"` and `48px` mobile touch targets                                                                                  | `navigation`, `list`, `link`                |
 | `ClinicalExplanation`                      | Structured ADR-2482 rule explanation card rendering claims, met/unmet conditions, steps, and `NextAction` `NodeRef` links                                                                                            | `region`, `aria-live="polite"`              |
 | `ClinicalGatedAction`                      | Visible capability-gated action wrapper with accessible inline or expandable why-blocked explanations                                                                                                                | `button`, `aria-describedby`                |
-| `EntityLink`                               | `NodeRef`-compatible keyboard-operable button or link trigger and K-EXP-2 masked badge with `.sr-only` context and peek/open focus restoration                                                                       | `button` / `link`                           |
+| `EntityLink`                               | `NodeRef`-compatible keyboard-operable button or link trigger, K-EXP-2 masked badge, and DIA TMF / eTMF artifact chip with `.sr-only` context and peek/open focus restoration                                        | `button` / `link`                           |
+| `EntityPeekDrawer`                         | Contextual eTMF / DIA TMF artifact preview drawer (`ClinicalDrawer` wrapper) displaying clinical scope pills, taxonomy metadata, collapsible support details, and scoped `/etmf` binder deep-link actions            | `dialog`, `aria-modal="true"`               |
 | `ClinicalIcon`                             | Zero-emoji `1.75px` stroke-only vector icon primitive (`aria-hidden="true"`) paired with visible labels                                                                                                              | Decorative SVG (`aria-hidden="true"`)       |
 | [`ClinicalDataTable`](./data-table.md)     | Accessible, keyboard-sortable, client/external/none paginated clinical dataset table with focusable or masked rows, row selection, header/cell slots, live pagination status, and tabular numerals                   | `table`, `region`, `columnheader`, `status` |
 | [`ClinicalModal`](./modal.md)              | Accessible modal dialog with focus trap, `ariaDescribedby` support, and backdrop blur                                                                                                                                | `dialog`, `aria-modal="true"`               |
@@ -94,6 +95,6 @@ Responsive utilities in `packages/ui/responsive.css` provide `.drawer-mobile-ful
 
 ### Inline Explanation & Gated Action Primitives
 
-- `EntityLink`: Renders Clinical Kernel `NodeRef` links in monospace with K-EXP-2 masked badge support and scope-preserving peek-drawer activation.
+- `EntityLink` & `EntityPeekDrawer`: Renders Clinical Kernel `NodeRef` links in monospace with K-EXP-2 masked badge support alongside DIA TMF / `TmfDocument` chips with scope-preserving peek drawers.
 - `ClinicalExplanation`: Renders ADR-2482 `Explanation` claims, evaluated met/unmet conditions, reasoning steps, and clickable `NextAction.Target` links.
 - `ClinicalGatedAction`: Keeps blocked clinical controls visible with accessible why-blocked explanations.

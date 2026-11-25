@@ -250,6 +250,9 @@ const trainingLink = computed(() => scopedWorkflowPath("/training"));
     expect(byKey["workspace:site-readiness"]).toBe(
       "/ctms?studyId=CADENCE-101&siteId=SITE-101&subjectId=017-0001"
     );
+    expect(byKey["workspace:trial-documents"]).toBe(
+      "/etmf?studyId=CADENCE-101&siteId=SITE-101&subjectId=017-0001"
+    );
     expect(byKey["workspace:data-collection"]).toBe(
       `/studies/CADENCE-101?stage=conduct&site=SITE-101&participant=${encodeURIComponent(PARTICIPANT_NODE_REF)}`
     );
@@ -295,6 +298,15 @@ const trainingLink = computed(() => scopedWorkflowPath("/training"));
         subjectCode: "017-0001",
       })
     ).toBe("/ssu?studyId=CADENCE-101&siteId=SITE-101&subjectId=017-0001");
+
+    // Raw participant:<uuid> NodeRefs never leak into workflow subjectId query params
+    expect(
+      buildScopedWorkflowPath("/etmf", {
+        studyCode: "CADENCE-101",
+        siteId: "SITE-101",
+        subjectCode: PARTICIPANT_NODE_REF,
+      })
+    ).toBe("/etmf?studyId=CADENCE-101&siteId=SITE-101");
   });
 
   it("aligns demoStore getZoomPath study step labels with KernelNavigator study.Code (Req 7)", () => {
@@ -2228,5 +2240,37 @@ const trainingLink = computed(() => scopedWorkflowPath("/training"));
       participant: "SUBJ-102-001",
     });
     unavailableWrapper.unmount();
+  });
+
+  it("resolves canonical enrollment:<uuid> NodeRefs via instantiated studyCanvas without leaking raw NodeRef tokens", () => {
+    const enrollmentId = "0192f3c4-5e6a-7b8c-9d0e-999999999999";
+    const enrollmentRef = `enrollment:${enrollmentId}`;
+    const canvasStore = useStudyCanvasStore();
+    canvasStore.studyCode = "CADENCE-101";
+    canvasStore.knownParticipantsByEnrollmentId = {
+      [enrollmentId]: {
+        id: PARTICIPANT_UUID,
+        subject_id: "SUBJ-ENR-42",
+        site_id: "SITE-102",
+        enrollment_ref: enrollmentRef,
+      } as never,
+    };
+
+    const resolved = resolveActiveWorkspaceScope({
+      params: { studyCode: "CADENCE-101" },
+      query: { participant: enrollmentRef },
+    });
+    expect(resolved.studyCode).toBe("CADENCE-101");
+    expect(resolved.siteId).toBe("SITE-102");
+    expect(resolved.subjectCode).toBe("SUBJ-ENR-42");
+    expect(resolved.participantRef).toBe(enrollmentRef);
+
+    const unresolved = resolveActiveWorkspaceScope({
+      params: { studyCode: "CADENCE-101" },
+      query: {
+        subjectId: "enrollment:0192f3c4-5e6a-7b8c-9d0e-000000000000",
+      },
+    });
+    expect(unresolved.subjectCode).toBe("");
   });
 });

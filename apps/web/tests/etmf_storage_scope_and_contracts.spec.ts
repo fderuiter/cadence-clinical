@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { mount, flushPromises } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { createRouter, createMemoryHistory } from "vue-router";
+import { hasRegisteredUnsavedDrafts, resetDraftSourcesForTests } from "ui";
 import DocumentManagerView from "../src/views/DocumentManagerView.vue";
 import StudyCanvasView from "../src/views/StudyCanvasView.vue";
 import DocumentGrid from "../src/components/etmf/DocumentGrid.vue";
@@ -377,23 +378,23 @@ describe("eTMF binary storage, scope propagation, role gates, and mapped contrac
     });
     const store = useEtmfStore();
     await store.fetchBinderTree("CADENCE-101");
-    store.documentsList = [
-      {
-        id: "DOC-DRAFT-1",
-        study_id: "CADENCE-101",
-        site_id: "SITE-101",
-        zone: 1,
-        section: "01.01",
-        artifact_code: "01.01.01",
-        artifact_type: "Clinical Trial Protocol",
-        filename: "draft_protocol.pdf",
-        mime_type: "application/pdf",
-        status: "DRAFT",
-        version_index: 1,
-        created_by: "crc.coord",
-        created_at: "2026-11-22T10:00:00Z",
-      },
-    ];
+    const piDraftDoc = {
+      id: "DOC-DRAFT-1",
+      study_id: "CADENCE-101",
+      site_id: "SITE-101",
+      zone: 1,
+      section: "01.01",
+      artifact_code: "01.01.01",
+      artifact_type: "Clinical Trial Protocol",
+      filename: "draft_protocol.pdf",
+      mime_type: "application/pdf",
+      status: "DRAFT",
+      version_index: 1,
+      created_by: "crc.coord",
+      created_at: "2026-11-22T10:00:00Z",
+    };
+    getDocsSpy.mockResolvedValue([piDraftDoc]);
+    store.documentsList = [piDraftDoc];
     const tagSpy = vi.spyOn(etmfService, "tagDocument").mockResolvedValue({
       ...store.documentsList[0],
       artifact_code: "01.01.02",
@@ -534,7 +535,7 @@ describe("eTMF binary storage, scope propagation, role gates, and mapped contrac
       studyIds: ["CADENCE-101"],
     });
 
-    // Verify all 8 unmapped legacy helpers are pruned from etmfService
+    // Verify all unmapped legacy helpers are pruned from etmfService
     const prunedKeys = [
       "getArchivalStatus",
       "autoFile",
@@ -542,6 +543,8 @@ describe("eTMF binary storage, scope propagation, role gates, and mapped contrac
       "getEmsExportUrl",
       "verifyAuditChain",
       "verifyDocumentSignature",
+      "getCompleteness",
+      "signDocument",
     ];
     for (const key of prunedKeys) {
       expect(key in etmfService).toBe(false);
@@ -586,6 +589,11 @@ describe("eTMF binary storage, scope propagation, role gates, and mapped contrac
       "blob:stored-regulated-pdf"
     );
     expect(modal.find("#pdf-preview-sha256").text()).toBe("a".repeat(64));
+    expect(modal.find(".gxp-tracking-subtitle").text()).not.toContain(
+      "DOC-BIN-77"
+    );
+    expect(modal.find(".metadata-sidebar").text()).toContain("Approved");
+    expect(modal.find(".metadata-sidebar").text()).toContain("DOC-BIN-77");
     expect(modal.text()).toContain("USER: auditor.jane");
     expect(modal.text()).toContain("FINAL APPROVED");
     expect(modal.text()).not.toContain("MOCK-SHA256-VALIDATED-INTEGRITY-OK");
@@ -593,5 +601,123 @@ describe("eTMF binary storage, scope propagation, role gates, and mapped contrac
     expect(modal.text()).not.toContain("TIN-REDACTED-0000");
 
     modal.unmount();
+  });
+
+  it("clears cached rows on study/site switches, forwards site_id on binder export, opens PdfPreviewModal from CraQcQueue, and registers unsaved draft guards", async () => {
+    resetDraftSourcesForTests();
+    signInAs(useAuthStore(), ["CRA"], {
+      username: "cra.lead",
+      studyIds: ["CADENCE-101", "CADENCE-202"],
+      siteIds: ["SITE-101", "SITE-102"],
+    });
+
+    const store = useEtmfStore();
+    store.setScope("CADENCE-101", "SITE-101");
+    store.documentsList = [
+      {
+        id: "DOC-S101",
+        study_id: "CADENCE-101",
+        site_id: "SITE-101",
+        filename: "site_101_1572.pdf",
+        artifact_code: "05.02.01",
+        status: "APPROVED",
+      },
+    ];
+    store.qcQueue = [
+      {
+        document_id: "DOC-QC-101",
+        study_id: "CADENCE-101",
+        site_id: "SITE-101",
+        filename: "staged_1572.pdf",
+        status: "TECHNICAL_QC",
+      },
+    ];
+    store.activeDocument = store.documentsList[0];
+    store.setSelectedDocumentIds(["DOC-S101"]);
+
+    const exportSpy = vi
+      .spyOn(etmfService, "exportDocuments")
+      .mockResolvedValue({
+        mode: "job",
+        job: {
+          job_id: "JOB-SITE-101",
+          study_id: "CADENCE-101",
+          status: "PENDING",
+          progress_percentage: 0,
+        },
+      } as never);
+    vi.spyOn(etmfService, "getExportJob").mockResolvedValue({
+      job_id: "JOB-SITE-101",
+      study_id: "CADENCE-101",
+      status: "COMPLETED",
+      progress_percentage: 100,
+    } as never);
+
+    await store.triggerExport({ is_full_binder: true });
+    expect(exportSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        study_id: "CADENCE-101",
+        site_id: "SITE-101",
+        is_full_binder: true,
+      })
+    );
+
+    // Switching site clears cached documents, QC items, activeDocument, and selections
+    store.setScope("CADENCE-101", "SITE-102");
+    expect(store.documentsList).toEqual([]);
+    expect(store.qcQueue).toEqual([]);
+    expect(store.activeDocument).toBeNull();
+    expect(store.selectedDocumentIds).toEqual([]);
+
+    // CraQcQueue opens PdfPreviewModal before Part 11 sign-off and registers unsaved draft source
+    const qcItem = {
+      document_id: "DOC-QC-202",
+      study_id: "CADENCE-101",
+      site_id: "SITE-102",
+      filename: "site_102_cv.pdf",
+      status: "TECHNICAL_QC",
+      staged_by: "crc.site102",
+      staged_at: "2026-11-23T08:00:00Z",
+      intelligence_report: {
+        confidence_tier: "HIGH",
+        primary_classification: {
+          zone: 5,
+          section: "05.02",
+          artifact_code: "05.02.03",
+          artifact_type: "Investigator CV",
+          confidence: 0.94,
+        },
+      },
+      discrepancy_notes: [],
+    };
+    vi.spyOn(etmfService, "getQcQueue").mockResolvedValue([qcItem] as never);
+    vi.spyOn(etmfService, "downloadDocumentContent").mockResolvedValue({
+      blob: new Blob(["%PDF-1.7 QC preview bytes"], {
+        type: "application/pdf",
+      }),
+      mimeType: "application/pdf",
+      sha256: "b".repeat(64),
+    });
+
+    const qcWrapper = mount(CraQcQueue, {
+      global: { plugins: [pinia] },
+    });
+    await flushPromises();
+    expect(qcWrapper.text()).toContain("94% High");
+
+    await qcWrapper.find(".btn-inspect-qc").trigger("click");
+    await flushPromises();
+    expect(hasRegisteredUnsavedDrafts()).toBe(false);
+
+    await qcWrapper.find("#qc-artifact-code-override").setValue("05.02.01");
+    await flushPromises();
+    expect(hasRegisteredUnsavedDrafts()).toBe(true);
+
+    await qcWrapper.find("#btn-qc-preview-pdf").trigger("click");
+    await flushPromises();
+    expect(qcWrapper.findComponent(PdfPreviewModal).exists()).toBe(true);
+
+    qcWrapper.unmount();
+    resetDraftSourcesForTests();
   });
 });

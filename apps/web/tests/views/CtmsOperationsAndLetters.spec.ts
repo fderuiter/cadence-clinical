@@ -195,6 +195,24 @@ describe("CtmsMonitoringSection in live CTMS workspace: structured findings, com
     expect(wrapper.find("#ctms-compiled-letters-container").text()).toContain(
       "ETMF-LTR-001"
     );
+    const letterEntityChip = wrapper.find(
+      "#ctms-compiled-letters-container .clinical-entity-link"
+    );
+    expect(letterEntityChip.exists()).toBe(true);
+    await letterEntityChip.trigger("click");
+    await flushPromises();
+    expect(wrapper.find(".entity-peek-body").exists()).toBe(true);
+    expect(wrapper.find(".entity-peek-body").text()).toContain("05.04.01");
+    expect(wrapper.find(".entity-peek-body").text()).toContain(
+      "Zone 5: Site Management"
+    );
+    const previewPdfBtn = wrapper.find(
+      '[data-testid="btn-preview-letter-pdf-LTR-ABCD1234"]'
+    );
+    expect(previewPdfBtn.exists()).toBe(true);
+    await previewPdfBtn.trigger("click");
+    await flushPromises();
+    expect(wrapper.find(".pdf-preview-modal").exists()).toBe(true);
   });
 
   it("allows Monitor role to perform supervisory visit sign-off while gating CRA scheduling and letter compilation", async () => {

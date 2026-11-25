@@ -397,6 +397,14 @@ describe("CTMS site activation and live workspaces (Execution + CTMS)", () => {
     expect(wrapper.find("#site-activation-explanation").text()).toContain(
       "IRB approval, Signed 1572"
     );
+
+    const firstEntityChip = wrapper.find(
+      "#site-missing-documents .clinical-entity-link"
+    );
+    expect(firstEntityChip.exists()).toBe(true);
+    await firstEntityChip.trigger("click");
+    expect(wrapper.find(".entity-peek-body").exists()).toBe(true);
+    expect(wrapper.find(".entity-peek-body").text()).toContain("04.02.01");
   });
 
   it("says eTMF has not confirmed a site it reported nothing for", async () => {

@@ -509,6 +509,7 @@
               :key="`docs-${studyCode}`"
               :study-id="studyCode"
               :site-id="siteFilter"
+              @dirty-change="documentsWorkspaceDirty = $event"
             />
             <p
               v-else
@@ -1714,6 +1715,7 @@ const queryChangedFilter = computed(() => {
 
 const loadedForm = ref<EcrfForm | null>(null);
 const formWorkspaceDirty = ref(false);
+const documentsWorkspaceDirty = ref(false);
 const observationWorkspaceDirty = ref(false);
 const observationViewRef = ref<{ discardCorrection?: () => void } | null>(null);
 const loadedObservation = ref<KernelObservation | null>(null);
@@ -2699,6 +2701,7 @@ watch(
       return;
     }
     formWorkspaceDirty.value = false;
+    documentsWorkspaceDirty.value = false;
     observationWorkspaceDirty.value = false;
     loadedForm.value = null;
     loadedObservation.value = null;
@@ -2876,6 +2879,15 @@ watch(openObservationRef, (refText) => {
   }
 });
 
+watch(
+  () => section.value?.id,
+  (secId) => {
+    if (secId !== "documents") {
+      documentsWorkspaceDirty.value = false;
+    }
+  }
+);
+
 const autoCollapseNavigator = computed(
   () =>
     isMediumCanvasViewport.value &&
@@ -2986,8 +2998,23 @@ watch(
 
 const UNSAVED_FORM_CONFIRM_MESSAGE =
   "You have unsaved eCRF draft changes. Are you sure you want to leave?";
+const UNSAVED_ETMF_CONFIRM_MESSAGE =
+  "You have unsaved eTMF upload, taxonomy, or quality control draft changes. Are you sure you want to leave?";
 const UNSAVED_OBSERVATION_CONFIRM_MESSAGE =
   "You have an unsaved observation correction. Leave without saving?";
+
+function leavesActiveDocuments(to: RouteLocationNormalized): boolean {
+  const nextStudyCode = single(to.params.studyCode).trim();
+  if (!nextStudyCode || nextStudyCode !== studyCode.value) return true;
+  if (parseNodeRef(to.query.proposal)?.kind === "proposal") return true;
+  if (observationNodeRef(single(to.query.observation))) return true;
+  if (single(to.query.form).trim()) return true;
+  const nextStage = single(to.query.stage).trim() || "start";
+  const nextSection = single(to.query.section).trim();
+  if (nextStage !== "start" || nextSection !== "documents") return true;
+  const nextSite = single(to.query.site ?? to.query.siteId).trim();
+  return nextSite !== siteFilter.value;
+}
 
 function leavesActiveForm(to: RouteLocationNormalized): boolean {
   const nextStudyCode = single(to.params.studyCode).trim();
@@ -3026,7 +3053,10 @@ function leavesActiveObservation(to: RouteLocationNormalized): boolean {
 }
 
 useUnsavedNavigationGuard({
-  isDirty: () => formWorkspaceDirty.value || observationWorkspaceDirty.value,
+  isDirty: () =>
+    formWorkspaceDirty.value ||
+    observationWorkspaceDirty.value ||
+    documentsWorkspaceDirty.value,
   guardSignOut: false,
   dialogCopy: (to, from) => {
     const sameStudyRoute = Boolean(to.name && to.name === from.name);
@@ -3051,15 +3081,30 @@ useUnsavedNavigationGuard({
         cancelLabel: "Stay on Form",
       };
     }
+    const leavingDocs =
+      documentsWorkspaceDirty.value &&
+      (!sameStudyRoute || leavesActiveDocuments(to));
+    if (leavingDocs) {
+      return {
+        title: "Unsaved eTMF Changes",
+        message: UNSAVED_ETMF_CONFIRM_MESSAGE,
+        confirmLabel: "Leave Without Saving",
+        cancelLabel: "Stay in Documents",
+      };
+    }
     return null;
   },
   shouldPromptOnUpdate: (to) =>
     (observationWorkspaceDirty.value && leavesActiveObservation(to)) ||
-    (formWorkspaceDirty.value && leavesActiveForm(to)),
+    (formWorkspaceDirty.value && leavesActiveForm(to)) ||
+    (documentsWorkspaceDirty.value && leavesActiveDocuments(to)),
   onConfirmedDiscard: () => {
     if (observationWorkspaceDirty.value) {
       observationViewRef.value?.discardCorrection?.();
       observationWorkspaceDirty.value = false;
+    }
+    if (documentsWorkspaceDirty.value) {
+      documentsWorkspaceDirty.value = false;
     }
   },
 });
@@ -3442,6 +3487,7 @@ watch(
 
 function handleDemoReset() {
   formWorkspaceDirty.value = false;
+  documentsWorkspaceDirty.value = false;
   observationWorkspaceDirty.value = false;
   loadedForm.value = null;
   loadedObservation.value = null;

@@ -1711,6 +1711,7 @@
       :is-open="showSignModal"
       :username="currentUserId"
       :action-url="signActionUrl"
+      :on-sign="submitDemoDocumentSignOff"
       @cancel="handleSignCancel"
       @success="handleSignSuccess"
     />
@@ -1721,6 +1722,8 @@
 import { ref, reactive, computed, onMounted } from "vue";
 import { useAuthStore } from "../stores/auth";
 import { auditorService } from "../api/auditor";
+import { getBaseUrl } from "../api/client";
+import { encodeChangeReason } from "../api/changeReason";
 import { etmfService } from "../api/etmf";
 import SignatureCaptureModal from "../components/SignatureCaptureModal.vue";
 import { useToastStore } from "../stores/toasts.js";
@@ -1753,6 +1756,44 @@ function openSignModal(doc) {
 function handleSignCancel() {
   showSignModal.value = false;
   docToSign.value = null;
+}
+
+async function submitDemoDocumentSignOff(sigToken, signingReason) {
+  if (!docToSign.value) {
+    throw new Error("No document selected for sign-off.");
+  }
+  const token = authStore.token || authStore.accessToken;
+  const headers = {
+    "Content-Type": "application/json",
+    "X-Change-Reason": encodeChangeReason(
+      `Part 11 Document Sign-off: Reason - ${signingReason}`
+    ),
+  };
+  if (sigToken) {
+    headers["X-Sig-Token"] = sigToken;
+  }
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+  const response = await fetch(
+    `${getBaseUrl()}/api/v1/etmf/documents/${encodeURIComponent(docToSign.value.id)}/sign-off`,
+    {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ signing_reason: signingReason }),
+    }
+  );
+  if (!response.ok) {
+    const errData = await response.json().catch(() => ({}));
+    const error = new Error(
+      errData?.detail ||
+        errData?.message ||
+        `Document sign-off failed (${response.status})`
+    );
+    error.response = { status: response.status, data: errData };
+    throw error;
+  }
+  return response.json();
 }
 
 async function handleSignSuccess(updatedDoc) {
@@ -2257,14 +2298,31 @@ async function checkCompleteness() {
   completenessResult.value = null;
 
   try {
-    const params = {
+    const query = new URLSearchParams({
       study_id: completenessParams.study_id.trim(),
       milestone: completenessParams.milestone,
-    };
+    });
     if (completenessParams.site_id.trim()) {
-      params.site_id = completenessParams.site_id.trim();
+      query.set("site_id", completenessParams.site_id.trim());
     }
-    const res = await etmfService.getCompleteness(params);
+    const token = authStore.token || authStore.accessToken;
+    const headers = {};
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+    const response = await fetch(
+      `${getBaseUrl()}/api/v1/etmf/completeness?${query.toString()}`,
+      { headers }
+    );
+    if (!response.ok) {
+      const errJson = await response.json().catch(() => ({}));
+      throw new Error(
+        errJson?.detail ||
+          errJson?.message ||
+          `Completeness check failed (${response.status})`
+      );
+    }
+    const res = await response.json();
     completenessResult.value = res;
     // Refresh audit logs since the completeness check creates an audit trail entry
     await fetchAuditLogs();

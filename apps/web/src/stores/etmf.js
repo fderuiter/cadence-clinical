@@ -337,32 +337,66 @@ export const useEtmfStore = defineStore("etmf", {
   },
 
   actions: {
+    clearScopedData() {
+      this.documentsList = [];
+      this.qcQueue = [];
+      this.activeDocument = null;
+      this.selectedDocumentIds = [];
+      this.scopeForbiddenGuidance = "";
+      this.documentsError = "";
+    },
+
+    resetSessionScope(useDemoDefaults = false) {
+      this.currentSiteId = "";
+      this.clearScopedData();
+      if (useDemoDefaults) {
+        this.currentStudyId = DEMO_STUDY.code || "";
+        if (typeof window !== "undefined" && window.localStorage) {
+          const stored = window.localStorage.getItem("demo_documents");
+          if (stored) {
+            try {
+              this.documentsList = JSON.parse(stored);
+              return;
+            } catch {
+              // Fall back to default demo documents if stored JSON is invalid
+            }
+          }
+        }
+        this.documentsList = getDefaultDocuments();
+      } else {
+        this.currentStudyId = "";
+      }
+    },
+
     setScope(studyId, siteId) {
+      let studyChanged = false;
+      let siteChanged = false;
+      let nextStudy = this.currentStudyId;
       if (studyId !== undefined && studyId !== null) {
-        const nextStudy = String(studyId).trim();
+        nextStudy = String(studyId).trim();
         if (nextStudy !== this.currentStudyId) {
           this.currentStudyId = nextStudy;
-          this.scopeForbiddenGuidance = "";
-          this.documentsError = "";
-        }
-        if (nextStudy) {
-          syncActiveStudyScope(nextStudy);
+          studyChanged = true;
         }
       }
       if (siteId !== undefined && siteId !== null) {
         const nextSite = String(siteId).trim();
         if (nextSite !== this.currentSiteId) {
           this.currentSiteId = nextSite;
-          this.scopeForbiddenGuidance = "";
-          this.documentsError = "";
+          siteChanged = true;
         }
+      }
+      if (studyChanged || siteChanged) {
+        this.clearScopedData();
+      }
+      if (studyId !== undefined && studyId !== null && nextStudy) {
+        syncActiveStudyScope(nextStudy);
       }
     },
 
     async fetchBinderTree(studyId) {
       if (typeof studyId === "string" && studyId.trim()) {
-        this.currentStudyId = studyId.trim();
-        syncActiveStudyScope(this.currentStudyId);
+        this.setScope(studyId.trim());
       } else if (!this.currentStudyId && isDemoBuild() && DEMO_STUDY.code) {
         this.currentStudyId = DEMO_STUDY.code;
         syncActiveStudyScope(this.currentStudyId);
@@ -1150,6 +1184,10 @@ export const useEtmfStore = defineStore("etmf", {
       if (typeof window !== "undefined" && window.localStorage) {
         window.localStorage.removeItem("demo_documents");
       }
+      this.currentStudyId =
+        isDemoBuild() && DEMO_STUDY.code ? DEMO_STUDY.code : "";
+      this.currentSiteId = "";
+      this.clearScopedData();
       this.documentsList = getDefaultDocuments();
     },
 
@@ -1317,7 +1355,7 @@ export const useEtmfStore = defineStore("etmf", {
           override_artifact_code,
           discrepancy_comment,
         });
-        await this.fetchQcQueue(this.currentStudyId);
+        await this.fetchQcQueue(this.currentStudyId, this.currentSiteId);
         await this.fetchDocuments(this.selectedArtifactId);
         return res;
       } catch (err) {
@@ -1381,6 +1419,8 @@ export const useEtmfStore = defineStore("etmf", {
     async triggerExport(payload) {
       const fullPayload = {
         study_id: this.currentStudyId || null,
+        site_code: this.currentSiteId || null,
+        site_id: this.currentSiteId || null,
         ...payload,
       };
 

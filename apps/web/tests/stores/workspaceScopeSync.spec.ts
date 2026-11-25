@@ -334,4 +334,27 @@ describe("workspaceScope cross-view synchronization", () => {
     );
     overviewWrapper.unmount();
   });
+
+  it("clears cached eTMF documents and QC items when syncWorkspaceScope changes site within the same study", async () => {
+    const { useEtmfStore } = await import("../../src/stores/etmf");
+    const etmfStore = useEtmfStore();
+    syncWorkspaceScope({ studyId: "CADENCE-ETMF-01", siteId: "SITE-101" });
+    etmfStore.documentsList = [
+      {
+        id: "DOC-101",
+        study_id: "CADENCE-ETMF-01",
+        site_id: "SITE-101",
+        filename: "site101_1572.pdf",
+      },
+    ];
+    etmfStore.qcQueue = [{ id: "DOC-101", filename: "site101_1572.pdf" }];
+    etmfStore.selectedDocumentIds = ["DOC-101"];
+
+    syncWorkspaceScope({ studyId: "CADENCE-ETMF-01", siteId: "SITE-102" });
+    expect(etmfStore.currentStudyId).toBe("CADENCE-ETMF-01");
+    expect(etmfStore.currentSiteId).toBe("SITE-102");
+    expect(etmfStore.documentsList).toEqual([]);
+    expect(etmfStore.qcQueue).toEqual([]);
+    expect(etmfStore.selectedDocumentIds).toEqual([]);
+  });
 });

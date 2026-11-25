@@ -243,7 +243,8 @@
               Math.round(
                 row.intelligence_report.primary_classification.confidence * 100
               )
-            }}% {{ row.intelligence_report.confidence_tier }}
+            }}%
+            {{ formatClinicalEnum(row.intelligence_report.confidence_tier) }}
           </span>
         </template>
         <template #cell-discrepancies="{ row }">
@@ -516,60 +517,84 @@
         <div
           style="
             display: flex;
-            justify-content: flex-end;
+            justify-content: space-between;
+            align-items: center;
             gap: 8px;
             border-top: 1px solid var(--border);
             padding-top: 12px;
           "
         >
           <button
+            id="btn-qc-preview-pdf"
             type="button"
-            class="btn btn-secondary"
+            class="btn btn-secondary btn-preview-qc-pdf"
             style="font-size: 12px"
-            @click="inspectedItem = null"
+            @click="openQcPdfPreview(inspectedItem)"
           >
-            Cancel
+            Preview Regulated PDF
           </button>
-          <button
-            type="button"
-            class="btn btn-danger btn-reject-qc"
-            style="font-size: 12px"
-            :disabled="
-              !canReviewQc || !reviewReason || reviewReason.length < 10
-            "
-            :title="!canReviewQc ? ETMF_QC_REVIEW_ROLE_REASON : undefined"
-            @click="submitDecision('REJECT')"
-          >
-            Reject
-          </button>
-          <button
-            type="button"
-            class="btn btn-primary btn-accept-qc"
-            style="font-size: 12px"
-            :disabled="
-              !canReviewQc || !reviewReason || reviewReason.length < 10
-            "
-            :title="!canReviewQc ? ETMF_QC_REVIEW_ROLE_REASON : undefined"
-            @click="
-              submitDecision(overrideArtifactCode ? 'OVERRIDE' : 'ACCEPT')
-            "
-          >
-            {{
-              overrideArtifactCode
-                ? "Override Tag & Approve"
-                : "Accept & Approve"
-            }}
-          </button>
+          <div style="display: flex; justify-content: flex-end; gap: 8px">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              style="font-size: 12px"
+              @click="inspectedItem = null"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              class="btn btn-danger btn-reject-qc"
+              style="font-size: 12px"
+              :disabled="
+                !canReviewQc || !reviewReason || reviewReason.length < 10
+              "
+              :title="!canReviewQc ? ETMF_QC_REVIEW_ROLE_REASON : undefined"
+              @click="submitDecision('REJECT')"
+            >
+              Reject
+            </button>
+            <button
+              type="button"
+              class="btn btn-primary btn-accept-qc"
+              style="font-size: 12px"
+              :disabled="
+                !canReviewQc || !reviewReason || reviewReason.length < 10
+              "
+              :title="!canReviewQc ? ETMF_QC_REVIEW_ROLE_REASON : undefined"
+              @click="
+                submitDecision(overrideArtifactCode ? 'OVERRIDE' : 'ACCEPT')
+              "
+            >
+              {{
+                overrideArtifactCode
+                  ? "Override Tag & Approve"
+                  : "Accept & Approve"
+              }}
+            </button>
+          </div>
         </div>
       </div>
     </div>
+
+    <PdfPreviewModal
+      v-if="previewDoc"
+      :document="previewDoc"
+      @close="previewDoc = null"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from "vue";
-import { ClinicalDataTable, ClinicalInput, useFocusTrap } from "ui";
+import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
+import {
+  ClinicalDataTable,
+  ClinicalInput,
+  registerDraftSource,
+  useFocusTrap,
+} from "ui";
 import SupportDetails from "../canvas/SupportDetails.vue";
+import PdfPreviewModal from "./PdfPreviewModal.vue";
 import { useEtmfStore } from "../../stores/etmf.js";
 import { useAuthStore } from "../../stores/auth.js";
 import { useToastStore } from "../../stores/toasts.js";
@@ -577,6 +602,9 @@ import {
   canReviewEtmfQc,
   ETMF_QC_REVIEW_ROLE_REASON,
 } from "../../canvas/authority.ts";
+import { formatClinicalEnum } from "../../utils/clinicalLabels";
+
+const emit = defineEmits(["dirty-change"]);
 
 const etmfStore = useEtmfStore();
 const authStore = useAuthStore();
@@ -593,17 +621,43 @@ const canReviewQc = computed(
 );
 const queueError = ref("");
 
+const DEFAULT_BATCH_QC_REASON =
+  "Verified AI classifications against source regulatory document originals";
+const DEFAULT_ITEM_QC_REASON = "CRA QC review verified taxonomy metadata";
+
 const searchQuery = ref("");
 const selectedItemIds = ref([]);
 const showBatchModal = ref(false);
-const batchReason = ref(
-  "Verified AI classifications against source regulatory document originals"
-);
+const batchReason = ref(DEFAULT_BATCH_QC_REASON);
 const inspectedItem = ref(null);
-const reviewReason = ref("CRA QC review verified taxonomy metadata");
+const previewDoc = ref(null);
+const reviewReason = ref(DEFAULT_ITEM_QC_REASON);
 const overrideArtifactCode = ref("");
 const batchModalRef = ref(null);
 const inspectModalRef = ref(null);
+
+const isQcDirty = computed(() =>
+  Boolean(
+    (showBatchModal.value &&
+      batchReason.value.trim() !== DEFAULT_BATCH_QC_REASON) ||
+    (inspectedItem.value &&
+      (Boolean(overrideArtifactCode.value) ||
+        reviewReason.value.trim() !== DEFAULT_ITEM_QC_REASON))
+  )
+);
+
+const unregisterDraftSource = registerDraftSource({
+  flush: () => {},
+  hasDrafts: () => isQcDirty.value,
+});
+
+watch(
+  isQcDirty,
+  (dirty) => {
+    emit("dirty-change", dirty);
+  },
+  { immediate: true }
+);
 
 useFocusTrap(batchModalRef, {
   isOpen: () => showBatchModal.value,
@@ -614,10 +668,12 @@ useFocusTrap(batchModalRef, {
 });
 
 useFocusTrap(inspectModalRef, {
-  isOpen: () => Boolean(inspectedItem.value),
+  isOpen: () => Boolean(inspectedItem.value && !previewDoc.value),
   fallbackFocus: "#btn-refresh-qc-queue",
   onEscape: () => {
-    inspectedItem.value = null;
+    if (!previewDoc.value) {
+      inspectedItem.value = null;
+    }
   },
 });
 
@@ -733,8 +789,30 @@ async function executeBatchAccept() {
 
 function openInspectionModal(item) {
   inspectedItem.value = item;
-  reviewReason.value = "CRA QC review verified taxonomy metadata";
+  previewDoc.value = null;
+  reviewReason.value = DEFAULT_ITEM_QC_REASON;
   overrideArtifactCode.value = "";
+}
+
+function openQcPdfPreview(item) {
+  if (!item) return;
+  const docId = item.document_id || item.id;
+  const existing = etmfStore.documentsList.find((d) => d.id === docId);
+  const primary = item.intelligence_report?.primary_classification || {};
+  previewDoc.value = existing || {
+    id: docId,
+    study_id: item.study_id || etmfStore.currentStudyId,
+    site_id: item.site_id || etmfStore.currentSiteId || null,
+    filename: item.filename || docId,
+    mime_type: "application/pdf",
+    artifact_code: overrideArtifactCode.value || primary.artifact_code || "—",
+    artifact_type: primary.artifact_type || "Staged Regulatory Document",
+    version_index: 1,
+    status: item.status || "TECHNICAL_QC",
+    created_by: item.staged_by || "—",
+    created_at: item.staged_at || null,
+    reason_for_change: reviewReason.value || "",
+  };
 }
 
 async function submitDecision(decision) {
@@ -751,10 +829,11 @@ async function submitDecision(decision) {
       override_artifact_code: overrideArtifactCode.value || null,
     });
 
+    previewDoc.value = null;
     inspectedItem.value = null;
     toastStore.push({
       title: "QC Adjudication Submitted",
-      message: `QC Adjudication submitted for '${currentFilename || "document"}': ${decision}`,
+      message: `QC Adjudication submitted for '${currentFilename || "document"}': ${formatClinicalEnum(decision)}`,
       tone: "success",
     });
   } catch (err) {
@@ -767,12 +846,18 @@ watch(
   () => [etmfStore.currentStudyId, etmfStore.currentSiteId],
   () => {
     selectedItemIds.value = [];
+    previewDoc.value = null;
+    inspectedItem.value = null;
     loadQueue();
   }
 );
 
 onMounted(() => {
   loadQueue();
+});
+
+onBeforeUnmount(() => {
+  unregisterDraftSource();
 });
 </script>
 

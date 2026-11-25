@@ -27,14 +27,10 @@ const props = defineProps({
   },
 });
 
-// Provide a lightweight step-up service by default; lazy-load etmfService only when callers omit `onSign`.
+// Provide a lightweight step-up service by default; digital sign-off uses explicit `onSign` callbacks.
 provide("signatureService", {
   verifySignature(payload) {
     return requestStepUpSignature(payload);
-  },
-  async signDocument(documentId, payload, options) {
-    const { etmfService } = await import("../api/etmf");
-    return etmfService.signDocument(documentId, payload, options);
   },
 });
 

@@ -1,3 +1,4 @@
+import { getActivePinia } from "pinia";
 import { getCurrentInstance } from "vue";
 import * as VueRouter from "vue-router";
 import type {
@@ -5,6 +6,81 @@ import type {
   RouteLocationNormalizedLoaded,
   Router,
 } from "vue-router";
+import type { SubjectSummary } from "../api/executionApi";
+import { parseNodeRef } from "../canvas/nodeRef";
+
+export interface InstantiatedStudyCanvasSnapshot {
+  studyCode?: string;
+  knownParticipants?: Record<string, SubjectSummary>;
+  knownParticipantsByEnrollmentId?: Record<string, SubjectSummary>;
+  record?: { subjectCode?: string; enrollmentId?: string | null };
+  participantsFilter?: { siteId?: string };
+}
+
+export function readInstantiatedStudyCanvas(): InstantiatedStudyCanvasSnapshot | null {
+  const stateRoot = getActivePinia()?.state.value as
+    { studyCanvas?: InstantiatedStudyCanvasSnapshot } | undefined;
+  return stateRoot?.studyCanvas ?? null;
+}
+
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export function normalizeSubjectCodeValue(
+  value: unknown,
+  canvasStore?: Pick<
+    InstantiatedStudyCanvasSnapshot,
+    "knownParticipants" | "knownParticipantsByEnrollmentId"
+  > | null
+): string {
+  const raw = Array.isArray(value) ? value[0] : value;
+  if (typeof raw !== "string") return "";
+  const trimmed = raw.trim();
+  if (!trimmed) return "";
+
+  const parsed = parseNodeRef(trimmed);
+  let participantId = "";
+  let enrollmentId = "";
+  if (parsed) {
+    if (parsed.kind === "participant") {
+      participantId = parsed.id;
+    } else if (parsed.kind === "enrollment") {
+      enrollmentId = parsed.id;
+    } else {
+      return "";
+    }
+  } else if (trimmed.startsWith("participant:")) {
+    participantId =
+      trimmed.slice("participant:".length).split("@")[0]?.trim() || "";
+  } else if (trimmed.startsWith("enrollment:")) {
+    enrollmentId =
+      trimmed.slice("enrollment:".length).split("@")[0]?.trim() || "";
+  } else if (trimmed.includes(":")) {
+    return "";
+  } else if (UUID_PATTERN.test(trimmed)) {
+    participantId = trimmed;
+  }
+
+  if (enrollmentId || participantId) {
+    const instantiated = readInstantiatedStudyCanvas();
+    const resolved = enrollmentId
+      ? (canvasStore?.knownParticipantsByEnrollmentId?.[enrollmentId]
+          ?.subject_id ??
+        canvasStore?.knownParticipants?.[enrollmentId]?.subject_id ??
+        instantiated?.knownParticipantsByEnrollmentId?.[enrollmentId]
+          ?.subject_id ??
+        instantiated?.knownParticipants?.[enrollmentId]?.subject_id)
+      : (canvasStore?.knownParticipants?.[participantId]?.subject_id ??
+        canvasStore?.knownParticipantsByEnrollmentId?.[participantId]
+          ?.subject_id ??
+        instantiated?.knownParticipants?.[participantId]?.subject_id ??
+        instantiated?.knownParticipantsByEnrollmentId?.[participantId]
+          ?.subject_id);
+    return typeof resolved === "string" ? resolved.trim() : "";
+  }
+
+  return trimmed;
+}
 
 export interface RouteScopeQuery {
   studyId: string;
@@ -70,12 +146,14 @@ export function readRouteScopeQuery(
   return {
     studyId: readSingleQueryString(query, ["studyId", "study_id", "study"]),
     siteId: readSingleQueryString(query, ["siteId", "site_id", "site"]),
-    subjectId: readSingleQueryString(query, [
-      "subjectId",
-      "subject_id",
-      "subject",
-      "participant",
-    ]),
+    subjectId: normalizeSubjectCodeValue(
+      readSingleQueryString(query, [
+        "subjectId",
+        "subject_id",
+        "subject",
+        "participant",
+      ])
+    ),
     visitId: readSingleQueryString(query, ["visitId", "visit_id"]),
   };
 }
@@ -123,7 +201,14 @@ export async function replaceRouteQueryParams(
   for (const [key, raw] of Object.entries(currentQuery)) {
     const val = Array.isArray(raw) ? raw[0] : raw;
     if (typeof val === "string" && val.length > 0) {
-      nextQuery[key] = val;
+      if (key === "subjectId") {
+        const normalized = normalizeSubjectCodeValue(val);
+        if (normalized) {
+          nextQuery[key] = normalized;
+        }
+      } else {
+        nextQuery[key] = val;
+      }
     }
   }
 
@@ -132,7 +217,12 @@ export async function replaceRouteQueryParams(
     for (const alias of aliases) {
       delete nextQuery[alias];
     }
-    const trimmed = typeof raw === "string" ? raw.trim() : "";
+    const trimmed =
+      key === "subjectId"
+        ? normalizeSubjectCodeValue(raw)
+        : typeof raw === "string"
+          ? raw.trim()
+          : "";
     if (trimmed) {
       nextQuery[key] = trimmed;
     } else {

@@ -385,13 +385,14 @@
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, watch, onBeforeUnmount } from "vue";
 import {
   ClinicalDataTable,
   ClinicalDropzone,
   ClinicalIconButton,
   ClinicalInput,
   handoffFocus,
+  registerDraftSource,
   useFocusTrap,
 } from "ui";
 import SupportDetails from "../canvas/SupportDetails.vue";
@@ -423,7 +424,7 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(["close", "batch-completed"]);
+const emit = defineEmits(["close", "batch-completed", "dirty-change"]);
 
 const etmfStore = useEtmfStore();
 const authStore = useAuthStore();
@@ -439,6 +440,8 @@ const canStage = computed(
   () => !hasActiveAuth.value || canStageEtmfQc(authStore)
 );
 
+const DEFAULT_BATCH_REASON =
+  "Site regulatory documents batch ingestion for CRA Quality Control";
 const drawerRef = ref(null);
 const inspectionCardRef = ref(null);
 const queue = ref([]);
@@ -455,13 +458,37 @@ const queueColumns = [
   { key: "confidence", label: "Confidence" },
   { key: "action", label: "Action" },
 ];
-const reasonForChange = ref(
-  "Site regulatory documents batch ingestion for CRA Quality Control"
-);
+const reasonForChange = ref(DEFAULT_BATCH_REASON);
 const batchError = ref("");
 const isProcessing = ref(false);
 const inspectedItem = ref(null);
 const cancelRequested = ref(false);
+
+const isBatchDirty = computed(() =>
+  Boolean(
+    props.isOpen &&
+    (isProcessing.value ||
+      queue.value.some((item) => item.status !== "STAGED") ||
+      reasonForChange.value.trim() !== DEFAULT_BATCH_REASON)
+  )
+);
+
+const unregisterDraftSource = registerDraftSource({
+  flush: () => {},
+  hasDrafts: () => isBatchDirty.value,
+});
+
+watch(
+  isBatchDirty,
+  (dirty) => {
+    emit("dirty-change", dirty);
+  },
+  { immediate: true }
+);
+
+onBeforeUnmount(() => {
+  unregisterDraftSource();
+});
 
 const inspectedProvenanceRows = computed(() =>
   extractAiProvenanceAttributes(

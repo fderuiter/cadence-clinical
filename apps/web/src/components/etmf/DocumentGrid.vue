@@ -559,13 +559,19 @@
       :study-id="etmfStore.currentStudyId"
       :site-id="etmfStore.currentSiteId || null"
       @close="isBatchDrawerOpen = false"
+      @dirty-change="batchDrawerDirty = $event"
     />
   </div>
 </template>
 
 <script setup>
-import { ref, computed, watch, nextTick } from "vue";
-import { ClinicalDropzone, EmptyState, useFocusTrap } from "ui";
+import { ref, computed, watch, nextTick, onBeforeUnmount } from "vue";
+import {
+  ClinicalDropzone,
+  EmptyState,
+  registerDraftSource,
+  useFocusTrap,
+} from "ui";
 import { useEtmfStore, arrayBufferToBase64 } from "../../stores/etmf";
 import { useAuthStore } from "../../stores/auth";
 import { etmfService } from "../../api/etmf";
@@ -579,10 +585,12 @@ import {
   ETMF_TAG_ROLE_REASON,
   ETMF_EXPORT_ROLE_REASON,
 } from "../../canvas/authority.ts";
+import { formatClinicalStatus } from "../../utils/clinicalLabels";
 import BatchUploadDrawer from "./BatchUploadDrawer.vue";
 import SkeletonLoader from "../common/SkeletonLoader.vue";
 
 const isBatchDrawerOpen = ref(false);
+const batchDrawerDirty = ref(false);
 
 const props = defineProps({
   documents: {
@@ -595,7 +603,7 @@ const props = defineProps({
   },
 });
 
-defineEmits(["preview", "inspect"]);
+const emit = defineEmits(["preview", "inspect", "dirty-change"]);
 
 const etmfStore = useEtmfStore();
 const authStore = useAuthStore();
@@ -967,9 +975,39 @@ function getStatusClass(status) {
 }
 
 function formatStatus(status) {
-  const s = status || "DRAFT";
-  return s.toUpperCase().replace(/_/g, " ");
+  return formatClinicalStatus(status || "DRAFT");
 }
+
+const isGridDirty = computed(() =>
+  Boolean(
+    (showUploadModal.value &&
+      (Boolean(selectedFile.value) ||
+        reasonForChange.value.trim().length > 0)) ||
+    isEditing.value ||
+    batchDrawerDirty.value
+  )
+);
+
+const unregisterDraftSource = registerDraftSource({
+  flush: () => {},
+  hasDrafts: () => isGridDirty.value,
+});
+
+watch(
+  isGridDirty,
+  (dirty) => {
+    emit("dirty-change", dirty);
+  },
+  { immediate: true }
+);
+
+onBeforeUnmount(() => {
+  unregisterDraftSource();
+});
+
+defineExpose({
+  isGridDirty,
+});
 
 function formatDate(dateStr) {
   if (!dateStr) return "N/A";

@@ -67,6 +67,7 @@ export function syncWorkspaceScope(options: SyncWorkspaceScopeOptions): {
           {
             currentStudyId?: string;
             currentSiteId?: string;
+            clearScopedData?: () => void;
             selectedStudyId?: string;
             selectedSiteId?: string;
             activeStudyId?: string;
@@ -81,6 +82,8 @@ export function syncWorkspaceScope(options: SyncWorkspaceScopeOptions): {
   const explicitFlags = pinia ? getOrCreateExplicitFlags(pinia) : null;
   const etmfInstance = pinia?._s?.get("etmf");
   const clinicalInstance = pinia?._s?.get("clinical");
+  const prevEtmfStudy = cleanScopeString(etmfInstance?.currentStudyId);
+  const prevEtmfSite = cleanScopeString(etmfInstance?.currentSiteId);
 
   const prevStudy =
     cleanScopeString(scopeStore.activeStudyId) ||
@@ -146,6 +149,12 @@ export function syncWorkspaceScope(options: SyncWorkspaceScopeOptions): {
     }
     if (hasExplicitSite || studyChanged) {
       etmfInstance.currentSiteId = nextSite;
+    }
+    if (
+      cleanScopeString(etmfInstance.currentStudyId) !== prevEtmfStudy ||
+      cleanScopeString(etmfInstance.currentSiteId) !== prevEtmfSite
+    ) {
+      etmfInstance.clearScopedData?.();
     }
   }
 
@@ -294,8 +303,15 @@ export function clearSynchronizedWorkspaceScope(): void {
 
   const etmfInstance = pinia._s?.get("etmf");
   if (etmfInstance) {
-    etmfInstance.currentStudyId = "";
-    etmfInstance.currentSiteId = "";
+    if (typeof etmfInstance.resetSessionScope === "function") {
+      (etmfInstance.resetSessionScope as (useDemo: boolean) => void)(
+        demoDefaults
+      );
+    } else {
+      etmfInstance.currentStudyId = "";
+      etmfInstance.currentSiteId = "";
+      (etmfInstance.clearScopedData as (() => void) | undefined)?.();
+    }
   }
 }
 

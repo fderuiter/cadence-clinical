@@ -594,7 +594,10 @@ public class EtmfExportTests
     }
 
     /// <summary>A request signed by a CRA assigned to <paramref name="studies"/>.</summary>
-    private static DefaultHttpContext Caller(params string[] studies)
+    private static DefaultHttpContext Caller(params string[] studies) =>
+        CallerWithSites(["SITE-1"], studies);
+
+    private static DefaultHttpContext CallerWithSites(string[] sites, params string[] studies)
     {
         var context = new DefaultHttpContext();
         context.Items[GatewayAuthenticationHandler.PrincipalItemKey] = new Principal
@@ -602,9 +605,212 @@ public class EtmfExportTests
             UserId = "cra-1",
             Roles = ["cra"],
             AssignedStudies = studies,
-            AssignedSites = ["SITE-1"],
+            AssignedSites = sites,
         };
         return context;
+    }
+
+    [Fact]
+    public async Task ExportDocuments_SynchronousWithAuthorizedSiteId_PackagesOnlyMatchingSiteDocuments()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var options = new DbContextOptionsBuilder<EtmfDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+        await using var dbContext = new EtmfDbContext(options);
+
+        dbContext.TmfDocuments.AddRange(
+            TmfDocument.CreateApproved(
+                id: "DOC-SITE-1",
+                studyId: "STUDY-SITE",
+                filename: "Site1_1572.pdf",
+                createdBy: "cra-1",
+                createdAt: _clock.UtcNow.UtcDateTime,
+                reasonForChange: "Approved 1572 for Site 1",
+                siteId: " SITE-1 ",
+                zone: 5,
+                section: "05.02",
+                artifactCode: "05.02.02",
+                artifactType: "FDA Form 1572",
+                content: "Site 1 content",
+                mimeType: "application/pdf"),
+            TmfDocument.CreateApproved(
+                id: "DOC-SITE-2",
+                studyId: "STUDY-SITE",
+                filename: "Site2_1572.pdf",
+                createdBy: "cra-1",
+                createdAt: _clock.UtcNow.UtcDateTime,
+                reasonForChange: "Approved 1572 for Site 2",
+                siteId: "SITE-2",
+                zone: 5,
+                section: "05.02",
+                artifactCode: "05.02.02",
+                artifactType: "FDA Form 1572",
+                content: "Site 2 content",
+                mimeType: "application/pdf"),
+            TmfDocument.CreateApproved(
+                id: "DOC-STUDY-LEVEL",
+                studyId: "STUDY-SITE",
+                filename: "Master_Protocol.pdf",
+                createdBy: "cra-1",
+                createdAt: _clock.UtcNow.UtcDateTime,
+                reasonForChange: "Approved study protocol",
+                siteId: null,
+                zone: 1,
+                section: "01.01",
+                artifactCode: "01.01.01",
+                artifactType: "Protocol",
+                content: "Study protocol content",
+                mimeType: "application/pdf"));
+        await dbContext.SaveChangesAsync(ct);
+
+        var queue = new EtmfExportQueue();
+        var caller = CallerWithSites(["SITE-1", "SITE-2"], "STUDY-SITE");
+        var request = new ExportDocumentsRequest("STUDY-SITE", IsFullBinder: false, SiteCode: "site-1");
+
+        var result = await EtmfIntelligenceEndpoints.ExportDocuments(request, dbContext, queue, _clock, caller, ct);
+
+        var fileResult = result.Should().BeOfType<FileContentHttpResult>().Subject;
+        using var ms = new MemoryStream(fileResult.FileContents.ToArray());
+        await using var archive = new ZipArchive(ms, ZipArchiveMode.Read);
+
+        await using var manifestStream = await archive.GetEntry("manifest.json")!.OpenAsync(ct);
+        using var reader = new StreamReader(manifestStream);
+        var manifestText = await reader.ReadToEndAsync(ct);
+        manifestText.Should().Contain("DOC-SITE-1")
+            .And.NotContain("DOC-SITE-2")
+            .And.NotContain("DOC-STUDY-LEVEL");
+    }
+
+    [Fact]
+    public async Task ExportDocuments_WithUnauthorizedSiteId_Returns403ForbiddenScopeAndQueuesNothing()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var options = new DbContextOptionsBuilder<EtmfDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+        await using var dbContext = new EtmfDbContext(options);
+        var queue = new EtmfExportQueue();
+
+        var result = await EtmfIntelligenceEndpoints.ExportDocuments(
+            new ExportDocumentsRequest("STUDY-01", null, IsFullBinder: true, SiteCode: "SITE-99"),
+            dbContext,
+            queue,
+            _clock,
+            CallerWithSites(["SITE-1"], "STUDY-01"),
+            ct);
+
+        var problem = result.Should().BeOfType<ProblemHttpResult>().Subject;
+        problem.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
+        problem.ProblemDetails.Extensions["code"].Should().Be("FORBIDDEN_SCOPE");
+        (await dbContext.TmfExportJobs.CountAsync(ct)).Should().Be(0);
+        queue.TryDequeue(out _, out _).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task ExportDocuments_AsynchronousWithSiteId_WorkerPackagesOnlyMatchingSiteAndBlocksUnauthorizedAccess()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var options = new DbContextOptionsBuilder<EtmfDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+        await using var dbContext = new EtmfDbContext(options);
+
+        dbContext.TmfDocuments.AddRange(
+            TmfDocument.CreateApproved(
+                id: "DOC-ASYNC-S1",
+                studyId: "STUDY-ASYNC",
+                filename: "Site1_CV.pdf",
+                createdBy: "cra-1",
+                createdAt: _clock.UtcNow.UtcDateTime,
+                reasonForChange: "Approved CV for Site 1",
+                siteId: "SITE-1",
+                zone: 5,
+                section: "05.02",
+                artifactCode: "05.02.07",
+                artifactType: "Investigator CV",
+                content: "Site 1 CV",
+                mimeType: "application/pdf"),
+            TmfDocument.CreateApproved(
+                id: "DOC-ASYNC-S2",
+                studyId: "STUDY-ASYNC",
+                filename: "Site2_CV.pdf",
+                createdBy: "cra-1",
+                createdAt: _clock.UtcNow.UtcDateTime,
+                reasonForChange: "Approved CV for Site 2",
+                siteId: "SITE-2",
+                zone: 5,
+                section: "05.02",
+                artifactCode: "05.02.07",
+                artifactType: "Investigator CV",
+                content: "Site 2 CV",
+                mimeType: "application/pdf"));
+        await dbContext.SaveChangesAsync(ct);
+
+        var queue = new EtmfExportQueue();
+        var site1Caller = CallerWithSites(["SITE-1"], "STUDY-ASYNC");
+        var enqueueResult = await EtmfIntelligenceEndpoints.ExportDocuments(
+            new ExportDocumentsRequest("STUDY-ASYNC", null, IsFullBinder: true, SiteCode: "SITE-1"),
+            dbContext,
+            queue,
+            _clock,
+            site1Caller,
+            ct);
+
+        enqueueResult.GetType().GetGenericTypeDefinition().Should().Be(typeof(Accepted<>));
+        var jobId = await queue.DequeueAsync(ct);
+
+        var services = new ServiceCollection();
+        services.AddSingleton(dbContext);
+        services.AddSingleton<IClock>(_clock);
+        await using var provider = services.BuildServiceProvider();
+
+        var worker = new EtmfExportWorker(provider, queue, NullLogger<EtmfExportWorker>.Instance);
+        await worker.ProcessJobAsync(jobId, ct);
+
+        var completedJob = await dbContext.TmfExportJobs.AsNoTracking().SingleAsync(j => j.Id == jobId, ct);
+        completedJob.Status.Should().Be("COMPLETED");
+        completedJob.TotalDocuments.Should().Be(1);
+        completedJob.ProcessedDocuments.Should().Be(1);
+
+        var site2Caller = CallerWithSites(["SITE-2"], "STUDY-ASYNC");
+        var forbiddenGet = await EtmfIntelligenceEndpoints.GetExportJob(jobId, dbContext, site2Caller, ct);
+        forbiddenGet.GetType().Name.Should().StartWith("NotFound");
+
+        var forbiddenDownload = await EtmfIntelligenceEndpoints.DownloadExportJob(jobId, dbContext, _clock, site2Caller, ct);
+        forbiddenDownload.GetType().Name.Should().StartWith("NotFound");
+
+        var allowedDownload = await EtmfIntelligenceEndpoints.DownloadExportJob(jobId, dbContext, _clock, site1Caller, ct);
+        string tempZipPath = Path.Combine(Path.GetTempPath(), "etmf_exports", $"{jobId}.zip");
+        try
+        {
+            byte[] zipBytes;
+            if (allowedDownload is FileStreamHttpResult streamResult)
+            {
+                await using var stream = streamResult.FileStream;
+                using var copy = new MemoryStream();
+                await stream.CopyToAsync(copy, ct);
+                zipBytes = copy.ToArray();
+            }
+            else
+            {
+                zipBytes = allowedDownload.Should().BeOfType<FileContentHttpResult>().Subject.FileContents.ToArray();
+            }
+
+            using var archiveStream = new MemoryStream(zipBytes);
+            await using var archive = new ZipArchive(archiveStream, ZipArchiveMode.Read);
+            await using var manifestStream = await archive.GetEntry("manifest.json")!.OpenAsync(ct);
+            using var reader = new StreamReader(manifestStream);
+            var manifest = await reader.ReadToEndAsync(ct);
+            manifest.Should().Contain("DOC-ASYNC-S1").And.NotContain("DOC-ASYNC-S2");
+        }
+        finally
+        {
+            if (File.Exists(tempZipPath))
+            {
+                File.Delete(tempZipPath);
+            }
+        }
     }
 
     /// <summary>An export of a study the caller is not assigned to is refused, and queues nothing (#5361).</summary>

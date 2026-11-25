@@ -1,10 +1,5 @@
 import { encodeChangeReason } from "./changeReason";
-import {
-  ApiError,
-  createOpenApiClient,
-  openApiClient,
-  unwrapResponse,
-} from "./client";
+import { ApiError, createOpenApiClient, unwrapResponse } from "./client";
 import type { components, paths as EtmfPaths } from "./generated/etmf";
 import { requestStepUpSignature } from "./signatureVerification";
 
@@ -17,12 +12,6 @@ export interface EtmfDocumentParams {
   search?: string;
 }
 
-export interface EtmfCompletenessParams {
-  study_id?: string;
-  milestone?: string;
-  site_id?: string;
-}
-
 export interface SignatureVerificationPayload {
   username: string;
   password?: string;
@@ -31,16 +20,10 @@ export interface SignatureVerificationPayload {
   semanticAction?: string;
 }
 
-export interface DocumentSignOffPayload {
-  signingReason: string;
-}
-
-export interface SignOptions {
-  changeReason?: string;
-  sigToken?: string;
-}
-
-export type ExportDocumentsPayload = EtmfSchemas["Etmf_ExportDocumentsRequest"];
+export type ExportDocumentsPayload =
+  EtmfSchemas["Etmf_ExportDocumentsRequest"] & {
+    site_id?: string | null;
+  };
 
 export interface ExportJobStatus {
   job_id: string;
@@ -269,8 +252,9 @@ function normalizeQcStagingItem<T>(raw: T): T {
 
 export const etmfService = {
   async exportDocuments(payload: Partial<ExportDocumentsPayload>) {
-    const body: ExportDocumentsPayload = {
+    const body: EtmfSchemas["Etmf_ExportDocumentsRequest"] = {
       study_id: payload.study_id ?? null,
+      site_code: payload.site_code ?? payload.site_id ?? null,
       document_ids: payload.document_ids ?? null,
       zone: payload.zone ?? null,
       section: payload.section ?? null,
@@ -492,51 +476,11 @@ export const etmfService = {
     return normalizeTmfDocument(data);
   },
 
-  getCompleteness(
-    params: EtmfCompletenessParams = {},
-    options: Record<string, unknown> = {}
-  ) {
-    return unwrapResponse(
-      openApiClient.GET("/api/v1/etmf/completeness", {
-        params: {
-          query: {
-            study_id: params.study_id || "",
-            milestone: params.milestone || "",
-            site_id: params.site_id ?? null,
-          },
-        },
-        ...options,
-      })
-    );
-  },
-
   verifySignature(
     payload: SignatureVerificationPayload,
     options: Record<string, unknown> = {}
   ) {
     return requestStepUpSignature(payload, { requestOptions: options });
-  },
-
-  signDocument(
-    documentId: string,
-    { signingReason }: DocumentSignOffPayload,
-    { changeReason, sigToken }: SignOptions = {}
-  ) {
-    const headers: Record<string, string> = {};
-    if (sigToken) {
-      headers["X-Sig-Token"] = sigToken;
-    }
-    if (changeReason) {
-      headers["X-Change-Reason"] = encodeChangeReason(changeReason);
-    }
-
-    return unwrapResponse(
-      openApiClient.POST("/api/v1/etmf/documents/{document_id}/sign-off", {
-        params: { path: { document_id: documentId } },
-        body: { signing_reason: signingReason as never },
-        headers,
-      })
-    );
   },
 
   async classifyIntelligence(

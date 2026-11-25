@@ -618,6 +618,7 @@ export interface components {
       artifact_code?: null | string;
       /** @default false */
       is_full_binder: boolean;
+      site_code?: null | string;
     };
     Etmf_IngestDocumentRequest: {
       filename: string;

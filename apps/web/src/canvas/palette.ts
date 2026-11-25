@@ -9,9 +9,15 @@ import {
 import type { SubjectSummary } from "../api/executionApi";
 import { formatNodeRef, parseNodeRef, tryNodeRef } from "./nodeRef";
 import {
+  normalizeSubjectCodeValue,
+  readInstantiatedStudyCanvas,
+} from "../composables/useRouteScopeSync";
+import {
   isScreenAvailable,
   listDemoCatalogModules,
 } from "../router/availability.js";
+
+export { readInstantiatedStudyCanvas };
 import { ROLE_ALIASES } from "../stores/auth.js";
 import { getSyncedStudyScope } from "../stores/studyScopeBridge";
 import { isDemoBuild } from "../utils/demoMode.js";
@@ -68,13 +74,43 @@ export function syncInstantiatedClinicalScope(next: {
           activeSiteId?: string;
           activeSubjectId?: string;
         };
+        etmf?: {
+          currentStudyId?: string;
+          currentSiteId?: string;
+          documentsList?: unknown[];
+          qcQueue?: unknown[];
+          activeDocument?: unknown;
+          selectedDocumentIds?: unknown[];
+          scopeForbiddenGuidance?: string;
+          documentsError?: string;
+        };
       }
     | undefined;
   const scopeState = stateRoot?.clinicalScope;
-  if (!scopeState) return;
-  scopeState.activeStudyId = next.activeStudyId;
-  scopeState.activeSiteId = next.activeSiteId;
-  scopeState.activeSubjectId = next.activeSubjectId;
+  if (scopeState) {
+    scopeState.activeStudyId = next.activeStudyId;
+    scopeState.activeSiteId = next.activeSiteId;
+    scopeState.activeSubjectId = normalizeSubjectCodeValue(
+      next.activeSubjectId
+    );
+  }
+  const etmfState = stateRoot?.etmf;
+  if (etmfState) {
+    const prevStudy = (etmfState.currentStudyId || "").trim();
+    const prevSite = (etmfState.currentSiteId || "").trim();
+    const nextStudy = (next.activeStudyId || "").trim();
+    const nextSite = (next.activeSiteId || "").trim();
+    if (prevStudy !== nextStudy || prevSite !== nextSite) {
+      etmfState.currentStudyId = nextStudy;
+      etmfState.currentSiteId = nextSite;
+      etmfState.documentsList = [];
+      etmfState.qcQueue = [];
+      etmfState.activeDocument = null;
+      etmfState.selectedDocumentIds = [];
+      etmfState.scopeForbiddenGuidance = "";
+      etmfState.documentsError = "";
+    }
+  }
 }
 
 export type PaletteWorkspaceAction =
@@ -240,13 +276,14 @@ export function buildScopedWorkflowPath(
     cleanQueryString(fallbackClinical?.activeStudyId) === studyCode
       ? cleanQueryString(fallbackClinical?.activeSiteId)
       : "");
-  const subjectCode =
+  const subjectCode = normalizeSubjectCodeValue(
     scope?.subjectCode?.trim() ||
-    (scope === undefined &&
-    studyCode &&
-    cleanQueryString(fallbackClinical?.activeStudyId) === studyCode
-      ? cleanQueryString(fallbackClinical?.activeSubjectId)
-      : "");
+      (scope === undefined &&
+      studyCode &&
+      cleanQueryString(fallbackClinical?.activeStudyId) === studyCode
+        ? cleanQueryString(fallbackClinical?.activeSubjectId)
+        : "")
+  );
   if (!studyCode && !siteId && !subjectCode) return basePath;
   const params = new URLSearchParams();
   if (studyCode) params.set("studyId", studyCode);
@@ -578,6 +615,12 @@ export function resolveActiveWorkspaceScope(
     }>;
   } | null
 ): WorkspaceScopeSnapshot {
+  const effectiveCanvas =
+    canvasStore !== undefined
+      ? canvasStore
+      : !isDemoBuild()
+        ? readInstantiatedStudyCanvas()
+        : null;
   const effectiveClinical =
     clinicalStore !== undefined
       ? clinicalStore
@@ -613,7 +656,7 @@ export function resolveActiveWorkspaceScope(
     cleanQueryString(route?.query?.study);
   const routeStudy = routeParamStudy || routeQueryStudy;
 
-  const canvasStudy = cleanQueryString(canvasStore?.studyCode);
+  const canvasStudy = cleanQueryString(effectiveCanvas?.studyCode);
   const clinicalStudy = allowClinicalFallback
     ? cleanQueryString(effectiveClinical?.activeStudyId)
     : "";
@@ -647,16 +690,17 @@ export function resolveActiveWorkspaceScope(
       : undefined;
 
   let participantSite = "";
-  if (!routeSite && studyCode && canvasStore?.studyCode === studyCode) {
+  if (!routeSite && studyCode && effectiveCanvas?.studyCode === studyCode) {
     if (extractedRouteParticipantNode?.kind === "enrollment") {
       const known =
-        canvasStore.knownParticipantsByEnrollmentId?.[
+        effectiveCanvas.knownParticipantsByEnrollmentId?.[
           extractedRouteParticipantNode.id
-        ] ?? canvasStore.knownParticipants?.[extractedRouteParticipantNode.id];
+        ] ??
+        effectiveCanvas.knownParticipants?.[extractedRouteParticipantNode.id];
       participantSite = cleanQueryString(known?.site_id);
     } else if (extractedRouteParticipantNode?.kind === "participant") {
       participantSite = cleanQueryString(
-        canvasStore.knownParticipants?.[extractedRouteParticipantNode.id]
+        effectiveCanvas.knownParticipants?.[extractedRouteParticipantNode.id]
           ?.site_id
       );
     }
@@ -670,8 +714,8 @@ export function resolveActiveWorkspaceScope(
 
   let storeSite = "";
   if (!routeSite && studyCode) {
-    if (canvasStore?.studyCode === studyCode) {
-      storeSite = cleanQueryString(canvasStore.participantsFilter?.siteId);
+    if (effectiveCanvas?.studyCode === studyCode) {
+      storeSite = cleanQueryString(effectiveCanvas.participantsFilter?.siteId);
     }
     if (
       !storeSite &&
@@ -690,15 +734,17 @@ export function resolveActiveWorkspaceScope(
   const rawNodeParam = cleanQueryString(route?.query?.node);
   const parsedParticipantParam = parseNodeRef(rawParticipantParam);
   const parsedNodeParam = parseNodeRef(rawNodeParam);
-  const routeSubject =
+  const routeSubject = normalizeSubjectCodeValue(
     cleanQueryString(route?.query?.subjectId) ||
-    cleanQueryString(route?.query?.subject) ||
-    (!parsedParticipantParam && !rawParticipantParam.includes(":")
-      ? rawParticipantParam
-      : "");
+      cleanQueryString(route?.query?.subject) ||
+      (!parsedParticipantParam && !rawParticipantParam.includes(":")
+        ? rawParticipantParam
+        : ""),
+    effectiveCanvas
+  );
   const routeEnrollment = cleanQueryString(route?.query?.enrollmentId);
-  const canvasParticipant = canvasStore
-    ? resolveCanvasParticipantContext(studyCode, route?.query, canvasStore)
+  const canvasParticipant = effectiveCanvas
+    ? resolveCanvasParticipantContext(studyCode, route?.query, effectiveCanvas)
     : { subjectCode: "", participantRef: "", enrollmentId: "" };
 
   const rawClinicalSubject = cleanQueryString(
@@ -717,18 +763,20 @@ export function resolveActiveWorkspaceScope(
   const siteMatchesClinicalStore =
     !routeSite || !clinicalSiteId || clinicalSiteId === routeSite;
 
-  const subjectCode =
+  const subjectCode = normalizeSubjectCodeValue(
     routeSubject ||
-    canvasParticipant.subjectCode ||
-    resolvedNodeSubjectCode ||
-    (allowClinicalFallback &&
-    !hasExplicitStandaloneStudyQuery &&
-    !extractedRouteParticipantNode &&
-    siteMatchesClinicalStore &&
-    studyCode &&
-    cleanQueryString(effectiveClinical?.activeStudyId) === studyCode
-      ? verifiedClinicalSubject
-      : "");
+      canvasParticipant.subjectCode ||
+      resolvedNodeSubjectCode ||
+      (allowClinicalFallback &&
+      !hasExplicitStandaloneStudyQuery &&
+      !extractedRouteParticipantNode &&
+      siteMatchesClinicalStore &&
+      studyCode &&
+      cleanQueryString(effectiveClinical?.activeStudyId) === studyCode
+        ? verifiedClinicalSubject
+        : ""),
+    effectiveCanvas
+  );
 
   let participantRef =
     routeSubject && routeSubject !== canvasParticipant.subjectCode
@@ -748,10 +796,10 @@ export function resolveActiveWorkspaceScope(
     !participantRef &&
     subjectCode &&
     studyCode &&
-    canvasStore?.studyCode === studyCode &&
-    canvasStore.knownParticipants
+    effectiveCanvas?.studyCode === studyCode &&
+    effectiveCanvas.knownParticipants
   ) {
-    const matched = Object.values(canvasStore.knownParticipants).find(
+    const matched = Object.values(effectiveCanvas.knownParticipants).find(
       (item) => item?.subject_id === subjectCode
     );
     const refNode = canonicalParticipantNodeFromSummary(matched);

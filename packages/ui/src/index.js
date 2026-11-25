@@ -22,6 +22,7 @@ import ClinicalTabs from "./components/clinical/ClinicalTabs.vue";
 import ClinicalToastHost from "./components/clinical/ClinicalToastHost.vue";
 import ConfidenceBadge from "./components/clinical/ConfidenceBadge.vue";
 import EntityLink from "./components/clinical/EntityLink.vue";
+import EntityPeekDrawer from "./components/clinical/EntityPeekDrawer.vue";
 import PersonaSwitcher from "./components/clinical/PersonaSwitcher.vue";
 import SignOutConfirmModal from "./components/clinical/SignOutConfirmModal.vue";
 import EmptyState from "./components/common/EmptyState.vue";
@@ -78,6 +79,7 @@ export {
   ConfidenceBadge,
   EmptyState,
   EntityLink,
+  EntityPeekDrawer,
   FileUploadModal,
   MediaPlayer,
   ModalErrorAlert,
@@ -108,3 +110,11 @@ export {
   stripRawPermissionTokens,
   openEntityPeek,
 } from "./utils/entityPeekRegistry.js";
+export {
+  DIA_TMF_ARTIFACT_CATALOG,
+  buildEntityBinderUrl,
+  humanizeEntityStatus,
+  normalizeEntitySubjectCode,
+  resolveDiaArtifactMeta,
+  resolveEntityLinkDescriptor,
+} from "./components/clinical/entityLinkAdapter.js";

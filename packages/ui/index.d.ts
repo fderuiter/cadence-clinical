@@ -1188,23 +1188,126 @@ export interface ParsedNodeRef {
   displayLabel: string;
 }
 
+export interface DiaTmfArtifactMeta {
+  zone: number;
+  zoneName: string;
+  section: string;
+  sectionName: string;
+  artifactCode: string;
+  artifactName: string;
+}
+
+export interface EntityLinkDescriptor {
+  kind: "etmf-document" | "dia-artifact" | string;
+  kindLabel: string;
+  chipLabel: string;
+  title: string;
+  subtitle: string;
+  zoneLabel: string;
+  sectionLabel: string;
+  artifactCode: string;
+  artifactLabel: string;
+  filename: string;
+  documentId: string;
+  statusLabel: string;
+  statusTone: string;
+  studyId: string;
+  siteId: string;
+  subjectId: string;
+  versionLabel: string;
+  href: string;
+  query: Record<string, string>;
+  supportDetails: string;
+}
+
+export interface EntityPeekNavigatePayload {
+  href: string;
+  query: Record<string, string>;
+  descriptor: EntityLinkDescriptor;
+  originalEvent?: MouseEvent;
+}
+
+export type EntityLinkNavigatePayload = EntityPeekNavigatePayload;
+
+export const DIA_TMF_ARTIFACT_CATALOG: Readonly<
+  Record<string, Readonly<DiaTmfArtifactMeta>>
+>;
+
+export function normalizeEntitySubjectCode(raw: unknown): string;
+export function humanizeEntityStatus(raw: unknown): string;
+export function resolveDiaArtifactMeta(
+  codeOrName: unknown
+): DiaTmfArtifactMeta | null;
+export function buildEntityBinderUrl(options?: {
+  basePath?: string;
+  studyId?: string;
+  siteId?: string;
+  subjectId?: string;
+  artifactCode?: string;
+  documentId?: string;
+  tab?: string;
+}): string;
+export function resolveEntityLinkDescriptor(
+  input?: Record<string, any>
+): EntityLinkDescriptor;
+
+export const EntityPeekDrawer: DefineSlotsComponent<
+  {
+    isOpen?: boolean;
+    descriptor: EntityLinkDescriptor | Record<string, any>;
+    drawerId?: string;
+    openLabel?: string;
+    teleport?: boolean;
+    interceptNavigate?: boolean;
+    onClose?: () => void;
+    onNavigate?: (payload: EntityPeekNavigatePayload) => void;
+  },
+  {
+    default?: (props: { descriptor: EntityLinkDescriptor }) => any;
+    actions?: (props: { descriptor: EntityLinkDescriptor }) => any;
+  }
+>;
+
 export const EntityLink: DefineSlotsComponent<
   {
+    id?: string;
     nodeRef?: string | EntityLinkNodeRef | null;
     entityType?: string;
     entityId?: string;
     label?: string;
+    subtitle?: string;
     srContext?: string;
     href?: string;
     preventNavigation?: boolean;
     tabular?: boolean;
     compact?: boolean;
+    peekDrawer?: boolean;
+    document?: Record<string, any> | null;
+    documentId?: string;
+    artifactCode?: string;
+    artifactName?: string;
+    filename?: string;
+    status?: string;
+    studyId?: string;
+    siteId?: string;
+    subjectId?: string;
+    versionIndex?: number | string | null;
+    supportDetails?: string;
+    tab?: string;
+    openLabel?: string;
+    variant?: "chip" | "inline" | "plain" | string;
     showCode?: boolean;
+    teleport?: boolean;
+    disabled?: boolean;
     onPeek?: (payload: any) => void;
     onSelect?: (payload: any) => void;
+    "onOpen-peek"?: (descriptor: EntityLinkDescriptor) => void;
+    "onClose-peek"?: (descriptor: EntityLinkDescriptor) => void;
+    onNavigate?: (payload: EntityPeekNavigatePayload) => void;
   },
   {
-    default?: (props: Record<string, never>) => any;
+    default?: (props: { descriptor?: EntityLinkDescriptor }) => any;
+    actions?: (props: { descriptor: EntityLinkDescriptor }) => any;
   }
 >;
 

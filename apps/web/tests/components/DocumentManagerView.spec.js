@@ -5,6 +5,7 @@ import { createMemoryHistory, createRouter } from "vue-router";
 import DocumentManagerView from "../../src/views/DocumentManagerView.vue";
 import { etmfService } from "../../src/api/etmf";
 import { useAuthStore } from "../../src/stores/auth";
+import { useConfirmStore } from "../../src/stores/confirm";
 import { useEtmfStore } from "../../src/stores/etmf";
 import { useToastStore } from "../../src/stores/toasts";
 import TmfBinderTree from "../../src/components/etmf/TmfBinderTree.vue";
@@ -147,7 +148,7 @@ describe("DocumentManagerView.vue Component Integration Tests", () => {
     await wrapper.vm.$nextTick();
 
     expect(wrapper.find(".filename").text()).toBe("icf_v1.0_signed.pdf");
-    expect(wrapper.find(".status-badge").text()).toBe("APPROVED");
+    expect(wrapper.find(".status-badge").text()).toBe("Approved");
     expect(wrapper.findComponent(PdfPreviewModal).exists()).toBe(false);
 
     const grid = wrapper.findComponent(DocumentGrid);
@@ -228,6 +229,65 @@ describe("DocumentManagerView.vue Component Integration Tests", () => {
     ).toBeDefined();
   });
 
+  it("reloads scoped documents on mount when cached rows from another study exist and syncs tab, artifactCode, and documentId via router.replace", async () => {
+    const store = useEtmfStore(pinia);
+    store.currentStudyId = "STUDY-OLD";
+    store.currentSiteId = "SITE-OLD";
+    store.documentsList = [
+      {
+        id: "DOC-STALE",
+        study_id: "STUDY-OLD",
+        site_id: "SITE-OLD",
+        zone: 1,
+        section: "01.01",
+        artifact_code: "01.01.01",
+        artifact_type: "Clinical Trial Protocol",
+        filename: "stale_study_doc.pdf",
+        mime_type: "application/pdf",
+        status: "APPROVED",
+        version_index: 1,
+        created_by: "crc_old",
+        created_at: "2026-07-01T10:00:00Z",
+      },
+    ];
+
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: "/etmf", name: "etmf", component: DocumentManagerView }],
+    });
+    const replaceSpy = vi.spyOn(router, "replace");
+    await router.push(
+      "/etmf?studyId=CADENCE-101&siteId=SITE-101&artifactCode=01.01.01&documentId=DOC-100"
+    );
+    await router.isReady();
+
+    const wrapper = mount(
+      { template: "<router-view />" },
+      { global: { plugins: [pinia, router] } }
+    );
+    await flushPromises();
+
+    expect(etmfService.getDocuments).toHaveBeenCalledWith({
+      study_id: "CADENCE-101",
+      site_id: "SITE-101",
+    });
+    expect(wrapper.text()).not.toContain("stale_study_doc.pdf");
+    expect(wrapper.text()).toContain("protocol_v1_draft.pdf");
+
+    const view = wrapper.findComponent(DocumentManagerView);
+    expect(view.vm.inspectedDoc?.id).toBe("DOC-100");
+
+    await view.vm.closeInspectionDrawer();
+    await flushPromises();
+    expect(router.currentRoute.value.query.documentId).toBeUndefined();
+
+    await wrapper.find("#btn-etmf-tab-qc-queue").trigger("click");
+    await flushPromises();
+    expect(replaceSpy).toHaveBeenCalled();
+    expect(router.currentRoute.value.query.tab).toBe("qc-queue");
+    wrapper.unmount();
+  });
+
   it("queries GET /api/v1/etmf/documents?study_id=CADENCE-101 when opening /etmf?studyId=CADENCE-101 without falling back to STUDY-USDM-001 outside demo mode", async () => {
     const store = useEtmfStore(pinia);
     expect(store.currentStudyId).toBe("");
@@ -252,6 +312,66 @@ describe("DocumentManagerView.vue Component Integration Tests", () => {
     for (const [args] of vi.mocked(etmfService.getDocuments).mock.calls) {
       expect(args?.study_id).not.toBe("STUDY-USDM-001");
     }
+    wrapper.unmount();
+  });
+
+  it("guards dirty eTMF inspection drafts on route leave and cross-study updates without prompting on tab or artifact query sync (ADR-2671)", async () => {
+    const confirmStore = useConfirmStore(pinia);
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        { path: "/etmf", name: "etmf", component: DocumentManagerView },
+        {
+          path: "/overview",
+          name: "overview",
+          component: { template: "<div>Overview</div>" },
+        },
+      ],
+    });
+    await router.push("/etmf?studyId=CADENCE-101&documentId=DOC-100");
+    await router.isReady();
+
+    const wrapper = mount(
+      { template: "<router-view />" },
+      { global: { plugins: [pinia, router] } }
+    );
+    await flushPromises();
+
+    await wrapper
+      .find("#qc-accept-reason")
+      .setValue("Edited unsaved clinical QC note");
+    await flushPromises();
+
+    // In-place tab query sync within the same study/site does not prompt
+    await router.replace({
+      path: "/etmf",
+      query: {
+        ...router.currentRoute.value.query,
+        tab: "qc-queue",
+      },
+    });
+    await flushPromises();
+    expect(confirmStore.activeRequest).toBeNull();
+    expect(router.currentRoute.value.query.tab).toBe("qc-queue");
+
+    // Switching study prompts and cancels when operator chooses Stay in eTMF
+    const blockedNav = router.push("/etmf?studyId=CADENCE-202");
+    await flushPromises();
+    expect(confirmStore.activeRequest?.title).toBe("Unsaved eTMF Changes");
+    confirmStore.cancelConfirm();
+    await blockedNav.catch(() => {});
+    await flushPromises();
+    expect(router.currentRoute.value.query.studyId).toBe("CADENCE-101");
+
+    // Leaving /etmf proceeds once operator confirms Leave Without Saving
+    const allowedNav = router.push("/overview");
+    await flushPromises();
+    expect(confirmStore.activeRequest?.title).toBe("Unsaved eTMF Changes");
+    confirmStore.resolveConfirm(true);
+    await allowedNav;
+    await flushPromises();
+    expect(router.currentRoute.value.path).toBe("/overview");
+
     wrapper.unmount();
   });
 });

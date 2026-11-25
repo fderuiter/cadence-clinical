@@ -719,6 +719,8 @@ public sealed class TmfDocumentQcTransition
 
 public sealed class TmfExportJob : AggregateRoot<string>
 {
+    private const string SiteScopeReasonMarker = " [site:";
+
     public string JobId { get => Id; set => Id = value; }
     public string StudyId { get; set; } = string.Empty;
     public string RequestedBy { get => CreatedBy; set => CreatedBy = value; }
@@ -731,6 +733,38 @@ public sealed class TmfExportJob : AggregateRoot<string>
 
     public TmfExportJob() : base("JOB-" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant()) { }
     public TmfExportJob(string id) : base(id) { }
+
+    public static string FormatExportReason(string? siteCode)
+    {
+        var normalized = siteCode?.Trim();
+        return string.IsNullOrWhiteSpace(normalized)
+            ? "Study binder bulk export request"
+            : $"Study binder bulk export request{SiteScopeReasonMarker}{normalized}]";
+    }
+
+    public static string? TryParseSiteScope(string? reasonForChange)
+    {
+        if (string.IsNullOrWhiteSpace(reasonForChange))
+        {
+            return null;
+        }
+
+        int markerIndex = reasonForChange.LastIndexOf(SiteScopeReasonMarker, StringComparison.Ordinal);
+        if (markerIndex < 0)
+        {
+            return null;
+        }
+
+        int start = markerIndex + SiteScopeReasonMarker.Length;
+        int end = reasonForChange.IndexOf(']', start);
+        if (end <= start)
+        {
+            return null;
+        }
+
+        var parsed = reasonForChange[start..end].Trim();
+        return parsed.Length > 0 ? parsed : null;
+    }
 }
 
 public sealed class TmfDocumentRevision

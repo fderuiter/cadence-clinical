@@ -24473,6 +24473,12 @@
           "is_full_binder": {
             "type": "boolean",
             "default": false
+          },
+          "site_code": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
