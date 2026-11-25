@@ -98,7 +98,48 @@ RUN env -u VERSION dotnet publish "${PROJECT_PATH}" --no-restore -c Release -o /
     && basename "$(ls "${PROJECT_PATH}"/*.csproj)" .csproj > /app/publish/entrypoint-assembly
 
 # ------------------------------------------------------------------------------
-# 5. Production Runtime Stage
+# 5. Polyglot DevContainer Stage
+# ------------------------------------------------------------------------------
+# Extends `dev` with Python 3 + venv, xz-utils, SHA-256-verified Node.js 22, and
+# Corepack pnpm so GitHub Codespaces / VS Code Dev Containers can run
+# `scripts/setup_wizard.sh --dev` without bloating service build stages.
+FROM dev AS devcontainer
+
+ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+
+RUN set -eu; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends \
+        clang=1:18.0-59~exp2 \
+        python3=3.12.3-0ubuntu2.1 \
+        python3-venv=3.12.3-0ubuntu2.1 \
+        xz-utils=5.6.1+really5.4.5-1ubuntu0.4 \
+        zlib1g-dev=1:1.3.dfsg-3.1ubuntu2.3; \
+    rm -rf /var/lib/apt/lists/*; \
+    arch="$(dpkg --print-architecture)"; \
+    case "${arch}" in \
+      amd64) \
+        node_arch="x64"; \
+        node_sha256="sha256:cdeb8670a0c81f51b4dc4ac61919f9b1ad917b304bf8221eb939570663d240f8" ;; \
+      arm64) \
+        node_arch="arm64"; \
+        node_sha256="sha256:2babb9eb5264860d540849f4b064a6fbdebcdc323657d9d382ce23d313fd5e09" ;; \
+      *) \
+        echo "Unsupported architecture: ${arch}" >&2; \
+        exit 1 ;; \
+    esac; \
+    node_tarball="node-v22.23.5-linux-${node_arch}.tar.xz"; \
+    curl -fsSL "https://nodejs.org/dist/v22.23.5/${node_tarball}" -o "/tmp/${node_tarball}"; \
+    printf '%s  /tmp/%s\n' "${node_sha256#sha256:}" "${node_tarball}" > /tmp/node.sha256; \
+    sha256sum -c /tmp/node.sha256; \
+    tar -xJf "/tmp/${node_tarball}" -C /usr/local --strip-components=1 --no-same-owner; \
+    rm -f "/tmp/${node_tarball}" /tmp/node.sha256; \
+    corepack enable; \
+    corepack prepare pnpm@10.34.6 --activate; \
+    git config --system --add safe.directory /workspace
+
+# ------------------------------------------------------------------------------
+# 6. Production Runtime Stage
 # ------------------------------------------------------------------------------
 FROM mcr.microsoft.com/dotnet/aspnet:10.0.15@sha256:aac50ceef10391e78a899e3d2ccd00bbafa2dcb56ccf4586cbccf00edb84fc21 AS runtime
 

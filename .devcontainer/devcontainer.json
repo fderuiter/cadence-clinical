@@ -2,7 +2,7 @@
   "name": "Cadence Clinical .NET 10 DevContainer",
   "build": {
     "dockerfile": "../docker/Dockerfile.dotnet",
-    "target": "dev",
+    "target": "devcontainer",
     "context": ".."
   },
   "customizations": {
@@ -20,7 +20,7 @@
       }
     }
   },
-  "forwardPorts": [8000, 8001, 8002, 5432],
+  "forwardPorts": [3000, 5174, 5432, 8000, 8001, 8002, 8018, 8080],
   "remoteUser": "root",
   "postCreateCommand": "bash scripts/setup_wizard.sh --dev"
 }
