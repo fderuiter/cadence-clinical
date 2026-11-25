@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi } from "vitest";
-import { createApp, createSSRApp, defineComponent, h } from "vue";
+import { describe, it, expect, vi, afterEach } from "vitest";
+import { createApp, createSSRApp, defineComponent, h, nextTick } from "vue";
 import { renderToString } from "vue/server-renderer";
 import fs from "fs";
 import path from "path";
@@ -9,6 +9,10 @@ import { ClinicalContextBar as SrcClinicalContextBar } from "../src/index.js";
 import { toBeAccessible } from "../accessibility-matcher.js";
 
 describe("ClinicalContextBar", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it("re-exports ClinicalContextBar from both src/index.js and root index.js", () => {
     expect(ClinicalContextBar).toBeDefined();
     expect(SrcClinicalContextBar).toBe(ClinicalContextBar);
@@ -77,6 +81,15 @@ describe("ClinicalContextBar", () => {
     expect(links[3].getAttribute("href")).toBe(
       "/studies/CADENCE-101?stage=conduct&site=SITE-101&participant=participant%3Ap-1"
     );
+
+    // Ancestor steps receive is-ancestor for <768px mobile prefix condensation while keeping accessible text intact
+    const stepItems = Array.from(
+      host.querySelectorAll("li.clinical-context-step")
+    );
+    expect(stepItems).toHaveLength(5);
+    expect(stepItems[0].classList.contains("is-ancestor")).toBe(true);
+    expect(stepItems[2].classList.contains("is-ancestor")).toBe(true);
+    expect(stepItems[4].classList.contains("is-ancestor")).toBe(false);
 
     const monoCodes = Array.from(host.querySelectorAll(".font-mono")).map(
       (el) => el.textContent?.trim()
@@ -156,7 +169,117 @@ describe("ClinicalContextBar", () => {
     host.remove();
   });
 
-  it("handles fallback targets without studyCode and enforces 44px touch targets and zero emojis", () => {
+  it("aligns the active trailing crumb into view and updates non-blocking start/end overflow cues", async () => {
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    const app = createApp(ClinicalContextBar, {
+      studyCode: "CADENCE-101",
+      siteCode: "SITE-101",
+      participantCode: "017-0001",
+      currentLabel: "Data collection",
+    });
+    app.mount(host);
+
+    const nav = host.querySelector("nav.clinical-context-bar") as HTMLElement;
+    const list = host.querySelector("ol.clinical-context-list") as HTMLElement;
+    const steps = Array.from(
+      list.querySelectorAll<HTMLElement>("li.clinical-context-step")
+    );
+    const activeEl = list.querySelector('[aria-current="page"]') as HTMLElement;
+
+    let scrollLeftVal = 0;
+    Object.defineProperty(list, "clientWidth", {
+      configurable: true,
+      get: () => 280,
+    });
+    Object.defineProperty(list, "scrollWidth", {
+      configurable: true,
+      get: () => 560,
+    });
+    Object.defineProperty(list, "scrollLeft", {
+      configurable: true,
+      get: () => scrollLeftVal,
+      set: (v: number) => {
+        scrollLeftVal = Math.max(0, Math.min(v, 280));
+      },
+    });
+    list.getBoundingClientRect = () =>
+      ({
+        left: 0,
+        right: 280,
+        top: 0,
+        bottom: 44,
+        width: 280,
+        height: 44,
+        x: 0,
+        y: 0,
+        toJSON: () => ({}),
+      }) as DOMRect;
+    steps.forEach((step, idx) => {
+      const left = idx * 110;
+      step.getBoundingClientRect = () =>
+        ({
+          left: left - scrollLeftVal,
+          right: left - scrollLeftVal + 105,
+          top: 0,
+          bottom: 44,
+          width: 105,
+          height: 44,
+          x: left - scrollLeftVal,
+          y: 0,
+          toJSON: () => ({}),
+        }) as DOMRect;
+    });
+    activeEl.getBoundingClientRect = () =>
+      ({
+        left: 440 - scrollLeftVal,
+        right: 555 - scrollLeftVal,
+        top: 0,
+        bottom: 44,
+        width: 115,
+        height: 44,
+        x: 440 - scrollLeftVal,
+        y: 0,
+        toJSON: () => ({}),
+      }) as DOMRect;
+    list.scrollTo = ((opts?: ScrollToOptions | number) => {
+      if (typeof opts === "object" && opts && typeof opts.left === "number") {
+        list.scrollLeft = opts.left;
+      }
+      list.dispatchEvent(new Event("scroll"));
+    }) as typeof list.scrollTo;
+
+    await nextTick();
+    await nextTick();
+    // Active trailing crumb snaps to maxScrollLeft (280), showing start overflow cue and clearing end cue
+    expect(list.scrollLeft).toBe(280);
+    expect(nav.getAttribute("data-overflow-start")).toBe("true");
+    expect(nav.getAttribute("data-overflow-end")).toBe("false");
+    expect(
+      nav.querySelector(".clinical-context-overflow-cue.is-start")
+    ).not.toBeNull();
+    expect(
+      nav.querySelector(".clinical-context-overflow-cue.is-end")
+    ).toBeNull();
+
+    // User scrolls back to start -> end overflow cue appears and start cue clears
+    list.scrollLeft = 0;
+    list.dispatchEvent(new Event("scroll"));
+    await nextTick();
+    expect(nav.getAttribute("data-overflow-start")).toBe("false");
+    expect(nav.getAttribute("data-overflow-end")).toBe("true");
+    expect(
+      nav.querySelector(".clinical-context-overflow-cue.is-end")
+    ).not.toBeNull();
+
+    const a11y = await toBeAccessible({ element: nav });
+    expect(a11y.pass).toBe(true);
+
+    app.unmount();
+    host.remove();
+  });
+
+  it("handles fallback targets without studyCode and enforces 44px touch targets, mobile condensation, and zero emojis", () => {
     const host = document.createElement("div");
     document.body.appendChild(host);
     const app = createApp(ClinicalContextBar, {
@@ -183,6 +306,8 @@ describe("ClinicalContextBar", () => {
     );
     expect(source).toContain("min-height: 44px;");
     expect(source).toContain("min-width: 44px;");
+    expect(source).toContain("@media (max-width: 767px)");
+    expect(source).toContain("pointer-events: none;");
     expect(source).not.toMatch(/\p{Extended_Pictographic}/u);
   });
 });

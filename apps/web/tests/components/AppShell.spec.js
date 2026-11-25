@@ -681,4 +681,115 @@ describe("AppShell.vue - Unified Study-Centric Application Shell", () => {
       vi.unstubAllEnvs();
     }
   });
+
+  it("collapses .app-header on downward scroll below 1280px, shifts --shell-header-height to 0px while keeping #shell-context-bar sticky, and re-expands on upward scroll, focusin, or >=1280px resize", async () => {
+    const originalInnerWidth = window.innerWidth;
+    const originalInnerHeight = window.innerHeight;
+    const originalScrollY = window.scrollY;
+
+    Object.defineProperty(window, "innerWidth", {
+      configurable: true,
+      writable: true,
+      value: 768,
+    });
+    Object.defineProperty(window, "innerHeight", {
+      configurable: true,
+      writable: true,
+      value: 1024,
+    });
+    Object.defineProperty(window, "scrollY", {
+      configurable: true,
+      writable: true,
+      value: 0,
+    });
+
+    const authStore = useAuthStore();
+    authStore.isAuthenticated = true;
+    authStore.rawRoles = ["CRA"];
+
+    await router.push(
+      "/ecrf?studyId=CADENCE-101&siteId=SITE-101&subjectId=SUBJ-042"
+    );
+    await router.isReady();
+
+    const wrapper = mount(AppShell, {
+      attachTo: document.body,
+      global: { plugins: [router] },
+    });
+
+    try {
+      await vi.waitFor(() => {
+        expect(wrapper.find("#shell-context-bar").exists()).toBe(true);
+      });
+      await nextTick();
+
+      const header = wrapper.find("header.app-header");
+      expect(header.classes()).not.toContain("is-header-collapsed");
+      expect(
+        document.documentElement.style.getPropertyValue("--shell-header-height")
+      ).not.toBe("0px");
+
+      // Scroll downward past threshold on 768px tablet -> collapses header & shifts --shell-header-height to 0px
+      window.scrollY = 80;
+      window.dispatchEvent(new Event("scroll"));
+      await nextTick();
+      expect(header.classes()).toContain("is-header-collapsed");
+      expect(
+        document.documentElement.style.getPropertyValue("--shell-header-height")
+      ).toBe("0px");
+
+      // Keyboard focus inside .app-header immediately re-expands header (WCAG 2.2 SC 2.4.11)
+      const menuBtn = wrapper.find("#btn-header-actions-menu");
+      menuBtn.element.focus();
+      menuBtn.element.dispatchEvent(
+        new FocusEvent("focusin", { bubbles: true })
+      );
+      await nextTick();
+      expect(header.classes()).not.toContain("is-header-collapsed");
+      expect(
+        document.documentElement.style.getPropertyValue("--shell-header-height")
+      ).not.toBe("0px");
+
+      // Blur header, scroll down again to collapse, then scroll up to re-expand
+      wrapper.find("#main-content").element.focus();
+      window.scrollY = 140;
+      window.dispatchEvent(new Event("scroll"));
+      await nextTick();
+      expect(header.classes()).toContain("is-header-collapsed");
+
+      window.scrollY = 90;
+      window.dispatchEvent(new Event("scroll"));
+      await nextTick();
+      expect(header.classes()).not.toContain("is-header-collapsed");
+
+      // Collapse again, then resize to >= 1280px desktop -> auto-expands
+      window.scrollY = 160;
+      window.dispatchEvent(new Event("scroll"));
+      await nextTick();
+      expect(header.classes()).toContain("is-header-collapsed");
+
+      window.innerWidth = 1280;
+      window.dispatchEvent(new Event("resize"));
+      await nextTick();
+      expect(header.classes()).not.toContain("is-header-collapsed");
+    } finally {
+      wrapper.unmount();
+      Object.defineProperty(window, "innerWidth", {
+        configurable: true,
+        writable: true,
+        value: originalInnerWidth,
+      });
+      Object.defineProperty(window, "innerHeight", {
+        configurable: true,
+        writable: true,
+        value: originalInnerHeight,
+      });
+      Object.defineProperty(window, "scrollY", {
+        configurable: true,
+        writable: true,
+        value: originalScrollY,
+      });
+      await router.push("/");
+    }
+  });
 });

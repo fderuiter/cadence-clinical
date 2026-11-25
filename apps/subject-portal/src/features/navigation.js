@@ -1,7 +1,7 @@
 // View switching. `state.currentView` (the ui store) is the source of truth the
 // shell renders from; the router follows it into the URL and back (see
 // src/router/index.js).
-import { handoffFocus } from "ui";
+import { alignActiveScrollItem, handoffFocus } from "ui";
 import {
   defaultPortalViewId,
   isScreenAvailable,
@@ -133,6 +133,14 @@ export function showView(viewId, options = {}) {
           );
         }
       }
+    }
+
+    const tablistEl = document.querySelector(".nav-tabs");
+    if (tablistEl) {
+      alignActiveScrollItem(tablistEl, {
+        itemSelector: ".nav-item",
+        immediate: Boolean(options.immediateScroll),
+      });
     }
 
     if (!options.preserveTabFocus && !hasActiveModalOrDrawer()) {

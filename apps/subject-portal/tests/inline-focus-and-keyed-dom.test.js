@@ -705,4 +705,90 @@ describe("Subject Portal Inline Focus Handoffs, Visible Inbox, and Keyed DOM Upd
       true
     );
   });
+
+  it("aligns the active tab horizontally in .nav-tabs on narrow viewports and renders non-blocking overflow chevron cues", async () => {
+    const navContainer = document.querySelector(".nav-tabs-container");
+    const navTabs = document.querySelector(".nav-tabs");
+    expect(navContainer).not.toBeNull();
+    expect(navTabs).not.toBeNull();
+
+    let scrollLeftVal = 0;
+    Object.defineProperty(navTabs, "clientWidth", {
+      configurable: true,
+      get: () => 320,
+    });
+    Object.defineProperty(navTabs, "scrollWidth", {
+      configurable: true,
+      get: () => 660,
+    });
+    Object.defineProperty(navTabs, "scrollLeft", {
+      configurable: true,
+      get: () => scrollLeftVal,
+      set: (val) => {
+        scrollLeftVal = Math.max(0, Math.min(val, 340));
+      },
+    });
+    navTabs.getBoundingClientRect = () => ({
+      left: 0,
+      right: 320,
+      top: 592,
+      bottom: 640,
+      width: 320,
+      height: 48,
+      x: 0,
+      y: 592,
+      toJSON: () => ({}),
+    });
+
+    const items = Array.from(navTabs.querySelectorAll(".nav-item"));
+    expect(items.length).toBe(6);
+    items.forEach((item, idx) => {
+      const left = idx * 110;
+      const rectFn = () => ({
+        left: left - scrollLeftVal,
+        right: left - scrollLeftVal + 110,
+        top: 592,
+        bottom: 640,
+        width: 110,
+        height: 48,
+        x: left - scrollLeftVal,
+        y: 592,
+        toJSON: () => ({}),
+      });
+      item.getBoundingClientRect = rectFn;
+      const btn = item.querySelector("button");
+      if (btn) btn.getBoundingClientRect = rectFn;
+    });
+
+    navTabs.scrollTo = (opts) => {
+      if (opts && typeof opts.left === "number") {
+        navTabs.scrollLeft = opts.left;
+      }
+      navTabs.dispatchEvent(new Event("scroll"));
+    };
+
+    // Initial tab (My Tasks) at scrollLeft=0 -> end overflow cue visible, start cue absent
+    navTabs.dispatchEvent(new Event("scroll"));
+    await settle();
+    expect(navContainer?.getAttribute("data-overflow-start")).toBe("false");
+    expect(navContainer?.getAttribute("data-overflow-end")).toBe("true");
+    expect(
+      navContainer?.querySelector(".nav-tabs-overflow-cue.is-end")
+    ).not.toBeNull();
+
+    // Selecting My Wallet (index 4, left=440..550) scrolls active tab into view with both start & end cues
+    showView("view-wallet");
+    await settle();
+    expect(navTabs.scrollLeft).toBeGreaterThan(250);
+    expect(navTabs.scrollLeft).toBeLessThan(340);
+    expect(navContainer?.getAttribute("data-overflow-start")).toBe("true");
+    expect(navContainer?.getAttribute("data-overflow-end")).toBe("true");
+
+    // Selecting Study Results (last tab, index 5) snaps to maxScrollLeft (340) and clears end cue
+    showView("view-lay-summaries");
+    await settle();
+    expect(navTabs.scrollLeft).toBe(340);
+    expect(navContainer?.getAttribute("data-overflow-start")).toBe("true");
+    expect(navContainer?.getAttribute("data-overflow-end")).toBe("false");
+  });
 });

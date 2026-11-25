@@ -5,6 +5,7 @@
 
 :root {
   --shell-header-height: 52px;
+  --shell-context-bar-height: 0px;
   --canvas-topbar-height: 45px;
   --sticky-chrome-offset: 88px;
 }

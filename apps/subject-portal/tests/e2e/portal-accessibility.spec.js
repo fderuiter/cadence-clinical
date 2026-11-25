@@ -2374,4 +2374,156 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
     });
     expect(oidcDiscoveryStatus).toBe(200);
   });
+
+  test("should auto-align active off-screen mobile tabs with non-blocking overflow cues at 320px and keep .portal-navigation sticky at 768px (ADR-2676)", async ({
+    page,
+  }) => {
+    const captureScreenshots = process.env.CAPTURE_NAV_SCREENSHOTS === "1";
+
+    await page.route(
+      "**/econsent/templates/template-icf/approved-content*",
+      async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            template_id: "template-icf",
+            template_name: "Main Informed Consent Form",
+            study_id: "DEMO-01",
+            site_id: "SITE-01",
+            sponsor_code: "CADENCE",
+            protocol_version: "v1.0",
+            language_code: "en",
+            version_index: 1,
+            clauses: [
+              {
+                clause_id: "clause-purpose",
+                title: "1. Study Purpose & Procedures",
+                text: "This clinical research study evaluates daily symptom reporting, clinic visit assessments, and protocol adherence over twelve weeks.",
+                version_index: 1,
+              },
+              {
+                clause_id: "clause-risk",
+                title: "2. Risks & Side Effects",
+                text: "There is a risk of mild temporary headache or fatigue following scheduled study assessments.",
+                version_index: 1,
+              },
+              {
+                clause_id: "clause-benefit",
+                title: "3. Expected Benefits",
+                text: "You will receive structured medical monitoring and potential symptom improvement.",
+                version_index: 1,
+              },
+              {
+                clause_id: "clause-voluntary",
+                title: "4. Voluntary Participation & Withdrawal",
+                text: "Participation is voluntary and you may withdraw from the study at any time without affecting your standard medical care.",
+                version_index: 1,
+              },
+            ],
+            workflow_steps: [
+              { type: "comprehension_check" },
+              { type: "signature_placeholder" },
+            ],
+          }),
+        });
+      }
+    );
+    await page.route(
+      "**/econsent/templates/template-icf/versions/*/comprehension-checks*",
+      async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            template_id: "template-icf",
+            version_index: 1,
+            questions: [
+              {
+                id: "q_headache",
+                text: "What is a potential temporary side effect?",
+                options: ["Headache", "Nausea", "Vision Loss"],
+              },
+              {
+                id: "q_withdraw",
+                text: "Can you withdraw from the study at any time?",
+                options: ["Yes", "No"],
+              },
+            ],
+            expected_answers: {
+              q_headache: "Headache",
+              q_withdraw: "Yes",
+            },
+            threshold_policy: { min_correct: 2 },
+          }),
+        });
+      }
+    );
+
+    // 1. Direct deep-link to #/wallet at 320x640 auto-aligns My Wallet into view with non-blocking overflow cues
+    await page.setViewportSize({ width: 320, height: 640 });
+    await page.goto(`${DEMO_PORTAL_URL}#/wallet`);
+    await completeInitialPinSetupIfOpen(page);
+    await expect(page.locator("#view-wallet")).toBeVisible();
+
+    const walletTab = page.locator("#btn-tab-btn-wallet");
+    await expect(walletTab).toHaveAttribute("aria-selected", "true");
+    await expect
+      .poll(async () => {
+        const box = await walletTab.boundingBox();
+        return box ? box.x >= 0 && box.x + box.width <= 320.5 : false;
+      })
+      .toBe(true);
+
+    const navContainer = page.locator(".nav-tabs-container");
+    await expect(navContainer).toHaveAttribute("data-overflow-start", "true");
+    const startCue = page.locator(".nav-tabs-overflow-cue.is-start");
+    await expect(startCue).toBeVisible();
+    expect(
+      await startCue.evaluate((el) => getComputedStyle(el).pointerEvents)
+    ).toBe("none");
+
+    const mobileWalletAudit = await new AxeBuilder({ page })
+      .withTags(WCAG_AA_TAGS)
+      .analyze();
+    expect(mobileWalletAudit.violations).toEqual([]);
+
+    if (captureScreenshots) {
+      await page.screenshot({
+        path: "/tmp/mobile-portal-tabs-wallet-320.png",
+      });
+    }
+
+    // 2. Tablet 768x1024 keeps .portal-navigation sticky while scrolling long ConsentView clauses
+    await page.setViewportSize({ width: 768, height: 620 });
+    await page.click("#btn-tab-btn-consent");
+    await expect(page.locator("#view-consent")).toBeVisible();
+    await expect(page.locator("#consent-clauses-container")).toBeVisible();
+
+    const navPosition = await page
+      .locator(".portal-navigation")
+      .evaluate((el) => getComputedStyle(el).position);
+    expect(navPosition).toBe("sticky");
+
+    await page.evaluate(() => window.scrollTo(0, 320));
+    await expect
+      .poll(async () => page.evaluate(() => window.scrollY))
+      .toBeGreaterThan(100);
+
+    const stickyNavBox = await page.locator(".portal-navigation").boundingBox();
+    expect(stickyNavBox).not.toBeNull();
+    expect(stickyNavBox.y).toBeGreaterThanOrEqual(0);
+    expect(stickyNavBox.y).toBeLessThanOrEqual(32);
+
+    const tabletConsentAudit = await new AxeBuilder({ page })
+      .withTags(WCAG_AA_TAGS)
+      .analyze();
+    expect(tabletConsentAudit.violations).toEqual([]);
+
+    if (captureScreenshots) {
+      await page.screenshot({
+        path: "/tmp/tablet-portal-sticky-consent-768.png",
+      });
+    }
+  });
 });

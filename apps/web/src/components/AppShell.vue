@@ -1,5 +1,6 @@
 <template>
   <div
+    ref="shellRootRef"
     class="app-shell"
     :style="{ '--shell-header-height': `${effectiveHeaderHeight}px` }"
   >
@@ -21,6 +22,7 @@
     <div
       v-if="isDemoBuild()"
       id="staff-demo-banner"
+      ref="demoBannerRef"
       class="shell-demo-banner"
       role="region"
       aria-label="Interactive demo navigation"
@@ -48,7 +50,11 @@
       </nav>
     </div>
 
-    <header ref="headerRef" class="app-header">
+    <header
+      ref="headerRef"
+      class="app-header"
+      :class="{ 'is-header-collapsed': isHeaderCollapsed }"
+    >
       <div class="header-left">
         <router-link
           :to="authStore.isAuthenticated ? studiesPath : '/login'"
@@ -486,10 +492,12 @@ import {
   resolveSiteReadinessPath,
 } from "../canvas/palette";
 import {
+  clearShellStickyContextBarHeight,
   clearShellStickyHeaderHeight,
   ensureFocusedElementClearsStickyChrome,
   recordStickyChromePointerDown,
   syncRootStickyChromeOffset,
+  updateShellStickyContextBarHeight,
   updateShellStickyHeaderHeight,
 } from "../utils/stickyChromeOffset";
 
@@ -534,10 +542,21 @@ const isSecondaryMenuOpen = ref(false);
 const secondaryMenuWrapperRef = ref(null);
 const secondaryMenuToggleRef = ref(null);
 const statusAnnouncement = ref("");
+const shellRootRef = ref(null);
+const demoBannerRef = ref(null);
 const headerRef = ref(null);
 const headerHeight = ref(48);
 const effectiveHeaderHeight = ref(48);
+const isHeaderCollapsed = ref(false);
 let headerResizeObserver = null;
+let contextBarResizeObserver = null;
+let shellMutationObserver = null;
+let observedContextBarEl = null;
+let lastScrollY = 0;
+
+const COMPACT_HEADER_MAX_WIDTH = 1279;
+const STICKY_HEADER_MIN_WIDTH = 641;
+const SHORT_VIEWPORT_MAX_HEIGHT = 499;
 
 function focusSkipTarget(targetId) {
   const target = document.getElementById(targetId);
@@ -546,25 +565,159 @@ function focusSkipTarget(targetId) {
   target.scrollIntoView?.({ block: "nearest" });
 }
 
+function isCollapsibleStickyHeaderViewport() {
+  if (typeof window === "undefined") return false;
+  const width = Number(window.innerWidth) || 0;
+  const height = Number(window.innerHeight) || 0;
+  if (height > 0 && height <= SHORT_VIEWPORT_MAX_HEIGHT) {
+    return false;
+  }
+  if (width > 0) {
+    return (
+      width >= STICKY_HEADER_MIN_WIDTH && width <= COMPACT_HEADER_MAX_WIDTH
+    );
+  }
+  if (typeof window.matchMedia === "function") {
+    try {
+      return Boolean(
+        window.matchMedia(
+          `(min-width: ${STICKY_HEADER_MIN_WIDTH}px) and (max-width: ${COMPACT_HEADER_MAX_WIDTH}px) and (min-height: ${SHORT_VIEWPORT_MAX_HEIGHT + 1}px)`
+        )?.matches
+      );
+    } catch {
+      return false;
+    }
+  }
+  return false;
+}
+
+function readWindowScrollY() {
+  if (typeof window === "undefined") return 0;
+  return Math.max(
+    0,
+    window.scrollY ??
+      window.pageYOffset ??
+      (typeof document !== "undefined"
+        ? document.documentElement?.scrollTop || 0
+        : 0)
+  );
+}
+
 function syncHeaderHeight() {
   const el = headerRef.value;
-  if (el && typeof el.getBoundingClientRect === "function") {
+  if (
+    el &&
+    !isHeaderCollapsed.value &&
+    typeof el.getBoundingClientRect === "function"
+  ) {
     const measured = Math.round(el.getBoundingClientRect().height);
     if (measured > 0) {
       headerHeight.value = measured;
     }
   }
-  const synced = updateShellStickyHeaderHeight(headerHeight.value);
+  const activeHeight =
+    isHeaderCollapsed.value && isCollapsibleStickyHeaderViewport()
+      ? 0
+      : headerHeight.value;
+  const synced = updateShellStickyHeaderHeight(activeHeight);
   effectiveHeaderHeight.value = synced.shellHeight;
 }
 
+function syncContextBarHeight() {
+  if (typeof document === "undefined" || !showContextBar.value) {
+    if (observedContextBarEl && contextBarResizeObserver) {
+      contextBarResizeObserver.disconnect();
+      observedContextBarEl = null;
+    }
+    clearShellStickyContextBarHeight();
+    return;
+  }
+  const el =
+    shellRootRef.value?.querySelector?.("#shell-context-bar") ||
+    document.getElementById("shell-context-bar");
+  if (!el) {
+    clearShellStickyContextBarHeight();
+    return;
+  }
+  if (
+    typeof ResizeObserver !== "undefined" &&
+    contextBarResizeObserver &&
+    observedContextBarEl !== el
+  ) {
+    contextBarResizeObserver.disconnect();
+    observedContextBarEl = el;
+    contextBarResizeObserver.observe(el, { box: "border-box" });
+  }
+  const measured =
+    typeof el.getBoundingClientRect === "function"
+      ? Math.round(el.getBoundingClientRect().height)
+      : 0;
+  updateShellStickyContextBarHeight(measured > 0 ? measured : 44);
+}
+
+function handleWindowScroll() {
+  const currentY = readWindowScrollY();
+  if (!isCollapsibleStickyHeaderViewport()) {
+    if (isHeaderCollapsed.value) {
+      isHeaderCollapsed.value = false;
+      syncHeaderHeight();
+    }
+    lastScrollY = currentY;
+    return;
+  }
+
+  const demoOffset = Number(demoBannerRef.value?.offsetHeight) || 0;
+  const collapseThreshold = demoOffset + 24;
+  const delta = currentY - lastScrollY;
+  const hasFocusInHeader =
+    typeof document !== "undefined" &&
+    Boolean(
+      headerRef.value &&
+      document.activeElement &&
+      headerRef.value.contains(document.activeElement)
+    );
+
+  if (
+    currentY <= 8 ||
+    delta < -4 ||
+    isMobileMenuOpen.value ||
+    isSecondaryMenuOpen.value ||
+    hasFocusInHeader
+  ) {
+    if (isHeaderCollapsed.value) {
+      isHeaderCollapsed.value = false;
+      syncHeaderHeight();
+    }
+  } else if (delta > 6 && currentY > collapseThreshold) {
+    if (!isHeaderCollapsed.value) {
+      isHeaderCollapsed.value = true;
+      syncHeaderHeight();
+    }
+  }
+  lastScrollY = currentY;
+}
+
 function handleViewportResize() {
+  if (!isCollapsibleStickyHeaderViewport() && isHeaderCollapsed.value) {
+    isHeaderCollapsed.value = false;
+  }
   syncHeaderHeight();
+  syncContextBarHeight();
   syncRootStickyChromeOffset();
 }
 
 function handleGlobalFocusIn(event) {
   const target = event?.target;
+  if (
+    isHeaderCollapsed.value &&
+    headerRef.value &&
+    target &&
+    typeof headerRef.value.contains === "function" &&
+    headerRef.value.contains(target)
+  ) {
+    isHeaderCollapsed.value = false;
+    syncHeaderHeight();
+  }
   ensureFocusedElementClearsStickyChrome(target);
   if (
     typeof window !== "undefined" &&
@@ -1083,6 +1236,10 @@ watch(
   () => {
     isSecondaryMenuOpen.value = false;
     isMobileMenuOpen.value = false;
+    if (isHeaderCollapsed.value) {
+      isHeaderCollapsed.value = false;
+    }
+    lastScrollY = readWindowScrollY();
   }
 );
 
@@ -1099,24 +1256,46 @@ watch(
     authStore.activePlanBadge,
     isMobileMenuOpen.value,
     isSecondaryMenuOpen.value,
+    showContextBar.value,
     route?.fullPath,
   ],
   () => {
-    nextTick(syncHeaderHeight);
+    if (
+      (isMobileMenuOpen.value || isSecondaryMenuOpen.value) &&
+      isHeaderCollapsed.value
+    ) {
+      isHeaderCollapsed.value = false;
+    }
+    nextTick(() => {
+      syncHeaderHeight();
+      syncContextBarHeight();
+    });
   }
 );
 
 onMounted(() => {
+  lastScrollY = readWindowScrollY();
   window.addEventListener("keydown", handleGlobalKeydown);
   window.addEventListener("resize", handleViewportResize);
+  window.addEventListener("scroll", handleWindowScroll, { passive: true });
   document.addEventListener("pointerdown", handleDocumentPointerDown);
   document.addEventListener("pointerdown", recordStickyChromePointerDown, true);
   document.addEventListener("focusin", handleGlobalFocusIn);
   syncHeaderHeight();
-  if (typeof ResizeObserver !== "undefined" && headerRef.value) {
-    headerResizeObserver = new ResizeObserver(() => syncHeaderHeight());
-    headerResizeObserver.observe(headerRef.value, { box: "border-box" });
+  if (typeof ResizeObserver !== "undefined") {
+    if (headerRef.value) {
+      headerResizeObserver = new ResizeObserver(() => syncHeaderHeight());
+      headerResizeObserver.observe(headerRef.value, { box: "border-box" });
+    }
+    contextBarResizeObserver = new ResizeObserver(() => syncContextBarHeight());
   }
+  if (typeof MutationObserver !== "undefined" && shellRootRef.value) {
+    shellMutationObserver = new MutationObserver(() => {
+      syncContextBarHeight();
+    });
+    shellMutationObserver.observe(shellRootRef.value, { childList: true });
+  }
+  syncContextBarHeight();
   if (
     authStore.isAuthenticated &&
     typeof authStore.loadEntitlements === "function"
@@ -1128,6 +1307,7 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener("keydown", handleGlobalKeydown);
   window.removeEventListener("resize", handleViewportResize);
+  window.removeEventListener("scroll", handleWindowScroll);
   document.removeEventListener("pointerdown", handleDocumentPointerDown);
   document.removeEventListener(
     "pointerdown",
@@ -1139,6 +1319,16 @@ onUnmounted(() => {
     headerResizeObserver.disconnect();
     headerResizeObserver = null;
   }
+  if (contextBarResizeObserver) {
+    contextBarResizeObserver.disconnect();
+    contextBarResizeObserver = null;
+  }
+  if (shellMutationObserver) {
+    shellMutationObserver.disconnect();
+    shellMutationObserver = null;
+  }
+  observedContextBarEl = null;
+  clearShellStickyContextBarHeight();
   clearShellStickyHeaderHeight();
 });
 </script>
@@ -1237,6 +1427,14 @@ onUnmounted(() => {
   position: sticky;
   top: 0;
   z-index: 30;
+  transition: transform 0.2s ease;
+}
+
+#shell-context-bar {
+  position: sticky;
+  top: var(--shell-header-height, 0px);
+  z-index: 25;
+  transition: top 0.2s ease;
 }
 
 .header-left {
@@ -1867,10 +2065,25 @@ onUnmounted(() => {
   }
 }
 
+@media (min-width: 641px) and (max-width: 1279px) and (min-height: 500px) {
+  .app-header.is-header-collapsed {
+    transform: translateY(-100%);
+    pointer-events: none;
+  }
+}
+
 @media (max-height: 499px) {
-  .app-header {
+  .app-header,
+  #shell-context-bar {
     position: relative;
     top: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-header,
+  #shell-context-bar {
+    transition: none;
   }
 }
 </style>

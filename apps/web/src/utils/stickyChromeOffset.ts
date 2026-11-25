@@ -15,6 +15,8 @@ export interface CanvasTopbarUpdateOptions {
 
 let shellMounted = false;
 let shellHeaderHeightPx = 0;
+let contextBarMounted = false;
+let contextBarHeightPx = 0;
 let canvasMounted = false;
 let canvasTopbarHeightPx = 0;
 let canvasInShell = true;
@@ -42,7 +44,7 @@ const INTERACTIVE_ROLES = new Set([
   "treeitem",
 ]);
 
-export function isStickyChromeReleased(): boolean {
+export function isShortViewportChromeReleased(): boolean {
   if (typeof window === "undefined") {
     return false;
   }
@@ -51,6 +53,28 @@ export function isStickyChromeReleased(): boolean {
     window.innerHeight > 0 &&
     window.innerHeight <= SHORT_VIEWPORT_MAX_HEIGHT
   ) {
+    return true;
+  }
+  if (typeof window.matchMedia === "function") {
+    try {
+      const mql = window.matchMedia(
+        `(max-height: ${SHORT_VIEWPORT_MAX_HEIGHT}px)`
+      );
+      if (mql && mql.matches) {
+        return true;
+      }
+    } catch {
+      // Ignore matchMedia errors in test stubs
+    }
+  }
+  return false;
+}
+
+export function isStickyChromeReleased(): boolean {
+  if (typeof window === "undefined") {
+    return false;
+  }
+  if (isShortViewportChromeReleased()) {
     return true;
   }
   if (
@@ -76,24 +100,36 @@ export function isStickyChromeReleased(): boolean {
 }
 
 export function getActiveStickyChromeHeightPx(): number {
-  if (isStickyChromeReleased()) {
+  const shortReleased = isShortViewportChromeReleased();
+  if (shortReleased) {
     return 0;
   }
+  const headerReleased = isStickyChromeReleased();
   const activeShell =
-    shellMounted && (!canvasMounted || canvasInShell)
+    !headerReleased && shellMounted && (!canvasMounted || canvasInShell)
       ? Math.max(0, Math.round(shellHeaderHeightPx))
       : 0;
-  const activeTopbar = canvasMounted
-    ? Math.max(0, Math.round(canvasTopbarHeightPx))
-    : 0;
-  return activeShell + activeTopbar;
+  const activeContextBar =
+    contextBarMounted && !canvasMounted
+      ? Math.max(0, Math.round(contextBarHeightPx))
+      : 0;
+  const activeTopbar =
+    !headerReleased && canvasMounted
+      ? Math.max(0, Math.round(canvasTopbarHeightPx))
+      : 0;
+  return activeShell + activeContextBar + activeTopbar;
 }
 
 export function syncRootStickyChromeOffset(): StickyChromeSyncResult {
   const released = isStickyChromeReleased();
+  const shortReleased = isShortViewportChromeReleased();
   const effectiveShell =
     !released && shellMounted
       ? Math.max(0, Math.round(shellHeaderHeightPx))
+      : 0;
+  const effectiveContextBar =
+    !shortReleased && contextBarMounted && !canvasMounted
+      ? Math.max(0, Math.round(contextBarHeightPx))
       : 0;
   const effectiveTopbar =
     !released && canvasMounted
@@ -101,6 +137,7 @@ export function syncRootStickyChromeOffset(): StickyChromeSyncResult {
       : 0;
   const activeChrome =
     (effectiveShell && (!canvasMounted || canvasInShell) ? effectiveShell : 0) +
+    effectiveContextBar +
     effectiveTopbar;
   const stickyChromeOffset = activeChrome + FOCUS_RING_CLEARANCE_PX;
 
@@ -112,6 +149,10 @@ export function syncRootStickyChromeOffset(): StickyChromeSyncResult {
     document.documentElement.style.setProperty(
       "--shell-header-height",
       `${effectiveShell}px`
+    );
+    document.documentElement.style.setProperty(
+      "--shell-context-bar-height",
+      `${effectiveContextBar}px`
     );
     document.documentElement.style.setProperty(
       "--canvas-topbar-height",
@@ -143,6 +184,21 @@ export function updateShellStickyHeaderHeight(
 export function clearShellStickyHeaderHeight(): StickyChromeSyncResult {
   shellMounted = false;
   shellHeaderHeightPx = 0;
+  return syncRootStickyChromeOffset();
+}
+
+export function updateShellStickyContextBarHeight(
+  heightPx: number
+): StickyChromeSyncResult {
+  contextBarMounted = true;
+  contextBarHeightPx =
+    Number.isFinite(heightPx) && heightPx > 0 ? Math.round(heightPx) : 0;
+  return syncRootStickyChromeOffset();
+}
+
+export function clearShellStickyContextBarHeight(): StickyChromeSyncResult {
+  contextBarMounted = false;
+  contextBarHeightPx = 0;
   return syncRootStickyChromeOffset();
 }
 
@@ -182,7 +238,7 @@ function isInsideStickyOrModalOverlay(el: Element): boolean {
   if (typeof el.closest !== "function") return true;
   if (
     el.closest(
-      '.app-header, .topbar, .skip-link, [role="dialog"], [role="alertdialog"], .navigator, #canvas-inspector'
+      '.app-header, #shell-context-bar, .topbar, .skip-link, [role="dialog"], [role="alertdialog"], .navigator, #canvas-inspector'
     )
   ) {
     return true;

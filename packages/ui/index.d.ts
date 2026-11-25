@@ -754,6 +754,50 @@ export function useEscapeClose(
   stop: () => void;
 };
 
+export interface ScrollOverflowState {
+  canScrollStart: boolean;
+  canScrollEnd: boolean;
+  scrollLeft: number;
+  maxScrollLeft: number;
+}
+
+export function prefersReducedMotion(): boolean;
+
+export function computeScrollOverflowState(
+  container: HTMLElement | null | undefined,
+  threshold?: number
+): {
+  canScrollStart: boolean;
+  canScrollEnd: boolean;
+  scrollLeft: number;
+  maxScrollLeft: number;
+};
+
+export function alignActiveScrollItem(
+  container: HTMLElement | null | undefined,
+  options?: {
+    selector?: string;
+    itemSelector?: string;
+    immediate?: boolean;
+    threshold?: number;
+  }
+): number | null;
+
+export function useActiveScrollAlignment(
+  containerRef: import("vue").Ref<HTMLElement | null | undefined>,
+  options?: {
+    activeKey?: import("vue").Ref<unknown> | (() => unknown);
+    selector?: string;
+    itemSelector?: string;
+    threshold?: number;
+  }
+): {
+  canScrollStart: import("vue").Ref<boolean>;
+  canScrollEnd: import("vue").Ref<boolean>;
+  updateOverflow: () => void;
+  alignActive: (alignOptions?: { immediate?: boolean }) => number | null;
+};
+
 export function useAsyncRetry<T extends (...args: any[]) => any>(
   asyncFn?: T
 ): {

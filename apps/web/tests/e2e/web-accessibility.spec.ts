@@ -4293,4 +4293,89 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
       });
     }
   });
+
+  test("ADR-2676: ClinicalContextBar aligns active scope at 320px with condensed ancestor pills and #shell-context-bar stays sticky as .app-header collapses on 768px downward scroll", async ({
+    page,
+  }) => {
+    const captureScreenshots = process.env.CAPTURE_NAV_SCREENSHOTS === "1";
+
+    // 1. 320x640 mobile study+site+participant workflow route: ancestor labels condense to accessible sr-only pills and active trailing crumb aligns into view
+    await page.setViewportSize({ width: 320, height: 640 });
+    await gotoHashRoute(
+      page,
+      "/ecrf?studyId=CADENCE-101&siteId=SITE-101&subjectId=017-0001"
+    );
+    const contextBar = page.locator("#shell-context-bar");
+    await expect(contextBar).toBeVisible();
+
+    const currentCrumb = contextBar.locator("#context-current");
+    await expect(currentCrumb).toContainText("Data collection");
+    await expect
+      .poll(async () => {
+        const box = await currentCrumb.boundingBox();
+        return box ? box.x >= 0 && box.x + box.width <= 320.5 : false;
+      })
+      .toBe(true);
+
+    // Ancestor Studies link condenses visually to a compact >=44x44px icon pill while keeping accessible name
+    const studiesBox = await contextBar
+      .locator("#context-studies")
+      .boundingBox();
+    expect(studiesBox).not.toBeNull();
+    expect(studiesBox!.height).toBeGreaterThanOrEqual(43.9);
+    expect(studiesBox!.width).toBeGreaterThanOrEqual(43.9);
+    expect(studiesBox!.width).toBeLessThanOrEqual(64);
+    await expect(contextBar.locator("#context-studies")).toHaveAccessibleName(
+      "Studies"
+    );
+    await expect(contextBar.locator("#context-site")).toHaveAccessibleName(
+      /Site\s+SITE-101/
+    );
+
+    await expectNoWcagViolations(
+      page,
+      "EcrfView 320x640 sticky ClinicalContextBar"
+    );
+    if (captureScreenshots) {
+      await page.screenshot({
+        path: "/tmp/mobile-context-bar-320.png",
+      });
+    }
+
+    // 2. 768x640 tablet workflow route: downward scroll collapses .app-header and shifts #shell-context-bar to top: 0px; upward scroll re-expands .app-header
+    await page.setViewportSize({ width: 768, height: 640 });
+    await page.evaluate(() => window.scrollTo(0, 0));
+    const header = page.locator("header.app-header");
+    await expect(header).not.toHaveClass(/is-header-collapsed/);
+
+    await page.evaluate(() => window.scrollTo(0, 220));
+    await expect(header).toHaveClass(/is-header-collapsed/);
+    await expect
+      .poll(async () => {
+        const box = await contextBar.boundingBox();
+        return box ? Math.round(box.y) : -999;
+      })
+      .toBe(0);
+
+    await expectNoWcagViolations(
+      page,
+      "EcrfView 768x640 collapsed header + sticky ClinicalContextBar"
+    );
+    if (captureScreenshots) {
+      await page.screenshot({
+        path: "/tmp/tablet-collapsed-header-768.png",
+      });
+    }
+
+    // Upward scroll restores .app-header cleanly above #shell-context-bar
+    await page.evaluate(() => window.scrollTo(0, 40));
+    await expect(header).not.toHaveClass(/is-header-collapsed/);
+    const restoredContextBox = await contextBar.boundingBox();
+    const restoredHeaderBox = await header.boundingBox();
+    expect(restoredHeaderBox).not.toBeNull();
+    expect(restoredContextBox).not.toBeNull();
+    expect(restoredContextBox!.y).toBeGreaterThanOrEqual(
+      restoredHeaderBox!.height - 2
+    );
+  });
 });

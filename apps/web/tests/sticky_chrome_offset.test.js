@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   FOCUS_RING_CLEARANCE_PX,
   clearCanvasStickyTopbarHeight,
+  clearShellStickyContextBarHeight,
   clearShellStickyHeaderHeight,
   ensureFocusedElementClearsStickyChrome,
   getActiveStickyChromeHeightPx,
@@ -9,10 +10,11 @@ import {
   recordStickyChromePointerDown,
   syncRootStickyChromeOffset,
   updateCanvasStickyTopbarHeight,
+  updateShellStickyContextBarHeight,
   updateShellStickyHeaderHeight,
 } from "../src/utils/stickyChromeOffset";
 
-describe("stickyChromeOffset synchronization (ADR-2663)", () => {
+describe("stickyChromeOffset synchronization (ADR-2665 / ADR-2676)", () => {
   const originalInnerHeight = window.innerHeight;
   const originalInnerWidth = window.innerWidth;
 
@@ -33,11 +35,13 @@ describe("stickyChromeOffset synchronization (ADR-2663)", () => {
       value: 0,
     });
     clearCanvasStickyTopbarHeight();
+    clearShellStickyContextBarHeight();
     clearShellStickyHeaderHeight();
   });
 
   afterEach(() => {
     clearCanvasStickyTopbarHeight();
+    clearShellStickyContextBarHeight();
     clearShellStickyHeaderHeight();
     Object.defineProperty(window, "innerHeight", {
       configurable: true,
@@ -51,7 +55,7 @@ describe("stickyChromeOffset synchronization (ADR-2663)", () => {
     });
   });
 
-  it("publishes live --shell-header-height, --canvas-topbar-height, and --sticky-chrome-offset on :root and cleans up on unmount", () => {
+  it("publishes live --shell-header-height, --shell-context-bar-height, --canvas-topbar-height, and --sticky-chrome-offset on :root and cleans up on unmount", () => {
     const shellOnly = updateShellStickyHeaderHeight(48);
     expect(shellOnly).toEqual({
       released: false,
@@ -63,8 +67,29 @@ describe("stickyChromeOffset synchronization (ADR-2663)", () => {
       document.documentElement.style.getPropertyValue("--shell-header-height")
     ).toBe("48px");
     expect(
+      document.documentElement.style.getPropertyValue(
+        "--shell-context-bar-height"
+      )
+    ).toBe("0px");
+    expect(
       document.documentElement.style.getPropertyValue("--sticky-chrome-offset")
     ).toBe(`${48 + FOCUS_RING_CLEARANCE_PX}px`);
+
+    const withContextBar = updateShellStickyContextBarHeight(44);
+    expect(withContextBar).toEqual({
+      released: false,
+      shellHeight: 48,
+      topbarHeight: 0,
+      stickyChromeOffset: 48 + 44 + FOCUS_RING_CLEARANCE_PX,
+    });
+    expect(
+      document.documentElement.style.getPropertyValue(
+        "--shell-context-bar-height"
+      )
+    ).toBe("44px");
+    expect(getActiveStickyChromeHeightPx()).toBe(92);
+
+    clearShellStickyContextBarHeight();
 
     const stacked = updateCanvasStickyTopbarHeight(46, { inAppShell: true });
     expect(stacked).toEqual({
@@ -90,7 +115,7 @@ describe("stickyChromeOffset synchronization (ADR-2663)", () => {
     ).toBe("0px");
   });
 
-  it("releases sticky chrome offsets below 500px viewport height (320x256 and 640x400)", () => {
+  it("releases sticky chrome offsets below 500px viewport height while retaining sticky #shell-context-bar on 320x640 mobile", () => {
     updateShellStickyHeaderHeight(48);
     updateCanvasStickyTopbarHeight(45, { inAppShell: true });
     expect(isStickyChromeReleased()).toBe(false);
@@ -118,11 +143,32 @@ describe("stickyChromeOffset synchronization (ADR-2663)", () => {
 
     window.innerWidth = 320;
     expect(syncRootStickyChromeOffset().released).toBe(true);
+
+    // On 320x640 workflow routes (non-canvas), #shell-context-bar stays sticky (44px) while .app-header releases
+    clearCanvasStickyTopbarHeight();
+    updateShellStickyContextBarHeight(44);
+    window.innerHeight = 640;
+    const mobileWithContext = syncRootStickyChromeOffset();
+    expect(mobileWithContext.released).toBe(true);
+    expect(mobileWithContext.shellHeight).toBe(0);
+    expect(mobileWithContext.stickyChromeOffset).toBe(
+      44 + FOCUS_RING_CLEARANCE_PX
+    );
+    expect(getActiveStickyChromeHeightPx()).toBe(44);
+
+    // Short landscape (640x400) releases #shell-context-bar too
+    window.innerHeight = 400;
+    expect(syncRootStickyChromeOffset().stickyChromeOffset).toBe(
+      FOCUS_RING_CLEARANCE_PX
+    );
+
+    clearShellStickyContextBarHeight();
+    window.innerHeight = 768;
     window.innerWidth = 1280;
     expect(syncRootStickyChromeOffset().released).toBe(false);
   });
 
-  it("scrolls focused main controls out from behind sticky chrome while ignoring pointer interactions and sticky header buttons", () => {
+  it("scrolls focused main controls out from behind sticky chrome while ignoring pointer interactions and sticky header/context-bar controls", () => {
     updateShellStickyHeaderHeight(48);
     updateCanvasStickyTopbarHeight(44, { inAppShell: true });
     window.scrollY = 220;
@@ -161,12 +207,24 @@ describe("stickyChromeOffset synchronization (ADR-2663)", () => {
     ensureFocusedElementClearsStickyChrome(headerBtn);
     expect(scrollBySpy).not.toHaveBeenCalled();
 
+    const contextBar = document.createElement("nav");
+    contextBar.id = "shell-context-bar";
+    const contextLink = document.createElement("a");
+    contextLink.href = "/studies";
+    contextLink.getBoundingClientRect = btn.getBoundingClientRect;
+    contextBar.appendChild(contextLink);
+    document.body.appendChild(contextBar);
+
+    ensureFocusedElementClearsStickyChrome(contextLink);
+    expect(scrollBySpy).not.toHaveBeenCalled();
+
     recordStickyChromePointerDown();
     ensureFocusedElementClearsStickyChrome(btn);
     expect(scrollBySpy).not.toHaveBeenCalled();
 
     btn.remove();
     header.remove();
+    contextBar.remove();
     scrollBySpy.mockRestore();
   });
 });

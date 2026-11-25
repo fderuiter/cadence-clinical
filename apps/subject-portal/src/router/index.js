@@ -469,11 +469,11 @@ export function getPortalRouter() {
     }
   });
 
-  router.afterEach((to, _from, failure) => {
+  router.afterEach((to, from, failure) => {
     if (failure) return;
     const wasStatePush = pushingFromViewState || syncingRouteQuery;
     if (to.meta.viewId && to.meta.viewId !== state.currentView) {
-      showView(to.meta.viewId);
+      showView(to.meta.viewId, { immediateScroll: from === START_LOCATION });
     }
     void syncActiveRouteEntities(to, { fromStatePush: wasStatePush });
   });

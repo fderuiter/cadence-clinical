@@ -122,6 +122,33 @@ h4 {
   gap: 20px;
 }
 
+@media (min-width: 768px) {
+  .portal-navigation {
+    position: sticky;
+    top: 16px;
+    align-self: flex-start;
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
+  }
+}
+
+@media (min-width: 768px) and (max-height: 499px) {
+  .portal-navigation {
+    position: static;
+    top: auto;
+    max-height: none;
+    overflow-y: visible;
+  }
+}
+
+.nav-tabs-container {
+  position: relative;
+}
+
+.nav-tabs-overflow-cue {
+  display: none;
+}
+
 .nav-tabs {
   list-style: none;
   background-color: var(--bg-card);
@@ -440,16 +467,21 @@ h4 {
     gap: 6px;
   }
 
-  .nav-tabs {
+  .nav-tabs-container {
     position: fixed;
     left: 0;
     right: 0;
     bottom: 0;
     z-index: 900;
+  }
+
+  .nav-tabs {
     display: flex;
     flex-direction: row;
     align-items: stretch;
     justify-content: flex-start;
+    width: 100%;
+    margin: 0;
     min-width: var(--touch-target-min, 48px);
     border-radius: 0;
     border-left: none;
@@ -459,8 +491,39 @@ h4 {
     box-shadow: var(--semantic-shadow-sm);
     overflow-x: auto;
     overflow-y: hidden;
+    scrollbar-width: none;
     -webkit-overflow-scrolling: touch;
     padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .nav-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .nav-tabs-overflow-cue {
+    position: absolute;
+    top: 1px;
+    bottom: env(safe-area-inset-bottom, 0px);
+    z-index: 901;
+    display: inline-flex;
+    align-items: center;
+    width: 28px;
+    color: var(--text-muted);
+    pointer-events: none;
+  }
+
+  .nav-tabs-overflow-cue.is-start {
+    left: 0;
+    justify-content: flex-start;
+    padding-left: 4px;
+    background: linear-gradient(to right, var(--bg-card) 45%, transparent);
+  }
+
+  .nav-tabs-overflow-cue.is-end {
+    right: 0;
+    justify-content: flex-end;
+    padding-right: 4px;
+    background: linear-gradient(to left, var(--bg-card) 45%, transparent);
   }
 
   .nav-item {
