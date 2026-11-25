@@ -1,11 +1,11 @@
 import { computed, type ComputedRef } from "vue";
 import { normalizeBackendRole } from "../canvas/authority/roles";
 
-export const VERIFIED_TRIAL_TENANT_RE = /^trial-[0-9a-f]{12}$/;
+const VERIFIED_TRIAL_TENANT_RE = /^trial-[0-9a-f]{12}$/;
 
-export const AUDITOR_ROLES = new Set(["auditor", "tmf_auditor"]);
+const AUDITOR_ROLES = new Set(["auditor", "tmf_auditor"]);
 
-export const OPERATIONAL_MUTATION_ROLES = new Set([
+const OPERATIONAL_MUTATION_ROLES = new Set([
   "sysadmin",
   "sponsor_admin",
   "super_admin",
@@ -45,7 +45,7 @@ export const OPERATIONAL_MUTATION_ROLES = new Set([
   "pi",
 ]);
 
-export const AUDITOR_TICKET_READONLY_EXPLANATION =
+const AUDITOR_TICKET_READONLY_EXPLANATION =
   "Read-only auditor access: logging or modifying clinical issues is disabled to preserve inspection independence.";
 
 export interface TicketAuthStateLike {
@@ -57,11 +57,11 @@ export interface TicketAuthStateLike {
   } | null;
 }
 
-export function isVerifiedTrialTenantId(tenantId?: string | null): boolean {
+function isVerifiedTrialTenantId(tenantId?: string | null): boolean {
   return Boolean(tenantId && VERIFIED_TRIAL_TENANT_RE.test(tenantId));
 }
 
-export function evaluateCanMutateTicket(
+function evaluateCanMutateTicket(
   authStore?: TicketAuthStateLike | null
 ): boolean {
   if (!authStore) {

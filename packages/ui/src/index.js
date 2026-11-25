@@ -1,6 +1,3 @@
-import AiActionButton from "./components/clinical/AiActionButton.vue";
-import AiSuggestionDrawer from "./components/clinical/AiSuggestionDrawer.vue";
-import AuditLogViewer from "./components/clinical/AuditLogViewer.vue";
 import ClinicalBreadcrumbs from "./components/clinical/ClinicalBreadcrumbs.vue";
 import ClinicalContextBar from "./components/clinical/ClinicalContextBar.vue";
 import ClinicalDataTable from "./components/clinical/ClinicalDataTable.vue";
@@ -20,15 +17,11 @@ import ClinicalQueryPanel from "./components/clinical/ClinicalQueryPanel.vue";
 import ClinicalRadioGroup from "./components/clinical/ClinicalRadioGroup.vue";
 import ClinicalTabs from "./components/clinical/ClinicalTabs.vue";
 import ClinicalToastHost from "./components/clinical/ClinicalToastHost.vue";
-import ConfidenceBadge from "./components/clinical/ConfidenceBadge.vue";
 import EntityLink from "./components/clinical/EntityLink.vue";
-import PersonaSwitcher from "./components/clinical/PersonaSwitcher.vue";
 import SignOutConfirmModal from "./components/clinical/SignOutConfirmModal.vue";
 import EmptyState from "./components/common/EmptyState.vue";
-import FileUploadModal from "./components/FileUploadModal.vue";
 import MediaPlayer from "./components/MediaPlayer.vue";
 import ModalErrorAlert from "./components/ModalErrorAlert.vue";
-import { useAsyncRetry } from "./composables/useAsyncRetry.js";
 import { useEscapeClose } from "./composables/useEscapeClose.js";
 import {
   getFocusableElements,
@@ -53,9 +46,6 @@ import {
 } from "./composables/useSignOutGuard.js";
 
 export {
-  AiActionButton,
-  AiSuggestionDrawer,
-  AuditLogViewer,
   ClinicalBreadcrumbs,
   ClinicalContextBar,
   ClinicalDataTable,
@@ -75,13 +65,10 @@ export {
   ClinicalRadioGroup,
   ClinicalTabs,
   ClinicalToastHost,
-  ConfidenceBadge,
   EmptyState,
   EntityLink,
-  FileUploadModal,
   MediaPlayer,
   ModalErrorAlert,
-  PersonaSwitcher,
   SignOutConfirmModal,
   flushRegisteredDraftSources,
   flushRegisteredDraftSourcesSync,
@@ -94,7 +81,6 @@ export {
   registerDraftSource,
   resetDraftSourcesForTests,
   trapTabFocus,
-  useAsyncRetry,
   useEscapeClose,
   useFocusTrap,
   useInlineFocusHandoff,

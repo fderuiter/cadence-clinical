@@ -1,4 +1,4 @@
-import { computed, shallowReactive, type ComputedRef } from "vue";
+import { shallowReactive } from "vue";
 import {
   registerLogoutCleanup,
   registerSessionCacheClearHandler,
@@ -662,16 +662,6 @@ export function getNodeDisplay(
   };
 }
 
-/** Reactive computed wrapper returning the human display summary for a `NodeRef`. */
-export function useNodeDisplay(
-  nodeRefGetter: () => string,
-  fallbackTitleGetter?: () => string | null | undefined
-): ComputedRef<NodeDisplaySummary> {
-  return computed(() =>
-    getNodeDisplay(nodeRefGetter(), fallbackTitleGetter?.() ?? null)
-  );
-}
-
 /** Reads the cached resolution entry for a `NodeRef`, if any. */
 export function getCachedNodeEntry(
   nodeRefText: string
@@ -743,19 +733,4 @@ export function formatFieldPath(pointerOrKey: string): string {
   }
 
   return formatted.join(" · ");
-}
-
-/**
- * Replaces inline raw `NodeRef` substrings inside an error message with their human kind phrase
- * so primary error summaries stay readable while full diagnostics remain in support details.
- */
-export function sanitizeDiagnosticSummary(message: string): string {
-  if (!message) return "";
-  return message
-    .replace(
-      /\b([a-z][a-z0-9_]*):[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?:@[0-9]+)?\b/gi,
-      (_match, kind: string) => `this ${formatKindInline(kind)}`
-    )
-    .replace(/\s*\(NotPermitted\)/gi, "")
-    .trim();
 }

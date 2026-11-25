@@ -644,6 +644,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2824: Standardize Clinical Typography Utilities, 12px Floor, and AST Lints](adr/2026-11-24-standardize-clinical-typography-utilities-12px-floor-and-ast-lints.md) | Current | - Status: Accepted |
 | [ADR-2666: Atomic Dual-Signer Step-Up Verification and Startup-Validated CGT Barcode Key](adr/2026-11-24-atomic-dual-signer-step-up-verification-and-startup-validated-cgt-barcode-key.md) | Current | - Status: Accepted |
 | [ADR-2667: Fail-Closed Site Scope for Pharmacist and Subject Roles](adr/2026-11-23-fail-closed-site-scope-for-pharmacist-and-subject-roles.md) | Current | - Status: Accepted |
+| [ADR-2677: Retire Dead UI and Web Exports and Enforce UI Consumer Reachability](adr/2026-11-24-retire-dead-ui-exports-and-enforce-consumer-guard.md) | Current | - Status: Accepted |
 
 ## Developing and running
 
@@ -685,10 +686,8 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [quality API](api/quality.md) | Generated | Generated from `docs/openapi/quality_openapi.json` by `pnpm cadence generate-api-docs`. Don't edit this file by hand. |
 | [safety API](api/safety.md) | Generated | Generated from `docs/openapi/safety_openapi.json` by `pnpm cadence generate-api-docs`. Don't edit this file by hand. |
 | [tickets API](api/tickets.md) | Generated | Generated from `docs/openapi/tickets_openapi.json` by `pnpm cadence generate-api-docs`. Don't edit this file by hand. |
-| [AuditLogViewer](components/audit-viewer.md) | Current | The `AuditLogViewer` renders an interactive, chronological 21 CFR Part 11 audit trail feed with before/after value di... |
 | [ClinicalDataTable](components/data-table.md) | Current | The `ClinicalDataTable` component provides an accessible, performant tabular viewer for clinical observation records,... |
 | [ClinicalModal](components/modal.md) | Current | The `ClinicalModal` component renders accessible dialogs with focus trapping, `Escape` key listeners, backdrop blur, ... |
-| [PersonaSwitcher](components/persona-switcher.md) | Current | The `PersonaSwitcher` component enables multi-persona simulation across clinical operations workflows. Users and auto... |
 | [ctms database schema](schema/ctms.md) | Generated | Generated from the EF Core model by `pnpm cadence generate-schema-doc`. Don't edit this file by hand. |
 | [econsent database schema](schema/econsent.md) | Generated | Generated from the EF Core model by `pnpm cadence generate-schema-doc`. Don't edit this file by hand. |
 | [eisf database schema](schema/eisf.md) | Generated | Generated from the EF Core model by `pnpm cadence generate-schema-doc`. Don't edit this file by hand. |

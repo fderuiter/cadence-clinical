@@ -5,7 +5,8 @@ import {
   runLogoutCleanups,
 } from "../../src/auth/sessionCoordinator.js";
 import {
-  buildScopedRoutePath,
+  buildScopedWorkflowLocation,
+  buildScopedWorkflowPath,
   resolveActiveWorkspaceScope,
 } from "../../src/canvas/palette";
 import {
@@ -37,7 +38,14 @@ describe("workspaceScope cross-view synchronization", () => {
       studyId: "",
       siteId: "",
     });
-    expect(buildScopedRoutePath("/ecrf", scope)).toBe("/ecrf");
+    expect(buildScopedWorkflowPath("/ecrf", scope)).toBe("/ecrf");
+    expect(buildScopedWorkflowLocation("/ecrf", scope)).toBe("/ecrf");
+    expect(
+      buildScopedWorkflowLocation("/ecrf", {
+        studyCode: "CADENCE-ONC-204",
+        siteId: "SITE-044",
+      })
+    ).toBe("/ecrf?studyId=CADENCE-ONC-204&siteId=SITE-044");
   });
 
   it("synchronizes studyId and siteId across studyCanvas, clinicalScope, and router query", () => {

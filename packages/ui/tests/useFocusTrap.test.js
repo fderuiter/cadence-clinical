@@ -5,8 +5,6 @@ import { computed, effectScope, nextTick, ref } from "vue";
 import {
   ClinicalModal,
   ClinicalDrawer,
-  FileUploadModal,
-  AiSuggestionDrawer,
   useFocusTrap,
   hasActiveModalFocusTrap,
   getTopActiveModalContainer,
@@ -353,8 +351,6 @@ describe("Shared reactive useFocusTrap, useEscapeClose, and reduced-motion token
     expect(getFocusableElements).toBeTypeOf("function");
     expect(ClinicalModal).toBeDefined();
     expect(ClinicalDrawer).toBeDefined();
-    expect(FileUploadModal).toBeDefined();
-    expect(AiSuggestionDrawer).toBeDefined();
   });
 
   it("marks background siblings inert and aria-hidden while keeping ToastHost live alerts active", async () => {
@@ -524,7 +520,7 @@ describe("Shared reactive useFocusTrap, useEscapeClose, and reduced-motion token
     expect(onCustomEscape).toHaveBeenCalledTimes(1);
   });
 
-  it("enforces shared primitives across ClinicalDrawer, FileUploadModal, and inline ClinicalQueryPanel", () => {
+  it("enforces shared primitives across ClinicalDrawer and inline ClinicalQueryPanel", () => {
     const drawerSrc = fs.readFileSync(
       path.resolve(__dirname, "../src/components/clinical/ClinicalDrawer.vue"),
       "utf-8"
@@ -535,14 +531,6 @@ describe("Shared reactive useFocusTrap, useEscapeClose, and reduced-motion token
     expect(drawerSrc).toContain("useFocusTrap");
     expect(drawerSrc).not.toContain("<main");
     expect(drawerSrc).not.toContain("vuejs-accessibility");
-
-    const uploadSrc = fs.readFileSync(
-      path.resolve(__dirname, "../src/components/FileUploadModal.vue"),
-      "utf-8"
-    );
-    expect(uploadSrc).toContain("<ClinicalModal");
-    expect(uploadSrc).toContain(':dismissible="!isUploadLocked"');
-    expect(uploadSrc).not.toContain("vuejs-accessibility");
 
     const queryPanelSrc = fs.readFileSync(
       path.resolve(

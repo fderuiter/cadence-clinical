@@ -171,29 +171,8 @@ const STAFF_HUB_ROLES = [
   "tmf_auditor",
 ];
 
-export function buildStudyScopedPath(
-  basePath: string,
-  studyCode?: string
-): string {
-  const code = studyCode?.trim() || "";
-  return code ? `${basePath}?studyId=${encodeURIComponent(code)}` : basePath;
-}
-
 function cleanQueryString(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
-}
-
-export function buildScopedRoutePath(
-  basePath: string,
-  scope?: { studyCode?: string; siteId?: string }
-): string {
-  const studyCode = scope?.studyCode?.trim() || "";
-  const siteId = scope?.siteId?.trim() || "";
-  if (!studyCode && !siteId) return basePath;
-  const params = new URLSearchParams();
-  if (studyCode) params.set("studyId", studyCode);
-  if (siteId) params.set("siteId", siteId);
-  return `${basePath}?${params.toString()}`;
 }
 
 export function resolveSiteReadinessPath(

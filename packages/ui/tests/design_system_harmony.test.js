@@ -10,9 +10,6 @@ const portalSrcDir = path.join(repoRoot, "apps/subject-portal/src");
 const docsComponentsDir = path.join(repoRoot, "docs/components");
 
 const EXPECTED_SHARED_COMPONENTS = [
-  "AiActionButton",
-  "AiSuggestionDrawer",
-  "AuditLogViewer",
   "ClinicalBreadcrumbs",
   "ClinicalContextBar",
   "ClinicalDataTable",
@@ -32,13 +29,10 @@ const EXPECTED_SHARED_COMPONENTS = [
   "ClinicalRadioGroup",
   "ClinicalTabs",
   "ClinicalToastHost",
-  "ConfidenceBadge",
   "EmptyState",
   "EntityLink",
-  "FileUploadModal",
   "MediaPlayer",
   "ModalErrorAlert",
-  "PersonaSwitcher",
   "SignOutConfirmModal",
 ];
 
@@ -201,7 +195,7 @@ function resolveCssColorExpr(expr, themeMap) {
 
 describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", () => {
   describe("Requirement 1: Complete Root Package Exports & Type Definitions", () => {
-    it("exposes all 30 shared Vue components from root index.js with zero unexported SFCs", () => {
+    it("exposes all 24 shared Vue components from root index.js with zero unexported SFCs", () => {
       const discoveredVueNames = walkFiles(path.join(uiDir, "src/components"), [
         ".vue",
       ])
@@ -211,18 +205,17 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       expect(discoveredVueNames).toEqual(
         [...EXPECTED_SHARED_COMPONENTS].sort()
       );
-      expect(EXPECTED_SHARED_COMPONENTS).toHaveLength(30);
+      expect(EXPECTED_SHARED_COMPONENTS).toHaveLength(24);
       for (const name of EXPECTED_SHARED_COMPONENTS) {
         expect(rootUi[name], `root index.js missing ${name}`).toBeDefined();
       }
     });
 
-    it("exposes all 5 keyboard interaction helpers, createSrOnlyActionButton, and useAsyncRetry from root index.js", () => {
+    it("exposes all 5 keyboard interaction helpers and createSrOnlyActionButton from root index.js", () => {
       expect(EXPECTED_KEYBOARD_HELPERS).toHaveLength(5);
       for (const helperName of [
         ...EXPECTED_KEYBOARD_HELPERS,
         "createSrOnlyActionButton",
-        "useAsyncRetry",
       ]) {
         expect(
           rootUi[helperName],
@@ -231,7 +224,7 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       }
     });
 
-    it("declares complete TypeScript definitions for all 30 components and helpers in index.d.ts", () => {
+    it("declares complete TypeScript definitions for all 24 components and helpers in index.d.ts", () => {
       const dts = fs.readFileSync(path.join(uiDir, "index.d.ts"), "utf-8");
       for (const componentName of EXPECTED_SHARED_COMPONENTS) {
         expect(dts).toMatch(
@@ -241,7 +234,6 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       for (const helperName of [
         ...EXPECTED_KEYBOARD_HELPERS,
         "createSrOnlyActionButton",
-        "useAsyncRetry",
       ]) {
         expect(dts).toMatch(
           new RegExp(`export (?:declare )?(?:function|const) ${helperName}\\b`)
@@ -256,7 +248,7 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
         path.join(uiDir, "README.md"),
         ...walkFiles(docsComponentsDir, [".md"]),
       ];
-      expect(docFiles.length).toBeGreaterThanOrEqual(6);
+      expect(docFiles.length).toBeGreaterThanOrEqual(4);
 
       for (const docPath of docFiles) {
         const content = fs.readFileSync(docPath, "utf-8");
@@ -446,9 +438,7 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       const unauthorizedAiTokenFiles = [];
       for (const file of sourceFiles) {
         const rel = path.relative(repoRoot, file).split(path.sep).join("/");
-        const isGovernedAi =
-          rel.startsWith("apps/web/src/components/ai/") ||
-          /^packages\/ui\/src\/components\/clinical\/Ai[^/]*\.vue$/.test(rel);
+        const isGovernedAi = rel.startsWith("apps/web/src/components/ai/");
         if (isGovernedAi) continue;
         const text = fs
           .readFileSync(file, "utf-8")
@@ -2290,7 +2280,7 @@ const open = ref(true);
   });
 
   describe("Requirement 8: Shared Accessibility Primitives & Label-in-Name AST Gates (ADR-2822)", () => {
-    it("defines global .sr-only utility in packages/ui/tokens.css and migrates all 6 upload dropzones onto ClinicalDropzone without role=button containers", () => {
+    it("defines global .sr-only utility in packages/ui/tokens.css and migrates all 5 upload dropzones onto ClinicalDropzone without role=button containers", () => {
       const tokensCss = fs.readFileSync(
         path.join(uiDir, "tokens.css"),
         "utf-8"
@@ -2303,7 +2293,6 @@ const open = ref(true);
       expect(srOnlyProps.overflow).toBe("hidden");
 
       const dropzoneFiles = [
-        path.join(uiDir, "src/components/FileUploadModal.vue"),
         path.join(webSrcDir, "components/etmf/BatchUploadDrawer.vue"),
         path.join(webSrcDir, "components/etmf/DocumentGrid.vue"),
         path.join(webSrcDir, "components/SynonymImportDrawer.vue"),
@@ -2571,6 +2560,14 @@ const open = () => {};
           code: `export const BADGE_COLOR = "var(--semantic-color-ai)";\n`,
           expectedCount: 1,
         },
+        {
+          filePath: path.join(
+            uiDir,
+            "src/components/clinical/__SyntheticAiButton.vue"
+          ),
+          code: `<template><button type="button" class="ai-btn">Draft</button></template>\n<style scoped>\n.ai-btn { border-color: var(--semantic-color-ai-border); }\n</style>\n`,
+          expectedCount: 1,
+        },
       ];
 
       for (const probe of violationProbes) {
@@ -2591,13 +2588,6 @@ const open = () => {};
         {
           filePath: path.join(webSrcDir, "components/ai/AiLabel.vue"),
           code: `<template><span class="ai-pill">AI-assisted</span></template>\n<style scoped>\n.ai-pill { background: var(--semantic-color-ai-bg); color: var(--semantic-color-ai); }\n</style>\n`,
-        },
-        {
-          filePath: path.join(
-            uiDir,
-            "src/components/clinical/AiActionButton.vue"
-          ),
-          code: `<template><button type="button" class="ai-btn">Draft</button></template>\n<style scoped>\n.ai-btn { border-color: var(--semantic-color-ai-border); }\n</style>\n`,
         },
       ];
 

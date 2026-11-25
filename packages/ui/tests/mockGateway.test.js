@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import * as mockGatewayModule from "../mockGateway.js";
 import {
   isGatewayApiCall,
   validateGatewayRequest,
-  generateGatewaySignature,
   isWhitelistedSubjectRoute,
   isPathSignatureGated,
   normalizeMswBasePath,
@@ -12,6 +12,7 @@ import {
   createMswWorkerStarter,
   evaluateDemoBoundaryRequest,
 } from "../mockGateway.js";
+import { generateGatewaySignature } from "../signing.js";
 import * as uiRoot from "../index.js";
 
 // A per-test secret: the simulator ships none of its own (#5335).
@@ -221,6 +222,13 @@ describe("Mock Gateway Simulator Unit Tests", () => {
       expect(uiRoot).not.toHaveProperty("resolveMswServiceWorkerOptions");
       expect(uiRoot).not.toHaveProperty("ensureServiceWorkerController");
       expect(uiRoot).not.toHaveProperty("createMswWorkerStarter");
+      expect(mockGatewayModule).toHaveProperty("verifyGatewaySignature");
+      expect(mockGatewayModule).not.toHaveProperty("generateGatewaySignature");
+      expect(mockGatewayModule).not.toHaveProperty(
+        "generateCanonicalSignature"
+      );
+      expect(mockGatewayModule).not.toHaveProperty("verifyCanonicalSignature");
+      expect(mockGatewayModule).not.toHaveProperty("generateJwtHS256");
     });
 
     it("should reject invalid/tampered X-Gateway-Signature and log console error", async () => {

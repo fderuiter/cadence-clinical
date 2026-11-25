@@ -348,40 +348,6 @@ export const ctmsApi = {
     );
   },
 
-  /** Alias for `listMonitoringVisitLetters`. */
-  getMonitoringVisitLetters(visitId: string): Promise<GeneratedVisitLetter[]> {
-    return this.listMonitoringVisitLetters(visitId);
-  },
-
-  /** Retrieves a specific generated monitoring visit letter by type. */
-  getMonitoringVisitLetterByType(
-    visitId: string,
-    letterType: string
-  ): Promise<GeneratedVisitLetter> {
-    return unwrapResponse(
-      client.GET(
-        "/api/v1/ctms/monitoring-visits/{visit_id}/letters/{letter_type}",
-        {
-          params: { path: { visit_id: visitId, letter_type: letterType } },
-        }
-      )
-    );
-  },
-
-  /** Renders a CTMS site visit letter preview via Liquid template (POST /api/v1/ctms/letters/render). */
-  renderVisitLetter(
-    templateName: string,
-    payload: SiteVisitLetterModel
-  ): Promise<string> {
-    return unwrapResponse(
-      client.POST("/api/v1/ctms/letters/render", {
-        params: { query: { templateName } },
-        body: payload,
-        parseAs: "text",
-      })
-    );
-  },
-
   /** Compiles a GxP PDF visit letter with Part 11 signature and eTMF filing (POST /api/v1/ctms/letters/compile). */
   compileVisitLetter(
     templateName: string,

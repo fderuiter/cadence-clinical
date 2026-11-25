@@ -56,23 +56,18 @@ export function debounce(func, wait) {
 }
 
 export {
-  createClinicalLookupInput,
   createConditionRowHTML,
   createRuleEditorHTML,
   serializeConditionsTree,
   deserializeConditionsTree,
-  createSoaBuilderMatrix,
-  createClinicalVisitMatrix,
   createSrOnlyActionButton,
 } from "./src/builders.js";
 
 export {
   canonicalSerialize,
   generateCanonicalSignature,
-  verifyCanonicalSignature,
   generateGatewaySignature,
   verifyGatewaySignature,
-  generateJwtHS256,
   sha256,
   validateField,
   buildLedgerBlock,

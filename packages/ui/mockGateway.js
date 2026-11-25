@@ -4,21 +4,9 @@
  * and dual-signature header validation using browser Crypto APIs.
  */
 
-import {
-  generateGatewaySignature,
-  verifyGatewaySignature,
-  generateCanonicalSignature,
-  verifyCanonicalSignature,
-  generateJwtHS256,
-} from "./signing.js";
+import { verifyGatewaySignature } from "./signing.js";
 
-export {
-  generateGatewaySignature,
-  verifyGatewaySignature,
-  generateCanonicalSignature,
-  verifyCanonicalSignature,
-  generateJwtHS256,
-};
+export { verifyGatewaySignature };
 
 export const VALID_SERVICE_PREFIXES = [
   "designer/",
