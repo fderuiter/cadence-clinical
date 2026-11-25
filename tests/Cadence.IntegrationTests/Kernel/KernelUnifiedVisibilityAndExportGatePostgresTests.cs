@@ -98,6 +98,7 @@ public sealed class KernelUnifiedVisibilityAndExportGatePostgresTests(ExecutionF
     [Fact(DisplayName = "ObservationExecutionFormsPreviewsQueriesAndAutoQueries_EnforceEnrollmentUnblindEvenForTenantCaller")]
     [KernelRule("K-AUTH-4")]
     [KernelRule("K-RULE-3")]
+    [GxPRequirement("PRD-MDR-006")]
     public async Task ObservationExecutionFormsPreviewsQueriesAndAutoQueriesEnforceEnrollmentUnblindEvenForTenantCaller()
     {
         fixture.SkipIfUnavailable();
@@ -297,6 +298,8 @@ public sealed class KernelUnifiedVisibilityAndExportGatePostgresTests(ExecutionF
     [KernelRule("K-AUTH-4")]
     [KernelRule("K-FIND-1")]
     [KernelRule("K-AI-3")]
+    [GxPRequirement("PRD-CRF-013")]
+    [GxPRequirement("PRD-MDR-006")]
     public async Task ValidationFindingsRulePackPreviewAndMcpToolsEnforceSiteVisibilityAndBlinding()
     {
         fixture.SkipIfUnavailable();
@@ -442,6 +445,8 @@ public sealed class KernelUnifiedVisibilityAndExportGatePostgresTests(ExecutionF
     [Fact(DisplayName = "BitemporalExportsAndCasebooks_ExcludePostKnownAtProtocolEdits_AndEliminateBlindedSideChannels")]
     [KernelRule("K-TRUTH-1")]
     [KernelRule("K-AUTH-4")]
+    [GxPRequirement("PRD-CDR-006")]
+    [GxPRequirement("PRD-MDR-006")]
     public async Task BitemporalExportsAndCasebooksExcludePostKnownAtProtocolEditsAndEliminateBlindedSideChannels()
     {
         fixture.SkipIfUnavailable();
@@ -653,6 +658,9 @@ public sealed class KernelUnifiedVisibilityAndExportGatePostgresTests(ExecutionF
     [Fact(DisplayName = "ExportCommands_EnforceCapabilityGates_AuditDeniedAndPermittedExports_AndRemainBaselineWhenSubscriptionExpires")]
     [KernelRule("K-AUTH-2")]
     [KernelRule("K-PROV-1")]
+    [GxPRequirement("PRD-CDR-006")]
+    [GxPRequirement("PRD-SYS-001")]
+    [GxPRequirement("PRD-SYS-192")]
     public async Task ExportCommandsEnforceCapabilityGatesAuditDeniedAndPermittedExportsAndRemainBaselineWhenSubscriptionExpires()
     {
         fixture.SkipIfUnavailable();

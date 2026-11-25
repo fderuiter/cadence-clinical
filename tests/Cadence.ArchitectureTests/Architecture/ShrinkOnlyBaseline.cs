@@ -8,7 +8,7 @@ namespace Cadence.ArchitectureTests.Architecture;
 /// <summary>
 /// Shared shrink-only ratchet baseline evaluator for architecture sentinels
 /// (<c>direct-state-writes.baseline.txt</c>, <c>permission-matrix.baseline.txt</c>,
-/// <c>cross-service-isolation.baseline.txt</c>). Uses <see cref="KernelBoundaryBaseline.UpdateEnvironmentVariable"/>
+/// <c>cross-service-isolation.baseline.txt</c>, <c>prd-requirement-coverage.baseline.txt</c>). Uses <see cref="KernelBoundaryBaseline.UpdateEnvironmentVariable"/>
 /// (<c>CADENCE_UPDATE_BASELINE=1</c>) to regenerate baseline files when paying down debt.
 /// </summary>
 public static class ShrinkOnlyBaseline

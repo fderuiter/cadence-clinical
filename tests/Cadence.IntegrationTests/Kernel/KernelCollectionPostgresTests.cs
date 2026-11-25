@@ -59,6 +59,7 @@ public sealed class KernelCollectionPostgresTests(KernelPostgresFixture fixture)
     /// and for a time in the future.
     /// </summary>
     [Fact(DisplayName = "Open_ResolvesTheGoverningVersion_AndRefusesWhatItDoesNotGovern")]
+    [GxPRequirement("PRD-CRF-012")]
     public async Task OpenResolvesTheGoverningVersionAndRefusesWhatItDoesNotGovern()
     {
         fixture.SkipIfUnavailable();
@@ -253,6 +254,7 @@ public sealed class KernelCollectionPostgresTests(KernelPostgresFixture fixture)
     /// </summary>
     [Fact(DisplayName = "Save_RecordsAndCorrectsAPage_AsOneActivity")]
     [KernelRule("K-FACT-6")]
+    [GxPRequirement("PRD-SYS-001")]
     public async Task SaveRecordsAndCorrectsAPageAsOneActivity()
     {
         fixture.SkipIfUnavailable();
@@ -330,6 +332,7 @@ public sealed class KernelCollectionPostgresTests(KernelPostgresFixture fixture)
     /// </summary>
     [Theory(DisplayName = "Save_FailingAtAnyCommitStage_ChangesNothing")]
     [MemberData(nameof(CommitStages))]
+    [GxPRequirement("PRD-EVT-001")]
     public async Task SaveFailingAtAnyCommitStageChangesNothing(string stageName)
     {
         fixture.SkipIfUnavailable();
@@ -433,6 +436,7 @@ public sealed class KernelCollectionPostgresTests(KernelPostgresFixture fixture)
     /// </summary>
     [Theory(DisplayName = "LockAndSave_Race_NoValueCommitsAfterTheLock")]
     [MemberData(nameof(LockScopeKinds))]
+    [GxPRequirement("PRD-CRF-012")]
     public async Task LockAndSaveRaceNoValueCommitsAfterTheLock(string scopeKind)
     {
         fixture.SkipIfUnavailable();
@@ -508,6 +512,7 @@ public sealed class KernelCollectionPostgresTests(KernelPostgresFixture fixture)
     /// A lock on the form also covers its values when they are corrected or queried one at a time, outside a page save.
     /// </summary>
     [Fact(DisplayName = "FormLock_CoversItsValues_OutsideAPageSave")]
+    [GxPRequirement("PRD-CRF-012")]
     public async Task FormLockCoversItsValuesOutsideAPageSave()
     {
         fixture.SkipIfUnavailable();
@@ -674,6 +679,7 @@ public sealed class KernelCollectionPostgresTests(KernelPostgresFixture fixture)
     /// and enforce PostgreSQL Row-Level Security across tenants.
     /// </summary>
     [Fact(DisplayName = "BatchProjections_HeadersRevisionsAndQueryTargets_SkipProtocolParsesAndEnforceRls")]
+    [GxPRequirement("PRD-CRF-013")]
     public async Task BatchProjectionsHeadersRevisionsAndQueryTargetsSkipProtocolParsesAndEnforceRls()
     {
         fixture.SkipIfUnavailable();

@@ -106,21 +106,61 @@ public static class SyncGxPService
             if (Directory.Exists(resolvedResultsDir)) Directory.Delete(resolvedResultsDir, recursive: true);
             Directory.CreateDirectory(resolvedResultsDir);
 
-            var psi = new ProcessStartInfo("dotnet")
+            var baseEnv = new Dictionary<string, string>(StringComparer.Ordinal)
             {
-                WorkingDirectory = repoRoot,
-                UseShellExecute = false
+                // Database fixtures record server, extensions, migrations, and role metadata next to TRX and JUnit XML files.
+                ["CADENCE_TEST_EVIDENCE_DIR"] = resolvedResultsDir,
             };
-            // The database fixtures record the server, extensions, migrations and role they used next to the TRX files.
-            psi.Environment["CADENCE_TEST_EVIDENCE_DIR"] = resolvedResultsDir;
-            foreach (var arg in new[] { "test", "Cadence.sln", "--no-restore", "--configuration", "Release", "--results-directory", resolvedResultsDir, "--logger", "trx;LogFilePrefix=gxp" })
+            if (writeToSdlc && string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("CADENCE_TEST_BROWSER")))
             {
-                psi.ArgumentList.Add(arg);
+                baseEnv["CADENCE_TEST_BROWSER"] = "1";
             }
 
-            using var proc = Process.Start(psi);
-            proc?.WaitForExit();
-            testExitCode = proc?.ExitCode ?? 1;
+            testExitCode = RunProcess(
+                repoRoot,
+                "dotnet",
+                ["test", "Cadence.sln", "--no-restore", "--configuration", "Release", "--results-directory", resolvedResultsDir, "--logger", "trx;LogFilePrefix=gxp"],
+                baseEnv);
+
+            int frontendUnitExit = RunProcess(repoRoot, "pnpm", ["-r", "test"], baseEnv);
+            if (testExitCode == 0 && frontendUnitExit != 0) testExitCode = frontendUnitExit;
+
+            int docsVitestExit = RunProcess(repoRoot, "pnpm", ["exec", "vitest", "run", "--config", "vitest.config.mjs"], baseEnv);
+            if (testExitCode == 0 && docsVitestExit != 0) testExitCode = docsVitestExit;
+
+            bool runBrowserSuites = writeToSdlc
+                || string.Equals(Environment.GetEnvironmentVariable("CADENCE_TEST_BROWSER"), "1", StringComparison.Ordinal);
+            if (runBrowserSuites)
+            {
+                var browserEnv = new Dictionary<string, string>(baseEnv, StringComparer.Ordinal)
+                {
+                    ["CADENCE_TEST_BROWSER"] = "1",
+                };
+                var workflowEnv = new Dictionary<string, string>(browserEnv, StringComparer.Ordinal)
+                {
+                    ["DEMO_MODE"] = "false",
+                };
+
+                (string[] Args, IReadOnlyDictionary<string, string> Env)[] e2eCommands =
+                [
+                    (["--filter", "ui", "build"], browserEnv),
+                    (["docs:build"], browserEnv),
+                    (["--filter", "subject-portal", "test:e2e:docs-portal"], browserEnv),
+                    (["--filter", "subject-portal", "test:e2e"], browserEnv),
+                    (["--filter", "web", "test:e2e"], browserEnv),
+                    (["--filter", "web", "test:e2e:workflows"], workflowEnv),
+                ];
+
+                foreach (var (args, env) in e2eCommands)
+                {
+                    int stepExit = RunProcess(repoRoot, "pnpm", args, env);
+                    if (testExitCode == 0 && stepExit != 0)
+                    {
+                        testExitCode = stepExit;
+                    }
+                }
+            }
+
             if (testExitCode != 0)
             {
                 writer.WriteLine("\n[ERROR] Test suite execution failed. The documents are still generated so the failures are visible, but nothing is staged.");
@@ -259,6 +299,32 @@ public static class SyncGxPService
         }
 
         return true;
+    }
+
+    private static int RunProcess(
+        string workingDirectory,
+        string fileName,
+        IReadOnlyList<string> arguments,
+        IReadOnlyDictionary<string, string> environment)
+    {
+        var psi = new ProcessStartInfo(fileName)
+        {
+            WorkingDirectory = workingDirectory,
+            UseShellExecute = false,
+        };
+        foreach (var (key, value) in environment)
+        {
+            psi.Environment[key] = value;
+        }
+
+        foreach (string arg in arguments)
+        {
+            psi.ArgumentList.Add(arg);
+        }
+
+        using var proc = Process.Start(psi);
+        proc?.WaitForExit();
+        return proc?.ExitCode ?? 1;
     }
 
     private static string FindRepoRoot()

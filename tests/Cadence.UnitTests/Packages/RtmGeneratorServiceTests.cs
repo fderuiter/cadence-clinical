@@ -287,6 +287,78 @@ public class RequirementTagScannerTests
         tests.Single(t => t.MethodName == "Untagged").KernelRuleIds.Should().BeEmpty();
         tests.Should().OnlyContain(t => t.RequirementIds.Count == 0);
     }
+
+    [Fact]
+    public void Scan_JavaScriptAndTypeScript_ExtractsTestLevelTagsAndReportsFileOrDescribeViolations()
+    {
+        var cleanScan = RequirementTagScanner.Scan(Source(
+            "import { describe, it, expect } from 'vitest';",
+            "describe('ReAuthModal.vue', () => {",
+            "  // @" + "req: PRD-DOC-003",
+            "  it('captures password and signing reason (/regex/ literal)', () => {",
+            "    expect(/foo\\/bar/.test('foo/bar')).toBe(true);",
+            "  });",
+            "",
+            "  it('leaves UI-only cancel untagged', () => {",
+            "    expect(1).toBe(1);",
+            "  });",
+            "});"), "apps/web/tests/components/ReAuthModal.spec.ts");
+
+        cleanScan.Violations.Should().BeEmpty();
+        cleanScan.Tests.Should().HaveCount(2);
+        cleanScan.Tests[0].FullName.Should().Be("apps/web/tests/components/ReAuthModal.spec.ts::ReAuthModal.vue > captures password and signing reason (/regex/ literal)");
+        cleanScan.Tests[0].RequirementIds.Should().Equal("PRD-DOC-003");
+        cleanScan.Tests[1].RequirementIds.Should().BeEmpty();
+
+        var violationScan = RequirementTagScanner.Scan(Source(
+            "/**",
+            " * @" + "req: PRD-PAT-001",
+            " */",
+            "import { describe, it } from 'vitest';",
+            "describe('Wallet (@" + "req: PRD-SYS-182)', () => {",
+            "  it('renders', () => {});",
+            "});"), "apps/web/tests/views/Wallet.spec.ts");
+
+        violationScan.Tests.Should().ContainSingle().Which.RequirementIds.Should().BeEmpty();
+        violationScan.Violations.Should().HaveCount(2);
+        violationScan.Violations[0].Message.Should().Contain("File-level comment declares PRD-PAT-001");
+        violationScan.Violations[1].Message.Should().Contain("PRD-SYS-182").And.Contain("on the suite");
+    }
+
+    [Fact]
+    public void ScanDirectoriesWithViolations_ExcludesProductionCSharpUnderPackagesSrc_WhileIncludingPackageAndFrontendTests()
+    {
+        string tempRoot = Path.Combine(Path.GetTempPath(), $"scanner-dirs-{Guid.NewGuid():N}");
+        try
+        {
+            Directory.CreateDirectory(Path.Combine(tempRoot, "packages", "compliance", "src"));
+            File.WriteAllText(
+                Path.Combine(tempRoot, "packages", "compliance", "src", "ProdDoc.cs"),
+                Source(
+                    "namespace Sample;",
+                    "/// <summary>Doc example @" + "req:PRD-FAKE-999.</summary>",
+                    "public class ProdDoc { }"));
+
+            Directory.CreateDirectory(Path.Combine(tempRoot, "packages", "usdm-schemas", "tests"));
+            File.WriteAllText(
+                Path.Combine(tempRoot, "packages", "usdm-schemas", "tests", "schema.test.ts"),
+                Source(
+                    "import { describe, it } from 'vitest';",
+                    "describe('USDM', () => {",
+                    "  // @" + "req: PRD-AAA-001",
+                    "  it('validates schema', () => {});",
+                    "});"));
+
+            var scan = RequirementTagScanner.ScanDirectoriesWithViolations(tempRoot, RtmGeneratorService.TestSearchDirs);
+            scan.Violations.Should().BeEmpty();
+            scan.Tests.Should().ContainSingle()
+                .Which.FullName.Should().Be("packages/usdm-schemas/tests/schema.test.ts::USDM > validates schema");
+        }
+        finally
+        {
+            Directory.Delete(tempRoot, recursive: true);
+        }
+    }
 }
 
 /// <summary>
@@ -985,6 +1057,140 @@ public sealed class RtmGeneratorServiceTests : IDisposable
         int withBrowserExit = Cadence.ToolingCore.Services.SyncGxPService.SyncCompliance(
             snapshot: true, repoRoot: _dir, resultsDir: "TestResults/gxp");
         withBrowserExit.Should().Be(0);
+    }
+
+    [Fact]
+    public void ParseTestResults_MergesVitestAndPlaywrightJUnitReports_AndPreservesPostgresEvidenceGate()
+    {
+        Directory.CreateDirectory(Path.Combine(_dir, "docs", "SDLC"));
+        File.WriteAllText(
+            Path.Combine(_dir, "docs", "SDLC", "prd.md"),
+            string.Join("\n",
+                "#### PRD-UI-001: Browser Workflow",
+                "#### PRD-DB-001: Immutable Audit",
+                "**Evidence:** PostgreSQL"));
+
+        Directory.CreateDirectory(Path.Combine(_dir, "apps", "web", "tests", "e2e", "suites"));
+        File.WriteAllText(
+            Path.Combine(_dir, "apps", "web", "tests", "e2e", "suites", "01_designer_suite.spec.ts"),
+            string.Join("\n",
+                "import { test } from '@playwright/test';",
+                "test.describe('Suite 1', () => {",
+                "  test('01_protocol_designer @" + "req:PRD-UI-001', async () => {",
+                "  });",
+                "});"));
+
+        Directory.CreateDirectory(Path.Combine(_dir, "apps", "web", "tests", "components"));
+        File.WriteAllText(
+            Path.Combine(_dir, "apps", "web", "tests", "components", "AuditMock.spec.ts"),
+            string.Join("\n",
+                "import { describe, it } from 'vitest';",
+                "describe('AuditMock', () => {",
+                "  // @" + "req: PRD-DB-001",
+                "  it('renders mocked audit rows', () => {});",
+                "});"));
+
+        string resultsDir = Path.Combine(_dir, "TestResults", "gxp");
+        Directory.CreateDirectory(resultsDir);
+        new XDocument(
+            new XElement("testsuites",
+                new XElement("testsuite",
+                    new XAttribute("name", "suites/01_designer_suite.spec.ts"),
+                    new XElement("testcase",
+                        new XAttribute("classname", "suites/01_designer_suite.spec.ts"),
+                        new XAttribute("name", "Suite 1 \u203A 01_protocol_designer @" + "req:PRD-UI-001"),
+                        new XAttribute("time", "1.25"))))).Save(Path.Combine(resultsDir, "playwright-web.xml"));
+
+        new XDocument(
+            new XElement("testsuites",
+                new XElement("testsuite",
+                    new XAttribute("name", "tests/components/AuditMock.spec.ts"),
+                    new XElement("testcase",
+                        new XAttribute("classname", "tests/components/AuditMock.spec.ts"),
+                        new XAttribute("name", "AuditMock > renders mocked audit rows"),
+                        new XAttribute("time", "0.05"))))).Save(Path.Combine(resultsDir, "vitest-web.xml"));
+
+        var parsed = RtmGeneratorService.ParseTestResults(_dir, resultsDir);
+        parsed["apps/web/tests/e2e/suites/01_designer_suite.spec.ts::Suite 1 > 01_protocol_designer @" + "req:PRD-UI-001"].Status.Should().Be(TestStatus.Passed);
+        parsed["apps/web/tests/components/AuditMock.spec.ts::AuditMock > renders mocked audit rows"].Status.Should().Be(TestStatus.Passed);
+
+        RtmGeneratorService.GenerateRtm(reportPath: resultsDir, repoRoot: _dir).Should().Be(0);
+        string rtm = File.ReadAllText(Path.Combine(_dir, "docs", "SDLC", "Requirements_Traceability_Matrix.md"));
+        rtm.Should().Contain("| PRD-UI-001 | PRD | **Browser Workflow** | `01_protocol_designer @" + "req:PRD-UI-001` (apps/web/tests/e2e/suites/01_designer_suite.spec.ts) 🟢 | ✅ **Qualified** |");
+        rtm.Should().Contain("| PRD-DB-001 | PRD | **Immutable Audit** | `renders mocked audit rows` (apps/web/tests/components/AuditMock.spec.ts) 🟢 | ⚠️ **Not Verified (needs PostgreSQL evidence)** |");
+
+        // If a second browser project fails the same Playwright spec, failure wins over pass.
+        new XDocument(
+            new XElement("testsuite",
+                new XElement("testcase",
+                    new XAttribute("classname", "suites/01_designer_suite.spec.ts"),
+                    new XAttribute("name", "Suite 1 \u203A 01_protocol_designer @" + "req:PRD-UI-001"),
+                    new XElement("failure", "assertion failed")))).Save(Path.Combine(resultsDir, "playwright-web-webkit.xml"));
+
+        RtmGeneratorService.ParseTestResults(_dir, resultsDir)["apps/web/tests/e2e/suites/01_designer_suite.spec.ts::Suite 1 > 01_protocol_designer @" + "req:PRD-UI-001"]
+            .Status.Should().Be(TestStatus.Failed);
+    }
+
+    [Fact]
+    public void ValidateGxpRtm_FailsOnMainWhenSnapshotCommitLagExceedsBound_AndExemptsFeatureBranchesAndPullRequests()
+    {
+        WriteMinimalRepository();
+        RunGit(_dir, "init", "-q", "-b", "main");
+        RunGit(_dir, "config", "user.email", "test@cadence.local");
+        RunGit(_dir, "config", "user.name", "Cadence Test");
+        RunGit(_dir, "add", "-A");
+        RunGit(_dir, "commit", "-q", "-m", "initial");
+
+        string snapshotSha = RunGit(_dir, "rev-parse", "HEAD").Trim();
+        var evidence = new RtmEvidenceContext($"`{snapshotSha}` (clean working tree)", "2026-11-24 00:00:00", "PostgreSQL 18", "test");
+        WriteTrx("a.trx", ("Sample.FirstTests", "First", "Passed"));
+        RtmGeneratorService.GenerateRtm(reportPath: ".", repoRoot: _dir, evidence: evidence).Should().Be(0);
+        File.Delete(Path.Combine(_dir, "a.trx"));
+        RunGit(_dir, "add", "-A");
+        RunGit(_dir, "commit", "-q", "-m", "snapshot");
+
+        for (int i = 1; i <= 3; i++)
+        {
+            File.WriteAllText(Path.Combine(_dir, $"note-{i}.txt"), $"change {i}\n");
+            RunGit(_dir, "add", "-A");
+            RunGit(_dir, "commit", "-q", "-m", $"change {i}");
+        }
+
+        // Snapshot was recorded at `initial`, so HEAD on main is 4 commits ahead of `snapshotSha`.
+        Cadence.Cli.Services.GxpRtmValidatorService.ValidateGxpRtm(_dir, eventName: "push", gitRef: "refs/heads/main", maxMainSnapshotCommitLag: 5)
+            .Should().BeTrue("commit lag 4 is within maxMainSnapshotCommitLag 5");
+        Cadence.Cli.Services.GxpRtmValidatorService.ValidateGxpRtm(_dir, eventName: "push", gitRef: "refs/heads/main", maxMainSnapshotCommitLag: 2)
+            .Should().BeFalse("commit lag 4 exceeds maxMainSnapshotCommitLag 2 on refs/heads/main");
+        Cadence.Cli.Services.GxpRtmValidatorService.ValidateGxpRtm(_dir, eventName: "pull_request", gitRef: "refs/heads/main", maxMainSnapshotCommitLag: 2)
+            .Should().BeTrue("pull_request validation never fails on baseline snapshot lag (ADR-2532)");
+        Cadence.Cli.Services.GxpRtmValidatorService.ValidateGxpRtm(_dir, eventName: "push", gitRef: "refs/heads/feature/demo", maxMainSnapshotCommitLag: 2)
+            .Should().BeTrue("feature branches never fail on baseline snapshot lag (ADR-2532)");
+    }
+
+    private static string RunGit(string workingDirectory, params string[] args)
+    {
+        var psi = new System.Diagnostics.ProcessStartInfo("git")
+        {
+            WorkingDirectory = workingDirectory,
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+        };
+        foreach (string arg in args)
+        {
+            psi.ArgumentList.Add(arg);
+        }
+
+        using var proc = System.Diagnostics.Process.Start(psi)!;
+        string stdout = proc.StandardOutput.ReadToEnd();
+        string stderr = proc.StandardError.ReadToEnd();
+        proc.WaitForExit();
+        if (proc.ExitCode != 0)
+        {
+            throw new InvalidOperationException($"git {string.Join(' ', args)} failed ({proc.ExitCode}): {stderr}");
+        }
+
+        return stdout;
     }
 
     private void WriteMinimalRepository()

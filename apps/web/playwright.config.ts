@@ -1,5 +1,11 @@
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { chromium, defineConfig, devices } from "@playwright/test";
 import { buildChromiumLaunchOptions } from "../../scripts/playwright-chromium-launcher.mjs";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const repoRoot = path.resolve(__dirname, "../..");
+const evidenceDir = process.env.CADENCE_TEST_EVIDENCE_DIR?.trim();
 
 function getRequestedProjects(argv: readonly string[]): string[] {
   const projects: string[] = [];
@@ -22,6 +28,12 @@ const webBaseUrl = useLiveKeycloak
   ? "http://localhost:3000/cadence-clinical/"
   : demoPreviewUrl;
 const requestedProjects = getRequestedProjects(process.argv);
+const junitSlug =
+  requestedProjects.length > 0
+    ? requestedProjects
+        .map((p) => p.replace(/[^a-zA-Z0-9_-]/g, "-"))
+        .join("-")
+    : "all";
 const isStandalonePreviewOnly =
   requestedProjects.length > 0 &&
   requestedProjects.every(
@@ -103,6 +115,23 @@ export default defineConfig({
     timeout: 15000,
   },
   outputDir: process.env.RECORDING_OUTPUT_DIR || "./test-results",
+  ...(evidenceDir
+    ? {
+        reporter: [
+          ["list"],
+          [
+            "junit",
+            {
+              outputFile: path.resolve(
+                repoRoot,
+                evidenceDir,
+                `playwright-web-${junitSlug}.xml`
+              ),
+            },
+          ],
+        ],
+      }
+    : {}),
   use: {
     baseURL: webBaseUrl,
     serviceWorkers: useLiveKeycloak ? "allow" : "block",

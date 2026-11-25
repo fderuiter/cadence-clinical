@@ -293,7 +293,7 @@ public static class QualityGates
         },
         new("rtm", ["gxp-rtm-validate"],
             "Requirement tags name known requirements and sit on test methods, and the generated documents match their integrity stamps and are not drafts",
-            ctx => GxpRtmValidatorService.ValidateGxpRtm(ctx.RepoRoot)),
+            ctx => GxpRtmValidatorService.ValidateGxpRtm(ctx.RepoRoot, ctx.EventName, ctx.GitRef)),
         new("gxp-snapshot", ["gxp-snapshot-guard"],
             "The branch or push range does not change the generated RTM, IQ/OQ/PQ report or `docs/SDLC/runs/` unless `CADENCE_GXP_SNAPSHOT=1` (ADR-2532)",
             ctx => GxpSnapshotGuardService.Check(ctx.RepoRoot, ctx.PreCommit, baseRef: ctx.BaseRef, pushBefore: ctx.PushBefore, eventName: ctx.EventName, gitRef: ctx.GitRef) == 0)

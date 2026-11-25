@@ -19,7 +19,7 @@ test.describe("Suite 2: Site CRC & Clinical Data Capture Golden Path", () => {
   /**
    * Exercise Site CRC subject enrollment, eCRF data entry, and query lifecycle.
    *
-   * @req:PRD-SYS-105
+   * @req:PRD-SYS-050
    */
   test("02_crc_ecrf_data_capture_and_queries", async ({ page }) => {
     // Authenticate as Site Coordinator / CRC

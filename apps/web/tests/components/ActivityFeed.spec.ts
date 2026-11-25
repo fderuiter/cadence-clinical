@@ -66,10 +66,6 @@ describe("ActivityFeed.vue - Document Activity Feed & Audit Trail", () => {
   });
 
   it("renders the activity drawer when isOpen is true and loads feed entries", async () => {
-    /**
-     * @req: PRD-SYS-001
-     * @req: PRD-DOC-001
-     */
     const store = useFileshareStore();
     vi.spyOn(store, "fetchActivityFeed").mockResolvedValue(
       mockActivityResponse as any
@@ -104,10 +100,6 @@ describe("ActivityFeed.vue - Document Activity Feed & Audit Trail", () => {
   });
 
   it("expands structured technical audit details accordion on click", async () => {
-    /**
-     * @req: PRD-DOC-001
-     * @req: PRD-SYS-001
-     */
     const store = useFileshareStore();
     vi.spyOn(store, "fetchActivityFeed").mockResolvedValue(
       mockActivityResponse as any
@@ -138,9 +130,6 @@ describe("ActivityFeed.vue - Document Activity Feed & Audit Trail", () => {
   });
 
   it("filters activity feed when event type selector is changed", async () => {
-    /**
-     * @req: PRD-DOC-001
-     */
     const store = useFileshareStore();
     const fetchSpy = vi
       .spyOn(store, "fetchActivityFeed")
@@ -170,9 +159,6 @@ describe("ActivityFeed.vue - Document Activity Feed & Audit Trail", () => {
   });
 
   it("renders empty state when no activities match", async () => {
-    /**
-     * @req: PRD-DOC-001
-     */
     const store = useFileshareStore();
     vi.spyOn(store, "fetchActivityFeed").mockResolvedValue({
       total: 0,
@@ -198,9 +184,6 @@ describe("ActivityFeed.vue - Document Activity Feed & Audit Trail", () => {
   });
 
   it("emits close event when close button is clicked", async () => {
-    /**
-     * @req: PRD-DOC-001
-     */
     const store = useFileshareStore();
     vi.spyOn(store, "fetchActivityFeed").mockResolvedValue(
       mockActivityResponse as any

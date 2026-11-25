@@ -1,5 +1,11 @@
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { chromium, defineConfig, devices } from "@playwright/test";
 import { buildChromiumLaunchOptions } from "../../scripts/playwright-chromium-launcher.mjs";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const repoRoot = path.resolve(__dirname, "../..");
+const evidenceDir = process.env.CADENCE_TEST_EVIDENCE_DIR?.trim();
 
 const chromiumLaunchOptions = buildChromiumLaunchOptions(chromium, {
   ...(process.env.PLAYWRIGHT_CHROME_EXECUTABLE
@@ -22,7 +28,14 @@ export default defineConfig({
   workers: 1,
   reporter: [
     ["html", { open: "never" }],
-    ["junit", { outputFile: "playwright-report.xml" }],
+    [
+      "junit",
+      {
+        outputFile: evidenceDir
+          ? path.resolve(repoRoot, evidenceDir, "playwright-subject-portal.xml")
+          : "playwright-report.xml",
+      },
+    ],
   ],
   use: {
     baseURL: "http://127.0.0.1:5174/subject-portal/",
