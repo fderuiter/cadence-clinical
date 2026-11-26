@@ -87,14 +87,6 @@ jobs:
         uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
         with:
           global-json-file: global.json
-          cache: true
-          cache-dependency-path: |
-            global.json
-            Directory.Build.props
-            Directory.Build.targets
-            Directory.Packages.props
-            NuGet.Config
-            **/*.csproj
 
       - name: Download Cadence CLI Artifact
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
@@ -296,7 +288,15 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
 
+      - name: Cache Cadence CLI
+        id: cadence-cli-cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ./bin/cadence
+          key: cadence-cli-${{ runner.os }}-${{ hashFiles('global.json', 'Directory.Build.props', 'Directory.Build.targets', 'Directory.Packages.props', 'NuGet.Config', 'BannedSymbols.txt', 'packages/cli/src/**', 'packages/compliance/src/**', 'packages/security/src/**', 'packages/tooling_core/src/**', 'packages/kernel/src/Cadence.Kernel.Abstractions/**', 'packages/deid/src/**', 'packages/topology/src/**') }}
+
       - name: Setup .NET SDK
+        if: steps.cadence-cli-cache.outputs.cache-hit != 'true'
         uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
         with:
           global-json-file: global.json
@@ -308,13 +308,6 @@ jobs:
             Directory.Packages.props
             NuGet.Config
             **/*.csproj
-
-      - name: Cache Cadence CLI
-        id: cadence-cli-cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
-        with:
-          path: ./bin/cadence
-          key: cadence-cli-${{ runner.os }}-${{ hashFiles('global.json', 'Directory.Build.props', 'Directory.Build.targets', 'Directory.Packages.props', 'NuGet.Config', 'BannedSymbols.txt', 'packages/cli/src/**', 'packages/compliance/src/**', 'packages/security/src/**', 'packages/tooling_core/src/**', 'packages/kernel/src/Cadence.Kernel.Abstractions/**', 'packages/deid/src/**', 'packages/topology/src/**') }}
 
       # Warnings are errors, so any trim or AOT warning (IL2xxx/IL3xxx) fails this step (#4794, ADR-2496).
       - name: Publish the CLI as Native AOT
@@ -1015,14 +1008,6 @@ jobs:
         uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
         with:
           global-json-file: global.json
-          cache: true
-          cache-dependency-path: |
-            global.json
-            Directory.Build.props
-            Directory.Build.targets
-            Directory.Packages.props
-            NuGet.Config
-            **/*.csproj
 
       - name: Download Cadence CLI Artifact
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2

@@ -48,11 +48,22 @@ using static Cadence.IntegrationTests.Kernel.KernelCollectionScenario;
 
 namespace Cadence.IntegrationTests.Execution;
 
+[CollectionDefinition(Name, DisableParallelization = true)]
+public sealed class ExecutionFormMemoryQuotaCollection
+{
+    public const string Name = "ExecutionFormMemoryQuota";
+
+    private ExecutionFormMemoryQuotaCollection()
+    {
+    }
+}
+
 /// <summary>
 /// PostgreSQL 18 integration and performance regression tests verifying narrow projections on
 /// <see cref="ICollectionInstanceRecords"/>, summary query assertion ID merging across 30 forms, pre-filtered bitemporal
 /// query paging and bounded memory across 300 study forms, deduplicated mutation round-trips, RLS, blinding, and lineage.
 /// </summary>
+[Collection(ExecutionFormMemoryQuotaCollection.Name)]
 [Trait("Category", "Integration")]
 public sealed class ExecutionFormProjectionPerfPostgresTests(
     ExecutionFormModulePostgresFixture fixture,

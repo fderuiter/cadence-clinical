@@ -1044,18 +1044,21 @@ public partial class LocalCiPlanTests
             .ToList();
 
         int setupDotnetCount = 0;
+        int cachedSetupDotnetCount = 0;
         var violations = new List<string>();
         foreach (string path in workflowFiles)
         {
             string fileName = Path.GetFileName(path);
             string[] lines = File.ReadAllLines(path);
-            violations.AddRange(FindIncompleteSetupDotnetCaches(fileName, lines, out int countInFile));
+            violations.AddRange(FindIncompleteSetupDotnetCaches(fileName, lines, out int countInFile, out int cachedInFile));
             setupDotnetCount += countInFile;
+            cachedSetupDotnetCount += cachedInFile;
         }
 
         setupDotnetCount.Should().Be(10);
+        cachedSetupDotnetCount.Should().Be(8);
         violations.Should().BeEmpty(
-            "every actions/setup-dotnet step must hash global.json, Directory.Build.props, Directory.Build.targets, Directory.Packages.props, NuGet.Config, and **/*.csproj");
+            "every restoring actions/setup-dotnet step must enable cache: true and hash global.json, Directory.Build.props, Directory.Build.targets, Directory.Packages.props, NuGet.Config, and **/*.csproj, while non-restoring CLI artifact consumer jobs must omit cache: true");
 
         string[] driftedWorkflow =
         [
@@ -1072,11 +1075,38 @@ public partial class LocalCiPlanTests
             "            Directory.Build.props",
             "            Directory.Packages.props",
             "            **/*.csproj",
+            "      - name: Build",
+            "        run: dotnet build Cadence.sln",
         ];
 
-        FindIncompleteSetupDotnetCaches("sample.yml", driftedWorkflow, out int driftedCount)
+        FindIncompleteSetupDotnetCaches("sample.yml", driftedWorkflow, out int driftedCount, out int driftedCachedCount)
             .Should().Equal("sample.yml:sample (missing Directory.Build.targets, NuGet.Config)");
         driftedCount.Should().Be(1);
+        driftedCachedCount.Should().Be(1);
+
+        string[] unpopulatedCacheWorkflow =
+        [
+            "jobs:",
+            "  lint-and-static:",
+            "    steps:",
+            "      - name: Setup .NET SDK",
+            "        uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6",
+            "        with:",
+            "          global-json-file: global.json",
+            "          cache: true",
+            "          cache-dependency-path: |",
+            "            global.json",
+            "            Directory.Build.props",
+            "            Directory.Build.targets",
+            "            Directory.Packages.props",
+            "            NuGet.Config",
+            "            **/*.csproj",
+            "      - name: Run Markdown validation",
+            "        run: node scripts/run-cli.js check markdown",
+        ];
+
+        FindIncompleteSetupDotnetCaches("ci.yml", unpopulatedCacheWorkflow, out _, out _)
+            .Should().Equal("ci.yml:lint-and-static (sets cache: true without running dotnet or pnpm docs:build)");
     }
 
     [Fact]
@@ -1153,7 +1183,7 @@ public partial class LocalCiPlanTests
             "pnpm exec vitest run --config vitest.config.mjs");
     }
 
-    private static List<string> FindIncompleteSetupDotnetCaches(string workflowFile, string[] lines, out int stepCount)
+    private static List<string> FindIncompleteSetupDotnetCaches(string workflowFile, string[] lines, out int stepCount, out int cachedStepCount)
     {
         string[] requiredPaths =
         [
@@ -1166,9 +1196,28 @@ public partial class LocalCiPlanTests
         ];
 
         stepCount = 0;
+        cachedStepCount = 0;
         var violations = new List<string>();
         foreach (var job in ParseWorkflow(lines))
         {
+            bool restoresNuGet = job.Steps.Any(s =>
+                s.Run is not null &&
+                (s.Run.Contains("dotnet ", StringComparison.Ordinal) ||
+                 s.Run.Contains("pnpm docs:build", StringComparison.Ordinal)));
+            var conditionalDotnetGuards = job.Steps
+                .Where(s =>
+                    s.Run?.Contains("dotnet ", StringComparison.Ordinal) is true &&
+                    !string.IsNullOrWhiteSpace(s.If) &&
+                    !string.Equals(s.If.Trim(), "always()", StringComparison.Ordinal))
+                .Select(s => s.If!.Trim())
+                .Distinct(StringComparer.Ordinal)
+                .ToList();
+            bool hasUnconditionalRestore = job.Steps.Any(s =>
+                (string.IsNullOrWhiteSpace(s.If) || string.Equals(s.If.Trim(), "always()", StringComparison.Ordinal)) &&
+                s.Run is not null &&
+                (s.Run.Contains("dotnet ", StringComparison.Ordinal) ||
+                 s.Run.Contains("pnpm docs:build", StringComparison.Ordinal)));
+
             foreach (string block in ExtractJobStepBlocks(lines, job.Key))
             {
                 if (!block.Contains("actions/setup-dotnet@", StringComparison.Ordinal))
@@ -1178,13 +1227,32 @@ public partial class LocalCiPlanTests
 
                 stepCount++;
                 var blockLines = block.Split('\n').Select(l => l.Trim()).ToHashSet(StringComparer.Ordinal);
+                bool hasCache = blockLines.Contains("cache: true");
+                bool hasCachePaths = blockLines.Contains("cache-dependency-path: |") || requiredPaths.Any(blockLines.Contains);
+
+                if (!restoresNuGet)
+                {
+                    if (hasCache || hasCachePaths)
+                    {
+                        violations.Add($"{workflowFile}:{job.Key} (sets cache: true without running dotnet or pnpm docs:build)");
+                    }
+
+                    continue;
+                }
+
+                cachedStepCount++;
                 var missing = new List<string>();
-                if (!blockLines.Contains("cache: true"))
+                if (!hasCache)
                 {
                     missing.Add("cache: true");
                 }
 
                 missing.AddRange(requiredPaths.Where(p => !blockLines.Contains(p)));
+                if (!hasUnconditionalRestore && conditionalDotnetGuards.Count == 1 && !blockLines.Contains($"if: {conditionalDotnetGuards[0]}"))
+                {
+                    missing.Add($"if: {conditionalDotnetGuards[0]}");
+                }
+
                 if (missing.Count > 0)
                 {
                     violations.Add($"{workflowFile}:{job.Key} (missing {string.Join(", ", missing)})");
