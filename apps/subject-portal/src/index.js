@@ -10,6 +10,7 @@
 //   stores/     Pinia stores and the `state` facade over them
 //   widgets/    HTML-string form widgets, field errors, toast
 //   views/, components/, App.vue   the Vue shell and its views
+import { bootstrapTheme, subscribeThemeSync } from "ui";
 import { initializeApp } from "./bootstrap/initialize.js";
 import { unmountApp } from "./bootstrap/mount.js";
 import {
@@ -159,6 +160,8 @@ import { markFieldInvalid } from "./widgets/field-errors.js";
 
 // Auto-run on load in DOM environments
 if (typeof document !== "undefined") {
+  bootstrapTheme();
+  subscribeThemeSync();
   if (
     import.meta.env?.MODE === "test" ||
     import.meta.env?.VITEST ||

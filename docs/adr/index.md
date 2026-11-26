@@ -36,6 +36,7 @@ Reservation rule: since the kernel work of September 2026, a new ADR takes the n
 | 2650–2659 | Web and design system (continued)                                                 |
 | 2660–2669 | Security and GxP compliance (continued)                                           |
 | 2670–2679 | Web and design system (continued)                                                 |
+| 2680–2699 | Web and design system (continued)                                                 |
 | 2800–2899 | Google Stitch pull requests (closed; no new numbers)                              |
 
 An area with no block takes the next unused block of ten below 2800 and adds a row here in the same pull request.
@@ -479,6 +480,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2677: Retire Unreferenced Shared UI and Web Exports and Enforce Live Consumer Reachability](2026-11-24-retire-dead-ui-exports-and-enforce-consumer-guard.md) (2026-11-24)
 - [ADR-2679: Centralize Curated Lucide Icons and Enforce CLI Emoji Gate](2026-11-25-centralize-lucide-icons-and-cli-emoji-gate.md) (2026-11-25)
 - [ADR-2689: Centralize Floating Primitives and Top-Right Toast Stack](2026-11-25-centralize-floating-primitives-and-top-right-toast-stack.md) (2026-11-25)
+- [ADR-2690: Unified CSS Theme Cascade, Non-Text Border Recalibration, and Shared Theme Controller](2026-11-25-unified-css-cascade-and-shared-theme-controller.md) (2026-11-25)
 
 ### 7. DevOps, Tooling & CI/CD
 

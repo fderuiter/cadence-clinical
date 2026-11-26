@@ -31,6 +31,8 @@ const authStore = useAuthStore(pinia);
 installAuthorizedFetch(window);
 
 // Dynamic Hover Pointer Capability Detection
+// (Pre-paint theme state is applied synchronously by theme-bootstrap.js;
+// live storage/media sync is subscribed by ClinicalThemeToggle on mount.)
 initHoverDetection();
 
 const handleSessionEnded = (ctx) => {

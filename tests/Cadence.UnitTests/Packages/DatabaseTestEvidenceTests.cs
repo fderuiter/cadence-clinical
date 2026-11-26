@@ -63,6 +63,7 @@ public sealed class DatabaseTestEvidenceTests : IDisposable
             ("Cadence.E2ETests.dll", "Cadence.E2ETests.E2E.Flow", "Pending", "Inconclusive"),
             ("Cadence.UnitTests.dll", "Cadence.UnitTests.Some", "Skipped", "NotExecuted"),
             ("Cadence.IntegrationTests.dll", "Cadence.IntegrationTests.Kernel.LineageBenchmarkPostgresTests", "BenchmarkTenMillionEdgesTraceLatency", "NotExecuted"),
+            ("Cadence.IntegrationTests.dll", "Cadence.IntegrationTests.Execution.FormQueryWorklistBenchmarkPostgresTests", "BenchmarkThreeHundredStudyFormsWorklistSqlLatencyAndAllocations", "NotExecuted"),
             ("Cadence.IntegrationTests.dll", "Cadence.IntegrationTests.Kernel.KernelObservationHostPostgresTests", "BrowserCorrectionReachesTheDatabaseWithItsReason", "NotExecuted"));
 
         var skipped = DatabaseTestEvidence.FindSkipped(_dir);
@@ -103,6 +104,15 @@ public sealed class DatabaseTestEvidenceTests : IDisposable
             "{",
             "    [Fact]",
             "    public void BenchmarkTenMillionEdgesTraceLatency() { }",
+            "}"));
+        string executionDir = Path.Combine(repoRoot, "tests", "Cadence.IntegrationTests", "Execution");
+        Directory.CreateDirectory(executionDir);
+        File.WriteAllText(Path.Combine(executionDir, "FormQueryWorklistBenchmarkPostgresTests.cs"), string.Join("\n",
+            "namespace Cadence.IntegrationTests.Execution;",
+            "public class FormQueryWorklistBenchmarkPostgresTests",
+            "{",
+            "    [Fact]",
+            "    public void BenchmarkThreeHundredStudyFormsWorklistSqlLatencyAndAllocations() { }",
             "}"));
         File.WriteAllText(Path.Combine(e2eDir, "FlowTests.cs"), string.Join("\n",
             "namespace Cadence.E2ETests.E2E;",
@@ -148,6 +158,7 @@ public sealed class DatabaseTestEvidenceTests : IDisposable
         WriteTrx("dotnet/gxp_integration.trx",
             ("Cadence.IntegrationTests.dll", "Cadence.IntegrationTests.Kernel.RlsTests", "Passes", "Passed"),
             ("Cadence.IntegrationTests.dll", "Cadence.IntegrationTests.Kernel.LineageBenchmarkPostgresTests", "BenchmarkTenMillionEdgesTraceLatency", "NotExecuted"),
+            ("Cadence.IntegrationTests.dll", "Cadence.IntegrationTests.Execution.FormQueryWorklistBenchmarkPostgresTests", "BenchmarkThreeHundredStudyFormsWorklistSqlLatencyAndAllocations", "NotExecuted"),
             ("Cadence.IntegrationTests.dll", "Cadence.IntegrationTests.Kernel.KernelObservationHostPostgresTests", "BrowserCorrectionReachesTheDatabaseWithItsReason", "NotExecuted"));
 
         DatabaseTestEvidence.FindSkipped(_dir, repoRoot: null, requireBrowserEvidence: false).Should().BeEmpty();

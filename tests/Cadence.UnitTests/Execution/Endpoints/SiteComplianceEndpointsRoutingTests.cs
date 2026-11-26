@@ -679,24 +679,9 @@ public sealed class ExecutionProgramStartupTests : IDisposable
             builder.UseTestGatewaySecret().UseTestDemographicsKey().UseTestRandomizationKey().UseTestCgtBarcodeKey();
             builder.UseTestPostgresConnectionString();
 
-            builder.ConfigureServices(services =>
+            builder.ConfigureTestServices(services =>
             {
-                // `Program.cs`'s own registration configures ExecutionDbContext for Npgsql, which -- via
-                // AddDbContext's own provider-registration side effects -- adds Npgsql's own EF provider
-                // services directly to this same IServiceCollection, not merely to the removed
-                // DbContextOptions<ExecutionDbContext> descriptor below. Verified empirically while
-                // implementing this ticket: simply re-registering AddDbContext with a different `UseXxx(...)`
-                // call here (Sqlite, then plain UseInMemoryDatabase) still throws "Only a single database
-                // provider can be registered in a service provider" the first time a real query runs (not at
-                // DI-resolution time -- EF only builds/validates its internal service provider lazily, on
-                // first actual use of a DbSet<T>/Database property, which is why a "does this resolve"-only
-                // test would not have caught this). EF Core's own escape hatch for exactly this scenario is
-                // `UseInternalServiceProvider`: building the InMemory provider's services in a completely
-                // separate, isolated ServiceProvider bypasses the ambient (Npgsql-containing) one entirely,
-                // so the two providers' services never coexist in the same lookup.
-                var inMemoryServices = new ServiceCollection()
-                    .AddEntityFrameworkInMemoryDatabase()
-                    .BuildServiceProvider();
+                TestSupport.TestEfServiceProviders.RemoveBackgroundHostedServices(services);
 
                 services.RemoveAll<DbContextOptions<ExecutionDbContext>>();
 
@@ -704,18 +689,12 @@ public sealed class ExecutionProgramStartupTests : IDisposable
                 services.AddDbContext<ExecutionDbContext>((sp, options) =>
                 {
                     options.UseInMemoryDatabase(_databaseName);
-                    options.UseInternalServiceProvider(inMemoryServices);
+                    options.UseInternalServiceProvider(TestSupport.TestEfServiceProviders.InMemory);
                     options.AddInterceptors(
                         new ConcurrencyTokenIncrementInterceptor(),
                         new GxPAuditInterceptor(() => sp.GetRequiredService<ICurrentAuditContextAccessor>().UserId, sp.GetRequiredService<IClock>()));
                 });
 
-                // MassTransit's EF outbox lock-statement provider is configured for Postgres syntax
-                // (`Program.cs`'s own `o.UsePostgres()` call, unmodified here -- see this class's own
-                // remarks) and is therefore expected to fail its background polling query against this
-                // InMemory-backed context specifically, since the InMemory provider cannot execute a raw SQL
-                // query at all. Suppressing these two diagnostic categories keeps that expected, harmless
-                // noise out of test output without touching any application-level log source.
                 services.AddLogging(logging =>
                 {
                     logging.AddFilter("Microsoft.EntityFrameworkCore", LogLevel.None);

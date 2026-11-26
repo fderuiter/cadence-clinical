@@ -22,6 +22,7 @@ using Cadence.Storage;
 using Cadence.Testing.Hosting;
 using Cadence.Testing.Security;
 using Cadence.Testing.Time;
+using Cadence.UnitTests.TestSupport;
 
 using FluentAssertions;
 
@@ -58,16 +59,14 @@ public sealed class EtmfStorageAndEndpointsTests : IDisposable
 
             host.ConfigureTestServices(services =>
             {
-                var inMemoryServices = new ServiceCollection()
-                    .AddEntityFrameworkInMemoryDatabase()
-                    .BuildServiceProvider();
+                services.RemoveBackgroundHostedServices(typeof(Cadence.Apps.Etmf.Workers.EtmfExportWorker));
 
                 services.RemoveAll<DbContextOptions<EtmfDbContext>>();
                 services.RemoveAll<IDbContextOptionsConfiguration<EtmfDbContext>>();
                 services.AddDbContext<EtmfDbContext>(options =>
                 {
                     options.UseInMemoryDatabase(dbName);
-                    options.UseInternalServiceProvider(inMemoryServices);
+                    options.UseInternalServiceProvider(TestEfServiceProviders.InMemory);
                 });
 
                 services.RemoveAll<IClock>();

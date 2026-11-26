@@ -17,6 +17,7 @@ jobs:
   conflict-check:
     name: Check for Merge Conflicts
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
     steps:

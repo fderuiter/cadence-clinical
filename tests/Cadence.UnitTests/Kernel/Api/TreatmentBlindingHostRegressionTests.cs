@@ -42,6 +42,7 @@ using Cadence.Testing;
 using Cadence.Testing.Hosting;
 using Cadence.Testing.Security;
 using Cadence.Testing.Time;
+using Cadence.UnitTests.TestSupport;
 
 using FluentAssertions;
 
@@ -939,14 +940,7 @@ public sealed class TreatmentBlindingHostRegressionTests : IAsyncLifetime
             builder.ConfigureServices(services =>
             {
                 // Remove background DB-polling hosted services so the Kestrel host runs purely in-memory.
-                var backgroundJobs = services
-                    .Where(d => d.ServiceType == typeof(IHostedService)
-                        && d.ImplementationType?.Namespace?.StartsWith("Cadence.Kernel.Persistence", StringComparison.Ordinal) == true)
-                    .ToList();
-                foreach (var job in backgroundJobs)
-                {
-                    services.Remove(job);
-                }
+                services.RemoveBackgroundHostedServices();
 
                 services.RemoveAll<IClock>();
                 services.AddSingleton<IClock>(new FakeClock(T0.AddMinutes(5)));

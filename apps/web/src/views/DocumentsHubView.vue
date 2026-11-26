@@ -1187,7 +1187,7 @@ async function handleDeleteFile(file) {
 
 .page-num-btn.active {
   background-color: var(--accent);
-  color: var(--semantic-color-surface);
+  color: var(--semantic-color-text-on-accent);
   border-color: var(--accent);
 }
 </style>

@@ -390,7 +390,7 @@ useFocusTrap(dialogRef, {
 .btn-primary {
   background: var(--semantic-color-primary);
   border-color: var(--semantic-color-primary-dark);
-  color: var(--semantic-color-surface);
+  color: var(--semantic-color-text-on-primary);
 }
 
 .btn-primary:not(:disabled):not([aria-disabled="true"]):hover {

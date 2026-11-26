@@ -21,10 +21,21 @@ using Xunit;
 
 namespace Cadence.UnitTests.Execution.Endpoints;
 
+[CollectionDefinition(Name, DisableParallelization = true)]
+public sealed class TabularImportMemoryQuotaCollection
+{
+    public const string Name = "TabularImportMemoryQuota";
+
+    private TabularImportMemoryQuotaCollection()
+    {
+    }
+}
+
 /// <summary>
 /// End-to-end verification of OpenXML archive, XML, row, and column quotas across all four bulk tabular import
 /// endpoints in <see cref="Cadence.Apps.Execution.Program"/> via <see cref="ExecutionApiFactory"/>.
 /// </summary>
+[Collection(TabularImportMemoryQuotaCollection.Name)]
 public sealed class TabularImportQuotaEndpointsTests(ExecutionApiFactory factory) : IClassFixture<ExecutionApiFactory>
 {
     private const string StudyId = "STUDY-VERIFY-101";

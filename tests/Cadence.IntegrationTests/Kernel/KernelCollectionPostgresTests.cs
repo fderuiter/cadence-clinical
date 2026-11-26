@@ -138,7 +138,7 @@ public sealed class KernelCollectionPostgresTests(KernelPostgresFixture fixture)
             ],
             CollectionSpecs =
             [
-                new CollectionSpec(SpecId, "Vital signs", [new CollectionItem(Systolic, systolic, "mm[Hg]", Required: true)]),
+                new CollectionSpec(SpecId, "Vital signs", [new CollectionItem(Systolic, systolic, "mm[Hg]", Required: true)], Repeating: true),
             ],
         };
         var version = ProtocolVersionId.New();

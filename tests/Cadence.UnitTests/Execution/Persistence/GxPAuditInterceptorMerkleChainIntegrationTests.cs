@@ -54,6 +54,7 @@ public class GxPAuditInterceptorMerkleChainIntegrationTests
     private static ExecutionDbContext CreateInMemoryContext(string databaseName) =>
         new(new DbContextOptionsBuilder<ExecutionDbContext>()
             .UseInMemoryDatabase(databaseName)
+            .UseInternalServiceProvider(TestSupport.TestEfServiceProviders.InMemory)
             .AddInterceptors(new GxPAuditInterceptor(() => "qa.reviewer@site.org", SystemClock.Instance))
             .Options);
 
@@ -67,6 +68,7 @@ public class GxPAuditInterceptorMerkleChainIntegrationTests
     private static ExecutionDbContext CreateSqliteContext(SqliteConnection connection) =>
         new(new DbContextOptionsBuilder<ExecutionDbContext>()
             .UseSqlite(connection)
+            .UseInternalServiceProvider(TestSupport.TestEfServiceProviders.Sqlite)
             .AddInterceptors(new GxPAuditInterceptor(() => "qa.reviewer@site.org", SystemClock.Instance))
             .Options);
 
@@ -217,6 +219,7 @@ public class GxPAuditInterceptorMerkleChainIntegrationTests
         ExecutionDbContext CreateRecordedContext() =>
             new(new DbContextOptionsBuilder<ExecutionDbContext>()
                 .UseSqlite(connection)
+                .UseInternalServiceProvider(TestSupport.TestEfServiceProviders.Sqlite)
                 .AddInterceptors(recorder, new GxPAuditInterceptor(() => "qa.reviewer@site.org", SystemClock.Instance))
                 .Options);
 

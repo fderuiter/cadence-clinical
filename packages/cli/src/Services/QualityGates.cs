@@ -855,6 +855,7 @@ public static class QualityGates
             RedirectStandardOutput = true,
             RedirectStandardError = true,
         };
+        ConfigureSingleShotDotnetProcess(psi, fileName);
         foreach (string argument in arguments)
         {
             psi.ArgumentList.Add(argument);
@@ -884,6 +885,7 @@ public static class QualityGates
     private static int RunProcess(string workingDirectory, string fileName, params string[] arguments)
     {
         var psi = new ProcessStartInfo(fileName) { WorkingDirectory = workingDirectory, UseShellExecute = false };
+        ConfigureSingleShotDotnetProcess(psi, fileName);
         foreach (string argument in arguments)
         {
             psi.ArgumentList.Add(argument);
@@ -904,6 +906,16 @@ public static class QualityGates
         {
             Console.WriteLine($"[ERROR] Could not run {fileName}: {ex.Message}");
             return 1;
+        }
+    }
+
+    private static void ConfigureSingleShotDotnetProcess(ProcessStartInfo psi, string fileName)
+    {
+        if (string.Equals(Path.GetFileNameWithoutExtension(fileName), "dotnet", StringComparison.OrdinalIgnoreCase))
+        {
+            psi.Environment["MSBUILDDISABLENODEREUSE"] = "1";
+            psi.Environment["UseSharedCompilation"] = "false";
+            psi.Environment["DOTNET_CLI_DO_NOT_USE_MSBUILD_SERVER"] = "1";
         }
     }
 }

@@ -129,6 +129,7 @@ public class GxPAuditInterceptorMerkleChainTests
     private static MerkleChainTestDbContext CreateContext(string databaseName, IClock? clock = null) =>
         new(new DbContextOptionsBuilder<MerkleChainTestDbContext>()
             .UseInMemoryDatabase(databaseName)
+            .UseInternalServiceProvider(TestSupport.TestEfServiceProviders.InMemory)
             .AddInterceptors(new GxPAuditInterceptor(() => "qa.reviewer@site.org", clock ?? SystemClock.Instance))
             .Options);
 
@@ -327,6 +328,7 @@ public class GxPAuditInterceptorMerkleChainTests
         MerkleChainTestDbContext CreateSqliteContext() =>
             new(new DbContextOptionsBuilder<MerkleChainTestDbContext>()
                 .UseSqlite(connection)
+                .UseInternalServiceProvider(TestSupport.TestEfServiceProviders.Sqlite)
                 .AddInterceptors(recorder, new GxPAuditInterceptor(() => "qa.reviewer@site.org", clock))
                 .Options);
 

@@ -199,12 +199,12 @@ public sealed class DelegationSignOffAuthorityTests(DelegationSignOffAuthorityTe
             builder.UseTestGatewaySecret().UseTestPostgresConnectionString();
             builder.ConfigureServices(services =>
             {
-                var inMemory = new ServiceCollection().AddEntityFrameworkInMemoryDatabase().BuildServiceProvider();
+                TestSupport.TestEfServiceProviders.RemoveBackgroundHostedServices(services);
                 services.RemoveAll<DbContextOptions<KnowledgeDbContext>>();
                 services.RemoveAll<IDbContextOptionsConfiguration<KnowledgeDbContext>>();
                 services.AddDbContext<KnowledgeDbContext>((sp, options) => options
                     .UseInMemoryDatabase(_databaseName)
-                    .UseInternalServiceProvider(inMemory)
+                    .UseInternalServiceProvider(TestSupport.TestEfServiceProviders.InMemory)
                     .UseCadenceStandaloneTenancy(sp.GetService<ICurrentTenantAccessor>(), isRelational: false)
                     .AddInterceptors(StandaloneTenantSaveChangesInterceptor.Instance));
 

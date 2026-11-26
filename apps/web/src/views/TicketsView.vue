@@ -2360,7 +2360,7 @@ const exportAuditTrail = (format) => {
 
 .btn-primary {
   background: var(--semantic-color-interactive-primary);
-  color: var(--semantic-color-surface);
+  color: var(--semantic-color-text-on-primary);
 }
 .btn-primary:hover:not(:disabled) {
   background: var(--semantic-color-interactive-primary);

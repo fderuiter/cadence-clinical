@@ -17,6 +17,7 @@
     "paths": {
       "@/*": ["./src/*"],
       "ui": ["../../packages/ui/index.d.ts"],
+      "ui/theme": ["../../packages/ui/theme.d.ts"],
       "ui/testing": ["../../packages/ui/mockGateway.js"],
       "ui/vitest": ["../../packages/ui/accessibility-matcher.d.ts"],
       "demo-fixtures": ["../../packages/demo-fixtures/src/index.d.ts"],

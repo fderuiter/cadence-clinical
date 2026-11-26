@@ -171,7 +171,9 @@
             :class="{ active: selectedCategoryId === cat.id }"
             @click="selectCategory(cat.id)"
           >
-            <span class="category-icon">{{ getCategoryIcon(cat.slug) }}</span>
+            <span class="category-icon"
+              ><ClinicalIcon :name="getCategoryIcon(cat.slug)" :size="16"
+            /></span>
             <div class="category-text-block">
               <span class="category-title">{{ cat.name }}</span>
               <span v-if="cat.description" class="category-desc">{{
@@ -1423,20 +1425,21 @@ export default {
     }
 
     function getCategoryIcon(slug) {
-      if (!slug) return "Folder";
-      if (slug.includes("clinical") || slug.includes("ecrf")) return "Clinical";
+      if (!slug) return "folder";
+      if (slug.includes("clinical") || slug.includes("ecrf"))
+        return "stethoscope";
       if (slug.includes("authoring") || slug.includes("mdr"))
-        return "Checklist";
+        return "clipboard-list";
       if (slug.includes("monitoring") || slug.includes("ctms"))
-        return "Metrics";
+        return "trending-up";
       if (
         slug.includes("regulatory") ||
         slug.includes("compliance") ||
         slug.includes("audit")
       )
-        return "Locked";
-      if (slug.includes("data") || slug.includes("coding")) return "Ticket";
-      return "Folder";
+        return "lock";
+      if (slug.includes("data") || slug.includes("coding")) return "ticket";
+      return "folder";
     }
 
     function getArticleCountForCategory(catId) {
@@ -2379,6 +2382,7 @@ export default {
   flex-direction: column;
   gap: 6px;
   flex: 1;
+  min-width: 0;
 }
 
 .category-item-btn {
@@ -2386,6 +2390,8 @@ export default {
   align-items: flex-start;
   gap: 10px;
   width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   text-align: left;
   background-color: transparent;
   border: 1px solid transparent;
@@ -2409,25 +2415,33 @@ export default {
 }
 
 .category-icon {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
   font-size: 1.1rem;
   line-height: 1.2;
 }
 
 .category-text-block {
   flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
 }
 
 .category-title {
+  flex: 1;
+  min-width: 0;
   font-size: 0.85rem;
   font-weight: 600;
+  overflow-wrap: anywhere;
 }
 
 .category-desc {
   font-size: var(--font-size-2xs);
   color: var(--neutral-dark);
   margin-top: 2px;
+  overflow-wrap: anywhere;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -2948,7 +2962,7 @@ export default {
 }
 
 .status-published {
-  background-color: var(--semantic-color-success-border-soft);
+  background-color: var(--semantic-color-success-bg);
   color: var(--semantic-color-success-dark);
   border: 1px solid var(--semantic-color-success-border);
 }
@@ -3235,7 +3249,7 @@ export default {
 
 .btn-primary {
   background-color: var(--semantic-color-primary);
-  color: var(--semantic-color-surface);
+  color: var(--semantic-color-text-on-primary);
 }
 
 .btn-primary:hover {
@@ -3254,7 +3268,7 @@ export default {
 
 .btn-success {
   background-color: var(--semantic-color-success);
-  color: var(--semantic-color-surface);
+  color: var(--semantic-color-text-on-status);
 }
 
 .btn-success:hover {
@@ -3263,7 +3277,7 @@ export default {
 
 .btn-danger {
   background-color: var(--semantic-color-error);
-  color: var(--semantic-color-surface);
+  color: var(--semantic-color-text-on-status);
 }
 
 .btn-danger:hover {

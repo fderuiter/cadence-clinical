@@ -10,6 +10,7 @@ using Cadence.Kernel.Time;
 using Cadence.Security.Authentication;
 using Cadence.Testing.Hosting;
 using Cadence.Testing.Security;
+using Cadence.UnitTests.TestSupport;
 
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -59,10 +60,6 @@ public sealed class ExecutionApiFactory : WebApplicationFactory<Cadence.Apps.Exe
             // Core's documented escape hatch for coexisting with Program.cs's own ambient Npgsql provider
             // registration, which AddDbContext's provider-registration side effects make otherwise
             // unremovable via a mere DbContextOptions<ExecutionDbContext> descriptor swap.
-            var inMemoryServices = new ServiceCollection()
-                .AddEntityFrameworkInMemoryDatabase()
-                .BuildServiceProvider();
-
             services.RemoveAll<DbContextOptions<ExecutionDbContext>>();
             // AddDbContext composes every registered configuration action (EF Core 9+), so Program.cs's own
             // (Npgsql plus its GxPAuditInterceptor) must go too, or each save runs two audit interceptors (#4922).
@@ -72,7 +69,7 @@ public sealed class ExecutionApiFactory : WebApplicationFactory<Cadence.Apps.Exe
                 options.UseInMemoryDatabase(_databaseName)
                     .UseCadenceStandaloneTenancy(sp.GetService<ICurrentTenantAccessor>(), isRelational: false)
                     .AddInterceptors(StandaloneTenantSaveChangesInterceptor.Instance);
-                options.UseInternalServiceProvider(inMemoryServices);
+                options.UseInternalServiceProvider(TestEfServiceProviders.InMemory);
                 options.AddInterceptors(
                     new ConcurrencyTokenIncrementInterceptor(),
                     new GxPAuditInterceptor(() => sp.GetRequiredService<ICurrentAuditContextAccessor>().UserId, sp.GetRequiredService<IClock>()));
@@ -81,6 +78,7 @@ public sealed class ExecutionApiFactory : WebApplicationFactory<Cadence.Apps.Exe
             // The durable token-use store needs PostgreSQL; this in-memory host keeps uses in process memory.
             services.RemoveAll<ISigTokenUseStore>();
             services.AddSingleton<ISigTokenUseStore>(sp => new ReplayCache(sp.GetRequiredService<IClock>()));
+            services.RemoveBackgroundHostedServices();
 
             // MassTransit's EF outbox lock-statement provider is configured for Postgres syntax
             // (Program.cs's own o.UsePostgres() call, unmodified here) and is therefore expected to fail its

@@ -1365,6 +1365,86 @@ export const ClinicalIcon: DefineComponent<
   any
 >;
 
+export type {
+  AppliedThemeState,
+  ResolvedTheme,
+  ThemeControllerOptions,
+  ThemePreference,
+  ThemeSyncState,
+} from "./theme.js";
+
+export const THEME_STORAGE_KEY: "vitepress-theme-appearance";
+export const THEME_MODES: readonly ["light", "dark", "auto"];
+export const PREFERS_DARK_MEDIA_QUERY: "(prefers-color-scheme: dark)";
+export const THEME_CHANGE_EVENT: "cadence:theme-change";
+
+export function normalizeThemePreference(
+  rawValue: unknown
+): import("./theme.js").ThemePreference;
+export function readStoredThemePreference(
+  options?: import("./theme.js").ThemeControllerOptions
+): import("./theme.js").ThemePreference;
+export function writeStoredThemePreference(
+  preference: unknown,
+  options?: import("./theme.js").ThemeControllerOptions
+): import("./theme.js").ThemePreference;
+export function detectSystemDarkPreference(win?: Window | null): boolean;
+export function resolveEffectiveTheme(
+  preference: unknown,
+  systemPrefersDark?: boolean
+): import("./theme.js").ResolvedTheme;
+export function cycleThemePreference(
+  currentPreference: unknown
+): import("./theme.js").ThemePreference;
+export function applyThemeToDocument(
+  preference: unknown,
+  options?: {
+    doc?: Document | null;
+    win?: Window | null;
+    systemPrefersDark?: boolean;
+    emit?: boolean;
+  }
+): import("./theme.js").AppliedThemeState;
+export function bootstrapTheme(
+  options?: import("./theme.js").ThemeControllerOptions
+): import("./theme.js").AppliedThemeState;
+export function subscribeThemeSync(
+  onUpdate?: (state: import("./theme.js").ThemeSyncState) => void,
+  options?: import("./theme.js").ThemeControllerOptions
+): () => void;
+
+export const ClinicalThemeToggle: DefineComponent<
+  {
+    id?: string;
+    density?: "compact" | "touch";
+    variant?: "cycle" | "segmented";
+    showLabel?: boolean;
+    groupAriaLabel?: string;
+    onChange?: (mode: "light" | "dark" | "auto") => void;
+  },
+  {},
+  any
+>;
+
+export function useTheme(
+  options?: import("./theme.js").ThemeControllerOptions
+): {
+  preference: import("vue").WritableComputedRef<
+    import("./theme.js").ThemePreference
+  >;
+  theme: import("vue").WritableComputedRef<
+    import("./theme.js").ThemePreference
+  >;
+  resolvedTheme: import("vue").ComputedRef<import("./theme.js").ResolvedTheme>;
+  isDark: import("vue").ComputedRef<boolean>;
+  systemPrefersDark: import("vue").ComputedRef<boolean>;
+  modes: readonly ["light", "dark", "auto"];
+  setTheme: (nextPreference: unknown) => import("./theme.js").ThemePreference;
+  cycleTheme: () => import("./theme.js").ThemePreference;
+  syncTheme: () => import("./theme.js").AppliedThemeState;
+  stop: () => void;
+};
+
 export function parseNodeRef(raw: string): ParsedNodeRef;
 export function stripRawPermissionTokens(text: string): string;
 export function registerEntityPeekHandler(

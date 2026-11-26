@@ -11,6 +11,7 @@ cd "$root"
 
 # Opt-in tests skipped by design in dotnet-tests unless their dedicated environment flag is set (DatabaseTestEvidence.OptInTests):
 # - BenchmarkTenMillionEdgesTraceLatency / Benchmark_TenMillionEdges_TraceLatency (CADENCE_LINEAGE_BENCHMARK=1)
+# - BenchmarkThreeHundredStudyFormsWorklistSqlLatencyAndAllocations / Benchmark_ThreeHundredStudyForms_WorklistSqlLatencyAndAllocations (CADENCE_FORM_QUERY_BENCHMARK=1)
 # - BrowserCorrectionReachesTheDatabaseWithItsReason / BrowserCorrection_ReachesTheDatabaseWithItsReason (CADENCE_TEST_BROWSER=1, run in accessibility-e2e)
 # During GxP snapshots (CADENCE_GXP_SNAPSHOT=1), BrowserCorrectionReachesTheDatabaseWithItsReason is mandatory (ADR-2531) and must pass in at least one TRX report.
 browser_pattern='BrowserCorrection_?ReachesTheDatabaseWithItsReason'
@@ -39,7 +40,7 @@ verify_browser_snapshot_evidence() {
   fi
 }
 
-optin='Benchmark_?TenMillionEdges_?TraceLatency|BrowserCorrection_?ReachesTheDatabaseWithItsReason'
+optin='Benchmark_?TenMillionEdges_?TraceLatency|Benchmark_?ThreeHundredStudyForms_?WorklistSqlLatencyAndAllocations|BrowserCorrection_?ReachesTheDatabaseWithItsReason'
 
 if [ -d "TestResults/gxp" ]; then
   mapfile -t gxp_trx < <(find TestResults/gxp -maxdepth 2 -name '*.trx' 2>/dev/null | sort)

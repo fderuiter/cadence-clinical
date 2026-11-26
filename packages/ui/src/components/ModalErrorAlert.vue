@@ -210,7 +210,7 @@ onMounted(() => {
 
 .btn-retry {
   background-color: var(--semantic-color-error);
-  color: var(--semantic-color-surface);
+  color: var(--semantic-color-text-on-status);
   border: 1px solid var(--semantic-color-error);
 }
 

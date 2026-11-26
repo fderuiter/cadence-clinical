@@ -2,6 +2,16 @@
  * Shared mode-aware Content-Security-Policy profile builder and <head> hoisting
  * helpers for Vite single-page applications (ADR-2498).
  */
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const THEME_CONTROLLER_PATH = path.resolve(
+  __dirname,
+  "../packages/ui/src/utils/themeController.js"
+);
 
 /**
  * Resolves the configured Keycloak OIDC origin for non-demo Vite builds,
@@ -96,4 +106,86 @@ export function injectHoistedCspMeta(html, cspContent) {
     );
   }
   return `${cspTag}\n${stripped}`;
+}
+
+/**
+ * Compiles packages/ui/src/utils/themeController.js into a self-contained IIFE
+ * suitable for synchronous same-origin execution in <head> before first paint.
+ *
+ * @returns {string}
+ */
+export function buildThemeBootstrapScript() {
+  const controllerSource = fs.readFileSync(THEME_CONTROLLER_PATH, "utf8");
+  const storageKey =
+    controllerSource.match(/THEME_STORAGE_KEY\s*=\s*"([^"]+)"/)?.[1] ||
+    "vitepress-theme-appearance";
+  const mediaQuery =
+    controllerSource.match(/PREFERS_DARK_MEDIA_QUERY\s*=\s*"([^"]+)"/)?.[1] ||
+    "(prefers-color-scheme: dark)";
+  return `function bootstrapTheme(){var p="auto",d,r=document.documentElement;try{var v=(localStorage.getItem("${storageKey}")||"").trim().toLowerCase();p=v==="light"||v==="dark"?v:v==="true"?"dark":v==="false"?"light":"auto"}catch{}try{d=matchMedia("${mediaQuery}").matches}catch{}v=p==="dark"||p==="auto"&&d?"dark":"light";r.dataset.theme=p;r.classList.toggle("dark",v==="dark");r.style.colorScheme=v}bootstrapTheme();\n`;
+}
+
+/**
+ * Vite plugin serving and emitting `theme-bootstrap.js` from `packages/ui` so
+ * `apps/web` and `apps/subject-portal` apply `data-theme`, `.dark`, and
+ * `color-scheme` before first paint under `script-src 'self'`.
+ *
+ * @returns {import("vite").Plugin}
+ */
+const VIRTUAL_THEME_BOOTSTRAP_ID = "\0cadence-theme-bootstrap";
+
+export function createThemeBootstrapPlugin() {
+  let resolvedBase = "/";
+  let resolvedCommand = "serve";
+  return {
+    name: "cadence-theme-bootstrap",
+    configResolved(resolved) {
+      resolvedBase = resolved.base || "/";
+      resolvedCommand = resolved.command || "serve";
+    },
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        const cleanPath = (req.url || "").split("?")[0];
+        const baseNormalized = resolvedBase.endsWith("/")
+          ? resolvedBase
+          : `${resolvedBase}/`;
+        if (
+          cleanPath === "/theme-bootstrap.js" ||
+          cleanPath === `${baseNormalized}theme-bootstrap.js`
+        ) {
+          res.statusCode = 200;
+          res.setHeader(
+            "Content-Type",
+            "application/javascript; charset=utf-8"
+          );
+          res.setHeader("Cache-Control", "no-store");
+          res.end(buildThemeBootstrapScript());
+          return;
+        }
+        next();
+      });
+    },
+    buildStart() {
+      if (resolvedCommand !== "build") {
+        return;
+      }
+      this.emitFile({
+        type: "chunk",
+        id: VIRTUAL_THEME_BOOTSTRAP_ID,
+        fileName: "theme-bootstrap.js",
+      });
+    },
+    resolveId(id) {
+      if (id === VIRTUAL_THEME_BOOTSTRAP_ID) {
+        return VIRTUAL_THEME_BOOTSTRAP_ID;
+      }
+      return null;
+    },
+    load(id) {
+      if (id === VIRTUAL_THEME_BOOTSTRAP_ID) {
+        return buildThemeBootstrapScript();
+      }
+      return null;
+    },
+  };
 }

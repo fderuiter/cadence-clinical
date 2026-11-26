@@ -86,16 +86,14 @@ public sealed class EtmfCompletenessWebhookTests : IDisposable
 
             host.ConfigureTestServices(services =>
             {
-                var inMemoryServices = new ServiceCollection()
-                    .AddEntityFrameworkInMemoryDatabase()
-                    .BuildServiceProvider();
+                TestSupport.TestEfServiceProviders.RemoveBackgroundHostedServices(services);
 
                 services.RemoveAll<DbContextOptions<EtmfDbContext>>();
                 services.RemoveAll<IDbContextOptionsConfiguration<EtmfDbContext>>();
                 services.AddDbContext<EtmfDbContext>(options =>
                 {
                     options.UseInMemoryDatabase(etmfDbName);
-                    options.UseInternalServiceProvider(inMemoryServices);
+                    options.UseInternalServiceProvider(TestSupport.TestEfServiceProviders.InMemory);
                 });
 
                 services.AddHttpClient<IEtmfCompletenessWebhookPublisher, HttpEtmfCompletenessWebhookPublisher>(client =>

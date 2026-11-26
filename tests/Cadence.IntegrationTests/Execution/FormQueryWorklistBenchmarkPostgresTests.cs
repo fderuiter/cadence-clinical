@@ -47,6 +47,7 @@ namespace Cadence.IntegrationTests.Execution;
 /// enrollment) and 30 enrollment forms under PostgreSQL Row-Level Security. Opt in with
 /// <c>CADENCE_FORM_QUERY_BENCHMARK=1</c> alongside <c>CADENCE_TEST_POSTGRES</c>.
 /// </summary>
+[Collection(ExecutionFormMemoryQuotaCollection.Name)]
 [Trait("Category", "Integration")]
 [Trait("Category", "Benchmark")]
 public sealed class FormQueryWorklistBenchmarkPostgresTests(ExecutionFormModulePostgresFixture fixture, ITestOutputHelper output)

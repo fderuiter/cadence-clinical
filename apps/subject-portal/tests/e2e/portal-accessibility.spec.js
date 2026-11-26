@@ -2477,4 +2477,105 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
       });
     }
   });
+
+  test("switches light, dark, and auto themes via ClinicalThemeToggle, applies pre-paint theme-bootstrap.js without CSP violations or FOUC, syncs storage and prefers-color-scheme, and passes WCAG 2.2 AA in dark mode (ADR-2690)", async ({
+    page,
+  }) => {
+    await page.emulateMedia({ colorScheme: "light" });
+    await page.setViewportSize({ width: 1024, height: 768 });
+    await page.goto(DEMO_PORTAL_URL);
+    await completeInitialPinSetupIfOpen(page);
+
+    const themeBtn = page.locator("#btn-portal-theme-toggle");
+    await expect(themeBtn).toBeVisible();
+
+    // Verify 48px touch target floor on participant portal theme toggle
+    const btnBox = await themeBtn.boundingBox();
+    expect(btnBox?.height ?? 0).toBeGreaterThanOrEqual(48);
+    expect(btnBox?.width ?? 0).toBeGreaterThanOrEqual(48);
+
+    // Cycle auto -> light -> dark
+    await themeBtn.click();
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+
+    await themeBtn.click();
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+    await expect(page.locator("html")).toHaveClass(/\bdark\b/);
+    expect(
+      await page.evaluate(() =>
+        window.localStorage.getItem("vitepress-theme-appearance")
+      )
+    ).toBe("dark");
+
+    // Verify WCAG 2.2 AA contrast in dark mode across Tasks, Inbox, and Wallet views
+    const darkTasksAudit = await new AxeBuilder({ page })
+      .withTags(WCAG_AA_TAGS)
+      .analyze();
+    expect(darkTasksAudit.violations).toEqual([]);
+
+    await page.click("#tab-btn-inbox button");
+    await expect(page.locator("#view-inbox")).toBeVisible();
+    const darkInboxAudit = await new AxeBuilder({ page })
+      .withTags(WCAG_AA_TAGS)
+      .analyze();
+    expect(darkInboxAudit.violations).toEqual([]);
+
+    await page.click("#tab-btn-wallet button");
+    await expect(page.locator("#view-wallet")).toBeVisible();
+    const darkWalletAudit = await new AxeBuilder({ page })
+      .withTags(WCAG_AA_TAGS)
+      .analyze();
+    expect(darkWalletAudit.violations).toEqual([]);
+
+    // Reload and verify synchronous <head> theme-bootstrap.js sets data-theme & .dark before DOMContentLoaded
+    await page.addInitScript(() => {
+      document.addEventListener(
+        "DOMContentLoaded",
+        () => {
+          window.__portalPreMountTheme = {
+            dataTheme: document.documentElement.getAttribute("data-theme"),
+            hasDarkClass: document.documentElement.classList.contains("dark"),
+            colorScheme: document.documentElement.style.colorScheme,
+          };
+        },
+        { once: true }
+      );
+    });
+
+    await page.reload();
+    await completeInitialPinSetupIfOpen(page);
+    const preMount = await page.evaluate(() => window.__portalPreMountTheme);
+    expect(preMount).toEqual({
+      dataTheme: "dark",
+      hasDarkClass: true,
+      colorScheme: "dark",
+    });
+
+    // Cycle dark -> auto and verify live OS prefers-color-scheme reactivity + cross-tab storage sync
+    await page.locator("#btn-portal-theme-toggle").click();
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "auto");
+    expect(
+      await page.evaluate(() =>
+        document.documentElement.classList.contains("dark")
+      )
+    ).toBe(false);
+
+    await page.emulateMedia({ colorScheme: "dark" });
+    await expect
+      .poll(() =>
+        page.evaluate(() => document.documentElement.classList.contains("dark"))
+      )
+      .toBe(true);
+
+    await page.evaluate(() => {
+      window.localStorage.setItem("vitepress-theme-appearance", "light");
+      window.dispatchEvent(
+        new StorageEvent("storage", {
+          key: "vitepress-theme-appearance",
+          newValue: "light",
+        })
+      );
+    });
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+  });
 });

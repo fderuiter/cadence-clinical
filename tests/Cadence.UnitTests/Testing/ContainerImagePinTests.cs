@@ -196,6 +196,7 @@ public sealed partial class ContainerImagePinTests
             .And.Contain("cache-from: type=gha")
             .And.Contain("cache-to: type=gha,mode=max")
             .And.Contain("output: \"trivy-results-${{ matrix.target }}.sarif\"")
+            .And.Contain("limit-severities-for-sarif: true")
             .And.Contain("category: \"trivy-${{ matrix.target }}\"");
 
         var ciDotnetApps = CiMatrixAppName().Matches(ci).Select(m => m.Groups["app"].Value).ToList();
@@ -1102,15 +1103,20 @@ public sealed partial class ContainerImagePinTests
                 RedirectStandardError = true,
                 UseShellExecute = false,
             };
+            psi.Environment["MSBUILDDISABLENODEREUSE"] = "1";
+            psi.Environment["UseSharedCompilation"] = "false";
+            psi.Environment["DOTNET_CLI_DO_NOT_USE_MSBUILD_SERVER"] = "1";
             psi.ArgumentList.Add("msbuild");
             psi.ArgumentList.Add(projectFile);
             psi.ArgumentList.Add("-t:ValidateDependencyAlignment");
+            psi.ArgumentList.Add("-nodeReuse:false");
             psi.ArgumentList.Add("-nologo");
 
             using var process = Process.Start(psi)!;
+            var stderrTask = process.StandardError.ReadToEndAsync();
             string stdout = process.StandardOutput.ReadToEnd();
-            string stderr = process.StandardError.ReadToEnd();
             process.WaitForExit();
+            string stderr = stderrTask.GetAwaiter().GetResult();
             return (process.ExitCode, stdout + "\n" + stderr);
         }
         finally

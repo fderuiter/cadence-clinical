@@ -101,7 +101,14 @@ public class ExecutionE2EFactory : WebApplicationFactory<Cadence.Apps.Execution.
 
         if (_databaseName is not null && _adminConnectionString is not null)
         {
-            NpgsqlConnection.ClearAllPools();
+            if (!string.IsNullOrWhiteSpace(_connectionString))
+            {
+                using var conn = new NpgsqlConnection(_connectionString);
+                NpgsqlConnection.ClearPool(conn);
+                using var scopedConn = new NpgsqlConnection(CadenceDatabaseExtensions.WithModuleSchema(_connectionString, ExecutionDbContextFactory.Schema));
+                NpgsqlConnection.ClearPool(scopedConn);
+            }
+
             await using var admin = new NpgsqlConnection(_adminConnectionString);
             await admin.OpenAsync().ConfigureAwait(false);
             await using var drop = new NpgsqlCommand($"DROP DATABASE IF EXISTS \"{_databaseName}\" WITH (FORCE)", admin);

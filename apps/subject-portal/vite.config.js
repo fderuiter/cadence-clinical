@@ -6,6 +6,7 @@ import { fileURLToPath } from "url";
 import { createStripMockWorkerInProdPlugin } from "../../scripts/vite-strip-mock-worker.mjs";
 import {
   buildModeAwareCspContent,
+  createThemeBootstrapPlugin,
   injectHoistedCspMeta as injectHoistedPortalCspMeta,
   resolveViteOidcOrigin as resolvePortalOidcOrigin,
 } from "../../scripts/vite-hoist-csp.mjs";
@@ -51,6 +52,7 @@ export default defineConfig(({ mode }) => ({
   },
   plugins: [
     vue(),
+    createThemeBootstrapPlugin(),
     {
       // The gateway sends no CORS headers, so a dev server page that called http://localhost:8000 directly would be
       // blocked by the browser. Unless VITE_API_BASE_URL is set (environment or .env files), the dev server sends API

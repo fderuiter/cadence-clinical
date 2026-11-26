@@ -151,6 +151,7 @@ public sealed class NotificationBrandingTests
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
             builder.UseTestGatewaySecret().UseTestPostgresConnectionString();
+            builder.ConfigureServices(services => TestSupport.TestEfServiceProviders.RemoveBackgroundHostedServices(services));
             if (portalUrl is not null)
             {
                 builder.UseSetting("Notifications:PortalUrl", portalUrl);

@@ -192,7 +192,7 @@
               <p
                 style="
                   font-size: var(--font-size-2xs);
-                  color: var(--semantic-color-warning-action-border);
+                  color: var(--semantic-color-warning-text-dark);
                   margin: 0;
                   line-height: 1.3;
                 "

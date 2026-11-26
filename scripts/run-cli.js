@@ -440,7 +440,12 @@ function buildBinary() {
   const publishResult = spawnSync(dotnetCmd, publishArgs, {
     stdio: "inherit",
     cwd: rootDir,
-    env: process.env,
+    env: {
+      ...process.env,
+      MSBUILDDISABLENODEREUSE: "1",
+      UseSharedCompilation: "false",
+      DOTNET_CLI_DO_NOT_USE_MSBUILD_SERVER: "1",
+    },
   });
 
   if (publishResult.status !== 0) {

@@ -649,6 +649,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2677: Retire Dead UI and Web Exports and Enforce UI Consumer Reachability](adr/2026-11-24-retire-dead-ui-exports-and-enforce-consumer-guard.md) | Current | - Status: Accepted |
 | [ADR-2679: Centralize Curated Lucide Icons and Enforce CLI Emoji Gate](adr/2026-11-25-centralize-lucide-icons-and-cli-emoji-gate.md) | Current | - Status: Accepted |
 | [ADR-2689: Centralize Floating Primitives and Top-Right Toast Stack](adr/2026-11-25-centralize-floating-primitives-and-top-right-toast-stack.md) | Current | - Status: Accepted |
+| [ADR-2690: Unified CSS Theme Cascade, Non-Text Border Recalibration, and Shared Theme Controller](adr/2026-11-25-unified-css-cascade-and-shared-theme-controller.md) | Current | - Status: Accepted |
 
 ## Developing and running
 

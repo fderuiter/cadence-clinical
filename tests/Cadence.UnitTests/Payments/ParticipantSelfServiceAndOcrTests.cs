@@ -51,6 +51,7 @@ public sealed class ParticipantSelfServiceAndOcrTests : IAsyncDisposable
             {
                 services.RemoveAll<DbContextOptions<PaymentsDbContext>>();
                 services.RemoveAll<IDbContextOptionsConfiguration<PaymentsDbContext>>();
+                TestSupport.TestEfServiceProviders.RemoveBackgroundHostedServices(services);
                 services.AddDbContext<PaymentsDbContext>(options => options.UseSqlite(_connection));
             });
         });

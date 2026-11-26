@@ -4,10 +4,12 @@ using Cadence.Apps.Execution.Infrastructure.Persistence;
 using Cadence.Database;
 using Cadence.Testing.Hosting;
 using Cadence.Testing.Security;
+using Cadence.UnitTests.TestSupport;
 
 using FluentAssertions;
 
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
@@ -28,7 +30,8 @@ public sealed class ExecutionAuditInterceptorRegistrationTests
         using var host = new WebApplicationFactory<Cadence.Apps.Execution.Program>().WithWebHostBuilder(builder => builder
             .UseTestGatewaySecret()
             .UseTestDemographicsKey().UseTestRandomizationKey().UseTestCgtBarcodeKey()
-            .UseTestPostgresConnectionString());
+            .UseTestPostgresConnectionString()
+            .ConfigureTestServices(services => services.RemoveBackgroundHostedServices()));
 
         ShouldHaveEachInterceptorOnce(host.Services);
     }
@@ -43,7 +46,8 @@ public sealed class ExecutionAuditInterceptorRegistrationTests
         using var host = new WebApplicationFactory<Cadence.Apps.Execution.Program>().WithWebHostBuilder(builder => builder
             .UseTestGatewaySecret()
             .UseTestDemographicsKey().UseTestRandomizationKey().UseTestCgtBarcodeKey()
-            .UseTestPostgresConnectionString());
+            .UseTestPostgresConnectionString()
+            .ConfigureTestServices(services => services.RemoveBackgroundHostedServices()));
         using var scope = host.Services.CreateScope();
 
         scope.ServiceProvider.GetRequiredService<ExecutionDbContext>().Database.CreateExecutionStrategy()
