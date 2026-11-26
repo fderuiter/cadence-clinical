@@ -1,3 +1,4 @@
+using Cadence.Apps.Econsent.Application;
 using Cadence.Apps.Econsent.Endpoints;
 using Cadence.Apps.Econsent.Infrastructure.Persistence;
 using Cadence.Database;
@@ -22,6 +23,8 @@ builder.Services.AddCadenceFieldEncryption();
 // Biometric liveness tokens are verified with CADENCE_BIOMETRIC_LIVENESS_KEY, validated at startup (ADR-2660).
 builder.Services.AddCadenceBiometricLiveness();
 builder.AddCadencePostgresDbContext<EconsentDbContext>();
+builder.Services.AddScoped<IEconsentUnitOfWork, EconsentUnitOfWork>();
+builder.Services.AddScoped<IEconsentApplicationService, EconsentApplicationService>();
 // Consent capture is e-signed; each token is single use across instances and restarts (ADR-2515, #5434).
 builder.Services.AddCadenceDurableSigTokenStore<EconsentDbContext>();
 

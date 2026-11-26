@@ -145,7 +145,9 @@
       <template #header="{ titleId, close }">
         <div v-if="inspectedDoc" class="drawer-header">
           <div style="display: flex; align-items: center; gap: 8px">
-            <span style="font-size: 20px" aria-hidden="true">📋</span>
+            <span style="font-size: 20px" aria-hidden="true"
+              ><ClinicalIcon name="clipboard-list" :size="16"
+            /></span>
             <div>
               <h3 :id="titleId" style="margin: 0; font-size: 16px">
                 Document Metadata &amp; 21 CFR Part 11 Manifest
@@ -289,17 +291,17 @@
           <h4 class="section-heading">HIPAA / GDPR De-identification</h4>
           <div class="redaction-info">
             <span v-if="inspectedDoc.is_redacted" class="badge status-approved">
-              🛡️ De-Identified Copy (PHI/PII Scrubber Applied)
+              De-Identified Copy (PHI/PII Scrubber Applied)
             </span>
             <span v-else class="badge status-draft">
-              🔒 Regulated Source Original
+              Regulated Source Original
             </span>
           </div>
         </div>
 
         <!-- Multimodal DIA Document Intelligence & Lifecycle Transitions -->
         <div class="drawer-section">
-          <h4 class="section-heading">🤖 DIA Document Intelligence</h4>
+          <h4 class="section-heading">DIA Document Intelligence</h4>
           <div class="intelligence-card">
             <div
               style="
@@ -402,7 +404,7 @@
                 {{
                   submittingDraftQc
                     ? "Submitting for Technical QC..."
-                    : "📤 Submit for Technical QC"
+                    : "Submit for Technical QC"
                 }}
               </button>
             </div>
@@ -475,7 +477,7 @@
           :disabled="reviewingQc || submittingDraftQc"
           @click="handlePreviewFromDrawer(inspectedDoc)"
         >
-          👁️ Open Secure PDF Preview
+          Open Secure PDF Preview
         </button>
       </template>
     </ClinicalDrawer>
@@ -507,7 +509,13 @@ const PdfPreviewModal = defineLazyOverlay(
 </script>
 
 <script setup>
-import { ClinicalDrawer, ClinicalInput, ClinicalTabs, handoffFocus } from "ui";
+import {
+  ClinicalDrawer,
+  ClinicalInput,
+  ClinicalTabs,
+  handoffFocus,
+  ClinicalIcon,
+} from "ui";
 import { computed, onMounted, ref, watch } from "vue";
 import { kernelApi } from "../api/kernelApi";
 import {
@@ -817,9 +825,9 @@ function getSigStatusText(doc) {
   if (report && report.signature_analysis) {
     const status = report.signature_analysis.status;
     if (status === "FULLY_SIGNED") return "✓ Fully Signed (Verified)";
-    if (status === "PARTIALLY_SIGNED") return "⚠️ Partially Signed";
-    if (status === "UNSIGNED") return "❌ Unsigned";
-    if (status === "SIGNATURE_NOT_REQUIRED") return "⚪ Not Required";
+    if (status === "PARTIALLY_SIGNED") return "Partially Signed";
+    if (status === "UNSIGNED") return "Unsigned";
+    if (status === "SIGNATURE_NOT_REQUIRED") return "Not Required";
   }
   if (doc.signer || doc.signing_timestamp) {
     return "✓ Signed";

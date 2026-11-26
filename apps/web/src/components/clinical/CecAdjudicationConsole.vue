@@ -22,8 +22,8 @@
             >
               {{
                 phiMaskEnabled
-                  ? "🛡️ IN-FLIGHT PHI MASKING: ACTIVE"
-                  : "⚠️ UNMASKED VIEW"
+                  ? "IN-FLIGHT PHI MASKING: ACTIVE"
+                  : "UNMASKED VIEW"
               }}
             </span>
           </div>
@@ -156,7 +156,7 @@
         :class="['tab-btn', { active: activeMainTab === 'dossiers' }]"
         @click="activeMainTab = 'dossiers'"
       >
-        📑 Event Dossiers &amp; Blinded Review ({{ dossiers.length }})
+        Event Dossiers &amp; Blinded Review ({{ dossiers.length }})
       </button>
       <button
         role="tab"
@@ -164,7 +164,7 @@
         :class="['tab-btn', { active: activeMainTab === 'chair_tiebreaker' }]"
         @click="activeMainTab = 'chair_tiebreaker'"
       >
-        ⚖️ Chair Tie-Breaker &amp; Consensus Panel
+        Chair Tie-Breaker &amp; Consensus Panel
         <span v-if="discordantCount > 0" class="badge-count tabular-nums">{{
           discordantCount
         }}</span>
@@ -175,7 +175,7 @@
         :class="['tab-btn', { active: activeMainTab === 'charter_quorum' }]"
         @click="activeMainTab = 'charter_quorum'"
       >
-        📜 Charter Governance &amp; Quorum Tracker
+        Charter Governance &amp; Quorum Tracker
       </button>
       <button
         role="tab"
@@ -183,7 +183,7 @@
         :class="['tab-btn', { active: activeMainTab === 'sdtm_ce' }]"
         @click="activeMainTab = 'sdtm_ce'"
       >
-        📊 CDISC SDTM CE &amp; EDC Casebook Sync
+        CDISC SDTM CE &amp; EDC Casebook Sync
       </button>
     </nav>
 
@@ -280,8 +280,7 @@
                   v-if="item.is_discordant"
                   class="dot dot-alert"
                   title="Discordance Detected"
-                  >⚠️</span
-                >
+                ></span>
                 <span
                   v-if="
                     item.workflow_status === 'FINALIZED_CONCORDANT' ||
@@ -354,7 +353,7 @@
                 class="btn btn-secondary"
                 @click="activeMainTab = 'chair_tiebreaker'"
               >
-                ⚖️ Open Adjudication Panel
+                Open Adjudication Panel
               </button>
             </div>
           </div>
@@ -364,7 +363,9 @@
             v-if="activeDossier.is_discordant"
             class="alert-banner alert-discordance"
           >
-            <div class="alert-icon">⚠️</div>
+            <div class="alert-icon">
+              <ClinicalIcon name="alert-triangle" :size="16" />
+            </div>
             <div class="alert-content">
               <h4 class="alert-title">
                 DISCORDANCE DETECTED &mdash; Escalated to Committee Chair
@@ -388,7 +389,9 @@
             "
             class="alert-banner alert-consensus"
           >
-            <div class="alert-icon">✅</div>
+            <div class="alert-icon">
+              <ClinicalIcon name="check-circle" :size="16" />
+            </div>
             <div class="alert-content">
               <h4 class="alert-title">CONCORDANT CONSENSUS FINALIZED</h4>
               <p class="alert-desc">
@@ -410,7 +413,7 @@
             <div class="section-card">
               <div class="section-header">
                 <h4 class="section-title">
-                  🏥 Medical Narrative &amp; Hospital Discharge Summary
+                  Medical Narrative &amp; Hospital Discharge Summary
                 </h4>
                 <span class="phi-badge">PHI SCRUBBED</span>
               </div>
@@ -434,7 +437,7 @@
             <div class="section-card">
               <div class="section-header">
                 <h4 class="section-title">
-                  🧪 Pertinent Laboratory Panels &amp; Biomarkers
+                  Pertinent Laboratory Panels &amp; Biomarkers
                 </h4>
                 <span class="count-tag"
                   >{{ activeDossier.lab_panels?.length || 0 }} Analytes</span
@@ -506,7 +509,7 @@
             <div class="section-card">
               <div class="section-header">
                 <h4 class="section-title">
-                  🫀 12-Lead Electrocardiogram (ECG) Findings
+                  12-Lead Electrocardiogram (ECG) Findings
                 </h4>
                 <span class="count-tag"
                   >{{ activeDossier.ecg_records?.length || 0 }} Tracings</span
@@ -573,7 +576,7 @@
             <div class="section-card">
               <div class="section-header">
                 <h4 class="section-title">
-                  📁 Diagnostic Imaging &amp; Specialty Attachments
+                  Diagnostic Imaging &amp; Specialty Attachments
                 </h4>
                 <span class="count-tag"
                   >{{
@@ -588,7 +591,9 @@
                   :key="att.attachment_id"
                   class="attachment-item"
                 >
-                  <div class="att-icon">📄</div>
+                  <div class="att-icon">
+                    <ClinicalIcon name="file-text" :size="16" />
+                  </div>
                   <div class="att-info">
                     <h5 class="att-title">
                       {{ att.title }} ({{ att.document_type }})
@@ -610,7 +615,7 @@
                       class="btn btn-sm btn-secondary"
                       @click="viewAttachment(att)"
                     >
-                      👁️ View Document
+                      View Document
                     </button>
                   </div>
                 </div>
@@ -627,7 +632,7 @@
             <div class="section-card assessment-workbench">
               <div class="section-header">
                 <h4 class="section-title">
-                  🧑‍⚕️ Blinded Reader Assessments &amp; Criteria Verification
+                  Blinded Reader Assessments &amp; Criteria Verification
                 </h4>
                 <span class="badge badge-charter">2+1 INDEPENDENT REVIEW</span>
               </div>
@@ -719,12 +724,14 @@
                         class="btn btn-primary"
                         @click="openReaderForm('READER_1')"
                       >
-                        ✍️ Complete Reader 1 Assessment
+                        Complete Reader 1 Assessment
                       </button>
                     </div>
                   </div>
                   <div v-else class="blinded-placeholder">
-                    <span class="lock-icon">🔒</span>
+                    <span class="lock-icon"
+                      ><ClinicalIcon name="lock" :size="16"
+                    /></span>
                     <p>
                       Reader 1 assessment is blinded from peer reviewer until
                       consensus.
@@ -818,12 +825,14 @@
                         class="btn btn-primary"
                         @click="openReaderForm('READER_2')"
                       >
-                        ✍️ Complete Reader 2 Assessment
+                        Complete Reader 2 Assessment
                       </button>
                     </div>
                   </div>
                   <div v-else class="blinded-placeholder">
-                    <span class="lock-icon">🔒</span>
+                    <span class="lock-icon"
+                      ><ClinicalIcon name="lock" :size="16"
+                    /></span>
                     <p>
                       Reader 2 assessment is blinded from peer reviewer until
                       consensus.
@@ -1030,7 +1039,7 @@
             <!-- 21 CFR Part 11 Electronic Signature Block -->
             <div class="esign-block">
               <div class="esign-header">
-                <h5>🔐 21 CFR Part 11 Electronic Signature Authentication</h5>
+                <h5>21 CFR Part 11 Electronic Signature Authentication</h5>
                 <span class="badge badge-regulatory"
                   >MANDATORY STEP-UP SIGN-OFF</span
                 >
@@ -1062,7 +1071,7 @@
                 :disabled="isSubmitting"
                 @click="submitChairAdjudication"
               >
-                🖋️ Sign &amp; Finalize Tie-Breaker Adjudication
+                Sign &amp; Finalize Tie-Breaker Adjudication
               </button>
             </div>
           </div>
@@ -1175,8 +1184,8 @@
               >
                 {{
                   isQuorumMet
-                    ? "✅ MEETING QUORUM ACHIEVED"
-                    : "❌ INSUFFICIENT QUORUM &mdash; Meeting Cannot Proceed"
+                    ? "MEETING QUORUM ACHIEVED"
+                    : "INSUFFICIENT QUORUM &mdash; Meeting Cannot Proceed"
                 }}
               </div>
             </div>
@@ -1199,7 +1208,7 @@
               :disabled="!isQuorumMet || isSubmitting"
               @click="recordMeetingSession"
             >
-              📝 Record Quorum &amp; Cryptographically Seal Minutes
+              Record Quorum &amp; Cryptographically Seal Minutes
             </button>
           </div>
         </div>
@@ -1221,10 +1230,10 @@
           </div>
           <div class="header-actions">
             <button class="btn btn-secondary" @click="compileSdtmCe">
-              🔄 Re-Compile SDTM CE
+              Re-Compile SDTM CE
             </button>
             <button class="btn btn-primary" @click="exportSdtmJson">
-              💾 Export Dataset-JSON
+              Export Dataset-JSON
             </button>
           </div>
         </div>
@@ -1275,7 +1284,7 @@
                 <td>{{ ce.CESTDTC }}</td>
                 <td><span class="status-pill success">FINALIZED</span></td>
                 <td>
-                  <span class="sync-badge">✅ SYNCED</span>
+                  <span class="sync-badge"> SYNCED</span>
                 </td>
               </tr>
               <tr v-if="!sdtmCeRecords.length">
@@ -1411,7 +1420,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from "vue";
-import { ClinicalModal, SEMANTIC_ACTIONS } from "ui";
+import { ClinicalModal, SEMANTIC_ACTIONS, ClinicalIcon } from "ui";
 import { isDemoBuild } from "../../utils/demoMode.js";
 import { allowUnbackedAction } from "../../utils/unbackedActions.js";
 import { apiClient } from "../../api/apiClient";

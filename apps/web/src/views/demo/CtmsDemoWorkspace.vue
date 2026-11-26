@@ -310,24 +310,7 @@
           class="clinical-badge clinical-badge--warning"
           :title="complianceLoadError"
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="13"
-            height="13"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-          >
-            <path
-              d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"
-            />
-            <path d="M12 9v4" />
-            <path d="M12 17h.01" />
-          </svg>
+          <ClinicalIcon name="alert-triangle" :size="16" />
           STATUS UNAVAILABLE
         </span>
         <span
@@ -345,39 +328,10 @@
                 (complianceStatus.missing_documents || []).join(', ')
           "
         >
-          <svg
-            v-if="complianceStatus.is_complete"
-            xmlns="http://www.w3.org/2000/svg"
-            width="13"
-            height="13"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-          >
-            <circle cx="12" cy="12" r="10" />
-            <path d="m9 12 2 2 4-4" />
-          </svg>
-          <svg
-            v-else
-            xmlns="http://www.w3.org/2000/svg"
-            width="13"
-            height="13"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-          >
-            <circle cx="12" cy="12" r="10" />
-            <path d="m15 9-6 6" />
-            <path d="m9 9 6 6" />
-          </svg>
+          <ClinicalIcon
+            :name="complianceStatus.is_complete ? 'check-circle' : 'x-circle'"
+            :size="16"
+          />
           {{ complianceStatus.is_complete ? "COMPLIANT" : "NON-COMPLIANT" }}
         </span>
       </div>
@@ -890,7 +844,7 @@
             :disabled="!siteId.trim()"
             @click="exportDoaPdf"
           >
-            🖨️ Export GxP PDF
+            Export GxP PDF
           </button>
         </div>
 
@@ -970,10 +924,11 @@
                         viewBox="0 0 24 24"
                         fill="none"
                         stroke="currentColor"
-                        stroke-width="2"
+                        stroke-width="1.75"
                         stroke-linecap="round"
                         stroke-linejoin="round"
                         aria-hidden="true"
+                        focusable="false"
                       >
                         <circle cx="12" cy="12" r="10" />
                         <path d="m9 12 2 2 4-4" />
@@ -1152,7 +1107,7 @@
               class="btn btn-secondary"
               @click="showCreateTemplateModal = true"
             >
-              ➕ Create Budget Template
+              Create Budget Template
             </button>
             <button
               id="btn-execute-amendment"
@@ -1160,7 +1115,7 @@
               :disabled="!investigatorGrant"
               @click="openAmendmentModal"
             >
-              ✍️ Execute Contract Amendment
+              Execute Contract Amendment
             </button>
           </div>
         </div>
@@ -1351,7 +1306,7 @@
               :disabled="!investigatorGrant"
               @click="openAddProcedureModal"
             >
-              ➕ Add Procedure to Grid
+              Add Procedure to Grid
             </button>
           </div>
         </div>
@@ -1673,7 +1628,7 @@
               class="btn btn-sm btn-secondary"
               @click="showAdjustmentModal = true"
             >
-              ➕ Add Adjustment
+              Add Adjustment
             </button>
           </div>
 
@@ -2236,7 +2191,7 @@
           :placeholder="justificationPlaceholder"
         />
         <div v-if="justificationError" class="error-msg">
-          ⚠️ {{ justificationError }}
+          {{ justificationError }}
         </div>
       </div>
       <template #footer>
@@ -2339,7 +2294,7 @@
         />
       </div>
 
-      <div v-if="sigError" class="error-msg">⚠️ {{ sigError }}</div>
+      <div v-if="sigError" class="error-msg">{{ sigError }}</div>
       <template #footer>
         <button
           type="button"
@@ -2406,7 +2361,7 @@
         />
       </div>
 
-      <div v-if="scheduleError" class="error-msg">⚠️ {{ scheduleError }}</div>
+      <div v-if="scheduleError" class="error-msg">{{ scheduleError }}</div>
       <template #footer>
         <button
           type="button"
@@ -2461,7 +2416,7 @@
         />
       </div>
 
-      <div v-if="allocError" class="error-msg">⚠️ {{ allocError }}</div>
+      <div v-if="allocError" class="error-msg">{{ allocError }}</div>
       <template #footer>
         <button
           type="button"
@@ -2511,7 +2466,7 @@
         />
       </div>
 
-      <div v-if="recError" class="error-msg">⚠️ {{ recError }}</div>
+      <div v-if="recError" class="error-msg">{{ recError }}</div>
       <template #footer>
         <button
           type="button"
@@ -2596,7 +2551,7 @@
         />
       </div>
 
-      <div v-if="delError" class="error-msg">⚠️ {{ delError }}</div>
+      <div v-if="delError" class="error-msg">{{ delError }}</div>
       <template #footer>
         <button
           type="button"
@@ -2651,7 +2606,7 @@
         />
       </div>
 
-      <div v-if="msError" class="error-msg">⚠️ {{ msError }}</div>
+      <div v-if="msError" class="error-msg">{{ msError }}</div>
       <template #footer>
         <button
           type="button"
@@ -2811,7 +2766,7 @@
       </div>
 
       <div v-if="completeVisitError" class="error-msg">
-        ⚠️ {{ completeVisitError }}
+        {{ completeVisitError }}
       </div>
       <template #footer>
         <button
@@ -2923,7 +2878,7 @@
       </div>
 
       <div v-if="compileLetterError" class="error-msg">
-        ⚠️ {{ compileLetterError }}
+        {{ compileLetterError }}
       </div>
       <template #footer>
         <button
@@ -3008,7 +2963,7 @@
           class="btn btn-primary"
           @click="isIpKitReconciliationDrawerOpen = true"
         >
-          🔍 Launch Bulk Kit Reconciliation Drawer
+          Launch Bulk Kit Reconciliation Drawer
         </button>
       </div>
       <AdaptiveDoseEscalationConsole :study-id="studyId" />
@@ -3027,6 +2982,7 @@
 import { ref, computed, watch } from "vue";
 import * as VueRouter from "vue-router";
 import {
+  ClinicalIcon,
   ClinicalModal,
   ClinicalTabs,
   SEMANTIC_ACTIONS,

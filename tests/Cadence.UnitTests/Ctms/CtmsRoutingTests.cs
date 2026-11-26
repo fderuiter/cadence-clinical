@@ -7,6 +7,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Threading.Tasks;
 
+using Cadence.Apps.Ctms;
 using Cadence.Apps.Ctms.Endpoints;
 using Cadence.Apps.Ctms.Infrastructure.Persistence;
 using Cadence.Kernel.Time;
@@ -53,6 +54,7 @@ public sealed class CtmsRoutingTests : IAsyncDisposable
                     services.AddRouting();
                     services.AddSingleton<IClock>(new FakeClock(new DateTimeOffset(2026, 11, 1, 10, 0, 0, TimeSpan.Zero)));
                     services.AddSingleton(_db);
+                    services.AddCtmsApplicationServices();
                     services.AddCadenceSecurity();
                 });
                 webHost.Configure(app =>

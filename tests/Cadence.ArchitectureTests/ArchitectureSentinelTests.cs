@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Reflection.Emit;
 using System.Text.RegularExpressions;
 
 using Cadence.Apps.Execution.Domain.Subjects;
@@ -172,67 +173,333 @@ public partial class ArchitectureSentinelTests
 
     /// <summary>
     /// Validates Clean Architecture boundary purity: Core domain models, value objects, domain rules, and ports
-    /// across all C# execution domain namespaces must have zero references to ASP.NET Core or MassTransit.
+    /// across all <c>Cadence.Apps.*.Domain</c> namespaces must have zero references to ASP.NET Core or MassTransit.
     /// </summary>
     [Fact(DisplayName = "ExecutionDomainLayer_MustNotReference_AspNetCoreOrMassTransit")]
     [Trait("Category", "Architecture")]
     public void ExecutionDomainLayerMustNotReferenceAspNetCoreOrMassTransit()
     {
-        var executionAssembly = typeof(ClinicalSubject).Assembly;
-        var domainTypes = executionAssembly.GetTypes()
-            .Where(t => t.Namespace != null &&
-                        t.Namespace.StartsWith("Cadence.Apps.Execution.Domain", StringComparison.Ordinal))
-            // MIG-SUBJ-010 explicit exception: DomainErrorHttpMapping and DomainErrorExtensions serve as the
-            // isolated ProblemDetails HTTP mapping bridge at the boundary.
-            .Where(t => t != typeof(DomainErrorHttpMapping) && t != typeof(DomainErrorExtensions))
-            .ToList();
+        var appAssemblies = DiscoverStandaloneAppAssemblies().ToList();
+        appAssemblies.Select(a => a.GetName().Name).Should().Contain(
+            [
+                "Cadence.Apps.Ctms",
+                "Cadence.Apps.Econsent",
+                "Cadence.Apps.Etmf",
+                "Cadence.Apps.Execution",
+                "Cadence.Apps.Imaging",
+                "Cadence.Apps.Interop",
+                "Cadence.Apps.Knowledge",
+                "Cadence.Apps.Payments",
+                "Cadence.Apps.Safety",
+                "Cadence.Apps.Tickets",
+            ],
+            "all standalone Cadence.Apps.* assemblies with Domain layers must be inspected");
 
-        domainTypes.Should().NotBeEmpty("Domain layer must contain discovered types");
-
-        foreach (var type in domainTypes)
-        {
-            var referencedTypes = new HashSet<Type>();
-
-            if (type.BaseType != null) referencedTypes.Add(type.BaseType);
-            foreach (var iface in type.GetInterfaces()) referencedTypes.Add(iface);
-
-            foreach (var field in type.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static))
-                referencedTypes.Add(field.FieldType);
-            foreach (var prop in type.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static))
-                referencedTypes.Add(prop.PropertyType);
-
-            foreach (var method in type.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static))
-            {
-                referencedTypes.Add(method.ReturnType);
-                foreach (var p in method.GetParameters()) referencedTypes.Add(p.ParameterType);
-            }
-            foreach (var ctor in type.GetConstructors(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static))
-            {
-                foreach (var p in ctor.GetParameters()) referencedTypes.Add(p.ParameterType);
-            }
-
-            foreach (var refType in referencedTypes)
-            {
-                var assemblyName = refType.Assembly.GetName().Name ?? string.Empty;
-                var typeNamespace = refType.Namespace ?? string.Empty;
-
-                assemblyName.Should().NotStartWith("Microsoft.AspNetCore",
-                    $"Domain type '{type.FullName}' must not reference ASP.NET Core types (found '{refType.FullName}')");
-                typeNamespace.Should().NotStartWith("Microsoft.AspNetCore",
-                    $"Domain type '{type.FullName}' must not reference ASP.NET Core namespaces (found '{refType.FullName}')");
-
-                assemblyName.Should().NotStartWith("MassTransit",
-                    $"Domain type '{type.FullName}' must not reference MassTransit types (found '{refType.FullName}')");
-                typeNamespace.Should().NotStartWith("MassTransit",
-                    $"Domain type '{type.FullName}' must not reference MassTransit namespaces (found '{refType.FullName}')");
-            }
-        }
+        var (inspectedCount, violations) = EvaluateAppsDomainLayerPurity(appAssemblies);
+        inspectedCount.Should().BeGreaterThan(0, "Domain layer across Cadence.Apps.* must contain discovered types");
+        string.Join(Environment.NewLine, violations).Should().BeEmpty(
+            "Cadence.Apps.*.Domain types must remain free of Microsoft.AspNetCore and MassTransit dependencies");
 
         typeof(ClinicalSubject).GetMethods()
             .SelectMany(m => m.GetParameters().Select(p => p.ParameterType).Append(m.ReturnType))
             .Should().NotContain(t => (t.Namespace ?? "").StartsWith("Microsoft.AspNetCore", StringComparison.Ordinal) ||
                                       (t.Namespace ?? "").StartsWith("MassTransit", StringComparison.Ordinal),
                 "ClinicalSubject signatures must remain completely pure of web or messaging infrastructure");
+    }
+
+    /// <summary>
+    /// Proves that a synthetic <c>Microsoft.AspNetCore</c> reference in any <c>Cadence.Apps.*.Domain</c> type is caught.
+    /// </summary>
+    [Fact(DisplayName = "AppsDomainLayerPurity_Bites_WhenDomainTypeReferencesAspNetCore")]
+    [Trait("Category", "Architecture")]
+    public void AppsDomainLayerPurityBitesWhenDomainTypeReferencesAspNetCore()
+    {
+        var assemblyBuilder = AssemblyBuilder.DefineDynamicAssembly(
+            new AssemblyName("Cadence.Apps.Synthetic"),
+            AssemblyBuilderAccess.Run);
+        var moduleBuilder = assemblyBuilder.DefineDynamicModule("MainModule");
+        var typeBuilder = moduleBuilder.DefineType(
+            "Cadence.Apps.Synthetic.Domain.LeakyDomainModel",
+            TypeAttributes.Public | TypeAttributes.Class);
+        typeBuilder.DefineField(
+            "_httpContext",
+            typeof(Microsoft.AspNetCore.Http.HttpContext),
+            FieldAttributes.Private);
+        _ = typeBuilder.CreateType();
+
+        var (inspectedCount, violations) = EvaluateAppsDomainLayerPurity([assemblyBuilder]);
+        inspectedCount.Should().Be(1);
+        violations.Should().ContainSingle()
+            .Which.Should().Contain("Cadence.Apps.Synthetic.Domain.LeakyDomainModel")
+            .And.Contain("Microsoft.AspNetCore.Http.HttpContext");
+    }
+
+    /// <summary>
+    /// Validates ADR-2428 / ADR-2832 layering: Minimal API endpoint slices in <c>Cadence.Apps.*.Endpoints</c>
+    /// must delegate persistence to <c>Application</c> services and never inject or reference <see cref="DbContext"/>
+    /// or <c>Microsoft.EntityFrameworkCore</c> types directly.
+    /// </summary>
+    [Fact(DisplayName = "StandaloneEndpoints_MustNotDependOn_DbContext")]
+    [Trait("Category", "Architecture")]
+    public void StandaloneEndpointsMustNotDependOnDbContext()
+    {
+        var appAssemblies = DiscoverStandaloneAppAssemblies().ToList();
+        var (inspectedCount, violations) = EvaluateStandaloneEndpointsDbContextFree(appAssemblies);
+
+        inspectedCount.Should().BeGreaterThan(0, "Cadence.Apps.*.Endpoints must contain discovered endpoint types");
+        string.Join(Environment.NewLine, violations).Should().BeEmpty(
+            "Cadence.Apps.*.Endpoints types must not inject or reference DbContext or Microsoft.EntityFrameworkCore types");
+    }
+
+    /// <summary>
+    /// Proves that a synthetic <see cref="DbContext"/> injection in any <c>Cadence.Apps.*.Endpoints</c> type is caught.
+    /// </summary>
+    [Fact(DisplayName = "StandaloneEndpointsDbContextBan_Bites_WhenEndpointInjectsDbContext")]
+    [Trait("Category", "Architecture")]
+    public void StandaloneEndpointsDbContextBanBitesWhenEndpointInjectsDbContext()
+    {
+        var assemblyBuilder = AssemblyBuilder.DefineDynamicAssembly(
+            new AssemblyName("Cadence.Apps.Synthetic"),
+            AssemblyBuilderAccess.Run);
+        var moduleBuilder = assemblyBuilder.DefineDynamicModule("MainModule");
+        var typeBuilder = moduleBuilder.DefineType(
+            "Cadence.Apps.Synthetic.Endpoints.LeakyEndpoints",
+            TypeAttributes.Public | TypeAttributes.Abstract | TypeAttributes.Sealed);
+        var methodBuilder = typeBuilder.DefineMethod(
+            "HandleAsync",
+            MethodAttributes.Public | MethodAttributes.Static,
+            typeof(void),
+            [typeof(DbContext)]);
+        methodBuilder.GetILGenerator().Emit(OpCodes.Ret);
+        _ = typeBuilder.CreateType();
+
+        var (inspectedCount, violations) = EvaluateStandaloneEndpointsDbContextFree([assemblyBuilder]);
+        inspectedCount.Should().Be(1);
+        violations.Should().ContainSingle()
+            .Which.Should().Contain("Cadence.Apps.Synthetic.Endpoints.LeakyEndpoints")
+            .And.Contain("DbContext");
+    }
+
+    internal static (int InspectedCount, IReadOnlyList<string> Violations) EvaluateAppsDomainLayerPurity(
+        IEnumerable<Assembly> assemblies)
+    {
+        var violations = new List<string>();
+        int inspectedCount = 0;
+
+        foreach (var assembly in assemblies)
+        {
+            string assemblyName = assembly.GetName().Name ?? string.Empty;
+            if (!assemblyName.StartsWith("Cadence.Apps.", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            foreach (var type in KernelBoundaryRules.GetLoadableTypes(assembly))
+            {
+                string rootNamespace = ResolveRootTypeNamespace(type);
+                if (!AppsDomainNamespaceRegex().IsMatch(rootNamespace))
+                {
+                    continue;
+                }
+
+                // MIG-SUBJ-010 explicit exception: DomainErrorHttpMapping and DomainErrorExtensions serve as the
+                // isolated ProblemDetails HTTP mapping bridge at the boundary.
+                var rootType = ResolveRootDeclaringType(type);
+                if (rootType == typeof(DomainErrorHttpMapping) || rootType == typeof(DomainErrorExtensions))
+                {
+                    continue;
+                }
+
+                inspectedCount++;
+                foreach (var refType in CollectReferencedTypes(type))
+                {
+                    string refAssembly = refType.Assembly.GetName().Name ?? string.Empty;
+                    string refNamespace = refType.Namespace ?? string.Empty;
+
+                    if (refAssembly.StartsWith("Microsoft.AspNetCore", StringComparison.Ordinal) ||
+                        refNamespace.StartsWith("Microsoft.AspNetCore", StringComparison.Ordinal))
+                    {
+                        violations.Add(
+                            $"Domain type '{type.FullName}' in '{assemblyName}' references ASP.NET Core type '{refType.FullName}'");
+                    }
+
+                    if (refAssembly.StartsWith("MassTransit", StringComparison.Ordinal) ||
+                        refNamespace.StartsWith("MassTransit", StringComparison.Ordinal))
+                    {
+                        violations.Add(
+                            $"Domain type '{type.FullName}' in '{assemblyName}' references MassTransit type '{refType.FullName}'");
+                    }
+                }
+            }
+        }
+
+        violations.Sort(StringComparer.Ordinal);
+        return (inspectedCount, violations.Distinct(StringComparer.Ordinal).ToList());
+    }
+
+    internal static (int InspectedCount, IReadOnlyList<string> Violations) EvaluateStandaloneEndpointsDbContextFree(
+        IEnumerable<Assembly> assemblies)
+    {
+        var violations = new List<string>();
+        int inspectedCount = 0;
+
+        foreach (var assembly in assemblies)
+        {
+            string assemblyName = assembly.GetName().Name ?? string.Empty;
+            if (!assemblyName.StartsWith("Cadence.Apps.", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            foreach (var type in KernelBoundaryRules.GetLoadableTypes(assembly))
+            {
+                string rootNamespace = ResolveRootTypeNamespace(type);
+                if (!AppsEndpointsNamespaceRegex().IsMatch(rootNamespace))
+                {
+                    continue;
+                }
+
+                inspectedCount++;
+                foreach (var refType in CollectReferencedTypes(type))
+                {
+                    string refAssembly = refType.Assembly.GetName().Name ?? string.Empty;
+                    string refNamespace = refType.Namespace ?? string.Empty;
+
+                    if (typeof(DbContext).IsAssignableFrom(refType) ||
+                        refAssembly.StartsWith("Microsoft.EntityFrameworkCore", StringComparison.Ordinal) ||
+                        refNamespace.StartsWith("Microsoft.EntityFrameworkCore", StringComparison.Ordinal))
+                    {
+                        violations.Add(
+                            $"Endpoint type '{type.FullName}' in '{assemblyName}' depends on persistence type '{refType.FullName}'");
+                    }
+                }
+            }
+        }
+
+        violations.Sort(StringComparer.Ordinal);
+        return (inspectedCount, violations.Distinct(StringComparer.Ordinal).ToList());
+    }
+
+    private static IEnumerable<Assembly> DiscoverStandaloneAppAssemblies() =>
+        NonKernelProductionAssemblies.Value.Where(assembly =>
+            (assembly.GetName().Name ?? string.Empty).StartsWith("Cadence.Apps.", StringComparison.Ordinal));
+
+    private static Type ResolveRootDeclaringType(Type type)
+    {
+        var current = type;
+        while (current.DeclaringType is not null)
+        {
+            current = current.DeclaringType;
+        }
+
+        return current;
+    }
+
+    private static string ResolveRootTypeNamespace(Type type) =>
+        ResolveRootDeclaringType(type).Namespace ?? string.Empty;
+
+    private static HashSet<Type> CollectReferencedTypes(Type type)
+    {
+        const BindingFlags AllMembers = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly;
+        var results = new HashSet<Type>();
+
+        if (type.BaseType is not null)
+        {
+            AddUnwrappedTypes(results, type.BaseType);
+        }
+
+        foreach (var iface in type.GetInterfaces())
+        {
+            AddUnwrappedTypes(results, iface);
+        }
+
+        foreach (var field in type.GetFields(AllMembers))
+        {
+            AddUnwrappedTypes(results, field.FieldType);
+        }
+
+        foreach (var prop in type.GetProperties(AllMembers))
+        {
+            AddUnwrappedTypes(results, prop.PropertyType);
+        }
+
+        foreach (var method in type.GetMethods(AllMembers))
+        {
+            AddUnwrappedTypes(results, method.ReturnType);
+            foreach (var parameter in method.GetParameters())
+            {
+                AddUnwrappedTypes(results, parameter.ParameterType);
+            }
+
+            AddLocalVariableTypes(results, method);
+        }
+
+        foreach (var ctor in type.GetConstructors(AllMembers))
+        {
+            foreach (var parameter in ctor.GetParameters())
+            {
+                AddUnwrappedTypes(results, parameter.ParameterType);
+            }
+
+            AddLocalVariableTypes(results, ctor);
+        }
+
+        return results;
+    }
+
+    private static void AddLocalVariableTypes(HashSet<Type> results, MethodBase method)
+    {
+        MethodBody? body;
+        try
+        {
+            body = method.GetMethodBody();
+        }
+        catch (InvalidOperationException)
+        {
+            return;
+        }
+        catch (NotSupportedException)
+        {
+            return;
+        }
+
+        if (body is null)
+        {
+            return;
+        }
+
+        foreach (var local in body.LocalVariables)
+        {
+            AddUnwrappedTypes(results, local.LocalType);
+        }
+    }
+
+    private static void AddUnwrappedTypes(HashSet<Type> results, Type? candidate)
+    {
+        if (candidate is null || candidate.IsGenericParameter)
+        {
+            return;
+        }
+
+        if (candidate.IsByRef || candidate.IsPointer || candidate.IsArray)
+        {
+            AddUnwrappedTypes(results, candidate.GetElementType());
+            return;
+        }
+
+        if (!results.Add(candidate))
+        {
+            return;
+        }
+
+        if (candidate.IsGenericType)
+        {
+            AddUnwrappedTypes(results, candidate.GetGenericTypeDefinition());
+            foreach (var arg in candidate.GetGenericArguments())
+            {
+                AddUnwrappedTypes(results, arg);
+            }
+        }
     }
 
     /// <summary>
@@ -548,4 +815,10 @@ public partial class ArchitectureSentinelTests
 
     [GeneratedRegex(@"Project\(""\{[^""]+\}""\)\s*=\s*""(?<name>[^""]+)""\s*,\s*""(?<path>[^""]+\.csproj)""", RegexOptions.CultureInvariant)]
     private static partial Regex SolutionProjectRegex();
+
+    [GeneratedRegex(@"^Cadence\.Apps\.[A-Za-z0-9_]+\.Domain(?:\.|$)", RegexOptions.CultureInvariant)]
+    private static partial Regex AppsDomainNamespaceRegex();
+
+    [GeneratedRegex(@"^Cadence\.Apps\.[A-Za-z0-9_]+\.Endpoints(?:\.|$)", RegexOptions.CultureInvariant)]
+    private static partial Regex AppsEndpointsNamespaceRegex();
 }

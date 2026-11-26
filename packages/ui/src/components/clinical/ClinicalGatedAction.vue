@@ -25,6 +25,7 @@
             :size="16"
             :stroke-width="1.75"
             aria-hidden="true"
+            focusable="false"
           />
           <span>{{ label }}</span>
         </button>
@@ -38,19 +39,26 @@
         :aria-controls="explanationDomId"
         @click="expanded = !expanded"
       >
-        <Lock :size="16" :stroke-width="1.75" aria-hidden="true" />
+        <Lock
+          :size="16"
+          :stroke-width="1.75"
+          aria-hidden="true"
+          focusable="false"
+        />
         <span>{{ whyButtonLabel }}</span>
         <ChevronDown
           v-if="expanded"
           :size="16"
           :stroke-width="1.75"
           aria-hidden="true"
+          focusable="false"
         />
         <ChevronRight
           v-else
           :size="16"
           :stroke-width="1.75"
           aria-hidden="true"
+          focusable="false"
         />
       </button>
     </div>

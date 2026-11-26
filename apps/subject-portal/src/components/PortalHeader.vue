@@ -25,9 +25,14 @@
         title="Toggle sync status drawer"
         @click="toggleSyncDrawer"
       >
-        <span class="sync-icon" aria-hidden="true">{{
-          quarantinedSubmissionsCount > 0 ? "⚠️" : "🔄"
-        }}</span>
+        <span class="sync-icon" aria-hidden="true">
+          <ClinicalIcon
+            :name="
+              quarantinedSubmissionsCount > 0 ? 'alert-triangle' : 'refresh'
+            "
+            :size="16"
+          />
+        </span>
         <span
           v-if="queuedSubmissionsCount > 0"
           id="header-sync-badge"
@@ -47,6 +52,7 @@
 <script setup>
 import { computed } from "vue";
 import { storeToRefs } from "pinia";
+import { ClinicalIcon } from "ui";
 
 import { useSyncStore } from "../stores/sync.js";
 

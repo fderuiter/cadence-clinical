@@ -1,4 +1,7 @@
 <script setup>
+import { computed } from "vue";
+import ClinicalIcon from "./ClinicalIcon.vue";
+
 const props = defineProps({
   label: {
     type: String,
@@ -40,6 +43,8 @@ const handleClick = (event) => {
   }
   emit("click", event);
 };
+
+const iconPixelSize = computed(() => (props.size === "lg" ? 20 : 16));
 </script>
 
 <template>
@@ -56,7 +61,9 @@ const handleClick = (event) => {
     @click="handleClick"
   >
     <span class="clinical-icon-btn-glyph" aria-hidden="true">
-      <slot>{{ icon }}</slot>
+      <slot>
+        <ClinicalIcon v-if="icon" :name="icon" :size="iconPixelSize" />
+      </slot>
     </span>
   </button>
 </template>

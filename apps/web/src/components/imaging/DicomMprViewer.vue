@@ -14,7 +14,9 @@
         class="sync-status-badge"
         :class="{ synced: isSynced, unlinked: !isSynced }"
       >
-        <span class="status-icon">{{ isSynced ? "🔗" : "🔓" }}</span>
+        <span class="status-icon">{{
+          isSynced ? "Open link" : "Unlocked"
+        }}</span>
         <span class="status-text">{{
           isSynced ? "Crosshairs & Scroll Linked" : "Independent Control"
         }}</span>
@@ -66,7 +68,10 @@
           title="Toggle Synchronized MPR Crosshairs"
           @click="isCrosshairEnabled = !isCrosshairEnabled"
         >
-          <span class="btn-icon">🎯</span> Crosshairs
+          <span class="btn-icon"
+            ><ClinicalIcon name="trending-up" :size="16"
+          /></span>
+          Crosshairs
         </button>
 
         <button
@@ -76,7 +81,10 @@
           title="Invert Grayscale Color Map"
           @click="isInverted = !isInverted"
         >
-          <span class="btn-icon">🌓</span> Invert
+          <span class="btn-icon"
+            ><ClinicalIcon name="file-text" :size="16"
+          /></span>
+          Invert
         </button>
 
         <button
@@ -85,7 +93,10 @@
           title="Reset Zoom & Pan"
           @click="resetView"
         >
-          <span class="btn-icon">🔄</span> Reset
+          <span class="btn-icon"
+            ><ClinicalIcon name="refresh" :size="16"
+          /></span>
+          Reset
         </button>
       </div>
 
@@ -97,7 +108,10 @@
           :title="isCinePlaying ? 'Pause Cine Playback' : 'Play Cine Loop'"
           @click="toggleCine"
         >
-          <span class="btn-icon">{{ isCinePlaying ? "⏸️" : "▶️" }}</span> Cine
+          <span class="btn-icon"
+            ><ClinicalIcon :name="isCinePlaying ? 'pause' : 'play'" :size="16"
+          /></span>
+          Cine
         </button>
         <span class="cine-speed-label">{{ cineFps }} fps</span>
       </div>
@@ -228,6 +242,7 @@
 </template>
 
 <script setup>
+import { ClinicalIcon } from "ui";
 import { ref, onMounted, onUnmounted, watch } from "vue";
 import {
   observeActiveThemeChanges,

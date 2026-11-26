@@ -276,6 +276,36 @@ public sealed class PublicBundleValidatorServiceTests : IDisposable
             "staged /subject-portal/assets/ volume over 920 KiB must fail closed");
     }
 
+    [Fact]
+    public void ScanBundleFile_RejectsDisallowedEmojiGlyphsInAppAndStagedDemoBundles()
+    {
+        var webFindings = PublicBundleValidatorService.ScanBundleFile(
+            "apps/web/dist/assets/index.js",
+            "assets/index.js",
+            "export const badge = \"\U0001F512 Held\";\n",
+            isDocsBundle: false);
+        webFindings.Select(f => f.Category).Should().Contain("emoji_glyph");
+
+        var legalBannerFindings = PublicBundleValidatorService.ScanBundleFile(
+            "docs/.vitepress/dist/assets/style.css",
+            "assets/style.css",
+            "/*! MIT License | \u00A9 Vendor, Inc. */\n",
+            isDocsBundle: true);
+        legalBannerFindings.Select(f => f.Category).Should().NotContain("emoji_glyph");
+
+        var emojiCopyrightFindings = PublicBundleValidatorService.ScanBundleFile(
+            "docs/.vitepress/dist/assets/style.css",
+            "assets/style.css",
+            ".badge::before { content: \"\u00A9\uFE0F\"; }\n",
+            isDocsBundle: true);
+        emojiCopyrightFindings.Select(f => f.Category).Should().Contain("emoji_glyph");
+
+        SeedCleanBundles();
+        Write("apps/subject-portal/dist/assets/tasks.js", "export const done = \"\U0001F389 Done\";\n");
+        PublicBundleValidatorService.ValidatePublicBundles(_dir).Should().Be(1,
+            "Unicode emoji glyphs in built application bundles must fail public-bundle");
+    }
+
     private void SeedCleanBundles()
     {
         Write("docs/.vitepress/dist/index.html", CleanHtml());

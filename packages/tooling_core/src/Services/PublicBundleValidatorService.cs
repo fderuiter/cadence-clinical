@@ -388,6 +388,25 @@ public static partial class PublicBundleValidatorService
             ValidateExecutableChunkContamination(displayPath, relativeInsideBundle, content, isDocsBundle, effectiveDemoBundle, findings);
         }
 
+        // 7. Disallowed Unicode emoji glyphs in web/portal/demo bundles and non-prose docs theme assets (ADR-2679).
+        bool isJsonOrManifest = extension.Equals(".json", StringComparison.OrdinalIgnoreCase) ||
+                                extension.Equals(".webmanifest", StringComparison.OrdinalIgnoreCase);
+        bool scanForEmojiGlyphs = !isDocsBundle
+            ? isHtml || isSvg || isCss || isExecutableJs || isJsonOrManifest
+            : !isDocsSerializedProseChunk && (isCss || isSvg);
+        if (scanForEmojiGlyphs)
+        {
+            foreach (EmojiHit hit in EmojiValidatorService.FindEmojis(content.AsSpan(), maxViolations: 5))
+            {
+                findings.Add(new PublicBundleFinding(
+                    displayPath,
+                    hit.Line,
+                    hit.Column,
+                    "emoji_glyph",
+                    $"Disallowed Unicode emoji glyph U+{hit.CodePoint:X4} in public bundle (ADR-2679)"));
+            }
+        }
+
         return findings;
     }
 

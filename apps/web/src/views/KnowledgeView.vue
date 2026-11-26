@@ -25,7 +25,10 @@
           title="Create New Knowledge Category"
           @click="openCreateCategoryModal"
         >
-          <span class="btn-icon">📁</span> New Category
+          <span class="btn-icon"
+            ><ClinicalIcon name="folder" :size="16"
+          /></span>
+          New Category
         </button>
         <button
           id="btn-create-article"
@@ -33,7 +36,8 @@
           title="Author New Knowledge SOP Article"
           @click="openCreateArticleModal"
         >
-          <span class="btn-icon">➕</span> New Article
+          <span class="btn-icon"><ClinicalIcon name="plus" :size="16" /></span>
+          New Article
         </button>
       </div>
     </div>
@@ -49,7 +53,9 @@
         @keydown.enter.prevent="setStatusFilter('ALL')"
         @keydown.space.prevent="setStatusFilter('ALL')"
       >
-        <span class="stat-icon alert-icon" aria-hidden="true">📚</span>
+        <span class="stat-icon alert-icon" aria-hidden="true"
+          ><ClinicalIcon name="book-open" :size="20"
+        /></span>
         <span class="stat-details">
           <span class="stat-value tabular-nums">
             {{ totalArticlesCount }}
@@ -67,7 +73,9 @@
         @keydown.enter.prevent="setStatusFilter('PUBLISHED')"
         @keydown.space.prevent="setStatusFilter('PUBLISHED')"
       >
-        <span class="stat-icon capa-icon" aria-hidden="true">✅</span>
+        <span class="stat-icon capa-icon" aria-hidden="true"
+          ><ClinicalIcon name="check-circle" :size="20"
+        /></span>
         <span class="stat-details">
           <span class="stat-value text-success tabular-nums">
             {{ publishedArticlesCount }}
@@ -86,7 +94,9 @@
         @keydown.enter.prevent="setStatusFilter('IN_REVIEW')"
         @keydown.space.prevent="setStatusFilter('IN_REVIEW')"
       >
-        <span class="stat-icon rbqm-icon" aria-hidden="true">🔍</span>
+        <span class="stat-icon rbqm-icon" aria-hidden="true"
+          ><ClinicalIcon name="search" :size="20"
+        /></span>
         <span class="stat-details">
           <span class="stat-value text-warning tabular-nums">
             {{ inReviewArticlesCount }}
@@ -105,7 +115,9 @@
         @keydown.enter.prevent="setStatusFilter('DRAFT')"
         @keydown.space.prevent="setStatusFilter('DRAFT')"
       >
-        <span class="stat-icon breach-icon" aria-hidden="true">📝</span>
+        <span class="stat-icon breach-icon" aria-hidden="true"
+          ><ClinicalIcon name="file-text" :size="20"
+        /></span>
         <span class="stat-details">
           <span class="stat-value tabular-nums">
             {{ draftArticlesCount }}
@@ -121,7 +133,10 @@
       <aside id="knowledge-sidebar" class="knowledge-sidebar">
         <div class="sidebar-box-header">
           <h4 class="sidebar-heading">
-            <span class="heading-icon">🗂️</span> Categories
+            <span class="heading-icon"
+              ><ClinicalIcon name="folder" :size="16"
+            /></span>
+            Categories
           </h4>
           <span
             v-if="!isSuperAdmin"
@@ -139,7 +154,9 @@
             :class="{ active: selectedCategoryId === null }"
             @click="selectCategory(null)"
           >
-            <span class="category-icon">📂</span>
+            <span class="category-icon"
+              ><ClinicalIcon name="folder" :size="16"
+            /></span>
             <span class="category-title">All Categories</span>
             <span class="category-count">{{
               filteredByPersonaArticles.length
@@ -227,7 +244,9 @@
         <!-- Search and Tag Bar -->
         <div class="list-search-bar">
           <div class="search-input-wrapper">
-            <span class="search-symbol" aria-hidden="true">🔍</span>
+            <span class="search-symbol" aria-hidden="true"
+              ><ClinicalIcon name="search" :size="16"
+            /></span>
             <label for="knowledge-search-input" class="sr-only"
               >Search SOPs by title, tag, or content</label
             >
@@ -282,7 +301,9 @@
           v-else-if="displayArticles.length === 0"
           class="articles-empty-state"
         >
-          <div class="empty-icon">📄</div>
+          <div class="empty-icon">
+            <ClinicalIcon name="file-text" :size="20" />
+          </div>
           <h4>No SOPs Found</h4>
           <p v-if="searchQuery || selectedTag || activeStatusFilter !== 'ALL'">
             No articles match your current search or status filters.
@@ -331,11 +352,11 @@
             </span>
 
             <span class="article-card-meta">
-              <span class="meta-category"
-                >📁 {{ art.category_name || "General" }}</span
+              <span class="meta-category">
+                {{ art.category_name || "General" }}</span
               >
-              <span v-if="art.updated_at" class="meta-date"
-                >📅 {{ formatDate(art.updated_at) }}</span
+              <span v-if="art.updated_at" class="meta-date">
+                {{ formatDate(art.updated_at) }}</span
               >
             </span>
 
@@ -354,7 +375,9 @@
       <!-- Column 3: Article Reader & GxP Inspection Pane -->
       <main id="knowledge-reader-pane" class="article-reader-pane">
         <div v-if="!selectedArticle" class="reader-empty-state">
-          <div class="empty-icon">📖</div>
+          <div class="empty-icon">
+            <ClinicalIcon name="book-open" :size="20" />
+          </div>
           <h3>Select an SOP or Guideline</h3>
           <p>
             Choose an article from the directory on the left to read guidance,
@@ -368,8 +391,7 @@
           <div class="reader-header-card">
             <div class="reader-meta-top">
               <div class="breadcrumbs">
-                <span class="crumb-category"
-                  >📁
+                <span class="crumb-category">
                   {{ selectedArticle.category_name || "General SOPs" }}</span
                 >
                 <span class="crumb-separator">/</span>
@@ -442,7 +464,7 @@
               id="admin-authoring-toolbar"
               class="admin-lifecycle-toolbar"
             >
-              <span class="toolbar-label">👑 Admin Controls:</span>
+              <span class="toolbar-label"> Admin Controls:</span>
 
               <!-- Draft & Rejected State Actions -->
               <template
@@ -457,7 +479,7 @@
                   title="Edit Working Markdown Draft"
                   @click="openEditDraftModal"
                 >
-                  ✏️ Edit Draft
+                  Edit Draft
                 </button>
                 <button
                   id="btn-submit-review"
@@ -465,7 +487,7 @@
                   title="Submit Draft for Peer Review (DRAFT -> IN_REVIEW)"
                   @click="promptSubmitReview"
                 >
-                  📨 Submit for Review
+                  Submit for Review
                 </button>
               </template>
 
@@ -492,7 +514,7 @@
                   title="Edit Working Draft"
                   @click="openEditDraftModal"
                 >
-                  ✏️ Edit Draft
+                  Edit Draft
                 </button>
               </template>
 
@@ -504,14 +526,14 @@
                   title="Publish Article (Auto-supersedes prior version)"
                   @click="promptPublishArticle"
                 >
-                  🚀 Publish Live
+                  Publish Live
                 </button>
                 <button
                   class="btn btn-secondary btn-sm"
                   title="Create New Revision Draft"
                   @click="openEditDraftModal"
                 >
-                  📝 New Revision Draft
+                  New Revision Draft
                 </button>
               </template>
 
@@ -523,7 +545,7 @@
                   title="Start New Draft Revision"
                   @click="openEditDraftModal"
                 >
-                  📝 Create Amendment Draft
+                  Create Amendment Draft
                 </button>
                 <button
                   id="btn-archive-article"
@@ -531,7 +553,7 @@
                   title="Archive SOP Document"
                   @click="promptArchiveArticle"
                 >
-                  📦 Archive
+                  Archive
                 </button>
               </template>
             </div>
@@ -634,7 +656,7 @@
                           ver.is_locked ? 'badge-success' : 'badge-neutral'
                         "
                       >
-                        {{ ver.is_locked ? "🔒 Locked" : "📝 Draft" }}
+                        {{ ver.is_locked ? "Locked" : "Draft" }}
                       </span>
                     </td>
                   </tr>
@@ -736,7 +758,7 @@
       aria-labelledby="create-art-modal-title"
     >
       <template #header>
-        <h3 id="create-art-modal-title">➕ Author New Knowledge SOP Article</h3>
+        <h3 id="create-art-modal-title">Author New Knowledge SOP Article</h3>
       </template>
 
       <form @submit.prevent="handleCreateArticle">
@@ -856,7 +878,7 @@
       aria-labelledby="edit-draft-modal-title"
     >
       <template #header>
-        <h3 id="edit-draft-modal-title">✏️ Edit Working Draft SOP</h3>
+        <h3 id="edit-draft-modal-title">Edit Working Draft SOP</h3>
       </template>
 
       <form @submit.prevent="handleSaveDraft">
@@ -907,9 +929,7 @@
               class="btn-text-toggle"
               @click="isPreviewMode = !isPreviewMode"
             >
-              {{
-                isPreviewMode ? "👁️ Show Raw Markdown" : "🔍 Show Live Preview"
-              }}
+              {{ isPreviewMode ? "Show Raw Markdown" : "Show Live Preview" }}
             </button>
           </div>
 
@@ -1024,7 +1044,7 @@
       aria-labelledby="create-cat-modal-title"
     >
       <template #header>
-        <h3 id="create-cat-modal-title">📁 Create Knowledge Category</h3>
+        <h3 id="create-cat-modal-title">Create Knowledge Category</h3>
       </template>
 
       <form @submit.prevent="handleCreateCategory">
@@ -1101,7 +1121,12 @@
 
 <script>
 import { computed, onMounted, ref, watch } from "vue";
-import { ClinicalIconButton, ClinicalModal, ClinicalTabs } from "ui";
+import {
+  ClinicalIcon,
+  ClinicalIconButton,
+  ClinicalModal,
+  ClinicalTabs,
+} from "ui";
 import {
   knowledgeService,
   compileSopMarkdownToHtml,
@@ -1121,6 +1146,7 @@ import { isDemoBuild } from "../utils/demoMode.js";
 export default {
   name: "KnowledgeView",
   components: {
+    ClinicalIcon,
     ClinicalIconButton,
     ClinicalModal,
     ClinicalTabs,
@@ -1397,18 +1423,20 @@ export default {
     }
 
     function getCategoryIcon(slug) {
-      if (!slug) return "📁";
-      if (slug.includes("clinical") || slug.includes("ecrf")) return "🩺";
-      if (slug.includes("authoring") || slug.includes("mdr")) return "📋";
-      if (slug.includes("monitoring") || slug.includes("ctms")) return "📊";
+      if (!slug) return "Folder";
+      if (slug.includes("clinical") || slug.includes("ecrf")) return "Clinical";
+      if (slug.includes("authoring") || slug.includes("mdr"))
+        return "Checklist";
+      if (slug.includes("monitoring") || slug.includes("ctms"))
+        return "Metrics";
       if (
         slug.includes("regulatory") ||
         slug.includes("compliance") ||
         slug.includes("audit")
       )
-        return "🔒";
-      if (slug.includes("data") || slug.includes("coding")) return "🏷️";
-      return "📁";
+        return "Locked";
+      if (slug.includes("data") || slug.includes("coding")) return "Ticket";
+      return "Folder";
     }
 
     function getArticleCountForCategory(catId) {
@@ -1808,7 +1836,7 @@ export default {
 
     function promptSubmitReview() {
       actionModalType.value = "submit_review";
-      actionModalTitle.value = "📨 Submit Draft for Four-Eyes Review";
+      actionModalTitle.value = "Submit Draft for Four-Eyes Review";
       actionModalIntro.value =
         "Submitting this working draft will transition the document to IN_REVIEW status. An independent peer reviewer must review and approve this revision.";
       actionReason.value =
@@ -1844,7 +1872,7 @@ export default {
 
     function promptPublishArticle() {
       actionModalType.value = "publish";
-      actionModalTitle.value = "🚀 Publish Approved SOP Live";
+      actionModalTitle.value = "Publish Approved SOP Live";
       actionModalIntro.value =
         "Publishing will immediately make this document active across the platform and automatically supersede any previous published version.";
       actionReason.value =
@@ -1857,7 +1885,7 @@ export default {
 
     function promptArchiveArticle() {
       actionModalType.value = "archive";
-      actionModalTitle.value = "📦 Archive Knowledge Article";
+      actionModalTitle.value = "Archive Knowledge Article";
       actionModalIntro.value =
         "Archiving will deprecate this SOP document and remove it from active clinical workflows while retaining 21 CFR Part 11 audit records.";
       actionReason.value =

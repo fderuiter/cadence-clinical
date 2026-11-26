@@ -23,7 +23,7 @@
   >
     <div class="drawer-header">
       <h3 id="drawer-title" class="drawer-title-heading">
-        <ClinicalIcon name="refresh" :size="18" />
+        <ClinicalIcon name="refresh" :size="16" />
         <span>Submission Sync Status</span>
       </h3>
       <button

@@ -42,7 +42,7 @@
           "
           @click="showEhrReconciliationDrawer = true"
         >
-          🏥 {{ $t("ecrf.ehrReconciliation") }}
+          {{ $t("ecrf.ehrReconciliation") }}
         </button>
 
         <label

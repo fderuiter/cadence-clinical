@@ -12,7 +12,9 @@
   >
     <template #header>
       <div class="modal-header-title-wrap">
-        <div class="modal-header-icon" aria-hidden="true">🎫</div>
+        <div class="modal-header-icon" aria-hidden="true">
+          <ClinicalIcon name="ticket" :size="20" />
+        </div>
         <div>
           <h3 id="create-modal-title" class="modal-title">
             Log Clinical Issue / Ticket
@@ -266,7 +268,7 @@
 
 <script setup>
 import { ref, reactive, computed, watch } from "vue";
-import { ClinicalInput, ClinicalModal } from "ui";
+import { ClinicalInput, ClinicalModal, ClinicalIcon } from "ui";
 import { describeApiError } from "../../utils/apiErrors.js";
 
 const props = defineProps({

@@ -151,6 +151,10 @@ public static class QualityGates
             "Non-empty UTF-8 text files end with a newline character",
             ctx => FileHygieneValidatorService.ValidateEndOfFileNewline(ctx.TargetFiles, ctx.RepoRoot, ctx.PreCommit, ctx.IndexReader) == 0)
         { TakesFiles = true },
+        new("no-emojis", ["check-no-emojis", "validate-no-emojis"],
+            "Zero Unicode emoji, regional indicator flag, or keycap glyphs across `packages/ui`, `apps/web`, `apps/subject-portal`, `packages/demo-fixtures`, and `docs/.vitepress/theme` (ADR-2679)",
+            ctx => EmojiValidatorService.Validate(ctx.RepoRoot, ctx.TargetFiles, ctx.PreCommit, ctx.IndexReader))
+        { TakesFiles = true },
         new("clean-secrets", ["clean-secrets-baseline"],
             "Verifies `baselines/secrets/config.json` and `baselines/secrets/*.secrets.baseline.json` shards are valid, normalized JSON with the canonical exclusion filter without mutating them",
             ctx => SecretsBaselineCleanerService.CleanSecretsBaseline(repoRoot: ctx.RepoRoot, check: true, preCommit: ctx.PreCommit, indexReader: ctx.IndexReader) == 0)

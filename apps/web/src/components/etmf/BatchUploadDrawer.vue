@@ -14,7 +14,13 @@
     <template #header>
       <div class="drawer-header">
         <div class="header-title-wrap">
-          <UploadCloud :size="18" class="header-icon" aria-hidden="true" />
+          <UploadCloud
+            :size="20"
+            class="header-icon"
+            aria-hidden="true"
+            :stroke-width="1.75"
+            focusable="false"
+          />
           <h3 id="batch-drawer-title" class="drawer-title">
             Batch Ingestion &amp; AI Auto-Classification
           </h3>
@@ -25,7 +31,12 @@
           aria-label="Close batch upload drawer"
           @click="handleClose"
         >
-          <X :size="18" aria-hidden="true" />
+          <X
+            :size="20"
+            aria-hidden="true"
+            :stroke-width="1.75"
+            focusable="false"
+          />
         </button>
       </div>
     </template>
@@ -47,7 +58,13 @@
 
       <!-- Error Banner -->
       <div v-if="batchError" class="alert alert-error error-banner">
-        <AlertTriangle :size="16" class="inline-icon" aria-hidden="true" />
+        <AlertTriangle
+          :size="16"
+          class="inline-icon"
+          aria-hidden="true"
+          :stroke-width="1.75"
+          focusable="false"
+        />
         <span>{{ batchError }}</span>
       </div>
 
@@ -170,7 +187,12 @@
               class="btn btn-secondary btn-xs btn-inspect-item"
               @click="inspectItem(row)"
             >
-              <FileSearch :size="14" aria-hidden="true" />
+              <FileSearch
+                :size="16"
+                aria-hidden="true"
+                :stroke-width="1.75"
+                focusable="false"
+              />
               <span>Inspect</span>
               <span class="sr-only"> {{ row.file.name }}</span>
             </button>
@@ -180,7 +202,12 @@
               :label="`Remove ${row.file.name} from upload queue`"
               @click="removeItem(index)"
             >
-              <X :size="14" aria-hidden="true" />
+              <X
+                :size="16"
+                aria-hidden="true"
+                :stroke-width="1.75"
+                focusable="false"
+              />
             </ClinicalIconButton>
           </template>
         </ClinicalDataTable>
@@ -218,7 +245,12 @@
           :title="!canStage ? ETMF_STAGE_ROLE_REASON : undefined"
           @click="startBatchUpload"
         >
-          <UploadCloud :size="16" aria-hidden="true" />
+          <UploadCloud
+            :size="16"
+            aria-hidden="true"
+            :stroke-width="1.75"
+            focusable="false"
+          />
           <span>Start Batch AI Auto-Classification &amp; Staging</span>
         </button>
       </div>
@@ -248,7 +280,12 @@
           aria-label="Close classification preview"
           @click="inspectedItem = null"
         >
-          <X :size="16" aria-hidden="true" />
+          <X
+            :size="16"
+            aria-hidden="true"
+            :stroke-width="1.75"
+            focusable="false"
+          />
         </button>
       </div>
     </template>

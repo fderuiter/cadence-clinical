@@ -1,5 +1,6 @@
 using System;
 
+using Cadence.Apps.Etmf.Application;
 using Cadence.Apps.Etmf.Endpoints;
 using Cadence.Apps.Etmf.Infrastructure.Consumers;
 using Cadence.Apps.Etmf.Infrastructure.Persistence;
@@ -26,6 +27,10 @@ builder.Services.AddSingleton<IAuthorizationMiddlewareResultHandler, EtmfScopeAu
 builder.Services.AddSingleton<IClock>(SystemClock.Instance);
 builder.Services.AddCadenceStorage(builder.Configuration, builder.Environment);
 builder.AddCadencePostgresDbContext<EtmfDbContext>();
+builder.Services.AddScoped<IEtmfUnitOfWork, EtmfUnitOfWork>();
+builder.Services.AddScoped<IEtmfQcService, EtmfQcService>();
+builder.Services.AddScoped<IEtmfDocumentService, EtmfDocumentService>();
+builder.Services.AddScoped<IEtmfExportService, EtmfExportService>();
 builder.Services.AddSingleton<EtmfExportQueue>();
 builder.Services.AddHostedService<EtmfExportWorker>();
 builder.Services.AddHttpClient<IEtmfCompletenessWebhookPublisher, HttpEtmfCompletenessWebhookPublisher>(client =>

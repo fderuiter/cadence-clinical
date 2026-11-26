@@ -9,6 +9,7 @@
       :size="16"
       :stroke-width="1.75"
       aria-hidden="true"
+      focusable="false"
       class="entity-link__icon"
     />
     <span class="entity-link__label">{{ label || parsed.displayLabel }}</span>
@@ -37,6 +38,7 @@
       :size="16"
       :stroke-width="1.75"
       aria-hidden="true"
+      focusable="false"
       class="entity-link__icon"
     />
     <slot>
@@ -71,6 +73,7 @@
       :size="16"
       :stroke-width="1.75"
       aria-hidden="true"
+      focusable="false"
       class="entity-link__icon"
     />
     <slot>

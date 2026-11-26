@@ -329,7 +329,7 @@
                     :key="iIdx"
                     class="ingredient-chip"
                   >
-                    🧪 {{ ing.ingredient_name }} ({{ ing.ingredient_code }})
+                    {{ ing.ingredient_name }} ({{ ing.ingredient_code }})
                   </span>
                 </div>
                 <div v-else class="text-muted-notice">

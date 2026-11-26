@@ -11,7 +11,13 @@
     <template #header>
       <div class="drawer-header-bar">
         <div class="header-title-wrap">
-          <Database :size="18" class="header-icon" aria-hidden="true" />
+          <Database
+            :size="20"
+            class="header-icon"
+            aria-hidden="true"
+            :stroke-width="1.75"
+            focusable="false"
+          />
           <h3 id="drawer-title" class="drawer-title">
             USDM Biomedical Concept Staging &amp; Mapping Drawer
           </h3>
@@ -22,7 +28,12 @@
           aria-label="Close drawer"
           @click="closeDrawer"
         >
-          <X :size="18" aria-hidden="true" />
+          <X
+            :size="20"
+            aria-hidden="true"
+            :stroke-width="1.75"
+            focusable="false"
+          />
         </button>
       </div>
     </template>
@@ -54,7 +65,13 @@
           v-if="resolvedCount < items.length"
           class="alert alert-warning-inline"
         >
-          <AlertTriangle :size="15" class="alert-icon" aria-hidden="true" />
+          <AlertTriangle
+            :size="16"
+            class="alert-icon"
+            aria-hidden="true"
+            :stroke-width="1.75"
+            focusable="false"
+          />
           <span>
             Guardrail Active: All USDM lineage nodes require valid concept
             bindings or explicit design finding exemptions prior to protocol
@@ -62,7 +79,13 @@
           </span>
         </div>
         <div v-else class="alert alert-success-inline">
-          <CheckCircle2 :size="15" class="alert-icon" aria-hidden="true" />
+          <CheckCircle2
+            :size="16"
+            class="alert-icon"
+            aria-hidden="true"
+            :stroke-width="1.75"
+            focusable="false"
+          />
           <span>
             All unmapped USDM concept tokens resolved. Ready to hydrate protocol
             design lineage nodes.
@@ -72,7 +95,13 @@
 
       <!-- Filter / Search Control -->
       <div class="filter-bar">
-        <Search :size="16" class="search-input-icon" aria-hidden="true" />
+        <Search
+          :size="16"
+          class="search-input-icon"
+          aria-hidden="true"
+          :stroke-width="1.75"
+          focusable="false"
+        />
         <input
           v-model="searchQuery"
           type="text"
@@ -116,7 +145,12 @@
                 :class="{ active: item.action === 'bind' }"
                 @click="item.action = 'bind'"
               >
-                <Link2 :size="14" aria-hidden="true" />
+                <Link2
+                  :size="16"
+                  aria-hidden="true"
+                  :stroke-width="1.75"
+                  focusable="false"
+                />
                 <span>Bind Registry Concept</span>
               </button>
               <button
@@ -125,7 +159,12 @@
                 :class="{ active: item.action === 'alias' }"
                 @click="item.action = 'alias'"
               >
-                <Tag :size="14" aria-hidden="true" />
+                <Tag
+                  :size="16"
+                  aria-hidden="true"
+                  :stroke-width="1.75"
+                  focusable="false"
+                />
                 <span>Create Tenant Alias</span>
               </button>
               <button
@@ -134,7 +173,12 @@
                 :class="{ active: item.action === 'finding' }"
                 @click="item.action = 'finding'"
               >
-                <ShieldCheck :size="14" aria-hidden="true" />
+                <ShieldCheck
+                  :size="16"
+                  aria-hidden="true"
+                  :stroke-width="1.75"
+                  focusable="false"
+                />
                 <span>Design Finding Exemption</span>
               </button>
             </div>
@@ -240,7 +284,12 @@
       <!-- Part 11 Audit Trail Verification -->
       <div class="audit-section">
         <h5 class="audit-title">
-          <FileSignature :size="16" aria-hidden="true" />
+          <FileSignature
+            :size="16"
+            aria-hidden="true"
+            :stroke-width="1.75"
+            focusable="false"
+          />
           <span>21 CFR Part 11 Electronic Signature &amp; Audit Trail</span>
         </h5>
         <div class="audit-grid">
@@ -287,7 +336,12 @@
           :disabled="!canConfirm"
           @click="confirmAndApply"
         >
-          <Zap :size="16" aria-hidden="true" />
+          <Zap
+            :size="16"
+            aria-hidden="true"
+            :stroke-width="1.75"
+            focusable="false"
+          />
           <span>Confirm Staging Mappings &amp; Hydrate Protocol Design</span>
         </button>
       </div>

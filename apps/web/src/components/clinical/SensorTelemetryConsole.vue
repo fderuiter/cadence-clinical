@@ -30,7 +30,8 @@
           :disabled="isLoading"
           @click="refreshData"
         >
-          <span class="icon">🔄</span> Refresh Telemetry
+          <span class="icon"><ClinicalIcon name="refresh" :size="16" /></span>
+          Refresh Telemetry
         </button>
 
         <button
@@ -38,7 +39,8 @@
           class="btn btn-primary"
           @click="openRegisterDeviceModal"
         >
-          <span class="icon">📱</span> Register Medical IoT Device
+          <span class="icon"><ClinicalIcon name="phone" :size="16" /></span>
+          Register Medical IoT Device
         </button>
 
         <button
@@ -46,7 +48,10 @@
           class="btn btn-accent"
           @click="openSimulateIngestModal"
         >
-          <span class="icon">⚡</span> Ingest Stream Batch
+          <span class="icon"
+            ><ClinicalIcon name="alert-triangle" :size="16"
+          /></span>
+          Ingest Stream Batch
         </button>
       </div>
     </header>
@@ -55,7 +60,9 @@
     <section class="metrics-grid" aria-label="Sensor Telemetry Summary Metrics">
       <div class="metric-card">
         <div class="metric-icon-box bg-blue">
-          <span class="metric-icon">📊</span>
+          <span class="metric-icon"
+            ><ClinicalIcon name="trending-up" :size="16"
+          /></span>
         </div>
         <div class="metric-content">
           <span class="metric-label">Ingested Readings</span>
@@ -73,7 +80,9 @@
 
       <div class="metric-card">
         <div class="metric-icon-box bg-green">
-          <span class="metric-icon">📈</span>
+          <span class="metric-icon"
+            ><ClinicalIcon name="trending-up" :size="16"
+          /></span>
         </div>
         <div class="metric-content">
           <span class="metric-label">Mean CGM Time-in-Range</span>
@@ -88,7 +97,9 @@
 
       <div class="metric-card">
         <div class="metric-icon-box bg-purple">
-          <span class="metric-icon">👟</span>
+          <span class="metric-icon"
+            ><ClinicalIcon name="file-text" :size="16"
+          /></span>
         </div>
         <div class="metric-content">
           <span class="metric-label">Mean Daily Steps</span>
@@ -105,7 +116,9 @@
 
       <div class="metric-card">
         <div class="metric-icon-box bg-red">
-          <span class="metric-icon">🚨</span>
+          <span class="metric-icon"
+            ><ClinicalIcon name="alert-triangle" :size="16"
+          /></span>
         </div>
         <div class="metric-content">
           <span class="metric-label">Safety Threshold Alerts</span>
@@ -127,7 +140,7 @@
         :class="['tab-button', { active: activeTab === 'telemetry' }]"
         @click="activeTab = 'telemetry'"
       >
-        📈 Biometric Endpoints &amp; Time-in-Range ({{ dailySummaries.length }})
+        Biometric Endpoints &amp; Time-in-Range ({{ dailySummaries.length }})
       </button>
       <button
         role="tab"
@@ -135,7 +148,7 @@
         :class="['tab-button', { active: activeTab === 'alerts' }]"
         @click="activeTab = 'alerts'"
       >
-        🚨 Automated Safety Alerts ({{ safetyAlerts.length }})
+        Automated Safety Alerts ({{ safetyAlerts.length }})
         <span v-if="unacknowledgedCount > 0" class="badge-count">{{
           unacknowledgedCount
         }}</span>
@@ -146,7 +159,7 @@
         :class="['tab-button', { active: activeTab === 'devices' }]"
         @click="activeTab = 'devices'"
       >
-        📱 Medical Device Registry &amp; UDI / MAC ({{ devices.length }})
+        Medical Device Registry &amp; UDI / MAC ({{ devices.length }})
       </button>
       <button
         role="tab"
@@ -154,7 +167,7 @@
         :class="['tab-button', { active: activeTab === 'standards' }]"
         @click="activeTab = 'standards'"
       >
-        📜 Open mHealth &amp; FHIR Inspector
+        Open mHealth &amp; FHIR Inspector
       </button>
     </nav>
 
@@ -165,7 +178,7 @@
         <div class="card summary-card">
           <div class="card-header">
             <h3 class="card-title">
-              🩸 Continuous Glucose Monitoring (CGM) Consensus
+              Continuous Glucose Monitoring (CGM) Consensus
             </h3>
             <span class="badge badge-success">ATTD Standards</span>
           </div>
@@ -310,7 +323,7 @@
                   </td>
                   <td><span class="badge badge-success">Valid GxP</span></td>
                   <td>
-                    <span class="lakehouse-tag">💧 Lakehouse Fed</span>
+                    <span class="lakehouse-tag"> Lakehouse Fed</span>
                   </td>
                 </tr>
               </tbody>
@@ -326,7 +339,7 @@
         v-if="domainErrors.alerts"
         class="error-banner alerts-warning-banner"
       >
-        ⚠️ Failed to update safety alerts: {{ domainErrors.alerts }}
+        Failed to update safety alerts: {{ domainErrors.alerts }}
       </div>
       <div class="card table-card">
         <div class="card-header">
@@ -392,10 +405,10 @@
                     v-if="alert.is_acknowledged"
                     class="badge badge-success"
                   >
-                    ✔ Acknowledged by {{ alert.acknowledged_by }}
+                    Acknowledged by {{ alert.acknowledged_by }}
                   </span>
                   <span v-else class="badge badge-danger">
-                    ⏳ Pending Review
+                    Pending Review
                   </span>
                 </td>
                 <td>
@@ -405,7 +418,7 @@
                     class="btn btn-sm btn-danger"
                     @click="openAcknowledgeModal(alert)"
                   >
-                    ✍ Acknowledge Alert
+                    Acknowledge Alert
                   </button>
                   <span v-else class="text-muted text-sm">{{
                     alert.acknowledgment_notes
@@ -494,7 +507,7 @@
         <div class="card">
           <div class="card-header">
             <h3 class="card-title">
-              🌐 Open mHealth (OMH) 1.0 JSON Schema Standard
+              Open mHealth (OMH) 1.0 JSON Schema Standard
             </h3>
             <span class="badge badge-standard">omh:blood-glucose</span>
           </div>
@@ -506,7 +519,7 @@
         <div class="card">
           <div class="card-header">
             <h3 class="card-title">
-              🩺 HL7 FHIR R4 Observation Resource Standard
+              HL7 FHIR R4 Observation Resource Standard
             </h3>
             <span class="badge badge-standard">LOINC 2339-0</span>
           </div>
@@ -584,9 +597,7 @@
           :disabled="!ackNotes.trim() || isSubmitting"
           @click="submitAcknowledgment"
         >
-          {{
-            isSubmitting ? "Signing..." : "✍ Confirm 21 CFR Part 11 Sign-off"
-          }}
+          {{ isSubmitting ? "Signing..." : "Confirm 21 CFR Part 11 Sign-off" }}
         </button>
       </template>
     </ClinicalModal>
@@ -782,7 +793,7 @@
           :disabled="isSubmitting"
           @click="submitSimulatedIngestion"
         >
-          {{ isSubmitting ? "Ingesting..." : "⚡ Ingest Telemetry Stream" }}
+          {{ isSubmitting ? "Ingesting..." : "Ingest Telemetry Stream" }}
         </button>
       </template>
     </ClinicalModal>
@@ -790,7 +801,7 @@
 </template>
 
 <script setup lang="ts">
-import { ClinicalModal } from "ui";
+import { ClinicalModal, ClinicalIcon } from "ui";
 import { computed, onMounted, ref } from "vue";
 import { interopService } from "../../api/interop";
 import { useToastStore } from "../../stores/toasts";

@@ -96,7 +96,7 @@
     "diastolicBpRule": "Diastolischer Blutdruck: Numerischer Wert zwischen 30 und 150 mmHg.",
     "pulseRateRule": "Pulsfrequenz: Numerischer Wert zwischen 30 und 200 bpm.",
     "queryManagementTitle": "Aktionen zum Diskrepanzmanagement:",
-    "queryManagementDesc": "Klicken Sie auf die 💬 / ⚠️ Flaggen neben den Eingabefeldern, um Diskrepanznotizen zu erstellen, zu beantworten, zu schließen oder wieder zu öffnen. Alle Übergänge werden in Echtzeit protokolliert.",
+    "queryManagementDesc": "Klicken Sie auf die Diskrepanz-Flaggen neben den Eingabefeldern, um Diskrepanznotizen zu erstellen, zu beantworten, zu schließen oder wieder zu öffnen. Alle Übergänge werden in Echtzeit protokolliert.",
     "form": {
       "title": "eCRF-Dateneingabeformular für Probanden",
       "schemaBadge": "Protokollschema v{version}",
@@ -109,7 +109,7 @@
       "noSubjects": "Keine Probanden gelistet",
       "trainingGatedTitle": "Obligatorisches Protokolltraining unvollständig — Dateneingabe gesperrt",
       "trainingGatedDesc": "Gemäß ICH GCP E6(R2) §4 & PRD-TRN-002 muss das Studienpersonal das obligatorische Protokoll-Amendment-Training absolvieren, bevor eCRF-Einträge gespeichert oder signiert werden können.",
-      "completeTrainingNow": "Training jetzt absolvieren ➡️",
+      "completeTrainingNow": "Training jetzt absolvieren",
       "reconsentGatedTitle": "Protokoll-Amendment aktiv (v2.0.0) — Erneute Einwilligung erforderlich",
       "reconsentGatedDesc": "Dieser Proband muss die erneute Einwilligung für Protokollversion 2.0.0 abschließen, bevor weitere Besuchsdaten gespeichert werden können (PRD-SUB-007). Alle Eingabefelder sind derzeit gesperrt.",
       "openEconsent": "eConsent-Formular öffnen",

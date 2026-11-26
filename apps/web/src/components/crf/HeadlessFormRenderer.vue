@@ -14,7 +14,7 @@
           :class="{ active: currentViewport === 'desktop_edc' }"
           @click="currentViewport = 'desktop_edc'"
         >
-          🖥️ Desktop EDC
+          Desktop EDC
         </button>
         <button
           type="button"
@@ -22,7 +22,7 @@
           :class="{ active: currentViewport === 'mobile_epro' }"
           @click="currentViewport = 'mobile_epro'"
         >
-          📱 Mobile ePRO
+          Mobile ePRO
         </button>
         <button
           type="button"
@@ -30,7 +30,7 @@
           :class="{ active: currentViewport === 'tablet_esource' }"
           @click="currentViewport = 'tablet_esource'"
         >
-          📋 Tablet eSource
+          Tablet eSource
         </button>
       </div>
     </div>
@@ -126,7 +126,7 @@
                 v-if="fieldErrors[widget.variable_id]"
                 class="field-error-message"
               >
-                ⚠️ {{ fieldErrors[widget.variable_id] }}
+                {{ fieldErrors[widget.variable_id] }}
               </div>
             </div>
           </div>

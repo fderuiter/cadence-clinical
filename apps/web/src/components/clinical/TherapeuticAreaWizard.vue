@@ -2,7 +2,7 @@
   <div class="therapeutic-area-wizard card">
     <div class="wizard-header">
       <div class="header-title-box">
-        <h3>🪄 Guided Therapeutic Area Protocol Wizard</h3>
+        <h3>Guided Therapeutic Area Protocol Wizard</h3>
         <p>
           Select a pre-configured therapeutic area template to generate a
           complete CDISC USDM v4.0 study protocol in &lt; 2 seconds.
@@ -21,7 +21,9 @@
       role="alert"
     >
       <div class="banner-content">
-        <span class="banner-icon" aria-hidden="true">⚠️</span>
+        <span class="banner-icon" aria-hidden="true"
+          ><ClinicalIcon name="alert-triangle" :size="20"
+        /></span>
         <div class="banner-text">
           <strong>Auto-Save Warning:</strong> {{ storageError }}
         </div>
@@ -32,7 +34,7 @@
           class="btn btn-sm btn-outline-warning btn-retry-save"
           @click="saveState"
         >
-          🔄 Retry Auto-Save
+          Retry Auto-Save
         </button>
         <button
           type="button"
@@ -64,7 +66,9 @@
           @keydown.space.prevent="selectTemplate(tpl.id)"
         >
           <div class="ta-card-header">
-            <span class="ta-icon">{{ tpl.icon }}</span>
+            <span class="ta-icon"
+              ><ClinicalIcon :name="tpl.icon" :size="20"
+            /></span>
             <span class="badge badge-category">{{ tpl.category }}</span>
           </div>
           <h5 class="ta-title">
@@ -155,7 +159,7 @@
           :class="{ active: configTab === 'arms' }"
           @click="configTab = 'arms'"
         >
-          🗺️ Study Arms &amp; Cohorts ({{ activeConfig.arms.length }})
+          Study Arms &amp; Cohorts ({{ activeConfig.arms.length }})
         </button>
         <button
           type="button"
@@ -163,7 +167,7 @@
           :class="{ active: configTab === 'epochs' }"
           @click="configTab = 'epochs'"
         >
-          ⏱️ Study Epochs ({{ activeConfig.epochs.length }})
+          Study Epochs ({{ activeConfig.epochs.length }})
         </button>
         <button
           type="button"
@@ -171,7 +175,7 @@
           :class="{ active: configTab === 'visits' }"
           @click="configTab = 'visits'"
         >
-          📅 Visit Schedule Matrix ({{ activeConfig.visits.length }})
+          Visit Schedule Matrix ({{ activeConfig.visits.length }})
         </button>
       </div>
 
@@ -184,7 +188,7 @@
             class="btn btn-secondary btn-sm btn-add-arm"
             @click="addArm"
           >
-            ➕ Add Cohort Arm
+            Add Cohort Arm
           </button>
         </div>
         <div class="arms-table-container">
@@ -244,9 +248,8 @@
                     :disabled="activeConfig.arms.length <= 1"
                     :label="`Remove study arm ${arm.name || idx + 1}`"
                     @click="removeArm(idx)"
-                  >
-                    🗑️
-                  </ClinicalIconButton>
+                    ><ClinicalIcon name="trash" :size="16"
+                  /></ClinicalIconButton>
                 </td>
               </tr>
             </tbody>
@@ -263,7 +266,7 @@
             class="btn btn-secondary btn-sm btn-add-epoch"
             @click="addEpoch"
           >
-            ➕ Add Epoch
+            Add Epoch
           </button>
         </div>
         <div class="epochs-table-container">
@@ -320,9 +323,8 @@
                     :disabled="activeConfig.epochs.length <= 1"
                     :label="`Remove study epoch ${epoch.name || idx + 1}`"
                     @click="removeEpoch(idx)"
-                  >
-                    🗑️
-                  </ClinicalIconButton>
+                    ><ClinicalIcon name="trash" :size="16"
+                  /></ClinicalIconButton>
                 </td>
               </tr>
             </tbody>
@@ -339,7 +341,7 @@
             class="btn btn-secondary btn-sm btn-add-visit"
             @click="addVisit"
           >
-            ➕ Add Visit Encounter
+            Add Visit Encounter
           </button>
         </div>
         <div class="visits-table-container">
@@ -423,9 +425,8 @@
                     :disabled="activeConfig.visits.length <= 1"
                     :label="`Remove planned visit ${vis.visit_name || idx + 1}`"
                     @click="removeVisit(idx)"
-                  >
-                    🗑️
-                  </ClinicalIconButton>
+                    ><ClinicalIcon name="trash" :size="16"
+                  /></ClinicalIconButton>
                 </td>
               </tr>
             </tbody>
@@ -466,14 +467,14 @@
           class="btn btn-secondary btn-reset-wizard"
           @click="resetActiveTemplate"
         >
-          🔄 Reset Template
+          Reset Template
         </button>
         <button
           type="button"
           class="btn btn-primary btn-synthesize-protocol"
           @click="synthesizeProtocol"
         >
-          ⚡ Synthesize USDM Protocol Graph ➜
+          Synthesize USDM Protocol Graph ➜
         </button>
       </div>
     </div>
@@ -482,7 +483,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import { ClinicalIconButton } from "ui";
+import { ClinicalIconButton, ClinicalIcon } from "ui";
 import {
   THERAPEUTIC_AREA_TEMPLATES,
   type TherapeuticAreaTemplate,

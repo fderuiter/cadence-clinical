@@ -523,10 +523,10 @@ function actionIcon(action: string): string {
     case "EXPAND_COHORT":
       return "■";
     case "STOP_SAFETY":
-      return "✖";
+      return "Rejected";
     case "STOP_SUCCESS":
     case "MTD_FOUND":
-      return "✔";
+      return "Verified";
     default:
       return "●";
   }

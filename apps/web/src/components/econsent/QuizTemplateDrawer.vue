@@ -11,7 +11,13 @@
     <template #header>
       <div class="drawer-header">
         <div class="drawer-title-group">
-          <BookOpen :size="18" class="drawer-icon" aria-hidden="true" />
+          <BookOpen
+            :size="20"
+            class="drawer-icon"
+            aria-hidden="true"
+            :stroke-width="1.75"
+            focusable="false"
+          />
           <h3 class="drawer-title">Regulatory Quiz Template Library</h3>
         </div>
         <button
@@ -21,7 +27,12 @@
           aria-label="Close Template Library Drawer"
           @click="$emit('close')"
         >
-          <X :size="18" aria-hidden="true" />
+          <X
+            :size="20"
+            aria-hidden="true"
+            :stroke-width="1.75"
+            focusable="false"
+          />
         </button>
       </div>
     </template>
@@ -55,7 +66,13 @@
             >Search Keywords:</label
           >
           <div class="search-input-wrapper">
-            <Search :size="16" class="search-icon" aria-hidden="true" />
+            <Search
+              :size="16"
+              class="search-icon"
+              aria-hidden="true"
+              :stroke-width="1.75"
+              focusable="false"
+            />
             <input
               id="template-search-input"
               v-model="searchQuery"
@@ -70,7 +87,12 @@
               label="Clear search query"
               @click="searchQuery = ''"
             >
-              <X :size="16" aria-hidden="true" />
+              <X
+                :size="16"
+                aria-hidden="true"
+                :stroke-width="1.75"
+                focusable="false"
+              />
             </ClinicalIconButton>
           </div>
         </div>
@@ -169,7 +191,13 @@
                 ]"
               >
                 <span class="opt-bullet" aria-hidden="true">
-                  <Check v-if="optIdx === tmpl.correctAnswerIndex" :size="14" />
+                  <Check
+                    v-if="optIdx === tmpl.correctAnswerIndex"
+                    :size="16"
+                    :stroke-width="1.75"
+                    aria-hidden="true"
+                    focusable="false"
+                  />
                   <template v-else>&bull;</template>
                 </span>
                 <span class="opt-text">{{ opt }}</span>
@@ -183,7 +211,13 @@
             </div>
 
             <div v-if="tmpl.hint" class="template-hint-preview">
-              <Lightbulb :size="15" class="hint-icon" aria-hidden="true" />
+              <Lightbulb
+                :size="16"
+                class="hint-icon"
+                aria-hidden="true"
+                :stroke-width="1.75"
+                focusable="false"
+              />
               <span class="hint-text"
                 ><strong>Feedback Hint:</strong> {{ tmpl.hint }}</span
               >
@@ -205,7 +239,12 @@
           :disabled="selectedTemplateIds.length === 0"
           @click="confirmBatchImport"
         >
-          <Download :size="16" aria-hidden="true" />
+          <Download
+            :size="16"
+            aria-hidden="true"
+            :stroke-width="1.75"
+            focusable="false"
+          />
           <span
             >Import Selected Questions ({{ selectedTemplateIds.length }})</span
           >

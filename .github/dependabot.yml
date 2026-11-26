@@ -142,7 +142,7 @@ updates:
       # Node runtime baseline is pinned via package.json engines (ADR-2508).
       - dependency-name: "@types/node"
         update-types: ["version-update:semver-major"]
-      # typescript-eslint, vue-tsc, and openapi-typescript require TypeScript 6.x (< 7.0).
+      # TypeScript 7.0 removes the JS compiler API and './lib/tsc' required by vue-tsc, typescript-eslint, and openapi-typescript.
       - dependency-name: "typescript"
         update-types: ["version-update:semver-major"]
 

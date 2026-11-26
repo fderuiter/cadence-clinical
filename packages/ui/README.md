@@ -21,7 +21,7 @@ Shared frontend package (JavaScript, TypeScript types and Vue 3 components) used
   - `ClinicalFieldLayout` (`touch` and `compact` densities, required markers, hints, and status alerts)
   - `ClinicalFormField` (auto-propagating `data-tabular-nums="true"` for numeric/date CDASH fields)
   - `ClinicalGatedAction`
-  - `ClinicalIcon`
+  - `ClinicalIcon` (curated `16px`/`20px`, `1.75px` stroke `lucide-vue-next` vector icon primitive splitting eager `shellIcons` from lazy `routeIcons`, paired with `CLINICAL_SHELL_ICON_NAMES`, `CLINICAL_ROUTE_ICON_NAMES`, `CLINICAL_ICON_NAMES`, `isClinicalIconName`, and `renderClinicalIconSvg` per [ADR-2679](../../docs/adr/2026-11-25-centralize-lucide-icons-and-cli-emoji-gate.md))
   - `ClinicalIconButton`
   - `ClinicalInput` (`48px` touch or `compact` `36px` staff `<input>`, `<select>`, and `<textarea>` controls with `16px` coarse/mobile font sizing plus `type`, `inputmode`, and `tabularNums` / `data-tabular-nums` alignment)
   - `ClinicalLookupInput`
