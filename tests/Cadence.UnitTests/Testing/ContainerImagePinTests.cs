@@ -196,6 +196,7 @@ public sealed partial class ContainerImagePinTests
             .And.Contain("cache-from: type=gha")
             .And.Contain("cache-to: type=gha,mode=max")
             .And.Contain("output: \"trivy-results-${{ matrix.target }}.sarif\"")
+            .And.Contain("limit-severities-for-sarif: true")
             .And.Contain("category: \"trivy-${{ matrix.target }}\"");
 
         var ciDotnetApps = CiMatrixAppName().Matches(ci).Select(m => m.Groups["app"].Value).ToList();

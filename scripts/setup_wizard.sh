@@ -111,12 +111,14 @@ if ! command -v node >/dev/null 2>&1 || ! node --version >/dev/null 2>&1; then
   fail_closed "Node.js (node) not found on PATH. Install Node.js 22.13+ or 24+ and re-run setup_wizard.sh."
 fi
 
-if command -v corepack >/dev/null 2>&1; then
-  corepack enable >/dev/null 2>&1 || true
-fi
+if [[ "$LINTERS_ONLY" != "1" ]]; then
+  if command -v corepack >/dev/null 2>&1; then
+    corepack enable >/dev/null 2>&1 || true
+  fi
 
-if ! command -v pnpm >/dev/null 2>&1 || ! pnpm --version >/dev/null 2>&1; then
-  fail_closed "pnpm not found or crashes on PATH. Install Corepack ('npm install --global corepack') and run 'corepack enable'."
+  if ! command -v pnpm >/dev/null 2>&1 || ! pnpm --version >/dev/null 2>&1; then
+    fail_closed "pnpm not found or crashes on PATH. Install Corepack ('npm install --global corepack') and run 'corepack enable'."
+  fi
 fi
 
 DOCTOR_ARGS=("doctor" "--auto-fix")

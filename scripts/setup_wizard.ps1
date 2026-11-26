@@ -106,21 +106,23 @@ if ($LASTEXITCODE -ne 0) {
     Stop-FailClosed "Node.js (node) failed to run '--version'."
 }
 
-if (Get-Command corepack -ErrorAction SilentlyContinue) {
-    try {
-        & corepack enable 2>$null | Out-Null
+if (-not $LintersOnly) {
+    if (Get-Command corepack -ErrorAction SilentlyContinue) {
+        try {
+            & corepack enable 2>$null | Out-Null
+        }
+        catch {
+            # Ignore non-fatal corepack enable permission issues when pnpm is already active.
+        }
     }
-    catch {
-        # Ignore non-fatal corepack enable permission issues when pnpm is already active.
-    }
-}
 
-if (-not (Get-Command pnpm -ErrorAction SilentlyContinue)) {
-    Stop-FailClosed "pnpm not found on PATH. Install Corepack ('npm install --global corepack') and run 'corepack enable'."
-}
-$null = & pnpm --version 2>$null
-if ($LASTEXITCODE -ne 0) {
-    Stop-FailClosed "pnpm is on PATH but failed to run '--version'. Run 'corepack enable'."
+    if (-not (Get-Command pnpm -ErrorAction SilentlyContinue)) {
+        Stop-FailClosed "pnpm not found on PATH. Install Corepack ('npm install --global corepack') and run 'corepack enable'."
+    }
+    $null = & pnpm --version 2>$null
+    if ($LASTEXITCODE -ne 0) {
+        Stop-FailClosed "pnpm is on PATH but failed to run '--version'. Run 'corepack enable'."
+    }
 }
 
 $doctorArgs = @((Join-Path $RepoRoot "scripts\run-cli.js"), "doctor", "--auto-fix")

@@ -2039,6 +2039,39 @@ public sealed class PreCommitGuardrailsTests : IDisposable
         File.Exists(Path.Combine(binOut, "actionlint")).Should().BeTrue();
         File.Exists(Path.Combine(binOut, "hadolint")).Should().BeTrue();
         File.Exists(Path.Combine(binOut, "shellcheck")).Should().BeTrue();
+
+        // Regression guard for GitHub Actions dotnet-tests runners where pnpm/corepack are absent from PATH.
+        string noPnpmPathDir = Path.Combine(_tempDir, "no-pnpm-bin");
+        Directory.CreateDirectory(noPnpmPathDir);
+        foreach (string tool in new[]
+                 {
+                     "sh", "bash", "pwd", "id", "env", "uname", "dirname", "mkdir", "mktemp",
+                     "rm", "mv", "cp", "chmod", "cat", "curl", "tar", "gzip", "xz", "sha256sum",
+                     "shasum", "awk", "tr", "head", "node", "dotnet"
+                 })
+        {
+            string? resolved = ResolveFromSystemPath(tool);
+            if (resolved is not null)
+            {
+                File.CreateSymbolicLink(Path.Combine(noPnpmPathDir, tool), resolved);
+            }
+        }
+
+        string noPnpmBinOut = Path.Combine(_tempDir, "no-pnpm-cadence-bin");
+        (int noPnpmExit, string noPnpmOut) = RunWizardLintersOnly(
+            wizardPath,
+            noPnpmBinOut,
+            $"file://{tarPath}",
+            alSha,
+            $"file://{hadolintPayload}",
+            hlSha,
+            $"file://{scTarPath}",
+            scSha,
+            noPnpmPathDir);
+        noPnpmExit.Should().Be(0, noPnpmOut);
+        File.Exists(Path.Combine(noPnpmBinOut, "actionlint")).Should().BeTrue();
+        File.Exists(Path.Combine(noPnpmBinOut, "hadolint")).Should().BeTrue();
+        File.Exists(Path.Combine(noPnpmBinOut, "shellcheck")).Should().BeTrue();
     }
 
     [Fact]
@@ -2258,7 +2291,7 @@ public sealed class PreCommitGuardrailsTests : IDisposable
                  {
                      "sh", "bash", "pwd", "id", "env", "uname", "dirname", "mkdir", "mktemp",
                      "rm", "mv", "cp", "chmod", "curl", "tar", "gzip", "sha256sum", "shasum",
-                     "awk", "tr", "head", "node", "dotnet", "pnpm", "clang", "cc", "gcc",
+                     "awk", "tr", "head", "node", "dotnet", "clang", "cc", "gcc",
                      "ld", "ld.bfd", "ld.lld", "ld.gold", "lld", "dsymutil", "as", "ar", "strip", "objcopy"
                  })
         {
@@ -2551,12 +2584,11 @@ public sealed class PreCommitGuardrailsTests : IDisposable
         psi.Environment["ACTIONLINT_SHA256"] = actionlintSha;
         psi.Environment["HADOLINT_DOWNLOAD_URL"] = hadolintUrl;
         psi.Environment["HADOLINT_SHA256"] = hadolintSha;
+        psi.Environment.Remove("GITHUB_ACTIONS");
+        psi.Environment.Remove("CADENCE_CLI_AOT");
+        psi.Environment.Remove("CADENCE_CLI_CACHE_HIT");
 
-        using var proc = Process.Start(psi)!;
-        string stdout = proc.StandardOutput.ReadToEnd();
-        string stderr = proc.StandardError.ReadToEnd();
-        proc.WaitForExit();
-        return (proc.ExitCode, stdout + stderr);
+        return RunProcessCapture(psi);
     }
 
     private static string? ResolveFromSystemPath(string binaryName)
@@ -2582,7 +2614,8 @@ public sealed class PreCommitGuardrailsTests : IDisposable
         string hadolintUrl,
         string hadolintSha,
         string shellcheckUrl,
-        string shellcheckSha)
+        string shellcheckSha,
+        string? customPath = null)
     {
         var psi = new ProcessStartInfo("/bin/bash")
         {
@@ -2592,6 +2625,11 @@ public sealed class PreCommitGuardrailsTests : IDisposable
         };
         psi.ArgumentList.Add(wizardPath);
         psi.ArgumentList.Add("--linters-only");
+        if (customPath is not null)
+        {
+            psi.Environment["PATH"] = customPath;
+        }
+
         psi.Environment["CADENCE_BIN_DIR"] = cadenceBinDir;
         psi.Environment["ACTIONLINT_DOWNLOAD_URL"] = actionlintUrl;
         psi.Environment["ACTIONLINT_SHA256"] = actionlintSha;
@@ -2599,12 +2637,10 @@ public sealed class PreCommitGuardrailsTests : IDisposable
         psi.Environment["HADOLINT_SHA256"] = hadolintSha;
         psi.Environment["SHELLCHECK_DOWNLOAD_URL"] = shellcheckUrl;
         psi.Environment["SHELLCHECK_SHA256"] = shellcheckSha;
+        psi.Environment.Remove("GITHUB_ACTIONS");
+        psi.Environment.Remove("CADENCE_CLI_AOT");
+        psi.Environment.Remove("CADENCE_CLI_CACHE_HIT");
 
-        using var proc = Process.Start(psi)!;
-        var stderrTask = proc.StandardError.ReadToEndAsync();
-        string stdout = proc.StandardOutput.ReadToEnd();
-        proc.WaitForExit();
-        string stderr = stderrTask.GetAwaiter().GetResult();
-        return (proc.ExitCode, stdout + stderr);
+        return RunProcessCapture(psi);
     }
 }

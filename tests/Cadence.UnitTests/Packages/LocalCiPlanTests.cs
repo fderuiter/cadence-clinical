@@ -855,7 +855,8 @@ public partial class LocalCiPlanTests
             .And.Contain("exit-code: \"1\"")
             .And.Contain("ignore-unfixed: true")
             .And.Contain("vuln-type: \"os,library\"")
-            .And.Contain("severity: \"CRITICAL,HIGH\"");
+            .And.Contain("severity: \"CRITICAL,HIGH\"")
+            .And.Contain("limit-severities-for-sarif: true");
 
         var triggerLine = lines
             .Select(l => l.Trim())
