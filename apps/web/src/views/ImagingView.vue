@@ -116,11 +116,7 @@
               title="Toggle Crosshairs and Wheel Scroll Sync"
               @click="isViewportSynced = !isViewportSynced"
             >
-              {{
-                isViewportSynced
-                  ? "🔗 Viewports Synced"
-                  : "🔓 Viewports Unlinked"
-              }}
+              {{ isViewportSynced ? "Viewports Synced" : "Viewports Unlinked" }}
             </button>
           </div>
         </template>
@@ -146,7 +142,7 @@
             class="btn-batch-upload"
             @click="isBatchModalOpen = true"
           >
-            📁 Batch Ingest DICOM Folder
+            Batch Ingest DICOM Folder
           </button>
         </div>
       </div>
@@ -169,7 +165,9 @@
               :class="{ active: activeSeriesUid === s.seriesUid }"
               @click="activeSeriesUid = s.seriesUid"
             >
-              <div class="series-thumb">🖼️</div>
+              <div class="series-thumb">
+                <ClinicalIcon name="camera" :size="16" />
+              </div>
               <div class="series-meta">
                 <div class="series-title">
                   {{ s.description }}
@@ -192,7 +190,9 @@
               :class="{ active: activeSeriesUidA === s.seriesUid }"
               @click="activeSeriesUidA = s.seriesUid"
             >
-              <div class="series-thumb">🖼️</div>
+              <div class="series-thumb">
+                <ClinicalIcon name="camera" :size="16" />
+              </div>
               <div class="series-meta">
                 <div class="series-title">
                   {{ s.description }}
@@ -215,7 +215,9 @@
               :class="{ active: activeSeriesUidB === s.seriesUid }"
               @click="activeSeriesUidB = s.seriesUid"
             >
-              <div class="series-thumb">🖼️</div>
+              <div class="series-thumb">
+                <ClinicalIcon name="camera" :size="16" />
+              </div>
               <div class="series-meta">
                 <div class="series-title">
                   {{ s.description }}
@@ -375,7 +377,7 @@
                   {{ t.overall_response }}
                 </span>
               </td>
-              <td class="font-mono text-xs">🔒 Sealed</td>
+              <td class="font-mono text-xs">Sealed</td>
               <td>{{ t.reader_id }}</td>
               <td>{{ t.created_at || "2026-08-23 04:15 UTC" }}</td>
             </tr>
@@ -396,6 +398,7 @@
 </template>
 
 <script setup>
+import { ClinicalIcon } from "ui";
 import { ref, computed, watch } from "vue";
 import DicomMprViewer from "../components/imaging/DicomMprViewer.vue";
 import OncologyCalipers from "../components/imaging/OncologyCalipers.vue";

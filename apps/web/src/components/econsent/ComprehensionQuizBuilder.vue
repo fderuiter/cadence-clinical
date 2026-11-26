@@ -20,7 +20,7 @@
             :class="['mode-tab-btn', { active: activeMode === 'authoring' }]"
             @click="setMode('authoring')"
           >
-            ✏️ Authoring Mode
+            Authoring Mode
           </button>
           <button
             type="button"
@@ -29,7 +29,7 @@
             :class="['mode-tab-btn', { active: activeMode === 'interactive' }]"
             @click="setMode('interactive')"
           >
-            🎯 Interactive Assessment
+            Interactive Assessment
           </button>
         </div>
 
@@ -137,7 +137,7 @@
               class="btn btn-secondary btn-small"
               @click="addOption(qIndex)"
             >
-              ➕ Add Option Choice
+              Add Option Choice
             </button>
           </div>
 
@@ -161,14 +161,14 @@
           class="btn btn-primary btn-add-question"
           @click="addQuestion"
         >
-          ➕ Add Quiz Question
+          Add Quiz Question
         </button>
         <button
           type="button"
           class="btn btn-secondary btn-import-template"
           @click="openTemplateDrawer"
         >
-          📚 Import from Template Library
+          Import from Template Library
         </button>
       </div>
 
@@ -201,7 +201,7 @@
         aria-live="polite"
       >
         <div class="result-icon">
-          {{ evaluationResult.passed ? "🎉" : "⚠️" }}
+          {{ evaluationResult.passed ? "Item" : "Warning" }}
         </div>
         <div class="result-details">
           <h4 class="result-title">
@@ -295,7 +295,9 @@
               "
               class="instant-hint-box"
             >
-              <span class="hint-icon">💡</span>
+              <span class="hint-icon"
+                ><ClinicalIcon name="sparkles" :size="16"
+              /></span>
               <span class="hint-text"
                 ><strong>Feedback Hint:</strong> {{ q.hint }}</span
               >
@@ -311,7 +313,7 @@
           class="btn btn-secondary btn-reset-quiz"
           @click="resetAssessment"
         >
-          🔄 Reset Answers
+          Reset Answers
         </button>
 
         <button
@@ -319,7 +321,7 @@
           class="btn btn-primary btn-submit-answers"
           @click="submitAssessment"
         >
-          ✅ Check Answers & Evaluate
+          Check Answers & Evaluate
         </button>
 
         <button
@@ -329,7 +331,7 @@
           class="btn btn-success btn-proceed-signature"
           @click="proceedToSignature"
         >
-          ✍️ Proceed to eSignature
+          Proceed to eSignature
         </button>
       </div>
     </div>
@@ -338,7 +340,7 @@
 
 <script setup>
 import { ref, reactive } from "vue";
-import { ClinicalIconButton } from "ui";
+import { ClinicalIconButton, ClinicalIcon } from "ui";
 import { useEconsentStore } from "../../stores/econsent.js";
 import QuizTemplateDrawer from "./QuizTemplateDrawer.vue";
 

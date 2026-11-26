@@ -1,8 +1,8 @@
 <template>
   <div class="language-translation-tabs-container card">
     <div class="tabs-header">
-      <span class="tabs-label"
-        >🌍 {{ $t("econsent.translationTabs.headerLabel") }}</span
+      <span class="tabs-label">
+        {{ $t("econsent.translationTabs.headerLabel") }}</span
       >
       <div ref="tabsListRef" class="tabs-list" role="tablist">
         <button
@@ -63,10 +63,10 @@ onMounted(() => {
 });
 
 const availableLanguages = [
-  { code: "en", name: "English", flag: "🇬🇧" },
-  { code: "es", name: "Spanish", flag: "🇪🇸" },
-  { code: "fr", name: "French", flag: "🇫🇷" },
-  { code: "de", name: "German", flag: "🇩🇪" },
+  { code: "en", name: "English", flag: "GB" },
+  { code: "es", name: "Spanish", flag: "ES" },
+  { code: "fr", name: "French", flag: "FR" },
+  { code: "de", name: "German", flag: "DE" },
 ];
 
 const onSelectTab = (index) => {

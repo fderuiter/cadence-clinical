@@ -124,6 +124,18 @@ export {
 
 export * from "./src/index.js";
 
+/**
+ * @typedef {"bell" | "globe" | "help-circle" | "info" | "menu" | "search" | "x"} ClinicalShellIconName
+ */
+
+/**
+ * @typedef {"alert-circle" | "alert-triangle" | "book-open" | "calendar" | "camera" | "check" | "check-circle" | "chevron-down" | "chevron-left" | "chevron-right" | "chevron-up" | "clipboard-list" | "clock" | "copy" | "download" | "edit" | "external-link" | "file-signature" | "file-text" | "flask-conical" | "folder" | "lock" | "mail" | "message-square" | "mic" | "phone" | "plus" | "refresh" | "shield-check" | "sparkles" | "stethoscope" | "ticket" | "trash" | "trending-up" | "unlock" | "upload" | "users" | "video" | "wallet" | "x-circle"} ClinicalRouteIconName
+ */
+
+/**
+ * @typedef {ClinicalShellIconName | ClinicalRouteIconName} ClinicalIconName
+ */
+
 // Dynamic Hover Pointer Capability Detection
 export function initHoverDetection() {
   if (typeof window !== "undefined" && typeof document !== "undefined") {

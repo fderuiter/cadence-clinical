@@ -96,7 +96,7 @@
     "diastolicBpRule": "PA diastólica: Valor numérico entre 30 y 150 mmHg.",
     "pulseRateRule": "Frecuencia de pulso: Valor numérico entre 30 y 200 bpm.",
     "queryManagementTitle": "Acciones de gestión de consultas:",
-    "queryManagementDesc": "Haga clic en los indicadores 💬 / ⚠️ junto a los campos de entrada para plantear, responder, cerrar o reabrir notas de discrepancia. Todas las transiciones de consulta se registran en auditoría en tiempo real.",
+    "queryManagementDesc": "Haga clic en los indicadores de consulta junto a los campos de entrada para plantear, responder, cerrar o reabrir notas de discrepancia. Todas las transiciones de consulta se registran en auditoría en tiempo real.",
     "form": {
       "title": "Formulario de entrada de datos eCRF del sujeto",
       "schemaBadge": "Esquema de protocolo v{version}",
@@ -109,7 +109,7 @@
       "noSubjects": "No hay sujetos listados",
       "trainingGatedTitle": "Capacitación obligatoria sobre el protocolo incompleta — Entrada de datos bloqueada",
       "trainingGatedDesc": "Según ICH GCP E6(R2) §4 y PRD-TRN-002, el personal del sitio debe completar la capacitación obligatoria sobre enmiendas al protocolo antes de guardar o firmar entradas eCRF.",
-      "completeTrainingNow": "Completar capacitación ahora ➡️",
+      "completeTrainingNow": "Completar capacitación ahora",
       "reconsentGatedTitle": "Enmienda de protocolo activa (v2.0.0) — Re-consentimiento requerido",
       "reconsentGatedDesc": "Este sujeto debe completar el re-consentimiento para la Versión 2.0.0 del Protocolo antes de poder guardar más datos de la visita (PRD-SUB-007). Todos los campos de entrada están bloqueados actualmente.",
       "openEconsent": "Abrir formulario eConsent",

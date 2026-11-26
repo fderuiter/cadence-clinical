@@ -11,7 +11,13 @@
     <template #header>
       <div class="drawer-header">
         <div class="drawer-title">
-          <BookOpen :size="18" class="icon" aria-hidden="true" />
+          <BookOpen
+            :size="20"
+            class="icon"
+            aria-hidden="true"
+            :stroke-width="1.75"
+            focusable="false"
+          />
           <h3>eConsent Readability Harmonizer</h3>
         </div>
         <button
@@ -21,7 +27,12 @@
           aria-label="Close Assistant"
           @click="$emit('close')"
         >
-          <X :size="18" aria-hidden="true" />
+          <X
+            :size="20"
+            aria-hidden="true"
+            :stroke-width="1.75"
+            focusable="false"
+          />
         </button>
       </div>
     </template>
@@ -80,7 +91,12 @@
           :disabled="loading"
           @click="analyzeText"
         >
-          <Search :size="15" aria-hidden="true" />
+          <Search
+            :size="16"
+            aria-hidden="true"
+            :stroke-width="1.75"
+            focusable="false"
+          />
           <span>Recalculate Scores</span>
         </button>
         <button
@@ -90,11 +106,22 @@
           @click="harmonizeWithAI"
         >
           <template v-if="loading">
-            <Loader2 :size="15" class="spin-icon" aria-hidden="true" />
+            <Loader2
+              :size="16"
+              class="spin-icon"
+              aria-hidden="true"
+              :stroke-width="1.75"
+              focusable="false"
+            />
             <span>Harmonizing...</span>
           </template>
           <template v-else>
-            <Sparkles :size="15" aria-hidden="true" />
+            <Sparkles
+              :size="16"
+              aria-hidden="true"
+              :stroke-width="1.75"
+              focusable="false"
+            />
             <span>Harmonize with AI (Tier 2)</span>
           </template>
         </button>
@@ -139,7 +166,13 @@
                 <span class="diff-tag del">Jargon</span>
                 <span class="diff-text del-text">{{ sub.original_term }}</span>
               </div>
-              <ArrowRight :size="15" class="arrow" aria-hidden="true" />
+              <ArrowRight
+                :size="16"
+                class="arrow"
+                aria-hidden="true"
+                :stroke-width="1.75"
+                focusable="false"
+              />
               <div class="diff-suggested">
                 <span class="diff-tag ins">Plain</span>
                 <span class="diff-text ins-text">{{ sub.suggested_term }}</span>
@@ -156,7 +189,12 @@
                 class="btn-apply-single"
                 @click="applySingleSubstitution(sub)"
               >
-                <Check :size="14" aria-hidden="true" />
+                <Check
+                  :size="16"
+                  aria-hidden="true"
+                  :stroke-width="1.75"
+                  focusable="false"
+                />
                 <span>Apply Substitution</span>
               </button>
             </div>
@@ -168,7 +206,12 @@
               class="btn btn-success btn-block"
               @click="applyAllSubstitutions"
             >
-              <Check :size="15" aria-hidden="true" />
+              <Check
+                :size="16"
+                aria-hidden="true"
+                :stroke-width="1.75"
+                focusable="false"
+              />
               <span>Apply All Harmonizations ({{ substitutions.length }})</span>
             </button>
           </div>

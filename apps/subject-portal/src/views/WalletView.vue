@@ -103,7 +103,7 @@
             margin-bottom: 4px;
           "
         >
-          <ClinicalIcon name="alert-circle" :size="18" />
+          <ClinicalIcon name="alert-circle" :size="16" />
           <span>IRS $600.00 Form W-9 Verification Hold Active</span>
         </strong>
         <span>
@@ -159,7 +159,7 @@
         "
       >
         <div style="display: flex; align-items: flex-start; gap: 8px">
-          <ClinicalIcon name="info" :size="18" />
+          <ClinicalIcon name="info" :size="16" />
           <span>
             Year-to-date taxable compensation ({{
               formatCurrency(wallet.taxableYtd)
@@ -340,7 +340,7 @@
             gap: 8px;
           "
         >
-          <ClinicalIcon name="check" :size="18" />
+          <ClinicalIcon name="check" :size="16" />
           <span>Balance Payout Dispatched</span>
         </h3>
         <p style="margin: 0; font-size: 14px">
@@ -453,7 +453,7 @@
           @remove="handleClearReceiptSelection"
         >
           <template #icon>
-            <ClinicalIcon name="camera" :size="28" />
+            <ClinicalIcon name="camera" :size="20" />
           </template>
           <template #selected>
             <p
@@ -515,7 +515,7 @@
               gap: 8px;
             "
           >
-            <ClinicalIcon name="search" :size="18" />
+            <ClinicalIcon name="search" :size="16" />
             <span>Reading Receipt Details...</span>
           </p>
         </div>
@@ -729,7 +729,7 @@
                 gap: 8px;
               "
             >
-              <ClinicalIcon name="check" :size="18" />
+              <ClinicalIcon name="check" :size="16" />
               <span>Reimbursement Auto-Approved &amp; Dispatched</span>
             </h4>
             <p style="margin: 0 0 8px 0; font-size: 14px">
@@ -780,7 +780,7 @@
                 gap: 8px;
               "
             >
-              <ClinicalIcon name="alert-circle" :size="18" />
+              <ClinicalIcon name="alert-circle" :size="16" />
               <span>Expense Claim Held for Manual Review</span>
             </h4>
             <p id="pending-review-notes" style="margin: 0; font-size: 14px">

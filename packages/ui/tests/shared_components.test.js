@@ -293,13 +293,15 @@ describe("Shared UI Vue Components Behavior & SSR Rendering", () => {
     it("renders EmptyState title, message, action button, and custom slots", async () => {
       const html = await renderToString(
         createSSRApp(EmptyState, {
-          icon: "🧪",
+          icon: "flask-conical",
           title: "No Samples Queued",
           message: "All laboratory aliquots have been reconciled.",
           actionText: "Add Sample",
         })
       );
-      expect(html).toContain("🧪");
+      expect(html).toContain("clinical-icon");
+      expect(html).toContain("lucide-flask-conical");
+      expect(html).toContain('stroke-width="1.75"');
       expect(html).toContain("No Samples Queued");
       expect(html).toContain("All laboratory aliquots have been reconciled.");
       expect(html).toContain("Add Sample");
@@ -602,19 +604,19 @@ describe("Shared UI Vue Components Behavior & SSR Rendering", () => {
       const html = await renderToString(
         createSSRApp({
           render: () =>
-            h(
-              ClinicalIconButton,
-              {
-                label: "Remove study arm 1",
-                variant: "danger",
-                size: "sm",
-              },
-              { default: () => "🗑️" }
-            ),
+            h(ClinicalIconButton, {
+              label: "Remove study arm 1",
+              icon: "trash",
+              variant: "danger",
+              size: "sm",
+            }),
         })
       );
       expect(html).toContain('aria-label="Remove study arm 1"');
       expect(html).toContain('class="clinical-icon-btn-glyph"');
+      expect(html).toContain("clinical-icon");
+      expect(html).toContain("lucide-trash-2");
+      expect(html).toContain('stroke-width="1.75"');
       expect(html).toContain('aria-hidden="true"');
 
       const emit = vi.fn();

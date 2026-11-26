@@ -211,9 +211,9 @@
             class="filename-col-inner"
             @click="openPreview(row)"
           >
-            <span class="mime-icon" :title="row.mime_type">{{
-              getMimeIcon(row)
-            }}</span>
+            <span class="mime-icon" :title="row.mime_type"
+              ><ClinicalIcon :name="getMimeIcon(row)" :size="16"
+            /></span>
             <span class="filename-text" :title="row.filename">{{
               row.filename
             }}</span>
@@ -248,7 +248,7 @@
             class="status-pill status-hold"
             :title="row.hold_reason || 'File is under retention hold.'"
           >
-            🔒
+            <ClinicalIcon name="lock" :size="16" />
             {{ row.status === "ON_HOLD" ? "ON HOLD" : row.status || "ON HOLD" }}
           </span>
           <span v-else class="status-pill" :class="getStatusClass(row.status)">
@@ -421,7 +421,12 @@
 
 <script setup>
 import { ref, computed, defineAsyncComponent, onMounted, watch } from "vue";
-import { ClinicalDataTable, ClinicalIconButton, ClinicalInput } from "ui";
+import {
+  ClinicalDataTable,
+  ClinicalIcon,
+  ClinicalIconButton,
+  ClinicalInput,
+} from "ui";
 import { useFileshareStore } from "../stores/fileshare";
 import DocumentsFolderTree from "../components/fileshare/DocumentsFolderTree.vue";
 import ShareDrawer from "../components/fileshare/ShareDrawer.vue";
@@ -689,22 +694,21 @@ function handleFileDownload(file) {
 function getMimeIcon(file) {
   const mime = (file.mime_type || "").toLowerCase();
   const name = (file.filename || "").toLowerCase();
-
-  if (mime.includes("pdf") || name.endsWith(".pdf")) return "📕";
+  if (mime.includes("pdf") || name.endsWith(".pdf")) return "file-text";
   if (mime.includes("video") || name.endsWith(".mp4") || name.endsWith(".webm"))
-    return "🎬";
+    return "video";
   if (mime.includes("audio") || name.endsWith(".mp3") || name.endsWith(".wav"))
-    return "🎙️";
+    return "mic";
   if (mime.includes("image") || name.endsWith(".png") || name.endsWith(".jpg"))
-    return "🖼️";
+    return "camera";
   if (
     mime.includes("spreadsheet") ||
     name.endsWith(".xlsx") ||
     name.endsWith(".csv")
   )
-    return "📊";
-  if (mime.includes("word") || name.endsWith(".docx")) return "📝";
-  return "📄";
+    return "trending-up";
+  if (mime.includes("word") || name.endsWith(".docx")) return "edit";
+  return "file-text";
 }
 
 function formatDate(dateStr) {

@@ -2373,8 +2373,8 @@ const open = ref(true);
         `<template>
   <div>
     <button type="button" title="Delete row">✕</button>
-    <button type="button">{{ isOpen ? "▼" : "▶" }}</button>
-    <button type="button" aria-label="Open Batch Document Upload Drawer">📑 Batch Upload</button>
+    <button type="button">{{ isOpen ? "▾" : "▸" }}</button>
+    <button type="button" aria-label="Open Batch Document Upload Drawer"><ClinicalIcon name="upload" /> Batch Upload</button>
     <button type="button" aria-label="Switch User Persona / Role"><span>{{ activeLabel }}</span></button>
   </div>
 </template>
@@ -2420,11 +2420,11 @@ const activeLabel = ref("CRA Monitor");
   <div>
     <ClinicalIconButton label="Delete row 1">✕</ClinicalIconButton>
     <button type="button">Verify <span class="sr-only">Vital Signs</span></button>
-    <button type="button" aria-label="Batch Upload — Open Batch Document Upload Drawer">📑 Batch Upload</button>
+    <button type="button" aria-label="Batch Upload — Open Batch Document Upload Drawer"><ClinicalIcon name="upload" /> Batch Upload</button>
   </div>
 </template>
 <script setup>
-import { ClinicalIconButton } from "ui";
+import { ClinicalIcon, ClinicalIconButton } from "ui";
 </script>
 `,
         { filePath: path.join(webSrcDir, "views/__SyntheticA11yCompliant.vue") }
@@ -3403,5 +3403,159 @@ const save = () => {};
       expect(vitepressTheme).toContain("subscribeThemeSync");
       expect(vitepressTheme).toContain("readStoredThemePreference");
     });
+  });
+});
+
+describe("ADR-2679 centralized Lucide icons and zero-emoji guardrails", () => {
+  it("eliminates Unicode emojis and makeLucideIcon across runtime UI, locales, fixtures, and VitePress theme", async () => {
+    const fsMod = await import("node:fs");
+    const pathMod = await import("node:path");
+    const repoRoot = pathMod.resolve(import.meta.dirname, "../../..");
+    const scopes = [
+      "packages/ui",
+      "apps/web",
+      "apps/subject-portal",
+      "packages/demo-fixtures",
+      "docs/.vitepress/theme",
+    ];
+    const emojiRe =
+      /\p{Extended_Pictographic}|\p{Regional_Indicator}|[#*0-9]\uFE0F?\u20E3|\u20E3/gu;
+    const skipDirs = new Set([
+      "node_modules",
+      "dist",
+      "coverage",
+      "playwright-report",
+      "test-results",
+    ]);
+
+    function collect(dir, acc = []) {
+      if (!fsMod.existsSync(dir)) return acc;
+      for (const ent of fsMod.readdirSync(dir, { withFileTypes: true })) {
+        if (skipDirs.has(ent.name)) continue;
+        const full = pathMod.join(dir, ent.name);
+        if (ent.isDirectory()) collect(full, acc);
+        else if (/\.(vue|ts|js|mjs|cjs|css|html|svg|json)$/.test(ent.name))
+          acc.push(full);
+      }
+      return acc;
+    }
+
+    const emojiViolations = [];
+    const helperViolations = [];
+    for (const s of scopes) {
+      for (const f of collect(pathMod.join(repoRoot, s))) {
+        const rel = pathMod.relative(repoRoot, f);
+        const text = fsMod.readFileSync(f, "utf8");
+        emojiRe.lastIndex = 0;
+        if (emojiRe.test(text)) emojiViolations.push(rel);
+        if (
+          rel !== "packages/ui/tests/design_system_harmony.test.js" &&
+          text.includes("make" + "LucideIcon")
+        ) {
+          helperViolations.push(rel);
+        }
+      }
+    }
+    expect(emojiViolations).toEqual([]);
+    expect(helperViolations).toEqual([]);
+  });
+
+  it("enforces custom-vue/no-emoji-glyphs and PascalCase no-unlabeled-glyph-button in ESLint", async () => {
+    const pathMod = await import("node:path");
+    const { ESLint } = await import("eslint");
+    const repoRoot = pathMod.resolve(import.meta.dirname, "../../..");
+    const eslint = new ESLint({ cwd: repoRoot });
+
+    const rocket = String.fromCodePoint(0x1f680);
+    const flagUs = String.fromCodePoint(0x1f1fa, 0x1f1f8);
+    const keycapOne = "1\uFE0F\u20E3";
+
+    const [vueRes] = await eslint.lintText(
+      `<template><div>${rocket}</div></template>\n`,
+      { filePath: pathMod.join(repoRoot, "apps/web/src/views/EmojiProbe.vue") }
+    );
+    expect(
+      vueRes.messages.some((m) => m.ruleId === "custom-vue/no-emoji-glyphs")
+    ).toBe(true);
+
+    const [jsonRes] = await eslint.lintText(
+      JSON.stringify({ flag: flagUs, step: keycapOne }) + "\n",
+      { filePath: pathMod.join(repoRoot, "apps/web/src/locales/en.json") }
+    );
+    expect(
+      jsonRes.messages.some((m) => m.ruleId === "custom-vue/no-emoji-glyphs")
+    ).toBe(true);
+
+    const [btnBad] = await eslint.lintText(
+      '<template><button type="button"><ClinicalIcon name="x" /></button></template>\n',
+      { filePath: pathMod.join(repoRoot, "apps/web/src/views/BtnProbe.vue") }
+    );
+    expect(
+      btnBad.messages.some(
+        (m) => m.ruleId === "custom-vue/no-unlabeled-glyph-button"
+      )
+    ).toBe(true);
+
+    const [btnGood] = await eslint.lintText(
+      '<template><button type="button" aria-label="Close dialog"><ClinicalIcon name="x" /></button></template>\n',
+      { filePath: pathMod.join(repoRoot, "apps/web/src/views/BtnProbe.vue") }
+    );
+    expect(
+      btnGood.messages.some(
+        (m) => m.ruleId === "custom-vue/no-unlabeled-glyph-button"
+      )
+    ).toBe(false);
+  });
+
+  it("renders 1.75px stroke Lucide vectors via ClinicalIcon and renderClinicalIconSvg and throws on unknown names", async () => {
+    const fsMod = await import("node:fs");
+    const pathMod = await import("node:path");
+    const { createSSRApp, h } = await import("vue");
+    const { renderToString } = await import("vue/server-renderer");
+    const uiExports = await import("../index.js");
+
+    expect(uiExports.CLINICAL_ICON_STROKE_WIDTH).toBe(1.75);
+    expect(uiExports.CLINICAL_ICON_NAMES.length).toBe(
+      uiExports.CLINICAL_SHELL_ICON_NAMES.length +
+        uiExports.CLINICAL_ROUTE_ICON_NAMES.length
+    );
+
+    const dts = fsMod.readFileSync(
+      pathMod.join(import.meta.dirname, "../index.d.ts"),
+      "utf8"
+    );
+    for (const iconName of uiExports.CLINICAL_ICON_NAMES) {
+      expect(dts).toContain(`"${iconName}"`);
+    }
+
+    for (const [iconName, size] of [
+      ["info", 16],
+      ["shield-check", 20],
+    ]) {
+      const ssrHtml = await renderToString(
+        createSSRApp({
+          render: () => h(uiExports.ClinicalIcon, { name: iconName, size }),
+        })
+      );
+      expect(ssrHtml).toContain('stroke-width="1.75"');
+      expect(ssrHtml).toContain('aria-hidden="true"');
+      expect(ssrHtml).toContain('focusable="false"');
+      expect(ssrHtml).toContain(`width="${size}"`);
+      expect(ssrHtml).toContain(`height="${size}"`);
+
+      const helperSvg = uiExports.renderClinicalIconSvg(iconName, { size });
+      expect(helperSvg).toContain('stroke-width="1.75"');
+      expect(helperSvg).toContain('aria-hidden="true"');
+      expect(helperSvg).toContain('focusable="false"');
+      expect(helperSvg).toContain(`width="${size}"`);
+      expect(helperSvg).toContain(`height="${size}"`);
+    }
+
+    expect(() => uiExports.resolveClinicalIcon("not-a-valid-icon")).toThrow(
+      /Unknown ClinicalIcon name/
+    );
+    expect(() =>
+      uiExports.renderClinicalIconSvg("not-a-valid-icon", { size: 16 })
+    ).toThrow(/Unknown ClinicalIcon name/);
   });
 });

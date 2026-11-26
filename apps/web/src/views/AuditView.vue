@@ -21,7 +21,7 @@
         margin-bottom: 20px;
       "
     >
-      <span style="color: var(--error); font-weight: 600">⚠️ Error:</span>
+      <span style="color: var(--error); font-weight: 600"> Error:</span>
       {{ globalError }}
     </div>
 
@@ -84,7 +84,9 @@
             "
           >
             <div style="display: flex; align-items: center; gap: 8px">
-              <span style="font-size: 20px">🟢</span>
+              <span style="font-size: 20px"
+                ><ClinicalIcon name="check-circle" :size="16"
+              /></span>
               <div>
                 <strong
                   style="color: var(--semantic-color-success); font-size: 14px"
@@ -116,7 +118,9 @@
             "
           >
             <div style="display: flex; align-items: center; gap: 8px">
-              <span style="font-size: 20px">🔴</span>
+              <span style="font-size: 20px"
+                ><ClinicalIcon name="alert-circle" :size="16"
+              /></span>
               <div>
                 <strong style="color: var(--error); font-size: 14px"
                   >INTEGRITY BREACH / TAMPERED</strong
@@ -557,7 +561,9 @@
           "
         >
           <div style="display: flex; align-items: center; gap: 8px">
-            <span style="font-size: 16px">🔍</span>
+            <span style="font-size: 16px"
+              ><ClinicalIcon name="search" :size="16"
+            /></span>
             <span style="font-weight: 600"
               >Secure Preview: {{ previewDoc.filename }}</span
             >
@@ -643,7 +649,8 @@
               gap: 6px;
             "
           >
-            <span>🖋️</span> 21 CFR Part 11 Electronic Signature Manifestation
+            <span><ClinicalIcon name="edit" :size="16" /></span> 21 CFR Part 11
+            Electronic Signature Manifestation
           </div>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px">
             <div>
@@ -1210,7 +1217,10 @@
                             gap: 6px;
                           "
                         >
-                          <span>🔴</span> Previous State (old_value)
+                          <span
+                            ><ClinicalIcon name="alert-circle" :size="16"
+                          /></span>
+                          Previous State (old_value)
                         </div>
                         <pre
                           style="
@@ -1248,7 +1258,10 @@
                             gap: 6px;
                           "
                         >
-                          <span>🟢</span> Committed State (new_value)
+                          <span
+                            ><ClinicalIcon name="check-circle" :size="16"
+                          /></span>
+                          Committed State (new_value)
                         </div>
                         <pre
                           style="
@@ -1282,7 +1295,9 @@
                       "
                     >
                       <div style="display: flex; align-items: center; gap: 8px">
-                        <span style="font-size: 14px">🛡️</span>
+                        <span style="font-size: 14px"
+                          ><ClinicalIcon name="shield-check" :size="16"
+                        /></span>
                         <span
                           ><strong>Cryptographic SHA-256 Digest:</strong></span
                         >
@@ -1527,7 +1542,7 @@
           border-radius: 6px;
         "
       >
-        <span style="color: var(--error); font-weight: 600">⚠️ Error:</span>
+        <span style="color: var(--error); font-weight: 600"> Error:</span>
         {{ completenessError }}
       </div>
 
@@ -1559,7 +1574,7 @@
           >
             <div style="display: flex; align-items: center; gap: 8px">
               <span style="font-size: 20px">{{
-                completenessResult.is_complete ? "🟢" : "🟡"
+                completenessResult.is_complete ? "Verified" : "Pending"
               }}</span>
               <div>
                 <strong
@@ -1718,6 +1733,7 @@
 </template>
 
 <script setup>
+import { ClinicalIcon } from "ui";
 import { ref, reactive, computed, onMounted } from "vue";
 import { useAuthStore } from "../stores/auth";
 import { auditorService } from "../api/auditor";

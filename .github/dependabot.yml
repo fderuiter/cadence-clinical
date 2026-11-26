@@ -142,6 +142,9 @@ updates:
       # Node runtime baseline is pinned via package.json engines (ADR-2508).
       - dependency-name: "@types/node"
         update-types: ["version-update:semver-major"]
+      # TypeScript 7.0 removes the JS compiler API and './lib/tsc' required by vue-tsc, typescript-eslint, and openapi-typescript.
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
 
   # Container base images, pinned by version and digest (docker/Dockerfile.dotnet)
   - package-ecosystem: "docker"

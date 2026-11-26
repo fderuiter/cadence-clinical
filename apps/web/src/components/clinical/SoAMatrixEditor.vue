@@ -12,7 +12,7 @@
           ><strong>{{ totalAssignedCells }}</strong> Scheduled Activities</span
         >
         <span v-if="selectedRangeCellCount > 0" class="stat-badge range-badge">
-          ⚡ <strong>{{ selectedRangeCellCount }}</strong> Cells Selected
+          <strong>{{ selectedRangeCellCount }}</strong> Cells Selected
         </span>
       </div>
       <div class="toolbar-actions">
@@ -45,7 +45,7 @@
             showAddVisit = false;
           "
         >
-          📋 Clone Procedure Group
+          Clone Procedure Group
         </button>
       </div>
     </div>
@@ -194,7 +194,7 @@
         class="btn btn-primary btn-sm btn-execute-clone"
         @click="executeProcedureGroupCloning"
       >
-        ⚡ Clone Group to Target Arm
+        Clone Group to Target Arm
       </button>
       <button
         type="button"

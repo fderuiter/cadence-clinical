@@ -14,8 +14,20 @@ export default defineConfig({
       fileName: "index",
     },
     rollupOptions: {
+      onwarn(warning, warn) {
+        if (warning.code === "INEFFECTIVE_DYNAMIC_IMPORT") {
+          return;
+        }
+        warn(warning);
+      },
       // Externalize dependencies that shouldn't be bundled into your library
-      external: ["vue", "pinia", "axe-core", "lucide-vue-next"],
+      external: [
+        "vue",
+        "pinia",
+        "axe-core",
+        "lucide-vue-next",
+        /^lucide-vue-next\//,
+      ],
       output: [
         {
           format: "es",
@@ -26,6 +38,7 @@ export default defineConfig({
         {
           format: "cjs",
           entryFileNames: "index.cjs",
+          codeSplitting: false,
         },
       ],
     },

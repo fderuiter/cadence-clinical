@@ -8,7 +8,7 @@
           tabindex="-1"
           style="margin: 0; font-size: 16px; font-weight: 700"
         >
-          🛡️ CRA Quality Control Review Queue
+          CRA Quality Control Review Queue
         </h3>
         <p
           style="
@@ -30,7 +30,7 @@
           style="font-size: 12px"
           @click="loadQueue"
         >
-          🔄 Refresh Queue
+          Refresh Queue
         </button>
         <button
           type="button"
@@ -68,7 +68,7 @@
       class="qc-error-banner"
       role="alert"
     >
-      ❌ {{ queueError }}
+      {{ queueError }}
     </div>
 
     <!-- Selection / Filter Ribbon -->
@@ -138,7 +138,9 @@
           color: var(--semantic-color-text-secondary);
         "
       >
-        <span style="font-size: 32px" aria-hidden="true">🔒</span>
+        <span style="font-size: 32px" aria-hidden="true"
+          ><ClinicalIcon name="lock" :size="16"
+        /></span>
         <p style="margin: 8px 0 0 0; font-size: 14px; font-weight: 600">
           Study or Site Scope Assignment Required
         </p>
@@ -155,7 +157,9 @@
           color: var(--semantic-color-text-secondary);
         "
       >
-        <span style="font-size: 32px">✅</span>
+        <span style="font-size: 32px"
+          ><ClinicalIcon name="check-circle" :size="16"
+        /></span>
         <p style="margin: 8px 0 0 0; font-size: 14px; font-weight: 600">
           No staged documents pending Quality Control review
         </p>
@@ -568,7 +572,12 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from "vue";
-import { ClinicalDataTable, ClinicalInput, useFocusTrap } from "ui";
+import {
+  ClinicalDataTable,
+  ClinicalInput,
+  useFocusTrap,
+  ClinicalIcon,
+} from "ui";
 import SupportDetails from "../canvas/SupportDetails.vue";
 import { useEtmfStore } from "../../stores/etmf.js";
 import { useAuthStore } from "../../stores/auth.js";

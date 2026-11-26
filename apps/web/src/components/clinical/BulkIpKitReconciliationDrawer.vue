@@ -14,22 +14,27 @@
     <template #header>
       <div class="drawer-header">
         <div class="header-title-wrap">
-          <ScanBarcode :size="18" class="header-icon" aria-hidden="true" />
+          <ScanBarcode
+            :size="20"
+            class="header-icon"
+            aria-hidden="true"
+            :stroke-width="1.75"
+            focusable="false"
+          />
           <h2 id="drawer-heading" class="drawer-title">
             Bulk IP Kit Reconciliation &amp; Batch Disposition Drawer
           </h2>
         </div>
 
-        <button
+        <ClinicalIconButton
           id="btn-close-bulk-ip-drawer"
-          type="button"
           class="btn-close"
-          aria-label="Close Bulk IP Kit Reconciliation Drawer"
+          label="Close Bulk IP Kit Reconciliation Drawer"
+          icon="x"
+          size="lg"
           :disabled="isSubmitting"
           @click="closeDrawer"
-        >
-          <X :size="18" aria-hidden="true" />
-        </button>
+        />
       </div>
     </template>
 
@@ -68,7 +73,12 @@
             :disabled="isLoadingInventory"
             @click="loadInventory"
           >
-            <RefreshCw :size="14" aria-hidden="true" />
+            <RefreshCw
+              :size="16"
+              aria-hidden="true"
+              :stroke-width="1.75"
+              focusable="false"
+            />
             <span>Refresh Inventory</span>
           </button>
         </div>
@@ -79,7 +89,12 @@
         <div class="scanner-card">
           <div class="scanner-header">
             <label for="barcode-scanner-input" class="scanner-label">
-              <ScanBarcode :size="16" aria-hidden="true" />
+              <ScanBarcode
+                :size="16"
+                aria-hidden="true"
+                :stroke-width="1.75"
+                focusable="false"
+              />
               <span>Multi-Barcode Scanner Buffer Input</span>
             </label>
             <span class="focus-indicator badge badge-active"
@@ -121,7 +136,13 @@
           class="alert-banner alert-warning"
           role="alert"
         >
-          <AlertTriangle :size="16" class="alert-icon" aria-hidden="true" />
+          <AlertTriangle
+            :size="16"
+            class="alert-icon"
+            aria-hidden="true"
+            :stroke-width="1.75"
+            focusable="false"
+          />
           <span class="alert-text">{{ warningMessage }}</span>
           <button
             type="button"
@@ -129,7 +150,12 @@
             aria-label="Dismiss warning"
             @click="warningMessage = ''"
           >
-            <X :size="16" aria-hidden="true" />
+            <X
+              :size="16"
+              aria-hidden="true"
+              :stroke-width="1.75"
+              focusable="false"
+            />
           </button>
         </div>
       </section>
@@ -196,7 +222,12 @@
       <!-- Scanned Kits Buffer Table / Mobile Stacked Record Cards -->
       <div v-if="scannedItems.length === 0" class="empty-state-box">
         <div class="empty-icon">
-          <Package :size="36" aria-hidden="true" />
+          <Package
+            :size="20"
+            aria-hidden="true"
+            :stroke-width="1.75"
+            focusable="false"
+          />
         </div>
         <h3>Scan Buffer Empty</h3>
         <p>
@@ -321,18 +352,33 @@
         </template>
         <template #cell-flags="{ row }">
           <span v-if="row.hasLotMismatch" class="status-flag flag-warning">
-            <AlertTriangle :size="13" aria-hidden="true" />
+            <AlertTriangle
+              :size="16"
+              aria-hidden="true"
+              :stroke-width="1.75"
+              focusable="false"
+            />
             <span>Lot Mismatch</span>
           </span>
           <span
             v-else-if="row.disposition === 'QUARANTINED_FOR_DESTRUCTION'"
             class="status-flag flag-quarantine"
           >
-            <Lock :size="13" aria-hidden="true" />
+            <Lock
+              :size="16"
+              aria-hidden="true"
+              :stroke-width="1.75"
+              focusable="false"
+            />
             <span>Quarantined</span>
           </span>
           <span v-else class="status-flag flag-valid">
-            <Check :size="13" aria-hidden="true" />
+            <Check
+              :size="16"
+              aria-hidden="true"
+              :stroke-width="1.75"
+              focusable="false"
+            />
             <span>Valid</span>
           </span>
         </template>
@@ -343,7 +389,12 @@
             title="Remove item"
             @click="removeItem(index)"
           >
-            <X :size="16" aria-hidden="true" />
+            <X
+              :size="16"
+              aria-hidden="true"
+              :stroke-width="1.75"
+              focusable="false"
+            />
           </ClinicalIconButton>
         </template>
       </ClinicalDataTable>
@@ -352,7 +403,12 @@
       <section v-if="scannedItems.length > 0" class="esign-section">
         <div class="esign-card">
           <h4 class="esign-title">
-            <FileSignature :size="16" aria-hidden="true" />
+            <FileSignature
+              :size="16"
+              aria-hidden="true"
+              :stroke-width="1.75"
+              focusable="false"
+            />
             <span
               >21 CFR Part 11 Electronic Signature &amp; Audit Rationale</span
             >
@@ -439,9 +495,16 @@
               :size="16"
               class="spin-icon"
               aria-hidden="true"
+              :stroke-width="1.75"
+              focusable="false"
             />
             <template v-else>
-              <Lock :size="15" aria-hidden="true" />
+              <Lock
+                :size="16"
+                aria-hidden="true"
+                :stroke-width="1.75"
+                focusable="false"
+              />
               <span
                 >Commit Batch Reconciliation ({{ scannedItems.length }})</span
               >
@@ -467,7 +530,12 @@
       <header class="cert-modal-header">
         <div class="cert-header-titles">
           <div class="cert-badge">
-            <Award :size="14" aria-hidden="true" />
+            <Award
+              :size="16"
+              aria-hidden="true"
+              :stroke-width="1.75"
+              focusable="false"
+            />
             <span>21 CFR Part 11 Digital Certificate</span>
           </div>
           <h3 id="cert-modal-title" class="cert-modal-title">
@@ -480,7 +548,12 @@
           aria-label="Close certificate dialog"
           @click="showCertificateModal = false"
         >
-          <X :size="18" aria-hidden="true" />
+          <X
+            :size="20"
+            aria-hidden="true"
+            :stroke-width="1.75"
+            focusable="false"
+          />
         </button>
       </header>
     </template>
@@ -528,7 +601,12 @@
             :key="kit"
             class="cert-kit-chip mono"
           >
-            <Package :size="13" aria-hidden="true" />
+            <Package
+              :size="16"
+              aria-hidden="true"
+              :stroke-width="1.75"
+              focusable="false"
+            />
             <span>{{ kit }}</span>
           </span>
         </div>
@@ -547,7 +625,12 @@
           class="btn btn-secondary"
           @click="printCertificate"
         >
-          <Printer :size="15" aria-hidden="true" />
+          <Printer
+            :size="16"
+            aria-hidden="true"
+            :stroke-width="1.75"
+            focusable="false"
+          />
           <span>Print Certificate</span>
         </button>
         <button

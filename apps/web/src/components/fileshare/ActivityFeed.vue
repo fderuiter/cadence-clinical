@@ -16,7 +16,9 @@
       <!-- Header -->
       <div class="drawer-header">
         <div class="header-info">
-          <span class="activity-header-icon">📜</span>
+          <span class="activity-header-icon"
+            ><ClinicalIcon name="file-text" :size="20"
+          /></span>
           <div>
             <h3 class="drawer-title">Document Activity Feed</h3>
             <p class="drawer-subtitle" :title="file?.filename || 'Document'">
@@ -93,7 +95,9 @@
 
       <!-- Compliance Notice Banner -->
       <div class="gxp-badge-strip">
-        <span class="gxp-icon">🛡️</span>
+        <span class="gxp-icon"
+          ><ClinicalIcon name="shield-check" :size="16"
+        /></span>
         <span class="gxp-text">
           ICH E6(R2) & 21 CFR Part 11 Inspection-Ready Audit Trail.
           Chronological UTC timeline.
@@ -110,14 +114,18 @@
 
         <!-- Error State -->
         <div v-else-if="error" class="error-state">
-          <span class="error-icon">⚠️</span>
+          <span class="error-icon"
+            ><ClinicalIcon name="alert-triangle" :size="16"
+          /></span>
           <p>{{ error }}</p>
           <button class="retry-btn" @click="loadFeed(1)">Retry</button>
         </div>
 
         <!-- Empty State -->
         <div v-else-if="entries.length === 0" class="empty-state">
-          <span class="empty-icon">📭</span>
+          <span class="empty-icon"
+            ><ClinicalIcon name="file-text" :size="20"
+          /></span>
           <h4>No Activity Events Found</h4>
           <p v-if="hasActiveFilters">
             Try adjusting your filters to see historical events.
@@ -136,7 +144,10 @@
             <!-- Timeline Track Icon -->
             <div class="timeline-marker">
               <span class="marker-icon" :title="entry.event_type">
-                {{ getEventIcon(entry.event_type) }}
+                <ClinicalIcon
+                  :name="getEventIcon(entry.event_type)"
+                  :size="16"
+                />
               </span>
               <div
                 v-if="index < entries.length - 1"
@@ -177,9 +188,15 @@
                   :aria-expanded="isExpanded(index)"
                   @click="toggleExpand(index)"
                 >
-                  <span>{{
-                    isExpanded(index) ? "▼ Hide Details" : "▶ Show Details"
-                  }}</span>
+                  <span>
+                    <ClinicalIcon
+                      :name="
+                        isExpanded(index) ? 'chevron-down' : 'chevron-right'
+                      "
+                      :size="16"
+                    />
+                    {{ isExpanded(index) ? "Hide Details" : "Show Details" }}
+                  </span>
                 </button>
 
                 <div v-if="isExpanded(index)" class="detail-content">
@@ -317,7 +334,7 @@
 
 <script setup>
 import { computed, onMounted, ref, watch } from "vue";
-import { useFocusTrap } from "ui";
+import { useFocusTrap, ClinicalIcon } from "ui";
 import { useFileshareStore } from "../../stores/fileshare";
 
 const props = defineProps({
@@ -507,46 +524,41 @@ function getEventIcon(eventType) {
   const norm = (eventType || "").toUpperCase();
   switch (norm) {
     case "FILE_UPLOADED":
-      return "📄";
+    case "CONVERSION_COMPLETE":
+      return "file-text";
     case "VERSION_CREATED":
     case "REVISION_UPLOADED":
-      return "🔄";
+      return "refresh";
     case "GRANT_CREATED":
-      return "👥";
+      return "users";
     case "GRANT_REVOKED":
-      return "🚫";
-    case "GUEST_LINK_CREATED":
-      return "🌐";
-    case "GUEST_LINK_ACCESSED":
-      return "👁️";
-    case "GUEST_LINK_REVOKED":
-      return "🔒";
-    case "SCAN_COMPLETE":
-      return "🛡️";
-    case "SCAN_QUARANTINED":
-      return "⚠️";
-    case "CONVERSION_COMPLETE":
-      return "📑";
     case "HOLD_SET":
-      return "🛑";
-    case "HOLD_CLEARED":
-      return "🔓";
-    case "DOCUMENT_APPROVED":
-    case "FILE_APPROVED":
-      return "✅";
     case "DOCUMENT_REJECTED":
     case "FILE_REJECTED":
-      return "❌";
-    case "APPROVAL_RESCINDED":
-      return "↩️";
+      return "x-circle";
+    case "GUEST_LINK_CREATED":
+      return "external-link";
+    case "GUEST_LINK_ACCESSED":
     case "VIEW_OPEN":
-      return "👁️";
+      return "eye";
+    case "GUEST_LINK_REVOKED":
+      return "lock";
+    case "SCAN_COMPLETE":
+    case "DOCUMENT_APPROVED":
+    case "FILE_APPROVED":
+      return "shield-check";
+    case "SCAN_QUARANTINED":
+      return "alert-triangle";
+    case "HOLD_CLEARED":
+      return "unlock";
+    case "APPROVAL_RESCINDED":
+      return "rotate-ccw";
     case "PLAY_START":
-      return "▶️";
+      return "play";
     case "PLAY_END":
-      return "⏹️";
+      return "pause";
     default:
-      return "📜";
+      return "file-text";
   }
 }
 

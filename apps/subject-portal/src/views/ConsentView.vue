@@ -226,7 +226,7 @@
           "
         >
           <div style="margin-bottom: 8px">
-            <ClinicalIcon name="camera" :size="32" />
+            <ClinicalIcon name="camera" :size="20" />
           </div>
           <p style="margin: 0; font-size: 14px; font-weight: 500">
             Camera Ready for Quick Check
@@ -332,7 +332,7 @@
             gap: 8px;
           "
         >
-          <ClinicalIcon name="check" :size="18" />
+          <ClinicalIcon name="check" :size="16" />
           <span>Informed Consent Signed &amp; Archived</span>
         </h3>
         <p

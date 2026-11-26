@@ -3,7 +3,8 @@
     <div class="card-header">
       <div class="card-title-row">
         <h3 class="card-title">
-          <span>🩺</span> Subject Registration &amp; Screening
+          <span><ClinicalIcon name="stethoscope" :size="16" /></span> Subject
+          Registration &amp; Screening
         </h3>
         <span v-if="screeningStatus" class="badge" :class="screeningBadgeClass">
           {{ screeningStatus }}
@@ -184,7 +185,7 @@
           @click="handleScreenClick"
         >
           <span v-if="isScreening">Evaluating...</span>
-          <span v-else>🔍 Check Eligibility</span>
+          <span v-else> Check Eligibility</span>
         </button>
 
         <button
@@ -193,7 +194,7 @@
           :disabled="!canEnroll || disabled || isEnrolling"
         >
           <span v-if="isEnrolling">Registering...</span>
-          <span v-else>➕ Enroll Subject</span>
+          <span v-else> Enroll Subject</span>
         </button>
       </div>
     </form>
@@ -202,7 +203,7 @@
 
 <script setup>
 import { reactive, computed } from "vue";
-import { ClinicalInput, validateField } from "ui";
+import { ClinicalInput, validateField, ClinicalIcon } from "ui";
 
 const props = defineProps({
   canEnroll: {
@@ -359,10 +360,10 @@ const screeningBadgeClass = computed(() => {
 });
 
 const outcomeIcon = computed(() => {
-  if (!props.screeningResult) return "ℹ️";
-  if (props.screeningResult.eligible === true) return "✅";
-  if (props.screeningResult.eligible === false) return "🚫";
-  return "⚠️";
+  if (!props.screeningResult) return "Information";
+  if (props.screeningResult.eligible === true) return "Verified";
+  if (props.screeningResult.eligible === false) return "Rejected";
+  return "Warning";
 });
 
 const outcomeSummaryText = computed(() => {

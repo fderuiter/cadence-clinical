@@ -22,9 +22,14 @@
           :title="!canExport ? ETMF_EXPORT_ROLE_REASON : undefined"
           @click="handleExportSelected"
         >
-          <span aria-hidden="true">📦</span> Download Selected ({{
-            selectedDocumentIds.length
-          }})<span class="sr-only"> documents as ZIP package</span>
+          <span aria-hidden="true"
+            ><ClinicalIcon name="folder" :size="16"
+          /></span>
+          Download Selected ({{ selectedDocumentIds.length }})<span
+            class="sr-only"
+          >
+            documents as ZIP package</span
+          >
         </button>
         <button
           type="button"
@@ -33,11 +38,10 @@
           :title="!canStage ? ETMF_STAGE_ROLE_REASON : undefined"
           @click="openBatchDrawer"
         >
-          <span aria-hidden="true">📤</span> Batch Ingestion<span
-            class="sr-only"
-          >
-            multi-file upload</span
-          >
+          <span aria-hidden="true"
+            ><ClinicalIcon name="upload" :size="16"
+          /></span>
+          Batch Ingestion<span class="sr-only"> multi-file upload</span>
         </button>
         <button
           type="button"
@@ -46,7 +50,10 @@
           :title="!canStage ? ETMF_STAGE_ROLE_REASON : undefined"
           @click="openUploadModal"
         >
-          <span aria-hidden="true">📄</span> Upload Single Document<span
+          <span aria-hidden="true"
+            ><ClinicalIcon name="file-text" :size="16"
+          /></span>
+          Upload Single Document<span
             v-if="selectedArtifactCode"
             class="sr-only"
           >
@@ -115,7 +122,9 @@
                 class="scope-forbidden-guidance"
                 role="alert"
               >
-                <span class="scope-forbidden-icon" aria-hidden="true">🔒</span>
+                <span class="scope-forbidden-icon" aria-hidden="true"
+                  ><ClinicalIcon name="lock" :size="16"
+                /></span>
                 <h3>Study or Site Scope Assignment Required</h3>
                 <p>{{ etmfStore.scopeForbiddenGuidance }}</p>
               </div>
@@ -125,13 +134,15 @@
                 class="scope-forbidden-guidance"
                 role="alert"
               >
-                <span class="scope-forbidden-icon" aria-hidden="true">⚠️</span>
+                <span class="scope-forbidden-icon" aria-hidden="true"
+                  ><ClinicalIcon name="alert-triangle" :size="16"
+                /></span>
                 <h3>Unable to Load Regulated Documents</h3>
                 <p>{{ etmfStore.documentsError }}</p>
               </div>
               <EmptyState
                 v-else
-                icon="📄"
+                icon="file-text"
                 title="No Regulated Documents Found"
                 message="No documents have been uploaded for this artifact yet. Upload a single document or run batch ingestion to populate the eTMF."
               >
@@ -143,7 +154,8 @@
                     :title="!canStage ? ETMF_STAGE_ROLE_REASON : undefined"
                     @click="openUploadModal"
                   >
-                    <span>📄</span> Upload Single Document
+                    <span><ClinicalIcon name="file-text" :size="16" /></span>
+                    Upload Single Document
                   </button>
                   <button
                     type="button"
@@ -152,7 +164,8 @@
                     :title="!canStage ? ETMF_STAGE_ROLE_REASON : undefined"
                     @click="openBatchDrawer"
                   >
-                    <span>📤</span> Batch Ingestion
+                    <span><ClinicalIcon name="upload" :size="16" /></span> Batch
+                    Ingestion
                   </button>
                 </template>
               </EmptyState>
@@ -184,7 +197,9 @@
                 @click="selectCell(rIndex, 0)"
                 @keydown="handleCellKeyDown($event, rIndex, 0, doc)"
               >
-                <span class="file-icon">📄</span>
+                <span class="file-icon"
+                  ><ClinicalIcon name="file-text" :size="16"
+                /></span>
                 <span class="filename" :title="doc.filename">{{
                   doc.filename
                 }}</span>
@@ -192,7 +207,8 @@
                   v-if="doc.is_redacted"
                   class="compliance-badge-pill"
                   title="HIPAA/GDPR Compliant Redacted Copy"
-                  >🛡️ Compliant</span
+                >
+                  Compliant</span
                 >
               </td>
               <td
@@ -317,7 +333,10 @@
                     :aria-label="'Inspect metadata for ' + doc.filename"
                     @click.stop="$emit('inspect', doc)"
                   >
-                    <span aria-hidden="true">📋</span> Inspect
+                    <span aria-hidden="true"
+                      ><ClinicalIcon name="clipboard-list" :size="16"
+                    /></span>
+                    Inspect
                   </button>
                   <button
                     type="button"
@@ -328,7 +347,10 @@
                     "
                     @click.stop="$emit('preview', doc)"
                   >
-                    <span aria-hidden="true">👁️</span> Preview
+                    <span aria-hidden="true"
+                      ><ClinicalIcon name="camera" :size="16"
+                    /></span>
+                    Preview
                   </button>
                 </div>
               </td>
@@ -361,7 +383,10 @@
           aria-label="Previous page"
           @click="prevPage"
         >
-          <span aria-hidden="true">◀</span> Previous
+          <span aria-hidden="true"
+            ><ClinicalIcon name="chevron-left" :size="16"
+          /></span>
+          Previous
         </button>
 
         <div class="page-numbers">
@@ -386,7 +411,10 @@
           aria-label="Next page"
           @click="nextPage"
         >
-          Next <span aria-hidden="true">▶</span>
+          Next
+          <span aria-hidden="true"
+            ><ClinicalIcon name="video" :size="16"
+          /></span>
         </button>
       </div>
     </div>
@@ -418,7 +446,7 @@
         <div class="modal-body">
           <!-- GxP Compliance Warning Box -->
           <div class="gxp-warning-alert">
-            <strong>⚠️ Regulated Record Ingestion Warning:</strong>
+            <strong> Regulated Record Ingestion Warning:</strong>
             All actions are logged in the append-only eTMF audit ledger. You
             must provide a valid electronic signature context and change reason
             justification to submit this record.
@@ -430,7 +458,7 @@
             accept=".pdf"
             :disabled="isSubmitting"
             :has-selection="!!selectedFile"
-            icon="☁️"
+            icon="file-text"
             :prompt-text="
               selectedFile ? '' : 'Drag and drop your regulated PDF here'
             "
@@ -447,7 +475,9 @@
             <template #selected>
               <div v-if="selectedFile" class="selected-file-details">
                 <p class="file-name-success">
-                  <span aria-hidden="true">🎉 </span>{{ selectedFile.name }}
+                  <span aria-hidden="true"
+                    ><ClinicalIcon name="file-text" :size="16" /></span
+                  >{{ selectedFile.name }}
                 </p>
                 <p class="file-size-meta">
                   Size: {{ (selectedFile.size / 1024).toFixed(1) }} KB | Type:
@@ -525,7 +555,7 @@
             </div>
 
             <div v-if="uploadError" class="upload-error-banner">
-              ❌ {{ uploadError }}
+              {{ uploadError }}
             </div>
 
             <div class="modal-footer-actions">
@@ -545,7 +575,7 @@
                 "
               >
                 <span v-if="isSubmitting">Uploading & Indexing...</span>
-                <span v-else>🔒 Commit Electronic Record</span>
+                <span v-else> Commit Electronic Record</span>
               </button>
             </div>
           </form>
@@ -570,11 +600,14 @@ import { defineLazyOverlay } from "../../utils/lazyOverlay.js";
 const BatchUploadDrawer = defineLazyOverlay(
   () => import("./BatchUploadDrawer.vue")
 );
+const ClinicalDropzone = defineLazyOverlay(
+  () => import("./LazyClinicalDropzone.js")
+);
 </script>
 
 <script setup>
 import { ref, computed, watch, nextTick } from "vue";
-import { ClinicalDropzone, EmptyState, useFocusTrap } from "ui";
+import { EmptyState, useFocusTrap, ClinicalIcon } from "ui";
 import { useEtmfStore, arrayBufferToBase64 } from "../../stores/etmf";
 import { useAuthStore } from "../../stores/auth";
 import { etmfService } from "../../api/etmf";

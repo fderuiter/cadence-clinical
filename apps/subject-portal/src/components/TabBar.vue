@@ -37,6 +37,7 @@
           :size="16"
           :stroke-width="1.75"
           aria-hidden="true"
+          focusable="false"
         />
         <span class="nav-label">{{ tab.label }}</span>
         <span

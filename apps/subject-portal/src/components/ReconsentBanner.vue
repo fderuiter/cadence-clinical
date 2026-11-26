@@ -28,7 +28,7 @@
         min-width: 0;
       "
     >
-      <ClinicalIcon name="alert-circle" :size="24" />
+      <ClinicalIcon name="alert-circle" :size="20" />
       <div style="min-width: 0">
         <h3
           style="

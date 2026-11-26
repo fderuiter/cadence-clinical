@@ -27,23 +27,7 @@
             title="Export Regulatory Audit Trail CSV"
             @click="exportAuditTrail('csv')"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="15"
-              height="15"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              class="btn-icon-svg"
-              aria-hidden="true"
-            >
-              <path d="M12 3v12" />
-              <path d="m7 10 5 5 5-5" />
-              <path d="M5 21h14" />
-            </svg>
+            <ClinicalIcon name="download" :size="16" />
             <span>Export CSV</span>
           </button>
           <button
@@ -53,30 +37,7 @@
             title="Export Regulatory Audit Trail JSON"
             @click="exportAuditTrail('json')"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="15"
-              height="15"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              class="btn-icon-svg"
-              aria-hidden="true"
-            >
-              <path
-                d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
-              />
-              <path d="M14 2v6h6" />
-              <path
-                d="M10 12a1 1 0 0 0-1 1v1a1 1 0 0 1-1 1 1 1 0 0 1 1 1v1a1 1 0 0 0 1 1"
-              />
-              <path
-                d="M14 18a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1 1 1 0 0 1-1-1v-1a1 1 0 0 0-1-1"
-              />
-            </svg>
+            <ClinicalIcon name="file-text" :size="16" />
             <span>Export JSON</span>
           </button>
           <button
@@ -95,40 +56,10 @@
             "
             @click="openCreateTicketModal"
           >
-            <svg
-              v-if="!canMutateTicket"
-              xmlns="http://www.w3.org/2000/svg"
-              width="15"
-              height="15"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              class="btn-icon-svg"
-              aria-hidden="true"
-            >
-              <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
-              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-            </svg>
-            <svg
-              v-else
-              xmlns="http://www.w3.org/2000/svg"
-              width="15"
-              height="15"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              class="btn-icon-svg"
-              aria-hidden="true"
-            >
-              <path d="M5 12h14" />
-              <path d="M12 5v14" />
-            </svg>
+            <ClinicalIcon
+              :name="!canMutateTicket ? 'lock' : 'plus'"
+              :size="16"
+            />
             <span>Log Issue</span>
           </button>
         </div>
@@ -149,7 +80,9 @@
         class="stat-card stat-card-btn"
         @click="filterStatus = 'ALL'"
       >
-        <span class="stat-icon alert-icon" aria-hidden="true">🎫</span>
+        <span class="stat-icon alert-icon" aria-hidden="true"
+          ><ClinicalIcon name="ticket" :size="20"
+        /></span>
         <span class="stat-details">
           <span class="stat-value tabular-nums">
             {{ activeTicketsCount }}
@@ -162,7 +95,9 @@
         class="stat-card stat-card-btn"
         @click="filterSeverity = 'CRITICAL'"
       >
-        <span class="stat-icon capa-icon" aria-hidden="true">🚨</span>
+        <span class="stat-icon capa-icon" aria-hidden="true"
+          ><ClinicalIcon name="alert-triangle" :size="20"
+        /></span>
         <span class="stat-details">
           <span class="stat-value text-danger tabular-nums">
             {{ criticalTicketsCount }}
@@ -171,7 +106,9 @@
         </span>
       </button>
       <div class="stat-card">
-        <div class="stat-icon rbqm-icon">⏱</div>
+        <div class="stat-icon rbqm-icon">
+          <ClinicalIcon name="clock" :size="20" />
+        </div>
         <div class="stat-details">
           <div
             id="kpi-sla-compliance"
@@ -184,7 +121,9 @@
         </div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon qtl-icon">⚡</div>
+        <div class="stat-icon qtl-icon">
+          <ClinicalIcon name="alert-triangle" :size="20" />
+        </div>
         <div class="stat-details">
           <div id="kpi-mttr" class="stat-value tabular-nums">
             {{ mttrDisplay }}
@@ -197,7 +136,9 @@
         class="stat-card stat-card-btn"
         @click="filterStatus = 'WAITING_ON_SITE'"
       >
-        <span class="stat-icon breach-icon" aria-hidden="true">⏸</span>
+        <span class="stat-icon breach-icon" aria-hidden="true"
+          ><ClinicalIcon name="clock" :size="20"
+        /></span>
         <span class="stat-details">
           <span class="stat-value tabular-nums">
             {{ pausedTicketsCount }}
@@ -210,7 +151,9 @@
     <!-- Filter & View Mode Control Bar -->
     <div class="controls-card">
       <div class="search-box">
-        <span class="search-icon" aria-hidden="true">🔍</span>
+        <span class="search-icon" aria-hidden="true"
+          ><ClinicalIcon name="search" :size="16"
+        /></span>
         <ClinicalInput
           id="tickets-search-input"
           v-model="searchQuery"
@@ -465,7 +408,8 @@
                 class="sla-mini-badge"
                 :class="getSlaClass(t)"
               >
-                {{ formatSlaRemaining(t) }}
+                <ClinicalIcon :name="getSlaIcon(t)" :size="16" />
+                <span>{{ formatSlaRemaining(t) }}</span>
               </span>
             </span>
           </button>
@@ -520,7 +464,8 @@
                 class="sla-mini-badge"
                 :class="getSlaClass(t)"
               >
-                {{ formatSlaRemaining(t) }}
+                <ClinicalIcon :name="getSlaIcon(t)" :size="16" />
+                <span>{{ formatSlaRemaining(t) }}</span>
               </span>
             </span>
           </button>
@@ -576,7 +521,10 @@
               <span class="category-pill">{{
                 formatCategory(t.category)
               }}</span>
-              <span class="sla-mini-badge fill-paused">⏸ SLA Paused</span>
+              <span class="sla-mini-badge fill-paused"
+                ><ClinicalIcon name="clock" :size="16" />
+                <span>SLA Paused</span></span
+              >
             </span>
           </button>
         </div>
@@ -613,7 +561,8 @@
                 t.reference || `#${t.id?.substring(0, 8)}`
               }}</span>
               <span v-if="t.signature_token" class="badge badge-signed"
-                >✍️ eSigned</span
+                ><ClinicalIcon name="file-signature" :size="16" />
+                <span>eSigned</span></span
               >
               <span v-else class="badge badge-pending-sign"
                 >Pending Sign-off</span
@@ -664,7 +613,10 @@
               <span class="ref-tag">{{
                 t.reference || `#${t.id?.substring(0, 8)}`
               }}</span>
-              <span class="badge badge-closed">🔒 Closed</span>
+              <span class="badge badge-closed"
+                ><ClinicalIcon name="lock" :size="16" />
+                <span>Closed</span></span
+              >
             </span>
             <span class="card-ticket-title">
               {{ t.title }}
@@ -771,7 +723,8 @@
             class="sla-mini-badge"
             :class="getSlaClass(row)"
           >
-            {{ formatSlaRemaining(row) }}
+            <ClinicalIcon :name="getSlaIcon(row)" :size="16" />
+            <span>{{ formatSlaRemaining(row) }}</span>
           </div>
           <span v-else>—</span>
         </template>
@@ -841,7 +794,12 @@ import {
   onMounted,
   getCurrentInstance,
 } from "vue";
-import { ClinicalDataTable, ClinicalInput, ClinicalTabs } from "ui";
+import {
+  ClinicalDataTable,
+  ClinicalIcon,
+  ClinicalInput,
+  ClinicalTabs,
+} from "ui";
 import TicketDetailDrawer from "../components/tickets/TicketDetailDrawer.vue";
 import TicketCreateModal from "../components/tickets/TicketCreateModal.vue";
 import { ticketsApi } from "../api/ticketsApi";
@@ -1436,14 +1394,20 @@ const getColumnTickets = (statuses) => {
 };
 
 // SLA utilities
+const getSlaIcon = (t) => {
+  if (!t?.sla_target_at) return "clock";
+  const diff = new Date(t.sla_target_at).getTime() - Date.now();
+  return diff <= 0 || t.sla_breached ? "alert-triangle" : "clock";
+};
+
 const formatSlaRemaining = (t) => {
   if (!t.sla_target_at) return "No SLA";
   const diff = new Date(t.sla_target_at).getTime() - Date.now();
-  if (diff <= 0) return "🚨 SLA BREACH";
+  if (diff <= 0) return "SLA BREACH";
   const hours = Math.floor(diff / (3600 * 1000));
-  if (hours < 24) return `⏱ ${hours}h left`;
+  if (hours < 24) return `${hours}h left`;
   const days = Math.floor(hours / 24);
-  return `⏱ ${days}d left`;
+  return `${days}d left`;
 };
 
 const getSlaClass = (t) => {

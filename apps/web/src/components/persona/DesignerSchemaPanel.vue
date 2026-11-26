@@ -130,7 +130,7 @@
           {{
             importingDraft || store.ingestionLoading
               ? "Importing Protocol…"
-              : "📁 Select ODM XML or USDM JSON"
+              : "Select ODM XML or USDM JSON"
           }}
         </button>
         <div
@@ -444,7 +444,7 @@
                   title="Source Reference"
                   class="item-citation"
                 >
-                  📖 {{ item.source_citation }}
+                  {{ item.source_citation }}
                 </span>
               </div>
             </div>
@@ -609,7 +609,7 @@
                   style="padding: 2px 8px; font-size: 0.75rem"
                   @click="$emit('accept-item', item.id)"
                 >
-                  ✔️ Accept
+                  Accept
                 </button>
                 <button
                   :id="`btn-edit-candidate-${item.id}`"
@@ -617,7 +617,7 @@
                   style="padding: 2px 8px; font-size: 0.75rem"
                   @click="$emit('start-edit-item', item)"
                 >
-                  ✏️ Edit
+                  Edit
                 </button>
                 <button
                   :id="`btn-reject-candidate-${item.id}`"
@@ -630,7 +630,7 @@
                   "
                   @click="$emit('start-reject-item', item.id)"
                 >
-                  ❌ Reject
+                  Reject
                 </button>
               </div>
             </div>
@@ -684,8 +684,8 @@
             >
               {{
                 unreviewedCount === 0
-                  ? "✅ All items reviewed. Ready to promote."
-                  : `⚠️ ${unreviewedCount} items remaining to be reviewed.`
+                  ? "All items reviewed. Ready to promote."
+                  : ` ${unreviewedCount} items remaining to be reviewed.`
               }}
             </span>
             <button
@@ -699,7 +699,7 @@
               "
               @click="$emit('promote-candidate')"
             >
-              🚀 Promote Reviewed Candidate
+              Promote Reviewed Candidate
             </button>
           </div>
         </div>

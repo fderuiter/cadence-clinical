@@ -175,18 +175,19 @@ export const ClinicalTabs: DefineComponent<
   any
 >;
 
-export const ClinicalIconButton: DefineComponent<
+export const ClinicalIconButton: DefineSlotsComponent<
   {
     label: string;
-    icon?: string;
+    icon?: ClinicalIconName | (string & {});
     type?: "button" | "submit" | "reset";
     variant?: "unstyled" | "ghost" | "secondary" | "danger";
     size?: "sm" | "md" | "lg";
     disabled?: boolean;
     title?: string;
   },
-  {},
-  any
+  {
+    default?: (props: Record<string, never>) => any;
+  }
 >;
 
 export const ClinicalDropzone: DefineSlotsComponent<
@@ -1271,10 +1272,94 @@ export const ClinicalGatedAction: DefineSlotsComponent<
   }
 >;
 
+export type ClinicalShellIconName =
+  "bell" | "globe" | "help-circle" | "info" | "menu" | "search" | "x";
+
+export type ClinicalRouteIconName =
+  | "alert-circle"
+  | "alert-triangle"
+  | "book-open"
+  | "calendar"
+  | "camera"
+  | "check"
+  | "check-circle"
+  | "chevron-down"
+  | "chevron-left"
+  | "chevron-right"
+  | "chevron-up"
+  | "clipboard-list"
+  | "clock"
+  | "copy"
+  | "download"
+  | "edit"
+  | "external-link"
+  | "eye"
+  | "file-signature"
+  | "file-text"
+  | "flask-conical"
+  | "folder"
+  | "lock"
+  | "mail"
+  | "message-square"
+  | "mic"
+  | "pause"
+  | "phone"
+  | "play"
+  | "plus"
+  | "refresh"
+  | "rotate-ccw"
+  | "shield-check"
+  | "sparkles"
+  | "stethoscope"
+  | "ticket"
+  | "trash"
+  | "trending-up"
+  | "unlock"
+  | "upload"
+  | "users"
+  | "video"
+  | "wallet"
+  | "x-circle";
+
+export type ClinicalIconName = ClinicalShellIconName | ClinicalRouteIconName;
+
+export const CLINICAL_ICON_STROKE_WIDTH: 1.75;
+export const CLINICAL_SHELL_ICON_NAMES: readonly ClinicalShellIconName[];
+export const CLINICAL_ROUTE_ICON_NAMES: readonly ClinicalRouteIconName[];
+export const CLINICAL_ICON_NAMES: readonly ClinicalIconName[];
+export const CLINICAL_SHELL_ICONS: Readonly<
+  Record<ClinicalShellIconName, import("vue").Component>
+>;
+export const CLINICAL_ROUTE_ICONS: Readonly<
+  Record<ClinicalRouteIconName, import("vue").Component>
+>;
+export const CLINICAL_ICONS: Readonly<
+  Record<ClinicalIconName, import("vue").Component>
+>;
+
+export function isClinicalShellIconName(
+  name: unknown
+): name is ClinicalShellIconName;
+export function isClinicalRouteIconName(
+  name: unknown
+): name is ClinicalRouteIconName;
+export function isClinicalIconName(name: unknown): name is ClinicalIconName;
+export function normalizeClinicalIconSize(size?: number | string): 16 | 20;
+export function resolveClinicalIcon(
+  name?: ClinicalIconName | (string & {})
+): import("vue").Component;
+export function renderClinicalIconSvg(
+  name: ClinicalIconName | (string & {}),
+  options?: {
+    size?: number | string;
+    className?: string;
+  }
+): string;
+
 export const ClinicalIcon: DefineComponent<
   {
-    name?: string;
-    size?: number | string;
+    name?: ClinicalIconName | (string & {});
+    size?: 16 | 20 | number | string;
   },
   {},
   any

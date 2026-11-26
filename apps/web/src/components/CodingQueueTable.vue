@@ -21,14 +21,14 @@
           class="btn btn-primary btn-sm btn-batch-approve"
           @click="openBatchApproveClustersModal(null)"
         >
-          ⚡ Batch Approve Selected Clusters
+          Batch Approve Selected Clusters
         </button>
         <button
           type="button"
           class="btn btn-secondary btn-sm"
           @click="openBatchCodeClustersModal(null)"
         >
-          🏷️ Batch Code Selected Clusters
+          Batch Code Selected Clusters
         </button>
         <button
           type="button"
@@ -61,7 +61,7 @@
           class="btn btn-secondary btn-sm"
           @click="openBatchOverrideModal"
         >
-          🏷️ Batch Code
+          Batch Code
         </button>
         <button
           type="button"
@@ -99,7 +99,7 @@
       class="table-empty-state"
     >
       <EmptyState
-        icon="🩺"
+        icon="stethoscope"
         title="No Coding Assignments Found"
         message="No adverse events or concomitant medications match the active filters or confidence score threshold."
       >
@@ -109,7 +109,7 @@
             class="btn btn-secondary btn-sm btn-reset-filters"
             @click="resetFilters"
           >
-            🔄 Reset Active Filters
+            Reset Active Filters
           </button>
         </template>
       </EmptyState>
@@ -183,7 +183,7 @@
                 </div>
                 <div class="verbatim-meta">
                   <span class="badge badge-neutral instance-count-badge">
-                    👥 {{ cluster.instance_count }} subject instance{{
+                    {{ cluster.instance_count }} subject instance{{
                       cluster.instance_count === 1 ? "" : "s"
                     }}
                   </span>
@@ -191,7 +191,7 @@
                     v-if="cluster.blocked_count > 0"
                     class="badge badge-warning blocked-count-badge"
                   >
-                    ⚠️ {{ cluster.blocked_count }} query / lock blocked
+                    {{ cluster.blocked_count }} query / lock blocked
                   </span>
                 </div>
               </td>
@@ -237,7 +237,7 @@
                     title="1-Step Batch Approve Cluster"
                     @click="openBatchApproveClustersModal([cluster.id])"
                   >
-                    ⚡ Batch Approve
+                    Batch Approve
                   </button>
                   <button
                     type="button"
@@ -245,7 +245,7 @@
                     title="Batch Code Override"
                     @click="openBatchCodeClustersModal([cluster.id])"
                   >
-                    🏷️ Batch Code
+                    Batch Code
                   </button>
                   <button
                     type="button"
@@ -260,7 +260,7 @@
                     {{
                       expandedClusterId === cluster.id
                         ? "▲ Hide"
-                        : "👁️ Instances (" + cluster.instance_count + ")"
+                        : "Instances (" + cluster.instance_count + ")"
                     }}
                   </button>
                 </div>
@@ -336,14 +336,14 @@
                               class="btn btn-xs btn-secondary"
                               @click="openBrowser(inst)"
                             >
-                              🔍 Browse
+                              Browse
                             </button>
                             <button
                               type="button"
                               class="btn btn-xs btn-warning"
                               @click="promptRaiseQuery(inst)"
                             >
-                              ❓ Query
+                              Query
                             </button>
                           </div>
                         </td>
@@ -573,7 +573,7 @@
                   tabindex="-1"
                   @click="openBrowser(item)"
                 >
-                  🔍 Browse
+                  Browse
                 </button>
                 <button
                   type="button"
@@ -582,7 +582,7 @@
                   tabindex="-1"
                   @click="promptRaiseQuery(item)"
                 >
-                  ❓ Query
+                  Query
                 </button>
               </div>
             </td>
@@ -610,7 +610,7 @@
       >
         <div class="modal-header">
           <h3 id="approve-cluster-modal-title">
-            ⚡ Batch Approve Verbatim Cluster(s)
+            Batch Approve Verbatim Cluster(s)
           </h3>
           <button
             type="button"
@@ -635,7 +635,6 @@
             class="alert-banner alert-warning"
           >
             <span>
-              ⚠️
               <strong>{{ targetClustersSummary.blockedInstances }}</strong>
               instance(s) have active discrepancy queries or lock conflicts and
               will be excluded.
@@ -701,9 +700,7 @@
         tabindex="-1"
       >
         <div class="modal-header">
-          <h3 id="batch-cluster-modal-title">
-            🏷️ Batch Code Verbatim Cluster(s)
-          </h3>
+          <h3 id="batch-cluster-modal-title">Batch Code Verbatim Cluster(s)</h3>
           <button
             type="button"
             class="btn-close"

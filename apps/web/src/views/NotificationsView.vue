@@ -119,7 +119,9 @@
       "
     >
       <div style="display: flex; gap: 16px; align-items: flex-start">
-        <span style="font-size: 2rem">🚫</span>
+        <span style="font-size: 2rem"
+          ><ClinicalIcon name="x-circle" :size="16"
+        /></span>
         <div>
           <h3
             style="color: var(--error); font-weight: bold; margin-bottom: 8px"
@@ -146,7 +148,9 @@
       "
     >
       <div style="display: flex; gap: 16px; align-items: flex-start">
-        <span style="font-size: 2rem">⚠️</span>
+        <span style="font-size: 2rem"
+          ><ClinicalIcon name="alert-triangle" :size="16"
+        /></span>
         <div>
           <h3
             style="color: var(--warning); font-weight: bold; margin-bottom: 8px"
@@ -314,7 +318,7 @@
             "
             @click="goToTarget(notif)"
           >
-            🔗 Go to Target
+            Go to Target
           </button>
           <button
             v-if="notif.status === 'OPEN'"
@@ -451,7 +455,7 @@
 
 <script setup>
 import { onMounted, ref, computed } from "vue";
-import { ClinicalModal } from "ui";
+import { ClinicalModal, ClinicalIcon } from "ui";
 import { useRouter } from "vue-router";
 import { useNotificationsStore } from "../stores/notifications";
 

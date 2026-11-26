@@ -11,28 +11,15 @@
     <div
       v-if="!hasEditAccess"
       id="access-denied-card"
-      class="card"
-      style="
-        border-left: 4px solid var(--error);
-        background-color: var(--error-bg);
-        padding: 24px;
-      "
+      class="card access-denied-banner"
     >
-      <div style="display: flex; gap: 16px; align-items: flex-start">
-        <span style="font-size: 2rem">🚫</span>
+      <div class="access-denied-row">
+        <ClinicalIcon name="x-circle" :size="20" class="access-denied-icon" />
         <div>
-          <h3
-            style="color: var(--error); font-weight: bold; margin-bottom: 8px"
-          >
+          <h3 class="access-denied-heading">
             {{ $t("econsent.authoring.accessDeniedTitle") }}
           </h3>
-          <p
-            style="
-              color: var(--neutral-dark);
-              font-size: 0.95rem;
-              line-height: 1.6;
-            "
-          >
+          <p class="access-denied-copy">
             {{ $t("econsent.authoring.accessDeniedMsg") }}
           </p>
         </div>
@@ -224,7 +211,8 @@
           "
           @click="openEditor(null)"
         >
-          <span>➕</span> {{ $t("econsent.authoring.createNew") }}
+          <span><ClinicalIcon name="plus" :size="16" /></span>
+          {{ $t("econsent.authoring.createNew") }}
         </button>
       </div>
 
@@ -261,7 +249,7 @@
           role="status"
           aria-live="polite"
         >
-          ⚠️ {{ validationError }}
+          {{ validationError }}
         </div>
 
         <div
@@ -512,7 +500,7 @@
               style="margin-top: 12px; padding: 6px 12px; font-size: 0.8rem"
               @click="addClauseRow"
             >
-              ➕ {{ $t("econsent.authoring.addClause") }}
+              {{ $t("econsent.authoring.addClause") }}
             </button>
           </fieldset>
 
@@ -623,7 +611,7 @@
                 style="padding: 6px 12px; font-size: 0.8rem"
                 @click="addWorkflowStep('comprehension_check')"
               >
-                ➕ {{ $t("econsent.authoring.addComprehensionStep") }}
+                {{ $t("econsent.authoring.addComprehensionStep") }}
               </button>
               <button
                 type="button"
@@ -631,7 +619,7 @@
                 style="padding: 6px 12px; font-size: 0.8rem"
                 @click="addWorkflowStep('signature_placeholder')"
               >
-                ➕ {{ $t("econsent.authoring.addSignatureStep") }}
+                {{ $t("econsent.authoring.addSignatureStep") }}
               </button>
             </div>
           </fieldset>
@@ -777,7 +765,7 @@
 <script setup>
 import ReconsentChannelPicker from "../components/econsent/ReconsentChannelPicker.vue";
 import { ref, computed, onMounted, reactive } from "vue";
-import { ClinicalIconButton } from "ui";
+import { ClinicalIconButton, ClinicalIcon } from "ui";
 import { useAuthStore } from "../stores/auth";
 import { useClinicalStore } from "../stores/clinical";
 import { econsentService } from "../api/econsent";
@@ -1061,6 +1049,35 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.access-denied-banner {
+  border-left: 4px solid var(--error);
+  background-color: var(--error-bg);
+  padding: 24px;
+}
+
+.access-denied-row {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.access-denied-icon {
+  color: var(--error);
+  margin-top: 2px;
+}
+
+.access-denied-heading {
+  color: var(--error);
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.access-denied-copy {
+  color: var(--neutral-dark);
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
 .template-card:hover {
   border-color: var(--accent) !important;
   box-shadow: var(--shadow-md);

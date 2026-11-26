@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Apps.Knowledge.Application;
 using Cadence.Apps.Knowledge.Domain;
 using Cadence.Apps.Knowledge.Endpoints;
 using Cadence.Apps.Knowledge.Infrastructure.Persistence;
@@ -50,7 +51,7 @@ public class TrainingEndpointsTests
     {
         using var db = CreateDbContext(nameof(ListCurricula_WithNoCurricula_ReturnsAnEmptyListAndWritesNothing));
 
-        var result = await Invoke("ListCurriculaAsync", null, null, db, Caller(), Ct);
+        var result = await Invoke("ListCurriculaAsync", null, null, CreateCurriculumService(db), Caller(), Ct);
 
         result.Should().BeOfType<Ok<List<TrainingCurriculumDto>>>().Which.Value.Should().BeEmpty();
         (await db.TrainingCurricula.CountAsync(Ct)).Should().Be(0);
@@ -61,7 +62,7 @@ public class TrainingEndpointsTests
     {
         using var db = CreateDbContext(nameof(GetCurriculum_ThatDoesNotExist_Returns404));
 
-        var result = await Invoke("GetCurriculumAsync", CurriculumId, db, Caller(), Ct);
+        var result = await Invoke("GetCurriculumAsync", CurriculumId, CreateCurriculumService(db), Caller(), Ct);
 
         result.Should().BeOfType<ProblemHttpResult>().Which.StatusCode.Should().Be(StatusCodes.Status404NotFound);
     }
@@ -72,7 +73,7 @@ public class TrainingEndpointsTests
         using var db = CreateDbContext(nameof(GetCurriculum_InAnotherStudy_Returns404));
         await SeedCurriculumAsync(db);
 
-        var result = await Invoke("GetCurriculumAsync", CurriculumId, db, Caller("ONCO-2027"), Ct);
+        var result = await Invoke("GetCurriculumAsync", CurriculumId, CreateCurriculumService(db), Caller("ONCO-2027"), Ct);
 
         result.Should().BeOfType<ProblemHttpResult>().Which.StatusCode.Should().Be(StatusCodes.Status404NotFound);
     }
@@ -82,7 +83,7 @@ public class TrainingEndpointsTests
     {
         using var db = CreateDbContext(nameof(GetAssignmentDetail_ThatDoesNotExist_Returns404));
 
-        var result = await Invoke("GetAssignmentDetailAsync", "asn-missing", db, Caller(), Ct);
+        var result = await Invoke("GetAssignmentDetailAsync", "asn-missing", CreateCurriculumService(db), Caller(), Ct);
 
         result.Should().BeOfType<ProblemHttpResult>().Which.StatusCode.Should().Be(StatusCodes.Status404NotFound);
     }
@@ -254,7 +255,10 @@ public class TrainingEndpointsTests
     }
 
     private Task<IResult> BatchAssign(KnowledgeDbContext db, BatchAssignCurriculumRequest request, HttpContext caller) =>
-        Invoke("BatchAssignCurriculumAsync", request, db, caller, _clock, Ct);
+        Invoke("BatchAssignCurriculumAsync", request, CreateCurriculumService(db), caller, Ct);
+
+    private ITrainingCurriculumService CreateCurriculumService(KnowledgeDbContext db) =>
+        new TrainingCurriculumService(db, new KnowledgeUnitOfWork(db), _clock);
 
     private static BatchAssignCurriculumRequest Request(
         List<string>? sites = null, List<string>? roles = null, List<string>? people = null) =>

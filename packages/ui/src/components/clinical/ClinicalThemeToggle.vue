@@ -24,6 +24,7 @@
         :size="iconSize"
         :stroke-width="1.75"
         aria-hidden="true"
+        focusable="false"
         class="clinical-theme-toggle-icon"
       />
       <span class="clinical-theme-toggle-label">{{ option.label }}</span>
@@ -46,6 +47,7 @@
       :size="iconSize"
       :stroke-width="1.75"
       aria-hidden="true"
+      focusable="false"
       class="clinical-theme-toggle-icon"
     />
     <template v-if="showLabel">

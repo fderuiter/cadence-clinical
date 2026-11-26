@@ -66,10 +66,7 @@ async function dispatchWithDynamicBase(
   return fetchWithSingleFlightRetry(input, init);
 }
 
-async function normalizeFetchResponse(
-  promise: Promise<Response>
-): Promise<Response> {
-  const response = await promise;
+function ensureResponseText(response: Response): Response {
   if (
     response &&
     typeof response.text !== "function" &&
@@ -80,8 +77,8 @@ async function normalizeFetchResponse(
       response,
       {
         text: async () => {
-          const payload = await response.json();
-          return payload === undefined ? "" : JSON.stringify(payload);
+          const body = await response.json();
+          return body === undefined ? "" : JSON.stringify(body);
         },
       }
     );
@@ -101,11 +98,11 @@ export function createOpenApiClient<T extends {} = Record<string, unknown>>(
       const initialClientBase = baseUrl ?? getBaseUrl();
       inner = createClient<T>({
         baseUrl: initialClientBase,
-        fetch: (input: RequestInfo | URL, init?: RequestInit) =>
-          normalizeFetchResponse(
-            hasExplicitBaseUrl
+        fetch: async (input: RequestInfo | URL, init?: RequestInit) =>
+          ensureResponseText(
+            await (hasExplicitBaseUrl
               ? fetchWithSingleFlightRetry(input, init)
-              : dispatchWithDynamicBase(initialClientBase, input, init)
+              : dispatchWithDynamicBase(initialClientBase, input, init))
           ),
       });
       inner.use(getAuthMiddleware());

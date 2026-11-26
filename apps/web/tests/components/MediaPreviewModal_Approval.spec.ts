@@ -19,7 +19,7 @@ describe("MediaPreviewModal.vue - Document Approval & Signatures", () => {
     vi.clearAllMocks();
   });
 
-  it("displays '✅ Approved' badge and signer metadata when fileRecord.approval_status is APPROVED", () => {
+  it("displays 'Approved' badge and signer metadata when fileRecord.approval_status is APPROVED", () => {
     /**
      * @req: PRD-DOC-003
      */

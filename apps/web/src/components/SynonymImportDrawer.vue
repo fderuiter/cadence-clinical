@@ -12,7 +12,13 @@
     <template #header>
       <div class="drawer-header">
         <div class="header-title-wrap">
-          <FolderDown :size="18" class="header-icon" aria-hidden="true" />
+          <FolderDown
+            :size="20"
+            class="header-icon"
+            aria-hidden="true"
+            :stroke-width="1.75"
+            focusable="false"
+          />
           <h2 id="synonym-drawer-title" class="drawer-title">
             Bulk Synonym Dictionary Import
           </h2>
@@ -24,7 +30,12 @@
           :disabled="codingStore.synonymImportLoading"
           @click="close"
         >
-          <X :size="18" aria-hidden="true" />
+          <X
+            :size="20"
+            aria-hidden="true"
+            :stroke-width="1.75"
+            focusable="false"
+          />
         </button>
       </div>
     </template>
@@ -49,7 +60,12 @@
           :class="{ active: activeTab === 'import' }"
           @click="activeTab = 'import'"
         >
-          <FolderInput :size="15" aria-hidden="true" />
+          <FolderInput
+            :size="16"
+            aria-hidden="true"
+            :stroke-width="1.75"
+            focusable="false"
+          />
           <span>Import New Rules</span>
         </button>
         <button
@@ -60,7 +76,12 @@
           :class="{ active: activeTab === 'history' }"
           @click="switchToHistoryTab"
         >
-          <History :size="15" aria-hidden="true" />
+          <History
+            :size="16"
+            aria-hidden="true"
+            :stroke-width="1.75"
+            focusable="false"
+          />
           <span>Audit History</span>
         </button>
         <button
@@ -71,7 +92,12 @@
           :class="{ active: activeTab === 'rules' }"
           @click="switchToRulesTab"
         >
-          <Zap :size="15" aria-hidden="true" />
+          <Zap
+            :size="16"
+            aria-hidden="true"
+            :stroke-width="1.75"
+            focusable="false"
+          />
           <span>Active Rules ({{ codingStore.synonymRules.length }})</span>
         </button>
       </div>
@@ -79,7 +105,12 @@
       <!-- Access Restricted Banner -->
       <div v-if="!isAuthorized" class="access-restricted-banner">
         <div class="banner-heading">
-          <AlertTriangle :size="16" aria-hidden="true" />
+          <AlertTriangle
+            :size="16"
+            aria-hidden="true"
+            :stroke-width="1.75"
+            focusable="false"
+          />
           <span>Access Restricted</span>
         </div>
         <p class="banner-body">
@@ -153,7 +184,12 @@
           >
             <template #prompt>
               <div v-if="!selectedFile" class="dropzone-prompt">
-                <UploadCloud :size="20" aria-hidden="true" />
+                <UploadCloud
+                  :size="20"
+                  aria-hidden="true"
+                  :stroke-width="1.75"
+                  focusable="false"
+                />
                 <span>
                   Drag and drop a <strong>.csv</strong> or
                   <strong>.xlsx</strong> synonym dictionary file here
@@ -169,7 +205,12 @@
             </template>
             <template #selected>
               <div v-if="selectedFile" class="selected-file-summary">
-                <FileSpreadsheet :size="18" aria-hidden="true" />
+                <FileSpreadsheet
+                  :size="20"
+                  aria-hidden="true"
+                  :stroke-width="1.75"
+                  focusable="false"
+                />
                 <div>
                   <div class="selected-file-name">
                     {{ selectedFile.name }}
@@ -193,7 +234,12 @@
               "
               @click="runPreflightValidation"
             >
-              <Search :size="15" aria-hidden="true" />
+              <Search
+                :size="16"
+                aria-hidden="true"
+                :stroke-width="1.75"
+                focusable="false"
+              />
               <span>{{
                 codingStore.synonymImportLoading
                   ? "Validating File..."
@@ -206,7 +252,12 @@
         <!-- Error Alert -->
         <div v-if="codingStore.synonymImportError" class="import-error-alert">
           <div class="banner-heading">
-            <OctagonAlert :size="16" aria-hidden="true" />
+            <OctagonAlert
+              :size="16"
+              aria-hidden="true"
+              :stroke-width="1.75"
+              focusable="false"
+            />
             <span>Import Error</span>
           </div>
           <p class="banner-body">
@@ -226,10 +277,18 @@
             >
               <CheckCircle2
                 v-if="report.canImport"
-                :size="14"
+                :size="16"
                 aria-hidden="true"
+                :stroke-width="1.75"
+                focusable="false"
               />
-              <XCircle v-else :size="14" aria-hidden="true" />
+              <XCircle
+                v-else
+                :size="16"
+                aria-hidden="true"
+                :stroke-width="1.75"
+                focusable="false"
+              />
               <span>{{
                 report.canImport ? "Pre-flight Passed" : "Validation Failed"
               }}</span>
@@ -334,7 +393,12 @@
                 "
                 @click="executeImport"
               >
-                <CheckCircle2 :size="15" aria-hidden="true" />
+                <CheckCircle2
+                  :size="16"
+                  aria-hidden="true"
+                  :stroke-width="1.75"
+                  focusable="false"
+                />
                 <span>{{
                   codingStore.synonymImportLoading
                     ? "Ingesting Synonym Rules..."
@@ -359,7 +423,12 @@
               )
             "
           >
-            <RefreshCw :size="14" aria-hidden="true" />
+            <RefreshCw
+              :size="16"
+              aria-hidden="true"
+              :stroke-width="1.75"
+              focusable="false"
+            />
             <span>Refresh</span>
           </button>
         </div>
@@ -437,7 +506,12 @@
             class="refresh-btn"
             @click="codingStore.fetchActiveSynonymRules(studyId)"
           >
-            <RefreshCw :size="14" aria-hidden="true" />
+            <RefreshCw
+              :size="16"
+              aria-hidden="true"
+              :stroke-width="1.75"
+              focusable="false"
+            />
             <span>Refresh Rules</span>
           </button>
         </div>

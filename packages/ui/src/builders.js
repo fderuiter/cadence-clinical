@@ -1,3 +1,5 @@
+import { renderClinicalIconSvg } from "./icons/renderClinicalIconSvg.js";
+
 /**
  * Generates vanilla HTML string for a single condition row in the rule builder.
  * Includes selectors for form, field, operator, right-hand operand type/value/field reference.
@@ -253,7 +255,7 @@ export function createRuleEditorHTML(forms = [], fields = [], options = {}) {
         </div>
 
         <div style="margin-top: 12px;">
-          <button type="button" class="btn btn-secondary add-condition-btn" data-action="add-condition" style="padding: 6px 12px; font-size: 0.8rem; cursor: pointer;">➕ Add Condition Row</button>
+          <button type="button" class="btn btn-secondary add-condition-btn" data-action="add-condition" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; font-size: 0.8rem; cursor: pointer;">${renderClinicalIconSvg("plus", { size: 16 })} Add Condition Row</button>
         </div>
       </fieldset>
     </div>

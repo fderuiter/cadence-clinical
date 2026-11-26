@@ -63,7 +63,7 @@
         :title="$t('econsent.editor.insertTable')"
         @click="insertTable"
       >
-        📊 {{ $t("econsent.editor.table") }}
+        {{ $t("econsent.editor.table") }}
       </button>
       <button
         type="button"
@@ -71,7 +71,7 @@
         :title="$t('econsent.editor.insertImage')"
         @click="insertImage"
       >
-        🖼️ {{ $t("econsent.editor.image") }}
+        {{ $t("econsent.editor.image") }}
       </button>
       <button
         type="button"
@@ -79,7 +79,7 @@
         :title="$t('econsent.editor.annotateGlossary')"
         @click="promptGlossary"
       >
-        🏷️ {{ $t("econsent.editor.glossaryTerm") }}
+        {{ $t("econsent.editor.glossaryTerm") }}
       </button>
       <button
         type="button"
@@ -87,7 +87,7 @@
         :title="$t('econsent.editor.readabilityHarmonizerTitle')"
         @click="showReadabilityDrawer = true"
       >
-        📖 {{ $t("econsent.editor.readabilityHarmonizer") }}
+        {{ $t("econsent.editor.readabilityHarmonizer") }}
       </button>
     </div>
 

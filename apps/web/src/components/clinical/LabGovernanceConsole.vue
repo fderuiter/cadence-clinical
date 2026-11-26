@@ -42,13 +42,18 @@
 
       <div class="header-actions">
         <button class="btn btn-outline" @click="openBulkImportModal">
-          <span class="icon">📊</span> Bulk Import Reference Ranges (CSV/XLSX)
+          <span class="icon"
+            ><ClinicalIcon name="trending-up" :size="16"
+          /></span>
+          Bulk Import Reference Ranges (CSV/XLSX)
         </button>
         <button class="btn btn-secondary" @click="openIngestModal">
-          <span class="icon">📥</span> Ingest Lab Feed (HL7 / CDISC / CSV)
+          <span class="icon"><ClinicalIcon name="download" :size="16" /></span>
+          Ingest Lab Feed (HL7 / CDISC / CSV)
         </button>
         <button class="btn btn-primary" @click="openCreateRangeModal">
-          <span class="icon">➕</span> New Reference Range
+          <span class="icon"><ClinicalIcon name="plus" :size="16" /></span> New
+          Reference Range
         </button>
       </div>
     </header>
@@ -61,7 +66,7 @@
         :class="['tab-button', { active: activeTab === 'ranges' }]"
         @click="activeTab = 'ranges'"
       >
-        🧬 Normal Reference Ranges ({{ ranges.length }})
+        Normal Reference Ranges ({{ ranges.length }})
       </button>
       <button
         role="tab"
@@ -69,7 +74,7 @@
         :class="['tab-button', { active: activeTab === 'toxicity_queue' }]"
         @click="activeTab = 'toxicity_queue'"
       >
-        🚨 Investigator AE Review Queue ({{ stagedReviews.length }})
+        Investigator AE Review Queue ({{ stagedReviews.length }})
       </button>
       <button
         role="tab"
@@ -77,7 +82,7 @@
         :class="['tab-button', { active: activeTab === 'certifications' }]"
         @click="activeTab = 'certifications'"
       >
-        🏥 Local Lab Certifications (CLIA/CAP)
+        Local Lab Certifications (CLIA/CAP)
       </button>
       <button
         role="tab"
@@ -85,7 +90,7 @@
         :class="['tab-button', { active: activeTab === 'loinc_converter' }]"
         @click="activeTab = 'loinc_converter'"
       >
-        📐 LOINC & Unit Conversion Engine
+        LOINC & Unit Conversion Engine
       </button>
       <button
         role="tab"
@@ -93,7 +98,7 @@
         :class="['tab-button', { active: activeTab === 'batches' }]"
         @click="activeTab = 'batches'"
       >
-        📊 Feed Ingestion Monitor
+        Feed Ingestion Monitor
       </button>
       <button
         role="tab"
@@ -101,7 +106,7 @@
         :class="['tab-button', { active: activeTab === 'trends' }]"
         @click="activeTab = 'trends'"
       >
-        📈 Longitudinal Trends & Delta Checks
+        Longitudinal Trends & Delta Checks
       </button>
     </nav>
 
@@ -149,7 +154,10 @@
             </select>
           </div>
           <button class="btn btn-primary" @click="openBulkImportModal">
-            <span class="icon">📥</span> Bulk Import Lab Ranges
+            <span class="icon"
+              ><ClinicalIcon name="download" :size="16"
+            /></span>
+            Bulk Import Lab Ranges
           </button>
         </div>
 
@@ -250,7 +258,9 @@
       >
         <div class="pane-toolbar alert-toolbar">
           <div class="alert-info-box">
-            <span class="icon-warning">⚠️</span>
+            <span class="icon-warning"
+              ><ClinicalIcon name="alert-triangle" :size="16"
+            /></span>
             <div>
               <strong>Investigator Safety Trigger Workflow:</strong>
               <p>
@@ -331,12 +341,14 @@
                     <span
                       v-if="review.is_hys_law_warning"
                       class="safety-tag hys-law"
-                      >🚨 Hy's Law DILI</span
+                    >
+                      Hy's Law DILI</span
                     >
                     <span
                       v-if="review.is_delta_check_alert"
                       class="safety-tag delta"
-                      >⚡ Delta Alert ({{ review.delta_percentage }}%)</span
+                    >
+                      Delta Alert ({{ review.delta_percentage }}%)</span
                     >
                     <span
                       v-if="
@@ -404,7 +416,8 @@
             </p>
           </div>
           <button class="btn btn-primary" @click="openCreateCertModal">
-            <span class="icon">➕</span> Register Local Lab Certification
+            <span class="icon"><ClinicalIcon name="plus" :size="16" /></span>
+            Register Local Lab Certification
           </button>
         </div>
 
@@ -452,10 +465,10 @@
                     v-if="isCertExpired(cert.expiration_date)"
                     class="safeguard-badge active"
                   >
-                    ⚠️ Uncalibrated Range Safeguard Active
+                    Uncalibrated Range Safeguard Active
                   </span>
                   <span v-else class="safeguard-badge normal">
-                    ✅ Calibrated & Verified
+                    Calibrated & Verified
                   </span>
                 </td>
                 <td>
@@ -487,7 +500,7 @@
         <div class="converter-grid">
           <!-- Live Interactive Unit Converter -->
           <div class="converter-card">
-            <h4>🔄 Real-Time LOINC Mathematical Unit Converter</h4>
+            <h4>Real-Time LOINC Mathematical Unit Converter</h4>
             <div class="form-group">
               <label for="conv-test">Analyte / Test Code:</label>
               <select
@@ -588,7 +601,7 @@
 
           <!-- Real-Time CTCAE / DAIDS Toxicity Evaluation Simulator -->
           <div class="converter-card">
-            <h4>🧪 Toxicity Evaluation & Hy's Law Simulator</h4>
+            <h4>Toxicity Evaluation & Hy's Law Simulator</h4>
             <div class="form-group">
               <label for="sim-scale">Grading System Standard:</label>
               <select
@@ -786,7 +799,8 @@
             </p>
           </div>
           <button class="btn btn-secondary" @click="fetchBatchStatuses">
-            <span class="icon">🔄</span> Refresh Feeds
+            <span class="icon"><ClinicalIcon name="refresh" :size="16" /></span>
+            Refresh Feeds
           </button>
         </div>
 
@@ -946,8 +960,11 @@
               {{ trendSummary.maxDeltaPct > 0 ? "+" : ""
               }}{{ trendSummary.maxDeltaPct }}%
             </span>
-            <span v-if="trendSummary.maxDeltaPct >= 50" class="safety-tag delta"
-              >⚡ Acute Shift Alert</span
+            <span
+              v-if="trendSummary.maxDeltaPct >= 50"
+              class="safety-tag delta"
+            >
+              Acute Shift Alert</span
             >
             <span v-else class="kpi-sub">Within Normal Variance</span>
           </div>
@@ -1638,7 +1655,7 @@
 
 <script setup>
 import { computed, onMounted, ref } from "vue";
-import { ClinicalIconButton, useFocusTrap } from "ui";
+import { ClinicalIconButton, useFocusTrap, ClinicalIcon } from "ui";
 import { useConfirmDialog } from "../../composables/useConfirmDialog.js";
 import { useErrorPresenter } from "../../composables/useErrorPresenter";
 import { useToastStore } from "../../stores/toasts.js";

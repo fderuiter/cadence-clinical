@@ -20,7 +20,12 @@
           class="entity-peek-host__btn"
           @click="stepBack"
         >
-          <ArrowLeft :size="16" :stroke-width="1.75" aria-hidden="true" />
+          <ArrowLeft
+            :size="16"
+            :stroke-width="1.75"
+            aria-hidden="true"
+            focusable="false"
+          />
           <span>Previous ({{ state.history.length }})</span>
         </button>
         <button
@@ -29,7 +34,12 @@
           :aria-pressed="state.docked"
           @click="toggleDocked"
         >
-          <PanelRight :size="16" :stroke-width="1.75" aria-hidden="true" />
+          <PanelRight
+            :size="16"
+            :stroke-width="1.75"
+            aria-hidden="true"
+            focusable="false"
+          />
           <span>{{ state.docked ? "Undock panel" : "Dock on desktop" }}</span>
         </button>
       </div>
@@ -50,7 +60,12 @@
         class="entity-peek-host__btn"
         @click="openFullView"
       >
-        <ExternalLink :size="16" :stroke-width="1.75" aria-hidden="true" />
+        <ExternalLink
+          :size="16"
+          :stroke-width="1.75"
+          aria-hidden="true"
+          focusable="false"
+        />
         <span>Open full view</span>
       </button>
     </div>

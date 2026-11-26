@@ -12,7 +12,13 @@
     <template #header>
       <div class="drawer-header">
         <div class="header-title-group">
-          <Archive :size="18" class="header-icon" aria-hidden="true" />
+          <Archive
+            :size="20"
+            class="header-icon"
+            aria-hidden="true"
+            :stroke-width="1.75"
+            focusable="false"
+          />
           <h3 class="drawer-title">eTMF Study Binder Export</h3>
         </div>
         <button
@@ -21,7 +27,12 @@
           aria-label="Close export drawer"
           @click="handleClose"
         >
-          <X :size="18" aria-hidden="true" />
+          <X
+            :size="20"
+            aria-hidden="true"
+            :stroke-width="1.75"
+            focusable="false"
+          />
         </button>
       </div>
     </template>
@@ -37,7 +48,13 @@
         class="error-box"
         role="alert"
       >
-        <AlertCircle :size="15" class="inline-icon" aria-hidden="true" />
+        <AlertCircle
+          :size="16"
+          class="inline-icon"
+          aria-hidden="true"
+          :stroke-width="1.75"
+          focusable="false"
+        />
         <span>{{ downloadError }}</span>
       </div>
       <p
@@ -105,7 +122,13 @@
         <!-- Download Action Area -->
         <div v-if="activeJob.status === 'COMPLETED'" class="completion-box">
           <div class="completion-message">
-            <CheckCircle2 :size="15" class="inline-icon" aria-hidden="true" />
+            <CheckCircle2
+              :size="16"
+              class="inline-icon"
+              aria-hidden="true"
+              :stroke-width="1.75"
+              focusable="false"
+            />
             <span>
               Study binder archive is ready for download with complete document
               index and verification inventory.
@@ -123,12 +146,23 @@
               Downloading Export Package...
             </span>
             <template v-else>
-              <Download :size="15" aria-hidden="true" />
+              <Download
+                :size="16"
+                aria-hidden="true"
+                :stroke-width="1.75"
+                focusable="false"
+              />
               <span>Download Export Package (.zip)</span>
             </template>
           </button>
           <p v-if="activeJob.expires_at" class="expiration-notice">
-            <Clock :size="13" class="inline-icon" aria-hidden="true" />
+            <Clock
+              :size="16"
+              class="inline-icon"
+              aria-hidden="true"
+              :stroke-width="1.75"
+              focusable="false"
+            />
             <span>
               Temporary download link expires at
               {{ formatDate(activeJob.expires_at) }} (24h validity).
@@ -138,7 +172,13 @@
 
         <!-- Failure Alert -->
         <div v-else-if="activeJob.status === 'FAILED'" class="error-box">
-          <AlertCircle :size="15" class="inline-icon" aria-hidden="true" />
+          <AlertCircle
+            :size="16"
+            class="inline-icon"
+            aria-hidden="true"
+            :stroke-width="1.75"
+            focusable="false"
+          />
           <span>
             Background export job failed. Please verify document storage
             connectivity or retry export.
@@ -196,7 +236,12 @@
                 :title="!canExport ? ETMF_EXPORT_ROLE_REASON : undefined"
                 @click="handleDownload(job)"
               >
-                <Download :size="13" aria-hidden="true" />
+                <Download
+                  :size="16"
+                  aria-hidden="true"
+                  :stroke-width="1.75"
+                  focusable="false"
+                />
                 <span>{{
                   downloadingJobId === job.job_id
                     ? "Downloading..."

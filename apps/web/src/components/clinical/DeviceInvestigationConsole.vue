@@ -46,7 +46,7 @@
             />
           </div>
           <button class="btn btn-secondary btn-sm" @click="refreshData">
-            🔄 Refresh Hub
+            Refresh Hub
           </button>
         </div>
       </div>
@@ -109,7 +109,7 @@
         :class="['tab-button', { active: activeTab === 'inventory' }]"
         @click="activeTab = 'inventory'"
       >
-        📦 UDI Inventory &amp; RTSM ({{ devices.length }})
+        UDI Inventory &amp; RTSM ({{ devices.length }})
       </button>
       <button
         role="tab"
@@ -117,7 +117,7 @@
         :class="['tab-button', { active: activeTab === 'deficiencies' }]"
         @click="activeTab = 'deficiencies'"
       >
-        ⚠️ Deficiency &amp; Malfunction eCRF ({{ deficiencies.length }})
+        Deficiency &amp; Malfunction eCRF ({{ deficiencies.length }})
       </button>
       <button
         role="tab"
@@ -125,7 +125,7 @@
         :class="['tab-button', { active: activeTab === 'quarantine_safety' }]"
         @click="activeTab = 'quarantine_safety'"
       >
-        🚨 Automated Quarantine &amp; Safety Cases ({{ safetyCases.length }})
+        Automated Quarantine &amp; Safety Cases ({{ safetyCases.length }})
       </button>
       <button
         role="tab"
@@ -133,7 +133,7 @@
         :class="['tab-button', { active: activeTab === 'regulatory_exports' }]"
         @click="activeTab = 'regulatory_exports'"
       >
-        📋 Regulatory Incident &amp; SDTM Exports (DD / DO / MIR)
+        Regulatory Incident &amp; SDTM Exports (DD / DO / MIR)
       </button>
     </nav>
 
@@ -148,9 +148,7 @@
         <!-- Barcode Scanner & Intake Section -->
         <div class="pane-card scanner-panel">
           <div class="panel-header">
-            <h3 class="panel-title">
-              📷 UDI Barcode Scanner &amp; Intake Engine
-            </h3>
+            <h3 class="panel-title">UDI Barcode Scanner &amp; Intake Engine</h3>
             <span class="badge badge-outline"
               >GS1-128 / GS1-DataMatrix / HIBCC</span
             >
@@ -170,7 +168,7 @@
                   @input="handleBarcodeParse"
                 />
                 <button class="btn btn-secondary" @click="handleBarcodeParse">
-                  🔍 Parse UDI
+                  Parse UDI
                 </button>
               </div>
               <div class="sample-barcodes-row">
@@ -261,7 +259,7 @@
                   :disabled="!parsedUdi.udi_di"
                   @click="registerParsedItem"
                 >
-                  📥 Ingest into RTSM Inventory
+                  Ingest into RTSM Inventory
                 </button>
               </div>
             </div>
@@ -323,7 +321,7 @@
               </div>
             </div>
             <button class="btn btn-secondary btn-sm" @click="openRegisterModal">
-              ➕ Manual Intake
+              Manual Intake
             </button>
           </div>
 
@@ -387,10 +385,10 @@
                       "
                       class="lock-indicator text-danger"
                     >
-                      🔒 BLOCKED
+                      BLOCKED
                     </span>
                     <span v-else class="lock-indicator text-success">
-                      🔓 UNLOCKED
+                      UNLOCKED
                     </span>
                   </td>
                   <td>
@@ -694,7 +692,7 @@
                 class="btn btn-danger"
                 :disabled="isSubmitting"
               >
-                🚨 Submit Deficiency Report &amp; Execute Quarantine
+                Submit Deficiency Report &amp; Execute Quarantine
               </button>
             </div>
           </form>
@@ -752,8 +750,8 @@
                     <span v-else class="text-muted">None</span>
                   </td>
                   <td>
-                    <span class="status-pill danger"
-                      >🔒 {{ defic.quarantine_scope }}</span
+                    <span class="status-pill danger">
+                      {{ defic.quarantine_scope }}</span
                     >
                   </td>
                   <td>{{ formatDate(defic.incident_date) }}</td>
@@ -780,7 +778,7 @@
           <div class="panel-header">
             <div>
               <h3 class="panel-title">
-                🔒 Active RTSM Inventory Quarantine Records
+                Active RTSM Inventory Quarantine Records
               </h3>
               <p class="panel-subtitle">
                 Immediate dispensation lockouts preventing subject allocation of
@@ -870,7 +868,7 @@
           <div class="panel-header">
             <div>
               <h3 class="panel-title">
-                🛡️ Adverse Device Effect (ADE / SADE / USADE) Safety Inquiries
+                Adverse Device Effect (ADE / SADE / USADE) Safety Inquiries
               </h3>
               <p class="panel-subtitle">
                 ISO 14155 &amp; EU MDR vigilance countdown tracking with Safety
@@ -906,7 +904,9 @@
                   class="countdown-badge tabular-nums"
                   :class="{ overdue: sc.is_overdue }"
                 >
-                  <span class="clock-icon">⏱️</span>
+                  <span class="clock-icon"
+                    ><ClinicalIcon name="clock" :size="16"
+                  /></span>
                   <span class="tabular-nums"
                     >{{ sc.days_remaining }} days remaining</span
                   >
@@ -955,14 +955,14 @@
                   class="btn btn-sm btn-secondary"
                   @click="generateMirReport(sc)"
                 >
-                  📄 View MIR Form
+                  View MIR Form
                 </button>
                 <button
                   v-if="sc.status !== 'RESOLVED'"
                   class="btn btn-sm btn-primary"
                   @click="openAdjudicateModal(sc)"
                 >
-                  ✍️ Adjudicate &amp; Sign
+                  Adjudicate &amp; Sign
                 </button>
               </div>
             </div>
@@ -999,7 +999,7 @@
               :disabled="isSubmitting"
               @click="compileFullExportPackage"
             >
-              📦 Compile Full Regulatory Package
+              Compile Full Regulatory Package
             </button>
           </div>
 
@@ -1037,10 +1037,10 @@
           <div class="pane-card mt-4 mir-viewer-card">
             <div class="panel-header">
               <h4 class="panel-title">
-                🇪🇺 EU MDR 2017/745 Manufacturer Incident Report (MIR v7.2 XML)
+                EU EU MDR 2017/745 Manufacturer Incident Report (MIR v7.2 XML)
               </h4>
               <button class="btn btn-sm btn-secondary" @click="copyMirXml">
-                📋 Copy XML
+                Copy XML
               </button>
             </div>
             <div class="xml-preview code-font">
@@ -1092,7 +1092,7 @@
         </div>
 
         <div v-if="dispenseError" class="alert-danger-box">
-          ⚠️ {{ dispenseError }}
+          {{ dispenseError }}
         </div>
 
         <div class="modal-actions">
@@ -1119,7 +1119,7 @@
       aria-modal="true"
     >
       <div class="modal-card">
-        <h3 class="modal-title text-danger">⚠️ Initiate Device Quarantine</h3>
+        <h3 class="modal-title text-danger">Initiate Device Quarantine</h3>
         <p class="modal-subtitle">
           Target: <strong>{{ activeModalDevice?.brand_name }}</strong> (Lot:
           {{ activeModalDevice?.lot_number }})
@@ -1183,7 +1183,7 @@
       aria-modal="true"
     >
       <div class="modal-card">
-        <h3 class="modal-title">🔓 Release Device Quarantine</h3>
+        <h3 class="modal-title">Release Device Quarantine</h3>
         <p class="modal-subtitle">
           Quarantine ID: {{ activeModalQuarantine?.id }}
         </p>
@@ -1244,7 +1244,7 @@
       aria-modal="true"
     >
       <div class="modal-card">
-        <h3 class="modal-title">✍️ Safety Physician Formal Adjudication</h3>
+        <h3 class="modal-title">Safety Physician Formal Adjudication</h3>
         <p class="modal-subtitle">
           Case: {{ activeModalCase?.case_number }} | Device:
           {{ activeModalCase?.device_name }}
@@ -1347,7 +1347,7 @@
 
 <script setup>
 import { computed, onMounted, ref } from "vue";
-import { useFocusTrap } from "ui";
+import { useFocusTrap, ClinicalIcon } from "ui";
 import { demoRandomInt } from "../../utils/demoMode.js";
 
 // State
