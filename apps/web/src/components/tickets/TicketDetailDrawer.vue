@@ -28,7 +28,12 @@
           aria-label="Close"
           @click="close"
         >
-          <X :size="18" aria-hidden="true" />
+          <X
+            :size="20"
+            aria-hidden="true"
+            :stroke-width="1.75"
+            focusable="false"
+          />
         </button>
       </div>
     </template>
@@ -54,7 +59,12 @@
           {{ formatStatus(ticket.status) }}
         </span>
         <span v-if="ticket.signature_token" class="badge badge-signed">
-          <FileSignature :size="12" aria-hidden="true" />
+          <FileSignature
+            :size="16"
+            aria-hidden="true"
+            :stroke-width="1.75"
+            focusable="false"
+          />
           <span>Part 11 Signed</span>
         </span>
       </div>
@@ -85,7 +95,12 @@
       <!-- Action Bar -->
       <div class="drawer-actions">
         <div v-if="isSigned" class="signed-lock-notice">
-          <Lock :size="14" aria-hidden="true" />
+          <Lock
+            :size="16"
+            aria-hidden="true"
+            :stroke-width="1.75"
+            focusable="false"
+          />
           <span
             >Locked under 21 CFR Part 11 — Ticket record and notes are
             immutable.</span
@@ -99,7 +114,12 @@
             :disabled="actionLoading"
             @click="transitionTicket('IN_PROGRESS')"
           >
-            <Play :size="14" aria-hidden="true" />
+            <Play
+              :size="16"
+              aria-hidden="true"
+              :stroke-width="1.75"
+              focusable="false"
+            />
             <span>Start Work</span>
           </button>
           <button
@@ -109,7 +129,12 @@
             :disabled="actionLoading"
             @click="transitionTicket('WAITING_ON_SITE')"
           >
-            <Pause :size="14" aria-hidden="true" />
+            <Pause
+              :size="16"
+              aria-hidden="true"
+              :stroke-width="1.75"
+              focusable="false"
+            />
             <span>Pause (Wait Site)</span>
           </button>
           <button
@@ -119,7 +144,12 @@
             :disabled="actionLoading"
             @click="transitionTicket('WAITING_ON_SPONSOR')"
           >
-            <Pause :size="14" aria-hidden="true" />
+            <Pause
+              :size="16"
+              aria-hidden="true"
+              :stroke-width="1.75"
+              focusable="false"
+            />
             <span>Pause (Wait Sponsor)</span>
           </button>
           <button
@@ -132,7 +162,12 @@
             :disabled="actionLoading"
             @click="transitionTicket('IN_PROGRESS')"
           >
-            <Play :size="14" aria-hidden="true" />
+            <Play
+              :size="16"
+              aria-hidden="true"
+              :stroke-width="1.75"
+              focusable="false"
+            />
             <span>Resume Work</span>
           </button>
           <button
@@ -147,7 +182,12 @@
             :disabled="actionLoading"
             @click="openResolveModal"
           >
-            <Check :size="14" aria-hidden="true" />
+            <Check
+              :size="16"
+              aria-hidden="true"
+              :stroke-width="1.75"
+              focusable="false"
+            />
             <span>Resolve Issue</span>
           </button>
           <button
@@ -157,7 +197,12 @@
             :disabled="actionLoading"
             @click="transitionTicket('CLOSED')"
           >
-            <Lock :size="14" aria-hidden="true" />
+            <Lock
+              :size="16"
+              aria-hidden="true"
+              :stroke-width="1.75"
+              focusable="false"
+            />
             <span>Final Close</span>
           </button>
           <ClinicalInput
@@ -177,7 +222,12 @@
           />
         </div>
         <div v-else class="signed-lock-notice">
-          <Eye :size="14" aria-hidden="true" />
+          <Eye
+            :size="16"
+            aria-hidden="true"
+            :stroke-width="1.75"
+            focusable="false"
+          />
           <span
             >Read-only view — Status transitions require operational staff
             access.</span
@@ -191,7 +241,12 @@
           class="btn btn-sm btn-sign"
           @click="isSignModalOpen = true"
         >
-          <FileSignature :size="14" aria-hidden="true" />
+          <FileSignature
+            :size="16"
+            aria-hidden="true"
+            :stroke-width="1.75"
+            focusable="false"
+          />
           <span>Part 11 eSign</span>
         </button>
       </div>
@@ -281,7 +336,12 @@
             "
             @click="submitResolution"
           >
-            <Check :size="14" aria-hidden="true" />
+            <Check
+              :size="16"
+              aria-hidden="true"
+              :stroke-width="1.75"
+              focusable="false"
+            />
             <span>Confirm Resolution</span>
           </button>
         </div>
@@ -354,7 +414,13 @@
         <div v-if="aiTriage" class="section-card ai-triage-card">
           <div class="ai-card-header">
             <div class="ai-card-title-group">
-              <Bot :size="17" class="ai-robot-icon" aria-hidden="true" />
+              <Bot
+                :size="16"
+                class="ai-robot-icon"
+                aria-hidden="true"
+                :stroke-width="1.75"
+                focusable="false"
+              />
               <h4 class="card-title ai-title">Grounded Protocol RAG Triage</h4>
             </div>
             <span
@@ -367,10 +433,18 @@
             >
               <Target
                 v-if="aiTriage.rag_status === 'DRAFT_AVAILABLE'"
-                :size="12"
+                :size="16"
                 aria-hidden="true"
+                :stroke-width="1.75"
+                focusable="false"
               />
-              <AlertTriangle v-else :size="12" aria-hidden="true" />
+              <AlertTriangle
+                v-else
+                :size="16"
+                aria-hidden="true"
+                :stroke-width="1.75"
+                focusable="false"
+              />
               <span>{{
                 aiTriage.rag_status === "DRAFT_AVAILABLE"
                   ? `${Math.round(aiTriage.faithfulness_score * 100)}% Faithfulness (Grounded)`
@@ -399,7 +473,12 @@
                 title="Open protocol document viewer at referenced page"
                 @click="openCitationViewer(cit)"
               >
-                <BookOpen :size="13" aria-hidden="true" />
+                <BookOpen
+                  :size="16"
+                  aria-hidden="true"
+                  :stroke-width="1.75"
+                  focusable="false"
+                />
                 <span>{{
                   cit.citation_marker ||
                   `Protocol ${cit.protocol_version} §${cit.section_number || "General"} p.${cit.page_number}`
@@ -412,7 +491,12 @@
                 class="btn btn-sm btn-secondary"
                 @click="applyAiDraftToComment"
               >
-                <MessageSquare :size="14" aria-hidden="true" />
+                <MessageSquare
+                  :size="16"
+                  aria-hidden="true"
+                  :stroke-width="1.75"
+                  focusable="false"
+                />
                 <span>Use Draft as Public Comment</span>
               </button>
             </div>
@@ -426,7 +510,12 @@
               }}
             </p>
             <div class="human-routed-badge">
-              <User :size="13" aria-hidden="true" />
+              <User
+                :size="16"
+                aria-hidden="true"
+                :stroke-width="1.75"
+                focusable="false"
+              />
               <span>Assigned Queue: <strong>Data Manager Review</strong></span>
             </div>
           </div>
@@ -493,7 +582,12 @@
             :class="{ active: commentFilter === 'PUBLIC' }"
             @click="commentFilter = 'PUBLIC'"
           >
-            <Globe :size="13" aria-hidden="true" />
+            <Globe
+              :size="16"
+              aria-hidden="true"
+              :stroke-width="1.75"
+              focusable="false"
+            />
             <span>Public (Site &amp; Sponsor)</span>
           </button>
           <button
@@ -503,7 +597,12 @@
             :class="{ active: commentFilter === 'INTERNAL_SPONSOR' }"
             @click="commentFilter = 'INTERNAL_SPONSOR'"
           >
-            <Lock :size="13" aria-hidden="true" />
+            <Lock
+              :size="16"
+              aria-hidden="true"
+              :stroke-width="1.75"
+              focusable="false"
+            />
             <span>Internal Sponsor Only</span>
           </button>
         </div>
@@ -531,10 +630,18 @@
               >
                 <Lock
                   v-if="c.visibility === 'INTERNAL_SPONSOR'"
-                  :size="11"
+                  :size="16"
                   aria-hidden="true"
+                  :stroke-width="1.75"
+                  focusable="false"
                 />
-                <Globe v-else :size="11" aria-hidden="true" />
+                <Globe
+                  v-else
+                  :size="16"
+                  aria-hidden="true"
+                  :stroke-width="1.75"
+                  focusable="false"
+                />
                 <span>{{
                   c.visibility === "INTERNAL_SPONSOR"
                     ? "Internal Note"
@@ -561,7 +668,12 @@
                 type="radio"
                 value="PUBLIC"
               />
-              <Globe :size="14" aria-hidden="true" />
+              <Globe
+                :size="16"
+                aria-hidden="true"
+                :stroke-width="1.75"
+                focusable="false"
+              />
               <span>Public (Site Visible)</span>
             </label>
             <label v-if="canViewInternalSponsorNotes" class="radio-label">
@@ -570,7 +682,12 @@
                 type="radio"
                 value="INTERNAL_SPONSOR"
               />
-              <Lock :size="14" aria-hidden="true" />
+              <Lock
+                :size="16"
+                aria-hidden="true"
+                :stroke-width="1.75"
+                focusable="false"
+              />
               <span>Internal Sponsor Note</span>
             </label>
           </div>
@@ -665,7 +782,12 @@
               "
               @click="uploadAttachment"
             >
-              <Paperclip :size="15" aria-hidden="true" />
+              <Paperclip
+                :size="16"
+                aria-hidden="true"
+                :stroke-width="1.75"
+                focusable="false"
+              />
               <span>Attach Evidence</span>
             </button>
           </div>
@@ -674,7 +796,12 @@
         <div class="attachments-list">
           <div v-for="att in attachments" :key="att.id" class="attachment-card">
             <div class="attachment-icon">
-              <FileText :size="20" aria-hidden="true" />
+              <FileText
+                :size="20"
+                aria-hidden="true"
+                :stroke-width="1.75"
+                focusable="false"
+              />
             </div>
             <div class="attachment-details">
               <div class="attachment-filename">
@@ -692,7 +819,12 @@
             </div>
             <div class="attachment-badges">
               <span v-if="att.deid_scrubbed" class="badge badge-deid">
-                <ShieldCheck :size="12" aria-hidden="true" />
+                <ShieldCheck
+                  :size="16"
+                  aria-hidden="true"
+                  :stroke-width="1.75"
+                  focusable="false"
+                />
                 <span>DEID Verified</span>
               </span>
             </div>
@@ -717,7 +849,13 @@
       >
         <div v-if="ticket.signature_token" class="signature-record-card">
           <div class="sig-card-header">
-            <ShieldCheck :size="24" class="sig-seal-icon" aria-hidden="true" />
+            <ShieldCheck
+              :size="20"
+              class="sig-seal-icon"
+              aria-hidden="true"
+              :stroke-width="1.75"
+              focusable="false"
+            />
             <div>
               <h4 class="sig-card-title">
                 Authoritative 21 CFR Part 11 Electronic Signature
@@ -764,7 +902,12 @@
             class="btn btn-primary btn-sign-action"
             @click="isSignModalOpen = true"
           >
-            <FileSignature :size="15" aria-hidden="true" />
+            <FileSignature
+              :size="16"
+              aria-hidden="true"
+              :stroke-width="1.75"
+              focusable="false"
+            />
             <span>Sign &amp; Authorize Ticket</span>
           </button>
           <p v-else class="sig-prereq-hint">
@@ -852,7 +995,12 @@
             >
           </div>
           <h3 id="citation-viewer-title" class="citation-modal-title">
-            <BookOpen :size="16" aria-hidden="true" />
+            <BookOpen
+              :size="16"
+              aria-hidden="true"
+              :stroke-width="1.75"
+              focusable="false"
+            />
             <span>{{
               activeCitation?.section_title || "Study Protocol Reference"
             }}</span>
@@ -864,7 +1012,12 @@
           aria-label="Close"
           @click="closeCitationViewer"
         >
-          <X :size="18" aria-hidden="true" />
+          <X
+            :size="20"
+            aria-hidden="true"
+            :stroke-width="1.75"
+            focusable="false"
+          />
         </button>
       </div>
     </template>
@@ -883,7 +1036,12 @@
         <div class="coord-item">
           <span class="coord-label">Status:</span>
           <span class="coord-val text-success">
-            <Check :size="14" aria-hidden="true" />
+            <Check
+              :size="16"
+              aria-hidden="true"
+              :stroke-width="1.75"
+              focusable="false"
+            />
             <span>Approved Protocol Version</span>
           </span>
         </div>

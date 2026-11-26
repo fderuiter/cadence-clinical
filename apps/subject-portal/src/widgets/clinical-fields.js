@@ -1,5 +1,6 @@
 // HTML-string widget factories for generated clinical form fields (CDASH
 // inputs, radio grids, visual analog sliders) and their query flag and panel.
+import { renderClinicalIconSvg } from "ui";
 
 const SLIDER_TOUCHED_BADGE_STYLE =
   "background: var(--semantic-color-interactive-primary); color: var(--semantic-color-text-on-primary); border: 1px solid var(--semantic-color-interactive-primary); padding: 2px 10px; border-radius: 12px; font-weight: bold; font-size: 14px; font-variant-numeric: var(--font-variant-numeric-tabular);";
@@ -209,7 +210,10 @@ export function createClinicalQueryFlag(fieldId, query) {
     status === "NONE"
       ? "No active queries. Click to create."
       : `Query status: ${status}`;
-  const icon = status === "NONE" ? "💬" : "⚠️";
+  const icon = renderClinicalIconSvg(
+    status === "NONE" ? "message-square" : "alert-triangle",
+    { size: 16 }
+  );
 
   return `
 <button class="query-flag query-status-${statusClass}"

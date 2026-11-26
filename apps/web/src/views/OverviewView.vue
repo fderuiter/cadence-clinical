@@ -21,7 +21,9 @@
       <!-- User Preference Toggle Card -->
       <div class="landing-preference-card">
         <div class="preference-header">
-          <span class="pref-icon">⚙️</span>
+          <span class="pref-icon"
+            ><ClinicalIcon name="file-text" :size="16"
+          /></span>
           <span class="pref-title">Default Landing Preference</span>
         </div>
         <label class="pref-toggle-label" for="toggle-bypass-overview">
@@ -44,8 +46,8 @@
         >
           {{
             onboardingStore.bypassOverview
-              ? "⚡ Direct workspace navigation active"
-              : "🏠 Orientation Hub set as default landing"
+              ? "Direct workspace navigation active"
+              : "Orientation Hub set as default landing"
           }}
         </div>
       </div>
@@ -122,7 +124,10 @@
       >
         <div class="section-header">
           <h2 id="heading-quickstart" class="section-title">
-            <span class="section-icon">📋</span> Quick-Start Task Checklist
+            <span class="section-icon"
+              ><ClinicalIcon name="clipboard-list" :size="16"
+            /></span>
+            Quick-Start Task Checklist
           </h2>
           <span class="progress-badge">
             {{ completedCount }} of {{ currentChecklist.length }} tasks complete
@@ -170,7 +175,7 @@
               :title="'Open ' + task.title"
               @click="navigateToRoute(task.targetRoute)"
             >
-              Go <span aria-hidden="true">↗</span
+              Go <span aria-hidden="true"></span
               ><span class="sr-only">to {{ task.title }}</span>
             </button>
           </li>
@@ -182,7 +187,7 @@
             class="btn btn-primary btn-start-tour"
             @click="startGuidedTour"
           >
-            🚀 Launch Interactive Guided Tour
+            Launch Interactive Guided Tour
           </button>
         </div>
       </section>
@@ -194,7 +199,10 @@
       >
         <div class="section-header">
           <h2 id="heading-launchers" class="section-title">
-            <span class="section-icon">🚀</span> Core Workflow Launchers
+            <span class="section-icon"
+              ><ClinicalIcon name="file-text" :size="16"
+            /></span>
+            Core Workflow Launchers
           </h2>
           <span class="subtitle-tag">One-click deep operational access</span>
         </div>
@@ -224,7 +232,7 @@
                 class="btn btn-launcher-action"
                 @click="navigateToRoute(launcher.route)"
               >
-                Launch {{ launcher.title }} ↗
+                Launch {{ launcher.title }}
               </button>
             </div>
           </div>
@@ -293,6 +301,7 @@
 </template>
 
 <script setup>
+import { ClinicalIcon } from "ui";
 import { computed, onMounted } from "vue";
 import { getActivePinia } from "pinia";
 import { useRoute, useRouter } from "vue-router";
@@ -557,28 +566,28 @@ function resolveAuthorizedRoute(routeSpec) {
 
 const PERSONA_DETAILS = {
   super_admin: {
-    icon: "👑",
+    icon: "Item",
     title: "Super Admin Workspace",
     roleName: "Super Admin",
     description:
       "Full oversight across study workspaces, clinical data collection, site readiness, and regulatory governance.",
   },
   sponsor_designer: {
-    icon: "📋",
+    icon: "Checklist",
     title: "Sponsor Protocol & Design Workspace",
     roleName: "Sponsor Protocol Designer",
     description:
       "Structure study lifecycle stages, inspect recorded protocol versions, and review clinical schedules.",
   },
   data_manager: {
-    icon: "⚙️",
+    icon: "Item",
     title: "Clinical Data Management Workspace",
     roleName: "Clinical Data Manager",
     description:
       "Review clinical case report forms, field validation rules, and discrepancy query resolution.",
   },
   site_crc: {
-    icon: "🩺",
+    icon: "Clinical",
     title: "Site Investigator & Coordinator Workspace",
     roleName: "Site Coordinator / CRC",
     description:
@@ -592,7 +601,7 @@ const PERSONA_DETAILS = {
       "Oversee site clinical conduct, review participant case report forms, and apply 21 CFR Part 11 investigator signatures.",
   },
   cra_monitor: {
-    icon: "📊",
+    icon: "Metrics",
     title: "Clinical Monitoring & Site Readiness",
     roleName: "CRA / Clinical Monitor",
     description:
@@ -606,7 +615,7 @@ const PERSONA_DETAILS = {
       "Monitor serious adverse event narratives, unblinded safety signals, and aggregate pharmacovigilance governance.",
   },
   auditor: {
-    icon: "🔒",
+    icon: "Locked",
     title: "GxP & Part 11 Regulatory Workspace",
     roleName: "GxP Auditor",
     description:
@@ -841,7 +850,7 @@ const ALL_LAUNCHERS = [
   {
     id: "study",
     title: "Studies",
-    icon: "📐",
+    icon: "Item",
     description:
       "Open a study workspace to navigate lifecycle stages, participant status, protocol versions, and activity.",
     routeSpec: "study",
@@ -852,7 +861,7 @@ const ALL_LAUNCHERS = [
   {
     id: "data-collection",
     title: "Data collection",
-    icon: "🩺",
+    icon: "Clinical",
     description:
       "Capture clinical visit observations, validate case report forms, and perform source data verification.",
     routeSpec: "ecrf",
@@ -863,7 +872,7 @@ const ALL_LAUNCHERS = [
   {
     id: "site-readiness",
     title: "Site readiness",
-    icon: "📊",
+    icon: "Metrics",
     description:
       "Track site activation requirements, startup milestones, and operational site readiness.",
     routeSpec: "site-readiness",

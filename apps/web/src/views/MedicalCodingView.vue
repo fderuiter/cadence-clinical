@@ -19,7 +19,7 @@
             :class="{ active: codingStore.viewMode === 'INDIVIDUAL' }"
             @click="codingStore.setViewMode('INDIVIDUAL')"
           >
-            📋 Individual Items
+            Individual Items
           </button>
           <button
             type="button"
@@ -27,7 +27,7 @@
             :class="{ active: codingStore.viewMode === 'CLUSTERS' }"
             @click="codingStore.setViewMode('CLUSTERS')"
           >
-            🧩 Verbatim Clusters
+            Verbatim Clusters
           </button>
         </div>
 
@@ -36,14 +36,14 @@
           class="btn btn-secondary synonym-import-btn"
           @click="codingStore.openSynonymDrawer()"
         >
-          📥 Bulk Synonym Import
+          Bulk Synonym Import
         </button>
         <button
           type="button"
           class="btn btn-secondary"
           @click="codingStore.openImpactDrawer()"
         >
-          📈 Up-Versioning Impact
+          Up-Versioning Impact
         </button>
         <button
           type="button"
@@ -51,7 +51,7 @@
           :disabled="codingStore.isLoading"
           @click="refreshQueue"
         >
-          🔄 Refresh Queue
+          Refresh Queue
         </button>
       </div>
     </div>
@@ -67,10 +67,10 @@
         <span class="alert-icon">
           {{
             codingStore.batchAlert.type === "success"
-              ? "✅"
+              ? "Verified"
               : codingStore.batchAlert.type === "warning"
-                ? "⚠️"
-                : "ℹ️"
+                ? "Warning"
+                : "Information"
           }}
         </span>
         <span>{{ codingStore.batchAlert.message }}</span>
@@ -88,7 +88,9 @@
     <!-- 21 CFR Part 11 Role Gating Notice if unauthorized -->
     <div v-if="!hasAccess" class="card gating-banner">
       <div class="gating-content">
-        <span class="gating-icon">🚫</span>
+        <span class="gating-icon"
+          ><ClinicalIcon name="x-circle" :size="16"
+        /></span>
         <div>
           <h3>Access Restricted: Data Management Authorization Required</h3>
           <p>
@@ -360,6 +362,7 @@
 </template>
 
 <script setup>
+import { ClinicalIcon } from "ui";
 import { computed, onMounted } from "vue";
 import { useAuthStore } from "../stores/auth";
 import { useCodingStore } from "../stores/coding";

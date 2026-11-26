@@ -22,7 +22,7 @@
               }"
               @click="setViewport('desktop')"
             >
-              🖥️ <span>Desktop (12-Col)</span>
+              <span>Desktop (12-Col)</span>
             </button>
             <button
               class="btn-viewport btn-viewport-tablet"
@@ -32,7 +32,7 @@
               }"
               @click="setViewport('tablet')"
             >
-              📟 <span>Tablet (8-Col)</span>
+              <span>Tablet (8-Col)</span>
             </button>
             <button
               class="btn-viewport btn-viewport-mobile"
@@ -42,14 +42,14 @@
               }"
               @click="setViewport('mobile')"
             >
-              📱 <span>Mobile (4-Col)</span>
+              <span>Mobile (4-Col)</span>
             </button>
             <button
               class="btn-viewport btn-viewport-simulation btn-simulation-mode"
               :class="{ active: isSimulationMode }"
               @click="toggleSimulationMode"
             >
-              🧪 <span>Simulation Mode</span>
+              <span>Simulation Mode</span>
             </button>
           </div>
 
@@ -103,7 +103,9 @@
           :style="{ maxWidth: canvasMaxWidthStyle, margin: '0 auto' }"
         >
           <div class="simulation-banner">
-            <span class="simulation-icon">🧪</span>
+            <span class="simulation-icon"
+              ><ClinicalIcon name="flask-conical" :size="16"
+            /></span>
             <div>
               <strong>Rule Simulation Mode Active</strong>
               <p>
@@ -136,7 +138,8 @@
           </div>
 
           <div v-if="layoutWarnings.length === 0" class="warnings-box-clean">
-            <span>✅</span> No layout warnings for this viewport.
+            <span><ClinicalIcon name="check-circle" :size="16" /></span> No
+            layout warnings for this viewport.
           </div>
 
           <div
@@ -455,7 +458,7 @@
                 font-weight: 600;
               "
             >
-              ❌ Compilation blocked: active layout warnings must be resolved or
+              Compilation blocked: active layout warnings must be resolved or
               explicitly dismissed!
             </div>
             <div
@@ -471,7 +474,7 @@
                 font-weight: 600;
               "
             >
-              ✅ Compilation successful: form compiled to valid CDISC USDM
+              Compilation successful: form compiled to valid CDISC USDM
               structure!
             </div>
           </div>
@@ -494,6 +497,7 @@
 </template>
 
 <script setup>
+import { ClinicalIcon } from "ui";
 /**
  * CrfAuthoringCanvas Component
  *

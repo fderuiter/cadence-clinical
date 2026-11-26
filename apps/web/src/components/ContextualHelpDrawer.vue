@@ -19,7 +19,12 @@
         <header class="drawer-header">
           <div class="header-title-group">
             <span class="header-icon" aria-hidden="true">
-              <BookOpen :size="18" aria-hidden="true" />
+              <BookOpen
+                :size="20"
+                aria-hidden="true"
+                :stroke-width="1.75"
+                focusable="false"
+              />
             </span>
             <h3 id="help-drawer-title" class="drawer-title">
               Clinical Guidance &amp; SOPs
@@ -38,7 +43,12 @@
               title="Toggle Search SOPs"
               @click="toggleSearch"
             >
-              <Search :size="16" aria-hidden="true" />
+              <Search
+                :size="16"
+                aria-hidden="true"
+                :stroke-width="1.75"
+                focusable="false"
+              />
             </ClinicalIconButton>
             <ClinicalIconButton
               class="btn-close"
@@ -47,7 +57,12 @@
               label="Close Help Drawer"
               @click="knowledgeStore.closeDrawer()"
             >
-              <X :size="18" aria-hidden="true" />
+              <X
+                :size="20"
+                aria-hidden="true"
+                :stroke-width="1.75"
+                focusable="false"
+              />
             </ClinicalIconButton>
           </div>
         </header>
@@ -56,7 +71,12 @@
       <!-- Secondary Context Badges, View Tabs & Search Bar inside Scroll Body -->
       <div class="context-badges">
         <span class="context-badge route-badge" title="Active Route">
-          <MapPin :size="12" aria-hidden="true" />
+          <MapPin
+            :size="16"
+            aria-hidden="true"
+            :stroke-width="1.75"
+            focusable="false"
+          />
           <span>{{ knowledgeStore.currentRoute }}</span>
         </span>
         <span class="context-badge persona-badge" title="Active Persona">
@@ -81,7 +101,12 @@
           aria-controls="panel-contextual-guidance"
           @click="switchTab('guidance')"
         >
-          <BookOpen :size="14" aria-hidden="true" />
+          <BookOpen
+            :size="16"
+            aria-hidden="true"
+            :stroke-width="1.75"
+            focusable="false"
+          />
           <span>SOP Guidance</span>
         </button>
         <button
@@ -96,7 +121,12 @@
           aria-controls="panel-contextual-tickets"
           @click="switchTab('tickets')"
         >
-          <Ticket :size="14" aria-hidden="true" />
+          <Ticket
+            :size="16"
+            aria-hidden="true"
+            :stroke-width="1.75"
+            focusable="false"
+          />
           <span>Support Tickets</span>
           <span
             v-if="knowledgeStore.hasLoadedDrawerTickets"
@@ -131,7 +161,12 @@
           label="Clear SOP search"
           @click="clearSearch"
         >
-          <X :size="14" aria-hidden="true" />
+          <X
+            :size="16"
+            aria-hidden="true"
+            :stroke-width="1.75"
+            focusable="false"
+          />
         </ClinicalIconButton>
       </div>
 
@@ -162,8 +197,10 @@
           <div class="error-alert-header">
             <AlertTriangle
               class="error-alert-icon"
-              :size="18"
+              :size="20"
               aria-hidden="true"
+              :stroke-width="1.75"
+              focusable="false"
             />
             <h4 class="error-alert-title">
               {{
@@ -181,7 +218,12 @@
               class="btn btn-secondary btn-retry"
               @click="handleRetry"
             >
-              <RefreshCw :size="14" aria-hidden="true" />
+              <RefreshCw
+                :size="16"
+                aria-hidden="true"
+                :stroke-width="1.75"
+                focusable="false"
+              />
               <span>Retry</span>
             </button>
           </div>
@@ -266,7 +308,12 @@
               class="btn-back"
               @click="returnToPrimarySop"
             >
-              <ArrowLeft :size="14" aria-hidden="true" />
+              <ArrowLeft
+                :size="16"
+                aria-hidden="true"
+                :stroke-width="1.75"
+                focusable="false"
+              />
               <span>Return to Route Spotlight SOP</span>
             </button>
           </div>
@@ -310,7 +357,13 @@
               class="anchor-callout"
               :data-anchor-target="normalizedSectionAnchorId"
             >
-              <Target class="anchor-icon" :size="16" aria-hidden="true" />
+              <Target
+                class="anchor-icon"
+                :size="16"
+                aria-hidden="true"
+                :stroke-width="1.75"
+                focusable="false"
+              />
               <div class="anchor-text">
                 <strong>Spotlight Section:</strong>
                 <button
@@ -371,7 +424,12 @@
             class="related-section"
           >
             <h5 class="related-title">
-              <Library :size="14" aria-hidden="true" />
+              <Library
+                :size="16"
+                aria-hidden="true"
+                :stroke-width="1.75"
+                focusable="false"
+              />
               <span>
                 Related Clinical SOPs ({{
                   knowledgeStore.relatedArticles.length
@@ -410,7 +468,13 @@
 
         <!-- Empty Fallback State -->
         <div v-else class="empty-state">
-          <Search class="empty-icon" :size="32" aria-hidden="true" />
+          <Search
+            class="empty-icon"
+            :size="20"
+            aria-hidden="true"
+            :stroke-width="1.75"
+            focusable="false"
+          />
           <h4>No Specific SOP Mapped for This Route</h4>
           <p>
             There is currently no published SOP mapped specifically to
@@ -423,7 +487,12 @@
               class="btn btn-secondary"
               @click="openSearchWithFallback"
             >
-              <Search :size="14" aria-hidden="true" />
+              <Search
+                :size="16"
+                aria-hidden="true"
+                :stroke-width="1.75"
+                focusable="false"
+              />
               <span>Search Knowledge Hub</span>
             </button>
             <button
@@ -431,7 +500,12 @@
               class="btn btn-secondary"
               @click="openHubRoute('/knowledge')"
             >
-              <Library :size="14" aria-hidden="true" />
+              <Library
+                :size="16"
+                aria-hidden="true"
+                :stroke-width="1.75"
+                focusable="false"
+              />
               <span>Open Full SOP Hub</span>
             </button>
           </div>
@@ -460,7 +534,12 @@
             :disabled="knowledgeStore.isTicketsLoading"
             @click="handleRefreshDrawerTickets"
           >
-            <RefreshCw :size="13" aria-hidden="true" />
+            <RefreshCw
+              :size="16"
+              aria-hidden="true"
+              :stroke-width="1.75"
+              focusable="false"
+            />
             <span>Refresh</span>
           </button>
         </div>
@@ -478,7 +557,12 @@
               class="btn-back"
               @click="handleBackToTicketList"
             >
-              <ArrowLeft :size="14" aria-hidden="true" />
+              <ArrowLeft
+                :size="16"
+                aria-hidden="true"
+                :stroke-width="1.75"
+                focusable="false"
+              />
               <span>Back to Scoped Tickets</span>
             </button>
             <span
@@ -496,7 +580,12 @@
             role="alert"
           >
             <div class="error-alert-header">
-              <AlertTriangle :size="16" aria-hidden="true" />
+              <AlertTriangle
+                :size="16"
+                aria-hidden="true"
+                :stroke-width="1.75"
+                focusable="false"
+              />
               <h4 class="error-alert-title">
                 Unable to Refresh Ticket Details
               </h4>
@@ -576,7 +665,12 @@
             <div class="ticket-meta-item">
               <dt>Acknowledge Target</dt>
               <dd class="mono-val">
-                <Clock :size="12" aria-hidden="true" />
+                <Clock
+                  :size="16"
+                  aria-hidden="true"
+                  :stroke-width="1.75"
+                  focusable="false"
+                />
                 <span>{{
                   formatTimestamp(
                     knowledgeStore.selectedTicket.acknowledge_target_at
@@ -587,7 +681,12 @@
             <div class="ticket-meta-item">
               <dt>Resolution SLA Target</dt>
               <dd class="mono-val">
-                <Clock :size="12" aria-hidden="true" />
+                <Clock
+                  :size="16"
+                  aria-hidden="true"
+                  :stroke-width="1.75"
+                  focusable="false"
+                />
                 <span>{{
                   formatTimestamp(knowledgeStore.selectedTicket.sla_target_at)
                 }}</span>
@@ -610,7 +709,12 @@
           role="alert"
         >
           <div class="error-alert-header">
-            <AlertTriangle :size="18" aria-hidden="true" />
+            <AlertTriangle
+              :size="20"
+              aria-hidden="true"
+              :stroke-width="1.75"
+              focusable="false"
+            />
             <h4 class="error-alert-title">Unable to Load Support Tickets</h4>
           </div>
           <p class="error-alert-message">{{ knowledgeStore.ticketsError }}</p>
@@ -621,7 +725,12 @@
               class="btn btn-secondary btn-retry"
               @click="handleRefreshDrawerTickets"
             >
-              <RefreshCw :size="14" aria-hidden="true" />
+              <RefreshCw
+                :size="16"
+                aria-hidden="true"
+                :stroke-width="1.75"
+                focusable="false"
+              />
               <span>Retry</span>
             </button>
           </div>
@@ -633,7 +742,13 @@
           id="drawer-tickets-empty-state"
           class="empty-state"
         >
-          <Ticket class="empty-icon" :size="32" aria-hidden="true" />
+          <Ticket
+            class="empty-icon"
+            :size="20"
+            aria-hidden="true"
+            :stroke-width="1.75"
+            focusable="false"
+          />
           <h4>No Support Tickets in Scope</h4>
           <p>
             No persisted support tickets currently match
@@ -708,10 +823,19 @@
               <Lock
                 v-if="isReadOnlyAuditor"
                 class="btn-icon"
-                :size="15"
+                :size="16"
                 aria-hidden="true"
+                :stroke-width="1.75"
+                focusable="false"
               />
-              <Ticket v-else class="btn-icon" :size="15" aria-hidden="true" />
+              <Ticket
+                v-else
+                class="btn-icon"
+                :size="16"
+                aria-hidden="true"
+                :stroke-width="1.75"
+                focusable="false"
+              />
               <span>Escalate to Support Ticket</span>
             </button>
 
@@ -732,7 +856,12 @@
                 class="btn-hub-link"
                 @click="openHubRoute('/knowledge')"
               >
-                <Library :size="13" aria-hidden="true" />
+                <Library
+                  :size="16"
+                  aria-hidden="true"
+                  :stroke-width="1.75"
+                  focusable="false"
+                />
                 <span>Browse SOP Hub</span>
               </button>
               <span class="hub-link-sep" aria-hidden="true">·</span>
@@ -742,7 +871,12 @@
                 class="btn-hub-link"
                 @click="openHubRoute('/tickets')"
               >
-                <Ticket :size="13" aria-hidden="true" />
+                <Ticket
+                  :size="16"
+                  aria-hidden="true"
+                  :stroke-width="1.75"
+                  focusable="false"
+                />
                 <span>Support Queue</span>
               </button>
             </div>
@@ -1008,7 +1142,7 @@ const activePersonaLabel = computed(() => {
   const pKey =
     authStore.currentPersona || knowledgeStore.activePersona || "super_admin";
   const p = PERSONA_PRESETS.find((preset) => preset.key === pKey);
-  return p ? p.label.replace(/^.+?\s/, "") : "Super Admin";
+  return p ? p.label.replace(/^[^\w\s]+\s*/, "").trim() : "Super Admin";
 });
 
 const displayedArticleHtml = computed(() => {

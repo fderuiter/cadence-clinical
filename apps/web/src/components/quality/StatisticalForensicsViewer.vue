@@ -66,21 +66,29 @@
           :disabled="isLoading"
           @click="generateSimulatedDataset"
         >
-          <span class="btn-icon">⚡</span> Simulate Calibration Data
+          <span class="btn-icon"
+            ><ClinicalIcon name="alert-triangle" :size="16"
+          /></span>
+          Simulate Calibration Data
         </button>
         <button
           class="csm-btn csm-btn-secondary"
           :disabled="isLoading || !activeRun"
           @click="openDossierModal"
         >
-          <span class="btn-icon">📄</span> Forensics Dossier
+          <span class="btn-icon"
+            ><ClinicalIcon name="file-text" :size="16"
+          /></span>
+          Forensics Dossier
         </button>
         <button
           class="csm-btn csm-btn-primary"
           :disabled="isLoading"
           @click="executeSurveillanceScan"
         >
-          <span class="btn-icon">🔍</span>
+          <span class="btn-icon"
+            ><ClinicalIcon name="search" :size="16"
+          /></span>
           {{
             isLoading ? "Analyzing Distributions..." : "Run Statistical Scan"
           }}
@@ -96,7 +104,9 @@
         :class="{ 'kpi-card-alert': anomalousSitesCount > 0 }"
         @click="activeSubTab = 'overview'"
       >
-        <div class="kpi-icon">🚨</div>
+        <div class="kpi-icon">
+          <ClinicalIcon name="alert-triangle" :size="20" />
+        </div>
         <div class="kpi-content">
           <div class="kpi-value tabular-nums">
             {{ anomalousSitesCount }} / {{ siteRecords.length || 0 }}
@@ -107,7 +117,9 @@
 
       <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <div class="kpi-card" @click="activeSubTab = 'benford'">
-        <div class="kpi-icon">📊</div>
+        <div class="kpi-icon">
+          <ClinicalIcon name="trending-up" :size="20" />
+        </div>
         <div class="kpi-content">
           <div class="kpi-value tabular-nums">
             {{ benfordNonConformCount }}
@@ -118,7 +130,9 @@
 
       <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <div class="kpi-card" @click="activeSubTab = 'rounding'">
-        <div class="kpi-icon">🎯</div>
+        <div class="kpi-icon">
+          <ClinicalIcon name="trending-up" :size="20" />
+        </div>
         <div class="kpi-content">
           <div class="kpi-value tabular-nums">
             {{ severeRoundingCount }}
@@ -129,7 +143,9 @@
 
       <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <div class="kpi-card" @click="activeSubTab = 'variance'">
-        <div class="kpi-icon">🔬</div>
+        <div class="kpi-icon">
+          <ClinicalIcon name="flask-conical" :size="20" />
+        </div>
         <div class="kpi-content">
           <div class="kpi-value tabular-nums">
             {{ varianceShrunkCount }}
@@ -140,7 +156,7 @@
 
       <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <div class="kpi-card" @click="activeSubTab = 'mahalanobis'">
-        <div class="kpi-icon">🌐</div>
+        <div class="kpi-icon"><ClinicalIcon name="globe" :size="20" /></div>
         <div class="kpi-content">
           <div class="kpi-value tabular-nums">
             {{ maxMahalanobisDistance.toFixed(2) }}
@@ -163,7 +179,7 @@
         :class="{ active: activeSubTab === 'overview' }"
         @click="activeSubTab = 'overview'"
       >
-        📑 Cross-Site Surveillance Matrix
+        Cross-Site Surveillance Matrix
       </button>
       <button
         role="tab"
@@ -172,7 +188,7 @@
         :class="{ active: activeSubTab === 'benford' }"
         @click="activeSubTab = 'benford'"
       >
-        📊 Leading Digits (Benford's Law)
+        Leading Digits (Benford's Law)
       </button>
       <button
         role="tab"
@@ -181,7 +197,7 @@
         :class="{ active: activeSubTab === 'rounding' }"
         @click="activeSubTab = 'rounding'"
       >
-        🔢 Terminal Digit Rounding Bias
+        Terminal Digit Rounding Bias
       </button>
       <button
         role="tab"
@@ -190,7 +206,7 @@
         :class="{ active: activeSubTab === 'mahalanobis' }"
         @click="activeSubTab = 'mahalanobis'"
       >
-        🌐 Multivariate Correlation &amp; Mahalanobis
+        Multivariate Correlation &amp; Mahalanobis
       </button>
       <button
         role="tab"
@@ -199,7 +215,7 @@
         :class="{ active: activeSubTab === 'variance' }"
         @click="activeSubTab = 'variance'"
       >
-        📉 Variance Shrinkage &amp; KL Divergence
+        Variance Shrinkage &amp; KL Divergence
       </button>
       <button
         role="tab"
@@ -208,7 +224,7 @@
         :class="{ active: activeSubTab === 'duplicate-patients' }"
         @click="activeSubTab = 'duplicate-patients'"
       >
-        👥 Duplicate Patient Records
+        Duplicate Patient Records
       </button>
       <button
         role="tab"
@@ -217,7 +233,7 @@
         :class="{ active: activeSubTab === 'temporal' }"
         @click="activeSubTab = 'temporal'"
       >
-        ⏱️ Temporal &amp; Behavioral Scanner
+        Temporal &amp; Behavioral Scanner
       </button>
       <button
         role="tab"
@@ -226,7 +242,7 @@
         :class="{ active: activeSubTab === 'phash' }"
         @click="activeSubTab = 'phash'"
       >
-        🖼️ Perceptual Image Hashing (pHash)
+        Perceptual Image Hashing (pHash)
       </button>
     </nav>
 
@@ -254,7 +270,7 @@
               class="csm-btn csm-btn-sm csm-btn-secondary"
               @click="dispatchAllKriAlerts"
             >
-              ⚡ Auto-Dispatch KRI Alerts
+              Auto-Dispatch KRI Alerts
             </button>
           </div>
         </div>
@@ -628,7 +644,7 @@
                   currentDrilldownSite.terminal_digit.zero_five_index >= 0.45
                 "
               >
-                🚨 Severe rounding bias detected.
+                Severe rounding bias detected.
                 {{
                   (
                     currentDrilldownSite.terminal_digit.zero_five_index * 100
@@ -637,7 +653,7 @@
                 estimation rather than calibrated instrument measurement.
               </span>
               <span v-else>
-                🟢 Terminal digit distribution aligns with true continuous
+                Terminal digit distribution aligns with true continuous
                 physiological measurements.
               </span>
             </div>
@@ -853,8 +869,8 @@
               >
                 {{
                   currentDrilldownSite.variance_shrinkage.is_variance_shrunk
-                    ? "🚨 ANOMALOUS VARIANCE SHRINKAGE"
-                    : "🟢 NORMAL VARIANCE"
+                    ? "ANOMALOUS VARIANCE SHRINKAGE"
+                    : "NORMAL VARIANCE"
                 }}
               </div>
             </div>
@@ -893,7 +909,7 @@
               v-if="currentDrilldownSite.variance_shrinkage.is_variance_shrunk"
               class="fabrication-alert-card mt-16"
             >
-              <h4>⚠️ Fabrication Sentinel Warning</h4>
+              <h4>Fabrication Sentinel Warning</h4>
               <p>
                 This site exhibits an unnaturally low variance ratio ({{
                   currentDrilldownSite.variance_shrinkage.variance_ratio
@@ -966,7 +982,10 @@
               :disabled="isLoading"
               @click="runDuplicatePatientScan"
             >
-              <span class="btn-icon">🔍</span> Run Duplicate Vector Scan
+              <span class="btn-icon"
+                ><ClinicalIcon name="search" :size="16"
+              /></span>
+              Run Duplicate Vector Scan
             </button>
           </div>
         </div>
@@ -1114,7 +1133,7 @@
                 class="csm-btn csm-btn-primary csm-btn-sm"
                 @click="dispatchInvestigationAlert(match)"
               >
-                🚨 Dispatch 21 CFR Part 11 Investigation Ticket
+                Dispatch 21 CFR Part 11 Investigation Ticket
               </button>
             </div>
           </div>
@@ -1141,7 +1160,10 @@
               :disabled="isLoading"
               @click="runTemporalScan"
             >
-              <span class="btn-icon">⏱️</span> Scan Timing Patterns
+              <span class="btn-icon"
+                ><ClinicalIcon name="clock" :size="16"
+              /></span>
+              Scan Timing Patterns
             </button>
           </div>
         </div>
@@ -1214,7 +1236,10 @@
               :disabled="isLoading"
               @click="runImagePhashScan"
             >
-              <span class="btn-icon">🖼️</span> Execute pHash Scan
+              <span class="btn-icon"
+                ><ClinicalIcon name="camera" :size="16"
+              /></span>
+              Execute pHash Scan
             </button>
           </div>
         </div>
@@ -1243,7 +1268,7 @@
 
             <div class="phash-comparison-view">
               <div class="image-preview-box">
-                <div class="image-mock-canvas">🩻 [CT Slice #101]</div>
+                <div class="image-mock-canvas">[CT Slice #101]</div>
                 <div class="image-meta">
                   <strong>Subject:</strong>
                   {{ imgMatch.primary_subject_id }} ({{
@@ -1266,7 +1291,7 @@
 
               <div class="image-preview-box">
                 <div class="image-mock-canvas image-rotated">
-                  🩻 [CT Slice #104 (Rotated)]
+                  [CT Slice #104 (Rotated)]
                 </div>
                 <div class="image-meta">
                   <strong>Subject:</strong>
@@ -1291,7 +1316,7 @@
                 class="csm-btn csm-btn-primary csm-btn-sm"
                 @click="dispatchInvestigationAlert(imgMatch)"
               >
-                🚨 Log GCP Investigation Deviation &amp; Quarantine Attachment
+                Log GCP Investigation Deviation &amp; Quarantine Attachment
               </button>
             </div>
           </div>
@@ -1323,7 +1348,7 @@
         </div>
         <div class="modal-body">
           <div class="seal-badge">
-            🔐 CRYPTOGRAPHICALLY SEALED &bull; GxP AUDIT TRAIL VERIFIED
+            CRYPTOGRAPHICALLY SEALED &bull; GxP AUDIT TRAIL VERIFIED
           </div>
           <p><strong>Study:</strong> {{ selectedStudyId }}</p>
           <p><strong>Surveillance Run ID:</strong> {{ activeRun?.id }}</p>
@@ -1374,7 +1399,7 @@
 
 <script setup>
 import { computed, onMounted, ref } from "vue";
-import { ClinicalIconButton, useFocusTrap } from "ui";
+import { ClinicalIconButton, useFocusTrap, ClinicalIcon } from "ui";
 import { useToastStore } from "../../stores/toasts";
 
 const toasts = useToastStore();

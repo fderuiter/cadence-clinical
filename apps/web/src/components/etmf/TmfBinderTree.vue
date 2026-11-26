@@ -8,11 +8,10 @@
         :title="!canExport ? ETMF_EXPORT_ROLE_REASON : undefined"
         @click="exportFullBinder"
       >
-        <span aria-hidden="true">📦</span> Export Complete Study Binder<span
-          class="sr-only"
-        >
-          (eTMF)</span
-        >
+        <span aria-hidden="true"
+          ><ClinicalIcon name="folder" :size="16"
+        /></span>
+        Export Complete Study Binder<span class="sr-only"> (eTMF)</span>
       </button>
       <div
         v-if="activeZone || activeSection"
@@ -116,10 +115,14 @@
           @keydown="handleTreeKeyDown"
           @focus="activeFocusedNodeId = zone.id"
         >
-          <span class="toggle-icon" aria-hidden="true">{{
-            isExpanded(zone.id) ? "▼" : "▶"
-          }}</span>
-          <span class="folder-icon" aria-hidden="true">📂</span>
+          <span class="toggle-icon" aria-hidden="true"
+            ><ClinicalIcon
+              :name="isExpanded(zone.id) ? 'chevron-down' : 'chevron-right'"
+              :size="16"
+          /></span>
+          <span class="folder-icon" aria-hidden="true"
+            ><ClinicalIcon name="folder" :size="16"
+          /></span>
           <span class="zone-label">Zone {{ zone.code }}:</span>
           <span class="node-name">{{ zone.name }}</span>
           <span
@@ -158,10 +161,16 @@
               @keydown="handleTreeKeyDown"
               @focus="activeFocusedNodeId = section.id"
             >
-              <span class="toggle-icon" aria-hidden="true">{{
-                isExpanded(section.id) ? "▼" : "▶"
-              }}</span>
-              <span class="folder-icon" aria-hidden="true">📁</span>
+              <span class="toggle-icon" aria-hidden="true"
+                ><ClinicalIcon
+                  :name="
+                    isExpanded(section.id) ? 'chevron-down' : 'chevron-right'
+                  "
+                  :size="16"
+              /></span>
+              <span class="folder-icon" aria-hidden="true"
+                ><ClinicalIcon name="folder" :size="16"
+              /></span>
               <span class="section-label">Section {{ section.code }}:</span>
               <span class="node-name">{{ section.name }}</span>
               <span
@@ -193,7 +202,9 @@
                 @focus="activeFocusedNodeId = artifact.id"
               >
                 <span class="node-header artifact-header">
-                  <span class="file-icon" aria-hidden="true">📄</span>
+                  <span class="file-icon" aria-hidden="true"
+                    ><ClinicalIcon name="file-text" :size="16"
+                  /></span>
                   <span class="artifact-code">[{{ artifact.code }}]</span>
                   <span class="node-name">{{ artifact.name }}</span>
                   <span
@@ -213,6 +224,7 @@
 </template>
 
 <script setup>
+import { ClinicalIcon } from "ui";
 import { ref, computed, watch, nextTick } from "vue";
 import { useEtmfStore } from "../../stores/etmf.js";
 import { useAuthStore } from "../../stores/auth.js";

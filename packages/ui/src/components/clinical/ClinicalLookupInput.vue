@@ -42,9 +42,20 @@
         role="status"
         aria-live="polite"
       >
-        <span class="lookup-status-icon" aria-hidden="true">{{
-          statusIcon
-        }}</span>
+        <span
+          v-if="statusIconComponent"
+          class="lookup-status-icon"
+          aria-hidden="true"
+        >
+          <component
+            :is="statusIconComponent"
+            :size="16"
+            :stroke-width="1.75"
+            aria-hidden="true"
+            focusable="false"
+            class="clinical-icon"
+          />
+        </span>
         <span class="lookup-status-text">{{ ariaLiveMessage }}</span>
       </div>
       <div
@@ -61,6 +72,7 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
+import { AlertTriangle, CheckCircle2, Clock, XCircle } from "lucide-vue-next";
 import ClinicalFieldLayout from "./ClinicalFieldLayout.vue";
 
 interface Props {
@@ -130,12 +142,12 @@ const stateClass = computed(() => {
   return "";
 });
 
-const statusIcon = computed(() => {
-  if (props.status === "loading") return "⏳";
-  if (props.status === "valid") return "✅";
-  if (props.status === "invalid") return "❌";
-  if (props.status === "degraded") return "⚠️";
-  return "";
+const statusIconComponent = computed(() => {
+  if (props.status === "loading") return Clock;
+  if (props.status === "valid") return CheckCircle2;
+  if (props.status === "invalid") return XCircle;
+  if (props.status === "degraded") return AlertTriangle;
+  return null;
 });
 
 const ariaLiveMessage = computed(() => {

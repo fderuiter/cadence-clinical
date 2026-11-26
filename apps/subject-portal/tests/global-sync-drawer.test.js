@@ -46,7 +46,10 @@ describe("Global Floating Drawer and Vue-Reactive State Sync", () => {
 
     const syncBtn = document.getElementById("btn-global-sync-drawer");
     expect(syncBtn).not.toBeNull();
-    expect(syncBtn.querySelector(".sync-icon").textContent).toBe("🔄");
+    const syncIconSvg = syncBtn.querySelector(".sync-icon svg.clinical-icon");
+    expect(syncIconSvg).not.toBeNull();
+    expect(syncIconSvg.getAttribute("stroke-width")).toBe("1.75");
+    expect(syncIconSvg.getAttribute("aria-hidden")).toBe("true");
     expect(syncBtn.querySelector(".sync-btn-label").textContent).toBe(
       "Sync Status"
     );

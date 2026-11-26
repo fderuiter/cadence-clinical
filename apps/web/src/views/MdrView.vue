@@ -26,7 +26,7 @@
         style="font-size: 0.9rem; padding: 8px 16px; border-radius: 8px"
         @click="activeTab = 'soa'"
       >
-        📋 Schedule of Activities (SoA)
+        Schedule of Activities (SoA)
       </button>
       <button
         id="btn-tab-canvas-top"
@@ -35,7 +35,7 @@
         style="font-size: 0.9rem; padding: 8px 16px; border-radius: 8px"
         @click="activeTab = 'canvas'"
       >
-        🎨 eCRF Visual Form Designer
+        eCRF Visual Form Designer
       </button>
       <button
         class="btn tab-btn-mdr"
@@ -43,7 +43,7 @@
         style="font-size: 0.9rem; padding: 8px 16px; border-radius: 8px"
         @click="activeTab = 'mdr'"
       >
-        🔍 NCI Concept Registry
+        NCI Concept Registry
       </button>
       <button
         class="btn tab-btn-diff"
@@ -51,7 +51,7 @@
         style="font-size: 0.9rem; padding: 8px 16px; border-radius: 8px"
         @click="activeTab = 'diff'"
       >
-        ⚖️ Protocol Revision Alignment
+        Protocol Revision Alignment
       </button>
     </div>
 
@@ -101,8 +101,8 @@
                 gap: 6px;
               "
             >
-              <span>⚡</span> Zero-Click USDM Study Ingestion &amp; Synthesis
-              Metrics
+              <span><ClinicalIcon name="alert-triangle" :size="16" /></span>
+              Zero-Click USDM Study Ingestion &amp; Synthesis Metrics
             </h3>
             <span class="badge lookup-valid" style="font-weight: 600"
               >✓ Synthesis Ready</span
@@ -115,7 +115,7 @@
                 font-weight: 600;
               "
             >
-              ⚡ Latency: {{ synthesisResult.latencyMs }}ms (&lt; 3.0s SLA
+              Latency: {{ synthesisResult.latencyMs }}ms (&lt; 3.0s SLA
               Compliant)
             </span>
             <span
@@ -127,7 +127,7 @@
                 font-weight: 600;
               "
             >
-              🚀 Active EDC Study Build
+              Active EDC Study Build
             </span>
           </div>
           <button
@@ -536,7 +536,8 @@
               "
               @click="openPromotionModal"
             >
-              <span>🚀</span> Promote to Active EDC Study Build
+              <span><ClinicalIcon name="file-text" :size="16" /></span> Promote
+              to Active EDC Study Build
             </button>
             <button
               id="btn-inspect-crf"
@@ -550,7 +551,8 @@
               "
               @click="navigateToCrf"
             >
-              <span>🎨</span> Open eCRF Form Designer
+              <span><ClinicalIcon name="file-text" :size="16" /></span> Open
+              eCRF Form Designer
             </button>
             <button
               id="btn-view-soa"
@@ -564,7 +566,8 @@
               "
               @click="navigateToSoa"
             >
-              <span>📋</span> View SoA Matrix
+              <span><ClinicalIcon name="clipboard-list" :size="16" /></span>
+              View SoA Matrix
             </button>
           </div>
           <button
@@ -572,7 +575,7 @@
             style="font-size: 0.82rem; padding: 6px 12px"
             @click="openUsdmModal"
           >
-            🔄 Ingest Another USDM Protocol
+            Ingest Another USDM Protocol
           </button>
         </div>
       </div>
@@ -599,7 +602,7 @@
             {{
               builderMode
                 ? "Close Interactive Builder"
-                : "🔧 Open Interactive Builder"
+                : "Open Interactive Builder"
             }}
           </button>
         </div>
@@ -1084,7 +1087,8 @@
               "
               @click="openUsdmModal"
             >
-              <span>⚡</span> Ingest &amp; Synthesize USDM Protocol
+              <span><ClinicalIcon name="alert-triangle" :size="16" /></span>
+              Ingest &amp; Synthesize USDM Protocol
             </button>
             <button
               id="btn-export-usdm"
@@ -1099,7 +1103,8 @@
               "
               @click="exportUsdmJson"
             >
-              <span>📥</span> Export USDM JSON
+              <span><ClinicalIcon name="download" :size="16" /></span> Export
+              USDM JSON
             </button>
             <button
               class="btn btn-secondary"
@@ -1109,7 +1114,7 @@
               {{
                 showUsdmJson
                   ? "Hide USDM JSON Source"
-                  : "📄 CDISC USDM JSON Source"
+                  : "CDISC USDM JSON Source"
               }}
             </button>
             <span
@@ -1650,7 +1655,7 @@
             align-items: center;
           "
         >
-          <span>⚡ Zero-Click USDM Study Ingestion &amp; Synthesis</span>
+          <span> Zero-Click USDM Study Ingestion &amp; Synthesis</span>
           <button
             class="btn btn-secondary"
             style="
@@ -1712,7 +1717,9 @@
               style="display: none"
               @change="handleFileSelected"
             />
-            <div style="font-size: 1.8rem; margin-bottom: 6px">📁</div>
+            <div style="font-size: 1.8rem; margin-bottom: 6px">
+              <ClinicalIcon name="folder" :size="16" />
+            </div>
             <div
               style="font-size: 0.9rem; font-weight: 600; color: var(--primary)"
             >
@@ -1764,7 +1771,8 @@
               type="button"
               @click="loadSampleUsdm"
             >
-              <span>📥</span> Load Sample Phase II USDM Protocol
+              <span><ClinicalIcon name="download" :size="16" /></span> Load
+              Sample Phase II USDM Protocol
             </button>
           </div>
 
@@ -1906,8 +1914,8 @@
                   margin-bottom: 4px;
                 "
               >
-                <span class="badge lookup-invalid" style="font-weight: 600"
-                  >⚠️ Schema Validation Issue</span
+                <span class="badge lookup-invalid" style="font-weight: 600">
+                  Schema Validation Issue</span
                 >
                 <span
                   style="
@@ -1961,8 +1969,8 @@
           >
             {{
               isSynthesizing
-                ? "⏳ Synthesizing Protocol Build..."
-                : "⚡ Synthesize USDM Protocol"
+                ? "Synthesizing Protocol Build..."
+                : "Synthesize USDM Protocol"
             }}
           </button>
         </div>
@@ -1976,7 +1984,7 @@
       description="Document the regulatory justification for promoting this synthesized CDISC USDM study build into the active clinical runtime environment."
       :options="promotionReasonOptions"
       default-option="Initial Entry"
-      confirm-text="🚀 Sign &amp; Promote to Active EDC"
+      confirm-text="Sign &amp; Promote to Active EDC"
       cancel-text="Cancel"
       @confirm="confirmPromotion"
       @cancel="cancelPromotion"
@@ -2015,7 +2023,7 @@ import { useErrorPresenter } from "../composables/useErrorPresenter";
 import ClinicalSoAMatrix from "../components/clinical/ClinicalSoAMatrix.vue";
 import ClinicalGanttVisualizer from "../components/clinical/ClinicalGanttVisualizer.vue";
 import { terminologyClient } from "../api/terminologyClient.js";
-import { debounce, useFocusTrap } from "ui";
+import { debounce, useFocusTrap, ClinicalIcon } from "ui";
 import ReasonModal from "../components/ReasonModal.vue";
 import CrfAuthoringCanvas from "../components/crf/CrfAuthoringCanvas.vue";
 import { useDesignerStore } from "../stores/designer.js";

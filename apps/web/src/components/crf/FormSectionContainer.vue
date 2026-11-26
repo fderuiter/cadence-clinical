@@ -54,7 +54,7 @@
           </button>
         </div>
         <button class="btn-add-field btn-add-item" @click="addNewItem">
-          <span>➕</span> Add Field
+          <span><ClinicalIcon name="plus" :size="16" /></span> Add Field
         </button>
         <button class="btn-section-toggle" @click="toggleCollapse">
           {{ section.isCollapsed ? "Expand" : "Collapse" }}
@@ -114,6 +114,7 @@
 </template>
 
 <script setup>
+import { ClinicalIcon } from "ui";
 /**
  * FormSectionContainer component
  *

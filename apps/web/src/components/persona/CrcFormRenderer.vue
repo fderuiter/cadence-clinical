@@ -62,7 +62,8 @@
             "
             @click="showEnrollModal = true"
           >
-            <span>➕</span> {{ $t("ecrf.form.enrollNewSubject") }}
+            <span><ClinicalIcon name="plus" :size="16" /></span>
+            {{ $t("ecrf.form.enrollNewSubject") }}
           </button>
         </div>
       </div>
@@ -168,7 +169,7 @@
               gap: 8px;
             "
           >
-            <span>🎓</span>
+            <span><ClinicalIcon name="file-text" :size="16" /></span>
             <span>{{ $t("ecrf.form.trainingGatedTitle") }}</span>
           </div>
           <p
@@ -239,7 +240,7 @@
               gap: 8px;
             "
           >
-            <span>⚠️</span>
+            <span><ClinicalIcon name="alert-triangle" :size="16" /></span>
             <span>{{ $t("ecrf.form.reconsentGatedTitle") }}</span>
           </div>
           <p
@@ -269,7 +270,7 @@
             "
             @click="$emit('open-econsent-modal')"
           >
-            ✍️ {{ $t("ecrf.form.openEconsent") }}
+            {{ $t("ecrf.form.openEconsent") }}
           </button>
           <button
             id="btn-upload-paper-icf"
@@ -287,7 +288,7 @@
             "
             @click="$emit('open-paper-icf-modal')"
           >
-            📄 {{ $t("ecrf.form.uploadPaperIcf") }}
+            {{ $t("ecrf.form.uploadPaperIcf") }}
           </button>
         </div>
       </div>
@@ -320,7 +321,7 @@
             font-weight: 600;
           "
         >
-          <span>⚡ {{ $t("ecrf.form.liveEditChecks") }}</span>
+          <span> {{ $t("ecrf.form.liveEditChecks") }}</span>
           <span
             v-if="discrepancyAlertsCount > 0"
             class="badge badge-discrepancy tabular-nums"
@@ -386,8 +387,7 @@
             font-weight: 600;
           "
         >
-          <span
-            >📝
+          <span>
             {{
               isDirty
                 ? $t("ecrf.form.unsavedDraftChanges")
@@ -646,7 +646,7 @@
       :teleport="false"
       overlay-id="enroll-subject-modal"
       dialog-class="modal"
-      :title="`➕ ${$t('ecrf.enrollModal.header')}`"
+      :title="` ${$t('ecrf.enrollModal.header')}`"
     >
       <p style="font-size: 0.9rem; color: var(--semantic-color-text-secondary)">
         {{ $t("ecrf.enrollModal.desc") }}
@@ -791,7 +791,7 @@
       :teleport="false"
       overlay-id="reconsent-gate-modal"
       dialog-class="modal"
-      :title="`⚠️ ${$t('ecrf.gateModal.header')}`"
+      :title="` ${$t('ecrf.gateModal.header')}`"
     >
       <p
         style="
@@ -827,7 +827,7 @@
             $emit('open-econsent-modal');
           "
         >
-          ✍️ {{ $t("ecrf.form.openEconsent") }}
+          {{ $t("ecrf.form.openEconsent") }}
         </button>
         <button
           type="button"
@@ -841,7 +841,7 @@
             $emit('open-paper-icf-modal');
           "
         >
-          📄 {{ $t("ecrf.form.uploadPaperIcf") }}
+          {{ $t("ecrf.form.uploadPaperIcf") }}
         </button>
       </template>
     </ClinicalModal>
@@ -949,7 +949,7 @@
 
 <script setup>
 import { computed, reactive, ref } from "vue";
-import { ClinicalFormField, ClinicalModal } from "ui";
+import { ClinicalFormField, ClinicalModal, ClinicalIcon } from "ui";
 import { useScopedNavigation } from "../../composables/useScopedNavigation";
 import { isScreenAvailable } from "../../router/availability.js";
 import { useClinicalStore } from "../../stores/clinical";

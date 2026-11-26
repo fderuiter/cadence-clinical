@@ -113,6 +113,11 @@ public sealed class QualityGateRegistryTests : IDisposable
             Write("docs/note.md", "# Note without newline");
             return Context();
         },
+        ["no-emojis"] = () =>
+        {
+            Write("apps/web/src/Bad.vue", "<template><div>\U0001F680 Launch</div></template>\n");
+            return Context();
+        },
         ["clean-secrets"] = () =>
         {
             Write(".secrets.baseline", "{ \"results\": ");
@@ -383,7 +388,7 @@ public sealed class QualityGateRegistryTests : IDisposable
     [Fact]
     public void EveryGate_HasAFailingFixture()
     {
-        QualityGates.All.Should().HaveCount(46);
+        QualityGates.All.Should().HaveCount(47);
         Fixtures().Keys.Should().BeEquivalentTo(QualityGates.All.Select(g => g.Name));
         FailsClosedOnly.Keys.Should().BeSubsetOf(QualityGates.All.Select(g => g.Name));
     }
@@ -867,6 +872,29 @@ public sealed class QualityGateRegistryTests : IDisposable
             "apps/payments/src/Rbac/ShadowGrant.cs",
             "namespace Cadence.Apps.Payments.Rbac;\npublic static class ShadowGrant\n{\n    public static void Init() => Grant(\"pi\", \"payments_shadow\", \"approve\");\n}\n");
         permissionGate.Run(Context()).Should().BeFalse("unbaselined static Grant(...) calls in service sources must fail permission-matrix");
+    }
+
+    [Fact]
+    public void NoEmojisGate_RejectsExtendedPictographicRegionalIndicatorAndKeycaps()
+    {
+        var gate = QualityGates.Find("no-emojis")!;
+        gate.TakesFiles.Should().BeTrue();
+        gate.PreCommit.Should().Be(PreCommitMode.Full);
+
+        Write("apps/web/src/Clean.vue", "<template><button type=\"button\" aria-label=\"Close\">Close</button></template>\n");
+        gate.Run(Context()).Should().BeTrue("emoji-free frontend source must pass no-emojis");
+
+        Write("packages/ui/src/Pictograph.vue", "<template><span>\U0001F680</span></template>\n");
+        gate.Run(Context(files: ["packages/ui/src/Pictograph.vue"], preCommit: true))
+            .Should().BeFalse("Extended_Pictographic glyph must fail no-emojis");
+
+        Write("apps/web/src/locales/en.json", "{\"region\": \"\U0001F1FA\U0001F1F8\"}\n");
+        gate.Run(Context(files: ["apps/web/src/locales/en.json"], preCommit: true))
+            .Should().BeFalse("Regional_Indicator flag sequence must fail no-emojis");
+
+        Write("apps/subject-portal/src/step.js", "export const step = \"1\uFE0F\u20E3\";\n");
+        gate.Run(Context(files: ["apps/subject-portal/src/step.js"], preCommit: true))
+            .Should().BeFalse("keycap combining sequence must fail no-emojis");
     }
 
     private static string CaptureConsoleOutput(Action action)

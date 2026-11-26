@@ -17,7 +17,12 @@
         <header class="drawer-header">
           <div class="header-title-group">
             <span class="header-icon" aria-hidden="true">
-              <Rocket :size="18" aria-hidden="true" />
+              <Rocket
+                :size="20"
+                aria-hidden="true"
+                :stroke-width="1.75"
+                focusable="false"
+              />
             </span>
             <h3 id="checklist-drawer-title" class="drawer-title">
               Workspace Setup Checklist
@@ -29,7 +34,12 @@
             aria-label="Close Setup Checklist Drawer"
             @click="onboardingStore.closeDrawer()"
           >
-            <X :size="18" aria-hidden="true" />
+            <X
+              :size="20"
+              aria-hidden="true"
+              :stroke-width="1.75"
+              focusable="false"
+            />
           </button>
         </header>
       </template>
@@ -63,7 +73,12 @@
           />
         </div>
         <div v-if="onboardingStore.isChecklistComplete" class="complete-banner">
-          <CheckCircle2 :size="15" aria-hidden="true" />
+          <CheckCircle2
+            :size="16"
+            aria-hidden="true"
+            :stroke-width="1.75"
+            focusable="false"
+          />
           All setup milestones completed! Study configuration ready.
         </div>
       </div>
@@ -111,7 +126,12 @@
               :aria-label="'Go to Task — ' + task.title"
               @click="navigateToTask(task)"
             >
-              <ArrowUpRight :size="14" aria-hidden="true" />
+              <ArrowUpRight
+                :size="16"
+                aria-hidden="true"
+                :stroke-width="1.75"
+                focusable="false"
+              />
               Go to Task
             </button>
           </div>

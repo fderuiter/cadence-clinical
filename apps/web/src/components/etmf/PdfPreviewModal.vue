@@ -11,8 +11,10 @@
       <div class="modal-header">
         <div class="header-details">
           <h3>
-            <span class="secure-icon" aria-hidden="true">🔒</span> Secure
-            Regulated Viewer -
+            <span class="secure-icon" aria-hidden="true"
+              ><ClinicalIcon name="lock" :size="16"
+            /></span>
+            Secure Regulated Viewer -
             {{ document.filename }}
           </h3>
           <p class="gxp-tracking-subtitle">
@@ -116,7 +118,7 @@
               v-if="document.signer && document.signing_timestamp"
               class="manifest-card signed"
             >
-              <p class="sign-status">📝 ELECTRONICALLY SIGNED</p>
+              <p class="sign-status">ELECTRONICALLY SIGNED</p>
               <p class="signer-meta">
                 Signer: <strong>{{ document.signer }}</strong>
               </p>
@@ -131,7 +133,7 @@
               </p>
             </div>
             <div v-else class="manifest-card unsigned">
-              <p class="sign-status">⚠️ UNSIGNED RECORD</p>
+              <p class="sign-status">UNSIGNED RECORD</p>
               <p class="unsigned-warning">
                 This document is a working electronic draft and has not been
                 locked by signature manifestation.
@@ -146,7 +148,7 @@
           >
             <h4>Redaction Manifest</h4>
             <div class="manifest-card redacted">
-              <p class="redact-status">🛡️ HIPAA/GDPR COMPLIANT</p>
+              <p class="redact-status">HIPAA/GDPR COMPLIANT</p>
               <p
                 v-if="document.redaction_manifest_json?.operator_name"
                 class="redact-meta"
@@ -290,7 +292,7 @@
 
 <script setup>
 import { ref, computed, watch, onBeforeUnmount } from "vue";
-import { useFocusTrap } from "ui";
+import { useFocusTrap, ClinicalIcon } from "ui";
 import { useAuthStore } from "../../stores/auth";
 import { useEtmfStore } from "../../stores/etmf";
 

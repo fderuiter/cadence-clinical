@@ -19,7 +19,7 @@
     "build": "node scripts/generate-types.js && vite build",
     "test": "vitest run --coverage --testTimeout=30000",
     "typecheck": "vue-tsc --noEmit",
-    "lint": "eslint .",
+    "lint": "eslint --max-warnings 0 .",
     "format": "prettier --write ."
   },
   "keywords": [],

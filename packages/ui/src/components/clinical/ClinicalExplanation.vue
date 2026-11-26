@@ -10,6 +10,7 @@
         :size="16"
         :stroke-width="1.75"
         aria-hidden="true"
+        focusable="false"
         class="clinical-explanation__lead-icon"
       />
       <p class="clinical-explanation__claim">{{ displayClaim }}</p>
@@ -43,6 +44,7 @@
           :size="16"
           :stroke-width="1.75"
           aria-hidden="true"
+          focusable="false"
           class="clinical-explanation__status-icon clinical-explanation__status-icon--met"
         />
         <XCircle
@@ -50,6 +52,7 @@
           :size="16"
           :stroke-width="1.75"
           aria-hidden="true"
+          focusable="false"
           class="clinical-explanation__status-icon clinical-explanation__status-icon--unmet"
         />
         <div class="clinical-explanation__condition-body">
@@ -104,7 +107,12 @@
       class="clinical-explanation__steps"
     >
       <summary class="clinical-explanation__steps-summary">
-        <Info :size="16" :stroke-width="1.75" aria-hidden="true" />
+        <Info
+          :size="16"
+          :stroke-width="1.75"
+          aria-hidden="true"
+          focusable="false"
+        />
         <span>Rule evaluation steps ({{ stepsList.length }})</span>
       </summary>
       <ol class="clinical-explanation__steps-list">

@@ -29,7 +29,7 @@ export function generateHtmlVerificationReport(
     <div class="suite-card ${s.passed ? "passed" : "failed"}">
       <div class="suite-header">
         <div class="suite-title">
-          <span class="status-icon">${s.passed ? "✔" : "✘"}</span>
+          <span class="status-icon">${s.passed ? "PASS" : "FAIL"}</span>
           <h3>${s.suiteName}</h3>
         </div>
         <div class="suite-badge">${s.persona}</div>

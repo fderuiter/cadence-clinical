@@ -1,6 +1,8 @@
 <script setup>
 import { computed, onBeforeUnmount, ref, useId, watch } from "vue";
 import { handoffFocus } from "../../composables/useInlineFocusHandoff.js";
+import { isClinicalIconName } from "../../icons/iconNames.js";
+import ClinicalIcon from "./ClinicalIcon.vue";
 
 const props = defineProps({
   inputId: {
@@ -227,7 +229,14 @@ defineExpose({
         class="clinical-dropzone-icon"
         aria-hidden="true"
       >
-        <slot name="icon">{{ icon }}</slot>
+        <slot name="icon">
+          <ClinicalIcon
+            v-if="isClinicalIconName(icon)"
+            :name="icon"
+            :size="20"
+          />
+          <template v-else>{{ icon }}</template>
+        </slot>
       </span>
 
       <div v-if="$slots.prompt || promptText" class="clinical-dropzone-prompt">

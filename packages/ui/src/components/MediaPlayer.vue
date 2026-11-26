@@ -1,5 +1,14 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
+import {
+  Pause,
+  Play,
+  RotateCw,
+  Volume2,
+  VolumeX,
+  ZoomIn,
+  ZoomOut,
+} from "lucide-vue-next";
 
 const props = defineProps({
   src: {
@@ -406,7 +415,13 @@ onUnmounted(() => {
             title="Zoom Out"
             @click="zoomOut"
           >
-            🔍−
+            <ZoomOut
+              :size="16"
+              :stroke-width="1.75"
+              aria-hidden="true"
+              focusable="false"
+              class="clinical-icon"
+            />
           </button>
           <span class="zoom-indicator">{{ Math.round(zoomLevel * 100) }}%</span>
           <button
@@ -416,7 +431,13 @@ onUnmounted(() => {
             title="Zoom In"
             @click="zoomIn"
           >
-            🔍+
+            <ZoomIn
+              :size="16"
+              :stroke-width="1.75"
+              aria-hidden="true"
+              focusable="false"
+              class="clinical-icon"
+            />
           </button>
           <button
             v-if="mediaCategory === 'image'"
@@ -426,7 +447,13 @@ onUnmounted(() => {
             title="Rotate Clockwise"
             @click="rotateClockwise"
           >
-            🔄
+            <RotateCw
+              :size="16"
+              :stroke-width="1.75"
+              aria-hidden="true"
+              focusable="false"
+              class="clinical-icon"
+            />
           </button>
           <button
             v-if="mediaCategory === 'image'"
@@ -580,7 +607,22 @@ onUnmounted(() => {
             data-testid="audio-play-btn"
             @click="togglePlayPause"
           >
-            {{ isPlaying ? "⏸" : "▶" }}
+            <Pause
+              v-if="isPlaying"
+              :size="16"
+              :stroke-width="1.75"
+              aria-hidden="true"
+              focusable="false"
+              class="clinical-icon"
+            />
+            <Play
+              v-else
+              :size="16"
+              :stroke-width="1.75"
+              aria-hidden="true"
+              focusable="false"
+              class="clinical-icon"
+            />
           </button>
 
           <span class="time-display">{{ formatTime(currentTime) }}</span>
@@ -603,7 +645,22 @@ onUnmounted(() => {
             :aria-label="isMuted ? 'Unmute' : 'Mute'"
             @click="toggleMute"
           >
-            {{ isMuted ? "🔇" : "🔊" }}
+            <VolumeX
+              v-if="isMuted"
+              :size="16"
+              :stroke-width="1.75"
+              aria-hidden="true"
+              focusable="false"
+              class="clinical-icon"
+            />
+            <Volume2
+              v-else
+              :size="16"
+              :stroke-width="1.75"
+              aria-hidden="true"
+              focusable="false"
+              class="clinical-icon"
+            />
           </button>
         </div>
       </div>
@@ -636,7 +693,22 @@ onUnmounted(() => {
             data-testid="video-play-btn"
             @click="togglePlayPause"
           >
-            {{ isPlaying ? "⏸" : "▶" }}
+            <Pause
+              v-if="isPlaying"
+              :size="16"
+              :stroke-width="1.75"
+              aria-hidden="true"
+              focusable="false"
+              class="clinical-icon"
+            />
+            <Play
+              v-else
+              :size="16"
+              :stroke-width="1.75"
+              aria-hidden="true"
+              focusable="false"
+              class="clinical-icon"
+            />
           </button>
 
           <span class="time-display">{{ formatTime(currentTime) }}</span>
@@ -674,7 +746,22 @@ onUnmounted(() => {
             :aria-label="isMuted ? 'Unmute' : 'Mute'"
             @click="toggleMute"
           >
-            {{ isMuted ? "🔇" : "🔊" }}
+            <VolumeX
+              v-if="isMuted"
+              :size="16"
+              :stroke-width="1.75"
+              aria-hidden="true"
+              focusable="false"
+              class="clinical-icon"
+            />
+            <Volume2
+              v-else
+              :size="16"
+              :stroke-width="1.75"
+              aria-hidden="true"
+              focusable="false"
+              class="clinical-icon"
+            />
           </button>
         </div>
       </div>

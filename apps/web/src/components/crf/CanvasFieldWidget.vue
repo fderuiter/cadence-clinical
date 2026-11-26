@@ -227,7 +227,7 @@
             color: var(--semantic-color-text-secondary);
           "
         >
-          <span>📁 Attachment Upload Area</span>
+          <span> Attachment Upload Area</span>
         </div>
       </template>
 
@@ -331,13 +331,14 @@
         gap: 6px;
       "
     >
-      <span>⚠️</span>
+      <span><ClinicalIcon name="alert-triangle" :size="16" /></span>
       <span style="font-weight: 600">{{ warningMessage }}</span>
     </div>
   </div>
 </template>
 
 <script setup>
+import { ClinicalIcon } from "ui";
 /**
  * CanvasFieldWidget component
  *

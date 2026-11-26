@@ -108,3 +108,20 @@ export {
   stripRawPermissionTokens,
   openEntityPeek,
 } from "./utils/entityPeekRegistry.js";
+export {
+  CLINICAL_SHELL_ICON_NAMES,
+  CLINICAL_ROUTE_ICON_NAMES,
+  CLINICAL_ICON_NAMES,
+  CLINICAL_ICON_STROKE_WIDTH,
+  isClinicalShellIconName,
+  isClinicalRouteIconName,
+  isClinicalIconName,
+  normalizeClinicalIconSize,
+} from "./icons/iconNames.js";
+export { CLINICAL_SHELL_ICONS } from "./icons/shellIcons.js";
+export {
+  CLINICAL_ROUTE_ICONS,
+  CLINICAL_ICONS,
+  resolveClinicalIcon,
+} from "./icons/clinicalIcons.js";
+export { renderClinicalIconSvg } from "./icons/renderClinicalIconSvg.js";

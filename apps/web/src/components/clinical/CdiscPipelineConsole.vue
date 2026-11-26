@@ -42,7 +42,11 @@
           :disabled="isRunningPipeline"
           @click="runContinuousPipeline"
         >
-          <span class="icon">{{ isRunningPipeline ? "⏳" : "⚡" }}</span>
+          <span class="icon"
+            ><ClinicalIcon
+              :name="isRunningPipeline ? 'clock' : 'play'"
+              :size="16"
+          /></span>
           {{
             isRunningPipeline
               ? "Transforming & Compiling..."
@@ -59,7 +63,14 @@
       :class="lastExecutionResult.status.toLowerCase()"
     >
       <div class="banner-icon">
-        {{ lastExecutionResult.status === "COMPLETED" ? "✅" : "⚠️" }}
+        <ClinicalIcon
+          :name="
+            lastExecutionResult.status === 'COMPLETED'
+              ? 'check-circle'
+              : 'alert-triangle'
+          "
+          :size="20"
+        />
       </div>
       <div class="banner-content">
         <div class="banner-title">
@@ -111,7 +122,7 @@
         :class="['subtab-btn', { active: currentSubTab === 'domains' }]"
         @click="currentSubTab = 'domains'"
       >
-        📑 SDTM Domains &amp; ADaM Datasets
+        SDTM Domains &amp; ADaM Datasets
       </button>
       <button
         role="tab"
@@ -119,7 +130,7 @@
         :class="['subtab-btn', { active: currentSubTab === 'dataset_json' }]"
         @click="currentSubTab = 'dataset_json'"
       >
-        📄 Dataset-JSON 1.1 / 2.0 Viewer
+        Dataset-JSON 1.1 / 2.0 Viewer
       </button>
       <button
         role="tab"
@@ -127,7 +138,7 @@
         :class="['subtab-btn', { active: currentSubTab === 'define_xml' }]"
         @click="currentSubTab = 'define_xml'"
       >
-        🏛️ Define-XML 2.1 Compiler &amp; VLM
+        Define-XML 2.1 Compiler &amp; VLM
       </button>
     </div>
 
@@ -218,14 +229,14 @@
             class="btn btn-sm btn-secondary"
             @click="copyDatasetJson"
           >
-            📋 Copy JSON
+            Copy JSON
           </button>
           <button
             type="button"
             class="btn btn-sm btn-primary"
             @click="downloadDatasetJson"
           >
-            ⬇️ Download Dataset-JSON
+            Download Dataset-JSON
           </button>
         </div>
       </div>
@@ -250,14 +261,14 @@
             class="btn btn-sm btn-secondary"
             @click="copyDefineXml"
           >
-            📋 Copy XML
+            Copy XML
           </button>
           <button
             type="button"
             class="btn btn-sm btn-primary"
             @click="downloadDefineXml"
           >
-            ⬇️ Download Define-XML 2.1
+            Download Define-XML 2.1
           </button>
         </div>
       </div>
@@ -305,6 +316,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from "vue";
+import { ClinicalIcon } from "ui";
 
 const props = defineProps({
   studyId: {
