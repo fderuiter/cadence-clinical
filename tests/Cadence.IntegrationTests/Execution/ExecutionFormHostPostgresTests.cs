@@ -14,7 +14,9 @@ using Cadence.Kernel;
 using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Evidence;
+using Cadence.Kernel.Persistence.Background;
 using Cadence.Kernel.Protocol.Design;
+using Cadence.Kernel.Time;
 using Cadence.Modules.Execution.Endpoints;
 using Cadence.Security.Authentication;
 using Cadence.Testing.Commands;
@@ -26,6 +28,8 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 
 using Xunit;
@@ -376,8 +380,22 @@ public sealed class ExecutionFormHostPostgresTests(ExecutionFormModulePostgresFi
         var savedClock = fixture.Clock.UtcNow;
         try
         {
-            fixture.Clock.Set(Cadence.Kernel.Time.SystemClock.Instance.UtcNow);
+            if (SystemClock.Instance.UtcNow > savedClock)
+            {
+                fixture.Clock.Set(SystemClock.Instance.UtcNow);
+            }
+
             var relayed = await fixture.OutboxRelay.RelayBatchAsync(10_000, ct);
+            if (relayed.Failed > 0)
+            {
+                await using var db = fixture.CreateAdminContext();
+                var errors = await db.OutboxMessages
+                    .Where(m => m.LastError != null)
+                    .Select(m => m.LastError!)
+                    .ToListAsync(ct);
+                relayed.Failed.Should().Be(0, string.Join(" | ", errors));
+            }
+
             relayed.Failed.Should().Be(0);
         }
         finally
@@ -555,6 +573,11 @@ public sealed class ExecutionFormHostPostgresTests(ExecutionFormModulePostgresFi
                 ct);
         }
 
+        await _scenario.Protocol.OkAsync(
+            new IssueGrant(tenant, GrantId.New(), Actor.ServiceAccount("execution-forms"), "execution.form.open", null, AuthorityScope.Tenant(), _scenario.Tick(), null, false,
+                KernelProtocolScenario.Key(), "Module consumer grant"),
+            ct);
+
         return (code, enrollment, _scenario.Tick());
     }
 
@@ -567,7 +590,17 @@ public sealed class ExecutionFormHostPostgresTests(ExecutionFormModulePostgresFi
             .ConfigureLogging(logging => logging.AddProvider(_sql))
 
             // Every error a form endpoint returns must be one its command declares (ADR-2600 §4.5).
-            .ConfigureTestServices(services => services.AddDeclaredKernelErrorsCheck()));
+            // Defer background outbox and activity loops so explicit fixture.OutboxRelay passes deliver each tenant's events in causal order.
+            .ConfigureTestServices(services =>
+            {
+                services.AddDeclaredKernelErrorsCheck();
+                services.RemoveAll<KernelBackgroundOptions>();
+                services.AddSingleton(new KernelBackgroundOptions
+                {
+                    RelayInterval = TimeSpan.FromHours(1),
+                    ActivityInterval = TimeSpan.FromHours(1),
+                });
+            }));
         _host.Server.PreserveExecutionContext = true;
         return _host.CreateSignedClient(new GatewayIdentity(userId, [], [], TenantId: tenantCode));
     }

@@ -888,8 +888,11 @@ jobs:
             playwright-${{ runner.os }}-
 
       - name: Install Playwright Browsers
+        env:
+          PLAYWRIGHT_CACHE_HIT: ${{ steps.playwright-cache.outputs.cache-hit }}
         run: |
-          if [ "${{ steps.playwright-cache.outputs.cache-hit }}" = "true" ]; then
+          # Reads steps.playwright-cache.outputs.cache-hit via PLAYWRIGHT_CACHE_HIT.
+          if [ "$PLAYWRIGHT_CACHE_HIT" = "true" ]; then
             echo "Playwright cache hit detected. Installing system dependencies and verifying browser binary..."
             pnpm --filter web exec playwright install-deps chromium
             pnpm --filter web exec playwright install chromium

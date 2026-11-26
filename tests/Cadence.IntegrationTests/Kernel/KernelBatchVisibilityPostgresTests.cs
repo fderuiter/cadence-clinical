@@ -52,6 +52,16 @@ using Xunit;
 
 namespace Cadence.IntegrationTests.Kernel;
 
+[CollectionDefinition(Name, DisableParallelization = true)]
+public sealed class KernelBatchVisibilityPerfQuotaCollection
+{
+    public const string Name = "KernelBatchVisibilityPerfQuota";
+
+    private KernelBatchVisibilityPerfQuotaCollection()
+    {
+    }
+}
+
 /// <summary>
 /// PostgreSQL verification of batched scope lookups over shared connection leases (<c>KernelAuthorityStore</c>,
 /// <c>GrantNodeVisibility</c>, <c>GrantChain</c>, <c>KernelLineageStore</c>, and <c>RequesterBoundVisibility</c>):
@@ -59,6 +69,7 @@ namespace Cadence.IntegrationTests.Kernel;
 /// <c>SELECT</c> per present kind, exact parity with single-node lookups across all 18 path-bearing kinds, lineage
 /// version deduplication with preserved <c>masked:n</c> handles, and the 2,000-node waterfall benchmark.
 /// </summary>
+[Collection(KernelBatchVisibilityPerfQuotaCollection.Name)]
 [Trait("Category", "Integration")]
 public sealed class KernelBatchVisibilityPostgresTests(KernelPostgresFixture fixture, ITestOutputHelper output) : IClassFixture<KernelPostgresFixture>
 {
