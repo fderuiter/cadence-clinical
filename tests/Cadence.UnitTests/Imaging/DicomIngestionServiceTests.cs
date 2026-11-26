@@ -26,6 +26,17 @@ using Xunit;
 
 namespace Cadence.UnitTests.Imaging;
 
+[CollectionDefinition(Name, DisableParallelization = true)]
+public sealed class DicomIngestionLohSerialCollection
+{
+    public const string Name = "DicomIngestionLohSerial";
+
+    private DicomIngestionLohSerialCollection()
+    {
+    }
+}
+
+[Collection(DicomIngestionLohSerialCollection.Name)]
 public sealed class DicomIngestionServiceTests
 {
     private static readonly byte[] SigningKey = RandomNumberGenerator.GetBytes(DicomDeidentifier.MinimumSigningKeyLength);

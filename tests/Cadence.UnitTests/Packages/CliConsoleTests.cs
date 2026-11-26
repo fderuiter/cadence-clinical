@@ -117,6 +117,7 @@ public sealed class CliConsoleTests
         psi.ArgumentList.Add(cli);
         psi.ArgumentList.Add("check");
         psi.ArgumentList.Add("no-such-gate");
+        psi.Environment["MSBUILDDISABLENODEREUSE"] = "1";
 
         psi.Environment.Remove("TERM");
         if (term is not null)

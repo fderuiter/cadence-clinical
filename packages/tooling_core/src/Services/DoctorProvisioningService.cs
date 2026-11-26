@@ -241,6 +241,7 @@ public sealed class DefaultDoctorProvisioningRuntime : IDoctorProvisioningRuntim
         psi.Environment["DOTNET_CLI_TELEMETRY_OPTOUT"] = "1";
         psi.Environment["DOTNET_SKIP_FIRST_TIME_EXPERIENCE"] = "1";
         psi.Environment["DOTNET_NOLOGO"] = "1";
+        psi.Environment["MSBUILDDISABLENODEREUSE"] = "1";
     }
 }
 

@@ -217,7 +217,7 @@ public sealed class ExecutionFormHostPostgresTests(ExecutionFormModulePostgresFi
         await _scenario.Protocol.OkAsync(
             new ProvisionTenant(tenant, code, "Execution casebook summary tenant", KernelProtocolScenario.Key(), KernelProtocolScenario.Reason), ct);
         var (_, study) = await _scenario.Protocol.NewStudyAsync(tenant, ct);
-        await _scenario.EffectiveVersionAsync(tenant, study, ct);
+        await _scenario.EffectiveVersionAsync(tenant, study, ct, repeatingSpec: true);
         var studySite = await _scenario.Observations.AddStudySiteAsync(tenant, study, ct);
         var enrollment = await _scenario.Observations.ScreenAsync(tenant, studySite, ct);
         var collectedAt = _scenario.Tick();

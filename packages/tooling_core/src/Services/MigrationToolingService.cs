@@ -250,19 +250,28 @@ public static class MigrationToolingService
         }
 
         repoRoot ??= FindRepoRoot();
-        var args = new List<string>
+        var exporterArgs = new List<string> { "--verify-only" };
+        if (targets.Count == 1)
+        {
+            exporterArgs.Add("--module");
+            exporterArgs.Add(targets[0].Module);
+        }
+
+        if (processRunner is null)
+        {
+            ExporterBinaryResolver.ExporterInvocation invocation =
+                ExporterBinaryResolver.ResolveInvocation(repoRoot, ExporterProject, exporterArgs);
+            return InvokeProcess(repoRoot, invocation.FileName, invocation.Arguments, processRunner: null);
+        }
+
+        var args = new List<string>(exporterArgs.Count + 4)
         {
             "run",
             "--project",
             ExporterProject,
             "--",
-            "--verify-only",
         };
-        if (targets.Count == 1)
-        {
-            args.Add("--module");
-            args.Add(targets[0].Module);
-        }
+        args.AddRange(exporterArgs);
 
         return InvokeProcess(repoRoot, "dotnet", args, processRunner);
     }
@@ -284,34 +293,43 @@ public static class MigrationToolingService
         }
 
         repoRoot ??= FindRepoRoot();
-        var args = new List<string>
+        var migratorArgs = new List<string>();
+        if (targets.Count == 1)
         {
-            "run",
-            "--project",
-            MigratorProject,
-        };
+            migratorArgs.Add("--module");
+            migratorArgs.Add(targets[0].Module);
+        }
 
-        bool hasMigratorArgs = targets.Count == 1 || !string.IsNullOrWhiteSpace(connectionString);
-        if (hasMigratorArgs)
+        if (!string.IsNullOrWhiteSpace(connectionString))
         {
-            args.Add("--");
-            if (targets.Count == 1)
-            {
-                args.Add("--module");
-                args.Add(targets[0].Module);
-            }
-
-            if (!string.IsNullOrWhiteSpace(connectionString))
-            {
-                args.Add("--connection");
-                args.Add(connectionString.Trim());
-            }
+            migratorArgs.Add("--connection");
+            migratorArgs.Add(connectionString.Trim());
         }
 
         string scopeLabel = targets.Count == 1
             ? $"module '{targets[0].Module}' ({targets[0].DbContextName}, schema '{targets[0].Schema}')"
             : $"all {targets.Count} persistence modules";
         Console.WriteLine($"Applying pending EF Core migrations for {scopeLabel}...");
+
+        if (processRunner is null)
+        {
+            ExporterBinaryResolver.ExporterInvocation invocation =
+                ExporterBinaryResolver.ResolveInvocation(repoRoot, MigratorProject, migratorArgs);
+            return InvokeProcess(repoRoot, invocation.FileName, invocation.Arguments, processRunner: null);
+        }
+
+        var args = new List<string>(migratorArgs.Count + 4)
+        {
+            "run",
+            "--project",
+            MigratorProject,
+        };
+        if (migratorArgs.Count > 0)
+        {
+            args.Add("--");
+            args.AddRange(migratorArgs);
+        }
+
         return InvokeProcess(repoRoot, "dotnet", args, processRunner);
     }
 
@@ -634,6 +652,7 @@ public static class MigrationToolingService
             WorkingDirectory = workingDirectory,
             UseShellExecute = false,
         };
+        psi.Environment["MSBUILDDISABLENODEREUSE"] = "1";
         string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         if (!string.IsNullOrEmpty(home))
         {

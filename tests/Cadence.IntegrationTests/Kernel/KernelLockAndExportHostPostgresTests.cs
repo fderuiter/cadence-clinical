@@ -1103,7 +1103,7 @@ public sealed class KernelLockAndExportHostPostgresTests(ExecutionFormModulePost
         var treatmentConcept = await DefineConceptWithCodeAsync(tenant, "randomization_treatment_assignment", "Randomized treatment arm", ct);
         var blindedFormId = CollectionInstanceId.New();
         var subjectObjA = new KernelObservationScenario.Subject(tenant, study, siteA, enrollmentA);
-        await _scenario.Protocol.OkAsync(Open(subjectObjA, blindedFormId, Tick()), ct);
+        await _scenario.Protocol.OkAsync(Open(subjectObjA, blindedFormId, Tick(), visit: null), ct);
         var savedBlinded = await _scenario.Protocol.OkAsync(
             Save(new Form(subjectObjA, version, blindedFormId), Value(Systolic, new QuantityValue(118.0m, "mm[Hg]"))),
             ct);
@@ -1217,7 +1217,7 @@ public sealed class KernelLockAndExportHostPostgresTests(ExecutionFormModulePost
             version = (await db.ProtocolVersions.AsNoTracking().SingleAsync(v => v.StudyId == study, ct)).Id;
         }
         var subjectB = new KernelObservationScenario.Subject(tenant, study, siteB, enrollmentB);
-        var incompleteFormB = await _scenario.Protocol.OkAsync(Open(subjectB, CollectionInstanceId.New(), Tick()), ct);
+        var incompleteFormB = await _scenario.Protocol.OkAsync(Open(subjectB, CollectionInstanceId.New(), Tick(), visit: null), ct);
         await _scenario.Protocol.OkAsync(
             Save(new Form(subjectB, version, incompleteFormB.CollectionInstanceId), Value(Systolic, new QuantityValue(134.00m, "mm[Hg]"))),
             ct);

@@ -9,6 +9,7 @@ using Cadence.Apps.Execution.Application.Subjects;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Execution.Endpoints.Filters;
 using Cadence.Apps.Execution.Infrastructure.Security;
+using Cadence.Core.Domain;
 using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
 using Cadence.Security.Rbac;
@@ -229,7 +230,8 @@ public static partial class SubjectEndpoints
         ISubjectApplicationService svc,
         CancellationToken ct,
         [FromServices] ILogger? logger = null,
-        [FromServices] IKernelLockGuard? lockGuard = null)
+        [FromServices] IKernelLockGuard? lockGuard = null,
+        [FromServices] IKernelEnrollmentSynchronizer? enrollmentSynchronizer = null)
     {
         ct.ThrowIfCancellationRequested();
 
@@ -249,14 +251,23 @@ public static partial class SubjectEndpoints
             return scopeDenied;
         }
 
-        if (await ExecutionLockGuard.EnsureUnlockedAsync(
-                lockGuard,
-                request.StudyId,
-                request.SiteId,
-                request.SubjectId,
-                ct).ConfigureAwait(false) is { } locked)
+        if (lockGuard is not null && !string.IsNullOrWhiteSpace(request.StudyId))
         {
-            return locked;
+            var lockCheck = await lockGuard
+                .EnsureUnlockedAsync(request.StudyId, request.SiteId, request.SubjectId, ct)
+                .ConfigureAwait(false);
+            if (lockCheck.IsFailure)
+            {
+                bool deferUnlinkedSiteToEnrollmentSync =
+                    enrollmentSynchronizer is not null
+                    && !string.IsNullOrWhiteSpace(request.SiteId)
+                    && lockCheck.Error is { Type: ErrorType.NotFound, Code: "KERNEL_LOCK_CHECK_FAILED" }
+                    && (await svc.GetDetailAsync(request.SubjectId, ct).ConfigureAwait(false)).IsFailure;
+                if (!deferUnlinkedSiteToEnrollmentSync)
+                {
+                    return lockCheck.Error!.ToProblemResult();
+                }
+            }
         }
 
         if (logger != null)

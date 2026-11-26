@@ -580,6 +580,55 @@ public sealed class EtmfCompletenessWebhookTests : IDisposable
         }
     }
 
+    [Fact]
+    public async Task ExpectedDocumentMissingArtifacts_OrderDeterministicallyByTmfTaxonomy_RegardlessOfPrimaryKeyOrder()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        const string studyCode = "STUDY-PK-ORDER";
+        const string siteCode = "SITE-099";
+
+        string connString = $"Data Source=etmf_pk_order_{Guid.NewGuid():N};Mode=Memory;Cache=Shared";
+        await using var keepAliveConnection = new SqliteConnection(connString);
+        await keepAliveConnection.OpenAsync(ct);
+
+        var dbOptions = new DbContextOptionsBuilder<EtmfDbContext>()
+            .UseSqlite(connString)
+            .Options;
+
+        await using (var seedDb = new EtmfDbContext(dbOptions))
+        {
+            await seedDb.Database.EnsureCreatedAsync(ct);
+
+            // Insert Zone 5 with lexicographically smaller PK than Zone 1 so physical PK order is reversed.
+            seedDb.TmfExpectedDocuments.Add(new TmfExpectedDocument("0000-site-1572")
+            {
+                StudyId = studyCode,
+                SiteId = siteCode,
+                Milestone = "SITE_ACTIVATION",
+                Zone = 5,
+                Section = "05.02",
+                ArtifactType = "FDA Form 1572",
+            });
+            seedDb.TmfExpectedDocuments.Add(new TmfExpectedDocument("ffff-central-protocol")
+            {
+                StudyId = studyCode,
+                SiteId = null,
+                Milestone = "SITE_ACTIVATION",
+                Zone = 1,
+                Section = "01.01",
+                ArtifactType = "Clinical Trial Protocol",
+            });
+            await seedDb.SaveChangesAsync(ct);
+        }
+
+        await using var evalDb = new EtmfDbContext(dbOptions);
+        var (isComplete, missingArtifacts) = await HttpEtmfCompletenessWebhookPublisher
+            .EvaluateSiteActivationCompletenessAsync(evalDb, studyCode, siteCode, ct);
+
+        isComplete.Should().BeFalse();
+        missingArtifacts.Should().Equal("Clinical Trial Protocol", "FDA Form 1572");
+    }
+
     private static async Task<(int EtmfSelectCount, int EtmfConnectionOpenCount, int ExecutionWebhookRequests, int KernelLockBatchRequests, IReadOnlyList<string> ExecutedSql)>
         RunMultiSiteRelationalScalingScenarioAsync(int siteCount, CancellationToken ct)
     {

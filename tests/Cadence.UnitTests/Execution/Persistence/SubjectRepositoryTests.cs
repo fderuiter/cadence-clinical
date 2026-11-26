@@ -15,6 +15,7 @@ using Cadence.Testing;
 using FluentAssertions;
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 using Xunit;
 
@@ -41,11 +42,16 @@ public class SubjectRepositoryTests
 {
     private static readonly StudyCode StudyA = new("STUDY-ENROLL-A");
     private static readonly StudyCode StudyB = new("STUDY-ENROLL-B");
+    private static readonly IServiceProvider SqliteServiceProvider =
+        new ServiceCollection().AddEntityFrameworkSqlite().BuildServiceProvider();
 
     private static string NewTempDbPath() => Path.Combine(Path.GetTempPath(), $"subject-repo-{Guid.NewGuid():N}.db");
 
     private static DbContextOptions<ExecutionDbContext> FileOptions(string path) =>
-        new DbContextOptionsBuilder<ExecutionDbContext>().UseSqlite($"Data Source={path}").Options;
+        new DbContextOptionsBuilder<ExecutionDbContext>()
+            .UseSqlite($"Data Source={path}")
+            .UseInternalServiceProvider(SqliteServiceProvider)
+            .Options;
 
     private static async Task<string> CreateSchemaAsync()
     {
@@ -327,6 +333,7 @@ public class SubjectRepositoryTests
     {
         var builder = new DbContextOptionsBuilder<ExecutionDbContext>()
             .UseSqlite($"Data Source={path}")
+            .UseInternalServiceProvider(SqliteServiceProvider)
             .AddInterceptors(StandaloneTenantSaveChangesInterceptor.Instance);
         builder.UseCadenceStandaloneTenancy(accessor, isRelational: true);
         return builder.Options;

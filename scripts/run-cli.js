@@ -437,11 +437,18 @@ function buildBinary() {
         binDir,
       ];
 
-  const publishResult = spawnSync(dotnetCmd, publishArgs, {
-    stdio: "inherit",
-    cwd: rootDir,
-    env: process.env,
-  });
+  const publishResult = spawnSync(
+    dotnetCmd,
+    [...publishArgs, "-nodeReuse:false"],
+    {
+      stdio: "inherit",
+      cwd: rootDir,
+      env: {
+        ...process.env,
+        MSBUILDDISABLENODEREUSE: "1",
+      },
+    }
+  );
 
   if (publishResult.status !== 0) {
     console.error("::error:: Failed to compile Cadence CLI binary.");
@@ -480,7 +487,10 @@ function main() {
   const runResult = spawnSync(binaryPath, args, {
     stdio: "inherit",
     cwd: rootDir,
-    env: process.env,
+    env: {
+      ...process.env,
+      MSBUILDDISABLENODEREUSE: process.env.MSBUILDDISABLENODEREUSE ?? "1",
+    },
   });
 
   if (runResult.error) {

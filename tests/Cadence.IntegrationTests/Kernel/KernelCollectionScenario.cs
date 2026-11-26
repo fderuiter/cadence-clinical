@@ -119,10 +119,10 @@ internal sealed class KernelCollectionScenario(KernelPostgresFixture fixture)
     }
 
     /// <summary>A study with an effective protocol version, an enrollment and an open form instance in a new tenant.</summary>
-    public async Task<Form> NewFormAsync(CancellationToken ct)
+    public async Task<Form> NewFormAsync(CancellationToken ct, bool repeatingSpec = false)
     {
         var (tenant, study) = await Protocol.NewStudyAsync(ct);
-        var version = await EffectiveVersionAsync(tenant, study, ct);
+        var version = await EffectiveVersionAsync(tenant, study, ct, repeatingSpec: repeatingSpec);
         var studySite = await Observations.AddStudySiteAsync(tenant, study, ct);
         var subject = new KernelObservationScenario.Subject(tenant, study, studySite, await Observations.ScreenAsync(tenant, studySite, ct));
         var opened = await Protocol.OkAsync(Open(subject, CollectionInstanceId.New(), Tick()), ct);
@@ -133,7 +133,12 @@ internal sealed class KernelCollectionScenario(KernelPostgresFixture fixture)
     /// Approves a version whose design collects systolic and diastolic pressure in mm[Hg] and a free-text comment, and makes
     /// it effective study-wide on an ethics approval. Returns the version.
     /// </summary>
-    public async Task<ProtocolVersionId> EffectiveVersionAsync(TenantId tenant, StudyId study, CancellationToken ct, bool requireDiastolic = true)
+    public async Task<ProtocolVersionId> EffectiveVersionAsync(
+        TenantId tenant,
+        StudyId study,
+        CancellationToken ct,
+        bool requireDiastolic = true,
+        bool repeatingSpec = false)
     {
         var systolic = await DefineAsync(tenant, "Systolic blood pressure", ct);
         var diastolic = await DefineAsync(tenant, "Diastolic blood pressure", ct);
@@ -153,7 +158,8 @@ internal sealed class KernelCollectionScenario(KernelPostgresFixture fixture)
                         new CollectionItem(Systolic, systolic, "mm[Hg]", Required: true),
                         new CollectionItem(Diastolic, diastolic, "mm[Hg]", Required: requireDiastolic),
                         new CollectionItem(Comment, systolic, ValueKind: ObservationValueKind.Text),
-                    ]),
+                    ],
+                    Repeating: repeatingSpec),
             ],
         };
 

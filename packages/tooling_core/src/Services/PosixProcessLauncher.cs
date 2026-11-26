@@ -315,6 +315,8 @@ public static class PosixProcessLauncher
             clone.Environment[entry.Key] = entry.Value;
         }
 
+        clone.Environment.TryAdd("MSBUILDDISABLENODEREUSE", "1");
+
         return clone;
     }
 }

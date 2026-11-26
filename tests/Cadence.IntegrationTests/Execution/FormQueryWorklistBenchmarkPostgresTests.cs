@@ -47,6 +47,7 @@ namespace Cadence.IntegrationTests.Execution;
 /// enrollment) and 30 enrollment forms under PostgreSQL Row-Level Security. Opt in with
 /// <c>CADENCE_FORM_QUERY_BENCHMARK=1</c> alongside <c>CADENCE_TEST_POSTGRES</c>.
 /// </summary>
+[Collection(ExecutionFormPerfMemoryQuotaCollection.Name)]
 [Trait("Category", "Integration")]
 [Trait("Category", "Benchmark")]
 public sealed class FormQueryWorklistBenchmarkPostgresTests(ExecutionFormModulePostgresFixture fixture, ITestOutputHelper output)
@@ -93,7 +94,7 @@ public sealed class FormQueryWorklistBenchmarkPostgresTests(ExecutionFormModuleP
         await _scenario.Protocol.OkAsync(
             new ProvisionTenant(tenant, code, "Worklist benchmark tenant", KernelProtocolScenario.Key(), KernelProtocolScenario.Reason), ct);
         var (_, study) = await _scenario.Protocol.NewStudyAsync(tenant, ct);
-        var version = await _scenario.EffectiveVersionAsync(tenant, study, ct);
+        var version = await _scenario.EffectiveVersionAsync(tenant, study, ct, repeatingSpec: true);
 
         Guid sponsorId;
         await using (var db = fixture.CreateContext(tenant))

@@ -856,6 +856,8 @@ public static class QualityGates
             psi.ArgumentList.Add(argument);
         }
 
+        psi.Environment["MSBUILDDISABLENODEREUSE"] = "1";
+
         try
         {
             using var process = Process.Start(psi);
@@ -884,6 +886,8 @@ public static class QualityGates
         {
             psi.ArgumentList.Add(argument);
         }
+
+        psi.Environment["MSBUILDDISABLENODEREUSE"] = "1";
 
         try
         {

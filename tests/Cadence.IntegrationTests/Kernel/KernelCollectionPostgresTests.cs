@@ -168,21 +168,30 @@ public sealed class KernelCollectionPostgresTests(KernelPostgresFixture fixture)
 
         var studySite = await _forms.Observations.AddStudySiteAsync(tenant, study, ct);
         var screeningSubject = new KernelObservationScenario.Subject(tenant, study, studySite, await _forms.Observations.ScreenAsync(tenant, studySite, ct));
-        var subject = new KernelObservationScenario.Subject(tenant, study, studySite, await _forms.Observations.ScreenAsync(tenant, studySite, ct));
-
         var enrolledAt = new DateTimeOffset(DateOnly.FromDateTime(Tick().UtcDateTime).AddDays(1), new TimeOnly(9, 30), TimeSpan.Zero);
-        fixture.Clock.Set(enrolledAt.AddHours(3));
-        await _forms.Protocol.OkAsync(
-            new ChangeEnrollmentStatus(tenant, subject.Enrollment, EnrollmentStatus.Enrolled, enrolledAt, KernelProtocolScenario.Key(), "Eligible and enrolled"),
-            ct);
-        Tick();
-        await _forms.Protocol.OkAsync(
-            new ChangeEnrollmentStatus(tenant, subject.Enrollment, EnrollmentStatus.Randomized, enrolledAt.AddHours(1), KernelProtocolScenario.Key(), "Randomized"),
-            ct);
-        Tick();
-        await _forms.Protocol.OkAsync(
-            new ChangeEnrollmentStatus(tenant, subject.Enrollment, EnrollmentStatus.Active, enrolledAt.AddHours(2), KernelProtocolScenario.Key(), "First dose"),
-            ct);
+
+        async Task<KernelObservationScenario.Subject> ScreenAndEnrollActiveAsync()
+        {
+            fixture.Clock.Set(enrolledAt.AddHours(-1));
+            var enrolledSubject = new KernelObservationScenario.Subject(tenant, study, studySite, await _forms.Observations.ScreenAsync(tenant, studySite, ct));
+            fixture.Clock.Set(enrolledAt.AddHours(3));
+            await _forms.Protocol.OkAsync(
+                new ChangeEnrollmentStatus(tenant, enrolledSubject.Enrollment, EnrollmentStatus.Enrolled, enrolledAt, KernelProtocolScenario.Key(), "Eligible and enrolled"),
+                ct);
+            Tick();
+            await _forms.Protocol.OkAsync(
+                new ChangeEnrollmentStatus(tenant, enrolledSubject.Enrollment, EnrollmentStatus.Randomized, enrolledAt.AddHours(1), KernelProtocolScenario.Key(), "Randomized"),
+                ct);
+            Tick();
+            await _forms.Protocol.OkAsync(
+                new ChangeEnrollmentStatus(tenant, enrolledSubject.Enrollment, EnrollmentStatus.Active, enrolledAt.AddHours(2), KernelProtocolScenario.Key(), "First dose"),
+                ct);
+            return enrolledSubject;
+        }
+
+        var earlySubject = await ScreenAndEnrollActiveAsync();
+        var subject = await ScreenAndEnrollActiveAsync();
+        var lateSubject = await ScreenAndEnrollActiveAsync();
 
         var day1 = DateOnly.FromDateTime(enrolledAt.UtcDateTime);
         fixture.Clock.Advance(TimeSpan.FromDays(95));
@@ -206,7 +215,7 @@ public sealed class KernelCollectionPostgresTests(KernelPostgresFixture fixture)
         var expectedWeek12 = new PlannedVisit(VisitId, "Week 12 visit", "ep.treatment", 1, 84, 3, 3);
 
         var earlyAt = new DateTimeOffset(targetWeek12.AddDays(-5), new TimeOnly(10, 0), TimeSpan.Zero);
-        var earlyOpened = await _forms.Protocol.OkAsync(Open(subject, CollectionInstanceId.New(), earlyAt), ct);
+        var earlyOpened = await _forms.Protocol.OkAsync(Open(earlySubject, CollectionInstanceId.New(), earlyAt), ct);
         earlyOpened.VisitTimingAssessment.Should().Be(new VisitTimingAssessment(
             new ExpectedVisit(expectedWeek12, targetWeek12, targetWeek12.AddDays(-3), targetWeek12.AddDays(3), VisitWindowStatus.NotYetOpen),
             targetWeek12.AddDays(-5),
@@ -228,7 +237,7 @@ public sealed class KernelCollectionPostgresTests(KernelPostgresFixture fixture)
         replayed.Value.Should().BeEquivalentTo(inWindowOpened);
 
         var lateAt = new DateTimeOffset(targetWeek12.AddDays(7), new TimeOnly(16, 45), TimeSpan.Zero);
-        var lateOpened = await _forms.Protocol.OkAsync(Open(subject, CollectionInstanceId.New(), lateAt), ct);
+        var lateOpened = await _forms.Protocol.OkAsync(Open(lateSubject, CollectionInstanceId.New(), lateAt), ct);
         lateOpened.VisitTimingAssessment.Should().Be(new VisitTimingAssessment(
             new ExpectedVisit(expectedWeek12, targetWeek12, targetWeek12.AddDays(-3), targetWeek12.AddDays(3), VisitWindowStatus.Closed),
             targetWeek12.AddDays(7),
@@ -686,7 +695,7 @@ public sealed class KernelCollectionPostgresTests(KernelPostgresFixture fixture)
         var ct = TestContext.Current.CancellationToken;
         var formA = await _forms.NewFormAsync(ct);
         var tenant = formA.Subject.Tenant;
-        var formBId = (await _forms.Protocol.OkAsync(Open(formA.Subject, CollectionInstanceId.New(), Tick()), ct)).CollectionInstanceId;
+        var formBId = (await _forms.Protocol.OkAsync(Open(formA.Subject, CollectionInstanceId.New(), Tick(), visit: null), ct)).CollectionInstanceId;
         var formB = new Form(formA.Subject, formA.Version, formBId);
 
         var savedA1 = await _forms.Protocol.OkAsync(Save(formA, Value(Systolic, Mmhg(122)), Value(Diastolic, Mmhg(80))), ct);

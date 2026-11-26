@@ -308,12 +308,16 @@ public sealed class ExecutionTenantIsolationPostgresTests(ExecutionPostgresApiFa
         factory.SkipIfUnavailable();
         var ct = TestContext.Current.CancellationToken;
 
-        using (var warm = factory.CreateSignedClient())
+        await using var isolatedFactory = new ExecutionPostgresApiFactory();
+        await isolatedFactory.InitializeAsync();
+        isolatedFactory.SkipIfUnavailable();
+
+        using (var warm = isolatedFactory.CreateSignedClient())
         {
             _ = await warm.GetAsync(new Uri("/healthz", UriKind.Relative), ct);
         }
 
-        using (var seedScope = factory.Services.CreateSeedingScope())
+        using (var seedScope = isolatedFactory.Services.CreateSeedingScope())
         {
             var db = seedScope.ServiceProvider.GetRequiredService<ExecutionDbContext>();
             var tenantScope = seedScope.ServiceProvider.GetRequiredService<ITenantScope>();
@@ -321,7 +325,7 @@ public sealed class ExecutionTenantIsolationPostgresTests(ExecutionPostgresApiFa
         }
 
         // 1. Non-demo tenants (tenant-beta) see zero seeded randomization schemes and zero seeded IP kits for CADENCE-101.
-        using (var betaStat = factory.CreateSignedClient(new GatewayIdentity(
+        using (var betaStat = isolatedFactory.CreateSignedClient(new GatewayIdentity(
             UserId: "stat-beta",
             Roles: [RoleNormalization.ROLE_UNBLINDED_STATISTICIAN],
             SiteIds: [],
@@ -335,7 +339,7 @@ public sealed class ExecutionTenantIsolationPostgresTests(ExecutionPostgresApiFa
             JsonDocument.Parse(await betaSchemes.Content.ReadAsStringAsync(ct)).RootElement.GetArrayLength().Should().Be(0);
         }
 
-        using (var betaPharmacist = factory.CreateSignedClient(new GatewayIdentity(
+        using (var betaPharmacist = isolatedFactory.CreateSignedClient(new GatewayIdentity(
             UserId: "pharm-beta",
             Roles: [RoleNormalization.ROLE_PHARMACIST],
             SiteIds: ["SITE-101"],
@@ -351,7 +355,7 @@ public sealed class ExecutionTenantIsolationPostgresTests(ExecutionPostgresApiFa
 
         // 2. Demo tenant (cadence-local) sees the approved v1 scheme (8 encrypted slots) and ACTIVE_AT_SITE kits at SITE-101 & SITE-102,
         //    with zero clear-text arms and zero unhashed audit rows.
-        using (var verifyScope = factory.Services.CreateScope())
+        using (var verifyScope = isolatedFactory.Services.CreateScope())
         {
             var tenantScope = verifyScope.ServiceProvider.GetRequiredService<ITenantScope>();
             using var bound = tenantScope.Bind(ExecutionDbSeeder.DemoTenantCode);
@@ -392,7 +396,7 @@ public sealed class ExecutionTenantIsolationPostgresTests(ExecutionPostgresApiFa
             TenantId: ExecutionDbSeeder.DemoTenantCode,
             StudyIds: ["CADENCE-101"],
             ChangeReason: Reason);
-        using var crcClient = factory.CreateSignedClient(demoCrc);
+        using var crcClient = isolatedFactory.CreateSignedClient(demoCrc);
 
         using var createResp = await crcClient.PostAsJsonAsync(
             "/api/v1/execution/subjects",
@@ -443,7 +447,7 @@ public sealed class ExecutionTenantIsolationPostgresTests(ExecutionPostgresApiFa
         assignedKit.Should().BeOneOf("KIT-1001", "KIT-1002", "KIT-1003", "KIT-1004");
 
         // Unblinded statistician in cadence-local inspects revealed treatment_group and investigational_product_id.
-        using var statClient = factory.CreateSignedClient(new GatewayIdentity(
+        using var statClient = isolatedFactory.CreateSignedClient(new GatewayIdentity(
             UserId: "demo-stat-unblinded",
             Roles: [RoleNormalization.ROLE_UNBLINDED_STATISTICIAN],
             SiteIds: [],

@@ -709,6 +709,7 @@ public sealed class PreCommitGuardrailsTests : IDisposable
             RedirectStandardOutput = true,
             RedirectStandardError = true,
         };
+        psi.Environment["MSBUILDDISABLENODEREUSE"] = "1";
         foreach (string arg in args)
         {
             psi.ArgumentList.Add(arg);
@@ -1199,6 +1200,7 @@ public sealed class PreCommitGuardrailsTests : IDisposable
         wizardPsi.Environment["HADOLINT_SHA256"] = hlSha;
         wizardPsi.Environment["SHELLCHECK_DOWNLOAD_URL"] = $"file://{shellcheckTar}";
         wizardPsi.Environment["SHELLCHECK_SHA256"] = scSha;
+        wizardPsi.Environment["MSBUILDDISABLENODEREUSE"] = "1";
 
         (int wizardExit, string combined) = RunProcessCapture(wizardPsi);
         wizardExit.Should().Be(0, combined);
@@ -2539,6 +2541,7 @@ public sealed class PreCommitGuardrailsTests : IDisposable
         psi.Environment["ACTIONLINT_SHA256"] = actionlintSha;
         psi.Environment["HADOLINT_DOWNLOAD_URL"] = hadolintUrl;
         psi.Environment["HADOLINT_SHA256"] = hadolintSha;
+        psi.Environment["MSBUILDDISABLENODEREUSE"] = "1";
 
         using var proc = Process.Start(psi)!;
         string stdout = proc.StandardOutput.ReadToEnd();
@@ -2587,6 +2590,7 @@ public sealed class PreCommitGuardrailsTests : IDisposable
         psi.Environment["HADOLINT_SHA256"] = hadolintSha;
         psi.Environment["SHELLCHECK_DOWNLOAD_URL"] = shellcheckUrl;
         psi.Environment["SHELLCHECK_SHA256"] = shellcheckSha;
+        psi.Environment["MSBUILDDISABLENODEREUSE"] = "1";
 
         using var proc = Process.Start(psi)!;
         var stderrTask = proc.StandardError.ReadToEndAsync();

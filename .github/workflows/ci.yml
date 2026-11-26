@@ -28,6 +28,9 @@ concurrency:
 permissions:
   contents: read
 
+env:
+  MSBUILDDISABLENODEREUSE: "1"
+
 jobs:
   actionlint:
     name: Workflow Action Pinning & Actionlint Gate
@@ -1279,8 +1282,9 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request && github.event.pull_request.number || '0' }}
+          REPO_FULL_NAME: ${{ github.repository }}
         run: |
-          gh pr edit "$PR_NUMBER" --repo "${{ github.repository }}" --add-label "safe-change"
+          gh pr edit "$PR_NUMBER" --repo "$REPO_FULL_NAME" --add-label "safe-change"
 
   release-and-archive:
     name: Call Production Pipeline

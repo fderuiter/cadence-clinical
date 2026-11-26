@@ -107,6 +107,7 @@ public static class ExporterBinaryResolver
             RedirectStandardError = true,
             UseShellExecute = false,
         };
+        psi.Environment["MSBUILDDISABLENODEREUSE"] = "1";
         foreach (string arg in arguments)
         {
             psi.ArgumentList.Add(arg);

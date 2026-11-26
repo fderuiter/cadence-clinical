@@ -529,6 +529,8 @@ public static class DuplicationDetectorService
         }
 
         if (norm.Contains("/generated/", StringComparison.OrdinalIgnoreCase) ||
+            norm.StartsWith("/docs/.vitepress/cache/", StringComparison.OrdinalIgnoreCase) ||
+            norm.StartsWith("/docs/.vitepress/.temp/", StringComparison.OrdinalIgnoreCase) ||
             IsAmbientDeclarationOrTestPath(norm) ||
             norm.Equals("/apps/web/src/api/types.ts", StringComparison.OrdinalIgnoreCase) ||
             norm.Equals("/packages/ui/src/types/cdash.ts", StringComparison.OrdinalIgnoreCase))

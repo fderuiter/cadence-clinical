@@ -1106,9 +1106,11 @@ public sealed partial class ContainerImagePinTests
                 RedirectStandardError = true,
                 UseShellExecute = false,
             };
+            psi.Environment["MSBUILDDISABLENODEREUSE"] = "1";
             psi.ArgumentList.Add("msbuild");
             psi.ArgumentList.Add(projectFile);
             psi.ArgumentList.Add("-t:ValidateDependencyAlignment");
+            psi.ArgumentList.Add("-nodeReuse:false");
             psi.ArgumentList.Add("-nologo");
 
             using var process = Process.Start(psi)!;

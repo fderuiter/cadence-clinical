@@ -6,6 +6,9 @@ on:
 permissions:
   contents: read
 
+env:
+  MSBUILDDISABLENODEREUSE: "1"
+
 # Allow only one concurrent deployment
 concurrency:
   group: "pages"

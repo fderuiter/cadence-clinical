@@ -38,29 +38,36 @@ public static class DatabaseTestEvidence
     public const string LineageBenchmarkTest =
         "Cadence.IntegrationTests.Kernel.LineageBenchmarkPostgresTests.BenchmarkTenMillionEdgesTraceLatency";
 
+    /// <summary>The 300-form query worklist benchmark opt-in test (<c>CADENCE_FORM_QUERY_BENCHMARK=1</c>).</summary>
+    public const string FormQueryWorklistBenchmarkTest =
+        "Cadence.IntegrationTests.Execution.FormQueryWorklistBenchmarkPostgresTests.BenchmarkThreeHundredStudyFormsWorklistSqlLatencyAndAllocations";
+
     /// <summary>The Chromium browser-to-database observation correction test (<c>CADENCE_TEST_BROWSER=1</c>, ADR-2531).</summary>
     public const string BrowserCorrectionTest =
         "Cadence.IntegrationTests.Kernel.KernelObservationHostPostgresTests.BrowserCorrectionReachesTheDatabaseWithItsReason";
 
     /// <summary>
     /// Tests that are skipped by design in non-snapshot runs even with a database, because they need a separate opt-in:
-    /// the 10M-edge lineage benchmark (<c>CADENCE_LINEAGE_BENCHMARK=1</c>) and the Chromium browser-to-database
-    /// correction check (<c>CADENCE_TEST_BROWSER=1</c>, executed in <c>accessibility-e2e</c>). During GxP snapshots // deid-ignore
+    /// the 10M-edge lineage benchmark (<c>CADENCE_LINEAGE_BENCHMARK=1</c>), the 300-form query worklist benchmark
+    /// (<c>CADENCE_FORM_QUERY_BENCHMARK=1</c>), and the Chromium browser-to-database correction check
+    /// (<c>CADENCE_TEST_BROWSER=1</c>, executed in <c>accessibility-e2e</c>). During GxP snapshots // deid-ignore
     /// (<see cref="SnapshotOptInTests"/>), <see cref="BrowserCorrectionTest"/> is mandatory (ADR-2531).
     /// </summary>
     public static readonly IReadOnlySet<string> OptInTests = new HashSet<string>(StringComparer.Ordinal)
     {
         LineageBenchmarkTest,
+        FormQueryWorklistBenchmarkTest,
         BrowserCorrectionTest,
     };
 
     /// <summary>
-    /// Tests remaining opt-in during GxP snapshots (<c>CADENCE_GXP_SNAPSHOT=1</c>): only the 10M-edge lineage benchmark
-    /// stays opt-in, whereas <see cref="BrowserCorrectionTest"/> must execute and be recorded in TRX evidence.
+    /// Tests remaining opt-in during GxP snapshots (<c>CADENCE_GXP_SNAPSHOT=1</c>): only the opt-in performance
+    /// benchmarks stay opt-in, whereas <see cref="BrowserCorrectionTest"/> must execute and be recorded in TRX evidence.
     /// </summary>
     public static readonly IReadOnlySet<string> SnapshotOptInTests = new HashSet<string>(StringComparer.Ordinal)
     {
         LineageBenchmarkTest,
+        FormQueryWorklistBenchmarkTest,
     };
 
     /// <summary>The skipped or not-executed tests from the database assemblies in the TRX files under <paramref name="resultsPath"/>.</summary>

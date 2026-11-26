@@ -48,11 +48,22 @@ using static Cadence.IntegrationTests.Kernel.KernelCollectionScenario;
 
 namespace Cadence.IntegrationTests.Execution;
 
+[CollectionDefinition(Name, DisableParallelization = true)]
+public sealed class ExecutionFormPerfMemoryQuotaCollection
+{
+    public const string Name = "ExecutionFormPerfMemoryQuota";
+
+    private ExecutionFormPerfMemoryQuotaCollection()
+    {
+    }
+}
+
 /// <summary>
 /// PostgreSQL 18 integration and performance regression tests verifying narrow projections on
 /// <see cref="ICollectionInstanceRecords"/>, summary query assertion ID merging across 30 forms, pre-filtered bitemporal
 /// query paging and bounded memory across 300 study forms, deduplicated mutation round-trips, RLS, blinding, and lineage.
 /// </summary>
+[Collection(ExecutionFormPerfMemoryQuotaCollection.Name)]
 [Trait("Category", "Integration")]
 public sealed class ExecutionFormProjectionPerfPostgresTests(
     ExecutionFormModulePostgresFixture fixture,
@@ -197,7 +208,7 @@ public sealed class ExecutionFormProjectionPerfPostgresTests(
     {
         fixture.SkipIfUnavailable();
         var ct = TestContext.Current.CancellationToken;
-        var (code, tenant, study, site, enrollment, version) = await SeedStudyAndActorsAsync(ct);
+        var (code, tenant, study, site, enrollment, version) = await SeedStudyAndActorsAsync(ct, repeatingSpec: true);
         var subject = new KernelObservationScenario.Subject(tenant, study, site, enrollment);
 
         var formIds = new List<CollectionInstanceId>(30);
@@ -390,7 +401,7 @@ public sealed class ExecutionFormProjectionPerfPostgresTests(
     {
         fixture.SkipIfUnavailable();
         var ct = TestContext.Current.CancellationToken;
-        var (code, tenant, study, site, enrollment, version) = await SeedStudyAndActorsAsync(ct);
+        var (code, tenant, study, site, enrollment, version) = await SeedStudyAndActorsAsync(ct, repeatingSpec: true);
         var subject = new KernelObservationScenario.Subject(tenant, study, site, enrollment);
 
         // Seed 300 forms with recorded values, plus 60 queries (so the study has 300 forms and multiple pages of queries).
@@ -518,9 +529,11 @@ public sealed class ExecutionFormProjectionPerfPostgresTests(
         currentFiltered.Should().HaveCount(5, "5 of the 10 value-changed queries were answered after asOfSnapshot");
     }
 
-    private async Task<(string Code, TenantId Tenant, StudyId Study, StudySiteId Site, EnrollmentId Enrollment, ProtocolVersionId Version)> SeedStudyAndActorsAsync(CancellationToken ct)
+    private async Task<(string Code, TenantId Tenant, StudyId Study, StudySiteId Site, EnrollmentId Enrollment, ProtocolVersionId Version)> SeedStudyAndActorsAsync(
+        CancellationToken ct,
+        bool repeatingSpec = false)
     {
-        var form = await _scenario.NewFormAsync(ct);
+        var form = await _scenario.NewFormAsync(ct, repeatingSpec: repeatingSpec);
         var tenant = form.Subject.Tenant;
         var study = form.Subject.Study;
         var site = form.Subject.StudySite;

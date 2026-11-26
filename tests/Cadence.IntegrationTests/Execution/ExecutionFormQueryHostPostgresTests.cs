@@ -252,7 +252,7 @@ public sealed class ExecutionFormQueryHostPostgresTests(ExecutionFormModulePostg
         var study = obsRecord.StudyId;
         var formRecord = (await fixture.CollectionInstanceRecords.FindAsync(tenant, CollectionInstanceId.FromGuid(form), ct))!;
         var subject = new KernelObservationScenario.Subject(tenant, study, formRecord.StudySiteId, enrollment);
-        var openedSecond = await _scenario.Protocol.OkAsync(Open(subject, CollectionInstanceId.New(), _scenario.Tick()), ct);
+        var openedSecond = await _scenario.Protocol.OkAsync(Open(subject, CollectionInstanceId.New(), _scenario.Tick(), visit: null), ct);
         await _scenario.Protocol.OkAsync(
             Save(new Form(subject, formRecord.ProtocolVersionId, openedSecond.CollectionInstanceId), Value(Systolic, Mmhg(118)), Value(Diastolic, Mmhg(76))),
             ct);
@@ -1069,7 +1069,7 @@ public sealed class ExecutionFormQueryHostPostgresTests(ExecutionFormModulePostg
         await _scenario.Protocol.OkAsync(
             new ProvisionTenant(tenant, code, "Batch query projection tenant", KernelProtocolScenario.Key(), KernelProtocolScenario.Reason), ct);
         var (_, study) = await _scenario.Protocol.NewStudyAsync(tenant, ct);
-        var version = await _scenario.EffectiveVersionAsync(tenant, study, ct);
+        var version = await _scenario.EffectiveVersionAsync(tenant, study, ct, repeatingSpec: true);
 
         StudySiteId siteA;
         StudySiteId siteB;

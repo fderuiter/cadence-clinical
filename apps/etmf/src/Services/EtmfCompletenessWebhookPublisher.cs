@@ -162,6 +162,10 @@ public sealed class HttpEtmfCompletenessWebhookPublisher(
             allExpectedDocs = await dbContext.TmfExpectedDocuments
                 .AsNoTracking()
                 .Where(e => e.StudyId == studyId && e.Milestone == SiteActivationMilestone)
+                .OrderBy(e => e.Zone)
+                .ThenBy(e => e.Section)
+                .ThenBy(e => e.ArtifactType)
+                .ThenBy(e => e.Id)
                 .Select(e => new ProjectedExpectedDoc(e.SiteId, e.ArtifactType))
                 .ToListAsync(ct);
 
@@ -182,6 +186,12 @@ public sealed class HttpEtmfCompletenessWebhookPublisher(
             allStudyDocs = await dbContext.TmfDocuments
                 .AsNoTracking()
                 .Where(d => d.StudyId == studyId)
+                .OrderBy(d => d.Zone)
+                .ThenBy(d => d.Section)
+                .ThenBy(d => d.ArtifactCode)
+                .ThenBy(d => d.ArtifactType)
+                .ThenBy(d => d.Filename)
+                .ThenBy(d => d.Id)
                 .Select(d => new ProjectedDoc(
                     d.SiteId,
                     d.Status,
@@ -205,6 +215,7 @@ public sealed class HttpEtmfCompletenessWebhookPublisher(
                 .Where(d => !string.IsNullOrWhiteSpace(d.SiteCode))
                 .Select(d => d.SiteCode!))
             .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(siteCode => siteCode, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
         if (targetSites.Count == 0)
@@ -240,6 +251,10 @@ public sealed class HttpEtmfCompletenessWebhookPublisher(
                 .Where(e => e.StudyId == studyId
                             && e.Milestone == SiteActivationMilestone
                             && (e.SiteId == siteId || e.SiteId == null || e.SiteId == string.Empty))
+                .OrderBy(e => e.Zone)
+                .ThenBy(e => e.Section)
+                .ThenBy(e => e.ArtifactType)
+                .ThenBy(e => e.Id)
                 .Select(e => new ProjectedExpectedDoc(e.SiteId, e.ArtifactType))
                 .ToListAsync(ct);
 
@@ -247,6 +262,12 @@ public sealed class HttpEtmfCompletenessWebhookPublisher(
                 .AsNoTracking()
                 .Where(d => d.StudyId == studyId
                             && (d.SiteId == siteId || d.SiteId == null || d.SiteId == string.Empty))
+                .OrderBy(d => d.Zone)
+                .ThenBy(d => d.Section)
+                .ThenBy(d => d.ArtifactCode)
+                .ThenBy(d => d.ArtifactType)
+                .ThenBy(d => d.Filename)
+                .ThenBy(d => d.Id)
                 .Select(d => new ProjectedDoc(
                     d.SiteId,
                     d.Status,

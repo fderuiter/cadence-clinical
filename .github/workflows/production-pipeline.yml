@@ -6,6 +6,9 @@ on:
 permissions:
   contents: read
 
+env:
+  MSBUILDDISABLENODEREUSE: "1"
+
 jobs:
   release-and-archive:
     name: Qualify and Archive GxP Evidence
