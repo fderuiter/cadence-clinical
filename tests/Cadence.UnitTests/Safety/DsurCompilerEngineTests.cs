@@ -235,8 +235,10 @@ public class DsurCompilerEngineTests
             ReasonForChange: "Initial compilation"
         );
 
+        var dsurService = new DsurApplicationService(dbContext, fakeClock);
+
         // Act 1: Compile via endpoint handler
-        var compileResult = await DsurEndpoints.CompileDsurAsync(compileReq, dbContext, fakeClock, compilerContext, cancellationToken);
+        var compileResult = await DsurEndpoints.CompileDsurAsync(compileReq, dsurService, compilerContext, cancellationToken);
 
         // Assert 1
         compileResult.Should().BeOfType<Created<PeriodicSafetyReportRecord>>();
@@ -249,7 +251,7 @@ public class DsurCompilerEngineTests
 
         // Act 2: Approve via endpoint handler
         var approveReq = new DsurApproveRequest("Regulatory Approval", "Final Signoff");
-        var approveResult = await DsurEndpoints.ApproveDsurAsync(createdRecord.Id, approveReq, dbContext, fakeClock, approverContext, cancellationToken);
+        var approveResult = await DsurEndpoints.ApproveDsurAsync(createdRecord.Id, approveReq, dsurService, approverContext, cancellationToken);
 
         // Assert 2
         approveResult.Should().BeOfType<Ok<PeriodicSafetyReportRecord>>();
@@ -262,7 +264,7 @@ public class DsurCompilerEngineTests
 
         // Act 3: Update locked record via endpoint handler
         var updateReq = new DsurUpdateRequest("Updated-Name", null, null, null, "Unauthorized Edit");
-        var updateResult = await DsurEndpoints.UpdateDsurAsync(createdRecord.Id, updateReq, dbContext, fakeClock, compilerContext, cancellationToken);
+        var updateResult = await DsurEndpoints.UpdateDsurAsync(createdRecord.Id, updateReq, dsurService, compilerContext, cancellationToken);
 
         // Assert 3
         updateResult.Should().BeOfType<ProblemHttpResult>();
@@ -353,11 +355,12 @@ public class DsurCompilerEngineTests
         var compiled = await engine.CompileDsurAsync(DraftRequest(), "mm-compiler", cancellationToken);
         var anonymous = new DefaultHttpContext();
 
-        var compile = await DsurEndpoints.CompileDsurAsync(DraftRequest(), dbContext, fakeClock, anonymous, cancellationToken);
+        var dsurService = new DsurApplicationService(dbContext, fakeClock);
+        var compile = await DsurEndpoints.CompileDsurAsync(DraftRequest(), dsurService, anonymous, cancellationToken);
         var approve = await DsurEndpoints.ApproveDsurAsync(
-            compiled.Record.Id, new DsurApproveRequest(null, "Anonymous approval"), dbContext, fakeClock, anonymous, cancellationToken);
+            compiled.Record.Id, new DsurApproveRequest(null, "Anonymous approval"), dsurService, anonymous, cancellationToken);
         var update = await DsurEndpoints.UpdateDsurAsync(
-            compiled.Record.Id, new DsurUpdateRequest("Renamed", null, null, null, "Anonymous edit"), dbContext, fakeClock, anonymous, cancellationToken);
+            compiled.Record.Id, new DsurUpdateRequest("Renamed", null, null, null, "Anonymous edit"), dsurService, anonymous, cancellationToken);
 
         foreach (var result in new[] { compile, approve, update })
         {

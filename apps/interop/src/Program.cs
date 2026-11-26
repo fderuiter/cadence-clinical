@@ -1,3 +1,4 @@
+using Cadence.Apps.Interop.Application;
 using Cadence.Apps.Interop.Application.Services;
 using Cadence.Apps.Interop.Endpoints;
 using Cadence.Apps.Interop.Infrastructure.Persistence;
@@ -27,6 +28,11 @@ builder.Services.AddSingleton<ISmartSigningKeys, ConfigurationSmartSigningKeys>(
 builder.AddCadencePostgresDbContext<InteropDbContext>();
 builder.Services.AddCadenceDurableSigTokenStore<InteropDbContext>();
 builder.Services.AddSingleton<IClock>(SystemClock.Instance);
+builder.Services.AddScoped<IInteropUnitOfWork, InteropUnitOfWork>();
+builder.Services.AddScoped<IEsourceIngestionService, EsourceIngestionService>();
+builder.Services.AddScoped<IEsourceReconciliationService, EsourceReconciliationService>();
+builder.Services.AddScoped<ISceProgramLockService, SceProgramLockService>();
+builder.Services.AddScoped<ISceExecutionService, SceExecutionService>();
 
 var app = builder.Build();
 app.UseCadenceWebDefaults();

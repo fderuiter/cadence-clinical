@@ -1,3 +1,4 @@
+using Cadence.Apps.Ctms;
 using Cadence.Apps.Ctms.Domain;
 using Cadence.Apps.Ctms.Endpoints;
 using Cadence.Apps.Ctms.Infrastructure.Persistence;
@@ -21,6 +22,7 @@ builder.Services.AddSingleton<IClock>(SystemClock.Instance);
 builder.AddCadencePostgresDbContext<CtmsDbContext>();
 builder.Services.AddCadenceDurableSigTokenStore<CtmsDbContext>();
 builder.Services.AddFluidTemplating();
+builder.Services.AddCtmsApplicationServices();
 
 builder.Services.AddMassTransit(x =>
 {

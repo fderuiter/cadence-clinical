@@ -5,8 +5,6 @@ using System.Threading.Tasks;
 
 using Cadence.Apps.Safety.Application;
 using Cadence.Apps.Safety.Domain;
-using Cadence.Apps.Safety.Infrastructure.Persistence;
-using Cadence.Kernel.Time;
 using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
 using Cadence.Security.Rbac;
@@ -15,7 +13,6 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
-using Microsoft.EntityFrameworkCore;
 
 namespace Cadence.Apps.Safety.Endpoints;
 
@@ -115,8 +112,7 @@ public static class DsurEndpoints
 
     public static async Task<IResult> CompileDsurAsync(
         DsurCompileRequest request,
-        SafetyDbContext dbContext,
-        IClock clock,
+        [FromServices] IDsurApplicationService dsurService,
         HttpContext httpContext,
         CancellationToken cancellationToken)
     {
@@ -145,17 +141,14 @@ public static class DsurEndpoints
             }
         }
 
-        var compiler = new DsurCompilerEngine(dbContext, clock);
-
-        var result = await compiler.CompileDsurAsync(request, callerUserId, cancellationToken);
+        var result = await dsurService.CompileAsync(request, callerUserId, cancellationToken);
         return TypedResults.Created($"/api/v1/safety/dsur/{result.Record.Id}", result.Record);
     }
 
     public static async Task<IResult> ApproveDsurAsync(
         string id,
         DsurApproveRequest? request,
-        SafetyDbContext dbContext,
-        IClock clock,
+        [FromServices] IDsurApplicationService dsurService,
         HttpContext httpContext,
         CancellationToken cancellationToken)
     {
@@ -163,6 +156,7 @@ public static class DsurEndpoints
         {
             return VerifiedCallerRequired();
         }
+
         if (request is null || string.IsNullOrWhiteSpace(request.ReasonForChange))
         {
             return TypedResults.Problem("A reason for change is required to approve and lock a DSUR.", statusCode: StatusCodes.Status400BadRequest);
@@ -170,25 +164,21 @@ public static class DsurEndpoints
 
         if (ClinicalScopeGuard.ResolvePrincipal(httpContext) is not null)
         {
-            var existing = await dbContext.PeriodicSafetyReports.AsNoTracking().FirstOrDefaultAsync(r => r.Id == id, cancellationToken);
+            var existing = await dsurService.FindReportAsync(id, cancellationToken);
             if (existing is not null && !CanCallerAccessReport(httpContext, existing))
             {
                 return TypedResults.Problem(ClinicalScopeGuard.StudyAccessDeniedDetail, statusCode: StatusCodes.Status403Forbidden);
             }
         }
 
-        var compiler = new DsurCompilerEngine(dbContext, clock);
-
-        var result = await compiler.ApproveDsurAsync(id, request, callerUserId, cancellationToken, httpContext);
-
+        var result = await dsurService.ApproveAsync(id, request, callerUserId, httpContext, cancellationToken);
         return ToResult(result.Status, result.Message, result.Record);
     }
 
     public static async Task<IResult> UpdateDsurAsync(
         string id,
         DsurUpdateRequest request,
-        SafetyDbContext dbContext,
-        IClock clock,
+        [FromServices] IDsurApplicationService dsurService,
         HttpContext httpContext,
         CancellationToken cancellationToken)
     {
@@ -199,7 +189,7 @@ public static class DsurEndpoints
 
         if (ClinicalScopeGuard.ResolvePrincipal(httpContext) is not null)
         {
-            var existing = await dbContext.PeriodicSafetyReports.AsNoTracking().FirstOrDefaultAsync(r => r.Id == id, cancellationToken);
+            var existing = await dsurService.FindReportAsync(id, cancellationToken);
             if (existing is not null && !CanCallerAccessReport(httpContext, existing))
             {
                 return TypedResults.Problem(ClinicalScopeGuard.StudyAccessDeniedDetail, statusCode: StatusCodes.Status403Forbidden);
@@ -211,72 +201,50 @@ public static class DsurEndpoints
             }
         }
 
-        var compiler = new DsurCompilerEngine(dbContext, clock);
-
-        var result = await compiler.UpdateDsurAsync(id, request, callerUserId, cancellationToken, httpContext);
-
+        var result = await dsurService.UpdateAsync(id, request, callerUserId, httpContext, cancellationToken);
         return ToResult(result.Status, result.Message, result.Record);
     }
 
     public static async Task<IResult> GetDsurByIdAsync(
         string id,
-        SafetyDbContext dbContext,
+        [FromServices] IDsurApplicationService dsurService,
         CancellationToken cancellationToken,
         HttpContext? httpContext = null,
         [FromQuery(Name = "revision")] int? revision = null,
         [FromQuery(Name = "as_of")] DateTimeOffset? asOf = null)
     {
-        var record = await dbContext.PeriodicSafetyReports.AsNoTracking().FirstOrDefaultAsync(r => r.Id == id, cancellationToken);
+        var (record, resolvedVersion, revisionNotFound) =
+            await dsurService.GetReportOrRevisionAsync(id, revision, asOf, cancellationToken);
+
         if (record == null || (httpContext is not null && ClinicalScopeGuard.ResolvePrincipal(httpContext) is not null && !CanCallerAccessReport(httpContext, record)))
         {
             return TypedResults.Problem($"DSUR periodic report record '{id}' not found.", statusCode: StatusCodes.Status404NotFound);
         }
 
-        if (revision.HasValue || asOf.HasValue)
+        if (revisionNotFound || resolvedVersion is null)
         {
-            var revQuery = dbContext.PeriodicSafetyReportRevisions
-                .AsNoTracking()
-                .Where(r => r.ReportId == record.Id);
-
-            PeriodicSafetyReportRevision? matchedRevision = revision.HasValue
-                ? await revQuery.FirstOrDefaultAsync(r => r.RevisionNumber == revision.Value, cancellationToken)
-                : await revQuery
-                    .Where(r => r.RecordedAt <= asOf!.Value)
-                    .OrderByDescending(r => r.RevisionNumber)
-                    .FirstOrDefaultAsync(cancellationToken);
-
-            if (matchedRevision is null)
-            {
-                return TypedResults.Problem($"DSUR periodic report revision for '{id}' not found.", statusCode: StatusCodes.Status404NotFound);
-            }
-
-            return TypedResults.Ok(matchedRevision.ToRecord(record.CreatedAt, record.CreatedBy));
+            return TypedResults.Problem($"DSUR periodic report revision for '{id}' not found.", statusCode: StatusCodes.Status404NotFound);
         }
 
-        return TypedResults.Ok(record);
+        return TypedResults.Ok(resolvedVersion);
     }
 
     public static async Task<IResult> ListDsurReportsAsync(
-        SafetyDbContext dbContext,
+        [FromServices] IDsurApplicationService dsurService,
         CancellationToken cancellationToken,
         HttpContext? httpContext = null)
     {
-        var query = dbContext.PeriodicSafetyReports.AsNoTracking();
+        HashSet<string>? authorizedStudies = null;
         if (httpContext is not null && ClinicalScopeGuard.ResolvePrincipal(httpContext) is not null)
         {
             string? requestedStudyId = httpContext.Request.Query["study_id"].FirstOrDefault();
-            if (!ClinicalScopeGuard.ResolveStudyFilter(httpContext, requestedStudyId, out var studies, out var errorResult))
+            if (!ClinicalScopeGuard.ResolveStudyFilter(httpContext, requestedStudyId, out authorizedStudies, out var errorResult))
             {
                 return errorResult!;
             }
-
-            if (studies is not null)
-            {
-                query = query.Where(r => r.StudyId != null && studies.Contains(r.StudyId));
-            }
         }
 
-        var records = await query.ToArrayAsync(cancellationToken);
+        var records = await dsurService.ListReportsAsync(authorizedStudies, cancellationToken);
         return TypedResults.Ok(records);
     }
 

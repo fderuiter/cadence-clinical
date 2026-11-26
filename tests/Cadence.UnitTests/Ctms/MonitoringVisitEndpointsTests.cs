@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Apps.Ctms.Application.Services;
 using Cadence.Apps.Ctms.Domain;
 using Cadence.Apps.Ctms.Endpoints;
 using Cadence.Apps.Ctms.Infrastructure.Persistence;
@@ -43,6 +44,9 @@ public sealed class MonitoringVisitEndpointsTests
         _clock = new FakeClock(new DateTimeOffset(2026, 10, 15, 10, 0, 0, TimeSpan.Zero));
     }
 
+    private MonitoringVisitApplicationService CreateService() =>
+        new(_db, new CtmsUnitOfWork(_db), _clock);
+
     private static DefaultHttpContext Caller(
         string role = RoleNormalization.ROLE_SYSADMIN,
         string userId = "user-1",
@@ -80,7 +84,7 @@ public sealed class MonitoringVisitEndpointsTests
         );
 
         var result = await MonitoringVisitEndpoints.ScheduleMonitoringVisitAsync(
-            request, _db, caller, _clock, TestContext.Current.CancellationToken);
+            request, CreateService(), caller, TestContext.Current.CancellationToken);
 
         var created = result.Should().BeOfType<Created<MonitoringVisitResponseDto>>().Subject;
         created.Value.Should().NotBeNull();
@@ -117,7 +121,7 @@ public sealed class MonitoringVisitEndpointsTests
         );
 
         var result = await MonitoringVisitEndpoints.ScheduleMonitoringVisitAsync(
-            request, _db, caller, _clock, TestContext.Current.CancellationToken);
+            request, CreateService(), caller, TestContext.Current.CancellationToken);
 
         result.Should().BeOfType<ProblemHttpResult>()
             .Which.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
@@ -137,7 +141,7 @@ public sealed class MonitoringVisitEndpointsTests
         );
 
         var result = await MonitoringVisitEndpoints.ScheduleMonitoringVisitAsync(
-            request, _db, caller, _clock, TestContext.Current.CancellationToken);
+            request, CreateService(), caller, TestContext.Current.CancellationToken);
 
         result.Should().BeOfType<ProblemHttpResult>()
             .Which.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
@@ -172,7 +176,7 @@ public sealed class MonitoringVisitEndpointsTests
         await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var result = await MonitoringVisitEndpoints.GetMonitoringVisitsAsync(
-            StudyId, SiteId, null, null, _db, Caller(), TestContext.Current.CancellationToken);
+            StudyId, SiteId, null, null, CreateService(), Caller(), TestContext.Current.CancellationToken);
 
         var ok = result.Should().BeOfType<Ok<List<MonitoringVisitResponseDto>>>().Subject;
         ok.Value.Should().HaveCount(1);
@@ -212,7 +216,7 @@ public sealed class MonitoringVisitEndpointsTests
         );
 
         var result = await MonitoringVisitEndpoints.CompleteMonitoringVisitAsync(
-            visit.Id, request, _db, caller, _clock, TestContext.Current.CancellationToken);
+            visit.Id, request, CreateService(), caller, TestContext.Current.CancellationToken);
 
         var ok = result.Should().BeOfType<Ok<MonitoringVisitResponseDto>>().Subject;
         ok.Value.Should().NotBeNull();
@@ -239,7 +243,7 @@ public sealed class MonitoringVisitEndpointsTests
         var request = new MonitoringVisitCompleteDto(ActualDate: _clock.UtcNow);
 
         var result = await MonitoringVisitEndpoints.CompleteMonitoringVisitAsync(
-            "NON-EXISTENT", request, _db, caller, _clock, TestContext.Current.CancellationToken);
+            "NON-EXISTENT", request, CreateService(), caller, TestContext.Current.CancellationToken);
 
         result.Should().BeOfType<ProblemHttpResult>()
             .Which.StatusCode.Should().Be(StatusCodes.Status404NotFound);
@@ -268,7 +272,7 @@ public sealed class MonitoringVisitEndpointsTests
         caller.Request.Headers["X-Change-Reason"] = "Trip report reviewed and endorsed in full compliance with protocol.";
 
         var result = await MonitoringVisitEndpoints.SignOffMonitoringVisitAsync(
-            visit.Id, _db, caller, _clock, TestContext.Current.CancellationToken);
+            visit.Id, CreateService(), caller, TestContext.Current.CancellationToken);
 
         var ok = result.Should().BeOfType<Ok<MonitoringVisitResponseDto>>().Subject;
         ok.Value.Should().NotBeNull();
@@ -310,7 +314,7 @@ public sealed class MonitoringVisitEndpointsTests
         caller.Request.Headers["X-Change-Reason"] = "Attempt sign off";
 
         var result = await MonitoringVisitEndpoints.SignOffMonitoringVisitAsync(
-            visit.Id, _db, caller, _clock, TestContext.Current.CancellationToken);
+            visit.Id, CreateService(), caller, TestContext.Current.CancellationToken);
 
         result.Should().BeOfType<ProblemHttpResult>()
             .Which.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
@@ -337,7 +341,7 @@ public sealed class MonitoringVisitEndpointsTests
         var caller = Caller("monitor", "manager-1");
 
         var result = await MonitoringVisitEndpoints.SignOffMonitoringVisitAsync(
-            visit.Id, _db, caller, _clock, TestContext.Current.CancellationToken);
+            visit.Id, CreateService(), caller, TestContext.Current.CancellationToken);
 
         result.Should().BeOfType<ProblemHttpResult>()
             .Which.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
@@ -373,18 +377,18 @@ public sealed class MonitoringVisitEndpointsTests
 
         var caller = Caller();
         var listResult = await MonitoringVisitEndpoints.GetMonitoringVisitLettersAsync(
-            "VISIT-001", _db, caller, TestContext.Current.CancellationToken);
+            "VISIT-001", CreateService(), caller, TestContext.Current.CancellationToken);
         var okList = listResult.Should().BeOfType<Ok<List<GeneratedLetterResponseDto>>>().Subject;
         okList.Value.Should().HaveCount(1);
         okList.Value![0].LetterType.Should().Be("confirmation_letter");
 
         var itemResult = await MonitoringVisitEndpoints.GetMonitoringVisitLetterByTypeAsync(
-            "VISIT-001", "confirmation_letter", _db, caller, TestContext.Current.CancellationToken);
+            "VISIT-001", "confirmation_letter", CreateService(), caller, TestContext.Current.CancellationToken);
         var okItem = itemResult.Should().BeOfType<Ok<GeneratedLetterResponseDto>>().Subject;
         okItem.Value!.Id.Should().Be("LTR-001");
 
         var missingResult = await MonitoringVisitEndpoints.GetMonitoringVisitLetterByTypeAsync(
-            "VISIT-001", "follow_up_letter", _db, caller, TestContext.Current.CancellationToken);
+            "VISIT-001", "follow_up_letter", CreateService(), caller, TestContext.Current.CancellationToken);
         missingResult.Should().BeOfType<ProblemHttpResult>()
             .Which.StatusCode.Should().Be(StatusCodes.Status404NotFound);
     }
@@ -412,19 +416,19 @@ public sealed class MonitoringVisitEndpointsTests
 
         var schedDenied = await MonitoringVisitEndpoints.ScheduleMonitoringVisitAsync(
             new MonitoringVisitCreateDto(StudyId, "SITE-999", CraId, "IMV", _clock.UtcNow.AddDays(5)),
-            _db, scopedCra, _clock, TestContext.Current.CancellationToken);
+            CreateService(), scopedCra, TestContext.Current.CancellationToken);
         schedDenied.Should().BeOfType<ProblemHttpResult>().Which.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
 
         var completeDenied = await MonitoringVisitEndpoints.CompleteMonitoringVisitAsync(
-            foreignVisit.Id, new MonitoringVisitCompleteDto(_clock.UtcNow), _db, scopedCra, _clock, TestContext.Current.CancellationToken);
+            foreignVisit.Id, new MonitoringVisitCompleteDto(_clock.UtcNow), CreateService(), scopedCra, TestContext.Current.CancellationToken);
         completeDenied.Should().BeOfType<ProblemHttpResult>().Which.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
 
         var signDenied = await MonitoringVisitEndpoints.SignOffMonitoringVisitAsync(
-            foreignVisit.Id, _db, Caller("monitor", "mon-1", [StudyId], [SiteId]), _clock, TestContext.Current.CancellationToken);
+            foreignVisit.Id, CreateService(), Caller("monitor", "mon-1", [StudyId], [SiteId]), TestContext.Current.CancellationToken);
         signDenied.Should().BeOfType<ProblemHttpResult>().Which.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
 
         var lettersDenied = await MonitoringVisitEndpoints.GetMonitoringVisitLettersAsync(
-            foreignVisit.Id, _db, scopedCra, TestContext.Current.CancellationToken);
+            foreignVisit.Id, CreateService(), scopedCra, TestContext.Current.CancellationToken);
         var problem = lettersDenied.Should().BeOfType<ProblemHttpResult>().Subject;
         problem.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
         problem.ProblemDetails.Extensions.Should().ContainKey("code").WhoseValue.Should().Be(CtmsScopeGuard.ForbiddenCode);

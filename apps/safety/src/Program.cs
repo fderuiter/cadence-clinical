@@ -1,3 +1,4 @@
+using Cadence.Apps.Safety.Application;
 using Cadence.Apps.Safety.Domain;
 using Cadence.Apps.Safety.Endpoints;
 using Cadence.Apps.Safety.Infrastructure.Persistence;
@@ -22,6 +23,7 @@ builder.Services.AddHttpContextAccessor();
 builder.AddCadencePostgresDbContext<SafetyDbContext>();
 // DSUR approval is e-signed; each token is single use across instances and restarts (ADR-2515, #5434, #5462).
 builder.Services.AddCadenceDurableSigTokenStore<SafetyDbContext>();
+builder.Services.AddScoped<IDsurApplicationService, DsurApplicationService>();
 builder.Services.AddFluidTemplating();
 
 FluidTemplateRenderer.RegisterType<IcsrHeader>();

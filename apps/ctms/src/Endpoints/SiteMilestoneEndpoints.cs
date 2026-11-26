@@ -1,22 +1,15 @@
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Apps.Ctms.Application.Services;
 using Cadence.Apps.Ctms.Domain;
-using Cadence.Apps.Ctms.Infrastructure.Persistence;
-using Cadence.Kernel.Time;
 using Cadence.Security.DependencyInjection;
-using Cadence.Security.Rbac;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
-using Microsoft.EntityFrameworkCore;
 
 namespace Cadence.Apps.Ctms.Endpoints;
 
@@ -58,201 +51,28 @@ public static class SiteMilestoneEndpoints
         return group;
     }
 
-    public static async Task<IResult> GetSiteMilestonesAsync(
+    public static Task<IResult> GetSiteMilestonesAsync(
         [FromQuery(Name = "study_id")] string? studyId,
         [FromQuery(Name = "site_id")] string? siteId,
-        CtmsDbContext db,
+        [FromServices] ISiteMilestoneApplicationService service,
         HttpContext httpContext,
-        CancellationToken ct)
-    {
-        if (CtmsScopeGuard.ResolveStudyAndSiteFilters(httpContext, studyId, siteId, out var studyFilter, out var siteFilter) is { } scopeDenied)
-        {
-            return scopeDenied;
-        }
+        CancellationToken ct) =>
+        service.GetSiteMilestonesAsync(studyId, siteId, httpContext, ct);
 
-        IQueryable<CtmsSiteMilestone> query = db.CtmsSiteMilestones.AsNoTracking();
-
-        if (!string.IsNullOrWhiteSpace(studyId))
-        {
-            query = query.Where(m => m.StudyId == studyId);
-        }
-
-        if (!string.IsNullOrWhiteSpace(siteId))
-        {
-            query = query.Where(m => m.SiteId == siteId);
-        }
-
-        var milestones = await query
-            .OrderBy(m => m.PlannedDate ?? new DateTimeOffset(m.CreatedAt, TimeSpan.Zero))
-            .ToListAsync(ct);
-
-        var scopedMilestones = CtmsScopeGuard.ApplyFilters(milestones, studyFilter, m => m.StudyId, siteFilter, m => m.SiteId);
-        var dtos = scopedMilestones.Select(ToResponseDto).ToList();
-        return TypedResults.Ok(dtos);
-    }
-
-    public static async Task<IResult> CreateSiteMilestoneAsync(
+    public static Task<IResult> CreateSiteMilestoneAsync(
         [FromBody] SiteMilestoneCreateDto request,
-        CtmsDbContext db,
+        [FromServices] ISiteMilestoneApplicationService service,
         HttpContext httpContext,
-        [FromServices] IClock clock,
-        CancellationToken ct)
-    {
-        if (request is null)
-        {
-            return TypedResults.Problem(
-                title: "Invalid request payload",
-                detail: "Request body cannot be null.",
-                statusCode: StatusCodes.Status400BadRequest);
-        }
+        CancellationToken ct) =>
+        service.CreateSiteMilestoneAsync(request, httpContext, ct);
 
-        if (string.IsNullOrWhiteSpace(request.Site) ||
-            string.IsNullOrWhiteSpace(request.Study) ||
-            string.IsNullOrWhiteSpace(request.MilestoneType))
-        {
-            return TypedResults.Problem(
-                title: "Validation error",
-                detail: "site_id, study_id, and milestone_type are required.",
-                statusCode: StatusCodes.Status400BadRequest);
-        }
-
-        if (CtmsScopeGuard.RequireStudyAndSite(httpContext, request.Study, request.Site) is { } scopeDenied)
-        {
-            return scopeDenied;
-        }
-
-        if (!MonitoringVisitEndpoints.TryExtractReasonForChange(httpContext, request.ReasonForChange, out string reason, out var problem))
-        {
-            return problem!;
-        }
-
-        var (user, role) = CallerScope.ResolveActor(httpContext);
-        DateTimeOffset now = clock.UtcNow;
-
-        CtmsSiteMilestoneStatus initialStatus = CtmsSiteMilestoneStatus.Planned;
-        if (!string.IsNullOrWhiteSpace(request.Status) && Enum.TryParse<CtmsSiteMilestoneStatus>(request.Status.Trim(), true, out var parsed))
-        {
-            initialStatus = parsed;
-        }
-
-        var milestone = new CtmsSiteMilestone(Guid.NewGuid().ToString(), initialStatus)
-        {
-            SiteId = request.Site.Trim(),
-            StudyId = request.Study.Trim(),
-            MilestoneType = request.MilestoneType.Trim(),
-            PlannedDate = request.PlannedDate,
-            ActualDate = request.ActualDate,
-            CreatedAt = now.UtcDateTime,
-            CreatedBy = user,
-            ReasonForChange = reason,
-            VersionIndex = 1
-        };
-
-        db.CtmsSiteMilestones.Add(milestone);
-
-        var auditEntry = new CtmsAuditLog
-        {
-            Timestamp = now,
-            UserId = user,
-            UserRole = role,
-            Action = "CREATE_SITE_MILESTONE",
-            Details = $"Created site milestone {milestone.MilestoneType} ({milestone.Id}) for site {milestone.SiteId} in study {milestone.StudyId}.",
-            StudyId = milestone.StudyId,
-            SiteId = milestone.SiteId,
-            ReasonForChange = reason,
-            CreatedAt = now.UtcDateTime,
-            CreatedBy = user,
-            VersionIndex = 1
-        };
-        db.CtmsAuditLogs.Add(auditEntry);
-
-        await db.SaveChangesAsync(ct);
-
-        return TypedResults.Created($"/api/v1/ctms/site-milestones/{milestone.Id}", ToResponseDto(milestone));
-    }
-
-    public static async Task<IResult> UpdateSiteMilestoneAsync(
+    public static Task<IResult> UpdateSiteMilestoneAsync(
         [FromRoute(Name = "milestone_id")] string milestoneId,
         [FromBody] SiteMilestoneUpdateDto request,
-        CtmsDbContext db,
+        [FromServices] ISiteMilestoneApplicationService service,
         HttpContext httpContext,
-        [FromServices] IClock clock,
-        CancellationToken ct)
-    {
-        if (CtmsScopeGuard.RequireAnyScopeForLookup(httpContext) is { } missingScope)
-        {
-            return missingScope;
-        }
-
-        var milestone = await db.CtmsSiteMilestones.FirstOrDefaultAsync(m => m.Id == milestoneId, ct);
-        if (milestone is null)
-        {
-            return TypedResults.Problem(
-                title: "Milestone not found",
-                detail: $"Site milestone '{milestoneId}' not found.",
-                statusCode: StatusCodes.Status404NotFound);
-        }
-
-        if (CtmsScopeGuard.RequireStudyAndSite(httpContext, milestone.StudyId, milestone.SiteId) is { } scopeDenied)
-        {
-            return scopeDenied;
-        }
-
-        if (!MonitoringVisitEndpoints.TryExtractReasonForChange(httpContext, request?.ReasonForChange, out string reason, out var problem))
-        {
-            return problem!;
-        }
-
-        var (user, role) = CallerScope.ResolveActor(httpContext);
-        DateTimeOffset now = clock.UtcNow;
-
-        if (request is not null)
-        {
-            if (!string.IsNullOrWhiteSpace(request.Status) && Enum.TryParse<CtmsSiteMilestoneStatus>(request.Status.Trim(), true, out var targetStatus))
-            {
-                var transitionResult = milestone.TransitionTo(targetStatus, user, now, reason, role);
-                if (transitionResult.IsFailure)
-                {
-                    return TypedResults.Problem(
-                        title: "Invalid milestone status transition",
-                        detail: transitionResult.Error!.Description,
-                        statusCode: StatusCodes.Status400BadRequest);
-                }
-            }
-
-            if (request.ActualDate.HasValue)
-            {
-                milestone.ActualDate = request.ActualDate;
-            }
-
-            if (request.PlannedDate.HasValue)
-            {
-                milestone.PlannedDate = request.PlannedDate;
-            }
-        }
-
-        milestone.ReasonForChange = reason;
-
-        var auditEntry = new CtmsAuditLog
-        {
-            Timestamp = now,
-            UserId = user,
-            UserRole = role,
-            Action = "UPDATE_SITE_MILESTONE",
-            Details = $"Updated site milestone {milestone.MilestoneType} ({milestone.Id}) to status {milestone.Status.ToString().ToUpperInvariant()} for site {milestone.SiteId} in study {milestone.StudyId}.",
-            StudyId = milestone.StudyId,
-            SiteId = milestone.SiteId,
-            ReasonForChange = reason,
-            CreatedAt = now.UtcDateTime,
-            CreatedBy = user,
-            VersionIndex = 1
-        };
-        db.CtmsAuditLogs.Add(auditEntry);
-
-        await db.SaveChangesAsync(ct);
-
-        return TypedResults.Ok(ToResponseDto(milestone));
-    }
+        CancellationToken ct) =>
+        service.UpdateSiteMilestoneAsync(milestoneId, request, httpContext, ct);
 
     public static SiteMilestoneResponseDto ToResponseDto(CtmsSiteMilestone milestone) =>
         new(
@@ -269,34 +89,3 @@ public static class SiteMilestoneEndpoints
             VersionIndex: milestone.VersionIndex
         );
 }
-
-public record SiteMilestoneResponseDto(
-    [property: JsonPropertyName("id")] string Id,
-    [property: JsonPropertyName("site_id")] string Site,
-    [property: JsonPropertyName("study_id")] string Study,
-    [property: JsonPropertyName("milestone_type")] string MilestoneType,
-    [property: JsonPropertyName("planned_date")] string? PlannedDate,
-    [property: JsonPropertyName("actual_date")] string? ActualDate,
-    [property: JsonPropertyName("status")] string Status,
-    [property: JsonPropertyName("created_at")] string CreatedAt,
-    [property: JsonPropertyName("created_by")] string CreatedBy,
-    [property: JsonPropertyName("reason_for_change")] string ReasonForChange,
-    [property: JsonPropertyName("version_index")] long VersionIndex
-);
-
-public record SiteMilestoneCreateDto(
-    [property: JsonPropertyName("site_id")] string Site,
-    [property: JsonPropertyName("study_id")] string Study,
-    [property: JsonPropertyName("milestone_type")] string MilestoneType,
-    [property: JsonPropertyName("planned_date")] DateTimeOffset? PlannedDate = null,
-    [property: JsonPropertyName("actual_date")] DateTimeOffset? ActualDate = null,
-    [property: JsonPropertyName("status")] string? Status = null,
-    [property: JsonPropertyName("reason_for_change")] string? ReasonForChange = null
-);
-
-public record SiteMilestoneUpdateDto(
-    [property: JsonPropertyName("planned_date")] DateTimeOffset? PlannedDate = null,
-    [property: JsonPropertyName("actual_date")] DateTimeOffset? ActualDate = null,
-    [property: JsonPropertyName("status")] string? Status = null,
-    [property: JsonPropertyName("reason_for_change")] string? ReasonForChange = null
-);

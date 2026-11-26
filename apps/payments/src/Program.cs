@@ -1,3 +1,4 @@
+using Cadence.Apps.Payments;
 using Cadence.Apps.Payments.Endpoints;
 using Cadence.Apps.Payments.Infrastructure.Consumers;
 using Cadence.Apps.Payments.Infrastructure.Persistence;
@@ -21,6 +22,7 @@ builder.Services.AddCadenceFieldEncryption();
 builder.AddCadencePostgresDbContext<PaymentsDbContext>();
 builder.Services.AddCadenceDurableSigTokenStore<PaymentsDbContext>();
 builder.Services.AddSingleton<IClock>(SystemClock.Instance);
+builder.Services.AddPaymentsApplicationServices();
 
 builder.Services.AddMassTransit(x =>
 {

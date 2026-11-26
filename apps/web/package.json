@@ -5,7 +5,7 @@
     "hls.js": "^1.7.4",
     "keycloak-js": "catalog:",
     "lucide-vue-next": "catalog:",
-    "openapi-fetch": "^0.17.0",
+    "openapi-fetch": "^0.13.0",
     "pinia": "catalog:",
     "ui": "workspace:*",
     "usdm-schemas": "workspace:*",
