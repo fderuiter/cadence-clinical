@@ -186,7 +186,33 @@ test.describe("Clinical Workflows and ePRO Portal Tests", () => {
         }
       );
 
-      // Intercept ePRO sync endpoint
+      // Intercept step-up signature verification and ePRO sync endpoints
+      await page.route(
+        "**/api/v1/auth/signature-verification",
+        async (route) => {
+          await route.fulfill({
+            status: 200,
+            contentType: "application/json",
+            body: JSON.stringify({ sig_token: "e2e_diary_sig_token_001" }),
+          });
+        }
+      );
+
+      await page.route(
+        "**/api/v1/payments/participant/me/diary-stipend",
+        async (route) => {
+          await route.fulfill({
+            status: 200,
+            contentType: "application/json",
+            body: JSON.stringify({
+              currentBalance: 90.0,
+              lifetimeStipends: 90.0,
+              creditedAmount: 15.0,
+            }),
+          });
+        }
+      );
+
       await page.route("**/epro/sync", async (route) => {
         await route.fulfill({
           status: 200,

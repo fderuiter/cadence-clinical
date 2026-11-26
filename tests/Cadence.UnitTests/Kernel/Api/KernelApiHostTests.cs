@@ -45,6 +45,7 @@ using Cadence.Testing.Hosting;
 using Cadence.Testing.Security;
 using Cadence.Testing.Time;
 using Cadence.TestSupport.Kernel.Protocol;
+using Cadence.UnitTests.TestSupport;
 
 using FluentAssertions;
 
@@ -1724,14 +1725,7 @@ public sealed class KernelApiHostTests : IDisposable
             builder.ConfigureServices(services =>
             {
                 owner.ConfigureFakeServices(services, hostVisibility, dropClaim: null);
-                var persistenceJobs = services
-                    .Where(d => d.ServiceType == typeof(IHostedService)
-                        && d.ImplementationType?.Namespace?.StartsWith("Cadence.Kernel.Persistence", StringComparison.Ordinal) == true)
-                    .ToList();
-                foreach (var job in persistenceJobs)
-                {
-                    services.Remove(job);
-                }
+                services.RemoveBackgroundHostedServices();
 
                 if (overrideActor is not null)
                 {
@@ -1813,12 +1807,8 @@ public sealed class KernelApiHostTests : IDisposable
         services.RemoveAll<IStudySdvAlertReader>();
         services.AddSingleton<IStudySdvAlertReader>(_sdvAlerts);
 
-        // The activity projector reads the database the host is configured with, which these tests never open.
-        var projector = services.SingleOrDefault(d => d.ServiceType == typeof(IHostedService) && d.ImplementationType?.Name == "KernelActivityProjectionService");
-        if (projector is not null)
-        {
-            services.Remove(projector);
-        }
+        // Background jobs read the database the host is configured with, which these tests never open.
+        services.RemoveBackgroundHostedServices();
 
         if (!hostVisibility)
         {

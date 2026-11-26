@@ -16,6 +16,7 @@ using Cadence.Testing;
 using Cadence.Testing.Hosting;
 using Cadence.Testing.Security;
 using Cadence.Testing.Time;
+using Cadence.UnitTests.TestSupport;
 
 using FluentAssertions;
 
@@ -526,9 +527,6 @@ version = ""1.0.0""
             )));
 
         string dbName = $"sce-policy-{Guid.NewGuid():N}";
-        var inMemoryProvider = new ServiceCollection()
-            .AddEntityFrameworkInMemoryDatabase()
-            .BuildServiceProvider();
 
         await using var factory = new WebApplicationFactory<Cadence.Apps.Interop.Program>().WithWebHostBuilder(host =>
         {
@@ -539,12 +537,13 @@ version = ""1.0.0""
 
             host.ConfigureTestServices(services =>
             {
+                services.RemoveBackgroundHostedServices();
                 services.RemoveAll<DbContextOptions<InteropDbContext>>();
                 services.RemoveAll<IDbContextOptionsConfiguration<InteropDbContext>>();
                 services.AddDbContext<InteropDbContext>(options =>
                 {
                     options.UseInMemoryDatabase(dbName);
-                    options.UseInternalServiceProvider(inMemoryProvider);
+                    options.UseInternalServiceProvider(TestEfServiceProviders.InMemory);
                 });
 
                 services.RemoveAll<ISceDockerEngineDriver>();

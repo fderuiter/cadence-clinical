@@ -68,7 +68,14 @@ public sealed class ExecutionPostgresFixture : IAsyncLifetime
     {
         if (_databaseName is not null && _adminConnectionString is not null)
         {
-            NpgsqlConnection.ClearAllPools();
+            if (!string.IsNullOrWhiteSpace(ConnectionString))
+            {
+                using var conn = new NpgsqlConnection(ConnectionString);
+                NpgsqlConnection.ClearPool(conn);
+                using var scopedConn = new NpgsqlConnection(CadenceDatabaseExtensions.WithModuleSchema(ConnectionString, ExecutionDbContextFactory.Schema));
+                NpgsqlConnection.ClearPool(scopedConn);
+            }
+
             await using var admin = new NpgsqlConnection(_adminConnectionString);
             await admin.OpenAsync().ConfigureAwait(false);
             await using var drop = new NpgsqlCommand($"DROP DATABASE IF EXISTS \"{_databaseName}\" WITH (FORCE)", admin);
@@ -130,7 +137,9 @@ public sealed class ExecutionPostgresFixture : IAsyncLifetime
     public static ExecutionDbContext CreateDbContext(string connectionString)
     {
         var optionsBuilder = new DbContextOptionsBuilder<ExecutionDbContext>();
-        optionsBuilder.UseNpgsql(CadenceDatabaseExtensions.WithModuleSchema(connectionString, ExecutionDbContextFactory.Schema));
+        optionsBuilder.UseNpgsql(
+            CadenceDatabaseExtensions.WithModuleSchema(connectionString, ExecutionDbContextFactory.Schema),
+            npgsql => npgsql.EnableRetryOnFailure());
         optionsBuilder.UseCadenceStandaloneTenancy(DefaultFixtureTenantAccessor, isRelational: true);
         optionsBuilder.AddInterceptors(
             StandaloneTenantConnectionInterceptor.Instance,

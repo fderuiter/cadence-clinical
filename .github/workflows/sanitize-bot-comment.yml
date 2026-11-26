@@ -7,6 +7,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: sanitize-bot-comment-${{ github.event.comment.id || github.run_id }}
+  cancel-in-progress: false
+
 jobs:
   sanitize-comment:
     # 1. Ensure this comment is on a Pull Request (not an issue)
@@ -18,6 +22,7 @@ jobs:
       github.event.comment.user.login == 'github-actions[bot]' &&
       contains(github.event.comment.body, '[CI/CD Fix Attempt ')
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     permissions:
       issues: write # Required to edit comments on PRs
 

@@ -37,6 +37,7 @@ jobs:
       startsWith(github.ref, 'refs/heads/release/') ||
       startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
     steps:
@@ -57,6 +58,7 @@ jobs:
       startsWith(github.ref, 'refs/heads/release/') ||
       startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       contents: read
     steps:
@@ -189,8 +191,12 @@ jobs:
       startsWith(github.ref, 'refs/heads/release/') ||
       startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     env:
       RTM_DRAFT: "true"
+      MSBUILDDISABLENODEREUSE: "1"
+      UseSharedCompilation: "false"
+      DOTNET_CLI_DO_NOT_USE_MSBUILD_SERVER: "1"
     permissions:
       contents: read
     steps:
@@ -280,6 +286,7 @@ jobs:
       startsWith(github.ref, 'refs/heads/release/') ||
       startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     permissions:
       contents: read
     steps:
@@ -331,6 +338,7 @@ jobs:
       startsWith(github.ref, 'refs/heads/release/') ||
       startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       contents: read
     steps:
@@ -392,6 +400,7 @@ jobs:
       startsWith(github.ref, 'refs/heads/release/') ||
       startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     env:
       UV_NO_SYNC: "1"
     permissions:
@@ -527,6 +536,7 @@ jobs:
         ))
       )
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: read
       security-events: write
@@ -688,6 +698,7 @@ jobs:
       startsWith(github.ref, 'refs/heads/release/') ||
       startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       contents: read
     env:
@@ -741,6 +752,7 @@ jobs:
       startsWith(github.ref, 'refs/heads/release/') ||
       startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: read
     outputs:
@@ -766,6 +778,9 @@ jobs:
     env:
       CADENCE_TEST_POSTGRES: Host=localhost;Port=5432;Database=cadence;Username=cadence
       CADENCE_TEST_EVIDENCE_DIR: ${{ github.workspace }}/TestResults/gxp
+      MSBUILDDISABLENODEREUSE: "1"
+      UseSharedCompilation: "false"
+      DOTNET_CLI_DO_NOT_USE_MSBUILD_SERVER: "1"
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -835,6 +850,7 @@ jobs:
       startsWith(github.ref, 'refs/heads/release/') ||
       startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: read
     services:
@@ -856,6 +872,9 @@ jobs:
       CADENCE_TEST_POSTGRES: Host=localhost;Port=5432;Database=cadence;Username=cadence
       CADENCE_TEST_BROWSER: "1"
       CADENCE_TEST_EVIDENCE_DIR: ${{ github.workspace }}/TestResults/gxp-browser
+      MSBUILDDISABLENODEREUSE: "1"
+      UseSharedCompilation: "false"
+      DOTNET_CLI_DO_NOT_USE_MSBUILD_SERVER: "1"
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -885,8 +904,11 @@ jobs:
             playwright-${{ runner.os }}-
 
       - name: Install Playwright Browsers
+        env:
+          PLAYWRIGHT_CACHE_HIT: ${{ steps.playwright-cache.outputs.cache-hit }}
         run: |
-          if [ "${{ steps.playwright-cache.outputs.cache-hit }}" = "true" ]; then
+          # Guarded on steps.playwright-cache.outputs.cache-hit via PLAYWRIGHT_CACHE_HIT
+          if [ "$PLAYWRIGHT_CACHE_HIT" = "true" ]; then
             echo "Playwright cache hit detected. Installing system dependencies and verifying browser binary..."
             pnpm --filter web exec playwright install-deps chromium
             pnpm --filter web exec playwright install chromium
@@ -966,6 +988,7 @@ jobs:
   compliance:
     name: GxP Compliance & Qualification Reporting
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     needs: [native-aot-build, unit-tests, dotnet-tests, accessibility-e2e]
     if: >-
       always() &&
@@ -1121,6 +1144,7 @@ jobs:
       ]
     if: always()
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     permissions: {}
     steps:
       - name: Verify validation job outcomes
@@ -1194,6 +1218,7 @@ jobs:
     name: Classify Change
     if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     outputs:
       is_safe: ${{ steps.classify.outputs.is_safe }}
       container_scan: ${{ steps.classify.outputs.container_scan }}
@@ -1278,9 +1303,10 @@ jobs:
         if: github.event_name == 'pull_request' && steps.classify.outputs.is_safe == 'true' && github.event.pull_request.head.repo.full_name == github.repository
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
           PR_NUMBER: ${{ github.event.pull_request && github.event.pull_request.number || '0' }}
         run: |
-          gh pr edit "$PR_NUMBER" --repo "${{ github.repository }}" --add-label "safe-change"
+          gh pr edit "$PR_NUMBER" --repo "$GH_REPO" --add-label "safe-change"
 
   release-and-archive:
     name: Call Production Pipeline

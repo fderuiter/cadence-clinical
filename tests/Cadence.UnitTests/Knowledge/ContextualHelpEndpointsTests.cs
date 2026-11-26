@@ -63,9 +63,11 @@ public sealed class ContextualHelpEndpointsTests : IAsyncDisposable
                 services.AddSingleton<IClock>(_clock);
                 services.RemoveAll<DbContextOptions<KnowledgeDbContext>>();
                 services.RemoveAll<IDbContextOptionsConfiguration<KnowledgeDbContext>>();
+                TestSupport.TestEfServiceProviders.RemoveBackgroundHostedServices(services);
                 services.AddDbContext<KnowledgeDbContext>((sp, options) =>
                 {
-                    options.UseSqlite(_connection);
+                    options.UseSqlite(_connection)
+                        .UseInternalServiceProvider(TestSupport.TestEfServiceProviders.Sqlite);
                     options.AddInterceptors(new GxPAuditInterceptor(
                         () => KnowledgeAuditActorScope.CurrentUserId
                               ?? sp.GetService<IHttpContextAccessor>()?.HttpContext?.User.FindFirst(CadenceClaimTypes.Subject)?.Value
@@ -1191,9 +1193,11 @@ public sealed class ContextualHelpEndpointsTests : IAsyncDisposable
                 services.AddSingleton<IClock>(_clock);
                 services.RemoveAll<DbContextOptions<KnowledgeDbContext>>();
                 services.RemoveAll<IDbContextOptionsConfiguration<KnowledgeDbContext>>();
+                TestSupport.TestEfServiceProviders.RemoveBackgroundHostedServices(services);
                 services.AddDbContext<KnowledgeDbContext>((sp, options) =>
                 {
-                    options.UseSqlite(connection);
+                    options.UseSqlite(connection)
+                        .UseInternalServiceProvider(TestSupport.TestEfServiceProviders.Sqlite);
                     options.AddInterceptors(
                         sqlRecorder,
                         new GxPAuditInterceptor(

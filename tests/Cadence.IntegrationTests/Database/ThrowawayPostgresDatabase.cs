@@ -92,7 +92,8 @@ public sealed class ThrowawayPostgresDatabase : IAsyncLifetime
     {
         if (_databaseName is not null && _adminConnectionString is not null)
         {
-            NpgsqlConnection.ClearAllPools();
+            ClearPool(ConnectionString);
+            ClearPool(AdminDatabaseConnectionString);
             await ExecuteAsync(_adminConnectionString, $"DROP DATABASE IF EXISTS \"{_databaseName}\" WITH (FORCE)").ConfigureAwait(false);
             await ExecuteAsync(_adminConnectionString, $"DROP ROLE IF EXISTS \"{_roleName}\"").ConfigureAwait(false);
         }
@@ -100,6 +101,15 @@ public sealed class ThrowawayPostgresDatabase : IAsyncLifetime
         if (_container is not null)
         {
             await _container.DisposeAsync().ConfigureAwait(false);
+        }
+    }
+
+    private static void ClearPool(string? connectionString)
+    {
+        if (!string.IsNullOrWhiteSpace(connectionString))
+        {
+            using var connection = new NpgsqlConnection(connectionString);
+            NpgsqlConnection.ClearPool(connection);
         }
     }
 

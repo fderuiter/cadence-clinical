@@ -45,7 +45,10 @@ public class SubjectRepositoryTests
     private static string NewTempDbPath() => Path.Combine(Path.GetTempPath(), $"subject-repo-{Guid.NewGuid():N}.db");
 
     private static DbContextOptions<ExecutionDbContext> FileOptions(string path) =>
-        new DbContextOptionsBuilder<ExecutionDbContext>().UseSqlite($"Data Source={path}").Options;
+        new DbContextOptionsBuilder<ExecutionDbContext>()
+            .UseSqlite($"Data Source={path}")
+            .UseInternalServiceProvider(TestSupport.TestEfServiceProviders.Sqlite)
+            .Options;
 
     private static async Task<string> CreateSchemaAsync()
     {
@@ -327,6 +330,7 @@ public class SubjectRepositoryTests
     {
         var builder = new DbContextOptionsBuilder<ExecutionDbContext>()
             .UseSqlite($"Data Source={path}")
+            .UseInternalServiceProvider(TestSupport.TestEfServiceProviders.Sqlite)
             .AddInterceptors(StandaloneTenantSaveChangesInterceptor.Instance);
         builder.UseCadenceStandaloneTenancy(accessor, isRelational: true);
         return builder.Options;

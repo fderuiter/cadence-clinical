@@ -7,6 +7,8 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.ToolingCore.Services;
+
 using Npgsql;
 
 using Spectre.Console;
@@ -285,15 +287,23 @@ public static class DatabaseResetService
         ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
         repoRoot ??= FindRepoRoot();
 
-        var psi = new ProcessStartInfo("dotnet")
+        ExporterBinaryResolver.ExporterInvocation invocation = ExporterBinaryResolver.ResolveInvocation(
+            repoRoot,
+            MigratorProject,
+            ["--connection", connectionString]);
+
+        var psi = new ProcessStartInfo(invocation.FileName)
         {
             WorkingDirectory = repoRoot,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
         };
+        psi.Environment["MSBUILDDISABLENODEREUSE"] = "1";
+        psi.Environment["UseSharedCompilation"] = "false";
+        psi.Environment["DOTNET_CLI_DO_NOT_USE_MSBUILD_SERVER"] = "1";
 
-        foreach (string arg in new[] { "run", "--project", MigratorProject, "--", "--connection", connectionString })
+        foreach (string arg in invocation.Arguments)
         {
             psi.ArgumentList.Add(arg);
         }

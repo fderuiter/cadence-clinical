@@ -6,11 +6,13 @@ using System.Threading.Tasks;
 
 using Cadence.Testing.Hosting;
 using Cadence.Testing.Security;
+using Cadence.UnitTests.TestSupport;
 
 using FluentAssertions;
 
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 
 using Xunit;
 
@@ -105,20 +107,26 @@ public sealed class RenderRouteAuthorityTests(
     public sealed class SafetyFactory : WebApplicationFactory<Cadence.Apps.Safety.Program>
     {
         protected override void ConfigureWebHost(IWebHostBuilder builder) =>
-            builder.UseTestGatewaySecret().UseTestPostgresConnectionString();
+            builder.UseTestGatewaySecret()
+                .UseTestPostgresConnectionString()
+                .ConfigureTestServices(services => services.RemoveBackgroundHostedServices());
     }
 
     /// <summary>The Notifications service with the test gateway secret.</summary>
     public sealed class NotificationsFactory : WebApplicationFactory<Cadence.Apps.Notifications.Program>
     {
         protected override void ConfigureWebHost(IWebHostBuilder builder) =>
-            builder.UseTestGatewaySecret().UseTestPostgresConnectionString();
+            builder.UseTestGatewaySecret()
+                .UseTestPostgresConnectionString()
+                .ConfigureTestServices(services => services.RemoveBackgroundHostedServices());
     }
 
     /// <summary>The CTMS service with the test gateway secret.</summary>
     public sealed class CtmsFactory : WebApplicationFactory<Cadence.Apps.Ctms.Program>
     {
         protected override void ConfigureWebHost(IWebHostBuilder builder) =>
-            builder.UseTestGatewaySecret().UseTestPostgresConnectionString();
+            builder.UseTestGatewaySecret()
+                .UseTestPostgresConnectionString()
+                .ConfigureTestServices(services => services.RemoveBackgroundHostedServices());
     }
 }

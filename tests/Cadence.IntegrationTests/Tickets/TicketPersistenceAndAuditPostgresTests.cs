@@ -139,7 +139,7 @@ public sealed class TicketPersistenceAndAuditPostgresTests(TicketsAndKnowledgePo
         using (tenantScope.Bind(TestSecurityContext.TenantCode))
         {
             var optionsBuilder = new DbContextOptionsBuilder<TicketsDbContext>();
-            optionsBuilder.UseNpgsql($"{connectionString};Search Path=tickets", npgsql => npgsql.MigrationsHistoryTable("__EFMigrationsHistory", "tickets"));
+            optionsBuilder.UseNpgsql($"{connectionString};Search Path=tickets", npgsql => npgsql.MigrationsHistoryTable("__EFMigrationsHistory", "tickets").EnableRetryOnFailure());
             optionsBuilder.UseCadenceStandaloneTenancy(tenantAccessor, isRelational: true);
             optionsBuilder.AddInterceptors(StandaloneTenantConnectionInterceptor.Instance);
             await using var freshDb = new TicketsDbContext(optionsBuilder.Options);
@@ -228,7 +228,7 @@ public sealed class TicketPersistenceAndAuditPostgresTests(TicketsAndKnowledgePo
         using (tenantScope.Bind(TestSecurityContext.TenantCode))
         {
             var optionsBuilder = new DbContextOptionsBuilder<KnowledgeDbContext>();
-            optionsBuilder.UseNpgsql($"{connectionString};Search Path=knowledge", npgsql => npgsql.MigrationsHistoryTable("__EFMigrationsHistory", "knowledge"));
+            optionsBuilder.UseNpgsql($"{connectionString};Search Path=knowledge", npgsql => npgsql.MigrationsHistoryTable("__EFMigrationsHistory", "knowledge").EnableRetryOnFailure());
             optionsBuilder.UseCadenceStandaloneTenancy(tenantAccessor, isRelational: true);
             optionsBuilder.AddInterceptors(StandaloneTenantConnectionInterceptor.Instance);
             await using var freshDb = new KnowledgeDbContext(optionsBuilder.Options);

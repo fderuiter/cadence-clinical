@@ -223,12 +223,15 @@ public static partial class SubjectEndpoints
             return scopeDenied;
         }
 
+        bool canDeferScopeNotFoundToSync = !string.IsNullOrWhiteSpace(request.SiteId)
+            && http.RequestServices?.GetService(typeof(IKernelEnrollmentSynchronizer)) is not null;
         if (await ExecutionLockGuard.EnsureUnlockedAsync(
                 lockGuard,
                 request.StudyId,
                 request.SiteId,
                 request.SubjectId,
-                ct).ConfigureAwait(false) is { } locked)
+                ct,
+                deferScopeNotFoundToEnrollmentSync: canDeferScopeNotFoundToSync).ConfigureAwait(false) is { } locked)
         {
             return locked;
         }

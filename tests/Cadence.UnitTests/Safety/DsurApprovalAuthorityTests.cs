@@ -257,12 +257,12 @@ public sealed class DsurApprovalAuthorityTests(DsurApprovalAuthorityTests.Safety
             builder.UseTestGatewaySecret().UseTestPostgresConnectionString();
             builder.ConfigureServices(services =>
             {
-                var inMemory = new ServiceCollection().AddEntityFrameworkInMemoryDatabase().BuildServiceProvider();
+                TestSupport.TestEfServiceProviders.RemoveBackgroundHostedServices(services);
                 services.RemoveAll<DbContextOptions<SafetyDbContext>>();
                 services.RemoveAll<IDbContextOptionsConfiguration<SafetyDbContext>>();
                 services.AddDbContext<SafetyDbContext>((sp, options) => options
                     .UseInMemoryDatabase(_databaseName)
-                    .UseInternalServiceProvider(inMemory)
+                    .UseInternalServiceProvider(TestSupport.TestEfServiceProviders.InMemory)
                     .UseCadenceStandaloneTenancy(sp.GetService<ICurrentTenantAccessor>(), isRelational: false)
                     .AddInterceptors(
                         StandaloneTenantSaveChangesInterceptor.Instance,

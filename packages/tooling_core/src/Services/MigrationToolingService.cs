@@ -284,6 +284,31 @@ public static class MigrationToolingService
         }
 
         repoRoot ??= FindRepoRoot();
+        var migratorArgs = new List<string>();
+        if (targets.Count == 1)
+        {
+            migratorArgs.Add("--module");
+            migratorArgs.Add(targets[0].Module);
+        }
+
+        if (!string.IsNullOrWhiteSpace(connectionString))
+        {
+            migratorArgs.Add("--connection");
+            migratorArgs.Add(connectionString.Trim());
+        }
+
+        string scopeLabel = targets.Count == 1
+            ? $"module '{targets[0].Module}' ({targets[0].DbContextName}, schema '{targets[0].Schema}')"
+            : $"all {targets.Count} persistence modules";
+        Console.WriteLine($"Applying pending EF Core migrations for {scopeLabel}...");
+
+        if (processRunner is null)
+        {
+            ExporterBinaryResolver.ExporterInvocation invocation =
+                ExporterBinaryResolver.ResolveInvocation(repoRoot, MigratorProject, migratorArgs);
+            return InvokeProcess(repoRoot, invocation.FileName, invocation.Arguments, processRunner: null);
+        }
+
         var args = new List<string>
         {
             "run",
@@ -291,27 +316,12 @@ public static class MigrationToolingService
             MigratorProject,
         };
 
-        bool hasMigratorArgs = targets.Count == 1 || !string.IsNullOrWhiteSpace(connectionString);
-        if (hasMigratorArgs)
+        if (migratorArgs.Count > 0)
         {
             args.Add("--");
-            if (targets.Count == 1)
-            {
-                args.Add("--module");
-                args.Add(targets[0].Module);
-            }
-
-            if (!string.IsNullOrWhiteSpace(connectionString))
-            {
-                args.Add("--connection");
-                args.Add(connectionString.Trim());
-            }
+            args.AddRange(migratorArgs);
         }
 
-        string scopeLabel = targets.Count == 1
-            ? $"module '{targets[0].Module}' ({targets[0].DbContextName}, schema '{targets[0].Schema}')"
-            : $"all {targets.Count} persistence modules";
-        Console.WriteLine($"Applying pending EF Core migrations for {scopeLabel}...");
         return InvokeProcess(repoRoot, "dotnet", args, processRunner);
     }
 
@@ -634,6 +644,9 @@ public static class MigrationToolingService
             WorkingDirectory = workingDirectory,
             UseShellExecute = false,
         };
+        psi.Environment["MSBUILDDISABLENODEREUSE"] = "1";
+        psi.Environment["UseSharedCompilation"] = "false";
+        psi.Environment["DOTNET_CLI_DO_NOT_USE_MSBUILD_SERVER"] = "1";
         string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         if (!string.IsNullOrEmpty(home))
         {

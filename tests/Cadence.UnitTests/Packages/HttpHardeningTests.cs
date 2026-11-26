@@ -6,6 +6,7 @@ using Cadence.Telemetry;
 using Cadence.Testing;
 using Cadence.Testing.Hosting;
 using Cadence.Testing.Security;
+using Cadence.UnitTests.TestSupport;
 
 using FluentAssertions;
 
@@ -14,6 +15,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 
 using Xunit;
 
@@ -108,5 +110,7 @@ public sealed class HttpHardeningTests
             {
                 host.UseSetting(key, value);
             }
+
+            host.ConfigureTestServices(services => services.RemoveBackgroundHostedServices());
         });
 }

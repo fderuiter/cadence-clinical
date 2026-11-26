@@ -783,6 +783,23 @@ public sealed class RouteAuthorizationTests
             }
 
             services.AddSingleton<ISigTokenUseStore>(replayStore);
+
+            string dbName = $"sig-probe-{service}-{Guid.NewGuid():N}";
+            switch (service)
+            {
+                case "ctms":
+                    TestSupport.TestEfServiceProviders.ReplaceWithInMemoryDbContext<Cadence.Apps.Ctms.Infrastructure.Persistence.CtmsDbContext>(services, dbName);
+                    break;
+                case "imaging":
+                    TestSupport.TestEfServiceProviders.ReplaceWithInMemoryDbContext<Cadence.Apps.Imaging.Infrastructure.Persistence.ImagingDbContext>(services, dbName);
+                    break;
+                case "payments":
+                    TestSupport.TestEfServiceProviders.ReplaceWithInMemoryDbContext<Cadence.Apps.Payments.Infrastructure.Persistence.PaymentsDbContext>(services, dbName, useSharedInternalProvider: false);
+                    break;
+                case "interop":
+                    TestSupport.TestEfServiceProviders.ReplaceWithInMemoryDbContext<Cadence.Apps.Interop.Infrastructure.Persistence.InteropDbContext>(services, dbName);
+                    break;
+            }
         });
 
         string pathOnly = pathAndQuery.Split('?')[0];

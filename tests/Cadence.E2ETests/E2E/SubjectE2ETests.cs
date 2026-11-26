@@ -24,7 +24,11 @@ public class SubjectE2ETests : IClassFixture<ExecutionE2EFactory>
     public SubjectE2ETests(ExecutionE2EFactory factory)
     {
         _factory = factory;
-        _client = factory.CreateSignedClient(TestSecurityContext.DefaultIdentity with { SiteIds = ["SITE-101"] });
+        _client = factory.CreateSignedClient(TestSecurityContext.DefaultIdentity with
+        {
+            SiteIds = ["SITE-101"],
+            ChangeReason = "Initial participant screening enrollment for E2E verification",
+        });
     }
 
     [Fact]

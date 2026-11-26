@@ -143,7 +143,11 @@ public sealed class KernelIdentityVaultMigrationPostgresTests
 
         public async ValueTask DisposeAsync()
         {
-            NpgsqlConnection.ClearAllPools();
+            using (var conn = new NpgsqlConnection(ConnectionString))
+            {
+                NpgsqlConnection.ClearPool(conn);
+            }
+
             await ExecuteOnAsync(_server, $"DROP DATABASE IF EXISTS \"{_name}\" WITH (FORCE)", CancellationToken.None);
             await _host.DisposeAsync();
         }

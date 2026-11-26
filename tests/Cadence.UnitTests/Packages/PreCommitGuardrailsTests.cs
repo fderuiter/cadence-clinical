@@ -709,15 +709,20 @@ public sealed class PreCommitGuardrailsTests : IDisposable
             RedirectStandardOutput = true,
             RedirectStandardError = true,
         };
+        psi.Environment["DOTNET_NOLOGO"] = "1";
+        psi.Environment["MSBUILDDISABLENODEREUSE"] = "1";
+        psi.Environment["UseSharedCompilation"] = "false";
+        psi.Environment["DOTNET_CLI_DO_NOT_USE_MSBUILD_SERVER"] = "1";
         foreach (string arg in args)
         {
             psi.ArgumentList.Add(arg);
         }
 
         using var process = Process.Start(psi)!;
+        var stderrTask = process.StandardError.ReadToEndAsync();
         string stdout = process.StandardOutput.ReadToEnd();
-        string stderr = process.StandardError.ReadToEnd();
         process.WaitForExit();
+        string stderr = stderrTask.GetAwaiter().GetResult();
         process.ExitCode.Should().Be(0, stdout + stderr);
     }
 
@@ -1735,6 +1740,9 @@ public sealed class PreCommitGuardrailsTests : IDisposable
         psi.ArgumentList.Add(hookPath);
         psi.Environment["PATH"] = pathEnv;
         psi.Environment["HOME"] = homeDir;
+        psi.Environment["MSBUILDDISABLENODEREUSE"] = "1";
+        psi.Environment["UseSharedCompilation"] = "false";
+        psi.Environment["DOTNET_CLI_DO_NOT_USE_MSBUILD_SERVER"] = "1";
         psi.Environment.Remove("DOTNET_ROOT");
         psi.Environment.Remove("LOCALAPPDATA");
         psi.Environment.Remove("USERPROFILE");
@@ -1747,9 +1755,10 @@ public sealed class PreCommitGuardrailsTests : IDisposable
         }
 
         using var process = Process.Start(psi)!;
+        var stderrTask = process.StandardError.ReadToEndAsync();
         _ = process.StandardOutput.ReadToEnd();
-        string stderr = process.StandardError.ReadToEnd();
         process.WaitForExit();
+        string stderr = stderrTask.GetAwaiter().GetResult();
         return (process.ExitCode, stderr);
     }
 
@@ -1776,6 +1785,9 @@ public sealed class PreCommitGuardrailsTests : IDisposable
 
         psi.Environment["PATH"] = pathEnv;
         psi.Environment["HOME"] = homeDir;
+        psi.Environment["MSBUILDDISABLENODEREUSE"] = "1";
+        psi.Environment["UseSharedCompilation"] = "false";
+        psi.Environment["DOTNET_CLI_DO_NOT_USE_MSBUILD_SERVER"] = "1";
         psi.Environment.Remove("DOTNET_ROOT");
         psi.Environment.Remove("LOCALAPPDATA");
         psi.Environment.Remove("USERPROFILE");

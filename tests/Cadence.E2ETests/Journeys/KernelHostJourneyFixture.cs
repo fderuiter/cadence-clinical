@@ -139,7 +139,18 @@ public sealed class KernelHostJourneyFixture : IAsyncLifetime
 
         if (_server is not null)
         {
-            NpgsqlConnection.ClearAllPools();
+            if (!string.IsNullOrWhiteSpace(_appConnectionString))
+            {
+                using var appConn = new NpgsqlConnection(_appConnectionString);
+                NpgsqlConnection.ClearPool(appConn);
+            }
+
+            if (!string.IsNullOrWhiteSpace(_adminConnectionString))
+            {
+                using var adminConn = new NpgsqlConnection(_adminConnectionString);
+                NpgsqlConnection.ClearPool(adminConn);
+            }
+
             await ExecuteAsync(_server.SuperuserConnectionString, $"DROP DATABASE IF EXISTS \"{_databaseName}\" WITH (FORCE)").ConfigureAwait(false);
             await ExecuteAsync(_server.SuperuserConnectionString, $"DROP ROLE IF EXISTS \"{_appRole}\"").ConfigureAwait(false);
             await _server.DisposeAsync().ConfigureAwait(false);

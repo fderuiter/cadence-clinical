@@ -25,6 +25,7 @@ using Cadence.Security.Authentication;
 using Cadence.Security.Rbac;
 using Cadence.Testing;
 using Cadence.UnitTests.Security;
+using Cadence.UnitTests.TestSupport;
 
 using FluentAssertions;
 
@@ -295,19 +296,7 @@ public sealed class DicomWebEndpointsTests
 
         await using var booted = ServiceHosts.All["imaging"](services =>
         {
-            var inMemoryServices = new ServiceCollection()
-                .AddEntityFrameworkInMemoryDatabase()
-                .BuildServiceProvider();
-
-            services.RemoveAll<DbContextOptions<ImagingDbContext>>();
-            services.RemoveAll<IDbContextOptionsConfiguration<ImagingDbContext>>();
-            services.AddDbContext<ImagingDbContext>((sp, options) =>
-            {
-                options.UseInMemoryDatabase(databaseName)
-                    .UseCadenceStandaloneTenancy(sp.GetService<ICurrentTenantAccessor>(), isRelational: false)
-                    .AddInterceptors(StandaloneTenantSaveChangesInterceptor.Instance);
-                options.UseInternalServiceProvider(inMemoryServices);
-            });
+            services.ReplaceWithInMemoryDbContext<ImagingDbContext>(databaseName);
         });
 
         using var crcSite1 = booted.CreateSignedClient(new GatewayIdentity(

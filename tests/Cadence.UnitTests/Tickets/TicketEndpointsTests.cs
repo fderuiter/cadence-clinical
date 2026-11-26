@@ -18,6 +18,7 @@ using Cadence.Testing;
 using Cadence.Testing.Hosting;
 using Cadence.Testing.Security;
 using Cadence.Testing.Time;
+using Cadence.UnitTests.TestSupport;
 
 using FluentAssertions;
 
@@ -61,9 +62,11 @@ public sealed class TicketEndpointsTests : IAsyncDisposable
                 services.AddSingleton<ISigTokenUseStore, ReplayCache>();
                 services.RemoveAll<DbContextOptions<TicketsDbContext>>();
                 services.RemoveAll<IDbContextOptionsConfiguration<TicketsDbContext>>();
+                services.RemoveBackgroundHostedServices();
                 services.AddDbContext<TicketsDbContext>((sp, options) =>
                 {
-                    options.UseSqlite(_connection);
+                    options.UseSqlite(_connection)
+                        .UseInternalServiceProvider(TestSupport.TestEfServiceProviders.Sqlite);
                     options.AddInterceptors(new GxPAuditInterceptor(
                         () =>
                         {

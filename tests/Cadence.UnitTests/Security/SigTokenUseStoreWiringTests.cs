@@ -7,6 +7,7 @@ using Cadence.Security.Authentication;
 using Cadence.Testing;
 using Cadence.Testing.Hosting;
 using Cadence.Testing.Security;
+using Cadence.UnitTests.TestSupport;
 
 using FluentAssertions;
 
@@ -14,6 +15,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
@@ -60,7 +62,8 @@ public sealed class SigTokenUseStoreWiringTests
         using var host = new WebApplicationFactory<Cadence.Apps.Execution.Program>().WithWebHostBuilder(builder => builder
             .UseTestGatewaySecret()
             .UseTestDemographicsKey().UseTestRandomizationKey().UseTestCgtBarcodeKey()
-            .UseTestPostgresConnectionString());
+            .UseTestPostgresConnectionString()
+            .ConfigureTestServices(services => services.RemoveBackgroundHostedServices()));
 
         host.Services.GetRequiredService<ISigTokenUseStore>()
             .Should().BeOfType<PostgresSigTokenUseStore<Cadence.Apps.Execution.Infrastructure.Persistence.ExecutionDbContext>>();

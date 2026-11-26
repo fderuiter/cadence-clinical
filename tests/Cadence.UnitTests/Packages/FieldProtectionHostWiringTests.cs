@@ -11,11 +11,13 @@ using Cadence.Security.FieldProtection;
 using Cadence.Testing;
 using Cadence.Testing.Hosting;
 using Cadence.Testing.Security;
+using Cadence.UnitTests.TestSupport;
 
 using FluentAssertions;
 
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -41,7 +43,11 @@ public class FieldProtectionHostWiringTests
         string expectedKeyId = TestFieldProtection.CreateEncryptor().KeyId;
 
         using var payments = new WebApplicationFactory<Cadence.Apps.Payments.Program>()
-            .WithWebHostBuilder(builder => builder.UseTestGatewaySecret().UseTestPostgresConnectionString().UseTestFieldProtectionKeys());
+            .WithWebHostBuilder(builder => builder
+                .UseTestGatewaySecret()
+                .UseTestPostgresConnectionString()
+                .UseTestFieldProtectionKeys()
+                .ConfigureTestServices(services => services.RemoveBackgroundHostedServices()));
         using (var scope = payments.Services.CreateScope())
         {
             var context = scope.ServiceProvider.GetRequiredService<PaymentsDbContext>();
@@ -52,7 +58,12 @@ public class FieldProtectionHostWiringTests
         }
 
         using var econsent = new WebApplicationFactory<Cadence.Apps.Econsent.Program>()
-            .WithWebHostBuilder(builder => builder.UseTestGatewaySecret().UseTestPostgresConnectionString().UseTestFieldProtectionKeys().UseTestBiometricLivenessKey());
+            .WithWebHostBuilder(builder => builder
+                .UseTestGatewaySecret()
+                .UseTestPostgresConnectionString()
+                .UseTestFieldProtectionKeys()
+                .UseTestBiometricLivenessKey()
+                .ConfigureTestServices(services => services.RemoveBackgroundHostedServices()));
         using (var scope = econsent.Services.CreateScope())
         {
             var context = scope.ServiceProvider.GetRequiredService<EconsentDbContext>();
@@ -71,7 +82,12 @@ public class FieldProtectionHostWiringTests
     public void InteropHost_WithKey_ResolvesDeviceTokenHasher()
     {
         using var interop = new WebApplicationFactory<Cadence.Apps.Interop.Program>()
-            .WithWebHostBuilder(builder => builder.UseTestGatewaySecret().UseTestPostgresConnectionString().UseTestFieldProtectionKeys().UseTestSceSigningKey());
+            .WithWebHostBuilder(builder => builder
+                .UseTestGatewaySecret()
+                .UseTestPostgresConnectionString()
+                .UseTestFieldProtectionKeys()
+                .UseTestSceSigningKey()
+                .ConfigureTestServices(services => services.RemoveBackgroundHostedServices()));
 
         var hasher = interop.Services.GetRequiredService<DeviceTokenHasher>();
 
@@ -90,13 +106,31 @@ public class FieldProtectionHostWiringTests
     public void Hosts_RegisterFailClosedKeyValidation()
     {
         using var payments = new WebApplicationFactory<Cadence.Apps.Payments.Program>()
-            .WithWebHostBuilder(builder => builder.UseTestGatewaySecret().UseTestPostgresConnectionString().UseTestFieldProtectionKeys());
+            .WithWebHostBuilder(builder => builder
+                .UseTestGatewaySecret()
+                .UseTestPostgresConnectionString()
+                .UseTestFieldProtectionKeys()
+                .ConfigureTestServices(services => services.RemoveBackgroundHostedServices()));
         using var econsent = new WebApplicationFactory<Cadence.Apps.Econsent.Program>()
-            .WithWebHostBuilder(builder => builder.UseTestGatewaySecret().UseTestPostgresConnectionString().UseTestFieldProtectionKeys().UseTestBiometricLivenessKey());
+            .WithWebHostBuilder(builder => builder
+                .UseTestGatewaySecret()
+                .UseTestPostgresConnectionString()
+                .UseTestFieldProtectionKeys()
+                .UseTestBiometricLivenessKey()
+                .ConfigureTestServices(services => services.RemoveBackgroundHostedServices()));
         using var interop = new WebApplicationFactory<Cadence.Apps.Interop.Program>()
-            .WithWebHostBuilder(builder => builder.UseTestGatewaySecret().UseTestPostgresConnectionString().UseTestFieldProtectionKeys().UseTestSceSigningKey());
+            .WithWebHostBuilder(builder => builder
+                .UseTestGatewaySecret()
+                .UseTestPostgresConnectionString()
+                .UseTestFieldProtectionKeys()
+                .UseTestSceSigningKey()
+                .ConfigureTestServices(services => services.RemoveBackgroundHostedServices()));
         using var kernel = new WebApplicationFactory<Cadence.Kernel.Host.Program>()
-            .WithWebHostBuilder(builder => builder.UseTestGatewaySecret().UseTestPostgresConnectionString().UseTestBiometricLivenessKey());
+            .WithWebHostBuilder(builder => builder
+                .UseTestGatewaySecret()
+                .UseTestPostgresConnectionString()
+                .UseTestBiometricLivenessKey()
+                .ConfigureTestServices(services => services.RemoveBackgroundHostedServices()));
 
         AssertRejectsMissingKey<FieldEncryptionOptions>(payments.Services, new FieldEncryptionOptions(), new FieldEncryptionOptions { KeyBase64 = " " });
         AssertRejectsMissingKey<FieldEncryptionOptions>(econsent.Services, new FieldEncryptionOptions(), new FieldEncryptionOptions { KeyBase64 = " " });

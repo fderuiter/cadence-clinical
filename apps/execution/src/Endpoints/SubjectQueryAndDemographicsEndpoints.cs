@@ -335,6 +335,7 @@ public static partial class SubjectEndpoints
                 return existingLocked;
             }
 
+            bool canDeferTargetNotFoundToSync = http.RequestServices?.GetService(typeof(IKernelEnrollmentSynchronizer)) is not null;
             if (!string.IsNullOrWhiteSpace(request.SiteCode)
                 && !string.Equals(s.SiteId?.Value, request.SiteCode.Trim(), StringComparison.Ordinal)
                 && await ExecutionLockGuard.EnsureUnlockedAsync(
@@ -342,7 +343,8 @@ public static partial class SubjectEndpoints
                     s.StudyId.Value,
                     request.SiteCode.Trim(),
                     resolvedSubjectCode,
-                    ct).ConfigureAwait(false) is { } targetLocked)
+                    ct,
+                    deferScopeNotFoundToEnrollmentSync: canDeferTargetNotFoundToSync).ConfigureAwait(false) is { } targetLocked)
             {
                 return targetLocked;
             }

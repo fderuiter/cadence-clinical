@@ -352,7 +352,18 @@ public class KernelPostgresFixture : IAsyncLifetime
 
         if (_databaseName is not null && _serverConnectionString is not null)
         {
-            NpgsqlConnection.ClearAllPools();
+            if (!string.IsNullOrWhiteSpace(ConnectionString))
+            {
+                using var appConn = new NpgsqlConnection(ConnectionString);
+                NpgsqlConnection.ClearPool(appConn);
+            }
+
+            if (!string.IsNullOrWhiteSpace(AdminConnectionString))
+            {
+                using var adminConn = new NpgsqlConnection(AdminConnectionString);
+                NpgsqlConnection.ClearPool(adminConn);
+            }
+
             await ExecuteAsync(_serverConnectionString, $"DROP DATABASE IF EXISTS \"{_databaseName}\" WITH (FORCE)").ConfigureAwait(false);
             await ExecuteAsync(_serverConnectionString, $"DROP ROLE IF EXISTS \"{_appRole}\"").ConfigureAwait(false);
         }

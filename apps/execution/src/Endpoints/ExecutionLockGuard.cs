@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 
 using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Domain.Subjects;
+using Cadence.Core.Domain;
 
 using Microsoft.AspNetCore.Http;
 
@@ -20,7 +21,8 @@ internal static class ExecutionLockGuard
         string? studyCode,
         string? siteCode = null,
         string? subjectCode = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        bool deferScopeNotFoundToEnrollmentSync = false)
     {
         if (lockGuard is null || string.IsNullOrWhiteSpace(studyCode))
         {
@@ -30,7 +32,18 @@ internal static class ExecutionLockGuard
         var check = await lockGuard
             .EnsureUnlockedAsync(studyCode, siteCode, subjectCode, cancellationToken)
             .ConfigureAwait(false);
-        return check.IsFailure ? check.Error!.ToProblemResult() : null;
+        if (!check.IsFailure)
+        {
+            return null;
+        }
+
+        if (deferScopeNotFoundToEnrollmentSync
+            && check.Error is { Type: ErrorType.NotFound, Code: "KERNEL_LOCK_CHECK_FAILED" })
+        {
+            return null;
+        }
+
+        return check.Error!.ToProblemResult();
     }
 
     internal static async Task<IResult?> EnsureUnlockedBatchAsync(

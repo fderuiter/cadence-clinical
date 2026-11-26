@@ -782,16 +782,14 @@ public class EtmfExportTests
 
             host.ConfigureTestServices(services =>
             {
-                var inMemoryServices = new ServiceCollection()
-                    .AddEntityFrameworkInMemoryDatabase()
-                    .BuildServiceProvider();
+                TestSupport.TestEfServiceProviders.RemoveBackgroundHostedServices(services);
 
                 services.RemoveAll<DbContextOptions<EtmfDbContext>>();
                 services.RemoveAll<IDbContextOptionsConfiguration<EtmfDbContext>>();
                 services.AddDbContext<EtmfDbContext>(options =>
                 {
                     options.UseInMemoryDatabase(dbName);
-                    options.UseInternalServiceProvider(inMemoryServices);
+                    options.UseInternalServiceProvider(TestSupport.TestEfServiceProviders.InMemory);
                 });
 
                 services.RemoveAll<IClock>();

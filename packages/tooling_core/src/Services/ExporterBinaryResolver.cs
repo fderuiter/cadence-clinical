@@ -107,6 +107,9 @@ public static class ExporterBinaryResolver
             RedirectStandardError = true,
             UseShellExecute = false,
         };
+        psi.Environment["MSBUILDDISABLENODEREUSE"] = "1";
+        psi.Environment["UseSharedCompilation"] = "false";
+        psi.Environment["DOTNET_CLI_DO_NOT_USE_MSBUILD_SERVER"] = "1";
         foreach (string arg in arguments)
         {
             psi.ArgumentList.Add(arg);

@@ -111,7 +111,18 @@ public sealed class TrialSubjectWorkflowPostgresTests : IAsyncLifetime
     {
         if (_databaseName is not null && _serverConnectionString is not null)
         {
-            NpgsqlConnection.ClearAllPools();
+            if (!string.IsNullOrWhiteSpace(AppConnectionString))
+            {
+                using var appConn = new NpgsqlConnection(AppConnectionString);
+                NpgsqlConnection.ClearPool(appConn);
+            }
+
+            if (!string.IsNullOrWhiteSpace(AdminConnectionString))
+            {
+                using var adminConn = new NpgsqlConnection(AdminConnectionString);
+                NpgsqlConnection.ClearPool(adminConn);
+            }
+
             await ExecuteSqlAsync(_serverConnectionString, $"DROP DATABASE IF EXISTS \"{_databaseName}\" WITH (FORCE)")
                 .ConfigureAwait(false);
             await ExecuteSqlAsync(_serverConnectionString, $"DROP ROLE IF EXISTS \"{_appRole}\"")

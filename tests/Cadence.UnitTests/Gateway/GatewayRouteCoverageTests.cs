@@ -7,11 +7,13 @@ using Cadence.Testing;
 using Cadence.Testing.Hosting;
 using Cadence.Testing.Security;
 using Cadence.UnitTests.Execution;
+using Cadence.UnitTests.TestSupport;
 
 using FluentAssertions;
 
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 
 using Xunit;
@@ -109,7 +111,8 @@ public sealed class GatewayRouteCoverageTests
             .UseTestFieldProtectionKeys()
             .UseTestSceSigningKey()
             .UseTestImagingDeidentificationKeys()
-            .UseTestBiometricLivenessKey());
+            .UseTestBiometricLivenessKey()
+            .ConfigureTestServices(services => services.RemoveBackgroundHostedServices()));
         return PathsOf(factory.Services);
     }
 

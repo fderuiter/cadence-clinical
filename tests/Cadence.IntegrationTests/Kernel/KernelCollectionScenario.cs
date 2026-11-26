@@ -93,7 +93,8 @@ internal sealed class KernelCollectionScenario(KernelPostgresFixture fixture)
                         new CollectionItem(Systolic, systolic, "mm[Hg]", Required: true),
                         new CollectionItem(Position, position, Terminology: new TerminologyBinding(csVersion, PositionCodelist), ValueKind: ObservationValueKind.Coded, Required: true),
                         new CollectionItem(AdverseTerm, aeTerm, Terminology: new TerminologyBinding(csVersion), ValueKind: ObservationValueKind.Coded),
-                    ]),
+                    ],
+                    Repeating: true),
             ],
         };
 
@@ -153,7 +154,8 @@ internal sealed class KernelCollectionScenario(KernelPostgresFixture fixture)
                         new CollectionItem(Systolic, systolic, "mm[Hg]", Required: true),
                         new CollectionItem(Diastolic, diastolic, "mm[Hg]", Required: requireDiastolic),
                         new CollectionItem(Comment, systolic, ValueKind: ObservationValueKind.Text),
-                    ]),
+                    ],
+                    Repeating: true),
             ],
         };
 

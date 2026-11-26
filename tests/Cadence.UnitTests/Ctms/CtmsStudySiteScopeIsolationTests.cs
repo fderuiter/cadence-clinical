@@ -544,17 +544,7 @@ public sealed class CtmsStudySiteScopeIsolationTests : IAsyncLifetime
 
             builder.ConfigureTestServices(services =>
             {
-                foreach (var descriptor in services
-                    .Where(d => d.ServiceType == typeof(IHostedService)
-                        && d.ImplementationType != typeof(SigTokenUseStoreStartupCheck))
-                    .ToList())
-                {
-                    services.Remove(descriptor);
-                }
-
-                var inMemoryServices = new ServiceCollection()
-                    .AddEntityFrameworkInMemoryDatabase()
-                    .BuildServiceProvider();
+                TestSupport.TestEfServiceProviders.RemoveBackgroundHostedServices(services);
 
                 services.RemoveAll<DbContextOptions<CtmsDbContext>>();
                 services.RemoveAll<IDbContextOptionsConfiguration<CtmsDbContext>>();
@@ -573,7 +563,7 @@ public sealed class CtmsStudySiteScopeIsolationTests : IAsyncLifetime
                     options.UseInMemoryDatabase(_databaseName)
                         .UseCadenceStandaloneTenancy(sp.GetService<ICurrentTenantAccessor>(), isRelational: false)
                         .AddInterceptors(StandaloneTenantSaveChangesInterceptor.Instance);
-                    options.UseInternalServiceProvider(inMemoryServices);
+                    options.UseInternalServiceProvider(TestSupport.TestEfServiceProviders.InMemory);
                 });
             });
         }
