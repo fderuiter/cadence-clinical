@@ -386,8 +386,8 @@ public sealed class ExpiredSubscriptionStandaloneServicesTests
             1,
             "ctms GET /api/v1/ctms/doa/sites/{site_id}/export-pdf is a safe-read inspection export preserved for expired tenants under PRD-SYS-053");
         kernelSignatureRoutesVerified.Should().Be(
-            4,
-            "kernel non-closeout ElectronicSignatureRequired routes (library-items/{itemRef}/approve, protocol-versions/{versionRef}/approve, validation/findings/{findingRef}/accept, and validation/findings/{findingRef}/explain) must all be verified");
+            6,
+            "kernel non-closeout ElectronicSignatureRequired routes (artifact-versions/{artifactVersionRef}/review, library-items/{itemRef}/approve, protocol-versions/{versionRef}/approve, protocol-versions/{versionRef}/withdraw, validation/findings/{findingRef}/accept, and validation/findings/{findingRef}/explain) must all be verified");
         closeoutSignatureRoutesFound.Should().Be(
             3,
             "only the three closeout signature routes (form closeout signature + lock apply + lock release) carry AllowExpiredTenantWriteMetadata");
