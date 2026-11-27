@@ -227,6 +227,46 @@ export default defineComponent({
 });
 `;
 
+function buildSubjectPortalDemoViewStubSource(landmark) {
+  const childrenExpr = landmark.includeSyncStatusLiveRegion
+    ? `[
+      h(
+        "div",
+        {
+          id: "sync-queue-status-text",
+          class: "text-muted",
+          role: "status",
+          "aria-live": "polite",
+        },
+        "Checking sync status..."
+      ),
+    ]`
+    : "undefined";
+
+  return `
+import { defineComponent, h } from "vue";
+
+export default defineComponent({
+  name: "DemoWorkspaceProdStub",
+  render() {
+    return h(
+      "section",
+      {
+        id: ${JSON.stringify(landmark.id)},
+        class: "portal-view",
+        hidden: true,
+        inert: true,
+        role: "region",
+        "aria-label": ${JSON.stringify(landmark.ariaLabel)},
+        tabindex: "0",
+      },
+      ${childrenExpr}
+    );
+  },
+});
+`;
+}
+
 const EMPTY_DEMO_STORE_STUB_SOURCE = `
 const EMPTY_LIST = Object.freeze([]);
 const EMPTY_RECORD = Object.freeze({});
@@ -640,15 +680,43 @@ export const WEB_NON_DEMO_STUBBED_VIEWS = Object.freeze([
   "ExportWizardView.vue",
 ]);
 
-export const SUBJECT_PORTAL_NON_DEMO_STUBBED_VIEWS = Object.freeze([
+export const SUBJECT_PORTAL_NON_DEMO_VIEW_LANDMARKS = Object.freeze({
+  "ComplianceView.vue": Object.freeze({
+    id: "view-compliance",
+    ariaLabel: "My Compliance Overview",
+    includeSyncStatusLiveRegion: false,
+  }),
+  "ConsentView.vue": Object.freeze({
+    id: "view-consent",
+    ariaLabel: "My Informed Consent Review",
+    includeSyncStatusLiveRegion: false,
+  }),
+  "InboxView.vue": Object.freeze({
+    id: "view-inbox",
+    ariaLabel: "My Notification Inbox",
+    includeSyncStatusLiveRegion: false,
+  }),
+  "LaySummariesView.vue": Object.freeze({
+    id: "view-lay-summaries",
+    ariaLabel: "Plain-Language Clinical Trial Results",
+    includeSyncStatusLiveRegion: false,
+  }),
+  "QuestionnaireView.vue": Object.freeze({
+    id: "view-questionnaire",
+    ariaLabel: "Questionnaire",
+    includeSyncStatusLiveRegion: false,
+  }),
+  "TasksView.vue": Object.freeze({
+    id: "view-tasks",
+    ariaLabel: "My Daily Questionnaires",
+    includeSyncStatusLiveRegion: true,
+  }),
+});
+
+export const SUBJECT_PORTAL_NON_DEMO_STUBBED_VIEWS = Object.freeze(
   // DEMO_AVAILABLE_SCREENS views (apps/subject-portal/src/router/availability.js)
-  "ComplianceView.vue",
-  "ConsentView.vue",
-  "InboxView.vue",
-  "LaySummariesView.vue",
-  "QuestionnaireView.vue",
-  "TasksView.vue",
-]);
+  Object.keys(SUBJECT_PORTAL_NON_DEMO_VIEW_LANDMARKS)
+);
 
 export function createDemoFixturesPlugin(appDir) {
   let stripDemoFixtures = false;
@@ -776,6 +844,13 @@ export function createDemoFixturesPlugin(appDir) {
         return DEMO_TLDTS_SHIM_SOURCE;
       }
       if (id.startsWith(VIRTUAL_DEMO_VIEW_PREFIX)) {
+        if (appName === "subject-portal") {
+          const viewFileName = id.slice(VIRTUAL_DEMO_VIEW_PREFIX.length);
+          const landmark = SUBJECT_PORTAL_NON_DEMO_VIEW_LANDMARKS[viewFileName];
+          if (landmark) {
+            return buildSubjectPortalDemoViewStubSource(landmark);
+          }
+        }
         return EMPTY_DEMO_VIEW_STUB_SOURCE;
       }
       if (id.startsWith(VIRTUAL_DEMO_STORE_PREFIX)) {

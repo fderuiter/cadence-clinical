@@ -7,6 +7,7 @@ import {
 } from "../src/router/availability.js";
 import {
   SUBJECT_PORTAL_NON_DEMO_STUBBED_VIEWS,
+  SUBJECT_PORTAL_NON_DEMO_VIEW_LANDMARKS,
   WEB_NON_DEMO_STUBBED_VIEWS,
   createDemoFixturesPlugin,
 } from "../../../scripts/vite-strip-demo-fixtures.mjs";
@@ -334,7 +335,26 @@ describe("vite-strip-demo-fixtures plugin", () => {
         portalRouterImporter
       );
       expect(stubId).toBe(`\0virtual:demo-view-prod-stub:${viewFile}`);
-      expect(prodBuild.load(stubId!)).toContain("DemoWorkspaceProdStub");
+      const stubSource = prodBuild.load(stubId!)!;
+      const landmark =
+        SUBJECT_PORTAL_NON_DEMO_VIEW_LANDMARKS[
+          viewFile as keyof typeof SUBJECT_PORTAL_NON_DEMO_VIEW_LANDMARKS
+        ];
+      expect(landmark).toBeDefined();
+      expect(stubSource).toContain("DemoWorkspaceProdStub");
+      expect(stubSource).toContain(`id: "${landmark.id}"`);
+      expect(stubSource).toContain('role: "region"');
+      expect(stubSource).toContain(`"aria-label": "${landmark.ariaLabel}"`);
+      expect(stubSource).toContain("hidden: true");
+      expect(stubSource).toContain("inert: true");
+      expect(stubSource).not.toContain("aria-labelledby");
+      if (viewFile === "TasksView.vue") {
+        expect(stubSource).toContain('id: "sync-queue-status-text"');
+        expect(stubSource).toContain('role: "status"');
+        expect(stubSource).toContain('"aria-live": "polite"');
+      } else {
+        expect(stubSource).not.toContain("sync-queue-status-text");
+      }
       expect(
         demoBuild.resolveId(`../views/${viewFile}`, portalRouterImporter)
       ).toBeNull();
