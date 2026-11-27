@@ -1,0 +1,317 @@
+.study-locks {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.study-locks-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.study-locks-header h2 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.study-locks-subtitle {
+  margin: 4px 0 0;
+  font-size: 0.85rem;
+  color: var(--semantic-color-text-body);
+}
+
+.study-locks-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+}
+
+.checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--semantic-control-target-min, 24px);
+  gap: 6px;
+  cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: var(--semantic-control-target-min, 24px);
+  height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
+  min-height: var(--semantic-control-target-min, 24px);
+  margin: 0;
+  cursor: pointer;
+}
+
+.apply-card {
+  padding: 14px 16px;
+  border: 1px solid var(--semantic-color-border-muted);
+  border-radius: 8px;
+  background: var(--semantic-color-surface-muted);
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.apply-card h3 {
+  margin: 0 0 10px;
+  font-size: 0.95rem;
+}
+
+.apply-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+  gap: 10px;
+  min-width: 0;
+}
+
+.field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 0;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.field-group--wide {
+  grid-column: 1 / -1;
+}
+
+.picker-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--semantic-color-text-dark);
+}
+
+.study-locks-filters :deep(.locks-inline-field) {
+  display: flex;
+  flex-wrap: wrap;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.study-locks-filters :deep(.locks-inline-field > label) {
+  margin: 0;
+}
+
+.study-locks-filters :deep(.locks-inline-field > .input-wrapper) {
+  flex: 1 1 150px;
+  min-width: 0;
+  max-width: 100%;
+  width: auto;
+}
+
+.release-reason-bar :deep(.locks-release-field) {
+  display: flex;
+  flex-wrap: wrap;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 100%;
+  margin: 0;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.release-reason-bar :deep(.locks-release-field > label) {
+  margin: 0;
+}
+
+.release-reason-bar :deep(.locks-release-field > .input-wrapper) {
+  flex: 1 1 min(100%, 260px);
+  min-width: 0;
+  max-width: 100%;
+  width: auto;
+}
+
+.selected-scope-chip {
+  display: flex;
+  align-items: center;
+  min-height: 32px;
+}
+
+.readiness-panel {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--semantic-color-border);
+  background: var(--semantic-color-surface);
+  font-size: 0.83rem;
+}
+
+.readiness-panel--ready {
+  border-color: var(--semantic-color-success-dark);
+}
+
+.readiness-panel--blocked {
+  border-color: var(--semantic-color-error-dark);
+}
+
+.readiness-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.readiness-counts {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px;
+  color: var(--semantic-color-text-body);
+  font-variant-numeric: tabular-nums;
+}
+
+.readiness-gate-chip--active {
+  font-weight: 600;
+  color: var(--semantic-color-error-dark);
+}
+
+.blocker-kind-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 7px;
+  border-radius: 4px;
+  border: 1px solid var(--semantic-color-border);
+  background: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-dark);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+@media (pointer: coarse), (max-width: 1024px) {
+  .field-group input,
+  .field-group select,
+  .release-reason-bar input,
+  .study-locks-filters input[type="text"],
+  .quick-dialog-textarea {
+    font-size: 1rem;
+  }
+}
+
+.readiness-blockers {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.readiness-blocker-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.blocker-owner {
+  color: var(--semantic-color-text-dark);
+}
+
+.blocker-action {
+  color: var(--semantic-color-text-body);
+}
+
+.apply-actions {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.quick-dialog-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.quick-dialog-target {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--semantic-color-text-body);
+}
+
+.quick-dialog-textarea {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--semantic-color-border-control);
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-family: inherit;
+  color: var(--semantic-color-text);
+  background: var(--semantic-color-surface);
+}
+
+.release-reason-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.release-reason-bar input {
+  flex: 1 1 260px;
+}
+
+:deep(.locks-table-scroll) {
+  position: relative;
+  overflow-x: auto;
+  max-width: 100%;
+  min-width: 0;
+  -webkit-overflow-scrolling: touch;
+  padding: 4px;
+}
+
+:deep(.locks-table) {
+  width: 100%;
+  min-width: 48rem;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.masked-pill {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-body);
+  font-size: 0.8rem;
+}
+
+#study-locks-as-of,
+.locks-table td:nth-child(3),
+.locks-table td:nth-child(5),
+.quick-dialog-target code {
+  font-family: var(--semantic-font-mono);
+}
+
+.meaning-note {
+  color: var(--semantic-color-text-muted);
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.hidden-scope-notice {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--semantic-color-border-muted);
+  background: var(--semantic-color-surface-muted);
+  color: var(--semantic-color-text-body);
+  font-size: 0.82rem;
+}

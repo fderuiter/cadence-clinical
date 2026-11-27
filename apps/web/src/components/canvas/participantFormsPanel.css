@@ -1,0 +1,254 @@
+.forms-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.forms-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.forms-head h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.forms-head-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.forms-open-btn {
+  font-size: 0.82rem;
+  padding: 4px 10px;
+  text-decoration: none;
+}
+
+.status-line {
+  margin: 0;
+  color: var(--semantic-color-text-secondary);
+  font-size: 0.85rem;
+}
+
+.sr-only {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.casebook-matrix-scroll {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid var(--semantic-color-border);
+  border-radius: 8px;
+  background: var(--semantic-color-surface);
+}
+
+.casebook-matrix-scroll:focus-visible {
+  outline: 2px solid var(--semantic-color-primary);
+  outline-offset: 2px;
+}
+
+.casebook-matrix {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.casebook-matrix th,
+.casebook-matrix td {
+  border-bottom: 1px solid var(--semantic-color-border);
+  border-right: 1px solid var(--semantic-color-border);
+  padding: 8px 10px;
+  vertical-align: top;
+  text-align: left;
+}
+
+.casebook-matrix th:last-child,
+.casebook-matrix td:last-child {
+  border-right: 0;
+}
+
+.casebook-matrix tbody tr:last-child th,
+.casebook-matrix tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.matrix-corner {
+  background: var(--semantic-color-surface-subtle);
+  font-weight: 700;
+  color: var(--semantic-color-text-dark);
+  min-width: 10rem;
+}
+
+.matrix-epoch-header {
+  background: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-dark);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  text-align: center;
+}
+
+.matrix-visit-header {
+  background: var(--semantic-color-surface-subtle);
+  min-width: 9rem;
+}
+
+.visit-name {
+  display: block;
+  font-weight: 600;
+  color: var(--semantic-color-text);
+}
+
+.visit-day {
+  display: block;
+  font-size: var(--font-size-2xs);
+  font-weight: 500;
+  color: var(--semantic-color-text-secondary);
+  font-variant-numeric: tabular-nums;
+  margin-top: 2px;
+}
+
+.visit-target-date {
+  display: block;
+  font-size: var(--font-size-2xs);
+  font-weight: 600;
+  color: var(--semantic-color-text-dark);
+  margin-top: 2px;
+  font-variant-numeric: tabular-nums;
+}
+
+.visit-header-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.cb-badge {
+  font-variant-numeric: tabular-nums;
+}
+
+.casebook-governance-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid var(--semantic-color-warning-border);
+  border-radius: 8px;
+  background: var(--semantic-color-warning-bg-soft);
+  color: var(--semantic-color-warning-text-dark);
+  font-size: 0.85rem;
+}
+
+.casebook-governance-heading {
+  font-size: 0.88rem;
+}
+
+.casebook-governance-body {
+  margin: 0;
+}
+
+.matrix-row-header {
+  background: var(--semantic-color-surface);
+  min-width: 10rem;
+}
+
+.row-spec-title {
+  display: block;
+  font-weight: 600;
+  color: var(--semantic-color-text);
+}
+
+.row-spec-code {
+  display: block;
+  font-family: var(--semantic-font-mono);
+  font-size: var(--font-size-2xs);
+  font-weight: 400;
+  color: var(--semantic-color-text-secondary);
+  font-variant-numeric: tabular-nums;
+  margin-top: 2px;
+}
+
+.matrix-cell--na {
+  background: var(--semantic-color-surface-subtle);
+  text-align: center;
+  vertical-align: middle;
+}
+
+.matrix-na {
+  color: var(--semantic-color-text-secondary);
+  font-weight: 600;
+}
+
+.matrix-cell--queried {
+  background: var(--semantic-color-warning-bg-soft);
+}
+
+.matrix-cell-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.matrix-open-link,
+.matrix-repeat-link {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--semantic-color-interactive-primary);
+  text-decoration: underline;
+}
+
+.matrix-instances {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.matrix-instance {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  width: 100%;
+}
+
+.matrix-instance + .matrix-instance {
+  padding-top: 6px;
+  border-top: 1px dashed var(--semantic-color-border-muted);
+}
+
+.matrix-instance-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cb-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}

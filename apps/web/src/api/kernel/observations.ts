@@ -12,7 +12,7 @@ import {
   type KernelSchemas,
 } from "./shared";
 
-const loadRouteTransport = () => import("./protocolImport");
+const loadRouteTransport = () => import("./observations.transport");
 
 export type { KernelObservationValue };
 

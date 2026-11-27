@@ -506,6 +506,9 @@ const ExportJobDrawer = defineLazyOverlay(
 const PdfPreviewModal = defineLazyOverlay(
   () => import("../components/etmf/PdfPreviewModal.vue")
 );
+const SupportDetails = defineLazyOverlay(
+  () => import("../components/canvas/SupportDetails.vue")
+);
 </script>
 
 <script setup>
@@ -531,14 +534,12 @@ import {
   canReviewEtmfQc,
   canStageEtmfQc,
 } from "../canvas/authority";
-import SupportDetails from "../components/canvas/SupportDetails.vue";
 import DocumentGrid from "../components/etmf/DocumentGrid.vue";
 import TmfBinderTree from "../components/etmf/TmfBinderTree.vue";
 import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 import { useAuthStore } from "../stores/auth";
 import { useClinicalScopeStore } from "../stores/clinicalScope";
 import { useEtmfStore } from "../stores/etmf";
-import { useStudyCanvasStore } from "../stores/studyCanvas";
 import { useToastStore } from "../stores/toasts.js";
 import { syncWorkspaceScope } from "../stores/workspaceScope";
 import {
@@ -564,7 +565,6 @@ const props = defineProps({
 const authStore = useAuthStore();
 const etmfStore = useEtmfStore();
 const clinicalStore = useClinicalScopeStore();
-const canvasStore = useStudyCanvasStore();
 const { route, router } = resolveRouteAndRouter();
 const { activeStudyCode, setActiveStudyCode } = useActiveStudyScope();
 
@@ -618,7 +618,6 @@ const effectiveStudyId = computed(
   () =>
     props.studyId ||
     etmfStore.currentStudyId ||
-    canvasStore.studyCode ||
     activeStudyCode.value ||
     clinicalStore.activeStudyId
 );
@@ -982,7 +981,6 @@ onMounted(async () => {
   const initialStudy =
     props.studyId ||
     queryStudy ||
-    canvasStore.studyCode ||
     activeStudyCode.value ||
     clinicalStore.activeStudyId ||
     etmfStore.currentStudyId ||

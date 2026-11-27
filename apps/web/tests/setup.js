@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { beforeEach, vi, expect } from "vitest";
+import { afterEach, beforeEach, vi, expect } from "vitest";
 import { config } from "@vue/test-utils";
 import { toBeAccessible } from "ui/vitest";
 import * as usdmSchemas from "usdm-schemas";
@@ -35,6 +35,13 @@ beforeEach(async () => {
   const pending = globalThis.__CADENCE_LAZY_OVERLAY_PROMISES__;
   while (pending && pending.size > 0) {
     await Promise.all(Array.from(pending));
+  }
+});
+
+afterEach(async () => {
+  const pending = globalThis.__CADENCE_LAZY_OVERLAY_PROMISES__;
+  while (pending && pending.size > 0) {
+    await Promise.allSettled(Array.from(pending));
   }
 });
 
