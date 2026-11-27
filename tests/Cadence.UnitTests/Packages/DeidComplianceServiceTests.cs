@@ -18,6 +18,7 @@ namespace Cadence.UnitTests.Packages;
 /// deleted once these tests landed and kept in git history): pragmas, per-category development-value allowlists,
 /// path exclusions and the shrink-only baseline. All values are synthetic.
 /// </summary>
+[Collection(ProcessEnvironmentMutationCollection.Name)]
 public sealed class DeidComplianceServiceTests : IDisposable
 {
     private static readonly DeidDetector Detector = new();
