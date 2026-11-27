@@ -266,41 +266,56 @@ public static class KernelValidationEndpoints
             return KernelProblems.NotFound(NodeRef.For(itemId));
         }
 
+        IReadOnlyList<CollectionInstanceRecord>? studyForms = null;
         IReadOnlySet<EnrollmentId>? unblindedEnrollments = null;
         var probe = context.RequestServices.GetService<IAuthorizationProbe>();
         var collections = context.RequestServices.GetService<ICollectionInstanceRecords>();
         if (probe is not null && collections is not null)
         {
-            var studyForms = await collections.ListForStudyAsync(tenant, resolved.StudyId, cancellationToken).ConfigureAwait(false);
+            studyForms = await collections.ListForStudyAsync(tenant, resolved.StudyId, cancellationToken).ConfigureAwait(false);
             var enrollmentNodes = studyForms
                 .Select(f => (EnrollmentId: f.EnrollmentId, Node: NodeRef.For(f.EnrollmentId)))
                 .DistinctBy(x => x.EnrollmentId)
                 .ToArray();
-            var decisions = await probe.CanIManyAsync(
-                tenant,
-                EnrollmentUnblindCapability,
-                [.. enrollmentNodes.Select(x => x.Node)],
-                cancellationToken).ConfigureAwait(false);
             var permitted = new HashSet<EnrollmentId>();
-            foreach (var (enrollmentId, node) in enrollmentNodes)
+            if (enrollmentNodes.Length > 0)
             {
-                if (decisions.TryGetValue(node, out var decision) && decision.Permitted)
+                var decisions = await probe.CanIManyAsync(
+                    tenant,
+                    EnrollmentUnblindCapability,
+                    [.. enrollmentNodes.Select(x => x.Node)],
+                    cancellationToken).ConfigureAwait(false);
+                foreach (var (enrollmentId, node) in enrollmentNodes)
                 {
-                    permitted.Add(enrollmentId);
+                    if (decisions.TryGetValue(node, out var decision) && decision.Permitted)
+                    {
+                        permitted.Add(enrollmentId);
+                    }
                 }
             }
 
             unblindedEnrollments = permitted;
         }
 
-        var preview = await validation.PreviewRulePackAsync(
-            tenant,
-            resolved.StudyId,
-            itemId,
-            DateOnly.FromDateTime(clock.UtcNow.UtcDateTime),
-            actor.Actor,
-            unblindedEnrollments,
-            cancellationToken).ConfigureAwait(false);
+        var asOf = DateOnly.FromDateTime(clock.UtcNow.UtcDateTime);
+        var preview = studyForms is not null
+            ? await validation.PreviewRulePackAsync(
+                tenant,
+                resolved.StudyId,
+                itemId,
+                studyForms,
+                asOf,
+                actor.Actor,
+                unblindedEnrollments,
+                cancellationToken).ConfigureAwait(false)
+            : await validation.PreviewRulePackAsync(
+                tenant,
+                resolved.StudyId,
+                itemId,
+                asOf,
+                actor.Actor,
+                unblindedEnrollments,
+                cancellationToken).ConfigureAwait(false);
 
         return TypedResults.Ok(new KernelRulePackPreviewResponse(
             NodeRef.For(itemId).ToString(),

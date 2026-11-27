@@ -1302,14 +1302,17 @@ internal static class BlindedObservationClassifier
 
     public static BlindedObservationLookup CreateLookup(
         IReadOnlyDictionary<ConceptId, Concept> conceptsById,
-        IReadOnlyList<ProtocolDesign> designs) =>
-        new(conceptsById, designs);
+        IReadOnlyList<ProtocolDesign> designs,
+        IBlindedTreatmentClassifier? classifier = null) =>
+        new(conceptsById, designs, classifier);
 }
 
 internal sealed class BlindedObservationLookup(
     IReadOnlyDictionary<ConceptId, Concept> conceptsById,
-    IReadOnlyList<ProtocolDesign> designs)
+    IReadOnlyList<ProtocolDesign> designs,
+    IBlindedTreatmentClassifier? classifier = null)
 {
+    private readonly IBlindedTreatmentClassifier _classifier = classifier ?? BlindedTreatmentClassifier.Instance;
     private readonly Dictionary<BlindingKey, bool> _cache = new(BlindingKeyComparer.Instance);
     private readonly Dictionary<ConceptId, BlindedConceptMetadata?> _metadataByConcept = [];
 
@@ -1339,7 +1342,7 @@ internal sealed class BlindedObservationLookup(
             _metadataByConcept[conceptId] = metadata;
         }
 
-        var isBlinded = BlindedTreatmentClassifier.Instance.IsBlindedObservation(
+        var isBlinded = _classifier.IsBlindedObservation(
             conceptId,
             value: null,
             metadata,

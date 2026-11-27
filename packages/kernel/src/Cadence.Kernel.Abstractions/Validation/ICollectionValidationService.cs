@@ -169,6 +169,30 @@ public interface ICollectionValidationService
         PreviewRulePackAsync(tenant, studyId, rulePackId, asOf, cancellationToken);
 
     /// <summary>
+    /// Evaluates a specific <see cref="LibraryItemKind.RulePack"/> library item (draft or approved) in memory against
+    /// already-loaded <paramref name="studyForms"/> of <paramref name="studyId"/> visible to <paramref name="caller"/>,
+    /// replacing blinded variables with <c>null</c> for enrollments not in <paramref name="unblindedEnrollments"/>
+    /// without re-reading study forms (K-AUTH-4, K-RULE-3).
+    /// </summary>
+    Task<CollectionRulePackPreviewResult> PreviewRulePackAsync(
+        TenantId tenant,
+        StudyId studyId,
+        LibraryItemId rulePackId,
+        IReadOnlyList<CollectionInstanceRecord> studyForms,
+        DateOnly asOf,
+        Actor? caller,
+        IReadOnlySet<EnrollmentId>? unblindedEnrollments = null,
+        CancellationToken cancellationToken = default) =>
+        PreviewRulePackAsync(
+            tenant,
+            studyId,
+            rulePackId,
+            asOf,
+            caller,
+            unblindedEnrollments,
+            cancellationToken);
+
+    /// <summary>
     /// Evaluates the study's pinned rule packs at <see cref="ValidationStage.Collection"/> across the study's form
     /// instances and records a deterministic <see cref="RecordValidationRun"/> when rule packs are pinned.
     /// </summary>
