@@ -209,7 +209,8 @@ public static class DuplicationDetectorService
                                 var l1 = filteredLocs[i];
                                 var l2 = filteredLocs[j];
 
-                                if (string.CompareOrdinal(l1.RelPath, l2.RelPath) > 0)
+                                int pathCmp = string.CompareOrdinal(l1.RelPath, l2.RelPath);
+                                if (pathCmp > 0 || (pathCmp == 0 && l1.StartLine > l2.StartLine))
                                 {
                                     (l1, l2) = (l2, l1);
                                 }
@@ -217,7 +218,7 @@ public static class DuplicationDetectorService
                                 string rel1 = l1.RelPath;
                                 string rel2 = l2.RelPath;
 
-                                if (rel1 == rel2)
+                                if (rel1 == rel2 && !IsIntraFileDuplicationEnforced(rel1))
                                 {
                                     continue;
                                 }
@@ -480,6 +481,14 @@ public static class DuplicationDetectorService
         ".cs", ".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".mts", ".cts", ".vue", ".css",
     };
 
+    private static readonly HashSet<string> IntraFileDuplicationExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".mts", ".cts", ".vue",
+    };
+
+    private static bool IsIntraFileDuplicationEnforced(string relativePath) =>
+        IntraFileDuplicationExtensions.Contains(Path.GetExtension(relativePath));
+
     private static bool IsAmbientDeclarationOrTestPath(string normalizedSlashPath)
     {
         if (normalizedSlashPath.EndsWith(".d.ts", StringComparison.OrdinalIgnoreCase) ||
@@ -530,8 +539,7 @@ public static class DuplicationDetectorService
 
         if (norm.Contains("/generated/", StringComparison.OrdinalIgnoreCase) ||
             IsAmbientDeclarationOrTestPath(norm) ||
-            norm.Equals("/apps/web/src/api/types.ts", StringComparison.OrdinalIgnoreCase) ||
-            norm.Equals("/packages/ui/src/types/cdash.ts", StringComparison.OrdinalIgnoreCase))
+            norm.Equals("/apps/web/src/api/types.ts", StringComparison.OrdinalIgnoreCase))
         {
             return false;
         }

@@ -551,6 +551,7 @@ import {
   nextDemoStep,
 } from "../../utils/demoMode";
 import ReAuthModal from "../shared/ReAuthModal.vue";
+import { formatDate } from "../../utils/formatDate";
 
 const props = defineProps({
   fileRecord: {
@@ -1094,22 +1095,6 @@ function formatFileSize(bytes) {
   const sizes = ["B", "KB", "MB", "GB"];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
-}
-
-function formatDate(dateStr) {
-  if (!dateStr) return "N/A";
-  try {
-    const d = new Date(dateStr);
-    return d.toLocaleString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  } catch {
-    return dateStr;
-  }
 }
 
 function getStatusClass(status) {

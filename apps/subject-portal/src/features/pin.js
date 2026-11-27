@@ -1,6 +1,12 @@
 // Local security PIN that wraps the offline database master key in memory (ADR-2360),
 // with 5-attempt consecutive lockout cap and identity-verified OIDC reset.
-import { decryptAESGCM, deriveKeyFromPIN, encryptAESGCM } from "ui";
+import {
+  decryptAESGCM,
+  deriveKeyFromPIN,
+  encryptAESGCM,
+  useFocusTrap,
+  useSignOutGuard,
+} from "ui";
 import { nextTick } from "vue";
 
 import { isAuthenticatedSession } from "../api/client.js";
@@ -15,7 +21,12 @@ import {
 } from "../sync-queue.js";
 import { isDemoModeActive } from "../utils/demoMode.js";
 import { logAuditRecord } from "./audit.js";
-import { login } from "./auth.js";
+import {
+  hasUnsavedOrUnsyncedLocalData,
+  login,
+  logout,
+  prepareSignOutGuardState,
+} from "./auth.js";
 import { maskParticipantIdentifier } from "./site-support.js";
 import { syncOfflineQueue } from "./sync.js";
 import { checkOnline, refreshSyncViews } from "./sync-status.js";
@@ -365,4 +376,34 @@ export async function confirmPINReset() {
     const setupInput = document.getElementById("setup-pin");
     if (setupInput) setupInput.focus();
   });
+}
+
+export function usePinModalGuard(modalRef, { isOpen, initialFocus }) {
+  const {
+    isConfirmOpen: isSignOutConfirmOpen,
+    requestSignOut,
+    confirmSignOut,
+    cancelSignOut,
+  } = useSignOutGuard({
+    flushExternalDrafts: prepareSignOutGuardState,
+    hasExternalDrafts: hasUnsavedOrUnsyncedLocalData,
+    onConfirmSignOut: () => logout({ confirmed: true }),
+  });
+
+  useFocusTrap(modalRef, {
+    isOpen: () => Boolean(isOpen()) && !isSignOutConfirmOpen.value,
+    escapeDeactivates: false,
+    initialFocus,
+  });
+
+  function handleSignOut() {
+    return requestSignOut();
+  }
+
+  return {
+    isSignOutConfirmOpen,
+    confirmSignOut,
+    cancelSignOut,
+    handleSignOut,
+  };
 }

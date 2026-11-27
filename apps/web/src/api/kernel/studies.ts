@@ -1,11 +1,7 @@
 import { unwrapResponse } from "../client";
-import {
-  kernelClient,
-  type KernelLineageWindow,
-  type KernelSchemas,
-} from "./shared";
+import { kernelClient, lazyKernelAction, type KernelSchemas } from "./shared";
 
-const loadAuthoring = () => import("./studies.transport");
+const loadRouteTransport = () => import("./studies.transport");
 
 export type KernelProtocolVersion =
   KernelSchemas["Kernel_KernelProtocolVersionResponse"];
@@ -136,77 +132,55 @@ export const kernelStudiesApi = {
   },
 
   /** Registered organizations in the caller's tenant, optionally filtered by kind (GET /api/v1/kernel/organizations). */
-  async listOrganizations(kind?: string): Promise<KernelOrganizationSummary[]> {
-    const { executeListOrganizations } = await loadAuthoring();
-    return executeListOrganizations(kind);
-  },
+  listOrganizations: lazyKernelAction(
+    loadRouteTransport,
+    "executeListOrganizations"
+  ),
 
   /** Registers an organization such as a SiteInstitution with a signed reason and idempotency key (POST /api/v1/kernel/organizations). */
-  async createOrganization(
-    input: KernelCreateOrganizationInput
-  ): Promise<KernelOrganizationSummary> {
-    const { executeCreateOrganization } = await loadAuthoring();
-    return executeCreateOrganization(input);
-  },
+  createOrganization: lazyKernelAction(
+    loadRouteTransport,
+    "executeCreateOrganization"
+  ),
 
   /** Registered investigational sites in the caller's tenant, ordered by site code (GET /api/v1/kernel/sites). */
-  async listSites(): Promise<KernelSiteSummary[]> {
-    const { executeListSites } = await loadAuthoring();
-    return executeListSites();
-  },
+  listSites: lazyKernelAction(loadRouteTransport, "executeListSites"),
 
   /** Registers an investigational site with a 2-letter ISO country code, signed reason, and idempotency key (POST /api/v1/kernel/sites). */
-  async createSite(input: KernelCreateSiteInput): Promise<KernelSiteSummary> {
-    const { executeCreateSite } = await loadAuthoring();
-    return executeCreateSite(input);
-  },
+  createSite: lazyKernelAction(loadRouteTransport, "executeCreateSite"),
 
   /** Sites linked to a study in the caller's tenant, ordered by site code (GET /api/v1/kernel/studies/{studyRef}/sites). */
-  async listStudySites(studyRef: string): Promise<KernelStudySiteSummary[]> {
-    const { executeListStudySites } = await loadAuthoring();
-    return executeListStudySites(studyRef);
-  },
+  listStudySites: lazyKernelAction(loadRouteTransport, "executeListStudySites"),
 
   /** Links a registered investigational site to a study with a signed reason and idempotency key (POST /api/v1/kernel/studies/{studyRef}/sites). */
-  async linkSiteToStudy(
-    input: KernelLinkSiteToStudyInput
-  ): Promise<KernelStudySiteSummary> {
-    const { executeLinkSiteToStudy } = await loadAuthoring();
-    return executeLinkSiteToStudy(input);
-  },
+  linkSiteToStudy: lazyKernelAction(
+    loadRouteTransport,
+    "executeLinkSiteToStudy"
+  ),
 
   /** Registers a new study with a signed reason for change and idempotency key (POST /api/v1/kernel/studies). */
-  async createStudy(
-    input: KernelCreateStudyRequest
-  ): Promise<KernelStudySummary> {
-    const { executeCreateStudy } = await loadAuthoring();
-    return executeCreateStudy(input);
-  },
+  createStudy: lazyKernelAction(loadRouteTransport, "executeCreateStudy"),
 
   /** Bundled CDISC Library eCRF templates available to import into a protocol draft (GET /api/v1/kernel/protocol-templates). */
-  async listProtocolTemplates(): Promise<KernelProtocolTemplate[]> {
-    const { executeListProtocolTemplates } = await loadAuthoring();
-    return executeListProtocolTemplates();
-  },
+  listProtocolTemplates: lazyKernelAction(
+    loadRouteTransport,
+    "executeListProtocolTemplates"
+  ),
 
   /** Viewable forms, ordered items, prompts, mandatory flags, and import notes for a protocol version (GET /api/v1/kernel/protocol-versions/{versionRef}/design-summary). */
-  async getProtocolDesignSummary(
-    versionRef: string
-  ): Promise<KernelProtocolDraftSummary> {
-    const { executeGetProtocolDesignSummary } = await loadAuthoring();
-    return executeGetProtocolDesignSummary(versionRef);
-  },
+  getProtocolDesignSummary: lazyKernelAction(
+    loadRouteTransport,
+    "executeGetProtocolDesignSummary"
+  ),
 
   /**
    * Synchronously imports an ODM v1.3.2 XML file, USDM v4 JSON file, or bundled CDISC Library eCRF templates
    * to create or revise a study's protocol draft (POST /api/v1/kernel/studies/{studyRef}/protocol-imports).
    */
-  async importProtocolDraft(
-    request: KernelProtocolImportRequest
-  ): Promise<KernelProtocolDraftSummary> {
-    const { executeProtocolDraftImport } = await loadAuthoring();
-    return executeProtocolDraftImport(request);
-  },
+  importProtocolDraft: lazyKernelAction(
+    loadRouteTransport,
+    "executeProtocolDraftImport"
+  ),
 
   /**
    * Resolves the governing protocol version at the enrollment's site and computes expected visit target dates and
@@ -230,50 +204,29 @@ export const kernelStudiesApi = {
   },
 
   /** A study's protocol versions, newest first, without content. */
-  async listProtocolVersions(
-    studyRef: string
-  ): Promise<KernelProtocolVersion[]> {
-    const { executeListProtocolVersions } = await loadAuthoring();
-    return executeListProtocolVersions(studyRef);
-  },
+  listProtocolVersions: lazyKernelAction(
+    loadRouteTransport,
+    "executeListProtocolVersions"
+  ),
 
   /** One protocol version, without content. */
-  async getProtocolVersion(versionRef: string): Promise<KernelProtocolVersion> {
-    const { executeGetProtocolVersion } = await loadAuthoring();
-    return executeGetProtocolVersion(versionRef);
-  },
+  getProtocolVersion: lazyKernelAction(
+    loadRouteTransport,
+    "executeGetProtocolVersion"
+  ),
 
   /** A protocol version's Schedule of Activities: planned activities as columns, collection specifications as rows (ADR-2475). */
-  async getScheduleOfActivities(
-    versionRef: string
-  ): Promise<KernelScheduleOfActivities> {
-    const { executeGetScheduleOfActivities } = await loadAuthoring();
-    return executeGetScheduleOfActivities(versionRef);
-  },
+  getScheduleOfActivities: lazyKernelAction(
+    loadRouteTransport,
+    "executeGetScheduleOfActivities"
+  ),
 
   /** What depends on the version a protocol amendment changes (K-PROT-2). A first version amends nothing and is refused. */
-  async amendmentImpact(
-    versionRef: string,
-    window: Omit<KernelLineageWindow, "edgeKinds"> = {}
-  ): Promise<KernelAmendmentImpact> {
-    const { executeAmendmentImpact } = await loadAuthoring();
-    return executeAmendmentImpact(versionRef, window);
-  },
+  amendmentImpact: lazyKernelAction(
+    loadRouteTransport,
+    "executeAmendmentImpact"
+  ),
 
   /** Runs evaluate-only in-memory simulation over candidate protocol version, mapping specification, or rule pack. */
-  async simulate(request: {
-    baseVersionRef?: string;
-    storedVersionRef?: string;
-    candidateContent?: string;
-    validAt?: string;
-    knownAt?: string;
-    kind?: "ProtocolVersion" | "MappingSpecification" | "RulePack";
-    studyRef?: string;
-    libraryItemRef?: string;
-    baseLibraryItemRef?: string;
-    standardVersionRef?: string;
-  }): Promise<KernelSimulationResult> {
-    const { executeSimulate } = await loadAuthoring();
-    return executeSimulate(request);
-  },
+  simulate: lazyKernelAction(loadRouteTransport, "executeSimulate"),
 };

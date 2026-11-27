@@ -171,7 +171,7 @@ public static class QualityGates
             PreCommitNote = "scans materialized staged blobs instead of the working tree",
         },
         new("duplication", ["detect-code-duplication"],
-            "Duplicated code blocks over 15 normalized lines across `.cs`, `.js`, `.jsx`, `.mjs`, `.cjs`, `.ts`, `.tsx`, `.mts`, `.cts`, `.vue` and `.css` files, ratcheted by `.duplication-baseline.txt`",
+            "Duplicated code blocks over 15 normalized lines across `.cs`, `.js`, `.jsx`, `.mjs`, `.cjs`, `.ts`, `.tsx`, `.mts`, `.cts`, `.vue` and `.css` files (including intra-file clones in JS, TS, and Vue), ratcheted by `.duplication-baseline.txt`",
             ctx => DuplicationDetectorService.DetectDuplication(ctx.Files, ctx.RepoRoot, ctx.PreCommit, ctx.IndexReader) == 0)
         { TakesFiles = true },
         new("cli-docs", ["validate-cli-docs"],

@@ -494,6 +494,7 @@ import {
   X,
 } from "lucide-vue-next";
 import { useFileshareStore } from "../../stores/fileshare";
+import { formatDate } from "../../utils/formatDate";
 
 const props = defineProps({
   isOpen: {
@@ -724,22 +725,6 @@ async function confirmRevoke() {
   }
   grantToRevoke.value = null;
   revokeReason.value = "";
-}
-
-function formatDate(dateStr) {
-  if (!dateStr) return "N/A";
-  try {
-    const d = new Date(dateStr);
-    return d.toLocaleString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  } catch {
-    return dateStr;
-  }
 }
 
 function handleDocumentClick(e) {

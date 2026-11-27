@@ -90,7 +90,7 @@ public sealed class KernelStudyImportEndpointsTests : IDisposable
         """;
 
     private readonly InMemoryImportWorld _world = new(Tenant);
-    private readonly List<WebApplicationFactory<Cadence.Kernel.Host.Program>> _factories = [];
+    private WebApplicationFactory<Cadence.Kernel.Host.Program>? _host;
 
     public KernelStudyImportEndpointsTests()
     {
@@ -107,13 +107,7 @@ public sealed class KernelStudyImportEndpointsTests : IDisposable
             AuthorityScope.Study(_world.DemoStudyId));
     }
 
-    public void Dispose()
-    {
-        foreach (var factory in _factories)
-        {
-            factory.Dispose();
-        }
-    }
+    public void Dispose() => _host?.Dispose();
 
     [Fact]
     public async Task ListStudies_FiltersByCallerVisibility_AndExposesDemoStudy()
@@ -937,7 +931,7 @@ public sealed class KernelStudyImportEndpointsTests : IDisposable
 
     private HttpClient CreateClient(GatewayIdentity identity)
     {
-        var factory = new WebApplicationFactory<Cadence.Kernel.Host.Program>().WithWebHostBuilder(builder =>
+        _host ??= new WebApplicationFactory<Cadence.Kernel.Host.Program>().WithWebHostBuilder(builder =>
         {
             builder.UseTestGatewaySecret().UseTestBiometricLivenessKey().UseTestPostgresConnectionString();
             builder.ConfigureServices(services =>
@@ -963,8 +957,7 @@ public sealed class KernelStudyImportEndpointsTests : IDisposable
                 }
             });
         });
-        _factories.Add(factory);
-        return factory.CreateSignedClient(identity);
+        return _host.CreateSignedClient(identity);
     }
 
     private static HttpRequestMessage JsonPost(string path, object payload, string idempotencyKey, string? reason)

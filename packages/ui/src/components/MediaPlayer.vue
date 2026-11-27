@@ -571,107 +571,42 @@ onUnmounted(() => {
         />
       </div>
 
-      <!-- 3. Audio Waveform Preview Player -->
+      <!-- 3 & 4. Audio Waveform & Direct Video Playback -->
       <div
-        v-else-if="mediaCategory === 'audio'"
-        class="audio-viewer-container"
-        data-testid="audio-viewer"
+        v-else-if="mediaCategory === 'audio' || mediaCategory === 'video'"
+        :class="
+          mediaCategory === 'audio'
+            ? 'audio-viewer-container'
+            : 'video-viewer-container'
+        "
+        :data-testid="`${mediaCategory}-viewer`"
       >
-        <audio
-          ref="audioRef"
-          :src="src"
-          :autoplay="autoplay"
-          @timeupdate="onTimeUpdate"
-          @loadedmetadata="onLoadedMetadata"
-          @ended="onEnded"
-        >
-          <track kind="captions" />
-        </audio>
+        <template v-if="mediaCategory === 'audio'">
+          <audio
+            ref="audioRef"
+            :src="src"
+            :autoplay="autoplay"
+            @timeupdate="onTimeUpdate"
+            @loadedmetadata="onLoadedMetadata"
+            @ended="onEnded"
+          >
+            <track kind="captions" />
+          </audio>
 
-        <div class="waveform-box">
-          <div class="waveform-bars" :class="{ 'is-playing': isPlaying }">
-            <span
-              v-for="bar in 32"
-              :key="bar"
-              class="waveform-bar"
-              :style="{ height: `${20 + ((bar * 17) % 65)}%` }"
-            ></span>
+          <div class="waveform-box">
+            <div class="waveform-bars" :class="{ 'is-playing': isPlaying }">
+              <span
+                v-for="bar in 32"
+                :key="bar"
+                class="waveform-bar"
+                :style="{ height: `${20 + ((bar * 17) % 65)}%` }"
+              ></span>
+            </div>
           </div>
-        </div>
+        </template>
 
-        <div class="audio-controls-bar">
-          <button
-            type="button"
-            class="play-toggle-btn"
-            :aria-label="isPlaying ? 'Pause audio' : 'Play audio'"
-            data-testid="audio-play-btn"
-            @click="togglePlayPause"
-          >
-            <Pause
-              v-if="isPlaying"
-              :size="16"
-              :stroke-width="1.75"
-              aria-hidden="true"
-              focusable="false"
-              class="clinical-icon"
-            />
-            <Play
-              v-else
-              :size="16"
-              :stroke-width="1.75"
-              aria-hidden="true"
-              focusable="false"
-              class="clinical-icon"
-            />
-          </button>
-
-          <span class="time-display">{{ formatTime(currentTime) }}</span>
-          <input
-            type="range"
-            class="timeline-slider"
-            min="0"
-            :max="duration || 100"
-            step="0.1"
-            :value="currentTime"
-            aria-label="Audio playback seek slider"
-            data-testid="audio-timeline"
-            @input="seekMedia"
-          />
-          <span class="time-display">{{ formatTime(duration) }}</span>
-
-          <button
-            type="button"
-            class="control-btn"
-            :aria-label="isMuted ? 'Unmute' : 'Mute'"
-            @click="toggleMute"
-          >
-            <VolumeX
-              v-if="isMuted"
-              :size="16"
-              :stroke-width="1.75"
-              aria-hidden="true"
-              focusable="false"
-              class="clinical-icon"
-            />
-            <Volume2
-              v-else
-              :size="16"
-              :stroke-width="1.75"
-              aria-hidden="true"
-              focusable="false"
-              class="clinical-icon"
-            />
-          </button>
-        </div>
-      </div>
-
-      <!-- 4. Direct Video Playback (MP4 / WebM) -->
-      <div
-        v-else-if="mediaCategory === 'video'"
-        class="video-viewer-container"
-        data-testid="video-viewer"
-      >
         <video
+          v-else
           ref="videoRef"
           :src="src"
           :autoplay="autoplay"
@@ -685,12 +620,20 @@ onUnmounted(() => {
           <track kind="captions" />
         </video>
 
-        <div class="video-controls-bar">
+        <div
+          :class="
+            mediaCategory === 'audio'
+              ? 'audio-controls-bar'
+              : 'video-controls-bar'
+          "
+        >
           <button
             type="button"
             class="play-toggle-btn"
-            :aria-label="isPlaying ? 'Pause video' : 'Play video'"
-            data-testid="video-play-btn"
+            :aria-label="
+              isPlaying ? `Pause ${mediaCategory}` : `Play ${mediaCategory}`
+            "
+            :data-testid="`${mediaCategory}-play-btn`"
             @click="togglePlayPause"
           >
             <Pause
@@ -719,14 +662,14 @@ onUnmounted(() => {
             :max="duration || 100"
             step="0.1"
             :value="currentTime"
-            aria-label="Video playback seek slider"
-            data-testid="video-timeline"
+            :aria-label="`${mediaCategory === 'audio' ? 'Audio' : 'Video'} playback seek slider`"
+            :data-testid="`${mediaCategory}-timeline`"
             @input="seekMedia"
           />
           <span class="time-display">{{ formatTime(duration) }}</span>
 
           <!-- Playback Speed -->
-          <div class="speed-selector">
+          <div v-if="mediaCategory === 'video'" class="speed-selector">
             <button
               v-for="rate in [0.5, 1, 1.5, 2]"
               :key="rate"

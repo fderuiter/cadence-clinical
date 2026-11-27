@@ -237,53 +237,13 @@
           "
         >
           <!-- Panel 1: Core Graph Entities -->
-          <div
-            class="metric-panel"
-            style="
-              background: var(--semantic-color-surface-muted);
-              border: 1px solid var(--border);
-              border-radius: var(--radius-md, 8px);
-              padding: 14px;
-            "
-          >
-            <div
-              style="
-                font-size: 0.75rem;
-                font-weight: 700;
-                color: var(--semantic-color-text-secondary);
-                text-transform: uppercase;
-                margin-bottom: 6px;
-              "
-            >
-              USDM Study Entities
-            </div>
-            <div
-              style="
-                font-size: 1.4rem;
-                font-weight: 800;
-                color: var(--text-main);
-                margin-bottom: 6px;
-              "
-            >
+          <div class="metric-panel synthesis-metric-panel">
+            <div class="synthesis-metric-heading">USDM Study Entities</div>
+            <div class="synthesis-metric-count">
               {{ synthesisResult.graphEntitiesCount }}
-              <span
-                style="
-                  font-size: 0.8rem;
-                  font-weight: normal;
-                  color: var(--semantic-color-text-secondary);
-                "
-                >nodes</span
-              >
+              <span class="synthesis-metric-unit">nodes</span>
             </div>
-            <div
-              style="
-                font-size: 0.78rem;
-                color: var(--semantic-color-text-secondary);
-                display: flex;
-                flex-direction: column;
-                gap: 3px;
-              "
-            >
+            <div class="synthesis-metric-details">
               <span
                 >• Arms: <strong>{{ synthesisResult.armsCount }}</strong> |
                 Epochs: <strong>{{ synthesisResult.epochsCount }}</strong></span
@@ -302,53 +262,13 @@
           </div>
 
           <!-- Panel 2: Synthesized CDASH eCRFs -->
-          <div
-            class="metric-panel"
-            style="
-              background: var(--semantic-color-surface-muted);
-              border: 1px solid var(--border);
-              border-radius: var(--radius-md, 8px);
-              padding: 14px;
-            "
-          >
-            <div
-              style="
-                font-size: 0.75rem;
-                font-weight: 700;
-                color: var(--semantic-color-text-secondary);
-                text-transform: uppercase;
-                margin-bottom: 6px;
-              "
-            >
-              Synthesized CDASH eCRFs
-            </div>
-            <div
-              style="
-                font-size: 1.4rem;
-                font-weight: 800;
-                color: var(--text-main);
-                margin-bottom: 6px;
-              "
-            >
+          <div class="metric-panel synthesis-metric-panel">
+            <div class="synthesis-metric-heading">Synthesized CDASH eCRFs</div>
+            <div class="synthesis-metric-count">
               {{ synthesisResult.formsCount }}
-              <span
-                style="
-                  font-size: 0.8rem;
-                  font-weight: normal;
-                  color: var(--semantic-color-text-secondary);
-                "
-                >forms</span
-              >
+              <span class="synthesis-metric-unit">forms</span>
             </div>
-            <div
-              style="
-                font-size: 0.78rem;
-                color: var(--semantic-color-text-secondary);
-                display: flex;
-                flex-direction: column;
-                gap: 3px;
-              "
-            >
+            <div class="synthesis-metric-details">
               <span
                 >• CDASH Variables:
                 <strong>{{ synthesisResult.variablesCount }}</strong></span
@@ -364,53 +284,15 @@
           </div>
 
           <!-- Panel 3: Declarative Validation Rules -->
-          <div
-            class="metric-panel"
-            style="
-              background: var(--semantic-color-surface-muted);
-              border: 1px solid var(--border);
-              border-radius: var(--radius-md, 8px);
-              padding: 14px;
-            "
-          >
-            <div
-              style="
-                font-size: 0.75rem;
-                font-weight: 700;
-                color: var(--semantic-color-text-secondary);
-                text-transform: uppercase;
-                margin-bottom: 6px;
-              "
-            >
+          <div class="metric-panel synthesis-metric-panel">
+            <div class="synthesis-metric-heading">
               Automated Validation Rules
             </div>
-            <div
-              style="
-                font-size: 1.4rem;
-                font-weight: 800;
-                color: var(--text-main);
-                margin-bottom: 6px;
-              "
-            >
+            <div class="synthesis-metric-count">
               {{ synthesisResult.rulesCount }}
-              <span
-                style="
-                  font-size: 0.8rem;
-                  font-weight: normal;
-                  color: var(--semantic-color-text-secondary);
-                "
-                >edit checks</span
-              >
+              <span class="synthesis-metric-unit">edit checks</span>
             </div>
-            <div
-              style="
-                font-size: 0.78rem;
-                color: var(--semantic-color-text-secondary);
-                display: flex;
-                flex-direction: column;
-                gap: 3px;
-              "
-            >
+            <div class="synthesis-metric-details">
               <span
                 >• Cross-Field Sanity: <strong>CHK_VS_BP_SANITY</strong></span
               >
@@ -425,53 +307,13 @@
           </div>
 
           <!-- Panel 4: DIA TMF Expected Document List (EDL) -->
-          <div
-            class="metric-panel"
-            style="
-              background: var(--semantic-color-surface-muted);
-              border: 1px solid var(--border);
-              border-radius: var(--radius-md, 8px);
-              padding: 14px;
-            "
-          >
-            <div
-              style="
-                font-size: 0.75rem;
-                font-weight: 700;
-                color: var(--semantic-color-text-secondary);
-                text-transform: uppercase;
-                margin-bottom: 6px;
-              "
-            >
-              Seeded DIA TMF EDL
-            </div>
-            <div
-              style="
-                font-size: 1.4rem;
-                font-weight: 800;
-                color: var(--semantic-color-success);
-                margin-bottom: 6px;
-              "
-            >
+          <div class="metric-panel synthesis-metric-panel">
+            <div class="synthesis-metric-heading">Seeded DIA TMF EDL</div>
+            <div class="synthesis-metric-count synthesis-metric-count--success">
               {{ synthesisResult.tmfEdlCount }}
-              <span
-                style="
-                  font-size: 0.8rem;
-                  font-weight: normal;
-                  color: var(--semantic-color-text-secondary);
-                "
-                >documents</span
-              >
+              <span class="synthesis-metric-unit">documents</span>
             </div>
-            <div
-              style="
-                font-size: 0.78rem;
-                color: var(--semantic-color-text-secondary);
-                display: flex;
-                flex-direction: column;
-                gap: 3px;
-              "
-            >
+            <div class="synthesis-metric-details">
               <span
                 >• Pre-Seeded Zones: <strong>1, 2, 4, 5 (of 1–11)</strong></span
               >
@@ -688,29 +530,12 @@
                 <div
                   v-if="armSuggestions.length > 0"
                   class="autocomplete-dropdown"
-                  style="
-                    position: absolute;
-                    background: var(--semantic-color-surface);
-                    border: 1px solid var(--border);
-                    border-radius: 4px;
-                    width: 100%;
-                    z-index: 100;
-                    max-height: 150px;
-                    overflow-y: auto;
-                    box-shadow: var(--shadow-sm);
-                  "
                 >
-                  <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
                   <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
                   <div
                     v-for="sug in armSuggestions"
                     :key="sug.concept_code"
-                    style="
-                      padding: 6px;
-                      cursor: pointer;
-                      border-bottom: 1px solid
-                        var(--semantic-color-surface-header);
-                    "
+                    class="autocomplete-option"
                     @click="selectArmConcept(sug)"
                   >
                     <strong>{{ sug.concept_code }}</strong> -
@@ -851,29 +676,12 @@
                 <div
                   v-if="encSuggestions.length > 0"
                   class="autocomplete-dropdown"
-                  style="
-                    position: absolute;
-                    background: var(--semantic-color-surface);
-                    border: 1px solid var(--border);
-                    border-radius: 4px;
-                    width: 100%;
-                    z-index: 100;
-                    max-height: 150px;
-                    overflow-y: auto;
-                    box-shadow: var(--shadow-sm);
-                  "
                 >
-                  <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
                   <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
                   <div
                     v-for="sug in encSuggestions"
                     :key="sug.concept_code"
-                    style="
-                      padding: 6px;
-                      cursor: pointer;
-                      border-bottom: 1px solid
-                        var(--semantic-color-surface-header);
-                    "
+                    class="autocomplete-option"
                     @click="selectEncConcept(sug)"
                   >
                     <strong>{{ sug.concept_code }}</strong> -
@@ -3628,6 +3436,46 @@ function navigateToSoa() {
     box-shadow 0.15s ease;
 }
 
+.synthesis-metric-panel {
+  background: var(--semantic-color-surface-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md, 8px);
+  padding: 14px;
+}
+
+.synthesis-metric-heading {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--semantic-color-text-secondary);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.synthesis-metric-count {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--text-main);
+  margin-bottom: 6px;
+}
+
+.synthesis-metric-count--success {
+  color: var(--semantic-color-success);
+}
+
+.synthesis-metric-unit {
+  font-size: 0.8rem;
+  font-weight: normal;
+  color: var(--semantic-color-text-secondary);
+}
+
+.synthesis-metric-details {
+  font-size: 0.78rem;
+  color: var(--semantic-color-text-secondary);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
 .metric-panel:hover {
   transform: translateY(-2px);
   box-shadow: var(--shadow-sm);
@@ -3678,5 +3526,23 @@ function navigateToSoa() {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
+}
+
+.autocomplete-dropdown {
+  position: absolute;
+  background: var(--semantic-color-surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  width: 100%;
+  z-index: 100;
+  max-height: 150px;
+  overflow-y: auto;
+  box-shadow: var(--shadow-sm);
+}
+
+.autocomplete-option {
+  padding: 6px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--semantic-color-surface-header);
 }
 </style>

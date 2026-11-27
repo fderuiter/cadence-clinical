@@ -279,42 +279,18 @@
                 :key="sub.id"
                 :class="'row-' + sub.category"
               >
-                <td class="cell-id">
-                  <strong>{{ sub.id }}</strong>
-                </td>
-                <td>
-                  <span class="site-tag">{{ sub.site_id || "SITE-101" }}</span>
-                </td>
-                <td>
-                  <span class="state-pill">{{ sub.status }}</span>
-                </td>
-                <td>
-                  <span class="version-tag"
-                    >v{{ sub.active_protocol_version }}</span
+                <td
+                  v-for="c in getSubjectRowCells(sub)"
+                  :key="c.key"
+                  :class="c.tdClass"
+                >
+                  <component
+                    :is="c.tag"
+                    :class="c.cls"
+                    v-bind="c.attrs"
+                    @click="c.onClick?.()"
+                    >{{ c.text }}</component
                   >
-                </td>
-                <td>
-                  <span :class="['consent-badge', 'badge-' + sub.consentColor]">
-                    {{ sub.consentText }}
-                  </span>
-                </td>
-                <td>
-                  <span v-if="sub.isGated" class="gating-pill pill-locked">
-                    Gated (Re-Consent Required)
-                  </span>
-                  <span v-else class="gating-pill pill-unlocked">
-                    Active &amp; Projected
-                  </span>
-                </td>
-                <td>
-                  <button
-                    v-if="sub.isGated"
-                    class="btn btn-sm btn-action"
-                    @click="openReconsentModal(sub)"
-                  >
-                    Clear Re-Consent Gate
-                  </button>
-                  <span v-else class="text-muted">Compliant</span>
                 </td>
               </tr>
             </tbody>
@@ -813,42 +789,18 @@
                     :disabled="!sub.isGated"
                   />
                 </td>
-                <td class="cell-id">
-                  <strong>{{ sub.id }}</strong>
-                </td>
-                <td>
-                  <span class="site-tag">{{ sub.site_id || "SITE-101" }}</span>
-                </td>
-                <td>
-                  <span class="state-pill">{{ sub.status }}</span>
-                </td>
-                <td>
-                  <span class="version-tag"
-                    >v{{ sub.active_protocol_version }}</span
+                <td
+                  v-for="c in getSubjectRowCells(sub)"
+                  :key="c.key"
+                  :class="c.tdClass"
+                >
+                  <component
+                    :is="c.tag"
+                    :class="c.cls"
+                    v-bind="c.attrs"
+                    @click="c.onClick?.()"
+                    >{{ c.text }}</component
                   >
-                </td>
-                <td>
-                  <span :class="['consent-badge', 'badge-' + sub.consentColor]">
-                    {{ sub.consentText }}
-                  </span>
-                </td>
-                <td>
-                  <span v-if="sub.isGated" class="gating-pill pill-locked">
-                    Gated (Re-Consent Required)
-                  </span>
-                  <span v-else class="gating-pill pill-unlocked">
-                    Active &amp; Projected
-                  </span>
-                </td>
-                <td>
-                  <button
-                    v-if="sub.isGated"
-                    class="btn btn-sm btn-action"
-                    @click="openReconsentModal(sub)"
-                  >
-                    Clear Re-Consent Gate
-                  </button>
-                  <span v-else class="text-muted">Compliant</span>
                 </td>
               </tr>
 
@@ -1612,6 +1564,52 @@ const siteOptions = computed(() =>
 
 // Cohort Subjects Data
 const subjectsList = computed(() => store.subjects);
+
+function getSubjectRowCells(sub) {
+  return [
+    { key: "id", tdClass: "cell-id", tag: "strong", text: sub.id },
+    {
+      key: "site",
+      tag: "span",
+      cls: "site-tag",
+      text: sub.site_id || "SITE-101",
+    },
+    { key: "status", tag: "span", cls: "state-pill", text: sub.status },
+    {
+      key: "version",
+      tag: "span",
+      cls: "version-tag",
+      text: `v${sub.active_protocol_version}`,
+    },
+    {
+      key: "consent",
+      tag: "span",
+      cls: ["consent-badge", `badge-${sub.consentColor}`],
+      text: sub.consentText,
+    },
+    {
+      key: "gating",
+      tag: "span",
+      cls: ["gating-pill", sub.isGated ? "pill-locked" : "pill-unlocked"],
+      text: sub.isGated ? "Gated (Re-Consent Required)" : "Active & Projected",
+    },
+    sub.isGated
+      ? {
+          key: "action",
+          tag: "button",
+          cls: "btn btn-sm btn-action",
+          attrs: { type: "button" },
+          onClick: () => openReconsentModal(sub),
+          text: "Clear Re-Consent Gate",
+        }
+      : {
+          key: "action",
+          tag: "span",
+          cls: "text-muted",
+          text: "Compliant",
+        },
+  ];
+}
 
 // Computed Metrics
 const activeSubjectCount = computed(() => subjectsList.value.length);

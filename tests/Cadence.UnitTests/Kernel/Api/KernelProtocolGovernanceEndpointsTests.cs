@@ -79,7 +79,7 @@ public sealed class KernelProtocolGovernanceEndpointsTests : IDisposable
     private readonly FakeClock _clock = new(T0);
     private readonly ReplayCache _sigTokenUseStore;
     private readonly InMemoryGovernanceStore _store;
-    private readonly List<WebApplicationFactory<Cadence.Kernel.Host.Program>> _factories = [];
+    private WebApplicationFactory<Cadence.Kernel.Host.Program>? _host;
 
     public KernelProtocolGovernanceEndpointsTests()
     {
@@ -130,13 +130,7 @@ public sealed class KernelProtocolGovernanceEndpointsTests : IDisposable
             AuthorityScope.Tenant());
     }
 
-    public void Dispose()
-    {
-        foreach (var factory in _factories)
-        {
-            factory.Dispose();
-        }
-    }
+    public void Dispose() => _host?.Dispose();
 
     [Fact]
     public async Task ApproveProtocolVersion_EnforcesStepUpSigToken_Headers_Authorization_ContentHashBinding_AndSingleUse()
@@ -902,9 +896,8 @@ public sealed class KernelProtocolGovernanceEndpointsTests : IDisposable
             ValueTask.FromResult<IReadOnlyList<CommandAvailability>>([]);
     }
 
-    private WebApplicationFactory<Cadence.Kernel.Host.Program> CreateFactory()
-    {
-        var factory = new WebApplicationFactory<Cadence.Kernel.Host.Program>().WithWebHostBuilder(builder =>
+    private WebApplicationFactory<Cadence.Kernel.Host.Program> CreateFactory() =>
+        _host ??= new WebApplicationFactory<Cadence.Kernel.Host.Program>().WithWebHostBuilder(builder =>
         {
             builder.UseTestGatewaySecret().UseTestBiometricLivenessKey().UseTestPostgresConnectionString();
             builder.ConfigureServices(services =>
@@ -941,9 +934,6 @@ public sealed class KernelProtocolGovernanceEndpointsTests : IDisposable
                 }
             });
         });
-        _factories.Add(factory);
-        return factory;
-    }
 
     private HttpClient CreateClient(GatewayIdentity identity) =>
         CreateFactory().CreateSignedClient(identity);

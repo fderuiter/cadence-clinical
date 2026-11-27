@@ -1,5 +1,5 @@
 import type { KernelLockMeaning } from "./locks";
-import { unversioned, type KernelSchemas } from "./shared";
+import { lazyKernelAction, unversioned, type KernelSchemas } from "./shared";
 
 const loadRouteTransport = () => import("./validation.transport");
 
@@ -109,99 +109,74 @@ export interface KernelExplainValidationFindingInput {
 
 export const kernelValidationApi = {
   /** Lists edit-check rule packs in the tenant alongside whether each is pinned on the study. */
-  async listStudyRulePacks(studyRef: string): Promise<KernelStudyRulePacks> {
-    const { executeListStudyRulePacks } = await loadRouteTransport();
-    return executeListStudyRulePacks(studyRef);
-  },
+  listStudyRulePacks: lazyKernelAction(
+    loadRouteTransport,
+    "executeListStudyRulePacks"
+  ),
 
   /** Dry-runs a rule pack in memory against all collection instances of a study without persisting findings. */
-  async previewStudyRulePack(
-    studyRef: string,
-    itemRef: string
-  ): Promise<KernelRulePackPreview> {
-    const { executePreviewStudyRulePack } = await loadRouteTransport();
-    return executePreviewStudyRulePack(studyRef, itemRef);
-  },
+  previewStudyRulePack: lazyKernelAction(
+    loadRouteTransport,
+    "executePreviewStudyRulePack"
+  ),
 
   /** Approves a draft library item (such as a RulePack) with a step-up signature token. */
-  async approveLibraryItem(
-    input: KernelApproveLibraryItemRequest
-  ): Promise<KernelRulePack> {
-    const { executeApproveLibraryItem } = await loadRouteTransport();
-    return executeApproveLibraryItem(input);
-  },
+  approveLibraryItem: lazyKernelAction(
+    loadRouteTransport,
+    "executeApproveLibraryItem"
+  ),
 
   /** Pins the active approved rule packs on a study's standards profile. */
-  async declareStudyRulePacks(
-    input: KernelDeclareStudyRulePacksInput
-  ): Promise<KernelStudyRulePacks> {
-    const { executeDeclareStudyRulePacks } = await loadRouteTransport();
-    return executeDeclareStudyRulePacks(input);
-  },
+  declareStudyRulePacks: lazyKernelAction(
+    loadRouteTransport,
+    "executeDeclareStudyRulePacks"
+  ),
 
   /** Lists validation findings recorded for a study, newest first. */
-  async listStudyValidationFindings(
-    studyRef: string,
-    query: KernelStudyValidationFindingsQuery = {}
-  ): Promise<KernelValidationFindingPage> {
-    const { executeListStudyValidationFindings } = await loadRouteTransport();
-    return executeListStudyValidationFindings(studyRef, query);
-  },
+  listStudyValidationFindings: lazyKernelAction(
+    loadRouteTransport,
+    "executeListStudyValidationFindings"
+  ),
 
   /** Unified study attention summary: open proposals, Open and Investigating validation findings, and active CRA SDV modification alerts. */
-  async getStudyAttention(
-    studyRef: string,
-    query: { limit?: number } = {}
-  ): Promise<KernelStudyAttention> {
-    const { executeGetStudyAttention } = await loadRouteTransport();
-    return executeGetStudyAttention(studyRef, query);
-  },
+  getStudyAttention: lazyKernelAction(
+    loadRouteTransport,
+    "executeGetStudyAttention"
+  ),
 
   /** Reads a validation finding together with its structured explanation. */
-  async getValidationFinding(
-    findingRef: string
-  ): Promise<KernelValidationFindingDetail> {
-    const { executeGetValidationFinding } = await loadRouteTransport();
-    return executeGetValidationFinding(findingRef);
-  },
+  getValidationFinding: lazyKernelAction(
+    loadRouteTransport,
+    "executeGetValidationFinding"
+  ),
 
   /** Marks an Open validation finding as Investigating (`POST /api/v1/kernel/validation/findings/{findingRef}/investigate`). */
-  async investigateValidationFinding(
-    input: KernelValidationFindingReasonInput
-  ): Promise<KernelValidationFinding> {
-    const { executeInvestigateValidationFinding } = await loadRouteTransport();
-    return executeInvestigateValidationFinding(input);
-  },
+  investigateValidationFinding: lazyKernelAction(
+    loadRouteTransport,
+    "executeInvestigateValidationFinding"
+  ),
 
   /** Classifies a detected validation finding (`POST /api/v1/kernel/validation/findings/{findingRef}/classify`). */
-  async classifyValidationFinding(
-    input: KernelClassifyValidationFindingInput
-  ): Promise<KernelValidationFinding> {
-    const { executeClassifyValidationFinding } = await loadRouteTransport();
-    return executeClassifyValidationFinding(input);
-  },
+  classifyValidationFinding: lazyKernelAction(
+    loadRouteTransport,
+    "executeClassifyValidationFinding"
+  ),
 
   /** Accepts an Open or Investigating validation finding with a Responsibility signature (`POST /api/v1/kernel/validation/findings/{findingRef}/accept`). */
-  async acceptValidationFinding(
-    input: KernelAcceptValidationFindingInput
-  ): Promise<KernelValidationFinding> {
-    const { executeAcceptValidationFinding } = await loadRouteTransport();
-    return executeAcceptValidationFinding(input);
-  },
+  acceptValidationFinding: lazyKernelAction(
+    loadRouteTransport,
+    "executeAcceptValidationFinding"
+  ),
 
   /** Explains an Open or Investigating validation finding with an Approved signature (`POST /api/v1/kernel/validation/findings/{findingRef}/explain`). */
-  async explainValidationFinding(
-    input: KernelExplainValidationFindingInput
-  ): Promise<KernelValidationFinding> {
-    const { executeExplainValidationFinding } = await loadRouteTransport();
-    return executeExplainValidationFinding(input);
-  },
+  explainValidationFinding: lazyKernelAction(
+    loadRouteTransport,
+    "executeExplainValidationFinding"
+  ),
 
   /** Reopens an Investigating, Accepted, or Explained validation finding (`POST /api/v1/kernel/validation/findings/{findingRef}/reopen`). */
-  async reopenValidationFinding(
-    input: KernelValidationFindingReasonInput
-  ): Promise<KernelValidationFinding> {
-    const { executeReopenValidationFinding } = await loadRouteTransport();
-    return executeReopenValidationFinding(input);
-  },
+  reopenValidationFinding: lazyKernelAction(
+    loadRouteTransport,
+    "executeReopenValidationFinding"
+  ),
 };

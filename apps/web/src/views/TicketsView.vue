@@ -360,28 +360,28 @@
       class="kanban-board focus-ring-inset"
       tabindex="0"
     >
-      <!-- Column 1: OPEN -->
-      <div class="kanban-column">
+      <div v-for="col in kanbanColumns" :key="col.key" class="kanban-column">
         <div class="column-header">
           <div class="column-title-group">
-            <span class="column-bullet col-open" />
-            <span class="column-title">Open / Triage</span>
+            <span class="column-bullet" :class="col.bulletClass" />
+            <span class="column-title">{{ col.title }}</span>
           </div>
           <span class="column-count">{{
-            getColumnTickets("OPEN").length
+            getColumnTickets(col.statuses).length
           }}</span>
         </div>
         <div
           class="column-cards focus-ring-inset"
           tabindex="0"
           role="region"
-          aria-label="Open and triage tickets"
+          :aria-label="col.ariaLabel"
         >
           <button
-            v-for="t in getColumnTickets('OPEN')"
+            v-for="t in getColumnTickets(col.statuses)"
             :key="t.id"
             type="button"
             class="ticket-card"
+            :class="col.cardClass"
             @click="openTicketDetail(t)"
             @keydown.enter.prevent="openTicketDetail(t)"
             @keydown.space.prevent="openTicketDetail(t)"
@@ -391,229 +391,28 @@
                 t.reference || `#${t.id?.substring(0, 8)}`
               }}</span>
               <span
+                v-if="col.badgeMode === 'severity'"
                 class="badge"
                 :class="`badge-sev-${t.gxp_severity?.toLowerCase()}`"
                 >{{ t.gxp_severity }}</span
               >
-            </span>
-            <span class="card-ticket-title">
-              {{ t.title }}
-            </span>
-            <span class="card-footer">
-              <span class="category-pill">{{
-                formatCategory(t.category)
-              }}</span>
               <span
-                v-if="t.sla_target_at"
-                class="sla-mini-badge"
-                :class="getSlaClass(t)"
+                v-else-if="col.badgeMode === 'paused'"
+                class="badge badge-paused"
+                >{{ formatStatus(t.status) }}</span
               >
-                <ClinicalIcon :name="getSlaIcon(t)" :size="16" />
-                <span>{{ formatSlaRemaining(t) }}</span>
-              </span>
-            </span>
-          </button>
-        </div>
-      </div>
-
-      <!-- Column 2: IN PROGRESS -->
-      <div class="kanban-column">
-        <div class="column-header">
-          <div class="column-title-group">
-            <span class="column-bullet col-progress" />
-            <span class="column-title">Investigation</span>
-          </div>
-          <span class="column-count">{{
-            getColumnTickets("IN_PROGRESS").length
-          }}</span>
-        </div>
-        <div
-          class="column-cards focus-ring-inset"
-          tabindex="0"
-          role="region"
-          aria-label="Investigation tickets"
-        >
-          <button
-            v-for="t in getColumnTickets('IN_PROGRESS')"
-            :key="t.id"
-            type="button"
-            class="ticket-card"
-            @click="openTicketDetail(t)"
-            @keydown.enter.prevent="openTicketDetail(t)"
-            @keydown.space.prevent="openTicketDetail(t)"
-          >
-            <span class="card-meta">
-              <span class="ref-tag">{{
-                t.reference || `#${t.id?.substring(0, 8)}`
-              }}</span>
+              <template v-else-if="col.badgeMode === 'resolved'">
+                <span v-if="t.signature_token" class="badge badge-signed"
+                  ><ClinicalIcon name="file-signature" :size="16" />
+                  <span>eSigned</span></span
+                >
+                <span v-else class="badge badge-pending-sign"
+                  >Pending Sign-off</span
+                >
+              </template>
               <span
-                class="badge"
-                :class="`badge-sev-${t.gxp_severity?.toLowerCase()}`"
-                >{{ t.gxp_severity }}</span
-              >
-            </span>
-            <span class="card-ticket-title">
-              {{ t.title }}
-            </span>
-            <span class="card-footer">
-              <span class="category-pill">{{
-                formatCategory(t.category)
-              }}</span>
-              <span
-                v-if="t.sla_target_at"
-                class="sla-mini-badge"
-                :class="getSlaClass(t)"
-              >
-                <ClinicalIcon :name="getSlaIcon(t)" :size="16" />
-                <span>{{ formatSlaRemaining(t) }}</span>
-              </span>
-            </span>
-          </button>
-        </div>
-      </div>
-
-      <!-- Column 3: PAUSED (WAITING SITE/SPONSOR) -->
-      <div class="kanban-column">
-        <div class="column-header">
-          <div class="column-title-group">
-            <span class="column-bullet col-paused" />
-            <span class="column-title">Awaiting Action</span>
-          </div>
-          <span class="column-count">{{
-            getColumnTickets([
-              "WAITING_ON_SITE",
-              "WAITING_ON_SPONSOR",
-              "PENDING_REGULATORY_REVIEW",
-            ]).length
-          }}</span>
-        </div>
-        <div
-          class="column-cards focus-ring-inset"
-          tabindex="0"
-          role="region"
-          aria-label="Awaiting action tickets"
-        >
-          <button
-            v-for="t in getColumnTickets([
-              'WAITING_ON_SITE',
-              'WAITING_ON_SPONSOR',
-              'PENDING_REGULATORY_REVIEW',
-            ])"
-            :key="t.id"
-            type="button"
-            class="ticket-card paused-card"
-            @click="openTicketDetail(t)"
-            @keydown.enter.prevent="openTicketDetail(t)"
-            @keydown.space.prevent="openTicketDetail(t)"
-          >
-            <span class="card-meta">
-              <span class="ref-tag">{{
-                t.reference || `#${t.id?.substring(0, 8)}`
-              }}</span>
-              <span class="badge badge-paused">{{
-                formatStatus(t.status)
-              }}</span>
-            </span>
-            <span class="card-ticket-title">
-              {{ t.title }}
-            </span>
-            <span class="card-footer">
-              <span class="category-pill">{{
-                formatCategory(t.category)
-              }}</span>
-              <span class="sla-mini-badge fill-paused"
-                ><ClinicalIcon name="clock" :size="16" />
-                <span>SLA Paused</span></span
-              >
-            </span>
-          </button>
-        </div>
-      </div>
-
-      <!-- Column 4: RESOLVED -->
-      <div class="kanban-column">
-        <div class="column-header">
-          <div class="column-title-group">
-            <span class="column-bullet col-resolved" />
-            <span class="column-title">Resolved</span>
-          </div>
-          <span class="column-count">{{
-            getColumnTickets("RESOLVED").length
-          }}</span>
-        </div>
-        <div
-          class="column-cards focus-ring-inset"
-          tabindex="0"
-          role="region"
-          aria-label="Resolved tickets"
-        >
-          <button
-            v-for="t in getColumnTickets('RESOLVED')"
-            :key="t.id"
-            type="button"
-            class="ticket-card resolved-card"
-            @click="openTicketDetail(t)"
-            @keydown.enter.prevent="openTicketDetail(t)"
-            @keydown.space.prevent="openTicketDetail(t)"
-          >
-            <span class="card-meta">
-              <span class="ref-tag">{{
-                t.reference || `#${t.id?.substring(0, 8)}`
-              }}</span>
-              <span v-if="t.signature_token" class="badge badge-signed"
-                ><ClinicalIcon name="file-signature" :size="16" />
-                <span>eSigned</span></span
-              >
-              <span v-else class="badge badge-pending-sign"
-                >Pending Sign-off</span
-              >
-            </span>
-            <span class="card-ticket-title">
-              {{ t.title }}
-            </span>
-            <span class="card-footer">
-              <span class="category-pill">{{
-                formatCategory(t.category)
-              }}</span>
-              <span class="rca-mini-tag">{{
-                t.resolution_code || "Resolved"
-              }}</span>
-            </span>
-          </button>
-        </div>
-      </div>
-
-      <!-- Column 5: CLOSED -->
-      <div class="kanban-column">
-        <div class="column-header">
-          <div class="column-title-group">
-            <span class="column-bullet col-closed" />
-            <span class="column-title">Closed &amp; Archived</span>
-          </div>
-          <span class="column-count">{{
-            getColumnTickets("CLOSED").length
-          }}</span>
-        </div>
-        <div
-          class="column-cards focus-ring-inset"
-          tabindex="0"
-          role="region"
-          aria-label="Closed and archived tickets"
-        >
-          <button
-            v-for="t in getColumnTickets('CLOSED')"
-            :key="t.id"
-            type="button"
-            class="ticket-card closed-card"
-            @click="openTicketDetail(t)"
-            @keydown.enter.prevent="openTicketDetail(t)"
-            @keydown.space.prevent="openTicketDetail(t)"
-          >
-            <span class="card-meta">
-              <span class="ref-tag">{{
-                t.reference || `#${t.id?.substring(0, 8)}`
-              }}</span>
-              <span class="badge badge-closed"
+                v-else-if="col.badgeMode === 'closed'"
+                class="badge badge-closed"
                 ><ClinicalIcon name="lock" :size="16" />
                 <span>Closed</span></span
               >
@@ -625,6 +424,25 @@
               <span class="category-pill">{{
                 formatCategory(t.category)
               }}</span>
+              <span
+                v-if="col.footerMode === 'sla' && t.sla_target_at"
+                class="sla-mini-badge"
+                :class="getSlaClass(t)"
+              >
+                <ClinicalIcon :name="getSlaIcon(t)" :size="16" />
+                <span>{{ formatSlaRemaining(t) }}</span>
+              </span>
+              <span
+                v-else-if="col.footerMode === 'paused'"
+                class="sla-mini-badge fill-paused"
+                ><ClinicalIcon name="clock" :size="16" />
+                <span>SLA Paused</span></span
+              >
+              <span
+                v-else-if="col.footerMode === 'resolved'"
+                class="rca-mini-tag"
+                >{{ t.resolution_code || "Resolved" }}</span
+              >
             </span>
           </button>
         </div>
@@ -1228,6 +1046,63 @@ watch(
     }
   }
 );
+
+const kanbanColumns = [
+  {
+    key: "open",
+    bulletClass: "col-open",
+    title: "Open / Triage",
+    ariaLabel: "Open and triage tickets",
+    statuses: "OPEN",
+    cardClass: "",
+    badgeMode: "severity",
+    footerMode: "sla",
+  },
+  {
+    key: "progress",
+    bulletClass: "col-progress",
+    title: "Investigation",
+    ariaLabel: "Investigation tickets",
+    statuses: "IN_PROGRESS",
+    cardClass: "",
+    badgeMode: "severity",
+    footerMode: "sla",
+  },
+  {
+    key: "paused",
+    bulletClass: "col-paused",
+    title: "Awaiting Action",
+    ariaLabel: "Awaiting action tickets",
+    statuses: [
+      "WAITING_ON_SITE",
+      "WAITING_ON_SPONSOR",
+      "PENDING_REGULATORY_REVIEW",
+    ],
+    cardClass: "paused-card",
+    badgeMode: "paused",
+    footerMode: "paused",
+  },
+  {
+    key: "resolved",
+    bulletClass: "col-resolved",
+    title: "Resolved",
+    ariaLabel: "Resolved tickets",
+    statuses: "RESOLVED",
+    cardClass: "resolved-card",
+    badgeMode: "resolved",
+    footerMode: "resolved",
+  },
+  {
+    key: "closed",
+    bulletClass: "col-closed",
+    title: "Closed & Archived",
+    ariaLabel: "Closed and archived tickets",
+    statuses: "CLOSED",
+    cardClass: "closed-card",
+    badgeMode: "closed",
+    footerMode: "none",
+  },
+];
 
 const applyTicketScope = async () => {
   const synced = syncWorkspaceScope({

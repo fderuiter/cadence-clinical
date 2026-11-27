@@ -156,64 +156,21 @@
           <span class="panel-heading">Series Envelope</span>
         </div>
         <div class="series-list">
-          <template v-if="viewMode === 'single'">
-            <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+          <template v-for="group in seriesNavigatorGroups" :key="group.key">
             <div
-              v-for="s in availableSeries"
-              :key="s.seriesUid"
-              class="series-item"
-              :class="{ active: activeSeriesUid === s.seriesUid }"
-              @click="activeSeriesUid = s.seriesUid"
+              v-if="group.title"
+              class="series-group-title"
+              :class="{ 'margin-top-sm': group.marginTop }"
             >
-              <div class="series-thumb">
-                <ClinicalIcon name="camera" :size="16" />
-              </div>
-              <div class="series-meta">
-                <div class="series-title">
-                  {{ s.description }}
-                </div>
-                <div class="series-tags">
-                  <span class="modality-tag">{{ s.modality }}</span>
-                  <span class="slices-tag">{{ s.instancesCount }} slices</span>
-                </div>
-              </div>
-            </div>
-          </template>
-
-          <template v-else>
-            <div class="series-group-title">Viewport A Series</div>
-            <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-            <div
-              v-for="s in availableSeriesA"
-              :key="'a-' + s.seriesUid"
-              class="series-item"
-              :class="{ active: activeSeriesUidA === s.seriesUid }"
-              @click="activeSeriesUidA = s.seriesUid"
-            >
-              <div class="series-thumb">
-                <ClinicalIcon name="camera" :size="16" />
-              </div>
-              <div class="series-meta">
-                <div class="series-title">
-                  {{ s.description }}
-                </div>
-                <div class="series-tags">
-                  <span class="modality-tag">{{ s.modality }}</span>
-                  <span class="slices-tag">{{ s.instancesCount }} slices</span>
-                </div>
-              </div>
-            </div>
-
-            <div class="series-group-title margin-top-sm">
-              Viewport B Series
+              {{ group.title }}
             </div>
             <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
             <div
-              v-for="s in availableSeriesB"
-              :key="'b-' + s.seriesUid"
+              v-for="s in group.items"
+              :key="`${group.key}-${s.seriesUid}`"
               class="series-item"
-              :class="{ active: activeSeriesUidB === s.seriesUid }"
-              @click="activeSeriesUidB = s.seriesUid"
+              :class="{ active: group.activeUid === s.seriesUid }"
+              @click="group.select(s.seriesUid)"
             >
               <div class="series-thumb">
                 <ClinicalIcon name="camera" :size="16" />
@@ -519,6 +476,44 @@ const availableSeries = ref([
     instancesCount: 120,
   },
 ]);
+
+const seriesNavigatorGroups = computed(() =>
+  viewMode.value === "single"
+    ? [
+        {
+          key: "single",
+          title: "",
+          marginTop: false,
+          items: availableSeries.value,
+          activeUid: activeSeriesUid.value,
+          select: (uid) => {
+            activeSeriesUid.value = uid;
+          },
+        },
+      ]
+    : [
+        {
+          key: "a",
+          title: "Viewport A Series",
+          marginTop: false,
+          items: availableSeriesA.value,
+          activeUid: activeSeriesUidA.value,
+          select: (uid) => {
+            activeSeriesUidA.value = uid;
+          },
+        },
+        {
+          key: "b",
+          title: "Viewport B Series",
+          marginTop: true,
+          items: availableSeriesB.value,
+          activeUid: activeSeriesUidB.value,
+          select: (uid) => {
+            activeSeriesUidB.value = uid;
+          },
+        },
+      ]
+);
 
 const currentAnnotations = ref([
   {

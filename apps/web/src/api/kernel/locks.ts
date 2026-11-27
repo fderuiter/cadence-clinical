@@ -7,13 +7,12 @@ import {
   extractKernelExplanation,
   KERNEL_AUTHORIZATION_DENIED,
   KERNEL_SUBSCRIPTION_EXPIRED,
+  lazyKernelAction,
   unversioned,
   type KernelSchemas,
-  type KernelStreamedArtifact,
 } from "./shared";
 
 const loadRouteTransport = () => import("./locks.transport");
-
 export type KernelLock = KernelSchemas["Kernel_KernelLockResponse"];
 export type KernelStudyLocks = KernelSchemas["Kernel_KernelStudyLocksResponse"];
 export type KernelLockReadiness =
@@ -172,48 +171,29 @@ export function describeLockError(error: unknown): string {
 
 export const kernelLocksApi = {
   /** Lists active and historical Frozen and Locked assertions in a study, masked per caller visibility and blinding (GET /api/v1/kernel/studies/{studyRef}/locks). */
-  async listStudyLocks(
-    studyRef: string,
-    query: KernelStudyLocksQuery = {}
-  ): Promise<KernelStudyLocks> {
-    const { executeListStudyLocks } = await loadRouteTransport();
-    return executeListStudyLocks(studyRef, query);
-  },
+  listStudyLocks: lazyKernelAction(loadRouteTransport, "executeListStudyLocks"),
 
   /** Evaluates all six lock readiness gates (open queries, missing required items, unverified values, unsigned forms, unopened scheduled visits, and unresolved error validation findings) for a study or child scope (`GET /api/v1/kernel/studies/{studyRef}/locks/readiness`). */
-  async getStudyLockReadiness(
-    studyRef: string,
-    scopeRef?: string
-  ): Promise<KernelLockReadiness> {
-    const { executeGetStudyLockReadiness } = await loadRouteTransport();
-    return executeGetStudyLockReadiness(studyRef, scopeRef);
-  },
+  getStudyLockReadiness: lazyKernelAction(
+    loadRouteTransport,
+    "executeGetStudyLockReadiness"
+  ),
 
   /** Applies a signed Frozen or Locked assertion to a study, site, enrollment, form, or observation (POST /api/v1/kernel/locks). */
-  async applyLock(input: KernelApplyLock): Promise<KernelLock> {
-    const { executeApplyLock } = await loadRouteTransport();
-    return executeApplyLock(input);
-  },
+  applyLock: lazyKernelAction(loadRouteTransport, "executeApplyLock"),
 
   /** Releases an active Frozen or Locked assertion with step-up re-authentication and reason (POST /api/v1/kernel/locks/{lockRef}/release). */
-  async releaseLock(input: KernelReleaseLock): Promise<KernelLock> {
-    const { executeReleaseLock } = await loadRouteTransport();
-    return executeReleaseLock(input);
-  },
+  releaseLock: lazyKernelAction(loadRouteTransport, "executeReleaseLock"),
 
   /** Streams a study clinical snapshot or statistical/regulatory ZIP bundle at optional bitemporal `as_of` (GET /api/v1/kernel/studies/{studyRef}/exports). */
-  async streamStudyExport(
-    query: KernelStudyExportQuery
-  ): Promise<KernelStreamedArtifact> {
-    const { executeStreamStudyExport } = await loadRouteTransport();
-    return executeStreamStudyExport(query);
-  },
+  streamStudyExport: lazyKernelAction(
+    loadRouteTransport,
+    "executeStreamStudyExport"
+  ),
 
   /** Streams a participant casebook in JSON, CDISC ODM v1.3.2 XML, printable HTML, or certified PDF with `X-Content-Sha256` integrity digest (GET /api/v1/kernel/enrollments/{enrollmentRef}/casebook). */
-  async streamEnrollmentCasebook(
-    query: KernelCasebookExportQuery
-  ): Promise<KernelStreamedArtifact> {
-    const { executeStreamEnrollmentCasebook } = await loadRouteTransport();
-    return executeStreamEnrollmentCasebook(query);
-  },
+  streamEnrollmentCasebook: lazyKernelAction(
+    loadRouteTransport,
+    "executeStreamEnrollmentCasebook"
+  ),
 };

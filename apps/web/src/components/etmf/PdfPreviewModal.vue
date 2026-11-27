@@ -295,6 +295,7 @@ import { ref, computed, watch, onBeforeUnmount } from "vue";
 import { useFocusTrap, ClinicalIcon } from "ui";
 import { useAuthStore } from "../../stores/auth";
 import { useEtmfStore } from "../../stores/etmf";
+import { formatDate } from "../../utils/formatDate";
 
 const props = defineProps({
   document: {
@@ -462,22 +463,6 @@ function getStatusClass(status) {
   if (s.includes("approved") || s.includes("active")) return "text-success";
   if (s.includes("archive")) return "text-danger";
   return "";
-}
-
-function formatDate(dateStr) {
-  if (!dateStr) return "N/A";
-  try {
-    const d = new Date(dateStr);
-    return d.toLocaleString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  } catch {
-    return dateStr;
-  }
 }
 </script>
 

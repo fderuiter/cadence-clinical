@@ -94,38 +94,18 @@
 
 <script setup>
 import { ref } from "vue";
-import { SignOutConfirmModal, useFocusTrap, useSignOutGuard } from "ui";
+import { SignOutConfirmModal } from "ui";
 
-import {
-  hasUnsavedOrUnsyncedLocalData,
-  logout,
-  prepareSignOutGuardState,
-} from "../features/auth.js";
-import { handlePINSetupSubmit } from "../features/pin.js";
+import { handlePINSetupSubmit, usePinModalGuard } from "../features/pin.js";
 import { useSessionStore } from "../stores/session.js";
 import SiteContactLinks from "./SiteContactLinks.vue";
 
 const modalRef = ref(null);
 const sessionStore = useSessionStore();
 
-const {
-  isConfirmOpen: isSignOutConfirmOpen,
-  requestSignOut,
-  confirmSignOut,
-  cancelSignOut,
-} = useSignOutGuard({
-  flushExternalDrafts: prepareSignOutGuardState,
-  hasExternalDrafts: hasUnsavedOrUnsyncedLocalData,
-  onConfirmSignOut: () => logout({ confirmed: true }),
-});
-
-useFocusTrap(modalRef, {
-  isOpen: () => sessionStore.pinSetup.isOpen && !isSignOutConfirmOpen.value,
-  escapeDeactivates: false,
-  initialFocus: "#setup-pin",
-});
-
-function handleSignOut() {
-  return requestSignOut();
-}
+const { isSignOutConfirmOpen, confirmSignOut, cancelSignOut, handleSignOut } =
+  usePinModalGuard(modalRef, {
+    isOpen: () => sessionStore.pinSetup.isOpen,
+    initialFocus: "#setup-pin",
+  });
 </script>

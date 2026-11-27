@@ -1,5 +1,5 @@
 import { unwrapResponse } from "../client";
-import { kernelClient, type KernelSchemas } from "./shared";
+import { kernelClient, lazyKernelAction, type KernelSchemas } from "./shared";
 
 const loadRouteTransport = () => import("./entitlements.transport");
 
@@ -51,38 +51,17 @@ export const kernelEntitlementsApi = {
   },
 
   /** Provisions or idempotently replays the authenticated OIDC caller's self-service trial workspace. */
-  async bootstrapTrial(
-    request: KernelTrialOnboardingRequest,
-    options?: { idempotencyKey?: string; reason?: string }
-  ): Promise<KernelTrialOnboardingResponse> {
-    const { executeBootstrapTrial } = await loadRouteTransport();
-    return executeBootstrapTrial(request, options);
-  },
+  bootstrapTrial: lazyKernelAction(loadRouteTransport, "executeBootstrapTrial"),
 
   /** Switches the caller's tenant commercial subscription tier in place while preserving an active trial window (POST /api/v1/kernel/entitlements/tier). */
-  async upgradeSubscriptionTier(input: {
-    tier: string;
-    idempotencyKey: string;
-    reason?: string;
-  }): Promise<KernelEntitlements> {
-    const { executeUpgradeSubscriptionTier } = await loadRouteTransport();
-    return executeUpgradeSubscriptionTier(input);
-  },
+  upgradeSubscriptionTier: lazyKernelAction(
+    loadRouteTransport,
+    "executeUpgradeSubscriptionTier"
+  ),
 
   /** Activates or upgrades the caller's tenant commercial subscription with validated study scoping and billing confirmation (POST /api/v1/kernel/entitlements/activate). */
-  async activateSubscription(input: {
-    tier: string;
-    studyPhase?: string | null;
-    studyDurationMonths?: number | null;
-    countries?: string[] | null;
-    siteCount?: number | null;
-    participantCount?: number | null;
-    activeStudyCount?: number | null;
-    billingConfirmation?: string | null;
-    idempotencyKey: string;
-    reason?: string;
-  }): Promise<KernelEntitlements> {
-    const { executeActivateSubscription } = await loadRouteTransport();
-    return executeActivateSubscription(input);
-  },
+  activateSubscription: lazyKernelAction(
+    loadRouteTransport,
+    "executeActivateSubscription"
+  ),
 };
