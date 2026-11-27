@@ -1,6 +1,8 @@
 import type { KernelLockMeaning } from "./locks";
 import { lazyKernelAction, unversioned, type KernelSchemas } from "./shared";
 
+const loadRouteTransport = () => import("./validation.transport");
+
 export type KernelRulePack = KernelSchemas["Kernel_KernelRulePackResponse"];
 export type KernelStudyRulePacks =
   KernelSchemas["Kernel_KernelStudyRulePacksResponse"];
@@ -107,44 +109,74 @@ export interface KernelExplainValidationFindingInput {
 
 export const kernelValidationApi = {
   /** Lists edit-check rule packs in the tenant alongside whether each is pinned on the study. */
-  listStudyRulePacks: lazyKernelAction("executeListStudyRulePacks"),
+  listStudyRulePacks: lazyKernelAction(
+    loadRouteTransport,
+    "executeListStudyRulePacks"
+  ),
 
   /** Dry-runs a rule pack in memory against all collection instances of a study without persisting findings. */
-  previewStudyRulePack: lazyKernelAction("executePreviewStudyRulePack"),
+  previewStudyRulePack: lazyKernelAction(
+    loadRouteTransport,
+    "executePreviewStudyRulePack"
+  ),
 
   /** Approves a draft library item (such as a RulePack) with a step-up signature token. */
-  approveLibraryItem: lazyKernelAction("executeApproveLibraryItem"),
+  approveLibraryItem: lazyKernelAction(
+    loadRouteTransport,
+    "executeApproveLibraryItem"
+  ),
 
   /** Pins the active approved rule packs on a study's standards profile. */
-  declareStudyRulePacks: lazyKernelAction("executeDeclareStudyRulePacks"),
+  declareStudyRulePacks: lazyKernelAction(
+    loadRouteTransport,
+    "executeDeclareStudyRulePacks"
+  ),
 
   /** Lists validation findings recorded for a study, newest first. */
   listStudyValidationFindings: lazyKernelAction(
+    loadRouteTransport,
     "executeListStudyValidationFindings"
   ),
 
   /** Unified study attention summary: open proposals, Open and Investigating validation findings, and active CRA SDV modification alerts. */
-  getStudyAttention: lazyKernelAction("executeGetStudyAttention"),
+  getStudyAttention: lazyKernelAction(
+    loadRouteTransport,
+    "executeGetStudyAttention"
+  ),
 
   /** Reads a validation finding together with its structured explanation. */
-  getValidationFinding: lazyKernelAction("executeGetValidationFinding"),
+  getValidationFinding: lazyKernelAction(
+    loadRouteTransport,
+    "executeGetValidationFinding"
+  ),
 
   /** Marks an Open validation finding as Investigating (`POST /api/v1/kernel/validation/findings/{findingRef}/investigate`). */
   investigateValidationFinding: lazyKernelAction(
+    loadRouteTransport,
     "executeInvestigateValidationFinding"
   ),
 
   /** Classifies a detected validation finding (`POST /api/v1/kernel/validation/findings/{findingRef}/classify`). */
   classifyValidationFinding: lazyKernelAction(
+    loadRouteTransport,
     "executeClassifyValidationFinding"
   ),
 
   /** Accepts an Open or Investigating validation finding with a Responsibility signature (`POST /api/v1/kernel/validation/findings/{findingRef}/accept`). */
-  acceptValidationFinding: lazyKernelAction("executeAcceptValidationFinding"),
+  acceptValidationFinding: lazyKernelAction(
+    loadRouteTransport,
+    "executeAcceptValidationFinding"
+  ),
 
   /** Explains an Open or Investigating validation finding with an Approved signature (`POST /api/v1/kernel/validation/findings/{findingRef}/explain`). */
-  explainValidationFinding: lazyKernelAction("executeExplainValidationFinding"),
+  explainValidationFinding: lazyKernelAction(
+    loadRouteTransport,
+    "executeExplainValidationFinding"
+  ),
 
   /** Reopens an Investigating, Accepted, or Explained validation finding (`POST /api/v1/kernel/validation/findings/{findingRef}/reopen`). */
-  reopenValidationFinding: lazyKernelAction("executeReopenValidationFinding"),
+  reopenValidationFinding: lazyKernelAction(
+    loadRouteTransport,
+    "executeReopenValidationFinding"
+  ),
 };

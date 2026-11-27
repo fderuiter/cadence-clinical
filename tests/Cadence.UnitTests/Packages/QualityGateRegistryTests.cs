@@ -17,6 +17,7 @@ namespace Cadence.UnitTests.Packages;
 /// tables generated into the docs are current. Each gate runs against a fixture repository that must make it fail; a
 /// gate added to the registry without a fixture here fails <see cref="EveryGate_HasAFailingFixture"/>.
 /// </summary>
+[Collection(ProcessEnvironmentMutationCollection.Name)]
 public sealed class QualityGateRegistryTests : IDisposable
 {
     // Built at run time so the repository's own security, query-linter and RTM gates do not report this file.

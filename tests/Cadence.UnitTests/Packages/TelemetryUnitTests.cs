@@ -97,7 +97,7 @@ public class TelemetryUnitTests
 
         services.AddCadenceTelemetry();
 
-        var provider = services.BuildServiceProvider();
+        using var provider = services.BuildServiceProvider();
         var tracerProvider = provider.GetService<TracerProvider>();
         var meterProvider = provider.GetService<MeterProvider>();
 

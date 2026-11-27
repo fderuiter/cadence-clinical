@@ -1,6 +1,8 @@
 import { unwrapResponse } from "../client";
 import { kernelClient, lazyKernelAction, type KernelSchemas } from "./shared";
 
+const loadRouteTransport = () => import("./studies.transport");
+
 export type KernelProtocolVersion =
   KernelSchemas["Kernel_KernelProtocolVersionResponse"];
 export type KernelScheduleOfActivities =
@@ -130,37 +132,55 @@ export const kernelStudiesApi = {
   },
 
   /** Registered organizations in the caller's tenant, optionally filtered by kind (GET /api/v1/kernel/organizations). */
-  listOrganizations: lazyKernelAction("executeListOrganizations"),
+  listOrganizations: lazyKernelAction(
+    loadRouteTransport,
+    "executeListOrganizations"
+  ),
 
   /** Registers an organization such as a SiteInstitution with a signed reason and idempotency key (POST /api/v1/kernel/organizations). */
-  createOrganization: lazyKernelAction("executeCreateOrganization"),
+  createOrganization: lazyKernelAction(
+    loadRouteTransport,
+    "executeCreateOrganization"
+  ),
 
   /** Registered investigational sites in the caller's tenant, ordered by site code (GET /api/v1/kernel/sites). */
-  listSites: lazyKernelAction("executeListSites"),
+  listSites: lazyKernelAction(loadRouteTransport, "executeListSites"),
 
   /** Registers an investigational site with a 2-letter ISO country code, signed reason, and idempotency key (POST /api/v1/kernel/sites). */
-  createSite: lazyKernelAction("executeCreateSite"),
+  createSite: lazyKernelAction(loadRouteTransport, "executeCreateSite"),
 
   /** Sites linked to a study in the caller's tenant, ordered by site code (GET /api/v1/kernel/studies/{studyRef}/sites). */
-  listStudySites: lazyKernelAction("executeListStudySites"),
+  listStudySites: lazyKernelAction(loadRouteTransport, "executeListStudySites"),
 
   /** Links a registered investigational site to a study with a signed reason and idempotency key (POST /api/v1/kernel/studies/{studyRef}/sites). */
-  linkSiteToStudy: lazyKernelAction("executeLinkSiteToStudy"),
+  linkSiteToStudy: lazyKernelAction(
+    loadRouteTransport,
+    "executeLinkSiteToStudy"
+  ),
 
   /** Registers a new study with a signed reason for change and idempotency key (POST /api/v1/kernel/studies). */
-  createStudy: lazyKernelAction("executeCreateStudy"),
+  createStudy: lazyKernelAction(loadRouteTransport, "executeCreateStudy"),
 
   /** Bundled CDISC Library eCRF templates available to import into a protocol draft (GET /api/v1/kernel/protocol-templates). */
-  listProtocolTemplates: lazyKernelAction("executeListProtocolTemplates"),
+  listProtocolTemplates: lazyKernelAction(
+    loadRouteTransport,
+    "executeListProtocolTemplates"
+  ),
 
   /** Viewable forms, ordered items, prompts, mandatory flags, and import notes for a protocol version (GET /api/v1/kernel/protocol-versions/{versionRef}/design-summary). */
-  getProtocolDesignSummary: lazyKernelAction("executeGetProtocolDesignSummary"),
+  getProtocolDesignSummary: lazyKernelAction(
+    loadRouteTransport,
+    "executeGetProtocolDesignSummary"
+  ),
 
   /**
    * Synchronously imports an ODM v1.3.2 XML file, USDM v4 JSON file, or bundled CDISC Library eCRF templates
    * to create or revise a study's protocol draft (POST /api/v1/kernel/studies/{studyRef}/protocol-imports).
    */
-  importProtocolDraft: lazyKernelAction("executeProtocolDraftImport"),
+  importProtocolDraft: lazyKernelAction(
+    loadRouteTransport,
+    "executeProtocolDraftImport"
+  ),
 
   /**
    * Resolves the governing protocol version at the enrollment's site and computes expected visit target dates and
@@ -184,17 +204,29 @@ export const kernelStudiesApi = {
   },
 
   /** A study's protocol versions, newest first, without content. */
-  listProtocolVersions: lazyKernelAction("executeListProtocolVersions"),
+  listProtocolVersions: lazyKernelAction(
+    loadRouteTransport,
+    "executeListProtocolVersions"
+  ),
 
   /** One protocol version, without content. */
-  getProtocolVersion: lazyKernelAction("executeGetProtocolVersion"),
+  getProtocolVersion: lazyKernelAction(
+    loadRouteTransport,
+    "executeGetProtocolVersion"
+  ),
 
   /** A protocol version's Schedule of Activities: planned activities as columns, collection specifications as rows (ADR-2475). */
-  getScheduleOfActivities: lazyKernelAction("executeGetScheduleOfActivities"),
+  getScheduleOfActivities: lazyKernelAction(
+    loadRouteTransport,
+    "executeGetScheduleOfActivities"
+  ),
 
   /** What depends on the version a protocol amendment changes (K-PROT-2). A first version amends nothing and is refused. */
-  amendmentImpact: lazyKernelAction("executeAmendmentImpact"),
+  amendmentImpact: lazyKernelAction(
+    loadRouteTransport,
+    "executeAmendmentImpact"
+  ),
 
   /** Runs evaluate-only in-memory simulation over candidate protocol version, mapping specification, or rule pack. */
-  simulate: lazyKernelAction("executeSimulate"),
+  simulate: lazyKernelAction(loadRouteTransport, "executeSimulate"),
 };

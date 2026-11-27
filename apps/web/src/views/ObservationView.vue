@@ -237,132 +237,15 @@
           </template>
         </div>
 
-        <section
-          id="observation-queries"
-          class="observation-queries-section"
-          aria-labelledby="observation-queries-title"
-        >
-          <h3 id="observation-queries-title">Open queries</h3>
-          <p
-            v-if="openQueryThreads.length === 0"
-            data-testid="observation-no-open-queries"
-          >
-            No open queries on this value.
-          </p>
-          <ul
-            v-else
-            class="observation-query-list"
-            data-testid="observation-queries"
-          >
-            <li
-              v-for="thread in openQueryThreads"
-              :key="String(thread.query.assertion_id)"
-              class="observation-query-item"
-              :data-testid="`observation-query-${thread.query.assertion_id}`"
-            >
-              <div class="observation-query-header tabular-nums">
-                <span
-                  :class="[
-                    'clinical-badge',
-                    thread.hasActiveAnswer
-                      ? 'clinical-badge--warning'
-                      : 'clinical-badge--queried',
-                  ]"
-                >
-                  {{ thread.hasActiveAnswer ? "Answered" : "Open" }}
-                </span>
-                <span v-if="thread.query.revision !== null">
-                  Revision {{ thread.query.revision }}
-                </span>
-                <span
-                  v-if="thread.valueChanged"
-                  class="observation-query-changed"
-                >
-                  Value changed (now rev {{ currentRevisionNumber }})
-                </span>
-                <span class="observation-query-meta">
-                  by {{ thread.query.asserted_by }} at
-                  {{ thread.query.asserted_at }}
-                </span>
-              </div>
-              <p class="observation-query-text">
-                {{
-                  thread.query.text ||
-                  assertionReason(thread.query) ||
-                  "Query raised on this value."
-                }}
-              </p>
-              <ul
-                v-if="thread.answers.length > 0"
-                class="observation-query-answers tabular-nums"
-              >
-                <li
-                  v-for="ans in thread.answers"
-                  :key="String(ans.assertion_id)"
-                >
-                  Answered by {{ ans.asserted_by }} at {{ ans.asserted_at
-                  }}<template v-if="ans.text">: “{{ ans.text }}”</template
-                  ><template v-else-if="assertionReason(ans)"
-                    >: “{{ assertionReason(ans) }}”</template
-                  >
-                  <em v-if="ans.retracted_at">
-                    (retracted {{ ans.retracted_at }})</em
-                  >
-                </li>
-              </ul>
-              <div
-                v-if="hasRouter && (owningFormLocation || studyQueriesLocation)"
-                class="observation-query-links"
-              >
-                <component
-                  :is="routerLinkTag"
-                  v-if="owningFormLocation"
-                  class="observation-context-link"
-                  :to="owningFormLocation"
-                >
-                  Manage query on form
-                </component>
-                <component
-                  :is="routerLinkTag"
-                  v-if="studyQueriesLocation"
-                  class="observation-context-link"
-                  :to="studyQueriesLocation"
-                >
-                  View in study queries
-                </component>
-              </div>
-            </li>
-          </ul>
-        </section>
-
-        <h3>Verifications, queries and answers</h3>
-        <p
-          v-if="observationAssertions.length === 0"
-          data-testid="observation-no-assertions"
-        >
-          None recorded.
-        </p>
-        <ul v-else class="tabular-nums" data-testid="observation-assertions">
-          <li
-            v-for="assertion in observationAssertions"
-            :key="String(assertion.assertion_id)"
-          >
-            {{ assertion.kind }}
-            <template v-if="assertion.revision !== null">
-              (revision {{ assertion.revision }})
-            </template>
-            by {{ assertion.asserted_by }} at {{ assertion.asserted_at }}
-            <template v-if="assertion.text">
-              : “{{ assertion.text }}”
-            </template>
-            <template v-if="assertionReason(assertion)">
-              (reason: {{ assertionReason(assertion) }})
-            </template>
-            <em v-if="assertion.retracted_at">
-              (retracted {{ assertion.retracted_at }})</em
-            >
-          </li>
-        </ul>
+        <ObservationQueriesAndAssertions
+          :open-query-threads="openQueryThreads"
+          :observation-assertions="observationAssertions"
+          :current-revision-number="currentRevisionNumber"
+          :has-router="hasRouter"
+          :router-link-tag="routerLinkTag"
+          :owning-form-location="owningFormLocation"
+          :study-queries-location="studyQueriesLocation"
+        />
 
         <h3>Revisions</h3>
         <div
@@ -449,64 +332,25 @@
 </template>
 
 <script setup lang="ts">
-import {
-  computed,
-  getCurrentInstance,
-  onMounted,
-  onUnmounted,
-  ref,
-  watch,
-} from "vue";
-import type { RouteLocationRaw, Router } from "vue-router";
-import ScopeLockControls, {
-  type CoveringScopeLockItem,
-  type DirectScopeLockItem,
-} from "../components/canvas/ScopeLockControls.vue";
+import { computed, onMounted, onUnmounted, watch } from "vue";
+import type { RouteLocationRaw } from "vue-router";
+import ScopeLockControls from "../components/canvas/ScopeLockControls.vue";
 import NodeRefChip from "../components/canvas/NodeRefChip.vue";
 import SupportDetails from "../components/canvas/SupportDetails.vue";
+import ObservationQueriesAndAssertions from "../components/observation/ObservationQueriesAndAssertions.vue";
 import ReasonForChangeModal from "../components/ReasonForChangeModal.vue";
 import { useObservationCorrection } from "../composables/useObservationCorrection";
-import { kernelApi, type KernelObservation } from "../api/kernelApi";
+import { useObservationScopeNavigation } from "../composables/useObservationScopeNavigation";
 import {
-  correctionUnit,
-  formatObservationValue,
-  isUnrecordedValue,
-  parseCorrection,
-  sameObservationValue,
-  type ExpectedItemSpec,
-} from "../api/observationValue";
-import { getActivePinia } from "pinia";
-import {
-  collectionInstanceId,
-  collectionInstanceRef,
-  formatNodeRef,
-  observationNodeRef,
-  parseNodeRef,
-  tryNodeRef,
-} from "../canvas/nodeRef";
-import {
-  normalizeLookupNodeRef,
-  seedNodeSummary,
-} from "../canvas/nodeResolver";
-import { buildStudiesWorkspacePath } from "../canvas/palette";
+  lockScopeLabel,
+  useObservationViewModel,
+} from "../composables/useObservationViewModel";
+import type { KernelObservation } from "../api/kernelApi";
+import { formatObservationValue } from "../api/observationValue";
+import { normalizeLookupNodeRef } from "../canvas/nodeResolver";
 import { canCorrectObservations } from "../canvas/authority";
-import {
-  toCoveringScopeLocks,
-  toDirectScopeLocks,
-} from "../canvas/kernelLocks";
-import { seedKernelStudyRef } from "../canvas/kernelStudy";
-import { syncActiveStudyScope } from "../composables/useActiveStudyScope";
-import { useKernelStudyRef } from "../composables/useKernelStudyRef";
-import { useUnsavedNavigationGuard } from "../composables/useUnsavedNavigationGuard";
 import { useAuthStore } from "../stores/auth";
-import { isDemoBuild } from "../utils/demoMode";
 
-/**
- * Corrects one kernel observation (ADR-2620). The value shown is always the kernel's: the screen keeps no local
- * copy, and reports a correction as saved only after the kernel has committed it. A correction keeps the current
- * value's kind (ADR-2623): a quantity is corrected in its unit, a code in its code system version. A Locked or
- * Frozen lock at the value, its participant, its site or its study (ADR-2621) closes it to correction.
- */
 const props = defineProps<{
   observationRef: string;
   studyCode?: string | null;
@@ -524,130 +368,6 @@ const emit = defineEmits<{
 const authStore = useAuthStore();
 const canCorrect = computed(() => canCorrectObservations(authStore));
 
-const instance = getCurrentInstance();
-const activeRouter = (instance?.appContext.config.globalProperties.$router ??
-  null) as Router | null;
-const routerLinkTag = instance?.appContext.components.RouterLink ?? "a";
-const hasRouter = computed(() => activeRouter !== null);
-
-function queryString(name: string): string {
-  const raw = activeRouter?.currentRoute.value?.query?.[name];
-  return typeof raw === "string" ? raw.trim() : "";
-}
-
-function appendFormAndItemToReturnPath(
-  rawPath: string,
-  formVal: string,
-  itemVal: string
-): string {
-  if (!formVal && !itemVal) return rawPath;
-  try {
-    const parsed = new URL(rawPath, "https://cadence.local");
-    const formUuid = collectionInstanceId(formVal);
-    const formRef = collectionInstanceRef(formVal) ?? formVal;
-    if (parsed.pathname === "/ecrf") {
-      if (formUuid && !parsed.searchParams.has("formId")) {
-        parsed.searchParams.set("formId", formUuid);
-      }
-      if (itemVal && !parsed.searchParams.has("itemId")) {
-        parsed.searchParams.set("itemId", itemVal);
-      }
-    } else if (parsed.pathname.startsWith("/studies/")) {
-      if (formRef && !parsed.searchParams.has("form")) {
-        parsed.searchParams.set("form", formRef);
-      }
-      if (itemVal && !parsed.searchParams.has("item")) {
-        parsed.searchParams.set("item", itemVal);
-      }
-    }
-    return `${parsed.pathname}${parsed.search}${parsed.hash}`;
-  } catch {
-    return rawPath;
-  }
-}
-
-const effectiveReturnTo = computed<RouteLocationRaw | null>(() => {
-  if (props.returnTo) return props.returnTo;
-  if (!activeRouter) return null;
-  const rawForm = queryString("form") || queryString("formId");
-  const rawItem = queryString("item") || queryString("itemId");
-  const queryReturn = activeRouter.currentRoute.value?.query?.returnTo;
-  if (
-    typeof queryReturn === "string" &&
-    queryReturn.startsWith("/") &&
-    !queryReturn.startsWith("//")
-  ) {
-    return appendFormAndItemToReturnPath(queryReturn, rawForm, rawItem);
-  }
-  const studyFromContext =
-    (props.studyCode && props.studyCode.trim()) ||
-    queryString("studyId") ||
-    queryString("study");
-  const formRef = rawForm ? (collectionInstanceRef(rawForm) ?? rawForm) : "";
-  const formUuid = rawForm ? collectionInstanceId(rawForm) : null;
-  if (studyFromContext && activeRouter.hasRoute("study")) {
-    const sectionVal = queryString("section");
-    const isDataWorklist =
-      sectionVal === "queries" || sectionVal === "validation";
-    const siteVal =
-      queryString("site") || queryString("siteId") || resolvedSiteLabel.value;
-    const participantVal = resolveCanonicalParticipantParam(
-      studyFromContext,
-      queryString("participant") ||
-        queryString("subjectId") ||
-        queryString("subject") ||
-        resolvedParticipantLabel.value
-    );
-    return {
-      name: "study",
-      params: { studyCode: studyFromContext },
-      query: {
-        stage: isDataWorklist ? "data" : queryString("stage") || "conduct",
-        ...(isDataWorklist ? { section: sectionVal } : {}),
-        ...(siteVal ? { site: siteVal } : {}),
-        ...(participantVal ? { participant: participantVal } : {}),
-        ...(formRef ? { form: formRef } : {}),
-        ...(rawItem ? { item: rawItem } : {}),
-      },
-    };
-  }
-  if ((formUuid || rawItem) && activeRouter.hasRoute("ecrf")) {
-    return {
-      name: "ecrf",
-      query: {
-        ...(formUuid ? { formId: formUuid } : {}),
-        ...(rawItem ? { itemId: rawItem } : {}),
-      },
-    };
-  }
-  if (activeRouter.hasRoute("studies")) {
-    return { name: "studies" };
-  }
-  if (activeRouter.hasRoute("study")) {
-    return buildStudiesWorkspacePath({
-      studyCode: studyFromContext,
-      siteId:
-        queryString("site") || queryString("siteId") || resolvedSiteLabel.value,
-      subjectCode:
-        queryString("subjectId") ||
-        queryString("subject") ||
-        resolvedParticipantLabel.value,
-    });
-  }
-  return "/";
-});
-
-const effectiveReturnLabel = computed(() => {
-  if (props.returnTo) return props.returnLabel || "Back to study";
-  const queryLabel = activeRouter?.currentRoute.value?.query?.returnLabel;
-  if (typeof queryLabel === "string" && queryLabel.trim().length > 0) {
-    return queryLabel.trim();
-  }
-  const rawForm = queryString("form") || queryString("formId");
-  if (rawForm) return props.returnLabel || "Back to form";
-  return props.returnLabel || "Back to studies";
-});
-
 const {
   observation,
   loading,
@@ -659,341 +379,54 @@ const {
   correct,
 } = useObservationCorrection(() => props.observationRef);
 
-/** What a lock covers, in the words a data manager uses (spec §10.5). */
-const SCOPE_LABELS: Record<string, string> = {
-  study: "study level",
-  study_site: "site level",
-  enrollment: "participant level",
-  collection_instance: "form level",
-  observation: "this value",
-};
-
-const { studyRef: observationStudyRef } = useKernelStudyRef(
-  () => props.studyCode || queryString("studyId") || queryString("study"),
-  {
-    studyRef: () => props.studyRef,
-    embedded: () => props.embedded,
-  }
-);
-const normalizedConceptRef = computed(() =>
-  normalizeLookupNodeRef(observation.value?.concept)
-);
-const cleanObservationRef = computed(() => {
-  const raw = observation.value?.ref ?? props.observationRef;
-  const at = raw.indexOf("@");
-  return at < 0 ? raw : raw.slice(0, at);
-});
-
-const directObservationLocks = computed<DirectScopeLockItem[]>(() =>
-  toDirectScopeLocks(
-    observation.value?.locks,
-    observation.value ? cleanObservationRef.value : ""
-  )
-);
-
-const ancestorObservationLocks = computed<CoveringScopeLockItem[]>(() =>
-  toCoveringScopeLocks(
-    observation.value?.locks,
-    observation.value ? cleanObservationRef.value : ""
-  )
-);
-
-function lockScopeLabel(scope: unknown): string {
-  const kind = String(scope).split(":")[0];
-  return SCOPE_LABELS[kind] ?? kind;
-}
-
-type ObservationAssertionItem = KernelObservation["assertions"][number];
-
-const observationLocks = computed(() => observation.value?.locks ?? []);
-const observationAssertions = computed<ObservationAssertionItem[]>(
-  () => observation.value?.assertions ?? []
-);
-const observationRevisions = computed(() => observation.value?.revisions ?? []);
-const observationAudit = computed(() => observation.value?.audit ?? []);
-
-function assertionReason(assertion: ObservationAssertionItem): string {
-  const raw =
-    assertion.reason_for_change ??
-    (assertion as { reason?: string | null }).reason ??
-    "";
-  return typeof raw === "string" ? raw.trim() : "";
-}
-
-const hasRecordedValue = computed(() =>
-  observation.value ? !isUnrecordedValue(observation.value.value) : false
-);
-
-const currentRevisionNumber = computed(() => {
-  const obs = observation.value;
-  if (!obs) return 1;
-  const revisions = observationRevisions.value;
-  const latest = revisions[revisions.length - 1];
-  return Number(latest?.number ?? obs.version);
-});
-
-const activeVerification = computed<ObservationAssertionItem | null>(() => {
-  if (!observation.value || !hasRecordedValue.value) return null;
-  const assertions = observationAssertions.value;
-  for (let i = assertions.length - 1; i >= 0; i--) {
-    const item = assertions[i];
-    if (
-      String(item.kind).toLowerCase() === "verified" &&
-      !item.retracted_at &&
-      Number(item.revision) === currentRevisionNumber.value
-    ) {
-      return item;
-    }
-  }
-  return null;
-});
-
-const supersededVerification = computed<ObservationAssertionItem | null>(() => {
-  if (
-    !observation.value ||
-    !hasRecordedValue.value ||
-    activeVerification.value
-  ) {
-    return null;
-  }
-  const assertions = observationAssertions.value;
-  for (let i = assertions.length - 1; i >= 0; i--) {
-    const item = assertions[i];
-    if (
-      String(item.kind).toLowerCase() === "verified" &&
-      !item.retracted_at &&
-      item.revision !== null &&
-      Number(item.revision) < currentRevisionNumber.value
-    ) {
-      return item;
-    }
-  }
-  return null;
-});
-
-const openQueryThreads = computed(() => {
-  if (!observation.value) return [];
-  const assertions = observationAssertions.value;
-  return assertions
-    .filter(
-      (item) =>
-        String(item.kind).toLowerCase() === "queried" && !item.retracted_at
-    )
-    .map((query) => {
-      const targetRef = `assertion:${String(query.assertion_id)}`;
-      const answers = assertions.filter(
-        (candidate) =>
-          String(candidate.kind).toLowerCase() === "queryanswered" &&
-          (String(candidate.target) === targetRef ||
-            String(candidate.target) === String(query.assertion_id))
-      );
-      const hasActiveAnswer = answers.some((ans) => !ans.retracted_at);
-      const valueChanged =
-        query.revision !== null &&
-        Number(query.revision) < currentRevisionNumber.value;
-      return {
-        query,
-        answers,
-        hasActiveAnswer,
-        valueChanged,
-      };
-    });
-});
-
-const effectiveStudyCode = computed(() => {
-  return (
-    (props.studyCode && props.studyCode.trim()) ||
-    queryString("studyId") ||
-    queryString("study") ||
-    ""
-  );
-});
-
-const effectiveFormRef = computed(() => {
-  const fromObs = observation.value?.form_ref?.trim() || "";
-  if (fromObs) return collectionInstanceRef(fromObs) ?? fromObs;
-  const fromQuery = queryString("form") || queryString("formId");
-  return fromQuery ? (collectionInstanceRef(fromQuery) ?? fromQuery) : "";
-});
-
-const effectiveItemId = computed(() => {
-  return (
-    observation.value?.item_id?.trim() ||
-    queryString("item") ||
-    queryString("itemId") ||
-    ""
-  );
-});
-
-const owningFormLocation = computed<RouteLocationRaw | null>(() => {
-  if (!activeRouter || !effectiveFormRef.value) return null;
-  const studyVal = effectiveStudyCode.value;
-  const siteVal =
-    queryString("site") || queryString("siteId") || resolvedSiteLabel.value;
-  if (studyVal && activeRouter.hasRoute("study")) {
-    const participantVal = resolveCanonicalParticipantParam(
-      studyVal,
-      queryString("participant") ||
-        queryString("subjectId") ||
-        queryString("subject") ||
-        resolvedParticipantLabel.value
-    );
-    return {
-      name: "study",
-      params: { studyCode: studyVal },
-      query: {
-        stage: "conduct",
-        ...(siteVal ? { site: siteVal } : {}),
-        ...(participantVal ? { participant: participantVal } : {}),
-        form: effectiveFormRef.value,
-        ...(effectiveItemId.value ? { item: effectiveItemId.value } : {}),
-      },
-    };
-  }
-  const formUuid = collectionInstanceId(effectiveFormRef.value);
-  if (formUuid && activeRouter.hasRoute("ecrf")) {
-    return {
-      name: "ecrf",
-      query: {
-        formId: formUuid,
-        ...(effectiveItemId.value ? { itemId: effectiveItemId.value } : {}),
-      },
-    };
-  }
-  return null;
-});
-
-const studyQueriesLocation = computed<RouteLocationRaw | null>(() => {
-  const studyVal = effectiveStudyCode.value;
-  if (!activeRouter || !studyVal || !activeRouter.hasRoute("study")) {
-    return null;
-  }
-  const siteVal =
-    queryString("site") || queryString("siteId") || resolvedSiteLabel.value;
-  return {
-    name: "study",
-    params: { studyCode: studyVal },
-    query: {
-      stage: "data",
-      section: "queries",
-      ...(siteVal ? { site: siteVal } : {}),
-    },
-  };
-});
-
-const correctionDescribedBy = computed(() =>
-  activeVerification.value
-    ? "observation-sdv-edit-warning observation-new-value-hint"
-    : "observation-new-value-hint"
-);
-
-const reasonModalDescription = computed(() =>
-  activeVerification.value
-    ? `This value was source data verified at revision ${currentRevisionNumber.value}. Saving this correction supersedes the verified revision, marks the item as Needs re-verification, and sends a modification alert to the CRA.`
-    : undefined
-);
-
-const newValue = ref("");
-const reasonOpen = ref(false);
-
-const expectedSpec = computed<ExpectedItemSpec | null>(() => {
-  const obs = observation.value;
-  if (!obs) return null;
-  return {
-    valueKind: obs.expected_value_kind ?? null,
-    unit: obs.expected_unit ?? null,
-    codeSystemVersionId: obs.expected_code_system_version_id ?? null,
-    codelist: obs.expected_codelist ?? null,
-    codelistOptions: obs.expected_codelist_options ?? null,
-  };
-});
-
-const unit = computed(() =>
-  correctionUnit(observation.value?.value, expectedSpec.value)
-);
-
-const isTabularObservation = computed(() => {
-  const valueKind =
-    observation.value?.value?.type ?? observation.value?.expected_value_kind;
-  return valueKind === "quantity" || valueKind === "dateTime";
-});
-
-const parsed = computed(() => {
-  const current = observation.value?.value;
-  if (!current || newValue.value.trim().length === 0) return null;
-  return parseCorrection(newValue.value, current, expectedSpec.value);
-});
-
-const parseError = computed(() =>
-  parsed.value && !parsed.value.ok ? parsed.value.message : null
-);
-
-const canSave = computed(
-  () =>
-    parsed.value?.ok === true &&
-    !sameObservationValue(parsed.value.value, observation.value?.value)
-);
-
-const hasChangedText = computed(() => {
-  const current = observation.value?.value;
-  if (!current || locked.value || !canCorrect.value) return false;
-  if (newValue.value.trim().length === 0) return false;
-  if (parsed.value?.ok) {
-    return !sameObservationValue(parsed.value.value, current);
-  }
-  return true;
-});
-
-const isDirty = computed(
-  () =>
-    Boolean(observation.value?.value) &&
-    !locked.value &&
-    canCorrect.value &&
-    (hasChangedText.value || reasonOpen.value)
-);
-
-function discardCorrection() {
-  reasonOpen.value = false;
-  newValue.value = "";
-}
-
-watch(locked, (isLocked) => {
-  if (isLocked) {
-    reasonOpen.value = false;
-  }
-});
-
-watch(isDirty, (dirty) => {
-  emit("dirty-change", dirty);
-});
-
-onUnmounted(() => {
-  if (isDirty.value) {
-    emit("dirty-change", false);
-  }
-});
-
-useUnsavedNavigationGuard({
+const {
+  activeVerification,
+  ancestorObservationLocks,
+  canSave,
+  cleanObservationRef,
+  correctionDescribedBy,
+  currentRevisionNumber,
+  directObservationLocks,
+  discardCorrection,
+  hasRecordedValue,
   isDirty,
-  guardNavigation: () => !props.embedded,
-  guardSignOut: true,
-  dialogCopy: {
-    title: "Unsaved Observation Changes",
-    message:
-      "You have an unsaved observation correction. Leave without saving?",
-    confirmLabel: "Leave Without Saving",
-    cancelLabel: "Stay on Observation",
-  },
-  shouldPromptOnUpdate: (to, from) => {
-    const nextRaw = String(to.params.observationRef ?? "");
-    const prevRaw = String(from.params.observationRef ?? "");
-    const nextRef = observationNodeRef(nextRaw) ?? nextRaw;
-    const prevRef = observationNodeRef(prevRaw) ?? prevRaw;
-    return nextRef !== prevRef;
-  },
-  onConfirmedDiscard: () => {
-    discardCorrection();
-  },
+  isTabularObservation,
+  newValue,
+  normalizedConceptRef,
+  observationAssertions,
+  observationAudit,
+  observationLocks,
+  observationRevisions,
+  openQueryThreads,
+  parseError,
+  parsed,
+  reasonModalDescription,
+  reasonOpen,
+  supersededVerification,
+  unit,
+} = useObservationViewModel({
+  observation,
+  locked,
+  canCorrect,
+  observationRef: () => props.observationRef,
+  embedded: () => props.embedded,
+  onDirtyChange: (dirty) => emit("dirty-change", dirty),
+});
+
+const {
+  routerLinkTag,
+  hasRouter,
+  effectiveReturnTo,
+  effectiveReturnLabel,
+  observationStudyRef,
+  effectiveItemId,
+  owningFormLocation,
+  studyQueriesLocation,
+} = useObservationScopeNavigation({
+  props,
+  observation,
+  isDirty,
+  onLoaded: (obs) => emit("loaded", obs),
 });
 
 defineExpose({ dirty: isDirty, discardCorrection });
@@ -1008,286 +441,6 @@ async function onReason(reason: string) {
   await correct(parsed.value.value, reason);
   if (outcome.value?.kind === "saved") newValue.value = "";
 }
-
-let redirectRequest = 0;
-const resolvedSiteLabel = ref("");
-const resolvedParticipantLabel = ref("");
-
-function resolveCanonicalParticipantParam(
-  studyCodeValue: string,
-  rawCandidate: string
-): string {
-  const candidate = rawCandidate.trim();
-  if (!candidate) return "";
-  const parsed = parseNodeRef(candidate);
-  if (parsed?.kind === "enrollment" || parsed?.kind === "participant") {
-    return formatNodeRef({ kind: parsed.kind, id: parsed.id });
-  }
-  const stateRoot = getActivePinia()?.state.value as
-    | {
-        studyCanvas?: {
-          studyCode?: string;
-          knownParticipants?: Record<
-            string,
-            {
-              id?: string;
-              subject_id?: string;
-              study_id?: string;
-              enrollment_ref?: string | null;
-            }
-          >;
-        };
-      }
-    | undefined;
-  const knownParticipants = stateRoot?.studyCanvas?.knownParticipants;
-  if (knownParticipants) {
-    const matched = Object.values(knownParticipants).find(
-      (item) =>
-        item?.subject_id === candidate &&
-        (!item.study_id ||
-          item.study_id === studyCodeValue ||
-          stateRoot?.studyCanvas?.studyCode === studyCodeValue)
-    );
-    const enrollmentNode = parseNodeRef(matched?.enrollment_ref);
-    if (enrollmentNode?.kind === "enrollment") {
-      return formatNodeRef({ kind: "enrollment", id: enrollmentNode.id });
-    }
-    const node = matched?.id ? tryNodeRef("participant", matched.id) : null;
-    if (node) {
-      return formatNodeRef(node);
-    }
-  }
-  return candidate;
-}
-
-function fallbackStepCode(rawLabel: string): string {
-  const trimmed = rawLabel.trim();
-  if (!trimmed) return "";
-  const head = /\s+[—–-]\s+/.test(trimmed)
-    ? trimmed.split(/\s+[—–-]\s+/)[0].trim()
-    : trimmed;
-  return head && !/\s/.test(head) ? head : "";
-}
-
-function extractStepStudyRef(step: unknown): string | null {
-  if (!step || typeof step !== "object") return null;
-  const s = step as { ref?: unknown; node?: unknown };
-  if (typeof s.ref === "string" && s.ref.trim()) return s.ref.trim();
-  if (typeof s.node === "string" && s.node.trim()) return s.node.trim();
-  if (s.node && typeof s.node === "object") {
-    const n = s.node as { kind?: unknown; id?: unknown };
-    const parsed =
-      typeof n.kind === "string" && n.kind === "study"
-        ? tryNodeRef("study", n.id)
-        : null;
-    return parsed ? formatNodeRef(parsed) : null;
-  }
-  return null;
-}
-
-async function resolveCanonicalStepCode(
-  step:
-    | {
-        ref?: string | null;
-        node?: unknown;
-        label?: string | null;
-        mask?: unknown;
-      }
-    | undefined
-): Promise<string> {
-  if (!step || step.mask !== null) return "";
-  const fallbackLabel = typeof step.label === "string" ? step.label.trim() : "";
-  const stepRef =
-    typeof step.ref === "string" && step.ref.trim() ? step.ref.trim() : "";
-  if (!stepRef) return fallbackStepCode(fallbackLabel);
-  const expectedKind = parseNodeRef(stepRef)?.kind ?? stepRef.split(":")[0];
-  if (typeof kernelApi.getNode === "function") {
-    try {
-      const summary = await kernelApi.getNode(stepRef);
-      if (summary && typeof summary === "object") {
-        if (
-          (summary.ref && summary.ref !== stepRef) ||
-          (expectedKind && summary.kind && summary.kind !== expectedKind)
-        ) {
-          return fallbackStepCode(fallbackLabel);
-        }
-        if (summary.mask !== null && summary.mask !== undefined) {
-          return "";
-        }
-        seedNodeSummary(stepRef, {
-          kind: summary.kind,
-          code: summary.code,
-          title: summary.title,
-          status: summary.status,
-        });
-        if (typeof summary.code === "string") {
-          return summary.code.trim();
-        }
-        if ("code" in summary && summary.code === null) {
-          return "";
-        }
-      }
-    } catch (err) {
-      const status = (err as { status?: number | null } | null)?.status;
-      if (status === 401 || status === 403 || status === 404) {
-        return "";
-      }
-      return fallbackStepCode(fallbackLabel);
-    }
-  }
-  return fallbackStepCode(fallbackLabel);
-}
-
-watch(
-  observation,
-  async (obs) => {
-    if (!obs) return;
-    emit("loaded", obs);
-    if (
-      props.embedded ||
-      isDirty.value ||
-      !activeRouter ||
-      activeRouter.currentRoute.value.name !== "observation" ||
-      typeof kernelApi.getZoomPath !== "function"
-    ) {
-      return;
-    }
-    const explicitReturn = activeRouter.currentRoute.value.query?.returnTo;
-    if (
-      typeof explicitReturn === "string" &&
-      explicitReturn.startsWith("/") &&
-      !explicitReturn.startsWith("//")
-    ) {
-      const explicitStudyFromQuery =
-        queryString("studyId") || queryString("study");
-      if (
-        !props.studyRef &&
-        !props.studyCode &&
-        !(isDemoBuild() && explicitStudyFromQuery) &&
-        typeof kernelApi.getZoomPath === "function"
-      ) {
-        const request = ++redirectRequest;
-        try {
-          const steps = await kernelApi.getZoomPath(obs.enrollment_ref);
-          if (request !== redirectRequest) return;
-          const studyStep = steps.find(
-            (s) => s.level === "study" && s.mask === null
-          );
-          observationStudyRef.value = extractStepStudyRef(studyStep);
-        } catch {
-          // Keep standalone observation view when zoom path is unavailable.
-        }
-      }
-      return;
-    }
-    const request = ++redirectRequest;
-    try {
-      const steps = await kernelApi.getZoomPath(obs.enrollment_ref);
-      if (request !== redirectRequest) return;
-      const studyStep = steps.find(
-        (s) => s.level === "study" && s.mask === null
-      );
-      const studyRef = extractStepStudyRef(studyStep);
-      const explicitStudyFromQuery =
-        queryString("studyId") || queryString("study");
-      if (
-        !props.studyRef &&
-        !props.studyCode &&
-        !(isDemoBuild() && explicitStudyFromQuery)
-      ) {
-        observationStudyRef.value = studyRef;
-      }
-      const enrollmentStep = steps.find(
-        (s) => s.level === "enrollment" && s.mask === null
-      );
-      if (!enrollmentStep) {
-        return;
-      }
-      const siteStep = steps.find(
-        (s) =>
-          (s.level === "study_site" || s.level === "site") && s.mask === null
-      );
-      const [lineageStudyCode, canonicalSiteCode] = await Promise.all([
-        studyStep ? resolveCanonicalStepCode(studyStep) : Promise.resolve(""),
-        siteStep ? resolveCanonicalStepCode(siteStep) : Promise.resolve(""),
-      ]);
-      if (request !== redirectRequest) return;
-      const demoMode = isDemoBuild();
-      const explicitStudy = queryString("studyId") || queryString("study");
-      const explicitSite = queryString("site") || queryString("siteId");
-      const explicitParticipant =
-        queryString("participant") ||
-        queryString("subjectId") ||
-        queryString("subject");
-      const canonicalStudyCode = demoMode
-        ? explicitStudy || lineageStudyCode
-        : lineageStudyCode || explicitStudy;
-      if (!canonicalStudyCode) return;
-      syncActiveStudyScope(canonicalStudyCode);
-      const studyOverridden = Boolean(
-        demoMode &&
-        explicitStudy &&
-        lineageStudyCode &&
-        explicitStudy.toUpperCase() !== lineageStudyCode.toUpperCase()
-      );
-      if (studyRef && !studyOverridden) {
-        seedKernelStudyRef(canonicalStudyCode, studyRef);
-      }
-      const siteVal = demoMode
-        ? explicitSite || canonicalSiteCode
-        : canonicalSiteCode || explicitSite;
-      const siteOverridden = Boolean(
-        demoMode &&
-        explicitSite &&
-        canonicalSiteCode &&
-        explicitSite.toUpperCase() !== canonicalSiteCode.toUpperCase()
-      );
-      resolvedSiteLabel.value = siteVal || "";
-      resolvedParticipantLabel.value =
-        studyOverridden || siteOverridden
-          ? explicitParticipant
-          : enrollmentStep.label || "";
-      const participantCandidate =
-        explicitParticipant ||
-        (studyOverridden || siteOverridden ? "" : enrollmentStep.label || "");
-      const participantVal = resolveCanonicalParticipantParam(
-        canonicalStudyCode,
-        participantCandidate
-      );
-      const rawForm = queryString("form") || queryString("formId");
-      const formRef = rawForm
-        ? (collectionInstanceRef(rawForm) ?? rawForm)
-        : "";
-      const rawItem = queryString("item") || queryString("itemId");
-      const sectionVal = queryString("section");
-      const isDataWorklist =
-        sectionVal === "queries" || sectionVal === "validation";
-      if (
-        isDirty.value ||
-        activeRouter.currentRoute.value.name !== "observation"
-      ) {
-        return;
-      }
-      const canonicalRef = observationNodeRef(obs.ref) ?? props.observationRef;
-      await activeRouter.replace({
-        name: "study",
-        params: { studyCode: canonicalStudyCode },
-        query: {
-          stage: isDataWorklist ? "data" : queryString("stage") || "conduct",
-          ...(isDataWorklist ? { section: sectionVal } : {}),
-          ...(siteVal ? { site: siteVal } : {}),
-          ...(participantVal ? { participant: participantVal } : {}),
-          ...(formRef ? { form: formRef } : {}),
-          ...(rawItem ? { item: rawItem } : {}),
-          observation: canonicalRef,
-        },
-      });
-    } catch {
-      // Keep the standalone view if scope-path resolution is unauthorized or unavailable.
-    }
-  },
-  { immediate: true }
-);
 
 function handleDemoReset() {
   discardCorrection();
@@ -1307,6 +460,7 @@ onUnmounted(() => {
     window.removeEventListener("cadence:demo-reset", handleDemoReset);
   }
 });
+
 watch(
   () => props.observationRef,
   () => {
@@ -1316,40 +470,8 @@ watch(
 );
 </script>
 
+<style scoped src="../components/observation/observationView.css"></style>
 <style scoped>
-.back {
-  display: inline-block;
-  max-width: 100%;
-  box-sizing: border-box;
-  overflow-wrap: anywhere;
-  margin-bottom: 12px;
-  color: var(--semantic-color-interactive-primary);
-  font-size: 0.85rem;
-}
-.observation-summary {
-  display: grid;
-  grid-template-columns: minmax(0, max-content) minmax(0, 1fr);
-  gap: 4px 16px;
-  min-width: 0;
-  max-width: 100%;
-}
-.observation-summary :deep(dt),
-.observation-summary :deep(dd),
-.observation-summary dt,
-.observation-summary dd {
-  margin: 0;
-  min-width: 0;
-  max-width: 100%;
-  overflow-wrap: anywhere;
-}
-@media (max-width: 640px) {
-  .observation-summary {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-.observation-summary dd {
-  margin: 0;
-}
 [data-testid="observation-concept"],
 [data-testid="observation-value"],
 [data-testid="observation-version"],
@@ -1358,6 +480,7 @@ watch(
 [data-testid="observation-unit"] {
   font-family: var(--semantic-font-mono);
 }
+
 [data-testid="observation-value"],
 [data-testid="observation-version"],
 .observation-timestamp,
@@ -1365,187 +488,5 @@ watch(
 #observation-new-value,
 .observation-outcome {
   font-variant-numeric: tabular-nums;
-}
-.observation-sdv-meta {
-  margin-left: 8px;
-  font-size: 0.85rem;
-  color: var(--semantic-color-text-secondary);
-}
-.observation-context-links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin: 12px 0;
-}
-.observation-context-link {
-  color: var(--semantic-color-interactive-primary);
-  font-size: 0.875rem;
-  font-weight: 500;
-}
-.observation-sdv-warning {
-  padding: 10px 12px;
-  margin: 12px 0;
-  border-radius: 6px;
-  border: 1px solid var(--semantic-color-warning-border-strong);
-  background: var(--semantic-color-warning-bg-soft);
-  color: var(--semantic-color-warning-text-dark);
-  font-size: 0.875rem;
-}
-.observation-queries-section {
-  margin-bottom: 16px;
-}
-.observation-query-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.observation-query-item {
-  padding: 10px 12px;
-  border: 1px solid var(--semantic-color-border);
-  border-radius: 6px;
-  background: var(--semantic-color-surface);
-}
-.observation-query-header {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.85rem;
-}
-.observation-query-meta {
-  color: var(--semantic-color-text-secondary);
-}
-.observation-query-changed {
-  font-weight: 600;
-  color: var(--semantic-color-warning-text-dark);
-}
-.observation-query-text {
-  margin: 6px 0 0;
-}
-.observation-query-answers {
-  margin: 8px 0 0;
-  padding-left: 18px;
-  font-size: 0.875rem;
-}
-.observation-query-links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-top: 8px;
-}
-.observation-correction {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  align-items: center;
-  margin: 16px 0;
-  min-width: 0;
-  max-width: 100%;
-}
-.observation-correction > * {
-  min-width: 0;
-  max-width: 100%;
-  box-sizing: border-box;
-  overflow-wrap: anywhere;
-}
-.observation-hint {
-  flex-basis: 100%;
-  margin: 0;
-  color: var(--semantic-color-error-text-dark);
-  overflow-wrap: anywhere;
-}
-.observation-outcome {
-  padding: 8px 12px;
-  border-radius: 6px;
-  margin-bottom: 16px;
-  max-width: 100%;
-  box-sizing: border-box;
-  overflow-wrap: anywhere;
-}
-.observation-outcome--saved {
-  background: var(--semantic-color-success-bg-soft);
-  color: var(--semantic-color-success-dark);
-}
-.observation-outcome--stale,
-.observation-outcome--locked,
-.observation-outcome--failed,
-.observation-error {
-  background: var(--semantic-color-error-bg-soft);
-  color: var(--semantic-color-error-text-dark);
-}
-#section-observation,
-#section-observation > .card {
-  min-width: 0;
-  max-width: 100%;
-  box-sizing: border-box;
-  overflow-wrap: anywhere;
-}
-.observation-table-scroll {
-  position: relative;
-  overflow-x: auto;
-  max-width: 100%;
-  margin-bottom: 16px;
-  padding: 2px;
-  box-sizing: border-box;
-}
-.observation-table-scroll:focus-visible {
-  outline: 2px solid var(--semantic-color-accent);
-  outline-offset: 2px;
-  border-radius: 4px;
-}
-table {
-  width: 100%;
-  min-width: 46rem;
-  border-collapse: collapse;
-}
-th,
-td {
-  text-align: left;
-  padding: 4px 8px;
-  border-bottom: 1px solid var(--semantic-color-border);
-}
-.observation-revisions th:nth-child(1),
-.observation-revisions td:nth-child(1),
-.observation-audit th:nth-child(1),
-.observation-audit td:nth-child(1),
-.observation-audit th:nth-child(5),
-.observation-audit td:nth-child(5) {
-  min-width: 5rem;
-}
-.observation-revisions th:nth-child(2),
-.observation-revisions td:nth-child(2),
-.observation-revisions th:nth-child(4),
-.observation-revisions td:nth-child(4),
-.observation-audit th:nth-child(3),
-.observation-audit td:nth-child(3) {
-  min-width: 7rem;
-}
-.observation-revisions th:nth-child(3),
-.observation-revisions td:nth-child(3),
-.observation-audit th:nth-child(4),
-.observation-audit td:nth-child(4),
-.observation-audit th:nth-child(6),
-.observation-audit td:nth-child(6) {
-  min-width: 9rem;
-}
-.observation-revisions th:nth-child(5),
-.observation-revisions td:nth-child(5),
-.observation-revisions th:nth-child(6),
-.observation-revisions td:nth-child(6),
-.observation-audit th:nth-child(2),
-.observation-audit td:nth-child(2) {
-  min-width: 8.5rem;
-}
-.observation-revisions td:nth-child(1),
-.observation-revisions td:nth-child(2),
-.observation-revisions td:nth-child(5),
-.observation-revisions td:nth-child(6),
-.observation-audit td:nth-child(1),
-.observation-audit td:nth-child(2),
-.observation-audit td:nth-child(5) {
-  font-family: var(--semantic-font-mono);
 }
 </style>

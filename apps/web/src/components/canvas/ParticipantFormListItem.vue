@@ -28,14 +28,9 @@
 
 <script setup lang="ts">
 import type { EcrfFormSummary } from "../../api/ecrfFormsApi";
+import type { FormStatusBadgeView } from "./casebookBadges";
 
-export interface FormStatusBadgeView {
-  key: string;
-  classes: string;
-  label: string;
-  dataComplete?: "true" | "false";
-  testId?: string;
-}
+export type { FormStatusBadgeView };
 
 defineProps<{
   summary: EcrfFormSummary;

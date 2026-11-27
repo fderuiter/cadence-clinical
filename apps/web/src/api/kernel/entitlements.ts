@@ -1,6 +1,8 @@
 import { unwrapResponse } from "../client";
 import { kernelClient, lazyKernelAction, type KernelSchemas } from "./shared";
 
+const loadRouteTransport = () => import("./entitlements.transport");
+
 export type KernelEntitlements =
   KernelSchemas["Kernel_KernelEntitlementsResponse"];
 export type KernelSubscriptionScoping =
@@ -49,11 +51,17 @@ export const kernelEntitlementsApi = {
   },
 
   /** Provisions or idempotently replays the authenticated OIDC caller's self-service trial workspace. */
-  bootstrapTrial: lazyKernelAction("executeBootstrapTrial"),
+  bootstrapTrial: lazyKernelAction(loadRouteTransport, "executeBootstrapTrial"),
 
   /** Switches the caller's tenant commercial subscription tier in place while preserving an active trial window (POST /api/v1/kernel/entitlements/tier). */
-  upgradeSubscriptionTier: lazyKernelAction("executeUpgradeSubscriptionTier"),
+  upgradeSubscriptionTier: lazyKernelAction(
+    loadRouteTransport,
+    "executeUpgradeSubscriptionTier"
+  ),
 
   /** Activates or upgrades the caller's tenant commercial subscription with validated study scoping and billing confirmation (POST /api/v1/kernel/entitlements/activate). */
-  activateSubscription: lazyKernelAction("executeActivateSubscription"),
+  activateSubscription: lazyKernelAction(
+    loadRouteTransport,
+    "executeActivateSubscription"
+  ),
 };

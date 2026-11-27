@@ -13,6 +13,7 @@ import {
   type KernelSchemas,
 } from "./shared";
 
+const loadRouteTransport = () => import("./observations.transport");
 export type { KernelObservationValue };
 
 type GeneratedKernelObservation =
@@ -106,24 +107,33 @@ export function describeAssertionError(error: unknown): string {
 
 export const kernelObservationsApi = {
   /** One observation with its revisions, the locks covering it, the assertions about it and its kernel audit trail (GET /api/v1/kernel/observations/{observationRef}). */
-  getObservation: lazyKernelAction("executeGetObservation"),
+  getObservation: lazyKernelAction(loadRouteTransport, "executeGetObservation"),
 
   /**
    * Corrects an observation's value (POST /api/v1/kernel/observations/{observationRef}/corrections). The promise
    * resolves only when the kernel has committed the value, its revision, the audit entry and the outgoing event
    * together; it rejects with an ApiError of status 409 (stale version), 423 (locked) or 422 (no reason).
    */
-  correctObservation: lazyKernelAction("executeCorrectObservation"),
+  correctObservation: lazyKernelAction(
+    loadRouteTransport,
+    "executeCorrectObservation"
+  ),
 
   /**
    * Verifies an observation's current revision against source (`POST /api/v1/kernel/observations/{observationRef}/verifications`).
    * Rejects with 409 (`K.Assertion.RevisionStale`), 423 (`K.Assertion.Locked`), 422 (no reason), or 403 (`K.Authorization.Denied`).
    */
-  verifyObservation: lazyKernelAction("executeVerifyObservation"),
+  verifyObservation: lazyKernelAction(
+    loadRouteTransport,
+    "executeVerifyObservation"
+  ),
 
   /**
    * Withdraws an active verification or assertion with a mandatory reason (`POST /api/v1/kernel/assertions/{assertionRef}/retraction`).
    * Rejects with 409 (`K.Assertion.AlreadyRetracted`), 423 (`K.Assertion.Locked`), 422 (no reason), or 403 (`K.Authorization.Denied`).
    */
-  retractAssertion: lazyKernelAction("executeRetractAssertion"),
+  retractAssertion: lazyKernelAction(
+    loadRouteTransport,
+    "executeRetractAssertion"
+  ),
 };

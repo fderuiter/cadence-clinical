@@ -1,5 +1,7 @@
 import { lazyKernelAction, type KernelSchemas } from "./shared";
 
+const loadRouteTransport = () => import("./proposals.transport");
+
 export type KernelProposal = KernelSchemas["Kernel_KernelProposalResponse"];
 export type KernelProposalState =
   KernelSchemas["Kernel_KernelProposalStateResponse"];
@@ -21,15 +23,15 @@ export const kernelProposalsApi = {
    * A study's proposals, newest first (GET /api/v1/kernel/studies/{studyRef}/proposals). A proposal the reader may
    * not see comes back masked; an affected object they may not see keeps its place with its mask (ADR-2471).
    */
-  listProposals: lazyKernelAction("executeListProposals"),
+  listProposals: lazyKernelAction(loadRouteTransport, "executeListProposals"),
 
   /** One proposal with its plan, affected objects, requested capabilities, model, content hash and decision. */
-  getProposal: lazyKernelAction("executeGetProposal"),
+  getProposal: lazyKernelAction(loadRouteTransport, "executeGetProposal"),
 
   /**
    * Rejects an open proposal with a reason (POST /api/v1/kernel/proposals/{proposalRef}/rejection). Rejects with an
    * ApiError of status 409 when the proposal is already decided or expired, 422 without a reason and 403 without
    * proposal.reject in its study.
    */
-  rejectProposal: lazyKernelAction("executeRejectProposal"),
+  rejectProposal: lazyKernelAction(loadRouteTransport, "executeRejectProposal"),
 };

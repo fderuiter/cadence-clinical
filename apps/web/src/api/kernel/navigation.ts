@@ -6,6 +6,7 @@ import {
   type KernelSchemas,
 } from "./shared";
 
+const loadRouteTransport = () => import("./navigation.transport");
 export type KernelNode = KernelSchemas["Kernel_KernelNodeResponse"];
 export type KernelBatchNodes = KernelSchemas["Kernel_KernelBatchNodesResponse"];
 export type KernelZoomStep = KernelSchemas["Kernel_KernelZoomStepResponse"];
@@ -85,13 +86,13 @@ export const kernelNavigationApi = {
   },
 
   /** Zoom path from the tenant down to the object; presentation only, it grants nothing (spec §9.3). */
-  getZoomPath: lazyKernelAction("executeGetZoomPath"),
+  getZoomPath: lazyKernelAction(loadRouteTransport, "executeGetZoomPath"),
 
   /** Zoom children of a scope node, with their own child counts. */
-  getChildren: lazyKernelAction("executeGetChildren"),
+  getChildren: lazyKernelAction(loadRouteTransport, "executeGetChildren"),
 
   /** Kernel commands offered on the object, each with the reader's dry-run decision and its explanation (ADR-2483). */
-  getCommands: lazyKernelAction("executeGetCommands"),
+  getCommands: lazyKernelAction(loadRouteTransport, "executeGetCommands"),
 
   /** Whether the reader may exercise a capability on an object now, and why (ADR-2482). Executes nothing. */
   canI(capability: string, resource: string): Promise<KernelDecision> {
@@ -144,14 +145,14 @@ export const kernelNavigationApi = {
   },
 
   /** Trace: the object's lineage walk, backward to its inputs by default. Masked objects keep their place (ADR-2471). */
-  trace: lazyKernelAction("executeTrace"),
+  trace: lazyKernelAction(loadRouteTransport, "executeTrace"),
 
   /** Impact: what depends on the object, grouped by kind; masked objects are counted like any other (Canvas D2). */
-  dependents: lazyKernelAction("executeDependents"),
+  dependents: lazyKernelAction(loadRouteTransport, "executeDependents"),
 
   /**
    * What happened in a scope, newest first (ADR-2485). A scope the reader may not see is refused; an entry about an
    * object the reader may not see keeps its place with its kind and `mask`, and no `subject`.
    */
-  activity: lazyKernelAction("executeActivity"),
+  activity: lazyKernelAction(loadRouteTransport, "executeActivity"),
 };

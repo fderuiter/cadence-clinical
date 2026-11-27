@@ -18,29 +18,32 @@ export type KernelSchemas = components["schemas"];
 
 export const kernelClient = createOpenApiClient<paths>();
 
-type ProtocolImportModule = typeof import("./protocolImport");
-type KernelActionName = {
-  [K in keyof ProtocolImportModule]: ProtocolImportModule[K] extends (
+type KernelActionKeys<TModule> = {
+  [K in keyof TModule]: TModule[K] extends (
     ...args: never[]
   ) => Promise<unknown>
     ? K
     : never;
-}[keyof ProtocolImportModule];
+}[keyof TModule];
 
 /**
- * Creates a lazy dynamic-import forwarder to an `execute*` transport helper in `./protocolImport`,
- * preserving single-source parameter and return type inference alongside the cold-boot chunk boundary.
+ * Creates a lazy dynamic-import forwarder to an `execute*` transport helper in a slice's
+ * `./<slice>.transport` module, preserving single-source parameter and return type inference
+ * alongside the cold-boot chunk boundary.
  */
-export function lazyKernelAction<K extends KernelActionName>(
-  actionName: K
-): ProtocolImportModule[K] {
-  return (async (...args: Parameters<ProtocolImportModule[K]>) => {
-    const mod = await import("./protocolImport");
-    const fn = mod[actionName] as (
-      ...fnArgs: Parameters<ProtocolImportModule[K]>
-    ) => ReturnType<ProtocolImportModule[K]>;
+export function lazyKernelAction<
+  TModule extends object,
+  K extends KernelActionKeys<TModule>,
+>(loadModule: () => Promise<TModule>, actionName: K): TModule[K] {
+  return (async (
+    ...args: Parameters<
+      Extract<TModule[K], (...fnArgs: never[]) => Promise<unknown>>
+    >
+  ) => {
+    const mod = await loadModule();
+    const fn = mod[actionName] as (...fnArgs: typeof args) => Promise<unknown>;
     return fn(...args);
-  }) as unknown as ProtocolImportModule[K];
+  }) as unknown as TModule[K];
 }
 
 export const ASSERTION_LOCKED = "K.Assertion.Locked";
