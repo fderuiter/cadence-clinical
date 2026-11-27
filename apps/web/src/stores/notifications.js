@@ -197,20 +197,23 @@ export const useNotificationsStore = defineStore("notifications", {
         this.loading = false;
       }
     },
-    async acknowledge(id, changeReason) {
+    async _transitionNotificationStatus(
+      id,
+      changeReason,
+      { status, serviceMethod, fallbackError }
+    ) {
       this.loading = true;
       this.error = null;
       this.errorStatus = null;
       try {
         const notificationsService = await getNotificationsService();
+        const method = notificationsService[serviceMethod];
         if (isDemoBuild()) {
           const authStore = useAuthStore();
           const storageKey = getStorageKey(authStore);
           const isMocked =
-            notificationsService.acknowledgeNotification &&
-            (notificationsService.acknowledgeNotification._isMockFunction ||
-              typeof notificationsService.acknowledgeNotification.mock ===
-                "object");
+            method &&
+            (method._isMockFunction || typeof method.mock === "object");
           if (authStore.isDemoMode && !authStore.token && !isMocked) {
             await new Promise((resolve) => setTimeout(resolve, 100));
             let list = [];
@@ -231,7 +234,7 @@ export const useNotificationsStore = defineStore("notifications", {
 
             const updated = {
               ...list[index],
-              status: "ACKNOWLEDGED",
+              status,
               version_index: (list[index].version_index || 1) + 1,
               reason_for_change: changeReason,
             };
@@ -251,7 +254,7 @@ export const useNotificationsStore = defineStore("notifications", {
           }
         }
 
-        const updated = await notificationsService.acknowledgeNotification(id, {
+        const updated = await notificationsService[serviceMethod](id, {
           changeReason,
         });
         const index = this.notifications.findIndex((n) => n.id === id);
@@ -260,82 +263,26 @@ export const useNotificationsStore = defineStore("notifications", {
         }
         return updated;
       } catch (err) {
-        this.error = err.message || "Failed to acknowledge notification";
+        this.error = err.message || fallbackError;
         this.errorStatus = err.status || null;
         throw err;
       } finally {
         this.loading = false;
       }
     },
+    async acknowledge(id, changeReason) {
+      return this._transitionNotificationStatus(id, changeReason, {
+        status: "ACKNOWLEDGED",
+        serviceMethod: "acknowledgeNotification",
+        fallbackError: "Failed to acknowledge notification",
+      });
+    },
     async resolve(id, changeReason) {
-      this.loading = true;
-      this.error = null;
-      this.errorStatus = null;
-      try {
-        const notificationsService = await getNotificationsService();
-        if (isDemoBuild()) {
-          const authStore = useAuthStore();
-          const storageKey = getStorageKey(authStore);
-          const isMocked =
-            notificationsService.resolveNotification &&
-            (notificationsService.resolveNotification._isMockFunction ||
-              typeof notificationsService.resolveNotification.mock ===
-                "object");
-          if (authStore.isDemoMode && !authStore.token && !isMocked) {
-            await new Promise((resolve) => setTimeout(resolve, 100));
-            let list = [];
-            if (typeof window !== "undefined" && window.localStorage) {
-              const stored = window.localStorage.getItem(storageKey);
-              if (stored) {
-                list = JSON.parse(stored);
-              }
-            }
-            if (list.length === 0) {
-              list = JSON.parse(JSON.stringify(this.notifications));
-            }
-
-            const index = list.findIndex((n) => n.id === id);
-            if (index === -1) {
-              throw new Error("Notification not found");
-            }
-
-            const updated = {
-              ...list[index],
-              status: "RESOLVED",
-              version_index: (list[index].version_index || 1) + 1,
-              reason_for_change: changeReason,
-            };
-            list[index] = updated;
-
-            if (typeof window !== "undefined" && window.localStorage) {
-              window.localStorage.setItem(storageKey, JSON.stringify(list));
-            }
-
-            const activeIndex = this.notifications.findIndex(
-              (n) => n.id === id
-            );
-            if (activeIndex !== -1) {
-              this.notifications[activeIndex] = updated;
-            }
-            return updated;
-          }
-        }
-
-        const updated = await notificationsService.resolveNotification(id, {
-          changeReason,
-        });
-        const index = this.notifications.findIndex((n) => n.id === id);
-        if (index !== -1) {
-          this.notifications[index] = updated;
-        }
-        return updated;
-      } catch (err) {
-        this.error = err.message || "Failed to resolve notification";
-        this.errorStatus = err.status || null;
-        throw err;
-      } finally {
-        this.loading = false;
-      }
+      return this._transitionNotificationStatus(id, changeReason, {
+        status: "RESOLVED",
+        serviceMethod: "resolveNotification",
+        fallbackError: "Failed to resolve notification",
+      });
     },
     resetDemoStorage() {
       if (!isDemoBuild()) {

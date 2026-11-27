@@ -79,7 +79,7 @@ public sealed class KernelProtocolGovernanceEndpointsTests : IDisposable
     private readonly FakeClock _clock = new(T0);
     private readonly ReplayCache _sigTokenUseStore;
     private readonly InMemoryGovernanceStore _store;
-    private readonly List<WebApplicationFactory<Cadence.Kernel.Host.Program>> _factories = [];
+    private WebApplicationFactory<Cadence.Kernel.Host.Program>? _host;
 
     public KernelProtocolGovernanceEndpointsTests()
     {
@@ -131,13 +131,7 @@ public sealed class KernelProtocolGovernanceEndpointsTests : IDisposable
             AuthorityScope.Tenant());
     }
 
-    public void Dispose()
-    {
-        foreach (var factory in _factories)
-        {
-            factory.Dispose();
-        }
-    }
+    public void Dispose() => _host?.Dispose();
 
     [Fact]
     public async Task ApproveProtocolVersion_EnforcesStepUpSigToken_Headers_Authorization_ContentHashBinding_AndSingleUse()
@@ -1119,45 +1113,14 @@ public sealed class KernelProtocolGovernanceEndpointsTests : IDisposable
         var studyRef = NodeRef.For(_store.StudyId).ToString();
 
         var maskedNodes = new Dictionary<NodeRef, MaskReason>();
-        var factory = new WebApplicationFactory<Cadence.Kernel.Host.Program>().WithWebHostBuilder(builder =>
+        using var factory = CreateFactory().WithWebHostBuilder(builder =>
         {
-            builder.UseTestGatewaySecret().UseTestBiometricLivenessKey().UseTestPostgresConnectionString();
             builder.ConfigureServices(services =>
             {
-                services.RemoveAll<IClock>();
-                services.AddSingleton<IClock>(_clock);
-                services.RemoveAll<ISigTokenUseStore>();
-                services.AddSingleton<ISigTokenUseStore>(_sigTokenUseStore);
-                services.RemoveAll<ITenantDirectory>();
-                services.AddSingleton<ITenantDirectory>(_store);
-                services.RemoveAll<IAuthorityStore>();
-                services.AddSingleton<IAuthorityStore>(_store);
-                services.RemoveAll<IStudyDirectory>();
-                services.AddSingleton<IStudyDirectory>(_store);
-                services.RemoveAll<IProtocolVersionReader>();
-                services.AddSingleton<IProtocolVersionReader>(_store);
-                services.RemoveAll<IStudyGovernanceReader>();
-                services.AddSingleton<IStudyGovernanceReader>(_store);
-                services.RemoveAll<IAttestationVerifier>();
-                services.AddSingleton<IAttestationVerifier>(_store);
-                services.RemoveAll<ITenantEntitlementReader>();
-                services.AddSingleton<ITenantEntitlementReader>(_store);
-                services.RemoveAll<ITenantResidencyReader>();
-                services.AddSingleton<ITenantResidencyReader>(_store);
-                services.RemoveAll<IKernelUnitOfWorkFactory>();
-                services.AddSingleton<IKernelUnitOfWorkFactory>(_store);
-                services.RemoveAll<ISimulationInputs>();
-                services.AddSingleton<ISimulationInputs>(_store);
                 services.RemoveAll<INodeVisibility>();
                 services.AddSingleton<INodeVisibility>(new SelectiveMaskNodeVisibility(maskedNodes));
-                services.RemoveAll<IProtocolSubmissionCheck>();
-                foreach (var hosted in services.Where(d => d.ServiceType == typeof(IHostedService)).ToList())
-                {
-                    services.Remove(hosted);
-                }
             });
         });
-        _factories.Add(factory);
         using var designer = factory.CreateSignedClient(DesignerIdentity);
 
         using var submitV1 = await designer.SendAsync(BuildPost($"/api/v1/kernel/protocol-versions/{v1Ref}/submit-for-review", "mask-v1-sub", "Freeze v1", null), ct);
@@ -1261,9 +1224,8 @@ public sealed class KernelProtocolGovernanceEndpointsTests : IDisposable
             ValueTask.FromResult<IReadOnlyList<CommandAvailability>>([]);
     }
 
-    private WebApplicationFactory<Cadence.Kernel.Host.Program> CreateFactory()
-    {
-        var factory = new WebApplicationFactory<Cadence.Kernel.Host.Program>().WithWebHostBuilder(builder =>
+    private WebApplicationFactory<Cadence.Kernel.Host.Program> CreateFactory() =>
+        _host ??= new WebApplicationFactory<Cadence.Kernel.Host.Program>().WithWebHostBuilder(builder =>
         {
             builder.UseTestGatewaySecret().UseTestBiometricLivenessKey().UseTestPostgresConnectionString();
             builder.ConfigureServices(services =>
@@ -1300,9 +1262,6 @@ public sealed class KernelProtocolGovernanceEndpointsTests : IDisposable
                 }
             });
         });
-        _factories.Add(factory);
-        return factory;
-    }
 
     private HttpClient CreateClient(GatewayIdentity identity) =>
         CreateFactory().CreateSignedClient(identity);

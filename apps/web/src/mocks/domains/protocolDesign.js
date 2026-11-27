@@ -169,6 +169,41 @@ export function createProtocolDesignDomain(ctx) {
     return null;
   }
 
+  function requireMutableProtocolVersionInStatus(
+    versionRef,
+    allowedStatuses,
+    detail
+  ) {
+    const found = findMutableProtocolVersion(versionRef);
+    if (!found) {
+      return {
+        error: {
+          status: 404,
+          problem: {
+            title: "Protocol version not found",
+            status: 404,
+            code: "K.Protocol.VersionNotFound",
+          },
+        },
+      };
+    }
+    const lower = String(found.version.status).toLowerCase();
+    if (!allowedStatuses.includes(lower)) {
+      return {
+        error: {
+          status: 409,
+          problem: {
+            title: "Invalid protocol version transition",
+            status: 409,
+            code: "K.Protocol.InvalidTransition",
+            detail,
+          },
+        },
+      };
+    }
+    return found;
+  }
+
   function getProtocolVersion(versionRef) {
     const found = findMutableProtocolVersion(versionRef);
     if (found) return cloneJson(found.version);
@@ -529,34 +564,13 @@ export function createProtocolDesignDomain(ctx) {
     },
 
     submitProtocolVersionForReview(versionRef) {
-      const found = findMutableProtocolVersion(versionRef);
-      if (!found) {
-        return {
-          error: {
-            status: 404,
-            problem: {
-              title: "Protocol version not found",
-              status: 404,
-              code: "K.Protocol.VersionNotFound",
-            },
-          },
-        };
-      }
-      const { version } = found;
-      if (String(version.status).toLowerCase() !== "draft") {
-        return {
-          error: {
-            status: 409,
-            problem: {
-              title: "Invalid protocol version transition",
-              status: 409,
-              code: "K.Protocol.InvalidTransition",
-              detail:
-                "Only a Draft protocol version may be submitted for review.",
-            },
-          },
-        };
-      }
+      const checked = requireMutableProtocolVersionInStatus(
+        versionRef,
+        ["draft"],
+        "Only a Draft protocol version may be submitted for review."
+      );
+      if (checked.error) return checked;
+      const { version } = checked;
       version.status = "InReview";
       version.content_hash =
         version.content_hash || `sha256-demo-v${version.number}-frozen`;
@@ -572,34 +586,13 @@ export function createProtocolDesignDomain(ctx) {
     },
 
     returnProtocolVersionToDraft(versionRef) {
-      const found = findMutableProtocolVersion(versionRef);
-      if (!found) {
-        return {
-          error: {
-            status: 404,
-            problem: {
-              title: "Protocol version not found",
-              status: 404,
-              code: "K.Protocol.VersionNotFound",
-            },
-          },
-        };
-      }
-      const { version } = found;
-      if (String(version.status).toLowerCase() !== "inreview") {
-        return {
-          error: {
-            status: 409,
-            problem: {
-              title: "Invalid protocol version transition",
-              status: 409,
-              code: "K.Protocol.InvalidTransition",
-              detail:
-                "Only an InReview protocol version may be returned to Draft.",
-            },
-          },
-        };
-      }
+      const checked = requireMutableProtocolVersionInStatus(
+        versionRef,
+        ["inreview"],
+        "Only an InReview protocol version may be returned to Draft."
+      );
+      if (checked.error) return checked;
+      const { version } = checked;
       version.status = "Draft";
       version.content_hash = null;
       syncSummaryVersionSnapshot(version);
@@ -1066,33 +1059,13 @@ export function createProtocolDesignDomain(ctx) {
           },
         };
       }
-      const found = findMutableProtocolVersion(versionRef);
-      if (!found) {
-        return {
-          error: {
-            status: 404,
-            problem: {
-              title: "Protocol version not found",
-              status: 404,
-              code: "K.Protocol.VersionNotFound",
-            },
-          },
-        };
-      }
-      const { version } = found;
-      if (String(version.status).toLowerCase() !== "inreview") {
-        return {
-          error: {
-            status: 409,
-            problem: {
-              title: "Invalid protocol version transition",
-              status: 409,
-              code: "K.Protocol.InvalidTransition",
-              detail: "Only an InReview protocol version may be approved.",
-            },
-          },
-        };
-      }
+      const checked = requireMutableProtocolVersionInStatus(
+        versionRef,
+        ["inreview"],
+        "Only an InReview protocol version may be approved."
+      );
+      if (checked.error) return checked;
+      const { version } = checked;
       const readinessRes = methods.getProtocolApprovalReadiness(versionRef);
       if (!readinessRes.data?.ready) {
         return {
@@ -1147,35 +1120,13 @@ export function createProtocolDesignDomain(ctx) {
           },
         };
       }
-      const found = findMutableProtocolVersion(versionRef);
-      if (!found) {
-        return {
-          error: {
-            status: 404,
-            problem: {
-              title: "Protocol version not found",
-              status: 404,
-              code: "K.Protocol.VersionNotFound",
-            },
-          },
-        };
-      }
-      const { version } = found;
-      const lower = String(version.status).toLowerCase();
-      if (lower !== "inreview" && lower !== "approved") {
-        return {
-          error: {
-            status: 409,
-            problem: {
-              title: "Invalid protocol version transition",
-              status: 409,
-              code: "K.Protocol.InvalidTransition",
-              detail:
-                "Only an InReview or Approved protocol version may be withdrawn.",
-            },
-          },
-        };
-      }
+      const checked = requireMutableProtocolVersionInStatus(
+        versionRef,
+        ["inreview", "approved"],
+        "Only an InReview or Approved protocol version may be withdrawn."
+      );
+      if (checked.error) return checked;
+      const { version } = checked;
       version.status = "Withdrawn";
       version.withdrawal_reason = reason || "Withdrawn in demo session";
       syncSummaryVersionSnapshot(version);

@@ -152,45 +152,16 @@
         >
           <div>
             <div class="card-title">{{ $t("ecrf.cdashTitle") }}</div>
-            <p
-              style="
-                font-size: 0.85rem;
-                color: var(--semantic-color-text-secondary);
-                margin-bottom: 8px;
-              "
-            >
+            <p class="ecrf-cdash-lead">
               {{ $t("ecrf.cdashDesc") }}
             </p>
           </div>
 
-          <div
-            style="
-              border: 1px solid var(--border);
-              border-radius: 8px;
-              padding: 12px;
-              background-color: var(--semantic-color-surface-muted);
-            "
-          >
-            <h3
-              style="
-                font-size: 0.9rem;
-                font-weight: 700;
-                margin-bottom: 8px;
-                color: var(--text-main);
-              "
-            >
+          <div class="ecrf-cdash-box">
+            <h3 class="ecrf-cdash-heading">
               {{ $t("ecrf.validationRulesTitle") }}
             </h3>
-            <ul
-              style="
-                font-size: 0.8rem;
-                padding-left: 20px;
-                color: var(--semantic-color-text-secondary);
-                display: flex;
-                flex-direction: column;
-                gap: 6px;
-              "
-            >
+            <ul class="ecrf-cdash-list">
               <li>{{ $t("ecrf.birthDateRule") }}</li>
               <li>{{ $t("ecrf.systolicBpRule") }}</li>
               <li>{{ $t("ecrf.diastolicBpRule") }}</li>
@@ -198,31 +169,11 @@
             </ul>
           </div>
 
-          <div
-            style="
-              border: 1px solid var(--border);
-              border-radius: 8px;
-              padding: 12px;
-              background-color: var(--semantic-color-surface-muted);
-            "
-          >
-            <h3
-              style="
-                font-size: 0.9rem;
-                font-weight: 700;
-                margin-bottom: 8px;
-                color: var(--text-main);
-              "
-            >
+          <div class="ecrf-cdash-box">
+            <h3 class="ecrf-cdash-heading">
               {{ $t("ecrf.queryManagementTitle") }}
             </h3>
-            <p
-              style="
-                font-size: 0.8rem;
-                color: var(--semantic-color-text-secondary);
-                line-height: 1.4;
-              "
-            >
+            <p class="ecrf-cdash-copy">
               {{ $t("ecrf.queryManagementDesc") }}
             </p>
           </div>

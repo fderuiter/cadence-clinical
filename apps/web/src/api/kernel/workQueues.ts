@@ -1,4 +1,4 @@
-import type { KernelSchemas } from "./shared";
+import { lazyKernelAction, type KernelSchemas } from "./shared";
 
 const loadRouteTransport = () => import("./workQueues.transport");
 
@@ -17,10 +17,5 @@ export interface KernelWorkQueuesQuery {
 
 export const kernelWorkQueuesApi = {
   /** Reads the caller's capability-keyed work queues (`GET /api/v1/kernel/work-queues`). */
-  async listWorkQueues(
-    query: KernelWorkQueuesQuery = {}
-  ): Promise<KernelWorkQueuesPage> {
-    const { executeListWorkQueues } = await loadRouteTransport();
-    return executeListWorkQueues(query);
-  },
+  listWorkQueues: lazyKernelAction(loadRouteTransport, "executeListWorkQueues"),
 };

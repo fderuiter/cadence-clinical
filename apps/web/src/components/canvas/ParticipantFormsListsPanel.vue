@@ -33,57 +33,16 @@
         class="forms-list"
         data-testid="casebook-unscheduled-instances"
       >
-        <li
+        <ParticipantFormListItem
           v-for="entry in numberedUnscheduledForms"
-          :id="`record-form-${entry.summary.form_id}`"
           :key="entry.summary.form_id"
-          class="forms-item"
-        >
-          <div class="forms-item-main">
-            <component
-              :is="routerLinkComponent || 'a'"
-              :id="`record-form-link-${entry.summary.form_id}`"
-              class="forms-link"
-              v-bind="linkAttrs(formLocation(entry.summary.form_id))"
-              @click="emit('formLinkClick', $event, entry.summary.form_id)"
-            >
-              {{
-                entry.summary.collection_title ||
-                entry.summary.collection_spec_id
-              }}<template v-if="entry.totalForSpec > 1">
-                #{{ entry.ordinal }}</template
-              >
-              · Unscheduled
-            </component>
-            <span
-              class="clinical-badge cb-badge"
-              :class="
-                entry.summary.complete
-                  ? 'clinical-badge--verified cb-badge--complete'
-                  : 'clinical-badge--warning cb-badge--incomplete'
-              "
-              :data-complete="entry.summary.complete ? 'true' : 'false'"
-            >
-              {{ completenessLabel(entry.summary) }}
-            </span>
-            <span
-              v-for="badge in lifecycleBadges(entry.summary)"
-              :key="badge.key"
-              class="clinical-badge cb-badge"
-              :class="[
-                clinicalBadgeModifier(badge.tone),
-                `cb-badge--${badge.tone}`,
-              ]"
-              :data-testid="badge.testId"
-            >
-              {{ badge.label }}
-            </span>
-          </div>
-          <span class="forms-meta">
-            Version {{ entry.summary.version }} · Collected
-            {{ entry.summary.collected_at }}
-          </span>
-        </li>
+          :summary="entry.summary"
+          :title="unscheduledFormTitle(entry)"
+          :link-component="routerLinkComponent || 'a'"
+          :link-bindings="linkAttrs(formLocation(entry.summary.form_id))"
+          :badges="instanceStatusBadges(entry.summary)"
+          @select="emit('formLinkClick', $event, entry.summary.form_id)"
+        />
       </ul>
     </section>
 
@@ -95,54 +54,16 @@
     >
       <h4 id="casebook-other-forms-title">Other opened forms</h4>
       <ul class="forms-list">
-        <li
+        <ParticipantFormListItem
           v-for="summary in unmappedScheduledForms"
-          :id="`record-form-${summary.form_id}`"
           :key="summary.form_id"
-          class="forms-item"
-        >
-          <div class="forms-item-main">
-            <component
-              :is="routerLinkComponent || 'a'"
-              :id="`record-form-link-${summary.form_id}`"
-              class="forms-link"
-              v-bind="linkAttrs(formLocation(summary.form_id))"
-              @click="emit('formLinkClick', $event, summary.form_id)"
-            >
-              {{ summary.collection_title || summary.collection_spec_id
-              }}<template v-if="summary.planned_activity_id">
-                · {{ summary.planned_activity_id }}</template
-              >
-            </component>
-            <span
-              class="clinical-badge cb-badge"
-              :class="
-                summary.complete
-                  ? 'clinical-badge--verified cb-badge--complete'
-                  : 'clinical-badge--warning cb-badge--incomplete'
-              "
-              :data-complete="summary.complete ? 'true' : 'false'"
-            >
-              {{ completenessLabel(summary) }}
-            </span>
-            <span
-              v-for="badge in lifecycleBadges(summary)"
-              :key="badge.key"
-              class="clinical-badge cb-badge"
-              :class="[
-                clinicalBadgeModifier(badge.tone),
-                `cb-badge--${badge.tone}`,
-              ]"
-              :data-testid="badge.testId"
-            >
-              {{ badge.label }}
-            </span>
-          </div>
-          <span class="forms-meta">
-            Version {{ summary.version }} · Collected
-            {{ summary.collected_at }}
-          </span>
-        </li>
+          :summary="summary"
+          :title="scheduledFormTitle(summary)"
+          :link-component="routerLinkComponent || 'a'"
+          :link-bindings="linkAttrs(formLocation(summary.form_id))"
+          :badges="instanceStatusBadges(summary)"
+          @select="emit('formLinkClick', $event, summary.form_id)"
+        />
       </ul>
     </section>
   </template>
@@ -156,66 +77,20 @@
     class="forms-list"
     data-testid="participant-forms-list"
   >
-    <li
+    <ParticipantFormListItem
       v-for="summary in forms"
-      :id="`record-form-${summary.form_id}`"
       :key="summary.form_id"
-      class="forms-item"
-    >
-      <div class="forms-item-main">
-        <component
-          :is="routerLinkComponent"
-          v-if="routerLinkComponent"
-          :id="`record-form-link-${summary.form_id}`"
-          class="forms-link"
-          :to="formLocation(summary.form_id) ?? '#'"
-          @click="emit('selectForm', summary.form_id)"
-        >
-          {{ summary.collection_title || summary.collection_spec_id
-          }}<template v-if="summary.planned_activity_id">
-            · {{ summary.planned_activity_id }}</template
-          >
-        </component>
-        <a
-          v-else
-          :id="`record-form-link-${summary.form_id}`"
-          class="forms-link"
-          :href="fallbackHref(formLocation(summary.form_id))"
-          @click="emit('formLinkClick', $event, summary.form_id)"
-        >
-          {{ summary.collection_title || summary.collection_spec_id
-          }}<template v-if="summary.planned_activity_id">
-            · {{ summary.planned_activity_id }}</template
-          >
-        </a>
-        <span
-          class="clinical-badge forms-status"
-          :class="
-            summary.complete
-              ? 'clinical-badge--verified'
-              : 'clinical-badge--warning'
-          "
-          :data-complete="summary.complete ? 'true' : 'false'"
-        >
-          {{ completenessLabel(summary) }}
-        </span>
-        <span
-          v-for="badge in lifecycleBadges(summary)"
-          :key="badge.key"
-          class="clinical-badge cb-badge"
-          :class="[
-            clinicalBadgeModifier(badge.tone),
-            `cb-badge--${badge.tone}`,
-          ]"
-          :data-testid="badge.testId"
-        >
-          {{ badge.label }}
-        </span>
-      </div>
-      <span class="forms-meta">
-        Version {{ summary.version }} · Collected {{ summary.collected_at }}
-      </span>
-    </li>
+      :summary="summary"
+      :title="scheduledFormTitle(summary)"
+      :link-component="routerLinkComponent || 'a'"
+      :link-bindings="linkAttrs(formLocation(summary.form_id), true)"
+      :badges="instanceStatusBadges(summary, true)"
+      @select="
+        routerLinkComponent
+          ? emit('selectForm', summary.form_id)
+          : emit('formLinkClick', $event, summary.form_id)
+      "
+    />
   </ul>
 </template>
 
@@ -224,12 +99,8 @@ import type { Component } from "vue";
 import type { RouteLocationRaw } from "vue-router";
 import type { EcrfFormSummary } from "../../api/ecrfFormsApi";
 import type { StudyScheduleOptions } from "../../canvas/kernelStudy";
-import {
-  clinicalBadgeModifier,
-  completenessLabel,
-  fallbackHref,
-  lifecycleBadges,
-} from "./casebookBadges";
+import { fallbackHref, instanceStatusBadges } from "./casebookBadges";
+import ParticipantFormListItem from "./ParticipantFormListItem.vue";
 import type { NumberedUnscheduledForm } from "./useParticipantCasebook";
 
 const props = defineProps<{
@@ -263,9 +134,27 @@ const emit = defineEmits<{
 }>();
 
 function linkAttrs(
-  loc: RouteLocationRaw | null | undefined
+  loc: RouteLocationRaw | null | undefined,
+  fallbackToHash = false
 ): Record<string, unknown> {
-  return props.routerLinkComponent ? { to: loc } : { href: fallbackHref(loc) };
+  if (props.routerLinkComponent) {
+    return { to: fallbackToHash ? (loc ?? "#") : loc };
+  }
+  return { href: fallbackHref(loc) };
+}
+
+function unscheduledFormTitle(entry: NumberedUnscheduledForm): string {
+  const base =
+    entry.summary.collection_title || entry.summary.collection_spec_id;
+  const ordinal = entry.totalForSpec > 1 ? ` #${entry.ordinal}` : "";
+  return `${base}${ordinal} · Unscheduled`;
+}
+
+function scheduledFormTitle(summary: EcrfFormSummary): string {
+  const base = summary.collection_title || summary.collection_spec_id;
+  return summary.planned_activity_id
+    ? `${base} · ${summary.planned_activity_id}`
+    : base;
 }
 </script>
 
@@ -280,11 +169,6 @@ function linkAttrs(
   margin: 0;
   color: var(--semantic-color-text-secondary);
   font-size: 0.85rem;
-}
-
-.cb-badge,
-.forms-meta {
-  font-variant-numeric: tabular-nums;
 }
 
 .casebook-unscheduled {
@@ -324,39 +208,5 @@ function linkAttrs(
   display: flex;
   flex-direction: column;
   gap: 8px;
-}
-
-.forms-item {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 10px 12px;
-  border: 1px solid var(--semantic-color-border);
-  border-radius: 8px;
-  background: var(--semantic-color-surface);
-  font-size: 0.85rem;
-  min-width: 0;
-  max-width: 100%;
-  box-sizing: border-box;
-  overflow-wrap: anywhere;
-}
-
-.forms-item-main {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
-
-.forms-link {
-  position: relative;
-  font-weight: 600;
-  color: var(--semantic-color-interactive-primary);
-  text-decoration: underline;
-}
-
-.forms-meta {
-  color: var(--semantic-color-text-secondary);
-  font-size: 0.78rem;
 }
 </style>

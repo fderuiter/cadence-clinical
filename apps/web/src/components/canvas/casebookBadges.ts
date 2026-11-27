@@ -28,6 +28,14 @@ export interface LifecycleBadge {
   testId: string;
 }
 
+export interface FormStatusBadgeView {
+  key: string;
+  classes: string;
+  label: string;
+  dataComplete?: "true" | "false";
+  testId?: string;
+}
+
 export function fallbackHref(loc: RouteLocationRaw | null | undefined): string {
   if (!loc) return "#";
   if (typeof loc === "string") return loc;
@@ -258,4 +266,27 @@ export function clinicalBadgeModifier(tone: LifecycleBadge["tone"]): string {
     default:
       return "clinical-badge--draft";
   }
+}
+
+export function instanceStatusBadges(
+  summary: EcrfFormSummary,
+  flatStatusClass = false
+): FormStatusBadgeView[] {
+  const completenessClasses = flatStatusClass
+    ? `clinical-badge forms-status ${summary.complete ? "clinical-badge--verified" : "clinical-badge--warning"}`
+    : `clinical-badge cb-badge ${summary.complete ? "clinical-badge--verified cb-badge--complete" : "clinical-badge--warning cb-badge--incomplete"}`;
+  return [
+    {
+      key: "completeness",
+      classes: completenessClasses,
+      label: completenessLabel(summary),
+      dataComplete: summary.complete ? "true" : "false",
+    },
+    ...lifecycleBadges(summary).map((badge) => ({
+      key: badge.key,
+      classes: `clinical-badge cb-badge ${clinicalBadgeModifier(badge.tone)} cb-badge--${badge.tone}`,
+      label: badge.label,
+      testId: badge.testId,
+    })),
+  ];
 }

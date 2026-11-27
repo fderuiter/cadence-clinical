@@ -349,7 +349,7 @@ public sealed class KernelUnifiedVisibilityAndExportGatePostgresTests(ExecutionF
 
         // 1. UnblindedPharmacist sees all 3 findings (2 on Site A + 1 on Site B) with unmasked BlindedArmText.
         var pharmFindingsRaw = await GetRawAsync(unblindedPharm, $"/api/v1/kernel/studies/{studyRef}/validation/findings", HttpStatusCode.OK, ct);
-        pharmFindingsRaw.Should().Contain(BlindedArmText).And.Contain("252");
+        pharmFindingsRaw.Should().Contain(BlindedArmText).And.Contain("\"252\"");
         using var pharmFindingsDoc = JsonDocument.Parse(pharmFindingsRaw);
         pharmFindingsDoc.RootElement.GetProperty("total").GetInt32().Should().Be(3);
         var allFindings = pharmFindingsDoc.RootElement.GetProperty("findings").EnumerateArray().ToList();
@@ -358,12 +358,15 @@ public sealed class KernelUnifiedVisibilityAndExportGatePostgresTests(ExecutionF
 
         // 2. SiteACrc sees ONLY Site A's non-blinded finding (total == 1), zero Site B findings, and blinded ARM_CHECK is withheld!
         var crcFindingsRaw = await GetRawAsync(siteACrc, $"/api/v1/kernel/studies/{studyRef}/validation/findings", HttpStatusCode.OK, ct);
-        crcFindingsRaw.Should().NotContain("252").And.NotContain(siteBFindingRef).And.NotContain(BlindedArmText).And.NotContain("ARM_CHECK");
+        crcFindingsRaw.Should().NotContain("\"252\"").And.NotContain(siteBFindingRef).And.NotContain(BlindedArmText).And.NotContain("ARM_CHECK");
         using (var crcFindingsDoc = JsonDocument.Parse(crcFindingsRaw))
         {
             crcFindingsDoc.RootElement.GetProperty("total").GetInt32().Should().Be(1);
-            crcFindingsDoc.RootElement.GetProperty("findings").EnumerateArray()
-                .Single().GetProperty("rule_id").GetString().Should().Be("VS_SBP_HIGH");
+            var crcFinding = crcFindingsDoc.RootElement.GetProperty("findings").EnumerateArray().Single();
+            crcFinding.GetProperty("rule_id").GetString().Should().Be("VS_SBP_HIGH");
+            crcFinding.GetProperty("observed").EnumerateArray()
+                .Select(o => o.GetProperty("value").GetString())
+                .Should().Equal("245");
         }
 
         // Cross-site GET /validation/findings/{siteBFindingRef} returns 403 Forbidden for SiteACrc.

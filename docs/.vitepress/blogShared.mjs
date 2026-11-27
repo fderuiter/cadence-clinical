@@ -1000,6 +1000,34 @@ function renderInlineMarkdown(text, urlContext) {
   return formatted;
 }
 
+function consumeMarkdownList(lines, startIndex, itemRegex, tag, urlContext) {
+  let i = startIndex;
+  const items = [];
+  while (i < lines.length) {
+    const itemMatch = lines[i].match(itemRegex);
+    if (!itemMatch) break;
+    const itemParts = [itemMatch[1].trim()];
+    i += 1;
+    while (
+      i < lines.length &&
+      lines[i].trim() !== "" &&
+      /^\s{2,}\S/.test(lines[i]) &&
+      !/^\s*[-*+]\s+/.test(lines[i]) &&
+      !/^\s*\d+\.\s+/.test(lines[i])
+    ) {
+      itemParts.push(lines[i].trim());
+      i += 1;
+    }
+    items.push(
+      `<li>${renderInlineMarkdown(itemParts.join(" "), urlContext)}</li>`
+    );
+  }
+  return {
+    html: `<${tag}>${items.join("")}</${tag}>`,
+    nextIndex: i,
+  };
+}
+
 /**
  * Renders Markdown post body into clean semantic HTML with absolute links for RSS `<content:encoded>`.
  *
@@ -1125,55 +1153,31 @@ export function renderBlogMarkdownToHtml(markdown, urlContext) {
       continue;
     }
 
-    const ulMatch = line.match(/^\s*[-*+]\s+(.+)$/);
-    if (ulMatch) {
-      const items = [];
-      while (i < lines.length) {
-        const itemMatch = lines[i].match(/^\s*[-*+]\s+(.+)$/);
-        if (!itemMatch) break;
-        const itemParts = [itemMatch[1].trim()];
-        i += 1;
-        while (
-          i < lines.length &&
-          lines[i].trim() !== "" &&
-          /^\s{2,}\S/.test(lines[i]) &&
-          !/^\s*[-*+]\s+/.test(lines[i]) &&
-          !/^\s*\d+\.\s+/.test(lines[i])
-        ) {
-          itemParts.push(lines[i].trim());
-          i += 1;
-        }
-        items.push(
-          `<li>${renderInlineMarkdown(itemParts.join(" "), urlContext)}</li>`
-        );
-      }
-      blocks.push(`<ul>${items.join("")}</ul>`);
+    const ulListRegex = /^\s*[-*+]\s+(.+)$/;
+    const olListRegex = /^\s*\d+\.\s+(.+)$/;
+    if (ulListRegex.test(line)) {
+      const parsedList = consumeMarkdownList(
+        lines,
+        i,
+        ulListRegex,
+        "ul",
+        urlContext
+      );
+      blocks.push(parsedList.html);
+      i = parsedList.nextIndex;
       continue;
     }
 
-    const olMatch = line.match(/^\s*\d+\.\s+(.+)$/);
-    if (olMatch) {
-      const items = [];
-      while (i < lines.length) {
-        const itemMatch = lines[i].match(/^\s*\d+\.\s+(.+)$/);
-        if (!itemMatch) break;
-        const itemParts = [itemMatch[1].trim()];
-        i += 1;
-        while (
-          i < lines.length &&
-          lines[i].trim() !== "" &&
-          /^\s{2,}\S/.test(lines[i]) &&
-          !/^\s*[-*+]\s+/.test(lines[i]) &&
-          !/^\s*\d+\.\s+/.test(lines[i])
-        ) {
-          itemParts.push(lines[i].trim());
-          i += 1;
-        }
-        items.push(
-          `<li>${renderInlineMarkdown(itemParts.join(" "), urlContext)}</li>`
-        );
-      }
-      blocks.push(`<ol>${items.join("")}</ol>`);
+    if (olListRegex.test(line)) {
+      const parsedList = consumeMarkdownList(
+        lines,
+        i,
+        olListRegex,
+        "ol",
+        urlContext
+      );
+      blocks.push(parsedList.html);
+      i = parsedList.nextIndex;
       continue;
     }
 

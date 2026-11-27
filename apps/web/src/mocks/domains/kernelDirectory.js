@@ -57,6 +57,30 @@ export function createKernelDirectoryDomain(ctx) {
     });
   }
 
+  function findVisibleStudyOrError(studyRefOrCode = "") {
+    const clean = String(studyRefOrCode || "").trim();
+    const unversioned = clean.split("@")[0];
+    for (const candidate of state.studies.values()) {
+      if (
+        candidate.code.toUpperCase() === clean.toUpperCase() ||
+        String(candidate.ref).split("@")[0] === unversioned
+      ) {
+        return { study: candidate };
+      }
+    }
+    return {
+      error: {
+        status: 404,
+        problem: {
+          title: "Study not found",
+          status: 404,
+          code: "K.Study.NotFound",
+          detail: `No visible study '${clean}' exists in this tenant.`,
+        },
+      },
+    };
+  }
+
   function ensureStudyByCode(rawCode) {
     const code = (rawCode || "DEMO-01").trim() || "DEMO-01";
     for (const [existingCode, study] of state.studies.entries()) {
@@ -487,31 +511,11 @@ export function createKernelDirectoryDomain(ctx) {
       };
     }
 
-    const clean = String(studyRefOrCode || "").trim();
-    const unversioned = clean.split("@")[0];
-    let matchedStudy = null;
-    for (const candidate of state.studies.values()) {
-      if (
-        candidate.code.toUpperCase() === clean.toUpperCase() ||
-        String(candidate.ref).split("@")[0] === unversioned
-      ) {
-        matchedStudy = candidate;
-        break;
-      }
+    const studyLookup = findVisibleStudyOrError(studyRefOrCode);
+    if (studyLookup.error) {
+      return { error: studyLookup.error };
     }
-    if (!matchedStudy) {
-      return {
-        error: {
-          status: 404,
-          problem: {
-            title: "Study not found",
-            status: 404,
-            code: "K.Study.NotFound",
-            detail: `No visible study '${clean}' exists in this tenant.`,
-          },
-        },
-      };
-    }
+    const matchedStudy = studyLookup.study;
 
     const reqRef = String(body.site_ref || "")
       .trim()
@@ -858,31 +862,11 @@ export function createKernelDirectoryDomain(ctx) {
     },
 
     listStudySites(studyRefOrCode = "") {
-      const clean = String(studyRefOrCode || "").trim();
-      const unversioned = clean.split("@")[0];
-      let matchedStudy = null;
-      for (const candidate of state.studies.values()) {
-        if (
-          candidate.code.toUpperCase() === clean.toUpperCase() ||
-          String(candidate.ref).split("@")[0] === unversioned
-        ) {
-          matchedStudy = candidate;
-          break;
-        }
+      const studyLookup = findVisibleStudyOrError(studyRefOrCode);
+      if (studyLookup.error) {
+        return { error: studyLookup.error };
       }
-      if (!matchedStudy) {
-        return {
-          error: {
-            status: 404,
-            problem: {
-              title: "Study not found",
-              status: 404,
-              code: "K.Study.NotFound",
-              detail: `No visible study '${clean}' exists in this tenant.`,
-            },
-          },
-        };
-      }
+      const matchedStudy = studyLookup.study;
       const list =
         state.studySites.get(matchedStudy.code.toUpperCase()) ||
         state.studySites.get(matchedStudy.code) ||

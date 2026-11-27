@@ -294,24 +294,10 @@
                     </div>
                     <div class="cb-badges">
                       <span
-                        class="clinical-badge cb-badge"
-                        :class="
-                          inst.complete
-                            ? 'clinical-badge--verified cb-badge--complete'
-                            : 'clinical-badge--warning cb-badge--incomplete'
-                        "
-                        :data-complete="inst.complete ? 'true' : 'false'"
-                      >
-                        {{ completenessLabel(inst) }}
-                      </span>
-                      <span
-                        v-for="badge in lifecycleBadges(inst)"
+                        v-for="badge in instanceStatusBadges(inst)"
                         :key="badge.key"
-                        class="clinical-badge cb-badge"
-                        :class="[
-                          clinicalBadgeModifier(badge.tone),
-                          `cb-badge--${badge.tone}`,
-                        ]"
+                        :class="badge.classes"
+                        :data-complete="badge.dataComplete"
                         :data-testid="badge.testId"
                       >
                         {{ badge.label }}
@@ -401,11 +387,9 @@ import ParticipantFormsListsPanel from "./ParticipantFormsListsPanel.vue";
 import SupportDetails from "./SupportDetails.vue";
 import {
   canAddRepeat,
-  clinicalBadgeModifier,
-  completenessLabel,
   fallbackHref,
   instanceAriaLabel,
-  lifecycleBadges,
+  instanceStatusBadges,
   visitWindowBadgeClass,
 } from "./casebookBadges";
 import {

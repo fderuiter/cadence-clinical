@@ -1,129 +1,71 @@
 <template>
-  <main id="amendment-diff-view" class="canvas-consolidated-view">
-    <header class="consolidated-header">
-      <div>
-        <h1>Protocol Amendments</h1>
-        <p class="consolidated-subtitle">
-          Protocol amendment forking, simulation impact review,
-          <strong>21 CFR Part 11</strong> approval, and site effectivity rollout
-          are governed directly through Clinical Canvas and the Clinical Kernel.
-        </p>
-      </div>
-      <div class="consolidated-controls">
-        <ClinicalInput
-          id="amendment-diff-study-select"
-          v-model="selectedStudyCode"
-          label="Study"
-          type="select"
-          density="compact"
-          :show-query-flag="false"
-          :disabled="studiesLoading"
-        >
-          <option value="">{{ studyPlaceholder }}</option>
-          <option
-            v-for="item in studyOptions"
-            :key="item.key"
-            :value="item.code"
-          >
-            {{ item.label }}
-          </option>
-        </ClinicalInput>
-        <button
-          type="button"
-          class="btn btn-secondary"
-          data-testid="open-amendment-governance-modal"
-          @click="isGovernanceModalOpen = true"
-        >
-          Part 11 Governance
-        </button>
-        <router-link
-          v-if="selectedStudyCode"
-          class="btn btn-secondary"
-          data-testid="open-canvas-protocol-versions-link"
-          :to="canvasProtocolVersionsLocation"
-        >
-          Open in Clinical Canvas
-        </router-link>
-      </div>
-    </header>
-
-    <p v-if="studiesError" class="status-line error-banner" role="alert">
-      {{ studiesError }}
-    </p>
-    <p
-      v-else-if="!selectedStudyCode && !studiesLoading"
-      class="status-line"
-      data-testid="amendment-diff-choose-study"
-    >
-      Choose a study to inspect protocol versions, fork an amendment draft, and
-      review simulation readiness.
-    </p>
-    <ProtocolVersionsSection
-      v-else-if="selectedStudyCode"
-      :study-code="selectedStudyCode"
-      :selected-ref="selectedVersionRef"
-      @select="(version) => (selectedVersionRef = version?.ref || '')"
-    />
-
-    <ClinicalModal
-      v-model="isGovernanceModalOpen"
-      :teleport="false"
-      title="21 CFR Part 11 Protocol Amendment Governance"
-      :show-footer="false"
-    >
-      <div class="governance-modal-body">
-        <p>
-          <strong>Forked amendments</strong> clone an approved parent protocol
-          version into an editable draft with explicit regulatory classification
-          and participant transition policy.
-        </p>
-        <p>
-          <strong>Simulation review gate</strong> requires a saved
-          <code>SimulationReport</code> artifact and a signed
-          <code>Reviewed</code> attestation before step-up
-          <code>X-Sig-Token</code> approval of any forked amendment.
-        </p>
-      </div>
-    </ClinicalModal>
-  </main>
+  <ConsolidatedStudyHeader
+    view-id="amendment-diff-view"
+    title="Protocol Amendments"
+    select-id="amendment-diff-study-select"
+    choose-study-test-id="amendment-diff-choose-study"
+    choose-study-message="Choose a study to inspect protocol versions, fork an amendment draft, and review simulation readiness."
+    canvas-link-test-id="open-canvas-protocol-versions-link"
+    canvas-stage="design"
+    canvas-section="protocol-versions"
+    :canvas-node="selectedVersionRef"
+    @study-change="selectedVersionRef = ''"
+  >
+    <template #subtitle>
+      Protocol amendment forking, simulation impact review,
+      <strong>21 CFR Part 11</strong> approval, and site effectivity rollout are
+      governed directly through Clinical Canvas and the Clinical Kernel.
+    </template>
+    <template #extra-controls>
+      <button
+        type="button"
+        class="btn btn-secondary"
+        data-testid="open-amendment-governance-modal"
+        @click="isGovernanceModalOpen = true"
+      >
+        Part 11 Governance
+      </button>
+    </template>
+    <template #default="{ studyCode }">
+      <ProtocolVersionsSection
+        :study-code="studyCode"
+        :selected-ref="selectedVersionRef"
+        @select="(version) => (selectedVersionRef = version?.ref || '')"
+      />
+    </template>
+    <template #modals>
+      <ClinicalModal
+        v-model="isGovernanceModalOpen"
+        :teleport="false"
+        title="21 CFR Part 11 Protocol Amendment Governance"
+        :show-footer="false"
+      >
+        <div class="governance-modal-body">
+          <p>
+            <strong>Forked amendments</strong> clone an approved parent protocol
+            version into an editable draft with explicit regulatory
+            classification and participant transition policy.
+          </p>
+          <p>
+            <strong>Simulation review gate</strong> requires a saved
+            <code>SimulationReport</code> artifact and a signed
+            <code>Reviewed</code> attestation before step-up
+            <code>X-Sig-Token</code> approval of any forked amendment.
+          </p>
+        </div>
+      </ClinicalModal>
+    </template>
+  </ConsolidatedStudyHeader>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
-import { ClinicalInput, ClinicalModal } from "ui";
+import { ref } from "vue";
+import { ClinicalModal } from "ui";
+import ConsolidatedStudyHeader from "../components/canvas/ConsolidatedStudyHeader.vue";
 import ProtocolVersionsSection from "../components/canvas/ProtocolVersionsSection.vue";
-import { useConsolidatedStudyList } from "../composables/useConsolidatedStudyList";
-import { useScopedNavigation } from "../composables/useScopedNavigation";
 
-const { studies, studiesLoading, studiesError, selectedStudyCode } =
-  useConsolidatedStudyList();
-const { scopedStudyLocation } = useScopedNavigation(
-  () => selectedStudyCode.value
-);
 const selectedVersionRef = ref("");
 const isGovernanceModalOpen = ref(false);
-const studyPlaceholder = computed(() =>
-  studiesLoading.value ? "Loading studies…" : "Select a study…"
-);
-const studyOptions = computed(() =>
-  studies.value.map((study) => ({
-    key: study.ref || study.code,
-    code: study.code,
-    label: `${study.code} — ${study.title}`,
-  }))
-);
-
-watch(selectedStudyCode, () => {
-  selectedVersionRef.value = "";
-});
-
-const canvasProtocolVersionsLocation = computed(() =>
-  scopedStudyLocation({
-    stage: "design",
-    section: "protocol-versions",
-    ...(selectedVersionRef.value ? { node: selectedVersionRef.value } : {}),
-  })
-);
 </script>
 
 <style scoped>
@@ -139,5 +81,3 @@ const canvasProtocolVersionsLocation = computed(() =>
   margin: 0;
 }
 </style>
-
-<style scoped src="./consolidatedCanvasView.css"></style>

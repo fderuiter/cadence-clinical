@@ -144,41 +144,14 @@
       <div
         v-if="isTrainingGated"
         id="training-gating-banner"
-        class="training-banner"
-        style="
-          background-color: var(--semantic-color-warning-bg-soft);
-          border: 2px solid var(--semantic-color-warning-border-strong);
-          border-radius: 8px;
-          padding: 16px 20px;
-          margin-bottom: var(--spacing-md);
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          flex-wrap: wrap;
-          gap: 12px;
-        "
+        class="training-banner crc-gating-banner crc-gating-banner--training"
       >
         <div>
-          <div
-            style="
-              font-size: 1.05rem;
-              font-weight: 700;
-              color: var(--semantic-color-warning-text);
-              display: flex;
-              align-items: center;
-              gap: 8px;
-            "
-          >
+          <div class="crc-gating-banner__title crc-gating-banner__title--warn">
             <span><ClinicalIcon name="file-text" :size="16" /></span>
             <span>{{ $t("ecrf.form.trainingGatedTitle") }}</span>
           </div>
-          <p
-            style="
-              margin: 4px 0 0 0;
-              font-size: 0.875rem;
-              color: var(--semantic-color-warning-text);
-            "
-          >
+          <p class="crc-gating-banner__desc crc-gating-banner__desc--warn">
             {{ $t("ecrf.form.trainingGatedDesc") }}
           </p>
         </div>
@@ -191,18 +164,8 @@
             <button
               id="btn-complete-training"
               type="button"
-              class="btn btn-primary"
+              class="btn btn-primary crc-banner-btn crc-banner-btn--warn"
               :data-href="href || trainingLocation"
-              style="
-                background-color: var(--semantic-color-warning-action);
-                color: var(--semantic-color-text-on-solid);
-                font-weight: bold;
-                padding: 8px 14px;
-                font-size: 0.85rem;
-                border: none;
-                border-radius: 4px;
-                cursor: pointer;
-              "
               @click="navigate"
             >
               {{ $t("ecrf.form.completeTrainingNow") }}
@@ -215,59 +178,22 @@
       <div
         v-if="isReconsentGated"
         id="reconsent-gating-banner"
-        class="reconsent-banner"
-        style="
-          background-color: var(--semantic-color-error-bg-soft);
-          border: 2px solid var(--semantic-color-error);
-          border-radius: 8px;
-          padding: 16px 20px;
-          margin-bottom: var(--spacing-md);
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          flex-wrap: wrap;
-          gap: 12px;
-        "
+        class="reconsent-banner crc-gating-banner crc-gating-banner--reconsent"
       >
         <div>
-          <div
-            style="
-              font-size: 1.05rem;
-              font-weight: 700;
-              color: var(--semantic-color-error-text-dark);
-              display: flex;
-              align-items: center;
-              gap: 8px;
-            "
-          >
+          <div class="crc-gating-banner__title crc-gating-banner__title--error">
             <span><ClinicalIcon name="alert-triangle" :size="16" /></span>
             <span>{{ $t("ecrf.form.reconsentGatedTitle") }}</span>
           </div>
-          <p
-            style="
-              margin: 4px 0 0 0;
-              font-size: 0.875rem;
-              color: var(--semantic-color-error-text-deep);
-            "
-          >
+          <p class="crc-gating-banner__desc crc-gating-banner__desc--error">
             {{ $t("ecrf.form.reconsentGatedDesc") }}
           </p>
         </div>
-        <div style="display: flex; gap: 8px; flex-wrap: wrap">
+        <div class="crc-gating-banner__actions">
           <button
             id="btn-open-econsent"
             type="button"
-            class="btn btn-primary"
-            style="
-              background-color: var(--semantic-color-error-interactive);
-              color: var(--semantic-color-text-on-solid);
-              font-weight: bold;
-              padding: 8px 14px;
-              font-size: 0.85rem;
-              border-radius: 6px;
-              border: none;
-              cursor: pointer;
-            "
+            class="btn btn-primary crc-banner-btn crc-banner-btn--error"
             @click="$emit('open-econsent-modal')"
           >
             {{ $t("ecrf.form.openEconsent") }}
@@ -275,17 +201,7 @@
           <button
             id="btn-upload-paper-icf"
             type="button"
-            class="btn btn-secondary"
-            style="
-              background-color: var(--semantic-color-surface);
-              color: var(--semantic-color-error-text-dark);
-              border: 1px solid var(--semantic-color-error);
-              font-weight: bold;
-              padding: 8px 14px;
-              font-size: 0.85rem;
-              border-radius: 6px;
-              cursor: pointer;
-            "
+            class="btn btn-secondary crc-banner-btn crc-banner-btn--error-outline"
             @click="$emit('open-paper-icf-modal')"
           >
             {{ $t("ecrf.form.uploadPaperIcf") }}
@@ -297,41 +213,13 @@
       <div
         v-if="activeEditCheckAlerts.length > 0"
         id="edit-checks-summary-bar"
-        style="
-          background-color: var(--semantic-color-warning-bg-soft);
-          border: 1px solid var(--semantic-color-warning-border);
-          border-left: 4px solid var(--semantic-color-warning-border-strong);
-          border-radius: 6px;
-          padding: 10px 14px;
-          margin-bottom: var(--spacing-md);
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          flex-wrap: wrap;
-          gap: 8px;
-        "
+        class="crc-status-bar crc-status-bar--warn"
       >
-        <div
-          style="
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 0.875rem;
-            color: var(--semantic-color-warning-text);
-            font-weight: 600;
-          "
-        >
+        <div class="crc-status-bar__lead crc-status-bar__lead--warn">
           <span> {{ $t("ecrf.form.liveEditChecks") }}</span>
           <span
             v-if="discrepancyAlertsCount > 0"
-            class="badge badge-discrepancy tabular-nums"
-            style="
-              background-color: var(--semantic-color-error-interactive);
-              color: var(--semantic-color-text-on-solid);
-              padding: 2px 6px;
-              border-radius: 4px;
-              font-size: 0.75rem;
-            "
+            class="badge badge-discrepancy tabular-nums crc-status-pill crc-status-pill--error"
           >
             {{
               $t("ecrf.form.discrepancyCount", {
@@ -341,19 +229,12 @@
           </span>
           <span
             v-if="warningAlertsCount > 0"
-            class="badge badge-warning tabular-nums"
-            style="
-              background-color: var(--semantic-color-warning-action);
-              color: var(--semantic-color-text-on-solid);
-              padding: 2px 6px;
-              border-radius: 4px;
-              font-size: 0.75rem;
-            "
+            class="badge badge-warning tabular-nums crc-status-pill crc-status-pill--warn"
           >
             {{ $t("ecrf.form.warningCount", { count: warningAlertsCount }) }}
           </span>
         </div>
-        <div style="font-size: 0.8rem; color: var(--semantic-color-warning)">
+        <div class="crc-status-bar__meta crc-status-bar__meta--warn">
           {{ $t("ecrf.form.realtimeEvaluationActive") }}
         </div>
       </div>
@@ -362,31 +243,9 @@
       <div
         v-if="isDirty || draftRestored"
         id="ecrf-draft-status-banner"
-        class="draft-banner"
-        style="
-          background-color: var(--semantic-color-info-bg);
-          border: 1px solid var(--semantic-color-divider-accent);
-          border-left: 4px solid var(--semantic-color-interactive-primary);
-          border-radius: 6px;
-          padding: 10px 14px;
-          margin-bottom: var(--spacing-md);
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          flex-wrap: wrap;
-          gap: 8px;
-        "
+        class="draft-banner crc-status-bar crc-status-bar--info"
       >
-        <div
-          style="
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 0.875rem;
-            color: var(--semantic-color-info);
-            font-weight: 600;
-          "
-        >
+        <div class="crc-status-bar__lead crc-status-bar__lead--info">
           <span>
             {{
               isDirty
@@ -395,19 +254,12 @@
             }}</span
           >
           <span
-            class="badge badge-draft"
-            style="
-              background-color: var(--semantic-color-interactive-primary);
-              color: var(--semantic-color-text-on-primary);
-              padding: 2px 6px;
-              border-radius: 4px;
-              font-size: 0.75rem;
-            "
+            class="badge badge-draft crc-status-pill crc-status-pill--draft"
           >
             Draft
           </span>
         </div>
-        <div style="font-size: 0.8rem; color: var(--semantic-color-info)">
+        <div class="crc-status-bar__meta crc-status-bar__meta--info">
           {{
             isDirty
               ? $t("ecrf.form.draftAutoSaving")
@@ -1213,5 +1065,161 @@ function updateFieldValue(fieldId, val) {
 <style scoped>
 #form-VS_DEMO :deep(.clinical-form-field-wrapper) {
   content-visibility: visible !important;
+}
+
+.crc-gating-banner {
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin-bottom: var(--spacing-md);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.crc-gating-banner--training {
+  background-color: var(--semantic-color-warning-bg-soft);
+  border: 2px solid var(--semantic-color-warning-border-strong);
+}
+
+.crc-gating-banner--reconsent {
+  background-color: var(--semantic-color-error-bg-soft);
+  border: 2px solid var(--semantic-color-error);
+}
+
+.crc-gating-banner__title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.crc-gating-banner__title--warn {
+  color: var(--semantic-color-warning-text);
+}
+
+.crc-gating-banner__title--error {
+  color: var(--semantic-color-error-text-dark);
+}
+
+.crc-gating-banner__desc {
+  margin: 4px 0 0 0;
+  font-size: 0.875rem;
+}
+
+.crc-gating-banner__desc--warn {
+  color: var(--semantic-color-warning-text);
+}
+
+.crc-gating-banner__desc--error {
+  color: var(--semantic-color-error-text-deep);
+}
+
+.crc-gating-banner__actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.crc-banner-btn {
+  font-weight: bold;
+  padding: 8px 14px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.crc-banner-btn--warn {
+  background-color: var(--semantic-color-warning-action);
+  color: var(--semantic-color-text-on-solid);
+  border: none;
+  border-radius: 4px;
+}
+
+.crc-banner-btn--error {
+  background-color: var(--semantic-color-error-interactive);
+  color: var(--semantic-color-text-on-solid);
+  border-radius: 6px;
+  border: none;
+}
+
+.crc-banner-btn--error-outline {
+  background-color: var(--semantic-color-surface);
+  color: var(--semantic-color-error-text-dark);
+  border: 1px solid var(--semantic-color-error);
+  border-radius: 6px;
+}
+
+.crc-status-bar {
+  border-radius: 6px;
+  padding: 10px 14px;
+  margin-bottom: var(--spacing-md);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.crc-status-bar--warn {
+  background-color: var(--semantic-color-warning-bg-soft);
+  border: 1px solid var(--semantic-color-warning-border);
+  border-left: 4px solid var(--semantic-color-warning-border-strong);
+}
+
+.crc-status-bar--info {
+  background-color: var(--semantic-color-info-bg);
+  border: 1px solid var(--semantic-color-divider-accent);
+  border-left: 4px solid var(--semantic-color-interactive-primary);
+}
+
+.crc-status-bar__lead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.crc-status-bar__lead--warn {
+  color: var(--semantic-color-warning-text);
+}
+
+.crc-status-bar__lead--info {
+  color: var(--semantic-color-info);
+}
+
+.crc-status-pill {
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+}
+
+.crc-status-pill--error {
+  background-color: var(--semantic-color-error-interactive);
+  color: var(--semantic-color-text-on-solid);
+}
+
+.crc-status-pill--warn {
+  background-color: var(--semantic-color-warning-action);
+  color: var(--semantic-color-text-on-solid);
+}
+
+.crc-status-pill--draft {
+  background-color: var(--semantic-color-interactive-primary);
+  color: var(--semantic-color-text-on-primary);
+}
+
+.crc-status-bar__meta {
+  font-size: 0.8rem;
+}
+
+.crc-status-bar__meta--warn {
+  color: var(--semantic-color-warning);
+}
+
+.crc-status-bar__meta--info {
+  color: var(--semantic-color-info);
 }
 </style>
