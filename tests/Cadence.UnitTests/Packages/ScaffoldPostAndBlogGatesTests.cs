@@ -42,9 +42,11 @@ public sealed class ScaffoldPostAndBlogGatesTests : IDisposable
         string docsDir = Path.Combine(_tempDir, "docs");
         Directory.CreateDirectory(Path.Combine(docsDir, "blog"));
         File.WriteAllText(Path.Combine(docsDir, "blog", "index.md"), "# Engineering Blog\n");
+        const string hubContent = "# Documentation Index\n\n## Category Shards\n\n| Shard | Scope |\n| --- | --- |\n| [Engineering Blog](blog/DOC_INDEX.md) | Blog |\n";
+        File.WriteAllText(Path.Combine(docsDir, "DOCUMENTATION_INDEX.md"), hubContent);
         File.WriteAllText(
-            Path.Combine(docsDir, "DOCUMENTATION_INDEX.md"),
-            "# Documentation Index\n\n## Engineering blog\n\n| Document | Status | What it is |\n| --- | --- | --- |\n| [Blog](blog/index.md) | Current | Overview |\n");
+            Path.Combine(docsDir, "blog", "DOC_INDEX.md"),
+            "# Engineering Blog Index\n\n| Document | Status | What it is |\n| --- | --- | --- |\n| [Blog](index.md) | Current | Overview |\n");
 
         var clock = new FakeClock(new DateTimeOffset(2026, 11, 20, 14, 30, 0, TimeSpan.Zero));
         int exitCode = ScaffoldCommands.ScaffoldPost(
@@ -72,8 +74,9 @@ public sealed class ScaffoldPostAndBlogGatesTests : IDisposable
         postContent.Should().Contain("next: false");
         postContent.Should().Contain("# Ship Kernel \"Phase 3\" Milestones!");
 
-        string updatedIndex = File.ReadAllText(Path.Combine(docsDir, "DOCUMENTATION_INDEX.md"));
-        updatedIndex.Should().NotContain("blog/2026-11-20-ship-kernel-phase-3-milestones.md");
+        string updatedShard = File.ReadAllText(Path.Combine(docsDir, "blog", "DOC_INDEX.md"));
+        updatedShard.Should().NotContain("2026-11-20-ship-kernel-phase-3-milestones.md");
+        File.ReadAllText(Path.Combine(docsDir, "DOCUMENTATION_INDEX.md")).Should().Be(hubContent);
         DocIndexSyncService.SyncDocIndex(check: true, repoRoot: _tempDir).Should().Be(0);
     }
 
@@ -83,9 +86,11 @@ public sealed class ScaffoldPostAndBlogGatesTests : IDisposable
         string docsDir = Path.Combine(_tempDir, "docs");
         Directory.CreateDirectory(Path.Combine(docsDir, "blog"));
         File.WriteAllText(Path.Combine(docsDir, "blog", "index.md"), "# Engineering Blog\n");
+        const string hubContent = "# Documentation Index\n\n## Category Shards\n\n| Shard | Scope |\n| --- | --- |\n| [Engineering Blog](blog/DOC_INDEX.md) | Blog |\n";
+        File.WriteAllText(Path.Combine(docsDir, "DOCUMENTATION_INDEX.md"), hubContent);
         File.WriteAllText(
-            Path.Combine(docsDir, "DOCUMENTATION_INDEX.md"),
-            "# Documentation Index\n\n## Engineering blog\n\n| Document | Status | What it is |\n| --- | --- | --- |\n| [Blog](blog/index.md) | Current | Overview |\n");
+            Path.Combine(docsDir, "blog", "DOC_INDEX.md"),
+            "# Engineering Blog Index\n\n| Document | Status | What it is |\n| --- | --- | --- |\n| [Blog](index.md) | Current | Overview |\n");
 
         var clock = new FakeClock(new DateTimeOffset(2026, 11, 20, 9, 0, 0, TimeSpan.Zero));
 
@@ -104,9 +109,10 @@ public sealed class ScaffoldPostAndBlogGatesTests : IDisposable
         File.ReadAllText(postPath).Should().Contain("draft: false");
         File.ReadAllText(postPath).Should().Contain("tags: [\"engineering\"]");
 
-        string updatedIndex = File.ReadAllText(Path.Combine(docsDir, "DOCUMENTATION_INDEX.md"));
-        updatedIndex.Should().Contain("blog/2026-11-20-immediate-release-note.md");
-        updatedIndex.Should().Contain("2026-11-20 — Published immediately for subscribers.");
+        string updatedShard = File.ReadAllText(Path.Combine(docsDir, "blog", "DOC_INDEX.md"));
+        updatedShard.Should().Contain("2026-11-20-immediate-release-note.md");
+        updatedShard.Should().Contain("2026-11-20 — Published immediately for subscribers.");
+        File.ReadAllText(Path.Combine(docsDir, "DOCUMENTATION_INDEX.md")).Should().Be(hubContent);
         DocIndexSyncService.SyncDocIndex(check: true, repoRoot: _tempDir).Should().Be(0);
 
         ScaffoldCommands.ScaffoldPost("Immediate Release Note", repoRoot: _tempDir, clock: clock, draft: false)

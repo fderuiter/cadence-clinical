@@ -3,7 +3,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 
-using Cadence.Testing;
+using Cadence.Cli.Commands;
+using Cadence.Testing.Time;
 using Cadence.ToolingCore.Services;
 
 using FluentAssertions;
@@ -13,8 +14,8 @@ using Xunit;
 namespace Cadence.UnitTests.Packages;
 
 /// <summary>
-/// ADR integrity checks run by <c>cadence check adrs</c>: unique numbers, <c># ADR-NNNN:</c> headings,
-/// and an index that lists every ADR exactly once with no broken links.
+/// ADR integrity and domain-sharded scaffolding checks run by <c>cadence check adrs</c> and
+/// <c>cadence scaffold adr --domain &lt;slug&gt;</c>.
 /// </summary>
 public sealed class AdrValidatorServiceTests : IDisposable
 {
@@ -47,9 +48,6 @@ public sealed class AdrValidatorServiceTests : IDisposable
     private void WriteIndex(params string[] lines) =>
         File.WriteAllText(Path.Combine(_adrDir, "index.md"), string.Join("\n", lines) + "\n");
 
-    /// <summary>
-    /// A directory whose ADRs are uniquely numbered and fully indexed has no integrity errors.
-    /// </summary>
     [Fact]
     [Trait("Category", "Tooling")]
     public void FindIntegrityErrors_ConsistentDirectory_ReturnsNoErrors()
@@ -69,9 +67,6 @@ public sealed class AdrValidatorServiceTests : IDisposable
         AdrValidatorService.FindIntegrityErrors(_adrDir).Should().BeEmpty();
     }
 
-    /// <summary>
-    /// Two ADRs carrying the same number (including zero-padded variants) are reported as a duplicate.
-    /// </summary>
     [Fact]
     [Trait("Category", "Tooling")]
     public void FindIntegrityErrors_DuplicateNumber_ReportsBothFiles()
@@ -88,9 +83,6 @@ public sealed class AdrValidatorServiceTests : IDisposable
             .Which.Should().Contain("ADR-085").And.Contain("2026-01-01-first.md").And.Contain("2026-01-02-second.md");
     }
 
-    /// <summary>
-    /// An ADR whose first line is not a numbered "# ADR-NNNN: Title" heading is rejected.
-    /// </summary>
     [Theory]
     [Trait("Category", "Tooling")]
     [InlineData("# ADR 2026-07-22: Date-Based Title")]
@@ -109,9 +101,6 @@ public sealed class AdrValidatorServiceTests : IDisposable
             .Which.Should().Contain("2026-01-01-first.md").And.Contain("heading");
     }
 
-    /// <summary>
-    /// Index links to files that do not exist are reported with their line number.
-    /// </summary>
     [Fact]
     [Trait("Category", "Tooling")]
     public void FindIntegrityErrors_BrokenIndexLink_IsReported()
@@ -129,9 +118,6 @@ public sealed class AdrValidatorServiceTests : IDisposable
         errors.Should().Contain(e => e.Contains("line 3") && e.Contains("2026-01-02-gone.md"));
     }
 
-    /// <summary>
-    /// An ADR missing from the index, or listed more than once, is reported.
-    /// </summary>
     [Fact]
     [Trait("Category", "Tooling")]
     public void FindIntegrityErrors_UnlistedAndDoublyListedAdrs_AreReported()
@@ -148,12 +134,9 @@ public sealed class AdrValidatorServiceTests : IDisposable
 
         errors.Should().HaveCount(2);
         errors.Should().Contain(e => e.Contains("2026-01-01-first.md") && e.Contains("listed 2 times"));
-        errors.Should().Contain(e => e.Contains("2026-01-02-second.md") && e.Contains("missing from index"));
+        errors.Should().Contain(e => e.Contains("2026-01-02-second.md") && e.Contains("missing from"));
     }
 
-    /// <summary>
-    /// Heading parsing accepts three-or-more digit numbers and rejects everything else.
-    /// </summary>
     [Theory]
     [Trait("Category", "Tooling")]
     [InlineData("# ADR-049: Title", 49)]
@@ -167,9 +150,6 @@ public sealed class AdrValidatorServiceTests : IDisposable
         AdrValidatorService.ParseAdrNumber(line).Should().Be(expected);
     }
 
-    /// <summary>
-    /// The repository's own docs/adr directory satisfies every integrity rule.
-    /// </summary>
     [Fact]
     [Trait("Category", "Tooling")]
     public void FindIntegrityErrors_RepositoryAdrDirectory_IsConsistent()
@@ -181,7 +161,99 @@ public sealed class AdrValidatorServiceTests : IDisposable
 
     [Fact]
     [Trait("Category", "Tooling")]
-    public void ValidateAdrs_RejectsCommittedGatewayAndPackageJsonDependencyChangesWithoutAdr_AndAdmitsPreCommitWhenBranchAddedAdr()
+    public void ScaffoldAdr_WritesDomainShardedAdrUsingInjectedClock_SortsShardAlphabetically_AndKeepsHubStatic()
+    {
+        string repo = Path.Combine(_adrDir, "scaffold-repo");
+        string adrDir = Path.Combine(repo, "docs", "adr");
+        Directory.CreateDirectory(adrDir);
+
+        string hubContent = "# Architectural Decision Records (Index)\n\nStatic hub.\n";
+        string legacyContent = "# Frozen Legacy ADRs\n\n### 2. API Gateway, Security & Identity\n\n- [ADR-0100: Initial](2025-01-01-initial.md)\n";
+        File.WriteAllText(Path.Combine(adrDir, "TEMPLATE.md"), "# ADR-[NUMBER]: Title\n");
+        File.WriteAllText(Path.Combine(adrDir, "index.md"), hubContent);
+        File.WriteAllText(Path.Combine(adrDir, "legacy-index.md"), legacyContent);
+        File.WriteAllText(Path.Combine(adrDir, "2025-01-01-initial.md"), "# ADR-0100: Initial\n\n- **Status:** Accepted\n");
+
+        var clock = new FakeClock(new DateTimeOffset(2026, 11, 27, 15, 30, 0, TimeSpan.Zero));
+
+        // Unknown domain fails with exit code 1.
+        ScaffoldCommands.ScaffoldAdr("Some Decision", "unknown-domain", repoRoot: repo, clock: clock)
+            .Should().Be(1);
+
+        // Scaffold two security ADRs in reverse alphabetical order ("Zeta" then "Alpha") and one frontend ADR.
+        ScaffoldCommands.ScaffoldAdr("Zeta Token Rotation", "security", repoRoot: repo, clock: clock)
+            .Should().Be(0);
+        ScaffoldCommands.ScaffoldAdr("Alpha mTLS Binding", "security", repoRoot: repo, clock: clock)
+            .Should().Be(0);
+        ScaffoldCommands.ScaffoldAdr("Clinical Table Virtualization", "frontend", repoRoot: repo, clock: clock)
+            .Should().Be(0);
+
+        // Duplicate filename fails closed without overwriting.
+        ScaffoldCommands.ScaffoldAdr("Alpha mTLS Binding", "security", repoRoot: repo, clock: clock)
+            .Should().Be(1);
+
+        string alphaFile = Path.Combine(adrDir, "security", "2026-11-27-alpha-mtls-binding.md");
+        string zetaFile = Path.Combine(adrDir, "security", "2026-11-27-zeta-token-rotation.md");
+        string frontendFile = Path.Combine(adrDir, "frontend", "2026-11-27-clinical-table-virtualization.md");
+
+        File.ReadAllText(alphaFile).Should().StartWith("# ADR-SECURITY-20261127-alpha-mtls-binding: Alpha mTLS Binding\n");
+        File.ReadAllText(alphaFile).Should().Contain("- **Date:** 2026-11-27");
+        File.ReadAllText(zetaFile).Should().StartWith("# ADR-SECURITY-20261127-zeta-token-rotation: Zeta Token Rotation\n");
+        File.ReadAllText(frontendFile).Should().StartWith("# ADR-FRONTEND-20261127-clinical-table-virtualization: Clinical Table Virtualization\n");
+
+        // Security shard index must have Alpha before Zeta even though Zeta was scaffolded first.
+        string securityIndex = File.ReadAllText(Path.Combine(adrDir, "security", "index.md"));
+        int alphaIdx = securityIndex.IndexOf("2026-11-27-alpha-mtls-binding.md", StringComparison.Ordinal);
+        int zetaIdx = securityIndex.IndexOf("2026-11-27-zeta-token-rotation.md", StringComparison.Ordinal);
+        alphaIdx.Should().BeGreaterThanOrEqualTo(0);
+        zetaIdx.Should().BeGreaterThan(alphaIdx);
+
+        // Hub index.md and legacy-index.md must remain 100% untouched.
+        File.ReadAllText(Path.Combine(adrDir, "index.md")).Should().Be(hubContent);
+        File.ReadAllText(Path.Combine(adrDir, "legacy-index.md")).Should().Be(legacyContent);
+
+        AdrValidatorService.FindIntegrityErrors(adrDir).Should().BeEmpty();
+    }
+
+    [Fact]
+    [Trait("Category", "Tooling")]
+    public void FindIntegrityErrors_DomainShards_EnforcesHeaderDomainDateSlugUniqueIdsAndAlphabeticalOrder()
+    {
+        string repoAdr = Path.Combine(_adrDir, "domain-errors");
+        string secDir = Path.Combine(repoAdr, "security");
+        Directory.CreateDirectory(secDir);
+
+        File.WriteAllText(Path.Combine(repoAdr, "TEMPLATE.md"), "# ADR-[NUMBER]: Title\n");
+        File.WriteAllText(Path.Combine(repoAdr, "index.md"), "# ADR Hub\n");
+        File.WriteAllText(Path.Combine(repoAdr, "legacy-index.md"), "# Legacy\n");
+
+        // Out-of-order entries in security/index.md + mismatched domain header on one file.
+        File.WriteAllText(
+            Path.Combine(secDir, "2026-11-27-zeta-policy.md"),
+            "# ADR-SECURITY-20261127-zeta-policy: Zeta Policy\n\n- **Status:** Accepted\n");
+        File.WriteAllText(
+            Path.Combine(secDir, "2026-11-27-alpha-policy.md"),
+            "# ADR-FRONTEND-20261127-alpha-policy: Wrong Domain Prefix\n\n- **Status:** Accepted\n");
+        File.WriteAllText(
+            Path.Combine(secDir, "index.md"),
+            string.Join(
+                '\n',
+                "# Security ADRs",
+                "",
+                "## Decisions",
+                "",
+                "- [Zeta](2026-11-27-zeta-policy.md)",
+                "- [Alpha](2026-11-27-alpha-policy.md)",
+                ""));
+
+        var errors = AdrValidatorService.FindIntegrityErrors(repoAdr);
+        errors.Should().Contain(e => e.Contains("security/2026-11-27-alpha-policy.md") && e.Contains("does not match directory domain 'SECURITY'"));
+        errors.Should().Contain(e => e.Contains("security/index.md") && e.Contains("not sorted alphabetically by filename"));
+    }
+
+    [Fact]
+    [Trait("Category", "Tooling")]
+    public void ValidateAdrs_RejectsCommittedGatewayAndPackageJsonDependencyChangesWithoutAdr_AndAdmitsDomainShardedAdr()
     {
         string repo = Path.Combine(_adrDir, "branch-repo");
         Directory.CreateDirectory(Path.Combine(repo, "docs", "adr"));
@@ -194,8 +266,11 @@ public sealed class AdrValidatorServiceTests : IDisposable
             Path.Combine(repo, "docs", "adr", "2025-01-01-initial.md"),
             "# ADR-0100: Initial\n\n## Status\nAccepted\n\n## Context\nBaseline.\n\n## Decision\nKeep.\n\n## Alternatives Considered\nNone.\n\n## Trade-offs\nNone.\n");
         File.WriteAllText(
+            Path.Combine(repo, "docs", "adr", "legacy-index.md"),
+            "# Legacy ADRs\n\n- [ADR-0100: Initial](2025-01-01-initial.md)\n");
+        File.WriteAllText(
             Path.Combine(repo, "docs", "adr", "index.md"),
-            "# ADR Index\n\n- [ADR-0100: Initial](2025-01-01-initial.md)\n");
+            "# ADR Hub\n\n- [Legacy](legacy-index.md)\n");
         File.WriteAllText(Path.Combine(repo, "apps", "gateway", "src", "Program.cs"), "class Program {}\n");
         File.WriteAllText(
             Path.Combine(repo, "package.json"),
@@ -223,18 +298,20 @@ public sealed class AdrValidatorServiceTests : IDisposable
         RunGit(repo, "commit", "-q", "-m", "build: bump vitest major");
         AdrValidatorService.ValidateAdrs(checkGitDiff: true, repoRoot: repo).Should().BeFalse();
 
-        // Adding an ADR on the branch satisfies both the branch check and subsequent --pre-commit architectural edits!
-        File.WriteAllText(
-            Path.Combine(repo, "docs", "adr", "2026-11-20-gateway-and-toolchain.md"),
-            "# ADR-0101: Gateway and toolchain\n\n## Status\nAccepted\n\n## Context\nImplements PRD-SYS-001.\n\n## Decision\nUpgrade gateway and toolchain.\n\n## Alternatives Considered\nManual scripting.\n\n## Trade-offs\nValidated in CI.\n");
+        // Scaffolding a domain-sharded ADR satisfies both branch validation and subsequent --pre-commit edits.
+        var clock = new FakeClock(new DateTimeOffset(2026, 11, 20, 10, 0, 0, TimeSpan.Zero));
+        ScaffoldCommands.ScaffoldAdr("Gateway and toolchain", "tooling", repoRoot: repo, clock: clock).Should().Be(0);
+        string adrPath = Path.Combine(repo, "docs", "adr", "tooling", "2026-11-20-gateway-and-toolchain.md");
+        string scaffolded = File.ReadAllText(adrPath).Replace("PRD-SYS-001", "PRD-SYS-001", StringComparison.Ordinal) + "\nImplements PRD-SYS-001.\n";
+        File.WriteAllText(adrPath, scaffolded);
         File.WriteAllText(
             Path.Combine(repo, "docs", "adr", "index.md"),
-            "# ADR Index\n\n- [ADR-0100: Initial](2025-01-01-initial.md)\n- [ADR-0101: Gateway and toolchain](2026-11-20-gateway-and-toolchain.md)\n");
+            "# ADR Hub\n\n- [Legacy](legacy-index.md)\n- [Tooling](tooling/index.md)\n");
+
         RunGit(repo, "add", "-A");
-        RunGit(repo, "commit", "-q", "-m", "docs: add ADR-0101");
+        RunGit(repo, "commit", "-q", "-m", "docs: add domain ADR");
         AdrValidatorService.ValidateAdrs(checkGitDiff: true, repoRoot: repo).Should().BeTrue();
 
-        // Follow-up staged gateway edit on the same branch passes --pre-commit because ADR-0101 was already added in mergeBase..HEAD.
         File.WriteAllText(Path.Combine(repo, "apps", "gateway", "src", "Program.cs"), "class Program { static void Main() {} }\n");
         RunGit(repo, "add", "apps/gateway/src/Program.cs");
         AdrValidatorService.ValidateAdrs(checkGitDiff: true, repoRoot: repo, preCommit: true).Should().BeTrue();
@@ -259,24 +336,44 @@ public sealed class AdrValidatorServiceTests : IDisposable
 
     [Fact]
     [Trait("Category", "Tooling")]
-    public void SyncAdrIndex_AppendsUnlistedAdrs_WithoutDuplicatingExistingEntries()
+    public void SyncAdrIndex_InsertsUnlistedDomainAdrsSortedAlphabetically_WithoutTouchingHubOrLegacyIndex()
     {
         string repoRoot = Path.Combine(_adrDir, "sync-repo");
         string repoAdrDir = Path.Combine(repoRoot, "docs", "adr");
-        Directory.CreateDirectory(repoAdrDir);
+        string secDir = Path.Combine(repoAdrDir, "security");
+        Directory.CreateDirectory(secDir);
+
+        string hubContent = "# Hub\n\n- [ADR Template](TEMPLATE.md)\n- [Legacy](legacy-index.md)\n- [Security](security/index.md)\n";
+        string legacyContent = "# Legacy\n\n- [ADR-100: First](2026-01-01-first.md) (2026-01-01)\n";
+
         File.WriteAllText(Path.Combine(repoAdrDir, "TEMPLATE.md"), "# ADR-[NUMBER]: Title\n");
         File.WriteAllText(Path.Combine(repoAdrDir, "2026-01-01-first.md"), "# ADR-100: First\n\n## Status\nAccepted\n");
-        File.WriteAllText(Path.Combine(repoAdrDir, "2026-01-02-second.md"), "# ADR-101: Second\n\n## Status\nAccepted\n");
+        File.WriteAllText(Path.Combine(repoAdrDir, "index.md"), hubContent);
+        File.WriteAllText(Path.Combine(repoAdrDir, "legacy-index.md"), legacyContent);
+
         File.WriteAllText(
-            Path.Combine(repoAdrDir, "index.md"),
-            "# Index\n\n- [ADR Template](TEMPLATE.md)\n\n- [ADR-100: First](2026-01-01-first.md) (2026-01-01)\n");
+            Path.Combine(secDir, "2026-11-20-zeta.md"),
+            "# ADR-SECURITY-20261120-zeta: Zeta\n\n- **Status:** Accepted\n");
+        File.WriteAllText(
+            Path.Combine(secDir, "2026-11-19-alpha.md"),
+            "# ADR-SECURITY-20261119-alpha: Alpha\n\n- **Status:** Accepted\n");
+        File.WriteAllText(
+            Path.Combine(secDir, "index.md"),
+            "# Security ADRs\n\n## Decisions\n\n- [ADR-SECURITY-20261120-zeta: Zeta](2026-11-20-zeta.md) (2026-11-20)\n");
 
         AdrValidatorService.FindIntegrityErrors(repoAdrDir).Should().ContainSingle();
         AdrValidatorService.SyncAdrIndex(repoRoot).Should().Be(0);
         AdrValidatorService.FindIntegrityErrors(repoAdrDir).Should().BeEmpty();
-        string afterFirstSync = File.ReadAllText(Path.Combine(repoAdrDir, "index.md"));
+
+        string syncedShard = File.ReadAllText(Path.Combine(secDir, "index.md"));
+        syncedShard.IndexOf("2026-11-19-alpha.md", StringComparison.Ordinal)
+            .Should().BeLessThan(syncedShard.IndexOf("2026-11-20-zeta.md", StringComparison.Ordinal));
+
+        File.ReadAllText(Path.Combine(repoAdrDir, "index.md")).Should().Be(hubContent);
+        File.ReadAllText(Path.Combine(repoAdrDir, "legacy-index.md")).Should().Be(legacyContent);
+
         AdrValidatorService.SyncAdrIndex(repoRoot).Should().Be(0);
-        File.ReadAllText(Path.Combine(repoAdrDir, "index.md")).Should().Be(afterFirstSync);
+        File.ReadAllText(Path.Combine(secDir, "index.md")).Should().Be(syncedShard);
     }
 
     [Fact]
@@ -305,11 +402,9 @@ public sealed class AdrValidatorServiceTests : IDisposable
         RunGit(repoRoot, "update-ref", "refs/remotes/origin/main", "HEAD");
         RunGit(repoRoot, "checkout", "-q", "-b", "feature");
 
-        // Stage a non-architectural doc change.
         File.WriteAllText(Path.Combine(repoRoot, "docs", "note.md"), "# Note\n");
         RunGit(repoRoot, "add", "docs/note.md");
 
-        // Leave unstaged architectural edits in gateway and package.json dependencies.
         File.WriteAllText(Path.Combine(repoRoot, "apps", "gateway", "src", "Program.cs"), "class Program { static void Main() { } }\n");
         File.WriteAllText(
             Path.Combine(repoRoot, "package.json"),

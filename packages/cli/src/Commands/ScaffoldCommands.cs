@@ -26,8 +26,16 @@ public static class ScaffoldCommands
     public static void ConfigureAdr(Command command)
     {
         var title = new Argument<string>("title") { Description = "Title of the decision" };
+        var domain = new Option<string>("--domain", "-d")
+        {
+            Description = $"Target ADR domain shard ({string.Join(", ", AdrValidatorService.DomainSlugs)})",
+            Required = true,
+        };
         command.Arguments.Add(title);
-        command.SetAction(result => ScaffoldAdr(result.GetRequiredValue(title)));
+        command.Options.Add(domain);
+        command.SetAction(result => ScaffoldAdr(
+            result.GetRequiredValue(title),
+            result.GetRequiredValue(domain)));
     }
 
     public static void ConfigurePost(Command command)
@@ -84,52 +92,51 @@ public static class ScaffoldCommands
         return p?.ExitCode ?? 0;
     }
 
-    private static int ScaffoldAdr(string title)
+    public static int ScaffoldAdr(
+        string title,
+        string domain,
+        string? repoRoot = null,
+        IClock? clock = null)
     {
-        AnsiConsole.MarkupLine($"[cyan]Scaffolding new ADR: {Markup.Escape(title)}[/]");
-        string repoRoot = Cadence.Cli.Services.QualityGateOrchestrator.FindRepoRoot();
-        string todayStr = SystemClock.Instance.UtcNow.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
-        string slug = SlugifyTitle(title);
-        string filename = $"{todayStr}-{slug}.md";
-        string adrDir = Path.Combine(repoRoot, "docs", "adr");
-        Directory.CreateDirectory(adrDir);
-        string filepath = Path.Combine(adrDir, filename);
-
-        if (File.Exists(filepath))
+        string normalizedDomain = (domain ?? string.Empty).Trim().ToLowerInvariant();
+        if (!AdrValidatorService.IsValidDomain(normalizedDomain))
         {
-            AnsiConsole.MarkupLine($"[red]Error: ADR file already exists: {filepath}[/]");
+            AnsiConsole.MarkupLine(
+                $"[red]Error: Unknown ADR domain '{Markup.Escape(domain ?? string.Empty)}'. Expected one of: {string.Join(", ", AdrValidatorService.DomainSlugs)}.[/]");
             return 1;
         }
 
-        int maxNum = 0;
-        foreach (var f in Directory.GetFiles(adrDir, "*.md"))
+        string cleanTitle = (title ?? string.Empty).Trim();
+        string slug = SlugifyTitle(cleanTitle);
+        if (string.IsNullOrWhiteSpace(slug))
         {
-            string fname = Path.GetFileName(f);
-            if (fname == "TEMPLATE.md" || fname == "index.md") continue;
-            try
-            {
-                using var reader = new StreamReader(f);
-                string? firstLine = reader.ReadLine();
-                if (firstLine != null)
-                {
-                    var match = Regex.Match(firstLine, @"ADR-(\d+):");
-                    if (match.Success)
-                    {
-                        maxNum = Math.Max(maxNum, int.Parse(match.Groups[1].Value));
-                    }
-                }
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-            {
-                // Ignore unreadable ADR header files during number discovery
-            }
+            AnsiConsole.MarkupLine("[red]Error: ADR title must contain at least one alphanumeric character.[/]");
+            return 1;
         }
-        int adrNum = maxNum > 0 ? maxNum + 1 : 100;
 
-        string template = $@"# ADR-{adrNum}: {title}
+        AnsiConsole.MarkupLine($"[cyan]Scaffolding new ADR in domain '{Markup.Escape(normalizedDomain)}': {Markup.Escape(cleanTitle)}[/]");
+        string resolvedRoot = repoRoot ?? Services.QualityGateOrchestrator.FindRepoRoot();
+        DateTimeOffset utcNow = (clock ?? SystemClock.Instance).UtcNow;
+        string todayIso = utcNow.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        string todayCompact = utcNow.ToString("yyyyMMdd", CultureInfo.InvariantCulture);
+        string domainUpper = normalizedDomain.ToUpperInvariant();
+        string adrId = $"ADR-{domainUpper}-{todayCompact}-{slug}";
+        string filename = $"{todayIso}-{slug}.md";
+
+        string domainDir = Path.Combine(resolvedRoot, "docs", "adr", normalizedDomain);
+        Directory.CreateDirectory(domainDir);
+        string filepath = Path.Combine(domainDir, filename);
+
+        if (File.Exists(filepath))
+        {
+            AnsiConsole.MarkupLine($"[red]Error: ADR file already exists: {Markup.Escape(filepath)}[/]");
+            return 1;
+        }
+
+        string template = $@"# {adrId}: {cleanTitle}
 
 - **Status:** Accepted
-- **Date:** {todayStr}
+- **Date:** {todayIso}
 - **Authors:** @fderuiter
 - **Deciders:** @fderuiter
 
@@ -180,21 +187,19 @@ Describe the background, architectural context, and the specific technical or bu
 - **Verification Plan:** Automated unit and architecture tests added under `tests/`.
 ";
 
-        File.WriteAllText(filepath, template);
-        AnsiConsole.MarkupLine($"[green]Successfully created ADR file: {filepath}[/]");
+        File.WriteAllText(filepath, template.Replace("\r\n", "\n", StringComparison.Ordinal));
+        AnsiConsole.MarkupLine($"[green]Successfully created ADR file: {Markup.Escape(filepath)}[/]");
 
-        string indexFile = Path.Combine(adrDir, "index.md");
-        if (File.Exists(indexFile))
+        string shardIndexFile = Path.Combine(domainDir, "index.md");
+        if (AdrValidatorService.InsertSortedDomainShardEntry(
+                shardIndexFile,
+                normalizedDomain,
+                filename,
+                adrId,
+                cleanTitle,
+                todayIso))
         {
-            string indexContent = File.ReadAllText(indexFile);
-            string entry = $"- [ADR-{adrNum}: {title}]({filename}) ({todayStr})";
-            if (!indexContent.Contains(filename))
-            {
-                // Append directly under the last list so the index keeps no blank-line gaps inside lists.
-                string separator = indexContent.EndsWith('\n') ? "" : "\n";
-                File.AppendAllText(indexFile, $"{separator}{entry}\n");
-                AnsiConsole.MarkupLine($"[green]Successfully indexed {filename} in {indexFile}[/]");
-            }
+            AnsiConsole.MarkupLine($"[green]Successfully indexed {Markup.Escape(filename)} in {Markup.Escape(shardIndexFile)}[/]");
         }
 
         return 0;
@@ -283,11 +288,12 @@ Explain the key architectural choices, domain invariants, and trade-offs evaluat
 Document how the change is verified across automated unit, architecture, or end-to-end suites, and flip `draft: false` in the frontmatter when ready to publish.
 ";
 
-        File.WriteAllText(filepath, template);
+        File.WriteAllText(filepath, template.Replace("\r\n", "\n", StringComparison.Ordinal));
         AnsiConsole.MarkupLine($"[green]Successfully created blog post: {Markup.Escape(filepath)}[/]");
 
-        string indexPath = Path.Combine(resolvedRoot, "docs", "DOCUMENTATION_INDEX.md");
-        if (File.Exists(indexPath))
+        string docsDir = Path.Combine(resolvedRoot, "docs");
+        if (File.Exists(Path.Combine(docsDir, "DOCUMENTATION_INDEX.md")) ||
+            File.Exists(Path.Combine(blogDir, "DOC_INDEX.md")))
         {
             int syncExit = DocIndexSyncService.SyncDocIndex(check: false, repoRoot: resolvedRoot);
             if (syncExit != 0)
@@ -330,4 +336,3 @@ Document how the change is verified across automated unit, architecture, or end-
             .Replace("\n", " ");
     }
 }
-

@@ -21,6 +21,56 @@ const ACTIVE_STATUSES = new Set(["Normative", "Current", "Generated"]);
 const MARKDOWN_LINK_RE = /\[((?:[^\]]|\\\])+)\]\(([^)]+)\)/g;
 const CLINICAL_KERNEL_INCEPTION_DATE = "2026-09-29";
 const ADR_DATE_PREFIX_RE = /^(\d{4}-\d{2}-\d{2})-/;
+const ADR_DOMAIN_SHARDS = [
+  {
+    slug: "kernel",
+    label: "0. Clinical Kernel & Study Execution",
+    headingPattern: /^0\.\s*|Clinical Kernel/i,
+  },
+  {
+    slug: "platform",
+    label: "1. Core Platform & Architecture",
+    headingPattern: /^1\.\s*|Core Platform/i,
+  },
+  {
+    slug: "security",
+    label: "2. Security & Identity",
+    headingPattern: /^2\.\s*|Security\s*&\s*Identity/i,
+  },
+  {
+    slug: "standards",
+    label: "3. Interoperability, Standards & Data Exchange",
+    headingPattern: /^3\.\s*|Interoperability/i,
+  },
+  {
+    slug: "operations",
+    label: "4. Clinical Operations, Biostatistics & AI",
+    headingPattern: /^4\.\s*|Clinical Operations/i,
+  },
+  {
+    slug: "compliance",
+    label: "5. Compliance, Audit & Regulatory Validation",
+    headingPattern: /^5\.\s*|Compliance,\s*Audit/i,
+  },
+  {
+    slug: "frontend",
+    label: "6. Frontend & Design System",
+    headingPattern: /^6\.\s*|Frontend\s*&\s*Design/i,
+  },
+  {
+    slug: "tooling",
+    label: "7. DevOps, Tooling & Quality Gates",
+    headingPattern: /^7\.\s*|DevOps,\s*Tooling/i,
+  },
+];
+
+function isCategoryShardRelPath(relToDocs) {
+  return (
+    relToDocs === "ROOT_INDEX.md" ||
+    /^[^/]+\/(?:INDEX|DOC_INDEX)\.md$/.test(relToDocs)
+  );
+}
+
 const ADR_SUPERSEDED_RE =
   /^\s*(?:[-*]\s*)?(?:\*\*)?Status:?(?:\*\*)?:?\s*(?:\*\*)?Superseded\b|^\s*>\s*(?:\[!(?:WARNING|IMPORTANT|NOTE)\]\s*)?(?:\*\*)?Superseded\b|^\s*Superseded\s+by\b|^\s*##\s+Status\s*\r?\n+\s*Superseded\b/im;
 
@@ -55,7 +105,8 @@ function unescapeLabel(label) {
  * @param {{ docsDir: string, repoRoot: string }} options
  * @returns {string | null}
  */
-export function toSidebarLink(rawHref, { docsDir, repoRoot }) {
+export function toSidebarLink(rawHref, { docsDir, repoRoot, baseDir }) {
+  const effectiveBaseDir = baseDir ?? docsDir;
   const href = rawHref.trim();
   if (!href) return null;
 
@@ -78,11 +129,11 @@ export function toSidebarLink(rawHref, { docsDir, repoRoot }) {
         return toRepoUrl(href, docsDir, docsDir, repoRoot);
       }
     }
-    if (/^\/index(?:\.(?:html|md))?$/i.test(rawRootPath)) {
+    if (/^\/index(?:\.(?:html|md))?$/.test(rawRootPath)) {
       return `/${rootAnchor}`;
     }
-    if (/\/index(?:\.(?:html|md))?$/i.test(rawRootPath)) {
-      const hubPrefix = rawRootPath.replace(/\/index(?:\.(?:html|md))?$/i, "/");
+    if (/\/index(?:\.(?:html|md))?$/.test(rawRootPath)) {
+      const hubPrefix = rawRootPath.replace(/\/index(?:\.(?:html|md))?$/, "/");
       return `${hubPrefix}${rootAnchor}`;
     }
     return href;
@@ -94,7 +145,7 @@ export function toSidebarLink(rawHref, { docsDir, repoRoot }) {
     return anchor ? `/DOCUMENTATION_INDEX${anchor}` : "/DOCUMENTATION_INDEX";
   }
 
-  const absolute = path.resolve(docsDir, decodeURI(cleanTarget));
+  const absolute = path.resolve(effectiveBaseDir, decodeURI(cleanTarget));
   const relToRepo = path.relative(repoRoot, absolute).replace(/\\/g, "/");
 
   const stagedRoot = STAGED_ROOT_DOCS[relToRepo];
@@ -118,11 +169,11 @@ export function toSidebarLink(rawHref, { docsDir, repoRoot }) {
       if (fs.existsSync(path.join(absolute, "index.md"))) {
         return relToDocs === "" ? `/${anchor}` : `/${relToDocs}/${anchor}`;
       }
-      return toRepoUrl(href, docsDir, docsDir, repoRoot);
+      return toRepoUrl(href, effectiveBaseDir, docsDir, repoRoot);
     }
 
     if (exists && !/\.(md|html)$/i.test(absolute)) {
-      return toRepoUrl(href, docsDir, docsDir, repoRoot);
+      return toRepoUrl(href, effectiveBaseDir, docsDir, repoRoot);
     }
 
     const mdCandidate = exists
@@ -140,20 +191,41 @@ export function toSidebarLink(rawHref, { docsDir, repoRoot }) {
       return null;
     }
     if (mdCandidate && isExcludedPortalDocFile(mdCandidate, docsDir)) {
-      return toRepoUrl(href, docsDir, docsDir, repoRoot);
+      return toRepoUrl(href, effectiveBaseDir, docsDir, repoRoot);
     }
 
-    if (relToDocs.toLowerCase() === "index.md") {
+    if (relToDocs === "index.md") {
       return `/${anchor}`;
     }
-    if (/\/index\.(md|html)$/i.test(relToDocs)) {
-      return `/${relToDocs.replace(/\/index\.(md|html)$/i, "/")}${anchor}`;
+    if (/\/index\.(md|html)$/.test(relToDocs)) {
+      return `/${relToDocs.replace(/\/index\.(md|html)$/, "/")}${anchor}`;
     }
 
     return `/${relToDocs.replace(/\.(md|html)$/i, "")}${anchor}`;
   }
 
-  return toRepoUrl(href, docsDir, docsDir, repoRoot);
+  return toRepoUrl(href, effectiveBaseDir, docsDir, repoRoot);
+}
+
+function normalizeHrefRelativeToDocs(rawHref, baseDir, docsDir) {
+  const trimmed = rawHref.trim();
+  if (
+    !trimmed ||
+    trimmed.startsWith("/") ||
+    trimmed.startsWith("#") ||
+    /^([a-z][a-z0-9+.-]*:)/i.test(trimmed)
+  ) {
+    return trimmed;
+  }
+  const [rawTarget, anchor = ""] = splitAnchor(trimmed);
+  const cleanTarget = rawTarget.split("?")[0].trim();
+  if (!cleanTarget) return trimmed;
+  const absolute = path.resolve(baseDir, decodeURI(cleanTarget));
+  let rel = path.relative(docsDir, absolute).replace(/\\/g, "/");
+  if (cleanTarget.endsWith("/") && !rel.endsWith("/")) {
+    rel += "/";
+  }
+  return `${rel}${anchor}`;
 }
 
 /**
@@ -162,7 +234,11 @@ export function toSidebarLink(rawHref, { docsDir, repoRoot }) {
  * @param {string} indexContent
  * @param {{ docsDir: string, repoRoot: string }} options
  */
-export function parseDocumentationIndex(indexContent, { docsDir, repoRoot }) {
+export function parseDocumentationIndex(
+  indexContent,
+  { docsDir, repoRoot, baseDir, expandShards = true, shardOverrides = null }
+) {
+  const effectiveBaseDir = baseDir ?? docsDir;
   const entries = [];
   let currentSection = "";
   let hasStatusColumn = true;
@@ -195,13 +271,51 @@ export function parseDocumentationIndex(indexContent, { docsDir, repoRoot }) {
     for (const m of primaryMatches) {
       const text = unescapeLabel(m[1]);
       const rawHref = m[2].trim();
-      const link = toSidebarLink(rawHref, { docsDir, repoRoot });
+
+      if (expandShards && !/^([a-z][a-z0-9+.-]*:|\/|#)/i.test(rawHref)) {
+        const cleanTarget = splitAnchor(rawHref)[0].split("?")[0].trim();
+        const candidateAbs = path.resolve(
+          effectiveBaseDir,
+          decodeURI(cleanTarget)
+        );
+        const relToDocs = path
+          .relative(docsDir, candidateAbs)
+          .replace(/\\/g, "/");
+        if (
+          isCategoryShardRelPath(relToDocs) &&
+          (shardOverrides?.[relToDocs] !== undefined ||
+            fs.existsSync(candidateAbs))
+        ) {
+          const shardContent =
+            shardOverrides?.[relToDocs] ??
+            fs.readFileSync(candidateAbs, "utf-8");
+          const shardEntries = parseDocumentationIndex(shardContent, {
+            docsDir,
+            repoRoot,
+            baseDir: path.dirname(candidateAbs),
+            expandShards: false,
+            shardOverrides,
+          });
+          entries.push(...shardEntries);
+          continue;
+        }
+      }
+
+      const link = toSidebarLink(rawHref, {
+        docsDir,
+        repoRoot,
+        baseDir: effectiveBaseDir,
+      });
       if (!link) continue;
       entries.push({
         section: currentSection,
         status,
         text,
-        rawHref,
+        rawHref: normalizeHrefRelativeToDocs(
+          rawHref,
+          effectiveBaseDir,
+          docsDir
+        ),
         link,
       });
     }
@@ -213,13 +327,21 @@ export function parseDocumentationIndex(indexContent, { docsDir, repoRoot }) {
         if (/^([a-z][a-z0-9+.-]*:|#)/i.test(rawHref)) continue;
         const cleanTarget = splitAnchor(rawHref)[0].trim();
         if (!cleanTarget.endsWith(".md")) continue;
-        const link = toSidebarLink(rawHref, { docsDir, repoRoot });
+        const link = toSidebarLink(rawHref, {
+          docsDir,
+          repoRoot,
+          baseDir: effectiveBaseDir,
+        });
         if (!link) continue;
         entries.push({
           section: currentSection,
           status: "Current",
           text: unescapeLabel(m[1]),
-          rawHref,
+          rawHref: normalizeHrefRelativeToDocs(
+            rawHref,
+            effectiveBaseDir,
+            docsDir
+          ),
           link,
           fromDescription: true,
         });
@@ -238,79 +360,69 @@ const MAX_INLINE_KERNEL_SIDEBAR_ITEMS = 8;
  *
  * @param {string} adrIndexContent
  */
-function parseAdrIndexStructure(adrIndexContent) {
+function parseAdrShardEntries(shardContent, domainSlug) {
+  const items = [];
+  if (!shardContent) return items;
+  let inDecisions = false;
+  for (const line of shardContent.split(/\r?\n/)) {
+    const h2 = line.match(/^##\s+(.+?)\s*$/);
+    if (h2) {
+      inDecisions = /Decisions/i.test(h2[1].trim());
+      continue;
+    }
+    if (!inDecisions) continue;
+    const linkMatch = line.match(/^-\s*\[(.*?)\]\((.*?)\)/);
+    if (!linkMatch) continue;
+    const text = linkMatch[1].trim();
+    let filename = linkMatch[2].trim();
+    if (filename.startsWith("./")) filename = filename.slice(2);
+    if (filename.startsWith("../") || filename.includes("://")) continue;
+    filename = splitAnchor(filename)[0].replace(/\.md$/i, "");
+    if (!filename || filename.toLowerCase() === "index") continue;
+    items.push({
+      text,
+      link: `/adr/${domainSlug}/${filename}`,
+      domain: domainSlug,
+    });
+  }
+  return items;
+}
+
+/**
+ * Extracts active Clinical Kernel ADR links, K-decision table items, security ADR routes,
+ * domain shard entries, and domain section headings across `docs/adr/index.md`,
+ * `docs/adr/legacy-index.md`, and `docs/adr/<domain>/index.md`.
+ *
+ * @param {string} adrIndexContent
+ * @param {{ adrDir?: string }} [options]
+ */
+function parseAdrIndexStructure(adrIndexContent, options = {}) {
   let kernelHeading = "0. Clinical Kernel (K001–K037)";
   const kernelItems = [];
   const securityItems = [];
+  const domainShardItems = [];
+  const availableDomainShards = new Set();
+  let hasLegacyIndex = false;
   const kDecisionTableItems = [];
   const domainHeadings = [];
-  let currentDomain = "";
 
-  if (!adrIndexContent) {
-    return {
-      kernelHeading,
-      kernelItems,
-      securityItems,
-      kDecisionTableItems,
-      domainHeadings,
-    };
-  }
-
-  let inKernelDecisionTable = false;
-  for (const line of adrIndexContent.split(/\r?\n/)) {
-    const h2Match = line.match(/^##\s+(.+?)\s*$/);
-    if (h2Match) {
-      inKernelDecisionTable = /Clinical Kernel Decisions/i.test(
-        h2Match[1].trim()
-      );
-      currentDomain = "";
-      continue;
-    }
-
-    if (inKernelDecisionTable && line.trim().startsWith("|")) {
-      const cells = splitTableRow(line);
-      if (
-        cells.length >= 3 &&
-        /^K\d+$/i.test(cells[0]) &&
-        !isSeparatorRow(cells)
-      ) {
-        const linkMatch = cells[2].match(/\[([^\]]+)\]\(([^)]+)\)/);
-        if (linkMatch) {
-          let filename = linkMatch[2].trim();
-          if (filename.startsWith("./")) filename = filename.slice(2);
-          else if (filename.startsWith("docs/adr/")) {
-            filename = filename.slice("docs/adr/".length);
-          }
-          filename = splitAnchor(filename)[0].replace(/\.md$/i, "");
-          const subject = cells[1].replace(/\s*\([^)]*\)\s*/g, " ").trim();
-          const shortSubject =
-            subject.length > 44
-              ? `${subject.slice(0, 41).trimEnd()}…`
-              : subject;
-          kDecisionTableItems.push({
-            text: `${cells[0]}: ${shortSubject}`,
-            link: `/adr/${filename}`,
-          });
-        }
+  const parseBulletBlock = (markdownContent) => {
+    if (!markdownContent) return;
+    let domainTitle = "";
+    for (const line of markdownContent.split(/\r?\n/)) {
+      const h2Match = line.match(/^##\s+(.+?)\s*$/);
+      if (h2Match) {
+        domainTitle = "";
+        continue;
       }
-      continue;
-    }
-
-    const headingMatch = line.match(/^###\s+(.+?)\s*$/);
-    if (headingMatch) {
-      const title = headingMatch[1].trim();
-      currentDomain = title;
-      if (/^0\.\s*/.test(title) || /Clinical Kernel/i.test(title)) {
-        kernelHeading = title;
+      const h3Match = line.match(/^###\s+(.+?)\s*$/);
+      if (h3Match) {
+        domainTitle = h3Match[1].trim();
+        continue;
       }
-      domainHeadings.push(title);
-      continue;
-    }
-
-    if (!currentDomain) continue;
-
-    const linkMatch = line.match(/^-\s*\[(.*?)\]\((.*?)\)/);
-    if (linkMatch) {
+      if (!domainTitle) continue;
+      const linkMatch = line.match(/^-\s*\[(.*?)\]\((.*?)\)/);
+      if (!linkMatch) continue;
       const text = linkMatch[1].trim();
       let filename = linkMatch[2].trim();
       if (filename.startsWith("./")) {
@@ -318,15 +430,98 @@ function parseAdrIndexStructure(adrIndexContent) {
       } else if (filename.startsWith("docs/adr/")) {
         filename = filename.slice("docs/adr/".length);
       }
-      filename = splitAnchor(filename)[0].replace(/\.md$/i, "");
-      const item = { text, link: `/adr/${filename}` };
+      const cleanFile = splitAnchor(filename)[0];
       if (
-        /^0\.\s*/.test(currentDomain) ||
-        /Clinical Kernel/i.test(currentDomain)
+        !cleanFile ||
+        cleanFile === "legacy-index.md" ||
+        /\/index\.md$/i.test(cleanFile)
       ) {
+        continue;
+      }
+      const stem = cleanFile.replace(/\.md$/i, "");
+      const item = { text, link: `/adr/${stem}` };
+      if (/^0\.\s*/.test(domainTitle) || /Clinical Kernel/i.test(domainTitle)) {
         kernelItems.push(item);
-      } else if (/Security\s*&\s*Identity/i.test(currentDomain)) {
+      } else if (/Security\s*&\s*Identity/i.test(domainTitle)) {
         securityItems.push(item);
+      }
+    }
+  };
+
+  if (adrIndexContent) {
+    let inKernelDecisionTable = false;
+    for (const line of adrIndexContent.split(/\r?\n/)) {
+      const h2Match = line.match(/^##\s+(.+?)\s*$/);
+      if (h2Match) {
+        inKernelDecisionTable = /Clinical Kernel Decisions/i.test(
+          h2Match[1].trim()
+        );
+        continue;
+      }
+
+      if (inKernelDecisionTable && line.trim().startsWith("|")) {
+        const cells = splitTableRow(line);
+        if (
+          cells.length >= 3 &&
+          /^K\d+$/i.test(cells[0]) &&
+          !isSeparatorRow(cells)
+        ) {
+          const linkMatch = cells[2].match(/\[([^\]]+)\]\(([^)]+)\)/);
+          if (linkMatch) {
+            let filename = linkMatch[2].trim();
+            if (filename.startsWith("./")) filename = filename.slice(2);
+            else if (filename.startsWith("docs/adr/")) {
+              filename = filename.slice("docs/adr/".length);
+            }
+            filename = splitAnchor(filename)[0].replace(/\.md$/i, "");
+            const subject = cells[1].replace(/\s*\([^)]*\)\s*/g, " ").trim();
+            const shortSubject =
+              subject.length > 44
+                ? `${subject.slice(0, 41).trimEnd()}…`
+                : subject;
+            kDecisionTableItems.push({
+              text: `${cells[0]}: ${shortSubject}`,
+              link: `/adr/${filename}`,
+            });
+          }
+        }
+        continue;
+      }
+
+      const headingMatch = line.match(/^###\s+(.+?)\s*$/);
+      if (headingMatch) {
+        const title = headingMatch[1].trim();
+        if (/^0\.\s*/.test(title) || /Clinical Kernel/i.test(title)) {
+          kernelHeading = title;
+        }
+        domainHeadings.push(title);
+      }
+    }
+
+    parseBulletBlock(adrIndexContent);
+  }
+
+  const adrDir = options.adrDir;
+  if (adrDir && fs.existsSync(adrDir)) {
+    const legacyIndexPath = path.join(adrDir, "legacy-index.md");
+    if (fs.existsSync(legacyIndexPath)) {
+      hasLegacyIndex = true;
+      parseBulletBlock(fs.readFileSync(legacyIndexPath, "utf-8"));
+    }
+
+    for (const { slug } of ADR_DOMAIN_SHARDS) {
+      const shardPath = path.join(adrDir, slug, "index.md");
+      if (!fs.existsSync(shardPath)) continue;
+      availableDomainShards.add(slug);
+      const parsedShard = parseAdrShardEntries(
+        fs.readFileSync(shardPath, "utf-8"),
+        slug
+      );
+      domainShardItems.push(...parsedShard);
+      if (slug === "kernel") {
+        kernelItems.push(...parsedShard);
+      } else if (slug === "security") {
+        securityItems.push(...parsedShard);
       }
     }
   }
@@ -335,6 +530,9 @@ function parseAdrIndexStructure(adrIndexContent) {
     kernelHeading,
     kernelItems,
     securityItems,
+    domainShardItems,
+    availableDomainShards,
+    hasLegacyIndex,
     kDecisionTableItems,
     domainHeadings,
   };
@@ -342,17 +540,36 @@ function parseAdrIndexStructure(adrIndexContent) {
 
 /**
  * Builds a compact `/adr/` sidebar listing the ADR overview, active Clinical Kernel decisions,
- * and domain decision log section links into `/adr/#...`.
+ * and domain decision shard links.
  *
  * @param {string} adrIndexContent
  * @param {Array<{text: string, link: string, status?: string}>} indexAdrEntries
+ * @param {{ adrDir?: string }} [options]
  */
-export function buildAdrSidebarGroups(adrIndexContent, indexAdrEntries = []) {
+export function buildAdrSidebarGroups(
+  adrIndexContent,
+  indexAdrEntries = [],
+  options = {}
+) {
   const historicalAdrRoutes = new Set(
     indexAdrEntries
-      .filter((entry) => entry.status === "Historical")
+      .filter(
+        (entry) =>
+          entry.status === "Historical" &&
+          normalizeRouteKey(entry.link) !== "/adr/legacy-index"
+      )
       .map((entry) => normalizeRouteKey(entry.link))
   );
+
+  const {
+    kernelHeading,
+    kernelItems,
+    domainShardItems,
+    availableDomainShards,
+    hasLegacyIndex,
+    kDecisionTableItems,
+    domainHeadings,
+  } = parseAdrIndexStructure(adrIndexContent, options);
 
   const overviewItems = [{ text: "ADR Overview & Log", link: "/adr/" }];
   if (
@@ -363,12 +580,25 @@ export function buildAdrSidebarGroups(adrIndexContent, indexAdrEntries = []) {
   ) {
     overviewItems.push({ text: "ADR Template", link: "/adr/TEMPLATE" });
   }
+  if (
+    hasLegacyIndex ||
+    indexAdrEntries.some(
+      (entry) => normalizeRouteKey(entry.link) === "/adr/legacy-index"
+    )
+  ) {
+    overviewItems.push({
+      text: "Frozen Legacy ADRs",
+      link: "/adr/legacy-index",
+    });
+  }
 
-  const { kernelHeading, kernelItems, kDecisionTableItems, domainHeadings } =
-    parseAdrIndexStructure(adrIndexContent);
-
+  const kernelShardAdrs = domainShardItems.filter(
+    (item) => item.domain === "kernel"
+  );
   const candidateKernelSource =
-    kDecisionTableItems.length > 0 ? kDecisionTableItems : kernelItems;
+    kDecisionTableItems.length > 0
+      ? [...kernelShardAdrs, ...kDecisionTableItems]
+      : kernelItems;
 
   const filteredKernelItems = dedupeItems(
     candidateKernelSource.filter(
@@ -376,28 +606,86 @@ export function buildAdrSidebarGroups(adrIndexContent, indexAdrEntries = []) {
     )
   );
 
+  const kernelShardItems = domainShardItems.filter(
+    (item) => item.domain === "kernel"
+  );
+  const kernelFooterItems = [];
+  if (availableDomainShards.has("kernel")) {
+    kernelFooterItems.push({
+      text: "Kernel Domain Shard",
+      link: "/adr/kernel/",
+    });
+  }
+  kernelFooterItems.push(...kernelShardItems);
+  kernelFooterItems.push({
+    text: "All Kernel Decisions (K001–K037)",
+    link: `/adr/#${vitepressSlugify(kernelHeading)}`,
+  });
+
   const compactKernelItems =
     filteredKernelItems.length > MAX_INLINE_KERNEL_SIDEBAR_ITEMS
       ? [
           ...filteredKernelItems.slice(0, MAX_INLINE_KERNEL_SIDEBAR_ITEMS),
-          {
-            text: "All Kernel Decisions (K001–K037)",
-            link: `/adr/#${vitepressSlugify(kernelHeading)}`,
-          },
+          ...kernelFooterItems,
         ]
-      : filteredKernelItems;
+      : [
+          ...filteredKernelItems,
+          ...(availableDomainShards.has("kernel")
+            ? [{ text: "Kernel Domain Shard", link: "/adr/kernel/" }]
+            : []),
+          ...kernelShardItems,
+        ];
 
-  const domainLogItems = dedupeItems(
-    domainHeadings
-      .filter(
-        (heading) =>
-          compactKernelItems.length === 0 || heading !== kernelHeading
-      )
-      .map((heading) => ({
+  const matchedDomainSlugs = new Set();
+  if (compactKernelItems.length > 0) {
+    matchedDomainSlugs.add("kernel");
+  }
+
+  const rawDomainLogItems = [];
+  for (const heading of domainHeadings) {
+    if (compactKernelItems.length > 0 && heading === kernelHeading) {
+      continue;
+    }
+    const matchedDomain = ADR_DOMAIN_SHARDS.find(({ headingPattern }) =>
+      headingPattern.test(heading)
+    );
+    if (matchedDomain && availableDomainShards.has(matchedDomain.slug)) {
+      matchedDomainSlugs.add(matchedDomain.slug);
+      rawDomainLogItems.push({
+        text: heading,
+        link: `/adr/${matchedDomain.slug}/`,
+      });
+      for (const shardItem of domainShardItems) {
+        if (shardItem.domain === matchedDomain.slug) {
+          rawDomainLogItems.push(shardItem);
+        }
+      }
+    } else {
+      rawDomainLogItems.push({
         text: heading,
         link: `/adr/#${vitepressSlugify(heading)}`,
-      }))
-  );
+      });
+    }
+  }
+
+  for (const domain of ADR_DOMAIN_SHARDS) {
+    if (
+      matchedDomainSlugs.has(domain.slug) ||
+      !availableDomainShards.has(domain.slug)
+    ) {
+      continue;
+    }
+    rawDomainLogItems.push({
+      text: domain.label,
+      link: `/adr/${domain.slug}/`,
+    });
+    for (const shardItem of domainShardItems) {
+      if (shardItem.domain === domain.slug) {
+        rawDomainLogItems.push(shardItem);
+      }
+    }
+  }
+  const domainLogItems = dedupeItems(rawDomainLogItems);
 
   const groups = [
     {
@@ -473,6 +761,7 @@ export function synthesizeSidebarFromIndex(indexPath, options = {}) {
   const allEntries = parseDocumentationIndex(indexContent, {
     docsDir,
     repoRoot,
+    shardOverrides: options.shardOverrides ?? null,
   });
 
   const hasRootPortalPages =
@@ -747,7 +1036,12 @@ export function synthesizeSidebarFromIndex(indexPath, options = {}) {
   if (adrIndexContent || adrEntries.length > 0) {
     assignSection(
       ["/adr/"],
-      buildAdrSidebarGroups(adrIndexContent, adrEntries)
+      buildAdrSidebarGroups(adrIndexContent, adrEntries, {
+        adrDir:
+          options.adrIndexContent === undefined
+            ? path.dirname(adrIndexPath)
+            : undefined,
+      })
     );
   }
 
@@ -832,14 +1126,17 @@ export function buildPortalSearchCatalog(indexPath, options = {}) {
     targetSetMap.get(route).add(entry.status);
   }
 
-  const { kernelItems, securityItems } =
-    parseAdrIndexStructure(adrIndexContent);
+  const { kernelItems, securityItems, domainShardItems } =
+    parseAdrIndexStructure(adrIndexContent, {
+      adrDir: path.dirname(adrIndexPath),
+    });
   const kernelAdrRoutes = new Set(
     kernelItems.map((item) => normalizeRouteKey(item.link))
   );
   const indexedAdrRoutes = new Set([
     ...kernelAdrRoutes,
     ...securityItems.map((item) => normalizeRouteKey(item.link)),
+    ...domainShardItems.map((item) => normalizeRouteKey(item.link)),
   ]);
 
   const excludedDocSet = new Set(
@@ -848,9 +1145,9 @@ export function buildPortalSearchCatalog(indexPath, options = {}) {
 
   const toRoute = (relativePath) => {
     const clean = relativePath.replace(/\\/g, "/").replace(/^\/+/, "");
-    if (clean.toLowerCase() === "index.md") return "/";
-    if (/\/index\.md$/i.test(clean)) {
-      return `/${clean.replace(/\/index\.md$/i, "/")}`;
+    if (clean === "index.md") return "/";
+    if (/\/index\.md$/.test(clean)) {
+      return `/${clean.replace(/\/index\.md$/, "/")}`;
     }
     return `/${clean.replace(/\.md$/i, "")}`;
   };
@@ -886,6 +1183,7 @@ export function buildPortalSearchCatalog(indexPath, options = {}) {
 
     if (relLower.startsWith("adr/")) {
       const fileName = path.basename(rel);
+      if (relLower === "adr/legacy-index.md") return false;
       if (fileName.toLowerCase() === "index.md") return true;
       if (fileName.toLowerCase() === "template.md") return false;
       if (inactiveSet?.has("Historical") || inactiveSet?.has("Baseline")) {
@@ -898,7 +1196,15 @@ export function buildPortalSearchCatalog(indexPath, options = {}) {
       if (dateMatch && dateMatch[1] < CLINICAL_KERNEL_INCEPTION_DATE) {
         return false;
       }
-      if (indexedAdrRoutes.size > 0 && !indexedAdrRoutes.has(route)) {
+      const segments = relLower.split("/");
+      const isDomainShardAdr =
+        segments.length === 3 &&
+        ADR_DOMAIN_SHARDS.some(({ slug }) => slug === segments[1]);
+      if (
+        !isDomainShardAdr &&
+        indexedAdrRoutes.size > 0 &&
+        !indexedAdrRoutes.has(route)
+      ) {
         return false;
       }
       return true;
@@ -906,7 +1212,7 @@ export function buildPortalSearchCatalog(indexPath, options = {}) {
 
     if (
       relLower.startsWith("migration/") ||
-      relLower.startsWith("architecture/repository-migration/") ||
+      relLower.startsWith("architecture/") ||
       relLower.startsWith("specs/") ||
       relLower === "migration_workflow.md" ||
       relLower === "python_reference_inventory.md"
@@ -927,7 +1233,7 @@ export function buildPortalSearchCatalog(indexPath, options = {}) {
 
   const prepareSearchMarkdown = (relativePath, src) => {
     const rel = relativePath.replace(/\\/g, "/").replace(/^\/+/, "");
-    if (rel === "DOCUMENTATION_INDEX.md") {
+    if (rel === "DOCUMENTATION_INDEX.md" || isCategoryShardRelPath(rel)) {
       const filteredLines = [];
       let skipSection = false;
       for (const line of src.split(/\r?\n/)) {
@@ -976,6 +1282,7 @@ export function buildPortalSearchCatalog(indexPath, options = {}) {
       rel.startsWith("kernel/") ||
       rel.startsWith("ai/") ||
       rel.startsWith("ux/") ||
+      rel.startsWith("adr/kernel/") ||
       kernelAdrRoutes.has(route) ||
       rel === "ARCHITECTURE.md" ||
       rel === "OPERATIONAL_DATABASE.md" ||

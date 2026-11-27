@@ -45,6 +45,9 @@ const config = defineConfig({
   base: siteBase,
   metaChunk: true,
   outDir: path.resolve(__dirname, "dist"),
+  rewrites: {
+    ":dir/INDEX.md": ":dir/index.md",
+  },
   srcExclude: [
     "**/SDLC/runs/**",
     "**/runs/**",
@@ -69,7 +72,8 @@ const config = defineConfig({
     const relPath = (pageData.relativePath || "").replace(/\\/g, "/");
     if (
       relPath.startsWith("blog/") &&
-      relPath.toLowerCase() !== "blog/index.md"
+      relPath.toLowerCase() !== "blog/index.md" &&
+      relPath.toLowerCase() !== "blog/doc_index.md"
     ) {
       pageData.frontmatter ??= {};
       pageData.frontmatter.prev ??= false;
@@ -149,7 +153,10 @@ const config = defineConfig({
           },
         },
         _render(src, env, md) {
-          const relPath = env.relativePath ?? "";
+          const relPath =
+            env.realPath && env.realPath.startsWith(docsDir)
+              ? path.relative(docsDir, env.realPath).replace(/\\/g, "/")
+              : (env.relativePath ?? "");
           if (
             env.frontmatter?.draft === true ||
             /^true$/i.test(String(env.frontmatter?.draft ?? "").trim()) ||

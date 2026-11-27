@@ -298,23 +298,99 @@ describe("VitePress navigation synthesis and link/anchor plugins", () => {
     );
   });
 
-  it("automatically places a newly added active Start here document row into the / sidebar", () => {
-    const originalContent = fs.readFileSync(indexPath, "utf-8");
-    const modifiedContent = originalContent.replace(
+  it("automatically places a newly added active Start here document row from ROOT_INDEX.md into the / sidebar", () => {
+    const rootShardPath = path.join(docsDir, "ROOT_INDEX.md");
+    const originalRootShard = fs.readFileSync(rootShardPath, "utf-8");
+    const modifiedRootShard = originalRootShard.replace(
       "| [CONTRIBUTING.md](../CONTRIBUTING.md) |",
-      "| [New Onboarding Guide](ONBOARDING_TEST_GUIDE.md) | Current | Step-by-step evaluator walkthrough |\n| [CONTRIBUTING.md](../CONTRIBUTING.md) |"
+      "| [CONTRIBUTING.md](../CONTRIBUTING.md) |\n| [New Onboarding Guide](ONBOARDING_TEST_GUIDE.md) | Current | Step-by-step evaluator walkthrough |"
     );
 
     const sidebar = synthesizeSidebarFromIndex(indexPath, {
       docsDir,
       repoRoot,
-      indexContent: modifiedContent,
+      shardOverrides: { "ROOT_INDEX.md": modifiedRootShard },
     });
 
     const startHere = sidebar["/"]?.find((g) => g.text === "Start Here");
     expect(startHere).toBeDefined();
     expect(
       startHere.items.some((item) => item.link === "/ONBOARDING_TEST_GUIDE")
+    ).toBe(true);
+  });
+
+  it("aggregates new domain-sharded ADRs under docs/adr/<domain>/index.md into /adr/ sidebar and search while excluding legacy-index.md from search", () => {
+    const tmpRepo = makeTempWorkspace();
+    const tmpDocs = path.join(tmpRepo, "docs");
+    const tmpAdrDir = path.join(tmpDocs, "adr");
+    const tmpSecurityDir = path.join(tmpAdrDir, "security");
+    fs.mkdirSync(tmpSecurityDir, { recursive: true });
+
+    fs.writeFileSync(
+      path.join(tmpDocs, "DOCUMENTATION_INDEX.md"),
+      [
+        "# Documentation Index",
+        "",
+        "## Architecture decision records",
+        "",
+        "| Document | Status | What it is |",
+        "| --- | --- | --- |",
+        "| [ADR hub](adr/index.md) | Current | Hub |",
+        "| [Frozen legacy ADRs](adr/legacy-index.md) | Historical | Frozen legacy ADRs |",
+        "| [Security ADRs](adr/security/index.md) | Current | Domain shard security |",
+        "",
+      ].join("\n")
+    );
+    fs.writeFileSync(
+      path.join(tmpAdrDir, "index.md"),
+      "# Architectural Decision Records (Index)\n\nStatic ADR hub.\n"
+    );
+    fs.writeFileSync(
+      path.join(tmpAdrDir, "legacy-index.md"),
+      "# Legacy ADRs\n\n### 2. API Gateway, Security & Identity\n\n- [ADR-2680: Legacy Security Rule](2026-11-10-legacy-security-rule.md) (2026-11-10)\n"
+    );
+    fs.writeFileSync(
+      path.join(tmpAdrDir, "2026-11-10-legacy-security-rule.md"),
+      "# ADR-2680: Legacy Security Rule\n\n- **Status:** Accepted\n"
+    );
+    fs.writeFileSync(
+      path.join(tmpSecurityDir, "index.md"),
+      [
+        "# API Gateway, Security & Identity ADRs (`security`)",
+        "",
+        "## Decisions",
+        "",
+        "- [ADR-SECURITY-20261127-zero-trust-token-binding: Zero Trust Token Binding](2026-11-27-zero-trust-token-binding.md) (2026-11-27)",
+        "",
+      ].join("\n")
+    );
+    fs.writeFileSync(
+      path.join(tmpSecurityDir, "2026-11-27-zero-trust-token-binding.md"),
+      "# ADR-SECURITY-20261127-zero-trust-token-binding: Zero Trust Token Binding\n\n- **Status:** Accepted\n"
+    );
+
+    const tmpIndexPath = path.join(tmpDocs, "DOCUMENTATION_INDEX.md");
+    const sidebar = synthesizeSidebarFromIndex(tmpIndexPath, {
+      docsDir: tmpDocs,
+      repoRoot: tmpRepo,
+    });
+    const adrLinks = collectSidebarLinks(sidebar["/adr/"]);
+    expect(
+      adrLinks.has("/adr/security/2026-11-27-zero-trust-token-binding")
+    ).toBe(true);
+    expect(adrLinks.has("/adr/security/")).toBe(true);
+    expect(adrLinks.has("/adr/legacy-index")).toBe(true);
+
+    const catalog = buildPortalSearchCatalog(tmpIndexPath, {
+      docsDir: tmpDocs,
+      repoRoot: tmpRepo,
+    });
+    expect(catalog.shouldIndexPage("adr/legacy-index.md")).toBe(false);
+    expect(catalog.shouldIndexPage("adr/security/index.md")).toBe(true);
+    expect(
+      catalog.shouldIndexPage(
+        "adr/security/2026-11-27-zero-trust-token-binding.md"
+      )
     ).toBe(true);
   });
 

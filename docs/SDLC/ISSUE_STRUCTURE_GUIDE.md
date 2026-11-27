@@ -101,5 +101,5 @@ All Pull Requests (PRs) must satisfy the Definition of Done before merging into 
 Every issue must cite its governing requirement identifiers:
 
 1. **Requirements Level**: `PRD-SYS-xxx`, `PRD-EDC-xxx`, or `Trace-x`.
-2. **Architecture Level**: `ADR-xxx` (created via `pnpm cadence scaffold adr "<title>"` for architectural changes).
+2. **Architecture Level**: `ADR-<DOMAIN>-YYYYMMDD-<slug>` (created via `pnpm cadence scaffold adr --domain <domain> "<title>"` for architectural changes).
 3. **Traceability Level**: RTM entry in `docs/SDLC/Requirements_Traceability_Matrix.md`.

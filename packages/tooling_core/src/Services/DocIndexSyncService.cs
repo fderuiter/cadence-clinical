@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -20,12 +21,18 @@ public static partial class DocIndexSyncService
         ".vs",
         ".venv",
         ".cadence",
-        "runs"
+        "runs",
+        "adr",
     };
 
-    private static readonly HashSet<string> ExcludedFiles = new(StringComparer.OrdinalIgnoreCase)
+    // Case-sensitive: uppercase shard index filenames are excluded from document scanning, while
+    // authored lowercase index.md pages inside subdirectories (e.g. blog/index.md) are indexed.
+    private static readonly HashSet<string> ExcludedIndexFiles = new(StringComparer.Ordinal)
     {
-        "DOCUMENTATION_INDEX.md"
+        "DOCUMENTATION_INDEX.md",
+        "ROOT_INDEX.md",
+        "INDEX.md",
+        "DOC_INDEX.md",
     };
 
     // VitePress stages these copies from root documents when serving or building the site.
@@ -39,7 +46,7 @@ public static partial class DocIndexSyncService
         "README.md",
         "SECURITY.md",
         "SUPPORT.md",
-        "index.md"
+        "index.md",
     };
 
     [GeneratedRegex(@"\]\(([^)\r\n]+)\)")]
@@ -53,17 +60,11 @@ public static partial class DocIndexSyncService
     [GeneratedRegex(@"<!--[\s\S]*?-->")]
     private static partial Regex HtmlCommentRegex();
 
-    [GeneratedRegex(@"^\s*\|\s*([^|]+)\s*\|\s*([^|]+)\s*\|\s*([^|]+)\s*\|")]
-    private static partial Regex TableRow3ColRegex();
-
     [GeneratedRegex(@"\s+")]
     private static partial Regex WhitespaceRegex();
 
     [GeneratedRegex(@"^(\d{4}-\d{2}-\d{2})")]
     private static partial Regex IsoDatePrefixRegex();
-
-    [GeneratedRegex(@"^\s*\|\s*\[ADR-(\d+)\b", RegexOptions.IgnoreCase)]
-    private static partial Regex AdrTableRowNumberRegex();
 
     [GeneratedRegex(@"^\s*(?:[-*]\s*)?(?:\*\*)?Status:?(?:\*\*)?:?\s*(?:\*\*)?Superseded\b|^\s*>\s*(?:\[!(?:WARNING|IMPORTANT|NOTE)\]\s*)?(?:\*\*)?Superseded\b|^\s*Superseded\s+by\b|^\s*##\s+Status\s*\r?\n+\s*Superseded\b", RegexOptions.IgnoreCase | RegexOptions.Multiline)]
     private static partial Regex AdrSupersededRegex();
@@ -82,62 +83,119 @@ public static partial class DocIndexSyncService
 
     private const string ClinicalKernelInceptionDate = "2026-09-29"; // deid-ignore: architectural milestone date, not PHI
 
-    public static string FindRepoRoot()
+    public static string FindRepoRoot() => PreCommitOpenApiService.FindRepoRoot();
+
+    /// <summary>
+    /// Compares two relative file paths or link targets alphabetically in case-insensitive ASCII order
+    /// (folding to lowercase, with exact ordinal tie-breaking).
+    /// </summary>
+    public static int CompareSortKeys(string a, string b)
     {
-        string current = AppContext.BaseDirectory;
-        while (!string.IsNullOrEmpty(current))
-        {
-            if (File.Exists(Path.Combine(current, "Cadence.sln")))
-            {
-                return current;
-            }
-            string? parent = Directory.GetParent(current)?.FullName;
-            if (parent == current) break;
-            current = parent ?? "";
-        }
-        return Directory.GetCurrentDirectory();
+        int cmp = string.CompareOrdinal(a.ToLowerInvariant(), b.ToLowerInvariant());
+        return cmp != 0 ? cmp : string.CompareOrdinal(a, b);
     }
 
     public static int SyncDocIndex(bool check = false, string? repoRoot = null)
     {
         repoRoot ??= FindRepoRoot();
         string docsDir = Path.Combine(repoRoot, "docs");
-        string indexPath = Path.Combine(docsDir, "DOCUMENTATION_INDEX.md");
+        string hubPath = Path.Combine(docsDir, "DOCUMENTATION_INDEX.md");
 
-        if (!Directory.Exists(docsDir) || !File.Exists(indexPath))
+        if (!Directory.Exists(docsDir) || !File.Exists(hubPath))
         {
-            Console.WriteLine($"[ERROR] Documentation directory or index file not found at {indexPath}");
+            Console.WriteLine($"[ERROR] Documentation directory or index file not found at {hubPath}");
             return 1;
         }
 
-        string originalContent = File.ReadAllText(indexPath).Replace("\r\n", "\n", StringComparison.Ordinal);
+        string hubOriginal = File.ReadAllText(hubPath).Replace("\r\n", "\n", StringComparison.Ordinal);
+        string[] hubLines = hubOriginal.Split('\n');
 
-        // 1. Scan filesystem for all valid non-draft markdown files in docs/
+        // 1. Scan filesystem for all valid non-ADR, non-draft, non-index markdown files in docs/
         var diskFiles = ScanMarkdownFiles(docsDir);
 
-        // 2. Extract existing links and index mappings from DOCUMENTATION_INDEX.md
-        var indexedTargets = ExtractIndexedTargets(originalContent);
+        // 2. Group disk files by owning category shard
+        var docsByShard = new Dictionary<string, List<MarkdownDocInfo>>(StringComparer.Ordinal);
+        foreach (var doc in diskFiles)
+        {
+            string shardRelPath = GetOwningShardRelativePath(docsDir, doc.RelativePath);
+            if (!docsByShard.TryGetValue(shardRelPath, out var shardDocs))
+            {
+                shardDocs = [];
+                docsByShard[shardRelPath] = shardDocs;
+            }
+            shardDocs.Add(doc);
+        }
 
-        // 3. Find unindexed markdown files (non-blog sections + blog/index.md if missing)
-        var unindexedFiles = diskFiles
-            .Where(file => !indexedTargets.Contains(NormalizePath(file.RelativePath)))
-            .Select(file => file.RelativePath)
+        // 3. Union existing category shard files on disk with shards required by disk documents
+        var existingShards = DiscoverExistingShardFiles(docsDir);
+        var allShardRelPaths = existingShards
+            .Union(docsByShard.Keys, StringComparer.Ordinal)
+            .Order(Comparer<string>.Create(CompareSortKeys))
             .ToList();
 
-        // 4. Reconcile status drift on existing ADR entries in DOCUMENTATION_INDEX.md
-        string reconciledContent = ReconcileAdrRowStatuses(originalContent, docsDir, out var staleAdrStatuses);
+        // 4. Validate static hub docs/DOCUMENTATION_INDEX.md
+        var tableErrors = ValidateMarkdownTableLines(hubLines, "docs/DOCUMENTATION_INDEX.md");
+        var sortErrors = ValidateTableRowSorting(hubLines, "docs/DOCUMENTATION_INDEX.md");
+        var forbiddenHubAdrRows = FindForbiddenPerAdrRowsInHub(hubLines);
+        var hubIndexedDocsTargets = ExtractIndexedDocsRelativeTargets(hubOriginal, docsDir, "DOCUMENTATION_INDEX.md");
+        var unlinkedShardsInHub = allShardRelPaths
+            .Where(s => !hubIndexedDocsTargets.Contains(s))
+            .ToList();
 
-        // 5. Compute canonical updated index (adds unindexed files AND refreshes/prunes ## Engineering blog rows)
-        string blogOnlyUpdatedContent = GenerateUpdatedIndex(reconciledContent, diskFiles, [], docsDir);
-        string normalizedReconciled = reconciledContent.TrimEnd() + "\n";
-        bool hasBlogSectionDrift = !string.Equals(normalizedReconciled, blogOnlyUpdatedContent, StringComparison.Ordinal);
+        // 5. Inspect every category shard
+        var missingShardFiles = new List<string>();
+        var unindexedFiles = new List<string>();
+        var driftedShards = new List<string>();
+        var shardOriginals = new Dictionary<string, string>(StringComparer.Ordinal);
+        var shardMissingDocs = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+
+        foreach (string shardRelPath in allShardRelPaths)
+        {
+            string shardFullPath = Path.Combine(docsDir, shardRelPath.Replace('/', Path.DirectorySeparatorChar));
+            string shardDisplayPath = $"docs/{shardRelPath}";
+            var shardDocs = docsByShard.TryGetValue(shardRelPath, out var list) ? list : [];
+
+            if (!File.Exists(shardFullPath))
+            {
+                missingShardFiles.Add(shardRelPath);
+                var missingPaths = shardDocs.Select(d => d.RelativePath).ToList();
+                shardMissingDocs[shardRelPath] = missingPaths;
+                unindexedFiles.AddRange(missingPaths);
+                continue;
+            }
+
+            string shardOriginal = File.ReadAllText(shardFullPath).Replace("\r\n", "\n", StringComparison.Ordinal);
+            shardOriginals[shardRelPath] = shardOriginal;
+            string[] shardLines = shardOriginal.Split('\n');
+
+            tableErrors.AddRange(ValidateMarkdownTableLines(shardLines, shardDisplayPath));
+            sortErrors.AddRange(ValidateTableRowSorting(shardLines, shardDisplayPath));
+
+            var indexedInShard = ExtractIndexedDocsRelativeTargets(shardOriginal, docsDir, shardRelPath);
+            var missingInShard = shardDocs
+                .Where(d => !indexedInShard.Contains(d.RelativePath))
+                .Select(d => d.RelativePath)
+                .ToList();
+
+            shardMissingDocs[shardRelPath] = missingInShard;
+            unindexedFiles.AddRange(missingInShard);
+
+            string canonicalWithoutNew = GenerateUpdatedShardContent(shardOriginal, shardDocs, [], docsDir, shardRelPath);
+            string normalizedShardOriginal = shardOriginal.TrimEnd() + "\n";
+            if (!string.Equals(normalizedShardOriginal, canonicalWithoutNew, StringComparison.Ordinal))
+            {
+                driftedShards.Add(shardRelPath);
+            }
+        }
 
         if (check)
         {
-            var tableErrors = ValidateMarkdownTableLines(originalContent.Split('\n'), "docs/DOCUMENTATION_INDEX.md");
+            bool failed = false;
+
             if (tableErrors.Count > 0)
             {
-                Console.WriteLine($"[ERROR] Documentation index 'docs/DOCUMENTATION_INDEX.md' contains {tableErrors.Count} malformed Markdown table row(s):");
+                failed = true;
+                Console.WriteLine($"[ERROR] Documentation index shards contain {tableErrors.Count} malformed Markdown table row(s):");
                 foreach (var err in tableErrors.Take(20))
                 {
                     Console.WriteLine($"  - {err}");
@@ -146,66 +204,193 @@ public static partial class DocIndexSyncService
                 {
                     Console.WriteLine($"  ... and {tableErrors.Count - 20} more table error(s).");
                 }
-                return 1;
             }
 
-            if (unindexedFiles.Count > 0 || staleAdrStatuses.Count > 0 || hasBlogSectionDrift)
+            if (forbiddenHubAdrRows.Count > 0)
             {
-                if (unindexedFiles.Count > 0)
+                failed = true;
+                Console.WriteLine($"[ERROR] 'docs/DOCUMENTATION_INDEX.md' must omit per-ADR rows and link only to ADR hub/domain shards ({forbiddenHubAdrRows.Count} violation(s)):");
+                foreach (var err in forbiddenHubAdrRows.Take(20))
                 {
-                    Console.WriteLine($"[ERROR] Documentation index 'docs/DOCUMENTATION_INDEX.md' is missing entries for {unindexedFiles.Count} markdown file(s):");
-                    foreach (var unindexed in unindexedFiles.Take(20))
-                    {
-                        Console.WriteLine($"  - docs/{unindexed}");
-                    }
-                    if (unindexedFiles.Count > 20)
-                    {
-                        Console.WriteLine($"  ... and {unindexedFiles.Count - 20} more file(s).");
-                    }
+                    Console.WriteLine($"  - {err}");
                 }
+            }
 
-                if (staleAdrStatuses.Count > 0)
+            if (sortErrors.Count > 0)
+            {
+                failed = true;
+                Console.WriteLine($"[ERROR] Documentation index shards contain {sortErrors.Count} out-of-order table row(s) (must be sorted alphabetically by file path):");
+                foreach (var err in sortErrors.Take(20))
                 {
-                    Console.WriteLine($"[ERROR] Documentation index 'docs/DOCUMENTATION_INDEX.md' has stale status values for {staleAdrStatuses.Count} ADR file(s):");
-                    foreach (var stale in staleAdrStatuses.Take(20))
-                    {
-                        Console.WriteLine($"  - docs/{stale}");
-                    }
-                    if (staleAdrStatuses.Count > 20)
-                    {
-                        Console.WriteLine($"  ... and {staleAdrStatuses.Count - 20} more file(s).");
-                    }
+                    Console.WriteLine($"  - {err}");
                 }
-
-                if (hasBlogSectionDrift)
+                if (sortErrors.Count > 20)
                 {
-                    Console.WriteLine("[ERROR] Documentation index 'docs/DOCUMENTATION_INDEX.md' has stale or draft '## Engineering blog' entries.");
+                    Console.WriteLine($"  ... and {sortErrors.Count - 20} more sorting error(s).");
                 }
+            }
 
-                Console.WriteLine("\nRun 'pnpm cadence generate-doc-index' to update 'docs/DOCUMENTATION_INDEX.md'.");
+            if (missingShardFiles.Count > 0 || unlinkedShardsInHub.Count > 0)
+            {
+                failed = true;
+                foreach (var missingShard in missingShardFiles)
+                {
+                    Console.WriteLine($"[ERROR] Missing category documentation shard 'docs/{missingShard}'.");
+                }
+                foreach (var unlinkedShard in unlinkedShardsInHub)
+                {
+                    Console.WriteLine($"[ERROR] Category shard 'docs/{unlinkedShard}' is not linked in 'docs/DOCUMENTATION_INDEX.md'.");
+                }
+            }
+
+            if (unindexedFiles.Count > 0)
+            {
+                failed = true;
+                Console.WriteLine($"[ERROR] Category documentation shards are missing entries for {unindexedFiles.Count} markdown file(s):");
+                foreach (var unindexed in unindexedFiles.Take(20))
+                {
+                    Console.WriteLine($"  - docs/{unindexed}");
+                }
+                if (unindexedFiles.Count > 20)
+                {
+                    Console.WriteLine($"  ... and {unindexedFiles.Count - 20} more file(s).");
+                }
+            }
+
+            if (driftedShards.Count > 0)
+            {
+                failed = true;
+                Console.WriteLine($"[ERROR] Category documentation shard(s) have stale metadata, draft entries, or formatting drift: {string.Join(", ", driftedShards.Select(s => $"docs/{s}"))}");
+            }
+
+            if (failed)
+            {
+                Console.WriteLine("\nRun 'pnpm cadence generate-doc-index' to synchronize category documentation shards.");
                 return 1;
             }
 
-            Console.WriteLine($"✔ Documentation index parity check passed cleanly ({diskFiles.Count} documents indexed).");
+            Console.WriteLine($"✔ Documentation index parity check passed cleanly ({diskFiles.Count} documents indexed across {allShardRelPaths.Count} category shard(s)).");
             return 0;
         }
 
-        if (unindexedFiles.Count == 0 && staleAdrStatuses.Count == 0 && !hasBlogSectionDrift)
+        // Write mode: update only shards that need changes, leaving static DOCUMENTATION_INDEX.md untouched
+        // whenever all category shards are already linked and valid.
+        int updatedShardCount = 0;
+        foreach (string shardRelPath in allShardRelPaths)
         {
-            Console.WriteLine("✔ Documentation index is already up to date.");
+            string shardFullPath = Path.Combine(docsDir, shardRelPath.Replace('/', Path.DirectorySeparatorChar));
+            var shardDocs = docsByShard.TryGetValue(shardRelPath, out var list) ? list : [];
+            var missingPaths = shardMissingDocs.TryGetValue(shardRelPath, out var mp) ? mp : [];
+
+            bool existed = shardOriginals.TryGetValue(shardRelPath, out string? existingContent);
+            string baseContent = existed ? existingContent! : BuildInitialShardHeader(shardRelPath);
+            string updatedShard = GenerateUpdatedShardContent(baseContent, shardDocs, missingPaths, docsDir, shardRelPath);
+
+            if (!existed || !string.Equals(existingContent!.TrimEnd() + "\n", updatedShard, StringComparison.Ordinal) || !string.Equals(existingContent, updatedShard, StringComparison.Ordinal))
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(shardFullPath)!);
+                File.WriteAllText(shardFullPath, updatedShard);
+                updatedShardCount++;
+            }
+        }
+
+        bool hubNeedsRepair =
+            unlinkedShardsInHub.Count > 0 ||
+            forbiddenHubAdrRows.Count > 0 ||
+            ValidateMarkdownTableLines(hubLines, "docs/DOCUMENTATION_INDEX.md").Count > 0 ||
+            ValidateTableRowSorting(hubLines, "docs/DOCUMENTATION_INDEX.md").Count > 0;
+
+        bool hubUpdated = false;
+        if (hubNeedsRepair)
+        {
+            string updatedHub = RepairAndSyncHubContent(hubOriginal, unlinkedShardsInHub);
+            if (!string.Equals(hubOriginal, updatedHub, StringComparison.Ordinal))
+            {
+                File.WriteAllText(hubPath, updatedHub);
+                hubUpdated = true;
+            }
+        }
+
+        if (updatedShardCount == 0 && !hubUpdated)
+        {
+            Console.WriteLine("✔ Documentation index shards are already up to date.");
             return 0;
         }
 
-        string updatedContent = unindexedFiles.Count > 0
-            ? GenerateUpdatedIndex(reconciledContent, diskFiles, unindexedFiles, docsDir)
-            : blogOnlyUpdatedContent;
-
-        File.WriteAllText(indexPath, updatedContent);
-        Console.WriteLine($"✔ Successfully synchronized documentation index in 'docs/DOCUMENTATION_INDEX.md' ({unindexedFiles.Count} new documents indexed, {staleAdrStatuses.Count} ADR statuses updated).");
+        Console.WriteLine($"✔ Synchronized {updatedShardCount} category documentation shard(s) ({unindexedFiles.Count} new document(s) indexed).");
         return 0;
     }
 
     public record MarkdownDocInfo(string RelativePath, string FullPath);
+
+    /// <summary>
+    /// Maps a <c>docs/</c>-relative Markdown path (e.g. <c>LOCAL_DEV_ENVIRONMENT.md</c>,
+    /// <c>kernel/CLINICAL_KERNEL_SPECIFICATION.md</c>, <c>blog/YYYY-MM-DD-post.md</c>) to its owning
+    /// category shard path relative to <c>docs/</c>.
+    /// </summary>
+    public static string GetOwningShardRelativePath(string docsDir, string docRelPath)
+    {
+        string normalized = NormalizeRelativePath(docRelPath);
+        int slashIdx = normalized.IndexOf('/', StringComparison.Ordinal);
+        if (slashIdx < 0)
+        {
+            return "ROOT_INDEX.md";
+        }
+
+        string topDir = normalized[..slashIdx];
+        string topDirFull = Path.Combine(docsDir, topDir);
+        if (Directory.Exists(topDirFull))
+        {
+            bool hasLowercasePortalIndex = Directory.EnumerateFiles(topDirFull, "*.md", SearchOption.TopDirectoryOnly)
+                .Select(Path.GetFileName)
+                .Any(name => string.Equals(name, "index.md", StringComparison.Ordinal) ||
+                             string.Equals(name, "DOC_INDEX.md", StringComparison.Ordinal));
+            if (hasLowercasePortalIndex)
+            {
+                return $"{topDir}/DOC_INDEX.md";
+            }
+        }
+
+        return $"{topDir}/INDEX.md";
+    }
+
+    private static List<string> DiscoverExistingShardFiles(string docsDir)
+    {
+        var shards = new List<string>();
+        if (!Directory.Exists(docsDir))
+        {
+            return shards;
+        }
+
+        foreach (string rootFile in Directory.EnumerateFiles(docsDir, "*.md", SearchOption.TopDirectoryOnly))
+        {
+            if (string.Equals(Path.GetFileName(rootFile), "ROOT_INDEX.md", StringComparison.Ordinal))
+            {
+                shards.Add("ROOT_INDEX.md");
+            }
+        }
+
+        foreach (string subDir in Directory.GetDirectories(docsDir))
+        {
+            string subName = Path.GetFileName(subDir);
+            if (ExcludedDirectories.Contains(subName))
+            {
+                continue;
+            }
+
+            foreach (string file in Directory.EnumerateFiles(subDir, "*.md", SearchOption.TopDirectoryOnly))
+            {
+                string fileName = Path.GetFileName(file);
+                if (string.Equals(fileName, "INDEX.md", StringComparison.Ordinal) ||
+                    string.Equals(fileName, "DOC_INDEX.md", StringComparison.Ordinal))
+                {
+                    shards.Add($"{subName}/{fileName}");
+                }
+            }
+        }
+
+        return shards;
+    }
 
     public static bool IsDraftMarkdownFile(string fullPath)
     {
@@ -230,13 +415,14 @@ public static partial class DocIndexSyncService
     {
         var result = new List<MarkdownDocInfo>();
         ScanDirRecursive(docsDir, docsDir, result);
-        return [.. result.OrderBy(f => f.RelativePath, StringComparer.OrdinalIgnoreCase)];
+        return [.. result.OrderBy(f => f.RelativePath, Comparer<string>.Create(CompareSortKeys))];
     }
 
     private static void ScanDirRecursive(string currentDir, string docsDir, List<MarkdownDocInfo> result)
     {
         var dirName = Path.GetFileName(currentDir);
-        if (ExcludedDirectories.Contains(dirName))
+        if (!string.Equals(currentDir, docsDir, StringComparison.OrdinalIgnoreCase) &&
+            ExcludedDirectories.Contains(dirName))
         {
             return;
         }
@@ -245,7 +431,7 @@ public static partial class DocIndexSyncService
         {
             string fileName = Path.GetFileName(file);
             string relPath = Path.GetRelativePath(docsDir, file).Replace('\\', '/');
-            if (ExcludedFiles.Contains(fileName) || StagedSitePages.Contains(relPath))
+            if (ExcludedIndexFiles.Contains(fileName) || StagedSitePages.Contains(relPath))
             {
                 continue;
             }
@@ -283,7 +469,8 @@ public static partial class DocIndexSyncService
         }
 
         return normalized.StartsWith("blog/", StringComparison.OrdinalIgnoreCase) &&
-               !normalized.Equals("blog/index.md", StringComparison.OrdinalIgnoreCase);
+               !normalized.Equals("blog/index.md", StringComparison.OrdinalIgnoreCase) &&
+               !normalized.Equals("blog/DOC_INDEX.md", StringComparison.Ordinal);
     }
 
     public static HashSet<string> ExtractIndexedTargets(string content)
@@ -310,6 +497,51 @@ public static partial class DocIndexSyncService
         return targets;
     }
 
+    private static HashSet<string> ExtractIndexedDocsRelativeTargets(string content, string docsDir, string shardRelPath)
+    {
+        var targets = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        string shardFullPath = Path.Combine(docsDir, shardRelPath.Replace('/', Path.DirectorySeparatorChar));
+        string shardDirFull = Path.GetDirectoryName(shardFullPath) ?? docsDir;
+        string normalizedDocsRoot = Path.GetFullPath(docsDir);
+
+        foreach (Match match in MarkdownLinkRegex().Matches(content))
+        {
+            string target = match.Groups[1].Value;
+            int anchorIdx = target.IndexOf('#');
+            if (anchorIdx >= 0)
+            {
+                target = target[..anchorIdx];
+            }
+            target = target.Trim();
+            if (string.IsNullOrEmpty(target) ||
+                target.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+                target.StartsWith("https://", StringComparison.OrdinalIgnoreCase) ||
+                target.StartsWith("mailto:", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            string resolvedFull = Path.GetFullPath(Path.Combine(shardDirFull, target.Replace('/', Path.DirectorySeparatorChar)));
+            string relToDocs = Path.GetRelativePath(normalizedDocsRoot, resolvedFull).Replace('\\', '/');
+            if (!relToDocs.StartsWith("..", StringComparison.Ordinal))
+            {
+                targets.Add(relToDocs);
+            }
+        }
+
+        return targets;
+    }
+
+    private static string NormalizeRelativePath(string path)
+    {
+        string normalized = path.Replace('\\', '/').Trim();
+        while (normalized.StartsWith("./", StringComparison.Ordinal))
+        {
+            normalized = normalized[2..];
+        }
+        return normalized;
+    }
+
     private static string NormalizePath(string path)
     {
         path = path.Replace('\\', '/').Trim();
@@ -328,15 +560,17 @@ public static partial class DocIndexSyncService
     {
         if (relPath.StartsWith("blog/", StringComparison.OrdinalIgnoreCase) ||
             relPath.StartsWith("docs/blog/", StringComparison.OrdinalIgnoreCase)) return "## Engineering blog";
-        if (relPath.StartsWith("architecture/repository-migration/", StringComparison.OrdinalIgnoreCase)) return "## Former repository migration program";
+        if (relPath.StartsWith("architecture/repository-migration/", StringComparison.OrdinalIgnoreCase) ||
+            relPath.StartsWith("architecture/", StringComparison.OrdinalIgnoreCase) && relPath.Contains("repository-migration", StringComparison.OrdinalIgnoreCase)) return "## Former repository migration program";
         if (relPath.StartsWith("kernel/", StringComparison.OrdinalIgnoreCase) ||
-            relPath.StartsWith("architecture/", StringComparison.OrdinalIgnoreCase)) return "## Kernel and roadmap";
+            relPath.StartsWith("architecture/", StringComparison.OrdinalIgnoreCase) ||
+            relPath.StartsWith("ai/", StringComparison.OrdinalIgnoreCase) ||
+            relPath.StartsWith("ux/", StringComparison.OrdinalIgnoreCase)) return "## Kernel and roadmap";
         if (relPath.StartsWith("adr/", StringComparison.OrdinalIgnoreCase)) return "## Architecture decision records";
         if (relPath.StartsWith("SDLC/", StringComparison.OrdinalIgnoreCase) ||
             relPath.Equals("SRS.md", StringComparison.OrdinalIgnoreCase)) return "## Requirements, validation and GxP";
         if (relPath.StartsWith("migration/", StringComparison.OrdinalIgnoreCase) ||
-            relPath.Equals("PYTHON_REFERENCE_INVENTORY.md", StringComparison.OrdinalIgnoreCase) ||
-            relPath.Equals("MIGRATION_WORKFLOW.md", StringComparison.OrdinalIgnoreCase)) return "## Python-to-.NET port (completed)";
+            relPath.Equals("PYTHON_REFERENCE_INVENTORY.md", StringComparison.OrdinalIgnoreCase)) return "## Python-to-.NET port (completed)";
         if (relPath.StartsWith("specs/", StringComparison.OrdinalIgnoreCase)) return "## Design proposals";
         if (relPath.StartsWith("CDISC/", StringComparison.OrdinalIgnoreCase) ||
             relPath.StartsWith("NCI/", StringComparison.OrdinalIgnoreCase)) return "## Standards reference material";
@@ -402,6 +636,7 @@ public static partial class DocIndexSyncService
         string normalizedPath = relPath.Replace('\\', '/');
         string fileName = Path.GetFileName(normalizedPath);
         if (fileName.Equals("index.md", StringComparison.OrdinalIgnoreCase) ||
+            fileName.Equals("legacy-index.md", StringComparison.OrdinalIgnoreCase) ||
             fileName.Equals("TEMPLATE.md", StringComparison.OrdinalIgnoreCase) ||
             string.IsNullOrWhiteSpace(fileContent))
         {
@@ -428,82 +663,6 @@ public static partial class DocIndexSyncService
         }
 
         return PreKernelPythonOrNeo4jRegex().IsMatch(fileContent);
-    }
-
-    private static string ReconcileAdrRowStatuses(string indexContent, string docsDir, out List<string> updatedPaths)
-    {
-        updatedPaths = [];
-        string[] lines = indexContent.Split('\n');
-        bool inAdrSection = false;
-
-        for (int i = 0; i < lines.Length; i++)
-        {
-            string hasCr = lines[i].EndsWith('\r') ? "\r" : "";
-            string line = hasCr.Length > 0 ? lines[i][..^1] : lines[i];
-            string trimmed = line.Trim();
-
-            if (trimmed.StartsWith("## ", StringComparison.Ordinal))
-            {
-                inAdrSection = trimmed.Equals("## Architecture decision records", StringComparison.OrdinalIgnoreCase);
-                continue;
-            }
-
-            if (!inAdrSection || !trimmed.StartsWith('|'))
-            {
-                continue;
-            }
-
-            Match rowMatch = TableRow3ColRegex().Match(line);
-            if (!rowMatch.Success)
-            {
-                continue;
-            }
-
-            string docCell = rowMatch.Groups[1].Value.Trim();
-            string statusCell = rowMatch.Groups[2].Value.Trim();
-            if (docCell.Equals("Document", StringComparison.OrdinalIgnoreCase) ||
-                statusCell.StartsWith("---", StringComparison.Ordinal))
-            {
-                continue;
-            }
-
-            Match linkMatch = MarkdownLinkRegex().Match(docCell);
-            if (!linkMatch.Success)
-            {
-                continue;
-            }
-
-            string rawTarget = linkMatch.Groups[1].Value;
-            int anchorIdx = rawTarget.IndexOf('#');
-            if (anchorIdx >= 0)
-            {
-                rawTarget = rawTarget[..anchorIdx];
-            }
-
-            string normTarget = NormalizePath(rawTarget);
-            if (!normTarget.StartsWith("adr/", StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-
-            string fullPath = Path.Combine(docsDir, normTarget.Replace('/', Path.DirectorySeparatorChar));
-            if (!File.Exists(fullPath))
-            {
-                continue;
-            }
-
-            string expectedStatus = DetermineStatus(normTarget, File.ReadAllText(fullPath));
-            if (!string.Equals(statusCell, expectedStatus, StringComparison.Ordinal))
-            {
-                Group statusGroup = rowMatch.Groups[2];
-                string prefix = line[..statusGroup.Index].TrimEnd();
-                string suffix = line[(statusGroup.Index + statusGroup.Length)..].TrimStart();
-                lines[i] = $"{prefix} {expectedStatus} {suffix}{hasCr}";
-                updatedPaths.Add(normTarget);
-            }
-        }
-
-        return string.Join('\n', lines);
     }
 
     public static (string Title, string Description) ExtractDocMetadata(string fullPath, string relPath)
@@ -601,7 +760,7 @@ public static partial class DocIndexSyncService
         if (string.IsNullOrEmpty(title))
         {
             title = Path.GetFileNameWithoutExtension(fullPath).Replace('-', ' ').Replace('_', ' ');
-            title = System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(title);
+            title = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(title);
         }
 
         if (string.IsNullOrEmpty(description))
@@ -609,9 +768,7 @@ public static partial class DocIndexSyncService
             description = title;
         }
 
-        // Clean up markdown in title if any
         title = title.Replace("`", "").Trim();
-
         return (title, description);
     }
 
@@ -712,7 +869,6 @@ public static partial class DocIndexSyncService
                 runLen++;
             }
 
-            // Search for a matching backtick run of exact length `runLen`.
             int search = pos + runLen;
             int matchedClose = -1;
             while (search < line.Length)
@@ -750,15 +906,12 @@ public static partial class DocIndexSyncService
                 continue;
             }
 
-            // CommonMark treats a standalone empty ` `` ` (with no content inside a cell) as literal text,
-            // whereas single unclosed backticks or cut code spans break inline code parsing.
             if (runLen == 1)
             {
                 unclosedLen = runLen;
                 return pos;
             }
 
-            // For multi-backtick runs (>= 2), flag when non-whitespace content follows before the next pipe or end of line.
             int nextPipe = line.IndexOf('|', pos + runLen);
             string remainderInCell = nextPipe >= 0
                 ? line[(pos + runLen)..nextPipe]
@@ -864,6 +1017,188 @@ public static partial class DocIndexSyncService
         return errors;
     }
 
+    /// <summary>
+    /// Validates that data rows within every Markdown table are sorted alphabetically by their primary
+    /// link target (<see cref="CompareSortKeys"/>).
+    /// </summary>
+    public static List<string> ValidateTableRowSorting(IReadOnlyList<string> lines, string displayPath)
+    {
+        var errors = new List<string>();
+        char fenceChar = '\0';
+        int fenceLen = 0;
+        bool inHtmlComment = false;
+        bool inTable = false;
+        int tableRowIndex = 0;
+        string? prevSortKey = null;
+
+        for (int i = 0; i < lines.Count; i++)
+        {
+            string rawLine = lines[i].TrimEnd('\r');
+            string trimmed = rawLine.Trim();
+
+            if (TryMatchFenceLine(rawLine, out char markerChar, out int markerLen, out bool hasInfo))
+            {
+                if (fenceChar == '\0')
+                {
+                    fenceChar = markerChar;
+                    fenceLen = markerLen;
+                    inTable = false;
+                    prevSortKey = null;
+                    continue;
+                }
+
+                if (markerChar == fenceChar && markerLen >= fenceLen && !hasInfo)
+                {
+                    fenceChar = '\0';
+                    fenceLen = 0;
+                    continue;
+                }
+            }
+
+            if (fenceChar != '\0')
+            {
+                continue;
+            }
+
+            if (inHtmlComment)
+            {
+                if (trimmed.Contains("-->", StringComparison.Ordinal))
+                {
+                    inHtmlComment = false;
+                }
+                continue;
+            }
+
+            if (trimmed.StartsWith("<!--", StringComparison.Ordinal) && !trimmed.StartsWith('|'))
+            {
+                if (!trimmed.Contains("-->", StringComparison.Ordinal))
+                {
+                    inHtmlComment = true;
+                }
+                inTable = false;
+                prevSortKey = null;
+                continue;
+            }
+
+            if (!IsPipeTableRowCandidate(trimmed))
+            {
+                inTable = false;
+                prevSortKey = null;
+                continue;
+            }
+
+            if (!inTable)
+            {
+                string nextTrimmed = (i + 1 < lines.Count) ? lines[i + 1].Trim() : string.Empty;
+                if (IsGfmDelimiterRow(nextTrimmed))
+                {
+                    inTable = true;
+                    tableRowIndex = 0;
+                    prevSortKey = null;
+                }
+                continue;
+            }
+
+            tableRowIndex++;
+            if (tableRowIndex == 1 && IsGfmDelimiterRow(trimmed))
+            {
+                continue;
+            }
+
+            string? currentSortKey = TryExtractRowPrimaryTarget(trimmed);
+            if (string.IsNullOrEmpty(currentSortKey))
+            {
+                continue;
+            }
+
+            if (prevSortKey is not null && CompareSortKeys(prevSortKey, currentSortKey) > 0)
+            {
+                errors.Add($"{displayPath}:{i + 1} - Row target '{currentSortKey}' is out of alphabetical order after '{prevSortKey}'.");
+            }
+
+            prevSortKey = currentSortKey;
+        }
+
+        return errors;
+    }
+
+    private static List<string> FindForbiddenPerAdrRowsInHub(IReadOnlyList<string> hubLines)
+    {
+        var errors = new List<string>();
+        for (int i = 0; i < hubLines.Count; i++)
+        {
+            string trimmed = hubLines[i].Trim();
+            if (!IsPipeTableRowCandidate(trimmed) || IsGfmDelimiterRow(trimmed))
+            {
+                continue;
+            }
+
+            string? rawTarget = TryExtractRowPrimaryTarget(trimmed);
+            if (string.IsNullOrEmpty(rawTarget))
+            {
+                continue;
+            }
+
+            string clean = NormalizeRelativePath(rawTarget.Split('#')[0]);
+            if (!clean.StartsWith("adr/", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            if (IsAllowedHubAdrTarget(clean))
+            {
+                continue;
+            }
+
+            errors.Add($"docs/DOCUMENTATION_INDEX.md:{i + 1} - Forbidden per-ADR entry '{clean}'; list ADRs only in 'docs/adr/<domain>/index.md' or 'docs/adr/legacy-index.md'.");
+        }
+
+        return errors;
+    }
+
+    private static bool IsAllowedHubAdrTarget(string cleanTarget)
+    {
+        if (cleanTarget.Equals("adr/index.md", StringComparison.OrdinalIgnoreCase) ||
+            cleanTarget.Equals("adr/TEMPLATE.md", StringComparison.OrdinalIgnoreCase) ||
+            cleanTarget.Equals("adr/legacy-index.md", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        string[] parts = cleanTarget.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length == 3 &&
+               parts[0].Equals("adr", StringComparison.OrdinalIgnoreCase) &&
+               AdrValidatorService.IsValidDomain(parts[1]) &&
+               parts[2].Equals("index.md", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string? TryExtractRowPrimaryTarget(string trimmedRow)
+    {
+        string firstCell = ExtractFirstTableCell(trimmedRow);
+        Match linkMatch = MarkdownLinkRegex().Match(firstCell);
+        return linkMatch.Success ? linkMatch.Groups[1].Value.Trim() : null;
+    }
+
+    private static string ExtractFirstTableCell(string trimmedRow)
+    {
+        int start = trimmedRow.StartsWith('|') ? 1 : 0;
+        int i = start;
+        while (i < trimmedRow.Length)
+        {
+            if (trimmedRow[i] == '\\' && i + 1 < trimmedRow.Length)
+            {
+                i += 2;
+                continue;
+            }
+            if (trimmedRow[i] == '|')
+            {
+                return trimmedRow[start..i].Trim();
+            }
+            i++;
+        }
+        return trimmedRow[start..].Trim();
+    }
+
     private static bool TryMatchFenceLine(string line, out char markerChar, out int markerLen, out bool hasInfo)
     {
         string trimmedStart = line.TrimStart();
@@ -879,7 +1214,6 @@ public static partial class DocIndexSyncService
             if (count >= 3)
             {
                 string rest = trimmedStart[count..].Trim();
-                // Per CommonMark, backtick fences cannot contain backticks in their info string (otherwise it's inline code).
                 if (ch == '`' && rest.Contains('`'))
                 {
                     markerChar = '\0';
@@ -1090,30 +1424,59 @@ public static partial class DocIndexSyncService
         return result;
     }
 
-    private static string GenerateUpdatedIndex(
-        string originalContent,
-        List<MarkdownDocInfo> allDiskDocs,
-        List<string> unindexedPaths,
-        string docsDir)
+    private static string BuildInitialShardHeader(string shardRelPath)
     {
+        if (shardRelPath.Equals("ROOT_INDEX.md", StringComparison.Ordinal))
+        {
+            return string.Join(
+                '\n',
+                "# Root & Cross-Cutting Guides Index",
+                "",
+                "Root-level `docs/*.md` guides and staged repository-root references. Part of the sharded [Documentation Index](DOCUMENTATION_INDEX.md); rows in each table are sorted alphabetically by file path.",
+                "");
+        }
+
+        string topDir = shardRelPath.Split('/')[0];
+        string title = topDir.Equals("blog", StringComparison.OrdinalIgnoreCase)
+            ? "Engineering Blog Index"
+            : $"{CultureInfo.InvariantCulture.TextInfo.ToTitleCase(topDir.Replace('-', ' ').Replace('_', ' '))} Documentation Index";
+
+        return string.Join(
+            '\n',
+            $"# {title}",
+            "",
+            $"Documentation shard for `docs/{topDir}/`. Part of the sharded [Documentation Index](../DOCUMENTATION_INDEX.md); rows in each table are sorted alphabetically by file path.",
+            "");
+    }
+
+    private static string GenerateUpdatedShardContent(
+        string originalShardContent,
+        List<MarkdownDocInfo> shardDiskDocs,
+        List<string> unindexedPaths,
+        string docsDir,
+        string shardRelPath)
+    {
+        string shardFullPath = Path.Combine(docsDir, shardRelPath.Replace('/', Path.DirectorySeparatorChar));
+        string shardDirFull = Path.GetDirectoryName(shardFullPath) ?? docsDir;
+
         var unindexedSet = new HashSet<string>(unindexedPaths, StringComparer.OrdinalIgnoreCase);
-        var unindexedDocs = allDiskDocs.Where(d => unindexedSet.Contains(d.RelativePath)).ToList();
-        var publishedBlogPosts = allDiskDocs
+        var unindexedDocs = shardDiskDocs.Where(d => unindexedSet.Contains(d.RelativePath)).ToList();
+
+        bool isBlogShard = shardRelPath.Equals("blog/DOC_INDEX.md", StringComparison.OrdinalIgnoreCase) ||
+                           shardDiskDocs.Any(d => IsDatedBlogPostPath(d.RelativePath));
+
+        var publishedBlogPosts = shardDiskDocs
             .Where(d => IsDatedBlogPostPath(d.RelativePath))
-            .Select(doc => (Doc: doc, Date: ExtractBlogPostDate(doc.FullPath, doc.RelativePath)))
-            .OrderByDescending(entry => entry.Date, StringComparer.Ordinal)
-            .ThenByDescending(entry => entry.Doc.RelativePath, StringComparer.OrdinalIgnoreCase)
-            .Select(entry => entry.Doc)
+            .OrderBy(d => GetShardRelativeHref(shardDirFull, d.FullPath), Comparer<string>.Create(CompareSortKeys))
             .ToList();
-        var blogIndexDoc = allDiskDocs.FirstOrDefault(d =>
+        var blogIndexDoc = shardDiskDocs.FirstOrDefault(d =>
             d.RelativePath.Equals("blog/index.md", StringComparison.OrdinalIgnoreCase));
 
         var categoryGroups = new Dictionary<string, List<MarkdownDocInfo>>(StringComparer.OrdinalIgnoreCase);
-
         foreach (var doc in unindexedDocs)
         {
             string category = DetermineCategory(doc.RelativePath);
-            if (string.Equals(category, "## Engineering blog", StringComparison.OrdinalIgnoreCase))
+            if (isBlogShard && string.Equals(category, "## Engineering blog", StringComparison.OrdinalIgnoreCase))
             {
                 continue;
             }
@@ -1126,13 +1489,12 @@ public static partial class DocIndexSyncService
             list.Add(doc);
         }
 
-        var lines = CollapseIntraTableBlankLines([.. originalContent.Split('\n')]);
+        var lines = CollapseIntraTableBlankLines([.. originalShardContent.Split('\n')]);
 
-        // Identify sections starting with "## "
         var sectionIndices = new List<int>();
         for (int i = 0; i < lines.Count; i++)
         {
-            if (lines[i].Trim().StartsWith("## "))
+            if (lines[i].Trim().StartsWith("## ", StringComparison.Ordinal))
             {
                 sectionIndices.Add(i);
             }
@@ -1140,17 +1502,16 @@ public static partial class DocIndexSyncService
 
         bool sawBlogSection = false;
 
-        // Process sections from bottom to top so insertions don't invalidate earlier section indices
         for (int s = sectionIndices.Count - 1; s >= 0; s--)
         {
             int start = sectionIndices[s];
             int end = (s + 1 < sectionIndices.Count) ? sectionIndices[s + 1] : lines.Count;
             string categoryHeader = lines[start].Trim();
 
-            if (string.Equals(categoryHeader, "## Engineering blog", StringComparison.OrdinalIgnoreCase))
+            if (isBlogShard && string.Equals(categoryHeader, "## Engineering blog", StringComparison.OrdinalIgnoreCase))
             {
                 sawBlogSection = true;
-                RebuildEngineeringBlogSection(lines, start, end, blogIndexDoc, publishedBlogPosts, docsDir);
+                RebuildEngineeringBlogShardSection(lines, start, end, blogIndexDoc, publishedBlogPosts, docsDir, shardDirFull);
                 continue;
             }
 
@@ -1161,9 +1522,10 @@ public static partial class DocIndexSyncService
                 for (int i = start; i < end; i++)
                 {
                     string trimmed = lines[i].Trim();
-                    if (trimmed.StartsWith("| Document |") || trimmed.StartsWith("| Location |"))
+                    if (trimmed.StartsWith("| Document |", StringComparison.Ordinal) ||
+                        trimmed.StartsWith("| Location |", StringComparison.Ordinal))
                     {
-                        hasStatusCol = trimmed.Contains("Status");
+                        hasStatusCol = trimmed.Contains("Status", StringComparison.Ordinal);
                     }
                     if (trimmed.StartsWith('|'))
                     {
@@ -1171,35 +1533,27 @@ public static partial class DocIndexSyncService
                     }
                 }
 
+                var renderedRows = RenderDocRows(pendingDocs, shardDirFull, hasStatusCol);
                 if (lastTableLine >= 0)
                 {
-                    if (string.Equals(categoryHeader, "## Architecture decision records", StringComparison.OrdinalIgnoreCase))
+                    bool needsTrailingBlankLine =
+                        lastTableLine + 1 == end &&
+                        end < lines.Count &&
+                        !string.IsNullOrWhiteSpace(lines[end]);
+                    if (needsTrailingBlankLine)
                     {
-                        InsertAdrRowsByNumber(lines, start, ref end, ref lastTableLine, pendingDocs, hasStatusCol);
+                        renderedRows.Add(string.Empty);
                     }
-                    else
-                    {
-                        var renderedRows = RenderDocRows(pendingDocs, hasStatusCol);
-                        bool needsTrailingBlankLine =
-                            lastTableLine + 1 == end &&
-                            end < lines.Count &&
-                            !string.IsNullOrWhiteSpace(lines[end]);
-                        if (needsTrailingBlankLine)
-                        {
-                            renderedRows.Add(string.Empty);
-                        }
 
-                        lines.InsertRange(lastTableLine + 1, renderedRows);
-                    }
+                    lines.InsertRange(lastTableLine + 1, renderedRows);
                 }
                 else
                 {
-                    var renderedRows = RenderDocRows(pendingDocs, hasStatusCol);
                     var newTable = new List<string>
                     {
                         "",
                         "| Document | Status | What it is |",
-                        "| --- | --- | --- |"
+                        "| --- | --- | --- |",
                     };
                     newTable.AddRange(renderedRows);
                     lines.InsertRange(end, newTable);
@@ -1209,47 +1563,54 @@ public static partial class DocIndexSyncService
             }
         }
 
-        if (!sawBlogSection && (blogIndexDoc is not null || publishedBlogPosts.Count > 0))
+        if (isBlogShard && !sawBlogSection && (blogIndexDoc is not null || publishedBlogPosts.Count > 0))
         {
-            lines.Add("");
+            if (lines.Count > 0 && !string.IsNullOrWhiteSpace(lines[^1]))
+            {
+                lines.Add("");
+            }
             lines.Add("## Engineering blog");
             lines.Add("");
             lines.Add("| Document | Status | What it is |");
             lines.Add("| --- | --- | --- |");
             if (blogIndexDoc is not null)
             {
-                lines.Add(RenderSingleDocRow(blogIndexDoc, hasStatusCol: true, includeBlogDate: false));
+                lines.Add(RenderSingleDocRow(blogIndexDoc, shardDirFull, hasStatusCol: true, includeBlogDate: false));
             }
             foreach (var post in publishedBlogPosts)
             {
-                lines.Add(RenderSingleDocRow(post, hasStatusCol: true, includeBlogDate: true));
+                lines.Add(RenderSingleDocRow(post, shardDirFull, hasStatusCol: true, includeBlogDate: true));
             }
         }
 
-        // Flush any remaining category groups at end of file
-        foreach (var (cat, docs) in categoryGroups)
+        foreach (var (cat, docs) in categoryGroups.OrderBy(kvp => kvp.Key, StringComparer.OrdinalIgnoreCase))
         {
             if (docs.Count > 0)
             {
-                lines.Add("");
+                if (lines.Count > 0 && !string.IsNullOrWhiteSpace(lines[^1]))
+                {
+                    lines.Add("");
+                }
                 lines.Add(cat);
                 lines.Add("");
                 lines.Add("| Document | Status | What it is |");
                 lines.Add("| --- | --- | --- |");
-                lines.AddRange(RenderDocRows(docs, hasStatusCol: true));
+                lines.AddRange(RenderDocRows(docs, shardDirFull, hasStatusCol: true));
             }
         }
 
+        SortAllTablesInLines(lines);
         return string.Join('\n', lines).TrimEnd() + "\n";
     }
 
-    private static void RebuildEngineeringBlogSection(
+    private static void RebuildEngineeringBlogShardSection(
         List<string> lines,
         int start,
         int end,
         MarkdownDocInfo? blogIndexDoc,
         List<MarkdownDocInfo> publishedBlogPosts,
-        string docsDir)
+        string docsDir,
+        string shardDirFull)
     {
         int firstTableLine = -1;
         int lastTableLine = -1;
@@ -1281,36 +1642,35 @@ public static partial class DocIndexSyncService
                 continue;
             }
 
-            if (trimmed.StartsWith("| ---", StringComparison.Ordinal) ||
-                trimmed.StartsWith("|---", StringComparison.Ordinal) ||
-                trimmed.StartsWith("| :---", StringComparison.Ordinal))
+            if (IsGfmDelimiterRow(trimmed))
             {
                 headerAndSepLines.Add(rawLine);
                 continue;
             }
 
-            Match linkMatch = MarkdownLinkRegex().Match(trimmed);
-            if (!linkMatch.Success)
+            string? rowTargetRaw = TryExtractRowPrimaryTarget(trimmed);
+            if (string.IsNullOrEmpty(rowTargetRaw))
             {
                 preservedNonBlogRows.Add(rawLine);
                 continue;
             }
 
-            string rowTarget = NormalizePath(linkMatch.Groups[1].Value.Split('#')[0]);
-            if (rowTarget.Equals("blog/index.md", StringComparison.OrdinalIgnoreCase))
+            string cleanTarget = rowTargetRaw.Split('#')[0].Trim();
+            string resolvedFull = Path.GetFullPath(Path.Combine(shardDirFull, cleanTarget.Replace('/', Path.DirectorySeparatorChar)));
+            string relToDocs = Path.GetRelativePath(Path.GetFullPath(docsDir), resolvedFull).Replace('\\', '/');
+
+            if (relToDocs.Equals("blog/index.md", StringComparison.OrdinalIgnoreCase))
             {
                 existingBlogIndexRow ??= rawLine;
                 continue;
             }
 
-            if (IsDatedBlogPostPath(rowTarget))
+            if (IsDatedBlogPostPath(relToDocs))
             {
-                // Rebuilt from published disk posts below; draft or deleted posts are excluded.
                 continue;
             }
 
-            string candidateFull = Path.Combine(docsDir, rowTarget);
-            if (!IsDraftMarkdownFile(candidateFull))
+            if (!IsDraftMarkdownFile(resolvedFull))
             {
                 preservedNonBlogRows.Add(rawLine);
             }
@@ -1327,21 +1687,24 @@ public static partial class DocIndexSyncService
             rebuiltTable.Add("| --- | --- | --- |");
         }
 
+        var dataRows = new List<string>();
         if (existingBlogIndexRow is not null)
         {
-            rebuiltTable.Add(existingBlogIndexRow);
+            dataRows.Add(existingBlogIndexRow);
         }
         else if (blogIndexDoc is not null)
         {
-            rebuiltTable.Add(RenderSingleDocRow(blogIndexDoc, hasStatusCol, includeBlogDate: false));
+            dataRows.Add(RenderSingleDocRow(blogIndexDoc, shardDirFull, hasStatusCol, includeBlogDate: false));
         }
 
-        rebuiltTable.AddRange(preservedNonBlogRows);
+        dataRows.AddRange(preservedNonBlogRows);
 
         foreach (var post in publishedBlogPosts)
         {
-            rebuiltTable.Add(RenderSingleDocRow(post, hasStatusCol, includeBlogDate: true));
+            dataRows.Add(RenderSingleDocRow(post, shardDirFull, hasStatusCol, includeBlogDate: true));
         }
+
+        rebuiltTable.AddRange(SortTableDataRows(dataRows));
 
         if (firstTableLine >= 0 && lastTableLine >= firstTableLine)
         {
@@ -1365,100 +1728,225 @@ public static partial class DocIndexSyncService
         }
     }
 
-    private static void InsertAdrRowsByNumber(
-        List<string> lines,
-        int start,
-        ref int end,
-        ref int lastTableLine,
-        List<MarkdownDocInfo> pendingDocs,
-        bool hasStatusCol)
+    private static string RepairAndSyncHubContent(string hubOriginal, List<string> unlinkedShards)
     {
-        var renderedPending = pendingDocs
-            .Select(doc =>
-            {
-                string row = RenderSingleDocRow(doc, hasStatusCol, includeBlogDate: false);
-                return (Doc: doc, Row: row, AdrNumber: TryExtractAdrNumberFromRow(row));
-            })
-            .OrderBy(item => item.AdrNumber.HasValue ? 0 : 1)
-            .ThenBy(item => item.AdrNumber ?? int.MaxValue)
-            .ThenBy(item => item.Doc.RelativePath, StringComparer.OrdinalIgnoreCase)
-            .ToList();
+        var lines = CollapseIntraTableBlankLines([.. hubOriginal.Split('\n')]);
 
-        foreach (var item in renderedPending)
+        // Strip any forbidden per-ADR rows in hub tables while keeping hub/shard ADR links intact.
+        for (int i = lines.Count - 1; i >= 0; i--)
         {
-            int insertIndex = lastTableLine + 1;
-            if (item.AdrNumber is int targetAdrNumber)
+            string trimmed = lines[i].Trim();
+            if (!IsPipeTableRowCandidate(trimmed) || IsGfmDelimiterRow(trimmed))
             {
-                int bestPredecessorLine = -1;
-                int bestPredecessorNumber = int.MinValue;
-                int smallestSuccessorLine = -1;
-                int smallestSuccessorNumber = int.MaxValue;
-
-                for (int i = start; i <= lastTableLine; i++)
-                {
-                    if (TryExtractAdrNumberFromRow(lines[i]) is not int existingAdrNumber)
-                    {
-                        continue;
-                    }
-
-                    if (existingAdrNumber <= targetAdrNumber && existingAdrNumber >= bestPredecessorNumber)
-                    {
-                        bestPredecessorNumber = existingAdrNumber;
-                        bestPredecessorLine = i;
-                    }
-                    else if (existingAdrNumber > targetAdrNumber && existingAdrNumber < smallestSuccessorNumber)
-                    {
-                        smallestSuccessorNumber = existingAdrNumber;
-                        smallestSuccessorLine = i;
-                    }
-                }
-
-                if (bestPredecessorLine >= 0)
-                {
-                    insertIndex = bestPredecessorLine + 1;
-                }
-                else if (smallestSuccessorLine >= 0)
-                {
-                    insertIndex = smallestSuccessorLine;
-                }
+                continue;
             }
 
-            lines.Insert(insertIndex, item.Row);
-            lastTableLine++;
-            end++;
+            string? rawTarget = TryExtractRowPrimaryTarget(trimmed);
+            if (string.IsNullOrEmpty(rawTarget))
+            {
+                continue;
+            }
+
+            string clean = NormalizeRelativePath(rawTarget.Split('#')[0]);
+            if (clean.StartsWith("adr/", StringComparison.OrdinalIgnoreCase) && !IsAllowedHubAdrTarget(clean))
+            {
+                lines.RemoveAt(i);
+            }
         }
 
-        if (lastTableLine + 1 == end &&
-            end < lines.Count &&
-            !string.IsNullOrWhiteSpace(lines[end]))
+        if (unlinkedShards.Count > 0)
         {
-            lines.Insert(lastTableLine + 1, string.Empty);
+            var shardRows = unlinkedShards
+                .Order(Comparer<string>.Create(CompareSortKeys))
+                .Select(RenderHubShardRow)
+                .ToList();
+
+            int shardSectionIdx = lines.FindIndex(l => l.Trim().Equals("## Category documentation shards", StringComparison.OrdinalIgnoreCase));
+            if (shardSectionIdx >= 0)
+            {
+                int sectionEnd = lines.Count;
+                for (int i = shardSectionIdx + 1; i < lines.Count; i++)
+                {
+                    if (lines[i].Trim().StartsWith("## ", StringComparison.Ordinal))
+                    {
+                        sectionEnd = i;
+                        break;
+                    }
+                }
+
+                int lastTableLine = -1;
+                for (int i = shardSectionIdx + 1; i < sectionEnd; i++)
+                {
+                    if (lines[i].Trim().StartsWith('|'))
+                    {
+                        lastTableLine = i;
+                    }
+                }
+
+                if (lastTableLine >= 0)
+                {
+                    bool needsBlank = lastTableLine + 1 == sectionEnd &&
+                                      sectionEnd < lines.Count &&
+                                      !string.IsNullOrWhiteSpace(lines[sectionEnd]);
+                    if (needsBlank)
+                    {
+                        shardRows.Add(string.Empty);
+                    }
+                    lines.InsertRange(lastTableLine + 1, shardRows);
+                }
+                else
+                {
+                    var block = new List<string>
+                    {
+                        "",
+                        "| Document | Status | What it is |",
+                        "| --- | --- | --- |",
+                    };
+                    block.AddRange(shardRows);
+                    lines.InsertRange(shardSectionIdx + 1, block);
+                }
+            }
+            else
+            {
+                if (lines.Count > 0 && !string.IsNullOrWhiteSpace(lines[^1]))
+                {
+                    lines.Add("");
+                }
+                lines.Add("## Category documentation shards");
+                lines.Add("");
+                lines.Add("| Document | Status | What it is |");
+                lines.Add("| --- | --- | --- |");
+                lines.AddRange(shardRows);
+            }
+        }
+
+        SortAllTablesInLines(lines);
+        return string.Join('\n', lines).TrimEnd() + "\n";
+    }
+
+    private static string RenderHubShardRow(string shardRelPath)
+    {
+        if (shardRelPath.Equals("ROOT_INDEX.md", StringComparison.Ordinal))
+        {
+            return "| [Root & cross-cutting guides index](ROOT_INDEX.md) | Current | Root-level guides (`docs/*.md` and repo root) |";
+        }
+
+        string topDir = shardRelPath.Split('/')[0];
+        string status = DetermineStatus($"{topDir}/", string.Empty);
+        return $"| [{topDir} documentation index]({shardRelPath}) | {status} | Documentation shard for `docs/{topDir}/` |";
+    }
+
+    private static void SortAllTablesInLines(List<string> lines)
+    {
+        char fenceChar = '\0';
+        int fenceLen = 0;
+        bool inHtmlComment = false;
+        int i = 0;
+
+        while (i < lines.Count)
+        {
+            string rawLine = lines[i].TrimEnd('\r');
+            string trimmed = rawLine.Trim();
+
+            if (TryMatchFenceLine(rawLine, out char markerChar, out int markerLen, out bool hasInfo))
+            {
+                if (fenceChar == '\0')
+                {
+                    fenceChar = markerChar;
+                    fenceLen = markerLen;
+                }
+                else if (markerChar == fenceChar && markerLen >= fenceLen && !hasInfo)
+                {
+                    fenceChar = '\0';
+                    fenceLen = 0;
+                }
+                i++;
+                continue;
+            }
+
+            if (fenceChar != '\0')
+            {
+                i++;
+                continue;
+            }
+
+            if (inHtmlComment)
+            {
+                if (trimmed.Contains("-->", StringComparison.Ordinal))
+                {
+                    inHtmlComment = false;
+                }
+                i++;
+                continue;
+            }
+
+            if (trimmed.StartsWith("<!--", StringComparison.Ordinal) && !trimmed.StartsWith('|'))
+            {
+                if (!trimmed.Contains("-->", StringComparison.Ordinal))
+                {
+                    inHtmlComment = true;
+                }
+                i++;
+                continue;
+            }
+
+            if (IsPipeTableRowCandidate(trimmed) &&
+                i + 1 < lines.Count &&
+                IsGfmDelimiterRow(lines[i + 1].Trim()))
+            {
+                int dataStart = i + 2;
+                int dataEnd = dataStart;
+                while (dataEnd < lines.Count && IsPipeTableRowCandidate(lines[dataEnd].Trim()))
+                {
+                    dataEnd++;
+                }
+
+                if (dataEnd > dataStart + 1)
+                {
+                    var slice = lines.GetRange(dataStart, dataEnd - dataStart);
+                    var sorted = SortTableDataRows(slice);
+                    for (int k = 0; k < sorted.Count; k++)
+                    {
+                        lines[dataStart + k] = sorted[k];
+                    }
+                }
+
+                i = dataEnd;
+                continue;
+            }
+
+            i++;
         }
     }
 
-    private static int? TryExtractAdrNumberFromRow(string row)
+    private static List<string> SortTableDataRows(List<string> rows)
     {
-        Match match = AdrTableRowNumberRegex().Match(row);
-        return match.Success && int.TryParse(match.Groups[1].Value, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out int adrNumber)
-            ? adrNumber
-            : null;
+        return [.. rows
+            .Select((row, idx) => (Row: row, Index: idx, Key: TryExtractRowPrimaryTarget(row.Trim()) ?? string.Empty))
+            .OrderBy(item => item.Key, Comparer<string>.Create(CompareSortKeys))
+            .ThenBy(item => item.Index)
+            .Select(item => item.Row)];
     }
 
-    private static List<string> RenderDocRows(List<MarkdownDocInfo> docs, bool hasStatusCol)
+    private static string GetShardRelativeHref(string shardDirFull, string docFullPath) =>
+        Path.GetRelativePath(shardDirFull, docFullPath).Replace('\\', '/');
+
+    private static List<string> RenderDocRows(List<MarkdownDocInfo> docs, string shardDirFull, bool hasStatusCol)
     {
         var result = new List<string>();
-        foreach (var doc in docs.OrderBy(d => d.RelativePath, StringComparer.OrdinalIgnoreCase))
+        foreach (var doc in docs.OrderBy(d => GetShardRelativeHref(shardDirFull, d.FullPath), Comparer<string>.Create(CompareSortKeys)))
         {
-            result.Add(RenderSingleDocRow(doc, hasStatusCol, includeBlogDate: IsDatedBlogPostPath(doc.RelativePath)));
+            result.Add(RenderSingleDocRow(doc, shardDirFull, hasStatusCol, includeBlogDate: IsDatedBlogPostPath(doc.RelativePath)));
         }
         return result;
     }
 
-    private static string RenderSingleDocRow(MarkdownDocInfo doc, bool hasStatusCol, bool includeBlogDate)
+    private static string RenderSingleDocRow(MarkdownDocInfo doc, string shardDirFull, bool hasStatusCol, bool includeBlogDate)
     {
         string fileContent = File.Exists(doc.FullPath) ? File.ReadAllText(doc.FullPath) : "";
         var (title, desc) = ExtractDocMetadata(doc.FullPath, doc.RelativePath);
         string status = DetermineStatus(doc.RelativePath, fileContent);
+        string href = GetShardRelativeHref(shardDirFull, doc.FullPath);
 
         if (includeBlogDate)
         {
@@ -1469,12 +1957,11 @@ public static partial class DocIndexSyncService
             }
         }
 
-        // Escape pipe chars in title or desc
         title = title.Replace("|", "\\|", StringComparison.Ordinal);
         desc = desc.Replace("|", "\\|", StringComparison.Ordinal);
 
         return hasStatusCol
-            ? $"| [{title}]({doc.RelativePath}) | {status} | {desc} |"
-            : $"| [{title}]({doc.RelativePath}) | {desc} |";
+            ? $"| [{title}]({href}) | {status} | {desc} |"
+            : $"| [{title}]({href}) | {desc} |";
     }
 }

@@ -298,7 +298,13 @@ public sealed class QualityGateRegistryTests : IDisposable
         },
         ["doc-index"] = () =>
         {
-            Write("docs/DOCUMENTATION_INDEX.md", "# Documentation index\n");
+            Write(
+                "docs/DOCUMENTATION_INDEX.md",
+                "# Documentation index\n\n## Category documentation shards\n\n| Document | Status | What it is |\n| --- | --- | --- |\n| [Root](ROOT_INDEX.md) | Current | Root guides |\n");
+            Write(
+                "docs/ROOT_INDEX.md",
+                "# Root guides\n\n## Developing and running\n\n| Document | Status | What it is |\n| --- | --- | --- |\n| [Listed](listed.md) | Current | Listed guide |\n");
+            Write("docs/listed.md", "# Listed\n");
             Write("docs/unlisted.md", "# Unlisted\n");
             return Context();
         },
@@ -896,6 +902,57 @@ public sealed class QualityGateRegistryTests : IDisposable
         Write("apps/subject-portal/src/step.js", "export const step = \"1\uFE0F\u20E3\";\n");
         gate.Run(Context(files: ["apps/subject-portal/src/step.js"], preCommit: true))
             .Should().BeFalse("keycap combining sequence must fail no-emojis");
+    }
+
+    [Fact]
+    public void AdrsAndDocIndexGates_VerifyEveryShard_AndRejectUnlistedMarkdownOrDuplicateAdrIds()
+    {
+        var docIndexGate = QualityGates.Find("doc-index")!;
+        Write(
+            "docs/DOCUMENTATION_INDEX.md",
+            "# Documentation Index\n\n## Category documentation shards\n\n| Document | Status | What it is |\n| --- | --- | --- |\n| [Kernel](kernel/INDEX.md) | Normative | Kernel guides |\n| [Root](ROOT_INDEX.md) | Current | Root guides |\n");
+        Write(
+            "docs/ROOT_INDEX.md",
+            "# Root & Cross-Cutting Guides Index\n\n## Developing and running\n\n| Document | Status | What it is |\n| --- | --- | --- |\n| [Guide](guide.md) | Current | Root guide |\n");
+        Write("docs/guide.md", "# Guide\n\nRoot guide.\n");
+        Write(
+            "docs/kernel/INDEX.md",
+            "# Clinical Kernel Index\n\n## Kernel and roadmap\n\n| Document | Status | What it is |\n| --- | --- | --- |\n| [Alpha](alpha.md) | Current | Alpha spec |\n");
+        Write("docs/kernel/alpha.md", "# Alpha\n\nAlpha spec.\n");
+
+        docIndexGate.Run(Context()).Should().BeTrue("complete, alphabetically sorted category shards pass doc-index");
+
+        Write("docs/kernel/beta.md", "# Beta\n\nBeta spec.\n");
+        docIndexGate.Run(Context()).Should().BeFalse("an unlisted Markdown file in a category folder must fail doc-index");
+
+        Write(
+            "docs/kernel/INDEX.md",
+            "# Clinical Kernel Index\n\n## Kernel and roadmap\n\n| Document | Status | What it is |\n| --- | --- | --- |\n| [Alpha](alpha.md) | Current | Alpha spec |\n| [Beta](beta.md) | Current | Beta spec |\n");
+        docIndexGate.Run(Context()).Should().BeTrue("listing the category guide in alphabetical order restores doc-index");
+
+        const string adrBody =
+            "\n- **Status:** Accepted\n\n## 1. Context & Problem Statement\nCovers PRD-SYS-001.\n## 2. Decision Drivers & Constraints\nDrivers.\n## 3. Options Considered\nOptions.\n## 4. Decision Outcome\nOutcome.\n## 5. Consequences & Trade-offs\nTrade-offs.\n## 6. Implementation & Verification\nVerified.\n";
+        Write("docs/SDLC/01_Product_Requirements_Document_PRD.md", "# PRD\n\nDefines PRD-SYS-001.\n");
+        Write("docs/adr/index.md", "# ADR Hub\n\n- [Legacy](legacy-index.md)\n- [Security](security/index.md)\n");
+        Write("docs/adr/legacy-index.md", "# Legacy ADRs\n\n### 2. API Gateway, Security & Identity\n\n- [ADR-2500: Legacy Rule](2026-10-01-legacy-rule.md) (2026-10-01)\n");
+        Write("docs/adr/2026-10-01-legacy-rule.md", "# ADR-2500: Legacy Rule" + adrBody);
+        Write(
+            "docs/adr/security/index.md",
+            "# Security ADRs (`security`)\n\n## Decisions\n\n- [ADR-SECURITY-20261127-token-binding: Token Binding](2026-11-27-token-binding.md) (2026-11-27)\n");
+        Write("docs/adr/security/2026-11-27-token-binding.md", "# ADR-SECURITY-20261127-token-binding: Token Binding" + adrBody);
+
+        var adrsGate = QualityGates.Find("adrs")!;
+        adrsGate.Run(Context()).Should().BeTrue("valid legacy and domain ADR shards pass adrs");
+
+        Write("docs/adr/security/2026-11-27-unlisted-policy.md", "# ADR-SECURITY-20261127-unlisted-policy: Unlisted Policy" + adrBody);
+        adrsGate.Run(Context()).Should().BeFalse("an unlisted domain ADR file must fail adrs");
+
+        File.Delete(Path.Combine(_root, "docs", "adr", "security", "2026-11-27-unlisted-policy.md"));
+        Write("docs/adr/2026-10-02-duplicate-legacy.md", "# ADR-2500: Duplicate Legacy" + adrBody);
+        Write(
+            "docs/adr/legacy-index.md",
+            "# Legacy ADRs\n\n### 2. API Gateway, Security & Identity\n\n- [ADR-2500: Legacy Rule](2026-10-01-legacy-rule.md) (2026-10-01)\n- [ADR-2500: Duplicate Legacy](2026-10-02-duplicate-legacy.md) (2026-10-02)\n");
+        adrsGate.Run(Context()).Should().BeFalse("duplicate ADR identifiers across shard entries must fail adrs");
     }
 
     private static string CaptureConsoleOutput(Action action)
