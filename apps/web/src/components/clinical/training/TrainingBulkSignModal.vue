@@ -45,12 +45,12 @@
       <label for="bulk-password">21 CFR Part 11 Password Credential:</label>
       <input
         id="bulk-password"
-        :value="password"
+        :value="signerCredential"
         type="password"
         class="text-input"
         :disabled="submittingBulkSign"
         placeholder="Enter password to verify identity"
-        @input="emit('update:password', $event.target.value)"
+        @input="emit('update:signerCredential', $event.target.value)"
       />
     </div>
     <div class="form-group">
@@ -73,7 +73,7 @@
       <button
         type="button"
         class="btn btn-success"
-        :disabled="submittingBulkSign || !password || !signerName"
+        :disabled="submittingBulkSign || !signerCredential || !signerName"
         @click="emit('submit')"
       >
         <span v-if="submittingBulkSign">Executing Part 11 Signature...</span>
@@ -103,7 +103,7 @@ defineProps({
     type: String,
     default: "",
   },
-  password: {
+  signerCredential: {
     type: String,
     default: "",
   },
@@ -121,7 +121,7 @@ const emit = defineEmits([
   "update:modelValue",
   "update:signerName",
   "update:signerRole",
-  "update:password",
+  "update:signerCredential",
   "submit",
 ]);
 </script>

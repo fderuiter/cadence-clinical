@@ -425,7 +425,7 @@
       v-model="showBulkSignModal"
       v-model:signer-name="bulkSignForm.signerName"
       v-model:signer-role="bulkSignForm.signerRole"
-      v-model:password="bulkSignForm.password"
+      v-model:signer-credential="bulkSignForm.password"
       :selected-count="selectedDelegationIds.length"
       :bulk-sign-error="bulkSignError"
       :submitting-bulk-sign="submittingBulkSign"
