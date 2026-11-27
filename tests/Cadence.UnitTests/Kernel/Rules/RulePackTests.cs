@@ -192,8 +192,9 @@ public class RulePackTests
             million[i] = (i & 3) == 0 ? labs : vitals;
         }
 
-        // Warm up compilation and tiered JIT once before measuring thread-local heap allocations.
-        evaluator.Evaluate(pack, Standardization, small).Should().BeEmpty();
+        // Warm up compilation, iterator state machine, and tiered JIT / OSR (>1,000 backedges) before measuring thread-local heap allocations.
+        evaluator.Evaluate(pack, Standardization, million).Should().BeEmpty();
+        evaluator.Evaluate(pack, Standardization, StreamRecords(small)).Should().BeEmpty();
 
         var beforeSmall = GC.GetAllocatedBytesForCurrentThread();
         var smallViolations = evaluator.Evaluate(pack, Standardization, small);
@@ -384,10 +385,10 @@ public class RulePackTests
         var pack = SampleRulePacks.Sample();
         var evaluator = new DotNetRuleEvaluator();
 
-        // Warm up compilation and tiered JIT before measuring thread-local allocations.
+        // Warm up compilation and tiered JIT / OSR (>1,000 backedges) before measuring thread-local allocations.
         var warmupSink = new CountingViolationSink();
-        evaluator.Evaluate(pack, Standardization, new FiringSyntheticCursor(1_000), warmupSink);
-        warmupSink.Count.Should().Be(1_750);
+        evaluator.Evaluate(pack, Standardization, new FiringSyntheticCursor(10_000), warmupSink);
+        warmupSink.Count.Should().Be(17_500);
 
         var millionCursor = new FiringSyntheticCursor(1_000_000);
         var millionSink = new CountingViolationSink();

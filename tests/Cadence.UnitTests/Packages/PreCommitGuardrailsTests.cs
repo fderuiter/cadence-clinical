@@ -15,6 +15,17 @@ using Xunit;
 
 namespace Cadence.UnitTests.Packages;
 
+[CollectionDefinition(Name, DisableParallelization = true)]
+public sealed class ProcessEnvironmentMutationCollection
+{
+    public const string Name = "ProcessEnvironmentMutation";
+
+    private ProcessEnvironmentMutationCollection()
+    {
+    }
+}
+
+[Collection(ProcessEnvironmentMutationCollection.Name)]
 public sealed class PreCommitGuardrailsTests : IDisposable
 {
     private static readonly string PrivateKeyHeader = "-----BEGIN " + "PRIVATE KEY-----";
@@ -1297,6 +1308,78 @@ public sealed class PreCommitGuardrailsTests : IDisposable
             proc.ExitCode.Should().Be(0, stderr);
             stdout.Replace("\r\n", "\n", StringComparison.Ordinal).Should().Be("exec\narg with spaces & ; | $HOME\n");
         }
+    }
+
+    [Fact]
+    public void PosixProcessLauncher_RetriesTransientPosixEtxtbsy_AndPropagatesTerminalOrNonPosixErrors()
+    {
+        var recordedDelays = new List<int>();
+        int transientAttempts = 0;
+
+        int result = PosixProcessLauncher.StartWithPosixEtxtbsyRetry(
+            () =>
+            {
+                transientAttempts++;
+                if (transientAttempts <= 2)
+                {
+                    throw new Win32Exception(PosixProcessLauncher.PosixEtxtbsy, "Text file busy");
+                }
+
+                return 42;
+            },
+            isWindows: false,
+            recordedDelays.Add);
+
+        result.Should().Be(42);
+        transientAttempts.Should().Be(3);
+        recordedDelays.Should().Equal(1, 2);
+
+        var exhaustedDelays = new List<int>();
+        int exhaustedAttempts = 0;
+        Action actExhausted = () => PosixProcessLauncher.StartWithPosixEtxtbsyRetry<int>(
+            () =>
+            {
+                exhaustedAttempts++;
+                throw new Win32Exception(PosixProcessLauncher.PosixEtxtbsy, "Text file busy");
+            },
+            isWindows: false,
+            exhaustedDelays.Add);
+
+        actExhausted.Should().Throw<Win32Exception>()
+            .Where(ex => ex.NativeErrorCode == PosixProcessLauncher.PosixEtxtbsy);
+        exhaustedAttempts.Should().Be(7);
+        exhaustedDelays.Should().Equal(1, 2, 5, 10, 20, 50);
+
+        var windowsDelays = new List<int>();
+        int windowsAttempts = 0;
+        Action actWindows = () => PosixProcessLauncher.StartWithPosixEtxtbsyRetry<int>(
+            () =>
+            {
+                windowsAttempts++;
+                throw new Win32Exception(PosixProcessLauncher.PosixEtxtbsy, "Windows error 26");
+            },
+            isWindows: true,
+            windowsDelays.Add);
+
+        actWindows.Should().Throw<Win32Exception>();
+        windowsAttempts.Should().Be(1);
+        windowsDelays.Should().BeEmpty();
+
+        var enoexecDelays = new List<int>();
+        int enoexecAttempts = 0;
+        Action actEnoexec = () => PosixProcessLauncher.StartWithPosixEtxtbsyRetry<int>(
+            () =>
+            {
+                enoexecAttempts++;
+                throw new Win32Exception(PosixProcessLauncher.PosixEnoexec, "Exec format error");
+            },
+            isWindows: false,
+            enoexecDelays.Add);
+
+        actEnoexec.Should().Throw<Win32Exception>()
+            .Where(ex => ex.NativeErrorCode == PosixProcessLauncher.PosixEnoexec);
+        enoexecAttempts.Should().Be(1);
+        enoexecDelays.Should().BeEmpty();
     }
 
     private void CreateCadenceBinLinterStubs()
