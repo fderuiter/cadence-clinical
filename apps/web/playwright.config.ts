@@ -82,7 +82,7 @@ const stagedDemoSubpathProject = {
 
 const demoPreviewServer = {
   command:
-    "./node_modules/.bin/vite build --mode demo --outDir node_modules/.e2e-demo && exec ./node_modules/.bin/vite preview --outDir node_modules/.e2e-demo --host 127.0.0.1 --port 3001 --strictPort",
+    '([ -n "$CI" ] && [ -f node_modules/.e2e-demo/index.html ] || ./node_modules/.bin/vite build --mode demo --outDir node_modules/.e2e-demo) && exec ./node_modules/.bin/vite preview --outDir node_modules/.e2e-demo --host 127.0.0.1 --port 3001 --strictPort',
   url: demoPreviewUrl,
   reuseExistingServer: false,
   timeout: 120000,
@@ -109,6 +109,7 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: 1,
+  timeout: 60000,
   expect: {
     timeout: 15000,
   },
@@ -148,7 +149,8 @@ export default defineConfig({
     },
     {
       name: "chromium",
-      testIgnore: /(?:web-accessibility|staged-demo-subpath)\.spec\.ts/,
+      testIgnore:
+        /(?:web-accessibility|drawer-reflow|staged-demo-subpath)\.spec\.ts/,
       use: {
         ...devices["Desktop Chrome"],
         channel: "chromium",

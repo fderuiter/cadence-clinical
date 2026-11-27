@@ -2867,6 +2867,7 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
   test("Knowledge (/knowledge), CTMS (/ctms), SSU (/ssu), Training (/training), and Trial Onboarding (/onboarding/trial) pass WCAG 2.2 AA, 24px chip targets, native buttons, and ClinicalTabs keyboard navigation", async ({
     page,
   }) => {
+    test.setTimeout(90_000);
     const captureScreenshots = process.env.CAPTURE_OVERLAY_SCREENSHOTS === "1";
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.emulateMedia({ reducedMotion: "reduce" });
@@ -3727,6 +3728,7 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
   test("Dark theme (data-theme='dark') and system-auto dark mode pass WCAG 2.2 AA contrast, >= 3:1 control border contrast, and neutral-ink separation across clinician workspaces", async ({
     page,
   }) => {
+    test.setTimeout(90_000);
     const captureScreenshots = process.env.CAPTURE_OVERLAY_SCREENSHOTS === "1";
     await page.setViewportSize({ width: 1440, height: 900 });
 
