@@ -1,0 +1,190 @@
+.back {
+  display: inline-block;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-wrap: anywhere;
+  margin-bottom: 12px;
+  color: var(--semantic-color-interactive-primary);
+  font-size: 0.85rem;
+}
+
+.observation-summary {
+  display: grid;
+  grid-template-columns: minmax(0, max-content) minmax(0, 1fr);
+  gap: 4px 16px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.observation-summary :deep(dt),
+.observation-summary :deep(dd),
+.observation-summary dt,
+.observation-summary dd {
+  margin: 0;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 640px) {
+  .observation-summary {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.observation-sdv-meta {
+  margin-left: 8px;
+  font-size: 0.85rem;
+  color: var(--semantic-color-text-secondary);
+}
+
+.observation-context-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 12px 0;
+}
+
+.observation-context-link {
+  color: var(--semantic-color-interactive-primary);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.observation-sdv-warning {
+  padding: 10px 12px;
+  margin: 12px 0;
+  border-radius: 6px;
+  border: 1px solid var(--semantic-color-warning-border-strong);
+  background: var(--semantic-color-warning-bg-soft);
+  color: var(--semantic-color-warning-text-dark);
+  font-size: 0.875rem;
+}
+
+.observation-correction {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin: 16px 0;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.observation-correction > * {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-wrap: anywhere;
+}
+
+.observation-hint {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--semantic-color-error-text-dark);
+  overflow-wrap: anywhere;
+}
+
+.observation-outcome {
+  padding: 8px 12px;
+  border-radius: 6px;
+  margin-bottom: 16px;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-wrap: anywhere;
+}
+
+.observation-outcome--saved {
+  background: var(--semantic-color-success-bg-soft);
+  color: var(--semantic-color-success-dark);
+}
+
+.observation-outcome--stale,
+.observation-outcome--locked,
+.observation-outcome--failed,
+.observation-error {
+  background: var(--semantic-color-error-bg-soft);
+  color: var(--semantic-color-error-text-dark);
+}
+
+#section-observation,
+#section-observation > .card {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-wrap: anywhere;
+}
+
+.observation-table-scroll {
+  position: relative;
+  overflow-x: auto;
+  max-width: 100%;
+  margin-bottom: 16px;
+  padding: 2px;
+  box-sizing: border-box;
+}
+
+.observation-table-scroll:focus-visible {
+  outline: 2px solid var(--semantic-color-accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+table {
+  width: 100%;
+  min-width: 46rem;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--semantic-color-border);
+}
+
+.observation-revisions th:nth-child(1),
+.observation-revisions td:nth-child(1),
+.observation-audit th:nth-child(1),
+.observation-audit td:nth-child(1),
+.observation-audit th:nth-child(5),
+.observation-audit td:nth-child(5) {
+  min-width: 5rem;
+}
+
+.observation-revisions th:nth-child(2),
+.observation-revisions td:nth-child(2),
+.observation-revisions th:nth-child(4),
+.observation-revisions td:nth-child(4),
+.observation-audit th:nth-child(3),
+.observation-audit td:nth-child(3) {
+  min-width: 7rem;
+}
+
+.observation-revisions th:nth-child(3),
+.observation-revisions td:nth-child(3),
+.observation-audit th:nth-child(4),
+.observation-audit td:nth-child(4),
+.observation-audit th:nth-child(6),
+.observation-audit td:nth-child(6) {
+  min-width: 9rem;
+}
+
+.observation-revisions th:nth-child(5),
+.observation-revisions td:nth-child(5),
+.observation-revisions th:nth-child(6),
+.observation-revisions td:nth-child(6),
+.observation-audit th:nth-child(2),
+.observation-audit td:nth-child(2) {
+  min-width: 8.5rem;
+}
+
+.observation-revisions td:nth-child(1),
+.observation-revisions td:nth-child(2),
+.observation-revisions td:nth-child(5),
+.observation-revisions td:nth-child(6),
+.observation-audit td:nth-child(1),
+.observation-audit td:nth-child(2),
+.observation-audit td:nth-child(5) {
+  font-family: var(--semantic-font-mono);
+}
