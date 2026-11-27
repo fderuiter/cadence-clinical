@@ -193,13 +193,8 @@
 
 <script setup>
 import { computed, ref } from "vue";
-import { SignOutConfirmModal, useFocusTrap, useSignOutGuard } from "ui";
+import { SignOutConfirmModal } from "ui";
 
-import {
-  hasUnsavedOrUnsyncedLocalData,
-  logout,
-  prepareSignOutGuardState,
-} from "../features/auth.js";
 import {
   MAX_PIN_UNLOCK_ATTEMPTS,
   cancelPINReset,
@@ -208,6 +203,7 @@ import {
   hasVerifiedParticipantIdentity,
   reauthenticateForPINReset,
   requestPINReset,
+  usePinModalGuard,
 } from "../features/pin.js";
 import { useSessionStore } from "../stores/session.js";
 import SiteContactLinks from "./SiteContactLinks.vue";
@@ -215,22 +211,11 @@ import SiteContactLinks from "./SiteContactLinks.vue";
 const modalRef = ref(null);
 const sessionStore = useSessionStore();
 
-const {
-  isConfirmOpen: isSignOutConfirmOpen,
-  requestSignOut,
-  confirmSignOut,
-  cancelSignOut,
-} = useSignOutGuard({
-  flushExternalDrafts: prepareSignOutGuardState,
-  hasExternalDrafts: hasUnsavedOrUnsyncedLocalData,
-  onConfirmSignOut: () => logout({ confirmed: true }),
-});
-
-useFocusTrap(modalRef, {
-  isOpen: () => sessionStore.pinUnlock.isOpen && !isSignOutConfirmOpen.value,
-  escapeDeactivates: false,
-  initialFocus: "#unlock-pin",
-});
+const { isSignOutConfirmOpen, confirmSignOut, cancelSignOut, handleSignOut } =
+  usePinModalGuard(modalRef, {
+    isOpen: () => sessionStore.pinUnlock.isOpen,
+    initialFocus: "#unlock-pin",
+  });
 
 const maxAttempts = computed(
   () => sessionStore.pinUnlock.maxAttempts || MAX_PIN_UNLOCK_ATTEMPTS
@@ -259,8 +244,4 @@ const requiresIdentitySignIn = computed(() => {
     !hasVerifiedParticipantIdentity()
   );
 });
-
-function handleSignOut() {
-  return requestSignOut();
-}
 </script>

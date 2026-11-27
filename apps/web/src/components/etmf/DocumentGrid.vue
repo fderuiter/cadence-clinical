@@ -622,6 +622,7 @@ import {
   ETMF_EXPORT_ROLE_REASON,
 } from "../../canvas/authority.ts";
 import SkeletonLoader from "../common/SkeletonLoader.vue";
+import { formatDate } from "../../utils/formatDate";
 
 const isBatchDrawerOpen = ref(false);
 
@@ -1010,22 +1011,6 @@ function getStatusClass(status) {
 function formatStatus(status) {
   const s = status || "DRAFT";
   return s.toUpperCase().replace(/_/g, " ");
-}
-
-function formatDate(dateStr) {
-  if (!dateStr) return "N/A";
-  try {
-    const d = new Date(dateStr);
-    return d.toLocaleString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  } catch {
-    return dateStr;
-  }
 }
 
 // Modal Handlers

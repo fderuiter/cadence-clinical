@@ -1,11 +1,10 @@
 import { unwrapResponse } from "../client";
 import {
   kernelClient,
+  lazyKernelAction,
   type KernelLineageWindow,
   type KernelSchemas,
 } from "./shared";
-
-const loadRouteTransport = () => import("./protocolImport");
 
 export type KernelNode = KernelSchemas["Kernel_KernelNodeResponse"];
 export type KernelBatchNodes = KernelSchemas["Kernel_KernelBatchNodesResponse"];
@@ -86,22 +85,13 @@ export const kernelNavigationApi = {
   },
 
   /** Zoom path from the tenant down to the object; presentation only, it grants nothing (spec §9.3). */
-  async getZoomPath(nodeRef: string): Promise<KernelZoomStep[]> {
-    const { executeGetZoomPath } = await loadRouteTransport();
-    return executeGetZoomPath(nodeRef);
-  },
+  getZoomPath: lazyKernelAction("executeGetZoomPath"),
 
   /** Zoom children of a scope node, with their own child counts. */
-  async getChildren(nodeRef: string): Promise<KernelChild[]> {
-    const { executeGetChildren } = await loadRouteTransport();
-    return executeGetChildren(nodeRef);
-  },
+  getChildren: lazyKernelAction("executeGetChildren"),
 
   /** Kernel commands offered on the object, each with the reader's dry-run decision and its explanation (ADR-2483). */
-  async getCommands(nodeRef: string): Promise<KernelCommand[]> {
-    const { executeGetCommands } = await loadRouteTransport();
-    return executeGetCommands(nodeRef);
-  },
+  getCommands: lazyKernelAction("executeGetCommands"),
 
   /** Whether the reader may exercise a capability on an object now, and why (ADR-2482). Executes nothing. */
   canI(capability: string, resource: string): Promise<KernelDecision> {
@@ -154,29 +144,14 @@ export const kernelNavigationApi = {
   },
 
   /** Trace: the object's lineage walk, backward to its inputs by default. Masked objects keep their place (ADR-2471). */
-  async trace(
-    nodeRef: string,
-    query: KernelTraceQuery = {}
-  ): Promise<KernelLineage> {
-    const { executeTrace } = await loadRouteTransport();
-    return executeTrace(nodeRef, query);
-  },
+  trace: lazyKernelAction("executeTrace"),
 
   /** Impact: what depends on the object, grouped by kind; masked objects are counted like any other (Canvas D2). */
-  async dependents(
-    nodeRef: string,
-    window: KernelLineageWindow = {}
-  ): Promise<KernelDependents> {
-    const { executeDependents } = await loadRouteTransport();
-    return executeDependents(nodeRef, window);
-  },
+  dependents: lazyKernelAction("executeDependents"),
 
   /**
    * What happened in a scope, newest first (ADR-2485). A scope the reader may not see is refused; an entry about an
    * object the reader may not see keeps its place with its kind and `mask`, and no `subject`.
    */
-  async activity(query: KernelActivityQuery = {}): Promise<KernelActivityPage> {
-    const { executeActivity } = await loadRouteTransport();
-    return executeActivity(query);
-  },
+  activity: lazyKernelAction("executeActivity"),
 };

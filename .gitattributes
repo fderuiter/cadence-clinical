@@ -17,6 +17,7 @@ pnpm-lock.yaml linguist-generated=true
 docs/openapi/*.json linguist-generated=true
 apps/web/src/api/generated/*.ts linguist-generated=true
 apps/web/src/api/types.ts linguist-generated=true
+packages/ui/src/generated/*.ts linguist-generated=true
 docs/api/*.md linguist-generated=true
 docs/schema/*.md linguist-generated=true
 docs/SDLC/** linguist-generated=true

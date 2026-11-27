@@ -106,6 +106,18 @@ function redirectToCanvasSection(stage, section) {
   };
 }
 
+const CEC_ADJUDICATION_ROLES = [
+  "site_investigator",
+  "crc",
+  "data_manager",
+  "sponsor_admin",
+  "cra",
+  "monitor",
+  "sponsor_designer",
+  "auditor",
+  "tmf_auditor",
+];
+
 const routes = [
   {
     path: "/",
@@ -353,17 +365,7 @@ const routes = [
     component: () => import("../views/CecAdjudicationView.vue"),
     meta: {
       requiresAuth: true,
-      requiresRole: [
-        "site_investigator",
-        "crc",
-        "data_manager",
-        "sponsor_admin",
-        "cra",
-        "monitor",
-        "sponsor_designer",
-        "auditor",
-        "tmf_auditor",
-      ],
+      requiresRole: CEC_ADJUDICATION_ROLES,
     },
   },
   {
@@ -372,17 +374,7 @@ const routes = [
     component: () => import("../views/CecAdjudicationView.vue"),
     meta: {
       requiresAuth: true,
-      requiresRole: [
-        "site_investigator",
-        "crc",
-        "data_manager",
-        "sponsor_admin",
-        "cra",
-        "monitor",
-        "sponsor_designer",
-        "auditor",
-        "tmf_auditor",
-      ],
+      requiresRole: CEC_ADJUDICATION_ROLES,
     },
   },
   {

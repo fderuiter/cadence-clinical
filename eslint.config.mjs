@@ -1011,7 +1011,9 @@ const noRawOverlaysRule = {
       sourceText.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi),
       (m) => m[1]
     ).join("\n");
-    const importsFocusTrap = /\buseFocusTrap\b/.test(scriptContent);
+    const importsFocusTrap = /\b(?:useFocusTrap|usePinModalGuard)\b/.test(
+      scriptContent
+    );
 
     const nativeOverlayElements = [];
 
@@ -1126,10 +1128,9 @@ function splitTopLevelCommas(selectorText) {
   return parts;
 }
 
-function findUnscopedSuppressedOutlinesInCss(cssText) {
+function scanCssStyleRules(cssText, onRule) {
   const noComments = stripCssCommentsPreservingNewlines(cssText);
   const clean = maskCssStringsPreservingLength(noComments);
-  const violations = [];
   const stack = [];
   let segStart = 0;
 
@@ -1140,13 +1141,16 @@ function findUnscopedSuppressedOutlinesInCss(cssText) {
         segStart = i + 1;
       }
     } else if (ch === "{") {
-      const header = clean.slice(segStart, i).trim();
+      const rawSlice = clean.slice(segStart, i);
+      const header = rawSlice.trim();
       if (header.startsWith("@")) {
         stack.push({ isAtRule: true });
       } else {
         stack.push({
           isAtRule: false,
-          selectorText: noComments.slice(segStart, i).trim(),
+          cleanSelectorText: header,
+          rawSelectorText: noComments.slice(segStart, i).trim(),
+          headerOffset: segStart + (rawSlice.length - header.length),
           bodyStart: i + 1,
         });
       }
@@ -1154,30 +1158,42 @@ function findUnscopedSuppressedOutlinesInCss(cssText) {
     } else if (ch === "}") {
       const entry = stack.pop();
       if (entry && !entry.isAtRule) {
-        const body = clean.slice(entry.bodyStart, i);
-        const selectors = splitTopLevelCommas(entry.selectorText);
-        const isProgrammaticFocusOnly =
-          selectors.length > 0 &&
-          selectors.every(
-            (sel) =>
-              /:focus:not\(\s*:focus-visible\s*\)/.test(sel) ||
-              (/\[tabindex=["']?-1["']?\]:focus(?:-visible)?\b/.test(sel) &&
-                !/\b(?:button|input|select|textarea|a|summary)\b|\[role=["']?(?:button|link|tab|menuitem|checkbox|radio|switch|option|combobox|textbox)["']?\]/i.test(
-                  sel
-                ))
-          );
-        if (!isProgrammaticFocusOnly) {
-          for (const match of body.matchAll(suppressedOutlineDeclRegex)) {
-            violations.push({
-              offset: entry.bodyStart + match.index,
-              declaration: match[0].trim(),
-            });
-          }
-        }
+        onRule({
+          cleanSelectorText: entry.cleanSelectorText,
+          rawSelectorText: entry.rawSelectorText,
+          headerOffset: entry.headerOffset,
+          bodyStart: entry.bodyStart,
+          body: clean.slice(entry.bodyStart, i),
+        });
       }
       segStart = i + 1;
     }
   }
+}
+
+function findUnscopedSuppressedOutlinesInCss(cssText) {
+  const violations = [];
+  scanCssStyleRules(cssText, ({ rawSelectorText, bodyStart, body }) => {
+    const selectors = splitTopLevelCommas(rawSelectorText);
+    const isProgrammaticFocusOnly =
+      selectors.length > 0 &&
+      selectors.every(
+        (sel) =>
+          /:focus:not\(\s*:focus-visible\s*\)/.test(sel) ||
+          (/\[tabindex=["']?-1["']?\]:focus(?:-visible)?\b/.test(sel) &&
+            !/\b(?:button|input|select|textarea|a|summary)\b|\[role=["']?(?:button|link|tab|menuitem|checkbox|radio|switch|option|combobox|textbox)["']?\]/i.test(
+              sel
+            ))
+      );
+    if (!isProgrammaticFocusOnly) {
+      for (const match of body.matchAll(suppressedOutlineDeclRegex)) {
+        violations.push({
+          offset: bodyStart + match.index,
+          declaration: match[0].trim(),
+        });
+      }
+    }
+  });
   return violations;
 }
 
@@ -3331,50 +3347,20 @@ const buttonHoverCompoundRegex =
   /(?:^|[\s>+~(])(?:\.(?![a-z0-9_-]*btn-(?:group|row|bar|wrap|wrapper|container|list|stack|grid|actions|slot)\b)[a-z0-9_-]*btn[a-z0-9_-]*|button)(?:[:.#[]\S*?)?:hover\b/i;
 
 function findUnguardedButtonHoverSelectorsInCss(cssText) {
-  const clean = maskCssStringsPreservingLength(
-    stripCssCommentsPreservingNewlines(cssText)
-  );
   const violations = [];
-  const stack = [];
-  let segStart = 0;
-
-  for (let i = 0; i < clean.length; i++) {
-    const ch = clean[i];
-    if (ch === ";") {
-      if (stack.length === 0 || stack[stack.length - 1].isAtRule) {
-        segStart = i + 1;
-      }
-    } else if (ch === "{") {
-      const header = clean.slice(segStart, i).trim();
-      if (header.startsWith("@")) {
-        stack.push({ isAtRule: true });
-      } else {
-        stack.push({
-          isAtRule: false,
-          selectorText: header,
-          headerOffset:
-            segStart + (clean.slice(segStart, i).length - header.length),
+  scanCssStyleRules(cssText, ({ cleanSelectorText, headerOffset }) => {
+    for (const sel of splitTopLevelCommas(cleanSelectorText)) {
+      if (
+        buttonHoverCompoundRegex.test(sel) &&
+        !/:not\(\s*:disabled\s*\)/.test(sel)
+      ) {
+        violations.push({
+          offset: headerOffset,
+          selector: sel.replace(/\s+/g, " ").trim(),
         });
       }
-      segStart = i + 1;
-    } else if (ch === "}") {
-      const entry = stack.pop();
-      if (entry && !entry.isAtRule) {
-        for (const sel of splitTopLevelCommas(entry.selectorText)) {
-          if (
-            buttonHoverCompoundRegex.test(sel) &&
-            !/:not\(\s*:disabled\s*\)/.test(sel)
-          ) {
-            violations.push({
-              offset: entry.headerOffset,
-              selector: sel.replace(/\s+/g, " ").trim(),
-            });
-          }
-        }
-      }
-      segStart = i + 1;
     }
-  }
+  });
   return violations;
 }
 

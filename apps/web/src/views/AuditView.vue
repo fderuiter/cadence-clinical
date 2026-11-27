@@ -752,30 +752,9 @@
       </p>
 
       <!-- Audit Log Filter Bar -->
-      <div
-        style="
-          display: flex;
-          flex-wrap: wrap;
-          gap: 12px;
-          background: var(--semantic-color-surface-muted);
-          padding: 12px;
-          border-radius: 6px;
-          border: 1px solid var(--border);
-          margin-bottom: 16px;
-        "
-      >
-        <div
-          class="form-group"
-          style="margin-bottom: 0; flex: 1; min-width: 140px"
-        >
-          <label
-            for="filter-user-id-input"
-            style="
-              font-size: var(--font-size-2xs);
-              font-weight: 600;
-              margin-bottom: 2px;
-              display: block;
-            "
+      <div class="audit-filter-bar">
+        <div class="form-group audit-filter-group">
+          <label for="filter-user-id-input" class="audit-filter-label"
             >Actor / User ID</label
           >
           <input
@@ -783,45 +762,17 @@
             v-model="filters.user_id"
             type="text"
             placeholder="Filter by Actor"
-            class="filter-user-id"
-            style="
-              width: 100%;
-              padding: 6px 8px;
-              font-size: 12px;
-              border-radius: 4px;
-              border: 1px solid var(--border);
-              background: var(--semantic-color-surface);
-              color: var(--semantic-color-text);
-            "
+            class="filter-user-id audit-filter-control"
           />
         </div>
-        <div
-          class="form-group"
-          style="margin-bottom: 0; flex: 1; min-width: 140px"
-        >
-          <label
-            for="filter-action-select"
-            style="
-              font-size: var(--font-size-2xs);
-              font-weight: 600;
-              margin-bottom: 2px;
-              display: block;
-            "
+        <div class="form-group audit-filter-group">
+          <label for="filter-action-select" class="audit-filter-label"
             >Action Type</label
           >
           <select
             id="filter-action-select"
             v-model="filters.action"
-            class="filter-action"
-            style="
-              width: 100%;
-              padding: 6px 8px;
-              font-size: 12px;
-              border-radius: 4px;
-              border: 1px solid var(--border);
-              background: var(--semantic-color-surface);
-              color: var(--semantic-color-text);
-            "
+            class="filter-action audit-filter-control"
           >
             <option value="">All Actions</option>
             <option value="CREATE">CREATE (Record Creation)</option>
@@ -840,33 +791,14 @@
             <option value="COMPLETENESS">COMPLETENESS (EDL Metrics)</option>
           </select>
         </div>
-        <div
-          class="form-group"
-          style="margin-bottom: 0; flex: 1; min-width: 140px"
-        >
-          <label
-            for="filter-entity-type-select"
-            style="
-              font-size: var(--font-size-2xs);
-              font-weight: 600;
-              margin-bottom: 2px;
-              display: block;
-            "
+        <div class="form-group audit-filter-group">
+          <label for="filter-entity-type-select" class="audit-filter-label"
             >Entity Type</label
           >
           <select
             id="filter-entity-type-select"
             v-model="filters.entity_type"
-            class="filter-entity-type"
-            style="
-              width: 100%;
-              padding: 6px 8px;
-              font-size: 12px;
-              border-radius: 4px;
-              border: 1px solid var(--border);
-              background: var(--semantic-color-surface);
-              color: var(--semantic-color-text);
-            "
+            class="filter-entity-type audit-filter-control"
           >
             <option value="">All Entities</option>
             <option value="Observation">Observation (Clinical Data)</option>
@@ -876,78 +808,30 @@
             <option value="Document">Document (eTMF)</option>
           </select>
         </div>
-        <div
-          class="form-group"
-          style="margin-bottom: 0; flex: 1; min-width: 130px"
-        >
-          <label
-            for="filter-start-date-input"
-            style="
-              font-size: var(--font-size-2xs);
-              font-weight: 600;
-              margin-bottom: 2px;
-              display: block;
-            "
+        <div class="form-group audit-filter-group audit-filter-group--date">
+          <label for="filter-start-date-input" class="audit-filter-label"
             >Start Date</label
           >
           <input
             id="filter-start-date-input"
             v-model="filters.start_date"
             type="date"
-            class="filter-start-date"
-            style="
-              width: 100%;
-              padding: 6px 8px;
-              font-size: 12px;
-              border-radius: 4px;
-              border: 1px solid var(--border);
-              background: var(--semantic-color-surface);
-              color: var(--semantic-color-text);
-            "
+            class="filter-start-date audit-filter-control"
           />
         </div>
-        <div
-          class="form-group"
-          style="margin-bottom: 0; flex: 1; min-width: 130px"
-        >
-          <label
-            for="filter-end-date-input"
-            style="
-              font-size: var(--font-size-2xs);
-              font-weight: 600;
-              margin-bottom: 2px;
-              display: block;
-            "
+        <div class="form-group audit-filter-group audit-filter-group--date">
+          <label for="filter-end-date-input" class="audit-filter-label"
             >End Date</label
           >
           <input
             id="filter-end-date-input"
             v-model="filters.end_date"
             type="date"
-            class="filter-end-date"
-            style="
-              width: 100%;
-              padding: 6px 8px;
-              font-size: 12px;
-              border-radius: 4px;
-              border: 1px solid var(--border);
-              background: var(--semantic-color-surface);
-              color: var(--semantic-color-text);
-            "
+            class="filter-end-date audit-filter-control"
           />
         </div>
-        <div
-          class="form-group"
-          style="margin-bottom: 0; flex: 1; min-width: 140px"
-        >
-          <label
-            for="filter-document-id-input"
-            style="
-              font-size: var(--font-size-2xs);
-              font-weight: 600;
-              margin-bottom: 2px;
-              display: block;
-            "
+        <div class="form-group audit-filter-group">
+          <label for="filter-document-id-input" class="audit-filter-label"
             >Record / Document ID</label
           >
           <input
@@ -955,16 +839,7 @@
             v-model="filters.document_id"
             type="text"
             placeholder="Filter by ID"
-            class="filter-document-id"
-            style="
-              width: 100%;
-              padding: 6px 8px;
-              font-size: 12px;
-              border-radius: 4px;
-              border: 1px solid var(--border);
-              background: var(--semantic-color-surface);
-              color: var(--semantic-color-text);
-            "
+            class="filter-document-id audit-filter-control"
           />
         </div>
         <div
@@ -1395,30 +1270,9 @@
       </p>
 
       <!-- Completeness Controls -->
-      <div
-        style="
-          display: flex;
-          flex-wrap: wrap;
-          gap: 12px;
-          background: var(--semantic-color-surface-muted);
-          padding: 12px;
-          border-radius: 6px;
-          border: 1px solid var(--border);
-          margin-bottom: 16px;
-        "
-      >
-        <div
-          class="form-group"
-          style="margin-bottom: 0; flex: 1; min-width: 140px"
-        >
-          <label
-            for="completeness-study-id-input"
-            style="
-              font-size: var(--font-size-2xs);
-              font-weight: 600;
-              margin-bottom: 2px;
-              display: block;
-            "
+      <div class="audit-filter-bar">
+        <div class="form-group audit-filter-group">
+          <label for="completeness-study-id-input" class="audit-filter-label"
             >Study ID</label
           >
           <input
@@ -1426,63 +1280,25 @@
             v-model="completenessParams.study_id"
             type="text"
             placeholder="e.g. study_001"
-            class="completeness-study-id"
-            style="
-              width: 100%;
-              padding: 6px 8px;
-              font-size: 12px;
-              border-radius: 4px;
-              border: 1px solid var(--border);
-              background: var(--semantic-color-surface);
-              color: var(--semantic-color-text);
-            "
+            class="completeness-study-id audit-filter-control"
           />
         </div>
-        <div
-          class="form-group"
-          style="margin-bottom: 0; flex: 1; min-width: 140px"
-        >
-          <label
-            for="completeness-milestone-select"
-            style="
-              font-size: var(--font-size-2xs);
-              font-weight: 600;
-              margin-bottom: 2px;
-              display: block;
-            "
+        <div class="form-group audit-filter-group">
+          <label for="completeness-milestone-select" class="audit-filter-label"
             >Milestone</label
           >
           <select
             id="completeness-milestone-select"
             v-model="completenessParams.milestone"
-            class="completeness-milestone"
-            style="
-              width: 100%;
-              padding: 6px 8px;
-              font-size: 12px;
-              border-radius: 4px;
-              border: 1px solid var(--border);
-              background: var(--semantic-color-surface);
-              color: var(--semantic-color-text);
-            "
+            class="completeness-milestone audit-filter-control"
           >
             <option value="INITIATION">INITIATION (Study Start)</option>
             <option value="CONDUCT">CONDUCT (Data Collection)</option>
             <option value="CLOSEOUT">CLOSEOUT (Study Closed/Lock)</option>
           </select>
         </div>
-        <div
-          class="form-group"
-          style="margin-bottom: 0; flex: 1; min-width: 140px"
-        >
-          <label
-            for="completeness-site-id-input"
-            style="
-              font-size: var(--font-size-2xs);
-              font-weight: 600;
-              margin-bottom: 2px;
-              display: block;
-            "
+        <div class="form-group audit-filter-group">
+          <label for="completeness-site-id-input" class="audit-filter-label"
             >Site ID (Optional)</label
           >
           <input
@@ -1490,16 +1306,7 @@
             v-model="completenessParams.site_id"
             type="text"
             placeholder="e.g. site_001"
-            class="completeness-site-id"
-            style="
-              width: 100%;
-              padding: 6px 8px;
-              font-size: 12px;
-              border-radius: 4px;
-              border: 1px solid var(--border);
-              background: var(--semantic-color-surface);
-              color: var(--semantic-color-text);
-            "
+            class="completeness-site-id audit-filter-control"
           />
         </div>
         <div
@@ -2379,6 +2186,39 @@ onMounted(() => {
 .clinical-table th,
 .clinical-table td {
   border-bottom: 1px solid var(--border);
+}
+.audit-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  background: var(--semantic-color-surface-muted);
+  padding: 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  margin-bottom: 16px;
+}
+.audit-filter-group {
+  margin-bottom: 0;
+  flex: 1;
+  min-width: 140px;
+}
+.audit-filter-group--date {
+  min-width: 130px;
+}
+.audit-filter-label {
+  font-size: var(--font-size-2xs);
+  font-weight: 600;
+  margin-bottom: 2px;
+  display: block;
+}
+.audit-filter-control {
+  width: 100%;
+  padding: 6px 8px;
+  font-size: 12px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--semantic-color-surface);
+  color: var(--semantic-color-text);
 }
 .clinical-table tr:hover {
   background-color: var(--semantic-color-surface-muted);

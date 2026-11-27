@@ -1,6 +1,80 @@
 import { defineStore } from "pinia";
 import { apiClient } from "../api/apiClient";
 
+function selectTargetVerbatimClusters(store, targetIds, targetKeys) {
+  return store.verbatimClusters.filter((c) => {
+    if (targetIds) {
+      return (
+        targetIds.includes(c.id) ||
+        targetIds.includes(c.cluster_id) ||
+        targetIds.includes(c.clusterKey)
+      );
+    }
+    if (targetKeys) {
+      return (
+        targetKeys.includes(c.clusterKey) ||
+        targetKeys.includes(c.id) ||
+        targetKeys.includes(c.cluster_id)
+      );
+    }
+    return (
+      store.selectedClusterIds.includes(c.id) ||
+      store.selectedClusterIds.includes(c.cluster_id) ||
+      store.selectedClusterKeys.includes(c.clusterKey)
+    );
+  });
+}
+
+function collectClusterBatchAssignments(store, targetClusters, resolveRule) {
+  let totalInstances = 0;
+  let blockedInstances = 0;
+  const unblockedAssignmentIds = [];
+
+  for (const cluster of targetClusters) {
+    totalInstances += cluster.instance_count;
+    let clusterUnblockedCount = 0;
+    for (const inst of cluster.instances) {
+      if (
+        inst.status === "QUERY_PENDING" ||
+        inst.has_query ||
+        inst.is_locked ||
+        inst.is_blocked
+      ) {
+        blockedInstances++;
+      } else {
+        unblockedAssignmentIds.push(inst.id);
+        clusterUnblockedCount++;
+      }
+    }
+
+    if (clusterUnblockedCount > 0) {
+      const { targetCode, targetTerm, dictionaryType } = resolveRule(cluster);
+      const newRule = {
+        verbatim_text: cluster.verbatim_text,
+        target_code: targetCode,
+        target_term: targetTerm,
+        dictionary_type: dictionaryType,
+        created_at: new Date().toISOString(),
+        status: "ACTIVE",
+      };
+      const existingIdx = store.synonymRules.findIndex(
+        (r) =>
+          r.verbatim_text.toUpperCase() ===
+            cluster.verbatim_text.toUpperCase() &&
+          (r.dictionary_type || "").toUpperCase() ===
+            (dictionaryType || "").toUpperCase()
+      );
+      if (existingIdx !== -1) {
+        store.synonymRules[existingIdx] = newRule;
+      } else {
+        store.synonymRules.push(newRule);
+      }
+    }
+  }
+
+  return { totalInstances, blockedInstances, unblockedAssignmentIds };
+}
+
 export const useCodingStore = defineStore("coding", {
   state: () => ({
     assignments: [],
@@ -815,25 +889,11 @@ export const useCodingStore = defineStore("coding", {
       const targetIds = clusterIds || (clusterId ? [clusterId] : null);
       const targetKeys = clusterKeys || null;
 
-      const targetClusters = this.verbatimClusters.filter((c) => {
-        if (targetIds)
-          return (
-            targetIds.includes(c.id) ||
-            targetIds.includes(c.cluster_id) ||
-            targetIds.includes(c.clusterKey)
-          );
-        if (targetKeys)
-          return (
-            targetKeys.includes(c.clusterKey) ||
-            targetKeys.includes(c.id) ||
-            targetKeys.includes(c.cluster_id)
-          );
-        return (
-          this.selectedClusterIds.includes(c.id) ||
-          this.selectedClusterIds.includes(c.cluster_id) ||
-          this.selectedClusterKeys.includes(c.clusterKey)
-        );
-      });
+      const targetClusters = selectTargetVerbatimClusters(
+        this,
+        targetIds,
+        targetKeys
+      );
 
       if (targetClusters.length === 0) return;
 
@@ -841,60 +901,18 @@ export const useCodingStore = defineStore("coding", {
       this.batchAlert = null;
 
       try {
-        let totalInstances = 0;
-        let blockedInstances = 0;
-        const unblockedAssignmentIds = [];
-
-        for (const cluster of targetClusters) {
-          totalInstances += cluster.instance_count;
-          let clusterUnblockedCount = 0;
-          for (const inst of cluster.instances) {
-            // Guardrail check: exclude active query or locked items
-            if (
-              inst.status === "QUERY_PENDING" ||
-              inst.has_query ||
-              inst.is_locked ||
-              inst.is_blocked
-            ) {
-              blockedInstances++;
-            } else {
-              unblockedAssignmentIds.push(inst.id);
-              clusterUnblockedCount++;
-            }
-          }
-
-          if (clusterUnblockedCount > 0) {
-            // Register synonym expansion rule for approved verbatim cluster
-            const targetCode =
+        const { totalInstances, blockedInstances, unblockedAssignmentIds } =
+          collectClusterBatchAssignments(this, targetClusters, (cluster) => ({
+            targetCode:
               cluster.top_suggested_code ||
               cluster.top_suggestion?.code ||
-              "10019211";
-            const targetTerm =
+              "10019211",
+            targetTerm:
               cluster.top_suggested_term ||
               cluster.top_suggestion?.term ||
-              "Headache";
-            const newRule = {
-              verbatim_text: cluster.verbatim_text,
-              target_code: targetCode,
-              target_term: targetTerm,
-              dictionary_type: cluster.dictionary_type,
-              created_at: new Date().toISOString(),
-              status: "ACTIVE",
-            };
-            const existingIdx = this.synonymRules.findIndex(
-              (r) =>
-                r.verbatim_text.toUpperCase() ===
-                  cluster.verbatim_text.toUpperCase() &&
-                (r.dictionary_type || "").toUpperCase() ===
-                  (cluster.dictionary_type || "").toUpperCase()
-            );
-            if (existingIdx !== -1) {
-              this.synonymRules[existingIdx] = newRule;
-            } else {
-              this.synonymRules.push(newRule);
-            }
-          }
-        }
+              "Headache",
+            dictionaryType: cluster.dictionary_type,
+          }));
 
         if (unblockedAssignmentIds.length === 0) {
           this.batchAlert = {
@@ -956,25 +974,11 @@ export const useCodingStore = defineStore("coding", {
       const targetIds = clusterIds || null;
       const targetKeys = clusterKeys || null;
 
-      const targetClusters = this.verbatimClusters.filter((c) => {
-        if (targetIds)
-          return (
-            targetIds.includes(c.id) ||
-            targetIds.includes(c.cluster_id) ||
-            targetIds.includes(c.clusterKey)
-          );
-        if (targetKeys)
-          return (
-            targetKeys.includes(c.clusterKey) ||
-            targetKeys.includes(c.id) ||
-            targetKeys.includes(c.cluster_id)
-          );
-        return (
-          this.selectedClusterIds.includes(c.id) ||
-          this.selectedClusterIds.includes(c.cluster_id) ||
-          this.selectedClusterKeys.includes(c.clusterKey)
-        );
-      });
+      const targetClusters = selectTargetVerbatimClusters(
+        this,
+        targetIds,
+        targetKeys
+      );
 
       if (targetClusters.length === 0) return;
 
@@ -982,55 +986,12 @@ export const useCodingStore = defineStore("coding", {
       this.batchAlert = null;
 
       try {
-        let totalInstances = 0;
-        let blockedInstances = 0;
-        const unblockedAssignmentIds = [];
-
-        for (const cluster of targetClusters) {
-          totalInstances += cluster.instance_count;
-          let clusterUnblockedCount = 0;
-          for (const inst of cluster.instances) {
-            if (
-              inst.status === "QUERY_PENDING" ||
-              inst.has_query ||
-              inst.is_locked ||
-              inst.is_blocked
-            ) {
-              blockedInstances++;
-            } else {
-              unblockedAssignmentIds.push(inst.id);
-              clusterUnblockedCount++;
-            }
-          }
-
-          if (clusterUnblockedCount > 0) {
-            // Register synonym expansion rule
-            const newRule = {
-              verbatim_text: cluster.verbatim_text,
-              target_code: code,
-              target_term: term,
-              dictionary_type: dictionaryType || cluster.dictionary_type,
-              created_at: new Date().toISOString(),
-              status: "ACTIVE",
-            };
-            const existingIdx = this.synonymRules.findIndex(
-              (r) =>
-                r.verbatim_text.toUpperCase() ===
-                  cluster.verbatim_text.toUpperCase() &&
-                (r.dictionary_type || "").toUpperCase() ===
-                  (
-                    dictionaryType ||
-                    cluster.dictionary_type ||
-                    ""
-                  ).toUpperCase()
-            );
-            if (existingIdx !== -1) {
-              this.synonymRules[existingIdx] = newRule;
-            } else {
-              this.synonymRules.push(newRule);
-            }
-          }
-        }
+        const { totalInstances, blockedInstances, unblockedAssignmentIds } =
+          collectClusterBatchAssignments(this, targetClusters, (cluster) => ({
+            targetCode: code,
+            targetTerm: term,
+            dictionaryType: dictionaryType || cluster.dictionary_type,
+          }));
 
         if (unblockedAssignmentIds.length === 0) {
           this.batchAlert = {

@@ -47,3 +47,38 @@
   background-color: var(--semantic-color-error-bg-soft);
   color: var(--semantic-color-error-text-dark);
 }
+
+.ecrf-cdash-lead {
+  font-size: 0.85rem;
+  color: var(--semantic-color-text-secondary);
+  margin-bottom: 8px;
+}
+
+.ecrf-cdash-box {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  background-color: var(--semantic-color-surface-muted);
+}
+
+.ecrf-cdash-heading {
+  font-size: 0.9rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: var(--text-main);
+}
+
+.ecrf-cdash-list {
+  font-size: 0.8rem;
+  padding-left: 20px;
+  color: var(--semantic-color-text-secondary);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ecrf-cdash-copy {
+  font-size: 0.8rem;
+  color: var(--semantic-color-text-secondary);
+  line-height: 1.4;
+}

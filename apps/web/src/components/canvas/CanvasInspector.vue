@@ -577,29 +577,14 @@
           />
 
           <router-link
-            v-if="recordLocation"
-            id="inspector-open-record"
+            v-for="link in inspectorOpenLinks"
+            :id="link.id"
+            :key="link.id"
+            :data-testid="link.testId"
             class="inspector-link"
-            :to="recordLocation"
+            :to="link.to"
           >
-            Open participant's data
-          </router-link>
-          <router-link
-            v-if="dataEntryLocation"
-            id="inspector-open-data-entry"
-            class="inspector-link"
-            :to="dataEntryLocation"
-          >
-            Open in data entry
-          </router-link>
-          <router-link
-            v-if="isDemoBuild() && handoffLocation"
-            id="inspector-handoff-standalone"
-            data-testid="inspector-ecrf-handoff"
-            class="inspector-link"
-            :to="handoffLocation"
-          >
-            Open standalone form view
+            {{ link.label }}
           </router-link>
         </template>
 
@@ -647,29 +632,14 @@
           </dl>
 
           <router-link
-            v-if="recordLocation"
-            id="inspector-open-record"
+            v-for="link in inspectorOpenLinks"
+            :id="link.id"
+            :key="link.id"
+            :data-testid="link.testId"
             class="inspector-link"
-            :to="recordLocation"
+            :to="link.to"
           >
-            Open participant's data
-          </router-link>
-          <router-link
-            v-if="dataEntryLocation"
-            id="inspector-open-data-entry"
-            class="inspector-link"
-            :to="dataEntryLocation"
-          >
-            Open in data entry
-          </router-link>
-          <router-link
-            v-if="isDemoBuild() && handoffLocation"
-            id="inspector-handoff-standalone"
-            data-testid="inspector-ecrf-handoff"
-            class="inspector-link"
-            :to="handoffLocation"
-          >
-            Open standalone form view
+            {{ link.label }}
           </router-link>
         </template>
       </template>
@@ -854,6 +824,38 @@ const showParticipantStateActions = computed(() => {
     effectiveCanUnblind.value &&
     participantStateChanges(props.participant.status).unblindingWithheld
   );
+});
+
+const inspectorOpenLinks = computed(() => {
+  const links: Array<{
+    id: string;
+    testId?: string;
+    to: RouteLocationRaw;
+    label: string;
+  }> = [];
+  if (props.recordLocation) {
+    links.push({
+      id: "inspector-open-record",
+      to: props.recordLocation,
+      label: "Open participant's data",
+    });
+  }
+  if (props.dataEntryLocation) {
+    links.push({
+      id: "inspector-open-data-entry",
+      to: props.dataEntryLocation,
+      label: "Open in data entry",
+    });
+  }
+  if (isDemoBuild() && props.handoffLocation) {
+    links.push({
+      id: "inspector-handoff-standalone",
+      testId: "inspector-ecrf-handoff",
+      to: props.handoffLocation,
+      label: "Open standalone form view",
+    });
+  }
+  return links;
 });
 
 const assignedKitDisplay = computed(

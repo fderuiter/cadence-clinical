@@ -481,6 +481,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2679: Centralize Curated Lucide Icons and Enforce CLI Emoji Gate](2026-11-25-centralize-lucide-icons-and-cli-emoji-gate.md) (2026-11-25)
 - [ADR-2689: Centralize Floating Primitives and Top-Right Toast Stack](2026-11-25-centralize-floating-primitives-and-top-right-toast-stack.md) (2026-11-25)
 - [ADR-2690: Unified CSS Theme Cascade, Non-Text Border Recalibration, and Shared Theme Controller](2026-11-25-unified-css-cascade-and-shared-theme-controller.md) (2026-11-25)
+- [ADR-2691: Split Generated CDASH Variable Union, Enforce Intra-File Frontend Clone Detection, and Delegate Lazy Kernel Action Wrappers](2026-11-26-deduplicate-cdash-frontend-clones-and-kernel-action-wrappers.md) (2026-11-26)
 
 ### 7. DevOps, Tooling & CI/CD
 

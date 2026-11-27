@@ -18,6 +18,31 @@ export type KernelSchemas = components["schemas"];
 
 export const kernelClient = createOpenApiClient<paths>();
 
+type ProtocolImportModule = typeof import("./protocolImport");
+type KernelActionName = {
+  [K in keyof ProtocolImportModule]: ProtocolImportModule[K] extends (
+    ...args: never[]
+  ) => Promise<unknown>
+    ? K
+    : never;
+}[keyof ProtocolImportModule];
+
+/**
+ * Creates a lazy dynamic-import forwarder to an `execute*` transport helper in `./protocolImport`,
+ * preserving single-source parameter and return type inference alongside the cold-boot chunk boundary.
+ */
+export function lazyKernelAction<K extends KernelActionName>(
+  actionName: K
+): ProtocolImportModule[K] {
+  return (async (...args: Parameters<ProtocolImportModule[K]>) => {
+    const mod = await import("./protocolImport");
+    const fn = mod[actionName] as (
+      ...fnArgs: Parameters<ProtocolImportModule[K]>
+    ) => ReturnType<ProtocolImportModule[K]>;
+    return fn(...args);
+  }) as unknown as ProtocolImportModule[K];
+}
+
 export const ASSERTION_LOCKED = "K.Assertion.Locked";
 export const ASSERTION_ALREADY_LOCKED = "K.Assertion.AlreadyLocked";
 export const ASSERTION_SCOPE_NOT_READY = "K.Assertion.ScopeNotReady";

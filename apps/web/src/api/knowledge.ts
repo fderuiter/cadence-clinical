@@ -1415,50 +1415,40 @@ function createDefaultContextualSops(): Record<
         "Assess unanticipated serious adverse device effect (`USADE`) causality within statutory vigilance reporting timelines.",
       ],
     }),
-    "/adjudication": buildBundledSop({
-      mappingId: "map-adjudication-01",
-      routePattern: "/adjudication/*",
-      persona: "site_investigator",
-      priority: 15,
-      articleId: "art-cec-sop",
-      versionId: "ver-cec-315",
-      title:
-        "SOP-CEC-315: Blinded Clinical Events Committee Dossier & Adjudication",
-      slug: "sop-cec-315-endpoint-adjudication",
-      tags: ["cec", "adjudication", "endpoints", "blinding"],
-      categoryId: "cat-clinical-ops",
-      categoryName: "Clinical Operations",
-      sectionAnchor: "#cec-endpoint-adjudication",
-      heading: "Clinical Events Committee Dossier & Consensus Review",
-      summary:
-        "Standardizes treatment-blinded clinical dossier redaction, independent reviewer voting, and consensus adjudication sign-off.",
-      steps: [
-        "Verify source dossier redaction removes treatment-arm indicators and direct participant identifiers before CEC release.",
-        "Complete independent reviewer assessments and record Part 11 signed consensus adjudication outcomes.",
-      ],
-    }),
-    "/cec": buildBundledSop({
-      mappingId: "map-cec-01",
-      routePattern: "/cec/*",
-      persona: "site_investigator",
-      priority: 15,
-      articleId: "art-cec-sop",
-      versionId: "ver-cec-315",
-      title:
-        "SOP-CEC-315: Blinded Clinical Events Committee Dossier & Adjudication",
-      slug: "sop-cec-315-endpoint-adjudication",
-      tags: ["cec", "adjudication", "endpoints", "blinding"],
-      categoryId: "cat-clinical-ops",
-      categoryName: "Clinical Operations",
-      sectionAnchor: "#cec-endpoint-adjudication",
-      heading: "Clinical Events Committee Dossier & Consensus Review",
-      summary:
-        "Standardizes treatment-blinded clinical dossier redaction, independent reviewer voting, and consensus adjudication sign-off.",
-      steps: [
-        "Verify source dossier redaction removes treatment-arm indicators and direct participant identifiers before CEC release.",
-        "Complete independent reviewer assessments and record Part 11 signed consensus adjudication outcomes.",
-      ],
-    }),
+    ...(() => {
+      const cecSpec = {
+        persona: "site_investigator",
+        priority: 15,
+        articleId: "art-cec-sop",
+        versionId: "ver-cec-315",
+        title:
+          "SOP-CEC-315: Blinded Clinical Events Committee Dossier & Adjudication",
+        slug: "sop-cec-315-endpoint-adjudication",
+        tags: ["cec", "adjudication", "endpoints", "blinding"],
+        categoryId: "cat-clinical-ops",
+        categoryName: "Clinical Operations",
+        sectionAnchor: "#cec-endpoint-adjudication",
+        heading: "Clinical Events Committee Dossier & Consensus Review",
+        summary:
+          "Standardizes treatment-blinded clinical dossier redaction, independent reviewer voting, and consensus adjudication sign-off.",
+        steps: [
+          "Verify source dossier redaction removes treatment-arm indicators and direct participant identifiers before CEC release.",
+          "Complete independent reviewer assessments and record Part 11 signed consensus adjudication outcomes.",
+        ],
+      };
+      return {
+        "/adjudication": buildBundledSop({
+          ...cecSpec,
+          mappingId: "map-adjudication-01",
+          routePattern: "/adjudication/*",
+        }),
+        "/cec": buildBundledSop({
+          ...cecSpec,
+          mappingId: "map-cec-01",
+          routePattern: "/cec/*",
+        }),
+      };
+    })(),
     "/ctms": buildBundledSop({
       mappingId: "map-ctms-01",
       routePattern: "/ctms/*",

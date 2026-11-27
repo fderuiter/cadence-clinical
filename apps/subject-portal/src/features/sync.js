@@ -458,6 +458,30 @@ export async function syncOfflineQueue(isManual = false, options = {}) {
           );
         });
 
+        const recordBatchSubmissionResult = (item, res) => {
+          const isQuar = res.status === "QUARANTINED";
+          if (isQuar) {
+            hasQuarantined = true;
+          }
+          const syncVerificationToken =
+            res.syncVerificationToken ?? res.sync_verification_token ?? null;
+          updates.push({
+            sequence_number: item.sequence_number,
+            status: res.status,
+            ...(syncVerificationToken ? { syncVerificationToken } : {}),
+            additionalFields: {
+              resolved_answers: res.answers,
+              resolved_at: new Date().toISOString(),
+              ...(syncVerificationToken
+                ? { sync_verification_token: syncVerificationToken }
+                : {}),
+              error: isQuar
+                ? "Survey form version changed on the study server. Tap Sync Now to refresh active forms or contact your study coordinator."
+                : null,
+            },
+          });
+        };
+
         if (hasKeys) {
           for (const res of response.results) {
             const resSeq =
@@ -468,29 +492,7 @@ export async function syncOfflineQueue(isManual = false, options = {}) {
               (q) => q.sequence_number === resSeq && q.client_id === resClientId
             );
             if (item) {
-              const isQuar = res.status === "QUARANTINED";
-              if (isQuar) {
-                hasQuarantined = true;
-              }
-              const syncVerificationToken =
-                res.syncVerificationToken ??
-                res.sync_verification_token ??
-                null;
-              updates.push({
-                sequence_number: item.sequence_number,
-                status: res.status,
-                ...(syncVerificationToken ? { syncVerificationToken } : {}),
-                additionalFields: {
-                  resolved_answers: res.answers,
-                  resolved_at: new Date().toISOString(),
-                  ...(syncVerificationToken
-                    ? { sync_verification_token: syncVerificationToken }
-                    : {}),
-                  error: isQuar
-                    ? "Survey form version changed on the study server. Tap Sync Now to refresh active forms or contact your study coordinator."
-                    : null,
-                },
-              });
+              recordBatchSubmissionResult(item, res);
             }
           }
         } else {
@@ -499,29 +501,7 @@ export async function syncOfflineQueue(isManual = false, options = {}) {
             const item = validSubmissions[i];
             const res = response.results[i];
             if (res) {
-              const isQuar = res.status === "QUARANTINED";
-              if (isQuar) {
-                hasQuarantined = true;
-              }
-              const syncVerificationToken =
-                res.syncVerificationToken ??
-                res.sync_verification_token ??
-                null;
-              updates.push({
-                sequence_number: item.sequence_number,
-                status: res.status,
-                ...(syncVerificationToken ? { syncVerificationToken } : {}),
-                additionalFields: {
-                  resolved_answers: res.answers,
-                  resolved_at: new Date().toISOString(),
-                  ...(syncVerificationToken
-                    ? { sync_verification_token: syncVerificationToken }
-                    : {}),
-                  error: isQuar
-                    ? "Survey form version changed on the study server. Tap Sync Now to refresh active forms or contact your study coordinator."
-                    : null,
-                },
-              });
+              recordBatchSubmissionResult(item, res);
             }
           }
         }

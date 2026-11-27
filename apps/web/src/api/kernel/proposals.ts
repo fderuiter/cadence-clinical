@@ -1,6 +1,4 @@
-import type { KernelSchemas } from "./shared";
-
-const loadRouteTransport = () => import("./protocolImport");
+import { lazyKernelAction, type KernelSchemas } from "./shared";
 
 export type KernelProposal = KernelSchemas["Kernel_KernelProposalResponse"];
 export type KernelProposalState =
@@ -23,29 +21,15 @@ export const kernelProposalsApi = {
    * A study's proposals, newest first (GET /api/v1/kernel/studies/{studyRef}/proposals). A proposal the reader may
    * not see comes back masked; an affected object they may not see keeps its place with its mask (ADR-2471).
    */
-  async listProposals(
-    studyRef: string,
-    query: { status?: KernelProposalStatus; limit?: number } = {}
-  ): Promise<KernelProposal[]> {
-    const { executeListProposals } = await loadRouteTransport();
-    return executeListProposals(studyRef, query);
-  },
+  listProposals: lazyKernelAction("executeListProposals"),
 
   /** One proposal with its plan, affected objects, requested capabilities, model, content hash and decision. */
-  async getProposal(proposalRef: string): Promise<KernelProposal> {
-    const { executeGetProposal } = await loadRouteTransport();
-    return executeGetProposal(proposalRef);
-  },
+  getProposal: lazyKernelAction("executeGetProposal"),
 
   /**
    * Rejects an open proposal with a reason (POST /api/v1/kernel/proposals/{proposalRef}/rejection). Rejects with an
    * ApiError of status 409 when the proposal is already decided or expired, 422 without a reason and 403 without
    * proposal.reject in its study.
    */
-  async rejectProposal(
-    input: KernelProposalRejection
-  ): Promise<KernelProposalState> {
-    const { executeRejectProposal } = await loadRouteTransport();
-    return executeRejectProposal(input);
-  },
+  rejectProposal: lazyKernelAction("executeRejectProposal"),
 };
