@@ -33,6 +33,7 @@
       >
         <component
           :is="tab.icon"
+          v-if="tab.icon"
           class="icon"
           :size="16"
           :stroke-width="1.75"

@@ -11,6 +11,7 @@ import {
 } from "lucide-vue-next";
 import { markRaw } from "vue";
 
+import { isDemoBuild } from "../utils/demoMode.js";
 import ComplianceView from "../views/ComplianceView.vue";
 import ConsentView from "../views/ConsentView.vue";
 import InboxView from "../views/InboxView.vue";
@@ -18,6 +19,8 @@ import LaySummariesView from "../views/LaySummariesView.vue";
 import QuestionnaireView from "../views/QuestionnaireView.vue";
 import TasksView from "../views/TasksView.vue";
 import WalletView from "../views/WalletView.vue";
+
+const includeDemoTabIcons = isDemoBuild() || import.meta.env?.MODE === "test";
 
 export const viewRoutes = [
   {
@@ -27,7 +30,11 @@ export const viewRoutes = [
     component: TasksView,
     meta: {
       viewId: "view-tasks",
-      tab: { id: "tasks", label: "My Tasks", icon: markRaw(ClipboardList) },
+      tab: {
+        id: "tasks",
+        label: "My Tasks",
+        icon: includeDemoTabIcons ? markRaw(ClipboardList) : null,
+      },
     },
   },
   {
@@ -47,7 +54,7 @@ export const viewRoutes = [
       tab: {
         id: "compliance",
         label: "My Compliance",
-        icon: markRaw(TrendingUp),
+        icon: includeDemoTabIcons ? markRaw(TrendingUp) : null,
       },
     },
   },
@@ -57,7 +64,11 @@ export const viewRoutes = [
     component: InboxView,
     meta: {
       viewId: "view-inbox",
-      tab: { id: "inbox", label: "My Inbox", icon: markRaw(Mail) },
+      tab: {
+        id: "inbox",
+        label: "My Inbox",
+        icon: includeDemoTabIcons ? markRaw(Mail) : null,
+      },
     },
   },
   {
@@ -69,7 +80,7 @@ export const viewRoutes = [
       tab: {
         id: "consent",
         label: "My Consent",
-        icon: markRaw(FileSignature),
+        icon: includeDemoTabIcons ? markRaw(FileSignature) : null,
       },
     },
   },
@@ -91,7 +102,7 @@ export const viewRoutes = [
       tab: {
         id: "lay-summaries",
         label: "Trial Results",
-        icon: markRaw(ScrollText),
+        icon: includeDemoTabIcons ? markRaw(ScrollText) : null,
       },
     },
   },

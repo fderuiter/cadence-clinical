@@ -1,10 +1,102 @@
+import fs from "node:fs";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { createDemoFixturesPlugin } from "../../../scripts/vite-strip-demo-fixtures.mjs";
+import {
+  AVAILABLE_SCREENS as WEB_AVAILABLE_SCREENS,
+  DEMO_AVAILABLE_SCREENS as WEB_DEMO_AVAILABLE_SCREENS,
+} from "../src/router/availability.js";
+import {
+  SUBJECT_PORTAL_NON_DEMO_STUBBED_VIEWS,
+  WEB_NON_DEMO_STUBBED_VIEWS,
+  createDemoFixturesPlugin,
+} from "../../../scripts/vite-strip-demo-fixtures.mjs";
 
 const webAppDir = path.resolve(process.cwd());
+const subjectPortalDir = path.resolve(webAppDir, "../subject-portal");
 const viewsImporter = path.join(webAppDir, "src/views/CtmsView.vue");
+const routerImporter = path.join(webAppDir, "src/router/index.js");
 const storesImporter = path.join(webAppDir, "src/stores/clinical.ts");
+const portalRouterImporter = path.join(
+  subjectPortalDir,
+  "src/router/routes.js"
+);
+const portalAvailabilityPath = path.join(
+  subjectPortalDir,
+  "src/router/availability.js"
+);
+const INFRASTRUCTURE_ROUTE_NAMES = new Set([
+  "overview",
+  "plans",
+  "trial-onboarding",
+  "login",
+  "forbidden",
+  "unavailable",
+  "observation",
+]);
+
+function createResolver(
+  appDir: string,
+  command: "build" | "serve",
+  mode: string
+) {
+  const plugin = createDemoFixturesPlugin(appDir);
+  plugin.configResolved?.({ command, mode, env: {} } as never);
+  return {
+    resolveId: plugin.resolveId as (
+      source: string,
+      importer?: string
+    ) => string | null,
+    load: plugin.load as (id: string) => string | null,
+  };
+}
+
+function parseWebRouteViews(routerSource: string) {
+  const routeBlocks = routerSource.split(/\n {2}\{\n/).slice(1);
+  return routeBlocks
+    .map((block) => {
+      const nameMatch = block.match(/\bname:\s*"([^"]+)"/);
+      const viewMatch = block.match(
+        /component:\s*\(\)\s*=>\s*import\("\.\.\/views\/([^"]+)"\)/
+      );
+      if (!nameMatch || !viewMatch) return null;
+      const redirectsInProd =
+        /beforeEnter:\s*redirectToCanvasSection\(/.test(block) ||
+        /buildCanvasLocationFromEcrfQuery/.test(block);
+      return {
+        name: nameMatch[1],
+        viewFile: viewMatch[1],
+        redirectsInProd,
+      };
+    })
+    .filter(
+      (
+        entry
+      ): entry is {
+        name: string;
+        viewFile: string;
+        redirectsInProd: boolean;
+      } => entry !== null
+    );
+}
+
+function parseSubjectPortalRouteViews(routesSource: string) {
+  const importMap = new Map<string, string>();
+  for (const match of routesSource.matchAll(
+    /import\s+(\w+)\s+from\s+"\.\.\/views\/([^"]+)";/g
+  )) {
+    importMap.set(match[1], match[2]);
+  }
+  const entries: Array<{ name: string; viewFile: string }> = [];
+  for (const match of routesSource.matchAll(
+    /name:\s*"([^"]+)",\s*component:\s*(\w+)/g
+  )) {
+    const viewFile = importMap.get(match[2]);
+    if (viewFile) {
+      entries.push({ name: match[1], viewFile });
+    }
+  }
+  return entries;
+}
 
 describe("vite-strip-demo-fixtures plugin", () => {
   const originalDemoEnv = process.env.VITE_DEMO_MODE;
@@ -131,5 +223,130 @@ describe("vite-strip-demo-fixtures plugin", () => {
     ).toBeNull();
     expect(devServeResolve("./demo/clinicalUsdm", storesImporter)).toBeNull();
     expect(devServeResolve("tldts")).toBeNull();
+  });
+
+  it("maintains route parity across apps/web and stubs every unbacked and redirected view only in non-demo builds", () => {
+    delete process.env.VITE_DEMO_MODE;
+    const routerSource = fs.readFileSync(routerImporter, "utf8");
+    const routeViews = parseWebRouteViews(routerSource);
+    expect(routeViews.length).toBeGreaterThanOrEqual(35);
+
+    const expectedStubbed = new Set<string>();
+    const expectedLive = new Set<string>();
+    for (const { name, viewFile, redirectsInProd } of routeViews) {
+      const isLiveAvailable =
+        (WEB_AVAILABLE_SCREENS.has(name) ||
+          INFRASTRUCTURE_ROUTE_NAMES.has(name)) &&
+        !redirectsInProd;
+      if (isLiveAvailable) {
+        expectedLive.add(viewFile);
+      } else {
+        expect(
+          WEB_DEMO_AVAILABLE_SCREENS.has(name) || redirectsInProd,
+          `Unexpected unreachable route ${name} (${viewFile})`
+        ).toBe(true);
+        expectedStubbed.add(viewFile);
+      }
+    }
+
+    expect(Array.from(expectedStubbed).sort()).toEqual(
+      [...WEB_NON_DEMO_STUBBED_VIEWS].sort()
+    );
+    for (const liveFile of expectedLive) {
+      expect(expectedStubbed.has(liveFile)).toBe(false);
+    }
+
+    const prodBuild = createResolver(webAppDir, "build", "production");
+    const demoBuild = createResolver(webAppDir, "build", "demo");
+    const devServe = createResolver(webAppDir, "serve", "development");
+
+    for (const viewFile of expectedStubbed) {
+      const stubId = prodBuild.resolveId(
+        `../views/${viewFile}`,
+        routerImporter
+      );
+      expect(stubId).toBe(`\0virtual:demo-view-prod-stub:${viewFile}`);
+      expect(prodBuild.load(stubId!)).toContain("DemoWorkspaceProdStub");
+      expect(
+        demoBuild.resolveId(`../views/${viewFile}`, routerImporter)
+      ).toBeNull();
+      expect(
+        devServe.resolveId(`../views/${viewFile}`, routerImporter)
+      ).toBeNull();
+    }
+
+    for (const liveFile of expectedLive) {
+      expect(
+        prodBuild.resolveId(`../views/${liveFile}`, routerImporter)
+      ).toBeNull();
+    }
+  });
+
+  it("maintains route parity across apps/subject-portal and stubs all six demo views only in non-demo builds", () => {
+    delete process.env.VITE_DEMO_MODE;
+    const availabilitySource = fs.readFileSync(portalAvailabilityPath, "utf8");
+    const parseSet = (exportName: string) => {
+      const blockMatch = availabilitySource.match(
+        new RegExp(
+          `export const ${exportName}\\s*=\\s*new Set\\(([\\s\\S]*?)\\);`
+        )
+      );
+      expect(blockMatch).not.toBeNull();
+      return new Set(
+        Array.from(blockMatch![1].matchAll(/"([^"]+)"/g), (m) => m[1])
+      );
+    };
+    const portalLiveScreens = new Set([
+      ...parseSet("AVAILABLE_SCREENS"),
+      ...parseSet("AUTHENTICATED_SCREENS"),
+    ]);
+    const portalDemoScreens = parseSet("DEMO_AVAILABLE_SCREENS");
+
+    const routesSource = fs.readFileSync(portalRouterImporter, "utf8");
+    const portalRouteViews = parseSubjectPortalRouteViews(routesSource);
+    expect(portalRouteViews).toHaveLength(7);
+
+    const expectedPortalStubbed = portalRouteViews
+      .filter(
+        ({ name }) =>
+          portalDemoScreens.has(name) && !portalLiveScreens.has(name)
+      )
+      .map(({ viewFile }) => viewFile);
+    const expectedPortalLive = [
+      ...portalRouteViews
+        .filter(({ name }) => portalLiveScreens.has(name))
+        .map(({ viewFile }) => viewFile),
+      "UnavailableView.vue",
+    ];
+
+    expect([...expectedPortalStubbed].sort()).toEqual(
+      [...SUBJECT_PORTAL_NON_DEMO_STUBBED_VIEWS].sort()
+    );
+    expect(expectedPortalStubbed).toHaveLength(6);
+
+    const prodBuild = createResolver(subjectPortalDir, "build", "production");
+    const demoBuild = createResolver(subjectPortalDir, "build", "demo");
+    const devServe = createResolver(subjectPortalDir, "serve", "development");
+
+    for (const viewFile of expectedPortalStubbed) {
+      const stubId = prodBuild.resolveId(
+        `../views/${viewFile}`,
+        portalRouterImporter
+      );
+      expect(stubId).toBe(`\0virtual:demo-view-prod-stub:${viewFile}`);
+      expect(prodBuild.load(stubId!)).toContain("DemoWorkspaceProdStub");
+      expect(
+        demoBuild.resolveId(`../views/${viewFile}`, portalRouterImporter)
+      ).toBeNull();
+      expect(
+        devServe.resolveId(`../views/${viewFile}`, portalRouterImporter)
+      ).toBeNull();
+    }
+
+    for (const liveFile of expectedPortalLive) {
+      expect(
+        prodBuild.resolveId(`../views/${liveFile}`, portalRouterImporter)
+      ).toBeNull();
+    }
   });
 });

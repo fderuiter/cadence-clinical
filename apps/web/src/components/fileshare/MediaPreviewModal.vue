@@ -592,7 +592,7 @@ const sessionId = ref(
       : `sess-${Date.now()}-${demoRandomToken(7, 36, "media-preview")}`
 );
 
-// Video HLS playback and transcoding state
+// Video playback and transcoding state
 const streamUrl = ref("");
 const transcodeStatus = ref(props.fileRecord?.transcode_status || "READY");
 const transcodeError = ref("");
@@ -602,7 +602,6 @@ const isPolling = ref(false);
 const pollTimer = ref(null);
 const qualityLevels = ref([]);
 const selectedQuality = ref(-1);
-const hlsInstance = ref(null);
 const emptySha256Digest =
   "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"; // pragma: allowlist secret
 const reportedCheckpoints = ref(new Set());
@@ -848,12 +847,8 @@ function onVideoEnded() {
   sendPlaybackAudit("PLAY_END");
 }
 
-function isHlsManifestUrl(url) {
-  return /\.m3u8(?:$|[?#])/i.test(String(url || ""));
-}
-
 /**
- * Configure HLS or native playback on the video element
+ * Configure native HTML5 playback on the video element
  */
 async function setupVideoPlayer(manifestUrl) {
   if (!manifestUrl) return;
@@ -861,81 +856,19 @@ async function setupVideoPlayer(manifestUrl) {
   const video = videoPlayerRef.value;
   if (!video) return;
 
-  if (hlsInstance.value) {
-    hlsInstance.value.destroy();
-    hlsInstance.value = null;
-  }
-
-  let Hls = null;
-  if (!isDemoBuild()) {
-    if (isHlsManifestUrl(manifestUrl)) {
-      const hlsModule = await import("hls.js");
-      Hls = hlsModule.default || hlsModule;
-    }
-  }
-
-  if (Hls && Hls.isSupported && Hls.isSupported()) {
-    const hls = new Hls({
-      enableWorker: true,
-      lowLatencyMode: true,
-    });
-    hlsInstance.value = hls;
-
-    hls.loadSource(manifestUrl);
-    hls.attachMedia(video);
-
-    hls.on(Hls.Events.MANIFEST_PARSED, (_event, data) => {
-      if (data && data.levels && data.levels.length > 0) {
-        qualityLevels.value = [
-          { index: -1, label: "Auto" },
-          ...data.levels.map((lvl, index) => ({
-            index,
-            label: lvl.height
-              ? `${lvl.height}p`
-              : `${Math.round((lvl.bitrate || 0) / 1000)}k`,
-          })),
-        ];
-      } else {
-        qualityLevels.value = [{ index: -1, label: "Auto" }];
-      }
-      selectedQuality.value = -1;
-    });
-
-    hls.on(Hls.Events.ERROR, (_event, data) => {
-      if (data.fatal) {
-        switch (data.type) {
-          case Hls.ErrorTypes.NETWORK_ERROR:
-            hls.startLoad();
-            break;
-          case Hls.ErrorTypes.MEDIA_ERROR:
-            hls.recoverMediaError();
-            break;
-          default:
-            hls.destroy();
-            hlsInstance.value = null;
-            break;
-        }
-      }
-    });
-  } else if (
-    video.canPlayType &&
-    video.canPlayType("application/vnd.apple.mpegurl")
-  ) {
-    video.src = manifestUrl;
+  video.src = manifestUrl;
+  if (video.canPlayType && video.canPlayType("application/vnd.apple.mpegurl")) {
     qualityLevels.value = [{ index: -1, label: "Auto (Native)" }];
     selectedQuality.value = -1;
   } else {
-    video.src = manifestUrl;
     qualityLevels.value = [];
+    selectedQuality.value = -1;
   }
 }
 
 function onQualityChange(e) {
   const levelIndex = parseInt(e.target.value, 10);
   selectedQuality.value = levelIndex;
-  if (hlsInstance.value) {
-    hlsInstance.value.currentLevel = levelIndex;
-  }
 }
 
 /**
@@ -1064,10 +997,6 @@ onMounted(() => {
 onUnmounted(() => {
   document.removeEventListener("keydown", handleProtectedKeydown);
   clearPolling();
-  if (hlsInstance.value) {
-    hlsInstance.value.destroy();
-    hlsInstance.value = null;
-  }
 });
 
 watch(
@@ -1078,10 +1007,6 @@ watch(
       pendingAuditEvents.value.clear();
       auditErrorState.value = null;
       clearPolling();
-      if (hlsInstance.value) {
-        hlsInstance.value.destroy();
-        hlsInstance.value = null;
-      }
       if (mediaType.value === "video") {
         fetchStreamUrl();
       }

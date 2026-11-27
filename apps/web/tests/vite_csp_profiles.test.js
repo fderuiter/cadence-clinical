@@ -17,7 +17,8 @@ describe("apps/web mode-aware CSP profiles", () => {
 
     expect(csp).toContain("script-src 'self'");
     expect(csp).toContain("media-src 'self' blob:");
-    expect(csp).toContain("worker-src 'self' blob:");
+    expect(csp).toContain("worker-src 'self'");
+    expect(csp).not.toContain("worker-src 'self' blob:");
     expect(csp).toContain("connect-src 'self'");
     expect(csp).toContain("frame-src 'self' blob:");
     expect(csp).not.toContain("localhost");
@@ -43,6 +44,8 @@ describe("apps/web mode-aware CSP profiles", () => {
       isProduction: true,
       env: { VITE_KEYCLOAK_URL: "https://sso.cadence.example/auth/" },
     });
+    expect(prodWithOidc).toContain("worker-src 'self'");
+    expect(prodWithOidc).not.toContain("worker-src 'self' blob:");
     expect(prodWithOidc).toContain(
       "connect-src 'self' https://sso.cadence.example"
     );

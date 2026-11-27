@@ -361,7 +361,7 @@ describe("apps/web cold-boot bundle budget & chunk isolation", () => {
       ).toEqual([]);
     }
 
-    // Verify preserved vendor splits and isolated lazy auth & draggable chunks.
+    // Verify preserved vendor splits, lazy auth chunk, and zero unreachable third-party vendor chunks in non-demo production builds.
     const allChunkNames = Array.from(chunksByFile.keys());
     expect(allChunkNames.some((f) => f.includes("vendor-vue"))).toBe(true);
     const vendorAuthChunks = allChunkNames.filter((f) =>
@@ -371,27 +371,37 @@ describe("apps/web cold-boot bundle budget & chunk isolation", () => {
     for (const vendorAuthChunk of vendorAuthChunks) {
       expect(bootChunkFiles.has(vendorAuthChunk)).toBe(false);
     }
-    expect(allChunkNames.some((f) => f.includes("vendor-media"))).toBe(true);
+    expect(allChunkNames.some((f) => f.includes("vendor-media"))).toBe(false);
+    expect(allChunkNames.some((f) => f.includes("vendor-vuedraggable"))).toBe(
+      false
+    );
 
-    const draggableChunks = Array.from(chunksByFile.values()).filter((chunk) =>
-      Object.keys(chunk.modules).some((m) =>
-        /(?:^|\/)(?:vuedraggable|sortablejs)(?:\/|$)/.test(
-          m.replace(/\\/g, "/")
-        )
-      )
+    const allBundleModuleIds = Array.from(chunksByFile.values()).flatMap(
+      (chunk) => Object.keys(chunk.modules).map((m) => m.replace(/\\/g, "/"))
     );
-    expect(draggableChunks).toHaveLength(1);
-    expect(bootChunkFiles.has(draggableChunks[0].fileName)).toBe(false);
-
-    const draggableModules = Object.keys(draggableChunks[0].modules).map((m) =>
-      m.replace(/\\/g, "/")
-    );
-    expect(draggableModules.some((m) => /(?:^|\/)vuedraggable\//.test(m))).toBe(
-      true
-    );
-    expect(draggableModules.some((m) => /(?:^|\/)sortablejs\//.test(m))).toBe(
-      true
-    );
+    const forbiddenProdBundlePatterns: ReadonlyArray<{
+      label: string;
+      pattern: RegExp;
+    }> = [
+      { label: "hls.js", pattern: /(?:^|\/)hls\.js(?:\/|$)/ },
+      { label: "zod", pattern: /node_modules\/zod\// },
+      {
+        label: "packages/usdm-schemas",
+        pattern: /packages\/usdm-schemas\//,
+      },
+      { label: "sortablejs", pattern: /(?:^|\/)sortablejs(?:\/|$)/ },
+      { label: "vuedraggable", pattern: /(?:^|\/)vuedraggable(?:\/|$)/ },
+      { label: "vue-i18n", pattern: /(?:^|\/)vue-i18n(?:\/|$)/ },
+      { label: "@intlify", pattern: /(?:^|\/)@intlify(?:\/|$)/ },
+      { label: "src/locales/", pattern: /src\/locales\// },
+    ];
+    for (const { label, pattern } of forbiddenProdBundlePatterns) {
+      const offending = allBundleModuleIds.filter((id) => pattern.test(id));
+      expect(
+        offending,
+        `Non-demo production bundle must contain 0 B of ${label}, found in: ${offending.join(", ")}`
+      ).toEqual([]);
+    }
   });
 
   it("enforces static closure budgets and async branch/overlay splits for StudyCanvasView, CtmsView, and DocumentManagerView", () => {
