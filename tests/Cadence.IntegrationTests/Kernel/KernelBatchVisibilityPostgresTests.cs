@@ -52,6 +52,16 @@ using Xunit;
 
 namespace Cadence.IntegrationTests.Kernel;
 
+[CollectionDefinition(Name, DisableParallelization = true)]
+public sealed class KernelPerformanceQuotaCollection
+{
+    public const string Name = "KernelPerformanceQuota";
+
+    private KernelPerformanceQuotaCollection()
+    {
+    }
+}
+
 /// <summary>
 /// PostgreSQL verification of batched scope lookups over shared connection leases (<c>KernelAuthorityStore</c>,
 /// <c>GrantNodeVisibility</c>, <c>GrantChain</c>, <c>KernelLineageStore</c>, and <c>RequesterBoundVisibility</c>):
@@ -59,6 +69,7 @@ namespace Cadence.IntegrationTests.Kernel;
 /// <c>SELECT</c> per present kind, exact parity with single-node lookups across all 18 path-bearing kinds, lineage
 /// version deduplication with preserved <c>masked:n</c> handles, and the 2,000-node waterfall benchmark.
 /// </summary>
+[Collection(KernelPerformanceQuotaCollection.Name)]
 [Trait("Category", "Integration")]
 public sealed class KernelBatchVisibilityPostgresTests(KernelPostgresFixture fixture, ITestOutputHelper output) : IClassFixture<KernelPostgresFixture>
 {
@@ -1775,6 +1786,16 @@ public sealed class KernelBatchVisibilityPostgresTests(KernelPostgresFixture fix
             .Findings
             .Select(f => NodeRef.For(f.Id))
             .ToList();
+
+        await using (var adminConn = new NpgsqlConnection(fixture.AdminConnectionString))
+        {
+            await adminConn.OpenAsync(ct);
+            await using var analyzeCmd = new NpgsqlCommand(
+                "ANALYZE kernel.observations, kernel.collection_instances, kernel.collection_instance_members, kernel.validation_findings, kernel.validation_detections, kernel.protocol_versions, kernel.concepts;",
+                adminConn)
+            { CommandTimeout = 0 };
+            await analyzeCmd.ExecuteNonQueryAsync(ct);
+        }
 
         return new LargeProtocolBenchmarkWorld(
             tenant,
