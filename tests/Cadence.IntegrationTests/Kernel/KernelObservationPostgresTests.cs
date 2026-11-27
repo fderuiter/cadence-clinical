@@ -357,9 +357,10 @@ public sealed class KernelObservationPostgresTests(KernelPostgresFixture fixture
         Tick();
         await _observations.Protocol.OkAsync(Correct(subject.Tenant, recorded, Mmhg(128)), ct);
 
-        // Seed non-matching observations in the same tenant so kernel.audit_entries spans multiple heap pages,
-        // and ensure NoChange audit entries with null AggregateType and AggregateId commit cleanly under the B-tree index.
-        for (var i = 0; i < 60; i++)
+        // Seed non-matching observations in the same tenant so kernel.audit_entries spans enough heap pages (>15 pages)
+        // for PostgreSQL's cost model to prefer an ordered B-tree Index Scan over Bitmap Heap Scan + Sort, and ensure
+        // NoChange audit entries with null AggregateType and AggregateId commit cleanly under the B-tree index.
+        for (var i = 0; i < 250; i++)
         {
             await RecordAsync(subject.Tenant, subject.Enrollment, Mmhg(110 + (i % 30)), ct);
         }
