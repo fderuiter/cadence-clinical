@@ -39,6 +39,7 @@ namespace Cadence.IntegrationTests.Kernel;
 /// Verifies bounded PostgreSQL assertion queries in <see cref="KernelExportReader.ReadEnrollmentCasebookAsync"/> and
 /// linear Phase III export scaling at 25,000 observations, 25,000 assertions, and 2,500 active locks under Row-Level Security.
 /// </summary>
+[Collection(KernelPerformanceQuotaCollection.Name)]
 [Trait("Category", "Integration")]
 public sealed class KernelExportReaderScalePostgresTests(KernelPostgresFixture fixture, ITestOutputHelper output)
     : IClassFixture<KernelPostgresFixture>

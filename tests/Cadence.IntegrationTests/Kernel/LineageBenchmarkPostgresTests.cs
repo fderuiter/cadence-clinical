@@ -24,6 +24,7 @@ namespace Cadence.IntegrationTests.Kernel;
 /// minutes to load, so it never runs by default. The graph is 51 layers of 100,000 objects, each object derived from
 /// two objects in the layer above, which makes a backward trace fan out like a derived dataset value does.
 /// </summary>
+[Collection(KernelPerformanceQuotaCollection.Name)]
 [Trait("Category", "Integration")]
 [Trait("Category", "Benchmark")]
 public sealed class LineageBenchmarkPostgresTests(KernelPostgresFixture fixture, ITestOutputHelper output) : IClassFixture<KernelPostgresFixture>
