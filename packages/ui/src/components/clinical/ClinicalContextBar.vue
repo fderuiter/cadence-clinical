@@ -29,7 +29,7 @@
           v-if="step.to"
           :id="step.id"
           v-bind="stepLinkAttrs(step)"
-          class="clinical-context-link"
+          class="clinical-context-link focus-ring-inset"
           :aria-current="index === steps.length - 1 ? 'page' : undefined"
           @click="handleNavigate(step)"
         >

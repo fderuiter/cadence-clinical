@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import path from "node:path";
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
@@ -299,6 +301,9 @@ describe("2D Grid Keyboard Navigation & ARIA Semantics Engine", () => {
       const cells = wrapper.findAll("td");
       cells.forEach((cell) => {
         expect(cell.attributes("role")).toBe("gridcell");
+        if (cell.attributes("data-col") !== undefined) {
+          expect(cell.classes()).toContain("focus-ring-inset");
+        }
       });
     });
 
@@ -365,6 +370,50 @@ describe("2D Grid Keyboard Navigation & ARIA Semantics Engine", () => {
       });
 
       await expect(wrapper).toBeAccessible();
+    });
+
+    it("preserves computed -3px outline-offset and inset 5px halo on focused DocumentGrid cells when tokens.css is loaded", async () => {
+      const tokensCss = fs.readFileSync(
+        path.resolve(__dirname, "../../../../packages/ui/tokens.css"),
+        "utf-8"
+      );
+      const sfcSource = fs.readFileSync(
+        path.resolve(__dirname, "../../src/components/etmf/DocumentGrid.vue"),
+        "utf-8"
+      );
+      const scopedMatch = sfcSource.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
+      expect(scopedMatch).not.toBeNull();
+
+      const styleEl = document.createElement("style");
+      styleEl.textContent = `${tokensCss}\n${scopedMatch[1]}`;
+      document.head.appendChild(styleEl);
+
+      const store = useEtmfStore(pinia);
+      await store.fetchBinderTree();
+
+      const wrapper = mount(DocumentGrid, {
+        attachTo: document.body,
+        props: { documents: mockDocuments },
+        global: { plugins: [pinia] },
+      });
+
+      try {
+        const activeCell = wrapper.find(
+          'td[data-row="0"][data-col="0"]'
+        ).element;
+        expect(activeCell.classList.contains("focus-ring-inset")).toBe(true);
+        activeCell.focus();
+        const cs = window.getComputedStyle(activeCell);
+        expect(cs.outlineStyle).toBe("solid");
+        expect(cs.outlineWidth).toBe("3px");
+        expect(cs.outlineOffset).toBe("-3px");
+        expect(cs.boxShadow).toMatch(
+          /inset.*0px 0px 0px 5px|0px 0px 0px 5px.*inset/
+        );
+      } finally {
+        wrapper.unmount();
+        styleEl.remove();
+      }
     });
   });
 });

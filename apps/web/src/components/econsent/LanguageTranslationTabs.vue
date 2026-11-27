@@ -141,17 +141,15 @@ const selectLanguage = (langCode) => {
   border: 1px solid var(--border);
   border-radius: 6px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition:
+    background-color 0.2s,
+    border-color 0.2s,
+    color 0.2s;
 }
 
 .tab-item:hover {
   background-color: var(--semantic-color-surface-header);
   border-color: var(--accent);
-}
-
-.tab-item:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
 }
 
 .tab-item.active {

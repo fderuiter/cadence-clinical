@@ -744,7 +744,9 @@ function handleClose() {
   text-align: center;
   background: var(--semantic-color-surface-muted);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease;
 }
 
 .dropzone:hover,

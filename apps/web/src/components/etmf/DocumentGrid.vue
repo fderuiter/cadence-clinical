@@ -81,11 +81,7 @@
               </td>
               <td
                 role="gridcell"
-                :tabindex="getCellTabindex(rIndex, 0)"
-                :class="{ 'cell-active': isCellActive(rIndex, 0) }"
-                :data-row="rIndex"
-                :data-col="0"
-                class="doc-name-cell"
+                v-bind="gridCellBind(rIndex, 0, 'doc-name-cell')"
                 @click="selectCell(rIndex, 0)"
                 @keydown="handleCellKeyDown($event, rIndex, 0, doc)"
               >
@@ -105,14 +101,7 @@
               </td>
               <td
                 role="gridcell"
-                :tabindex="
-                  isEditing && isCellActive(rIndex, 1)
-                    ? -1
-                    : getCellTabindex(rIndex, 1)
-                "
-                :class="{ 'cell-active': isCellActive(rIndex, 1) }"
-                :data-row="rIndex"
-                :data-col="1"
+                v-bind="gridCellBind(rIndex, 1)"
                 @click="selectCell(rIndex, 1)"
                 @dblclick="startEditing(rIndex, doc)"
                 @keydown="handleCellKeyDown($event, rIndex, 1, doc)"
@@ -148,10 +137,7 @@
               </td>
               <td
                 role="gridcell"
-                :tabindex="getCellTabindex(rIndex, 2)"
-                :class="{ 'cell-active': isCellActive(rIndex, 2) }"
-                :data-row="rIndex"
-                :data-col="2"
+                v-bind="gridCellBind(rIndex, 2)"
                 @click="selectCell(rIndex, 2)"
                 @keydown="handleCellKeyDown($event, rIndex, 2, doc)"
               >
@@ -159,10 +145,7 @@
               </td>
               <td
                 role="gridcell"
-                :tabindex="getCellTabindex(rIndex, 3)"
-                :class="{ 'cell-active': isCellActive(rIndex, 3) }"
-                :data-row="rIndex"
-                :data-col="3"
+                v-bind="gridCellBind(rIndex, 3)"
                 @click="selectCell(rIndex, 3)"
                 @keydown="handleCellKeyDown($event, rIndex, 3, doc)"
               >
@@ -172,10 +155,7 @@
               </td>
               <td
                 role="gridcell"
-                :tabindex="getCellTabindex(rIndex, 4)"
-                :class="{ 'cell-active': isCellActive(rIndex, 4) }"
-                :data-row="rIndex"
-                :data-col="4"
+                v-bind="gridCellBind(rIndex, 4)"
                 @click="selectCell(rIndex, 4)"
                 @keydown="handleCellKeyDown($event, rIndex, 4, doc)"
               >
@@ -185,11 +165,7 @@
               </td>
               <td
                 role="gridcell"
-                :tabindex="getCellTabindex(rIndex, 5)"
-                :class="{ 'cell-active': isCellActive(rIndex, 5) }"
-                :data-row="rIndex"
-                :data-col="5"
-                class="date-cell"
+                v-bind="gridCellBind(rIndex, 5, 'date-cell')"
                 @click="selectCell(rIndex, 5)"
                 @keydown="handleCellKeyDown($event, rIndex, 5, doc)"
               >
@@ -197,11 +173,7 @@
               </td>
               <td
                 role="gridcell"
-                :tabindex="getCellTabindex(rIndex, 6)"
-                :class="{ 'cell-active': isCellActive(rIndex, 6) }"
-                :data-row="rIndex"
-                :data-col="6"
-                class="actions-cell"
+                v-bind="gridCellBind(rIndex, 6, 'actions-cell')"
                 @click="selectCell(rIndex, 6)"
                 @keydown="handleCellKeyDown($event, rIndex, 6, doc)"
               >
@@ -397,9 +369,9 @@ const {
   containerRef,
   currentPage,
   etmfStore,
-  getCellTabindex,
   goToPage,
   grid,
+  gridCellBind,
   handleCellKeyDown,
   handleSelectKeyDown,
   inlineSelectRef,

@@ -1593,7 +1593,9 @@ onMounted(async () => {
   padding: 16px;
   margin-bottom: 12px;
   background-color: var(--neutral-light);
-  transition: all 0.2s;
+  transition:
+    background-color 0.2s,
+    border-color 0.2s;
 }
 
 .rule-card-header {

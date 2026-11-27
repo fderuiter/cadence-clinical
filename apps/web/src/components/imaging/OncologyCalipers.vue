@@ -540,6 +540,7 @@ function getTimepointClass(tp) {
 
 <style scoped>
 .oncology-calipers-panel {
+  --focus-ring-color: var(--semantic-color-focus-ring-inverse);
   display: flex;
   flex-direction: column;
   background-color: var(--semantic-color-surface-inverse);
@@ -603,7 +604,10 @@ function getTimepointClass(tp) {
   font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
 }
 
 .tool-select-btn:hover {
@@ -618,6 +622,12 @@ function getTimepointClass(tp) {
   box-shadow: var(--shadow-focus-ring);
 }
 
+.tool-select-btn.active:focus-visible,
+.btn-primary-signoff:focus-visible {
+  box-shadow: 0 0 0 2px
+    var(--focus-ring-halo-color, var(--semantic-color-text-on-solid));
+}
+
 .form-row {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -629,6 +639,7 @@ function getTimepointClass(tp) {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 0;
 }
 
 .field-label {
@@ -639,8 +650,10 @@ function getTimepointClass(tp) {
 
 .field-input,
 .field-select {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   min-height: var(--semantic-control-target-min, 24px);
-  min-width: var(--semantic-control-target-min, 24px);
   background-color: var(--semantic-color-surface-elevated);
   color: var(--semantic-color-text-inverse);
   border: 1px solid var(--semantic-color-border-inverse);
@@ -685,6 +698,7 @@ function getTimepointClass(tp) {
 
 .annotations-table-wrapper {
   max-height: 160px;
+  padding: 6px;
   overflow-y: auto;
   background-color: var(--semantic-color-surface-sunken);
   border: 1px solid var(--semantic-color-text-dark);
@@ -890,6 +904,7 @@ function getTimepointClass(tp) {
 }
 
 .modal-card {
+  --focus-ring-color: var(--semantic-color-focus-ring-inverse);
   background-color: var(--semantic-color-surface-inverse);
   border: 1px solid var(--semantic-color-border-inverse);
   border-radius: 8px;

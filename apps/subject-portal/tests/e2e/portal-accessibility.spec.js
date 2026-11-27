@@ -2578,4 +2578,431 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
     });
     await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
   });
+
+  test("enforces 0 clipped :focus-visible controls across all 6 portal tabs (desktop and mobile), >= 3:1 contrast at t=0ms on .btn-primary, and >= 7.34:1 inverse outer focus ring on .portal-footer", async ({
+    page,
+  }) => {
+    await page.emulateMedia({ colorScheme: "light" });
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto(DEMO_PORTAL_URL);
+    await completeInitialPinSetupIfOpen(page);
+
+    const portalTabs = [
+      { id: "tasks", viewSelector: "#view-tasks" },
+      { id: "compliance", viewSelector: "#view-compliance" },
+      { id: "inbox", viewSelector: "#view-inbox" },
+      { id: "consent", viewSelector: "#view-consent" },
+      { id: "lay-summaries", viewSelector: "#view-lay-summaries" },
+      { id: "wallet", viewSelector: "#view-wallet" },
+    ];
+
+    const auditPortalFocusClipping = async (contextLabel) => {
+      await page.keyboard.press("Tab");
+      return page.evaluate((label) => {
+        const selector = [
+          "button:not([disabled])",
+          "a[href]",
+          'input:not([type="hidden"]):not([disabled])',
+          "select:not([disabled])",
+          "textarea:not([disabled])",
+          "summary",
+          '[role="button"]:not([aria-disabled="true"])',
+          '[role="tab"]:not([disabled])',
+          '[tabindex]:not([tabindex="-1"])',
+        ].join(", ");
+
+        const candidates = Array.from(document.querySelectorAll(selector));
+        const clipped = [];
+        let auditedCount = 0;
+
+        for (const el of candidates) {
+          if (
+            el.classList.contains("skip-link") ||
+            el.classList.contains("sr-only") ||
+            el.closest(".sr-only") ||
+            el.closest('[aria-hidden="true"]') ||
+            el.closest("[inert]")
+          ) {
+            continue;
+          }
+          const cs = window.getComputedStyle(el);
+          if (
+            cs.display === "none" ||
+            cs.visibility === "hidden" ||
+            parseFloat(cs.opacity || "1") === 0
+          ) {
+            continue;
+          }
+          const initialRect = el.getBoundingClientRect();
+          if (initialRect.width <= 2 || initialRect.height <= 2) {
+            continue;
+          }
+
+          el.scrollIntoView({ block: "nearest", inline: "nearest" });
+          el.focus({ preventScroll: true });
+          if (!el.matches(":focus-visible")) {
+            continue;
+          }
+
+          const focusStyle = window.getComputedStyle(el);
+          const parseSec = (val) =>
+            val.trim().endsWith("ms")
+              ? parseFloat(val) / 1000
+              : parseFloat(val || "0");
+          const tProps = (focusStyle.transitionProperty || "")
+            .split(",")
+            .map((s) => s.trim());
+          const tDurs = (focusStyle.transitionDuration || "0s")
+            .split(",")
+            .map(parseSec);
+          const tDelays = (focusStyle.transitionDelay || "0s")
+            .split(",")
+            .map(parseSec);
+          const animatesFocus = tProps.some(
+            (prop, idx) =>
+              (prop === "all" || prop.startsWith("outline")) &&
+              (tDurs[idx % tDurs.length] || 0) +
+                (tDelays[idx % tDelays.length] || 0) >
+                0
+          );
+          if (animatesFocus) {
+            clipped.push(
+              `${label}: ${el.tagName.toLowerCase()}#${el.id || el.className} has prohibited focus transition (${focusStyle.transitionProperty} / ${focusStyle.transitionDuration})`
+            );
+          }
+          if (focusStyle.outlineStyle === "none") {
+            clipped.push(
+              `${label}: ${el.tagName.toLowerCase()}#${el.id || el.className} suppressed :focus-visible outline`
+            );
+            continue;
+          }
+
+          const outlineWidth = parseFloat(focusStyle.outlineWidth || "0");
+          const outlineOffset = parseFloat(focusStyle.outlineOffset || "0");
+          const ringOutset = Math.max(0, outlineWidth + outlineOffset);
+          auditedCount++;
+
+          let anc = el.parentElement;
+          let clampedXToScrollport = null;
+          let clampedYToScrollport = null;
+          while (anc && anc !== document.documentElement) {
+            const ancStyle = window.getComputedStyle(anc);
+            const clipsX =
+              ancStyle.overflowX !== "visible" &&
+              ancStyle.display !== "contents";
+            const clipsY =
+              ancStyle.overflowY !== "visible" &&
+              ancStyle.display !== "contents";
+
+            if (clipsX || clipsY) {
+              const borderLeft = parseFloat(ancStyle.borderLeftWidth || "0");
+              const borderTop = parseFloat(ancStyle.borderTopWidth || "0");
+              let rect = el.getBoundingClientRect();
+              let ancRect = anc.getBoundingClientRect();
+              let clipLeft = ancRect.left + borderLeft;
+              let clipRight = clipLeft + anc.clientWidth;
+              let clipTop = ancRect.top + borderTop;
+              let clipBottom = clipTop + anc.clientHeight;
+
+              if (
+                clipsX &&
+                !clampedXToScrollport &&
+                anc.scrollWidth > anc.clientWidth &&
+                rect.width + 2 * ringOutset <= anc.clientWidth
+              ) {
+                if (rect.left - ringOutset < clipLeft && anc.scrollLeft > 0) {
+                  anc.scrollLeft = Math.max(
+                    0,
+                    anc.scrollLeft - (clipLeft - (rect.left - ringOutset) + 1)
+                  );
+                } else if (
+                  rect.right + ringOutset > clipRight &&
+                  anc.scrollLeft < anc.scrollWidth - anc.clientWidth
+                ) {
+                  anc.scrollLeft = Math.min(
+                    anc.scrollWidth - anc.clientWidth,
+                    anc.scrollLeft + (rect.right + ringOutset - clipRight + 1)
+                  );
+                }
+              }
+              if (
+                clipsY &&
+                !clampedYToScrollport &&
+                anc.scrollHeight > anc.clientHeight &&
+                rect.height + 2 * ringOutset <= anc.clientHeight
+              ) {
+                if (rect.top - ringOutset < clipTop && anc.scrollTop > 0) {
+                  anc.scrollTop = Math.max(
+                    0,
+                    anc.scrollTop - (clipTop - (rect.top - ringOutset) + 1)
+                  );
+                } else if (
+                  rect.bottom + ringOutset > clipBottom &&
+                  anc.scrollTop < anc.scrollHeight - anc.clientHeight
+                ) {
+                  anc.scrollTop = Math.min(
+                    anc.scrollHeight - anc.clientHeight,
+                    anc.scrollTop + (rect.bottom + ringOutset - clipBottom + 1)
+                  );
+                }
+              }
+
+              rect = el.getBoundingClientRect();
+              ancRect = anc.getBoundingClientRect();
+              clipLeft = ancRect.left + borderLeft;
+              clipRight = clipLeft + anc.clientWidth;
+              clipTop = ancRect.top + borderTop;
+              clipBottom = clipTop + anc.clientHeight;
+
+              const tol = 0.85;
+              const desc = `${el.tagName.toLowerCase()}${el.id ? "#" + el.id : ""}`;
+              const ancDesc = `${anc.tagName.toLowerCase()}${anc.id ? "#" + anc.id : "." + (anc.className || "")}`;
+              if (clipsX) {
+                if (
+                  !clampedXToScrollport &&
+                  anc.scrollWidth > anc.clientWidth &&
+                  rect.width + 2 * ringOutset > anc.clientWidth
+                ) {
+                  anc.scrollLeft = 0;
+                  const startRect = el.getBoundingClientRect();
+                  if (startRect.left - ringOutset < clipLeft - tol) {
+                    clipped.push(
+                      `${label}: ${desc} left ring clipped by ${ancDesc}`
+                    );
+                    break;
+                  }
+                  anc.scrollLeft = anc.scrollWidth - anc.clientWidth;
+                  const endRect = el.getBoundingClientRect();
+                  if (endRect.right + ringOutset > clipRight + tol) {
+                    clipped.push(
+                      `${label}: ${desc} right ring clipped by ${ancDesc}`
+                    );
+                    break;
+                  }
+                  anc.scrollLeft = 0;
+                  clampedXToScrollport = [clipLeft, clipRight];
+                } else {
+                  const effLeft = clampedXToScrollport
+                    ? clampedXToScrollport[0]
+                    : rect.left - ringOutset;
+                  const effRight = clampedXToScrollport
+                    ? clampedXToScrollport[1]
+                    : rect.right + ringOutset;
+                  if (effLeft < clipLeft - tol) {
+                    clipped.push(
+                      `${label}: ${desc} left ring clipped by ${ancDesc}`
+                    );
+                    break;
+                  }
+                  if (effRight > clipRight + tol) {
+                    clipped.push(
+                      `${label}: ${desc} right ring clipped by ${ancDesc}`
+                    );
+                    break;
+                  }
+                }
+              }
+              if (clipsY) {
+                if (
+                  !clampedYToScrollport &&
+                  anc.scrollHeight > anc.clientHeight &&
+                  rect.height + 2 * ringOutset > anc.clientHeight
+                ) {
+                  anc.scrollTop = 0;
+                  const startRect = el.getBoundingClientRect();
+                  if (startRect.top - ringOutset < clipTop - tol) {
+                    clipped.push(
+                      `${label}: ${desc} top ring clipped by ${ancDesc}`
+                    );
+                    break;
+                  }
+                  anc.scrollTop = anc.scrollHeight - anc.clientHeight;
+                  const endRect = el.getBoundingClientRect();
+                  if (endRect.bottom + ringOutset > clipBottom + tol) {
+                    clipped.push(
+                      `${label}: ${desc} bottom ring clipped by ${ancDesc}`
+                    );
+                    break;
+                  }
+                  anc.scrollTop = 0;
+                  clampedYToScrollport = [clipTop, clipBottom];
+                } else {
+                  const effTop = clampedYToScrollport
+                    ? clampedYToScrollport[0]
+                    : rect.top - ringOutset;
+                  const effBottom = clampedYToScrollport
+                    ? clampedYToScrollport[1]
+                    : rect.bottom + ringOutset;
+                  if (effTop < clipTop - tol) {
+                    clipped.push(
+                      `${label}: ${desc} top ring clipped by ${ancDesc}`
+                    );
+                    break;
+                  }
+                  if (effBottom > clipBottom + tol) {
+                    clipped.push(
+                      `${label}: ${desc} bottom ring clipped by ${ancDesc}`
+                    );
+                    break;
+                  }
+                }
+              }
+            }
+            anc = anc.parentElement;
+          }
+        }
+        return { auditedCount, clipped };
+      }, contextLabel);
+    };
+
+    // 1. Verify t=0ms >= 3:1 focus contrast on .btn-primary and >= 7.34:1 inverse outer contrast on .portal-footer
+    await expect(
+      page.locator("#task-card-assign_01 .btn-primary")
+    ).toBeVisible();
+    await page.keyboard.press("Tab");
+    await page.locator("#task-card-assign_01 .btn-primary").focus();
+    const primaryFocusMetrics = await page
+      .locator("#task-card-assign_01 .btn-primary")
+      .evaluate((el) => {
+        function parseRgb(str) {
+          const m = str.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+          return m
+            ? [Number(m[1]), Number(m[2]), Number(m[3])]
+            : [255, 255, 255];
+        }
+        function luminance([r, g, b]) {
+          const [rl, gl, bl] = [r, g, b].map((v) => {
+            const s = v / 255;
+            return s <= 0.04045 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+          });
+          return 0.2126 * rl + 0.7152 * gl + 0.0722 * bl;
+        }
+        function contrast(a, b) {
+          const l1 = luminance(a);
+          const l2 = luminance(b);
+          return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+        }
+        const style = window.getComputedStyle(el);
+        const parseSec = (val) =>
+          val.trim().endsWith("ms")
+            ? parseFloat(val) / 1000
+            : parseFloat(val || "0");
+        const tProps = (style.transitionProperty || "")
+          .split(",")
+          .map((s) => s.trim());
+        const tDurs = (style.transitionDuration || "0s")
+          .split(",")
+          .map(parseSec);
+        const tDelays = (style.transitionDelay || "0s")
+          .split(",")
+          .map(parseSec);
+        const hasFocusTransition = tProps.some(
+          (prop, idx) =>
+            (prop === "all" || prop.startsWith("outline")) &&
+            (tDurs[idx % tDurs.length] || 0) +
+              (tDelays[idx % tDelays.length] || 0) >
+              0
+        );
+        const outlineRgb = parseRgb(style.outlineColor);
+        const haloRgb = parseRgb(style.boxShadow);
+        const selfBg = parseRgb(style.backgroundColor);
+        const parentBg = parseRgb(
+          window.getComputedStyle(el.parentElement).backgroundColor
+        );
+        return {
+          matchesFocusVisible: el.matches(":focus-visible"),
+          hasFocusTransition,
+          selfDualContrast: Math.max(
+            contrast(outlineRgb, selfBg),
+            contrast(haloRgb, selfBg)
+          ),
+          parentDualContrast: Math.max(
+            contrast(outlineRgb, parentBg),
+            contrast(haloRgb, parentBg)
+          ),
+        };
+      });
+    expect(primaryFocusMetrics.matchesFocusVisible).toBe(true);
+    expect(primaryFocusMetrics.hasFocusTransition).toBe(false);
+    expect(primaryFocusMetrics.selfDualContrast).toBeGreaterThanOrEqual(3);
+    expect(primaryFocusMetrics.parentDualContrast).toBeGreaterThanOrEqual(3);
+
+    // Verify dark .portal-footer #portal-ledger-timeline renders #a5b4fc outer focus ring (>= 7.34:1)
+    await page.locator("#portal-ledger-timeline").scrollIntoViewIfNeeded();
+    await page.keyboard.press("Tab");
+    await page.locator("#portal-ledger-timeline").focus();
+    const footerFocusMetrics = await page
+      .locator("#portal-ledger-timeline")
+      .evaluate((el) => {
+        function parseRgb(str) {
+          const m = str.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+          return m ? [Number(m[1]), Number(m[2]), Number(m[3])] : [15, 23, 42];
+        }
+        function luminance([r, g, b]) {
+          const [rl, gl, bl] = [r, g, b].map((v) => {
+            const s = v / 255;
+            return s <= 0.04045 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+          });
+          return 0.2126 * rl + 0.7152 * gl + 0.0722 * bl;
+        }
+        const footer = el.closest(".portal-footer");
+        const style = window.getComputedStyle(el);
+        const footerBg = parseRgb(
+          window.getComputedStyle(footer).backgroundColor
+        );
+        const outlineRgb = parseRgb(style.outlineColor);
+        const l1 = luminance(outlineRgb);
+        const l2 = luminance(footerBg);
+        return {
+          matchesFocusVisible: el.matches(":focus-visible"),
+          outlineColor: style.outlineColor,
+          outerContrast: (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05),
+        };
+      });
+    expect(footerFocusMetrics.matchesFocusVisible).toBe(true);
+    expect(footerFocusMetrics.outerContrast).toBeGreaterThanOrEqual(7.34);
+
+    // 2. Desktop (1280x800): verify 6px ul.nav-tabs gutter and 0 clipped :focus-visible controls across all 6 tabs
+    const desktopTabGutter = await page
+      .locator("ul.nav-tabs")
+      .evaluate((el) => {
+        const s = window.getComputedStyle(el);
+        return {
+          paddingTop: parseFloat(s.paddingTop),
+          paddingLeft: parseFloat(s.paddingLeft),
+        };
+      });
+    expect(desktopTabGutter.paddingTop).toBeGreaterThanOrEqual(6);
+    expect(desktopTabGutter.paddingLeft).toBeGreaterThanOrEqual(6);
+
+    for (const tab of portalTabs) {
+      await page.click(`#tab-btn-${tab.id} button`);
+      await expect(page.locator(tab.viewSelector)).toBeVisible();
+      const report = await auditPortalFocusClipping(`desktop:${tab.id}`);
+      expect(report.auditedCount).toBeGreaterThan(0);
+      expect(
+        report.clipped,
+        `Desktop clipped :focus-visible controls on ${tab.id}:\n${report.clipped.join("\n")}`
+      ).toEqual([]);
+    }
+
+    // 3. Mobile (375x667): verify inset focus rings on ul.nav-tabs buttons and 0 clipped controls across all 6 tabs
+    await page.setViewportSize({ width: 375, height: 667 });
+    for (const tab of portalTabs) {
+      const tabBtn = page.locator(`#tab-btn-${tab.id} button`);
+      await tabBtn.click();
+      await expect(page.locator(tab.viewSelector)).toBeVisible();
+      await page.keyboard.press("Tab");
+      await tabBtn.focus();
+      const tabOffset = await tabBtn.evaluate((el) =>
+        parseFloat(window.getComputedStyle(el).outlineOffset)
+      );
+      expect(tabOffset).toBeLessThanOrEqual(-2.5);
+      const report = await auditPortalFocusClipping(`mobile:${tab.id}`);
+      expect(
+        report.clipped,
+        `Mobile clipped :focus-visible controls on ${tab.id}:\n${report.clipped.join("\n")}`
+      ).toEqual([]);
+    }
+  });
 });

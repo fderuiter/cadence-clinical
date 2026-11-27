@@ -541,7 +541,9 @@ const formatTime = (isoString) => {
   border-radius: 6px;
   cursor: pointer;
   font-size: 0.9rem;
-  transition: all 0.2s;
+  transition:
+    background-color 0.2s,
+    color 0.2s;
   color: var(--neutral-dark);
 }
 

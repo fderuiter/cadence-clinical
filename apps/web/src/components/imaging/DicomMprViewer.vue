@@ -787,6 +787,7 @@ onUnmounted(() => {
 
 <style scoped>
 .mpr-viewer-container {
+  --focus-ring-color: var(--semantic-color-focus-ring-inverse);
   display: flex;
   flex-direction: column;
   background-color: var(--semantic-color-surface-sunken);

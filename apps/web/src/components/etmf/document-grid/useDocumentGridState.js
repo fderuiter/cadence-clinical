@@ -106,6 +106,22 @@ export function useDocumentGridState(props, onStartEditing) {
     exitEditing,
   } = grid;
 
+  function gridCellBind(rIndex, col, extraClass = "") {
+    return {
+      tabindex:
+        col === 1 && isEditing.value && isCellActive(rIndex, 1)
+          ? -1
+          : getCellTabindex(rIndex, col),
+      class: [
+        extraClass,
+        "focus-ring-inset",
+        { "cell-active": isCellActive(rIndex, col) },
+      ],
+      "data-row": rIndex,
+      "data-col": col,
+    };
+  }
+
   watch(
     () => props.documents,
     (nextDocs) => {
@@ -307,6 +323,7 @@ export function useDocumentGridState(props, onStartEditing) {
     tempTaxonomyCode,
     inlineSelectRef,
     grid,
+    gridCellBind,
     isEditing,
     isCellActive,
     getCellTabindex,

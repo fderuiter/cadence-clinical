@@ -22,10 +22,10 @@ const chromiumLaunchOptions = buildChromiumLaunchOptions(chromium, {
 
 export default defineConfig({
   testDir: "./tests/e2e",
-  fullyParallel: false, // run sequentially to avoid race conditions or database locks
+  fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: 1,
+  workers: 2,
   timeout: 60000,
   reporter: [
     ["html", { open: "never" }],

@@ -715,7 +715,9 @@ function completeAndClose() {
   padding: 32px 20px;
   text-align: center;
   background-color: var(--semantic-color-surface-muted);
-  transition: all 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease;
   cursor: pointer;
 }
 
@@ -999,7 +1001,10 @@ function completeAndClose() {
   font-weight: 700;
   cursor: pointer;
   border: 1px solid transparent;
-  transition: all 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
 }
 
 .btn-primary {

@@ -2348,6 +2348,8 @@ onMounted(() => {
 .nav-tabs {
   display: flex;
   gap: 4px;
+  padding: 6px;
+  margin: -6px -6px 0 -6px;
   border-bottom: 2px solid var(--semantic-color-border);
   overflow-x: auto;
 }
@@ -2361,7 +2363,7 @@ onMounted(() => {
   color: var(--semantic-color-text-secondary);
   cursor: pointer;
   border-bottom: 2px solid transparent;
-  margin-bottom: -2px;
+  margin: 0;
   white-space: nowrap;
 }
 

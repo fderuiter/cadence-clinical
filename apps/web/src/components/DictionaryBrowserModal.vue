@@ -631,6 +631,8 @@ useFocusTrap(modalRef, {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  padding: 6px;
+  margin: -6px;
   overflow-y: auto;
   max-height: 360px;
 }
@@ -640,7 +642,10 @@ useFocusTrap(modalRef, {
   border: 1px solid var(--border);
   border-radius: 6px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
   background-color: var(--semantic-color-surface);
 }
 
@@ -648,11 +653,6 @@ useFocusTrap(modalRef, {
 .result-item-card:focus-visible {
   border-color: var(--accent);
   background-color: var(--semantic-color-info-bg-soft);
-}
-
-.result-item-card:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
 }
 
 .active-result {
