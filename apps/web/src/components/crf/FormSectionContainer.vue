@@ -338,7 +338,9 @@ function moveFieldDown(index) {
   border-radius: 10px;
   box-shadow: var(--shadow-sm);
   overflow: hidden;
-  transition: all 0.15s;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
 }
 
 .form-section-container.is-active-section {
@@ -417,7 +419,10 @@ function moveFieldDown(index) {
   display: flex;
   align-items: center;
   gap: 4px;
-  transition: all 0.15s;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s,
+    color 0.15s;
 }
 
 .btn-add-field:hover {
@@ -458,7 +463,9 @@ function moveFieldDown(index) {
 }
 
 .field-item-wrapper {
-  transition: all 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    opacity 0.2s ease;
   position: relative;
 }
 

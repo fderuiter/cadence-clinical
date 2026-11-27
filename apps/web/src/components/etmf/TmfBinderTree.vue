@@ -720,7 +720,8 @@ function getDocumentCount(node) {
 }
 
 .tree-search-bar {
-  margin-bottom: 16px;
+  margin: -6px -6px 10px -6px;
+  padding: 6px;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -762,7 +763,8 @@ function getDocumentCount(node) {
 .tree-root-nodes {
   flex: 1;
   overflow-y: auto;
-  padding-right: 4px;
+  padding: 6px;
+  margin: -6px;
 }
 
 .empty-tree-message {

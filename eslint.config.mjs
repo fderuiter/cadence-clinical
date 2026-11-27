@@ -1271,6 +1271,142 @@ const noSuppressedFocusOutlineRule = {
   },
 };
 
+const transitionAllDeclRegex =
+  /(?:^|[;{\s])(transition(?:-property)?\s*:\s*[^;{}]*?\ball\b[^;{}]*)/gi;
+
+const dynamicTransitionAllRegex =
+  /\btransition(?:Property|-property)?\s*:\s*(['"`])[^'"`]*\ball\b[^'"`]*\1/gi;
+
+function findTransitionAllInCss(cssText) {
+  const noComments = stripCssCommentsPreservingNewlines(cssText);
+  const clean = maskCssStringsPreservingLength(noComments);
+  const violations = [];
+  for (const match of clean.matchAll(transitionAllDeclRegex)) {
+    const fullMatch = match[0];
+    const decl = match[1];
+    const leadLen = fullMatch.length - decl.length;
+    const offset = match.index + leadLen;
+    violations.push({
+      offset,
+      declaration: noComments.slice(offset, offset + decl.length).trim(),
+    });
+  }
+  return violations;
+}
+
+const noTransitionAllRule = {
+  meta: {
+    type: "problem",
+    docs: {
+      description:
+        "Disallow transition: all and transition-property: all across CSS and Vue styles/templates so :focus-visible outlines and box-shadow halos render with >= 3:1 contrast at t=0ms (WCAG 2.2 SC 2.4.7 / SC 1.4.11).",
+      category: "Accessibility",
+    },
+    messages: {
+      noTransitionAll:
+        '"{{declaration}}" is prohibited because transitioning all properties animates focus outlines and halos from 0 contrast at t=0ms. Transition explicit non-focus properties instead (e.g., background-color, border-color, color, opacity, transform).',
+    },
+  },
+  create(context) {
+    const filename = (context.filename || context.getFilename() || "")
+      .split(path.sep)
+      .join("/");
+
+    const sourceText = context.sourceCode.getText();
+
+    if (filename.endsWith(".css")) {
+      return {
+        Program() {
+          for (const v of findTransitionAllInCss(sourceText)) {
+            context.report({
+              loc: offsetToLoc(sourceText, v.offset),
+              messageId: "noTransitionAll",
+              data: { declaration: v.declaration },
+            });
+          }
+        },
+      };
+    }
+
+    if (!filename.endsWith(".vue")) {
+      return {};
+    }
+
+    const styleBlockCheck = {
+      "Program:exit"() {
+        for (const styleMatch of sourceText.matchAll(
+          /(<style\b[^>]*>)([\s\S]*?)<\/style>/gi
+        )) {
+          const contentStart = styleMatch.index + styleMatch[1].length;
+          for (const v of findTransitionAllInCss(styleMatch[2])) {
+            context.report({
+              loc: offsetToLoc(sourceText, contentStart + v.offset),
+              messageId: "noTransitionAll",
+              data: { declaration: v.declaration },
+            });
+          }
+        }
+      },
+    };
+
+    const parserServices =
+      context.sourceCode?.parserServices || context.parserServices;
+    if (!parserServices?.defineTemplateBodyVisitor) {
+      return styleBlockCheck;
+    }
+
+    return parserServices.defineTemplateBodyVisitor(
+      {
+        VAttribute(node) {
+          const isStaticStyle =
+            !node.directive &&
+            node.key?.type === "VIdentifier" &&
+            node.key.name === "style";
+          const isDynamicStyle =
+            node.directive &&
+            node.key?.type === "VDirectiveKey" &&
+            node.key.name?.name === "bind" &&
+            node.key.argument?.name === "style";
+          if (!node.value) return;
+
+          if (isStaticStyle) {
+            const valText = node.value.value ?? "";
+            for (const v of findTransitionAllInCss(valText)) {
+              context.report({
+                node: node.value,
+                messageId: "noTransitionAll",
+                data: { declaration: v.declaration },
+              });
+            }
+          } else if (isDynamicStyle) {
+            const rawVal = context.sourceCode.getText(node.value);
+            const reported = new Set();
+            for (const match of rawVal.matchAll(dynamicTransitionAllRegex)) {
+              const decl = match[0].trim();
+              reported.add(decl);
+              context.report({
+                node: node.value,
+                messageId: "noTransitionAll",
+                data: { declaration: decl },
+              });
+            }
+            for (const v of findTransitionAllInCss(rawVal)) {
+              if (!reported.has(v.declaration)) {
+                context.report({
+                  node: node.value,
+                  messageId: "noTransitionAll",
+                  data: { declaration: v.declaration },
+                });
+              }
+            }
+          }
+        },
+      },
+      styleBlockCheck
+    );
+  },
+};
+
 function isAriaHiddenElement(elementNode) {
   return getStaticAttrValue(elementNode, "aria-hidden") === "true";
 }
@@ -3915,6 +4051,7 @@ const customVuePlugin = {
     "no-misused-ai-tokens": noMisusedAiTokensRule,
     "no-raw-overlays": noRawOverlaysRule,
     "no-suppressed-focus-outline": noSuppressedFocusOutlineRule,
+    "no-transition-all": noTransitionAllRule,
     "no-unlabeled-glyph-button": enhancedNoUnlabeledGlyphButtonRule,
     "no-emoji-glyphs": noEmojiGlyphsRule,
     "no-aria-label-mismatch": noAriaLabelMismatchRule,
@@ -3979,6 +4116,7 @@ export default [
       "custom-vue/no-misused-ai-tokens": "error",
       "custom-vue/no-raw-overlays": "error",
       "custom-vue/no-suppressed-focus-outline": "error",
+      "custom-vue/no-transition-all": "error",
       "custom-vue/no-unlabeled-glyph-button": "error",
       "custom-vue/no-aria-label-mismatch": "error",
       "custom-vue/require-tabular-nums": "error",
@@ -4025,6 +4163,7 @@ export default [
       "custom-vue/no-undefined-css-vars": "error",
       "custom-vue/no-misused-ai-tokens": "error",
       "custom-vue/no-suppressed-focus-outline": "error",
+      "custom-vue/no-transition-all": "error",
       "custom-vue/no-unguarded-button-state": "error",
       "custom-vue/require-tabular-nums": "error",
       "custom-vue/no-sub12px-font-size": "error",

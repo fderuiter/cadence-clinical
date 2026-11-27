@@ -457,13 +457,21 @@ onMounted(() => {
   color: var(--semantic-color-text-secondary);
   border-radius: 4px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
 }
 
 .mode-btn.active {
   background-color: var(--semantic-color-surface);
   color: var(--primary);
   box-shadow: var(--shadow-sm);
+}
+
+.mode-btn.active:focus-visible {
+  box-shadow:
+    0 0 0 2px var(--focus-ring-halo-color, var(--semantic-color-text-on-solid)),
+    var(--shadow-sm);
 }
 
 .alert-banner {
@@ -555,7 +563,10 @@ onMounted(() => {
   border-radius: 8px;
   padding: 16px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    border-color 0.15s ease,
+    background-color 0.15s ease;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -571,6 +582,11 @@ onMounted(() => {
   border-color: var(--accent) !important;
   background-color: var(--semantic-color-info-bg-soft) !important;
   box-shadow: 0 0 0 2px var(--accent-bg);
+}
+
+.stat-card:focus-visible {
+  box-shadow: 0 0 0 2px
+    var(--focus-ring-halo-color, var(--semantic-color-text-on-solid));
 }
 
 .stat-number {
@@ -642,7 +658,9 @@ onMounted(() => {
   color: var(--semantic-color-text-secondary);
   border-radius: 4px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
 }
 
 .tab-btn:hover {
@@ -653,6 +671,12 @@ onMounted(() => {
   background-color: var(--semantic-color-surface);
   color: var(--primary);
   box-shadow: var(--shadow-sm);
+}
+
+.tab-btn.active:focus-visible {
+  box-shadow:
+    0 0 0 2px var(--focus-ring-halo-color, var(--semantic-color-text-on-solid)),
+    var(--shadow-sm);
 }
 
 .dict-select-box select,

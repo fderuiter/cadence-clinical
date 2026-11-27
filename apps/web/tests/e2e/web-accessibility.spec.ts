@@ -400,19 +400,34 @@ async function focusWithKeyboardAndMeasureDualRing(
     const parentSurfaceRgb = resolveOpaqueBackground(el.parentElement);
     const selfSurfaceRgb = resolveOpaqueBackground(el);
 
+    const outerParentContrast = contrast(outlineRgb, parentSurfaceRgb);
+    const outerSelfContrast = contrast(outlineRgb, selfSurfaceRgb);
+
     const parentContrast = haloRgb
-      ? Math.max(
-          contrast(outlineRgb, parentSurfaceRgb),
-          contrast(haloRgb, parentSurfaceRgb)
-        )
-      : contrast(outlineRgb, parentSurfaceRgb);
+      ? Math.max(outerParentContrast, contrast(haloRgb, parentSurfaceRgb))
+      : outerParentContrast;
 
     const selfContrast = haloRgb
-      ? Math.max(
-          contrast(outlineRgb, selfSurfaceRgb),
-          contrast(haloRgb, selfSurfaceRgb)
-        )
-      : contrast(outlineRgb, selfSurfaceRgb);
+      ? Math.max(outerSelfContrast, contrast(haloRgb, selfSurfaceRgb))
+      : outerSelfContrast;
+
+    function hasAnimatedFocusTransition(cs: CSSStyleDeclaration): boolean {
+      const parseSec = (val: string) =>
+        val.trim().endsWith("ms")
+          ? parseFloat(val) / 1000
+          : parseFloat(val || "0");
+      const props = (cs.transitionProperty || "")
+        .split(",")
+        .map((s) => s.trim());
+      const durs = (cs.transitionDuration || "0s").split(",").map(parseSec);
+      const delays = (cs.transitionDelay || "0s").split(",").map(parseSec);
+      return props.some(
+        (prop, idx) =>
+          (prop === "all" || prop.startsWith("outline")) &&
+          (durs[idx % durs.length] || 0) + (delays[idx % delays.length] || 0) >
+            0
+      );
+    }
 
     return {
       matchesFocusVisible: el.matches(":focus-visible"),
@@ -420,6 +435,9 @@ async function focusWithKeyboardAndMeasureDualRing(
       outlineWidthPx: parseFloat(style.outlineWidth),
       outlineOffsetPx: parseFloat(style.outlineOffset),
       hasHaloShadow: Boolean(haloRgb) && style.boxShadow !== "none",
+      hasFocusTransition: hasAnimatedFocusTransition(style),
+      outerParentContrast,
+      outerSelfContrast,
       parentContrast,
       selfContrast,
     };
@@ -2097,6 +2115,15 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
         metrics.selfContrast,
         `${selector} dual focus ring contrast on control surface (${metrics.selfContrast.toFixed(2)}:1) < 3:1`
       ).toBeGreaterThanOrEqual(3);
+      expect(
+        metrics.outerParentContrast,
+        `${selector} inverse outer ring contrast on dark parent surface (${metrics.outerParentContrast.toFixed(2)}:1) < 7.34:1`
+      ).toBeGreaterThanOrEqual(7.33);
+      expect(
+        metrics.outerSelfContrast,
+        `${selector} inverse outer ring contrast on control fill (${metrics.outerSelfContrast.toFixed(2)}:1) < 3.18:1`
+      ).toBeGreaterThanOrEqual(3.17);
+      expect(metrics.hasFocusTransition).toBe(false);
     }
 
     if (captureScreenshots) {
@@ -2130,6 +2157,409 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
     await page.evaluate(() => {
       document.getElementById("ai-reason-focus-probe-host")?.remove();
     });
+  });
+
+  test("Enforces 0 clipped :focus-visible rings across all 15+ apps/web routes, <= 52px persistent top chrome with >= 44px targets, and >= 3:1 t=0ms .btn-primary focus contrast", async ({
+    page,
+  }) => {
+    test.setTimeout(150_000);
+    await page.setViewportSize({ width: 1280, height: 800 });
+
+    const auditRouteFocusClipping = async (routeLabel: string) => {
+      // Establish keyboard :focus-visible modality in Chromium
+      await page.keyboard.press("Tab");
+
+      return page.evaluate((label) => {
+        const selector = [
+          "button:not([disabled])",
+          "a[href]",
+          'input:not([type="hidden"]):not([disabled])',
+          "select:not([disabled])",
+          "textarea:not([disabled])",
+          "summary",
+          '[role="button"]:not([aria-disabled="true"])',
+          '[role="tab"]:not([disabled])',
+          '[tabindex]:not([tabindex="-1"])',
+        ].join(", ");
+
+        const candidates = Array.from(
+          document.querySelectorAll<HTMLElement>(selector)
+        );
+        const clipped: string[] = [];
+        let auditedCount = 0;
+
+        for (const el of candidates) {
+          if (
+            el.classList.contains("skip-link") ||
+            el.classList.contains("sr-only") ||
+            el.closest(".sr-only") ||
+            el.closest('[aria-hidden="true"]') ||
+            el.closest("[inert]")
+          ) {
+            continue;
+          }
+          const cs = window.getComputedStyle(el);
+          if (
+            cs.display === "none" ||
+            cs.visibility === "hidden" ||
+            parseFloat(cs.opacity || "1") === 0
+          ) {
+            continue;
+          }
+          const initialRect = el.getBoundingClientRect();
+          if (initialRect.width <= 2 || initialRect.height <= 2) {
+            continue;
+          }
+
+          el.scrollIntoView({ block: "nearest", inline: "nearest" });
+          el.focus({ preventScroll: true });
+          if (!el.matches(":focus-visible")) {
+            continue;
+          }
+
+          const focusStyle = window.getComputedStyle(el);
+          const parseSec = (val: string) =>
+            val.trim().endsWith("ms")
+              ? parseFloat(val) / 1000
+              : parseFloat(val || "0");
+          const tProps = (focusStyle.transitionProperty || "")
+            .split(",")
+            .map((s) => s.trim());
+          const tDurs = (focusStyle.transitionDuration || "0s")
+            .split(",")
+            .map(parseSec);
+          const tDelays = (focusStyle.transitionDelay || "0s")
+            .split(",")
+            .map(parseSec);
+          const animatesFocus = tProps.some(
+            (prop, idx) =>
+              (prop === "all" || prop.startsWith("outline")) &&
+              (tDurs[idx % tDurs.length] || 0) +
+                (tDelays[idx % tDelays.length] || 0) >
+                0
+          );
+          if (animatesFocus) {
+            clipped.push(
+              `${label}: ${el.tagName.toLowerCase()}#${el.id || "." + Array.from(el.classList).join(".")} has prohibited focus transition (${focusStyle.transitionProperty} / ${focusStyle.transitionDuration})`
+            );
+          }
+
+          if (focusStyle.outlineStyle === "none") {
+            clipped.push(
+              `${label}: ${el.tagName.toLowerCase()}#${el.id || "." + Array.from(el.classList).join(".")} suppressed :focus-visible outline`
+            );
+            continue;
+          }
+
+          const outlineWidth = parseFloat(focusStyle.outlineWidth || "0");
+          const outlineOffset = parseFloat(focusStyle.outlineOffset || "0");
+          if (el.classList.contains("focus-ring-inset") && outlineOffset > -2) {
+            clipped.push(
+              `${label}: .focus-ring-inset element ${el.tagName.toLowerCase()}#${el.id || el.className} expected outlineOffset <= -2px, got ${outlineOffset}px`
+            );
+          }
+          const ringOutset = Math.max(0, outlineWidth + outlineOffset);
+          auditedCount++;
+
+          let anc = el.parentElement;
+          let clampedXToScrollport: [number, number] | null = null;
+          let clampedYToScrollport: [number, number] | null = null;
+          while (anc && anc !== document.documentElement) {
+            const ancStyle = window.getComputedStyle(anc);
+            const clipsX =
+              ancStyle.overflowX !== "visible" &&
+              ancStyle.display !== "contents";
+            const clipsY =
+              ancStyle.overflowY !== "visible" &&
+              ancStyle.display !== "contents";
+
+            if (clipsX || clipsY) {
+              const borderLeft = parseFloat(ancStyle.borderLeftWidth || "0");
+              const borderTop = parseFloat(ancStyle.borderTopWidth || "0");
+
+              // Nudge scrollable ancestor if scrollIntoView aligned border-box flush without showing available padding gutter
+              let rect = el.getBoundingClientRect();
+              let ancRect = anc.getBoundingClientRect();
+              let clipLeft = ancRect.left + borderLeft;
+              let clipRight = clipLeft + anc.clientWidth;
+              let clipTop = ancRect.top + borderTop;
+              let clipBottom = clipTop + anc.clientHeight;
+
+              if (
+                clipsX &&
+                !clampedXToScrollport &&
+                anc.scrollWidth > anc.clientWidth &&
+                rect.width + 2 * ringOutset <= anc.clientWidth
+              ) {
+                if (rect.left - ringOutset < clipLeft && anc.scrollLeft > 0) {
+                  anc.scrollLeft = Math.max(
+                    0,
+                    anc.scrollLeft - (clipLeft - (rect.left - ringOutset) + 1)
+                  );
+                } else if (
+                  rect.right + ringOutset > clipRight &&
+                  anc.scrollLeft < anc.scrollWidth - anc.clientWidth
+                ) {
+                  anc.scrollLeft = Math.min(
+                    anc.scrollWidth - anc.clientWidth,
+                    anc.scrollLeft + (rect.right + ringOutset - clipRight + 1)
+                  );
+                }
+              }
+              if (
+                clipsY &&
+                !clampedYToScrollport &&
+                anc.scrollHeight > anc.clientHeight &&
+                rect.height + 2 * ringOutset <= anc.clientHeight
+              ) {
+                if (rect.top - ringOutset < clipTop && anc.scrollTop > 0) {
+                  anc.scrollTop = Math.max(
+                    0,
+                    anc.scrollTop - (clipTop - (rect.top - ringOutset) + 1)
+                  );
+                } else if (
+                  rect.bottom + ringOutset > clipBottom &&
+                  anc.scrollTop < anc.scrollHeight - anc.clientHeight
+                ) {
+                  anc.scrollTop = Math.min(
+                    anc.scrollHeight - anc.clientHeight,
+                    anc.scrollTop + (rect.bottom + ringOutset - clipBottom + 1)
+                  );
+                }
+              }
+
+              rect = el.getBoundingClientRect();
+              ancRect = anc.getBoundingClientRect();
+              clipLeft = ancRect.left + borderLeft;
+              clipRight = clipLeft + anc.clientWidth;
+              clipTop = ancRect.top + borderTop;
+              clipBottom = clipTop + anc.clientHeight;
+
+              const tol = 0.85;
+              const desc = `${el.tagName.toLowerCase()}${el.id ? "#" + el.id : ""}${el.className && typeof el.className === "string" ? "." + el.className.trim().split(/\s+/).slice(0, 2).join(".") : ""}`;
+              const ancDesc = `${anc.tagName.toLowerCase()}${anc.id ? "#" + anc.id : ""}${anc.className && typeof anc.className === "string" ? "." + anc.className.trim().split(/\s+/).slice(0, 2).join(".") : ""}`;
+
+              if (clipsX) {
+                if (
+                  !clampedXToScrollport &&
+                  anc.scrollWidth > anc.clientWidth &&
+                  rect.width + 2 * ringOutset > anc.clientWidth
+                ) {
+                  anc.scrollLeft = 0;
+                  const startRect = el.getBoundingClientRect();
+                  if (startRect.left - ringOutset < clipLeft - tol) {
+                    clipped.push(
+                      `${label}: ${desc} left ring (${(startRect.left - ringOutset).toFixed(1)}) clipped by ${ancDesc} (${clipLeft.toFixed(1)})`
+                    );
+                    break;
+                  }
+                  anc.scrollLeft = anc.scrollWidth - anc.clientWidth;
+                  const endRect = el.getBoundingClientRect();
+                  if (endRect.right + ringOutset > clipRight + tol) {
+                    clipped.push(
+                      `${label}: ${desc} right ring (${(endRect.right + ringOutset).toFixed(1)}) clipped by ${ancDesc} (${clipRight.toFixed(1)})`
+                    );
+                    break;
+                  }
+                  anc.scrollLeft = 0;
+                  clampedXToScrollport = [clipLeft, clipRight];
+                } else {
+                  const effLeft = clampedXToScrollport
+                    ? clampedXToScrollport[0]
+                    : rect.left - ringOutset;
+                  const effRight = clampedXToScrollport
+                    ? clampedXToScrollport[1]
+                    : rect.right + ringOutset;
+                  if (effLeft < clipLeft - tol) {
+                    clipped.push(
+                      `${label}: ${desc} left ring (${effLeft.toFixed(1)}) clipped by ${ancDesc} (${clipLeft.toFixed(1)})`
+                    );
+                    break;
+                  }
+                  if (effRight > clipRight + tol) {
+                    clipped.push(
+                      `${label}: ${desc} right ring (${effRight.toFixed(1)}) clipped by ${ancDesc} (${clipRight.toFixed(1)})`
+                    );
+                    break;
+                  }
+                }
+              }
+              if (clipsY) {
+                if (
+                  !clampedYToScrollport &&
+                  anc.scrollHeight > anc.clientHeight &&
+                  rect.height + 2 * ringOutset > anc.clientHeight
+                ) {
+                  anc.scrollTop = 0;
+                  const startRect = el.getBoundingClientRect();
+                  if (startRect.top - ringOutset < clipTop - tol) {
+                    clipped.push(
+                      `${label}: ${desc} top ring (${(startRect.top - ringOutset).toFixed(1)}) clipped by ${ancDesc} (${clipTop.toFixed(1)})`
+                    );
+                    break;
+                  }
+                  anc.scrollTop = anc.scrollHeight - anc.clientHeight;
+                  const endRect = el.getBoundingClientRect();
+                  if (endRect.bottom + ringOutset > clipBottom + tol) {
+                    clipped.push(
+                      `${label}: ${desc} bottom ring (${(endRect.bottom + ringOutset).toFixed(1)}) clipped by ${ancDesc} (${clipBottom.toFixed(1)})`
+                    );
+                    break;
+                  }
+                  anc.scrollTop = 0;
+                  clampedYToScrollport = [clipTop, clipBottom];
+                } else {
+                  const effTop = clampedYToScrollport
+                    ? clampedYToScrollport[0]
+                    : rect.top - ringOutset;
+                  const effBottom = clampedYToScrollport
+                    ? clampedYToScrollport[1]
+                    : rect.bottom + ringOutset;
+                  if (effTop < clipTop - tol) {
+                    clipped.push(
+                      `${label}: ${desc} top ring (${effTop.toFixed(1)}) clipped by ${ancDesc} (${clipTop.toFixed(1)})`
+                    );
+                    break;
+                  }
+                  if (effBottom > clipBottom + tol) {
+                    clipped.push(
+                      `${label}: ${desc} bottom ring (${effBottom.toFixed(1)}) clipped by ${ancDesc} (${clipBottom.toFixed(1)})`
+                    );
+                    break;
+                  }
+                }
+              }
+            }
+            anc = anc.parentElement;
+          }
+        }
+
+        return { auditedCount, clipped };
+      }, routeLabel);
+    };
+
+    // 1. Verify StudyCanvasView .topbar <= 52px, >= 44px zoom-path hit areas, and 6px gutter on /studies/CADENCE-101
+    await gotoHashRoute(
+      page,
+      "/studies/CADENCE-101?stage=conduct&section=participants"
+    );
+    await expect(page.locator("#study-canvas")).toBeVisible();
+    const canvasTopbarMetrics = await page.evaluate(() => {
+      const topbar = document.querySelector(".topbar");
+      const zoomList = document.querySelector(".zoom-path ol");
+      const crumbs = Array.from(
+        document.querySelectorAll<HTMLElement>(".zoom-path a")
+      );
+      const listStyle = zoomList ? window.getComputedStyle(zoomList) : null;
+      return {
+        topbarHeight: topbar ? topbar.getBoundingClientRect().height : 0,
+        paddingTop: listStyle ? parseFloat(listStyle.paddingTop) : 0,
+        paddingBottom: listStyle ? parseFloat(listStyle.paddingBottom) : 0,
+        crumbBoxes: crumbs.map((c) => {
+          const r = c.getBoundingClientRect();
+          return { width: r.width, height: r.height };
+        }),
+      };
+    });
+    expect(canvasTopbarMetrics.topbarHeight).toBeGreaterThan(0);
+    expect(canvasTopbarMetrics.topbarHeight).toBeLessThanOrEqual(52);
+    expect(canvasTopbarMetrics.paddingTop).toBeGreaterThanOrEqual(6);
+    expect(canvasTopbarMetrics.paddingBottom).toBeGreaterThanOrEqual(6);
+    expect(canvasTopbarMetrics.crumbBoxes.length).toBeGreaterThanOrEqual(2);
+    for (const box of canvasTopbarMetrics.crumbBoxes) {
+      expect(box.height).toBeGreaterThanOrEqual(43.9);
+      expect(box.width).toBeGreaterThanOrEqual(43.9);
+    }
+
+    // 2. Verify ClinicalContextBar <= 52px height, >= 44px hit targets, and .focus-ring-inset
+    const SEEDED_OBSERVATION_REF =
+      "observation:00000000-0000-0000-0000-000000000001@1"; // deid-ignore
+    await gotoHashRoute(page, "/ctms?studyCode=CADENCE-101&site=SITE-101");
+    await expect(
+      page.locator(".clinical-context-bar .clinical-context-link").first()
+    ).toBeVisible();
+    const contextBarMetrics = await page.evaluate(() => {
+      const bar = document.querySelector(".clinical-context-bar");
+      const links = Array.from(
+        document.querySelectorAll<HTMLElement>(
+          ".clinical-context-bar .clinical-context-link"
+        )
+      );
+      return {
+        barHeight: bar ? bar.getBoundingClientRect().height : 0,
+        allInset:
+          links.length > 0 &&
+          links.every((l) => l.classList.contains("focus-ring-inset")),
+        linkBoxes: links.map((l) => {
+          const r = l.getBoundingClientRect();
+          return { width: r.width, height: r.height };
+        }),
+      };
+    });
+    expect(contextBarMetrics.barHeight).toBeGreaterThan(0);
+    expect(contextBarMetrics.barHeight).toBeLessThanOrEqual(52);
+    expect(contextBarMetrics.allInset).toBe(true);
+    for (const box of contextBarMetrics.linkBoxes) {
+      expect(box.height).toBeGreaterThanOrEqual(43.9);
+      expect(box.width).toBeGreaterThanOrEqual(43.9);
+    }
+
+    // 3. Verify >= 3:1 focus contrast at t=0ms on .btn-primary with active CSS transitions (no reducedMotion)
+    await gotoHashRoute(page, "/tickets");
+    await expect(page.locator(".btn-primary").first()).toBeVisible();
+    const btnPrimaryMetrics = await focusWithKeyboardAndMeasureDualRing(
+      page,
+      ".btn-primary"
+    );
+    expect(btnPrimaryMetrics.matchesFocusVisible).toBe(true);
+    expect(btnPrimaryMetrics.parentContrast).toBeGreaterThanOrEqual(3);
+    expect(btnPrimaryMetrics.selfContrast).toBeGreaterThanOrEqual(3);
+    expect(btnPrimaryMetrics.hasFocusTransition).toBe(false);
+
+    // 4. Audit all 15 primary routes + demo overflow workspaces (/quality, /safety, /documents) for 0 clipped :focus-visible rings
+    const auditedRoutes: Array<{ path: string; readySelector: string }> = [
+      { path: "/overview", readySelector: "main" },
+      { path: "/plans", readySelector: "main" },
+      { path: "/onboarding/trial", readySelector: "main" },
+      { path: "/login", readySelector: "main" },
+      { path: "/studies", readySelector: "main" },
+      {
+        path: "/studies/CADENCE-101?stage=conduct&section=participants",
+        readySelector: "#study-canvas",
+      },
+      {
+        path: `/observations/${SEEDED_OBSERVATION_REF}`,
+        readySelector: "main",
+      },
+      { path: "/ecrf", readySelector: "#section-ecrf" },
+      { path: "/ctms", readySelector: "#section-ctms" },
+      { path: "/ssu", readySelector: ".ssu-greenlight-console" },
+      { path: "/etmf", readySelector: ".document-manager-layout" },
+      { path: "/training", readySelector: "#section-study-training" },
+      { path: "/tickets", readySelector: "main" },
+      { path: "/knowledge", readySelector: "#section-knowledge-hub" },
+      { path: "/imaging", readySelector: "#section-imaging-viewer" },
+      { path: "/quality", readySelector: "main" },
+      { path: "/safety", readySelector: "main" },
+      { path: "/documents", readySelector: "main" },
+    ];
+
+    for (const route of auditedRoutes) {
+      await gotoHashRoute(page, route.path);
+      await expect(
+        page.locator(route.readySelector).first(),
+        `Expected ${route.readySelector} visible on ${route.path}`
+      ).toBeVisible();
+      const report = await auditRouteFocusClipping(route.path);
+      expect(
+        report.auditedCount,
+        `Expected focusable controls on ${route.path}`
+      ).toBeGreaterThan(0);
+      expect(
+        report.clipped,
+        `Clipped :focus-visible rings on ${route.path}:\n${report.clipped.join("\n")}`
+      ).toEqual([]);
+    }
   });
 
   test("WCAG 2.1 SC 1.4.10 320x640 reflow keeps scrollWidth <= 320 and card bounds unclipped across Plans, Unavailable, Login, and Forbidden", async ({

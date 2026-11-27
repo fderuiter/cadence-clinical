@@ -527,9 +527,11 @@ button:focus:not(:focus-visible) {
 
 select:focus-visible,
 button:focus-visible {
-  outline: 3px solid var(--accent) !important;
-  outline-offset: 2px !important;
-  box-shadow: 0 0 0 2px var(--semantic-color-text-on-solid) !important;
+  outline: var(--focus-ring-width, 3px) solid
+    var(--focus-ring-color, var(--accent));
+  outline-offset: var(--focus-ring-offset, 2px);
+  box-shadow: 0 0 0 2px
+    var(--focus-ring-halo-color, var(--semantic-color-text-on-solid));
 }
 
 /* Touch Target Sizes for mobile and tablet devices */

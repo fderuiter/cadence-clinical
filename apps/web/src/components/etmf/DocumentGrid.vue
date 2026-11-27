@@ -193,7 +193,7 @@
                 }"
                 :data-row="rIndex"
                 :data-col="0"
-                class="doc-name-cell"
+                class="doc-name-cell focus-ring-inset"
                 @click="selectCell(rIndex, 0)"
                 @keydown="handleCellKeyDown($event, rIndex, 0, doc)"
               >
@@ -221,6 +221,7 @@
                 :class="{
                   'cell-active': isCellActive(rIndex, 1),
                 }"
+                class="focus-ring-inset"
                 :data-row="rIndex"
                 :data-col="1"
                 @click="selectCell(rIndex, 1)"
@@ -262,6 +263,7 @@
                 :class="{
                   'cell-active': isCellActive(rIndex, 2),
                 }"
+                class="focus-ring-inset"
                 :data-row="rIndex"
                 :data-col="2"
                 @click="selectCell(rIndex, 2)"
@@ -275,6 +277,7 @@
                 :class="{
                   'cell-active': isCellActive(rIndex, 3),
                 }"
+                class="focus-ring-inset"
                 :data-row="rIndex"
                 :data-col="3"
                 @click="selectCell(rIndex, 3)"
@@ -290,6 +293,7 @@
                 :class="{
                   'cell-active': isCellActive(rIndex, 4),
                 }"
+                class="focus-ring-inset"
                 :data-row="rIndex"
                 :data-col="4"
                 @click="selectCell(rIndex, 4)"
@@ -307,7 +311,7 @@
                 }"
                 :data-row="rIndex"
                 :data-col="5"
-                class="date-cell"
+                class="date-cell focus-ring-inset"
                 @click="selectCell(rIndex, 5)"
                 @keydown="handleCellKeyDown($event, rIndex, 5, doc)"
               >
@@ -321,7 +325,7 @@
                 }"
                 :data-row="rIndex"
                 :data-col="6"
-                class="actions-cell"
+                class="actions-cell focus-ring-inset"
                 @click="selectCell(rIndex, 6)"
                 @keydown="handleCellKeyDown($event, rIndex, 6, doc)"
               >
@@ -1403,7 +1407,9 @@ async function submitUpload() {
   padding: 32px 16px;
   text-align: center;
   cursor: pointer;
-  transition: all 0.2s;
+  transition:
+    background-color 0.2s,
+    border-color 0.2s;
   margin-bottom: 20px;
 }
 
@@ -1527,7 +1533,10 @@ async function submitUpload() {
   font-weight: 500;
   border-radius: 6px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition:
+    background-color 0.2s,
+    border-color 0.2s,
+    color 0.2s;
 }
 
 .btn-primary {
@@ -1638,11 +1647,32 @@ async function submitUpload() {
 
 .documents-table td:focus,
 .documents-table td.cell-active {
-  outline: 2px solid var(--semantic-color-primary); /* High contrast sky/blue */
-  outline-offset: -2px;
   background-color: var(
     --semantic-color-info-bg-soft
   ) !important; /* deid-ignore */
+}
+
+.documents-table td.cell-active:not(:focus):not(:focus-visible) {
+  outline: 2px solid var(--semantic-color-primary);
+  outline-offset: -2px;
+}
+
+.documents-table td.focus-ring-inset:focus,
+.documents-table td.focus-ring-inset:focus-visible {
+  outline: var(--focus-ring-width, 3px) solid
+    var(--focus-ring-color, var(--semantic-color-accent));
+  outline-offset: -3px;
+  box-shadow: inset 0 0 0 5px
+    var(--focus-ring-halo-color, var(--semantic-color-text-on-solid));
+}
+
+@media (forced-colors: active) {
+  .documents-table td.focus-ring-inset:focus,
+  .documents-table td.focus-ring-inset:focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+    box-shadow: none;
+  }
 }
 
 .inline-edit-container {

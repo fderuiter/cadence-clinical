@@ -143,10 +143,4 @@ function handleConfirm() {
 .btn-signout-confirm:hover:not(:disabled) {
   background: var(--semantic-color-error-interactive-hover);
 }
-
-.btn-signout-stay:focus-visible,
-.btn-signout-confirm:focus-visible {
-  outline: 2px solid var(--semantic-color-primary);
-  outline-offset: 2px;
-}
 </style>

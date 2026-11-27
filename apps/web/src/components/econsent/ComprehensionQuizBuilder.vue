@@ -530,13 +530,21 @@ defineExpose({
   border-radius: 4px;
   cursor: pointer;
   color: var(--neutral-dark);
-  transition: all 0.2s;
+  transition:
+    background-color 0.2s,
+    border-color 0.2s,
+    color 0.2s;
 }
 
 .mode-tab-btn.active {
   background-color: var(--semantic-color-surface);
   color: var(--primary);
   box-shadow: var(--shadow-sm);
+}
+
+.mode-tab-btn.active:focus-visible {
+  box-shadow: 0 0 0 2px
+    var(--focus-ring-halo-color, var(--semantic-color-text-on-solid));
 }
 
 .threshold-control {
@@ -814,7 +822,9 @@ defineExpose({
   border: 1px solid var(--border);
   border-radius: 6px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition:
+    background-color 0.2s,
+    border-color 0.2s;
   font-size: 0.9rem;
 }
 

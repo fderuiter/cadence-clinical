@@ -650,6 +650,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2679: Centralize Curated Lucide Icons and Enforce CLI Emoji Gate](adr/2026-11-25-centralize-lucide-icons-and-cli-emoji-gate.md) | Current | - Status: Accepted |
 | [ADR-2689: Centralize Floating Primitives and Top-Right Toast Stack](adr/2026-11-25-centralize-floating-primitives-and-top-right-toast-stack.md) | Current | - Status: Accepted |
 | [ADR-2690: Unified CSS Theme Cascade, Non-Text Border Recalibration, and Shared Theme Controller](adr/2026-11-25-unified-css-cascade-and-shared-theme-controller.md) | Current | - Status: Accepted |
+| [ADR-2834: Tokenized Focus Cascade, Scroll Gutters, and Explicit CSS Transitions](adr/2026-11-27-tokenized-focus-cascade-scroll-gutters-and-explicit-css-transitions.md) | Current | - Status: Accepted |
 
 ## Developing and running
 

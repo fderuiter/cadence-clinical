@@ -620,7 +620,9 @@ onMounted(async () => {
 
 <style scoped>
 .notification-card {
-  transition: all 0.2s;
+  transition:
+    border-color 0.2s,
+    background-color 0.2s;
 }
 .notification-card:hover {
   box-shadow: var(--shadow-sm);

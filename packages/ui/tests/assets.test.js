@@ -414,6 +414,40 @@ describe("CSS Assets and Package Exports", () => {
           contrastRatio(darkOuterOutlineHex, darkSurface)
         ).toBeGreaterThanOrEqual(3);
       }
+
+      // Inverse focus-ring token (#a5b4fc) independently achieves >= 3:1 on dark & active toolbar surfaces without relying on the inner halo
+      const lightInverseRingHex = tokens.get(
+        "--semantic-color-focus-ring-inverse"
+      );
+      const darkInverseRingHex = darkTokens.get(
+        "--semantic-color-focus-ring-inverse"
+      );
+      expect(lightInverseRingHex).toBe("#a5b4fc");
+      expect(darkInverseRingHex).toBe("#a5b4fc");
+      expect(tokens.get("--focus-ring-width")).toBe("3px");
+      expect(tokens.get("--focus-ring-offset")).toBe("2px");
+
+      const ratioSlate900 = contrastRatio(lightInverseRingHex, "#0f172a");
+      const ratioSlate800 = contrastRatio(lightInverseRingHex, "#1e293b");
+      const ratioBrandActive = contrastRatio(lightInverseRingHex, "#026597");
+      expect(ratioSlate900).toBeGreaterThanOrEqual(3);
+      expect(Number(ratioSlate900.toFixed(2))).toBe(8.96);
+      expect(ratioSlate800).toBeGreaterThanOrEqual(3);
+      expect(Number(ratioSlate800.toFixed(2))).toBe(7.34);
+      expect(ratioBrandActive).toBeGreaterThanOrEqual(3);
+      expect(Number(ratioBrandActive.toFixed(2))).toBe(3.18);
+
+      // Verify tokens.css defines .focus-ring-inset and avoids !important on :focus-visible and forced-colors rules
+      expect(tokensContent).toContain(".focus-ring-inset:focus-visible");
+      expect(tokensContent).toContain("outline-offset: -3px");
+      expect(tokensContent).toContain("inset 0 0 0 5px");
+      const uncommentedTokens = tokensContent.replace(/\/\*[\s\S]*?\*\//g, "");
+      const focusVisibleBlocks =
+        uncommentedTokens.match(/[^{}]*:focus-visible[^{]*\{[^}]*\}/g) || [];
+      expect(focusVisibleBlocks.length).toBeGreaterThan(0);
+      for (const block of focusVisibleBlocks) {
+        expect(block).not.toContain("!important");
+      }
     });
 
     it("maintains 100% 1:1 parity across :root, :root[data-theme='dark'], and @media (prefers-color-scheme: dark) (:root:not([data-theme='light']), :root[data-theme='auto']) for every color and shadow token (ADR-2675 / ADR-2690)", () => {
@@ -929,6 +963,53 @@ describe("CSS Assets and Package Exports", () => {
       expect(
         allowedVueResult.messages.filter(
           (m) => m.ruleId === "custom-vue/no-suppressed-focus-outline"
+        )
+      ).toHaveLength(0);
+    });
+
+    it("rejects synthetic Vue and CSS fixtures with transition: all or transition-property: all while permitting explicit non-focus transitions", async () => {
+      const eslint = new ESLint({
+        cwd: repoRoot,
+        overrideConfigFile: path.join(repoRoot, "eslint.config.mjs"),
+      });
+
+      const [badVueResult] = await eslint.lintText(
+        `<template>\n  <button type="button" style="transition: all 0.15s ease">Save</button>\n  <div :style="{ transition: 'all 0.2s ease-in-out' }">Card</div>\n</template>\n<style scoped>\n.btn-probe {\n  transition: all 0.2s ease;\n}\n.chip-probe {\n  transition-property: opacity, all;\n}\n</style>\n`,
+        {
+          filePath: path.join(
+            repoRoot,
+            "apps/web/src/components/TransitionAllProbe.vue"
+          ),
+        }
+      );
+      const badVueMsgs = badVueResult.messages.filter(
+        (m) => m.ruleId === "custom-vue/no-transition-all"
+      );
+      expect(badVueMsgs).toHaveLength(4);
+
+      const [badCssResult] = await eslint.lintText(
+        `.nav-btn {\n  transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);\n}\n.card {\n  transition-property: all;\n}\n`,
+        {
+          filePath: path.join(repoRoot, "apps/web/src/transition-probe.css"),
+        }
+      );
+      const badCssMsgs = badCssResult.messages.filter(
+        (m) => m.ruleId === "custom-vue/no-transition-all"
+      );
+      expect(badCssMsgs).toHaveLength(2);
+
+      const [validVueResult] = await eslint.lintText(
+        `<template>\n  <button type="button" style="transition: background-color 0.15s ease, border-color 0.15s ease">Save</button>\n</template>\n<style scoped>\n.btn-explicit {\n  transition:\n    background-color 0.15s ease,\n    color 0.15s ease,\n    border-color 0.15s ease;\n}\n</style>\n`,
+        {
+          filePath: path.join(
+            repoRoot,
+            "apps/web/src/components/ExplicitTransitionProbe.vue"
+          ),
+        }
+      );
+      expect(
+        validVueResult.messages.filter(
+          (m) => m.ruleId === "custom-vue/no-transition-all"
         )
       ).toHaveLength(0);
     });

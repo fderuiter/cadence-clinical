@@ -224,6 +224,7 @@
   --semantic-color-text-inverse: #ffffff;
   --semantic-color-text-inverse-muted: #cbd5e1;
   --semantic-color-accent-inverse: #38bdf8;
+  --semantic-color-focus-ring-inverse: #a5b4fc;
   --semantic-color-emerald-inverse-bg: #064e3b;
   --semantic-color-emerald-inverse-border: #059669;
   --semantic-color-emerald-inverse-text: #a7f3d0;
@@ -337,6 +338,12 @@
   --danger: var(--semantic-color-error);
   --danger-bg: var(--semantic-color-error-bg);
   --font: var(--semantic-font-family);
+
+  /* Parameterized Focus Ring Cascade Defaults (ADR-2650) */
+  --focus-ring-width: 3px;
+  --focus-ring-offset: 2px;
+  --focus-ring-color: var(--semantic-color-accent);
+  --focus-ring-halo-color: var(--semantic-color-text-on-solid);
 }
 
 /* Paired Dark Theme Semantic Token Contract (CLINICAL_CANVAS.md §2.13, WCAG 2.1 AA >= 4.5:1) */
@@ -513,6 +520,7 @@
   --semantic-color-text-inverse: #ffffff;
   --semantic-color-text-inverse-muted: #cbd5e1;
   --semantic-color-accent-inverse: #38bdf8;
+  --semantic-color-focus-ring-inverse: #a5b4fc;
   --semantic-color-emerald-inverse-bg: #064e3b;
   --semantic-color-emerald-inverse-border: #059669;
   --semantic-color-emerald-inverse-text: #a7f3d0;
@@ -558,6 +566,10 @@
   --error-bg: var(--semantic-color-error-bg);
   --danger: var(--semantic-color-error);
   --danger-bg: var(--semantic-color-error-bg);
+  --focus-ring-width: 3px;
+  --focus-ring-offset: 2px;
+  --focus-ring-color: var(--semantic-color-accent);
+  --focus-ring-halo-color: var(--semantic-color-text-on-solid);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -720,6 +732,7 @@
     --semantic-color-text-inverse: #ffffff;
     --semantic-color-text-inverse-muted: #cbd5e1;
     --semantic-color-accent-inverse: #38bdf8;
+    --semantic-color-focus-ring-inverse: #a5b4fc;
     --semantic-color-emerald-inverse-bg: #064e3b;
     --semantic-color-emerald-inverse-border: #059669;
     --semantic-color-emerald-inverse-text: #a7f3d0;
@@ -761,6 +774,10 @@
     --error-bg: var(--semantic-color-error-bg);
     --danger: var(--semantic-color-error);
     --danger-bg: var(--semantic-color-error-bg);
+    --focus-ring-width: 3px;
+    --focus-ring-offset: 2px;
+    --focus-ring-color: var(--semantic-color-accent);
+    --focus-ring-halo-color: var(--semantic-color-text-on-solid);
   }
 }
 
@@ -801,21 +818,29 @@ html.dark {
 }
 
 /* Global Keyboard Navigation Two-Color Focus Indicators (WCAG 2.2 SC 2.4.7 / SC 1.4.11 via Techniques C40, C45, G195).
-   Uses :where() on attribute selectors so max specificity stays <= (0, 1, 1),
-   below [aria-invalid="true"]:focus-visible, .skip-link:focus-visible, and .form-group input:focus-visible. */
-button:focus-visible,
-input:focus-visible,
-select:focus-visible,
-textarea:focus-visible,
-a:focus-visible,
-summary:focus-visible,
+   Parameterizes --focus-ring-* under :where() per ADR-2650 without !important so specificity stays (0, 1, 0),
+   allowing .focus-ring-inset, [aria-invalid="true"]:focus-visible, .modal-error-alert:focus, and inverse surface
+   --focus-ring-color overrides to participate cleanly in the standard CSS cascade. */
+:where(button, input, select, textarea, a, summary):focus-visible,
 :where([role="button"], [tabindex]:not([tabindex="-1"])):focus-visible {
-  outline: 3px solid var(--semantic-color-accent) !important;
-  outline-offset: 2px !important;
-  box-shadow: 0 0 0 2px var(--semantic-color-text-on-solid) !important;
+  outline: var(--focus-ring-width, 3px) solid
+    var(--focus-ring-color, var(--semantic-color-accent));
+  outline-offset: var(--focus-ring-offset, 2px);
+  box-shadow: 0 0 0 2px
+    var(--focus-ring-halo-color, var(--semantic-color-text-on-solid));
 }
 
-:where([tabindex="-1"]):focus:not(:focus-visible),
+.focus-ring-inset:focus-visible {
+  outline: var(--focus-ring-width, 3px) solid
+    var(--focus-ring-color, var(--semantic-color-accent));
+  outline-offset: -3px;
+  box-shadow: inset 0 0 0 5px
+    var(--focus-ring-halo-color, var(--semantic-color-text-on-solid));
+}
+
+:where([tabindex="-1"]:not(.modal-error-alert):not([role="alert"])):focus:not(
+    :focus-visible
+  ),
 :where(
     main,
     section,
@@ -829,7 +854,6 @@ summary:focus-visible,
     div[role="dialog"],
     div[role="alertdialog"],
     div[role="region"],
-    div[role="alert"],
     div[role="status"],
     h1,
     h2,
@@ -837,9 +861,9 @@ summary:focus-visible,
     h4,
     h5,
     h6
-  )[tabindex="-1"]:focus-visible {
-  outline: none !important;
-  box-shadow: none !important;
+  ):not(.modal-error-alert)[tabindex="-1"]:focus-visible {
+  outline: none;
+  box-shadow: none;
 }
 
 /* Shared Form Action Bar & Primary Brand Button Colors */
@@ -1153,10 +1177,12 @@ td select,
 .clinical-input select:focus-visible,
 .clinical-input textarea:focus-visible,
 .clinical-input .clinical-input-control:focus-visible {
-  outline: 3px solid var(--semantic-color-accent) !important;
-  outline-offset: 2px !important;
-  box-shadow: 0 0 0 2px var(--semantic-color-text-on-solid) !important;
-  border-color: var(--semantic-color-accent) !important;
+  outline: var(--focus-ring-width, 3px) solid
+    var(--focus-ring-color, var(--semantic-color-accent));
+  outline-offset: var(--focus-ring-offset, 2px);
+  box-shadow: 0 0 0 2px
+    var(--focus-ring-halo-color, var(--semantic-color-text-on-solid));
+  border-color: var(--focus-ring-color, var(--semantic-color-accent));
 }
 
 /* Form validation states use unified error variables */
@@ -1174,20 +1200,16 @@ textarea[aria-invalid="true"] {
 input[aria-invalid="true"]:focus-visible,
 select[aria-invalid="true"]:focus-visible,
 textarea[aria-invalid="true"]:focus-visible {
-  border: 1px solid var(--semantic-color-error) !important;
-  background-color: var(--semantic-color-error-bg) !important;
-  box-shadow: 0 0 0 2px var(--semantic-color-text-on-solid) !important;
-  outline: 3px solid var(--semantic-color-error) !important;
-  outline-offset: 2px !important;
+  border: 1px solid var(--semantic-color-error);
+  background-color: var(--semantic-color-error-bg);
+  box-shadow: 0 0 0 2px
+    var(--focus-ring-halo-color, var(--semantic-color-text-on-solid));
+  outline: var(--focus-ring-width, 3px) solid var(--semantic-color-error);
+  outline-offset: var(--focus-ring-offset, 2px);
 }
 
 @media (forced-colors: active) {
-  button:focus-visible,
-  input:focus-visible,
-  select:focus-visible,
-  textarea:focus-visible,
-  a:focus-visible,
-  summary:focus-visible,
+  :where(button, input, select, textarea, a, summary):focus-visible,
   :where([role="button"], [tabindex]:not([tabindex="-1"])):focus-visible,
   .clinical-input
     input:not([type="checkbox"]):not([type="radio"]):not(
@@ -1196,9 +1218,15 @@ textarea[aria-invalid="true"]:focus-visible {
   .clinical-input select:focus-visible,
   .clinical-input textarea:focus-visible,
   .clinical-input .clinical-input-control:focus-visible {
-    outline: 2px solid Highlight !important;
-    outline-offset: 2px !important;
-    box-shadow: none !important;
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+    box-shadow: none;
+  }
+
+  .focus-ring-inset:focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+    box-shadow: none;
   }
 }
 

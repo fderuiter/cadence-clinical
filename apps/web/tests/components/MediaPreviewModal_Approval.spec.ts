@@ -4,6 +4,8 @@
  * Requirements Traceability: PRD-SYS-001, PRD-DOC-001 | GxP 21 CFR Part 11
  */
 
+import fs from "node:fs";
+import path from "node:path";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
@@ -50,6 +52,11 @@ describe("MediaPreviewModal.vue - Document Approval & Signatures", () => {
     expect(badge.exists()).toBe(true);
     expect(badge.text()).toContain("Approved");
     expect(badge.text()).toContain("dr.smith");
+
+    const metadataSidebar = wrapper.find(".metadata-sidebar");
+    expect(metadataSidebar.exists()).toBe(true);
+    expect(metadataSidebar.attributes("tabindex")).toBe("0");
+    expect(metadataSidebar.classes()).toContain("focus-ring-inset");
 
     // "Approve this document" button should NOT be shown when already approved
     expect(wrapper.find('[data-testid="approve-doc-btn"]').exists()).toBe(
@@ -161,5 +168,61 @@ describe("MediaPreviewModal.vue - Document Approval & Signatures", () => {
     });
 
     expect(wrapper.emitted("approved")).toBeTruthy();
+  });
+
+  it("preserves computed -3px outline-offset and inset 5px halo on .metadata-sidebar when tokens.css is loaded", () => {
+    const tokensCss = fs.readFileSync(
+      path.resolve(__dirname, "../../../../packages/ui/tokens.css"),
+      "utf-8"
+    );
+    const sfcSource = fs.readFileSync(
+      path.resolve(
+        __dirname,
+        "../../src/components/fileshare/MediaPreviewModal.vue"
+      ),
+      "utf-8"
+    );
+    const scopedMatch = sfcSource.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
+    expect(scopedMatch).not.toBeNull();
+
+    const styleEl = document.createElement("style");
+    styleEl.textContent = `${tokensCss}\n${scopedMatch![1]}`;
+    document.head.appendChild(styleEl);
+
+    const wrapper = mount(MediaPreviewModal, {
+      attachTo: document.body,
+      props: {
+        fileRecord: {
+          id: "doc-105",
+          filename: "Inset_Focus_Check.pdf",
+          study_id: "STUDY-001",
+          mime_type: "application/pdf",
+          size_bytes: 2048,
+          version_index: 1,
+          approval_status: "APPROVED",
+        },
+        permissions: { canDownload: true, canApprove: false },
+      },
+      global: {
+        plugins: [pinia],
+      },
+    });
+
+    try {
+      const sidebarEl = wrapper.find(".metadata-sidebar")
+        .element as HTMLElement;
+      expect(sidebarEl.classList.contains("focus-ring-inset")).toBe(true);
+      sidebarEl.focus();
+      const cs = window.getComputedStyle(sidebarEl);
+      expect(cs.outlineStyle).toBe("solid");
+      expect(cs.outlineWidth).toBe("3px");
+      expect(cs.outlineOffset).toBe("-3px");
+      expect(cs.boxShadow).toMatch(
+        /inset.*0px 0px 0px 5px|0px 0px 0px 5px.*inset/
+      );
+    } finally {
+      wrapper.unmount();
+      styleEl.remove();
+    }
   });
 });

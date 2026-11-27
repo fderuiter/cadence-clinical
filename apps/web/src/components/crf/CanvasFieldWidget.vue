@@ -410,7 +410,9 @@ function selectField() {
   border-radius: 8px;
   border: 2px solid var(--semantic-color-border);
   background-color: var(--semantic-color-surface);
-  transition: all 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
   margin-bottom: 8px;
   cursor: pointer;
 }

@@ -2293,7 +2293,11 @@ onMounted(() => {
   font-weight: 600;
   border-radius: 6px;
   cursor: pointer;
-  transition: all 0.15s ease-in-out;
+  transition:
+    background-color 0.15s ease-in-out,
+    color 0.15s ease-in-out,
+    border-color 0.15s ease-in-out,
+    opacity 0.15s ease-in-out;
   border: 1px solid transparent;
 }
 
@@ -2392,6 +2396,8 @@ onMounted(() => {
 .forensics-tabs {
   display: flex;
   gap: 4px;
+  padding: 6px 6px 2px;
+  margin: -6px -6px 0;
   border-bottom: 2px solid var(--semantic-color-border);
   overflow-x: auto;
 }
@@ -2406,7 +2412,9 @@ onMounted(() => {
   border-bottom: 3px solid transparent;
   cursor: pointer;
   white-space: nowrap;
-  transition: all 0.15s ease;
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease;
 }
 
 .tab-btn:hover {

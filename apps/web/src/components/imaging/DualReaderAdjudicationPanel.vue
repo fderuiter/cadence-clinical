@@ -954,6 +954,7 @@ function executeChairSignoff() {
 
 <style scoped>
 .dual-reader-panel {
+  --focus-ring-color: var(--semantic-color-focus-ring-inverse);
   display: flex;
   flex-direction: column;
   background-color: var(--semantic-color-surface-elevated);
@@ -1007,7 +1008,10 @@ function executeChairSignoff() {
   display: flex;
   align-items: center;
   gap: 6px;
-  transition: all 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
 }
 
 .role-tab-btn:hover {
@@ -1019,6 +1023,11 @@ function executeChairSignoff() {
   background-color: var(--semantic-color-primary);
   color: var(--semantic-color-text-on-primary);
   box-shadow: var(--shadow-sm);
+}
+
+.role-tab-btn.active:focus-visible {
+  box-shadow: 0 0 0 2px
+    var(--focus-ring-halo-color, var(--semantic-color-text-on-solid));
 }
 
 .blinding-alert-box {

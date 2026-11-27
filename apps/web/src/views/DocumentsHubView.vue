@@ -775,6 +775,7 @@ async function handleDeleteFile(file) {
 /* Main Workspace */
 .hub-content-area {
   flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -826,7 +827,9 @@ async function handleDeleteFile(file) {
   border-radius: 8px;
   font-size: 0.85rem;
   background-color: var(--semantic-color-surface-muted);
-  transition: all 0.2s;
+  transition:
+    background-color 0.2s,
+    border-color 0.2s;
   box-sizing: border-box;
 }
 

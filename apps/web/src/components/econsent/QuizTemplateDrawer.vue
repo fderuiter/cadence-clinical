@@ -481,7 +481,10 @@ defineExpose({
   background-color: var(--semantic-color-surface-muted);
   color: var(--semantic-color-text);
   cursor: pointer;
-  transition: all 0.15s;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s,
+    color 0.15s;
 }
 
 .domain-pill.active {
@@ -550,7 +553,9 @@ defineExpose({
   padding: 14px;
   background-color: var(--semantic-color-surface);
   cursor: pointer;
-  transition: all 0.2s;
+  transition:
+    background-color 0.2s,
+    border-color 0.2s;
   display: flex;
   flex-direction: column;
   gap: 10px;

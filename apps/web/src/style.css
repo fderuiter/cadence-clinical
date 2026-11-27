@@ -291,7 +291,10 @@ main {
   color: var(--semantic-color-text);
   cursor: pointer;
   font-family: var(--font);
-  transition: all 0.2s;
+  transition:
+    background-color 0.2s,
+    border-color 0.2s,
+    color 0.2s;
 }
 
 :where(.can-hover)

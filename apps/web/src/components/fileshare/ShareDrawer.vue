@@ -873,7 +873,10 @@ onUnmounted(() => {
   color: var(--semantic-color-text-secondary);
   cursor: pointer;
   border-bottom: 2px solid transparent;
-  transition: all 0.2s;
+  transition:
+    background-color 0.2s,
+    border-color 0.2s,
+    color 0.2s;
   min-height: 44px;
   display: inline-flex;
   align-items: center;

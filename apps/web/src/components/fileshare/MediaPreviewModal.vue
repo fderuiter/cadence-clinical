@@ -94,7 +94,7 @@
       <div class="modal-body-layout">
         <!-- Metadata Sidebar -->
         <aside
-          class="metadata-sidebar"
+          class="metadata-sidebar focus-ring-inset"
           aria-label="File Metadata and Audit Ledger"
           tabindex="0"
         >
@@ -1177,11 +1177,6 @@ function getStatusClass(status) {
   padding: 16px;
   overflow-y: auto;
   box-sizing: border-box;
-}
-
-.metadata-sidebar:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: -2px;
 }
 
 .meta-section {

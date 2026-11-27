@@ -61,6 +61,9 @@ describe("ClinicalContextBar", () => {
 
     const links = Array.from(host.querySelectorAll("a.clinical-context-link"));
     expect(links).toHaveLength(4);
+    for (const link of links) {
+      expect(link.classList.contains("focus-ring-inset")).toBe(true);
+    }
     expect(links[0].textContent?.trim()).toBe("Studies");
     expect(links[0].getAttribute("href")).toBe(
       "/studies?site=SITE-101&participant=participant%3Ap-1"
@@ -139,6 +142,9 @@ describe("ClinicalContextBar", () => {
       host.querySelectorAll<HTMLAnchorElement>('a[data-router-link="true"]')
     );
     expect(links).toHaveLength(4);
+    for (const link of links) {
+      expect(link.classList.contains("focus-ring-inset")).toBe(true);
+    }
     expect(links[3].getAttribute("aria-current")).toBe("page");
     expect(links[0].getAttribute("aria-current")).toBeNull();
 

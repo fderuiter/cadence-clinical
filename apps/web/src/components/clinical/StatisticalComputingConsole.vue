@@ -1723,7 +1723,10 @@ onMounted(() => {
   border-bottom: 3px solid transparent;
   cursor: pointer;
   min-height: 48px;
-  transition: all 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
 }
 
 .tab-btn:hover {
@@ -2001,7 +2004,10 @@ onMounted(() => {
   border-radius: var(--radius-sm);
   border: 1px solid transparent;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
   min-height: 44px;
 }
 

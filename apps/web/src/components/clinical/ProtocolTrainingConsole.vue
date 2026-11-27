@@ -1262,7 +1262,10 @@ async function handleExecuteBulkSignOff() {
   border-radius: 6px;
   cursor: pointer;
   border: 1px solid transparent;
-  transition: all 0.2s;
+  transition:
+    background-color 0.2s,
+    border-color 0.2s,
+    color 0.2s;
 }
 
 .form-fieldset {
@@ -1427,7 +1430,9 @@ async function handleExecuteBulkSignOff() {
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   cursor: pointer;
-  transition: all 0.15s;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s;
 }
 
 .option-item.selected {

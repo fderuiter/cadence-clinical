@@ -2277,7 +2277,10 @@ onMounted(() => {
   font-size: 0.9rem;
   color: var(--semantic-color-text-secondary);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease;
 }
 
 .mode-nav-btn.active {
@@ -2285,6 +2288,12 @@ onMounted(() => {
   color: var(--semantic-color-surface);
   border-color: var(--primary);
   box-shadow: var(--shadow-sm);
+}
+
+.mode-nav-btn.active:focus-visible {
+  box-shadow:
+    0 0 0 2px var(--focus-ring-halo-color, var(--semantic-color-text-on-solid)),
+    var(--shadow-sm);
 }
 
 .nav-pill-badge {
@@ -2752,7 +2761,9 @@ onMounted(() => {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm, 6px);
   padding: 0.75rem 1rem;
-  transition: all 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease;
 }
 
 .node-unchanged {
@@ -3126,7 +3137,9 @@ onMounted(() => {
   border-radius: var(--radius-sm, 6px);
   padding: 1rem;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease;
 }
 
 .option-card h4 {
@@ -3345,7 +3358,10 @@ onMounted(() => {
   font-weight: 600;
   color: var(--semantic-color-text-secondary);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease;
 }
 
 .layer-tab-btn.active {

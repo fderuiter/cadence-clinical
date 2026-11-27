@@ -382,7 +382,7 @@ const handleRowKeydown = (event, row, idx) => {
     </span>
 
     <div
-      :class="['table-wrapper', wrapperClass]"
+      :class="['table-wrapper', 'focus-ring-inset', wrapperClass]"
       :data-testid="wrapperTestId || undefined"
       role="region"
       :aria-label="ariaLabel || undefined"
@@ -423,7 +423,7 @@ const handleRowKeydown = (event, row, idx) => {
               <button
                 v-if="col.sortable"
                 type="button"
-                class="sort-button"
+                class="sort-button focus-ring-inset"
                 @click="toggleSort(col)"
                 @keydown="handleSortKeydown($event, col)"
               >
@@ -470,6 +470,7 @@ const handleRowKeydown = (event, row, idx) => {
               :id="resolveRowId(row, idx)"
               :class="[
                 'data-row',
+                'focus-ring-inset',
                 { selected: isRowSelected(row) },
                 resolveRowClass(row, idx),
               ]"
@@ -758,15 +759,19 @@ const handleRowKeydown = (event, row, idx) => {
 .sort-button:focus-visible,
 .data-row:focus-visible,
 .table-wrapper:focus-visible {
-  outline: 3px solid var(--semantic-color-accent);
+  outline: var(--focus-ring-width, 3px) solid
+    var(--focus-ring-color, var(--semantic-color-accent));
   outline-offset: -3px;
-  box-shadow: inset 0 0 0 2px var(--semantic-color-text-on-solid);
+  box-shadow: inset 0 0 0 5px
+    var(--focus-ring-halo-color, var(--semantic-color-text-on-solid));
 }
 
 .pagination-btn:focus-visible {
-  outline: 3px solid var(--semantic-color-accent);
-  outline-offset: 2px;
-  box-shadow: 0 0 0 2px var(--semantic-color-text-on-solid);
+  outline: var(--focus-ring-width, 3px) solid
+    var(--focus-ring-color, var(--semantic-color-accent));
+  outline-offset: var(--focus-ring-offset, 2px);
+  box-shadow: 0 0 0 2px
+    var(--focus-ring-halo-color, var(--semantic-color-text-on-solid));
 }
 
 @media (forced-colors: active) {
