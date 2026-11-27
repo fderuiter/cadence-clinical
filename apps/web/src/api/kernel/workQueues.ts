@@ -1,6 +1,6 @@
 import type { KernelSchemas } from "./shared";
 
-const loadRouteTransport = () => import("./protocolImport");
+const loadRouteTransport = () => import("./workQueues.transport");
 
 export type KernelWorkQueue = KernelSchemas["Kernel_KernelWorkQueueResponse"];
 export type KernelWorkQueuesPage =

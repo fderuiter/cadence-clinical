@@ -5,7 +5,10 @@ let babelParser = null;
 try {
   babelParser = require("@babel/parser");
 } catch (err) {
-  if (!err || err.code !== "MODULE_NOT_FOUND") {
+  if (
+    !err ||
+    (err.code !== "MODULE_NOT_FOUND" && err.code !== "ERR_REQUIRE_ESM")
+  ) {
     throw err;
   }
 }

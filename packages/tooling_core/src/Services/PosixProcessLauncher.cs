@@ -4,27 +4,35 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
 
 namespace Cadence.ToolingCore.Services;
 
 /// <summary>
 /// Starts external CLI processes safely with <c>UseShellExecute = false</c>, resolving Windows <c>.exe</c>,
-/// <c>.cmd</c>, and <c>.bat</c> shims in <c>PATH</c> directory order and falling back to <c>/bin/sh</c> on POSIX
-/// <c>ENOEXEC</c> for shebang-less script wrappers such as standalone <c>pnpm</c>.
+/// <c>.cmd</c>, and <c>.bat</c> shims in <c>PATH</c> directory order, retrying transient POSIX <c>ETXTBSY</c>
+/// races on freshly written executables, and falling back to <c>/bin/sh</c> on POSIX <c>ENOEXEC</c> for
+/// shebang-less script wrappers such as standalone <c>pnpm</c>.
 /// </summary>
 public static class PosixProcessLauncher
 {
     /// <summary>POSIX <c>ENOEXEC</c> (<c>Exec format error</c>) native error code.</summary>
     public const int PosixEnoexec = 8;
 
+    /// <summary>POSIX <c>ETXTBSY</c> (<c>Text file busy</c>) native error code.</summary>
+    public const int PosixEtxtbsy = 26;
+
     private const int ErrorFileNotFound = 2;
+
+    private static readonly int[] EtxtbsyRetryDelaysMs = [1, 2, 5, 10, 20, 50];
 
     private static readonly string[] WindowsExecutableExtensions = [".exe", ".cmd", ".bat"];
 
     /// <summary>
     /// Starts a process configured from <paramref name="template"/>, honoring custom <c>PATH</c> overrides in
-    /// <see cref="ProcessStartInfo.Environment"/>, resolving Windows <c>.exe</c>/<c>.cmd</c>/<c>.bat</c> shims, and
-    /// falling back to <c>/bin/sh</c> when a POSIX executable lacks a kernel <c>#!</c> header (<c>ENOEXEC</c>).
+    /// <see cref="ProcessStartInfo.Environment"/>, resolving Windows <c>.exe</c>/<c>.cmd</c>/<c>.bat</c> shims,
+    /// retrying transient POSIX <c>ETXTBSY</c> races, and falling back to <c>/bin/sh</c> when a POSIX executable
+    /// lacks a kernel <c>#!</c> header (<c>ENOEXEC</c>).
     /// </summary>
     /// <param name="template">The initial <see cref="ProcessStartInfo"/> describing the command to run.</param>
     /// <returns>The started <see cref="Process"/>, or <see langword="null"/> if no process resource was started.</returns>
@@ -54,13 +62,43 @@ public static class PosixProcessLauncher
 
         try
         {
-            return Process.Start(startInfo);
+            return StartWithPosixEtxtbsyRetry(() => Process.Start(startInfo), isWindows);
         }
         catch (Win32Exception ex) when (!isWindows && ex.NativeErrorCode == PosixEnoexec && template.FileName != "/bin/sh")
         {
             ProcessStartInfo fallback = CloneStartInfo(template, "/bin/sh", prependArgument: resolved);
-            return Process.Start(fallback);
+            return StartWithPosixEtxtbsyRetry(() => Process.Start(fallback), isWindows);
         }
+    }
+
+    /// <summary>
+    /// Executes <paramref name="startProcess"/> and retries transient POSIX <c>ETXTBSY</c> (<see cref="PosixEtxtbsy"/>)
+    /// failures caused when a concurrent <c>fork()</c> briefly inherits a writable descriptor to a freshly written
+    /// executable before <c>execve()</c> closes <c>FD_CLOEXEC</c> descriptors.
+    /// </summary>
+    /// <typeparam name="T">The process handle type returned by <paramref name="startProcess"/>.</typeparam>
+    /// <param name="startProcess">Callback that starts the process.</param>
+    /// <param name="isWindows">Whether the current platform is Windows (<c>ETXTBSY</c> retries apply only on POSIX).</param>
+    /// <param name="sleep">Optional backoff delay callback receiving milliseconds; defaults to <see cref="Thread.Sleep(int)"/>.</param>
+    /// <returns>The value returned by <paramref name="startProcess"/>.</returns>
+    public static T StartWithPosixEtxtbsyRetry<T>(Func<T> startProcess, bool isWindows, Action<int>? sleep = null)
+    {
+        ArgumentNullException.ThrowIfNull(startProcess);
+        Action<int> effectiveSleep = sleep ?? Thread.Sleep;
+
+        for (int attempt = 0; attempt < EtxtbsyRetryDelaysMs.Length; attempt++)
+        {
+            try
+            {
+                return startProcess();
+            }
+            catch (Win32Exception ex) when (!isWindows && ex.NativeErrorCode == PosixEtxtbsy)
+            {
+                effectiveSleep(EtxtbsyRetryDelaysMs[attempt]);
+            }
+        }
+
+        return startProcess();
     }
 
     /// <summary>
