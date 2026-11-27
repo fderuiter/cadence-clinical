@@ -75,7 +75,12 @@ public class GxPAuditTrailGenerationTests
         // Assert 2
         milestone.VersionIndex.Should().Be(2);
 
-        var auditEntries2 = await context.AuditLogEntries.Where(x => x.EntityName == nameof(CtmsSiteMilestone)).OrderBy(x => x.Timestamp).ToListAsync(TestContext.Current.CancellationToken);
+        var auditEntries2 = await context.AuditLogEntries
+            .Where(x => x.EntityName == nameof(CtmsSiteMilestone))
+            .OrderBy(x => x.Timestamp)
+            .ThenBy(x => x.VersionIndex)
+            .ThenBy(x => x.Id)
+            .ToListAsync(TestContext.Current.CancellationToken);
         auditEntries2.Should().HaveCount(2);
         var secondAudit = auditEntries2[auditEntries2.Count - 1];
         secondAudit.Action.Should().Be("Modified");
