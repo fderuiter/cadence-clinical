@@ -234,6 +234,7 @@ const routes = [
     path: "/amendment-diff",
     name: "amendment-diff",
     component: () => import("../views/AmendmentDiffView.vue"),
+    beforeEnter: redirectToCanvasSection("design", "protocol-versions"),
     meta: {
       requiresAuth: true,
       requiresRole: [

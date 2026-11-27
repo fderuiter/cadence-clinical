@@ -135,12 +135,18 @@
             {{
               explained
                 ? `Why: ${formatCommandTitle(explained.command)}`
-                : "Explain"
+                : directExplanation
+                  ? directExplanation.title
+                  : "Explain"
             }}
           </h3>
           <KernelExplanation
             v-if="explained"
             :explanation="explained.decision.explanation"
+          />
+          <KernelExplanation
+            v-else-if="directExplanation"
+            :explanation="directExplanation.explanation"
           />
           <p v-else id="kernel-explain-empty" class="inspector-empty">
             Choose Explain beside an action under Act to see why it is permitted
@@ -245,8 +251,8 @@
                   <span class="simulation-change-kind">{{
                     change.change
                   }}</span>
-                  <code>{{ change.activity_id }}</code>
-                  <span class="simulation-meta numeric">
+                  <code>{{ change.activity_id }}</code>{{ " "
+                  }}<span class="simulation-meta numeric">
                     {{ formatScheduleChange(change) }}
                   </span>
                 </li>
@@ -387,6 +393,13 @@
                 </div>
               </div>
             </details>
+
+            <SimulationGovernanceActions
+              v-if="protocolVersion && !participant"
+              :study-code="studyCode"
+              :protocol-version="protocolVersion"
+              :simulation-result="simulationResult"
+            />
           </div>
         </section>
 
@@ -697,6 +710,10 @@
             v-if="versionErrorCanI.decision.value?.explanation"
             :explanation="versionErrorCanI.decision.value.explanation"
           />
+          <KernelExplanation
+            v-else-if="directExplanation"
+            :explanation="directExplanation.explanation"
+          />
           <p v-else id="kernel-explain-empty" class="inspector-empty">
             Choose Retry above or verify your account's study access to inspect
             available protocol actions.
@@ -726,8 +743,14 @@
           tabindex="-1"
           aria-labelledby="kernel-explain-title"
         >
-          <h3 id="kernel-explain-title">Explain</h3>
-          <p id="kernel-explain-empty" class="inspector-empty">
+          <h3 id="kernel-explain-title">
+            {{ directExplanation ? directExplanation.title : "Explain" }}
+          </h3>
+          <KernelExplanation
+            v-if="directExplanation"
+            :explanation="directExplanation.explanation"
+          />
+          <p v-else id="kernel-explain-empty" class="inspector-empty">
             Select a study record to inspect why its actions are permitted or
             blocked.
           </p>
@@ -761,7 +784,9 @@ import { useAuthStore } from "../../stores/auth";
 import {
   useStudyCanvasStore,
   type CanvasParticipant,
+  type ExplainRequestOptions,
 } from "../../stores/studyCanvas";
+import { defineLazyOverlay } from "../../utils/lazyOverlay";
 import ParticipantSiteAssignment from "./ParticipantSiteAssignment.vue";
 import ParticipantStateChange from "./ParticipantStateChange.vue";
 import CanvasErrorAlert from "./CanvasErrorAlert.vue";
@@ -773,6 +798,7 @@ import {
   isMasked,
   kernelApi,
   type KernelCommand,
+  type KernelExplanation as KernelExplanationPayload,
   type KernelNode,
   type KernelPlannedVisit,
   type KernelProtocolDraftSummary,
@@ -795,6 +821,10 @@ import { useRovingToolbar } from "../../composables/useRovingToolbar";
 import { recordParticipantConsentMutation } from "../../stores/studyCanvasParticipantMutations";
 import { isDemoBuild } from "../../utils/demoMode";
 import AssistPanel from "../ai/AssistPanel.vue";
+
+const SimulationGovernanceActions = defineLazyOverlay(
+  () => import("./SimulationGovernanceActions.vue")
+);
 
 /**
  * The Clinical Canvas inspector (docs/ux/CLINICAL_CANVAS.md §2.4, UX-3, UX-5): displays the selected object's
@@ -1142,6 +1172,10 @@ type VerbId =
   "details" | "trace" | "impact" | "act" | "explain" | "simulate" | "assist";
 const currentVerb = ref<VerbId>("details");
 const explained = ref<KernelCommand | null>(null);
+const directExplanation = ref<{
+  title: string;
+  explanation: KernelExplanationPayload;
+} | null>(null);
 const shownVerb = ref<string | null>(null);
 const toolbarRef = ref<HTMLElement | null>(null);
 const toolbarItemIds = computed(() => [
@@ -1236,10 +1270,16 @@ function focusExplainSection() {
 }
 
 function explainCommand(command: KernelCommand) {
+  directExplanation.value = null;
   explained.value = command;
   expand();
   choose("explain");
   focusExplainSection();
+}
+
+function openVerb(verb: VerbId) {
+  expand();
+  choose(verb);
 }
 
 function openProtocolVersionExplain() {
@@ -1251,12 +1291,38 @@ function openProtocolVersionExplain() {
   focusExplainSection();
 }
 
-function openExplain(options?: {
-  fromShortcut?: boolean;
-  targetNodeRef?: string | null;
-}): boolean {
+function matchesTargetNodeRef(targetRef?: string | null): boolean {
+  if (!targetRef) return true;
+  const targetId = parseNodeRef(targetRef)?.id;
+  const activeId = parseNodeRef(kernelRef.value)?.id;
+  if (!targetId || !activeId) return false;
+  return targetId === activeId;
+}
+
+function openExplain(options?: ExplainRequestOptions): boolean {
   const fromShortcut = Boolean(options?.fromShortcut);
-  if (kernelRef.value || explained.value) {
+  if (
+    options?.targetNodeRef &&
+    (!kernelRef.value || !matchesTargetNodeRef(options.targetNodeRef))
+  ) {
+    // Allow StudyCanvasView's fallback coordinator to select targetNodeRef first.
+    return false;
+  }
+  if (options?.explanation) {
+    explained.value = null;
+    directExplanation.value = {
+      title: options.title || "Explain",
+      explanation: options.explanation,
+    };
+    forceExplainOpen.value = true;
+    expand();
+    if (kernelRef.value) {
+      choose("explain");
+    }
+    focusExplainSection();
+    return true;
+  }
+  if (kernelRef.value || explained.value || directExplanation.value) {
     expand();
     if (kernelRef.value) {
       choose("explain");
@@ -1270,10 +1336,6 @@ function openExplain(options?: {
   if (props.protocolVersionError) {
     openProtocolVersionExplain();
     return true;
-  }
-  if (options?.targetNodeRef) {
-    // Allow StudyCanvasView's fallback coordinator to select targetNodeRef first.
-    return false;
   }
   forceExplainOpen.value = true;
   expand();
@@ -1292,7 +1354,7 @@ onBeforeUnmount(() => {
   unregisterExplain = null;
 });
 
-defineExpose({ expand, openExplain });
+defineExpose({ expand, openExplain, openVerb });
 
 watch(
   () => [props.nodeRef, props.protocolVersion?.ref, props.genericNodeRef],
@@ -1302,6 +1364,7 @@ watch(
     currentVerb.value = "details";
     setActiveId("verb-details");
     explained.value = null;
+    directExplanation.value = null;
     forceExplainOpen.value = false;
     versionErrorCanI.reset();
     copiedRef.value = false;

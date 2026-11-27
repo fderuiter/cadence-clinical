@@ -426,6 +426,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/kernel/artifact-versions/{artifactVersionRef}/review": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Records a 21 CFR Part 11 Reviewed attestation bound to an immutable artifact version's content hash (attestation.sign, K-SIM-5). */
+    post: operations["KernelReviewArtifactVersion"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/kernel/protocols/matrix-gap-check": {
     parameters: {
       query?: never;
@@ -566,6 +583,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/kernel/protocol-versions/{versionRef}/fork": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Forks an approved protocol version into the study's next numbered Draft protocol amendment without importing external files (protocol.amend). */
+    post: operations["KernelForkProtocolVersion"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/kernel/protocol-versions/{versionRef}/submit-for-review": {
     parameters: {
       query?: never;
@@ -611,6 +645,40 @@ export interface paths {
     put?: never;
     /** Records a 21 CFR Part 11 Approved attestation bound to the frozen protocol content hash and approves the protocol version (protocol.approve). */
     post: operations["KernelApproveProtocolVersion"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/kernel/protocol-versions/{versionRef}/approval-readiness": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Evaluates read-only approval readiness, simulation report binding, and wire-masked explanation items for a protocol version prior to step-up authentication (K-PROT-2, K-SIM-5). */
+    get: operations["KernelGetProtocolApprovalReadiness"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/kernel/protocol-versions/{versionRef}/withdraw": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Records a 21 CFR Part 11 Withdrawn attestation bound to the frozen protocol content hash and withdraws an InReview or Approved protocol version (protocol.withdraw). */
+    post: operations["KernelWithdrawProtocolVersion"];
     delete?: never;
     options?: never;
     head?: never;
@@ -1478,6 +1546,18 @@ export interface components {
       /** Format: date-time */
       recorded_at: null | string;
     };
+    Kernel_KernelArtifactReviewAttestationResponse: {
+      attestation_ref: string;
+      /** Format: uuid */
+      attestation_id: string;
+      artifact_ref: string;
+      artifact_version_ref: string;
+      study_ref: null | string;
+      meaning: string;
+      content_hash: string;
+      /** Format: date-time */
+      recorded_at: string;
+    };
     Kernel_KernelAssertionStateResponse: {
       ref: string;
       kind: string;
@@ -1769,6 +1849,16 @@ export interface components {
     Kernel_KernelFindingObservedValueResponse: {
       variable: string;
       value: null | string;
+    };
+    Kernel_KernelForkProtocolVersionRequest: {
+      intent: null | string;
+      rationale: null | string;
+      classification?: null | string;
+      summary_of_changes?: null | string;
+      impacted_elements?: null | string[];
+      transition_policy?: null | string;
+      /** Format: uuid */
+      protocol_version_id?: null | string;
     };
     Kernel_KernelHiddenContentResponse: {
       more_exist: boolean;
@@ -2142,6 +2232,19 @@ export interface components {
       impacted_elements: string[];
       transition_policy: string;
     };
+    Kernel_KernelProtocolApprovalReadinessResponse: {
+      protocol_version_ref: string;
+      status: string;
+      is_amendment: boolean;
+      parent_version_ref: null | string;
+      ready: boolean;
+      simulation_report_saved: boolean;
+      review_signed: boolean;
+      simulation_report_artifact_version_ref: null | string;
+      review_attestation_ref: null | string;
+      blocking_code: null | string;
+      explanation: components["schemas"]["Kernel_KernelExplanationResponse"];
+    };
     Kernel_KernelProtocolDraftSummaryResponse: {
       version: components["schemas"]["Kernel_KernelProtocolVersionResponse"];
       title: string;
@@ -2242,6 +2345,12 @@ export interface components {
       enrollment_ref: string;
       /** Format: uuid */
       assertion_id?: null | string;
+    };
+    Kernel_KernelReviewArtifactVersionRequest: {
+      meaning?: null | string;
+      expected_content_hash?: null | string;
+      /** Format: uuid */
+      attestation_id?: null | string;
     };
     Kernel_KernelRulePackPreviewResponse: {
       item_ref: string;
@@ -2655,6 +2764,12 @@ export interface components {
       revision: number | string;
       /** Format: uuid */
       assertion_id?: null | string;
+    };
+    Kernel_KernelWithdrawProtocolVersionRequest: {
+      meaning?: null | string;
+      expected_content_hash?: null | string;
+      /** Format: uuid */
+      attestation_id?: null | string;
     };
     Kernel_KernelWorkItemResponse: {
       subject: null | string;
@@ -4054,6 +4169,88 @@ export interface operations {
       };
     };
   };
+  KernelReviewArtifactVersion: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        artifactVersionRef: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: {
+      content: {
+        "application/json":
+          | null
+          | components["schemas"]["Kernel_KernelReviewArtifactVersionRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_KernelArtifactReviewAttestationResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized. Kernel errors: `K.Actor.Unresolved`, `K.Trust.AuthenticationStale`. */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`, `K.Trust.PersonRequired`. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Not Found. Kernel errors: `K.Trust.TargetUnknown`. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Conflict. Kernel errors: `K.Aggregate.AlreadyExists`, `K.Aggregate.ConcurrencyConflict`, `K.Command.IdempotencyConflict`, `K.Trust.TargetContentChanged`, `K.Trust.TargetNotSignable`. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Unprocessable Entity. Kernel errors: `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`, `K.Protocol.AttestationRejected`, `K.Trust.MethodRequired`, `K.Trust.TargetKindUnsupported`. */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
   KernelMatrixGapCheck: {
     parameters: {
       query?: never;
@@ -4745,6 +4942,88 @@ export interface operations {
       };
     };
   };
+  KernelForkProtocolVersion: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        versionRef: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: {
+      content: {
+        "application/json":
+          | null
+          | components["schemas"]["Kernel_KernelForkProtocolVersionRequest"];
+      };
+    };
+    responses: {
+      /** @description Created */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_KernelProtocolVersionResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized. Kernel errors: `K.Actor.Unresolved`. */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Not Found. Kernel errors: `K.Aggregate.NotFound`. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Conflict. Kernel errors: `K.Aggregate.AlreadyExists`, `K.Aggregate.ConcurrencyConflict`, `K.Command.IdempotencyConflict`, `K.Protocol.InvalidTransition`. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Unprocessable Entity. Kernel errors: `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`, `K.Protocol.AmendmentInvalid`. */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
   KernelSubmitProtocolVersionForReview: {
     parameters: {
       query?: never;
@@ -4960,6 +5239,137 @@ export interface operations {
         };
       };
       /** @description Conflict. Kernel errors: `K.Aggregate.AlreadyExists`, `K.Aggregate.ConcurrencyConflict`, `K.Command.IdempotencyConflict`, `K.Protocol.InvalidTransition`, `K.Protocol.SimulationReviewRequired`, `K.Trust.TargetContentChanged`, `K.Trust.TargetNotSignable`. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Unprocessable Entity. Kernel errors: `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`, `K.Protocol.AttestationRejected`, `K.Trust.MethodRequired`, `K.Trust.TargetKindUnsupported`. */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
+  KernelGetProtocolApprovalReadiness: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        versionRef: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_KernelProtocolApprovalReadinessResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
+  KernelWithdrawProtocolVersion: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        versionRef: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: {
+      content: {
+        "application/json":
+          | null
+          | components["schemas"]["Kernel_KernelWithdrawProtocolVersionRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_KernelProtocolVersionResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized. Kernel errors: `K.Actor.Unresolved`, `K.Trust.AuthenticationStale`. */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`, `K.Trust.PersonRequired`. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Not Found. Kernel errors: `K.Aggregate.NotFound`, `K.Trust.TargetUnknown`. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Conflict. Kernel errors: `K.Aggregate.AlreadyExists`, `K.Aggregate.ConcurrencyConflict`, `K.Command.IdempotencyConflict`, `K.Protocol.InvalidTransition`, `K.Trust.TargetContentChanged`, `K.Trust.TargetNotSignable`. */
       409: {
         headers: {
           [name: string]: unknown;

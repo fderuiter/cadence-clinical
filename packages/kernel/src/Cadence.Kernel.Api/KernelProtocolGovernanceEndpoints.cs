@@ -10,10 +10,12 @@ using Cadence.Kernel.Application.Authorization;
 using Cadence.Kernel.Application.Commands;
 using Cadence.Kernel.Application.Execution;
 using Cadence.Kernel.Application.Protocol;
+using Cadence.Kernel.Application.Trust;
 using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Execution;
+using Cadence.Kernel.Explanations;
 using Cadence.Kernel.Modules;
 using Cadence.Kernel.Navigation;
 using Cadence.Kernel.Protocol;
@@ -41,7 +43,11 @@ public static class KernelProtocolGovernanceEndpoints
     /// <summary>The semantic action a protocol-version approval step-up token must carry (21 CFR Part 11).</summary>
     public const string ApproveProtocolVersionSemanticAction = "kernel.protocol_version.approve";
 
+    /// <summary>The semantic action a protocol-version withdrawal step-up token must carry (21 CFR Part 11).</summary>
+    public const string WithdrawProtocolVersionSemanticAction = "kernel.protocol_version.withdraw";
+
     private static readonly Capability ApproveProtocolVersionCapability = new("protocol.approve", VerbClass.Approve);
+    private static readonly Capability WithdrawProtocolVersionCapability = new("protocol.withdraw", VerbClass.Approve);
 
     /// <summary>The canonical concrete action path for approving a protocol version reference.</summary>
     public static string ApproveProtocolVersionAction(string versionRef)
@@ -52,11 +58,32 @@ public static class KernelProtocolGovernanceEndpoints
         return $"{KernelApiEndpointRouteBuilderExtensions.RoutePrefix}/protocol-versions/{canonical}/approve";
     }
 
+    /// <summary>The canonical concrete action path for withdrawing a protocol version reference.</summary>
+    public static string WithdrawProtocolVersionAction(string versionRef)
+    {
+        var canonical = TryParseProtocolVersion(versionRef, out var versionId)
+            ? NodeRef.For(versionId).ToString()
+            : versionRef;
+        return $"{KernelApiEndpointRouteBuilderExtensions.RoutePrefix}/protocol-versions/{canonical}/withdraw";
+    }
+
     /// <summary>Maps protocol governance, evidence artifact, effectivity, and study-site activation routes.</summary>
     public static RouteGroupBuilder MapKernelProtocolGovernance(this RouteGroupBuilder kernel)
     {
         ArgumentNullException.ThrowIfNull(kernel);
         var group = kernel.MapGroup(string.Empty).AddEndpointFilter<KernelTenantFilter>().WithTags("Kernel protocol governance");
+
+        group.MapPost("/protocol-versions/{versionRef}/fork", ForkProtocolVersionAsync)
+            .WithName("KernelForkProtocolVersion")
+            .WithSummary("Forks an approved protocol version into the study's next numbered Draft protocol amendment without importing external files (protocol.amend).")
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesKernelErrors([
+                .. KernelErrors.CommandPipeline,
+                KernelErrors.AlreadyExists,
+                KernelErrors.NotFound,
+                ProtocolErrors.InvalidTransition,
+                ProtocolErrors.AmendmentInvalid,
+            ]);
 
         group.MapPost("/protocol-versions/{versionRef}/submit-for-review", SubmitProtocolVersionForReviewAsync)
             .WithName("KernelSubmitProtocolVersionForReview")
@@ -99,6 +126,30 @@ public static class KernelProtocolGovernanceEndpoints
             .RequireElectronicSignature(
                 ApproveProtocolVersionSemanticAction,
                 ctx => ApproveProtocolVersionAction(ctx.Request.RouteValues["versionRef"]?.ToString() ?? string.Empty));
+
+        group.MapGet("/protocol-versions/{versionRef}/approval-readiness", GetProtocolApprovalReadinessAsync)
+            .WithName("KernelGetProtocolApprovalReadiness")
+            .WithSummary("Evaluates read-only approval readiness, simulation report binding, and wire-masked explanation items for a protocol version prior to step-up authentication (K-PROT-2, K-SIM-5).")
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        group.MapPost("/protocol-versions/{versionRef}/withdraw", WithdrawProtocolVersionAsync)
+            .WithName("KernelWithdrawProtocolVersion")
+            .WithSummary("Records a 21 CFR Part 11 Withdrawn attestation bound to the frozen protocol content hash and withdraws an InReview or Approved protocol version (protocol.withdraw).")
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesKernelErrors([
+                .. KernelErrors.CommandPipeline,
+                .. RaisesKernelErrorsAttribute.Of(typeof(Attest))!,
+                KernelErrors.AlreadyExists,
+                KernelErrors.NotFound,
+                ProtocolErrors.InvalidTransition,
+                ProtocolErrors.AttestationRejected,
+            ])
+            .RequireElectronicSignature(
+                WithdrawProtocolVersionSemanticAction,
+                ctx => WithdrawProtocolVersionAction(ctx.Request.RouteValues["versionRef"]?.ToString() ?? string.Empty));
 
         group.MapGet("/studies/{studyRef}/artifacts", ListStudyArtifactsAsync)
             .WithName("KernelListStudyArtifacts")
@@ -391,6 +442,311 @@ public static class KernelProtocolGovernanceEndpoints
 
         var updated = await versions.GetAsync(tenant, versionId, cancellationToken).ConfigureAwait(false);
         return TypedResults.Ok(ToProtocolVersionResponse(updated, approveResult.Value!));
+    }
+
+    internal static async Task<Results<Created<KernelProtocolVersionResponse>, ProblemHttpResult>> ForkProtocolVersionAsync(
+        string versionRef,
+        KernelForkProtocolVersionRequest? request,
+        HttpContext context,
+        IProtocolVersionReader versions,
+        IKernelCommandSender sender,
+        IKernelChangeReason changeReason,
+        CancellationToken cancellationToken)
+    {
+        if (!TryParseProtocolVersion(versionRef, out var parentVersionId))
+        {
+            return KernelProblems.BadRequest("Invalid NodeRef", $"'{versionRef}' is not a protocol_version NodeRef (protocol_version:<uuid>).");
+        }
+
+        var (idempotencyKey, reason, headerProblem) = ReadMutationHeaders(context, changeReason);
+        if (headerProblem is not null)
+        {
+            return headerProblem;
+        }
+
+        if (request is null)
+        {
+            return KernelErrorEndpoints.Problem(ProtocolErrors.AmendmentInvalid);
+        }
+
+        var classification = AmendmentClassification.Substantial;
+        if (!string.IsNullOrWhiteSpace(request.Classification)
+            && (!Enum.TryParse(request.Classification.Trim(), ignoreCase: true, out classification) || !Enum.IsDefined(classification)))
+        {
+            return KernelErrorEndpoints.Problem(
+                ProtocolErrors.AmendmentInvalid.WithMessage("Amendment classification must be Substantial, NonSubstantial, or UrgentSafetyMeasure."));
+        }
+
+        var transitionPolicy = TransitionPolicy.RequiresReconsent;
+        if (!string.IsNullOrWhiteSpace(request.TransitionPolicy)
+            && (!Enum.TryParse(request.TransitionPolicy.Trim(), ignoreCase: true, out transitionPolicy) || !Enum.IsDefined(transitionPolicy)))
+        {
+            return KernelErrorEndpoints.Problem(
+                ProtocolErrors.AmendmentInvalid.WithMessage("Transition policy must be NewParticipantsOnly, RequiresReconsent, Automatic, or ByCohort."));
+        }
+
+        var impactedElements = (request.ImpactedElements ?? [])
+            .Where(e => !string.IsNullOrWhiteSpace(e))
+            .Select(e => e.Trim())
+            .ToList();
+
+        var amendment = new ProtocolAmendment(
+            (request.Intent ?? string.Empty).Trim(),
+            (request.Rationale ?? string.Empty).Trim(),
+            classification,
+            (request.SummaryOfChanges ?? string.Empty).Trim(),
+            impactedElements,
+            transitionPolicy);
+
+        var tenant = KernelRequestTenant.Get(context);
+        var newVersionId = request.ProtocolVersionId is { } given && given != Guid.Empty
+            ? ProtocolVersionId.FromGuid(given)
+            : ProtocolVersionId.FromGuid(DeriveGuid(tenant, $"fork-protocol-version:{parentVersionId.Value:D}", idempotencyKey));
+
+        var result = await sender.SendAsync(
+            new ForkProtocolVersion(tenant, parentVersionId, newVersionId, amendment, idempotencyKey, reason),
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+        if (!result.IsSuccess)
+        {
+            return KernelErrorEndpoints.Problem(result.Error!);
+        }
+
+        var created = await versions.GetAsync(tenant, newVersionId, cancellationToken).ConfigureAwait(false);
+        return TypedResults.Created(
+            $"{KernelApiEndpointRouteBuilderExtensions.RoutePrefix}/protocol-versions/{NodeRef.For(newVersionId)}",
+            ToProtocolVersionResponse(created, result.Value!));
+    }
+
+    internal static async Task<Results<Ok<KernelProtocolApprovalReadinessResponse>, ProblemHttpResult>> GetProtocolApprovalReadinessAsync(
+        string versionRef,
+        HttpContext context,
+        IProtocolVersionReader versions,
+        INodeVisibility visibility,
+        ICurrentActor actor,
+        IClock clock,
+        CancellationToken cancellationToken)
+    {
+        if (NodeRef.TryParse(versionRef, out var parsedRef) && parsedRef is not null && parsedRef.Kind != NodeKinds.ProtocolVersion)
+        {
+            return KernelProblems.WrongKind(parsedRef, NodeKinds.ProtocolVersion);
+        }
+
+        if (!TryParseProtocolVersion(versionRef, out var versionId))
+        {
+            return KernelProblems.InvalidNodeRef(versionRef);
+        }
+
+        var tenant = KernelRequestTenant.Get(context);
+        var versionNode = NodeRef.For(versionId);
+        if (await versions.GetAsync(tenant, versionId, cancellationToken).ConfigureAwait(false) is not { } version)
+        {
+            return KernelProblems.NotFound(versionNode);
+        }
+
+        var visibilityMasks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, [versionNode], cancellationToken).ConfigureAwait(false);
+        if (visibilityMasks.For(versionNode) is { } hiddenMask)
+        {
+            return KernelProblems.NotVisible($"You can't see this protocol version ({hiddenMask}), so its approval readiness is not shown.");
+        }
+
+        ProtocolApprovalReadinessEvaluation? evaluation = null;
+        if (context.RequestServices.GetService<IKernelUnitOfWorkFactory>() is { } unitOfWorkFactory
+            && context.RequestServices.GetService<IAttestationVerifier>() is { } verifier)
+        {
+            var evalActor = actor.Actor is { } resolvedActor && !string.IsNullOrWhiteSpace(resolvedActor.Id)
+                ? resolvedActor
+                : Actor.Person("anonymous");
+            evaluation = await ProtocolApprovalSimulationGate.EvaluateAsync(
+                tenant,
+                unitOfWorkFactory,
+                verifier,
+                evalActor,
+                clock.UtcNow,
+                versionId,
+                explicitReviewAttestationId: null,
+                cancellationToken).ConfigureAwait(false);
+        }
+
+        if (evaluation is null)
+        {
+            var fallbackReady = version.Status == ProtocolVersionStatus.InReview && version.ParentVersionId is null;
+            KernelError? fallbackError = null;
+            if (!fallbackReady)
+            {
+                fallbackError = version.Status == ProtocolVersionStatus.InReview
+                    ? ProtocolErrors.SimulationReviewRequired
+                    : ProtocolErrors.InvalidTransition;
+            }
+
+            var fallbackExplanation = new Explanation(
+                versionNode,
+                fallbackReady
+                    ? $"Initial protocol version {version.Number} is frozen in review and ready for approval."
+                    : $"Protocol version {version.Number} is not ready for approval.",
+                "kernel.protocol.approval_readiness",
+                [new ExplanationStep($"Protocol version {version.Number} has status {version.Status}.", [versionNode])],
+                [
+                    version.Status == ProtocolVersionStatus.InReview
+                        ? EvaluatedCondition.Satisfied("protocol.version.in_review", $"Protocol version {version.Number} is in review.", versionNode)
+                        : EvaluatedCondition.Unsatisfied("protocol.version.in_review", $"Protocol version {version.Number} is {version.Status}.", versionNode),
+                ],
+                []);
+            evaluation = new ProtocolApprovalReadinessEvaluation(
+                version.Id,
+                version.Status,
+                version.ParentVersionId is not null,
+                version.ParentVersionId,
+                Ready: fallbackReady,
+                SimulationReportSaved: false,
+                ReviewSigned: false,
+                SimulationReportArtifactVersionId: null,
+                ReviewAttestationId: null,
+                fallbackExplanation,
+                fallbackError);
+        }
+
+        var extraNodes = new List<NodeRef>(3);
+        if (evaluation.ParentVersionId is { } pid)
+        {
+            extraNodes.Add(NodeRef.For(pid));
+        }
+
+        if (evaluation.SimulationReportArtifactVersionId is { } simVersionId)
+        {
+            extraNodes.Add(NodeRef.For(simVersionId));
+        }
+
+        if (evaluation.ReviewAttestationId is { } reviewAttestId)
+        {
+            extraNodes.Add(NodeRef.For(reviewAttestId));
+        }
+
+        var allRefsToMask = ExplanationMasking.CollectNodes(evaluation.Explanation).Concat(extraNodes).Distinct().ToList();
+        var refMasks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, allRefsToMask, cancellationToken).ConfigureAwait(false);
+
+        return TypedResults.Ok(new KernelProtocolApprovalReadinessResponse(
+            NodeRef.For(evaluation.ProtocolVersionId).ToString(),
+            evaluation.Status.ToString(),
+            evaluation.IsAmendment,
+            ExplanationMasking.FormatOptional(evaluation.ParentVersionId is { } parentId ? NodeRef.For(parentId) : null, refMasks),
+            evaluation.Ready,
+            evaluation.SimulationReportSaved,
+            evaluation.ReviewSigned,
+            ExplanationMasking.FormatOptional(evaluation.SimulationReportArtifactVersionId is { } avId ? NodeRef.For(avId) : null, refMasks),
+            ExplanationMasking.FormatOptional(evaluation.ReviewAttestationId is { } attId ? NodeRef.For(attId) : null, refMasks),
+            evaluation.BlockingError?.Code,
+            KernelExplanationResponse.From(evaluation.Explanation, refMasks)));
+    }
+
+    internal static async Task<Results<Ok<KernelProtocolVersionResponse>, ProblemHttpResult>> WithdrawProtocolVersionAsync(
+        string versionRef,
+        KernelWithdrawProtocolVersionRequest? request,
+        HttpContext context,
+        IProtocolVersionReader versions,
+        IKernelCommandSender sender,
+        IAuthorizationProbe probe,
+        IKernelChangeReason changeReason,
+        CancellationToken cancellationToken)
+    {
+        if (context.VerifiedSigToken() is not { } sigToken)
+        {
+            return TypedResults.Problem(
+                title: "Electronic signature required",
+                detail: "Supply a fresh, single-use X-Sig-Token step-up header bound to this protocol version withdrawal.",
+                statusCode: StatusCodes.Status401Unauthorized);
+        }
+
+        if (!TryParseProtocolVersion(versionRef, out var versionId))
+        {
+            return KernelProblems.BadRequest("Invalid NodeRef", $"'{versionRef}' is not a protocol_version NodeRef (protocol_version:<uuid>).");
+        }
+
+        var (idempotencyKey, reason, headerProblem) = ReadMutationHeaders(context, changeReason);
+        if (headerProblem is not null)
+        {
+            return headerProblem;
+        }
+
+        if (request?.Meaning is { Length: > 0 } rawMeaning
+            && (!Enum.TryParse<AttestationMeaning>(rawMeaning, ignoreCase: true, out var parsedMeaning)
+                || parsedMeaning != AttestationMeaning.Withdrawn))
+        {
+            return KernelErrorEndpoints.Problem(
+                ProtocolErrors.AttestationRejected.WithMessage("Protocol withdrawal requires an attestation with meaning Withdrawn."));
+        }
+
+        var tenant = KernelRequestTenant.Get(context);
+        if (context.RequestServices.GetService<ITenantEntitlementReader>() is { } entitlementReader)
+        {
+            var clock = context.RequestServices.GetService<IClock>() ?? SystemClock.Instance;
+            var entitlements = await entitlementReader.GetEntitlementsAsync(tenant, clock.UtcNow, cancellationToken).ConfigureAwait(false);
+            if (entitlements.IsReadOnly)
+            {
+                return KernelErrorEndpoints.Problem(KernelErrors.SubscriptionExpired);
+            }
+
+            if (!entitlements.ProductFamilies.Contains(ProductFamily.Blueprint))
+            {
+                return KernelErrorEndpoints.Problem(CommercialErrors.ProductFamilyNotEntitled);
+            }
+        }
+
+        var existing = await versions.GetAsync(tenant, versionId, cancellationToken).ConfigureAwait(false);
+        if (existing is null)
+        {
+            return KernelErrorEndpoints.Problem(KernelErrors.NotFound);
+        }
+
+        var attestationId = request?.AttestationId is { } given && given != Guid.Empty
+            ? AttestationId.FromGuid(given)
+            : AttestationId.FromGuid(DeriveGuid(tenant, "withdraw-protocol-version-attest", idempotencyKey));
+
+        var canWithdraw = await probe.CanIAsync(tenant, WithdrawProtocolVersionCapability, NodeRef.For(versionId), cancellationToken).ConfigureAwait(false);
+        if (canWithdraw.Permitted)
+        {
+            if (existing.Status is not (ProtocolVersionStatus.InReview or ProtocolVersionStatus.Approved)
+                || string.IsNullOrWhiteSpace(existing.ContentHash))
+            {
+                return KernelErrorEndpoints.Problem(ProtocolErrors.InvalidTransition);
+            }
+
+            if (!string.IsNullOrWhiteSpace(request?.ExpectedContentHash))
+            {
+                var normalizedExpected = NormalizeSha256(request.ExpectedContentHash);
+                if (!string.Equals(normalizedExpected, existing.ContentHash, StringComparison.Ordinal))
+                {
+                    return KernelErrorEndpoints.Problem(TrustErrors.TargetContentChanged);
+                }
+            }
+
+            var attestResult = await sender.SendAsync(
+                new Attest(
+                    tenant,
+                    attestationId,
+                    AttestationMeaning.Withdrawn,
+                    new AttestationTarget(AttestationTarget.ProtocolVersionKind, versionId.Value, existing.ContentHash),
+                    new DateTimeOffset(sigToken.IssuedAt, TimeSpan.Zero),
+                    KernelLockEndpoints.StepUpMethod,
+                    $"{idempotencyKey}:attest",
+                    reason,
+                    Scope: NodeRef.For(existing.StudyId)),
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+            if (!attestResult.IsSuccess && attestResult.Error?.Code != KernelErrors.AlreadyExists.Code)
+            {
+                return KernelErrorEndpoints.Problem(attestResult.Error!);
+            }
+        }
+
+        var withdrawResult = await sender.SendAsync(
+            new WithdrawProtocolVersion(tenant, versionId, attestationId, idempotencyKey, reason),
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+        if (!withdrawResult.IsSuccess)
+        {
+            return KernelErrorEndpoints.Problem(withdrawResult.Error!);
+        }
+
+        var updated = await versions.GetAsync(tenant, versionId, cancellationToken).ConfigureAwait(false);
+        return TypedResults.Ok(ToProtocolVersionResponse(updated, withdrawResult.Value!));
     }
 
     internal static async Task<Results<Ok<IReadOnlyList<KernelArtifactResponse>>, ProblemHttpResult>> ListStudyArtifactsAsync(
@@ -862,7 +1218,7 @@ public static class KernelProtocolGovernanceEndpoints
         return false;
     }
 
-    private static bool TryParseArtifactVersion(string raw, out ArtifactVersionId id)
+    internal static bool TryParseArtifactVersion(string raw, out ArtifactVersionId id)
     {
         if (NodeRef.TryParse(raw, out var parsed) && parsed is not null && parsed.TryGetId(out id))
         {
@@ -913,7 +1269,7 @@ public static class KernelProtocolGovernanceEndpoints
         return false;
     }
 
-    private static string NormalizeSha256(string raw)
+    internal static string NormalizeSha256(string raw)
     {
         var trimmed = raw.Trim();
         if (trimmed.StartsWith("sha256:", StringComparison.OrdinalIgnoreCase))

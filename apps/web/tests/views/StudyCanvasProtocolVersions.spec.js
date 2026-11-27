@@ -44,9 +44,14 @@ vi.mock("../../src/api/kernelApi", () => ({
 
 vi.mock("../../src/api/kernelGovernanceApi", () => ({
   kernelGovernanceApi: {
+    forkProtocolVersion: vi.fn(),
+    getProtocolApprovalReadiness: vi.fn(),
     submitProtocolVersionForReview: vi.fn(),
     returnProtocolVersionToDraft: vi.fn(),
     approveProtocolVersion: vi.fn(),
+    withdrawProtocolVersion: vi.fn(),
+    saveSimulationReport: vi.fn(),
+    reviewArtifactVersion: vi.fn(),
     listStudyArtifacts: vi.fn(async () => []),
     registerStudyArtifact: vi.fn(),
     listStudyEffectivities: vi.fn(async () => []),
@@ -55,9 +60,19 @@ vi.mock("../../src/api/kernelGovernanceApi", () => ({
     listStudySites: vi.fn(async () => []),
   },
   PROTOCOL_APPROVE_SEMANTIC_ACTION: "kernel.protocol_version.approve",
+  PROTOCOL_WITHDRAW_SEMANTIC_ACTION: "kernel.protocol_version.withdraw",
+  ARTIFACT_VERSION_REVIEW_SEMANTIC_ACTION: "kernel.artifact_version.review",
   protocolVersionApproveAction: (versionRef) => {
     const clean = String(versionRef ?? "").split("@")[0];
     return `/api/v1/kernel/protocol-versions/${clean}/approve`;
+  },
+  protocolVersionWithdrawAction: (versionRef) => {
+    const clean = String(versionRef ?? "").split("@")[0];
+    return `/api/v1/kernel/protocol-versions/${clean}/withdraw`;
+  },
+  artifactVersionReviewAction: (artifactVersionRef) => {
+    const clean = String(artifactVersionRef ?? "").split("@")[0];
+    return `/api/v1/kernel/artifact-versions/${clean}/review`;
   },
 }));
 
@@ -134,6 +149,11 @@ describe("Clinical Canvas protocol versions and amendment impact (ADR-2540, K-PR
     vi.mocked(kernelGovernanceApi.listStudyArtifacts).mockResolvedValue([]);
     vi.mocked(kernelGovernanceApi.listStudyEffectivities).mockResolvedValue([]);
     vi.mocked(kernelGovernanceApi.listStudySites).mockResolvedValue([]);
+    vi.mocked(kernelGovernanceApi.forkProtocolVersion).mockReset();
+    vi.mocked(kernelGovernanceApi.getProtocolApprovalReadiness).mockReset();
+    vi.mocked(kernelGovernanceApi.withdrawProtocolVersion).mockReset();
+    vi.mocked(kernelGovernanceApi.saveSimulationReport).mockReset();
+    vi.mocked(kernelGovernanceApi.reviewArtifactVersion).mockReset();
     vi.mocked(requestStepUpSignature).mockReset();
     vi.mocked(kernelApi.search).mockResolvedValue([
       {
@@ -978,5 +998,346 @@ describe("Clinical Canvas protocol versions and amendment impact (ADR-2540, K-PR
       })
     );
     expect(loadScheduleSpy).toHaveBeenCalledWith("CAD-101", { force: true });
+  });
+
+  it("forks a Draft amendment from an Approved parent, gates Part 11 approval on simulation save + Reviewed sign-off, explains blockers, and withdraws versions", async () => {
+    const authStore = useAuthStore();
+    authStore.isAuthenticated = true;
+    authStore.rawRoles = ["Sponsor Designer"];
+    authStore.user = {
+      username: "designer.lead",
+      firstName: "Dana",
+      lastName: "Designer",
+    };
+
+    const FROZEN_HASH =
+      "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
+    const SIM_REPORT_VER_ID = "0192f3c4-5e6a-7b8c-9d0e-000000000901";
+    const SIM_REPORT_VER_REF = `artifact_version:${SIM_REPORT_VER_ID}`;
+    const REVIEW_ATTESTATION_REF =
+      "attestation:0192f3c4-5e6a-7b8c-9d0e-000000000902";
+
+    let versionsState = [FIRST];
+    let reportSaved = false;
+    let reviewSigned = false;
+
+    vi.mocked(kernelApi.listProtocolVersions).mockImplementation(async () =>
+      versionsState.map((v) => ({ ...v }))
+    );
+    vi.mocked(kernelApi.getProtocolVersion).mockImplementation(
+      async (ref) =>
+        versionsState.find((v) => v.ref === ref) ?? versionsState[0]
+    );
+    vi.mocked(kernelGovernanceApi.forkProtocolVersion).mockImplementation(
+      async (payload) => {
+        const forked = version({
+          ref: V2,
+          number: 2,
+          status: "Draft",
+          parent_version: `protocol_version:${V1_ID}`,
+          amendment_intent: payload.intent,
+        });
+        versionsState = [forked, ...versionsState];
+        return { ...forked };
+      }
+    );
+    vi.mocked(
+      kernelGovernanceApi.submitProtocolVersionForReview
+    ).mockImplementation(async () => {
+      versionsState[0] = {
+        ...versionsState[0],
+        status: "InReview",
+        content_hash: FROZEN_HASH,
+      };
+      return { ...versionsState[0] };
+    });
+    vi.mocked(
+      kernelGovernanceApi.getProtocolApprovalReadiness
+    ).mockImplementation(async () => ({
+      protocol_version_ref: `protocol_version:${V2_ID}`,
+      status: versionsState[0].status,
+      is_amendment: true,
+      parent_version_ref: `protocol_version:${V1_ID}`,
+      ready: reportSaved && reviewSigned,
+      simulation_report_saved: reportSaved,
+      review_signed: reviewSigned,
+      simulation_report_artifact_version_ref: reportSaved
+        ? SIM_REPORT_VER_REF
+        : null,
+      review_attestation_ref: reviewSigned ? REVIEW_ATTESTATION_REF : null,
+      blocking_code:
+        reportSaved && reviewSigned
+          ? null
+          : "K.Protocol.SimulationReviewRequired",
+      explanation: {
+        subject: `protocol_version:${V2_ID}`,
+        claim:
+          reportSaved && reviewSigned
+            ? "Amendment v2 simulation review complete."
+            : "Protocol Version 2 requires a saved SimulationReport and signed Reviewed attestation before Part 11 approval.",
+        producer: "kernel.protocol.approval_readiness",
+        steps: [],
+        conditions: [
+          {
+            code: "protocol.amendment.simulation_report_saved",
+            description: "Unmasked SimulationReport saved.",
+            met: reportSaved,
+            evidence: [V2],
+          },
+          {
+            code: "protocol.amendment.review_signed",
+            description: "Reviewed attestation signed.",
+            met: reviewSigned,
+            evidence: reportSaved ? [SIM_REPORT_VER_REF] : [V2],
+          },
+        ],
+        next_actions: [],
+      },
+    }));
+    vi.mocked(kernelApi.simulate).mockResolvedValue({
+      scope: STUDY,
+      as_of: {
+        valid_at: "2026-03-01T12:00:00Z",
+        known_at: "2026-03-01T12:00:00Z",
+      },
+      candidate: {
+        kind: "ProtocolVersion",
+        version: `protocol_version:${V2_ID}`,
+        base_version: `protocol_version:${V1_ID}`,
+        content_hash: FROZEN_HASH,
+        base_content_hash: FIRST.content_hash,
+      },
+      engine_versions: [{ name: "protocol.structural_diff", version: "1" }],
+      input_hash: "sha256:sim-in",
+      result_hash: "sha256:sim-out",
+      structural_diff: [
+        {
+          element_id: "visit-pk",
+          instance_type: "PlannedVisit",
+          change: "Added",
+          properties: ["study_day"],
+        },
+      ],
+      schedule_changes: [],
+      masked: [],
+      dependents: { root: V2, depth: 1, truncated: false, groups: [] },
+      matrix_gaps: [],
+      is_empty: false,
+    });
+    vi.mocked(kernelGovernanceApi.saveSimulationReport).mockImplementation(
+      async () => {
+        reportSaved = true;
+        return {
+          artifact_ref: "artifact:0192f3c4-5e6a-7b8c-9d0e-000000000900",
+          artifact_id: "0192f3c4-5e6a-7b8c-9d0e-000000000900",
+          artifact_version_ref: SIM_REPORT_VER_REF,
+          artifact_version_id: SIM_REPORT_VER_ID,
+          version_number: 1,
+          kind: "SimulationReport",
+          study_ref: STUDY,
+          title: "Protocol Version 2 Simulation Report",
+          content_hash: "sha256:sim-report",
+          size_bytes: 512,
+          media_type: "application/vnd.cadence.simulation-report+json",
+          storage_ref: "urn:cadence:sim:901",
+          recorded_at: "2026-03-01T12:01:00Z",
+        };
+      }
+    );
+    vi.mocked(kernelGovernanceApi.reviewArtifactVersion).mockImplementation(
+      async () => {
+        reviewSigned = true;
+        return {
+          attestation_ref: REVIEW_ATTESTATION_REF,
+          attestation_id: "0192f3c4-5e6a-7b8c-9d0e-000000000902",
+          artifact_ref: "artifact:0192f3c4-5e6a-7b8c-9d0e-000000000900",
+          artifact_version_ref: SIM_REPORT_VER_REF,
+          study_ref: STUDY,
+          meaning: "Reviewed",
+          content_hash: "sha256:sim-report",
+          recorded_at: "2026-03-01T12:02:00Z",
+        };
+      }
+    );
+    vi.mocked(kernelGovernanceApi.approveProtocolVersion).mockImplementation(
+      async () => {
+        versionsState[0] = {
+          ...versionsState[0],
+          status: "Approved",
+          approval_attestation:
+            "attestation:0192f3c4-5e6a-7b8c-9d0e-000000000903",
+        };
+        return { ...versionsState[0] };
+      }
+    );
+    vi.mocked(kernelGovernanceApi.withdrawProtocolVersion).mockImplementation(
+      async (payload) => {
+        versionsState[0] = {
+          ...versionsState[0],
+          status: "Withdrawn",
+          withdrawal_reason: payload.reason,
+        };
+        return { ...versionsState[0] };
+      }
+    );
+    vi.mocked(requestStepUpSignature).mockResolvedValue({
+      sig_token: "step-up-sig-token-60s",
+      expires_in: 60,
+    });
+
+    await open(`/studies/CAD-101?section=protocol-versions&node=${V1}`);
+
+    // 1. Fork amendment Draft v2 from Approved v1
+    expect(wrapper.find("#btn-open-fork-amendment").exists()).toBe(true);
+    await wrapper.find("#btn-open-fork-amendment").trigger("click");
+    await wrapper
+      .find("#fork-amendment-intent")
+      .setValue("Add Week 8 PK sampling visit");
+    await wrapper
+      .find("#fork-amendment-rationale")
+      .setValue("Support exposure-response modeling");
+    await wrapper
+      .find("#fork-amendment-classification")
+      .setValue("Substantial");
+    await wrapper
+      .find("#fork-amendment-transition-policy")
+      .setValue("RequiresReconsent");
+    await wrapper
+      .find("#fork-amendment-reason")
+      .setValue("Fork amendment v2 from baseline v1");
+    await wrapper.find("#protocol-fork-form").trigger("submit");
+    await flushPromises();
+
+    expect(kernelGovernanceApi.forkProtocolVersion).toHaveBeenCalledWith(
+      expect.objectContaining({
+        parentVersionRef: V1,
+        intent: "Add Week 8 PK sampling visit",
+        rationale: "Support exposure-response modeling",
+        classification: "Substantial",
+        transitionPolicy: "RequiresReconsent",
+        reason: "Fork amendment v2 from baseline v1",
+      })
+    );
+
+    // 2. Submit Draft v2 for review -> InReview; readiness blocks approval without burning X-Sig-Token
+    await wrapper
+      .find("#protocol-governance-reason")
+      .setValue("Freeze v2 for impact review");
+    await wrapper.find("#btn-submit-protocol-review").trigger("click");
+    await flushPromises();
+
+    expect(wrapper.find("#protocol-amendment-impact-review").exists()).toBe(
+      true
+    );
+    const approveBtn = wrapper.find("#btn-approve-protocol-version");
+    expect(approveBtn.attributes("disabled")).toBeDefined();
+    await approveBtn.trigger("click");
+    await flushPromises();
+    expect(requestStepUpSignature).not.toHaveBeenCalled();
+
+    // 3. Explain button opens #kernel-explain with readiness explanation
+    await wrapper.find("#btn-explain-approval-readiness").trigger("click");
+    await flushPromises();
+    expect(wrapper.find("#kernel-explain").text()).toContain(
+      "requires a saved SimulationReport"
+    );
+
+    // 4. Open Simulate -> runs simulate with baseVersionRef, saves report, signs Reviewed (Part 11)
+    await wrapper.find("#btn-open-amendment-simulate").trigger("click");
+    await flushPromises();
+
+    expect(kernelApi.simulate).toHaveBeenCalledWith({
+      storedVersionRef: V2,
+    });
+
+    // Wait for lazy SimulationGovernanceActions chunk
+    await vi.waitFor(() => {
+      expect(wrapper.find("#btn-save-simulation-report").exists()).toBe(true);
+    });
+    await wrapper.find("#btn-save-simulation-report").trigger("click");
+    await flushPromises();
+
+    expect(kernelGovernanceApi.saveSimulationReport).toHaveBeenCalledWith(
+      expect.objectContaining({
+        studyRef: STUDY,
+        title: "Protocol Version 2 Simulation Report",
+      })
+    );
+
+    await wrapper.find("#btn-sign-simulation-review").trigger("click");
+    await flushPromises();
+    const simModal = wrapper.find("#signature-capture-modal");
+    expect(simModal.exists()).toBe(true);
+    await simModal.find("#sig-password").setValue("ClinicalPass!123");
+    await simModal
+      .find("#sig-reason")
+      .setValue("Reviewed protocol amendment simulation and schedule impact");
+    await simModal.find("#btn-confirm-sig").trigger("click");
+    await flushPromises();
+
+    expect(requestStepUpSignature).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: `/api/v1/kernel/artifact-versions/${SIM_REPORT_VER_REF}/review`,
+        semanticAction: "kernel.artifact_version.review",
+      })
+    );
+    expect(kernelGovernanceApi.reviewArtifactVersion).toHaveBeenCalledWith(
+      expect.objectContaining({
+        artifactVersionRef: SIM_REPORT_VER_REF,
+        meaning: "Reviewed",
+        sigToken: "step-up-sig-token-60s",
+      })
+    );
+
+    // 5. Readiness is now met; Approve version (Part 11) forwards reviewAttestationRef
+    expect(
+      wrapper.find("#btn-approve-protocol-version").attributes("disabled")
+    ).toBeUndefined();
+    await wrapper.find("#btn-approve-protocol-version").trigger("click");
+    await flushPromises();
+
+    await wrapper.find("#sig-password").setValue("ClinicalPass!123");
+    await wrapper
+      .find("#sig-reason")
+      .setValue("Approve frozen protocol version for clinical conduct");
+    await wrapper.find("#btn-confirm-sig").trigger("click");
+    await flushPromises();
+
+    expect(kernelGovernanceApi.approveProtocolVersion).toHaveBeenCalledWith(
+      expect.objectContaining({
+        versionRef: V2,
+        reviewAttestationRef: REVIEW_ATTESTATION_REF,
+        expectedContentHash: FROZEN_HASH,
+      })
+    );
+
+    // 6. Withdraw Approved protocol version via Part 11 Withdrawn signature
+    expect(wrapper.find("#btn-withdraw-protocol-version").exists()).toBe(true);
+    await wrapper.find("#btn-withdraw-protocol-version").trigger("click");
+    await flushPromises();
+
+    await wrapper.find("#sig-password").setValue("ClinicalPass!123");
+    await wrapper
+      .find("#sig-reason")
+      .setValue("Withdraw superseded or rejected protocol version");
+    await wrapper.find("#btn-confirm-sig").trigger("click");
+    await flushPromises();
+
+    expect(requestStepUpSignature).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        action: `/api/v1/kernel/protocol-versions/protocol_version:${V2_ID}/withdraw`,
+        semanticAction: "kernel.protocol_version.withdraw",
+      })
+    );
+    expect(kernelGovernanceApi.withdrawProtocolVersion).toHaveBeenCalledWith(
+      expect.objectContaining({
+        versionRef: V2,
+        meaning: "Withdrawn",
+        sigToken: "step-up-sig-token-60s",
+      })
+    );
+    expect(wrapper.find("#protocol-versions-section").text()).toContain(
+      "Withdrawn"
+    );
   });
 });

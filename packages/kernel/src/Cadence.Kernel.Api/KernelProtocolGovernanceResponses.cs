@@ -8,6 +8,23 @@ using Cadence.Kernel.References;
 
 namespace Cadence.Kernel.Api;
 
+/// <summary>Request body for <c>POST /api/v1/kernel/protocol-versions/{versionRef}/fork</c>.</summary>
+/// <param name="Intent">What the protocol amendment sets out to change.</param>
+/// <param name="Rationale">Clinical or operational justification for the amendment.</param>
+/// <param name="Classification">Regulatory classification (<c>Substantial</c>, <c>NonSubstantial</c>, or <c>UrgentSafetyMeasure</c>; defaults to <c>Substantial</c>).</param>
+/// <param name="SummaryOfChanges">Human-readable summary of the changes introduced by the amendment.</param>
+/// <param name="ImpactedElements">Protocol schedule or eligibility element identifiers impacted by the amendment.</param>
+/// <param name="TransitionPolicy">Participant transition policy (<c>NewParticipantsOnly</c>, <c>RequiresReconsent</c>, <c>Automatic</c>, or <c>ByCohort</c>; defaults to <c>RequiresReconsent</c>).</param>
+/// <param name="ProtocolVersionId">Optional caller-assigned protocol-version UUID; derived deterministically when omitted.</param>
+public sealed record KernelForkProtocolVersionRequest(
+    string? Intent,
+    string? Rationale,
+    string? Classification = null,
+    string? SummaryOfChanges = null,
+    IReadOnlyList<string>? ImpactedElements = null,
+    string? TransitionPolicy = null,
+    Guid? ProtocolVersionId = null);
+
 /// <summary>Request body for <c>POST /api/v1/kernel/protocol-versions/{versionRef}/approve</c>.</summary>
 /// <param name="Meaning">Attestation meaning (defaults to <c>Approved</c>).</param>
 /// <param name="ExpectedContentHash">Optional frozen protocol content hash expected by the signer (21 CFR 11.70).</param>
@@ -18,6 +35,40 @@ public sealed record KernelApproveProtocolVersionRequest(
     string? ExpectedContentHash = null,
     Guid? AttestationId = null,
     string? ReviewAttestationRef = null);
+
+/// <summary>Request body for <c>POST /api/v1/kernel/protocol-versions/{versionRef}/withdraw</c>.</summary>
+/// <param name="Meaning">Attestation meaning (defaults to <c>Withdrawn</c>).</param>
+/// <param name="ExpectedContentHash">Optional frozen protocol content hash expected by the signer (21 CFR 11.70).</param>
+/// <param name="AttestationId">Optional caller-assigned attestation UUID; derived deterministically when omitted.</param>
+public sealed record KernelWithdrawProtocolVersionRequest(
+    string? Meaning = null,
+    string? ExpectedContentHash = null,
+    Guid? AttestationId = null);
+
+/// <summary>Read-only approval-readiness evaluation for <c>GET /api/v1/kernel/protocol-versions/{versionRef}/approval-readiness</c> (K-PROT-2, K-SIM-5, ADR-2482).</summary>
+/// <param name="ProtocolVersionRef">Canonical NodeRef of the evaluated protocol version (<c>protocol_version:&lt;uuid&gt;</c>).</param>
+/// <param name="Status">Current lifecycle status of the protocol version.</param>
+/// <param name="IsAmendment">True when the protocol version was forked from a parent version.</param>
+/// <param name="ParentVersionRef">Canonical or wire-masked NodeRef of the parent protocol version when forked, otherwise null.</param>
+/// <param name="Ready">True when the version is frozen in review and satisfies all approval preconditions.</param>
+/// <param name="SimulationReportSaved">True when a matching <c>SimulationReport</c> artifact version exists.</param>
+/// <param name="ReviewSigned">True when a verified <c>Reviewed</c> attestation exists over a matching simulation report.</param>
+/// <param name="SimulationReportArtifactVersionRef">Canonical or wire-masked NodeRef of the matching <c>SimulationReport</c> artifact version when saved, otherwise null.</param>
+/// <param name="ReviewAttestationRef">Canonical or wire-masked NodeRef of the verified <c>Reviewed</c> attestation when signed, otherwise null.</param>
+/// <param name="BlockingCode">Stable kernel error code when approval would be refused, otherwise null.</param>
+/// <param name="Explanation">Wire-masked kernel explanation detailing met and unmet approval conditions.</param>
+public sealed record KernelProtocolApprovalReadinessResponse(
+    string ProtocolVersionRef,
+    string Status,
+    bool IsAmendment,
+    string? ParentVersionRef,
+    bool Ready,
+    bool SimulationReportSaved,
+    bool ReviewSigned,
+    string? SimulationReportArtifactVersionRef,
+    string? ReviewAttestationRef,
+    string? BlockingCode,
+    KernelExplanationResponse Explanation);
 
 /// <summary>Request body for <c>POST /api/v1/kernel/studies/{studyRef}/artifacts</c>.</summary>
 /// <param name="Kind">Artifact kind, such as <c>EthicsApproval</c>, <c>RegulatoryApproval</c>, or <c>CtaAcknowledgement</c>.</param>

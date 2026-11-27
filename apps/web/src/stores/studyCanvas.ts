@@ -9,7 +9,7 @@ import {
   type SubjectList,
   type SubjectSummary,
 } from "../api/executionApi";
-import { kernelApi } from "../api/kernelApi";
+import { kernelApi, type KernelExplanation } from "../api/kernelApi";
 import {
   clearKernelStudyCache,
   findEnrollmentScheduleOptions,
@@ -182,6 +182,8 @@ const inFlightSchedules = new WeakMap<
 export interface ExplainRequestOptions {
   fromShortcut?: boolean;
   targetNodeRef?: string | null;
+  title?: string | null;
+  explanation?: KernelExplanation | null;
 }
 export type ExplainCoordinatorHandler = (
   options?: ExplainRequestOptions
@@ -190,14 +192,18 @@ const explainCoordinators = new WeakMap<
   object,
   Set<ExplainCoordinatorHandler>
 >();
+export type InspectorVerbRequest =
+  "details" | "trace" | "impact" | "explain" | "simulate" | "act" | "assist";
 export interface InspectorFocusOptions {
   nodeRef?: string | null;
   scrollIntoView?: boolean;
+  verb?: InspectorVerbRequest | null;
 }
 export interface InspectorFocusRequest {
   seq: number;
   nodeRef: string | null;
   scrollIntoView: boolean;
+  verb: InspectorVerbRequest | null;
 }
 export type InspectorFocusCoordinatorHandler = (
   request: InspectorFocusRequest
@@ -213,6 +219,10 @@ const pendingInspectorFocus = new WeakMap<
 >();
 let palettePromise: Promise<boolean> | null = null;
 let palettePromiseKey = "";
+
+function coordinatorKey(store: object): object {
+  return (store as { _p?: object })._p ?? store;
+}
 
 export function isEditableShortcutTarget(target: EventTarget | null): boolean {
   if (!target || typeof target !== "object") return false;
@@ -297,6 +307,8 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
     scheduleOptions: null as StudyScheduleOptions | null,
     scheduleLoading: false,
     scheduleError: null as string | null,
+    /** Incremented when inspector simulation persistence or review sign-off mutates protocol governance readiness. */
+    protocolGovernanceRevision: 0,
     /**
      * The open participant's record: the participant's kernel enrollment, by subject code. Its eCRF queries are read
      * by enrollment id (#5461); `enrollmentId` is null when the kernel has no single enrollment for the participant.
@@ -443,7 +455,8 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
         }
         return cached;
       }
-      const existing = inFlightSchedules.get(this);
+      const storeKey = coordinatorKey(this);
+      const existing = inFlightSchedules.get(storeKey);
       if (!force && existing && existing.cacheKey === cacheKey) {
         return existing.promise;
       }
@@ -477,15 +490,15 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
           this.scheduleError = err instanceof Error ? err.message : String(err);
           return null;
         } finally {
-          if (inFlightSchedules.get(this)?.request === request) {
-            inFlightSchedules.delete(this);
+          if (inFlightSchedules.get(storeKey)?.request === request) {
+            inFlightSchedules.delete(storeKey);
           }
           if (request === scheduleRequest) {
             this.scheduleLoading = false;
           }
         }
       })();
-      inFlightSchedules.set(this, { cacheKey, request, promise });
+      inFlightSchedules.set(storeKey, { cacheKey, request, promise });
       return promise;
     },
 
@@ -1285,10 +1298,11 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
      * Stored outside Pinia `$state` so switching studies (`openStudy` -> `$reset`) preserves active listeners.
      */
     registerExplainCoordinator(handler: ExplainCoordinatorHandler): () => void {
-      let set = explainCoordinators.get(this);
+      const storeKey = coordinatorKey(this);
+      let set = explainCoordinators.get(storeKey);
       if (!set) {
         set = new Set();
-        explainCoordinators.set(this, set);
+        explainCoordinators.set(storeKey, set);
       }
       set.add(handler);
       return () => {
@@ -1297,7 +1311,7 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
     },
 
     unregisterExplainCoordinator(handler: ExplainCoordinatorHandler): void {
-      explainCoordinators.get(this)?.delete(handler);
+      explainCoordinators.get(coordinatorKey(this))?.delete(handler);
     },
 
     /**
@@ -1305,7 +1319,7 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
      * Returns `true` when an active study selection or explanation handled the request.
      */
     requestExplain(options?: ExplainRequestOptions): boolean {
-      const set = explainCoordinators.get(this);
+      const set = explainCoordinators.get(coordinatorKey(this));
       if (!set || set.size === 0) return false;
       // Invoke in reverse registration order so the innermost mounted CanvasInspector handles first,
       // falling back to StudyCanvasView when a study-level panel passes a targetNodeRef with no current selection.
@@ -1356,33 +1370,40 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
     registerInspectorCoordinator(
       handler: InspectorFocusCoordinatorHandler
     ): () => void {
-      inspectorCoordinators.set(this, handler);
-      const pending = pendingInspectorFocus.get(this);
+      const storeKey = coordinatorKey(this);
+      inspectorCoordinators.set(storeKey, handler);
+      const pending = pendingInspectorFocus.get(storeKey);
       if (pending) {
-        pendingInspectorFocus.delete(this);
+        pendingInspectorFocus.delete(storeKey);
         void handler(pending);
       }
       return () => {
-        if (inspectorCoordinators.get(this) === handler) {
-          inspectorCoordinators.delete(this);
+        if (inspectorCoordinators.get(storeKey) === handler) {
+          inspectorCoordinators.delete(storeKey);
         }
       };
+    },
+
+    notifyProtocolGovernanceChanged(): void {
+      this.protocolGovernanceRevision++;
     },
 
     async requestInspectorFocus(
       options?: InspectorFocusOptions
     ): Promise<void> {
+      const storeKey = coordinatorKey(this);
       const request: InspectorFocusRequest = {
         seq: ++inspectorFocusSeq,
         nodeRef: options?.nodeRef ?? null,
         scrollIntoView: options?.scrollIntoView !== false,
+        verb: options?.verb ?? null,
       };
-      const handler = inspectorCoordinators.get(this);
+      const handler = inspectorCoordinators.get(storeKey);
       if (handler) {
-        pendingInspectorFocus.delete(this);
+        pendingInspectorFocus.delete(storeKey);
         await handler(request);
       } else {
-        pendingInspectorFocus.set(this, request);
+        pendingInspectorFocus.set(storeKey, request);
       }
     },
   },

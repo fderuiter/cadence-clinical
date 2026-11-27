@@ -1,4 +1,3 @@
-import { buildAmendmentReconsentPayload } from "demo-fixtures/mocks";
 import { http, HttpResponse } from "msw";
 import { readJsonBody } from "./shared.js";
 
@@ -11,48 +10,6 @@ export function createAmendmentsAndSoaHandlers(store) {
       HttpResponse.json([])
     ),
     http.get("*/api/v1/execution/coding/synonyms", () => HttpResponse.json([])),
-    http.get(
-      "*/api/v1/execution/amendments/:studyId/subject-impact",
-      ({ params }) =>
-        HttpResponse.json({
-          study_id: params.studyId,
-          target_version: "2.0",
-          impacted_subjects: [],
-          total_impacted: 0,
-        })
-    ),
-    http.post("*/api/v1/designer/amendments/diff", async ({ request }) => {
-      const body = await readJsonBody(request);
-      return HttpResponse.json({
-        study_id: body?.study_id || "DEMO-01",
-        base_version_tag: body?.base_version_tag || "1.0.0",
-        amended_version_tag: body?.amended_version_tag || "2.0.0",
-        impact_summary: {
-          impacted_sites: 2,
-          subjects_requiring_reconsent: 2,
-          added_procedures: 1,
-          modified_visits: 1,
-        },
-        soa_matrix_diffs: [],
-      });
-    }),
-    http.post("*/api/v1/designer/amendments/branch", async ({ request }) => {
-      const body = await readJsonBody(request);
-      return HttpResponse.json({
-        status: "BRANCHED",
-        study_id: body?.study_id || "DEMO-01",
-        version_tag: body?.target_version_tag || "2.0.0",
-      });
-    }),
-    http.post("*/api/v1/execution/amendments/publish", () =>
-      HttpResponse.json({ status: "PUBLISHED" })
-    ),
-    http.post("*/api/v1/execution/amendments/reconsent", () =>
-      HttpResponse.json(buildAmendmentReconsentPayload({ status: "COMPLETED" }))
-    ),
-    http.post("*/api/v1/execution/amendments/bulk-reconsent", () =>
-      HttpResponse.json({ status: "COMPLETED", updated_count: 1 })
-    ),
     http.get(
       "*/api/v1/studies/:studyId/versions/:versionId/soa-projection",
       ({ params }) => {

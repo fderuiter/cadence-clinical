@@ -5,6 +5,7 @@ Generated from `docs/openapi/kernel_openapi.json` by `pnpm cadence generate-api-
 | Method | Path | Operation | Summary |
 | ------ | ---- | --------- | ------- |
 | `GET` | `/api/v1/kernel/activity` | KernelActivity | What happened in a scope, newest first. |
+| `POST` | `/api/v1/kernel/artifact-versions/{artifactVersionRef}/review` | KernelReviewArtifactVersion | Records a 21 CFR Part 11 Reviewed attestation bound to an immutable artifact version's content hash (attestation.sign, K-SIM-5). |
 | `POST` | `/api/v1/kernel/assertions/{assertionRef}/retraction` | KernelRetractAssertion | Retracts a verification, answer or query assertion with the signed reason for change (assertion.retract). |
 | `GET` | `/api/v1/kernel/authorization/can-i` | KernelCanI | Whether the caller may exercise a capability on an object now, and why. |
 | `POST` | `/api/v1/kernel/effectivities/{effectivityRef}/status` | KernelChangeEffectivityStatus | Transitions an effectivity's status in valid time with supporting approval artifact evidence (effectivity.change_status, K-TIME-5). |
@@ -39,13 +40,16 @@ Generated from `docs/openapi/kernel_openapi.json` by `pnpm cadence generate-api-
 | `POST` | `/api/v1/kernel/proposals/{proposalRef}/rejection` | KernelRejectProposal | Rejects an open proposal; the signed reason for change is the rejection reason (proposal.reject). |
 | `GET` | `/api/v1/kernel/protocol-templates` | KernelListProtocolTemplates | Lists bundled standard CDISC Library eCRF templates available for protocol draft import. |
 | `GET` | `/api/v1/kernel/protocol-versions/{versionRef}` | KernelGetProtocolVersion | One protocol version, without its content. |
+| `GET` | `/api/v1/kernel/protocol-versions/{versionRef}/approval-readiness` | KernelGetProtocolApprovalReadiness | Evaluates read-only approval readiness, simulation report binding, and wire-masked explanation items for a protocol version prior to step-up authentication (K-PROT-2, K-SIM-5). |
 | `POST` | `/api/v1/kernel/protocol-versions/{versionRef}/approve` | KernelApproveProtocolVersion | Records a 21 CFR Part 11 Approved attestation bound to the frozen protocol content hash and approves the protocol version (protocol.approve). |
 | `GET` | `/api/v1/kernel/protocol-versions/{versionRef}/design-summary` | KernelGetProtocolDesignSummary | Returns a viewable summary of a protocol version's forms, ordered items, and import notes. |
 | `POST` | `/api/v1/kernel/protocol-versions/{versionRef}/effectivities` | KernelDeclareEffectivity | Declares a Pending protocol-version effectivity for the whole study, a country, or one study site (effectivity.declare). |
+| `POST` | `/api/v1/kernel/protocol-versions/{versionRef}/fork` | KernelForkProtocolVersion | Forks an approved protocol version into the study's next numbered Draft protocol amendment without importing external files (protocol.amend). |
 | `GET` | `/api/v1/kernel/protocol-versions/{versionRef}/impact` | KernelAmendmentImpact | What depends on the version a protocol amendment changes (K-PROT-2). |
 | `POST` | `/api/v1/kernel/protocol-versions/{versionRef}/return-to-draft` | KernelReturnProtocolVersionToDraft | Returns an InReview protocol version to Draft, clearing its content hash so it can be revised (protocol.return_to_draft). |
 | `GET` | `/api/v1/kernel/protocol-versions/{versionRef}/schedule-of-activities` | KernelGetScheduleOfActivities | A protocol version's Schedule of Activities, compiled from its design. |
 | `POST` | `/api/v1/kernel/protocol-versions/{versionRef}/submit-for-review` | KernelSubmitProtocolVersionForReview | Freezes a draft protocol version's content, computes its content hash, and moves it to InReview (protocol.submit_for_review). |
+| `POST` | `/api/v1/kernel/protocol-versions/{versionRef}/withdraw` | KernelWithdrawProtocolVersion | Records a 21 CFR Part 11 Withdrawn attestation bound to the frozen protocol content hash and withdraws an InReview or Approved protocol version (protocol.withdraw). |
 | `POST` | `/api/v1/kernel/protocols/matrix-gap-check` | KernelMatrixGapCheck | Performs immediate real-time matrix gap check on a candidate protocol design graph. |
 | `GET` | `/api/v1/kernel/search` | KernelSearch | Finds kernel objects in the caller's tenant by code or title. |
 | `POST` | `/api/v1/kernel/simulation/simulate` | KernelSimulateProtocol | Evaluates a candidate protocol version, mapping specification, or rule pack in memory at a bitemporal (valid_at, known_at) instant without database changes. |

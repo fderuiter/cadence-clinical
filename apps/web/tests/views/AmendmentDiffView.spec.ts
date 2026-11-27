@@ -1,332 +1,331 @@
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-
-// The view reaches the Designer API (amendment diff + branch) through designerService, which is built
-// on openapi-fetch and calls the global fetch with a Request. Stub fetch before any import so no test
-// reaches the real network; the remaining Execution calls still go through the mocked apiClient.
-const { mockFetch } = vi.hoisted(() => {
-  const mockFetch = vi.fn();
-  vi.stubGlobal("fetch", mockFetch);
-  return { mockFetch };
-});
-
 import { mount, flushPromises } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
+import { createMemoryHistory, createRouter } from "vue-router";
+import { getResponse } from "msw";
 import AmendmentDiffView from "@/views/AmendmentDiffView.vue";
+import { AVAILABLE_SCREENS } from "@/router/availability";
+import { router as appRouter } from "@/router";
 import { useAuthStore } from "@/stores/auth";
-import { useClinicalStore } from "@/stores/clinical";
-import { apiClient } from "@/api/apiClient";
-import { jsonResponse, recordedRequest } from "../fetch_mock.js";
+import { useStudyCanvasStore } from "@/stores/studyCanvas";
+import { createWebDemoStore } from "@/mocks/demoStore";
+import { buildWebGatewayHandlers } from "@/mocks/handlers";
 
-const amendmentDiffFixture = {
-  baseVersion: "1.0.0",
-  amendedVersion: "2.0.0",
-  requiresReconsent: true,
-  structureDiff: {
-    addedArms: [{ id: "arm_c", name: "Dose Escalation Cohort C" }],
-    modifiedEpochs: [{ id: "epoch_treat", name: "Extended Treatment" }],
-  },
-  soaDiff: {
-    addedVisits: [{ id: "v_week_16", name: "Week 16 Follow-up" }],
-    modifiedProcedures: [{ id: "proc_biomarker", name: "PK Blood Sampling" }],
-  },
-  eligibilityDiff: {
-    addedCriteria: [{ id: "crit_alt_01", text: "ALT/AST <= 2.5x ULN" }],
-  },
-};
-
-/** Every request the fetch stub received, decoded. */
-async function fetchRequests() {
-  return Promise.all(
-    mockFetch.mock.calls.map((_, i) => recordedRequest(mockFetch, i))
-  );
+function collectSourceFiles(dir: string, acc: string[] = []): string[] {
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const full = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      if (entry.name === "node_modules" || entry.name === "dist") continue;
+      collectSourceFiles(full, acc);
+    } else if (/\.(ts|js|vue)$/.test(entry.name)) {
+      acc.push(full);
+    }
+  }
+  return acc;
 }
 
-vi.mock("@/api/apiClient", () => {
-  return {
-    apiClient: {
-      get: vi.fn(),
-      post: vi.fn(),
-      put: vi.fn(),
-      delete: vi.fn(),
-    },
-  };
-});
-
-describe("AmendmentDiffView.vue - Protocol Amendments & Semantic Diff Specification", () => {
-  let pinia: any;
-  let authStore: any;
-  let clinicalStore: any;
+describe("Consolidated Protocol Amendments & Stateful MSW Kernel Governance", () => {
+  let pinia: ReturnType<typeof createPinia>;
 
   beforeEach(() => {
     pinia = createPinia();
     setActivePinia(pinia);
-
-    authStore = useAuthStore();
-    clinicalStore = useClinicalStore();
-
+    const authStore = useAuthStore();
     authStore.isAuthenticated = true;
-    authStore.rawRoles = ["Sponsor Designer", "Medical Monitor"];
-
-    vi.mocked(apiClient.get).mockImplementation((url) => {
-      if (url.includes("/amendments") || url.includes("/diff")) {
-        return Promise.resolve(amendmentDiffFixture);
-      }
-      return Promise.resolve([]);
-    });
-
-    vi.mocked(apiClient.post).mockResolvedValue({ status: "SUCCESS" });
-    vi.clearAllMocks();
-
-    mockFetch.mockReset();
-    mockFetch.mockImplementation(async (input: Request) => {
-      const { pathname } = new URL(input.url);
-      if (pathname.endsWith("/amendments/diff")) {
-        return jsonResponse(amendmentDiffFixture);
-      }
-      return jsonResponse({ status: "SUCCESS" });
-    });
+    authStore.rawRoles = ["Sponsor Designer"];
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  it("renders the protocol amendment comparison header and controls", () => {
-    const wrapper = mount(AmendmentDiffView, {
-      global: { plugins: [pinia] },
+  it("retires all legacy designer/amendments and execution/amendments references across apps/web", () => {
+    const webRoot = join(__dirname, "..", "..");
+    const files = [
+      ...collectSourceFiles(join(webRoot, "src")),
+      ...collectSourceFiles(join(webRoot, "tests")),
+    ].filter((file) => !file.endsWith("AmendmentDiffView.spec.ts"));
+
+    const legacyDesignerPath = ["designer", "amendments"].join("/");
+    const legacyExecutionPath = ["execution", "amendments"].join("/");
+
+    const offending = files.filter((file) => {
+      const text = readFileSync(file, "utf8");
+      return (
+        text.includes(legacyDesignerPath) || text.includes(legacyExecutionPath)
+      );
     });
 
-    expect(wrapper.text()).toContain(
-      "Protocol Amendments & In-Flight Subject Migration"
+    expect(offending).toEqual([]);
+    expect(AVAILABLE_SCREENS.has("amendment-diff")).toBe(true);
+  });
+
+  it("redirects /amendment-diff to /studies/:studyCode?stage=design&section=protocol-versions", async () => {
+    const canvasStore = useStudyCanvasStore();
+    canvasStore.studyCode = "CADENCE-101";
+
+    await appRouter.push("/amendment-diff");
+    await appRouter.isReady();
+
+    expect(appRouter.currentRoute.value.name).toBe("study");
+    expect(appRouter.currentRoute.value.params.studyCode).toBe("CADENCE-101");
+    expect(appRouter.currentRoute.value.query).toMatchObject({
+      stage: "design",
+      section: "protocol-versions",
+    });
+  });
+
+  it("mounts consolidated AmendmentDiffView with ProtocolVersionsSection and Part 11 Governance modal", async () => {
+    const demoStore = createWebDemoStore();
+    const handlers = buildWebGatewayHandlers({
+      forceDemo: true,
+      store: demoStore,
+    });
+    const origFetch = globalThis.fetch;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url =
+          input instanceof Request
+            ? input.url
+            : new URL(String(input), "http://localhost").href;
+        const headers = new Headers(
+          input instanceof Request ? input.headers : init?.headers
+        );
+        headers.set("X-Demo-Persona", "sponsor_designer");
+        const req = new Request(url, {
+          method:
+            init?.method || (input instanceof Request ? input.method : "GET"),
+          headers,
+          body:
+            init?.body ??
+            (input instanceof Request &&
+            input.method !== "GET" &&
+            input.method !== "HEAD"
+              ? await input.clone().text()
+              : undefined),
+        });
+        const res = await getResponse(handlers, req);
+        return res ?? new Response("Not handled", { status: 501 });
+      })
     );
-    expect(wrapper.find("#btn-create-amendment").exists()).toBe(true);
-    expect(wrapper.find("#base-version-select").exists()).toBe(true);
-    expect(wrapper.find("#amended-version-select").exists()).toBe(true);
-  });
 
-  it("displays re-consent gating status and subject impact counters", () => {
-    const wrapper = mount(AmendmentDiffView, {
-      global: { plugins: [pinia] },
-    });
+    try {
+      const stubRouter = createRouter({
+        history: createMemoryHistory(),
+        routes: [
+          {
+            path: "/studies/:studyCode?",
+            name: "study",
+            component: { template: "<div />" },
+          },
+        ],
+      });
+      await stubRouter.push("/studies/CADENCE-101");
+      await stubRouter.isReady();
 
-    expect(wrapper.text()).toContain(
-      "In-Flight Subject Migration & Re-Consent Analyzer"
-    );
-    expect(wrapper.text()).toContain("Re-Consent Mandated");
-    expect(wrapper.text()).toContain("IMMUTABLE BRANCH");
-  });
+      const wrapper = mount(AmendmentDiffView, {
+        global: { plugins: [pinia, stubRouter] },
+        attachTo: document.body,
+      });
+      await flushPromises();
 
-  it("opens create amendment modal when trigger button is clicked", async () => {
-    const wrapper = mount(AmendmentDiffView, {
-      global: { plugins: [pinia] },
-    });
+      expect(wrapper.find("#amendment-diff-view").exists()).toBe(true);
+      expect(wrapper.find("#protocol-versions-section").exists()).toBe(true);
+      expect(
+        wrapper
+          .find("[data-testid='open-canvas-protocol-versions-link']")
+          .exists()
+      ).toBe(true);
 
-    const createBtn = wrapper.find("#btn-create-amendment");
-    await createBtn.trigger("click");
-    await wrapper.vm.$nextTick();
+      await wrapper
+        .find("[data-testid='open-amendment-governance-modal']")
+        .trigger("click");
+      await flushPromises();
+      expect(wrapper.text()).toContain(
+        "21 CFR Part 11 Protocol Amendment Governance"
+      );
 
-    expect((wrapper.vm as Record<string, any>).showCreateModal).toBe(true);
-  });
-
-  it("supports switching between diff inspector tabs", async () => {
-    const wrapper = mount(AmendmentDiffView, {
-      global: { plugins: [pinia] },
-    });
-
-    const tabs = wrapper.findAll(".tab-btn");
-    if (tabs.length > 1) {
-      await tabs[1].trigger("click");
-      await wrapper.vm.$nextTick();
-      expect(tabs[1].classes()).toContain("active");
+      wrapper.unmount();
+    } finally {
+      vi.stubGlobal("fetch", origFetch);
     }
   });
 
-  it("guides study manager through the 4-step upversioning wizard and publishes via API", async () => {
-    const wrapper = mount(AmendmentDiffView, {
-      global: { plugins: [pinia] },
+  it("executes fork, submit-for-review, simulate, save simulation report, Reviewed sign-off, approval-readiness, approve, and withdraw in MSW without HTTP 501", async () => {
+    const demoStore = createWebDemoStore();
+    const handlers = buildWebGatewayHandlers({
+      forceDemo: true,
+      store: demoStore,
     });
 
-    // Launch wizard
-    const vm = wrapper.vm as Record<string, any>;
-    const createBtn = wrapper.find("#btn-create-amendment");
-    await createBtn.trigger("click");
-    await wrapper.vm.$nextTick();
+    let idempSeq = 0;
+    async function dispatchDemo(
+      method: string,
+      path: string,
+      body?: unknown,
+      extraHeaders: Record<string, string> = {}
+    ) {
+      const headers = new Headers({
+        "X-Demo-Persona": "sponsor_designer",
+        ...extraHeaders,
+      });
+      if (method !== "GET") {
+        headers.set("Idempotency-Key", `demo-gov-${++idempSeq}`);
+        headers.set("X-Change-Reason", "Automated MSW governance verification");
+        if (body !== undefined) {
+          headers.set("Content-Type", "application/json");
+        }
+      }
+      const req = new Request(`http://localhost${path}`, {
+        method,
+        headers,
+        body: body !== undefined ? JSON.stringify(body) : undefined,
+      });
+      const res = await getResponse(handlers, req);
+      expect(res, `${method} ${path} should be handled`).toBeDefined();
+      expect(res!.status, `${method} ${path} must not return 501`).not.toBe(
+        501
+      );
+      const json = await res!.json();
+      return { status: res!.status, body: json };
+    }
 
-    expect(vm.wizardStep).toBe(1);
-    expect(wrapper.text()).toContain(
-      "Step 1: Amendment Classification & Scope"
+    // 1. List initial versions -> Version 2 is Approved
+    const initialList = await dispatchDemo(
+      "GET",
+      "/api/v1/kernel/studies/CADENCE-101/protocol-versions"
+    );
+    expect(initialList.status).toBe(200);
+    const v2 = initialList.body.find((v: any) => v.number === 2);
+    expect(v2.status).toBe("Approved");
+
+    // 2. Fork Version 3 Draft from Version 2
+    const forked = await dispatchDemo(
+      "POST",
+      `/api/v1/kernel/protocol-versions/${v2.ref}/fork`,
+      {
+        intent: "Extend Week 4 window to +/-3 days",
+        rationale: "Reduce out-of-window deviations",
+        classification: "NonSubstantial",
+        transition_policy: "NewParticipantsOnly",
+      }
+    );
+    expect(forked.status).toBe(201);
+    expect(forked.body.number).toBe(3);
+    expect(forked.body.status).toBe("Draft");
+    const v3Ref = String(forked.body.ref).split("@")[0];
+
+    // 3. Submit Version 3 for review -> InReview
+    const submitted = await dispatchDemo(
+      "POST",
+      `/api/v1/kernel/protocol-versions/${v3Ref}/submit-for-review`
+    );
+    expect(submitted.status).toBe(200);
+    expect(submitted.body.status).toBe("InReview");
+
+    // 4. Readiness before simulation report save -> ready: false
+    const unready = await dispatchDemo(
+      "GET",
+      `/api/v1/kernel/protocol-versions/${v3Ref}/approval-readiness`
+    );
+    expect(unready.status).toBe(200);
+    expect(unready.body.ready).toBe(false);
+    expect(unready.body.simulation_report_saved).toBe(false);
+    expect(unready.body.review_signed).toBe(false);
+    expect(unready.body.blocking_code).toBe(
+      "K.Protocol.SimulationReviewRequired"
     );
 
-    // Advance to Step 2
-    vm.goToWizardStep(2);
-    await wrapper.vm.$nextTick();
-    expect(vm.wizardStep).toBe(2);
-    expect(wrapper.text()).toContain(
-      "Step 2: Target Version & Study Scope Selection"
+    // 5. Attempting approve before simulation review returns 409 K.Protocol.SimulationReviewRequired
+    const blockedApprove = await dispatchDemo(
+      "POST",
+      `/api/v1/kernel/protocol-versions/${v3Ref}/approve`,
+      { meaning: "Approved" },
+      { "X-Sig-Token": "demo_sig_tok_blocked" }
+    );
+    expect(blockedApprove.status).toBe(409);
+    expect(blockedApprove.body.code).toBe(
+      "K.Protocol.SimulationReviewRequired"
     );
 
-    // Advance to Step 3 (Predictive impact analysis)
-    vm.goToWizardStep(3);
-    await wrapper.vm.$nextTick();
-    expect(vm.wizardStep).toBe(3);
-    expect(wrapper.text()).toContain(
-      "Step 3: Predictive Site & Subject Impact Analysis"
+    // 6. Simulate candidate against parent and save SimulationReport
+    const simulated = await dispatchDemo(
+      "POST",
+      "/api/v1/kernel/simulation/simulate",
+      {
+        stored_version_ref: v3Ref,
+        base_version_ref: v2.ref,
+      }
+    );
+    expect(simulated.status).toBe(200);
+    expect(simulated.body.structural_diff.length).toBeGreaterThan(0);
+
+    const savedReport = await dispatchDemo(
+      "POST",
+      "/api/v1/kernel/studies/CADENCE-101/simulation-reports",
+      {
+        title: "Protocol Version 3 Simulation Report",
+        result: simulated.body,
+      }
+    );
+    expect(savedReport.status).toBe(201);
+    expect(savedReport.body.kind).toBe("SimulationReport");
+    const reportVerRef = savedReport.body.artifact_version_ref;
+
+    // 7. Sign Part 11 Reviewed attestation on the SimulationReport
+    const reviewed = await dispatchDemo(
+      "POST",
+      `/api/v1/kernel/artifact-versions/${reportVerRef}/review`,
+      {
+        meaning: "Reviewed",
+        expected_content_hash: savedReport.body.content_hash,
+      },
+      { "X-Sig-Token": "demo_sig_tok_review" }
+    );
+    expect(reviewed.status).toBe(200);
+    expect(reviewed.body.meaning).toBe("Reviewed");
+
+    // 8. Readiness is now ready: true with review_attestation_ref
+    const ready = await dispatchDemo(
+      "GET",
+      `/api/v1/kernel/protocol-versions/${v3Ref}/approval-readiness`
+    );
+    expect(ready.status).toBe(200);
+    expect(ready.body.ready).toBe(true);
+    expect(ready.body.simulation_report_saved).toBe(true);
+    expect(ready.body.review_signed).toBe(true);
+    expect(ready.body.review_attestation_ref).toBe(
+      reviewed.body.attestation_ref
     );
 
-    // Advance to Step 4 & publish
-    vm.goToWizardStep(4);
-    await wrapper.vm.$nextTick();
-    expect(vm.wizardStep).toBe(4);
-    expect(wrapper.find("#btn-publish-amendment").exists()).toBe(true);
-
-    // Trigger publish
-    await wrapper.find("#btn-publish-amendment").trigger("click");
-    await flushPromises();
-
-    // Designer branching goes through designerService (openapi-fetch -> fetch); the Execution
-    // publish that follows it can land after flushPromises(), so wait for it.
-    await vi.waitFor(() =>
-      expect(apiClient.post).toHaveBeenCalledWith(
-        "/api/v1/execution/amendments/publish",
-        expect.anything()
-      )
+    // 9. Approve Version 3 with Part 11 signature
+    const approved = await dispatchDemo(
+      "POST",
+      `/api/v1/kernel/protocol-versions/${v3Ref}/approve`,
+      {
+        meaning: "Approved",
+        expected_content_hash: submitted.body.content_hash,
+        review_attestation_ref: ready.body.review_attestation_ref,
+      },
+      { "X-Sig-Token": "demo_sig_tok_approve" }
     );
-    const branchRequests = (await fetchRequests()).filter(
-      (r) => new URL(r.url).pathname === "/api/v1/designer/amendments/branch"
+    expect(approved.status).toBe(200);
+    expect(approved.body.status).toBe("Approved");
+
+    // 10. Withdraw Version 3 with Part 11 signature
+    const withdrawn = await dispatchDemo(
+      "POST",
+      `/api/v1/kernel/protocol-versions/${v3Ref}/withdraw`,
+      {
+        meaning: "Withdrawn",
+        expected_content_hash: submitted.body.content_hash,
+      },
+      { "X-Sig-Token": "demo_sig_tok_withdraw" }
     );
-    expect(branchRequests).toHaveLength(1);
-    expect(branchRequests[0].method).toBe("POST");
-    expect(branchRequests[0].body).toEqual(
-      expect.objectContaining({
-        study_id: "CADENCE-101",
-        base_version_tag: "1.0.0",
-        amendment_type: "major",
-        requires_reconsent: true,
-      })
-    );
-
-    expect(apiClient.post).toHaveBeenCalledWith(
-      "/api/v1/execution/amendments/publish",
-      expect.objectContaining({
-        study_id: "CADENCE-101",
-        version_number: "2.0.0",
-      })
-    );
-  });
-
-  it("switches to site coordinator bulk workspace, filters by site, and executes bulk re-consent", async () => {
-    const wrapper = mount(AmendmentDiffView, {
-      global: { plugins: [pinia] },
-    });
-
-    // Switch to site coordinator mode
-    const navBtns = wrapper.findAll(".mode-nav-btn");
-    expect(navBtns.length).toBeGreaterThan(1);
-    await navBtns[1].trigger("click");
-    await wrapper.vm.$nextTick();
-
-    const vm = wrapper.vm as Record<string, any>;
-    expect(vm.activeMode).toBe("coordinator");
-    expect(wrapper.text()).toContain(
-      "Site Coordinator Bulk Re-Consent Workspace"
-    );
-
-    // Test site filter select
-    const siteSelect = wrapper.find("#site-filter-select");
-    expect(siteSelect.exists()).toBe(true);
-    await siteSelect.setValue("SITE-101");
-    await wrapper.vm.$nextTick();
-
-    expect(vm.siteFilter).toBe("SITE-101");
-
-    // Select gated subjects
-    vm.selectedSubjectIds = ["SUBJ-102", "SUBJ-103"];
-    await wrapper.vm.$nextTick();
-
-    // Verify sticky batch toolbar is displayed
-    const batchToolbar = wrapper.find("#sticky-batch-toolbar");
-    expect(batchToolbar.exists()).toBe(true);
-    expect(wrapper.text()).toContain("2 Subject(s) Selected");
-
-    // Open bulk re-consent modal
-    await wrapper.find("#btn-batch-reconsent").trigger("click");
-    await wrapper.vm.$nextTick();
-
-    expect(vm.showBulkReconsentModal).toBe(true);
-    expect(wrapper.find("#bulk-reconsent-modal").exists()).toBe(true);
-
-    // Execute bulk re-consent sign-off
-    await wrapper.find("#btn-submit-bulk-signature").trigger("click");
-    await flushPromises();
-
-    expect(apiClient.post).toHaveBeenCalledWith(
-      "/api/v1/execution/amendments/bulk-reconsent",
-      expect.objectContaining({
-        subject_ids: ["SUBJ-102", "SUBJ-103"],
-        study_id: "CADENCE-101",
-        protocol_version: "2.0.0",
-        signature_type: "ECONSENT",
-      })
-    );
-
-    // Verify subjects cleared. The ledger block is hashed with crypto.subtle, which can outlast
-    // flushPromises(), so wait for the view to finish rather than racing it.
-    await vi.waitFor(() => {
-      expect(vm.selectedSubjectIds).toEqual([]);
-      expect(vm.showBulkReconsentModal).toBe(false);
-    });
-  });
-
-  it("renders Amendment Impact Summary and multi-layer diff tabs", async () => {
-    const wrapper = mount(AmendmentDiffView, {
-      global: { plugins: [pinia] },
-    });
-    await flushPromises();
-
-    // Switch to graph diff tab
-    const tabs = wrapper.findAll(".tab-btn");
-    expect(tabs.length).toBeGreaterThan(1);
-    await tabs[1].trigger("click");
-    await wrapper.vm.$nextTick();
-
-    // Check Impact Summary section
-    expect(wrapper.text()).toContain("Protocol Amendment Impact Summary");
-    expect(wrapper.text()).toContain("Operational Burden Delta");
-    expect(wrapper.text()).toContain("MANDATORY RE-CONSENT GATED");
-
-    // Check layer buttons
-    const layerBtns = wrapper.findAll(".layer-tab-btn");
-    expect(layerBtns.length).toBe(3);
-    expect(layerBtns[0].text()).toContain("USDM Graph & SoA Matrix Diff");
-    expect(layerBtns[1].text()).toContain("Eligibility Criteria Diff");
-    expect(layerBtns[2].text()).toContain("eCRF Forms & Data Capture Diff");
-
-    // Switch to Eligibility layer
-    const vm = wrapper.vm as Record<string, any>;
-    await layerBtns[1].trigger("click");
-    await wrapper.vm.$nextTick();
-    expect(vm.activeDiffLayer).toBe("eligibility");
-    expect(wrapper.text()).toContain("Eligibility Criteria Modifications");
-
-    // Switch to eCRF Forms layer
-    await layerBtns[2].trigger("click");
-    await wrapper.vm.$nextTick();
-    expect(vm.activeDiffLayer).toBe("ecrf");
-    expect(wrapper.text()).toContain("eCRF Form Definitions");
-  });
-
-  it("hides internal microservice names ('Designer service') in error alerts when diff load fails", async () => {
-    const wrapper = mount(AmendmentDiffView, {
-      global: { plugins: [pinia] },
-    });
-    const vm = wrapper.vm as Record<string, any>;
-    vm.activeTab = "graph";
-    vm.diffLoadError = "HTTP 500 Internal Server Error in Designer service";
-    await wrapper.vm.$nextTick();
-
-    const errorAlert = wrapper.find('[data-testid="diff-load-error"]');
-    expect(errorAlert.exists()).toBe(true);
-    expect(errorAlert.text()).not.toContain("Designer service");
-    expect(errorAlert.text()).toContain("protocol design service");
+    expect(withdrawn.status).toBe(200);
+    expect(withdrawn.body.status).toBe("Withdrawn");
   });
 });

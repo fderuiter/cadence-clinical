@@ -6,20 +6,67 @@ import type { KernelLockMeaning, KernelProtocolVersion } from "./kernelApi";
 type Schemas = components["schemas"];
 
 export type KernelArtifact = Schemas["Kernel_KernelArtifactResponse"];
+export type KernelArtifactReviewAttestation =
+  Schemas["Kernel_KernelArtifactReviewAttestationResponse"];
+export type KernelProtocolApprovalReadiness =
+  Schemas["Kernel_KernelProtocolApprovalReadinessResponse"];
 export type KernelEffectivity = Schemas["Kernel_KernelEffectivityResponse"];
 export type KernelEffectiveVersion =
   Schemas["Kernel_KernelEffectiveVersionResponse"];
 export type KernelStudySite = Schemas["Kernel_KernelStudySiteResponse"];
 
+export type KernelAmendmentClassification =
+  "Substantial" | "NonSubstantial" | "UrgentSafetyMeasure";
+
+export type KernelTransitionPolicy =
+  "NewParticipantsOnly" | "RequiresReconsent" | "Automatic" | "ByCohort";
+
 /** Gateway step-up semantic action for `POST /api/v1/kernel/protocol-versions/{versionRef}/approve`. */
 export const PROTOCOL_APPROVE_SEMANTIC_ACTION =
   "kernel.protocol_version.approve";
+
+/** Gateway step-up semantic action for `POST /api/v1/kernel/protocol-versions/{versionRef}/withdraw`. */
+export const PROTOCOL_WITHDRAW_SEMANTIC_ACTION =
+  "kernel.protocol_version.withdraw";
+
+/** Gateway step-up semantic action for `POST /api/v1/kernel/artifact-versions/{artifactVersionRef}/review`. */
+export const ARTIFACT_VERSION_REVIEW_SEMANTIC_ACTION =
+  "kernel.artifact_version.review";
 
 /** Gateway step-up target URL for `POST /api/v1/kernel/protocol-versions/{versionRef}/approve`. */
 export function protocolVersionApproveAction(versionRef: string): string {
   const at = versionRef.indexOf("@");
   const clean = at < 0 ? versionRef : versionRef.slice(0, at);
   return `/api/v1/kernel/protocol-versions/${clean}/approve`;
+}
+
+/** Gateway step-up target URL for `POST /api/v1/kernel/protocol-versions/{versionRef}/withdraw`. */
+export function protocolVersionWithdrawAction(versionRef: string): string {
+  const at = versionRef.indexOf("@");
+  const clean = at < 0 ? versionRef : versionRef.slice(0, at);
+  return `/api/v1/kernel/protocol-versions/${clean}/withdraw`;
+}
+
+/** Gateway step-up target URL for `POST /api/v1/kernel/artifact-versions/{artifactVersionRef}/review`. */
+export function artifactVersionReviewAction(
+  artifactVersionRef: string
+): string {
+  const at = artifactVersionRef.indexOf("@");
+  const clean = at < 0 ? artifactVersionRef : artifactVersionRef.slice(0, at);
+  return `/api/v1/kernel/artifact-versions/${clean}/review`;
+}
+
+export interface KernelForkProtocolVersionInput {
+  parentVersionRef: string;
+  intent: string;
+  rationale: string;
+  classification?: KernelAmendmentClassification | string | null;
+  summaryOfChanges?: string | null;
+  impactedElements?: string[] | null;
+  transitionPolicy?: KernelTransitionPolicy | string | null;
+  protocolVersionId?: string | null;
+  reason: string;
+  idempotencyKey: string;
 }
 
 export interface KernelProtocolLifecycleRequest {
@@ -34,6 +81,26 @@ export interface KernelApproveProtocolVersionInput {
   expectedContentHash?: string | null;
   attestationId?: string | null;
   reviewAttestationRef?: string | null;
+  sigToken: string;
+  reason: string;
+  idempotencyKey: string;
+}
+
+export interface KernelWithdrawProtocolVersionInput {
+  versionRef: string;
+  meaning?: "Withdrawn" | string;
+  expectedContentHash?: string | null;
+  attestationId?: string | null;
+  sigToken: string;
+  reason: string;
+  idempotencyKey: string;
+}
+
+export interface KernelReviewArtifactVersionInput {
+  artifactVersionRef: string;
+  meaning?: "Reviewed" | string;
+  expectedContentHash?: string | null;
+  attestationId?: string | null;
   sigToken: string;
   reason: string;
   idempotencyKey: string;
@@ -116,6 +183,55 @@ function unversioned(nodeRef: string): string {
  * the `index.html` cold-boot bundle.
  */
 export const kernelGovernanceApi = {
+  /** Forks a Draft amendment protocol version from an Approved parent protocol version (K-PROT-2). */
+  forkProtocolVersion({
+    parentVersionRef,
+    intent,
+    rationale,
+    classification = "Substantial",
+    summaryOfChanges,
+    impactedElements,
+    transitionPolicy = "RequiresReconsent",
+    protocolVersionId,
+    reason,
+    idempotencyKey,
+  }: KernelForkProtocolVersionInput): Promise<KernelProtocolVersion> {
+    return unwrapResponse(
+      client.POST("/api/v1/kernel/protocol-versions/{versionRef}/fork", {
+        params: { path: { versionRef: unversioned(parentVersionRef) } },
+        body: {
+          intent,
+          rationale,
+          classification,
+          summary_of_changes: summaryOfChanges ?? null,
+          impacted_elements: impactedElements ?? [],
+          transition_policy: transitionPolicy,
+          ...(protocolVersionId
+            ? { protocol_version_id: protocolVersionId }
+            : {}),
+        },
+        headers: {
+          "X-Change-Reason": encodeChangeReason(reason),
+          "Idempotency-Key": idempotencyKey,
+        },
+      })
+    );
+  },
+
+  /** Queries approval readiness for a protocol version before consuming a single-use X-Sig-Token (K-PROT-2, K-SIM-5). */
+  getProtocolApprovalReadiness(
+    versionRef: string
+  ): Promise<KernelProtocolApprovalReadiness> {
+    return unwrapResponse(
+      client.GET(
+        "/api/v1/kernel/protocol-versions/{versionRef}/approval-readiness",
+        {
+          params: { path: { versionRef: unversioned(versionRef) } },
+        }
+      )
+    );
+  },
+
   /** Submits a Draft protocol version for review, freezing its design and computing its content hash. */
   submitProtocolVersionForReview({
     versionRef,
@@ -189,6 +305,35 @@ export const kernelGovernanceApi = {
     );
   },
 
+  /** Withdraws an InReview or Approved protocol version with a 21 CFR Part 11 Withdrawn signature (K-PROT-2). */
+  withdrawProtocolVersion({
+    versionRef,
+    meaning = "Withdrawn",
+    expectedContentHash,
+    attestationId,
+    sigToken,
+    reason,
+    idempotencyKey,
+  }: KernelWithdrawProtocolVersionInput): Promise<KernelProtocolVersion> {
+    return unwrapResponse(
+      client.POST("/api/v1/kernel/protocol-versions/{versionRef}/withdraw", {
+        params: { path: { versionRef: unversioned(versionRef) } },
+        body: {
+          meaning,
+          ...(expectedContentHash
+            ? { expected_content_hash: expectedContentHash }
+            : {}),
+          ...(attestationId ? { attestation_id: attestationId } : {}),
+        },
+        headers: {
+          "X-Change-Reason": encodeChangeReason(reason),
+          "Idempotency-Key": idempotencyKey,
+          "X-Sig-Token": sigToken,
+        },
+      })
+    );
+  },
+
   /** Saves an unmasked SimulationResult as an attestable SimulationReport artifact version (K-SIM-5). */
   saveSimulationReport({
     studyRef,
@@ -215,6 +360,40 @@ export const kernelGovernanceApi = {
           "Idempotency-Key": idempotencyKey,
         },
       })
+    );
+  },
+
+  /** Signs a 21 CFR Part 11 Reviewed attestation over an immutable ArtifactVersion such as a SimulationReport (K-SIM-5). */
+  reviewArtifactVersion({
+    artifactVersionRef,
+    meaning = "Reviewed",
+    expectedContentHash,
+    attestationId,
+    sigToken,
+    reason,
+    idempotencyKey,
+  }: KernelReviewArtifactVersionInput): Promise<KernelArtifactReviewAttestation> {
+    return unwrapResponse(
+      client.POST(
+        "/api/v1/kernel/artifact-versions/{artifactVersionRef}/review",
+        {
+          params: {
+            path: { artifactVersionRef: unversioned(artifactVersionRef) },
+          },
+          body: {
+            meaning,
+            ...(expectedContentHash
+              ? { expected_content_hash: expectedContentHash }
+              : {}),
+            ...(attestationId ? { attestation_id: attestationId } : {}),
+          },
+          headers: {
+            "X-Change-Reason": encodeChangeReason(reason),
+            "Idempotency-Key": idempotencyKey,
+            "X-Sig-Token": sigToken,
+          },
+        }
+      )
     );
   },
 

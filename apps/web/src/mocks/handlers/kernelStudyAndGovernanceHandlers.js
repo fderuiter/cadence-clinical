@@ -8,6 +8,7 @@ import {
   readIdempotencyKey,
   readJsonBody,
   readRequiredReasonHeader,
+  requireKernelMutationHeaders,
 } from "./shared.js";
 
 async function sha256Hex(bytes) {
@@ -190,6 +191,213 @@ export function createKernelStudyAndGovernanceHandlers(store) {
             decodeURIComponent(String(params.versionRef))
           )
         )
+    ),
+    http.get(
+      "*/api/v1/kernel/protocol-versions/:versionRef/approval-readiness",
+      ({ params }) => {
+        const result = store.getProtocolApprovalReadiness(
+          decodeURIComponent(String(params.versionRef))
+        );
+        if (result.error) return problemResponse(result.error);
+        return HttpResponse.json(result.data);
+      }
+    ),
+    http.post(
+      "*/api/v1/kernel/protocol-versions/:versionRef/fork",
+      async ({ params, request }) => {
+        const headerErr = requireKernelMutationHeaders(request);
+        if (headerErr) return headerErr;
+        const body = await readJsonBody(request);
+        const result = store.forkProtocolVersion(
+          decodeURIComponent(String(params.versionRef)),
+          body,
+          {
+            reason: readRequiredReasonHeader(request),
+            idempotencyKey: readIdempotencyKey(request),
+          }
+        );
+        if (result.error) return problemResponse(result.error);
+        return HttpResponse.json(result.data, {
+          status: result.replayed ? 200 : 201,
+        });
+      }
+    ),
+    http.post(
+      "*/api/v1/kernel/protocol-versions/:versionRef/submit-for-review",
+      ({ params, request }) => {
+        const headerErr = requireKernelMutationHeaders(request);
+        if (headerErr) return headerErr;
+        const result = store.submitProtocolVersionForReview(
+          decodeURIComponent(String(params.versionRef)),
+          {
+            reason: readRequiredReasonHeader(request),
+            idempotencyKey: readIdempotencyKey(request),
+          }
+        );
+        if (result.error) return problemResponse(result.error);
+        return HttpResponse.json(result.data);
+      }
+    ),
+    http.post(
+      "*/api/v1/kernel/protocol-versions/:versionRef/return-to-draft",
+      ({ params, request }) => {
+        const headerErr = requireKernelMutationHeaders(request);
+        if (headerErr) return headerErr;
+        const result = store.returnProtocolVersionToDraft(
+          decodeURIComponent(String(params.versionRef)),
+          {
+            reason: readRequiredReasonHeader(request),
+            idempotencyKey: readIdempotencyKey(request),
+          }
+        );
+        if (result.error) return problemResponse(result.error);
+        return HttpResponse.json(result.data);
+      }
+    ),
+    http.post(
+      "*/api/v1/kernel/protocol-versions/:versionRef/approve",
+      async ({ params, request }) => {
+        const headerErr = requireKernelMutationHeaders(request);
+        if (headerErr) return headerErr;
+        const body = await readJsonBody(request);
+        const sigToken =
+          request.headers.get("X-Sig-Token") ||
+          request.headers.get("x-sig-token") ||
+          "";
+        const result = store.approveProtocolVersion(
+          decodeURIComponent(String(params.versionRef)),
+          body,
+          {
+            reason: readRequiredReasonHeader(request),
+            idempotencyKey: readIdempotencyKey(request),
+            sigToken,
+          }
+        );
+        if (result.error) return problemResponse(result.error);
+        return HttpResponse.json(result.data);
+      }
+    ),
+    http.post(
+      "*/api/v1/kernel/protocol-versions/:versionRef/withdraw",
+      async ({ params, request }) => {
+        const headerErr = requireKernelMutationHeaders(request);
+        if (headerErr) return headerErr;
+        const body = await readJsonBody(request);
+        const sigToken =
+          request.headers.get("X-Sig-Token") ||
+          request.headers.get("x-sig-token") ||
+          "";
+        const result = store.withdrawProtocolVersion(
+          decodeURIComponent(String(params.versionRef)),
+          body,
+          {
+            reason: readRequiredReasonHeader(request),
+            idempotencyKey: readIdempotencyKey(request),
+            sigToken,
+          }
+        );
+        if (result.error) return problemResponse(result.error);
+        return HttpResponse.json(result.data);
+      }
+    ),
+    http.get("*/api/v1/kernel/studies/:studyRef/artifacts", ({ params }) =>
+      HttpResponse.json(
+        store.listStudyArtifacts(decodeURIComponent(String(params.studyRef)))
+      )
+    ),
+    http.post(
+      "*/api/v1/kernel/studies/:studyRef/artifacts",
+      async ({ params, request }) => {
+        const headerErr = requireKernelMutationHeaders(request);
+        if (headerErr) return headerErr;
+        const body = await readJsonBody(request);
+        const result = store.registerStudyArtifact(
+          decodeURIComponent(String(params.studyRef)),
+          body
+        );
+        if (result.error) return problemResponse(result.error);
+        return HttpResponse.json(result.data, { status: 201 });
+      }
+    ),
+    http.post(
+      "*/api/v1/kernel/studies/:studyRef/simulation-reports",
+      async ({ params, request }) => {
+        const headerErr = requireKernelMutationHeaders(request);
+        if (headerErr) return headerErr;
+        const body = await readJsonBody(request);
+        const result = store.saveSimulationReport(
+          decodeURIComponent(String(params.studyRef)),
+          body
+        );
+        if (result.error) return problemResponse(result.error);
+        return HttpResponse.json(result.data, { status: 201 });
+      }
+    ),
+    http.post(
+      "*/api/v1/kernel/artifact-versions/:artifactVersionRef/review",
+      async ({ params, request }) => {
+        const headerErr = requireKernelMutationHeaders(request);
+        if (headerErr) return headerErr;
+        const body = await readJsonBody(request);
+        const sigToken =
+          request.headers.get("X-Sig-Token") ||
+          request.headers.get("x-sig-token") ||
+          "";
+        const result = store.reviewArtifactVersion(
+          decodeURIComponent(String(params.artifactVersionRef)),
+          body,
+          { sigToken }
+        );
+        if (result.error) return problemResponse(result.error);
+        return HttpResponse.json(result.data);
+      }
+    ),
+    http.get("*/api/v1/kernel/studies/:studyRef/effectivities", ({ params }) =>
+      HttpResponse.json(
+        store.listStudyEffectivities(
+          decodeURIComponent(String(params.studyRef))
+        )
+      )
+    ),
+    http.post(
+      "*/api/v1/kernel/protocol-versions/:versionRef/effectivities",
+      async ({ params, request }) => {
+        const headerErr = requireKernelMutationHeaders(request);
+        if (headerErr) return headerErr;
+        const body = await readJsonBody(request);
+        const result = store.declareProtocolEffectivity(
+          decodeURIComponent(String(params.versionRef)),
+          body
+        );
+        if (result.error) return problemResponse(result.error);
+        return HttpResponse.json(result.data, { status: 201 });
+      }
+    ),
+    http.post(
+      "*/api/v1/kernel/effectivities/:effectivityRef/status",
+      async ({ params, request }) => {
+        const headerErr = requireKernelMutationHeaders(request);
+        if (headerErr) return headerErr;
+        const body = await readJsonBody(request);
+        const result = store.changeEffectivityStatus(
+          decodeURIComponent(String(params.effectivityRef)),
+          body
+        );
+        if (result.error) return problemResponse(result.error);
+        return HttpResponse.json(result.data);
+      }
+    ),
+    http.post(
+      "*/api/v1/kernel/study-sites/:studySiteRef/activate",
+      ({ params, request }) => {
+        const headerErr = requireKernelMutationHeaders(request);
+        if (headerErr) return headerErr;
+        const result = store.activateKernelStudySite(
+          decodeURIComponent(String(params.studySiteRef))
+        );
+        if (result.error) return problemResponse(result.error);
+        return HttpResponse.json(result.data);
+      }
     ),
     http.get("*/api/v1/kernel/protocol-versions/:versionRef", ({ params }) =>
       HttpResponse.json(
@@ -488,6 +696,9 @@ export function createKernelStudyAndGovernanceHandlers(store) {
     }),
     http.post("*/api/v1/kernel/simulation/simulate", async ({ request }) => {
       const body = await readJsonBody(request);
+      if (typeof store.simulateProtocolCandidate === "function") {
+        return HttpResponse.json(store.simulateProtocolCandidate(body));
+      }
       const now = new Date().toISOString();
       const targetRef =
         body?.stored_version_ref || body?.base_version_ref || DEFAULT_STUDY_REF;
