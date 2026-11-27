@@ -323,7 +323,7 @@
 
         <div
           v-else
-          class="articles-stream"
+          class="articles-stream focus-ring-inset"
           role="region"
           aria-label="SOP articles list"
           tabindex="0"
@@ -578,7 +578,7 @@
             id="sop-prose-viewer"
             role="tabpanel"
             aria-labelledby="knowledge-reader-tab-content"
-            class="reader-body-card"
+            class="reader-body-card focus-ring-inset"
             tabindex="0"
           >
             <div
@@ -597,7 +597,7 @@
             id="sop-versions-viewer"
             role="tabpanel"
             aria-labelledby="knowledge-reader-tab-versions"
-            class="reader-body-card"
+            class="reader-body-card focus-ring-inset"
             tabindex="0"
           >
             <div class="tab-section-header">
@@ -673,7 +673,7 @@
             id="sop-audit-viewer"
             role="tabpanel"
             aria-labelledby="knowledge-reader-tab-audit"
-            class="reader-body-card"
+            class="reader-body-card focus-ring-inset"
             tabindex="0"
           >
             <div class="tab-section-header">
@@ -2262,7 +2262,10 @@ export default {
   border-radius: 8px;
   padding: 14px 18px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    background-color 0.2s ease,
+    border-color 0.2s ease;
 }
 
 .stat-card:hover {
@@ -2275,6 +2278,11 @@ export default {
   border-color: var(--accent);
   background-color: var(--semantic-color-info-bg-soft);
   box-shadow: var(--shadow-focus-ring);
+}
+
+.stat-card-active:focus-visible {
+  box-shadow: 0 0 0 2px
+    var(--focus-ring-halo-color, var(--semantic-color-text-on-solid));
 }
 
 .stat-icon {
@@ -2398,7 +2406,10 @@ export default {
   border-radius: 6px;
   padding: 8px 10px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
   color: var(--primary);
 }
 
@@ -2562,9 +2573,10 @@ export default {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  max-height: 76px;
+  max-height: 84px;
   overflow-y: auto;
-  padding: 4px 2px;
+  padding: 6px;
+  margin: -2px -4px;
 }
 
 .tag-chip {
@@ -2581,7 +2593,10 @@ export default {
   font-weight: 600;
   color: var(--semantic-color-text);
   cursor: pointer;
-  transition: all 0.15s;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s,
+    color 0.15s;
   box-sizing: border-box;
 }
 
@@ -2617,7 +2632,10 @@ export default {
   border-radius: 6px;
   padding: 12px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -2628,19 +2646,15 @@ export default {
   box-shadow: var(--shadow-sm);
 }
 
-.stat-card:focus-visible,
-.tag-chips-scroll:focus-visible,
-.article-card:focus-visible,
-.articles-stream:focus-visible,
-.reader-body-card:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
 .article-card-selected {
   border-color: var(--accent);
   background-color: var(--semantic-color-surface-muted);
   box-shadow: var(--shadow-focus-ring);
+}
+
+.article-card-selected:focus-visible {
+  box-shadow: 0 0 0 2px
+    var(--focus-ring-halo-color, var(--semantic-color-text-on-solid));
 }
 
 .article-card-header {
@@ -3237,7 +3251,10 @@ export default {
   font-weight: 600;
   cursor: pointer;
   border: 1px solid transparent;
-  transition: all 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
 }
 
 .btn-sm {

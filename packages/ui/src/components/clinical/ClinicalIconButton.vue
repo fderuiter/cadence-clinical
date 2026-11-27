@@ -144,11 +144,6 @@ const iconPixelSize = computed(() => (props.size === "lg" ? 20 : 16));
   font-size: var(--font-size-md);
 }
 
-.clinical-icon-btn:focus-visible {
-  outline: 2px solid var(--semantic-color-primary);
-  outline-offset: 2px;
-}
-
 .clinical-icon-btn:disabled {
   opacity: 0.55;
   cursor: not-allowed;

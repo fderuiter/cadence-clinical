@@ -1391,7 +1391,10 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 6px;
-  transition: all 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
 }
 
 .tab-button:hover {

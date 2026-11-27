@@ -845,8 +845,16 @@ function handleBatchIngested(result) {
   font-size: 0.85rem;
   font-weight: 700;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
   box-shadow: var(--shadow-sm);
+}
+
+.btn-sync-toggle:focus-visible {
+  box-shadow: 0 0 0 2px
+    var(--focus-ring-halo-color, var(--semantic-color-text-on-solid));
 }
 
 .btn-sync-toggle.synced {
@@ -930,6 +938,7 @@ function handleBatchIngested(result) {
 }
 
 .series-nav-panel {
+  --focus-ring-color: var(--semantic-color-focus-ring-inverse);
   background-color: var(--semantic-color-surface-inverse);
   border: 1px solid var(--semantic-color-border-inverse);
   border-radius: 8px;
@@ -965,7 +974,10 @@ function handleBatchIngested(result) {
   border-radius: 6px;
   padding: 8px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
 }
 
 .series-item:hover {

@@ -1845,9 +1845,9 @@ function downloadDossierJson() {
   display: flex;
   gap: 8px;
   border-bottom: 2px solid var(--border);
-  margin-bottom: 20px;
+  margin: -6px -6px 20px -6px;
   overflow-x: auto;
-  padding-bottom: 4px;
+  padding: 6px;
 }
 
 .quality-tab-btn {
@@ -1862,7 +1862,10 @@ function downloadDossierJson() {
   display: flex;
   align-items: center;
   gap: 8px;
-  transition: all 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
   white-space: nowrap;
 }
 

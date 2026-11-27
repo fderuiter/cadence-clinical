@@ -7,6 +7,7 @@ import { noRawClinicalTableRule } from "./no-raw-clinical-table.mjs";
 import { noRawOverlaysRule } from "./no-raw-overlays.mjs";
 import { noSub12pxFontSizeRule } from "./no-sub12px-font-size.mjs";
 import { noSuppressedFocusOutlineRule } from "./no-suppressed-focus-outline.mjs";
+import { noTransitionAllRule } from "./no-transition-all.mjs";
 import { noUndefinedCssVarsRule } from "./no-undefined-css-vars.mjs";
 import { noUnguardedButtonStateRule } from "./no-unguarded-button-state.mjs";
 import { enhancedNoUnlabeledGlyphButtonRule } from "./no-unlabeled-glyph-button.mjs";
@@ -23,6 +24,7 @@ export const customVuePlugin = {
     "no-misused-ai-tokens": noMisusedAiTokensRule,
     "no-raw-overlays": noRawOverlaysRule,
     "no-suppressed-focus-outline": noSuppressedFocusOutlineRule,
+    "no-transition-all": noTransitionAllRule,
     "no-unlabeled-glyph-button": enhancedNoUnlabeledGlyphButtonRule,
     "no-emoji-glyphs": noEmojiGlyphsRule,
     "no-aria-label-mismatch": noAriaLabelMismatchRule,

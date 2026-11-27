@@ -17,8 +17,31 @@ fi
 
 if command -v taskset >/dev/null 2>&1; then
   affinity_output="$(taskset -cp "$$" 2>/dev/null || true)"
-  first_cpu="$(printf '%s\n' "${affinity_output}" | sed -nE 's/.*:[[:space:]]*([0-9]+).*/\1/p')"
-  cpu_core="${first_cpu:-0}"
+  affinity_list="$(printf '%s\n' "${affinity_output}" | sed -nE 's/.*:[[:space:]]*([0-9,-]+).*/\1/p')"
+  allowed_cpus=()
+  if [[ -n "${affinity_list}" ]]; then
+    IFS=',' read -ra cpu_ranges <<< "${affinity_list}"
+    for range in "${cpu_ranges[@]}"; do
+      if [[ "${range}" =~ ^([0-9]+)-([0-9]+)$ ]]; then
+        start_cpu="${BASH_REMATCH[1]}"
+        end_cpu="${BASH_REMATCH[2]}"
+        for ((c = start_cpu; c <= end_cpu; c++)); do
+          allowed_cpus+=("${c}")
+        done
+      elif [[ "${range}" =~ ^[0-9]+$ ]]; then
+        allowed_cpus+=("${range}")
+      fi
+    done
+  fi
+  worker_idx="${TEST_PARALLEL_INDEX:-0}"
+  if [[ ! "${worker_idx}" =~ ^[0-9]+$ ]]; then
+    worker_idx=0
+  fi
+  if (( ${#allowed_cpus[@]} > 0 )); then
+    cpu_core="${allowed_cpus[$((worker_idx % ${#allowed_cpus[@]}))]}"
+  else
+    cpu_core=0
+  fi
   if taskset -c "${cpu_core}" true >/dev/null 2>&1; then
     exec taskset -c "${cpu_core}" "${target_bin}" "$@"
   fi

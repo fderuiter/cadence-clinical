@@ -407,12 +407,6 @@ defineExpose({
   background-color: var(--semantic-color-error-bg-soft);
 }
 
-.clinical-dropzone-browse-btn:focus-visible,
-.clinical-dropzone-remove-btn:focus-visible {
-  outline: 2px solid var(--semantic-color-primary);
-  outline-offset: 2px;
-}
-
 .clinical-dropzone-browse-btn:disabled,
 .clinical-dropzone-remove-btn:disabled {
   cursor: not-allowed;

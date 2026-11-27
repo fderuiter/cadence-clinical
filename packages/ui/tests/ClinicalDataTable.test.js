@@ -1,4 +1,6 @@
 // @vitest-environment jsdom
+import fs from "fs";
+import path from "path";
 import { createApp, h, nextTick, ref } from "vue";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { toBeAccessible } from "../accessibility-matcher.js";
@@ -58,6 +60,8 @@ describe("ClinicalDataTable WCAG 2.2 keyboard & ARIA primitive", () => {
     const table = host.querySelector("table.clinical-table");
     const caption = table.querySelector("caption.sr-only");
 
+    expect(region.classList.contains("focus-ring-inset")).toBe(true);
+
     expect(heading).not.toBeNull();
     expect(heading.id).toMatch(/^clinical-data-table-title-/);
     expect(region.getAttribute("aria-labelledby")).toBe(heading.id);
@@ -82,6 +86,8 @@ describe("ClinicalDataTable WCAG 2.2 keyboard & ARIA primitive", () => {
     const glucoseSortBtn = headers[2].querySelector('button[type="button"]');
     expect(idSortBtn).not.toBeNull();
     expect(glucoseSortBtn).not.toBeNull();
+    expect(idSortBtn.classList.contains("focus-ring-inset")).toBe(true);
+    expect(glucoseSortBtn.classList.contains("focus-ring-inset")).toBe(true);
     expect(headers[1].getAttribute("aria-sort")).toBe("none");
     expect(headers[2].getAttribute("aria-sort")).toBe("none");
 
@@ -168,6 +174,7 @@ describe("ClinicalDataTable WCAG 2.2 keyboard & ARIA primitive", () => {
 
     const dataRows = Array.from(host.querySelectorAll("tbody tr.data-row"));
     expect(dataRows).toHaveLength(3);
+    expect(dataRows[0].classList.contains("focus-ring-inset")).toBe(true);
     expect(dataRows[0].getAttribute("tabindex")).toBe("0");
     expect(dataRows[0].getAttribute("aria-selected")).toBe("false");
 
@@ -433,5 +440,57 @@ describe("ClinicalDataTable WCAG 2.2 keyboard & ARIA primitive", () => {
 
     const audit = await toBeAccessible({ element: host });
     expect(audit.pass, audit.message()).toBe(true);
+  });
+
+  it("preserves computed -3px outline-offset and inset 5px halo on .table-wrapper, .sort-button, and .data-row when tokens.css is loaded", async () => {
+    const tokensCss = fs.readFileSync(
+      path.resolve(__dirname, "../tokens.css"),
+      "utf-8"
+    );
+    const sfcSource = fs.readFileSync(
+      path.resolve(
+        __dirname,
+        "../src/components/clinical/ClinicalDataTable.vue"
+      ),
+      "utf-8"
+    );
+    const scopedMatch = sfcSource.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
+    expect(scopedMatch).not.toBeNull();
+
+    const styleEl = document.createElement("style");
+    styleEl.textContent = `${tokensCss}\n${scopedMatch[1]}`;
+    document.head.appendChild(styleEl);
+
+    try {
+      const host = mountHost(
+        () => () =>
+          h(ClinicalDataTable, {
+            title: "Inset Focus Cohort",
+            columns,
+            data: sampleRows,
+            pageSize: 10,
+          })
+      );
+      await nextTick();
+
+      const wrapper = host.querySelector(".table-wrapper");
+      const sortBtn = host.querySelector(".sort-button");
+      const firstRow = host.querySelector("tbody tr.data-row");
+
+      for (const el of [wrapper, sortBtn, firstRow]) {
+        expect(el).not.toBeNull();
+        expect(el.classList.contains("focus-ring-inset")).toBe(true);
+        el.focus();
+        const cs = window.getComputedStyle(el);
+        expect(cs.outlineStyle).toBe("solid");
+        expect(cs.outlineWidth).toBe("3px");
+        expect(cs.outlineOffset).toBe("-3px");
+        expect(cs.boxShadow).toMatch(
+          /inset.*0px 0px 0px 5px|0px 0px 0px 5px.*inset/
+        );
+      }
+    } finally {
+      styleEl.remove();
+    }
   });
 });

@@ -1372,7 +1372,9 @@ const commitAndActivateEDC = async () => {
   text-align: center;
   background-color: var(--semantic-color-surface-muted);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease;
 }
 
 .dropzone:hover,
@@ -1911,7 +1913,10 @@ const commitAndActivateEDC = async () => {
   font-size: 0.95rem;
   color: var(--semantic-color-text-secondary);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1928,5 +1933,11 @@ const commitAndActivateEDC = async () => {
   border-color: var(--semantic-color-text);
   color: var(--semantic-color-text-inverse);
   box-shadow: var(--shadow-md);
+}
+
+.btn-mode.active:focus-visible {
+  box-shadow:
+    0 0 0 2px var(--focus-ring-halo-color, var(--semantic-color-text-on-solid)),
+    var(--shadow-md);
 }
 </style>

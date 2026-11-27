@@ -204,7 +204,10 @@ onMounted(() => {
   font-weight: 600;
   border-radius: var(--radius-xs);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
   box-sizing: border-box;
 }
 

@@ -171,7 +171,10 @@ const emit = defineEmits(["escalate", "open-hub", "close"]);
   font-size: 0.84rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.15s;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s,
+    color 0.15s;
 }
 
 .btn-escalate {

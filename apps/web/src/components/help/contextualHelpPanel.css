@@ -122,13 +122,21 @@
   font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.15s;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s,
+    color 0.15s;
 }
 
 .drawer-tab-btn.active {
   background-color: var(--semantic-color-surface);
   color: var(--text-main);
   box-shadow: var(--semantic-shadow-sm);
+}
+
+.drawer-tab-btn.active:focus-visible {
+  box-shadow: 0 0 0 2px
+    var(--focus-ring-halo-color, var(--semantic-color-text-on-solid));
 }
 
 .tab-count-pill {
@@ -501,24 +509,24 @@
   padding: 10px 12px;
   background-color: var(--semantic-color-surface-muted);
   cursor: pointer;
-  transition: all 0.15s ease-in-out;
+  transition:
+    background-color 0.15s ease-in-out,
+    border-color 0.15s ease-in-out,
+    color 0.15s ease-in-out;
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.related-card:hover:not(:disabled),
-.related-card:focus-visible {
+.related-card:hover:not(:disabled) {
   background-color: var(--semantic-color-surface);
   border-color: var(--accent);
   box-shadow: var(--semantic-shadow-sm);
 }
 
-.related-card:focus-visible,
-.search-result-card:focus-visible,
-.drawer-ticket-card:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+.related-card:focus-visible {
+  background-color: var(--semantic-color-surface);
+  border-color: var(--accent);
 }
 
 .related-card-top {
@@ -589,7 +597,10 @@
   padding: 10px 12px;
   background-color: var(--semantic-color-surface);
   cursor: pointer;
-  transition: all 0.15s;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s,
+    color 0.15s;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -676,7 +687,10 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  transition: all 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
 }
 
 .drawer-ticket-card:hover:not(:disabled) {
@@ -857,7 +871,10 @@
   font-weight: 600;
   border-radius: 6px;
   cursor: pointer;
-  transition: all 0.15s;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s,
+    color 0.15s;
   display: inline-flex;
   align-items: center;
   justify-content: center;

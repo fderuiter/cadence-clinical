@@ -3678,11 +3678,16 @@ onUnmounted(() => {
   flex-wrap: wrap;
   align-items: center;
   gap: 4px;
-  margin: 0;
-  padding: 0;
+  margin: -3px -6px;
+  padding: 6px;
   list-style: none;
   font-size: 0.9rem;
   min-width: 0;
+  scrollbar-width: none;
+}
+
+.zoom-path ol::-webkit-scrollbar {
+  display: none;
 }
 
 .zoom-path li {

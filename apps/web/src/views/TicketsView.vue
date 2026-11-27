@@ -357,7 +357,7 @@
       id="tickets-view-panel-kanban"
       role="tabpanel"
       aria-labelledby="tickets-view-tab-kanban"
-      class="kanban-board"
+      class="kanban-board focus-ring-inset"
       tabindex="0"
     >
       <div v-for="col in kanbanColumns" :key="col.key" class="kanban-column">
@@ -371,7 +371,7 @@
           }}</span>
         </div>
         <div
-          class="column-cards"
+          class="column-cards focus-ring-inset"
           tabindex="0"
           role="region"
           :aria-label="col.ariaLabel"
@@ -1941,8 +1941,10 @@ const exportAuditTrail = (format) => {
   display: grid;
   grid-template-columns: repeat(5, minmax(240px, 1fr));
   gap: 16px;
+  padding: 6px;
+  margin: -6px;
   overflow-x: auto;
-  max-width: 100%;
+  max-width: calc(100% + 12px);
   align-items: flex-start;
 }
 
@@ -2040,11 +2042,9 @@ const exportAuditTrail = (format) => {
   box-shadow: var(--shadow-sm);
 }
 
-.ticket-card:focus-visible,
-.kanban-board:focus-visible,
-.column-cards:focus-visible {
-  outline: 2px solid var(--semantic-color-interactive-primary);
-  outline-offset: 2px;
+.ticket-card:focus-visible {
+  box-shadow: 0 0 0 2px
+    var(--focus-ring-halo-color, var(--semantic-color-text-on-solid));
 }
 
 .card-meta {
@@ -2223,7 +2223,10 @@ const exportAuditTrail = (format) => {
   align-items: center;
   gap: 6px;
   border: 1px solid transparent;
-  transition: all 0.15s ease-in-out;
+  transition:
+    background-color 0.15s ease-in-out,
+    border-color 0.15s ease-in-out,
+    color 0.15s ease-in-out;
 }
 
 .btn-xs {

@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium, defineConfig, devices } from "@playwright/test";
@@ -80,9 +81,15 @@ const stagedDemoSubpathProject = {
   },
 };
 
+const demoPreviewOutDir = path.resolve(__dirname, "node_modules/.e2e-demo");
+const reuseCiDemoBuild =
+  Boolean(process.env.CI) &&
+  fs.existsSync(path.join(demoPreviewOutDir, "index.html"));
+
 const demoPreviewServer = {
-  command:
-    "./node_modules/.bin/vite build --mode demo --outDir node_modules/.e2e-demo && exec ./node_modules/.bin/vite preview --outDir node_modules/.e2e-demo --host 127.0.0.1 --port 3001 --strictPort",
+  command: reuseCiDemoBuild
+    ? "exec ./node_modules/.bin/vite preview --outDir node_modules/.e2e-demo --host 127.0.0.1 --port 3001 --strictPort"
+    : "./node_modules/.bin/vite build --mode demo --outDir node_modules/.e2e-demo && exec ./node_modules/.bin/vite preview --outDir node_modules/.e2e-demo --host 127.0.0.1 --port 3001 --strictPort",
   url: demoPreviewUrl,
   reuseExistingServer: false,
   timeout: 120000,
@@ -105,10 +112,10 @@ const stagedDemoPreviewServer = {
 
 export default defineConfig({
   testDir: "./tests/e2e",
-  fullyParallel: false, // run sequentially to prevent race conditions or database locks
+  fullyParallel: isStandalonePreviewOnly, // standalone preview servers are stateless; workflow tests run sequentially
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: 1,
+  workers: isStandalonePreviewOnly ? 2 : 1,
   expect: {
     timeout: 15000,
   },

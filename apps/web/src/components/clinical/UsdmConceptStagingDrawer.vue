@@ -742,7 +742,10 @@ const confirmAndApply = () => {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  transition: all 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
 }
 
 .tab-btn.active {

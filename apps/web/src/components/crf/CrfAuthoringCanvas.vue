@@ -1022,7 +1022,10 @@ function onResetSimulation() {
   background: none;
   color: var(--semantic-color-text-secondary);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -1148,7 +1151,10 @@ function onResetSimulation() {
   font-size: 0.82rem;
   color: var(--semantic-color-text);
   background-color: var(--semantic-color-surface);
-  transition: all 0.15s;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s,
+    color 0.15s;
   box-sizing: border-box;
 }
 
@@ -1167,7 +1173,10 @@ function onResetSimulation() {
   border: none;
   border-radius: 8px;
   cursor: pointer;
-  transition: all 0.15s;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s,
+    color 0.15s;
 }
 
 .btn-compile-schema:hover {

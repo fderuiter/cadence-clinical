@@ -1297,7 +1297,9 @@ function startGuidedTour() {
   background: var(--semantic-color-surface-muted);
   border: 1px solid var(--semantic-color-border);
   border-radius: 8px;
-  transition: all 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease;
 }
 
 .checklist-item-row:hover {
@@ -1482,7 +1484,10 @@ function startGuidedTour() {
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease;
 }
 
 .launcher-card:hover .btn-launcher-action {
