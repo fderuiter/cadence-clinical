@@ -15,6 +15,7 @@ using Cadence.IntegrationTests.Kernel;
 using Cadence.Kernel;
 using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
+using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Execution;
 using Cadence.Kernel.Knowledge;
@@ -22,11 +23,17 @@ using Cadence.Kernel.Persistence.Background;
 using Cadence.Kernel.Persistence.Lineage;
 using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;
+using Cadence.Kernel.Standards;
 using Cadence.Kernel.Time;
 using Cadence.Kernel.Trust;
+using Cadence.Kernel.Validation;
 using Cadence.Modules.Execution.Application;
 using Cadence.Modules.Execution.Endpoints;
+using Cadence.Rules.Evaluation;
+using Cadence.Rules.Expressions;
+using Cadence.Rules.Packs;
 using Cadence.Security.Authentication;
+using Cadence.Standards;
 using Cadence.Testing;
 using Cadence.Testing.Commands;
 using Cadence.Testing.Security;
@@ -666,6 +673,514 @@ public sealed class ExecutionFormProjectionPerfPostgresTests(
         replaySelects.Should().BeLessThanOrEqualTo(18, "GetStudyEnrollmentsAsync maps all 11 study sites in 1 SELECT instead of N+1 per-site GetChildrenAsync queries");
     }
 
+    [Fact(DisplayName = "BatchHydrationAndRulePackPreview_ScaleLinearlyAcross500To5000FormsInPostgres")]
+    public async Task BatchHydrationAndRulePackPreviewScaleLinearlyAcross500To5000FormsInPostgres()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var (tenant, study) = await _scenario.Protocol.NewStudyAsync(ct);
+
+        await using var adminForCode = fixture.CreateAdminContext();
+        var tenantCode = await adminForCode.Tenants.AsNoTracking().Where(t => t.Id == tenant).Select(t => t.Code).SingleAsync(ct);
+
+        var sbpConcept = await _scenario.Protocol.OkAsync(
+            new DefineConcept(tenant, ConceptId.New(), ConceptOrigin.Sponsor, null, ConceptKind.BiomedicalConcept, "Systolic BP", "Systolic BP.", KernelProtocolScenario.Key(), "Concept"),
+            ct);
+        var dbpConcept = await _scenario.Protocol.OkAsync(
+            new DefineConcept(tenant, ConceptId.New(), ConceptOrigin.Sponsor, null, ConceptKind.BiomedicalConcept, "Diastolic BP", "Diastolic BP.", KernelProtocolScenario.Key(), "Concept"),
+            ct);
+        var hrConcept = await _scenario.Protocol.OkAsync(
+            new DefineConcept(tenant, ConceptId.New(), ConceptOrigin.Sponsor, null, ConceptKind.BiomedicalConcept, "Heart Rate", "Heart Rate.", KernelProtocolScenario.Key(), "Concept"),
+            ct);
+        var armConcept = await _scenario.Protocol.OkAsync(
+            new DefineConcept(tenant, ConceptId.New(), ConceptOrigin.Sponsor, null, ConceptKind.BiomedicalConcept, "Randomization Arm", "Blinded treatment arm.", KernelProtocolScenario.Key(), "Concept"),
+            ct);
+
+        var activities = new List<PlannedActivity>(20);
+        for (var v = 0; v < 20; v++)
+        {
+            string epochId;
+            if (v == 0)
+            {
+                epochId = "ep.screening";
+            }
+            else if (v < 16)
+            {
+                epochId = "ep.treatment";
+            }
+            else
+            {
+                epochId = "ep.followup";
+            }
+
+            int day;
+            if (v == 0)
+            {
+                day = 0;
+            }
+            else if (v == 1)
+            {
+                day = -7;
+            }
+            else
+            {
+                day = v * 7;
+            }
+
+            activities.Add(new PlannedActivity(
+                $"visit.{v:D2}",
+                $"Visit {v:D2}",
+                epochId,
+                [ActivityLocation.Site],
+                [SpecId, "cs.dispense"],
+                new ActivityTiming(day, 2, 3)));
+        }
+
+        var design = ProtocolDesignSamples.MinimalDesign() with
+        {
+            Epochs =
+            [
+                new Epoch("ep.screening", "Screening", 1),
+                new Epoch("ep.treatment", "Treatment", 2),
+                new Epoch("ep.followup", "Follow-up", 3),
+            ],
+            PlannedActivities = activities,
+            CollectionSpecs =
+            [
+                new CollectionSpec(
+                    SpecId,
+                    "Vital signs",
+                    [
+                        new CollectionItem(Systolic, sbpConcept, "mm[Hg]", Required: true),
+                        new CollectionItem(Diastolic, dbpConcept, "mm[Hg]", Required: true),
+                        new CollectionItem("item.hr", hrConcept, "/min", Required: false),
+                    ]),
+                new CollectionSpec(
+                    "cs.dispense",
+                    "Randomization Arm Dispense",
+                    [
+                        new CollectionItem("item.arm", armConcept, ValueKind: ObservationValueKind.Text, Required: true),
+                    ]),
+            ],
+        };
+
+        var version = ProtocolVersionId.New();
+        (await _scenario.Protocol.CreateDraftAsync(tenant, study, version, ct, ProtocolDesignDocument.Write(design))).IsSuccess.Should().BeTrue();
+        var inReview = await _scenario.Protocol.OkAsync(new SubmitProtocolVersionForReview(tenant, version, KernelProtocolScenario.Key(), "Ready"), ct);
+        var sig = await _scenario.Protocol.OkAsync(_scenario.Protocol.AttestCommand(tenant, AttestationMeaning.Approved, KernelProtocolScenario.Target(inReview)), ct);
+        await _scenario.Protocol.OkAsync(new ApproveProtocolVersion(tenant, version, sig, KernelProtocolScenario.Key(), "Approved"), ct);
+        var eff = EffectivityId.New();
+        await _scenario.Protocol.OkAsync(new DeclareEffectivity(tenant, eff, version, EffectivityScope.Study(), _scenario.Tick(), KernelProtocolScenario.Key(), "Study-wide"), ct);
+        var ethicsBytes = Encoding.UTF8.GetBytes($"ethics-{Guid.CreateVersion7():N}");
+        var ethics = ArtifactVersionId.New();
+        await _scenario.Protocol.OkAsync(
+            new RegisterArtifact(
+                tenant,
+                ArtifactId.New(),
+                ethics,
+                ArtifactKind.EthicsApproval,
+                study,
+                "Ethics approval letter",
+                new ArtifactContent(ContentHash.OfBytes(ethicsBytes), ethicsBytes.Length, "application/pdf", "blob://evidence/ethics"),
+                KernelProtocolScenario.Key(),
+                "Filed approval"),
+            ct);
+        await _scenario.Protocol.OkAsync(new ChangeEffectivityStatus(tenant, eff, EffectivityStatus.Effective, _scenario.Tick(), [ethics], KernelProtocolScenario.Key(), "Effective"), ct);
+
+        // Pin a collection-stage Error rule pack and create a draft candidate rule pack for PreviewStudyRulePackAsync.
+        var collectionPack = new RulePack(
+            RuleAuthority.Sponsor,
+            "Vitals Collection Edit Checks",
+            [
+                new Rule(
+                    "VITAL-SYS-LT-DIA",
+                    Version: 1,
+                    RuleAuthority.Sponsor,
+                    new SourceCitation("Protocol Edit Check Plan", "§4.1", null),
+                    new RuleApplicability(ValidationStage.Collection, null, null, null, SpecId),
+                    ValidationSeverity.Error,
+                    new ComparisonExpression(ComparisonOperator.Less, new VariableExpression(Systolic), new VariableExpression(Diastolic)),
+                    "Systolic BP is below diastolic BP.",
+                    "Confirm vital signs against source chart.",
+                    EffectivePeriod.Always),
+                new Rule(
+                    "BLIND-ARM-CHECK",
+                    Version: 1,
+                    RuleAuthority.Sponsor,
+                    new SourceCitation("Protocol Edit Check Plan", "§4.2", null),
+                    new RuleApplicability(ValidationStage.Collection, null, null, null, "cs.dispense"),
+                    ValidationSeverity.Warning,
+                    new ComparisonExpression(ComparisonOperator.Equal, new VariableExpression("item.arm"), new LiteralExpression(RuleValue.FromText("Arm A"))),
+                    "Treatment arm check.",
+                    "Verify kit assignment.",
+                    EffectivePeriod.Always),
+            ]);
+
+        var sdtmig = await _scenario.Protocol.OkAsync(
+            new RegisterStandardVersion(
+                tenant,
+                StandardVersionId.New(),
+                StandardSeeds.LoadAll().Single(s => s.Package.StandardCode == "SDTMIG").Package,
+                null,
+                KernelProtocolScenario.Key(),
+                "Register SDTMIG"),
+            ct);
+        var sdtmigHash = (await fixture.Standards.FindStandardVersionAsync(tenant, sdtmig, ct))!.ContentHash;
+        var stdApproval = await _scenario.Protocol.OkAsync(
+            _scenario.Protocol.AttestCommand(tenant, AttestationMeaning.Approved, new AttestationTarget(NodeKinds.StandardVersion, sdtmig.Value, sdtmigHash)),
+            ct);
+        await _scenario.Protocol.OkAsync(new ApproveStandardVersion(tenant, sdtmig, stdApproval, KernelProtocolScenario.Key(), "Approve SDTMIG"), ct);
+
+        var pinnedPackId = LibraryItemId.New();
+        var pinnedDraft = await _scenario.Protocol.OkAsync(
+            new DraftLibraryItem(tenant, pinnedPackId, LibraryItemKind.RulePack, "vitals-edit-checks", collectionPack.Title, RulePackJson.ToJson(collectionPack), [], KernelProtocolScenario.Key(), "Draft pinned pack"),
+            ct);
+        var packApproval = await _scenario.Protocol.OkAsync(
+            _scenario.Protocol.AttestCommand(tenant, AttestationMeaning.Approved, new AttestationTarget(NodeKinds.LibraryItem, pinnedDraft.Id.Value, pinnedDraft.ContentHash)),
+            ct);
+        await _scenario.Protocol.OkAsync(new ApproveLibraryItem(tenant, pinnedDraft.Id, packApproval, KernelProtocolScenario.Key(), "Approve pinned pack"), ct);
+        await _scenario.Protocol.OkAsync(
+            new DeclareStudyStandards(tenant, study, StudyStandardsProfileId.New(), [sdtmig], [], [pinnedDraft.Id], KernelProtocolScenario.Key(), "Pin edit checks"),
+            ct);
+
+        var previewPackId = LibraryItemId.New();
+        await _scenario.Protocol.OkAsync(
+            new DraftLibraryItem(tenant, previewPackId, LibraryItemKind.RulePack, "vitals-preview-checks", "Candidate Vitals Pack", RulePackJson.ToJson(collectionPack), [], KernelProtocolScenario.Key(), "Draft preview pack"),
+            ct);
+
+        var siteA = await _scenario.Observations.AddStudySiteAsync(tenant, study, ct);
+        var siteB = await _scenario.Observations.AddStudySiteAsync(tenant, study, ct);
+        foreach (var (actor, capabilities, scope) in new (Actor, string[], AuthorityScope)[]
+        {
+            (Actor.Person(Monitor), ["execution.query.raise", "execution.query.manage"], AuthorityScope.Study(study)),
+            (Actor.Person(UnblindedPharmacist), ["enrollment.unblind"], AuthorityScope.Study(study)),
+            (Actor.ServiceAccount("validation-bench"), ["validation_run.record"], AuthorityScope.Tenant()),
+        })
+        {
+            foreach (var cap in capabilities)
+            {
+                await _scenario.Protocol.OkAsync(
+                    new IssueGrant(tenant, GrantId.New(), actor, cap, null, scope, _scenario.Tick(), null, false, KernelProtocolScenario.Key(), "Bench grant"),
+                    ct);
+            }
+        }
+
+        var enrollmentIds = new List<EnrollmentId>(20);
+        for (var e = 0; e < 20; e++)
+        {
+            enrollmentIds.Add(await _scenario.Observations.ScreenAsync(tenant, e < 10 ? siteA : siteB, ct));
+        }
+
+        List<Enrollment> enrollments;
+        await using (var readDb = fixture.CreateAdminContext())
+        {
+            enrollments = await readDb.Enrollments.AsNoTracking()
+                .Where(e => enrollmentIds.Contains(e.Id))
+                .ToListAsync(ct);
+        }
+
+        var enrollmentMap = enrollmentIds.Select(id => enrollments.Single(e => e.Id == id)).ToArray();
+
+        // Add site-level and enrollment-level Frozen locks so ScopedAssertions.Locks() covers multi-level lock hierarchy.
+        await _scenario.Protocol.OkAsync(
+            await _scenario.Observations.LockAsync(tenant, study, NodeRef.For(siteB), ct, LockKind.Frozen),
+            ct);
+        await _scenario.Protocol.OkAsync(
+            await _scenario.Observations.LockAsync(tenant, study, NodeRef.For(enrollmentIds[1]), ct, LockKind.Frozen),
+            ct);
+
+        using var monitor = Client(tenantCode, Monitor);
+        var validationService = new CollectionValidationService(
+            fixture.RulePacks,
+            fixture.Standards,
+            fixture.RuleEvaluator,
+            fixture.CollectionInstanceRecords,
+            fixture.Findings,
+            fixture.Sender,
+            fixture.Clock);
+        var seededCount = 0;
+        var baseInstant = fixture.Clock.UtcNow;
+        var lockHash = ContentHash.Compute("{\"scope\":\"lock\"}");
+
+        async Task SeedFormsUpToAsync(int targetTotal)
+        {
+            while (seededCount < targetTotal)
+            {
+                var chunkEnd = Math.Min(targetTotal, seededCount + 500);
+                await using var seedDb = fixture.CreateAdminContext();
+                seedDb.ChangeTracker.AutoDetectChangesEnabled = false;
+                using var permit = seedDb.PermitPipelineWrites();
+
+                var formsBatch = new List<CollectionInstance>(chunkEnd - seededCount);
+                var obsBatch = new List<Observation>((chunkEnd - seededCount) * 3);
+                var assertionsBatch = new List<Assertion>(chunkEnd - seededCount);
+                var attestationsBatch = new List<Attestation>(32);
+
+                for (var idx = seededCount; idx < chunkEnd; idx++)
+                {
+                    // Route 20% of all forms onto enrollment 0 so ListForEnrollmentAsync scales across 100 / 400 / 1,000 forms.
+                    var enrollment = idx % 5 == 0 ? enrollmentMap[0] : enrollmentMap[1 + (idx % (enrollmentMap.Length - 1))];
+                    var isDispense = idx % 10 == 9;
+                    var specToOpen = isDispense ? "cs.dispense" : SpecId;
+                    var activityId = $"visit.{idx % 20:D2}";
+                    var collectedAt = baseInstant.AddSeconds(idx);
+                    var openedAt = collectedAt.AddSeconds(1);
+
+                    var form = CollectionInstance.Open(
+                        CollectionInstanceId.New(),
+                        enrollment,
+                        version,
+                        specToOpen,
+                        activityId,
+                        collectedAt,
+                        Crc,
+                        openedAt);
+
+                    if (isDispense)
+                    {
+                        ObservationValue armValue = idx % 20 == 19
+                            ? new MissingValue(NullFlavor.Masked)
+                            : new TextValue("Arm A");
+                        var armObs = Observation.Record(
+                            ObservationId.New(),
+                            tenant,
+                            enrollment.Id,
+                            enrollment.ParticipantId,
+                            study,
+                            armConcept,
+                            armValue,
+                            collectedAt,
+                            "Dispensed",
+                            Crc,
+                            openedAt).Value!;
+                        form.Join("item.arm", armObs.Id, openedAt);
+                        form.Saved(openedAt);
+                        obsBatch.Add(armObs);
+                    }
+                    else
+                    {
+                        // Every 10th vitals form violates SBP >= DBP (92 < 104) to populate active Error findings.
+                        var invalidBp = idx % 10 == 0;
+                        var sbpVal = invalidBp ? 92m : 118m + (idx % 25);
+                        var dbpVal = invalidBp ? 104m : 74m + (idx % 15);
+
+                        var sbpObs = Observation.Record(
+                            ObservationId.New(),
+                            tenant,
+                            enrollment.Id,
+                            enrollment.ParticipantId,
+                            study,
+                            sbpConcept,
+                            Mmhg(sbpVal),
+                            collectedAt,
+                            "Vitals recorded",
+                            Crc,
+                            openedAt).Value!;
+                        var dbpObs = Observation.Record(
+                            ObservationId.New(),
+                            tenant,
+                            enrollment.Id,
+                            enrollment.ParticipantId,
+                            study,
+                            dbpConcept,
+                            Mmhg(dbpVal),
+                            collectedAt,
+                            "Vitals recorded",
+                            Crc,
+                            openedAt).Value!;
+                        var hrObs = Observation.Record(
+                            ObservationId.New(),
+                            tenant,
+                            enrollment.Id,
+                            enrollment.ParticipantId,
+                            study,
+                            hrConcept,
+                            new QuantityValue(62m + (idx % 20), "/min"),
+                            collectedAt,
+                            "Vitals recorded",
+                            Crc,
+                            openedAt).Value!;
+
+                        form.Join(Systolic, sbpObs.Id, openedAt);
+                        form.Join(Diastolic, dbpObs.Id, openedAt);
+                        form.Join("item.hr", hrObs.Id, openedAt);
+                        form.Saved(openedAt);
+                        obsBatch.Add(sbpObs);
+                        obsBatch.Add(dbpObs);
+                        obsBatch.Add(hrObs);
+
+                        if (idx % 2 == 0)
+                        {
+                            assertionsBatch.Add(Assertion.Verify(AssertionId.New(), sbpObs, 1, Monitor, openedAt.AddMilliseconds(10)));
+                        }
+
+                        if (idx % 4 == 0)
+                        {
+                            var q = Assertion.Query(AssertionId.New(), dbpObs, "Confirm diastolic BP", Monitor, openedAt.AddMilliseconds(20), 1).Value!;
+                            assertionsBatch.Add(q);
+                            if (idx % 8 == 0)
+                            {
+                                var ans = Assertion.Answer(AssertionId.New(), q, "Confirmed on source", Crc, openedAt.AddMilliseconds(30), 1).Value!;
+                                assertionsBatch.Add(ans);
+                            }
+
+                            if (idx % 16 == 0)
+                            {
+                                assertionsBatch.Add(Assertion.Retract(AssertionId.New(), q, null, Monitor, openedAt.AddMilliseconds(40)));
+                            }
+                        }
+
+                        if (idx % 25 == 0)
+                        {
+                            var lockAtt = Attestation.Sign(
+                                AttestationId.New(),
+                                tenant,
+                                Actor.Person(Monitor),
+                                AttestationMeaning.Approved,
+                                new AttestationTarget(NodeKinds.CollectionInstance, form.Id.Value, lockHash),
+                                openedAt,
+                                "pwd+otp",
+                                openedAt.AddMilliseconds(50),
+                                "Freeze form").Value!;
+                            attestationsBatch.Add(lockAtt);
+                            assertionsBatch.Add(Assertion.Lock(
+                                AssertionId.New(),
+                                tenant,
+                                LockKind.Frozen,
+                                study,
+                                enrollment.Id,
+                                NodeRef.For(form.Id),
+                                lockAtt.Id,
+                                Monitor,
+                                openedAt.AddMilliseconds(55)));
+                        }
+                    }
+
+                    formsBatch.Add(form);
+                }
+
+                seedDb.Observations.AddRange(obsBatch);
+                seedDb.CollectionInstances.AddRange(formsBatch);
+                if (attestationsBatch.Count > 0)
+                {
+                    seedDb.Attestations.AddRange(attestationsBatch);
+                }
+
+                if (assertionsBatch.Count > 0)
+                {
+                    seedDb.Assertions.AddRange(assertionsBatch);
+                }
+
+                await seedDb.SaveChangesAsync(ct);
+                seededCount = chunkEnd;
+            }
+        }
+
+        // Warm up JIT and pipeline once before timed tiers.
+        await SeedFormsUpToAsync(500);
+        _ = await fixture.CollectionInstanceRecords.ListForEnrollmentAsync(tenant, enrollmentIds[0], ct);
+        using (var warmupPreviewReq = new HttpRequestMessage(
+                   HttpMethod.Post,
+                   new Uri($"/api/v1/kernel/studies/study:{study.Value:D}/rule-packs/library_item:{previewPackId.Value:D}/preview", UriKind.Relative)))
+        {
+            using var warmupResp = await monitor.SendAsync(warmupPreviewReq, ct);
+            warmupResp.StatusCode.Should().Be(HttpStatusCode.OK);
+        }
+
+        foreach (var tier in new[] { 500, 2_000, 5_000 })
+        {
+            await SeedFormsUpToAsync(tier);
+            fixture.Clock.Advance(TimeSpan.FromHours(2));
+
+            // 1. ValidateStudyCollectionsAsync (post-save outbox edit-check path; also populates active Error findings for tier).
+            var swValidate = Stopwatch.StartNew();
+            var valResult = await validationService.ValidateStudyCollectionsAsync(
+                tenant,
+                study,
+                DateOnly.FromDateTime(fixture.Clock.UtcNow.UtcDateTime),
+                fixture.Clock.UtcNow,
+                $"bench-val-{tier}",
+                "Benchmark collection validation",
+                cancellationToken: ct);
+            swValidate.Stop();
+            valResult.IsSuccess.Should().BeTrue(valResult.Error?.Message);
+
+            // 2. ListForStudyAsync (Study Home work-queue hydration path).
+            var beforeStudyBytes = GC.GetTotalAllocatedBytes(precise: true);
+            var swStudy = Stopwatch.StartNew();
+            var studyRecords = await fixture.CollectionInstanceRecords.ListForStudyAsync(tenant, study, ct);
+            swStudy.Stop();
+            var studyAllocMb = (GC.GetTotalAllocatedBytes(precise: true) - beforeStudyBytes) / (1024.0 * 1024.0);
+            studyRecords.Should().HaveCount(tier);
+
+            // 3. ListForEnrollmentAsync (Participant casebook summary path: 100 / 400 / 1,000 forms).
+            var beforeEnrBytes = GC.GetTotalAllocatedBytes(precise: true);
+            var swEnrollment = Stopwatch.StartNew();
+            var enrollmentSummaries = await fixture.CollectionInstanceRecords.ListForEnrollmentAsync(tenant, enrollmentIds[0], ct);
+            swEnrollment.Stop();
+            var enrAllocMb = (GC.GetTotalAllocatedBytes(precise: true) - beforeEnrBytes) / (1024.0 * 1024.0);
+            enrollmentSummaries.Should().HaveCount(tier / 5);
+
+            // 4. PreviewStudyRulePackAsync HTTP endpoint (blinded caller).
+            _recordsSpy!.Reset();
+            var swPreview = Stopwatch.StartNew();
+            using var previewReq = new HttpRequestMessage(
+                HttpMethod.Post,
+                new Uri($"/api/v1/kernel/studies/study:{study.Value:D}/rule-packs/library_item:{previewPackId.Value:D}/preview", UriKind.Relative));
+            using var previewResp = await monitor.SendAsync(previewReq, ct);
+            var previewBody = await previewResp.Content.ReadAsStringAsync(ct);
+            swPreview.Stop();
+            previewResp.StatusCode.Should().Be(HttpStatusCode.OK, previewBody);
+            var previewCalls = _recordsSpy.ListForStudyCalls;
+
+            output.WriteLine(
+                $"TIER {tier,5} forms | ListForStudyAsync: {swStudy.Elapsed.TotalMilliseconds,8:F1} ms ({studyAllocMb,6:F1} MB) | " +
+                $"ListForEnrollmentAsync ({tier / 5} forms): {swEnrollment.Elapsed.TotalMilliseconds,7:F1} ms ({enrAllocMb,5:F1} MB) | " +
+                $"ValidateStudyCollectionsAsync: {swValidate.Elapsed.TotalMilliseconds,8:F1} ms | " +
+                $"PreviewStudyRulePackAsync: {swPreview.Elapsed.TotalMilliseconds,8:F1} ms (ListForStudyCalls={previewCalls})");
+
+            previewCalls.Should().Be(1, "PreviewStudyRulePackAsync must call ListForStudyAsync at most once per HTTP request");
+            swStudy.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(15), $"ListForStudyAsync at {tier} forms must stay well below the 30 s gateway timeout");
+            swEnrollment.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(10), $"ListForEnrollmentAsync at {tier / 5} forms must stay well below the 30 s gateway timeout");
+            swValidate.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(25), $"ValidateStudyCollectionsAsync at {tier} forms must stay well below the 30 s gateway timeout");
+            swPreview.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(15), $"PreviewStudyRulePackAsync at {tier} forms must stay well below the 30 s gateway timeout");
+
+            if (tier == 5_000)
+            {
+                // Verify exact end-to-end projection parity between single-form FindAsync and batch ListForStudyAsync / ListForEnrollmentAsync
+                // across representative forms (locks, open/answered/retracted queries, error findings, blinded/masked items, and visit timing).
+                var sampleIndices = new[] { 0, 4, 8, 9, 16, 19, 25 };
+                var summaryById = enrollmentSummaries.ToDictionary(s => s.CollectionInstanceId);
+                foreach (var sampleIdx in sampleIndices)
+                {
+                    var batchRecord = studyRecords[sampleIdx];
+                    var singleRecord = await fixture.CollectionInstanceRecords.FindAsync(tenant, batchRecord.CollectionInstanceId, ct);
+                    singleRecord.Should().NotBeNull();
+                    batchRecord.Complete.Should().Be(singleRecord!.Complete);
+                    batchRecord.OpenQueryCount.Should().Be(singleRecord.OpenQueryCount);
+                    batchRecord.AnsweredQueryCount.Should().Be(singleRecord.AnsweredQueryCount);
+                    batchRecord.OpenErrorFindingCount.Should().Be(singleRecord.OpenErrorFindingCount);
+                    batchRecord.ReadinessBlockers.Should().Equal(singleRecord.ReadinessBlockers);
+                    batchRecord.Locks.Should().Equal(singleRecord.Locks);
+                    batchRecord.Assertions.Should().Equal(singleRecord.Assertions);
+                    batchRecord.BlindedItemIds.Should().BeEquivalentTo(singleRecord.BlindedItemIds);
+                    batchRecord.BlindedObservationIds.Should().BeEquivalentTo(singleRecord.BlindedObservationIds);
+                    batchRecord.VisitTimingAssessment.Should().Be(singleRecord.VisitTimingAssessment);
+
+                    if (summaryById.TryGetValue(batchRecord.CollectionInstanceId, out var summary))
+                    {
+                        summary.Complete.Should().Be(singleRecord.Complete);
+                        summary.OpenQueryCount.Should().Be(singleRecord.OpenQueryCount);
+                        summary.AnsweredQueryCount.Should().Be(singleRecord.AnsweredQueryCount);
+                        summary.OpenErrorFindingCount.Should().Be(singleRecord.OpenErrorFindingCount);
+                        summary.LockCount.Should().Be(singleRecord.Locks.Count);
+                        summary.VisitTimingAssessment.Should().Be(singleRecord.VisitTimingAssessment);
+                    }
+                }
+            }
+        }
+    }
+
     private HttpClient Client(string tenantCode, string userId)
     {
         _host ??= new WebApplicationFactory<Cadence.Kernel.Host.Program>().WithWebHostBuilder(builder => builder
@@ -812,11 +1327,13 @@ public sealed class ExecutionFormProjectionPerfPostgresTests(
         private int _findHeaderCalls;
         private int _findScopeStateCalls;
         private int _listRecordsCalls;
+        private int _listForStudyCalls;
 
         public int FindCalls => Volatile.Read(ref _findCalls);
         public int FindHeaderCalls => Volatile.Read(ref _findHeaderCalls);
         public int FindScopeStateCalls => Volatile.Read(ref _findScopeStateCalls);
         public int ListRecordsForEnrollmentCalls => Volatile.Read(ref _listRecordsCalls);
+        public int ListForStudyCalls => Volatile.Read(ref _listForStudyCalls);
 
         public void Reset()
         {
@@ -824,6 +1341,7 @@ public sealed class ExecutionFormProjectionPerfPostgresTests(
             Interlocked.Exchange(ref _findHeaderCalls, 0);
             Interlocked.Exchange(ref _findScopeStateCalls, 0);
             Interlocked.Exchange(ref _listRecordsCalls, 0);
+            Interlocked.Exchange(ref _listForStudyCalls, 0);
         }
 
         public Task<CollectionInstanceRecord?> FindAsync(TenantId tenant, CollectionInstanceId instance, CancellationToken cancellationToken)
@@ -950,6 +1468,15 @@ public sealed class ExecutionFormProjectionPerfPostgresTests(
         {
             Interlocked.Increment(ref _listRecordsCalls);
             return inner.ListRecordsForEnrollmentAsync(tenant, enrollment, cancellationToken);
+        }
+
+        public Task<IReadOnlyList<CollectionInstanceRecord>> ListForStudyAsync(
+            TenantId tenant,
+            StudyId study,
+            CancellationToken cancellationToken)
+        {
+            Interlocked.Increment(ref _listForStudyCalls);
+            return inner.ListForStudyAsync(tenant, study, cancellationToken);
         }
 
         public Task<IReadOnlyDictionary<ObservationId, int>> FindObservationRevisionsAsync(

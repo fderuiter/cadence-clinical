@@ -18,13 +18,18 @@ namespace Cadence.Kernel.Persistence.Evidence;
 /// </summary>
 internal sealed class ScopedAssertions
 {
-    private readonly IReadOnlyList<NodeRef> _scopes;
+    private readonly Dictionary<ScopeKey, int> _scopeIndex;
     private readonly Dictionary<AssertionId, Assertion> _retractedBy;
     private readonly List<Assertion> _stated;
 
-    private ScopedAssertions(IReadOnlyList<NodeRef> scopes, List<Assertion> all)
+    internal ScopedAssertions(IReadOnlyList<NodeRef> scopes, List<Assertion> all)
+        : this(IndexScopes(scopes), all)
     {
-        _scopes = scopes;
+    }
+
+    private ScopedAssertions(Dictionary<ScopeKey, int> scopeIndex, List<Assertion> all)
+    {
+        _scopeIndex = scopeIndex;
         _retractedBy = all.Where(a => a.RetractsId is not null).ToDictionary(a => a.RetractsId!.Value);
         _stated = [.. all.Where(a => a.RetractsId is null).OrderBy(a => a.AssertedAt).ThenBy(a => a.Id)];
     }
@@ -32,21 +37,50 @@ internal sealed class ScopedAssertions
     /// <summary>Reads the assertions at <paramref name="scopes"/>, widest first (<c>LockScopes.Covering</c>).</summary>
     public static async Task<ScopedAssertions> ReadAsync(KernelDbContext db, IReadOnlyList<NodeRef> scopes, CancellationToken cancellationToken)
     {
-        var scopeIds = scopes.Select(s => s.Id).ToList();
+        ArgumentNullException.ThrowIfNull(scopes);
+        var scopeIndex = IndexScopes(scopes);
+        if (scopeIndex.Count == 0)
+        {
+            return new ScopedAssertions(scopeIndex, []);
+        }
+
+        var scopeIds = DistinctScopeIds(scopes);
         var direct = await db.Assertions.AsNoTracking()
             .Where(a => scopeIds.Contains(a.TargetId))
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
-        var queryIds = direct.Where(a => a.Kind == AssertionKind.Queried && a.RetractsId == null).Select(a => a.Id.Value).ToList();
+        var queryIds = direct
+            .Where(a => a.Kind == AssertionKind.Queried && a.RetractsId == null && scopeIndex.ContainsKey(new ScopeKey(a.TargetKind, a.TargetId)))
+            .Select(a => a.Id.Value)
+            .ToList();
         var answers = queryIds.Count == 0
             ? []
             : await db.Assertions.AsNoTracking()
                 .Where(a => a.Kind == AssertionKind.QueryAnswered && queryIds.Contains(a.TargetId))
                 .ToListAsync(cancellationToken)
                 .ConfigureAwait(false);
-        return new ScopedAssertions(
-            scopes,
-            [.. direct.Concat(answers).Where(a => scopes.Any(s => s.Kind == a.TargetKind && s.Id == a.TargetId) || a.TargetKind == NodeKinds.Assertion)]);
+        var filtered = new List<Assertion>(direct.Count + answers.Count);
+        for (var i = 0; i < direct.Count; i++)
+        {
+            var candidate = direct[i];
+            if (scopeIndex.ContainsKey(new ScopeKey(candidate.TargetKind, candidate.TargetId))
+                || string.Equals(candidate.TargetKind, NodeKinds.Assertion, StringComparison.Ordinal))
+            {
+                filtered.Add(candidate);
+            }
+        }
+
+        for (var i = 0; i < answers.Count; i++)
+        {
+            var answer = answers[i];
+            if (string.Equals(answer.TargetKind, NodeKinds.Assertion, StringComparison.Ordinal)
+                || scopeIndex.ContainsKey(new ScopeKey(answer.TargetKind, answer.TargetId)))
+            {
+                filtered.Add(answer);
+            }
+        }
+
+        return new ScopedAssertions(scopeIndex, filtered);
     }
 
     /// <summary>Reads only the active locks and freezes at <paramref name="scopes"/>, widest first.</summary>
@@ -55,7 +89,14 @@ internal sealed class ScopedAssertions
         IReadOnlyList<NodeRef> scopes,
         CancellationToken cancellationToken)
     {
-        var scopeIds = scopes.Select(s => s.Id).ToList();
+        ArgumentNullException.ThrowIfNull(scopes);
+        var scopeIndex = IndexScopes(scopes);
+        if (scopeIndex.Count == 0)
+        {
+            return [];
+        }
+
+        var scopeIds = DistinctScopeIds(scopes);
         var locks = await db.Assertions.AsNoTracking()
             .Where(a => scopeIds.Contains(a.TargetId)
                 && (a.Kind == AssertionKind.Locked || a.Kind == AssertionKind.Frozen))
@@ -66,9 +107,19 @@ internal sealed class ScopedAssertions
             return [];
         }
 
-        return new ScopedAssertions(
-            scopes,
-            [.. locks.Where(a => scopes.Any(s => s.Kind == a.TargetKind && s.Id == a.TargetId))]).Locks();
+        var matchedLocks = new List<Assertion>(locks.Count);
+        for (var i = 0; i < locks.Count; i++)
+        {
+            var candidate = locks[i];
+            if (scopeIndex.ContainsKey(new ScopeKey(candidate.TargetKind, candidate.TargetId)))
+            {
+                matchedLocks.Add(candidate);
+            }
+        }
+
+        return matchedLocks.Count == 0
+            ? []
+            : new ScopedAssertions(scopeIndex, matchedLocks).Locks();
     }
 
     /// <summary>The locks in force, widest scope first.</summary>
@@ -107,19 +158,56 @@ internal sealed class ScopedAssertions
         return [.. coveredStated.Concat(retractions)];
     }
 
-    private int Width(Assertion assertion)
+    private (int HierarchyOrder, int ScopeOrder) Width(Assertion assertion)
     {
-        for (var i = 0; i < _scopes.Count; i++)
+        var hierarchyOrder = LockScopes.OrderOf(assertion.TargetKind);
+        var scopeOrder = _scopeIndex.TryGetValue(new ScopeKey(assertion.TargetKind, assertion.TargetId), out var index)
+            ? index
+            : int.MaxValue;
+        return (hierarchyOrder, scopeOrder);
+    }
+
+    private static Dictionary<ScopeKey, int> IndexScopes(IReadOnlyList<NodeRef> scopes)
+    {
+        var index = new Dictionary<ScopeKey, int>(scopes.Count, ScopeKeyComparer.Instance);
+        for (var i = 0; i < scopes.Count; i++)
         {
-            if (_scopes[i].Kind == assertion.TargetKind && _scopes[i].Id == assertion.TargetId)
+            var scope = scopes[i];
+            index.TryAdd(new ScopeKey(scope.Kind, scope.Id), i);
+        }
+
+        return index;
+    }
+
+    private static List<Guid> DistinctScopeIds(IReadOnlyList<NodeRef> scopes)
+    {
+        var seen = new HashSet<Guid>(scopes.Count);
+        var ids = new List<Guid>(scopes.Count);
+        for (var i = 0; i < scopes.Count; i++)
+        {
+            var id = scopes[i].Id;
+            if (seen.Add(id))
             {
-                return i;
+                ids.Add(id);
             }
         }
 
-        return _scopes.Count;
+        return ids;
     }
 
     private static AssertionView View(Assertion a, AssertionId? retractedBy, DateTimeOffset? retractedAt) =>
         new(a.Id, a.Kind, a.Target, a.TargetRevision, a.Text, a.AssertedBy, a.AssertedAt, a.ReasonForChange, retractedBy, retractedAt);
+
+    private readonly record struct ScopeKey(string Kind, Guid Id);
+
+    private sealed class ScopeKeyComparer : IEqualityComparer<ScopeKey>
+    {
+        public static readonly ScopeKeyComparer Instance = new();
+
+        public bool Equals(ScopeKey x, ScopeKey y) =>
+            x.Id == y.Id && string.Equals(x.Kind, y.Kind, StringComparison.Ordinal);
+
+        public int GetHashCode(ScopeKey obj) =>
+            HashCode.Combine(StringComparer.Ordinal.GetHashCode(obj.Kind), obj.Id);
+    }
 }
