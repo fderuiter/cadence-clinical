@@ -1,7 +1,7 @@
 import type { KernelLockMeaning } from "./locks";
 import { unversioned, type KernelSchemas } from "./shared";
 
-const loadRouteTransport = () => import("./protocolImport");
+const loadRouteTransport = () => import("./validation.transport");
 
 export type KernelRulePack = KernelSchemas["Kernel_KernelRulePackResponse"];
 export type KernelStudyRulePacks =

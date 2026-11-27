@@ -1,6 +1,6 @@
 import type { KernelSchemas } from "./shared";
 
-const loadRouteTransport = () => import("./protocolImport");
+const loadRouteTransport = () => import("./proposals.transport");
 
 export type KernelProposal = KernelSchemas["Kernel_KernelProposalResponse"];
 export type KernelProposalState =

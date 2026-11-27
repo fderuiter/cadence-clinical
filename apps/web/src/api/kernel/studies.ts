@@ -5,7 +5,7 @@ import {
   type KernelSchemas,
 } from "./shared";
 
-const loadAuthoring = () => import("./protocolImport");
+const loadAuthoring = () => import("./studies.transport");
 
 export type KernelProtocolVersion =
   KernelSchemas["Kernel_KernelProtocolVersionResponse"];
