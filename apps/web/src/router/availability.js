@@ -31,7 +31,8 @@ export const AVAILABLE_SCREENS = new Set([
   "tickets",
   // Assure: published SOP repository, contextual guidance, immutable version snapshots, and Part 11 audit ledger.
   "knowledge",
-  // Consolidated into Clinical Canvas: scoped locks (stage=data&section=locks) and regulated exports (stage=submit&section=exports).
+  // Consolidated into Clinical Canvas: protocol amendments (stage=design&section=protocol-versions), scoped locks (stage=data&section=locks), and regulated exports (stage=submit&section=exports).
+  "amendment-diff",
   "data-lock",
   "exports",
 ]);

@@ -2282,6 +2282,49 @@
         }
       }
     },
+    "/api/v1/etmf/ingest": {
+      "post": {
+        "tags": [
+          "EtmfIntelligenceEndpoints"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Etmf_IngestDocumentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/taxonomy": {
+      "get": {
+        "tags": [
+          "EtmfIntelligenceEndpoints"
+        ],
+        "parameters": [
+          {
+            "name": "version",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/v1/etmf/documents/export": {
       "post": {
         "tags": [
@@ -2356,49 +2399,6 @@
         "parameters": [
           {
             "name": "study_id",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/etmf/ingest": {
-      "post": {
-        "tags": [
-          "EtmfIntelligenceEndpoints"
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Etmf_IngestDocumentRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/etmf/taxonomy": {
-      "get": {
-        "tags": [
-          "EtmfIntelligenceEndpoints"
-        ],
-        "parameters": [
-          {
-            "name": "version",
             "in": "query",
             "schema": {
               "type": "string"
@@ -12434,6 +12434,187 @@
         ]
       }
     },
+    "/api/v1/kernel/artifact-versions/{artifactVersionRef}/review": {
+      "post": {
+        "tags": [
+          "Kernel"
+        ],
+        "summary": "Records a 21 CFR Part 11 Reviewed attestation bound to an immutable artifact version\u0027s content hash (attestation.sign, K-SIM-5).",
+        "operationId": "KernelReviewArtifactVersion",
+        "parameters": [
+          {
+            "name": "artifactVersionRef",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Kernel_KernelReviewArtifactVersionRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_KernelArtifactReviewAttestationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized. Kernel errors: \u0060K.Actor.Unresolved\u0060, \u0060K.Trust.AuthenticationStale\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060, \u0060K.Subscription.Expired\u0060, \u0060K.Trust.PersonRequired\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found. Kernel errors: \u0060K.Trust.TargetUnknown\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict. Kernel errors: \u0060K.Aggregate.AlreadyExists\u0060, \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Command.IdempotencyConflict\u0060, \u0060K.Trust.TargetContentChanged\u0060, \u0060K.Trust.TargetNotSignable\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity. Kernel errors: \u0060K.Command.IdempotencyKeyRequired\u0060, \u0060K.Command.Invalid\u0060, \u0060K.Command.ReasonForChangeRequired\u0060, \u0060K.Command.TenantRequired\u0060, \u0060K.Protocol.AttestationRejected\u0060, \u0060K.Trust.MethodRequired\u0060, \u0060K.Trust.TargetKindUnsupported\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "x-kernel-errors": [
+          {
+            "code": "K.Actor.Unresolved",
+            "status": 401
+          },
+          {
+            "code": "K.Trust.AuthenticationStale",
+            "status": 401
+          },
+          {
+            "code": "K.Authorization.Denied",
+            "status": 403
+          },
+          {
+            "code": "K.Subscription.Expired",
+            "status": 403
+          },
+          {
+            "code": "K.Trust.PersonRequired",
+            "status": 403
+          },
+          {
+            "code": "K.Trust.TargetUnknown",
+            "status": 404
+          },
+          {
+            "code": "K.Aggregate.AlreadyExists",
+            "status": 409
+          },
+          {
+            "code": "K.Aggregate.ConcurrencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Trust.TargetContentChanged",
+            "status": 409
+          },
+          {
+            "code": "K.Trust.TargetNotSignable",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyKeyRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.Invalid",
+            "status": 422
+          },
+          {
+            "code": "K.Command.ReasonForChangeRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.TenantRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Protocol.AttestationRejected",
+            "status": 422
+          },
+          {
+            "code": "K.Trust.MethodRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Trust.TargetKindUnsupported",
+            "status": 422
+          }
+        ]
+      }
+    },
     "/api/v1/kernel/protocols/matrix-gap-check": {
       "post": {
         "tags": [
@@ -13726,6 +13907,167 @@
         ]
       }
     },
+    "/api/v1/kernel/protocol-versions/{versionRef}/fork": {
+      "post": {
+        "tags": [
+          "Kernel protocol governance"
+        ],
+        "summary": "Forks an approved protocol version into the study\u0027s next numbered Draft protocol amendment without importing external files (protocol.amend).",
+        "operationId": "KernelForkProtocolVersion",
+        "parameters": [
+          {
+            "name": "versionRef",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Kernel_KernelForkProtocolVersionRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_KernelProtocolVersionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized. Kernel errors: \u0060K.Actor.Unresolved\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060, \u0060K.Subscription.Expired\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found. Kernel errors: \u0060K.Aggregate.NotFound\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict. Kernel errors: \u0060K.Aggregate.AlreadyExists\u0060, \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Command.IdempotencyConflict\u0060, \u0060K.Protocol.InvalidTransition\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity. Kernel errors: \u0060K.Command.IdempotencyKeyRequired\u0060, \u0060K.Command.Invalid\u0060, \u0060K.Command.ReasonForChangeRequired\u0060, \u0060K.Command.TenantRequired\u0060, \u0060K.Protocol.AmendmentInvalid\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "x-kernel-errors": [
+          {
+            "code": "K.Actor.Unresolved",
+            "status": 401
+          },
+          {
+            "code": "K.Authorization.Denied",
+            "status": 403
+          },
+          {
+            "code": "K.Subscription.Expired",
+            "status": 403
+          },
+          {
+            "code": "K.Aggregate.NotFound",
+            "status": 404
+          },
+          {
+            "code": "K.Aggregate.AlreadyExists",
+            "status": 409
+          },
+          {
+            "code": "K.Aggregate.ConcurrencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Protocol.InvalidTransition",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyKeyRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.Invalid",
+            "status": 422
+          },
+          {
+            "code": "K.Command.ReasonForChangeRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.TenantRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Protocol.AmendmentInvalid",
+            "status": 422
+          }
+        ]
+      }
+    },
     "/api/v1/kernel/protocol-versions/{versionRef}/submit-for-review": {
       "post": {
         "tags": [
@@ -14168,6 +14510,256 @@
           },
           {
             "code": "K.Protocol.SimulationReviewRequired",
+            "status": 409
+          },
+          {
+            "code": "K.Trust.TargetContentChanged",
+            "status": 409
+          },
+          {
+            "code": "K.Trust.TargetNotSignable",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyKeyRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.Invalid",
+            "status": 422
+          },
+          {
+            "code": "K.Command.ReasonForChangeRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.TenantRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Protocol.AttestationRejected",
+            "status": 422
+          },
+          {
+            "code": "K.Trust.MethodRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Trust.TargetKindUnsupported",
+            "status": 422
+          }
+        ]
+      }
+    },
+    "/api/v1/kernel/protocol-versions/{versionRef}/approval-readiness": {
+      "get": {
+        "tags": [
+          "Kernel protocol governance"
+        ],
+        "summary": "Evaluates read-only approval readiness, simulation report binding, and wire-masked explanation items for a protocol version prior to step-up authentication (K-PROT-2, K-SIM-5).",
+        "operationId": "KernelGetProtocolApprovalReadiness",
+        "parameters": [
+          {
+            "name": "versionRef",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_KernelProtocolApprovalReadinessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/kernel/protocol-versions/{versionRef}/withdraw": {
+      "post": {
+        "tags": [
+          "Kernel protocol governance"
+        ],
+        "summary": "Records a 21 CFR Part 11 Withdrawn attestation bound to the frozen protocol content hash and withdraws an InReview or Approved protocol version (protocol.withdraw).",
+        "operationId": "KernelWithdrawProtocolVersion",
+        "parameters": [
+          {
+            "name": "versionRef",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Kernel_KernelWithdrawProtocolVersionRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_KernelProtocolVersionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized. Kernel errors: \u0060K.Actor.Unresolved\u0060, \u0060K.Trust.AuthenticationStale\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060, \u0060K.Subscription.Expired\u0060, \u0060K.Trust.PersonRequired\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found. Kernel errors: \u0060K.Aggregate.NotFound\u0060, \u0060K.Trust.TargetUnknown\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict. Kernel errors: \u0060K.Aggregate.AlreadyExists\u0060, \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Command.IdempotencyConflict\u0060, \u0060K.Protocol.InvalidTransition\u0060, \u0060K.Trust.TargetContentChanged\u0060, \u0060K.Trust.TargetNotSignable\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity. Kernel errors: \u0060K.Command.IdempotencyKeyRequired\u0060, \u0060K.Command.Invalid\u0060, \u0060K.Command.ReasonForChangeRequired\u0060, \u0060K.Command.TenantRequired\u0060, \u0060K.Protocol.AttestationRejected\u0060, \u0060K.Trust.MethodRequired\u0060, \u0060K.Trust.TargetKindUnsupported\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "x-kernel-errors": [
+          {
+            "code": "K.Actor.Unresolved",
+            "status": 401
+          },
+          {
+            "code": "K.Trust.AuthenticationStale",
+            "status": 401
+          },
+          {
+            "code": "K.Authorization.Denied",
+            "status": 403
+          },
+          {
+            "code": "K.Subscription.Expired",
+            "status": 403
+          },
+          {
+            "code": "K.Trust.PersonRequired",
+            "status": 403
+          },
+          {
+            "code": "K.Aggregate.NotFound",
+            "status": 404
+          },
+          {
+            "code": "K.Trust.TargetUnknown",
+            "status": 404
+          },
+          {
+            "code": "K.Aggregate.AlreadyExists",
+            "status": 409
+          },
+          {
+            "code": "K.Aggregate.ConcurrencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Protocol.InvalidTransition",
             "status": 409
           },
           {
@@ -20235,30 +20827,6 @@
         }
       }
     },
-    "/api/v1/payments/participant/wallets/{walletId}/tax-1099-status": {
-      "get": {
-        "tags": [
-          "Payments"
-        ],
-        "summary": "Retrieve IRS 1099 tax status and threshold monitoring tracer.",
-        "operationId": "GetTax1099Status",
-        "parameters": [
-          {
-            "name": "walletId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
     "/api/v1/payments/participant/wallets/{walletId}/balance": {
       "get": {
         "tags": [
@@ -20305,74 +20873,6 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/Payments_IssueCardRequestDto"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/payments/participant/wallets/{walletId}/submit-w9": {
-      "post": {
-        "tags": [
-          "Payments"
-        ],
-        "summary": "Submit Form W-9 taxpayer identification certification.",
-        "operationId": "SubmitW9Form",
-        "parameters": [
-          {
-            "name": "walletId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Payments_SubmitW9RequestDto"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/payments/participant/wallets/{walletId}/verify-w9": {
-      "post": {
-        "tags": [
-          "Payments"
-        ],
-        "summary": "Verify participant Form W-9 submission.",
-        "operationId": "VerifyW9Form",
-        "parameters": [
-          {
-            "name": "walletId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Payments_VerifyW9RequestDto"
               }
             }
           },
@@ -20476,6 +20976,192 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/Payments_VisitVerificationEventDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/me/wallet": {
+      "get": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Retrieves the authenticated participant\u0027s own study wallet balances, masks, and ledger activity.",
+        "operationId": "GetSelfParticipantWallet",
+        "parameters": [
+          {
+            "name": "subjectId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "walletId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "studyId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/me/disburse": {
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Triggers an on-demand payout of the signed participant\u0027s available wallet balance.",
+        "operationId": "DisburseSelfWalletBalance",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Payments_SelfServiceDisburseRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/me/diary-stipend": {
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Credits protocol stipend for a synchronized participant diary strictly from server rules.",
+        "operationId": "CreditSelfDiaryStipend",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Payments_SelfServiceDiaryStipendRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/wallets/{walletId}/tax-1099-status": {
+      "get": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Retrieve IRS 1099 tax status and threshold monitoring tracer.",
+        "operationId": "GetTax1099Status",
+        "parameters": [
+          {
+            "name": "walletId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/wallets/{walletId}/submit-w9": {
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Submit Form W-9 taxpayer identification certification.",
+        "operationId": "SubmitW9Form",
+        "parameters": [
+          {
+            "name": "walletId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Payments_SubmitW9RequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/wallets/{walletId}/verify-w9": {
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Verify participant Form W-9 submission.",
+        "operationId": "VerifyW9Form",
+        "parameters": [
+          {
+            "name": "walletId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Payments_VerifyW9RequestDto"
               }
             }
           },
@@ -20598,43 +21284,6 @@
         }
       }
     },
-    "/api/v1/payments/participant/me/wallet": {
-      "get": {
-        "tags": [
-          "Payments"
-        ],
-        "summary": "Retrieves the authenticated participant\u0027s own study wallet balances, masks, and ledger activity.",
-        "operationId": "GetSelfParticipantWallet",
-        "parameters": [
-          {
-            "name": "subjectId",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "walletId",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "studyId",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
     "/api/v1/payments/participant/me/expenses/ocr-extract": {
       "post": {
         "tags": [
@@ -20680,63 +21329,6 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/Payments_SelfServiceSubmitExpenseRequestDto"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/payments/participant/me/disburse": {
-      "post": {
-        "tags": [
-          "Payments"
-        ],
-        "summary": "Triggers an on-demand payout of the signed participant\u0027s available wallet balance.",
-        "operationId": "DisburseSelfWalletBalance",
-        "parameters": [
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Payments_SelfServiceDisburseRequestDto"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/payments/participant/me/diary-stipend": {
-      "post": {
-        "tags": [
-          "Payments"
-        ],
-        "summary": "Credits protocol stipend for a synchronized participant diary strictly from server rules.",
-        "operationId": "CreditSelfDiaryStipend",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Payments_SelfServiceDiaryStipendRequestDto"
               }
             }
           },
@@ -21791,64 +22383,6 @@
       }
     },
     "/api/v1/tickets": {
-      "post": {
-        "tags": [
-          "Tickets"
-        ],
-        "operationId": "CreateTicket",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Tickets_CreateTicketRequestDto"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "description": "Created",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Tickets_TicketResponseDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/Tickets_ProblemDetails"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/Tickets_ProblemDetails"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/Tickets_ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      },
       "get": {
         "tags": [
           "Tickets"
@@ -21946,6 +22480,64 @@
                   "items": {
                     "$ref": "#/components/schemas/Tickets_TicketResponseDto"
                   }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tickets_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tickets_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Tickets"
+        ],
+        "operationId": "CreateTicket",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Tickets_CreateTicketRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tickets_TicketResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tickets_ProblemDetails"
                 }
               }
             }
@@ -22292,6 +22884,69 @@
         }
       }
     },
+    "/api/v1/tickets/{ticket_id}/audit-trail": {
+      "get": {
+        "tags": [
+          "Tickets"
+        ],
+        "operationId": "GetTicketAuditTrail",
+        "parameters": [
+          {
+            "name": "ticket_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Tickets_TicketAuditEntryDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tickets_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tickets_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tickets_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/tickets/{ticket_id}/transitions": {
       "post": {
         "tags": [
@@ -22461,69 +23116,6 @@
           },
           "409": {
             "description": "Conflict",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/Tickets_ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/tickets/{ticket_id}/audit-trail": {
-      "get": {
-        "tags": [
-          "Tickets"
-        ],
-        "operationId": "GetTicketAuditTrail",
-        "parameters": [
-          {
-            "name": "ticket_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/Tickets_TicketAuditEntryDto"
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/Tickets_ProblemDetails"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/Tickets_ProblemDetails"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -35494,6 +36086,50 @@
           }
         }
       },
+      "Kernel_KernelArtifactReviewAttestationResponse": {
+        "required": [
+          "attestation_ref",
+          "attestation_id",
+          "artifact_ref",
+          "artifact_version_ref",
+          "study_ref",
+          "meaning",
+          "content_hash",
+          "recorded_at"
+        ],
+        "type": "object",
+        "properties": {
+          "attestation_ref": {
+            "type": "string"
+          },
+          "attestation_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "artifact_ref": {
+            "type": "string"
+          },
+          "artifact_version_ref": {
+            "type": "string"
+          },
+          "study_ref": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "meaning": {
+            "type": "string"
+          },
+          "content_hash": {
+            "type": "string"
+          },
+          "recorded_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "Kernel_KernelAssertionStateResponse": {
         "required": [
           "ref",
@@ -36746,6 +37382,61 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "Kernel_KernelForkProtocolVersionRequest": {
+        "required": [
+          "intent",
+          "rationale"
+        ],
+        "type": "object",
+        "properties": {
+          "intent": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "rationale": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "classification": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "summary_of_changes": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "impacted_elements": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "transition_policy": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "protocol_version_id": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
           }
         }
       },
@@ -38437,6 +39128,69 @@
           }
         }
       },
+      "Kernel_KernelProtocolApprovalReadinessResponse": {
+        "required": [
+          "protocol_version_ref",
+          "status",
+          "is_amendment",
+          "parent_version_ref",
+          "ready",
+          "simulation_report_saved",
+          "review_signed",
+          "simulation_report_artifact_version_ref",
+          "review_attestation_ref",
+          "blocking_code",
+          "explanation"
+        ],
+        "type": "object",
+        "properties": {
+          "protocol_version_ref": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "is_amendment": {
+            "type": "boolean"
+          },
+          "parent_version_ref": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "ready": {
+            "type": "boolean"
+          },
+          "simulation_report_saved": {
+            "type": "boolean"
+          },
+          "review_signed": {
+            "type": "boolean"
+          },
+          "simulation_report_artifact_version_ref": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "review_attestation_ref": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "blocking_code": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "explanation": {
+            "$ref": "#/components/schemas/Kernel_KernelExplanationResponse"
+          }
+        }
+      },
       "Kernel_KernelProtocolDraftSummaryResponse": {
         "required": [
           "version",
@@ -38883,6 +39637,30 @@
             "type": "string"
           },
           "assertion_id": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
+      "Kernel_KernelReviewArtifactVersionRequest": {
+        "type": "object",
+        "properties": {
+          "meaning": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "expected_content_hash": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "attestation_id": {
             "type": [
               "null",
               "string"
@@ -40728,6 +41506,30 @@
             "format": "int32"
           },
           "assertion_id": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
+      "Kernel_KernelWithdrawProtocolVersionRequest": {
+        "type": "object",
+        "properties": {
+          "meaning": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "expected_content_hash": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "attestation_id": {
             "type": [
               "null",
               "string"

@@ -146,6 +146,26 @@ describe("Router OIDC & RBAC Navigation Guards", () => {
       expect(router.currentRoute.value.name).toBeUndefined();
     });
 
+    it("redirects /amendment-diff into StudyCanvasView (stage=design&section=protocol-versions) and blocks unauthorized roles", async () => {
+      const authStore = useAuthStore();
+      const canvasStore = useStudyCanvasStore();
+      authStore.isAuthenticated = true;
+      authStore.rawRoles = ["Sponsor Designer"];
+      canvasStore.studyCode = "CAD-101";
+
+      await router.push("/amendment-diff");
+      expect(router.currentRoute.value.name).toBe("study");
+      expect(router.currentRoute.value.params.studyCode).toBe("CAD-101");
+      expect(router.currentRoute.value.query).toMatchObject({
+        stage: "design",
+        section: "protocol-versions",
+      });
+
+      authStore.rawRoles = ["Auditor"];
+      await router.push("/amendment-diff");
+      expect(router.currentRoute.value.path).toBe("/forbidden");
+    });
+
     it("redirects /data-lock into StudyCanvasView (stage=data&section=locks) for Data Manager and blocks unauthorized roles", async () => {
       const authStore = useAuthStore();
       const canvasStore = useStudyCanvasStore();

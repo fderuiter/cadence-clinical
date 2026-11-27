@@ -1160,6 +1160,7 @@ import {
   enrollmentIdFromParticipant,
   participantNodeRef,
   useStudyCanvasStore,
+  type InspectorVerbRequest,
 } from "../stores/studyCanvas";
 import { hasUserScopedDrafts } from "../utils/userScopedStorage.js";
 import CanvasInspector from "../components/canvas/CanvasInspector.vue";
@@ -1936,10 +1937,12 @@ function retryProtocolVersionLoad() {
   return undefined;
 }
 
+let activeVersionLoadPromise: Promise<void> = Promise.resolve();
+
 watch(
   selectedVersionText,
   (text) => {
-    void loadInspectedProtocolVersion(text);
+    activeVersionLoadPromise = loadInspectedProtocolVersion(text);
   },
   { immediate: true }
 );
@@ -2540,8 +2543,12 @@ async function onObservationLoaded(obs: KernelObservation) {
   }
 }
 
-async function selectVersion(version: KernelProtocolVersion) {
+async function selectVersion(
+  version: KernelProtocolVersion,
+  verb?: InspectorVerbRequest
+) {
   if (!version.ref) return;
+  const sameNode = selectedVersionText.value === version.ref;
   await router.push(
     scopedStudyLocation({
       stage: "design",
@@ -2549,8 +2556,18 @@ async function selectVersion(version: KernelProtocolVersion) {
       node: version.ref,
     })
   );
+  if (sameNode) {
+    versionRequest += 1;
+    inspectedVersion.value = version;
+    inspectedVersionError.value = "";
+  } else {
+    await nextTick();
+    await activeVersionLoadPromise;
+  }
+  await nextTick();
   await canvas.requestInspectorFocus({
     nodeRef: version.ref,
+    verb: verb ?? null,
     scrollIntoView: true,
   });
 }
@@ -3529,6 +3546,9 @@ onMounted(() => {
       await focusAndScrollInspector({
         scrollIntoView: request.scrollIntoView,
       });
+      if (request.verb) {
+        inspectorRef.value?.openVerb?.(request.verb);
+      }
     }
   );
   unregisterCanvasExplain = canvas.registerExplainCoordinator((options) => {
@@ -3546,7 +3566,7 @@ onMounted(() => {
         })
         .then(() => {
           void nextTick(() => {
-            inspectorRef.value?.openExplain?.();
+            inspectorRef.value?.openExplain?.(options);
           });
         });
       return true;

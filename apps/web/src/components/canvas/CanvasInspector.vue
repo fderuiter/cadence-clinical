@@ -135,12 +135,18 @@
             {{
               explained
                 ? `Why: ${formatCommandTitle(explained.command)}`
-                : "Explain"
+                : directExplanation
+                  ? directExplanation.title
+                  : "Explain"
             }}
           </h3>
           <KernelExplanation
             v-if="explained"
             :explanation="explained.decision.explanation"
+          />
+          <KernelExplanation
+            v-else-if="directExplanation"
+            :explanation="directExplanation.explanation"
           />
           <p v-else id="kernel-explain-empty" class="inspector-empty">
             Choose Explain beside an action under Act to see why it is permitted
@@ -150,6 +156,9 @@
 
         <InspectorSimulatePanel
           v-else-if="currentVerb === 'simulate' && kernelRef"
+          :study-code="studyCode"
+          :protocol-version="protocolVersion"
+          :has-participant="Boolean(participant)"
           :simulation-result="simulationResult"
           :simulation-loading="simulationLoading"
           :simulation-error="simulationError"
@@ -228,6 +237,10 @@
             v-if="versionErrorCanI.decision.value?.explanation"
             :explanation="versionErrorCanI.decision.value.explanation"
           />
+          <KernelExplanation
+            v-else-if="directExplanation"
+            :explanation="directExplanation.explanation"
+          />
           <p v-else id="kernel-explain-empty" class="inspector-empty">
             Choose Retry above or verify your account's study access to inspect
             available protocol actions.
@@ -257,8 +270,14 @@
           tabindex="-1"
           aria-labelledby="kernel-explain-title"
         >
-          <h3 id="kernel-explain-title">Explain</h3>
-          <p id="kernel-explain-empty" class="inspector-empty">
+          <h3 id="kernel-explain-title">
+            {{ directExplanation ? directExplanation.title : "Explain" }}
+          </h3>
+          <KernelExplanation
+            v-if="directExplanation"
+            :explanation="directExplanation.explanation"
+          />
+          <p v-else id="kernel-explain-empty" class="inspector-empty">
             Select a study record to inspect why its actions are permitted or
             blocked.
           </p>
@@ -302,6 +321,7 @@ const {
   copiedRef,
   copyInspectorRef,
   currentVerb,
+  directExplanation,
   expand,
   explainCommand,
   explained,
@@ -317,6 +337,7 @@ const {
   lineageMode,
   openExplain,
   openProtocolVersionExplain,
+  openVerb,
   runSimulation,
   shownVerb,
   shownVerbNote,
@@ -331,7 +352,7 @@ const {
   emit("update:collapsed", collapsed)
 );
 
-defineExpose({ expand, openExplain });
+defineExpose({ expand, openExplain, openVerb });
 </script>
 
 <style scoped src="./canvasInspector.css"></style>

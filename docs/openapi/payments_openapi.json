@@ -162,30 +162,6 @@
         }
       }
     },
-    "/api/v1/payments/participant/wallets/{walletId}/tax-1099-status": {
-      "get": {
-        "tags": [
-          "Payments"
-        ],
-        "summary": "Retrieve IRS 1099 tax status and threshold monitoring tracer.",
-        "operationId": "GetTax1099Status",
-        "parameters": [
-          {
-            "name": "walletId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
     "/api/v1/payments/participant/wallets/{walletId}/balance": {
       "get": {
         "tags": [
@@ -232,74 +208,6 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/Payments_IssueCardRequestDto"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/payments/participant/wallets/{walletId}/submit-w9": {
-      "post": {
-        "tags": [
-          "Payments"
-        ],
-        "summary": "Submit Form W-9 taxpayer identification certification.",
-        "operationId": "SubmitW9Form",
-        "parameters": [
-          {
-            "name": "walletId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Payments_SubmitW9RequestDto"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/payments/participant/wallets/{walletId}/verify-w9": {
-      "post": {
-        "tags": [
-          "Payments"
-        ],
-        "summary": "Verify participant Form W-9 submission.",
-        "operationId": "VerifyW9Form",
-        "parameters": [
-          {
-            "name": "walletId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Payments_VerifyW9RequestDto"
               }
             }
           },
@@ -403,6 +311,192 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/Payments_VisitVerificationEventDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/me/wallet": {
+      "get": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Retrieves the authenticated participant\u0027s own study wallet balances, masks, and ledger activity.",
+        "operationId": "GetSelfParticipantWallet",
+        "parameters": [
+          {
+            "name": "subjectId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "walletId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "studyId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/me/disburse": {
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Triggers an on-demand payout of the signed participant\u0027s available wallet balance.",
+        "operationId": "DisburseSelfWalletBalance",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Payments_SelfServiceDisburseRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/me/diary-stipend": {
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Credits protocol stipend for a synchronized participant diary strictly from server rules.",
+        "operationId": "CreditSelfDiaryStipend",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Payments_SelfServiceDiaryStipendRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/wallets/{walletId}/tax-1099-status": {
+      "get": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Retrieve IRS 1099 tax status and threshold monitoring tracer.",
+        "operationId": "GetTax1099Status",
+        "parameters": [
+          {
+            "name": "walletId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/wallets/{walletId}/submit-w9": {
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Submit Form W-9 taxpayer identification certification.",
+        "operationId": "SubmitW9Form",
+        "parameters": [
+          {
+            "name": "walletId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Payments_SubmitW9RequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments/participant/wallets/{walletId}/verify-w9": {
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "summary": "Verify participant Form W-9 submission.",
+        "operationId": "VerifyW9Form",
+        "parameters": [
+          {
+            "name": "walletId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Payments_VerifyW9RequestDto"
               }
             }
           },
@@ -525,43 +619,6 @@
         }
       }
     },
-    "/api/v1/payments/participant/me/wallet": {
-      "get": {
-        "tags": [
-          "Payments"
-        ],
-        "summary": "Retrieves the authenticated participant\u0027s own study wallet balances, masks, and ledger activity.",
-        "operationId": "GetSelfParticipantWallet",
-        "parameters": [
-          {
-            "name": "subjectId",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "walletId",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "studyId",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
     "/api/v1/payments/participant/me/expenses/ocr-extract": {
       "post": {
         "tags": [
@@ -607,63 +664,6 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/Payments_SelfServiceSubmitExpenseRequestDto"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/payments/participant/me/disburse": {
-      "post": {
-        "tags": [
-          "Payments"
-        ],
-        "summary": "Triggers an on-demand payout of the signed participant\u0027s available wallet balance.",
-        "operationId": "DisburseSelfWalletBalance",
-        "parameters": [
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Payments_SelfServiceDisburseRequestDto"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/payments/participant/me/diary-stipend": {
-      "post": {
-        "tags": [
-          "Payments"
-        ],
-        "summary": "Credits protocol stipend for a synchronized participant diary strictly from server rules.",
-        "operationId": "CreditSelfDiaryStipend",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Payments_SelfServiceDiaryStipendRequestDto"
               }
             }
           },

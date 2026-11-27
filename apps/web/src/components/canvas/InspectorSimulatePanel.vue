@@ -91,8 +91,8 @@
             :data-change="change.change"
           >
             <span class="simulation-change-kind">{{ change.change }}</span>
-            <code>{{ change.activity_id }}</code>
-            <span class="simulation-meta numeric">
+            <code>{{ change.activity_id }}</code>{{ " "
+            }}<span class="simulation-meta numeric">
               {{ formatScheduleChange(change) }}
             </span>
           </li>
@@ -209,18 +209,30 @@
           </div>
         </div>
       </details>
+
+      <SimulationGovernanceActions
+        v-if="protocolVersion && !hasParticipant && studyCode"
+        :study-code="studyCode"
+        :protocol-version="protocolVersion"
+        :simulation-result="simulationResult"
+      />
     </div>
   </section>
 </template>
 
 <script setup lang="ts">
-import { isMasked, type KernelSimulationResult } from "../../api/kernelApi";
+import {
+  isMasked,
+  type KernelProtocolVersion,
+  type KernelSimulationResult,
+} from "../../api/kernelApi";
 import {
   formatCommandTitle,
   formatFieldPath,
   formatMaskedNode,
   maskReasonWords,
 } from "../../canvas/nodeResolver";
+import { defineLazyOverlay } from "../../utils/lazyOverlay";
 import CanvasErrorAlert from "./CanvasErrorAlert.vue";
 import NodeRefChip from "./NodeRefChip.vue";
 import {
@@ -229,7 +241,14 @@ import {
   plainSimulationWords,
 } from "./useInspectorSimulation";
 
+const SimulationGovernanceActions = defineLazyOverlay(
+  () => import("./SimulationGovernanceActions.vue")
+);
+
 const props = defineProps<{
+  studyCode?: string;
+  protocolVersion?: KernelProtocolVersion | null;
+  hasParticipant?: boolean;
   simulationResult: KernelSimulationResult | null;
   simulationLoading: boolean;
   simulationError: string;

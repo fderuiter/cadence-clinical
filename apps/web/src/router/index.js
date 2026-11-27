@@ -118,6 +118,35 @@ const CEC_ADJUDICATION_ROLES = [
   "tmf_auditor",
 ];
 
+const CLINICAL_OPERATIONS_ROLES = [
+  "sponsor_designer",
+  "data_manager",
+  "sponsor_admin",
+  "super_admin",
+  "cra",
+  "monitor",
+  "site_investigator",
+  "crc",
+];
+
+const DEVICE_INVESTIGATION_ROLES = [
+  "site_investigator",
+  "crc",
+  "data_manager",
+  "sponsor_admin",
+  "cra",
+  "monitor",
+  "sponsor_designer",
+  "auditor",
+];
+
+const DATA_GOVERNANCE_ROLES = [
+  "data_manager",
+  "sponsor_designer",
+  "sponsor_admin",
+  "super_admin",
+];
+
 const routes = [
   {
     path: "/",
@@ -246,18 +275,10 @@ const routes = [
     path: "/amendment-diff",
     name: "amendment-diff",
     component: () => import("../views/AmendmentDiffView.vue"),
+    beforeEnter: redirectToCanvasSection("design", "protocol-versions"),
     meta: {
       requiresAuth: true,
-      requiresRole: [
-        "sponsor_designer",
-        "data_manager",
-        "sponsor_admin",
-        "super_admin",
-        "cra",
-        "monitor",
-        "site_investigator",
-        "crc",
-      ],
+      requiresRole: CLINICAL_OPERATIONS_ROLES,
     },
   },
   {
@@ -329,16 +350,7 @@ const routes = [
     component: () => import("../views/DeviceInvestigationView.vue"),
     meta: {
       requiresAuth: true,
-      requiresRole: [
-        "site_investigator",
-        "crc",
-        "data_manager",
-        "sponsor_admin",
-        "cra",
-        "monitor",
-        "sponsor_designer",
-        "auditor",
-      ],
+      requiresRole: DEVICE_INVESTIGATION_ROLES,
     },
   },
   {
@@ -347,16 +359,7 @@ const routes = [
     component: () => import("../views/DeviceInvestigationView.vue"),
     meta: {
       requiresAuth: true,
-      requiresRole: [
-        "site_investigator",
-        "crc",
-        "data_manager",
-        "sponsor_admin",
-        "cra",
-        "monitor",
-        "sponsor_designer",
-        "auditor",
-      ],
+      requiresRole: DEVICE_INVESTIGATION_ROLES,
     },
   },
   {
@@ -446,12 +449,7 @@ const routes = [
     component: () => import("../views/MedicalCodingView.vue"),
     meta: {
       requiresAuth: true,
-      requiresRole: [
-        "data_manager",
-        "sponsor_designer",
-        "sponsor_admin",
-        "super_admin",
-      ],
+      requiresRole: DATA_GOVERNANCE_ROLES,
     },
   },
   {
@@ -461,12 +459,7 @@ const routes = [
     beforeEnter: redirectToCanvasSection("data", "locks"),
     meta: {
       requiresAuth: true,
-      requiresRole: [
-        "data_manager",
-        "sponsor_designer",
-        "sponsor_admin",
-        "super_admin",
-      ],
+      requiresRole: DATA_GOVERNANCE_ROLES,
     },
   },
   {
@@ -491,16 +484,7 @@ const routes = [
     component: () => import("../views/SensorTelemetryView.vue"),
     meta: {
       requiresAuth: true,
-      requiresRole: [
-        "site_investigator",
-        "crc",
-        "data_manager",
-        "sponsor_designer",
-        "sponsor_admin",
-        "cra",
-        "monitor",
-        "super_admin",
-      ],
+      requiresRole: CLINICAL_OPERATIONS_ROLES,
     },
   },
   {
@@ -509,16 +493,7 @@ const routes = [
     component: () => import("../views/LabGovernanceView.vue"),
     meta: {
       requiresAuth: true,
-      requiresRole: [
-        "site_investigator",
-        "crc",
-        "data_manager",
-        "cra",
-        "monitor",
-        "sponsor_designer",
-        "sponsor_admin",
-        "super_admin",
-      ],
+      requiresRole: CLINICAL_OPERATIONS_ROLES,
     },
   },
   {
@@ -527,16 +502,7 @@ const routes = [
     component: () => import("../views/TelehealthDtpView.vue"),
     meta: {
       requiresAuth: true,
-      requiresRole: [
-        "site_investigator",
-        "crc",
-        "data_manager",
-        "sponsor_designer",
-        "sponsor_admin",
-        "cra",
-        "monitor",
-        "super_admin",
-      ],
+      requiresRole: CLINICAL_OPERATIONS_ROLES,
     },
   },
   {

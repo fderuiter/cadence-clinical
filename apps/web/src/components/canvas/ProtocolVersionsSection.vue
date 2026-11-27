@@ -5,19 +5,205 @@
     aria-labelledby="protocol-versions-title"
     :aria-busy="loading"
   >
-    <h2 id="protocol-versions-title" tabindex="-1">Protocol versions</h2>
-    <div
-      v-if="error"
-      id="protocol-versions-status"
-      class="status-line"
-      role="alert"
-    >
-      <p class="status-line">Protocol versions couldn't be loaded right now.</p>
-      <SupportDetails :detail="error" />
+    <div class="versions-header">
+      <div class="versions-header-copy">
+        <h2 id="protocol-versions-title" tabindex="-1">Protocol versions</h2>
+        <div
+          v-if="error"
+          id="protocol-versions-status"
+          class="status-line"
+          role="alert"
+        >
+          <p class="status-line">
+            Protocol versions couldn't be loaded right now.
+          </p>
+          <SupportDetails :detail="error" />
+        </div>
+        <p
+          v-else
+          id="protocol-versions-status"
+          class="status-line"
+          role="status"
+        >
+          {{ statusLine }}
+        </p>
+      </div>
+
+      <button
+        v-if="showGovernanceControls && canGovern && forkSourceVersion"
+        id="btn-open-fork-amendment"
+        type="button"
+        class="btn btn-secondary versions-fork-btn"
+        :disabled="governanceBusy"
+        :aria-expanded="forkFormOpen"
+        aria-controls="protocol-fork-card"
+        @click="toggleForkForm"
+      >
+        <GitFork :size="14" aria-hidden="true" />
+        <span>{{ forkFormOpen ? "Cancel fork" : "Fork amendment" }}</span>
+      </button>
     </div>
-    <p v-else id="protocol-versions-status" class="status-line" role="status">
-      {{ statusLine }}
-    </p>
+
+    <section
+      v-if="forkFormOpen && forkSourceVersion && canGovern"
+      id="protocol-fork-card"
+      class="gov-card"
+      aria-labelledby="protocol-fork-heading"
+    >
+      <div class="gov-card-header">
+        <div>
+          <h3 id="protocol-fork-heading" tabindex="-1">
+            Fork amendment from Version {{ forkSourceVersion.number }}
+          </h3>
+          <p class="gov-subtitle">
+            Creates a mutable <strong>Draft</strong> amendment version linked to
+            Approved Version {{ forkSourceVersion.number }} (K-PROT-2).
+          </p>
+        </div>
+      </div>
+
+      <form
+        id="protocol-fork-form"
+        class="gov-form"
+        @submit.prevent="submitForkAmendment"
+      >
+        <div class="gov-grid">
+          <ClinicalInput
+            id="fork-amendment-intent"
+            v-model="forkForm.intent"
+            label="Amendment intent"
+            type="text"
+            density="compact"
+            :show-query-flag="false"
+            extra-class="gov-field"
+            :maxlength="500"
+            placeholder="e.g. Added Week 4 cardiometabolic biomarker panel"
+            :disabled="governanceBusy"
+          />
+
+          <ClinicalInput
+            id="fork-amendment-classification"
+            v-model="forkForm.classification"
+            label="Classification"
+            type="select"
+            density="compact"
+            :show-query-flag="false"
+            extra-class="gov-field"
+            :disabled="governanceBusy"
+          >
+            <option value="Substantial">Substantial</option>
+            <option value="NonSubstantial">Non-substantial</option>
+            <option value="UrgentSafetyMeasure">Urgent safety measure</option>
+          </ClinicalInput>
+        </div>
+
+        <div class="gov-grid">
+          <ClinicalInput
+            id="fork-amendment-rationale"
+            v-model="forkForm.rationale"
+            label="Clinical rationale"
+            type="text"
+            density="compact"
+            :show-query-flag="false"
+            extra-class="gov-field"
+            :maxlength="1000"
+            placeholder="e.g. Incorporate Week 4 biomarker safety monitoring per DSMB recommendation"
+            :disabled="governanceBusy"
+          />
+
+          <ClinicalInput
+            id="fork-amendment-transition-policy"
+            v-model="forkForm.transitionPolicy"
+            label="Participant transition policy"
+            type="select"
+            density="compact"
+            :show-query-flag="false"
+            extra-class="gov-field"
+            :disabled="governanceBusy"
+          >
+            <option value="RequiresReconsent">
+              Requires re-consent (RequiresReconsent)
+            </option>
+            <option value="NewParticipantsOnly">
+              New participants only (NewParticipantsOnly)
+            </option>
+            <option value="Automatic">Automatic transition (Automatic)</option>
+            <option value="ByCohort">By cohort (ByCohort)</option>
+          </ClinicalInput>
+        </div>
+
+        <div class="gov-grid">
+          <ClinicalInput
+            id="fork-amendment-summary"
+            v-model="forkForm.summaryOfChanges"
+            label="Summary of changes (optional)"
+            type="text"
+            density="compact"
+            :show-query-flag="false"
+            extra-class="gov-field"
+            :maxlength="1000"
+            placeholder="e.g. Add Week 4 blood draw to Treatment epoch"
+            :disabled="governanceBusy"
+          />
+
+          <ClinicalInput
+            id="fork-amendment-elements"
+            v-model="forkForm.impactedElementsText"
+            label="Impacted elements (optional, comma-separated)"
+            type="text"
+            density="compact"
+            :show-query-flag="false"
+            extra-class="gov-field"
+            placeholder="e.g. schedule_of_activities, visit.week4"
+            :disabled="governanceBusy"
+          />
+        </div>
+
+        <ClinicalInput
+          id="fork-amendment-reason"
+          v-model="forkForm.reason"
+          label="Reason for change"
+          type="text"
+          density="compact"
+          :show-query-flag="false"
+          extra-class="gov-field"
+          :maxlength="500"
+          placeholder="e.g. Open Protocol Amendment Version 2 per DSMB safety update"
+          :disabled="governanceBusy"
+        />
+
+        <div
+          v-if="forkErrorMessage"
+          id="protocol-fork-error"
+          class="gov-banner gov-banner-error"
+          role="alert"
+        >
+          {{ forkErrorMessage }}
+        </div>
+
+        <div class="gov-actions">
+          <button
+            id="btn-submit-fork-amendment"
+            type="submit"
+            class="btn btn-primary"
+            :disabled="!canSubmitFork || governanceBusy"
+          >
+            {{
+              governanceBusy ? "Creating amendment…" : "Create draft amendment"
+            }}
+          </button>
+          <button
+            id="btn-cancel-fork-amendment"
+            type="button"
+            class="btn btn-secondary"
+            :disabled="governanceBusy"
+            @click="forkFormOpen = false"
+          >
+            Cancel
+          </button>
+        </div>
+      </form>
+    </section>
 
     <ClinicalDataTable
       v-if="versions.length"
@@ -105,15 +291,156 @@
       </div>
 
       <div
+        v-if="showAmendmentReadinessCard"
+        id="protocol-amendment-impact-review"
+        class="amendment-review"
+        aria-labelledby="protocol-amendment-review-heading"
+      >
+        <div class="amendment-review-header">
+          <h4
+            id="protocol-amendment-review-heading"
+            class="amendment-review-title"
+          >
+            Amendment impact review
+          </h4>
+          <div class="amendment-review-actions">
+            <button
+              v-if="approvalReadiness"
+              id="btn-explain-approval-readiness"
+              type="button"
+              class="btn btn-secondary btn-sm"
+              @click="explainApprovalReadiness"
+            >
+              Explain
+            </button>
+            <button
+              v-if="approvalReadiness && !approvalReadiness.ready"
+              id="btn-open-amendment-simulate"
+              type="button"
+              class="btn btn-secondary btn-sm"
+              @click="openAmendmentSimulate"
+            >
+              Open Simulate
+            </button>
+          </div>
+        </div>
+
+        <div class="amendment-review-box" role="status">
+          <p v-if="approvalReadinessLoading" class="gov-empty">
+            Checking amendment impact review readiness…
+          </p>
+          <template v-else-if="approvalReadiness">
+            <div
+              id="readiness-check-simulation-saved"
+              class="amendment-check-row"
+              :data-met="approvalReadiness.simulation_report_saved"
+            >
+              <span
+                class="amendment-check-icon"
+                :class="
+                  approvalReadiness.simulation_report_saved
+                    ? 'amendment-check-icon--met'
+                    : 'amendment-check-icon--unmet'
+                "
+                aria-hidden="true"
+              >
+                <Check
+                  v-if="approvalReadiness.simulation_report_saved"
+                  :size="12"
+                />
+                <Clock v-else :size="12" />
+              </span>
+              <div class="amendment-check-copy">
+                <strong>
+                  {{
+                    approvalReadiness.simulation_report_saved
+                      ? "Simulation report saved"
+                      : "Simulation report required"
+                  }}
+                </strong>
+                <NodeRefChip
+                  v-if="
+                    approvalReadiness.simulation_report_artifact_version_ref &&
+                    parseNodeRef(
+                      approvalReadiness.simulation_report_artifact_version_ref
+                    )
+                  "
+                  :node-ref="
+                    approvalReadiness.simulation_report_artifact_version_ref
+                  "
+                />
+                <span
+                  v-else-if="!approvalReadiness.simulation_report_saved"
+                  class="gov-meta"
+                >
+                  Run Simulate in the inspector and save an unmasked report
+                  (K-SIM-5).
+                </span>
+              </div>
+            </div>
+
+            <div
+              id="readiness-check-review-signed"
+              class="amendment-check-row"
+              :data-met="approvalReadiness.review_signed"
+            >
+              <span
+                class="amendment-check-icon"
+                :class="
+                  approvalReadiness.review_signed
+                    ? 'amendment-check-icon--met'
+                    : 'amendment-check-icon--unmet'
+                "
+                aria-hidden="true"
+              >
+                <Check v-if="approvalReadiness.review_signed" :size="12" />
+                <Clock v-else :size="12" />
+              </span>
+              <div class="amendment-check-copy">
+                <strong>
+                  {{
+                    approvalReadiness.review_signed
+                      ? "Impact review signed"
+                      : "Part 11 Reviewed signature required"
+                  }}
+                </strong>
+                <span class="gov-meta">(21 CFR Part 11 Reviewed)</span>
+                <NodeRefChip
+                  v-if="
+                    approvalReadiness.review_attestation_ref &&
+                    parseNodeRef(approvalReadiness.review_attestation_ref)
+                  "
+                  :node-ref="approvalReadiness.review_attestation_ref"
+                />
+              </div>
+            </div>
+          </template>
+        </div>
+
+        <div
+          v-if="inlineReadinessExplainOpen && approvalReadiness?.explanation"
+          id="protocol-approval-readiness-explanation"
+          class="amendment-inline-explanation"
+        >
+          <KernelExplanation :explanation="approvalReadiness.explanation" />
+        </div>
+      </div>
+
+      <div
         v-if="
           canGovern &&
           (activeVersion.status === 'Draft' ||
-            activeVersion.status === 'InReview')
+            activeVersion.status === 'InReview' ||
+            activeVersion.status === 'Approved')
         "
         id="protocol-lifecycle-controls"
         class="gov-controls"
       >
         <ClinicalInput
+          v-if="
+            activeVersion.status === 'Draft' ||
+            activeVersion.status === 'InReview'
+          "
           id="protocol-governance-reason"
           v-model="lifecycleReason"
           label="Reason for change (required for review or return to draft)"
@@ -126,38 +453,59 @@
           :disabled="governanceBusy"
         />
 
-        <div class="gov-actions">
-          <button
-            v-if="activeVersion.status === 'Draft'"
-            id="btn-submit-protocol-review"
-            type="button"
-            class="btn btn-primary"
-            :disabled="governanceBusy || !lifecycleReason.trim()"
-            @click="submitForReview"
-          >
-            {{ governanceBusy ? "Submitting…" : "Submit for review" }}
-          </button>
-
-          <template v-if="activeVersion.status === 'InReview'">
+        <div class="gov-actions-row">
+          <div class="gov-actions">
             <button
-              id="btn-approve-protocol-version"
+              v-if="activeVersion.status === 'Draft'"
+              id="btn-submit-protocol-review"
               type="button"
               class="btn btn-primary"
-              :disabled="governanceBusy"
-              @click="openApprovalSignature(activeVersion)"
-            >
-              Sign &amp; approve protocol (Part 11)
-            </button>
-            <button
-              id="btn-return-protocol-draft"
-              type="button"
-              class="btn btn-secondary"
               :disabled="governanceBusy || !lifecycleReason.trim()"
-              @click="returnToDraft"
+              @click="submitForReview"
             >
-              Return to draft
+              {{ governanceBusy ? "Submitting…" : "Submit for review" }}
             </button>
-          </template>
+
+            <template v-if="activeVersion.status === 'InReview'">
+              <button
+                id="btn-approve-protocol-version"
+                type="button"
+                class="btn btn-primary"
+                :disabled="
+                  governanceBusy ||
+                  (isAmendmentInReview && approvalReadinessLoading) ||
+                  isApprovalBlockedByReadiness
+                "
+                @click="openApprovalSignature(activeVersion)"
+              >
+                <ShieldCheck :size="14" aria-hidden="true" />
+                <span>Sign &amp; approve protocol (Part 11)</span>
+              </button>
+              <button
+                id="btn-return-protocol-draft"
+                type="button"
+                class="btn btn-secondary"
+                :disabled="governanceBusy || !lifecycleReason.trim()"
+                @click="returnToDraft"
+              >
+                Return to draft
+              </button>
+            </template>
+          </div>
+
+          <button
+            v-if="
+              activeVersion.status === 'InReview' ||
+              activeVersion.status === 'Approved'
+            "
+            id="btn-withdraw-protocol-version"
+            type="button"
+            class="btn btn-withdraw"
+            :disabled="governanceBusy"
+            @click="openWithdrawalSignature(activeVersion)"
+          >
+            Withdraw version
+          </button>
         </div>
       </div>
     </section>
@@ -582,11 +930,26 @@
       @cancel="approvingVersion = null"
       @success="handleApprovalSigned"
     />
+
+    <SignatureCaptureModal
+      v-if="withdrawingVersion && withdrawingVersion.ref"
+      :is-open="Boolean(withdrawingVersion)"
+      :username="signerUsername"
+      :signer-name="signerFullName"
+      signer-role="Sponsor Designer"
+      :reasons="PROTOCOL_WITHDRAW_REASONS"
+      :action-url="protocolVersionWithdrawAction(withdrawingVersion.ref)"
+      :semantic-action="PROTOCOL_WITHDRAW_SEMANTIC_ACTION"
+      :on-sign="withdrawProtocolWithToken"
+      @cancel="withdrawingVersion = null"
+      @success="handleWithdrawalSigned"
+    />
   </section>
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref } from "vue";
+import { computed, reactive, ref, watch } from "vue";
+import { Check, Clock, GitFork, ShieldCheck } from "lucide-vue-next";
 import {
   ClinicalDataTable,
   ClinicalFieldLayout,
@@ -603,18 +966,28 @@ import {
 import {
   kernelGovernanceApi,
   PROTOCOL_APPROVE_SEMANTIC_ACTION,
+  PROTOCOL_WITHDRAW_SEMANTIC_ACTION,
   protocolVersionApproveAction,
+  protocolVersionWithdrawAction,
+  type KernelAmendmentClassification,
   type KernelArtifact,
   type KernelEffectivity,
+  type KernelProtocolApprovalReadiness,
   type KernelStudySite,
+  type KernelTransitionPolicy,
 } from "../../api/kernelGovernanceApi";
 import { canGovernProtocols } from "../../canvas/authority";
 import { parseNodeRef } from "../../canvas/nodeRef";
 import { maskReasonWords, seedNodeSummary } from "../../canvas/nodeResolver";
 import { useKernelStudyRef } from "../../composables/useKernelStudyRef";
 import { useAuthStore } from "../../stores/auth";
-import { useStudyCanvasStore } from "../../stores/studyCanvas";
+import {
+  useStudyCanvasStore,
+  type InspectorVerbRequest,
+} from "../../stores/studyCanvas";
 import SignatureCaptureModal from "../SignatureCaptureModal.vue";
+import KernelExplanation from "./KernelExplanation.vue";
+import NodeRefChip from "./NodeRefChip.vue";
 import ProtocolImportPanel from "./ProtocolImportPanel.vue";
 import SupportDetails from "./SupportDetails.vue";
 
@@ -623,7 +996,9 @@ import SupportDetails from "./SupportDetails.vue";
  * evidence artifact registration, and bitemporal effectivity governance controls.
  */
 const props = defineProps<{ studyCode: string; selectedRef: string }>();
-const emit = defineEmits<{ select: [version: KernelProtocolVersion] }>();
+const emit = defineEmits<{
+  select: [version: KernelProtocolVersion, verb?: InspectorVerbRequest];
+}>();
 
 const versionColumns = [
   { key: "number", label: "Version", align: "right", rowHeader: true },
@@ -644,6 +1019,12 @@ const PROTOCOL_APPROVE_REASONS = [
   "CLINICAL_QC",
 ];
 
+const PROTOCOL_WITHDRAW_REASONS = [
+  "Withdraw superseded or rejected protocol version",
+  "OBSOLETE_VERSION",
+  "CLINICAL_QC",
+];
+
 const authStore = useAuthStore();
 const canvasStore = useStudyCanvasStore();
 
@@ -657,6 +1038,24 @@ const governanceActionMessage = ref("");
 const governanceErrorMessage = ref("");
 const lifecycleReason = ref("");
 const approvingVersion = ref<KernelProtocolVersion | null>(null);
+const withdrawingVersion = ref<KernelProtocolVersion | null>(null);
+
+const forkFormOpen = ref(false);
+const forkErrorMessage = ref("");
+const forkForm = reactive({
+  intent: "",
+  rationale: "",
+  classification: "Substantial" as KernelAmendmentClassification,
+  transitionPolicy: "RequiresReconsent" as KernelTransitionPolicy,
+  summaryOfChanges: "",
+  impactedElementsText: "",
+  reason: "",
+});
+
+const approvalReadiness = ref<KernelProtocolApprovalReadiness | null>(null);
+const approvalReadinessLoading = ref(false);
+const inlineReadinessExplainOpen = ref(false);
+let readinessReqSeq = 0;
 
 function seedVersions(listed: KernelProtocolVersion[]) {
   versions.value = listed;
@@ -684,6 +1083,11 @@ const {
     studySites.value = [];
     governanceActionMessage.value = "";
     governanceErrorMessage.value = "";
+    forkFormOpen.value = false;
+    forkErrorMessage.value = "";
+    approvalReadiness.value = null;
+    approvalReadinessLoading.value = false;
+    inlineReadinessExplainOpen.value = false;
   },
   onResolved: async (study, { isCurrent }) => {
     const listed = await kernelApi.listProtocolVersions(study);
@@ -780,6 +1184,121 @@ const activeVersion = computed<KernelProtocolVersion | null>(() => {
     }) ?? null
   );
 });
+
+const forkSourceVersion = computed<KernelProtocolVersion | null>(() => {
+  if (
+    activeVersion.value?.ref &&
+    !isMasked(activeVersion.value) &&
+    activeVersion.value.status === "Approved"
+  ) {
+    return activeVersion.value;
+  }
+  return (
+    versions.value.find(
+      (v) => v.ref && !isMasked(v) && v.status === "Approved"
+    ) ?? null
+  );
+});
+
+const canSubmitFork = computed(
+  () =>
+    Boolean(forkSourceVersion.value?.ref) &&
+    Boolean(forkForm.intent.trim()) &&
+    Boolean(forkForm.rationale.trim()) &&
+    Boolean(forkForm.reason.trim())
+);
+
+const isAmendmentInReview = computed(() =>
+  Boolean(
+    activeVersion.value &&
+    activeVersion.value.status === "InReview" &&
+    (activeVersion.value.parent_version ||
+      approvalReadiness.value?.is_amendment)
+  )
+);
+
+const showAmendmentReadinessCard = computed(
+  () =>
+    canGovern.value &&
+    isAmendmentInReview.value &&
+    (approvalReadinessLoading.value || approvalReadiness.value !== null)
+);
+
+const isApprovalBlockedByReadiness = computed(
+  () => approvalReadiness.value !== null && !approvalReadiness.value.ready
+);
+
+async function refreshApprovalReadiness() {
+  const target = activeVersion.value;
+  const seq = ++readinessReqSeq;
+  inlineReadinessExplainOpen.value = false;
+  if (
+    !canGovern.value ||
+    !target?.ref ||
+    target.status !== "InReview" ||
+    !target.parent_version ||
+    typeof kernelGovernanceApi?.getProtocolApprovalReadiness !== "function"
+  ) {
+    approvalReadiness.value = null;
+    approvalReadinessLoading.value = false;
+    return;
+  }
+  approvalReadinessLoading.value = true;
+  try {
+    const res = await kernelGovernanceApi.getProtocolApprovalReadiness(
+      target.ref
+    );
+    if (seq !== readinessReqSeq) return;
+    if (res && typeof res === "object" && "ready" in res) {
+      approvalReadiness.value = res;
+      if (res.simulation_report_artifact_version_ref) {
+        seedNodeSummary(res.simulation_report_artifact_version_ref, {
+          kind: "artifact_version",
+          title: `Version ${target.number} simulation report`,
+        });
+      }
+      if (res.review_attestation_ref) {
+        seedNodeSummary(res.review_attestation_ref, {
+          kind: "attestation",
+          title: "Reviewed attestation",
+        });
+      }
+    } else {
+      approvalReadiness.value = null;
+    }
+  } catch {
+    if (seq === readinessReqSeq) {
+      approvalReadiness.value = null;
+    }
+  } finally {
+    if (seq === readinessReqSeq) {
+      approvalReadinessLoading.value = false;
+    }
+  }
+}
+
+watch(
+  () => [
+    activeVersion.value?.ref ?? "",
+    activeVersion.value?.status ?? "",
+    activeVersion.value?.content_hash ?? "",
+    canGovern.value,
+  ],
+  () => {
+    void refreshApprovalReadiness();
+  },
+  { immediate: true }
+);
+
+watch(
+  () => canvasStore.protocolGovernanceRevision,
+  () => {
+    void refreshApprovalReadiness();
+    if (studyNodeRef.value) {
+      void refreshGovernanceLists(studyNodeRef.value);
+    }
+  }
+);
 
 const approvalArtifacts = computed(() =>
   artifacts.value.filter((a) => APPROVAL_EVIDENCE_KINDS.has(a.kind))
@@ -994,6 +1513,7 @@ async function submitForReview() {
     });
     lifecycleReason.value = "";
     await refreshVersions();
+    await refreshApprovalReadiness();
     emit("select", updated);
     governanceActionMessage.value = `Submitted Version ${updated.number} for review (${updated.status}).`;
     didSubmit = true;
@@ -1007,6 +1527,7 @@ async function submitForReview() {
     await handoffFocus(
       [
         "#btn-approve-protocol-version",
+        "#btn-open-amendment-simulate",
         "#protocol-governance-reason",
         "#protocol-governance-heading",
         "#protocol-versions-title",
@@ -1058,7 +1579,98 @@ async function returnToDraft() {
   }
 }
 
+function toggleForkForm() {
+  forkFormOpen.value = !forkFormOpen.value;
+  forkErrorMessage.value = "";
+  governanceErrorMessage.value = "";
+  if (forkFormOpen.value) {
+    void handoffFocus(["#fork-amendment-intent", "#protocol-fork-heading"], {
+      container: () => document.getElementById("protocol-versions-section"),
+    });
+  }
+}
+
+async function submitForkAmendment() {
+  const parent = forkSourceVersion.value;
+  if (!parent?.ref || !canSubmitFork.value || governanceBusy.value) return;
+  governanceBusy.value = true;
+  forkErrorMessage.value = "";
+  governanceErrorMessage.value = "";
+  governanceActionMessage.value = "";
+  let forked: KernelProtocolVersion | null = null;
+  try {
+    const impactedElements = forkForm.impactedElementsText
+      .split(/[,\n]/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+    forked = await kernelGovernanceApi.forkProtocolVersion({
+      parentVersionRef: parent.ref,
+      intent: forkForm.intent.trim(),
+      rationale: forkForm.rationale.trim(),
+      classification: forkForm.classification,
+      transitionPolicy: forkForm.transitionPolicy,
+      summaryOfChanges: forkForm.summaryOfChanges.trim() || null,
+      impactedElements,
+      reason: forkForm.reason.trim(),
+      idempotencyKey: nextIdempotencyKey(),
+    });
+    forkForm.intent = "";
+    forkForm.rationale = "";
+    forkForm.summaryOfChanges = "";
+    forkForm.impactedElementsText = "";
+    forkForm.reason = "";
+    forkFormOpen.value = false;
+    await refreshVersions();
+    emit("select", forked);
+    governanceActionMessage.value = `Forked Draft Version ${forked.number} from Version ${parent.number}.`;
+  } catch (err) {
+    forkErrorMessage.value = describeKernelError(err);
+  } finally {
+    governanceBusy.value = false;
+  }
+
+  if (forked) {
+    await handoffFocus(
+      [
+        "#protocol-governance-reason",
+        "#btn-submit-protocol-review",
+        "#protocol-governance-heading",
+        "#protocol-versions-title",
+      ],
+      {
+        container: () => document.getElementById("protocol-versions-section"),
+      }
+    );
+  }
+}
+
+function explainApprovalReadiness() {
+  const target = activeVersion.value;
+  const readiness = approvalReadiness.value;
+  if (!readiness?.explanation) return;
+  const handled = canvasStore.requestExplain({
+    targetNodeRef: target?.ref ?? null,
+    title: `Why: Approve Version ${target?.number ?? ""}`.trim(),
+    explanation: readiness.explanation,
+  });
+  if (!handled) {
+    inlineReadinessExplainOpen.value = !inlineReadinessExplainOpen.value;
+  }
+}
+
+function openAmendmentSimulate() {
+  const target = activeVersion.value;
+  if (!target?.ref) return;
+  emit("select", target, "simulate");
+}
+
 function openApprovalSignature(version: KernelProtocolVersion) {
+  if (
+    isApprovalBlockedByReadiness.value ||
+    (isAmendmentInReview.value && approvalReadinessLoading.value)
+  ) {
+    return;
+  }
   governanceErrorMessage.value = "";
   approvingVersion.value = version;
 }
@@ -1089,6 +1701,12 @@ async function approveProtocolWithToken(sigToken: string, reason: string) {
       versionRef: target.ref,
       meaning: "Approved",
       expectedContentHash: target.content_hash,
+      ...(approvalReadiness.value?.review_attestation_ref
+        ? {
+            reviewAttestationRef:
+              approvalReadiness.value.review_attestation_ref,
+          }
+        : {}),
       sigToken,
       reason,
       idempotencyKey: nextIdempotencyKey(),
@@ -1097,6 +1715,42 @@ async function approveProtocolWithToken(sigToken: string, reason: string) {
     emit("select", approved);
     governanceActionMessage.value = `Signed and approved Version ${approved.number} under 21 CFR Part 11.`;
     return approved;
+  } finally {
+    governanceBusy.value = false;
+  }
+}
+
+function openWithdrawalSignature(version: KernelProtocolVersion) {
+  governanceErrorMessage.value = "";
+  withdrawingVersion.value = version;
+}
+
+function handleWithdrawalSigned() {
+  withdrawingVersion.value = null;
+  void handoffFocus(["#protocol-versions-title"], {
+    container: () => document.getElementById("protocol-versions-section"),
+  });
+}
+
+async function withdrawProtocolWithToken(sigToken: string, reason: string) {
+  const target = withdrawingVersion.value;
+  if (!target?.ref) return;
+  governanceBusy.value = true;
+  governanceErrorMessage.value = "";
+  governanceActionMessage.value = "";
+  try {
+    const withdrawn = await kernelGovernanceApi.withdrawProtocolVersion({
+      versionRef: target.ref,
+      meaning: "Withdrawn",
+      expectedContentHash: target.content_hash,
+      sigToken,
+      reason,
+      idempotencyKey: nextIdempotencyKey(),
+    });
+    await refreshVersions();
+    emit("select", withdrawn);
+    governanceActionMessage.value = `Signed and withdrew Version ${withdrawn.number} under 21 CFR Part 11.`;
+    return withdrawn;
   } finally {
     governanceBusy.value = false;
   }
@@ -1288,9 +1942,152 @@ async function onDraftImported(summary: KernelProtocolDraftSummary) {
   max-width: 100%;
 }
 
+.versions-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.versions-header-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.versions-fork-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .versions h2 {
   margin: 0;
   font-size: 1rem;
+}
+
+.amendment-review {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.amendment-review-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.amendment-review-title {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--neutral-dark);
+}
+
+.amendment-review-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.amendment-review-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--neutral-light);
+}
+
+.amendment-check-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 0.85rem;
+}
+
+.amendment-check-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  border-radius: 999px;
+}
+
+.amendment-check-icon--met {
+  background: var(--semantic-color-success-bg-soft);
+  color: var(--semantic-color-success-dark, var(--semantic-color-success));
+}
+
+.amendment-check-icon--unmet {
+  background: var(--semantic-color-warning-bg-soft);
+  color: var(--warning);
+}
+
+.amendment-check-copy {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.amendment-inline-explanation {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--semantic-color-surface);
+}
+
+.gov-actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+#btn-approve-protocol-version {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-withdraw {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--semantic-control-target-min, 32px);
+  padding: 6px 10px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--neutral-dark);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.btn-withdraw:hover:not(:disabled) {
+  color: var(--semantic-color-error);
+  background: var(--semantic-color-error-bg-soft);
+  border-color: var(--semantic-color-error-border);
+}
+
+.btn-withdraw:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .status-line {

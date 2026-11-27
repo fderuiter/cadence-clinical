@@ -756,7 +756,9 @@ export function evaluateCapabilityDecision(
   if (
     cap.includes("protocol") ||
     cap.includes("study") ||
-    cap.includes("design")
+    cap.includes("design") ||
+    cap.includes("artifact") ||
+    cap.includes("simulation")
   ) {
     const allowed = hasAnyRole(caller, DESIGN_AUTHORITY_ROLES);
     return store.buildDecision(
@@ -931,10 +933,7 @@ export async function evaluateDemoRequestPolicy(request, store) {
     return denied ? { status: 403, problem: denied } : null;
   }
 
-  if (
-    /\/api\/v1\/econsent\/consents/.test(pathname) ||
-    /\/api\/v1\/execution\/amendments\/(bulk-)?reconsent$/.test(pathname)
-  ) {
+  if (/\/api\/v1\/econsent\/consents/.test(pathname)) {
     const payload = await readClonedBody();
     const siteCode =
       payload?.site_id ||
@@ -1227,12 +1226,11 @@ export async function evaluateDemoRequestPolicy(request, store) {
   }
 
   if (
-    /\/api\/v1\/kernel\/(studies|organizations|sites|proposals|simulation|protocols)/.test(
+    /\/api\/v1\/kernel\/(studies|organizations|sites|study-sites|proposals|simulation|protocols|protocol-versions|artifacts|artifact-versions|effectivities)/.test(
       pathname
     ) ||
     /\/api\/v1\/designer\//.test(pathname) ||
-    /\/api\/v1\/studies\/[^/]+\/versions\//.test(pathname) ||
-    /\/api\/v1\/execution\/amendments\/publish$/.test(pathname)
+    /\/api\/v1\/studies\/[^/]+\/versions\//.test(pathname)
   ) {
     if (!hasAnyRole(caller, DESIGN_AUTHORITY_ROLES)) {
       return {

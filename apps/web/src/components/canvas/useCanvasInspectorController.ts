@@ -10,6 +10,7 @@ import {
 import type { RouteLocationRaw } from "vue-router";
 import type {
   KernelCommand,
+  KernelExplanation as KernelExplanationPayload,
   KernelNode,
   KernelProtocolVersion,
 } from "../../api/kernelApi";
@@ -21,6 +22,7 @@ import { useRovingToolbar } from "../../composables/useRovingToolbar";
 import {
   useStudyCanvasStore,
   type CanvasParticipant,
+  type ExplainRequestOptions,
 } from "../../stores/studyCanvas";
 import { useInspectorSimulation } from "./useInspectorSimulation";
 
@@ -172,6 +174,10 @@ export function useCanvasInspectorController(
 
   const currentVerb = ref<VerbId>("details");
   const explained = ref<KernelCommand | null>(null);
+  const directExplanation = ref<{
+    title: string;
+    explanation: KernelExplanationPayload;
+  } | null>(null);
   const shownVerb = ref<string | null>(null);
   const toolbarRef: Ref<HTMLElement | null> = ref(null);
 
@@ -279,10 +285,16 @@ export function useCanvasInspectorController(
   }
 
   function explainCommand(command: KernelCommand) {
+    directExplanation.value = null;
     explained.value = command;
     expand();
     choose("explain");
     focusExplainSection();
+  }
+
+  function openVerb(verb: VerbId) {
+    expand();
+    choose(verb);
   }
 
   function openProtocolVersionExplain() {
@@ -294,12 +306,37 @@ export function useCanvasInspectorController(
     focusExplainSection();
   }
 
-  function openExplain(options?: {
-    fromShortcut?: boolean;
-    targetNodeRef?: string | null;
-  }): boolean {
+  function matchesTargetNodeRef(targetRef?: string | null): boolean {
+    if (!targetRef) return true;
+    const targetId = parseNodeRef(targetRef)?.id;
+    const activeId = parseNodeRef(kernelRef.value)?.id;
+    if (!targetId || !activeId) return false;
+    return targetId === activeId;
+  }
+
+  function openExplain(options?: ExplainRequestOptions): boolean {
     const fromShortcut = Boolean(options?.fromShortcut);
-    if (kernelRef.value || explained.value) {
+    if (
+      options?.targetNodeRef &&
+      (!kernelRef.value || !matchesTargetNodeRef(options.targetNodeRef))
+    ) {
+      return false;
+    }
+    if (options?.explanation) {
+      explained.value = null;
+      directExplanation.value = {
+        title: options.title || "Explain",
+        explanation: options.explanation,
+      };
+      forceExplainOpen.value = true;
+      expand();
+      if (kernelRef.value) {
+        choose("explain");
+      }
+      focusExplainSection();
+      return true;
+    }
+    if (kernelRef.value || explained.value || directExplanation.value) {
       expand();
       if (kernelRef.value) {
         choose("explain");
@@ -312,7 +349,6 @@ export function useCanvasInspectorController(
       openProtocolVersionExplain();
       return true;
     }
-    if (options?.targetNodeRef) return false;
     forceExplainOpen.value = true;
     expand();
     focusExplainSection();
@@ -338,6 +374,7 @@ export function useCanvasInspectorController(
       currentVerb.value = "details";
       setActiveId("verb-details");
       explained.value = null;
+      directExplanation.value = null;
       forceExplainOpen.value = false;
       versionErrorCanI.reset();
       copiedRef.value = false;
@@ -407,6 +444,7 @@ export function useCanvasInspectorController(
     verbs,
     currentVerb,
     explained,
+    directExplanation,
     shownVerb,
     shownVerbNote,
     toolbarRef,
@@ -417,6 +455,7 @@ export function useCanvasInspectorController(
     runSimulation,
     choose,
     explainCommand,
+    openVerb,
     openProtocolVersionExplain,
     openExplain,
   };

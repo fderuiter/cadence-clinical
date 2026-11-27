@@ -700,14 +700,21 @@ describe("legacy web contract isolation and reachability invariants", () => {
       schemasMap.set(schemaMember.name, schemaMember.value);
     }
 
-    expect(declaredPaths).toHaveLength(63);
-    expect(declaredOps).toHaveLength(69);
-    expect(operationsMap.size).toBe(69);
-    expect(schemasMap.size).toBe(156);
+    expect(declaredPaths).toHaveLength(61);
+    expect(declaredOps).toHaveLength(67);
+    expect(operationsMap.size).toBe(67);
+    expect(schemasMap.size).toBe(148);
 
-    // Zero migrated eSource or GET knowledge routes remain in legacy types.ts
+    // Zero migrated eSource, designer amendment, or GET knowledge routes remain in legacy types.ts
     expect(
       declaredPaths.filter((p) => p.startsWith("/api/v1/interop/esource/"))
+    ).toEqual([]);
+    const legacyDesignerAmendmentPrefix = [
+      "/api/v1/designer",
+      "amendments/",
+    ].join("/");
+    expect(
+      declaredPaths.filter((p) => p.startsWith(legacyDesignerAmendmentPrefix))
     ).toEqual([]);
     expect(
       declaredOps

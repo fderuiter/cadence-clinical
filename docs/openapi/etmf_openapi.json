@@ -304,6 +304,49 @@
         }
       }
     },
+    "/api/v1/etmf/ingest": {
+      "post": {
+        "tags": [
+          "EtmfIntelligenceEndpoints"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Etmf_IngestDocumentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/taxonomy": {
+      "get": {
+        "tags": [
+          "EtmfIntelligenceEndpoints"
+        ],
+        "parameters": [
+          {
+            "name": "version",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/v1/etmf/documents/export": {
       "post": {
         "tags": [
@@ -378,49 +421,6 @@
         "parameters": [
           {
             "name": "study_id",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/etmf/ingest": {
-      "post": {
-        "tags": [
-          "EtmfIntelligenceEndpoints"
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Etmf_IngestDocumentRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/etmf/taxonomy": {
-      "get": {
-        "tags": [
-          "EtmfIntelligenceEndpoints"
-        ],
-        "parameters": [
-          {
-            "name": "version",
             "in": "query",
             "schema": {
               "type": "string"

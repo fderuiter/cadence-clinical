@@ -33,7 +33,7 @@ describe("Shared Clinical Store State & Reactive Subject Re-Consent Gating Speci
     authStore.rawRoles = ["Sponsor Designer", "Site Investigator", "CRC"];
   });
 
-  it("Requirement 1 & 2: maintains a unified subject fixture pool matching across amendment and eCRF views", () => {
+  it("Requirement 1 & 2: maintains a unified subject fixture pool in eCRF and consolidates AmendmentDiffView into Clinical Canvas", () => {
     const storeSubjectIds = clinicalStore.subjects.map((s: any) => s.id);
     expect(storeSubjectIds).toEqual([
       "SUBJ-101-001",
@@ -42,20 +42,20 @@ describe("Shared Clinical Store State & Reactive Subject Re-Consent Gating Speci
     ]);
 
     const amendmentWrapper = mount(AmendmentDiffView, {
-      global: { plugins: [pinia] },
+      global: {
+        plugins: [pinia],
+        stubs: { RouterLink: true },
+      },
     });
     const ecrfWrapper = mount(EcrfView, {
       global: { plugins: [pinia] },
     });
 
-    const amendmentSubjectIds = (
-      amendmentWrapper.vm as Record<string, any>
-    ).subjectsList.map((s: any) => s.id);
     const ecrfSubjectIds = ecrfWrapper
       .findAll("#ecrf-subject-selector option")
       .map((option) => option.attributes("value"));
 
-    expect(amendmentSubjectIds).toEqual(storeSubjectIds);
+    expect(amendmentWrapper.find("#amendment-diff-view").exists()).toBe(true);
     expect(ecrfSubjectIds).toEqual(storeSubjectIds);
   });
 

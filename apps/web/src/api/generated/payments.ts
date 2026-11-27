@@ -123,23 +123,6 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/api/v1/payments/participant/wallets/{walletId}/tax-1099-status": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** Retrieve IRS 1099 tax status and threshold monitoring tracer. */
-    get: operations["GetTax1099Status"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
   "/api/v1/payments/participant/wallets/{walletId}/balance": {
     parameters: {
       query?: never;
@@ -168,40 +151,6 @@ export interface paths {
     put?: never;
     /** Issue or re-issue reloadable debit card for participant wallet. */
     post: operations["IssueReloadableCard"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/payments/participant/wallets/{walletId}/submit-w9": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /** Submit Form W-9 taxpayer identification certification. */
-    post: operations["SubmitW9Form"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/payments/participant/wallets/{walletId}/verify-w9": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /** Verify participant Form W-9 submission. */
-    post: operations["VerifyW9Form"];
     delete?: never;
     options?: never;
     head?: never;
@@ -260,6 +209,108 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/payments/participant/me/wallet": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Retrieves the authenticated participant's own study wallet balances, masks, and ledger activity. */
+    get: operations["GetSelfParticipantWallet"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/payments/participant/me/disburse": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Triggers an on-demand payout of the signed participant's available wallet balance. */
+    post: operations["DisburseSelfWalletBalance"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/payments/participant/me/diary-stipend": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Credits protocol stipend for a synchronized participant diary strictly from server rules. */
+    post: operations["CreditSelfDiaryStipend"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/payments/participant/wallets/{walletId}/tax-1099-status": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Retrieve IRS 1099 tax status and threshold monitoring tracer. */
+    get: operations["GetTax1099Status"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/payments/participant/wallets/{walletId}/submit-w9": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Submit Form W-9 taxpayer identification certification. */
+    post: operations["SubmitW9Form"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/payments/participant/wallets/{walletId}/verify-w9": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Verify participant Form W-9 submission. */
+    post: operations["VerifyW9Form"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/payments/participant/expenses": {
     parameters: {
       query?: never;
@@ -312,23 +363,6 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/api/v1/payments/participant/me/wallet": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** Retrieves the authenticated participant's own study wallet balances, masks, and ledger activity. */
-    get: operations["GetSelfParticipantWallet"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
   "/api/v1/payments/participant/me/expenses/ocr-extract": {
     parameters: {
       query?: never;
@@ -357,40 +391,6 @@ export interface paths {
     put?: never;
     /** Submits a travel or meal expense claim for the signed participant with policy auto-approval and direct ACH dispatch. */
     post: operations["SubmitSelfExpenseClaim"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/payments/participant/me/disburse": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /** Triggers an on-demand payout of the signed participant's available wallet balance. */
-    post: operations["DisburseSelfWalletBalance"];
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  "/api/v1/payments/participant/me/diary-stipend": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /** Credits protocol stipend for a synchronized participant diary strictly from server rules. */
-    post: operations["CreditSelfDiaryStipend"];
     delete?: never;
     options?: never;
     head?: never;
@@ -952,26 +952,6 @@ export interface operations {
       };
     };
   };
-  GetTax1099Status: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        walletId: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
   GetBalanceInquiry: {
     parameters: {
       query?: never;
@@ -1004,54 +984,6 @@ export interface operations {
     requestBody: {
       content: {
         "application/json": components["schemas"]["Payments_IssueCardRequestDto"];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  SubmitW9Form: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        walletId: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["Payments_SubmitW9RequestDto"];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  VerifyW9Form: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        walletId: string;
-      };
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["Payments_VerifyW9RequestDto"];
       };
     };
     responses: {
@@ -1140,6 +1072,142 @@ export interface operations {
     requestBody: {
       content: {
         "application/json": components["schemas"]["Payments_VisitVerificationEventDto"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  GetSelfParticipantWallet: {
+    parameters: {
+      query?: {
+        subjectId?: string;
+        walletId?: string;
+        studyId?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  DisburseSelfWalletBalance: {
+    parameters: {
+      query?: never;
+      header?: {
+        "Idempotency-Key"?: string;
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Payments_SelfServiceDisburseRequestDto"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  CreditSelfDiaryStipend: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Payments_SelfServiceDiaryStipendRequestDto"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  GetTax1099Status: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        walletId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  SubmitW9Form: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        walletId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Payments_SubmitW9RequestDto"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  VerifyW9Form: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        walletId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Payments_VerifyW9RequestDto"];
       };
     };
     responses: {
@@ -1241,28 +1309,6 @@ export interface operations {
       };
     };
   };
-  GetSelfParticipantWallet: {
-    parameters: {
-      query?: {
-        subjectId?: string;
-        walletId?: string;
-        studyId?: string;
-      };
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
   ExtractSelfReceiptOcr: {
     parameters: {
       query?: never;
@@ -1297,52 +1343,6 @@ export interface operations {
     requestBody: {
       content: {
         "application/json": components["schemas"]["Payments_SelfServiceSubmitExpenseRequestDto"];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  DisburseSelfWalletBalance: {
-    parameters: {
-      query?: never;
-      header?: {
-        "Idempotency-Key"?: string;
-      };
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["Payments_SelfServiceDisburseRequestDto"];
-      };
-    };
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content?: never;
-      };
-    };
-  };
-  CreditSelfDiaryStipend: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["Payments_SelfServiceDiaryStipendRequestDto"];
       };
     };
     responses: {

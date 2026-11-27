@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 
 using Cadence.Kernel;
 using Cadence.Kernel.Application.Commands;
+using Cadence.Kernel.Application.Evidence;
 using Cadence.Kernel.Application.Protocol;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Evidence;
@@ -14,12 +15,16 @@ using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Simulation;
 using Cadence.Kernel.Standards;
+using Cadence.Kernel.Tenancy;
 using Cadence.Kernel.Time;
+using Cadence.Kernel.Trust;
+using Cadence.Security.Authentication;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Cadence.Kernel.Api;
 
@@ -51,7 +56,19 @@ public record MatrixGapCheckRequest(string ProtocolContent);
 /// </summary>
 public static class KernelSimulationEndpoints
 {
-    /// <summary>Maps the simulation, simulation report, and matrix gap check endpoints.</summary>
+    /// <summary>The semantic action an artifact-version review step-up token must carry (21 CFR Part 11, K-SIM-5).</summary>
+    public const string ReviewArtifactVersionSemanticAction = "kernel.artifact_version.review";
+
+    /// <summary>The canonical concrete action path for signing a Reviewed attestation over an artifact version reference.</summary>
+    public static string ReviewArtifactVersionAction(string artifactVersionRef)
+    {
+        var canonical = KernelProtocolGovernanceEndpoints.TryParseArtifactVersion(artifactVersionRef, out var versionId)
+            ? NodeRef.For(versionId).ToString()
+            : artifactVersionRef;
+        return $"{KernelApiEndpointRouteBuilderExtensions.RoutePrefix}/artifact-versions/{canonical}/review";
+    }
+
+    /// <summary>Maps the simulation, simulation report, artifact review sign-off, and matrix gap check endpoints.</summary>
     public static RouteGroupBuilder MapSimulationEndpoints(this RouteGroupBuilder kernel)
     {
         ArgumentNullException.ThrowIfNull(kernel);
@@ -80,6 +97,20 @@ public static class KernelSimulationEndpoints
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesKernelCommand<SaveSimulationReport>();
+
+        group.MapPost("/artifact-versions/{artifactVersionRef}/review", ReviewArtifactVersionAsync)
+            .WithName("KernelReviewArtifactVersion")
+            .WithSummary("Records a 21 CFR Part 11 Reviewed attestation bound to an immutable artifact version's content hash (attestation.sign, K-SIM-5).")
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesKernelErrors([
+                .. KernelErrors.CommandPipeline,
+                .. RaisesKernelErrorsAttribute.Of(typeof(Attest))!,
+                ProtocolErrors.AttestationRejected,
+            ])
+            .RequireElectronicSignature(
+                ReviewArtifactVersionSemanticAction,
+                ctx => ReviewArtifactVersionAction(ctx.Request.RouteValues["artifactVersionRef"]?.ToString() ?? string.Empty));
 
         group.MapPost("/protocols/matrix-gap-check", CheckMatrixGapsAsync)
             .WithName("KernelMatrixGapCheck")
@@ -321,6 +352,133 @@ public static class KernelSimulationEndpoints
         return TypedResults.Created(
             $"{KernelApiEndpointRouteBuilderExtensions.RoutePrefix}/nodes/{NodeRef.For(sent.Value!.ArtifactId)}",
             response);
+    }
+
+    internal static async Task<Results<Ok<KernelArtifactReviewAttestationResponse>, ProblemHttpResult>> ReviewArtifactVersionAsync(
+        string artifactVersionRef,
+        KernelReviewArtifactVersionRequest? request,
+        HttpContext context,
+        IKernelCommandSender sender,
+        IKernelChangeReason changeReason,
+        IClock clock,
+        CancellationToken cancellationToken)
+    {
+        if (context.VerifiedSigToken() is not { } sigToken)
+        {
+            return TypedResults.Problem(
+                title: "Electronic signature required",
+                detail: "Supply a fresh, single-use X-Sig-Token step-up header bound to this artifact version review.",
+                statusCode: StatusCodes.Status401Unauthorized);
+        }
+
+        if (!KernelProtocolGovernanceEndpoints.TryParseArtifactVersion(artifactVersionRef, out var artifactVersionId))
+        {
+            return KernelProblems.BadRequest(
+                "Invalid NodeRef",
+                $"'{artifactVersionRef}' is not an artifact_version NodeRef (artifact_version:<uuid>).");
+        }
+
+        var (idempotencyKey, reason, headerProblem) = KernelProtocolGovernanceEndpoints.ReadMutationHeaders(context, changeReason);
+        if (headerProblem is not null)
+        {
+            return headerProblem;
+        }
+
+        if (request?.Meaning is { Length: > 0 } rawMeaning
+            && (!Enum.TryParse<AttestationMeaning>(rawMeaning, ignoreCase: true, out var parsedMeaning)
+                || parsedMeaning != AttestationMeaning.Reviewed))
+        {
+            return KernelErrorEndpoints.Problem(
+                ProtocolErrors.AttestationRejected.WithMessage("Artifact review requires an attestation with meaning Reviewed."));
+        }
+
+        var tenant = KernelRequestTenant.Get(context);
+        if (context.RequestServices.GetService<ITenantEntitlementReader>() is { } entitlementReader)
+        {
+            var entitlements = await entitlementReader.GetEntitlementsAsync(tenant, clock.UtcNow, cancellationToken).ConfigureAwait(false);
+            if (entitlements.IsReadOnly)
+            {
+                return KernelErrorEndpoints.Problem(KernelErrors.SubscriptionExpired);
+            }
+
+            if (!entitlements.ProductFamilies.Contains(ProductFamily.Blueprint))
+            {
+                return KernelErrorEndpoints.Problem(CommercialErrors.ProductFamilyNotEntitled);
+            }
+        }
+
+        Actor actor;
+        if (context.RequestServices.GetService<ICurrentActor>()?.Actor is { } resolvedActor
+            && !string.IsNullOrWhiteSpace(resolvedActor.Id))
+        {
+            actor = resolvedActor;
+        }
+        else if (!string.IsNullOrWhiteSpace(sigToken.Subject))
+        {
+            actor = Actor.Person(sigToken.Subject);
+        }
+        else
+        {
+            return KernelErrorEndpoints.Problem(KernelErrors.ActorUnresolved);
+        }
+
+        var unitOfWorkFactory = context.RequestServices.GetService<IKernelUnitOfWorkFactory>();
+        if (unitOfWorkFactory is null)
+        {
+            return KernelErrorEndpoints.Problem(TrustErrors.TargetUnknown);
+        }
+
+        var targetInfo = await ArtifactVersionTargetLookup.FindAsync(
+            tenant,
+            unitOfWorkFactory,
+            actor,
+            clock.UtcNow,
+            artifactVersionId,
+            cancellationToken).ConfigureAwait(false);
+        if (targetInfo is null)
+        {
+            return KernelErrorEndpoints.Problem(TrustErrors.TargetUnknown);
+        }
+
+        if (!string.IsNullOrWhiteSpace(request?.ExpectedContentHash))
+        {
+            var normalizedExpected = KernelProtocolGovernanceEndpoints.NormalizeSha256(request.ExpectedContentHash);
+            if (!string.Equals(normalizedExpected, targetInfo.ContentHash, StringComparison.Ordinal))
+            {
+                return KernelErrorEndpoints.Problem(TrustErrors.TargetContentChanged);
+            }
+        }
+
+        var attestationId = request?.AttestationId is { } given && given != Guid.Empty
+            ? AttestationId.FromGuid(given)
+            : AttestationId.FromGuid(KernelProtocolGovernanceEndpoints.DeriveGuid(tenant, "review-artifact-version-attest", idempotencyKey));
+
+        var attestResult = await sender.SendAsync(
+            new Attest(
+                tenant,
+                attestationId,
+                AttestationMeaning.Reviewed,
+                new AttestationTarget(NodeKinds.ArtifactVersion, artifactVersionId.Value, targetInfo.ContentHash),
+                new DateTimeOffset(sigToken.IssuedAt, TimeSpan.Zero),
+                KernelLockEndpoints.StepUpMethod,
+                idempotencyKey,
+                reason,
+                Scope: targetInfo.StudyId is { } sid ? NodeRef.For(sid) : null),
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+        if (!attestResult.IsSuccess && attestResult.Error?.Code != KernelErrors.AlreadyExists.Code)
+        {
+            return KernelErrorEndpoints.Problem(attestResult.Error!);
+        }
+
+        return TypedResults.Ok(new KernelArtifactReviewAttestationResponse(
+            NodeRef.For(attestationId).ToString(),
+            attestationId.Value,
+            NodeRef.For(targetInfo.ArtifactId).ToString(),
+            NodeRef.For(artifactVersionId).ToString(),
+            targetInfo.StudyId is { } studyId ? NodeRef.For(studyId).ToString() : null,
+            AttestationMeaning.Reviewed.ToString(),
+            targetInfo.ContentHash,
+            clock.UtcNow));
     }
 
     internal static Results<Ok<IReadOnlyList<KernelMatrixGapFindingResponse>>, ProblemHttpResult> CheckMatrixGapsAsync(MatrixGapCheckRequest request)

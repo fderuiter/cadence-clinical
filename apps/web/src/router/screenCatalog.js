@@ -56,11 +56,10 @@ export const SCREEN_CATALOG = /* @__PURE__ */ Object.freeze({
     title: "Amendments & Migration",
     family: "Blueprint",
     minimumTier: "Individual",
-    isBaselineCapability: false,
-    roadmapStage:
-      "Pre-release Blueprint authoring surface (impact API live in Study Workspace)",
+    isBaselineCapability: true,
+    roadmapStage: "Active in Clinical Canvas (Design → Protocol versions)",
     summary:
-      "Side-by-side protocol version comparison and downstream eCRF migration assessment.",
+      "Protocol amendment forking, simulation impact review, Part 11 approval, and site effectivity rollout.",
   },
   imaging: {
     title: "DICOM & RECIST Viewer",

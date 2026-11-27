@@ -21,19 +21,67 @@ function createInitialSoaProjection() {
   return buildUsdmSoaSchedule(["ACT-DEM", "ACT-VS"]);
 }
 
+function unpinRef(ref) {
+  return String(ref || "")
+    .trim()
+    .split("@")[0];
+}
+
+function buildSeededStudyVersions(studyRef) {
+  const cleanStudyRef = unpinRef(studyRef) || STUDY_REF;
+  return [
+    {
+      ref: VERSION_V2_REF,
+      study: cleanStudyRef,
+      number: 2,
+      parent_version: VERSION_V1_REF,
+      status: "Approved",
+      content_hash: "sha256-demo-v2",
+      amendment_intent: "Added Week 4 cardiometabolic biomarker panel",
+      approval_attestation: "attestation:00000000-0000-0000-0000-000000000802", // deid-ignore
+      withdrawal_reason: null,
+      mask: null,
+    },
+    {
+      ref: VERSION_V1_REF,
+      study: cleanStudyRef,
+      number: 1,
+      parent_version: null,
+      status: "Approved",
+      content_hash: "sha256-demo-v1",
+      amendment_intent: null,
+      approval_attestation: "attestation:00000000-0000-0000-0000-000000000801", // deid-ignore
+      withdrawal_reason: null,
+      mask: null,
+    },
+  ];
+}
+
 export function createProtocolDesignDomain(ctx) {
   const { state, nextCounter } = ctx;
 
   state.importedProtocolVersions = new Map();
+  state.protocolVersionsByStudy = new Map();
   state.protocolDesignSummaries = new Map();
   state.idempotentImportResponses = new Map();
+  state.idempotentGovernanceResponses = new Map();
+  state.simulationReportsByVersion = new Map();
+  state.artifactReviews = new Map();
+  state.studyArtifacts = new Map();
+  state.studyEffectivities = new Map();
   state.proposals = new Map();
   state.soaProjection = createInitialSoaProjection();
 
   function seed() {
     state.importedProtocolVersions = new Map();
+    state.protocolVersionsByStudy = new Map();
     state.protocolDesignSummaries = new Map();
     state.idempotentImportResponses = new Map();
+    state.idempotentGovernanceResponses = new Map();
+    state.simulationReportsByVersion = new Map();
+    state.artifactReviews = new Map();
+    state.studyArtifacts = new Map();
+    state.studyEffectivities = new Map();
     state.soaProjection = createInitialSoaProjection();
 
     const canonicalStudyRef =
@@ -84,54 +132,95 @@ export function createProtocolDesignDomain(ctx) {
     ]);
   }
 
+  function ensureStudyVersionRecords(study) {
+    const codeKey = String(study?.code || "DEMO-01").toUpperCase();
+    if (!state.protocolVersionsByStudy.has(codeKey)) {
+      const imported = state.importedProtocolVersions.get(study.code) || [];
+      const initial = study.isCustomCreated
+        ? [...imported]
+        : [...imported, ...buildSeededStudyVersions(study.ref)];
+      state.protocolVersionsByStudy.set(codeKey, initial);
+    }
+    return state.protocolVersionsByStudy.get(codeKey);
+  }
+
   function listProtocolVersions(studyRef) {
     const study = ctx.getStudyByRefOrCode(studyRef);
-    const imported = state.importedProtocolVersions.get(study.code) || [];
-    if (study.isCustomCreated) {
-      return cloneJson(imported);
+    return cloneJson(ensureStudyVersionRecords(study));
+  }
+
+  function findMutableProtocolVersion(versionRef) {
+    const targetUnpinned = unpinRef(versionRef);
+    if (!targetUnpinned) return null;
+    for (const study of state.studies.values()) {
+      const records = ensureStudyVersionRecords(study);
+      const found = records.find((v) => unpinRef(v.ref) === targetUnpinned);
+      if (found) {
+        return { study, records, version: found };
+      }
     }
-    return cloneJson([
-      ...imported,
-      {
-        ref: VERSION_V2_REF,
-        study: study.ref,
-        number: 2,
-        parent_version: VERSION_V1_REF,
-        status: "PUBLISHED",
-        content_hash: "sha256-demo-v2",
-        amendment_intent: "Added Week 4 cardiometabolic biomarker panel",
-        approval_attestation:
-          "attestation:00000000-0000-0000-0000-000000000802", // deid-ignore
-        withdrawal_reason: null,
-        mask: null,
-      },
-      {
-        ref: VERSION_V1_REF,
-        study: study.ref,
-        number: 1,
-        parent_version: null,
-        status: "SUPERSEDED",
-        content_hash: "sha256-demo-v1",
-        amendment_intent: null,
-        approval_attestation:
-          "attestation:00000000-0000-0000-0000-000000000801", // deid-ignore
-        withdrawal_reason: null,
-        mask: null,
-      },
-    ]);
+    for (const [codeKey, records] of state.protocolVersionsByStudy.entries()) {
+      const found = records.find((v) => unpinRef(v.ref) === targetUnpinned);
+      if (found) {
+        const study = ctx.getStudyByRefOrCode(codeKey);
+        return { study, records, version: found };
+      }
+    }
+    return null;
+  }
+
+  function requireMutableProtocolVersionInStatus(
+    versionRef,
+    allowedStatuses,
+    detail
+  ) {
+    const found = findMutableProtocolVersion(versionRef);
+    if (!found) {
+      return {
+        error: {
+          status: 404,
+          problem: {
+            title: "Protocol version not found",
+            status: 404,
+            code: "K.Protocol.VersionNotFound",
+          },
+        },
+      };
+    }
+    const lower = String(found.version.status).toLowerCase();
+    if (!allowedStatuses.includes(lower)) {
+      return {
+        error: {
+          status: 409,
+          problem: {
+            title: "Invalid protocol version transition",
+            status: 409,
+            code: "K.Protocol.InvalidTransition",
+            detail,
+          },
+        },
+      };
+    }
+    return found;
   }
 
   function getProtocolVersion(versionRef) {
-    for (const versions of state.importedProtocolVersions.values()) {
-      const found = versions.find(
-        (v) =>
-          v.ref === versionRef ||
-          v.ref.split("@")[0] === String(versionRef || "").split("@")[0]
-      );
-      if (found) return cloneJson(found);
-    }
+    const found = findMutableProtocolVersion(versionRef);
+    if (found) return cloneJson(found.version);
     const versions = listProtocolVersions(STUDY_REF);
-    return cloneJson(versions.find((v) => v.ref === versionRef) || versions[0]);
+    return cloneJson(
+      versions.find((v) => unpinRef(v.ref) === unpinRef(versionRef)) ||
+        versions[0]
+    );
+  }
+
+  function syncSummaryVersionSnapshot(version) {
+    const unpinned = unpinRef(version.ref);
+    for (const [key, summary] of state.protocolDesignSummaries.entries()) {
+      if (unpinRef(key) === unpinned) {
+        summary.version = cloneJson(version);
+      }
+    }
   }
 
   const methods = {
@@ -236,8 +325,8 @@ export function createProtocolDesignDomain(ctx) {
         return built;
       }
 
-      const existingVersions = listProtocolVersions(foundStudy.ref);
-      const existingDraft = existingVersions.find(
+      const records = ensureStudyVersionRecords(foundStudy);
+      const existingDraft = records.find(
         (v) => String(v.status).toLowerCase() === "draft"
       );
 
@@ -246,9 +335,9 @@ export function createProtocolDesignDomain(ctx) {
       let targetVersion = existingDraft;
 
       if (existingDraft && !parsedRequest.replaceForms) {
-        const prevSummary = state.protocolDesignSummaries.get(
-          existingDraft.ref
-        );
+        const prevSummary =
+          state.protocolDesignSummaries.get(existingDraft.ref) ||
+          state.protocolDesignSummaries.get(unpinRef(existingDraft.ref));
         if (prevSummary) {
           const byId = new Map(prevSummary.forms.map((f) => [f.id, f]));
           for (const nextForm of built.forms) {
@@ -263,11 +352,11 @@ export function createProtocolDesignDomain(ctx) {
       }
 
       if (!targetVersion) {
-        const maxNum = existingVersions.reduce(
+        const maxNum = records.reduce(
           (acc, v) => Math.max(acc, Number(v.number || 0)),
           0
         );
-        const parent = existingVersions.find((v) => {
+        const parent = records.find((v) => {
           const upper = String(v.status).toUpperCase();
           return upper === "APPROVED" || upper === "PUBLISHED";
         });
@@ -284,9 +373,7 @@ export function createProtocolDesignDomain(ctx) {
           withdrawal_reason: null,
           mask: null,
         };
-        const list = state.importedProtocolVersions.get(foundStudy.code) || [];
-        list.unshift(targetVersion);
-        state.importedProtocolVersions.set(foundStudy.code, list);
+        records.unshift(targetVersion);
       }
 
       const prevSummaryForAmendment = state.protocolDesignSummaries.get(
@@ -331,6 +418,865 @@ export function createProtocolDesignDomain(ctx) {
         state.idempotentImportResponses.set(idempotencyKey, cloneJson(summary));
       }
       return { data: cloneJson(summary) };
+    },
+
+    forkProtocolVersion(
+      parentVersionRef,
+      body = {},
+      { reason = "", idempotencyKey = "" } = {}
+    ) {
+      if (
+        idempotencyKey &&
+        state.idempotentGovernanceResponses.has(`fork:${idempotencyKey}`)
+      ) {
+        return {
+          data: cloneJson(
+            state.idempotentGovernanceResponses.get(`fork:${idempotencyKey}`)
+          ),
+          replayed: true,
+        };
+      }
+      const found = findMutableProtocolVersion(parentVersionRef);
+      if (!found) {
+        return {
+          error: {
+            status: 404,
+            problem: {
+              title: "Protocol version not found",
+              status: 404,
+              code: "K.Protocol.VersionNotFound",
+              detail: `Protocol version '${parentVersionRef}' was not found.`,
+            },
+          },
+        };
+      }
+      const { study, records, version: parent } = found;
+      if (String(parent.status).toLowerCase() !== "approved") {
+        return {
+          error: {
+            status: 409,
+            problem: {
+              title: "Fork requires an Approved parent version",
+              status: 409,
+              code: "K.Protocol.ForkRequiresApprovedParent",
+              detail:
+                "Only an Approved protocol version may be forked into an amendment draft.",
+            },
+          },
+        };
+      }
+      if (records.some((v) => String(v.status).toLowerCase() === "draft")) {
+        return {
+          error: {
+            status: 409,
+            problem: {
+              title: "Active Draft already exists",
+              status: 409,
+              code: "K.Protocol.ActiveDraftExists",
+              detail:
+                "Submit or withdraw the active Draft protocol version before forking another amendment.",
+            },
+          },
+        };
+      }
+      const intent = String(body?.intent || "").trim();
+      const rationale = String(body?.rationale || "").trim();
+      if (!intent || !rationale) {
+        return {
+          error: {
+            status: 400,
+            problem: {
+              title: "Amendment intent and rationale required",
+              status: 400,
+              code: "K.Protocol.AmendmentDetailsRequired",
+              detail:
+                "Forking an amendment requires non-empty intent and rationale.",
+            },
+          },
+        };
+      }
+      const classification = body?.classification || "Substantial";
+      const transitionPolicy = body?.transition_policy || "RequiresReconsent";
+      const maxNum = records.reduce(
+        (acc, v) => Math.max(acc, Number(v.number || 0)),
+        0
+      );
+      const vIdx = nextCounter();
+      const customId = String(body?.protocol_version_id || "").trim();
+      const createdRef = customId
+        ? `protocol_version:${customId}@1`
+        : `protocol_version:${makeUuidFromIndex("00000150", vIdx)}@1`;
+      const created = {
+        ref: createdRef,
+        study: unpinRef(study.ref),
+        number: maxNum + 1,
+        parent_version: unpinRef(parent.ref),
+        status: "Draft",
+        content_hash: null,
+        amendment_intent: intent,
+        approval_attestation: null,
+        withdrawal_reason: null,
+        mask: null,
+      };
+      records.unshift(created);
+
+      const parentSummary = methods.getProtocolDesignSummary(parent.ref);
+      const impactedElements =
+        Array.isArray(body?.impacted_elements) &&
+        body.impacted_elements.length > 0
+          ? body.impacted_elements.map((item) => String(item))
+          : (parentSummary.forms || []).map((f) => f.id);
+      const summaryOfChanges =
+        String(body?.summary_of_changes || "").trim() ||
+        `Forked from Version ${parent.number} (${intent}).`;
+      const forkedSummary = {
+        version: cloneJson(created),
+        title: `Protocol Version ${created.number} Amendment Draft`,
+        form_count: parentSummary.form_count,
+        item_count: parentSummary.item_count,
+        forms: cloneJson(parentSummary.forms || []),
+        import_notes: cloneJson(parentSummary.import_notes || []),
+        amendment: {
+          intent,
+          rationale: rationale || reason,
+          classification,
+          summary_of_changes: summaryOfChanges,
+          impacted_elements: impactedElements,
+          transition_policy: transitionPolicy,
+        },
+      };
+      state.protocolDesignSummaries.set(created.ref, forkedSummary);
+      state.protocolDesignSummaries.set(unpinRef(created.ref), forkedSummary);
+      ctx.recordActivity(
+        "kernel.protocol.fork",
+        "protocol",
+        "protocol_version",
+        created.ref,
+        "usr-demo-operator"
+      );
+      if (idempotencyKey) {
+        state.idempotentGovernanceResponses.set(
+          `fork:${idempotencyKey}`,
+          cloneJson(created)
+        );
+      }
+      return { data: cloneJson(created) };
+    },
+
+    submitProtocolVersionForReview(versionRef) {
+      const checked = requireMutableProtocolVersionInStatus(
+        versionRef,
+        ["draft"],
+        "Only a Draft protocol version may be submitted for review."
+      );
+      if (checked.error) return checked;
+      const { version } = checked;
+      version.status = "InReview";
+      version.content_hash =
+        version.content_hash || `sha256-demo-v${version.number}-frozen`;
+      syncSummaryVersionSnapshot(version);
+      ctx.recordActivity(
+        "kernel.protocol.submit_for_review",
+        "protocol",
+        "protocol_version",
+        version.ref,
+        "usr-demo-operator"
+      );
+      return { data: cloneJson(version) };
+    },
+
+    returnProtocolVersionToDraft(versionRef) {
+      const checked = requireMutableProtocolVersionInStatus(
+        versionRef,
+        ["inreview"],
+        "Only an InReview protocol version may be returned to Draft."
+      );
+      if (checked.error) return checked;
+      const { version } = checked;
+      version.status = "Draft";
+      version.content_hash = null;
+      syncSummaryVersionSnapshot(version);
+      ctx.recordActivity(
+        "kernel.protocol.return_to_draft",
+        "protocol",
+        "protocol_version",
+        version.ref,
+        "usr-demo-operator"
+      );
+      return { data: cloneJson(version) };
+    },
+
+    simulateProtocolCandidate(body = {}) {
+      const now = demoNowIso();
+      const rawCandidateRef = body?.stored_version_ref || null;
+      const candidateFound = rawCandidateRef
+        ? findMutableProtocolVersion(rawCandidateRef)
+        : null;
+      const candidate = candidateFound?.version || null;
+      const rawBaseRef =
+        body?.base_version_ref || candidate?.parent_version || null;
+      const baseFound = rawBaseRef
+        ? findMutableProtocolVersion(rawBaseRef)
+        : null;
+      const base = baseFound?.version || null;
+      const scopeRef =
+        unpinRef(candidate?.study) || unpinRef(body?.study_ref) || STUDY_REF;
+      const candHash =
+        candidate?.content_hash ||
+        (candidate
+          ? `sha256-demo-v${candidate.number}-draft`
+          : "sha256:demo-sim-cand");
+      const baseHash = base
+        ? base.content_hash || `sha256-demo-v${base.number}`
+        : rawBaseRef
+          ? "sha256:demo-sim-base"
+          : null;
+      const isAmendmentSim = Boolean(rawBaseRef);
+      const targetRef = rawCandidateRef || rawBaseRef || scopeRef;
+      return {
+        scope: scopeRef,
+        as_of: { valid_at: now, known_at: now },
+        candidate: {
+          kind: "ProtocolVersion",
+          version: rawCandidateRef ? unpinRef(rawCandidateRef) : null,
+          base_version: rawBaseRef ? unpinRef(rawBaseRef) : null,
+          content_hash: candHash,
+          base_content_hash: baseHash,
+        },
+        engine_versions: [
+          { name: "protocol.expected_schedule", version: "1" },
+          { name: "protocol.matrix_gap", version: "1" },
+          { name: "protocol.structural_diff", version: "1" },
+        ],
+        input_hash: `sha256-sim-in-${candHash}`,
+        result_hash: `sha256-sim-out-${candHash}-${baseHash || "root"}`,
+        structural_diff: isAmendmentSim
+          ? [
+              {
+                element_id: "visit-week4",
+                instance_type: "PlannedVisit",
+                change: "Modified",
+                properties: ["window_before", "window_after"],
+              },
+            ]
+          : [],
+        schedule_changes: isAmendmentSim
+          ? [
+              {
+                activity_id: "visit-week4",
+                name: "Week 4",
+                change: "Modified",
+                before: {
+                  activity_id: "visit-week4",
+                  name: "Week 4",
+                  epoch_id: "epoch-treatment",
+                  study_day: 28,
+                  window_before: 2,
+                  window_after: 2,
+                  repeating: false,
+                  locations: ["CLINIC"],
+                },
+                after: {
+                  activity_id: "visit-week4",
+                  name: "Week 4",
+                  epoch_id: "epoch-treatment",
+                  study_day: 28,
+                  window_before: 3,
+                  window_after: 3,
+                  repeating: false,
+                  locations: ["CLINIC"],
+                },
+              },
+            ]
+          : [],
+        masked: [],
+        dependents: ctx.getDependents(targetRef),
+        matrix_gaps: [],
+        is_empty: !isAmendmentSim,
+      };
+    },
+
+    saveSimulationReport(studyRef, body = {}) {
+      const study = ctx.getStudyByRefOrCode(studyRef);
+      const cleanStudyRef = unpinRef(study?.ref || studyRef || STUDY_REF);
+      const simResult = body?.result || {};
+      if (Array.isArray(simResult?.masked) && simResult.masked.length > 0) {
+        return {
+          error: {
+            status: 409,
+            problem: {
+              title: "Masked simulation cannot be saved",
+              status: 409,
+              code: "K.Simulation.MaskedNotAttestable",
+              detail:
+                "Simulation results containing withheld parts cannot be persisted as attestable evidence.",
+            },
+          },
+        };
+      }
+      const idx = nextCounter();
+      const artifactId =
+        String(body?.artifact_id || "").trim() ||
+        makeUuidFromIndex("00000910", idx);
+      const artifactVersionId =
+        String(body?.artifact_version_id || "").trim() ||
+        makeUuidFromIndex("00000920", idx);
+      const artifactRef = `artifact:${artifactId}`;
+      const artifactVersionRef = `artifact_version:${artifactVersionId}`;
+      const now = demoNowIso(idx);
+      const serialized = JSON.stringify(simResult);
+      const contentHash = simResult?.result_hash || `sha256-sim-report-${idx}`;
+      const record = {
+        artifact_ref: artifactRef,
+        artifact_id: artifactId,
+        artifact_version_ref: artifactVersionRef,
+        artifact_version_id: artifactVersionId,
+        version_number: 1,
+        kind: "SimulationReport",
+        study_ref: cleanStudyRef,
+        title: String(body?.title || "Protocol Simulation Report"),
+        content_hash: contentHash,
+        size_bytes: serialized.length,
+        media_type: "application/vnd.cadence.simulation-report+json",
+        storage_ref: `urn:cadence:simulation-report:${artifactVersionId}`,
+        recorded_at: now,
+      };
+      const studyCodeKey = String(study?.code || "DEMO-01").toUpperCase();
+      const artifacts = state.studyArtifacts.get(studyCodeKey) || [];
+      artifacts.unshift(record);
+      state.studyArtifacts.set(studyCodeKey, artifacts);
+
+      const candRef = unpinRef(simResult?.candidate?.version || "");
+      if (candRef) {
+        state.simulationReportsByVersion.set(candRef, {
+          artifact: record,
+          candidateContentHash: simResult?.candidate?.content_hash || null,
+          baseVersionRef: unpinRef(simResult?.candidate?.base_version || ""),
+          baseContentHash: simResult?.candidate?.base_content_hash || null,
+        });
+      }
+      ctx.recordActivity(
+        "kernel.simulation_report.save",
+        "evidence",
+        "artifact_version",
+        artifactVersionRef,
+        "usr-demo-operator"
+      );
+      return { data: cloneJson(record) };
+    },
+
+    reviewArtifactVersion(
+      artifactVersionRef,
+      body = {},
+      { sigToken = "" } = {}
+    ) {
+      if (!String(sigToken || "").trim()) {
+        return {
+          error: {
+            status: 401,
+            problem: {
+              title: "Step-up signature token required",
+              status: 401,
+              code: "Auth.SignatureTokenRequired",
+              detail:
+                "Header 'X-Sig-Token' is required to sign a 21 CFR Part 11 Reviewed attestation.",
+            },
+          },
+        };
+      }
+      const cleanArtifactVerRef = unpinRef(artifactVersionRef);
+      let matchedArtifact = null;
+      for (const list of state.studyArtifacts.values()) {
+        const hit = list.find(
+          (a) => unpinRef(a.artifact_version_ref) === cleanArtifactVerRef
+        );
+        if (hit) {
+          matchedArtifact = hit;
+          break;
+        }
+      }
+      if (!matchedArtifact) {
+        return {
+          error: {
+            status: 404,
+            problem: {
+              title: "Artifact version not found",
+              status: 404,
+              code: "K.Artifact.VersionNotFound",
+              detail: `Artifact version '${artifactVersionRef}' was not found.`,
+            },
+          },
+        };
+      }
+      if (
+        body?.expected_content_hash &&
+        body.expected_content_hash !== matchedArtifact.content_hash
+      ) {
+        return {
+          error: {
+            status: 409,
+            problem: {
+              title: "Artifact content hash mismatch",
+              status: 409,
+              code: "K.Evidence.ContentHashMismatch",
+              detail:
+                "Artifact content digest does not match expected_content_hash.",
+            },
+          },
+        };
+      }
+      const idx = nextCounter();
+      const attestationId =
+        String(body?.attestation_id || "").trim() ||
+        makeUuidFromIndex("00000930", idx);
+      const attestationRef = `attestation:${attestationId}`;
+      const now = demoNowIso(idx);
+      const attestation = {
+        attestation_ref: attestationRef,
+        attestation_id: attestationId,
+        artifact_ref: matchedArtifact.artifact_ref,
+        artifact_version_ref: matchedArtifact.artifact_version_ref,
+        study_ref: matchedArtifact.study_ref,
+        meaning: body?.meaning || "Reviewed",
+        content_hash: matchedArtifact.content_hash,
+        recorded_at: now,
+      };
+      state.artifactReviews.set(cleanArtifactVerRef, attestation);
+      ctx.recordActivity(
+        "kernel.artifact_version.review",
+        "evidence",
+        "attestation",
+        attestationRef,
+        "usr-demo-operator"
+      );
+      return { data: cloneJson(attestation) };
+    },
+
+    getProtocolApprovalReadiness(versionRef) {
+      const found = findMutableProtocolVersion(versionRef);
+      if (!found) {
+        return {
+          error: {
+            status: 404,
+            problem: {
+              title: "Protocol version not found",
+              status: 404,
+              code: "K.Protocol.VersionNotFound",
+              detail: `Protocol version '${versionRef}' was not found.`,
+            },
+          },
+        };
+      }
+      const { version } = found;
+      const cleanVersionRef = unpinRef(version.ref);
+      const parentRef = version.parent_version
+        ? unpinRef(version.parent_version)
+        : null;
+      const isAmendment = Boolean(parentRef);
+      const isInReview = String(version.status).toLowerCase() === "inreview";
+
+      if (!isAmendment) {
+        const ready = isInReview;
+        return {
+          data: {
+            protocol_version_ref: cleanVersionRef,
+            status: version.status,
+            is_amendment: false,
+            parent_version_ref: null,
+            ready,
+            simulation_report_saved: true,
+            review_signed: true,
+            simulation_report_artifact_version_ref: null,
+            review_attestation_ref: null,
+            blocking_code: ready ? null : "K.Protocol.InvalidTransition",
+            explanation: {
+              subject: cleanVersionRef,
+              claim: ready
+                ? `Baseline Protocol Version ${version.number} is ready for Part 11 approval.`
+                : `Protocol Version ${version.number} must be in InReview status before approval.`,
+              producer: "kernel.protocol.approval_readiness",
+              steps: [],
+              conditions: [
+                {
+                  code: "protocol.status.in_review",
+                  description:
+                    "Protocol version is submitted for review (InReview) with a frozen content digest.",
+                  met: isInReview,
+                  evidence: [cleanVersionRef],
+                },
+              ],
+              next_actions: ready
+                ? []
+                : [
+                    {
+                      description: `Submit Protocol Version ${version.number} for review before signing approval.`,
+                      capability: "protocol.submit_for_review",
+                      target: cleanVersionRef,
+                    },
+                  ],
+            },
+          },
+        };
+      }
+
+      const parentFound = findMutableProtocolVersion(parentRef);
+      const expectedParentHash = parentFound?.version?.content_hash || null;
+      const savedSimEntry =
+        state.simulationReportsByVersion.get(cleanVersionRef);
+      const hashesMatch = Boolean(
+        savedSimEntry &&
+        (!version.content_hash ||
+          savedSimEntry.candidateContentHash === version.content_hash) &&
+        (!parentRef || savedSimEntry.baseVersionRef === parentRef) &&
+        (!expectedParentHash ||
+          !savedSimEntry.baseContentHash ||
+          savedSimEntry.baseContentHash === expectedParentHash)
+      );
+      const reportArtifactVersionRef = hashesMatch
+        ? savedSimEntry.artifact.artifact_version_ref
+        : null;
+      const reviewEntry = reportArtifactVersionRef
+        ? state.artifactReviews.get(unpinRef(reportArtifactVersionRef)) || null
+        : null;
+      const simulationReportSaved = Boolean(reportArtifactVersionRef);
+      const reviewSigned = Boolean(reviewEntry?.attestation_ref);
+      const ready = isInReview && simulationReportSaved && reviewSigned;
+
+      let blockingCode = null;
+      if (!isInReview) {
+        blockingCode = "K.Protocol.InvalidTransition";
+      } else if (!simulationReportSaved || !reviewSigned) {
+        blockingCode = "K.Protocol.SimulationReviewRequired";
+      }
+
+      const nextActions = [];
+      const steps = [];
+      if (!isInReview) {
+        const msg = `Submit Protocol Version ${version.number} for review to freeze its content digest.`;
+        steps.push({ claim: msg, evidence: [cleanVersionRef] });
+        nextActions.push({
+          description: msg,
+          capability: "protocol.submit_for_review",
+          target: cleanVersionRef,
+        });
+      }
+      if (!simulationReportSaved) {
+        const msg = `Run Simulate on Protocol Version ${version.number} against parent Version ${parentFound?.version?.number ?? 1} and save an unmasked SimulationReport.`;
+        steps.push({
+          claim: msg,
+          evidence: [cleanVersionRef, parentRef].filter(Boolean),
+        });
+        nextActions.push({
+          description: msg,
+          capability: "simulation.save_report",
+          target: cleanVersionRef,
+        });
+      } else if (!reviewSigned) {
+        const msg = `Sign a 21 CFR Part 11 Reviewed attestation on ${reportArtifactVersionRef} before approving Protocol Version ${version.number}.`;
+        steps.push({
+          claim: msg,
+          evidence: [reportArtifactVersionRef],
+        });
+        nextActions.push({
+          description: msg,
+          capability: "kernel.artifact_version.review",
+          target: reportArtifactVersionRef,
+        });
+      }
+
+      const claim = ready
+        ? `Amendment Protocol Version ${version.number} has a verified SimulationReport and signed Reviewed attestation and is ready for Part 11 approval.`
+        : !simulationReportSaved
+          ? `Protocol Version ${version.number} requires a saved SimulationReport comparing it with parent Version ${parentFound?.version?.number ?? 1} before Part 11 approval.`
+          : !reviewSigned
+            ? `Saved SimulationReport ${reportArtifactVersionRef} requires a signed 21 CFR Part 11 Reviewed attestation before Protocol Version ${version.number} can be approved.`
+            : `Protocol Version ${version.number} must be InReview before Part 11 approval.`;
+
+      return {
+        data: {
+          protocol_version_ref: cleanVersionRef,
+          status: version.status,
+          is_amendment: true,
+          parent_version_ref: parentRef,
+          ready,
+          simulation_report_saved: simulationReportSaved,
+          review_signed: reviewSigned,
+          simulation_report_artifact_version_ref: reportArtifactVersionRef,
+          review_attestation_ref: reviewEntry?.attestation_ref || null,
+          blocking_code: blockingCode,
+          explanation: {
+            subject: cleanVersionRef,
+            claim,
+            producer: "kernel.protocol.approval_readiness",
+            steps,
+            conditions: [
+              {
+                code: "protocol.status.in_review",
+                description:
+                  "Protocol version is submitted for review (InReview) with a frozen content digest.",
+                met: isInReview,
+                evidence: [cleanVersionRef],
+              },
+              {
+                code: "protocol.amendment.simulation_report_saved",
+                description:
+                  "Unmasked SimulationReport artifact saved for parent and candidate protocol hashes.",
+                met: simulationReportSaved,
+                evidence: reportArtifactVersionRef
+                  ? [reportArtifactVersionRef]
+                  : [cleanVersionRef],
+              },
+              {
+                code: "protocol.amendment.review_signed",
+                description:
+                  "21 CFR Part 11 Reviewed attestation signed on the saved SimulationReport.",
+                met: reviewSigned,
+                evidence: reviewEntry?.attestation_ref
+                  ? [reviewEntry.attestation_ref]
+                  : reportArtifactVersionRef
+                    ? [reportArtifactVersionRef]
+                    : [cleanVersionRef],
+              },
+            ],
+            next_actions: nextActions,
+          },
+        },
+      };
+    },
+
+    approveProtocolVersion(versionRef, body = {}, { sigToken = "" } = {}) {
+      if (!String(sigToken || "").trim()) {
+        return {
+          error: {
+            status: 401,
+            problem: {
+              title: "Step-up signature token required",
+              status: 401,
+              code: "Auth.SignatureTokenRequired",
+              detail:
+                "Header 'X-Sig-Token' is required to approve a protocol version.",
+            },
+          },
+        };
+      }
+      const checked = requireMutableProtocolVersionInStatus(
+        versionRef,
+        ["inreview"],
+        "Only an InReview protocol version may be approved."
+      );
+      if (checked.error) return checked;
+      const { version } = checked;
+      const readinessRes = methods.getProtocolApprovalReadiness(versionRef);
+      if (!readinessRes.data?.ready) {
+        return {
+          error: {
+            status: 409,
+            problem: {
+              title:
+                "Simulation impact review required before amendment approval",
+              status: 409,
+              code:
+                readinessRes.data?.blocking_code ||
+                "K.Protocol.SimulationReviewRequired",
+              detail: readinessRes.data?.explanation?.claim,
+              explanation: readinessRes.data?.explanation,
+            },
+          },
+        };
+      }
+      const idx = nextCounter();
+      const attestationId =
+        String(body?.attestation_id || "").trim() ||
+        makeUuidFromIndex("00000800", idx);
+      version.status = "Approved";
+      version.approval_attestation = `attestation:${attestationId}`;
+      syncSummaryVersionSnapshot(version);
+      ctx.recordActivity(
+        "kernel.protocol.approve",
+        "protocol",
+        "protocol_version",
+        version.ref,
+        "usr-demo-operator"
+      );
+      return { data: cloneJson(version) };
+    },
+
+    withdrawProtocolVersion(
+      versionRef,
+      _body = {},
+      { reason = "", sigToken = "" } = {}
+    ) {
+      if (!String(sigToken || "").trim()) {
+        return {
+          error: {
+            status: 401,
+            problem: {
+              title: "Step-up signature token required",
+              status: 401,
+              code: "Auth.SignatureTokenRequired",
+              detail:
+                "Header 'X-Sig-Token' is required to withdraw an InReview or Approved protocol version.",
+            },
+          },
+        };
+      }
+      const checked = requireMutableProtocolVersionInStatus(
+        versionRef,
+        ["inreview", "approved"],
+        "Only an InReview or Approved protocol version may be withdrawn."
+      );
+      if (checked.error) return checked;
+      const { version } = checked;
+      version.status = "Withdrawn";
+      version.withdrawal_reason = reason || "Withdrawn in demo session";
+      syncSummaryVersionSnapshot(version);
+      ctx.recordActivity(
+        "kernel.protocol.withdraw",
+        "protocol",
+        "protocol_version",
+        version.ref,
+        "usr-demo-operator"
+      );
+      return { data: cloneJson(version) };
+    },
+
+    listStudyArtifacts(studyRef) {
+      const study = ctx.getStudyByRefOrCode(studyRef);
+      const codeKey = String(study?.code || "DEMO-01").toUpperCase();
+      return cloneJson(state.studyArtifacts.get(codeKey) || []);
+    },
+
+    registerStudyArtifact(studyRef, body = {}) {
+      const study = ctx.getStudyByRefOrCode(studyRef);
+      const codeKey = String(study?.code || "DEMO-01").toUpperCase();
+      const cleanStudyRef = unpinRef(study?.ref || studyRef || STUDY_REF);
+      const idx = nextCounter();
+      const artifactId =
+        String(body?.artifact_id || "").trim() ||
+        makeUuidFromIndex("00000940", idx);
+      const artifactVersionId =
+        String(body?.artifact_version_id || "").trim() ||
+        makeUuidFromIndex("00000950", idx);
+      const record = {
+        artifact_ref: `artifact:${artifactId}`,
+        artifact_id: artifactId,
+        artifact_version_ref: `artifact_version:${artifactVersionId}`,
+        artifact_version_id: artifactVersionId,
+        version_number: 1,
+        kind: String(body?.kind || "EthicsApproval"),
+        study_ref: cleanStudyRef,
+        title: String(body?.title || "Regulatory Evidence Artifact"),
+        content_hash: String(body?.content_hash || `sha256-artifact-${idx}`),
+        size_bytes: Number(body?.size_bytes || 1024),
+        media_type: String(body?.media_type || "application/pdf"),
+        storage_ref: String(
+          body?.storage_ref || `urn:cadence:artifact:${artifactVersionId}`
+        ),
+        recorded_at: demoNowIso(idx),
+      };
+      const list = state.studyArtifacts.get(codeKey) || [];
+      list.unshift(record);
+      state.studyArtifacts.set(codeKey, list);
+      return { data: cloneJson(record) };
+    },
+
+    listStudyEffectivities(studyRef) {
+      const study = ctx.getStudyByRefOrCode(studyRef);
+      const codeKey = String(study?.code || "DEMO-01").toUpperCase();
+      return cloneJson(state.studyEffectivities.get(codeKey) || []);
+    },
+
+    declareProtocolEffectivity(versionRef, body = {}) {
+      const found = findMutableProtocolVersion(versionRef);
+      if (!found) {
+        return {
+          error: {
+            status: 404,
+            problem: {
+              title: "Protocol version not found",
+              status: 404,
+              code: "K.Protocol.VersionNotFound",
+            },
+          },
+        };
+      }
+      const { study, version } = found;
+      const codeKey = String(study?.code || "DEMO-01").toUpperCase();
+      const idx = nextCounter();
+      const effectivityId =
+        String(body?.effectivity_id || "").trim() ||
+        makeUuidFromIndex("00000960", idx);
+      const record = {
+        effectivity_ref: `effectivity:${effectivityId}`,
+        effectivity_id: effectivityId,
+        study_ref: unpinRef(study.ref),
+        protocol_version_ref: unpinRef(version.ref),
+        protocol_version_number: version.number,
+        scope_level: String(body?.scope_level || "Study"),
+        country: body?.country || null,
+        study_site_ref: body?.study_site_ref
+          ? unpinRef(body.study_site_ref)
+          : null,
+        status: "Pending",
+        status_since: body?.declared_at || demoNowIso(idx),
+        evidence_artifact_version_refs: [],
+      };
+      const list = state.studyEffectivities.get(codeKey) || [];
+      list.unshift(record);
+      state.studyEffectivities.set(codeKey, list);
+      return { data: cloneJson(record) };
+    },
+
+    changeEffectivityStatus(effectivityRef, body = {}) {
+      const cleanRef = unpinRef(effectivityRef);
+      for (const list of state.studyEffectivities.values()) {
+        const hit = list.find((e) => unpinRef(e.effectivity_ref) === cleanRef);
+        if (hit) {
+          hit.status = String(body?.status || "Effective");
+          hit.status_since = body?.effective_at || demoNowIso(nextCounter());
+          if (Array.isArray(body?.evidence_artifact_version_refs)) {
+            hit.evidence_artifact_version_refs =
+              body.evidence_artifact_version_refs.map((r) => unpinRef(r));
+          }
+          return { data: cloneJson(hit) };
+        }
+      }
+      return {
+        error: {
+          status: 404,
+          problem: {
+            title: "Effectivity not found",
+            status: 404,
+            code: "K.Effectivity.NotFound",
+          },
+        },
+      };
+    },
+
+    activateKernelStudySite(studySiteRef) {
+      const cleanRef = unpinRef(studySiteRef);
+      if (state.studySites) {
+        for (const links of state.studySites.values()) {
+          const hit = links.find(
+            (s) => unpinRef(s.study_site_ref) === cleanRef
+          );
+          if (hit) {
+            hit.status = "Active";
+            hit.is_active = true;
+            return { data: cloneJson(hit) };
+          }
+        }
+      }
+      return {
+        error: {
+          status: 404,
+          problem: {
+            title: "Study site not found",
+            status: 404,
+            code: "K.StudySite.NotFound",
+          },
+        },
+      };
     },
 
     getScheduleOfActivities(versionRef) {

@@ -700,3 +700,31 @@ public sealed record KernelSimulationResponse(
         return false;
     }
 }
+
+/// <summary>Request body for <c>POST /api/v1/kernel/artifact-versions/{artifactVersionRef}/review</c> (21 CFR Part 11, K-SIM-5).</summary>
+/// <param name="Meaning">Attestation meaning (defaults to <c>Reviewed</c>).</param>
+/// <param name="ExpectedContentHash">Optional immutable artifact-version content hash expected by the signer (21 CFR 11.70).</param>
+/// <param name="AttestationId">Optional caller-assigned attestation UUID; derived deterministically when omitted.</param>
+public sealed record KernelReviewArtifactVersionRequest(
+    string? Meaning = null,
+    string? ExpectedContentHash = null,
+    Guid? AttestationId = null);
+
+/// <summary>Recorded <c>Reviewed</c> attestation returned by <c>POST /api/v1/kernel/artifact-versions/{artifactVersionRef}/review</c>.</summary>
+/// <param name="AttestationRef">Canonical NodeRef of the recorded attestation (<c>attestation:&lt;uuid&gt;</c>).</param>
+/// <param name="AttestationId">Recorded attestation UUID.</param>
+/// <param name="ArtifactRef">Canonical NodeRef of the owning artifact (<c>artifact:&lt;uuid&gt;</c>).</param>
+/// <param name="ArtifactVersionRef">Canonical NodeRef of the attested artifact version (<c>artifact_version:&lt;uuid&gt;</c>).</param>
+/// <param name="StudyRef">Canonical NodeRef of the owning study when study-scoped, otherwise null.</param>
+/// <param name="Meaning">Attestation meaning (<c>Reviewed</c>).</param>
+/// <param name="ContentHash">Canonical <c>sha256:</c> digest bound to the attestation.</param>
+/// <param name="RecordedAt">Timestamp when the review signature was recorded.</param>
+public sealed record KernelArtifactReviewAttestationResponse(
+    string AttestationRef,
+    Guid AttestationId,
+    string ArtifactRef,
+    string ArtifactVersionRef,
+    string? StudyRef,
+    string Meaning,
+    string ContentHash,
+    DateTimeOffset RecordedAt);

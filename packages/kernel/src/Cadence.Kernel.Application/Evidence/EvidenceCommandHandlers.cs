@@ -1,3 +1,5 @@
+using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -10,6 +12,7 @@ using Cadence.Kernel.Lineage;
 using Cadence.Kernel.Modules;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Simulation;
+using Cadence.Kernel.Trust;
 
 using Microsoft.Extensions.DependencyInjection;
 
@@ -236,6 +239,70 @@ internal sealed class SaveSimulationReportHandler : ICommandHandler<SaveSimulati
         context.Work.Raise(new ArtifactRegistered(
             artifact.TenantId, artifact.Id, version.Id, artifact.Kind, artifact.StudyId, version.ContentHash, version.MediaType, version.SizeBytes));
         return ArtifactStates.Of(artifact);
+    }
+}
+
+/// <summary>Immutable signable target details for an <see cref="ArtifactVersion"/>.</summary>
+/// <param name="ArtifactId">Owning artifact identifier.</param>
+/// <param name="ArtifactVersionId">Artifact version identifier.</param>
+/// <param name="StudyId">Owning study identifier when study-scoped, otherwise null.</param>
+/// <param name="Kind">Artifact kind.</param>
+/// <param name="ContentHash">Canonical SHA-256 content hash of the artifact version.</param>
+public sealed record ArtifactVersionSignableInfo(
+    ArtifactId ArtifactId,
+    ArtifactVersionId ArtifactVersionId,
+    StudyId? StudyId,
+    ArtifactKind Kind,
+    string ContentHash);
+
+/// <summary>Read-only lookup of an <see cref="ArtifactVersion"/>'s signable content hash for 21 CFR Part 11 attestation.</summary>
+public static class ArtifactVersionTargetLookup
+{
+    /// <summary>Finds the signable metadata of <paramref name="artifactVersionId"/> in <paramref name="tenantId"/>, or null when absent.</summary>
+    public static async Task<ArtifactVersionSignableInfo?> FindAsync(
+        TenantId tenantId,
+        IKernelUnitOfWorkFactory unitOfWorkFactory,
+        Actor actor,
+        DateTimeOffset recordedAt,
+        ArtifactVersionId artifactVersionId,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(unitOfWorkFactory);
+        ArgumentNullException.ThrowIfNull(actor);
+
+        var probe = new Attest(
+            tenantId,
+            AttestationId.New(),
+            AttestationMeaning.Reviewed,
+            new AttestationTarget(NodeKinds.ArtifactVersion, artifactVersionId.Value, string.Empty),
+            recordedAt,
+            "precheck",
+            "precheck",
+            "Artifact version lookup");
+        var execution = new CommandExecution(
+            probe,
+            probe.GetType().Name,
+            actor,
+            recordedAt,
+            Guid.CreateVersion7(),
+            new CommandMetadata(Guid.CreateVersion7()),
+            "precheck");
+        await using var tx = unitOfWorkFactory.Begin(execution);
+        var artifacts = await tx.Work.ReadAllAsync<Artifact>(
+            a => a.Versions.Any(v => v.Id == artifactVersionId),
+            cancellationToken).ConfigureAwait(false);
+        if (artifacts.Count == 0 || artifacts[0].Version(artifactVersionId) is not { } version)
+        {
+            return null;
+        }
+
+        var artifact = artifacts[0];
+        return new ArtifactVersionSignableInfo(
+            artifact.Id,
+            version.Id,
+            artifact.StudyId,
+            artifact.Kind,
+            version.ContentHash);
     }
 }
 

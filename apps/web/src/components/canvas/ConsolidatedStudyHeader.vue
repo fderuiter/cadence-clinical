@@ -55,7 +55,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, watch } from "vue";
 import { useConsolidatedStudyList } from "../../composables/useConsolidatedStudyList";
 import {
   useScopedNavigation,
@@ -71,6 +71,11 @@ const props = defineProps<{
   canvasLinkTestId: string;
   canvasStage: NonNullable<UseScopedStudyLocationOptions["stage"]>;
   canvasSection: NonNullable<UseScopedStudyLocationOptions["section"]>;
+  canvasNode?: string;
+}>();
+
+const emit = defineEmits<{
+  (e: "study-change", studyCode: string): void;
 }>();
 
 const { studies, studiesLoading, studiesError, selectedStudyCode } =
@@ -78,10 +83,16 @@ const { studies, studiesLoading, studiesError, selectedStudyCode } =
 const { scopedStudyLocation } = useScopedNavigation(
   () => selectedStudyCode.value
 );
+
+watch(selectedStudyCode, (code) => {
+  emit("study-change", code);
+});
+
 const canvasLocation = computed(() =>
   scopedStudyLocation({
     stage: props.canvasStage,
     section: props.canvasSection,
+    ...(props.canvasNode ? { node: props.canvasNode } : {}),
   })
 );
 </script>
