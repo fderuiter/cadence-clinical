@@ -7,6 +7,7 @@ import {
 import { use2DGrid } from "../../../composables/use2DGrid";
 import { useAuthStore } from "../../../stores/auth";
 import { useEtmfStore } from "../../../stores/etmf";
+import { formatDate } from "../../../utils/formatDate";
 
 let cachedGridActionsPromise =
   import.meta.env?.MODE === "test" ? import("./documentGridActions.js") : null;
@@ -38,22 +39,6 @@ export function getStatusClass(status) {
 export function formatStatus(status) {
   const s = status || "DRAFT";
   return s.toUpperCase().replace(/_/g, " ");
-}
-
-function formatDate(dateStr) {
-  if (!dateStr) return "N/A";
-  try {
-    const d = new Date(dateStr);
-    return d.toLocaleString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  } catch {
-    return dateStr;
-  }
 }
 
 export function useDocumentGridState(props, onStartEditing) {

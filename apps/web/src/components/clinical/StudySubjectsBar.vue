@@ -42,15 +42,13 @@
           <input
             id="study-subjects-code"
             v-model="studyCode"
-            type="text"
-            autocomplete="off"
-            placeholder="Study code, e.g. CADENCE-101"
+            v-bind="studyCodeInputAttrs"
           />
           <button
             id="btn-load-study-subjects"
             type="submit"
             class="btn btn-secondary"
-            :disabled="!studyCode.trim() || store.subjectsLoading"
+            :disabled="isLoadDisabled"
           >
             Show subjects
           </button>
@@ -62,15 +60,13 @@
       <input
         id="study-subjects-code"
         v-model="studyCode"
-        type="text"
-        autocomplete="off"
-        placeholder="Study code, e.g. CADENCE-101"
+        v-bind="studyCodeInputAttrs"
       />
       <button
         id="btn-load-study-subjects"
         type="submit"
         class="btn btn-secondary"
-        :disabled="!studyCode.trim() || store.subjectsLoading"
+        :disabled="isLoadDisabled"
       >
         Show subjects
       </button>
@@ -105,6 +101,14 @@ const router =
 const studyCode = ref(store.activeStudyId);
 const visibleStudies = ref([]);
 const studiesLoading = ref(false);
+const studyCodeInputAttrs = {
+  type: "text",
+  autocomplete: "off",
+  placeholder: "Study code, e.g. CADENCE-101",
+};
+const isLoadDisabled = computed(
+  () => !studyCode.value.trim() || store.subjectsLoading
+);
 
 watch(
   () => store.activeStudyId,

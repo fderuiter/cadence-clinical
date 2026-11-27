@@ -108,7 +108,9 @@ export const noRawOverlaysRule = {
       sourceText.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi),
       (m) => m[1]
     ).join("\n");
-    const importsFocusTrap = /\buseFocusTrap\b/.test(scriptContent);
+    const importsFocusTrap = /\b(?:useFocusTrap|usePinModalGuard)\b/.test(
+      scriptContent
+    );
 
     const nativeOverlayElements = [];
 

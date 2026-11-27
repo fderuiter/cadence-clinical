@@ -189,3 +189,65 @@ export function createThemeBootstrapPlugin() {
     },
   };
 }
+
+/**
+ * Merges `.env*` `VITE_*` variables with `process.env` for a resolved Vite config.
+ *
+ * @param {{ mode: string }} resolved
+ * @param {string} rootDir
+ * @param {(mode: string, envDir: string, prefixes?: string | string[]) => Record<string, string>} loadEnv
+ * @returns {Record<string, string | undefined>}
+ */
+export function resolveMergedViteEnv(resolved, rootDir, loadEnv) {
+  const fileEnv = loadEnv(resolved.mode, rootDir, "VITE_");
+  return { ...fileEnv, ...process.env };
+}
+
+/**
+ * Vite plugin ensuring `serve` in `development` mode points `VITE_API_BASE_URL` at the local dev server
+ * when unset so `/api` requests flow through Vite's same-origin gateway proxy without CORS errors.
+ *
+ * @param {{ rootDir: string, devPort: number, loadEnv: (mode: string, envDir: string, prefixes?: string | string[]) => Record<string, string> }} options
+ * @returns {import("vite").Plugin}
+ */
+export function createSameOriginApiInDevPlugin({ rootDir, devPort, loadEnv }) {
+  return {
+    name: "same-origin-api-in-dev",
+    config(_config, { command, mode }) {
+      if (
+        command === "serve" &&
+        mode === "development" &&
+        !loadEnv(mode, rootDir, "VITE_API_BASE_URL").VITE_API_BASE_URL
+      ) {
+        process.env.VITE_API_BASE_URL = `http://localhost:${devPort}`;
+      }
+    },
+  };
+}
+
+/**
+ * Applies reverse-proxy friendly keep-alive and header timeouts to a Vite preview server.
+ *
+ * @param {{ httpServer?: { keepAliveTimeout?: number, headersTimeout?: number } | null }} server
+ */
+export function configureVitePreviewTimeouts(server) {
+  if (server?.httpServer) {
+    server.httpServer.keepAliveTimeout = 65000;
+    server.httpServer.headersTimeout = 66000;
+  }
+}
+
+/**
+ * Builds the shared `/api` Vite dev-server proxy rule forwarding to the API gateway.
+ *
+ * @param {string} gatewayUrl
+ */
+export function createViteGatewayProxy(gatewayUrl) {
+  return {
+    "/api": {
+      target: gatewayUrl,
+      changeOrigin: true,
+      secure: false,
+    },
+  };
+}

@@ -14,45 +14,11 @@
     />
     <span class="entity-link__label">{{ label || parsed.displayLabel }}</span>
   </span>
-  <a
-    v-else-if="href"
-    ref="triggerRef"
-    :href="href"
-    :class="[
-      'clinical-entity-link',
-      {
-        'clinical-entity-link-tabular': tabular,
-        'entity-link': isStringNodeRef,
-        'entity-link--interactive': isStringNodeRef,
-        'entity-link--compact': compact,
-      },
-    ]"
-    :data-node-ref="isStringNodeRef ? parsed.raw : undefined"
-    :data-node-kind="isStringNodeRef ? parsed.kind : undefined"
-    :data-entity-type="resolvedObjectNodeRef.type"
-    :data-entity-id="resolvedObjectNodeRef.id"
-    @click="handleClick"
-  >
-    <ExternalLink
-      v-if="isStringNodeRef && !$slots.default"
-      :size="16"
-      :stroke-width="1.75"
-      aria-hidden="true"
-      focusable="false"
-      class="entity-link__icon"
-    />
-    <slot>
-      <span class="entity-link__label">{{ resolvedLabel }}</span>
-      <span v-if="showRefCode" class="entity-link__code">{{
-        parsed.shortRef
-      }}</span>
-    </slot>
-    <span v-if="srContext" class="sr-only">: {{ srContext }}</span>
-  </a>
-  <button
+  <component
+    :is="href ? 'a' : 'button'"
     v-else
     ref="triggerRef"
-    type="button"
+    v-bind="href ? { href } : { type: 'button' }"
     :class="[
       'clinical-entity-link',
       {
@@ -83,7 +49,7 @@
       }}</span>
     </slot>
     <span v-if="srContext" class="sr-only">: {{ srContext }}</span>
-  </button>
+  </component>
 </template>
 
 <script setup>

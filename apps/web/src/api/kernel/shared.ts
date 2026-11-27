@@ -18,6 +18,34 @@ export type KernelSchemas = components["schemas"];
 
 export const kernelClient = createOpenApiClient<paths>();
 
+type KernelActionKeys<TModule> = {
+  [K in keyof TModule]: TModule[K] extends (
+    ...args: never[]
+  ) => Promise<unknown>
+    ? K
+    : never;
+}[keyof TModule];
+
+/**
+ * Creates a lazy dynamic-import forwarder to an `execute*` transport helper in a slice's
+ * `./<slice>.transport` module, preserving single-source parameter and return type inference
+ * alongside the cold-boot chunk boundary.
+ */
+export function lazyKernelAction<
+  TModule extends object,
+  K extends KernelActionKeys<TModule>,
+>(loadModule: () => Promise<TModule>, actionName: K): TModule[K] {
+  return (async (
+    ...args: Parameters<
+      Extract<TModule[K], (...fnArgs: never[]) => Promise<unknown>>
+    >
+  ) => {
+    const mod = await loadModule();
+    const fn = mod[actionName] as (...fnArgs: typeof args) => Promise<unknown>;
+    return fn(...args);
+  }) as unknown as TModule[K];
+}
+
 export const ASSERTION_LOCKED = "K.Assertion.Locked";
 export const ASSERTION_ALREADY_LOCKED = "K.Assertion.AlreadyLocked";
 export const ASSERTION_SCOPE_NOT_READY = "K.Assertion.ScopeNotReady";

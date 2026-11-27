@@ -106,157 +106,34 @@
     <div v-else class="coding-workspace-container">
       <!-- Summary Metric Cards (Adapted for View Mode) -->
       <div
-        v-if="codingStore.viewMode === 'CLUSTERS'"
-        class="stats-overview-grid cluster-stats-grid"
+        :class="[
+          'stats-overview-grid',
+          { 'cluster-stats-grid': codingStore.viewMode === 'CLUSTERS' },
+        ]"
       >
-        <div
-          class="stat-card"
-          :class="{ 'stat-active': codingStore.filters.status === 'ALL' }"
-          role="button"
-          tabindex="0"
-          @click="setStatusFilter('ALL')"
-          @keydown.enter.prevent="setStatusFilter('ALL')"
-          @keydown.space.prevent="setStatusFilter('ALL')"
-        >
-          <div class="stat-number">
-            {{ codingStore.totalClustersCount }}
+        <template v-for="card in summaryStatCards" :key="card.key">
+          <div
+            v-if="card.onSelect"
+            class="stat-card"
+            :class="[card.cardClass, { 'stat-active': card.active }]"
+            role="button"
+            tabindex="0"
+            @click="card.onSelect()"
+            @keydown.enter.prevent="card.onSelect()"
+            @keydown.space.prevent="card.onSelect()"
+          >
+            <div class="stat-number">
+              {{ card.value }}
+            </div>
+            <div class="stat-title">{{ card.title }}</div>
           </div>
-          <div class="stat-title">Verbatim Clusters</div>
-        </div>
-
-        <div class="stat-card stat-instances">
-          <div class="stat-number">
-            {{ codingStore.totalClusterInstancesCount }}
+          <div v-else class="stat-card" :class="card.cardClass">
+            <div class="stat-number">
+              {{ card.value }}
+            </div>
+            <div class="stat-title">{{ card.title }}</div>
           </div>
-          <div class="stat-title">Subject Instances</div>
-        </div>
-
-        <div
-          class="stat-card stat-suggested"
-          :class="{ 'stat-active': codingStore.confidenceThreshold === 'HIGH' }"
-          role="button"
-          tabindex="0"
-          @click="setConfidenceFilter('HIGH')"
-          @keydown.enter.prevent="setConfidenceFilter('HIGH')"
-          @keydown.space.prevent="setConfidenceFilter('HIGH')"
-        >
-          <div class="stat-number">
-            {{ codingStore.highConfidenceClustersCount }}
-          </div>
-          <div class="stat-title">High Conf. Clusters (≥90%)</div>
-        </div>
-
-        <div
-          class="stat-card stat-coded"
-          :class="{ 'stat-active': codingStore.filters.status === 'CODED_ALL' }"
-          role="button"
-          tabindex="0"
-          @click="setStatusFilter('CODED_ALL')"
-          @keydown.enter.prevent="setStatusFilter('CODED_ALL')"
-          @keydown.space.prevent="setStatusFilter('CODED_ALL')"
-        >
-          <div class="stat-number">
-            {{ codingStore.autoCodingProgressPct }}%
-          </div>
-          <div class="stat-title">Auto-Coded Progress</div>
-        </div>
-
-        <div
-          class="stat-card stat-query"
-          :class="{
-            'stat-active': codingStore.filters.status === 'QUERY_PENDING',
-          }"
-          role="button"
-          tabindex="0"
-          @click="setStatusFilter('QUERY_PENDING')"
-          @keydown.enter.prevent="setStatusFilter('QUERY_PENDING')"
-          @keydown.space.prevent="setStatusFilter('QUERY_PENDING')"
-        >
-          <div class="stat-number">
-            {{ codingStore.queryPendingCount }}
-          </div>
-          <div class="stat-title">Query Pending</div>
-        </div>
-      </div>
-
-      <!-- Individual View Summary Cards -->
-      <div v-else class="stats-overview-grid">
-        <div
-          class="stat-card"
-          :class="{ 'stat-active': codingStore.filters.status === 'ALL' }"
-          role="button"
-          tabindex="0"
-          @click="setStatusFilter('ALL')"
-          @keydown.enter.prevent="setStatusFilter('ALL')"
-          @keydown.space.prevent="setStatusFilter('ALL')"
-        >
-          <div class="stat-number">
-            {{ codingStore.totalCount }}
-          </div>
-          <div class="stat-title">Total Verbatims</div>
-        </div>
-
-        <div
-          class="stat-card stat-uncoded"
-          :class="{ 'stat-active': codingStore.filters.status === 'UNCODED' }"
-          role="button"
-          tabindex="0"
-          @click="setStatusFilter('UNCODED')"
-          @keydown.enter.prevent="setStatusFilter('UNCODED')"
-          @keydown.space.prevent="setStatusFilter('UNCODED')"
-        >
-          <div class="stat-number">
-            {{ codingStore.uncodedCount }}
-          </div>
-          <div class="stat-title">Uncoded</div>
-        </div>
-
-        <div
-          class="stat-card stat-suggested"
-          :class="{ 'stat-active': codingStore.filters.status === 'SUGGESTED' }"
-          role="button"
-          tabindex="0"
-          @click="setStatusFilter('SUGGESTED')"
-          @keydown.enter.prevent="setStatusFilter('SUGGESTED')"
-          @keydown.space.prevent="setStatusFilter('SUGGESTED')"
-        >
-          <div class="stat-number">
-            {{ codingStore.suggestedCount }}
-          </div>
-          <div class="stat-title">Suggested Matches</div>
-        </div>
-
-        <div
-          class="stat-card stat-coded"
-          :class="{ 'stat-active': codingStore.filters.status === 'CODED_ALL' }"
-          role="button"
-          tabindex="0"
-          @click="setStatusFilter('CODED_ALL')"
-          @keydown.enter.prevent="setStatusFilter('CODED_ALL')"
-          @keydown.space.prevent="setStatusFilter('CODED_ALL')"
-        >
-          <div class="stat-number">
-            {{ codingStore.codedCount }}
-          </div>
-          <div class="stat-title">Coded</div>
-        </div>
-
-        <div
-          class="stat-card stat-query"
-          :class="{
-            'stat-active': codingStore.filters.status === 'QUERY_PENDING',
-          }"
-          role="button"
-          tabindex="0"
-          @click="setStatusFilter('QUERY_PENDING')"
-          @keydown.enter.prevent="setStatusFilter('QUERY_PENDING')"
-          @keydown.space.prevent="setStatusFilter('QUERY_PENDING')"
-        >
-          <div class="stat-number">
-            {{ codingStore.queryPendingCount }}
-          </div>
-          <div class="stat-title">Query Pending</div>
-        </div>
+        </template>
       </div>
 
       <!-- Filter and Search Toolbar -->
@@ -395,6 +272,95 @@ function setConfidenceFilter(threshold) {
     codingStore.setConfidenceThreshold(threshold);
   }
 }
+
+const summaryStatCards = computed(() => {
+  if (codingStore.viewMode === "CLUSTERS") {
+    return [
+      {
+        key: "clusters-all",
+        cardClass: "",
+        active: codingStore.filters.status === "ALL",
+        value: codingStore.totalClustersCount,
+        title: "Verbatim Clusters",
+        onSelect: () => setStatusFilter("ALL"),
+      },
+      {
+        key: "clusters-instances",
+        cardClass: "stat-instances",
+        active: false,
+        value: codingStore.totalClusterInstancesCount,
+        title: "Subject Instances",
+        onSelect: null,
+      },
+      {
+        key: "clusters-high-conf",
+        cardClass: "stat-suggested",
+        active: codingStore.confidenceThreshold === "HIGH",
+        value: codingStore.highConfidenceClustersCount,
+        title: "High Conf. Clusters (≥90%)",
+        onSelect: () => setConfidenceFilter("HIGH"),
+      },
+      {
+        key: "clusters-coded",
+        cardClass: "stat-coded",
+        active: codingStore.filters.status === "CODED_ALL",
+        value: `${codingStore.autoCodingProgressPct}%`,
+        title: "Auto-Coded Progress",
+        onSelect: () => setStatusFilter("CODED_ALL"),
+      },
+      {
+        key: "clusters-query",
+        cardClass: "stat-query",
+        active: codingStore.filters.status === "QUERY_PENDING",
+        value: codingStore.queryPendingCount,
+        title: "Query Pending",
+        onSelect: () => setStatusFilter("QUERY_PENDING"),
+      },
+    ];
+  }
+  return [
+    {
+      key: "ind-all",
+      cardClass: "",
+      active: codingStore.filters.status === "ALL",
+      value: codingStore.totalCount,
+      title: "Total Verbatims",
+      onSelect: () => setStatusFilter("ALL"),
+    },
+    {
+      key: "ind-uncoded",
+      cardClass: "stat-uncoded",
+      active: codingStore.filters.status === "UNCODED",
+      value: codingStore.uncodedCount,
+      title: "Uncoded",
+      onSelect: () => setStatusFilter("UNCODED"),
+    },
+    {
+      key: "ind-suggested",
+      cardClass: "stat-suggested",
+      active: codingStore.filters.status === "SUGGESTED",
+      value: codingStore.suggestedCount,
+      title: "Suggested Matches",
+      onSelect: () => setStatusFilter("SUGGESTED"),
+    },
+    {
+      key: "ind-coded",
+      cardClass: "stat-coded",
+      active: codingStore.filters.status === "CODED_ALL",
+      value: codingStore.codedCount,
+      title: "Coded",
+      onSelect: () => setStatusFilter("CODED_ALL"),
+    },
+    {
+      key: "ind-query",
+      cardClass: "stat-query",
+      active: codingStore.filters.status === "QUERY_PENDING",
+      value: codingStore.queryPendingCount,
+      title: "Query Pending",
+      onSelect: () => setStatusFilter("QUERY_PENDING"),
+    },
+  ];
+});
 
 async function refreshQueue() {
   await codingStore.fetchAssignments();

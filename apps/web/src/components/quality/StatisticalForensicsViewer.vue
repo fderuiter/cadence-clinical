@@ -402,23 +402,18 @@
         </div>
       </section>
 
-      <!-- TAB 2: Benford's Law Drilldown -->
-      <section v-if="activeSubTab === 'benford'" class="tab-pane">
+      <!-- TABS 2-5: Site Drilldown Panes (Benford, Rounding, Mahalanobis, Variance) -->
+      <section v-if="activeDrilldownPane" class="tab-pane">
         <div class="pane-header-row">
           <div class="pane-title-group">
-            <h3 class="pane-title">
-              Leading Digit Distribution against Benford's Law
-            </h3>
-            <span class="pane-caption"
-              >P(d) = log10(1 + 1/d) with Chi-Square Goodness-of-Fit Testing (df
-              = 8)</span
-            >
+            <h3 class="pane-title">{{ activeDrilldownPane.title }}</h3>
+            <span class="pane-caption">{{ activeDrilldownPane.caption }}</span>
           </div>
 
           <div class="site-drilldown-selector">
-            <label for="benford-site-select">Inspect Site:</label>
+            <label :for="activeDrilldownPane.selectId">Inspect Site:</label>
             <select
-              id="benford-site-select"
+              :id="activeDrilldownPane.selectId"
               v-model="selectedDrilldownSiteId"
               class="csm-select"
             >
@@ -433,7 +428,10 @@
           </div>
         </div>
 
-        <div v-if="currentDrilldownSite" class="drilldown-grid">
+        <div
+          v-if="currentDrilldownSite && activeSubTab === 'benford'"
+          class="drilldown-grid"
+        >
           <!-- Chart Visualizer -->
           <div class="chart-card">
             <div class="chart-header">
@@ -548,40 +546,12 @@
             </table>
           </div>
         </div>
-      </section>
 
-      <!-- TAB 3: Rounding Bias Drilldown -->
-      <section v-if="activeSubTab === 'rounding'" class="tab-pane">
-        <div class="pane-header-row">
-          <div class="pane-title-group">
-            <h3 class="pane-title">
-              Terminal Digit Uniform Distribution &amp; Rounding Bias
-            </h3>
-            <span class="pane-caption"
-              >Detection of Human Rounding Preferences on Blood Pressure &amp;
-              Vitals (0 &amp; 5 terminal digit clustering)</span
-            >
-          </div>
-
-          <div class="site-drilldown-selector">
-            <label for="rounding-site-select">Inspect Site:</label>
-            <select
-              id="rounding-site-select"
-              v-model="selectedDrilldownSiteId"
-              class="csm-select"
-            >
-              <option
-                v-for="site in siteRecords"
-                :key="site.site_id"
-                :value="site.site_id"
-              >
-                {{ site.site_id }} ({{ site.risk_tier }})
-              </option>
-            </select>
-          </div>
-        </div>
-
-        <div v-if="currentDrilldownSite" class="drilldown-grid">
+        <!-- TAB 3: Rounding Bias Drilldown -->
+        <div
+          v-else-if="currentDrilldownSite && activeSubTab === 'rounding'"
+          class="drilldown-grid"
+        >
           <!-- Terminal Digits Chart -->
           <div class="chart-card">
             <div class="chart-header">
@@ -711,40 +681,12 @@
             </table>
           </div>
         </div>
-      </section>
 
-      <!-- TAB 4: Multivariate Mahalanobis & Correlation Matrices -->
-      <section v-if="activeSubTab === 'mahalanobis'" class="tab-pane">
-        <div class="pane-header-row">
-          <div class="pane-title-group">
-            <h3 class="pane-title">
-              Multivariate Observation Clusters &amp; Mahalanobis Distance
-            </h3>
-            <span class="pane-caption"
-              >Assessment of Inter-Variable Correlation Structures and Site
-              Centroid Distances</span
-            >
-          </div>
-
-          <div class="site-drilldown-selector">
-            <label for="mahal-site-select">Inspect Site:</label>
-            <select
-              id="mahal-site-select"
-              v-model="selectedDrilldownSiteId"
-              class="csm-select"
-            >
-              <option
-                v-for="site in siteRecords"
-                :key="site.site_id"
-                :value="site.site_id"
-              >
-                {{ site.site_id }} ({{ site.risk_tier }})
-              </option>
-            </select>
-          </div>
-        </div>
-
-        <div v-if="currentDrilldownSite" class="drilldown-grid">
+        <!-- TAB 4: Multivariate Mahalanobis & Correlation Matrices -->
+        <div
+          v-else-if="currentDrilldownSite && activeSubTab === 'mahalanobis'"
+          class="drilldown-grid"
+        >
           <div class="chart-card">
             <h4>Site Mean Vector vs Pooled Trial Population Centroid</h4>
             <table class="nested-table">
@@ -814,40 +756,12 @@
             }}</pre>
           </div>
         </div>
-      </section>
 
-      <!-- TAB 5: Variance Shrinkage & KL Divergence -->
-      <section v-if="activeSubTab === 'variance'" class="tab-pane">
-        <div class="pane-header-row">
-          <div class="pane-title-group">
-            <h3 class="pane-title">
-              Variance Shrinkage &amp; Data Fabrication Sentinels
-            </h3>
-            <span class="pane-caption"
-              >Kullback-Leibler (KL) Divergence and Low-Standard-Deviation
-              Fabrication Scanners</span
-            >
-          </div>
-
-          <div class="site-drilldown-selector">
-            <label for="var-site-select">Inspect Site:</label>
-            <select
-              id="var-site-select"
-              v-model="selectedDrilldownSiteId"
-              class="csm-select"
-            >
-              <option
-                v-for="site in siteRecords"
-                :key="site.site_id"
-                :value="site.site_id"
-              >
-                {{ site.site_id }} ({{ site.risk_tier }})
-              </option>
-            </select>
-          </div>
-        </div>
-
-        <div v-if="currentDrilldownSite" class="drilldown-grid">
+        <!-- TAB 5: Variance Shrinkage & KL Divergence -->
+        <div
+          v-else-if="currentDrilldownSite && activeSubTab === 'variance'"
+          class="drilldown-grid"
+        >
           <div class="chart-card">
             <h4>Site Variance vs Pooled Study Variance Ratio</h4>
             <div class="variance-gauge-box">
@@ -1410,6 +1324,35 @@ const availableStudies = ref([
 ]);
 const selectedStudyId = ref("STUDY-CSM-2026");
 const activeSubTab = ref("overview");
+const DRILLDOWN_PANES = {
+  benford: {
+    title: "Leading Digit Distribution against Benford's Law",
+    caption:
+      "P(d) = log10(1 + 1/d) with Chi-Square Goodness-of-Fit Testing (df = 8)",
+    selectId: "benford-site-select",
+  },
+  rounding: {
+    title: "Terminal Digit Uniform Distribution & Rounding Bias",
+    caption:
+      "Detection of Human Rounding Preferences on Blood Pressure & Vitals (0 & 5 terminal digit clustering)",
+    selectId: "rounding-site-select",
+  },
+  mahalanobis: {
+    title: "Multivariate Observation Clusters & Mahalanobis Distance",
+    caption:
+      "Assessment of Inter-Variable Correlation Structures and Site Centroid Distances",
+    selectId: "mahal-site-select",
+  },
+  variance: {
+    title: "Variance Shrinkage & Data Fabrication Sentinels",
+    caption:
+      "Kullback-Leibler (KL) Divergence and Low-Standard-Deviation Fabrication Scanners",
+    selectId: "var-site-select",
+  },
+};
+const activeDrilldownPane = computed(
+  () => DRILLDOWN_PANES[activeSubTab.value] || null
+);
 const isLoading = ref(false);
 const showOnlyOutliers = ref(false);
 const showDossierModal = ref(false);
@@ -1582,376 +1525,154 @@ function openDossierModal() {
 const defaultPrimaryPhash = "a3f01b92c4d5e678"; // pragma: allowlist secret
 const defaultMatchedPhash = "a3f01b92c4d5e678"; // pragma: allowlist secret
 
+function toDigitFrequencyMap(counts, startDigit) {
+  return Object.fromEntries(counts.map((c, idx) => [startDigit + idx, c]));
+}
+
+const BENFORD_EXPECTED_FREQUENCIES = toDigitFrequencyMap(
+  [18.06, 10.57, 7.5, 5.81, 4.75, 4.02, 3.48, 3.07, 2.75],
+  1
+);
+const UNIFORM_TERMINAL_FREQUENCIES = toDigitFrequencyMap(
+  [18, 18, 18, 18, 18, 18, 18, 18, 18, 18],
+  0
+);
+
+function buildSimulatedForensicsSite(studyId, spec) {
+  return {
+    id: spec.id,
+    run_id: "run-001",
+    study_id: studyId,
+    site_id: spec.siteId,
+    sample_size: 60,
+    benford: {
+      sample_size: 60,
+      chi_square: spec.benfordStats[0],
+      p_value: spec.benfordStats[1],
+      mad: spec.benfordStats[2],
+      conformity: spec.conformity,
+      observed_frequencies: toDigitFrequencyMap(spec.benfordObserved, 1),
+      expected_frequencies: { ...BENFORD_EXPECTED_FREQUENCIES },
+    },
+    terminal_digit: {
+      sample_size: 180,
+      chi_square: spec.terminalStats[0],
+      p_value: spec.terminalStats[1],
+      zero_five_index: spec.terminalStats[2],
+      rounding_bias_tier: spec.roundingTier,
+      observed_frequencies: toDigitFrequencyMap(spec.terminalObserved, 0),
+      expected_frequencies: { ...UNIFORM_TERMINAL_FREQUENCIES },
+    },
+    multivariate: {
+      mahalanobis_distance: spec.multivariateStats[0],
+      mahalanobis_p_value: spec.multivariateStats[1],
+      correlation_matrix_distance: spec.multivariateStats[2],
+      site_mean_vector: {
+        systolic_bp: spec.means[0],
+        diastolic_bp: spec.means[1],
+        heart_rate: spec.means[2],
+        lab_creatinine: spec.means[3],
+      },
+      site_covariance_matrix: spec.covariance,
+    },
+    variance_shrinkage: {
+      variance_ratio: spec.varianceStats[0],
+      variance_shrinkage_p_value: spec.varianceStats[1],
+      kl_divergence: spec.varianceStats[2],
+      is_variance_shrunk: spec.isShrunk,
+    },
+    composite_risk_score: spec.riskScore,
+    risk_tier: spec.riskTier,
+    is_anomalous_outlier: spec.isOutlier,
+    flagged_anomaly_reasons: spec.reasons,
+  };
+}
+
 // Simulated data generator for standalone frontend interactive demonstration
 function generateSimulatedDataset() {
   isLoading.value = true;
   setTimeout(() => {
+    const studyId = selectedStudyId.value;
     const mockSites = [
-      {
+      buildSimulatedForensicsSite(studyId, {
         id: "rec-101",
-        run_id: "run-001",
-        study_id: selectedStudyId.value,
-        site_id: "SITE-101",
-        sample_size: 60,
-        benford: {
-          sample_size: 60,
-          chi_square: 4.2,
-          p_value: 0.838,
-          mad: 0.0052,
-          conformity: "CLOSE_CONFORMITY",
-          observed_frequencies: {
-            1: 19,
-            2: 11,
-            3: 8,
-            4: 6,
-            5: 5,
-            6: 4,
-            7: 3,
-            8: 2,
-            9: 2,
-          },
-          expected_frequencies: {
-            1: 18.06,
-            2: 10.57,
-            3: 7.5,
-            4: 5.81,
-            5: 4.75,
-            6: 4.02,
-            7: 3.48,
-            8: 3.07,
-            9: 2.75,
-          },
+        siteId: "SITE-101",
+        benfordStats: [4.2, 0.838, 0.0052],
+        conformity: "CLOSE_CONFORMITY",
+        benfordObserved: [19, 11, 8, 6, 5, 4, 3, 2, 2],
+        terminalStats: [2.4, 0.983, 0.21],
+        roundingTier: "NORMAL",
+        terminalObserved: [19, 18, 17, 19, 18, 19, 18, 17, 18, 17],
+        multivariateStats: [0.45, 0.892, 0.12],
+        means: [121.5, 79.2, 71.8, 1.12],
+        covariance: {
+          systolic_bp: { systolic_bp: 144.0, diastolic_bp: 78.0 },
+          diastolic_bp: { diastolic_bp: 42.0 },
         },
-        terminal_digit: {
-          sample_size: 180,
-          chi_square: 2.4,
-          p_value: 0.983,
-          zero_five_index: 0.21,
-          rounding_bias_tier: "NORMAL",
-          observed_frequencies: {
-            0: 19,
-            1: 18,
-            2: 17,
-            3: 19,
-            4: 18,
-            5: 19,
-            6: 18,
-            7: 17,
-            8: 18,
-            9: 17,
-          },
-          expected_frequencies: {
-            0: 18,
-            1: 18,
-            2: 18,
-            3: 18,
-            4: 18,
-            5: 18,
-            6: 18,
-            7: 18,
-            8: 18,
-            9: 18,
-          },
-        },
-        multivariate: {
-          mahalanobis_distance: 0.45,
-          mahalanobis_p_value: 0.892,
-          correlation_matrix_distance: 0.12,
-          site_mean_vector: {
-            systolic_bp: 121.5,
-            diastolic_bp: 79.2,
-            heart_rate: 71.8,
-            lab_creatinine: 1.12,
-          },
-          site_covariance_matrix: {
-            systolic_bp: { systolic_bp: 144.0, diastolic_bp: 78.0 },
-            diastolic_bp: { diastolic_bp: 42.0 },
-          },
-        },
-        variance_shrinkage: {
-          variance_ratio: 0.94,
-          variance_shrinkage_p_value: 0.452,
-          kl_divergence: 0.08,
-          is_variance_shrunk: false,
-        },
-        composite_risk_score: 5.0,
-        risk_tier: "LOW",
-        is_anomalous_outlier: false,
-        flagged_anomaly_reasons: [],
-      },
-      {
+        varianceStats: [0.94, 0.452, 0.08],
+        isShrunk: false,
+        riskScore: 5.0,
+        riskTier: "LOW",
+        isOutlier: false,
+        reasons: [],
+      }),
+      buildSimulatedForensicsSite(studyId, {
         id: "rec-102",
-        run_id: "run-001",
-        study_id: selectedStudyId.value,
-        site_id: "SITE-BENFORD-ANOMALY",
-        sample_size: 60,
-        benford: {
-          sample_size: 60,
-          chi_square: 337.4,
-          p_value: 0.00001,
-          mad: 0.1878,
-          conformity: "NON_CONFORMING",
-          observed_frequencies: {
-            1: 0,
-            2: 0,
-            3: 0,
-            4: 0,
-            5: 0,
-            6: 0,
-            7: 18,
-            8: 21,
-            9: 21,
-          },
-          expected_frequencies: {
-            1: 18.06,
-            2: 10.57,
-            3: 7.5,
-            4: 5.81,
-            5: 4.75,
-            6: 4.02,
-            7: 3.48,
-            8: 3.07,
-            9: 2.75,
-          },
-        },
-        terminal_digit: {
-          sample_size: 180,
-          chi_square: 3.1,
-          p_value: 0.96,
-          zero_five_index: 0.19,
-          rounding_bias_tier: "NORMAL",
-          observed_frequencies: {
-            0: 18,
-            1: 19,
-            2: 18,
-            3: 17,
-            4: 19,
-            5: 16,
-            6: 18,
-            7: 19,
-            8: 18,
-            9: 18,
-          },
-          expected_frequencies: {
-            0: 18,
-            1: 18,
-            2: 18,
-            3: 18,
-            4: 18,
-            5: 18,
-            6: 18,
-            7: 18,
-            8: 18,
-            9: 18,
-          },
-        },
-        multivariate: {
-          mahalanobis_distance: 1.25,
-          mahalanobis_p_value: 0.152,
-          correlation_matrix_distance: 0.35,
-          site_mean_vector: {
-            systolic_bp: 122.0,
-            diastolic_bp: 80.1,
-            heart_rate: 72.0,
-            lab_creatinine: 8.2,
-          },
-          site_covariance_matrix: { systolic_bp: { systolic_bp: 140.0 } },
-        },
-        variance_shrinkage: {
-          variance_ratio: 0.88,
-          variance_shrinkage_p_value: 0.312,
-          kl_divergence: 0.45,
-          is_variance_shrunk: false,
-        },
-        composite_risk_score: 65.0,
-        risk_tier: "CRITICAL",
-        is_anomalous_outlier: true,
-        flagged_anomaly_reasons: [
-          "BENFORD_NON_CONFORMANCE",
-          "DATA_FABRICATION_SUSPICION",
-        ],
-      },
-      {
+        siteId: "SITE-BENFORD-ANOMALY",
+        benfordStats: [337.4, 0.00001, 0.1878],
+        conformity: "NON_CONFORMING",
+        benfordObserved: [0, 0, 0, 0, 0, 0, 18, 21, 21],
+        terminalStats: [3.1, 0.96, 0.19],
+        roundingTier: "NORMAL",
+        terminalObserved: [18, 19, 18, 17, 19, 16, 18, 19, 18, 18],
+        multivariateStats: [1.25, 0.152, 0.35],
+        means: [122.0, 80.1, 72.0, 8.2],
+        covariance: { systolic_bp: { systolic_bp: 140.0 } },
+        varianceStats: [0.88, 0.312, 0.45],
+        isShrunk: false,
+        riskScore: 65.0,
+        riskTier: "CRITICAL",
+        isOutlier: true,
+        reasons: ["BENFORD_NON_CONFORMANCE", "DATA_FABRICATION_SUSPICION"],
+      }),
+      buildSimulatedForensicsSite(studyId, {
         id: "rec-103",
-        run_id: "run-001",
-        study_id: selectedStudyId.value,
-        site_id: "SITE-ROUNDING-BIAS",
-        sample_size: 60,
-        benford: {
-          sample_size: 60,
-          chi_square: 8.5,
-          p_value: 0.386,
-          mad: 0.0105,
-          conformity: "ACCEPTABLE_CONFORMITY",
-          observed_frequencies: {
-            1: 17,
-            2: 11,
-            3: 8,
-            4: 6,
-            5: 5,
-            6: 4,
-            7: 3,
-            8: 3,
-            9: 3,
-          },
-          expected_frequencies: {
-            1: 18.06,
-            2: 10.57,
-            3: 7.5,
-            4: 5.81,
-            5: 4.75,
-            6: 4.02,
-            7: 3.48,
-            8: 3.07,
-            9: 2.75,
-          },
-        },
-        terminal_digit: {
-          sample_size: 180,
-          chi_square: 727.1,
-          p_value: 0.00001,
-          zero_five_index: 0.95,
-          rounding_bias_tier: "SEVERE_ROUNDING",
-          observed_frequencies: {
-            0: 82,
-            1: 0,
-            2: 0,
-            3: 0,
-            4: 0,
-            5: 98,
-            6: 0,
-            7: 0,
-            8: 0,
-            9: 0,
-          },
-          expected_frequencies: {
-            0: 18,
-            1: 18,
-            2: 18,
-            3: 18,
-            4: 18,
-            5: 18,
-            6: 18,
-            7: 18,
-            8: 18,
-            9: 18,
-          },
-        },
-        multivariate: {
-          mahalanobis_distance: 0.88,
-          mahalanobis_p_value: 0.62,
-          correlation_matrix_distance: 0.28,
-          site_mean_vector: {
-            systolic_bp: 125.0,
-            diastolic_bp: 80.0,
-            heart_rate: 75.0,
-            lab_creatinine: 1.15,
-          },
-          site_covariance_matrix: { systolic_bp: { systolic_bp: 135.0 } },
-        },
-        variance_shrinkage: {
-          variance_ratio: 0.85,
-          variance_shrinkage_p_value: 0.28,
-          kl_divergence: 0.32,
-          is_variance_shrunk: false,
-        },
-        composite_risk_score: 55.0,
-        risk_tier: "HIGH",
-        is_anomalous_outlier: true,
-        flagged_anomaly_reasons: ["TERMINAL_DIGIT_ROUNDING_BIAS"],
-      },
-      {
+        siteId: "SITE-ROUNDING-BIAS",
+        benfordStats: [8.5, 0.386, 0.0105],
+        conformity: "ACCEPTABLE_CONFORMITY",
+        benfordObserved: [17, 11, 8, 6, 5, 4, 3, 3, 3],
+        terminalStats: [727.1, 0.00001, 0.95],
+        roundingTier: "SEVERE_ROUNDING",
+        terminalObserved: [82, 0, 0, 0, 0, 98, 0, 0, 0, 0],
+        multivariateStats: [0.88, 0.62, 0.28],
+        means: [125.0, 80.0, 75.0, 1.15],
+        covariance: { systolic_bp: { systolic_bp: 135.0 } },
+        varianceStats: [0.85, 0.28, 0.32],
+        isShrunk: false,
+        riskScore: 55.0,
+        riskTier: "HIGH",
+        isOutlier: true,
+        reasons: ["TERMINAL_DIGIT_ROUNDING_BIAS"],
+      }),
+      buildSimulatedForensicsSite(studyId, {
         id: "rec-104",
-        run_id: "run-001",
-        study_id: selectedStudyId.value,
-        site_id: "SITE-VARIANCE-SHRINKAGE",
-        sample_size: 60,
-        benford: {
-          sample_size: 60,
-          chi_square: 6.2,
-          p_value: 0.625,
-          mad: 0.0082,
-          conformity: "ACCEPTABLE_CONFORMITY",
-          observed_frequencies: {
-            1: 18,
-            2: 11,
-            3: 7,
-            4: 6,
-            5: 5,
-            6: 4,
-            7: 4,
-            8: 3,
-            9: 2,
-          },
-          expected_frequencies: {
-            1: 18.06,
-            2: 10.57,
-            3: 7.5,
-            4: 5.81,
-            5: 4.75,
-            6: 4.02,
-            7: 3.48,
-            8: 3.07,
-            9: 2.75,
-          },
-        },
-        terminal_digit: {
-          sample_size: 180,
-          chi_square: 4.8,
-          p_value: 0.778,
-          zero_five_index: 0.22,
-          rounding_bias_tier: "NORMAL",
-          observed_frequencies: {
-            0: 20,
-            1: 18,
-            2: 18,
-            3: 17,
-            4: 18,
-            5: 19,
-            6: 18,
-            7: 17,
-            8: 18,
-            9: 17,
-          },
-          expected_frequencies: {
-            0: 18,
-            1: 18,
-            2: 18,
-            3: 18,
-            4: 18,
-            5: 18,
-            6: 18,
-            7: 18,
-            8: 18,
-            9: 18,
-          },
-        },
-        multivariate: {
-          mahalanobis_distance: 0.62,
-          mahalanobis_p_value: 0.812,
-          correlation_matrix_distance: 0.21,
-          site_mean_vector: {
-            systolic_bp: 120.0,
-            diastolic_bp: 80.0,
-            heart_rate: 72.0,
-            lab_creatinine: 1.05,
-          },
-          site_covariance_matrix: { systolic_bp: { systolic_bp: 0.16 } },
-        },
-        variance_shrinkage: {
-          variance_ratio: 0.002,
-          variance_shrinkage_p_value: 0.00001,
-          kl_divergence: 4.82,
-          is_variance_shrunk: true,
-        },
-        composite_risk_score: 70.0,
-        risk_tier: "CRITICAL",
-        is_anomalous_outlier: true,
-        flagged_anomaly_reasons: [
-          "ANOMALOUS_VARIANCE_SHRINKAGE",
-          "DATA_FABRICATION_SUSPICION",
-        ],
-      },
+        siteId: "SITE-VARIANCE-SHRINKAGE",
+        benfordStats: [6.2, 0.625, 0.0082],
+        conformity: "ACCEPTABLE_CONFORMITY",
+        benfordObserved: [18, 11, 7, 6, 5, 4, 4, 3, 2],
+        terminalStats: [4.8, 0.778, 0.22],
+        roundingTier: "NORMAL",
+        terminalObserved: [20, 18, 18, 17, 18, 19, 18, 17, 18, 17],
+        multivariateStats: [0.62, 0.812, 0.21],
+        means: [120.0, 80.0, 72.0, 1.05],
+        covariance: { systolic_bp: { systolic_bp: 0.16 } },
+        varianceStats: [0.002, 0.00001, 4.82],
+        isShrunk: true,
+        riskScore: 70.0,
+        riskTier: "CRITICAL",
+        isOutlier: true,
+        reasons: ["ANOMALOUS_VARIANCE_SHRINKAGE", "DATA_FABRICATION_SUSPICION"],
+      }),
     ];
 
     siteRecords.value = mockSites;

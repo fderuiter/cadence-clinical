@@ -7,8 +7,12 @@ import { fileURLToPath } from "url";
 import { createStripMockWorkerInProdPlugin } from "../../scripts/vite-strip-mock-worker.mjs";
 import {
   buildModeAwareCspContent,
+  configureVitePreviewTimeouts,
+  createSameOriginApiInDevPlugin,
   createThemeBootstrapPlugin,
+  createViteGatewayProxy,
   injectHoistedCspMeta as injectHoistedWebCspMeta,
+  resolveMergedViteEnv,
   resolveViteOidcOrigin as resolveWebOidcOrigin,
 } from "../../scripts/vite-hoist-csp.mjs";
 import {
@@ -96,21 +100,11 @@ export default defineConfig({
   plugins: [
     vue(),
     createThemeBootstrapPlugin(),
-    {
-      // The gateway sends no CORS headers, so a dev server page that called http://localhost:8000 directly would be
-      // blocked by the browser. Unless VITE_API_BASE_URL is set (environment or .env files), the dev server sends API calls to its own origin,
-      // and the /api proxy below forwards them to the gateway (#5429). Builds, tests and demo mode are unchanged.
-      name: "same-origin-api-in-dev",
-      config(_config, { command, mode }) {
-        if (
-          command === "serve" &&
-          mode === "development" &&
-          !loadEnv(mode, __dirname, "VITE_API_BASE_URL").VITE_API_BASE_URL
-        ) {
-          process.env.VITE_API_BASE_URL = `http://localhost:${DEV_PORT}`;
-        }
-      },
-    },
+    createSameOriginApiInDevPlugin({
+      rootDir: __dirname,
+      devPort: DEV_PORT,
+      loadEnv,
+    }),
     (() => {
       let resolvedBase = "/cadence-clinical/";
       let resolvedOutDir = "dist";
@@ -120,12 +114,10 @@ export default defineConfig({
         configResolved(resolved) {
           resolvedBase = resolved.base || "/cadence-clinical/";
           resolvedOutDir = resolved.build?.outDir || "dist";
-          const fileEnv = loadEnv(resolved.mode, __dirname, "VITE_");
-          const mergedEnv = { ...fileEnv, ...process.env };
           resolvedCsp = buildWebCspContent({
             mode: resolved.mode,
             isProduction: Boolean(resolved.isProduction),
-            env: mergedEnv,
+            env: resolveMergedViteEnv(resolved, __dirname, loadEnv),
           });
         },
         transformIndexHtml: {
@@ -187,12 +179,7 @@ export default defineConfig({
             );
           }
         },
-        configurePreviewServer(server) {
-          if (server.httpServer) {
-            server.httpServer.keepAliveTimeout = 65000;
-            server.httpServer.headersTimeout = 66000;
-          }
-        },
+        configurePreviewServer: configureVitePreviewTimeouts,
       };
     })(),
     createStripMockWorkerInProdPlugin(__dirname),
@@ -220,13 +207,7 @@ export default defineConfig({
   server: {
     port: DEV_PORT,
     strictPort: true,
-    proxy: {
-      "/api": {
-        target: GATEWAY_URL,
-        changeOrigin: true,
-        secure: false,
-      },
-    },
+    proxy: createViteGatewayProxy(GATEWAY_URL),
   },
   preview: {
     host: "::",

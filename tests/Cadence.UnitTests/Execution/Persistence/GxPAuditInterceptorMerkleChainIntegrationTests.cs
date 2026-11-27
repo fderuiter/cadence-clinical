@@ -77,6 +77,8 @@ public class GxPAuditInterceptorMerkleChainIntegrationTests
         var entries = await context.AuditLogEntries
             .Where(e => e.EntityName == entityName)
             .OrderBy(e => e.Timestamp)
+            .ThenBy(e => e.VersionIndex)
+            .ThenBy(e => e.Id)
             .ToListAsync(TestContext.Current.CancellationToken);
         return entries.ToArray();
     }

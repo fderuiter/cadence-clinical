@@ -271,14 +271,17 @@ public class DomainEngineUnitTests
             string webGenDir = Path.Combine(webApiDir, "generated");
             string webUtilsDir = Path.Combine(tempRoot, "apps", "web", "src", "utils");
             string uiTypesDir = Path.Combine(tempRoot, "packages", "ui", "src", "types");
+            string uiGeneratedDir = Path.Combine(tempRoot, "packages", "ui", "src", "generated");
             Directory.CreateDirectory(webApiDir);
             Directory.CreateDirectory(webGenDir);
             Directory.CreateDirectory(webUtilsDir);
             Directory.CreateDirectory(uiTypesDir);
+            Directory.CreateDirectory(uiGeneratedDir);
 
             string probeA = Path.Combine(webApiDir, "probeA.ts");
             string probeB = Path.Combine(webUtilsDir, "probeB.ts");
             string generatedFile = Path.Combine(webGenDir, "openapiProbe.ts");
+            string cdashGeneratedFile = Path.Combine(uiGeneratedDir, "cdashVariables.ts");
             string declarationFile = Path.Combine(webApiDir, "probe.d.ts");
             string legacyTypesFile = Path.Combine(webApiDir, "types.ts");
             string cdashTypesFile = Path.Combine(uiTypesDir, "cdash.ts");
@@ -291,15 +294,22 @@ public class DomainEngineUnitTests
             File.WriteAllText(probeA, dupTsFn);
             File.WriteAllText(probeB, "export function uniqueHelper(): string {\n  return 'distinct';\n}\n");
             File.WriteAllText(generatedFile, dupTsFn);
+            File.WriteAllText(cdashGeneratedFile, dupTsFn);
             File.WriteAllText(declarationFile, dupTsFn);
             File.WriteAllText(legacyTypesFile, dupTsFn);
-            File.WriteAllText(cdashTypesFile, dupTsFn);
+            File.WriteAllText(cdashTypesFile, "export interface CDASHModelVariable {\n  \"Version\": string;\n}\n");
 
-            string[] allFiles = [probeA, probeB, generatedFile, declarationFile, legacyTypesFile, cdashTypesFile];
+            string[] allFiles = [probeA, probeB, generatedFile, cdashGeneratedFile, declarationFile, legacyTypesFile, cdashTypesFile];
 
             DuplicationDetectorService.DetectDuplication(allFiles, tempRoot).Should().Be(0);
             DuplicationDetectorService.DetectDuplication(repoRoot: tempRoot).Should().Be(0);
 
+            // Hand-written cdash.ts is no longer exempted: duplicating a >15-line block into cdash.ts fails the scan.
+            File.WriteAllText(cdashTypesFile, dupTsFn);
+            DuplicationDetectorService.DetectDuplication(allFiles, tempRoot).Should().Be(1);
+            DuplicationDetectorService.DetectDuplication(repoRoot: tempRoot).Should().Be(1);
+
+            File.WriteAllText(cdashTypesFile, "export interface CDASHModelVariable {\n  \"Version\": string;\n}\n");
             File.AppendAllText(probeB, "\n" + dupTsFn);
 
             DuplicationDetectorService.DetectDuplication(allFiles, tempRoot).Should().Be(1);
@@ -377,14 +387,13 @@ public class DomainEngineUnitTests
         try
         {
             string generatedA = Path.Combine(tempRoot, "apps", "web", "src", "generated", "clientA.ts");
-            string generatedB = Path.Combine(tempRoot, "packages", "ui", "src", "generated", "clientB.ts");
+            string generatedB = Path.Combine(tempRoot, "packages", "ui", "src", "generated", "cdashVariables.ts");
             string dtsA = Path.Combine(tempRoot, "apps", "web", "src", "env.d.ts");
             string dtsB = Path.Combine(tempRoot, "packages", "ui", "src", "index.d.ts");
             string webApiTypes = Path.Combine(tempRoot, "apps", "web", "src", "api", "types.ts");
-            string uiCdashTypes = Path.Combine(tempRoot, "packages", "ui", "src", "types", "cdash.ts");
             string liveTs = Path.Combine(tempRoot, "apps", "web", "src", "composables", "liveConsumer.ts");
 
-            foreach (string file in new[] { generatedA, generatedB, dtsA, dtsB, webApiTypes, uiCdashTypes, liveTs })
+            foreach (string file in new[] { generatedA, generatedB, dtsA, dtsB, webApiTypes, liveTs })
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(file)!);
             }
@@ -394,7 +403,7 @@ public class DomainEngineUnitTests
                 Enumerable.Range(1, 20).Select(i => $"  readonly field_{i}: string;"));
             string payload = $"export interface GeneratedContract {{\n{sharedTypeBlock}\n}}\n";
 
-            foreach (string file in new[] { generatedA, generatedB, dtsA, dtsB, webApiTypes, uiCdashTypes, liveTs })
+            foreach (string file in new[] { generatedA, generatedB, dtsA, dtsB, webApiTypes, liveTs })
             {
                 File.WriteAllText(file, payload);
             }
@@ -402,9 +411,57 @@ public class DomainEngineUnitTests
             // Even with a single live .ts file sharing the exact 20-line block with all excluded files, 0 duplicates are reported.
             DuplicationDetectorService.DetectDuplication(repoRoot: tempRoot, preCommit: true).Should().Be(0);
             DuplicationDetectorService.DetectDuplication(
-                [generatedA, generatedB, dtsA, dtsB, webApiTypes, uiCdashTypes],
+                [generatedA, generatedB, dtsA, dtsB, webApiTypes],
                 tempRoot,
                 preCommit: true).Should().Be(0);
+        }
+        finally
+        {
+            if (Directory.Exists(tempRoot))
+            {
+                Directory.Delete(tempRoot, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public void DuplicationDetectorService_EnforcesIntraFileClonesForJsTsAndVue_WhileKeepingCsAndCssCrossFileOnly()
+    {
+        string tempRoot = Path.Combine(Path.GetTempPath(), $"cadence-dup-intra-{Guid.NewGuid():N}");
+        try
+        {
+            string webDir = Path.Combine(tempRoot, "apps", "web", "src");
+            string execDir = Path.Combine(tempRoot, "apps", "execution", "src");
+            Directory.CreateDirectory(webDir);
+            Directory.CreateDirectory(execDir);
+
+            string jsLines = string.Join("\n", Enumerable.Range(1, 16).Select(i => $"  const metricRow{i} = seed + {i};"));
+            string singleTs = Path.Combine(webDir, "intraClone.ts");
+            File.WriteAllText(
+                singleTs,
+                $"export function alpha(seed: number): number {{\n{jsLines}\n  return metricRow16;\n}}\n\n" +
+                $"export function beta(seed: number): number {{\n{jsLines}\n  return metricRow16;\n}}\n");
+            DuplicationDetectorService.DetectDuplication([singleTs], tempRoot, preCommit: true).Should().Be(1);
+
+            string singleVue = Path.Combine(webDir, "IntraClone.vue");
+            string vueLines = string.Join("\n", Enumerable.Range(1, 16).Select(i => $"    <span class=\"pill-{i}\">{{{{ label }}}}</span>"));
+            File.WriteAllText(
+                singleVue,
+                $"<template>\n  <div v-if=\"primary\">\n{vueLines}\n  </div>\n  <div v-else>\n{vueLines}\n  </div>\n</template>\n");
+            DuplicationDetectorService.DetectDuplication([singleVue], tempRoot, preCommit: true).Should().Be(1);
+
+            string singleCss = Path.Combine(webDir, "intraAllowed.css");
+            string cssLines = string.Join("\n", Enumerable.Range(1, 16).Select(i => $"  --surface-step-{i}: #{i:X2}4455;"));
+            File.WriteAllText(singleCss, $":root {{\n{cssLines}\n}}\n[data-theme=\"dark\"] {{\n{cssLines}\n}}\n");
+            DuplicationDetectorService.DetectDuplication([singleCss], tempRoot, preCommit: true).Should().Be(0);
+
+            string singleCs = Path.Combine(execDir, "IntraAllowed.cs");
+            string csLines = string.Join("\n", Enumerable.Range(1, 16).Select(i => $"        int acc{i} = input + {i};"));
+            File.WriteAllText(
+                singleCs,
+                $"namespace Probe;\npublic static class IntraAllowed {{\n    public static int First(int input) {{\n{csLines}\n        return acc16;\n    }}\n" +
+                $"    public static int Second(int input) {{\n{csLines}\n        return acc16;\n    }}\n}}\n");
+            DuplicationDetectorService.DetectDuplication([singleCs], tempRoot, preCommit: true).Should().Be(0);
         }
         finally
         {
