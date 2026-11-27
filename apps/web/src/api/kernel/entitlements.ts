@@ -1,7 +1,7 @@
 import { unwrapResponse } from "../client";
 import { kernelClient, type KernelSchemas } from "./shared";
 
-const loadRouteTransport = () => import("./protocolImport");
+const loadRouteTransport = () => import("./entitlements.transport");
 
 export type KernelEntitlements =
   KernelSchemas["Kernel_KernelEntitlementsResponse"];

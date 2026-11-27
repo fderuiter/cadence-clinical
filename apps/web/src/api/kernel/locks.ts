@@ -12,7 +12,7 @@ import {
   type KernelStreamedArtifact,
 } from "./shared";
 
-const loadRouteTransport = () => import("./protocolImport");
+const loadRouteTransport = () => import("./locks.transport");
 
 export type KernelLock = KernelSchemas["Kernel_KernelLockResponse"];
 export type KernelStudyLocks = KernelSchemas["Kernel_KernelStudyLocksResponse"];

@@ -327,6 +327,8 @@ public sealed class GxpSnapshotPolicyTests : IDisposable
     {
         SetupFullEvidenceRepository(includeBrowserEvidence: true);
         Git("init", "-q", "-b", "main");
+        Git("config", "--local", "--get", "user.name").Trim().Should().Be("Test");
+        Git("config", "--local", "--get", "user.email").Trim().Should().Be("test@example.invalid");
         Git("add", "-A");
         Git("commit", "-q", "-m", "initial commit");
         string initialHead = Git("rev-parse", "HEAD").Trim();
@@ -808,6 +810,21 @@ public sealed class GxpSnapshotPolicyTests : IDisposable
 
     private string Git(params string[] args)
     {
+        string output = RunGitCommand(args);
+        if (args.Length > 0
+            && string.Equals(args[0], "init", StringComparison.Ordinal)
+            && !args.Contains("--bare", StringComparer.Ordinal))
+        {
+            RunGitCommand(["config", "user.name", "Test"]);
+            RunGitCommand(["config", "user.email", "test@example.invalid"]);
+            RunGitCommand(["config", "commit.gpgsign", "false"]);
+        }
+
+        return output;
+    }
+
+    private string RunGitCommand(IReadOnlyList<string> args)
+    {
         var psi = new ProcessStartInfo("git") { WorkingDirectory = _dir, UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true };
         foreach (string arg in new List<string> { "-c", "user.name=Test", "-c", "user.email=test@example.invalid", "-c", "commit.gpgsign=false" })
         {
@@ -820,9 +837,10 @@ public sealed class GxpSnapshotPolicyTests : IDisposable
         }
 
         using var process = Process.Start(psi)!;
+        Task<string> stderrTask = process.StandardError.ReadToEndAsync();
         string output = process.StandardOutput.ReadToEnd();
-        string error = process.StandardError.ReadToEnd();
         process.WaitForExit();
+        string error = stderrTask.GetAwaiter().GetResult();
         process.ExitCode.Should().Be(0, $"git {string.Join(' ', args)} failed: {error}");
         return output;
     }

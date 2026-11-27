@@ -5,7 +5,7 @@ import {
   type KernelSchemas,
 } from "./shared";
 
-const loadRouteTransport = () => import("./protocolImport");
+const loadRouteTransport = () => import("./navigation.transport");
 
 export type KernelNode = KernelSchemas["Kernel_KernelNodeResponse"];
 export type KernelBatchNodes = KernelSchemas["Kernel_KernelBatchNodesResponse"];

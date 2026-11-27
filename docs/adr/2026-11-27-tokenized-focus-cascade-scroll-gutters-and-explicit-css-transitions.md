@@ -56,5 +56,5 @@ Across `packages/ui/tokens.css`, `packages/ui/src/components`, `apps/web`, and `
 
 ## 6. Implementation & Verification
 
-- **Affected Repositories / Services:** `packages/ui`, `apps/web`, `apps/subject-portal`, `eslint.config.mjs`, `docs/adr/`, `docs/DOCUMENTATION_INDEX.md`.
+- **Affected Repositories / Services:** `packages/ui`, `apps/web`, `apps/subject-portal`, `eslint.config.mjs`, `scripts/eslint/rules/no-transition-all.mjs`, `docs/adr/`, `docs/DOCUMENTATION_INDEX.md`.
 - **Verification Plan:** Verified via `pnpm format`, `pnpm lint`, `pnpm typecheck`, `pnpm build`, `pnpm --filter ui test`, `pnpm --filter web test`, `pnpm --filter subject-portal test`, Playwright accessibility E2E suites (`apps/web/tests/e2e/web-accessibility.spec.ts`, `apps/subject-portal/tests/e2e/portal-accessibility.spec.js`), and `pnpm cadence check --pre-commit`.
