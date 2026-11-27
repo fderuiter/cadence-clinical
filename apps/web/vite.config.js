@@ -34,7 +34,7 @@ export { injectHoistedWebCspMeta, resolveWebOidcOrigin };
 export function buildWebCspContent(options = {}) {
   return buildModeAwareCspContent(options, {
     allowBlobMedia: true,
-    allowBlobWorker: true,
+    allowBlobWorker: false,
     allowBlobFrame: true,
   });
 }
@@ -258,9 +258,6 @@ export default defineConfig({
                 pkgPath.startsWith("pinia/")
               ) {
                 return "vendor-vue";
-              }
-              if (pkgPath.startsWith("hls.js/")) {
-                return "vendor-media";
               }
               if (pkgPath.startsWith("keycloak-js/")) {
                 return "vendor-auth";

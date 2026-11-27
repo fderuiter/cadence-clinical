@@ -732,7 +732,7 @@ router.beforeEach(async (to) => {
   }
 
   const requiresI18n = to.matched.some((record) => record.meta?.requiresI18n);
-  if (requiresI18n && !(to.name === "ecrf" && !isDemoBuild())) {
+  if (isDemoBuild() && requiresI18n) {
     const requestedLocale =
       typeof to.query?.lang === "string" ? to.query.lang.trim() : undefined;
     const { ensureI18nInstalled } = await import("../i18n/index.js");

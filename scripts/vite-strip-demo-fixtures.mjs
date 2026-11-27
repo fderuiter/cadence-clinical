@@ -610,10 +610,52 @@ export function isDemoBuildResolved(appDir, resolved) {
   );
 }
 
+export const WEB_NON_DEMO_STUBBED_VIEWS = Object.freeze([
+  // Unbacked top-level DEMO_AVAILABLE_SCREENS views (apps/web/src/router/availability.js)
+  "AggregateSafetyView.vue",
+  "AuditView.vue",
+  "AuditorView.vue",
+  "CecAdjudicationView.vue",
+  "ConsentAuthoringView.vue",
+  "DeviceInvestigationView.vue",
+  "DocumentsHubView.vue",
+  "ICFBuilderView.vue",
+  "ImagingView.vue",
+  "LabGovernanceView.vue",
+  "LakehouseView.vue",
+  "LaySummaryPortal.vue",
+  "MdrView.vue",
+  "MedicalCodingView.vue",
+  "NotificationsView.vue",
+  "ParticipantWalletView.vue",
+  "ProtocolDigitizationView.vue",
+  "QualityCockpitView.vue",
+  "RulesView.vue",
+  "SensorTelemetryView.vue",
+  "TelehealthDtpView.vue",
+  // Legacy top-level views whose beforeEnter redirects in non-demo builds (apps/web/src/router/index.js)
+  "AmendmentDiffView.vue",
+  "DataLockView.vue",
+  "EcrfView.vue",
+  "ExportWizardView.vue",
+]);
+
+export const SUBJECT_PORTAL_NON_DEMO_STUBBED_VIEWS = Object.freeze([
+  // DEMO_AVAILABLE_SCREENS views (apps/subject-portal/src/router/availability.js)
+  "ComplianceView.vue",
+  "ConsentView.vue",
+  "InboxView.vue",
+  "LaySummariesView.vue",
+  "QuestionnaireView.vue",
+  "TasksView.vue",
+]);
+
 export function createDemoFixturesPlugin(appDir) {
   let stripDemoFixtures = false;
   let isDemoStaticBuild = false;
-  const repoRoot = path.resolve(appDir, "../..");
+  const resolvedAppDir = path.resolve(appDir);
+  const appName = path.basename(resolvedAppDir);
+  const repoRoot = path.resolve(resolvedAppDir, "../..");
   const demoSeedPath = path.join(
     repoRoot,
     "packages/demo-fixtures/demo-seed.json"
@@ -631,8 +673,19 @@ export function createDemoFixturesPlugin(appDir) {
     repoRoot,
     "packages/demo-fixtures/src/mocks.js"
   );
-  const viewsDemoPrefix = `${toPosixPath(path.resolve(appDir, "src/views/demo"))}/`;
-  const storesDemoPrefix = `${toPosixPath(path.resolve(appDir, "src/stores/demo"))}/`;
+  const viewsDemoPrefix = `${toPosixPath(path.resolve(resolvedAppDir, "src/views/demo"))}/`;
+  const storesDemoPrefix = `${toPosixPath(path.resolve(resolvedAppDir, "src/stores/demo"))}/`;
+  const stubbedTopLevelViews =
+    appName === "web"
+      ? WEB_NON_DEMO_STUBBED_VIEWS
+      : appName === "subject-portal"
+        ? SUBJECT_PORTAL_NON_DEMO_STUBBED_VIEWS
+        : [];
+  const stubbedTopLevelViewPaths = new Set(
+    stubbedTopLevelViews.map((fileName) =>
+      toPosixPath(path.resolve(resolvedAppDir, "src/views", fileName))
+    )
+  );
 
   function resolveCandidateSource(source, importer) {
     if (!source || source.startsWith("\0")) return null;
@@ -693,6 +746,12 @@ export function createDemoFixturesPlugin(appDir) {
       if (resolvedPath.startsWith(viewsDemoPrefix)) {
         return `${VIRTUAL_DEMO_VIEW_PREFIX}${path.basename(resolvedPath)}`;
       }
+      const candidateViewPath = path.posix.extname(resolvedPath)
+        ? resolvedPath
+        : `${resolvedPath}.vue`;
+      if (stubbedTopLevelViewPaths.has(candidateViewPath)) {
+        return `${VIRTUAL_DEMO_VIEW_PREFIX}${path.basename(candidateViewPath)}`;
+      }
       if (resolvedPath.startsWith(storesDemoPrefix)) {
         return `${VIRTUAL_DEMO_STORE_PREFIX}${path.basename(resolvedPath)}`;
       }
@@ -729,8 +788,9 @@ export function createDemoFixturesPlugin(appDir) {
 
 /**
  * Constant-folds zero-argument `isDemoBuild()` calls during `vite build` so Rollup
- * dead-code-eliminates OIDC (`keycloak-js`) and streaming (`hls.js`) branches in demo
- * bundles while preserving `isDemoBuild(env)` overrides and `vi.stubEnv` in Vitest.
+ * dead-code-eliminates OIDC (`keycloak-js`) branches in demo bundles and `vue-i18n`
+ * / demo tab-icon branches in non-demo production bundles while preserving
+ * `isDemoBuild(env)` overrides and `vi.stubEnv` in Vitest.
  *
  * @param {string} appDir - Absolute directory of the Vite app.
  * @returns {import("vite").Plugin}

@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { mount, flushPromises } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
-import Hls from "hls.js";
 import MediaPreviewModal from "../src/components/fileshare/MediaPreviewModal.vue";
 import { fileshareService } from "../src/api/fileshare";
 import { useAuthStore } from "../src/stores/auth";
@@ -55,20 +54,7 @@ describe("feat(fileshare): 09 — HLS Adaptive Streaming in Media Player (#4316)
     vi.useRealTimers();
   });
 
-  it("calls getStreamUrl and initializes HLS.js when video is READY", async () => {
-    const originalIsSupported = Hls.isSupported;
-    Hls.isSupported = vi.fn(() => true);
-
-    const loadSourceSpy = vi.fn();
-    const attachMediaSpy = vi.fn();
-    const onSpy = vi.fn();
-    const destroySpy = vi.fn();
-
-    vi.spyOn(Hls.prototype, "loadSource").mockImplementation(loadSourceSpy);
-    vi.spyOn(Hls.prototype, "attachMedia").mockImplementation(attachMediaSpy);
-    vi.spyOn(Hls.prototype, "on").mockImplementation(onSpy);
-    vi.spyOn(Hls.prototype, "destroy").mockImplementation(destroySpy);
-
+  it("calls getStreamUrl and configures native HTML5 video playback when video is READY", async () => {
     const wrapper = mount(MediaPreviewModal, {
       props: {
         fileRecord: mockVideoFile,
@@ -82,16 +68,17 @@ describe("feat(fileshare): 09 — HLS Adaptive Streaming in Media Player (#4316)
       "file-video-001"
     );
     expect(wrapper.find(".video-player-wrapper").exists()).toBe(true);
-    expect(wrapper.find("video.video-element").exists()).toBe(true);
+    const video = wrapper.find("video.video-element");
+    expect(video.exists()).toBe(true);
+    expect(video.attributes("src") || video.element.src).toContain(
+      "https://example.com/hls/master.m3u8"
+    );
+    expect(wrapper.find("select.quality-select").exists()).toBe(false);
 
-    Hls.isSupported = originalIsSupported;
     wrapper.unmount();
   });
 
-  it("falls back to native HLS on Safari when Hls.isSupported() is false", async () => {
-    const originalIsSupported = Hls.isSupported;
-    Hls.isSupported = vi.fn(() => false);
-
+  it("uses native HLS playback on Safari when canPlayType supports application/vnd.apple.mpegurl", async () => {
     const originalCanPlayType = HTMLMediaElement.prototype.canPlayType;
     HTMLMediaElement.prototype.canPlayType = vi.fn((type) => {
       if (type === "application/vnd.apple.mpegurl") return "probably";
@@ -114,8 +101,8 @@ describe("feat(fileshare): 09 — HLS Adaptive Streaming in Media Player (#4316)
     expect(video.attributes("src") || video.element.src).toContain(
       "master.m3u8"
     );
+    expect(wrapper.text()).toContain("[Auto (Native)]");
 
-    Hls.isSupported = originalIsSupported;
     HTMLMediaElement.prototype.canPlayType = originalCanPlayType;
     wrapper.unmount();
   });
@@ -218,19 +205,12 @@ describe("feat(fileshare): 09 — HLS Adaptive Streaming in Media Player (#4316)
     wrapper.unmount();
   });
 
-  it("allows changing quality levels via quality selector", async () => {
-    const originalIsSupported = Hls.isSupported;
-    Hls.isSupported = vi.fn(() => true);
-
-    let manifestCallback = null;
-    vi.spyOn(Hls.prototype, "loadSource").mockImplementation(vi.fn());
-    vi.spyOn(Hls.prototype, "attachMedia").mockImplementation(vi.fn());
-    vi.spyOn(Hls.prototype, "on").mockImplementation((event, cb) => {
-      if (event === Hls.Events.MANIFEST_PARSED) {
-        manifestCallback = cb;
-      }
+  it("renders native quality selector when native HLS is supported and updates selected option", async () => {
+    const originalCanPlayType = HTMLMediaElement.prototype.canPlayType;
+    HTMLMediaElement.prototype.canPlayType = vi.fn((type) => {
+      if (type === "application/vnd.apple.mpegurl") return "probably";
+      return "";
     });
-    vi.spyOn(Hls.prototype, "destroy").mockImplementation(vi.fn());
 
     const wrapper = mount(MediaPreviewModal, {
       props: {
@@ -240,30 +220,16 @@ describe("feat(fileshare): 09 — HLS Adaptive Streaming in Media Player (#4316)
 
     await flushPromises();
 
-    if (manifestCallback) {
-      manifestCallback(Hls.Events.MANIFEST_PARSED, {
-        levels: [
-          { height: 360, bitrate: 800000 },
-          { height: 720, bitrate: 2500000 },
-          { height: 1080, bitrate: 5000000 },
-        ],
-      });
-    }
-
-    await wrapper.vm.$nextTick();
-
     const qualitySelect = wrapper.find("select.quality-select");
     expect(qualitySelect.exists()).toBe(true);
     const options = qualitySelect.findAll("option");
-    expect(options.length).toBe(4);
-    expect(options[1].text()).toBe("360p");
-    expect(options[2].text()).toBe("720p");
-    expect(options[3].text()).toBe("1080p");
+    expect(options.length).toBe(1);
+    expect(options[0].text()).toBe("Auto (Native)");
 
-    await qualitySelect.setValue(2);
-    expect(wrapper.text()).toContain("[1080p]");
+    await qualitySelect.setValue(-1);
+    expect(wrapper.text()).toContain("[Auto (Native)]");
 
-    Hls.isSupported = originalIsSupported;
+    HTMLMediaElement.prototype.canPlayType = originalCanPlayType;
     wrapper.unmount();
   });
 
@@ -390,14 +356,7 @@ describe("feat(fileshare): 09 — HLS Adaptive Streaming in Media Player (#4316)
     wrapper.unmount();
   });
 
-  it("plays direct MP4 stream URLs natively without initializing HLS.js", async () => {
-    const isSupportedSpy = vi
-      .spyOn(Hls, "isSupported")
-      .mockImplementation(() => true);
-    const loadSourceSpy = vi
-      .spyOn(Hls.prototype, "loadSource")
-      .mockImplementation(vi.fn());
-
+  it("plays direct MP4 stream URLs natively on the HTML5 video element", async () => {
     fileshareService.getStreamUrl.mockResolvedValueOnce({
       file_id: "file-video-001",
       stream_url: "https://example.com/raw/video.mp4",
@@ -417,19 +376,12 @@ describe("feat(fileshare): 09 — HLS Adaptive Streaming in Media Player (#4316)
     const video = wrapper.find("video.video-element");
     expect(video.exists()).toBe(true);
     expect(video.attributes("src") || video.element.src).toContain("video.mp4");
-    expect(isSupportedSpy).not.toHaveBeenCalled();
-    expect(loadSourceSpy).not.toHaveBeenCalled();
 
-    isSupportedSpy.mockRestore();
-    loadSourceSpy.mockRestore();
     wrapper.unmount();
   });
 
-  it("skips HLS.js initialization in demo mode even when stream URL ends with .m3u8", async () => {
+  it("assigns .m3u8 stream URLs directly to the native HTML5 video element in demo mode", async () => {
     vi.stubEnv("VITE_DEMO_MODE", "true");
-    const isSupportedSpy = vi
-      .spyOn(Hls, "isSupported")
-      .mockImplementation(() => true);
 
     try {
       const wrapper = mount(MediaPreviewModal, {
@@ -442,12 +394,13 @@ describe("feat(fileshare): 09 — HLS Adaptive Streaming in Media Player (#4316)
 
       const video = wrapper.find("video.video-element");
       expect(video.exists()).toBe(true);
-      expect(isSupportedSpy).not.toHaveBeenCalled();
+      expect(video.attributes("src") || video.element.src).toContain(
+        "master.m3u8"
+      );
 
       wrapper.unmount();
     } finally {
       vi.unstubAllEnvs();
-      isSupportedSpy.mockRestore();
     }
   });
 
