@@ -150,6 +150,36 @@ public sealed class ExpectedScheduleTests
         ExpectedSchedule.Assess(early, Day1.AddDays(1)).Should().Match<VisitTimingAssessment>(a => a.Timing == VisitTiming.Late && a.DaysFromTarget == 1 && a.DaysOutsideWindow == 1);
     }
 
+    /// <summary>
+    /// Pre-indexing planned visits by activity id once per protocol version produces the exact same <see cref="ExpectedVisit"/>
+    /// and <see cref="VisitTimingAssessment"/> as <see cref="ExpectedSchedule.Compute"/> across day-0, negative pre-baseline,
+    /// and windowed visits while omitting untimed event-driven activities.
+    /// </summary>
+    [Fact]
+    public void IndexByActivity_And_ComputeVisit_MatchFullSchedulePlanAndCompute()
+    {
+        var design = Design(
+            Activity("act.screening", "ep.screening", new ActivityTiming(-14, 2, 2)),
+            Activity("act.day0", "ep.screening", new ActivityTiming(0, 0, 1)),
+            Activity("act.unscheduled_ae", "ep.treatment", null),
+            Activity("act.week4", "ep.treatment", new ActivityTiming(29, 2, 2)));
+        var asOf = new DateOnly(2026, 10, 28);
+
+        var indexed = ExpectedSchedule.IndexByActivity(design);
+        indexed.Should().NotContainKey("act.unscheduled_ae");
+        indexed["act.day0"].StudyDay.Should().Be(1, "day 0 normalizes to SDTM study day 1");
+
+        var fullSchedule = ExpectedSchedule.Compute(design, Day1, asOf);
+        foreach (var expectedFromFull in fullSchedule)
+        {
+            indexed.TryGetValue(expectedFromFull.Visit.ActivityId, out var planned).Should().BeTrue();
+            var computedSingle = ExpectedSchedule.ComputeVisit(planned!, Day1, asOf);
+            computedSingle.Should().Be(expectedFromFull);
+            ExpectedSchedule.Assess(computedSingle, asOf)
+                .Should().Be(ExpectedSchedule.Assess(expectedFromFull, asOf));
+        }
+    }
+
     private static ProtocolDesign Design(params PlannedActivity[] activities) => ProtocolDesignSamples.MinimalDesign() with
     {
         Epochs = [new Epoch("ep.treatment", "Treatment", 2), new Epoch("ep.screening", "Screening", 1)],
