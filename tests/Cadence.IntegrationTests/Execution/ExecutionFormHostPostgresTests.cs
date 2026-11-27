@@ -26,6 +26,8 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 using Xunit;
@@ -376,7 +378,11 @@ public sealed class ExecutionFormHostPostgresTests(ExecutionFormModulePostgresFi
         var savedClock = fixture.Clock.UtcNow;
         try
         {
-            fixture.Clock.Set(Cadence.Kernel.Time.SystemClock.Instance.UtcNow);
+            if (Cadence.Kernel.Time.SystemClock.Instance.UtcNow > savedClock)
+            {
+                fixture.Clock.Set(Cadence.Kernel.Time.SystemClock.Instance.UtcNow);
+            }
+
             var relayed = await fixture.OutboxRelay.RelayBatchAsync(10_000, ct);
             relayed.Failed.Should().Be(0);
         }
@@ -555,6 +561,11 @@ public sealed class ExecutionFormHostPostgresTests(ExecutionFormModulePostgresFi
                 ct);
         }
 
+        await _scenario.Protocol.OkAsync(
+            new IssueGrant(tenant, GrantId.New(), Actor.ServiceAccount("execution-forms"), "execution.form.open", null, AuthorityScope.Tenant(), _scenario.Tick(), null, false,
+                KernelProtocolScenario.Key(), "Module consumer grant"),
+            ct);
+
         return (code, enrollment, _scenario.Tick());
     }
 
@@ -567,7 +578,11 @@ public sealed class ExecutionFormHostPostgresTests(ExecutionFormModulePostgresFi
             .ConfigureLogging(logging => logging.AddProvider(_sql))
 
             // Every error a form endpoint returns must be one its command declares (ADR-2600 §4.5).
-            .ConfigureTestServices(services => services.AddDeclaredKernelErrorsCheck()));
+            .ConfigureTestServices(services =>
+            {
+                services.RemoveAll<IHostedService>();
+                services.AddDeclaredKernelErrorsCheck();
+            }));
         _host.Server.PreserveExecutionContext = true;
         return _host.CreateSignedClient(new GatewayIdentity(userId, [], [], TenantId: tenantCode));
     }

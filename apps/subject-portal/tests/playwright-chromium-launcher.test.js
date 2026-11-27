@@ -97,4 +97,54 @@ describe("Playwright single-core Chromium launcher", () => {
       expect(affinityList).toMatch(/^\d+$/);
     }
   });
+
+  it("distributes parallel Playwright workers across distinct allowed CPU cores while keeping each pinned to one core", () => {
+    if (process.platform !== "linux") {
+      return;
+    }
+
+    const probeScript =
+      "import('node:child_process').then(({ execFileSync }) => { try { process.stdout.write(execFileSync('taskset', ['-cp', String(process.pid)], { encoding: 'utf8' })); } catch { process.stdout.write('no-taskset'); } })";
+
+    const hostAffinityRaw = (() => {
+      try {
+        return execFileSync("taskset", ["-cp", String(process.pid)], {
+          encoding: "utf8",
+        }).trim();
+      } catch {
+        return "no-taskset";
+      }
+    })();
+
+    if (hostAffinityRaw === "no-taskset") {
+      return;
+    }
+
+    const worker0Out = execFileSync(wrapperScript, ["-e", probeScript], {
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        CADENCE_REAL_CHROMIUM_BIN: process.execPath,
+        TEST_PARALLEL_INDEX: "0",
+      },
+    }).trim();
+    const worker1Out = execFileSync(wrapperScript, ["-e", probeScript], {
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        CADENCE_REAL_CHROMIUM_BIN: process.execPath,
+        TEST_PARALLEL_INDEX: "1",
+      },
+    }).trim();
+
+    const core0 = worker0Out.split(":").pop()?.trim() ?? "";
+    const core1 = worker1Out.split(":").pop()?.trim() ?? "";
+    expect(core0).toMatch(/^\d+$/);
+    expect(core1).toMatch(/^\d+$/);
+
+    const hostRange = hostAffinityRaw.split(":").pop()?.trim() ?? "";
+    if (hostRange.includes("-") || hostRange.includes(",")) {
+      expect(core1).not.toBe(core0);
+    }
+  });
 });
